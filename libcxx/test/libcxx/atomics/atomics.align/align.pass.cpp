@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// UNSUPPORTED: libcpp-has-no-threads, c++03
+// UNSUPPORTED: c++03
 // REQUIRES: is-lockfree-runtime-function
 // ADDITIONAL_COMPILE_FLAGS: -Wno-psabi
 // ... since C++20 std::__atomic_base initializes, so we get a warning about an

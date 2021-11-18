@@ -8,11 +8,11 @@
 
 #include "memory"
 #ifndef _LIBCPP_HAS_NO_THREADS
-#include "mutex"
-#include "thread"
-#if defined(__ELF__) && defined(_LIBCPP_LINK_PTHREAD_LIB)
-#pragma comment(lib, "pthread")
-#endif
+#   include "mutex"
+#   include "thread"
+#   if defined(__ELF__) && defined(_LIBCPP_LINK_PTHREAD_LIB)
+#       pragma comment(lib, "pthread")
+#   endif
 #endif
 #include "include/atomic_support.h"
 
@@ -130,7 +130,7 @@ __shared_weak_count::__get_deleter(const type_info&) const noexcept
     return nullptr;
 }
 
-#if !defined(_LIBCPP_HAS_NO_ATOMIC_HEADER)
+#if !defined(_LIBCPP_HAS_NO_THREADS)
 
 _LIBCPP_SAFE_STATIC static const std::size_t __sp_mut_count = 16;
 _LIBCPP_SAFE_STATIC static __libcpp_mutex_t mut_back[__sp_mut_count] =
@@ -181,7 +181,7 @@ __get_sp_mut(const void* p)
     return muts[hash<const void*>()(p) & (__sp_mut_count-1)];
 }
 
-#endif // !defined(_LIBCPP_HAS_NO_ATOMIC_HEADER)
+#endif // !defined(_LIBCPP_HAS_NO_THREADS)
 
 void*
 align(size_t alignment, size_t size, void*& ptr, size_t& space)

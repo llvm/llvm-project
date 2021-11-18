@@ -21,7 +21,6 @@ def get_libcxx_paths():
 script_name, source_root, include_path, libcxx_test_path = get_libcxx_paths()
 
 header_markup = {
-    "atomic": ["ifndef _LIBCPP_HAS_NO_THREADS"],
     "barrier": ["ifndef _LIBCPP_HAS_NO_THREADS"],
     "future": ["ifndef _LIBCPP_HAS_NO_THREADS"],
     "latch": ["ifndef _LIBCPP_HAS_NO_THREADS"],

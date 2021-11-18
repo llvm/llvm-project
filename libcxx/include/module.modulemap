@@ -799,6 +799,10 @@ module std [system] {
   module thread {
     header "thread"
     export *
+
+    module __thread {
+      module poll_with_backoff { private header "__thread/poll_with_backoff.h" }
+    }
   }
   module tuple {
     header "tuple"

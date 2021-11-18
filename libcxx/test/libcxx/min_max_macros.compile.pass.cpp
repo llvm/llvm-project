@@ -34,10 +34,8 @@ TEST_MACROS();
 TEST_MACROS();
 #include <array>
 TEST_MACROS();
-#ifndef _LIBCPP_HAS_NO_THREADS
-#    include <atomic>
+#include <atomic>
 TEST_MACROS();
-#endif
 #ifndef _LIBCPP_HAS_NO_THREADS
 #    include <barrier>
 TEST_MACROS();
