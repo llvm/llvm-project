@@ -312,7 +312,7 @@ class LDMATRIX_OPS<list<string> Geom, list<string> Frags, list<string> Types> {
    list<string> ops = !foreach(x, ret, x.gft);
 }
 
-// Creates list of valid combinations of fragments. This is the master list that
+// Creates list of valid combinations of fragments. This is the main list that
 // drives generation of corresponding intrinsics and instructions.
 class NVVM_MMA_OPS {
   list<list<WMMA_REGS>> tf32_wmma_ops = MMA_OPS<
