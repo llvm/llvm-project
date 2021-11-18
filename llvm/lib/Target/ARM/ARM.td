@@ -636,6 +636,8 @@ def ProcA78     : SubtargetFeature<"cortex-a78", "ARMProcFamily", "CortexA78",
                                    "Cortex-A78 ARM processors", []>;
 def ProcA78C    : SubtargetFeature<"a78c", "ARMProcFamily", "CortexA78C",
                                    "Cortex-A78C ARM processors", []>;
+def ProcA710    : SubtargetFeature<"cortex-a710", "ARMProcFamily",
+                                   "CortexA710", "Cortex-A710 ARM processors", []>;
 def ProcX1      : SubtargetFeature<"cortex-x1", "ARMProcFamily", "CortexX1",
                                    "Cortex-X1 ARM processors", []>;
 
@@ -1379,6 +1381,14 @@ def : ProcNoItin<"cortex-a78c",                         [ARMv82a, ProcA78C,
                                                          FeatureCRC,
                                                          FeatureDotProd,
                                                          FeatureFullFP16]>;
+
+def : ProcNoItin<"cortex-a710",                         [ARMv9a, ProcA710,
+                                                         FeatureHWDivThumb,
+                                                         FeatureHWDivARM,
+                                                         FeatureFP16FML,
+                                                         FeatureBF16,
+                                                         FeatureMatMulInt8,
+                                                         FeatureSB]>;
 
 def : ProcNoItin<"cortex-x1",                           [ARMv82a, ProcX1,
                                                          FeatureHWDivThumb,
