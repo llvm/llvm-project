@@ -60,9 +60,9 @@ func @bar_select_type(%arg : !fir.box<!fir.type<derived3{f:f32}>>) -> i32 {
   %2 = arith.constant 3 : i32
 
   // expected-error@+1{{failed to legalize operation 'fir.select_type'}}
-  fir.select_type %arg : !fir.box<!fir.type<derived3{f:f32}>> [ 
-    #fir.instance<!fir.int<4>>,^bb1(%0:i32), 
-    #fir.instance<!fir.int<8>>,^bb2(%2:i32), 
+  fir.select_type %arg : !fir.box<!fir.type<derived3{f:f32}>> [
+    #fir.instance<!fir.int<4>>,^bb1(%0:i32),
+    #fir.instance<!fir.int<8>>,^bb2(%2:i32),
     unit,^bb5 ]
 ^bb1(%a : i32) :
   return %a : i32
