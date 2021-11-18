@@ -320,3 +320,21 @@ body:             |
     KILL killed $vgpr5
     KILL killed $vgpr6
 ...
+
+---
+name: post_bundle_kill_and_null_reg_dbginfo
+body:             |
+  bb.0:
+    liveins: $vgpr3_vgpr4, $vgpr5_vgpr6
+
+    ; GCN-LABEL: name: post_bundle_kill_and_null_reg_dbginfo
+    ; GCN: BUNDLE implicit-def $vgpr0, implicit-def $vgpr0_lo16, implicit-def $vgpr0_hi16, implicit-def $vgpr1, implicit-def $vgpr1_lo16, implicit-def $vgpr1_hi16, implicit $vgpr3_vgpr4, implicit $exec, implicit $vgpr5_vgpr6 {
+    ; GCN-NEXT:   $vgpr0 = GLOBAL_LOAD_DWORD $vgpr3_vgpr4, 0, 0, implicit $exec
+    ; GCN-NEXT:   DBG_VALUE $noreg, $noreg
+    ; GCN-NEXT:   $vgpr1 = GLOBAL_LOAD_DWORD $vgpr5_vgpr6, 0, 0, implicit $exec
+    ; GCN-NEXT: }
+    $vgpr0 = GLOBAL_LOAD_DWORD $vgpr3_vgpr4, 0, 0, implicit $exec
+    DBG_VALUE $noreg, $noreg
+    $vgpr1 = GLOBAL_LOAD_DWORD $vgpr5_vgpr6, 0, 0, implicit $exec
+    KILL killed $vgpr3_vgpr4, killed $vgpr5_vgpr6
+...

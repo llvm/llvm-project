@@ -90,6 +90,9 @@ bool SIPostRABundler::isDependentLoad(const MachineInstr &MI) const {
 
 void SIPostRABundler::collectUsedRegUnits(const MachineInstr &MI,
                                           BitVector &UsedRegUnits) const {
+  if (MI.isDebugInstr())
+    return;
+
   for (const MachineOperand &Op : MI.operands()) {
     if (!Op.isReg() || !Op.readsReg())
       continue;
