@@ -18867,12 +18867,20 @@ class EvaluatedExprMarker : public UsedDeclVisitor<EvaluatedExprMarker> {
 public:
   typedef UsedDeclVisitor<EvaluatedExprMarker> Inherited;
   bool SkipLocalVariables;
+  ArrayRef<const Expr *> StopAt;
 
-  EvaluatedExprMarker(Sema &S, bool SkipLocalVariables)
-      : Inherited(S), SkipLocalVariables(SkipLocalVariables) {}
+  EvaluatedExprMarker(Sema &S, bool SkipLocalVariables,
+                      ArrayRef<const Expr *> StopAt)
+      : Inherited(S), SkipLocalVariables(SkipLocalVariables), StopAt(StopAt) {}
 
   void visitUsedDecl(SourceLocation Loc, Decl *D) {
     S.MarkFunctionReferenced(Loc, cast<FunctionDecl>(D));
+  }
+
+  void Visit(Expr *E) {
+    if (std::find(StopAt.begin(), StopAt.end(), E) != StopAt.end())
+      return;
+    Inherited::Visit(E);
   }
 
   void VisitDeclRefExpr(DeclRefExpr *E) {
@@ -18901,9 +18909,11 @@ public:
 ///
 /// \param SkipLocalVariables If true, don't mark local variables as
 /// 'referenced'.
+/// \param StopAt Subexpressions that we shouldn't recurse into.
 void Sema::MarkDeclarationsReferencedInExpr(Expr *E,
-                                            bool SkipLocalVariables) {
-  EvaluatedExprMarker(*this, SkipLocalVariables).Visit(E);
+                                            bool SkipLocalVariables,
+                                            ArrayRef<const Expr*> StopAt) {
+  EvaluatedExprMarker(*this, SkipLocalVariables, StopAt).Visit(E);
 }
 
 /// Emit a diagnostic when statements are reachable.

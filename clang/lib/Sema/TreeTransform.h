@@ -11008,14 +11008,10 @@ ExprResult TreeTransform<Derived>::TransformCXXRewrittenBinaryOperator(
   if (RHS.isInvalid())
     return ExprError();
 
-  if (!getDerived().AlwaysRebuild() &&
-      LHS.get() == Decomp.LHS &&
-      RHS.get() == Decomp.RHS)
-    return E;
-
   // Extract the already-resolved callee declarations so that we can restrict
   // ourselves to using them as the unqualified lookup results when rebuilding.
   UnresolvedSet<2> UnqualLookups;
+  bool ChangedAnyLookups = false;
   Expr *PossibleBinOps[] = {E->getSemanticForm(),
                             const_cast<Expr *>(Decomp.InnerBinOp)};
   for (Expr *PossibleBinOp : PossibleBinOps) {
@@ -11032,7 +11028,21 @@ ExprResult TreeTransform<Derived>::TransformCXXRewrittenBinaryOperator(
         E->getOperatorLoc(), Callee->getFoundDecl()));
     if (!Found)
       return ExprError();
+    if (Found != Callee->getFoundDecl())
+      ChangedAnyLookups = true;
     UnqualLookups.addDecl(Found);
+  }
+
+  if (!getDerived().AlwaysRebuild() && !ChangedAnyLookups &&
+      LHS.get() == Decomp.LHS && RHS.get() == Decomp.RHS) {
+    // Mark all functions used in the rewrite as referenced. Note that when
+    // a < b is rewritten to (a <=> b) < 0, both the <=> and the < might be
+    // function calls, and/or there might be a user-defined conversion sequence
+    // applied to the operands of the <.
+    // FIXME: this is a bit instantiation-specific.
+    const Expr *StopAt[] = {Decomp.LHS, Decomp.RHS};
+    SemaRef.MarkDeclarationsReferencedInExpr(E, false, StopAt);
+    return E;
   }
 
   return getDerived().RebuildCXXRewrittenBinaryOperator(
