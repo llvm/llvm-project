@@ -191,12 +191,12 @@ int VSNPrintf(char *buff, int buff_length,
         break;
       }
       case 'p': {
-        RAW_CHECK(!have_flags, kPrintfFormatsHelp, format);
+        RAW_CHECK_VA(!have_flags, kPrintfFormatsHelp, format);
         result += AppendPointer(&buff, buff_end, va_arg(args, uptr));
         break;
       }
       case 's': {
-        RAW_CHECK(!have_length, kPrintfFormatsHelp, format);
+        RAW_CHECK_VA(!have_length, kPrintfFormatsHelp, format);
         // Only left-justified width is supported.
         CHECK(!have_width || left_justified);
         result += AppendString(&buff, buff_end, left_justified ? -width : width,
@@ -204,17 +204,17 @@ int VSNPrintf(char *buff, int buff_length,
         break;
       }
       case 'c': {
-        RAW_CHECK(!have_flags, kPrintfFormatsHelp, format);
+        RAW_CHECK_VA(!have_flags, kPrintfFormatsHelp, format);
         result += AppendChar(&buff, buff_end, va_arg(args, int));
         break;
       }
       case '%' : {
-        RAW_CHECK(!have_flags, kPrintfFormatsHelp, format);
+        RAW_CHECK_VA(!have_flags, kPrintfFormatsHelp, format);
         result += AppendChar(&buff, buff_end, '%');
         break;
       }
       default: {
-        RAW_CHECK(false, kPrintfFormatsHelp, format);
+        RAW_CHECK_VA(false, kPrintfFormatsHelp, format);
       }
     }
   }
