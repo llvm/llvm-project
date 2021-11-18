@@ -581,6 +581,7 @@ bool Simplex::isMarkedRedundant(unsigned constraintIndex) const {
 void Simplex::markRowRedundant(Unknown &u) {
   assert(u.orientation == Orientation::Row &&
          "Unknown should be in row position!");
+  assert(u.pos >= nRedundant && "Unknown is already marked redundant!");
   swapRows(u.pos, nRedundant);
   ++nRedundant;
   undoLog.emplace_back(UndoLogEntry::UnmarkLastRedundant);
