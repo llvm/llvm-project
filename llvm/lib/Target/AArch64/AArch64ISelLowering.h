@@ -104,6 +104,8 @@ enum NodeType : unsigned {
   // Unpredicated vector instructions
   BIC,
 
+  SRAD_MERGE_OP1,
+
   // Predicated instructions with the result of inactive lanes provided by the
   // last operand.
   FABS_MERGE_PASSTHRU,
