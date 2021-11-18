@@ -131,7 +131,7 @@ __selection_sort(_BidirectionalIterator __first, _BidirectionalIterator __last, 
     _BidirectionalIterator __lm1 = __last;
     for (--__lm1; __first != __lm1; ++__first)
     {
-        _BidirectionalIterator __i = _VSTD::min_element<_BidirectionalIterator, _Compare&>(__first, __last, __comp);
+        _BidirectionalIterator __i = _VSTD::min_element(__first, __last, __comp);
         if (__i != __first)
             swap(*__first, *__i);
     }
@@ -268,13 +268,12 @@ __insertion_sort_move(_BidirectionalIterator __first1, _BidirectionalIterator __
 template <class _Compare, class _RandomAccessIterator>
 void
 __introsort(_RandomAccessIterator __first, _RandomAccessIterator __last, _Compare __comp,
-            typename _VSTD::iterator_traits<_RandomAccessIterator>::difference_type __depth)
+            typename iterator_traits<_RandomAccessIterator>::difference_type __depth)
 {
     typedef typename iterator_traits<_RandomAccessIterator>::difference_type difference_type;
     typedef typename iterator_traits<_RandomAccessIterator>::value_type value_type;
     const difference_type __limit = is_trivially_copy_constructible<value_type>::value &&
                                     is_trivially_copy_assignable<value_type>::value ? 30 : 6;
-    typedef typename __comp_ref_type<_Compare>::type _Comp_ref;
     while (true)
     {
     __restart:
@@ -307,7 +306,7 @@ __introsort(_RandomAccessIterator __first, _RandomAccessIterator __last, _Compar
         if (__depth == 0)
         {
           // Fallback to heap sort as Introsort suggests.
-          _VSTD::__partial_sort<_Comp_ref>(__first, __last, __last, _Comp_ref(__comp));
+          _VSTD::__partial_sort<_Compare>(__first, __last, __last, __comp);
           return;
         }
         --__depth;
@@ -478,7 +477,7 @@ template <class _Compare, class _RandomAccessIterator>
 void __sort(_RandomAccessIterator __first, _RandomAccessIterator __last, _Compare __comp) {
   typedef typename iterator_traits<_RandomAccessIterator>::difference_type difference_type;
   difference_type __depth_limit = 2 * __log2i(__last - __first);
-  __introsort(__first, __last, __comp, __depth_limit);
+  _VSTD::__introsort<_Compare>(__first, __last, __comp, __depth_limit);
 }
 
 template <class _Compare, class _Tp>
