@@ -59,12 +59,13 @@ _LIBCPP_CONSTEXPR_AFTER_CXX17 _RandomAccessIterator __search_n(_RandomAccessIter
                                                                _RandomAccessIterator __last, _Size __count,
                                                                const _Tp& __value_, _BinaryPredicate __pred,
                                                                random_access_iterator_tag) {
+  typedef typename iterator_traits<_RandomAccessIterator>::difference_type difference_type;
   if (__count <= 0)
     return __first;
   _Size __len = static_cast<_Size>(__last - __first);
   if (__len < __count)
     return __last;
-  const _RandomAccessIterator __s = __last - (__count - 1); // Start of pattern match can't go beyond here
+  const _RandomAccessIterator __s = __last - difference_type(__count - 1); // Start of pattern match can't go beyond here
   while (true) {
     // Find first element in sequence that matchs __value_, with a mininum of loop checks
     while (true) {

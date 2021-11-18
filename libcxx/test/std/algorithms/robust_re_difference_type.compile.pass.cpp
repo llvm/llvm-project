@@ -78,6 +78,7 @@ TEST_CONSTEXPR_CXX20 bool all_the_algorithms()
     auto mid = PickyIterator<void**, long>(a+5);
     auto last = PickyIterator<void**, long>(a+10);
     auto first2 = PickyIterator<void**, long long>(b);
+    auto mid2 = PickyIterator<void**, long long>(b+5);
     auto last2 = PickyIterator<void**, long long>(b+10);
     void *value = nullptr;
     int count = 1;
@@ -96,7 +97,7 @@ TEST_CONSTEXPR_CXX20 bool all_the_algorithms()
 #endif
     (void)std::copy(first, last, first2);
     (void)std::copy_backward(first, last, last2);
-    // TODO FIXME (void)std::copy_n(first, count, first2);
+    (void)std::copy_n(first, count, first2);
     (void)std::count(first, last, value);
     (void)std::count_if(first, last, UnaryTrue());
     (void)std::distance(first, last);
@@ -111,8 +112,8 @@ TEST_CONSTEXPR_CXX20 bool all_the_algorithms()
     (void)std::fill(first, last, value);
     (void)std::fill_n(first, count, value);
     (void)std::find(first, last, value);
-    // TODO FIXME (void)std::find_end(first, last, first2, mid2);
-    // TODO FIXME (void)std::find_end(first, last, first2, mid2, std::equal_to<void*>());
+    (void)std::find_end(first, last, first2, mid2);
+    (void)std::find_end(first, last, first2, mid2, std::equal_to<void*>());
     (void)std::find_if(first, last, UnaryTrue());
     (void)std::find_if_not(first, last, UnaryTrue());
     (void)std::for_each(first, last, UnaryVoid());
@@ -146,8 +147,8 @@ TEST_CONSTEXPR_CXX20 bool all_the_algorithms()
     // TODO: lexicographical_compare_three_way
     (void)std::lower_bound(first, last, value);
     (void)std::lower_bound(first, last, value, std::less<void*>());
-    // TODO FIXME (void)std::make_heap(first, last);
-    // TODO FIXME (void)std::make_heap(first, last, std::less<void*>());
+    (void)std::make_heap(first, last);
+    (void)std::make_heap(first, last, std::less<void*>());
     (void)std::max(value, value);
     (void)std::max(value, value, std::less<void*>());
 #if TEST_STD_VER >= 11
@@ -187,15 +188,15 @@ TEST_CONSTEXPR_CXX20 bool all_the_algorithms()
     (void)std::none_of(first, last, UnaryTrue());
     (void)std::nth_element(first, mid, last);
     (void)std::nth_element(first, mid, last, std::less<void*>());
-    // TODO FIXME (void)std::partial_sort(first, mid, last);
-    // TODO FIXME (void)std::partial_sort(first, mid, last, std::less<void*>());
-    // TODO FIXME (void)std::partial_sort_copy(first, last, first2, mid2);
-    // TODO FIXME (void)std::partial_sort_copy(first, last, first2, mid2, std::less<void*>());
+    (void)std::partial_sort(first, mid, last);
+    (void)std::partial_sort(first, mid, last, std::less<void*>());
+    (void)std::partial_sort_copy(first, last, first2, mid2);
+    (void)std::partial_sort_copy(first, last, first2, mid2, std::less<void*>());
     (void)std::partition(first, last, UnaryTrue());
     (void)std::partition_copy(first, last, first2, last2, UnaryTrue());
     (void)std::partition_point(first, last, UnaryTrue());
-    // TODO FIXME (void)std::pop_heap(first, last);
-    // TODO FIXME (void)std::pop_heap(first, last, std::less<void*>());
+    (void)std::pop_heap(first, last);
+    (void)std::pop_heap(first, last, std::less<void*>());
     (void)std::prev_permutation(first, last);
     (void)std::prev_permutation(first, last, std::less<void*>());
     (void)std::push_heap(first, last);
@@ -212,10 +213,10 @@ TEST_CONSTEXPR_CXX20 bool all_the_algorithms()
     (void)std::reverse_copy(first, last, first2);
     (void)std::rotate(first, mid, last);
     (void)std::rotate_copy(first, mid, last, first2);
-    // TODO FIXME (void)std::search(first, last, first2, mid2);
-    // TODO FIXME (void)std::search(first, last, first2, mid2, std::equal_to<void*>());
-    // TODO FIXME (void)std::search_n(first, last, count, value);
-    // TODO FIXME (void)std::search_n(first, last, count, value, std::equal_to<void*>());
+    (void)std::search(first, last, first2, mid2);
+    (void)std::search(first, last, first2, mid2, std::equal_to<void*>());
+    (void)std::search_n(first, last, count, value);
+    (void)std::search_n(first, last, count, value, std::equal_to<void*>());
     (void)std::set_difference(first, mid, mid, last, first2);
     (void)std::set_difference(first, mid, mid, last, first2, std::less<void*>());
     (void)std::set_intersection(first, mid, mid, last, first2);
@@ -228,10 +229,10 @@ TEST_CONSTEXPR_CXX20 bool all_the_algorithms()
     (void)std::shift_left(first, last, count);
     (void)std::shift_right(first, last, count);
 #endif
-    // TODO FIXME (void)std::sort(first, last);
-    // TODO FIXME (void)std::sort(first, last, std::less<void*>());
-    // TODO FIXME (void)std::sort_heap(first, last);
-    // TODO FIXME (void)std::sort_heap(first, last, std::less<void*>());
+    (void)std::sort(first, last);
+    (void)std::sort(first, last, std::less<void*>());
+    (void)std::sort_heap(first, last);
+    (void)std::sort_heap(first, last, std::less<void*>());
     if (!TEST_IS_CONSTANT_EVALUATED) (void)std::stable_partition(first, last, UnaryTrue());
     if (!TEST_IS_CONSTANT_EVALUATED) (void)std::stable_sort(first, last);
     if (!TEST_IS_CONSTANT_EVALUATED) (void)std::stable_sort(first, last, std::less<void*>());

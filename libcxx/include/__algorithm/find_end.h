@@ -95,14 +95,16 @@ template <class _BinaryPredicate, class _RandomAccessIterator1, class _RandomAcc
 _LIBCPP_CONSTEXPR_AFTER_CXX11 _RandomAccessIterator1 __find_end(
     _RandomAccessIterator1 __first1, _RandomAccessIterator1 __last1, _RandomAccessIterator2 __first2,
     _RandomAccessIterator2 __last2, _BinaryPredicate __pred, random_access_iterator_tag, random_access_iterator_tag) {
+  typedef typename iterator_traits<_RandomAccessIterator1>::difference_type _D1;
+  typedef typename iterator_traits<_RandomAccessIterator2>::difference_type _D2;
   // Take advantage of knowing source and pattern lengths.  Stop short when source is smaller than pattern
-  typename iterator_traits<_RandomAccessIterator2>::difference_type __len2 = __last2 - __first2;
+  _D2 __len2 = __last2 - __first2;
   if (__len2 == 0)
     return __last1;
-  typename iterator_traits<_RandomAccessIterator1>::difference_type __len1 = __last1 - __first1;
+  _D1 __len1 = __last1 - __first1;
   if (__len1 < __len2)
     return __last1;
-  const _RandomAccessIterator1 __s = __first1 + (__len2 - 1); // End of pattern match can't go before here
+  const _RandomAccessIterator1 __s = __first1 + _D1(__len2 - 1); // End of pattern match can't go before here
   _RandomAccessIterator1 __l1 = __last1;
   _RandomAccessIterator2 __l2 = __last2;
   --__l2;
