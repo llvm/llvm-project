@@ -8,6 +8,8 @@ endif()
 
 if (MLIR_ENABLE_ROCM_CONVERSIONS)
   set(AMDGPU_LIBS
+    IRReader
+    linker
     MCParser
     AMDGPUAsmParser
     AMDGPUCodeGen
