@@ -931,6 +931,42 @@ exit:
   ret double %res
 }
 
+; We should not mark the fadd as an ordered reduction here as there are
+; more than 2 uses of the instruction
+define float @fadd_multiple_use(i64 %n) {
+; CHECK-ORDERED-LABEL: @fadd_multiple_use
+; CHECK-ORDERED-LABEL-NOT: vector.body
+
+; CHECK-UNORDERED-LABEL: @fadd_multiple_use
+; CHECK-UNORDERED-LABEL-NOT: vector.body
+
+; CHECK-NOT-VECTORIZED-LABEL: @fadd_multiple_use
+; CHECK-NOT-VECTORIZED-NOT: vector.body
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next2, %bb2 ]
+  %red = phi float [ 0.0, %entry ], [ %fadd, %bb2 ]
+  %phi1 = phi i64 [ 0, %entry ], [ %iv.next, %bb2 ]
+  %fadd = fadd float %red, 1.000000e+00
+  %iv.next = add nsw i64 %phi1, 1
+  %cmp = icmp ult i64 %iv, %n
+  br i1 %cmp, label %bb2, label %bb1
+
+bb1:
+  %phi2 = phi float [ %fadd, %for.body ]
+  ret float %phi2
+
+bb2:
+  %iv.next2 = add nuw nsw i64 %iv, 1
+  br i1 false, label %for.end, label %for.body
+
+for.end:
+  %phi3 = phi float [ %fadd, %bb2 ]
+  ret float %phi3
+}
+
 !0 = distinct !{!0, !5, !9, !11}
 !1 = distinct !{!1, !5, !10, !11}
 !2 = distinct !{!2, !6, !9, !11}
