@@ -161,6 +161,59 @@ static TypeCode getTypeCodeForTypeClass(Type::TypeClass id) {
 
 namespace {
 
+std::set<const FileEntry *> GetAllModuleMaps(const HeaderSearch &HS,
+                                             Module *RootModule) {
+  std::set<const FileEntry *> ModuleMaps{};
+  std::set<Module *> ProcessedModules;
+  SmallVector<Module *> ModulesToProcess{RootModule};
+
+  SmallVector<const FileEntry *, 16> FilesByUID;
+  HS.getFileMgr().GetUniqueIDMapping(FilesByUID);
+
+  if (FilesByUID.size() > HS.header_file_size())
+    FilesByUID.resize(HS.header_file_size());
+
+  for (unsigned UID = 0, LastUID = FilesByUID.size(); UID != LastUID; ++UID) {
+    const FileEntry *File = FilesByUID[UID];
+    if (!File)
+      continue;
+
+    const HeaderFileInfo *HFI =
+        HS.getExistingFileInfo(File, /*WantExternal*/ false);
+    if (!HFI || (HFI->isModuleHeader && !HFI->isCompilingModuleHeader))
+      continue;
+
+    for (const auto &KH : HS.findAllModulesForHeader(File)) {
+      if (!KH.getModule())
+        continue;
+      ModulesToProcess.push_back(KH.getModule());
+    }
+  }
+
+  while (!ModulesToProcess.empty()) {
+    auto *CurrentModule = ModulesToProcess.pop_back_val();
+    ProcessedModules.insert(CurrentModule);
+
+    auto *ModuleMapFile =
+        HS.getModuleMap().getModuleMapFileForUniquing(CurrentModule);
+    if (!ModuleMapFile) {
+      continue;
+    }
+
+    ModuleMaps.insert(ModuleMapFile);
+
+    for (auto *ImportedModule : (CurrentModule)->Imports) {
+      if (!ImportedModule ||
+          ProcessedModules.find(ImportedModule) != ProcessedModules.end()) {
+        continue;
+      }
+      ModulesToProcess.push_back(ImportedModule);
+    }
+  }
+
+  return ModuleMaps;
+}
+
 class ASTTypeWriter {
   ASTWriter &Writer;
   ASTWriter::RecordData Record;
@@ -1424,9 +1477,15 @@ void ASTWriter::WriteControlBlock(Preprocessor &PP, ASTContext &Context,
     Stream.EmitRecordWithBlob(AbbrevCode, Record, origDir);
   }
 
+  std::set<const FileEntry *> AffectingModuleMaps;
+  if (WritingModule) {
+    AffectingModuleMaps =
+        GetAllModuleMaps(PP.getHeaderSearchInfo(), WritingModule);
+  }
+
   WriteInputFiles(Context.SourceMgr,
                   PP.getHeaderSearchInfo().getHeaderSearchOpts(),
-                  PP.getLangOpts().Modules);
+                  AffectingModuleMaps);
   Stream.ExitBlock();
 }
 
@@ -1444,9 +1503,9 @@ struct InputFileEntry {
 
 } // namespace
 
-void ASTWriter::WriteInputFiles(SourceManager &SourceMgr,
-                                HeaderSearchOptions &HSOpts,
-                                bool Modules) {
+void ASTWriter::WriteInputFiles(
+    SourceManager &SourceMgr, HeaderSearchOptions &HSOpts,
+    std::set<const FileEntry *> &AffectingModuleMaps) {
   using namespace llvm;
 
   Stream.EnterSubblock(INPUT_FILES_BLOCK_ID, 4);
@@ -1485,6 +1544,16 @@ void ASTWriter::WriteInputFiles(SourceManager &SourceMgr,
     const SrcMgr::ContentCache *Cache = &File.getContentCache();
     if (!Cache->OrigEntry)
       continue;
+
+    if (isModuleMap(File.getFileCharacteristic()) &&
+        !isSystem(File.getFileCharacteristic()) &&
+        !AffectingModuleMaps.empty() &&
+        AffectingModuleMaps.find(Cache->OrigEntry) ==
+            AffectingModuleMaps.end()) {
+      SkippedModuleMaps.insert(Cache->OrigEntry);
+      // Do not emit modulemaps that do not affect current module.
+      continue;
+    }
 
     InputFileEntry Entry;
     Entry.File = Cache->OrigEntry;
@@ -1999,11 +2068,17 @@ void ASTWriter::WriteSourceManagerBlock(SourceManager &SourceMgr,
     Record.push_back(SLoc->getOffset() - 2);
     if (SLoc->isFile()) {
       const SrcMgr::FileInfo &File = SLoc->getFile();
+      const SrcMgr::ContentCache *Content = &File.getContentCache();
+      if (Content->OrigEntry && !SkippedModuleMaps.empty() &&
+          SkippedModuleMaps.find(Content->OrigEntry) !=
+              SkippedModuleMaps.end()) {
+        // Do not emit files that were not listed as inputs.
+        continue;
+      }
       AddSourceLocation(File.getIncludeLoc(), Record);
       Record.push_back(File.getFileCharacteristic()); // FIXME: stable encoding
       Record.push_back(File.hasLineDirectives());
 
-      const SrcMgr::ContentCache *Content = &File.getContentCache();
       bool EmitBlob = false;
       if (Content->OrigEntry) {
         assert(Content->OrigEntry == Content->ContentsEntry &&
