@@ -173,3 +173,10 @@ func @emboxproc_test() {
 
 // Test that `fir.unboxproc` and `fir.boxproc_host` also fails to be legalized.
 // At the moment these cannot be tested since the `fir.boxproc` type does not have a conversion.
+
+// -----
+
+// Test `fir.end` conversion failure. Not implemented yet.
+
+// expected-error@+1{{failed to legalize operation 'fir.end'}}
+"fir.end"() : () -> ()
