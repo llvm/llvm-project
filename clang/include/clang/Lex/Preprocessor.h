@@ -1368,7 +1368,7 @@ public:
   ///
   /// Emits a diagnostic, doesn't enter the file, and returns true on error.
   bool EnterSourceFile(FileID FID, const DirectoryLookup *Dir,
-                       SourceLocation Loc);
+                       SourceLocation Loc, bool IsFirstIncludeOfFile = true);
 
   /// Add a Macro to the top of the include stack and start lexing
   /// tokens from it instead of the current buffer.

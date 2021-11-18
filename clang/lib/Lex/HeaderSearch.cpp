@@ -1310,8 +1310,11 @@ void HeaderSearch::MarkFileModuleHeader(const FileEntry *FE,
 
 bool HeaderSearch::ShouldEnterIncludeFile(Preprocessor &PP,
                                           const FileEntry *File, bool isImport,
-                                          bool ModulesEnabled, Module *M) {
+                                          bool ModulesEnabled, Module *M,
+                                          bool &IsFirstIncludeOfFile) {
   ++NumIncluded; // Count # of attempted #includes.
+
+  IsFirstIncludeOfFile = false;
 
   // Get information about this file.
   HeaderFileInfo &FileInfo = getFileInfo(File);
@@ -1386,6 +1389,8 @@ bool HeaderSearch::ShouldEnterIncludeFile(Preprocessor &PP,
 
   // Increment the number of times this file has been included.
   ++FileInfo.NumIncludes;
+
+  IsFirstIncludeOfFile = FileInfo.NumIncludes == 1;
 
   return true;
 }
