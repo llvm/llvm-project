@@ -1627,10 +1627,10 @@ void Module::RegisterXcodeSDK(llvm::StringRef sdk_name, llvm::StringRef sysroot)
 bool Module::MergeArchitecture(const ArchSpec &arch_spec) {
   if (!arch_spec.IsValid())
     return false;
-  LLDB_LOG(GetLogIfAllCategoriesSet(LIBLLDB_LOG_OBJECT | LIBLLDB_LOG_MODULES),
-           "module has arch %s, merging/replacing with arch %s",
-           m_arch.GetTriple().getTriple().c_str(),
-           arch_spec.GetTriple().getTriple().c_str());
+  LLDB_LOGF(GetLogIfAllCategoriesSet(LIBLLDB_LOG_OBJECT | LIBLLDB_LOG_MODULES),
+            "module has arch %s, merging/replacing with arch %s",
+            m_arch.GetTriple().getTriple().c_str(),
+            arch_spec.GetTriple().getTriple().c_str());
   if (!m_arch.IsCompatibleMatch(arch_spec)) {
     // The new architecture is different, we just need to replace it.
     return SetArchitecture(arch_spec);
