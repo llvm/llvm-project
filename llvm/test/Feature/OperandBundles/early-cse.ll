@@ -1,4 +1,4 @@
-; RUN: opt -S -early-cse -earlycse-debug-hash < %s | FileCheck %s
+; RUN: opt -S -passes=early-cse -earlycse-debug-hash < %s | FileCheck %s
 
 ; While it is normally okay to do memory optimizations over calls to
 ; @readonly_function and @readnone_function, we cannot do that if
