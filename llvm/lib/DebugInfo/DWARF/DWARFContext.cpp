@@ -693,24 +693,15 @@ void DWARFContext::dump(
     getDebugNames().dump(OS);
 }
 
-DWARFTypeUnit *DWARFContext::getTypeUnitForHash(uint16_t Version,
-                                                uint64_t Hash) {
-  // FIXME: Include support for Split DWARF here
-  parseNormalUnits();
-
-  auto IsTypeWithHash = [&](const std::unique_ptr<DWARFUnit> &Unit) {
-    DWARFTypeUnit *TU = dyn_cast<DWARFTypeUnit>(Unit.get());
-    if (!TU)
-      return false;
-    return TU->getTypeHash() == Hash;
-  };
-  auto I = llvm::find_if(types_section_units(), IsTypeWithHash);
-  if (I != types_section_units().end())
-    return cast<DWARFTypeUnit>(I->get());
-  // Search normal .debug_info units in case it's a DWARFv5 type unit.
-  I = llvm::find_if(normal_units(), IsTypeWithHash);
-  if (I != types_section_units().end())
-    return cast<DWARFTypeUnit>(I->get());
+DWARFTypeUnit *DWARFContext::getTypeUnitForHash(uint16_t Version, uint64_t Hash,
+                                                bool IsDWO) {
+  // FIXME: Check for/use the tu_index here, if there is one.
+  for (const auto &U : IsDWO ? dwo_units() : normal_units()) {
+    if (DWARFTypeUnit *TU = dyn_cast<DWARFTypeUnit>(U.get())) {
+      if (TU->getTypeHash() == Hash)
+        return TU;
+    }
+  }
   return nullptr;
 }
 
