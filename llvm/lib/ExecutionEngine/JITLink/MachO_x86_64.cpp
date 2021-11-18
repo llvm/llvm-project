@@ -272,7 +272,7 @@ private:
         Symbol *TargetSymbol = nullptr;
         uint64_t Addend = 0;
 
-        // Sanity check the relocation kind.
+        // Validate the relocation kind.
         auto MachORelocKind = getRelocKind(RI);
         if (!MachORelocKind)
           return MachORelocKind.takeError();
