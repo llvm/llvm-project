@@ -680,10 +680,6 @@ bool Linux::IsAArch64OutlineAtomicsDefault(const ArgList &Args) const {
   return true;
 }
 
-bool Linux::isNoExecStackDefault() const {
-    return getTriple().isAndroid();
-}
-
 bool Linux::IsMathErrnoDefault() const {
   if (getTriple().isAndroid())
     return false;
