@@ -11,6 +11,8 @@
 //
 //===----------------------------------------------------------------------===//
 #include "mlir/Dialect/GPU/Passes.h"
+#include "mlir/IR/Location.h"
+#include "mlir/IR/MLIRContext.h"
 
 #if MLIR_GPU_TO_HSACO_PASS_ENABLE
 #include "mlir/Pass/Pass.h"
@@ -32,8 +34,11 @@
 #include "llvm/Support/FileUtilities.h"
 #include "llvm/Support/LineIterator.h"
 #include "llvm/Support/Program.h"
+#include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/WithColor.h"
+
+#include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetOptions.h"
 
 #include "lld/Common/Driver.h"
@@ -170,8 +175,11 @@ SerializeToHsacoPass::assembleIsa(const std::string &isa) {
   std::unique_ptr<llvm::MCAsmInfo> mai(
       target->createMCAsmInfo(*mri, this->triple, mcOptions));
   mai->setRelaxELFRelocations(true);
+  std::unique_ptr<llvm::MCSubtargetInfo> sti(
+      target->createMCSubtargetInfo(this->triple, this->chip, this->features));
 
-  llvm::MCContext ctx(triple, mai.get(), mri.get(), &srcMgr, &mcOptions);
+  llvm::MCContext ctx(triple, mai.get(), mri.get(), sti.get(), &srcMgr,
+                      &mcOptions);
   std::unique_ptr<llvm::MCObjectFileInfo> mofi(target->createMCObjectFileInfo(
       ctx, /*PIC=*/false, /*LargeCodeModel=*/false));
   ctx.setObjectFileInfo(mofi.get());
@@ -182,8 +190,6 @@ SerializeToHsacoPass::assembleIsa(const std::string &isa) {
 
   std::unique_ptr<llvm::MCStreamer> mcStreamer;
   std::unique_ptr<llvm::MCInstrInfo> mcii(target->createMCInstrInfo());
-  std::unique_ptr<llvm::MCSubtargetInfo> sti(
-      target->createMCSubtargetInfo(this->triple, this->chip, this->features));
 
   llvm::MCCodeEmitter *ce = target->createMCCodeEmitter(*mcii, *mri, ctx);
   llvm::MCAsmBackend *mab = target->createMCAsmBackend(*sti, *mri, mcOptions);
