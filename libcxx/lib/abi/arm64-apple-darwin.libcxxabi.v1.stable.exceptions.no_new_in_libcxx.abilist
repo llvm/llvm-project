@@ -1646,6 +1646,7 @@
 {'is_defined': True, 'name': '__ZNSt3__14stolERKNS_12basic_stringIwNS_11char_traitsIwEENS_9allocatorIwEEEEPmi', 'type': 'FUNC'}
 {'is_defined': True, 'name': '__ZNSt3__14wcinE', 'size': 0, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '__ZNSt3__15alignEmmRPvRm', 'type': 'FUNC'}
+{'is_defined': True, 'name': '__ZNSt3__15ctypeIcE10table_sizeE', 'size': 0, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '__ZNSt3__15ctypeIcE13classic_tableEv', 'type': 'FUNC'}
 {'is_defined': True, 'name': '__ZNSt3__15ctypeIcE2idE', 'size': 0, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '__ZNSt3__15ctypeIcEC1EPKjbm', 'type': 'FUNC'}

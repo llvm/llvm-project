@@ -1337,6 +1337,7 @@
 {'is_defined': True, 'name': '_ZNSt3__14stolERKNS_12basic_stringIwNS_11char_traitsIwEENS_9allocatorIwEEEEPmi', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt3__14wcinE', 'size': 168, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZNSt3__15alignEmmRPvRm', 'type': 'FUNC'}
+{'is_defined': True, 'name': '_ZNSt3__15ctypeIcE10table_sizeE', 'size': 8, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZNSt3__15ctypeIcE13classic_tableEv', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt3__15ctypeIcE21__classic_lower_tableEv', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt3__15ctypeIcE21__classic_upper_tableEv', 'type': 'FUNC'}
