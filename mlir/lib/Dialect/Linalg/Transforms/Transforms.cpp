@@ -107,6 +107,15 @@ void mlir::linalg::LinalgTransformationFilter::
         rewriter.getStringAttr(LinalgTransforms::kLinalgTransformMarker));
 }
 
+bool mlir::linalg::LinalgTransformationFilter::hasReplacementFilter(
+    Operation *op) const {
+  if (!replacement)
+    return false;
+  auto attr = op->getAttr(LinalgTransforms::kLinalgTransformMarker)
+                  .dyn_cast<StringAttr>();
+  return attr && attr == replacement.getValue();
+}
+
 LinalgTilingOptions &
 mlir::linalg::LinalgTilingOptions::setTileSizes(ArrayRef<int64_t> ts) {
   assert(!tileSizeComputationFunction && "tile sizes already set");
