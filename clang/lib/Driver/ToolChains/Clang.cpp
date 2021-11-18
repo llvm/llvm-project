@@ -2210,6 +2210,11 @@ void Clang::AddX86TargetArgs(const ArgList &Args,
     CmdArgs.push_back("-x86-asm-syntax=intel");
   }
 
+  if (Arg *A = Args.getLastArg(options::OPT_mskip_rax_setup,
+                               options::OPT_mno_skip_rax_setup))
+    if (A->getOption().matches(options::OPT_mskip_rax_setup))
+      CmdArgs.push_back(Args.MakeArgString("-mskip-rax-setup"));
+
   // Set flags to support MCU ABI.
   if (Args.hasFlag(options::OPT_miamcu, options::OPT_mno_iamcu, false)) {
     CmdArgs.push_back("-mfloat-abi");

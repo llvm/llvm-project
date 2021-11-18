@@ -456,6 +456,9 @@ CODEGENOPT(EmitIEEENaNCompliantInsts, 1, 1)
 ENUM_CODEGENOPT(SwiftAsyncFramePointer, SwiftAsyncFramePointerKind, 2,
                 SwiftAsyncFramePointerKind::Always)
 
+/// Whether to skip RAX setup when passing variable arguments (x86 only).
+CODEGENOPT(SkipRaxSetup, 1, 0)
+
 #undef CODEGENOPT
 #undef ENUM_CODEGENOPT
 #undef VALUE_CODEGENOPT
