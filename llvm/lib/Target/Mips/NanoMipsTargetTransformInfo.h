@@ -47,6 +47,8 @@ public:
                                     const APInt &Imm, Type *Ty,
                                     TTI::TargetCostKind CostKind,
                                     Instruction *Inst = nullptr);
+  void getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
+                               TTI::UnrollingPreferences &UP);
 };
 
 } // end namespace llvm
