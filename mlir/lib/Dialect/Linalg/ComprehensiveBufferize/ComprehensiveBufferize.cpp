@@ -1114,16 +1114,19 @@ LogicalResult mlir::linalg::comprehensive_bufferize::bufferizeOp(
   if (isa<memref::BufferCastOp, memref::TensorLoadOp>(op))
     return success();
 
+  // Check if op has tensor results or operands.
+  auto isaTensor = [](Type t) { return t.isa<TensorType>(); };
+  bool hasTensorResult = any_of(op->getResultTypes(), isaTensor);
+  bool hasTensorOperand = any_of(op->getOperandTypes(), isaTensor);
+  if (!hasTensorResult && !hasTensorOperand)
+    return success();
+
   // Bufferize using `BufferizableOpInterface`.
   if (auto bufferizableOp = dyn_cast<BufferizableOpInterface>(op))
     return bufferizableOp.bufferize(b, state);
 
   // Other op with tensors. No bufferization method specified.
-  auto isaTensor = [](Type t) { return t.isa<TensorType>(); };
-  if (any_of(op->getOperandTypes(), isaTensor) ||
-      any_of(op->getResultTypes(), isaTensor))
-    return op->emitError() << "unsupported op with tensors";
-  return success();
+  return op->emitError() << "unsupported op with tensors";
 }
 
 static LogicalResult bufferizeFuncOpInternals(
@@ -2482,10 +2485,9 @@ struct TransferReadOpInterface
     OpBuilder::InsertionGuard g(b);
     b.setInsertionPoint(op);
 
-    if (transferReadOp.getShapedType().isa<MemRefType>())
-      return failure();
-
     // TransferReadOp always reads from the bufferized op.source().
+    assert(transferReadOp.getShapedType().isa<TensorType>() &&
+           "only tensor types expected");
     Value v = state.lookupBuffer(transferReadOp.source());
     transferReadOp.sourceMutable().assign(v);
     return success();
@@ -2530,12 +2532,11 @@ struct TransferWriteOpInterface
     OpBuilder::InsertionGuard g(b);
     b.setInsertionPoint(op);
 
-    if (writeOp.getShapedType().isa<MemRefType>())
-      return failure();
-
     // Create a new transfer_write on buffer that doesn't have a return value.
     // Leave the previous transfer_write to dead code as it still has uses at
     // this point.
+    assert(writeOp.getShapedType().isa<TensorType>() &&
+           "only tensor types expected");
     Value resultBuffer = getResultBuffer(b, op->getResult(0), state);
     if (!resultBuffer)
       return failure();
