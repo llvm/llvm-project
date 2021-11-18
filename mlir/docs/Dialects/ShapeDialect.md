@@ -3,7 +3,7 @@
 Description of operations & types within the Shape dialect as well as their
 [usage](#different-stages-of-lowering-shape-dialect).
 
-[include "Dialects/ShapeDialect.md"]
+[include "Dialects/ShapeDialectOps.md"]
 
 ## Different stages of lowering Shape dialect
 
