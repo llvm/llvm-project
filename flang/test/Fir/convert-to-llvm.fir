@@ -690,6 +690,38 @@ func @convert_complex16(%arg0 : !fir.complex<16>) -> !fir.complex<2> {
 
 // -----
 
+// Test constc.
+
+func @test_constc4() -> !fir.complex<4> {
+  %0 = fir.constc (#fir.real<4, 1.4>, #fir.real<4, 2.3>) : !fir.complex<4>
+  return %0 : !fir.complex<4>
+}
+
+// CHECK-LABEL: @test_constc4
+// CHECK_SAME: () -> !llvm.struct<(f32, f32)>
+// CHECK-DAG: [[rp:%.*]] = llvm.mlir.constant(1.400000e+00 : f32) : f32
+// CHECK-DAG: [[ip:%.*]] = llvm.mlir.constant(2.300000e+00 : f32) : f32
+// CHECK: [[undef:%.*]] = llvm.mlir.undef : !llvm.struct<(f32, f32)>
+// CHECK: [[withr:%.*]] = llvm.insertvalue [[rp]], [[undef]][0 : i32] : !llvm.struct<(f32, f32)>
+// CHECK: [[full:%.*]] = llvm.insertvalue [[ip]], [[withr]][1 : i32] : !llvm.struct<(f32, f32)>
+// CHECK: return [[full]] : !llvm.struct<(f32, f32)>
+
+func @test_constc8() -> !fir.complex<8> {
+  %0 = fir.constc (#fir.real<8, 1.8>, #fir.real<8, 2.3>) : !fir.complex<8>
+  return %0 : !fir.complex<8>
+}
+
+// CHECK-LABEL: @test_constc8
+// CHECK_SAME: () -> !llvm.struct<(f64, f64)>
+// CHECK-DAG: [[rp:%.*]] = llvm.mlir.constant(1.800000e+00 : f64) : f64
+// CHECK-DAG: [[ip:%.*]] = llvm.mlir.constant(2.300000e+00 : f64) : f64
+// CHECK: [[undef:%.*]] = llvm.mlir.undef : !llvm.struct<(f64, f64)>
+// CHECK: [[withr:%.*]] = llvm.insertvalue [[rp]], [[undef]][0 : i32] : !llvm.struct<(f64, f64)>
+// CHECK: [[full:%.*]] = llvm.insertvalue [[ip]], [[withr]][1 : i32] : !llvm.struct<(f64, f64)>
+// CHECK: return [[full]] : !llvm.struct<(f64, f64)>
+
+// -----
+
 // Test `fir.store` --> `llvm.store` conversion
 
 func @test_store_index(%val_to_store : index, %addr : !fir.ref<index>) {
