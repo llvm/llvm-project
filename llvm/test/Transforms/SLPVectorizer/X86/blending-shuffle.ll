@@ -60,7 +60,7 @@ define <4 x i8> @h_undef(<4 x i8> %x, <4 x i8> %y) {
 
 define i8 @i(<4 x i8> %x, <4 x i8> %y) {
 ; CHECK-LABEL: @i(
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i8> [[X:%.*]], <4 x i8> [[Y:%.*]], <4 x i32> <i32 0, i32 3, i32 5, i32 6>
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i8> [[Y:%.*]], <4 x i8> [[X:%.*]], <4 x i32> <i32 2, i32 1, i32 7, i32 4>
 ; CHECK-NEXT:    [[TMP2:%.*]] = mul <4 x i8> [[TMP1]], [[TMP1]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = call i8 @llvm.vector.reduce.add.v4i8(<4 x i8> [[TMP2]])
 ; CHECK-NEXT:    ret i8 [[TMP3]]
