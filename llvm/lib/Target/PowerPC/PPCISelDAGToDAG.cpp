@@ -5888,15 +5888,15 @@ void PPCDAGToDAGISel::Select(SDNode *N) {
     // v16i8 LD_SPLAT addr
     // ======>
     // Mask = LVSR/LVSL 0, addr
-    // LoadLow = LXV 0, addr
+    // LoadLow = LVX 0, addr
     // Perm = VPERM LoadLow, LoadLow, Mask
     // Splat = VSPLTB 15/0, Perm
     //
     // v8i16 LD_SPLAT addr
     // ======>
     // Mask = LVSR/LVSL 0, addr
-    // LoadLow = LXV 0, addr
-    // LoadHigh = LXV (LI, 1), addr
+    // LoadLow = LVX 0, addr
+    // LoadHigh = LVX (LI, 1), addr
     // Perm = VPERM LoadLow, LoadHigh, Mask
     // Splat = VSPLTH 7/0, Perm
     unsigned SplatOp = (Type == MVT::v16i8) ? PPC::VSPLTB : PPC::VSPLTH;
