@@ -2,10 +2,14 @@
 
 	.text
 
-# CHECK: error: displacement exceeds uint12
+# CHECK:      error: operand out of range (4096 not between 0 and 4095)
+# CHECK-NEXT:        la %r1, b-a(%r1)
+# CHECK-NEXT:        ^
 	la    %r1, b-a(%r1)
 
-# CHECK: error: displacement exceeds int20
+# CHECK-NEXT: error: operand out of range (524288 not between -524288 and 524287)
+# CHECK-NEXT:        lay   %r1, d-c(%r1)
+# CHECK-NEXT:        ^
         lay   %r1, d-c(%r1)
 
 # CHECK-NOT: error

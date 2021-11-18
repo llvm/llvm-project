@@ -28,25 +28,43 @@ static uint64_t extractBitsForFixup(MCFixupKind Kind, uint64_t Value,
   if (Kind < FirstTargetFixupKind)
     return Value;
 
+  auto checkFixupInRange = [&](int64_t Min, int64_t Max) -> bool {
+    int64_t SVal = int64_t(Value);
+    if (SVal < Min || SVal > Max) {
+      Ctx.reportError(Fixup.getLoc(), "operand out of range (" + Twine(SVal) +
+                                          " not between " + Twine(Min) +
+                                          " and " + Twine(Max) + ")");
+      return false;
+    }
+    return true;
+  };
+
+  auto handlePCRelFixupValue = [&](unsigned W) -> uint64_t {
+    if (Value % 2 != 0)
+      Ctx.reportError(Fixup.getLoc(), "Non-even PC relative offset.");
+    if (!checkFixupInRange(minIntN(W) * 2, maxIntN(W) * 2))
+      return 0;
+    return (int64_t)Value / 2;
+  };
+
   switch (unsigned(Kind)) {
   case SystemZ::FK_390_PC12DBL:
+    return handlePCRelFixupValue(12);
   case SystemZ::FK_390_PC16DBL:
+    return handlePCRelFixupValue(16);
   case SystemZ::FK_390_PC24DBL:
+    return handlePCRelFixupValue(24);
   case SystemZ::FK_390_PC32DBL:
-    return (int64_t)Value / 2;
+    return handlePCRelFixupValue(32);
 
   case SystemZ::FK_390_12:
-    if (!isUInt<12>(Value)) {
-      Ctx.reportError(Fixup.getLoc(), "displacement exceeds uint12");
+    if (!checkFixupInRange(0, maxUIntN(12)))
       return 0;
-    }
     return Value;
 
   case SystemZ::FK_390_20: {
-    if (!isInt<20>(Value)) {
-      Ctx.reportError(Fixup.getLoc(), "displacement exceeds int20");
+    if (!checkFixupInRange(minIntN(20), maxIntN(20)))
       return 0;
-    }
     // The high byte of a 20 bit displacement value comes first.
     uint64_t DLo = Value & 0xfff;
     uint64_t DHi = (Value >> 12) & 0xff;
