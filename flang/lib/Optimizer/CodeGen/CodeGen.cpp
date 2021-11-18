@@ -532,6 +532,20 @@ struct StringLitOpConversion : public FIROpConversion<fir::StringLitOp> {
   }
 };
 
+/// Lower `fir.boxproc_host` operation. Extracts the host pointer from the
+/// boxproc.
+/// TODO: Part of supporting Fortran 2003 procedure pointers.
+struct BoxProcHostOpConversion : public FIROpConversion<fir::BoxProcHostOp> {
+  using FIROpConversion::FIROpConversion;
+
+  mlir::LogicalResult
+  matchAndRewrite(fir::BoxProcHostOp boxprochost, OpAdaptor adaptor,
+                  mlir::ConversionPatternRewriter &rewriter) const override {
+    return rewriter.notifyMatchFailure(
+        boxprochost, "fir.boxproc_host codegen is not implemented yet");
+  }
+};
+
 /// Lower `fir.box_tdesc` to the sequence of operations to extract the type
 /// descriptor from the box.
 struct BoxTypeDescOpConversion : public FIROpConversion<fir::BoxTypeDescOp> {
@@ -1529,6 +1543,20 @@ struct EmboxOpConversion : public EmboxCommonConversion<fir::EmboxOp> {
   }
 };
 
+/// Lower `fir.emboxproc` operation. Creates a procedure box.
+/// TODO: Part of supporting Fortran 2003 procedure pointers.
+struct EmboxProcOpConversion : public FIROpConversion<fir::EmboxProcOp> {
+  using FIROpConversion::FIROpConversion;
+
+  mlir::LogicalResult
+  matchAndRewrite(fir::EmboxProcOp emboxproc, OpAdaptor adaptor,
+                  mlir::ConversionPatternRewriter &rewriter) const override {
+    return rewriter.notifyMatchFailure(
+        emboxproc, "fir.emboxproc codegen is not implemented yet");
+  }
+};
+
+
 // Code shared between insert_value and extract_value Ops.
 struct ValueOpCommon {
   // Translate the arguments pertaining to any multidimensional array to
@@ -2035,6 +2063,20 @@ struct UnboxCharOpConversion : public FIROpConversion<fir::UnboxCharOp> {
   }
 };
 
+/// Lower `fir.unboxproc` operation. Unbox a procedure box value, yielding its
+/// components.
+/// TODO: Part of supporting Fortran 2003 procedure pointers.
+struct UnboxProcOpConversion : public FIROpConversion<fir::UnboxProcOp> {
+  using FIROpConversion::FIROpConversion;
+
+  mlir::LogicalResult
+  matchAndRewrite(fir::UnboxProcOp unboxproc, OpAdaptor adaptor,
+                  mlir::ConversionPatternRewriter &rewriter) const override {
+    return rewriter.notifyMatchFailure(
+        unboxproc, "fir.unboxproc codegen is not implemented yet");
+  }
+};
+
 } // namespace
 
 namespace {
@@ -2061,20 +2103,21 @@ public:
         AbsentOpConversion, AddcOpConversion, AddrOfOpConversion,
         AllocaOpConversion, BoxAddrOpConversion, BoxCharLenOpConversion,
         BoxDimsOpConversion, BoxEleSizeOpConversion, BoxIsAllocOpConversion,
-        BoxIsArrayOpConversion, BoxIsPtrOpConversion, BoxRankOpConversion,
-        BoxTypeDescOpConversion, CallOpConversion, CmpcOpConversion,
-        ConstcOpConversion, ConvertOpConversion, DispatchOpConversion,
-        DispatchTableOpConversion, DTEntryOpConversion, DivcOpConversion,
-        EmboxOpConversion, EmboxCharOpConversion, ExtractValueOpConversion,
-        HasValueOpConversion, GenTypeDescOpConversion, GlobalLenOpConversion,
-        GlobalOpConversion, InsertOnRangeOpConversion, InsertValueOpConversion,
+        BoxIsArrayOpConversion, BoxIsPtrOpConversion, BoxProcHostOpConversion,
+        BoxRankOpConversion, BoxTypeDescOpConversion, CallOpConversion,
+        CmpcOpConversion, ConstcOpConversion, ConvertOpConversion,
+        DispatchOpConversion, DispatchTableOpConversion, DTEntryOpConversion,
+        DivcOpConversion, EmboxOpConversion, EmboxCharOpConversion,
+        EmboxProcOpConversion, ExtractValueOpConversion, HasValueOpConversion,
+        GenTypeDescOpConversion, GlobalLenOpConversion, GlobalOpConversion,
+        InsertOnRangeOpConversion, InsertValueOpConversion,
         IsPresentOpConversion, LoadOpConversion, NegcOpConversion,
         MulcOpConversion, SelectCaseOpConversion, SelectOpConversion,
         SelectRankOpConversion, SelectTypeOpConversion, ShapeOpConversion,
         ShapeShiftOpConversion, ShiftOpConversion, SliceOpConversion,
         StoreOpConversion, StringLitOpConversion, SubcOpConversion,
-        UnboxCharOpConversion, UndefOpConversion, UnreachableOpConversion,
-        ZeroOpConversion>(typeConverter);
+        UnboxCharOpConversion, UnboxProcOpConversion, UndefOpConversion,
+        UnreachableOpConversion, ZeroOpConversion>(typeConverter);
     mlir::populateStdToLLVMConversionPatterns(typeConverter, pattern);
     mlir::arith::populateArithmeticToLLVMConversionPatterns(typeConverter,
                                                             pattern);
