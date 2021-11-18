@@ -729,28 +729,6 @@ static bool tryToShortenBegin(Instruction *DeadI,
   return false;
 }
 
-static bool removePartiallyOverlappedStores(const DataLayout &DL,
-                                            InstOverlapIntervalsTy &IOL,
-                                            const TargetLibraryInfo &TLI) {
-  bool Changed = false;
-  for (auto OI : IOL) {
-    Instruction *DeadI = OI.first;
-    MemoryLocation Loc = getLocForWrite(DeadI, TLI);
-    assert(isRemovable(DeadI) && "Expect only removable instruction");
-
-    const Value *Ptr = Loc.Ptr->stripPointerCasts();
-    int64_t DeadStart = 0;
-    uint64_t DeadSize = Loc.Size.getValue();
-    GetPointerBaseWithConstantOffset(Ptr, DeadStart, DL);
-    OverlapIntervalsTy &IntervalMap = OI.second;
-    Changed |= tryToShortenEnd(DeadI, IntervalMap, DeadStart, DeadSize);
-    if (IntervalMap.empty())
-      continue;
-    Changed |= tryToShortenBegin(DeadI, IntervalMap, DeadStart, DeadSize);
-  }
-  return Changed;
-}
-
 static Constant *
 tryToMergePartialOverlappingStores(StoreInst *KillingI, StoreInst *DeadI,
                                    int64_t KillingOffset, int64_t DeadOffset,
@@ -1942,6 +1920,26 @@ struct DSEState {
     return false;
   }
 
+  bool removePartiallyOverlappedStores(InstOverlapIntervalsTy &IOL) {
+    bool Changed = false;
+    for (auto OI : IOL) {
+      Instruction *DeadI = OI.first;
+      MemoryLocation Loc = getLocForWrite(DeadI, TLI);
+      assert(isRemovable(DeadI) && "Expect only removable instruction");
+
+      const Value *Ptr = Loc.Ptr->stripPointerCasts();
+      int64_t DeadStart = 0;
+      uint64_t DeadSize = Loc.Size.getValue();
+      GetPointerBaseWithConstantOffset(Ptr, DeadStart, DL);
+      OverlapIntervalsTy &IntervalMap = OI.second;
+      Changed |= tryToShortenEnd(DeadI, IntervalMap, DeadStart, DeadSize);
+      if (IntervalMap.empty())
+        continue;
+      Changed |= tryToShortenBegin(DeadI, IntervalMap, DeadStart, DeadSize);
+    }
+    return Changed;
+  }
+
   /// Eliminates writes to locations where the value that is being written
   /// is already stored at the same location.
   bool eliminateRedundantStoresOfExistingValues() {
@@ -2154,7 +2152,7 @@ static bool eliminateDeadStores(Function &F, AliasAnalysis &AA, MemorySSA &MSSA,
 
   if (EnablePartialOverwriteTracking)
     for (auto &KV : State.IOLs)
-      MadeChange |= removePartiallyOverlappedStores(State.DL, KV.second, TLI);
+      MadeChange |= State.removePartiallyOverlappedStores(KV.second);
 
   MadeChange |= State.eliminateRedundantStoresOfExistingValues();
   MadeChange |= State.eliminateDeadWritesAtEndOfFunction();
