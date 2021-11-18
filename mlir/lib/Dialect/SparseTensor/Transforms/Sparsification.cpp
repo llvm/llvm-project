@@ -391,7 +391,8 @@ static Value genVectorReducInit(CodeGen &codegen, PatternRewriter &rewriter,
     // Initialize reduction vector to: | 0 | .. | 0 | r |
     Attribute zero = rewriter.getZeroAttr(vtp);
     Value vec = rewriter.create<arith::ConstantOp>(loc, vtp, zero);
-    return rewriter.create<vector::InsertElementOp>(loc, r, vec, 0);
+    return rewriter.create<vector::InsertElementOp>(
+        loc, r, vec, rewriter.create<arith::ConstantIndexOp>(loc, 0));
   }
   case kProduct: {
     // Initialize reduction vector to: | 1 | .. | 1 | r |
@@ -403,7 +404,8 @@ static Value genVectorReducInit(CodeGen &codegen, PatternRewriter &rewriter,
       one = rewriter.getIntegerAttr(etp, 1);
     Value vec = rewriter.create<arith::ConstantOp>(
         loc, vtp, DenseElementsAttr::get(vtp, one));
-    return rewriter.create<vector::InsertElementOp>(loc, r, vec, 0);
+    return rewriter.create<vector::InsertElementOp>(
+        loc, r, vec, rewriter.create<arith::ConstantIndexOp>(loc, 0));
   }
   case kAnd:
   case kOr:

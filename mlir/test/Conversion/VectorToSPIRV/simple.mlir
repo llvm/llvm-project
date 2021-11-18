@@ -80,6 +80,14 @@ func @extract_element(%arg0 : vector<4xf32>, %id : i32) {
 
 // -----
 
+func @extract_element_index(%arg0 : vector<4xf32>, %id : index) {
+// expected-error @+1 {{failed to legalize operation 'vector.extractelement'}}
+  %0 = vector.extractelement %arg0[%id : index] : vector<4xf32>
+  spv.ReturnValue %0: f32
+}
+
+// -----
+
 func @extract_element_negative(%arg0 : vector<5xf32>, %id : i32) {
 // expected-error @+1 {{failed to legalize operation 'vector.extractelement'}}
   %0 = vector.extractelement %arg0[%id : i32] : vector<5xf32>
@@ -105,6 +113,14 @@ func @extract_strided_slice(%arg0: vector<4xf32>) {
 //       CHECK:   spv.VectorInsertDynamic %[[VAL]], %[[V]][%[[ID]]] : vector<4xf32>, i32
 func @insert_element(%val: f32, %arg0 : vector<4xf32>, %id : i32) {
   %0 = vector.insertelement %val, %arg0[%id : i32] : vector<4xf32>
+  spv.ReturnValue %0: vector<4xf32>
+}
+
+// -----
+
+func @insert_element_index(%val: f32, %arg0 : vector<4xf32>, %id : index) {
+// expected-error @+1 {{failed to legalize operation 'vector.insertelement'}}
+  %0 = vector.insertelement %val, %arg0[%id : index] : vector<4xf32>
   spv.ReturnValue %0: vector<4xf32>
 }
 

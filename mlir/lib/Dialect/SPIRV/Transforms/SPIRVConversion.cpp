@@ -880,6 +880,11 @@ bool SPIRVConversionTarget::isLegalOp(Operation *op) {
   valueTypes.append(op->operand_type_begin(), op->operand_type_end());
   valueTypes.append(op->result_type_begin(), op->result_type_end());
 
+  // Ensure that all types have been converted to SPIRV types.
+  if (llvm::any_of(valueTypes,
+                   [](Type t) { return !t.isa<spirv::SPIRVType>(); }))
+    return false;
+
   // Special treatment for global variables, whose type requirements are
   // conveyed by type attributes.
   if (auto globalVar = dyn_cast<spirv::GlobalVariableOp>(op))

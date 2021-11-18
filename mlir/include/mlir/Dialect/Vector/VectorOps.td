@@ -482,7 +482,7 @@ def Vector_ExtractElementOp :
      TypesMatchWith<"result type matches element type of vector operand",
                     "vector", "result",
                     "$_self.cast<ShapedType>().getElementType()">]>,
-    Arguments<(ins AnyVector:$vector, AnySignlessInteger:$position)>,
+    Arguments<(ins AnyVector:$vector, AnySignlessIntegerOrIndex:$position)>,
     Results<(outs AnyType:$result)> {
   let summary = "extractelement operation";
   let description = [{
@@ -504,7 +504,6 @@ def Vector_ExtractElementOp :
   }];
 
   let builders = [
-    OpBuilder<(ins "Value":$source, "int64_t":$position)>,
     OpBuilder<(ins "Value":$source, "Value":$position)>
   ];
   let extraClassDeclaration = [{
@@ -658,7 +657,7 @@ def Vector_InsertElementOp :
                     "$_self.cast<ShapedType>().getElementType()">,
      AllTypesMatch<["dest", "result"]>]>,
      Arguments<(ins AnyType:$source, AnyVector:$dest,
-                    AnySignlessInteger:$position)>,
+                    AnySignlessIntegerOrIndex:$position)>,
      Results<(outs AnyVector:$result)> {
   let summary = "insertelement operation";
   let description = [{
@@ -683,7 +682,6 @@ def Vector_InsertElementOp :
   }];
 
   let builders = [
-    OpBuilder<(ins "Value":$source, "Value":$dest, "int64_t":$position)>,
     OpBuilder<(ins "Value":$source, "Value":$dest, "Value":$position)>
   ];
   let extraClassDeclaration = [{
