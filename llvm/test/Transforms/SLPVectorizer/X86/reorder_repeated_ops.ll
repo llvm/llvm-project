@@ -15,8 +15,8 @@ define void @hoge() {
 ; CHECK-NEXT:    [[TMP1:%.*]] = sext <2 x i16> [[TMP0]] to <2 x i32>
 ; CHECK-NEXT:    [[TMP2:%.*]] = sub nsw <2 x i32> <i32 undef, i32 63>, [[TMP1]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = sub <2 x i32> [[TMP2]], undef
-; CHECK-NEXT:    [[SHUFFLE10:%.*]] = shufflevector <2 x i32> [[TMP3]], <2 x i32> poison, <4 x i32> <i32 1, i32 0, i32 0, i32 0>
-; CHECK-NEXT:    [[TMP4:%.*]] = add <4 x i32> [[SHUFFLE10]], <i32 undef, i32 15, i32 31, i32 47>
+; CHECK-NEXT:    [[SHUFFLE4:%.*]] = shufflevector <2 x i32> [[TMP3]], <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 0, i32 0>
+; CHECK-NEXT:    [[TMP4:%.*]] = add <4 x i32> [[SHUFFLE4]], <i32 15, i32 undef, i32 31, i32 47>
 ; CHECK-NEXT:    [[TMP5:%.*]] = call i32 @llvm.vector.reduce.smax.v4i32(<4 x i32> [[TMP4]])
 ; CHECK-NEXT:    [[T19:%.*]] = select i1 undef, i32 [[TMP5]], i32 undef
 ; CHECK-NEXT:    [[T20:%.*]] = icmp sgt i32 [[T19]], 63
@@ -24,18 +24,13 @@ define void @hoge() {
 ; CHECK-NEXT:    [[TMP7:%.*]] = sub <2 x i32> [[TMP6]], undef
 ; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <2 x i32> [[TMP7]], <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 0, i32 1>
 ; CHECK-NEXT:    [[TMP8:%.*]] = add nsw <4 x i32> [[SHUFFLE]], <i32 -49, i32 -33, i32 -33, i32 -17>
-; CHECK-NEXT:    [[TMP9:%.*]] = call i32 @llvm.vector.reduce.smin.v4i32(<4 x i32> [[TMP8]])
-; CHECK-NEXT:    [[OP_EXTRA:%.*]] = icmp slt i32 [[TMP9]], undef
-; CHECK-NEXT:    [[OP_EXTRA1:%.*]] = select i1 [[OP_EXTRA]], i32 [[TMP9]], i32 undef
-; CHECK-NEXT:    [[OP_EXTRA2:%.*]] = icmp slt i32 [[OP_EXTRA1]], undef
-; CHECK-NEXT:    [[OP_EXTRA3:%.*]] = select i1 [[OP_EXTRA2]], i32 [[OP_EXTRA1]], i32 undef
-; CHECK-NEXT:    [[OP_EXTRA4:%.*]] = icmp slt i32 [[OP_EXTRA3]], undef
-; CHECK-NEXT:    [[OP_EXTRA5:%.*]] = select i1 [[OP_EXTRA4]], i32 [[OP_EXTRA3]], i32 undef
-; CHECK-NEXT:    [[OP_EXTRA6:%.*]] = icmp slt i32 [[OP_EXTRA5]], undef
-; CHECK-NEXT:    [[OP_EXTRA7:%.*]] = select i1 [[OP_EXTRA6]], i32 [[OP_EXTRA5]], i32 undef
-; CHECK-NEXT:    [[OP_EXTRA8:%.*]] = icmp slt i32 [[OP_EXTRA7]], undef
-; CHECK-NEXT:    [[OP_EXTRA9:%.*]] = select i1 [[OP_EXTRA8]], i32 [[OP_EXTRA7]], i32 undef
-; CHECK-NEXT:    [[T45:%.*]] = icmp sgt i32 undef, [[OP_EXTRA9]]
+; CHECK-NEXT:    [[TMP9:%.*]] = call i32 @llvm.vector.reduce.smin.v4i32(<4 x i32> undef)
+; CHECK-NEXT:    [[TMP10:%.*]] = call i32 @llvm.vector.reduce.smin.v4i32(<4 x i32> [[TMP8]])
+; CHECK-NEXT:    [[OP_RDX:%.*]] = icmp slt i32 [[TMP9]], [[TMP10]]
+; CHECK-NEXT:    [[OP_RDX1:%.*]] = select i1 [[OP_RDX]], i32 [[TMP9]], i32 [[TMP10]]
+; CHECK-NEXT:    [[OP_RDX2:%.*]] = icmp slt i32 [[OP_RDX1]], undef
+; CHECK-NEXT:    [[OP_RDX3:%.*]] = select i1 [[OP_RDX2]], i32 [[OP_RDX1]], i32 undef
+; CHECK-NEXT:    [[T45:%.*]] = icmp sgt i32 undef, [[OP_RDX3]]
 ; CHECK-NEXT:    unreachable
 ;
 bb:
