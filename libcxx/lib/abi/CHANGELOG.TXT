@@ -16,6 +16,21 @@ New entries should be added directly below the "Version" header.
 Version 14.0
 ------------
 
+* [libc++] Resolve missing table_size symbol
+
+  This commit added an out-of-line definition for `table_size` in the library.
+  This is not an ABI break since we are just adding a symbol to the library.
+  In fact, any program that would have attempted to refer to that symbol would
+  have previously failed to link.
+
+  x86_64-apple-apple-darwin
+  -------------------------
+  Symbol added: _ZNSt3__15ctypeIcE10table_sizeE
+
+  x86_64-unknown-linux-gnu
+  ------------------------
+  Symbol added: _ZNSt3__15ctypeIcE10table_sizeE
+
 * [libc++] Always define a key function for std::bad_function_call in the dylib
 
   This commit added a new explicit instantiation of std::bad_function_call's

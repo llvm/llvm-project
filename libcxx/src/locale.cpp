@@ -988,6 +988,8 @@ ctype<wchar_t>::do_narrow(const char_type* low, const char_type* high, char dfau
 
 locale::id ctype<char>::id;
 
+const size_t ctype<char>::table_size;
+
 ctype<char>::ctype(const mask* tab, bool del, size_t refs)
     : locale::facet(refs),
       __tab_(tab),
