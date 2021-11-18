@@ -86,6 +86,7 @@ static_library("Driver") {
     "ToolChains/PPCLinux.cpp",
     "ToolChains/PS4CPU.cpp",
     "ToolChains/RISCVToolchain.cpp",
+    "ToolChains/SPIRV.cpp",
     "ToolChains/Solaris.cpp",
     "ToolChains/TCE.cpp",
     "ToolChains/VEToolchain.cpp",
