@@ -8316,6 +8316,32 @@ ScalarEvolution::computeExitLimitFromICmp(const Loop *L,
         if (!isa<SCEVCouldNotCompute>(Ret)) return Ret;
       }
 
+  // If this loop must exit based on this condition (or execute undefined
+  // behaviour), and we can prove the test sequence produced must repeat
+  // the same values on self-wrap of the IV, then we can infer that IV
+  // doesn't self wrap because if it did, we'd have an infinite (undefined)
+  // loop.
+  if (ControlsExit && isLoopInvariant(RHS, L) && loopHasNoAbnormalExits(L) &&
+      loopIsFiniteByAssumption(L)) {
+
+    // TODO: We can peel off any functions which are invertible *in L*.  Loop
+    // invariant terms are effectively constants for our purposes here.
+    auto *InnerLHS = LHS;
+    if (auto *ZExt = dyn_cast<SCEVZeroExtendExpr>(LHS))
+      InnerLHS = ZExt->getOperand();
+    if (const SCEVAddRecExpr *AR = dyn_cast<SCEVAddRecExpr>(InnerLHS)) {
+      auto *StrideC = dyn_cast<SCEVConstant>(AR->getStepRecurrence(*this));
+      if (!AR->hasNoSelfWrap() && AR->getLoop() == L && AR->isAffine() && 
+          StrideC && StrideC->getAPInt().isPowerOf2()) {
+        auto Flags = AR->getNoWrapFlags();
+        Flags = setFlags(Flags, SCEV::FlagNW);
+        SmallVector<const SCEV*> Operands{AR->operands()};
+        Flags = StrengthenNoWrapFlags(this, scAddRecExpr, Operands, Flags);
+        setNoWrapFlags(const_cast<SCEVAddRecExpr *>(AR), Flags);
+      }
+    }
+  }
+
   switch (Pred) {
   case ICmpInst::ICMP_NE: {                     // while (X != Y)
     // Convert to: while (X-Y != 0)
@@ -11821,14 +11847,6 @@ ScalarEvolution::howManyLessThans(const SCEV *LHS, const SCEV *RHS,
     if (auto *ZExt = dyn_cast<SCEVZeroExtendExpr>(LHS)) {
       const SCEVAddRecExpr *AR = dyn_cast<SCEVAddRecExpr>(ZExt->getOperand());
       if (AR && AR->getLoop() == L && AR->isAffine()) {
-        auto Flags = AR->getNoWrapFlags();
-        if (!hasFlags(Flags, SCEV::FlagNW) && canAssumeNoSelfWrap(AR)) {
-          Flags = setFlags(Flags, SCEV::FlagNW);
-
-          SmallVector<const SCEV*> Operands{AR->operands()};
-          Flags = StrengthenNoWrapFlags(this, scAddRecExpr, Operands, Flags);
-        }
-
         auto canProveNUW = [&]() {
           if (!isLoopInvariant(RHS, L))
             return false;
@@ -11851,6 +11869,7 @@ ScalarEvolution::howManyLessThans(const SCEV *LHS, const SCEV *RHS,
           Limit = Limit.zext(OuterBitWidth);
           return getUnsignedRangeMax(applyLoopGuards(RHS, L)).ule(Limit);
         };
+        auto Flags = AR->getNoWrapFlags();
         if (!hasFlags(Flags, SCEV::FlagNUW) && canProveNUW())
           Flags = setFlags(Flags, SCEV::FlagNUW);
 

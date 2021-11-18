@@ -10,9 +10,11 @@ target triple = "x86_64-unknown-linux-gnu"
 define void @test(i32 %N) mustprogress {
 ; CHECK-LABEL: 'test'
 ; CHECK-NEXT:  Determining loop execution counts for: @test
-; CHECK-NEXT:  Loop %for.body: Unpredictable backedge-taken count.
-; CHECK-NEXT:  Loop %for.body: Unpredictable max backedge-taken count.
-; CHECK-NEXT:  Loop %for.body: Unpredictable predicated backedge-taken count.
+; CHECK-NEXT:  Loop %for.body: backedge-taken count is ((-2 + %N) /u 2)
+; CHECK-NEXT:  Loop %for.body: max backedge-taken count is 2147483647
+; CHECK-NEXT:  Loop %for.body: Predicated backedge-taken count is ((-2 + %N) /u 2)
+; CHECK-NEXT:   Predicates:
+; CHECK:       Loop %for.body: Trip multiple is 1
 ;
 entry:
   br label %for.body
@@ -30,9 +32,11 @@ for.cond.cleanup:
 define void @test_preinc(i32 %N) mustprogress {
 ; CHECK-LABEL: 'test_preinc'
 ; CHECK-NEXT:  Determining loop execution counts for: @test_preinc
-; CHECK-NEXT:  Loop %for.body: Unpredictable backedge-taken count.
-; CHECK-NEXT:  Loop %for.body: Unpredictable max backedge-taken count.
-; CHECK-NEXT:  Loop %for.body: Unpredictable predicated backedge-taken count.
+; CHECK-NEXT:  Loop %for.body: backedge-taken count is (%N /u 2)
+; CHECK-NEXT:  Loop %for.body: max backedge-taken count is 2147483647
+; CHECK-NEXT:  Loop %for.body: Predicated backedge-taken count is (%N /u 2)
+; CHECK-NEXT:   Predicates:
+; CHECK:       Loop %for.body: Trip multiple is 1
 ;
 entry:
   br label %for.body
@@ -117,9 +121,11 @@ for.cond.cleanup:
 define void @test_1024(i32 %N) mustprogress {
 ; CHECK-LABEL: 'test_1024'
 ; CHECK-NEXT:  Determining loop execution counts for: @test_1024
-; CHECK-NEXT:  Loop %for.body: Unpredictable backedge-taken count.
-; CHECK-NEXT:  Loop %for.body: Unpredictable max backedge-taken count.
-; CHECK-NEXT:  Loop %for.body: Unpredictable predicated backedge-taken count.
+; CHECK-NEXT:  Loop %for.body: backedge-taken count is ((-1024 + %N) /u 1024)
+; CHECK-NEXT:  Loop %for.body: max backedge-taken count is 4194303
+; CHECK-NEXT:  Loop %for.body: Predicated backedge-taken count is ((-1024 + %N) /u 1024)
+; CHECK-NEXT:   Predicates:
+; CHECK:       Loop %for.body: Trip multiple is 1
 ;
 entry:
   br label %for.body
@@ -232,7 +238,9 @@ define void @test_zext(i64 %N) mustprogress {
 ; CHECK-NEXT:  Determining loop execution counts for: @test_zext
 ; CHECK-NEXT:  Loop %for.body: Unpredictable backedge-taken count.
 ; CHECK-NEXT:  Loop %for.body: Unpredictable max backedge-taken count.
-; CHECK-NEXT:  Loop %for.body: Unpredictable predicated backedge-taken count.
+; CHECK-NEXT:  Loop %for.body: Predicated backedge-taken count is (%N /u 2)
+; CHECK-NEXT:   Predicates:
+; CHECK-NEXT:    {0,+,2}<nuw><%for.body> Added Flags: <nusw>
 ;
 entry:
   br label %for.body
