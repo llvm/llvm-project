@@ -1277,7 +1277,7 @@ template <class ELFT> Triple::ArchType ELFObjectFile<ELFT>::getArch() const {
   case ELF::EM_LANAI:
     return Triple::lanai;
   case ELF::EM_88K:
-    return IsLittleEndian ? Triple::m88kel : Triple::m88k;
+    return Triple::m88k;
   case ELF::EM_MIPS:
     switch (EF.getHeader().e_ident[ELF::EI_CLASS]) {
     case ELF::ELFCLASS32:
