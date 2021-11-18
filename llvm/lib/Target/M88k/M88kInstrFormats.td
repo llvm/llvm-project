@@ -265,6 +265,20 @@ class F_XMEMSC<bits<1> ty, bits<1> user,
   let Inst{15-11} = 0b00000;
 }
 
+class F_XMEMIMM<bits<2> ty, dag outs, dag ins, string asm,
+                list<dag> pattern = []>
+   : InstM88k<outs, ins, asm, "$rd, $rs1, $imm16", pattern> {
+  bits<5>  rd;
+  bits<5>  rs1;
+  bits<16> imm16;
+
+  let Inst{31-28} = 0b0000;
+  let Inst{27-26} = ty;
+  let Inst{25-21} = rd;
+  let Inst{20-16} = rs1;
+  let Inst{15-0}  = imm16;
+}
+
 // Format: Load/Store register indirect with scaled or unscaled index
 class F_LADDR<bits<2> ty, dag outs, dag ins, string asm,
               list<dag> pattern = []>
@@ -309,7 +323,7 @@ class F_BRANCH<bits<5> func,
   let Inst{25-0}  = d26;
 }
 
-// Format: BB0/BB1/BCOND
+// Format: BB0/BB1/BCND
 class F_BCOND<bits<5> func, dag outs, dag ins, string asm>
    : InstM88k<outs, ins, asm, "$m5, $rs1, $d16", []> {
   bits<5>  m5;
@@ -349,6 +363,31 @@ class F_TCND<dag outs, dag ins, string asm>
   let Inst{20-16} = rs1;
   let Inst{15-9}  = 0b1110100;
   let Inst{8-0}   = vec9;
+}
+
+// Format: TBND
+class F_TBND<dag outs, dag ins, string asm>
+   : InstM88k<outs, ins, asm, "$rs1, $rs2", []> {
+  bits<5>  rs1;
+  bits<5>  rs2;
+
+  let Inst{31-26} = 0b111101;
+  let Inst{25-21} = 0b00000;
+  let Inst{20-16} = rs1;
+  let Inst{15-5}  = 0b11111000000;
+  let Inst{4-0}   = rs2;
+}
+
+// Format: TBNDIMM
+class F_TBNDIMM<dag outs, dag ins, string asm>
+   : InstM88k<outs, ins, asm, "$rs1, $imm16", []> {
+  bits<5>  rs1;
+  bits<16> imm16;
+
+  let Inst{31-26} = 0b111110;
+  let Inst{25-21} = 0b00000;
+  let Inst{20-16} = rs1;
+  let Inst{15-0}  = imm16;
 }
 
 // Format: RTE/ILLOP
@@ -446,4 +485,27 @@ class F_SFU2<bits<5> func, bits<2> sat, bits<2> ty,
   let Inst{10-9} = 0;
   let Inst{8-7} = sat;
   let Inst{6-5} = ty;
+}
+
+// Format: Dyadic register.
+class F_SFU2D<bits<5> func, bits<2> sat, bits<2> ty,
+              dag outs, dag ins, string asmstr, list<dag> pattern = []>
+   : F_SFU<outs, ins, asmstr, "$rd, $rs1, $rs2", pattern> {
+  let rs2 = 0b00000;
+
+  let Inst{28-26} = 0b010;
+  let Inst{15-11} = func;
+  let Inst{10-9} = 0;
+  let Inst{8-7} = sat;
+  let Inst{6-5} = ty;
+}
+
+// Format: Triadic register - ppack.
+class F_SFU2PPACK<bits<5> func, bits<4> r, bits<2> ty,
+                  dag outs, dag ins, string asmstr, list<dag> pattern = []>
+   : F_SFU<outs, ins, asmstr, "$rd, $rs1, $rs2", pattern> {
+  let Inst{28-26} = 0b010;
+  let Inst{15-11} = func;
+  let Inst{10-7}  = r;
+  let Inst{6-5}   = ty;
 }

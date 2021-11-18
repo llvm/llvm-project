@@ -188,6 +188,11 @@ static DecodeStatus decodeU16ImmOperand(MCInst &Inst, uint64_t Imm,
   return decodeUImmOperand<16>(Inst, Imm);
 }
 
+static DecodeStatus decodeVec9Operand(MCInst &Inst, uint64_t Imm,
+                                      uint64_t Address, const void *Decoder) {
+  return decodeUImmOperand<9>(Inst, Imm);
+}
+
 static DecodeStatus decodeBitFieldOperand(MCInst &Inst, uint64_t Imm,
                                           uint64_t Address,
                                           const void *Decoder) {

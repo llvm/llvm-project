@@ -90,6 +90,18 @@ void M88kInstPrinter::printU16ImmOperand(const MCInst *MI, int OpNum,
   }
 }
 
+void M88kInstPrinter::printVec9Operand(const MCInst *MI, int OpNum,
+                                       const MCSubtargetInfo &STI,
+                                       raw_ostream &O) {
+  const MCOperand &MO = MI->getOperand(OpNum);
+  if (MO.isImm()) {
+    O << MO.getImm();
+  } else {
+    assert(MO.isExpr() && "Expected expression");
+    MO.getExpr()->print(O, &MAI);
+  }
+}
+
 void M88kInstPrinter::printBitFieldOperand(const MCInst *MI, int OpNum,
                                            const MCSubtargetInfo &STI,
                                            raw_ostream &O) {

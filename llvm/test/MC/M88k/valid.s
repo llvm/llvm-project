@@ -1,5 +1,7 @@
 # RUN: llvm-mc  %s -triple=m88k-unknown-openbsd -show-encoding -mcpu=mc88100 | FileCheck %s
 
+# Deviation in gas: gas does not have the s in fcmp.sXX.
+
 isns:
   # integer add
   add      %r0, %r1, %r2
@@ -196,14 +198,14 @@ isns:
 # CHECK: fadd.ddd %r0, %r1, %r2          | encoding: [0x84,0x01,0x2a,0xa2]
 
 # floating point compare
-#  fcmp.ss %r0, %r1, %r2
-#  fcmp.sd %r0, %r1, %r2
-#  fcmp.ds %r0, %r1, %r2
-#  fcmp.dd %r0, %r1, %r2
-# COM: CHECK: fcmp.ss %r0, %r1, %r2           | encoding: [0x84 01 38 02]
-# COM: CHECK: fcmp.sd %r0, %r1, %r2           | encoding: [0x84 01 38 82]
-# COM: CHECK: fcmp.ds %r0, %r1, %r2           | encoding: [0x84 01 3a 02]
-# COM: CHECK: fcmp.dd %r0, %r1, %r2           | encoding: [0x84 01 3a 82]
+  fcmp.sss     %r0, %r1, %r2
+  fcmp.ssd     %r0, %r1, %r2
+  fcmp.sds     %r0, %r1, %r2
+  fcmp.sdd     %r0, %r1, %r2
+# CHECK: fcmp.sss     %r0, %r1, %r2      | encoding: [0x84,0x01,0x38,0x02]
+# CHECK: fcmp.ssd     %r0, %r1, %r2      | encoding: [0x84,0x01,0x38,0x82]
+# CHECK: fcmp.sds     %r0, %r1, %r2      | encoding: [0x84,0x01,0x3a,0x02]
+# CHECK: fcmp.sdd     %r0, %r1, %r2      | encoding: [0x84,0x01,0x3a,0x82]
 
 # floating point divide
   fdiv.sss %r0, %r1, %r2
@@ -235,11 +237,11 @@ isns:
   fldcr    %r0, %fcr50
 # CHECK: fldcr    %r0, %fcr50            | encoding: [0x80,0x00,0x4e,0x40]
 
-  # convert integer to floating point
-#  flt.ss   %r0, %r3
-#  flt.ds   %r0, %r10
-# COM: CHECK: flt.ss   %r0, %r3               | encoding: [0x84,0x00,0x20,0x03]
-# COM: CHECK: flt.ds   %r0, %r10              | encoding: [0x84,0x00,0x20,0x2a]
+# convert integer to floating point
+  flt.ss   %r0, %r3
+  flt.ds   %r0, %r10
+# CHECK: flt.ss   %r0, %r3               | encoding: [0x84,0x00,0x20,0x03]
+# CHECK: flt.ds   %r0, %r10              | encoding: [0x84,0x00,0x20,0x2a]
 
   # floating point multiply
   fmul.sss %r0, %r1, %r2
@@ -474,48 +476,48 @@ isns:
   st.h     %r0, %r1, 4096
   st       %r0, %r1, 0
   st       %r0, %r1, 4096
-#  st.d     %r0, %r1, 0
-#  st.d     %r0, %r1, 4096
-#  st.b     %r0, %r1, %r2
-#  st.h     %r2, %r3, %r4
-#  st       %r4, %r5, %r6
-#  st.d     %r5, %r6, %r7
-#  st.b.usr %r6, %r7, %r8
-#  st.h.usr %r8, %r9, %r1
-#  st.usr   %r1, %r2, %r3
-#  st.d.usr %r2, %r3, %r4
-#  st.b     %r0, %r1[%r2]
-#  st.h     %r2, %r3[%r4]
-#  st       %r4, %r5[%r6]
-#  st.d     %r5, %r6[%r7]
-#  st.b.usr %r6, %r7[%r8]
-#  st.h.usr %r8, %r9[%r1]
-#  st.usr   %r1, %r2[%r3]
-#  st.d.usr %r2, %r3[%r4]
+  st.d     %r0, %r1, 0
+  st.d     %r0, %r1, 4096
+  st.b     %r0, %r1, %r2
+  st.h     %r2, %r3, %r4
+  st       %r4, %r5, %r6
+  st.d     %r5, %r6, %r7
+  st.b.usr %r6, %r7, %r8
+  st.h.usr %r8, %r9, %r1
+  st.usr   %r1, %r2, %r3
+  st.d.usr %r2, %r3, %r4
+  st.b     %r0, %r1[%r2]
+  st.h     %r2, %r3[%r4]
+  st       %r4, %r5[%r6]
+  st.d     %r5, %r6[%r7]
+  st.b.usr %r6, %r7[%r8]
+  st.h.usr %r8, %r9[%r1]
+  st.usr   %r1, %r2[%r3]
+  st.d.usr %r2, %r3[%r4]
 # CHECK: st.b     %r0, %r1, 0            | encoding: [0x2c,0x01,0x00,0x00]
 # CHECK: st.b     %r0, %r1, 4096         | encoding: [0x2c,0x01,0x10,0x00]
 # CHECK: st.h     %r0, %r1, 0            | encoding: [0x28,0x01,0x00,0x00]
 # CHECK: st.h     %r0, %r1, 4096         | encoding: [0x28,0x01,0x10,0x00]
 # CHECK: st       %r0, %r1, 0            | encoding: [0x24,0x01,0x00,0x00]
 # CHECK: st       %r0, %r1, 4096         | encoding: [0x24,0x01,0x10,0x00]
-# COM: CHECK: st.d     %r0, %r1, 0            | encoding: [0x20,0x01,0x00,0x00]
-# COM: CHECK: st.d     %r0, %r1, 4096         | encoding: [0x20,0x01,0x10,0x00]
-# COM: CHECK: st.b     %r0, %r1, %r2          | encoding: [0xf4,0x01,0x2c,0x02]
-# COM: CHECK: st.h     %r2, %r3, %r4          | encoding: [0xf4,0x43,0x28,0x04]
-# COM: CHECK: st       %r4, %r5, %r6          | encoding: [0xf4,0x85,0x24,0x06]
-# COM: CHECK: st.d     %r5, %r6, %r7          | encoding: [0xf4,0xa6,0x20,0x07]
-# COM: CHECK: st.b.usr %r6, %r7, %r8          | encoding: [0xf4,0xc7,0x2d,0x08]
-# COM: CHECK: st.h.usr %r8, %r9, %r1          | encoding: [0xf5,0x09,0x29,0x01]
-# COM: CHECK: st.usr   %r1, %r2, %r3          | encoding: [0xf4,0x22,0x25,0x03]
-# COM: CHECK: st.d.usr %r2, %r3, %r4          | encoding: [0xf4,0x43,0x21,0x04]
-# COM: CHECK: st.b     %r0, %r1[%r2]          | encoding: [0xf4,0x01,0x2e,0x02]
-# COM: CHECK: st.h     %r2, %r3[%r4]          | encoding: [0xf4,0x43,0x2a,0x04]
-# COM: CHECK: st       %r4, %r5[%r6]          | encoding: [0xf4,0x85,0x26,0x06]
-# COM: CHECK: st.d     %r5, %r6[%r7]          | encoding: [0xf4,0xa6,0x22,0x07]
-# COM: CHECK: st.b.usr %r6, %r7[%r8]          | encoding: [0xf4,0xc7,0x2f,0x08]
-# COM: CHECK: st.h.usr %r8, %r9[%r1]          | encoding: [0xf5,0x09,0x2b,0x01]
-# COM: CHECK: st.usr   %r1, %r2[%r3]          | encoding: [0xf4,0x22,0x27,0x03]
-# COM: CHECK: st.d.usr %r2, %r3[%r4]          | encoding: [0xf4,0x43,0x23,0x04]
+# CHECK: st.d     %r0, %r1, 0            | encoding: [0x20,0x01,0x00,0x00]
+# CHECK: st.d     %r0, %r1, 4096         | encoding: [0x20,0x01,0x10,0x00]
+# CHECK: st.b     %r0, %r1, %r2          | encoding: [0xf4,0x01,0x2c,0x02]
+# CHECK: st.h     %r2, %r3, %r4          | encoding: [0xf4,0x43,0x28,0x04]
+# CHECK: st       %r4, %r5, %r6          | encoding: [0xf4,0x85,0x24,0x06]
+# CHECK: st.d     %r5, %r6, %r7          | encoding: [0xf4,0xa6,0x20,0x07]
+# CHECK: st.b.usr %r6, %r7, %r8          | encoding: [0xf4,0xc7,0x2d,0x08]
+# CHECK: st.h.usr %r8, %r9, %r1          | encoding: [0xf5,0x09,0x29,0x01]
+# CHECK: st.usr   %r1, %r2, %r3          | encoding: [0xf4,0x22,0x25,0x03]
+# CHECK: st.d.usr %r2, %r3, %r4          | encoding: [0xf4,0x43,0x21,0x04]
+# CHECK: st.b     %r0, %r1[%r2]          | encoding: [0xf4,0x01,0x2e,0x02]
+# CHECK: st.h     %r2, %r3[%r4]          | encoding: [0xf4,0x43,0x2a,0x04]
+# CHECK: st       %r4, %r5[%r6]          | encoding: [0xf4,0x85,0x26,0x06]
+# CHECK: st.d     %r5, %r6[%r7]          | encoding: [0xf4,0xa6,0x22,0x07]
+# CHECK: st.b.usr %r6, %r7[%r8]          | encoding: [0xf4,0xc7,0x2f,0x08]
+# CHECK: st.h.usr %r8, %r9[%r1]          | encoding: [0xf5,0x09,0x2b,0x01]
+# CHECK: st.usr   %r1, %r2[%r3]          | encoding: [0xf4,0x22,0x27,0x03]
+# CHECK: st.d.usr %r2, %r3[%r4]          | encoding: [0xf4,0x43,0x23,0x04]
 
 # store to control register
   stcr %r0, %cr10
@@ -550,33 +552,33 @@ isns:
 # CHECK: subu     %r5, %r6, 4096         | encoding: [0x64,0xa6,0x10,0x00]
 
 # trap on bit clear
-#  tb0          0, %r10, 10
-#  tb0          31, %r11, 10
+  tb0          0, %r10, 10
+  tb0          31, %r11, 10
 # CHECK: tb0          0, %r10, 10        | encoding: [0xf0,0x0a,0xd0,0x0a]
 # CHECK: tb0          31, %r11, 10       | encoding: [0xf3,0xeb,0xd0,0x0a]
 
 # trap on bit set
-#  tb1          0, %r10, 10
-#  tb1          31, %r11, 10
+  tb1          0, %r10, 10
+  tb1          31, %r11, 10
 # CHECK: tb1          0, %r10, 10        | encoding: [0xf0,0x0a,0xd8,0x0a]
 # CHECK: tb1          31, %r11, 10       | encoding: [0xf3,0xeb,0xd8,0x0a]
 
 # trap on bounds check
-#  tbnd         %r0, %r1
-#  tbnd         %r7, 0
-#  tbnd         %r7, 4096
+  tbnd         %r0, %r1
+  tbnd         %r7, 0
+  tbnd         %r7, 4096
 # CHECK: tbnd         %r0, %r1           | encoding: [0xf4,0x00,0xf8,0x01]
 # CHECK: tbnd         %r7, 0             | encoding: [0xf8,0x07,0x00,0x00]
 # CHECK: tbnd         %r7, 4096          | encoding: [0xf8,0x07,0x10,0x00]
 
 # conditional trap
-#  tcnd         eq0, %r10, 12
-#  tcnd         ne0, %r9, 12
-#  tcnd         gt0, %r8, 7
-#  tcnd         lt0, %r7, 1
-#  tcnd         ge0, %r6, 35
-#  tcnd         le0, %r5, 33
-#  tcnd         10, %r4, 12
+  tcnd         eq0, %r10, 12
+  tcnd         ne0, %r9, 12
+  tcnd         gt0, %r8, 7
+  tcnd         lt0, %r7, 1
+  tcnd         ge0, %r6, 35
+  tcnd         le0, %r5, 33
+  tcnd         10, %r4, 12
 # CHECK: tcnd         eq0, %r10, 12      | encoding: [0xf0,0x4a,0xe8,0x0c]
 # CHECK: tcnd         ne0, %r9, 12       | encoding: [0xf1,0xa9,0xe8,0x0c]
 # CHECK: tcnd         gt0, %r8, 7        | encoding: [0xf0,0x28,0xe8,0x07]

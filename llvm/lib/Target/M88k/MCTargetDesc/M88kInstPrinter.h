@@ -47,6 +47,8 @@ public:
                           const MCSubtargetInfo &STI, raw_ostream &O);
   void printU16ImmOperand(const MCInst *MI, int OpNum,
                           const MCSubtargetInfo &STI, raw_ostream &O);
+  void printVec9Operand(const MCInst *MI, int OpNum, const MCSubtargetInfo &STI,
+                        raw_ostream &O);
   void printBitFieldOperand(const MCInst *MI, int OpNum,
                             const MCSubtargetInfo &STI, raw_ostream &O);
   void printCCodeOperand(const MCInst *MI, int OpNum,

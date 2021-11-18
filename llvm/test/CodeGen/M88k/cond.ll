@@ -5,7 +5,7 @@
 
 define i32 @f1(i32 %a, i32 %b) {
 ; CHECK-LABEL: f1:
-; CHECK: bcnd 13, %r2, .LBB0_2
+; CHECK: bcnd ne0, %r2, .LBB0_2
 ; CHECK: br .{{[A-Z0-9]+}}
 ; CHECK: jmp %r1
   %cmp = icmp eq i32 %a, 0

@@ -185,6 +185,7 @@ public:
   bool isU5ImmO() const { return isImm(0, 31); }
   bool isU16Imm() const { return isImm(0, 65535); }
   bool isS16Imm() const { return isImm(-32768, 32767); }
+  bool isVec9() const { return isImm(0, 511); }
 
   bool isBitField() const { return isImm(0, 1023); }
   bool isCCode() const { return isImm(0, 31); }
