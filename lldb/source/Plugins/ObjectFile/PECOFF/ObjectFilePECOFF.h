@@ -107,7 +107,7 @@ public:
   //    virtual lldb_private::AddressClass
   //    GetAddressClass (lldb::addr_t file_addr);
 
-  void ParseSymtab(lldb_private::Symtab &symtab) override;
+  lldb_private::Symtab *GetSymtab() override;
 
   bool IsStripped() override;
 

@@ -73,7 +73,7 @@ public:
   bool IsExecutable() const override { return false; }
   ArchSpec GetArchitecture() override { return m_arch; }
   UUID GetUUID() override { return m_uuid; }
-  void ParseSymtab(lldb_private::Symtab &symtab) override {}
+  Symtab *GetSymtab() override { return m_symtab_up.get(); }
   bool IsStripped() override { return true; }
   ByteOrder GetByteOrder() const override { return m_arch.GetByteOrder(); }
 

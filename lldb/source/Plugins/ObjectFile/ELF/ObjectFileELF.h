@@ -110,7 +110,7 @@ public:
 
   lldb_private::AddressClass GetAddressClass(lldb::addr_t file_addr) override;
 
-  void ParseSymtab(lldb_private::Symtab &symtab) override;
+  lldb_private::Symtab *GetSymtab() override;
 
   bool IsStripped() override;
 
@@ -123,7 +123,7 @@ public:
   lldb_private::UUID GetUUID() override;
 
   /// Return the contents of the .gnu_debuglink section, if the object file
-  /// contains it.
+  /// contains it. 
   llvm::Optional<lldb_private::FileSpec> GetDebugLink();
 
   uint32_t GetDependentModules(lldb_private::FileSpecList &files) override;
@@ -384,7 +384,7 @@ private:
                               lldb_private::UUID &uuid);
 
   bool AnySegmentHasPhysicalAddress();
-
+  
   /// Takes the .gnu_debugdata and returns the decompressed object file that is
   /// stored within that section.
   ///

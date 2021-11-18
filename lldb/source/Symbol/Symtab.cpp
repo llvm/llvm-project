@@ -997,15 +997,10 @@ void Symtab::InitAddressIndexes() {
   }
 }
 
-void Symtab::Finalize() {
+void Symtab::CalculateSymbolSizes() {
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
-  // Calculate the size of symbols inside InitAddressIndexes.
+  // Size computation happens inside InitAddressIndexes.
   InitAddressIndexes();
-  // Shrink to fit the symbols so we don't waste memory
-  if (m_symbols.capacity() > m_symbols.size()) {
-    collection new_symbols(m_symbols.begin(), m_symbols.end());
-    m_symbols.swap(new_symbols);
-  }
 }
 
 Symbol *Symtab::FindSymbolAtFileAddress(addr_t file_addr) {

@@ -322,26 +322,12 @@ public:
   /// Gets the symbol table for the currently selected architecture (and
   /// object for archives).
   ///
-  /// This function will manage when ParseSymtab(...) is called to actually do
-  /// the symbol table parsing in each plug-in. This function will take care of
-  /// taking all the necessary locks and finalizing the symbol table when the
-  /// symbol table does get parsed.
+  /// Symbol table parsing can be deferred by ObjectFile instances until this
+  /// accessor is called the first time.
   ///
   /// \return
   ///     The symbol table for this object file.
-  Symtab *GetSymtab();
-
-  /// Parse the symbol table into the provides symbol table object.
-  ///
-  /// Symbol table parsing will be done once when this function is called by
-  /// each object file plugin. All of the necessary locks will already be
-  /// acquired before this function is called and the symbol table object to
-  /// populate is supplied as an argument and doesn't need to be created by
-  /// each plug-in.
-  ///
-  /// \param
-  ///     The symbol table to populate.
-  virtual void ParseSymtab(Symtab &symtab) = 0;
+  virtual Symtab *GetSymtab() = 0;
 
   /// Perform relocations on the section if necessary.
   ///

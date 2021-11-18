@@ -78,7 +78,7 @@ public:
     return AddressClass::eInvalid;
   }
 
-  void ParseSymtab(lldb_private::Symtab &symtab) override;
+  Symtab *GetSymtab() override;
 
   bool IsStripped() override { return !!GetExternalDebugInfoFileSpec(); }
 
