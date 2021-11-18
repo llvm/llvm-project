@@ -605,7 +605,7 @@ bool EquivalenceSets::CheckObject(const parser::Name &name) {
         msg = "Nonsequence derived type object '%s'"
               " is not allowed in an equivalence set"_err_en_US;
       }
-    } else if (IsAutomaticObject(symbol)) {
+    } else if (IsAutomatic(symbol)) {
       msg = "Automatic object '%s'"
             " is not allowed in an equivalence set"_err_en_US;
     }

@@ -1149,21 +1149,87 @@ bool IsProcedurePointer(const Symbol &original) {
   return symbol.has<ProcEntityDetails>() && IsPointer(symbol);
 }
 
+// 3.11 automatic data object
+bool IsAutomatic(const Symbol &original) {
+  const Symbol &symbol{original.GetUltimate()};
+  if (const auto *object{symbol.detailsIf<ObjectEntityDetails>()}) {
+    if (!object->isDummy() && !IsAllocatable(symbol) && !IsPointer(symbol)) {
+      if (const DeclTypeSpec * type{symbol.GetType()}) {
+        // If a type parameter value is not a constant expression, the
+        // object is automatic.
+        if (type->category() == DeclTypeSpec::Character) {
+          if (const auto &length{
+                  type->characterTypeSpec().length().GetExplicit()}) {
+            if (!evaluate::IsConstantExpr(*length)) {
+              return true;
+            }
+          }
+        } else if (const DerivedTypeSpec * derived{type->AsDerived()}) {
+          for (const auto &pair : derived->parameters()) {
+            if (const auto &value{pair.second.GetExplicit()}) {
+              if (!evaluate::IsConstantExpr(*value)) {
+                return true;
+              }
+            }
+          }
+        }
+      }
+      // If an array bound is not a constant expression, the object is
+      // automatic.
+      for (const ShapeSpec &dim : object->shape()) {
+        if (const auto &lb{dim.lbound().GetExplicit()}) {
+          if (!evaluate::IsConstantExpr(*lb)) {
+            return true;
+          }
+        }
+        if (const auto &ub{dim.ubound().GetExplicit()}) {
+          if (!evaluate::IsConstantExpr(*ub)) {
+            return true;
+          }
+        }
+      }
+    }
+  }
+  return false;
+}
+
 bool IsSaved(const Symbol &original) {
   const Symbol &symbol{GetAssociationRoot(original)};
   const Scope &scope{symbol.owner()};
   auto scopeKind{scope.kind()};
   if (symbol.has<AssocEntityDetails>()) {
     return false; // ASSOCIATE(non-variable)
-  } else if (scopeKind == Scope::Kind::Module) {
-    return true; // BLOCK DATA entities must all be in COMMON, handled below
   } else if (scopeKind == Scope::Kind::DerivedType) {
     return false; // this is a component
   } else if (symbol.attrs().test(Attr::SAVE)) {
-    return true;
+    return true; // explicit SAVE attribute
   } else if (symbol.test(Symbol::Flag::InDataStmt)) {
     return true;
+  } else if (IsDummy(symbol) || IsFunctionResult(symbol) ||
+      IsAutomatic(symbol)) {
+    return false;
+  } else if (scopeKind == Scope::Kind::Module ||
+      (scopeKind == Scope::Kind::MainProgram &&
+          (symbol.attrs().test(Attr::TARGET) || IsCoarray(symbol)))) {
+    // 8.5.16p4
+    // In main programs, implied SAVE matters only for pointer
+    // initialization targets and coarrays.
+    // BLOCK DATA entities must all be in COMMON,
+    // which was checked above.
+    return true;
+  } else if (scope.kind() == Scope::Kind::Subprogram &&
+      scope.context().languageFeatures().IsEnabled(
+          common::LanguageFeature::DefaultSave) &&
+      !(scope.symbol() && scope.symbol()->attrs().test(Attr::RECURSIVE))) {
+    // -fno-automatic/-save/-Msave option applies to objects in
+    // executable subprograms unless they are explicitly RECURSIVE.
+    return true;
   } else if (IsNamedConstant(symbol)) {
+    // TODO: lowering needs named constants in modules to be static,
+    // so this test for a named constant has lower precedence for the
+    // time being; when lowering is corrected, this case should be
+    // moved up above module logic, since named constants don't really
+    // have implied SAVE attributes.
     return false;
   } else if (const auto *object{symbol.detailsIf<ObjectEntityDetails>()};
              object && object->init()) {
@@ -1171,13 +1237,13 @@ bool IsSaved(const Symbol &original) {
   } else if (IsProcedurePointer(symbol) &&
       symbol.get<ProcEntityDetails>().init()) {
     return true;
+  } else if (scope.hasSAVE()) {
+    return true; // bare SAVE statement
   } else if (const Symbol * block{FindCommonBlockContaining(symbol)};
              block && block->attrs().test(Attr::SAVE)) {
-    return true;
-  } else if (IsDummy(symbol) || IsFunctionResult(symbol)) {
-    return false;
+    return true; // in COMMON with SAVE
   } else {
-    return scope.hasSAVE();
+    return false;
   }
 }
 
