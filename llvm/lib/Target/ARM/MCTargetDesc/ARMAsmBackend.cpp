@@ -331,7 +331,7 @@ void ARMAsmBackend::relaxInstruction(MCInst &Inst,
                                      const MCSubtargetInfo &STI) const {
   unsigned RelaxedOp = getRelaxedOpcode(Inst.getOpcode(), STI);
 
-  // Sanity check w/ diagnostic if we get here w/ a bogus instruction.
+  // Return a diagnostic if we get here w/ a bogus instruction.
   if (RelaxedOp == Inst.getOpcode()) {
     SmallString<256> Tmp;
     raw_svector_ostream OS(Tmp);
