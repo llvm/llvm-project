@@ -1,4 +1,4 @@
-; RUN: opt < %s -sccp -S | not grep %X
+; RUN: opt < %s -passes=sccp -S | not grep %X
 
 @G =  global [1000000 x i10000] zeroinitializer
 

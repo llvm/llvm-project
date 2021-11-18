@@ -1,4 +1,4 @@
-;RUN: opt -S -globalopt -f %s | FileCheck %s
+;RUN: opt -S -passes=globalopt -f %s | FileCheck %s
 
 ;CHECK: @foo = internal unnamed_addr global i1 false, align 4, !dbg ![[VAR:.*]]
 ;CHECK: ![[VAR]] = !DIGlobalVariableExpression(var: !1, expr:

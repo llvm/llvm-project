@@ -1,4 +1,4 @@
-; RUN: opt < %s -globalopt -S | llvm-as | llvm-dis | FileCheck %s
+; RUN: opt < %s -passes=globalopt -S | llvm-as | llvm-dis | FileCheck %s
 
 ; The %struct.S type would not get emitted after @s was removed, resulting in
 ; llvm-as failing to parse the dbg.value intrinsic using that type. The

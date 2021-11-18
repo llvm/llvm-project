@@ -1,4 +1,4 @@
-; RUN: opt < %s -globalopt -disable-output
+; RUN: opt < %s -passes=globalopt -disable-output
 
         %struct._list = type { i32*, %struct._list* }
         %struct._play = type { i32, i32*, %struct._list*, %struct._play* }

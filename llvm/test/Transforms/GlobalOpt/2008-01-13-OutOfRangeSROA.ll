@@ -1,4 +1,4 @@
-; RUN: opt < %s -globalopt -S | FileCheck %s
+; RUN: opt < %s -passes=globalopt -S | FileCheck %s
 
 ; The 'X' indices could be larger than 31.  Do not SROA the outer
 ; indices of this array.

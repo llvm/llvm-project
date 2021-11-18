@@ -1,7 +1,7 @@
 ; This testcase tests that a worklist is being used, and that globals can be 
 ; removed if they are the subject of a constexpr and ConstantPointerRef
 
-; RUN: opt < %s -globaldce -S | FileCheck %s
+; RUN: opt < %s -passes=globaldce -S | FileCheck %s
 
 ; CHECK-NOT: global
 

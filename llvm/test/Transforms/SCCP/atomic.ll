@@ -1,4 +1,4 @@
-; RUN: opt < %s -sccp -S | FileCheck %s
+; RUN: opt < %s -passes=sccp -S | FileCheck %s
 
 define i1 @test_cmpxchg(i32* %addr, i32 %desired, i32 %new) {
 ; CHECK-LABEL: @test_cmpxchg

@@ -1,4 +1,4 @@
-; RUN: opt -ipsccp < %s -S | FileCheck %s
+; RUN: opt -passes=ipsccp < %s -S | FileCheck %s
 
 define internal {i32, i32} @identity(i32 %patatino) {
   %foo = insertvalue {i32, i32} {i32 1, i32 undef}, i32 %patatino, 1

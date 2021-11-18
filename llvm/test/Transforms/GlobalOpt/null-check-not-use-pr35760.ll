@@ -1,4 +1,4 @@
-; RUN: opt -S -globalopt -o - < %s | FileCheck %s
+; RUN: opt -S -passes=globalopt -o - < %s | FileCheck %s
 
 ; No malloc promotion with non-null check.
 

@@ -1,4 +1,4 @@
-; RUN: opt -S < %s -globalopt | FileCheck %s
+; RUN: opt -S < %s -passes=globalopt | FileCheck %s
 
 ; Static evaluation across a @llvm.sideeffect.
 

@@ -1,4 +1,4 @@
-; RUN: opt < %s -globalopt -disable-output
+; RUN: opt < %s -passes=globalopt -disable-output
         %RPyString = type { i32, %arraytype.Char }
         %arraytype.Char = type { i32, [0 x i8] }
         %arraytype.Signed = type { i32, [0 x i32] }

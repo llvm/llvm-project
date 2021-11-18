@@ -1,4 +1,4 @@
-; RUN: opt < %s -sccp -S | FileCheck %s
+; RUN: opt < %s -passes=sccp -S | FileCheck %s
 
 ; This is a basic correctness check for constant propagation.  The add
 ; instruction should be eliminated.

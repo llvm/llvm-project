@@ -1,4 +1,4 @@
-; RUN: opt < %s -sccp -S | FileCheck %s
+; RUN: opt < %s -passes=sccp -S | FileCheck %s
 
 ; Test that SCCP has basic knowledge of when div can nuke overdefined values.
 

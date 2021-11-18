@@ -2,7 +2,7 @@
 ; then the "returned" attribute of input arguments
 ; should be cleared.
 
-; RUN: opt < %s -ipsccp -S | FileCheck %s
+; RUN: opt < %s -passes=ipsccp -S | FileCheck %s
 define i32 @main() {
 ; CHECK-LABEL: @main
 entry:

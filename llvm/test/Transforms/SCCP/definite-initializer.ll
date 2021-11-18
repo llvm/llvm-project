@@ -1,4 +1,4 @@
-; RUN: opt -S -ipsccp < %s | FileCheck %s
+; RUN: opt -S -passes=ipsccp < %s | FileCheck %s
 @d = internal externally_initialized global i32 0, section ".openbsd.randomdata", align 4
 
 ; CHECK-LABEL: @test1(

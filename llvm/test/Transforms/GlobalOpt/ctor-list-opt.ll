@@ -1,4 +1,4 @@
-; RUN: opt < %s -globalopt -S | FileCheck %s
+; RUN: opt < %s -passes=globalopt -S | FileCheck %s
 ; CHECK-NOT: CTOR
 %ini = type { i32, void()*, i8* }
 @llvm.global_ctors = appending global [11 x %ini] [

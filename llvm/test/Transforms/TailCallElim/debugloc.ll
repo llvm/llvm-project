@@ -1,4 +1,4 @@
-; RUN: opt < %s -debugify -tailcallelim -S | FileCheck %s
+; RUN: opt < %s -passes=debugify,tailcallelim -S | FileCheck %s
 
 define void @foo() {
 entry:

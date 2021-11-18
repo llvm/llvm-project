@@ -1,4 +1,4 @@
-; RUN: opt < %s -ipsccp -S | FileCheck %s
+; RUN: opt < %s -passes=ipsccp -S | FileCheck %s
 
 ; This transformation is safe for atomic loads and stores; check that it works.
 

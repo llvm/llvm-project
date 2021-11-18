@@ -1,4 +1,4 @@
-; RUN: opt < %s -S -globalopt | FileCheck %s
+; RUN: opt < %s -S -passes=globalopt | FileCheck %s
 
 ; This global is externally_initialized, which may modify the value between
 ; it's static initializer and any code in this module being run, so the only

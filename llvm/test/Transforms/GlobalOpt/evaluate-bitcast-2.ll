@@ -1,4 +1,4 @@
-; RUN: opt < %s -globalopt -S | FileCheck %s
+; RUN: opt < %s -passes=globalopt -S | FileCheck %s
 
 ; Test the evaluation of a store and a load via a bitcast, and check
 ; that globals are constant folded to the correct value.

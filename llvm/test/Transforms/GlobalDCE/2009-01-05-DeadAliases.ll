@@ -1,4 +1,4 @@
-; RUN: opt < %s -globaldce -S > %t
+; RUN: opt < %s -passes=globaldce -S > %t
 ; RUN: FileCheck %s < %t
 ; RUN: FileCheck --check-prefix=DEAD %s < %t
 

@@ -1,4 +1,4 @@
-; RUN: opt < %s -globalopt -S | FileCheck %s
+; RUN: opt < %s -passes=globalopt -S | FileCheck %s
 ; CHECK: load volatile
 @t0.1441 = internal global double 0x3FD5555555555555, align 8		; <double*> [#uses=1]
 

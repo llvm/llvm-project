@@ -1,4 +1,4 @@
-; RUN: opt -constmerge -S < %s | FileCheck %s
+; RUN: opt -passes=constmerge -S < %s | FileCheck %s
 ; Test which corresponding x and y are merged and that unnamed_addr
 ; is correctly set.
 

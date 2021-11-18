@@ -1,4 +1,4 @@
-; RUN: opt < %s -globalopt -S | FileCheck %s
+; RUN: opt < %s -passes=globalopt -S | FileCheck %s
 ; This is a harder case to delete as the GEP has a variable index.
 
 ; CHECK-NOT: internal

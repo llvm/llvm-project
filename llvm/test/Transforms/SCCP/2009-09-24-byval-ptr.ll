@@ -1,4 +1,4 @@
-; RUN: opt < %s -ipsccp -S | FileCheck %s
+; RUN: opt < %s -passes=ipsccp -S | FileCheck %s
 ; Don't constant-propagate byval pointers, since they are not pointers!
 ; PR5038
 %struct.MYstr = type { i8, i32 }

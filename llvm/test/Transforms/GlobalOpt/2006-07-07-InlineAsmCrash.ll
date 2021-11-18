@@ -1,4 +1,4 @@
-; RUN: opt < %s -globalopt -disable-output
+; RUN: opt < %s -passes=globalopt -disable-output
 ; PR820
 target datalayout = "e-p:32:32"
 target triple = "i686-pc-linux-gnu"
