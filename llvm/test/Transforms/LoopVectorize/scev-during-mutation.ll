@@ -76,7 +76,10 @@ exit:
   ret void
 }
 
-define void @test_pr52024(i32* %dst, i16 %N) {
+; CHECK-LABEL: @pr52024(
+; CHECK: vector.body:
+;
+define void @pr52024(i32* %dst, i16 %N) {
 entry:
   br label %loop.1
 
