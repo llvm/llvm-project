@@ -68,7 +68,7 @@ public:
 
   bool IsExecutable() const override { return false; }
 
-  void ParseSymtab(lldb_private::Symtab &symtab) override {}
+  Symtab *GetSymtab() override { return nullptr; }
 
   bool IsStripped() override { return false; }
 
