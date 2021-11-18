@@ -16,4 +16,5 @@ template <> struct coroutine_traits<void>; // expected-note {{forward declaratio
 
 void uses_forward_declaration() {
   co_return; // expected-error {{this function cannot be a coroutine: missing definition of specialization 'coroutine_traits<void>'}}
+             // expected-warning@-1 {{Please move from std::experimental::coroutine_traits to std::coroutine_traits}}
 }
