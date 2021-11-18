@@ -17,6 +17,10 @@
 
 // UNSUPPORTED: libunwind-arm-ehabi
 
+// The AIX assembler does not support CFI directives, which
+// are necessary to run this test.
+// UNSUPPORTED: target=powerpc{{(64)?}}-ibm-aix
+
 #include <assert.h>
 #include <stdlib.h>
 #include <libunwind.h>
