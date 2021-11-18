@@ -1211,8 +1211,8 @@ Operation *SPIRVDialect::materializeConstant(OpBuilder &builder,
 
 LogicalResult SPIRVDialect::verifyOperationAttribute(Operation *op,
                                                      NamedAttribute attribute) {
-  StringRef symbol = attribute.first.strref();
-  Attribute attr = attribute.second;
+  StringRef symbol = attribute.getName().strref();
+  Attribute attr = attribute.getValue();
 
   // TODO: figure out a way to generate the description from the
   // StructAttr definition.
@@ -1237,8 +1237,8 @@ LogicalResult SPIRVDialect::verifyOperationAttribute(Operation *op,
 /// `valueType` is valid.
 static LogicalResult verifyRegionAttribute(Location loc, Type valueType,
                                            NamedAttribute attribute) {
-  StringRef symbol = attribute.first.strref();
-  Attribute attr = attribute.second;
+  StringRef symbol = attribute.getName().strref();
+  Attribute attr = attribute.getValue();
 
   if (symbol != spirv::getInterfaceVarABIAttrName())
     return emitError(loc, "found unsupported '")

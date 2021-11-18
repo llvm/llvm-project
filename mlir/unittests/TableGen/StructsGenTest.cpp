@@ -62,7 +62,7 @@ TEST(StructsGenTest, ClassofExtraFalse) {
 
   // Add an extra NamedAttribute.
   auto wrongId = mlir::StringAttr::get(&context, "wrong");
-  auto wrongAttr = mlir::NamedAttribute(wrongId, expectedValues[0].second);
+  auto wrongAttr = mlir::NamedAttribute(wrongId, expectedValues[0].getValue());
   newValues.push_back(wrongAttr);
 
   // Make a new DictionaryAttr and validate.
@@ -84,7 +84,7 @@ TEST(StructsGenTest, ClassofBadNameFalse) {
 
   // Add a copy of the first attribute with the wrong name.
   auto wrongId = mlir::StringAttr::get(&context, "wrong");
-  auto wrongAttr = mlir::NamedAttribute(wrongId, expectedValues[0].second);
+  auto wrongAttr = mlir::NamedAttribute(wrongId, expectedValues[0].getValue());
   newValues.push_back(wrongAttr);
 
   auto badDictionary = mlir::DictionaryAttr::get(&context, newValues);
@@ -108,7 +108,7 @@ TEST(StructsGenTest, ClassofBadTypeFalse) {
   auto elementsType = mlir::RankedTensorType::get({3}, i64Type);
   auto elementsAttr =
       mlir::DenseIntElementsAttr::get(elementsType, ArrayRef<int64_t>{1, 2, 3});
-  mlir::StringAttr id = expectedValues.back().first;
+  mlir::StringAttr id = expectedValues.back().getName();
   auto wrongAttr = mlir::NamedAttribute(id, elementsAttr);
   newValues.push_back(wrongAttr);
 

@@ -521,7 +521,7 @@ spirv::Deserializer::createSpecConstant(Location loc, uint32_t resultID,
                                                     defaultValue);
   if (decorations.count(resultID)) {
     for (auto attr : decorations[resultID].getAttrs())
-      op->setAttr(attr.first, attr.second);
+      op->setAttr(attr.getName(), attr.getValue());
   }
   specConstMap[resultID] = op;
   return op;
@@ -591,9 +591,8 @@ spirv::Deserializer::processGlobalVariable(ArrayRef<uint32_t> operands) {
 
   // Decorations.
   if (decorations.count(variableID)) {
-    for (auto attr : decorations[variableID].getAttrs()) {
-      varOp->setAttr(attr.first, attr.second);
-    }
+    for (auto attr : decorations[variableID].getAttrs())
+      varOp->setAttr(attr.getName(), attr.getValue());
   }
   globalVariableMap[variableID] = varOp;
   return success();

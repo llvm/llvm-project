@@ -76,7 +76,7 @@ static LogicalResult updateSymbolAndAllUses(SymbolOpInterface op,
 static llvm::hash_code computeHash(SymbolOpInterface symbolOp) {
   auto range =
       llvm::make_filter_range(symbolOp->getAttrs(), [](NamedAttribute attr) {
-        return attr.first != SymbolTable::getSymbolAttrName();
+        return attr.getName() != SymbolTable::getSymbolAttrName();
       });
 
   return llvm::hash_combine(

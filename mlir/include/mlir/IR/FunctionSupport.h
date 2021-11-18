@@ -609,10 +609,10 @@ LogicalResult FunctionLike<ConcreteType>::verifyTrait(Operation *op) {
       // that they contain a dialect prefix in their name.  Call the dialect, if
       // registered, to verify the attributes themselves.
       for (auto attr : argAttrs) {
-        if (!attr.first.strref().contains('.'))
+        if (!attr.getName().strref().contains('.'))
           return funcOp.emitOpError(
               "arguments may only have dialect attributes");
-        if (Dialect *dialect = attr.first.getReferencedDialect()) {
+        if (Dialect *dialect = attr.getNameDialect()) {
           if (failed(dialect->verifyRegionArgAttribute(op, /*regionIndex=*/0,
                                                        /*argIndex=*/i, attr)))
             return failure();
@@ -643,9 +643,9 @@ LogicalResult FunctionLike<ConcreteType>::verifyTrait(Operation *op) {
       // that they contain a dialect prefix in their name.  Call the dialect, if
       // registered, to verify the attributes themselves.
       for (auto attr : resultAttrs) {
-        if (!attr.first.strref().contains('.'))
+        if (!attr.getName().strref().contains('.'))
           return funcOp.emitOpError("results may only have dialect attributes");
-        if (Dialect *dialect = attr.first.getReferencedDialect()) {
+        if (Dialect *dialect = attr.getNameDialect()) {
           if (failed(dialect->verifyRegionResultAttribute(op, /*regionIndex=*/0,
                                                           /*resultIndex=*/i,
                                                           attr)))

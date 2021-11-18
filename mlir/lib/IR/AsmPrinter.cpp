@@ -411,7 +411,7 @@ private:
 
     // Consider the attributes of the operation for aliases.
     for (const NamedAttribute &attr : op->getAttrs())
-      printAttribute(attr.second);
+      printAttribute(attr.getValue());
   }
 
   /// Print the given block. If 'printBlockArgs' is false, the arguments of the
@@ -483,14 +483,14 @@ private:
       return;
     if (elidedAttrs.empty()) {
       for (const NamedAttribute &attr : attrs)
-        printAttribute(attr.second);
+        printAttribute(attr.getValue());
       return;
     }
     llvm::SmallDenseSet<StringRef> elidedAttrsSet(elidedAttrs.begin(),
                                                   elidedAttrs.end());
     for (const NamedAttribute &attr : attrs)
-      if (!elidedAttrsSet.contains(attr.first.strref()))
-        printAttribute(attr.second);
+      if (!elidedAttrsSet.contains(attr.getName().strref()))
+        printAttribute(attr.getValue());
   }
   void printOptionalAttrDictWithKeyword(
       ArrayRef<NamedAttribute> attrs,
@@ -2031,24 +2031,22 @@ void AsmPrinter::Impl::printOptionalAttrDict(ArrayRef<NamedAttribute> attrs,
   llvm::SmallDenseSet<StringRef> elidedAttrsSet(elidedAttrs.begin(),
                                                 elidedAttrs.end());
   auto filteredAttrs = llvm::make_filter_range(attrs, [&](NamedAttribute attr) {
-    return !elidedAttrsSet.contains(attr.first.strref());
+    return !elidedAttrsSet.contains(attr.getName().strref());
   });
   if (!filteredAttrs.empty())
     printFilteredAttributesFn(filteredAttrs);
 }
 
 void AsmPrinter::Impl::printNamedAttribute(NamedAttribute attr) {
-  assert(attr.first.size() != 0 && "expected valid named attribute");
-
   // Print the name without quotes if possible.
-  ::printKeywordOrString(attr.first.strref(), os);
+  ::printKeywordOrString(attr.getName().strref(), os);
 
   // Pretty printing elides the attribute value for unit attributes.
-  if (attr.second.isa<UnitAttr>())
+  if (attr.getValue().isa<UnitAttr>())
     return;
 
   os << " = ";
-  printAttribute(attr.second);
+  printAttribute(attr.getValue());
 }
 
 void AsmPrinter::Impl::printDialectAttribute(Attribute attr) {

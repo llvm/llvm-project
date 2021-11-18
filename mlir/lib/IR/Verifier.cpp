@@ -170,7 +170,7 @@ LogicalResult OperationVerifier::verifyOperation(
   /// Verify that all of the attributes are okay.
   for (auto attr : op.getAttrs()) {
     // Check for any optional dialect specific attributes.
-    if (auto *dialect = attr.first.getReferencedDialect())
+    if (auto *dialect = attr.getNameDialect())
       if (failed(dialect->verifyOperationAttribute(&op, attr)))
         return failure();
   }

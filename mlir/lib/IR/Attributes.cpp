@@ -23,9 +23,27 @@ MLIRContext *Attribute::getContext() const { return getDialect().getContext(); }
 // NamedAttribute
 //===----------------------------------------------------------------------===//
 
-bool mlir::operator<(const NamedAttribute &lhs, const NamedAttribute &rhs) {
-  return lhs.first.compare(rhs.first) < 0;
+NamedAttribute::NamedAttribute(StringAttr name, Attribute value)
+    : name(name), value(value) {
+  assert(name && value && "expected valid attribute name and value");
+  assert(name.size() != 0 && "expected valid attribute name");
 }
-bool mlir::operator<(const NamedAttribute &lhs, StringRef rhs) {
-  return lhs.first.getValue().compare(rhs) < 0;
+
+StringAttr NamedAttribute::getName() const { return name.cast<StringAttr>(); }
+
+Dialect *NamedAttribute::getNameDialect() const {
+  return getName().getReferencedDialect();
+}
+
+void NamedAttribute::setName(StringAttr newName) {
+  assert(name && "expected valid attribute name");
+  name = newName;
+}
+
+bool NamedAttribute::operator<(const NamedAttribute &rhs) const {
+  return getName().compare(rhs.getName()) < 0;
+}
+
+bool NamedAttribute::operator<(StringRef rhs) const {
+  return getName().getValue().compare(rhs) < 0;
 }

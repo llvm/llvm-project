@@ -373,7 +373,7 @@ public:
                                      bool (*)(NamedAttribute)> {
     static bool filter(NamedAttribute attr) {
       // Dialect attributes are prefixed by the dialect name, like operations.
-      return attr.first.strref().count('.');
+      return attr.getName().strref().count('.');
     }
 
     explicit dialect_attr_iterator(ArrayRef<NamedAttribute>::iterator it,
@@ -407,7 +407,7 @@ public:
     NamedAttrList attrs;
     attrs.append(std::begin(dialectAttrs), std::end(dialectAttrs));
     for (auto attr : getAttrs())
-      if (!attr.first.strref().contains('.'))
+      if (!attr.getName().strref().contains('.'))
         attrs.push_back(attr);
     setAttrs(attrs.getDictionary(getContext()));
   }

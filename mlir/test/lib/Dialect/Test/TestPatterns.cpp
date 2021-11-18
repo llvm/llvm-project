@@ -243,7 +243,7 @@ void TestDerivedAttributeDriver::runOnFunction() {
     if (!dAttr)
       return;
     for (auto d : dAttr)
-      dOp.emitRemark() << d.first.getValue() << " = " << d.second;
+      dOp.emitRemark() << d.getName().getValue() << " = " << d.getValue();
   });
 }
 

@@ -64,7 +64,7 @@ public:
   LogicalResult
   amendOperation(Operation *op, NamedAttribute attribute,
                  LLVM::ModuleTranslation &moduleTranslation) const final {
-    if (attribute.first == ROCDL::ROCDLDialect::getKernelFuncAttrName()) {
+    if (attribute.getName() == ROCDL::ROCDLDialect::getKernelFuncAttrName()) {
       auto func = dyn_cast<LLVM::LLVMFuncOp>(op);
       if (!func)
         return failure();

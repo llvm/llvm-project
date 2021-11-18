@@ -57,7 +57,7 @@ public:
   LogicalResult
   amendOperation(Operation *op, NamedAttribute attribute,
                  LLVM::ModuleTranslation &moduleTranslation) const final {
-    if (attribute.first == NVVM::NVVMDialect::getKernelFuncAttrName()) {
+    if (attribute.getName() == NVVM::NVVMDialect::getKernelFuncAttrName()) {
       auto func = dyn_cast<LLVM::LLVMFuncOp>(op);
       if (!func)
         return failure();

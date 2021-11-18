@@ -367,8 +367,8 @@ void DLTIDialect::printAttribute(Attribute attr, DialectAsmPrinter &os) const {
 
 LogicalResult DLTIDialect::verifyOperationAttribute(Operation *op,
                                                     NamedAttribute attr) {
-  if (attr.first == DLTIDialect::kDataLayoutAttrName) {
-    if (!attr.second.isa<DataLayoutSpecAttr>()) {
+  if (attr.getName() == DLTIDialect::kDataLayoutAttrName) {
+    if (!attr.getValue().isa<DataLayoutSpecAttr>()) {
       return op->emitError() << "'" << DLTIDialect::kDataLayoutAttrName
                              << "' is expected to be a #dlti.dl_spec attribute";
     }
@@ -377,6 +377,6 @@ LogicalResult DLTIDialect::verifyOperationAttribute(Operation *op,
     return success();
   }
 
-  return op->emitError() << "attribute '" << attr.first.getValue()
+  return op->emitError() << "attribute '" << attr.getName().getValue()
                          << "' not supported by dialect";
 }

@@ -51,9 +51,9 @@ static constexpr const char kNonTemporalAttrName[] = "nontemporal";
 static auto processFMFAttr(ArrayRef<NamedAttribute> attrs) {
   SmallVector<NamedAttribute, 8> filteredAttrs(
       llvm::make_filter_range(attrs, [&](NamedAttribute attr) {
-        if (attr.first == "fastmathFlags") {
-          auto defAttr = FMFAttr::get(attr.second.getContext(), {});
-          return defAttr != attr.second;
+        if (attr.getName() == "fastmathFlags") {
+          auto defAttr = FMFAttr::get(attr.getValue().getContext(), {});
+          return defAttr != attr.getValue();
         }
         return true;
       }));
@@ -201,7 +201,8 @@ static ParseResult parseAllocaOp(OpAsmParser &parser, OperationState &result) {
   Optional<NamedAttribute> alignmentAttr =
       result.attributes.getNamed("alignment");
   if (alignmentAttr.hasValue()) {
-    auto alignmentInt = alignmentAttr.getValue().second.dyn_cast<IntegerAttr>();
+    auto alignmentInt =
+        alignmentAttr.getValue().getValue().dyn_cast<IntegerAttr>();
     if (!alignmentInt)
       return parser.emitError(parser.getNameLoc(),
                               "expected integer alignment");
@@ -2317,15 +2318,15 @@ LogicalResult LLVMDialect::verifyOperationAttribute(Operation *op,
                                                     NamedAttribute attr) {
   // If the `llvm.loop` attribute is present, enforce the following structure,
   // which the module translation can assume.
-  if (attr.first.strref() == LLVMDialect::getLoopAttrName()) {
-    auto loopAttr = attr.second.dyn_cast<DictionaryAttr>();
+  if (attr.getName() == LLVMDialect::getLoopAttrName()) {
+    auto loopAttr = attr.getValue().dyn_cast<DictionaryAttr>();
     if (!loopAttr)
       return op->emitOpError() << "expected '" << LLVMDialect::getLoopAttrName()
                                << "' to be a dictionary attribute";
     Optional<NamedAttribute> parallelAccessGroup =
         loopAttr.getNamed(LLVMDialect::getParallelAccessAttrName());
     if (parallelAccessGroup.hasValue()) {
-      auto accessGroups = parallelAccessGroup->second.dyn_cast<ArrayAttr>();
+      auto accessGroups = parallelAccessGroup->getValue().dyn_cast<ArrayAttr>();
       if (!accessGroups)
         return op->emitOpError()
                << "expected '" << LLVMDialect::getParallelAccessAttrName()
@@ -2353,7 +2354,8 @@ LogicalResult LLVMDialect::verifyOperationAttribute(Operation *op,
 
     Optional<NamedAttribute> loopOptions =
         loopAttr.getNamed(LLVMDialect::getLoopOptionsAttrName());
-    if (loopOptions.hasValue() && !loopOptions->second.isa<LoopOptionsAttr>())
+    if (loopOptions.hasValue() &&
+        !loopOptions->getValue().isa<LoopOptionsAttr>())
       return op->emitOpError()
              << "expected '" << LLVMDialect::getLoopOptionsAttrName()
              << "' to be a `loopopts` attribute";
@@ -2363,9 +2365,9 @@ LogicalResult LLVMDialect::verifyOperationAttribute(Operation *op,
   // syntax. Try parsing it and report errors in case of failure. Users of this
   // attribute may assume it is well-formed and can pass it to the (asserting)
   // llvm::DataLayout constructor.
-  if (attr.first.strref() != LLVM::LLVMDialect::getDataLayoutAttrName())
+  if (attr.getName() != LLVM::LLVMDialect::getDataLayoutAttrName())
     return success();
-  if (auto stringAttr = attr.second.dyn_cast<StringAttr>())
+  if (auto stringAttr = attr.getValue().dyn_cast<StringAttr>())
     return verifyDataLayoutString(
         stringAttr.getValue(),
         [op](const Twine &message) { op->emitOpError() << message.str(); });
@@ -2381,13 +2383,13 @@ LogicalResult LLVMDialect::verifyRegionArgAttribute(Operation *op,
                                                     unsigned argIdx,
                                                     NamedAttribute argAttr) {
   // Check that llvm.noalias is a unit attribute.
-  if (argAttr.first == LLVMDialect::getNoAliasAttrName() &&
-      !argAttr.second.isa<UnitAttr>())
+  if (argAttr.getName() == LLVMDialect::getNoAliasAttrName() &&
+      !argAttr.getValue().isa<UnitAttr>())
     return op->emitError()
            << "expected llvm.noalias argument attribute to be a unit attribute";
   // Check that llvm.align is an integer attribute.
-  if (argAttr.first == LLVMDialect::getAlignAttrName() &&
-      !argAttr.second.isa<IntegerAttr>())
+  if (argAttr.getName() == LLVMDialect::getAlignAttrName() &&
+      !argAttr.getValue().isa<IntegerAttr>())
     return op->emitError()
            << "llvm.align argument attribute of non integer type";
   return success();

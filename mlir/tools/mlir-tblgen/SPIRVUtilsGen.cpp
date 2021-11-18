@@ -673,7 +673,8 @@ static void emitDecorationSerialization(const Operator &op, StringRef tabs,
     // All non-argument attributes translated into OpDecorate instruction
     os << tabs << formatv("for (auto attr : {0}->getAttrs()) {{\n", opVar);
     os << tabs
-       << formatv("  if (llvm::is_contained({0}, attr.first)) {{", elidedAttrs);
+       << formatv("  if (llvm::is_contained({0}, attr.getName())) {{",
+                  elidedAttrs);
     os << tabs << "    continue;\n";
     os << tabs << "  }\n";
     os << tabs

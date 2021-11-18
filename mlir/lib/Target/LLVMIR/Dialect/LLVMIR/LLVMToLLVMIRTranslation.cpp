@@ -224,9 +224,9 @@ static void setLoopMetadata(Operation &opInst, llvm::Instruction &llvmInst,
         SmallVector<llvm::Metadata *> parallelAccess;
         parallelAccess.push_back(
             llvm::MDString::get(ctx, "llvm.loop.parallel_accesses"));
-        for (SymbolRefAttr accessGroupRef :
-             parallelAccessGroup->second.cast<ArrayAttr>()
-                 .getAsRange<SymbolRefAttr>())
+        for (SymbolRefAttr accessGroupRef : parallelAccessGroup->getValue()
+                                                .cast<ArrayAttr>()
+                                                .getAsRange<SymbolRefAttr>())
           parallelAccess.push_back(
               moduleTranslation.getAccessGroup(opInst, accessGroupRef));
         loopOptions.push_back(llvm::MDNode::get(ctx, parallelAccess));

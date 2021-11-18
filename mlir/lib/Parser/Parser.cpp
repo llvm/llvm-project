@@ -1123,7 +1123,7 @@ public:
     Optional<NamedAttribute> duplicate = opState.attributes.findDuplicate();
     if (duplicate)
       return emitError(getNameLoc(), "attribute '")
-             << duplicate->first.getValue()
+             << duplicate->getName().getValue()
              << "' occurs more than once in the attribute list";
     return success();
   }

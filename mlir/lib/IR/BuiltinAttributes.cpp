@@ -119,11 +119,12 @@ findDuplicateElement(ArrayRef<NamedAttribute> value) {
     return none;
 
   if (value.size() == 2)
-    return value[0].first == value[1].first ? value[0] : none;
+    return value[0].getName() == value[1].getName() ? value[0] : none;
 
-  auto it = std::adjacent_find(
-      value.begin(), value.end(),
-      [](NamedAttribute l, NamedAttribute r) { return l.first == r.first; });
+  auto it = std::adjacent_find(value.begin(), value.end(),
+                               [](NamedAttribute l, NamedAttribute r) {
+                                 return l.getName() == r.getName();
+                               });
   return it != value.end() ? *it : none;
 }
 
@@ -154,9 +155,6 @@ DictionaryAttr DictionaryAttr::get(MLIRContext *context,
                                    ArrayRef<NamedAttribute> value) {
   if (value.empty())
     return DictionaryAttr::getEmpty(context);
-  assert(llvm::all_of(value,
-                      [](const NamedAttribute &attr) { return attr.second; }) &&
-         "value cannot have null entries");
 
   // We need to sort the element list to canonicalize it.
   SmallVector<NamedAttribute, 8> storage;
@@ -173,10 +171,8 @@ DictionaryAttr DictionaryAttr::getWithSorted(MLIRContext *context,
   if (value.empty())
     return DictionaryAttr::getEmpty(context);
   // Ensure that the attribute elements are unique and sorted.
-  assert(llvm::is_sorted(value,
-                         [](NamedAttribute l, NamedAttribute r) {
-                           return l.first.strref() < r.first.strref();
-                         }) &&
+  assert(llvm::is_sorted(
+             value, [](NamedAttribute l, NamedAttribute r) { return l < r; }) &&
          "expected attribute values to be sorted");
   assert(!findDuplicateElement(value) &&
          "DictionaryAttr element names must be unique");
@@ -186,11 +182,11 @@ DictionaryAttr DictionaryAttr::getWithSorted(MLIRContext *context,
 /// Return the specified attribute if present, null otherwise.
 Attribute DictionaryAttr::get(StringRef name) const {
   auto it = impl::findAttrSorted(begin(), end(), name);
-  return it.second ? it.first->second : Attribute();
+  return it.second ? it.first->getValue() : Attribute();
 }
 Attribute DictionaryAttr::get(StringAttr name) const {
   auto it = impl::findAttrSorted(begin(), end(), name);
-  return it.second ? it.first->second : Attribute();
+  return it.second ? it.first->getValue() : Attribute();
 }
 
 /// Return the specified named attribute if present, None otherwise.
@@ -226,16 +222,16 @@ DictionaryAttr DictionaryAttr::getEmptyUnchecked(MLIRContext *context) {
 void DictionaryAttr::walkImmediateSubElements(
     function_ref<void(Attribute)> walkAttrsFn,
     function_ref<void(Type)> walkTypesFn) const {
-  for (Attribute attr : llvm::make_second_range(getValue()))
-    walkAttrsFn(attr);
+  for (const NamedAttribute &attr : getValue())
+    walkAttrsFn(attr.getValue());
 }
 
 SubElementAttrInterface DictionaryAttr::replaceImmediateSubAttribute(
     ArrayRef<std::pair<size_t, Attribute>> replacements) const {
   std::vector<NamedAttribute> vec = getValue().vec();
-  for (auto &it : replacements) {
-    vec[it.first].second = it.second;
-  }
+  for (auto &it : replacements)
+    vec[it.first].setValue(it.second);
+
   // The above only modifies the mapped value, but not the key, and therefore
   // not the order of the elements. It remains sorted
   return getWithSorted(getContext(), vec);
