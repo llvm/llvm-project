@@ -1318,6 +1318,22 @@ AddressClass ObjectFileMachO::GetAddressClass(lldb::addr_t file_addr) {
   return AddressClass::eUnknown;
 }
 
+Symtab *ObjectFileMachO::GetSymtab() {
+  ModuleSP module_sp(GetModule());
+  if (module_sp) {
+    std::lock_guard<std::recursive_mutex> guard(module_sp->GetMutex());
+    if (m_symtab_up == nullptr) {
+      ElapsedTime elapsed(module_sp->GetSymtabParseTime());
+      m_symtab_up = std::make_unique<Symtab>(this);
+      std::lock_guard<std::recursive_mutex> symtab_guard(
+          m_symtab_up->GetMutex());
+      ParseSymtab();
+      m_symtab_up->Finalize();
+    }
+  }
+  return m_symtab_up.get();
+}
+
 bool ObjectFileMachO::IsStripped() {
   if (m_dysymtab.cmd == 0) {
     ModuleSP module_sp(GetModule());
@@ -2227,12 +2243,12 @@ ParseNList(DataExtractor &nlist_data, lldb::offset_t &nlist_data_offset,
 
 enum { DebugSymbols = true, NonDebugSymbols = false };
 
-void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
+size_t ObjectFileMachO::ParseSymtab() {
   LLDB_SCOPED_TIMERF("ObjectFileMachO::ParseSymtab () module = %s",
                      m_file.GetFilename().AsCString(""));
   ModuleSP module_sp(GetModule());
   if (!module_sp)
-    return;
+    return 0;
 
   Progress progress(llvm::formatv("Parsing symbol table for {0}",
                                   m_file.GetFilename().AsCString("<Unknown>")));
@@ -2282,7 +2298,7 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
       // Read in the rest of the symtab load command
       if (m_data.GetU32(&offset, &symtab_load_command.symoff, 4) ==
           nullptr) // fill in symoff, nsyms, stroff, strsize fields
-        return;
+        return 0;
       break;
 
     case LC_DYLD_INFO:
@@ -2341,11 +2357,12 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
   }
 
   if (!symtab_load_command.cmd)
-    return;
+    return 0;
 
+  Symtab *symtab = m_symtab_up.get();
   SectionList *section_list = GetSectionList();
   if (section_list == nullptr)
-    return;
+    return 0;
 
   const uint32_t addr_byte_size = m_data.GetAddressByteSize();
   const ByteOrder byte_order = m_data.GetByteOrder();
@@ -2482,7 +2499,7 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
 
     // We shouldn't have exports data from both the LC_DYLD_INFO command
     // AND the LC_DYLD_EXPORTS_TRIE command in the same binary:
-    lldbassert(!((dyld_info.export_size > 0)
+    lldbassert(!((dyld_info.export_size > 0) 
                  && (exports_trie_load_command.datasize > 0)));
     if (dyld_info.export_size > 0) {
       dyld_trie_data.SetData(m_data, dyld_info.export_off,
@@ -2875,10 +2892,10 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
 
                 // The normal nlist code cannot correctly size the Symbols
                 // array, we need to allocate it here.
-                sym = symtab.Resize(
+                sym = symtab->Resize(
                     symtab_load_command.nsyms + m_dysymtab.nindirectsyms +
                     unmapped_local_symbols_found - m_dysymtab.nlocalsym);
-                num_syms = symtab.GetNumSymbols();
+                num_syms = symtab->GetNumSymbols();
 
                 nlist_data_offset =
                     local_symbols_info.nlistOffset +
@@ -3010,7 +3027,7 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
                             // original
                             // STAB entry so we don't have
                             // to hunt for it later
-                            symtab.SymbolAtIndex(N_FUN_indexes.back())
+                            symtab->SymbolAtIndex(N_FUN_indexes.back())
                                 ->SetByteSize(nlist.n_value);
                             N_FUN_indexes.pop_back();
                             // We don't really need the end function STAB as
@@ -3090,7 +3107,7 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
                             // index of this N_SO so that we can always skip
                             // the entire N_SO if we need to navigate more
                             // quickly at the source level when parsing STABS
-                            symbol_ptr = symtab.SymbolAtIndex(N_SO_index);
+                            symbol_ptr = symtab->SymbolAtIndex(N_SO_index);
                             symbol_ptr->SetByteSize(sym_idx);
                             symbol_ptr->SetSizeIsSibling(true);
                           }
@@ -3197,7 +3214,7 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
                         // quickly at the source level when parsing STABS
                         if (!N_INCL_indexes.empty()) {
                           symbol_ptr =
-                              symtab.SymbolAtIndex(N_INCL_indexes.back());
+                              symtab->SymbolAtIndex(N_INCL_indexes.back());
                           symbol_ptr->SetByteSize(sym_idx + 1);
                           symbol_ptr->SetSizeIsSibling(true);
                           N_INCL_indexes.pop_back();
@@ -3262,7 +3279,7 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
                                                                  nlist.n_value);
                         if (!N_BRAC_indexes.empty()) {
                           symbol_ptr =
-                              symtab.SymbolAtIndex(N_BRAC_indexes.back());
+                              symtab->SymbolAtIndex(N_BRAC_indexes.back());
                           symbol_ptr->SetByteSize(sym_idx + 1);
                           symbol_ptr->SetSizeIsSibling(true);
                           N_BRAC_indexes.pop_back();
@@ -3300,7 +3317,7 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
                         // parsing STABS
                         if (!N_COMM_indexes.empty()) {
                           symbol_ptr =
-                              symtab.SymbolAtIndex(N_COMM_indexes.back());
+                              symtab->SymbolAtIndex(N_COMM_indexes.back());
                           symbol_ptr->SetByteSize(sym_idx + 1);
                           symbol_ptr->SetSizeIsSibling(true);
                           N_COMM_indexes.pop_back();
@@ -3807,8 +3824,8 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
     // symbols, create it now.
     if (sym == nullptr) {
       sym =
-          symtab.Resize(symtab_load_command.nsyms + m_dysymtab.nindirectsyms);
-      num_syms = symtab.GetNumSymbols();
+          symtab->Resize(symtab_load_command.nsyms + m_dysymtab.nindirectsyms);
+      num_syms = symtab->GetNumSymbols();
     }
 
     if (unmapped_local_symbols_found) {
@@ -3942,7 +3959,7 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
             if (!N_FUN_indexes.empty()) {
               // Copy the size of the function into the original STAB entry
               // so we don't have to hunt for it later
-              symtab.SymbolAtIndex(N_FUN_indexes.back())
+              symtab->SymbolAtIndex(N_FUN_indexes.back())
                   ->SetByteSize(nlist.n_value);
               N_FUN_indexes.pop_back();
               // We don't really need the end function STAB as it contains
@@ -4016,7 +4033,7 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
               // N_SO so that we can always skip the entire N_SO if we need
               // to navigate more quickly at the source level when parsing
               // STABS
-              symbol_ptr = symtab.SymbolAtIndex(N_SO_index);
+              symbol_ptr = symtab->SymbolAtIndex(N_SO_index);
               symbol_ptr->SetByteSize(sym_idx);
               symbol_ptr->SetSizeIsSibling(true);
             }
@@ -4110,7 +4127,7 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
           // N_EINCL so that we can always skip the entire symbol if we need
           // to navigate more quickly at the source level when parsing STABS
           if (!N_INCL_indexes.empty()) {
-            symbol_ptr = symtab.SymbolAtIndex(N_INCL_indexes.back());
+            symbol_ptr = symtab->SymbolAtIndex(N_INCL_indexes.back());
             symbol_ptr->SetByteSize(sym_idx + 1);
             symbol_ptr->SetSizeIsSibling(true);
             N_INCL_indexes.pop_back();
@@ -4169,7 +4186,7 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
           // quickly at the source level when parsing STABS
           symbol_section = section_info.GetSection(nlist.n_sect, nlist.n_value);
           if (!N_BRAC_indexes.empty()) {
-            symbol_ptr = symtab.SymbolAtIndex(N_BRAC_indexes.back());
+            symbol_ptr = symtab->SymbolAtIndex(N_BRAC_indexes.back());
             symbol_ptr->SetByteSize(sym_idx + 1);
             symbol_ptr->SetSizeIsSibling(true);
             N_BRAC_indexes.pop_back();
@@ -4203,7 +4220,7 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
           // we need to navigate more quickly at the source level when
           // parsing STABS
           if (!N_COMM_indexes.empty()) {
-            symbol_ptr = symtab.SymbolAtIndex(N_COMM_indexes.back());
+            symbol_ptr = symtab->SymbolAtIndex(N_COMM_indexes.back());
             symbol_ptr->SetByteSize(sym_idx + 1);
             symbol_ptr->SetSizeIsSibling(true);
             N_COMM_indexes.pop_back();
@@ -4672,7 +4689,7 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
 
   if (num_syms < sym_idx + trie_symbol_table_augment_count) {
     num_syms = sym_idx + trie_symbol_table_augment_count;
-    sym = symtab.Resize(num_syms);
+    sym = symtab->Resize(num_syms);
   }
   uint32_t synthetic_sym_id = symtab_load_command.nsyms;
 
@@ -4721,7 +4738,7 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
     if (num_synthetic_function_symbols > 0) {
       if (num_syms < sym_idx + num_synthetic_function_symbols) {
         num_syms = sym_idx + num_synthetic_function_symbols;
-        sym = symtab.Resize(num_syms);
+        sym = symtab->Resize(num_syms);
       }
       for (i = 0; i < function_starts_count; ++i) {
         const FunctionStarts::Entry *func_start_entry =
@@ -4776,7 +4793,7 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
   // symbols.
   if (sym_idx < num_syms) {
     num_syms = sym_idx;
-    sym = symtab.Resize(num_syms);
+    sym = symtab->Resize(num_syms);
   }
 
   // Now synthesize indirect symbols
@@ -4821,11 +4838,11 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
               if (index_pos != end_index_pos) {
                 // We have a remapping from the original nlist index to a
                 // current symbol index, so just look this up by index
-                stub_symbol = symtab.SymbolAtIndex(index_pos->second);
+                stub_symbol = symtab->SymbolAtIndex(index_pos->second);
               } else {
                 // We need to lookup a symbol using the original nlist symbol
                 // index since this index is coming from the S_SYMBOL_STUBS
-                stub_symbol = symtab.FindSymbolByID(stub_sym_id);
+                stub_symbol = symtab->FindSymbolByID(stub_sym_id);
               }
 
               if (stub_symbol) {
@@ -4848,7 +4865,7 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
                   // Make a synthetic symbol to describe the trampoline stub
                   Mangled stub_symbol_mangled_name(stub_symbol->GetMangled());
                   if (sym_idx >= num_syms) {
-                    sym = symtab.Resize(++num_syms);
+                    sym = symtab->Resize(++num_syms);
                     stub_symbol = nullptr; // this pointer no longer valid
                   }
                   sym[sym_idx].SetID(synthetic_sym_id++);
@@ -4887,7 +4904,7 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
             indirect_symbol_names.end()) {
           // Make a synthetic symbol to describe re-exported symbol.
           if (sym_idx >= num_syms)
-            sym = symtab.Resize(++num_syms);
+            sym = symtab->Resize(++num_syms);
           sym[sym_idx].SetID(synthetic_sym_id++);
           sym[sym_idx].GetMangled() = Mangled(e.entry.name);
           sym[sym_idx].SetType(eSymbolTypeReExported);
@@ -4902,6 +4919,18 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
       }
     }
   }
+
+  //        StreamFile s(stdout, false);
+  //        s.Printf ("Symbol table before CalculateSymbolSizes():\n");
+  //        symtab->Dump(&s, NULL, eSortOrderNone);
+  // Set symbol byte sizes correctly since mach-o nlist entries don't have
+  // sizes
+  symtab->CalculateSymbolSizes();
+
+  //        s.Printf ("Symbol table after CalculateSymbolSizes():\n");
+  //        symtab->Dump(&s, NULL, eSortOrderNone);
+
+  return symtab->GetNumSymbols();
 }
 
 void ObjectFileMachO::Dump(Stream *s) {
