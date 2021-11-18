@@ -915,7 +915,7 @@ bool InquireUnitState::Inquire(
       auto pos{unit().position()};
       if (pos == size.value_or(pos + 1)) {
         str = "APPEND";
-      } else if (pos == 0) {
+      } else if (pos == 0 && unit().mayPosition()) {
         str = "REWIND";
       } else {
         str = "ASIS"; // processor-dependent & no common behavior
