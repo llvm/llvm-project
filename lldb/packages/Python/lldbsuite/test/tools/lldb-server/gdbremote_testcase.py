@@ -62,8 +62,8 @@ class GdbRemoteTestCaseFactory(type):
 @add_metaclass(GdbRemoteTestCaseFactory)
 class GdbRemoteTestCaseBase(Base):
 
-    # Default time out in seconds. The timeout is increased fivefold under Asan.
-    DEFAULT_TIMEOUT =  60 * (5 if ('ASAN_OPTIONS' in os.environ) else 1)
+    # Default time out in seconds. The timeout is increased tenfold under Asan.
+    DEFAULT_TIMEOUT =  20 * (10 if ('ASAN_OPTIONS' in os.environ) else 1)
     # Default sleep time in seconds. The sleep time is doubled under Asan.
     DEFAULT_SLEEP   =  5  * (2  if ('ASAN_OPTIONS' in os.environ) else 1)
 
