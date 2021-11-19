@@ -5818,7 +5818,8 @@ static void mergeCandidatesWithResults(
     if (Candidate.Function) {
       if (Candidate.Function->isDeleted())
         continue;
-      if (!Candidate.Function->isVariadic() &&
+      if (shouldEnforceArgLimit(/*PartialOverloading=*/true,
+                                Candidate.Function) &&
           Candidate.Function->getNumParams() <= ArgSize &&
           // Having zero args is annoying, normally we don't surface a function
           // with 2 params, if you already have 2 params, because you are

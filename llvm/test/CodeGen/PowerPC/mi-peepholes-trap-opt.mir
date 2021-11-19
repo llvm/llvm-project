@@ -26,6 +26,25 @@ body:             |
   # CHECK-NEXT:  blr
 
 ---
+name:            conditional_trap_opt_int_return
+alignment:       16
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    liveins: $x3
+    %0:g8rc = COPY $x3
+    %1:g8rc = LI8 3
+    %2:g8rc = LI8 0
+    TD 24, %2, %1
+    $x3 = COPY %0
+    BLR8 implicit $lr8, implicit $rm, implicit $x3
+...
+  # CHECK-LABEL: conditional_trap_opt_int_return
+  # CHECK: # %bb.0: # %entry
+  # CHECK-NEXT:  trap
+  # CHECK-NOT:   blr
+
+---
 name:            conditional_trap_opt_TW_31
 alignment:       16
 tracksRegLiveness: true
@@ -39,7 +58,7 @@ body:             |
   # CHECK-LABEL: conditional_trap_opt_TW_31
   # CHECK: # %bb.0: # %entry
   # CHECK-NEXT:  trap
-  # CHECK-NEXT:  blr
+  # CHECK-NOT:   blr
 
 ---
 name:            conditional_trap_opt_TW_24
@@ -55,7 +74,7 @@ body:             |
   # CHECK-LABEL: conditional_trap_opt_TW_24
   # CHECK: # %bb.0: # %entry
   # CHECK-NEXT:  trap
-  # CHECK-NEXT:  blr
+  # CHECK-NOT:   blr
 
 ---
 name:            conditional_trap_opt_no_trap_TW_24
@@ -86,7 +105,7 @@ body:             |
   # CHECK-LABEL: conditional_trap_opt_TW_20
   # CHECK: # %bb.0: # %entry
   # CHECK-NEXT:  trap
-  # CHECK-NEXT:  blr
+  # CHECK-NOT:   blr
 
 ---
 name:            conditional_trap_opt_no_trap_TW_20
@@ -133,7 +152,7 @@ body:             |
   # CHECK-LABEL: conditional_trap_opt_TW_16
   # CHECK: # %bb.0: # %entry
   # CHECK-NEXT:  trap
-  # CHECK-NEXT:  blr
+  # CHECK-NOT:   blr
 
 ---
 name:            conditional_trap_opt_TW_8
@@ -150,7 +169,7 @@ body:             |
   # CHECK-LABEL: conditional_trap_opt_TW_8
   # CHECK: # %bb.0: # %entry
   # CHECK-NEXT:  trap
-  # CHECK-NEXT:  blr
+  # CHECK-NOT:   blr
 
 ---
 name:            conditional_trap_opt_TW_2
@@ -167,7 +186,7 @@ body:             |
   # CHECK-LABEL: conditional_trap_opt_TW_2
   # CHECK: # %bb.0: # %entry
   # CHECK-NEXT:  trap
-  # CHECK-NEXT:  blr
+  # CHECK-NOT:   blr
 
 ---
 name:            conditional_trap_opt_TW_1
@@ -184,7 +203,7 @@ body:             |
   # CHECK-LABEL: conditional_trap_opt_TW_1
   # CHECK: # %bb.0: # %entry
   # CHECK-NEXT:  trap
-  # CHECK-NEXT:  blr
+  # CHECK-NOT:   blr
 
 ---
 name:            conditional_trap_opt_TW_4
@@ -201,7 +220,7 @@ body:             |
   # CHECK-LABEL: conditional_trap_opt_TW_4
   # CHECK: # %bb.0: # %entry
   # CHECK-NEXT:  trap
-  # CHECK-NEXT:  blr
+  # CHECK-NOT:   blr
 
 ---
 name:            conditional_trap_opt_TWI_31
@@ -216,7 +235,7 @@ body:             |
   # CHECK-LABEL: conditional_trap_opt_TWI_31
   # CHECK: # %bb.0: # %entry
   # CHECK-NEXT:  trap
-  # CHECK-NEXT:  blr
+  # CHECK-NOT:   blr
 
 ---
 name:            conditional_trap_opt_TWI_24
@@ -231,7 +250,7 @@ body:             |
   # CHECK-LABEL: conditional_trap_opt_TWI_24
   # CHECK: # %bb.0: # %entry
   # CHECK-NEXT:  trap
-  # CHECK-NEXT:  blr
+  # CHECK-NOT:   blr
 
 ---
 name:            conditional_trap_opt_no_trap_TWI_24
@@ -260,7 +279,7 @@ body:             |
   # CHECK-LABEL: conditional_trap_opt_TWI_20
   # CHECK: # %bb.0: # %entry
   # CHECK-NEXT:  trap
-  # CHECK-NEXT:  blr
+  # CHECK-NOT:   blr
 
 ---
 name:            conditional_trap_opt_no_trap_TWI_20
@@ -305,7 +324,7 @@ body:             |
   # CHECK-LABEL: conditional_trap_opt_TWI_16
   # CHECK: # %bb.0: # %entry
   # CHECK-NEXT:  trap
-  # CHECK-NEXT:  blr
+  # CHECK-NOT:   blr
 
 ---
 name:            conditional_trap_opt_TWI_8
@@ -322,7 +341,7 @@ body:             |
   # CHECK-LABEL: conditional_trap_opt_TWI_8
   # CHECK: # %bb.0: # %entry
   # CHECK-NEXT:  trap
-  # CHECK-NEXT:  blr
+  # CHECK-NOT:   blr
 
 ---
 name:            conditional_trap_opt_TWI_2
@@ -339,7 +358,7 @@ body:             |
   # CHECK-LABEL: conditional_trap_opt_TWI_2
   # CHECK: # %bb.0: # %entry
   # CHECK-NEXT:  trap
-  # CHECK-NEXT:  blr
+  # CHECK-NOT:   blr
 
 ---
 name:            conditional_trap_opt_TWI_1
@@ -356,7 +375,7 @@ body:             |
   # CHECK-LABEL: conditional_trap_opt_TWI_1
   # CHECK: # %bb.0: # %entry
   # CHECK-NEXT:  trap
-  # CHECK-NEXT:  blr
+  # CHECK-NOT:   blr
 
 ---
 name:            conditional_trap_opt_TWI_4
@@ -373,7 +392,7 @@ body:             |
   # CHECK-LABEL: conditional_trap_opt_TWI_4
   # CHECK: # %bb.0: # %entry
   # CHECK-NEXT:  trap
-  # CHECK-NEXT:  blr
+  # CHECK-NOT:   blr
 
 ---
 name:            conditional_trap_opt_TD_31
@@ -389,7 +408,7 @@ body:             |
   # CHECK-LABEL: conditional_trap_opt_TD_31
   # CHECK: # %bb.0: # %entry
   # CHECK-NEXT:  trap
-  # CHECK-NEXT:  blr
+  # CHECK-NOT:   blr
 
 ---
 name:            conditional_trap_opt_TD_24
@@ -405,7 +424,7 @@ body:             |
   # CHECK-LABEL: conditional_trap_opt_TD_24
   # CHECK: # %bb.0: # %entry
   # CHECK-NEXT:  trap
-  # CHECK-NEXT:  blr
+  # CHECK-NOT:   blr
 
 ---
 name:            conditional_trap_opt_no_trap_TD_24
@@ -436,7 +455,7 @@ body:             |
   # CHECK-LABEL: conditional_trap_opt_TD_20
   # CHECK: # %bb.0: # %entry
   # CHECK-NEXT:  trap
-  # CHECK-NEXT:  blr
+  # CHECK-NOT:   blr
 
 ---
 name:            conditional_trap_opt_no_trap_TD_20
@@ -483,7 +502,7 @@ body:             |
   # CHECK-LABEL: conditional_trap_opt_TD_16
   # CHECK: # %bb.0: # %entry
   # CHECK-NEXT:  trap
-  # CHECK-NEXT:  blr
+  # CHECK-NOT:   blr
 
 ---
 name:            conditional_trap_opt_TD_8
@@ -500,7 +519,7 @@ body:             |
   # CHECK-LABEL: conditional_trap_opt_TD_8
   # CHECK: # %bb.0: # %entry
   # CHECK-NEXT:  trap
-  # CHECK-NEXT:  blr
+  # CHECK-NOT:   blr
 
 ---
 name:            conditional_trap_opt_TD_2
@@ -517,7 +536,7 @@ body:             |
   # CHECK-LABEL: conditional_trap_opt_TD_2
   # CHECK: # %bb.0: # %entry
   # CHECK-NEXT:  trap
-  # CHECK-NEXT:  blr
+  # CHECK-NOT:   blr
 
 ---
 name:            conditional_trap_opt_TD_1
@@ -534,7 +553,7 @@ body:             |
   # CHECK-LABEL: conditional_trap_opt_TD_1
   # CHECK: # %bb.0: # %entry
   # CHECK-NEXT:  trap
-  # CHECK-NEXT:  blr
+  # CHECK-NOT:   blr
 
 ---
 name:            conditional_trap_opt_TD_4
@@ -551,7 +570,7 @@ body:             |
   # CHECK-LABEL: conditional_trap_opt_TD_4
   # CHECK: # %bb.0: # %entry
   # CHECK-NEXT:  trap
-  # CHECK-NEXT:  blr
+  # CHECK-NOT:   blr
 
 ---
 name:            conditional_trap_opt_TDI_31
@@ -566,7 +585,7 @@ body:             |
   # CHECK-LABEL: conditional_trap_opt_TDI_31
   # CHECK: # %bb.0: # %entry
   # CHECK-NEXT:  trap
-  # CHECK-NEXT:  blr
+  # CHECK-NOT:   blr
 
 ---
 name:            conditional_trap_opt_TDI_24
@@ -581,7 +600,7 @@ body:             |
   # CHECK-LABEL: conditional_trap_opt_TDI_24
   # CHECK: # %bb.0: # %entry
   # CHECK-NEXT:  trap
-  # CHECK-NEXT:  blr
+  # CHECK-NOT:   blr
 
 ---
 name:            conditional_trap_opt_no_trap_TDI_24
@@ -610,7 +629,7 @@ body:             |
   # CHECK-LABEL: conditional_trap_opt_TDI_20
   # CHECK: # %bb.0: # %entry
   # CHECK-NEXT:  trap
-  # CHECK-NEXT:  blr
+  # CHECK-NOT:   blr
 
 ---
 name:            conditional_trap_opt_no_trap_TDI_20
@@ -655,7 +674,7 @@ body:             |
   # CHECK-LABEL: conditional_trap_opt_TDI_16
   # CHECK: # %bb.0: # %entry
   # CHECK-NEXT:  trap
-  # CHECK-NEXT:  blr
+  # CHECK-NOT:   blr
 
 ---
 name:            conditional_trap_opt_TDI_8
@@ -672,7 +691,7 @@ body:             |
   # CHECK-LABEL: conditional_trap_opt_TDI_8
   # CHECK: # %bb.0: # %entry
   # CHECK-NEXT:  trap
-  # CHECK-NEXT:  blr
+  # CHECK-NOT:   blr
 
 ---
 name:            conditional_trap_opt_TDI_2
@@ -689,7 +708,7 @@ body:             |
   # CHECK-LABEL: conditional_trap_opt_TDI_2
   # CHECK: # %bb.0: # %entry
   # CHECK-NEXT:  trap
-  # CHECK-NEXT:  blr
+  # CHECK-NOT:   blr
 
 ---
 name:            conditional_trap_opt_TDI_1
@@ -706,7 +725,7 @@ body:             |
   # CHECK-LABEL: conditional_trap_opt_TDI_1
   # CHECK: # %bb.0: # %entry
   # CHECK-NEXT:  trap
-  # CHECK-NEXT:  blr
+  # CHECK-NOT:   blr
 
 ---
 name:            conditional_trap_opt_TDI_4
@@ -723,7 +742,7 @@ body:             |
   # CHECK-LABEL: conditional_trap_opt_TDI_4
   # CHECK: # %bb.0: # %entry
   # CHECK-NEXT:  trap
-  # CHECK-NEXT:  blr
+  # CHECK-NOT:   blr
 
 ---
 name:            conditional_trap_opt_multiple_traps
@@ -744,4 +763,4 @@ body:             |
   # CHECK-LABEL: conditional_trap_opt_multiple_traps
   # CHECK: # %bb.0: # %entry
   # CHECK-NEXT:  trap
-  # CHECK-NEXT:  blr
+  # CHECK-NOT:   blr

@@ -54,6 +54,11 @@ public:
       LLVM_DEBUG(llvm::dbgs() << "type convert: " << boxchar << '\n');
       return convertType(specifics->boxcharMemoryType(boxchar.getEleTy()));
     });
+    addConversion([&](BoxProcType boxproc) {
+      // TODO: Support for this type will be added later when the Fortran 2003
+      // procedure pointer feature is implemented.
+      return llvm::None;
+    });
     addConversion(
         [&](fir::CharacterType charTy) { return convertCharType(charTy); });
     addConversion([&](HeapType heap) { return convertPointerLike(heap); });

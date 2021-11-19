@@ -8316,6 +8316,40 @@ ScalarEvolution::computeExitLimitFromICmp(const Loop *L,
         if (!isa<SCEVCouldNotCompute>(Ret)) return Ret;
       }
 
+  // If this loop must exit based on this condition (or execute undefined
+  // behaviour), and we can prove the test sequence produced must repeat
+  // the same values on self-wrap of the IV, then we can infer that IV
+  // doesn't self wrap because if it did, we'd have an infinite (undefined)
+  // loop.
+  if (ControlsExit) {
+    auto deferredLoopProperties = [&]() {
+      // Conceptually, these two checks should be in the immediately guarding
+      // if clause, but we defer their actual execution to after the cheaper
+      // checks have all been done.
+      return isLoopInvariant(RHS, L) && loopHasNoAbnormalExits(L) &&
+        loopIsFiniteByAssumption(L);
+    };
+
+    // TODO: We can peel off any functions which are invertible *in L*.  Loop
+    // invariant terms are effectively constants for our purposes here.
+    auto *InnerLHS = LHS;
+    if (auto *ZExt = dyn_cast<SCEVZeroExtendExpr>(LHS))
+      InnerLHS = ZExt->getOperand();
+    if (const SCEVAddRecExpr *AR = dyn_cast<SCEVAddRecExpr>(InnerLHS)) {
+      if (!AR->hasNoSelfWrap() && AR->getLoop() == L && AR->isAffine()) {
+        auto *StrideC = dyn_cast<SCEVConstant>(AR->getStepRecurrence(*this));
+        if (StrideC && StrideC->getAPInt().isPowerOf2() &&
+            deferredLoopProperties()) {
+          auto Flags = AR->getNoWrapFlags();
+          Flags = setFlags(Flags, SCEV::FlagNW);
+          SmallVector<const SCEV*> Operands{AR->operands()};
+          Flags = StrengthenNoWrapFlags(this, scAddRecExpr, Operands, Flags);
+          setNoWrapFlags(const_cast<SCEVAddRecExpr *>(AR), Flags);
+        }
+      }
+    }
+  }
+
   switch (Pred) {
   case ICmpInst::ICMP_NE: {                     // while (X != Y)
     // Convert to: while (X-Y != 0)
@@ -11821,14 +11855,6 @@ ScalarEvolution::howManyLessThans(const SCEV *LHS, const SCEV *RHS,
     if (auto *ZExt = dyn_cast<SCEVZeroExtendExpr>(LHS)) {
       const SCEVAddRecExpr *AR = dyn_cast<SCEVAddRecExpr>(ZExt->getOperand());
       if (AR && AR->getLoop() == L && AR->isAffine()) {
-        auto Flags = AR->getNoWrapFlags();
-        if (!hasFlags(Flags, SCEV::FlagNW) && canAssumeNoSelfWrap(AR)) {
-          Flags = setFlags(Flags, SCEV::FlagNW);
-
-          SmallVector<const SCEV*> Operands{AR->operands()};
-          Flags = StrengthenNoWrapFlags(this, scAddRecExpr, Operands, Flags);
-        }
-
         auto canProveNUW = [&]() {
           if (!isLoopInvariant(RHS, L))
             return false;
@@ -11851,6 +11877,7 @@ ScalarEvolution::howManyLessThans(const SCEV *LHS, const SCEV *RHS,
           Limit = Limit.zext(OuterBitWidth);
           return getUnsignedRangeMax(applyLoopGuards(RHS, L)).ule(Limit);
         };
+        auto Flags = AR->getNoWrapFlags();
         if (!hasFlags(Flags, SCEV::FlagNUW) && canProveNUW())
           Flags = setFlags(Flags, SCEV::FlagNUW);
 
@@ -13774,26 +13801,8 @@ const SCEV *ScalarEvolution::applyLoopGuards(const SCEV *Expr, const Loop *L) {
     // SCEV.  In particular, using contextual facts to imply flags is *NOT*
     // legal.  See the scoping rules for flags in the header to understand why.
 
-    // If we have LHS == 0, check if LHS is computing a property of some unknown
-    // SCEV %v which we can rewrite %v to express explicitly.
-    const SCEVConstant *RHSC = dyn_cast<SCEVConstant>(RHS);
-    if (Predicate == CmpInst::ICMP_EQ && RHSC &&
-        RHSC->getValue()->isNullValue()) {
-      // If LHS is A % B, i.e. A % B == 0, rewrite A to (A /u B) * B to
-      // explicitly express that.
-      const SCEV *URemLHS = nullptr;
-      const SCEV *URemRHS = nullptr;
-      if (matchURem(LHS, URemLHS, URemRHS)) {
-        if (const SCEVUnknown *LHSUnknown = dyn_cast<SCEVUnknown>(URemLHS)) {
-          auto Multiple = getMulExpr(getUDivExpr(URemLHS, URemRHS), URemRHS);
-          RewriteMap[LHSUnknown] = Multiple;
-          ExprsToRewrite.push_back(LHSUnknown);
-          return;
-        }
-      }
-    }
-
-    if (!isa<SCEVUnknown>(LHS) && isa<SCEVUnknown>(RHS)) {
+    // If LHS is a constant, apply information to the other expression.
+    if (isa<SCEVConstant>(LHS)) {
       std::swap(LHS, RHS);
       Predicate = CmpInst::getSwappedPredicate(Predicate);
     }
@@ -13831,19 +13840,34 @@ const SCEV *ScalarEvolution::applyLoopGuards(const SCEV *Expr, const Loop *L) {
     if (MatchRangeCheckIdiom())
       return;
 
-    // If RHS is SCEVUnknown, make sure the information is applied to it.
-    if (isa<SCEVUnknown>(RHS)) {
-      std::swap(LHS, RHS);
-      Predicate = CmpInst::getSwappedPredicate(Predicate);
+    // If we have LHS == 0, check if LHS is computing a property of some unknown
+    // SCEV %v which we can rewrite %v to express explicitly.
+    const SCEVConstant *RHSC = dyn_cast<SCEVConstant>(RHS);
+    if (Predicate == CmpInst::ICMP_EQ && RHSC &&
+        RHSC->getValue()->isNullValue()) {
+      // If LHS is A % B, i.e. A % B == 0, rewrite A to (A /u B) * B to
+      // explicitly express that.
+      const SCEV *URemLHS = nullptr;
+      const SCEV *URemRHS = nullptr;
+      if (matchURem(LHS, URemLHS, URemRHS)) {
+        if (const SCEVUnknown *LHSUnknown = dyn_cast<SCEVUnknown>(URemLHS)) {
+          auto Multiple = getMulExpr(getUDivExpr(URemLHS, URemRHS), URemRHS);
+          RewriteMap[LHSUnknown] = Multiple;
+          ExprsToRewrite.push_back(LHSUnknown);
+          return;
+        }
+      }
     }
-    // If LHS is a constant, apply information to the other expression.
-    if (isa<SCEVConstant>(LHS)) {
-      std::swap(LHS, RHS);
-      Predicate = CmpInst::getSwappedPredicate(Predicate);
-    }
+
     // Do not apply information for constants or if RHS contains an AddRec.
     if (isa<SCEVConstant>(LHS) || containsAddRecurrence(RHS))
       return;
+
+    // If RHS is SCEVUnknown, make sure the information is applied to it.
+    if (!isa<SCEVUnknown>(LHS) && isa<SCEVUnknown>(RHS)) {
+      std::swap(LHS, RHS);
+      Predicate = CmpInst::getSwappedPredicate(Predicate);
+    }
 
     // Limit to expressions that can be rewritten.
     if (!isa<SCEVUnknown>(LHS) && !isa<SCEVZeroExtendExpr>(LHS))

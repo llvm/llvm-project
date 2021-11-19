@@ -12,6 +12,7 @@
 #include "clang/Driver/InputInfo.h"
 #include "clang/Driver/Options.h"
 
+using namespace clang::driver;
 using namespace clang::driver::tools;
 using namespace llvm::opt;
 

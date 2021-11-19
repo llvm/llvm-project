@@ -79,6 +79,25 @@ static bool DecodeAArch64Features(const Driver &D, StringRef text,
     else
       return false;
 
+    if (Feature == "sve2")
+      Features.push_back("+sve");
+    else if (Feature == "sve2-bitperm" || Feature == "sve2-sha3" ||
+             Feature == "sve2-aes" || Feature == "sve2-sm4") {
+      Features.push_back("+sve");
+      Features.push_back("+sve2");
+    } else if (Feature == "nosve") {
+      Features.push_back("-sve2");
+      Features.push_back("-sve2-bitperm");
+      Features.push_back("-sve2-sha3");
+      Features.push_back("-sve2-aes");
+      Features.push_back("-sve2-sm4");
+    } else if (Feature == "nosve2") {
+      Features.push_back("-sve2-bitperm");
+      Features.push_back("-sve2-sha3");
+      Features.push_back("-sve2-aes");
+      Features.push_back("-sve2-sm4");
+    }
+
     // +sve implies +f32mm if the base architecture is v8.6A, v8.7A, v9.1A or
     // v9.2A. It isn't the case in general that sve implies both f64mm and f32mm
     if ((ArchKind == llvm::AArch64::ArchKind::ARMV8_6A ||
@@ -130,8 +149,20 @@ getAArch64ArchFeaturesFromMarch(const Driver &D, StringRef March,
 
   llvm::AArch64::ArchKind ArchKind = llvm::AArch64::parseArch(Split.first);
   if (ArchKind == llvm::AArch64::ArchKind::INVALID ||
-      !llvm::AArch64::getArchFeatures(ArchKind, Features) ||
-      (Split.second.size() &&
+      !llvm::AArch64::getArchFeatures(ArchKind, Features))
+    return false;
+
+  // Enable SVE2 by default on Armv9-A.
+  // It can still be disabled if +nosve2 is present.
+  // We must do this early so that DecodeAArch64Features has the correct state
+  if ((ArchKind == llvm::AArch64::ArchKind::ARMV9A ||
+       ArchKind == llvm::AArch64::ArchKind::ARMV9_1A ||
+       ArchKind == llvm::AArch64::ArchKind::ARMV9_2A)) {
+    Features.push_back("+sve");
+    Features.push_back("+sve2");
+  }
+
+  if ((Split.second.size() &&
        !DecodeAArch64Features(D, Split.second, Features, ArchKind)))
     return false;
 
@@ -418,14 +449,6 @@ fp16_fml_fallthrough:
                                 std::begin(Archs), std::end(Archs));
   if (Pos != std::end(Features))
     Pos = Features.insert(std::next(Pos), {"+i8mm", "+bf16"});
-
-  // Enable SVE2 by default on Armv9-A.
-  // It can still be disabled if +nosve2 is present.
-  const char *SVE2Archs[] = {"+v9a", "+v9.1a", "+v9.2a"};
-  Pos = std::find_first_of(Features.begin(), Features.end(),
-                           std::begin(SVE2Archs), std::end(SVE2Archs));
-  if (Pos != Features.end())
-    Features.insert(++Pos, "+sve2");
 
   if (Arg *A = Args.getLastArg(options::OPT_mno_unaligned_access,
                                options::OPT_munaligned_access)) {

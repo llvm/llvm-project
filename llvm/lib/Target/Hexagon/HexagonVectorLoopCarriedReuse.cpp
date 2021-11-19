@@ -386,8 +386,7 @@ void HexagonVectorLoopCarriedReuse::findValueToReuse() {
                       << " can be reused\n");
 
     SmallVector<Instruction *, 4> PNUsers;
-    for (auto UI = PN->use_begin(), E = PN->use_end(); UI != E; ++UI) {
-      Use &U = *UI;
+    for (Use &U : PN->uses()) {
       Instruction *User = cast<Instruction>(U.getUser());
 
       if (User->getParent() != BB)
@@ -415,9 +414,7 @@ void HexagonVectorLoopCarriedReuse::findValueToReuse() {
     // rematerialized in OtherBB, we may find more such "fixup" opportunities
     // in this block. So, we'll start over again.
     for (Instruction *I : PNUsers) {
-      for (auto UI = BEInst->use_begin(), E = BEInst->use_end(); UI != E;
-           ++UI) {
-        Use &U = *UI;
+      for (Use &U : BEInst->uses()) {
         Instruction *BEUser = cast<Instruction>(U.getUser());
 
         if (BEUser->getParent() != BB)

@@ -28,6 +28,32 @@ exit:
   ret void
 }
 
+; Same as @test_trip_multiple_4 but with the icmp operands swapped.
+define void @test_trip_multiple_4_icmp_ops_swapped(i32 %num) {
+; CHECK-LABEL: @test_trip_multiple_4_icmp_ops_swapped
+; CHECK:       Loop %for.body: backedge-taken count is (-1 + %num)
+; CHECK-NEXT:  Loop %for.body: max backedge-taken count is -2
+; CHECK-NEXT:  Loop %for.body: Predicated backedge-taken count is (-1 + %num)
+; CHECK:       Loop %for.body: Trip multiple is 4
+;
+entry:
+  %u = urem i32 %num, 4
+  %cmp = icmp eq i32 0, %u
+  tail call void @llvm.assume(i1 %cmp)
+  %cmp.1 = icmp uge i32 %num, 4
+  tail call void @llvm.assume(i1 %cmp.1)
+  br label %for.body
+
+for.body:
+  %i.010 = phi i32 [ 0, %entry ], [ %inc, %for.body ]
+  %inc = add nuw nsw i32 %i.010, 1
+  %cmp2 = icmp ult i32 %inc, %num
+  br i1 %cmp2, label %for.body, label %exit
+
+exit:
+  ret void
+}
+
 define void @test_trip_multiple_5(i32 %num) {
 ; CHECK-LABEL: @test_trip_multiple_5
 ; CHECK:       Loop %for.body: backedge-taken count is (-1 + %num)

@@ -123,9 +123,7 @@ static Value generateMaskCheck(OpBuilder &b, OpTy xferOp, Value iv) {
     return Value();
 
   Location loc = xferOp.getLoc();
-  Value ivI32 = b.create<arith::IndexCastOp>(
-      loc, IntegerType::get(b.getContext(), 32), iv);
-  return b.create<vector::ExtractElementOp>(loc, xferOp.mask(), ivI32);
+  return b.create<vector::ExtractElementOp>(loc, xferOp.mask(), iv);
 }
 
 /// Helper function TransferOpConversion and TransferOp1dConversion.
@@ -1115,8 +1113,6 @@ struct Strategy1d<TransferReadOp> {
                                   ValueRange loopState) {
     SmallVector<Value, 8> indices;
     auto dim = get1dMemrefIndices(b, xferOp, iv, indices);
-    Value ivI32 = b.create<arith::IndexCastOp>(
-        loc, IntegerType::get(b.getContext(), 32), iv);
     auto vec = loopState[0];
 
     // In case of out-of-bounds access, leave `vec` as is (was initialized with
@@ -1126,7 +1122,7 @@ struct Strategy1d<TransferReadOp> {
         /*inBoundsCase=*/
         [&](OpBuilder &b, Location loc) {
           Value val = b.create<memref::LoadOp>(loc, xferOp.source(), indices);
-          return b.create<vector::InsertElementOp>(loc, val, vec, ivI32);
+          return b.create<vector::InsertElementOp>(loc, val, vec, iv);
         },
         /*outOfBoundsCase=*/
         [&](OpBuilder & /*b*/, Location loc) { return vec; });
@@ -1148,15 +1144,13 @@ struct Strategy1d<TransferWriteOp> {
                                   ValueRange /*loopState*/) {
     SmallVector<Value, 8> indices;
     auto dim = get1dMemrefIndices(b, xferOp, iv, indices);
-    Value ivI32 = b.create<arith::IndexCastOp>(
-        loc, IntegerType::get(b.getContext(), 32), iv);
 
     // Nothing to do in case of out-of-bounds access.
     generateInBoundsCheck(
         b, xferOp, iv, dim,
         /*inBoundsCase=*/[&](OpBuilder &b, Location loc) {
           auto val =
-              b.create<vector::ExtractElementOp>(loc, xferOp.vector(), ivI32);
+              b.create<vector::ExtractElementOp>(loc, xferOp.vector(), iv);
           b.create<memref::StoreOp>(loc, val, xferOp.source(), indices);
         });
     b.create<scf::YieldOp>(loc);
