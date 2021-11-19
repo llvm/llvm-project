@@ -427,3 +427,80 @@ define void @dse_strncat(i8* nocapture readonly %src) {
 
 declare void @llvm.lifetime.start.p0i8(i64 immarg, i8* nocapture)
 declare void @llvm.lifetime.end.p0i8(i64 immarg, i8* nocapture)
+
+declare void @llvm.memset.p0i8.i64(i8* nocapture, i8, i64, i1) nounwind
+
+; Test that strncpy/memset overwriting each other is optimized out
+
+; strncpy -> memset, full overwrite
+define void @dse_strncpy_test1(i8* noalias %out, i8* noalias %in) {
+; CHECK-LABEL: @dse_strncpy_test1(
+; CHECK-NEXT:    [[CALL:%.*]] = tail call i8* @strncpy(i8* [[OUT:%.*]], i8* [[IN:%.*]], i64 100)
+; CHECK-NEXT:    tail call void @llvm.memset.p0i8.i64(i8* [[OUT]], i8 42, i64 100, i1 false)
+; CHECK-NEXT:    ret void
+;
+  %call = tail call i8* @strncpy(i8* %out, i8* %in, i64 100)
+  tail call void @llvm.memset.p0i8.i64(i8* %out, i8 42, i64 100, i1 false)
+  ret void
+}
+
+; strncpy -> memset, partial overwrite
+define void @dse_strncpy_test2(i8* noalias %out, i8* noalias %in) {
+; CHECK-LABEL: @dse_strncpy_test2(
+; CHECK-NEXT:    [[CALL:%.*]] = tail call i8* @strncpy(i8* [[OUT:%.*]], i8* [[IN:%.*]], i64 100)
+; CHECK-NEXT:    tail call void @llvm.memset.p0i8.i64(i8* [[OUT]], i8 42, i64 99, i1 false)
+; CHECK-NEXT:    ret void
+;
+  %call = tail call i8* @strncpy(i8* %out, i8* %in, i64 100)
+  tail call void @llvm.memset.p0i8.i64(i8* %out, i8 42, i64 99, i1 false)
+  ret void
+}
+
+; strncpy -> memset, different destination
+define void @dse_strncpy_test3(i8* noalias %out1, i8* noalias %out2, i8* noalias %in) {
+; CHECK-LABEL: @dse_strncpy_test3(
+; CHECK-NEXT:    [[CALL:%.*]] = tail call i8* @strncpy(i8* [[OUT1:%.*]], i8* [[IN:%.*]], i64 100)
+; CHECK-NEXT:    tail call void @llvm.memset.p0i8.i64(i8* [[OUT2:%.*]], i8 42, i64 100, i1 false)
+; CHECK-NEXT:    ret void
+;
+  %call = tail call i8* @strncpy(i8* %out1, i8* %in, i64 100)
+  tail call void @llvm.memset.p0i8.i64(i8* %out2, i8 42, i64 100, i1 false)
+  ret void
+}
+
+
+; memset -> strncpy, full overwrite
+define void @dse_strncpy_test4(i8* noalias %out, i8* noalias %in) {
+; CHECK-LABEL: @dse_strncpy_test4(
+; CHECK-NEXT:    tail call void @llvm.memset.p0i8.i64(i8* [[OUT:%.*]], i8 42, i64 100, i1 false)
+; CHECK-NEXT:    [[CALL:%.*]] = tail call i8* @strncpy(i8* [[OUT]], i8* [[IN:%.*]], i64 100)
+; CHECK-NEXT:    ret void
+;
+  tail call void @llvm.memset.p0i8.i64(i8* %out, i8 42, i64 100, i1 false)
+  %call = tail call i8* @strncpy(i8* %out, i8* %in, i64 100)
+  ret void
+}
+
+; memset -> strncpy, partial overwrite
+define void @dse_strncpy_test5(i8* noalias %out, i8* noalias %in) {
+; CHECK-LABEL: @dse_strncpy_test5(
+; CHECK-NEXT:    tail call void @llvm.memset.p0i8.i64(i8* [[OUT:%.*]], i8 42, i64 100, i1 false)
+; CHECK-NEXT:    [[CALL:%.*]] = tail call i8* @strncpy(i8* [[OUT]], i8* [[IN:%.*]], i64 99)
+; CHECK-NEXT:    ret void
+;
+  tail call void @llvm.memset.p0i8.i64(i8* %out, i8 42, i64 100, i1 false)
+  %call = tail call i8* @strncpy(i8* %out, i8* %in, i64 99)
+  ret void
+}
+
+; memset -> strncpy, different destination
+define void @dse_strncpy_test6(i8* noalias %out1, i8* noalias %out2, i8* noalias %in) {
+; CHECK-LABEL: @dse_strncpy_test6(
+; CHECK-NEXT:    tail call void @llvm.memset.p0i8.i64(i8* [[OUT1:%.*]], i8 42, i64 100, i1 false)
+; CHECK-NEXT:    [[CALL:%.*]] = tail call i8* @strncpy(i8* [[OUT2:%.*]], i8* [[IN:%.*]], i64 100)
+; CHECK-NEXT:    ret void
+;
+  tail call void @llvm.memset.p0i8.i64(i8* %out1, i8 42, i64 100, i1 false)
+  %call = tail call i8* @strncpy(i8* %out2, i8* %in, i64 100)
+  ret void
+}
