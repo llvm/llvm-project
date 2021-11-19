@@ -17,6 +17,7 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/Optional.h"
+#include <iterator>
 
 using namespace llvm;
 using namespace clang;
@@ -35,10 +36,12 @@ ento::CallDescription::CallDescription(
     int Flags, ArrayRef<const char *> QualifiedName,
     Optional<unsigned> RequiredArgs /*= None*/,
     Optional<size_t> RequiredParams /*= None*/)
-    : QualifiedName(QualifiedName), RequiredArgs(RequiredArgs),
+    : RequiredArgs(RequiredArgs),
       RequiredParams(readRequiredParams(RequiredArgs, RequiredParams)),
       Flags(Flags) {
   assert(!QualifiedName.empty());
+  this->QualifiedName.reserve(QualifiedName.size());
+  llvm::copy(QualifiedName, std::back_inserter(this->QualifiedName));
 }
 
 /// Construct a CallDescription with default flags.

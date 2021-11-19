@@ -43,7 +43,7 @@ class CallDescription {
   mutable Optional<const IdentifierInfo *> II;
   // The list of the qualified names used to identify the specified CallEvent,
   // e.g. "{a, b}" represent the qualified names, like "a::b".
-  std::vector<const char *> QualifiedName;
+  std::vector<std::string> QualifiedName;
   Optional<unsigned> RequiredArgs;
   Optional<size_t> RequiredParams;
   int Flags;
