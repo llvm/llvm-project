@@ -19832,26 +19832,28 @@ elements as the return type. The third is the explicit vector length of the
 operation. The return type and underlying type of the vector of pointers are
 the same vector types.
 
+The :ref:`align <attr_align>` parameter attribute can be provided for the first
+operand.
+
 Semantics:
 """"""""""
 
 The '``llvm.vp.gather``' intrinsic reads multiple scalar values from memory in
 the same way as the '``llvm.masked.gather``' intrinsic, where the mask is taken
 from the combination of the '``mask``' and '``evl``' operands in the usual VP
-way. Of the '``llvm.masked.gather``' operands not set by '``llvm.vp.gather``':
-the '``passthru``' operand is implicitly ``undef``; the '``alignment``' operand
-is taken as the ABI alignment of the source addresses as specified by the
-:ref:`datalayout string<langref_datalayout>`.
+way. Certain '``llvm.masked.gather``' operands do not have corresponding
+operands in '``llvm.vp.gather``': the '``passthru``' operand is implicitly
+``undef``; the '``alignment``' operand is taken as the ``align`` parameter, if
+provided. The default alignment is taken as the ABI alignment of the source
+addresses as specified by the :ref:`datalayout string<langref_datalayout>`.
 
 Examples:
 """""""""
 
 .. code-block:: text
 
-     %r = call <8 x i8> @llvm.vp.gather.v8i8.v8p0i8(<8 x i8*> %ptrs, <8 x i1> %mask, i32 %evl)
+     %r = call <8 x i8> @llvm.vp.gather.v8i8.v8p0i8(<8 x i8*>  align 8 %ptrs, <8 x i1> %mask, i32 %evl)
      ;; For all lanes below %evl, %r is lane-wise equivalent to %also.r
-     ;; Note that since the alignment is ultimately up to the data layout
-     ;; string, 8 is used as an example.
 
      %also.r = call <8 x i8> @llvm.masked.gather.v8i8.v8p0i8(<8 x i8*> %ptrs, i32 8, <8 x i1> %mask, <8 x i8> undef)
 
@@ -19887,15 +19889,20 @@ The third operand is a vector of boolean values with the same number of
 elements as the return type. The fourth is the explicit vector length of the
 operation.
 
+The :ref:`align <attr_align>` parameter attribute can be provided for the
+second operand.
+
 Semantics:
 """"""""""
 
 The '``llvm.vp.scatter``' intrinsic writes multiple scalar values to memory in
 the same way as the '``llvm.masked.scatter``' intrinsic, where the mask is
 taken from the combination of the '``mask``' and '``evl``' operands in the
-usual VP way. The '``alignment``' operand of the '``llvm.masked.scatter``'
-intrinsic is not set by '``llvm.vp.scatter``': it is taken as the ABI alignment
-of the destination addresses as specified by the :ref:`datalayout
+usual VP way. The '``alignment``' operand of the '``llvm.masked.scatter``' does
+not have a corresponding operand in '``llvm.vp.scatter``': it is instead
+provided via the optional ``align`` parameter attribute on the
+vector-of-pointers operand. Otherwise it is taken as the ABI alignment of the
+destination addresses as specified by the :ref:`datalayout
 string<langref_datalayout>`.
 
 Examples:
@@ -19903,12 +19910,10 @@ Examples:
 
 .. code-block:: text
 
-     call void @llvm.vp.scatter.v8i8.v8p0i8(<8 x i8> %val, <8 x i8*> %ptrs, <8 x i1> %mask, i32 %evl)
+     call void @llvm.vp.scatter.v8i8.v8p0i8(<8 x i8> %val, <8 x i8*> align 1 %ptrs, <8 x i1> %mask, i32 %evl)
      ;; For all lanes below %evl, the call above is lane-wise equivalent to the call below.
-     ;; Note that since the alignment is ultimately up to the data layout
-     ;; string, 8 is used as an example.
 
-     call void @llvm.masked.scatter.v8i8.v8p0i8(<8 x i8> %val, <8 x i8*> %ptrs, i32 8, <8 x i1> %mask)
+     call void @llvm.masked.scatter.v8i8.v8p0i8(<8 x i8> %val, <8 x i8*> %ptrs, i32 1, <8 x i1> %mask)
 
 
 .. _int_mload_mstore:
