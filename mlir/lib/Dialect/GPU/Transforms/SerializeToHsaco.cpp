@@ -15,6 +15,7 @@
 #include "mlir/IR/MLIRContext.h"
 
 #if MLIR_GPU_TO_HSACO_PASS_ENABLE
+#include "mlir/ExecutionEngine/OptUtils.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Support/FileUtilities.h"
 #include "mlir/Target/LLVMIR/Dialect/ROCDL/ROCDLToLLVMIRTranslation.h"
@@ -29,10 +30,10 @@
 #include "llvm/MC/MCParser/MCTargetAsmParser.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSubtargetInfo.h"
-
 #include "llvm/MC/TargetRegistry.h"
+
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileUtilities.h"
-#include "llvm/Support/LineIterator.h"
 #include "llvm/Support/Program.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/TargetSelect.h"
@@ -43,8 +44,6 @@
 
 #include "lld/Common/Driver.h"
 
-#include "hip/hip_version.h"
-
 #include <mutex>
 
 using namespace mlir;
@@ -53,11 +52,26 @@ namespace {
 class SerializeToHsacoPass
     : public PassWrapper<SerializeToHsacoPass, gpu::SerializeToBlobPass> {
 public:
-  SerializeToHsacoPass(StringRef triple, StringRef arch, StringRef features);
+  SerializeToHsacoPass(StringRef triple, StringRef arch, StringRef features,
+                       int optLevel);
+  SerializeToHsacoPass(const SerializeToHsacoPass &other);
   StringRef getArgument() const override { return "gpu-to-hsaco"; }
   StringRef getDescription() const override {
     return "Lower GPU kernel function to HSACO binary annotations";
   }
+
+protected:
+  Option<int> optLevel{
+      *this, "opt-level",
+      llvm::cl::desc("Optimization level for HSACO compilation"),
+      llvm::cl::init(2)};
+
+  Option<std::string> rocmPath{*this, "rocm-path",
+                               llvm::cl::desc("Path to ROCm install")};
+
+  /// Adds LLVM optimization passes
+  LogicalResult optimizeLlvm(llvm::Module &llvmModule,
+                             llvm::TargetMachine &targetMachine) override;
 
 private:
   void getDependentDialects(DialectRegistry &registry) const override;
@@ -69,64 +83,22 @@ private:
   std::unique_ptr<SmallVectorImpl<char>> assembleIsa(const std::string &isa);
   std::unique_ptr<std::vector<char>>
   createHsaco(const SmallVectorImpl<char> &isaBinary);
+
+  std::string getRocmPath();
 };
-} // namespace
+} // end namespace
 
-static std::string getDefaultChip() {
-  const char kDefaultChip[] = "gfx900";
+SerializeToHsacoPass::SerializeToHsacoPass(const SerializeToHsacoPass &other)
+    : PassWrapper<SerializeToHsacoPass, gpu::SerializeToBlobPass>(other) {}
 
-  // Locate rocm_agent_enumerator.
-  const char kRocmAgentEnumerator[] = "rocm_agent_enumerator";
-  llvm::ErrorOr<std::string> rocmAgentEnumerator = llvm::sys::findProgramByName(
-      kRocmAgentEnumerator, {__ROCM_PATH__ "/bin"});
-  if (!rocmAgentEnumerator) {
-    llvm::WithColor::warning(llvm::errs())
-        << kRocmAgentEnumerator << "couldn't be located under " << __ROCM_PATH__
-        << "/bin\n";
-    return kDefaultChip;
-  }
+/// Get a user-specified path to ROCm
+// Tries, in order, the --rocm-path option, the ROCM_PATH environment variable
+// and a compile-time default
+std::string SerializeToHsacoPass::getRocmPath() {
+  if (rocmPath.getNumOccurrences() > 0)
+    return rocmPath.getValue();
 
-  // Prepare temp file to hold the outputs.
-  int tempFd = -1;
-  SmallString<128> tempFilename;
-  if (llvm::sys::fs::createTemporaryFile("rocm_agent", "txt", tempFd,
-                                         tempFilename)) {
-    llvm::WithColor::warning(llvm::errs())
-        << "temporary file for " << kRocmAgentEnumerator << " creation error\n";
-    return kDefaultChip;
-  }
-  llvm::FileRemover cleanup(tempFilename);
-
-  // Invoke rocm_agent_enumerator.
-  std::string errorMessage;
-  SmallVector<StringRef, 2> args{"-t", "GPU"};
-  Optional<StringRef> redirects[3] = {{""}, tempFilename.str(), {""}};
-  int result =
-      llvm::sys::ExecuteAndWait(rocmAgentEnumerator.get(), args, llvm::None,
-                                redirects, 0, 0, &errorMessage);
-  if (result) {
-    llvm::WithColor::warning(llvm::errs())
-        << kRocmAgentEnumerator << " invocation error: " << errorMessage
-        << "\n";
-    return kDefaultChip;
-  }
-
-  // Load and parse the result.
-  auto gfxIsaList = openInputFile(tempFilename);
-  if (!gfxIsaList) {
-    llvm::WithColor::error(llvm::errs())
-        << "read ROCm agent list temp file error\n";
-    return kDefaultChip;
-  }
-  for (llvm::line_iterator lines(*gfxIsaList); !lines.is_at_end(); ++lines) {
-    // Skip the line with content "gfx000".
-    if (*lines == "gfx000")
-      continue;
-    // Use the first ISA version found.
-    return lines->str();
-  }
-
-  return kDefaultChip;
+  return __DEFAULT_ROCM_PATH__;
 }
 
 // Sets the 'option' to 'value' unless it already has a value.
@@ -137,16 +109,42 @@ static void maybeSetOption(Pass::Option<std::string> &option,
 }
 
 SerializeToHsacoPass::SerializeToHsacoPass(StringRef triple, StringRef arch,
-                                           StringRef features) {
+                                           StringRef features, int optLevel) {
   maybeSetOption(this->triple, [&triple] { return triple.str(); });
   maybeSetOption(this->chip, [&arch] { return arch.str(); });
   maybeSetOption(this->features, [&features] { return features.str(); });
+  if (this->optLevel.getNumOccurrences() == 0)
+    this->optLevel.setValue(optLevel);
 }
 
 void SerializeToHsacoPass::getDependentDialects(
     DialectRegistry &registry) const {
   registerROCDLDialectTranslation(registry);
   gpu::SerializeToBlobPass::getDependentDialects(registry);
+}
+
+LogicalResult
+SerializeToHsacoPass::optimizeLlvm(llvm::Module &llvmModule,
+                                   llvm::TargetMachine &targetMachine) {
+  int optLevel = this->optLevel.getValue();
+  if (optLevel < 0 || optLevel > 3)
+    return getOperation().emitError()
+           << "Invalid HSA optimization level" << optLevel << "\n";
+
+  targetMachine.setOptLevel(static_cast<llvm::CodeGenOpt::Level>(optLevel));
+
+  auto transformer =
+      makeOptimizingTransformer(optLevel, /*sizeLevel=*/0, &targetMachine);
+  auto error = transformer(&llvmModule);
+  if (error) {
+    InFlightDiagnostic mlirError = getOperation()->emitError();
+    llvm::handleAllErrors(
+        std::move(error), [&mlirError](const llvm::ErrorInfoBase &ei) {
+          mlirError << "Could not optimize LLVM IR: " << ei.message() << "\n";
+        });
+    return mlirError;
+  }
+  return success();
 }
 
 std::unique_ptr<SmallVectorImpl<char>>
@@ -286,7 +284,7 @@ void mlir::registerGpuSerializeToHsacoPass() {
         LLVMInitializeAMDGPUTargetMC();
 
         return std::make_unique<SerializeToHsacoPass>("amdgcn-amd-amdhsa", "",
-                                                      "");
+                                                      "", 2);
       });
 }
 #else  // MLIR_GPU_TO_HSACO_PASS_ENABLE

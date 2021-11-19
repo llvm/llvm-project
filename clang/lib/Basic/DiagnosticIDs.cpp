@@ -692,7 +692,7 @@ void DiagnosticIDs::getAllDiagnostics(diag::Flavor Flavor,
 StringRef DiagnosticIDs::getNearestOption(diag::Flavor Flavor,
                                           StringRef Group) {
   StringRef Best;
-  unsigned BestDistance = Group.size() + 1; // Sanity threshold.
+  unsigned BestDistance = Group.size() + 1; // Maximum threshold.
   for (const WarningOption &O : OptionTable) {
     // Don't suggest ignored warning flags.
     if (!O.Members && !O.SubGroups)

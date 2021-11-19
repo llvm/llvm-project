@@ -8,24 +8,19 @@
 
 #include <cmath>
 
-#include "test_macros.h"
-
-int main(int, char**)
-{
+void f() {
     unsigned int ui = -5;
-    ui = std::abs(ui); // expected-error {{call to 'abs' is ambiguous}}
+    (void)std::abs(ui); // expected-error {{call to 'abs' is ambiguous}}
 
     unsigned char uc = -5;
-    uc = std::abs(uc); // expected-warning {{taking the absolute value of unsigned type 'unsigned char' has no effect}}
+    (void)std::abs(uc); // expected-warning {{taking the absolute value of unsigned type 'unsigned char' has no effect}}
 
     unsigned short us = -5;
-    us = std::abs(us); // expected-warning {{taking the absolute value of unsigned type 'unsigned short' has no effect}}
+    (void)std::abs(us); // expected-warning {{taking the absolute value of unsigned type 'unsigned short' has no effect}}
 
     unsigned long ul = -5;
-    ul = std::abs(ul); // expected-error {{call to 'abs' is ambiguous}}
+    (void)std::abs(ul); // expected-error {{call to 'abs' is ambiguous}}
 
     unsigned long long ull = -5;
-    ull = ::abs(ull); // expected-error {{call to 'abs' is ambiguous}}
-
-    return 0;
+    (void)std::abs(ull); // expected-error {{call to 'abs' is ambiguous}}
 }
