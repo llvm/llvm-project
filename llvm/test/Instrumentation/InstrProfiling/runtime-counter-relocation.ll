@@ -8,9 +8,9 @@ target triple = "x86_64-unknown-linux-gnu"
 ; RELOC: @__llvm_profile_counter_bias = linkonce_odr hidden global i64 0, comdat
 
 ; CHECK-LABEL: define void @foo
-; CHECK-NEXT: %pgocount = load i64, i64* getelementptr inbounds ([1 x i64], [1 x i64]* @__profc_foo, i64 0, i64 0)
+; CHECK-NEXT: %pgocount = load i64, i64* getelementptr inbounds ([1 x i64], [1 x i64]* @__profc_foo, i32 0, i32 0)
 ; CHECK-NEXT: %1 = add i64 %pgocount, 1
-; CHECK-NEXT: store i64 %1, i64* getelementptr inbounds ([1 x i64], [1 x i64]* @__profc_foo, i64 0, i64 0)
+; CHECK-NEXT: store i64 %1, i64* getelementptr inbounds ([1 x i64], [1 x i64]* @__profc_foo, i32 0, i32 0)
 ; RELOC-LABEL: define void @foo
 ; RELOC-NEXT: %1 = load i64, i64* @__llvm_profile_counter_bias
 ; RELOC-NEXT: %2 = add i64 ptrtoint ([1 x i64]* @__profc_foo to i64), %1

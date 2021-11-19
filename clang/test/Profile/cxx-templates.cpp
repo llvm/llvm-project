@@ -21,13 +21,13 @@
 // T100USE-LABEL: define linkonce_odr {{.*}}void @_Z4loopILj100EEvv()
 template <unsigned N> void loop() {
   // ALL-NOT: ret
-  // T0GEN: store {{.*}} @[[T0C]], i64 0, i64 0
-  // T100GEN: store {{.*}} @[[T100C]], i64 0, i64 0
+  // T0GEN: store {{.*}} @[[T0C]], i32 0, i32 0
+  // T100GEN: store {{.*}} @[[T100C]], i32 0, i32 0
 
   // ALL-NOT: ret
-  // T0GEN: store {{.*}} @[[T0C]], i64 0, i64 1
+  // T0GEN: store {{.*}} @[[T0C]], i32 0, i32 1
   // T0USE: br {{.*}} !prof ![[T01:[0-9]+]]
-  // T100GEN: store {{.*}} @[[T100C]], i64 0, i64 1
+  // T100GEN: store {{.*}} @[[T100C]], i32 0, i32 1
   // T100USE: br {{.*}} !prof ![[T1001:[0-9]+]]
   for (unsigned I = 0; I < N; ++I) {}
 
