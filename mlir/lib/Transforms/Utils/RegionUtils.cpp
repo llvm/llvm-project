@@ -76,8 +76,8 @@ void mlir::getUsedValuesDefinedAbove(MutableArrayRef<Region> regions,
 /// Erase the unreachable blocks within the provided regions. Returns success
 /// if any blocks were erased, failure otherwise.
 // TODO: We could likely merge this with the DCE algorithm below.
-static LogicalResult eraseUnreachableBlocks(RewriterBase &rewriter,
-                                            MutableArrayRef<Region> regions) {
+LogicalResult mlir::eraseUnreachableBlocks(RewriterBase &rewriter,
+                                           MutableArrayRef<Region> regions) {
   // Set of blocks found to be reachable within a given region.
   llvm::df_iterator_default_set<Block *, 16> reachable;
   // If any blocks were found to be dead.
@@ -364,8 +364,8 @@ static LogicalResult deleteDeadness(RewriterBase &rewriter,
 //
 // This function returns success if any operations or arguments were deleted,
 // failure otherwise.
-static LogicalResult runRegionDCE(RewriterBase &rewriter,
-                                  MutableArrayRef<Region> regions) {
+LogicalResult mlir::runRegionDCE(RewriterBase &rewriter,
+                                 MutableArrayRef<Region> regions) {
   LiveMap liveMap;
   do {
     liveMap.resetChanged();
