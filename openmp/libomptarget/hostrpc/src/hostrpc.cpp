@@ -3,7 +3,6 @@
 ///
 
 #include "hostrpc.h"
-#include <offload_macros.h>
 #include <omp.h>
 // -----------------------------------------------------------------------------
 //
@@ -22,7 +21,7 @@
 
 #pragma omp declare target
 
-#ifdef _DEVICE_GPU
+#ifdef __AMDGCN__
 EXTERN char *printf_allocate(uint32_t bufsz) {
   uint64_t arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7;
   arg0 = (uint64_t)bufsz;
