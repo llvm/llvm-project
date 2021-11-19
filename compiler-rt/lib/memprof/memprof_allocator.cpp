@@ -252,6 +252,8 @@ struct Allocator {
 
     InsertLiveBlocks();
     if (print_text) {
+      if (!flags()->print_terse)
+        Printf("Recorded MIBs (incl. live on exit):\n");
       MIBMap.ForEach(PrintCallback,
                      reinterpret_cast<void *>(flags()->print_terse));
       StackDepotPrintAll();
@@ -271,9 +273,6 @@ struct Allocator {
 
   // Inserts any blocks which have been allocated but not yet deallocated.
   void InsertLiveBlocks() {
-    if (print_text && !flags()->print_terse)
-      Printf("Live on exit:\n");
-
     allocator.ForEachChunk(
         [](uptr chunk, void *alloc) {
           u64 user_requested_size;
