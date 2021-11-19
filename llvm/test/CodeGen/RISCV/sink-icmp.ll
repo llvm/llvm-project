@@ -10,8 +10,7 @@ define signext i16 @func(i16* %a, i16* %b) {
 ; RV32-NEXT:    lh a0, 0(a0)
 ; RV32-NEXT:    bltz a0, .LBB0_3
 ; RV32-NEXT:  # %bb.1: # %.LBB0_1
-; RV32-NEXT:    seqz a1, a1
-; RV32-NEXT:    bnez a1, .LBB0_3
+; RV32-NEXT:    beqz a1, .LBB0_3
 ; RV32-NEXT:  # %bb.2: # %.LBB0_2
 ; RV32-NEXT:    ret
 ; RV32-NEXT:  .LBB0_3: # %return
@@ -23,8 +22,7 @@ define signext i16 @func(i16* %a, i16* %b) {
 ; RV64-NEXT:    lh a0, 0(a0)
 ; RV64-NEXT:    bltz a0, .LBB0_3
 ; RV64-NEXT:  # %bb.1: # %.LBB0_1
-; RV64-NEXT:    seqz a1, a1
-; RV64-NEXT:    bnez a1, .LBB0_3
+; RV64-NEXT:    beqz a1, .LBB0_3
 ; RV64-NEXT:  # %bb.2: # %.LBB0_2
 ; RV64-NEXT:    ret
 ; RV64-NEXT:  .LBB0_3: # %return
