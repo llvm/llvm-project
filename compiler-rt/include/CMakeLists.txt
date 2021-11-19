@@ -23,6 +23,7 @@ endif(COMPILER_RT_BUILD_SANITIZERS)
 if (COMPILER_RT_BUILD_MEMPROF)
   set(MEMPROF_HEADERS
     sanitizer/memprof_interface.h
+    profile/MemProfData.inc
     )
 endif(COMPILER_RT_BUILD_MEMPROF)
 

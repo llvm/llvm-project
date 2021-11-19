@@ -1,5 +1,10 @@
-#include "memprof_rawprofile.h"
+#include <stdint.h>
+#include <stdlib.h>
+#include <string.h>
+
 #include "memprof_meminfoblock.h"
+#include "memprof_rawprofile.h"
+#include "profile/MemProfData.inc"
 #include "sanitizer_common/sanitizer_allocator_internal.h"
 #include "sanitizer_common/sanitizer_linux.h"
 #include "sanitizer_common/sanitizer_procmaps.h"
@@ -8,29 +13,12 @@
 #include "sanitizer_common/sanitizer_stacktrace.h"
 #include "sanitizer_common/sanitizer_vector.h"
 
-#include <stdlib.h>
-#include <string.h>
-
 namespace __memprof {
 using ::__sanitizer::Vector;
+using SegmentEntry = ::llvm::memprof::SegmentEntry;
+using Header = ::llvm::memprof::Header;
 
 namespace {
-typedef struct __attribute__((__packed__)) {
-  u64 start;
-  u64 end;
-  u64 offset;
-  u8 buildId[32];
-} SegmentEntry;
-
-typedef struct __attribute__((__packed__)) {
-  u64 magic;
-  u64 version;
-  u64 total_size;
-  u64 segment_offset;
-  u64 mib_offset;
-  u64 stack_offset;
-} Header;
-
 template <class T> char *WriteBytes(T Pod, char *&Buffer) {
   *(T *)Buffer = Pod;
   return Buffer + sizeof(T);
@@ -76,12 +64,12 @@ void SerializeSegmentsToBuffer(MemoryMappingLayoutBase &Layout,
 
   for (Layout.Reset(); Layout.Next(&segment);) {
     if (segment.IsReadable() && segment.IsExecutable()) {
-      SegmentEntry entry{};
-      entry.start = segment.start;
-      entry.end = segment.end;
-      entry.offset = segment.offset;
-      memcpy(entry.buildId, segment.uuid, sizeof(segment.uuid));
-      memcpy(Ptr, &entry, sizeof(SegmentEntry));
+      SegmentEntry Entry{};
+      Entry.Start = segment.start;
+      Entry.End = segment.end;
+      Entry.Offset = segment.offset;
+      memcpy(Entry.BuildId, segment.uuid, sizeof(segment.uuid));
+      memcpy(Ptr, &Entry, sizeof(SegmentEntry));
       Ptr += sizeof(SegmentEntry);
       NumSegmentsRecorded++;
     }

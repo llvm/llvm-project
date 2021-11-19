@@ -7,6 +7,7 @@ add_llvm_component_library(LLVMProfileData
   SampleProf.cpp
   SampleProfReader.cpp
   SampleProfWriter.cpp
+  RawMemProfReader.cpp
 
   ADDITIONAL_HEADER_DIRS
   ${LLVM_MAIN_INCLUDE_DIR}/llvm/ProfileData
