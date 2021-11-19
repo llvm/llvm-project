@@ -1337,6 +1337,13 @@ static Sema::TemplateDeductionResult DeduceTemplateArgumentsByTypeMatch(
     TemplateDeductionInfo &Info,
     SmallVectorImpl<DeducedTemplateArgument> &Deduced, unsigned TDF,
     bool PartialOrdering, bool DeducedFromArrayBound) {
+
+  // If the argument type is a pack expansion, look at its pattern.
+  // This isn't explicitly called out
+  if (const auto *AExp = dyn_cast<PackExpansionType>(A))
+    A = AExp->getPattern();
+  assert(!isa<PackExpansionType>(A.getCanonicalType()));
+
   if (PartialOrdering) {
     // C++11 [temp.deduct.partial]p5:
     //   Before the partial ordering is done, certain transformations are
