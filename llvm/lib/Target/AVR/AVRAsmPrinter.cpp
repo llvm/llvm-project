@@ -144,9 +144,8 @@ bool AVRAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNum,
 bool AVRAsmPrinter::PrintAsmMemoryOperand(const MachineInstr *MI,
                                           unsigned OpNum, const char *ExtraCode,
                                           raw_ostream &O) {
-  if (ExtraCode && ExtraCode[0]) {
-    llvm_unreachable("This branch is not implemented yet");
-  }
+  if (ExtraCode && ExtraCode[0])
+    return true; // Unknown modifier
 
   const MachineOperand &MO = MI->getOperand(OpNum);
   (void)MO;
