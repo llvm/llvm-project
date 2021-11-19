@@ -15,6 +15,7 @@
 #include "mlir/IR/MLIRContext.h"
 
 #if MLIR_GPU_TO_HSACO_PASS_ENABLE
+#include "mlir/ExecutionEngine/OptUtils.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Support/FileUtilities.h"
 #include "mlir/Target/LLVMIR/Dialect/ROCDL/ROCDLToLLVMIRTranslation.h"
@@ -53,11 +54,23 @@ namespace {
 class SerializeToHsacoPass
     : public PassWrapper<SerializeToHsacoPass, gpu::SerializeToBlobPass> {
 public:
-  SerializeToHsacoPass(StringRef triple, StringRef arch, StringRef features);
+  SerializeToHsacoPass(StringRef triple, StringRef arch, StringRef features,
+                       int optLevel);
+  SerializeToHsacoPass(const SerializeToHsacoPass &other);
   StringRef getArgument() const override { return "gpu-to-hsaco"; }
   StringRef getDescription() const override {
     return "Lower GPU kernel function to HSACO binary annotations";
   }
+
+protected:
+  Option<int> optLevel{
+      *this, "opt-level",
+      llvm::cl::desc("Optimization level for HSACO compilation"),
+      llvm::cl::init(2)};
+
+  /// Adds LLVM optimization passes
+  LogicalResult optimizeLlvm(llvm::Module &llvmModule,
+                             llvm::TargetMachine &targetMachine) override;
 
 private:
   void getDependentDialects(DialectRegistry &registry) const override;
@@ -72,6 +85,8 @@ private:
 };
 } // namespace
 
+SerializeToHsacoPass::SerializeToHsacoPass(const SerializeToHsacoPass &other)
+    : PassWrapper<SerializeToHsacoPass, gpu::SerializeToBlobPass>(other) {}
 static std::string getDefaultChip() {
   const char kDefaultChip[] = "gfx900";
 
@@ -137,16 +152,42 @@ static void maybeSetOption(Pass::Option<std::string> &option,
 }
 
 SerializeToHsacoPass::SerializeToHsacoPass(StringRef triple, StringRef arch,
-                                           StringRef features) {
+                                           StringRef features, int optLevel) {
   maybeSetOption(this->triple, [&triple] { return triple.str(); });
   maybeSetOption(this->chip, [&arch] { return arch.str(); });
   maybeSetOption(this->features, [&features] { return features.str(); });
+  if (this->optLevel.getNumOccurrences() == 0)
+    this->optLevel.setValue(optLevel);
 }
 
 void SerializeToHsacoPass::getDependentDialects(
     DialectRegistry &registry) const {
   registerROCDLDialectTranslation(registry);
   gpu::SerializeToBlobPass::getDependentDialects(registry);
+}
+
+LogicalResult
+SerializeToHsacoPass::optimizeLlvm(llvm::Module &llvmModule,
+                                   llvm::TargetMachine &targetMachine) {
+  int optLevel = this->optLevel.getValue();
+  if (optLevel < 0 || optLevel > 3)
+    return getOperation().emitError()
+           << "Invalid HSA optimization level" << optLevel << "\n";
+
+  targetMachine.setOptLevel(static_cast<llvm::CodeGenOpt::Level>(optLevel));
+
+  auto transformer =
+      makeOptimizingTransformer(optLevel, /*sizeLevel=*/0, &targetMachine);
+  auto error = transformer(&llvmModule);
+  if (error) {
+    InFlightDiagnostic mlirError = getOperation()->emitError();
+    llvm::handleAllErrors(
+        std::move(error), [&mlirError](const llvm::ErrorInfoBase &ei) {
+          mlirError << "Could not optimize LLVM IR: " << ei.message() << "\n";
+        });
+    return mlirError;
+  }
+  return success();
 }
 
 std::unique_ptr<SmallVectorImpl<char>>
@@ -286,7 +327,7 @@ void mlir::registerGpuSerializeToHsacoPass() {
         LLVMInitializeAMDGPUTargetMC();
 
         return std::make_unique<SerializeToHsacoPass>("amdgcn-amd-amdhsa", "",
-                                                      "");
+                                                      "", 2);
       });
 }
 #else  // MLIR_GPU_TO_HSACO_PASS_ENABLE
