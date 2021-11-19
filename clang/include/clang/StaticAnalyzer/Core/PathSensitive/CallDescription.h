@@ -83,6 +83,33 @@ public:
   /// It's false, if and only if we expect a single identifier, such as
   /// `getenv`. It's true for `std::swap`, or `my::detail::container::data`.
   bool hasQualifiedNameParts() const { return QualifiedName.size() > 1; }
+
+  /// @name Matching CallDescriptions against a CallEvent
+  /// @{
+
+  /// Returns true if the CallEvent is a call to a function that matches
+  /// the CallDescription.
+  ///
+  /// \note This function is not intended to be used to match Obj-C method
+  /// calls.
+  bool matches(const CallEvent &Call) const;
+
+  /// Returns true whether the CallEvent matches on any of the CallDescriptions
+  /// supplied.
+  ///
+  /// \note This function is not intended to be used to match Obj-C method
+  /// calls.
+  friend bool matchesAny(const CallEvent &Call, const CallDescription &CD1) {
+    return CD1.matches(Call);
+  }
+
+  /// \copydoc clang::ento::matchesAny(const CallEvent &, const CallDescription &)
+  template <typename... Ts>
+  friend bool matchesAny(const CallEvent &Call, const CallDescription &CD1,
+                         const Ts &...CDs) {
+    return CD1.matches(Call) || matchesAny(Call, CDs...);
+  }
+  /// @}
 };
 
 /// An immutable map from CallDescriptions to arbitrary data. Provides a unified
@@ -113,7 +140,7 @@ public:
     // Slow path: linear lookup.
     // TODO: Implement some sort of fast path.
     for (const std::pair<CallDescription, T> &I : LinearMap)
-      if (Call.isCalled(I.first))
+      if (I.first.matches(Call))
         return &I.second;
 
     return nullptr;
