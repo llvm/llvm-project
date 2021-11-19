@@ -79,6 +79,11 @@ static cl::opt<bool>
                           cl::desc("enable elimination of zero-extensions"),
                           cl::init(false), cl::Hidden);
 
+static cl::opt<bool>
+    EnableTrapOptimization("ppc-opt-conditional-trap",
+                           cl::desc("enable optimization of conditional traps"),
+                           cl::init(false), cl::Hidden);
+
 namespace {
 
 struct PPCMIPeephole : public MachineFunctionPass {
@@ -423,7 +428,7 @@ bool PPCMIPeephole::simplifyCode(void) {
       // If a conditional trap instruction got optimized to an
       // unconditional trap, eliminate all the instructions after
       // the trap.
-      if (TrapOpt) {
+      if (EnableTrapOptimization && TrapOpt) {
         ToErase = &MI;
         continue;
       }
@@ -1020,6 +1025,7 @@ bool PPCMIPeephole::simplifyCode(void) {
       case PPC::TWI:
       case PPC::TD:
       case PPC::TW: {
+        if (!EnableTrapOptimization) break;
         MachineInstr *LiMI1 = getVRegDefOrNull(&MI.getOperand(1), MRI);
         MachineInstr *LiMI2 = getVRegDefOrNull(&MI.getOperand(2), MRI);
         bool IsOperand2Immediate = MI.getOperand(2).isImm();
@@ -1068,7 +1074,8 @@ bool PPCMIPeephole::simplifyCode(void) {
       ToErase = nullptr;
     }
     // Reset TrapOpt to false at the end of the basic block.
-    TrapOpt = false;
+    if (EnableTrapOptimization)
+      TrapOpt = false;
   }
 
   // Eliminate all the TOC save instructions which are redundant.

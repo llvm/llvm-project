@@ -1,5 +1,6 @@
 # RUN: llc -mtriple powerpc64le-unknown-linux-gnu -mcpu=pwr8 -x mir < %s \
-# RUN:   -verify-machineinstrs -start-before=ppc-mi-peepholes | FileCheck %s
+# RUN:   -verify-machineinstrs -start-before=ppc-mi-peepholes \
+# RUN:   -ppc-opt-conditional-trap | FileCheck %s
 
 ---
 name:            conditional_trap_opt_reg_implicit_def
