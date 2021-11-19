@@ -258,7 +258,8 @@ public:
 
     redecl_iterator& operator++() {
       assert(Current && "Advancing while iterator has reached end");
-      // Sanity check to avoid infinite loop on invalid redecl chain.
+      // Make sure we don't infinitely loop on an invalid redecl chain. This
+      // should never happen.
       if (Current->isFirstDecl()) {
         if (PassedFirst) {
           assert(0 && "Passed first decl twice, invalid redecl chain!");

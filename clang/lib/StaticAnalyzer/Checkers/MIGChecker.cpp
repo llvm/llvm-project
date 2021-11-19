@@ -160,7 +160,7 @@ static bool isInMIGCall(CheckerContext &C) {
   if (Optional<AnyCall> AC = AnyCall::forDecl(D)) {
     // Even though there's a Sema warning when the return type of an annotated
     // function is not a kern_return_t, this warning isn't an error, so we need
-    // an extra sanity check here.
+    // an extra check here.
     // FIXME: AnyCall doesn't support blocks yet, so they remain unchecked
     // for now.
     if (!AC->getReturnType(C.getASTContext())
