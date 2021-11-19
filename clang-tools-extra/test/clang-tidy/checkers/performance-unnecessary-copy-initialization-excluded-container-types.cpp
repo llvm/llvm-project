@@ -21,6 +21,7 @@ struct ExpensiveToCopy {
 
 struct ConstInCorrectType {
   const ExpensiveToCopy &secretlyMutates() const;
+  const ExpensiveToCopy &operator[](int) const;
 };
 
 using NSVTE = ns::ViewType<ExpensiveToCopy>;
@@ -59,12 +60,28 @@ void excludedConstIncorrectType() {
   E.constMethod();
 }
 
+void excludedConstIncorrectTypeOperator() {
+  ConstInCorrectType C;
+  const auto E = C[42];
+  E.constMethod();
+}
+
 void excludedConstIncorrectTypeAsPointer(ConstInCorrectType *C) {
   const auto E = C->secretlyMutates();
   E.constMethod();
 }
 
+void excludedConstIncorrectTypeAsPointerOperator(ConstInCorrectType *C) {
+  const auto E = (*C)[42];
+  E.constMethod();
+}
+
 void excludedConstIncorrectTypeAsReference(const ConstInCorrectType &C) {
   const auto E = C.secretlyMutates();
+  E.constMethod();
+}
+
+void excludedConstIncorrectTypeAsReferenceOperator(const ConstInCorrectType &C) {
+  const auto E = C[42];
   E.constMethod();
 }
