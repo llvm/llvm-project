@@ -2989,8 +2989,10 @@ reformat(const FormatStyle &Style, StringRef Code,
   if (Style.isJson()) {
     std::vector<tooling::Range> Ranges(1, tooling::Range(0, Code.size()));
     auto Env =
-        std::make_unique<Environment>(Code, FileName, Ranges, FirstStartColumn,
+        Environment::make(Code, FileName, Ranges, FirstStartColumn,
                                       NextStartColumn, LastStartColumn);
+    if (!Env)
+      return {};
     // Perform the actual formatting pass.
     tooling::Replacements Replaces =
         Formatter(*Env, Style, Status).process().first;
@@ -3046,9 +3048,10 @@ reformat(const FormatStyle &Style, StringRef Code,
       return TrailingCommaInserter(Env, Expanded).process();
     });
 
-  auto Env =
-      std::make_unique<Environment>(Code, FileName, Ranges, FirstStartColumn,
-                                    NextStartColumn, LastStartColumn);
+  auto Env = Environment::make(Code, FileName, Ranges, FirstStartColumn,
+                               NextStartColumn, LastStartColumn);
+  if (!Env)
+    return {};
   llvm::Optional<std::string> CurrentCode = None;
   tooling::Replacements Fixes;
   unsigned Penalty = 0;
@@ -3061,10 +3064,12 @@ reformat(const FormatStyle &Style, StringRef Code,
       Penalty += PassFixes.second;
       if (I + 1 < E) {
         CurrentCode = std::move(*NewCode);
-        Env = std::make_unique<Environment>(
+        Env = Environment::make(
             *CurrentCode, FileName,
             tooling::calculateRangesAfterReplacements(Fixes, Ranges),
             FirstStartColumn, NextStartColumn, LastStartColumn);
+        if (!Env)
+          return {};
       }
     }
   }
@@ -3090,7 +3095,10 @@ tooling::Replacements cleanup(const FormatStyle &Style, StringRef Code,
   // cleanups only apply to C++ (they mostly concern ctor commas etc.)
   if (Style.Language != FormatStyle::LK_Cpp)
     return tooling::Replacements();
-  return Cleaner(Environment(Code, FileName, Ranges), Style).process().first;
+  auto Env = Environment::make(Code, FileName, Ranges);
+  if (!Env)
+    return {};
+  return Cleaner(*Env, Style).process().first;
 }
 
 tooling::Replacements reformat(const FormatStyle &Style, StringRef Code,
@@ -3107,7 +3115,10 @@ tooling::Replacements fixNamespaceEndComments(const FormatStyle &Style,
                                               StringRef Code,
                                               ArrayRef<tooling::Range> Ranges,
                                               StringRef FileName) {
-  return NamespaceEndCommentsFixer(Environment(Code, FileName, Ranges), Style)
+  auto Env = Environment::make(Code, FileName, Ranges);
+  if (!Env)
+    return {};
+  return NamespaceEndCommentsFixer(*Env, Style)
       .process()
       .first;
 }
@@ -3116,7 +3127,10 @@ tooling::Replacements sortUsingDeclarations(const FormatStyle &Style,
                                             StringRef Code,
                                             ArrayRef<tooling::Range> Ranges,
                                             StringRef FileName) {
-  return UsingDeclarationsSorter(Environment(Code, FileName, Ranges), Style)
+  auto Env = Environment::make(Code, FileName, Ranges);
+  if (!Env)
+    return {};
+  return UsingDeclarationsSorter(*Env, Style)
       .process()
       .first;
 }
