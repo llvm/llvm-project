@@ -842,12 +842,12 @@ void CSProfileGenerator::populateBodySamplesWithProbes(
       FunctionProfile.addHeadSamples(Count);
       // Look up for the caller's function profile
       const auto *InlinerDesc = Binary->getInlinerDescForProbe(Probe);
-      if (InlinerDesc != nullptr) {
+      SampleContextFrames CalleeContextId =
+          FunctionProfile.getContext().getContextFrames();
+      if (InlinerDesc != nullptr && CalleeContextId.size() > 1) {
         // Since the context id will be compressed, we have to use callee's
         // context id to infer caller's context id to ensure they share the
         // same context prefix.
-        SampleContextFrames CalleeContextId =
-            FunctionProfile.getContext().getContextFrames();
         SampleContextFrameVector CallerContextId;
         SampleContextFrame &&CallerLeafFrameLoc =
             getCallerContext(CalleeContextId, CallerContextId);
