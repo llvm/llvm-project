@@ -3282,9 +3282,9 @@ static void *SmallStackThread_threadfn(void* data) {
 
 static int GetThreadStackMin() {
 #ifdef PTHREAD_STACK_MIN
- return PTHREAD_STACK_MIN;
+  return PTHREAD_STACK_MIN;
 #else
- return 0;
+  return 0;
 #endif
 }
 
@@ -3295,7 +3295,8 @@ TEST(MemorySanitizer, SmallStackThread) {
   int res;
   res = pthread_attr_init(&attr);
   ASSERT_EQ(0, res);
-  res = pthread_attr_setstacksize(&attr, std::max(GetThreadStackMin(), 64 * 1024));
+  res = pthread_attr_setstacksize(&attr,
+                                  std::max(GetThreadStackMin(), 64 * 1024));
   ASSERT_EQ(0, res);
   res = pthread_create(&t, &attr, SmallStackThread_threadfn, NULL);
   ASSERT_EQ(0, res);

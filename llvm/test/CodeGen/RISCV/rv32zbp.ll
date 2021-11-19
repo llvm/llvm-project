@@ -1642,9 +1642,9 @@ define i64 @grev8_i64(i64 %a) nounwind {
 define i32 @grev16_i32(i32 %a) nounwind {
 ; RV32I-LABEL: grev16_i32:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    slli a1, a0, 16
-; RV32I-NEXT:    srli a0, a0, 16
-; RV32I-NEXT:    or a0, a1, a0
+; RV32I-NEXT:    srli a1, a0, 16
+; RV32I-NEXT:    slli a0, a0, 16
+; RV32I-NEXT:    or a0, a0, a1
 ; RV32I-NEXT:    ret
 ;
 ; RV32ZBP-LABEL: grev16_i32:
@@ -2045,12 +2045,12 @@ define signext i32 @grev16_i32_fshr(i32 signext %a) nounwind {
 define i64 @grev16_i64(i64 %a) nounwind {
 ; RV32I-LABEL: grev16_i64:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    slli a2, a1, 16
-; RV32I-NEXT:    srli a3, a0, 16
+; RV32I-NEXT:    srli a2, a0, 16
 ; RV32I-NEXT:    slli a0, a0, 16
-; RV32I-NEXT:    or a0, a0, a3
-; RV32I-NEXT:    srli a1, a1, 16
-; RV32I-NEXT:    or a1, a2, a1
+; RV32I-NEXT:    or a0, a0, a2
+; RV32I-NEXT:    srli a2, a1, 16
+; RV32I-NEXT:    slli a1, a1, 16
+; RV32I-NEXT:    or a1, a1, a2
 ; RV32I-NEXT:    ret
 ;
 ; RV32ZBP-LABEL: grev16_i64:

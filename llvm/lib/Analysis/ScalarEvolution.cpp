@@ -8321,12 +8321,13 @@ ScalarEvolution::computeExitLimitFromICmp(const Loop *L,
   // the same values on self-wrap of the IV, then we can infer that IV
   // doesn't self wrap because if it did, we'd have an infinite (undefined)
   // loop.
-  if (ControlsExit && isLoopInvariant(RHS, L)) {
+  if (ControlsExit) {
     auto deferredLoopProperties = [&]() {
       // Conceptually, these two checks should be in the immediately guarding
       // if clause, but we defer their actual execution to after the cheaper
       // checks have all been done.
-      return loopHasNoAbnormalExits(L) && loopIsFiniteByAssumption(L);
+      return isLoopInvariant(RHS, L) && loopHasNoAbnormalExits(L) &&
+        loopIsFiniteByAssumption(L);
     };
 
     // TODO: We can peel off any functions which are invertible *in L*.  Loop
@@ -8335,15 +8336,16 @@ ScalarEvolution::computeExitLimitFromICmp(const Loop *L,
     if (auto *ZExt = dyn_cast<SCEVZeroExtendExpr>(LHS))
       InnerLHS = ZExt->getOperand();
     if (const SCEVAddRecExpr *AR = dyn_cast<SCEVAddRecExpr>(InnerLHS)) {
-      auto *StrideC = dyn_cast<SCEVConstant>(AR->getStepRecurrence(*this));
-      if (!AR->hasNoSelfWrap() && AR->getLoop() == L && AR->isAffine() && 
-          StrideC && StrideC->getAPInt().isPowerOf2() &&
-          deferredLoopProperties()) {
-        auto Flags = AR->getNoWrapFlags();
-        Flags = setFlags(Flags, SCEV::FlagNW);
-        SmallVector<const SCEV*> Operands{AR->operands()};
-        Flags = StrengthenNoWrapFlags(this, scAddRecExpr, Operands, Flags);
-        setNoWrapFlags(const_cast<SCEVAddRecExpr *>(AR), Flags);
+      if (!AR->hasNoSelfWrap() && AR->getLoop() == L && AR->isAffine()) {
+        auto *StrideC = dyn_cast<SCEVConstant>(AR->getStepRecurrence(*this));
+        if (StrideC && StrideC->getAPInt().isPowerOf2() &&
+            deferredLoopProperties()) {
+          auto Flags = AR->getNoWrapFlags();
+          Flags = setFlags(Flags, SCEV::FlagNW);
+          SmallVector<const SCEV*> Operands{AR->operands()};
+          Flags = StrengthenNoWrapFlags(this, scAddRecExpr, Operands, Flags);
+          setNoWrapFlags(const_cast<SCEVAddRecExpr *>(AR), Flags);
+        }
       }
     }
   }
