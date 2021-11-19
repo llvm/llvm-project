@@ -105,7 +105,7 @@ define i32 @selecti8i32(i8 %a) {
 ; CHECK-NEXT:    v_bfe_i32 v0, v0, 0, 8
 ; CHECK-NEXT:    v_mov_b32_e32 v1, 0x54
 ; CHECK-NEXT:    v_ashrrev_i16 v0, 7, v0
-; CHECK-NEXT:    v_xor_b32_sdwa v0, v1, sext(v0) dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
+; CHECK-NEXT:    v_xor_b32_sdwa v0, sext(v0), v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
   %c = icmp sgt i8 %a, -1
   %s = select i1 %c, i32 84, i32 -85

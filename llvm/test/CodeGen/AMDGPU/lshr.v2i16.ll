@@ -123,8 +123,8 @@ define amdgpu_kernel void @v_lshr_v2i16(<2 x i16> addrspace(1)* %out, <2 x i16> 
 ; CI-NEXT:    v_and_b32_e32 v2, 0xffff, v2
 ; CI-NEXT:    s_waitcnt vmcnt(0)
 ; CI-NEXT:    v_lshrrev_b32_e32 v5, 16, v3
-; CI-NEXT:    v_lshr_b32_e32 v2, v2, v3
-; CI-NEXT:    v_lshr_b32_e32 v3, v4, v5
+; CI-NEXT:    v_lshrrev_b32_e32 v2, v3, v2
+; CI-NEXT:    v_lshrrev_b32_e32 v3, v5, v4
 ; CI-NEXT:    v_lshlrev_b32_e32 v3, 16, v3
 ; CI-NEXT:    v_or_b32_e32 v2, v2, v3
 ; CI-NEXT:    buffer_store_dword v2, v[0:1], s[4:7], 0 addr64
@@ -512,10 +512,10 @@ define amdgpu_kernel void @v_lshr_v4i16(<4 x i16> addrspace(1)* %out, <4 x i16> 
 ; CI-NEXT:    s_waitcnt vmcnt(0)
 ; CI-NEXT:    v_lshrrev_b32_e32 v8, 16, v4
 ; CI-NEXT:    v_lshrrev_b32_e32 v9, 16, v5
-; CI-NEXT:    v_lshr_b32_e32 v3, v3, v5
-; CI-NEXT:    v_lshr_b32_e32 v5, v7, v9
-; CI-NEXT:    v_lshr_b32_e32 v2, v2, v4
-; CI-NEXT:    v_lshr_b32_e32 v4, v6, v8
+; CI-NEXT:    v_lshrrev_b32_e32 v3, v5, v3
+; CI-NEXT:    v_lshrrev_b32_e32 v5, v9, v7
+; CI-NEXT:    v_lshrrev_b32_e32 v2, v4, v2
+; CI-NEXT:    v_lshrrev_b32_e32 v4, v8, v6
 ; CI-NEXT:    v_lshlrev_b32_e32 v5, 16, v5
 ; CI-NEXT:    v_lshlrev_b32_e32 v4, 16, v4
 ; CI-NEXT:    v_or_b32_e32 v3, v3, v5

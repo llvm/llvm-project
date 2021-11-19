@@ -1,5 +1,5 @@
-; RUN: llc -march=amdgcn -verify-machineinstrs < %s | FileCheck --check-prefix=CHECK --check-prefix=PRE-GFX8 %s
-; RUN: llc -march=amdgcn -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck  --check-prefix=CHECK --check-prefix=GFX8 %s
+; RUN: llc -march=amdgcn -verify-machineinstrs < %s | FileCheck --check-prefix=CHECK %s
+; RUN: llc -march=amdgcn -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck  --check-prefix=CHECK %s
 
 ; CHECK-LABEL: {{^}}inline_asm:
 ; CHECK: s_endpgm
@@ -260,8 +260,7 @@ entry:
 ; CHECK: ; def v0
 ; CHECK: v_mov_b32_e32 v1, v0
 ; CHECK: ; def v0
-; PRE-GFX8: v_lshl_b32_e32 v{{[0-9]+}}, v1, v0
-; GFX8: v_lshlrev_b32_e32 v{{[0-9]+}}, v0, v1
+; CHECK: v_lshlrev_b32_e32 v{{[0-9]+}}, v0, v1
 define amdgpu_kernel void @muliple_def_phys_vgpr() {
 entry:
   %def0 = call i32 asm sideeffect "; def $0 ", "={v0}"()

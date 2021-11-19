@@ -37,8 +37,8 @@ define void @needs_align16_default_stack_align(i32 %idx) #0 {
 
 ; GCN: buffer_store_dword v{{[0-9]+}}, v{{[0-9]+}}, s[0:3], 0 offen
 ; GCN: v_or_b32_e32 v{{[0-9]+}}, 12
-; GCN: s_addk_i32 s32, 0x2800{{$}}
 ; GCN: buffer_store_dword v{{[0-9]+}}, v{{[0-9]+}}, s[0:3], 0 offen
+; GCN: s_addk_i32 s32, 0x2800{{$}}
 ; GCN: buffer_store_dword v{{[0-9]+}}, v{{[0-9]+}}, s[0:3], 0 offen
 ; GCN: buffer_store_dword v{{[0-9]+}}, v{{[0-9]+}}, s[0:3], 0 offen
 
@@ -58,8 +58,8 @@ define void @needs_align16_stack_align4(i32 %idx) #2 {
 
 ; GCN: buffer_store_dword v{{[0-9]+}}, v{{[0-9]+}}, s[0:3], 0 offen
 ; GCN: v_or_b32_e32 v{{[0-9]+}}, 12
-; GCN: s_addk_i32 s32, 0x3000{{$}}
 ; GCN: buffer_store_dword v{{[0-9]+}}, v{{[0-9]+}}, s[0:3], 0 offen
+; GCN: s_addk_i32 s32, 0x3000{{$}}
 ; GCN: buffer_store_dword v{{[0-9]+}}, v{{[0-9]+}}, s[0:3], 0 offen
 ; GCN: buffer_store_dword v{{[0-9]+}}, v{{[0-9]+}}, s[0:3], 0 offen
 
