@@ -52,8 +52,6 @@ if (NOT DEFINED AMDGPU_TARGET_TRIPLE)
   set(AMDGPU_TARGET_TRIPLE "amdgcn-amd-amdhsa")
 endif()
 
-option(BUILD_HC_LIB "Build Heterogeneous Compute built-in library (hc)" ON)
-
 if (NOT PREPARE_BUILTINS)
   add_subdirectory(utils/prepare-builtins)
   set (PREPARE_BUILTINS $<TARGET_FILE:prepare-builtins>)
@@ -70,10 +68,6 @@ add_subdirectory(ockl)
 add_subdirectory(opencl)
 add_subdirectory(hip)
 add_subdirectory(asanrtl)
-
-if(BUILD_HC_LIB)
-  add_subdirectory(hc)
-endif()
 
 enable_testing()
 add_subdirectory(test/constant_folding)
