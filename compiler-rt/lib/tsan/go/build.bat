@@ -25,6 +25,7 @@ type ^
   ..\rtl\tsan_platform_windows.cpp ^
   ..\..\sanitizer_common\sanitizer_win.cpp ^
   ..\..\sanitizer_common\sanitizer_deadlock_detector1.cpp ^
+  ..\..\sanitizer_common\sanitizer_stack_store.cpp ^
   ..\..\sanitizer_common\sanitizer_stackdepot.cpp ^
   ..\..\sanitizer_common\sanitizer_flag_parser.cpp ^
   ..\..\sanitizer_common\sanitizer_symbolizer.cpp ^

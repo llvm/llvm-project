@@ -1,4 +1,4 @@
-//===-- sanitizer_persistent_allocator.h ------------------------*- C++ -*-===//
+//===-- sanitizer_stack_store.cpp -------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -10,74 +10,62 @@
 // All allocations are forever.
 //===----------------------------------------------------------------------===//
 
-#ifndef SANITIZER_PERSISTENT_ALLOCATOR_H
-#define SANITIZER_PERSISTENT_ALLOCATOR_H
+#include "sanitizer_stack_store.h"
 
-#include "sanitizer_internal_defs.h"
-#include "sanitizer_mutex.h"
 #include "sanitizer_atomic.h"
 #include "sanitizer_common.h"
+#include "sanitizer_stacktrace.h"
 
 namespace __sanitizer {
 
-template <typename T>
-class PersistentAllocator {
- public:
-  T *alloc(uptr count = 1);
-  uptr allocated() const { return atomic_load_relaxed(&mapped_size); }
+static constexpr u32 kStackSizeBits = 16;
 
-  void TestOnlyUnmap();
+StackStore::Id StackStore::store(const StackTrace &trace) {
+  uptr *stack_trace = alloc(trace.size + 1);
+  CHECK_LT(trace.size, 1 << kStackSizeBits);
+  *stack_trace = trace.size + (trace.tag << kStackSizeBits);
+  internal_memcpy(stack_trace + 1, trace.trace, trace.size * sizeof(uptr));
+  return reinterpret_cast<StackStore::Id>(stack_trace);
+}
 
- private:
-  T *tryAlloc(uptr count);
-  T *refillAndAlloc(uptr count);
-  mutable StaticSpinMutex mtx;  // Protects alloc of new blocks.
-  atomic_uintptr_t region_pos;  // Region allocator for Node's.
-  atomic_uintptr_t region_end;
-  atomic_uintptr_t mapped_size;
+StackTrace StackStore::load(Id id) {
+  const uptr *stack_trace = reinterpret_cast<const uptr *>(id);
+  uptr size = *stack_trace & ((1 << kStackSizeBits) - 1);
+  uptr tag = *stack_trace >> kStackSizeBits;
+  return StackTrace(stack_trace + 1, size, tag);
+}
 
-  struct BlockInfo {
-    const BlockInfo *next;
-    uptr ptr;
-    uptr size;
-  };
-  const BlockInfo *curr;
-};
-
-template <typename T>
-inline T *PersistentAllocator<T>::tryAlloc(uptr count) {
+uptr *StackStore::tryAlloc(uptr count) {
   // Optimisic lock-free allocation, essentially try to bump the region ptr.
   for (;;) {
     uptr cmp = atomic_load(&region_pos, memory_order_acquire);
     uptr end = atomic_load(&region_end, memory_order_acquire);
-    uptr size = count * sizeof(T);
+    uptr size = count * sizeof(uptr);
     if (cmp == 0 || cmp + size > end)
       return nullptr;
     if (atomic_compare_exchange_weak(&region_pos, &cmp, cmp + size,
                                      memory_order_acquire))
-      return reinterpret_cast<T *>(cmp);
+      return reinterpret_cast<uptr *>(cmp);
   }
 }
 
-template <typename T>
-inline T *PersistentAllocator<T>::alloc(uptr count) {
+uptr *StackStore::alloc(uptr count) {
   // First, try to allocate optimisitically.
-  T *s = tryAlloc(count);
+  uptr *s = tryAlloc(count);
   if (LIKELY(s))
     return s;
   return refillAndAlloc(count);
 }
 
-template <typename T>
-inline T *PersistentAllocator<T>::refillAndAlloc(uptr count) {
+uptr *StackStore::refillAndAlloc(uptr count) {
   // If failed, lock, retry and alloc new superblock.
   SpinMutexLock l(&mtx);
   for (;;) {
-    T *s = tryAlloc(count);
+    uptr *s = tryAlloc(count);
     if (s)
       return s;
     atomic_store(&region_pos, 0, memory_order_relaxed);
-    uptr size = count * sizeof(T) + sizeof(BlockInfo);
+    uptr size = count * sizeof(uptr) + sizeof(BlockInfo);
     uptr allocsz = RoundUpTo(Max<uptr>(size, 64u * 1024u), GetPageSizeCached());
     uptr mem = (uptr)MmapOrDie(allocsz, "stack depot");
     BlockInfo *new_block = (BlockInfo *)(mem + allocsz) - 1;
@@ -94,8 +82,7 @@ inline T *PersistentAllocator<T>::refillAndAlloc(uptr count) {
   }
 }
 
-template <typename T>
-void PersistentAllocator<T>::TestOnlyUnmap() {
+void StackStore::TestOnlyUnmap() {
   while (curr) {
     uptr mem = curr->ptr;
     uptr allocsz = curr->size;
@@ -105,6 +92,4 @@ void PersistentAllocator<T>::TestOnlyUnmap() {
   internal_memset(this, 0, sizeof(*this));
 }
 
-} // namespace __sanitizer
-
-#endif // SANITIZER_PERSISTENT_ALLOCATOR_H
+}  // namespace __sanitizer

@@ -88,7 +88,6 @@ int main(int argc, char **argv) {
          before + mmap_cost_kb + mmap_shadow_cost_kb + mmap_origin_cost_kb);
 
 #ifdef ORIGIN_TRACKING
-  // Origin chain (sanitizer PersistentAllocator, never freed).
   // This value is chosen based on observed difference.
   const size_t mmap_origin_chain_kb = 4000;
 #else
