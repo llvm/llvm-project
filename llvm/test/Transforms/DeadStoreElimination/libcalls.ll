@@ -435,8 +435,7 @@ declare void @llvm.memset.p0i8.i64(i8* nocapture, i8, i64, i1) nounwind
 ; strncpy -> memset, full overwrite
 define void @dse_strncpy_test1(i8* noalias %out, i8* noalias %in) {
 ; CHECK-LABEL: @dse_strncpy_test1(
-; CHECK-NEXT:    [[CALL:%.*]] = tail call i8* @strncpy(i8* [[OUT:%.*]], i8* [[IN:%.*]], i64 100)
-; CHECK-NEXT:    tail call void @llvm.memset.p0i8.i64(i8* [[OUT]], i8 42, i64 100, i1 false)
+; CHECK-NEXT:    tail call void @llvm.memset.p0i8.i64(i8* [[OUT:%.*]], i8 42, i64 100, i1 false)
 ; CHECK-NEXT:    ret void
 ;
   %call = tail call i8* @strncpy(i8* %out, i8* %in, i64 100)
@@ -472,8 +471,7 @@ define void @dse_strncpy_test3(i8* noalias %out1, i8* noalias %out2, i8* noalias
 ; memset -> strncpy, full overwrite
 define void @dse_strncpy_test4(i8* noalias %out, i8* noalias %in) {
 ; CHECK-LABEL: @dse_strncpy_test4(
-; CHECK-NEXT:    tail call void @llvm.memset.p0i8.i64(i8* [[OUT:%.*]], i8 42, i64 100, i1 false)
-; CHECK-NEXT:    [[CALL:%.*]] = tail call i8* @strncpy(i8* [[OUT]], i8* [[IN:%.*]], i64 100)
+; CHECK-NEXT:    [[CALL:%.*]] = tail call i8* @strncpy(i8* [[OUT:%.*]], i8* [[IN:%.*]], i64 100)
 ; CHECK-NEXT:    ret void
 ;
   tail call void @llvm.memset.p0i8.i64(i8* %out, i8 42, i64 100, i1 false)
@@ -484,7 +482,8 @@ define void @dse_strncpy_test4(i8* noalias %out, i8* noalias %in) {
 ; memset -> strncpy, partial overwrite
 define void @dse_strncpy_test5(i8* noalias %out, i8* noalias %in) {
 ; CHECK-LABEL: @dse_strncpy_test5(
-; CHECK-NEXT:    tail call void @llvm.memset.p0i8.i64(i8* [[OUT:%.*]], i8 42, i64 100, i1 false)
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, i8* [[OUT:%.*]], i64 99
+; CHECK-NEXT:    tail call void @llvm.memset.p0i8.i64(i8* align 1 [[TMP1]], i8 42, i64 1, i1 false)
 ; CHECK-NEXT:    [[CALL:%.*]] = tail call i8* @strncpy(i8* [[OUT]], i8* [[IN:%.*]], i64 99)
 ; CHECK-NEXT:    ret void
 ;
