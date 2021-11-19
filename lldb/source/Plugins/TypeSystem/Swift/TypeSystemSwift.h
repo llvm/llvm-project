@@ -99,7 +99,9 @@ public:
   /// \{
   static void Initialize();
   static void Terminate();
-  ConstString GetPluginName() override;
+  llvm::StringRef GetPluginName() override {
+    return GetPluginNameStatic().GetStringRef();
+  }
   static ConstString GetPluginNameStatic();
   /// \}
 
@@ -166,6 +168,9 @@ public:
                  uint32_t bitfield_bit_size, uint32_t bitfield_bit_offset,
                  bool show_types, bool show_summary, bool verbose,
                  uint32_t depth) override;
+
+  /// \see lldb_private::TypeSystem::Dump
+  void Dump(llvm::raw_ostream &output) override;
 
   /// Unavailable hardcoded functions that don't make sense for Swift.
   /// \{

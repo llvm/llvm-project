@@ -1389,10 +1389,6 @@ void TypeSystemSwiftTypeRef::SetCachedType(ConstString mangled,
   m_swift_type_map.Insert(mangled.GetCString(), type_sp);
 }
 
-ConstString TypeSystemSwiftTypeRef::GetPluginName() {
-  return ConstString("TypeSystemSwiftTypeRef");
-}
-
 bool TypeSystemSwiftTypeRef::SupportsLanguage(lldb::LanguageType language) {
   return language == eLanguageTypeSwift;
 }

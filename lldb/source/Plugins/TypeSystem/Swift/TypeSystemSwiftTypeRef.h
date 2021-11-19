@@ -75,7 +75,7 @@ public:
                                       size_t idx) override;
 
   // PluginInterface functions
-  ConstString GetPluginName() override;
+  llvm::StringRef GetPluginName() override { return "TypeSystemSwiftTypeRef"; }
 
   bool SupportsLanguage(lldb::LanguageType language) override;
   Status IsCompatible() override;

@@ -212,7 +212,10 @@ lldb::TypeSP DWARFASTParserSwift::ParseTypeFromDWARF(const SymbolContext &sc,
 }
 
 Function *DWARFASTParserSwift::ParseFunctionFromDWARF(
-    lldb_private::CompileUnit &comp_unit, const DWARFDIE &die) {
+    lldb_private::CompileUnit &comp_unit, const DWARFDIE &die,
+    const lldb_private::AddressRange &func_range) {
+  assert(func_range.GetBaseAddress().IsValid());
+
   DWARFRangeList func_ranges;
   const char *name = NULL;
   const char *mangled = NULL;
@@ -232,63 +235,47 @@ Function *DWARFASTParserSwift::ParseFunctionFromDWARF(
                                &frame_base)) {
     // Union of all ranges in the function DIE (if the function is
     // discontiguous)
-    SymbolFileDWARF *dwarf = die.GetDWARF();
-    AddressRange func_range;
-    lldb::addr_t lowest_func_addr = func_ranges.GetMinRangeBase(0);
-    lldb::addr_t highest_func_addr = func_ranges.GetMaxRangeEnd(0);
-    if (lowest_func_addr != LLDB_INVALID_ADDRESS &&
-        lowest_func_addr <= highest_func_addr) {
-      ModuleSP module_sp(dwarf->GetObjectFile()->GetModule());
-      func_range.GetBaseAddress().ResolveAddressUsingFileSections(
-          lowest_func_addr, module_sp->GetSectionList());
-      if (func_range.GetBaseAddress().IsValid())
-        func_range.SetByteSize(highest_func_addr - lowest_func_addr);
+
+    Mangled func_name;
+    if (mangled)
+      func_name.SetValue(ConstString(mangled), true);
+    else
+      func_name.SetValue(ConstString(name), false);
+
+    // See if this function can throw.  We can't get that from the
+    // mangled name (even though the information is often there)
+    // because Swift reserves the right to omit it from the name
+    // if it doesn't need it.  So instead we look for the
+    // DW_TAG_thrown_type:
+
+    bool can_throw = false;
+
+    DWARFDebugInfoEntry *child(die.GetFirstChild().GetDIE());
+    while (child) {
+      if (child->Tag() == DW_TAG_thrown_type) {
+        can_throw = true;
+        break;
+      }
+      child = child->GetSibling();
     }
 
-    if (func_range.GetBaseAddress().IsValid()) {
-      Mangled func_name;
-      if (mangled)
-        func_name.SetValue(ConstString(mangled), true);
-      else
-        func_name.SetValue(ConstString(name), false);
+    FunctionSP func_sp;
+    std::unique_ptr<Declaration> decl_ap;
+    if (decl_file != 0 || decl_line != 0 || decl_column != 0)
+      decl_ap.reset(new Declaration(
+          comp_unit.GetSupportFiles().GetFileSpecAtIndex(decl_file), decl_line,
+          decl_column));
 
-      // See if this function can throw.  We can't get that from the
-      // mangled name (even though the information is often there)
-      // because Swift reserves the right to omit it from the name
-      // if it doesn't need it.  So instead we look for the
-      // DW_TAG_thrown_type:
+    const user_id_t func_user_id = die.GetID();
+    func_sp.reset(new Function(&comp_unit, func_user_id, func_user_id,
+                               func_name, nullptr, func_range,
+                               can_throw)); // first address range
 
-      bool can_throw = false;
-
-      DWARFDebugInfoEntry *child(die.GetFirstChild().GetDIE());
-      while (child) {
-        if (child->Tag() == DW_TAG_thrown_type) {
-          can_throw = true;
-          break;
-        }
-        child = child->GetSibling();
-      }
-
-      FunctionSP func_sp;
-      std::unique_ptr<Declaration> decl_ap;
-      if (decl_file != 0 || decl_line != 0 || decl_column != 0)
-        decl_ap.reset(new Declaration(
-            comp_unit.GetSupportFiles().GetFileSpecAtIndex(decl_file),
-            decl_line, decl_column));
-
-      if (dwarf->FixupAddress(func_range.GetBaseAddress())) {
-        const user_id_t func_user_id = die.GetID();
-        func_sp.reset(new Function(&comp_unit, func_user_id, func_user_id,
-                                   func_name, nullptr, func_range,
-                                   can_throw)); // first address range
-
-        if (func_sp.get() != NULL) {
-          if (frame_base.IsValid())
-            func_sp->GetFrameBaseExpression() = frame_base;
-          comp_unit.AddFunction(func_sp);
-          return func_sp.get();
-        }
-      }
+    if (func_sp.get() != NULL) {
+      if (frame_base.IsValid())
+        func_sp->GetFrameBaseExpression() = frame_base;
+      comp_unit.AddFunction(func_sp);
+      return func_sp.get();
     }
   }
   return NULL;

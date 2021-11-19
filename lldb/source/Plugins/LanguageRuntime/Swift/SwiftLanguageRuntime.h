@@ -108,7 +108,9 @@ public:
   /// \}
 
   /// PluginInterface protocol.
-  lldb_private::ConstString GetPluginName() override;
+  llvm::StringRef GetPluginName() override {
+    return GetPluginNameStatic().GetStringRef();
+  }
 
   bool GetObjectDescription(Stream &str, Value &value,
                             ExecutionContextScope *exe_scope) override {

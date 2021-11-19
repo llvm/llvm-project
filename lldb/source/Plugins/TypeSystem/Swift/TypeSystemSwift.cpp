@@ -70,10 +70,6 @@ ConstString TypeSystemSwift::GetPluginNameStatic() {
   return ConstString("swift");
 }
 
-ConstString TypeSystemSwift::GetPluginName() {
-  return TypeSystemSwift::GetPluginNameStatic();
-}
-
 /// \}
 
 void TypeSystemSwift::DumpValue(
@@ -82,6 +78,10 @@ void TypeSystemSwift::DumpValue(
     size_t data_byte_size, uint32_t bitfield_bit_size,
     uint32_t bitfield_bit_offset, bool show_types, bool show_summary,
     bool verbose, uint32_t depth) {}
+
+void TypeSystemSwift::Dump(llvm::raw_ostream &output) {
+  // TODO: What to dump?
+}
 
 bool TypeSystemSwift::IsFloatingPointType(opaque_compiler_type_t type,
                                           uint32_t &count, bool &is_complex) {

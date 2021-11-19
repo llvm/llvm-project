@@ -669,7 +669,8 @@ lldb::TypeCategoryImplSP SwiftLanguage::GetFormatters() {
   static TypeCategoryImplSP g_category;
 
   std::call_once(g_initialize, [this]() -> void {
-    DataVisualization::Categories::GetCategory(GetPluginName(), g_category);
+    DataVisualization::Categories::GetCategory(ConstString(GetPluginName()),
+                                               g_category);
     if (g_category) {
       LoadSwiftFormatters(g_category);
       LoadFoundationValueTypesFormatters(g_category);
@@ -1484,29 +1485,23 @@ void SwiftLanguage::GetExceptionResolverDescription(bool catch_on,
 }
 
 ConstString SwiftLanguage::GetDemangledFunctionNameWithoutArguments(Mangled mangled) const {
-  const char *mangled_name_cstr = mangled.GetMangledName().GetCString();
+  ConstString mangled_name = mangled.GetMangledName();
   ConstString demangled_name = mangled.GetDemangledName();
-  if (demangled_name && mangled_name_cstr && mangled_name_cstr[0]) {
-    if (SwiftLanguageRuntime::IsSwiftMangledName(demangled.GetStringRef())) {
+  if (demangled_name && mangled_name) {
+    if (SwiftLanguageRuntime::IsSwiftMangledName(
+            demangled_name.GetStringRef())) {
       lldb_private::ConstString basename;
       bool is_method = false;
       if (SwiftLanguageRuntime::MethodName::ExtractFunctionBasenameFromMangled(
-              mangled, basename, is_method)) {
-        if (basename && basename != mangled)
-          return basename);
+              mangled_name, basename, is_method)) {
+        if (basename && basename != mangled_name)
+          return basename;
       }
     }
   }
   if (demangled_name)
     return demangled_name;
-  return mangled.GetMangledName();
-}
-
-//------------------------------------------------------------------
-// PluginInterface protocol
-//------------------------------------------------------------------
-lldb_private::ConstString SwiftLanguage::GetPluginName() {
-  return GetPluginNameStatic();
+  return mangled_name;
 }
 
 //------------------------------------------------------------------

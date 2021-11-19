@@ -83,8 +83,7 @@ bool SwiftExpressionSourceCode::GetText(
       if (auto process_sp = exe_ctx.GetProcessSP()) {
         os_vers << getAvailabilityName(triple) << " ";
         auto platform = target->GetPlatform();
-        bool is_simulator =
-            platform->GetPluginName().GetStringRef().endswith("-simulator");
+        bool is_simulator = platform->GetPluginName().endswith("-simulator");
         if (is_simulator) {
           // The simulators look like the host OS to Process, but Platform
           // can the version out of an environment variable.

@@ -1392,8 +1392,9 @@ bool SwiftASTManipulator::SaveExpressionTextToTempFile(
   std::error_code err =
       llvm::sys::fs::createTemporaryFile(prefix, suffix, temp_fd, buffer);
   if (!err) {
-    lldb_private::NativeFile file(temp_fd, /*options*/ File::eOpenOptionWrite,
-                            /*transfer_ownership*/ true);
+    lldb_private::NativeFile file(temp_fd,
+                                  /*options*/ File::eOpenOptionWriteOnly,
+                                  /*transfer_ownership*/ true);
     const size_t text_len = text.size();
     size_t bytes_written = text_len;
     if (file.Write(text.data(), bytes_written).Success()) {
