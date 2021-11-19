@@ -550,7 +550,10 @@ tooling::Replacements sortJavaScriptImports(const FormatStyle &Style,
                                             ArrayRef<tooling::Range> Ranges,
                                             StringRef FileName) {
   // FIXME: Cursor support.
-  return JavaScriptImportSorter(Environment(Code, FileName, Ranges), Style)
+  auto Env = Environment::make(Code, FileName, Ranges);
+  if (!Env)
+    return {};
+  return JavaScriptImportSorter(*Env, Style)
       .process()
       .first;
 }

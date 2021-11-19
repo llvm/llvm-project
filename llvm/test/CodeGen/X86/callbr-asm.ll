@@ -32,6 +32,36 @@ fail:
   ret i32 1
 }
 
+; Test 1b - Like test 1 but using `asm inteldialect`.
+define i32 @test1b(i32 %a) {
+; CHECK-LABEL: test1b:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; CHECK-NEXT:    addl $4, %eax
+; CHECK-NEXT:    #APP
+; CHECK-EMPTY:
+; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:    jmp .Ltmp1
+; CHECK-EMPTY:
+; CHECK-NEXT:    #NO_APP
+; CHECK-NEXT:  # %bb.1: # %normal
+; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:    retl
+; CHECK-NEXT:  .Ltmp1: # Block address taken
+; CHECK-NEXT:  .LBB1_2: # %fail
+; CHECK-NEXT:    movl $1, %eax
+; CHECK-NEXT:    retl
+entry:
+  %0 = add i32 %a, 4
+  callbr void asm inteldialect "xor $0, $0; jmp ${1:l}", "r,X,~{dirflag},~{fpsr},~{flags}"(i32 %0, i8* blockaddress(@test1b, %fail)) to label %normal [label %fail]
+
+normal:
+  ret i32 0
+
+fail:
+  ret i32 1
+}
+
 ; Test 2 - callbr terminates an unreachable block, function gets simplified
 ; to a trivial zero return.
 define i32 @test2(i32 %a) {
@@ -59,43 +89,43 @@ fail:
 define i32 @test3(i32 %a) {
 ; CHECK-LABEL: test3:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:  .Ltmp1: # Block address taken
-; CHECK-NEXT:  .LBB2_1: # %label01
-; CHECK-NEXT:    # =>This Loop Header: Depth=1
-; CHECK-NEXT:    # Child Loop BB2_2 Depth 2
-; CHECK-NEXT:    # Child Loop BB2_3 Depth 3
-; CHECK-NEXT:    # Child Loop BB2_4 Depth 4
 ; CHECK-NEXT:  .Ltmp2: # Block address taken
-; CHECK-NEXT:  .LBB2_2: # %label02
-; CHECK-NEXT:    # Parent Loop BB2_1 Depth=1
-; CHECK-NEXT:    # => This Loop Header: Depth=2
-; CHECK-NEXT:    # Child Loop BB2_3 Depth 3
-; CHECK-NEXT:    # Child Loop BB2_4 Depth 4
-; CHECK-NEXT:    addl $4, {{[0-9]+}}(%esp)
+; CHECK-NEXT:  .LBB3_1: # %label01
+; CHECK-NEXT:    # =>This Loop Header: Depth=1
+; CHECK-NEXT:    # Child Loop BB3_2 Depth 2
+; CHECK-NEXT:    # Child Loop BB3_3 Depth 3
+; CHECK-NEXT:    # Child Loop BB3_4 Depth 4
 ; CHECK-NEXT:  .Ltmp3: # Block address taken
-; CHECK-NEXT:  .LBB2_3: # %label03
-; CHECK-NEXT:    # Parent Loop BB2_1 Depth=1
-; CHECK-NEXT:    # Parent Loop BB2_2 Depth=2
-; CHECK-NEXT:    # => This Loop Header: Depth=3
-; CHECK-NEXT:    # Child Loop BB2_4 Depth 4
+; CHECK-NEXT:  .LBB3_2: # %label02
+; CHECK-NEXT:    # Parent Loop BB3_1 Depth=1
+; CHECK-NEXT:    # => This Loop Header: Depth=2
+; CHECK-NEXT:    # Child Loop BB3_3 Depth 3
+; CHECK-NEXT:    # Child Loop BB3_4 Depth 4
+; CHECK-NEXT:    addl $4, {{[0-9]+}}(%esp)
 ; CHECK-NEXT:  .Ltmp4: # Block address taken
-; CHECK-NEXT:  .LBB2_4: # %label04
-; CHECK-NEXT:    # Parent Loop BB2_1 Depth=1
-; CHECK-NEXT:    # Parent Loop BB2_2 Depth=2
-; CHECK-NEXT:    # Parent Loop BB2_3 Depth=3
+; CHECK-NEXT:  .LBB3_3: # %label03
+; CHECK-NEXT:    # Parent Loop BB3_1 Depth=1
+; CHECK-NEXT:    # Parent Loop BB3_2 Depth=2
+; CHECK-NEXT:    # => This Loop Header: Depth=3
+; CHECK-NEXT:    # Child Loop BB3_4 Depth 4
+; CHECK-NEXT:  .Ltmp5: # Block address taken
+; CHECK-NEXT:  .LBB3_4: # %label04
+; CHECK-NEXT:    # Parent Loop BB3_1 Depth=1
+; CHECK-NEXT:    # Parent Loop BB3_2 Depth=2
+; CHECK-NEXT:    # Parent Loop BB3_3 Depth=3
 ; CHECK-NEXT:    # => This Inner Loop Header: Depth=4
 ; CHECK-NEXT:    #APP
-; CHECK-NEXT:    jmp .Ltmp1
-; CHECK-NEXT:    jmp .Ltmp2
-; CHECK-NEXT:    jmp .Ltmp3
-; CHECK-NEXT:    #NO_APP
-; CHECK-NEXT:  # %bb.5: # %normal0
-; CHECK-NEXT:    # in Loop: Header=BB2_4 Depth=4
-; CHECK-NEXT:    #APP
-; CHECK-NEXT:    jmp .Ltmp1
 ; CHECK-NEXT:    jmp .Ltmp2
 ; CHECK-NEXT:    jmp .Ltmp3
 ; CHECK-NEXT:    jmp .Ltmp4
+; CHECK-NEXT:    #NO_APP
+; CHECK-NEXT:  # %bb.5: # %normal0
+; CHECK-NEXT:    # in Loop: Header=BB3_4 Depth=4
+; CHECK-NEXT:    #APP
+; CHECK-NEXT:    jmp .Ltmp2
+; CHECK-NEXT:    jmp .Ltmp3
+; CHECK-NEXT:    jmp .Ltmp4
+; CHECK-NEXT:    jmp .Ltmp5
 ; CHECK-NEXT:    #NO_APP
 ; CHECK-NEXT:  # %bb.6: # %normal1
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -135,14 +165,14 @@ define void @test4() {
 ; CHECK-LABEL: test4:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    #APP
-; CHECK-NEXT:    ja .Ltmp5
+; CHECK-NEXT:    ja .Ltmp6
 ; CHECK-NEXT:    #NO_APP
 ; CHECK-NEXT:  # %bb.1: # %asm.fallthrough
 ; CHECK-NEXT:    #APP
-; CHECK-NEXT:    ja .Ltmp5
+; CHECK-NEXT:    ja .Ltmp6
 ; CHECK-NEXT:    #NO_APP
-; CHECK-NEXT:  .Ltmp5: # Block address taken
-; CHECK-NEXT:  .LBB3_3: # %quux
+; CHECK-NEXT:  .Ltmp6: # Block address taken
+; CHECK-NEXT:  .LBB4_3: # %quux
 ; CHECK-NEXT:    retl
 entry:
   callbr void asm sideeffect "ja $0", "X,~{dirflag},~{fpsr},~{flags}"(i8* blockaddress(@test4, %quux))

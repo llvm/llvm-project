@@ -257,10 +257,8 @@ bool SIPreEmitPeephole::optimizeSetGPR(MachineInstr &First,
                        })) {
         // The only exception allowed here is another indirect vector move
         // with the same mode.
-        if (!IdxOn ||
-            !((I->getOpcode() == AMDGPU::V_MOV_B32_e32 &&
-               I->hasRegisterImplicitUseOperand(AMDGPU::M0)) ||
-              I->getOpcode() == AMDGPU::V_MOV_B32_indirect))
+        if (!IdxOn || !(I->getOpcode() == AMDGPU::V_MOV_B32_indirect_write ||
+                        I->getOpcode() == AMDGPU::V_MOV_B32_indirect_read))
           return false;
       }
     }
