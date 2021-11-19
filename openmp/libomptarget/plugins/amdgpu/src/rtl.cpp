@@ -1631,20 +1631,10 @@ __tgt_target_table *__tgt_rtl_load_binary_locked(int32_t device_id,
       auto It = KernelInfoMap.find(kernelStr);
       if (It != KernelInfoMap.end()) {
         atl_kernel_info_t info = It->second;
-        // return the size for non-implicit args
-        kernarg_segment_size =
-            info.kernel_segment_size - sizeof(impl_implicit_args_t);
+        kernarg_segment_size = info.kernel_segment_size;
       } else {
         err = HSA_STATUS_ERROR;
       }
-    }
-
-    // each arg is a void * in this openmp implementation
-    uint32_t arg_num = kernarg_segment_size / sizeof(void *);
-    std::vector<size_t> arg_sizes(arg_num);
-    for (std::vector<size_t>::iterator it = arg_sizes.begin();
-         it != arg_sizes.end(); it++) {
-      *it = sizeof(void *);
     }
 
     // default value GENERIC (in case symbol is missing from cubin file)
