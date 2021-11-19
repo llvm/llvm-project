@@ -42,10 +42,10 @@ gpu::SerializeToBlobPass::translateToISA(llvm::Module &llvmModule,
   std::string targetISA;
   llvm::raw_string_ostream stream(targetISA);
 
-  llvm::legacy::PassManager codegenPasses;
-
   { // Drop pstream after this to prevent the ISA from being stuck buffering
     llvm::buffer_ostream pstream(stream);
+    llvm::legacy::PassManager codegenPasses;
+
     if (targetMachine.addPassesToEmitFile(codegenPasses, pstream, nullptr,
                                           llvm::CGFT_AssemblyFile))
       return llvm::None;
