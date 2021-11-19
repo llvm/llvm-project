@@ -30,6 +30,10 @@ if(NOT WIN32)
   list(APPEND MEMPROF_UNITTEST_LINK_FLAGS -pthread)
 endif()
 
+foreach(lib ${SANITIZER_TEST_CXX_LIBRARIES})
+  list(APPEND MEMPROF_UNITTEST_LINK_FLAGS -l${lib})
+endforeach()
+
 if(COMPILER_RT_DEFAULT_TARGET_ARCH IN_LIST MEMPROF_SUPPORTED_ARCH)
   # MemProf unit tests are only run on the host machine.
   set(arch ${COMPILER_RT_DEFAULT_TARGET_ARCH})
@@ -45,7 +49,11 @@ if(COMPILER_RT_DEFAULT_TARGET_ARCH IN_LIST MEMPROF_SUPPORTED_ARCH)
     $<TARGET_OBJECTS:RTSanitizerCommonSymbolizer.${arch}>)
   set_target_compile_flags(MemProfUnitTests ${MEMPROF_UNITTEST_CFLAGS})
   set_target_link_flags(MemProfUnitTests ${MEMPROF_UNITTEST_LINK_FLAGS})
-  target_link_libraries(MemProfUnitTests dl) 
+  target_link_libraries(MemProfUnitTests dl)
+
+  if (TARGET cxx-headers OR HAVE_LIBCXX)
+    add_dependencies(MemProfUnitTests cxx-headers)
+  endif()
 
   set_target_properties(MemProfUnitTests PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
