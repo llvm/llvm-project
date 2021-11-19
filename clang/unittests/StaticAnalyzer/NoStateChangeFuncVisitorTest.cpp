@@ -86,17 +86,17 @@ class StatefulChecker : public Checker<check::PreCall> {
 
 public:
   void checkPreCall(const CallEvent &Call, CheckerContext &C) const {
-    if (Call.isCalled(CallDescription{"preventError", 0})) {
+    if (CallDescription{"preventError", 0}.matches(Call)) {
       C.addTransition(C.getState()->set<ErrorPrevented>(true));
       return;
     }
 
-    if (Call.isCalled(CallDescription{"allowError", 0})) {
+    if (CallDescription{"allowError", 0}.matches(Call)) {
       C.addTransition(C.getState()->set<ErrorPrevented>(false));
       return;
     }
 
-    if (Call.isCalled(CallDescription{"error", 0})) {
+    if (CallDescription{"error", 0}.matches(Call)) {
       if (C.getState()->get<ErrorPrevented>())
         return;
       const ExplodedNode *N = C.generateErrorNode();

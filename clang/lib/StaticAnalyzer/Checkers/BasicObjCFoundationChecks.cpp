@@ -551,8 +551,8 @@ void CFRetainReleaseChecker::checkPreCall(const CallEvent &Call,
     return;
 
   // Check if we called CFRetain/CFRelease/CFMakeCollectable/CFAutorelease.
-  if (!(Call.isCalled(CFRetain) || Call.isCalled(CFRelease) ||
-        Call.isCalled(CFMakeCollectable) || Call.isCalled(CFAutorelease)))
+
+  if (!matchesAny(Call, CFRetain, CFRelease, CFMakeCollectable, CFAutorelease))
     return;
 
   // Get the argument's value.
