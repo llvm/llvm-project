@@ -534,10 +534,12 @@ void CFNumberChecker::checkPreStmt(const CallExpr *CE,
 namespace {
 class CFRetainReleaseChecker : public Checker<check::PreCall> {
   mutable APIMisuse BT{this, "null passed to CF memory management function"};
-  CallDescription CFRetain{"CFRetain", 1},
-                  CFRelease{"CFRelease", 1},
-                  CFMakeCollectable{"CFMakeCollectable", 1},
-                  CFAutorelease{"CFAutorelease", 1};
+  const CallDescriptionSet ModelledCalls = {
+      {"CFRetain", 1},
+      {"CFRelease", 1},
+      {"CFMakeCollectable", 1},
+      {"CFAutorelease", 1},
+  };
 
 public:
   void checkPreCall(const CallEvent &Call, CheckerContext &C) const;
@@ -551,8 +553,7 @@ void CFRetainReleaseChecker::checkPreCall(const CallEvent &Call,
     return;
 
   // Check if we called CFRetain/CFRelease/CFMakeCollectable/CFAutorelease.
-
-  if (!matchesAny(Call, CFRetain, CFRelease, CFMakeCollectable, CFAutorelease))
+  if (!ModelledCalls.contains(Call))
     return;
 
   // Get the argument's value.
