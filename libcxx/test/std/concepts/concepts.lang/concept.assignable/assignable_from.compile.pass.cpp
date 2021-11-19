@@ -19,12 +19,15 @@
 #include <list>
 #include <map>
 #include <memory>
-#include <mutex>
 #include <optional>
 #include <string>
 #include <string_view>
 #include <unordered_map>
 #include <vector>
+
+#ifndef _LIBCPP_HAS_NO_THREADS
+#   include <mutex>
+#endif
 
 #include "../support/allocators.h"
 

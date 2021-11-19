@@ -653,23 +653,26 @@ assert all(all(key in ["name", "values", "headers", "libcxx_guard", "test_suite_
 # Map from each header to the Lit annotations that should be used for
 # tests that include that header.
 #
-# For example, when threads are not supported, any feature-test-macro test
-# that includes <thread> should be marked as UNSUPPORTED, because including
-# <thread> is a hard error in that case.
+# For example, when threads are not supported, any test that includes
+# <thread> should be marked as UNSUPPORTED, because including <thread>
+# is a hard error in that case.
 lit_markup = {
   "barrier": ["UNSUPPORTED: libcpp-has-no-threads"],
   "filesystem": ["UNSUPPORTED: libcpp-has-no-filesystem-library"],
   "format": ["UNSUPPORTED: libcpp-has-no-incomplete-format"],
   "iomanip": ["UNSUPPORTED: libcpp-has-no-localization"],
+  "ios": ["UNSUPPORTED: libcpp-has-no-localization"],
+  "iostream": ["UNSUPPORTED: libcpp-has-no-localization"],
   "istream": ["UNSUPPORTED: libcpp-has-no-localization"],
   "latch": ["UNSUPPORTED: libcpp-has-no-threads"],
   "locale": ["UNSUPPORTED: libcpp-has-no-localization"],
+  "mutex": ["UNSUPPORTED: libcpp-has-no-threads"],
   "ostream": ["UNSUPPORTED: libcpp-has-no-localization"],
   "ranges": ["UNSUPPORTED: libcpp-has-no-incomplete-ranges"],
   "regex": ["UNSUPPORTED: libcpp-has-no-localization"],
   "semaphore": ["UNSUPPORTED: libcpp-has-no-threads"],
   "shared_mutex": ["UNSUPPORTED: libcpp-has-no-threads"],
-  "thread": ["UNSUPPORTED: libcpp-has-no-threads"],
+  "thread": ["UNSUPPORTED: libcpp-has-no-threads"]
 }
 
 def get_std_dialects():
