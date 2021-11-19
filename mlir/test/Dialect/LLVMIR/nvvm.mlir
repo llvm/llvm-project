@@ -37,20 +37,26 @@ func @llvm.nvvm.barrier0() {
 func @nvvm_shfl(
     %arg0 : i32, %arg1 : i32, %arg2 : i32,
     %arg3 : i32, %arg4 : f32) -> i32 {
-  // CHECK: nvvm.shfl.sync.bfly %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}} : i32
-  %0 = nvvm.shfl.sync.bfly %arg0, %arg3, %arg1, %arg2 : i32
-  // CHECK: nvvm.shfl.sync.bfly %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}} : f32
-  %1 = nvvm.shfl.sync.bfly %arg0, %arg4, %arg1, %arg2 : f32
+  // CHECK: nvvm.shfl.sync "bfly" %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}} : i32 -> i32
+  %0 = nvvm.shfl.sync "bfly" %arg0, %arg3, %arg1, %arg2 : i32 -> i32
+  // CHECK: nvvm.shfl.sync "bfly" %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}} : f32 -> f32
+  %1 = nvvm.shfl.sync "bfly" %arg0, %arg4, %arg1, %arg2 : f32 -> f32
+  // CHECK: nvvm.shfl.sync "up" %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}} : f32 -> f32
+  %2 = nvvm.shfl.sync "up" %arg0, %arg4, %arg1, %arg2 : f32 -> f32
+  // CHECK: nvvm.shfl.sync "down" %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}} : f32 -> f32
+  %3 = nvvm.shfl.sync "down" %arg0, %arg4, %arg1, %arg2 : f32 -> f32
+  // CHECK: nvvm.shfl.sync "idx" %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}} : f32 -> f32
+  %4 = nvvm.shfl.sync "idx" %arg0, %arg4, %arg1, %arg2 : f32 -> f32
   llvm.return %0 : i32
 }
 
 func @nvvm_shfl_pred(
     %arg0 : i32, %arg1 : i32, %arg2 : i32,
     %arg3 : i32, %arg4 : f32) -> !llvm.struct<(i32, i1)> {
-  // CHECK: nvvm.shfl.sync.bfly %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}} : !llvm.struct<(i32, i1)>
-  %0 = nvvm.shfl.sync.bfly %arg0, %arg3, %arg1, %arg2 {return_value_and_is_valid} : !llvm.struct<(i32, i1)>
-  // CHECK: nvvm.shfl.sync.bfly %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}} : !llvm.struct<(f32, i1)>
-  %1 = nvvm.shfl.sync.bfly %arg0, %arg4, %arg1, %arg2 {return_value_and_is_valid} : !llvm.struct<(f32, i1)>
+  // CHECK: nvvm.shfl.sync "bfly" %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}} {return_value_and_is_valid} : i32 -> !llvm.struct<(i32, i1)>
+  %0 = nvvm.shfl.sync "bfly" %arg0, %arg3, %arg1, %arg2 {return_value_and_is_valid} : i32 -> !llvm.struct<(i32, i1)>
+  // CHECK: nvvm.shfl.sync "bfly" %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}} {return_value_and_is_valid} : f32 -> !llvm.struct<(f32, i1)>
+  %1 = nvvm.shfl.sync "bfly" %arg0, %arg4, %arg1, %arg2 {return_value_and_is_valid} : f32 -> !llvm.struct<(f32, i1)>
   llvm.return %0 : !llvm.struct<(i32, i1)>
 }
 

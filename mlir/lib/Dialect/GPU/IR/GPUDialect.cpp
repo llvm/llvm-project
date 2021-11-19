@@ -302,7 +302,7 @@ static LogicalResult verifyShuffleOp(gpu::ShuffleOp shuffleOp) {
 }
 
 static void printShuffleOp(OpAsmPrinter &p, ShuffleOp op) {
-  p << ' ' << op.getOperands() << ' ' << op.mode() << " : "
+  p << ' ' << op.getOperands() << ' ' << stringifyEnum(op.mode()) << " : "
     << op.value().getType();
 }
 
