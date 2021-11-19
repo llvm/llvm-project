@@ -16,17 +16,22 @@
 #include "sanitizer_atomic.h"
 #include "sanitizer_internal_defs.h"
 #include "sanitizer_mutex.h"
+#include "sanitizer_stacktrace.h"
 
 namespace __sanitizer {
 
 class StackStore {
  public:
-  uptr *alloc(uptr count = 1);
+  using Id = uptr;
+
+  Id store(const StackTrace &trace);
+  StackTrace load(Id id);
   uptr allocated() const { return atomic_load_relaxed(&mapped_size); }
 
   void TestOnlyUnmap();
 
  private:
+  uptr *alloc(uptr count = 1);
   uptr *tryAlloc(uptr count);
   uptr *refillAndAlloc(uptr count);
   mutable StaticSpinMutex mtx;  // Protects alloc of new blocks.

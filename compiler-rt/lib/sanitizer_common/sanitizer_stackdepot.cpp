@@ -19,15 +19,12 @@
 
 namespace __sanitizer {
 
-static StackStore stackStore;
-
 struct StackDepotNode {
   using hash_type = u64;
   hash_type stack_hash;
   u32 link;
 
   static const u32 kTabSizeLog = SANITIZER_ANDROID ? 16 : 20;
-  static const u32 kStackSizeBits = 16;
 
   typedef StackTrace args_type;
   bool eq(hash_type hash, const args_type &args) const {
@@ -50,14 +47,17 @@ struct StackDepotNode {
   typedef StackDepotHandle handle_type;
 };
 
+static StackStore stackStore;
+
 // FIXME(dvyukov): this single reserved bit is used in TSan.
 typedef StackDepotBase<StackDepotNode, 1, StackDepotNode::kTabSizeLog>
     StackDepot;
 static StackDepot theDepot;
 // Keep rarely accessed stack traces out of frequently access nodes to improve
 // caching efficiency.
-static TwoLevelMap<uptr *, StackDepot::kNodesSize1, StackDepot::kNodesSize2>
-    tracePtrs;
+static TwoLevelMap<StackStore::Id, StackDepot::kNodesSize1,
+                   StackDepot::kNodesSize2>
+    storeIds;
 // Keep mutable data out of frequently access nodes to improve caching
 // efficiency.
 static TwoLevelMap<atomic_uint32_t, StackDepot::kNodesSize1,
@@ -73,26 +73,20 @@ void StackDepotHandle::inc_use_count_unsafe() {
 }
 
 uptr StackDepotNode::allocated() {
-  return stackStore.allocated() + tracePtrs.MemoryUsage() +
+  return stackStore.allocated() + storeIds.MemoryUsage() +
          useCounts.MemoryUsage();
 }
 
 void StackDepotNode::store(u32 id, const args_type &args, hash_type hash) {
   stack_hash = hash;
-  uptr *stack_trace = stackStore.alloc(args.size + 1);
-  CHECK_LT(args.size, 1 << kStackSizeBits);
-  *stack_trace = args.size + (args.tag << kStackSizeBits);
-  internal_memcpy(stack_trace + 1, args.trace, args.size * sizeof(uptr));
-  tracePtrs[id] = stack_trace;
+  storeIds[id] = stackStore.store(args);
 }
 
 StackDepotNode::args_type StackDepotNode::load(u32 id) const {
-  const uptr *stack_trace = tracePtrs[id];
-  if (!stack_trace)
+  StackStore::Id store_id = storeIds[id];
+  if (!store_id)
     return {};
-  uptr size = *stack_trace & ((1 << kStackSizeBits) - 1);
-  uptr tag = *stack_trace >> kStackSizeBits;
-  return args_type(stack_trace + 1, size, tag);
+  return stackStore.load(store_id);
 }
 
 StackDepotStats StackDepotGetStats() { return theDepot.GetStats(); }
@@ -127,7 +121,7 @@ StackDepotHandle StackDepotNode::get_handle(u32 id) {
 
 void StackDepotTestOnlyUnmap() {
   theDepot.TestOnlyUnmap();
-  tracePtrs.TestOnlyUnmap();
+  storeIds.TestOnlyUnmap();
   stackStore.TestOnlyUnmap();
 }
 
