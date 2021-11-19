@@ -441,6 +441,11 @@ namespace X86II {
     ///    SYMBOL_LABEL @GOTPCREL
     MO_GOTPCREL,
 
+    /// MO_GOTPCREL_NORELAX - Same as MO_GOTPCREL except that R_X86_64_GOTPCREL
+    /// relocations are guaranteed to be emitted by the integrated assembler
+    /// instead of the relaxable R_X86_64[_REX]_GOTPCRELX relocations.
+    MO_GOTPCREL_NORELAX,
+
     /// MO_PLT - On a symbol operand this indicates that the immediate is
     /// offset to the PLT entry of symbol name from the current code location.
     ///

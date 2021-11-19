@@ -75,6 +75,7 @@ inline static bool isGlobalStubReference(unsigned char TargetFlag) {
   switch (TargetFlag) {
   case X86II::MO_DLLIMPORT:               // dllimport stub.
   case X86II::MO_GOTPCREL:                // rip-relative GOT reference.
+  case X86II::MO_GOTPCREL_NORELAX:        // rip-relative GOT reference.
   case X86II::MO_GOT:                     // normal GOT reference.
   case X86II::MO_DARWIN_NONLAZY_PIC_BASE: // Normal $non_lazy_ptr ref.
   case X86II::MO_DARWIN_NONLAZY:          // Normal $non_lazy_ptr ref.

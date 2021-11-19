@@ -789,7 +789,8 @@ bool X86FastISel::handleConstantAddresses(const Value *V, X86AddressMode &AM) {
           RC  = &X86::GR32RegClass;
         }
 
-        if (Subtarget->isPICStyleRIPRel() || GVFlags == X86II::MO_GOTPCREL)
+        if (Subtarget->isPICStyleRIPRel() || GVFlags == X86II::MO_GOTPCREL ||
+            GVFlags == X86II::MO_GOTPCREL_NORELAX)
           StubAM.Base.Reg = X86::RIP;
 
         LoadReg = createResultReg(RC);
@@ -3486,6 +3487,7 @@ bool X86FastISel::fastLowerCall(CallLoweringInfo &CLI) {
     // NonLazyBind calls or dllimport calls.
     bool NeedLoad = OpFlags == X86II::MO_DLLIMPORT ||
                     OpFlags == X86II::MO_GOTPCREL ||
+                    OpFlags == X86II::MO_GOTPCREL_NORELAX ||
                     OpFlags == X86II::MO_COFFSTUB;
     unsigned CallOpc = NeedLoad
                            ? (Is64Bit ? X86::CALL64m : X86::CALL32m)

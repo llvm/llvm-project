@@ -190,6 +190,7 @@ void X86AsmPrinter::PrintSymbolOperand(const MachineOperand &MO,
   case X86II::MO_NTPOFF:    O << "@NTPOFF";    break;
   case X86II::MO_GOTNTPOFF: O << "@GOTNTPOFF"; break;
   case X86II::MO_GOTPCREL:  O << "@GOTPCREL";  break;
+  case X86II::MO_GOTPCREL_NORELAX: O << "@GOTPCREL_NORELAX"; break;
   case X86II::MO_GOT:       O << "@GOT";       break;
   case X86II::MO_GOTOFF:    O << "@GOTOFF";    break;
   case X86II::MO_PLT:       O << "@PLT";       break;
