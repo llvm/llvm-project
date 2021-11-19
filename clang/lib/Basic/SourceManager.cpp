@@ -59,12 +59,10 @@ unsigned ContentCache::getSizeBytesMapped() const {
 /// Returns the kind of memory used to back the memory buffer for
 /// this content cache.  This is used for performance analysis.
 llvm::MemoryBuffer::BufferKind ContentCache::getMemoryBufferKind() const {
-  assert(Buffer);
-
-  // Should be unreachable, but keep for sanity.
-  if (!Buffer)
+  if (Buffer == nullptr) {
+    assert(0 && "Buffer should never be null");
     return llvm::MemoryBuffer::MemoryBuffer_Malloc;
-
+  }
   return Buffer->getBufferKind();
 }
 
@@ -864,7 +862,6 @@ FileID SourceManager::getFileIDLocal(SourceLocation::UIntTy SLocOffset) const {
 /// This function knows that the SourceLocation is in a loaded buffer, not a
 /// local one.
 FileID SourceManager::getFileIDLoaded(SourceLocation::UIntTy SLocOffset) const {
-  // Sanity checking, otherwise a bug may lead to hanging in release build.
   if (SLocOffset < CurrentLoadedOffset) {
     assert(0 && "Invalid SLocOffset or bad function choice");
     return FileID();
@@ -909,7 +906,6 @@ FileID SourceManager::getFileIDLoaded(SourceLocation::UIntTy SLocOffset) const {
     ++NumProbes;
 
     if (E.getOffset() > SLocOffset) {
-      // Sanity checking, otherwise a bug may lead to hanging in release build.
       if (GreaterIndex == MiddleIndex) {
         assert(0 && "binary search missed the entry");
         return FileID();
@@ -925,7 +921,6 @@ FileID SourceManager::getFileIDLoaded(SourceLocation::UIntTy SLocOffset) const {
       return Res;
     }
 
-    // Sanity checking, otherwise a bug may lead to hanging in release build.
     if (LessIndex == MiddleIndex) {
       assert(0 && "binary search missed the entry");
       return FileID();

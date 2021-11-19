@@ -249,7 +249,7 @@ static bool regionMatchesCXXRecordType(SVal V, QualType Ty) {
 }
 
 SVal StoreManager::evalDerivedToBase(SVal Derived, const CastExpr *Cast) {
-  // Sanity check to avoid doing the wrong thing in the face of
+  // Early return to avoid doing the wrong thing in the face of
   // reinterpret_cast.
   if (!regionMatchesCXXRecordType(Derived, Cast->getSubExpr()->getType()))
     return UnknownVal();

@@ -2579,7 +2579,7 @@ tooling::Replacements sortCppIncludes(const FormatStyle &Style, StringRef Code,
   // doesn't have hidden dependencies
   // (http://llvm.org/docs/CodingStandards.html#include-style).
   //
-  // FIXME: Do some sanity checking, e.g. edit distance of the base name, to fix
+  // FIXME: Do some validation, e.g. edit distance of the base name, to fix
   // cases where the first #include is unlikely to be the main header.
   tooling::IncludeCategoryManager Categories(Style.IncludeStyle, FileName);
   bool FirstIncludeBlock = true;
