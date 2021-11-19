@@ -2490,9 +2490,9 @@ define i32 @trunc_vXi1() {
 ; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V2i8 = trunc <2 x i8> undef to <2 x i1>
 ; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V3i8 = trunc <3 x i8> undef to <3 x i1>
 ; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V4i8 = trunc <4 x i8> undef to <4 x i1>
-; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %V5i8 = trunc <5 x i8> undef to <5 x i1>
-; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V6i8 = trunc <6 x i8> undef to <6 x i1>
-; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %V7i8 = trunc <7 x i8> undef to <7 x i1>
+; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V5i8 = trunc <5 x i8> undef to <5 x i1>
+; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V6i8 = trunc <6 x i8> undef to <6 x i1>
+; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V7i8 = trunc <7 x i8> undef to <7 x i1>
 ; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V8i8 = trunc <8 x i8> undef to <8 x i1>
 ; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V10i8 = trunc <10 x i8> undef to <10 x i1>
 ; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V12i8 = trunc <12 x i8> undef to <12 x i1>
