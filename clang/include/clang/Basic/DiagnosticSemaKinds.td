@@ -10599,6 +10599,8 @@ def err_omp_depend_sink_unexpected_expr : Error<
   "unexpected expression: number of expressions is larger than the number of associated loops">;
 def err_omp_depend_sink_expected_plus_minus : Error<
   "expected '+' or '-' operation">;
+def err_omp_taskwait_depend_mutexinoutset_not_allowed : Error<
+  "'mutexinoutset' modifier not allowed in 'depend' clause on 'taskwait' directive">;
 def err_omp_depend_sink_source_not_allowed : Error<
   "'depend(%select{source|sink:vec}0)' clause%select{|s}0 cannot be mixed with 'depend(%select{sink:vec|source}0)' clause%select{s|}0">;
 def err_omp_depend_zero_length_array_section_not_allowed : Error<
