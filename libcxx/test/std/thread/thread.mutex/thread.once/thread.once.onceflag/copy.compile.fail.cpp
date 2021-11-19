@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// UNSUPPORTED: libcpp-has-no-threads
+
 // <mutex>
 
 // struct once_flag;

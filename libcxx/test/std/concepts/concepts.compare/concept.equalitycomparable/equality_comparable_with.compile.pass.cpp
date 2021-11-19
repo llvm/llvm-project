@@ -20,12 +20,15 @@
 #include <list>
 #include <map>
 #include <memory>
-#include <mutex>
 #include <optional>
 #include <set>
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
+
+#ifndef _LIBCPP_HAS_NO_THREADS
+#   include <mutex>
+#endif
 
 #include "compare_types.h"
 
