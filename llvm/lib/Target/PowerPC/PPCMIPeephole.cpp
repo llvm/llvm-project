@@ -421,9 +421,9 @@ bool PPCMIPeephole::simplifyCode(void) {
         ToErase = nullptr;
       }
       // If a conditional trap instruction got optimized to an
-      // unconditional trap, eliminate all the instructions between
-      // the trap and the terminator of the MBB.
-      if (TrapOpt && !MI.isTerminator()) {
+      // unconditional trap, eliminate all the instructions after
+      // the trap.
+      if (TrapOpt) {
         ToErase = &MI;
         continue;
       }
