@@ -1257,7 +1257,7 @@ StyleKind IdentifierNamingCheck::findStyleKind(
 
   if (const auto *Decl = dyn_cast<CXXMethodDecl>(D)) {
     if (Decl->isMain() || !Decl->isUserProvided() ||
-        Decl->size_overridden_methods() > 0)
+        Decl->size_overridden_methods() > 0 || Decl->hasAttr<OverrideAttr>())
       return SK_Invalid;
 
     // If this method has the same name as any base method, this is likely

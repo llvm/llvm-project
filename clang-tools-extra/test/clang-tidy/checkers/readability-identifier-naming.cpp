@@ -285,6 +285,10 @@ public:
   virtual void BadBaseMethod() = 0;
   // CHECK-MESSAGES: :[[@LINE-1]]:16: warning: invalid case style for virtual method 'BadBaseMethod'
   // CHECK-FIXES: {{^}}  virtual void v_Bad_Base_Method() = 0;
+
+  virtual void BadBaseMethodNoAttr() = 0;
+  // CHECK-MESSAGES: :[[@LINE-1]]:16: warning: invalid case style for virtual method 'BadBaseMethodNoAttr'
+  // CHECK-FIXES: {{^}}  virtual void v_Bad_Base_Method_No_Attr() = 0;
 };
 
 class COverriding : public AOverridden {
@@ -292,6 +296,9 @@ public:
   // Overriding a badly-named base isn't a new violation.
   void BadBaseMethod() override {}
   // CHECK-FIXES: {{^}}  void v_Bad_Base_Method() override {}
+
+  void BadBaseMethodNoAttr() /* override */ {}
+  // CHECK-FIXES: {{^}}  void v_Bad_Base_Method_No_Attr() /* override */ {}
 
   void foo() {
     BadBaseMethod();
@@ -302,12 +309,79 @@ public:
     // CHECK-FIXES: {{^}}    AOverridden::v_Bad_Base_Method();
     COverriding::BadBaseMethod();
     // CHECK-FIXES: {{^}}    COverriding::v_Bad_Base_Method();
+
+    BadBaseMethodNoAttr();
+    // CHECK-FIXES: {{^}}    v_Bad_Base_Method_No_Attr();
+    this->BadBaseMethodNoAttr();
+    // CHECK-FIXES: {{^}}    this->v_Bad_Base_Method_No_Attr();
+    AOverridden::BadBaseMethodNoAttr();
+    // CHECK-FIXES: {{^}}    AOverridden::v_Bad_Base_Method_No_Attr();
+    COverriding::BadBaseMethodNoAttr();
+    // CHECK-FIXES: {{^}}    COverriding::v_Bad_Base_Method_No_Attr();
   }
 };
 
-void VirtualCall(AOverridden &a_vItem) {
+// Same test as above, now with a dependent base class.
+template<typename some_t>
+class ATOverridden {
+public:
+  virtual void BadBaseMethod() = 0;
+  // CHECK-MESSAGES: :[[@LINE-1]]:16: warning: invalid case style for virtual method 'BadBaseMethod'
+  // CHECK-FIXES: {{^}}  virtual void v_Bad_Base_Method() = 0;
+
+  virtual void BadBaseMethodNoAttr() = 0;
+  // CHECK-MESSAGES: :[[@LINE-1]]:16: warning: invalid case style for virtual method 'BadBaseMethodNoAttr'
+  // CHECK-FIXES: {{^}}  virtual void v_Bad_Base_Method_No_Attr() = 0;
+};
+
+template<typename some_t>
+class CTOverriding : public ATOverridden<some_t> {
+  // Overriding a badly-named base isn't a new violation.
+  // FIXME: The fixes from the base class should be propagated to the derived class here
+  //        (note that there could be specializations of the template base class, though)
+  void BadBaseMethod() override {}
+
+  // Without the "override" attribute, and due to the dependent base class, it is not
+  // known whether this method overrides anything, so we get the warning here.
+  virtual void BadBaseMethodNoAttr() {};
+  // CHECK-MESSAGES: :[[@LINE-1]]:16: warning: invalid case style for virtual method 'BadBaseMethodNoAttr'
+  // CHECK-FIXES: {{^}}  virtual void v_Bad_Base_Method_No_Attr() {};
+};
+
+template<typename some_t>
+void VirtualCall(AOverridden &a_vItem, ATOverridden<some_t> &a_vTitem) {
   a_vItem.BadBaseMethod();
   // CHECK-FIXES: {{^}}  a_vItem.v_Bad_Base_Method();
+
+  // FIXME: The fixes from ATOverridden should be propagated to the following call
+  a_vTitem.BadBaseMethod();
+}
+
+// Same test as above, now with a dependent base class that is instantiated below.
+template<typename some_t>
+class ATIOverridden {
+public:
+  virtual void BadBaseMethod() = 0;
+  // CHECK-MESSAGES: :[[@LINE-1]]:16: warning: invalid case style for virtual method 'BadBaseMethod'
+  // CHECK-FIXES: {{^}}  virtual void v_Bad_Base_Method() = 0;
+};
+
+template<typename some_t>
+class CTIOverriding : public ATIOverridden<some_t> {
+public:
+  // Overriding a badly-named base isn't a new violation.
+  void BadBaseMethod() override {}
+  // CHECK-FIXES: {{^}}  void v_Bad_Base_Method() override {}
+};
+
+template class CTIOverriding<int>;
+
+void VirtualCallI(ATIOverridden<int>& a_vItem, CTIOverriding<int>& a_vCitem) {
+  a_vItem.BadBaseMethod();
+  // CHECK-FIXES: {{^}}  a_vItem.v_Bad_Base_Method();
+
+  a_vCitem.BadBaseMethod();
+  // CHECK-FIXES: {{^}}  a_vCitem.v_Bad_Base_Method();
 }
 
 template <typename derived_t>
