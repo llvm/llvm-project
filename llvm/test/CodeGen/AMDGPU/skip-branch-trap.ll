@@ -5,7 +5,7 @@
 ; An s_cbranch_execnz is required to avoid trapping if all lanes are 0
 ; GCN-LABEL: {{^}}trap_divergent_branch:
 ; GCN: s_and_saveexec_b64
-; GCN: s_cbranch_execnz [[TRAP:BB[0-9]+_[0-9]+]]
+; GCN: s_cbranch_execnz [[TRAP:.LBB[0-9]+_[0-9]+]]
 ; GCN: ; %bb.{{[0-9]+}}:
 ; GCN-NEXT: s_endpgm
 ; GCN: [[TRAP]]:
@@ -28,7 +28,7 @@ end:
 
 ; GCN-LABEL: {{^}}debugtrap_divergent_branch:
 ; GCN: s_and_saveexec_b64
-; GCN: s_cbranch_execz [[ENDPGM:BB[0-9]+_[0-9]+]]
+; GCN: s_cbranch_execz [[ENDPGM:.LBB[0-9]+_[0-9]+]]
 ; GCN: ; %bb.{{[0-9]+}}:
 ; GCN: s_trap 3
 ; GCN-NEXT: [[ENDPGM]]:

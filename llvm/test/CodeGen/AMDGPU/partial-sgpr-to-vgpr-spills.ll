@@ -202,7 +202,7 @@ define amdgpu_kernel void @spill_sgprs_to_multiple_vgprs(i32 addrspace(1)* %out,
 ; GCN-NEXT:    s_mov_b32 s1, 0
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    s_cmp_lg_u32 s0, s1
-; GCN-NEXT:    s_cbranch_scc1 BB0_2
+; GCN-NEXT:    s_cbranch_scc1 .LBB0_2
 ; GCN-NEXT:  ; %bb.1: ; %bb0
 ; GCN-NEXT:    v_readlane_b32 s8, v1, 56
 ; GCN-NEXT:    v_readlane_b32 s9, v1, 57
@@ -391,7 +391,7 @@ define amdgpu_kernel void @spill_sgprs_to_multiple_vgprs(i32 addrspace(1)* %out,
 ; GCN-NEXT:    ;;#ASMSTART
 ; GCN-NEXT:    ; use s[0:7]
 ; GCN-NEXT:    ;;#ASMEND
-; GCN-NEXT:  BB0_2: ; %ret
+; GCN-NEXT:  .LBB0_2: ; %ret
 ; GCN-NEXT:    s_endpgm
   %wide.sgpr0 = call <8 x i32> asm sideeffect "; def $0", "=s" () #0
   %wide.sgpr1 = call <8 x i32> asm sideeffect "; def $0", "=s" () #0
@@ -538,7 +538,7 @@ define amdgpu_kernel void @split_sgpr_spill_2_vgprs(i32 addrspace(1)* %out, i32 
 ; GCN-NEXT:    s_mov_b32 s1, 0
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    s_cmp_lg_u32 s0, s1
-; GCN-NEXT:    s_cbranch_scc1 BB1_2
+; GCN-NEXT:    s_cbranch_scc1 .LBB1_2
 ; GCN-NEXT:  ; %bb.1: ; %bb0
 ; GCN-NEXT:    v_readlane_b32 s16, v1, 8
 ; GCN-NEXT:    v_readlane_b32 s17, v1, 9
@@ -632,7 +632,7 @@ define amdgpu_kernel void @split_sgpr_spill_2_vgprs(i32 addrspace(1)* %out, i32 
 ; GCN-NEXT:    ;;#ASMSTART
 ; GCN-NEXT:    ; use s[0:15]
 ; GCN-NEXT:    ;;#ASMEND
-; GCN-NEXT:  BB1_2: ; %ret
+; GCN-NEXT:  .LBB1_2: ; %ret
 ; GCN-NEXT:    s_endpgm
   %wide.sgpr0 = call <16 x i32> asm sideeffect "; def $0", "=s" () #0
   %wide.sgpr1 = call <16 x i32> asm sideeffect "; def $0", "=s" () #0
@@ -773,7 +773,7 @@ define amdgpu_kernel void @no_vgprs_last_sgpr_spill(i32 addrspace(1)* %out, i32 
 ; GCN-NEXT:    s_mov_b32 s1, 0
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    s_cmp_lg_u32 s0, s1
-; GCN-NEXT:    s_cbranch_scc1 BB2_2
+; GCN-NEXT:    s_cbranch_scc1 .LBB2_2
 ; GCN-NEXT:  ; %bb.1: ; %bb0
 ; GCN-NEXT:    v_readlane_b32 s36, v31, 32
 ; GCN-NEXT:    v_readlane_b32 s37, v31, 33
@@ -864,7 +864,7 @@ define amdgpu_kernel void @no_vgprs_last_sgpr_spill(i32 addrspace(1)* %out, i32 
 ; GCN-NEXT:    ;;#ASMSTART
 ; GCN-NEXT:    ; use s[0:1]
 ; GCN-NEXT:    ;;#ASMEND
-; GCN-NEXT:  BB2_2: ; %ret
+; GCN-NEXT:  .LBB2_2: ; %ret
 ; GCN-NEXT:    s_endpgm
   call void asm sideeffect "", "~{v[0:7]}" () #0
   call void asm sideeffect "", "~{v[8:15]}" () #0
@@ -1008,7 +1008,7 @@ define amdgpu_kernel void @no_vgprs_last_sgpr_spill_live_v0(i32 %in) #1 {
 ; GCN-NEXT:    s_mov_b32 s1, 0
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    s_cmp_lg_u32 s0, s1
-; GCN-NEXT:    s_cbranch_scc1 BB3_2
+; GCN-NEXT:    s_cbranch_scc1 .LBB3_2
 ; GCN-NEXT:  ; %bb.1: ; %bb0
 ; GCN-NEXT:    v_readlane_b32 s36, v31, 32
 ; GCN-NEXT:    v_readlane_b32 s37, v31, 33
@@ -1105,7 +1105,7 @@ define amdgpu_kernel void @no_vgprs_last_sgpr_spill_live_v0(i32 %in) #1 {
 ; GCN-NEXT:    ;;#ASMSTART
 ; GCN-NEXT:    ; use v0
 ; GCN-NEXT:    ;;#ASMEND
-; GCN-NEXT:  BB3_2: ; %ret
+; GCN-NEXT:  .LBB3_2: ; %ret
 ; GCN-NEXT:    s_endpgm
   call void asm sideeffect "", "~{v[0:7]}" () #0
   call void asm sideeffect "", "~{v[8:15]}" () #0

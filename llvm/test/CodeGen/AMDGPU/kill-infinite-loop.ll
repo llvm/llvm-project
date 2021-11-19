@@ -17,27 +17,27 @@ define amdgpu_ps void @return_void(float %0) #0 {
 ; CHECK-NEXT:    v_cmp_ngt_f32_e32 vcc, s2, v0
 ; CHECK-NEXT:    s_and_saveexec_b64 s[2:3], vcc
 ; CHECK-NEXT:    s_xor_b64 s[2:3], exec, s[2:3]
-; CHECK-NEXT:    s_cbranch_execz BB0_3
-; CHECK-NEXT:  BB0_1: ; %loop
+; CHECK-NEXT:    s_cbranch_execz .LBB0_3
+; CHECK-NEXT:  .LBB0_1: ; %loop
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    s_andn2_b64 s[0:1], s[0:1], exec
-; CHECK-NEXT:    s_cbranch_scc0 BB0_6
+; CHECK-NEXT:    s_cbranch_scc0 .LBB0_6
 ; CHECK-NEXT:  ; %bb.2: ; %loop
 ; CHECK-NEXT:    ; in Loop: Header=BB0_1 Depth=1
 ; CHECK-NEXT:    s_mov_b64 exec, 0
 ; CHECK-NEXT:    s_mov_b64 vcc, 0
-; CHECK-NEXT:    s_branch BB0_1
-; CHECK-NEXT:  BB0_3: ; %Flow1
+; CHECK-NEXT:    s_branch .LBB0_1
+; CHECK-NEXT:  .LBB0_3: ; %Flow1
 ; CHECK-NEXT:    s_or_saveexec_b64 s[0:1], s[2:3]
 ; CHECK-NEXT:    s_xor_b64 exec, exec, s[0:1]
-; CHECK-NEXT:    s_cbranch_execz BB0_5
+; CHECK-NEXT:    s_cbranch_execz .LBB0_5
 ; CHECK-NEXT:  ; %bb.4: ; %end
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 1.0
 ; CHECK-NEXT:    v_mov_b32_e32 v1, 0
 ; CHECK-NEXT:    exp mrt0 v1, v1, v1, v0 done vm
-; CHECK-NEXT:  BB0_5: ; %UnifiedReturnBlock
+; CHECK-NEXT:  .LBB0_5: ; %UnifiedReturnBlock
 ; CHECK-NEXT:    s_endpgm
-; CHECK-NEXT:  BB0_6:
+; CHECK-NEXT:  .LBB0_6:
 ; CHECK-NEXT:    s_mov_b64 exec, 0
 ; CHECK-NEXT:    exp null off, off, off, off done vm
 ; CHECK-NEXT:    s_endpgm
@@ -62,26 +62,26 @@ define amdgpu_ps void @return_void_compr(float %0) #0 {
 ; CHECK-NEXT:    v_cmp_ngt_f32_e32 vcc, s2, v0
 ; CHECK-NEXT:    s_and_saveexec_b64 s[2:3], vcc
 ; CHECK-NEXT:    s_xor_b64 s[2:3], exec, s[2:3]
-; CHECK-NEXT:    s_cbranch_execz BB1_3
-; CHECK-NEXT:  BB1_1: ; %loop
+; CHECK-NEXT:    s_cbranch_execz .LBB1_3
+; CHECK-NEXT:  .LBB1_1: ; %loop
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    s_andn2_b64 s[0:1], s[0:1], exec
-; CHECK-NEXT:    s_cbranch_scc0 BB1_6
+; CHECK-NEXT:    s_cbranch_scc0 .LBB1_6
 ; CHECK-NEXT:  ; %bb.2: ; %loop
 ; CHECK-NEXT:    ; in Loop: Header=BB1_1 Depth=1
 ; CHECK-NEXT:    s_mov_b64 exec, 0
 ; CHECK-NEXT:    s_mov_b64 vcc, 0
-; CHECK-NEXT:    s_branch BB1_1
-; CHECK-NEXT:  BB1_3: ; %Flow1
+; CHECK-NEXT:    s_branch .LBB1_1
+; CHECK-NEXT:  .LBB1_3: ; %Flow1
 ; CHECK-NEXT:    s_or_saveexec_b64 s[0:1], s[2:3]
 ; CHECK-NEXT:    s_xor_b64 exec, exec, s[0:1]
-; CHECK-NEXT:    s_cbranch_execz BB1_5
+; CHECK-NEXT:    s_cbranch_execz .LBB1_5
 ; CHECK-NEXT:  ; %bb.4: ; %end
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 0
 ; CHECK-NEXT:    exp mrt0 v0, off, v0, off done compr vm
-; CHECK-NEXT:  BB1_5: ; %UnifiedReturnBlock
+; CHECK-NEXT:  .LBB1_5: ; %UnifiedReturnBlock
 ; CHECK-NEXT:    s_endpgm
-; CHECK-NEXT:  BB1_6:
+; CHECK-NEXT:  .LBB1_6:
 ; CHECK-NEXT:    s_mov_b64 exec, 0
 ; CHECK-NEXT:    exp null off, off, off, off done vm
 ; CHECK-NEXT:    s_endpgm
@@ -103,15 +103,15 @@ define amdgpu_ps void @only_kill() #0 {
 ; CHECK-LABEL: only_kill:
 ; CHECK:       ; %bb.0: ; %main_body
 ; CHECK-NEXT:    s_mov_b64 s[0:1], exec
-; CHECK-NEXT:  BB2_1: ; %loop
+; CHECK-NEXT:  .LBB2_1: ; %loop
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    s_andn2_b64 s[0:1], s[0:1], exec
-; CHECK-NEXT:    s_cbranch_scc0 BB2_3
+; CHECK-NEXT:    s_cbranch_scc0 .LBB2_3
 ; CHECK-NEXT:  ; %bb.2: ; %loop
 ; CHECK-NEXT:    ; in Loop: Header=BB2_1 Depth=1
 ; CHECK-NEXT:    s_mov_b64 exec, 0
-; CHECK-NEXT:    s_branch BB2_1
-; CHECK-NEXT:  BB2_3:
+; CHECK-NEXT:    s_branch .LBB2_1
+; CHECK-NEXT:  .LBB2_3:
 ; CHECK-NEXT:    s_mov_b64 exec, 0
 ; CHECK-NEXT:    exp null off, off, off, off done vm
 ; CHECK-NEXT:    s_endpgm
@@ -132,25 +132,25 @@ define amdgpu_ps float @return_nonvoid(float %0) #0 {
 ; CHECK-NEXT:    v_cmp_ngt_f32_e32 vcc, s2, v0
 ; CHECK-NEXT:    s_and_saveexec_b64 s[2:3], vcc
 ; CHECK-NEXT:    s_xor_b64 s[2:3], exec, s[2:3]
-; CHECK-NEXT:    s_cbranch_execz BB3_3
-; CHECK-NEXT:  BB3_1: ; %loop
+; CHECK-NEXT:    s_cbranch_execz .LBB3_3
+; CHECK-NEXT:  .LBB3_1: ; %loop
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    s_andn2_b64 s[0:1], s[0:1], exec
-; CHECK-NEXT:    s_cbranch_scc0 BB3_4
+; CHECK-NEXT:    s_cbranch_scc0 .LBB3_4
 ; CHECK-NEXT:  ; %bb.2: ; %loop
 ; CHECK-NEXT:    ; in Loop: Header=BB3_1 Depth=1
 ; CHECK-NEXT:    s_mov_b64 exec, 0
 ; CHECK-NEXT:    s_mov_b64 vcc, exec
-; CHECK-NEXT:    s_cbranch_execnz BB3_1
-; CHECK-NEXT:  BB3_3: ; %Flow1
+; CHECK-NEXT:    s_cbranch_execnz .LBB3_1
+; CHECK-NEXT:  .LBB3_3: ; %Flow1
 ; CHECK-NEXT:    s_or_b64 exec, exec, s[2:3]
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 0
-; CHECK-NEXT:    s_branch BB3_5
-; CHECK-NEXT:  BB3_4:
+; CHECK-NEXT:    s_branch .LBB3_5
+; CHECK-NEXT:  .LBB3_4:
 ; CHECK-NEXT:    s_mov_b64 exec, 0
 ; CHECK-NEXT:    exp null off, off, off, off done vm
 ; CHECK-NEXT:    s_endpgm
-; CHECK-NEXT:  BB3_5:
+; CHECK-NEXT:  .LBB3_5:
 main_body:
   %cmp = fcmp olt float %0, 1.000000e+01
   br i1 %cmp, label %end, label %loop

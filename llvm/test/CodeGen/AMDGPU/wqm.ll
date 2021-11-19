@@ -638,7 +638,7 @@ END:
 ;CHECK-NEXT: s_and_b64 exec, exec, [[ORIG]]
 ;CHECK-NEXT: s_and_b64 [[SAVED]], exec, [[SAVED]]
 ;CHECK-NEXT: s_xor_b64 exec, exec, [[SAVED]]
-;CHECK-NEXT: s_cbranch_execz [[END_BB:BB[0-9]+_[0-9]+]]
+;CHECK-NEXT: s_cbranch_execz [[END_BB:.LBB[0-9]+_[0-9]+]]
 ;CHECK-NEXT: ; %bb.{{[0-9]+}}: ; %ELSE
 ;CHECK: store_dword
 ;CHECK: [[END_BB]]: ; %END
@@ -869,9 +869,9 @@ main_body:
 ; CHECK-DAG: v_mov_b32_e32 [[CTR:v[0-9]+]], 0
 ; CHECK-DAG: s_mov_b32 [[SEVEN:s[0-9]+]], 0x40e00000
 
-; CHECK: [[LOOPHDR:BB[0-9]+_[0-9]+]]: ; %body
+; CHECK: [[LOOPHDR:.LBB[0-9]+_[0-9]+]]: ; %body
 ; CHECK: v_add_f32_e32 [[CTR]], 2.0, [[CTR]]
-; CHECK: [[LOOP:BB[0-9]+_[0-9]+]]: ; %loop
+; CHECK: [[LOOP:.LBB[0-9]+_[0-9]+]]: ; %loop
 ; CHECK: v_cmp_lt_f32_e32 vcc, [[SEVEN]], [[CTR]]
 ; CHECK: s_cbranch_vccz [[LOOPHDR]]
 
