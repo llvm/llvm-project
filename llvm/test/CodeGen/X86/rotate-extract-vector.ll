@@ -132,18 +132,18 @@ define <4 x i32> @vrolw_extract_mul_with_mask(<4 x i32> %i) nounwind {
 define <32 x i16> @illegal_no_extract_mul(<32 x i16> %i) nounwind {
 ; X86-LABEL: illegal_no_extract_mul:
 ; X86:       # %bb.0:
-; X86-NEXT:    vpmullw {{\.?LCPI[0-9]+_[0-9]+}}, %zmm0, %zmm1
 ; X86-NEXT:    vpmullw {{\.?LCPI[0-9]+_[0-9]+}}, %zmm0, %zmm0
-; X86-NEXT:    vpsrlw $10, %zmm0, %zmm0
-; X86-NEXT:    vporq %zmm0, %zmm1, %zmm0
+; X86-NEXT:    vpsrlw $10, %zmm0, %zmm1
+; X86-NEXT:    vpsllw $6, %zmm0, %zmm0
+; X86-NEXT:    vporq %zmm1, %zmm0, %zmm0
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: illegal_no_extract_mul:
 ; X64:       # %bb.0:
-; X64-NEXT:    vpmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm0, %zmm1
 ; X64-NEXT:    vpmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm0, %zmm0
-; X64-NEXT:    vpsrlw $10, %zmm0, %zmm0
-; X64-NEXT:    vporq %zmm0, %zmm1, %zmm0
+; X64-NEXT:    vpsrlw $10, %zmm0, %zmm1
+; X64-NEXT:    vpsllw $6, %zmm0, %zmm0
+; X64-NEXT:    vporq %zmm1, %zmm0, %zmm0
 ; X64-NEXT:    retq
   %lhs_mul = mul <32 x i16> %i, <i16 640, i16 640, i16 640, i16 640, i16 640, i16 640, i16 640, i16 640, i16 640, i16 640, i16 640, i16 640, i16 640, i16 640, i16 640, i16 640, i16 640, i16 640, i16 640, i16 640, i16 640, i16 640, i16 640, i16 640, i16 640, i16 640, i16 640, i16 640, i16 640, i16 640, i16 640, i16 640>
   %rhs_mul = mul <32 x i16> %i, <i16 10, i16 10, i16 10, i16 10, i16 10, i16 10, i16 10, i16 10, i16 10, i16 10, i16 10, i16 10, i16 10, i16 10, i16 10, i16 10, i16 10, i16 10, i16 10, i16 10, i16 10, i16 10, i16 10, i16 10, i16 10, i16 10, i16 10, i16 10, i16 10, i16 10, i16 10, i16 10>

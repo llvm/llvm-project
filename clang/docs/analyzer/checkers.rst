@@ -319,13 +319,22 @@ cplusplus.StringChecker (C++)
 """""""""""""""""""""""""""""
 Checks std::string operations.
 
+Checks if the cstring pointer from which the ``std::string`` object is
+constructed is ``NULL`` or not.
+If the checker cannot reason about the nullness of the pointer it will assume
+that it was non-null to satisfy the precondition of the constructor.
+
+This checker is capable of checking the `SEI CERT C++ coding rule STR51-CPP.
+Do not attempt to create a std::string from a null pointer
+<https://wiki.sei.cmu.edu/confluence/x/E3s-BQ>`__.
+
 .. code-block:: cpp
 
  #include <string>
 
  void f(const char *p) {
    if (!p) {
-     std::string msg(p); // warn: p is NULL
+     std::string msg(p); // warn: The parameter must not be null
    }
  }
 

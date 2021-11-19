@@ -110,23 +110,16 @@ define <2 x i64> @rotl_v2i64(<2 x i64> %a) {
 ;
 ; CHECK-P7-LABEL: rotl_v2i64:
 ; CHECK-P7:       # %bb.0: # %entry
-; CHECK-P7-NEXT:    addi r3, r1, -48
-; CHECK-P7-NEXT:    stxvd2x vs34, 0, r3
-; CHECK-P7-NEXT:    ld r3, -40(r1)
-; CHECK-P7-NEXT:    sldi r4, r3, 53
-; CHECK-P7-NEXT:    rldicl r3, r3, 53, 11
-; CHECK-P7-NEXT:    std r4, -8(r1)
-; CHECK-P7-NEXT:    ld r4, -48(r1)
-; CHECK-P7-NEXT:    sldi r5, r4, 41
-; CHECK-P7-NEXT:    rldicl r4, r4, 41, 23
-; CHECK-P7-NEXT:    std r5, -16(r1)
-; CHECK-P7-NEXT:    addi r5, r1, -16
-; CHECK-P7-NEXT:    lxvw4x vs0, 0, r5
-; CHECK-P7-NEXT:    std r3, -24(r1)
 ; CHECK-P7-NEXT:    addi r3, r1, -32
-; CHECK-P7-NEXT:    std r4, -32(r1)
-; CHECK-P7-NEXT:    lxvw4x vs1, 0, r3
-; CHECK-P7-NEXT:    xxlor vs34, vs0, vs1
+; CHECK-P7-NEXT:    stxvd2x vs34, 0, r3
+; CHECK-P7-NEXT:    ld r3, -24(r1)
+; CHECK-P7-NEXT:    rotldi r3, r3, 53
+; CHECK-P7-NEXT:    std r3, -8(r1)
+; CHECK-P7-NEXT:    ld r3, -32(r1)
+; CHECK-P7-NEXT:    rotldi r3, r3, 41
+; CHECK-P7-NEXT:    std r3, -16(r1)
+; CHECK-P7-NEXT:    addi r3, r1, -16
+; CHECK-P7-NEXT:    lxvd2x vs34, 0, r3
 ; CHECK-P7-NEXT:    blr
 entry:
   %b = shl <2 x i64> %a, <i64 41, i64 53>
