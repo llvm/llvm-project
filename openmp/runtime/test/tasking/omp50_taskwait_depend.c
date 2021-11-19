@@ -1,11 +1,12 @@
 // RUN: %libomp-compile-and-run
 // UNSUPPORTED: gcc-4, gcc-5, gcc-6, gcc-7, gcc-8
-// clang does not yet support taskwait with depend clause
-// clang-12 introduced parsing, but no codegen
-// TODO: update expected result when codegen in clang is added
+
+// support for taskwait with depend clause introduced in clang-14
+// UNSUPPORTED: clang-5, clang-6, clang-6, clang-8, clang-9, clang-10, clang-11,
+// clang-12, clang-13
+
 // icc does not yet support taskwait with depend clause
-// TODO: update expected result when support for icc is added
-// XFAIL: clang, icc
+// XFAIL: icc
 
 #include <stdio.h>
 #include <stdlib.h>
