@@ -5073,8 +5073,10 @@ public:
   static void Profile(llvm::FoldingSetNodeID &ID, TemplateName Template,
                       QualType Deduced, bool IsDependent) {
     Template.Profile(ID);
-    ID.AddPointer(Deduced.getAsOpaquePtr());
-    ID.AddBoolean(IsDependent);
+    QualType CanonicalType =
+        Deduced.isNull() ? Deduced : Deduced.getCanonicalType();
+    ID.AddPointer(CanonicalType.getAsOpaquePtr());
+    ID.AddBoolean(IsDependent || Template.isDependent());
   }
 
   static bool classof(const Type *T) {
