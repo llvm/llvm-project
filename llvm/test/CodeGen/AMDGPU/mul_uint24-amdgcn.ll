@@ -138,17 +138,16 @@ define amdgpu_kernel void @test_umul24_i16_vgpr_sext(i32 addrspace(1)* %out, i16
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x24
 ; VI-NEXT:    v_lshlrev_b32_e32 v0, 1, v0
-; VI-NEXT:    v_mov_b32_e32 v4, 0
 ; VI-NEXT:    s_mov_b32 s3, 0xf000
 ; VI-NEXT:    s_mov_b32 s2, -1
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    v_mov_b32_e32 v3, s7
 ; VI-NEXT:    v_add_u32_e32 v2, vcc, s6, v0
-; VI-NEXT:    v_addc_u32_e32 v3, vcc, v3, v4, vcc
+; VI-NEXT:    v_addc_u32_e32 v3, vcc, 0, v3, vcc
 ; VI-NEXT:    v_lshlrev_b32_e32 v0, 1, v1
 ; VI-NEXT:    v_mov_b32_e32 v1, s7
 ; VI-NEXT:    v_add_u32_e32 v0, vcc, s6, v0
-; VI-NEXT:    v_addc_u32_e32 v1, vcc, v1, v4, vcc
+; VI-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
 ; VI-NEXT:    flat_load_ushort v2, v[2:3]
 ; VI-NEXT:    flat_load_ushort v0, v[0:1]
 ; VI-NEXT:    s_mov_b32 s0, s4
