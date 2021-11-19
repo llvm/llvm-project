@@ -30,10 +30,10 @@
 #include "llvm/MC/MCParser/MCTargetAsmParser.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSubtargetInfo.h"
-
 #include "llvm/MC/TargetRegistry.h"
+
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileUtilities.h"
-#include "llvm/Support/LineIterator.h"
 #include "llvm/Support/Program.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/TargetSelect.h"
@@ -43,8 +43,6 @@
 #include "llvm/Target/TargetOptions.h"
 
 #include "lld/Common/Driver.h"
-
-#include "hip/hip_version.h"
 
 #include <mutex>
 
@@ -68,6 +66,9 @@ protected:
       llvm::cl::desc("Optimization level for HSACO compilation"),
       llvm::cl::init(2)};
 
+  Option<std::string> rocmPath{*this, "rocm-path",
+                               llvm::cl::desc("Path to ROCm install")};
+
   /// Adds LLVM optimization passes
   LogicalResult optimizeLlvm(llvm::Module &llvmModule,
                              llvm::TargetMachine &targetMachine) override;
@@ -82,66 +83,22 @@ private:
   std::unique_ptr<SmallVectorImpl<char>> assembleIsa(const std::string &isa);
   std::unique_ptr<std::vector<char>>
   createHsaco(const SmallVectorImpl<char> &isaBinary);
+
+  std::string getRocmPath();
 };
-} // namespace
+} // end namespace
 
 SerializeToHsacoPass::SerializeToHsacoPass(const SerializeToHsacoPass &other)
     : PassWrapper<SerializeToHsacoPass, gpu::SerializeToBlobPass>(other) {}
-static std::string getDefaultChip() {
-  const char kDefaultChip[] = "gfx900";
 
-  // Locate rocm_agent_enumerator.
-  const char kRocmAgentEnumerator[] = "rocm_agent_enumerator";
-  llvm::ErrorOr<std::string> rocmAgentEnumerator = llvm::sys::findProgramByName(
-      kRocmAgentEnumerator, {__ROCM_PATH__ "/bin"});
-  if (!rocmAgentEnumerator) {
-    llvm::WithColor::warning(llvm::errs())
-        << kRocmAgentEnumerator << "couldn't be located under " << __ROCM_PATH__
-        << "/bin\n";
-    return kDefaultChip;
-  }
+/// Get a user-specified path to ROCm
+// Tries, in order, the --rocm-path option, the ROCM_PATH environment variable
+// and a compile-time default
+std::string SerializeToHsacoPass::getRocmPath() {
+  if (rocmPath.getNumOccurrences() > 0)
+    return rocmPath.getValue();
 
-  // Prepare temp file to hold the outputs.
-  int tempFd = -1;
-  SmallString<128> tempFilename;
-  if (llvm::sys::fs::createTemporaryFile("rocm_agent", "txt", tempFd,
-                                         tempFilename)) {
-    llvm::WithColor::warning(llvm::errs())
-        << "temporary file for " << kRocmAgentEnumerator << " creation error\n";
-    return kDefaultChip;
-  }
-  llvm::FileRemover cleanup(tempFilename);
-
-  // Invoke rocm_agent_enumerator.
-  std::string errorMessage;
-  SmallVector<StringRef, 2> args{"-t", "GPU"};
-  Optional<StringRef> redirects[3] = {{""}, tempFilename.str(), {""}};
-  int result =
-      llvm::sys::ExecuteAndWait(rocmAgentEnumerator.get(), args, llvm::None,
-                                redirects, 0, 0, &errorMessage);
-  if (result) {
-    llvm::WithColor::warning(llvm::errs())
-        << kRocmAgentEnumerator << " invocation error: " << errorMessage
-        << "\n";
-    return kDefaultChip;
-  }
-
-  // Load and parse the result.
-  auto gfxIsaList = openInputFile(tempFilename);
-  if (!gfxIsaList) {
-    llvm::WithColor::error(llvm::errs())
-        << "read ROCm agent list temp file error\n";
-    return kDefaultChip;
-  }
-  for (llvm::line_iterator lines(*gfxIsaList); !lines.is_at_end(); ++lines) {
-    // Skip the line with content "gfx000".
-    if (*lines == "gfx000")
-      continue;
-    // Use the first ISA version found.
-    return lines->str();
-  }
-
-  return kDefaultChip;
+  return __DEFAULT_ROCM_PATH__;
 }
 
 // Sets the 'option' to 'value' unless it already has a value.
