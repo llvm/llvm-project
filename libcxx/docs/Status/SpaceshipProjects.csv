@@ -1,6 +1,6 @@
 Section,Description,Dependencies,Assignee,Complete
 | `[cmp.concept] <https://wg21.link/cmp.concept>`_,"| `three_way_comparable <https://reviews.llvm.org/D103478>`_
-| `three_way_comparable_with <https://reviews.llvm.org/D103478>`_",None,Ruslan Arutyunyan,|In Progress|
+| `three_way_comparable_with <https://reviews.llvm.org/D103478>`_",None,Ruslan Arutyunyan,|Complete|
 | `[cmp.result] <https://wg21.link/cmp.result>`_,| `compare_three_way_result <https://reviews.llvm.org/D103581>`_,None,Arthur O'Dwyer,|Complete|
 | `[expos.only.func] <https://wg21.link/expos.only.func>`_,"| `synth-three-way <https://reviews.llvm.org/D107721>`_
 | `synth-three-way-result <https://reviews.llvm.org/D107721>`_",[cmp.concept],Kent Ross,|Complete|

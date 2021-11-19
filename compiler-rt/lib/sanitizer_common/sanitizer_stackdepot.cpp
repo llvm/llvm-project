@@ -73,20 +73,20 @@ void StackDepotHandle::inc_use_count_unsafe() {
 }
 
 uptr StackDepotNode::allocated() {
-  return stackStore.allocated() + storeIds.MemoryUsage() +
+  return stackStore.Allocated() + storeIds.MemoryUsage() +
          useCounts.MemoryUsage();
 }
 
 void StackDepotNode::store(u32 id, const args_type &args, hash_type hash) {
   stack_hash = hash;
-  storeIds[id] = stackStore.store(args);
+  storeIds[id] = stackStore.Store(args);
 }
 
 StackDepotNode::args_type StackDepotNode::load(u32 id) const {
   StackStore::Id store_id = storeIds[id];
   if (!store_id)
     return {};
-  return stackStore.load(store_id);
+  return stackStore.Load(store_id);
 }
 
 StackDepotStats StackDepotGetStats() { return theDepot.GetStats(); }
