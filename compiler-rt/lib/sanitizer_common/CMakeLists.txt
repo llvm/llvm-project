@@ -73,6 +73,7 @@ set(SANITIZER_COVERAGE_SOURCES
 set(SANITIZER_SYMBOLIZER_SOURCES
   sanitizer_allocator_report.cpp
   sanitizer_chained_origin_depot.cpp
+  sanitizer_stack_store.cpp
   sanitizer_stackdepot.cpp
   sanitizer_stacktrace.cpp
   sanitizer_stacktrace_libcdep.cpp

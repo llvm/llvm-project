@@ -114,6 +114,7 @@ source_set("sources") {
     "sanitizer_report_decorator.h",
     "sanitizer_ring_buffer.h",
     "sanitizer_solaris.cpp",
+    "sanitizer_stack_store.cpp",
     "sanitizer_stack_store.h",
     "sanitizer_stackdepot.cpp",
     "sanitizer_stackdepot.h",
