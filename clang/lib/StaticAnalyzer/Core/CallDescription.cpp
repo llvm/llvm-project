@@ -46,3 +46,14 @@ ento::CallDescription::CallDescription(
     Optional<unsigned> RequiredArgs /*= None*/,
     Optional<size_t> RequiredParams /*= None*/)
     : CallDescription(0, QualifiedName, RequiredArgs, RequiredParams) {}
+
+ento::CallDescriptionSet::CallDescriptionSet(
+    std::initializer_list<CallDescription> &&List) {
+  Impl.LinearMap.reserve(List.size());
+  for (const CallDescription &CD : List)
+    Impl.LinearMap.push_back({CD, /*unused*/ true});
+}
+
+bool ento::CallDescriptionSet::contains(const CallEvent &Call) const {
+  return static_cast<bool>(Impl.lookup(Call));
+}

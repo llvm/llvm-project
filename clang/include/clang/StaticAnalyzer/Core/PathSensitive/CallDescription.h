@@ -88,6 +88,8 @@ public:
 /// An immutable map from CallDescriptions to arbitrary data. Provides a unified
 /// way for checkers to react on function calls.
 template <typename T> class CallDescriptionMap {
+  friend class CallDescriptionSet;
+
   // Some call descriptions aren't easily hashable (eg., the ones with qualified
   // names in which some sections are omitted), so let's put them
   // in a simple vector and use linear lookup.
@@ -116,6 +118,21 @@ public:
 
     return nullptr;
   }
+};
+
+/// An immutable set of CallDescriptions.
+/// Checkers can efficiently decide if a given CallEvent matches any
+/// CallDescription in the set.
+class CallDescriptionSet {
+  CallDescriptionMap<bool /*unused*/> Impl = {};
+
+public:
+  CallDescriptionSet(std::initializer_list<CallDescription> &&List);
+
+  CallDescriptionSet(const CallDescriptionSet &) = delete;
+  CallDescriptionSet &operator=(const CallDescription &) = delete;
+
+  LLVM_NODISCARD bool contains(const CallEvent &Call) const;
 };
 
 } // namespace ento
