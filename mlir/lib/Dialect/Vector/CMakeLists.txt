@@ -1,4 +1,5 @@
 add_mlir_dialect_library(MLIRVector
+  VectorDropLeadUnitDim.cpp
   VectorInsertExtractStridedSliceRewritePatterns.cpp
   VectorMultiDimReductionTransforms.cpp
   VectorOps.cpp
