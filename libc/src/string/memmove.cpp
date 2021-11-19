@@ -40,7 +40,7 @@ LLVM_LIBC_FUNCTION(void *, memmove,
   // dest_c:[_____yz_]  [___yz___]  [__yz____]
 
   // Call `memcpy` if `src_c` and `dest_c` do not overlap.
-  if (__llvm_libc::integerAbs(src_c - dest_c) >=
+  if (__llvm_libc::integer_abs(src_c - dest_c) >=
       static_cast<ptrdiff_t>(count)) {
     inline_memcpy(dest_c, src_c, count);
     return dest_c;

@@ -37,27 +37,27 @@ describeValue(const char *label, ValType value,
   stream << label;
 
   FPBits<ValType> bits(value);
-  if (bits.isNaN()) {
+  if (bits.is_nan()) {
     stream << "(NaN)";
-  } else if (bits.isInf()) {
-    if (bits.getSign())
+  } else if (bits.is_inf()) {
+    if (bits.get_sign())
       stream << "(-Infinity)";
     else
       stream << "(+Infinity)";
   } else {
     constexpr int exponentWidthInHex =
-        (fputil::ExponentWidth<ValType>::value - 1) / 4 + 1;
+        (fputil::ExponentWidth<ValType>::VALUE - 1) / 4 + 1;
     constexpr int mantissaWidthInHex =
-        (fputil::MantissaWidth<ValType>::value - 1) / 4 + 1;
+        (fputil::MantissaWidth<ValType>::VALUE - 1) / 4 + 1;
 
-    stream << "Sign: " << (bits.getSign() ? '1' : '0') << ", "
+    stream << "Sign: " << (bits.get_sign() ? '1' : '0') << ", "
            << "Exponent: 0x"
-           << uintToHex<uint16_t>(bits.getUnbiasedExponent(),
+           << uintToHex<uint16_t>(bits.get_unbiased_exponent(),
                                   exponentWidthInHex)
            << ", "
            << "Mantissa: 0x"
            << uintToHex<typename fputil::FPBits<ValType>::UIntType>(
-                  bits.getMantissa(), mantissaWidthInHex);
+                  bits.get_mantissa(), mantissaWidthInHex);
   }
 
   stream << '\n';

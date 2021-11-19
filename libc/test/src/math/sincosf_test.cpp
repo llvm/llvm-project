@@ -51,7 +51,7 @@ TEST(LlvmLibcSinCosfTest, SpecialNumbers) {
   EXPECT_EQ(errno, EDOM);
 
   errno = 0;
-  __llvm_libc::sincosf(negInf, &sin, &cos);
+  __llvm_libc::sincosf(neg_inf, &sin, &cos);
   EXPECT_FP_EQ(aNaN, cos);
   EXPECT_FP_EQ(aNaN, sin);
   EXPECT_EQ(errno, EDOM);

@@ -24,93 +24,94 @@ namespace fputil {
 
 static inline long double nextafter(long double from, long double to) {
   using FPBits = FPBits<long double>;
-  FPBits fromBits(from);
-  if (fromBits.isNaN())
+  FPBits from_bits(from);
+  if (from_bits.is_nan())
     return from;
 
-  FPBits toBits(to);
-  if (toBits.isNaN())
+  FPBits to_bits(to);
+  if (to_bits.is_nan())
     return to;
 
   if (from == to)
     return to;
 
   // Convert pseudo subnormal number to normal number.
-  if (fromBits.getImplicitBit() == 1 && fromBits.getUnbiasedExponent() == 0) {
-    fromBits.setUnbiasedExponent(1);
+  if (from_bits.get_implicit_bit() == 1 &&
+      from_bits.get_unbiased_exponent() == 0) {
+    from_bits.set_unbiased_exponent(1);
   }
 
   using UIntType = FPBits::UIntType;
-  constexpr UIntType signVal = (UIntType(1) << 79);
-  constexpr UIntType mantissaMask =
-      (UIntType(1) << MantissaWidth<long double>::value) - 1;
-  UIntType intVal = fromBits.uintval();
+  constexpr UIntType SIGN_VAL = (UIntType(1) << 79);
+  constexpr UIntType MANTISSA_MASK =
+      (UIntType(1) << MantissaWidth<long double>::VALUE) - 1;
+  UIntType int_val = from_bits.uintval();
   if (from < 0.0l) {
     if (from > to) {
-      if (intVal == (signVal + FPBits::maxSubnormal)) {
+      if (int_val == (SIGN_VAL + FPBits::MAX_SUBNORMAL)) {
         // We deal with normal/subnormal boundary separately to avoid
         // dealing with the implicit bit.
-        intVal = signVal + FPBits::minNormal;
-      } else if ((intVal & mantissaMask) == mantissaMask) {
-        fromBits.setMantissa(0);
+        int_val = SIGN_VAL + FPBits::MIN_NORMAL;
+      } else if ((int_val & MANTISSA_MASK) == MANTISSA_MASK) {
+        from_bits.set_mantissa(0);
         // Incrementing exponent might overflow the value to infinity,
         // which is what is expected. Since NaNs are handling separately,
         // it will never overflow "beyond" infinity.
-        fromBits.setUnbiasedExponent(fromBits.getUnbiasedExponent() + 1);
-        return fromBits;
+        from_bits.set_unbiased_exponent(from_bits.get_unbiased_exponent() + 1);
+        return from_bits;
       } else {
-        ++intVal;
+        ++int_val;
       }
     } else {
-      if (intVal == (signVal + FPBits::minNormal)) {
+      if (int_val == (SIGN_VAL + FPBits::MIN_NORMAL)) {
         // We deal with normal/subnormal boundary separately to avoid
         // dealing with the implicit bit.
-        intVal = signVal + FPBits::maxSubnormal;
-      } else if ((intVal & mantissaMask) == 0) {
-        fromBits.setMantissa(mantissaMask);
+        int_val = SIGN_VAL + FPBits::MAX_SUBNORMAL;
+      } else if ((int_val & MANTISSA_MASK) == 0) {
+        from_bits.set_mantissa(MANTISSA_MASK);
         // from == 0 is handled separately so decrementing the exponent will not
         // lead to underflow.
-        fromBits.setUnbiasedExponent(fromBits.getUnbiasedExponent() - 1);
-        return fromBits;
+        from_bits.set_unbiased_exponent(from_bits.get_unbiased_exponent() - 1);
+        return from_bits;
       } else {
-        --intVal;
+        --int_val;
       }
     }
   } else if (from == 0.0l) {
     if (from > to)
-      intVal = signVal + 1;
+      int_val = SIGN_VAL + 1;
     else
-      intVal = 1;
+      int_val = 1;
   } else {
     if (from > to) {
-      if (intVal == FPBits::minNormal) {
-        intVal = FPBits::maxSubnormal;
-      } else if ((intVal & mantissaMask) == 0) {
-        fromBits.setMantissa(mantissaMask);
+      if (int_val == FPBits::MIN_NORMAL) {
+        int_val = FPBits::MAX_SUBNORMAL;
+      } else if ((int_val & MANTISSA_MASK) == 0) {
+        from_bits.set_mantissa(MANTISSA_MASK);
         // from == 0 is handled separately so decrementing the exponent will not
         // lead to underflow.
-        fromBits.setUnbiasedExponent(fromBits.getUnbiasedExponent() - 1);
-        return fromBits;
+        from_bits.set_unbiased_exponent(from_bits.get_unbiased_exponent() - 1);
+        return from_bits;
       } else {
-        --intVal;
+        --int_val;
       }
     } else {
-      if (intVal == FPBits::maxSubnormal) {
-        intVal = FPBits::minNormal;
-      } else if ((intVal & mantissaMask) == mantissaMask) {
-        fromBits.setMantissa(0);
+      if (int_val == FPBits::MAX_SUBNORMAL) {
+        int_val = FPBits::MIN_NORMAL;
+      } else if ((int_val & MANTISSA_MASK) == MANTISSA_MASK) {
+        from_bits.set_mantissa(0);
         // Incrementing exponent might overflow the value to infinity,
         // which is what is expected. Since NaNs are handling separately,
         // it will never overflow "beyond" infinity.
-        fromBits.setUnbiasedExponent(fromBits.getUnbiasedExponent() + 1);
-        return fromBits;
+        from_bits.set_unbiased_exponent(from_bits.get_unbiased_exponent() + 1);
+        return from_bits;
       } else {
-        ++intVal;
+        ++int_val;
       }
     }
   }
 
-  return *reinterpret_cast<long double *>(&intVal);
+  return *reinterpret_cast<long double *>(&int_val);
   // TODO: Raise floating point exceptions as required by the standard.
 }
 

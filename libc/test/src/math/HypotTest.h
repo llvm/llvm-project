@@ -25,34 +25,35 @@ private:
   using Func = T (*)(T, T);
   using FPBits = __llvm_libc::fputil::FPBits<T>;
   using UIntType = typename FPBits::UIntType;
-  const T nan = T(__llvm_libc::fputil::FPBits<T>::buildNaN(1));
+  const T nan = T(__llvm_libc::fputil::FPBits<T>::build_nan(1));
   const T inf = T(__llvm_libc::fputil::FPBits<T>::inf());
-  const T negInf = T(__llvm_libc::fputil::FPBits<T>::negInf());
+  const T neg_inf = T(__llvm_libc::fputil::FPBits<T>::neg_inf());
   const T zero = T(__llvm_libc::fputil::FPBits<T>::zero());
-  const T negZero = T(__llvm_libc::fputil::FPBits<T>::negZero());
+  const T neg_zero = T(__llvm_libc::fputil::FPBits<T>::neg_zero());
 
 public:
   void testSpecialNumbers(Func func) {
     EXPECT_FP_EQ(func(inf, nan), inf);
-    EXPECT_FP_EQ(func(nan, negInf), inf);
+    EXPECT_FP_EQ(func(nan, neg_inf), inf);
     EXPECT_FP_EQ(func(zero, inf), inf);
-    EXPECT_FP_EQ(func(negInf, negZero), inf);
+    EXPECT_FP_EQ(func(neg_inf, neg_zero), inf);
 
     EXPECT_FP_EQ(func(nan, nan), nan);
     EXPECT_FP_EQ(func(nan, zero), nan);
-    EXPECT_FP_EQ(func(negZero, nan), nan);
+    EXPECT_FP_EQ(func(neg_zero, nan), nan);
 
-    EXPECT_FP_EQ(func(negZero, zero), zero);
+    EXPECT_FP_EQ(func(neg_zero, zero), zero);
   }
 
   void testSubnormalRange(Func func) {
     constexpr UIntType count = 1000001;
     for (unsigned scale = 0; scale < 4; ++scale) {
-      UIntType maxValue = FPBits::maxSubnormal << scale;
-      UIntType step = (maxValue - FPBits::minSubnormal) / count;
+      UIntType maxValue = FPBits::MAX_SUBNORMAL << scale;
+      UIntType step = (maxValue - FPBits::MIN_SUBNORMAL) / count;
       for (int signs = 0; signs < 4; ++signs) {
-        for (UIntType v = FPBits::minSubnormal, w = maxValue;
-             v <= maxValue && w >= FPBits::minSubnormal; v += step, w -= step) {
+        for (UIntType v = FPBits::MIN_SUBNORMAL, w = maxValue;
+             v <= maxValue && w >= FPBits::MIN_SUBNORMAL;
+             v += step, w -= step) {
           T x = T(FPBits(v)), y = T(FPBits(w));
           if (signs % 2 == 1) {
             x = -x;
@@ -71,10 +72,10 @@ public:
 
   void testNormalRange(Func func) {
     constexpr UIntType count = 1000001;
-    constexpr UIntType step = (FPBits::maxNormal - FPBits::minNormal) / count;
+    constexpr UIntType step = (FPBits::MAX_NORMAL - FPBits::MIN_NORMAL) / count;
     for (int signs = 0; signs < 4; ++signs) {
-      for (UIntType v = FPBits::minNormal, w = FPBits::maxNormal;
-           v <= FPBits::maxNormal && w >= FPBits::minNormal;
+      for (UIntType v = FPBits::MIN_NORMAL, w = FPBits::MAX_NORMAL;
+           v <= FPBits::MAX_NORMAL && w >= FPBits::MIN_NORMAL;
            v += step, w -= step) {
         T x = T(FPBits(v)), y = T(FPBits(w));
         if (signs % 2 == 1) {

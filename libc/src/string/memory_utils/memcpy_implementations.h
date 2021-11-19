@@ -46,13 +46,13 @@ static inline void inline_memcpy(char *__restrict dst,
   using namespace __llvm_libc::x86;
 
   // Whether to use only rep;movsb.
-  constexpr bool kUseOnlyRepMovsb =
+  constexpr bool USE_ONLY_REP_MOVSB =
       LLVM_LIBC_IS_DEFINED(LLVM_LIBC_MEMCPY_X86_USE_ONLY_REPMOVSB);
 
   // kRepMovsBSize == -1 : Only CopyAligned is used.
   // kRepMovsBSize ==  0 : Only RepMovsb is used.
   // else CopyAligned is used up to kRepMovsBSize and then RepMovsb.
-  constexpr size_t kRepMovsBSize =
+  constexpr size_t REP_MOVS_B_SIZE =
 #if defined(LLVM_LIBC_MEMCPY_X86_USE_REPMOVSB_FROM_SIZE)
       LLVM_LIBC_MEMCPY_X86_USE_REPMOVSB_FROM_SIZE;
 #else
@@ -60,7 +60,7 @@ static inline void inline_memcpy(char *__restrict dst,
 #endif // LLVM_LIBC_MEMCPY_X86_USE_REPMOVSB_FROM_SIZE
 
   // Whether target supports AVX instructions.
-  constexpr bool kHasAvx = LLVM_LIBC_IS_DEFINED(__AVX__);
+  constexpr bool HAS_AVX = LLVM_LIBC_IS_DEFINED(__AVX__);
 
 #if defined(__AVX__)
   using LoopBlockSize = _64;
@@ -68,35 +68,35 @@ static inline void inline_memcpy(char *__restrict dst,
   using LoopBlockSize = _32;
 #endif
 
-  if (kUseOnlyRepMovsb)
-    return Copy<Accelerator>(dst, src, count);
+  if (USE_ONLY_REP_MOVSB)
+    return copy<Accelerator>(dst, src, count);
 
   if (count == 0)
     return;
   if (count == 1)
-    return Copy<_1>(dst, src);
+    return copy<_1>(dst, src);
   if (count == 2)
-    return Copy<_2>(dst, src);
+    return copy<_2>(dst, src);
   if (count == 3)
-    return Copy<_3>(dst, src);
+    return copy<_3>(dst, src);
   if (count == 4)
-    return Copy<_4>(dst, src);
+    return copy<_4>(dst, src);
   if (count < 8)
-    return Copy<HeadTail<_4>>(dst, src, count);
+    return copy<HeadTail<_4>>(dst, src, count);
   if (count < 16)
-    return Copy<HeadTail<_8>>(dst, src, count);
+    return copy<HeadTail<_8>>(dst, src, count);
   if (count < 32)
-    return Copy<HeadTail<_16>>(dst, src, count);
+    return copy<HeadTail<_16>>(dst, src, count);
   if (count < 64)
-    return Copy<HeadTail<_32>>(dst, src, count);
+    return copy<HeadTail<_32>>(dst, src, count);
   if (count < 128)
-    return Copy<HeadTail<_64>>(dst, src, count);
-  if (kHasAvx && count < 256)
-    return Copy<HeadTail<_128>>(dst, src, count);
-  if (count <= kRepMovsBSize)
-    return Copy<Align<_32, Arg::Dst>::Then<Loop<LoopBlockSize>>>(dst, src,
+    return copy<HeadTail<_64>>(dst, src, count);
+  if (HAS_AVX && count < 256)
+    return copy<HeadTail<_128>>(dst, src, count);
+  if (count <= REP_MOVS_B_SIZE)
+    return copy<Align<_32, Arg::Dst>::Then<Loop<LoopBlockSize>>>(dst, src,
                                                                  count);
-  return Copy<Accelerator>(dst, src, count);
+  return copy<Accelerator>(dst, src, count);
 #elif defined(LLVM_LIBC_ARCH_AARCH64)
   /////////////////////////////////////////////////////////////////////////////
   // LLVM_LIBC_ARCH_AARCH64
@@ -105,24 +105,24 @@ static inline void inline_memcpy(char *__restrict dst,
   if (count == 0)
     return;
   if (count == 1)
-    return Copy<_1>(dst, src);
+    return copy<_1>(dst, src);
   if (count == 2)
-    return Copy<_2>(dst, src);
+    return copy<_2>(dst, src);
   if (count == 3)
-    return Copy<_3>(dst, src);
+    return copy<_3>(dst, src);
   if (count == 4)
-    return Copy<_4>(dst, src);
+    return copy<_4>(dst, src);
   if (count < 8)
-    return Copy<HeadTail<_4>>(dst, src, count);
+    return copy<HeadTail<_4>>(dst, src, count);
   if (count < 16)
-    return Copy<HeadTail<_8>>(dst, src, count);
+    return copy<HeadTail<_8>>(dst, src, count);
   if (count < 32)
-    return Copy<HeadTail<_16>>(dst, src, count);
+    return copy<HeadTail<_16>>(dst, src, count);
   if (count < 64)
-    return Copy<HeadTail<_32>>(dst, src, count);
+    return copy<HeadTail<_32>>(dst, src, count);
   if (count < 128)
-    return Copy<HeadTail<_64>>(dst, src, count);
-  return Copy<Align<_16, Arg::Src>::Then<Loop<_64>>>(dst, src, count);
+    return copy<HeadTail<_64>>(dst, src, count);
+  return copy<Align<_16, Arg::Src>::Then<Loop<_64>>>(dst, src, count);
 #else
   /////////////////////////////////////////////////////////////////////////////
   // Default
@@ -131,24 +131,24 @@ static inline void inline_memcpy(char *__restrict dst,
   if (count == 0)
     return;
   if (count == 1)
-    return Copy<_1>(dst, src);
+    return copy<_1>(dst, src);
   if (count == 2)
-    return Copy<_2>(dst, src);
+    return copy<_2>(dst, src);
   if (count == 3)
-    return Copy<_3>(dst, src);
+    return copy<_3>(dst, src);
   if (count == 4)
-    return Copy<_4>(dst, src);
+    return copy<_4>(dst, src);
   if (count < 8)
-    return Copy<HeadTail<_4>>(dst, src, count);
+    return copy<HeadTail<_4>>(dst, src, count);
   if (count < 16)
-    return Copy<HeadTail<_8>>(dst, src, count);
+    return copy<HeadTail<_8>>(dst, src, count);
   if (count < 32)
-    return Copy<HeadTail<_16>>(dst, src, count);
+    return copy<HeadTail<_16>>(dst, src, count);
   if (count < 64)
-    return Copy<HeadTail<_32>>(dst, src, count);
+    return copy<HeadTail<_32>>(dst, src, count);
   if (count < 128)
-    return Copy<HeadTail<_64>>(dst, src, count);
-  return Copy<Align<_32, Arg::Src>::Then<Loop<_32>>>(dst, src, count);
+    return copy<HeadTail<_64>>(dst, src, count);
+  return copy<Align<_32, Arg::Src>::Then<Loop<_32>>>(dst, src, count);
 #endif
 }
 

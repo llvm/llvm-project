@@ -28,9 +28,9 @@ TEST(LlvmLibcAToFTest, SimpleTest) {
       __llvm_libc::fputil::FPBits<double>(result);
 
   EXPECT_EQ(actualFP.bits, expectedFP.bits);
-  EXPECT_EQ(actualFP.getSign(), expectedFP.getSign());
-  EXPECT_EQ(actualFP.getExponent(), expectedFP.getExponent());
-  EXPECT_EQ(actualFP.getMantissa(), expectedFP.getMantissa());
+  EXPECT_EQ(actualFP.get_sign(), expectedFP.get_sign());
+  EXPECT_EQ(actualFP.get_exponent(), expectedFP.get_exponent());
+  EXPECT_EQ(actualFP.get_mantissa(), expectedFP.get_mantissa());
   EXPECT_EQ(errno, 0);
 }
 
@@ -45,8 +45,8 @@ TEST(LlvmLibcAToFTest, FailedParsingTest) {
       __llvm_libc::fputil::FPBits<double>(result);
 
   EXPECT_EQ(actualFP.bits, expectedFP.bits);
-  EXPECT_EQ(actualFP.getSign(), expectedFP.getSign());
-  EXPECT_EQ(actualFP.getExponent(), expectedFP.getExponent());
-  EXPECT_EQ(actualFP.getMantissa(), expectedFP.getMantissa());
+  EXPECT_EQ(actualFP.get_sign(), expectedFP.get_sign());
+  EXPECT_EQ(actualFP.get_exponent(), expectedFP.get_exponent());
+  EXPECT_EQ(actualFP.get_mantissa(), expectedFP.get_mantissa());
   EXPECT_EQ(errno, 0);
 }

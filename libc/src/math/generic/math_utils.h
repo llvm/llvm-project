@@ -69,7 +69,8 @@ template <typename T> static inline T opt_barrier(T x) {
 }
 
 template <typename T> struct IsFloatOrDouble {
-  static constexpr bool Value =
+  static constexpr bool
+      Value = // NOLINT so that this Value can match the ones for IsSame
       cpp::IsSame<T, float>::Value || cpp::IsSame<T, double>::Value;
 };
 

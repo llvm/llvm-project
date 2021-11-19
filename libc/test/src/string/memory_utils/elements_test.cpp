@@ -56,7 +56,7 @@ void Randomize(cpp::MutableArrayRef<char> buffer) {
     current = GetRandomChar();
 }
 
-template <typename Element> using Buffer = cpp::Array<char, Element::kSize>;
+template <typename Element> using Buffer = cpp::Array<char, Element::SIZE>;
 
 template <typename Element> Buffer<Element> GetRandomBuffer() {
   Buffer<Element> buffer;
@@ -64,15 +64,15 @@ template <typename Element> Buffer<Element> GetRandomBuffer() {
   return buffer;
 }
 
-TYPED_TEST(LlvmLibcMemoryElements, Copy, FixedSizeTypes) {
+TYPED_TEST(LlvmLibcMemoryElements, copy, FixedSizeTypes) {
   Buffer<ParamType> Dst;
   const auto buffer = GetRandomBuffer<ParamType>();
-  Copy<ParamType>(Dst.data(), buffer.data());
-  for (size_t i = 0; i < ParamType::kSize; ++i)
+  copy<ParamType>(Dst.data(), buffer.data());
+  for (size_t i = 0; i < ParamType::SIZE; ++i)
     EXPECT_EQ(Dst[i], buffer[i]);
 }
 
-template <typename T> T Copy(const T &Input) {
+template <typename T> T copy(const T &Input) {
   T Output;
   for (size_t I = 0; I < Input.size(); ++I)
     Output[I] = Input[I];
@@ -80,47 +80,47 @@ template <typename T> T Copy(const T &Input) {
 }
 
 TYPED_TEST(LlvmLibcMemoryElements, Move, FixedSizeTypes) {
-  constexpr size_t kSize = ParamType::kSize;
-  using LargeBuffer = cpp::Array<char, kSize * 2>;
+  constexpr size_t SIZE = ParamType::SIZE;
+  using LargeBuffer = cpp::Array<char, SIZE * 2>;
   LargeBuffer GroundTruth;
   Randomize(GroundTruth);
-  // Forward, we move the kSize first bytes from offset 0 to kSize.
-  for (size_t Offset = 0; Offset < kSize; ++Offset) {
-    LargeBuffer Buffer = Copy(GroundTruth);
-    Move<ParamType>(&Buffer[Offset], &Buffer[0]);
-    for (size_t I = 0; I < kSize; ++I)
+  // Forward, we move the SIZE first bytes from offset 0 to SIZE.
+  for (size_t Offset = 0; Offset < SIZE; ++Offset) {
+    LargeBuffer Buffer = copy(GroundTruth);
+    move<ParamType>(&Buffer[Offset], &Buffer[0]);
+    for (size_t I = 0; I < SIZE; ++I)
       EXPECT_EQ(Buffer[I + Offset], GroundTruth[I]);
   }
-  // Backward, we move the kSize last bytes from offset 0 to kSize.
-  for (size_t Offset = 0; Offset < kSize; ++Offset) {
-    LargeBuffer Buffer = Copy(GroundTruth);
-    Move<ParamType>(&Buffer[Offset], &Buffer[kSize]);
-    for (size_t I = 0; I < kSize; ++I)
-      EXPECT_EQ(Buffer[I + Offset], GroundTruth[kSize + I]);
+  // Backward, we move the SIZE last bytes from offset 0 to SIZE.
+  for (size_t Offset = 0; Offset < SIZE; ++Offset) {
+    LargeBuffer Buffer = copy(GroundTruth);
+    move<ParamType>(&Buffer[Offset], &Buffer[SIZE]);
+    for (size_t I = 0; I < SIZE; ++I)
+      EXPECT_EQ(Buffer[I + Offset], GroundTruth[SIZE + I]);
   }
 }
 
 TYPED_TEST(LlvmLibcMemoryElements, Equals, FixedSizeTypes) {
   const auto buffer = GetRandomBuffer<ParamType>();
-  EXPECT_TRUE(Equals<ParamType>(buffer.data(), buffer.data()));
+  EXPECT_TRUE(equals<ParamType>(buffer.data(), buffer.data()));
 }
 
-TYPED_TEST(LlvmLibcMemoryElements, ThreeWayCompare, FixedSizeTypes) {
+TYPED_TEST(LlvmLibcMemoryElements, three_way_compare, FixedSizeTypes) {
   Buffer<ParamType> initial;
   for (auto &c : initial)
     c = 5;
 
   // Testing equality
-  EXPECT_EQ(ThreeWayCompare<ParamType>(initial.data(), initial.data()), 0);
+  EXPECT_EQ(three_way_compare<ParamType>(initial.data(), initial.data()), 0);
 
   // Testing all mismatching positions
-  for (size_t i = 0; i < ParamType::kSize; ++i) {
+  for (size_t i = 0; i < ParamType::SIZE; ++i) {
     auto copy = initial;
-    ++copy[i]; // Copy is now lexicographycally greated than initial
+    ++copy[i]; // copy is now lexicographycally greated than initial
     const auto *less = initial.data();
     const auto *greater = copy.data();
-    EXPECT_LT(ThreeWayCompare<ParamType>(less, greater), 0);
-    EXPECT_GT(ThreeWayCompare<ParamType>(greater, less), 0);
+    EXPECT_LT(three_way_compare<ParamType>(less, greater), 0);
+    EXPECT_GT(three_way_compare<ParamType>(greater, less), 0);
   }
 }
 
@@ -128,8 +128,8 @@ TYPED_TEST(LlvmLibcMemoryElements, Splat, FixedSizeTypes) {
   Buffer<ParamType> Dst;
   const cpp::Array<char, 3> values = {char(0x00), char(0x7F), char(0xFF)};
   for (char value : values) {
-    SplatSet<ParamType>(Dst.data(), value);
-    for (size_t i = 0; i < ParamType::kSize; ++i)
+    splat_set<ParamType>(Dst.data(), value);
+    for (size_t i = 0; i < ParamType::SIZE; ++i)
       EXPECT_EQ(Dst[i], value);
   }
 }

@@ -21,35 +21,35 @@ public:
 
   void testNaNArg(FuncPtr func) {
     EXPECT_FP_EQ(nan, func(nan, inf));
-    EXPECT_FP_EQ(nan, func(negInf, nan));
+    EXPECT_FP_EQ(nan, func(neg_inf, nan));
     EXPECT_FP_EQ(nan, func(nan, zero));
-    EXPECT_FP_EQ(nan, func(negZero, nan));
+    EXPECT_FP_EQ(nan, func(neg_zero, nan));
     EXPECT_FP_EQ(nan, func(nan, T(-1.2345)));
     EXPECT_FP_EQ(nan, func(T(1.2345), nan));
     EXPECT_FP_EQ(func(nan, nan), nan);
   }
 
   void testInfArg(FuncPtr func) {
-    EXPECT_FP_EQ(zero, func(negInf, inf));
+    EXPECT_FP_EQ(zero, func(neg_inf, inf));
     EXPECT_FP_EQ(inf, func(inf, zero));
-    EXPECT_FP_EQ(zero, func(negZero, inf));
+    EXPECT_FP_EQ(zero, func(neg_zero, inf));
     EXPECT_FP_EQ(inf, func(inf, T(1.2345)));
     EXPECT_FP_EQ(zero, func(T(-1.2345), inf));
   }
 
   void testNegInfArg(FuncPtr func) {
-    EXPECT_FP_EQ(inf, func(inf, negInf));
-    EXPECT_FP_EQ(zero, func(negInf, zero));
-    EXPECT_FP_EQ(inf, func(negZero, negInf));
-    EXPECT_FP_EQ(zero, func(negInf, T(-1.2345)));
-    EXPECT_FP_EQ(inf, func(T(1.2345), negInf));
+    EXPECT_FP_EQ(inf, func(inf, neg_inf));
+    EXPECT_FP_EQ(zero, func(neg_inf, zero));
+    EXPECT_FP_EQ(inf, func(neg_zero, neg_inf));
+    EXPECT_FP_EQ(zero, func(neg_inf, T(-1.2345)));
+    EXPECT_FP_EQ(inf, func(T(1.2345), neg_inf));
   }
 
   void testBothZero(FuncPtr func) {
     EXPECT_FP_EQ(zero, func(zero, zero));
-    EXPECT_FP_EQ(zero, func(zero, negZero));
-    EXPECT_FP_EQ(zero, func(negZero, zero));
-    EXPECT_FP_EQ(zero, func(negZero, negZero));
+    EXPECT_FP_EQ(zero, func(zero, neg_zero));
+    EXPECT_FP_EQ(zero, func(neg_zero, zero));
+    EXPECT_FP_EQ(zero, func(neg_zero, neg_zero));
   }
 
   void testInRange(FuncPtr func) {
@@ -74,9 +74,9 @@ public:
 private:
   // constexpr does not work on FPBits yet, so we cannot have these constants as
   // static.
-  const T nan = T(__llvm_libc::fputil::FPBits<T>::buildNaN(1));
+  const T nan = T(__llvm_libc::fputil::FPBits<T>::build_nan(1));
   const T inf = T(__llvm_libc::fputil::FPBits<T>::inf());
-  const T negInf = T(__llvm_libc::fputil::FPBits<T>::negInf());
+  const T neg_inf = T(__llvm_libc::fputil::FPBits<T>::neg_inf());
   const T zero = T(__llvm_libc::fputil::FPBits<T>::zero());
-  const T negZero = T(__llvm_libc::fputil::FPBits<T>::negZero());
+  const T neg_zero = T(__llvm_libc::fputil::FPBits<T>::neg_zero());
 };

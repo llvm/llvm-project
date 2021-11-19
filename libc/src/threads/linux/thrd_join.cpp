@@ -31,7 +31,7 @@ LLVM_LIBC_FUNCTION(int, thrd_join, (thrd_t * thread, int *retval)) {
     // We cannot do a FUTEX_WAIT_PRIVATE here as the kernel does a
     // FUTEX_WAKE and not a FUTEX_WAKE_PRIVATE.
     __llvm_libc::syscall(SYS_futex, clear_tid_address, FUTEX_WAIT,
-                         ThreadParams::ClearTIDValue, nullptr);
+                         ThreadParams::CLEAR_TID_VALUE, nullptr);
   }
 
   *retval = thread->__retval;

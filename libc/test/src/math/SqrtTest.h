@@ -19,7 +19,7 @@ template <typename T> class SqrtTest : public __llvm_libc::testing::Test {
   DECLARE_SPECIAL_CONSTANTS(T)
 
   static constexpr UIntType HiddenBit =
-      UIntType(1) << __llvm_libc::fputil::MantissaWidth<T>::value;
+      UIntType(1) << __llvm_libc::fputil::MantissaWidth<T>::VALUE;
 
 public:
   typedef T (*SqrtFunc)(T);
@@ -27,7 +27,7 @@ public:
   void testSpecialNumbers(SqrtFunc func) {
     ASSERT_FP_EQ(aNaN, func(aNaN));
     ASSERT_FP_EQ(inf, func(inf));
-    ASSERT_FP_EQ(aNaN, func(negInf));
+    ASSERT_FP_EQ(aNaN, func(neg_inf));
     ASSERT_FP_EQ(0.0, func(0.0));
     ASSERT_FP_EQ(-0.0, func(-0.0));
     ASSERT_FP_EQ(aNaN, func(T(-1.0)));
@@ -39,7 +39,7 @@ public:
   void testDenormalValues(SqrtFunc func) {
     for (UIntType mant = 1; mant < HiddenBit; mant <<= 1) {
       FPBits denormal(T(0.0));
-      denormal.setMantissa(mant);
+      denormal.set_mantissa(mant);
 
       ASSERT_MPFR_MATCH(mpfr::Operation::Sqrt, T(denormal), func(T(denormal)),
                         T(0.5));

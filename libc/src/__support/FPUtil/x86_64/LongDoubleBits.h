@@ -25,68 +25,70 @@ namespace fputil {
 template <unsigned Width> struct Padding;
 
 // i386 padding.
-template <> struct Padding<4> { static constexpr unsigned value = 16; };
+template <> struct Padding<4> { static constexpr unsigned VALUE = 16; };
 
 // x86_64 padding.
-template <> struct Padding<8> { static constexpr unsigned value = 48; };
+template <> struct Padding<8> { static constexpr unsigned VALUE = 48; };
 
 template <> union FPBits<long double> {
   using UIntType = __uint128_t;
 
-  static constexpr int exponentBias = 0x3FFF;
-  static constexpr int maxExponent = 0x7FFF;
-  static constexpr UIntType minSubnormal = UIntType(1);
+  static constexpr int EXPONENT_BIAS = 0x3FFF;
+  static constexpr int MAX_EXPONENT = 0x7FFF;
+  static constexpr UIntType MIN_SUBNORMAL = UIntType(1);
   // Subnormal numbers include the implicit bit in x86 long double formats.
-  static constexpr UIntType maxSubnormal =
-      (UIntType(1) << (MantissaWidth<long double>::value)) - 1;
-  static constexpr UIntType minNormal =
-      (UIntType(3) << MantissaWidth<long double>::value);
-  static constexpr UIntType maxNormal =
-      ((UIntType(maxExponent) - 1) << (MantissaWidth<long double>::value + 1)) |
-      (UIntType(1) << MantissaWidth<long double>::value) | maxSubnormal;
+  static constexpr UIntType MAX_SUBNORMAL =
+      (UIntType(1) << (MantissaWidth<long double>::VALUE)) - 1;
+  static constexpr UIntType MIN_NORMAL =
+      (UIntType(3) << MantissaWidth<long double>::VALUE);
+  static constexpr UIntType MAX_NORMAL =
+      ((UIntType(MAX_EXPONENT) - 1)
+       << (MantissaWidth<long double>::VALUE + 1)) |
+      (UIntType(1) << MantissaWidth<long double>::VALUE) | MAX_SUBNORMAL;
 
   using FloatProp = FloatProperties<long double>;
 
   UIntType bits;
 
-  void setMantissa(UIntType mantVal) {
-    mantVal &= (FloatProp::mantissaMask);
-    bits &= ~(FloatProp::mantissaMask);
+  void set_mantissa(UIntType mantVal) {
+    mantVal &= (FloatProp::MANTISSA_MASK);
+    bits &= ~(FloatProp::MANTISSA_MASK);
     bits |= mantVal;
   }
 
-  UIntType getMantissa() const { return bits & FloatProp::mantissaMask; }
+  UIntType get_mantissa() const { return bits & FloatProp::MANTISSA_MASK; }
 
-  void setUnbiasedExponent(UIntType expVal) {
-    expVal = (expVal << (FloatProp::bitWidth - 1 - FloatProp::exponentWidth)) &
-             FloatProp::exponentMask;
-    bits &= ~(FloatProp::exponentMask);
+  void set_unbiased_exponent(UIntType expVal) {
+    expVal =
+        (expVal << (FloatProp::BIT_WIDTH - 1 - FloatProp::EXPONENT_WIDTH)) &
+        FloatProp::EXPONENT_MASK;
+    bits &= ~(FloatProp::EXPONENT_MASK);
     bits |= expVal;
   }
 
-  uint16_t getUnbiasedExponent() const {
-    return uint16_t((bits & FloatProp::exponentMask) >>
-                    (FloatProp::bitWidth - 1 - FloatProp::exponentWidth));
+  uint16_t get_unbiased_exponent() const {
+    return uint16_t((bits & FloatProp::EXPONENT_MASK) >>
+                    (FloatProp::BIT_WIDTH - 1 - FloatProp::EXPONENT_WIDTH));
   }
 
-  void setImplicitBit(bool implicitVal) {
-    bits &= ~(UIntType(1) << FloatProp::mantissaWidth);
-    bits |= (UIntType(implicitVal) << FloatProp::mantissaWidth);
+  void set_implicit_bit(bool implicitVal) {
+    bits &= ~(UIntType(1) << FloatProp::MANTISSA_WIDTH);
+    bits |= (UIntType(implicitVal) << FloatProp::MANTISSA_WIDTH);
   }
 
-  bool getImplicitBit() const {
-    return ((bits & (UIntType(1) << FloatProp::mantissaWidth)) >>
-            FloatProp::mantissaWidth);
+  bool get_implicit_bit() const {
+    return ((bits & (UIntType(1) << FloatProp::MANTISSA_WIDTH)) >>
+            FloatProp::MANTISSA_WIDTH);
   }
 
-  void setSign(bool signVal) {
-    bits &= ~(FloatProp::signMask);
-    UIntType sign1 = UIntType(signVal) << (FloatProp::bitWidth - 1);
+  void set_sign(bool signVal) {
+    bits &= ~(FloatProp::SIGN_MASK);
+    UIntType sign1 = UIntType(signVal) << (FloatProp::BIT_WIDTH - 1);
     bits |= sign1;
   }
 
-  bool getSign() const {
-    return ((bits & FloatProp::signMask) >> (FloatProp::bitWidth - 1));
+  bool get_sign() const {
+    return ((bits & FloatProp::SIGN_MASK) >> (FloatProp::BIT_WIDTH - 1));
   }
 
   long double val;
@@ -109,73 +111,73 @@ template <> union FPBits<long double> {
 
   UIntType uintval() {
     // We zero the padding bits as they can contain garbage.
-    static constexpr UIntType mask =
+    static constexpr UIntType MASK =
         (UIntType(1) << (sizeof(long double) * 8 -
-                         Padding<sizeof(uintptr_t)>::value)) -
+                         Padding<sizeof(uintptr_t)>::VALUE)) -
         1;
-    return bits & mask;
+    return bits & MASK;
   }
 
-  int getExponent() const {
-    if (getUnbiasedExponent() == 0)
-      return int(1) - exponentBias;
-    return int(getUnbiasedExponent()) - exponentBias;
+  int get_exponent() const {
+    if (get_unbiased_exponent() == 0)
+      return int(1) - EXPONENT_BIAS;
+    return int(get_unbiased_exponent()) - EXPONENT_BIAS;
   }
 
-  bool isZero() const {
-    return getUnbiasedExponent() == 0 && getMantissa() == 0 &&
-           getImplicitBit() == 0;
+  bool is_zero() const {
+    return get_unbiased_exponent() == 0 && get_mantissa() == 0 &&
+           get_implicit_bit() == 0;
   }
 
-  bool isInf() const {
-    return getUnbiasedExponent() == maxExponent && getMantissa() == 0 &&
-           getImplicitBit() == 1;
+  bool is_inf() const {
+    return get_unbiased_exponent() == MAX_EXPONENT && get_mantissa() == 0 &&
+           get_implicit_bit() == 1;
   }
 
-  bool isNaN() const {
-    if (getUnbiasedExponent() == maxExponent) {
-      return (getImplicitBit() == 0) || getMantissa() != 0;
-    } else if (getUnbiasedExponent() != 0) {
-      return getImplicitBit() == 0;
+  bool is_nan() const {
+    if (get_unbiased_exponent() == MAX_EXPONENT) {
+      return (get_implicit_bit() == 0) || get_mantissa() != 0;
+    } else if (get_unbiased_exponent() != 0) {
+      return get_implicit_bit() == 0;
     }
     return false;
   }
 
-  bool isInfOrNaN() const {
-    return (getUnbiasedExponent() == maxExponent) ||
-           (getUnbiasedExponent() != 0 && getImplicitBit() == 0);
+  bool is_inf_or_nan() const {
+    return (get_unbiased_exponent() == MAX_EXPONENT) ||
+           (get_unbiased_exponent() != 0 && get_implicit_bit() == 0);
   }
 
   // Methods below this are used by tests.
 
   static FPBits<long double> zero() { return FPBits<long double>(0.0l); }
 
-  static FPBits<long double> negZero() {
+  static FPBits<long double> neg_zero() {
     FPBits<long double> bits(0.0l);
-    bits.setSign(1);
+    bits.set_sign(1);
     return bits;
   }
 
   static FPBits<long double> inf() {
     FPBits<long double> bits(0.0l);
-    bits.setUnbiasedExponent(maxExponent);
-    bits.setImplicitBit(1);
+    bits.set_unbiased_exponent(MAX_EXPONENT);
+    bits.set_implicit_bit(1);
     return bits;
   }
 
-  static FPBits<long double> negInf() {
+  static FPBits<long double> neg_inf() {
     FPBits<long double> bits(0.0l);
-    bits.setUnbiasedExponent(maxExponent);
-    bits.setImplicitBit(1);
-    bits.setSign(1);
+    bits.set_unbiased_exponent(MAX_EXPONENT);
+    bits.set_implicit_bit(1);
+    bits.set_sign(1);
     return bits;
   }
 
-  static long double buildNaN(UIntType v) {
+  static long double build_nan(UIntType v) {
     FPBits<long double> bits(0.0l);
-    bits.setUnbiasedExponent(maxExponent);
-    bits.setImplicitBit(1);
-    bits.setMantissa(v);
+    bits.set_unbiased_exponent(MAX_EXPONENT);
+    bits.set_implicit_bit(1);
+    bits.set_mantissa(v);
     return bits;
   }
 };

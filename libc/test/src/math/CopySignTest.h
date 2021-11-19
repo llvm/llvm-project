@@ -25,11 +25,11 @@ public:
     EXPECT_FP_EQ(aNaN, func(aNaN, -1.0));
     EXPECT_FP_EQ(aNaN, func(aNaN, 1.0));
 
-    EXPECT_FP_EQ(negInf, func(inf, -1.0));
-    EXPECT_FP_EQ(inf, func(negInf, 1.0));
+    EXPECT_FP_EQ(neg_inf, func(inf, -1.0));
+    EXPECT_FP_EQ(inf, func(neg_inf, 1.0));
 
-    EXPECT_FP_EQ(negZero, func(zero, -1.0));
-    EXPECT_FP_EQ(zero, func(negZero, 1.0));
+    EXPECT_FP_EQ(neg_zero, func(zero, -1.0));
+    EXPECT_FP_EQ(zero, func(neg_zero, 1.0));
   }
 
   void testRange(CopySignFunc func) {
