@@ -708,10 +708,10 @@ define amdgpu_kernel void @simplify_i24_crash(<2 x i32> addrspace(1)* %out, i32 
 ; SI-NEXT:    s_load_dword s2, s[0:1], 0xb
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
 ; SI-NEXT:    s_cmp_lg_u32 s2, 0
-; SI-NEXT:    s_cbranch_scc0 BB8_2
+; SI-NEXT:    s_cbranch_scc0 .LBB8_2
 ; SI-NEXT:  ; %bb.1: ; %bb7
 ; SI-NEXT:    s_endpgm
-; SI-NEXT:  BB8_2: ; %bb11
+; SI-NEXT:  .LBB8_2: ; %bb11
 ; SI-NEXT:    s_load_dword s2, s[0:1], 0xd
 ; SI-NEXT:    s_load_dword s4, s[0:1], 0xf
 ; SI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
@@ -731,10 +731,10 @@ define amdgpu_kernel void @simplify_i24_crash(<2 x i32> addrspace(1)* %out, i32 
 ; VI-NEXT:    s_load_dword s2, s[0:1], 0x2c
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    s_cmp_lg_u32 s2, 0
-; VI-NEXT:    s_cbranch_scc0 BB8_2
+; VI-NEXT:    s_cbranch_scc0 .LBB8_2
 ; VI-NEXT:  ; %bb.1: ; %bb7
 ; VI-NEXT:    s_endpgm
-; VI-NEXT:  BB8_2: ; %bb11
+; VI-NEXT:  .LBB8_2: ; %bb11
 ; VI-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x24
 ; VI-NEXT:    s_load_dword s2, s[0:1], 0x34
 ; VI-NEXT:    s_load_dword s0, s[0:1], 0x3c
@@ -754,10 +754,10 @@ define amdgpu_kernel void @simplify_i24_crash(<2 x i32> addrspace(1)* %out, i32 
 ; GFX9-NEXT:    s_load_dword s2, s[0:1], 0x2c
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    s_cmp_lg_u32 s2, 0
-; GFX9-NEXT:    s_cbranch_scc0 BB8_2
+; GFX9-NEXT:    s_cbranch_scc0 .LBB8_2
 ; GFX9-NEXT:  ; %bb.1: ; %bb7
 ; GFX9-NEXT:    s_endpgm
-; GFX9-NEXT:  BB8_2: ; %bb11
+; GFX9-NEXT:  .LBB8_2: ; %bb11
 ; GFX9-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x24
 ; GFX9-NEXT:    s_load_dword s2, s[0:1], 0x34
 ; GFX9-NEXT:    s_load_dword s3, s[0:1], 0x3c

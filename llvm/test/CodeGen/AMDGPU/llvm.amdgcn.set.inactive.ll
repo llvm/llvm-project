@@ -58,19 +58,19 @@ define amdgpu_kernel void @set_inactive_scc(i32 addrspace(1)* %out, i32 %in, <4 
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    s_cmp_lg_u32 s0, 56
 ; GCN-NEXT:    s_mov_b64 s[0:1], -1
-; GCN-NEXT:    s_cbranch_scc1 BB2_3
+; GCN-NEXT:    s_cbranch_scc1 .LBB2_3
 ; GCN-NEXT:  ; %bb.1: ; %Flow
 ; GCN-NEXT:    s_andn2_b64 vcc, exec, s[0:1]
-; GCN-NEXT:    s_cbranch_vccz BB2_4
-; GCN-NEXT:  BB2_2: ; %.exit
+; GCN-NEXT:    s_cbranch_vccz .LBB2_4
+; GCN-NEXT:  .LBB2_2: ; %.exit
 ; GCN-NEXT:    s_endpgm
-; GCN-NEXT:  BB2_3: ; %.one
+; GCN-NEXT:  .LBB2_3: ; %.one
 ; GCN-NEXT:    v_add_u32_e32 v1, vcc, 1, v0
 ; GCN-NEXT:    s_mov_b32 s7, 0xf000
 ; GCN-NEXT:    s_mov_b32 s6, -1
 ; GCN-NEXT:    buffer_store_dword v1, off, s[4:7], 0
-; GCN-NEXT:    s_cbranch_execnz BB2_2
-; GCN-NEXT:  BB2_4: ; %.zero
+; GCN-NEXT:    s_cbranch_execnz .LBB2_2
+; GCN-NEXT:  .LBB2_4: ; %.zero
 ; GCN-NEXT:    s_mov_b32 s7, 0xf000
 ; GCN-NEXT:    s_mov_b32 s6, -1
 ; GCN-NEXT:    buffer_store_dword v0, off, s[4:7], 0

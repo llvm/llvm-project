@@ -30,7 +30,7 @@
 ; GCN: s_cbranch_scc{{[0-1]}}
 
 ; GCN: s_bfe_u32 s{{[0-9]+}}, s{{[0-9]+}}, 0x70008
-; GCN: BB0_3:
+; GCN: .LBB0_3:
 ; GCN: s_bfe_u32 s{{[0-9]+}}, s{{[0-9]+}}, 0x80008
 
 ; GCN: buffer_store_dword
@@ -115,7 +115,7 @@ ret:
 ; OPT: store
 ; OPT: ret
 
-; For GFX8: since i16 is legal type, we cannot sink lshr into BBs.
+; For GFX8: since i16 is legal type, we cannot sink lshr into .LBBs.
 
 ; GCN-LABEL: {{^}}sink_ubfe_i16:
 ; GCN-NOT: lshr
@@ -126,7 +126,7 @@ ret:
 ; SI: s_bfe_u32 s{{[0-9]+}}, s{{[0-9]+}}, 0x70004
 ; VI: v_mov_b32_e32 v{{[0-9]+}}, 0x7f
 
-; GCN: BB2_3:
+; GCN: .LBB2_3:
 ; SI: s_bfe_u32 s{{[0-9]+}}, s{{[0-9]+}}, 0x80004
 ; VI: v_mov_b32_e32 v{{[0-9]+}}, 0xff
 
@@ -175,11 +175,11 @@ ret:
 
 ; GCN-LABEL: {{^}}sink_ubfe_i64_span_midpoint:
 
-; GCN: s_cbranch_scc{{[0-1]}} BB3_2
+; GCN: s_cbranch_scc{{[0-1]}} .LBB3_2
 ; GCN: v_alignbit_b32 v[[LO:[0-9]+]], s{{[0-9]+}}, v{{[0-9]+}}, 30
 ; GCN: v_and_b32_e32 v{{[0-9]+}}, 0x7f, v[[LO]]
 
-; GCN: BB3_3:
+; GCN: .LBB3_3:
 ; GCN: v_and_b32_e32 v{{[0-9]+}}, 0xff, v[[LO]]
 
 ; GCN: buffer_store_dwordx2
@@ -223,11 +223,11 @@ ret:
 
 ; GCN-LABEL: {{^}}sink_ubfe_i64_low32:
 
-; GCN: s_cbranch_scc{{[0-1]}} BB4_2
+; GCN: s_cbranch_scc{{[0-1]}} .LBB4_2
 
 ; GCN: s_bfe_u32 s{{[0-9]+}}, s{{[0-9]+}}, 0x7000f
 
-; GCN: BB4_3:
+; GCN: .LBB4_3:
 ; GCN: s_bfe_u32 s{{[0-9]+}}, s{{[0-9]+}}, 0x8000f
 
 ; GCN: buffer_store_dwordx2
@@ -270,10 +270,10 @@ ret:
 ; OPT: ret
 
 ; GCN-LABEL: {{^}}sink_ubfe_i64_high32:
-; GCN: s_cbranch_scc{{[0-1]}} BB5_2
+; GCN: s_cbranch_scc{{[0-1]}} .LBB5_2
 ; GCN: s_bfe_u32 s{{[0-9]+}}, s{{[0-9]+}}, 0x70003
 
-; GCN: BB5_3:
+; GCN: .LBB5_3:
 ; GCN: s_bfe_u32 s{{[0-9]+}}, s{{[0-9]+}}, 0x80003
 
 ; GCN: buffer_store_dwordx2

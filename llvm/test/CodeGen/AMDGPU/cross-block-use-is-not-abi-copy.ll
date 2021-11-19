@@ -178,19 +178,19 @@ define amdgpu_kernel void @v3i16_registers(i1 %cond) #0 {
 ; GCN-NEXT:    s_cselect_b64 s[4:5], -1, 0
 ; GCN-NEXT:    s_and_b64 vcc, exec, s[4:5]
 ; GCN-NEXT:    s_mov_b32 s32, 0
-; GCN-NEXT:    s_cbranch_vccnz BB4_2
+; GCN-NEXT:    s_cbranch_vccnz .LBB4_2
 ; GCN-NEXT:  ; %bb.1: ; %if.else
 ; GCN-NEXT:    s_getpc_b64 s[4:5]
 ; GCN-NEXT:    s_add_u32 s4, s4, func_v3i16@rel32@lo+4
 ; GCN-NEXT:    s_addc_u32 s5, s5, func_v3i16@rel32@hi+12
 ; GCN-NEXT:    s_swappc_b64 s[30:31], s[4:5]
-; GCN-NEXT:    s_branch BB4_3
-; GCN-NEXT:  BB4_2:
+; GCN-NEXT:    s_branch .LBB4_3
+; GCN-NEXT:  .LBB4_2:
 ; GCN-NEXT:    s_mov_b32 s4, 0
 ; GCN-NEXT:    s_mov_b32 s5, s4
 ; GCN-NEXT:    v_mov_b32_e32 v0, s4
 ; GCN-NEXT:    v_mov_b32_e32 v1, s5
-; GCN-NEXT:  BB4_3: ; %if.end
+; GCN-NEXT:  .LBB4_3: ; %if.end
 ; GCN-NEXT:    global_store_short v[0:1], v1, off
 ; GCN-NEXT:    global_store_dword v[0:1], v0, off
 ; GCN-NEXT:    s_endpgm
@@ -223,19 +223,19 @@ define amdgpu_kernel void @v3f16_registers(i1 %cond) #0 {
 ; GCN-NEXT:    s_cselect_b64 s[4:5], -1, 0
 ; GCN-NEXT:    s_and_b64 vcc, exec, s[4:5]
 ; GCN-NEXT:    s_mov_b32 s32, 0
-; GCN-NEXT:    s_cbranch_vccnz BB5_2
+; GCN-NEXT:    s_cbranch_vccnz .LBB5_2
 ; GCN-NEXT:  ; %bb.1: ; %if.else
 ; GCN-NEXT:    s_getpc_b64 s[4:5]
 ; GCN-NEXT:    s_add_u32 s4, s4, func_v3f16@rel32@lo+4
 ; GCN-NEXT:    s_addc_u32 s5, s5, func_v3f16@rel32@hi+12
 ; GCN-NEXT:    s_swappc_b64 s[30:31], s[4:5]
-; GCN-NEXT:    s_branch BB5_3
-; GCN-NEXT:  BB5_2:
+; GCN-NEXT:    s_branch .LBB5_3
+; GCN-NEXT:  .LBB5_2:
 ; GCN-NEXT:    s_mov_b32 s4, 0
 ; GCN-NEXT:    s_mov_b32 s5, s4
 ; GCN-NEXT:    v_mov_b32_e32 v0, s4
 ; GCN-NEXT:    v_mov_b32_e32 v1, s5
-; GCN-NEXT:  BB5_3: ; %if.end
+; GCN-NEXT:  .LBB5_3: ; %if.end
 ; GCN-NEXT:    global_store_short v[0:1], v1, off
 ; GCN-NEXT:    global_store_dword v[0:1], v0, off
 ; GCN-NEXT:    s_endpgm

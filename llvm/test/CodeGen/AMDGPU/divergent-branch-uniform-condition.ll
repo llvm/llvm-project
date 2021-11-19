@@ -26,13 +26,13 @@ define amdgpu_ps void @main(i32 %0, float %1) {
 ; ISA-NEXT:    s_mov_b64 s[0:1], 0
 ; ISA-NEXT:    ; implicit-def: $sgpr4_sgpr5
 ; ISA-NEXT:    ; implicit-def: $sgpr2_sgpr3
-; ISA-NEXT:    s_branch BB0_3
-; ISA-NEXT:  BB0_1: ; %Flow1
+; ISA-NEXT:    s_branch .LBB0_3
+; ISA-NEXT:  .LBB0_1: ; %Flow1
 ; ISA-NEXT:    ; in Loop: Header=BB0_3 Depth=1
 ; ISA-NEXT:    s_or_b64 exec, exec, s[6:7]
 ; ISA-NEXT:    s_add_i32 s8, s8, 1
 ; ISA-NEXT:    s_mov_b64 s[6:7], 0
-; ISA-NEXT:  BB0_2: ; %Flow
+; ISA-NEXT:  .LBB0_2: ; %Flow
 ; ISA-NEXT:    ; in Loop: Header=BB0_3 Depth=1
 ; ISA-NEXT:    s_and_b64 s[10:11], exec, s[4:5]
 ; ISA-NEXT:    s_or_b64 s[0:1], s[10:11], s[0:1]
@@ -40,23 +40,23 @@ define amdgpu_ps void @main(i32 %0, float %1) {
 ; ISA-NEXT:    s_and_b64 s[6:7], s[6:7], exec
 ; ISA-NEXT:    s_or_b64 s[2:3], s[2:3], s[6:7]
 ; ISA-NEXT:    s_andn2_b64 exec, exec, s[0:1]
-; ISA-NEXT:    s_cbranch_execz BB0_6
-; ISA-NEXT:  BB0_3: ; %loop
+; ISA-NEXT:    s_cbranch_execz .LBB0_6
+; ISA-NEXT:  .LBB0_3: ; %loop
 ; ISA-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; ISA-NEXT:    s_or_b64 s[4:5], s[4:5], exec
 ; ISA-NEXT:    s_cmp_lt_u32 s8, 32
 ; ISA-NEXT:    s_mov_b64 s[6:7], -1
-; ISA-NEXT:    s_cbranch_scc0 BB0_2
+; ISA-NEXT:    s_cbranch_scc0 .LBB0_2
 ; ISA-NEXT:  ; %bb.4: ; %endif1
 ; ISA-NEXT:    ; in Loop: Header=BB0_3 Depth=1
 ; ISA-NEXT:    s_mov_b64 s[4:5], -1
 ; ISA-NEXT:    s_and_saveexec_b64 s[6:7], vcc
-; ISA-NEXT:    s_cbranch_execz BB0_1
+; ISA-NEXT:    s_cbranch_execz .LBB0_1
 ; ISA-NEXT:  ; %bb.5: ; %endif2
 ; ISA-NEXT:    ; in Loop: Header=BB0_3 Depth=1
 ; ISA-NEXT:    s_xor_b64 s[4:5], exec, -1
-; ISA-NEXT:    s_branch BB0_1
-; ISA-NEXT:  BB0_6: ; %Flow2
+; ISA-NEXT:    s_branch .LBB0_1
+; ISA-NEXT:  .LBB0_6: ; %Flow2
 ; ISA-NEXT:    s_or_b64 exec, exec, s[0:1]
 ; ISA-NEXT:    v_mov_b32_e32 v1, 0
 ; ISA-NEXT:    s_and_saveexec_b64 s[0:1], s[2:3]

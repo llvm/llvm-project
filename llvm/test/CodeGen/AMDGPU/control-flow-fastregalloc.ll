@@ -33,7 +33,7 @@
 ; GCN: s_and_b64 s{{\[}}[[ANDEXEC_LO:[0-9]+]]:[[ANDEXEC_HI:[0-9]+]]{{\]}}, s{{\[}}[[SAVEEXEC_LO]]:[[SAVEEXEC_HI]]{{\]}}, [[CMP0]]
 ; GCN: s_mov_b64 exec, s{{\[}}[[ANDEXEC_LO]]:[[ANDEXEC_HI]]{{\]}}
 
-; GCN: s_cbranch_execz [[ENDIF:BB[0-9]+_[0-9]+]]
+; GCN: s_cbranch_execz [[ENDIF:.LBB[0-9]+_[0-9]+]]
 
 ; GCN: ; %bb.{{[0-9]+}}: ; %if
 ; GCN: buffer_load_dword [[RELOAD_LOAD0:v[0-9]+]], off, s[0:3], 0 offset:[[LOAD0_OFFSET]] ; 4-byte Folded Reload
@@ -105,10 +105,10 @@ endif:
 
 ; GCN: s_and_b64 s{{\[}}[[ANDEXEC_LO:[0-9]+]]:[[ANDEXEC_HI:[0-9]+]]{{\]}}, s{{\[}}[[SAVEEXEC_LO:[0-9]+]]:[[SAVEEXEC_HI:[0-9]+]]{{\]}}, [[CMP0]]
 ; GCN: s_mov_b64 exec, s{{\[}}[[ANDEXEC_LO]]:[[ANDEXEC_HI]]{{\]}}
-; GCN-NEXT: s_cbranch_execz [[END:BB[0-9]+_[0-9]+]]
+; GCN-NEXT: s_cbranch_execz [[END:.LBB[0-9]+_[0-9]+]]
 
 
-; GCN: [[LOOP:BB[0-9]+_[0-9]+]]:
+; GCN: [[LOOP:.LBB[0-9]+_[0-9]+]]:
 ; GCN: buffer_load_dword v[[VAL_LOOP_RELOAD:[0-9]+]], off, s[0:3], 0 offset:[[LOAD0_OFFSET]] ; 4-byte Folded Reload
 ; GCN: v_subrev_i32_e32 [[VAL_LOOP:v[0-9]+]], vcc, v{{[0-9]+}}, v[[VAL_LOOP_RELOAD]]
 ; GCN: s_cmp_lg_u32
@@ -183,8 +183,8 @@ end:
 ; GCN: s_mov_b64 exec, [[CMP0]]
 
 ; FIXME: It makes no sense to put this skip here
-; GCN: s_cbranch_execz [[FLOW:BB[0-9]+_[0-9]+]]
-; GCN-NEXT: s_branch [[ELSE:BB[0-9]+_[0-9]+]]
+; GCN: s_cbranch_execz [[FLOW:.LBB[0-9]+_[0-9]+]]
+; GCN-NEXT: s_branch [[ELSE:.LBB[0-9]+_[0-9]+]]
 
 ; GCN: [[FLOW]]: ; %Flow
 ; VGPR: v_readlane_b32 s[[FLOW_S_RELOAD_SAVEEXEC_LO:[0-9]+]], [[SPILL_VGPR]], [[SAVEEXEC_LO_LANE]]
@@ -213,7 +213,7 @@ end:
 ; VMEM: buffer_store_dword v[[FLOW_V_SAVEEXEC]], off, s[0:3], 0 offset:[[FLOW_SAVEEXEC_OFFSET:[0-9]+]] ; 4-byte Folded Spill
 
 ; GCN: s_xor_b64 exec, exec, s{{\[}}[[FLOW_AND_EXEC_LO]]:[[FLOW_AND_EXEC_HI]]{{\]}}
-; GCN-NEXT: s_cbranch_execz [[ENDIF:BB[0-9]+_[0-9]+]]
+; GCN-NEXT: s_cbranch_execz [[ENDIF:.LBB[0-9]+_[0-9]+]]
 
 
 ; GCN: ; %bb.{{[0-9]+}}: ; %if
@@ -221,7 +221,7 @@ end:
 ; GCN: ds_read_b32
 ; GCN: v_add_i32_e32 [[ADD:v[0-9]+]], vcc, v{{[0-9]+}}, v[[LOAD0_RELOAD]]
 ; GCN: buffer_store_dword [[ADD]], off, s[0:3], 0 offset:[[RESULT_OFFSET]] ; 4-byte Folded Spill
-; GCN-NEXT: s_branch [[ENDIF:BB[0-9]+_[0-9]+]]
+; GCN-NEXT: s_branch [[ENDIF:.LBB[0-9]+_[0-9]+]]
 
 ; GCN: [[ELSE]]: ; %else
 ; GCN: buffer_load_dword v[[LOAD0_RELOAD:[0-9]+]], off, s[0:3], 0 offset:[[LOAD0_OFFSET]] ; 4-byte Folded Reload

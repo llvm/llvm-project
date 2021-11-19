@@ -12,7 +12,7 @@ define amdgpu_cs void @memset_p1i8(i8 addrspace(1)* %dst, i8 %val) {
 ; LOOP-NEXT:    s_mov_b32 s3, 0xf000
 ; LOOP-NEXT:    v_mov_b32_e32 v4, s1
 ; LOOP-NEXT:    v_mov_b32_e32 v3, s0
-; LOOP-NEXT:  BB0_1: ; %loadstoreloop
+; LOOP-NEXT:  .LBB0_1: ; %loadstoreloop
 ; LOOP-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; LOOP-NEXT:    v_add_i32_e32 v5, vcc, v0, v3
 ; LOOP-NEXT:    v_addc_u32_e32 v6, vcc, v1, v4, vcc
@@ -20,7 +20,7 @@ define amdgpu_cs void @memset_p1i8(i8 addrspace(1)* %dst, i8 %val) {
 ; LOOP-NEXT:    v_addc_u32_e32 v4, vcc, 0, v4, vcc
 ; LOOP-NEXT:    v_cmp_gt_u32_e32 vcc, 4, v3
 ; LOOP-NEXT:    buffer_store_byte v2, v[5:6], s[0:3], 0 addr64
-; LOOP-NEXT:    s_cbranch_vccnz BB0_1
+; LOOP-NEXT:    s_cbranch_vccnz .LBB0_1
 ; LOOP-NEXT:  ; %bb.2: ; %split
 ; LOOP-NEXT:    s_endpgm
 ;

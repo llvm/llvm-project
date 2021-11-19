@@ -315,7 +315,7 @@ ENDIF69:                                          ; preds = %LOOP68
 ; CHECK-LABEL:{{^}}sample_rsrc
 
 ; CHECK: s_cmp_eq_u32
-; CHECK: s_cbranch_scc0 [[END:BB[0-9]+_[0-9]+]]
+; CHECK: s_cbranch_scc0 [[END:.LBB[0-9]+_[0-9]+]]
 
 ; CHECK: v_add_{{[iu]}}32_e32 v[[ADD:[0-9]+]], vcc, 1, v{{[0-9]+}}
 

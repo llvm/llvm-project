@@ -5,7 +5,7 @@ declare <4 x float> @llvm.amdgcn.image.gather4.2d.v4f32.f32(i32, float, float, <
 
 ; GCN-LABEL: {{^}}water_loop_rsrc:
 
-; GCN: [[RSRC_LOOP:[a-zA-Z0-9_]+]]:                                  ; =>This Inner Loop Header: Depth=1
+; GCN: [[RSRC_LOOP:.L[a-zA-Z0-9_]+]]:                                  ; =>This Inner Loop Header: Depth=1
 ; GCN-NEXT: v_readfirstlane_b32 s[[SREG0:[0-9]+]], v[[VREG0:[0-9]+]]
 ; GCN-NEXT: v_readfirstlane_b32 s[[SREG1:[0-9]+]], v[[VREG1:[0-9]+]]
 ; GCN-NEXT: v_readfirstlane_b32 s[[SREG2:[0-9]+]], v[[VREG2:[0-9]+]]
@@ -37,7 +37,7 @@ main_body:
 
 ; GCN-LABEL: {{^}}water_loop_samp:
 
-; GCN: [[SAMP_LOOP:[a-zA-Z0-9_]+]]:                                  ; =>This Inner Loop Header: Depth=1
+; GCN: [[SAMP_LOOP:.L[a-zA-Z0-9_]+]]:                                  ; =>This Inner Loop Header: Depth=1
 ; GCN-NEXT: v_readfirstlane_b32 s[[SREG0:[0-9]+]], v[[VREG0:[0-9]+]]
 ; GCN-NEXT: v_readfirstlane_b32 s[[SREG1:[0-9]+]], v[[VREG1:[0-9]+]]
 ; GCN-NEXT: v_readfirstlane_b32 s[[SREG2:[0-9]+]], v[[VREG2:[0-9]+]]

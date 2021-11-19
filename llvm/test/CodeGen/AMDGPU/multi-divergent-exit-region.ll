@@ -362,7 +362,7 @@ exit1:                                     ; preds = %LeafBlock, %LeafBlock1
 
 ; GCN-LABEL: {{^}}uniform_branch_to_multi_divergent_region_exit_ret_ret_return_value:
 ; GCN: s_cmp_gt_i32 s0, 1
-; GCN: s_cbranch_scc0 [[FLOW:BB[0-9]+_[0-9]+]]
+; GCN: s_cbranch_scc0 [[FLOW:.LBB[0-9]+_[0-9]+]]
 
 ; GCN: v_cmp_ne_u32_e32 vcc, 7, v0
 
@@ -373,7 +373,7 @@ exit1:                                     ; preds = %LeafBlock, %LeafBlock1
 ; GCN-NOT: s_and_b64 exec, exec
 ; GCN: v_mov_b32_e32 v0, 1.0
 
-; GCN: {{^BB[0-9]+_[0-9]+}}: ; %UnifiedReturnBlock
+; GCN: {{^.LBB[0-9]+_[0-9]+}}: ; %UnifiedReturnBlock
 ; GCN-NEXT: s_or_b64 exec, exec
 ; GCN-NEXT: s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GCN-NEXT: ; return

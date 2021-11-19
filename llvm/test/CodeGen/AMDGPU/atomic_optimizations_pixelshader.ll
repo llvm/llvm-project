@@ -17,7 +17,7 @@ define amdgpu_ps void @add_i32_constant(<4 x i32> inreg %out, <4 x i32> inreg %i
 ; GFX7-NEXT:    s_mov_b64 s[10:11], exec
 ; GFX7-NEXT:    ; implicit-def: $vgpr0
 ; GFX7-NEXT:    s_and_saveexec_b64 s[8:9], s[10:11]
-; GFX7-NEXT:    s_cbranch_execz BB0_4
+; GFX7-NEXT:    s_cbranch_execz .LBB0_4
 ; GFX7-NEXT:  ; %bb.1:
 ; GFX7-NEXT:    s_mov_b64 s[12:13], exec
 ; GFX7-NEXT:    v_mbcnt_lo_u32_b32_e64 v0, s12, 0
@@ -25,25 +25,25 @@ define amdgpu_ps void @add_i32_constant(<4 x i32> inreg %out, <4 x i32> inreg %i
 ; GFX7-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
 ; GFX7-NEXT:    ; implicit-def: $vgpr1
 ; GFX7-NEXT:    s_and_saveexec_b64 s[10:11], vcc
-; GFX7-NEXT:    s_cbranch_execz BB0_3
+; GFX7-NEXT:    s_cbranch_execz .LBB0_3
 ; GFX7-NEXT:  ; %bb.2:
 ; GFX7-NEXT:    s_bcnt1_i32_b64 s12, s[12:13]
 ; GFX7-NEXT:    s_mul_i32 s12, s12, 5
 ; GFX7-NEXT:    v_mov_b32_e32 v1, s12
 ; GFX7-NEXT:    buffer_atomic_add v1, off, s[4:7], 0 glc
-; GFX7-NEXT:  BB0_3:
+; GFX7-NEXT:  .LBB0_3:
 ; GFX7-NEXT:    s_or_b64 exec, exec, s[10:11]
 ; GFX7-NEXT:    s_waitcnt vmcnt(0)
 ; GFX7-NEXT:    v_readfirstlane_b32 s4, v1
 ; GFX7-NEXT:    v_mad_u32_u24 v0, v0, 5, s4
-; GFX7-NEXT:  BB0_4: ; %Flow
+; GFX7-NEXT:  .LBB0_4: ; %Flow
 ; GFX7-NEXT:    s_or_b64 exec, exec, s[8:9]
 ; GFX7-NEXT:    s_wqm_b64 s[4:5], -1
 ; GFX7-NEXT:    s_andn2_b64 vcc, exec, s[4:5]
-; GFX7-NEXT:    s_cbranch_vccnz BB0_6
+; GFX7-NEXT:    s_cbranch_vccnz .LBB0_6
 ; GFX7-NEXT:  ; %bb.5: ; %if
 ; GFX7-NEXT:    buffer_store_dword v0, off, s[0:3], 0
-; GFX7-NEXT:  BB0_6: ; %UnifiedReturnBlock
+; GFX7-NEXT:  .LBB0_6: ; %UnifiedReturnBlock
 ; GFX7-NEXT:    s_endpgm
 ;
 ; GFX89-LABEL: add_i32_constant:
@@ -51,7 +51,7 @@ define amdgpu_ps void @add_i32_constant(<4 x i32> inreg %out, <4 x i32> inreg %i
 ; GFX89-NEXT:    s_mov_b64 s[10:11], exec
 ; GFX89-NEXT:    ; implicit-def: $vgpr0
 ; GFX89-NEXT:    s_and_saveexec_b64 s[8:9], s[10:11]
-; GFX89-NEXT:    s_cbranch_execz BB0_4
+; GFX89-NEXT:    s_cbranch_execz .LBB0_4
 ; GFX89-NEXT:  ; %bb.1:
 ; GFX89-NEXT:    s_mov_b64 s[12:13], exec
 ; GFX89-NEXT:    v_mbcnt_lo_u32_b32 v0, s12, 0
@@ -59,25 +59,25 @@ define amdgpu_ps void @add_i32_constant(<4 x i32> inreg %out, <4 x i32> inreg %i
 ; GFX89-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
 ; GFX89-NEXT:    ; implicit-def: $vgpr1
 ; GFX89-NEXT:    s_and_saveexec_b64 s[10:11], vcc
-; GFX89-NEXT:    s_cbranch_execz BB0_3
+; GFX89-NEXT:    s_cbranch_execz .LBB0_3
 ; GFX89-NEXT:  ; %bb.2:
 ; GFX89-NEXT:    s_bcnt1_i32_b64 s12, s[12:13]
 ; GFX89-NEXT:    s_mul_i32 s12, s12, 5
 ; GFX89-NEXT:    v_mov_b32_e32 v1, s12
 ; GFX89-NEXT:    buffer_atomic_add v1, off, s[4:7], 0 glc
-; GFX89-NEXT:  BB0_3:
+; GFX89-NEXT:  .LBB0_3:
 ; GFX89-NEXT:    s_or_b64 exec, exec, s[10:11]
 ; GFX89-NEXT:    s_waitcnt vmcnt(0)
 ; GFX89-NEXT:    v_readfirstlane_b32 s4, v1
 ; GFX89-NEXT:    v_mad_u32_u24 v0, v0, 5, s4
-; GFX89-NEXT:  BB0_4: ; %Flow
+; GFX89-NEXT:  .LBB0_4: ; %Flow
 ; GFX89-NEXT:    s_or_b64 exec, exec, s[8:9]
 ; GFX89-NEXT:    s_wqm_b64 s[4:5], -1
 ; GFX89-NEXT:    s_andn2_b64 vcc, exec, s[4:5]
-; GFX89-NEXT:    s_cbranch_vccnz BB0_6
+; GFX89-NEXT:    s_cbranch_vccnz .LBB0_6
 ; GFX89-NEXT:  ; %bb.5: ; %if
 ; GFX89-NEXT:    buffer_store_dword v0, off, s[0:3], 0
-; GFX89-NEXT:  BB0_6: ; %UnifiedReturnBlock
+; GFX89-NEXT:  .LBB0_6: ; %UnifiedReturnBlock
 ; GFX89-NEXT:    s_endpgm
 ;
 ; GFX1064-LABEL: add_i32_constant:
@@ -85,7 +85,7 @@ define amdgpu_ps void @add_i32_constant(<4 x i32> inreg %out, <4 x i32> inreg %i
 ; GFX1064-NEXT:    s_mov_b64 s[10:11], exec
 ; GFX1064-NEXT:    ; implicit-def: $vgpr0
 ; GFX1064-NEXT:    s_and_saveexec_b64 s[8:9], s[10:11]
-; GFX1064-NEXT:    s_cbranch_execz BB0_4
+; GFX1064-NEXT:    s_cbranch_execz .LBB0_4
 ; GFX1064-NEXT:  ; %bb.1:
 ; GFX1064-NEXT:    s_mov_b64 s[12:13], exec
 ; GFX1064-NEXT:    ; implicit-def: $vgpr1
@@ -93,26 +93,26 @@ define amdgpu_ps void @add_i32_constant(<4 x i32> inreg %out, <4 x i32> inreg %i
 ; GFX1064-NEXT:    v_mbcnt_hi_u32_b32 v0, s13, v0
 ; GFX1064-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
 ; GFX1064-NEXT:    s_and_saveexec_b64 s[10:11], vcc
-; GFX1064-NEXT:    s_cbranch_execz BB0_3
+; GFX1064-NEXT:    s_cbranch_execz .LBB0_3
 ; GFX1064-NEXT:  ; %bb.2:
 ; GFX1064-NEXT:    s_bcnt1_i32_b64 s12, s[12:13]
 ; GFX1064-NEXT:    s_mul_i32 s12, s12, 5
 ; GFX1064-NEXT:    v_mov_b32_e32 v1, s12
 ; GFX1064-NEXT:    buffer_atomic_add v1, off, s[4:7], 0 glc
-; GFX1064-NEXT:  BB0_3:
+; GFX1064-NEXT:  .LBB0_3:
 ; GFX1064-NEXT:    s_waitcnt_depctr 0xffe3
 ; GFX1064-NEXT:    s_or_b64 exec, exec, s[10:11]
 ; GFX1064-NEXT:    s_waitcnt vmcnt(0)
 ; GFX1064-NEXT:    v_readfirstlane_b32 s4, v1
 ; GFX1064-NEXT:    v_mad_u32_u24 v0, v0, 5, s4
-; GFX1064-NEXT:  BB0_4: ; %Flow
+; GFX1064-NEXT:  .LBB0_4: ; %Flow
 ; GFX1064-NEXT:    s_or_b64 exec, exec, s[8:9]
 ; GFX1064-NEXT:    s_wqm_b64 s[4:5], -1
 ; GFX1064-NEXT:    s_andn2_b64 vcc, exec, s[4:5]
-; GFX1064-NEXT:    s_cbranch_vccnz BB0_6
+; GFX1064-NEXT:    s_cbranch_vccnz .LBB0_6
 ; GFX1064-NEXT:  ; %bb.5: ; %if
 ; GFX1064-NEXT:    buffer_store_dword v0, off, s[0:3], 0
-; GFX1064-NEXT:  BB0_6: ; %UnifiedReturnBlock
+; GFX1064-NEXT:  .LBB0_6: ; %UnifiedReturnBlock
 ; GFX1064-NEXT:    s_endpgm
 ;
 ; GFX1032-LABEL: add_i32_constant:
@@ -120,33 +120,33 @@ define amdgpu_ps void @add_i32_constant(<4 x i32> inreg %out, <4 x i32> inreg %i
 ; GFX1032-NEXT:    s_mov_b32 s9, exec_lo
 ; GFX1032-NEXT:    ; implicit-def: $vgpr0
 ; GFX1032-NEXT:    s_and_saveexec_b32 s8, s9
-; GFX1032-NEXT:    s_cbranch_execz BB0_4
+; GFX1032-NEXT:    s_cbranch_execz .LBB0_4
 ; GFX1032-NEXT:  ; %bb.1:
 ; GFX1032-NEXT:    s_mov_b32 s10, exec_lo
 ; GFX1032-NEXT:    ; implicit-def: $vgpr1
 ; GFX1032-NEXT:    v_mbcnt_lo_u32_b32 v0, s10, 0
 ; GFX1032-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v0
 ; GFX1032-NEXT:    s_and_saveexec_b32 s9, vcc_lo
-; GFX1032-NEXT:    s_cbranch_execz BB0_3
+; GFX1032-NEXT:    s_cbranch_execz .LBB0_3
 ; GFX1032-NEXT:  ; %bb.2:
 ; GFX1032-NEXT:    s_bcnt1_i32_b32 s10, s10
 ; GFX1032-NEXT:    s_mul_i32 s10, s10, 5
 ; GFX1032-NEXT:    v_mov_b32_e32 v1, s10
 ; GFX1032-NEXT:    buffer_atomic_add v1, off, s[4:7], 0 glc
-; GFX1032-NEXT:  BB0_3:
+; GFX1032-NEXT:  .LBB0_3:
 ; GFX1032-NEXT:    s_waitcnt_depctr 0xffe3
 ; GFX1032-NEXT:    s_or_b32 exec_lo, exec_lo, s9
 ; GFX1032-NEXT:    s_waitcnt vmcnt(0)
 ; GFX1032-NEXT:    v_readfirstlane_b32 s4, v1
 ; GFX1032-NEXT:    v_mad_u32_u24 v0, v0, 5, s4
-; GFX1032-NEXT:  BB0_4: ; %Flow
+; GFX1032-NEXT:  .LBB0_4: ; %Flow
 ; GFX1032-NEXT:    s_or_b32 exec_lo, exec_lo, s8
 ; GFX1032-NEXT:    s_wqm_b32 s4, -1
 ; GFX1032-NEXT:    s_andn2_b32 vcc_lo, exec_lo, s4
-; GFX1032-NEXT:    s_cbranch_vccnz BB0_6
+; GFX1032-NEXT:    s_cbranch_vccnz .LBB0_6
 ; GFX1032-NEXT:  ; %bb.5: ; %if
 ; GFX1032-NEXT:    buffer_store_dword v0, off, s[0:3], 0
-; GFX1032-NEXT:  BB0_6: ; %UnifiedReturnBlock
+; GFX1032-NEXT:  .LBB0_6: ; %UnifiedReturnBlock
 ; GFX1032-NEXT:    s_endpgm
 entry:
   %cond1 = call i1 @llvm.amdgcn.wqm.vote(i1 true)
@@ -168,11 +168,11 @@ define amdgpu_ps void @add_i32_varying(<4 x i32> inreg %out, <4 x i32> inreg %in
 ; GFX7-NEXT:    s_wqm_b64 s[8:9], -1
 ; GFX7-NEXT:    buffer_atomic_add v0, off, s[4:7], 0 glc
 ; GFX7-NEXT:    s_andn2_b64 vcc, exec, s[8:9]
-; GFX7-NEXT:    s_cbranch_vccnz BB1_2
+; GFX7-NEXT:    s_cbranch_vccnz .LBB1_2
 ; GFX7-NEXT:  ; %bb.1: ; %if
 ; GFX7-NEXT:    s_waitcnt vmcnt(0)
 ; GFX7-NEXT:    buffer_store_dword v0, off, s[0:3], 0
-; GFX7-NEXT:  BB1_2: ; %else
+; GFX7-NEXT:  .LBB1_2: ; %else
 ; GFX7-NEXT:    s_endpgm
 ;
 ; GFX8-LABEL: add_i32_varying:
@@ -182,7 +182,7 @@ define amdgpu_ps void @add_i32_varying(<4 x i32> inreg %out, <4 x i32> inreg %in
 ; GFX8-NEXT:    v_mov_b32_e32 v2, v0
 ; GFX8-NEXT:    ; implicit-def: $vgpr0
 ; GFX8-NEXT:    s_and_saveexec_b64 s[8:9], s[10:11]
-; GFX8-NEXT:    s_cbranch_execz BB1_4
+; GFX8-NEXT:    s_cbranch_execz .LBB1_4
 ; GFX8-NEXT:  ; %bb.1:
 ; GFX8-NEXT:    s_or_saveexec_b64 s[10:11], -1
 ; GFX8-NEXT:    v_mov_b32_e32 v1, 0
@@ -211,24 +211,24 @@ define amdgpu_ps void @add_i32_varying(<4 x i32> inreg %out, <4 x i32> inreg %in
 ; GFX8-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
 ; GFX8-NEXT:    ; implicit-def: $vgpr0
 ; GFX8-NEXT:    s_and_saveexec_b64 s[10:11], vcc
-; GFX8-NEXT:    s_cbranch_execz BB1_3
+; GFX8-NEXT:    s_cbranch_execz .LBB1_3
 ; GFX8-NEXT:  ; %bb.2:
 ; GFX8-NEXT:    v_mov_b32_e32 v0, s12
 ; GFX8-NEXT:    buffer_atomic_add v0, off, s[4:7], 0 glc
-; GFX8-NEXT:  BB1_3:
+; GFX8-NEXT:  .LBB1_3:
 ; GFX8-NEXT:    s_or_b64 exec, exec, s[10:11]
 ; GFX8-NEXT:    s_waitcnt vmcnt(0)
 ; GFX8-NEXT:    v_readfirstlane_b32 s4, v0
 ; GFX8-NEXT:    v_mov_b32_e32 v0, v1
 ; GFX8-NEXT:    v_add_u32_e32 v0, vcc, s4, v0
-; GFX8-NEXT:  BB1_4: ; %Flow
+; GFX8-NEXT:  .LBB1_4: ; %Flow
 ; GFX8-NEXT:    s_or_b64 exec, exec, s[8:9]
 ; GFX8-NEXT:    s_wqm_b64 s[4:5], -1
 ; GFX8-NEXT:    s_andn2_b64 vcc, exec, s[4:5]
-; GFX8-NEXT:    s_cbranch_vccnz BB1_6
+; GFX8-NEXT:    s_cbranch_vccnz .LBB1_6
 ; GFX8-NEXT:  ; %bb.5: ; %if
 ; GFX8-NEXT:    buffer_store_dword v0, off, s[0:3], 0
-; GFX8-NEXT:  BB1_6: ; %UnifiedReturnBlock
+; GFX8-NEXT:  .LBB1_6: ; %UnifiedReturnBlock
 ; GFX8-NEXT:    s_endpgm
 ;
 ; GFX9-LABEL: add_i32_varying:
@@ -238,7 +238,7 @@ define amdgpu_ps void @add_i32_varying(<4 x i32> inreg %out, <4 x i32> inreg %in
 ; GFX9-NEXT:    v_mov_b32_e32 v2, v0
 ; GFX9-NEXT:    ; implicit-def: $vgpr0
 ; GFX9-NEXT:    s_and_saveexec_b64 s[8:9], s[10:11]
-; GFX9-NEXT:    s_cbranch_execz BB1_4
+; GFX9-NEXT:    s_cbranch_execz .LBB1_4
 ; GFX9-NEXT:  ; %bb.1:
 ; GFX9-NEXT:    s_or_saveexec_b64 s[10:11], -1
 ; GFX9-NEXT:    v_mov_b32_e32 v1, 0
@@ -267,24 +267,24 @@ define amdgpu_ps void @add_i32_varying(<4 x i32> inreg %out, <4 x i32> inreg %in
 ; GFX9-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
 ; GFX9-NEXT:    ; implicit-def: $vgpr0
 ; GFX9-NEXT:    s_and_saveexec_b64 s[10:11], vcc
-; GFX9-NEXT:    s_cbranch_execz BB1_3
+; GFX9-NEXT:    s_cbranch_execz .LBB1_3
 ; GFX9-NEXT:  ; %bb.2:
 ; GFX9-NEXT:    v_mov_b32_e32 v0, s12
 ; GFX9-NEXT:    buffer_atomic_add v0, off, s[4:7], 0 glc
-; GFX9-NEXT:  BB1_3:
+; GFX9-NEXT:  .LBB1_3:
 ; GFX9-NEXT:    s_or_b64 exec, exec, s[10:11]
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_readfirstlane_b32 s4, v0
 ; GFX9-NEXT:    v_mov_b32_e32 v0, v1
 ; GFX9-NEXT:    v_add_u32_e32 v0, s4, v0
-; GFX9-NEXT:  BB1_4: ; %Flow
+; GFX9-NEXT:  .LBB1_4: ; %Flow
 ; GFX9-NEXT:    s_or_b64 exec, exec, s[8:9]
 ; GFX9-NEXT:    s_wqm_b64 s[4:5], -1
 ; GFX9-NEXT:    s_andn2_b64 vcc, exec, s[4:5]
-; GFX9-NEXT:    s_cbranch_vccnz BB1_6
+; GFX9-NEXT:    s_cbranch_vccnz .LBB1_6
 ; GFX9-NEXT:  ; %bb.5: ; %if
 ; GFX9-NEXT:    buffer_store_dword v0, off, s[0:3], 0
-; GFX9-NEXT:  BB1_6: ; %UnifiedReturnBlock
+; GFX9-NEXT:  .LBB1_6: ; %UnifiedReturnBlock
 ; GFX9-NEXT:    s_endpgm
 ;
 ; GFX1064-LABEL: add_i32_varying:
@@ -294,7 +294,7 @@ define amdgpu_ps void @add_i32_varying(<4 x i32> inreg %out, <4 x i32> inreg %in
 ; GFX1064-NEXT:    s_mov_b64 s[10:11], s[8:9]
 ; GFX1064-NEXT:    ; implicit-def: $vgpr0
 ; GFX1064-NEXT:    s_and_saveexec_b64 s[8:9], s[10:11]
-; GFX1064-NEXT:    s_cbranch_execz BB1_4
+; GFX1064-NEXT:    s_cbranch_execz .LBB1_4
 ; GFX1064-NEXT:  ; %bb.1:
 ; GFX1064-NEXT:    s_not_b64 exec, exec
 ; GFX1064-NEXT:    v_mov_b32_e32 v1, 0
@@ -329,25 +329,25 @@ define amdgpu_ps void @add_i32_varying(<4 x i32> inreg %out, <4 x i32> inreg %in
 ; GFX1064-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
 ; GFX1064-NEXT:    ; implicit-def: $vgpr0
 ; GFX1064-NEXT:    s_and_saveexec_b64 s[10:11], vcc
-; GFX1064-NEXT:    s_cbranch_execz BB1_3
+; GFX1064-NEXT:    s_cbranch_execz .LBB1_3
 ; GFX1064-NEXT:  ; %bb.2:
 ; GFX1064-NEXT:    v_mov_b32_e32 v0, s12
 ; GFX1064-NEXT:    buffer_atomic_add v0, off, s[4:7], 0 glc
-; GFX1064-NEXT:  BB1_3:
+; GFX1064-NEXT:  .LBB1_3:
 ; GFX1064-NEXT:    s_waitcnt_depctr 0xffe3
 ; GFX1064-NEXT:    s_or_b64 exec, exec, s[10:11]
 ; GFX1064-NEXT:    s_waitcnt vmcnt(0)
 ; GFX1064-NEXT:    v_readfirstlane_b32 s4, v0
 ; GFX1064-NEXT:    v_mov_b32_e32 v0, v3
 ; GFX1064-NEXT:    v_add_nc_u32_e32 v0, s4, v0
-; GFX1064-NEXT:  BB1_4: ; %Flow
+; GFX1064-NEXT:  .LBB1_4: ; %Flow
 ; GFX1064-NEXT:    s_or_b64 exec, exec, s[8:9]
 ; GFX1064-NEXT:    s_wqm_b64 s[4:5], -1
 ; GFX1064-NEXT:    s_andn2_b64 vcc, exec, s[4:5]
-; GFX1064-NEXT:    s_cbranch_vccnz BB1_6
+; GFX1064-NEXT:    s_cbranch_vccnz .LBB1_6
 ; GFX1064-NEXT:  ; %bb.5: ; %if
 ; GFX1064-NEXT:    buffer_store_dword v0, off, s[0:3], 0
-; GFX1064-NEXT:  BB1_6: ; %UnifiedReturnBlock
+; GFX1064-NEXT:  .LBB1_6: ; %UnifiedReturnBlock
 ; GFX1064-NEXT:    s_endpgm
 ;
 ; GFX1032-LABEL: add_i32_varying:
@@ -357,7 +357,7 @@ define amdgpu_ps void @add_i32_varying(<4 x i32> inreg %out, <4 x i32> inreg %in
 ; GFX1032-NEXT:    s_mov_b32 s9, s8
 ; GFX1032-NEXT:    ; implicit-def: $vgpr0
 ; GFX1032-NEXT:    s_and_saveexec_b32 s8, s9
-; GFX1032-NEXT:    s_cbranch_execz BB1_4
+; GFX1032-NEXT:    s_cbranch_execz .LBB1_4
 ; GFX1032-NEXT:  ; %bb.1:
 ; GFX1032-NEXT:    s_not_b32 exec_lo, exec_lo
 ; GFX1032-NEXT:    v_mov_b32_e32 v1, 0
@@ -382,26 +382,26 @@ define amdgpu_ps void @add_i32_varying(<4 x i32> inreg %out, <4 x i32> inreg %in
 ; GFX1032-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v0
 ; GFX1032-NEXT:    ; implicit-def: $vgpr0
 ; GFX1032-NEXT:    s_and_saveexec_b32 s9, vcc_lo
-; GFX1032-NEXT:    s_cbranch_execz BB1_3
+; GFX1032-NEXT:    s_cbranch_execz .LBB1_3
 ; GFX1032-NEXT:  ; %bb.2:
 ; GFX1032-NEXT:    v_mov_b32_e32 v0, s11
 ; GFX1032-NEXT:    s_mov_b32 s10, s11
 ; GFX1032-NEXT:    buffer_atomic_add v0, off, s[4:7], 0 glc
-; GFX1032-NEXT:  BB1_3:
+; GFX1032-NEXT:  .LBB1_3:
 ; GFX1032-NEXT:    s_waitcnt_depctr 0xffe3
 ; GFX1032-NEXT:    s_or_b32 exec_lo, exec_lo, s9
 ; GFX1032-NEXT:    s_waitcnt vmcnt(0)
 ; GFX1032-NEXT:    v_readfirstlane_b32 s4, v0
 ; GFX1032-NEXT:    v_mov_b32_e32 v0, v3
 ; GFX1032-NEXT:    v_add_nc_u32_e32 v0, s4, v0
-; GFX1032-NEXT:  BB1_4: ; %Flow
+; GFX1032-NEXT:  .LBB1_4: ; %Flow
 ; GFX1032-NEXT:    s_or_b32 exec_lo, exec_lo, s8
 ; GFX1032-NEXT:    s_wqm_b32 s4, -1
 ; GFX1032-NEXT:    s_andn2_b32 vcc_lo, exec_lo, s4
-; GFX1032-NEXT:    s_cbranch_vccnz BB1_6
+; GFX1032-NEXT:    s_cbranch_vccnz .LBB1_6
 ; GFX1032-NEXT:  ; %bb.5: ; %if
 ; GFX1032-NEXT:    buffer_store_dword v0, off, s[0:3], 0
-; GFX1032-NEXT:  BB1_6: ; %UnifiedReturnBlock
+; GFX1032-NEXT:  .LBB1_6: ; %UnifiedReturnBlock
 ; GFX1032-NEXT:    s_endpgm
 entry:
   %cond1 = call i1 @llvm.amdgcn.wqm.vote(i1 true)

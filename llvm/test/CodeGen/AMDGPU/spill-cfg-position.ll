@@ -6,9 +6,9 @@
 ; Make sure instruction to restore exec mask immediately follows label
 
 ; CHECK-LABEL: {{^}}spill_cfg_position:
-; CHECK: s_cbranch_execz [[LABEL1:BB[0-9_]+]]
+; CHECK: s_cbranch_execz [[LABEL1:.LBB[0-9_]+]]
 ; CHECK: {{^}}[[LABEL1]]:
-; CHECK: s_cbranch_execz [[LABEL2:BB[0-9_]+]]
+; CHECK: s_cbranch_execz [[LABEL2:.LBB[0-9_]+]]
 ; CHECK: {{^}}[[LABEL2]]:
 ; CHECK-NEXT: s_or_b64 exec
 ; CHECK: buffer_

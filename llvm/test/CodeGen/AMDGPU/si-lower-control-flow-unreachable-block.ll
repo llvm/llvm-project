@@ -3,7 +3,7 @@
 ; GCN-LABEL: {{^}}lower_control_flow_unreachable_terminator:
 ; GCN: v_cmp_eq_u32
 ; GCN: s_and_saveexec_b64
-; GCN-NEXT: s_cbranch_execz BB0_{{[0-9]+}}
+; GCN-NEXT: s_cbranch_execz .LBB0_{{[0-9]+}}
 
 ; GCN-NEXT: ; %bb.{{[0-9]+}}: ; %unreachable
 ; GCN: ds_write_b32
@@ -29,7 +29,7 @@ ret:
 ; GCN-LABEL: {{^}}lower_control_flow_unreachable_terminator_swap_block_order:
 ; GCN: v_cmp_ne_u32
 ; GCN: s_and_saveexec_b64
-; GCN-NEXT: s_cbranch_execz BB1_{{[0-9]+}}
+; GCN-NEXT: s_cbranch_execz .LBB1_{{[0-9]+}}
 
 ; GCN-NEXT: ; %bb.{{[0-9]+}}: ; %unreachable
 ; GCN: ds_write_b32
@@ -53,7 +53,7 @@ unreachable:
 
 ; GCN-LABEL: {{^}}uniform_lower_control_flow_unreachable_terminator:
 ; GCN: s_cmp_lg_u32
-; GCN: s_cbranch_scc0 [[UNREACHABLE:BB[0-9]+_[0-9]+]]
+; GCN: s_cbranch_scc0 [[UNREACHABLE:.LBB[0-9]+_[0-9]+]]
 
 ; GCN-NEXT: %bb.{{[0-9]+}}: ; %ret
 ; GCN-NEXT: s_endpgm

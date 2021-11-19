@@ -9,7 +9,7 @@ target triple = "amdgcn--"
 
 ; We shouldn't crash. Check that we get a loop with the two stores.
 ;CHECK-LABEL: foo:
-;CHECK: [[LOOP_LABEL:BB[0-9]+_[0-9]+]]:
+;CHECK: [[LOOP_LABEL:.LBB[0-9]+_[0-9]+]]:
 ;CHECK: buffer_store_dword
 ;CHECK: buffer_store_dword
 ;CHECK: s_branch [[LOOP_LABEL]]

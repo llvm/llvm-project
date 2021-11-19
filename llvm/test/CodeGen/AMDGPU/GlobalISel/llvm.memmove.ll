@@ -10,14 +10,14 @@ define amdgpu_cs void @memmove_p1i8(i8 addrspace(1)* %dst, i8 addrspace(1)* %src
 ; LOOP-NEXT:    v_cmp_ge_u64_e32 vcc, v[2:3], v[0:1]
 ; LOOP-NEXT:    s_and_saveexec_b64 s[0:1], vcc
 ; LOOP-NEXT:    s_xor_b64 s[4:5], exec, s[0:1]
-; LOOP-NEXT:    s_cbranch_execz BB0_3
+; LOOP-NEXT:    s_cbranch_execz .LBB0_3
 ; LOOP-NEXT:  ; %bb.1: ; %copy_forward
 ; LOOP-NEXT:    s_mov_b64 s[0:1], 0
 ; LOOP-NEXT:    s_mov_b32 s2, 0
 ; LOOP-NEXT:    s_mov_b32 s3, 0xf000
 ; LOOP-NEXT:    v_mov_b32_e32 v5, s1
 ; LOOP-NEXT:    v_mov_b32_e32 v4, s0
-; LOOP-NEXT:  BB0_2: ; %copy_forward_loop
+; LOOP-NEXT:  .LBB0_2: ; %copy_forward_loop
 ; LOOP-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; LOOP-NEXT:    v_add_i32_e32 v6, vcc, v2, v4
 ; LOOP-NEXT:    v_addc_u32_e32 v7, vcc, v3, v5, vcc
@@ -30,11 +30,11 @@ define amdgpu_cs void @memmove_p1i8(i8 addrspace(1)* %dst, i8 addrspace(1)* %src
 ; LOOP-NEXT:    v_cmp_ne_u32_e32 vcc, 4, v4
 ; LOOP-NEXT:    s_waitcnt vmcnt(0)
 ; LOOP-NEXT:    buffer_store_byte v8, v[6:7], s[0:3], 0 addr64
-; LOOP-NEXT:    s_cbranch_vccnz BB0_2
-; LOOP-NEXT:  BB0_3: ; %Flow14
+; LOOP-NEXT:    s_cbranch_vccnz .LBB0_2
+; LOOP-NEXT:  .LBB0_3: ; %Flow14
 ; LOOP-NEXT:    s_or_saveexec_b64 s[0:1], s[4:5]
 ; LOOP-NEXT:    s_xor_b64 exec, exec, s[0:1]
-; LOOP-NEXT:    s_cbranch_execz BB0_6
+; LOOP-NEXT:    s_cbranch_execz .LBB0_6
 ; LOOP-NEXT:  ; %bb.4: ; %copy_backwards
 ; LOOP-NEXT:    s_mov_b64 s[4:5], 3
 ; LOOP-NEXT:    s_mov_b32 s2, 0
@@ -42,7 +42,7 @@ define amdgpu_cs void @memmove_p1i8(i8 addrspace(1)* %dst, i8 addrspace(1)* %src
 ; LOOP-NEXT:    s_mov_b64 s[0:1], 0
 ; LOOP-NEXT:    v_mov_b32_e32 v4, s4
 ; LOOP-NEXT:    v_mov_b32_e32 v5, s5
-; LOOP-NEXT:  BB0_5: ; %copy_backwards_loop
+; LOOP-NEXT:  .LBB0_5: ; %copy_backwards_loop
 ; LOOP-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; LOOP-NEXT:    v_add_i32_e32 v6, vcc, v2, v4
 ; LOOP-NEXT:    v_addc_u32_e32 v7, vcc, v3, v5, vcc
@@ -55,8 +55,8 @@ define amdgpu_cs void @memmove_p1i8(i8 addrspace(1)* %dst, i8 addrspace(1)* %src
 ; LOOP-NEXT:    v_cmp_eq_u32_e32 vcc, -1, v4
 ; LOOP-NEXT:    s_waitcnt vmcnt(0)
 ; LOOP-NEXT:    buffer_store_byte v8, v[6:7], s[0:3], 0 addr64
-; LOOP-NEXT:    s_cbranch_vccz BB0_5
-; LOOP-NEXT:  BB0_6: ; %memmove_done
+; LOOP-NEXT:    s_cbranch_vccz .LBB0_5
+; LOOP-NEXT:  .LBB0_6: ; %memmove_done
 ; LOOP-NEXT:    s_endpgm
 ;
 ; UNROLL-LABEL: memmove_p1i8:

@@ -30,7 +30,7 @@ define amdgpu_kernel void @test_sink_small_offset_global_atomic_fadd_f32(float a
 ; GCN-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v0
 ; GCN-NEXT:    v_mov_b32_e32 v0, 0
 ; GCN-NEXT:    s_and_saveexec_b64 s[4:5], vcc
-; GCN-NEXT:    s_cbranch_execz BB0_2
+; GCN-NEXT:    s_cbranch_execz .LBB0_2
 ; GCN-NEXT:  ; %bb.1: ; %if
 ; GCN-NEXT:    v_mov_b32_e32 v0, 0
 ; GCN-NEXT:    v_mov_b32_e32 v1, 2.0
@@ -38,7 +38,7 @@ define amdgpu_kernel void @test_sink_small_offset_global_atomic_fadd_f32(float a
 ; GCN-NEXT:    global_atomic_add_f32 v0, v1, s[2:3] offset:28
 ; GCN-NEXT:    global_load_dword v0, v[0:1], off glc
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
-; GCN-NEXT:  BB0_2: ; %endif
+; GCN-NEXT:  .LBB0_2: ; %endif
 ; GCN-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GCN-NEXT:    v_mov_b32_e32 v1, 0x3d0000
 ; GCN-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)

@@ -18,7 +18,7 @@ define amdgpu_cs float @ds_ordered_swap(i32 addrspace(2)* inreg %gds, i32 %value
 ; GCN: v_cmp_ne_u32_e32 vcc, 0, v[[VALUE:[0-9]+]]
 ; GCN: s_and_saveexec_b64 s[[SAVED:\[[0-9]+:[0-9]+\]]], vcc
 ; // We have to use s_cbranch, because ds_ordered_count has side effects with EXEC=0
-; GCN: s_cbranch_execz [[BB:BB._.]]
+; GCN: s_cbranch_execz [[BB:.LBB._.]]
 ; GCN: s_mov_b32 m0, s0
 ; VIGFX9-NEXT: s_nop 0
 ; GCN-NEXT: ds_ordered_count v{{[0-9]+}}, v[[VALUE]] offset:4868 gds

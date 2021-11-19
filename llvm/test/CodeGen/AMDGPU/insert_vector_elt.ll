@@ -1534,19 +1534,19 @@ define amdgpu_kernel void @insert_split_bb(<2 x i32> addrspace(1)* %out, i32 add
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
 ; SI-NEXT:    s_cmp_lg_u32 s6, 0
-; SI-NEXT:    s_cbranch_scc0 BB30_2
+; SI-NEXT:    s_cbranch_scc0 .LBB30_2
 ; SI-NEXT:  ; %bb.1: ; %else
 ; SI-NEXT:    s_load_dword s7, s[2:3], 0x1
 ; SI-NEXT:    s_mov_b64 s[4:5], 0
 ; SI-NEXT:    s_andn2_b64 vcc, exec, s[4:5]
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
 ; SI-NEXT:    s_mov_b64 vcc, vcc
-; SI-NEXT:    s_cbranch_vccz BB30_3
-; SI-NEXT:    s_branch BB30_4
-; SI-NEXT:  BB30_2:
-; SI-NEXT:  BB30_3: ; %if
+; SI-NEXT:    s_cbranch_vccz .LBB30_3
+; SI-NEXT:    s_branch .LBB30_4
+; SI-NEXT:  .LBB30_2:
+; SI-NEXT:  .LBB30_3: ; %if
 ; SI-NEXT:    s_load_dword s7, s[2:3], 0x0
-; SI-NEXT:  BB30_4: ; %endif
+; SI-NEXT:  .LBB30_4: ; %endif
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
 ; SI-NEXT:    v_mov_b32_e32 v0, s6
 ; SI-NEXT:    s_mov_b32 s3, 0x100f000
@@ -1561,16 +1561,16 @@ define amdgpu_kernel void @insert_split_bb(<2 x i32> addrspace(1)* %out, i32 add
 ; VI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    s_cmp_lg_u32 s6, 0
-; VI-NEXT:    s_cbranch_scc0 BB30_2
+; VI-NEXT:    s_cbranch_scc0 .LBB30_2
 ; VI-NEXT:  ; %bb.1: ; %else
 ; VI-NEXT:    s_load_dword s7, s[2:3], 0x4
-; VI-NEXT:    s_cbranch_execz BB30_3
-; VI-NEXT:    s_branch BB30_4
-; VI-NEXT:  BB30_2:
-; VI-NEXT:  BB30_3: ; %if
+; VI-NEXT:    s_cbranch_execz .LBB30_3
+; VI-NEXT:    s_branch .LBB30_4
+; VI-NEXT:  .LBB30_2:
+; VI-NEXT:  .LBB30_3: ; %if
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    s_load_dword s7, s[2:3], 0x0
-; VI-NEXT:  BB30_4: ; %endif
+; VI-NEXT:  .LBB30_4: ; %endif
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    v_mov_b32_e32 v0, s6
 ; VI-NEXT:    s_mov_b32 s3, 0x1100f000
