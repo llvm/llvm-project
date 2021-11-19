@@ -31,6 +31,11 @@ Sub-Projects in the One Ranges Proposal
    :header-rows: 1
    :widths: auto
 
+.. csv-table::
+   :file: RangesAlgorithms.csv
+   :header-rows: 1
+   :widths: auto
+
 
 Misc. Items and TODOs
 ====================================
