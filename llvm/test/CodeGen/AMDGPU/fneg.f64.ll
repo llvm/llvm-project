@@ -2,7 +2,7 @@
 ; RUN: llc -march=amdgcn -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefix=VI -check-prefix=GCN -check-prefix=FUNC %s
 
 ; FUNC-LABEL: {{^}}fneg_f64:
-; GCN: v_xor_b32
+; GCN: s_xor_b32 s{{[0-9]+}}, s{{[0-9]+}}, 0x80000000
 define amdgpu_kernel void @fneg_f64(double addrspace(1)* %out, double %in) {
   %fneg = fsub double -0.000000e+00, %in
   store double %fneg, double addrspace(1)* %out
@@ -10,8 +10,8 @@ define amdgpu_kernel void @fneg_f64(double addrspace(1)* %out, double %in) {
 }
 
 ; FUNC-LABEL: {{^}}fneg_v2f64:
-; GCN: v_xor_b32
-; GCN: v_xor_b32
+; GCN: s_xor_b32
+; GCN: s_xor_b32
 define amdgpu_kernel void @fneg_v2f64(<2 x double> addrspace(1)* nocapture %out, <2 x double> %in) {
   %fneg = fsub <2 x double> <double -0.000000e+00, double -0.000000e+00>, %in
   store <2 x double> %fneg, <2 x double> addrspace(1)* %out
@@ -24,10 +24,10 @@ define amdgpu_kernel void @fneg_v2f64(<2 x double> addrspace(1)* nocapture %out,
 ; R600: -PV
 ; R600: -PV
 
-; GCN: v_xor_b32
-; GCN: v_xor_b32
-; GCN: v_xor_b32
-; GCN: v_xor_b32
+; GCN: s_xor_b32
+; GCN: s_xor_b32
+; GCN: s_xor_b32
+; GCN: s_xor_b32
 define amdgpu_kernel void @fneg_v4f64(<4 x double> addrspace(1)* nocapture %out, <4 x double> %in) {
   %fneg = fsub <4 x double> <double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00>, %in
   store <4 x double> %fneg, <4 x double> addrspace(1)* %out

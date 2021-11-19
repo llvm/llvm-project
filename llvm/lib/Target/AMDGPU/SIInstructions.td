@@ -1372,61 +1372,48 @@ def : GCNPat <
 >;
 }
 
+
 /********** ================================ **********/
 /********** Floating point absolute/negative **********/
 /********** ================================ **********/
 
-// Prevent expanding both fneg and fabs.
-// TODO: Add IgnoredBySelectionDAG bit?
-let AddedComplexity = 1 in { // Prefer SALU to VALU patterns for DAG
-
 def : GCNPat <
-  (fneg (fabs (f32 SReg_32:$src))),
+  (UniformUnaryFrag<fneg> (fabs (f32 SReg_32:$src))),
   (S_OR_B32 SReg_32:$src, (S_MOV_B32 (i32 0x80000000))) // Set sign bit
 >;
 
 def : GCNPat <
-  (fabs (f32 SReg_32:$src)),
+  (UniformUnaryFrag<fabs> (f32 SReg_32:$src)),
   (S_AND_B32 SReg_32:$src, (S_MOV_B32 (i32 0x7fffffff)))
 >;
 
 def : GCNPat <
-  (fneg (f32 SReg_32:$src)),
+  (UniformUnaryFrag<fneg> (f32 SReg_32:$src)),
   (S_XOR_B32 SReg_32:$src, (S_MOV_B32 (i32 0x80000000)))
 >;
 
 def : GCNPat <
-  (fneg (f16 SReg_32:$src)),
+  (UniformUnaryFrag<fneg> (f16 SReg_32:$src)),
   (S_XOR_B32 SReg_32:$src, (S_MOV_B32 (i32 0x00008000)))
 >;
 
 def : GCNPat <
-  (fneg (f16 VGPR_32:$src)),
-  (V_XOR_B32_e32 (S_MOV_B32 (i32 0x00008000)), VGPR_32:$src)
->;
-
-def : GCNPat <
-  (fabs (f16 SReg_32:$src)),
+  (UniformUnaryFrag<fabs> (f16 SReg_32:$src)),
   (S_AND_B32 SReg_32:$src, (S_MOV_B32 (i32 0x00007fff)))
 >;
 
 def : GCNPat <
-  (fneg (fabs (f16 SReg_32:$src))),
+  (UniformUnaryFrag<fneg> (fabs (f16 SReg_32:$src))),
   (S_OR_B32 SReg_32:$src, (S_MOV_B32 (i32 0x00008000))) // Set sign bit
 >;
 
 def : GCNPat <
-  (fneg (fabs (f16 VGPR_32:$src))),
-  (V_OR_B32_e32 (S_MOV_B32 (i32 0x00008000)), VGPR_32:$src) // Set sign bit
->;
-
-def : GCNPat <
-  (fneg (v2f16 SReg_32:$src)),
+  (UniformUnaryFrag<fneg> (v2f16 SReg_32:$src)),
   (S_XOR_B32 SReg_32:$src, (S_MOV_B32 (i32 0x80008000)))
 >;
 
 def : GCNPat <
-  (fabs (v2f16 SReg_32:$src)),
+  (UniformUnaryFrag<fabs> (v2f16 SReg_32:$src)),
   (S_AND_B32 SReg_32:$src, (S_MOV_B32 (i32 0x7fff7fff)))
 >;
 
@@ -1435,51 +1422,20 @@ def : GCNPat <
 // fabs is not reported as free because there is modifier for it in
 // VOP3P instructions, so it is turned into the bit op.
 def : GCNPat <
-  (fneg (v2f16 (bitconvert (and_oneuse (i32 SReg_32:$src), 0x7fff7fff)))),
+  (UniformUnaryFrag<fneg> (v2f16 (bitconvert (and_oneuse (i32 SReg_32:$src), 0x7fff7fff)))),
   (S_OR_B32 SReg_32:$src, (S_MOV_B32 (i32 0x80008000))) // Set sign bit
 >;
 
 def : GCNPat <
-  (fneg (v2f16 (fabs SReg_32:$src))),
+  (UniformUnaryFrag<fneg> (v2f16 (fabs SReg_32:$src))),
   (S_OR_B32 SReg_32:$src, (S_MOV_B32 (i32 0x80008000))) // Set sign bit
 >;
 
-// FIXME: The implicit-def of scc from S_[X]OR/AND_B32 is mishandled
- // def : GCNPat <
-//   (fneg (f64 SReg_64:$src)),
-//   (REG_SEQUENCE SReg_64,
-//     (i32 (EXTRACT_SUBREG SReg_64:$src, sub0)),
-//     sub0,
-//     (S_XOR_B32 (i32 (EXTRACT_SUBREG SReg_64:$src, sub1)),
-//                (i32 (S_MOV_B32 (i32 0x80000000)))),
-//     sub1)
-// >;
-
-// def : GCNPat <
-//   (fneg (fabs (f64 SReg_64:$src))),
-//   (REG_SEQUENCE SReg_64,
-//     (i32 (EXTRACT_SUBREG SReg_64:$src, sub0)),
-//     sub0,
-//     (S_OR_B32 (i32 (EXTRACT_SUBREG SReg_64:$src, sub1)),
-//               (S_MOV_B32 (i32 0x80000000))), // Set sign bit.
-//     sub1)
-// >;
-
-// FIXME: Use S_BITSET0_B32/B64?
-// def : GCNPat <
-//   (fabs (f64 SReg_64:$src)),
-//   (REG_SEQUENCE SReg_64,
-//     (i32 (EXTRACT_SUBREG SReg_64:$src, sub0)),
-//     sub0,
-//     (S_AND_B32 (i32 (EXTRACT_SUBREG SReg_64:$src, sub1)),
-//                (i32 (S_MOV_B32 (i32 0x7fffffff)))),
-//     sub1)
-// >;
 
 // COPY_TO_REGCLASS is needed to avoid using SCC from S_XOR_B32 instead
 // of the real value.
 def : GCNPat <
-  (fneg (v2f32 SReg_64:$src)),
+  (UniformUnaryFrag<fneg> (v2f32 SReg_64:$src)),
   (v2f32 (REG_SEQUENCE SReg_64,
          (f32 (COPY_TO_REGCLASS (S_XOR_B32 (i32 (EXTRACT_SUBREG $src, sub0)),
                                            (i32 (S_MOV_B32 (i32 0x80000000)))),
@@ -1489,36 +1445,103 @@ def : GCNPat <
                                  SReg_32)), sub1))
 >;
 
-} // End let AddedComplexity = 1
+def : GCNPat <
+  (UniformUnaryFrag<fabs> (v2f32 SReg_64:$src)),
+  (v2f32 (REG_SEQUENCE SReg_64,
+         (f32 (COPY_TO_REGCLASS (S_AND_B32 (i32 (EXTRACT_SUBREG $src, sub0)),
+                                           (i32 (S_MOV_B32 (i32 0x7fffffff)))),
+                                 SReg_32)), sub0,
+         (f32 (COPY_TO_REGCLASS (S_AND_B32 (i32 (EXTRACT_SUBREG $src, sub1)),
+                                           (i32 (S_MOV_B32 (i32 0x7fffffff)))),
+                                 SReg_32)), sub1))
+>;
+
+def : GCNPat <
+  (UniformUnaryFrag<fneg> (fabs (v2f32 SReg_64:$src))),
+  (v2f32 (REG_SEQUENCE SReg_64,
+         (f32 (COPY_TO_REGCLASS (S_OR_B32 (i32 (EXTRACT_SUBREG $src, sub0)),
+                                           (i32 (S_MOV_B32 (i32 0x80000000)))),
+                                 SReg_32)), sub0,
+         (f32 (COPY_TO_REGCLASS (S_OR_B32 (i32 (EXTRACT_SUBREG $src, sub1)),
+                                           (i32 (S_MOV_B32 (i32 0x80000000)))),
+                                 SReg_32)), sub1))
+>;
+
+// FIXME: Use S_BITSET0_B32/B64?
+def : GCNPat <
+  (UniformUnaryFrag<fabs> (f64 SReg_64:$src)),
+  (REG_SEQUENCE SReg_64,
+    (i32 (EXTRACT_SUBREG SReg_64:$src, sub0)),
+    sub0,
+    (i32 (COPY_TO_REGCLASS (S_AND_B32 (i32 (EXTRACT_SUBREG SReg_64:$src, sub1)),
+                   (S_MOV_B32 (i32 0x7fffffff))), SReg_32)), // Set sign bit.
+     sub1)
+>;
+
+def : GCNPat <
+  (UniformUnaryFrag<fneg> (f64 SReg_64:$src)),
+  (REG_SEQUENCE SReg_64,
+    (i32 (EXTRACT_SUBREG SReg_64:$src, sub0)),
+    sub0,
+    (i32 (COPY_TO_REGCLASS (S_XOR_B32 (i32 (EXTRACT_SUBREG SReg_64:$src, sub1)),
+                   (i32 (S_MOV_B32 (i32 0x80000000)))), SReg_32)),
+    sub1)
+>;
+
+def : GCNPat <
+  (UniformUnaryFrag<fneg> (fabs (f64 SReg_64:$src))),
+  (REG_SEQUENCE SReg_64,
+    (i32 (EXTRACT_SUBREG SReg_64:$src, sub0)),
+    sub0,
+    (i32 (COPY_TO_REGCLASS (S_OR_B32 (i32 (EXTRACT_SUBREG SReg_64:$src, sub1)),
+                  (S_MOV_B32 (i32 0x80000000))), SReg_32)),// Set sign bit.
+    sub1)
+>;
+
+
+def : GCNPat <
+  (fneg (fabs (f32 VGPR_32:$src))),
+  (V_OR_B32_e64 (S_MOV_B32 (i32 0x80000000)), VGPR_32:$src) // Set sign bit
+>;
 
 def : GCNPat <
   (fabs (f32 VGPR_32:$src)),
-  (V_AND_B32_e32 (S_MOV_B32 (i32 0x7fffffff)), VGPR_32:$src)
+  (V_AND_B32_e64 (S_MOV_B32 (i32 0x7fffffff)), VGPR_32:$src)
 >;
 
 def : GCNPat <
   (fneg (f32 VGPR_32:$src)),
-  (V_XOR_B32_e32 (S_MOV_B32 (i32 0x80000000)), VGPR_32:$src)
+  (V_XOR_B32_e64 (S_MOV_B32 (i32 0x80000000)), VGPR_32:$src)
 >;
 
 def : GCNPat <
   (fabs (f16 VGPR_32:$src)),
-  (V_AND_B32_e32 (S_MOV_B32 (i32 0x00007fff)), VGPR_32:$src)
+  (V_AND_B32_e64 (S_MOV_B32 (i32 0x00007fff)), VGPR_32:$src)
+>;
+
+def : GCNPat <
+  (fneg (f16 VGPR_32:$src)),
+  (V_XOR_B32_e64 (S_MOV_B32 (i32 0x00008000)), VGPR_32:$src)
+>;
+
+def : GCNPat <
+  (fneg (fabs (f16 VGPR_32:$src))),
+  (V_OR_B32_e64 (S_MOV_B32 (i32 0x00008000)), VGPR_32:$src) // Set sign bit
 >;
 
 def : GCNPat <
   (fneg (v2f16 VGPR_32:$src)),
-  (V_XOR_B32_e32 (S_MOV_B32 (i32 0x80008000)), VGPR_32:$src)
+  (V_XOR_B32_e64 (S_MOV_B32 (i32 0x80008000)), VGPR_32:$src)
 >;
 
 def : GCNPat <
   (fabs (v2f16 VGPR_32:$src)),
-  (V_AND_B32_e32 (S_MOV_B32 (i32 0x7fff7fff)), VGPR_32:$src)
+  (V_AND_B32_e64 (S_MOV_B32 (i32 0x7fff7fff)), VGPR_32:$src)
 >;
 
 def : GCNPat <
   (fneg (v2f16 (fabs VGPR_32:$src))),
-  (V_OR_B32_e32 (S_MOV_B32 (i32 0x80008000)), VGPR_32:$src) // Set sign bit
+  (V_OR_B32_e64 (S_MOV_B32 (i32 0x80008000)), VGPR_32:$src)
 >;
 
 def : GCNPat <
@@ -1526,30 +1549,28 @@ def : GCNPat <
   (REG_SEQUENCE VReg_64,
     (i32 (EXTRACT_SUBREG VReg_64:$src, sub0)),
     sub0,
-    (V_AND_B32_e64 (i32 (EXTRACT_SUBREG VReg_64:$src, sub1)),
-                   (V_MOV_B32_e32 (i32 0x7fffffff))), // Set sign bit.
+    (V_AND_B32_e64 (i32 (S_MOV_B32 (i32 0x7fffffff))),
+        (i32 (EXTRACT_SUBREG VReg_64:$src, sub1))),
      sub1)
 >;
 
-// TODO: Use SGPR for constant
 def : GCNPat <
   (fneg (f64 VReg_64:$src)),
   (REG_SEQUENCE VReg_64,
     (i32 (EXTRACT_SUBREG VReg_64:$src, sub0)),
     sub0,
-    (V_XOR_B32_e32 (i32 (EXTRACT_SUBREG VReg_64:$src, sub1)),
-                   (i32 (V_MOV_B32_e32 (i32 0x80000000)))),
+    (V_XOR_B32_e64 (i32 (S_MOV_B32 (i32 0x80000000))),
+        (i32 (EXTRACT_SUBREG VReg_64:$src, sub1))),
     sub1)
 >;
 
-// TODO: Use SGPR for constant
 def : GCNPat <
   (fneg (fabs (f64 VReg_64:$src))),
   (REG_SEQUENCE VReg_64,
     (i32 (EXTRACT_SUBREG VReg_64:$src, sub0)),
     sub0,
-    (V_OR_B32_e32 (i32 (EXTRACT_SUBREG VReg_64:$src, sub1)),
-                  (V_MOV_B32_e32 (i32 0x80000000))), // Set sign bit.
+    (V_OR_B32_e64 (i32 (S_MOV_B32 (i32 0x80000000))),
+        (i32 (EXTRACT_SUBREG VReg_64:$src, sub1))),
     sub1)
 >;
 
