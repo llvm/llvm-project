@@ -562,6 +562,15 @@ TEST_P(ImportType, ImportAtomicType) {
       functionDecl(hasDescendant(typedefDecl(has(atomicType())))));
 }
 
+TEST_P(ImportType, ImportUsingType) {
+  MatchVerifier<Decl> Verifier;
+  testImport("struct C {};"
+             "void declToImport() { using ::C; new C{}; }",
+             Lang_CXX11, "", Lang_CXX11, Verifier,
+             functionDecl(hasDescendant(
+                 cxxNewExpr(hasType(pointerType(pointee(usingType())))))));
+}
+
 TEST_P(ImportDecl, ImportFunctionTemplateDecl) {
   MatchVerifier<Decl> Verifier;
   testImport("template <typename T> void declToImport() { };", Lang_CXX03, "",

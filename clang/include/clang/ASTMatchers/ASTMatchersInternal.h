@@ -1090,6 +1090,12 @@ private:
     if (const auto *S = dyn_cast<ElaboratedType>(&Node)) {
       return matchesSpecialized(S->desugar(), Finder, Builder);
     }
+    // Similarly types found via using declarations.
+    // These are *usually* meaningless sugar, and this matches the historical
+    // behavior prior to the introduction of UsingType.
+    if (const auto *S = dyn_cast<UsingType>(&Node)) {
+      return matchesSpecialized(S->desugar(), Finder, Builder);
+    }
     return false;
   }
 

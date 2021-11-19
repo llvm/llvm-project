@@ -70,6 +70,13 @@ public:
                 TL.getAs<TypedefTypeLoc>().getTypePtr()->getDecl()->getName()))
           return false;
         break;
+      case TypeLoc::Using:
+        if (visitUnqualName(TL.getAs<UsingTypeLoc>()
+                                .getTypePtr()
+                                ->getFoundDecl()
+                                ->getName()))
+          return false;
+        break;
       default:
         break;
       }

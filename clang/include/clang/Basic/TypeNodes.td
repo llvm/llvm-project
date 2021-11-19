@@ -75,6 +75,7 @@ def DependentSizedMatrixType : TypeNode<MatrixType>, AlwaysDependent;
 def FunctionType : TypeNode<Type, 1>;
 def FunctionProtoType : TypeNode<FunctionType>;
 def FunctionNoProtoType : TypeNode<FunctionType>;
+def UsingType : TypeNode<Type>, NeverCanonical;
 def UnresolvedUsingType : TypeNode<Type>, AlwaysDependent;
 def ParenType : TypeNode<Type>, NeverCanonical;
 def TypedefType : TypeNode<Type>, NeverCanonical;
