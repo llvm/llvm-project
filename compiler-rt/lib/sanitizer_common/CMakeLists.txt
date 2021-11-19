@@ -156,7 +156,6 @@ set(SANITIZER_IMPL_HEADERS
   sanitizer_mac.h
   sanitizer_malloc_mac.inc
   sanitizer_mutex.h
-  sanitizer_persistent_allocator.h
   sanitizer_placement_new.h
   sanitizer_platform.h
   sanitizer_platform_interceptors.h
@@ -170,6 +169,7 @@ set(SANITIZER_IMPL_HEADERS
   sanitizer_report_decorator.h
   sanitizer_ring_buffer.h
   sanitizer_signal_interceptors.inc
+  sanitizer_stack_store.h
   sanitizer_stackdepot.h
   sanitizer_stackdepotbase.h
   sanitizer_stacktrace.h

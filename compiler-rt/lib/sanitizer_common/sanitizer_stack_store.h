@@ -1,4 +1,4 @@
-//===-- sanitizer_persistent_allocator.h ------------------------*- C++ -*-===//
+//===-- sanitizer_stack_store.h ---------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -13,10 +13,10 @@
 #ifndef SANITIZER_PERSISTENT_ALLOCATOR_H
 #define SANITIZER_PERSISTENT_ALLOCATOR_H
 
-#include "sanitizer_internal_defs.h"
-#include "sanitizer_mutex.h"
 #include "sanitizer_atomic.h"
 #include "sanitizer_common.h"
+#include "sanitizer_internal_defs.h"
+#include "sanitizer_mutex.h"
 
 namespace __sanitizer {
 
@@ -105,6 +105,6 @@ void PersistentAllocator<T>::TestOnlyUnmap() {
   internal_memset(this, 0, sizeof(*this));
 }
 
-} // namespace __sanitizer
+}  // namespace __sanitizer
 
-#endif // SANITIZER_PERSISTENT_ALLOCATOR_H
+#endif  // SANITIZER_PERSISTENT_ALLOCATOR_H
