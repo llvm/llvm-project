@@ -6,6 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
+#ifndef LLVM_LIBC_SYS_MMAN_H
+#define LLVM_LIBC_SYS_MMAN_H
+
 #include <__llvm-libc-common.h>
 
 %%public_api()
+
+#endif // LLVM_LIBC_SYS_MMAN_H

@@ -39,7 +39,7 @@ public:
 
 void PutenvWithAutoChecker::checkPostCall(const CallEvent &Call,
                                           CheckerContext &C) const {
-  if (!Call.isCalled(Putenv))
+  if (!Putenv.matches(Call))
     return;
 
   SVal ArgV = Call.getArgSVal(0);
