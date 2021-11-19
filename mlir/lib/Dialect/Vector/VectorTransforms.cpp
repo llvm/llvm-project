@@ -2943,6 +2943,11 @@ static VectorType trimLeadingOneDims(VectorType oldType) {
   return VectorType::get(newShape, oldType.getElementType());
 }
 
+/// Return a smallVector of size `rank` containing all zeros.
+static SmallVector<int64_t> splatZero(int64_t rank) {
+  return SmallVector<int64_t>(rank, 0);
+}
+
 // Casts away leading one dimensions in vector.extract_strided_slice's vector
 // input by inserting vector.shape_cast.
 struct CastAwayExtractStridedSliceLeadingOneDim
@@ -2969,8 +2974,8 @@ struct CastAwayExtractStridedSliceLeadingOneDim
 
     Location loc = extractOp.getLoc();
 
-    Value newSrcVector = rewriter.create<vector::ShapeCastOp>(
-        loc, newSrcType, extractOp.vector());
+    Value newSrcVector = rewriter.create<vector::ExtractOp>(
+        loc, extractOp.vector(), splatZero(dropCount));
 
     // The offsets/sizes/strides attribute can have a less number of elements
     // than the input vector's rank: it is meant for the leading dimensions.
@@ -2984,7 +2989,7 @@ struct CastAwayExtractStridedSliceLeadingOneDim
     auto newExtractOp = rewriter.create<vector::ExtractStridedSliceOp>(
         loc, newDstType, newSrcVector, newOffsets, newSizes, newStrides);
 
-    rewriter.replaceOpWithNewOp<vector::ShapeCastOp>(extractOp, oldDstType,
+    rewriter.replaceOpWithNewOp<vector::BroadcastOp>(extractOp, oldDstType,
                                                      newExtractOp);
 
     return success();
@@ -3004,17 +3009,18 @@ struct CastAwayInsertStridedSliceLeadingOneDim
     VectorType oldDstType = insertOp.getDestVectorType();
     VectorType newDstType = trimLeadingOneDims(oldDstType);
 
-    if (newSrcType.getRank() == oldSrcType.getRank() &&
-        newDstType.getRank() == oldDstType.getRank())
+    int64_t srcDropCount = oldSrcType.getRank() - newSrcType.getRank();
+    int64_t dstDropCount = oldDstType.getRank() - newDstType.getRank();
+    if (srcDropCount == 0 && dstDropCount == 0)
       return failure();
 
     // Trim leading one dimensions from both operands.
     Location loc = insertOp.getLoc();
 
-    Value newSrcVector = rewriter.create<vector::ShapeCastOp>(
-        loc, newSrcType, insertOp.source());
-    Value newDstVector =
-        rewriter.create<vector::ShapeCastOp>(loc, newDstType, insertOp.dest());
+    Value newSrcVector = rewriter.create<vector::ExtractOp>(
+        loc, insertOp.source(), splatZero(srcDropCount));
+    Value newDstVector = rewriter.create<vector::ExtractOp>(
+        loc, insertOp.dest(), splatZero(dstDropCount));
 
     auto newOffsets = rewriter.getArrayAttr(
         insertOp.offsets().getValue().take_back(newDstType.getRank()));
@@ -3024,7 +3030,7 @@ struct CastAwayInsertStridedSliceLeadingOneDim
     auto newInsertOp = rewriter.create<vector::InsertStridedSliceOp>(
         loc, newDstType, newSrcVector, newDstVector, newOffsets, newStrides);
 
-    rewriter.replaceOpWithNewOp<vector::ShapeCastOp>(insertOp, oldDstType,
+    rewriter.replaceOpWithNewOp<vector::BroadcastOp>(insertOp, oldDstType,
                                                      newInsertOp);
 
     return success();
@@ -3068,7 +3074,7 @@ struct CastAwayTransferReadLeadingOneDim
     auto newRead = rewriter.create<vector::TransferReadOp>(
         read.getLoc(), newType, read.source(), read.indices(), newMap,
         read.padding(), inBounds);
-    rewriter.replaceOpWithNewOp<vector::ShapeCastOp>(read, oldType, newRead);
+    rewriter.replaceOpWithNewOp<vector::BroadcastOp>(read, oldType, newRead);
 
     return success();
   }
@@ -3092,9 +3098,9 @@ struct CastAwayTransferWriteLeadingOneDim
 
     VectorType oldType = write.getVectorType();
     VectorType newType = trimLeadingOneDims(oldType);
-
     if (newType == oldType)
       return failure();
+    int64_t dropDim = oldType.getRank() - newType.getRank();
 
     AffineMap oldMap = write.permutation_map();
     ArrayRef<AffineExpr> newResults =
@@ -3108,40 +3114,11 @@ struct CastAwayTransferWriteLeadingOneDim
       inBounds = rewriter.getArrayAttr(
           write.in_boundsAttr().getValue().take_back(newType.getRank()));
 
-    auto newVector = rewriter.create<vector::ShapeCastOp>(
-        write.getLoc(), newType, write.vector());
+    auto newVector = rewriter.create<vector::ExtractOp>(
+        write.getLoc(), write.vector(), splatZero(dropDim));
     rewriter.replaceOpWithNewOp<vector::TransferWriteOp>(
         write, newVector, write.source(), write.indices(), newMap, inBounds);
 
-    return success();
-  }
-};
-
-template <typename BroadCastType>
-struct CastAwayBroadcastLeadingOneDim : public OpRewritePattern<BroadCastType> {
-  using OpRewritePattern<BroadCastType>::OpRewritePattern;
-
-  LogicalResult matchAndRewrite(BroadCastType broadcastOp,
-                                PatternRewriter &rewriter) const override {
-    VectorType dstType =
-        broadcastOp.getResult().getType().template dyn_cast<VectorType>();
-    if (!dstType)
-      return failure();
-    VectorType newDstType = trimLeadingOneDims(dstType);
-    if (newDstType == dstType)
-      return failure();
-    Location loc = broadcastOp.getLoc();
-    Value source = broadcastOp->getOperand(0);
-    VectorType srcVecType = source.getType().template dyn_cast<VectorType>();
-    if (srcVecType)
-      srcVecType = trimLeadingOneDims(srcVecType);
-    if (srcVecType && srcVecType != source.getType()) {
-      source = rewriter.create<vector::ShapeCastOp>(loc, srcVecType, source);
-    }
-    Value newBroadcastOp =
-        rewriter.create<BroadCastType>(loc, newDstType, source);
-    rewriter.replaceOpWithNewOp<vector::ShapeCastOp>(broadcastOp, dstType,
-                                                     newBroadcastOp);
     return success();
   }
 };
@@ -3161,14 +3138,12 @@ public:
     VectorType newVecType = trimLeadingOneDims(vecType);
     if (newVecType == vecType)
       return failure();
-
+    int64_t dropDim = vecType.getRank() - newVecType.getRank();
     SmallVector<Value, 4> newOperands;
     for (Value operand : op->getOperands()) {
       if (auto opVecType = operand.getType().dyn_cast<VectorType>()) {
-        auto newType =
-            VectorType::get(newVecType.getShape(), opVecType.getElementType());
-        newOperands.push_back(rewriter.create<vector::ShapeCastOp>(
-            op->getLoc(), newType, operand));
+        newOperands.push_back(rewriter.create<vector::ExtractOp>(
+            op->getLoc(), operand, splatZero(dropDim)));
       } else {
         newOperands.push_back(operand);
       }
@@ -3178,65 +3153,8 @@ public:
     state.addOperands(newOperands);
     state.addTypes(newVecType);
     Operation *newOp = rewriter.createOperation(state);
-    rewriter.replaceOpWithNewOp<vector::ShapeCastOp>(op, vecType,
+    rewriter.replaceOpWithNewOp<vector::BroadcastOp>(op, vecType,
                                                      newOp->getResult(0));
-    return success();
-  }
-};
-
-// If extractOp is only removing unit dimensions it can be transformed to a
-// shapecast.
-class ExtractToShapeCast final : public OpRewritePattern<ExtractOp> {
-public:
-  using OpRewritePattern<ExtractOp>::OpRewritePattern;
-
-  LogicalResult matchAndRewrite(ExtractOp extractOp,
-                                PatternRewriter &rewriter) const override {
-    auto dstVecType = extractOp.getResult().getType().dyn_cast<VectorType>();
-    if (!dstVecType || extractOp.getVectorType().getNumElements() !=
-                           dstVecType.getNumElements())
-      return failure();
-    rewriter.replaceOpWithNewOp<ShapeCastOp>(extractOp, dstVecType,
-                                             extractOp.vector());
-    return success();
-  }
-};
-
-// If insertOp is only inserting unit dimensions it can be transformed to a
-// shapecast.
-class InsertToShapeCast final : public OpRewritePattern<InsertOp> {
-public:
-  using OpRewritePattern<InsertOp>::OpRewritePattern;
-
-  LogicalResult matchAndRewrite(InsertOp insertOp,
-                                PatternRewriter &rewriter) const override {
-    auto srcVecType = insertOp.getSourceType().dyn_cast<VectorType>();
-    if (!srcVecType || insertOp.getDestVectorType().getNumElements() !=
-                           srcVecType.getNumElements())
-      return failure();
-    rewriter.replaceOpWithNewOp<ShapeCastOp>(
-        insertOp, insertOp.getDestVectorType(), insertOp.source());
-    return success();
-  }
-};
-
-// BroadcastOp can only add dimensions or broadcast a dimension from 1 to N. In
-// the degenerated case where the broadcast only adds dimensions of size 1 it
-// can be replaced by a ShapeCastOp. This canonicalization checks if the total
-// number of elements is the same before and after the broadcast to detect if
-// the only change in the vector type are new dimensions of size 1.
-class BroadcastToShapeCast final : public OpRewritePattern<BroadcastOp> {
-public:
-  using OpRewritePattern<BroadcastOp>::OpRewritePattern;
-
-  LogicalResult matchAndRewrite(BroadcastOp broadcastOp,
-                                PatternRewriter &rewriter) const override {
-    auto srcVecType = broadcastOp.getSourceType().dyn_cast<VectorType>();
-    if (!srcVecType || broadcastOp.getVectorType().getNumElements() !=
-                           srcVecType.getNumElements())
-      return failure();
-    rewriter.replaceOpWithNewOp<ShapeCastOp>(
-        broadcastOp, broadcastOp.getVectorType(), broadcastOp.source());
     return success();
   }
 };
@@ -3722,13 +3640,11 @@ void mlir::vector::populateShapeCastFoldingPatterns(
 
 void mlir::vector::populateCastAwayVectorLeadingOneDimPatterns(
     RewritePatternSet &patterns) {
-  patterns.add<
-      BroadcastToShapeCast, CastAwayExtractStridedSliceLeadingOneDim,
-      CastAwayInsertStridedSliceLeadingOneDim,
-      CastAwayTransferReadLeadingOneDim, CastAwayTransferWriteLeadingOneDim,
-      CastAwayBroadcastLeadingOneDim<vector::BroadcastOp>,
-      CastAwayBroadcastLeadingOneDim<SplatOp>, CastAwayElementwiseLeadingOneDim,
-      ExtractToShapeCast, InsertToShapeCast>(patterns.getContext());
+  patterns.add<CastAwayExtractStridedSliceLeadingOneDim,
+               CastAwayInsertStridedSliceLeadingOneDim,
+               CastAwayTransferReadLeadingOneDim,
+               CastAwayTransferWriteLeadingOneDim,
+               CastAwayElementwiseLeadingOneDim>(patterns.getContext());
   populateShapeCastFoldingPatterns(patterns);
 }
 

@@ -1125,9 +1125,6 @@ static Value foldExtractFromBroadcast(ExtractOp extractOp) {
                        b.getI64ArrayAttr(extractPos));
     return extractOp.getResult();
   }
-  // TODO: In case the rank of the broadcast source is greater than the rank of
-  // the extract result this can be combined into a new broadcast op. This needs
-  // to be added a canonicalization pattern if needed.
   return Value();
 }
 
@@ -1208,12 +1205,63 @@ OpFoldResult ExtractOp::fold(ArrayRef<Attribute>) {
 
 namespace {
 
+// Pattern to rewrite a ExtractOp(Broadcast) -> Broadcast.
+class ExtractOpFromBroadcast final : public OpRewritePattern<ExtractOp> {
+public:
+  using OpRewritePattern<ExtractOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(ExtractOp extractOp,
+                                PatternRewriter &rewriter) const override {
+    Operation *defOp = extractOp.vector().getDefiningOp();
+    if (!defOp || !isa<vector::BroadcastOp, SplatOp>(defOp))
+      return failure();
+    Value source = defOp->getOperand(0);
+    if (extractOp.getType() == source.getType())
+      return failure();
+    auto getRank = [](Type type) {
+      return type.isa<VectorType>() ? type.cast<VectorType>().getRank() : 0;
+    };
+    unsigned broadcasrSrcRank = getRank(source.getType());
+    unsigned extractResultRank = getRank(extractOp.getType());
+    // We only consider the case where the rank of the source is smaller than
+    // the rank of the extract dst. The other cases are handled in the folding
+    // patterns.
+    if (extractResultRank <= broadcasrSrcRank)
+      return failure();
+    rewriter.replaceOpWithNewOp<vector::BroadcastOp>(
+        extractOp, extractOp.getType(), source);
+    return success();
+  }
+};
+
+// Pattern to rewrite a ExtractOp(splat ConstantOp) -> ConstantOp.
+class ExtractOpConstantFolder final : public OpRewritePattern<ExtractOp> {
+public:
+  using OpRewritePattern<ExtractOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(ExtractOp extractOp,
+                                PatternRewriter &rewriter) const override {
+    // Return if 'extractStridedSliceOp' operand is not defined by a
+    // ConstantOp.
+    auto constantOp = extractOp.vector().getDefiningOp<arith::ConstantOp>();
+    if (!constantOp)
+      return failure();
+    auto dense = constantOp.getValue().dyn_cast<SplatElementsAttr>();
+    if (!dense)
+      return failure();
+    Attribute newAttr = dense.getSplatValue<Attribute>();
+    if (auto vecDstType = extractOp.getType().dyn_cast<VectorType>())
+      newAttr = DenseElementsAttr::get(vecDstType, newAttr);
+    rewriter.replaceOpWithNewOp<arith::ConstantOp>(extractOp, newAttr);
+    return success();
+  }
+};
+
 } // namespace
 
 void ExtractOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                             MLIRContext *context) {
-  // ExtractToShapeCast is not a default canonicalization, it is opt-in by
-  // calling `populateCastAwayVectorLeadingOneDimPatterns`
+  results.add<ExtractOpConstantFolder, ExtractOpFromBroadcast>(context);
 }
 
 static void populateFromInt64AttrArray(ArrayAttr arrayAttr,
@@ -1555,10 +1603,31 @@ static LogicalResult verify(InsertOp op) {
   return success();
 }
 
+namespace {
+
+// If insertOp is only inserting unit dimensions it can be transformed to a
+// broadcast.
+class InsertToBroadcast final : public OpRewritePattern<InsertOp> {
+public:
+  using OpRewritePattern<InsertOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(InsertOp insertOp,
+                                PatternRewriter &rewriter) const override {
+    auto srcVecType = insertOp.getSourceType().dyn_cast<VectorType>();
+    if (!srcVecType || insertOp.getDestVectorType().getNumElements() !=
+                           srcVecType.getNumElements())
+      return failure();
+    rewriter.replaceOpWithNewOp<BroadcastOp>(
+        insertOp, insertOp.getDestVectorType(), insertOp.source());
+    return success();
+  }
+};
+
+} // namespace
+
 void InsertOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                            MLIRContext *context) {
-  // InsertToShapeCast is not a default canonicalization, it is opt-in by
-  // calling `populateCastAwayVectorLeadingOneDimPatterns`
+  results.add<InsertToBroadcast, BroadcastFolder>(context);
 }
 
 // Eliminates insert operations that produce values identical to their source
