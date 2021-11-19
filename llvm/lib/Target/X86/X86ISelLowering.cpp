@@ -29854,20 +29854,30 @@ static SDValue LowerRotate(SDValue Op, const X86Subtarget &Subtarget,
     if (ISD::isBuildVectorOfConstantSDNodes(Amt.getNode()))
       return SDValue();
 
+    // Check for a hidden ISD::ROTR, vXi8 lowering can handle both, but we
+    // currently hit infinite loops in legalization if we allow ISD::ROTR.
+    // FIXME: Infinite ROTL<->ROTR legalization in TargetLowering::expandROT.
+    SDValue HiddenROTRAmt;
+    if (Amt.getOpcode() == ISD::SUB &&
+        ISD::isBuildVectorAllZeros(Amt.getOperand(0).getNode()))
+      HiddenROTRAmt = Amt.getOperand(1);
+
     MVT ExtVT = MVT::getVectorVT(MVT::i16, NumElts / 2);
 
     // If the amount is a splat, attempt to fold as unpack(x,x) << zext(y):
     // rotl(x,y) -> (((aext(x) << bw) | zext(x)) << (y & (bw-1))) >> bw.
-    if (SDValue BaseRotAmt =
-            DAG.getSplatValue(DAG.getNode(ISD::AND, DL, VT, Amt, AmtMask))) {
+    // rotr(x,y) -> (((aext(x) << bw) | zext(x)) >> (y & (bw-1))).
+    if (SDValue BaseRotAmt = DAG.getSplatValue(DAG.getNode(
+            ISD::AND, DL, VT, HiddenROTRAmt ? HiddenROTRAmt : Amt, AmtMask))) {
+      unsigned ShiftX86Opc = HiddenROTRAmt ? X86ISD::VSRLI : X86ISD::VSHLI;
       BaseRotAmt = DAG.getNode(ISD::ZERO_EXTEND, DL, MVT::i32, BaseRotAmt);
       SDValue Lo = DAG.getBitcast(ExtVT, getUnpackl(DAG, DL, VT, R, R));
       SDValue Hi = DAG.getBitcast(ExtVT, getUnpackh(DAG, DL, VT, R, R));
-      Lo = getTargetVShiftNode(X86ISD::VSHLI, DL, ExtVT, Lo, BaseRotAmt,
+      Lo = getTargetVShiftNode(ShiftX86Opc, DL, ExtVT, Lo, BaseRotAmt,
                                Subtarget, DAG);
-      Hi = getTargetVShiftNode(X86ISD::VSHLI, DL, ExtVT, Hi, BaseRotAmt,
+      Hi = getTargetVShiftNode(ShiftX86Opc, DL, ExtVT, Hi, BaseRotAmt,
                                Subtarget, DAG);
-      return getPack(DAG, Subtarget, DL, VT, Lo, Hi, /*PackHiHalf */ true);
+      return getPack(DAG, Subtarget, DL, VT, Lo, Hi, !HiddenROTRAmt);
     }
 
     // We don't need ModuloAmt here as we just peek at individual bits.
@@ -29889,6 +29899,15 @@ static SDValue LowerRotate(SDValue Op, const X86Subtarget &Subtarget,
       return DAG.getSelect(DL, SelVT, C, V0, V1);
     };
 
+    // 'Hidden' ROTR is currently only profitable on AVX512 targets where we
+    // have VPTERNLOG.
+    unsigned ShiftLHS = ISD::SHL;
+    unsigned ShiftRHS = ISD::SRL;
+    if (HiddenROTRAmt && useVPTERNLOG(Subtarget, VT)) {
+      std::swap(ShiftLHS, ShiftRHS);
+      Amt = HiddenROTRAmt;
+    }
+
     // Turn 'a' into a mask suitable for VSELECT: a = a << 5;
     // We can safely do this using i16 shifts as we're only interested in
     // the 3 lower bits of each byte.
@@ -29900,8 +29919,8 @@ static SDValue LowerRotate(SDValue Op, const X86Subtarget &Subtarget,
     SDValue M;
     M = DAG.getNode(
         ISD::OR, DL, VT,
-        DAG.getNode(ISD::SHL, DL, VT, R, DAG.getConstant(4, DL, VT)),
-        DAG.getNode(ISD::SRL, DL, VT, R, DAG.getConstant(4, DL, VT)));
+        DAG.getNode(ShiftLHS, DL, VT, R, DAG.getConstant(4, DL, VT)),
+        DAG.getNode(ShiftRHS, DL, VT, R, DAG.getConstant(4, DL, VT)));
     R = SignBitSelect(VT, Amt, M, R);
 
     // a += a
@@ -29910,8 +29929,8 @@ static SDValue LowerRotate(SDValue Op, const X86Subtarget &Subtarget,
     // r = VSELECT(r, rot(r, 2), a);
     M = DAG.getNode(
         ISD::OR, DL, VT,
-        DAG.getNode(ISD::SHL, DL, VT, R, DAG.getConstant(2, DL, VT)),
-        DAG.getNode(ISD::SRL, DL, VT, R, DAG.getConstant(6, DL, VT)));
+        DAG.getNode(ShiftLHS, DL, VT, R, DAG.getConstant(2, DL, VT)),
+        DAG.getNode(ShiftRHS, DL, VT, R, DAG.getConstant(6, DL, VT)));
     R = SignBitSelect(VT, Amt, M, R);
 
     // a += a
@@ -29920,8 +29939,8 @@ static SDValue LowerRotate(SDValue Op, const X86Subtarget &Subtarget,
     // return VSELECT(r, rot(r, 1), a);
     M = DAG.getNode(
         ISD::OR, DL, VT,
-        DAG.getNode(ISD::SHL, DL, VT, R, DAG.getConstant(1, DL, VT)),
-        DAG.getNode(ISD::SRL, DL, VT, R, DAG.getConstant(7, DL, VT)));
+        DAG.getNode(ShiftLHS, DL, VT, R, DAG.getConstant(1, DL, VT)),
+        DAG.getNode(ShiftRHS, DL, VT, R, DAG.getConstant(7, DL, VT)));
     return SignBitSelect(VT, Amt, M, R);
   }
 
