@@ -3668,7 +3668,10 @@ X86TTIImpl::getReplicationShuffleCost(Type *EltTy, int ReplicationFactor,
   case 1:
     // There is no support for shuffling i1 elements. We *must* promote.
     if (ST->hasBWI()) {
-      PromEltTyBits = 16; // promote to i16, AVX512BW.
+      if (ST->hasVBMI())
+        PromEltTyBits = 8; // promote to i8, AVX512VBMI.
+      else
+        PromEltTyBits = 16; // promote to i16, AVX512BW.
       break;
     }
     return bailout();
