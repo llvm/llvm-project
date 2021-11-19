@@ -1145,6 +1145,20 @@ struct LoadOpConversion : public FIROpConversion<fir::LoadOp> {
   }
 };
 
+/// Lower `fir.no_reassoc` to LLVM IR dialect.
+/// TODO: how do we want to enforce this in LLVM-IR? Can we manipulate the fast
+/// math flags?
+struct NoReassocOpConversion : public FIROpConversion<fir::NoReassocOp> {
+  using FIROpConversion::FIROpConversion;
+
+  mlir::LogicalResult
+  matchAndRewrite(fir::NoReassocOp noreassoc, OpAdaptor adaptor,
+                  mlir::ConversionPatternRewriter &rewriter) const override {
+    rewriter.replaceOp(noreassoc, adaptor.getOperands()[0]);
+    return success();
+  }
+};
+
 /// Lower `fir.select_type` to LLVM IR dialect.
 struct SelectTypeOpConversion : public FIROpConversion<fir::SelectTypeOp> {
   using FIROpConversion::FIROpConversion;
@@ -2166,13 +2180,13 @@ public:
         FirEndOpConversion, HasValueOpConversion, GenTypeDescOpConversion,
         GlobalLenOpConversion, GlobalOpConversion, InsertOnRangeOpConversion,
         InsertValueOpConversion, IsPresentOpConversion, LoadOpConversion,
-        NegcOpConversion, MulcOpConversion, SelectCaseOpConversion,
-        SelectOpConversion, SelectRankOpConversion, SelectTypeOpConversion,
-        ShapeOpConversion, ShapeShiftOpConversion, ShiftOpConversion,
-        SliceOpConversion, StoreOpConversion, StringLitOpConversion,
-        SubcOpConversion, UnboxCharOpConversion, UnboxProcOpConversion,
-        UndefOpConversion, UnreachableOpConversion, ZeroOpConversion>(
-        typeConverter);
+        NegcOpConversion, NoReassocOpConversion, MulcOpConversion,
+        SelectCaseOpConversion, SelectOpConversion, SelectRankOpConversion,
+        SelectTypeOpConversion, ShapeOpConversion, ShapeShiftOpConversion,
+        ShiftOpConversion, SliceOpConversion, StoreOpConversion,
+        StringLitOpConversion, SubcOpConversion, UnboxCharOpConversion,
+        UnboxProcOpConversion, UndefOpConversion, UnreachableOpConversion,
+        ZeroOpConversion>(typeConverter);
     mlir::populateStdToLLVMConversionPatterns(typeConverter, pattern);
     mlir::arith::populateArithmeticToLLVMConversionPatterns(typeConverter,
                                                             pattern);
