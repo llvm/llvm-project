@@ -56,6 +56,8 @@ using llvm::support::endian::write32le;
 
 namespace {
 
+constexpr int OffsetLabelIntervalBits = 20;
+
 using name = SmallString<COFF::NameSize>;
 
 enum AuxiliaryType {
@@ -120,6 +122,8 @@ public:
   relocations Relocations;
 
   COFFSection(StringRef Name) : Name(std::string(Name)) {}
+
+  SmallVector<COFFSymbol *, 1> OffsetSymbols;
 };
 
 class WinCOFFObjectWriter : public MCObjectWriter {
@@ -149,6 +153,7 @@ public:
   symbol_list WeakDefaults;
 
   bool UseBigObj;
+  bool UseOffsetLabels = false;
 
   bool EmitAddrsigSection = false;
   MCSectionCOFF *AddrsigSection;
@@ -174,7 +179,7 @@ public:
   COFFSymbol *GetOrCreateCOFFSymbol(const MCSymbol *Symbol);
   COFFSection *createSection(StringRef Name);
 
-  void defineSection(MCSectionCOFF const &Sec);
+  void defineSection(MCSectionCOFF const &Sec, const MCAsmLayout &Layout);
 
   COFFSymbol *getLinkedSymbol(const MCSymbol &Symbol);
   void DefineSymbol(const MCSymbol &Symbol, MCAssembler &Assembler,
@@ -244,6 +249,11 @@ WinCOFFObjectWriter::WinCOFFObjectWriter(
     std::unique_ptr<MCWinCOFFObjectTargetWriter> MOTW, raw_pwrite_stream &OS)
     : W(OS, support::little), TargetObjectWriter(std::move(MOTW)) {
   Header.Machine = TargetObjectWriter->getMachine();
+  // Some relocations on ARM64 (the 21 bit ADRP relocations) have a slightly
+  // limited range for the immediate offset (+/- 1 MB); create extra offset
+  // label symbols with regular intervals to allow referencing a
+  // non-temporary symbol that is close enough.
+  UseOffsetLabels = Header.Machine == COFF::IMAGE_FILE_MACHINE_ARM64;
 }
 
 COFFSymbol *WinCOFFObjectWriter::createSymbol(StringRef Name) {
@@ -299,7 +309,8 @@ static uint32_t getAlignment(const MCSectionCOFF &Sec) {
 
 /// This function takes a section data object from the assembler
 /// and creates the associated COFF section staging object.
-void WinCOFFObjectWriter::defineSection(const MCSectionCOFF &MCSec) {
+void WinCOFFObjectWriter::defineSection(const MCSectionCOFF &MCSec,
+                                        const MCAsmLayout &Layout) {
   COFFSection *Section = createSection(MCSec.getName());
   COFFSymbol *Symbol = createSymbol(MCSec.getName());
   Section->Symbol = Symbol;
@@ -329,6 +340,20 @@ void WinCOFFObjectWriter::defineSection(const MCSectionCOFF &MCSec) {
   // Bind internal COFF section to MC section.
   Section->MCSection = &MCSec;
   SectionMap[&MCSec] = Section;
+
+  if (UseOffsetLabels && !MCSec.getFragmentList().empty()) {
+    const uint32_t Interval = 1 << OffsetLabelIntervalBits;
+    uint32_t N = 1;
+    for (uint32_t Off = Interval, E = Layout.getSectionAddressSize(&MCSec);
+         Off < E; Off += Interval) {
+      auto Name = ("$L" + MCSec.getName() + "_" + Twine(N++)).str();
+      COFFSymbol *Label = createSymbol(Name);
+      Label->Section = Section;
+      Label->Data.StorageClass = COFF::IMAGE_SYM_CLASS_LABEL;
+      Label->Data.Value = Off;
+      Section->OffsetSymbols.push_back(Label);
+    }
+  }
 }
 
 static uint64_t getSymbolValue(const MCSymbol &Symbol,
@@ -688,7 +713,7 @@ void WinCOFFObjectWriter::executePostLayoutBinding(MCAssembler &Asm,
   // "Define" each section & symbol. This creates section & symbol
   // entries in the staging area.
   for (const auto &Section : Asm)
-    defineSection(static_cast<const MCSectionCOFF &>(Section));
+    defineSection(static_cast<const MCSectionCOFF &>(Section), Layout);
 
   for (const MCSymbol &Symbol : Asm.symbols())
     if (!Symbol.isTemporary())
@@ -774,8 +799,23 @@ void WinCOFFObjectWriter::recordRelocation(MCAssembler &Asm,
     assert(
         SectionMap.find(TargetSection) != SectionMap.end() &&
         "Section must already have been defined in executePostLayoutBinding!");
-    Reloc.Symb = SectionMap[TargetSection]->Symbol;
+    COFFSection *Section = SectionMap[TargetSection];
+    Reloc.Symb = Section->Symbol;
     FixedValue += Layout.getSymbolOffset(A);
+    // Technically, we should do the final adjustments of FixedValue (below)
+    // before picking an offset symbol, otherwise we might choose one which
+    // is slightly too far away. The relocations where it really matters
+    // (arm64 adrp relocations) don't get any offset though.
+    if (UseOffsetLabels && !Section->OffsetSymbols.empty()) {
+      uint64_t LabelIndex = FixedValue >> OffsetLabelIntervalBits;
+      if (LabelIndex > 0) {
+        if (LabelIndex <= Section->OffsetSymbols.size())
+          Reloc.Symb = Section->OffsetSymbols[LabelIndex - 1];
+        else
+          Reloc.Symb = Section->OffsetSymbols.back();
+        FixedValue -= Reloc.Symb->Data.Value;
+      }
+    }
   } else {
     assert(
         SymbolMap.find(&A) != SymbolMap.end() &&
