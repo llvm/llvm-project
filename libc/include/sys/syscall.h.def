@@ -6,7 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
+#ifndef LLVM_LIBC_SYS_SYSCALL_H
+#define LLVM_LIBC_SYS_SYSCALL_H
+
 <!> If syscall.h were a linux only file, then we do not need this indirection.
 <!> However, to keep the option of a non-linux OS requiring a syscall.h file,
 <!> with its own special syscall numbers, we use this indirection.
 %%include_file(${syscall_numbers})
+
+#endif // LLVM_LIBC_SYS_SYSCALL_H
