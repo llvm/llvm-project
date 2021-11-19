@@ -245,87 +245,6 @@ define i64 @test_auth_db_zero(i64 %arg) {
   ret i64 %tmp
 }
 
-define i64 @test_sign_ia(i64 %arg, i64 %arg1) {
-; ALL-LABEL: test_sign_ia:
-; ALL:       ; %bb.0:
-; ALL-NEXT:    pacia x0, x1
-; ALL-NEXT:    ret
-  %tmp = call i64 @llvm.ptrauth.sign(i64 %arg, i32 0, i64 %arg1)
-  ret i64 %tmp
-}
-
-define i64 @test_sign_ia_zero(i64 %arg) {
-; ALL-LABEL: test_sign_ia_zero:
-; ALL:       ; %bb.0:
-; ALL-NEXT:    paciza x0
-; ALL-NEXT:    ret
-  %tmp = call i64 @llvm.ptrauth.sign(i64 %arg, i32 0, i64 0)
-  ret i64 %tmp
-}
-
-define i64 @test_sign_ib(i64 %arg, i64 %arg1) {
-; ALL-LABEL: test_sign_ib:
-; ALL:       ; %bb.0:
-; ALL-NEXT:    pacib x0, x1
-; ALL-NEXT:    ret
-  %tmp = call i64 @llvm.ptrauth.sign(i64 %arg, i32 1, i64 %arg1)
-  ret i64 %tmp
-}
-
-define i64 @test_sign_ib_zero(i64 %arg) {
-; ALL-LABEL: test_sign_ib_zero:
-; ALL:       ; %bb.0:
-; ALL-NEXT:    pacizb x0
-; ALL-NEXT:    ret
-  %tmp = call i64 @llvm.ptrauth.sign(i64 %arg, i32 1, i64 0)
-  ret i64 %tmp
-}
-
-define i64 @test_sign_da(i64 %arg, i64 %arg1) {
-; ALL-LABEL: test_sign_da:
-; ALL:       ; %bb.0:
-; ALL-NEXT:    pacda x0, x1
-; ALL-NEXT:    ret
-  %tmp = call i64 @llvm.ptrauth.sign(i64 %arg, i32 2, i64 %arg1)
-  ret i64 %tmp
-}
-
-define i64 @test_sign_da_zero(i64 %arg) {
-; ALL-LABEL: test_sign_da_zero:
-; ALL:       ; %bb.0:
-; ALL-NEXT:    pacdza x0
-; ALL-NEXT:    ret
-  %tmp = call i64 @llvm.ptrauth.sign(i64 %arg, i32 2, i64 0)
-  ret i64 %tmp
-}
-
-define i64 @test_sign_db(i64 %arg, i64 %arg1) {
-; ALL-LABEL: test_sign_db:
-; ALL:       ; %bb.0:
-; ALL-NEXT:    pacdb x0, x1
-; ALL-NEXT:    ret
-  %tmp = call i64 @llvm.ptrauth.sign(i64 %arg, i32 3, i64 %arg1)
-  ret i64 %tmp
-}
-
-define i64 @test_sign_db_zero(i64 %arg) {
-; ALL-LABEL: test_sign_db_zero:
-; ALL:       ; %bb.0:
-; ALL-NEXT:    pacdzb x0
-; ALL-NEXT:    ret
-  %tmp = call i64 @llvm.ptrauth.sign(i64 %arg, i32 3, i64 0)
-  ret i64 %tmp
-}
-
-define i64 @test_sign_generic(i64 %arg, i64 %arg1) {
-; ALL-LABEL: test_sign_generic:
-; ALL:       ; %bb.0:
-; ALL-NEXT:    pacga x0, x0, x1
-; ALL-NEXT:    ret
-  %tmp = call i64 @llvm.ptrauth.sign.generic(i64 %arg, i64 %arg1)
-  ret i64 %tmp
-}
-
 ; Note that this might seem like a no-op but is actually a valid way to enforce
 ; the validity of a signature.
 define i64 @test_resign_ia_ia(i64 %arg, i64 %arg1, i64 %arg2) {
@@ -721,18 +640,6 @@ define i64 @test_auth_cse(i64 %arg, i64 %arg1) {
   ret i64 %tmp2
 }
 
-define i64 @test_sign_cse(i64 %arg, i64 %arg1) {
-; ALL-LABEL: test_sign_cse:
-; ALL:       ; %bb.0:
-; ALL-NEXT:    pacia x0, x1
-; ALL-NEXT:    add x0, x0, x0
-; ALL-NEXT:    ret
-  %tmp0 = call i64 @llvm.ptrauth.sign(i64 %arg, i32 0, i64 %arg1)
-  %tmp1 = call i64 @llvm.ptrauth.sign(i64 %arg, i32 0, i64 %arg1)
-  %tmp2 = add i64 %tmp0, %tmp1
-  ret i64 %tmp2
-}
-
 define i64 @test_blend_cse(i64 %arg, i64 %arg1) {
 ; ALL-LABEL: test_blend_cse:
 ; ALL:       ; %bb.0:
@@ -781,8 +688,6 @@ define i64 @test_auth_trap_attribute(i64 %arg, i64 %arg1) "ptrauth-auth-traps" {
 }
 
 declare i64 @llvm.ptrauth.auth(i64, i32, i64)
-declare i64 @llvm.ptrauth.sign(i64, i32, i64)
-declare i64 @llvm.ptrauth.sign.generic(i64, i64)
 declare i64 @llvm.ptrauth.resign(i64, i32, i64, i32, i64)
 declare i64 @llvm.ptrauth.strip(i64, i32)
 declare i64 @llvm.ptrauth.blend(i64, i64)

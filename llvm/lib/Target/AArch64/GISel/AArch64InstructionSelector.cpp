@@ -5435,6 +5435,33 @@ bool AArch64InstructionSelector::selectIntrinsic(MachineInstr &I,
     I.eraseFromParent();
     return true;
   }
+  case Intrinsic::ptrauth_sign: {
+    Register DstReg = I.getOperand(0).getReg();
+    Register ValReg = I.getOperand(2).getReg();
+    uint64_t Key = I.getOperand(3).getImm();
+    Register DiscReg = I.getOperand(4).getReg();
+    auto DiscVal = getIConstantVRegVal(DiscReg, MRI);
+    bool IsDiscZero = DiscVal.hasValue() && DiscVal->isNullValue();
+
+    if (Key > 3)
+      return false;
+
+    unsigned Opcodes[][4] = {
+        {AArch64::PACIA, AArch64::PACIB, AArch64::PACDA, AArch64::PACDB},
+        {AArch64::PACIZA, AArch64::PACIZB, AArch64::PACDZA, AArch64::PACDZB}};
+    unsigned Opcode = Opcodes[IsDiscZero][Key];
+
+    auto PAC = MIB.buildInstr(Opcode, {DstReg}, {ValReg});
+
+    if (!IsDiscZero) {
+      PAC.addUse(DiscReg);
+      RBI.constrainGenericRegister(DiscReg, AArch64::GPR64spRegClass, MRI);
+    }
+
+    RBI.constrainGenericRegister(DstReg, AArch64::GPR64RegClass, MRI);
+    I.eraseFromParent();
+    return true;
+  }
   case Intrinsic::frameaddress:
   case Intrinsic::returnaddress: {
     MachineFunction &MF = *I.getParent()->getParent();
