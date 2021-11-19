@@ -48,8 +48,7 @@ namespace {
 class SerializeToHsacoPass
     : public PassWrapper<SerializeToHsacoPass, gpu::SerializeToBlobPass> {
 public:
-  SerializeToHsacoPass();
-
+  SerializeToHsacoPass(StringRef triple, StringRef arch, StringRef features);
   StringRef getArgument() const override { return "gpu-to-hsaco"; }
   StringRef getDescription() const override {
     return "Lower GPU kernel function to HSACO binary annotations";
@@ -132,12 +131,11 @@ static void maybeSetOption(Pass::Option<std::string> &option,
     option = getValue();
 }
 
-SerializeToHsacoPass::SerializeToHsacoPass() {
-  maybeSetOption(this->triple, [] { return "amdgcn-amd-amdhsa"; });
-  maybeSetOption(this->chip, [] {
-    static auto chip = getDefaultChip();
-    return chip;
-  });
+SerializeToHsacoPass::SerializeToHsacoPass(StringRef triple, StringRef arch,
+                                           StringRef features) {
+  maybeSetOption(this->triple, [&triple] { return triple.str(); });
+  maybeSetOption(this->chip, [&arch] { return arch.str(); });
+  maybeSetOption(this->features, [&features] { return features.str(); });
 }
 
 void SerializeToHsacoPass::getDependentDialects(
@@ -281,7 +279,8 @@ void mlir::registerGpuSerializeToHsacoPass() {
         LLVMInitializeAMDGPUTargetInfo();
         LLVMInitializeAMDGPUTargetMC();
 
-        return std::make_unique<SerializeToHsacoPass>();
+        return std::make_unique<SerializeToHsacoPass>("amdgcn-amd-amdhsa", "",
+                                                      "");
       });
 }
 #else  // MLIR_GPU_TO_HSACO_PASS_ENABLE

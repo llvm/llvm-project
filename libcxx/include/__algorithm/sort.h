@@ -131,7 +131,7 @@ __selection_sort(_BidirectionalIterator __first, _BidirectionalIterator __last, 
     _BidirectionalIterator __lm1 = __last;
     for (--__lm1; __first != __lm1; ++__first)
     {
-        _BidirectionalIterator __i = _VSTD::min_element<_BidirectionalIterator, _Compare&>(__first, __last, __comp);
+        _BidirectionalIterator __i = _VSTD::min_element(__first, __last, __comp);
         if (__i != __first)
             swap(*__first, *__i);
     }
@@ -160,10 +160,11 @@ template <class _Compare, class _RandomAccessIterator>
 void
 __insertion_sort_3(_RandomAccessIterator __first, _RandomAccessIterator __last, _Compare __comp)
 {
+    typedef typename iterator_traits<_RandomAccessIterator>::difference_type difference_type;
     typedef typename iterator_traits<_RandomAccessIterator>::value_type value_type;
-    _RandomAccessIterator __j = __first+2;
-    _VSTD::__sort3<_Compare>(__first, __first+1, __j, __comp);
-    for (_RandomAccessIterator __i = __j+1; __i != __last; ++__i)
+    _RandomAccessIterator __j = __first+difference_type(2);
+    _VSTD::__sort3<_Compare>(__first, __first+difference_type(1), __j, __comp);
+    for (_RandomAccessIterator __i = __j+difference_type(1); __i != __last; ++__i)
     {
         if (__comp(*__i, *__j))
         {
@@ -185,6 +186,7 @@ template <class _Compare, class _RandomAccessIterator>
 bool
 __insertion_sort_incomplete(_RandomAccessIterator __first, _RandomAccessIterator __last, _Compare __comp)
 {
+    typedef typename iterator_traits<_RandomAccessIterator>::difference_type difference_type;
     switch (__last - __first)
     {
     case 0:
@@ -195,21 +197,21 @@ __insertion_sort_incomplete(_RandomAccessIterator __first, _RandomAccessIterator
             swap(*__first, *__last);
         return true;
     case 3:
-        _VSTD::__sort3<_Compare>(__first, __first+1, --__last, __comp);
+        _VSTD::__sort3<_Compare>(__first, __first+difference_type(1), --__last, __comp);
         return true;
     case 4:
-        _VSTD::__sort4<_Compare>(__first, __first+1, __first+2, --__last, __comp);
+        _VSTD::__sort4<_Compare>(__first, __first+difference_type(1), __first+difference_type(2), --__last, __comp);
         return true;
     case 5:
-        _VSTD::__sort5<_Compare>(__first, __first+1, __first+2, __first+3, --__last, __comp);
+        _VSTD::__sort5<_Compare>(__first, __first+difference_type(1), __first+difference_type(2), __first+difference_type(3), --__last, __comp);
         return true;
     }
     typedef typename iterator_traits<_RandomAccessIterator>::value_type value_type;
-    _RandomAccessIterator __j = __first+2;
-    _VSTD::__sort3<_Compare>(__first, __first+1, __j, __comp);
+    _RandomAccessIterator __j = __first+difference_type(2);
+    _VSTD::__sort3<_Compare>(__first, __first+difference_type(1), __j, __comp);
     const unsigned __limit = 8;
     unsigned __count = 0;
-    for (_RandomAccessIterator __i = __j+1; __i != __last; ++__i)
+    for (_RandomAccessIterator __i = __j+difference_type(1); __i != __last; ++__i)
     {
         if (__comp(*__i, *__j))
         {
@@ -268,13 +270,12 @@ __insertion_sort_move(_BidirectionalIterator __first1, _BidirectionalIterator __
 template <class _Compare, class _RandomAccessIterator>
 void
 __introsort(_RandomAccessIterator __first, _RandomAccessIterator __last, _Compare __comp,
-            typename _VSTD::iterator_traits<_RandomAccessIterator>::difference_type __depth)
+            typename iterator_traits<_RandomAccessIterator>::difference_type __depth)
 {
     typedef typename iterator_traits<_RandomAccessIterator>::difference_type difference_type;
     typedef typename iterator_traits<_RandomAccessIterator>::value_type value_type;
     const difference_type __limit = is_trivially_copy_constructible<value_type>::value &&
                                     is_trivially_copy_assignable<value_type>::value ? 30 : 6;
-    typedef typename __comp_ref_type<_Compare>::type _Comp_ref;
     while (true)
     {
     __restart:
@@ -289,13 +290,13 @@ __introsort(_RandomAccessIterator __first, _RandomAccessIterator __last, _Compar
                 swap(*__first, *__last);
             return;
         case 3:
-            _VSTD::__sort3<_Compare>(__first, __first+1, --__last, __comp);
+            _VSTD::__sort3<_Compare>(__first, __first+difference_type(1), --__last, __comp);
             return;
         case 4:
-            _VSTD::__sort4<_Compare>(__first, __first+1, __first+2, --__last, __comp);
+            _VSTD::__sort4<_Compare>(__first, __first+difference_type(1), __first+difference_type(2), --__last, __comp);
             return;
         case 5:
-            _VSTD::__sort5<_Compare>(__first, __first+1, __first+2, __first+3, --__last, __comp);
+            _VSTD::__sort5<_Compare>(__first, __first+difference_type(1), __first+difference_type(2), __first+difference_type(3), --__last, __comp);
             return;
         }
         if (__len <= __limit)
@@ -307,7 +308,7 @@ __introsort(_RandomAccessIterator __first, _RandomAccessIterator __last, _Compar
         if (__depth == 0)
         {
           // Fallback to heap sort as Introsort suggests.
-          _VSTD::__partial_sort<_Comp_ref>(__first, __last, __last, _Comp_ref(__comp));
+          _VSTD::__partial_sort<_Compare>(__first, __last, __last, __comp);
           return;
         }
         --__depth;
@@ -434,7 +435,7 @@ __introsort(_RandomAccessIterator __first, _RandomAccessIterator __last, _Compar
         if (__n_swaps == 0)
         {
             bool __fs = _VSTD::__insertion_sort_incomplete<_Compare>(__first, __i, __comp);
-            if (_VSTD::__insertion_sort_incomplete<_Compare>(__i+1, __last, __comp))
+            if (_VSTD::__insertion_sort_incomplete<_Compare>(__i+difference_type(1), __last, __comp))
             {
                 if (__fs)
                     return;
@@ -458,7 +459,7 @@ __introsort(_RandomAccessIterator __first, _RandomAccessIterator __last, _Compar
         }
         else
         {
-          _VSTD::__introsort<_Compare>(__i + 1, __last, __comp, __depth);
+          _VSTD::__introsort<_Compare>(__i + difference_type(1), __last, __comp, __depth);
           __last = __i;
         }
     }
@@ -478,7 +479,7 @@ template <class _Compare, class _RandomAccessIterator>
 void __sort(_RandomAccessIterator __first, _RandomAccessIterator __last, _Compare __comp) {
   typedef typename iterator_traits<_RandomAccessIterator>::difference_type difference_type;
   difference_type __depth_limit = 2 * __log2i(__last - __first);
-  __introsort(__first, __last, __comp, __depth_limit);
+  _VSTD::__introsort<_Compare>(__first, __last, __comp, __depth_limit);
 }
 
 template <class _Compare, class _Tp>

@@ -182,6 +182,9 @@ def invoke_tool(exe, cmd_args, ir, preprocess_cmd=None, verbose=False):
       stdout = subprocess.check_output(exe + ' ' + applySubstitutions(cmd_args, substitutions),
                                        shell=True, stdin=ir_file)
     if sys.version_info[0] > 2:
+      # FYI, if you crashed here with a decode error, your run line probably
+      # results in bitcode or other binary format being written to the pipe.
+      # For an opt test, you probably want to add -S or -disable-output.
       stdout = stdout.decode()
   # Fix line endings to unix CR style.
   return stdout.replace('\r\n', '\n')
