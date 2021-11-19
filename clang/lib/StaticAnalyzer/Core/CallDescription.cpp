@@ -34,7 +34,7 @@ static MaybeUInt readRequiredParams(MaybeUInt RequiredArgs,
   return None;
 }
 
-ento::CallDescription::CallDescription(int Flags,
+ento::CallDescription::CallDescription(CallDescriptionFlags Flags,
                                        ArrayRef<const char *> QualifiedName,
                                        MaybeUInt RequiredArgs /*= None*/,
                                        MaybeUInt RequiredParams /*= None*/)
@@ -50,7 +50,7 @@ ento::CallDescription::CallDescription(int Flags,
 ento::CallDescription::CallDescription(ArrayRef<const char *> QualifiedName,
                                        MaybeUInt RequiredArgs /*= None*/,
                                        MaybeUInt RequiredParams /*= None*/)
-    : CallDescription(0, QualifiedName, RequiredArgs, RequiredParams) {}
+    : CallDescription(CDF_None, QualifiedName, RequiredArgs, RequiredParams) {}
 
 bool ento::CallDescription::matches(const CallEvent &Call) const {
   // FIXME: Add ObjC Message support.

@@ -28,7 +28,9 @@ class IdentifierInfo;
 namespace clang {
 namespace ento {
 
-enum CallDescriptionFlags : int {
+enum CallDescriptionFlags : unsigned {
+  CDF_None = 0,
+
   /// Describes a C standard function that is sometimes implemented as a macro
   /// that expands to a compiler builtin with some __builtin prefix.
   /// The builtin may as well have a few extra arguments on top of the requested
@@ -61,7 +63,8 @@ public:
   /// @param RequiredArgs The number of arguments that is expected to match a
   /// call. Omit this parameter to match every occurrence of call with a given
   /// name regardless the number of arguments.
-  CallDescription(int Flags, ArrayRef<const char *> QualifiedName,
+  CallDescription(CallDescriptionFlags Flags,
+                  ArrayRef<const char *> QualifiedName,
                   MaybeUInt RequiredArgs = None,
                   MaybeUInt RequiredParams = None);
 
