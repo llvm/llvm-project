@@ -22,20 +22,22 @@
 using namespace llvm;
 using namespace clang;
 
+using MaybeUInt = Optional<unsigned>;
+
 // A constructor helper.
-static Optional<size_t> readRequiredParams(Optional<unsigned> RequiredArgs,
-                                           Optional<size_t> RequiredParams) {
+static MaybeUInt readRequiredParams(MaybeUInt RequiredArgs,
+                                    MaybeUInt RequiredParams) {
   if (RequiredParams)
     return RequiredParams;
   if (RequiredArgs)
-    return static_cast<size_t>(*RequiredArgs);
+    return RequiredArgs;
   return None;
 }
 
-ento::CallDescription::CallDescription(
-    int Flags, ArrayRef<const char *> QualifiedName,
-    Optional<unsigned> RequiredArgs /*= None*/,
-    Optional<size_t> RequiredParams /*= None*/)
+ento::CallDescription::CallDescription(int Flags,
+                                       ArrayRef<const char *> QualifiedName,
+                                       MaybeUInt RequiredArgs /*= None*/,
+                                       MaybeUInt RequiredParams /*= None*/)
     : RequiredArgs(RequiredArgs),
       RequiredParams(readRequiredParams(RequiredArgs, RequiredParams)),
       Flags(Flags) {
@@ -45,10 +47,9 @@ ento::CallDescription::CallDescription(
 }
 
 /// Construct a CallDescription with default flags.
-ento::CallDescription::CallDescription(
-    ArrayRef<const char *> QualifiedName,
-    Optional<unsigned> RequiredArgs /*= None*/,
-    Optional<size_t> RequiredParams /*= None*/)
+ento::CallDescription::CallDescription(ArrayRef<const char *> QualifiedName,
+                                       MaybeUInt RequiredArgs /*= None*/,
+                                       MaybeUInt RequiredParams /*= None*/)
     : CallDescription(0, QualifiedName, RequiredArgs, RequiredParams) {}
 
 bool ento::CallDescription::matches(const CallEvent &Call) const {
@@ -62,8 +63,8 @@ bool ento::CallDescription::matches(const CallEvent &Call) const {
 
   if (Flags & CDF_MaybeBuiltin) {
     return CheckerContext::isCLibraryFunction(FD, getFunctionName()) &&
-           (!RequiredArgs || RequiredArgs <= Call.getNumArgs()) &&
-           (!RequiredParams || RequiredParams <= Call.parameters().size());
+           (!RequiredArgs || *RequiredArgs <= Call.getNumArgs()) &&
+           (!RequiredParams || *RequiredParams <= Call.parameters().size());
   }
 
   if (!II.hasValue()) {
@@ -87,9 +88,9 @@ bool ento::CallDescription::matches(const CallEvent &Call) const {
   const auto ExactMatchArgAndParamCounts =
       [](const CallEvent &Call, const CallDescription &CD) -> bool {
     const bool ArgsMatch =
-        !CD.RequiredArgs || CD.RequiredArgs == Call.getNumArgs();
+        !CD.RequiredArgs || *CD.RequiredArgs == Call.getNumArgs();
     const bool ParamsMatch =
-        !CD.RequiredParams || CD.RequiredParams == Call.parameters().size();
+        !CD.RequiredParams || *CD.RequiredParams == Call.parameters().size();
     return ArgsMatch && ParamsMatch;
   };
 
