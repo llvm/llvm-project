@@ -87,11 +87,9 @@ AST_MATCHER_FUNCTION_P(StatementMatcher, isConstRefReturningMethodCall,
       callee(cxxMethodDecl(
                  returns(hasCanonicalType(matchers::isReferenceToConst())))
                  .bind(MethodDeclId)),
-      on(declRefExpr(to(
-          varDecl(
-              unless(hasType(qualType(hasCanonicalType(hasDeclaration(namedDecl(
-                  matchers::matchesAnyListedName(ExcludedContainerTypes))))))))
-              .bind(ObjectArgId)))));
+      on(declRefExpr(to(varDecl().bind(ObjectArgId)))),
+      thisPointerType(namedDecl(
+          unless(matchers::matchesAnyListedName(ExcludedContainerTypes)))));
 }
 
 AST_MATCHER_FUNCTION(StatementMatcher, isConstRefReturningFunctionCall) {
