@@ -718,7 +718,7 @@ Thumb2SizeReduce::ReduceSpecial(MachineBasicBlock &MBB, MachineInstr *MI,
   case ARM::t2CMPrr: {
     // Try to reduce to the lo-reg only version first. Why there are two
     // versions of the instruction is a mystery.
-    // It would be nice to just have two entries in the master table that
+    // It would be nice to just have two entries in the main table that
     // are prioritized, but the table assumes a unique entry for each
     // source insn opcode. So for now, we hack a local entry record to use.
     static const ReduceEntry NarrowEntry =
