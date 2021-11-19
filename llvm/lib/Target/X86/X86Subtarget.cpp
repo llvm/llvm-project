@@ -72,7 +72,7 @@ X86Subtarget::classifyLocalReference(const GlobalValue *GV) const {
   // errors, so we go through the GOT instead.
   if (AllowTaggedGlobals && TM.getCodeModel() == CodeModel::Small && GV &&
       !isa<Function>(GV))
-    return X86II::MO_GOTPCREL;
+    return X86II::MO_GOTPCREL_NORELAX;
 
   // If we're not PIC, it's not very interesting.
   if (!isPositionIndependent())
@@ -167,6 +167,11 @@ unsigned char X86Subtarget::classifyGlobalReference(const GlobalValue *GV,
     // reference for them.
     if (TM.getCodeModel() == CodeModel::Large)
       return isTargetELF() ? X86II::MO_GOT : X86II::MO_NO_FLAG;
+    // Tagged globals have non-zero upper bits, which makes direct references
+    // require a 64-bit immediate. So we can't let the linker relax the
+    // relocation to a 32-bit RIP-relative direct reference.
+    if (AllowTaggedGlobals && GV && !isa<Function>(GV))
+      return X86II::MO_GOTPCREL_NORELAX;
     return X86II::MO_GOTPCREL;
   }
 
