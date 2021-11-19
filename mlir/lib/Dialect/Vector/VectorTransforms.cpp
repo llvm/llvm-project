@@ -862,16 +862,16 @@ private:
       combinedResult = rewriter.create<arith::MulIOp>(loc, mul, acc);
       break;
     case CombiningKind::MINUI:
-      combinedResult = rewriter.create<MinUIOp>(loc, mul, acc);
+      combinedResult = rewriter.create<arith::MinUIOp>(loc, mul, acc);
       break;
     case CombiningKind::MINSI:
-      combinedResult = rewriter.create<MinSIOp>(loc, mul, acc);
+      combinedResult = rewriter.create<arith::MinSIOp>(loc, mul, acc);
       break;
     case CombiningKind::MAXUI:
-      combinedResult = rewriter.create<MaxUIOp>(loc, mul, acc);
+      combinedResult = rewriter.create<arith::MaxUIOp>(loc, mul, acc);
       break;
     case CombiningKind::MAXSI:
-      combinedResult = rewriter.create<MaxSIOp>(loc, mul, acc);
+      combinedResult = rewriter.create<arith::MaxSIOp>(loc, mul, acc);
       break;
     case CombiningKind::AND:
       combinedResult = rewriter.create<arith::AndIOp>(loc, mul, acc);
@@ -910,10 +910,10 @@ private:
       combinedResult = rewriter.create<arith::MulFOp>(loc, mul, acc);
       break;
     case CombiningKind::MINF:
-      combinedResult = rewriter.create<MinFOp>(loc, mul, acc);
+      combinedResult = rewriter.create<arith::MinFOp>(loc, mul, acc);
       break;
     case CombiningKind::MAXF:
-      combinedResult = rewriter.create<MaxFOp>(loc, mul, acc);
+      combinedResult = rewriter.create<arith::MaxFOp>(loc, mul, acc);
       break;
     case CombiningKind::ADD:   // Already handled this special case above.
     case CombiningKind::AND:   // Only valid for integer types.
@@ -1113,11 +1113,18 @@ public:
     Location loc = op.getLoc();
     auto sourceVectorType = op.getSourceVectorType();
     auto resultVectorType = op.getResultVectorType();
-    // Intended 2D/1D lowerings with better implementations.
+
+    // Special case 2D/1D lowerings with better implementations.
+    // TODO: make is ND/1D to allow generic ND->1D->MD.
     int64_t srcRank = sourceVectorType.getRank();
     int64_t resRank = resultVectorType.getRank();
     if ((srcRank == 2 && resRank == 1) || (srcRank == 1 && resRank == 2))
       return failure();
+
+    // Generic ShapeCast lowering path goes all the way down to unrolled scalar
+    // extract/insert chains.
+    // TODO: consider evolving the semantics to only allow 1D source or dest and
+    // drop this potentially very expensive lowering.
     // Compute number of elements involved in the reshape.
     int64_t numElts = 1;
     for (int64_t r = 0; r < srcRank; r++)
@@ -3177,6 +3184,63 @@ public:
   }
 };
 
+// If extractOp is only removing unit dimensions it can be transformed to a
+// shapecast.
+class ExtractToShapeCast final : public OpRewritePattern<ExtractOp> {
+public:
+  using OpRewritePattern<ExtractOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(ExtractOp extractOp,
+                                PatternRewriter &rewriter) const override {
+    auto dstVecType = extractOp.getResult().getType().dyn_cast<VectorType>();
+    if (!dstVecType || extractOp.getVectorType().getNumElements() !=
+                           dstVecType.getNumElements())
+      return failure();
+    rewriter.replaceOpWithNewOp<ShapeCastOp>(extractOp, dstVecType,
+                                             extractOp.vector());
+    return success();
+  }
+};
+
+// If insertOp is only inserting unit dimensions it can be transformed to a
+// shapecast.
+class InsertToShapeCast final : public OpRewritePattern<InsertOp> {
+public:
+  using OpRewritePattern<InsertOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(InsertOp insertOp,
+                                PatternRewriter &rewriter) const override {
+    auto srcVecType = insertOp.getSourceType().dyn_cast<VectorType>();
+    if (!srcVecType || insertOp.getDestVectorType().getNumElements() !=
+                           srcVecType.getNumElements())
+      return failure();
+    rewriter.replaceOpWithNewOp<ShapeCastOp>(
+        insertOp, insertOp.getDestVectorType(), insertOp.source());
+    return success();
+  }
+};
+
+// BroadcastOp can only add dimensions or broadcast a dimension from 1 to N. In
+// the degenerated case where the broadcast only adds dimensions of size 1 it
+// can be replaced by a ShapeCastOp. This canonicalization checks if the total
+// number of elements is the same before and after the broadcast to detect if
+// the only change in the vector type are new dimensions of size 1.
+class BroadcastToShapeCast final : public OpRewritePattern<BroadcastOp> {
+public:
+  using OpRewritePattern<BroadcastOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(BroadcastOp broadcastOp,
+                                PatternRewriter &rewriter) const override {
+    auto srcVecType = broadcastOp.getSourceType().dyn_cast<VectorType>();
+    if (!srcVecType || broadcastOp.getVectorType().getNumElements() !=
+                           srcVecType.getNumElements())
+      return failure();
+    rewriter.replaceOpWithNewOp<ShapeCastOp>(
+        broadcastOp, broadcastOp.getVectorType(), broadcastOp.source());
+    return success();
+  }
+};
+
 // Returns the values in `arrayAttr` as an integer vector.
 static SmallVector<int64_t, 4> getIntValueVector(ArrayAttr arrayAttr) {
   return llvm::to_vector<4>(
@@ -3651,16 +3715,21 @@ void mlir::vector::populatePropagateVectorDistributionPatterns(
       patterns.getContext());
 }
 
+void mlir::vector::populateShapeCastFoldingPatterns(
+    RewritePatternSet &patterns) {
+  patterns.add<ShapeCastOpFolder>(patterns.getContext());
+}
+
 void mlir::vector::populateCastAwayVectorLeadingOneDimPatterns(
     RewritePatternSet &patterns) {
-  patterns.add<CastAwayExtractStridedSliceLeadingOneDim,
-               CastAwayInsertStridedSliceLeadingOneDim,
-               CastAwayTransferReadLeadingOneDim,
-               CastAwayTransferWriteLeadingOneDim,
-               CastAwayBroadcastLeadingOneDim<vector::BroadcastOp>,
-               CastAwayBroadcastLeadingOneDim<SplatOp>,
-               CastAwayElementwiseLeadingOneDim, ShapeCastOpFolder>(
-      patterns.getContext());
+  patterns.add<
+      BroadcastToShapeCast, CastAwayExtractStridedSliceLeadingOneDim,
+      CastAwayInsertStridedSliceLeadingOneDim,
+      CastAwayTransferReadLeadingOneDim, CastAwayTransferWriteLeadingOneDim,
+      CastAwayBroadcastLeadingOneDim<vector::BroadcastOp>,
+      CastAwayBroadcastLeadingOneDim<SplatOp>, CastAwayElementwiseLeadingOneDim,
+      ExtractToShapeCast, InsertToShapeCast>(patterns.getContext());
+  populateShapeCastFoldingPatterns(patterns);
 }
 
 void mlir::vector::populateBubbleVectorBitCastOpPatterns(

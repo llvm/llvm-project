@@ -1021,26 +1021,30 @@ static void gatherInputSections() {
   TimeTraceScope timeScope("Gathering input sections");
   int inputOrder = 0;
   for (const InputFile *file : inputFiles) {
-    for (const SubsectionMap &map : file->subsections) {
+    for (const Section &section : file->sections) {
+      const Subsections &subsections = section.subsections;
+      if (subsections.empty())
+        continue;
+      if (subsections[0].isec->getName() == section_names::compactUnwind)
+        // Compact unwind entries require special handling elsewhere.
+        continue;
       ConcatOutputSection *osec = nullptr;
-      for (const SubsectionEntry &entry : map) {
-        if (auto *isec = dyn_cast<ConcatInputSection>(entry.isec)) {
+      for (const Subsection &subsection : subsections) {
+        if (auto *isec = dyn_cast<ConcatInputSection>(subsection.isec)) {
           if (isec->isCoalescedWeak())
             continue;
-          if (isec->getSegName() == segment_names::ld) {
-            assert(isec->getName() == section_names::compactUnwind);
-            continue;
-          }
           isec->outSecOff = inputOrder++;
           if (!osec)
             osec = ConcatOutputSection::getOrCreateForInput(isec);
           isec->parent = osec;
           inputSections.push_back(isec);
-        } else if (auto *isec = dyn_cast<CStringInputSection>(entry.isec)) {
+        } else if (auto *isec =
+                       dyn_cast<CStringInputSection>(subsection.isec)) {
           if (in.cStringSection->inputOrder == UnspecifiedInputOrder)
             in.cStringSection->inputOrder = inputOrder++;
           in.cStringSection->addInput(isec);
-        } else if (auto *isec = dyn_cast<WordLiteralInputSection>(entry.isec)) {
+        } else if (auto *isec =
+                       dyn_cast<WordLiteralInputSection>(subsection.isec)) {
           if (in.wordLiteralSection->inputOrder == UnspecifiedInputOrder)
             in.wordLiteralSection->inputOrder = inputOrder++;
           in.wordLiteralSection->addInput(isec);
@@ -1260,6 +1264,8 @@ bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
   config->icfLevel = getICFLevel(args);
   config->dedupLiterals = args.hasArg(OPT_deduplicate_literals) ||
                           config->icfLevel != ICFLevel::none;
+  config->warnDylibInstallName = args.hasFlag(
+      OPT_warn_dylib_install_name, OPT_no_warn_dylib_install_name, false);
 
   // FIXME: Add a commandline flag for this too.
   config->zeroModTime = getenv("ZERO_AR_DATE");
@@ -1276,8 +1282,10 @@ bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
 #endif
 
   if (const Arg *arg = args.getLastArg(OPT_install_name)) {
-    if (config->outputType != MH_DYLIB)
-      warn(arg->getAsString(args) + ": ignored, only has effect with -dylib");
+    if (config->warnDylibInstallName && config->outputType != MH_DYLIB)
+      warn(
+          arg->getAsString(args) +
+          ": ignored, only has effect with -dylib [--warn-dylib-install-name]");
     else
       config->installName = arg->getValue();
   } else if (config->outputType == MH_DYLIB) {

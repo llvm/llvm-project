@@ -1,4 +1,4 @@
-; RUN: llc -start-after=codegenprepare -stop-before finalize-isel -o - %s | FileCheck %s
+; RUN: llc -start-after=codegenprepare -stop-before finalize-isel -o - %s -experimental-debug-variable-locations=false | FileCheck %s
 
 ; This tests that transferDbgValues() changes order of SDDbgValue transferred
 ; to another node and debug info for 'ADD32ri' appears *after* the instruction.

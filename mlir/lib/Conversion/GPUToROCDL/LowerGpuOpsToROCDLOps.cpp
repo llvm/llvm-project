@@ -117,8 +117,8 @@ void mlir::populateGpuToROCDLConversionPatterns(LLVMTypeConverter &converter,
            GPUReturnOpLowering>(converter);
   patterns.add<GPUFuncOpLowering>(
       converter, /*allocaAddrSpace=*/5,
-      Identifier::get(ROCDL::ROCDLDialect::getKernelFuncAttrName(),
-                      &converter.getContext()));
+      StringAttr::get(&converter.getContext(),
+                      ROCDL::ROCDLDialect::getKernelFuncAttrName()));
   patterns.add<OpToFuncCallLowering<math::AbsOp>>(converter, "__ocml_fabs_f32",
                                                   "__ocml_fabs_f64");
   patterns.add<OpToFuncCallLowering<math::AtanOp>>(converter, "__ocml_atan_f32",

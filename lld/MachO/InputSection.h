@@ -149,11 +149,6 @@ public:
   uint64_t outSecOff = 0;
 };
 
-// Verify ConcatInputSection's size on 64-bit builds.
-static_assert(sizeof(int) != 8 || sizeof(ConcatInputSection) == 112,
-              "Try to minimize ConcatInputSection's size, we create many "
-              "instances of it");
-
 // Helper functions to make it easy to sprinkle asserts.
 
 inline bool shouldOmitFromOutput(InputSection *isec) {
@@ -303,6 +298,7 @@ constexpr const char debugAbbrev[] = "__debug_abbrev";
 constexpr const char debugInfo[] = "__debug_info";
 constexpr const char debugStr[] = "__debug_str";
 constexpr const char ehFrame[] = "__eh_frame";
+constexpr const char gccExceptTab[] = "__gcc_except_tab";
 constexpr const char export_[] = "__export";
 constexpr const char dataInCode[] = "__data_in_code";
 constexpr const char functionStarts[] = "__func_starts";

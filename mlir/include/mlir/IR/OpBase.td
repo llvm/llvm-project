@@ -502,6 +502,10 @@ def Index : Type<CPred<"$_self.isa<::mlir::IndexType>()">, "index",
                  "::mlir::IndexType">,
             BuildableType<"$_builder.getIndexType()">;
 
+// Any signless integer type or index type.
+def AnySignlessIntegerOrIndex : Type<CPred<"$_self.isSignlessIntOrIndex()">,
+                                     "signless integer or index">;
+
 // Floating point types.
 
 // Any float type irrespective of its width.
@@ -549,7 +553,7 @@ class OpaqueType<string dialect, string name, string summary>
   : Type<CPred<"isOpaqueTypeWithName($_self, \""#dialect#"\", \""#name#"\")">,
          summary, "::mlir::OpaqueType">,
     BuildableType<"::mlir::OpaqueType::get("
-                  "$_builder.getIdentifier(\"" # dialect # "\"), \""
+                  "$_builder.getStringAttr(\"" # dialect # "\"), \""
                   # name # "\")">;
 
 // Function Type
@@ -823,9 +827,9 @@ def BoolLike : TypeConstraint<Or<[I1.predicate, VectorOf<[I1]>.predicate,
 // Type constraint for signless-integer-like types: signless integers, indices,
 // vectors of signless integers or indices, tensors of signless integers.
 def SignlessIntegerLike : TypeConstraint<Or<[
-        AnySignlessInteger.predicate, Index.predicate,
-        VectorOf<[AnySignlessInteger, Index]>.predicate,
-        TensorOf<[AnySignlessInteger, Index]>.predicate]>,
+        AnySignlessIntegerOrIndex.predicate,
+        VectorOf<[AnySignlessIntegerOrIndex]>.predicate,
+        TensorOf<[AnySignlessIntegerOrIndex]>.predicate]>,
     "signless-integer-like">;
 
 // Type constraint for float-like types: floats, vectors or tensors thereof.

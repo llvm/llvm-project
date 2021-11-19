@@ -1729,25 +1729,20 @@ Instruction *InstCombinerImpl::foldVectorBinop(BinaryOperator &Inst) {
     Value *X;
     ArrayRef<int> MaskC;
     int SplatIndex;
-    BinaryOperator *BO;
+    Value *Y, *OtherOp;
     if (!match(LHS,
                m_OneUse(m_Shuffle(m_Value(X), m_Undef(), m_Mask(MaskC)))) ||
         !match(MaskC, m_SplatOrUndefMask(SplatIndex)) ||
-        X->getType() != Inst.getType() || !match(RHS, m_OneUse(m_BinOp(BO))) ||
-        BO->getOpcode() != Opcode)
+        X->getType() != Inst.getType() ||
+        !match(RHS, m_OneUse(m_BinOp(Opcode, m_Value(Y), m_Value(OtherOp)))))
       return nullptr;
 
     // FIXME: This may not be safe if the analysis allows undef elements. By
     //        moving 'Y' before the splat shuffle, we are implicitly assuming
     //        that it is not undef/poison at the splat index.
-    Value *Y, *OtherOp;
-    if (isSplatValue(BO->getOperand(0), SplatIndex)) {
-      Y = BO->getOperand(0);
-      OtherOp = BO->getOperand(1);
-    } else if (isSplatValue(BO->getOperand(1), SplatIndex)) {
-      Y = BO->getOperand(1);
-      OtherOp = BO->getOperand(0);
-    } else {
+    if (isSplatValue(OtherOp, SplatIndex)) {
+      std::swap(Y, OtherOp);
+    } else if (!isSplatValue(Y, SplatIndex)) {
       return nullptr;
     }
 
@@ -1763,7 +1758,7 @@ Instruction *InstCombinerImpl::foldVectorBinop(BinaryOperator &Inst) {
     // dropped to be safe.
     if (isa<FPMathOperator>(R)) {
       R->copyFastMathFlags(&Inst);
-      R->andIRFlags(BO);
+      R->andIRFlags(RHS);
     }
     if (auto *NewInstBO = dyn_cast<BinaryOperator>(NewBO))
       NewInstBO->copyIRFlags(R);

@@ -167,16 +167,3 @@ func @main() -> tensor<4xi32> {
   }
   return %r: tensor<4xi32>
 }
-
-// -----
-
-func @main() -> i32 {
-  %c0 = arith.constant 0: index
-  // expected-error @+1 {{expected result-less scf.execute_region containing op}}
-  %r = scf.execute_region -> i32 {
-    %A = arith.constant dense<[1, 2, 3, 4]> : tensor<4xi32>
-    %e = tensor.extract %A[%c0]: tensor<4xi32>
-    scf.yield %e: i32
-  }
-  return %r: i32
-}

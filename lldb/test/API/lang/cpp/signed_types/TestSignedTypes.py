@@ -47,8 +47,7 @@ class SignedTypesTestCase(TestBase):
                     substrs=['stopped', 'stop reason = breakpoint'])
 
         # The breakpoint should have a hit count of 1.
-        self.expect("breakpoint list -f", BREAKPOINT_HIT_ONCE,
-                    substrs=[' resolved, hit count = 1'])
+        lldbutil.check_breakpoint(self, bpno = 1, expected_hit_count = 1)
 
         # Execute the puts().
         self.runCmd("thread step-over")

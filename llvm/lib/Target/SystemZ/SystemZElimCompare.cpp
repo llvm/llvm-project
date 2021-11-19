@@ -571,10 +571,9 @@ bool SystemZElimCompare::optimizeCompareZero(
   // Also do a forward search to handle cases where an instruction after the
   // compare can be converted, like
   // LTEBRCompare %f0s, %f0s; %f2s = LER %f0s  =>  LTEBRCompare %f2s, %f0s
-  for (MachineBasicBlock::iterator MBBI =
-         std::next(MachineBasicBlock::iterator(&Compare)), MBBE = MBB.end();
-       MBBI != MBBE;) {
-    MachineInstr &MI = *MBBI++;
+  auto MIRange = llvm::make_range(
+      std::next(MachineBasicBlock::iterator(&Compare)), MBB.end());
+  for (MachineInstr &MI : llvm::make_early_inc_range(MIRange)) {
     if (preservesValueOf(MI, SrcReg)) {
       // Try to eliminate Compare by reusing a CC result from MI.
       if (convertToLoadAndTest(MI, Compare, CCUsers)) {

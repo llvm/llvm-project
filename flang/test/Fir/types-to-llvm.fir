@@ -6,13 +6,13 @@
 // Test sequence types `!fir.array`
 
 func private @foo0(%arg0: !fir.array<10x10xi64>)
-// CHECK-LABEL: foo0 
+// CHECK-LABEL: foo0
 // CHECK-SAME: !llvm.array<10 x array<10 x i64>>
 func private @foo1(%arg0: !fir.array<?xf32>)
 // CHECK-LABEL: foo1
 // CHECK-SAME: !llvm.ptr<f32>
 func private @foo2(%arg0: !fir.array<?x?xf128>)
-// CHECK-LABEL: foo2 
+// CHECK-LABEL: foo2
 // CHECK-SAME: !llvm.ptr<f128>
 func private @foo3(%arg0: !fir.array<*:i32>)
 // CHECK-LABEL: foo3
@@ -176,6 +176,54 @@ func private @foo4(%arg0: !fir.logical<16>)
 
 // -----
 
+// Test `!fir.llvm_ptr` conversion.
+
+func private @foo0(%arg0: !fir.llvm_ptr<i8>)
+// CHECK-LABEL: foo0
+// CHECK-SAME: !llvm.ptr<i8>
+
+func private @foo1(%arg0: !fir.llvm_ptr<!fir.ref<f32>>)
+// CHECK-LABEL: foo1
+// CHECK-SAME: !llvm.ptr<ptr<f32>>
+
+func private @foo2(%arg0: !fir.llvm_ptr<!fir.ref<!fir.box<!fir.ptr<i32>>>>)
+// CHECK-LABEL: foo2
+// CHECK-SAME: !llvm.ptr<ptr<struct<(ptr<i32>, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}})>>>
+
+func private @foo3(%arg0: !fir.llvm_ptr<!fir.ptr<f32>>)
+// CHECK-LABEL: foo3
+// CHECK-SAME: !llvm.ptr<ptr<f32>>
+
+// -----
+
+// Test MLIR `complex<KIND>` conversion.
+
+func private @foo0(%arg0: complex<f16>)
+// CHECK-LABEL: foo0
+// CHECK-SAME: !llvm.struct<(f16, f16)>)
+
+func private @foo1(%arg0: complex<bf16>)
+// CHECK-LABEL: foo1
+// CHECK-SAME: !llvm.struct<(bf16, bf16)>)
+
+func private @foo2(%arg0: complex<f32>)
+// CHECK-LABEL: foo2
+// CHECK-SAME: !llvm.struct<(f32, f32)>)
+
+func private @foo3(%arg0: complex<f64>)
+// CHECK-LABEL: foo3
+// CHECK-SAME: !llvm.struct<(f64, f64)>)
+
+func private @foo4(%arg0: complex<f80>)
+// CHECK-LABEL: foo4
+// CHECK-SAME: !llvm.struct<(f80, f80)>)
+
+func private @foo5(%arg0: complex<f128>)
+// CHECK-LABEL: foo5
+// CHECK-SAME: !llvm.struct<(f128, f128)>)
+
+// -----
+
 // Test `!fir.complex<KIND>` conversion.
 
 func private @foo0(%arg0: !fir.complex<2>)
@@ -301,3 +349,23 @@ func private @foo0(%arg0: !fir.field)
 func private @foo0(%arg0: !fir.len)
 // CHECK-LABEL: foo0
 // CHECK-SAME: i64
+
+// -----
+
+// Test `!fir.tdesc` conversion.
+
+func private @foo0(%arg0: !fir.tdesc<!fir.type<x>>)
+// CHECK-LABEL: foo0
+// CHECK-SAME:  !llvm.ptr<i8>
+
+func private @foo1(%arg : !fir.tdesc<!fir.array<100xf32>>)
+// CHECK-LABEL: foo1
+// CHECK-SAME:  !llvm.ptr<i8>
+
+func private @foo2(%arg : !fir.tdesc<f32>)
+// CHECK-LABEL: foo2
+// CHECK-SAME:  !llvm.ptr<i8>
+
+func private @foo3(%arg : !fir.tdesc<!fir.type<derived7{f1:f32,f2:f32}>>)
+// CHECK-LABEL: foo3
+// CHECK-SAME:  !llvm.ptr<i8>

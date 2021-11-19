@@ -10,6 +10,7 @@ set(LIBS
 
 add_flang_unittest(FlangOptimizerTests
   Builder/CharacterTest.cpp
+  Builder/ComplexTest.cpp
   Builder/DoLoopHelperTest.cpp
   Builder/FIRBuilderTest.cpp
   FIRContextTest.cpp

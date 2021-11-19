@@ -301,12 +301,6 @@ struct AddZeroOptimization : public OpRewritePattern<tosa::AddOp> {
     DenseElementsAttr input1Attr;
     if (matchPattern(input1, m_Constant(&input1Attr)) && input1Attr.isSplat() &&
         input2.getType() == op.getType()) {
-      if (input1Attr.getType().getElementType().isa<FloatType>() &&
-          input1Attr.getSplatValue<APFloat>().isZero()) {
-        rewriter.replaceOp(op, op.input2());
-        return success();
-      }
-
       if (input1Attr.getType().getElementType().isa<IntegerType>() &&
           input1Attr.getSplatValue<APInt>().isZero()) {
         rewriter.replaceOp(op, op.input2());
@@ -317,12 +311,6 @@ struct AddZeroOptimization : public OpRewritePattern<tosa::AddOp> {
     DenseElementsAttr input2Attr;
     if (matchPattern(input2, m_Constant(&input2Attr)) && input2Attr.isSplat() &&
         input1.getType() == op.getType()) {
-      if (input2Attr.getType().getElementType().isa<FloatType>() &&
-          input2Attr.getSplatValue<APFloat>().isZero()) {
-        rewriter.replaceOp(op, op.input1());
-        return success();
-      }
-
       if (input2Attr.getType().getElementType().isa<IntegerType>() &&
           input2Attr.getSplatValue<APInt>().isZero()) {
         rewriter.replaceOp(op, op.input1());
@@ -337,6 +325,55 @@ struct AddZeroOptimization : public OpRewritePattern<tosa::AddOp> {
 void AddOp::getCanonicalizationPatterns(OwningRewritePatternList &results,
                                         MLIRContext *context) {
   results.insert<AddZeroOptimization>(context);
+}
+
+struct MulOneOptimization : public OpRewritePattern<tosa::MulOp> {
+  using OpRewritePattern::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(tosa::MulOp op,
+                                PatternRewriter &rewriter) const override {
+    auto input1 = op.input1();
+    auto input2 = op.input2();
+
+    DenseElementsAttr input1Attr;
+    if (matchPattern(input1, m_Constant(&input1Attr)) && input1Attr.isSplat() &&
+        input2.getType() == op.getType()) {
+      if (input1Attr.getType().getElementType().isa<FloatType>() &&
+          input1Attr.getSplatValue<APFloat>().isExactlyValue(1)) {
+        rewriter.replaceOp(op, op.input2());
+        return success();
+      }
+
+      if (input1Attr.getType().getElementType().isa<IntegerType>() &&
+          matchPattern(input1, m_One())) {
+        rewriter.replaceOp(op, op.input2());
+        return success();
+      }
+    }
+
+    DenseElementsAttr input2Attr;
+    if (matchPattern(input2, m_Constant(&input2Attr)) && input2Attr.isSplat() &&
+        input1.getType() == op.getType()) {
+      if (input2Attr.getType().getElementType().isa<FloatType>() &&
+          input2Attr.getSplatValue<APFloat>().isExactlyValue(1)) {
+        rewriter.replaceOp(op, op.input1());
+        return success();
+      }
+
+      if (input2Attr.getType().getElementType().isa<IntegerType>() &&
+          matchPattern(input2, m_One())) {
+        rewriter.replaceOp(op, op.input1());
+        return success();
+      }
+    }
+
+    return failure();
+  }
+};
+
+void MulOp::getCanonicalizationPatterns(OwningRewritePatternList &results,
+                                        MLIRContext *context) {
+  results.insert<MulOneOptimization>(context);
 }
 
 //===----------------------------------------------------------------------===//
@@ -1576,7 +1613,7 @@ LogicalResult TransposeConv2DOp::inferReturnTypeComponents(
   }
 
   // Weight shapes describes the filter width/height and the output channels.
-  ShapeAdaptor weightShape = operands.getShape(adaptor.input());
+  ShapeAdaptor weightShape = operands.getShape(adaptor.filter());
   if (weightShape.hasRank()) {
     outputShape[3] = ShapedType::isDynamic(outputShape[3])
                          ? weightShape.getDimSize(0)

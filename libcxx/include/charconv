@@ -1,5 +1,5 @@
 // -*- C++ -*-
-//===------------------------------ charconv ------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -107,8 +107,8 @@ _LIBCPP_AVAILABILITY_TO_CHARS _LIBCPP_FUNC_VIS char* __u32toa(uint32_t __value, 
 
 #ifndef _LIBCPP_CXX03_LANG
 
-void to_chars(char*, char*, bool, int = 10) = delete;
-void from_chars(const char*, const char*, bool, int = 10) = delete;
+to_chars_result to_chars(char*, char*, bool, int = 10) = delete;
+from_chars_result from_chars(const char*, const char*, bool, int = 10) = delete;
 
 namespace __itoa
 {

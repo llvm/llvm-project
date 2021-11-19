@@ -192,8 +192,8 @@ void mlir::populateGpuToNVVMConversionPatterns(LLVMTypeConverter &converter,
   // memory space and does not support `alloca`s with addrspace(5).
   patterns.add<GPUFuncOpLowering>(
       converter, /*allocaAddrSpace=*/0,
-      Identifier::get(NVVM::NVVMDialect::getKernelFuncAttrName(),
-                      &converter.getContext()));
+      StringAttr::get(&converter.getContext(),
+                      NVVM::NVVMDialect::getKernelFuncAttrName()));
 
   patterns.add<OpToFuncCallLowering<math::AbsOp>>(converter, "__nv_fabsf",
                                                   "__nv_fabs");

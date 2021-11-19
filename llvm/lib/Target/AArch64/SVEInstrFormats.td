@@ -1323,10 +1323,15 @@ multiclass sve_int_perm_reverse_z<string asm, SDPatternOperator op> {
   def : SVE_1_Op_Pat<nxv4i32, op, nxv4i32, !cast<Instruction>(NAME # _S)>;
   def : SVE_1_Op_Pat<nxv2i64, op, nxv2i64, !cast<Instruction>(NAME # _D)>;
 
+  def : SVE_1_Op_Pat<nxv2f16, op, nxv2f16, !cast<Instruction>(NAME # _D)>;
+  def : SVE_1_Op_Pat<nxv4f16, op, nxv4f16, !cast<Instruction>(NAME # _S)>;
   def : SVE_1_Op_Pat<nxv8f16, op, nxv8f16, !cast<Instruction>(NAME # _H)>;
+  def : SVE_1_Op_Pat<nxv2f32, op, nxv2f32, !cast<Instruction>(NAME # _D)>;
   def : SVE_1_Op_Pat<nxv4f32, op, nxv4f32, !cast<Instruction>(NAME # _S)>;
   def : SVE_1_Op_Pat<nxv2f64, op, nxv2f64, !cast<Instruction>(NAME # _D)>;
 
+  def : SVE_1_Op_Pat<nxv2bf16, op, nxv2bf16, !cast<Instruction>(NAME # _D)>;
+  def : SVE_1_Op_Pat<nxv4bf16, op, nxv4bf16, !cast<Instruction>(NAME # _S)>;
   def : SVE_1_Op_Pat<nxv8bf16, op, nxv8bf16, !cast<Instruction>(NAME # _H)>;
 }
 

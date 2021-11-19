@@ -1675,8 +1675,8 @@ ClassTemplateDecl *Sema::lookupCoroutineTraits(SourceLocation KwLoc,
             << "std::coroutine_traits";
         return nullptr;
       }
-      /// TODO: Add a warning about not including <experimental/coroutine>
-      /// once we update libcxx.
+      Diag(KwLoc, diag::warn_deprecated_coroutine_namespace)
+          << "coroutine_traits";
     } else {
       /// When we found coroutine_traits in std namespace. Make sure there is no
       /// misleading definition in std::experimental namespace.

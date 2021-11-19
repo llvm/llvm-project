@@ -1687,17 +1687,13 @@ bool SIInsertWaitcnts::runOnMachineFunction(MachineFunction &MF) {
 
   bool HaveScalarStores = false;
 
-  for (MachineFunction::iterator BI = MF.begin(), BE = MF.end(); BI != BE;
-       ++BI) {
-    MachineBasicBlock &MBB = *BI;
-
-    for (MachineBasicBlock::iterator I = MBB.begin(), E = MBB.end(); I != E;
-         ++I) {
-      if (!HaveScalarStores && TII->isScalarStore(*I))
+  for (MachineBasicBlock &MBB : MF) {
+    for (MachineInstr &MI : MBB) {
+      if (!HaveScalarStores && TII->isScalarStore(MI))
         HaveScalarStores = true;
 
-      if (I->getOpcode() == AMDGPU::S_ENDPGM ||
-          I->getOpcode() == AMDGPU::SI_RETURN_TO_EPILOG)
+      if (MI.getOpcode() == AMDGPU::S_ENDPGM ||
+          MI.getOpcode() == AMDGPU::SI_RETURN_TO_EPILOG)
         EndPgmBlocks.push_back(&MBB);
     }
   }

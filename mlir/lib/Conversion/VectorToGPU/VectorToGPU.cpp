@@ -126,9 +126,9 @@ convertElementwiseOpToMMA(Operation *op) {
     return gpu::MMAElementwiseOp::ADDF;
   if (isa<arith::MulFOp>(op))
     return gpu::MMAElementwiseOp::MULF;
-  if (isa<MaxFOp>(op))
+  if (isa<arith::MaxFOp>(op))
     return gpu::MMAElementwiseOp::MAXF;
-  if (isa<MinFOp>(op))
+  if (isa<arith::MinFOp>(op))
     return gpu::MMAElementwiseOp::MINF;
   if (isa<arith::DivFOp>(op))
     return gpu::MMAElementwiseOp::DIVF;

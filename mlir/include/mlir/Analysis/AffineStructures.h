@@ -157,11 +157,22 @@ public:
   bool containsPoint(ArrayRef<int64_t> point) const;
 
   /// Find pairs of inequalities identified by their position indices, using
-  /// which an explicit representation for each local variable can be computed
-  /// The pairs are stored as indices of upperbound, lowerbound
-  /// inequalities. If no such pair can be found, it is stored as llvm::None.
-  void getLocalReprLbUbPairs(
+  /// which an explicit representation for each local variable can be computed.
+  /// The pairs are stored as indices of upperbound, lowerbound inequalities. If
+  /// no such pair can be found, it is stored as llvm::None.
+  ///
+  /// The dividends of the explicit representations are stored in `dividends`
+  /// and the denominators in `denominators`. If no explicit representation
+  /// could be found for the `i^th` local identifier, `denominators[i]` is set
+  /// to 0.
+  void getLocalReprs(
+      std::vector<SmallVector<int64_t, 8>> &dividends,
+      SmallVector<unsigned, 4> &denominators,
       std::vector<llvm::Optional<std::pair<unsigned, unsigned>>> &repr) const;
+  void getLocalReprs(
+      std::vector<llvm::Optional<std::pair<unsigned, unsigned>>> &repr) const;
+  void getLocalReprs(std::vector<SmallVector<int64_t, 8>> &dividends,
+                     SmallVector<unsigned, 4> &denominators) const;
 
   // Clones this object.
   std::unique_ptr<FlatAffineConstraints> clone() const;

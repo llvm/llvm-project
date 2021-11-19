@@ -430,11 +430,6 @@ void tools::gnutools::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back("text");
   }
 
-  if (ToolChain.isNoExecStackDefault()) {
-    CmdArgs.push_back("-z");
-    CmdArgs.push_back("noexecstack");
-  }
-
   if (Args.hasArg(options::OPT_rdynamic))
     CmdArgs.push_back("-export-dynamic");
 
@@ -741,10 +736,6 @@ void tools::gnutools::Assembler::ConstructJob(Compilation &C,
             << A->getOption().getName() << Value;
       }
     }
-  }
-
-  if (getToolChain().isNoExecStackDefault()) {
-      CmdArgs.push_back("--noexecstack");
   }
 
   switch (getToolChain().getArch()) {

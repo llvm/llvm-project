@@ -745,13 +745,6 @@ def : InstAlias<"c.sdsp $rs2, (${rs1})", (C_SDSP GPRC:$rs2, SP:$rs1, 0)>;
 // Compress Instruction tablegen backend.
 //===----------------------------------------------------------------------===//
 
-class CompressPat<dag input, dag output> {
-  dag Input  = input;
-  dag Output    = output;
-  list<Predicate> Predicates = [];
-  bit isCompressOnly = false;
-}
-
 // Patterns are defined in the same order the compressed instructions appear
 // on page 82 of the ISA manual.
 

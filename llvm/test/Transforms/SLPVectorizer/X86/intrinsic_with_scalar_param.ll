@@ -5,24 +5,17 @@ declare float @llvm.powi.f32.i32(float, i32)
 define void @vec_powi_f32(float* %a, float* %c, i32 %P) {
 ; CHECK-LABEL: @vec_powi_f32(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[I0:%.*]] = load float, float* [[A:%.*]], align 4
-; CHECK-NEXT:    [[CALL1:%.*]] = tail call float @llvm.powi.f32.i32(float [[I0]], i32 [[P:%.*]])
-; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds float, float* [[A]], i32 1
-; CHECK-NEXT:    [[I2:%.*]] = load float, float* [[ARRAYIDX2]], align 4
-; CHECK-NEXT:    [[CALL2:%.*]] = tail call float @llvm.powi.f32.i32(float [[I2]], i32 [[P]])
+; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds float, float* [[A:%.*]], i32 1
 ; CHECK-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds float, float* [[A]], i32 2
-; CHECK-NEXT:    [[I4:%.*]] = load float, float* [[ARRAYIDX4]], align 4
-; CHECK-NEXT:    [[CALL3:%.*]] = tail call float @llvm.powi.f32.i32(float [[I4]], i32 [[P]])
 ; CHECK-NEXT:    [[ARRAYIDX6:%.*]] = getelementptr inbounds float, float* [[A]], i32 3
-; CHECK-NEXT:    [[I6:%.*]] = load float, float* [[ARRAYIDX6]], align 4
-; CHECK-NEXT:    [[CALL4:%.*]] = tail call float @llvm.powi.f32.i32(float [[I6]], i32 [[P]])
-; CHECK-NEXT:    store float [[CALL1]], float* [[C:%.*]], align 4
-; CHECK-NEXT:    [[ARRAYIDX8:%.*]] = getelementptr inbounds float, float* [[C]], i32 1
-; CHECK-NEXT:    store float [[CALL2]], float* [[ARRAYIDX8]], align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = bitcast float* [[A]] to <4 x float>*
+; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x float>, <4 x float>* [[TMP0]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = call <4 x float> @llvm.powi.v4f32.i32(<4 x float> [[TMP1]], i32 [[P:%.*]])
+; CHECK-NEXT:    [[ARRAYIDX8:%.*]] = getelementptr inbounds float, float* [[C:%.*]], i32 1
 ; CHECK-NEXT:    [[ARRAYIDX9:%.*]] = getelementptr inbounds float, float* [[C]], i32 2
-; CHECK-NEXT:    store float [[CALL3]], float* [[ARRAYIDX9]], align 4
 ; CHECK-NEXT:    [[ARRAYIDX10:%.*]] = getelementptr inbounds float, float* [[C]], i32 3
-; CHECK-NEXT:    store float [[CALL4]], float* [[ARRAYIDX10]], align 4
+; CHECK-NEXT:    [[TMP3:%.*]] = bitcast float* [[C]] to <4 x float>*
+; CHECK-NEXT:    store <4 x float> [[TMP2]], <4 x float>* [[TMP3]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:

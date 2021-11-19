@@ -53,11 +53,11 @@ static void filterFuncAttributes(ArrayRef<NamedAttribute> attrs,
                                  bool filterArgAttrs,
                                  SmallVectorImpl<NamedAttribute> &result) {
   for (const auto &attr : attrs) {
-    if (attr.first == SymbolTable::getSymbolAttrName() ||
-        attr.first == function_like_impl::getTypeAttrName() ||
-        attr.first == "std.varargs" ||
+    if (attr.getName() == SymbolTable::getSymbolAttrName() ||
+        attr.getName() == function_like_impl::getTypeAttrName() ||
+        attr.getName() == "std.varargs" ||
         (filterArgAttrs &&
-         attr.first == function_like_impl::getArgDictAttrName()))
+         attr.getName() == function_like_impl::getArgDictAttrName()))
       continue;
     result.push_back(attr);
   }
@@ -255,7 +255,7 @@ protected:
                                 rewriter.getArrayAttr(newArgAttrs)));
     }
     for (auto pair : llvm::enumerate(attributes)) {
-      if (pair.value().first == "llvm.linkage") {
+      if (pair.value().getName() == "llvm.linkage") {
         attributes.erase(attributes.begin() + pair.index());
         break;
       }
@@ -448,9 +448,9 @@ struct ConstantOpLowering : public ConvertOpToLLVMPattern<ConstantOp> {
       auto newOp = rewriter.create<LLVM::AddressOfOp>(op.getLoc(), type,
                                                       symbolRef.getValue());
       for (const NamedAttribute &attr : op->getAttrs()) {
-        if (attr.first.strref() == "value")
+        if (attr.getName().strref() == "value")
           continue;
-        newOp->setAttr(attr.first, attr.second);
+        newOp->setAttr(attr.getName(), attr.getValue());
       }
       rewriter.replaceOp(op, newOp->getResults());
       return success();

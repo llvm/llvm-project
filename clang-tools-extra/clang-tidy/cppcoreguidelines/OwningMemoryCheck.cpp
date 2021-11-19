@@ -134,14 +134,9 @@ void OwningMemoryCheck::registerMatchers(MatchFinder *Finder) {
   // Matching on initialization operations where the initial value is a newly
   // created owner, but the LHS is not an owner.
   Finder->addMatcher(
-      traverse(
-          TK_AsIs,
-          namedDecl(
-              varDecl(eachOf(allOf(hasInitializer(CreatesOwner),
-                                   unless(IsOwnerType)),
-                             allOf(hasInitializer(ConsideredOwner),
-                                   hasType(autoType().bind("deduced_type")))))
-                  .bind("bad_owner_creation_variable"))),
+      traverse(TK_AsIs, namedDecl(varDecl(allOf(hasInitializer(CreatesOwner),
+                                                unless(IsOwnerType)))
+                                      .bind("bad_owner_creation_variable"))),
       this);
 
   // Match on all function calls that expect owners as arguments, but didn't
@@ -324,13 +319,6 @@ bool OwningMemoryCheck::handleAssignmentFromNewOwner(const BoundNodes &Nodes) {
 
     // FIXME: FixitHint to rewrite the type of the initialized variable
     // as 'gsl::owner<OriginalType>'
-
-    // If the type of the variable was deduced, the wrapping owner typedef is
-    // eliminated, therefore the check emits a special note for that case.
-    if (Nodes.getNodeAs<AutoType>("deduced_type")) {
-      diag(BadOwnerInitialization->getBeginLoc(),
-           "type deduction did not result in an owner", DiagnosticIDs::Note);
-    }
     return true;
   }
 

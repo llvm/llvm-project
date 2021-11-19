@@ -1,15 +1,7 @@
-// RUN: %clang_cc1 -triple x86_64-apple-darwin -fcxx-exceptions -verify -std=c++2a -fmodules -I%S/Inputs %s -fno-modules-error-recovery
+// RUN: rm -rf %t.mcp
+// RUN: mkdir -p %t
 
-#pragma clang module build compare
-module compare {
-  explicit module cmp {}
-  explicit module other {}
-}
-#pragma clang module contents
-#pragma clang module begin compare.cmp
-#include "std-compare.h"
-#pragma clang module end
-#pragma clang module endbuild
+// RUN: %clang_cc1 -triple x86_64-apple-darwin -fcxx-exceptions -verify -std=c++2a -fmodules -fmodules-cache-path=%t.mcp -I%S/Inputs %s -fno-modules-error-recovery -fmodule-map-file=%S/Inputs/compare.modulemap
 
 struct CC { CC(...); };
 
@@ -24,10 +16,10 @@ auto va = A() <=> A(); // expected-note {{required here}}
 
 // expected-note@std-compare.h:* 2+{{not reachable}}
 
-void b() { void(0 <=> 0); } // expected-error 1+{{missing '#include "std-compare.h"'; 'strong_ordering' must be defined}}
+void b() { void(0 <=> 0); } // expected-error 1+{{definition of 'strong_ordering' must be imported from module 'compare.cmp' before it is required}}
 
 struct B {
-  CC operator<=>(const B&) const = default; // expected-error 1+{{missing '#include "std-compare.h"'; 'strong_ordering' must be defined}}
+  CC operator<=>(const B&) const = default; // expected-error 1+{{definition of 'strong_ordering' must be imported from module 'compare.cmp' before it is required}}
 };
 auto vb = B() <=> B(); // expected-note {{required here}}
 

@@ -1247,9 +1247,16 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
     }
 
     if (Subtarget.hasP9Altivec()) {
-      setOperationAction(ISD::INSERT_VECTOR_ELT, MVT::v8i16, Custom);
-      setOperationAction(ISD::INSERT_VECTOR_ELT, MVT::v16i8, Custom);
-
+      if (Subtarget.isISA3_1()) {
+        setOperationAction(ISD::INSERT_VECTOR_ELT, MVT::v2i64, Legal);
+        setOperationAction(ISD::INSERT_VECTOR_ELT, MVT::v8i16, Legal);
+        setOperationAction(ISD::INSERT_VECTOR_ELT, MVT::v16i8, Legal);
+        setOperationAction(ISD::INSERT_VECTOR_ELT, MVT::v4i32, Legal);
+        setOperationAction(ISD::INSERT_VECTOR_ELT, MVT::v4f32, Legal);
+      } else {
+        setOperationAction(ISD::INSERT_VECTOR_ELT, MVT::v8i16, Custom);
+        setOperationAction(ISD::INSERT_VECTOR_ELT, MVT::v16i8, Custom);
+      }
       setOperationAction(ISD::SIGN_EXTEND_INREG, MVT::v4i8,  Legal);
       setOperationAction(ISD::SIGN_EXTEND_INREG, MVT::v4i16, Legal);
       setOperationAction(ISD::SIGN_EXTEND_INREG, MVT::v4i32, Legal);
@@ -1258,9 +1265,6 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
       setOperationAction(ISD::SIGN_EXTEND_INREG, MVT::v2i32, Legal);
       setOperationAction(ISD::SIGN_EXTEND_INREG, MVT::v2i64, Legal);
     }
-
-    if (Subtarget.isISA3_1())
-      setOperationAction(ISD::INSERT_VECTOR_ELT, MVT::v2i64, Custom);
   }
 
   if (Subtarget.pairedVectorMemops()) {
@@ -10752,7 +10756,6 @@ SDValue PPCTargetLowering::LowerINSERT_VECTOR_ELT(SDValue Op,
   SDLoc dl(Op);
   SDValue V1 = Op.getOperand(0);
   SDValue V2 = Op.getOperand(1);
-  SDValue V3 = Op.getOperand(2);
 
   if (VT == MVT::v2f64 && C)
     return Op;
@@ -10761,18 +10764,10 @@ SDValue PPCTargetLowering::LowerINSERT_VECTOR_ELT(SDValue Op,
     if ((VT == MVT::v2i64 || VT == MVT::v2f64) && !Subtarget.isPPC64())
       return SDValue();
     // On P10, we have legal lowering for constant and variable indices for
-    // integer vectors.
+    // all vectors.
     if (VT == MVT::v16i8 || VT == MVT::v8i16 || VT == MVT::v4i32 ||
-        VT == MVT::v2i64)
-      return DAG.getNode(PPCISD::VECINSERT, dl, VT, V1, V2, V3);
-    // For f32 and f64 vectors, we have legal lowering for variable indices.
-    // For f32 we also have legal lowering when the element is loaded from
-    // memory.
-    if (VT == MVT::v4f32 || VT == MVT::v2f64) {
-      if (!C || (VT == MVT::v4f32 && isa<LoadSDNode>(V2)))
-        return DAG.getNode(PPCISD::VECINSERT, dl, VT, V1, V2, V3);
+        VT == MVT::v2i64 || VT == MVT::v4f32 || VT == MVT::v2f64)
       return Op;
-    }
   }
 
   // Before P10, we have legal lowering for constant indices but not for

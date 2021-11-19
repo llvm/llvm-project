@@ -137,14 +137,14 @@ ParseResult Parser::parseNameOrFileLineColLocation(LocationAttr &loc) {
     if (childLoc.isa<NameLoc>())
       return emitError(childSourceLoc,
                        "child of NameLoc cannot be another NameLoc");
-    loc = NameLoc::get(Identifier::get(str, ctx), childLoc);
+    loc = NameLoc::get(StringAttr::get(ctx, str), childLoc);
 
     // Parse the closing ')'.
     if (parseToken(Token::r_paren,
                    "expected ')' after child location of NameLoc"))
       return failure();
   } else {
-    loc = NameLoc::get(Identifier::get(str, ctx));
+    loc = NameLoc::get(StringAttr::get(ctx, str));
   }
 
   return success();

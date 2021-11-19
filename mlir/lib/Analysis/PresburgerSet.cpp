@@ -196,7 +196,7 @@ static void subtractRecursively(FlatAffineConstraints &b, Simplex &simplex,
   // the local variables of sI.
   std::vector<llvm::Optional<std::pair<unsigned, unsigned>>> repr(
       sI.getNumLocalIds());
-  sI.getLocalReprLbUbPairs(repr);
+  sI.getLocalReprs(repr);
 
   // Add sI's locals to b, after b's locals. Also add b's locals to sI, before
   // sI's locals.

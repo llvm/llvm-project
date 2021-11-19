@@ -1572,7 +1572,7 @@ basic_ostream<_CharT, _Traits>&
 operator<<(basic_ostream<_CharT, _Traits>& __os, shared_ptr<_Yp> const& __p);
 
 
-#if !defined(_LIBCPP_HAS_NO_ATOMIC_HEADER)
+#if !defined(_LIBCPP_HAS_NO_THREADS)
 
 class _LIBCPP_TYPE_VIS __sp_mut
 {
@@ -1712,7 +1712,7 @@ atomic_compare_exchange_weak_explicit(shared_ptr<_Tp>* __p, shared_ptr<_Tp>* __v
     return atomic_compare_exchange_weak(__p, __v, __w);
 }
 
-#endif // !defined(_LIBCPP_HAS_NO_ATOMIC_HEADER)
+#endif // !defined(_LIBCPP_HAS_NO_THREADS)
 
 _LIBCPP_END_NAMESPACE_STD
 

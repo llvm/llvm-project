@@ -1,5 +1,4 @@
 // RUN: %clang_cc1 -triple x86_64-apple-darwin9 %s -std=c++14 -fcoroutines-ts -fcxx-exceptions -fsyntax-only -Wignored-qualifiers -Wno-error=return-type -verify -fblocks -Wall -Wextra -Wno-error=unreachable-code
-// expected-no-diagnostics
 
 #include "Inputs/std-coroutine-exp-namespace.h"
 
@@ -40,7 +39,7 @@ struct std::experimental::coroutine_traits<void, T1> { using promise_type = prom
 VoidTagReturnValue test() {
   object x = {};
   try {
-    co_return {};
+    co_return {}; // expected-warning {{Please move from std::experimental::coroutine_traits to std::coroutine_traits}}
   } catch (...) {
     throw;
   }

@@ -809,26 +809,30 @@ def VSETIVLI : RVInstSetiVLi<(outs GPR:$rd), (ins uimm5:$uimm, VTypeIOp:$vtypei)
 def VSETVL : RVInstSetVL<(outs GPR:$rd), (ins GPR:$rs1, GPR:$rs2),
                          "vsetvl", "$rd, $rs1, $rs2">;
 } // hasSideEffects = 1, mayLoad = 0, mayStore = 0
+foreach eew = [8, 16, 32, 64] in {
+  defvar w = !cast<RISCVWidth>("LSWidth" # eew);
 
-// Vector Unit-Stride Instructions
-def VLE8_V  : VUnitStrideLoad<LSWidth8,  "vle8.v">,
-              VLESched<8>;
-def VLE16_V : VUnitStrideLoad<LSWidth16, "vle16.v">,
-              VLESched<16>;
-def VLE32_V : VUnitStrideLoad<LSWidth32, "vle32.v">,
-              VLESched<32>;
-def VLE64_V : VUnitStrideLoad<LSWidth64, "vle64.v">,
-              VLESched<64>;
+  // Vector Unit-Stride Instructions
+  def VLE#eew#_V : VUnitStrideLoad<w, "vle"#eew#".v">, VLESched<eew>;
+  def VSE#eew#_V  : VUnitStrideStore<w,  "vse"#eew#".v">, VSESched<eew>;
 
-// Vector Unit-Stride Fault-only-First Loads
-def VLE8FF_V  : VUnitStrideLoadFF<LSWidth8,  "vle8ff.v">,
-                VLFSched<8>;
-def VLE16FF_V : VUnitStrideLoadFF<LSWidth16, "vle16ff.v">,
-                VLFSched<16>;
-def VLE32FF_V : VUnitStrideLoadFF<LSWidth32, "vle32ff.v">,
-                VLFSched<32>;
-def VLE64FF_V : VUnitStrideLoadFF<LSWidth64, "vle64ff.v">,
-                VLFSched<64>;
+  // Vector Unit-Stride Fault-only-First Loads
+  def VLE#eew#FF_V : VUnitStrideLoadFF<w,  "vle"#eew#"ff.v">, VLFSched<eew>;
+
+  // Vector Strided Instructions
+  def VLSE#eew#_V  : VStridedLoad<w,  "vlse"#eew#".v">, VLSSched<eew>;
+  def VSSE#eew#_V  : VStridedStore<w,  "vsse"#eew#".v">, VSSSched<eew>;
+  
+  // Vector Indexed Instructions
+  def VLUXEI#eew#_V :
+    VIndexedLoad<MOPLDIndexedUnord, w, "vluxei"#eew#".v">, VLXSched<eew, "U">;
+  def VLOXEI#eew#_V :
+    VIndexedLoad<MOPLDIndexedOrder, w, "vloxei"#eew#".v">, VLXSched<eew, "O">;
+  def VSUXEI#eew#_V :
+    VIndexedStore<MOPSTIndexedUnord, w, "vsuxei"#eew#".v">, VSXSched<eew, "U">;
+  def VSOXEI#eew#_V :
+    VIndexedStore<MOPSTIndexedOrder, w, "vsoxei"#eew#".v">, VSXSched<eew, "O">;
+}
 
 def VLM_V : VUnitStrideLoadMask<"vlm.v">,
              Sched<[WriteVLDM, ReadVLDX]>;
@@ -838,53 +842,6 @@ def : InstAlias<"vle1.v $vd, (${rs1})",
                 (VLM_V VR:$vd, GPR:$rs1), 0>;
 def : InstAlias<"vse1.v $vs3, (${rs1})",
                 (VSM_V VR:$vs3, GPR:$rs1), 0>;
-
-def VSE8_V  : VUnitStrideStore<LSWidth8,  "vse8.v">,
-              VSESched<8>;
-def VSE16_V : VUnitStrideStore<LSWidth16, "vse16.v">,
-              VSESched<16>;
-def VSE32_V : VUnitStrideStore<LSWidth32, "vse32.v">,
-              VSESched<32>;
-def VSE64_V : VUnitStrideStore<LSWidth64, "vse64.v">,
-              VSESched<64>;
-
-// Vector Strided Instructions
-def VLSE8_V  : VStridedLoad<LSWidth8,  "vlse8.v">,
-               VLSSched<8>;
-def VLSE16_V : VStridedLoad<LSWidth16, "vlse16.v">,
-               VLSSched<16>;
-def VLSE32_V : VStridedLoad<LSWidth32, "vlse32.v">,
-               VLSSched<32>;
-def VLSE64_V : VStridedLoad<LSWidth64, "vlse64.v">,
-               VLSSched<32>;
-
-def VSSE8_V  : VStridedStore<LSWidth8,  "vsse8.v">,
-               VSSSched<8>;
-def VSSE16_V : VStridedStore<LSWidth16, "vsse16.v">,
-               VSSSched<16>;
-def VSSE32_V : VStridedStore<LSWidth32, "vsse32.v">,
-               VSSSched<32>;
-def VSSE64_V : VStridedStore<LSWidth64, "vsse64.v">,
-               VSSSched<64>;
-
-// Vector Indexed Instructions
-foreach n = [8, 16, 32, 64] in {
-defvar w = !cast<RISCVWidth>("LSWidth" # n);
-
-def VLUXEI # n # _V :
-  VIndexedLoad<MOPLDIndexedUnord, w, "vluxei" # n # ".v">,
-  VLXSched<n, "U">;
-def VLOXEI # n # _V :
-  VIndexedLoad<MOPLDIndexedOrder, w, "vloxei" # n # ".v">,
-  VLXSched<n, "O">;
-
-def VSUXEI # n # _V :
-  VIndexedStore<MOPSTIndexedUnord, w, "vsuxei" # n # ".v">,
-  VSXSched<n, "U">;
-def VSOXEI # n # _V :
-  VIndexedStore<MOPSTIndexedOrder, w, "vsoxei" # n # ".v">,
-  VSXSched<n, "O">;
-}
 
 defm VL1R : VWholeLoadN<0, "vl1r", VR>;
 defm VL2R : VWholeLoadN<1, "vl2r", VRM2>;
@@ -1472,107 +1429,52 @@ foreach n = [1, 2, 4, 8] in {
 
 let Predicates = [HasStdExtZvlsseg] in {
   foreach nf=2-8 in {
-    def VLSEG#nf#E8_V : VUnitStrideSegmentLoad<!add(nf, -1), LSWidth8, "vlseg"#nf#"e8.v">;
-    def VLSEG#nf#E16_V : VUnitStrideSegmentLoad<!add(nf, -1), LSWidth16, "vlseg"#nf#"e16.v">;
-    def VLSEG#nf#E32_V : VUnitStrideSegmentLoad<!add(nf, -1), LSWidth32, "vlseg"#nf#"e32.v">;
-    def VLSEG#nf#E64_V : VUnitStrideSegmentLoad<!add(nf, -1), LSWidth64, "vlseg"#nf#"e64.v">;
+    foreach eew = [8, 16, 32, 64] in {
+      defvar w = !cast<RISCVWidth>("LSWidth"#eew);
 
-    def VLSEG#nf#E8FF_V : VUnitStrideSegmentLoadFF<!add(nf, -1), LSWidth8, "vlseg"#nf#"e8ff.v">;
-    def VLSEG#nf#E16FF_V : VUnitStrideSegmentLoadFF<!add(nf, -1), LSWidth16, "vlseg"#nf#"e16ff.v">;
-    def VLSEG#nf#E32FF_V : VUnitStrideSegmentLoadFF<!add(nf, -1), LSWidth32, "vlseg"#nf#"e32ff.v">;
-    def VLSEG#nf#E64FF_V : VUnitStrideSegmentLoadFF<!add(nf, -1), LSWidth64, "vlseg"#nf#"e64ff.v">;
+      def VLSEG#nf#E#eew#_V :
+        VUnitStrideSegmentLoad<!add(nf, -1), w, "vlseg"#nf#"e"#eew#".v">;
+      def VLSEG#nf#E#eew#FF_V :
+        VUnitStrideSegmentLoadFF<!add(nf, -1), w, "vlseg"#nf#"e"#eew#"ff.v">;
+      def VSSEG#nf#E#eew#_V :
+        VUnitStrideSegmentStore<!add(nf, -1), w, "vsseg"#nf#"e"#eew#".v">;
 
-    def VSSEG#nf#E8_V : VUnitStrideSegmentStore<!add(nf, -1), LSWidth8, "vsseg"#nf#"e8.v">;
-    def VSSEG#nf#E16_V : VUnitStrideSegmentStore<!add(nf, -1), LSWidth16, "vsseg"#nf#"e16.v">;
-    def VSSEG#nf#E32_V : VUnitStrideSegmentStore<!add(nf, -1), LSWidth32, "vsseg"#nf#"e32.v">;
-    def VSSEG#nf#E64_V : VUnitStrideSegmentStore<!add(nf, -1), LSWidth64, "vsseg"#nf#"e64.v">;
+      // Vector Strided Instructions
+      def VLSSEG#nf#E#eew#_V :
+        VStridedSegmentLoad<!add(nf, -1), w, "vlsseg"#nf#"e"#eew#".v">;
+      def VSSSEG#nf#E#eew#_V :
+        VStridedSegmentStore<!add(nf, -1), w, "vssseg"#nf#"e"#eew#".v">;
 
-    // Vector Strided Instructions
-    def VLSSEG#nf#E8_V : VStridedSegmentLoad<!add(nf, -1), LSWidth8, "vlsseg"#nf#"e8.v">;
-    def VLSSEG#nf#E16_V : VStridedSegmentLoad<!add(nf, -1), LSWidth16, "vlsseg"#nf#"e16.v">;
-    def VLSSEG#nf#E32_V : VStridedSegmentLoad<!add(nf, -1), LSWidth32, "vlsseg"#nf#"e32.v">;
-    def VLSSEG#nf#E64_V : VStridedSegmentLoad<!add(nf, -1), LSWidth64, "vlsseg"#nf#"e64.v">;
-
-    def VSSSEG#nf#E8_V : VStridedSegmentStore<!add(nf, -1), LSWidth8, "vssseg"#nf#"e8.v">;
-    def VSSSEG#nf#E16_V : VStridedSegmentStore<!add(nf, -1), LSWidth16, "vssseg"#nf#"e16.v">;
-    def VSSSEG#nf#E32_V : VStridedSegmentStore<!add(nf, -1), LSWidth32, "vssseg"#nf#"e32.v">;
-    def VSSSEG#nf#E64_V : VStridedSegmentStore<!add(nf, -1), LSWidth64, "vssseg"#nf#"e64.v">;
-
-    // Vector Indexed Instructions
-    def VLUXSEG#nf#EI8_V : VIndexedSegmentLoad<!add(nf, -1), MOPLDIndexedUnord,
-                             LSWidth8, "vluxseg"#nf#"ei8.v">;
-    def VLUXSEG#nf#EI16_V : VIndexedSegmentLoad<!add(nf, -1), MOPLDIndexedUnord,
-                              LSWidth16, "vluxseg"#nf#"ei16.v">;
-    def VLUXSEG#nf#EI32_V : VIndexedSegmentLoad<!add(nf, -1), MOPLDIndexedUnord,
-                              LSWidth32, "vluxseg"#nf#"ei32.v">;
-    def VLUXSEG#nf#EI64_V : VIndexedSegmentLoad<!add(nf, -1), MOPLDIndexedUnord,
-                              LSWidth64, "vluxseg"#nf#"ei64.v">;
-
-    def VLOXSEG#nf#EI8_V : VIndexedSegmentLoad<!add(nf, -1), MOPLDIndexedOrder,
-                             LSWidth8, "vloxseg"#nf#"ei8.v">;
-    def VLOXSEG#nf#EI16_V : VIndexedSegmentLoad<!add(nf, -1), MOPLDIndexedOrder,
-                              LSWidth16, "vloxseg"#nf#"ei16.v">;
-    def VLOXSEG#nf#EI32_V : VIndexedSegmentLoad<!add(nf, -1), MOPLDIndexedOrder,
-                              LSWidth32, "vloxseg"#nf#"ei32.v">;
-    def VLOXSEG#nf#EI64_V : VIndexedSegmentLoad<!add(nf, -1), MOPLDIndexedOrder,
-                              LSWidth64, "vloxseg"#nf#"ei64.v">;
-
-    def VSUXSEG#nf#EI8_V : VIndexedSegmentStore<!add(nf, -1), MOPSTIndexedUnord,
-                             LSWidth8, "vsuxseg"#nf#"ei8.v">;
-    def VSUXSEG#nf#EI16_V : VIndexedSegmentStore<!add(nf, -1), MOPSTIndexedUnord,
-                              LSWidth16, "vsuxseg"#nf#"ei16.v">;
-    def VSUXSEG#nf#EI32_V : VIndexedSegmentStore<!add(nf, -1), MOPSTIndexedUnord,
-                              LSWidth32, "vsuxseg"#nf#"ei32.v">;
-    def VSUXSEG#nf#EI64_V : VIndexedSegmentStore<!add(nf, -1), MOPSTIndexedUnord,
-                              LSWidth64, "vsuxseg"#nf#"ei64.v">;
-
-    def VSOXSEG#nf#EI8_V : VIndexedSegmentStore<!add(nf, -1), MOPSTIndexedOrder,
-                             LSWidth8, "vsoxseg"#nf#"ei8.v">;
-    def VSOXSEG#nf#EI16_V : VIndexedSegmentStore<!add(nf, -1), MOPSTIndexedOrder,
-                              LSWidth16, "vsoxseg"#nf#"ei16.v">;
-    def VSOXSEG#nf#EI32_V : VIndexedSegmentStore<!add(nf, -1), MOPSTIndexedOrder,
-                              LSWidth32, "vsoxseg"#nf#"ei32.v">;
-    def VSOXSEG#nf#EI64_V : VIndexedSegmentStore<!add(nf, -1), MOPSTIndexedOrder,
-                              LSWidth64, "vsoxseg"#nf#"ei64.v">;
+      // Vector Indexed Instructions
+      def VLUXSEG#nf#EI#eew#_V :
+        VIndexedSegmentLoad<!add(nf, -1), MOPLDIndexedUnord, w,
+                            "vluxseg"#nf#"ei"#eew#".v">;
+      def VLOXSEG#nf#EI#eew#_V :
+        VIndexedSegmentLoad<!add(nf, -1), MOPLDIndexedOrder, w,
+                            "vloxseg"#nf#"ei"#eew#".v">;
+      def VSUXSEG#nf#EI#eew#_V :
+        VIndexedSegmentStore<!add(nf, -1), MOPSTIndexedUnord, w,
+                             "vsuxseg"#nf#"ei"#eew#".v">;
+      def VSOXSEG#nf#EI#eew#_V :
+        VIndexedSegmentStore<!add(nf, -1), MOPSTIndexedOrder, w,
+                             "vsoxseg"#nf#"ei"#eew#".v">;
+    }
   }
 } // Predicates = [HasStdExtZvlsseg]
 
 let Predicates = [HasStdExtZvamo, HasStdExtA] in {
-  defm VAMOSWAPEI8 : VAMO<AMOOPVamoSwap, LSWidth8, "vamoswapei8.v">;
-  defm VAMOSWAPEI16 : VAMO<AMOOPVamoSwap, LSWidth16, "vamoswapei16.v">;
-  defm VAMOSWAPEI32 : VAMO<AMOOPVamoSwap, LSWidth32, "vamoswapei32.v">;
-
-  defm VAMOADDEI8 : VAMO<AMOOPVamoAdd, LSWidth8, "vamoaddei8.v">;
-  defm VAMOADDEI16 : VAMO<AMOOPVamoAdd, LSWidth16, "vamoaddei16.v">;
-  defm VAMOADDEI32 : VAMO<AMOOPVamoAdd, LSWidth32, "vamoaddei32.v">;
-
-  defm VAMOXOREI8 : VAMO<AMOOPVamoXor, LSWidth8, "vamoxorei8.v">;
-  defm VAMOXOREI16 : VAMO<AMOOPVamoXor, LSWidth16, "vamoxorei16.v">;
-  defm VAMOXOREI32 : VAMO<AMOOPVamoXor, LSWidth32, "vamoxorei32.v">;
-
-  defm VAMOANDEI8 : VAMO<AMOOPVamoAnd, LSWidth8, "vamoandei8.v">;
-  defm VAMOANDEI16 : VAMO<AMOOPVamoAnd, LSWidth16, "vamoandei16.v">;
-  defm VAMOANDEI32 : VAMO<AMOOPVamoAnd, LSWidth32, "vamoandei32.v">;
-
-  defm VAMOOREI8 : VAMO<AMOOPVamoOr, LSWidth8, "vamoorei8.v">;
-  defm VAMOOREI16 : VAMO<AMOOPVamoOr, LSWidth16, "vamoorei16.v">;
-  defm VAMOOREI32 : VAMO<AMOOPVamoOr, LSWidth32, "vamoorei32.v">;
-
-  defm VAMOMINEI8 : VAMO<AMOOPVamoMin, LSWidth8, "vamominei8.v">;
-  defm VAMOMINEI16 : VAMO<AMOOPVamoMin, LSWidth16, "vamominei16.v">;
-  defm VAMOMINEI32 : VAMO<AMOOPVamoMin, LSWidth32, "vamominei32.v">;
-
-  defm VAMOMAXEI8 : VAMO<AMOOPVamoMax, LSWidth8, "vamomaxei8.v">;
-  defm VAMOMAXEI16 : VAMO<AMOOPVamoMax, LSWidth16, "vamomaxei16.v">;
-  defm VAMOMAXEI32 : VAMO<AMOOPVamoMax, LSWidth32, "vamomaxei32.v">;
-
-  defm VAMOMINUEI8 : VAMO<AMOOPVamoMinu, LSWidth8, "vamominuei8.v">;
-  defm VAMOMINUEI16 : VAMO<AMOOPVamoMinu, LSWidth16, "vamominuei16.v">;
-  defm VAMOMINUEI32 : VAMO<AMOOPVamoMinu, LSWidth32, "vamominuei32.v">;
-
-  defm VAMOMAXUEI8 : VAMO<AMOOPVamoMaxu, LSWidth8, "vamomaxuei8.v">;
-  defm VAMOMAXUEI16 : VAMO<AMOOPVamoMaxu, LSWidth16, "vamomaxuei16.v">;
-  defm VAMOMAXUEI32 : VAMO<AMOOPVamoMaxu, LSWidth32, "vamomaxuei32.v">;
+  foreach eew = [8, 16, 32] in {
+    defvar w = !cast<RISCVWidth>("LSWidth"#eew);
+    defm VAMOSWAPEI#eew : VAMO<AMOOPVamoSwap, w, "vamoswapei"#eew#".v">;
+    defm VAMOADDEI#eew : VAMO<AMOOPVamoAdd, w, "vamoaddei"#eew#".v">;
+    defm VAMOXOREI#eew : VAMO<AMOOPVamoXor, w, "vamoxorei"#eew#".v">;
+    defm VAMOANDEI#eew : VAMO<AMOOPVamoAnd, w, "vamoandei"#eew#".v">;
+    defm VAMOOREI#eew : VAMO<AMOOPVamoOr, w, "vamoorei"#eew#".v">;
+    defm VAMOMINEI#eew : VAMO<AMOOPVamoMin, w, "vamominei"#eew#".v">;
+    defm VAMOMAXEI#eew : VAMO<AMOOPVamoMax, w, "vamomaxei"#eew#".v">;
+    defm VAMOMINUEI#eew : VAMO<AMOOPVamoMinu, w, "vamominuei"#eew#".v">;
+    defm VAMOMAXUEI#eew : VAMO<AMOOPVamoMaxu, w, "vamomaxuei"#eew#".v">;
+  }
 } // Predicates = [HasStdExtZvamo, HasStdExtA]
 
 let Predicates = [HasStdExtZvamo, HasStdExtA, IsRV64] in {

@@ -8434,9 +8434,10 @@ static SDValue getAddressForMemoryInput(SDValue Chain, const SDLoc &Location,
 ///
 ///   OpInfo describes the operand
 ///   RefOpInfo describes the matching operand if any, the operand otherwise
-static void GetRegistersForValue(SelectionDAG &DAG, const SDLoc &DL,
-                                 SDISelAsmOperandInfo &OpInfo,
-                                 SDISelAsmOperandInfo &RefOpInfo) {
+static llvm::Optional<unsigned>
+getRegistersForValue(SelectionDAG &DAG, const SDLoc &DL,
+                     SDISelAsmOperandInfo &OpInfo,
+                     SDISelAsmOperandInfo &RefOpInfo) {
   LLVMContext &Context = *DAG.getContext();
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
 
@@ -8446,7 +8447,7 @@ static void GetRegistersForValue(SelectionDAG &DAG, const SDLoc &DL,
 
   // No work to do for memory operations.
   if (OpInfo.ConstraintType == TargetLowering::C_Memory)
-    return;
+    return None;
 
   // If this is a constraint for a single physreg, or a constraint for a
   // register class, find it.
@@ -8456,7 +8457,7 @@ static void GetRegistersForValue(SelectionDAG &DAG, const SDLoc &DL,
       &TRI, RefOpInfo.ConstraintCode, RefOpInfo.ConstraintVT);
   // RC is unset only on failure. Return immediately.
   if (!RC)
-    return;
+    return None;
 
   // Get the actual register value type.  This is important, because the user
   // may have asked for (e.g.) the AX register in i32 type.  We need to
@@ -8501,7 +8502,7 @@ static void GetRegistersForValue(SelectionDAG &DAG, const SDLoc &DL,
   // No need to allocate a matching input constraint since the constraint it's
   // matching to has already been allocated.
   if (OpInfo.isMatchingInputConstraint())
-    return;
+    return None;
 
   EVT ValueVT = OpInfo.ConstraintVT;
   if (OpInfo.ConstraintVT == MVT::Other)
@@ -8524,8 +8525,12 @@ static void GetRegistersForValue(SelectionDAG &DAG, const SDLoc &DL,
 
   // Do not check for single registers.
   if (AssignedReg) {
-      for (; *I != AssignedReg; ++I)
-        assert(I != RC->end() && "AssignedReg should be member of RC");
+    I = std::find(I, RC->end(), AssignedReg);
+    if (I == RC->end()) {
+      // RC does not contain the selected register, which indicates a
+      // mismatch between the register and the required type/bitwidth.
+      return {AssignedReg};
+    }
   }
 
   for (; NumRegs; --NumRegs, ++I) {
@@ -8535,6 +8540,7 @@ static void GetRegistersForValue(SelectionDAG &DAG, const SDLoc &DL,
   }
 
   OpInfo.AssignedRegs = RegsForValue(Regs, RegVT, ValueVT);
+  return None;
 }
 
 static unsigned
@@ -8768,7 +8774,18 @@ void SelectionDAGBuilder::visitInlineAsm(const CallBase &Call,
         OpInfo.isMatchingInputConstraint()
             ? ConstraintOperands[OpInfo.getMatchedOperand()]
             : OpInfo;
-    GetRegistersForValue(DAG, getCurSDLoc(), OpInfo, RefOpInfo);
+    const auto RegError =
+        getRegistersForValue(DAG, getCurSDLoc(), OpInfo, RefOpInfo);
+    if (RegError.hasValue()) {
+      const MachineFunction &MF = DAG.getMachineFunction();
+      const TargetRegisterInfo &TRI = *MF.getSubtarget().getRegisterInfo();
+      const char *RegName = TRI.getName(RegError.getValue());
+      emitInlineAsmError(Call, "register '" + Twine(RegName) +
+                                   "' allocated for constraint '" +
+                                   Twine(OpInfo.ConstraintCode) +
+                                   "' does not match required type");
+      return;
+    }
 
     auto DetectWriteToReservedRegister = [&]() {
       const MachineFunction &MF = DAG.getMachineFunction();

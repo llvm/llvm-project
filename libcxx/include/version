@@ -205,9 +205,7 @@ __cpp_lib_void_t                                        201411L <type_traits>
 # define __cpp_lib_apply                                201603L
 # define __cpp_lib_array_constexpr                      201603L
 # define __cpp_lib_as_const                             201510L
-# if !defined(_LIBCPP_HAS_NO_THREADS)
-#   define __cpp_lib_atomic_is_always_lock_free         201603L
-# endif
+# define __cpp_lib_atomic_is_always_lock_free           201603L
 # define __cpp_lib_bool_constant                        201505L
 // # define __cpp_lib_boyer_moore_searcher                 201603L
 # define __cpp_lib_byte                                 201603L
@@ -261,25 +259,13 @@ __cpp_lib_void_t                                        201411L <type_traits>
 # undef  __cpp_lib_array_constexpr
 # define __cpp_lib_array_constexpr                      201811L
 // # define __cpp_lib_assume_aligned                       201811L
-# if !defined(_LIBCPP_HAS_NO_THREADS)
-#   define __cpp_lib_atomic_flag_test                   201907L
-# endif
-# if !defined(_LIBCPP_HAS_NO_THREADS)
-// #   define __cpp_lib_atomic_float                       201711L
-# endif
-# if !defined(_LIBCPP_HAS_NO_THREADS)
-#   define __cpp_lib_atomic_lock_free_type_aliases      201907L
-# endif
-# if !defined(_LIBCPP_HAS_NO_THREADS)
-// #   define __cpp_lib_atomic_ref                         201806L
-# endif
-# if !defined(_LIBCPP_HAS_NO_THREADS)
-// #   define __cpp_lib_atomic_shared_ptr                  201711L
-# endif
-# if !defined(_LIBCPP_HAS_NO_THREADS)
-#   define __cpp_lib_atomic_value_initialization        201911L
-# endif
-# if !defined(_LIBCPP_HAS_NO_THREADS) && !defined(_LIBCPP_AVAILABILITY_DISABLE_FTM___cpp_lib_atomic_wait)
+# define __cpp_lib_atomic_flag_test                     201907L
+// # define __cpp_lib_atomic_float                         201711L
+# define __cpp_lib_atomic_lock_free_type_aliases        201907L
+// # define __cpp_lib_atomic_ref                           201806L
+// # define __cpp_lib_atomic_shared_ptr                    201711L
+# define __cpp_lib_atomic_value_initialization          201911L
+# if !defined(_LIBCPP_AVAILABILITY_DISABLE_FTM___cpp_lib_atomic_wait)
 #   define __cpp_lib_atomic_wait                        201907L
 # endif
 # if !defined(_LIBCPP_HAS_NO_THREADS) && !defined(_LIBCPP_AVAILABILITY_DISABLE_FTM___cpp_lib_barrier)
@@ -305,7 +291,7 @@ __cpp_lib_void_t                                        201411L <type_traits>
 # define __cpp_lib_constexpr_tuple                      201811L
 # define __cpp_lib_constexpr_utility                    201811L
 // # define __cpp_lib_constexpr_vector                     201907L
-// # define __cpp_lib_coroutine                            201902L
+# define __cpp_lib_coroutine                            201902L
 # if _LIBCPP_STD_VER > 17 && defined(__cpp_impl_destroying_delete) && __cpp_impl_destroying_delete >= 201806L
 #   define __cpp_lib_destroying_delete                  201806L
 # endif

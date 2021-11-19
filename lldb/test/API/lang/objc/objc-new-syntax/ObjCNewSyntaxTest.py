@@ -10,9 +10,12 @@ class ObjCNewSyntaxTest(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
+    def target(self):
+        return self._target
+
     def runToBreakpoint(self):
         self.build()
-        self.target, process, thread, bkpt = lldbutil.run_to_source_breakpoint(
+        self._target, process, thread, bkpt = lldbutil.run_to_source_breakpoint(
             self, '// Set breakpoint 0 here.', lldb.SBFileSpec(
                 'main.m', False))
 
@@ -23,7 +26,4 @@ class ObjCNewSyntaxTest(TestBase):
             substrs=['stopped', 'stop reason = breakpoint'])
 
         # The breakpoint should have a hit count of 1.
-        self.expect(
-            "breakpoint list -f",
-            BREAKPOINT_HIT_ONCE,
-            substrs=[' resolved, hit count = 1'])
+        lldbutil.check_breakpoint(self, bpno = 1, expected_hit_count = 1)

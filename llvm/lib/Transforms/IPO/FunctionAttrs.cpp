@@ -1827,9 +1827,30 @@ PreservedAnalyses PostOrderFunctionAttrsPass::run(LazyCallGraph::SCC &C,
   if (ChangedFunctions.empty())
     return PreservedAnalyses::all();
 
+  // Invalidate analyses for modified functions so that we don't have to
+  // invalidate all analyses for all functions in this SCC.
+  PreservedAnalyses FuncPA;
+  // We haven't changed the CFG for modified functions.
+  FuncPA.preserveSet<CFGAnalyses>();
+  for (Function *Changed : ChangedFunctions) {
+    FAM.invalidate(*Changed, FuncPA);
+    // Also invalidate any direct callers of changed functions since analyses
+    // may care about attributes of direct callees. For example, MemorySSA cares
+    // about whether or not a call's callee modifies memory and queries that
+    // through function attributes.
+    for (auto *U : Changed->users()) {
+      if (auto *Call = dyn_cast<CallBase>(U)) {
+        if (Call->getCalledFunction() == Changed)
+          FAM.invalidate(*Call->getFunction(), FuncPA);
+      }
+    }
+  }
+
   PreservedAnalyses PA;
   // We have not added or removed functions.
   PA.preserve<FunctionAnalysisManagerCGSCCProxy>();
+  // We already invalidated all relevant function analyses above.
+  PA.preserveSet<AllAnalysesOn<Function>>();
   return PA;
 }
 

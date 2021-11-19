@@ -72,6 +72,7 @@ add_clang_library(clangDriver
   ToolChains/PS4CPU.cpp
   ToolChains/RISCVToolchain.cpp
   ToolChains/Solaris.cpp
+  ToolChains/SPIRV.cpp
   ToolChains/TCE.cpp
   ToolChains/VEToolchain.cpp
   ToolChains/WebAssembly.cpp

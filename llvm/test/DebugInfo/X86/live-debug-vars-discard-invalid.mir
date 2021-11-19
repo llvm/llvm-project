@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=x86_64-linux-gnu -start-before greedy -stop-after virtregrewriter -o - -verify-machineinstrs %s | FileCheck %s
+# RUN: llc -mtriple=x86_64-linux-gnu -start-before greedy -stop-after virtregrewriter -o - -verify-machineinstrs %s -experimental-debug-variable-locations=false | FileCheck %s
 
 --- |
   ; ModuleID = '<stdin>'

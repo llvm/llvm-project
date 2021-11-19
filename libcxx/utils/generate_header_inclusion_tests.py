@@ -29,7 +29,7 @@ mandatory_inclusions = {
     "chrono": ["compare"],
     "cinttypes": ["cstdint"],
     "complex.h": ["complex"],
-    # TODO "coroutine": ["compare"],
+    "coroutine": ["compare"],
     "deque": ["compare", "initializer_list"],
     "filesystem": ["compare"],
     "forward_list": ["compare", "initializer_list"],
@@ -90,7 +90,6 @@ assert all(v == sorted(v) for k, v in mandatory_inclusions.items())
 # that includes <thread> should be marked as UNSUPPORTED, because including
 # <thread> is a hard error in that case.
 lit_markup = {
-  "atomic": ["UNSUPPORTED: libcpp-has-no-threads"],
   "barrier": ["UNSUPPORTED: libcpp-has-no-threads"],
   "filesystem": ["UNSUPPORTED: libcpp-has-no-filesystem-library"],
   "format": ["UNSUPPORTED: libcpp-has-no-incomplete-format"],

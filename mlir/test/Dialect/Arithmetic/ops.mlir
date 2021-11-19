@@ -704,3 +704,25 @@ func @test_constant() -> () {
 
   return
 }
+
+// CHECK-LABEL: func @maximum
+func @maximum(%v1: vector<4xf32>, %v2: vector<4xf32>,
+               %f1: f32, %f2: f32,
+               %i1: i32, %i2: i32) {
+  %max_vector = arith.maxf %v1, %v2 : vector<4xf32>
+  %max_float = arith.maxf %f1, %f2 : f32
+  %max_signed = arith.maxsi %i1, %i2 : i32
+  %max_unsigned = arith.maxui %i1, %i2 : i32
+  return
+}
+
+// CHECK-LABEL: func @minimum
+func @minimum(%v1: vector<4xf32>, %v2: vector<4xf32>,
+               %f1: f32, %f2: f32,
+               %i1: i32, %i2: i32) {
+  %min_vector = arith.minf %v1, %v2 : vector<4xf32>
+  %min_float = arith.minf %f1, %f2 : f32
+  %min_signed = arith.minsi %i1, %i2 : i32
+  %min_unsigned = arith.minui %i1, %i2 : i32
+  return
+}

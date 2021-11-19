@@ -90,8 +90,8 @@ static bool lowerObjCCall(Function &F, const char *NewFn,
 
   CallInst::TailCallKind OverridingTCK = getOverridingTailCallKind(F);
 
-  for (auto I = F.use_begin(), E = F.use_end(); I != E;) {
-    auto *CB = cast<CallBase>(I->getUser());
+  for (Use &U : llvm::make_early_inc_range(F.uses())) {
+    auto *CB = cast<CallBase>(U.getUser());
 
     if (CB->getCalledFunction() != &F) {
       objcarc::ARCInstKind Kind = objcarc::getAttachedARCFunctionKind(CB);
@@ -100,13 +100,12 @@ static bool lowerObjCCall(Function &F, const char *NewFn,
               Kind == objcarc::ARCInstKind::ClaimRV) &&
              "use expected to be the argument of operand bundle "
              "\"clang.arc.attachedcall\"");
-      I++->set(FCache.getCallee());
+      U.set(FCache.getCallee());
       continue;
     }
 
     auto *CI = cast<CallInst>(CB);
     assert(CI->getCalledFunction() && "Cannot lower an indirect call!");
-    ++I;
 
     IRBuilder<> Builder(CI->getParent(), CI->getIterator());
     SmallVector<Value *, 8> Args(CI->args());

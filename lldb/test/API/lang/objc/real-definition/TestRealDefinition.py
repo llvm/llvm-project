@@ -17,29 +17,18 @@ class TestRealDefinition(TestBase):
         if self.getArchitecture() == 'i386':
             self.skipTest("requires modern objc runtime")
         self.build()
-        self.common_setup()
 
-        line = line_number(
-            'Foo.m', '// Set breakpoint where Bar is an interface')
-        lldbutil.run_break_set_by_file_and_line(
-            self, 'Foo.m', line, num_expected_locations=1, loc_exact=True)
+        lldbutil.run_to_source_breakpoint(
+            self,
+            '// Set breakpoint where Bar is an interface',
+            lldb.SBFileSpec("Foo.m", False))
 
-        self.runCmd("run", RUN_SUCCEEDED)
-
-        # The stop reason of the thread should be breakpoint.
-        self.expect("thread list", STOPPED_DUE_TO_BREAKPOINT,
-                    substrs=['stopped',
-                             'stop reason = breakpoint'])
-
-        # Run and stop at Foo
-        self.expect("breakpoint list -f", BREAKPOINT_HIT_ONCE,
-                    substrs=[' resolved, hit count = 1'])
-
+        # Break inside the foo function which takes a bar_ptr argument.
+        self.expect('breakpoint set -p "// Set breakpoint in main"')
         self.runCmd("continue", RUN_SUCCEEDED)
 
         # Run at stop at main
-        self.expect("breakpoint list -f", BREAKPOINT_HIT_ONCE,
-                    substrs=[' resolved, hit count = 1'])
+        lldbutil.check_breakpoint(self, bpno = 1, expected_hit_count = 1)
 
         # This should display correctly.
         self.expect(
@@ -54,29 +43,17 @@ class TestRealDefinition(TestBase):
         if self.getArchitecture() == 'i386':
             self.skipTest("requires modern objc runtime")
         self.build()
-        self.common_setup()
 
-        line = line_number(
-            'Bar.m', '// Set breakpoint where Bar is an implementation')
-        lldbutil.run_break_set_by_file_and_line(
-            self, 'Bar.m', line, num_expected_locations=1, loc_exact=True)
+        lldbutil.run_to_source_breakpoint(
+            self,
+            '// Set breakpoint where Bar is an implementation',
+            lldb.SBFileSpec("Bar.m", False))
 
-        self.runCmd("run", RUN_SUCCEEDED)
-
-        # The stop reason of the thread should be breakpoint.
-        self.expect("thread list", STOPPED_DUE_TO_BREAKPOINT,
-                    substrs=['stopped',
-                             'stop reason = breakpoint'])
-
-        # Run and stop at Foo
-        self.expect("breakpoint list -f", BREAKPOINT_HIT_ONCE,
-                    substrs=[' resolved, hit count = 1'])
-
+        self.expect('breakpoint set -p "// Set breakpoint in main"')
         self.runCmd("continue", RUN_SUCCEEDED)
 
         # Run at stop at main
-        self.expect("breakpoint list -f", BREAKPOINT_HIT_ONCE,
-                    substrs=[' resolved, hit count = 1'])
+        lldbutil.check_breakpoint(self, bpno = 1, expected_hit_count = 1)
 
         # This should display correctly.
         self.expect(
@@ -85,12 +62,3 @@ class TestRealDefinition(TestBase):
             substrs=[
                 "(NSString *)",
                 "foo->_bar->_hidden_ivar = 0x"])
-
-    def common_setup(self):
-        exe = self.getBuildArtifact("a.out")
-        self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)
-
-        # Break inside the foo function which takes a bar_ptr argument.
-        line = line_number('main.m', '// Set breakpoint in main')
-        lldbutil.run_break_set_by_file_and_line(
-            self, "main.m", line, num_expected_locations=1, loc_exact=True)

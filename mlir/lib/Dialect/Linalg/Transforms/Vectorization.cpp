@@ -129,10 +129,12 @@ getKindForOp(Operation *reductionOp) {
       .Case<arith::AddIOp, arith::AddFOp>(
           [&](auto op) { return vector::CombiningKind::ADD; })
       .Case<arith::AndIOp>([&](auto op) { return vector::CombiningKind::AND; })
-      .Case<MaxSIOp>([&](auto op) { return vector::CombiningKind::MAXSI; })
-      .Case<MaxFOp>([&](auto op) { return vector::CombiningKind::MAXF; })
-      .Case<MinSIOp>([&](auto op) { return vector::CombiningKind::MINSI; })
-      .Case<MinFOp>([&](auto op) { return vector::CombiningKind::MINF; })
+      .Case<arith::MaxSIOp>(
+          [&](auto op) { return vector::CombiningKind::MAXSI; })
+      .Case<arith::MaxFOp>([&](auto op) { return vector::CombiningKind::MAXF; })
+      .Case<arith::MinSIOp>(
+          [&](auto op) { return vector::CombiningKind::MINSI; })
+      .Case<arith::MinFOp>([&](auto op) { return vector::CombiningKind::MINF; })
       .Case<arith::MulIOp, arith::MulFOp>(
           [&](auto op) { return vector::CombiningKind::MUL; })
       .Case<arith::OrIOp>([&](auto op) { return vector::CombiningKind::OR; })
@@ -1169,13 +1171,13 @@ static void populateVectorizationPatterns(
   constexpr static StringRef kPromotedMarker = "PROMOTED";
   tilingPatterns.add<LinalgTilingPattern<ConvOp>>(
       context, LinalgTilingOptions().setTileSizes(tileSizes),
-      LinalgTransformationFilter(ArrayRef<Identifier>{},
-                                 Identifier::get(kTiledMarker, context)));
+      LinalgTransformationFilter(ArrayRef<StringAttr>{},
+                                 StringAttr::get(kTiledMarker, context)));
 
   promotionPatterns.add<LinalgPromotionPattern<ConvOp>>(
       context, LinalgPromotionOptions().setUseFullTileBuffersByDefault(true),
-      LinalgTransformationFilter(Identifier::get(kTiledMarker, context),
-                                 Identifier::get(kPromotedMarker, context)));
+      LinalgTransformationFilter(StringAttr::get(kTiledMarker, context),
+                                 StringAttr::get(kPromotedMarker, context)));
 
   SmallVector<bool, 4> mask(N);
   int offset = tileSizes.size() - N;
@@ -1475,7 +1477,7 @@ struct Conv1D_NWC_Generator : public StructuredGenerator<LinalgOp> {
         {nSize,
          // iw = ow * sw + kw *  dw - 1
          //   (i.e. 16 convolved with 3 (@stride 1 dilation 1) -> 14)
-         // Perform the proper inclusive -> exclusive -> inclusive
+         // Perform the proper inclusive -> exclusive -> inclusive.
          ((wSize - 1) * strideW + 1) + ((kwSize - 1) * dilationW + 1) - 1,
          cSize},
         lhsEltType);
@@ -1555,9 +1557,8 @@ struct Conv1D_NWC_Generator : public StructuredGenerator<LinalgOp> {
   }
 
   // Create a contraction: lhs{n, w, c} * rhs{c, f} -> res{n, w, f}
-  vector::ContractionOp conv1dSliceAsContraction(OpBuilder &b, Location loc,
-                                                 Value lhs, Value rhs,
-                                                 Value res) {
+  Value conv1dSliceAsContraction(OpBuilder &b, Location loc, Value lhs,
+                                 Value rhs, Value res) {
     StringRef par = Par().strRef, red = Red().strRef;
     AffineExpr n, w, f, c;
     bindDims(ctx, n, w, f, c);
@@ -1595,7 +1596,10 @@ struct Conv1D_NWC_Generator : public StructuredGenerator<LinalgOp> {
     Type rhsEltType = rhsShapedType.getElementType();
     Type resEltType = resShapedType.getElementType();
     VectorType lhsType = VectorType::get(
-        {nSize, (wSize - 1) * strideW + 1 + (kwSize - 1) * dilationW + 1,
+        {nSize,
+         // iw = ow * sw + kw *  dw - 1
+         //   (i.e. 16 convolved with 3 (@stride 1 dilation 1) -> 14)
+         ((wSize - 1) * strideW + 1) + ((kwSize - 1) * dilationW + 1) - 1,
          cSize},
         lhsEltType);
     VectorType rhsType = VectorType::get({kwSize, cSize}, rhsEltType);
@@ -1649,7 +1653,7 @@ struct Conv1D_NWC_Generator : public StructuredGenerator<LinalgOp> {
     // Compute contraction: O{n, w, c} += I{n, sw * w + dw * kw, c} * F{c}
     for (int64_t kw = 0; kw < kwSize; ++kw) {
       for (int64_t w = 0; w < wSize; w += wSizeStep) {
-        resVals[w] = dilatedConv1dSliceAsContraction(
+        resVals[w] = dilatedConv1dSliceAsFma(
             builder, loc, lhsVals[linearIndex(kw, w)], rhsVals[kw], resVals[w]);
       }
     }
@@ -1673,17 +1677,11 @@ struct Conv1D_NWC_Generator : public StructuredGenerator<LinalgOp> {
         .getOperation();
   }
 
-  // Create a contraction: lhs{n, w, c} * rhs{c} -> res{n, w, c}
-  vector::ContractionOp dilatedConv1dSliceAsContraction(OpBuilder &b,
-                                                        Location loc, Value lhs,
-                                                        Value rhs, Value res) {
-    StringRef par = Par().strRef, red = Red().strRef;
-    AffineExpr n, w, c;
-    bindDims(ctx, n, w, c);
-    return builder.create<vector::ContractionOp>(
-        loc, lhs, rhs, res,
-        /*indexingMaps=*/MapList{{n, w, c}, {c}, {n, w, c}},
-        /*iteratorTypes=*/ArrayRef<StringRef>{par, par, red});
+  /// Lower lhs{n, w, c} * rhs{c} -> res{n, w, c} to fma.
+  Value dilatedConv1dSliceAsFma(OpBuilder &b, Location loc, Value lhs,
+                                Value rhs, Value res) {
+    Value bcast = builder.create<vector::BroadcastOp>(loc, res.getType(), rhs);
+    return b.create<vector::FMAOp>(loc, lhs, bcast, res);
   }
 
   /// Entry point that transposes into the common form:

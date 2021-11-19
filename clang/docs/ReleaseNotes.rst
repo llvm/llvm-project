@@ -194,6 +194,7 @@ Arm and AArch64 Support in Clang
 - Support has been added for the following processors (command-line identifiers in parentheses):
   - Arm Cortex-A510 (``cortex-a510``)
   - Arm Cortex-X2 (``cortex-x2``)
+  - Arm Cortex-A710 (``cortex-A710``)
 
 - The -mtune flag is no longer ignored for AArch64. It is now possible to
   tune code generation for a particular CPU with -mtune without setting any
@@ -205,11 +206,16 @@ Arm and AArch64 Support in Clang
 
 Floating Point Support in Clang
 -------------------------------
-- The -ffp-model=precise now implies -ffp-contract=on rather than
-  -ffp-contract=fast, and the documentation of these features has been
-  clarified. Previously, the documentation claimed that -ffp-model=precise was
-  the default, but this was incorrect because the precise model implied
-  -ffp-contract=fast, whereas the default behavior is -ffp-contract=on.
+- The default setting of FP contraction (FMA) is now -ffp-contract=on (for
+  languages other than CUDA/HIP) even when optimization is off. Previously,
+  the default behavior was equivalent to -ffp-contract=off (-ffp-contract
+  was not set).
+  Related to this, the switch -ffp-model=precise now implies -ffp-contract=on
+  rather than -ffp-contract=fast, and the documentation of these features has
+  been clarified. Previously, the documentation claimed that -ffp-model=precise
+  was the default, but this was incorrect because the precise model implied
+  -ffp-contract=fast, wheras the (now corrected) default behavior is
+  -ffp-contract=on.
   -ffp-model=precise is now exactly the default mode of the compiler.
 
 Internal API Changes

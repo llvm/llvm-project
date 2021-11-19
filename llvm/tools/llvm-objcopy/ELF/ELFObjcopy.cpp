@@ -548,6 +548,22 @@ static void addSymbol(Object &Obj, const NewSymbolInfo &SymInfo,
       Sec ? (uint16_t)SYMBOL_SIMPLE_INDEX : (uint16_t)SHN_ABS, 0);
 }
 
+static Error
+handleUserSection(StringRef Flag,
+                  function_ref<Error(StringRef, ArrayRef<uint8_t>)> F) {
+  std::pair<StringRef, StringRef> SecPair = Flag.split("=");
+  StringRef SecName = SecPair.first;
+  StringRef File = SecPair.second;
+  ErrorOr<std::unique_ptr<MemoryBuffer>> BufOrErr = MemoryBuffer::getFile(File);
+  if (!BufOrErr)
+    return createFileError(File, errorCodeToError(BufOrErr.getError()));
+  std::unique_ptr<MemoryBuffer> Buf = std::move(*BufOrErr);
+  ArrayRef<uint8_t> Data(
+      reinterpret_cast<const uint8_t *>(Buf->getBufferStart()),
+      Buf->getBufferSize());
+  return F(SecName, Data);
+}
+
 // This function handles the high level operations of GNU objcopy including
 // handling command line options. It's important to outline certain properties
 // we expect to hold of the command line operations. Any operation that "keeps"
@@ -665,21 +681,23 @@ static Error handleArgs(const CommonConfig &Config, const ELFConfig &ELFConfig,
         Sec.Type = SHT_NOBITS;
 
   for (const auto &Flag : Config.AddSection) {
-    std::pair<StringRef, StringRef> SecPair = Flag.split("=");
-    StringRef SecName = SecPair.first;
-    StringRef File = SecPair.second;
-    ErrorOr<std::unique_ptr<MemoryBuffer>> BufOrErr =
-        MemoryBuffer::getFile(File);
-    if (!BufOrErr)
-      return createFileError(File, errorCodeToError(BufOrErr.getError()));
-    std::unique_ptr<MemoryBuffer> Buf = std::move(*BufOrErr);
-    ArrayRef<uint8_t> Data(
-        reinterpret_cast<const uint8_t *>(Buf->getBufferStart()),
-        Buf->getBufferSize());
-    OwnedDataSection &NewSection =
-        Obj.addSection<OwnedDataSection>(SecName, Data);
-    if (SecName.startswith(".note") && SecName != ".note.GNU-stack")
-      NewSection.Type = SHT_NOTE;
+    auto AddSection = [&](StringRef Name, ArrayRef<uint8_t> Data) {
+      OwnedDataSection &NewSection =
+          Obj.addSection<OwnedDataSection>(Name, Data);
+      if (Name.startswith(".note") && Name != ".note.GNU-stack")
+        NewSection.Type = SHT_NOTE;
+      return Error::success();
+    };
+    if (Error E = handleUserSection(Flag, AddSection))
+      return E;
+  }
+
+  for (StringRef Flag : Config.UpdateSection) {
+    auto UpdateSection = [&](StringRef Name, ArrayRef<uint8_t> Data) {
+      return Obj.updateSection(Name, Data);
+    };
+    if (Error E = handleUserSection(Flag, UpdateSection))
+      return E;
   }
 
   if (!Config.AddGnuDebugLink.empty())

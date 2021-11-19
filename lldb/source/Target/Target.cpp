@@ -1904,6 +1904,68 @@ size_t Target::ReadCStringFromMemory(const Address &addr, char *dst,
   return total_cstr_len;
 }
 
+addr_t Target::GetReasonableReadSize(const Address &addr) {
+  addr_t load_addr = addr.GetLoadAddress(this);
+  if (load_addr != LLDB_INVALID_ADDRESS && m_process_sp) {
+    // Avoid crossing cache line boundaries.
+    addr_t cache_line_size = m_process_sp->GetMemoryCacheLineSize();
+    return cache_line_size - (load_addr % cache_line_size);
+  }
+
+  // The read is going to go to the file cache, so we can just pick a largish
+  // value.
+  return 0x1000;
+}
+
+size_t Target::ReadStringFromMemory(const Address &addr, char *dst,
+                                    size_t max_bytes, Status &error,
+                                    size_t type_width, bool force_live_memory) {
+  if (!dst || !max_bytes || !type_width || max_bytes < type_width)
+    return 0;
+
+  size_t total_bytes_read = 0;
+
+  // Ensure a null terminator independent of the number of bytes that is
+  // read.
+  memset(dst, 0, max_bytes);
+  size_t bytes_left = max_bytes - type_width;
+
+  const char terminator[4] = {'\0', '\0', '\0', '\0'};
+  assert(sizeof(terminator) >= type_width && "Attempting to validate a "
+                                             "string with more than 4 bytes "
+                                             "per character!");
+
+  Address address = addr;
+  char *curr_dst = dst;
+
+  error.Clear();
+  while (bytes_left > 0 && error.Success()) {
+    addr_t bytes_to_read =
+        std::min<addr_t>(bytes_left, GetReasonableReadSize(address));
+    size_t bytes_read =
+        ReadMemory(address, curr_dst, bytes_to_read, error, force_live_memory);
+
+    if (bytes_read == 0)
+      break;
+
+    // Search for a null terminator of correct size and alignment in
+    // bytes_read
+    size_t aligned_start = total_bytes_read - total_bytes_read % type_width;
+    for (size_t i = aligned_start;
+         i + type_width <= total_bytes_read + bytes_read; i += type_width)
+      if (::memcmp(&dst[i], terminator, type_width) == 0) {
+        error.Clear();
+        return i;
+      }
+
+    total_bytes_read += bytes_read;
+    curr_dst += bytes_read;
+    address.Slide(bytes_read);
+    bytes_left -= bytes_read;
+  }
+  return total_bytes_read;
+}
+
 size_t Target::ReadScalarIntegerFromMemory(const Address &addr, uint32_t byte_size,
                                            bool is_signed, Scalar &scalar,
                                            Status &error,

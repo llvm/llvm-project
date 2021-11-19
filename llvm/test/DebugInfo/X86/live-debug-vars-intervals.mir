@@ -13,7 +13,7 @@
 #   escape(&x);
 # }
 
-# RUN: llc %s -start-before=machine-scheduler -stop-after=virtregrewriter -o - \
+# RUN: llc %s -start-before=machine-scheduler -stop-after=virtregrewriter -o - -experimental-debug-variable-locations=false \
 # RUN:     | FileCheck %s --implicit-check-not=DBG_VALUE
 
 # Verify that DBG_VALUEs with same { Variable, Fragment } but different DIExpressions

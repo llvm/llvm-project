@@ -30,4 +30,4 @@
 // CHECK: clang-offload-wrapper"{{.*}}" "-o" "[[COMBINEDIR:.*.bc]]" "--offload-arch=gfx906" "[[GFX906OUT]]" "--offload-arch=gfx908" "[[GFX908OUT]]"
 
 // CHECK: clang{{.*}}"-cc1" "-triple" "x86_64-unknown-linux-gnu"{{.*}} "-fopenmp-targets=amdgcn-amd-amdhsa,amdgcn-amd-amdhsa"{{.*}}"-o" "[[COMBINEDOBJ:.*.o]]" "-x" "ir" "[[COMBINEDIR]]"
-// CHECK: ld.lld"{{.*}}" "-o" "a.out{{.*}}[[HOSTOBJ]]" "[[COMBINEDOBJ]]{{.*}}" "-lomp{{.*}}-lomptarget"
+// CHECK: ld"{{.*}}" "-o" "a.out{{.*}}[[HOSTOBJ]]" "[[COMBINEDOBJ]]{{.*}}" "-lomp{{.*}}-lomptarget"

@@ -456,6 +456,9 @@ private:
   std::vector<std::unique_ptr<ModuleFileExtensionWriter>>
       ModuleFileExtensionWriters;
 
+  /// User ModuleMaps skipped when writing control block.
+  std::set<const FileEntry *> SkippedModuleMaps;
+
   /// Retrieve or create a submodule ID for this module.
   unsigned getSubmoduleID(Module *Mod);
 
@@ -475,7 +478,7 @@ private:
   createSignature(StringRef AllBytes, StringRef ASTBlockBytes);
 
   void WriteInputFiles(SourceManager &SourceMgr, HeaderSearchOptions &HSOpts,
-                       bool Modules);
+                       std::set<const FileEntry *> &AffectingModuleMaps);
   void WriteSourceManagerBlock(SourceManager &SourceMgr,
                                const Preprocessor &PP);
   void WritePreprocessor(const Preprocessor &PP, bool IsModule);

@@ -1816,14 +1816,7 @@ OperationLegalizer::OperationLegalizer(ConversionTarget &targetInfo,
 }
 
 bool OperationLegalizer::isIllegal(Operation *op) const {
-  // Check if the target explicitly marked this operation as illegal.
-  if (auto info = target.getOpAction(op->getName())) {
-    if (*info == LegalizationAction::Dynamic)
-      return !target.isLegal(op);
-    return *info == LegalizationAction::Illegal;
-  }
-
-  return false;
+  return target.isIllegal(op);
 }
 
 LogicalResult
@@ -3135,6 +3128,22 @@ auto ConversionTarget::isLegal(Operation *op) const
     }
   }
   return legalityDetails;
+}
+
+bool ConversionTarget::isIllegal(Operation *op) const {
+  Optional<LegalizationInfo> info = getOpInfo(op->getName());
+  if (!info)
+    return false;
+
+  if (info->action == LegalizationAction::Dynamic) {
+    Optional<bool> result = info->legalityFn(op);
+    if (!result)
+      return false;
+
+    return !(*result);
+  }
+
+  return info->action == LegalizationAction::Illegal;
 }
 
 static ConversionTarget::DynamicLegalityCallbackFn composeLegalityCallbacks(

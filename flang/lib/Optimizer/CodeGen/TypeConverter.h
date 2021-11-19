@@ -54,6 +54,11 @@ public:
       LLVM_DEBUG(llvm::dbgs() << "type convert: " << boxchar << '\n');
       return convertType(specifics->boxcharMemoryType(boxchar.getEleTy()));
     });
+    addConversion([&](BoxProcType boxproc) {
+      // TODO: Support for this type will be added later when the Fortran 2003
+      // procedure pointer feature is implemented.
+      return llvm::None;
+    });
     addConversion(
         [&](fir::CharacterType charTy) { return convertCharType(charTy); });
     addConversion([&](HeapType heap) { return convertPointerLike(heap); });
@@ -64,6 +69,9 @@ public:
     addConversion([&](fir::LogicalType boolTy) {
       return mlir::IntegerType::get(
           &getContext(), kindMapping.getLogicalBitsize(boolTy.getFKind()));
+    });
+    addConversion([&](fir::LLVMPointerType pointer) {
+      return convertPointerLike(pointer);
     });
     addConversion(
         [&](fir::PointerType pointer) { return convertPointerLike(pointer); });
@@ -86,6 +94,9 @@ public:
         [&](fir::ReferenceType ref) { return convertPointerLike(ref); });
     addConversion([&](fir::SequenceType sequence) {
       return convertSequenceType(sequence);
+    });
+    addConversion([&](fir::TypeDescType tdesc) {
+      return convertTypeDescType(tdesc.getContext());
     });
     addConversion([&](fir::VectorType vecTy) {
       return mlir::VectorType::get(llvm::ArrayRef<int64_t>(vecTy.getLen()),
@@ -278,6 +289,14 @@ public:
         return baseTy;
     }
     return mlir::LLVM::LLVMPointerType::get(baseTy);
+  }
+
+  // fir.tdesc<any>  -->  llvm<"i8*">
+  // TODO: For now use a void*, however pointer identity is not sufficient for
+  // the f18 object v. class distinction (F2003).
+  mlir::Type convertTypeDescType(mlir::MLIRContext *ctx) {
+    return mlir::LLVM::LLVMPointerType::get(
+        mlir::IntegerType::get(&getContext(), 8));
   }
 
   /// Convert llvm::Type::TypeID to mlir::Type

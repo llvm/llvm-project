@@ -159,8 +159,13 @@ tileLinalgOpImpl(OpBuilder &b, LinalgOp op, ValueRange tileSizes,
   // Initial tile sizes may be too big, only take the first nLoops.
   tileSizes = tileSizes.take_front(nLoops);
 
-  if (llvm::all_of(tileSizes, isZero))
-    return failure();
+  if (llvm::all_of(tileSizes, isZero)) {
+    TiledLinalgOp tiledOp;
+    tiledOp.op = cast<LinalgOp>(b.clone(*op.getOperation()));
+    tiledOp.tensorResults.assign(tiledOp.op->result_begin(),
+                                 tiledOp.op->result_end());
+    return tiledOp;
+  }
 
   // 1. Build the tiled loop ranges.
   auto allShapeSizes = op.createFlatListOfOperandDims(b, op.getLoc());
@@ -447,8 +452,8 @@ public:
     auto *ctx = patterns.getContext();
     patterns.add<LinalgTilingPattern<OpTy>>(
         ctx, options,
-        LinalgTransformationFilter(ArrayRef<Identifier>{},
-                                   Identifier::get("tiled", ctx)));
+        LinalgTransformationFilter(ArrayRef<StringAttr>{},
+                                   StringAttr::get(ctx, "tiled")));
     RewritePatternList<OpTypes...>::insert(patterns, options);
   }
 };

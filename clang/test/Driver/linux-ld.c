@@ -991,15 +991,6 @@
 
 // RUN: %clang %s -### -o %t.o 2>&1 \
 // RUN:     --target=armv7-linux-android21 \
-// RUN:   | FileCheck --check-prefix=CHECK-ANDROID-NOEXECSTACK %s
-// CHECK-ANDROID-NOEXECSTACK: "{{.*}}ld{{(.exe)?}}"
-// CHECK-ANDROID-NOEXECSTACK: "-z" "noexecstack"
-// CHECK-ANDROID-NOEXECSTACK-NOT: "-z" "execstack"
-// CHECK-ANDROID-NOEXECSTACK-NOT: "-z,execstack"
-// CHECK-ANDROID-NOEXECSTACK-NOT: "-zexecstack"
-
-// RUN: %clang %s -### -o %t.o 2>&1 \
-// RUN:     --target=armv7-linux-android21 \
 // RUN:   | FileCheck --check-prefix=CHECK-ANDROID-WARN-SHARED-TEXTREL %s
 // CHECK-ANDROID-WARN-SHARED-TEXTREL: "{{.*}}ld{{(.exe)?}}"
 // CHECK-ANDROID-WARN-SHARED-TEXTREL: "--warn-shared-textrel"

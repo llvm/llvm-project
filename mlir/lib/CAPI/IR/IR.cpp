@@ -145,9 +145,9 @@ MlirLocation mlirLocationNameGet(MlirContext context, MlirStringRef name,
                                  MlirLocation childLoc) {
   if (mlirLocationIsNull(childLoc))
     return wrap(
-        Location(NameLoc::get(Identifier::get(unwrap(name), unwrap(context)))));
+        Location(NameLoc::get(StringAttr::get(unwrap(context), unwrap(name)))));
   return wrap(Location(NameLoc::get(
-      Identifier::get(unwrap(name), unwrap(context)), unwrap(childLoc))));
+      StringAttr::get(unwrap(context), unwrap(name)), unwrap(childLoc))));
 }
 
 MlirLocation mlirLocationUnknownGet(MlirContext context) {
@@ -264,9 +264,8 @@ void mlirOperationStateEnableResultTypeInference(MlirOperationState *state) {
 
 static LogicalResult inferOperationTypes(OperationState &state) {
   MLIRContext *context = state.getContext();
-  const AbstractOperation *abstractOp =
-      AbstractOperation::lookup(state.name.getStringRef(), context);
-  if (!abstractOp) {
+  Optional<RegisteredOperationName> info = state.name.getRegisteredInfo();
+  if (!info) {
     emitError(state.location)
         << "type inference was requested for the operation " << state.name
         << ", but the operation was not registered. Ensure that the dialect "
@@ -276,7 +275,7 @@ static LogicalResult inferOperationTypes(OperationState &state) {
   }
 
   // Fallback to inference via an op interface.
-  auto *inferInterface = abstractOp->getInterface<InferTypeOpInterface>();
+  auto *inferInterface = info->getInterface<InferTypeOpInterface>();
   if (!inferInterface) {
     emitError(state.location)
         << "type inference was requested for the operation " << state.name
@@ -353,9 +352,8 @@ MlirLocation mlirOperationGetLocation(MlirOperation op) {
 }
 
 MlirTypeID mlirOperationGetTypeID(MlirOperation op) {
-  if (const auto *abstractOp = unwrap(op)->getAbstractOperation()) {
-    return wrap(abstractOp->typeID);
-  }
+  if (auto info = unwrap(op)->getRegisteredInfo())
+    return wrap(info->getTypeID());
   return {nullptr};
 }
 
@@ -434,7 +432,7 @@ intptr_t mlirOperationGetNumAttributes(MlirOperation op) {
 
 MlirNamedAttribute mlirOperationGetAttribute(MlirOperation op, intptr_t pos) {
   NamedAttribute attr = unwrap(op)->getAttrs()[pos];
-  return MlirNamedAttribute{wrap(attr.first), wrap(attr.second)};
+  return MlirNamedAttribute{wrap(attr.getName()), wrap(attr.getValue())};
 }
 
 MlirAttribute mlirOperationGetAttributeByName(MlirOperation op,
@@ -753,7 +751,7 @@ MlirNamedAttribute mlirNamedAttributeGet(MlirIdentifier name,
 //===----------------------------------------------------------------------===//
 
 MlirIdentifier mlirIdentifierGet(MlirContext context, MlirStringRef str) {
-  return wrap(Identifier::get(unwrap(str), unwrap(context)));
+  return wrap(StringAttr::get(unwrap(context), unwrap(str)));
 }
 
 MlirContext mlirIdentifierGetContext(MlirIdentifier ident) {

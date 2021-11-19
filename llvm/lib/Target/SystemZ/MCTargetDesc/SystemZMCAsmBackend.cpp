@@ -10,6 +10,8 @@
 #include "MCTargetDesc/SystemZMCTargetDesc.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/MC/MCAsmBackend.h"
+#include "llvm/MC/MCAssembler.h"
+#include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCELFObjectWriter.h"
 #include "llvm/MC/MCFixupKindInfo.h"
 #include "llvm/MC/MCInst.h"
@@ -21,7 +23,8 @@ using namespace llvm;
 // Value is a fully-resolved relocation value: Symbol + Addend [- Pivot].
 // Return the bits that should be installed in a relocation field for
 // fixup kind Kind.
-static uint64_t extractBitsForFixup(MCFixupKind Kind, uint64_t Value) {
+static uint64_t extractBitsForFixup(MCFixupKind Kind, uint64_t Value,
+                                    const MCFixup &Fixup, MCContext &Ctx) {
   if (Kind < FirstTargetFixupKind)
     return Value;
 
@@ -31,6 +34,24 @@ static uint64_t extractBitsForFixup(MCFixupKind Kind, uint64_t Value) {
   case SystemZ::FK_390_PC24DBL:
   case SystemZ::FK_390_PC32DBL:
     return (int64_t)Value / 2;
+
+  case SystemZ::FK_390_12:
+    if (!isUInt<12>(Value)) {
+      Ctx.reportError(Fixup.getLoc(), "displacement exceeds uint12");
+      return 0;
+    }
+    return Value;
+
+  case SystemZ::FK_390_20: {
+    if (!isInt<20>(Value)) {
+      Ctx.reportError(Fixup.getLoc(), "displacement exceeds int20");
+      return 0;
+    }
+    // The high byte of a 20 bit displacement value comes first.
+    uint64_t DLo = Value & 0xfff;
+    uint64_t DHi = (Value >> 12) & 0xff;
+    return (DLo << 8) | DHi;
+  }
 
   case SystemZ::FK_390_TLS_CALL:
     return 0;
@@ -95,7 +116,9 @@ SystemZMCAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
     { "FK_390_PC16DBL",  0, 16, MCFixupKindInfo::FKF_IsPCRel },
     { "FK_390_PC24DBL",  0, 24, MCFixupKindInfo::FKF_IsPCRel },
     { "FK_390_PC32DBL",  0, 32, MCFixupKindInfo::FKF_IsPCRel },
-    { "FK_390_TLS_CALL", 0, 0, 0 }
+    { "FK_390_TLS_CALL", 0, 0, 0 },
+    { "FK_390_12",       4, 12, 0 },
+    { "FK_390_20",       4, 20, 0 }
   };
 
   // Fixup kinds from .reloc directive are like R_390_NONE. They
@@ -133,7 +156,7 @@ void SystemZMCAsmBackend::applyFixup(const MCAssembler &Asm,
   assert(Offset + Size <= Data.size() && "Invalid fixup offset!");
 
   // Big-endian insertion of Size bytes.
-  Value = extractBitsForFixup(Kind, Value);
+  Value = extractBitsForFixup(Kind, Value, Fixup, Asm.getContext());
   if (BitSize < 64)
     Value &= ((uint64_t)1 << BitSize) - 1;
   unsigned ShiftValue = (Size * 8) - 8;

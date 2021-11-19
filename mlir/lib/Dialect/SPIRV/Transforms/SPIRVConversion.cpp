@@ -580,9 +580,9 @@ FuncOpConversion::matchAndRewrite(FuncOp funcOp, OpAdaptor adaptor,
 
   // Copy over all attributes other than the function name and type.
   for (const auto &namedAttr : funcOp->getAttrs()) {
-    if (namedAttr.first != function_like_impl::getTypeAttrName() &&
-        namedAttr.first != SymbolTable::getSymbolAttrName())
-      newFuncOp->setAttr(namedAttr.first, namedAttr.second);
+    if (namedAttr.getName() != function_like_impl::getTypeAttrName() &&
+        namedAttr.getName() != SymbolTable::getSymbolAttrName())
+      newFuncOp->setAttr(namedAttr.getName(), namedAttr.getValue());
   }
 
   rewriter.inlineRegionBefore(funcOp.getBody(), newFuncOp.getBody(),
@@ -879,6 +879,11 @@ bool SPIRVConversionTarget::isLegalOp(Operation *op) {
   SmallVector<Type, 4> valueTypes;
   valueTypes.append(op->operand_type_begin(), op->operand_type_end());
   valueTypes.append(op->result_type_begin(), op->result_type_end());
+
+  // Ensure that all types have been converted to SPIRV types.
+  if (llvm::any_of(valueTypes,
+                   [](Type t) { return !t.isa<spirv::SPIRVType>(); }))
+    return false;
 
   // Special treatment for global variables, whose type requirements are
   // conveyed by type attributes.

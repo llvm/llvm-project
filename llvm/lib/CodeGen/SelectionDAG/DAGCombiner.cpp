@@ -7721,9 +7721,12 @@ SDValue DAGCombiner::MatchLoadCombine(SDNode *N) {
 //    |  D  |
 // Into:
 //   (x & m) | (y & ~m)
-// If y is a constant, and the 'andn' does not work with immediates,
-// we unfold into a different pattern:
+// If y is a constant, m is not a 'not', and the 'andn' does not work with
+// immediates, we unfold into a different pattern:
 //   ~(~x & m) & (m | y)
+// If x is a constant, m is a 'not', and the 'andn' does not work with
+// immediates, we unfold into a different pattern:
+//   (x | ~m) & ~(~m & ~y)
 // NOTE: we don't unfold the pattern if 'xor' is actually a 'not', because at
 //       the very least that breaks andnpd / andnps patterns, and because those
 //       patterns are simplified in IR and shouldn't be created in the DAG
@@ -7778,8 +7781,9 @@ SDValue DAGCombiner::unfoldMaskedMerge(SDNode *N) {
 
   SDLoc DL(N);
 
-  // If Y is a constant, check that 'andn' works with immediates.
-  if (!TLI.hasAndNot(Y)) {
+  // If Y is a constant, check that 'andn' works with immediates. Unless M is
+  // a bitwise not that would already allow ANDN to be used.
+  if (!TLI.hasAndNot(Y) && !isBitwiseNot(M)) {
     assert(TLI.hasAndNot(X) && "Only mask is a variable? Unreachable.");
     // If not, we need to do a bit more work to make sure andn is still used.
     SDValue NotX = DAG.getNOT(DL, X, VT);
@@ -7787,6 +7791,19 @@ SDValue DAGCombiner::unfoldMaskedMerge(SDNode *N) {
     SDValue NotLHS = DAG.getNOT(DL, LHS, VT);
     SDValue RHS = DAG.getNode(ISD::OR, DL, VT, M, Y);
     return DAG.getNode(ISD::AND, DL, VT, NotLHS, RHS);
+  }
+
+  // If X is a constant and M is a bitwise not, check that 'andn' works with
+  // immediates.
+  if (!TLI.hasAndNot(X) && isBitwiseNot(M)) {
+    assert(TLI.hasAndNot(Y) && "Only mask is a variable? Unreachable.");
+    // If not, we need to do a bit more work to make sure andn is still used.
+    SDValue NotM = M.getOperand(0);
+    SDValue LHS = DAG.getNode(ISD::OR, DL, VT, X, NotM);
+    SDValue NotY = DAG.getNOT(DL, Y, VT);
+    SDValue RHS = DAG.getNode(ISD::AND, DL, VT, NotM, NotY);
+    SDValue NotRHS = DAG.getNOT(DL, RHS, VT);
+    return DAG.getNode(ISD::AND, DL, VT, LHS, NotRHS);
   }
 
   SDValue LHS = DAG.getNode(ISD::AND, DL, VT, X, M);

@@ -36,4 +36,4 @@
 
 // CHECK: clang{{.*}}"-cc1" "-triple" "x86_64-unknown-linux-gnu" "-S" "-save-temps=cwd"{{.*}}"-fopenmp-targets=amdgcn-amd-amdhsa,amdgcn-amd-amdhsa"{{.*}}"-o" "[[COMBINEDASM:.*.s]]" "-x" "ir" "[[COMBINEDIR]]"
 // CHECK: clang{{.*}}"-cc1as" "-triple" "x86_64-unknown-linux-gnu" "-filetype" "obj"{{.*}}"-o" "[[COMBINEDOBJ:.*.o]]" "[[COMBINEDASM]]"
-// CHECK: ld.lld"{{.*}}" "-o" "a.out{{.*}}[[HOSTOBJ]]" "[[COMBINEDOBJ]]{{.*}}" "-lomp{{.*}}-lomptarget"
+// CHECK: ld"{{.*}}" "-o" "a.out{{.*}}[[HOSTOBJ]]" "[[COMBINEDOBJ]]{{.*}}" "-lomp{{.*}}-lomptarget"

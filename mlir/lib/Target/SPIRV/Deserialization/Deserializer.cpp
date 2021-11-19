@@ -227,7 +227,7 @@ LogicalResult spirv::Deserializer::processDecoration(ArrayRef<uint32_t> words) {
     return emitError(unknownLoc, "invalid Decoration code : ") << words[1];
   }
   auto attrName = llvm::convertToSnakeFromCamelCase(decorationName);
-  auto symbol = opBuilder.getIdentifier(attrName);
+  auto symbol = opBuilder.getStringAttr(attrName);
   switch (static_cast<spirv::Decoration>(words[1])) {
   case spirv::Decoration::DescriptorSet:
   case spirv::Decoration::Binding:
@@ -521,7 +521,7 @@ spirv::Deserializer::createSpecConstant(Location loc, uint32_t resultID,
                                                     defaultValue);
   if (decorations.count(resultID)) {
     for (auto attr : decorations[resultID].getAttrs())
-      op->setAttr(attr.first, attr.second);
+      op->setAttr(attr.getName(), attr.getValue());
   }
   specConstMap[resultID] = op;
   return op;
@@ -591,9 +591,8 @@ spirv::Deserializer::processGlobalVariable(ArrayRef<uint32_t> operands) {
 
   // Decorations.
   if (decorations.count(variableID)) {
-    for (auto attr : decorations[variableID].getAttrs()) {
-      varOp->setAttr(attr.first, attr.second);
-    }
+    for (auto attr : decorations[variableID].getAttrs())
+      varOp->setAttr(attr.getName(), attr.getValue());
   }
   globalVariableMap[variableID] = varOp;
   return success();
@@ -1964,7 +1963,7 @@ Location spirv::Deserializer::createFileLineColLoc(OpBuilder opBuilder) {
   auto fileName = debugInfoMap.lookup(debugLine->fileID).str();
   if (fileName.empty())
     fileName = "<unknown>";
-  return FileLineColLoc::get(opBuilder.getIdentifier(fileName), debugLine->line,
+  return FileLineColLoc::get(opBuilder.getStringAttr(fileName), debugLine->line,
                              debugLine->col);
 }
 

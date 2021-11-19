@@ -255,22 +255,22 @@ struct TwoDimMultiReductionToElementWise
           result = rewriter.create<arith::MulFOp>(loc, operand, result);
         break;
       case vector::CombiningKind::MINUI:
-        result = rewriter.create<MinUIOp>(loc, operand, result);
+        result = rewriter.create<arith::MinUIOp>(loc, operand, result);
         break;
       case vector::CombiningKind::MINSI:
-        result = rewriter.create<MinSIOp>(loc, operand, result);
+        result = rewriter.create<arith::MinSIOp>(loc, operand, result);
         break;
       case vector::CombiningKind::MINF:
-        result = rewriter.create<MinFOp>(loc, operand, result);
+        result = rewriter.create<arith::MinFOp>(loc, operand, result);
         break;
       case vector::CombiningKind::MAXUI:
-        result = rewriter.create<MaxUIOp>(loc, operand, result);
+        result = rewriter.create<arith::MaxUIOp>(loc, operand, result);
         break;
       case vector::CombiningKind::MAXSI:
-        result = rewriter.create<MaxSIOp>(loc, operand, result);
+        result = rewriter.create<arith::MaxSIOp>(loc, operand, result);
         break;
       case vector::CombiningKind::MAXF:
-        result = rewriter.create<MaxFOp>(loc, operand, result);
+        result = rewriter.create<arith::MaxFOp>(loc, operand, result);
         break;
       case vector::CombiningKind::AND:
         result = rewriter.create<arith::AndIOp>(loc, operand, result);
@@ -347,8 +347,9 @@ struct TwoDimMultiReductionToReduction
           loc, getElementTypeOrSelf(multiReductionOp.getDestType()),
           rewriter.getStringAttr(getKindStr(multiReductionOp.kind())), v,
           ValueRange{});
-      result = rewriter.create<vector::InsertElementOp>(loc, reducedValue,
-                                                        result, i);
+      result = rewriter.create<vector::InsertElementOp>(
+          loc, reducedValue, result,
+          rewriter.create<arith::ConstantIndexOp>(loc, i));
     }
     rewriter.replaceOp(multiReductionOp, result);
     return success();

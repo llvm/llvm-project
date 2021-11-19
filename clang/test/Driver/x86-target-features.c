@@ -2,6 +2,7 @@
 // RUN: %clang -target i386-unknown-linux-gnu -march=i386 -mno-x87 %s -### -o %t.o 2>&1 | FileCheck -check-prefix=NO-X87 %s
 // RUN: %clang -target i386-unknown-linux-gnu -march=i386 -m80387 %s -### -o %t.o 2>&1 | FileCheck -check-prefix=X87 %s
 // RUN: %clang -target i386-unknown-linux-gnu -march=i386 -mno-80387 %s -### -o %t.o 2>&1 | FileCheck -check-prefix=NO-X87 %s
+// RUN: %clang -target i386-unknown-linux-gnu -march=i386 -mno-fp-ret-in-387 %s -### -o %t.o 2>&1 | FileCheck -check-prefix=NO-X87 %s
 // X87: "-target-feature" "+x87"
 // NO-X87: "-target-feature" "-x87"
 

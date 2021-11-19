@@ -468,8 +468,7 @@ INTERCEPTOR(int, pthread_create, void *th, void *attr,
     res = REAL(pthread_create)(th, attr, __lsan_thread_start_func, &p);
   }
   if (res == 0) {
-    int tid = ThreadCreate(GetCurrentThread(), *(uptr *)th,
-                           IsStateDetached(detached));
+    int tid = ThreadCreate(GetCurrentThread(), IsStateDetached(detached));
     CHECK_NE(tid, kMainTid);
     atomic_store(&p.tid, tid, memory_order_release);
     while (atomic_load(&p.tid, memory_order_acquire) != 0)
@@ -477,24 +476,6 @@ INTERCEPTOR(int, pthread_create, void *th, void *attr,
   }
   if (attr == &myattr)
     pthread_attr_destroy(&myattr);
-  return res;
-}
-
-INTERCEPTOR(int, pthread_join, void *th, void **ret) {
-  ENSURE_LSAN_INITED;
-  int tid = ThreadTid((uptr)th);
-  int res = REAL(pthread_join)(th, ret);
-  if (res == 0)
-    ThreadJoin(tid);
-  return res;
-}
-
-INTERCEPTOR(int, pthread_detach, void *th) {
-  ENSURE_LSAN_INITED;
-  int tid = ThreadTid((uptr)th);
-  int res = REAL(pthread_detach)(th);
-  if (res == 0)
-    ThreadDetach(tid);
   return res;
 }
 
@@ -530,8 +511,6 @@ void InitializeInterceptors() {
   LSAN_MAYBE_INTERCEPT_MALLINFO;
   LSAN_MAYBE_INTERCEPT_MALLOPT;
   INTERCEPT_FUNCTION(pthread_create);
-  INTERCEPT_FUNCTION(pthread_detach);
-  INTERCEPT_FUNCTION(pthread_join);
   INTERCEPT_FUNCTION(_exit);
 
   LSAN_MAYBE_INTERCEPT__LWP_EXIT;

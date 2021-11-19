@@ -54,8 +54,9 @@ public:
                          lldb_private::Target *target,
                          lldb_private::Status &error) override;
 
-  bool GetSupportedArchitectureAtIndex(uint32_t idx,
-                                       lldb_private::ArchSpec &arch) override;
+  std::vector<ArchSpec> GetSupportedArchitectures() override {
+    return m_supported_architectures;
+  }
 
   void GetStatus(lldb_private::Stream &strm) override;
 
@@ -68,6 +69,8 @@ public:
 
   size_t GetSoftwareBreakpointTrapOpcode(Target &target,
                                          BreakpointSite *bp_site) override;
+
+  std::vector<ArchSpec> m_supported_architectures;
 };
 
 } // namespace lldb_private

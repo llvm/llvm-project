@@ -725,6 +725,50 @@ static Optional<Instruction *> instCombineSVEVectorFMLA(InstCombiner &IC,
   return IC.replaceInstUsesWith(II, FMLA);
 }
 
+static Optional<Instruction *>
+instCombineSVELD1(InstCombiner &IC, IntrinsicInst &II, const DataLayout &DL) {
+  IRBuilder<> Builder(II.getContext());
+  Builder.SetInsertPoint(&II);
+
+  Value *Pred = II.getOperand(0);
+  Value *PtrOp = II.getOperand(1);
+  Type *VecTy = II.getType();
+  Value *VecPtr = Builder.CreateBitCast(PtrOp, VecTy->getPointerTo());
+
+  if (match(Pred, m_Intrinsic<Intrinsic::aarch64_sve_ptrue>(
+                      m_ConstantInt<AArch64SVEPredPattern::all>()))) {
+    LoadInst *Load = Builder.CreateLoad(VecTy, VecPtr);
+    return IC.replaceInstUsesWith(II, Load);
+  }
+
+  CallInst *MaskedLoad =
+      Builder.CreateMaskedLoad(VecTy, VecPtr, PtrOp->getPointerAlignment(DL),
+                               Pred, ConstantAggregateZero::get(VecTy));
+  return IC.replaceInstUsesWith(II, MaskedLoad);
+}
+
+static Optional<Instruction *>
+instCombineSVEST1(InstCombiner &IC, IntrinsicInst &II, const DataLayout &DL) {
+  IRBuilder<> Builder(II.getContext());
+  Builder.SetInsertPoint(&II);
+
+  Value *VecOp = II.getOperand(0);
+  Value *Pred = II.getOperand(1);
+  Value *PtrOp = II.getOperand(2);
+  Value *VecPtr =
+      Builder.CreateBitCast(PtrOp, VecOp->getType()->getPointerTo());
+
+  if (match(Pred, m_Intrinsic<Intrinsic::aarch64_sve_ptrue>(
+                      m_ConstantInt<AArch64SVEPredPattern::all>()))) {
+    Builder.CreateStore(VecOp, VecPtr);
+    return IC.eraseInstFromFunction(II);
+  }
+
+  Builder.CreateMaskedStore(VecOp, VecPtr, PtrOp->getPointerAlignment(DL),
+                            Pred);
+  return IC.eraseInstFromFunction(II);
+}
+
 static Instruction::BinaryOps intrinsicIDToBinOpCode(unsigned Intrinsic) {
   switch (Intrinsic) {
   case Intrinsic::aarch64_sve_fmul:
@@ -1025,6 +1069,10 @@ AArch64TTIImpl::instCombineIntrinsic(InstCombiner &IC,
     return instCombineLD1GatherIndex(IC, II);
   case Intrinsic::aarch64_sve_st1_scatter_index:
     return instCombineST1ScatterIndex(IC, II);
+  case Intrinsic::aarch64_sve_ld1:
+    return instCombineSVELD1(IC, II, DL);
+  case Intrinsic::aarch64_sve_st1:
+    return instCombineSVEST1(IC, II, DL);
   }
 
   return None;

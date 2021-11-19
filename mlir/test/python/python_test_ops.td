@@ -76,4 +76,9 @@ def FirstAttrDeriveAttrOp : TestOp<"first_attr_derive_attr_op",
   let results = (outs AnyType:$one, AnyType:$two, AnyType:$three);
 }
 
+def OptionalOperandOp : TestOp<"optional_operand_op"> {
+  let arguments = (ins Optional<AnyType>:$input);
+  let results = (outs I32:$result);
+}
+
 #endif // PYTHON_TEST_OPS

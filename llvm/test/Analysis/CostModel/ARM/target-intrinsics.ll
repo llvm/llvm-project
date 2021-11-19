@@ -4,6 +4,8 @@
 ; RUN: opt < %s -cost-model -analyze -cost-kind=latency -mtriple=thumbv8.1m.main -mattr=+mve | FileCheck %s --check-prefix=CHECK-THUMB2-LAT
 ; RUN: opt < %s -cost-model -analyze -cost-kind=code-size -mtriple=thumbv8.1m.main -mattr=+mve | FileCheck %s --check-prefix=CHECK-THUMB2-SIZE
 
+target datalayout = "e-m:e-p:32:32-Fi8-i64:64-v128:64:128-a:0:32-n32-S64"
+
 define void @intrinsics() {
 ; CHECK-THUMB2-RECIP-LABEL: 'intrinsics'
 ; CHECK-THUMB2-RECIP-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %t1 = call i32 @llvm.arm.ssat(i32 undef, i32 undef)

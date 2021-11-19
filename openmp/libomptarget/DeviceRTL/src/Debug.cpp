@@ -32,7 +32,7 @@ void __assert_fail(const char *assertion, const char *file, unsigned line,
 }
 
 /// Current indentation level for the function trace. Only accessed by thread 0.
-static uint32_t Level = 0;
+static uint32_t Level;
 #pragma omp allocate(Level) allocator(omp_pteam_mem_alloc)
 
 DebugEntryRAII::DebugEntryRAII(const char *File, const unsigned Line,
@@ -54,5 +54,7 @@ DebugEntryRAII::~DebugEntryRAII() {
       mapping::getThreadIdInBlock() == 0 && mapping::getBlockId() == 0)
     Level--;
 }
+
+void DebugEntryRAII::init() { Level = 0; }
 
 #pragma omp end declare target

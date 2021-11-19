@@ -74,7 +74,7 @@ std::string getLocalScope(const Decl *D) {
   // - Classes, categories, and protocols: "MyClass(Category)"
   if (const ObjCMethodDecl *MD = dyn_cast<ObjCMethodDecl>(DC))
     return printObjCMethod(*MD);
-  else if (const ObjCContainerDecl *CD = dyn_cast<ObjCContainerDecl>(DC))
+  if (const ObjCContainerDecl *CD = dyn_cast<ObjCContainerDecl>(DC))
     return printObjCContainer(*CD);
 
   auto GetName = [](const TypeDecl *D) {

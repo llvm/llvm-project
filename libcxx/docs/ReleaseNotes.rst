@@ -51,6 +51,10 @@ New Features
   added. This is useful for building libc++ in an embedded setting, and it adds itself to the various
   freestanding-friendly options provided by libc++.
 
+- ``_LIBCPP_DEBUG`` equals to ``1`` enables the randomization of unspecified
+  behavior of standard algorithms (e.g. equal elements in ``std::sort`` or
+  randomization of both sides of partition for ``std::nth_element``)
+
 API Changes
 -----------
 
