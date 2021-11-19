@@ -1460,3 +1460,51 @@ define i8 @lshr_bitwidth_mask(i8 %x, i8 %y) {
   %r = and i8 %sign, %y
   ret i8 %r
 }
+
+define i32 @sext_to_sel(i32 %x, i1 %y) {
+; CHECK-LABEL: @sext_to_sel(
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[Y:%.*]], i32 [[X:%.*]], i32 0
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %sext = sext i1 %y to i32
+  %r = and i32 %sext, %x
+  ret i32 %r
+}
+
+define <2 x i32> @sext_to_sel_swap(<2 x i32> %px, <2 x i1> %y) {
+; CHECK-LABEL: @sext_to_sel_swap(
+; CHECK-NEXT:    [[X:%.*]] = mul <2 x i32> [[PX:%.*]], [[PX]]
+; CHECK-NEXT:    [[R:%.*]] = select <2 x i1> [[Y:%.*]], <2 x i32> [[X]], <2 x i32> zeroinitializer
+; CHECK-NEXT:    ret <2 x i32> [[R]]
+;
+  %x = mul <2 x i32> %px, %px ; thwart complexity-based canonicalization
+  %sext = sext <2 x i1> %y to <2 x i32>
+  %r = and <2 x i32> %x, %sext
+  ret <2 x i32> %r
+}
+
+define i32 @sext_to_sel_multi_use(i32 %x, i1 %y) {
+; CHECK-LABEL: @sext_to_sel_multi_use(
+; CHECK-NEXT:    [[SEXT:%.*]] = sext i1 [[Y:%.*]] to i32
+; CHECK-NEXT:    call void @use32(i32 [[SEXT]])
+; CHECK-NEXT:    [[R:%.*]] = and i32 [[SEXT]], [[X:%.*]]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %sext = sext i1 %y to i32
+  call void @use32(i32 %sext)
+  %r = and i32 %sext, %x
+  ret i32 %r
+}
+
+define i32 @sext_to_sel_multi_use_constant_mask(i1 %y) {
+; CHECK-LABEL: @sext_to_sel_multi_use_constant_mask(
+; CHECK-NEXT:    [[SEXT:%.*]] = sext i1 [[Y:%.*]] to i32
+; CHECK-NEXT:    call void @use32(i32 [[SEXT]])
+; CHECK-NEXT:    [[R:%.*]] = and i32 [[SEXT]], 42
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %sext = sext i1 %y to i32
+  call void @use32(i32 %sext)
+  %r = and i32 %sext, 42
+  ret i32 %r
+}
