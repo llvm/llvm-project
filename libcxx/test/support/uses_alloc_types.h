@@ -10,6 +10,7 @@
 #define USES_ALLOC_TYPES_H
 
 #include <cassert>
+#include <cstdio>
 #include <cstdlib>
 #include <memory>
 
