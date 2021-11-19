@@ -568,9 +568,9 @@ private:
   void visitTargetIntrinsic(const CallInst &I, unsigned Intrinsic);
   void visitConstrainedFPIntrinsic(const ConstrainedFPIntrinsic &FPI);
   void visitVPLoadGather(const VPIntrinsic &VPIntrin, EVT VT,
-                         SmallVector<SDValue, 7> &OpValues, bool isGather);
+                         SmallVector<SDValue, 7> &OpValues, bool IsGather);
   void visitVPStoreScatter(const VPIntrinsic &VPIntrin,
-                           SmallVector<SDValue, 7> &OpValues, bool isScatter);
+                           SmallVector<SDValue, 7> &OpValues, bool IsScatter);
   void visitVectorPredicationIntrinsic(const VPIntrinsic &VPIntrin);
 
   void visitVAStart(const CallInst &I);

@@ -19642,28 +19642,30 @@ vector of boolean values with the same number of elements as the return type.
 The third is the explicit vector length of the operation. The return type and
 underlying type of the base pointer are the same vector types.
 
+The :ref:`align <attr_align>` parameter attribute can be provided for the first
+operand.
+
 Semantics:
 """"""""""
 
 The '``llvm.vp.load``' intrinsic reads a vector from memory in the same way as
 the '``llvm.masked.load``' intrinsic, where the mask is taken from the
-combination of the '``mask``' and '``evl``' operands in the usual VP way. Of
-the '``llvm.masked.load``' operands not set by '``llvm.vp.load``': the
-'``passthru``' operand is implicitly ``undef``; the '``alignment``' operand is
-taken as the ABI alignment of the return type as specified by the
-:ref:`datalayout string<langref_datalayout>`.
+combination of the '``mask``' and '``evl``' operands in the usual VP way.
+Certain '``llvm.masked.load``' operands do not have corresponding operands in
+'``llvm.vp.load``': the '``passthru``' operand is implicitly ``undef``; the
+'``alignment``' operand is taken as the ``align`` parameter attribute, if
+provided. The default alignment is taken as the ABI alignment of the return
+type as specified by the :ref:`datalayout string<langref_datalayout>`.
 
 Examples:
 """""""""
 
 .. code-block:: text
 
-     %r = call <8 x i8> @llvm.vp.load.v8i8.p0v8i8(<8 x i8>* %ptr, <8 x i1> %mask, i32 %evl)
+     %r = call <8 x i8> @llvm.vp.load.v8i8.p0v8i8(<8 x i8>* align 2 %ptr, <8 x i1> %mask, i32 %evl)
      ;; For all lanes below %evl, %r is lane-wise equivalent to %also.r
-     ;; Note that since the alignment is ultimately up to the data layout
-     ;; string, 8 (the default) is used as an example.
 
-     %also.r = call <8 x i8> @llvm.masked.load.v8i8.p0v8i8(<8 x i8>* %ptr, i32 8, <8 x i1> %mask, <8 x i8> undef)
+     %also.r = call <8 x i8> @llvm.masked.load.v8i8.p0v8i8(<8 x i8>* %ptr, i32 2, <8 x i1> %mask, <8 x i8> undef)
 
 
 .. _int_vp_store:
@@ -19697,28 +19699,30 @@ the value operand. The third operand is a vector of boolean values with the
 same number of elements as the return type. The fourth is the explicit vector
 length of the operation.
 
+The :ref:`align <attr_align>` parameter attribute can be provided for the
+second operand.
+
 Semantics:
 """"""""""
 
 The '``llvm.vp.store``' intrinsic reads a vector from memory in the same way as
 the '``llvm.masked.store``' intrinsic, where the mask is taken from the
 combination of the '``mask``' and '``evl``' operands in the usual VP way. The
-'``alignment``' operand of the '``llvm.masked.store``' intrinsic is not set by
-'``llvm.vp.store``': it is taken as the ABI alignment of the type of the
+alignment of the operation (corresponding to the '``alignment``' operand of
+'``llvm.masked.store``') is specified by the ``align`` parameter attribute (see
+above). If it is not provided then the ABI alignment of the type of the
 '``value``' operand as specified by the :ref:`datalayout
-string<langref_datalayout>`.
+string<langref_datalayout>` is used instead.
 
 Examples:
 """""""""
 
 .. code-block:: text
 
-     call void @llvm.vp.store.v8i8.p0v8i8(<8 x i8> %val, <8 x i8>* %ptr, <8 x i1> %mask, i32 %evl)
+     call void @llvm.vp.store.v8i8.p0v8i8(<8 x i8> %val, <8 x i8>* align 4 %ptr, <8 x i1> %mask, i32 %evl)
      ;; For all lanes below %evl, the call above is lane-wise equivalent to the call below.
-     ;; Note that since the alignment is ultimately up to the data layout
-     ;; string, 8 (the default) is used as an example.
 
-     call void @llvm.masked.store.v8i8.p0v8i8(<8 x i8> %val, <8 x i8>* %ptr, i32 8, <8 x i1> %mask)
+     call void @llvm.masked.store.v8i8.p0v8i8(<8 x i8> %val, <8 x i8>* %ptr, i32 4, <8 x i1> %mask)
 
 
 .. _int_vp_gather:

@@ -7317,16 +7317,18 @@ static unsigned getISDForVPIntrinsic(const VPIntrinsic &VPIntrin) {
 
 void SelectionDAGBuilder::visitVPLoadGather(const VPIntrinsic &VPIntrin, EVT VT,
                                             SmallVector<SDValue, 7> &OpValues,
-                                            bool isGather) {
+                                            bool IsGather) {
   SDLoc DL = getCurSDLoc();
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
   Value *PtrOperand = VPIntrin.getArgOperand(0);
-  MaybeAlign Alignment = DAG.getEVTAlign(VT);
+  MaybeAlign Alignment = VPIntrin.getPointerAlignment();
+  if (!Alignment)
+    Alignment = DAG.getEVTAlign(VT);
   AAMDNodes AAInfo = VPIntrin.getAAMetadata();
   const MDNode *Ranges = VPIntrin.getMetadata(LLVMContext::MD_range);
   SDValue LD;
   bool AddToChain = true;
-  if (!isGather) {
+  if (!IsGather) {
     // Do not serialize variable-length loads of constant memory with
     // anything.
     MemoryLocation ML;
@@ -7380,15 +7382,17 @@ void SelectionDAGBuilder::visitVPLoadGather(const VPIntrinsic &VPIntrin, EVT VT,
 
 void SelectionDAGBuilder::visitVPStoreScatter(const VPIntrinsic &VPIntrin,
                                               SmallVector<SDValue, 7> &OpValues,
-                                              bool isScatter) {
+                                              bool IsScatter) {
   SDLoc DL = getCurSDLoc();
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
   Value *PtrOperand = VPIntrin.getArgOperand(1);
   EVT VT = OpValues[0].getValueType();
-  MaybeAlign Alignment = DAG.getEVTAlign(VT);
+  MaybeAlign Alignment = VPIntrin.getPointerAlignment();
+  if (!Alignment)
+    Alignment = DAG.getEVTAlign(VT);
   AAMDNodes AAInfo = VPIntrin.getAAMetadata();
   SDValue ST;
-  if (!isScatter) {
+  if (!IsScatter) {
     MachineMemOperand *MMO = DAG.getMachineFunction().getMachineMemOperand(
         MachinePointerInfo(PtrOperand), MachineMemOperand::MOStore,
         VT.getStoreSize().getKnownMinSize(), *Alignment, AAInfo);
