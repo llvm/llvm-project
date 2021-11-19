@@ -120,7 +120,7 @@ void SimpleStreamChecker::checkPostCall(const CallEvent &Call,
   if (!Call.isGlobalCFunction())
     return;
 
-  if (!Call.isCalled(OpenFn))
+  if (!OpenFn.matches(Call))
     return;
 
   // Get the symbolic value corresponding to the file handle.
@@ -139,7 +139,7 @@ void SimpleStreamChecker::checkPreCall(const CallEvent &Call,
   if (!Call.isGlobalCFunction())
     return;
 
-  if (!Call.isCalled(CloseFn))
+  if (!CloseFn.matches(Call))
     return;
 
   // Get the symbolic value corresponding to the file handle.

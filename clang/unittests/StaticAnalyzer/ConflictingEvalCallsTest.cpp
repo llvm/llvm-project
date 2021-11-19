@@ -22,7 +22,7 @@ class EvalCallBase : public Checker<eval::Call> {
 
 public:
   bool evalCall(const CallEvent &Call, CheckerContext &C) const {
-    return Call.isCalled(Foo);
+    return Foo.matches(Call);
   }
 };
 

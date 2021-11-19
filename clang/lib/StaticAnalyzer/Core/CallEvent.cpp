@@ -303,10 +303,6 @@ ProgramPoint CallEvent::getProgramPoint(bool IsPreVisit,
   return PostImplicitCall(D, Loc, getLocationContext(), Tag);
 }
 
-bool CallEvent::isCalled(const CallDescription &CD) const {
-  return CD.matches(*this);
-}
-
 SVal CallEvent::getArgSVal(unsigned Index) const {
   const Expr *ArgE = getArgExpr(Index);
   if (!ArgE)

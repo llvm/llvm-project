@@ -126,19 +126,15 @@ bool InnerPointerChecker::isInvalidatingMemberFunction(
       return true;
     return false;
   }
-  return (isa<CXXDestructorCall>(Call) || Call.isCalled(AppendFn) ||
-          Call.isCalled(AssignFn) || Call.isCalled(ClearFn) ||
-          Call.isCalled(EraseFn) || Call.isCalled(InsertFn) ||
-          Call.isCalled(PopBackFn) || Call.isCalled(PushBackFn) ||
-          Call.isCalled(ReplaceFn) || Call.isCalled(ReserveFn) ||
-          Call.isCalled(ResizeFn) || Call.isCalled(ShrinkToFitFn) ||
-          Call.isCalled(SwapFn));
+  return isa<CXXDestructorCall>(Call) ||
+         matchesAny(Call, AppendFn, AssignFn, ClearFn, EraseFn, InsertFn,
+                    PopBackFn, PushBackFn, ReplaceFn, ReserveFn, ResizeFn,
+                    ShrinkToFitFn, SwapFn);
 }
 
 bool InnerPointerChecker::isInnerPointerAccessFunction(
     const CallEvent &Call) const {
-  return (Call.isCalled(CStrFn) || Call.isCalled(DataFn) ||
-          Call.isCalled(DataMemberFn));
+  return matchesAny(Call, CStrFn, DataFn, DataMemberFn);
 }
 
 void InnerPointerChecker::markPtrSymbolsReleased(const CallEvent &Call,
@@ -185,7 +181,7 @@ void InnerPointerChecker::checkFunctionArguments(const CallEvent &Call,
 
       // std::addressof function accepts a non-const reference as an argument,
       // but doesn't modify it.
-      if (Call.isCalled(AddressofFn))
+      if (AddressofFn.matches(Call))
         continue;
 
       markPtrSymbolsReleased(Call, State, ArgRegion, C);

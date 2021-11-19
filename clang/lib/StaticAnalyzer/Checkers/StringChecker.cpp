@@ -37,7 +37,7 @@ public:
 
 bool StringChecker::isCharToStringCtor(const CallEvent &Call,
                                        const ASTContext &ACtx) const {
-  if (!Call.isCalled(TwoParamStdStringCtor))
+  if (!TwoParamStdStringCtor.matches(Call))
     return false;
   const auto *FD = dyn_cast<FunctionDecl>(Call.getDecl());
   assert(FD);
