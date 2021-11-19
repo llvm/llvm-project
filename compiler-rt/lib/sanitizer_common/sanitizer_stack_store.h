@@ -10,8 +10,8 @@
 // All allocations are forever.
 //===----------------------------------------------------------------------===//
 
-#ifndef SANITIZER_PERSISTENT_ALLOCATOR_H
-#define SANITIZER_PERSISTENT_ALLOCATOR_H
+#ifndef SANITIZER_STACK_STORE_H
+#define SANITIZER_STACK_STORE_H
 
 #include "sanitizer_atomic.h"
 #include "sanitizer_common.h"
@@ -20,17 +20,16 @@
 
 namespace __sanitizer {
 
-template <typename T>
-class PersistentAllocator {
+class StackStore {
  public:
-  T *alloc(uptr count = 1);
+  uptr *alloc(uptr count = 1);
   uptr allocated() const { return atomic_load_relaxed(&mapped_size); }
 
   void TestOnlyUnmap();
 
  private:
-  T *tryAlloc(uptr count);
-  T *refillAndAlloc(uptr count);
+  uptr *tryAlloc(uptr count);
+  uptr *refillAndAlloc(uptr count);
   mutable StaticSpinMutex mtx;  // Protects alloc of new blocks.
   atomic_uintptr_t region_pos;  // Region allocator for Node's.
   atomic_uintptr_t region_end;
@@ -44,40 +43,37 @@ class PersistentAllocator {
   const BlockInfo *curr;
 };
 
-template <typename T>
-inline T *PersistentAllocator<T>::tryAlloc(uptr count) {
+inline uptr *StackStore::tryAlloc(uptr count) {
   // Optimisic lock-free allocation, essentially try to bump the region ptr.
   for (;;) {
     uptr cmp = atomic_load(&region_pos, memory_order_acquire);
     uptr end = atomic_load(&region_end, memory_order_acquire);
-    uptr size = count * sizeof(T);
+    uptr size = count * sizeof(uptr);
     if (cmp == 0 || cmp + size > end)
       return nullptr;
     if (atomic_compare_exchange_weak(&region_pos, &cmp, cmp + size,
                                      memory_order_acquire))
-      return reinterpret_cast<T *>(cmp);
+      return reinterpret_cast<uptr *>(cmp);
   }
 }
 
-template <typename T>
-inline T *PersistentAllocator<T>::alloc(uptr count) {
+inline uptr *StackStore::alloc(uptr count) {
   // First, try to allocate optimisitically.
-  T *s = tryAlloc(count);
+  uptr *s = tryAlloc(count);
   if (LIKELY(s))
     return s;
   return refillAndAlloc(count);
 }
 
-template <typename T>
-inline T *PersistentAllocator<T>::refillAndAlloc(uptr count) {
+inline uptr *StackStore::refillAndAlloc(uptr count) {
   // If failed, lock, retry and alloc new superblock.
   SpinMutexLock l(&mtx);
   for (;;) {
-    T *s = tryAlloc(count);
+    uptr *s = tryAlloc(count);
     if (s)
       return s;
     atomic_store(&region_pos, 0, memory_order_relaxed);
-    uptr size = count * sizeof(T) + sizeof(BlockInfo);
+    uptr size = count * sizeof(uptr) + sizeof(BlockInfo);
     uptr allocsz = RoundUpTo(Max<uptr>(size, 64u * 1024u), GetPageSizeCached());
     uptr mem = (uptr)MmapOrDie(allocsz, "stack depot");
     BlockInfo *new_block = (BlockInfo *)(mem + allocsz) - 1;
@@ -94,8 +90,7 @@ inline T *PersistentAllocator<T>::refillAndAlloc(uptr count) {
   }
 }
 
-template <typename T>
-void PersistentAllocator<T>::TestOnlyUnmap() {
+inline void StackStore::TestOnlyUnmap() {
   while (curr) {
     uptr mem = curr->ptr;
     uptr allocsz = curr->size;
@@ -107,4 +102,4 @@ void PersistentAllocator<T>::TestOnlyUnmap() {
 
 }  // namespace __sanitizer
 
-#endif  // SANITIZER_PERSISTENT_ALLOCATOR_H
+#endif  // SANITIZER_STACK_STORE_H
