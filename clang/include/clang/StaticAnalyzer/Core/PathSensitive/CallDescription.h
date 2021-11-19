@@ -42,14 +42,14 @@ enum CallDescriptionFlags : unsigned {
 /// arguments and the name of the function.
 class CallDescription {
   friend class CallEvent;
-  using MaybeUInt = Optional<unsigned>;
+  using MaybeCount = Optional<unsigned>;
 
   mutable Optional<const IdentifierInfo *> II;
   // The list of the qualified names used to identify the specified CallEvent,
   // e.g. "{a, b}" represent the qualified names, like "a::b".
   std::vector<std::string> QualifiedName;
-  MaybeUInt RequiredArgs;
-  MaybeUInt RequiredParams;
+  MaybeCount RequiredArgs;
+  MaybeCount RequiredParams;
   int Flags;
 
 public:
@@ -65,13 +65,13 @@ public:
   /// name regardless the number of arguments.
   CallDescription(CallDescriptionFlags Flags,
                   ArrayRef<const char *> QualifiedName,
-                  MaybeUInt RequiredArgs = None,
-                  MaybeUInt RequiredParams = None);
+                  MaybeCount RequiredArgs = None,
+                  MaybeCount RequiredParams = None);
 
   /// Construct a CallDescription with default flags.
   CallDescription(ArrayRef<const char *> QualifiedName,
-                  MaybeUInt RequiredArgs = None,
-                  MaybeUInt RequiredParams = None);
+                  MaybeCount RequiredArgs = None,
+                  MaybeCount RequiredParams = None);
 
   CallDescription(std::nullptr_t) = delete;
 

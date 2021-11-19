@@ -22,11 +22,11 @@
 using namespace llvm;
 using namespace clang;
 
-using MaybeUInt = Optional<unsigned>;
+using MaybeCount = Optional<unsigned>;
 
 // A constructor helper.
-static MaybeUInt readRequiredParams(MaybeUInt RequiredArgs,
-                                    MaybeUInt RequiredParams) {
+static MaybeCount readRequiredParams(MaybeCount RequiredArgs,
+                                     MaybeCount RequiredParams) {
   if (RequiredParams)
     return RequiredParams;
   if (RequiredArgs)
@@ -36,8 +36,8 @@ static MaybeUInt readRequiredParams(MaybeUInt RequiredArgs,
 
 ento::CallDescription::CallDescription(CallDescriptionFlags Flags,
                                        ArrayRef<const char *> QualifiedName,
-                                       MaybeUInt RequiredArgs /*= None*/,
-                                       MaybeUInt RequiredParams /*= None*/)
+                                       MaybeCount RequiredArgs /*= None*/,
+                                       MaybeCount RequiredParams /*= None*/)
     : RequiredArgs(RequiredArgs),
       RequiredParams(readRequiredParams(RequiredArgs, RequiredParams)),
       Flags(Flags) {
@@ -48,8 +48,8 @@ ento::CallDescription::CallDescription(CallDescriptionFlags Flags,
 
 /// Construct a CallDescription with default flags.
 ento::CallDescription::CallDescription(ArrayRef<const char *> QualifiedName,
-                                       MaybeUInt RequiredArgs /*= None*/,
-                                       MaybeUInt RequiredParams /*= None*/)
+                                       MaybeCount RequiredArgs /*= None*/,
+                                       MaybeCount RequiredParams /*= None*/)
     : CallDescription(CDF_None, QualifiedName, RequiredArgs, RequiredParams) {}
 
 bool ento::CallDescription::matches(const CallEvent &Call) const {
