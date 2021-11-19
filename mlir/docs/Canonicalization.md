@@ -161,6 +161,7 @@ Otherwise, the following is generated:
 ///     the operation, partial folding is not supported. The caller will remove
 ///     the operation and use those results instead.
 ///
+/// Note that this mechanism cannot be used to remove 0-result operations.
 LogicalResult MyOp::fold(ArrayRef<Attribute> operands,
                          SmallVectorImpl<OpFoldResult> &results) {
   ...
