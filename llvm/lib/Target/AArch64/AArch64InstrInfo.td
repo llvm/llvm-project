@@ -1228,14 +1228,14 @@ def : InstAlias<"xpaclri", (XPACLRI), 0>;
 let Predicates = [HasPAuth] in {
   multiclass SignAuth<bits<3> prefix, bits<3> prefix_z, string asm,
                       SDPatternOperator op> {
-    def IA   : SignAuthOneData<prefix, 0b00, !strconcat(asm, "ia"), op>;
-    def IB   : SignAuthOneData<prefix, 0b01, !strconcat(asm, "ib"), op>;
-    def DA   : SignAuthOneData<prefix, 0b10, !strconcat(asm, "da"), op>;
-    def DB   : SignAuthOneData<prefix, 0b11, !strconcat(asm, "db"), op>;
-    def IZA  : SignAuthZero<prefix_z, 0b00, !strconcat(asm, "iza"), op>;
-    def DZA  : SignAuthZero<prefix_z, 0b10, !strconcat(asm, "dza"), op>;
-    def IZB  : SignAuthZero<prefix_z, 0b01, !strconcat(asm, "izb"), op>;
-    def DZB  : SignAuthZero<prefix_z, 0b11, !strconcat(asm, "dzb"), op>;
+    def IA   : SignAuthOneData<prefix, 0b00, !strconcat(asm,  "ia"), op>;
+    def IB   : SignAuthOneData<prefix, 0b01, !strconcat(asm,  "ib"), op>;
+    def DA   : SignAuthOneData<prefix, 0b10, !strconcat(asm,  "da"), op>;
+    def DB   : SignAuthOneData<prefix, 0b11, !strconcat(asm,  "db"), op>;
+    def IZA  : SignAuthZero<prefix_z,  0b00, !strconcat(asm, "iza"), op>;
+    def DZA  : SignAuthZero<prefix_z,  0b10, !strconcat(asm, "dza"), op>;
+    def IZB  : SignAuthZero<prefix_z,  0b01, !strconcat(asm, "izb"), op>;
+    def DZB  : SignAuthZero<prefix_z,  0b11, !strconcat(asm, "dzb"), op>;
   }
 
   // When PA is enabled, a better mnemonic should be emitted.
@@ -1256,8 +1256,6 @@ let Predicates = [HasPAuth] in {
   defm PAC : SignAuth<0b000, 0b010, "pac", int_ptrauth_sign>;
   defm AUT : SignAuth<0b001, 0b011, "aut", null_frag>;
 
-  def PACGA : SignAuthTwoOperand<0b1100, "pacga", int_ptrauth_sign_generic>;
-
   def XPACI : ClearAuth<0, "xpaci">;
   // Pseudo of the previous instruction with untied operands. Lowers to:
   // mov $dst, $src
@@ -1269,6 +1267,8 @@ let Predicates = [HasPAuth] in {
   def XPACD : ClearAuth<1, "xpacd">;
   def : Pat<(int_ptrauth_strip GPR64:$Rd, 2), (XPACD GPR64:$Rd)>;
   def : Pat<(int_ptrauth_strip GPR64:$Rd, 3), (XPACD GPR64:$Rd)>;
+
+  def PACGA : SignAuthTwoOperand<0b1100, "pacga", int_ptrauth_sign_generic>;
 
   // Combined Instructions
   let isBranch = 1, isTerminator = 1, isBarrier = 1, isIndirectBranch = 1  in {
