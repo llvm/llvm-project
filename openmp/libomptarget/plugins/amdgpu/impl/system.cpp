@@ -46,22 +46,6 @@ typedef struct {
 } Elf_Note;
 #endif
 
-// The following include file and following structs/enums
-// have been replicated on a per-use basis below. For example,
-// llvm::AMDGPU::HSAMD::Kernel::Metadata has several fields,
-// but we may care only about kernargSegmentSize_ for now, so
-// we just include that field in our KernelMD implementation. We
-// chose this approach to replicate in order to avoid forcing
-// a dependency on LLVM_INCLUDE_DIR just to compile the runtime.
-// #include "llvm/Support/AMDGPUMetadata.h"
-// typedef llvm::AMDGPU::HSAMD::Metadata CodeObjectMD;
-// typedef llvm::AMDGPU::HSAMD::Kernel::Metadata KernelMD;
-// typedef llvm::AMDGPU::HSAMD::Kernel::Arg::Metadata KernelArgMD;
-// using llvm::AMDGPU::HSAMD::AccessQualifier;
-// using llvm::AMDGPU::HSAMD::AddressSpaceQualifier;
-// using llvm::AMDGPU::HSAMD::ValueKind;
-// using llvm::AMDGPU::HSAMD::ValueType;
-
 class KernelArgMD {
 public:
   enum class ValueKind {
@@ -99,24 +83,6 @@ public:
 };
 
 static const std::map<std::string, KernelArgMD::ValueKind> ArgValueKind = {
-    //    Including only those fields that are relevant to the runtime.
-    //    {"ByValue", KernelArgMD::ValueKind::ByValue},
-    //    {"GlobalBuffer", KernelArgMD::ValueKind::GlobalBuffer},
-    //    {"DynamicSharedPointer",
-    //    KernelArgMD::ValueKind::DynamicSharedPointer},
-    //    {"Sampler", KernelArgMD::ValueKind::Sampler},
-    //    {"Image", KernelArgMD::ValueKind::Image},
-    //    {"Pipe", KernelArgMD::ValueKind::Pipe},
-    //    {"Queue", KernelArgMD::ValueKind::Queue},
-    {"HiddenGlobalOffsetX", KernelArgMD::ValueKind::HiddenGlobalOffsetX},
-    {"HiddenGlobalOffsetY", KernelArgMD::ValueKind::HiddenGlobalOffsetY},
-    {"HiddenGlobalOffsetZ", KernelArgMD::ValueKind::HiddenGlobalOffsetZ},
-    {"HiddenNone", KernelArgMD::ValueKind::HiddenNone},
-    {"HiddenPrintfBuffer", KernelArgMD::ValueKind::HiddenPrintfBuffer},
-    {"HiddenDefaultQueue", KernelArgMD::ValueKind::HiddenDefaultQueue},
-    {"HiddenCompletionAction", KernelArgMD::ValueKind::HiddenCompletionAction},
-    {"HiddenMultiGridSyncArg", KernelArgMD::ValueKind::HiddenMultiGridSyncArg},
-    {"HiddenHostcallBuffer", KernelArgMD::ValueKind::HiddenHostcallBuffer},
     // v3
     //    {"by_value", KernelArgMD::ValueKind::ByValue},
     //    {"global_buffer", KernelArgMD::ValueKind::GlobalBuffer},
