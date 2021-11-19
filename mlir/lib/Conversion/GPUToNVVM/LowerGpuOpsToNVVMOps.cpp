@@ -39,6 +39,21 @@ using namespace mlir;
 
 namespace {
 
+/// Convert gpu dialect shfl mode enum to the equivalent nvvm one.
+static NVVM::ShflKind convertShflKind(gpu::ShuffleModeAttr mode) {
+  switch (mode) {
+  case gpu::ShuffleModeAttr::XOR:
+    return NVVM::ShflKind::bfly;
+  case gpu::ShuffleModeAttr::UP:
+    return NVVM::ShflKind::up;
+  case gpu::ShuffleModeAttr::DOWN:
+    return NVVM::ShflKind::down;
+  case gpu::ShuffleModeAttr::IDX:
+    return NVVM::ShflKind::idx;
+  }
+  llvm_unreachable("unknown shuffle mode");
+}
+
 struct GPUShuffleOpLowering : public ConvertOpToLLVMPattern<gpu::ShuffleOp> {
   using ConvertOpToLLVMPattern<gpu::ShuffleOp>::ConvertOpToLLVMPattern;
 
@@ -81,9 +96,9 @@ struct GPUShuffleOpLowering : public ConvertOpToLLVMPattern<gpu::ShuffleOp> {
         rewriter.create<LLVM::SubOp>(loc, int32Type, adaptor.width(), one);
 
     auto returnValueAndIsValidAttr = rewriter.getUnitAttr();
-    Value shfl = rewriter.create<NVVM::ShflBflyOp>(
+    Value shfl = rewriter.create<NVVM::ShflOp>(
         loc, resultTy, activeMask, adaptor.value(), adaptor.offset(),
-        maskAndClamp, returnValueAndIsValidAttr);
+        maskAndClamp, convertShflKind(op.mode()), returnValueAndIsValidAttr);
     Value shflValue = rewriter.create<LLVM::ExtractValueOp>(
         loc, valueTy, shfl, rewriter.getIndexArrayAttr(0));
     Value isActiveSrcLane = rewriter.create<LLVM::ExtractValueOp>(

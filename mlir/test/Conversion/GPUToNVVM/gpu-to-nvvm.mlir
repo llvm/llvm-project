@@ -78,7 +78,7 @@ gpu.module @test_module {
   gpu.func @gpu_all_reduce_op() {
     %arg0 = arith.constant 1.0 : f32
     // TODO: Check full IR expansion once lowering has settled.
-    // CHECK: nvvm.shfl.sync.bfly
+    // CHECK: nvvm.shfl.sync "bfly" {{.*}}
     // CHECK: nvvm.barrier0
     // CHECK: llvm.fadd
     %result = "gpu.all_reduce"(%arg0) ({}) {op = "add"} : (f32) -> (f32)
@@ -94,7 +94,7 @@ gpu.module @test_module {
   gpu.func @gpu_all_reduce_region() {
     %arg0 = arith.constant 1 : i32
     // TODO: Check full IR expansion once lowering has settled.
-    // CHECK: nvvm.shfl.sync.bfly
+    // CHECK: nvvm.shfl.sync "bfly" {{.*}}
     // CHECK: nvvm.barrier0
     %result = "gpu.all_reduce"(%arg0) ({
     ^bb(%lhs : i32, %rhs : i32):
@@ -109,7 +109,7 @@ gpu.module @test_module {
 
 gpu.module @test_module {
   // CHECK-LABEL: func @gpu_shuffle()
-  builtin.func @gpu_shuffle() -> (f32) {
+  builtin.func @gpu_shuffle() -> (f32, f32, f32, f32) {
     // CHECK: %[[#VALUE:]] = llvm.mlir.constant(1.000000e+00 : f32) : f32
     %arg0 = arith.constant 1.0 : f32
     // CHECK: %[[#OFFSET:]] = llvm.mlir.constant(4 : i32) : i32
@@ -120,12 +120,18 @@ gpu.module @test_module {
     // CHECK: %[[#SHL:]] = llvm.shl %[[#ONE]], %[[#WIDTH]] : i32
     // CHECK: %[[#MASK:]] = llvm.sub %[[#SHL]], %[[#ONE]] : i32
     // CHECK: %[[#CLAMP:]] = llvm.sub %[[#WIDTH]], %[[#ONE]] : i32
-    // CHECK: %[[#SHFL:]] = nvvm.shfl.sync.bfly %[[#MASK]], %[[#VALUE]], %[[#OFFSET]], %[[#CLAMP]] : !llvm.struct<(f32, i1)>
+    // CHECK: %[[#SHFL:]] = nvvm.shfl.sync "bfly" %[[#MASK]], %[[#VALUE]], %[[#OFFSET]], %[[#CLAMP]] {return_value_and_is_valid} : f32 -> !llvm.struct<(f32, i1)>
     // CHECK: llvm.extractvalue %[[#SHFL]][0 : index] : !llvm.struct<(f32, i1)>
     // CHECK: llvm.extractvalue %[[#SHFL]][1 : index] : !llvm.struct<(f32, i1)>
     %shfl, %pred = "gpu.shuffle"(%arg0, %arg1, %arg2) { mode = "xor" } : (f32, i32, i32) -> (f32, i1)
+    // CHECK: nvvm.shfl.sync "up" {{.*}} {return_value_and_is_valid} : f32 -> !llvm.struct<(f32, i1)>
+    %shflu, %predu = "gpu.shuffle"(%arg0, %arg1, %arg2) { mode = "up" } : (f32, i32, i32) -> (f32, i1)
+    // CHECK: nvvm.shfl.sync "down" {{.*}} {return_value_and_is_valid} : f32 -> !llvm.struct<(f32, i1)>
+    %shfld, %predd = "gpu.shuffle"(%arg0, %arg1, %arg2) { mode = "down" } : (f32, i32, i32) -> (f32, i1)
+    // CHECK: nvvm.shfl.sync "idx" {{.*}} {return_value_and_is_valid} : f32 -> !llvm.struct<(f32, i1)>
+    %shfli, %predi = "gpu.shuffle"(%arg0, %arg1, %arg2) { mode = "idx" } : (f32, i32, i32) -> (f32, i1)
 
-    std.return %shfl : f32
+    std.return %shfl, %shflu, %shfld, %shfli : f32, f32,f32, f32
   }
 }
 
