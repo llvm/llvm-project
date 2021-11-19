@@ -55,6 +55,12 @@ if(LLVM_LIBC_ENABLE_LINTING)
   if("clang-tools-extra" IN_LIST LLVM_ENABLE_PROJECTS
              AND "clang" IN_LIST LLVM_ENABLE_PROJECTS)
     add_custom_target(lint-libc)
+    if(NOT EXISTS "${LIBC_BUILD_DIR}/.clang-tidy")
+      # add a no-op clang tidy file for the build directory so that the tidy 
+      # rules don't attempt to format the generated code.
+      file(WRITE ${LIBC_BUILD_DIR}/.clang-tidy "#InheritParentConfig: false
+      Checks: cppcoreguidelines-avoid-goto")
+    endif()
   else()
     message(FATAL_ERROR "
       'clang' and 'clang-tools-extra' are required in LLVM_ENABLE_PROJECTS to
