@@ -863,8 +863,19 @@ defm V_ACCVGPR_MOV_B32   : VOP1Only_Real_vi<0x52>;
 // Copy of v_mov_b32 with $vdst as a use operand for use with VGPR
 // indexing mode. vdst can't be treated as a def for codegen purposes,
 // and an implicit use and def of the super register should be added.
-def V_MOV_B32_indirect : VPseudoInstSI<(outs),
+def V_MOV_B32_indirect_write : VPseudoInstSI<(outs),
   (ins getVALUDstForVT<i32>.ret:$vdst, getVOPSrc0ForVT<i32>.ret:$src0)>,
+  PseudoInstExpansion<(V_MOV_B32_e32_vi getVALUDstForVT<i32>.ret:$vdst,
+                                        getVOPSrc0ForVT<i32>.ret:$src0)> {
+  let VOP1 = 1;
+  let SubtargetPredicate = isGFX8GFX9;
+}
+
+// Copy of v_mov_b32 for use with VGPR indexing mode. An implicit use of the
+// super register should be added.
+def V_MOV_B32_indirect_read : VPseudoInstSI<
+  (outs getVALUDstForVT<i32>.ret:$vdst),
+  (ins getVOPSrc0ForVT<i32>.ret:$src0)>,
   PseudoInstExpansion<(V_MOV_B32_e32_vi getVALUDstForVT<i32>.ret:$vdst,
                                         getVOPSrc0ForVT<i32>.ret:$src0)> {
   let VOP1 = 1;
