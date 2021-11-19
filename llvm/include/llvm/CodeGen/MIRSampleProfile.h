@@ -58,6 +58,8 @@ public:
   /// getMachineFunction - Return the last machine function computed.
   const MachineFunction *getMachineFunction() const { return MF; }
 
+  StringRef getPassName() const override { return "SampleFDO loader in MIR"; }
+
 private:
   void init(MachineFunction &MF);
   bool runOnMachineFunction(MachineFunction &) override;
