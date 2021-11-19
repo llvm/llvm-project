@@ -5,10 +5,6 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-//
-// A fast memory allocator that does not support free() nor realloc().
-// All allocations are forever.
-//===----------------------------------------------------------------------===//
 
 #ifndef SANITIZER_STACK_STORE_H
 #define SANITIZER_STACK_STORE_H
@@ -26,27 +22,27 @@ class StackStore {
 
   using Id = uptr;
 
-  Id store(const StackTrace &trace);
-  StackTrace load(Id id);
-  uptr allocated() const { return atomic_load_relaxed(&mapped_size); }
+  Id Store(const StackTrace &trace);
+  StackTrace Load(Id id);
+  uptr Allocated() const { return atomic_load_relaxed(&mapped_size_); }
 
   void TestOnlyUnmap();
 
  private:
-  uptr *alloc(uptr count = 1);
-  uptr *tryAlloc(uptr count);
-  uptr *refillAndAlloc(uptr count);
-  mutable StaticSpinMutex mtx = {};  // Protects alloc of new blocks.
-  atomic_uintptr_t region_pos = {};  // Region allocator for Node's.
-  atomic_uintptr_t region_end = {};
-  atomic_uintptr_t mapped_size = {};
+  uptr *Alloc(uptr count = 1);
+  uptr *TryAlloc(uptr count);
+  uptr *RefillAndAlloc(uptr count);
+  mutable StaticSpinMutex mtx_ = {};  // Protects alloc of new blocks.
+  atomic_uintptr_t region_pos_ = {};  // Region allocator for Node's.
+  atomic_uintptr_t region_end_ = {};
+  atomic_uintptr_t mapped_size_ = {};
 
   struct BlockInfo {
     const BlockInfo *next;
     uptr ptr;
     uptr size;
   };
-  const BlockInfo *curr = nullptr;
+  const BlockInfo *curr_ = nullptr;
 };
 
 }  // namespace __sanitizer
