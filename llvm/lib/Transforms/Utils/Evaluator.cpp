@@ -285,9 +285,8 @@ bool Evaluator::getFormalParams(CallBase &CB, Function *F,
   }
 
   auto ArgI = CB.arg_begin();
-  for (auto ParI = FTy->param_begin(), ParE = FTy->param_end(); ParI != ParE;
-       ++ParI) {
-    auto *ArgC = ConstantFoldLoadThroughBitcast(getVal(*ArgI), *ParI, DL);
+  for (Type *PTy : FTy->params()) {
+    auto *ArgC = ConstantFoldLoadThroughBitcast(getVal(*ArgI), PTy, DL);
     if (!ArgC) {
       LLVM_DEBUG(dbgs() << "Can not convert function argument.\n");
       return false;

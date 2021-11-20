@@ -663,9 +663,8 @@ void llvm::deleteDeadLoop(Loop *L, DominatorTree *DT, ScalarEvolution *SE,
     // about ordering because we already dropped the references.
     // NOTE: This iteration is safe because erasing the block does not remove
     // its entry from the loop's block list.  We do that in the next section.
-    for (Loop::block_iterator LpI = L->block_begin(), LpE = L->block_end();
-         LpI != LpE; ++LpI)
-      (*LpI)->eraseFromParent();
+    for (BasicBlock *BB : L->blocks())
+      BB->eraseFromParent();
 
     // Finally, the blocks from loopinfo.  This has to happen late because
     // otherwise our loop iterators won't work.
@@ -1501,10 +1500,9 @@ Loop *llvm::cloneLoop(Loop *L, Loop *PL, ValueToValueMapTy &VM,
     LPM->addLoop(New);
 
   // Add all of the blocks in L to the new loop.
-  for (Loop::block_iterator I = L->block_begin(), E = L->block_end();
-       I != E; ++I)
-    if (LI->getLoopFor(*I) == L)
-      New.addBasicBlockToLoop(cast<BasicBlock>(VM[*I]), *LI);
+  for (BasicBlock *BB : L->blocks())
+    if (LI->getLoopFor(BB) == L)
+      New.addBasicBlockToLoop(cast<BasicBlock>(VM[BB]), *LI);
 
   // Add all of the subloops to the new loop.
   for (Loop *I : *L)

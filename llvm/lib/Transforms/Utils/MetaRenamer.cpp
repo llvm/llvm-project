@@ -92,12 +92,12 @@ void MetaRename(Module &M,
   Renamer renamer(randSeed);
 
   // Rename all aliases
-  for (auto AI = M.alias_begin(), AE = M.alias_end(); AI != AE; ++AI) {
-    StringRef Name = AI->getName();
+  for (GlobalAlias &GA : M.aliases()) {
+    StringRef Name = GA.getName();
     if (Name.startswith("llvm.") || (!Name.empty() && Name[0] == 1))
       continue;
 
-    AI->setName("alias");
+    GA.setName("alias");
   }
 
   // Rename all global variables
