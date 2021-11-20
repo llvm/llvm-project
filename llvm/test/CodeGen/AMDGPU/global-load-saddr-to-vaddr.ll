@@ -23,7 +23,7 @@ define amdgpu_kernel void @test_move_load_address_to_vgpr(i32 addrspace(1)* noca
 ; GCN-NEXT:    v_lshlrev_b64 v[0:1], 2, v[0:1]
 ; GCN-NEXT:    v_add_co_u32_e32 v0, vcc, s0, v0
 ; GCN-NEXT:    v_addc_co_u32_e32 v1, vcc, v3, v1, vcc
-; GCN-NEXT:  BB0_1: ; %bb3
+; GCN-NEXT:  .LBB0_1: ; %bb3
 ; GCN-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GCN-NEXT:    global_load_dword v3, v[0:1], off glc
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
@@ -31,7 +31,7 @@ define amdgpu_kernel void @test_move_load_address_to_vgpr(i32 addrspace(1)* noca
 ; GCN-NEXT:    v_add_co_u32_e64 v0, s[0:1], 4, v0
 ; GCN-NEXT:    v_addc_co_u32_e64 v1, s[0:1], 0, v1, s[0:1]
 ; GCN-NEXT:    s_and_b64 vcc, exec, vcc
-; GCN-NEXT:    s_cbranch_vccz BB0_1
+; GCN-NEXT:    s_cbranch_vccz .LBB0_1
 ; GCN-NEXT:  ; %bb.2: ; %bb2
 ; GCN-NEXT:    s_endpgm
 bb:
@@ -61,7 +61,7 @@ define amdgpu_kernel void @test_move_load_address_to_vgpr_d16_hi(i16 addrspace(1
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    global_load_ushort v0, v1, s[0:1] glc
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
-; GCN-NEXT:  BB1_1: ; %bb3
+; GCN-NEXT:  .LBB1_1: ; %bb3
 ; GCN-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    v_lshlrev_b64 v[2:3], 1, v[0:1]
@@ -72,7 +72,7 @@ define amdgpu_kernel void @test_move_load_address_to_vgpr_d16_hi(i16 addrspace(1
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, s2, v0
 ; GCN-NEXT:    s_and_b64 vcc, exec, vcc
-; GCN-NEXT:    s_cbranch_vccz BB1_1
+; GCN-NEXT:    s_cbranch_vccz .LBB1_1
 ; GCN-NEXT:  ; %bb.2: ; %bb2
 ; GCN-NEXT:    s_endpgm
 bb:

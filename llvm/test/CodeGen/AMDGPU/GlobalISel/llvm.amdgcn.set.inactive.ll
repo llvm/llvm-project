@@ -56,26 +56,26 @@ define amdgpu_kernel void @set_inactive_scc(i32 addrspace(1)* %out, i32 %in, <4 
 ; GCN-NEXT:    v_mov_b32_e32 v0, 42
 ; GCN-NEXT:    s_not_b64 exec, exec
 ; GCN-NEXT:    s_cmp_lg_u32 s0, 0
-; GCN-NEXT:    s_cbranch_scc0 BB2_2
+; GCN-NEXT:    s_cbranch_scc0 .LBB2_2
 ; GCN-NEXT:  ; %bb.1: ; %.one
 ; GCN-NEXT:    v_add_u32_e32 v1, vcc, 1, v0
 ; GCN-NEXT:    s_mov_b32 s6, -1
 ; GCN-NEXT:    s_mov_b32 s7, 0xf000
 ; GCN-NEXT:    s_mov_b32 s0, 0
 ; GCN-NEXT:    buffer_store_dword v1, off, s[4:7], 0
-; GCN-NEXT:    s_branch BB2_3
-; GCN-NEXT:  BB2_2:
+; GCN-NEXT:    s_branch .LBB2_3
+; GCN-NEXT:  .LBB2_2:
 ; GCN-NEXT:    s_mov_b32 s0, -1
-; GCN-NEXT:  BB2_3: ; %Flow
+; GCN-NEXT:  .LBB2_3: ; %Flow
 ; GCN-NEXT:    s_xor_b32 s0, s0, -1
 ; GCN-NEXT:    s_and_b32 s0, s0, 1
 ; GCN-NEXT:    s_cmp_lg_u32 s0, 0
-; GCN-NEXT:    s_cbranch_scc1 BB2_5
+; GCN-NEXT:    s_cbranch_scc1 .LBB2_5
 ; GCN-NEXT:  ; %bb.4: ; %.zero
 ; GCN-NEXT:    s_mov_b32 s6, -1
 ; GCN-NEXT:    s_mov_b32 s7, 0xf000
 ; GCN-NEXT:    buffer_store_dword v0, off, s[4:7], 0
-; GCN-NEXT:  BB2_5: ; %.exit
+; GCN-NEXT:  .LBB2_5: ; %.exit
 ; GCN-NEXT:    s_endpgm
   %val = call i32 @llvm.amdgcn.s.buffer.load.i32(<4 x i32> %desc, i32 0, i32 0)
   %cmp = icmp eq i32 %val, 56

@@ -9,7 +9,7 @@
 ; GCN-NOT: s_sub_u32
 
 ; GCN: s_and_saveexec_b64
-; GCN: s_cbranch_execz [[BB1:BB[0-9]+_[0-9]+]]
+; GCN: s_cbranch_execz [[BB1:.LBB[0-9]+_[0-9]+]]
 
 ; GCN: buffer_load_dword [[LOAD0:v[0-9]+]], off, s[0:3], s32 glc{{$}}
 ; GCN-NOT: s32

@@ -47,7 +47,7 @@ done:
 
 ; GFX9: v_mov_b32_e32 [[VOFFSET:v[0-9]+]], 0xf000{{$}}
 ; GFX9: global_load_sbyte {{v[0-9]+}}, [[VOFFSET]], {{s\[[0-9]+:[0-9]+\]}} offset:4095{{$}}
-; GCN: {{^}}BB1_2:
+; GCN: {{^}}.LBB1_2:
 ; GCN: s_or_b64 exec
 define amdgpu_kernel void @test_sink_global_small_max_i32_ds_offset(i32 addrspace(1)* %out, i8 addrspace(1)* %in) {
 entry:
@@ -76,7 +76,7 @@ done:
 ; SICIVI: buffer_load_sbyte {{v[0-9]+}}, off, {{s\[[0-9]+:[0-9]+\]}}, 0 offset:4095{{$}}
 ; GFX9: v_mov_b32_e32 [[ZERO:v[0-9]+]], 0{{$}}
 ; GFX9: global_load_sbyte {{v[0-9]+}}, [[ZERO]], {{s\[[0-9]+:[0-9]+\]}} offset:4095{{$}}
-; GCN: {{^}}BB2_2:
+; GCN: {{^}}.LBB2_2:
 ; GCN: s_or_b64 exec
 define amdgpu_kernel void @test_sink_global_small_max_mubuf_offset(i32 addrspace(1)* %out, i8 addrspace(1)* %in) {
 entry:
@@ -105,7 +105,7 @@ done:
 ; SICIVI: buffer_load_sbyte {{v[0-9]+}}, off, {{s\[[0-9]+:[0-9]+\]}}, s{{[0-9]+$}}
 ; GFX9: v_mov_b32_e32 [[VOFFSET:v[0-9]+]], 0x1000{{$}}
 ; GFX9: global_load_sbyte {{v[0-9]+}}, [[VOFFSET]], {{s\[[0-9]+:[0-9]+\]$}}
-; GCN: {{^}}BB3_2:
+; GCN: {{^}}.LBB3_2:
 ; GCN: s_or_b64 exec
 define amdgpu_kernel void @test_sink_global_small_max_plus_1_mubuf_offset(i32 addrspace(1)* %out, i8 addrspace(1)* %in) {
 entry:
@@ -138,7 +138,7 @@ done:
 ; GCN: s_and_saveexec_b64
 ; GCN: buffer_store_dword {{v[0-9]+}}, off, {{s\[[0-9]+:[0-9]+\]}}, 0 offset:4092{{$}}
 ; GCN: buffer_load_dword {{v[0-9]+}}, off, {{s\[[0-9]+:[0-9]+\]}}, 0 offset:4092 glc{{$}}
-; GCN: {{^}}BB4_2:
+; GCN: {{^}}.LBB4_2:
 define amdgpu_kernel void @test_sink_scratch_small_offset_i32(i32 addrspace(1)* %out, i32 addrspace(1)* %in, i32 %arg) {
 entry:
   %alloca = alloca [512 x i32], align 4, addrspace(5)
@@ -178,7 +178,7 @@ done:
 ; GCN: buffer_store_dword {{v[0-9]+}}, [[BASE_FI0]], {{s\[[0-9]+:[0-9]+\]}}, 0 offen offset:4092{{$}}
 ; GCN: v_mov_b32_e32 [[BASE_FI1:v[0-9]+]], 4
 ; GCN: buffer_load_dword {{v[0-9]+}}, [[BASE_FI1]], {{s\[[0-9]+:[0-9]+\]}}, 0 offen offset:4092 glc{{$}}
-; GCN: {{^BB[0-9]+}}_2:
+; GCN: {{^.LBB[0-9]+}}_2:
 
 define amdgpu_kernel void @test_sink_scratch_small_offset_i32_reserved(i32 addrspace(1)* %out, i32 addrspace(1)* %in, i32 %arg) {
 entry:
@@ -216,7 +216,7 @@ done:
 ; GCN: s_and_saveexec_b64
 ; GCN: buffer_store_dword {{v[0-9]+}}, {{v[0-9]+}}, {{s\[[0-9]+:[0-9]+\]}}, 0 offen{{$}}
 ; GCN: buffer_load_dword {{v[0-9]+}}, {{v[0-9]+}}, {{s\[[0-9]+:[0-9]+\]}}, 0 offen glc{{$}}
-; GCN: {{^BB[0-9]+}}_2:
+; GCN: {{^.LBB[0-9]+}}_2:
 define amdgpu_kernel void @test_no_sink_scratch_large_offset_i32(i32 addrspace(1)* %out, i32 addrspace(1)* %in, i32 %arg) {
 entry:
   %alloca = alloca [512 x i32], align 4, addrspace(5)
@@ -248,7 +248,7 @@ done:
 ; GCN: s_and_saveexec_b64
 ; CI: buffer_load_dword {{v[0-9]+}}, {{v\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}}, 0 addr64{{$}}
 ; VI: flat_load_dword v{{[0-9]+}}, v[{{[0-9]+:[0-9]+}}]
-; GCN: {{^BB[0-9]+}}_2:
+; GCN: {{^.LBB[0-9]+}}_2:
 define amdgpu_kernel void @test_sink_global_vreg_sreg_i32(i32 addrspace(1)* %out, i32 addrspace(1)* %in, i32 %offset) {
 entry:
   %offset.ext = zext i32 %offset to i64

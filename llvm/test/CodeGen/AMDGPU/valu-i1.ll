@@ -13,7 +13,7 @@ declare i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
 ; SI-NEXT: s_mov_b64 {{s\[[0-9]+:[0-9]+\]}}, 0
 ; SI-NEXT: s_and_saveexec_b64 [[SAVE1:s\[[0-9]+:[0-9]+\]]], vcc
 ; SI-NEXT: s_xor_b64 [[SAVE2:s\[[0-9]+:[0-9]+\]]], exec, [[SAVE1]]
-; SI-NEXT: s_cbranch_execz [[FLOW_BB:BB[0-9]+_[0-9]+]]
+; SI-NEXT: s_cbranch_execz [[FLOW_BB:.LBB[0-9]+_[0-9]+]]
 
 ; SI-NEXT: ; %bb.{{[0-9]+}}: ; %LeafBlock3
 ; SI:      s_mov_b64 s[{{[0-9]:[0-9]}}], -1
@@ -63,7 +63,7 @@ end:
 ; SI-LABEL: {{^}}simple_test_v_if:
 ; SI: v_cmp_ne_u32_e32 vcc, 0, v{{[0-9]+}}
 ; SI: s_and_saveexec_b64 [[BR_SREG:s\[[0-9]+:[0-9]+\]]], vcc
-; SI-NEXT: s_cbranch_execz [[EXIT:BB[0-9]+_[0-9]+]]
+; SI-NEXT: s_cbranch_execz [[EXIT:.LBB[0-9]+_[0-9]+]]
 
 ; SI-NEXT: ; %bb.{{[0-9]+}}:
 ; SI: buffer_store_dword
@@ -89,7 +89,7 @@ exit:
 ; SI-LABEL: {{^}}simple_test_v_if_ret_else_ret:
 ; SI: v_cmp_ne_u32_e32 vcc, 0, v{{[0-9]+}}
 ; SI: s_and_saveexec_b64 [[BR_SREG:s\[[0-9]+:[0-9]+\]]], vcc
-; SI-NEXT: s_cbranch_execz [[EXIT:BB[0-9]+_[0-9]+]]
+; SI-NEXT: s_cbranch_execz [[EXIT:.LBB[0-9]+_[0-9]+]]
 
 ; SI-NEXT: ; %bb.{{[0-9]+}}:
 ; SI: buffer_store_dword
@@ -118,12 +118,12 @@ exit:
 ; SI: v_cmp_eq_u32_e32 vcc, 0, v{{[0-9]+}}
 ; SI: s_and_saveexec_b64 [[BR_SREG:s\[[0-9]+:[0-9]+\]]], vcc
 ; SI: s_xor_b64 [[BR_SREG]], exec, [[BR_SREG]]
-; SI: s_cbranch_execnz [[EXIT:BB[0-9]+_[0-9]+]]
+; SI: s_cbranch_execnz [[EXIT:.LBB[0-9]+_[0-9]+]]
 
-; SI-NEXT: {{^BB[0-9]+_[0-9]+}}: ; %Flow
+; SI-NEXT: {{^.LBB[0-9]+_[0-9]+}}: ; %Flow
 ; SI-NEXT: s_or_saveexec_b64
 ; SI-NEXT: s_xor_b64 exec, exec
-; SI-NEXT: s_cbranch_execz [[UNIFIED_RETURN:BB[0-9]+_[0-9]+]]
+; SI-NEXT: s_cbranch_execz [[UNIFIED_RETURN:.LBB[0-9]+_[0-9]+]]
 
 ; SI-NEXT: ; %bb.{{[0-9]+}}: ; %then
 ; SI: s_waitcnt
@@ -152,11 +152,11 @@ exit:
 ; SI-LABEL: {{^}}simple_test_v_loop:
 ; SI: v_cmp_ne_u32_e32 vcc, 0, v{{[0-9]+}}
 ; SI: s_and_saveexec_b64 [[BR_SREG:s\[[0-9]+:[0-9]+\]]], vcc
-; SI-NEXT: s_cbranch_execz [[LABEL_EXIT:BB[0-9]+_[0-9]+]]
+; SI-NEXT: s_cbranch_execz [[LABEL_EXIT:.LBB[0-9]+_[0-9]+]]
 
 ; SI: s_mov_b64 {{s\[[0-9]+:[0-9]+\]}}, 0{{$}}
 
-; SI: [[LABEL_LOOP:BB[0-9]+_[0-9]+]]:
+; SI: [[LABEL_LOOP:.LBB[0-9]+_[0-9]+]]:
 ; SI: buffer_load_dword
 ; SI-DAG: buffer_store_dword
 ; SI-DAG: s_cmpk_lg_i32 s{{[0-9]+}}, 0x100
@@ -193,21 +193,21 @@ exit:
 ; SI: buffer_load_dword [[VBOUND:v[0-9]+]]
 ; SI: v_cmp_lt_i32_e32 vcc
 ; SI: s_and_saveexec_b64 [[OUTER_CMP_SREG:s\[[0-9]+:[0-9]+\]]], vcc
-; SI-NEXT: s_cbranch_execz [[LABEL_EXIT:BB[0-9]+_[0-9]+]]
+; SI-NEXT: s_cbranch_execz [[LABEL_EXIT:.LBB[0-9]+_[0-9]+]]
 
 ; Initialize inner condition to false
 ; SI: ; %bb.{{[0-9]+}}: ; %bb10.preheader
 ; SI: s_mov_b64 [[COND_STATE:s\[[0-9]+:[0-9]+\]]], 0{{$}}
 
 ; Clear exec bits for workitems that load -1s
-; SI: [[LABEL_LOOP:BB[0-9]+_[0-9]+]]:
+; SI: .L[[LABEL_LOOP:BB[0-9]+_[0-9]+]]:
 ; SI: buffer_load_dword [[B:v[0-9]+]]
 ; SI: buffer_load_dword [[A:v[0-9]+]]
 ; SI-DAG: v_cmp_ne_u32_e64 [[NEG1_CHECK_0:s\[[0-9]+:[0-9]+\]]], -1, [[A]]
 ; SI-DAG: v_cmp_ne_u32_e32 [[NEG1_CHECK_1:vcc]], -1, [[B]]
 ; SI: s_and_b64 [[ORNEG1:s\[[0-9]+:[0-9]+\]]], [[NEG1_CHECK_1]], [[NEG1_CHECK_0]]
 ; SI: s_and_saveexec_b64 [[ORNEG2:s\[[0-9]+:[0-9]+\]]], [[ORNEG1]]
-; SI: s_cbranch_execz [[LABEL_FLOW:BB[0-9]+_[0-9]+]]
+; SI: s_cbranch_execz [[LABEL_FLOW:.LBB[0-9]+_[0-9]+]]
 
 ; SI: ; %bb.{{[0-9]+}}: ; %bb20
 ; SI: buffer_store_dword
@@ -218,7 +218,7 @@ exit:
 ; SI-NEXT: s_and_b64 [[TMP1:s\[[0-9]+:[0-9]+\]]],
 ; SI-NEXT: s_or_b64 [[COND_STATE]], [[TMP1]], [[COND_STATE]]
 ; SI-NEXT: s_andn2_b64 exec, exec, [[COND_STATE]]
-; SI-NEXT: s_cbranch_execnz [[LABEL_LOOP]]
+; SI-NEXT: s_cbranch_execnz .L[[LABEL_LOOP]]
 
 ; SI: [[LABEL_EXIT]]:
 ; SI-NOT: [[COND_STATE]]

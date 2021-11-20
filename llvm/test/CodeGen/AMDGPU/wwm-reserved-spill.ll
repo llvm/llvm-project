@@ -179,7 +179,7 @@ define amdgpu_gfx void @strict_wwm_cfg(<4 x i32> inreg %tmp14, i32 %arg) {
 ; GFX9-O0-NEXT:    v_writelane_b32 v5, s31, 7
 ; GFX9-O0-NEXT:    s_and_b64 s[30:31], s[30:31], s[34:35]
 ; GFX9-O0-NEXT:    s_mov_b64 exec, s[30:31]
-; GFX9-O0-NEXT:    s_cbranch_execz BB1_2
+; GFX9-O0-NEXT:    s_cbranch_execz .LBB1_2
 ; GFX9-O0-NEXT:  ; %bb.1: ; %if
 ; GFX9-O0-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:16 ; 4-byte Folded Reload
 ; GFX9-O0-NEXT:    s_nop 0
@@ -199,7 +199,7 @@ define amdgpu_gfx void @strict_wwm_cfg(<4 x i32> inreg %tmp14, i32 %arg) {
 ; GFX9-O0-NEXT:    s_mov_b64 exec, s[30:31]
 ; GFX9-O0-NEXT:    v_mov_b32_e32 v0, v1
 ; GFX9-O0-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:8 ; 4-byte Folded Spill
-; GFX9-O0-NEXT:  BB1_2: ; %merge
+; GFX9-O0-NEXT:  .LBB1_2: ; %merge
 ; GFX9-O0-NEXT:    v_readlane_b32 s34, v5, 6
 ; GFX9-O0-NEXT:    v_readlane_b32 s35, v5, 7
 ; GFX9-O0-NEXT:    s_or_b64 exec, exec, s[34:35]
