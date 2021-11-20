@@ -5,6 +5,7 @@
 ; RUN: opt < %s -cost-model -analyze -mtriple=x86_64-apple-macosx10.8.0 -mattr=+avx | FileCheck %s --check-prefixes=AVX1
 ; RUN: opt < %s -cost-model -analyze -mtriple=x86_64-apple-macosx10.8.0 -mattr=+avx2 | FileCheck %s --check-prefixes=AVX2
 ; RUN: opt < %s -cost-model -analyze -mtriple=x86_64-apple-macosx10.8.0 -mattr=+avx512f | FileCheck %s --check-prefixes=AVX512,AVX512F
+; RUN: opt < %s -cost-model -analyze -mtriple=x86_64-apple-macosx10.8.0 -mattr=+avx512f,+avx512dq | FileCheck %s --check-prefixes=AVX512,AVX512DQ
 ; RUN: opt < %s -cost-model -analyze -mtriple=x86_64-apple-macosx10.8.0 -mattr=+avx512f,+avx512bw | FileCheck %s --check-prefixes=AVX512,AVX512BW
 ;
 ; RUN: opt < %s -cost-model -analyze -mtriple=x86_64-apple-macosx10.8.0 -mcpu=slm | FileCheck %s --check-prefixes=SSE,SSE42
@@ -369,6 +370,33 @@ define i32 @zext_vXi8() {
 ; AVX512F-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %V128i16 = zext <128 x i8> undef to <128 x i16>
 ; AVX512F-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
+; AVX512DQ-LABEL: 'zext_vXi8'
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I64 = zext i8 undef to i64
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V2i64 = zext <2 x i8> undef to <2 x i64>
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V4i64 = zext <4 x i8> undef to <4 x i64>
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V8i64 = zext <8 x i8> undef to <8 x i64>
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V16i64 = zext <16 x i8> undef to <16 x i64>
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %V32i64 = zext <32 x i8> undef to <32 x i64>
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 15 for instruction: %V64i64 = zext <64 x i8> undef to <64 x i64>
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 30 for instruction: %V128i64 = zext <128 x i8> undef to <128 x i64>
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I32 = zext i8 undef to i32
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V2i32 = zext <2 x i8> undef to <2 x i32>
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V4i32 = zext <4 x i8> undef to <4 x i32>
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V8i32 = zext <8 x i8> undef to <8 x i32>
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V16i32 = zext <16 x i8> undef to <16 x i32>
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V32i32 = zext <32 x i8> undef to <32 x i32>
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %V64i32 = zext <64 x i8> undef to <64 x i32>
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %V128i32 = zext <128 x i8> undef to <128 x i32>
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I16 = zext i8 undef to i16
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V2i16 = zext <2 x i8> undef to <2 x i16>
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V4i16 = zext <4 x i8> undef to <4 x i16>
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V8i16 = zext <8 x i8> undef to <8 x i16>
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V16i16 = zext <16 x i8> undef to <16 x i16>
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V32i16 = zext <32 x i8> undef to <32 x i16>
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %V64i16 = zext <64 x i8> undef to <64 x i16>
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %V128i16 = zext <128 x i8> undef to <128 x i16>
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
+;
 ; AVX512BW-LABEL: 'zext_vXi8'
 ; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I64 = zext i8 undef to i64
 ; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V2i64 = zext <2 x i8> undef to <2 x i64>
@@ -663,6 +691,41 @@ define i32 @zext_vXi1() {
 ; AVX512F-NEXT:  Cost Model: Found an estimated cost of 19 for instruction: %V64i8 = zext <64 x i1> undef to <64 x i8>
 ; AVX512F-NEXT:  Cost Model: Found an estimated cost of 38 for instruction: %V128i8 = zext <128 x i1> undef to <128 x i8>
 ; AVX512F-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
+;
+; AVX512DQ-LABEL: 'zext_vXi1'
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I64 = zext i1 undef to i64
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V2i64 = zext <2 x i1> undef to <2 x i64>
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V4i64 = zext <4 x i1> undef to <4 x i64>
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V8i64 = zext <8 x i1> undef to <8 x i64>
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %V16i64 = zext <16 x i1> undef to <16 x i64>
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %V32i64 = zext <32 x i1> undef to <32 x i64>
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %V64i64 = zext <64 x i1> undef to <64 x i64>
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 40 for instruction: %V128i64 = zext <128 x i1> undef to <128 x i64>
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I32 = zext i1 undef to i32
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V2i32 = zext <2 x i1> undef to <2 x i32>
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V4i32 = zext <4 x i1> undef to <4 x i32>
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V8i32 = zext <8 x i1> undef to <8 x i32>
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V16i32 = zext <16 x i1> undef to <16 x i32>
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V32i32 = zext <32 x i1> undef to <32 x i32>
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V64i32 = zext <64 x i1> undef to <64 x i32>
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V128i32 = zext <128 x i1> undef to <128 x i32>
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I16 = zext i1 undef to i16
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V2i16 = zext <2 x i1> undef to <2 x i16>
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V4i16 = zext <4 x i1> undef to <4 x i16>
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V8i16 = zext <8 x i1> undef to <8 x i16>
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V16i16 = zext <16 x i1> undef to <16 x i16>
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %V32i16 = zext <32 x i1> undef to <32 x i16>
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 18 for instruction: %V64i16 = zext <64 x i1> undef to <64 x i16>
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 36 for instruction: %V128i16 = zext <128 x i1> undef to <128 x i16>
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I8 = zext i1 undef to i8
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V2i8 = zext <2 x i1> undef to <2 x i8>
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V4i8 = zext <4 x i1> undef to <4 x i8>
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V8i8 = zext <8 x i1> undef to <8 x i8>
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V16i8 = zext <16 x i1> undef to <16 x i8>
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %V32i8 = zext <32 x i1> undef to <32 x i8>
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 19 for instruction: %V64i8 = zext <64 x i1> undef to <64 x i8>
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 38 for instruction: %V128i8 = zext <128 x i1> undef to <128 x i8>
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; AVX512BW-LABEL: 'zext_vXi1'
 ; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I64 = zext i1 undef to i64
@@ -1149,6 +1212,33 @@ define i32 @sext_vXi8() {
 ; AVX512F-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %V128i16 = sext <128 x i8> undef to <128 x i16>
 ; AVX512F-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
+; AVX512DQ-LABEL: 'sext_vXi8'
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I64 = sext i8 undef to i64
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V2i64 = sext <2 x i8> undef to <2 x i64>
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V4i64 = sext <4 x i8> undef to <4 x i64>
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V8i64 = sext <8 x i8> undef to <8 x i64>
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V16i64 = sext <16 x i8> undef to <16 x i64>
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %V32i64 = sext <32 x i8> undef to <32 x i64>
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 15 for instruction: %V64i64 = sext <64 x i8> undef to <64 x i64>
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 30 for instruction: %V128i64 = sext <128 x i8> undef to <128 x i64>
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I32 = sext i8 undef to i32
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V2i32 = sext <2 x i8> undef to <2 x i32>
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V4i32 = sext <4 x i8> undef to <4 x i32>
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V8i32 = sext <8 x i8> undef to <8 x i32>
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V16i32 = sext <16 x i8> undef to <16 x i32>
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V32i32 = sext <32 x i8> undef to <32 x i32>
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %V64i32 = sext <64 x i8> undef to <64 x i32>
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %V128i32 = sext <128 x i8> undef to <128 x i32>
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I16 = sext i8 undef to i16
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V2i16 = sext <2 x i8> undef to <2 x i16>
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V4i16 = sext <4 x i8> undef to <4 x i16>
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V8i16 = sext <8 x i8> undef to <8 x i16>
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V16i16 = sext <16 x i8> undef to <16 x i16>
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V32i16 = sext <32 x i8> undef to <32 x i16>
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %V64i16 = sext <64 x i8> undef to <64 x i16>
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %V128i16 = sext <128 x i8> undef to <128 x i16>
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
+;
 ; AVX512BW-LABEL: 'sext_vXi8'
 ; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I64 = sext i8 undef to i64
 ; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V2i64 = sext <2 x i8> undef to <2 x i64>
@@ -1443,6 +1533,41 @@ define i32 @sext_vXi1() {
 ; AVX512F-NEXT:  Cost Model: Found an estimated cost of 15 for instruction: %V64i8 = sext <64 x i1> undef to <64 x i8>
 ; AVX512F-NEXT:  Cost Model: Found an estimated cost of 30 for instruction: %V128i8 = sext <128 x i1> undef to <128 x i8>
 ; AVX512F-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
+;
+; AVX512DQ-LABEL: 'sext_vXi1'
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I64 = sext i1 undef to i64
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V2i64 = sext <2 x i1> undef to <2 x i64>
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V4i64 = sext <4 x i1> undef to <4 x i64>
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V8i64 = sext <8 x i1> undef to <8 x i64>
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V16i64 = sext <16 x i1> undef to <16 x i64>
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V32i64 = sext <32 x i1> undef to <32 x i64>
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V64i64 = sext <64 x i1> undef to <64 x i64>
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %V128i64 = sext <128 x i1> undef to <128 x i64>
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I32 = sext i1 undef to i32
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V2i32 = sext <2 x i1> undef to <2 x i32>
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V4i32 = sext <4 x i1> undef to <4 x i32>
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V8i32 = sext <8 x i1> undef to <8 x i32>
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V16i32 = sext <16 x i1> undef to <16 x i32>
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V32i32 = sext <32 x i1> undef to <32 x i32>
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V64i32 = sext <64 x i1> undef to <64 x i32>
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V128i32 = sext <128 x i1> undef to <128 x i32>
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I16 = sext i1 undef to i16
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V2i16 = sext <2 x i1> undef to <2 x i16>
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V4i16 = sext <4 x i1> undef to <4 x i16>
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V8i16 = sext <8 x i1> undef to <8 x i16>
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V16i16 = sext <16 x i1> undef to <16 x i16>
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %V32i16 = sext <32 x i1> undef to <32 x i16>
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %V64i16 = sext <64 x i1> undef to <64 x i16>
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 28 for instruction: %V128i16 = sext <128 x i1> undef to <128 x i16>
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I8 = sext i1 undef to i8
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V2i8 = sext <2 x i1> undef to <2 x i8>
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V4i8 = sext <4 x i1> undef to <4 x i8>
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V8i8 = sext <8 x i1> undef to <8 x i8>
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V16i8 = sext <16 x i1> undef to <16 x i8>
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %V32i8 = sext <32 x i1> undef to <32 x i8>
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 15 for instruction: %V64i8 = sext <64 x i1> undef to <64 x i8>
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 30 for instruction: %V128i8 = sext <128 x i1> undef to <128 x i8>
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; AVX512BW-LABEL: 'sext_vXi1'
 ; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I64 = sext i1 undef to i64
