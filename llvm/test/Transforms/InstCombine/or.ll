@@ -657,7 +657,7 @@ define i32 @sext_to_sel_multi_use_constant_mask(i1 %y) {
 ; CHECK-LABEL: @sext_to_sel_multi_use_constant_mask(
 ; CHECK-NEXT:    [[SEXT:%.*]] = sext i1 [[Y:%.*]] to i32
 ; CHECK-NEXT:    call void @use(i32 [[SEXT]])
-; CHECK-NEXT:    [[R:%.*]] = or i32 [[SEXT]], 42
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[Y]], i32 -1, i32 42
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %sext = sext i1 %y to i32
