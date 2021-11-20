@@ -8,7 +8,7 @@ declare dso_local void @func()
 
 define i32* @global_addr() #0 {
   ; CHECK-LABEL: global_addr:
-  ; CHECK: movq global@GOTPCREL(%rip), %rax
+  ; CHECK: movq global@GOTPCREL_NORELAX(%rip), %rax
   ; CHECK: retq
 
   ret i32* @global
@@ -16,7 +16,7 @@ define i32* @global_addr() #0 {
 
 define i32 @global_load() #0 {
   ; CHECK-LABEL: global_load:
-  ; CHECK: movq global@GOTPCREL(%rip), [[REG:%r[0-9a-z]+]]
+  ; CHECK: movq global@GOTPCREL_NORELAX(%rip), [[REG:%r[0-9a-z]+]]
   ; CHECK: movl ([[REG]]), %eax
   ; CHECK: retq
 
@@ -26,7 +26,7 @@ define i32 @global_load() #0 {
 
 define void @global_store() #0 {
   ; CHECK-LABEL: global_store:
-  ; CHECK: movq global@GOTPCREL(%rip), [[REG:%r[0-9a-z]+]]
+  ; CHECK: movq global@GOTPCREL_NORELAX(%rip), [[REG:%r[0-9a-z]+]]
   ; CHECK: movl $0, ([[REG]])
   ; CHECK: retq
 

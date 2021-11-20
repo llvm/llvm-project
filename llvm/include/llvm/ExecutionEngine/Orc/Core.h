@@ -927,16 +927,10 @@ class JITDylib : public ThreadSafeRefCountedBase<JITDylib>,
   friend class MaterializationResponsibility;
 public:
 
-  using AsynchronousSymbolQuerySet =
-    std::set<std::shared_ptr<AsynchronousSymbolQuery>>;
-
   JITDylib(const JITDylib &) = delete;
   JITDylib &operator=(const JITDylib &) = delete;
   JITDylib(JITDylib &&) = delete;
   JITDylib &operator=(JITDylib &&) = delete;
-
-  /// Get the name for this JITDylib.
-  const std::string &getName() const { return JITDylibName; }
 
   /// Get a reference to the ExecutionSession for this JITDylib.
   ExecutionSession &getExecutionSession() const { return ES; }
@@ -1070,6 +1064,9 @@ public:
   std::vector<JITDylibSP> getReverseDFSLinkOrder();
 
 private:
+  using AsynchronousSymbolQuerySet =
+    std::set<std::shared_ptr<AsynchronousSymbolQuery>>;
+
   using AsynchronousSymbolQueryList =
       std::vector<std::shared_ptr<AsynchronousSymbolQuery>>;
 
@@ -1200,7 +1197,6 @@ private:
       failSymbols(FailedSymbolsWorklist);
 
   ExecutionSession &ES;
-  std::string JITDylibName;
   std::mutex GeneratorsMutex;
   bool Open = true;
   SymbolTable Symbols;

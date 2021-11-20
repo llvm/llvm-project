@@ -608,57 +608,52 @@ define <2 x i1> @test38_nonuniform(<2 x i32> %x) {
   ret <2 x i1> %ret1
 }
 
-define i32 @orsext_to_sel(i32 %x, i1 %y) {
-; CHECK-LABEL: @orsext_to_sel(
-; CHECK-NEXT:    [[OR:%.*]] = select i1 [[Y:%.*]], i32 -1, i32 [[X:%.*]]
-; CHECK-NEXT:    ret i32 [[OR]]
+define i32 @sext_to_sel(i32 %x, i1 %y) {
+; CHECK-LABEL: @sext_to_sel(
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[Y:%.*]], i32 -1, i32 [[X:%.*]]
+; CHECK-NEXT:    ret i32 [[R]]
 ;
   %sext = sext i1 %y to i32
-  %or = or i32 %sext, %x
-  ret i32 %or
+  %r = or i32 %sext, %x
+  ret i32 %r
 }
 
-define i32 @orsext_to_sel_swap(i32 %x, i1 %y) {
-; CHECK-LABEL: @orsext_to_sel_swap(
-; CHECK-NEXT:    [[OR:%.*]] = select i1 [[Y:%.*]], i32 -1, i32 [[X:%.*]]
-; CHECK-NEXT:    ret i32 [[OR]]
+define <2 x i32> @sext_to_sel_swap(<2 x i32> %px, <2 x i1> %y) {
+; CHECK-LABEL: @sext_to_sel_swap(
+; CHECK-NEXT:    [[X:%.*]] = mul <2 x i32> [[PX:%.*]], [[PX]]
+; CHECK-NEXT:    [[R:%.*]] = select <2 x i1> [[Y:%.*]], <2 x i32> <i32 -1, i32 -1>, <2 x i32> [[X]]
+; CHECK-NEXT:    ret <2 x i32> [[R]]
 ;
-  %sext = sext i1 %y to i32
-  %or = or i32 %x, %sext
-  ret i32 %or
-}
-
-define i32 @orsext_to_sel_multi_use(i32 %x, i1 %y) {
-; CHECK-LABEL: @orsext_to_sel_multi_use(
-; CHECK-NEXT:    [[SEXT:%.*]] = sext i1 [[Y:%.*]] to i32
-; CHECK-NEXT:    [[OR:%.*]] = or i32 [[SEXT]], [[X:%.*]]
-; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[OR]], [[SEXT]]
-; CHECK-NEXT:    ret i32 [[ADD]]
-;
-  %sext = sext i1 %y to i32
-  %or = or i32 %sext, %x
-  %add = add i32 %sext, %or
-  ret i32 %add
-}
-
-define <2 x i32> @orsext_to_sel_vec(<2 x i32> %x, <2 x i1> %y) {
-; CHECK-LABEL: @orsext_to_sel_vec(
-; CHECK-NEXT:    [[OR:%.*]] = select <2 x i1> [[Y:%.*]], <2 x i32> <i32 -1, i32 -1>, <2 x i32> [[X:%.*]]
-; CHECK-NEXT:    ret <2 x i32> [[OR]]
-;
+  %x = mul <2 x i32> %px, %px ; thwart complexity-based canonicalization
   %sext = sext <2 x i1> %y to <2 x i32>
-  %or = or <2 x i32> %sext, %x
-  ret <2 x i32> %or
+  %r = or <2 x i32> %x, %sext
+  ret <2 x i32> %r
 }
 
-define <2 x i132> @orsext_to_sel_vec_swap(<2 x i132> %x, <2 x i1> %y) {
-; CHECK-LABEL: @orsext_to_sel_vec_swap(
-; CHECK-NEXT:    [[OR:%.*]] = select <2 x i1> [[Y:%.*]], <2 x i132> <i132 -1, i132 -1>, <2 x i132> [[X:%.*]]
-; CHECK-NEXT:    ret <2 x i132> [[OR]]
+define i32 @sext_to_sel_multi_use(i32 %x, i1 %y) {
+; CHECK-LABEL: @sext_to_sel_multi_use(
+; CHECK-NEXT:    [[SEXT:%.*]] = sext i1 [[Y:%.*]] to i32
+; CHECK-NEXT:    call void @use(i32 [[SEXT]])
+; CHECK-NEXT:    [[R:%.*]] = or i32 [[SEXT]], [[X:%.*]]
+; CHECK-NEXT:    ret i32 [[R]]
 ;
-  %sext = sext <2 x i1> %y to <2 x i132>
-  %or = or <2 x i132> %x, %sext
-  ret <2 x i132> %or
+  %sext = sext i1 %y to i32
+  call void @use(i32 %sext)
+  %r = or i32 %sext, %x
+  ret i32 %r
+}
+
+define i32 @sext_to_sel_multi_use_constant_mask(i1 %y) {
+; CHECK-LABEL: @sext_to_sel_multi_use_constant_mask(
+; CHECK-NEXT:    [[SEXT:%.*]] = sext i1 [[Y:%.*]] to i32
+; CHECK-NEXT:    call void @use(i32 [[SEXT]])
+; CHECK-NEXT:    [[R:%.*]] = or i32 [[SEXT]], 42
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %sext = sext i1 %y to i32
+  call void @use(i32 %sext)
+  %r = or i32 %sext, 42
+  ret i32 %r
 }
 
 ; (~A & B) | A --> A | B

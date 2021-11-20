@@ -60,6 +60,49 @@ private:
   }
 };
 
+namespace __format_spec {
+
+_LIBCPP_HIDE_FROM_ABI inline char* __insert_sign(char* __buf, bool __negative,
+                                                 _Flags::_Sign __sign) {
+  if (__negative)
+    *__buf++ = '-';
+  else
+    switch (__sign) {
+    case _Flags::_Sign::__default:
+    case _Flags::_Sign::__minus:
+      // No sign added.
+      break;
+    case _Flags::_Sign::__plus:
+      *__buf++ = '+';
+      break;
+    case _Flags::_Sign::__space:
+      *__buf++ = ' ';
+      break;
+    }
+
+  return __buf;
+}
+
+_LIBCPP_HIDE_FROM_ABI constexpr char __hex_to_upper(char c) {
+  switch (c) {
+  case 'a':
+    return 'A';
+  case 'b':
+    return 'B';
+  case 'c':
+    return 'C';
+  case 'd':
+    return 'D';
+  case 'e':
+    return 'E';
+  case 'f':
+    return 'F';
+  }
+  return c;
+}
+
+} // namespace __format_spec
+
 namespace __formatter {
 
 /** The character types that formatters are specialized for. */

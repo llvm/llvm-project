@@ -1059,8 +1059,13 @@ struct DSEState {
       LibFunc LF;
       if (TLI.getLibFunc(*CB, LF) && TLI.has(LF)) {
         switch (LF) {
-        case LibFunc_strcpy:
         case LibFunc_strncpy:
+          if (const auto *Len = dyn_cast<ConstantInt>(CB->getArgOperand(2)))
+            return MemoryLocation(CB->getArgOperand(0),
+                                  LocationSize::precise(Len->getZExtValue()),
+                                  CB->getAAMetadata());
+          LLVM_FALLTHROUGH;
+        case LibFunc_strcpy:
         case LibFunc_strcat:
         case LibFunc_strncat:
           return {MemoryLocation::getAfter(CB->getArgOperand(0))};

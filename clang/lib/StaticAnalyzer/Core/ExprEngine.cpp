@@ -326,8 +326,8 @@ ProgramStateRef ExprEngine::createTemporaryRegionIfNeeded(
     }
     Result = InitWithAdjustments;
   } else {
-    // We need to create a region no matter what. For sanity, make sure we don't
-    // try to stuff a Loc into a non-pointer temporary region.
+    // We need to create a region no matter what. Make sure we don't try to
+    // stuff a Loc into a non-pointer temporary region.
     assert(!InitValWithAdjustments.getAs<Loc>() ||
            Loc::isLocType(Result->getType()) ||
            Result->getType()->isMemberPointerType());
