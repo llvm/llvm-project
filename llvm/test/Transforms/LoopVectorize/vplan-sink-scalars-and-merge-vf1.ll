@@ -8,6 +8,7 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 define void @sink_with_sideeffects(i1 %c, i8* %ptr) {
 ; CHECK-LABEL: sink_with_sideeffects
 ; CHECK:      VPlan 'Initial VPlan for VF={1},UF>=1' {
+; CHECK-NEXT: <x1> vector loop: {
 ; CHECK-NEXT: for.body:
 ; CHECK-NEXT:   WIDEN-INDUCTION %tmp0 = phi %tmp6, 0
 ; CHECK-NEXT:   WIDEN-INDUCTION %tmp1 = phi %tmp7, 0
@@ -39,6 +40,8 @@ define void @sink_with_sideeffects(i1 %c, i8* %ptr) {
 ; CHECK-NEXT: Successor(s): for.inc
 
 ; CHECK:      for.inc:
+; CHECK-NEXT: No successors
+; CHECK-NEXT: }
 ; CHECK-NEXT: No successors
 ; CHECK-NEXT: }
 ;

@@ -8,6 +8,7 @@ target triple = "aarch64-unknown-linux-gnu"
 ; CHECK-NOT:    LV: Found {{.*}} scalar instruction:   %ptr.iv.2.next = getelementptr inbounds i8, i8* %ptr.iv.2, i64 1
 ;
 ; CHECK:        VPlan 'Initial VPlan for VF={vscale x 2},UF>=1' {
+; CHECK-NEXT:   <x1> vector loop: {
 ; CHECK-NEXT:   loop.body:
 ; CHECK-NEXT:     WIDEN-INDUCTION %iv = phi 0, %iv.next
 ; CHECK-NEXT:     WIDEN-PHI %ptr.iv.1 = phi %start.1, %ptr.iv.1.next
