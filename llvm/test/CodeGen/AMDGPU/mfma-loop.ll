@@ -9,7 +9,7 @@
 
 ; Check that we do not copy agprs to vgprs and back inside the loop.
 
-; GCN: [[LOOP:BB[0-9_]+]]:
+; GCN: [[LOOP:.LBB[0-9_]+]]:
 ; GCN-NOT:  v_accvgpr
 ; GFX908_A: v_mfma_f32_32x32x1f32
 ; GCN-NOT:  v_accvgpr
@@ -50,7 +50,7 @@ exit:
 ; GFX90A:          v_accvgpr_write_b32 [[LEAD:a[0-9]+]], [[TMP]]
 ; GFX90A-COUNT-31: v_accvgpr_mov_b32 a{{[0-9]+}}, [[LEAD]]
 
-; GCN: [[LOOP:BB[0-9_]+]]:
+; GCN: [[LOOP:.LBB[0-9_]+]]:
 ; GCN-NOT:  v_accvgpr
 ; GFX908_A: v_mfma_f32_32x32x1f32
 ; GCN-NOT:  v_accvgpr
@@ -85,7 +85,7 @@ exit:
 ; GFX908-COUNT-30: v_accvgpr_write_b32 a{{[0-9]+}}, 0{{$}}
 ; GFX90A-COUNT-30: v_accvgpr_mov_b32 a{{[0-9]+}}, [[LEAD]]{{$}}
 
-; GCN: [[LOOP:BB[0-9_]+]]:
+; GCN: [[LOOP:.LBB[0-9_]+]]:
 ; GCN-NOT:  v_accvgpr
 ; GFX908_A: v_mfma_f32_32x32x1f32
 ; GCN-NOT:  v_accvgpr
@@ -249,7 +249,7 @@ exit:
 ; GFX90A: v_accvgpr_write_b32 a{{[0-9]+}}, [[TMP]]
 
 
-; GCN: [[LOOP:BB[0-9_]+]]:
+; GCN: [[LOOP:.LBB[0-9_]+]]:
 ; GCN-NOT:  v_accvgpr
 ; GFX908_A: v_mfma_f32_32x32x1f32
 ; GCN-NOT:  v_accvgpr
@@ -281,7 +281,7 @@ exit:
 
 ; GCN-COUNT-32: v_accvgpr_write_b32 a{{[0-9]+}}, v0{{$}}
 
-; GCN: [[LOOP:BB[0-9_]+]]:
+; GCN: [[LOOP:.LBB[0-9_]+]]:
 ; GCN-NOT:  v_accvgpr
 ; GFX908_A: v_mfma_f32_32x32x1f32
 ; GCN-NOT:  v_accvgpr
@@ -351,7 +351,7 @@ exit:
 ; GFX90A:          v_accvgpr_write_b32 [[LEAD:a[0-9]+]], [[TMP]]
 ; GFX90A-COUNT-31: v_accvgpr_mov_b32 a{{[0-9]+}}, [[LEAD]]
 
-; GCN: [[LOOP:BB[0-9_]+]]:
+; GCN: [[LOOP:.LBB[0-9_]+]]:
 ; GCN-NOT:  v_accvgpr
 ; GFX908_A: v_mfma_f32_32x32x1f32
 ; GCN-NOT:  v_accvgpr
@@ -451,7 +451,7 @@ exit:
 ; GFX90A-DAG:      v_accvgpr_write_b32 [[LEAD:a[0-9]+]], 0
 ; GFX90A-COUNT-28: v_accvgpr_mov_b32 a{{[0-9]+}}, [[LEAD]]
 
-; GCN: [[LOOP:BB[0-9_]+]]:
+; GCN: [[LOOP:.LBB[0-9_]+]]:
 ; GCN-NOT:  v_accvgpr
 ; GFX908_A: v_mfma_f32_32x32x1f32
 ; GCN-NOT:  v_accvgpr
@@ -493,7 +493,7 @@ exit:
 ; GFX90A-NOT:      v_accvgpr
 ; GCN-NOT:         v_accvgpr
 
-; GCN: [[LOOP:BB[0-9_]+]]:
+; GCN: [[LOOP:.LBB[0-9_]+]]:
 ; GCN-NOT:  v_accvgpr
 ; GFX908_A: v_mfma_f32_32x32x1f32
 ; GCN-NOT:  v_accvgpr
@@ -538,7 +538,7 @@ exit:
 ; GFX90A:          v_accvgpr_write_b32 [[LEAD:a[0-9]+]], [[TMP]]{{$}}
 ; GFX90A-COUNT-29: v_accvgpr_mov_b32 a{{[0-9]+}}, [[LEAD]]
 
-; GCN: [[LOOP:BB[0-9_]+]]:
+; GCN: [[LOOP:.LBB[0-9_]+]]:
 ; GCN-NOT:  v_accvgpr
 ; GFX908_A: v_mfma_f32_32x32x1f32
 ; GCN-NOT:  v_accvgpr
@@ -609,9 +609,9 @@ exit:
 
 ; Check that we do not copy agprs to vgprs and back in an outer loop.
 
-; GCN: [[OUTER_LOOP:BB[0-9_]+]]:
+; GCN: [[OUTER_LOOP:.LBB[0-9_]+]]:
 ; GCN-NOT:  v_accvgpr
-; GCN: [[INNER_LOOP:BB[0-9_]+]]:
+; GCN: [[INNER_LOOP:.LBB[0-9_]+]]:
 ; GCN-NOT:  v_accvgpr
 ; GFX908_A: v_mfma_f32_32x32x1f32
 ; GCN-NOT:  v_accvgpr

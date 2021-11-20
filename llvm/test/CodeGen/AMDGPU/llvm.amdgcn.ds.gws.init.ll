@@ -11,7 +11,7 @@
 ; GCN: v_mov_b32_e32 v0, [[BAR_NUM]]
 ; NOLOOP: ds_gws_init v0 gds{{$}}
 
-; LOOP: [[LOOP:BB[0-9]+_[0-9]+]]:
+; LOOP: [[LOOP:.LBB[0-9]+_[0-9]+]]:
 ; LOOP-NEXT: s_setreg_imm32_b32 hwreg(HW_REG_TRAPSTS, 8, 1), 0
 ; LOOP-NEXT: ds_gws_init v0 gds
 ; LOOP-NEXT: s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -32,7 +32,7 @@ define amdgpu_kernel void @gws_init_offset0(i32 %val) #0 {
 
 
 ; LOOP: s_mov_b32 m0, 0{{$}}
-; LOOP: [[LOOP:BB[0-9]+_[0-9]+]]:
+; LOOP: [[LOOP:.LBB[0-9]+_[0-9]+]]:
 ; LOOP-NEXT: s_setreg_imm32_b32 hwreg(HW_REG_TRAPSTS, 8, 1), 0
 ; LOOP-NEXT: ds_gws_init v0 offset:63 gds
 ; LOOP-NEXT: s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)

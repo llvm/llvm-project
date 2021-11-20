@@ -56,10 +56,10 @@ define protected amdgpu_kernel void @kernel() #1 {
 ; CHECK-NEXT:    s_add_u32 s0, s0, s7
 ; CHECK-NEXT:    s_addc_u32 s1, s1, 0
 ; CHECK-NEXT:    s_mov_b32 s32, 0
-; CHECK-NEXT:    s_cbranch_scc0 BB2_2
+; CHECK-NEXT:    s_cbranch_scc0 .LBB2_2
 ; CHECK-NEXT:  ; %bb.1: ; %end
 ; CHECK-NEXT:    s_endpgm
-; CHECK-NEXT:  BB2_2: ; %body
+; CHECK-NEXT:  .LBB2_2: ; %body
 ; CHECK-NEXT:    s_getpc_b64 s[4:5]
 ; CHECK-NEXT:    s_add_u32 s4, s4, callee_no_fp@gotpcrel32@lo+4
 ; CHECK-NEXT:    s_addc_u32 s5, s5, callee_no_fp@gotpcrel32@hi+12

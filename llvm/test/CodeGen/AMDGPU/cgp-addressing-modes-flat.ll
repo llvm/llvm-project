@@ -17,7 +17,7 @@
 
 ; GCN-LABEL: {{^}}test_no_sink_flat_small_offset_i32:
 ; GCN: flat_load_dword
-; GCN: {{^}}BB0_2:
+; GCN: {{^}}.LBB0_2:
 define amdgpu_kernel void @test_no_sink_flat_small_offset_i32(i32* %out, i32* %in, i32 %cond) {
 entry:
   %out.gep = getelementptr i32, i32* %out, i64 999999

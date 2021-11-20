@@ -128,11 +128,6 @@ isSimpleEnoughValueToCommit(Constant *C,
 /// globals and GEP's of globals.  This should be kept up to date with
 /// CommitValueTo.
 static bool isSimpleEnoughPointerToCommit(Constant *C, const DataLayout &DL) {
-  // Conservatively, avoid aggregate types. This is because we don't
-  // want to worry about them partially overlapping other stores.
-  if (!cast<PointerType>(C->getType())->getElementType()->isSingleValueType())
-    return false;
-
   if (GlobalVariable *GV = dyn_cast<GlobalVariable>(C))
     // Do not allow weak/*_odr/linkonce linkage or external globals.
     return GV->hasUniqueInitializer();
@@ -343,7 +338,10 @@ bool Evaluator::EvaluateBlock(BasicBlock::iterator CurInst, BasicBlock *&NextBB,
         Ptr = FoldedPtr;
         LLVM_DEBUG(dbgs() << "; To: " << *Ptr << "\n");
       }
-      if (!isSimpleEnoughPointerToCommit(Ptr, DL)) {
+      // Conservatively, avoid aggregate types. This is because we don't
+      // want to worry about them partially overlapping other stores.
+      if (!SI->getValueOperand()->getType()->isSingleValueType() ||
+          !isSimpleEnoughPointerToCommit(Ptr, DL)) {
         // If this is too complex for us to commit, reject it.
         LLVM_DEBUG(
             dbgs() << "Pointer is too complex for us to evaluate store.");

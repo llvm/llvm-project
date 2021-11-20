@@ -34,13 +34,13 @@ define amdgpu_cs void @atomic_add(<4 x i32> inreg %arg)  {
 ; GCN-NEXT:    v_mbcnt_hi_u32_b32_e32 v0, s5, v0
 ; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
 ; GCN-NEXT:    s_and_saveexec_b64 s[6:7], vcc
-; GCN-NEXT:    s_cbranch_execz BB0_2
+; GCN-NEXT:    s_cbranch_execz .LBB0_2
 ; GCN-NEXT:  ; %bb.1:
 ; GCN-NEXT:    s_bcnt1_i32_b64 s4, s[4:5]
 ; GCN-NEXT:    v_mov_b32_e32 v0, s4
 ; GCN-NEXT:    v_mov_b32_e32 v1, 0
 ; GCN-NEXT:    buffer_atomic_add v0, v1, s[0:3], 0 idxen glc
-; GCN-NEXT:  BB0_2:
+; GCN-NEXT:  .LBB0_2:
 ; GCN-NEXT:    s_endpgm
 .entry:
   call i32 @llvm.amdgcn.struct.buffer.atomic.add.i32(i32 1, <4 x i32> %arg, i32 0, i32 0, i32 0, i32 0)
@@ -78,13 +78,13 @@ define amdgpu_cs void @atomic_add_and_format(<4 x i32> inreg %arg) {
 ; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
 ; GCN-NEXT:    ; implicit-def: $vgpr1
 ; GCN-NEXT:    s_and_saveexec_b64 s[4:5], vcc
-; GCN-NEXT:    s_cbranch_execz BB1_2
+; GCN-NEXT:    s_cbranch_execz .LBB1_2
 ; GCN-NEXT:  ; %bb.1:
 ; GCN-NEXT:    s_bcnt1_i32_b64 s6, s[6:7]
 ; GCN-NEXT:    v_mov_b32_e32 v1, s6
 ; GCN-NEXT:    v_mov_b32_e32 v2, 0
 ; GCN-NEXT:    buffer_atomic_add v1, v2, s[0:3], 0 idxen glc
-; GCN-NEXT:  BB1_2:
+; GCN-NEXT:  .LBB1_2:
 ; GCN-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    v_readfirstlane_b32 s4, v1
@@ -128,13 +128,13 @@ define amdgpu_cs void @atomic_sub(<4 x i32> inreg %arg)  {
 ; GCN-NEXT:    v_mbcnt_hi_u32_b32_e32 v0, s5, v0
 ; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
 ; GCN-NEXT:    s_and_saveexec_b64 s[6:7], vcc
-; GCN-NEXT:    s_cbranch_execz BB2_2
+; GCN-NEXT:    s_cbranch_execz .LBB2_2
 ; GCN-NEXT:  ; %bb.1:
 ; GCN-NEXT:    s_bcnt1_i32_b64 s4, s[4:5]
 ; GCN-NEXT:    v_mov_b32_e32 v0, s4
 ; GCN-NEXT:    v_mov_b32_e32 v1, 0
 ; GCN-NEXT:    buffer_atomic_sub v0, v1, s[0:3], 0 idxen glc
-; GCN-NEXT:  BB2_2:
+; GCN-NEXT:  .LBB2_2:
 ; GCN-NEXT:    s_endpgm
 .entry:
   call i32 @llvm.amdgcn.struct.buffer.atomic.sub.i32(i32 1, <4 x i32> %arg, i32 0, i32 0, i32 0, i32 0)
@@ -172,13 +172,13 @@ define amdgpu_cs void @atomic_sub_and_format(<4 x i32> inreg %arg) {
 ; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
 ; GCN-NEXT:    ; implicit-def: $vgpr1
 ; GCN-NEXT:    s_and_saveexec_b64 s[4:5], vcc
-; GCN-NEXT:    s_cbranch_execz BB3_2
+; GCN-NEXT:    s_cbranch_execz .LBB3_2
 ; GCN-NEXT:  ; %bb.1:
 ; GCN-NEXT:    s_bcnt1_i32_b64 s6, s[6:7]
 ; GCN-NEXT:    v_mov_b32_e32 v1, s6
 ; GCN-NEXT:    v_mov_b32_e32 v2, 0
 ; GCN-NEXT:    buffer_atomic_sub v1, v2, s[0:3], 0 idxen glc
-; GCN-NEXT:  BB3_2:
+; GCN-NEXT:  .LBB3_2:
 ; GCN-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    v_readfirstlane_b32 s4, v1
@@ -223,14 +223,14 @@ define amdgpu_cs void @atomic_xor(<4 x i32> inreg %arg)  {
 ; GCN-NEXT:    v_mbcnt_hi_u32_b32_e32 v0, s5, v0
 ; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
 ; GCN-NEXT:    s_and_saveexec_b64 s[6:7], vcc
-; GCN-NEXT:    s_cbranch_execz BB4_2
+; GCN-NEXT:    s_cbranch_execz .LBB4_2
 ; GCN-NEXT:  ; %bb.1:
 ; GCN-NEXT:    s_bcnt1_i32_b64 s4, s[4:5]
 ; GCN-NEXT:    s_and_b32 s4, s4, 1
 ; GCN-NEXT:    v_mov_b32_e32 v0, s4
 ; GCN-NEXT:    v_mov_b32_e32 v1, 0
 ; GCN-NEXT:    buffer_atomic_xor v0, v1, s[0:3], 0 idxen glc
-; GCN-NEXT:  BB4_2:
+; GCN-NEXT:  .LBB4_2:
 ; GCN-NEXT:    s_endpgm
 .entry:
   call i32 @llvm.amdgcn.struct.buffer.atomic.xor.i32(i32 1, <4 x i32> %arg, i32 0, i32 0, i32 0, i32 0)
@@ -270,14 +270,14 @@ define amdgpu_cs void @atomic_xor_and_format(<4 x i32> inreg %arg) {
 ; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
 ; GCN-NEXT:    ; implicit-def: $vgpr1
 ; GCN-NEXT:    s_and_saveexec_b64 s[4:5], vcc
-; GCN-NEXT:    s_cbranch_execz BB5_2
+; GCN-NEXT:    s_cbranch_execz .LBB5_2
 ; GCN-NEXT:  ; %bb.1:
 ; GCN-NEXT:    s_bcnt1_i32_b64 s6, s[6:7]
 ; GCN-NEXT:    s_and_b32 s6, s6, 1
 ; GCN-NEXT:    v_mov_b32_e32 v1, s6
 ; GCN-NEXT:    v_mov_b32_e32 v2, 0
 ; GCN-NEXT:    buffer_atomic_xor v1, v2, s[0:3], 0 idxen glc
-; GCN-NEXT:  BB5_2:
+; GCN-NEXT:  .LBB5_2:
 ; GCN-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    v_readfirstlane_b32 s4, v1

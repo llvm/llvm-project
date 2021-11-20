@@ -9,7 +9,7 @@
 ; This is was lowered from the llvm.SI.end.cf intrinsic:
 ; CHECK: s_or_b64 exec, exec
 
-; CHECK: [[LOOP_LABEL:[0-9A-Za-z_]+]]: ; %loop{{$}}
+; CHECK: [[LOOP_LABEL:.L[0-9A-Za-z_]+]]: ; %loop{{$}}
 ; CHECK-NOT: s_or_b64 exec, exec
 ; CHECK: s_cbranch_execnz [[LOOP_LABEL]]
 define amdgpu_kernel void @test(i32 addrspace(1)* %out) {
