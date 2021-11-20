@@ -927,9 +927,6 @@ class JITDylib : public ThreadSafeRefCountedBase<JITDylib>,
   friend class MaterializationResponsibility;
 public:
 
-  using AsynchronousSymbolQuerySet =
-    std::set<std::shared_ptr<AsynchronousSymbolQuery>>;
-
   JITDylib(const JITDylib &) = delete;
   JITDylib &operator=(const JITDylib &) = delete;
   JITDylib(JITDylib &&) = delete;
@@ -1067,6 +1064,9 @@ public:
   std::vector<JITDylibSP> getReverseDFSLinkOrder();
 
 private:
+  using AsynchronousSymbolQuerySet =
+    std::set<std::shared_ptr<AsynchronousSymbolQuery>>;
+
   using AsynchronousSymbolQueryList =
       std::vector<std::shared_ptr<AsynchronousSymbolQuery>>;
 
