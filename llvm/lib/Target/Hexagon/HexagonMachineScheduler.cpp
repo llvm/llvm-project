@@ -121,7 +121,7 @@ bool VLIWResourceModel::isResourceAvailable(SUnit *SU, bool IsTop) {
   const auto &QII = *QST.getInstrInfo();
 
   // Now see if there are no other dependencies to instructions already
-  // in the packet.
+  // in the packet. 
   if (IsTop) {
     for (unsigned i = 0, e = Packet.size(); i != e; ++i)
       if (hasDependence(Packet[i], SU, QII))
