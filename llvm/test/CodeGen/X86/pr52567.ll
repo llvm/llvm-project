@@ -2,17 +2,16 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-linux-gnu | FileCheck %s
 
 ; The and in the test below discards half the bits from vector icmp result.
-; FIXME: The generated code is using a movmskps, but fails to discard bits
-; 2 and 3 before the testl.
+; We use a testb after a pmovmskb to examine only 8 bits.
 
 define i32 @foo(<4 x float> %arg) {
 ; CHECK-LABEL: foo:
 ; CHECK:       # %bb.0: # %bb
 ; CHECK-NEXT:    movaps {{.*#+}} xmm1 = [1.00000005E-3,1.00000005E-3,1.00000005E-3,1.00000005E-3]
 ; CHECK-NEXT:    cmpltps %xmm0, %xmm1
-; CHECK-NEXT:    movmskps %xmm1, %ecx
+; CHECK-NEXT:    pmovmskb %xmm1, %ecx
 ; CHECK-NEXT:    xorl %eax, %eax
-; CHECK-NEXT:    testl %ecx, %ecx
+; CHECK-NEXT:    testb %cl, %cl
 ; CHECK-NEXT:    sete %al
 ; CHECK-NEXT:    retq
 bb:
