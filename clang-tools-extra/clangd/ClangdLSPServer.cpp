@@ -493,7 +493,6 @@ void ClangdLSPServer::onInitialize(const InitializeParams &Params,
     Server.emplace(*CDB, TFS, Opts,
                    static_cast<ClangdServer::Callbacks *>(this));
   }
-  applyConfiguration(Params.initializationOptions.ConfigSettings);
 
   Opts.CodeComplete.EnableSnippets = Params.capabilities.CompletionSnippets;
   Opts.CodeComplete.IncludeFixIts = Params.capabilities.CompletionFixes;
@@ -627,6 +626,10 @@ void ClangdLSPServer::onInitialize(const InitializeParams &Params,
   if (Opts.Encoding)
     Result["offsetEncoding"] = *Opts.Encoding;
   Reply(std::move(Result));
+
+  // Apply settings after we're fully initialized.
+  // This can start background indexing and in turn trigger LSP notifications.
+  applyConfiguration(Params.initializationOptions.ConfigSettings);
 }
 
 void ClangdLSPServer::onInitialized(const InitializedParams &Params) {}
