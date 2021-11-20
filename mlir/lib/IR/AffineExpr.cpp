@@ -591,9 +591,10 @@ static AffineExpr simplifyAdd(AffineExpr lhs, AffineExpr rhs) {
     }
   }
 
-  // Detect and transform "expr - c * (expr floordiv c)" to "expr mod c". This
-  // leads to a much more efficient form when 'c' is a power of two, and in
-  // general a more compact and readable form.
+  // Detect and transform "expr - q * (expr floordiv q)" to "expr mod q", where
+  // q may be a constant or symbolic expression. This leads to a much more
+  // efficient form when 'c' is a power of two, and in general a more compact
+  // and readable form.
 
   // Process '(expr floordiv c) * (-c)'.
   if (!rBinOpExpr)
@@ -602,13 +603,33 @@ static AffineExpr simplifyAdd(AffineExpr lhs, AffineExpr rhs) {
   auto lrhs = rBinOpExpr.getLHS();
   auto rrhs = rBinOpExpr.getRHS();
 
+  AffineExpr llrhs, rlrhs;
+
+  // Check if lrhsBinOpExpr is of the form (expr floordiv q) * q, where q is a
+  // symbolic expression.
+  auto lrhsBinOpExpr = lrhs.dyn_cast<AffineBinaryOpExpr>();
+  // Check rrhsConstOpExpr = -1.
+  auto rrhsConstOpExpr = rrhs.dyn_cast<AffineConstantExpr>();
+  if (rrhsConstOpExpr && rrhsConstOpExpr.getValue() == -1 && lrhsBinOpExpr &&
+      lrhsBinOpExpr.getKind() == AffineExprKind::Mul) {
+    // Check llrhs = expr floordiv q.
+    llrhs = lrhsBinOpExpr.getLHS();
+    // Check rlrhs = q.
+    rlrhs = lrhsBinOpExpr.getRHS();
+    auto llrhsBinOpExpr = llrhs.dyn_cast<AffineBinaryOpExpr>();
+    if (!llrhsBinOpExpr || llrhsBinOpExpr.getKind() != AffineExprKind::FloorDiv)
+      return nullptr;
+    if (llrhsBinOpExpr.getRHS() == rlrhs && lhs == llrhsBinOpExpr.getLHS())
+      return lhs % rlrhs;
+  }
+
   // Process lrhs, which is 'expr floordiv c'.
   AffineBinaryOpExpr lrBinOpExpr = lrhs.dyn_cast<AffineBinaryOpExpr>();
   if (!lrBinOpExpr || lrBinOpExpr.getKind() != AffineExprKind::FloorDiv)
     return nullptr;
 
-  auto llrhs = lrBinOpExpr.getLHS();
-  auto rlrhs = lrBinOpExpr.getRHS();
+  llrhs = lrBinOpExpr.getLHS();
+  rlrhs = lrBinOpExpr.getRHS();
 
   if (lhs == llrhs && rlrhs == -rrhs) {
     return lhs % rlrhs;
