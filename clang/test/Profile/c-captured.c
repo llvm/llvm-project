@@ -8,22 +8,22 @@
 // PGOGEN: @[[C1C:__profc_c_captured.c___captured_stmt.1]] = private global [3 x i64] zeroinitializer
 
 // PGOALL-LABEL: define{{.*}} void @debug_captured()
-// PGOGEN: store {{.*}} @[[DCC]], i64 0, i64 0
+// PGOGEN: store {{.*}} @[[DCC]], i32 0, i32 0
 void debug_captured() {
   int x = 10;
 
-  // Check both debug_captured counters, so we can do this all in one pass
-  // PGOGEN: store {{.*}} @[[DCC]], i64 0, i64 1
-  // PGOUSE: br {{.*}} !prof ![[DC1:[0-9]+]]
-  // PGOGEN: store {{.*}} @[[DCC]], i64 0, i64 2
-  // PGOUSE: br {{.*}} !prof ![[DC2:[0-9]+]]
-  // PGOALL: ret
+// Check both debug_captured counters, so we can do this all in one pass
+// PGOGEN: store {{.*}} @[[DCC]], i32 0, i32 1
+// PGOUSE: br {{.*}} !prof ![[DC1:[0-9]+]]
+// PGOGEN: store {{.*}} @[[DCC]], i32 0, i32 2
+// PGOUSE: br {{.*}} !prof ![[DC2:[0-9]+]]
+// PGOALL: ret
 
-  // PGOALL-LABEL: define internal void @__captured_stmt(
-  // PGOGEN: store {{.*}} @[[CSC]], i64 0, i64 0
-  #pragma clang __debug captured
+// PGOALL-LABEL: define internal void @__captured_stmt(
+// PGOGEN: store {{.*}} @[[CSC]], i32 0, i32 0
+#pragma clang __debug captured
   {
-    // PGOGEN: store {{.*}} @[[CSC]], i64 0, i64 1
+    // PGOGEN: store {{.*}} @[[CSC]], i32 0, i32 1
     // PGOUSE: br {{.*}} !prof ![[CS1:[0-9]+]]
     if (x) {}
     // PGOALL: ret
@@ -31,14 +31,14 @@ void debug_captured() {
 
   if (x) {} // This is DC1. Checked above.
 
-  // PGOALL-LABEL: define internal void @__captured_stmt.1(
-  // PGOGEN: store {{.*}} @[[C1C]], i64 0, i64 0
-  #pragma clang __debug captured
+// PGOALL-LABEL: define internal void @__captured_stmt.1(
+// PGOGEN: store {{.*}} @[[C1C]], i32 0, i32 0
+#pragma clang __debug captured
   {
-    // PGOGEN: store {{.*}} @[[C1C]], i64 0, i64 1
+    // PGOGEN: store {{.*}} @[[C1C]], i32 0, i32 1
     // PGOUSE: br {{.*}} !prof ![[C11:[0-9]+]]
     for (int i = 0; i < x; ++i) {}
-    // PGOGEN: store {{.*}} @[[C1C]], i64 0, i64 2
+    // PGOGEN: store {{.*}} @[[C1C]], i32 0, i32 2
     // PGOUSE: br {{.*}} !prof ![[C12:[0-9]+]]
     if (x) {}
     // PGOALL: ret
