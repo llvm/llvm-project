@@ -161,18 +161,18 @@ define void @non_power_of_2(i24 %n) {
   ret void
 }
 
+; (x urem 5) uge 2 implies x uge 2 on the true branch.
+; We don't know anything about the lower bound on the false branch.
 define void @urem_implied_cond_uge(i8 %x) {
 ; CHECK-LABEL: @urem_implied_cond_uge(
 ; CHECK-NEXT:    [[U:%.*]] = urem i8 [[X:%.*]], 5
 ; CHECK-NEXT:    [[C1:%.*]] = icmp uge i8 [[U]], 2
 ; CHECK-NEXT:    br i1 [[C1]], label [[IF:%.*]], label [[ELSE:%.*]]
 ; CHECK:       if:
-; CHECK-NEXT:    [[C2:%.*]] = icmp ult i8 [[X]], 2
-; CHECK-NEXT:    call void @use(i1 [[C2]])
+; CHECK-NEXT:    call void @use(i1 false)
 ; CHECK-NEXT:    [[C3:%.*]] = icmp ule i8 [[X]], 2
 ; CHECK-NEXT:    call void @use(i1 [[C3]])
-; CHECK-NEXT:    [[C4:%.*]] = icmp uge i8 [[X]], 2
-; CHECK-NEXT:    call void @use(i1 [[C4]])
+; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    [[C5:%.*]] = icmp ugt i8 [[X]], 2
 ; CHECK-NEXT:    call void @use(i1 [[C5]])
 ; CHECK-NEXT:    ret void
@@ -214,6 +214,8 @@ else:
   ret void
 }
 
+; (x urem 5) uge 5 is always false. It ends up being folded first, but if it
+; weren't, we should handle that gracefully.
 define void @urem_implied_cond_uge_out_of_range(i8 %x) {
 ; CHECK-LABEL: @urem_implied_cond_uge_out_of_range(
 ; CHECK-NEXT:    [[U:%.*]] = urem i8 [[X:%.*]], 5
@@ -266,18 +268,17 @@ else:
   ret void
 }
 
+; (x urem 5) != 0 is the same as (x urem 5) >= 1 and implies x >= 1.
 define void @urem_implied_cond_ne_zero(i8 %x) {
 ; CHECK-LABEL: @urem_implied_cond_ne_zero(
 ; CHECK-NEXT:    [[U:%.*]] = urem i8 [[X:%.*]], 5
 ; CHECK-NEXT:    [[C1:%.*]] = icmp ne i8 [[U]], 0
 ; CHECK-NEXT:    br i1 [[C1]], label [[IF:%.*]], label [[ELSE:%.*]]
 ; CHECK:       if:
-; CHECK-NEXT:    [[C2:%.*]] = icmp ult i8 [[X]], 1
-; CHECK-NEXT:    call void @use(i1 [[C2]])
+; CHECK-NEXT:    call void @use(i1 false)
 ; CHECK-NEXT:    [[C3:%.*]] = icmp ule i8 [[X]], 1
 ; CHECK-NEXT:    call void @use(i1 [[C3]])
-; CHECK-NEXT:    [[C4:%.*]] = icmp uge i8 [[X]], 1
-; CHECK-NEXT:    call void @use(i1 [[C4]])
+; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    [[C5:%.*]] = icmp ugt i8 [[X]], 1
 ; CHECK-NEXT:    call void @use(i1 [[C5]])
 ; CHECK-NEXT:    ret void
@@ -319,6 +320,8 @@ else:
   ret void
 }
 
+; (x urem 5) != 1 doesn't imply anything on the true branch. However, on the
+; false branch (x urem 5) == 1 implies x >= 1.
 define void @urem_implied_cond_ne_non_zero(i8 %x) {
 ; CHECK-LABEL: @urem_implied_cond_ne_non_zero(
 ; CHECK-NEXT:    [[U:%.*]] = urem i8 [[X:%.*]], 5
@@ -335,12 +338,10 @@ define void @urem_implied_cond_ne_non_zero(i8 %x) {
 ; CHECK-NEXT:    call void @use(i1 [[C5]])
 ; CHECK-NEXT:    ret void
 ; CHECK:       else:
-; CHECK-NEXT:    [[C2_2:%.*]] = icmp ult i8 [[X]], 1
-; CHECK-NEXT:    call void @use(i1 [[C2_2]])
+; CHECK-NEXT:    call void @use(i1 false)
 ; CHECK-NEXT:    [[C3_2:%.*]] = icmp ule i8 [[X]], 1
 ; CHECK-NEXT:    call void @use(i1 [[C3_2]])
-; CHECK-NEXT:    [[C4_2:%.*]] = icmp uge i8 [[X]], 1
-; CHECK-NEXT:    call void @use(i1 [[C4_2]])
+; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    [[C5_2:%.*]] = icmp ugt i8 [[X]], 1
 ; CHECK-NEXT:    call void @use(i1 [[C5_2]])
 ; CHECK-NEXT:    ret void
