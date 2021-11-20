@@ -1127,8 +1127,7 @@ static ValueLatticeElement getValueFromICmpCondition(Value *Val, ICmpInst *ICI,
 
   // If (X urem Modulus) >= C, then X >= C.
   // TODO: An upper bound could be computed as well.
-  const APInt *Modulus;
-  if (match(LHS, m_URem(m_Specific(Val), m_APInt(Modulus))) &&
+  if (match(LHS, m_URem(m_Specific(Val), m_Value())) &&
       match(RHS, m_APInt(C))) {
     // Use the icmp region so we don't have to deal with different predicates.
     ConstantRange CR = ConstantRange::makeExactICmpRegion(EdgePred, *C);

@@ -163,9 +163,9 @@ define void @non_power_of_2(i24 %n) {
 
 ; (x urem 5) uge 2 implies x uge 2 on the true branch.
 ; We don't know anything about the lower bound on the false branch.
-define void @urem_implied_cond_uge(i8 %x) {
+define void @urem_implied_cond_uge(i8 %x, i8 %m) {
 ; CHECK-LABEL: @urem_implied_cond_uge(
-; CHECK-NEXT:    [[U:%.*]] = urem i8 [[X:%.*]], 5
+; CHECK-NEXT:    [[U:%.*]] = urem i8 [[X:%.*]], [[M:%.*]]
 ; CHECK-NEXT:    [[C1:%.*]] = icmp uge i8 [[U]], 2
 ; CHECK-NEXT:    br i1 [[C1]], label [[IF:%.*]], label [[ELSE:%.*]]
 ; CHECK:       if:
@@ -187,7 +187,7 @@ define void @urem_implied_cond_uge(i8 %x) {
 ; CHECK-NEXT:    call void @use(i1 [[C5_2]])
 ; CHECK-NEXT:    ret void
 ;
-  %u = urem i8 %x, 5
+  %u = urem i8 %x, %m
   %c1 = icmp uge i8 %u, 2
   br i1 %c1, label %if, label %else
 
@@ -269,9 +269,9 @@ else:
 }
 
 ; (x urem 5) != 0 is the same as (x urem 5) >= 1 and implies x >= 1.
-define void @urem_implied_cond_ne_zero(i8 %x) {
+define void @urem_implied_cond_ne_zero(i8 %x, i8 %m) {
 ; CHECK-LABEL: @urem_implied_cond_ne_zero(
-; CHECK-NEXT:    [[U:%.*]] = urem i8 [[X:%.*]], 5
+; CHECK-NEXT:    [[U:%.*]] = urem i8 [[X:%.*]], [[M:%.*]]
 ; CHECK-NEXT:    [[C1:%.*]] = icmp ne i8 [[U]], 0
 ; CHECK-NEXT:    br i1 [[C1]], label [[IF:%.*]], label [[ELSE:%.*]]
 ; CHECK:       if:
@@ -293,7 +293,7 @@ define void @urem_implied_cond_ne_zero(i8 %x) {
 ; CHECK-NEXT:    call void @use(i1 [[C5_2]])
 ; CHECK-NEXT:    ret void
 ;
-  %u = urem i8 %x, 5
+  %u = urem i8 %x, %m
   %c1 = icmp ne i8 %u, 0
   br i1 %c1, label %if, label %else
 
@@ -322,9 +322,9 @@ else:
 
 ; (x urem 5) != 1 doesn't imply anything on the true branch. However, on the
 ; false branch (x urem 5) == 1 implies x >= 1.
-define void @urem_implied_cond_ne_non_zero(i8 %x) {
+define void @urem_implied_cond_ne_non_zero(i8 %x, i8 %m) {
 ; CHECK-LABEL: @urem_implied_cond_ne_non_zero(
-; CHECK-NEXT:    [[U:%.*]] = urem i8 [[X:%.*]], 5
+; CHECK-NEXT:    [[U:%.*]] = urem i8 [[X:%.*]], [[M:%.*]]
 ; CHECK-NEXT:    [[C1:%.*]] = icmp ne i8 [[U]], 1
 ; CHECK-NEXT:    br i1 [[C1]], label [[IF:%.*]], label [[ELSE:%.*]]
 ; CHECK:       if:
@@ -346,7 +346,7 @@ define void @urem_implied_cond_ne_non_zero(i8 %x) {
 ; CHECK-NEXT:    call void @use(i1 [[C5_2]])
 ; CHECK-NEXT:    ret void
 ;
-  %u = urem i8 %x, 5
+  %u = urem i8 %x, %m
   %c1 = icmp ne i8 %u, 1
   br i1 %c1, label %if, label %else
 
