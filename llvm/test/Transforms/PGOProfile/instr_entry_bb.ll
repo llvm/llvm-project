@@ -18,7 +18,7 @@ entry:
 ; GEN: entry:
 ; GEN: call void @llvm.instrprof.increment(i8* getelementptr inbounds ([9 x i8], [9 x i8]* @__profn_test_br_2, i32 0, i32 0), i64 {{[0-9]+}}, i32 2, i32 0)
 ; GENA: entry:
-; GENA: %{{[0-9+]}} = atomicrmw add i64* getelementptr inbounds ([2 x i64], [2 x i64]* @__profc_test_br_2, i64 0, i64 0), i64 1 monotonic
+; GENA: %{{[0-9+]}} = atomicrmw add i64* getelementptr inbounds ([2 x i64], [2 x i64]* @__profc_test_br_2, i32 0, i32 0), i64 1 monotonic
 ; USE: br i1 %cmp, label %if.then, label %if.else
 ; USE-SAME: !prof ![[BW_ENTRY:[0-9]+]]
 ; USE: ![[BW_ENTRY]] = !{!"branch_weights", i32 0, i32 1}
@@ -35,9 +35,9 @@ if.else:
 ; GEN: if.else:
 ; GEN: call void @llvm.instrprof.increment(i8* getelementptr inbounds ([9 x i8], [9 x i8]* @__profn_test_br_2, i32 0, i32 0), i64 {{[0-9]+}}, i32 2, i32 1)
 ; GENA: if.else:
-; GENA:  %pgocount = load i64, i64* getelementptr inbounds ([2 x i64], [2 x i64]* @__profc_test_br_2, i64 0, i64 1), align 8
+; GENA:  %pgocount = load i64, i64* getelementptr inbounds ([2 x i64], [2 x i64]* @__profc_test_br_2, i32 0, i32 1), align 8
 ; GENA:  [[V:%[0-9]*]] = add i64 %pgocount, 1
-; GENA:  store i64 [[V]], i64* getelementptr inbounds ([2 x i64], [2 x i64]* @__profc_test_br_2, i64 0, i64 1), align 8
+; GENA:  store i64 [[V]], i64* getelementptr inbounds ([2 x i64], [2 x i64]* @__profc_test_br_2, i32 0, i32 1), align 8
   %sub = sub nsw i32 %i, 2
   br label %if.end
 
