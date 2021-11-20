@@ -967,6 +967,29 @@ Value *InstCombinerImpl::dyn_castNegVal(Value *V) const {
   return nullptr;
 }
 
+/// A binop with a constant operand and a sign-extended boolean operand may be
+/// converted into a select of constants by applying the binary operation to
+/// the constant with the two possible values of the extended boolean (0 or -1).
+Instruction *InstCombinerImpl::foldBinopOfSextBoolToSelect(BinaryOperator &BO) {
+  // TODO: Handle non-commutative binop (constant is operand 0).
+  // TODO: Handle zext.
+  // TODO: Peek through 'not' of cast.
+  Value *BO0 = BO.getOperand(0);
+  Value *BO1 = BO.getOperand(1);
+  Value *X;
+  Constant *C;
+  if (!match(BO0, m_SExt(m_Value(X))) || !match(BO1, m_ImmConstant(C)) ||
+      !X->getType()->isIntOrIntVectorTy(1))
+    return nullptr;
+
+  // bo (sext i1 X), C --> select X, (bo -1, C), (bo 0, C)
+  Constant *Ones = ConstantInt::getAllOnesValue(BO.getType());
+  Constant *Zero = ConstantInt::getNullValue(BO.getType());
+  Constant *TVal = ConstantExpr::get(BO.getOpcode(), Ones, C);
+  Constant *FVal = ConstantExpr::get(BO.getOpcode(), Zero, C);
+  return SelectInst::Create(X, TVal, FVal);
+}
+
 static Value *foldOperationIntoSelectOperand(Instruction &I, Value *SO,
                                              InstCombiner::BuilderTy &Builder) {
   if (auto *Cast = dyn_cast<CastInst>(&I))
