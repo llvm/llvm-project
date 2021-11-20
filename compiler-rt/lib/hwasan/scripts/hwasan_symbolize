@@ -35,7 +35,7 @@ class Symbolizer:
 
   def __open_pipe(self):
     if not self.__pipe:
-      self.__pipe = subprocess.Popen([self.__path, "-inlining", "-functions"],
+      self.__pipe = subprocess.Popen([self.__path, "--inlining", "--functions"],
                                      stdin=subprocess.PIPE, stdout=subprocess.PIPE)
 
   class __EOF:
