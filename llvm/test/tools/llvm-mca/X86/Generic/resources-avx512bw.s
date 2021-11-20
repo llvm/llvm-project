@@ -178,6 +178,12 @@ vpunpcklwd        (%rax), %zmm17, %zmm19 {k1}
 vpunpcklwd        %zmm16, %zmm17, %zmm19 {z}{k1}
 vpunpcklwd        (%rax), %zmm17, %zmm19 {z}{k1}
 
+vpmovm2b          %k0, %zmm0
+vpmovm2w          %k0, %zmm0
+
+vpmovb2m          %zmm0, %k0
+vpmovw2m          %zmm0, %k0
+
 # CHECK:      Instruction Info:
 # CHECK-NEXT: [1]: #uOps
 # CHECK-NEXT: [2]: Latency
@@ -337,6 +343,10 @@ vpunpcklwd        (%rax), %zmm17, %zmm19 {z}{k1}
 # CHECK-NEXT:  2      8     1.00    *                   vpunpcklwd	(%rax), %zmm17, %zmm19 {%k1}
 # CHECK-NEXT:  1      1     1.00                        vpunpcklwd	%zmm16, %zmm17, %zmm19 {%k1} {z}
 # CHECK-NEXT:  2      8     1.00    *                   vpunpcklwd	(%rax), %zmm17, %zmm19 {%k1} {z}
+# CHECK-NEXT:  1      1     0.33                        vpmovm2b	%k0, %zmm0
+# CHECK-NEXT:  1      1     0.33                        vpmovm2w	%k0, %zmm0
+# CHECK-NEXT:  1      1     0.33                        vpmovb2m	%zmm0, %k0
+# CHECK-NEXT:  1      1     0.33                        vpmovw2m	%zmm0, %k0
 
 # CHECK:      Resources:
 # CHECK-NEXT: [0]   - SBDivider
@@ -350,7 +360,7 @@ vpunpcklwd        (%rax), %zmm17, %zmm19 {z}{k1}
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6.0]  [6.1]
-# CHECK-NEXT:  -      -     9.33   46.33   -     94.33  33.00  33.00
+# CHECK-NEXT:  -      -     10.67  47.67   -     95.67  33.00  33.00
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6.0]  [6.1]  Instructions:
@@ -504,3 +514,7 @@ vpunpcklwd        (%rax), %zmm17, %zmm19 {z}{k1}
 # CHECK-NEXT:  -      -      -      -      -     1.00   0.50   0.50   vpunpcklwd	(%rax), %zmm17, %zmm19 {%k1}
 # CHECK-NEXT:  -      -      -      -      -     1.00    -      -     vpunpcklwd	%zmm16, %zmm17, %zmm19 {%k1} {z}
 # CHECK-NEXT:  -      -      -      -      -     1.00   0.50   0.50   vpunpcklwd	(%rax), %zmm17, %zmm19 {%k1} {z}
+# CHECK-NEXT:  -      -     0.33   0.33    -     0.33    -      -     vpmovm2b	%k0, %zmm0
+# CHECK-NEXT:  -      -     0.33   0.33    -     0.33    -      -     vpmovm2w	%k0, %zmm0
+# CHECK-NEXT:  -      -     0.33   0.33    -     0.33    -      -     vpmovb2m	%zmm0, %k0
+# CHECK-NEXT:  -      -     0.33   0.33    -     0.33    -      -     vpmovw2m	%zmm0, %k0
