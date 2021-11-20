@@ -935,9 +935,6 @@ public:
   JITDylib(JITDylib &&) = delete;
   JITDylib &operator=(JITDylib &&) = delete;
 
-  /// Get the name for this JITDylib.
-  const std::string &getName() const { return JITDylibName; }
-
   /// Get a reference to the ExecutionSession for this JITDylib.
   ExecutionSession &getExecutionSession() const { return ES; }
 
@@ -1200,7 +1197,6 @@ private:
       failSymbols(FailedSymbolsWorklist);
 
   ExecutionSession &ES;
-  std::string JITDylibName;
   std::mutex GeneratorsMutex;
   bool Open = true;
   SymbolTable Symbols;
