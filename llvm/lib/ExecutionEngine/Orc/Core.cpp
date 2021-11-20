@@ -1364,7 +1364,7 @@ Error JITDylib::remove(const SymbolNameSet &Names) {
 
 void JITDylib::dump(raw_ostream &OS) {
   ES.runSessionLocked([&, this]() {
-    OS << "JITDylib \"" << JITDylibName << "\" (ES: "
+    OS << "JITDylib \"" << getName() << "\" (ES: "
        << format("0x%016" PRIx64, reinterpret_cast<uintptr_t>(&ES)) << "):\n"
        << "Link order: " << LinkOrder << "\n"
        << "Symbol table:\n";
@@ -1450,7 +1450,7 @@ JITDylib::MaterializingInfo::takeQueriesMeeting(SymbolState RequiredState) {
 }
 
 JITDylib::JITDylib(ExecutionSession &ES, std::string Name)
-    : ES(ES), JITDylibName(std::move(Name)) {
+    : JITLinkDylib(std::move(Name)), ES(ES) {
   LinkOrder.push_back({this, JITDylibLookupFlags::MatchAllSymbols});
 }
 
