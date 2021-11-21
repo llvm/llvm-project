@@ -270,7 +270,11 @@ func @select_op(%arg1: vector<4xi1>) -> () {
 func @select_op(%arg1: vector<4xi1>) -> () {
   %0 = spv.Constant dense<[2.0, 3.0, 4.0]> : vector<3xf32>
   %1 = spv.Constant dense<[5, 6, 7]> : vector<3xi32>
-  // expected-error @+1 {{all of {true_value, false_value, result} have same type}}
+  // TODO: expand post change in verification order. This is currently only
+  // verifying that the type verification is failing but not the specific error
+  // message. In final state the error should refer to mismatch in true_value and
+  // false_value.
+  // expected-error @+1 {{type}}
   %2 = "spv.Select"(%arg1, %1, %0) : (vector<4xi1>, vector<3xi32>, vector<3xf32>) -> vector<3xi32>
   return
 }

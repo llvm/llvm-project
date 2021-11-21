@@ -137,7 +137,11 @@ func @func_with_ops(i32, i32, i32) {
 
 func @func_with_ops(i1, i32, i64) {
 ^bb0(%cond : i1, %t : i32, %f : i64):
-  // expected-error@+1 {{all of {true_value, false_value, result} have same type}}
+  // TODO: expand post change in verification order. This is currently only
+  // verifying that the type verification is failing but not the specific error
+  // message. In final state the error should refer to mismatch in true_value and
+  // false_value.
+  // expected-error@+1 {{type}}
   %r = "std.select"(%cond, %t, %f) : (i1, i32, i64) -> i32
 }
 
