@@ -957,8 +957,8 @@ Error BitcodeAnalyzer::parseBlock(unsigned BlockID, unsigned IndentLevel,
             O->OS.write_escaped(Blob, /*hex=*/true) << "'";
           } else {
             bool BlobIsPrintable = true;
-            for (unsigned i = 0, e = Blob.size(); i != e; ++i)
-              if (!isPrint(static_cast<unsigned char>(Blob[i]))) {
+            for (char C : Blob)
+              if (!isPrint(static_cast<unsigned char>(C))) {
                 BlobIsPrintable = false;
                 break;
               }
