@@ -1915,9 +1915,11 @@ private:
 
   /// Collect the instructions that are scalar after vectorization. An
   /// instruction is scalar if it is known to be uniform or will be scalarized
-  /// during vectorization. Non-uniform scalarized instructions will be
-  /// represented by VF values in the vectorized loop, each corresponding to an
-  /// iteration of the original scalar loop.
+  /// during vectorization. collectLoopScalars should only add non-uniform nodes
+  /// to the list if they are used by a load/store instruction that is marked as
+  /// CM_Scalarize. Non-uniform scalarized instructions will be represented by
+  /// VF values in the vectorized loop, each corresponding to an iteration of
+  /// the original scalar loop.
   void collectLoopScalars(ElementCount VF);
 
   /// Keeps cost model vectorization decision and cost for instructions.
@@ -4862,37 +4864,13 @@ void InnerLoopVectorizer::widenPHIInstruction(Instruction *PN,
       // iteration. If the instruction is uniform, we only need to generate the
       // first lane. Otherwise, we generate all VF values.
       bool IsUniform = Cost->isUniformAfterVectorization(P, State.VF);
-      unsigned Lanes = IsUniform ? 1 : State.VF.getKnownMinValue();
-
-      bool NeedsVectorIndex = !IsUniform && VF.isScalable();
-      Value *UnitStepVec = nullptr, *PtrIndSplat = nullptr;
-      if (NeedsVectorIndex) {
-        Type *VecIVTy = VectorType::get(PtrInd->getType(), VF);
-        UnitStepVec = Builder.CreateStepVector(VecIVTy);
-        PtrIndSplat = Builder.CreateVectorSplat(VF, PtrInd);
-      }
+      assert((IsUniform || !State.VF.isScalable()) &&
+             "Cannot scalarize a scalable VF");
+      unsigned Lanes = IsUniform ? 1 : State.VF.getFixedValue();
 
       for (unsigned Part = 0; Part < UF; ++Part) {
         Value *PartStart =
             createStepForVF(Builder, PtrInd->getType(), VF, Part);
-
-        if (NeedsVectorIndex) {
-          // Here we cache the whole vector, which means we can support the
-          // extraction of any lane. However, in some cases the extractelement
-          // instruction that is generated for scalar uses of this vector (e.g.
-          // a load instruction) is not folded away. Therefore we still
-          // calculate values for the first n lanes to avoid redundant moves
-          // (when extracting the 0th element) and to produce scalar code (i.e.
-          // additional add/gep instructions instead of expensive extractelement
-          // instructions) when extracting higher-order elements.
-          Value *PartStartSplat = Builder.CreateVectorSplat(VF, PartStart);
-          Value *Indices = Builder.CreateAdd(PartStartSplat, UnitStepVec);
-          Value *GlobalIndices = Builder.CreateAdd(PtrIndSplat, Indices);
-          Value *SclrGep =
-              emitTransformedIndex(Builder, GlobalIndices, PSE.getSE(), DL, II);
-          SclrGep->setName("next.gep");
-          State.set(PhiR, SclrGep, Part);
-        }
 
         for (unsigned Lane = 0; Lane < Lanes; ++Lane) {
           Value *Idx = Builder.CreateAdd(
@@ -5229,38 +5207,11 @@ void LoopVectorizationCostModel::collectLoopScalars(ElementCount VF) {
            !TheLoop->isLoopInvariant(V);
   };
 
-  auto isScalarPtrInduction = [&](Instruction *MemAccess, Value *Ptr) {
-    if (!isa<PHINode>(Ptr) ||
-        !Legal->getInductionVars().count(cast<PHINode>(Ptr)))
-      return false;
-    auto &Induction = Legal->getInductionVars()[cast<PHINode>(Ptr)];
-    if (Induction.getKind() != InductionDescriptor::IK_PtrInduction)
-      return false;
-    return isScalarUse(MemAccess, Ptr);
-  };
-
-  // A helper that evaluates a memory access's use of a pointer. If the
-  // pointer is actually the pointer induction of a loop, it is being
-  // inserted into Worklist. If the use will be a scalar use, and the
-  // pointer is only used by memory accesses, we place the pointer in
-  // ScalarPtrs. Otherwise, the pointer is placed in PossibleNonScalarPtrs.
+  // A helper that evaluates a memory access's use of a pointer. If the use will
+  // be a scalar use and the pointer is only used by memory accesses, we place
+  // the pointer in ScalarPtrs. Otherwise, the pointer is placed in
+  // PossibleNonScalarPtrs.
   auto evaluatePtrUse = [&](Instruction *MemAccess, Value *Ptr) {
-    if (isScalarPtrInduction(MemAccess, Ptr)) {
-      Worklist.insert(cast<Instruction>(Ptr));
-      LLVM_DEBUG(dbgs() << "LV: Found new scalar instruction: " << *Ptr
-                        << "\n");
-
-      Instruction *Update = cast<Instruction>(
-          cast<PHINode>(Ptr)->getIncomingValueForBlock(Latch));
-
-      // If there is more than one user of Update (Ptr), we shouldn't assume it
-      // will be scalar after vectorisation as other users of the instruction
-      // may require widening. Otherwise, add it to ScalarPtrs.
-      if (Update->hasOneUse() && cast<Value>(*Update->user_begin()) == Ptr) {
-        ScalarPtrs.insert(Update);
-        return;
-      }
-    }
     // We only care about bitcast and getelementptr instructions contained in
     // the loop.
     if (!isLoopVaryingBitCastOrGEP(Ptr))
@@ -5352,11 +5303,22 @@ void LoopVectorizationCostModel::collectLoopScalars(ElementCount VF) {
     if (Ind == Legal->getPrimaryInduction() && foldTailByMasking())
       continue;
 
+    // Returns true if \p Indvar is a pointer induction that is used directly by
+    // load/store instruction \p I.
+    auto IsDirectLoadStoreFromPtrIndvar = [&](Instruction *Indvar,
+                                              Instruction *I) {
+      return Induction.second.getKind() ==
+                 InductionDescriptor::IK_PtrInduction &&
+             (isa<LoadInst>(I) || isa<StoreInst>(I)) &&
+             Indvar == getLoadStorePointerOperand(I) && isScalarUse(I, Indvar);
+    };
+
     // Determine if all users of the induction variable are scalar after
     // vectorization.
     auto ScalarInd = llvm::all_of(Ind->users(), [&](User *U) -> bool {
       auto *I = cast<Instruction>(U);
-      return I == IndUpdate || !TheLoop->contains(I) || Worklist.count(I);
+      return I == IndUpdate || !TheLoop->contains(I) || Worklist.count(I) ||
+             IsDirectLoadStoreFromPtrIndvar(Ind, I);
     });
     if (!ScalarInd)
       continue;
@@ -5366,7 +5328,8 @@ void LoopVectorizationCostModel::collectLoopScalars(ElementCount VF) {
     auto ScalarIndUpdate =
         llvm::all_of(IndUpdate->users(), [&](User *U) -> bool {
           auto *I = cast<Instruction>(U);
-          return I == Ind || !TheLoop->contains(I) || Worklist.count(I);
+          return I == Ind || !TheLoop->contains(I) || Worklist.count(I) ||
+                 IsDirectLoadStoreFromPtrIndvar(IndUpdate, I);
         });
     if (!ScalarIndUpdate)
       continue;
