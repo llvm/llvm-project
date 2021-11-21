@@ -810,9 +810,9 @@ void AsmPrinter::emitFunctionHeader() {
   // so that we don't get references to undefined symbols.
   std::vector<MCSymbol*> DeadBlockSyms;
   MMI->takeDeletedSymbolsForFunction(&F, DeadBlockSyms);
-  for (unsigned i = 0, e = DeadBlockSyms.size(); i != e; ++i) {
+  for (MCSymbol *DeadBlockSym : DeadBlockSyms) {
     OutStreamer->AddComment("Address taken block that was later removed");
-    OutStreamer->emitLabel(DeadBlockSyms[i]);
+    OutStreamer->emitLabel(DeadBlockSym);
   }
 
   if (CurrentFnBegin) {
@@ -2151,8 +2151,7 @@ void AsmPrinter::emitJumpTableInfo() {
       SmallPtrSet<const MachineBasicBlock*, 16> EmittedSets;
       const TargetLowering *TLI = MF->getSubtarget().getTargetLowering();
       const MCExpr *Base = TLI->getPICJumpTableRelocBaseExpr(MF,JTI,OutContext);
-      for (unsigned ii = 0, ee = JTBBs.size(); ii != ee; ++ii) {
-        const MachineBasicBlock *MBB = JTBBs[ii];
+      for (const MachineBasicBlock *MBB : JTBBs) {
         if (!EmittedSets.insert(MBB).second)
           continue;
 
@@ -2178,8 +2177,8 @@ void AsmPrinter::emitJumpTableInfo() {
     MCSymbol* JTISymbol = GetJTISymbol(JTI);
     OutStreamer->emitLabel(JTISymbol);
 
-    for (unsigned ii = 0, ee = JTBBs.size(); ii != ee; ++ii)
-      emitJumpTableEntry(MJTI, JTBBs[ii], JTI);
+    for (const MachineBasicBlock *MBB : JTBBs)
+      emitJumpTableEntry(MJTI, MBB, JTI);
   }
   if (!JTInDiffSection)
     OutStreamer->emitDataRegion(MCDR_DataRegionEnd);
