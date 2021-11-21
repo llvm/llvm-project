@@ -338,6 +338,7 @@ module std [system] {
 
     module __bit {
       module bit_cast { private header "__bit/bit_cast.h" }
+      module byteswap { private header "__bit/byteswap.h" }
     }
   }
   module bitset {

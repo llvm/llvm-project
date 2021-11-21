@@ -40,6 +40,7 @@
     __cpp_lib_bounded_array_traits                 201902L [C++20]
     __cpp_lib_boyer_moore_searcher                 201603L [C++17]
     __cpp_lib_byte                                 201603L [C++17]
+    __cpp_lib_byteswap                             202110L [C++2b]
     __cpp_lib_char8_t                              201811L [C++20]
     __cpp_lib_chrono                               201611L [C++17]
     __cpp_lib_chrono_udls                          201304L [C++14]
@@ -249,6 +250,10 @@
 
 # ifdef __cpp_lib_byte
 #   error "__cpp_lib_byte should not be defined before c++17"
+# endif
+
+# ifdef __cpp_lib_byteswap
+#   error "__cpp_lib_byteswap should not be defined before c++2b"
 # endif
 
 # ifdef __cpp_lib_char8_t
@@ -779,6 +784,10 @@
 
 # ifdef __cpp_lib_byte
 #   error "__cpp_lib_byte should not be defined before c++17"
+# endif
+
+# ifdef __cpp_lib_byteswap
+#   error "__cpp_lib_byteswap should not be defined before c++2b"
 # endif
 
 # ifdef __cpp_lib_char8_t
@@ -1411,6 +1420,10 @@
 # endif
 # if __cpp_lib_byte != 201603L
 #   error "__cpp_lib_byte should have the value 201603L in c++17"
+# endif
+
+# ifdef __cpp_lib_byteswap
+#   error "__cpp_lib_byteswap should not be defined before c++2b"
 # endif
 
 # ifdef __cpp_lib_char8_t
@@ -2286,6 +2299,10 @@
 # endif
 # if __cpp_lib_byte != 201603L
 #   error "__cpp_lib_byte should have the value 201603L in c++20"
+# endif
+
+# ifdef __cpp_lib_byteswap
+#   error "__cpp_lib_byteswap should not be defined before c++2b"
 # endif
 
 # if defined(__cpp_char8_t)
@@ -3407,6 +3424,13 @@
 # endif
 # if __cpp_lib_byte != 201603L
 #   error "__cpp_lib_byte should have the value 201603L in c++2b"
+# endif
+
+# ifndef __cpp_lib_byteswap
+#   error "__cpp_lib_byteswap should be defined in c++2b"
+# endif
+# if __cpp_lib_byteswap != 202110L
+#   error "__cpp_lib_byteswap should have the value 202110L in c++2b"
 # endif
 
 # if defined(__cpp_char8_t)

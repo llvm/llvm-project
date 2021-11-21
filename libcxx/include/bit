@@ -14,9 +14,13 @@
     bit synopsis
 
 namespace std {
-    // [bit.cast], bit_cast
-    template<class To, class From>
-      constexpr To bit_cast(const From& from) noexcept; // C++20
+  // [bit.cast], bit_cast
+  template<class To, class From>
+    constexpr To bit_cast(const From& from) noexcept; // C++20
+
+  // [bit.byteswap], byteswap
+  template<class T>
+    constexpr T byteswap(T value) noexcept;      // C++23
 
   // [bit.pow.two], integral powers of 2
   template <class T>
@@ -51,13 +55,14 @@ namespace std {
     little = see below,        // C++20
     big = see below,           // C++20
     native = see below         // C++20
-};
+  };
 
 } // namespace std
 
 */
 
 #include <__bit/bit_cast.h>
+#include <__bit/byteswap.h>
 #include <__bits> // __libcpp_clz
 #include <__config>
 #include <__debug>

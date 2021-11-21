@@ -18,6 +18,7 @@
 /*  Constant              Value
     __cpp_lib_bit_cast    201806L [C++20]
     __cpp_lib_bitops      201907L [C++20]
+    __cpp_lib_byteswap    202110L [C++2b]
     __cpp_lib_endian      201907L [C++20]
     __cpp_lib_int_pow2    202002L [C++20]
 */
@@ -33,6 +34,10 @@
 
 # ifdef __cpp_lib_bitops
 #   error "__cpp_lib_bitops should not be defined before c++20"
+# endif
+
+# ifdef __cpp_lib_byteswap
+#   error "__cpp_lib_byteswap should not be defined before c++2b"
 # endif
 
 # ifdef __cpp_lib_endian
@@ -53,6 +58,10 @@
 #   error "__cpp_lib_bitops should not be defined before c++20"
 # endif
 
+# ifdef __cpp_lib_byteswap
+#   error "__cpp_lib_byteswap should not be defined before c++2b"
+# endif
+
 # ifdef __cpp_lib_endian
 #   error "__cpp_lib_endian should not be defined before c++20"
 # endif
@@ -69,6 +78,10 @@
 
 # ifdef __cpp_lib_bitops
 #   error "__cpp_lib_bitops should not be defined before c++20"
+# endif
+
+# ifdef __cpp_lib_byteswap
+#   error "__cpp_lib_byteswap should not be defined before c++2b"
 # endif
 
 # ifdef __cpp_lib_endian
@@ -99,6 +112,10 @@
 #   ifdef __cpp_lib_bitops
 #     error "__cpp_lib_bitops should not be defined because it is unimplemented in libc++!"
 #   endif
+# endif
+
+# ifdef __cpp_lib_byteswap
+#   error "__cpp_lib_byteswap should not be defined before c++2b"
 # endif
 
 # ifndef __cpp_lib_endian
@@ -135,6 +152,13 @@
 #   ifdef __cpp_lib_bitops
 #     error "__cpp_lib_bitops should not be defined because it is unimplemented in libc++!"
 #   endif
+# endif
+
+# ifndef __cpp_lib_byteswap
+#   error "__cpp_lib_byteswap should be defined in c++2b"
+# endif
+# if __cpp_lib_byteswap != 202110L
+#   error "__cpp_lib_byteswap should have the value 202110L in c++2b"
 # endif
 
 # ifndef __cpp_lib_endian
