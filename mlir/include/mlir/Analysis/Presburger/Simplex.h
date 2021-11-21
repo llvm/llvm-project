@@ -310,8 +310,8 @@ private:
 
   /// Restore the unknown to a non-negative sample value.
   ///
-  /// Returns true if the unknown was successfully restored to a non-negative
-  /// sample value, false otherwise.
+  /// Returns success if the unknown was successfully restored to a non-negative
+  /// sample value, failure otherwise.
   LogicalResult restoreRow(Unknown &u);
 
   /// Compute the maximum or minimum of the specified Unknown, depending on
