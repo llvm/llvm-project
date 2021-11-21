@@ -33,6 +33,8 @@ class StackStoreTest : public testing::Test {
       h.add(i);
       uptr tag = h.get() % 256;
       StackTrace s(frames.data(), size, tag);
+      if (!s.size && !s.tag)
+        continue;
       fn(s);
       std::next_permutation(frames.begin(), frames.end());
     };
@@ -40,6 +42,13 @@ class StackStoreTest : public testing::Test {
 
   StackStore store_ = {};
 };
+
+TEST_F(StackStoreTest, Empty) {
+  uptr before = store_.Allocated();
+  EXPECT_EQ(0u, store_.Store({}));
+  uptr after = store_.Allocated();
+  EXPECT_EQ(before, after);
+}
 
 TEST_F(StackStoreTest, Basic) {
   std::vector<StackStore::Id> ids;
