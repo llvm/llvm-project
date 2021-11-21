@@ -1095,7 +1095,8 @@ static ValueLatticeElement getValueFromICmpCondition(Value *Val, ICmpInst *ICI,
   if (!Ty->isIntegerTy())
     return ValueLatticeElement::getOverdefined();
 
-  APInt Offset(Ty->getScalarSizeInBits(), 0);
+  unsigned BitWidth = Ty->getScalarSizeInBits();
+  APInt Offset(BitWidth, 0);
   if (matchICmpOperand(Offset, LHS, Val, EdgePred))
     return getValueFromSimpleICmpCondition(EdgePred, RHS, Offset);
 
@@ -1118,11 +1119,21 @@ static ValueLatticeElement getValueFromICmpCondition(Value *Val, ICmpInst *ICI,
     // If (Val & Mask) != 0 then the value must be larger than the lowest set
     // bit of Mask.
     if (EdgePred == ICmpInst::ICMP_NE && !Mask->isZero() && C->isZero()) {
-      unsigned BitWidth = Ty->getIntegerBitWidth();
       return ValueLatticeElement::getRange(ConstantRange::getNonEmpty(
           APInt::getOneBitSet(BitWidth, Mask->countTrailingZeros()),
           APInt::getZero(BitWidth)));
     }
+  }
+
+  // If (X urem Modulus) >= C, then X >= C.
+  // TODO: An upper bound could be computed as well.
+  if (match(LHS, m_URem(m_Specific(Val), m_Value())) &&
+      match(RHS, m_APInt(C))) {
+    // Use the icmp region so we don't have to deal with different predicates.
+    ConstantRange CR = ConstantRange::makeExactICmpRegion(EdgePred, *C);
+    if (!CR.isEmptySet())
+      return ValueLatticeElement::getRange(ConstantRange::getNonEmpty(
+          CR.getUnsignedMin(), APInt(BitWidth, 0)));
   }
 
   return ValueLatticeElement::getOverdefined();

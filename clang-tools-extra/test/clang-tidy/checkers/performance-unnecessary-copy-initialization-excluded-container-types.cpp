@@ -58,3 +58,13 @@ void excludedConstIncorrectType() {
   const auto E = C.secretlyMutates();
   E.constMethod();
 }
+
+void excludedConstIncorrectTypeAsPointer(ConstInCorrectType *C) {
+  const auto E = C->secretlyMutates();
+  E.constMethod();
+}
+
+void excludedConstIncorrectTypeAsReference(const ConstInCorrectType &C) {
+  const auto E = C.secretlyMutates();
+  E.constMethod();
+}

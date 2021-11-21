@@ -1471,6 +1471,16 @@ define i32 @sext_to_sel(i32 %x, i1 %y) {
   ret i32 %r
 }
 
+define <2 x i32> @sext_to_sel_constant_vec(<2 x i1> %y) {
+; CHECK-LABEL: @sext_to_sel_constant_vec(
+; CHECK-NEXT:    [[R:%.*]] = select <2 x i1> [[Y:%.*]], <2 x i32> <i32 42, i32 -7>, <2 x i32> zeroinitializer
+; CHECK-NEXT:    ret <2 x i32> [[R]]
+;
+  %sext = sext <2 x i1> %y to <2 x i32>
+  %r = and <2 x i32> <i32 42, i32 -7>, %sext
+  ret <2 x i32> %r
+}
+
 define <2 x i32> @sext_to_sel_swap(<2 x i32> %px, <2 x i1> %y) {
 ; CHECK-LABEL: @sext_to_sel_swap(
 ; CHECK-NEXT:    [[X:%.*]] = mul <2 x i32> [[PX:%.*]], [[PX]]
@@ -1500,7 +1510,7 @@ define i32 @sext_to_sel_multi_use_constant_mask(i1 %y) {
 ; CHECK-LABEL: @sext_to_sel_multi_use_constant_mask(
 ; CHECK-NEXT:    [[SEXT:%.*]] = sext i1 [[Y:%.*]] to i32
 ; CHECK-NEXT:    call void @use32(i32 [[SEXT]])
-; CHECK-NEXT:    [[R:%.*]] = and i32 [[SEXT]], 42
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[Y]], i32 42, i32 0
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %sext = sext i1 %y to i32
