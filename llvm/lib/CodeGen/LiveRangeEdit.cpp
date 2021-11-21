@@ -425,15 +425,8 @@ void LiveRangeEdit::eliminateDeadDefs(SmallVectorImpl<MachineInstr *> &Dead,
     // The new intervals would have to be spilled anyway so its not worth it.
     // Also they currently aren't spilled so creating them and not spilling
     // them results in incorrect code.
-    bool BeingSpilled = false;
-    for (unsigned i = 0, e = RegsBeingSpilled.size(); i != e; ++i) {
-      if (VReg == RegsBeingSpilled[i]) {
-        BeingSpilled = true;
-        break;
-      }
-    }
-
-    if (BeingSpilled) continue;
+    if (llvm::is_contained(RegsBeingSpilled, VReg))
+      continue;
 
     // LI may have been separated, create new intervals.
     LI->RenumberValues();
