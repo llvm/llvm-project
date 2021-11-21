@@ -259,8 +259,8 @@ void Simplex::pivot(unsigned pivotRow, unsigned pivotCol) {
 }
 
 /// Perform pivots until the unknown has a non-negative sample value or until
-/// no more upward pivots can be performed. Return the sign of the final sample
-/// value.
+/// no more upward pivots can be performed. Return success if we were able to
+/// bring the row to a non-negative sample value, and failure otherwise.
 LogicalResult Simplex::restoreRow(Unknown &u) {
   assert(u.orientation == Orientation::Row &&
          "unknown should be in row position");
