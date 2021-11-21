@@ -277,6 +277,9 @@ MCOperand X86MCInstLower::LowerSymbolOperand(const MachineOperand &MO,
   case X86II::MO_GOTPCREL:
     RefKind = MCSymbolRefExpr::VK_GOTPCREL;
     break;
+  case X86II::MO_GOTPCREL_NORELAX:
+    RefKind = MCSymbolRefExpr::VK_GOTPCREL_NORELAX;
+    break;
   case X86II::MO_GOT:
     RefKind = MCSymbolRefExpr::VK_GOT;
     break;

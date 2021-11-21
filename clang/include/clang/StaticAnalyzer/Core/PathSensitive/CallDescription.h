@@ -28,7 +28,9 @@ class IdentifierInfo;
 namespace clang {
 namespace ento {
 
-enum CallDescriptionFlags : int {
+enum CallDescriptionFlags : unsigned {
+  CDF_None = 0,
+
   /// Describes a C standard function that is sometimes implemented as a macro
   /// that expands to a compiler builtin with some __builtin prefix.
   /// The builtin may as well have a few extra arguments on top of the requested
@@ -40,12 +42,14 @@ enum CallDescriptionFlags : int {
 /// arguments and the name of the function.
 class CallDescription {
   friend class CallEvent;
+  using MaybeCount = Optional<unsigned>;
+
   mutable Optional<const IdentifierInfo *> II;
   // The list of the qualified names used to identify the specified CallEvent,
   // e.g. "{a, b}" represent the qualified names, like "a::b".
-  std::vector<const char *> QualifiedName;
-  Optional<unsigned> RequiredArgs;
-  Optional<size_t> RequiredParams;
+  std::vector<std::string> QualifiedName;
+  MaybeCount RequiredArgs;
+  MaybeCount RequiredParams;
   int Flags;
 
 public:
@@ -59,14 +63,15 @@ public:
   /// @param RequiredArgs The number of arguments that is expected to match a
   /// call. Omit this parameter to match every occurrence of call with a given
   /// name regardless the number of arguments.
-  CallDescription(int Flags, ArrayRef<const char *> QualifiedName,
-                  Optional<unsigned> RequiredArgs = None,
-                  Optional<size_t> RequiredParams = None);
+  CallDescription(CallDescriptionFlags Flags,
+                  ArrayRef<const char *> QualifiedName,
+                  MaybeCount RequiredArgs = None,
+                  MaybeCount RequiredParams = None);
 
   /// Construct a CallDescription with default flags.
   CallDescription(ArrayRef<const char *> QualifiedName,
-                  Optional<unsigned> RequiredArgs = None,
-                  Optional<size_t> RequiredParams = None);
+                  MaybeCount RequiredArgs = None,
+                  MaybeCount RequiredParams = None);
 
   CallDescription(std::nullptr_t) = delete;
 
@@ -83,11 +88,40 @@ public:
   /// It's false, if and only if we expect a single identifier, such as
   /// `getenv`. It's true for `std::swap`, or `my::detail::container::data`.
   bool hasQualifiedNameParts() const { return QualifiedName.size() > 1; }
+
+  /// @name Matching CallDescriptions against a CallEvent
+  /// @{
+
+  /// Returns true if the CallEvent is a call to a function that matches
+  /// the CallDescription.
+  ///
+  /// \note This function is not intended to be used to match Obj-C method
+  /// calls.
+  bool matches(const CallEvent &Call) const;
+
+  /// Returns true whether the CallEvent matches on any of the CallDescriptions
+  /// supplied.
+  ///
+  /// \note This function is not intended to be used to match Obj-C method
+  /// calls.
+  friend bool matchesAny(const CallEvent &Call, const CallDescription &CD1) {
+    return CD1.matches(Call);
+  }
+
+  /// \copydoc clang::ento::matchesAny(const CallEvent &, const CallDescription &)
+  template <typename... Ts>
+  friend bool matchesAny(const CallEvent &Call, const CallDescription &CD1,
+                         const Ts &...CDs) {
+    return CD1.matches(Call) || matchesAny(Call, CDs...);
+  }
+  /// @}
 };
 
 /// An immutable map from CallDescriptions to arbitrary data. Provides a unified
 /// way for checkers to react on function calls.
 template <typename T> class CallDescriptionMap {
+  friend class CallDescriptionSet;
+
   // Some call descriptions aren't easily hashable (eg., the ones with qualified
   // names in which some sections are omitted), so let's put them
   // in a simple vector and use linear lookup.
@@ -111,11 +145,26 @@ public:
     // Slow path: linear lookup.
     // TODO: Implement some sort of fast path.
     for (const std::pair<CallDescription, T> &I : LinearMap)
-      if (Call.isCalled(I.first))
+      if (I.first.matches(Call))
         return &I.second;
 
     return nullptr;
   }
+};
+
+/// An immutable set of CallDescriptions.
+/// Checkers can efficiently decide if a given CallEvent matches any
+/// CallDescription in the set.
+class CallDescriptionSet {
+  CallDescriptionMap<bool /*unused*/> Impl = {};
+
+public:
+  CallDescriptionSet(std::initializer_list<CallDescription> &&List);
+
+  CallDescriptionSet(const CallDescriptionSet &) = delete;
+  CallDescriptionSet &operator=(const CallDescription &) = delete;
+
+  LLVM_NODISCARD bool contains(const CallEvent &Call) const;
 };
 
 } // namespace ento

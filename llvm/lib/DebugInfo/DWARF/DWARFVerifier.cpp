@@ -1289,16 +1289,14 @@ DWARFVerifier::verifyNameIndexAbbrevs(const DWARFDebugNames::NameIndex &NI) {
 static SmallVector<StringRef, 2> getNames(const DWARFDie &DIE,
                                           bool IncludeLinkageName = true) {
   SmallVector<StringRef, 2> Result;
-  if (const char *Str = DIE.getName(DINameKind::ShortName))
+  if (const char *Str = DIE.getShortName())
     Result.emplace_back(Str);
   else if (DIE.getTag() == dwarf::DW_TAG_namespace)
     Result.emplace_back("(anonymous namespace)");
 
   if (IncludeLinkageName) {
-    if (const char *Str = DIE.getName(DINameKind::LinkageName)) {
-      if (Result.empty() || Result[0] != Str)
-        Result.emplace_back(Str);
-    }
+    if (const char *Str = DIE.getLinkageName())
+      Result.emplace_back(Str);
   }
 
   return Result;

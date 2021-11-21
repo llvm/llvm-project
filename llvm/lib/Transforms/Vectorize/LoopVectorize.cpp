@@ -9336,7 +9336,6 @@ VPlanPtr LoopVectorizationPlanner::buildVPlanWithVPRecipes(
   // visit each basic block after having visited its predecessor basic blocks.
   // ---------------------------------------------------------------------------
 
-  // Create a dummy pre-entry VPBasicBlock to start building the VPlan.
   auto Plan = std::make_unique<VPlan>();
 
   // Scan the body of the loop in a topological order to visit each basic block

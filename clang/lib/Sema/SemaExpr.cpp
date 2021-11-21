@@ -11185,7 +11185,6 @@ QualType Sema::CheckShiftOperands(ExprResult &LHS, ExprResult &RHS,
       isScopedEnumerationType(RHSType)) {
     return InvalidOperands(Loc, LHS, RHS);
   }
-  // Sanity-check shift operands
   DiagnoseBadShiftValues(*this, LHS, RHS, Loc, Opc, LHSType);
 
   // "The type of the result is that of the promoted left operand."

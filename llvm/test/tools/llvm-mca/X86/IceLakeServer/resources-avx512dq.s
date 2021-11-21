@@ -142,6 +142,12 @@ vxorps            %zmm16, %zmm17, %zmm19 {z}{k1}
 vxorps            (%rax), %zmm17, %zmm19 {z}{k1}
 vxorps            (%rax){1to16}, %zmm17, %zmm19 {z}{k1}
 
+vpmovm2d          %k0, %zmm0
+vpmovm2q          %k0, %zmm0
+
+vpmovd2m          %zmm0, %k0
+vpmovq2m          %zmm0, %k0
+
 # CHECK:      Instruction Info:
 # CHECK-NEXT: [1]: #uOps
 # CHECK-NEXT: [2]: Latency
@@ -276,6 +282,10 @@ vxorps            (%rax){1to16}, %zmm17, %zmm19 {z}{k1}
 # CHECK-NEXT:  1      1     0.50                        vxorps	%zmm16, %zmm17, %zmm19 {%k1} {z}
 # CHECK-NEXT:  2      8     0.50    *                   vxorps	(%rax), %zmm17, %zmm19 {%k1} {z}
 # CHECK-NEXT:  2      8     0.50    *                   vxorps	(%rax){1to16}, %zmm17, %zmm19 {%k1} {z}
+# CHECK-NEXT:  1      1     0.25                        vpmovm2d	%k0, %zmm0
+# CHECK-NEXT:  1      1     0.25                        vpmovm2q	%k0, %zmm0
+# CHECK-NEXT:  1      1     1.00                        vpmovd2m	%zmm0, %k0
+# CHECK-NEXT:  1      1     1.00                        vpmovq2m	%zmm0, %k0
 
 # CHECK:      Resources:
 # CHECK-NEXT: [0]   - ICXDivider
@@ -293,7 +303,7 @@ vxorps            (%rax){1to16}, %zmm17, %zmm19 {z}{k1}
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]
-# CHECK-NEXT:  -      -     57.00  4.00   37.50  37.50   -     83.00   -      -      -      -
+# CHECK-NEXT:  -      -     59.50  4.50   37.50  37.50   -     83.50  0.50    -      -      -
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   Instructions:
@@ -422,3 +432,7 @@ vxorps            (%rax){1to16}, %zmm17, %zmm19 {z}{k1}
 # CHECK-NEXT:  -      -     0.50    -      -      -      -     0.50    -      -      -      -     vxorps	%zmm16, %zmm17, %zmm19 {%k1} {z}
 # CHECK-NEXT:  -      -     0.50    -     0.50   0.50    -     0.50    -      -      -      -     vxorps	(%rax), %zmm17, %zmm19 {%k1} {z}
 # CHECK-NEXT:  -      -     0.50    -     0.50   0.50    -     0.50    -      -      -      -     vxorps	(%rax){1to16}, %zmm17, %zmm19 {%k1} {z}
+# CHECK-NEXT:  -      -     0.25   0.25    -      -      -     0.25   0.25    -      -      -     vpmovm2d	%k0, %zmm0
+# CHECK-NEXT:  -      -     0.25   0.25    -      -      -     0.25   0.25    -      -      -     vpmovm2q	%k0, %zmm0
+# CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -     vpmovd2m	%zmm0, %k0
+# CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -     vpmovq2m	%zmm0, %k0
