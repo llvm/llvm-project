@@ -1952,8 +1952,6 @@ def SameTypeOperands : NativeOpTrait<"SameTypeOperands">;
 def SameOperandsShape : NativeOpTrait<"SameOperandsShape">;
 // Op has same operand and result shape.
 def SameOperandsAndResultShape : NativeOpTrait<"SameOperandsAndResultShape">;
-// Op has the same operand and result type.
-def SameOperandsAndResultType : NativeOpTrait<"SameOperandsAndResultType">;
 // Op has the same element type (or type itself, if scalar) for all operands.
 def SameOperandsElementType : NativeOpTrait<"SameOperandsElementType">;
 // Op has the same operand and result element type (or type itself, if scalar).
