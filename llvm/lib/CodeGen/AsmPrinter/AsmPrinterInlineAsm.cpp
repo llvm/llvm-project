@@ -281,6 +281,9 @@ static void EmitMSInlineAsmStr(const char *AsmStr, const MachineInstr *MI,
             MCSymbol *Sym = AP->GetBlockAddressSymbol(BA);
             Sym->print(OS, AP->MAI);
             MMI->getContext().registerInlineAsmLabel(Sym);
+          } else if (MI->getOperand(OpNo).isMBB()) {
+            const MCSymbol *Sym = MI->getOperand(OpNo).getMBB()->getSymbol();
+            Sym->print(OS, AP->MAI);
           } else if (InlineAsm::isMemKind(OpFlags)) {
             Error = AP->PrintAsmMemoryOperand(
                 MI, OpNo, Modifier[0] ? Modifier : nullptr, OS);
