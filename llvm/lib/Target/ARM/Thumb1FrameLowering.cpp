@@ -205,9 +205,9 @@ void Thumb1FrameLowering::emitPrologue(MachineFunction &MF,
     return;
   }
 
-  for (unsigned i = 0, e = CSI.size(); i != e; ++i) {
-    unsigned Reg = CSI[i].getReg();
-    int FI = CSI[i].getFrameIdx();
+  for (const CalleeSavedInfo &I : CSI) {
+    unsigned Reg = I.getReg();
+    int FI = I.getFrameIdx();
     switch (Reg) {
     case ARM::R8:
     case ARM::R9:
@@ -266,10 +266,9 @@ void Thumb1FrameLowering::emitPrologue(MachineFunction &MF,
         .addCFIIndex(CFIIndex)
         .setMIFlags(MachineInstr::FrameSetup);
   }
-  for (std::vector<CalleeSavedInfo>::const_iterator I = CSI.begin(),
-         E = CSI.end(); I != E; ++I) {
-    unsigned Reg = I->getReg();
-    int FI = I->getFrameIdx();
+  for (const CalleeSavedInfo &I : CSI) {
+    unsigned Reg = I.getReg();
+    int FI = I.getFrameIdx();
     switch (Reg) {
     case ARM::R8:
     case ARM::R9:

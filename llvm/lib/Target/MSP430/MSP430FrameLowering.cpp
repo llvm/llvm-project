@@ -211,8 +211,8 @@ bool MSP430FrameLowering::restoreCalleeSavedRegisters(
   MachineFunction &MF = *MBB.getParent();
   const TargetInstrInfo &TII = *MF.getSubtarget().getInstrInfo();
 
-  for (unsigned i = 0, e = CSI.size(); i != e; ++i)
-    BuildMI(MBB, MI, DL, TII.get(MSP430::POP16r), CSI[i].getReg());
+  for (const CalleeSavedInfo &I : CSI)
+    BuildMI(MBB, MI, DL, TII.get(MSP430::POP16r), I.getReg());
 
   return true;
 }
