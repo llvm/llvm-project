@@ -19,7 +19,7 @@ class GDBRemoteTestBase(TestBase):
 
     def setUp(self):
         TestBase.setUp(self)
-        self.server = MockGDBServer(socket_class=self.server_socket_class)
+        self.server = MockGDBServer(self.server_socket_class())
         self.server.start()
 
     def tearDown(self):
