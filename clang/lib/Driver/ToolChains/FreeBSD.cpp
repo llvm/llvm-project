@@ -293,8 +293,8 @@ void freebsd::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   addLinkerCompressDebugSectionsOption(ToolChain, Args, CmdArgs);
   AddLinkerInputs(ToolChain, Inputs, Args, CmdArgs, JA);
 
-  bool Profiling = Args.hasArg(options::OPT_pg) &&
-                   ToolChain.getTriple().getOSMajorVersion() < 14;
+  unsigned Major = ToolChain.getTriple().getOSMajorVersion();
+  bool Profiling = Args.hasArg(options::OPT_pg) && Major != 0 && Major < 14;
   if (!Args.hasArg(options::OPT_nostdlib, options::OPT_nodefaultlibs)) {
     // Use the static OpenMP runtime with -static-openmp
     bool StaticOpenMP = Args.hasArg(options::OPT_static_openmp) &&
@@ -419,8 +419,8 @@ void FreeBSD::addLibStdCxxIncludePaths(
 void FreeBSD::AddCXXStdlibLibArgs(const ArgList &Args,
                                   ArgStringList &CmdArgs) const {
   CXXStdlibType Type = GetCXXStdlibType(Args);
-  bool Profiling =
-      Args.hasArg(options::OPT_pg) && getTriple().getOSMajorVersion() < 14;
+  unsigned Major = getTriple().getOSMajorVersion();
+  bool Profiling = Args.hasArg(options::OPT_pg) && Major != 0 && Major < 14;
 
   switch (Type) {
   case ToolChain::CST_Libcxx:
