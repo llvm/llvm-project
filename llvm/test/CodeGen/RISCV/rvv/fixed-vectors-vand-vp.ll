@@ -1268,7 +1268,7 @@ define <11 x i64> @vand_vx_v11i64(<11 x i64> %va, i64 %b, <11 x i1> %m, i32 zero
 ; RV32-LABEL: vand_vx_v11i64:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    vmv1r.v v16, v0
-; RV32-NEXT:    addi a3, zero, 32
+; RV32-NEXT:    li a3, 32
 ; RV32-NEXT:    vsetvli zero, a3, e32, m8, ta, mu
 ; RV32-NEXT:    vmv.v.x v24, a1
 ; RV32-NEXT:    lui a1, 341
@@ -1296,7 +1296,7 @@ define <11 x i64> @vand_vx_v11i64(<11 x i64> %va, i64 %b, <11 x i1> %m, i32 zero
 define <11 x i64> @vand_vx_v11i64_unmasked(<11 x i64> %va, i64 %b, i32 zeroext %evl) {
 ; RV32-LABEL: vand_vx_v11i64_unmasked:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    addi a3, zero, 32
+; RV32-NEXT:    li a3, 32
 ; RV32-NEXT:    vsetvli zero, a3, e32, m8, ta, mu
 ; RV32-NEXT:    vmv.v.x v16, a1
 ; RV32-NEXT:    lui a1, 341

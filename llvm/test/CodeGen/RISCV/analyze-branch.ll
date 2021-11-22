@@ -17,7 +17,7 @@ define void @test_bcc_fallthrough_taken(i32 %in) nounwind {
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32I-NEXT:    addi a1, zero, 42
+; RV32I-NEXT:    li a1, 42
 ; RV32I-NEXT:    bne a0, a1, .LBB0_3
 ; RV32I-NEXT:  # %bb.1: # %true
 ; RV32I-NEXT:    call test_true@plt
@@ -49,7 +49,7 @@ define void @test_bcc_fallthrough_nottaken(i32 %in) nounwind {
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32I-NEXT:    addi a1, zero, 42
+; RV32I-NEXT:    li a1, 42
 ; RV32I-NEXT:    beq a0, a1, .LBB1_3
 ; RV32I-NEXT:  # %bb.1: # %false
 ; RV32I-NEXT:    call test_false@plt
