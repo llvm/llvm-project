@@ -13,6 +13,7 @@
 #include "SourceCode.h"
 #include "support/Logger.h"
 #include "support/Trace.h"
+#include "clang/AST/ExprCXX.h"
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Lex/HeaderSearch.h"
@@ -101,6 +102,13 @@ public:
   bool VisitEnumDecl(EnumDecl *D) {
     if (D->isThisDeclarationADefinition() && D->getIntegerTypeSourceInfo())
       add(D);
+    return true;
+  }
+
+  // When the overload is not resolved yet, mark all candidates as used.
+  bool VisitOverloadExpr(OverloadExpr *E) {
+    for (const auto *ResolutionDecl : E->decls())
+      add(ResolutionDecl);
     return true;
   }
 

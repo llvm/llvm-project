@@ -97,6 +97,10 @@ TEST(IncludeCleaner, ReferencedLocations) {
           "inline void ^foo() {}",
           "void bar() { foo(); }",
       },
+      {
+          "int ^foo(char); int ^foo(float);",
+          "template<class T> int x = foo(T{});",
+      },
       // Static function
       {
           "struct ^X { static bool ^foo(); }; bool X::^foo() {}",
