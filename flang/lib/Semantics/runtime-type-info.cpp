@@ -767,7 +767,7 @@ evaluate::StructureConstructor RuntimeTableBuilder::DescribeComponent(
     AddValue(values, componentSchema_, "genre"s, GetEnumValue("pointer"));
     hasDataInit = InitializeDataPointer(
         values, symbol, object, scope, dtScope, distinctName);
-  } else if (IsAutomaticObject(symbol)) {
+  } else if (IsAutomatic(symbol)) {
     AddValue(values, componentSchema_, "genre"s, GetEnumValue("automatic"));
   } else {
     AddValue(values, componentSchema_, "genre"s, GetEnumValue("data"));

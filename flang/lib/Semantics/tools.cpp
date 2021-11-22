@@ -626,49 +626,6 @@ bool IsSeparateModuleProcedureInterface(const Symbol *symbol) {
   return false;
 }
 
-// 3.11 automatic data object
-bool IsAutomatic(const Symbol &symbol) {
-  if (const auto *object{symbol.detailsIf<ObjectEntityDetails>()}) {
-    if (!object->isDummy() && !IsAllocatable(symbol) && !IsPointer(symbol)) {
-      if (const DeclTypeSpec * type{symbol.GetType()}) {
-        // If a type parameter value is not a constant expression, the
-        // object is automatic.
-        if (type->category() == DeclTypeSpec::Character) {
-          if (const auto &length{
-                  type->characterTypeSpec().length().GetExplicit()}) {
-            if (!evaluate::IsConstantExpr(*length)) {
-              return true;
-            }
-          }
-        } else if (const DerivedTypeSpec * derived{type->AsDerived()}) {
-          for (const auto &pair : derived->parameters()) {
-            if (const auto &value{pair.second.GetExplicit()}) {
-              if (!evaluate::IsConstantExpr(*value)) {
-                return true;
-              }
-            }
-          }
-        }
-      }
-      // If an array bound is not a constant expression, the object is
-      // automatic.
-      for (const ShapeSpec &dim : object->shape()) {
-        if (const auto &lb{dim.lbound().GetExplicit()}) {
-          if (!evaluate::IsConstantExpr(*lb)) {
-            return true;
-          }
-        }
-        if (const auto &ub{dim.ubound().GetExplicit()}) {
-          if (!evaluate::IsConstantExpr(*ub)) {
-            return true;
-          }
-        }
-      }
-    }
-  }
-  return false;
-}
-
 bool IsFinalizable(
     const Symbol &symbol, std::set<const DerivedTypeSpec *> *inProgress) {
   if (IsPointer(symbol)) {
@@ -720,35 +677,6 @@ bool HasImpureFinal(const DerivedTypeSpec &derived) {
 }
 
 bool IsCoarray(const Symbol &symbol) { return symbol.Corank() > 0; }
-
-bool IsAutomaticObject(const Symbol &symbol) {
-  if (IsDummy(symbol) || IsPointer(symbol) || IsAllocatable(symbol)) {
-    return false;
-  }
-  if (const DeclTypeSpec * type{symbol.GetType()}) {
-    if (type->category() == DeclTypeSpec::Character) {
-      ParamValue length{type->characterTypeSpec().length()};
-      if (length.isExplicit()) {
-        if (MaybeIntExpr lengthExpr{length.GetExplicit()}) {
-          if (!ToInt64(lengthExpr)) {
-            return true;
-          }
-        }
-      }
-    }
-  }
-  if (symbol.IsObjectArray()) {
-    for (const ShapeSpec &spec : symbol.get<ObjectEntityDetails>().shape()) {
-      auto &lbound{spec.lbound().GetExplicit()};
-      auto &ubound{spec.ubound().GetExplicit()};
-      if ((lbound && !evaluate::ToInt64(*lbound)) ||
-          (ubound && !evaluate::ToInt64(*ubound))) {
-        return true;
-      }
-    }
-  }
-  return false;
-}
 
 bool IsAssumedLengthCharacter(const Symbol &symbol) {
   if (const DeclTypeSpec * type{symbol.GetType()}) {
