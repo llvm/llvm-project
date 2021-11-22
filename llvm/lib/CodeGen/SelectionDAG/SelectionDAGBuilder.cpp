@@ -7107,28 +7107,21 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
   case Intrinsic::get_active_lane_mask: {
     SDValue Index = getValue(I.getOperand(0));
     SDValue TripCount = getValue(I.getOperand(1));
-    Type *ElementTy = I.getOperand(0)->getType();
-    EVT VT = TLI.getValueType(DAG.getDataLayout(), I.getType());
-    unsigned VecWidth = VT.getVectorNumElements();
+    EVT ElementVT = Index.getValueType();
+    EVT CCVT = TLI.getValueType(DAG.getDataLayout(), I.getType());
+    auto VecTy = CCVT.changeVectorElementType(ElementVT);
 
-    SmallVector<SDValue, 16> OpsTripCount;
-    SmallVector<SDValue, 16> OpsIndex;
-    SmallVector<SDValue, 16> OpsStepConstants;
-    for (unsigned i = 0; i < VecWidth; i++) {
-      OpsTripCount.push_back(TripCount);
-      OpsIndex.push_back(Index);
-      OpsStepConstants.push_back(
-          DAG.getConstant(i, sdl, EVT::getEVT(ElementTy)));
+    SDValue VectorIndex, VectorTripCount;
+    if (VecTy.isScalableVector()) {
+      VectorIndex = DAG.getSplatVector(VecTy, sdl, Index);
+      VectorTripCount = DAG.getSplatVector(VecTy, sdl, TripCount);
+    } else {
+      VectorIndex = DAG.getSplatBuildVector(VecTy, sdl, Index);
+      VectorTripCount = DAG.getSplatBuildVector(VecTy, sdl, TripCount);
     }
-
-    EVT CCVT = EVT::getVectorVT(I.getContext(), MVT::i1, VecWidth);
-
-    auto VecTy = EVT::getEVT(FixedVectorType::get(ElementTy, VecWidth));
-    SDValue VectorIndex = DAG.getBuildVector(VecTy, sdl, OpsIndex);
-    SDValue VectorStep = DAG.getBuildVector(VecTy, sdl, OpsStepConstants);
+    SDValue VectorStep = DAG.getStepVector(sdl, VecTy);
     SDValue VectorInduction = DAG.getNode(
         ISD::UADDO, sdl, DAG.getVTList(VecTy, CCVT), VectorIndex, VectorStep);
-    SDValue VectorTripCount = DAG.getBuildVector(VecTy, sdl, OpsTripCount);
     SDValue SetCC = DAG.getSetCC(sdl, CCVT, VectorInduction.getValue(0),
                                  VectorTripCount, ISD::CondCode::SETULT);
     setValue(&I, DAG.getNode(ISD::AND, sdl, CCVT,
