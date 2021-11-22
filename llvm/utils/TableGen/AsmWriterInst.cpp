@@ -147,8 +147,7 @@ AsmWriterInst::AsmWriterInst(const CodeGenInstruction &CGI, unsigned CGIIndex,
           std::string::size_type ModifierStart = VarEnd;
           while (VarEnd < AsmString.size() && isIdentChar(AsmString[VarEnd]))
             ++VarEnd;
-          Modifier = std::string(AsmString.begin()+ModifierStart,
-                                 AsmString.begin()+VarEnd);
+          Modifier = AsmString.substr(ModifierStart, VarEnd - ModifierStart);
           if (Modifier.empty())
             PrintFatalError(CGI.TheDef->getLoc(),
                             "Bad operand modifier name in '" +
