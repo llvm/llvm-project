@@ -4735,7 +4735,6 @@ unsigned AtomicExpr::getNumSubExprs(AtomicOp Op) {
   case AO__c11_atomic_compare_exchange_strong:
   case AO__c11_atomic_compare_exchange_weak:
     return 5;
-
   case AO__hip_atomic_compare_exchange_strong:
   case AO__opencl_atomic_compare_exchange_strong:
   case AO__opencl_atomic_compare_exchange_weak:

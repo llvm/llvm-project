@@ -217,6 +217,6 @@ AtomicScopeModel::create(AtomicScopeModelKind K) {
   }
   llvm_unreachable("Invalid atomic scope model kind");
 }
-}
+} // namespace clang
 
 #endif
