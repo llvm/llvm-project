@@ -5,7 +5,7 @@
 // CHECK-TEN: "-lc++" "-lm"
 // CHECK-NINE: "-lstdc++" "-lm"
 
-// RUN: %clangxx %s -### -pg -o %t.o -target amd64-unknown-freebsd40.0 -stdlib=platform 2>&1 \
+// RUN: %clangxx %s -### -pg -o %t.o -target amd64-unknown-freebsd14.0 -stdlib=platform 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-PG-FOURTEEN %s
 // RUN: %clangxx %s -### -pg -o %t.o -target amd64-unknown-freebsd10.0 -stdlib=platform 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-PG-TEN %s
