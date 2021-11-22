@@ -47,6 +47,8 @@ builtin.func @fuse_input(%arg0: tensor<24x12xf32>,
 builtin.func @fuse_output(%arg0: tensor<24x12xf32>,
                           %arg1: tensor<12x25xf32>,
                           %arg2: tensor<24x25xf32>) -> tensor<24x25xf32> {
+  //  MATMUL-DAG:  %[[C0:.*]] = arith.constant 0 : index
+  //  MATMUL-DAG:  %[[C1:.*]] = arith.constant 1 : index
   %c0 = arith.constant 0 : index
   %c12 = arith.constant 12 : index
   %c25 = arith.constant 25 : index
@@ -67,7 +69,17 @@ builtin.func @fuse_output(%arg0: tensor<24x12xf32>,
   // MATMUL-SAME:                                        %[[TS1]], %[[TS0]]
   //      MATMUL:      %[[T1:.*]] = linalg.fill(%{{.*}}, %[[T0]])
   //      MATMUL:        scf.for %[[IV2:.*]] = {{.*}} iter_args(%[[ARG5:.*]] = %[[T1]]
-  //      MATMUL:          %{{.*}} = linalg.matmul {{.*}} outs(%[[ARG5]]
+
+  // Check there is an extract/insert slice pair for the output operand.
+  //  MATMUL-DAG:          %[[D0:.*]] = tensor.dim %[[ARG5]], %[[C0]]
+  //  MATMUL-DAG:          %[[D1:.*]] = tensor.dim %[[ARG5]], %[[C1]]
+  //      MATMUL:          %[[T2:.*]] = tensor.extract_slice %[[ARG5]]
+  // MATMUL-SAME:                                            0, 0
+  // MATMUL-SAME:                                            %[[D0]], %[[D1]]
+  //      MATMUL:          %[[T3:.*]] = linalg.matmul {{.*}} outs(%[[T2]]
+  //      MATMUL:          %{{.*}} = tensor.insert_slice %[[T3]] into %[[ARG5]]
+  // MATMUL-SAME:                                            0, 0
+  // MATMUL-SAME:                                            %[[D0]], %[[D1]]
   %1 = linalg.matmul ins(%arg0, %arg1 : tensor<24x12xf32>, tensor<12x25xf32>) outs(%0 : tensor<24x25xf32>) -> tensor<24x25xf32>
   return %1 : tensor<24x25xf32>
 }
@@ -185,7 +197,8 @@ builtin.func @fuse_input_and_output(%arg0: tensor<24x12xf32>,
   //      MATMUL:          %[[T2:.*]] = tensor.extract_slice %[[ARG0]]
   // MATMUL-SAME:                                            %[[IV1]], %[[IV2]]
   //      MATMUL:          %[[T3:.*]] = linalg.fill(%{{.*}}, %[[T2]])
-  //      MATMUL:          %{{.*}} = linalg.matmul ins(%[[T3]], {{.*}} outs(%[[ARG5]]
+  //      MATMUL:          %[[T4:.*]] = tensor.extract_slice %[[ARG5]]
+  //      MATMUL:          %{{.*}} = linalg.matmul ins(%[[T3]], {{.*}} outs(%[[T4]]
   %2 = linalg.matmul ins(%0, %arg1 : tensor<24x12xf32>, tensor<12x25xf32>) outs(%1 : tensor<24x25xf32>) -> tensor<24x25xf32>
   return %2 : tensor<24x25xf32>
 }
