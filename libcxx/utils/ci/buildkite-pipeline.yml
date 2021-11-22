@@ -385,6 +385,8 @@ steps:
       automatic:
         - exit_status: -1  # Agent was lost
           limit: 2
+    soft_fail:
+        - exit_status: 1
     timeout_in_minutes: 120
 
   - label: "Single-threaded"

@@ -1,6 +1,3 @@
-// TODO: Investigate these failures
-// XFAIL: asan, tsan, ubsan
-
 // TODO: Investigate these failures on x86_64 macOS back deployment
 // UNSUPPORTED: target=x86_64-apple-darwin{{.+}}
 
