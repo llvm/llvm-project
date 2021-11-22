@@ -11,6 +11,7 @@ import pickle
 import pipes
 import platform
 import re
+import shutil
 import tempfile
 
 import libcxx.test.format
@@ -60,9 +61,6 @@ def _executeScriptInternal(test, commands):
     params={})
   _, tmpBase = libcxx.test.format._getTempPaths(test)
   execDir = os.path.dirname(test.getExecPath())
-  for d in (execDir, os.path.dirname(tmpBase)):
-    if not os.path.exists(d):
-      os.makedirs(d)
   res = lit.TestRunner.executeScriptInternal(test, litConfig, tmpBase, parsedCommands, execDir)
   if isinstance(res, lit.Test.Result): # Handle failure to parse the Lit test
     res = ('', res.output, 127, None)
@@ -79,19 +77,31 @@ def _executeScriptInternal(test, commands):
 
   return (out, err, exitCode, timeoutInfo)
 
-def _makeConfigTest(config, testPrefix=''):
+def _makeConfigTest(config):
+  # Make sure the support directories exist, which is needed to create
+  # the temporary file %t below.
   sourceRoot = os.path.join(config.test_exec_root, '__config_src__')
   execRoot = os.path.join(config.test_exec_root, '__config_exec__')
+  for supportDir in (sourceRoot, execRoot):
+    if not os.path.exists(supportDir):
+      os.makedirs(supportDir)
+
+  # Create a dummy test suite and single dummy test inside it. As part of
+  # the Lit configuration, automatically do the equivalent of 'mkdir %T'
+  # and 'rm -r %T' to avoid cluttering the build directory.
   suite = lit.Test.TestSuite('__config__', sourceRoot, execRoot, config)
-  if not os.path.exists(sourceRoot):
-    os.makedirs(sourceRoot)
-  tmp = tempfile.NamedTemporaryFile(dir=sourceRoot, delete=False, suffix='.cpp',
-                                    prefix=testPrefix)
+  tmp = tempfile.NamedTemporaryFile(dir=sourceRoot, delete=False, suffix='.cpp')
   tmp.close()
   pathInSuite = [os.path.relpath(tmp.name, sourceRoot)]
   class TestWrapper(lit.Test.Test):
-    def __enter__(self):       return self
-    def __exit__(self, *args): os.remove(tmp.name)
+    def __enter__(self):
+      testDir, _ = libcxx.test.format._getTempPaths(self)
+      os.makedirs(testDir)
+      return self
+    def __exit__(self, *args):
+      testDir, _ = libcxx.test.format._getTempPaths(self)
+      shutil.rmtree(testDir)
+      os.remove(tmp.name)
   return TestWrapper(suite, pathInSuite, config)
 
 @_memoizeExpensiveOperation(lambda c, s: (c.substitutions, c.environment, s))
@@ -106,11 +116,10 @@ def sourceBuilds(config, source):
     with open(test.getSourcePath(), 'w') as sourceFile:
       sourceFile.write(source)
     out, err, exitCode, timeoutInfo = _executeScriptInternal(test, ['%{build}'])
-    _executeScriptInternal(test, ['rm %t.exe'])
     return exitCode == 0
 
-@_memoizeExpensiveOperation(lambda c, p, args=None, testPrefix='': (c.substitutions, c.environment, p, args))
-def programOutput(config, program, args=None, testPrefix=''):
+@_memoizeExpensiveOperation(lambda c, p, args=None: (c.substitutions, c.environment, p, args))
+def programOutput(config, program, args=None):
   """
   Compiles a program for the test target, run it on the test target and return
   the output.
@@ -121,24 +130,20 @@ def programOutput(config, program, args=None, testPrefix=''):
   """
   if args is None:
     args = []
-  with _makeConfigTest(config, testPrefix=testPrefix) as test:
+  with _makeConfigTest(config) as test:
     with open(test.getSourcePath(), 'w') as source:
       source.write(program)
-    try:
-      _, _, exitCode, _ = _executeScriptInternal(test, ['%{build}'])
-      if exitCode != 0:
-        return None
+    _, _, exitCode, _ = _executeScriptInternal(test, ['%{build}'])
+    if exitCode != 0:
+      return None
 
-      out, err, exitCode, _ = _executeScriptInternal(test, ["%{{run}} {}".format(' '.join(args))])
-      if exitCode != 0:
-        return None
+    out, err, exitCode, _ = _executeScriptInternal(test, ["%{{run}} {}".format(' '.join(args))])
+    if exitCode != 0:
+      return None
 
-      actualOut = re.search("# command output:\n(.+)\n$", out, flags=re.DOTALL)
-      actualOut = actualOut.group(1) if actualOut else ""
-      return actualOut
-
-    finally:
-      _executeScriptInternal(test, ['rm %t.exe'])
+    actualOut = re.search("# command output:\n(.+)\n$", out, flags=re.DOTALL)
+    actualOut = actualOut.group(1) if actualOut else ""
+    return actualOut
 
 @_memoizeExpensiveOperation(lambda c, f: (c.substitutions, c.environment, f))
 def hasCompileFlag(config, flag):
@@ -181,8 +186,7 @@ def hasAnyLocale(config, locales):
       return 1;
     }
   """
-  return programOutput(config, program, args=[pipes.quote(l) for l in locales],
-                       testPrefix="check_locale_" + locales[0]) is not None
+  return programOutput(config, program, args=[pipes.quote(l) for l in locales]) is not None
 
 @_memoizeExpensiveOperation(lambda c, flags='': (c.substitutions, c.environment, flags))
 def compilerMacros(config, flags=''):
