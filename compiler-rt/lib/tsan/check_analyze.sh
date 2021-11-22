@@ -34,27 +34,21 @@ check() {
   fi
 }
 
-# All hot functions must contain no PUSH/POP
-# and no CALLs (everything is tail-called).
 for f in write1 write2 write4 write8; do
   check $f rsp 1
-  check $f push 0
-  check $f pop 0
-  check $f call 0
+  check $f push 2
 done
 
 for f in read1 read2 read4 read8; do
   check $f rsp 1
-  check $f push 0
-  check $f pop 0
-  check $f call 0
+  check $f push 3
 done
 
 for f in func_entry func_exit; do
   check $f rsp 0
   check $f push 0
   check $f pop 0
-  check $f call 0
+  check $f call 1  # TraceSwitch()
 done
 
 echo LGTM
