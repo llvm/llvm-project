@@ -254,7 +254,7 @@ linalg::rewriteAsPaddedOp(OpBuilder &b, LinalgOp opToPad,
     SmallVector<OpFoldResult> offsets(rank, b.getIndexAttr(0));
     SmallVector<OpFoldResult> sizes;
     for (Value v : reifiedResultShapes[resultNumber])
-      sizes.push_back(v);
+      sizes.push_back(getAsOpFoldResult(v));
     SmallVector<OpFoldResult> strides(rank, b.getIndexAttr(1));
     paddedSubviewResults.push_back(b.create<tensor::ExtractSliceOp>(
         loc, paddedResult, offsets, sizes, strides));
