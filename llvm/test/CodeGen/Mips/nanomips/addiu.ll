@@ -29,3 +29,28 @@ define i32 @test_addiu4(i32 %a) {
   %added = add i32 %a, -2049
   ret i32 %added
 }
+
+define i32 @test_addiu5(i32 %a) {
+; CHECK: addiu[48] $a0, $a0, 2147483647
+  %added = add i32 %a, 2147483647
+  ret i32 %added
+}
+
+define i32 @test_addiu6(i32 %a) {
+; CHECK: addiu[48] $a0, $a0, -2147483648
+  %added = add i32 %a, -2147483648
+  ret i32 %added
+}
+
+define i32 @test_addiu7(i32 %a, i32 %b) {
+; CHECK: move $a0, $a1
+; CHECK: addiu[48] $a0, $a0, -2049
+  %added = add i32 %b, -2049
+  ret i32 %added
+}
+
+define i32 @test_addiu8(i32 %a) {
+; CHECK: addiu[48] $a0, $a0, -2147483648
+  %added = add i32 %a, 2147483648
+  ret i32 %added
+}

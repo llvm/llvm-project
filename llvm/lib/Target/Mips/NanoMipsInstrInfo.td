@@ -25,6 +25,9 @@ def NMUnalignedSH : SDNode<"MipsISD::UASH", SDTStore, [SDNPHasChain, SDNPMayStor
 // nanoMIPS Operand, Complex Patterns and Transformations Definitions.
 //===----------------------------------------------------------------------===//
 
+def imm32_NM : IntImmLeaf<i32, [{
+    return (uint32_t)Imm.getZExtValue() == (uint64_t)Imm.getZExtValue();
+}]>;
 def imm32ZExt12 : IntImmLeaf<i32, [{ return isUInt<12>(Imm.getZExtValue()); }]>;
 def imm32ZExt5  : IntImmLeaf<i32, [{ return isUInt<5>(Imm.getZExtValue()); }]>;
 def imm32SExt12  : IntImmLeaf<i32, [{ return isInt<12>(Imm.getSExtValue()); }]>;
@@ -93,9 +96,14 @@ class ArithLogicINM<string opstr, Operand Od, RegisterOperand RO,
                     SDPatternOperator OpNode = null_frag> :
   InstNM<(outs RO:$rt), (ins RO:$rs, Od:$imm),
          !strconcat(opstr, "\t$rt, $rs, $imm"),
-         [(set RO:$rt, (OpNode RO:$rs, imm_type:$imm))]>, InstSize32 {
+         [(set RO:$rt, (OpNode RO:$rs, imm_type:$imm))]> {
   let isReMaterializable = 1;
 }
+
+class ArithLogicI32<string opstr, Operand Od, RegisterOperand RO,
+                    SDPatternOperator imm_type = null_frag,
+                    SDPatternOperator OpNode = null_frag> :
+  ArithLogicINM<opstr, Od, RO, imm_type, OpNode>, InstSize32;
 
 class DivMod<string opstr, SDPatternOperator OpNode = null_frag> :
     ArithLoginR32<opstr, GPR32NMOpnd, OpNode> {
@@ -319,24 +327,27 @@ def DIVU_NM  : DivMod<"divu", udiv>;
 def MODU_NM  : DivMod<"modu", urem>;
 
 // P.U12 pool of instructions
-def ORI_NM   : ArithLogicINM<"ori", uimm12_nm, GPR32NMOpnd, imm32ZExt12, or>;
-def XORI_NM  : ArithLogicINM<"xori", uimm12_nm, GPR32NMOpnd, imm32ZExt12, xor>;
-def ANDI_NM  : ArithLogicINM<"andi", uimm12_nm, GPR32NMOpnd, imm32ZExt12, and>;
-def SLTI_NM  : ArithLogicINM<"slti", uimm12_nm, GPR32NMOpnd, imm32ZExt12, setlt>;
-def SLTIU_NM : ArithLogicINM<"sltiu", uimm12_nm, GPR32NMOpnd, imm32ZExt12, setult>;
-def SEQI_NM  : ArithLogicINM<"seqi", uimm12_nm, GPR32NMOpnd, imm32ZExt12, seteq>;
+def ORI_NM   : ArithLogicI32<"ori", uimm12_nm, GPR32NMOpnd, imm32ZExt12, or>;
+def XORI_NM  : ArithLogicI32<"xori", uimm12_nm, GPR32NMOpnd, imm32ZExt12, xor>;
+def ANDI_NM  : ArithLogicI32<"andi", uimm12_nm, GPR32NMOpnd, imm32ZExt12, and>;
+def SLTI_NM  : ArithLogicI32<"slti", uimm12_nm, GPR32NMOpnd, imm32ZExt12, setlt>;
+def SLTIU_NM : ArithLogicI32<"sltiu", uimm12_nm, GPR32NMOpnd, imm32ZExt12, setult>;
+def SEQI_NM  : ArithLogicI32<"seqi", uimm12_nm, GPR32NMOpnd, imm32ZExt12, seteq>;
 
 // P.SHIFT pool of instructions
-def SLL_NM  : ArithLogicINM<"sll", uimm5_nm, GPR32NMOpnd, imm32ZExt5, shl>;
-def SRL_NM  : ArithLogicINM<"srl", uimm5_nm, GPR32NMOpnd, imm32ZExt5, srl>;
-def SRA_NM  : ArithLogicINM<"sra", uimm5_nm, GPR32NMOpnd, imm32ZExt5, sra>;
-def ROTR_NM : ArithLogicINM<"rotr", uimm5_nm, GPR32NMOpnd, imm32ZExt5, rotr>;
+def SLL_NM  : ArithLogicI32<"sll", uimm5_nm, GPR32NMOpnd, imm32ZExt5, shl>;
+def SRL_NM  : ArithLogicI32<"srl", uimm5_nm, GPR32NMOpnd, imm32ZExt5, srl>;
+def SRA_NM  : ArithLogicI32<"sra", uimm5_nm, GPR32NMOpnd, imm32ZExt5, sra>;
+def ROTR_NM : ArithLogicI32<"rotr", uimm5_nm, GPR32NMOpnd, imm32ZExt5, rotr>;
 
 def EXT_NM : ExtBaseNM;
 def INS_NM : InsBaseNM;
 
-def ADDiu_NM : ArithLogicINM<"addiu", uimm16_simm12, GPR32NMOpnd,
+def ADDiu_NM : ArithLogicI32<"addiu", uimm16_simm12, GPR32NMOpnd,
                              imm32SExt12OrZExt16, add>;
+let Constraints = "$rt = $rs" in
+def ADDIU48_NM : ArithLogicINM<"addiu[48]", simm32_relaxed, GPR32NMOpnd,
+                               imm32_NM, add>, InstSize48;
 
 def LSA_NM : LoadScaledAddressNM<"lsa", GPR32NMOpnd>;
 
@@ -407,9 +418,6 @@ let hasPostISelHook = 1, isCall = 1, isCTI = 1, Defs = [RA_NM] in {
     PseudoInstExpansion<(JALRC_NM RA_NM, GPR32NMOpnd:$rs)>;
 }
 
-def imm32_NM : IntImmLeaf<i32, [{
-    return (uint32_t)Imm.getZExtValue() == (uint64_t)Imm.getZExtValue();
-}]>;
 def : NMPat<(i32 imm32_NM:$imm), (Li_NM imm:$imm)>;
 
 def : NMPat<(MipsJmpLink (i32 texternalsym:$dst)), (BALC_NM texternalsym:$dst)>;
