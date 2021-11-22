@@ -676,8 +676,6 @@ bool HasImpureFinal(const DerivedTypeSpec &derived) {
   }
 }
 
-bool IsCoarray(const Symbol &symbol) { return symbol.Corank() > 0; }
-
 bool IsAssumedLengthCharacter(const Symbol &symbol) {
   if (const DeclTypeSpec * type{symbol.GetType()}) {
     return type->category() == DeclTypeSpec::Character &&
