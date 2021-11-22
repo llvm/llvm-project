@@ -496,7 +496,8 @@ static char *toLower(char *token) {
 }
 
 /// Read the MME header of a general sparse matrix of type real.
-static void readMMEHeader(FILE *file, char *name, uint64_t *idata) {
+static void readMMEHeader(FILE *file, char *name, uint64_t *idata,
+                          bool *is_symmetric) {
   char line[1025];
   char header[64];
   char object[64];
@@ -509,11 +510,12 @@ static void readMMEHeader(FILE *file, char *name, uint64_t *idata) {
     fprintf(stderr, "Corrupt header in %s\n", name);
     exit(1);
   }
+  *is_symmetric = (strcmp(toLower(symmetry), "symmetric") == 0);
   // Make sure this is a general sparse matrix.
   if (strcmp(toLower(header), "%%matrixmarket") ||
       strcmp(toLower(object), "matrix") ||
       strcmp(toLower(format), "coordinate") || strcmp(toLower(field), "real") ||
-      strcmp(toLower(symmetry), "general")) {
+      (strcmp(toLower(symmetry), "general") && !(*is_symmetric))) {
     fprintf(stderr,
             "Cannot find a general sparse matrix with type real in %s\n", name);
     exit(1);
@@ -579,8 +581,9 @@ static SparseTensorCOO<V> *openSparseTensorCOO(char *filename, uint64_t rank,
   }
   // Perform some file format dependent set up.
   uint64_t idata[512];
+  bool is_symmetric = false;
   if (strstr(filename, ".mtx")) {
-    readMMEHeader(file, filename, idata);
+    readMMEHeader(file, filename, idata, &is_symmetric);
   } else if (strstr(filename, ".tns")) {
     readExtFROSTTHeader(file, filename, idata);
   } else {
@@ -616,6 +619,11 @@ static SparseTensorCOO<V> *openSparseTensorCOO(char *filename, uint64_t rank,
       exit(1);
     }
     tensor->add(indices, value);
+    // We currently chose to deal with symmetric matrices by fully constructing
+    // them. In the future, we may want to make symmetry implicit for storage
+    // reasons.
+    if (is_symmetric && indices[0] != indices[1])
+      tensor->add({indices[1], indices[0]}, value);
   }
   // Close the file and return tensor.
   fclose(file);
