@@ -589,9 +589,9 @@ def : NMPat<(brcond (i32 GPR32NM:$lhs), bb:$dst),
             (BNEC_NM GPR32NM:$lhs, ZERO_NM, bb:$dst)>;
 
 // Bit-test branch
-def : Pat<(brcond (i32 (setne (and GPR32NM:$rt, simm32power2:$imm), 0)), bb:$offset),
+def : NMPat<(brcond (i32 (setne (and GPR32NM:$rt, simm32power2:$imm), 0)), bb:$offset),
           (BBNEZC_NM GPR32NM:$rt, (Log2XForm $imm), bb:$offset)>;
-def : Pat<(brcond (i32 (seteq (and GPR32NM:$rt, simm32power2:$imm), 0)), bb:$offset),
+def : NMPat<(brcond (i32 (seteq (and GPR32NM:$rt, simm32power2:$imm), 0)), bb:$offset),
           (BBEQZC_NM GPR32NM:$rt, (Log2XForm $imm), bb:$offset)>;
 
 
