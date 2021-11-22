@@ -390,7 +390,8 @@ public:
       auto argAttrRange = argAttrs.template getAsRange<DictionaryAttr>();
       result.append(argAttrRange.begin(), argAttrRange.end());
     } else {
-      result.resize(getNumArguments());
+      result.append(getNumArguments(),
+                    DictionaryAttr::get(this->getOperation()->getContext()));
     }
   }
 
@@ -479,7 +480,8 @@ public:
       auto argAttrRange = argAttrs.template getAsRange<DictionaryAttr>();
       result.append(argAttrRange.begin(), argAttrRange.end());
     } else {
-      result.resize(getNumResults());
+      result.append(getNumResults(),
+                    DictionaryAttr::get(this->getOperation()->getContext()));
     }
   }
 
