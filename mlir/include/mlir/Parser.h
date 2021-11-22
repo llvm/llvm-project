@@ -256,6 +256,16 @@ Type parseType(llvm::StringRef typeStr, MLIRContext *context);
 /// `typeStr`. The number of characters of `typeStr` parsed in the process is
 /// returned in `numRead`.
 Type parseType(llvm::StringRef typeStr, MLIRContext *context, size_t &numRead);
+
+/// This parses a single IntegerSet to an MLIR context if it was valid. If not,
+/// an error message is emitted through a new SourceMgrDiagnosticHandler
+/// constructed from a new SourceMgr with a single MemoryBuffer wrapping
+/// `str`. If the passed `str` has additional tokens that were not part of the
+/// IntegerSet, a failure is returned. Diagnostics are printed on failure if
+/// `printDiagnosticInfo` is true.
+IntegerSet parseIntegerSet(llvm::StringRef str, MLIRContext *context,
+                           bool printDiagnosticInfo = true);
+
 } // end namespace mlir
 
 #endif // MLIR_PARSER_H
