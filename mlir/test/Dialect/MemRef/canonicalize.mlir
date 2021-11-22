@@ -600,6 +600,18 @@ func @fold_memref_reshape_dynamic(%arg0 : memref<?x?xf32>) -> memref<?x?xf32> {
 
 // -----
 
+func @fold_memref_expand_cast(%arg0 : memref<?x?xf32>) -> memref<2x4x4xf32> {
+  %0 = memref.cast %arg0 : memref<?x?xf32> to memref<8x4xf32>
+  %1 = memref.expand_shape %0 [[0, 1], [2]]
+      : memref<8x4xf32> into memref<2x4x4xf32>
+  return %1 : memref<2x4x4xf32>
+}
+
+// CHECK-LABEL: @fold_memref_expand_cast
+// CHECK: memref.expand_shape
+
+// -----
+
 // CHECK-LABEL:   func @collapse_after_memref_cast_type_change(
 // CHECK-SAME:      %[[INPUT:.*]]: memref<?x512x1x1xf32>) -> memref<?x?xf32> {
 // CHECK:           %[[COLLAPSED:.*]] = memref.collapse_shape %[[INPUT]]
