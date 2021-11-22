@@ -225,9 +225,9 @@ public:
   LogicalResult tileRootOp(OpBuilder &b, ArrayRef<int64_t> tileSizes,
                            ArrayRef<int64_t> tileInterchange);
 
-  /// Fuse the producer of `rootOpOperand` into the tile loop nest. Returns the
-  /// fused producer of fails if fusion is not possible.
-  FailureOr<LinalgOp> fuseProducer(OpBuilder &b, OpOperand *rootOpOperand);
+  /// Fuse the producer of `consumerOpOperand` into the tile loop nest. Returns
+  /// the fused producer or fails if fusion is not possible.
+  FailureOr<LinalgOp> fuseProducer(OpBuilder &b, OpOperand *consumerOpOperand);
 
   /// Returns the replacement results for the original untiled root operation.
   ValueRange getRootOpReplacementResults();

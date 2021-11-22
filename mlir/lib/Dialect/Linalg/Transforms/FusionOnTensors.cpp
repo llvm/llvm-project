@@ -317,8 +317,11 @@ LogicalResult TileLoopNest::tileRootOp(OpBuilder &b,
 
 FailureOr<LinalgOp> TileLoopNest::fuseProducer(OpBuilder &b,
                                                OpOperand *consumerOpOperand) {
-  assert(tiledRootAndFusedOpsLoops.count(consumerOpOperand->getOwner()) != 0 &&
-         "expect the operand owner is the root operation or a fused producer");
+  // Check if the consumer has been tiled before. For example, it may not have
+  // been tiled if the outermost tile loop is a reduction loop.
+  if (tiledRootAndFusedOpsLoops.count(consumerOpOperand->getOwner()) == 0)
+    return failure();
+
   assert(this->isValid() &&
          "expect the tile loop nest to satisfy all invariants");
 
