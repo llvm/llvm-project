@@ -62,6 +62,11 @@ static inline bool mlirExecutionEngineIsNull(MlirExecutionEngine jit) {
 MLIR_CAPI_EXPORTED MlirLogicalResult mlirExecutionEngineInvokePacked(
     MlirExecutionEngine jit, MlirStringRef name, void **arguments);
 
+/// Lookup the wrapper of the native function in the execution engine with the
+/// given name, returns nullptr if the function can't be looked-up.
+MLIR_CAPI_EXPORTED void *
+mlirExecutionEngineLookupPacked(MlirExecutionEngine jit, MlirStringRef name);
+
 /// Lookup a native function in the execution engine by name, returns nullptr
 /// if the name can't be looked-up.
 MLIR_CAPI_EXPORTED void *mlirExecutionEngineLookup(MlirExecutionEngine jit,
