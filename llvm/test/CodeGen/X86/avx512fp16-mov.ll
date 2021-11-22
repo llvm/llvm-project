@@ -1955,3 +1955,73 @@ define <8 x half> @test21(half %a, half %b, half %c) nounwind {
   %3 = insertelement <8 x half> %2, half %c, i32 2
   ret <8 x half> %3
 }
+
+define <16 x i16> @test22(i16* %mem) nounwind {
+; X64-LABEL: test22:
+; X64:       # %bb.0:
+; X64-NEXT:    movzwl 0, %eax
+; X64-NEXT:    andw (%rdi), %ax
+; X64-NEXT:    vmovw %eax, %xmm0
+; X64-NEXT:    retq
+;
+; X86-LABEL: test22:
+; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movzwl 0, %ecx
+; X86-NEXT:    andw (%eax), %cx
+; X86-NEXT:    vmovw %ecx, %xmm0
+; X86-NEXT:    retl
+  %1 = load i16, i16* null, align 2
+  %2 = load i16, i16* %mem, align 2
+  %3 = and i16 %1, %2
+  %4 = insertelement <16 x i16> <i16 undef, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0>, i16 %3, i32 0
+  ret <16 x i16> %4
+}
+
+define void @pr52560(i8 %0, <2 x i16> %1, i8* %c) nounwind {
+; X64-LABEL: pr52560:
+; X64:       # %bb.0: # %entry
+; X64-NEXT:    movsbl %dil, %eax
+; X64-NEXT:    vmovw %eax, %xmm1
+; X64-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; X64-NEXT:    vpcmpgtw %xmm2, %xmm1, %k1
+; X64-NEXT:    vmovdqu16 %xmm0, %xmm0 {%k1} {z}
+; X64-NEXT:    vmovw %xmm0, %eax
+; X64-NEXT:    testw %ax, %ax
+; X64-NEXT:    je .LBB121_2
+; X64-NEXT:  # %bb.1: # %for.body.preheader
+; X64-NEXT:    movb $0, (%rsi)
+; X64-NEXT:  .LBB121_2: # %for.end
+; X64-NEXT:    retq
+;
+; X86-LABEL: pr52560:
+; X86:       # %bb.0: # %entry
+; X86-NEXT:    movsbl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    vmovw %eax, %xmm1
+; X86-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; X86-NEXT:    vpcmpgtw %xmm2, %xmm1, %k1
+; X86-NEXT:    vmovdqu16 %xmm0, %xmm0 {%k1} {z}
+; X86-NEXT:    vmovw %xmm0, %eax
+; X86-NEXT:    testw %ax, %ax
+; X86-NEXT:    je .LBB121_2
+; X86-NEXT:  # %bb.1: # %for.body.preheader
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movb $0, (%eax)
+; X86-NEXT:  .LBB121_2: # %for.end
+; X86-NEXT:    retl
+entry:
+  %conv = sext i8 %0 to i16
+  %2 = insertelement <2 x i16> <i16 poison, i16 0>, i16 %conv, i32 0
+  %3 = icmp sgt <2 x i16> %2, zeroinitializer
+  %4 = select <2 x i1> %3, <2 x i16> %1, <2 x i16> <i16 0, i16 poison>
+  %5 = extractelement <2 x i16> %4, i32 0
+  %tobool.not14 = icmp eq i16 %5, 0
+  br i1 %tobool.not14, label %for.end, label %for.body.preheader
+
+for.body.preheader:                               ; preds = %entry
+  store i8 0, i8* %c, align 1
+  br label %for.end
+
+for.end:                                          ; preds = %for.body.preheader, %entry
+  ret void
+}

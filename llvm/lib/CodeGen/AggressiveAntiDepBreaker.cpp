@@ -762,11 +762,8 @@ unsigned AggressiveAntiDepBreaker::BreakAntiDependencies(
 
   // ...need a map from MI to SUnit.
   std::map<MachineInstr *, const SUnit *> MISUnitMap;
-  for (unsigned i = 0, e = SUnits.size(); i != e; ++i) {
-    const SUnit *SU = &SUnits[i];
-    MISUnitMap.insert(std::pair<MachineInstr *, const SUnit *>(SU->getInstr(),
-                                                               SU));
-  }
+  for (const SUnit &SU : SUnits)
+    MISUnitMap.insert(std::make_pair(SU.getInstr(), &SU));
 
   // Track progress along the critical path through the SUnit graph as
   // we walk the instructions. This is needed for regclasses that only
@@ -774,12 +771,11 @@ unsigned AggressiveAntiDepBreaker::BreakAntiDependencies(
   const SUnit *CriticalPathSU = nullptr;
   MachineInstr *CriticalPathMI = nullptr;
   if (CriticalPathSet.any()) {
-    for (unsigned i = 0, e = SUnits.size(); i != e; ++i) {
-      const SUnit *SU = &SUnits[i];
+    for (const SUnit &SU : SUnits) {
       if (!CriticalPathSU ||
-          ((SU->getDepth() + SU->Latency) >
+          ((SU.getDepth() + SU.Latency) >
            (CriticalPathSU->getDepth() + CriticalPathSU->Latency))) {
-        CriticalPathSU = SU;
+        CriticalPathSU = &SU;
       }
     }
     assert(CriticalPathSU && "Failed to find SUnit critical path");
@@ -839,8 +835,7 @@ unsigned AggressiveAntiDepBreaker::BreakAntiDependencies(
     // but don't cause any anti-dependence breaking themselves)
     if (!MI.isKill()) {
       // Attempt to break each anti-dependency...
-      for (unsigned i = 0, e = Edges.size(); i != e; ++i) {
-        const SDep *Edge = Edges[i];
+      for (const SDep *Edge : Edges) {
         SUnit *NextSU = Edge->getSUnit();
 
         if ((Edge->getKind() != SDep::Anti) &&

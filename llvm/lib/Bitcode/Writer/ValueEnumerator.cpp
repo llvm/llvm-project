@@ -1167,8 +1167,8 @@ void ValueEnumerator::purgeFunction() {
     ValueMap.erase(Values[i].first);
   for (unsigned i = NumModuleMDs, e = MDs.size(); i != e; ++i)
     MetadataMap.erase(MDs[i]);
-  for (unsigned i = 0, e = BasicBlocks.size(); i != e; ++i)
-    ValueMap.erase(BasicBlocks[i]);
+  for (const BasicBlock *BB : BasicBlocks)
+    ValueMap.erase(BB);
 
   Values.resize(NumModuleValues);
   MDs.resize(NumModuleMDs);
