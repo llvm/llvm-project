@@ -94,15 +94,16 @@ static Value reshapeLoad(Location loc, Value val, VectorType type,
   }
   // Unroll leading dimensions.
   VectorType vType = lowType.cast<VectorType>();
-  auto resType = VectorType::Builder(type).dropDim(index).cast<VectorType>();
+  Type resType = VectorType::Builder(type).dropDim(index);
+  auto resVectorType = resType.cast<VectorType>();
   Value result = rewriter.create<arith::ConstantOp>(
-      loc, resType, rewriter.getZeroAttr(resType));
-  for (int64_t d = 0, e = resType.getDimSize(0); d < e; d++) {
+      loc, resVectorType, rewriter.getZeroAttr(resVectorType));
+  for (int64_t d = 0, e = resVectorType.getDimSize(0); d < e; d++) {
     auto posAttr = rewriter.getI64ArrayAttr(d);
     Value ext = rewriter.create<vector::ExtractOp>(loc, vType, val, posAttr);
     Value load = reshapeLoad(loc, ext, vType, index - 1, pos, rewriter);
-    result =
-        rewriter.create<vector::InsertOp>(loc, resType, load, result, posAttr);
+    result = rewriter.create<vector::InsertOp>(loc, resVectorType, load, result,
+                                               posAttr);
   }
   return result;
 }

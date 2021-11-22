@@ -876,9 +876,12 @@ struct DownscaleSizeOneWindowed2DConvolution final
     // Get new shapes and types for all operands by removing the size-1
     // dimension.
     using RTTBuilder = RankedTensorType::Builder;
-    auto newInputType = RTTBuilder(inputType).dropDim((removeH ? 1 : 2));
-    auto newFilterType = RTTBuilder(filterType).dropDim((removeH ? 0 : 1));
-    auto newOutputType = RTTBuilder(outputType).dropDim(removeH ? 1 : 2);
+    RankedTensorType newInputType =
+        RTTBuilder(inputType).dropDim((removeH ? 1 : 2));
+    RankedTensorType newFilterType =
+        RTTBuilder(filterType).dropDim((removeH ? 0 : 1));
+    RankedTensorType newOutputType =
+        RTTBuilder(outputType).dropDim(removeH ? 1 : 2);
 
     // Rank-reduce operands.
     Location loc = convOp.getLoc();
@@ -948,9 +951,12 @@ struct DownscaleDepthwiseConv2DNhwcHwcOp final
     // Get new shapes and types for all operands by removing the size-1
     // dimension.
     using RTTBuilder = RankedTensorType::Builder;
-    auto newInputType = RTTBuilder(inputType).dropDim((removeH ? 1 : 2));
-    auto newKernelType = RTTBuilder(kernelType).dropDim((removeH ? 0 : 1));
-    auto newOutputType = RTTBuilder(outputType).dropDim(removeH ? 1 : 2);
+    RankedTensorType newInputType =
+        RTTBuilder(inputType).dropDim((removeH ? 1 : 2));
+    RankedTensorType newKernelType =
+        RTTBuilder(kernelType).dropDim((removeH ? 0 : 1));
+    RankedTensorType newOutputType =
+        RTTBuilder(outputType).dropDim(removeH ? 1 : 2);
 
     // Rank-reduce operands.
     Location loc = convOp.getLoc();
