@@ -1632,6 +1632,35 @@ InstructionCost X86TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
   };
 
   static const TypeConversionCostTblEntry AVX512DQConversionTbl[] = {
+    // Mask sign extend has an instruction.
+    { ISD::SIGN_EXTEND, MVT::v2i64,  MVT::v2i1,   1 },
+    { ISD::SIGN_EXTEND, MVT::v4i32,  MVT::v2i1,   1 },
+    { ISD::SIGN_EXTEND, MVT::v4i32,  MVT::v4i1,   1 },
+    { ISD::SIGN_EXTEND, MVT::v4i64,  MVT::v4i1,   1 },
+    { ISD::SIGN_EXTEND, MVT::v8i32,  MVT::v8i1,   1 },
+    { ISD::SIGN_EXTEND, MVT::v8i64,  MVT::v16i1,  1 },
+    { ISD::SIGN_EXTEND, MVT::v8i64,  MVT::v8i1,   1 },
+    { ISD::SIGN_EXTEND, MVT::v16i32, MVT::v16i1,  1 },
+
+    // Mask zero extend is a sext + shift.
+    { ISD::ZERO_EXTEND, MVT::v2i64,  MVT::v2i1,   2 },
+    { ISD::ZERO_EXTEND, MVT::v4i32,  MVT::v2i1,   2 },
+    { ISD::ZERO_EXTEND, MVT::v4i32,  MVT::v4i1,   2 },
+    { ISD::ZERO_EXTEND, MVT::v4i64,  MVT::v4i1,   2 },
+    { ISD::ZERO_EXTEND, MVT::v8i32,  MVT::v8i1,   2 },
+    { ISD::ZERO_EXTEND, MVT::v8i64,  MVT::v16i1,  2 },
+    { ISD::ZERO_EXTEND, MVT::v8i64,  MVT::v8i1,   2 },
+    { ISD::ZERO_EXTEND, MVT::v16i32, MVT::v16i1,  2 },
+
+    { ISD::TRUNCATE,    MVT::v2i1,   MVT::v2i64,  2 },
+    { ISD::TRUNCATE,    MVT::v2i1,   MVT::v4i32,  2 },
+    { ISD::TRUNCATE,    MVT::v4i1,   MVT::v4i32,  2 },
+    { ISD::TRUNCATE,    MVT::v4i1,   MVT::v4i64,  2 },
+    { ISD::TRUNCATE,    MVT::v8i1,   MVT::v8i32,  2 },
+    { ISD::TRUNCATE,    MVT::v8i1,   MVT::v8i64,  2 },
+    { ISD::TRUNCATE,    MVT::v16i1,  MVT::v16i32, 2 },
+    { ISD::TRUNCATE,    MVT::v16i1,  MVT::v8i64,  2 },
+
     { ISD::SINT_TO_FP,  MVT::v8f32,  MVT::v8i64,  1 },
     { ISD::SINT_TO_FP,  MVT::v8f64,  MVT::v8i64,  1 },
 
@@ -1820,6 +1849,35 @@ InstructionCost X86TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
   };
 
   static const TypeConversionCostTblEntry AVX512DQVLConversionTbl[] = {
+    // Mask sign extend has an instruction.
+    { ISD::SIGN_EXTEND, MVT::v2i64,  MVT::v2i1,   1 },
+    { ISD::SIGN_EXTEND, MVT::v4i32,  MVT::v2i1,   1 },
+    { ISD::SIGN_EXTEND, MVT::v4i32,  MVT::v4i1,   1 },
+    { ISD::SIGN_EXTEND, MVT::v4i64,  MVT::v16i1,  1 },
+    { ISD::SIGN_EXTEND, MVT::v4i64,  MVT::v4i1,   1 },
+    { ISD::SIGN_EXTEND, MVT::v4i64,  MVT::v8i1,   1 },
+    { ISD::SIGN_EXTEND, MVT::v8i32,  MVT::v16i1,  1 },
+    { ISD::SIGN_EXTEND, MVT::v8i32,  MVT::v8i1,   1 },
+
+    // Mask zero extend is a sext + shift.
+    { ISD::ZERO_EXTEND, MVT::v2i64,  MVT::v2i1,   2 },
+    { ISD::ZERO_EXTEND, MVT::v4i32,  MVT::v2i1,   2 },
+    { ISD::ZERO_EXTEND, MVT::v4i32,  MVT::v4i1,   2 },
+    { ISD::ZERO_EXTEND, MVT::v4i64,  MVT::v16i1,  2 },
+    { ISD::ZERO_EXTEND, MVT::v4i64,  MVT::v4i1,   2 },
+    { ISD::ZERO_EXTEND, MVT::v4i64,  MVT::v8i1,   2 },
+    { ISD::ZERO_EXTEND, MVT::v8i32,  MVT::v16i1,  2 },
+    { ISD::ZERO_EXTEND, MVT::v8i32,  MVT::v8i1,   2 },
+
+    { ISD::TRUNCATE,    MVT::v16i1,  MVT::v4i64,  2 },
+    { ISD::TRUNCATE,    MVT::v16i1,  MVT::v8i32,  2 },
+    { ISD::TRUNCATE,    MVT::v2i1,   MVT::v2i64,  2 },
+    { ISD::TRUNCATE,    MVT::v2i1,   MVT::v4i32,  2 },
+    { ISD::TRUNCATE,    MVT::v4i1,   MVT::v4i32,  2 },
+    { ISD::TRUNCATE,    MVT::v4i1,   MVT::v4i64,  2 },
+    { ISD::TRUNCATE,    MVT::v8i1,   MVT::v4i64,  2 },
+    { ISD::TRUNCATE,    MVT::v8i1,   MVT::v8i32,  2 },
+
     { ISD::SINT_TO_FP,  MVT::v2f32,  MVT::v2i64,  1 },
     { ISD::SINT_TO_FP,  MVT::v2f64,  MVT::v2i64,  1 },
     { ISD::SINT_TO_FP,  MVT::v4f32,  MVT::v4i64,  1 },
