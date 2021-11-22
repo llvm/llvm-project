@@ -11,43 +11,25 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/Vector/VectorOps.h"
 #include "mlir/Dialect/X86Vector/Transforms.h"
 #include "mlir/IR/ImplicitLocOpBuilder.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/PatternMatch.h"
-#include "llvm/Support/Format.h"
-#include "llvm/Support/FormatVariadic.h"
 
 using namespace mlir;
 using namespace mlir::vector;
 using namespace mlir::x86vector;
 using namespace mlir::x86vector::avx2;
-using namespace mlir::x86vector::avx2::inline_asm;
-using namespace mlir::x86vector::avx2::intrin;
 
-Value mlir::x86vector::avx2::inline_asm::mm256BlendPsAsm(
-    ImplicitLocOpBuilder &b, Value v1, Value v2, uint8_t mask) {
-  auto asmDialectAttr =
-      LLVM::AsmDialectAttr::get(b.getContext(), LLVM::AsmDialect::AD_Intel);
-  auto asmTp = "vblendps $0, $1, $2, {0}";
-  auto asmCstr = "=x,x,x"; // Careful: constraint parser is very brittle: no ws!
-  SmallVector<Value> asmVals{v1, v2};
-  auto asmStr = llvm::formatv(asmTp, llvm::format_hex(mask, /*width=*/2)).str();
-  auto asmOp = b.create<LLVM::InlineAsmOp>(
-      v1.getType(), asmVals, asmStr, asmCstr, false, false, asmDialectAttr);
-  return asmOp.getResult(0);
-}
-
-Value mlir::x86vector::avx2::intrin::mm256UnpackLoPs(ImplicitLocOpBuilder &b,
-                                                     Value v1, Value v2) {
+Value mlir::x86vector::avx2::mm256UnpackLoPs(ImplicitLocOpBuilder &b, Value v1,
+                                             Value v2) {
   return b.create<vector::ShuffleOp>(
       v1, v2, ArrayRef<int64_t>{0, 8, 1, 9, 4, 12, 5, 13});
 }
 
-Value mlir::x86vector::avx2::intrin::mm256UnpackHiPs(ImplicitLocOpBuilder &b,
-                                                     Value v1, Value v2) {
+Value mlir::x86vector::avx2::mm256UnpackHiPs(ImplicitLocOpBuilder &b, Value v1,
+                                             Value v2) {
   return b.create<vector::ShuffleOp>(
       v1, v2, ArrayRef<int64_t>{2, 10, 3, 11, 6, 14, 7, 15});
 }
@@ -55,10 +37,9 @@ Value mlir::x86vector::avx2::intrin::mm256UnpackHiPs(ImplicitLocOpBuilder &b,
 /// Takes an 8 bit mask, 2 bit for each position of a[0, 3)  **and** b[0, 4):
 ///                                 0:127    |         128:255
 ///                            b01  b23  C8  D8  |  b01+4 b23+4 C8+4 D8+4
-Value mlir::x86vector::avx2::intrin::mm256ShufflePs(ImplicitLocOpBuilder &b,
-                                                    Value v1, Value v2,
-                                                    uint8_t mask) {
-  uint8_t b01, b23, b45, b67;
+Value mlir::x86vector::avx2::mm256ShufflePs(ImplicitLocOpBuilder &b, Value v1,
+                                            Value v2, int8_t mask) {
+  int8_t b01, b23, b45, b67;
   MaskHelper::extractShuffle(mask, b01, b23, b45, b67);
   SmallVector<int64_t> shuffleMask{b01,     b23,     b45 + 8,     b67 + 8,
                                    b01 + 4, b23 + 4, b45 + 8 + 4, b67 + 8 + 4};
@@ -71,10 +52,11 @@ Value mlir::x86vector::avx2::intrin::mm256ShufflePs(ImplicitLocOpBuilder &b,
 //          a[0:127] or a[128:255] or b[0:127] or b[128:255]
 //             0             1           2             3
 // imm[0:1] out of imm[4:7].
-Value mlir::x86vector::avx2::intrin::mm256Permute2f128Ps(
-    ImplicitLocOpBuilder &b, Value v1, Value v2, uint8_t mask) {
+Value mlir::x86vector::avx2::mm256Permute2f128Ps(ImplicitLocOpBuilder &b,
+                                                 Value v1, Value v2,
+                                                 int8_t mask) {
   SmallVector<int64_t> shuffleMask;
-  auto appendToMask = [&](uint8_t control) {
+  auto appendToMask = [&](int8_t control) {
     if (control == 0)
       llvm::append_range(shuffleMask, ArrayRef<int64_t>{0, 1, 2, 3});
     else if (control == 1)
@@ -86,22 +68,10 @@ Value mlir::x86vector::avx2::intrin::mm256Permute2f128Ps(
     else
       llvm_unreachable("control > 3 : overflow");
   };
-  uint8_t b03, b47;
+  int8_t b03, b47;
   MaskHelper::extractPermute(mask, b03, b47);
   appendToMask(b03);
   appendToMask(b47);
-  return b.create<vector::ShuffleOp>(v1, v2, shuffleMask);
-}
-
-/// If bit i of `mask` is zero, take f32@i from v1 else take it from v2.
-Value mlir::x86vector::avx2::intrin::mm256BlendPs(ImplicitLocOpBuilder &b,
-                                                  Value v1, Value v2,
-                                                  uint8_t mask) {
-  SmallVector<int64_t, 8> shuffleMask;
-  for (int i = 0; i < 8; ++i) {
-    bool isSet = mask & (1 << i);
-    shuffleMask.push_back(!isSet ? i : i + 8);
-  }
   return b.create<vector::ShuffleOp>(v1, v2, shuffleMask);
 }
 
@@ -148,30 +118,14 @@ void mlir::x86vector::avx2::transpose8x8xf32(ImplicitLocOpBuilder &ib,
   Value T5 = mm256UnpackHiPs(ib, vs[4], vs[5]);
   Value T6 = mm256UnpackLoPs(ib, vs[6], vs[7]);
   Value T7 = mm256UnpackHiPs(ib, vs[6], vs[7]);
-
-  using inline_asm::mm256BlendPsAsm;
-  Value sh0 = mm256ShufflePs(ib, T0, T2, MaskHelper::shuffle<1, 0, 3, 2>());
-  Value sh2 = mm256ShufflePs(ib, T1, T3, MaskHelper::shuffle<1, 0, 3, 2>());
-  Value sh4 = mm256ShufflePs(ib, T4, T6, MaskHelper::shuffle<1, 0, 3, 2>());
-  Value sh6 = mm256ShufflePs(ib, T5, T7, MaskHelper::shuffle<1, 0, 3, 2>());
-
-  Value S0 =
-      mm256BlendPsAsm(ib, T0, sh0, MaskHelper::blend<0, 0, 1, 1, 0, 0, 1, 1>());
-  Value S1 =
-      mm256BlendPsAsm(ib, T2, sh0, MaskHelper::blend<1, 1, 0, 0, 1, 1, 0, 0>());
-  Value S2 =
-      mm256BlendPsAsm(ib, T1, sh2, MaskHelper::blend<0, 0, 1, 1, 0, 0, 1, 1>());
-  Value S3 =
-      mm256BlendPsAsm(ib, T3, sh2, MaskHelper::blend<1, 1, 0, 0, 1, 1, 0, 0>());
-  Value S4 =
-      mm256BlendPsAsm(ib, T4, sh4, MaskHelper::blend<0, 0, 1, 1, 0, 0, 1, 1>());
-  Value S5 =
-      mm256BlendPsAsm(ib, T6, sh4, MaskHelper::blend<1, 1, 0, 0, 1, 1, 0, 0>());
-  Value S6 =
-      mm256BlendPsAsm(ib, T5, sh6, MaskHelper::blend<0, 0, 1, 1, 0, 0, 1, 1>());
-  Value S7 =
-      mm256BlendPsAsm(ib, T7, sh6, MaskHelper::blend<1, 1, 0, 0, 1, 1, 0, 0>());
-
+  Value S0 = mm256ShufflePs(ib, T0, T2, MaskHelper::shuffle<1, 0, 1, 0>());
+  Value S1 = mm256ShufflePs(ib, T0, T2, MaskHelper::shuffle<3, 2, 3, 2>());
+  Value S2 = mm256ShufflePs(ib, T1, T3, MaskHelper::shuffle<1, 0, 1, 0>());
+  Value S3 = mm256ShufflePs(ib, T1, T3, MaskHelper::shuffle<3, 2, 3, 2>());
+  Value S4 = mm256ShufflePs(ib, T4, T6, MaskHelper::shuffle<1, 0, 1, 0>());
+  Value S5 = mm256ShufflePs(ib, T4, T6, MaskHelper::shuffle<3, 2, 3, 2>());
+  Value S6 = mm256ShufflePs(ib, T5, T7, MaskHelper::shuffle<1, 0, 1, 0>());
+  Value S7 = mm256ShufflePs(ib, T5, T7, MaskHelper::shuffle<3, 2, 3, 2>());
   vs[0] = mm256Permute2f128Ps(ib, S0, S4, MaskHelper::permute<2, 0>());
   vs[1] = mm256Permute2f128Ps(ib, S1, S5, MaskHelper::permute<2, 0>());
   vs[2] = mm256Permute2f128Ps(ib, S2, S6, MaskHelper::permute<2, 0>());

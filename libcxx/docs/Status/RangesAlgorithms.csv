@@ -84,17 +84,17 @@ Permutation,pop_heap,Not assigned,n/a,Not started
 Permutation,sort_heap,Not assigned,n/a,Not started
 Permutation,prev_permutation,Not assigned,n/a,Not started
 Permutation,next_permutation,Not assigned,n/a,Not started
-Uninitialised memory,uninitialized_copy,Not assigned,n/a,Not started
-Uninitialised memory,uninitialized_copy_n,Not assigned,n/a,Not started
-Uninitialised memory,uninitialized_fill,Not assigned,n/a,Not started
-Uninitialised memory,uninitialized_fill_n,Not assigned,n/a,Not started
-Uninitialised memory,uninitialized_move,Not assigned,n/a,Not started
-Uninitialised memory,uninitialized_move_n,Not assigned,n/a,Not started
-Uninitialised memory,uninitialized_default_construct,Not assigned,n/a,Not started
-Uninitialised memory,uninitialized_default_construct_n,Not assigned,n/a,Not started
-Uninitialised memory,uninitialized_value_construct,Not assigned,n/a,Not started
-Uninitialised memory,uninitialized_value_construct_n,Not assigned,n/a,Not started
-Uninitialised memory,destroy,Not assigned,n/a,Not started
-Uninitialised memory,destroy_n,Not assigned,n/a,Not started
-Uninitialised memory,destroy_at,Not assigned,n/a,Not started
-Uninitialised memory,construct_at,Not assigned,n/a,Not started
+Uninitialised memory,uninitialized_copy,var-const,n/a,Not started
+Uninitialised memory,uninitialized_copy_n,var-const,n/a,Not started
+Uninitialised memory,uninitialized_fill,var-const,n/a,Not started
+Uninitialised memory,uninitialized_fill_n,var-const,n/a,Not started
+Uninitialised memory,uninitialized_move,var-const,n/a,Not started
+Uninitialised memory,uninitialized_move_n,var-const,n/a,Not started
+Uninitialised memory,uninitialized_default_construct,var-const,n/a,Not started
+Uninitialised memory,uninitialized_default_construct_n,var-const,n/a,Not started
+Uninitialised memory,uninitialized_value_construct,var-const,n/a,Not started
+Uninitialised memory,uninitialized_value_construct_n,var-const,n/a,Not started
+Uninitialised memory,destroy,var-const,n/a,Not started
+Uninitialised memory,destroy_n,var-const,n/a,Not started
+Uninitialised memory,destroy_at,var-const,n/a,Not started
+Uninitialised memory,construct_at,var-const,n/a,Not started
