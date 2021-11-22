@@ -356,7 +356,7 @@ public:
     size_type length()   const _NOEXCEPT { return __size; }
 
     _LIBCPP_CONSTEXPR _LIBCPP_INLINE_VISIBILITY
-    size_type max_size() const _NOEXCEPT { return numeric_limits<size_type>::max(); }
+    size_type max_size() const _NOEXCEPT { return numeric_limits<size_type>::max() / sizeof(value_type); }
 
     _LIBCPP_NODISCARD_AFTER_CXX17 _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR
     bool empty()         const _NOEXCEPT { return __size == 0; }
