@@ -9,18 +9,19 @@ from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
+USE_LIBSTDCPP = "USE_LIBSTDCPP"
+USE_LIBCPP = "USE_LIBCPP"
 
-class LibcxxUnorderedDataFormatterTestCase(TestBase):
-
+class GenericUnorderedDataFormatterTestCase(TestBase):
     mydir = TestBase.compute_mydir(__file__)
 
     def setUp(self):
         TestBase.setUp(self)
         self.namespace = 'std'
 
-    @add_test_categories(["libc++"])
-    def test_with_run_command(self):
-        self.build()
+
+    def do_test_with_run_command(self, stdlib_type):
+        self.build(dictionary={stdlib_type: "1"})
         self.runCmd("file " + self.getBuildArtifact("a.out"), CURRENT_EXECUTABLE_SET)
 
         lldbutil.run_break_set_by_source_regexp(
@@ -76,3 +77,11 @@ class LibcxxUnorderedDataFormatterTestCase(TestBase):
         self.expect(("frame variable %s" % var_name), patterns=patterns)
         self.expect(("frame variable %s" % var_name), patterns=patterns)
         self.runCmd("continue")
+
+    @add_test_categories(["libstdcxx"])
+    def test_with_run_command_libstdcpp(self):
+        self.do_test_with_run_command(USE_LIBSTDCPP)
+
+    @add_test_categories(["libc++"])
+    def test_with_run_command_libcpp(self):
+        self.do_test_with_run_command(USE_LIBCPP)
