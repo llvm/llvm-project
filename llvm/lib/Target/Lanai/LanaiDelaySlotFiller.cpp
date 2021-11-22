@@ -51,9 +51,8 @@ struct Filler : public MachineFunctionPass {
     TRI = Subtarget.getRegisterInfo();
 
     bool Changed = false;
-    for (MachineFunction::iterator FI = MF.begin(), FE = MF.end(); FI != FE;
-         ++FI)
-      Changed |= runOnMachineBasicBlock(*FI);
+    for (MachineBasicBlock &MBB : MF)
+      Changed |= runOnMachineBasicBlock(MBB);
     return Changed;
   }
 

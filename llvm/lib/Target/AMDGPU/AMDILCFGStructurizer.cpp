@@ -706,9 +706,7 @@ bool AMDGPUCFGStructurizer::prepare() {
 
   // Remove unconditional branch instr.
   // Add dummy exit block iff there are multiple returns.
-  for (SmallVectorImpl<MachineBasicBlock *>::const_iterator
-       It = OrderedBlks.begin(), E = OrderedBlks.end(); It != E; ++It) {
-    MachineBasicBlock *MBB = *It;
+  for (MachineBasicBlock *MBB : OrderedBlks) {
     removeUnconditionalBranch(MBB);
     removeRedundantConditionalBranch(MBB);
     if (isReturnBlock(MBB)) {
@@ -851,14 +849,10 @@ bool AMDGPUCFGStructurizer::run() {
 
 void AMDGPUCFGStructurizer::orderBlocks(MachineFunction *MF) {
   int SccNum = 0;
-  MachineBasicBlock *MBB;
   for (scc_iterator<MachineFunction *> It = scc_begin(MF); !It.isAtEnd();
        ++It, ++SccNum) {
     const std::vector<MachineBasicBlock *> &SccNext = *It;
-    for (std::vector<MachineBasicBlock *>::const_iterator
-         blockIter = SccNext.begin(), blockEnd = SccNext.end();
-         blockIter != blockEnd; ++blockIter) {
-      MBB = *blockIter;
+    for (MachineBasicBlock *MBB : SccNext) {
       OrderedBlks.push_back(MBB);
       recordSccnum(MBB, SccNum);
     }
@@ -1601,11 +1595,8 @@ void AMDGPUCFGStructurizer::addDummyExitBlock(
   FuncRep->push_back(DummyExitBlk);  //insert to function
   insertInstrEnd(DummyExitBlk, R600::RETURN);
 
-  for (SmallVectorImpl<MachineBasicBlock *>::iterator It = RetMBB.begin(),
-       E = RetMBB.end(); It != E; ++It) {
-    MachineBasicBlock *MBB = *It;
-    MachineInstr *MI = getReturnInstr(MBB);
-    if (MI)
+  for (MachineBasicBlock *MBB : RetMBB) {
+    if (MachineInstr *MI = getReturnInstr(MBB))
       MI->eraseFromParent();
     MBB->addSuccessor(DummyExitBlk);
     LLVM_DEBUG(dbgs() << "Add dummyExitBlock to BB" << MBB->getNumber()

@@ -484,14 +484,13 @@ bool HexagonCopyToCombine::runOnMachineFunction(MachineFunction &MF) {
     IsConst64Disabled = true;
 
   // Traverse basic blocks.
-  for (MachineFunction::iterator BI = MF.begin(), BE = MF.end(); BI != BE;
-       ++BI) {
+  for (MachineBasicBlock &MBB : MF) {
     PotentiallyNewifiableTFR.clear();
-    findPotentialNewifiableTFRs(*BI);
+    findPotentialNewifiableTFRs(MBB);
 
     // Traverse instructions in basic block.
-    for(MachineBasicBlock::iterator MI = BI->begin(), End = BI->end();
-        MI != End;) {
+    for (MachineBasicBlock::iterator MI = MBB.begin(), End = MBB.end();
+         MI != End;) {
       MachineInstr &I1 = *MI++;
 
       if (I1.isDebugInstr())

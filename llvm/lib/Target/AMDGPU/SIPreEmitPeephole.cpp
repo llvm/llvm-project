@@ -291,20 +291,19 @@ bool SIPreEmitPeephole::mustRetainExeczBranch(
        MBBI != End && MBBI != ToI; ++MBBI) {
     const MachineBasicBlock &MBB = *MBBI;
 
-    for (MachineBasicBlock::const_iterator I = MBB.begin(), E = MBB.end();
-         I != E; ++I) {
+    for (const MachineInstr &MI : MBB) {
       // When a uniform loop is inside non-uniform control flow, the branch
       // leaving the loop might never be taken when EXEC = 0.
       // Hence we should retain cbranch out of the loop lest it become infinite.
-      if (I->isConditionalBranch())
+      if (MI.isConditionalBranch())
         return true;
 
-      if (TII->hasUnwantedEffectsWhenEXECEmpty(*I))
+      if (TII->hasUnwantedEffectsWhenEXECEmpty(MI))
         return true;
 
       // These instructions are potentially expensive even if EXEC = 0.
-      if (TII->isSMRD(*I) || TII->isVMEM(*I) || TII->isFLAT(*I) ||
-          TII->isDS(*I) || I->getOpcode() == AMDGPU::S_WAITCNT)
+      if (TII->isSMRD(MI) || TII->isVMEM(MI) || TII->isFLAT(MI) ||
+          TII->isDS(MI) || MI.getOpcode() == AMDGPU::S_WAITCNT)
         return true;
 
       ++NumInstr;
