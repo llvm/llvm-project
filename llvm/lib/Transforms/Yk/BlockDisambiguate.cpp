@@ -191,7 +191,11 @@ private:
     std::vector<BasicBlock *> NewBBs;
     for (BasicBlock &BB : F) {
       Instruction *TI = BB.getTerminator();
-      assert(!isa<IndirectBrInst>(TI)); // YKFIXME: not implemented.
+
+      // YKFIXME: not implemented.
+      // https://github.com/ykjit/yk/issues/440
+      assert(!isa<IndirectBrInst>(TI));
+
       if (isa<BranchInst>(TI)) {
         BranchInst *BI = cast<BranchInst>(TI);
         for (unsigned SuccIdx = 0; SuccIdx < BI->getNumSuccessors();
