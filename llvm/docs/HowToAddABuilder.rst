@@ -191,17 +191,22 @@ Restrict what you build and test
   if you want to both a) confirm that all of LLVM builds with your host
   compiler, and b) want to do a multi-stage clang build on your target, you
   may be better off with two separate bots.  Splitting increases resource
-  consumption, but makes it easy for each bot to keep up with commit flow.  
+  consumption, but makes it easy for each bot to keep up with commit flow.
+  Additionally, splitting bots may assist in triage by narrowing attention to
+  relevant parts of the failing configuration.
 
   In general, we recommend Release build types with Assertions enabled.  This
   generally provides a good balance between build times and bug detection for
-  most buildbots.
+  most buildbots.  There may be room for including some debug info (e.g. with
+  `-gmlt`), but in general the balance between debug info quality and build
+  times is a delicate one.
 
 Use Ninja & LLD
   Ninja really does help build times over Make, particularly for highly
-  parallel builds.  LLD helps to reduce link times significantly.  With
-  a build machine with sufficient parallism, link times tend to dominate
-  critical path of the build, and are thus worth optimizing.
+  parallel builds.  LLD helps to reduce both link times and memory usage
+  during linking significantly.  With a build machine with sufficient
+  parallism, link times tend to dominate critical path of the build, and are
+  thus worth optimizing.
 
 Use CCache and NOT incremental builds
   Using ccache materially improves average build times.  Incremental builds
@@ -220,6 +225,12 @@ Use CCache and NOT incremental builds
   between the workers.  Experience to date indicates this is difficult to
   well, and that having local per-worker caches gets most of the benefit
   anyways.  We don't currently recommend shared caches.
+
+  CCache does depend on the builder hardware having sufficient IO to access
+  the cache with reasonable access times - i.e. a fast disk, or enough memory
+  for a RAM cache, etc..  For builders without, incremental may be your best
+  option, but is likely to require higher ongoing involvement from the
+  sponsor.
 
 Enable batch builds
   As a last resort, you can configure your builder to batch build requests.
