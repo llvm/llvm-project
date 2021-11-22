@@ -119,8 +119,7 @@ define <vscale x 8 x i8> @sve_splat_8xi8(i8 %val) {
 define <vscale x 8 x i8> @sve_splat_8xi8_imm() {
 ; CHECK-LABEL: sve_splat_8xi8_imm:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #255
-; CHECK-NEXT:    mov z0.h, w8
+; CHECK-NEXT:    mov z0.h, #-1 // =0xffffffffffffffff
 ; CHECK-NEXT:    ret
   %ins = insertelement <vscale x 8 x i8> undef, i8 -1, i32 0
   %splat = shufflevector <vscale x 8 x i8> %ins, <vscale x 8 x i8> undef, <vscale x 8 x i32> zeroinitializer
@@ -151,8 +150,7 @@ define <vscale x 4 x i16> @sve_splat_4xi16(i16 %val) {
 define <vscale x 4 x i16> @sve_splat_4xi16_imm() {
 ; CHECK-LABEL: sve_splat_4xi16_imm:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #65535
-; CHECK-NEXT:    mov z0.s, w8
+; CHECK-NEXT:    mov z0.s, #-1 // =0xffffffffffffffff
 ; CHECK-NEXT:    ret
   %ins = insertelement <vscale x 4 x i16> undef, i16 -1, i32 0
   %splat = shufflevector <vscale x 4 x i16> %ins, <vscale x 4 x i16> undef, <vscale x 4 x i32> zeroinitializer
@@ -173,8 +171,7 @@ define <vscale x 2 x i32> @sve_splat_2xi32(i32 %val) {
 define <vscale x 2 x i32> @sve_splat_2xi32_imm() {
 ; CHECK-LABEL: sve_splat_2xi32_imm:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #-1
-; CHECK-NEXT:    mov z0.d, x8
+; CHECK-NEXT:    mov z0.d, #-1 // =0xffffffffffffffff
 ; CHECK-NEXT:    ret
   %ins = insertelement <vscale x 2 x i32> undef, i32 -1, i32 0
   %splat = shufflevector <vscale x 2 x i32> %ins, <vscale x 2 x i32> undef, <vscale x 2 x i32> zeroinitializer
