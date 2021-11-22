@@ -256,6 +256,7 @@ enum OverwriteResult {
   OW_End,
   OW_PartialEarlierWithFullLater,
   OW_MaybePartial,
+  OW_None,
   OW_Unknown
 };
 
@@ -849,6 +850,7 @@ struct DSEState {
   /// Return OW_MaybePartial if \p KillingI does not completely overwrite
   /// \p DeadI, but they both write to the same underlying object. In that
   /// case, use isPartialOverwrite to check if \p KillingI partially overwrites
+  /// \p DeadI. Returns 'OR_None' if \p KillingI is known to not overwrite the
   /// \p DeadI. Returns 'OW_Unknown' if nothing can be determined.
   OverwriteResult isOverwrite(const Instruction *KillingI,
                               const Instruction *DeadI,
@@ -911,8 +913,16 @@ struct DSEState {
 
     // If we can't resolve the same pointers to the same object, then we can't
     // analyze them at all.
-    if (DeadUndObj != KillingUndObj)
+    if (DeadUndObj != KillingUndObj) {
+      // Non aliasing stores to different objects don't overlap. Note that
+      // if the killing store is known to overwrite whole object (out of
+      // bounds access overwrites whole object as well) then it is assumed to
+      // completely overwrite any store to the same object even if they don't
+      // actually alias (see next check).
+      if (AAR == AliasResult::NoAlias)
+        return OW_None;
       return OW_Unknown;
+    }
 
     // If the KillingI store is to a recognizable object, get its size.
     uint64_t KillingUndObjSize = getPointerSize(KillingUndObj, DL, TLI, &F);
@@ -966,9 +976,8 @@ struct DSEState {
       return OW_MaybePartial;
     }
 
-    // Can reach here only if accesses are known not to overlap. There is no
-    // dedicated code to indicate no overlap so signal "unknown".
-    return OW_Unknown;
+    // Can reach here only if accesses are known not to overlap.
+    return OW_None;
   }
 
   bool isInvisibleToCallerAfterRet(const Value *V) {
@@ -1368,7 +1377,7 @@ struct DSEState {
                               KillingOffset, DeadOffset);
         // If Current does not write to the same object as KillingDef, check
         // the next candidate.
-        if (OR == OW_Unknown)
+        if (OR == OW_Unknown || OR == OW_None)
           continue;
         else if (OR == OW_MaybePartial) {
           // If KillingDef only partially overwrites Current, check the next
@@ -1377,6 +1386,7 @@ struct DSEState {
           // which are less likely to be removable in the end.
           if (PartialLimit <= 1) {
             WalkerStepLimit -= 1;
+            LLVM_DEBUG(dbgs() << "   ... reached partial limit ... continue with next access\n");
             continue;
           }
           PartialLimit -= 1;
