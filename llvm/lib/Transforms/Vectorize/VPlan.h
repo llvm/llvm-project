@@ -59,6 +59,7 @@ class Value;
 class VPBasicBlock;
 class VPRegionBlock;
 class VPlan;
+class VPReplicateRecipe;
 class VPlanSlp;
 
 /// Returns a calculation for the total number of elements for a given \p VF.
@@ -346,6 +347,10 @@ struct VPTransformState {
 
   /// Pointer to the VPlan code is generated for.
   VPlan *Plan;
+
+  /// Holds recipes that may generate a poison value that is used after
+  /// vectorization, even when their operands are not poison.
+  SmallPtrSet<VPRecipeBase *, 16> MayGeneratePoisonRecipes;
 };
 
 /// VPUsers instance used by VPBlockBase to manage CondBit and the block
@@ -1511,7 +1516,7 @@ public:
 /// - For store: Address, stored value, optional mask
 /// TODO: We currently execute only per-part unless a specific instance is
 /// provided.
-class VPWidenMemoryInstructionRecipe : public VPRecipeBase {
+class VPWidenMemoryInstructionRecipe : public VPRecipeBase, public VPValue {
   Instruction &Ingredient;
 
   // Whether the loaded-from / stored-to addresses are consecutive.
@@ -1533,10 +1538,10 @@ class VPWidenMemoryInstructionRecipe : public VPRecipeBase {
 public:
   VPWidenMemoryInstructionRecipe(LoadInst &Load, VPValue *Addr, VPValue *Mask,
                                  bool Consecutive, bool Reverse)
-      : VPRecipeBase(VPWidenMemoryInstructionSC, {Addr}), Ingredient(Load),
+      : VPRecipeBase(VPWidenMemoryInstructionSC, {Addr}),
+        VPValue(VPValue::VPVMemoryInstructionSC, &Load, this), Ingredient(Load),
         Consecutive(Consecutive), Reverse(Reverse) {
     assert((Consecutive || !Reverse) && "Reverse implies consecutive");
-    new VPValue(VPValue::VPVMemoryInstructionSC, &Load, this);
     setMask(Mask);
   }
 
@@ -1544,6 +1549,7 @@ public:
                                  VPValue *StoredValue, VPValue *Mask,
                                  bool Consecutive, bool Reverse)
       : VPRecipeBase(VPWidenMemoryInstructionSC, {Addr, StoredValue}),
+        VPValue(VPValue::VPVMemoryInstructionSC, &Store, this),
         Ingredient(Store), Consecutive(Consecutive), Reverse(Reverse) {
     assert((Consecutive || !Reverse) && "Reverse implies consecutive");
     setMask(Mask);

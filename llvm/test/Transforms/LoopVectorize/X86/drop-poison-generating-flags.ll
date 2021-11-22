@@ -26,10 +26,10 @@ define void @drop_scalar_nuw_nsw(float* noalias nocapture readonly %input,
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <4 x i64> [ <i64 0, i64 1, i64 2, i64 3>, {{.*}} ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
 ; CHECK:         [[TMP4:%.*]] = icmp eq <4 x i64> [[VEC_IND]], zeroinitializer
-; CHECK-NEXT:    [[TMP5:%.*]] = sub nuw nsw i64 [[TMP0]], 1
-; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds float, float* [[INPUT:%.*]], i64 [[TMP5]]
+; CHECK-NEXT:    [[TMP5:%.*]] = sub i64 [[TMP0]], 1
+; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr float, float* [[INPUT:%.*]], i64 [[TMP5]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = xor <4 x i1> [[TMP4]], <i1 true, i1 true, i1 true, i1 true>
-; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds float, float* [[TMP6]], i32 0
+; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr float, float* [[TMP6]], i32 0
 ; CHECK-NEXT:    [[TMP9:%.*]] = bitcast float* [[TMP8]] to <4 x float>*
 ; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <4 x float> @llvm.masked.load.v4f32.p0v4f32(<4 x float>* [[TMP9]], i32 4, <4 x i1> [[TMP7]], <4 x float> poison), !invariant.load !0
 entry:
@@ -67,11 +67,11 @@ define void @drop_nonpred_scalar_nuw_nsw(float* noalias nocapture readonly %inpu
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, {{.*}} ]
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <4 x i64> [ <i64 0, i64 1, i64 2, i64 3>, {{.*}} ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
-; CHECK:         [[TMP5:%.*]] = sub nuw nsw i64 [[TMP0]], 1
-; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds float, float* [[INPUT:%.*]], i64 [[TMP5]]
+; CHECK:         [[TMP5:%.*]] = sub i64 [[TMP0]], 1
+; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr float, float* [[INPUT:%.*]], i64 [[TMP5]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq <4 x i64> [[VEC_IND]], zeroinitializer
 ; CHECK-NEXT:    [[TMP7:%.*]] = xor <4 x i1> [[TMP4]], <i1 true, i1 true, i1 true, i1 true>
-; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds float, float* [[TMP6]], i32 0
+; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr float, float* [[TMP6]], i32 0
 ; CHECK-NEXT:    [[TMP9:%.*]] = bitcast float* [[TMP8]] to <4 x float>*
 ; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <4 x float> @llvm.masked.load.v4f32.p0v4f32(<4 x float>* [[TMP9]], i32 4, <4 x i1> [[TMP7]], <4 x float> poison), !invariant.load !0
 entry:
@@ -79,8 +79,8 @@ entry:
 
 loop.header:
   %iv = phi i64 [ 0, %entry ], [ %iv.inc, %if.end ]
-  %i27 = sub nuw nsw i64 %iv, 1
-  %i29 = getelementptr inbounds float, float* %input, i64 %i27
+  %i27 = sub i64 %iv, 1
+  %i29 = getelementptr float, float* %input, i64 %i27
   %i23 = icmp eq i64 %iv, 0
   br i1 %i23, label %if.end, label %if.then
 
@@ -151,8 +151,8 @@ define void @drop_vector_nuw_nsw(float* noalias nocapture readonly %input,
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
 ; CHECK:         [[TMP4:%.*]] = icmp eq <4 x i64> [[VEC_IND]], zeroinitializer
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds float*, float** [[PTRS:%.*]], i64 [[TMP0]]
-; CHECK-NEXT:    [[TMP6:%.*]] = sub nuw nsw <4 x i64> [[VEC_IND]], <i64 1, i64 1, i64 1, i64 1>
-; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds float, float* [[INPUT:%.*]], <4 x i64> [[TMP6]]
+; CHECK-NEXT:    [[TMP6:%.*]] = sub <4 x i64> [[VEC_IND]], <i64 1, i64 1, i64 1, i64 1>
+; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr float, float* [[INPUT:%.*]], <4 x i64> [[TMP6]]
 ; CHECK:         [[TMP10:%.*]] = xor <4 x i1> [[TMP4]], <i1 true, i1 true, i1 true, i1 true>
 ; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <4 x float*> [[TMP7]], i32 0
 ; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr float, float* [[TMP11]], i32 0
@@ -238,10 +238,10 @@ define void @drop_scalar_exact(float* noalias nocapture readonly %input,
 ; CHECK-NEXT:    [[TMP5:%.*]] = and <4 x i64> [[VEC_IND]], <i64 1, i64 1, i64 1, i64 1>
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq <4 x i64> [[TMP5]], zeroinitializer
 ; CHECK-NEXT:    [[TMP7:%.*]] = and <4 x i1> [[TMP4]], [[TMP6]]
-; CHECK-NEXT:    [[TMP8:%.*]] = sdiv exact i64 [[TMP0]], 1
-; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds float, float* [[INPUT:%.*]], i64 [[TMP8]]
+; CHECK-NEXT:    [[TMP8:%.*]] = sdiv i64 [[TMP0]], 1
+; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr float, float* [[INPUT:%.*]], i64 [[TMP8]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = xor <4 x i1> [[TMP7]], <i1 true, i1 true, i1 true, i1 true>
-; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr inbounds float, float* [[TMP9]], i32 0
+; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr float, float* [[TMP9]], i32 0
 ; CHECK-NEXT:    [[TMP12:%.*]] = bitcast float* [[TMP11]] to <4 x float>*
 ; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <4 x float> @llvm.masked.load.v4f32.p0v4f32(<4 x float>* [[TMP12]], i32 4, <4 x i1> [[TMP10]], <4 x float> poison), !invariant.load !0
 entry:

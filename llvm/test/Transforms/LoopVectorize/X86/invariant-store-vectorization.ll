@@ -261,7 +261,7 @@ define void @variant_val_store_to_inv_address_conditional(i32* %a, i64 %n, i32* 
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq <16 x i32> [[WIDE_LOAD]], [[BROADCAST_SPLAT]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = bitcast i32* [[TMP0]] to <16 x i32>*
 ; CHECK-NEXT:    store <16 x i32> [[BROADCAST_SPLAT19]], <16 x i32>* [[TMP3]], align 4, !alias.scope !17, !noalias !20
-; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i32, i32* [[C]], i64 [[INDEX]]
+; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr i32, i32* [[C]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = bitcast i32* [[TMP4]] to <16 x i32>*
 ; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <16 x i32> @llvm.masked.load.v16i32.p0v16i32(<16 x i32>* [[TMP5]], i32 8, <16 x i1> [[TMP2]], <16 x i32> poison), !alias.scope !23
 ; CHECK-NEXT:    call void @llvm.masked.scatter.v16i32.v16p0i32(<16 x i32> [[WIDE_MASKED_LOAD]], <16 x i32*> [[BROADCAST_SPLAT21]], i32 4, <16 x i1> [[TMP2]]), !alias.scope !24, !noalias !23
@@ -294,7 +294,7 @@ define void @variant_val_store_to_inv_address_conditional(i32* %a, i64 %n, i32* 
 ; CHECK-NEXT:    [[TMP9:%.*]] = icmp eq <8 x i32> [[WIDE_LOAD28]], [[BROADCAST_SPLAT30]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = bitcast i32* [[TMP7]] to <8 x i32>*
 ; CHECK-NEXT:    store <8 x i32> [[BROADCAST_SPLAT32]], <8 x i32>* [[TMP10]], align 4
-; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr inbounds i32, i32* [[C]], i64 [[INDEX25]]
+; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr i32, i32* [[C]], i64 [[INDEX25]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = bitcast i32* [[TMP11]] to <8 x i32>*
 ; CHECK-NEXT:    [[WIDE_MASKED_LOAD33:%.*]] = call <8 x i32> @llvm.masked.load.v8i32.p0v8i32(<8 x i32>* [[TMP12]], i32 8, <8 x i1> [[TMP9]], <8 x i32> poison)
 ; CHECK-NEXT:    call void @llvm.masked.scatter.v8i32.v8p0i32(<8 x i32> [[WIDE_MASKED_LOAD33]], <8 x i32*> [[BROADCAST_SPLAT35]], i32 4, <8 x i1> [[TMP9]])
