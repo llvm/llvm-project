@@ -2071,7 +2071,7 @@ int32_t __tgt_rtl_run_target_team_region_locked(
   const uint32_t sgpr_spill_count = KernelInfoEntry.sgpr_spill_count;
   const uint32_t vgpr_spill_count = KernelInfoEntry.vgpr_spill_count;
 
-  assert(arg_num == (int)KernelInfoEntry.num_args);
+  assert(arg_num == (int)KernelInfoEntry.explicit_argument_count);
 
   /*
    * Set limit based on ThreadsPerGroup and GroupsPerDevice
@@ -2173,14 +2173,31 @@ int32_t __tgt_rtl_run_target_team_region_locked(
         // under a multiple reader lock, not a writer lock.
         static pthread_mutex_t hostcall_init_lock = PTHREAD_MUTEX_INITIALIZER;
         pthread_mutex_lock(&hostcall_init_lock);
-        impl_args->hostcall_ptr = hostrpc_assign_buffer(
+        unsigned long buffer = hostrpc_assign_buffer(
             DeviceInfo.HSAAgents[device_id], queue, device_id);
         pthread_mutex_unlock(&hostcall_init_lock);
-        if (!impl_args->hostcall_ptr) {
+        if (!buffer) {
           DP("hostrpc_assign_buffer failed, gpu would dereference null and "
              "error\n");
           return OFFLOAD_FAIL;
         }
+
+        if (KernelInfoEntry.implicit_argument_count >= 4) {
+          // Initialise pointer for implicit_argument_count != 0 ABI
+          // Guess that the right implicit argument is at offset 24 after
+          // the explicit arguments. In the future, should be able to read
+          // the offset from msgpack. Clang is not annotating it at present.
+          uint64_t Offset =
+              sizeof(void *) * (KernelInfoEntry.explicit_argument_count + 3);
+          if ((Offset + 8) > (ArgPool->kernarg_segment_size)) {
+            DP("Bad offset of hostcall, exceeds kernarg segment size\n");
+          } else {
+            memcpy(static_cast<char *>(kernarg) + Offset, &buffer, 8);
+          }
+        }
+
+        // initialise pointer for implicit_argument_count == 0 ABI
+        impl_args->hostcall_ptr = buffer;
       }
 
       packet->kernarg_address = kernarg;
