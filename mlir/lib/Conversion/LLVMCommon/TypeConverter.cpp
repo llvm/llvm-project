@@ -53,18 +53,43 @@ LLVMTypeConverter::LLVMTypeConverter(MLIRContext *ctx,
       return LLVM::LLVMPointerType::get(pointee, type.getAddressSpace());
     return llvm::None;
   });
-  addConversion([&](LLVM::LLVMStructType type) -> llvm::Optional<Type> {
-    // TODO: handle conversion of identified structs, which may be recursive.
-    if (type.isIdentified())
-      return type;
+  addConversion([&](LLVM::LLVMStructType type, SmallVectorImpl<Type> &results,
+                    ArrayRef<Type> callStack) -> llvm::Optional<LogicalResult> {
+    if (type.isIdentified()) {
+      auto convertedType = LLVM::LLVMStructType::getIdentified(
+          type.getContext(), ("_Converted_" + type.getName()).str());
+      unsigned counter = 1;
+      while (convertedType.isInitialized()) {
+        assert(counter != UINT_MAX &&
+               "about to overflow struct renaming counter in conversion");
+        convertedType = LLVM::LLVMStructType::getIdentified(
+            type.getContext(),
+            ("_Converted_" + std::to_string(counter) + type.getName()).str());
+      }
+      if (llvm::count(callStack, type) > 1) {
+        results.push_back(convertedType);
+        return success();
+      }
+
+      SmallVector<Type> convertedElemTypes;
+      convertedElemTypes.reserve(type.getBody().size());
+      if (failed(convertTypes(type.getBody(), convertedElemTypes)))
+        return llvm::None;
+
+      if (failed(convertedType.setBody(convertedElemTypes, type.isPacked())))
+        return failure();
+      results.push_back(convertedType);
+      return success();
+    }
 
     SmallVector<Type> convertedSubtypes;
     convertedSubtypes.reserve(type.getBody().size());
     if (failed(convertTypes(type.getBody(), convertedSubtypes)))
       return llvm::None;
 
-    return LLVM::LLVMStructType::getLiteral(type.getContext(),
-                                            convertedSubtypes, type.isPacked());
+    results.push_back(LLVM::LLVMStructType::getLiteral(
+        type.getContext(), convertedSubtypes, type.isPacked()));
+    return success();
   });
   addConversion([&](LLVM::LLVMArrayType type) -> llvm::Optional<Type> {
     if (auto element = convertType(type.getElementType()))
