@@ -199,6 +199,8 @@ public:
       : Tokens(Tokens), Position(-1) {}
 
   FormatToken *getNextToken() override {
+    if (Position >= 0 && Tokens[Position]->is(tok::eof))
+      return Tokens[Position];
     ++Position;
     return Tokens[Position];
   }
@@ -399,7 +401,7 @@ void UnwrappedLineParser::parseLevel(bool HasOpeningBrace) {
       FormatToken *Next;
       do {
         Next = Tokens->getNextToken();
-      } while (Next && Next->is(tok::comment));
+      } while (Next->is(tok::comment));
       FormatTok = Tokens->setPosition(StoredPosition);
       if (Next && Next->isNot(tok::colon)) {
         // default not followed by ':' is not a case label; treat it like
@@ -1097,7 +1099,6 @@ void UnwrappedLineParser::readTokenWithJavaScriptASI() {
 }
 
 void UnwrappedLineParser::parseStructuralElement(bool IsTopLevel) {
-  assert(!FormatTok->is(tok::l_brace));
   if (Style.Language == FormatStyle::LK_TableGen &&
       FormatTok->is(tok::pp_include)) {
     nextToken();
@@ -1488,7 +1489,7 @@ void UnwrappedLineParser::parseStructuralElement(bool IsTopLevel) {
           unsigned StoredPosition = Tokens->getPosition();
           FormatToken *Next = Tokens->getNextToken();
           FormatTok = Tokens->setPosition(StoredPosition);
-          if (Next && !mustBeJSIdent(Keywords, Next)) {
+          if (!mustBeJSIdent(Keywords, Next)) {
             nextToken();
             break;
           }
@@ -2653,23 +2654,25 @@ bool UnwrappedLineParser::tryToParseSimpleAttribute() {
   ScopedTokenPosition AutoPosition(Tokens);
   FormatToken *Tok = Tokens->getNextToken();
   // We already read the first [ check for the second.
-  if (Tok && !Tok->is(tok::l_square)) {
+  if (!Tok->is(tok::l_square)) {
     return false;
   }
   // Double check that the attribute is just something
   // fairly simple.
-  while (Tok) {
+  while (Tok->isNot(tok::eof)) {
     if (Tok->is(tok::r_square)) {
       break;
     }
     Tok = Tokens->getNextToken();
   }
+  if (Tok->is(tok::eof))
+    return false;
   Tok = Tokens->getNextToken();
-  if (Tok && !Tok->is(tok::r_square)) {
+  if (!Tok->is(tok::r_square)) {
     return false;
   }
   Tok = Tokens->getNextToken();
-  if (Tok && Tok->is(tok::semi)) {
+  if (Tok->is(tok::semi)) {
     return false;
   }
   return true;
@@ -2682,7 +2685,7 @@ void UnwrappedLineParser::parseJavaEnumBody() {
   unsigned StoredPosition = Tokens->getPosition();
   bool IsSimple = true;
   FormatToken *Tok = Tokens->getNextToken();
-  while (Tok) {
+  while (!Tok->is(tok::eof)) {
     if (Tok->is(tok::r_brace))
       break;
     if (Tok->isOneOf(tok::l_brace, tok::semi)) {
