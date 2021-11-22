@@ -326,13 +326,13 @@ define i32 @zext256_vXi1() "min-legal-vector-width"="256" {
 ; SKX256-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V4i16 = zext <4 x i1> undef to <4 x i16>
 ; SKX256-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V8i16 = zext <8 x i1> undef to <8 x i16>
 ; SKX256-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V16i16 = zext <16 x i1> undef to <16 x i16>
-; SKX256-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %V32i16 = zext <32 x i1> undef to <32 x i16>
+; SKX256-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V32i16 = zext <32 x i1> undef to <32 x i16>
 ; SKX256-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V2i8 = zext <2 x i1> undef to <2 x i8>
 ; SKX256-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V4i8 = zext <4 x i1> undef to <4 x i8>
 ; SKX256-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V8i8 = zext <8 x i1> undef to <8 x i8>
 ; SKX256-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V16i8 = zext <16 x i1> undef to <16 x i8>
 ; SKX256-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V32i8 = zext <32 x i1> undef to <32 x i8>
-; SKX256-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %V64i8 = zext <64 x i1> undef to <64 x i8>
+; SKX256-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V64i8 = zext <64 x i1> undef to <64 x i8>
 ; SKX256-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; SKX512-LABEL: 'zext256_vXi1'
@@ -472,14 +472,14 @@ define i32 @sext256_vXi1() "min-legal-vector-width"="256" {
 ; SKX256-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V4i16 = sext <4 x i1> undef to <4 x i16>
 ; SKX256-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V8i16 = sext <8 x i1> undef to <8 x i16>
 ; SKX256-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V16i16 = sext <16 x i1> undef to <16 x i16>
-; SKX256-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V32i16 = sext <32 x i1> undef to <32 x i16>
+; SKX256-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V32i16 = sext <32 x i1> undef to <32 x i16>
 ; SKX256-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I8 = sext i1 undef to i8
 ; SKX256-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V2i8 = sext <2 x i1> undef to <2 x i8>
 ; SKX256-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V4i8 = sext <4 x i1> undef to <4 x i8>
 ; SKX256-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V8i8 = sext <8 x i1> undef to <8 x i8>
 ; SKX256-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V16i8 = sext <16 x i1> undef to <16 x i8>
 ; SKX256-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V32i8 = sext <32 x i1> undef to <32 x i8>
-; SKX256-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V64i8 = sext <64 x i1> undef to <64 x i8>
+; SKX256-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V64i8 = sext <64 x i1> undef to <64 x i8>
 ; SKX256-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; SKX512-LABEL: 'sext256_vXi1'
@@ -635,14 +635,14 @@ define i32 @trunc_vXi1() "min-legal-vector-width"="256" {
 ; SKX256-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V4i16 = trunc <4 x i16> undef to <4 x i1>
 ; SKX256-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V8i16 = trunc <8 x i16> undef to <8 x i1>
 ; SKX256-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V16i16 = trunc <16 x i16> undef to <16 x i1>
-; SKX256-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %V32i16 = trunc <32 x i16> undef to <32 x i1>
-; SKX256-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: %V64i16 = trunc <64 x i16> undef to <64 x i1>
+; SKX256-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V32i16 = trunc <32 x i16> undef to <32 x i1>
+; SKX256-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V64i16 = trunc <64 x i16> undef to <64 x i1>
 ; SKX256-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V2i8 = trunc <2 x i8> undef to <2 x i1>
 ; SKX256-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V4i8 = trunc <4 x i8> undef to <4 x i1>
 ; SKX256-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V8i8 = trunc <8 x i8> undef to <8 x i1>
 ; SKX256-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V16i8 = trunc <16 x i8> undef to <16 x i1>
 ; SKX256-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V32i8 = trunc <32 x i8> undef to <32 x i1>
-; SKX256-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %V64i8 = trunc <64 x i8> undef to <64 x i1>
+; SKX256-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V64i8 = trunc <64 x i8> undef to <64 x i1>
 ; SKX256-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; SKX512-LABEL: 'trunc_vXi1'
