@@ -1681,14 +1681,9 @@ def : GCNPat <
 /********** Intrinsic Patterns **********/
 /********** ================== **********/
 
-let OtherPredicates = [isNotGFX90APlus] in
-// FIXME: Should use _e64 and select source modifiers.
-def : POW_Common <V_LOG_F32_e32, V_EXP_F32_e32, V_MUL_LEGACY_F32_e32>;
-
-let OtherPredicates = [isGFX90APlus] in
 def : GCNPat <
-  (fpow f32:$src0, f32:$src1),
-  (V_EXP_F32_e32 (V_MUL_LEGACY_F32_e64 0, f32:$src1, SRCMODS.NONE, (V_LOG_F32_e32 f32:$src0), 0, 0))
+  (f32 (fpow (VOP3Mods f32:$src0, i32:$src0_mods), (VOP3Mods f32:$src1, i32:$src1_mods))),
+  (V_EXP_F32_e64 SRCMODS.NONE, (V_MUL_LEGACY_F32_e64 $src1_mods, $src1, SRCMODS.NONE, (V_LOG_F32_e64 $src0_mods, $src0), 0, 0))
 >;
 
 def : GCNPat <
