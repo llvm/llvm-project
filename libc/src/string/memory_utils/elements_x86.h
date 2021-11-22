@@ -34,6 +34,10 @@ template <typename Base> struct Vector : public Base {
     Base::Store(dst, Base::Load(src));
   }
 
+  static void Move(char *dst, const char *src) {
+    Base::Store(dst, Base::Load(src));
+  }
+
   static bool Equals(const char *a, const char *b) {
     return Base::NotEqualMask(Base::Load(a), Base::Load(b)) == 0;
   }
