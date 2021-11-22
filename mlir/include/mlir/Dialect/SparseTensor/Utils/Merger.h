@@ -122,7 +122,7 @@ public:
   /// invariant expressions in the kernel.
   Merger(unsigned t, unsigned l)
       : outTensor(t - 1), syntheticTensor(t), numTensors(t + 1), numLoops(l),
-        dims(t + 1, std::vector<Dim>(l, Dim::kUndef)) {}
+        hasSparseOut(false), dims(t + 1, std::vector<Dim>(l, Dim::kUndef)) {}
 
   /// Adds a tensor expression. Returns its index.
   unsigned addExp(Kind k, unsigned e0, unsigned e1 = -1u, Value v = Value());
@@ -200,6 +200,9 @@ public:
   /// Dimension setter.
   void setDim(unsigned t, unsigned i, Dim d) { dims[t][i] = d; }
 
+  // Has sparse output tensor setter.
+  void setHasSparseOut(bool s) { hasSparseOut = s; }
+
   /// Convenience getters to immediately access the stored nodes.
   /// Typically it is inadvisible to keep the reference around, as in
   /// "TensorExpr &te = merger.exp(e))", since insertions into the merger
@@ -230,6 +233,7 @@ public:
                  Value v1);
 
 private:
+  /// Private helpers.
   bool maybeZero(unsigned e) const;
   bool isInvariant(unsigned e) const;
   Type inferType(unsigned e, Value src);
@@ -237,11 +241,12 @@ private:
   /// Traverses the SSA tree (possibly a DAG) to build a tensor expression.
   Optional<unsigned> buildTensorExp(linalg::GenericOp op, Value v);
 
+  /// Merger data structures.
   const unsigned outTensor;
   const unsigned syntheticTensor;
   const unsigned numTensors;
   const unsigned numLoops;
-
+  bool hasSparseOut;
   std::vector<std::vector<Dim>> dims;
   llvm::SmallVector<TensorExp, 32> tensorExps;
   llvm::SmallVector<LatPoint, 16> latPoints;

@@ -46,15 +46,15 @@ enum Reduction { kNoReduc, kSum, kProduct, kAnd, kOr, kXor };
 // Code generation.
 struct CodeGen {
   CodeGen(SparsificationOptions o, unsigned numTensors, unsigned numLoops,
-          OpOperand *op)
+          OpOperand *op, unsigned nest)
       : options(o), loops(numLoops), sizes(numLoops), buffers(numTensors),
         pointers(numTensors, std::vector<Value>(numLoops)),
         indices(numTensors, std::vector<Value>(numLoops)),
         highs(numTensors, std::vector<Value>(numLoops)),
         pidxs(numTensors, std::vector<Value>(numLoops)),
         idxs(numTensors, std::vector<Value>(numLoops)), redExp(-1u), redVal(),
-        redKind(kNoReduc), sparseOut(op), lexIdx(), curVecLength(1),
-        curVecMask() {}
+        redKind(kNoReduc), sparseOut(op), outerParNest(nest), lexIdx(),
+        curVecLength(1), curVecMask() {}
   /// Sparsification options.
   SparsificationOptions options;
   /// Universal dense indices and upper bounds (by index). The loops array
@@ -79,8 +79,11 @@ struct CodeGen {
   unsigned redExp;
   Value redVal;
   Reduction redKind;
-  // Sparse tensor as output.
+  // Sparse tensor as output. Implemented either through direct injective
+  // insertion in lexicographic index order (where indices are updated
+  // in the temporary array `lexIdx`) or TODO: access pattern expansion
   OpOperand *sparseOut;
+  unsigned outerParNest;
   Value lexIdx;
   // Current vector length and mask.
   unsigned curVecLength;
@@ -288,10 +291,13 @@ static bool isMaterializing(Value val) {
 
 /// Returns true when the tensor expression is admissable for codegen.
 /// Since all sparse input tensors are admissable, we just need to check
-/// whether the output tensor in the tensor expression codegen is admissable.
-/// Sets `sparseOut` when a "truly dynamic" sparse tensor output occurs.
+/// whether the out tensor in the tensor expression codegen is admissable.
+/// Sets `sparseOut` to the tensor and `outerParNest` to the outer injective
+/// nesting depth when a "truly dynamic" sparse tensor output occurs.
 static bool isAdmissableTensorExp(Merger &merger, linalg::GenericOp op,
-                                  unsigned exp, OpOperand **sparseOut) {
+                                  std::vector<unsigned> &topSort, unsigned exp,
+                                  OpOperand **sparseOut,
+                                  unsigned &outerParNest) {
   OpOperand *lhs = op.getOutputOperand(0);
   unsigned tensor = lhs->getOperandNumber();
   auto enc = getSparseTensorEncoding(lhs->get().getType());
@@ -302,7 +308,8 @@ static bool isAdmissableTensorExp(Merger &merger, linalg::GenericOp op,
   // An all-dense annotated "sparse" output tensor becomes a linearized random
   // access 1-dim memref. Also admissable since insertions cannot occur.
   bool allDense = true;
-  unsigned numLoops = op.iterator_types().getValue().size();
+  auto iteratorTypes = op.iterator_types().getValue();
+  unsigned numLoops = iteratorTypes.size();
   for (unsigned i = 0; i < numLoops; i++)
     if (merger.isDim(tensor, i, Dim::kSparse)) {
       allDense = false;
@@ -319,15 +326,20 @@ static bool isAdmissableTensorExp(Merger &merger, linalg::GenericOp op,
   // Accept "truly dynamic" if the output tensor materializes uninitialized
   // into the computation and insertions occur in lexicographic index order.
   if (isMaterializing(lhs->get())) {
-    // In this first sparse tensor output implementation, this is enforced by
-    // rejecting any reduction loops (since the sparse parallel loops give a
-    // lexicographically sorted and injective view into that tensor).
-    // TODO: generalize to include reductions
-    for (auto attr : op.iterator_types())
-      if (isReductionIterator(attr))
-        return false;
-    *sparseOut = lhs;
-    return true;
+    unsigned nest = 0;
+    for (unsigned i = 0; i < numLoops; i++) {
+      if (isReductionIterator(iteratorTypes[topSort[i]]))
+        break; // terminate at first reduction
+      nest++;
+    }
+    // Determine admissable dynamic insertion situations:
+    // (1) fully injective, since there are no reductions,
+    // (2) admissable 1-d expansion in innermost dimension. TODO: accept
+    if (nest == op.getRank(lhs)) {
+      *sparseOut = lhs;
+      outerParNest = nest;
+      return true;
+    }
   }
   return false;
 }
@@ -704,9 +716,15 @@ static Value genTensorLoad(Merger &merger, CodeGen &codegen,
       return genVectorInvariantValue(codegen, rewriter, val);
     return val;
   }
+  // Insertion (a sparse tensor output "loads" as zero).
+  OpOperand *t = op.getInputAndOutputOperands()[merger.exp(exp).tensor];
+  if (t == codegen.sparseOut) {
+    Type tp = getElementTypeOrSelf(t->get().getType());
+    return rewriter.create<arith::ConstantOp>(op.getLoc(), tp,
+                                              rewriter.getZeroAttr(tp));
+  }
   // Actual load.
   SmallVector<Value, 4> args;
-  OpOperand *t = op.getInputAndOutputOperands()[merger.exp(exp).tensor];
   Value ptr = genSubscript(codegen, rewriter, op, t, args);
   if (codegen.curVecLength > 1)
     return genVectorLoad(codegen, rewriter, ptr, args);
@@ -1515,11 +1533,14 @@ public:
 
     // Rejects an inadmissable tensor expression.
     OpOperand *sparseOut = nullptr;
-    if (!isAdmissableTensorExp(merger, op, exp, &sparseOut))
+    unsigned outerParNest = 0;
+    if (!isAdmissableTensorExp(merger, op, topSort, exp, &sparseOut,
+                               outerParNest))
       return failure();
 
     // Recursively generates code.
-    CodeGen codegen(options, numTensors, numLoops, sparseOut);
+    merger.setHasSparseOut(sparseOut != nullptr);
+    CodeGen codegen(options, numTensors, numLoops, sparseOut, outerParNest);
     genBuffers(merger, codegen, rewriter, op);
     genStmt(merger, codegen, rewriter, op, topSort, exp, 0);
     genResult(merger, codegen, rewriter, op);
