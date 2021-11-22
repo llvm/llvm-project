@@ -170,8 +170,8 @@ define void @loop2(float* %A, float* %B, i32* %C, float %x) {
 ; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr float, float* [[B]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = bitcast float* [[TMP8]] to <4 x float>*
 ; CHECK-NEXT:    [[WIDE_LOAD15:%.*]] = load <4 x float>, <4 x float>* [[TMP9]], align 4, !alias.scope !13, !noalias !15
-; CHECK-NEXT:    [[TMP10:%.*]] = fadd <4 x float> [[TMP7]], [[WIDE_LOAD15]]
-; CHECK-NEXT:    [[PREDPHI:%.*]] = select <4 x i1> [[TMP4]], <4 x float> [[TMP7]], <4 x float> [[TMP10]]
+; CHECK-NEXT:    [[TMP10:%.*]] = select <4 x i1> [[TMP4]], <4 x float> <float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, <4 x float> [[WIDE_LOAD15]]
+; CHECK-NEXT:    [[PREDPHI:%.*]] = fadd <4 x float> [[TMP7]], [[TMP10]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = bitcast float* [[TMP8]] to <4 x float>*
 ; CHECK-NEXT:    store <4 x float> [[PREDPHI]], <4 x float>* [[TMP11]], align 4, !alias.scope !13, !noalias !15
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
