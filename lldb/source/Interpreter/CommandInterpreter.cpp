@@ -2352,20 +2352,6 @@ void CommandInterpreter::SourceInitFileHome(CommandReturnObject &result,
     result.SetStatus(eReturnStatusSuccessFinishNoResult);
     return;
   }
-#if !defined(_WIN32)
-  // Facebook only:
-  //
-  // The 'fblldbinit' module will set up the python support specific to FB.
-  //
-  // As we want to have a mechanism for not triggering this by default, if the
-  // user is starting lldb disabling .lldbinit support, then we also don't load
-  // this module. This is equivalent to preppending the following line to all
-  // .lldbinit files.
-  //
-  // We don't have the fblldbinit module on windows, so we don't include it for
-  // that build.
-  HandleCommand("script import fblldbinit", eLazyBoolNo, result);
-#endif
 
   llvm::SmallString<128> init_file;
 
