@@ -25,7 +25,11 @@ func @bit_field_insert_vec(%base: vector<3xi32>, %insert: vector<3xi32>, %offset
 // -----
 
 func @bit_field_insert_invalid_insert_type(%base: vector<3xi32>, %insert: vector<2xi32>, %offset: i32, %count: i16) -> vector<3xi32> {
-  // expected-error @+1 {{all of {base, insert, result} have same type}}
+  // TODO: expand post change in verification order. This is currently only
+  // verifying that the type verification is failing but not the specific error
+  // message. In final state the error should refer to mismatch in base and
+  // insert.
+  // expected-error @+1 {{type}}
   %0 = "spv.BitFieldInsert" (%base, %insert, %offset, %count) : (vector<3xi32>, vector<2xi32>, i32, i16) -> vector<3xi32>
   spv.ReturnValue %0 : vector<3xi32>
 }
@@ -55,7 +59,7 @@ func @bit_field_u_extract_vec(%base: vector<3xi32>, %offset: i8, %count: i8) -> 
 // -----
 
 func @bit_field_u_extract_invalid_result_type(%base: vector<3xi32>, %offset: i32, %count: i16) -> vector<4xi32> {
-  // expected-error @+1 {{failed to verify that all of {base, result} have same type}}
+  // expected-error @+1 {{inferred type(s) 'vector<3xi32>' are incompatible with return type(s) of operation 'vector<4xi32>'}}
   %0 = "spv.BitFieldUExtract" (%base, %offset, %count) : (vector<3xi32>, i32, i16) -> vector<4xi32>
   spv.ReturnValue %0 : vector<4xi32>
 }

@@ -19,6 +19,7 @@ include "mlir/IR/SymbolInterfaces.td"
 include "mlir/Interfaces/CallInterfaces.td"
 include "mlir/Interfaces/CastInterfaces.td"
 include "mlir/Interfaces/ControlFlowInterfaces.td"
+include "mlir/Interfaces/InferTypeOpInterface.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/Interfaces/VectorInterfaces.td"
 
@@ -81,10 +82,6 @@ class ArithmeticOp<string mnemonic, list<OpTrait> traits = []> :
   let parser = [{
     return impl::parseOneResultSameOperandTypeOp(parser, result);
   }];
-
-  let printer = [{
-    return printStandardBinaryOp(this->getOperation(), p);
-  }];
 }
 
 // Base class for standard binary arithmetic operations.
@@ -93,10 +90,6 @@ class ArithmeticBinaryOp<string mnemonic, list<OpTrait> traits = []> :
 
   let parser = [{
     return impl::parseOneResultSameOperandTypeOp(parser, result);
-  }];
-
-  let printer = [{
-    return printStandardBinaryOp(this->getOperation(), p);
   }];
 }
 
@@ -687,12 +680,6 @@ def RankOp : Std_Op<"rank", [NoSideEffect]> {
   let results = (outs Index);
   let verifier = ?;
 
-  let builders = [
-    OpBuilder<(ins "Value":$tensor), [{
-      auto indexType = $_builder.getIndexType();
-      build($_builder, $_state, indexType, tensor);
-    }]>];
-
   let hasFolder = 1;
   let assemblyFormat = "$memrefOrTensor attr-dict `:` type($memrefOrTensor)";
 }
@@ -774,13 +761,6 @@ def SelectOp : Std_Op<"select", [NoSideEffect,
                        AnyType:$true_value,
                        AnyType:$false_value);
   let results = (outs AnyType:$result);
-
-  let builders = [
-    OpBuilder<(ins "Value":$condition, "Value":$trueValue,
-      "Value":$falseValue), [{
-      $_state.addOperands({condition, trueValue, falseValue});
-      $_state.addTypes(trueValue.getType());
-    }]>];
 
   let hasCanonicalizer = 1;
   let hasFolder = 1;

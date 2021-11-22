@@ -146,3 +146,92 @@ Here are the steps you can follow to do so:
    administrator contact and worker information are correct.
 
 #. Wait for the first build to succeed and enjoy.
+
+
+Best Practices for Configuring a Fast Builder
+=============================================
+
+As mentioned above, we generally have a strong preference for
+builders which can build every commit as they come in.  This section
+includes best practices and some recommendations as to how to achieve
+that end.
+
+The goal
+  In 2020, the monorepo had just under 35 thousand commits.  This works
+  out to an average of 4 commits per hour.  Already, we can see that a
+  builder must cycle in less than 15 minutes to have a hope of being
+  useful.  However, those commits are not uniformly distributed.  They
+  tend to cluster strongly during US working hours.  Looking at a couple
+  of recent (Nov 2021) working days, we routinely see ~10 commits per
+  hour during peek times, with occasional spikes as high as ~15 commits
+  per hour.  Thus, as a rule of thumb, we should plan for our builder to
+  complete ~10-15 builds an hour.
+
+Resource Appropriately
+  At 10-15 builds per hour, we need to complete a new build on average every
+  4 to 6 minutes.  For anything except the fastest of hardware/build configs,
+  this is going to be well beyond the ability of a single machine.  In buildbot
+  terms, we likely going to need multiple workers to build requests in parallel
+  under a single builder configuration.  For some rough back of the envelope
+  numbers, if your build config takes e.g. 30 minutes, you will need something
+  on the order of 5-8 workers.  If your build config takes ~2 hours, you'll
+  need something on the order of 20-30 workers.  The rest of this section
+  focuses on how to reduce cycle times.
+
+Restrict what you build and test
+  Think hard about why you're setting up a bot, and restrict your build
+  configuration as much as you can.  Basic functionality is probably
+  already covered by other bots, and you don't need to duplicate that
+  testing.  You only need to be building and testing the *unique* parts
+  of the configuration.  (e.g. For a multi-stage clang builder, you probably
+  don't need to be enabling every target or building all the various utilities.)
+
+  It can sometimes be worthwhile splitting a single builder into two or more,
+  if you have multiple distinct purposes for the same builder.  As an example,
+  if you want to both a) confirm that all of LLVM builds with your host
+  compiler, and b) want to do a multi-stage clang build on your target, you
+  may be better off with two separate bots.  Splitting increases resource
+  consumption, but makes it easy for each bot to keep up with commit flow.  
+
+  In general, we recommend Release build types with Assertions enabled.  This
+  generally provides a good balance between build times and bug detection for
+  most buildbots.
+
+Use Ninja & LLD
+  Ninja really does help build times over Make, particularly for highly
+  parallel builds.  LLD helps to reduce link times significantly.  With
+  a build machine with sufficient parallism, link times tend to dominate
+  critical path of the build, and are thus worth optimizing.
+
+Use CCache and NOT incremental builds
+  Using ccache materially improves average build times.  Incremental builds
+  can be slightly faster, but introduce the risk of build corruption due to
+  e.g. state changes, etc...  At this point, the recommendation is not to
+  use incremental builds and instead use ccache as the latter captures the
+  majority of the benefit with less risk of false positives.
+
+  One of the non-obvious benefits of using ccache is that it makes the
+  builder less sensitive to which projects are being monitored vs built.
+  If a change triggers a build request, but doesn't change the build output
+  (e.g. doc changes, python utility changes, etc..), the build will entirely
+  hit in cache and the build request will complete in just the testing time.
+
+  With multiple workers, it is tempting to try to configure a shared cache
+  between the workers.  Experience to date indicates this is difficult to
+  well, and that having local per-worker caches gets most of the benefit
+  anyways.  We don't currently recommend shared caches.
+
+Enable batch builds
+  As a last resort, you can configure your builder to batch build requests.
+  This makes the build failure notifications markedly less actionable, and
+  should only be done once all other reasonable measures have been taken.
+
+Leave it on the staging buildmaster
+  While most of this section has been biased towards builders intended for
+  the main buildmaster, it is worth highlighting that builders can run
+  indefinitely on the staging buildmaster.  Such a builder may still be
+  useful for the sponsoring organization, without concern of negatively
+  impacting the broader community.  The sponsoring organization simply
+  has to take on the responsibility of all bisection and triage.
+
+  
