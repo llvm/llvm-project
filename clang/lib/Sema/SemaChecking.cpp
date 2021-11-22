@@ -5532,8 +5532,8 @@ ExprResult Sema::BuildAtomicExpr(SourceRange CallRange, SourceRange ExprRange,
 
   // For an arithmetic operation, the implied arithmetic must be well-formed.
   if (Form == Arithmetic) {
-    // gcc does not enforce these rules for GNU atomics, but we do so for
-    // sanity.
+    // GCC does not enforce these rules for GNU atomics, but we do, because if
+    // we didn't it would be very confusing. FIXME:  For whom? How so?
     auto IsAllowedValueType = [&](QualType ValType) {
       if (ValType->isIntegerType())
         return true;
@@ -5574,7 +5574,8 @@ ExprResult Sema::BuildAtomicExpr(SourceRange CallRange, SourceRange ExprRange,
   if (!IsC11 && !AtomTy.isTriviallyCopyableType(Context) &&
       !AtomTy->isScalarType()) {
     // For GNU atomics, require a trivially-copyable type. This is not part of
-    // the GNU atomics specification, but we enforce it for sanity.
+    // the GNU atomics specification, but we enforce it, because if we didn't it
+    // would be very confusing. FIXME:  For whom? How so?
     Diag(ExprRange.getBegin(), diag::err_atomic_op_needs_trivial_copy)
         << Ptr->getType() << Ptr->getSourceRange();
     return ExprError();

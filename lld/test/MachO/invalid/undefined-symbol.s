@@ -20,9 +20,17 @@ _foo:
   retq
 
 #--- main.s
-.globl _main
 .text
+
+_anotherref:
+  callq _foo
+  movq $0, %rax
+  retq
+
+.globl _main
 _main:
   callq _foo
   movq $0, %rax
   retq
+
+.subsections_via_symbols

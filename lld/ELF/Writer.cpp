@@ -2276,7 +2276,7 @@ template <class ELFT> void Writer<ELFT>::addStartEndSymbols() {
     Default = Out::elfHeader;
 
   auto define = [=](StringRef start, StringRef end, OutputSection *os) {
-    if (os) {
+    if (os && !script->isDiscarded(os)) {
       addOptionalRegular(start, os, 0);
       addOptionalRegular(end, os, -1);
     } else {

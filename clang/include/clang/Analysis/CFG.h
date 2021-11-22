@@ -515,7 +515,7 @@ public:
     /// of the most derived class while we're in the base class.
     VirtualBaseBranch,
 
-    /// Number of different kinds, for sanity checks. We subtract 1 so that
+    /// Number of different kinds, for validity checks. We subtract 1 so that
     /// to keep receiving compiler warnings when we don't cover all enum values
     /// in a switch.
     NumKindsMinusOne = VirtualBaseBranch

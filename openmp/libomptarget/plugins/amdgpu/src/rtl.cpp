@@ -1620,19 +1620,21 @@ __tgt_target_table *__tgt_rtl_load_binary_locked(int32_t device_id,
 
     DP("to find the kernel name: %s size: %lu\n", e->name, strlen(e->name));
 
-    uint32_t kernarg_segment_size;
+    // errors in kernarg_segment_size previously treated as = 0 (or as undef)
+    uint32_t kernarg_segment_size = 0;
     auto &KernelInfoMap = DeviceInfo.KernelInfoTable[device_id];
-    hsa_status_t err = interop_hsa_get_kernel_info(
-        KernelInfoMap, device_id, e->name,
-        HSA_EXECUTABLE_SYMBOL_INFO_KERNEL_KERNARG_SEGMENT_SIZE,
-        &kernarg_segment_size);
-
-    // each arg is a void * in this openmp implementation
-    uint32_t arg_num = kernarg_segment_size / sizeof(void *);
-    std::vector<size_t> arg_sizes(arg_num);
-    for (std::vector<size_t>::iterator it = arg_sizes.begin();
-         it != arg_sizes.end(); it++) {
-      *it = sizeof(void *);
+    hsa_status_t err = HSA_STATUS_SUCCESS;
+    if (!e->name) {
+      err = HSA_STATUS_ERROR;
+    } else {
+      std::string kernelStr = std::string(e->name);
+      auto It = KernelInfoMap.find(kernelStr);
+      if (It != KernelInfoMap.end()) {
+        atl_kernel_info_t info = It->second;
+        kernarg_segment_size = info.kernel_segment_size;
+      } else {
+        err = HSA_STATUS_ERROR;
+      }
     }
 
     // default value GENERIC (in case symbol is missing from cubin file)

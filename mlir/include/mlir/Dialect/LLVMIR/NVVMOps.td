@@ -97,22 +97,36 @@ def NVVM_Barrier0Op : NVVM_Op<"barrier0"> {
   let assemblyFormat = "attr-dict";
 }
 
-def NVVM_ShflBflyOp :
-  NVVM_Op<"shfl.sync.bfly">,
+def ShflKindBfly : StrEnumAttrCase<"bfly">;
+def ShflKindUp : StrEnumAttrCase<"up">;
+def ShflKindDown : StrEnumAttrCase<"down">;
+def ShflKindIdx : StrEnumAttrCase<"idx">;
+
+/// Enum attribute of the different shuffle kinds.
+def ShflKind : StrEnumAttr<"ShflKind", "NVVM shuffle kind",
+  [ShflKindBfly, ShflKindUp, ShflKindDown, ShflKindIdx]> {
+  let cppNamespace = "::mlir::NVVM";
+  let storageType = "mlir::StringAttr";
+  let returnType = "NVVM::ShflKind";
+  let convertFromStorage = "*symbolizeEnum<NVVM::ShflKind>($_self.getValue())";
+  let constBuilderCall = "$_builder.getStringAttr(stringifyEnum($0))";
+}
+
+def NVVM_ShflOp :
+  NVVM_Op<"shfl.sync">,
   Results<(outs LLVM_Type:$res)>,
-  Arguments<(ins LLVM_Type:$dst,
+  Arguments<(ins I32:$dst,
                  LLVM_Type:$val,
-                 LLVM_Type:$offset,
-                 LLVM_Type:$mask_and_clamp,
+                 I32:$offset,
+                 I32:$mask_and_clamp,
+                 ShflKind:$kind,
                  OptionalAttr<UnitAttr>:$return_value_and_is_valid)> {
   string llvmBuilder = [{
-      auto intId = getShflBflyIntrinsicId(
-          $_resultType, static_cast<bool>($return_value_and_is_valid));
+      auto intId = getShflIntrinsicId(
+          $_resultType, $kind, static_cast<bool>($return_value_and_is_valid));
       $res = createIntrinsicCall(builder,
           intId, {$dst, $val, $offset, $mask_and_clamp});
   }];
-  let parser = [{ return parseNVVMShflSyncBflyOp(parser, result); }];
-  let printer = [{ printNVVMIntrinsicOp(p, this->getOperation()); }];
   let verifier = [{
     if (!(*this)->getAttrOfType<UnitAttr>("return_value_and_is_valid"))
       return success();
@@ -125,6 +139,10 @@ def NVVM_ShflBflyOp :
                        "i1 as the second element");
     return success();
   }];
+  let assemblyFormat = [{
+    $kind $dst `,` $val `,` $offset `,` $mask_and_clamp  attr-dict
+     `:` type($val) `->` type($res)
+   }];
 }
 
 def NVVM_VoteBallotOp :

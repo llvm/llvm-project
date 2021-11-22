@@ -9172,7 +9172,8 @@ bool SpecialMemberDeletionInfo::shouldDeleteForField(FieldDecl *FD) {
       }
 
       // Don't check the implicit member of the anonymous union type.
-      // This is technically non-conformant, but sanity demands it.
+      // This is technically non-conformant but supported, and we have a
+      // diagnostic for this elsewhere.
       return false;
     }
 
@@ -12256,7 +12257,7 @@ NamedDecl *Sema::BuildUsingDeclaration(
   // Unlike most lookups, we don't always want to hide tag
   // declarations: tag names are visible through the using declaration
   // even if hidden by ordinary names, *except* in a dependent context
-  // where it's important for the sanity of two-phase lookup.
+  // where they may be used by two-phase lookup.
   if (!IsInstantiation)
     R.setHideTags(false);
 

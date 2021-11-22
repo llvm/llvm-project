@@ -692,7 +692,7 @@ void InstrProfiling::lowerIncrement(InstrProfIncrementInst *Inc) {
 
   IRBuilder<> Builder(Inc);
   uint64_t Index = Inc->getIndex()->getZExtValue();
-  Value *Addr = Builder.CreateConstInBoundsGEP2_64(Counters->getValueType(),
+  Value *Addr = Builder.CreateConstInBoundsGEP2_32(Counters->getValueType(),
                                                    Counters, 0, Index);
 
   if (isRuntimeCounterRelocationEnabled()) {

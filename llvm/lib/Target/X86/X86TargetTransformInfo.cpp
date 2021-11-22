@@ -1620,6 +1620,7 @@ InstructionCost X86TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
     { ISD::TRUNCATE,    MVT::v4i1,   MVT::v4i16,  2 }, // widen to zmm
     { ISD::TRUNCATE,    MVT::v4i8,   MVT::v4i16,  2 }, // vpmovwb
     { ISD::TRUNCATE,    MVT::v8i1,   MVT::v8i8,   2 }, // widen to zmm
+    { ISD::TRUNCATE,    MVT::v8i1,   MVT::v16i8,  2 }, // widen to zmm
     { ISD::TRUNCATE,    MVT::v8i1,   MVT::v8i16,  2 }, // widen to zmm
     { ISD::TRUNCATE,    MVT::v8i8,   MVT::v8i16,  2 }, // vpmovwb
     { ISD::TRUNCATE,    MVT::v16i1,  MVT::v16i8,  2 }, // widen to zmm
@@ -3664,6 +3665,16 @@ X86TTIImpl::getReplicationShuffleCost(Type *EltTy, int ReplicationFactor,
     if (!ST->hasVBMI())
       PromEltTyBits = 32; // promote to i32, AVX512F.
     break;                // AVX512VBMI
+  case 1:
+    // There is no support for shuffling i1 elements. We *must* promote.
+    if (ST->hasBWI()) {
+      if (ST->hasVBMI())
+        PromEltTyBits = 8; // promote to i8, AVX512VBMI.
+      else
+        PromEltTyBits = 16; // promote to i16, AVX512BW.
+      break;
+    }
+    return bailout();
   default:
     return bailout();
   }
