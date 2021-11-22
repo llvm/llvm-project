@@ -17,6 +17,45 @@
 include "mlir/Interfaces/SideEffectInterfaceBase.td"
 
 //===----------------------------------------------------------------------===//
+// AllocationOpInterface
+//===----------------------------------------------------------------------===//
+
+def AllocationOpInterface : OpInterface<"AllocationOpInterface"> {
+  let description = [{
+    This interface provides general allocation-related methods that are
+    designed for allocation operations. For example, it offers the ability to
+    construct associated deallocation and clone operations that are compatible
+    with the current allocation operation.
+  }];
+  let cppNamespace = "::mlir";
+
+  let methods = [
+    StaticInterfaceMethod<[{
+        Builds a deallocation operation using the provided builder and the
+        current allocation value (which refers to the current Op implementing
+        this interface). The allocation value is a result of the current
+        operation implementing this interface. If there is no compatible
+        deallocation operation, this method can return ::llvm::None.
+      }],
+      "::mlir::Optional<::mlir::Operation*>", "buildDealloc",
+      (ins "::mlir::OpBuilder&":$opBuilder, "::mlir::Value":$alloc), [{}],
+      /*defaultImplementation=*/[{ return llvm::None; }]
+    >,
+    StaticInterfaceMethod<[{
+        Builds a clone operation using the provided builder and the current
+        allocation value (which refers to the current Op implementing this
+        interface). The allocation value is a result of the current operation
+        implementing this interface. If there is no compatible clone operation,
+        this method can return ::llvm::None.
+      }],
+      "::mlir::Optional<::mlir::Value>", "buildClone",
+      (ins "::mlir::OpBuilder&":$opBuilder, "::mlir::Value":$alloc), [{}],
+      /*defaultImplementation=*/[{ return llvm::None; }]
+    >
+  ];
+}
+
+//===----------------------------------------------------------------------===//
 // MemoryEffects
 //===----------------------------------------------------------------------===//
 
