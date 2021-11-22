@@ -38,6 +38,7 @@
 #include "ToolChains/NaCl.h"
 #include "ToolChains/NetBSD.h"
 #include "ToolChains/OpenBSD.h"
+#include "ToolChains/PPCFreeBSD.h"
 #include "ToolChains/PPCLinux.h"
 #include "ToolChains/PS4CPU.h"
 #include "ToolChains/RISCVToolchain.h"
@@ -5302,7 +5303,11 @@ const ToolChain &Driver::getToolChain(const ArgList &Args,
       TC = std::make_unique<toolchains::NetBSD>(*this, Target, Args);
       break;
     case llvm::Triple::FreeBSD:
-      TC = std::make_unique<toolchains::FreeBSD>(*this, Target, Args);
+      if (Target.isPPC())
+        TC = std::make_unique<toolchains::PPCFreeBSDToolChain>(*this, Target,
+                                                               Args);
+      else
+        TC = std::make_unique<toolchains::FreeBSD>(*this, Target, Args);
       break;
     case llvm::Triple::Minix:
       TC = std::make_unique<toolchains::Minix>(*this, Target, Args);

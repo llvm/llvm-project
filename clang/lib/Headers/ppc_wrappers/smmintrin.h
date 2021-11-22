@@ -29,7 +29,7 @@
 #ifndef SMMINTRIN_H_
 #define SMMINTRIN_H_
 
-#if defined(__linux__) && defined(__ppc64__)
+#if defined(__ppc64__) && (defined(__linux__) || defined(__FreeBSD__))
 
 #include <altivec.h>
 #include <tmmintrin.h>
@@ -104,6 +104,7 @@ extern __inline __m128i
 
 #else
 #include_next <smmintrin.h>
-#endif /* defined(__linux__) && defined(__ppc64__) */
+#endif /* defined(__ppc64__) && (defined(__linux__) || defined(__FreeBSD__))   \
+        */
 
 #endif /* _SMMINTRIN_H_ */
