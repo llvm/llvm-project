@@ -22,6 +22,7 @@ mlirExecutionEngineCreate(MlirModule op, int optLevel, int numPaths,
                           const MlirStringRef *sharedLibPaths) {
   static bool initOnce = [] {
     llvm::InitializeNativeTarget();
+    llvm::InitializeNativeTargetAsmParser(); // needed for inline_asm
     llvm::InitializeNativeTargetAsmPrinter();
     return true;
   }();
