@@ -19,6 +19,7 @@ set(LIBCXX_SOURCES
   include/atomic_support.h
   include/config_elast.h
   include/refstring.h
+  legacy_pointer_safety.cpp
   memory.cpp
   mutex.cpp
   mutex_destructor.cpp
@@ -285,6 +286,13 @@ if (LIBCXX_ENABLE_STATIC)
   )
   cxx_add_common_build_flags(cxx_static)
   cxx_set_common_defines(cxx_static)
+
+  if (LIBCXXABI_USE_LLVM_UNWINDER)
+    # If we intend to use the just-built unwinder, add a dependency so that it
+    # gets built, even if we technically aren't going to link it in at this
+    # stage.
+    add_dependencies(cxx_static unwind)
+  endif()
 
   if (LIBCXX_HERMETIC_STATIC_LIBRARY)
     # If the hermetic library doesn't define the operator new/delete functions

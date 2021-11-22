@@ -121,7 +121,7 @@ void GCNMaxOccupancySchedStrategy::initCandidate(SchedCandidate &Cand, SUnit *SU
 
   // Register pressure is considered 'CRITICAL' if it is approaching a value
   // that would reduce the wave occupancy for the execution unit.  When
-  // register pressure is 'CRITICAL', increading SGPR and VGPR pressure both
+  // register pressure is 'CRITICAL', increasing SGPR and VGPR pressure both
   // has the same cost, so we don't need to prefer one over the other.
 
   int SGPRDelta = NewSGPRPressure - SGPRCriticalLimit;

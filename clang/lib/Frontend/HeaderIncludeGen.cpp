@@ -119,7 +119,7 @@ void clang::AttachHeaderIncludeGen(Preprocessor &PP,
   // Print header info for extra headers, pretending they were discovered by
   // the regular preprocessor. The primary use case is to support proper
   // generation of Make / Ninja file dependencies for implicit includes, such
-  // as sanitizer blacklists. It's only important for cl.exe compatibility,
+  // as sanitizer ignorelists. It's only important for cl.exe compatibility,
   // the GNU way to generate rules is -M / -MM / -MD / -MMD.
   for (const auto &Header : DepOpts.ExtraDeps)
     PrintHeaderInfo(OutputFile, Header.first, ShowDepth, 2, MSStyle);

@@ -3,10 +3,13 @@ import binascii
 import os.path
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test.decorators import *
-from gdbclientutils import *
+from lldbsuite.test.gdbclientutils import *
+from lldbsuite.test.lldbgdbclient import GDBRemoteTestBase
 
 
 class TestGDBRemoteClient(GDBRemoteTestBase):
+
+    mydir = TestBase.compute_mydir(__file__)
 
     class gPacketResponder(MockGDBServerResponder):
         registers = [
@@ -412,3 +415,78 @@ class TestGDBRemoteClient(GDBRemoteTestBase):
         process = self.connect(target)
         process.Detach()
         self.assertRegex(self.server.responder.detached, r"D;0*400")
+
+    def test_signal_gdb(self):
+        class MyResponder(MockGDBServerResponder):
+            def qSupported(self, client_supported):
+                return "PacketSize=3fff;QStartNoAckMode+"
+
+            def haltReason(self):
+                return "S0a"
+
+            def cont(self):
+                return self.haltReason()
+
+        self.server.responder = MyResponder()
+
+        self.runCmd("platform select remote-linux")
+        target = self.createTarget("a.yaml")
+        process = self.connect(target)
+
+        self.assertEqual(process.threads[0].GetStopReason(),
+                         lldb.eStopReasonSignal)
+        self.assertEqual(process.threads[0].GetStopDescription(100),
+                         'signal SIGBUS')
+
+    def test_signal_lldb_old(self):
+        class MyResponder(MockGDBServerResponder):
+            def qSupported(self, client_supported):
+                return "PacketSize=3fff;QStartNoAckMode+"
+
+            def qHostInfo(self):
+                return "triple:61726d76372d756e6b6e6f776e2d6c696e75782d676e75;"
+
+            def QThreadSuffixSupported(self):
+                return "OK"
+
+            def haltReason(self):
+                return "S0a"
+
+            def cont(self):
+                return self.haltReason()
+
+        self.server.responder = MyResponder()
+
+        self.runCmd("platform select remote-linux")
+        target = self.createTarget("a.yaml")
+        process = self.connect(target)
+
+        self.assertEqual(process.threads[0].GetStopReason(),
+                         lldb.eStopReasonSignal)
+        self.assertEqual(process.threads[0].GetStopDescription(100),
+                         'signal SIGUSR1')
+
+    def test_signal_lldb(self):
+        class MyResponder(MockGDBServerResponder):
+            def qSupported(self, client_supported):
+                return "PacketSize=3fff;QStartNoAckMode+;native-signals+"
+
+            def qHostInfo(self):
+                return "triple:61726d76372d756e6b6e6f776e2d6c696e75782d676e75;"
+
+            def haltReason(self):
+                return "S0a"
+
+            def cont(self):
+                return self.haltReason()
+
+        self.server.responder = MyResponder()
+
+        self.runCmd("platform select remote-linux")
+        target = self.createTarget("a.yaml")
+        process = self.connect(target)
+
+        self.assertEqual(process.threads[0].GetStopReason(),
+                         lldb.eStopReasonSignal)
+        self.assertEqual(process.threads[0].GetStopDescription(100),
+                         'signal SIGUSR1')

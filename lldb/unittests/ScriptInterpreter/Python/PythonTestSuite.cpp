@@ -229,7 +229,8 @@ extern "C" void *LLDBSwigPythonCreateScriptedProcess(
 
 extern "C" void *LLDBSwigPythonCreateScriptedThread(
     const char *python_class_name, const char *session_dictionary_name,
-    const lldb::TargetSP &target_sp, std::string &error_string) {
+    const lldb::ProcessSP &process_sp, StructuredDataImpl *args_impl,
+    std::string &error_string) {
   return nullptr;
 }
 

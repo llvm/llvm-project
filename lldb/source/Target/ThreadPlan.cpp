@@ -26,8 +26,8 @@ ThreadPlan::ThreadPlan(ThreadPlanKind kind, const char *name, Thread &thread,
       m_takes_iteration_count(false), m_could_not_resolve_hw_bp(false),
       m_thread(&thread), m_kind(kind), m_name(name), m_plan_complete_mutex(),
       m_cached_plan_explains_stop(eLazyBoolCalculate), m_plan_complete(false),
-      m_plan_private(false), m_okay_to_discard(true), m_is_master_plan(false),
-      m_plan_succeeded(true) {
+      m_plan_private(false), m_okay_to_discard(true),
+      m_is_controlling_plan(false), m_plan_succeeded(true) {
   SetID(GetNextID());
 }
 
@@ -152,7 +152,7 @@ void ThreadPlan::DidPush() {}
 void ThreadPlan::DidPop() {}
 
 bool ThreadPlan::OkayToDiscard() {
-  return IsMasterPlan() ? m_okay_to_discard : true;
+  return IsControllingPlan() ? m_okay_to_discard : true;
 }
 
 lldb::StateType ThreadPlan::RunState() {

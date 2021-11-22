@@ -2331,8 +2331,7 @@ static void adjustForSubtraction(SelectionDAG &DAG, const SDLoc &DL,
                                  Comparison &C) {
   if (C.CCMask == SystemZ::CCMASK_CMP_EQ ||
       C.CCMask == SystemZ::CCMASK_CMP_NE) {
-    for (auto I = C.Op0->use_begin(), E = C.Op0->use_end(); I != E; ++I) {
-      SDNode *N = *I;
+    for (SDNode *N : C.Op0->uses()) {
       if (N->getOpcode() == ISD::SUB &&
           ((N->getOperand(0) == C.Op0 && N->getOperand(1) == C.Op1) ||
            (N->getOperand(0) == C.Op1 && N->getOperand(1) == C.Op0))) {
@@ -2355,8 +2354,7 @@ static void adjustForFNeg(Comparison &C) {
     return;
   auto *C1 = dyn_cast<ConstantFPSDNode>(C.Op1);
   if (C1 && C1->isZero()) {
-    for (auto I = C.Op0->use_begin(), E = C.Op0->use_end(); I != E; ++I) {
-      SDNode *N = *I;
+    for (SDNode *N : C.Op0->uses()) {
       if (N->getOpcode() == ISD::FNEG) {
         C.Op0 = SDValue(N, 0);
         C.CCMask = SystemZ::reverseCCMask(C.CCMask);
@@ -2382,8 +2380,7 @@ static void adjustForLTGFR(Comparison &C) {
     if (C1 && C1->getZExtValue() == 32) {
       SDValue ShlOp0 = C.Op0.getOperand(0);
       // See whether X has any SIGN_EXTEND_INREG uses.
-      for (auto I = ShlOp0->use_begin(), E = ShlOp0->use_end(); I != E; ++I) {
-        SDNode *N = *I;
+      for (SDNode *N : ShlOp0->uses()) {
         if (N->getOpcode() == ISD::SIGN_EXTEND_INREG &&
             cast<VTSDNode>(N->getOperand(1))->getVT() == MVT::i32) {
           C.Op0 = SDValue(N, 0);
@@ -7183,8 +7180,8 @@ static bool checkCCKill(MachineInstr &MI, MachineBasicBlock *MBB) {
   // If we hit the end of the block, check whether CC is live into a
   // successor.
   if (miI == MBB->end()) {
-    for (auto SI = MBB->succ_begin(), SE = MBB->succ_end(); SI != SE; ++SI)
-      if ((*SI)->isLiveIn(SystemZ::CC))
+    for (const MachineBasicBlock *Succ : MBB->successors())
+      if (Succ->isLiveIn(SystemZ::CC))
         return false;
   }
 

@@ -63,26 +63,112 @@ contains
 
   ! 10.2.2.4(3)
   subroutine s5
-    procedure(f_pure), pointer :: p_pure
-    procedure(f_impure), pointer :: p_impure
+    procedure(f_impure1), pointer :: p_impure
+    procedure(f_pure1), pointer :: p_pure
     !ERROR: Procedure pointer 'p_elemental' may not be ELEMENTAL
-    procedure(f_elemental), pointer :: p_elemental
-    p_pure => f_pure
-    p_impure => f_impure
-    p_impure => f_pure
-    !ERROR: PURE procedure pointer 'p_pure' may not be associated with non-PURE procedure designator 'f_impure'
-    p_pure => f_impure
+    procedure(f_elemental1), pointer :: p_elemental
+    procedure(s_impure1), pointer :: sp_impure
+    procedure(s_pure1), pointer :: sp_pure
+    !ERROR: Procedure pointer 'sp_elemental' may not be ELEMENTAL
+    procedure(s_elemental1), pointer :: sp_elemental
+
+    p_impure => f_impure1 ! OK, same characteristics
+    p_impure => f_pure1 ! OK, target may be pure when pointer is not
+    p_impure => f_elemental1 ! OK, target may be pure elemental
+    p_impure => f_ImpureElemental1 ! OK, target may be elemental
+
+    sp_impure => s_impure1 ! OK, same characteristics
+    sp_impure => s_pure1 ! OK, target may be pure when pointer is not
+    sp_impure => s_elemental1 ! OK, target may be elemental when pointer is not
+
+    !ERROR: PURE procedure pointer 'p_pure' may not be associated with non-PURE procedure designator 'f_impure1'
+    p_pure => f_impure1
+    p_pure => f_pure1 ! OK, same characteristics
+    p_pure => f_elemental1 ! OK, target may be pure
+    !ERROR: PURE procedure pointer 'p_pure' may not be associated with non-PURE procedure designator 'f_impureelemental1'
+    p_pure => f_impureElemental1
+
+    !ERROR: PURE procedure pointer 'sp_pure' may not be associated with non-PURE procedure designator 's_impure1'
+    sp_pure => s_impure1
+    sp_pure => s_pure1 ! OK, same characteristics
+    sp_pure => s_elemental1 ! OK, target may be elemental when pointer is not
+
+    !ERROR: Procedure pointer 'p_impure' associated with incompatible procedure designator 'f_impure2'
+    p_impure => f_impure2
+    !ERROR: Procedure pointer 'p_pure' associated with incompatible procedure designator 'f_pure2'
+    p_pure => f_pure2
+    !ERROR: Procedure pointer 'p_impure' associated with incompatible procedure designator 'f_elemental2'
+    p_impure => f_elemental2
+
+    !ERROR: Procedure pointer 'sp_impure' associated with incompatible procedure designator 's_impure2'
+    sp_impure => s_impure2
+    !ERROR: Procedure pointer 'sp_impure' associated with incompatible procedure designator 's_pure2'
+    sp_impure => s_pure2
+    !ERROR: Procedure pointer 'sp_pure' associated with incompatible procedure designator 's_elemental2'
+    sp_pure => s_elemental2
+
+    !ERROR: Function pointer 'p_impure' may not be associated with subroutine designator 's_impure1'
+    p_impure => s_impure1
+
+    !ERROR: Subroutine pointer 'sp_impure' may not be associated with function designator 'f_impure1'
+    sp_impure => f_impure1
+
   contains
-    pure integer function f_pure()
-      f_pure = 1
+    integer function f_impure1(n)
+      real, intent(in) :: n
+      f_impure = n
     end
-    integer function f_impure()
-      f_impure = 1
+    pure integer function f_pure1(n)
+      real, intent(in) :: n
+      f_pure = n
     end
-    elemental integer function f_elemental(n)
+    elemental integer function f_elemental1(n)
+      real, intent(in) :: n
+      f_elemental = n
+    end
+    impure elemental integer function f_impureElemental1(n)
+      real, intent(in) :: n
+      f_impureElemental = n
+    end
+
+    integer function f_impure2(n)
+      real, intent(inout) :: n
+      f_impure = n
+    end
+    pure real function f_pure2(n)
+      real, intent(in) :: n
+      f_pure = n
+    end
+    elemental integer function f_elemental2(n)
       real, value :: n
       f_elemental = n
     end
+
+    subroutine s_impure1(n)
+      integer, intent(inout) :: n
+      n = n + 1
+    end
+    pure subroutine s_pure1(n)
+      integer, intent(inout) :: n
+      n = n + 1
+    end
+    elemental subroutine s_elemental1(n)
+      integer, intent(inout) :: n
+      n = n + 1
+    end
+
+    subroutine s_impure2(n) bind(c)
+      integer, intent(inout) :: n
+      n = n + 1
+    end subroutine s_impure2
+    pure subroutine s_pure2(n)
+      integer, intent(out) :: n
+      n = 1
+    end subroutine s_pure2
+    elemental subroutine s_elemental2(m,n)
+      integer, intent(inout) :: m, n
+      n = m + n
+    end subroutine s_elemental2
   end
 
   ! 10.2.2.4(4)
@@ -92,8 +178,7 @@ contains
     external :: s_external
     !ERROR: Procedure pointer 'p' with explicit interface may not be associated with procedure designator 's_external' with implicit interface
     p => s_external
-    !ERROR: Procedure pointer 'r' with implicit interface may not be associated with procedure designator 's_module' with explicit interface
-    r => s_module
+    r => s_module ! OK for a pointer with implicit interface to be associated with a procedure with an explicit interface.  See 10.2.2.4 (3)
   end
 
   ! 10.2.2.4(5)
@@ -192,6 +277,8 @@ contains
     logical, parameter :: l4 = is_contiguous(x%a(:,v))
     !ERROR: Must be a constant value
     logical, parameter :: l5 = is_contiguous(y(v,1)%a(1,1))
+    !ERROR: Must be a constant value
+    logical, parameter :: l6 = is_contiguous(p(:))
   end
   subroutine test3(b)
     integer, intent(inout) :: b(..)

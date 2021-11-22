@@ -1,7 +1,7 @@
 // RUN: mlir-opt %s \
 // RUN:   -convert-scf-to-std \
 // RUN:   -gpu-kernel-outlining \
-// RUN:   -pass-pipeline='gpu.module(strip-debuginfo,convert-gpu-to-rocdl,gpu-to-hsaco)' \
+// RUN:   -pass-pipeline='gpu.module(strip-debuginfo,convert-gpu-to-rocdl,gpu-to-hsaco{chip=%chip})' \
 // RUN:   -gpu-to-llvm \
 // RUN: | mlir-cpu-runner \
 // RUN:   --shared-libs=%linalg_test_lib_dir/libmlir_rocm_runtime%shlibext \
@@ -59,19 +59,19 @@ func @main() {
   %cf1 = arith.constant 1.0 : f32
   %cf1dot23 = arith.constant 1.23 : f32
 
-  %arg0 = alloc() : memref<4xf32>
-  %arg1 = alloc() : memref<4xf32>
+  %arg0 = memref.alloc() : memref<4xf32>
+  %arg1 = memref.alloc() : memref<4xf32>
 
-  %22 = memref_cast %arg0 : memref<4xf32> to memref<?xf32>
-  %23 = memref_cast %arg1 : memref<4xf32> to memref<?xf32>
+  %22 = memref.cast %arg0 : memref<4xf32> to memref<?xf32>
+  %23 = memref.cast %arg1 : memref<4xf32> to memref<?xf32>
 
   scf.for %i = %c0 to %c4 step %c1 {
-    store %cf1dot23, %22[%i] : memref<?xf32>
-    store %cf1dot23, %23[%i] : memref<?xf32>
+    memref.store %cf1dot23, %22[%i] : memref<?xf32>
+    memref.store %cf1dot23, %23[%i] : memref<?xf32>
   }
 
-  %cast0 = memref_cast %22 : memref<?xf32> to memref<*xf32>
-  %cast1 = memref_cast %23 : memref<?xf32> to memref<*xf32>
+  %cast0 = memref.cast %22 : memref<?xf32> to memref<*xf32>
+  %cast1 = memref.cast %23 : memref<?xf32> to memref<*xf32>
 
   gpu.host_register %cast0 : memref<*xf32>
   gpu.host_register %cast1 : memref<*xf32>

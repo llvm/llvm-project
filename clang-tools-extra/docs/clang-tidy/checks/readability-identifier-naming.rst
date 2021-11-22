@@ -854,8 +854,8 @@ After:
 .. option:: GetConfigPerFile
 
     When `true` the check will look for the configuration for where an
-    identifier is declared. Useful for when included header files use a 
-    different style. 
+    identifier is declared. Useful for when included header files use a
+    different style.
     Default value is `true`.
 
 .. option:: GlobalConstantCase
@@ -1084,7 +1084,7 @@ After:
 
 .. option:: IgnoreMainLikeFunctions
 
-    When set to `true` functions that have a similar signature to ``main`` or 
+    When set to `true` functions that have a similar signature to ``main`` or
     ``wmain`` won't enforce checks on the names of their parameters.
     Default value is `false`.
 
@@ -1941,7 +1941,7 @@ After:
 
 .. option:: ScopedEnumConstantCase
 
-    When defined, the check will ensure scoped enum constant names conform to 
+    When defined, the check will ensure scoped enum constant names conform to
     the selected casing.
 
 .. option:: ScopedEnumConstantPrefix

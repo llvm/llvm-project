@@ -11,6 +11,10 @@
 #if defined(CRT_HAS_128BIT) && defined(CRT_LDBL_128BIT)
 
 int test__compiler_rt_scalbnl(const char *mode, fp_t x, int y) {
+#if defined(__ve__)
+  if (fpclassify(x) == FP_SUBNORMAL)
+    return 0;
+#endif
   fp_t crt_value = __compiler_rt_scalbnl(x, y);
   fp_t libm_value = scalbnl(x, y);
   // Consider +/-0 unequal, but disregard the sign/payload of NaN.

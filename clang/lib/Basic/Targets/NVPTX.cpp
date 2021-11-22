@@ -44,6 +44,7 @@ NVPTXTargetInfo::NVPTXTargetInfo(const llvm::Triple &Triple,
     if (!Feature.startswith("+ptx"))
       continue;
     PTXVersion = llvm::StringSwitch<unsigned>(Feature)
+                     .Case("+ptx75", 75)
                      .Case("+ptx74", 74)
                      .Case("+ptx73", 73)
                      .Case("+ptx72", 72)
@@ -217,6 +218,7 @@ void NVPTXTargetInfo::getTargetDefines(const LangOptions &Opts,
       case CudaArch::GFX1100:
       case CudaArch::GFX1101:
       case CudaArch::GFX1102:
+      case CudaArch::GFX1103:
       case CudaArch::LAST:
         break;
       case CudaArch::UNUSED:

@@ -134,6 +134,25 @@ struct LinalgStrategyGeneralizePass
   LinalgTransformationFilter filter;
 };
 
+/// Configurable pass to apply lowering of coarser-grained named linalg ops into
+/// finer-grained named versions.
+struct LinalgStrategyDecomposePass
+    : public LinalgStrategyDecomposePassBase<LinalgStrategyDecomposePass> {
+
+  LinalgStrategyDecomposePass() = default;
+
+  void runOnFunction() override {
+    auto funcOp = getFunction();
+    if (!anchorFuncName.empty() && funcOp.getName() != anchorFuncName)
+      return;
+    RewritePatternSet decompositionPattern(funcOp.getContext());
+    populateDecomposeConvolutionPatterns(decompositionPattern);
+    if (failed(applyPatternsAndFoldGreedily(funcOp,
+                                            std::move(decompositionPattern))))
+      signalPassFailure();
+  }
+};
+
 /// Configurable pass to apply pattern-based linalg generalization.
 struct LinalgStrategyInterchangePass
     : public LinalgStrategyInterchangePassBase<LinalgStrategyInterchangePass> {
@@ -334,6 +353,9 @@ struct LinalgStrategyLowerVectorsPass
     if (options.transposeLowering) {
       vector::populateVectorTransposeLoweringPatterns(
           patterns, options.vectorTransformOptions);
+      if (options.avx2Lowering)
+        x86vector::avx2::populateSpecializedTransposeLoweringPatterns(
+            patterns, options.avx2LoweringOptions, /*benefit=*/10);
     }
     (void)applyPatternsAndFoldGreedily(funcOp, std::move(patterns));
   }
@@ -385,6 +407,13 @@ std::unique_ptr<OperationPass<FuncOp>>
 mlir::createLinalgStrategyGeneralizePass(StringRef opName,
                                          LinalgTransformationFilter filter) {
   return std::make_unique<LinalgStrategyGeneralizePass>(opName, filter);
+}
+/// Create a LinalgStrategyDecomposePass.
+// TODO: atm this is applied to all supported ops. If/when we need finer control
+// this should be exposed with an opName + filter and a proper pattern.
+std::unique_ptr<OperationPass<FuncOp>>
+mlir::createLinalgStrategyDecomposePass() {
+  return std::make_unique<LinalgStrategyDecomposePass>();
 }
 
 /// Create a LinalgStrategyInterchangePass.

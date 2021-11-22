@@ -19,7 +19,7 @@ include "mlir/IR/OpBase.td"
 // DEF: ::test::SingleParameterAttr
 
 // DEF-LABEL: ::mlir::OptionalParseResult generatedAttributeParser(
-// DEF-NEXT: ::mlir::DialectAsmParser &parser,
+// DEF-NEXT: ::mlir::AsmParser &parser,
 // DEF-NEXT: ::llvm::StringRef mnemonic, ::mlir::Type type,
 // DEF-NEXT: ::mlir::Attribute &value) {
 // DEF: if (mnemonic == ::test::CompoundAAttr::getMnemonic()) {
@@ -67,8 +67,8 @@ def B_CompoundAttrA : TestAttr<"CompoundA"> {
 // DECL:   return ::llvm::StringLiteral("cmpnd_a");
 // DECL: }
 // DECL: static ::mlir::Attribute parse(
-// DECL-SAME: ::mlir::DialectAsmParser &parser, ::mlir::Type type);
-// DECL: void print(::mlir::DialectAsmPrinter &printer) const;
+// DECL-SAME: ::mlir::AsmParser &parser, ::mlir::Type type);
+// DECL: void print(::mlir::AsmPrinter &printer) const;
 // DECL: int getWidthOfSomething() const;
 // DECL: ::test::SimpleTypeA getExampleTdType() const;
 // DECL: ::llvm::APFloat getApFloat() const;
@@ -111,8 +111,8 @@ def C_IndexAttr : TestAttr<"Index"> {
 // DECL:   return ::llvm::StringLiteral("index");
 // DECL: }
 // DECL: static ::mlir::Attribute parse(
-// DECL-SAME: ::mlir::DialectAsmParser &parser, ::mlir::Type type);
-// DECL: void print(::mlir::DialectAsmPrinter &printer) const;
+// DECL-SAME: ::mlir::AsmParser &parser, ::mlir::Type type);
+// DECL: void print(::mlir::AsmPrinter &printer) const;
 }
 
 def D_SingleParameterAttr : TestAttr<"SingleParameter"> {

@@ -53,7 +53,9 @@ Tool *VEToolChain::buildLinker() const {
 
 bool VEToolChain::isPICDefault() const { return false; }
 
-bool VEToolChain::isPIEDefault() const { return false; }
+bool VEToolChain::isPIEDefault(const llvm::opt::ArgList &Args) const {
+  return false;
+}
 
 bool VEToolChain::isPICDefaultForced() const { return false; }
 

@@ -80,8 +80,7 @@ MemprofThread *MemprofThread::Create(thread_callback_t start_routine, void *arg,
   thread->start_routine_ = start_routine;
   thread->arg_ = arg;
   MemprofThreadContext::CreateThreadContextArgs args = {thread, stack};
-  memprofThreadRegistry().CreateThread(*reinterpret_cast<uptr *>(thread),
-                                       detached, parent_tid, &args);
+  memprofThreadRegistry().CreateThread(0, detached, parent_tid, &args);
 
   return thread;
 }

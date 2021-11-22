@@ -89,76 +89,6 @@ llvm::StringRef PlatformRemoteGDBServer::GetDescription() {
   return GetDescriptionStatic();
 }
 
-Status PlatformRemoteGDBServer::ResolveExecutable(
-    const ModuleSpec &module_spec, lldb::ModuleSP &exe_module_sp,
-    const FileSpecList *module_search_paths_ptr) {
-  // copied from PlatformRemoteiOS
-
-  Status error;
-  // Nothing special to do here, just use the actual file and architecture
-
-  ModuleSpec resolved_module_spec(module_spec);
-
-  // Resolve any executable within an apk on Android?
-  // Host::ResolveExecutableInBundle (resolved_module_spec.GetFileSpec());
-
-  if (FileSystem::Instance().Exists(resolved_module_spec.GetFileSpec()) ||
-      module_spec.GetUUID().IsValid()) {
-    if (resolved_module_spec.GetArchitecture().IsValid() ||
-        resolved_module_spec.GetUUID().IsValid()) {
-      error = ModuleList::GetSharedModule(resolved_module_spec, exe_module_sp,
-                                          module_search_paths_ptr, nullptr,
-                                          nullptr);
-
-      if (exe_module_sp && exe_module_sp->GetObjectFile())
-        return error;
-      exe_module_sp.reset();
-    }
-    // No valid architecture was specified or the exact arch wasn't found so
-    // ask the platform for the architectures that we should be using (in the
-    // correct order) and see if we can find a match that way
-    StreamString arch_names;
-    for (uint32_t idx = 0; GetSupportedArchitectureAtIndex(
-             idx, resolved_module_spec.GetArchitecture());
-         ++idx) {
-      error = ModuleList::GetSharedModule(resolved_module_spec, exe_module_sp,
-                                          module_search_paths_ptr, nullptr,
-                                          nullptr);
-      // Did we find an executable using one of the
-      if (error.Success()) {
-        if (exe_module_sp && exe_module_sp->GetObjectFile())
-          break;
-        else
-          error.SetErrorToGenericError();
-      }
-
-      if (idx > 0)
-        arch_names.PutCString(", ");
-      arch_names.PutCString(
-          resolved_module_spec.GetArchitecture().GetArchitectureName());
-    }
-
-    if (error.Fail() || !exe_module_sp) {
-      if (FileSystem::Instance().Readable(resolved_module_spec.GetFileSpec())) {
-        error.SetErrorStringWithFormatv(
-            "'{0}' doesn't contain any '{1}' platform architectures: {2}",
-            resolved_module_spec.GetFileSpec(), GetPluginName(),
-            arch_names.GetData());
-      } else {
-        error.SetErrorStringWithFormat(
-            "'%s' is not readable",
-            resolved_module_spec.GetFileSpec().GetPath().c_str());
-      }
-    }
-  } else {
-    error.SetErrorStringWithFormat(
-        "'%s' does not exist",
-        resolved_module_spec.GetFileSpec().GetPath().c_str());
-  }
-
-  return error;
-}
-
 bool PlatformRemoteGDBServer::GetModuleSpec(const FileSpec &module_file_spec,
                                             const ArchSpec &arch,
                                             ModuleSpec &module_spec) {
@@ -208,21 +138,6 @@ PlatformRemoteGDBServer::PlatformRemoteGDBServer()
 /// The destructor is virtual since this class is designed to be
 /// inherited from by the plug-in instance.
 PlatformRemoteGDBServer::~PlatformRemoteGDBServer() = default;
-
-bool PlatformRemoteGDBServer::GetSupportedArchitectureAtIndex(uint32_t idx,
-                                                              ArchSpec &arch) {
-  ArchSpec remote_arch = m_gdb_client.GetSystemArchitecture();
-
-  if (idx == 0) {
-    arch = remote_arch;
-    return arch.IsValid();
-  } else if (idx == 1 && remote_arch.IsValid() &&
-             remote_arch.GetTriple().isArch64Bit()) {
-    arch.SetTriple(remote_arch.GetTriple().get32BitArchVariant());
-    return arch.IsValid();
-  }
-  return false;
-}
 
 size_t PlatformRemoteGDBServer::GetSoftwareBreakpointTrapOpcode(
     Target &target, BreakpointSite *bp_site) {
@@ -332,6 +247,15 @@ Status PlatformRemoteGDBServer::ConnectRemote(Args &args) {
     // now.
     if (m_working_dir)
       m_gdb_client.SetWorkingDir(m_working_dir);
+
+    m_supported_architectures.clear();
+    ArchSpec remote_arch = m_gdb_client.GetSystemArchitecture();
+    if (remote_arch) {
+      m_supported_architectures.push_back(remote_arch);
+      if (remote_arch.GetTriple().isArch64Bit())
+        m_supported_architectures.push_back(
+            ArchSpec(remote_arch.GetTriple().get32BitArchVariant()));
+    }
   } else {
     m_gdb_client.Disconnect();
     if (error.Success())

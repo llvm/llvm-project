@@ -119,63 +119,16 @@ public:
   }
 };
 
-template <typename OpTy, arith::CmpFPredicate pred>
-struct MaxMinFOpConverter : public OpRewritePattern<OpTy> {
-public:
-  using OpRewritePattern<OpTy>::OpRewritePattern;
-
-  LogicalResult matchAndRewrite(OpTy op,
-                                PatternRewriter &rewriter) const final {
-    Value lhs = op.getLhs();
-    Value rhs = op.getRhs();
-
-    Location loc = op.getLoc();
-    Value cmp = rewriter.create<arith::CmpFOp>(loc, pred, lhs, rhs);
-    Value select = rewriter.create<SelectOp>(loc, cmp, lhs, rhs);
-
-    auto floatType = getElementTypeOrSelf(lhs.getType()).cast<FloatType>();
-    Value isNaN = rewriter.create<arith::CmpFOp>(loc, arith::CmpFPredicate::UNO,
-                                                 lhs, rhs);
-
-    Value nan = rewriter.create<arith::ConstantFloatOp>(
-        loc, APFloat::getQNaN(floatType.getFloatSemantics()), floatType);
-    if (VectorType vectorType = lhs.getType().dyn_cast<VectorType>())
-      nan = rewriter.create<SplatOp>(loc, vectorType, nan);
-
-    rewriter.replaceOpWithNewOp<SelectOp>(op, isNaN, nan, select);
-    return success();
-  }
-};
-
-template <typename OpTy, arith::CmpIPredicate pred>
-struct MaxMinIOpConverter : public OpRewritePattern<OpTy> {
-public:
-  using OpRewritePattern<OpTy>::OpRewritePattern;
-  LogicalResult matchAndRewrite(OpTy op,
-                                PatternRewriter &rewriter) const final {
-    Value lhs = op.getLhs();
-    Value rhs = op.getRhs();
-
-    Location loc = op.getLoc();
-    Value cmp = rewriter.create<arith::CmpIOp>(loc, pred, lhs, rhs);
-    rewriter.replaceOpWithNewOp<SelectOp>(op, cmp, lhs, rhs);
-    return success();
-  }
-};
-
 struct StdExpandOpsPass : public StdExpandOpsBase<StdExpandOpsPass> {
   void runOnFunction() override {
     MLIRContext &ctx = getContext();
 
     RewritePatternSet patterns(&ctx);
     populateStdExpandOpsPatterns(patterns);
-    arith::populateArithmeticExpandOpsPatterns(patterns);
-
     ConversionTarget target(getContext());
 
     target.addLegalDialect<arith::ArithmeticDialect, memref::MemRefDialect,
                            StandardOpsDialect>();
-    target.addIllegalOp<arith::CeilDivSIOp, arith::FloorDivSIOp>();
     target.addDynamicallyLegalOp<AtomicRMWOp>([](AtomicRMWOp op) {
       return op.getKind() != AtomicRMWKind::maxf &&
              op.getKind() != AtomicRMWKind::minf;
@@ -183,16 +136,6 @@ struct StdExpandOpsPass : public StdExpandOpsBase<StdExpandOpsPass> {
     target.addDynamicallyLegalOp<memref::ReshapeOp>([](memref::ReshapeOp op) {
       return !op.shape().getType().cast<MemRefType>().hasStaticShape();
     });
-    // clang-format off
-    target.addIllegalOp<
-      MaxFOp,
-      MaxSIOp,
-      MaxUIOp,
-      MinFOp,
-      MinSIOp,
-      MinUIOp
-    >();
-    // clang-format on
     if (failed(
             applyPartialConversion(getFunction(), target, std::move(patterns))))
       signalPassFailure();
@@ -202,18 +145,8 @@ struct StdExpandOpsPass : public StdExpandOpsBase<StdExpandOpsPass> {
 } // namespace
 
 void mlir::populateStdExpandOpsPatterns(RewritePatternSet &patterns) {
-  // clang-format off
-  patterns.add<
-    AtomicRMWOpConverter,
-    MaxMinFOpConverter<MaxFOp, arith::CmpFPredicate::OGT>,
-    MaxMinFOpConverter<MinFOp, arith::CmpFPredicate::OLT>,
-    MaxMinIOpConverter<MaxSIOp, arith::CmpIPredicate::sgt>,
-    MaxMinIOpConverter<MaxUIOp, arith::CmpIPredicate::ugt>,
-    MaxMinIOpConverter<MinSIOp, arith::CmpIPredicate::slt>,
-    MaxMinIOpConverter<MinUIOp, arith::CmpIPredicate::ult>,
-    MemRefReshapeOpConverter
-  >(patterns.getContext());
-  // clang-format on
+  patterns.add<AtomicRMWOpConverter, MemRefReshapeOpConverter>(
+      patterns.getContext());
 }
 
 std::unique_ptr<Pass> mlir::createStdExpandOpsPass() {

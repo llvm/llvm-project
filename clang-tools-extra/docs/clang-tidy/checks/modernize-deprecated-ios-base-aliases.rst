@@ -12,6 +12,6 @@ Deprecated member type               Replacement
 ``std::ios_base::io_state``          ``std::ios_base::iostate``
 ``std::ios_base::open_mode``         ``std::ios_base::openmode``
 ``std::ios_base::seek_dir``          ``std::ios_base::seekdir``
-``std::ios_base::streamoff``          
-``std::ios_base::streampos``         
+``std::ios_base::streamoff``
+``std::ios_base::streampos``
 ===================================  ===========================

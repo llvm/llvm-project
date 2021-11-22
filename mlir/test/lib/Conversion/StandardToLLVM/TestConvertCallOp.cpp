@@ -52,6 +52,9 @@ public:
     typeConverter.addConversion([&](test::TestType type) {
       return LLVM::LLVMPointerType::get(IntegerType::get(m.getContext(), 8));
     });
+    typeConverter.addConversion([&](test::SimpleAType type) {
+      return IntegerType::get(type.getContext(), 42);
+    });
 
     // Populate patterns.
     RewritePatternSet patterns(m.getContext());

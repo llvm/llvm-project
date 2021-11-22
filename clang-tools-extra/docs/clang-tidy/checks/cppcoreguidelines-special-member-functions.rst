@@ -27,21 +27,21 @@ Options
 
    When set to `true` (default is `false`), this check doesn't flag classes with a sole, explicitly
    defaulted destructor. An example for such a class is:
-   
+
    .. code-block:: c++
-   
+
      struct A {
        virtual ~A() = default;
      };
-   
+
 .. option:: AllowMissingMoveFunctions
 
    When set to `true` (default is `false`), this check doesn't flag classes which define no move
    operations at all. It still flags classes which define only one of either
    move constructor or move assignment operator. With this option enabled, the following class won't be flagged:
-   
+
    .. code-block:: c++
-   
+
      struct A {
        A(const A&);
        A& operator=(const A&);
@@ -52,11 +52,11 @@ Options
 
    When set to `true` (default is `false`), this check doesn't flag classes which define deleted copy
    operations but don't define move operations. This flag is related to Google C++ Style Guide
-   https://google.github.io/styleguide/cppguide.html#Copyable_Movable_Types. With this option enabled, the 
+   https://google.github.io/styleguide/cppguide.html#Copyable_Movable_Types. With this option enabled, the
    following class won't be flagged:
-   
+
    .. code-block:: c++
-   
+
      struct A {
        A(const A&) = delete;
        A& operator=(const A&) = delete;

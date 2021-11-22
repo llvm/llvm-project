@@ -23,6 +23,18 @@ add_custom_target(swig_wrapper_python ALL DEPENDS
   ${CMAKE_CURRENT_BINARY_DIR}/lldb.py
 )
 
+if (NOT WIN32)
+add_custom_command(
+  OUTPUT  ${LLVM_RUNTIME_OUTPUT_INTDIR}/lldb-python
+  VERBATIM
+  COMMAND ${CMAKE_COMMAND} -E copy lldb-python ${LLVM_RUNTIME_OUTPUT_INTDIR}/lldb-python
+  WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+)
+add_custom_target(lldb-python-wrapper ALL DEPENDS
+  ${LLVM_RUNTIME_OUTPUT_INTDIR}/lldb-python
+)
+endif()
+
 function(create_python_package swig_target working_dir pkg_dir)
   cmake_parse_arguments(ARG "NOINIT" "" "FILES" ${ARGN})
   if(ARG_FILES)
@@ -137,17 +149,14 @@ function(finish_swig_python swig_target lldb_python_bindings_dir lldb_python_tar
   else()
     set(LIBLLDB_SYMLINK_DEST "${LLVM_SHLIB_OUTPUT_INTDIR}/liblldb${CMAKE_SHARED_LIBRARY_SUFFIX}")
   endif()
-  if(WIN32)
-    if(CMAKE_BUILD_TYPE STREQUAL Debug)
-      set(LIBLLDB_SYMLINK_OUTPUT_FILE "_lldb_d.pyd")
-    else()
-      set(LIBLLDB_SYMLINK_OUTPUT_FILE "_lldb.pyd")
-    endif()
-  else()
-    set(LIBLLDB_SYMLINK_OUTPUT_FILE "_lldb.so")
-  endif()
+  set(LIBLLDB_SYMLINK_OUTPUT_FILE "_lldb${LLDB_PYTHON_EXT_SUFFIX}")
   create_relative_symlink(${swig_target} ${LIBLLDB_SYMLINK_DEST}
                           ${lldb_python_target_dir} ${LIBLLDB_SYMLINK_OUTPUT_FILE})
+
+
+  if (NOT WIN32)
+  add_dependencies(${swig_target} lldb-python-wrapper)
+  endif()
 
   if(NOT LLDB_BUILD_FRAMEWORK)
     set(LLDB_ARGDUMPER_FILENAME "lldb-argdumper${CMAKE_EXECUTABLE_SUFFIX}")

@@ -322,7 +322,7 @@ static void collectStatsForDie(DWARFDie Die, const std::string &FnPrefix,
                                U->getFormParams().Format);
     // Consider the expression containing the DW_OP_entry_value as
     // an entry value.
-    return llvm::any_of(Expression, [](DWARFExpression::Operation &Op) {
+    return llvm::any_of(Expression, [](const DWARFExpression::Operation &Op) {
       return Op.getCode() == dwarf::DW_OP_entry_value ||
              Op.getCode() == dwarf::DW_OP_GNU_entry_value;
     });

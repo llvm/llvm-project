@@ -5,7 +5,7 @@ objc-avoid-nserror-init
 
 Finds improper initialization of ``NSError`` objects.
 
-According to Apple developer document, we should always use factory method 
+According to Apple developer document, we should always use factory method
 ``errorWithDomain:code:userInfo:`` to create new NSError objects instead
 of ``[NSError alloc] init]``. Otherwise it will lead to a warning message
 during runtime.

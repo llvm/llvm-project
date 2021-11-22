@@ -410,6 +410,36 @@ FileSpec ScriptInterpreterPython::GetPythonDir() {
   return g_spec;
 }
 
+static const char GetInterpreterInfoScript[] = R"(
+import os
+import sys
+
+def main(lldb_python_dir, python_exe_relative_path):
+  info = {
+    "lldb-pythonpath": lldb_python_dir,
+    "language": "python",
+    "prefix": sys.prefix,
+    "executable": os.path.join(sys.prefix, python_exe_relative_path)
+  }
+  return info
+)";
+
+static const char python_exe_relative_path[] = LLDB_PYTHON_EXE_RELATIVE_PATH;
+
+StructuredData::DictionarySP ScriptInterpreterPython::GetInterpreterInfo() {
+  GIL gil;
+  FileSpec python_dir_spec = GetPythonDir();
+  if (!python_dir_spec)
+    return nullptr;
+  PythonScript get_info(GetInterpreterInfoScript);
+  auto info_json = unwrapIgnoringErrors(
+      As<PythonDictionary>(get_info(PythonString(python_dir_spec.GetPath()),
+                                    PythonString(python_exe_relative_path))));
+  if (!info_json)
+    return nullptr;
+  return info_json.CreateStructuredDictionary();
+}
+
 void ScriptInterpreterPython::SharedLibraryDirectoryHelper(
     FileSpec &this_file) {
   // When we're loaded from python, this_file will point to the file inside the

@@ -81,10 +81,10 @@ def FileLineColLoc : Builtin_LocationAttr<"FileLineColLoc"> {
     loc("mysource.cc":10:8)
     ```
   }];
-  let parameters = (ins "Identifier":$filename, "unsigned":$line,
+  let parameters = (ins "StringAttr":$filename, "unsigned":$line,
                         "unsigned":$column);
   let builders = [
-    AttrBuilderWithInferredContext<(ins "Identifier":$filename,
+    AttrBuilderWithInferredContext<(ins "StringAttr":$filename,
                                         "unsigned":$line,
                                         "unsigned":$column), [{
       return $_get(filename.getContext(), filename, line, column);
@@ -92,7 +92,7 @@ def FileLineColLoc : Builtin_LocationAttr<"FileLineColLoc"> {
     AttrBuilder<(ins "StringRef":$filename, "unsigned":$line,
                      "unsigned":$column), [{
       return $_get($_ctxt,
-                   Identifier::get(filename.empty() ? "-" : filename, $_ctxt),
+                   StringAttr::get($_ctxt, filename.empty() ? "-" : filename),
                    line, column);
     }]>
   ];
@@ -161,13 +161,13 @@ def NameLoc : Builtin_LocationAttr<"NameLoc"> {
     loc("CSE"("mysource.cc":10:8))
     ```
   }];
-  let parameters = (ins "Identifier":$name, "Location":$childLoc);
+  let parameters = (ins "StringAttr":$name, "Location":$childLoc);
   let builders = [
-    AttrBuilderWithInferredContext<(ins "Identifier":$name,
+    AttrBuilderWithInferredContext<(ins "StringAttr":$name,
                                         "Location":$childLoc), [{
       return $_get(name.getContext(), name, childLoc);
     }]>,
-    AttrBuilderWithInferredContext<(ins "Identifier":$name), [{
+    AttrBuilderWithInferredContext<(ins "StringAttr":$name), [{
       return $_get(name.getContext(), name,
                    UnknownLoc::get(name.getContext()));
     }]>

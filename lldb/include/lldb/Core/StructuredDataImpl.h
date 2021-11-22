@@ -152,6 +152,8 @@ public:
     return (::snprintf(dst, dst_len, "%s", result.data()));
   }
 
+  StructuredData::ObjectSP GetObjectSP() const { return m_data_sp; }
+
 private:
   lldb::StructuredDataPluginWP m_plugin_wp;
   StructuredData::ObjectSP m_data_sp;

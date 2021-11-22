@@ -2,6 +2,8 @@
 
 // Test ARM64 SIMD copy vector element to vector element: vcopyq_lane*
 
+// REQUIRES: aarch64-registered-target || arm-registered-target
+
 #include <arm_neon.h>
 
 // CHECK-LABEL: define{{.*}} <16 x i8> @test_vcopyq_laneq_s8(<16 x i8> %a1, <16 x i8> %a2) #0 {

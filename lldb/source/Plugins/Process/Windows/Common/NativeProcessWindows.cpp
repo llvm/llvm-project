@@ -621,7 +621,7 @@ NativeProcessWindows::Factory::Attach(
     lldb::pid_t pid, NativeProcessProtocol::NativeDelegate &native_delegate,
     MainLoop &mainloop) const {
   Error E = Error::success();
-  // Set pty master fd invalid since it is not available.
+  // Set pty primary fd invalid since it is not available.
   auto process_up = std::unique_ptr<NativeProcessWindows>(
       new NativeProcessWindows(pid, -1, native_delegate, E));
   if (E)

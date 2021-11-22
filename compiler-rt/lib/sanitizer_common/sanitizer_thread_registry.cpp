@@ -13,6 +13,8 @@
 
 #include "sanitizer_thread_registry.h"
 
+#include "sanitizer_placement_new.h"
+
 namespace __sanitizer {
 
 ThreadContextBase::ThreadContextBase(u32 tid)
@@ -162,6 +164,12 @@ u32 ThreadRegistry::CreateThread(uptr user_id, bool detached, u32 parent_tid,
     max_alive_threads_++;
     CHECK_EQ(alive_threads_, max_alive_threads_);
   }
+  if (user_id) {
+    // Ensure that user_id is unique. If it's not the case we are screwed.
+    // Ignoring this situation may lead to very hard to debug false
+    // positives later (e.g. if we join a wrong thread).
+    CHECK(live_.try_emplace(user_id, tid).second);
+  }
   tctx->SetCreated(user_id, total_threads_++, detached,
                    parent_tid, arg);
   return tid;
@@ -221,14 +229,8 @@ void ThreadRegistry::SetThreadName(u32 tid, const char *name) {
 
 void ThreadRegistry::SetThreadNameByUserId(uptr user_id, const char *name) {
   ThreadRegistryLock l(this);
-  for (u32 tid = 0; tid < threads_.size(); tid++) {
-    ThreadContextBase *tctx = threads_[tid];
-    if (tctx != 0 && tctx->user_id == user_id &&
-        tctx->status != ThreadStatusInvalid) {
-      tctx->SetName(name);
-      return;
-    }
-  }
+  if (const auto *tid = live_.find(user_id))
+    threads_[tid->second]->SetName(name);
 }
 
 void ThreadRegistry::DetachThread(u32 tid, void *arg) {
@@ -241,6 +243,8 @@ void ThreadRegistry::DetachThread(u32 tid, void *arg) {
   }
   tctx->OnDetached(arg);
   if (tctx->status == ThreadStatusFinished) {
+    if (tctx->user_id)
+      live_.erase(tctx->user_id);
     tctx->SetDead();
     QuarantinePush(tctx);
   } else {
@@ -260,6 +264,8 @@ void ThreadRegistry::JoinThread(u32 tid, void *arg) {
         return;
       }
       if ((destroyed = tctx->GetDestroyed())) {
+        if (tctx->user_id)
+          live_.erase(tctx->user_id);
         tctx->SetJoined(arg);
         QuarantinePush(tctx);
       }
@@ -292,6 +298,8 @@ ThreadStatus ThreadRegistry::FinishThread(u32 tid) {
   }
   tctx->SetFinished();
   if (dead) {
+    if (tctx->user_id)
+      live_.erase(tctx->user_id);
     tctx->SetDead();
     QuarantinePush(tctx);
   }
@@ -333,6 +341,19 @@ ThreadContextBase *ThreadRegistry::QuarantinePop() {
   return tctx;
 }
 
+u32 ThreadRegistry::ConsumeThreadUserId(uptr user_id) {
+  ThreadRegistryLock l(this);
+  u32 tid;
+  auto *t = live_.find(user_id);
+  CHECK(t);
+  tid = t->second;
+  live_.erase(t);
+  auto *tctx = threads_[tid];
+  CHECK_EQ(tctx->user_id, user_id);
+  tctx->user_id = 0;
+  return tid;
+}
+
 void ThreadRegistry::SetThreadUserId(u32 tid, uptr user_id) {
   ThreadRegistryLock l(this);
   ThreadContextBase *tctx = threads_[tid];
@@ -341,6 +362,7 @@ void ThreadRegistry::SetThreadUserId(u32 tid, uptr user_id) {
   CHECK_NE(tctx->status, ThreadStatusDead);
   CHECK_EQ(tctx->user_id, 0);
   tctx->user_id = user_id;
+  CHECK(live_.try_emplace(user_id, tctx->tid).second);
 }
 
 }  // namespace __sanitizer

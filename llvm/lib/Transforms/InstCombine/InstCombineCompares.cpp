@@ -4627,16 +4627,39 @@ static Instruction *foldICmpWithTrunc(ICmpInst &ICmp,
   unsigned SrcBits = X->getType()->getScalarSizeInBits();
   if (Pred == ICmpInst::ICMP_ULT) {
     if (C->isPowerOf2()) {
-      // If C is a power-of-2:
+      // If C is a power-of-2 (one set bit):
       // (trunc X) u< C --> (X & -C) == 0 (are all masked-high-bits clear?)
       Constant *MaskC = ConstantInt::get(X->getType(), (-*C).zext(SrcBits));
       Value *And = Builder.CreateAnd(X, MaskC);
       Constant *Zero = ConstantInt::getNullValue(X->getType());
       return new ICmpInst(ICmpInst::ICMP_EQ, And, Zero);
     }
-    // TODO: Handle C is negative-power-of-2.
+    // If C is a negative power-of-2 (high-bit mask):
+    // (trunc X) u< C --> (X & C) != C (are any masked-high-bits clear?)
+    if (C->isNegatedPowerOf2()) {
+      Constant *MaskC = ConstantInt::get(X->getType(), C->zext(SrcBits));
+      Value *And = Builder.CreateAnd(X, MaskC);
+      return new ICmpInst(ICmpInst::ICMP_NE, And, MaskC);
+    }
   }
-  // TODO: Handle ugt.
+
+  if (Pred == ICmpInst::ICMP_UGT) {
+    // If C is a low-bit-mask (C+1 is a power-of-2):
+    // (trunc X) u> C --> (X & ~C) != 0 (are any masked-high-bits set?)
+    if (C->isMask()) {
+      Constant *MaskC = ConstantInt::get(X->getType(), (~*C).zext(SrcBits));
+      Value *And = Builder.CreateAnd(X, MaskC);
+      Constant *Zero = ConstantInt::getNullValue(X->getType());
+      return new ICmpInst(ICmpInst::ICMP_NE, And, Zero);
+    }
+    // If C is not-of-power-of-2 (one clear bit):
+    // (trunc X) u> C --> (X & (C+1)) == C+1 (are all masked-high-bits set?)
+    if ((~*C).isPowerOf2()) {
+      Constant *MaskC = ConstantInt::get(X->getType(), (*C + 1).zext(SrcBits));
+      Value *And = Builder.CreateAnd(X, MaskC);
+      return new ICmpInst(ICmpInst::ICMP_EQ, And, MaskC);
+    }
+  }
 
   return nullptr;
 }

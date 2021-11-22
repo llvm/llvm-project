@@ -22,12 +22,9 @@ define i16 @full_unroll_multiple_exiting_blocks(i16* %A, i16 %x, i16 %y) {
 ; CHECK-NEXT:    [[LV_1:%.*]] = load i16, i16* [[PTR_1]], align 2
 ; CHECK-NEXT:    [[RES_NEXT_1:%.*]] = add i16 [[RES_NEXT]], [[LV_1]]
 ; CHECK-NEXT:    br label [[EXITING_1_1:%.*]]
-; CHECK:       exit:
-; CHECK-NEXT:    [[RES_LCSSA:%.*]] = phi i16 [ 0, [[EXITING_1]] ], [ 1, [[EXITING_2]] ], [ 0, [[EXITING_1_1]] ], [ 1, [[EXITING_2_1:%.*]] ], [ 0, [[EXITING_1_2:%.*]] ], [ 1, [[EXITING_2_2:%.*]] ], [ [[RES_NEXT_3:%.*]], [[LATCH_2:%.*]] ], [ 0, [[EXITING_1_3:%.*]] ], [ 1, [[EXITING_2_3:%.*]] ]
-; CHECK-NEXT:    ret i16 [[RES_LCSSA]]
 ; CHECK:       exiting.1.1:
 ; CHECK-NEXT:    [[EC_1_1:%.*]] = icmp eq i16 [[LV_1]], [[X]]
-; CHECK-NEXT:    br i1 [[EC_1_1]], label [[EXIT]], label [[EXITING_2_1]]
+; CHECK-NEXT:    br i1 [[EC_1_1]], label [[EXIT]], label [[EXITING_2_1:%.*]]
 ; CHECK:       exiting.2.1:
 ; CHECK-NEXT:    [[EC_2_1:%.*]] = icmp eq i16 [[LV_1]], [[Y]]
 ; CHECK-NEXT:    br i1 [[EC_2_1]], label [[EXIT]], label [[LATCH_1:%.*]]
@@ -35,26 +32,29 @@ define i16 @full_unroll_multiple_exiting_blocks(i16* %A, i16 %x, i16 %y) {
 ; CHECK-NEXT:    [[PTR_2:%.*]] = getelementptr inbounds i16, i16* [[A]], i64 2
 ; CHECK-NEXT:    [[LV_2:%.*]] = load i16, i16* [[PTR_2]], align 2
 ; CHECK-NEXT:    [[RES_NEXT_2:%.*]] = add i16 [[RES_NEXT_1]], [[LV_2]]
-; CHECK-NEXT:    br label [[EXITING_1_2]]
+; CHECK-NEXT:    br label [[EXITING_1_2:%.*]]
 ; CHECK:       exiting.1.2:
 ; CHECK-NEXT:    [[EC_1_2:%.*]] = icmp eq i16 [[LV_2]], [[X]]
-; CHECK-NEXT:    br i1 [[EC_1_2]], label [[EXIT]], label [[EXITING_2_2]]
+; CHECK-NEXT:    br i1 [[EC_1_2]], label [[EXIT]], label [[EXITING_2_2:%.*]]
 ; CHECK:       exiting.2.2:
 ; CHECK-NEXT:    [[EC_2_2:%.*]] = icmp eq i16 [[LV_2]], [[Y]]
-; CHECK-NEXT:    br i1 [[EC_2_2]], label [[EXIT]], label [[LATCH_2]]
+; CHECK-NEXT:    br i1 [[EC_2_2]], label [[EXIT]], label [[LATCH_2:%.*]]
 ; CHECK:       latch.2:
 ; CHECK-NEXT:    [[PTR_3:%.*]] = getelementptr inbounds i16, i16* [[A]], i64 3
 ; CHECK-NEXT:    [[LV_3:%.*]] = load i16, i16* [[PTR_3]], align 2
-; CHECK-NEXT:    [[RES_NEXT_3]] = add i16 [[RES_NEXT_2]], [[LV_3]]
-; CHECK-NEXT:    br i1 false, label [[EXITING_1_3]], label [[EXIT]]
+; CHECK-NEXT:    [[RES_NEXT_3:%.*]] = add i16 [[RES_NEXT_2]], [[LV_3]]
+; CHECK-NEXT:    br i1 false, label [[EXITING_1_3:%.*]], label [[EXIT]]
 ; CHECK:       exiting.1.3:
 ; CHECK-NEXT:    [[EC_1_3:%.*]] = icmp eq i16 [[LV_3]], [[X]]
-; CHECK-NEXT:    br i1 [[EC_1_3]], label [[EXIT]], label [[EXITING_2_3]]
+; CHECK-NEXT:    br i1 [[EC_1_3]], label [[EXIT]], label [[EXITING_2_3:%.*]]
 ; CHECK:       exiting.2.3:
 ; CHECK-NEXT:    [[EC_2_3:%.*]] = icmp eq i16 [[LV_3]], [[Y]]
 ; CHECK-NEXT:    br i1 [[EC_2_3]], label [[EXIT]], label [[LATCH_3:%.*]]
 ; CHECK:       latch.3:
 ; CHECK-NEXT:    unreachable
+; CHECK:       exit:
+; CHECK-NEXT:    [[RES_LCSSA:%.*]] = phi i16 [ 0, [[EXITING_1]] ], [ 1, [[EXITING_2]] ], [ 0, [[EXITING_1_1]] ], [ 1, [[EXITING_2_1]] ], [ 0, [[EXITING_1_2]] ], [ 1, [[EXITING_2_2]] ], [ [[RES_NEXT_3]], [[LATCH_2]] ], [ 0, [[EXITING_1_3]] ], [ 1, [[EXITING_2_3]] ]
+; CHECK-NEXT:    ret i16 [[RES_LCSSA]]
 ;
 entry:
   br label %header

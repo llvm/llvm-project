@@ -89,7 +89,11 @@ template <> union FPBits<long double> {
 
   template <typename XType,
             cpp::EnableIfType<cpp::IsSame<long double, XType>::Value, int> = 0>
-  explicit FPBits(XType x) : val(x) {}
+  explicit FPBits(XType x) : val(x) {
+    // bits starts uninitialized, and setting it to a long double only
+    // overwrites the first 80 bits. This clears those upper bits.
+    bits = bits & ((UIntType(1) << 80) - 1);
+  }
 
   template <typename XType,
             cpp::EnableIfType<cpp::IsSame<XType, UIntType>::Value, int> = 0>

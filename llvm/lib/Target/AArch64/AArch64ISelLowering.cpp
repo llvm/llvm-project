@@ -895,9 +895,10 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
   setTargetDAGCombine(ISD::SINT_TO_FP);
   setTargetDAGCombine(ISD::UINT_TO_FP);
 
-  // TODO: Do the same for FP_TO_*INT_SAT.
   setTargetDAGCombine(ISD::FP_TO_SINT);
   setTargetDAGCombine(ISD::FP_TO_UINT);
+  setTargetDAGCombine(ISD::FP_TO_SINT_SAT);
+  setTargetDAGCombine(ISD::FP_TO_UINT_SAT);
   setTargetDAGCombine(ISD::FDIV);
 
   // Try and combine setcc with csel
@@ -1014,10 +1015,6 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
     // elements smaller than i32, so promote the input to i32 first.
     setOperationPromotedToType(ISD::UINT_TO_FP, MVT::v4i8, MVT::v4i32);
     setOperationPromotedToType(ISD::SINT_TO_FP, MVT::v4i8, MVT::v4i32);
-    setOperationPromotedToType(ISD::SINT_TO_FP, MVT::v8i8, MVT::v8i32);
-    setOperationPromotedToType(ISD::UINT_TO_FP, MVT::v8i8, MVT::v8i32);
-    setOperationPromotedToType(ISD::UINT_TO_FP, MVT::v16i8, MVT::v16i32);
-    setOperationPromotedToType(ISD::SINT_TO_FP, MVT::v16i8, MVT::v16i32);
 
     // Similarly, there is no direct i32 -> f64 vector conversion instruction.
     setOperationAction(ISD::SINT_TO_FP, MVT::v2i32, Custom);
@@ -1030,6 +1027,10 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::UINT_TO_FP, MVT::v4i32, Custom);
 
     if (Subtarget->hasFullFP16()) {
+      setOperationAction(ISD::SINT_TO_FP, MVT::v8i8, Custom);
+      setOperationAction(ISD::UINT_TO_FP, MVT::v8i8, Custom);
+      setOperationAction(ISD::SINT_TO_FP, MVT::v16i8, Custom);
+      setOperationAction(ISD::UINT_TO_FP, MVT::v16i8, Custom);
       setOperationAction(ISD::SINT_TO_FP, MVT::v4i16, Custom);
       setOperationAction(ISD::UINT_TO_FP, MVT::v4i16, Custom);
       setOperationAction(ISD::SINT_TO_FP, MVT::v8i16, Custom);
@@ -1037,6 +1038,10 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
     } else {
       // when AArch64 doesn't have fullfp16 support, promote the input
       // to i32 first.
+      setOperationPromotedToType(ISD::SINT_TO_FP, MVT::v8i8, MVT::v8i32);
+      setOperationPromotedToType(ISD::UINT_TO_FP, MVT::v8i8, MVT::v8i32);
+      setOperationPromotedToType(ISD::UINT_TO_FP, MVT::v16i8, MVT::v16i32);
+      setOperationPromotedToType(ISD::SINT_TO_FP, MVT::v16i8, MVT::v16i32);
       setOperationPromotedToType(ISD::UINT_TO_FP, MVT::v4i16, MVT::v4i32);
       setOperationPromotedToType(ISD::SINT_TO_FP, MVT::v4i16, MVT::v4i32);
       setOperationPromotedToType(ISD::SINT_TO_FP, MVT::v8i16, MVT::v8i32);
@@ -2281,9 +2286,15 @@ MachineBasicBlock *AArch64TargetLowering::EmitInstrWithCustomInserter(
   case AArch64::F128CSEL:
     return EmitF128CSEL(MI, BB);
 
+  case TargetOpcode::STATEPOINT:
+    // STATEPOINT is a pseudo instruction which has no implicit defs/uses
+    // while bl call instruction (where statepoint will be lowered at the end)
+    // has implicit def. Add this implicit dead def here as a workaround.
+    MI.addOperand(*MI.getMF(), MachineOperand::CreateReg(AArch64::LR, true,
+                                                         true, false, true));
+    LLVM_FALLTHROUGH;
   case TargetOpcode::STACKMAP:
   case TargetOpcode::PATCHPOINT:
-  case TargetOpcode::STATEPOINT:
     return emitPatchPoint(MI, BB);
 
   case AArch64::CATCHRET:
@@ -5857,10 +5868,8 @@ SDValue AArch64TargetLowering::addTokenForArgument(SDValue Chain,
   ArgChains.push_back(Chain);
 
   // Add a chain value for each stack argument corresponding
-  for (SDNode::use_iterator U = DAG.getEntryNode().getNode()->use_begin(),
-                            UE = DAG.getEntryNode().getNode()->use_end();
-       U != UE; ++U)
-    if (LoadSDNode *L = dyn_cast<LoadSDNode>(*U))
+  for (SDNode *U : DAG.getEntryNode().getNode()->uses())
+    if (LoadSDNode *L = dyn_cast<LoadSDNode>(U))
       if (FrameIndexSDNode *FI = dyn_cast<FrameIndexSDNode>(L->getBasePtr()))
         if (FI->getIndex() < 0) {
           int64_t InFirstByte = MFI.getObjectOffset(FI->getIndex());
@@ -8941,7 +8950,7 @@ SDValue AArch64TargetLowering::ReconstructShuffle(SDValue Op,
     Src.WindowBase *= Src.WindowScale;
   }
 
-  // Final sanity check before we try to actually produce a shuffle.
+  // Final check before we try to actually produce a shuffle.
   LLVM_DEBUG(for (auto Src
                   : Sources)
                  assert(Src.ShuffleVec.getValueType() == ShuffleVT););
@@ -13394,7 +13403,8 @@ static SDValue performFpToIntCombine(SDNode *N, SelectionDAG &DAG,
 
   MVT FloatTy = Op.getSimpleValueType().getVectorElementType();
   uint32_t FloatBits = FloatTy.getSizeInBits();
-  if (FloatBits != 32 && FloatBits != 64)
+  if (FloatBits != 32 && FloatBits != 64 &&
+      (FloatBits != 16 || !Subtarget->hasFullFP16()))
     return SDValue();
 
   MVT IntTy = N->getSimpleValueType(0).getVectorElementType();
@@ -13413,27 +13423,20 @@ static SDValue performFpToIntCombine(SDNode *N, SelectionDAG &DAG,
   if (C == -1 || C == 0 || C > Bits)
     return SDValue();
 
-  MVT ResTy;
-  unsigned NumLanes = Op.getValueType().getVectorNumElements();
-  switch (NumLanes) {
-  default:
+  EVT ResTy = Op.getValueType().changeVectorElementTypeToInteger();
+  if (!DAG.getTargetLoweringInfo().isTypeLegal(ResTy))
     return SDValue();
-  case 2:
-    ResTy = FloatBits == 32 ? MVT::v2i32 : MVT::v2i64;
-    break;
-  case 4:
-    ResTy = FloatBits == 32 ? MVT::v4i32 : MVT::v4i64;
-    break;
+
+  if (N->getOpcode() == ISD::FP_TO_SINT_SAT ||
+      N->getOpcode() == ISD::FP_TO_UINT_SAT) {
+    EVT SatVT = cast<VTSDNode>(N->getOperand(1))->getVT();
+    if (SatVT.getScalarSizeInBits() != IntBits)
+      return SDValue();
   }
 
-  if (ResTy == MVT::v4i64 && DCI.isBeforeLegalizeOps())
-    return SDValue();
-
-  assert((ResTy != MVT::v4i64 || DCI.isBeforeLegalizeOps()) &&
-         "Illegal vector type after legalization");
-
   SDLoc DL(N);
-  bool IsSigned = N->getOpcode() == ISD::FP_TO_SINT;
+  bool IsSigned = (N->getOpcode() == ISD::FP_TO_SINT ||
+                   N->getOpcode() == ISD::FP_TO_SINT_SAT);
   unsigned IntrinsicOpcode = IsSigned ? Intrinsic::aarch64_neon_vcvtfp2fxs
                                       : Intrinsic::aarch64_neon_vcvtfp2fxu;
   SDValue FixConv =
@@ -17241,6 +17244,8 @@ SDValue AArch64TargetLowering::PerformDAGCombine(SDNode *N,
     return performIntToFpCombine(N, DAG, Subtarget);
   case ISD::FP_TO_SINT:
   case ISD::FP_TO_UINT:
+  case ISD::FP_TO_SINT_SAT:
+  case ISD::FP_TO_UINT_SAT:
     return performFpToIntCombine(N, DAG, DCI, Subtarget);
   case ISD::FDIV:
     return performFDivCombine(N, DAG, DCI, Subtarget);

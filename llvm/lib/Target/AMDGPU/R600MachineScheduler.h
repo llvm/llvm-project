@@ -63,7 +63,7 @@ class R600SchedStrategy final : public MachineSchedStrategy {
 
   int InstKindLimit[IDLast];
 
-  int OccupedSlotsMask;
+  int OccupiedSlotsMask;
 
 public:
   R600SchedStrategy() = default;

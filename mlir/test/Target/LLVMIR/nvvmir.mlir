@@ -42,9 +42,21 @@ llvm.func @nvvm_shfl(
     %0 : i32, %1 : i32, %2 : i32,
     %3 : i32, %4 : f32) -> i32 {
   // CHECK: call i32 @llvm.nvvm.shfl.sync.bfly.i32(i32 %{{.*}}, i32 %{{.*}}, i32 %{{.*}}, i32 %{{.*}})
-  %6 = nvvm.shfl.sync.bfly %0, %3, %1, %2 : i32
+  %6 = nvvm.shfl.sync "bfly" %0, %3, %1, %2 : i32 -> i32
   // CHECK: call float @llvm.nvvm.shfl.sync.bfly.f32(i32 %{{.*}}, float %{{.*}}, i32 %{{.*}}, i32 %{{.*}})
-  %7 = nvvm.shfl.sync.bfly %0, %4, %1, %2 : f32
+  %7 = nvvm.shfl.sync "bfly" %0, %4, %1, %2 : f32 -> f32
+  // CHECK: call i32 @llvm.nvvm.shfl.sync.up.i32(i32 %{{.*}}, i32 %{{.*}}, i32 %{{.*}}, i32 %{{.*}})
+  %8 = nvvm.shfl.sync "up" %0, %3, %1, %2 : i32 -> i32
+  // CHECK: call float @llvm.nvvm.shfl.sync.up.f32(i32 %{{.*}}, float %{{.*}}, i32 %{{.*}}, i32 %{{.*}})
+  %9 = nvvm.shfl.sync "up" %0, %4, %1, %2 : f32 -> f32
+  // CHECK: call i32 @llvm.nvvm.shfl.sync.down.i32(i32 %{{.*}}, i32 %{{.*}}, i32 %{{.*}}, i32 %{{.*}})
+  %10 = nvvm.shfl.sync "down" %0, %3, %1, %2 : i32 -> i32
+  // CHECK: call float @llvm.nvvm.shfl.sync.down.f32(i32 %{{.*}}, float %{{.*}}, i32 %{{.*}}, i32 %{{.*}})
+  %11 = nvvm.shfl.sync "down" %0, %4, %1, %2 : f32 -> f32
+  // CHECK: call i32 @llvm.nvvm.shfl.sync.idx.i32(i32 %{{.*}}, i32 %{{.*}}, i32 %{{.*}}, i32 %{{.*}})
+  %12 = nvvm.shfl.sync "idx" %0, %3, %1, %2 : i32 -> i32
+  // CHECK: call float @llvm.nvvm.shfl.sync.idx.f32(i32 %{{.*}}, float %{{.*}}, i32 %{{.*}}, i32 %{{.*}})
+  %13 = nvvm.shfl.sync "idx" %0, %4, %1, %2 : f32 -> f32
   llvm.return %6 : i32
 }
 
@@ -52,9 +64,21 @@ llvm.func @nvvm_shfl_pred(
     %0 : i32, %1 : i32, %2 : i32,
     %3 : i32, %4 : f32) -> !llvm.struct<(i32, i1)> {
   // CHECK: call { i32, i1 } @llvm.nvvm.shfl.sync.bfly.i32p(i32 %{{.*}}, i32 %{{.*}}, i32 %{{.*}}, i32 %{{.*}})
-  %6 = nvvm.shfl.sync.bfly %0, %3, %1, %2 {return_value_and_is_valid} : !llvm.struct<(i32, i1)>
+  %6 = nvvm.shfl.sync "bfly" %0, %3, %1, %2 {return_value_and_is_valid} : i32 -> !llvm.struct<(i32, i1)>
   // CHECK: call { float, i1 } @llvm.nvvm.shfl.sync.bfly.f32p(i32 %{{.*}}, float %{{.*}}, i32 %{{.*}}, i32 %{{.*}})
-  %7 = nvvm.shfl.sync.bfly %0, %4, %1, %2 {return_value_and_is_valid} : !llvm.struct<(f32, i1)>
+  %7 = nvvm.shfl.sync "bfly" %0, %4, %1, %2 {return_value_and_is_valid} : f32 -> !llvm.struct<(f32, i1)>
+  // CHECK: call { i32, i1 } @llvm.nvvm.shfl.sync.up.i32p(i32 %{{.*}}, i32 %{{.*}}, i32 %{{.*}}, i32 %{{.*}})
+  %8 = nvvm.shfl.sync "up" %0, %3, %1, %2 {return_value_and_is_valid} : i32 -> !llvm.struct<(i32, i1)>
+  // CHECK: call { float, i1 } @llvm.nvvm.shfl.sync.up.f32p(i32 %{{.*}}, float %{{.*}}, i32 %{{.*}}, i32 %{{.*}})
+  %9 = nvvm.shfl.sync "up" %0, %4, %1, %2 {return_value_and_is_valid} : f32 -> !llvm.struct<(f32, i1)>
+  // CHECK: call { i32, i1 } @llvm.nvvm.shfl.sync.down.i32p(i32 %{{.*}}, i32 %{{.*}}, i32 %{{.*}}, i32 %{{.*}})
+  %10 = nvvm.shfl.sync "down" %0, %3, %1, %2 {return_value_and_is_valid} : i32 -> !llvm.struct<(i32, i1)>
+  // CHECK: call { float, i1 } @llvm.nvvm.shfl.sync.down.f32p(i32 %{{.*}}, float %{{.*}}, i32 %{{.*}}, i32 %{{.*}})
+  %11 = nvvm.shfl.sync "down" %0, %4, %1, %2 {return_value_and_is_valid} : f32 -> !llvm.struct<(f32, i1)>
+  // CHECK: call { i32, i1 } @llvm.nvvm.shfl.sync.idx.i32p(i32 %{{.*}}, i32 %{{.*}}, i32 %{{.*}}, i32 %{{.*}})
+  %12 = nvvm.shfl.sync "idx" %0, %3, %1, %2 {return_value_and_is_valid} : i32 -> !llvm.struct<(i32, i1)>
+  // CHECK: call { float, i1 } @llvm.nvvm.shfl.sync.idx.f32p(i32 %{{.*}}, float %{{.*}}, i32 %{{.*}}, i32 %{{.*}})
+  %13 = nvvm.shfl.sync "idx" %0, %4, %1, %2 {return_value_and_is_valid} : f32 -> !llvm.struct<(f32, i1)>
   llvm.return %6 : !llvm.struct<(i32, i1)>
 }
 

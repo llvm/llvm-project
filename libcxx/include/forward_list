@@ -1,5 +1,5 @@
 // -*- C++ -*-
-//===----------------------- forward_list ---------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -647,7 +647,7 @@ public:
     typedef const value_type&                                          const_reference;
     typedef typename allocator_traits<allocator_type>::pointer         pointer;
     typedef typename allocator_traits<allocator_type>::const_pointer   const_pointer;
-    typedef typename allocator_traits<allocator_type>::size_type       size_type;
+    typedef typename __allocator_traits<allocator_type>::size_type     size_type;
     typedef typename allocator_traits<allocator_type>::difference_type difference_type;
 
     typedef typename base::iterator       iterator;
@@ -873,6 +873,7 @@ private:
 #if _LIBCPP_STD_VER >= 17
 template<class _InputIterator,
          class _Alloc = allocator<__iter_value_type<_InputIterator>>,
+         class = enable_if_t<__is_cpp17_input_iterator<_InputIterator>::value>,
          class = enable_if_t<__is_allocator<_Alloc>::value>
          >
 forward_list(_InputIterator, _InputIterator)
@@ -880,6 +881,7 @@ forward_list(_InputIterator, _InputIterator)
 
 template<class _InputIterator,
          class _Alloc,
+         class = enable_if_t<__is_cpp17_input_iterator<_InputIterator>::value>,
          class = enable_if_t<__is_allocator<_Alloc>::value>
          >
 forward_list(_InputIterator, _InputIterator, _Alloc)
@@ -1585,7 +1587,7 @@ template <class _Compare>
 void
 forward_list<_Tp, _Alloc>::merge(forward_list& __x, _Compare __comp)
 {
-    if (this != &__x)
+    if (this != _VSTD::addressof(__x))
     {
         base::__before_begin()->__next_ = __merge(base::__before_begin()->__next_,
                                                     __x.__before_begin()->__next_,

@@ -120,6 +120,7 @@
 // RUN: %clang -E -dM -target amdgcn -mcpu=gfx1100 %s 2>&1 | FileCheck --check-prefixes=ARCH-GCN,FAST_FMAF %s -DWAVEFRONT_SIZE=32 -DCPU=gfx1100
 // RUN: %clang -E -dM -target amdgcn -mcpu=gfx1101 %s 2>&1 | FileCheck --check-prefixes=ARCH-GCN,FAST_FMAF %s -DWAVEFRONT_SIZE=32 -DCPU=gfx1101
 // RUN: %clang -E -dM -target amdgcn -mcpu=gfx1102 %s 2>&1 | FileCheck --check-prefixes=ARCH-GCN,FAST_FMAF %s -DWAVEFRONT_SIZE=32 -DCPU=gfx1102
+// RUN: %clang -E -dM -target amdgcn -mcpu=gfx1103 %s 2>&1 | FileCheck --check-prefixes=ARCH-GCN,FAST_FMAF %s -DWAVEFRONT_SIZE=32 -DCPU=gfx1103
 
 // ARCH-GCN-DAG: #define FP_FAST_FMA 1
 

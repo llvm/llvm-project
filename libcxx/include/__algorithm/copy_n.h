@@ -57,9 +57,10 @@ typename enable_if
 >::type
 copy_n(_InputIterator __first, _Size __orig_n, _OutputIterator __result)
 {
+    typedef typename iterator_traits<_InputIterator>::difference_type difference_type;
     typedef decltype(_VSTD::__convert_to_integral(__orig_n)) _IntegralSize;
     _IntegralSize __n = __orig_n;
-    return _VSTD::copy(__first, __first + __n, __result);
+    return _VSTD::copy(__first, __first + difference_type(__n), __result);
 }
 
 _LIBCPP_END_NAMESPACE_STD

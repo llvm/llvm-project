@@ -23,7 +23,6 @@
 // CHECK-SAME:      %[[VAL_2:.*]]: tensor<64x32xf64, #sparse_tensor.encoding<{{{.*}}}>>) -> tensor<f64> {
 // CHECK-DAG:       %[[VAL_3:.*]] = arith.constant dense<0.000000e+00> : vector<8xf64>
 // CHECK-DAG:       %[[VAL_4:.*]] = arith.constant 8 : index
-// CHECK-DAG:       %[[VAL_5:.*]] = arith.constant 0 : i32
 // CHECK-DAG:       %[[VAL_6:.*]] = arith.constant 0 : index
 // CHECK-DAG:       %[[VAL_7:.*]] = arith.constant 64 : index
 // CHECK-DAG:       %[[VAL_8:.*]] = arith.constant 1 : index
@@ -89,7 +88,7 @@
 // CHECK:               %[[VAL_63:.*]] = select %[[VAL_61]], %[[VAL_62]], %[[VAL_34]] : index
 // CHECK:               scf.yield %[[VAL_60]], %[[VAL_63]], %[[VAL_64:.*]] : index, index, f64
 // CHECK:             }
-// CHECK:             %[[VAL_65:.*]] = vector.insertelement %[[VAL_66:.*]]#2, %[[VAL_3]]{{\[}}%[[VAL_5]] : i32] : vector<8xf64>
+// CHECK:             %[[VAL_65:.*]] = vector.insertelement %[[VAL_66:.*]]#2, %[[VAL_3]]{{\[}}%[[VAL_6]] : index] : vector<8xf64>
 // CHECK:             %[[VAL_67:.*]] = scf.for %[[VAL_68:.*]] = %[[VAL_66]]#0 to %[[VAL_22]] step %[[VAL_4]] iter_args(%[[VAL_69:.*]] = %[[VAL_65]]) -> (vector<8xf64>) {
 // CHECK:               %[[VAL_70:.*]] = affine.min #map(%[[VAL_22]], %[[VAL_68]])
 // CHECK:               %[[VAL_71:.*]] = vector.create_mask %[[VAL_70]] : vector<8xi1>

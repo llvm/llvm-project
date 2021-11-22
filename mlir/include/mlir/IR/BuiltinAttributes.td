@@ -379,15 +379,15 @@ def Builtin_DictionaryAttr : Builtin_Attr<"Dictionary", [
 
     /// Return the specified attribute if present, null otherwise.
     Attribute get(StringRef name) const;
-    Attribute get(Identifier name) const;
+    Attribute get(StringAttr name) const;
 
     /// Return the specified named attribute if present, None otherwise.
     Optional<NamedAttribute> getNamed(StringRef name) const;
-    Optional<NamedAttribute> getNamed(Identifier name) const;
+    Optional<NamedAttribute> getNamed(StringAttr name) const;
 
     /// Return whether the specified attribute is present.
     bool contains(StringRef name) const;
-    bool contains(Identifier name) const;
+    bool contains(StringAttr name) const;
 
     /// Support range iteration.
     using iterator = llvm::ArrayRef<NamedAttribute>::iterator;
@@ -641,11 +641,11 @@ def Builtin_OpaqueAttr : Builtin_Attr<"Opaque"> {
     #dialect<"opaque attribute data">
     ```
   }];
-  let parameters = (ins "Identifier":$dialectNamespace,
+  let parameters = (ins "StringAttr":$dialectNamespace,
                         StringRefParameter<"">:$attrData,
                         AttributeSelfTypeParameter<"">:$type);
   let builders = [
-    AttrBuilderWithInferredContext<(ins "Identifier":$dialect,
+    AttrBuilderWithInferredContext<(ins "StringAttr":$dialect,
                                         "StringRef":$attrData,
                                         "Type":$type), [{
       return $_get(dialect.getContext(), dialect, attrData, type);
@@ -688,11 +688,11 @@ def Builtin_OpaqueElementsAttr : Builtin_Attr<
 
   // TODO: Provide a way to avoid copying content of large opaque
   // tensors This will likely require a new reference attribute kind.
-  let parameters = (ins "Identifier":$dialect,
+  let parameters = (ins "StringAttr":$dialect,
                         StringRefParameter<"">:$value,
                         AttributeSelfTypeParameter<"", "ShapedType">:$type);
   let builders = [
-    AttrBuilderWithInferredContext<(ins "Identifier":$dialect,
+    AttrBuilderWithInferredContext<(ins "StringAttr":$dialect,
                                         "ShapedType":$type,
                                         "StringRef":$value), [{
       return $_get(dialect.getContext(), dialect, value, type);
@@ -701,7 +701,7 @@ def Builtin_OpaqueElementsAttr : Builtin_Attr<
                                         "ShapedType":$type,
                                         "StringRef":$value), [{
       MLIRContext *ctxt = dialect->getContext();
-      Identifier dialectName = Identifier::get(dialect->getNamespace(), ctxt);
+      StringAttr dialectName = StringAttr::get(ctxt, dialect->getNamespace());
       return $_get(ctxt, dialectName, value, type);
     }]>
   ];
@@ -915,6 +915,44 @@ def Builtin_StringAttr : Builtin_Attr<"String"> {
   let extraClassDeclaration = [{
     using ValueType = StringRef;
 
+    /// If the value of this string is prefixed with a dialect namespace,
+    /// returns the dialect corresponding to that namespace if it is loaded,
+    /// nullptr otherwise. For example, the string `llvm.fastmathflags` would
+    /// return the LLVM dialect, assuming it is loaded in the context.
+    Dialect *getReferencedDialect() const;
+
+    /// Enable conversion to StringRef.
+    operator StringRef() const { return getValue(); }
+
+    /// Returns the underlying string value
+    StringRef strref() const { return getValue(); }
+
+    /// Convert the underling value to an std::string.
+    std::string str() const { return getValue().str(); }
+
+    /// Return a pointer to the start of the string data.
+    const char *data() const { return getValue().data(); }
+
+    /// Return the number of bytes in this string.
+    size_t size() const { return getValue().size(); }
+
+    /// Iterate over the underlying string data.
+    StringRef::iterator begin() const { return getValue().begin(); }
+    StringRef::iterator end() const { return getValue().end(); }
+
+    /// Compare the underlying string value to the one in `rhs`.
+    int compare(StringAttr rhs) const {
+      if (*this == rhs)
+        return 0;
+      return getValue().compare(rhs.getValue());
+    }
+
+    /// FIXME: Defined as part of transition of Identifier->StringAttr. Prefer
+    /// using the other `get` methods instead.
+    static StringAttr get(const Twine &str, MLIRContext *context) {
+      return get(context, str);
+    }
+
   private:
     /// Return an empty StringAttr with NoneType type. This is a special variant
     /// of the `get` method that is used by the MLIRContext to cache the
@@ -923,6 +961,7 @@ def Builtin_StringAttr : Builtin_Attr<"String"> {
     friend MLIRContext;
   public:
   }];
+  let genStorageClass = 0;
   let skipDefaultBuilders = 1;
 }
 

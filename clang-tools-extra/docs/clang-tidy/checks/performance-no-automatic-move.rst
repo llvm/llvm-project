@@ -19,7 +19,7 @@ Example `[1] <https://godbolt.org/z/x7SYYA>`_:
     std::vector<int> obj = ...;
     return obj;  // calls StatusOr::StatusOr(std::vector<int>&&)
   }
-  
+
   StatusOr<std::vector<int>> NotCool() {
     const std::vector<int> obj = ...;
     return obj;  // calls `StatusOr::StatusOr(const std::vector<int>&)`

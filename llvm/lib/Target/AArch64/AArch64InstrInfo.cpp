@@ -4917,6 +4917,55 @@ static bool getFMAPatterns(MachineInstr &Root,
   return Found;
 }
 
+static bool getFMULPatterns(MachineInstr &Root,
+                            SmallVectorImpl<MachineCombinerPattern> &Patterns) {
+  MachineBasicBlock &MBB = *Root.getParent();
+  bool Found = false;
+
+  auto Match = [&](unsigned Opcode, int Operand,
+                   MachineCombinerPattern Pattern) -> bool {
+    MachineRegisterInfo &MRI = MBB.getParent()->getRegInfo();
+    MachineOperand &MO = Root.getOperand(Operand);
+    MachineInstr *MI = nullptr;
+    if (MO.isReg() && Register::isVirtualRegister(MO.getReg()))
+      MI = MRI.getUniqueVRegDef(MO.getReg());
+    if (MI && MI->getOpcode() == Opcode) {
+      Patterns.push_back(Pattern);
+      return true;
+    }
+    return false;
+  };
+
+  typedef MachineCombinerPattern MCP;
+
+  switch (Root.getOpcode()) {
+  default:
+    return false;
+  case AArch64::FMULv2f32:
+    Found = Match(AArch64::DUPv2i32lane, 1, MCP::FMULv2i32_indexed_OP1);
+    Found |= Match(AArch64::DUPv2i32lane, 2, MCP::FMULv2i32_indexed_OP2);
+    break;
+  case AArch64::FMULv2f64:
+    Found = Match(AArch64::DUPv2i64lane, 1, MCP::FMULv2i64_indexed_OP1);
+    Found |= Match(AArch64::DUPv2i64lane, 2, MCP::FMULv2i64_indexed_OP2);
+    break;
+  case AArch64::FMULv4f16:
+    Found = Match(AArch64::DUPv4i16lane, 1, MCP::FMULv4i16_indexed_OP1);
+    Found |= Match(AArch64::DUPv4i16lane, 2, MCP::FMULv4i16_indexed_OP2);
+    break;
+  case AArch64::FMULv4f32:
+    Found = Match(AArch64::DUPv4i32lane, 1, MCP::FMULv4i32_indexed_OP1);
+    Found |= Match(AArch64::DUPv4i32lane, 2, MCP::FMULv4i32_indexed_OP2);
+    break;
+  case AArch64::FMULv8f16:
+    Found = Match(AArch64::DUPv8i16lane, 1, MCP::FMULv8i16_indexed_OP1);
+    Found |= Match(AArch64::DUPv8i16lane, 2, MCP::FMULv8i16_indexed_OP2);
+    break;
+  }
+
+  return Found;
+}
+
 /// Return true when a code sequence can improve throughput. It
 /// should be called only for instructions in loops.
 /// \param Pattern - combiner pattern
@@ -4980,6 +5029,16 @@ bool AArch64InstrInfo::isThroughputPattern(
   case MachineCombinerPattern::FMLSv2f64_OP2:
   case MachineCombinerPattern::FMLSv4i32_indexed_OP2:
   case MachineCombinerPattern::FMLSv4f32_OP2:
+  case MachineCombinerPattern::FMULv2i32_indexed_OP1:
+  case MachineCombinerPattern::FMULv2i32_indexed_OP2:
+  case MachineCombinerPattern::FMULv2i64_indexed_OP1:
+  case MachineCombinerPattern::FMULv2i64_indexed_OP2:
+  case MachineCombinerPattern::FMULv4i16_indexed_OP1:
+  case MachineCombinerPattern::FMULv4i16_indexed_OP2:
+  case MachineCombinerPattern::FMULv4i32_indexed_OP1:
+  case MachineCombinerPattern::FMULv4i32_indexed_OP2:
+  case MachineCombinerPattern::FMULv8i16_indexed_OP1:
+  case MachineCombinerPattern::FMULv8i16_indexed_OP2:
   case MachineCombinerPattern::MULADDv8i8_OP1:
   case MachineCombinerPattern::MULADDv8i8_OP2:
   case MachineCombinerPattern::MULADDv16i8_OP1:
@@ -5036,6 +5095,8 @@ bool AArch64InstrInfo::getMachineCombinerPatterns(
   if (getMaddPatterns(Root, Patterns))
     return true;
   // Floating point patterns
+  if (getFMULPatterns(Root, Patterns))
+    return true;
   if (getFMAPatterns(Root, Patterns))
     return true;
 
@@ -5122,6 +5183,42 @@ genFusedMultiply(MachineFunction &MF, MachineRegisterInfo &MRI,
   // Insert the MADD (MADD, FMA, FMS, FMLA, FMSL)
   InsInstrs.push_back(MIB);
   return MUL;
+}
+
+/// Fold (FMUL x (DUP y lane)) into (FMUL_indexed x y lane)
+static MachineInstr *
+genIndexedMultiply(MachineInstr &Root,
+                   SmallVectorImpl<MachineInstr *> &InsInstrs,
+                   unsigned IdxDupOp, unsigned MulOpc,
+                   const TargetRegisterClass *RC, MachineRegisterInfo &MRI) {
+  assert(((IdxDupOp == 1) || (IdxDupOp == 2)) &&
+         "Invalid index of FMUL operand");
+
+  MachineFunction &MF = *Root.getMF();
+  const TargetInstrInfo *TII = MF.getSubtarget().getInstrInfo();
+
+  MachineInstr *Dup =
+      MF.getRegInfo().getUniqueVRegDef(Root.getOperand(IdxDupOp).getReg());
+
+  Register DupSrcReg = Dup->getOperand(1).getReg();
+  MRI.clearKillFlags(DupSrcReg);
+  MRI.constrainRegClass(DupSrcReg, RC);
+
+  unsigned DupSrcLane = Dup->getOperand(2).getImm();
+
+  unsigned IdxMulOp = IdxDupOp == 1 ? 2 : 1;
+  MachineOperand &MulOp = Root.getOperand(IdxMulOp);
+
+  Register ResultReg = Root.getOperand(0).getReg();
+
+  MachineInstrBuilder MIB;
+  MIB = BuildMI(MF, Root.getDebugLoc(), TII->get(MulOpc), ResultReg)
+            .add(MulOp)
+            .addReg(DupSrcReg)
+            .addImm(DupSrcLane);
+
+  InsInstrs.push_back(MIB);
+  return &Root;
 }
 
 /// genFusedMultiplyAcc - Helper to generate fused multiply accumulate
@@ -5335,15 +5432,15 @@ void AArch64InstrInfo::genAlternativeCodeSequence(
     }
     uint64_t UImm = SignExtend64(Imm, BitSize);
     uint64_t Encoding;
-    if (AArch64_AM::processLogicalImmediate(UImm, BitSize, Encoding)) {
-      MachineInstrBuilder MIB1 =
-          BuildMI(MF, Root.getDebugLoc(), TII->get(OrrOpc), NewVR)
-              .addReg(ZeroReg)
-              .addImm(Encoding);
-      InsInstrs.push_back(MIB1);
-      InstrIdxForVirtReg.insert(std::make_pair(NewVR, 0));
-      MUL = genMaddR(MF, MRI, TII, Root, InsInstrs, 1, Opc, NewVR, RC);
-    }
+    if (!AArch64_AM::processLogicalImmediate(UImm, BitSize, Encoding))
+      return;
+    MachineInstrBuilder MIB1 =
+        BuildMI(MF, Root.getDebugLoc(), TII->get(OrrOpc), NewVR)
+            .addReg(ZeroReg)
+            .addImm(Encoding);
+    InsInstrs.push_back(MIB1);
+    InstrIdxForVirtReg.insert(std::make_pair(NewVR, 0));
+    MUL = genMaddR(MF, MRI, TII, Root, InsInstrs, 1, Opc, NewVR, RC);
     break;
   }
   case MachineCombinerPattern::MULSUBW_OP1:
@@ -5426,15 +5523,15 @@ void AArch64InstrInfo::genAlternativeCodeSequence(
     }
     uint64_t UImm = SignExtend64(-Imm, BitSize);
     uint64_t Encoding;
-    if (AArch64_AM::processLogicalImmediate(UImm, BitSize, Encoding)) {
-      MachineInstrBuilder MIB1 =
-          BuildMI(MF, Root.getDebugLoc(), TII->get(OrrOpc), NewVR)
-              .addReg(ZeroReg)
-              .addImm(Encoding);
-      InsInstrs.push_back(MIB1);
-      InstrIdxForVirtReg.insert(std::make_pair(NewVR, 0));
-      MUL = genMaddR(MF, MRI, TII, Root, InsInstrs, 1, Opc, NewVR, RC);
-    }
+    if (!AArch64_AM::processLogicalImmediate(UImm, BitSize, Encoding))
+      return;
+    MachineInstrBuilder MIB1 =
+        BuildMI(MF, Root.getDebugLoc(), TII->get(OrrOpc), NewVR)
+            .addReg(ZeroReg)
+            .addImm(Encoding);
+    InsInstrs.push_back(MIB1);
+    InstrIdxForVirtReg.insert(std::make_pair(NewVR, 0));
+    MUL = genMaddR(MF, MRI, TII, Root, InsInstrs, 1, Opc, NewVR, RC);
     break;
   }
 
@@ -6082,12 +6179,50 @@ void AArch64InstrInfo::genAlternativeCodeSequence(
     }
     break;
   }
+  case MachineCombinerPattern::FMULv2i32_indexed_OP1:
+  case MachineCombinerPattern::FMULv2i32_indexed_OP2: {
+    unsigned IdxDupOp =
+        (Pattern == MachineCombinerPattern::FMULv2i32_indexed_OP1) ? 1 : 2;
+    genIndexedMultiply(Root, InsInstrs, IdxDupOp, AArch64::FMULv2i32_indexed,
+                       &AArch64::FPR128RegClass, MRI);
+    break;
+  }
+  case MachineCombinerPattern::FMULv2i64_indexed_OP1:
+  case MachineCombinerPattern::FMULv2i64_indexed_OP2: {
+    unsigned IdxDupOp =
+        (Pattern == MachineCombinerPattern::FMULv2i64_indexed_OP1) ? 1 : 2;
+    genIndexedMultiply(Root, InsInstrs, IdxDupOp, AArch64::FMULv2i64_indexed,
+                       &AArch64::FPR128RegClass, MRI);
+    break;
+  }
+  case MachineCombinerPattern::FMULv4i16_indexed_OP1:
+  case MachineCombinerPattern::FMULv4i16_indexed_OP2: {
+    unsigned IdxDupOp =
+        (Pattern == MachineCombinerPattern::FMULv4i16_indexed_OP1) ? 1 : 2;
+    genIndexedMultiply(Root, InsInstrs, IdxDupOp, AArch64::FMULv4i16_indexed,
+                       &AArch64::FPR128_loRegClass, MRI);
+    break;
+  }
+  case MachineCombinerPattern::FMULv4i32_indexed_OP1:
+  case MachineCombinerPattern::FMULv4i32_indexed_OP2: {
+    unsigned IdxDupOp =
+        (Pattern == MachineCombinerPattern::FMULv4i32_indexed_OP1) ? 1 : 2;
+    genIndexedMultiply(Root, InsInstrs, IdxDupOp, AArch64::FMULv4i32_indexed,
+                       &AArch64::FPR128RegClass, MRI);
+    break;
+  }
+  case MachineCombinerPattern::FMULv8i16_indexed_OP1:
+  case MachineCombinerPattern::FMULv8i16_indexed_OP2: {
+    unsigned IdxDupOp =
+        (Pattern == MachineCombinerPattern::FMULv8i16_indexed_OP1) ? 1 : 2;
+    genIndexedMultiply(Root, InsInstrs, IdxDupOp, AArch64::FMULv8i16_indexed,
+                       &AArch64::FPR128_loRegClass, MRI);
+    break;
+  }
   } // end switch (Pattern)
   // Record MUL and ADD/SUB for deletion
-  // FIXME: This assertion fails in CodeGen/AArch64/tailmerging_in_mbp.ll and
-  // CodeGen/AArch64/urem-seteq-nonzero.ll.
-  // assert(MUL && "MUL was never set");
-  DelInstrs.push_back(MUL);
+  if (MUL)
+    DelInstrs.push_back(MUL);
   DelInstrs.push_back(&Root);
 }
 
@@ -6630,13 +6765,8 @@ outliner::OutlinedFunction AArch64InstrInfo::getOutliningCandidateInfo(
   MachineBasicBlock::iterator MBBI = RepeatedSequenceLocs[0].front();
   for (unsigned Loc = RepeatedSequenceLocs[0].getStartIdx();
        Loc < RepeatedSequenceLocs[0].getEndIdx() + 1; Loc++) {
-    const std::vector<MCCFIInstruction> &CFIInstructions =
-        RepeatedSequenceLocs[0].getMF()->getFrameInstructions();
-    if (MBBI->isCFIInstruction()) {
-      unsigned CFIIndex = MBBI->getOperand(0).getCFIIndex();
-      MCCFIInstruction CFI = CFIInstructions[CFIIndex];
+    if (MBBI->isCFIInstruction())
       CFICount++;
-    }
     MBBI++;
   }
 

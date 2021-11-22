@@ -1,3 +1,5 @@
+// REQUIRES: riscv-registered-target
+
 // RUN: %clang_cc1 -triple riscv32 -target-feature +experimental-v \
 // RUN:     -O2 -emit-llvm %s -o - \
 // RUN:     | FileCheck %s

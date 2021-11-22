@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -test-vector-to-vector-conversion | FileCheck %s
+// RUN: mlir-opt %s -test-vector-to-vector-lowering | FileCheck %s
 
 // CHECK-LABEL:   func @maskedload0(
 // CHECK-SAME:                      %[[A0:.*]]: memref<?xf32>,

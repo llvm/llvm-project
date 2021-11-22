@@ -2508,13 +2508,12 @@ static bool isI32Insn(const SDNode *User, const SDNode *N) {
   case ISD::CopyToReg:
     // Check all use of selections, bit operations, and copies.  If all of them
     // are safe, optimize truncate to extract_subreg.
-    for (SDNode::use_iterator UI = User->use_begin(), UE = User->use_end();
-         UI != UE; ++UI) {
-      switch ((*UI)->getOpcode()) {
+    for (const SDNode *U : User->uses()) {
+      switch (U->getOpcode()) {
       default:
         // If the use is an instruction which treats the source operand as i32,
         // it is safe to avoid truncate here.
-        if (isI32Insn(*UI, N))
+        if (isI32Insn(U, N))
           continue;
         break;
       case ISD::ANY_EXTEND:
@@ -2561,10 +2560,7 @@ SDValue VETargetLowering::combineTRUNCATE(SDNode *N,
     return SDValue();
 
   // Check all use of this TRUNCATE.
-  for (SDNode::use_iterator UI = N->use_begin(), UE = N->use_end(); UI != UE;
-       ++UI) {
-    SDNode *User = *UI;
-
+  for (const SDNode *User : N->uses()) {
     // Make sure that we're not going to replace TRUNCATE for non i32
     // instructions.
     //

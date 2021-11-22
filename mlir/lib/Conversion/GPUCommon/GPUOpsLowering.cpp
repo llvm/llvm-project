@@ -55,9 +55,9 @@ GPUFuncOpLowering::matchAndRewrite(gpu::GPUFuncOp gpuFuncOp, OpAdaptor adaptor,
   // not specific to function modeling.
   SmallVector<NamedAttribute, 4> attributes;
   for (const auto &attr : gpuFuncOp->getAttrs()) {
-    if (attr.first == SymbolTable::getSymbolAttrName() ||
-        attr.first == function_like_impl::getTypeAttrName() ||
-        attr.first == gpu::GPUFuncOp::getNumWorkgroupAttributionsAttrName())
+    if (attr.getName() == SymbolTable::getSymbolAttrName() ||
+        attr.getName() == function_like_impl::getTypeAttrName() ||
+        attr.getName() == gpu::GPUFuncOp::getNumWorkgroupAttributionsAttrName())
       continue;
     attributes.push_back(attr);
   }

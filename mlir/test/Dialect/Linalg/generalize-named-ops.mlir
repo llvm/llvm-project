@@ -49,8 +49,8 @@ func @generalize_matmul_tensor(%A : tensor<16x8xf32>, %B: tensor<8x32xf32>, %C: 
 
 // -----
 
-func @depthwise_conv2D_nhwc(%input: memref<2x4x5x2xf32>, %filter: memref<2x2x2x3xf32>, %output: memref<2x3x4x2x3xf32>) {
-  linalg.depthwise_conv2D_nhwc
+func @depthwise_conv_2d_nhwc_hwcm(%input: memref<2x4x5x2xf32>, %filter: memref<2x2x2x3xf32>, %output: memref<2x3x4x2x3xf32>) {
+  linalg.depthwise_conv_2d_nhwc_hwcm
      { dilations = dense<1> : tensor<2xi64>, strides = dense<1> : tensor<2xi64> }
      ins(%input, %filter : memref<2x4x5x2xf32>, memref<2x2x2x3xf32>)
     outs(%output : memref<2x3x4x2x3xf32>)
@@ -61,7 +61,7 @@ func @depthwise_conv2D_nhwc(%input: memref<2x4x5x2xf32>, %filter: memref<2x2x2x3
 // CHECK-DAG: #[[MAP1:.+]] = affine_map<(d0, d1, d2, d3, d4, d5, d6) -> (d5, d6, d3, d4)>
 // CHECK-DAG: #[[MAP2:.+]] = affine_map<(d0, d1, d2, d3, d4, d5, d6) -> (d0, d1, d2, d3, d4)>
 
-// CHECK: func @depthwise_conv2D_nhwc
+// CHECK: func @depthwise_conv_2d_nhwc_hwcm
 
 // CHECK: linalg.generic
 // CHECK-SAME: indexing_maps = [#[[MAP0]], #[[MAP1]], #[[MAP2]]]
@@ -76,8 +76,8 @@ func @depthwise_conv2D_nhwc(%input: memref<2x4x5x2xf32>, %filter: memref<2x2x2x3
 
 // -----
 
-func @depthwise_conv2D_nhwc(%input: memref<2x4x5x2xf32>, %filter: memref<2x2x2x3xf32>, %output: memref<2x2x3x2x3xf32>) {
-  linalg.depthwise_conv2D_nhwc
+func @depthwise_conv_2d_nhwc_hwcm(%input: memref<2x4x5x2xf32>, %filter: memref<2x2x2x3xf32>, %output: memref<2x2x3x2x3xf32>) {
+  linalg.depthwise_conv_2d_nhwc_hwcm
      { dilations = dense<2> : tensor<2xi64>, strides = dense<1> : tensor<2xi64> }
      ins(%input, %filter : memref<2x4x5x2xf32>, memref<2x2x2x3xf32>)
     outs(%output : memref<2x2x3x2x3xf32>)
@@ -88,7 +88,7 @@ func @depthwise_conv2D_nhwc(%input: memref<2x4x5x2xf32>, %filter: memref<2x2x2x3
 // CHECK-DAG: #[[MAP1:.+]] = affine_map<(d0, d1, d2, d3, d4, d5, d6) -> (d5, d6, d3, d4)>
 // CHECK-DAG: #[[MAP2:.+]] = affine_map<(d0, d1, d2, d3, d4, d5, d6) -> (d0, d1, d2, d3, d4)>
 
-// CHECK: func @depthwise_conv2D_nhwc
+// CHECK: func @depthwise_conv_2d_nhwc_hwcm
 
 // CHECK: linalg.generic
 // CHECK-SAME: indexing_maps = [#[[MAP0]], #[[MAP1]], #[[MAP2]]]
@@ -103,8 +103,8 @@ func @depthwise_conv2D_nhwc(%input: memref<2x4x5x2xf32>, %filter: memref<2x2x2x3
 
 // -----
 
-func @depthwise_conv2D_nhw(%input: memref<1x113x113x96xf32>, %filter: memref<3x3x96xf32>, %output: memref<1x56x56x96xf32>) {
-  linalg.depthwise_conv2D_nhw {dilations = dense<1> : vector<2xi64>, strides = dense<2> : vector<2xi64>}
+func @depthwise_conv_2d_nhwc_hwc(%input: memref<1x113x113x96xf32>, %filter: memref<3x3x96xf32>, %output: memref<1x56x56x96xf32>) {
+  linalg.depthwise_conv_2d_nhwc_hwc {dilations = dense<1> : vector<2xi64>, strides = dense<2> : vector<2xi64>}
     ins(%input, %filter: memref<1x113x113x96xf32>, memref<3x3x96xf32>)
     outs(%output: memref<1x56x56x96xf32>)
   return
@@ -114,7 +114,7 @@ func @depthwise_conv2D_nhw(%input: memref<1x113x113x96xf32>, %filter: memref<3x3
 // CHECK-DAG: #[[MAP1:.+]] = affine_map<(d0, d1, d2, d3, d4, d5) -> (d4, d5, d3)>
 // CHECK-DAG: #[[MAP2:.+]] = affine_map<(d0, d1, d2, d3, d4, d5) -> (d0, d1, d2, d3)>
 
-// CHECK: func @depthwise_conv2D_nhw
+// CHECK: func @depthwise_conv_2d_nhwc_hwc
 
 // CHECK: linalg.generic
 // CHECK-SAME: indexing_maps = [#[[MAP0]], #[[MAP1]], #[[MAP2]]]

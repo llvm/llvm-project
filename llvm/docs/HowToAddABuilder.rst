@@ -112,7 +112,7 @@ Here are the steps you can follow to do so:
    to see if it works.
 
 #. Send a patch which adds your build worker and your builder to
-   `zorg <https://github.com/llvm/llvm-zorg>`_. Use the typical LLVM 
+   `zorg <https://github.com/llvm/llvm-zorg>`_. Use the typical LLVM
    `workflow <https://llvm.org/docs/Contributing.html#how-to-submit-a-patch>`_.
 
    * workers are added to ``buildbot/osuosl/master/config/workers.py``

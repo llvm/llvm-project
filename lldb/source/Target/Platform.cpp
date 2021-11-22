@@ -833,6 +833,7 @@ Platform::ResolveExecutable(const ModuleSpec &module_spec,
                             lldb::ModuleSP &exe_module_sp,
                             const FileSpecList *module_search_paths_ptr) {
   Status error;
+
   if (FileSystem::Instance().Exists(module_spec.GetFileSpec())) {
     if (module_spec.GetArchitecture().IsValid()) {
       error = ModuleList::GetSharedModule(module_spec, exe_module_sp,
@@ -843,9 +844,8 @@ Platform::ResolveExecutable(const ModuleSpec &module_spec,
       // architectures that we should be using (in the correct order) and see
       // if we can find a match that way
       ModuleSpec arch_module_spec(module_spec);
-      for (uint32_t idx = 0; GetSupportedArchitectureAtIndex(
-               idx, arch_module_spec.GetArchitecture());
-           ++idx) {
+      for (const ArchSpec &arch : GetSupportedArchitectures()) {
+        arch_module_spec.GetArchitecture() = arch;
         error = ModuleList::GetSharedModule(arch_module_spec, exe_module_sp,
                                             module_search_paths_ptr, nullptr,
                                             nullptr);
@@ -855,9 +855,74 @@ Platform::ResolveExecutable(const ModuleSpec &module_spec,
       }
     }
   } else {
-    error.SetErrorStringWithFormat("'%s' does not exist",
-                                   module_spec.GetFileSpec().GetPath().c_str());
+    error.SetErrorStringWithFormat(
+        "'%s' does not exist", module_spec.GetFileSpec().GetPath().c_str());
   }
+  return error;
+}
+
+Status
+Platform::ResolveRemoteExecutable(const ModuleSpec &module_spec,
+                            lldb::ModuleSP &exe_module_sp,
+                            const FileSpecList *module_search_paths_ptr) {
+  Status error;
+
+  // We may connect to a process and use the provided executable (Don't use
+  // local $PATH).
+  ModuleSpec resolved_module_spec(module_spec);
+
+  // Resolve any executable within a bundle on MacOSX
+  Host::ResolveExecutableInBundle(resolved_module_spec.GetFileSpec());
+
+  if (FileSystem::Instance().Exists(resolved_module_spec.GetFileSpec()) ||
+      module_spec.GetUUID().IsValid()) {
+    if (resolved_module_spec.GetArchitecture().IsValid() ||
+        resolved_module_spec.GetUUID().IsValid()) {
+      error = ModuleList::GetSharedModule(resolved_module_spec, exe_module_sp,
+                                          module_search_paths_ptr, nullptr,
+                                          nullptr);
+
+      if (exe_module_sp && exe_module_sp->GetObjectFile())
+        return error;
+      exe_module_sp.reset();
+    }
+    // No valid architecture was specified or the exact arch wasn't found so
+    // ask the platform for the architectures that we should be using (in the
+    // correct order) and see if we can find a match that way
+    StreamString arch_names;
+    llvm::ListSeparator LS;
+    for (const ArchSpec &arch : GetSupportedArchitectures()) {
+      resolved_module_spec.GetArchitecture() = arch;
+      error = ModuleList::GetSharedModule(resolved_module_spec, exe_module_sp,
+                                          module_search_paths_ptr, nullptr,
+                                          nullptr);
+      // Did we find an executable using one of the
+      if (error.Success()) {
+        if (exe_module_sp && exe_module_sp->GetObjectFile())
+          break;
+        else
+          error.SetErrorToGenericError();
+      }
+
+      arch_names << LS << arch.GetArchitectureName();
+    }
+
+    if (error.Fail() || !exe_module_sp) {
+      if (FileSystem::Instance().Readable(resolved_module_spec.GetFileSpec())) {
+        error.SetErrorStringWithFormatv(
+            "'{0}' doesn't contain any '{1}' platform architectures: {2}",
+            resolved_module_spec.GetFileSpec(), GetPluginName(),
+            arch_names.GetData());
+      } else {
+        error.SetErrorStringWithFormatv("'{0}' is not readable",
+                                        resolved_module_spec.GetFileSpec());
+      }
+    }
+  } else {
+    error.SetErrorStringWithFormatv("'{0}' does not exist",
+                                    resolved_module_spec.GetFileSpec());
+  }
+
   return error;
 }
 
@@ -1044,25 +1109,11 @@ Status Platform::KillProcess(const lldb::pid_t pid) {
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_PLATFORM));
   LLDB_LOGF(log, "Platform::%s, pid %" PRIu64, __FUNCTION__, pid);
 
-  // Try to find a process plugin to handle this Kill request.  If we can't,
-  // fall back to the default OS implementation.
-  size_t num_debuggers = Debugger::GetNumDebuggers();
-  for (size_t didx = 0; didx < num_debuggers; ++didx) {
-    DebuggerSP debugger = Debugger::GetDebuggerAtIndex(didx);
-    lldb_private::TargetList &targets = debugger->GetTargetList();
-    for (int tidx = 0; tidx < targets.GetNumTargets(); ++tidx) {
-      ProcessSP process = targets.GetTargetAtIndex(tidx)->GetProcessSP();
-      if (process->GetID() == pid)
-        return process->Destroy(true);
-    }
-  }
-
   if (!IsHost()) {
     return Status(
-        "base lldb_private::Platform class can't kill remote processes unless "
-        "they are controlled by a process plugin");
+        "base lldb_private::Platform class can't kill remote processes");
   }
-  Host::Kill(pid, SIGTERM);
+  Host::Kill(pid, SIGKILL);
   return Status();
 }
 
@@ -1124,7 +1175,7 @@ lldb::ProcessSP Platform::DebugProcess(ProcessLaunchInfo &launch_info,
 
         // If we didn't have any file actions, the pseudo terminal might have
         // been used where the secondary side was given as the file to open for
-        // stdin/out/err after we have already opened the master so we can
+        // stdin/out/err after we have already opened the primary so we can
         // read/write stdin/out/err.
         int pty_fd = launch_info.GetPTY().ReleasePrimaryFileDescriptor();
         if (pty_fd != PseudoTerminal::invalid_fd) {
@@ -1158,6 +1209,35 @@ Platform::GetPlatformForArchitecture(const ArchSpec &arch,
   return platform_sp;
 }
 
+std::vector<ArchSpec>
+Platform::CreateArchList(llvm::ArrayRef<llvm::Triple::ArchType> archs,
+                         llvm::Triple::OSType os) {
+  std::vector<ArchSpec> list;
+  for(auto arch : archs) {
+    llvm::Triple triple;
+    triple.setArch(arch);
+    triple.setOS(os);
+    list.push_back(ArchSpec(triple));
+  }
+  return list;
+}
+
+bool Platform::GetSupportedArchitectureAtIndex(uint32_t idx, ArchSpec &arch) {
+  const auto &archs = GetSupportedArchitectures();
+  if (idx >= archs.size())
+    return false;
+  arch = archs[idx];
+  return true;
+}
+
+std::vector<ArchSpec> Platform::GetSupportedArchitectures() {
+  std::vector<ArchSpec> result;
+  ArchSpec arch;
+  for (uint32_t idx = 0; GetSupportedArchitectureAtIndex(idx, arch); ++idx)
+    result.push_back(arch);
+  return result;
+}
+
 /// Lets a platform answer if it is compatible with a given
 /// architecture and the target triple contained within.
 bool Platform::IsCompatibleArchitecture(const ArchSpec &arch,
@@ -1166,26 +1246,13 @@ bool Platform::IsCompatibleArchitecture(const ArchSpec &arch,
   // If the architecture is invalid, we must answer true...
   if (arch.IsValid()) {
     ArchSpec platform_arch;
-    // Try for an exact architecture match first.
-    if (exact_arch_match) {
-      for (uint32_t arch_idx = 0;
-           GetSupportedArchitectureAtIndex(arch_idx, platform_arch);
-           ++arch_idx) {
-        if (arch.IsExactMatch(platform_arch)) {
-          if (compatible_arch_ptr)
-            *compatible_arch_ptr = platform_arch;
-          return true;
-        }
-      }
-    } else {
-      for (uint32_t arch_idx = 0;
-           GetSupportedArchitectureAtIndex(arch_idx, platform_arch);
-           ++arch_idx) {
-        if (arch.IsCompatibleMatch(platform_arch)) {
-          if (compatible_arch_ptr)
-            *compatible_arch_ptr = platform_arch;
-          return true;
-        }
+    auto match = exact_arch_match ? &ArchSpec::IsExactMatch
+                                  : &ArchSpec::IsCompatibleMatch;
+    for (const ArchSpec &platform_arch : GetSupportedArchitectures()) {
+      if ((arch.*match)(platform_arch)) {
+        if (compatible_arch_ptr)
+          *compatible_arch_ptr = platform_arch;
+        return true;
       }
     }
   }
@@ -1492,12 +1559,13 @@ const std::vector<ConstString> &Platform::GetTrapHandlerSymbolNames() {
   return m_trap_handlers;
 }
 
-Status Platform::GetCachedExecutable(
-    ModuleSpec &module_spec, lldb::ModuleSP &module_sp,
-    const FileSpecList *module_search_paths_ptr, Platform &remote_platform) {
+Status
+Platform::GetCachedExecutable(ModuleSpec &module_spec,
+                              lldb::ModuleSP &module_sp,
+                              const FileSpecList *module_search_paths_ptr) {
   const auto platform_spec = module_spec.GetFileSpec();
-  const auto error = LoadCachedExecutable(
-      module_spec, module_sp, module_search_paths_ptr, remote_platform);
+  const auto error =
+      LoadCachedExecutable(module_spec, module_sp, module_search_paths_ptr);
   if (error.Success()) {
     module_spec.GetFileSpec() = module_sp->GetFileSpec();
     module_spec.GetPlatformFileSpec() = platform_spec;
@@ -1506,15 +1574,17 @@ Status Platform::GetCachedExecutable(
   return error;
 }
 
-Status Platform::LoadCachedExecutable(
-    const ModuleSpec &module_spec, lldb::ModuleSP &module_sp,
-    const FileSpecList *module_search_paths_ptr, Platform &remote_platform) {
-  return GetRemoteSharedModule(module_spec, nullptr, module_sp,
-                               [&](const ModuleSpec &spec) {
-                                 return remote_platform.ResolveExecutable(
-                                     spec, module_sp, module_search_paths_ptr);
-                               },
-                               nullptr);
+Status
+Platform::LoadCachedExecutable(const ModuleSpec &module_spec,
+                               lldb::ModuleSP &module_sp,
+                               const FileSpecList *module_search_paths_ptr) {
+  return GetRemoteSharedModule(
+      module_spec, nullptr, module_sp,
+      [&](const ModuleSpec &spec) {
+        return ResolveRemoteExecutable(spec, module_sp,
+                                       module_search_paths_ptr);
+      },
+      nullptr);
 }
 
 Status Platform::GetRemoteSharedModule(const ModuleSpec &module_spec,
@@ -1543,9 +1613,8 @@ Status Platform::GetRemoteSharedModule(const ModuleSpec &module_spec,
     // architectures that we should be using (in the correct order) and see if
     // we can find a match that way
     ModuleSpec arch_module_spec(module_spec);
-    for (uint32_t idx = 0; GetSupportedArchitectureAtIndex(
-             idx, arch_module_spec.GetArchitecture());
-         ++idx) {
+    for (const ArchSpec &arch : GetSupportedArchitectures()) {
+      arch_module_spec.GetArchitecture() = arch;
       error = ModuleList::GetSharedModule(arch_module_spec, module_sp, nullptr,
                                           nullptr, nullptr);
       // Did we find an executable using one of the

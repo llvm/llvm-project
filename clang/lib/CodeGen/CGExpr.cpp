@@ -95,7 +95,7 @@ Address CodeGenFunction::CreateTempAlloca(llvm::Type *Ty, CharUnits Align,
     // otherwise alloca is inserted at the current insertion point of the
     // builder.
     if (!ArraySize)
-      Builder.SetInsertPoint(AllocaInsertPt);
+      Builder.SetInsertPoint(getPostAllocaInsertPoint());
     V = getTargetHooks().performAddrSpaceCast(
         *this, V, getASTAllocaAddressSpace(), LangAS::Default,
         Ty->getPointerTo(DestAddrSpace), /*non-null*/ true);

@@ -24,7 +24,7 @@ entry:
 ; CHECK:          STD killed renamable $x3, 0, %fixed-stack.0 :: (store (s64) into %fixed-stack.0, align 16)
 ; CHECK-NEXT:     renamable $x3 = LBZ8 4, %fixed-stack.0 :: (dereferenceable load (s8)
 
-; CHECKASM-LABEL: .test_byval_5Byte:
+; ASM-LABEL: .test_byval_5Byte:
 
 ; ASM:       std 3, 48(1)
 ; ASM-NEXT:  lbz 3, 52(1)
@@ -49,7 +49,7 @@ entry:
 ; CHECK:          STD killed renamable $x3, 0, %fixed-stack.0 :: (store (s64) into %fixed-stack.0, align 16)
 ; CHECK-NEXT:     renamable $x3 = LBZ8 5, %fixed-stack.0 :: (dereferenceable load (s8)
 
-; CHECKASM-LABEL: .test_byval_6Byte:
+; ASM-LABEL: .test_byval_6Byte:
 
 ; ASM:       std 3, 48(1)
 ; ASM-NEXT:  lbz 3, 53(1)
@@ -74,7 +74,7 @@ entry:
 ; CHECK:          STD killed renamable $x3, 0, %fixed-stack.0 :: (store (s64) into %fixed-stack.0, align 16)
 ; CHECK-NEXT:     renamable $x3 = LBZ8 6, %fixed-stack.0 :: (dereferenceable load (s8)
 
-; CHECKASM-LABEL: .test_byval_7Byte:
+; ASM-LABEL: .test_byval_7Byte:
 
 ; ASM:       std 3, 48(1)
 ; ASM-NEXT:  lbz 3, 54(1)
@@ -101,7 +101,7 @@ entry:
 ; CHECK-DAG:      STD killed renamable $x[[SCRATCH]], 0, %fixed-stack.0 :: (store (s64) into %fixed-stack.0, align 16)
 
 
-; CHECKASM-LABEL: .test_byval_8Byte:
+; ASM-LABEL: .test_byval_8Byte:
 
 ; ASM:       mr [[SCRATCH:[0-9]+]], 3
 ; ASM-DAG:   clrldi  3, 3, 56
@@ -137,7 +137,7 @@ declare void @test_byval_64Byte(%struct.S64* byval(%struct.S64) align 1)
 ; CHECK-NEXT:  BL8_NOP <mcsymbol .test_byval_64Byte[PR]>, csr_ppc64, implicit-def dead $lr8, implicit $rm, implicit $x3, implicit $x4, implicit $x5, implicit $x6, implicit $x7, implicit $x8, implicit $x9, implicit $x10, implicit $x2, implicit-def $r1
 ; CHECK-NEXT:  ADJCALLSTACKUP 112, 0, implicit-def dead $r1, implicit $r1
 
-; CHECKASM-LABEL: .test_byval_64Byte:
+; ASM-LABEL: .call_test_byval_64Byte:
 
 ; ASM:         stdu 1, -112(1)
 ; ASM-NEXT:    ld [[REG:[0-9]+]], L..C{{[0-9]+}}(2)

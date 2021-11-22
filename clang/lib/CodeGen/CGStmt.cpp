@@ -2224,20 +2224,6 @@ static void UpdateAsmCallInst(llvm::CallBase &Result, bool HasSideEffect,
       Result.addFnAttr(llvm::Attribute::ReadOnly);
   }
 
-  // Attach OpenMP assumption attributes from the caller, if they exist.
-  if (CGF.CGM.getLangOpts().OpenMP) {
-    SmallVector<StringRef, 4> Attrs;
-
-    for (const AssumptionAttr *AA :
-         CGF.CurFuncDecl->specific_attrs<AssumptionAttr>())
-      AA->getAssumption().split(Attrs, ",");
-
-    if (!Attrs.empty())
-      Result.addFnAttr(
-          llvm::Attribute::get(CGF.getLLVMContext(), llvm::AssumptionAttrKey,
-                               llvm::join(Attrs.begin(), Attrs.end(), ",")));
-  }
-
   // Slap the source location of the inline asm into a !srcloc metadata on the
   // call.
   if (const auto *gccAsmStmt = dyn_cast<GCCAsmStmt>(&S))
@@ -2643,8 +2629,14 @@ void CodeGenFunction::EmitAsmStmt(const AsmStmt &S) {
     llvm::FunctionType::get(ResultType, ArgTypes, false);
 
   bool HasSideEffect = S.isVolatile() || S.getNumOutputs() == 0;
+
+  llvm::InlineAsm::AsmDialect GnuAsmDialect =
+      CGM.getCodeGenOpts().getInlineAsmDialect() == CodeGenOptions::IAD_ATT
+          ? llvm::InlineAsm::AD_ATT
+          : llvm::InlineAsm::AD_Intel;
   llvm::InlineAsm::AsmDialect AsmDialect = isa<MSAsmStmt>(&S) ?
-    llvm::InlineAsm::AD_Intel : llvm::InlineAsm::AD_ATT;
+    llvm::InlineAsm::AD_Intel : GnuAsmDialect;
+
   llvm::InlineAsm *IA = llvm::InlineAsm::get(
       FTy, AsmString, Constraints, HasSideEffect,
       /* IsAlignStack */ false, AsmDialect, HasUnwindClobber);

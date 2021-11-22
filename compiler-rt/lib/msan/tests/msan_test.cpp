@@ -3280,11 +3280,13 @@ static void *SmallStackThread_threadfn(void* data) {
   return 0;
 }
 
+static int GetThreadStackMin() {
 #ifdef PTHREAD_STACK_MIN
-constexpr int kThreadStackMin = PTHREAD_STACK_MIN;
+  return PTHREAD_STACK_MIN;
 #else
-constexpr int kThreadStackMin = 0;
+  return 0;
 #endif
+}
 
 TEST(MemorySanitizer, SmallStackThread) {
   pthread_attr_t attr;
@@ -3293,7 +3295,8 @@ TEST(MemorySanitizer, SmallStackThread) {
   int res;
   res = pthread_attr_init(&attr);
   ASSERT_EQ(0, res);
-  res = pthread_attr_setstacksize(&attr, std::max(kThreadStackMin, 64 * 1024));
+  res = pthread_attr_setstacksize(&attr,
+                                  std::max(GetThreadStackMin(), 64 * 1024));
   ASSERT_EQ(0, res);
   res = pthread_create(&t, &attr, SmallStackThread_threadfn, NULL);
   ASSERT_EQ(0, res);
@@ -3310,7 +3313,7 @@ TEST(MemorySanitizer, SmallPreAllocatedStackThread) {
   res = pthread_attr_init(&attr);
   ASSERT_EQ(0, res);
   void *stack;
-  const size_t kStackSize = std::max(kThreadStackMin, 32 * 1024);
+  const size_t kStackSize = std::max(GetThreadStackMin(), 32 * 1024);
   res = posix_memalign(&stack, 4096, kStackSize);
   ASSERT_EQ(0, res);
   res = pthread_attr_setstack(&attr, stack, kStackSize);

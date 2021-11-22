@@ -13,6 +13,7 @@
 #include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
+#include "clang/StaticAnalyzer/Core/PathSensitive/CallDescription.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CallEvent.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
 
@@ -40,10 +41,10 @@ class DebugContainerModeling
                                                  CheckerContext &) const;
 
   CallDescriptionMap<FnCheck> Callbacks = {
-    {{0, "clang_analyzer_container_begin", 1},
-     &DebugContainerModeling::analyzerContainerBegin},
-    {{0, "clang_analyzer_container_end", 1},
-     &DebugContainerModeling::analyzerContainerEnd},
+      {{"clang_analyzer_container_begin", 1},
+       &DebugContainerModeling::analyzerContainerBegin},
+      {{"clang_analyzer_container_end", 1},
+       &DebugContainerModeling::analyzerContainerEnd},
   };
 
 public:

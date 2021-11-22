@@ -1662,6 +1662,9 @@ TEST(CompletionTest, OverloadBundling) {
       // Overload with bool
       int a(bool);
       int b(float);
+
+      X(int);
+      X(float);
     };
     int GFuncC(int);
     int GFuncD(int);
@@ -1670,6 +1673,10 @@ TEST(CompletionTest, OverloadBundling) {
   // Member completions are bundled.
   EXPECT_THAT(completions(Context + "int y = X().^", {}, Opts).Completions,
               UnorderedElementsAre(Labeled("a(…)"), Labeled("b(float)")));
+
+  // Constructor completions are bundled.
+  EXPECT_THAT(completions(Context + "X z = X^", {}, Opts).Completions,
+              UnorderedElementsAre(Labeled("X"), Labeled("X(…)")));
 
   // Non-member completions are bundled, including index+sema.
   Symbol NoArgsGFunc = func("GFuncC");
@@ -1886,6 +1893,11 @@ TEST(CompletionTest, Render) {
   R = C.render(Opts);
   EXPECT_EQ(R.insertText, "Foo::x(${0:bool})");
   EXPECT_EQ(R.insertTextFormat, InsertTextFormat::Snippet);
+
+  C.SnippetSuffix = "";
+  R = C.render(Opts);
+  EXPECT_EQ(R.insertText, "Foo::x");
+  EXPECT_EQ(R.insertTextFormat, InsertTextFormat::PlainText);
 
   Include.Insertion.emplace();
   R = C.render(Opts);
@@ -2318,6 +2330,15 @@ TEST(CompletionTest, CompletionFunctionArgsDisabled) {
         UnorderedElementsAre(AllOf(Named("foo_class"), SnippetSuffix("<$0>")),
                              AllOf(Named("foo_alias"), SnippetSuffix("<$0>"))));
   }
+  {
+    auto Results = completions(
+        R"cpp(
+      #define FOO(x, y) x##f
+      FO^ )cpp",
+        {}, Opts);
+    EXPECT_THAT(Results.Completions, UnorderedElementsAre(AllOf(
+                                         Named("FOO"), SnippetSuffix("($0)"))));
+  }
 }
 
 TEST(CompletionTest, SuggestOverrides) {
@@ -2598,6 +2619,104 @@ TEST(SignatureHelpTest, ConstructorInitializeFields) {
     EXPECT_THAT(Results.signatures,
                 UnorderedElementsAre(Sig("A([[int]])"), Sig("A([[A &&]])"),
                                      Sig("A([[const A &]])")));
+  }
+}
+
+TEST(SignatureHelpTest, Variadic) {
+  const std::string Header = R"cpp(
+    void fun(int x, ...) {}
+    void test() {)cpp";
+  const std::string ExpectedSig = "fun([[int x]], [[...]]) -> void";
+
+  {
+    const auto Result = signatures(Header + "fun(^);}");
+    EXPECT_EQ(0, Result.activeParameter);
+    EXPECT_THAT(Result.signatures, UnorderedElementsAre(Sig(ExpectedSig)));
+  }
+  {
+    const auto Result = signatures(Header + "fun(1, ^);}");
+    EXPECT_EQ(1, Result.activeParameter);
+    EXPECT_THAT(Result.signatures, UnorderedElementsAre(Sig(ExpectedSig)));
+  }
+  {
+    const auto Result = signatures(Header + "fun(1, 2, ^);}");
+    EXPECT_EQ(1, Result.activeParameter);
+    EXPECT_THAT(Result.signatures, UnorderedElementsAre(Sig(ExpectedSig)));
+  }
+}
+
+TEST(SignatureHelpTest, VariadicTemplate) {
+  const std::string Header = R"cpp(
+    template<typename T, typename ...Args>
+    void fun(T t, Args ...args) {}
+    void test() {)cpp";
+  const std::string ExpectedSig = "fun([[T t]], [[Args args...]]) -> void";
+
+  {
+    const auto Result = signatures(Header + "fun(^);}");
+    EXPECT_EQ(0, Result.activeParameter);
+    EXPECT_THAT(Result.signatures, UnorderedElementsAre(Sig(ExpectedSig)));
+  }
+  {
+    const auto Result = signatures(Header + "fun(1, ^);}");
+    EXPECT_EQ(1, Result.activeParameter);
+    EXPECT_THAT(Result.signatures, UnorderedElementsAre(Sig(ExpectedSig)));
+  }
+  {
+    const auto Result = signatures(Header + "fun(1, 2, ^);}");
+    EXPECT_EQ(1, Result.activeParameter);
+    EXPECT_THAT(Result.signatures, UnorderedElementsAre(Sig(ExpectedSig)));
+  }
+}
+
+TEST(SignatureHelpTest, VariadicMethod) {
+  const std::string Header = R"cpp(
+  class C {
+    template<typename T, typename ...Args>
+    void fun(T t, Args ...args) {}
+  };
+    void test() {C c; )cpp";
+  const std::string ExpectedSig = "fun([[T t]], [[Args args...]]) -> void";
+
+  {
+    const auto Result = signatures(Header + "c.fun(^);}");
+    EXPECT_EQ(0, Result.activeParameter);
+    EXPECT_THAT(Result.signatures, UnorderedElementsAre(Sig(ExpectedSig)));
+  }
+  {
+    const auto Result = signatures(Header + "c.fun(1, ^);}");
+    EXPECT_EQ(1, Result.activeParameter);
+    EXPECT_THAT(Result.signatures, UnorderedElementsAre(Sig(ExpectedSig)));
+  }
+  {
+    const auto Result = signatures(Header + "c.fun(1, 2, ^);}");
+    EXPECT_EQ(1, Result.activeParameter);
+    EXPECT_THAT(Result.signatures, UnorderedElementsAre(Sig(ExpectedSig)));
+  }
+}
+
+TEST(SignatureHelpTest, VariadicType) {
+  const std::string Header = R"cpp(
+  void fun(int x, ...) {}
+  auto get_fun() { return fun; }
+  void test() {
+  )cpp";
+  const std::string ExpectedSig = "([[int]], [[...]]) -> void";
+
+  {
+    const auto Result = signatures(Header + "get_fun()(^);}");
+    EXPECT_EQ(0, Result.activeParameter);
+    EXPECT_THAT(Result.signatures, UnorderedElementsAre(Sig(ExpectedSig)));
+  }
+  {
+    const auto Result = signatures(Header + "get_fun()(1, ^);}");
+    EXPECT_EQ(1, Result.activeParameter);
+    EXPECT_THAT(Result.signatures, UnorderedElementsAre(Sig(ExpectedSig)));
+  }
+  {
+    const auto Result = signatures(Header + "get_fun()(1, 2, ^);}");
+    EXPECT_EQ(1, Result.activeParameter);
+    EXPECT_THAT(Result.signatures, UnorderedElementsAre(Sig(ExpectedSig)));
   }
 }
 
@@ -3165,6 +3284,7 @@ TEST(CompletionTest, FunctionArgsExist) {
   clangd::CodeCompleteOptions Opts;
   Opts.EnableSnippets = true;
   std::string Context = R"cpp(
+    #define MACRO(x)
     int foo(int A);
     int bar();
     struct Object {
@@ -3212,6 +3332,9 @@ TEST(CompletionTest, FunctionArgsExist) {
       Contains(AllOf(Labeled("Container<typename T>(int Size)"),
                      SnippetSuffix(""),
                      Kind(CompletionItemKind::Constructor))));
+  EXPECT_THAT(completions(Context + "MAC^(2)", {}, Opts).Completions,
+              Contains(AllOf(Labeled("MACRO(x)"), SnippetSuffix(""),
+                             Kind(CompletionItemKind::Text))));
 }
 
 TEST(CompletionTest, NoCrashDueToMacroOrdering) {

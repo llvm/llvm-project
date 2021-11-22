@@ -3051,7 +3051,6 @@ void AMDGPULegalizerInfo::legalizeUnsignedDIV_REM64Impl(MachineIRBuilder &B,
 
   auto Add1_Lo = B.buildUAddo(S32, S1, RcpLo, MulHi1_Lo);
   auto Add1_Hi = B.buildUAdde(S32, S1, RcpHi, MulHi1_Hi, Add1_Lo.getReg(1));
-  auto Add1_HiNc = B.buildAdd(S32, RcpHi, MulHi1_Hi);
   auto Add1 = B.buildMerge(S64, {Add1_Lo, Add1_Hi});
 
   auto MulLo2 = B.buildMul(S64, NegDenom, Add1);
@@ -3062,9 +3061,7 @@ void AMDGPULegalizerInfo::legalizeUnsignedDIV_REM64Impl(MachineIRBuilder &B,
 
   auto Zero32 = B.buildConstant(S32, 0);
   auto Add2_Lo = B.buildUAddo(S32, S1, Add1_Lo, MulHi2_Lo);
-  auto Add2_HiC =
-      B.buildUAdde(S32, S1, Add1_HiNc, MulHi2_Hi, Add1_Lo.getReg(1));
-  auto Add2_Hi = B.buildUAdde(S32, S1, Add2_HiC, Zero32, Add2_Lo.getReg(1));
+  auto Add2_Hi = B.buildUAdde(S32, S1, Add1_Hi, MulHi2_Hi, Add2_Lo.getReg(1));
   auto Add2 = B.buildMerge(S64, {Add2_Lo, Add2_Hi});
 
   auto UnmergeNumer = B.buildUnmerge(S32, Numer);
@@ -4408,8 +4405,8 @@ bool AMDGPULegalizerInfo::legalizeImageIntrinsic(
       if (ConstantLod->isZero() || ConstantLod->isNegative()) {
         // Set new opcode to _lz variant of _l, and change the intrinsic ID.
         const AMDGPU::ImageDimIntrinsicInfo *NewImageDimIntr =
-            AMDGPU::getImageDimInstrinsicByBaseOpcode(LZMappingInfo->LZ,
-                                                      Intr->Dim);
+            AMDGPU::getImageDimIntrinsicByBaseOpcode(LZMappingInfo->LZ,
+                                                     Intr->Dim);
 
         // The starting indexes should remain in the same place.
         --CorrectedNumVAddrs;

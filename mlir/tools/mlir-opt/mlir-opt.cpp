@@ -106,7 +106,8 @@ void registerTestPDLByteCodePass();
 void registerTestPreparationPassWithAllowedMemrefResults();
 void registerTestRecursiveTypesPass();
 void registerTestSCFUtilsPass();
-void registerTestVectorConversions();
+void registerTestSliceAnalysisPass();
+void registerTestVectorLowerings();
 } // namespace test
 } // namespace mlir
 
@@ -195,7 +196,8 @@ void registerTestPasses() {
   mlir::test::registerTestPDLByteCodePass();
   mlir::test::registerTestRecursiveTypesPass();
   mlir::test::registerTestSCFUtilsPass();
-  mlir::test::registerTestVectorConversions();
+  mlir::test::registerTestSliceAnalysisPass();
+  mlir::test::registerTestVectorLowerings();
 }
 #endif
 

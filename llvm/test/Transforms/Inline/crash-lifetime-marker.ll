@@ -1,5 +1,6 @@
 ; RUN: opt < %s -inline -S | FileCheck %s
 ; RUN: opt < %s -passes='cgscc(inline)' -S | FileCheck %s
+; RUN: opt < %s -passes='module-inline' -S | FileCheck %s
 
 ; InlineFunction would assert inside the loop that leaves lifetime markers if
 ; there was an zero-sized AllocaInst. Check that it doesn't assert and doesn't

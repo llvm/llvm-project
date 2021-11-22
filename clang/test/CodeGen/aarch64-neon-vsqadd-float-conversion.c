@@ -2,6 +2,8 @@
 // RUN:  -S -disable-O0-optnone -emit-llvm -o - %s | opt -S -mem2reg -dce \
 // RUN: | FileCheck %s
 
+// REQUIRES: aarch64-registered-target || arm-registered-target
+
 #include <arm_neon.h>
 
 // Check float conversion is accepted for int argument

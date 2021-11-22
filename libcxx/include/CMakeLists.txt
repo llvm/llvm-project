@@ -131,6 +131,10 @@ set(files
   __concepts/swappable.h
   __concepts/totally_ordered.h
   __config
+  __coroutine/coroutine_handle.h
+  __coroutine/coroutine_traits.h
+  __coroutine/noop_coroutine_handle.h
+  __coroutine/trivial_awaitables.h
   __debug
   __errc
   __format/format_arg.h
@@ -140,6 +144,7 @@ set(files
   __format/format_fwd.h
   __format/format_parse_context.h
   __format/format_string.h
+  __format/format_to_n_result.h
   __format/formatter.h
   __format/formatter_bool.h
   __format/formatter_char.h
@@ -220,7 +225,6 @@ set(files
   __memory/auto_ptr.h
   __memory/compressed_pair.h
   __memory/construct_at.h
-  __memory/pointer_safety.h
   __memory/pointer_traits.h
   __memory/raw_storage_iterator.h
   __memory/shared_ptr.h
@@ -279,6 +283,7 @@ set(files
   __support/xlocale/__nop_locale_mgmt.h
   __support/xlocale/__posix_l_fallback.h
   __support/xlocale/__strtonum_fallback.h
+  __thread/poll_with_backoff.h
   __threading_support
   __tree
   __tuple
@@ -324,6 +329,7 @@ set(files
   complex.h
   concepts
   condition_variable
+  coroutine
   csetjmp
   csignal
   cstdarg

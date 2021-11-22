@@ -33,7 +33,7 @@ using namespace lldb_private;
 bool ThreadPlanCallFunction::ConstructorSetup(
     Thread &thread, ABI *&abi, lldb::addr_t &start_load_addr,
     lldb::addr_t &function_load_addr) {
-  SetIsMasterPlan(true);
+  SetIsControllingPlan(true);
   SetOkayToDiscard(false);
   SetPrivate(true);
 

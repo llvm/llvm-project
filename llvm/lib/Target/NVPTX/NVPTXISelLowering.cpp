@@ -4447,11 +4447,8 @@ static SDValue PerformADDCombineWithOperands(SDNode *N, SDValue N0, SDValue N1,
       //
       int numUses = 0;
       int nonAddCount = 0;
-      for (SDNode::use_iterator UI = N0.getNode()->use_begin(),
-           UE = N0.getNode()->use_end();
-           UI != UE; ++UI) {
+      for (const SDNode *User : N0.getNode()->uses()) {
         numUses++;
-        SDNode *User = *UI;
         if (User->getOpcode() != ISD::FADD)
           ++nonAddCount;
       }
@@ -4477,8 +4474,7 @@ static SDValue PerformADDCombineWithOperands(SDNode *N, SDValue N0, SDValue N1,
           opIsLive = true;
 
         if (!opIsLive)
-          for (SDNode::use_iterator UI = left->use_begin(), UE = left->use_end(); UI != UE; ++UI) {
-            SDNode *User = *UI;
+          for (const SDNode *User : left->uses()) {
             int orderNo3 = User->getIROrder();
             if (orderNo3 > orderNo) {
               opIsLive = true;
@@ -4487,8 +4483,7 @@ static SDValue PerformADDCombineWithOperands(SDNode *N, SDValue N0, SDValue N1,
           }
 
         if (!opIsLive)
-          for (SDNode::use_iterator UI = right->use_begin(), UE = right->use_end(); UI != UE; ++UI) {
-            SDNode *User = *UI;
+          for (const SDNode *User : right->uses()) {
             int orderNo3 = User->getIROrder();
             if (orderNo3 > orderNo) {
               opIsLive = true;

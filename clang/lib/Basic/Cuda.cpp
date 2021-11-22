@@ -40,6 +40,8 @@ const char *CudaVersionToString(CudaVersion V) {
     return "11.3";
   case CudaVersion::CUDA_114:
     return "11.4";
+  case CudaVersion::CUDA_115:
+    return "11.5";
   case CudaVersion::NEW:
     return "";
   }
@@ -62,6 +64,7 @@ CudaVersion CudaStringToVersion(const llvm::Twine &S) {
       .Case("11.2", CudaVersion::CUDA_112)
       .Case("11.3", CudaVersion::CUDA_113)
       .Case("11.4", CudaVersion::CUDA_114)
+      .Case("11.5", CudaVersion::CUDA_115)
       .Default(CudaVersion::UNKNOWN);
 }
 
@@ -123,6 +126,7 @@ static const CudaArchToStringMap arch_names[] = {
     GFX(1100), // gfx1100
     GFX(1101), // gfx1101
     GFX(1102), // gfx1102
+    GFX(1103), // gfx1103
     // clang-format on
 };
 #undef SM
@@ -244,6 +248,8 @@ CudaVersion ToCudaVersion(llvm::VersionTuple Version) {
     return CudaVersion::CUDA_113;
   case 114:
     return CudaVersion::CUDA_114;
+  case 115:
+    return CudaVersion::CUDA_115;
   default:
     return CudaVersion::UNKNOWN;
   }

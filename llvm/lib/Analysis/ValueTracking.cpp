@@ -1527,7 +1527,7 @@ static void computeKnownBitsFromOperator(const Operator *I,
     // taking conservative care to avoid excessive recursion.
     if (Depth < MaxAnalysisRecursionDepth - 1 && !Known.Zero && !Known.One) {
       // Skip if every incoming value references to ourself.
-      if (dyn_cast_or_null<UndefValue>(P->hasConstantValue()))
+      if (isa_and_nonnull<UndefValue>(P->hasConstantValue()))
         break;
 
       Known.Zero.setAllBits();

@@ -326,32 +326,27 @@ define <16 x i16> @zext_mulhuw_v16i16(<16 x i16> %a, <16 x i16> %b) {
 define <16 x i16> @and_mulhuw_v16i16(<16 x i32> %a, <16 x i32> %b) {
 ; SSE2-LABEL: and_mulhuw_v16i16:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    movdqa {{.*#+}} xmm8 = [32767,32767,32767,32767]
-; SSE2-NEXT:    pand %xmm8, %xmm3
-; SSE2-NEXT:    pand %xmm8, %xmm2
-; SSE2-NEXT:    packssdw %xmm3, %xmm2
-; SSE2-NEXT:    pand %xmm8, %xmm1
-; SSE2-NEXT:    pand %xmm8, %xmm0
-; SSE2-NEXT:    packssdw %xmm1, %xmm0
-; SSE2-NEXT:    pand %xmm8, %xmm7
-; SSE2-NEXT:    pand %xmm8, %xmm6
-; SSE2-NEXT:    packssdw %xmm7, %xmm6
-; SSE2-NEXT:    pmulhw %xmm2, %xmm6
-; SSE2-NEXT:    pand %xmm8, %xmm5
-; SSE2-NEXT:    pand %xmm8, %xmm4
-; SSE2-NEXT:    packssdw %xmm5, %xmm4
-; SSE2-NEXT:    pmulhw %xmm0, %xmm4
-; SSE2-NEXT:    pxor %xmm0, %xmm0
-; SSE2-NEXT:    movdqa %xmm6, %xmm1
-; SSE2-NEXT:    punpckhwd {{.*#+}} xmm1 = xmm1[4],xmm0[4],xmm1[5],xmm0[5],xmm1[6],xmm0[6],xmm1[7],xmm0[7]
-; SSE2-NEXT:    punpcklwd {{.*#+}} xmm6 = xmm6[0],xmm0[0],xmm6[1],xmm0[1],xmm6[2],xmm0[2],xmm6[3],xmm0[3]
-; SSE2-NEXT:    packssdw %xmm1, %xmm6
-; SSE2-NEXT:    movdqa %xmm4, %xmm1
-; SSE2-NEXT:    punpckhwd {{.*#+}} xmm1 = xmm1[4],xmm0[4],xmm1[5],xmm0[5],xmm1[6],xmm0[6],xmm1[7],xmm0[7]
-; SSE2-NEXT:    punpcklwd {{.*#+}} xmm4 = xmm4[0],xmm0[0],xmm4[1],xmm0[1],xmm4[2],xmm0[2],xmm4[3],xmm0[3]
-; SSE2-NEXT:    packssdw %xmm1, %xmm4
-; SSE2-NEXT:    movdqa %xmm4, %xmm0
-; SSE2-NEXT:    movdqa %xmm6, %xmm1
+; SSE2-NEXT:    movdqa %xmm6, %xmm8
+; SSE2-NEXT:    movdqa {{.*#+}} xmm6 = [32767,32767,32767,32767]
+; SSE2-NEXT:    pand %xmm6, %xmm3
+; SSE2-NEXT:    pand %xmm6, %xmm2
+; SSE2-NEXT:    pand %xmm6, %xmm1
+; SSE2-NEXT:    pand %xmm6, %xmm0
+; SSE2-NEXT:    pand %xmm6, %xmm7
+; SSE2-NEXT:    pmaddwd %xmm3, %xmm7
+; SSE2-NEXT:    pand %xmm6, %xmm8
+; SSE2-NEXT:    pmaddwd %xmm2, %xmm8
+; SSE2-NEXT:    pand %xmm6, %xmm5
+; SSE2-NEXT:    pmaddwd %xmm1, %xmm5
+; SSE2-NEXT:    pand %xmm4, %xmm6
+; SSE2-NEXT:    pmaddwd %xmm6, %xmm0
+; SSE2-NEXT:    psrld $16, %xmm7
+; SSE2-NEXT:    psrld $16, %xmm8
+; SSE2-NEXT:    packssdw %xmm7, %xmm8
+; SSE2-NEXT:    psrld $16, %xmm5
+; SSE2-NEXT:    psrld $16, %xmm0
+; SSE2-NEXT:    packssdw %xmm5, %xmm0
+; SSE2-NEXT:    movdqa %xmm8, %xmm1
 ; SSE2-NEXT:    retq
 ;
 ; SSE41-LABEL: and_mulhuw_v16i16:
@@ -382,12 +377,12 @@ define <16 x i16> @and_mulhuw_v16i16(<16 x i32> %a, <16 x i32> %b) {
 ; AVX2-LABEL: and_mulhuw_v16i16:
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vpbroadcastd {{.*#+}} ymm4 = [32767,32767,32767,32767,32767,32767,32767,32767]
-; AVX2-NEXT:    vpand %ymm4, %ymm1, %ymm1
-; AVX2-NEXT:    vpand %ymm4, %ymm0, %ymm0
-; AVX2-NEXT:    vpand %ymm4, %ymm3, %ymm3
-; AVX2-NEXT:    vpmaddwd %ymm3, %ymm1, %ymm1
 ; AVX2-NEXT:    vpand %ymm4, %ymm2, %ymm2
+; AVX2-NEXT:    vpand %ymm4, %ymm0, %ymm0
 ; AVX2-NEXT:    vpmaddwd %ymm2, %ymm0, %ymm0
+; AVX2-NEXT:    vpand %ymm4, %ymm3, %ymm2
+; AVX2-NEXT:    vpand %ymm4, %ymm1, %ymm1
+; AVX2-NEXT:    vpmaddwd %ymm2, %ymm1, %ymm1
 ; AVX2-NEXT:    vpsrld $16, %ymm1, %ymm1
 ; AVX2-NEXT:    vpsrld $16, %ymm0, %ymm0
 ; AVX2-NEXT:    vpackusdw %ymm1, %ymm0, %ymm0

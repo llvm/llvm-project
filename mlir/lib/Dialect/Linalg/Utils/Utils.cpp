@@ -12,7 +12,10 @@
 
 #include "mlir/Dialect/Linalg/Utils/Utils.h"
 
+#include "mlir/Analysis/AffineStructures.h"
+#include "mlir/Analysis/SliceAnalysis.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
+#include "mlir/Dialect/Affine/IR/AffineValueMap.h"
 #include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
 #include "mlir/Dialect/Linalg/IR/LinalgOps.h"
 #include "mlir/Dialect/Linalg/IR/LinalgTypes.h"
@@ -174,39 +177,107 @@ SmallVector<Value, 4> getDynOperands(Location loc, Value val, OpBuilder &b) {
   return dynOperands;
 }
 
-/// If `size` comes from an AffineMinOp and one of the values of AffineMinOp
-/// is a constant then return a new value set to the smallest such constant.
-/// Otherwise returngetSmallestBoundingIndex nullptr.
-IntegerAttr getSmallestBoundingIndex(Value size) {
-  Optional<int64_t> boundingConst = {};
-  if (auto affineMinOp = size.getDefiningOp<AffineMinOp>()) {
-    for (auto e : affineMinOp.getAffineMap().getResults())
-      if (auto cst = e.dyn_cast<AffineConstantExpr>())
-        boundingConst = boundingConst
-                            ? std::min(boundingConst.getValue(), cst.getValue())
-                            : cst.getValue();
-  } else if (auto constIndexOp = size.getDefiningOp<arith::ConstantOp>()) {
-    if (constIndexOp.getType().isa<IndexType>())
-      boundingConst = constIndexOp.getValue().cast<IntegerAttr>().getInt();
-  } else if (auto affineApplyOp = size.getDefiningOp<AffineApplyOp>()) {
-    if (auto cExpr = affineApplyOp.getAffineMap()
-                         .getResult(0)
-                         .dyn_cast<AffineConstantExpr>())
-      boundingConst = cExpr.getValue();
-  } else if (auto dimOp = size.getDefiningOp<tensor::DimOp>()) {
-    auto shape = dimOp.source().getType().dyn_cast<ShapedType>();
-    if (auto constOp = dimOp.index().getDefiningOp<arith::ConstantOp>()) {
-      if (auto indexAttr = constOp.getValue().dyn_cast<IntegerAttr>()) {
-        auto dimIndex = indexAttr.getInt();
-        if (!shape.isDynamicDim(dimIndex)) {
-          boundingConst = shape.getShape()[dimIndex];
-        }
-      }
+void getUpperBoundForIndex(Value value, AffineMap &boundMap,
+                           SmallVectorImpl<Value> &boundOperands) {
+  // Initialize `boundMap` and `boundOperands` to the identity returning
+  // `value`. This combination is the default result of the method if no
+  // simplification is possible.
+  assert(value.getType().isIndex() && "expect value to have index type");
+  boundMap = AffineMap::getMultiDimIdentityMap(1, value.getContext());
+  boundOperands.assign({value});
+  canonicalizeMapAndOperands(&boundMap, &boundOperands);
+
+  // Continue only if there is an affine index computation to simplify.
+  Operation *definingOp = value.getDefiningOp();
+  if (!definingOp || !isa<AffineApplyOp, AffineMinOp>(definingOp))
+    return;
+
+  // Get the backward slice containing the affine index computation.
+  SetVector<Operation *> backwardSlice;
+  getBackwardSlice(definingOp, &backwardSlice, [](Operation *op) {
+    return isa<AffineApplyOp, AffineMinOp>(op);
+  });
+  backwardSlice.insert(definingOp);
+
+  // Setup a system of affine constraints that describe the index computation.
+  FlatAffineValueConstraints constraints;
+
+  // Helper to find or create an identifier for the given value.
+  auto findOrCreateId = [&](Value value) {
+    if (!constraints.containsId(value)) {
+      constraints.appendDimId(value);
+      return true;
     }
+    unsigned pos;
+    constraints.findId(value, &pos);
+    return pos < constraints.getNumDimIds();
+  };
+  // Helper to get the position for the given value.
+  auto getPosition = [&](Value value) {
+    unsigned pos;
+    bool exists = constraints.findId(value, &pos);
+    (void)exists;
+    assert(exists && "expect to find the identifier");
+    return pos;
+  };
+
+  // Add the affine operations in `backwardSlice` to the constraints.
+  for (Operation *op : llvm::reverse(backwardSlice)) {
+    // Add an identifier for all op results and operands.
+    if (!(llvm::all_of(op->getResults(), findOrCreateId) &&
+          llvm::all_of(op->getOperands(), findOrCreateId)))
+      return;
+    // Add AffineApplyOps to the constraints.
+    if (auto applyOp = dyn_cast<AffineApplyOp>(op)) {
+      AffineValueMap valueMap(applyOp.getAffineMap(), applyOp.getOperands(),
+                              applyOp.getResult());
+      if (failed(constraints.composeMap(&valueMap)))
+        return;
+      continue;
+    }
+    // Add AffineMinOps to the constraints.
+    auto minOp = cast<AffineMinOp>(op);
+    AffineMap map = constraints.computeAlignedMap(minOp.getAffineMap(),
+                                                  minOp.getOperands());
+    if (failed(constraints.addBound(FlatAffineConstraints::UB,
+                                    getPosition(minOp.getResult()), map)))
+      return;
   }
-  if (boundingConst && *boundingConst >= 0)
-    return Builder(size.getContext()).getIndexAttr(*boundingConst);
-  return nullptr;
+
+  // Obtain an upper bound for the affine index computation by projecting out
+  // all temporary results and expressing the upper bound for `value` in terms
+  // of the terminals of the index computation.
+  SmallVector<AffineMap> lowerBounds(1), upperBounds(1);
+  constraints.getSliceBounds(getPosition(value), 1, value.getContext(),
+                             &lowerBounds, &upperBounds);
+
+  // Verify `upperBounds[0]` is valid and has at least one result.
+  if (!upperBounds[0] || upperBounds[0].getNumResults() == 0)
+    return;
+
+  // Set `boundMap` and `boundOperands` to the computed upper bound.
+  boundMap = upperBounds[0];
+  constraints.getAllValues(&boundOperands);
+  erase_value(boundOperands, value);
+  canonicalizeMapAndOperands(&boundMap, &boundOperands);
+}
+
+FailureOr<int64_t> getConstantUpperBoundForIndex(Value value) {
+  // Compute an upper bound for `value`.
+  AffineMap boundMap;
+  SmallVector<Value> boundOperands;
+  getUpperBoundForIndex(value, boundMap, boundOperands);
+
+  // Search the results of `boundMap` for constant upper bounds.
+  SmallVector<int64_t> constantBounds;
+  for (AffineExpr result : boundMap.getResults())
+    if (auto constExpr = result.dyn_cast<AffineConstantExpr>())
+      constantBounds.push_back(constExpr.getValue());
+
+  // Return the minimal upper bound or failure if none is found.
+  if (constantBounds.empty())
+    return failure();
+  return *std::min_element(constantBounds.begin(), constantBounds.end());
 }
 
 tensor::ExtractSliceOp makeComposedExtractSliceOp(

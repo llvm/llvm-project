@@ -422,6 +422,9 @@ class _LocalProcess(_BaseProcess):
     def poll(self):
         return self._proc.poll()
 
+    def wait(self, timeout=None):
+        return self._proc.wait(timeout)
+
 
 class _RemoteProcess(_BaseProcess):
 

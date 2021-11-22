@@ -1,0 +1,767 @@
+# RUN: llc -mtriple powerpc64le-unknown-linux-gnu -mcpu=pwr8 -x mir < %s \
+# RUN:   -verify-machineinstrs -start-before=ppc-mi-peepholes \
+# RUN:   -ppc-opt-conditional-trap | FileCheck %s
+
+---
+name:            conditional_trap_opt_reg_implicit_def
+alignment:       16
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    %0:gprc = IMPLICIT_DEF
+    %1:gprc = IMPLICIT_DEF
+    %2:g8rc = IMPLICIT_DEF
+    %3:g8rc = IMPLICIT_DEF
+    TW 8, %0, %1
+    TD 8, %2, %3
+    TWI 24, %0, 0
+    TDI 24, %2, 0
+    BLR8 implicit $lr8, implicit $rm
+...
+  # CHECK-LABEL: conditional_trap_opt_reg_implicit_def
+  # CHECK: # %bb.0: # %entry
+  # CHECK-NEXT:  twgt    3, 3
+  # CHECK-NEXT:  tdgt    3, 3
+  # CHECK-NEXT:  twnei   3, 0
+  # CHECK-NEXT:  tdnei   3, 0
+  # CHECK-NEXT:  blr
+
+---
+name:            conditional_trap_opt_int_return
+alignment:       16
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    liveins: $x3
+    %0:g8rc = COPY $x3
+    %1:g8rc = LI8 3
+    %2:g8rc = LI8 0
+    TD 24, %2, %1
+    $x3 = COPY %0
+    BLR8 implicit $lr8, implicit $rm, implicit $x3
+...
+  # CHECK-LABEL: conditional_trap_opt_int_return
+  # CHECK: # %bb.0: # %entry
+  # CHECK-NEXT:  trap
+  # CHECK-NOT:   blr
+
+---
+name:            conditional_trap_opt_TW_31
+alignment:       16
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    %0:gprc = LI 3
+    %1:gprc = LI 0
+    TW 31, %1, %0
+    BLR8 implicit $lr8, implicit $rm
+...
+  # CHECK-LABEL: conditional_trap_opt_TW_31
+  # CHECK: # %bb.0: # %entry
+  # CHECK-NEXT:  trap
+  # CHECK-NOT:   blr
+
+---
+name:            conditional_trap_opt_TW_24
+alignment:       16
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    %0:gprc = LI 3
+    %1:gprc = LI 0
+    TW 24, %1, %0
+    BLR8 implicit $lr8, implicit $rm
+...
+  # CHECK-LABEL: conditional_trap_opt_TW_24
+  # CHECK: # %bb.0: # %entry
+  # CHECK-NEXT:  trap
+  # CHECK-NOT:   blr
+
+---
+name:            conditional_trap_opt_no_trap_TW_24
+alignment:       16
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    %0:gprc = LI 3
+    %1:gprc = LI 3
+    TW 24, %1, %0
+    BLR8 implicit $lr8, implicit $rm
+...
+  # CHECK-LABEL: conditional_trap_opt_no_trap_TW_24
+  # CHECK: # %bb.0: # %entry
+  # CHECK-NEXT:  blr
+
+---
+name:            conditional_trap_opt_TW_20
+alignment:       16
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    %0:gprc = LI 3
+    %1:gprc = LI 3
+    TW 20, %1, %0
+    BLR8 implicit $lr8, implicit $rm
+...
+  # CHECK-LABEL: conditional_trap_opt_TW_20
+  # CHECK: # %bb.0: # %entry
+  # CHECK-NEXT:  trap
+  # CHECK-NOT:   blr
+
+---
+name:            conditional_trap_opt_no_trap_TW_20
+alignment:       16
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    %0:gprc = LI 3
+    %1:gprc = LI 5
+    TW 20, %1, %0
+    BLR8 implicit $lr8, implicit $rm
+...
+  # CHECK-LABEL: conditional_trap_opt_no_trap_TW_20
+  # CHECK: # %bb.0: # %entry
+  # CHECK-NEXT:  blr
+
+---
+name:            conditional_trap_opt_no_trap_TW_16
+alignment:       16
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    %0:gprc = LI 5
+    %1:gprc = LI 1
+    TW 16, %0, %1
+    BLR8 implicit $lr8, implicit $rm
+...
+  # CHECK-LABEL: conditional_trap_opt_no_trap_TW_16
+  # CHECK: # %bb.0: # %entry
+  # CHECK-NEXT:  blr
+
+---
+name:            conditional_trap_opt_TW_16
+alignment:       16
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    %0:gprc = LI 5
+    %1:gprc = LI 1
+    TW 16, %1, %0
+    TW 16, %0, %1
+    BLR8 implicit $lr8, implicit $rm
+...
+  # CHECK-LABEL: conditional_trap_opt_TW_16
+  # CHECK: # %bb.0: # %entry
+  # CHECK-NEXT:  trap
+  # CHECK-NOT:   blr
+
+---
+name:            conditional_trap_opt_TW_8
+alignment:       16
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    %0:gprc = LI -1
+    %1:gprc = LI 10
+    TW 8, %1, %0
+    TW 8, %0, %1
+    BLR8 implicit $lr8, implicit $rm
+...
+  # CHECK-LABEL: conditional_trap_opt_TW_8
+  # CHECK: # %bb.0: # %entry
+  # CHECK-NEXT:  trap
+  # CHECK-NOT:   blr
+
+---
+name:            conditional_trap_opt_TW_2
+alignment:       16
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    %0:gprc = LI -1
+    %1:gprc = LI 2
+    TW 2, %1, %0
+    TW 2, %0, %1
+    BLR8 implicit $lr8, implicit $rm
+...
+  # CHECK-LABEL: conditional_trap_opt_TW_2
+  # CHECK: # %bb.0: # %entry
+  # CHECK-NEXT:  trap
+  # CHECK-NOT:   blr
+
+---
+name:            conditional_trap_opt_TW_1
+alignment:       16
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    %0:gprc = LI -3
+    %1:gprc = LI 4
+    TW 1, %1, %0
+    TW 1, %0, %1
+    BLR8 implicit $lr8, implicit $rm
+...
+  # CHECK-LABEL: conditional_trap_opt_TW_1
+  # CHECK: # %bb.0: # %entry
+  # CHECK-NEXT:  trap
+  # CHECK-NOT:   blr
+
+---
+name:            conditional_trap_opt_TW_4
+alignment:       16
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    %0:gprc = LI 5
+    %1:gprc = LI 1
+    TW 4, %1, %0
+    TW 4, %1, %1
+    BLR8 implicit $lr8, implicit $rm
+...
+  # CHECK-LABEL: conditional_trap_opt_TW_4
+  # CHECK: # %bb.0: # %entry
+  # CHECK-NEXT:  trap
+  # CHECK-NOT:   blr
+
+---
+name:            conditional_trap_opt_TWI_31
+alignment:       16
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    %0:gprc = LI 3
+    TWI 31, %0, 0
+    BLR8 implicit $lr8, implicit $rm
+...
+  # CHECK-LABEL: conditional_trap_opt_TWI_31
+  # CHECK: # %bb.0: # %entry
+  # CHECK-NEXT:  trap
+  # CHECK-NOT:   blr
+
+---
+name:            conditional_trap_opt_TWI_24
+alignment:       16
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    %0:gprc = LI 3
+    TWI 24, %0, 0
+    BLR8 implicit $lr8, implicit $rm
+...
+  # CHECK-LABEL: conditional_trap_opt_TWI_24
+  # CHECK: # %bb.0: # %entry
+  # CHECK-NEXT:  trap
+  # CHECK-NOT:   blr
+
+---
+name:            conditional_trap_opt_no_trap_TWI_24
+alignment:       16
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    %0:gprc = LI 0
+    TWI 24, %0, 0
+    BLR8 implicit $lr8, implicit $rm
+...
+  # CHECK-LABEL: conditional_trap_opt_no_trap_TWI_24
+  # CHECK: # %bb.0: # %entry
+  # CHECK-NEXT:  blr
+
+---
+name:            conditional_trap_opt_TWI_20
+alignment:       16
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    %0:gprc = LI 3
+    TWI 20, %0, 3
+    BLR8 implicit $lr8, implicit $rm
+...
+  # CHECK-LABEL: conditional_trap_opt_TWI_20
+  # CHECK: # %bb.0: # %entry
+  # CHECK-NEXT:  trap
+  # CHECK-NOT:   blr
+
+---
+name:            conditional_trap_opt_no_trap_TWI_20
+alignment:       16
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    %0:gprc = LI 3
+    TWI 20, %0, 0
+    BLR8 implicit $lr8, implicit $rm
+...
+  # CHECK-LABEL: conditional_trap_opt_no_trap_TWI_20
+  # CHECK: # %bb.0: # %entry
+  # CHECK-NEXT:  blr
+
+---
+name:            conditional_trap_opt_no_trap_TWI_16
+alignment:       16
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    %0:gprc = LI 5
+    TWI 16, %0, 1
+    BLR8 implicit $lr8, implicit $rm
+...
+  # CHECK-LABEL: conditional_trap_opt_no_trap_TWI_16
+  # CHECK: # %bb.0: # %entry
+  # CHECK-NEXT:  blr
+
+---
+name:            conditional_trap_opt_TWI_16
+alignment:       16
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    %0:gprc = LI 5
+    %1:gprc = LI 1
+    TWI 16, %1, 5
+    TWI 16, %0, 1
+    BLR8 implicit $lr8, implicit $rm
+...
+  # CHECK-LABEL: conditional_trap_opt_TWI_16
+  # CHECK: # %bb.0: # %entry
+  # CHECK-NEXT:  trap
+  # CHECK-NOT:   blr
+
+---
+name:            conditional_trap_opt_TWI_8
+alignment:       16
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    %0:gprc = LI -1
+    %1:gprc = LI 10
+    TWI 8, %1, -1
+    TWI 8, %0, 10
+    BLR8 implicit $lr8, implicit $rm
+...
+  # CHECK-LABEL: conditional_trap_opt_TWI_8
+  # CHECK: # %bb.0: # %entry
+  # CHECK-NEXT:  trap
+  # CHECK-NOT:   blr
+
+---
+name:            conditional_trap_opt_TWI_2
+alignment:       16
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    %0:gprc = LI -1
+    %1:gprc = LI 2
+    TWI 2, %1, -1
+    TWI 2, %0, 2
+    BLR8 implicit $lr8, implicit $rm
+...
+  # CHECK-LABEL: conditional_trap_opt_TWI_2
+  # CHECK: # %bb.0: # %entry
+  # CHECK-NEXT:  trap
+  # CHECK-NOT:   blr
+
+---
+name:            conditional_trap_opt_TWI_1
+alignment:       16
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    %0:gprc = LI -3
+    %1:gprc = LI 4
+    TWI 1, %1, -3
+    TWI 1, %0, 4
+    BLR8 implicit $lr8, implicit $rm
+...
+  # CHECK-LABEL: conditional_trap_opt_TWI_1
+  # CHECK: # %bb.0: # %entry
+  # CHECK-NEXT:  trap
+  # CHECK-NOT:   blr
+
+---
+name:            conditional_trap_opt_TWI_4
+alignment:       16
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    %0:gprc = LI 5
+    %1:gprc = LI 1
+    TWI 4, %1, 5
+    TWI 4, %1, 1
+    BLR8 implicit $lr8, implicit $rm
+...
+  # CHECK-LABEL: conditional_trap_opt_TWI_4
+  # CHECK: # %bb.0: # %entry
+  # CHECK-NEXT:  trap
+  # CHECK-NOT:   blr
+
+---
+name:            conditional_trap_opt_TD_31
+alignment:       16
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    %0:g8rc = LI8 3
+    %1:g8rc = LI8 0
+    TD 31, %1, %0
+    BLR8 implicit $lr8, implicit $rm
+...
+  # CHECK-LABEL: conditional_trap_opt_TD_31
+  # CHECK: # %bb.0: # %entry
+  # CHECK-NEXT:  trap
+  # CHECK-NOT:   blr
+
+---
+name:            conditional_trap_opt_TD_24
+alignment:       16
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    %0:g8rc = LI8 3
+    %1:g8rc = LI8 0
+    TD 24, %1, %0
+    BLR8 implicit $lr8, implicit $rm
+...
+  # CHECK-LABEL: conditional_trap_opt_TD_24
+  # CHECK: # %bb.0: # %entry
+  # CHECK-NEXT:  trap
+  # CHECK-NOT:   blr
+
+---
+name:            conditional_trap_opt_no_trap_TD_24
+alignment:       16
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    %0:g8rc = LI8 3
+    %1:g8rc = LI8 3
+    TD 24, %1, %0
+    BLR8 implicit $lr8, implicit $rm
+...
+  # CHECK-LABEL: conditional_trap_opt_no_trap_TD_24
+  # CHECK: # %bb.0: # %entry
+  # CHECK-NEXT:  blr
+
+---
+name:            conditional_trap_opt_TD_20
+alignment:       16
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    %0:g8rc = LI8 3
+    %1:g8rc = LI8 3
+    TD 20, %1, %0
+    BLR8 implicit $lr8, implicit $rm
+...
+  # CHECK-LABEL: conditional_trap_opt_TD_20
+  # CHECK: # %bb.0: # %entry
+  # CHECK-NEXT:  trap
+  # CHECK-NOT:   blr
+
+---
+name:            conditional_trap_opt_no_trap_TD_20
+alignment:       16
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    %0:g8rc = LI8 3
+    %1:g8rc = LI8 5
+    TD 20, %1, %0
+    BLR8 implicit $lr8, implicit $rm
+...
+  # CHECK-LABEL: conditional_trap_opt_no_trap_TD_20
+  # CHECK: # %bb.0: # %entry
+  # CHECK-NEXT:  blr
+
+---
+name:            conditional_trap_opt_no_trap_TD_16
+alignment:       16
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    %0:g8rc = LI8 5
+    %1:g8rc = LI8 1
+    TD 16, %0, %1
+    BLR8 implicit $lr8, implicit $rm
+...
+  # CHECK-LABEL: conditional_trap_opt_no_trap_TD_16
+  # CHECK: # %bb.0: # %entry
+  # CHECK-NEXT:  blr
+
+---
+name:            conditional_trap_opt_TD_16
+alignment:       16
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    %0:g8rc = LI8 5
+    %1:g8rc = LI8 1
+    TD 16, %1, %0
+    TD 16, %0, %1
+    BLR8 implicit $lr8, implicit $rm
+...
+  # CHECK-LABEL: conditional_trap_opt_TD_16
+  # CHECK: # %bb.0: # %entry
+  # CHECK-NEXT:  trap
+  # CHECK-NOT:   blr
+
+---
+name:            conditional_trap_opt_TD_8
+alignment:       16
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    %0:g8rc = LI8 -1
+    %1:g8rc = LI8 10
+    TD 8, %1, %0
+    TD 8, %0, %1
+    BLR8 implicit $lr8, implicit $rm
+...
+  # CHECK-LABEL: conditional_trap_opt_TD_8
+  # CHECK: # %bb.0: # %entry
+  # CHECK-NEXT:  trap
+  # CHECK-NOT:   blr
+
+---
+name:            conditional_trap_opt_TD_2
+alignment:       16
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    %0:g8rc = LI8 -1
+    %1:g8rc = LI8 2
+    TD 2, %1, %0
+    TD 2, %0, %1
+    BLR8 implicit $lr8, implicit $rm
+...
+  # CHECK-LABEL: conditional_trap_opt_TD_2
+  # CHECK: # %bb.0: # %entry
+  # CHECK-NEXT:  trap
+  # CHECK-NOT:   blr
+
+---
+name:            conditional_trap_opt_TD_1
+alignment:       16
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    %0:g8rc = LI8 -3
+    %1:g8rc = LI8 4
+    TD 1, %1, %0
+    TD 1, %0, %1
+    BLR8 implicit $lr8, implicit $rm
+...
+  # CHECK-LABEL: conditional_trap_opt_TD_1
+  # CHECK: # %bb.0: # %entry
+  # CHECK-NEXT:  trap
+  # CHECK-NOT:   blr
+
+---
+name:            conditional_trap_opt_TD_4
+alignment:       16
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    %0:g8rc = LI8 5
+    %1:g8rc = LI8 1
+    TD 4, %1, %0
+    TD 4, %1, %1
+    BLR8 implicit $lr8, implicit $rm
+...
+  # CHECK-LABEL: conditional_trap_opt_TD_4
+  # CHECK: # %bb.0: # %entry
+  # CHECK-NEXT:  trap
+  # CHECK-NOT:   blr
+
+---
+name:            conditional_trap_opt_TDI_31
+alignment:       16
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    %0:g8rc = LI8 3
+    TDI 31, %0, 0
+    BLR8 implicit $lr8, implicit $rm
+...
+  # CHECK-LABEL: conditional_trap_opt_TDI_31
+  # CHECK: # %bb.0: # %entry
+  # CHECK-NEXT:  trap
+  # CHECK-NOT:   blr
+
+---
+name:            conditional_trap_opt_TDI_24
+alignment:       16
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    %0:g8rc = LI8 3
+    TDI 24, %0, 0
+    BLR8 implicit $lr8, implicit $rm
+...
+  # CHECK-LABEL: conditional_trap_opt_TDI_24
+  # CHECK: # %bb.0: # %entry
+  # CHECK-NEXT:  trap
+  # CHECK-NOT:   blr
+
+---
+name:            conditional_trap_opt_no_trap_TDI_24
+alignment:       16
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    %0:g8rc = LI8 0
+    TDI 24, %0, 0
+    BLR8 implicit $lr8, implicit $rm
+...
+  # CHECK-LABEL: conditional_trap_opt_no_trap_TDI_24
+  # CHECK: # %bb.0: # %entry
+  # CHECK-NEXT:  blr
+
+---
+name:            conditional_trap_opt_TDI_20
+alignment:       16
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    %0:g8rc = LI8 3
+    TDI 20, %0, 3
+    BLR8 implicit $lr8, implicit $rm
+...
+  # CHECK-LABEL: conditional_trap_opt_TDI_20
+  # CHECK: # %bb.0: # %entry
+  # CHECK-NEXT:  trap
+  # CHECK-NOT:   blr
+
+---
+name:            conditional_trap_opt_no_trap_TDI_20
+alignment:       16
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    %0:g8rc = LI8 5
+    TDI 20, %0, 3
+    BLR8 implicit $lr8, implicit $rm
+...
+  # CHECK-LABEL: conditional_trap_opt_no_trap_TDI_20
+  # CHECK: # %bb.0: # %entry
+  # CHECK-NEXT:  blr
+
+---
+name:            conditional_trap_opt_no_trap_TDI_16
+alignment:       16
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    %0:g8rc = LI8 5
+    TDI 16, %0, 1
+    BLR8 implicit $lr8, implicit $rm
+...
+  # CHECK-LABEL: conditional_trap_opt_no_trap_TDI_16
+  # CHECK: # %bb.0: # %entry
+  # CHECK-NEXT:  blr
+
+---
+name:            conditional_trap_opt_TDI_16
+alignment:       16
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    %0:g8rc = LI8 5
+    %1:g8rc = LI8 1
+    TDI 16, %1, 5
+    TDI 16, %0, 1
+    BLR8 implicit $lr8, implicit $rm
+...
+  # CHECK-LABEL: conditional_trap_opt_TDI_16
+  # CHECK: # %bb.0: # %entry
+  # CHECK-NEXT:  trap
+  # CHECK-NOT:   blr
+
+---
+name:            conditional_trap_opt_TDI_8
+alignment:       16
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    %0:g8rc = LI8 -1
+    %1:g8rc = LI8 10
+    TDI 8, %1, -1
+    TDI 8, %0, 10
+    BLR8 implicit $lr8, implicit $rm
+...
+  # CHECK-LABEL: conditional_trap_opt_TDI_8
+  # CHECK: # %bb.0: # %entry
+  # CHECK-NEXT:  trap
+  # CHECK-NOT:   blr
+
+---
+name:            conditional_trap_opt_TDI_2
+alignment:       16
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    %0:g8rc = LI8 -1
+    %1:g8rc = LI8 2
+    TDI 2, %1, -1
+    TDI 2, %0, 2
+    BLR8 implicit $lr8, implicit $rm
+...
+  # CHECK-LABEL: conditional_trap_opt_TDI_2
+  # CHECK: # %bb.0: # %entry
+  # CHECK-NEXT:  trap
+  # CHECK-NOT:   blr
+
+---
+name:            conditional_trap_opt_TDI_1
+alignment:       16
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    %0:g8rc = LI8 -3
+    %1:g8rc = LI8 4
+    TDI 1, %1, -3
+    TDI 1, %0, 4
+    BLR8 implicit $lr8, implicit $rm
+...
+  # CHECK-LABEL: conditional_trap_opt_TDI_1
+  # CHECK: # %bb.0: # %entry
+  # CHECK-NEXT:  trap
+  # CHECK-NOT:   blr
+
+---
+name:            conditional_trap_opt_TDI_4
+alignment:       16
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    %0:g8rc = LI8 5
+    %1:g8rc = LI8 1
+    TDI 4, %1, 5
+    TDI 4, %1, 1
+    BLR8 implicit $lr8, implicit $rm
+...
+  # CHECK-LABEL: conditional_trap_opt_TDI_4
+  # CHECK: # %bb.0: # %entry
+  # CHECK-NEXT:  trap
+  # CHECK-NOT:   blr
+
+---
+name:            conditional_trap_opt_multiple_traps
+alignment:       16
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    %0:gprc = LI 5
+    %1:gprc = LI 1
+    %2:g8rc = LI8 -1
+    %3:g8rc = LI8 0
+    TWI 31, %1, 5
+    TDI 31, %3, 0
+    TW 31, %0, %1
+    TD 31, %2, %2
+    BLR8 implicit $lr8, implicit $rm
+...
+  # CHECK-LABEL: conditional_trap_opt_multiple_traps
+  # CHECK: # %bb.0: # %entry
+  # CHECK-NEXT:  trap
+  # CHECK-NOT:   blr

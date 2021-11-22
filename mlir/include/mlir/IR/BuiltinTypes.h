@@ -20,9 +20,9 @@ namespace mlir {
 class AffineExpr;
 class AffineMap;
 class FloatType;
-class Identifier;
 class IndexType;
 class IntegerType;
+class StringAttr;
 class TypeRange;
 
 //===----------------------------------------------------------------------===//
@@ -199,12 +199,13 @@ public:
 #include "mlir/IR/BuiltinTypeInterfaces.h.inc"
 
 namespace mlir {
+
 //===----------------------------------------------------------------------===//
 // MemRefType
 //===----------------------------------------------------------------------===//
 
 /// This is a builder type that keeps local references to arguments. Arguments
-/// that are passed into the builder must out-live the builder.
+/// that are passed into the builder must outlive the builder.
 class MemRefType::Builder {
 public:
   // Build from another MemRefType.
@@ -248,6 +249,102 @@ private:
   Type elementType;
   MemRefLayoutAttrInterface layout;
   Attribute memorySpace;
+};
+
+//===----------------------------------------------------------------------===//
+// RankedTensorType
+//===----------------------------------------------------------------------===//
+
+/// This is a builder type that keeps local references to arguments. Arguments
+/// that are passed into the builder must outlive the builder.
+class RankedTensorType::Builder {
+public:
+  /// Build from another RankedTensorType.
+  explicit Builder(RankedTensorType other)
+      : shape(other.getShape()), elementType(other.getElementType()),
+        encoding(other.getEncoding()) {}
+
+  /// Build from scratch.
+  Builder(ArrayRef<int64_t> shape, Type elementType, Attribute encoding)
+      : shape(shape), elementType(elementType), encoding(encoding) {}
+
+  Builder &setShape(ArrayRef<int64_t> newShape) {
+    shape = newShape;
+    return *this;
+  }
+
+  Builder &setElementType(Type newElementType) {
+    elementType = newElementType;
+    return *this;
+  }
+
+  Builder &setEncoding(Attribute newEncoding) {
+    encoding = newEncoding;
+    return *this;
+  }
+
+  /// Create a new RankedTensor by erasing a dim from shape @pos.
+  RankedTensorType dropDim(unsigned pos) {
+    assert(pos < shape.size() && "overflow");
+    SmallVector<int64_t, 4> newShape(shape.begin(), shape.end());
+    newShape.erase(newShape.begin() + pos);
+    return setShape(newShape);
+  }
+
+  operator RankedTensorType() {
+    return RankedTensorType::get(shape, elementType, encoding);
+  }
+
+private:
+  ArrayRef<int64_t> shape;
+  Type elementType;
+  Attribute encoding;
+};
+
+//===----------------------------------------------------------------------===//
+// VectorType
+//===----------------------------------------------------------------------===//
+
+/// This is a builder type that keeps local references to arguments. Arguments
+/// that are passed into the builder must outlive the builder.
+class VectorType::Builder {
+public:
+  /// Build from another VectorType.
+  explicit Builder(VectorType other)
+      : shape(other.getShape()), elementType(other.getElementType()) {}
+
+  /// Build from scratch.
+  Builder(ArrayRef<int64_t> shape, Type elementType)
+      : shape(shape), elementType(elementType) {}
+
+  Builder &setShape(ArrayRef<int64_t> newShape) {
+    shape = newShape;
+    return *this;
+  }
+
+  Builder &setElementType(Type newElementType) {
+    elementType = newElementType;
+    return *this;
+  }
+
+  /// Create a new VectorType by erasing a dim from shape @pos.
+  /// In the particular case where the vector has a single dimension that we
+  /// drop, return the scalar element type.
+  // TODO: unify once we have a VectorType that supports 0-D.
+  Type dropDim(unsigned pos) {
+    assert(pos < shape.size() && "overflow");
+    if (shape.size() == 1)
+      return elementType;
+    SmallVector<int64_t, 4> newShape(shape.begin(), shape.end());
+    newShape.erase(newShape.begin() + pos);
+    return setShape(newShape);
+  }
+
+  operator VectorType() { return VectorType::get(shape, elementType); }
+
+private:
+  ArrayRef<int64_t> shape;
+  Type elementType;
 };
 
 /// Given an `originalShape` and a `reducedShape` assumed to be a subset of

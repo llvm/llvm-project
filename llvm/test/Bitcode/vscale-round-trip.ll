@@ -6,7 +6,7 @@ target triple = "aarch64"
 @important_val = extern_weak dso_local global i32, align 4
 
 ; CHECK-LABEL: define <vscale x 4 x i32> @const_shufflevector(
-; CHECK: <vscale x 4 x i32> shufflevector (<vscale x 4 x i32>
+; CHECK: <vscale x 4 x i32> zeroinitializer
 
 define <vscale x 4 x i32> @const_shufflevector() {
   ret <vscale x 4 x i32> shufflevector (<vscale x 4 x i32> zeroinitializer,
@@ -15,7 +15,7 @@ define <vscale x 4 x i32> @const_shufflevector() {
 }
 
 ; CHECK-LABEL: define <vscale x 4 x i32> @const_shufflevector_ex()
-; CHECK: <vscale x 4 x i32> shufflevector (<vscale x 2 x i32>
+; CHECK: <vscale x 4 x i32> zeroinitializer
 
 define <vscale x 4 x i32> @const_shufflevector_ex() {
   ret <vscale x 4 x i32> shufflevector (<vscale x 2 x i32> zeroinitializer,

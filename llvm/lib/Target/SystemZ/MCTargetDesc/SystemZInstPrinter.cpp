@@ -24,9 +24,9 @@ using namespace llvm;
 #include "SystemZGenAsmWriter.inc"
 
 void SystemZInstPrinter::printAddress(const MCAsmInfo *MAI, unsigned Base,
-                                      int64_t Disp, unsigned Index,
+                                      const MCOperand &DispMO, unsigned Index,
                                       raw_ostream &O) {
-  O << Disp;
+  printOperand(DispMO, MAI, O);
   if (Base || Index) {
     O << '(';
     if (Index) {
@@ -194,23 +194,23 @@ void SystemZInstPrinter::printOperand(const MCInst *MI, int OpNum,
 
 void SystemZInstPrinter::printBDAddrOperand(const MCInst *MI, int OpNum,
                                             raw_ostream &O) {
-  printAddress(&MAI, MI->getOperand(OpNum).getReg(),
-               MI->getOperand(OpNum + 1).getImm(), 0, O);
+  printAddress(&MAI, MI->getOperand(OpNum).getReg(), MI->getOperand(OpNum + 1),
+               0, O);
 }
 
 void SystemZInstPrinter::printBDXAddrOperand(const MCInst *MI, int OpNum,
                                              raw_ostream &O) {
-  printAddress(&MAI, MI->getOperand(OpNum).getReg(),
-               MI->getOperand(OpNum + 1).getImm(),
+  printAddress(&MAI, MI->getOperand(OpNum).getReg(), MI->getOperand(OpNum + 1),
                MI->getOperand(OpNum + 2).getReg(), O);
 }
 
 void SystemZInstPrinter::printBDLAddrOperand(const MCInst *MI, int OpNum,
                                              raw_ostream &O) {
   unsigned Base = MI->getOperand(OpNum).getReg();
-  uint64_t Disp = MI->getOperand(OpNum + 1).getImm();
+  const MCOperand &DispMO = MI->getOperand(OpNum + 1);
   uint64_t Length = MI->getOperand(OpNum + 2).getImm();
-  O << Disp << '(' << Length;
+  printOperand(DispMO, &MAI, O);
+  O << '(' << Length;
   if (Base) {
     O << ",";
     printRegName(O, Base);
@@ -221,9 +221,10 @@ void SystemZInstPrinter::printBDLAddrOperand(const MCInst *MI, int OpNum,
 void SystemZInstPrinter::printBDRAddrOperand(const MCInst *MI, int OpNum,
                                              raw_ostream &O) {
   unsigned Base = MI->getOperand(OpNum).getReg();
-  uint64_t Disp = MI->getOperand(OpNum + 1).getImm();
+  const MCOperand &DispMO = MI->getOperand(OpNum + 1);
   unsigned Length = MI->getOperand(OpNum + 2).getReg();
-  O << Disp << "(";
+  printOperand(DispMO, &MAI, O);
+  O << "(";
   printRegName(O, Length);
   if (Base) {
     O << ",";
@@ -234,8 +235,7 @@ void SystemZInstPrinter::printBDRAddrOperand(const MCInst *MI, int OpNum,
 
 void SystemZInstPrinter::printBDVAddrOperand(const MCInst *MI, int OpNum,
                                              raw_ostream &O) {
-  printAddress(&MAI, MI->getOperand(OpNum).getReg(),
-               MI->getOperand(OpNum + 1).getImm(),
+  printAddress(&MAI, MI->getOperand(OpNum).getReg(), MI->getOperand(OpNum + 1),
                MI->getOperand(OpNum + 2).getReg(), O);
 }
 

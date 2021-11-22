@@ -6456,7 +6456,8 @@ void Sema::AddOverloadCandidate(
   // parameters is viable only if it has an ellipsis in its parameter
   // list (8.3.5).
   if (TooManyArguments(NumParams, Args.size(), PartialOverloading) &&
-      !Proto->isVariadic()) {
+      !Proto->isVariadic() &&
+      shouldEnforceArgLimit(PartialOverloading, Function)) {
     Candidate.Viable = false;
     Candidate.FailureKind = ovl_fail_too_many_arguments;
     return;
@@ -6946,7 +6947,8 @@ Sema::AddMethodCandidate(CXXMethodDecl *Method, DeclAccessPair FoundDecl,
   // parameters is viable only if it has an ellipsis in its parameter
   // list (8.3.5).
   if (TooManyArguments(NumParams, Args.size(), PartialOverloading) &&
-      !Proto->isVariadic()) {
+      !Proto->isVariadic() &&
+      shouldEnforceArgLimit(PartialOverloading, Method)) {
     Candidate.Viable = false;
     Candidate.FailureKind = ovl_fail_too_many_arguments;
     return;
@@ -9860,9 +9862,9 @@ bool clang::isBetterOverloadCandidate(
   //      F1 and F2 have the same type.
   // FIXME: Implement the "all parameters have the same type" check.
   bool Cand1IsInherited =
-      dyn_cast_or_null<ConstructorUsingShadowDecl>(Cand1.FoundDecl.getDecl());
+      isa_and_nonnull<ConstructorUsingShadowDecl>(Cand1.FoundDecl.getDecl());
   bool Cand2IsInherited =
-      dyn_cast_or_null<ConstructorUsingShadowDecl>(Cand2.FoundDecl.getDecl());
+      isa_and_nonnull<ConstructorUsingShadowDecl>(Cand2.FoundDecl.getDecl());
   if (Cand1IsInherited != Cand2IsInherited)
     return Cand2IsInherited;
   else if (Cand1IsInherited) {
@@ -12673,7 +12675,7 @@ static void AddOverloadedCallCandidate(Sema &S,
       return;
     }
     // Prevent ill-formed function decls to be added as overload candidates.
-    if (!dyn_cast<FunctionProtoType>(Func->getType()->getAs<FunctionType>()))
+    if (!isa<FunctionProtoType>(Func->getType()->getAs<FunctionType>()))
       return;
 
     S.AddOverloadCandidate(Func, FoundDecl, Args, CandidateSet,
@@ -15241,4 +15243,22 @@ ExprResult Sema::FixOverloadedFunctionReference(ExprResult E,
                                                 DeclAccessPair Found,
                                                 FunctionDecl *Fn) {
   return FixOverloadedFunctionReference(E.get(), Found, Fn);
+}
+
+bool clang::shouldEnforceArgLimit(bool PartialOverloading,
+                                  FunctionDecl *Function) {
+  if (!PartialOverloading || !Function)
+    return true;
+  if (Function->isVariadic())
+    return false;
+  if (const auto *Proto =
+          dyn_cast<FunctionProtoType>(Function->getFunctionType()))
+    if (Proto->isTemplateVariadic())
+      return false;
+  if (auto *Pattern = Function->getTemplateInstantiationPattern())
+    if (const auto *Proto =
+            dyn_cast<FunctionProtoType>(Pattern->getFunctionType()))
+      if (Proto->isTemplateVariadic())
+        return false;
+  return true;
 }

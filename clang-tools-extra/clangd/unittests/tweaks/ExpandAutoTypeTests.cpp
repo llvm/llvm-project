@@ -57,7 +57,7 @@ TEST_F(ExpandAutoTypeTest, Test) {
   EXPECT_UNAVAILABLE("au^to x = []{};");
   // inline namespaces
   EXPECT_EQ(apply("au^to x = inl_ns::Visible();"),
-            "Visible x = inl_ns::Visible();");
+            "inl_ns::Visible x = inl_ns::Visible();");
   // local class
   EXPECT_EQ(apply("namespace x { void y() { struct S{}; ^auto z = S(); } }"),
             "namespace x { void y() { struct S{}; S z = S(); } }");
@@ -67,8 +67,9 @@ TEST_F(ExpandAutoTypeTest, Test) {
 
   EXPECT_EQ(apply("ns::Class * foo() { au^to c = foo(); }"),
             "ns::Class * foo() { ns::Class * c = foo(); }");
-  EXPECT_EQ(apply("void ns::Func() { au^to x = new ns::Class::Nested{}; }"),
-            "void ns::Func() { Class::Nested * x = new ns::Class::Nested{}; }");
+  EXPECT_EQ(
+      apply("void ns::Func() { au^to x = new ns::Class::Nested{}; }"),
+      "void ns::Func() { ns::Class::Nested * x = new ns::Class::Nested{}; }");
 
   EXPECT_UNAVAILABLE("dec^ltype(au^to) x = 10;");
   // expanding types in structured bindings is syntactically invalid.

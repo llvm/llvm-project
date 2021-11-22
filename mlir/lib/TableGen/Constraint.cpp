@@ -17,10 +17,11 @@ using namespace mlir;
 using namespace mlir::tblgen;
 
 Constraint::Constraint(const llvm::Record *record)
-    : def(record), kind(CK_Uncategorized) {
+    : Constraint(record, CK_Uncategorized) {
   // Look through OpVariable's to their constraint.
   if (def->isSubClassOf("OpVariable"))
     def = def->getValueAsDef("constraint");
+
   if (def->isSubClassOf("TypeConstraint")) {
     kind = CK_Type;
   } else if (def->isSubClassOf("AttrConstraint")) {
@@ -32,13 +33,6 @@ Constraint::Constraint(const llvm::Record *record)
   } else {
     assert(def->isSubClassOf("Constraint"));
   }
-}
-
-Constraint::Constraint(Kind kind, const llvm::Record *record)
-    : def(record), kind(kind) {
-  // Look through OpVariable's to their constraint.
-  if (def->isSubClassOf("OpVariable"))
-    def = def->getValueAsDef("constraint");
 }
 
 Pred Constraint::getPredicate() const {

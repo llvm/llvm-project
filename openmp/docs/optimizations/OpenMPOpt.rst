@@ -53,12 +53,12 @@ which means it cannot reside in the registers on the device.
 .. code-block:: c++
 
   void use(void *) { }
-  
+
   void foo() {
     int x;
     use(&x);
   }
-  
+
   int main() {
   #pragma omp target parallel
     foo();
@@ -106,4 +106,3 @@ Resources
 - 2021 OpenMP Webinar: "A Compiler's View of OpenMP" https://youtu.be/eIMpgez61r4
 - 2020 LLVM Developers’ Meeting: "(OpenMP) Parallelism-Aware Optimizations" https://youtu.be/gtxWkeLCxmU
 - 2019 EuroLLVM Developers’ Meeting: "Compiler Optimizations for (OpenMP) Target Offloading to GPUs" https://youtu.be/3AbS82C3X30
-

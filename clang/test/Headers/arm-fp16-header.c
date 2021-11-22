@@ -16,4 +16,6 @@
 // RUN: %clang -fsyntax-only -Wall -Werror -ffreestanding -nostdinc++ --target=aarch64_be-none-eabi -march=armv8.2-a+fp16 -std=c++14 -xc++ %s
 // RUN: %clang -fsyntax-only -Wall -Werror -ffreestanding -nostdinc++ --target=aarch64_be-none-eabi -march=armv8.2-a+fp16 -std=c++17 -xc++ %s
 
+// REQUIRES: aarch64-registered-target || arm-registered-target
+
 #include <arm_fp16.h>

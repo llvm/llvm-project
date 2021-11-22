@@ -1,4 +1,6 @@
 # REQUIRES: x86
+## Test R_X86_64_GOTPCRELX and R_X86_64_REX_GOTPCRELX GOT optimization.
+
 # RUN: llvm-mc -filetype=obj -relax-relocations -triple=x86_64-unknown-linux %s -o %t.o
 # RUN: ld.lld %t.o -o %t1 --no-apply-dynamic-relocs
 # RUN: llvm-readobj -x .got.plt -r %t1 | FileCheck --check-prefixes=RELOC,NO-APPLY-DYNAMIC-RELOCS %s
@@ -6,6 +8,10 @@
 # RUN: llvm-readobj -x .got.plt -r %t1 | FileCheck --check-prefixes=RELOC,APPLY-DYNAMIC-RELOCS %s
 # RUN: ld.lld %t.o -o %t1
 # RUN: llvm-objdump -d %t1 | FileCheck --check-prefix=DISASM %s
+
+## --no-relax disables GOT optimization.
+# RUN: ld.lld --no-relax %t.o -o %t2
+# RUN: llvm-objdump -d %t2 | FileCheck --check-prefix=NORELAX %s
 
 ## There is one R_X86_64_IRELATIVE relocations.
 # RELOC-LABEL: Relocations [
@@ -59,6 +65,11 @@
 # DISASM-NEXT: nop
 # DISASM-NEXT: jmpq  *4119(%rip)
 # DISASM-NEXT: jmpq  *4113(%rip)
+
+# NORELAX-LABEL: <_start>:
+# NORELAX-COUNT-12: movq
+# NORELAX-COUNT-6:  callq *
+# NORELAX-COUNT-6:  jmpq *
 
 .text
 .globl foo

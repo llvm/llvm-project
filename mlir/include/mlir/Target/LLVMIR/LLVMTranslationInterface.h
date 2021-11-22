@@ -13,9 +13,8 @@
 #ifndef MLIR_TARGET_LLVMIR_LLVMTRANSLATIONINTERFACE_H
 #define MLIR_TARGET_LLVMIR_LLVMTRANSLATIONINTERFACE_H
 
-#include "mlir/IR/Attributes.h"
+#include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/DialectInterface.h"
-#include "mlir/IR/Identifier.h"
 #include "mlir/Support/LogicalResult.h"
 
 namespace llvm {
@@ -82,7 +81,7 @@ public:
   amendOperation(Operation *op, NamedAttribute attribute,
                  LLVM::ModuleTranslation &moduleTranslation) const {
     if (const LLVMTranslationDialectInterface *iface =
-            getInterfaceFor(attribute.first.getDialect())) {
+            getInterfaceFor(attribute.getNameDialect())) {
       return iface->amendOperation(op, attribute, moduleTranslation);
     }
     return success();

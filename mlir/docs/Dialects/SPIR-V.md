@@ -1119,7 +1119,7 @@ Those `*Ops.td` files are organized according to the instruction categories used
 in the SPIR-V specification, for example, an op belonging to the "Atomics
 Instructions" section is put in the `SPIRVAtomicOps.td` file.
 
-`SPIRVOps.td` serves as the master op definition file that includes all files
+`SPIRVOps.td` serves as the main op definition file that includes all files
 for specific categories.
 
 `SPIRVBase.td` defines common classes and utilities used by various op

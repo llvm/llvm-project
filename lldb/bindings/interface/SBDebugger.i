@@ -479,6 +479,8 @@ public:
     lldb::SBTypeSynthetic
     GetSyntheticForType (lldb::SBTypeNameSpecifier);
 
+    SBStructuredData GetScriptInterpreterInfo(ScriptLanguage);
+
     STRING_EXTENSION(SBDebugger)
 
     %feature("docstring",

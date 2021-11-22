@@ -145,7 +145,7 @@ public:
     /// around but clear them.
     explicit operator bool() const;
 
-    /// Returnss the \c Kind of the edge.
+    /// Returns the \c Kind of the edge.
     Kind getKind() const;
 
     /// Test whether the edge represents a direct call to a function.
@@ -307,9 +307,9 @@ public:
 
   /// A node in the call graph.
   ///
-  /// This represents a single node. It's primary roles are to cache the list of
-  /// callees, de-duplicate and provide fast testing of whether a function is
-  /// a callee, and facilitate iteration of child nodes in the graph.
+  /// This represents a single node. Its primary roles are to cache the list of
+  /// callees, de-duplicate and provide fast testing of whether a function is a
+  /// callee, and facilitate iteration of child nodes in the graph.
   ///
   /// The node works much like an optional in order to lazily populate the
   /// edges of each node. Until populated, there are no edges. Once populated,
@@ -392,7 +392,7 @@ public:
 
     /// Internal helper to directly replace the function with a new one.
     ///
-    /// This is used to facilitate tranfsormations which need to replace the
+    /// This is used to facilitate transformations which need to replace the
     /// formal Function object but directly move the body and users from one to
     /// the other.
     void replaceFunction(Function &NewF);
@@ -435,7 +435,7 @@ public:
       Nodes.clear();
     }
 
-    /// Print a short descrtiption useful for debugging or logging.
+    /// Print a short description useful for debugging or logging.
     ///
     /// We print the function names in the SCC wrapped in '()'s and skipping
     /// the middle functions if there are a large number.
@@ -467,9 +467,10 @@ public:
     /// Verify invariants about the SCC.
     ///
     /// This will attempt to validate all of the basic invariants within an
-    /// SCC, but not that it is a strongly connected componet per-se. Primarily
-    /// useful while building and updating the graph to check that basic
-    /// properties are in place rather than having inexplicable crashes later.
+    /// SCC, but not that it is a strongly connected component per se.
+    /// Primarily useful while building and updating the graph to check that
+    /// basic properties are in place rather than having inexplicable crashes
+    /// later.
     void verify();
 #endif
 
@@ -511,7 +512,7 @@ public:
 
     /// Provide a short name by printing this SCC to a std::string.
     ///
-    /// This copes with the fact that we don't have a name per-se for an SCC
+    /// This copes with the fact that we don't have a name per se for an SCC
     /// while still making the use of this in debugging and logging useful.
     std::string getName() const {
       std::string Name;
@@ -644,7 +645,7 @@ public:
 
     /// Provide a short name by printing this RefSCC to a std::string.
     ///
-    /// This copes with the fact that we don't have a name per-se for an RefSCC
+    /// This copes with the fact that we don't have a name per se for an RefSCC
     /// while still making the use of this in debugging and logging useful.
     std::string getName() const {
       std::string Name;

@@ -19,8 +19,7 @@
 #include "CGObjCRuntime.h"
 #include "CGOpenCLRuntime.h"
 #include "CGOpenMPRuntime.h"
-#include "CGOpenMPRuntimeAMDGCN.h"
-#include "CGOpenMPRuntimeNVPTX.h"
+#include "CGOpenMPRuntimeGPU.h"
 #include "CodeGenFunction.h"
 #include "CodeGenPGO.h"
 #include "ConstantEmitter.h"
@@ -244,14 +243,10 @@ void CodeGenModule::createOpenMPRuntime() {
   switch (getTriple().getArch()) {
   case llvm::Triple::nvptx:
   case llvm::Triple::nvptx64:
-    assert(getLangOpts().OpenMPIsDevice &&
-           "OpenMP NVPTX is only prepared to deal with device code.");
-    OpenMPRuntime.reset(new CGOpenMPRuntimeNVPTX(*this));
-    break;
   case llvm::Triple::amdgcn:
     assert(getLangOpts().OpenMPIsDevice &&
-           "OpenMP AMDGCN is only prepared to deal with device code.");
-    OpenMPRuntime.reset(new CGOpenMPRuntimeAMDGCN(*this));
+           "OpenMP AMDGPU/NVPTX is only prepared to deal with device code.");
+    OpenMPRuntime.reset(new CGOpenMPRuntimeGPU(*this));
     break;
   default:
     if (LangOpts.OpenMPSimd)
@@ -318,21 +313,57 @@ void CodeGenModule::applyGlobalValReplacements() {
 // This is only used in aliases that we created and we know they have a
 // linear structure.
 static const llvm::GlobalValue *getAliasedGlobal(const llvm::GlobalValue *GV) {
-  llvm::SmallPtrSet<const llvm::GlobalValue *, 4> Visited;
-  for (;;) {
-    if (!GV || !Visited.insert(GV).second)
-      return nullptr;
+  const llvm::Constant *C;
+  if (auto *GA = dyn_cast<llvm::GlobalAlias>(GV))
+    C = GA->getAliasee();
+  else if (auto *GI = dyn_cast<llvm::GlobalIFunc>(GV))
+    C = GI->getResolver();
+  else
+    return GV;
 
-    const llvm::Constant *C;
-    if (auto *GA = dyn_cast<llvm::GlobalAlias>(GV))
-      C = GA->getAliasee();
-    else if (auto *GI = dyn_cast<llvm::GlobalIFunc>(GV))
-      C = GI->getResolver();
-    else
-      return GV;
+  const auto *AliaseeGV = dyn_cast<llvm::GlobalValue>(C->stripPointerCasts());
+  if (!AliaseeGV)
+    return nullptr;
 
-    GV = dyn_cast<llvm::GlobalValue>(C->stripPointerCasts());
+  const llvm::GlobalValue *FinalGV = AliaseeGV->getAliaseeObject();
+  if (FinalGV == GV)
+    return nullptr;
+
+  return FinalGV;
+}
+
+static bool checkAliasedGlobal(DiagnosticsEngine &Diags,
+                               SourceLocation Location, bool IsIFunc,
+                               const llvm::GlobalValue *Alias,
+                               const llvm::GlobalValue *&GV) {
+  GV = getAliasedGlobal(Alias);
+  if (!GV) {
+    Diags.Report(Location, diag::err_cyclic_alias) << IsIFunc;
+    return false;
   }
+
+  if (GV->isDeclaration()) {
+    Diags.Report(Location, diag::err_alias_to_undefined) << IsIFunc << IsIFunc;
+    return false;
+  }
+
+  if (IsIFunc) {
+    // Check resolver function type.
+    const auto *F = dyn_cast<llvm::Function>(GV);
+    if (!F) {
+      Diags.Report(Location, diag::err_alias_to_undefined)
+          << IsIFunc << IsIFunc;
+      return false;
+    }
+
+    llvm::FunctionType *FTy = F->getFunctionType();
+    if (!FTy->getReturnType()->isPointerTy()) {
+      Diags.Report(Location, diag::err_ifunc_resolver_return);
+      return false;
+    }
+  }
+
+  return true;
 }
 
 void CodeGenModule::checkAliases() {
@@ -349,23 +380,13 @@ void CodeGenModule::checkAliases() {
       Location = A->getLocation();
     else
       llvm_unreachable("Not an alias or ifunc?");
+
     StringRef MangledName = getMangledName(GD);
     llvm::GlobalValue *Alias = GetGlobalValue(MangledName);
-    const llvm::GlobalValue *GV = getAliasedGlobal(Alias);
-    if (!GV) {
+    const llvm::GlobalValue *GV = nullptr;
+    if (!checkAliasedGlobal(Diags, Location, IsIFunc, Alias, GV)) {
       Error = true;
-      Diags.Report(Location, diag::err_cyclic_alias) << IsIFunc;
-    } else if (GV->isDeclaration()) {
-      Error = true;
-      Diags.Report(Location, diag::err_alias_to_undefined)
-          << IsIFunc << IsIFunc;
-    } else if (IsIFunc) {
-      // Check resolver function type.
-      llvm::FunctionType *FTy = dyn_cast<llvm::FunctionType>(
-          GV->getType()->getPointerElementType());
-      assert(FTy);
-      if (!FTy->getReturnType()->isPointerTy())
-        Diags.Report(Location, diag::err_ifunc_resolver_return);
+      continue;
     }
 
     llvm::Constant *Aliasee =
@@ -544,6 +565,7 @@ void CodeGenModule::Release() {
         "__amdgpu_device_library_preserve_asan_functions_ptr", nullptr,
         llvm::GlobalVariable::NotThreadLocal);
     addCompilerUsedGlobal(Var);
+    getModule().addModuleFlag(llvm::Module::Override, "amdgpu_hostcall", 1);
   }
 
   emitLLVMUsed();
@@ -818,6 +840,8 @@ void CodeGenModule::Release() {
         getCodeGenOpts().StackProtectorGuardOffset);
   if (getCodeGenOpts().StackAlignment)
     getModule().setOverrideStackAlignment(getCodeGenOpts().StackAlignment);
+  if (getCodeGenOpts().SkipRaxSetup)
+    getModule().addModuleFlag(llvm::Module::Override, "SkipRaxSetup", 1);
 
   getTargetCodeGenInfo().emitTargetMetadata(*this, MangledDeclNames);
 
@@ -1931,7 +1955,7 @@ void CodeGenModule::setLLVMFunctionFEnvAttributes(const FunctionDecl *D,
 
 void CodeGenModule::SetCommonAttributes(GlobalDecl GD, llvm::GlobalValue *GV) {
   const Decl *D = GD.getDecl();
-  if (dyn_cast_or_null<NamedDecl>(D))
+  if (isa_and_nonnull<NamedDecl>(D))
     setGVProperties(GV, GD);
   else
     GV->setVisibility(llvm::GlobalValue::DefaultVisibility);
@@ -4287,11 +4311,6 @@ static bool shouldBeInCOMDAT(CodeGenModule &CGM, const Decl &D) {
   if (!CGM.supportsCOMDAT())
     return false;
 
-  // Do not set COMDAT attribute for CUDA/HIP stub functions to prevent
-  // them being "merged" by the COMDAT Folding linker optimization.
-  if (D.hasAttr<CUDAGlobalAttr>())
-    return false;
-
   if (D.hasAttr<SelectAnyAttr>())
     return true;
 
@@ -4790,7 +4809,7 @@ static void replaceUsesOfNonProtoConstant(llvm::Constant *old,
     callSite->getOperandBundlesAsDefs(newBundles);
 
     llvm::CallBase *newCall;
-    if (dyn_cast<llvm::CallInst>(callSite)) {
+    if (isa<llvm::CallInst>(callSite)) {
       newCall =
           llvm::CallInst::Create(newFn, newArgs, newBundles, "", callSite);
     } else {
@@ -5013,7 +5032,7 @@ void CodeGenModule::emitIFuncDefinition(GlobalDecl GD) {
   llvm::Type *DeclTy = getTypes().ConvertTypeForMem(D->getType());
   llvm::Type *ResolverTy = llvm::GlobalIFunc::getResolverFunctionType(DeclTy);
   llvm::Constant *Resolver =
-      GetOrCreateLLVMFunction(IFA->getResolver(), ResolverTy, GD,
+      GetOrCreateLLVMFunction(IFA->getResolver(), ResolverTy, {},
                               /*ForVTable=*/false);
   llvm::GlobalIFunc *GIF =
       llvm::GlobalIFunc::create(DeclTy, 0, llvm::Function::ExternalLinkage,

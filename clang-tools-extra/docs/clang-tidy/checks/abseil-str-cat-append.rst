@@ -3,7 +3,7 @@
 abseil-str-cat-append
 =====================
 
-Flags uses of ``absl::StrCat()`` to append to a ``std::string``. Suggests 
+Flags uses of ``absl::StrCat()`` to append to a ``std::string``. Suggests
 ``absl::StrAppend()`` should be used instead.
 
 The extra calls cause unnecessary temporary strings to be constructed. Removing

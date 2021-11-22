@@ -363,6 +363,9 @@ def OMPC_Filter : Clause<"filter"> {
   let clangClass = "OMPFilterClause";
   let flangClass = "ScalarIntExpr";
 }
+def OMPC_Align : Clause<"align"> {
+  let clangClass = "OMPAlignClause";
+}
 def OMPC_When: Clause<"when"> {}
 
 def OMPC_Bind : Clause<"bind"> {
@@ -1539,7 +1542,8 @@ def OMP_TargetTeamsDistributeSimd :
 }
 def OMP_Allocate : Directive<"allocate"> {
   let allowedOnceClauses = [
-    VersionedClause<OMPC_Allocator>
+    VersionedClause<OMPC_Allocator>,
+    VersionedClause<OMPC_Align, 51>
   ];
 }
 def OMP_DeclareVariant : Directive<"declare variant"> {

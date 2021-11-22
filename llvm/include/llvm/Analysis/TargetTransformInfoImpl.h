@@ -552,13 +552,7 @@ public:
   }
 
   unsigned getReplicationShuffleCost(Type *EltTy, int ReplicationFactor, int VF,
-                                     const APInt &DemandedSrcElts,
-                                     const APInt &DemandedReplicatedElts,
-                                     TTI::TargetCostKind CostKind) {
-    return 1;
-  }
-  unsigned getReplicationShuffleCost(Type *EltTy, int ReplicationFactor, int VF,
-                                     ArrayRef<int> Mask,
+                                     const APInt &DemandedDstElts,
                                      TTI::TargetCostKind CostKind) {
     return 1;
   }
@@ -638,7 +632,8 @@ public:
     return 1;
   }
 
-  unsigned getNumberOfParts(Type *Tp) const { return 0; }
+  // Assume that we have a register of the right size for the type.
+  unsigned getNumberOfParts(Type *Tp) const { return 1; }
 
   InstructionCost getAddressComputationCost(Type *Tp, ScalarEvolution *,
                                             const SCEV *) const {
@@ -1119,10 +1114,17 @@ public:
               FixedVectorType::get(VecTy->getScalarType(), NumSubElts));
 
         int ReplicationFactor, VF;
-        if (Shuffle->isReplicationMask(ReplicationFactor, VF))
+        if (Shuffle->isReplicationMask(ReplicationFactor, VF)) {
+          APInt DemandedDstElts =
+              APInt::getNullValue(Shuffle->getShuffleMask().size());
+          for (auto I : enumerate(Shuffle->getShuffleMask())) {
+            if (I.value() != UndefMaskElem)
+              DemandedDstElts.setBit(I.index());
+          }
           return TargetTTI->getReplicationShuffleCost(
               VecSrcTy->getElementType(), ReplicationFactor, VF,
-              Shuffle->getShuffleMask(), CostKind);
+              DemandedDstElts, CostKind);
+        }
 
         return CostKind == TTI::TCK_RecipThroughput ? -1 : 1;
       }

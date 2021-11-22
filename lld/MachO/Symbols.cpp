@@ -14,6 +14,19 @@ using namespace llvm;
 using namespace lld;
 using namespace lld::macho;
 
+static_assert(sizeof(void *) != 8 || sizeof(Symbol) == 48,
+              "Try to minimize Symbol's size; we create many instances");
+
+// The Microsoft ABI doesn't support using parent class tail padding for child
+// members, hence the _MSC_VER check.
+#if !defined(_MSC_VER)
+static_assert(sizeof(void *) != 8 || sizeof(Defined) == 80,
+              "Try to minimize Defined's size; we create many instances");
+#endif
+
+static_assert(sizeof(SymbolUnion) == sizeof(Defined),
+              "Defined should be the largest Symbol kind");
+
 // Returns a symbol for an error message.
 static std::string demangle(StringRef symName) {
   if (config->demangle)
@@ -34,12 +47,13 @@ uint64_t Symbol::getTlvVA() const { return in.tlvPointers->getVA(gotIndex); }
 Defined::Defined(StringRefZ name, InputFile *file, InputSection *isec,
                  uint64_t value, uint64_t size, bool isWeakDef, bool isExternal,
                  bool isPrivateExtern, bool isThumb,
-                 bool isReferencedDynamically, bool noDeadStrip)
-    : Symbol(DefinedKind, name, file), isec(isec), value(value), size(size),
-      overridesWeakDef(false), privateExtern(isPrivateExtern),
-      includeInSymtab(true), thumb(isThumb),
+                 bool isReferencedDynamically, bool noDeadStrip,
+                 bool canOverrideWeakDef, bool isWeakDefCanBeHidden)
+    : Symbol(DefinedKind, name, file), overridesWeakDef(canOverrideWeakDef),
+      privateExtern(isPrivateExtern), includeInSymtab(true), thumb(isThumb),
       referencedDynamically(isReferencedDynamically), noDeadStrip(noDeadStrip),
-      weakDef(isWeakDef), external(isExternal) {
+      weakDefCanBeHidden(isWeakDefCanBeHidden), weakDef(isWeakDef),
+      external(isExternal), isec(isec), value(value), size(size) {
   if (isec) {
     isec->symbols.push_back(this);
     // Maintain sorted order.
@@ -81,8 +95,8 @@ uint64_t Defined::getVA() const {
 }
 
 void Defined::canonicalize() {
-  if (compactUnwind)
-    compactUnwind = compactUnwind->canonical();
+  if (unwindEntry)
+    unwindEntry = unwindEntry->canonical();
   if (isec)
     isec = isec->canonical();
 }

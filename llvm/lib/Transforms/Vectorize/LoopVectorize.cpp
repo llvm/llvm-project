@@ -1542,7 +1542,7 @@ public:
   // through scalar predication or masked load/store or masked gather/scatter.
   // Superset of instructions that return true for isScalarWithPredication.
   bool isPredicatedInst(Instruction *I) {
-    if (!blockNeedsPredication(I->getParent()))
+    if (!blockNeedsPredicationForAnyReason(I->getParent()))
       return false;
     // Loads and stores that need some form of masked operation are predicated
     // instructions.
@@ -1596,7 +1596,10 @@ public:
   /// Returns true if all loop blocks should be masked to fold tail loop.
   bool foldTailByMasking() const { return FoldTailByMasking; }
 
-  bool blockNeedsPredication(BasicBlock *BB) const {
+  /// Returns true if the instructions in this block requires predication
+  /// for any reason, e.g. because tail folding now requires a predicate
+  /// or because the block in the original loop was predicated.
+  bool blockNeedsPredicationForAnyReason(BasicBlock *BB) const {
     return foldTailByMasking() || Legal->blockNeedsPredication(BB);
   }
 
@@ -2391,9 +2394,13 @@ void InnerLoopVectorizer::recordVectorLoopValueForInductionCast(
   if (isa<TruncInst>(EntryVal))
     return;
 
-  const SmallVectorImpl<Instruction *> &Casts = ID.getCastInsts();
-  if (Casts.empty())
+  if (!CastDef) {
+    assert(ID.getCastInsts().empty() &&
+           "there are casts for ID, but no CastDef");
     return;
+  }
+  assert(!ID.getCastInsts().empty() &&
+         "there is a CastDef, but no casts for ID");
   // Only the first Cast instruction in the Casts vector is of interest.
   // The rest of the Casts (if exist) have no uses outside the
   // induction update chain itself.
@@ -5250,7 +5257,7 @@ void LoopVectorizationCostModel::collectLoopScalars(ElementCount VF) {
 }
 
 bool LoopVectorizationCostModel::isScalarWithPredication(Instruction *I) const {
-  if (!blockNeedsPredication(I->getParent()))
+  if (!blockNeedsPredicationForAnyReason(I->getParent()))
     return false;
   switch(I->getOpcode()) {
   default:
@@ -5297,7 +5304,8 @@ bool LoopVectorizationCostModel::interleavedAccessCanBeWidened(
   // (either a gap at the end of a load-access that may result in a speculative
   // load, or any gaps in a store-access).
   bool PredicatedAccessRequiresMasking =
-      blockNeedsPredication(I->getParent()) && Legal->isMaskRequired(I);
+      blockNeedsPredicationForAnyReason(I->getParent()) &&
+      Legal->isMaskRequired(I);
   bool LoadAccessWithGapsRequiresEpilogMasking =
       isa<LoadInst>(I) && Group->requiresScalarEpilogue() &&
       !isScalarEpilogueAllowed();
@@ -6841,7 +6849,7 @@ void LoopVectorizationCostModel::collectInstsToScalarize(ElementCount VF) {
   // determine if it would be better to not if-convert the blocks they are in.
   // If so, we also record the instructions to scalarize.
   for (BasicBlock *BB : TheLoop->blocks()) {
-    if (!blockNeedsPredication(BB))
+    if (!blockNeedsPredicationForAnyReason(BB))
       continue;
     for (Instruction &I : *BB)
       if (isScalarWithPredication(&I)) {
@@ -7420,9 +7428,14 @@ LoopVectorizationCostModel::getInstructionCost(Instruction *I,
   Type *VectorTy;
   InstructionCost C = getInstructionCost(I, VF, VectorTy);
 
-  bool TypeNotScalarized =
-      VF.isVector() && VectorTy->isVectorTy() &&
-      TTI.getNumberOfParts(VectorTy) < VF.getKnownMinValue();
+  bool TypeNotScalarized = false;
+  if (VF.isVector() && VectorTy->isVectorTy()) {
+    unsigned NumParts = TTI.getNumberOfParts(VectorTy);
+    if (NumParts)
+      TypeNotScalarized = NumParts < VF.getKnownMinValue();
+    else
+      C = InstructionCost::getInvalid();
+  }
   return VectorizationCostTy(C, TypeNotScalarized);
 }
 
@@ -8134,7 +8147,7 @@ LoopVectorizationPlanner::plan(ElementCount UserVF, unsigned UserIC) {
     return None;
 
   // Invalidate interleave groups if all blocks of loop will be predicated.
-  if (CM.blockNeedsPredication(OrigLoop->getHeader()) &&
+  if (CM.blockNeedsPredicationForAnyReason(OrigLoop->getHeader()) &&
       !useMaskedInterleavedAccesses(*TTI)) {
     LLVM_DEBUG(
         dbgs()
@@ -8744,7 +8757,7 @@ VPValue *VPRecipeBuilder::createBlockInMask(BasicBlock *BB, VPlanPtr &Plan) {
   VPValue *BlockMask = nullptr;
 
   if (OrigLoop->getHeader() == BB) {
-    if (!CM.blockNeedsPredication(BB))
+    if (!CM.blockNeedsPredicationForAnyReason(BB))
       return BlockMaskCache[BB] = BlockMask; // Loop incoming mask is all-one.
 
     // Create the block in mask as the first non-phi instruction in the block.
@@ -9323,7 +9336,6 @@ VPlanPtr LoopVectorizationPlanner::buildVPlanWithVPRecipes(
   // visit each basic block after having visited its predecessor basic blocks.
   // ---------------------------------------------------------------------------
 
-  // Create a dummy pre-entry VPBasicBlock to start building the VPlan.
   auto Plan = std::make_unique<VPlan>();
 
   // Scan the body of the loop in a topological order to visit each basic block
@@ -9332,6 +9344,8 @@ VPlanPtr LoopVectorizationPlanner::buildVPlanWithVPRecipes(
   DFS.perform(LI);
 
   VPBasicBlock *VPBB = nullptr;
+  VPBasicBlock *HeaderVPBB = nullptr;
+  SmallVector<VPWidenIntOrFpInductionRecipe *> InductionsToMove;
   for (BasicBlock *BB : make_range(DFS.beginRPO(), DFS.endRPO())) {
     // Relevant instructions from basic block BB will be grouped into VPRecipe
     // ingredients and fill a new VPBasicBlock.
@@ -9339,8 +9353,10 @@ VPlanPtr LoopVectorizationPlanner::buildVPlanWithVPRecipes(
     auto *FirstVPBBForBB = new VPBasicBlock(BB->getName());
     if (VPBB)
       VPBlockUtils::insertBlockAfter(FirstVPBBForBB, VPBB);
-    else
+    else {
       Plan->setEntry(FirstVPBBForBB);
+      HeaderVPBB = FirstVPBBForBB;
+    }
     VPBB = FirstVPBBForBB;
     Builder.setInsertPoint(VPBB);
 
@@ -9382,15 +9398,19 @@ VPlanPtr LoopVectorizationPlanner::buildVPlanWithVPRecipes(
           Plan->addVPValue(UV, Def);
         }
 
+        if (isa<VPWidenIntOrFpInductionRecipe>(Recipe) &&
+            HeaderVPBB->getFirstNonPhi() != VPBB->end()) {
+          // Keep track of VPWidenIntOrFpInductionRecipes not in the phi section
+          // of the header block. That can happen for truncates of induction
+          // variables. Those recipes are moved to the phi section of the header
+          // block after applying SinkAfter, which relies on the original
+          // position of the trunc.
+          assert(isa<TruncInst>(Instr));
+          InductionsToMove.push_back(
+              cast<VPWidenIntOrFpInductionRecipe>(Recipe));
+        }
         RecipeBuilder.setRecipe(Instr, Recipe);
-        if (isa<VPWidenIntOrFpInductionRecipe>(Recipe)) {
-          // Make sure induction recipes are all kept in the header block.
-          // VPWidenIntOrFpInductionRecipe may be generated when reaching a
-          // Trunc of an induction Phi, where Trunc may not be in the header.
-          auto *Header = Plan->getEntry()->getEntryBasicBlock();
-          Header->insert(Recipe, Header->getFirstNonPhi());
-        } else
-          VPBB->appendRecipe(Recipe);
+        VPBB->appendRecipe(Recipe);
         continue;
       }
 
@@ -9479,6 +9499,11 @@ VPlanPtr LoopVectorizationPlanner::buildVPlanWithVPRecipes(
     }
   }
 
+  // Now that sink-after is done, move induction recipes for optimized truncates
+  // to the phi section of the header block.
+  for (VPWidenIntOrFpInductionRecipe *Ind : InductionsToMove)
+    Ind->moveBefore(*HeaderVPBB, HeaderVPBB->getFirstNonPhi());
+
   // Adjust the recipes for any inloop reductions.
   adjustRecipesForReductions(VPBB, Plan, RecipeBuilder, Range.Start);
 
@@ -9560,6 +9585,7 @@ VPlanPtr LoopVectorizationPlanner::buildVPlanWithVPRecipes(
   RSO.flush();
   Plan->setName(PlanName);
 
+  assert(VPlanVerifier::verifyPlanIsValid(*Plan) && "VPlan is invalid");
   return Plan;
 }
 

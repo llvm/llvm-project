@@ -764,7 +764,7 @@ protected:
                         true,  // stop_other_threads
                         new_plan_status));
                 if (new_plan_sp && new_plan_status.Success()) {
-                  new_plan_sp->SetIsMasterPlan(true);
+                  new_plan_sp->SetIsControllingPlan(true);
                   new_plan_sp->SetOkayToDiscard(false);
                   new_plan_sp->SetPrivate(true);
                 }

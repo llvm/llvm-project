@@ -1,8 +1,10 @@
-// REQUIRES: aarch64-registered-target
 // RUN: %clang_cc1 -triple arm64-apple-ios -target-feature +neon \
 // RUN:        -target-feature +v8.3a \
 // RUN:        -target-feature +fullfp16 \
 // RUN:        -disable-O0-optnone -emit-llvm -o - %s | opt -S -O1 | FileCheck %s
+
+// REQUIRES: aarch64-registered-target
+
 #include <arm_neon.h>
 
 // CHECK-LABEL: @test_vcmla_f16(

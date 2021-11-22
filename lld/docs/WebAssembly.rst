@@ -19,7 +19,7 @@ This is the object format that the llvm will produce when run with the
 Usage
 -----
 
-The WebAssembly version of lld is installed as **wasm-ld**.  It shared many 
+The WebAssembly version of lld is installed as **wasm-ld**.  It shared many
 common linker flags with **ld.lld** but also includes several
 WebAssembly-specific options:
 

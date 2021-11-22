@@ -834,19 +834,10 @@ InstructionCost TargetTransformInfo::getVectorInstrCost(unsigned Opcode,
 }
 
 InstructionCost TargetTransformInfo::getReplicationShuffleCost(
-    Type *EltTy, int ReplicationFactor, int VF, const APInt &DemandedSrcElts,
-    const APInt &DemandedReplicatedElts, TTI::TargetCostKind CostKind) {
-  InstructionCost Cost = TTIImpl->getReplicationShuffleCost(
-      EltTy, ReplicationFactor, VF, DemandedSrcElts, DemandedReplicatedElts,
-      CostKind);
-  assert(Cost >= 0 && "TTI should not produce negative costs!");
-  return Cost;
-}
-InstructionCost TargetTransformInfo::getReplicationShuffleCost(
-    Type *EltTy, int ReplicationFactor, int VF, ArrayRef<int> Mask,
+    Type *EltTy, int ReplicationFactor, int VF, const APInt &DemandedDstElts,
     TTI::TargetCostKind CostKind) {
   InstructionCost Cost = TTIImpl->getReplicationShuffleCost(
-      EltTy, ReplicationFactor, VF, Mask, CostKind);
+      EltTy, ReplicationFactor, VF, DemandedDstElts, CostKind);
   assert(Cost >= 0 && "TTI should not produce negative costs!");
   return Cost;
 }

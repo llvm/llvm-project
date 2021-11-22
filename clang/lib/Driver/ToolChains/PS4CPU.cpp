@@ -71,8 +71,9 @@ void tools::PS4cpu::Assemble::ConstructJob(Compilation &C, const JobAction &JA,
                                          Exec, CmdArgs, Inputs, Output));
 }
 
-static void AddPS4SanitizerArgs(const ToolChain &TC, ArgStringList &CmdArgs) {
-  const SanitizerArgs &SanArgs = TC.getSanitizerArgs();
+static void AddPS4SanitizerArgs(const ToolChain &TC, const ArgList &Args,
+                                ArgStringList &CmdArgs) {
+  const SanitizerArgs &SanArgs = TC.getSanitizerArgs(Args);
   if (SanArgs.needsUbsanRt()) {
     CmdArgs.push_back("-lSceDbgUBSanitizer_stub_weak");
   }
@@ -81,9 +82,9 @@ static void AddPS4SanitizerArgs(const ToolChain &TC, ArgStringList &CmdArgs) {
   }
 }
 
-void tools::PS4cpu::addSanitizerArgs(const ToolChain &TC,
+void tools::PS4cpu::addSanitizerArgs(const ToolChain &TC, const ArgList &Args,
                                      ArgStringList &CmdArgs) {
-  const SanitizerArgs &SanArgs = TC.getSanitizerArgs();
+  const SanitizerArgs &SanArgs = TC.getSanitizerArgs(Args);
   if (SanArgs.needsUbsanRt())
     CmdArgs.push_back("--dependent-lib=libSceDbgUBSanitizer_stub_weak.a");
   if (SanArgs.needsAsanRt())
@@ -127,7 +128,7 @@ void tools::PS4cpu::Link::ConstructJob(Compilation &C, const JobAction &JA,
   }
 
   if(!Args.hasArg(options::OPT_nostdlib, options::OPT_nodefaultlibs))
-    AddPS4SanitizerArgs(ToolChain, CmdArgs);
+    AddPS4SanitizerArgs(ToolChain, Args, CmdArgs);
 
   Args.AddAllArgs(CmdArgs, options::OPT_L);
   Args.AddAllArgs(CmdArgs, options::OPT_T_Group);

@@ -57,8 +57,6 @@ static bool verifyInType(mlir::Type inType,
       if (verifyInType(field.second, visited))
         return true;
     visited.pop_back();
-  } else if (auto rt = inType.dyn_cast<fir::PointerType>()) {
-    return verifyInType(rt.getEleTy(), visited);
   }
   return false;
 }
@@ -762,19 +760,9 @@ static mlir::ParseResult parseConstcOp(mlir::OpAsmParser &parser,
 }
 
 static void print(mlir::OpAsmPrinter &p, fir::ConstcOp &op) {
-  p << " (0x";
-  auto f1 = op.getOperation()
-                ->getAttr(fir::ConstcOp::realAttrName())
-                .cast<mlir::FloatAttr>();
-  auto i1 = f1.getValue().bitcastToAPInt();
-  p.getStream().write_hex(i1.getZExtValue());
-  p << ", 0x";
-  auto f2 = op.getOperation()
-                ->getAttr(fir::ConstcOp::imagAttrName())
-                .cast<mlir::FloatAttr>();
-  auto i2 = f2.getValue().bitcastToAPInt();
-  p.getStream().write_hex(i2.getZExtValue());
-  p << ") : ";
+  p << '(';
+  p << op.getOperation()->getAttr(fir::ConstcOp::realAttrName()) << ", ";
+  p << op.getOperation()->getAttr(fir::ConstcOp::imagAttrName()) << ") : ";
   p.printType(op.getType());
 }
 
@@ -826,8 +814,9 @@ bool fir::ConvertOp::isFloatCompatible(mlir::Type ty) {
 
 bool fir::ConvertOp::isPointerCompatible(mlir::Type ty) {
   return ty.isa<fir::ReferenceType>() || ty.isa<fir::PointerType>() ||
-         ty.isa<fir::HeapType>() || ty.isa<mlir::MemRefType>() ||
-         ty.isa<mlir::FunctionType>() || ty.isa<fir::TypeDescType>();
+         ty.isa<fir::HeapType>() || ty.isa<fir::LLVMPointerType>() ||
+         ty.isa<mlir::MemRefType>() || ty.isa<mlir::FunctionType>() ||
+         ty.isa<fir::TypeDescType>();
 }
 
 static mlir::LogicalResult verify(fir::ConvertOp &op) {
@@ -1757,16 +1746,8 @@ void fir::LoadOp::build(mlir::OpBuilder &builder, mlir::OperationState &result,
   result.addTypes(eleTy);
 }
 
-/// Get the element type of a reference like type; otherwise null
-static mlir::Type elementTypeOf(mlir::Type ref) {
-  return llvm::TypeSwitch<mlir::Type, mlir::Type>(ref)
-      .Case<ReferenceType, PointerType, HeapType>(
-          [](auto type) { return type.getEleTy(); })
-      .Default([](mlir::Type) { return mlir::Type{}; });
-}
-
 mlir::ParseResult fir::LoadOp::getElementOf(mlir::Type &ele, mlir::Type ref) {
-  if ((ele = elementTypeOf(ref)))
+  if ((ele = fir::dyn_cast_ptrEleTy(ref)))
     return mlir::success();
   return mlir::failure();
 }
@@ -2231,7 +2212,7 @@ getMutableSuccessorOperands(unsigned pos, mlir::MutableOperandRange operands,
   NamedAttribute targetOffsetAttr =
       *owner->getAttrDictionary().getNamed(offsetAttr);
   return getSubOperands(
-      pos, operands, targetOffsetAttr.second.cast<DenseIntElementsAttr>(),
+      pos, operands, targetOffsetAttr.getValue().cast<DenseIntElementsAttr>(),
       mlir::MutableOperandRange::OperandSegment(pos, targetOffsetAttr));
 }
 
@@ -2299,6 +2280,16 @@ fir::SelectCaseOp::getCompareOperands(llvm::ArrayRef<mlir::Value> operands,
   return {getSubOperands(cond, getSubOperands(1, operands, segments), a)};
 }
 
+llvm::Optional<mlir::ValueRange>
+fir::SelectCaseOp::getCompareOperands(mlir::ValueRange operands,
+                                      unsigned cond) {
+  auto a = (*this)->getAttrOfType<mlir::DenseIntElementsAttr>(
+      getCompareOffsetAttr());
+  auto segments = (*this)->getAttrOfType<mlir::DenseIntElementsAttr>(
+      getOperandSegmentSizeAttr());
+  return {getSubOperands(cond, getSubOperands(1, operands, segments), a)};
+}
+
 llvm::Optional<mlir::MutableOperandRange>
 fir::SelectCaseOp::getMutableSuccessorOperands(unsigned oper) {
   return ::getMutableSuccessorOperands(oper, targetArgsMutable(),
@@ -2307,6 +2298,16 @@ fir::SelectCaseOp::getMutableSuccessorOperands(unsigned oper) {
 
 llvm::Optional<llvm::ArrayRef<mlir::Value>>
 fir::SelectCaseOp::getSuccessorOperands(llvm::ArrayRef<mlir::Value> operands,
+                                        unsigned oper) {
+  auto a =
+      (*this)->getAttrOfType<mlir::DenseIntElementsAttr>(getTargetOffsetAttr());
+  auto segments = (*this)->getAttrOfType<mlir::DenseIntElementsAttr>(
+      getOperandSegmentSizeAttr());
+  return {getSubOperands(oper, getSubOperands(2, operands, segments), a)};
+}
+
+llvm::Optional<mlir::ValueRange>
+fir::SelectCaseOp::getSuccessorOperands(mlir::ValueRange operands,
                                         unsigned oper) {
   auto a =
       (*this)->getAttrOfType<mlir::DenseIntElementsAttr>(getTargetOffsetAttr());

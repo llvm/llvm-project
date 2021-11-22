@@ -620,9 +620,8 @@ bool A15SDOptimizer::runOnInstruction(MachineInstr *MI) {
       // Collect all the uses of this MI's DPR def for updating later.
       SmallVector<MachineOperand*, 8> Uses;
       Register DPRDefReg = MI->getOperand(0).getReg();
-      for (MachineRegisterInfo::use_iterator I = MRI->use_begin(DPRDefReg),
-             E = MRI->use_end(); I != E; ++I)
-        Uses.push_back(&*I);
+      for (MachineOperand &MO : MRI->use_operands(DPRDefReg))
+        Uses.push_back(&MO);
 
       // We can optimize this.
       unsigned NewReg = optimizeSDPattern(MI);

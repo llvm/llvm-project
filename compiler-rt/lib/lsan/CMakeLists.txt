@@ -53,7 +53,7 @@ if(COMPILER_RT_HAS_LSAN)
 
     add_compiler_rt_runtime(clang_rt.lsan
       SHARED
-      OS ${SANITIZER_COMMON_SUPPORTED_OS}
+      OS ${LSAN_SUPPORTED_OS}
       ARCHS ${LSAN_SUPPORTED_ARCH}
       SOURCES ${LSAN_SOURCES}
       ADDITIONAL_HEADERS ${LSAN_HEADERS}

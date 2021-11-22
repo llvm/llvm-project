@@ -1,5 +1,5 @@
-; RUN: llc %s -stop-after=livedebugvalues -o - | FileCheck --check-prefix=SANITY %s
-; RUN: llc < %s -filetype=obj | llvm-dwarfdump -v - | FileCheck %s
+; RUN: llc %s -stop-after=livedebugvalues -o - -experimental-debug-variable-locations=false | FileCheck --check-prefix=SANITY %s
+; RUN: llc < %s -filetype=obj -experimental-debug-variable-locations=false | llvm-dwarfdump -v - | FileCheck %s
 ; Test debug_loc support for floating point constants.
 ;
 ; Created from clang -O1:

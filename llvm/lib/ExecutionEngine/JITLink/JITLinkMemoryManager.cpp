@@ -40,8 +40,9 @@ Error toError(CWrapperFunctionResult R) {
     char *Content = Large ? R.Data.ValuePtr : R.Data.Value;
     if (Content[0]) {
       HasError = true;
-      ErrMsg.resize(R.Size - 1);
-      memcpy(&ErrMsg[0], Content + 1, R.Size - 1);
+      constexpr unsigned StrStart = 1 + sizeof(uint64_t);
+      ErrMsg.resize(R.Size - StrStart);
+      memcpy(&ErrMsg[0], Content + StrStart, R.Size - StrStart);
     }
     if (Large)
       free(R.Data.ValuePtr);
@@ -69,12 +70,6 @@ static Error runAllocAction(JITLinkMemoryManager::AllocActionCall &C) {
 
   return toError(Fn(jitTargetAddressToPointer<const void *>(C.CtxAddr),
                     static_cast<size_t>(C.CtxSize)));
-}
-
-// Align a JITTargetAddress to conform with block alignment requirements.
-static JITTargetAddress alignToBlock(JITTargetAddress Addr, Block &B) {
-  uint64_t Delta = (B.getAlignmentOffset() - Addr) % B.getAlignment();
-  return Addr + Delta;
 }
 
 BasicLayout::BasicLayout(LinkGraph &G) : G(G) {

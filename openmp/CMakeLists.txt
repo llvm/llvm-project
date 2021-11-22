@@ -97,6 +97,7 @@ if (OPENMP_ENABLE_OMPT_TOOLS)
   add_subdirectory(tools)
 endif()
 
+option(OPENMP_MSVC_NAME_SCHEME "Build dll with MSVC naming scheme." OFF)
 
 # Build documentation
 add_subdirectory(docs)

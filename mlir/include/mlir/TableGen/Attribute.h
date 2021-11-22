@@ -32,7 +32,7 @@ class Type;
 // in TableGen.
 class AttrConstraint : public Constraint {
 public:
-  explicit AttrConstraint(const llvm::Record *record);
+  using Constraint::Constraint;
 
   static bool classof(const Constraint *c) { return c->getKind() == CK_Attr; }
 

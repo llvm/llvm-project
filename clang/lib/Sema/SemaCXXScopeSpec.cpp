@@ -865,7 +865,7 @@ bool Sema::ActOnCXXNestedNameSpecifierDecltype(CXXScopeSpec &SS,
 
   assert(DS.getTypeSpecType() == DeclSpec::TST_decltype);
 
-  QualType T = BuildDecltypeType(DS.getRepAsExpr(), DS.getTypeSpecTypeLoc());
+  QualType T = BuildDecltypeType(DS.getRepAsExpr());
   if (T.isNull())
     return true;
 

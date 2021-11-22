@@ -6,6 +6,8 @@
 // RUN: %clang_cc1 -triple armv7a-none-android -target-feature +neon -emit-llvm -o - %s | FileCheck %s -check-prefix=CHECK -check-prefix=DEFAULT
 // RUN: %clang_cc1 -triple armv7a-none-androideabi -target-feature +neon -emit-llvm -o - %s | FileCheck %s -check-prefix=CHECK -check-prefix=DEFAULT
 
+// REQUIRES: aarch64-registered-target || arm-registered-target
+
 #include <arm_neon.h>
 // Neon types have 64-bit alignment
 int32x4_t gl_b;

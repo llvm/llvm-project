@@ -12,7 +12,9 @@ attributes {
   // CHECK: #test<"attr_ugly begin 5 : index end">
   attr2 = #test<"attr_ugly begin 5 : index end">,
   // CHECK: #test.attr_params<42, 24>
-  attr3 = #test.attr_params<42, 24>
+  attr3 = #test.attr_params<42, 24>,
+  // CHECK: #test.attr_with_type<i32, vector<4xi32>>
+  attr4 = #test.attr_with_type<i32, vector<4xi32>>
 }
 
 // CHECK-LABEL: @test_roundtrip_default_parsers_struct

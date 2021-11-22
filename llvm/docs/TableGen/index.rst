@@ -73,7 +73,7 @@ example, to get a list of all of the definitions that subclass a particular type
   XMM0, XMM1, XMM10, XMM11, XMM12, XMM13, XMM14, XMM15, XMM2, XMM3, XMM4, XMM5,
   XMM6, XMM7, XMM8, XMM9,
 
-  $ llvm-tblgen X86.td -print-enums -class=Instruction 
+  $ llvm-tblgen X86.td -print-enums -class=Instruction
   ABS_F, ABS_Fp32, ABS_Fp64, ABS_Fp80, ADC32mi, ADC32mi8, ADC32mr, ADC32ri,
   ADC32ri8, ADC32rm, ADC32rr, ADC64mi32, ADC64mi8, ADC64mr, ADC64ri32, ADC64ri8,
   ADC64rm, ADC64rr, ADD16mi, ADD16mi8, ADD16mr, ADD16ri, ADD16ri8, ADD16rm,
@@ -266,7 +266,7 @@ TableGen backends
 TableGen files have no real meaning without a backend. The default operation
 when running ``*-tblgen`` is to print the information in a textual format, but
 that's only useful for debugging the TableGen files themselves. The power
-in TableGen is, however, to interpret the source files into an internal 
+in TableGen is, however, to interpret the source files into an internal
 representation that can be generated into anything you want.
 
 Current usage of TableGen is to create huge include files with tables that you

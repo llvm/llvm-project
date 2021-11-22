@@ -141,12 +141,10 @@ define void @testCombineMultiplies_non_splat(<4 x i32> %v1) nounwind {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movdqa {{.*#+}} xmm1 = [11,22,33,44]
 ; CHECK-NEXT:    paddd %xmm0, %xmm1
-; CHECK-NEXT:    movdqa {{.*#+}} xmm2 = [22,33,44,55]
-; CHECK-NEXT:    pshufd {{.*#+}} xmm3 = xmm0[1,1,3,3]
-; CHECK-NEXT:    pmuludq %xmm2, %xmm0
+; CHECK-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[1,1,3,3]
+; CHECK-NEXT:    pmuludq {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; CHECK-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
-; CHECK-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[1,1,3,3]
-; CHECK-NEXT:    pmuludq %xmm3, %xmm2
+; CHECK-NEXT:    pmuludq {{\.?LCPI[0-9]+_[0-9]+}}, %xmm2
 ; CHECK-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[0,2,2,3]
 ; CHECK-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm2[0],xmm0[1],xmm2[1]
 ; CHECK-NEXT:    movdqa {{.*#+}} xmm2 = [242,726,1452,2420]

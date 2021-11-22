@@ -337,6 +337,15 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::BR_CC, MVT::f16, Expand);
     for (auto Op : FPOpToExpand)
       setOperationAction(Op, MVT::f16, Expand);
+
+    setOperationAction(ISD::FREM,       MVT::f16, Promote);
+    setOperationAction(ISD::FCEIL,      MVT::f16,  Promote);
+    setOperationAction(ISD::FFLOOR,     MVT::f16,  Promote);
+    setOperationAction(ISD::FNEARBYINT, MVT::f16,  Promote);
+    setOperationAction(ISD::FRINT,      MVT::f16,  Promote);
+    setOperationAction(ISD::FROUND,     MVT::f16,  Promote);
+    setOperationAction(ISD::FROUNDEVEN, MVT::f16,  Promote);
+    setOperationAction(ISD::FTRUNC,     MVT::f16,  Promote);
   }
 
   if (Subtarget.hasStdExtF()) {
@@ -621,6 +630,18 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
         setLoadExtAction(ISD::SEXTLOAD, OtherVT, VT, Expand);
         setLoadExtAction(ISD::ZEXTLOAD, OtherVT, VT, Expand);
       }
+
+      // Lower CTLZ_ZERO_UNDEF and CTTZ_ZERO_UNDEF if we have a floating point
+      // type that can represent the value exactly.
+      if (VT.getVectorElementType() != MVT::i64) {
+        MVT FloatEltVT =
+            VT.getVectorElementType() == MVT::i32 ? MVT::f64 : MVT::f32;
+        EVT FloatVT = MVT::getVectorVT(FloatEltVT, VT.getVectorElementCount());
+        if (isTypeLegal(FloatVT)) {
+          setOperationAction(ISD::CTLZ_ZERO_UNDEF, VT, Custom);
+          setOperationAction(ISD::CTTZ_ZERO_UNDEF, VT, Custom);
+        }
+      }
     }
 
     // Expand various CCs to best match the RVV ISA, which natively supports UNE
@@ -839,6 +860,19 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
 
         for (unsigned VPOpc : IntegerVPOps)
           setOperationAction(VPOpc, VT, Custom);
+
+        // Lower CTLZ_ZERO_UNDEF and CTTZ_ZERO_UNDEF if we have a floating point
+        // type that can represent the value exactly.
+        if (VT.getVectorElementType() != MVT::i64) {
+          MVT FloatEltVT =
+              VT.getVectorElementType() == MVT::i32 ? MVT::f64 : MVT::f32;
+          EVT FloatVT =
+              MVT::getVectorVT(FloatEltVT, VT.getVectorElementCount());
+          if (isTypeLegal(FloatVT)) {
+            setOperationAction(ISD::CTLZ_ZERO_UNDEF, VT, Custom);
+            setOperationAction(ISD::CTTZ_ZERO_UNDEF, VT, Custom);
+          }
+        }
       }
 
       for (MVT VT : MVT::fp_fixedlen_vector_valuetypes()) {
@@ -928,9 +962,6 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
 
   // Jumps are expensive, compared to logic
   setJumpIsExpensive();
-
-  // We can use any register for comparisons
-  setHasMultipleConditionRegisters();
 
   setTargetDAGCombine(ISD::ADD);
   setTargetDAGCombine(ISD::SUB);
@@ -1094,6 +1125,16 @@ bool RISCVTargetLowering::isCheapToSpeculateCttz() const {
 
 bool RISCVTargetLowering::isCheapToSpeculateCtlz() const {
   return Subtarget.hasStdExtZbb();
+}
+
+bool RISCVTargetLowering::hasAndNot(SDValue Y) const {
+  EVT VT = Y.getValueType();
+
+  // FIXME: Support vectors once we have tests.
+  if (VT.isVector())
+    return false;
+
+  return Subtarget.hasStdExtZbb() && !isa<ConstantSDNode>(Y);
 }
 
 /// Check if sinking \p I's operands to I's basic block is profitable, because
@@ -2304,6 +2345,57 @@ static SDValue getRVVFPExtendOrRound(SDValue Op, MVT VT, MVT ContainerVT,
   return DAG.getNode(RVVOpc, DL, ContainerVT, Op, Mask, VL);
 }
 
+// Lower CTLZ_ZERO_UNDEF or CTTZ_ZERO_UNDEF by converting to FP and extracting
+// the exponent.
+static SDValue lowerCTLZ_CTTZ_ZERO_UNDEF(SDValue Op, SelectionDAG &DAG) {
+  MVT VT = Op.getSimpleValueType();
+  unsigned EltSize = VT.getScalarSizeInBits();
+  SDValue Src = Op.getOperand(0);
+  SDLoc DL(Op);
+
+  // We need a FP type that can represent the value.
+  // TODO: Use f16 for i8 when possible?
+  MVT FloatEltVT = EltSize == 32 ? MVT::f64 : MVT::f32;
+  MVT FloatVT = MVT::getVectorVT(FloatEltVT, VT.getVectorElementCount());
+
+  // Legal types should have been checked in the RISCVTargetLowering
+  // constructor.
+  // TODO: Splitting may make sense in some cases.
+  assert(DAG.getTargetLoweringInfo().isTypeLegal(FloatVT) &&
+         "Expected legal float type!");
+
+  // For CTTZ_ZERO_UNDEF, we need to extract the lowest set bit using X & -X.
+  // The trailing zero count is equal to log2 of this single bit value.
+  if (Op.getOpcode() == ISD::CTTZ_ZERO_UNDEF) {
+    SDValue Neg =
+        DAG.getNode(ISD::SUB, DL, VT, DAG.getConstant(0, DL, VT), Src);
+    Src = DAG.getNode(ISD::AND, DL, VT, Src, Neg);
+  }
+
+  // We have a legal FP type, convert to it.
+  SDValue FloatVal = DAG.getNode(ISD::UINT_TO_FP, DL, FloatVT, Src);
+  // Bitcast to integer and shift the exponent to the LSB.
+  EVT IntVT = FloatVT.changeVectorElementTypeToInteger();
+  SDValue Bitcast = DAG.getBitcast(IntVT, FloatVal);
+  unsigned ShiftAmt = FloatEltVT == MVT::f64 ? 52 : 23;
+  SDValue Shift = DAG.getNode(ISD::SRL, DL, IntVT, Bitcast,
+                              DAG.getConstant(ShiftAmt, DL, IntVT));
+  // Truncate back to original type to allow vnsrl.
+  SDValue Trunc = DAG.getNode(ISD::TRUNCATE, DL, VT, Shift);
+  // The exponent contains log2 of the value in biased form.
+  unsigned ExponentBias = FloatEltVT == MVT::f64 ? 1023 : 127;
+
+  // For trailing zeros, we just need to subtract the bias.
+  if (Op.getOpcode() == ISD::CTTZ_ZERO_UNDEF)
+    return DAG.getNode(ISD::SUB, DL, VT, Trunc,
+                       DAG.getConstant(ExponentBias, DL, VT));
+
+  // For leading zeros, we need to remove the bias and convert from log2 to
+  // leading zeros. We can do this by subtracting from (Bias + (EltSize - 1)).
+  unsigned Adjust = ExponentBias + (EltSize - 1);
+  return DAG.getNode(ISD::SUB, DL, VT, DAG.getConstant(Adjust, DL, VT), Trunc);
+}
+
 // While RVV has alignment restrictions, we should always be able to load as a
 // legal equivalently-sized byte-typed vector instead. This method is
 // responsible for re-expressing a ISD::LOAD via a correctly-aligned type. If
@@ -2410,7 +2502,9 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
       // into a one-element vector of the result type, and perform a vector
       // bitcast.
       if (!Op0VT.isVector()) {
-        auto BVT = EVT::getVectorVT(*DAG.getContext(), Op0VT, 1);
+        EVT BVT = EVT::getVectorVT(*DAG.getContext(), Op0VT, 1);
+        if (!isTypeLegal(BVT))
+          return SDValue();
         return DAG.getBitcast(VT, DAG.getNode(ISD::INSERT_VECTOR_ELT, DL, BVT,
                                               DAG.getUNDEF(BVT), Op0,
                                               DAG.getConstant(0, DL, XLenVT)));
@@ -2421,8 +2515,10 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
     // thus: bitcast the vector to a one-element vector type whose element type
     // is the same as the result type, and extract the first element.
     if (!VT.isVector() && Op0VT.isFixedLengthVector()) {
-      LLVMContext &Context = *DAG.getContext();
-      SDValue BVec = DAG.getBitcast(EVT::getVectorVT(Context, VT, 1), Op0);
+      EVT BVT = EVT::getVectorVT(*DAG.getContext(), VT, 1);
+      if (!isTypeLegal(BVT))
+        return SDValue();
+      SDValue BVec = DAG.getBitcast(BVT, Op0);
       return DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, VT, BVec,
                          DAG.getConstant(0, DL, XLenVT));
     }
@@ -2918,6 +3014,9 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
     return lowerToScalableOp(Op, DAG, RISCVISD::FMAXNUM_VL);
   case ISD::ABS:
     return lowerABS(Op, DAG);
+  case ISD::CTLZ_ZERO_UNDEF:
+  case ISD::CTTZ_ZERO_UNDEF:
+    return lowerCTLZ_CTTZ_ZERO_UNDEF(Op, DAG);
   case ISD::VSELECT:
     return lowerFixedLengthVectorSelectToRVV(Op, DAG);
   case ISD::FCOPYSIGN:
@@ -5722,10 +5821,12 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
       // scalar types in order to improve codegen. Bitcast the vector to a
       // one-element vector type whose element type is the same as the result
       // type, and extract the first element.
-      LLVMContext &Context = *DAG.getContext();
-      SDValue BVec = DAG.getBitcast(EVT::getVectorVT(Context, VT, 1), Op0);
-      Results.push_back(DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, VT, BVec,
-                                    DAG.getConstant(0, DL, XLenVT)));
+      EVT BVT = EVT::getVectorVT(*DAG.getContext(), VT, 1);
+      if (isTypeLegal(BVT)) {
+        SDValue BVec = DAG.getBitcast(BVT, Op0);
+        Results.push_back(DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, VT, BVec,
+                                      DAG.getConstant(0, DL, XLenVT)));
+      }
     }
     break;
   }
@@ -7328,7 +7429,7 @@ bool RISCVTargetLowering::targetShrinkDemandedConstant(
   else
     return false;
 
-  // Sanity check that our new mask is a subset of the demanded mask.
+  // Check that our new mask is a subset of the demanded mask.
   assert(IsLegalMask(NewMask));
   return UseMask(NewMask);
 }

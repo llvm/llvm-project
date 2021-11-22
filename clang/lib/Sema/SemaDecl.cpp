@@ -3613,14 +3613,14 @@ bool Sema::MergeFunctionDecl(FunctionDecl *New, NamedDecl *&OldD,
       // defined, copy the deduced value from the old declaration.
       AutoType *OldAT = Old->getReturnType()->getContainedAutoType();
       if (OldAT && OldAT->isDeduced()) {
-        New->setType(
-            SubstAutoType(New->getType(),
-                          OldAT->isDependentType() ? Context.DependentTy
-                                                   : OldAT->getDeducedType()));
-        NewQType = Context.getCanonicalType(
-            SubstAutoType(NewQType,
-                          OldAT->isDependentType() ? Context.DependentTy
-                                                   : OldAT->getDeducedType()));
+        QualType DT = OldAT->getDeducedType();
+        if (DT.isNull()) {
+          New->setType(SubstAutoTypeDependent(New->getType()));
+          NewQType = Context.getCanonicalType(SubstAutoTypeDependent(NewQType));
+        } else {
+          New->setType(SubstAutoType(New->getType(), DT));
+          NewQType = Context.getCanonicalType(SubstAutoType(NewQType, DT));
+        }
       }
     }
 
@@ -5302,8 +5302,7 @@ Decl *Sema::BuildAnonymousStructOrUnion(Scope *S, DeclSpec &DS,
     // trivial in almost all cases, except if a union member has an in-class
     // initializer:
     //   union { int n = 0; };
-    if (!Invalid)
-      ActOnUninitializedDecl(Anon);
+    ActOnUninitializedDecl(Anon);
   }
   Anon->setImplicit();
 
@@ -5782,8 +5781,8 @@ bool Sema::diagnoseQualifiedDeclaration(CXXScopeSpec &SS, DeclContext *DC,
   NestedNameSpecifierLoc SpecLoc(SS.getScopeRep(), SS.location_data());
   while (SpecLoc.getPrefix())
     SpecLoc = SpecLoc.getPrefix();
-  if (dyn_cast_or_null<DecltypeType>(
-        SpecLoc.getNestedNameSpecifier()->getAsType()))
+  if (isa_and_nonnull<DecltypeType>(
+          SpecLoc.getNestedNameSpecifier()->getAsType()))
     Diag(Loc, diag::err_decltype_in_declarator)
       << SpecLoc.getTypeLoc().getSourceRange();
 
@@ -9109,8 +9108,10 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
 
       // C++ [class.union]p2
       //   A union can have member functions, but not virtual functions.
-      if (isVirtual && Parent->isUnion())
+      if (isVirtual && Parent->isUnion()) {
         Diag(D.getDeclSpec().getVirtualSpecLoc(), diag::err_virtual_in_union);
+        NewFD->setInvalidDecl();
+      }
     }
 
     SetNestedNameSpecifier(*this, NewFD, D);
@@ -9257,8 +9258,7 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
       // a friend yet, so 'isDependentContext' on the FD doesn't work.
       const FunctionProtoType *FPT =
           NewFD->getType()->castAs<FunctionProtoType>();
-      QualType Result =
-          SubstAutoType(FPT->getReturnType(), Context.DependentTy);
+      QualType Result = SubstAutoTypeDependent(FPT->getReturnType());
       NewFD->setType(Context.getFunctionType(Result, FPT->getParamTypes(),
                                              FPT->getExtProtoInfo()));
     }
@@ -12349,7 +12349,7 @@ void Sema::AddInitializerToDecl(Decl *RealDecl, Expr *Init, bool DirectInit) {
                                    /*TreatUnavailableAsInvalid=*/false);
     ExprResult Result = InitSeq.Perform(*this, Entity, Kind, Args, &DclT);
     if (Result.isInvalid()) {
-      // If the provied initializer fails to initialize the var decl,
+      // If the provided initializer fails to initialize the var decl,
       // we attach a recovery expr for better recovery.
       auto RecoveryExpr =
           CreateRecoveryExpr(Init->getBeginLoc(), Init->getEndLoc(), Args);
@@ -12621,8 +12621,9 @@ void Sema::AddInitializerToDecl(Decl *RealDecl, Expr *Init, bool DirectInit) {
 }
 
 /// ActOnInitializerError - Given that there was an error parsing an
-/// initializer for the given declaration, try to return to some form
-/// of sanity.
+/// initializer for the given declaration, try to at least re-establish
+/// invariants such as whether a variable's type is either dependent or
+/// complete.
 void Sema::ActOnInitializerError(Decl *D) {
   // Our main concern here is re-establishing invariants like "a
   // variable's type is either dependent or complete".
@@ -15997,8 +15998,7 @@ Decl *Sema::ActOnTag(Scope *S, unsigned TagSpec, TagUseKind TUK,
 
     // It's okay to have a tag decl in the same scope as a typedef
     // which hides a tag decl in the same scope.  Finding this
-    // insanity with a redeclaration lookup can only actually happen
-    // in C++.
+    // with a redeclaration lookup can only actually happen in C++.
     //
     // This is also okay for elaborated-type-specifiers, which is
     // technically forbidden by the current standard but which is

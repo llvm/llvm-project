@@ -793,8 +793,18 @@ public:
 
   /// If the given operation instance is legal on this target, a structure
   /// containing legality information is returned. If the operation is not
-  /// legal, None is returned.
+  /// legal, None is returned. Also returns None is operation legality wasn't
+  /// registered by user or dynamic legality callbacks returned None.
+  ///
+  /// Note: Legality is actually a 4-state: Legal(recursive=true),
+  /// Legal(recursive=false), Illegal or Unknown, where Unknown is treated
+  /// either as Legal or Illegal depending on context.
   Optional<LegalOpDetails> isLegal(Operation *op) const;
+
+  /// Returns true is operation instance is illegal on this target. Returns
+  /// false if operation is legal, operation legality wasn't registered by user
+  /// or dynamic legality callbacks returned None.
+  bool isIllegal(Operation *op) const;
 
 private:
   /// Set the dynamic legality callback for the given operation.

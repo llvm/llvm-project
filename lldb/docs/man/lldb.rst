@@ -234,6 +234,10 @@ SCRIPTING
 
  Alias for --script-language
 
+.. option:: --print-script-interpreter-info
+
+  Prints out a json dictionary with information about the scripting language interpreter.
+
 .. option:: --python-path
 
  Prints out the path to the lldb.py file for this version of lldb.

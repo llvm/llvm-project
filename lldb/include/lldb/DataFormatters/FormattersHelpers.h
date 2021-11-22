@@ -56,7 +56,7 @@ void AddFilter(TypeCategoryImpl::SharedPointer category_sp,
 
 size_t ExtractIndexFromString(const char *item_name);
 
-lldb::addr_t GetArrayAddressOrPointerValue(ValueObject &valobj);
+Address GetArrayAddressOrPointerValue(ValueObject &valobj);
 
 lldb::ValueObjectSP GetValueOfLibCXXCompressedPair(ValueObject &pair);
 

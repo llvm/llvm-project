@@ -34,7 +34,7 @@ import sys
 
 
 def write_file(file_name, text):
-  with open(file_name, 'w') as f:
+  with open(file_name, 'w', encoding='utf-8') as f:
     f.write(text)
     f.truncate()
 
@@ -82,7 +82,7 @@ def run_test_once(args, extra_args):
   if resource_dir is not None:
     clang_extra_args.append('-resource-dir=%s' % resource_dir)
 
-  with open(input_file_name, 'r') as input_file:
+  with open(input_file_name, 'r', encoding='utf-8') as input_file:
     input_text = input_file.read()
 
   check_fixes_prefixes = []
@@ -150,9 +150,9 @@ def run_test_once(args, extra_args):
     print('clang-tidy failed:\n' + e.output.decode())
     raise
 
-  print('------------------------ clang-tidy output -----------------------\n' +
-        clang_tidy_output +
-        '\n------------------------------------------------------------------')
+  print('------------------------ clang-tidy output -----------------------')
+  print(clang_tidy_output.encode())
+  print('\n------------------------------------------------------------------')
 
   try:
     diff_output = subprocess.check_output(

@@ -1664,31 +1664,31 @@ int bar(int n){
 // CHECK1-NEXT:    store i32* [[A]], i32** [[A_ADDR]], align 8
 // CHECK1-NEXT:    [[TMP0:%.*]] = load i32*, i32** [[A_ADDR]], align 8
 // CHECK1-NEXT:    [[TMP1:%.*]] = call i64 @__kmpc_warp_active_thread_mask()
-// CHECK1-NEXT:    [[NVPTX_TID:%.*]] = call i32 @llvm.nvvm.read.ptx.sreg.tid.x()
+// CHECK1-NEXT:    [[TMP2:%.*]] = call i32 @__kmpc_get_hardware_thread_id_in_block()
 // CHECK1-NEXT:    [[NVPTX_NUM_THREADS:%.*]] = call i32 @__kmpc_get_hardware_num_threads_in_block()
 // CHECK1-NEXT:    store i32 0, i32* [[CRITICAL_COUNTER]], align 4
 // CHECK1-NEXT:    br label [[OMP_CRITICAL_LOOP:%.*]]
 // CHECK1:       omp.critical.loop:
-// CHECK1-NEXT:    [[TMP2:%.*]] = load i32, i32* [[CRITICAL_COUNTER]], align 4
-// CHECK1-NEXT:    [[TMP3:%.*]] = icmp slt i32 [[TMP2]], [[NVPTX_NUM_THREADS]]
-// CHECK1-NEXT:    br i1 [[TMP3]], label [[OMP_CRITICAL_TEST:%.*]], label [[OMP_CRITICAL_EXIT:%.*]]
+// CHECK1-NEXT:    [[TMP3:%.*]] = load i32, i32* [[CRITICAL_COUNTER]], align 4
+// CHECK1-NEXT:    [[TMP4:%.*]] = icmp slt i32 [[TMP3]], [[NVPTX_NUM_THREADS]]
+// CHECK1-NEXT:    br i1 [[TMP4]], label [[OMP_CRITICAL_TEST:%.*]], label [[OMP_CRITICAL_EXIT:%.*]]
 // CHECK1:       omp.critical.test:
-// CHECK1-NEXT:    [[TMP4:%.*]] = load i32, i32* [[CRITICAL_COUNTER]], align 4
-// CHECK1-NEXT:    [[TMP5:%.*]] = icmp eq i32 [[NVPTX_TID]], [[TMP4]]
-// CHECK1-NEXT:    br i1 [[TMP5]], label [[OMP_CRITICAL_BODY:%.*]], label [[OMP_CRITICAL_SYNC:%.*]]
+// CHECK1-NEXT:    [[TMP5:%.*]] = load i32, i32* [[CRITICAL_COUNTER]], align 4
+// CHECK1-NEXT:    [[TMP6:%.*]] = icmp eq i32 [[TMP2]], [[TMP5]]
+// CHECK1-NEXT:    br i1 [[TMP6]], label [[OMP_CRITICAL_BODY:%.*]], label [[OMP_CRITICAL_SYNC:%.*]]
 // CHECK1:       omp.critical.body:
-// CHECK1-NEXT:    [[TMP6:%.*]] = load i32*, i32** [[DOTGLOBAL_TID__ADDR]], align 8
-// CHECK1-NEXT:    [[TMP7:%.*]] = load i32, i32* [[TMP6]], align 4
-// CHECK1-NEXT:    call void @__kmpc_critical(%struct.ident_t* @[[GLOB1]], i32 [[TMP7]], [8 x i32]* @"_gomp_critical_user_$var")
-// CHECK1-NEXT:    [[TMP8:%.*]] = load i32, i32* [[TMP0]], align 4
-// CHECK1-NEXT:    [[INC:%.*]] = add nsw i32 [[TMP8]], 1
+// CHECK1-NEXT:    [[TMP7:%.*]] = load i32*, i32** [[DOTGLOBAL_TID__ADDR]], align 8
+// CHECK1-NEXT:    [[TMP8:%.*]] = load i32, i32* [[TMP7]], align 4
+// CHECK1-NEXT:    call void @__kmpc_critical(%struct.ident_t* @[[GLOB1]], i32 [[TMP8]], [8 x i32]* @"_gomp_critical_user_$var")
+// CHECK1-NEXT:    [[TMP9:%.*]] = load i32, i32* [[TMP0]], align 4
+// CHECK1-NEXT:    [[INC:%.*]] = add nsw i32 [[TMP9]], 1
 // CHECK1-NEXT:    store i32 [[INC]], i32* [[TMP0]], align 4
-// CHECK1-NEXT:    call void @__kmpc_end_critical(%struct.ident_t* @[[GLOB1]], i32 [[TMP7]], [8 x i32]* @"_gomp_critical_user_$var")
+// CHECK1-NEXT:    call void @__kmpc_end_critical(%struct.ident_t* @[[GLOB1]], i32 [[TMP8]], [8 x i32]* @"_gomp_critical_user_$var")
 // CHECK1-NEXT:    br label [[OMP_CRITICAL_SYNC]]
 // CHECK1:       omp.critical.sync:
 // CHECK1-NEXT:    call void @__kmpc_syncwarp(i64 [[TMP1]])
-// CHECK1-NEXT:    [[TMP9:%.*]] = add nsw i32 [[TMP4]], 1
-// CHECK1-NEXT:    store i32 [[TMP9]], i32* [[CRITICAL_COUNTER]], align 4
+// CHECK1-NEXT:    [[TMP10:%.*]] = add nsw i32 [[TMP5]], 1
+// CHECK1-NEXT:    store i32 [[TMP10]], i32* [[CRITICAL_COUNTER]], align 4
 // CHECK1-NEXT:    br label [[OMP_CRITICAL_LOOP]]
 // CHECK1:       omp.critical.exit:
 // CHECK1-NEXT:    ret void
@@ -1936,31 +1936,31 @@ int bar(int n){
 // CHECK2-NEXT:    store i32* [[A]], i32** [[A_ADDR]], align 4
 // CHECK2-NEXT:    [[TMP0:%.*]] = load i32*, i32** [[A_ADDR]], align 4
 // CHECK2-NEXT:    [[TMP1:%.*]] = call i64 @__kmpc_warp_active_thread_mask()
-// CHECK2-NEXT:    [[NVPTX_TID:%.*]] = call i32 @llvm.nvvm.read.ptx.sreg.tid.x()
+// CHECK2-NEXT:    [[TMP2:%.*]] = call i32 @__kmpc_get_hardware_thread_id_in_block()
 // CHECK2-NEXT:    [[NVPTX_NUM_THREADS:%.*]] = call i32 @__kmpc_get_hardware_num_threads_in_block()
 // CHECK2-NEXT:    store i32 0, i32* [[CRITICAL_COUNTER]], align 4
 // CHECK2-NEXT:    br label [[OMP_CRITICAL_LOOP:%.*]]
 // CHECK2:       omp.critical.loop:
-// CHECK2-NEXT:    [[TMP2:%.*]] = load i32, i32* [[CRITICAL_COUNTER]], align 4
-// CHECK2-NEXT:    [[TMP3:%.*]] = icmp slt i32 [[TMP2]], [[NVPTX_NUM_THREADS]]
-// CHECK2-NEXT:    br i1 [[TMP3]], label [[OMP_CRITICAL_TEST:%.*]], label [[OMP_CRITICAL_EXIT:%.*]]
+// CHECK2-NEXT:    [[TMP3:%.*]] = load i32, i32* [[CRITICAL_COUNTER]], align 4
+// CHECK2-NEXT:    [[TMP4:%.*]] = icmp slt i32 [[TMP3]], [[NVPTX_NUM_THREADS]]
+// CHECK2-NEXT:    br i1 [[TMP4]], label [[OMP_CRITICAL_TEST:%.*]], label [[OMP_CRITICAL_EXIT:%.*]]
 // CHECK2:       omp.critical.test:
-// CHECK2-NEXT:    [[TMP4:%.*]] = load i32, i32* [[CRITICAL_COUNTER]], align 4
-// CHECK2-NEXT:    [[TMP5:%.*]] = icmp eq i32 [[NVPTX_TID]], [[TMP4]]
-// CHECK2-NEXT:    br i1 [[TMP5]], label [[OMP_CRITICAL_BODY:%.*]], label [[OMP_CRITICAL_SYNC:%.*]]
+// CHECK2-NEXT:    [[TMP5:%.*]] = load i32, i32* [[CRITICAL_COUNTER]], align 4
+// CHECK2-NEXT:    [[TMP6:%.*]] = icmp eq i32 [[TMP2]], [[TMP5]]
+// CHECK2-NEXT:    br i1 [[TMP6]], label [[OMP_CRITICAL_BODY:%.*]], label [[OMP_CRITICAL_SYNC:%.*]]
 // CHECK2:       omp.critical.body:
-// CHECK2-NEXT:    [[TMP6:%.*]] = load i32*, i32** [[DOTGLOBAL_TID__ADDR]], align 4
-// CHECK2-NEXT:    [[TMP7:%.*]] = load i32, i32* [[TMP6]], align 4
-// CHECK2-NEXT:    call void @__kmpc_critical(%struct.ident_t* @[[GLOB1]], i32 [[TMP7]], [8 x i32]* @"_gomp_critical_user_$var")
-// CHECK2-NEXT:    [[TMP8:%.*]] = load i32, i32* [[TMP0]], align 4
-// CHECK2-NEXT:    [[INC:%.*]] = add nsw i32 [[TMP8]], 1
+// CHECK2-NEXT:    [[TMP7:%.*]] = load i32*, i32** [[DOTGLOBAL_TID__ADDR]], align 4
+// CHECK2-NEXT:    [[TMP8:%.*]] = load i32, i32* [[TMP7]], align 4
+// CHECK2-NEXT:    call void @__kmpc_critical(%struct.ident_t* @[[GLOB1]], i32 [[TMP8]], [8 x i32]* @"_gomp_critical_user_$var")
+// CHECK2-NEXT:    [[TMP9:%.*]] = load i32, i32* [[TMP0]], align 4
+// CHECK2-NEXT:    [[INC:%.*]] = add nsw i32 [[TMP9]], 1
 // CHECK2-NEXT:    store i32 [[INC]], i32* [[TMP0]], align 4
-// CHECK2-NEXT:    call void @__kmpc_end_critical(%struct.ident_t* @[[GLOB1]], i32 [[TMP7]], [8 x i32]* @"_gomp_critical_user_$var")
+// CHECK2-NEXT:    call void @__kmpc_end_critical(%struct.ident_t* @[[GLOB1]], i32 [[TMP8]], [8 x i32]* @"_gomp_critical_user_$var")
 // CHECK2-NEXT:    br label [[OMP_CRITICAL_SYNC]]
 // CHECK2:       omp.critical.sync:
 // CHECK2-NEXT:    call void @__kmpc_syncwarp(i64 [[TMP1]])
-// CHECK2-NEXT:    [[TMP9:%.*]] = add nsw i32 [[TMP4]], 1
-// CHECK2-NEXT:    store i32 [[TMP9]], i32* [[CRITICAL_COUNTER]], align 4
+// CHECK2-NEXT:    [[TMP10:%.*]] = add nsw i32 [[TMP5]], 1
+// CHECK2-NEXT:    store i32 [[TMP10]], i32* [[CRITICAL_COUNTER]], align 4
 // CHECK2-NEXT:    br label [[OMP_CRITICAL_LOOP]]
 // CHECK2:       omp.critical.exit:
 // CHECK2-NEXT:    ret void

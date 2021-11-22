@@ -165,6 +165,28 @@ if(MLIR_ENABLE_ROCM_RUNNER)
     message(STATUS "ROCm HIP runtime lib: ${ROCM_RUNTIME_LIBRARY}")
   endif()
 
+  if (NOT DEFINED ROCM_TEST_CHIPSET)
+    execute_process(COMMAND "${ROCM_PATH}/bin/rocm_agent_enumerator"
+    OUTPUT_VARIABLE AGENTS_STRING
+    ERROR_VARIABLE AGENTS_STRING
+    RESULT_VARIABLE AGENT_ENUMERATOR_RESULT)
+
+    if (NOT AGENT_ENUMERATOR_RESULT EQUAL 0)
+      message(SEND_ERROR "Could not run rocm_agent_enumerator and ROCM_TEST_CHIPSET is not defined")
+      set(AGENTS_STRING "")
+    endif()
+    string(STRIP AGENTS_STRING ${AGENTS_STRING})
+    string(REPLACE "\n" ";" AGENTS_LIST ${AGENTS_STRING})
+    list(FILTER AGENTS_LIST EXCLUDE REGEX "gfx000")
+    if (AGENTS_LIST STREQUAL "")
+      message(SEND_ERROR "No non-CPU ROCm agents found on the system, and ROCM_TEST_CHIPSET is not defined")
+    else()
+      list(GET AGENTS_LIST 0 FIRST_AGENT)
+      set(ROCM_TEST_CHIPSET ${FIRST_AGENT} CACHE STRING "Chipset for which to compile ROCm integration tests")
+      message(STATUS "Compiling integration tests for ${ROCM_TEST_CHIPSET}")
+    endif()
+  endif()
+
   add_mlir_library(mlir_rocm_runtime
     SHARED
     RocmRuntimeWrappers.cpp
@@ -180,8 +202,11 @@ if(MLIR_ENABLE_ROCM_RUNNER)
     ${HIP_PATH}/include
     ${ROCM_PATH}/include
   )
+  set_property(TARGET mlir_rocm_runtime
+    PROPERTY INSTALL_RPATH_USE_LINK_PATH ON)
+
   target_link_libraries(mlir_rocm_runtime
-    PRIVATE
+    PUBLIC
     ${ROCM_RUNTIME_LIBRARY}
   )
 endif()

@@ -373,7 +373,7 @@ Every processor supports every OS ABI (see :ref:`amdgpu-os`) with the following 
                                                                                                       - Ryzen 3 Pro 4350G
                                                                                                       - Ryzen 3 Pro 4350GE
 
-     **GCN GFX10 (RDNA 1)** [AMD-GCN-GFX10-RDNA1]_
+     **GCN GFX10.1 (RDNA 1)** [AMD-GCN-GFX10-RDNA1]_
      -----------------------------------------------------------------------------------------------------------------------
      ``gfx1010``                 ``amdgcn``   dGPU  - cumode          - Absolute      - *rocm-amdhsa* - Radeon RX 5700
                                                     - wavefrontsize64   flat          - *pal-amdhsa*  - Radeon RX 5700 XT
@@ -393,7 +393,7 @@ Every processor supports every OS ABI (see :ref:`amdgpu-os`) with the following 
                                                                                                         Add product
                                                                                                         names.
 
-     **GCN GFX10 (RDNA 2)** [AMD-GCN-GFX10-RDNA2]_
+     **GCN GFX10.3 (RDNA 2)** [AMD-GCN-GFX10-RDNA2]_
      -----------------------------------------------------------------------------------------------------------------------
      ``gfx1030``                 ``amdgcn``   dGPU  - cumode          - Absolute      - *rocm-amdhsa* - Radeon RX 6800
                                                     - wavefrontsize64   flat          - *pal-amdhsa*  - Radeon RX 6800 XT
@@ -444,6 +444,13 @@ Every processor supports every OS ABI (see :ref:`amdgpu-os`) with the following 
                                                                         IDs                             names.
 
      ``gfx1102``                 ``amdgcn``   dGPU  - cumode          - Architected                   *TBA*
+                                                    - wavefrontsize64   flat
+                                                                        scratch                       .. TODO::
+                                                                      - Packed
+                                                                        work-item                       Add product
+                                                                        IDs                             names.
+
+     ``gfx1103``                 ``amdgcn``   APU   - cumode          - Architected                   *TBA*
                                                     - wavefrontsize64   flat
                                                                         scratch                       .. TODO::
                                                                       - Packed
@@ -1234,10 +1241,10 @@ The AMDGPU backend uses the following ELF header:
      ``EF_AMDGPU_MACH_AMDGCN_GFX1100``    0x041      ``gfx1100``
      ``EF_AMDGPU_MACH_AMDGCN_GFX1013``    0x042      ``gfx1013``
      *reserved*                           0x043      Reserved.
-     *reserved*                           0x044      Reserved.
+     ``EF_AMDGPU_MACH_AMDGCN_GFX1103``    0x044      ``gfx1103``
      *reserved*                           0x045      Reserved.
-     ``EF_AMDGPU_MACH_AMDGCN_GFX1101``    0x0f2      ``gfx1101``
-     ``EF_AMDGPU_MACH_AMDGCN_GFX1102``    0x0f3      ``gfx1102``
+     ``EF_AMDGPU_MACH_AMDGCN_GFX1101``    0x046      ``gfx1101``
+     ``EF_AMDGPU_MACH_AMDGCN_GFX1102``    0x047      ``gfx1102``
      ==================================== ========== =============================
 
 Sections
@@ -8636,6 +8643,9 @@ For GFX10-GFX11:
   requirements of acquire, release and sequential consistency.
 * The L2 cache can be kept coherent with other agents on some targets, or ranges
   of virtual addresses can be set up to bypass it to ensure system coherence.
+* On GFX10.3 a memory attached last level (MALL) cache exists for GPU memory.
+  The MALL cache is fully coherent with GPU memory and has no impact on system
+  coherence. All agents (GPU and CPU) access GPU memory through the MALL cache.
 
 Scalar memory operations are only used to access memory that is proven to not
 change during the execution of the kernel dispatch. This includes constant

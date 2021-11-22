@@ -1,5 +1,5 @@
 // -*- C++ -*-
-//===---------------------------- deque -----------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -129,7 +129,7 @@ public:
 
 template <class InputIterator, class Allocator = allocator<typename iterator_traits<InputIterator>::value_type>>
    deque(InputIterator, InputIterator, Allocator = Allocator())
-   -> deque<typename iterator_traits<InputIterator>::value_type, Allocator>;
+   -> deque<typename iterator_traits<InputIterator>::value_type, Allocator>; // C++17
 
 template <class T, class Allocator>
     bool operator==(const deque<T,Allocator>& x, const deque<T,Allocator>& y);
@@ -162,6 +162,7 @@ template <class T, class Allocator, class Predicate>
 
 #include <__config>
 #include <__debug>
+#include <__iterator/iterator_traits.h>
 #include <__split_buffer>
 #include <__utility/forward.h>
 #include <algorithm>
@@ -1258,20 +1259,20 @@ public:
     static_assert((is_same<typename allocator_type::value_type, value_type>::value),
                   "Allocator::value_type must be same type as value_type");
 
-    typedef __deque_base<value_type, allocator_type> __base;
+    typedef __deque_base<value_type, allocator_type>                 __base;
 
-    typedef typename __base::__alloc_traits        __alloc_traits;
-    typedef typename __base::reference             reference;
-    typedef typename __base::const_reference       const_reference;
-    typedef typename __base::iterator              iterator;
-    typedef typename __base::const_iterator        const_iterator;
-    typedef typename __base::size_type             size_type;
-    typedef typename __base::difference_type       difference_type;
+    typedef typename __base::__alloc_traits                          __alloc_traits;
+    typedef typename __base::reference                               reference;
+    typedef typename __base::const_reference                         const_reference;
+    typedef typename __base::iterator                                iterator;
+    typedef typename __base::const_iterator                          const_iterator;
+    typedef typename __allocator_traits<allocator_type>::size_type   size_type;
+    typedef typename __base::difference_type                         difference_type;
 
-    typedef typename __base::pointer               pointer;
-    typedef typename __base::const_pointer         const_pointer;
-    typedef _VSTD::reverse_iterator<iterator>       reverse_iterator;
-    typedef _VSTD::reverse_iterator<const_iterator> const_reverse_iterator;
+    typedef typename __base::pointer                                 pointer;
+    typedef typename __base::const_pointer                           const_pointer;
+    typedef _VSTD::reverse_iterator<iterator>                        reverse_iterator;
+    typedef _VSTD::reverse_iterator<const_iterator>                  const_reverse_iterator;
 
     using typename __base::__deque_range;
     using typename __base::__deque_block_range;
@@ -1568,6 +1569,7 @@ public:
 #if _LIBCPP_STD_VER >= 17
 template<class _InputIterator,
          class _Alloc = allocator<__iter_value_type<_InputIterator>>,
+         class = enable_if_t<__is_cpp17_input_iterator<_InputIterator>::value>,
          class = enable_if_t<__is_allocator<_Alloc>::value>
          >
 deque(_InputIterator, _InputIterator)
@@ -1575,12 +1577,12 @@ deque(_InputIterator, _InputIterator)
 
 template<class _InputIterator,
          class _Alloc,
+         class = enable_if_t<__is_cpp17_input_iterator<_InputIterator>::value>,
          class = enable_if_t<__is_allocator<_Alloc>::value>
          >
 deque(_InputIterator, _InputIterator, _Alloc)
   -> deque<__iter_value_type<_InputIterator>, _Alloc>;
 #endif
-
 
 template <class _Tp, class _Allocator>
 deque<_Tp, _Allocator>::deque(size_type __n)

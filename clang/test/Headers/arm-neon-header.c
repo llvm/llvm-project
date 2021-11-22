@@ -24,4 +24,6 @@
 // RUN: %clang -fsyntax-only -Wall -Werror -ffreestanding --target=aarch64_be-none-eabi -march=armv8.2-a+fp16fml+crypto+dotprod -std=c11 -xc -flax-vector-conversions=none %s
 // RUN: %clang -fsyntax-only -Wall -Werror -ffreestanding --target=arm64-linux-gnu -arch +neon -std=c11 -xc -flax-vector-conversions=none %s
 
+// REQUIRES: aarch64-registered-target || arm-registered-target
+
 #include <arm_neon.h>

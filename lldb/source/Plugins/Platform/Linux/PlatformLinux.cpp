@@ -14,9 +14,11 @@
 #include <sys/utsname.h>
 #endif
 
+#include "Utility/ARM64_DWARF_Registers.h"
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Host/HostInfo.h"
+#include "lldb/Symbol/UnwindPlan.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/FileSpec.h"
@@ -107,78 +109,28 @@ void PlatformLinux::Terminate() {
 /// Default Constructor
 PlatformLinux::PlatformLinux(bool is_host)
     : PlatformPOSIX(is_host) // This is the local host platform
-{}
-
-bool PlatformLinux::GetSupportedArchitectureAtIndex(uint32_t idx,
-                                                    ArchSpec &arch) {
-  if (IsHost()) {
+{
+  if (is_host) {
     ArchSpec hostArch = HostInfo::GetArchitecture(HostInfo::eArchKindDefault);
-    if (hostArch.GetTriple().isOSLinux()) {
-      if (idx == 0) {
-        arch = hostArch;
-        return arch.IsValid();
-      } else if (idx == 1) {
-        // If the default host architecture is 64-bit, look for a 32-bit
-        // variant
-        if (hostArch.IsValid() && hostArch.GetTriple().isArch64Bit()) {
-          arch = HostInfo::GetArchitecture(HostInfo::eArchKind32);
-          return arch.IsValid();
-        }
-      }
+    m_supported_architectures.push_back(hostArch);
+    if (hostArch.GetTriple().isArch64Bit()) {
+      m_supported_architectures.push_back(
+          HostInfo::GetArchitecture(HostInfo::eArchKind32));
     }
   } else {
-    if (m_remote_platform_sp)
-      return m_remote_platform_sp->GetSupportedArchitectureAtIndex(idx, arch);
-
-    llvm::Triple triple;
-    // Set the OS to linux
-    triple.setOS(llvm::Triple::Linux);
-    // Set the architecture
-    switch (idx) {
-    case 0:
-      triple.setArchName("x86_64");
-      break;
-    case 1:
-      triple.setArchName("i386");
-      break;
-    case 2:
-      triple.setArchName("arm");
-      break;
-    case 3:
-      triple.setArchName("aarch64");
-      break;
-    case 4:
-      triple.setArchName("mips64");
-      break;
-    case 5:
-      triple.setArchName("hexagon");
-      break;
-    case 6:
-      triple.setArchName("mips");
-      break;
-    case 7:
-      triple.setArchName("mips64el");
-      break;
-    case 8:
-      triple.setArchName("mipsel");
-      break;
-    case 9:
-      triple.setArchName("s390x");
-      break;
-    default:
-      return false;
-    }
-    // Leave the vendor as "llvm::Triple:UnknownVendor" and don't specify the
-    // vendor by calling triple.SetVendorName("unknown") so that it is a
-    // "unspecified unknown". This means when someone calls
-    // triple.GetVendorName() it will return an empty string which indicates
-    // that the vendor can be set when two architectures are merged
-
-    // Now set the triple into "arch" and return true
-    arch.SetTriple(triple);
-    return true;
+    m_supported_architectures = CreateArchList(
+        {llvm::Triple::x86_64, llvm::Triple::x86, llvm::Triple::arm,
+         llvm::Triple::aarch64, llvm::Triple::mips64, llvm::Triple::mips64,
+         llvm::Triple::hexagon, llvm::Triple::mips, llvm::Triple::mips64el,
+         llvm::Triple::mipsel, llvm::Triple::systemz},
+        llvm::Triple::Linux);
   }
-  return false;
+}
+
+std::vector<ArchSpec> PlatformLinux::GetSupportedArchitectures() {
+  if (m_remote_platform_sp)
+    return m_remote_platform_sp->GetSupportedArchitectures();
+  return m_supported_architectures;
 }
 
 void PlatformLinux::GetStatus(Stream &strm) {
@@ -249,6 +201,96 @@ void PlatformLinux::CalculateTrapHandlerSymbolNames() {
   m_trap_handlers.push_back(ConstString("_sigtramp"));
   m_trap_handlers.push_back(ConstString("__kernel_rt_sigreturn"));
   m_trap_handlers.push_back(ConstString("__restore_rt"));
+}
+
+static lldb::UnwindPlanSP GetAArch64TrapHanlderUnwindPlan(ConstString name) {
+  UnwindPlanSP unwind_plan_sp;
+  if (name != "__kernel_rt_sigreturn")
+    return unwind_plan_sp;
+
+  UnwindPlan::RowSP row = std::make_shared<UnwindPlan::Row>();
+  row->SetOffset(0);
+
+  // In the signal trampoline frame, sp points to an rt_sigframe[1], which is:
+  //  - 128-byte siginfo struct
+  //  - ucontext struct:
+  //     - 8-byte long (uc_flags)
+  //     - 8-byte pointer (uc_link)
+  //     - 24-byte stack_t
+  //     - 128-byte signal set
+  //     - 8 bytes of padding because sigcontext has 16-byte alignment
+  //     - sigcontext/mcontext_t
+  // [1]
+  // https://github.com/torvalds/linux/blob/master/arch/arm64/kernel/signal.c
+  int32_t offset = 128 + 8 + 8 + 24 + 128 + 8;
+  // Then sigcontext[2] is:
+  // - 8 byte fault address
+  // - 31 8 byte registers
+  // - 8 byte sp
+  // - 8 byte pc
+  // [2]
+  // https://github.com/torvalds/linux/blob/master/arch/arm64/include/uapi/asm/sigcontext.h
+
+  // Skip fault address
+  offset += 8;
+  row->GetCFAValue().SetIsRegisterPlusOffset(arm64_dwarf::sp, offset);
+
+  row->SetRegisterLocationToAtCFAPlusOffset(arm64_dwarf::x0, 0 * 8, false);
+  row->SetRegisterLocationToAtCFAPlusOffset(arm64_dwarf::x1, 1 * 8, false);
+  row->SetRegisterLocationToAtCFAPlusOffset(arm64_dwarf::x2, 2 * 8, false);
+  row->SetRegisterLocationToAtCFAPlusOffset(arm64_dwarf::x3, 3 * 8, false);
+  row->SetRegisterLocationToAtCFAPlusOffset(arm64_dwarf::x4, 4 * 8, false);
+  row->SetRegisterLocationToAtCFAPlusOffset(arm64_dwarf::x5, 5 * 8, false);
+  row->SetRegisterLocationToAtCFAPlusOffset(arm64_dwarf::x6, 6 * 8, false);
+  row->SetRegisterLocationToAtCFAPlusOffset(arm64_dwarf::x7, 7 * 8, false);
+  row->SetRegisterLocationToAtCFAPlusOffset(arm64_dwarf::x8, 8 * 8, false);
+  row->SetRegisterLocationToAtCFAPlusOffset(arm64_dwarf::x9, 9 * 8, false);
+  row->SetRegisterLocationToAtCFAPlusOffset(arm64_dwarf::x10, 10 * 8, false);
+  row->SetRegisterLocationToAtCFAPlusOffset(arm64_dwarf::x11, 11 * 8, false);
+  row->SetRegisterLocationToAtCFAPlusOffset(arm64_dwarf::x12, 12 * 8, false);
+  row->SetRegisterLocationToAtCFAPlusOffset(arm64_dwarf::x13, 13 * 8, false);
+  row->SetRegisterLocationToAtCFAPlusOffset(arm64_dwarf::x14, 14 * 8, false);
+  row->SetRegisterLocationToAtCFAPlusOffset(arm64_dwarf::x15, 15 * 8, false);
+  row->SetRegisterLocationToAtCFAPlusOffset(arm64_dwarf::x16, 16 * 8, false);
+  row->SetRegisterLocationToAtCFAPlusOffset(arm64_dwarf::x17, 17 * 8, false);
+  row->SetRegisterLocationToAtCFAPlusOffset(arm64_dwarf::x18, 18 * 8, false);
+  row->SetRegisterLocationToAtCFAPlusOffset(arm64_dwarf::x19, 19 * 8, false);
+  row->SetRegisterLocationToAtCFAPlusOffset(arm64_dwarf::x20, 20 * 8, false);
+  row->SetRegisterLocationToAtCFAPlusOffset(arm64_dwarf::x21, 21 * 8, false);
+  row->SetRegisterLocationToAtCFAPlusOffset(arm64_dwarf::x22, 22 * 8, false);
+  row->SetRegisterLocationToAtCFAPlusOffset(arm64_dwarf::x23, 23 * 8, false);
+  row->SetRegisterLocationToAtCFAPlusOffset(arm64_dwarf::x24, 24 * 8, false);
+  row->SetRegisterLocationToAtCFAPlusOffset(arm64_dwarf::x25, 25 * 8, false);
+  row->SetRegisterLocationToAtCFAPlusOffset(arm64_dwarf::x26, 26 * 8, false);
+  row->SetRegisterLocationToAtCFAPlusOffset(arm64_dwarf::x27, 27 * 8, false);
+  row->SetRegisterLocationToAtCFAPlusOffset(arm64_dwarf::x28, 28 * 8, false);
+  row->SetRegisterLocationToAtCFAPlusOffset(arm64_dwarf::fp, 29 * 8, false);
+  row->SetRegisterLocationToAtCFAPlusOffset(arm64_dwarf::x30, 30 * 8, false);
+  row->SetRegisterLocationToAtCFAPlusOffset(arm64_dwarf::sp, 31 * 8, false);
+  row->SetRegisterLocationToAtCFAPlusOffset(arm64_dwarf::pc, 32 * 8, false);
+
+  // The sigcontext may also contain floating point and SVE registers.
+  // However this would require a dynamic unwind plan so they are not included
+  // here.
+
+  unwind_plan_sp = std::make_shared<UnwindPlan>(eRegisterKindDWARF);
+  unwind_plan_sp->AppendRow(row);
+  unwind_plan_sp->SetSourceName("AArch64 Linux sigcontext");
+  unwind_plan_sp->SetSourcedFromCompiler(eLazyBoolYes);
+  // Because sp is the same throughout the function
+  unwind_plan_sp->SetUnwindPlanValidAtAllInstructions(eLazyBoolYes);
+  unwind_plan_sp->SetUnwindPlanForSignalTrap(eLazyBoolYes);
+
+  return unwind_plan_sp;
+}
+
+lldb::UnwindPlanSP
+PlatformLinux::GetTrapHandlerUnwindPlan(const llvm::Triple &triple,
+                                        ConstString name) {
+  if (triple.isAArch64())
+    return GetAArch64TrapHanlderUnwindPlan(name);
+
+  return {};
 }
 
 MmapArgList PlatformLinux::GetMmapArgumentList(const ArchSpec &arch,

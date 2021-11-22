@@ -61,7 +61,7 @@ void CheckAllocaIsInEntryBlock() {
 // CHECK-64-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [[PRINTF_ARGS]], %printf_args* [[TMP]], i32 0, i32 2
 // CHECK-64-NEXT:    store double 3.000000e+00, double* [[TMP4]], align 8
 // CHECK-64-NEXT:    [[TMP5:%.*]] = bitcast %printf_args* [[TMP]] to i8*
-// CHECK-64-NEXT:    [[TMP6:%.*]] = call i32 @vprintf(i8* [[TMP1]], i8* [[TMP5]])
+// CHECK-64-NEXT:    [[TMP6:%.*]] = call i32 @__llvm_omp_vprintf(i8* [[TMP1]], i8* [[TMP5]], i32 24)
 // CHECK-64-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 1, i1 true)
 // CHECK-64-NEXT:    ret void
 // CHECK-64:       worker.exit:
@@ -75,7 +75,7 @@ void CheckAllocaIsInEntryBlock() {
 // CHECK-64-NEXT:    [[EXEC_USER_CODE:%.*]] = icmp eq i32 [[TMP0]], -1
 // CHECK-64-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[WORKER_EXIT:%.*]]
 // CHECK-64:       user_code.entry:
-// CHECK-64-NEXT:    [[TMP1:%.*]] = call i32 @vprintf(i8* getelementptr inbounds ([14 x i8], [14 x i8]* @.str1, i64 0, i64 0), i8* null)
+// CHECK-64-NEXT:    [[TMP1:%.*]] = call i32 @__llvm_omp_vprintf(i8* getelementptr inbounds ([14 x i8], [14 x i8]* @.str1, i64 0, i64 0), i8* null, i32 0)
 // CHECK-64-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 1, i1 true)
 // CHECK-64-NEXT:    ret void
 // CHECK-64:       worker.exit:
@@ -100,7 +100,7 @@ void CheckAllocaIsInEntryBlock() {
 // CHECK-64-NEXT:    [[TMP2:%.*]] = getelementptr inbounds [[PRINTF_ARGS_0]], %printf_args.0* [[TMP]], i32 0, i32 0
 // CHECK-64-NEXT:    store i32 42, i32* [[TMP2]], align 4
 // CHECK-64-NEXT:    [[TMP3:%.*]] = bitcast %printf_args.0* [[TMP]] to i8*
-// CHECK-64-NEXT:    [[TMP4:%.*]] = call i32 @vprintf(i8* getelementptr inbounds ([3 x i8], [3 x i8]* @.str2, i64 0, i64 0), i8* [[TMP3]])
+// CHECK-64-NEXT:    [[TMP4:%.*]] = call i32 @__llvm_omp_vprintf(i8* getelementptr inbounds ([3 x i8], [3 x i8]* @.str2, i64 0, i64 0), i8* [[TMP3]], i32 4)
 // CHECK-64-NEXT:    br label [[IF_END]]
 // CHECK-64:       worker.exit:
 // CHECK-64-NEXT:    ret void
@@ -130,7 +130,7 @@ void CheckAllocaIsInEntryBlock() {
 // CHECK-32-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [[PRINTF_ARGS]], %printf_args* [[TMP]], i32 0, i32 2
 // CHECK-32-NEXT:    store double 3.000000e+00, double* [[TMP4]], align 8
 // CHECK-32-NEXT:    [[TMP5:%.*]] = bitcast %printf_args* [[TMP]] to i8*
-// CHECK-32-NEXT:    [[TMP6:%.*]] = call i32 @vprintf(i8* [[TMP1]], i8* [[TMP5]])
+// CHECK-32-NEXT:    [[TMP6:%.*]] = call i32 @__llvm_omp_vprintf(i8* [[TMP1]], i8* [[TMP5]], i32 24)
 // CHECK-32-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 1, i1 true)
 // CHECK-32-NEXT:    ret void
 // CHECK-32:       worker.exit:
@@ -144,7 +144,7 @@ void CheckAllocaIsInEntryBlock() {
 // CHECK-32-NEXT:    [[EXEC_USER_CODE:%.*]] = icmp eq i32 [[TMP0]], -1
 // CHECK-32-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[WORKER_EXIT:%.*]]
 // CHECK-32:       user_code.entry:
-// CHECK-32-NEXT:    [[TMP1:%.*]] = call i32 @vprintf(i8* getelementptr inbounds ([14 x i8], [14 x i8]* @.str1, i32 0, i32 0), i8* null)
+// CHECK-32-NEXT:    [[TMP1:%.*]] = call i32 @__llvm_omp_vprintf(i8* getelementptr inbounds ([14 x i8], [14 x i8]* @.str1, i32 0, i32 0), i8* null, i32 0)
 // CHECK-32-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 1, i1 true)
 // CHECK-32-NEXT:    ret void
 // CHECK-32:       worker.exit:
@@ -168,7 +168,7 @@ void CheckAllocaIsInEntryBlock() {
 // CHECK-32-NEXT:    [[TMP2:%.*]] = getelementptr inbounds [[PRINTF_ARGS_0]], %printf_args.0* [[TMP]], i32 0, i32 0
 // CHECK-32-NEXT:    store i32 42, i32* [[TMP2]], align 4
 // CHECK-32-NEXT:    [[TMP3:%.*]] = bitcast %printf_args.0* [[TMP]] to i8*
-// CHECK-32-NEXT:    [[TMP4:%.*]] = call i32 @vprintf(i8* getelementptr inbounds ([3 x i8], [3 x i8]* @.str2, i32 0, i32 0), i8* [[TMP3]])
+// CHECK-32-NEXT:    [[TMP4:%.*]] = call i32 @__llvm_omp_vprintf(i8* getelementptr inbounds ([3 x i8], [3 x i8]* @.str2, i32 0, i32 0), i8* [[TMP3]], i32 4)
 // CHECK-32-NEXT:    br label [[IF_END]]
 // CHECK-32:       worker.exit:
 // CHECK-32-NEXT:    ret void

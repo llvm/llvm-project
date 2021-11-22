@@ -14,7 +14,7 @@ typedef __WCHAR_TYPE__ wchar_t;
   #else
     #define WCHAR_T_TYPE unsigned int
   #endif
-#elif defined(__arm) || defined(__MVS__)
+#elif defined(__arm) || defined(__MVS__) || (defined(_AIX) && defined(__64BIT__))
   #define WCHAR_T_TYPE unsigned int
 #elif defined(__sun)
   #if defined(__LP64__)

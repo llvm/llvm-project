@@ -307,13 +307,10 @@ define i1 @test23_logical(i32 %A) {
   ret i1 %D
 }
 
-; FIXME: Vectors should fold too.
 define <2 x i1> @test23vec(<2 x i32> %A) {
 ; CHECK-LABEL: @test23vec(
-; CHECK-NEXT:    [[B:%.*]] = icmp sgt <2 x i32> [[A:%.*]], <i32 1, i32 1>
-; CHECK-NEXT:    [[C:%.*]] = icmp slt <2 x i32> [[A]], <i32 3, i32 3>
-; CHECK-NEXT:    [[D:%.*]] = and <2 x i1> [[B]], [[C]]
-; CHECK-NEXT:    ret <2 x i1> [[D]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq <2 x i32> [[A:%.*]], <i32 2, i32 2>
+; CHECK-NEXT:    ret <2 x i1> [[TMP1]]
 ;
   %B = icmp sgt <2 x i32> %A, <i32 1, i32 1>
   %C = icmp sle <2 x i32> %A, <i32 2, i32 2>
@@ -347,9 +344,9 @@ define i1 @test24_logical(i32 %A) {
 
 define i1 @test25(i32 %A) {
 ; CHECK-LABEL: @test25(
-; CHECK-NEXT:    [[A_OFF:%.*]] = add i32 [[A:%.*]], -50
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i32 [[A_OFF]], 50
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[A:%.*]], -50
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ult i32 [[TMP1]], 50
+; CHECK-NEXT:    ret i1 [[TMP2]]
 ;
   %B = icmp sge i32 %A, 50
   %C = icmp slt i32 %A, 100
@@ -359,9 +356,9 @@ define i1 @test25(i32 %A) {
 
 define i1 @test25_logical(i32 %A) {
 ; CHECK-LABEL: @test25_logical(
-; CHECK-NEXT:    [[A_OFF:%.*]] = add i32 [[A:%.*]], -50
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i32 [[A_OFF]], 50
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[A:%.*]], -50
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ult i32 [[TMP1]], 50
+; CHECK-NEXT:    ret i1 [[TMP2]]
 ;
   %B = icmp sge i32 %A, 50
   %C = icmp slt i32 %A, 100
@@ -369,13 +366,11 @@ define i1 @test25_logical(i32 %A) {
   ret i1 %D
 }
 
-; FIXME: Vectors should fold too.
 define <2 x i1> @test25vec(<2 x i32> %A) {
 ; CHECK-LABEL: @test25vec(
-; CHECK-NEXT:    [[B:%.*]] = icmp sgt <2 x i32> [[A:%.*]], <i32 49, i32 49>
-; CHECK-NEXT:    [[C:%.*]] = icmp slt <2 x i32> [[A]], <i32 100, i32 100>
-; CHECK-NEXT:    [[D:%.*]] = and <2 x i1> [[B]], [[C]]
-; CHECK-NEXT:    ret <2 x i1> [[D]]
+; CHECK-NEXT:    [[TMP1:%.*]] = add <2 x i32> [[A:%.*]], <i32 -50, i32 -50>
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ult <2 x i32> [[TMP1]], <i32 50, i32 50>
+; CHECK-NEXT:    ret <2 x i1> [[TMP2]]
 ;
   %B = icmp sge <2 x i32> %A, <i32 50, i32 50>
   %C = icmp slt <2 x i32> %A, <i32 100, i32 100>
@@ -1464,4 +1459,52 @@ define i8 @lshr_bitwidth_mask(i8 %x, i8 %y) {
   %sign = lshr i8 %x, 7
   %r = and i8 %sign, %y
   ret i8 %r
+}
+
+define i32 @sext_to_sel(i32 %x, i1 %y) {
+; CHECK-LABEL: @sext_to_sel(
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[Y:%.*]], i32 [[X:%.*]], i32 0
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %sext = sext i1 %y to i32
+  %r = and i32 %sext, %x
+  ret i32 %r
+}
+
+define <2 x i32> @sext_to_sel_swap(<2 x i32> %px, <2 x i1> %y) {
+; CHECK-LABEL: @sext_to_sel_swap(
+; CHECK-NEXT:    [[X:%.*]] = mul <2 x i32> [[PX:%.*]], [[PX]]
+; CHECK-NEXT:    [[R:%.*]] = select <2 x i1> [[Y:%.*]], <2 x i32> [[X]], <2 x i32> zeroinitializer
+; CHECK-NEXT:    ret <2 x i32> [[R]]
+;
+  %x = mul <2 x i32> %px, %px ; thwart complexity-based canonicalization
+  %sext = sext <2 x i1> %y to <2 x i32>
+  %r = and <2 x i32> %x, %sext
+  ret <2 x i32> %r
+}
+
+define i32 @sext_to_sel_multi_use(i32 %x, i1 %y) {
+; CHECK-LABEL: @sext_to_sel_multi_use(
+; CHECK-NEXT:    [[SEXT:%.*]] = sext i1 [[Y:%.*]] to i32
+; CHECK-NEXT:    call void @use32(i32 [[SEXT]])
+; CHECK-NEXT:    [[R:%.*]] = and i32 [[SEXT]], [[X:%.*]]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %sext = sext i1 %y to i32
+  call void @use32(i32 %sext)
+  %r = and i32 %sext, %x
+  ret i32 %r
+}
+
+define i32 @sext_to_sel_multi_use_constant_mask(i1 %y) {
+; CHECK-LABEL: @sext_to_sel_multi_use_constant_mask(
+; CHECK-NEXT:    [[SEXT:%.*]] = sext i1 [[Y:%.*]] to i32
+; CHECK-NEXT:    call void @use32(i32 [[SEXT]])
+; CHECK-NEXT:    [[R:%.*]] = and i32 [[SEXT]], 42
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %sext = sext i1 %y to i32
+  call void @use32(i32 %sext)
+  %r = and i32 %sext, 42
+  ret i32 %r
 }

@@ -6,6 +6,8 @@
 ; RUN: opt -cost-model -analyze -cost-kind=code-size -mtriple=armv8a-linux-gnueabihf < %s | FileCheck %s --check-prefix=NEON-SIZE
 ; RUN: opt -cost-model -analyze -cost-kind=code-size -mtriple=armv8.1m.main -mattr=+mve < %s | FileCheck %s --check-prefix=MVE-SIZE
 
+target datalayout = "e-m:e-p:32:32-Fi8-i64:64-v128:64:128-a:0:32-n32-S64"
+
 declare i64        @llvm.uadd.sat.i64(i64, i64)
 declare <2 x i64>  @llvm.uadd.sat.v2i64(<2 x i64>, <2 x i64>)
 declare <4 x i64>  @llvm.uadd.sat.v4i64(<4 x i64>, <4 x i64>)

@@ -58,7 +58,6 @@ namespace llvm {
 
 class APInt;
 class Constant;
-template <typename T> struct DenseMapInfo;
 class GlobalValue;
 class MachineBasicBlock;
 class MachineConstantPoolValue;
@@ -2058,6 +2057,15 @@ public:
                           BitVector &UndefElements) const;
 
   bool isConstant() const;
+
+  /// Recast bit data \p SrcBitElements to \p DstEltSizeInBits wide elements.
+  /// Undef elements are treated as zero, and entirely undefined elements are
+  /// flagged in \p DstUndefElements.
+  static void recastRawBits(bool IsLittleEndian, unsigned DstEltSizeInBits,
+                            SmallVectorImpl<APInt> &DstBitElements,
+                            ArrayRef<APInt> SrcBitElements,
+                            BitVector &DstUndefElements,
+                            const BitVector &SrcUndefElements);
 
   static bool classof(const SDNode *N) {
     return N->getOpcode() == ISD::BUILD_VECTOR;

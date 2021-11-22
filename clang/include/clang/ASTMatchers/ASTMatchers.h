@@ -4205,6 +4205,45 @@ AST_MATCHER_P(
           InnerMatcher.matches(*Initializer, Finder, Builder));
 }
 
+/// Matches a variable serving as the implicit variable for a lambda init-
+/// capture.
+///
+/// Example matches x (matcher = varDecl(isInitCapture()))
+/// \code
+/// auto f = [x=3]() { return x; };
+/// \endcode
+AST_MATCHER(VarDecl, isInitCapture) { return Node.isInitCapture(); }
+
+/// Matches each lambda capture in a lambda expression.
+///
+/// Given
+/// \code
+///   int main() {
+///     int x, y;
+///     float z;
+///     auto f = [=]() { return x + y + z; };
+///   }
+/// \endcode
+/// lambdaExpr(forEachLambdaCapture(
+///     lambdaCapture(capturesVar(varDecl(hasType(isInteger()))))))
+/// will trigger two matches, binding for 'x' and 'y' respectively.
+AST_MATCHER_P(LambdaExpr, forEachLambdaCapture, LambdaCaptureMatcher,
+              InnerMatcher) {
+  BoundNodesTreeBuilder Result;
+  bool Matched = false;
+  for (const auto &Capture : Node.captures()) {
+    if (Finder->isTraversalIgnoringImplicitNodes() && Capture.isImplicit())
+      continue;
+    BoundNodesTreeBuilder CaptureBuilder(*Builder);
+    if (InnerMatcher.matches(Capture, Finder, &CaptureBuilder)) {
+      Matched = true;
+      Result.addMatch(CaptureBuilder);
+    }
+  }
+  *Builder = std::move(Result);
+  return Matched;
+}
+
 /// \brief Matches a static variable with local scope.
 ///
 /// Example matches y (matcher = varDecl(isStaticLocal()))
@@ -4590,6 +4629,18 @@ AST_POLYMORPHIC_MATCHER_P(hasAnyArgument,
   return false;
 }
 
+/// Matches lambda captures.
+///
+/// Given
+/// \code
+///   int main() {
+///     int x;
+///     auto f = [x](){};
+///     auto g = [x = 1](){};
+///   }
+/// \endcode
+/// In the matcher `lambdaExpr(hasAnyCapture(lambdaCapture()))`,
+/// `lambdaCapture()` matches `x` and `x=1`.
 extern const internal::VariadicAllOfMatcher<LambdaCapture> lambdaCapture;
 
 /// Matches any capture in a lambda expression.

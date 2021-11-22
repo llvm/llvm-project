@@ -2,7 +2,10 @@
 
 @interface NSString
 +(instancetype)stringWithCString:(const char *)cstr __attribute__((format_arg(1)));
-+(instancetype)stringWithString:(NSString *)cstr __attribute__((format_arg(1)));
+-(instancetype)initWithString:(NSString *)str __attribute__((format_arg(1)));
+
++(instancetype _Nonnull)nonNullableString:(NSString *)str __attribute__((format_arg(1)));
++(instancetype _Nullable)nullableString:(NSString *)str __attribute__((format_arg(1)));
 @end
 
 @protocol MaybeString

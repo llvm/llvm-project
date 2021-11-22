@@ -34,23 +34,15 @@ void __assert_fail(const char *assertion, const char *file, unsigned line,
 ///}
 
 /// Print
-/// TODO: For now we have to use macros to guard the code because Clang lowers
-/// `printf` to different function calls on NVPTX and AMDGCN platforms, and it
-/// doesn't work for AMDGCN. After it can work on AMDGCN, we will remove the
-/// macro.
+/// printf() calls are rewritten by CGGPUBuiltin to __llvm_omp_vprintf
 /// {
 
-#ifndef __AMDGCN__
 extern "C" {
 int printf(const char *format, ...);
 }
 
-#define PRINTF(fmt, ...) (void)printf(fmt, __VA_ARGS__);
+#define PRINTF(fmt, ...) (void)printf(fmt, ##__VA_ARGS__);
 #define PRINT(str) PRINTF("%s", str)
-#else
-#define PRINTF(fmt, ...)
-#define PRINT(str)
-#endif
 
 ///}
 
@@ -65,6 +57,8 @@ int printf(const char *format, ...);
 struct DebugEntryRAII {
   DebugEntryRAII(const char *File, const unsigned Line, const char *Function);
   ~DebugEntryRAII();
+
+  static void init();
 };
 
 #endif

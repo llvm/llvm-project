@@ -1,4 +1,4 @@
-//===--------------------------- DwarfParser.hpp --------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -154,7 +154,8 @@ public:
                       uintptr_t sectionLength, pint_t fdeHint, FDE_Info *fdeInfo,
                       CIE_Info *cieInfo);
   static const char *decodeFDE(A &addressSpace, pint_t fdeStart,
-                               FDE_Info *fdeInfo, CIE_Info *cieInfo);
+                               FDE_Info *fdeInfo, CIE_Info *cieInfo,
+                               bool useCIEInfo = false);
   static bool parseFDEInstructions(A &addressSpace, const FDE_Info &fdeInfo,
                                    const CIE_Info &cieInfo, pint_t upToPC,
                                    int arch, PrologInfo *results);
@@ -162,10 +163,14 @@ public:
   static const char *parseCIE(A &addressSpace, pint_t cie, CIE_Info *cieInfo);
 };
 
-/// Parse a FDE into a CIE_Info and an FDE_Info
+/// Parse a FDE into a CIE_Info and an FDE_Info. If useCIEInfo is
+/// true, treat cieInfo as already-parsed CIE_Info (whose start offset
+/// must match the one specified by the FDE) rather than parsing the
+/// one indicated within the FDE.
 template <typename A>
 const char *CFI_Parser<A>::decodeFDE(A &addressSpace, pint_t fdeStart,
-                                     FDE_Info *fdeInfo, CIE_Info *cieInfo) {
+                                     FDE_Info *fdeInfo, CIE_Info *cieInfo,
+                                     bool useCIEInfo) {
   pint_t p = fdeStart;
   pint_t cfiLength = (pint_t)addressSpace.get32(p);
   p += 4;
@@ -181,9 +186,14 @@ const char *CFI_Parser<A>::decodeFDE(A &addressSpace, pint_t fdeStart,
     return "FDE is really a CIE"; // this is a CIE not an FDE
   pint_t nextCFI = p + cfiLength;
   pint_t cieStart = p - ciePointer;
-  const char *err = parseCIE(addressSpace, cieStart, cieInfo);
-  if (err != NULL)
-    return err;
+  if (useCIEInfo) {
+    if (cieInfo->cieStart != cieStart)
+      return "CIE start does not match";
+  } else {
+    const char *err = parseCIE(addressSpace, cieStart, cieInfo);
+    if (err != NULL)
+      return err;
+  }
   p += 4;
   // Parse pc begin and range.
   pint_t pcStart =

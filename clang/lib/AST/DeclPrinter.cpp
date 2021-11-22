@@ -112,11 +112,9 @@ namespace {
     void printTemplateParameters(const TemplateParameterList *Params,
                                  bool OmitTemplateKW = false);
     void printTemplateArguments(llvm::ArrayRef<TemplateArgument> Args,
-                                const TemplateParameterList *Params,
-                                bool TemplOverloaded);
+                                const TemplateParameterList *Params);
     void printTemplateArguments(llvm::ArrayRef<TemplateArgumentLoc> Args,
-                                const TemplateParameterList *Params,
-                                bool TemplOverloaded);
+                                const TemplateParameterList *Params);
     void prettyPrintAttributes(Decl *D);
     void prettyPrintPragmas(Decl *D);
     void printDeclType(QualType T, StringRef DeclName, bool Pack = false);
@@ -652,16 +650,11 @@ void DeclPrinter::VisitFunctionDecl(FunctionDecl *D) {
     llvm::raw_string_ostream POut(Proto);
     DeclPrinter TArgPrinter(POut, SubPolicy, Context, Indentation);
     const auto *TArgAsWritten = D->getTemplateSpecializationArgsAsWritten();
-    const TemplateParameterList *TPL = D->getTemplateSpecializationInfo()
-                                           ->getTemplate()
-                                           ->getTemplateParameters();
     if (TArgAsWritten && !Policy.PrintCanonicalTypes)
-      TArgPrinter.printTemplateArguments(TArgAsWritten->arguments(), TPL,
-                                         /*TemplOverloaded*/ true);
+      TArgPrinter.printTemplateArguments(TArgAsWritten->arguments(), nullptr);
     else if (const TemplateArgumentList *TArgs =
                  D->getTemplateSpecializationArgs())
-      TArgPrinter.printTemplateArguments(TArgs->asArray(), TPL,
-                                         /*TemplOverloaded*/ true);
+      TArgPrinter.printTemplateArguments(TArgs->asArray(), nullptr);
   }
 
   QualType Ty = D->getType();
@@ -789,11 +782,10 @@ void DeclPrinter::VisitFunctionDecl(FunctionDecl *D) {
           Out << ";\n";
         }
         Indentation -= Policy.Indentation;
-      } else
-        Out << ' ';
+      }
 
       if (D->getBody())
-        D->getBody()->printPretty(Out, nullptr, SubPolicy, Indentation, "\n",
+        D->getBody()->printPrettyControlled(Out, nullptr, SubPolicy, Indentation, "\n",
                                   &Context);
     } else {
       if (!Policy.TerseOutput && isa<CXXConstructorDecl>(*D))
@@ -1002,8 +994,7 @@ void DeclPrinter::VisitCXXRecordDecl(CXXRecordDecl *D) {
                   dyn_cast<TemplateSpecializationType>(TSI->getType()))
             Args = TST->template_arguments();
       printTemplateArguments(
-          Args, S->getSpecializedTemplate()->getTemplateParameters(),
-          /*TemplOverloaded*/ false);
+          Args, S->getSpecializedTemplate()->getTemplateParameters());
     }
   }
 
@@ -1096,13 +1087,12 @@ void DeclPrinter::printTemplateParameters(const TemplateParameterList *Params,
 }
 
 void DeclPrinter::printTemplateArguments(ArrayRef<TemplateArgument> Args,
-                                         const TemplateParameterList *Params,
-                                         bool TemplOverloaded) {
+                                         const TemplateParameterList *Params) {
   Out << "<";
   for (size_t I = 0, E = Args.size(); I < E; ++I) {
     if (I)
       Out << ", ";
-    if (TemplOverloaded || !Params)
+    if (!Params)
       Args[I].print(Policy, Out, /*IncludeType*/ true);
     else
       Args[I].print(Policy, Out,
@@ -1113,13 +1103,12 @@ void DeclPrinter::printTemplateArguments(ArrayRef<TemplateArgument> Args,
 }
 
 void DeclPrinter::printTemplateArguments(ArrayRef<TemplateArgumentLoc> Args,
-                                         const TemplateParameterList *Params,
-                                         bool TemplOverloaded) {
+                                         const TemplateParameterList *Params) {
   Out << "<";
   for (size_t I = 0, E = Args.size(); I < E; ++I) {
     if (I)
       Out << ", ";
-    if (TemplOverloaded)
+    if (!Params)
       Args[I].getArgument().print(Policy, Out, /*IncludeType*/ true);
     else
       Args[I].getArgument().print(
@@ -1195,6 +1184,7 @@ void DeclPrinter::VisitClassTemplateDecl(ClassTemplateDecl *D) {
         if (D->isThisDeclarationADefinition())
           Out << ";";
         Out << "\n";
+        Indent();
         Visit(I);
       }
   }
@@ -1662,10 +1652,11 @@ void DeclPrinter::VisitOMPAllocateDecl(OMPAllocateDecl *D) {
     Out << ")";
   }
   if (!D->clauselist_empty()) {
-    Out << " ";
     OMPClausePrinter Printer(Out, Policy);
-    for (OMPClause *C : D->clauselists())
+    for (OMPClause *C : D->clauselists()) {
+      Out << " ";
       Printer.Visit(C);
+    }
   }
 }
 

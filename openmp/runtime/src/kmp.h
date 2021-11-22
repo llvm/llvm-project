@@ -1081,7 +1081,9 @@ extern void __kmp_init_target_mem();
 #define KMP_MIN_BLOCKTIME (0)
 #define KMP_MAX_BLOCKTIME                                                      \
   (INT_MAX) /* Must be this for "infinite" setting the work */
-#define KMP_DEFAULT_BLOCKTIME (200) /*  __kmp_blocktime is in milliseconds  */
+
+/* __kmp_blocktime is in milliseconds */
+#define KMP_DEFAULT_BLOCKTIME (__kmp_is_hybrid_cpu() ? (0) : (200))
 
 #if KMP_USE_MONITOR
 #define KMP_DEFAULT_MONITOR_STKSIZE ((size_t)(64 * 1024))
@@ -4271,6 +4273,15 @@ public:
                     __kmp_msg_null);
       }
     }
+  }
+  /// Instead of erroring out, return non-zero when
+  /// unsuccessful fopen() for any reason
+  int try_open(const char *filename, const char *mode) {
+    KMP_ASSERT(!f);
+    f = fopen(filename, mode);
+    if (!f)
+      return errno;
+    return 0;
   }
   /// Set the FILE* object to stdout and output there
   /// No open call should happen before this call.

@@ -25,6 +25,7 @@ config.host_cc = "@HOST_CC@"
 config.host_cxx = "@HOST_CXX@"
 config.enable_libcxx = "@LLVM_ENABLE_LIBCXX@"
 config.host_cmake = "@CMAKE_COMMAND@"
+config.host_cmake_generator = "@CMAKE_GENERATOR@"
 # Note: ldflags can contain double-quoted paths, so must use single quotes here.
 config.host_ldflags = '@HOST_LDFLAGS@'
 config.llvm_use_sanitizer = "@LLVM_USE_SANITIZER@"
@@ -41,6 +42,7 @@ config.run_cuda_tests = @MLIR_ENABLE_CUDA_CONVERSIONS@
 config.enable_cuda_runner = @MLIR_ENABLE_CUDA_RUNNER@
 config.run_rocm_tests = @MLIR_ENABLE_ROCM_CONVERSIONS@
 config.enable_rocm_runner = @MLIR_ENABLE_ROCM_RUNNER@
+config.rocm_test_chipset = "@ROCM_TEST_CHIPSET@"
 config.spirv_wrapper_library_dir = "@MLIR_SPIRV_WRAPPER_LIBRARY_DIR@"
 config.enable_spirv_cpu_runner = @MLIR_ENABLE_SPIRV_CPU_RUNNER@
 config.vulkan_wrapper_library_dir = "@MLIR_VULKAN_WRAPPER_LIBRARY_DIR@"

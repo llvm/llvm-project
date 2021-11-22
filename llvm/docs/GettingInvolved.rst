@@ -102,8 +102,8 @@ Mailing Lists
 -------------
 
 If you can't find what you need in these docs, try consulting the mailing
-lists. In addition to the traditional mailing lists there is also a 
-`Discourse server <https://llvm.discourse.group>`_ available. 
+lists. In addition to the traditional mailing lists there is also a
+`Discourse server <https://llvm.discourse.group>`_ available.
 
 `Developer's List (llvm-dev)`__
   This list is for people who want to be included in technical discussions of
@@ -157,11 +157,15 @@ writing, the following sync-ups are organized:
      - Frequency
      - Calendar link
      - Minutes/docs link
+   * - Loop Optimization Working Group
+     - Every 2 weeks on Wednesday
+     - 
+     - `Minutes/docs <https://docs.google.com/document/d/1sdzoyB11s0ccTZ3fobqctDpgJmRoFcz0sviKxqczs4g/edit>`__
    * - RISC-V
      - Every 2 weeks on Thursday
      - `ics <https://calendar.google.com/calendar/ical/lowrisc.org_0n5pkesfjcnp0bh5hps1p0bd80%40group.calendar.google.com/public/basic.ics>`__
        `gcal <https://calendar.google.com/calendar/b/1?cid=bG93cmlzYy5vcmdfMG41cGtlc2ZqY25wMGJoNWhwczFwMGJkODBAZ3JvdXAuY2FsZW5kYXIuZ29vZ2xlLmNvbQ>`__
-     - 
+     -
    * - Scalable Vectors and Arm SVE
      - Monthly, every 3rd Tuesday
      - `ics <https://calendar.google.com/calendar/ical/bjms39pe6k6bo5egtsp7don414%40group.calendar.google.com/public/basic.ics>`__
@@ -178,27 +182,27 @@ writing, the following sync-ups are organized:
      - `Minutes/docs <https://docs.google.com/document/d/1GLCE8cl7goCaLSiM9j1eIq5IqeXt6_YTY2UEcC4jmsg/edit?usp=sharing>`__
    * - `CIRCT <https://github.com/llvm/circt>`__
      - Weekly, on Wednesday
-     - 
+     -
      - `Minutes/docs <https://docs.google.com/document/d/1fOSRdyZR2w75D87yU2Ma9h2-_lEPL4NxvhJGJd-s5pk/edit#heading=h.mulvhjtr8dk9>`__
    * - `MLIR <https://mlir.llvm.org>`__ design meetings
      - Weekly, on Thursdays
-     - 
+     -
      - `Minutes/docs <https://docs.google.com/document/d/1y_9f1AbfgcoVdJh4_aM6-BaSHvrHl8zuA5G4jv_94K8/edit#heading=h.cite1kolful9>`__
    * - flang
      - Multiple meeting series, `documented here <https://github.com/llvm/llvm-project/blob/main/flang/docs/GettingInvolved.md#calls>`__
-     - 
-     - 
+     -
+     -
    * - OpenMP
      - Multiple meeting series, `documented here <https://openmp.llvm.org/docs/SupportAndFAQ.html>`__
-     - 
-     - 
+     -
+     -
    * - LLVM Alias Analysis
      - Every 4 weeks on Tuesdays
      - `ics <http://lists.llvm.org/pipermail/llvm-dev/attachments/20201103/a3499a67/attachment-0001.ics>`__
      - `Minutes/docs <https://docs.google.com/document/d/17U-WvX8qyKc3S36YUKr3xfF-GHunWyYowXbxEdpHscw>`__
    * - Windows/COFF related developments
      - Every 2 months on Thursday
-     - 
+     -
      - `Minutes/docs <https://docs.google.com/document/d/1A-W0Sas_oHWTEl_x_djZYoRtzAdTONMW_6l1BH9G6Bo/edit?usp=sharing>`__
    * - Vector Predication
      - Every 2 weeks on Tuesdays, 3pm UTC
@@ -225,19 +229,18 @@ This channel has several bots.
 * Buildbot reporters
 
   * llvmbb - Bot for the main LLVM buildbot master.
-    http://lab.llvm.org:8011/console
-  * smooshlab - Apple's internal buildbot master.
+    http://lab.llvm.org/buildbot/#/console
 
 * robot - Bugzilla linker. %bug <number>
 
 * clang-bot - A `geordi <http://www.eelis.net/geordi/>`_ instance running
   near-trunk clang instead of gcc.
 
-In addition to the traditional IRC there is a 
-`Discord <https://discord.com/channels/636084430946959380/636725486533345280>`_ 
-chat server available. To sign up, please use this 
+In addition to the traditional IRC there is a
+`Discord <https://discord.com/channels/636084430946959380/636725486533345280>`_
+chat server available. To sign up, please use this
 `invitation link <https://discord.com/invite/xS7Z362>`_.
-  
+
 
 .. _meetups-social-events:
 

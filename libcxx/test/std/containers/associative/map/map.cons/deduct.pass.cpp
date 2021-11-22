@@ -32,6 +32,7 @@
 #include <map>
 #include <type_traits>
 
+#include "deduction_guides_sfinae_checks.h"
 #include "test_allocator.h"
 
 using P = std::pair<int, long>;
@@ -150,6 +151,8 @@ int main(int, char**)
     std::map m2{{value_type{1, 2}, {3, 4}}, std::less<int>()};
     ASSERT_SAME_TYPE(decltype(m2), std::map<int, int>);
     }
+
+    AssociativeContainerDeductionGuidesSfinaeAway<std::map, std::map<int, long>>();
 
     return 0;
 }

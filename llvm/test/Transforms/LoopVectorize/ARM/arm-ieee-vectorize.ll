@@ -4,6 +4,8 @@
 ; RUN: opt -mtriple armv7-unknwon-darwin -loop-vectorize -S %s -debug-only=loop-vectorize -o /dev/null 2>&1 | FileCheck %s --check-prefix=CHECK --check-prefix=DARWIN
 ; REQUIRES: asserts
 
+target datalayout = "e-m:e-p:32:32-Fi8-i64:64-v128:64:128-a:0:32-n32-S64"
+
 ; Testing the ability of the loop vectorizer to tell when SIMD is safe or not
 ; regarding IEEE 754 standard.
 ; On Linux, we only want the vectorizer to work when -ffast-math flag is set,

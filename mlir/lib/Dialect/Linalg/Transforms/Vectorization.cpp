@@ -129,10 +129,12 @@ getKindForOp(Operation *reductionOp) {
       .Case<arith::AddIOp, arith::AddFOp>(
           [&](auto op) { return vector::CombiningKind::ADD; })
       .Case<arith::AndIOp>([&](auto op) { return vector::CombiningKind::AND; })
-      .Case<MaxSIOp>([&](auto op) { return vector::CombiningKind::MAXSI; })
-      .Case<MaxFOp>([&](auto op) { return vector::CombiningKind::MAXF; })
-      .Case<MinSIOp>([&](auto op) { return vector::CombiningKind::MINSI; })
-      .Case<MinFOp>([&](auto op) { return vector::CombiningKind::MINF; })
+      .Case<arith::MaxSIOp>(
+          [&](auto op) { return vector::CombiningKind::MAXSI; })
+      .Case<arith::MaxFOp>([&](auto op) { return vector::CombiningKind::MAXF; })
+      .Case<arith::MinSIOp>(
+          [&](auto op) { return vector::CombiningKind::MINSI; })
+      .Case<arith::MinFOp>([&](auto op) { return vector::CombiningKind::MINF; })
       .Case<arith::MulIOp, arith::MulFOp>(
           [&](auto op) { return vector::CombiningKind::MUL; })
       .Case<arith::OrIOp>([&](auto op) { return vector::CombiningKind::OR; })
@@ -1169,13 +1171,13 @@ static void populateVectorizationPatterns(
   constexpr static StringRef kPromotedMarker = "PROMOTED";
   tilingPatterns.add<LinalgTilingPattern<ConvOp>>(
       context, LinalgTilingOptions().setTileSizes(tileSizes),
-      LinalgTransformationFilter(ArrayRef<Identifier>{},
-                                 Identifier::get(kTiledMarker, context)));
+      LinalgTransformationFilter(ArrayRef<StringAttr>{},
+                                 StringAttr::get(kTiledMarker, context)));
 
   promotionPatterns.add<LinalgPromotionPattern<ConvOp>>(
       context, LinalgPromotionOptions().setUseFullTileBuffersByDefault(true),
-      LinalgTransformationFilter(Identifier::get(kTiledMarker, context),
-                                 Identifier::get(kPromotedMarker, context)));
+      LinalgTransformationFilter(StringAttr::get(kTiledMarker, context),
+                                 StringAttr::get(kPromotedMarker, context)));
 
   SmallVector<bool, 4> mask(N);
   int offset = tileSizes.size() - N;
@@ -1390,16 +1392,25 @@ LogicalResult LinalgCopyVTWForwardingPattern::matchAndRewrite(
 // Convolution vectorization patterns
 //===----------------------------------------------------------------------===//
 namespace {
-/// Generate a vector implementation for:
+/// Generate a vector implementation for either:
 /// ```
 ///   Op def: (     n,     w,     c,    kw,    f  )
 ///    Iters: ({Par(), Par(), Par(), Red(), Red()})
 ///   Layout: {{n, strideW * w + dilationW * kw, c}, {kw, c, f}, {n, w, f}}
 /// ```
 /// kw is unrolled, w is unrolled iff dilationW > 1.
-struct Conv1D_NWC_WCF_Generator : public StructuredGenerator<LinalgOp> {
-  Conv1D_NWC_WCF_Generator(OpBuilder &builder, LinalgOp linalgOp, int strideW,
-                           int dilationW)
+///
+/// or
+///
+/// ```
+///   Op def: (     n,     w,     c,    kw )
+///    Iters: ({Par(), Par(), Par(), Red()})
+///   Layout: {{n, strideW * w + dilationW * kw, c}, {kw, c}, {n, w, c}}
+/// ```
+/// kw is unrolled, w is unrolled iff dilationW > 1.
+struct Conv1D_NWC_Generator : public StructuredGenerator<LinalgOp> {
+  Conv1D_NWC_Generator(OpBuilder &builder, LinalgOp linalgOp, int strideW,
+                       int dilationW)
       : StructuredGenerator<LinalgOp>(builder, linalgOp), valid(false),
         strideW(strideW), dilationW(dilationW) {
     // Determine whether `linalgOp` can be generated with this generator
@@ -1413,7 +1424,8 @@ struct Conv1D_NWC_WCF_Generator : public StructuredGenerator<LinalgOp> {
     resShapedType = resShaped.getType().dyn_cast<ShapedType>();
     if (!lhsShapedType || !rhsShapedType || !resShapedType)
       return;
-    if (lhsShapedType.getRank() != 3 || rhsShapedType.getRank() != 3 ||
+    if (lhsShapedType.getRank() != 3 ||
+        (rhsShapedType.getRank() != 2 && rhsShapedType.getRank() != 3) ||
         resShapedType.getRank() != 3)
       return;
 
@@ -1462,7 +1474,11 @@ struct Conv1D_NWC_WCF_Generator : public StructuredGenerator<LinalgOp> {
     Type rhsEltType = rhsShapedType.getElementType();
     Type resEltType = resShapedType.getElementType();
     VectorType lhsType = VectorType::get(
-        {nSize, (wSize - 1) * strideW + 1 + (kwSize - 1) * dilationW + 1,
+        {nSize,
+         // iw = ow * sw + kw *  dw - 1
+         //   (i.e. 16 convolved with 3 (@stride 1 dilation 1) -> 14)
+         // Perform the proper inclusive -> exclusive -> inclusive.
+         ((wSize - 1) * strideW + 1) + ((kwSize - 1) * dilationW + 1) - 1,
          cSize},
         lhsEltType);
     VectorType rhsType = VectorType::get({kwSize, cSize, fSize}, rhsEltType);
@@ -1541,9 +1557,8 @@ struct Conv1D_NWC_WCF_Generator : public StructuredGenerator<LinalgOp> {
   }
 
   // Create a contraction: lhs{n, w, c} * rhs{c, f} -> res{n, w, f}
-  vector::ContractionOp conv1dSliceAsContraction(OpBuilder &b, Location loc,
-                                                 Value lhs, Value rhs,
-                                                 Value res) {
+  Value conv1dSliceAsContraction(OpBuilder &b, Location loc, Value lhs,
+                                 Value rhs, Value res) {
     StringRef par = Par().strRef, red = Red().strRef;
     AffineExpr n, w, f, c;
     bindDims(ctx, n, w, f, c);
@@ -1553,12 +1568,127 @@ struct Conv1D_NWC_WCF_Generator : public StructuredGenerator<LinalgOp> {
         /*iteratorTypes=*/ArrayRef<StringRef>{par, par, par, red});
   }
 
+  /// Generate a vector implementation for:
+  /// ```
+  ///   Op def: (     n,     w,     c,    kw)
+  ///    Iters: ({Par(), Par(), Par(), Red()})
+  ///   Layout: {{n, strideW * w + dilationW * kw, c}, {kw, c}, {n, w, c}}
+  /// ```
+  /// kw is always unrolled.
+  /// TODO: w (resp. kw) is unrolled when the strideW ( resp. dilationW) is > 1.
+  FailureOr<Operation *> dilated_conv() {
+    if (!valid)
+      return failure();
+
+    int nSize = lhsShapedType.getShape()[0];
+    int wSize = resShapedType.getShape()[1];
+    int cSize = lhsShapedType.getShape()[2];
+    int kwSize = rhsShapedType.getShape()[0];
+
+    vector::TransferWriteOp write;
+    Value zero = builder.create<arith::ConstantIndexOp>(loc, 0);
+
+    // w is unrolled (i.e. wSizeStep == 1) iff strideW > 1.
+    // When strideW == 1, we can batch the contiguous loads and avoid unrolling
+    int64_t wSizeStep = strideW == 1 ? wSize : 1;
+
+    Type lhsEltType = lhsShapedType.getElementType();
+    Type rhsEltType = rhsShapedType.getElementType();
+    Type resEltType = resShapedType.getElementType();
+    VectorType lhsType = VectorType::get(
+        {nSize,
+         // iw = ow * sw + kw *  dw - 1
+         //   (i.e. 16 convolved with 3 (@stride 1 dilation 1) -> 14)
+         ((wSize - 1) * strideW + 1) + ((kwSize - 1) * dilationW + 1) - 1,
+         cSize},
+        lhsEltType);
+    VectorType rhsType = VectorType::get({kwSize, cSize}, rhsEltType);
+    VectorType resType = VectorType::get({nSize, wSize, cSize}, resEltType);
+
+    // Read lhs slice of size {n, w * strideW + kw * dilationW, c} @ [0, 0, 0].
+    Value lhs = builder.create<vector::TransferReadOp>(
+        loc, lhsType, lhsShaped, ValueRange{zero, zero, zero});
+    // Read rhs slice of size {kw, c} @ [0, 0].
+    Value rhs = builder.create<vector::TransferReadOp>(loc, rhsType, rhsShaped,
+                                                       ValueRange{zero, zero});
+    // Read res slice of size {n, w, c} @ [0, 0, 0].
+    Value res = builder.create<vector::TransferReadOp>(
+        loc, resType, resShaped, ValueRange{zero, zero, zero});
+
+    //===------------------------------------------------------------------===//
+    // Begin vector-only rewrite part
+    //===------------------------------------------------------------------===//
+    // Unroll along kw and read slices of lhs and rhs.
+    SmallVector<Value> lhsVals, rhsVals, resVals;
+    for (int64_t kw = 0; kw < kwSize; ++kw) {
+      // Extract rhs slice of size {c} @ [kw].
+      rhsVals.push_back(builder.create<vector::ExtractOp>(
+          loc, rhs, /*offsets=*/ArrayRef<int64_t>{kw}));
+
+      for (int64_t w = 0; w < wSize; w += wSizeStep) {
+        // Extract lhs slice of size {n, wSizeStep, c}
+        //   @ [0, sw * w + dw * kw, 0].
+        lhsVals.push_back(builder.create<vector::ExtractStridedSliceOp>(
+            loc, lhs,
+            /*offsets=*/ArrayRef<int64_t>{0, w * strideW + kw * dilationW, 0},
+            /*sizes=*/ArrayRef<int64_t>{nSize, wSizeStep, cSize},
+            /*strides=*/ArrayRef<int64_t>{1, 1, 1}));
+
+        // This does not depend on kw.
+        if (kw == 0) {
+          // Extract res slice: {n, wSizeStep, c} @ [0, w, 0].
+          resVals.push_back(builder.create<vector::ExtractStridedSliceOp>(
+              loc, res,
+              /*offsets=*/ArrayRef<int64_t>{0, w, 0},
+              /*sizes=*/ArrayRef<int64_t>{nSize, wSizeStep, cSize},
+              /*strides=*/ArrayRef<int64_t>{1, 1, 1}));
+        }
+      }
+    }
+
+    auto linearIndex = [&](int64_t kw, int64_t w) {
+      return kw * (wSize / wSizeStep) + w;
+    };
+
+    // Compute contraction: O{n, w, c} += I{n, sw * w + dw * kw, c} * F{c}
+    for (int64_t kw = 0; kw < kwSize; ++kw) {
+      for (int64_t w = 0; w < wSize; w += wSizeStep) {
+        resVals[w] = dilatedConv1dSliceAsFma(
+            builder, loc, lhsVals[linearIndex(kw, w)], rhsVals[kw], resVals[w]);
+      }
+    }
+
+    // Write back res slice: {n, wSizeStep, c} @ [0, w, 0].
+    // This does not depend on kw.
+    for (int64_t w = 0; w < wSize; w += wSizeStep) {
+      res = builder.create<vector::InsertStridedSliceOp>(
+          loc, resVals[w], res,
+          /*offsets=*/ArrayRef<int64_t>{0, w, 0},
+          /*strides=*/ArrayRef<int64_t>{1, 1, 1});
+    }
+    //===------------------------------------------------------------------===//
+    // End vector-only rewrite part
+    //===------------------------------------------------------------------===//
+
+    // Write back res slice of size {n, w, c} @ [0, 0, 0].
+    return builder
+        .create<vector::TransferWriteOp>(loc, res, resShaped,
+                                         ValueRange{zero, zero, zero})
+        .getOperation();
+  }
+
+  /// Lower lhs{n, w, c} * rhs{c} -> res{n, w, c} to fma.
+  Value dilatedConv1dSliceAsFma(OpBuilder &b, Location loc, Value lhs,
+                                Value rhs, Value res) {
+    Value bcast = builder.create<vector::BroadcastOp>(loc, res.getType(), rhs);
+    return b.create<vector::FMAOp>(loc, lhs, bcast, res);
+  }
+
   /// Entry point that transposes into the common form:
   ///   {{n, strideW * w + dilationW * kw, c}, {kw, c, f}, {n, w, f}}
   FailureOr<Operation *> generateConv() {
     AffineExpr n, w, f, kw, c;
     bindDims(ctx, n, w, f, kw, c);
-
     if (!iters({Par(), Par(), Par(), Red(), Red()}))
       return failure();
 
@@ -1567,6 +1697,22 @@ struct Conv1D_NWC_WCF_Generator : public StructuredGenerator<LinalgOp> {
                 /*rhsIndex*/ {kw, c, f},
                 /*resIndex*/ {n, w, f}}))
       return conv();
+    return failure();
+  }
+
+  /// Entry point that transposes into the common form:
+  ///   {{n, strideW * w + dilationW * kw, c}, {kw, c}, {n, w, c}}
+  FailureOr<Operation *> generateDilatedConv() {
+    AffineExpr n, w, c, kw;
+    bindDims(ctx, n, w, c, kw);
+    if (!iters({Par(), Par(), Par(), Red()}))
+      return failure();
+
+    // No transposition needed.
+    if (layout({/*lhsIndex*/ {n, strideW * w + dilationW * kw, c},
+                /*rhsIndex*/ {kw, c},
+                /*resIndex*/ {n, w, c}}))
+      return dilated_conv();
     return failure();
   }
 
@@ -1588,8 +1734,11 @@ vectorizeConvolution(OpBuilder &b, ConvolutionOpInterface convOp) {
   auto stride = strides ? *strides.getValues<uint64_t>().begin() : 1;
   auto dilation = dilations ? *dilations.getValues<uint64_t>().begin() : 1;
   LinalgOp linalgOp = cast<LinalgOp>(convOp.getOperation());
-  Conv1D_NWC_WCF_Generator e(b, linalgOp, stride, dilation);
-  return e.generateConv();
+  Conv1D_NWC_Generator e(b, linalgOp, stride, dilation);
+  auto res = e.generateConv();
+  if (succeeded(res))
+    return res;
+  return e.generateDilatedConv();
 }
 
 struct VectorizeConvolution

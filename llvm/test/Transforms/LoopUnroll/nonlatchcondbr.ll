@@ -21,8 +21,6 @@ define void @test1(i32* noalias %A) {
 ; CHECK-NEXT:    [[DOTPRE:%.*]] = load i32, i32* [[ARRAYIDX_PHI_TRANS_INSERT]], align 4
 ; CHECK-NEXT:    call void @bar(i32 [[DOTPRE]])
 ; CHECK-NEXT:    br label [[FOR_BODY_1:%.*]]
-; CHECK:       for.end:
-; CHECK-NEXT:    ret void
 ; CHECK:       for.body.1:
 ; CHECK-NEXT:    br label [[FOR_BODY_FOR_BODY_CRIT_EDGE_1:%.*]]
 ; CHECK:       for.body.for.body_crit_edge.1:
@@ -41,6 +39,8 @@ define void @test1(i32* noalias %A) {
 ; CHECK-NEXT:    br i1 false, label [[FOR_BODY_FOR_BODY_CRIT_EDGE_3:%.*]], label [[FOR_END:%.*]]
 ; CHECK:       for.body.for.body_crit_edge.3:
 ; CHECK-NEXT:    unreachable
+; CHECK:       for.end:
+; CHECK-NEXT:    ret void
 ;
 entry:
   %0 = load i32, i32* %A, align 4
@@ -95,10 +95,6 @@ define void @test2(i32* noalias %A) {
 ; CHECK-NEXT:    call void @bar(i32 [[DOTPRE]])
 ; CHECK-NEXT:    [[INC_1:%.*]] = add nuw nsw i64 [[INC]], 1
 ; CHECK-NEXT:    br i1 true, label [[FOR_BODY_1:%.*]], label [[FOR_BODY_FOR_BODY_CRIT_EDGE_1:%.*]]
-; CHECK:       for.end.loopexit:
-; CHECK-NEXT:    br label [[FOR_END]]
-; CHECK:       for.end:
-; CHECK-NEXT:    ret void
 ; CHECK:       for.body.1:
 ; CHECK-NEXT:    [[CMP_1:%.*]] = call i1 @foo(i64 [[INC]])
 ; CHECK-NEXT:    br i1 [[CMP_1]], label [[FOR_BODY_FOR_BODY_CRIT_EDGE_1]], label [[FOR_END_LOOPEXIT]]
@@ -124,6 +120,10 @@ define void @test2(i32* noalias %A) {
 ; CHECK-NEXT:    [[ARRAYIDX_PHI_TRANS_INSERT_3:%.*]] = getelementptr inbounds i32, i32* [[A]], i64 [[INC_3]]
 ; CHECK-NEXT:    [[DOTPRE_3]] = load i32, i32* [[ARRAYIDX_PHI_TRANS_INSERT_3]], align 4
 ; CHECK-NEXT:    br label [[FOR_HEADER]], !llvm.loop [[LOOP0:![0-9]+]]
+; CHECK:       for.end.loopexit:
+; CHECK-NEXT:    br label [[FOR_END]]
+; CHECK:       for.end:
+; CHECK-NEXT:    ret void
 ;
 entry:
   br i1 true, label %for.preheader, label %for.end
@@ -174,8 +174,6 @@ define void @test3(i32* noalias %A, i1 %cond) {
 ; CHECK-NEXT:    [[DOTPRE:%.*]] = load i32, i32* [[ARRAYIDX_PHI_TRANS_INSERT]], align 4
 ; CHECK-NEXT:    call void @bar(i32 [[DOTPRE]])
 ; CHECK-NEXT:    br i1 [[COND]], label [[FOR_BODY_1:%.*]], label [[FOR_END]]
-; CHECK:       for.end:
-; CHECK-NEXT:    ret void
 ; CHECK:       for.body.1:
 ; CHECK-NEXT:    br label [[FOR_BODY_FOR_BODY_CRIT_EDGE_1:%.*]]
 ; CHECK:       for.body.for.body_crit_edge.1:
@@ -194,6 +192,8 @@ define void @test3(i32* noalias %A, i1 %cond) {
 ; CHECK-NEXT:    br i1 false, label [[FOR_BODY_FOR_BODY_CRIT_EDGE_3:%.*]], label [[FOR_END]]
 ; CHECK:       for.body.for.body_crit_edge.3:
 ; CHECK-NEXT:    unreachable
+; CHECK:       for.end:
+; CHECK-NEXT:    ret void
 ;
 entry:
   %0 = load i32, i32* %A, align 4
@@ -228,14 +228,14 @@ define void @test4(i32 %arg) {
 ; CHECK-NEXT:    br label [[BB1:%.*]]
 ; CHECK:       bb1:
 ; CHECK-NEXT:    br i1 false, label [[BB4:%.*]], label [[BB1_1:%.*]]
-; CHECK:       bb4:
-; CHECK-NEXT:    unreachable
 ; CHECK:       bb1.1:
 ; CHECK-NEXT:    br i1 false, label [[BB4]], label [[BB1_2:%.*]]
 ; CHECK:       bb1.2:
 ; CHECK-NEXT:    br i1 false, label [[BB4]], label [[BB1_3:%.*]]
 ; CHECK:       bb1.3:
 ; CHECK-NEXT:    br i1 false, label [[BB4]], label [[BB1]], !llvm.loop [[LOOP2:![0-9]+]]
+; CHECK:       bb4:
+; CHECK-NEXT:    unreachable
 ;
 bb:
   br label %bb1

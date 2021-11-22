@@ -1256,10 +1256,13 @@ findOrphanPos(std::vector<BaseCommand *>::iterator b,
   // Consider all existing sections with the same proximity.
   int proximity = getRankProximity(sec, *i);
   unsigned sortRank = sec->sortRank;
-  if (script->hasPhdrsCommands())
-    // Prevent the orphan section to be placed before the found section because
-    // that can result in adding it to a previous segment and changing flags of
-    // that segment, for example, making a read-only segment writable.
+  if (script->hasPhdrsCommands() || !script->memoryRegions.empty())
+    // Prevent the orphan section to be placed before the found section. If
+    // custom program headers are defined, that helps to avoid adding it to a
+    // previous segment and changing flags of that segment, for example, making
+    // a read-only segment writable. If memory regions are defined, an orphan
+    // section should continue the same region as the found section to better
+    // resemble the behavior of GNU ld.
     sortRank = std::max(sortRank, foundSec->sortRank);
   for (; i != e; ++i) {
     auto *curSec = dyn_cast<OutputSection>(*i);
@@ -2273,7 +2276,7 @@ template <class ELFT> void Writer<ELFT>::addStartEndSymbols() {
     Default = Out::elfHeader;
 
   auto define = [=](StringRef start, StringRef end, OutputSection *os) {
-    if (os) {
+    if (os && !script->isDiscarded(os)) {
       addOptionalRegular(start, os, 0);
       addOptionalRegular(end, os, -1);
     } else {

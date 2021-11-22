@@ -43,19 +43,19 @@ def AOp : NS_Op<"a_op", []> {
 // DECL-SAME:     {::llvm::StringRef("aAttr"), ::llvm::StringRef("bAttr"), ::llvm::StringRef("cAttr")};
 // DECL-NEXT:   return ::llvm::makeArrayRef(attrNames);
 
-// DECL:      ::mlir::Identifier aAttrAttrName()
+// DECL:      ::mlir::StringAttr aAttrAttrName()
 // DECL-NEXT:      return getAttributeNameForIndex(0);
-// DECL:      ::mlir::Identifier aAttrAttrName(::mlir::OperationName name)
+// DECL:      ::mlir::StringAttr aAttrAttrName(::mlir::OperationName name)
 // DECL-NEXT:      return getAttributeNameForIndex(name, 0);
 
-// DECL:      ::mlir::Identifier bAttrAttrName()
+// DECL:      ::mlir::StringAttr bAttrAttrName()
 // DECL-NEXT:      return getAttributeNameForIndex(1);
-// DECL:      ::mlir::Identifier bAttrAttrName(::mlir::OperationName name)
+// DECL:      ::mlir::StringAttr bAttrAttrName(::mlir::OperationName name)
 // DECL-NEXT:      return getAttributeNameForIndex(name, 1);
 
-// DECL:      ::mlir::Identifier cAttrAttrName()
+// DECL:      ::mlir::StringAttr cAttrAttrName()
 // DECL-NEXT:      return getAttributeNameForIndex(2);
-// DECL:      ::mlir::Identifier cAttrAttrName(::mlir::OperationName name)
+// DECL:      ::mlir::StringAttr cAttrAttrName(::mlir::OperationName name)
 // DECL-NEXT:      return getAttributeNameForIndex(name, 2);
 
 // DEF-LABEL: AOp definitions
@@ -80,13 +80,13 @@ def AOp : NS_Op<"a_op", []> {
 // ---
 
 // DEF:      some-attr-kind AOp::aAttrAttr()
-// DEF-NEXT:   (*this)->getAttr(aAttrAttrName()).template cast<some-attr-kind>()
+// DEF-NEXT:   (*this)->getAttr(aAttrAttrName()).cast<some-attr-kind>()
 // DEF:      some-return-type AOp::aAttr() {
 // DEF-NEXT:   auto attr = aAttrAttr()
 // DEF-NEXT:   return attr.some-convert-from-storage();
 
 // DEF:      some-attr-kind AOp::bAttrAttr()
-// DEF-NEXT:   return (*this)->getAttr(bAttrAttrName()).template dyn_cast_or_null<some-attr-kind>()
+// DEF-NEXT:   return (*this)->getAttr(bAttrAttrName()).dyn_cast_or_null<some-attr-kind>()
 // DEF:      some-return-type AOp::bAttr() {
 // DEF-NEXT:   auto attr = bAttrAttr();
 // DEF-NEXT:   if (!attr)
@@ -94,7 +94,7 @@ def AOp : NS_Op<"a_op", []> {
 // DEF-NEXT:   return attr.some-convert-from-storage();
 
 // DEF:      some-attr-kind AOp::cAttrAttr()
-// DEF-NEXT:   return (*this)->getAttr(cAttrAttrName()).template dyn_cast_or_null<some-attr-kind>()
+// DEF-NEXT:   return (*this)->getAttr(cAttrAttrName()).dyn_cast_or_null<some-attr-kind>()
 // DEF:      ::llvm::Optional<some-return-type> AOp::cAttr() {
 // DEF-NEXT:   auto attr = cAttrAttr()
 // DEF-NEXT:   return attr ? ::llvm::Optional<some-return-type>(attr.some-convert-from-storage()) : (::llvm::None);
@@ -157,19 +157,19 @@ def AgetOp : Op<Test2_Dialect, "a_get_op", []> {
 // DECL-SAME:     {::llvm::StringRef("aAttr"), ::llvm::StringRef("bAttr"), ::llvm::StringRef("cAttr")};
 // DECL-NEXT:   return ::llvm::makeArrayRef(attrNames);
 
-// DECL:      ::mlir::Identifier getAAttrAttrName()
+// DECL:      ::mlir::StringAttr getAAttrAttrName()
 // DECL-NEXT:      return getAttributeNameForIndex(0);
-// DECL:      ::mlir::Identifier getAAttrAttrName(::mlir::OperationName name)
+// DECL:      ::mlir::StringAttr getAAttrAttrName(::mlir::OperationName name)
 // DECL-NEXT:      return getAttributeNameForIndex(name, 0);
 
-// DECL:      ::mlir::Identifier getBAttrAttrName()
+// DECL:      ::mlir::StringAttr getBAttrAttrName()
 // DECL-NEXT:      return getAttributeNameForIndex(1);
-// DECL:      ::mlir::Identifier getBAttrAttrName(::mlir::OperationName name)
+// DECL:      ::mlir::StringAttr getBAttrAttrName(::mlir::OperationName name)
 // DECL-NEXT:      return getAttributeNameForIndex(name, 1);
 
-// DECL:      ::mlir::Identifier getCAttrAttrName()
+// DECL:      ::mlir::StringAttr getCAttrAttrName()
 // DECL-NEXT:      return getAttributeNameForIndex(2);
-// DECL:      ::mlir::Identifier getCAttrAttrName(::mlir::OperationName name)
+// DECL:      ::mlir::StringAttr getCAttrAttrName(::mlir::OperationName name)
 // DECL-NEXT:      return getAttributeNameForIndex(name, 2);
 
 // DEF-LABEL: AgetOp definitions
@@ -194,13 +194,13 @@ def AgetOp : Op<Test2_Dialect, "a_get_op", []> {
 // ---
 
 // DEF:      some-attr-kind AgetOp::getAAttrAttr()
-// DEF-NEXT:   (*this)->getAttr(getAAttrAttrName()).template cast<some-attr-kind>()
+// DEF-NEXT:   (*this)->getAttr(getAAttrAttrName()).cast<some-attr-kind>()
 // DEF:      some-return-type AgetOp::getAAttr() {
 // DEF-NEXT:   auto attr = getAAttrAttr()
 // DEF-NEXT:   return attr.some-convert-from-storage();
 
 // DEF:      some-attr-kind AgetOp::getBAttrAttr()
-// DEF-NEXT:   return (*this)->getAttr(getBAttrAttrName()).template dyn_cast_or_null<some-attr-kind>()
+// DEF-NEXT:   return (*this)->getAttr(getBAttrAttrName()).dyn_cast_or_null<some-attr-kind>()
 // DEF:      some-return-type AgetOp::getBAttr() {
 // DEF-NEXT:   auto attr = getBAttrAttr();
 // DEF-NEXT:   if (!attr)
@@ -208,7 +208,7 @@ def AgetOp : Op<Test2_Dialect, "a_get_op", []> {
 // DEF-NEXT:   return attr.some-convert-from-storage();
 
 // DEF:      some-attr-kind AgetOp::getCAttrAttr()
-// DEF-NEXT:   return (*this)->getAttr(getCAttrAttrName()).template dyn_cast_or_null<some-attr-kind>()
+// DEF-NEXT:   return (*this)->getAttr(getCAttrAttrName()).dyn_cast_or_null<some-attr-kind>()
 // DEF:      ::llvm::Optional<some-return-type> AgetOp::getCAttr() {
 // DEF-NEXT:   auto attr = getCAttrAttr()
 // DEF-NEXT:   return attr ? ::llvm::Optional<some-return-type>(attr.some-convert-from-storage()) : (::llvm::None);

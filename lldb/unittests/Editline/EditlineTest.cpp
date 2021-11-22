@@ -87,24 +87,24 @@ private:
   std::unique_ptr<lldb_private::Editline> _editline_sp;
 
   PseudoTerminal _pty;
-  int _pty_master_fd;
+  int _pty_primary_fd;
   int _pty_secondary_fd;
 
   std::unique_ptr<FilePointer> _el_secondary_file;
 };
 
 EditlineAdapter::EditlineAdapter()
-    : _editline_sp(), _pty(), _pty_master_fd(-1), _pty_secondary_fd(-1),
+    : _editline_sp(), _pty(), _pty_primary_fd(-1), _pty_secondary_fd(-1),
       _el_secondary_file() {
   lldb_private::Status error;
 
-  // Open the first master pty available.
+  // Open the first primary pty available.
   EXPECT_THAT_ERROR(_pty.OpenFirstAvailablePrimary(O_RDWR), llvm::Succeeded());
 
-  // Grab the master fd.  This is a file descriptor we will:
+  // Grab the primary fd.  This is a file descriptor we will:
   // (1) write to when we want to send input to editline.
   // (2) read from when we want to see what editline sends back.
-  _pty_master_fd = _pty.GetPrimaryFileDescriptor();
+  _pty_primary_fd = _pty.GetPrimaryFileDescriptor();
 
   // Open the corresponding secondary pty.
   EXPECT_THAT_ERROR(_pty.OpenSecondary(O_RDWR), llvm::Succeeded());
@@ -140,13 +140,13 @@ bool EditlineAdapter::SendLine(const std::string &line) {
 
   // Write the line out to the pipe connected to editline's input.
   ssize_t input_bytes_written =
-      ::write(_pty_master_fd, line.c_str(),
+      ::write(_pty_primary_fd, line.c_str(),
               line.length() * sizeof(std::string::value_type));
 
   const char *eoln = "\n";
   const size_t eoln_length = strlen(eoln);
   input_bytes_written =
-      ::write(_pty_master_fd, eoln, eoln_length * sizeof(char));
+      ::write(_pty_primary_fd, eoln, eoln_length * sizeof(char));
 
   EXPECT_NE(-1, input_bytes_written) << strerror(errno);
   EXPECT_EQ(eoln_length * sizeof(char), size_t(input_bytes_written));
@@ -205,7 +205,7 @@ bool EditlineAdapter::IsInputComplete(lldb_private::Editline *editline,
 }
 
 void EditlineAdapter::ConsumeAllOutput() {
-  FilePointer output_file(fdopen(_pty_master_fd, "r"));
+  FilePointer output_file(fdopen(_pty_primary_fd, "r"));
 
   int ch;
   while ((ch = fgetc(output_file)) != EOF) {

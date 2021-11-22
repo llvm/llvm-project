@@ -373,7 +373,7 @@ static void explainDbiModiSubstreamOffset(LinePrinter &P, DbiStream &Dbi,
     ++Index;
   }
 
-  DbiModuleDescriptor &Descriptor = *Prev;
+  const DbiModuleDescriptor &Descriptor = *Prev;
   P.formatLine("which contains the descriptor for module {0} ({1}).", Index,
                Descriptor.getModuleName());
 }

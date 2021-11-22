@@ -451,9 +451,8 @@ struct ScalarEnumerationTraits<FormatStyle::ReferenceAlignmentStyle> {
 };
 
 template <>
-struct ScalarEnumerationTraits<FormatStyle::SpaceBeforeParensOptions> {
-  static void enumeration(IO &IO,
-                          FormatStyle::SpaceBeforeParensOptions &Value) {
+struct ScalarEnumerationTraits<FormatStyle::SpaceBeforeParensStyle> {
+  static void enumeration(IO &IO, FormatStyle::SpaceBeforeParensStyle &Value) {
     IO.enumCase(Value, "Never", FormatStyle::SBPO_Never);
     IO.enumCase(Value, "ControlStatements",
                 FormatStyle::SBPO_ControlStatements);
@@ -462,6 +461,7 @@ struct ScalarEnumerationTraits<FormatStyle::SpaceBeforeParensOptions> {
     IO.enumCase(Value, "NonEmptyParentheses",
                 FormatStyle::SBPO_NonEmptyParentheses);
     IO.enumCase(Value, "Always", FormatStyle::SBPO_Always);
+    IO.enumCase(Value, "Custom", FormatStyle::SBPO_Custom);
 
     // For backward compatibility.
     IO.enumCase(Value, "false", FormatStyle::SBPO_Never);
@@ -787,6 +787,7 @@ template <> struct MappingTraits<FormatStyle> {
     IO.mapOptional("SpaceBeforeInheritanceColon",
                    Style.SpaceBeforeInheritanceColon);
     IO.mapOptional("SpaceBeforeParens", Style.SpaceBeforeParens);
+    IO.mapOptional("SpaceBeforeParensOptions", Style.SpaceBeforeParensOptions);
     IO.mapOptional("SpaceAroundPointerQualifiers",
                    Style.SpaceAroundPointerQualifiers);
     IO.mapOptional("SpaceBeforeRangeBasedForLoopColon",
@@ -842,6 +843,20 @@ template <> struct MappingTraits<FormatStyle::BraceWrappingFlags> {
     IO.mapOptional("SplitEmptyFunction", Wrapping.SplitEmptyFunction);
     IO.mapOptional("SplitEmptyRecord", Wrapping.SplitEmptyRecord);
     IO.mapOptional("SplitEmptyNamespace", Wrapping.SplitEmptyNamespace);
+  }
+};
+
+template <> struct MappingTraits<FormatStyle::SpaceBeforeParensCustom> {
+  static void mapping(IO &IO, FormatStyle::SpaceBeforeParensCustom &Spacing) {
+    IO.mapOptional("AfterControlStatements", Spacing.AfterControlStatements);
+    IO.mapOptional("AfterForeachMacros", Spacing.AfterForeachMacros);
+    IO.mapOptional("AfterFunctionDefinitionName",
+                   Spacing.AfterFunctionDefinitionName);
+    IO.mapOptional("AfterFunctionDeclarationName",
+                   Spacing.AfterFunctionDeclarationName);
+    IO.mapOptional("AfterIfMacros", Spacing.AfterIfMacros);
+    IO.mapOptional("BeforeNonEmptyParentheses",
+                   Spacing.BeforeNonEmptyParentheses);
   }
 };
 
@@ -939,10 +954,9 @@ std::string ParseErrorCategory::message(int EV) const {
   llvm_unreachable("unexpected parse error");
 }
 
-static FormatStyle expandPresets(const FormatStyle &Style) {
-  if (Style.BreakBeforeBraces == FormatStyle::BS_Custom)
-    return Style;
-  FormatStyle Expanded = Style;
+static void expandPresetsBraceWrapping(FormatStyle &Expanded) {
+  if (Expanded.BreakBeforeBraces == FormatStyle::BS_Custom)
+    return;
   Expanded.BraceWrapping = {/*AfterCaseLabel=*/false,
                             /*AfterClass=*/false,
                             /*AfterControlStatement=*/FormatStyle::BWACS_Never,
@@ -961,7 +975,7 @@ static FormatStyle expandPresets(const FormatStyle &Style) {
                             /*SplitEmptyFunction=*/true,
                             /*SplitEmptyRecord=*/true,
                             /*SplitEmptyNamespace=*/true};
-  switch (Style.BreakBeforeBraces) {
+  switch (Expanded.BreakBeforeBraces) {
   case FormatStyle::BS_Linux:
     Expanded.BraceWrapping.AfterClass = true;
     Expanded.BraceWrapping.AfterFunction = true;
@@ -1042,7 +1056,33 @@ static FormatStyle expandPresets(const FormatStyle &Style) {
   default:
     break;
   }
-  return Expanded;
+}
+
+static void expandPresetsSpaceBeforeParens(FormatStyle &Expanded) {
+  if (Expanded.SpaceBeforeParens == FormatStyle::SBPO_Custom)
+    return;
+  // Reset all flags
+  Expanded.SpaceBeforeParensOptions = {};
+
+  switch (Expanded.SpaceBeforeParens) {
+  case FormatStyle::SBPO_Never:
+    break;
+  case FormatStyle::SBPO_ControlStatements:
+    Expanded.SpaceBeforeParensOptions.AfterControlStatements = true;
+    Expanded.SpaceBeforeParensOptions.AfterForeachMacros = true;
+    Expanded.SpaceBeforeParensOptions.AfterIfMacros = true;
+    break;
+  case FormatStyle::SBPO_ControlStatementsExceptControlMacros:
+    Expanded.SpaceBeforeParensOptions.AfterControlStatements = true;
+    break;
+  case FormatStyle::SBPO_NonEmptyParentheses:
+    Expanded.SpaceBeforeParensOptions.BeforeNonEmptyParentheses = true;
+    break;
+  case FormatStyle::SBPO_Always:
+    break;
+  default:
+    break;
+  }
 }
 
 FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
@@ -1174,6 +1214,9 @@ FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
   LLVMStyle.SpaceBeforeCtorInitializerColon = true;
   LLVMStyle.SpaceBeforeInheritanceColon = true;
   LLVMStyle.SpaceBeforeParens = FormatStyle::SBPO_ControlStatements;
+  LLVMStyle.SpaceBeforeParensOptions.AfterControlStatements = true;
+  LLVMStyle.SpaceBeforeParensOptions.AfterForeachMacros = true;
+  LLVMStyle.SpaceBeforeParensOptions.AfterIfMacros = true;
   LLVMStyle.SpaceBeforeRangeBasedForLoopColon = true;
   LLVMStyle.SpaceBeforeAssignmentOperators = true;
   LLVMStyle.SpaceBeforeCpp11BracedList = false;
@@ -1649,8 +1692,11 @@ std::string configurationAsText(const FormatStyle &Style) {
   llvm::yaml::Output Output(Stream);
   // We use the same mapping method for input and output, so we need a non-const
   // reference here.
-  FormatStyle NonConstStyle = expandPresets(Style);
+  FormatStyle NonConstStyle = Style;
+  expandPresetsBraceWrapping(NonConstStyle);
+  expandPresetsSpaceBeforeParens(NonConstStyle);
   Output << NonConstStyle;
+
   return Stream.str();
 }
 
@@ -2533,7 +2579,7 @@ tooling::Replacements sortCppIncludes(const FormatStyle &Style, StringRef Code,
   // doesn't have hidden dependencies
   // (http://llvm.org/docs/CodingStandards.html#include-style).
   //
-  // FIXME: Do some sanity checking, e.g. edit distance of the base name, to fix
+  // FIXME: Do some validation, e.g. edit distance of the base name, to fix
   // cases where the first #include is unlikely to be the main header.
   tooling::IncludeCategoryManager Categories(Style.IncludeStyle, FileName);
   bool FirstIncludeBlock = true;
@@ -2929,7 +2975,9 @@ reformat(const FormatStyle &Style, StringRef Code,
          ArrayRef<tooling::Range> Ranges, unsigned FirstStartColumn,
          unsigned NextStartColumn, unsigned LastStartColumn, StringRef FileName,
          FormattingAttemptStatus *Status) {
-  FormatStyle Expanded = expandPresets(Style);
+  FormatStyle Expanded = Style;
+  expandPresetsBraceWrapping(Expanded);
+  expandPresetsSpaceBeforeParens(Expanded);
   if (Expanded.DisableFormat)
     return {tooling::Replacements(), 0};
   if (isLikelyXml(Code))
@@ -2941,8 +2989,10 @@ reformat(const FormatStyle &Style, StringRef Code,
   if (Style.isJson()) {
     std::vector<tooling::Range> Ranges(1, tooling::Range(0, Code.size()));
     auto Env =
-        std::make_unique<Environment>(Code, FileName, Ranges, FirstStartColumn,
+        Environment::make(Code, FileName, Ranges, FirstStartColumn,
                                       NextStartColumn, LastStartColumn);
+    if (!Env)
+      return {};
     // Perform the actual formatting pass.
     tooling::Replacements Replaces =
         Formatter(*Env, Style, Status).process().first;
@@ -2998,9 +3048,10 @@ reformat(const FormatStyle &Style, StringRef Code,
       return TrailingCommaInserter(Env, Expanded).process();
     });
 
-  auto Env =
-      std::make_unique<Environment>(Code, FileName, Ranges, FirstStartColumn,
-                                    NextStartColumn, LastStartColumn);
+  auto Env = Environment::make(Code, FileName, Ranges, FirstStartColumn,
+                               NextStartColumn, LastStartColumn);
+  if (!Env)
+    return {};
   llvm::Optional<std::string> CurrentCode = None;
   tooling::Replacements Fixes;
   unsigned Penalty = 0;
@@ -3013,10 +3064,12 @@ reformat(const FormatStyle &Style, StringRef Code,
       Penalty += PassFixes.second;
       if (I + 1 < E) {
         CurrentCode = std::move(*NewCode);
-        Env = std::make_unique<Environment>(
+        Env = Environment::make(
             *CurrentCode, FileName,
             tooling::calculateRangesAfterReplacements(Fixes, Ranges),
             FirstStartColumn, NextStartColumn, LastStartColumn);
+        if (!Env)
+          return {};
       }
     }
   }
@@ -3042,7 +3095,10 @@ tooling::Replacements cleanup(const FormatStyle &Style, StringRef Code,
   // cleanups only apply to C++ (they mostly concern ctor commas etc.)
   if (Style.Language != FormatStyle::LK_Cpp)
     return tooling::Replacements();
-  return Cleaner(Environment(Code, FileName, Ranges), Style).process().first;
+  auto Env = Environment::make(Code, FileName, Ranges);
+  if (!Env)
+    return {};
+  return Cleaner(*Env, Style).process().first;
 }
 
 tooling::Replacements reformat(const FormatStyle &Style, StringRef Code,
@@ -3059,7 +3115,10 @@ tooling::Replacements fixNamespaceEndComments(const FormatStyle &Style,
                                               StringRef Code,
                                               ArrayRef<tooling::Range> Ranges,
                                               StringRef FileName) {
-  return NamespaceEndCommentsFixer(Environment(Code, FileName, Ranges), Style)
+  auto Env = Environment::make(Code, FileName, Ranges);
+  if (!Env)
+    return {};
+  return NamespaceEndCommentsFixer(*Env, Style)
       .process()
       .first;
 }
@@ -3068,7 +3127,10 @@ tooling::Replacements sortUsingDeclarations(const FormatStyle &Style,
                                             StringRef Code,
                                             ArrayRef<tooling::Range> Ranges,
                                             StringRef FileName) {
-  return UsingDeclarationsSorter(Environment(Code, FileName, Ranges), Style)
+  auto Env = Environment::make(Code, FileName, Ranges);
+  if (!Env)
+    return {};
+  return UsingDeclarationsSorter(*Env, Style)
       .process()
       .first;
 }

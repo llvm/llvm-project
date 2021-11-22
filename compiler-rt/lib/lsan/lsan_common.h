@@ -140,7 +140,7 @@ struct CheckForLeaksParam {
   bool success = false;
 };
 
-InternalMmapVector<RootRegion> const *GetRootRegions();
+InternalMmapVectorNoCtor<RootRegion> const *GetRootRegions();
 void ScanRootRegion(Frontier *frontier, RootRegion const &region,
                     uptr region_begin, uptr region_end, bool is_readable);
 void ForEachExtraStackRangeCb(uptr begin, uptr end, void* arg);
@@ -280,6 +280,13 @@ int __lsan_is_turned_off();
 
 SANITIZER_INTERFACE_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE
 const char *__lsan_default_suppressions();
+
+SANITIZER_INTERFACE_ATTRIBUTE
+void __lsan_register_root_region(const void *p, __lsan::uptr size);
+
+SANITIZER_INTERFACE_ATTRIBUTE
+void __lsan_unregister_root_region(const void *p, __lsan::uptr size);
+
 }  // extern "C"
 
 #endif  // LSAN_COMMON_H

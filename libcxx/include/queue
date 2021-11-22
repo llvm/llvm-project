@@ -1,5 +1,5 @@
 // -*- C++ -*-
-//===--------------------------- queue ------------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -185,16 +185,16 @@ template<class InputIterator, class Allocator>
 priority_queue(InputIterator, InputIterator, Allocator)
     -> priority_queue<iter-value-type<InputIterator>,
                       vector<iter-value-type<InputIterator>, Allocator>,
-                      less<iter-value-type<InputIterator>>>;
+                      less<iter-value-type<InputIterator>>>; // C++17
 
 template<class InputIterator, class Compare, class Allocator>
 priority_queue(InputIterator, InputIterator, Compare, Allocator)
     -> priority_queue<iter-value-type<InputIterator>,
-                      vector<iter-value-type<InputIterator>, Allocator>, Compare>;
+                      vector<iter-value-type<InputIterator>, Allocator>, Compare>; // C++17
 
 template<class InputIterator, class Compare, class Container, class Allocator>
 priority_queue(InputIterator, InputIterator, Compare, Container, Allocator)
-    -> priority_queue<typename Container::value_type, Container, Compare>;
+    -> priority_queue<typename Container::value_type, Container, Compare>; // C++17
 
 template <class T, class Container, class Compare>
   void swap(priority_queue<T, Container, Compare>& x,

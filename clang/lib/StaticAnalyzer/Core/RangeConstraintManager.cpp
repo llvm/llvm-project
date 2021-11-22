@@ -601,10 +601,15 @@ public:
   LLVM_NODISCARD static inline Optional<bool>
   areEqual(ProgramStateRef State, SymbolRef First, SymbolRef Second);
 
+  /// Remove one member from the class.
+  LLVM_NODISCARD ProgramStateRef removeMember(ProgramStateRef State,
+                                              const SymbolRef Old);
+
   /// Iterate over all symbols and try to simplify them.
-  LLVM_NODISCARD static inline ProgramStateRef
-  simplify(SValBuilder &SVB, RangeSet::Factory &F, RangedConstraintManager &RCM,
-           ProgramStateRef State, EquivalenceClass Class);
+  LLVM_NODISCARD static inline ProgramStateRef simplify(SValBuilder &SVB,
+                                                        RangeSet::Factory &F,
+                                                        ProgramStateRef State,
+                                                        EquivalenceClass Class);
 
   void dumpToStream(ProgramStateRef State, raw_ostream &os) const;
   LLVM_DUMP_METHOD void dump(ProgramStateRef State) const {
@@ -656,6 +661,7 @@ private:
   inline ProgramStateRef mergeImpl(RangeSet::Factory &F, ProgramStateRef State,
                                    SymbolSet Members, EquivalenceClass Other,
                                    SymbolSet OtherMembers);
+
   static inline bool
   addToDisequalityInfo(DisequalityMapTy &Info, ConstraintRangeTy &Constraints,
                        RangeSet::Factory &F, ProgramStateRef State,
@@ -1599,13 +1605,12 @@ class ConstraintAssignor : public ConstraintAssignorBase<ConstraintAssignor> {
 public:
   template <class ClassOrSymbol>
   LLVM_NODISCARD static ProgramStateRef
-  assign(ProgramStateRef State, RangeConstraintManager &RCM,
-         SValBuilder &Builder, RangeSet::Factory &F, ClassOrSymbol CoS,
-         RangeSet NewConstraint) {
+  assign(ProgramStateRef State, SValBuilder &Builder, RangeSet::Factory &F,
+         ClassOrSymbol CoS, RangeSet NewConstraint) {
     if (!State || NewConstraint.isEmpty())
       return nullptr;
 
-    ConstraintAssignor Assignor{State, RCM, Builder, F};
+    ConstraintAssignor Assignor{State, Builder, F};
     return Assignor.assign(CoS, NewConstraint);
   }
 
@@ -1635,9 +1640,9 @@ public:
                                          RangeSet Constraint);
 
 private:
-  ConstraintAssignor(ProgramStateRef State, RangeConstraintManager &RCM,
-                     SValBuilder &Builder, RangeSet::Factory &F)
-      : State(State), RCM(RCM), Builder(Builder), RangeFactory(F) {}
+  ConstraintAssignor(ProgramStateRef State, SValBuilder &Builder,
+                     RangeSet::Factory &F)
+      : State(State), Builder(Builder), RangeFactory(F) {}
   using Base = ConstraintAssignorBase<ConstraintAssignor>;
 
   /// Base method for handling new constraints for symbols.
@@ -1715,7 +1720,6 @@ private:
   }
 
   ProgramStateRef State;
-  RangeConstraintManager &RCM;
   SValBuilder &Builder;
   RangeSet::Factory &RangeFactory;
 };
@@ -1728,8 +1732,7 @@ bool ConstraintAssignor::assignSymExprToConst(const SymExpr *Sym,
   ClassMembersTy Members = State->get<ClassMembers>();
   for (std::pair<EquivalenceClass, SymbolSet> ClassToSymbolSet : Members) {
     EquivalenceClass Class = ClassToSymbolSet.first;
-    State =
-        EquivalenceClass::simplify(Builder, RangeFactory, RCM, State, Class);
+    State = EquivalenceClass::simplify(Builder, RangeFactory, State, Class);
     if (!State)
       return false;
     SimplifiedClasses.insert(Class);
@@ -1743,8 +1746,19 @@ bool ConstraintAssignor::assignSymExprToConst(const SymExpr *Sym,
     EquivalenceClass Class = ClassConstraint.first;
     if (SimplifiedClasses.count(Class)) // Already simplified.
       continue;
-    State =
-        EquivalenceClass::simplify(Builder, RangeFactory, RCM, State, Class);
+    State = EquivalenceClass::simplify(Builder, RangeFactory, State, Class);
+    if (!State)
+      return false;
+  }
+
+  // We may have trivial equivalence classes in the disequality info as
+  // well, and we need to simplify them.
+  DisequalityMapTy DisequalityInfo = State->get<DisequalityMap>();
+  for (std::pair<EquivalenceClass, ClassSet> DisequalityEntry :
+       DisequalityInfo) {
+    EquivalenceClass Class = DisequalityEntry.first;
+    ClassSet DisequalClasses = DisequalityEntry.second;
+    State = EquivalenceClass::simplify(Builder, RangeFactory, State, Class);
     if (!State)
       return false;
   }
@@ -2122,14 +2136,69 @@ inline Optional<bool> EquivalenceClass::areEqual(ProgramStateRef State,
   return llvm::None;
 }
 
+LLVM_NODISCARD ProgramStateRef
+EquivalenceClass::removeMember(ProgramStateRef State, const SymbolRef Old) {
+
+  SymbolSet ClsMembers = getClassMembers(State);
+  assert(ClsMembers.contains(Old));
+
+  // We don't remove `Old`'s Sym->Class relation for two reasons:
+  // 1) This way constraints for the old symbol can still be found via it's
+  // equivalence class that it used to be the member of.
+  // 2) Performance and resource reasons. We can spare one removal and thus one
+  // additional tree in the forest of `ClassMap`.
+
+  // Remove `Old`'s Class->Sym relation.
+  SymbolSet::Factory &F = getMembersFactory(State);
+  ClassMembersTy::Factory &EMFactory = State->get_context<ClassMembers>();
+  ClsMembers = F.remove(ClsMembers, Old);
+  // Ensure another precondition of the removeMember function (we can check
+  // this only with isEmpty, thus we have to do the remove first).
+  assert(!ClsMembers.isEmpty() &&
+         "Class should have had at least two members before member removal");
+  // Overwrite the existing members assigned to this class.
+  ClassMembersTy ClassMembersMap = State->get<ClassMembers>();
+  ClassMembersMap = EMFactory.add(ClassMembersMap, *this, ClsMembers);
+  State = State->set<ClassMembers>(ClassMembersMap);
+
+  return State;
+}
+
+// Re-evaluate an SVal with top-level `State->assume` logic.
+LLVM_NODISCARD ProgramStateRef reAssume(ProgramStateRef State,
+                                        const RangeSet *Constraint,
+                                        SVal TheValue) {
+  if (!Constraint)
+    return State;
+
+  const auto DefinedVal = TheValue.castAs<DefinedSVal>();
+
+  // If the SVal is 0, we can simply interpret that as `false`.
+  if (Constraint->encodesFalseRange())
+    return State->assume(DefinedVal, false);
+
+  // If the constraint does not encode 0 then we can interpret that as `true`
+  // AND as a Range(Set).
+  if (Constraint->encodesTrueRange()) {
+    State = State->assume(DefinedVal, true);
+    if (!State)
+      return nullptr;
+    // Fall through, re-assume based on the range values as well.
+  }
+  // Overestimate the individual Ranges with the RangeSet' lowest and
+  // highest values.
+  return State->assumeInclusiveRange(DefinedVal, Constraint->getMinValue(),
+                                     Constraint->getMaxValue(), true);
+}
+
 // Iterate over all symbols and try to simplify them. Once a symbol is
 // simplified then we check if we can merge the simplified symbol's equivalence
 // class to this class. This way, we simplify not just the symbols but the
 // classes as well: we strive to keep the number of the classes to be the
 // absolute minimum.
-LLVM_NODISCARD ProgramStateRef EquivalenceClass::simplify(
-    SValBuilder &SVB, RangeSet::Factory &F, RangedConstraintManager &RCM,
-    ProgramStateRef State, EquivalenceClass Class) {
+LLVM_NODISCARD ProgramStateRef
+EquivalenceClass::simplify(SValBuilder &SVB, RangeSet::Factory &F,
+                           ProgramStateRef State, EquivalenceClass Class) {
   SymbolSet ClassMembers = Class.getClassMembers(State);
   for (const SymbolRef &MemberSym : ClassMembers) {
 
@@ -2158,22 +2227,36 @@ LLVM_NODISCARD ProgramStateRef EquivalenceClass::simplify(
       if (OldState == State)
         continue;
 
-      // Initiate the reorganization of the equality information. E.g., if we
-      // have `c + 1 == 0` then we'd like to express that `c == -1`. It makes
-      // sense to do this only with `SymIntExpr`s.
-      // TODO Handle `IntSymExpr` as well, once computeAdjustment can handle
-      // them.
-      if (const SymIntExpr *SIE = dyn_cast<SymIntExpr>(SimplifiedMemberSym)) {
-        if (const RangeSet *ClassConstraint = getConstraint(State, Class)) {
-          // Overestimate the individual Ranges with the RangeSet' lowest and
-          // highest values.
-          State = RCM.assumeSymInclusiveRange(
-              State, SIE, ClassConstraint->getMinValue(),
-              ClassConstraint->getMaxValue(), /*InRange=*/true);
-          if (!State)
-            return nullptr;
-        }
-      }
+      assert(find(State, MemberSym) == find(State, SimplifiedMemberSym));
+      // Remove the old and more complex symbol.
+      State = find(State, MemberSym).removeMember(State, MemberSym);
+
+      // Query the class constraint again b/c that may have changed during the
+      // merge above.
+      const RangeSet *ClassConstraint = getConstraint(State, Class);
+
+      // Re-evaluate an SVal with top-level `State->assume`, this ignites
+      // a RECURSIVE algorithm that will reach a FIXPOINT.
+      //
+      // About performance and complexity: Let us assume that in a State we
+      // have N non-trivial equivalence classes and that all constraints and
+      // disequality info is related to non-trivial classes. In the worst case,
+      // we can simplify only one symbol of one class in each iteration. The
+      // number of symbols in one class cannot grow b/c we replace the old
+      // symbol with the simplified one. Also, the number of the equivalence
+      // classes can decrease only, b/c the algorithm does a merge operation
+      // optionally. We need N iterations in this case to reach the fixpoint.
+      // Thus, the steps needed to be done in the worst case is proportional to
+      // N*N.
+      //
+      // This worst case scenario can be extended to that case when we have
+      // trivial classes in the constraints and in the disequality map. This
+      // case can be reduced to the case with a State where there are only
+      // non-trivial classes. This is because a merge operation on two trivial
+      // classes results in one non-trivial class.
+      State = reAssume(State, ClassConstraint, SimplifiedMemberVal);
+      if (!State)
+        return nullptr;
     }
   }
   return State;
@@ -2466,8 +2549,7 @@ RangeSet RangeConstraintManager::getRange(ProgramStateRef State,
 ProgramStateRef RangeConstraintManager::setRange(ProgramStateRef State,
                                                  SymbolRef Sym,
                                                  RangeSet Range) {
-  return ConstraintAssignor::assign(State, *this, getSValBuilder(), F, Sym,
-                                    Range);
+  return ConstraintAssignor::assign(State, getSValBuilder(), F, Sym, Range);
 }
 
 //===------------------------------------------------------------------------===

@@ -224,6 +224,22 @@ def fir_LogicalType : FIR_Type<"Logical", "logical"> {
   }];
 }
 
+def fir_LLVMPointerType : FIR_Type<"LLVMPointer", "llvm_ptr"> {
+  let summary = "Like LLVM pointer type";
+
+  let description = [{
+    A pointer type that does not have any of the constraints and semantics
+    of other FIR pointer types and that translates to llvm pointer types.
+    It is meant to implement indirection that cannot be expressed directly
+    in Fortran, but are needed to implement some Fortran features (e.g,
+    double indirections).
+  }];
+
+  let parameters = (ins "mlir::Type":$eleTy);
+
+  let assemblyFormat = "`<` $eleTy `>`";
+}
+
 def fir_PointerType : FIR_Type<"Pointer", "ptr"> {
   let summary = "Reference to a POINTER attribute type";
 
@@ -301,6 +317,8 @@ def fir_RecordType : FIR_Type<"Record", "type"> {
 
     void finalize(llvm::ArrayRef<TypePair> lenPList,
                   llvm::ArrayRef<TypePair> typeList);
+    
+    std::string getLoweredName() const;
 
     detail::RecordTypeStorage const *uniqueKey() const;
   }];
@@ -506,14 +524,21 @@ def AnyRealLike : TypeConstraint<Or<[FloatLike.predicate,
 def AnyIntegerType : Type<AnyIntegerLike.predicate, "any integer">;
 
 // Composable types
+// Note that we include both fir_ComplexType and AnyComplex, so we can use both
+// the FIR ComplexType and the MLIR ComplexType (the former is used to represent
+// Fortran complex and the latter for C++ std::complex).
 def AnyCompositeLike : TypeConstraint<Or<[fir_RecordType.predicate,
-    fir_SequenceType.predicate, fir_ComplexType.predicate,
+    fir_SequenceType.predicate, fir_ComplexType.predicate, AnyComplex.predicate,
     fir_VectorType.predicate, IsTupleTypePred, fir_CharacterType.predicate]>,
     "any composite">;
 
 // Reference types
 def AnyReferenceLike : TypeConstraint<Or<[fir_ReferenceType.predicate,
-    fir_HeapType.predicate, fir_PointerType.predicate]>, "any reference">;
+    fir_HeapType.predicate, fir_PointerType.predicate,
+    fir_LLVMPointerType.predicate]>, "any reference">;
+
+def RefOrLLVMPtr : TypeConstraint<Or<[fir_ReferenceType.predicate,
+    fir_LLVMPointerType.predicate]>, "fir.ref or fir.llvm_ptr">;
 
 def AnyBoxLike : TypeConstraint<Or<[fir_BoxType.predicate,
     fir_BoxCharType.predicate, fir_BoxProcType.predicate]>, "any box">;

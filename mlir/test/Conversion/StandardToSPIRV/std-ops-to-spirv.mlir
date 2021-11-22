@@ -25,13 +25,13 @@ func @int32_scalar(%lhs: i32, %rhs: i32) {
   // CHECK: spv.UMod %{{.*}}, %{{.*}}: i32
   %5 = arith.remui %lhs, %rhs: i32
   // CHECK: spv.GLSL.SMax %{{.*}}, %{{.*}}: i32
-  %6 = maxsi %lhs, %rhs : i32
+  %6 = arith.maxsi %lhs, %rhs : i32
   // CHECK: spv.GLSL.UMax %{{.*}}, %{{.*}}: i32
-  %7 = maxui %lhs, %rhs : i32
+  %7 = arith.maxui %lhs, %rhs : i32
   // CHECK: spv.GLSL.SMin %{{.*}}, %{{.*}}: i32
-  %8 = minsi %lhs, %rhs : i32
+  %8 = arith.minsi %lhs, %rhs : i32
   // CHECK: spv.GLSL.UMin %{{.*}}, %{{.*}}: i32
-  %9 = minui %lhs, %rhs : i32
+  %9 = arith.minui %lhs, %rhs : i32
   return
 }
 
@@ -76,9 +76,9 @@ func @float32_binary_scalar(%lhs: f32, %rhs: f32) {
   // CHECK: spv.FRem %{{.*}}, %{{.*}}: f32
   %4 = arith.remf %lhs, %rhs: f32
   // CHECK: spv.GLSL.FMax %{{.*}}, %{{.*}}: f32
-  %5 = maxf %lhs, %rhs: f32
+  %5 = arith.maxf %lhs, %rhs: f32
   // CHECK: spv.GLSL.FMin %{{.*}}, %{{.*}}: f32
-  %6 = minf %lhs, %rhs: f32
+  %6 = arith.minf %lhs, %rhs: f32
   return
 }
 

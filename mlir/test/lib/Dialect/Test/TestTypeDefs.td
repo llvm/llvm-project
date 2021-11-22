@@ -62,7 +62,7 @@ def IntegerType : Test_Type<"TestInteger"> {
 
   // We define the printer inline.
   let printer = [{
-    $_printer << "int<";
+    $_printer << "<";
     printSignedness($_printer, getImpl()->signedness);
     $_printer << ", " << getImpl()->width << ">";
   }];
@@ -122,7 +122,7 @@ class FieldInfo_Type<string name> : Test_Type<name> {
   // Prints the type in this format:
   //   struct<[{field1Name, field1Type}, {field2Name, field2Type}]
   let printer = [{
-    $_printer << "struct" << "<";
+    $_printer << "<";
     for (size_t i=0, e = getImpl()->fields.size(); i < e; i++) {
       const auto& field = getImpl()->fields[i];
       $_printer << "{" << field.name << "," << field.type << "}";

@@ -564,6 +564,12 @@ void SymbolCollector::handleMacros(const MainFileMacros &MacroRefsToIndex) {
         S.SymInfo.Lang = index::SymbolLanguage::C;
         S.Origin = Opts.Origin;
         S.CanonicalDeclaration = R.Location;
+        // Make the macro visible for code completion if main file is an
+        // include-able header.
+        if (!HeaderFileURIs->getIncludeHeader(SM.getMainFileID()).empty()) {
+          S.Flags |= Symbol::IndexedForCodeCompletion;
+          S.Flags |= Symbol::VisibleOutsideFile;
+        }
         Symbols.insert(S);
       }
     }

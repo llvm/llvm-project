@@ -427,7 +427,7 @@ and let the debugger present ``optimized out`` to the developer. Withholding
 these potentially stale variable values from the developer diminishes the
 amount of available debug information, but increases the reliability of the
 remaining information.
- 
+
 To illustrate some potential issues, consider the following example:
 
 .. code-block:: llvm
@@ -797,7 +797,7 @@ presents several difficulties:
   entry:
     br i1 %cond, label %truebr, label %falsebr
 
-  bb1: 
+  bb1:
     %value = phi i32 [ %value1, %truebr ], [ %value2, %falsebr ]
     br label %exit, !dbg !26
 
@@ -813,7 +813,7 @@ presents several difficulties:
     %value = add i32 %input, 2
     br label %bb1
 
-  exit: 
+  exit:
     ret i32 %value, !dbg !30
   }
 
@@ -1068,7 +1068,7 @@ and this will materialize an additional DWARF attribute as:
 
 .. code-block:: text
 
-  DW_TAG_subprogram [3]  
+  DW_TAG_subprogram [3]
      DW_AT_low_pc [DW_FORM_addr]     (0x0000000000000010 ".text")
      DW_AT_high_pc [DW_FORM_data4]   (0x00000001)
      ...

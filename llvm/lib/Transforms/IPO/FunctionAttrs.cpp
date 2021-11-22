@@ -142,12 +142,10 @@ static MemoryAccessKind checkFunctionMemoryAccess(Function &F, bool ThisBody,
   // Scan the function body for instructions that may read or write memory.
   bool ReadsMemory = false;
   bool WritesMemory = false;
-  for (inst_iterator II = inst_begin(F), E = inst_end(F); II != E; ++II) {
-    Instruction *I = &*II;
-
+  for (Instruction &I : instructions(F)) {
     // Some instructions can be ignored even if they read or write memory.
     // Detect these now, skipping to the next instruction if one is found.
-    if (auto *Call = dyn_cast<CallBase>(I)) {
+    if (auto *Call = dyn_cast<CallBase>(&I)) {
       // Ignore calls to functions in the same SCC, as long as the call sites
       // don't have operand bundles.  Calls with operand bundles are allowed to
       // have memory effects not described by the memory effects of the call
@@ -181,13 +179,13 @@ static MemoryAccessKind checkFunctionMemoryAccess(Function &F, bool ThisBody,
 
       // Check whether all pointer arguments point to local memory, and
       // ignore calls that only access local memory.
-      for (auto CI = Call->arg_begin(), CE = Call->arg_end(); CI != CE; ++CI) {
-        Value *Arg = *CI;
+      for (const Use &U : Call->args()) {
+        const Value *Arg = U;
         if (!Arg->getType()->isPtrOrPtrVectorTy())
           continue;
 
         MemoryLocation Loc =
-            MemoryLocation::getBeforeOrAfter(Arg, I->getAAMetadata());
+            MemoryLocation::getBeforeOrAfter(Arg, I.getAAMetadata());
 
         // Skip accesses to local or constant memory as they don't impact the
         // externally visible mod/ref behavior.
@@ -202,21 +200,21 @@ static MemoryAccessKind checkFunctionMemoryAccess(Function &F, bool ThisBody,
           ReadsMemory = true;
       }
       continue;
-    } else if (LoadInst *LI = dyn_cast<LoadInst>(I)) {
+    } else if (LoadInst *LI = dyn_cast<LoadInst>(&I)) {
       // Ignore non-volatile loads from local memory. (Atomic is okay here.)
       if (!LI->isVolatile()) {
         MemoryLocation Loc = MemoryLocation::get(LI);
         if (AAR.pointsToConstantMemory(Loc, /*OrLocal=*/true))
           continue;
       }
-    } else if (StoreInst *SI = dyn_cast<StoreInst>(I)) {
+    } else if (StoreInst *SI = dyn_cast<StoreInst>(&I)) {
       // Ignore non-volatile stores to local memory. (Atomic is okay here.)
       if (!SI->isVolatile()) {
         MemoryLocation Loc = MemoryLocation::get(SI);
         if (AAR.pointsToConstantMemory(Loc, /*OrLocal=*/true))
           continue;
       }
-    } else if (VAArgInst *VI = dyn_cast<VAArgInst>(I)) {
+    } else if (VAArgInst *VI = dyn_cast<VAArgInst>(&I)) {
       // Ignore vaargs on local memory.
       MemoryLocation Loc = MemoryLocation::get(VI);
       if (AAR.pointsToConstantMemory(Loc, /*OrLocal=*/true))
@@ -227,10 +225,10 @@ static MemoryAccessKind checkFunctionMemoryAccess(Function &F, bool ThisBody,
     // read or write memory.
     //
     // Writes memory, remember that.
-    WritesMemory |= I->mayWriteToMemory();
+    WritesMemory |= I.mayWriteToMemory();
 
     // If this instruction may read memory, remember that.
-    ReadsMemory |= I->mayReadFromMemory();
+    ReadsMemory |= I.mayReadFromMemory();
   }
 
   if (WritesMemory) { 
@@ -1829,9 +1827,30 @@ PreservedAnalyses PostOrderFunctionAttrsPass::run(LazyCallGraph::SCC &C,
   if (ChangedFunctions.empty())
     return PreservedAnalyses::all();
 
+  // Invalidate analyses for modified functions so that we don't have to
+  // invalidate all analyses for all functions in this SCC.
+  PreservedAnalyses FuncPA;
+  // We haven't changed the CFG for modified functions.
+  FuncPA.preserveSet<CFGAnalyses>();
+  for (Function *Changed : ChangedFunctions) {
+    FAM.invalidate(*Changed, FuncPA);
+    // Also invalidate any direct callers of changed functions since analyses
+    // may care about attributes of direct callees. For example, MemorySSA cares
+    // about whether or not a call's callee modifies memory and queries that
+    // through function attributes.
+    for (auto *U : Changed->users()) {
+      if (auto *Call = dyn_cast<CallBase>(U)) {
+        if (Call->getCalledFunction() == Changed)
+          FAM.invalidate(*Call->getFunction(), FuncPA);
+      }
+    }
+  }
+
   PreservedAnalyses PA;
   // We have not added or removed functions.
   PA.preserve<FunctionAnalysisManagerCGSCCProxy>();
+  // We already invalidated all relevant function analyses above.
+  PA.preserveSet<AllAnalysesOn<Function>>();
   return PA;
 }
 

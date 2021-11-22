@@ -386,9 +386,8 @@ void HexagonCommonGEP::processGepInst(GetElementPtrInst *GepI,
   // dereferences the pointer operand.
   GepNode *PN = N;
   Type *PtrTy = GepI->getSourceElementType();
-  for (User::op_iterator OI = GepI->idx_begin()+1, OE = GepI->idx_end();
-       OI != OE; ++OI) {
-    Value *Op = *OI;
+  for (Use &U : llvm::drop_begin(GepI->indices())) {
+    Value *Op = U;
     GepNode *Nx = new (*Mem) GepNode;
     Nx->Parent = PN;  // Link Nx to the previous node.
     Nx->Flags |= GepNode::Internal | InBounds;

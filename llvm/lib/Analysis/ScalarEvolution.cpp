@@ -2601,6 +2601,19 @@ const SCEV *ScalarEvolution::getAddExpr(SmallVectorImpl<const SCEV *> &Ops,
     }
   }
 
+  // Canonicalize (-1 * urem X, Y) + X --> (Y * X/Y)
+  if (Ops.size() == 2) {
+    const SCEVMulExpr *Mul = dyn_cast<SCEVMulExpr>(Ops[0]);
+    if (Mul && Mul->getNumOperands() == 2 &&
+        Mul->getOperand(0)->isAllOnesValue()) {
+      const SCEV *X;
+      const SCEV *Y;
+      if (matchURem(Mul->getOperand(1), X, Y) && X == Ops[1]) {
+        return getMulExpr(Y, getUDivExpr(X, Y));
+      }
+    }
+  }
+
   // Skip past any other cast SCEVs.
   while (Idx < Ops.size() && Ops[Idx]->getSCEVType() < scAddExpr)
     ++Idx;
@@ -3983,6 +3996,21 @@ Type *ScalarEvolution::getEffectiveSCEVType(Type *Ty) const {
 Type *ScalarEvolution::getWiderType(Type *T1, Type *T2) const {
   return  getTypeSizeInBits(T1) >= getTypeSizeInBits(T2) ? T1 : T2;
 }
+
+bool ScalarEvolution::instructionCouldExistWitthOperands(const SCEV *A,
+                                                         const SCEV *B) {
+  /// For a valid use point to exist, the defining scope of one operand
+  /// must dominate the other.
+  bool PreciseA, PreciseB;
+  auto *ScopeA = getDefiningScopeBound({A}, PreciseA);
+  auto *ScopeB = getDefiningScopeBound({B}, PreciseB);
+  if (!PreciseA || !PreciseB)
+    // Can't tell.
+    return false;
+  return (ScopeA == ScopeB) || DT.dominates(ScopeA, ScopeB) ||
+    DT.dominates(ScopeB, ScopeA);
+}
+
 
 const SCEV *ScalarEvolution::getCouldNotCompute() {
   return CouldNotCompute.get();
@@ -6599,7 +6627,9 @@ static void collectUniqueOps(const SCEV *S,
 }
 
 const Instruction *
-ScalarEvolution::getDefiningScopeBound(ArrayRef<const SCEV *> Ops) {
+ScalarEvolution::getDefiningScopeBound(ArrayRef<const SCEV *> Ops,
+                                       bool &Precise) {
+  Precise = true;
   // Do a bounded search of the def relation of the requested SCEVs.
   SmallSet<const SCEV *, 16> Visited;
   SmallVector<const SCEV *> Worklist;
@@ -6607,8 +6637,10 @@ ScalarEvolution::getDefiningScopeBound(ArrayRef<const SCEV *> Ops) {
     if (!Visited.insert(S).second)
       return;
     // Threshold of 30 here is arbitrary.
-    if (Visited.size() > 30)
+    if (Visited.size() > 30) {
+      Precise = false;
       return;
+    }
     Worklist.push_back(S);
   };
 
@@ -6629,6 +6661,12 @@ ScalarEvolution::getDefiningScopeBound(ArrayRef<const SCEV *> Ops) {
     }
   }
   return Bound ? Bound : &*F.getEntryBlock().begin();
+}
+
+const Instruction *
+ScalarEvolution::getDefiningScopeBound(ArrayRef<const SCEV *> Ops) {
+  bool Discard;
+  return getDefiningScopeBound(Ops, Discard);
 }
 
 bool ScalarEvolution::isGuaranteedToTransferExecutionTo(const Instruction *A,
@@ -8278,6 +8316,32 @@ ScalarEvolution::computeExitLimitFromICmp(const Loop *L,
         if (!isa<SCEVCouldNotCompute>(Ret)) return Ret;
       }
 
+  // If this loop must exit based on this condition (or execute undefined
+  // behaviour), and we can prove the test sequence produced must repeat
+  // the same values on self-wrap of the IV, then we can infer that IV
+  // doesn't self wrap because if it did, we'd have an infinite (undefined)
+  // loop.
+  if (ControlsExit && isLoopInvariant(RHS, L) && loopHasNoAbnormalExits(L) &&
+      loopIsFiniteByAssumption(L)) {
+
+    // TODO: We can peel off any functions which are invertible *in L*.  Loop
+    // invariant terms are effectively constants for our purposes here.
+    auto *InnerLHS = LHS;
+    if (auto *ZExt = dyn_cast<SCEVZeroExtendExpr>(LHS))
+      InnerLHS = ZExt->getOperand();
+    if (const SCEVAddRecExpr *AR = dyn_cast<SCEVAddRecExpr>(InnerLHS)) {
+      auto *StrideC = dyn_cast<SCEVConstant>(AR->getStepRecurrence(*this));
+      if (!AR->hasNoSelfWrap() && AR->getLoop() == L && AR->isAffine() && 
+          StrideC && StrideC->getAPInt().isPowerOf2()) {
+        auto Flags = AR->getNoWrapFlags();
+        Flags = setFlags(Flags, SCEV::FlagNW);
+        SmallVector<const SCEV*> Operands{AR->operands()};
+        Flags = StrengthenNoWrapFlags(this, scAddRecExpr, Operands, Flags);
+        setNoWrapFlags(const_cast<SCEVAddRecExpr *>(AR), Flags);
+      }
+    }
+  }
+
   switch (Pred) {
   case ICmpInst::ICMP_NE: {                     // while (X != Y)
     // Convert to: while (X-Y != 0)
@@ -9615,9 +9679,7 @@ ScalarEvolution::howFarToZero(const SCEV *V, const Loop *L, bool ControlsExit,
   //   N = Distance (as unsigned)
   if (StepC->getValue()->isOne() || StepC->getValue()->isMinusOne()) {
     APInt MaxBECount = getUnsignedRangeMax(applyLoopGuards(Distance, L));
-    APInt MaxBECountBase = getUnsignedRangeMax(Distance);
-    if (MaxBECountBase.ult(MaxBECount))
-      MaxBECount = MaxBECountBase;
+    MaxBECount = APIntOps::umin(MaxBECount, getUnsignedRangeMax(Distance));
 
     // When a loop like "for (int i = 0; i != n; ++i) { /* body */ }" is rotated,
     // we end up with a loop whose backedge-taken count is n - 1.  Detect this
@@ -9650,11 +9712,7 @@ ScalarEvolution::howFarToZero(const SCEV *V, const Loop *L, bool ControlsExit,
     const SCEV *Max = getCouldNotCompute();
     if (Exact != getCouldNotCompute()) {
       APInt MaxInt = getUnsignedRangeMax(applyLoopGuards(Exact, L));
-      APInt BaseMaxInt = getUnsignedRangeMax(Exact);
-      if (BaseMaxInt.ult(MaxInt))
-        Max = getConstant(BaseMaxInt);
-      else
-        Max = getConstant(MaxInt);
+      Max = getConstant(APIntOps::umin(MaxInt, getUnsignedRangeMax(Exact)));
     }
     return ExitLimit(Exact, Max, false, Predicates);
   }
@@ -9662,9 +9720,12 @@ ScalarEvolution::howFarToZero(const SCEV *V, const Loop *L, bool ControlsExit,
   // Solve the general equation.
   const SCEV *E = SolveLinEquationWithOverflow(StepC->getAPInt(),
                                                getNegativeSCEV(Start), *this);
-  const SCEV *M = E == getCouldNotCompute()
-                      ? E
-                      : getConstant(getUnsignedRangeMax(E));
+
+  const SCEV *M = E;
+  if (E != getCouldNotCompute()) {
+    APInt MaxWithGuards = getUnsignedRangeMax(applyLoopGuards(E, L));
+    M = getConstant(APIntOps::umin(MaxWithGuards, getUnsignedRangeMax(E)));
+  }
   return ExitLimit(E, M, false, Predicates);
 }
 
@@ -11786,14 +11847,6 @@ ScalarEvolution::howManyLessThans(const SCEV *LHS, const SCEV *RHS,
     if (auto *ZExt = dyn_cast<SCEVZeroExtendExpr>(LHS)) {
       const SCEVAddRecExpr *AR = dyn_cast<SCEVAddRecExpr>(ZExt->getOperand());
       if (AR && AR->getLoop() == L && AR->isAffine()) {
-        auto Flags = AR->getNoWrapFlags();
-        if (!hasFlags(Flags, SCEV::FlagNW) && canAssumeNoSelfWrap(AR)) {
-          Flags = setFlags(Flags, SCEV::FlagNW);
-
-          SmallVector<const SCEV*> Operands{AR->operands()};
-          Flags = StrengthenNoWrapFlags(this, scAddRecExpr, Operands, Flags);
-        }
-
         auto canProveNUW = [&]() {
           if (!isLoopInvariant(RHS, L))
             return false;
@@ -11816,6 +11869,7 @@ ScalarEvolution::howManyLessThans(const SCEV *LHS, const SCEV *RHS,
           Limit = Limit.zext(OuterBitWidth);
           return getUnsignedRangeMax(applyLoopGuards(RHS, L)).ule(Limit);
         };
+        auto Flags = AR->getNoWrapFlags();
         if (!hasFlags(Flags, SCEV::FlagNUW) && canProveNUW())
           Flags = setFlags(Flags, SCEV::FlagNUW);
 
@@ -12375,7 +12429,7 @@ SCEVAddRecExpr::getPostIncExpr(ScalarEvolution &SE) const {
 }
 
 // Return true when S contains at least an undef value.
-static inline bool containsUndefs(const SCEV *S) {
+bool ScalarEvolution::containsUndefs(const SCEV *S) const {
   return SCEVExprContains(S, [](const SCEV *S) {
     if (const auto *SU = dyn_cast<SCEVUnknown>(S))
       return isa<UndefValue>(SU->getValue());
@@ -13696,54 +13750,51 @@ ScalarEvolution::computeSymbolicMaxBackedgeTakenCount(const Loop *L) {
   return getUMinFromMismatchedTypes(ExitCounts);
 }
 
-/// This rewriter is similar to SCEVParameterRewriter (it replaces SCEVUnknown
-/// components following the Map (Value -> SCEV)), but skips AddRecExpr because
-/// we cannot guarantee that the replacement is loop invariant in the loop of
-/// the AddRec.
+/// A rewriter to replace SCEV expressions in Map with the corresponding entry
+/// in the map. It skips AddRecExpr because we cannot guarantee that the
+/// replacement is loop invariant in the loop of the AddRec.
+///
+/// At the moment only rewriting SCEVUnknown and SCEVZeroExtendExpr is
+/// supported.
 class SCEVLoopGuardRewriter : public SCEVRewriteVisitor<SCEVLoopGuardRewriter> {
-  ValueToSCEVMapTy &Map;
+  const DenseMap<const SCEV *, const SCEV *> &Map;
 
 public:
-  SCEVLoopGuardRewriter(ScalarEvolution &SE, ValueToSCEVMapTy &M)
+  SCEVLoopGuardRewriter(ScalarEvolution &SE,
+                        DenseMap<const SCEV *, const SCEV *> &M)
       : SCEVRewriteVisitor(SE), Map(M) {}
 
   const SCEV *visitAddRecExpr(const SCEVAddRecExpr *Expr) { return Expr; }
 
   const SCEV *visitUnknown(const SCEVUnknown *Expr) {
-    auto I = Map.find(Expr->getValue());
+    auto I = Map.find(Expr);
     if (I == Map.end())
       return Expr;
+    return I->second;
+  }
+
+  const SCEV *visitZeroExtendExpr(const SCEVZeroExtendExpr *Expr) {
+    auto I = Map.find(Expr);
+    if (I == Map.end())
+      return SCEVRewriteVisitor<SCEVLoopGuardRewriter>::visitZeroExtendExpr(
+          Expr);
     return I->second;
   }
 };
 
 const SCEV *ScalarEvolution::applyLoopGuards(const SCEV *Expr, const Loop *L) {
+  SmallVector<const SCEV *> ExprsToRewrite;
   auto CollectCondition = [&](ICmpInst::Predicate Predicate, const SCEV *LHS,
-                              const SCEV *RHS, ValueToSCEVMapTy &RewriteMap) {
+                              const SCEV *RHS,
+                              DenseMap<const SCEV *, const SCEV *>
+                                  &RewriteMap) {
     // WARNING: It is generally unsound to apply any wrap flags to the proposed
     // replacement SCEV which isn't directly implied by the structure of that
     // SCEV.  In particular, using contextual facts to imply flags is *NOT*
     // legal.  See the scoping rules for flags in the header to understand why.
 
-    // If we have LHS == 0, check if LHS is computing a property of some unknown
-    // SCEV %v which we can rewrite %v to express explicitly.
-    const SCEVConstant *RHSC = dyn_cast<SCEVConstant>(RHS);
-    if (Predicate == CmpInst::ICMP_EQ && RHSC &&
-        RHSC->getValue()->isNullValue()) {
-      // If LHS is A % B, i.e. A % B == 0, rewrite A to (A /u B) * B to
-      // explicitly express that.
-      const SCEV *URemLHS = nullptr;
-      const SCEV *URemRHS = nullptr;
-      if (matchURem(LHS, URemLHS, URemRHS)) {
-        if (const SCEVUnknown *LHSUnknown = dyn_cast<SCEVUnknown>(URemLHS)) {
-          Value *V = LHSUnknown->getValue();
-          RewriteMap[V] = getMulExpr(getUDivExpr(URemLHS, URemRHS), URemRHS);
-          return;
-        }
-      }
-    }
-
-    if (!isa<SCEVUnknown>(LHS) && isa<SCEVUnknown>(RHS)) {
+    // If LHS is a constant, apply information to the other expression.
+    if (isa<SCEVConstant>(LHS)) {
       std::swap(LHS, RHS);
       Predicate = CmpInst::getSwappedPredicate(Predicate);
     }
@@ -13751,7 +13802,8 @@ const SCEV *ScalarEvolution::applyLoopGuards(const SCEV *Expr, const Loop *L) {
     // Check for a condition of the form (-C1 + X < C2).  InstCombine will
     // create this form when combining two checks of the form (X u< C2 + C1) and
     // (X >=u C1).
-    auto MatchRangeCheckIdiom = [this, Predicate, LHS, RHS, &RewriteMap]() {
+    auto MatchRangeCheckIdiom = [this, Predicate, LHS, RHS, &RewriteMap,
+                                 &ExprsToRewrite]() {
       auto *AddExpr = dyn_cast<SCEVAddExpr>(LHS);
       if (!AddExpr || AddExpr->getNumOperands() != 2)
         return false;
@@ -13769,26 +13821,55 @@ const SCEV *ScalarEvolution::applyLoopGuards(const SCEV *Expr, const Loop *L) {
       // Bail out, unless we have a non-wrapping, monotonic range.
       if (ExactRegion.isWrappedSet() || ExactRegion.isFullSet())
         return false;
-      auto I = RewriteMap.find(LHSUnknown->getValue());
+      auto I = RewriteMap.find(LHSUnknown);
       const SCEV *RewrittenLHS = I != RewriteMap.end() ? I->second : LHSUnknown;
-      RewriteMap[LHSUnknown->getValue()] = getUMaxExpr(
+      RewriteMap[LHSUnknown] = getUMaxExpr(
           getConstant(ExactRegion.getUnsignedMin()),
           getUMinExpr(RewrittenLHS, getConstant(ExactRegion.getUnsignedMax())));
+      ExprsToRewrite.push_back(LHSUnknown);
       return true;
     };
     if (MatchRangeCheckIdiom())
       return;
 
-    // For now, limit to conditions that provide information about unknown
-    // expressions. RHS also cannot contain add recurrences.
-    auto *LHSUnknown = dyn_cast<SCEVUnknown>(LHS);
-    if (!LHSUnknown || containsAddRecurrence(RHS))
+    // If we have LHS == 0, check if LHS is computing a property of some unknown
+    // SCEV %v which we can rewrite %v to express explicitly.
+    const SCEVConstant *RHSC = dyn_cast<SCEVConstant>(RHS);
+    if (Predicate == CmpInst::ICMP_EQ && RHSC &&
+        RHSC->getValue()->isNullValue()) {
+      // If LHS is A % B, i.e. A % B == 0, rewrite A to (A /u B) * B to
+      // explicitly express that.
+      const SCEV *URemLHS = nullptr;
+      const SCEV *URemRHS = nullptr;
+      if (matchURem(LHS, URemLHS, URemRHS)) {
+        if (const SCEVUnknown *LHSUnknown = dyn_cast<SCEVUnknown>(URemLHS)) {
+          auto Multiple = getMulExpr(getUDivExpr(URemLHS, URemRHS), URemRHS);
+          RewriteMap[LHSUnknown] = Multiple;
+          ExprsToRewrite.push_back(LHSUnknown);
+          return;
+        }
+      }
+    }
+
+    // Do not apply information for constants or if RHS contains an AddRec.
+    if (isa<SCEVConstant>(LHS) || containsAddRecurrence(RHS))
+      return;
+
+    // If RHS is SCEVUnknown, make sure the information is applied to it.
+    if (!isa<SCEVUnknown>(LHS) && isa<SCEVUnknown>(RHS)) {
+      std::swap(LHS, RHS);
+      Predicate = CmpInst::getSwappedPredicate(Predicate);
+    }
+
+    // Limit to expressions that can be rewritten.
+    if (!isa<SCEVUnknown>(LHS) && !isa<SCEVZeroExtendExpr>(LHS))
       return;
 
     // Check whether LHS has already been rewritten. In that case we want to
     // chain further rewrites onto the already rewritten value.
-    auto I = RewriteMap.find(LHSUnknown->getValue());
+    auto I = RewriteMap.find(LHS);
     const SCEV *RewrittenLHS = I != RewriteMap.end() ? I->second : LHS;
+
     const SCEV *RewrittenRHS = nullptr;
     switch (Predicate) {
     case CmpInst::ICMP_ULT:
@@ -13832,14 +13913,17 @@ const SCEV *ScalarEvolution::applyLoopGuards(const SCEV *Expr, const Loop *L) {
       break;
     }
 
-    if (RewrittenRHS)
-      RewriteMap[LHSUnknown->getValue()] = RewrittenRHS;
+    if (RewrittenRHS) {
+      RewriteMap[LHS] = RewrittenRHS;
+      if (LHS == RewrittenLHS)
+        ExprsToRewrite.push_back(LHS);
+    }
   };
   // Starting at the loop predecessor, climb up the predecessor chain, as long
   // as there are predecessors that can be found that have unique successors
   // leading to the original header.
   // TODO: share this logic with isLoopEntryGuardedByCond.
-  ValueToSCEVMapTy RewriteMap;
+  DenseMap<const SCEV *, const SCEV *> RewriteMap;
   for (std::pair<const BasicBlock *, const BasicBlock *> Pair(
            L->getLoopPredecessor(), L->getHeader());
        Pair.first; Pair = getPredecessorWithUniqueSuccessorForBB(Pair.first)) {
@@ -13889,6 +13973,19 @@ const SCEV *ScalarEvolution::applyLoopGuards(const SCEV *Expr, const Loop *L) {
 
   if (RewriteMap.empty())
     return Expr;
+
+  // Now that all rewrite information is collect, rewrite the collected
+  // expressions with the information in the map. This applies information to
+  // sub-expressions.
+  if (ExprsToRewrite.size() > 1) {
+    for (const SCEV *Expr : ExprsToRewrite) {
+      const SCEV *RewriteTo = RewriteMap[Expr];
+      RewriteMap.erase(Expr);
+      SCEVLoopGuardRewriter Rewriter(*this, RewriteMap);
+      RewriteMap.insert({Expr, Rewriter.visit(RewriteTo)});
+    }
+  }
+
   SCEVLoopGuardRewriter Rewriter(*this, RewriteMap);
   return Rewriter.visit(Expr);
 }

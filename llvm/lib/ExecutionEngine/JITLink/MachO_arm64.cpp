@@ -160,7 +160,7 @@ private:
       auto ToSymbolSec = findSectionByIndex(UnsignedRI.r_symbolnum - 1);
       if (!ToSymbolSec)
         return ToSymbolSec.takeError();
-      ToSymbol = getSymbolByAddress(ToSymbolSec->Address);
+      ToSymbol = getSymbolByAddress(*ToSymbolSec, ToSymbolSec->Address);
       assert(ToSymbol && "No symbol for section");
       FixupValue -= ToSymbol->getAddress();
     }
@@ -205,14 +205,18 @@ private:
         continue;
       }
 
-      // Skip relocations for debug symbols.
+      auto NSec =
+          findSectionByIndex(Obj.getSectionIndex(S.getRawDataRefImpl()));
+      if (!NSec)
+        return NSec.takeError();
+
+      // Skip relocations for MachO sections without corresponding graph
+      // sections.
       {
-        auto &NSec =
-            getSectionByIndex(Obj.getSectionIndex(S.getRawDataRefImpl()));
-        if (!NSec.GraphSection) {
+        if (!NSec->GraphSection) {
           LLVM_DEBUG({
             dbgs() << "  Skipping relocations for MachO section "
-                   << NSec.SegName << "/" << NSec.SectName
+                   << NSec->SegName << "/" << NSec->SectName
                    << " which has no associated graph section\n";
           });
           continue;
@@ -224,25 +228,22 @@ private:
 
         MachO::relocation_info RI = getRelocationInfo(RelItr);
 
-        // Sanity check the relocation kind.
+        // Validate the relocation kind.
         auto Kind = getRelocationKind(RI);
         if (!Kind)
           return Kind.takeError();
 
         // Find the address of the value to fix up.
         JITTargetAddress FixupAddress = SectionAddress + (uint32_t)RI.r_address;
-
         LLVM_DEBUG({
-          auto &NSec =
-              getSectionByIndex(Obj.getSectionIndex(S.getRawDataRefImpl()));
-          dbgs() << "  " << NSec.SectName << " + "
+          dbgs() << "  " << NSec->SectName << " + "
                  << formatv("{0:x8}", RI.r_address) << ":\n";
         });
 
         // Find the block that the fixup points to.
         Block *BlockToFix = nullptr;
         {
-          auto SymbolToFixOrErr = findSymbolByAddress(FixupAddress);
+          auto SymbolToFixOrErr = findSymbolByAddress(*NSec, FixupAddress);
           if (!SymbolToFixOrErr)
             return SymbolToFixOrErr.takeError();
           BlockToFix = &SymbolToFixOrErr->getBlock();
@@ -324,7 +325,11 @@ private:
           break;
         case Pointer64Anon: {
           JITTargetAddress TargetAddress = *(const ulittle64_t *)FixupContent;
-          if (auto TargetSymbolOrErr = findSymbolByAddress(TargetAddress))
+          auto TargetNSec = findSectionByIndex(RI.r_symbolnum - 1);
+          if (!TargetNSec)
+            return TargetNSec.takeError();
+          if (auto TargetSymbolOrErr =
+                  findSymbolByAddress(*TargetNSec, TargetAddress))
             TargetSymbol = &*TargetSymbolOrErr;
           else
             return TargetSymbolOrErr.takeError();

@@ -94,13 +94,13 @@ OPTIONS
 .. option:: -sample
 
  Specify that the input profile is a sample-based profile.
- 
+
  The format of the generated file can be generated in one of three ways:
 
  .. option:: -binary (default)
 
  Emit the profile using a binary encoding. For instrumentation-based profile
- the output format is the indexed binary format. 
+ the output format is the indexed binary format.
 
  .. option:: -extbinary
 

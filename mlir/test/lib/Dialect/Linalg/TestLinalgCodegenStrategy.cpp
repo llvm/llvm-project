@@ -125,6 +125,10 @@ struct TestLinalgCodegenStrategy
       *this, "unroll-vector-transfers",
       llvm::cl::desc("Enable full unrolling of vector.transfer operations"),
       llvm::cl::init(false)};
+  Option<bool> runEnablePass{
+      *this, "run-enable-pass",
+      llvm::cl::desc("Run the enable pass between transformations"),
+      llvm::cl::init(true)};
   Option<std::string> anchorOpName{
       *this, "anchor-op",
       llvm::cl::desc(
@@ -142,14 +146,6 @@ struct TestLinalgCodegenStrategy
           "latch on."),
       llvm::cl::init("")};
 };
-
-// For now, just assume it is the zero of type.
-// In the future, it should be the zero of type + op.
-static Value getNeutralOfLinalgOp(OpBuilder &b, OpOperand &op) {
-  auto t = getElementTypeOrSelf(op.get());
-  return b.create<arith::ConstantOp>(op.getOwner()->getLoc(), t,
-                                     b.getZeroAttr(t));
-}
 
 void TestLinalgCodegenStrategy::runStrategy(
     LinalgTilingOptions tilingOptions,
@@ -186,15 +182,22 @@ void TestLinalgCodegenStrategy::runStrategy(
               .enableTransferPartialRewrite()
               .enableContractionLowering()
               .enableTransferToSCFConversion());
-
   // Created a nested OpPassManager and run.
   FuncOp funcOp = getFunction();
   OpPassManager dynamicPM("builtin.func");
-  strategy.configurePassPipeline(dynamicPM, funcOp.getContext());
+  strategy.configurePassPipeline(dynamicPM, funcOp.getContext(), runEnablePass);
   if (failed(runPipeline(dynamicPM, funcOp)))
     return signalPassFailure();
 }
 } // end anonymous namespace
+
+// For now, just assume it is the zero of type.
+// In the future, it should be the zero of type + op.
+static Value getNeutralOfLinalgOp(OpBuilder &b, OpOperand &op) {
+  auto t = getElementTypeOrSelf(op.get());
+  return b.create<arith::ConstantOp>(op.getOwner()->getLoc(), t,
+                                     b.getZeroAttr(t));
+}
 
 /// Apply transformations specified as patterns.
 void TestLinalgCodegenStrategy::runOnFunction() {

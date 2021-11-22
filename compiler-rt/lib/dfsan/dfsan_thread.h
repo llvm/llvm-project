@@ -15,6 +15,7 @@
 
 #include "dfsan_allocator.h"
 #include "sanitizer_common/sanitizer_common.h"
+#include "sanitizer_common/sanitizer_posix.h"
 
 namespace __dfsan {
 
@@ -45,6 +46,7 @@ class DFsanThread {
   DFsanThreadLocalMallocStorage &malloc_storage() { return malloc_storage_; }
 
   int destructor_iterations_;
+  __sanitizer_sigset_t starting_sigset_;
 
  private:
   void SetThreadStackAndTls();

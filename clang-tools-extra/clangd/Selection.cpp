@@ -346,7 +346,7 @@ private:
             SM.getTopMacroCallerLoc(Batch.back().location());
         return testTokenRange(SM.getFileOffset(ArgStart),
                               SM.getFileOffset(ArgEnd));
-      } else {
+      } else { // NOLINT(llvm-else-after-return)
         /* fall through and treat as part of the macro body */
       }
     }
@@ -357,8 +357,7 @@ private:
     if (Expansion.first == SelFile)
       // FIXME: also check ( and ) for function-like macros?
       return testToken(Expansion.second);
-    else
-      return NoTokens;
+    return NoTokens;
   }
 
   // Is the closed token range [Begin, End] selected?
@@ -501,7 +500,7 @@ public:
   //  - those without source range information, we don't record those
   //  - those that can't be stored in DynTypedNode.
   bool TraverseDecl(Decl *X) {
-    if (X && isa<TranslationUnitDecl>(X))
+    if (llvm::isa_and_nonnull<TranslationUnitDecl>(X))
       return Base::TraverseDecl(X); // Already pushed by constructor.
     // Base::TraverseDecl will suppress children, but not this node itself.
     if (X && X->isImplicit())

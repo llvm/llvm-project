@@ -1845,7 +1845,8 @@ public:
         mlirOperationGetAttribute(operation->get(), index);
     return PyNamedAttribute(
         namedAttr.attribute,
-        std::string(mlirIdentifierStr(namedAttr.name).data));
+        std::string(mlirIdentifierStr(namedAttr.name).data,
+                    mlirIdentifierStr(namedAttr.name).length));
   }
 
   void dunderSetItem(const std::string &name, PyAttribute attr) {
@@ -2601,7 +2602,8 @@ void mlir::python::populateIRCore(py::module &m) {
              PyPrintAccumulator printAccum;
              printAccum.parts.append("NamedAttribute(");
              printAccum.parts.append(
-                 mlirIdentifierStr(self.namedAttr.name).data);
+                 py::str(mlirIdentifierStr(self.namedAttr.name).data,
+                         mlirIdentifierStr(self.namedAttr.name).length));
              printAccum.parts.append("=");
              mlirAttributePrint(self.namedAttr.attribute,
                                 printAccum.getCallback(),

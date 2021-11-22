@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=x86_64-unknown-unknown -stop-before livedebugvalues %s -o - \
+; RUN: llc -mtriple=x86_64-unknown-unknown -stop-before livedebugvalues %s -o - -experimental-debug-variable-locations=false \
 ; RUN:   | FileCheck %s
 ;
 ; Generated at -O1 from:

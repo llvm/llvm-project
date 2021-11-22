@@ -131,13 +131,13 @@ static void emitFactoryDef(llvm::StringRef structName,
 
   const char *getFieldInfo = R"(
   assert({0});
-  auto {0}_id = ::mlir::Identifier::get("{0}", context);
+  auto {0}_id = ::mlir::StringAttr::get(context, "{0}");
   fields.emplace_back({0}_id, {0});
 )";
 
   const char *getFieldInfoOptional = R"(
   if ({0}) {
-    auto {0}_id = ::mlir::Identifier::get("{0}", context);
+    auto {0}_id = ::mlir::StringAttr::get(context, "{0}");
     fields.emplace_back({0}_id, {0});
   }
 )";

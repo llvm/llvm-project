@@ -35,6 +35,8 @@ class IncrementalExecutor {
   llvm::orc::ThreadSafeContext &TSCtx;
 
 public:
+  enum SymbolNameKind { IRName, LinkerName };
+
   IncrementalExecutor(llvm::orc::ThreadSafeContext &TSC, llvm::Error &Err,
                       const llvm::Triple &Triple);
   ~IncrementalExecutor();
@@ -42,7 +44,7 @@ public:
   llvm::Error addModule(std::unique_ptr<llvm::Module> M);
   llvm::Error runCtors() const;
   llvm::Expected<llvm::JITTargetAddress>
-  getSymbolAddress(llvm::StringRef UnmangledName) const;
+  getSymbolAddress(llvm::StringRef Name, SymbolNameKind NameKind) const;
 };
 
 } // end namespace clang

@@ -417,6 +417,19 @@ module std [system] {
     header "condition_variable"
     export *
   }
+  module coroutine {
+    requires coroutines
+    header "coroutine"
+    export compare
+    export *
+
+    module __coroutine {
+      module coroutine_handle             { private header "__coroutine/coroutine_handle.h"             }
+      module coroutine_traits             { private header "__coroutine/coroutine_traits.h"             }
+      module trivial_awaitables           { private header "__coroutine/trivial_awaitables.h"           }
+      module noop_coroutine_handle        { private header "__coroutine/noop_coroutine_handle.h"        }
+    }
+  }
   module deque {
     header "deque"
     export initializer_list
@@ -450,6 +463,7 @@ module std [system] {
       module format_fwd             { private header "__format/format_fwd.h"             }
       module format_parse_context   { private header "__format/format_parse_context.h"   }
       module format_string          { private header "__format/format_string.h"          }
+      module format_to_n_result     { private header "__format/format_to_n_result.h"     }
       module formatter              { private header "__format/formatter.h"              }
       module formatter_bool         { private header "__format/formatter_bool.h"         }
       module formatter_char         { private header "__format/formatter_char.h"         }
@@ -620,7 +634,6 @@ module std [system] {
       module auto_ptr                 { private header "__memory/auto_ptr.h"                 }
       module compressed_pair          { private header "__memory/compressed_pair.h"          }
       module construct_at             { private header "__memory/construct_at.h"             }
-      module pointer_safety           { private header "__memory/pointer_safety.h"           }
       module pointer_traits           { private header "__memory/pointer_traits.h"           }
       module raw_storage_iterator     { private header "__memory/raw_storage_iterator.h"     }
       module shared_ptr               { private header "__memory/shared_ptr.h"               }
@@ -786,6 +799,10 @@ module std [system] {
   module thread {
     header "thread"
     export *
+
+    module __thread {
+      module poll_with_backoff { private header "__thread/poll_with_backoff.h" }
+    }
   }
   module tuple {
     header "tuple"

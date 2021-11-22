@@ -415,7 +415,7 @@ namespace PR33222 {
 
 namespace qualified_friend_no_match {
   void f(int); // expected-note {{type mismatch at 1st parameter}}
-  template<typename T> void f(T*); // expected-note {{could not match 'type-parameter-0-0 *' against 'double'}}
+  template<typename T> void f(T*); // expected-note {{could not match 'T *' against 'double'}}
   struct X {
     friend void qualified_friend_no_match::f(double); // expected-error {{friend declaration of 'f' does not match any declaration in namespace 'qualified_friend_no_match'}}
     friend void qualified_friend_no_match::g(); // expected-error {{friend declaration of 'g' does not match any declaration in namespace 'qualified_friend_no_match'}}
@@ -423,7 +423,7 @@ namespace qualified_friend_no_match {
 
   struct Y {
     void f(int); // expected-note {{type mismatch at 1st parameter}}
-    template<typename T> void f(T*); // expected-note {{could not match 'type-parameter-0-0 *' against 'double'}}
+    template<typename T> void f(T*); // expected-note {{could not match 'T *' against 'double'}}
   };
   struct Z {
     friend void Y::f(double); // expected-error {{friend declaration of 'f' does not match any declaration in 'qualified_friend_no_match::Y'}}

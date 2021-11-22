@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/Linalg/IR/LinalgTypes.h"
+#include "mlir/Dialect/Linalg/ComprehensiveBufferize/BufferizableOpInterface.h"
 #include "mlir/Dialect/Linalg/IR/LinalgOps.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Dialect.h"
@@ -64,11 +65,13 @@ constexpr const ::llvm::StringLiteral
 
 /// Attribute name used to mark the bufferization layout for region
 /// arguments during linalg comprehensive bufferization.
-constexpr const ::llvm::StringLiteral LinalgDialect::kBufferLayoutAttrName;
+constexpr const ::llvm::StringLiteral
+    comprehensive_bufferize::BufferizableOpInterface::kBufferLayoutAttrName;
 
 /// Attribute name used to mark region arguments that can be bufferized
 /// in-place during linalg comprehensive bufferization.
-constexpr const ::llvm::StringLiteral LinalgDialect::kInplaceableAttrName;
+constexpr const ::llvm::StringLiteral
+    comprehensive_bufferize::BufferizableOpInterface::kInplaceableAttrName;
 
 /// Trait to check if T provides a `regionBuilder` method.
 template <typename T, typename... Args>
@@ -147,28 +150,32 @@ void mlir::linalg::LinalgDialect::printType(Type type,
 
 LogicalResult LinalgDialect::verifyOperationAttribute(Operation *op,
                                                       NamedAttribute attr) {
-  if (attr.first == LinalgDialect::kInplaceableAttrName) {
-    if (!attr.second.isa<BoolAttr>()) {
-      return op->emitError() << "'" << LinalgDialect::kInplaceableAttrName
-                             << "' is expected to be a boolean attribute";
+  using comprehensive_bufferize::BufferizableOpInterface;
+
+  if (attr.getName() == BufferizableOpInterface::kInplaceableAttrName) {
+    if (!attr.getValue().isa<BoolAttr>()) {
+      return op->emitError()
+             << "'" << BufferizableOpInterface::kInplaceableAttrName
+             << "' is expected to be a boolean attribute";
     }
     if (!op->hasTrait<OpTrait::FunctionLike>())
-      return op->emitError() << "expected " << attr.first
+      return op->emitError() << "expected " << attr.getName()
                              << " to be used on function-like operations";
     return success();
   }
-  if (attr.first == LinalgDialect::kBufferLayoutAttrName) {
-    if (!attr.second.isa<AffineMapAttr>()) {
-      return op->emitError() << "'" << LinalgDialect::kBufferLayoutAttrName
-                             << "' is expected to be a affine map attribute";
+  if (attr.getName() == BufferizableOpInterface::kBufferLayoutAttrName) {
+    if (!attr.getValue().isa<AffineMapAttr>()) {
+      return op->emitError()
+             << "'" << BufferizableOpInterface::kBufferLayoutAttrName
+             << "' is expected to be a affine map attribute";
     }
     if (!op->hasTrait<OpTrait::FunctionLike>())
-      return op->emitError() << "expected " << attr.first
+      return op->emitError() << "expected " << attr.getName()
                              << " to be used on function-like operations";
     return success();
   }
-  if (attr.first == LinalgDialect::kMemoizedIndexingMapsAttrName)
+  if (attr.getName() == LinalgDialect::kMemoizedIndexingMapsAttrName)
     return success();
-  return op->emitError() << "attribute '" << attr.first
+  return op->emitError() << "attribute '" << attr.getName()
                          << "' not supported by the linalg dialect";
 }

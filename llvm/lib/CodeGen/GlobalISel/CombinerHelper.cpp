@@ -158,6 +158,15 @@ void CombinerHelper::replaceRegOpWith(MachineRegisterInfo &MRI,
   Observer.changedInstr(*FromRegOp.getParent());
 }
 
+void CombinerHelper::replaceOpcodeWith(MachineInstr &FromMI,
+                                       unsigned ToOpcode) const {
+  Observer.changingInstr(FromMI);
+
+  FromMI.setDesc(Builder.getTII().get(ToOpcode));
+
+  Observer.changedInstr(FromMI);
+}
+
 const RegisterBank *CombinerHelper::getRegBank(Register Reg) const {
   return RBI->getRegBank(Reg, MRI, *TRI);
 }

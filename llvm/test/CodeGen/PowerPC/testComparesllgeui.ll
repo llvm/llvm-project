@@ -75,7 +75,6 @@ entry:
   %conv = zext i1 %cmp to i32
   store i32 %conv, i32* @glob
   ret void
-; CHECK_LABEL: test_igeuc_store:
 }
 
 ; Function Attrs: norecurse nounwind

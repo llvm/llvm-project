@@ -272,7 +272,8 @@ class LinkerScript final {
 
   std::vector<size_t> getPhdrIndices(OutputSection *sec);
 
-  MemoryRegion *findMemoryRegion(OutputSection *sec);
+  std::pair<MemoryRegion *, MemoryRegion *>
+  findMemoryRegion(OutputSection *sec, MemoryRegion *hint);
 
   void switchTo(OutputSection *sec);
   uint64_t advance(uint64_t size, unsigned align);
@@ -316,6 +317,8 @@ public:
   void processSectionCommands();
   void processSymbolAssignments();
   void declareSymbols();
+
+  bool isDiscarded(const OutputSection *sec) const;
 
   // Used to handle INSERT AFTER statements.
   void processInsertCommands();

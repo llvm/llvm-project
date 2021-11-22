@@ -10,11 +10,11 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "mlir/TableGen/Class.h"
 #include "mlir/TableGen/CodeGenHelpers.h"
 #include "mlir/TableGen/Format.h"
 #include "mlir/TableGen/GenInfo.h"
 #include "mlir/TableGen/Interfaces.h"
-#include "mlir/TableGen/OpClass.h"
 #include "mlir/TableGen/Operator.h"
 #include "mlir/TableGen/Trait.h"
 #include "llvm/ADT/Optional.h"
@@ -208,9 +208,9 @@ static void emitDialectDecl(Dialect &dialect,
 
     // Check for any attributes/types registered to this dialect.  If there are,
     // add the hooks for parsing/printing.
-    if (!dialectAttrs.empty())
+    if (!dialectAttrs.empty() || dialect.useDefaultAttributePrinterParser())
       os << attrParserDecl;
-    if (!dialectTypes.empty())
+    if (!dialectTypes.empty() || dialect.useDefaultTypePrinterParser())
       os << typeParserDecl;
 
     // Add the decls for the various features of the dialect.

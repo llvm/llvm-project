@@ -2,6 +2,8 @@
 // RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sve -mvscale-min=4 -mvscale-max=4 -flax-vector-conversions=integer -fallow-half-arguments-and-returns -ffreestanding -fsyntax-only -verify=lax-vector-integer %s
 // RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sve -mvscale-min=4 -mvscale-max=4 -flax-vector-conversions=all -fallow-half-arguments-and-returns -ffreestanding -fsyntax-only -verify=lax-vector-all %s
 
+// REQUIRES: aarch64-registered-target || arm-registered-target
+
 #include <arm_sve.h>
 
 #define N __ARM_FEATURE_SVE_BITS

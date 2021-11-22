@@ -80,7 +80,7 @@ void Pass::printAsTextualPipeline(raw_ostream &os) {
 namespace mlir {
 namespace detail {
 struct OpPassManagerImpl {
-  OpPassManagerImpl(Identifier identifier, OpPassManager::Nesting nesting)
+  OpPassManagerImpl(StringAttr identifier, OpPassManager::Nesting nesting)
       : name(identifier.str()), identifier(identifier),
         initializationGeneration(0), nesting(nesting) {}
   OpPassManagerImpl(StringRef name, OpPassManager::Nesting nesting)
@@ -91,7 +91,7 @@ struct OpPassManagerImpl {
 
   /// Nest a new operation pass manager for the given operation kind under this
   /// pass manager.
-  OpPassManager &nest(Identifier nestedName);
+  OpPassManager &nest(StringAttr nestedName);
   OpPassManager &nest(StringRef nestedName);
 
   /// Add the given pass to this pass manager. If this pass has a concrete
@@ -107,9 +107,9 @@ struct OpPassManagerImpl {
   void coalesceAdjacentAdaptorPasses();
 
   /// Return the operation name of this pass manager as an identifier.
-  Identifier getOpName(MLIRContext &context) {
+  StringAttr getOpName(MLIRContext &context) {
     if (!identifier)
-      identifier = Identifier::get(name, &context);
+      identifier = StringAttr::get(name, &context);
     return *identifier;
   }
 
@@ -118,7 +118,7 @@ struct OpPassManagerImpl {
 
   /// The cached identifier (internalized in the context) for the name of the
   /// operation that passes of this pass manager operate on.
-  Optional<Identifier> identifier;
+  Optional<StringAttr> identifier;
 
   /// The set of passes to run as part of this pass manager.
   std::vector<std::unique_ptr<Pass>> passes;
@@ -141,7 +141,7 @@ void OpPassManagerImpl::mergeInto(OpPassManagerImpl &rhs) {
   passes.clear();
 }
 
-OpPassManager &OpPassManagerImpl::nest(Identifier nestedName) {
+OpPassManager &OpPassManagerImpl::nest(StringAttr nestedName) {
   OpPassManager nested(nestedName, nesting);
   auto *adaptor = new OpToOpPassAdaptor(std::move(nested));
   addPass(std::unique_ptr<Pass>(adaptor));
@@ -219,14 +219,14 @@ void OpPassManagerImpl::coalesceAdjacentAdaptorPasses() {
 // OpPassManager
 //===----------------------------------------------------------------------===//
 
-OpPassManager::OpPassManager(Identifier name, Nesting nesting)
+OpPassManager::OpPassManager(StringAttr name, Nesting nesting)
     : impl(new OpPassManagerImpl(name, nesting)) {}
 OpPassManager::OpPassManager(StringRef name, Nesting nesting)
     : impl(new OpPassManagerImpl(name, nesting)) {}
 OpPassManager::OpPassManager(OpPassManager &&rhs) : impl(std::move(rhs.impl)) {}
 OpPassManager::OpPassManager(const OpPassManager &rhs) { *this = rhs; }
 OpPassManager &OpPassManager::operator=(const OpPassManager &rhs) {
-  impl.reset(new OpPassManagerImpl(rhs.impl->name, rhs.impl->nesting));
+  impl = std::make_unique<OpPassManagerImpl>(rhs.impl->name, rhs.impl->nesting);
   impl->initializationGeneration = rhs.impl->initializationGeneration;
   for (auto &pass : rhs.impl->passes) {
     auto newPass = pass->clone();
@@ -254,7 +254,7 @@ OpPassManager::const_pass_iterator OpPassManager::end() const {
 
 /// Nest a new operation pass manager for the given operation kind under this
 /// pass manager.
-OpPassManager &OpPassManager::nest(Identifier nestedName) {
+OpPassManager &OpPassManager::nest(StringAttr nestedName) {
   return impl->nest(nestedName);
 }
 OpPassManager &OpPassManager::nest(StringRef nestedName) {
@@ -279,7 +279,7 @@ OpPassManagerImpl &OpPassManager::getImpl() { return *impl; }
 StringRef OpPassManager::getOpName() const { return impl->name; }
 
 /// Return the operation name that this pass manager operates on.
-Identifier OpPassManager::getOpName(MLIRContext &context) const {
+StringAttr OpPassManager::getOpName(MLIRContext &context) const {
   return impl->getOpName(context);
 }
 
@@ -468,7 +468,7 @@ static OpPassManager *findPassManagerFor(MutableArrayRef<OpPassManager> mgrs,
 /// Find an operation pass manager that can operate on an operation of the given
 /// type, or nullptr if one does not exist.
 static OpPassManager *findPassManagerFor(MutableArrayRef<OpPassManager> mgrs,
-                                         Identifier name,
+                                         StringAttr name,
                                          MLIRContext &context) {
   auto it = llvm::find_if(
       mgrs, [&](OpPassManager &mgr) { return mgr.getOpName(context) == name; });
@@ -630,7 +630,7 @@ void OpToOpPassAdaptor::runOnOperationAsyncImpl(bool verifyPasses) {
 
 PassManager::PassManager(MLIRContext *ctx, Nesting nesting,
                          StringRef operationName)
-    : OpPassManager(Identifier::get(operationName, ctx), nesting), context(ctx),
+    : OpPassManager(StringAttr::get(ctx, operationName), nesting), context(ctx),
       initializationKey(DenseMapInfo<llvm::hash_code>::getTombstoneKey()),
       passTiming(false), verifyPasses(true) {}
 
@@ -794,7 +794,7 @@ PassInstrumentor::~PassInstrumentor() {}
 
 /// See PassInstrumentation::runBeforePipeline for details.
 void PassInstrumentor::runBeforePipeline(
-    Identifier name,
+    StringAttr name,
     const PassInstrumentation::PipelineParentInfo &parentInfo) {
   llvm::sys::SmartScopedLock<true> instrumentationLock(impl->mutex);
   for (auto &instr : impl->instrumentations)
@@ -803,7 +803,7 @@ void PassInstrumentor::runBeforePipeline(
 
 /// See PassInstrumentation::runAfterPipeline for details.
 void PassInstrumentor::runAfterPipeline(
-    Identifier name,
+    StringAttr name,
     const PassInstrumentation::PipelineParentInfo &parentInfo) {
   llvm::sys::SmartScopedLock<true> instrumentationLock(impl->mutex);
   for (auto &instr : llvm::reverse(impl->instrumentations))

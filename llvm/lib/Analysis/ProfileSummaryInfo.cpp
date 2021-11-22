@@ -103,7 +103,7 @@ bool ProfileSummaryInfo::isFunctionEntryHot(const Function *F) const {
   // FIXME: The heuristic used below for determining hotness is based on
   // preliminary SPEC tuning for inliner. This will eventually be a
   // convenience method that calls isHotCount.
-  return FunctionCount && isHotCount(FunctionCount.getCount());
+  return FunctionCount && isHotCount(FunctionCount->getCount());
 }
 
 /// Returns true if the function contains hot code. This can include a hot
@@ -116,7 +116,7 @@ bool ProfileSummaryInfo::isFunctionHotInCallGraph(
   if (!F || !hasProfileSummary())
     return false;
   if (auto FunctionCount = F->getEntryCount())
-    if (isHotCount(FunctionCount.getCount()))
+    if (isHotCount(FunctionCount->getCount()))
       return true;
 
   if (hasSampleProfile()) {
@@ -145,7 +145,7 @@ bool ProfileSummaryInfo::isFunctionColdInCallGraph(
   if (!F || !hasProfileSummary())
     return false;
   if (auto FunctionCount = F->getEntryCount())
-    if (!isColdCount(FunctionCount.getCount()))
+    if (!isColdCount(FunctionCount->getCount()))
       return false;
 
   if (hasSampleProfile()) {
@@ -176,10 +176,10 @@ bool ProfileSummaryInfo::isFunctionHotOrColdInCallGraphNthPercentile(
     return false;
   if (auto FunctionCount = F->getEntryCount()) {
     if (isHot &&
-        isHotCountNthPercentile(PercentileCutoff, FunctionCount.getCount()))
+        isHotCountNthPercentile(PercentileCutoff, FunctionCount->getCount()))
       return true;
     if (!isHot &&
-        !isColdCountNthPercentile(PercentileCutoff, FunctionCount.getCount()))
+        !isColdCountNthPercentile(PercentileCutoff, FunctionCount->getCount()))
       return false;
   }
   if (hasSampleProfile()) {
@@ -230,7 +230,7 @@ bool ProfileSummaryInfo::isFunctionEntryCold(const Function *F) const {
   // FIXME: The heuristic used below for determining coldness is based on
   // preliminary SPEC tuning for inliner. This will eventually be a
   // convenience method that calls isHotCount.
-  return FunctionCount && isColdCount(FunctionCount.getCount());
+  return FunctionCount && isColdCount(FunctionCount->getCount());
 }
 
 /// Compute the hot and cold thresholds.

@@ -1,7 +1,7 @@
 ; For some reason, the output when targetting sparc is not quite as expected.
 ; XFAIL: sparc
 
-; RUN: %llc_dwarf -O0 -filetype=obj -dwarf-linkage-names=All < %s | llvm-dwarfdump -debug-info - | FileCheck %s
+; RUN: %llc_dwarf -O0 -filetype=obj -dwarf-linkage-names=All < %s | llvm-dwarfdump -debug-info - | FileCheck %s --implicit-check-not=DW_TAG
 
 ; IR generated from clang -O0 with:
 ; struct C {
@@ -11,42 +11,38 @@
 ; void fun4() { b && (C(), 1); }
 ; __attribute__((always_inline)) C::~C() { }
 
-; CHECK: DW_TAG_structure_type
-; CHECK-NOT: DW_TAG
-; CHECK:   DW_AT_name ("C")
-; CHECK-NOT: {{DW_TAG|NULL}}
+; CHECK: DW_TAG_compile_unit
+
+; CHECK:   DW_TAG_structure_type
+; CHECK:     DW_AT_name ("C")
+; CHECK:     DW_TAG_subprogram
+; CHECK:       DW_AT_name ("~C")
+; CHECK:       DW_TAG_formal_parameter
+; CHECK:   DW_TAG_pointer_type
+
 ; CHECK:   DW_TAG_subprogram
-; CHECK-NOT: DW_TAG
-; CHECK:     DW_AT_name ("~C")
-
-; CHECK:  DW_TAG_subprogram
-; CHECK-NOT: DW_TAG
-; CHECK:   DW_AT_linkage_name ("_ZN1CD1Ev")
-; CHECK-NOT: {{DW_TAG|NULL}}
-; CHECK:  DW_TAG_formal_parameter
-; CHECK-NOT: DW_TAG
-; CHECK:     DW_AT_name ("this")
-
-; CHECK: DW_TAG_subprogram
-; CHECK-NOT: DW_TAG
-; CHECK:   DW_AT_name ("fun4")
-; CHECK-NOT: {{DW_TAG|NULL}}
-; CHECK:   DW_TAG_inlined_subroutine
-; CHECK-NOT: DW_TAG
-; CHECK:     DW_AT_abstract_origin {{.*}} "_ZN1CD1Ev"
-; CHECK-NOT: {{DW_TAG|NULL}}
+; CHECK:     DW_AT_linkage_name ("_ZN1CD1Ev")
 ; CHECK:     DW_TAG_formal_parameter
-; CHECK-NOT: DW_TAG
+; CHECK:       DW_AT_name ("this")
+; CHECK:   DW_TAG_pointer_type
+
+; CHECK:   DW_TAG_subprogram
+; CHECK:     DW_AT_name ("fun4")
+; CHECK:     DW_TAG_inlined_subroutine
+; CHECK:       DW_AT_abstract_origin {{.*}} "_ZN1CD1Ev"
+; CHECK:       DW_TAG_formal_parameter
+; CHECK:         DW_AT_abstract_origin {{.*}} "this"
+
+; CHECK:   DW_TAG_subprogram
+; CHECK:     DW_AT_abstract_origin {{.*}} "_ZN1CD1Ev"
+; CHECK:     DW_TAG_formal_parameter
 ; CHECK:       DW_AT_abstract_origin {{.*}} "this"
 
-; FIXME: D2 is actually inlined into D1 but doesn't show up here, possibly due
-; to there being no work in D2 (calling another member function from the dtor
-; causes D2 to show up, calling a free function doesn't).
-
-; CHECK-NOT: DW_TAG
-; CHECK:     NULL
-; CHECK-NOT: DW_TAG
-; CHECK:   NULL
+; CHECK:   DW_TAG_subprogram
+; CHECK:     DW_AT_linkage_name  ("_ZN1CD2Ev")
+; CHECK:     DW_AT_specification {{.*}} "~C"
+; CHECK:     DW_TAG_formal_parameter
+; CHECK:       DW_AT_name  ("this")
 
 %struct.C = type { i8 }
 

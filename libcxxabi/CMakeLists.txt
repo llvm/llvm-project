@@ -417,7 +417,6 @@ if (NOT LIBCXXABI_ENABLE_THREADS)
                         " is also set to ON.")
   endif()
   add_definitions(-D_LIBCXXABI_HAS_NO_THREADS)
-  add_definitions(-D_LIBCPP_HAS_NO_THREADS)
 endif()
 
 if (LIBCXXABI_HAS_EXTERNAL_THREAD_API)
@@ -518,6 +517,12 @@ endif()
 string(REPLACE ";" " " LIBCXXABI_CXX_FLAGS "${LIBCXXABI_CXX_FLAGS}")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${LIBCXXABI_CXX_FLAGS}")
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${LIBCXXABI_C_FLAGS}")
+
+# On AIX, avoid picking up VMX extensions(i.e. vec_malloc) which would change
+# the default alignment of the allocators here.
+if (UNIX AND ${CMAKE_SYSTEM_NAME} MATCHES "AIX")
+  add_definitions("-D_XOPEN_SOURCE=700")
+endif()
 
 #===============================================================================
 # Setup Source Code

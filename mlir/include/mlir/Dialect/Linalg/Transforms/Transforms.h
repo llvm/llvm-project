@@ -16,7 +16,7 @@
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "mlir/Dialect/Vector/VectorTransforms.h"
-#include "mlir/IR/Identifier.h"
+#include "mlir/Dialect/X86Vector/Transforms.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Transforms/Bufferize.h"
 #include "llvm/ADT/SmallBitVector.h"
@@ -425,18 +425,19 @@ struct LinalgTransformationFilter {
   using FilterFunction = std::function<LogicalResult(Operation *)>;
 
   explicit LinalgTransformationFilter(
-      ArrayRef<Identifier> matchDisjunction = {},
-      Optional<Identifier> replacement = None);
+      ArrayRef<StringAttr> matchDisjunction = {},
+      Optional<StringAttr> replacement = None);
 
   explicit LinalgTransformationFilter(
-      FilterFunction f, ArrayRef<Identifier> matchDisjunction = {},
-      Optional<Identifier> replacement = None);
+      FilterFunction f, ArrayRef<StringAttr> matchDisjunction = {},
+      Optional<StringAttr> replacement = None);
 
   LinalgTransformationFilter(LinalgTransformationFilter &&) = default;
   LinalgTransformationFilter(const LinalgTransformationFilter &) = default;
   LogicalResult checkAndNotify(PatternRewriter &rewriter, Operation *op) const;
   void replaceLinalgTransformationFilter(PatternRewriter &rewriter,
                                          Operation *op) const;
+  bool hasReplacementFilter(Operation *op) const;
 
   LinalgTransformationFilter &addFilter(FilterFunction f) {
     if (f)
@@ -455,8 +456,8 @@ struct LinalgTransformationFilter {
 
 private:
   SmallVector<FilterFunction> filters;
-  SmallVector<Identifier> matchDisjunction;
-  Optional<Identifier> replacement;
+  SmallVector<StringAttr> matchDisjunction;
+  Optional<StringAttr> replacement;
   /// When set to true, if the attribute is not set, it will be treated as
   /// a match. Default is false.
   bool matchByDefault;
@@ -574,31 +575,6 @@ struct LinalgTilingOptions {
 
   LinalgTilingOptions &setDistributionTypes(ArrayRef<StringRef> types) {
     distributionTypes.assign(types.begin(), types.end());
-    return *this;
-  }
-
-  /// Callback returning the padding value to use for a given OpOperand or
-  /// failure for no padding. Padding operations are introduced if
-  /// `paddingValueComputationFunction` is set and does not return failure.
-  /// Padding all operands guarantees the operation is statically shaped and
-  /// thus can be vectorized.
-  PaddingValueComputationFunction paddingValueComputationFunction = nullptr;
-
-  LinalgTilingOptions &
-  setPaddingValueComputationFunction(PaddingValueComputationFunction fun) {
-    paddingValueComputationFunction = std::move(fun);
-    return *this;
-  }
-
-  /// Callback returning true if the pad tensor operation defining the given
-  /// OpOperand shall be marked as nofold to enable packing. A padding operation
-  /// is only marked nofold if `paddingNoFoldComputationFunction` is set and
-  /// returns true. Otherwise, the nofold attribute is set to false.
-  PaddingNoFoldComputationFunction paddingNoFoldComputationFunction = nullptr;
-
-  LinalgTilingOptions &
-  setPaddingNoFoldComputationFunction(PaddingNoFoldComputationFunction fun) {
-    paddingNoFoldComputationFunction = std::move(fun);
     return *this;
   }
 
@@ -1018,6 +994,12 @@ struct LinalgVectorLoweringOptions {
     transposeLowering = val;
     return *this;
   }
+  /// Enable AVX2-specific lowerings.
+  bool avx2Lowering = false;
+  LinalgVectorLoweringOptions &enableAVX2Lowering(bool val = true) {
+    avx2Lowering = val;
+    return *this;
+  }
 
   /// Configure the post staged-patterns late vector.transfer to scf
   /// conversion.
@@ -1032,6 +1014,13 @@ struct LinalgVectorLoweringOptions {
   LinalgVectorLoweringOptions &
   setVectorTransformsOptions(vector::VectorTransformsOptions options) {
     vectorTransformOptions = options;
+    return *this;
+  }
+  /// Configure specialized vector lowerings.
+  x86vector::avx2::LoweringOptions avx2LoweringOptions;
+  LinalgVectorLoweringOptions &
+  setAVX2LoweringOptions(x86vector::avx2::LoweringOptions options) {
+    avx2LoweringOptions = options;
     return *this;
   }
 };

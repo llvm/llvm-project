@@ -229,7 +229,8 @@ public:
     using LabeledConstructStmts = std::tuple<parser::AssociateStmt,
         parser::BlockStmt, parser::ChangeTeamStmt, parser::CriticalStmt,
         parser::IfThenStmt, parser::NonLabelDoStmt, parser::SelectCaseStmt,
-        parser::SelectRankStmt, parser::SelectTypeStmt>;
+        parser::SelectRankStmt, parser::SelectTypeStmt,
+        parser::WhereConstructStmt>;
     using LabeledConstructEndStmts = std::tuple<parser::EndAssociateStmt,
         parser::EndBlockStmt, parser::EndChangeTeamStmt,
         parser::EndCriticalStmt, parser::EndDoStmt, parser::EndForallStmt,

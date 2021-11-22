@@ -1,4 +1,6 @@
-// RUN: %clang_cc1 %s -emit-llvm -o - -O0 -triple spir-unknown-unknown | FileCheck %s
+// RUN: %clang_cc1 %s -cl-std=clc++1.0 -DGENERIC -emit-llvm -o - -O0 -triple spir-unknown-unknown | FileCheck %s
+// RUN: %clang_cc1 %s -cl-std=clc++2021 -DGENERIC -emit-llvm -o - -O0 -triple spir-unknown-unknown | FileCheck %s
+// RUN: %clang_cc1 %s -cl-std=clc++2021 -cl-ext=-__opencl_c_generic_address_space,-__opencl_c_pipes -emit-llvm -o - -O0 -triple spir-unknown-unknown | FileCheck %s
 
 // CHECK: %struct.X = type { i32 }
 
@@ -11,8 +13,10 @@ struct X {
   int x;
 
   // Local variables are handled in local_addrspace_init.clcpp
-  X() /*__generic*/ : x(0) {}
+  X() /*__generic or __private*/ : x(0) {}
+#if defined(GENERIC)
   X() __private : x(0) {}
+#endif
   X() __global : x(0) {}
   constexpr X() __constant : x(0) {}
   constexpr X(int x) __constant : x(x) {}

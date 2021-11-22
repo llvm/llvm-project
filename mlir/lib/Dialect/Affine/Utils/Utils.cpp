@@ -88,7 +88,7 @@ static AffineIfOp hoistAffineIfOp(AffineIfOp ifOp, Operation *hoistOverOp) {
   Operation *hoistOverOpClone = nullptr;
   // We use this unique name to identify/find  `ifOp`'s clone in the else
   // version.
-  Identifier idForIfOp = b.getIdentifier("__mlir_if_hoisting");
+  StringAttr idForIfOp = b.getStringAttr("__mlir_if_hoisting");
   operandMap.clear();
   b.setInsertionPointAfter(hoistOverOp);
   // We'll set an attribute to identify this op in a clone of this sub-tree.

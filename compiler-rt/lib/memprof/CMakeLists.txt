@@ -8,7 +8,9 @@ set(MEMPROF_SOURCES
   memprof_interceptors_memintrinsics.cpp
   memprof_linux.cpp
   memprof_malloc_linux.cpp
+  memprof_mibmap.cpp
   memprof_posix.cpp
+  memprof_rawprofile.cpp
   memprof_rtl.cpp
   memprof_shadow_setup.cpp
   memprof_stack.cpp
@@ -35,6 +37,9 @@ SET(MEMPROF_HEADERS
   memprof_interface_internal.h
   memprof_internal.h
   memprof_mapping.h
+  memprof_meminfoblock.h
+  memprof_mibmap.h
+  memprof_rawprofile.h
   memprof_stack.h
   memprof_stats.h
   memprof_thread.h
@@ -192,3 +197,8 @@ foreach(arch ${MEMPROF_SUPPORTED_ARCH})
     add_dependencies(memprof clang_rt.memprof-${arch}-symbols)
   endif()
 endforeach()
+
+
+if(COMPILER_RT_INCLUDE_TESTS)
+  add_subdirectory(tests)
+endif()

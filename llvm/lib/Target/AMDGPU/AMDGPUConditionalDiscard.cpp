@@ -190,17 +190,25 @@ void AMDGPUConditionalDiscard::optimizeBlock(BasicBlock &BB, bool ConvertToDemot
             PredBranchInst->setSuccessor(0, OldKillBlockSucc);
           else
             PredBranchInst->setSuccessor(1, OldKillBlockSucc);
+
+          // It's possible that the branch became unconditional.
+          if (PredBranchInst->getSuccessor(0) ==
+              PredBranchInst->getSuccessor(1)) {
+            auto *NewBranchInst =
+              BranchInst::Create(OldKillBlockSucc, PredBranchInst);
+            NewBranchInst->copyMetadata(*PredBranchInst);
+            PredBranchInst->eraseFromParent();
+          }
+
           // For OldKillBlockSucc's PHINode, the incoming block should be
-          // updated from BB to PredBlock, and the incoming value may also need
-          // to be updated if PredBlock is OldKillBlockSucc's predecessor. This
-          // could avoid leaving the PHINode with different incoming values for
-          // the PredBlock.
+          // updated from BB to PredBlock.  If PredBlock is already part
+          // of the PHINode then BB can simply be removed.
           for (PHINode &PN : OldKillBlockSucc->phis()) {
             if (PN.getBasicBlockIndex(PredBlock) >= 0) {
-              auto *PredIncoming = PN.getIncomingValueForBlock(PredBlock);
-              PN.setIncomingValue(PN.getBasicBlockIndex(&BB), PredIncoming);
+              PN.removeIncomingValue(&BB);
+            } else {
+              PN.replaceIncomingBlockWith(&BB, PredBlock);
             }
-            PN.replaceIncomingBlockWith(&BB, PredBlock);
           }
 
           KillBlocksToRemove.push_back(&BB);

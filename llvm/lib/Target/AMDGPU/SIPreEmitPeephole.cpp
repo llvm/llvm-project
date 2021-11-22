@@ -174,7 +174,7 @@ bool SIPreEmitPeephole::optimizeVccBranch(MachineInstr &MI) const {
     MI.setDesc(TII->get(AMDGPU::S_BRANCH));
   } else if (IsVCCZ && MaskValue == 0) {
     // Will always branch
-    // Remove all succesors shadowed by new unconditional branch
+    // Remove all successors shadowed by new unconditional branch
     MachineBasicBlock *Parent = MI.getParent();
     SmallVector<MachineInstr *, 4> ToRemove;
     bool Found = false;
@@ -257,10 +257,8 @@ bool SIPreEmitPeephole::optimizeSetGPR(MachineInstr &First,
                        })) {
         // The only exception allowed here is another indirect vector move
         // with the same mode.
-        if (!IdxOn ||
-            !((I->getOpcode() == AMDGPU::V_MOV_B32_e32 &&
-               I->hasRegisterImplicitUseOperand(AMDGPU::M0)) ||
-              I->getOpcode() == AMDGPU::V_MOV_B32_indirect))
+        if (!IdxOn || !(I->getOpcode() == AMDGPU::V_MOV_B32_indirect_write ||
+                        I->getOpcode() == AMDGPU::V_MOV_B32_indirect_read))
           return false;
       }
     }

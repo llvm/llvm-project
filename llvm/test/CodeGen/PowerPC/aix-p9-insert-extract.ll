@@ -442,16 +442,6 @@ entry:
 ; shufflevector.  If halfword element 3 in BE mode(or 4 in LE mode) is the one
 ; we're attempting to insert, then we can use the vector insert instruction
 define <8 x i16> @shuffle_vector_halfword_0_4(<8 x i16> %a) {
-; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vinserth 2, 2, 14
-; CHECK-NEXT:    blr
-; CHECK-BE-LABEL: shuffle_vector_halfword_0_4:
-; CHECK-BE:       # %bb.0: # %entry
-; CHECK-BE-NEXT:    addis 3, 2, .LCPI16_0@toc@ha
-; CHECK-BE-NEXT:    addi 3, 3, .LCPI16_0@toc@l
-; CHECK-BE-NEXT:    lxvx 35, 0, 3
-; CHECK-BE-NEXT:    vperm 2, 2, 2, 3
-; CHECK-BE-NEXT:    blr
 ; CHECK-64-LABEL: shuffle_vector_halfword_0_4:
 ; CHECK-64:       # %bb.0: # %entry
 ; CHECK-64-NEXT:    ld 3, L..C0(2)
@@ -471,16 +461,6 @@ entry:
 }
 
 define <8 x i16> @shuffle_vector_halfword_1_3(<8 x i16> %a) {
-; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    addis 3, 2, .LCPI17_0@toc@ha
-; CHECK-NEXT:    addi 3, 3, .LCPI17_0@toc@l
-; CHECK-NEXT:    lxvx 35, 0, 3
-; CHECK-NEXT:    vperm 2, 2, 2, 3
-; CHECK-NEXT:    blr
-; CHECK-BE-LABEL: shuffle_vector_halfword_1_3:
-; CHECK-BE:       # %bb.0: # %entry
-; CHECK-BE-NEXT:    vinserth 2, 2, 2
-; CHECK-BE-NEXT:    blr
 ; CHECK-64-LABEL: shuffle_vector_halfword_1_3:
 ; CHECK-64:       # %bb.0: # %entry
 ; CHECK-64-NEXT:    vinserth 2, 2, 2
@@ -496,16 +476,6 @@ entry:
 }
 
 define <8 x i16> @shuffle_vector_halfword_2_3(<8 x i16> %a) {
-; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    addis 3, 2, .LCPI18_0@toc@ha
-; CHECK-NEXT:    addi 3, 3, .LCPI18_0@toc@l
-; CHECK-NEXT:    lxvx 35, 0, 3
-; CHECK-NEXT:    vperm 2, 2, 2, 3
-; CHECK-NEXT:    blr
-; CHECK-BE-LABEL: shuffle_vector_halfword_2_3:
-; CHECK-BE:       # %bb.0: # %entry
-; CHECK-BE-NEXT:    vinserth 2, 2, 4
-; CHECK-BE-NEXT:    blr
 ; CHECK-64-LABEL: shuffle_vector_halfword_2_3:
 ; CHECK-64:       # %bb.0: # %entry
 ; CHECK-64-NEXT:    vinserth 2, 2, 4
@@ -521,16 +491,6 @@ entry:
 }
 
 define <8 x i16> @shuffle_vector_halfword_3_4(<8 x i16> %a) {
-; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vinserth 2, 2, 8
-; CHECK-NEXT:    blr
-; CHECK-BE-LABEL: shuffle_vector_halfword_3_4:
-; CHECK-BE:       # %bb.0: # %entry
-; CHECK-BE-NEXT:    addis 3, 2, .LCPI19_0@toc@ha
-; CHECK-BE-NEXT:    addi 3, 3, .LCPI19_0@toc@l
-; CHECK-BE-NEXT:    lxvx 35, 0, 3
-; CHECK-BE-NEXT:    vperm 2, 2, 2, 3
-; CHECK-BE-NEXT:    blr
 ; CHECK-64-LABEL: shuffle_vector_halfword_3_4:
 ; CHECK-64:       # %bb.0: # %entry
 ; CHECK-64-NEXT:    ld 3, L..C1(2)
@@ -550,16 +510,6 @@ entry:
 }
 
 define <8 x i16> @shuffle_vector_halfword_4_3(<8 x i16> %a) {
-; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    addis 3, 2, .LCPI20_0@toc@ha
-; CHECK-NEXT:    addi 3, 3, .LCPI20_0@toc@l
-; CHECK-NEXT:    lxvx 35, 0, 3
-; CHECK-NEXT:    vperm 2, 2, 2, 3
-; CHECK-NEXT:    blr
-; CHECK-BE-LABEL: shuffle_vector_halfword_4_3:
-; CHECK-BE:       # %bb.0: # %entry
-; CHECK-BE-NEXT:    vinserth 2, 2, 8
-; CHECK-BE-NEXT:    blr
 ; CHECK-64-LABEL: shuffle_vector_halfword_4_3:
 ; CHECK-64:       # %bb.0: # %entry
 ; CHECK-64-NEXT:    vinserth 2, 2, 8
@@ -575,16 +525,6 @@ entry:
 }
 
 define <8 x i16> @shuffle_vector_halfword_5_3(<8 x i16> %a) {
-; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    addis 3, 2, .LCPI21_0@toc@ha
-; CHECK-NEXT:    addi 3, 3, .LCPI21_0@toc@l
-; CHECK-NEXT:    lxvx 35, 0, 3
-; CHECK-NEXT:    vperm 2, 2, 2, 3
-; CHECK-NEXT:    blr
-; CHECK-BE-LABEL: shuffle_vector_halfword_5_3:
-; CHECK-BE:       # %bb.0: # %entry
-; CHECK-BE-NEXT:    vinserth 2, 2, 10
-; CHECK-BE-NEXT:    blr
 ; CHECK-64-LABEL: shuffle_vector_halfword_5_3:
 ; CHECK-64:       # %bb.0: # %entry
 ; CHECK-64-NEXT:    vinserth 2, 2, 10
@@ -600,16 +540,6 @@ entry:
 }
 
 define <8 x i16> @shuffle_vector_halfword_6_4(<8 x i16> %a) {
-; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vinserth 2, 2, 2
-; CHECK-NEXT:    blr
-; CHECK-BE-LABEL: shuffle_vector_halfword_6_4:
-; CHECK-BE:       # %bb.0: # %entry
-; CHECK-BE-NEXT:    addis 3, 2, .LCPI22_0@toc@ha
-; CHECK-BE-NEXT:    addi 3, 3, .LCPI22_0@toc@l
-; CHECK-BE-NEXT:    lxvx 35, 0, 3
-; CHECK-BE-NEXT:    vperm 2, 2, 2, 3
-; CHECK-BE-NEXT:    blr
 ; CHECK-64-LABEL: shuffle_vector_halfword_6_4:
 ; CHECK-64:       # %bb.0: # %entry
 ; CHECK-64-NEXT:    ld 3, L..C2(2)
@@ -629,16 +559,6 @@ entry:
 }
 
 define <8 x i16> @shuffle_vector_halfword_7_4(<8 x i16> %a) {
-; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vinserth 2, 2, 0
-; CHECK-NEXT:    blr
-; CHECK-BE-LABEL: shuffle_vector_halfword_7_4:
-; CHECK-BE:       # %bb.0: # %entry
-; CHECK-BE-NEXT:    addis 3, 2, .LCPI23_0@toc@ha
-; CHECK-BE-NEXT:    addi 3, 3, .LCPI23_0@toc@l
-; CHECK-BE-NEXT:    lxvx 35, 0, 3
-; CHECK-BE-NEXT:    vperm 2, 2, 2, 3
-; CHECK-BE-NEXT:    blr
 ; CHECK-64-LABEL: shuffle_vector_halfword_7_4:
 ; CHECK-64:       # %bb.0: # %entry
 ; CHECK-64-NEXT:    ld 3, L..C3(2)
@@ -660,15 +580,6 @@ entry:
 ; The following testcases take one byte element from the second vector and
 ; inserts it at various locations in the first vector
 define <16 x i8> @shuffle_vector_byte_0_16(<16 x i8> %a, <16 x i8> %b) {
-; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsldoi 3, 3, 3, 8
-; CHECK-NEXT:    vinsertb 2, 3, 15
-; CHECK-NEXT:    blr
-; CHECK-BE-LABEL: shuffle_vector_byte_0_16:
-; CHECK-BE:       # %bb.0: # %entry
-; CHECK-BE-NEXT:    vsldoi 3, 3, 3, 9
-; CHECK-BE-NEXT:    vinsertb 2, 3, 0
-; CHECK-BE-NEXT:    blr
 ; CHECK-64-LABEL: shuffle_vector_byte_0_16:
 ; CHECK-64:       # %bb.0: # %entry
 ; CHECK-64-NEXT:    vsldoi 3, 3, 3, 9
@@ -686,15 +597,6 @@ entry:
 }
 
 define <16 x i8> @shuffle_vector_byte_1_25(<16 x i8> %a, <16 x i8> %b) {
-; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsldoi 3, 3, 3, 15
-; CHECK-NEXT:    vinsertb 2, 3, 14
-; CHECK-NEXT:    blr
-; CHECK-BE-LABEL: shuffle_vector_byte_1_25:
-; CHECK-BE:       # %bb.0: # %entry
-; CHECK-BE-NEXT:    vsldoi 3, 3, 3, 2
-; CHECK-BE-NEXT:    vinsertb 2, 3, 1
-; CHECK-BE-NEXT:    blr
 ; CHECK-64-LABEL: shuffle_vector_byte_1_25:
 ; CHECK-64:       # %bb.0: # %entry
 ; CHECK-64-NEXT:    vsldoi 3, 3, 3, 2
@@ -712,15 +614,6 @@ entry:
 }
 
 define <16 x i8> @shuffle_vector_byte_2_18(<16 x i8> %a, <16 x i8> %b) {
-; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsldoi 3, 3, 3, 6
-; CHECK-NEXT:    vinsertb 2, 3, 13
-; CHECK-NEXT:    blr
-; CHECK-BE-LABEL: shuffle_vector_byte_2_18:
-; CHECK-BE:       # %bb.0: # %entry
-; CHECK-BE-NEXT:    vsldoi 3, 3, 3, 11
-; CHECK-BE-NEXT:    vinsertb 2, 3, 2
-; CHECK-BE-NEXT:    blr
 ; CHECK-64-LABEL: shuffle_vector_byte_2_18:
 ; CHECK-64:       # %bb.0: # %entry
 ; CHECK-64-NEXT:    vsldoi 3, 3, 3, 11
@@ -738,15 +631,6 @@ entry:
 }
 
 define <16 x i8> @shuffle_vector_byte_3_27(<16 x i8> %a, <16 x i8> %b) {
-; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsldoi 3, 3, 3, 13
-; CHECK-NEXT:    vinsertb 2, 3, 12
-; CHECK-NEXT:    blr
-; CHECK-BE-LABEL: shuffle_vector_byte_3_27:
-; CHECK-BE:       # %bb.0: # %entry
-; CHECK-BE-NEXT:    vsldoi 3, 3, 3, 4
-; CHECK-BE-NEXT:    vinsertb 2, 3, 3
-; CHECK-BE-NEXT:    blr
 ; CHECK-64-LABEL: shuffle_vector_byte_3_27:
 ; CHECK-64:       # %bb.0: # %entry
 ; CHECK-64-NEXT:    vsldoi 3, 3, 3, 4
@@ -764,15 +648,6 @@ entry:
 }
 
 define <16 x i8> @shuffle_vector_byte_4_20(<16 x i8> %a, <16 x i8> %b) {
-; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsldoi 3, 3, 3, 4
-; CHECK-NEXT:    vinsertb 2, 3, 11
-; CHECK-NEXT:    blr
-; CHECK-BE-LABEL: shuffle_vector_byte_4_20:
-; CHECK-BE:       # %bb.0: # %entry
-; CHECK-BE-NEXT:    vsldoi 3, 3, 3, 13
-; CHECK-BE-NEXT:    vinsertb 2, 3, 4
-; CHECK-BE-NEXT:    blr
 ; CHECK-64-LABEL: shuffle_vector_byte_4_20:
 ; CHECK-64:       # %bb.0: # %entry
 ; CHECK-64-NEXT:    vsldoi 3, 3, 3, 13
@@ -790,15 +665,6 @@ entry:
 }
 
 define <16 x i8> @shuffle_vector_byte_5_29(<16 x i8> %a, <16 x i8> %b) {
-; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsldoi 3, 3, 3, 11
-; CHECK-NEXT:    vinsertb 2, 3, 10
-; CHECK-NEXT:    blr
-; CHECK-BE-LABEL: shuffle_vector_byte_5_29:
-; CHECK-BE:       # %bb.0: # %entry
-; CHECK-BE-NEXT:    vsldoi 3, 3, 3, 6
-; CHECK-BE-NEXT:    vinsertb 2, 3, 5
-; CHECK-BE-NEXT:    blr
 ; CHECK-64-LABEL: shuffle_vector_byte_5_29:
 ; CHECK-64:       # %bb.0: # %entry
 ; CHECK-64-NEXT:    vsldoi 3, 3, 3, 6
@@ -816,15 +682,6 @@ entry:
 }
 
 define <16 x i8> @shuffle_vector_byte_6_22(<16 x i8> %a, <16 x i8> %b) {
-; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsldoi 3, 3, 3, 2
-; CHECK-NEXT:    vinsertb 2, 3, 9
-; CHECK-NEXT:    blr
-; CHECK-BE-LABEL: shuffle_vector_byte_6_22:
-; CHECK-BE:       # %bb.0: # %entry
-; CHECK-BE-NEXT:    vsldoi 3, 3, 3, 15
-; CHECK-BE-NEXT:    vinsertb 2, 3, 6
-; CHECK-BE-NEXT:    blr
 ; CHECK-64-LABEL: shuffle_vector_byte_6_22:
 ; CHECK-64:       # %bb.0: # %entry
 ; CHECK-64-NEXT:    vsldoi 3, 3, 3, 15
@@ -842,15 +699,6 @@ entry:
 }
 
 define <16 x i8> @shuffle_vector_byte_7_31(<16 x i8> %a, <16 x i8> %b) {
-; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsldoi 3, 3, 3, 9
-; CHECK-NEXT:    vinsertb 2, 3, 8
-; CHECK-NEXT:    blr
-; CHECK-BE-LABEL: shuffle_vector_byte_7_31:
-; CHECK-BE:       # %bb.0: # %entry
-; CHECK-BE-NEXT:    vsldoi 3, 3, 3, 8
-; CHECK-BE-NEXT:    vinsertb 2, 3, 7
-; CHECK-BE-NEXT:    blr
 ; CHECK-64-LABEL: shuffle_vector_byte_7_31:
 ; CHECK-64:       # %bb.0: # %entry
 ; CHECK-64-NEXT:    vsldoi 3, 3, 3, 8
@@ -868,14 +716,6 @@ entry:
 }
 
 define <16 x i8> @shuffle_vector_byte_8_24(<16 x i8> %a, <16 x i8> %b) {
-; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vinsertb 2, 3, 7
-; CHECK-NEXT:    blr
-; CHECK-BE-LABEL: shuffle_vector_byte_8_24:
-; CHECK-BE:       # %bb.0: # %entry
-; CHECK-BE-NEXT:    vsldoi 3, 3, 3, 1
-; CHECK-BE-NEXT:    vinsertb 2, 3, 8
-; CHECK-BE-NEXT:    blr
 ; CHECK-64-LABEL: shuffle_vector_byte_8_24:
 ; CHECK-64:       # %bb.0: # %entry
 ; CHECK-64-NEXT:    vsldoi 3, 3, 3, 1
@@ -893,15 +733,6 @@ entry:
 }
 
 define <16 x i8> @shuffle_vector_byte_9_17(<16 x i8> %a, <16 x i8> %b) {
-; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsldoi 3, 3, 3, 7
-; CHECK-NEXT:    vinsertb 2, 3, 6
-; CHECK-NEXT:    blr
-; CHECK-BE-LABEL: shuffle_vector_byte_9_17:
-; CHECK-BE:       # %bb.0: # %entry
-; CHECK-BE-NEXT:    vsldoi 3, 3, 3, 10
-; CHECK-BE-NEXT:    vinsertb 2, 3, 9
-; CHECK-BE-NEXT:    blr
 ; CHECK-64-LABEL: shuffle_vector_byte_9_17:
 ; CHECK-64:       # %bb.0: # %entry
 ; CHECK-64-NEXT:    vsldoi 3, 3, 3, 10
@@ -919,15 +750,6 @@ entry:
 }
 
 define <16 x i8> @shuffle_vector_byte_10_26(<16 x i8> %a, <16 x i8> %b) {
-; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsldoi 3, 3, 3, 14
-; CHECK-NEXT:    vinsertb 2, 3, 5
-; CHECK-NEXT:    blr
-; CHECK-BE-LABEL: shuffle_vector_byte_10_26:
-; CHECK-BE:       # %bb.0: # %entry
-; CHECK-BE-NEXT:    vsldoi 3, 3, 3, 3
-; CHECK-BE-NEXT:    vinsertb 2, 3, 10
-; CHECK-BE-NEXT:    blr
 ; CHECK-64-LABEL: shuffle_vector_byte_10_26:
 ; CHECK-64:       # %bb.0: # %entry
 ; CHECK-64-NEXT:    vsldoi 3, 3, 3, 3
@@ -945,15 +767,6 @@ entry:
 }
 
 define <16 x i8> @shuffle_vector_byte_11_19(<16 x i8> %a, <16 x i8> %b) {
-; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsldoi 3, 3, 3, 5
-; CHECK-NEXT:    vinsertb 2, 3, 4
-; CHECK-NEXT:    blr
-; CHECK-BE-LABEL: shuffle_vector_byte_11_19:
-; CHECK-BE:       # %bb.0: # %entry
-; CHECK-BE-NEXT:    vsldoi 3, 3, 3, 12
-; CHECK-BE-NEXT:    vinsertb 2, 3, 11
-; CHECK-BE-NEXT:    blr
 ; CHECK-64-LABEL: shuffle_vector_byte_11_19:
 ; CHECK-64:       # %bb.0: # %entry
 ; CHECK-64-NEXT:    vsldoi 3, 3, 3, 12
@@ -971,15 +784,6 @@ entry:
 }
 
 define <16 x i8> @shuffle_vector_byte_12_28(<16 x i8> %a, <16 x i8> %b) {
-; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsldoi 3, 3, 3, 12
-; CHECK-NEXT:    vinsertb 2, 3, 3
-; CHECK-NEXT:    blr
-; CHECK-BE-LABEL: shuffle_vector_byte_12_28:
-; CHECK-BE:       # %bb.0: # %entry
-; CHECK-BE-NEXT:    vsldoi 3, 3, 3, 5
-; CHECK-BE-NEXT:    vinsertb 2, 3, 12
-; CHECK-BE-NEXT:    blr
 ; CHECK-64-LABEL: shuffle_vector_byte_12_28:
 ; CHECK-64:       # %bb.0: # %entry
 ; CHECK-64-NEXT:    vsldoi 3, 3, 3, 5
@@ -997,15 +801,6 @@ entry:
 }
 
 define <16 x i8> @shuffle_vector_byte_13_21(<16 x i8> %a, <16 x i8> %b) {
-; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsldoi 3, 3, 3, 3
-; CHECK-NEXT:    vinsertb 2, 3, 2
-; CHECK-NEXT:    blr
-; CHECK-BE-LABEL: shuffle_vector_byte_13_21:
-; CHECK-BE:       # %bb.0: # %entry
-; CHECK-BE-NEXT:    vsldoi 3, 3, 3, 14
-; CHECK-BE-NEXT:    vinsertb 2, 3, 13
-; CHECK-BE-NEXT:    blr
 ; CHECK-64-LABEL: shuffle_vector_byte_13_21:
 ; CHECK-64:       # %bb.0: # %entry
 ; CHECK-64-NEXT:    vsldoi 3, 3, 3, 14
@@ -1023,15 +818,6 @@ entry:
 }
 
 define <16 x i8> @shuffle_vector_byte_14_30(<16 x i8> %a, <16 x i8> %b) {
-; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsldoi 3, 3, 3, 10
-; CHECK-NEXT:    vinsertb 2, 3, 1
-; CHECK-NEXT:    blr
-; CHECK-BE-LABEL: shuffle_vector_byte_14_30:
-; CHECK-BE:       # %bb.0: # %entry
-; CHECK-BE-NEXT:    vsldoi 3, 3, 3, 7
-; CHECK-BE-NEXT:    vinsertb 2, 3, 14
-; CHECK-BE-NEXT:    blr
 ; CHECK-64-LABEL: shuffle_vector_byte_14_30:
 ; CHECK-64:       # %bb.0: # %entry
 ; CHECK-64-NEXT:    vsldoi 3, 3, 3, 7
@@ -1049,14 +835,6 @@ entry:
 }
 
 define <16 x i8> @shuffle_vector_byte_15_23(<16 x i8> %a, <16 x i8> %b) {
-; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsldoi 3, 3, 3, 1
-; CHECK-NEXT:    vinsertb 2, 3, 0
-; CHECK-NEXT:    blr
-; CHECK-BE-LABEL: shuffle_vector_byte_15_23:
-; CHECK-BE:       # %bb.0: # %entry
-; CHECK-BE-NEXT:    vinsertb 2, 3, 15
-; CHECK-BE-NEXT:    blr
 ; CHECK-64-LABEL: shuffle_vector_byte_15_23:
 ; CHECK-64:       # %bb.0: # %entry
 ; CHECK-64-NEXT:    vinsertb 2, 3, 15
@@ -1665,16 +1443,6 @@ entry:
 ; shufflevector.  If byte element 7 in BE mode(or 8 in LE mode) is the one
 ; we're attempting to insert, then we can use the vector insert instruction
 define <16 x i8> @shuffle_vector_byte_0_7(<16 x i8> %a) {
-; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    addis 3, 2, .LCPI56_0@toc@ha
-; CHECK-NEXT:    addi 3, 3, .LCPI56_0@toc@l
-; CHECK-NEXT:    lxvx 35, 0, 3
-; CHECK-NEXT:    vperm 2, 2, 2, 3
-; CHECK-NEXT:    blr
-; CHECK-BE-LABEL: shuffle_vector_byte_0_7:
-; CHECK-BE:       # %bb.0: # %entry
-; CHECK-BE-NEXT:    vinsertb 2, 2, 0
-; CHECK-BE-NEXT:    blr
 ; CHECK-64-LABEL: shuffle_vector_byte_0_7:
 ; CHECK-64:       # %bb.0: # %entry
 ; CHECK-64-NEXT:    vinsertb 2, 2, 0
@@ -1690,16 +1458,6 @@ entry:
 }
 
 define <16 x i8> @shuffle_vector_byte_1_8(<16 x i8> %a) {
-; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vinsertb 2, 2, 14
-; CHECK-NEXT:    blr
-; CHECK-BE-LABEL: shuffle_vector_byte_1_8:
-; CHECK-BE:       # %bb.0: # %entry
-; CHECK-BE-NEXT:    addis 3, 2, .LCPI57_0@toc@ha
-; CHECK-BE-NEXT:    addi 3, 3, .LCPI57_0@toc@l
-; CHECK-BE-NEXT:    lxvx 35, 0, 3
-; CHECK-BE-NEXT:    vperm 2, 2, 2, 3
-; CHECK-BE-NEXT:    blr
 ; CHECK-64-LABEL: shuffle_vector_byte_1_8:
 ; CHECK-64:       # %bb.0: # %entry
 ; CHECK-64-NEXT:    ld 3, L..C4(2)
@@ -1719,16 +1477,6 @@ entry:
 }
 
 define <16 x i8> @shuffle_vector_byte_2_8(<16 x i8> %a) {
-; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vinsertb 2, 2, 13
-; CHECK-NEXT:    blr
-; CHECK-BE-LABEL: shuffle_vector_byte_2_8:
-; CHECK-BE:       # %bb.0: # %entry
-; CHECK-BE-NEXT:    addis 3, 2, .LCPI58_0@toc@ha
-; CHECK-BE-NEXT:    addi 3, 3, .LCPI58_0@toc@l
-; CHECK-BE-NEXT:    lxvx 35, 0, 3
-; CHECK-BE-NEXT:    vperm 2, 2, 2, 3
-; CHECK-BE-NEXT:    blr
 ; CHECK-64-LABEL: shuffle_vector_byte_2_8:
 ; CHECK-64:       # %bb.0: # %entry
 ; CHECK-64-NEXT:    ld 3, L..C5(2)
@@ -1748,16 +1496,6 @@ entry:
 }
 
 define <16 x i8> @shuffle_vector_byte_3_7(<16 x i8> %a) {
-; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    addis 3, 2, .LCPI59_0@toc@ha
-; CHECK-NEXT:    addi 3, 3, .LCPI59_0@toc@l
-; CHECK-NEXT:    lxvx 35, 0, 3
-; CHECK-NEXT:    vperm 2, 2, 2, 3
-; CHECK-NEXT:    blr
-; CHECK-BE-LABEL: shuffle_vector_byte_3_7:
-; CHECK-BE:       # %bb.0: # %entry
-; CHECK-BE-NEXT:    vinsertb 2, 2, 3
-; CHECK-BE-NEXT:    blr
 ; CHECK-64-LABEL: shuffle_vector_byte_3_7:
 ; CHECK-64:       # %bb.0: # %entry
 ; CHECK-64-NEXT:    vinsertb 2, 2, 3
@@ -1773,16 +1511,6 @@ entry:
 }
 
 define <16 x i8> @shuffle_vector_byte_4_7(<16 x i8> %a) {
-; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    addis 3, 2, .LCPI60_0@toc@ha
-; CHECK-NEXT:    addi 3, 3, .LCPI60_0@toc@l
-; CHECK-NEXT:    lxvx 35, 0, 3
-; CHECK-NEXT:    vperm 2, 2, 2, 3
-; CHECK-NEXT:    blr
-; CHECK-BE-LABEL: shuffle_vector_byte_4_7:
-; CHECK-BE:       # %bb.0: # %entry
-; CHECK-BE-NEXT:    vinsertb 2, 2, 4
-; CHECK-BE-NEXT:    blr
 ; CHECK-64-LABEL: shuffle_vector_byte_4_7:
 ; CHECK-64:       # %bb.0: # %entry
 ; CHECK-64-NEXT:    vinsertb 2, 2, 4
@@ -1798,16 +1526,6 @@ entry:
 }
 
 define <16 x i8> @shuffle_vector_byte_5_8(<16 x i8> %a) {
-; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vinsertb 2, 2, 10
-; CHECK-NEXT:    blr
-; CHECK-BE-LABEL: shuffle_vector_byte_5_8:
-; CHECK-BE:       # %bb.0: # %entry
-; CHECK-BE-NEXT:    addis 3, 2, .LCPI61_0@toc@ha
-; CHECK-BE-NEXT:    addi 3, 3, .LCPI61_0@toc@l
-; CHECK-BE-NEXT:    lxvx 35, 0, 3
-; CHECK-BE-NEXT:    vperm 2, 2, 2, 3
-; CHECK-BE-NEXT:    blr
 ; CHECK-64-LABEL: shuffle_vector_byte_5_8:
 ; CHECK-64:       # %bb.0: # %entry
 ; CHECK-64-NEXT:    ld 3, L..C6(2)
@@ -1827,16 +1545,6 @@ entry:
 }
 
 define <16 x i8> @shuffle_vector_byte_6_8(<16 x i8> %a) {
-; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vinsertb 2, 2, 9
-; CHECK-NEXT:    blr
-; CHECK-BE-LABEL: shuffle_vector_byte_6_8:
-; CHECK-BE:       # %bb.0: # %entry
-; CHECK-BE-NEXT:    addis 3, 2, .LCPI62_0@toc@ha
-; CHECK-BE-NEXT:    addi 3, 3, .LCPI62_0@toc@l
-; CHECK-BE-NEXT:    lxvx 35, 0, 3
-; CHECK-BE-NEXT:    vperm 2, 2, 2, 3
-; CHECK-BE-NEXT:    blr
 ; CHECK-64-LABEL: shuffle_vector_byte_6_8:
 ; CHECK-64:       # %bb.0: # %entry
 ; CHECK-64-NEXT:    ld 3, L..C7(2)
@@ -1856,16 +1564,6 @@ entry:
 }
 
 define <16 x i8> @shuffle_vector_byte_7_8(<16 x i8> %a) {
-; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vinsertb 2, 2, 8
-; CHECK-NEXT:    blr
-; CHECK-BE-LABEL: shuffle_vector_byte_7_8:
-; CHECK-BE:       # %bb.0: # %entry
-; CHECK-BE-NEXT:    addis 3, 2, .LCPI63_0@toc@ha
-; CHECK-BE-NEXT:    addi 3, 3, .LCPI63_0@toc@l
-; CHECK-BE-NEXT:    lxvx 35, 0, 3
-; CHECK-BE-NEXT:    vperm 2, 2, 2, 3
-; CHECK-BE-NEXT:    blr
 ; CHECK-64-LABEL: shuffle_vector_byte_7_8:
 ; CHECK-64:       # %bb.0: # %entry
 ; CHECK-64-NEXT:    ld 3, L..C8(2)
@@ -1885,16 +1583,6 @@ entry:
 }
 
 define <16 x i8> @shuffle_vector_byte_8_7(<16 x i8> %a) {
-; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    addis 3, 2, .LCPI64_0@toc@ha
-; CHECK-NEXT:    addi 3, 3, .LCPI64_0@toc@l
-; CHECK-NEXT:    lxvx 35, 0, 3
-; CHECK-NEXT:    vperm 2, 2, 2, 3
-; CHECK-NEXT:    blr
-; CHECK-BE-LABEL: shuffle_vector_byte_8_7:
-; CHECK-BE:       # %bb.0: # %entry
-; CHECK-BE-NEXT:    vinsertb 2, 2, 8
-; CHECK-BE-NEXT:    blr
 ; CHECK-64-LABEL: shuffle_vector_byte_8_7:
 ; CHECK-64:       # %bb.0: # %entry
 ; CHECK-64-NEXT:    vinsertb 2, 2, 8
@@ -1910,16 +1598,6 @@ entry:
 }
 
 define <16 x i8> @shuffle_vector_byte_9_7(<16 x i8> %a) {
-; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    addis 3, 2, .LCPI65_0@toc@ha
-; CHECK-NEXT:    addi 3, 3, .LCPI65_0@toc@l
-; CHECK-NEXT:    lxvx 35, 0, 3
-; CHECK-NEXT:    vperm 2, 2, 2, 3
-; CHECK-NEXT:    blr
-; CHECK-BE-LABEL: shuffle_vector_byte_9_7:
-; CHECK-BE:       # %bb.0: # %entry
-; CHECK-BE-NEXT:    vinsertb 2, 2, 9
-; CHECK-BE-NEXT:    blr
 ; CHECK-64-LABEL: shuffle_vector_byte_9_7:
 ; CHECK-64:       # %bb.0: # %entry
 ; CHECK-64-NEXT:    vinsertb 2, 2, 9
@@ -1935,16 +1613,6 @@ entry:
 }
 
 define <16 x i8> @shuffle_vector_byte_10_7(<16 x i8> %a) {
-; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    addis 3, 2, .LCPI66_0@toc@ha
-; CHECK-NEXT:    addi 3, 3, .LCPI66_0@toc@l
-; CHECK-NEXT:    lxvx 35, 0, 3
-; CHECK-NEXT:    vperm 2, 2, 2, 3
-; CHECK-NEXT:    blr
-; CHECK-BE-LABEL: shuffle_vector_byte_10_7:
-; CHECK-BE:       # %bb.0: # %entry
-; CHECK-BE-NEXT:    vinsertb 2, 2, 10
-; CHECK-BE-NEXT:    blr
 ; CHECK-64-LABEL: shuffle_vector_byte_10_7:
 ; CHECK-64:       # %bb.0: # %entry
 ; CHECK-64-NEXT:    vinsertb 2, 2, 10
@@ -1960,16 +1628,6 @@ entry:
 }
 
 define <16 x i8> @shuffle_vector_byte_11_8(<16 x i8> %a) {
-; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vinsertb 2, 2, 4
-; CHECK-NEXT:    blr
-; CHECK-BE-LABEL: shuffle_vector_byte_11_8:
-; CHECK-BE:       # %bb.0: # %entry
-; CHECK-BE-NEXT:    addis 3, 2, .LCPI67_0@toc@ha
-; CHECK-BE-NEXT:    addi 3, 3, .LCPI67_0@toc@l
-; CHECK-BE-NEXT:    lxvx 35, 0, 3
-; CHECK-BE-NEXT:    vperm 2, 2, 2, 3
-; CHECK-BE-NEXT:    blr
 ; CHECK-64-LABEL: shuffle_vector_byte_11_8:
 ; CHECK-64:       # %bb.0: # %entry
 ; CHECK-64-NEXT:    ld 3, L..C9(2)
@@ -1989,16 +1647,6 @@ entry:
 }
 
 define <16 x i8> @shuffle_vector_byte_12_8(<16 x i8> %a) {
-; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vinsertb 2, 2, 3
-; CHECK-NEXT:    blr
-; CHECK-BE-LABEL: shuffle_vector_byte_12_8:
-; CHECK-BE:       # %bb.0: # %entry
-; CHECK-BE-NEXT:    addis 3, 2, .LCPI68_0@toc@ha
-; CHECK-BE-NEXT:    addi 3, 3, .LCPI68_0@toc@l
-; CHECK-BE-NEXT:    lxvx 35, 0, 3
-; CHECK-BE-NEXT:    vperm 2, 2, 2, 3
-; CHECK-BE-NEXT:    blr
 ; CHECK-64-LABEL: shuffle_vector_byte_12_8:
 ; CHECK-64:       # %bb.0: # %entry
 ; CHECK-64-NEXT:    ld 3, L..C10(2)
@@ -2018,16 +1666,6 @@ entry:
 }
 
 define <16 x i8> @shuffle_vector_byte_13_7(<16 x i8> %a) {
-; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    addis 3, 2, .LCPI69_0@toc@ha
-; CHECK-NEXT:    addi 3, 3, .LCPI69_0@toc@l
-; CHECK-NEXT:    lxvx 35, 0, 3
-; CHECK-NEXT:    vperm 2, 2, 2, 3
-; CHECK-NEXT:    blr
-; CHECK-BE-LABEL: shuffle_vector_byte_13_7:
-; CHECK-BE:       # %bb.0: # %entry
-; CHECK-BE-NEXT:    vinsertb 2, 2, 13
-; CHECK-BE-NEXT:    blr
 ; CHECK-64-LABEL: shuffle_vector_byte_13_7:
 ; CHECK-64:       # %bb.0: # %entry
 ; CHECK-64-NEXT:    vinsertb 2, 2, 13
@@ -2043,16 +1681,6 @@ entry:
 }
 
 define <16 x i8> @shuffle_vector_byte_14_7(<16 x i8> %a) {
-; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    addis 3, 2, .LCPI70_0@toc@ha
-; CHECK-NEXT:    addi 3, 3, .LCPI70_0@toc@l
-; CHECK-NEXT:    lxvx 35, 0, 3
-; CHECK-NEXT:    vperm 2, 2, 2, 3
-; CHECK-NEXT:    blr
-; CHECK-BE-LABEL: shuffle_vector_byte_14_7:
-; CHECK-BE:       # %bb.0: # %entry
-; CHECK-BE-NEXT:    vinsertb 2, 2, 14
-; CHECK-BE-NEXT:    blr
 ; CHECK-64-LABEL: shuffle_vector_byte_14_7:
 ; CHECK-64:       # %bb.0: # %entry
 ; CHECK-64-NEXT:    vinsertb 2, 2, 14
@@ -2068,16 +1696,6 @@ entry:
 }
 
 define <16 x i8> @shuffle_vector_byte_15_8(<16 x i8> %a) {
-; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vinsertb 2, 2, 0
-; CHECK-NEXT:    blr
-; CHECK-BE-LABEL: shuffle_vector_byte_15_8:
-; CHECK-BE:       # %bb.0: # %entry
-; CHECK-BE-NEXT:    addis 3, 2, .LCPI71_0@toc@ha
-; CHECK-BE-NEXT:    addi 3, 3, .LCPI71_0@toc@l
-; CHECK-BE-NEXT:    lxvx 35, 0, 3
-; CHECK-BE-NEXT:    vperm 2, 2, 2, 3
-; CHECK-BE-NEXT:    blr
 ; CHECK-64-LABEL: shuffle_vector_byte_15_8:
 ; CHECK-64:       # %bb.0: # %entry
 ; CHECK-64-NEXT:    ld 3, L..C11(2)

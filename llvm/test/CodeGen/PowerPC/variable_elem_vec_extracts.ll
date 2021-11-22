@@ -35,7 +35,7 @@ entry:
 ; CHECK-BE-DAG: sldi [[SHAMREG:[0-9]+]], [[ANDCREG]], 5
 ; CHECK-BE: mfvsrd [[TOGPR:[0-9]+]],
 ; CHECK-BE: srd [[RSHREG:[0-9]+]], [[TOGPR]], [[SHAMREG]]
-; CHECk-BE: extsw 3, [[RSHREG]]
+; CHECK-BE: extsw 3, [[RSHREG]]
 }
 
 ; Function Attrs: norecurse nounwind readnone

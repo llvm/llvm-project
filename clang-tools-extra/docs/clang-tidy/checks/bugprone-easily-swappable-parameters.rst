@@ -154,7 +154,7 @@ noisiness.
       ``a < b``.
     * The parameters are further passed to the same function to the same
       parameter of that function, of the same overload.
-      e.g. ``f(a, 1)`` and ``f(b, 2)`` to some ``f(T, int)``.
+      E.g. ``f(a, 1)`` and ``f(b, 2)`` to some ``f(T, int)``.
 
       .. note::
 

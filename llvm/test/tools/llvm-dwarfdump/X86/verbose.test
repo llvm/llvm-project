@@ -7,9 +7,9 @@
 #       CHECK:.debug_info contents:
 #       CHECK:0x0000000b: DW_TAG_compile_unit [1] *
 #       CHECK:              DW_AT_name [DW_FORM_strp]	( .debug_str[0x{{.*}}] = "brief.c")
-#       CHECK:0x0000002a:   DW_TAG_subprogram [2]  
+#       CHECK:0x0000002a:   DW_TAG_subprogram [2]   (0x0000000b)
 #       CHECK:                DW_AT_name [DW_FORM_strp]	( .debug_str[0x{{.*}}] = "main")
-#       CHECK:0x00000043:   DW_TAG_base_type [3]  
+#       CHECK:0x00000043:   DW_TAG_base_type [3]   (0x0000000b)
 #  CHECK-NEXT:                DW_AT_name [DW_FORM_strp]	( .debug_str[0x{{.*}}] = "int")
 
 #       CHECK:.debug_line contents:

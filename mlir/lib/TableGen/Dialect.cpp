@@ -90,6 +90,14 @@ bool Dialect::hasOperationInterfaceFallback() const {
   return def->getValueAsBit("hasOperationInterfaceFallback");
 }
 
+bool Dialect::useDefaultAttributePrinterParser() const {
+  return def->getValueAsBit("useDefaultAttributePrinterParser");
+}
+
+bool Dialect::useDefaultTypePrinterParser() const {
+  return def->getValueAsBit("useDefaultTypePrinterParser");
+}
+
 Dialect::EmitPrefix Dialect::getEmitAccessorPrefix() const {
   int prefix = def->getValueAsInt("emitAccessorPrefix");
   if (prefix < 0 || prefix > static_cast<int>(EmitPrefix::Both))

@@ -212,6 +212,7 @@ Clang-Tidy Checks
    `llvmlibc-implementation-in-namespace <llvmlibc-implementation-in-namespace.html>`_,
    `llvmlibc-restrict-system-libc-headers <llvmlibc-restrict-system-libc-headers.html>`_, "Yes"
    `misc-definitions-in-headers <misc-definitions-in-headers.html>`_, "Yes"
+   `misc-misleading-identifier <misc-mileading-identifier.html>`_,
    `misc-misplaced-const <misc-misplaced-const.html>`_,
    `misc-new-delete-overloads <misc-new-delete-overloads.html>`_,
    `misc-no-recursion <misc-no-recursion.html>`_,
@@ -287,6 +288,7 @@ Clang-Tidy Checks
    `readability-avoid-const-params-in-decls <readability-avoid-const-params-in-decls.html>`_,
    `readability-braces-around-statements <readability-braces-around-statements.html>`_, "Yes"
    `readability-const-return-type <readability-const-return-type.html>`_, "Yes"
+   `readability-container-data-pointer <readability-container-data-pointer.html>`_, "Yes"
    `readability-container-size-empty <readability-container-size-empty.html>`_, "Yes"
    `readability-convert-member-functions-to-static <readability-convert-member-functions-to-static.html>`_,
    `readability-delete-null-pointer <readability-delete-null-pointer.html>`_, "Yes"
@@ -449,4 +451,3 @@ Clang-Tidy Checks
    `hicpp-vararg <hicpp-vararg.html>`_, `cppcoreguidelines-pro-type-vararg <cppcoreguidelines-pro-type-vararg.html>`_,
    `llvm-else-after-return <llvm-else-after-return.html>`_, `readability-else-after-return <readability-else-after-return.html>`_, "Yes"
    `llvm-qualified-auto <llvm-qualified-auto.html>`_, `readability-qualified-auto <readability-qualified-auto.html>`_, "Yes"
-   

@@ -230,7 +230,7 @@ that are already documented include: *LLVM_TARGETS_TO_BUILD*,
   components. LLVM library components are either library names with the LLVM
   prefix removed (i.e. Support, Demangle...), LLVM target names, or special
   purpose component names. The special purpose component names are:
-  
+
   #. ``all`` - All LLVM available component libraries
   #. ``Native`` - The LLVM target for the Native system
   #. ``AllTargetsAsmParsers`` - All the included target ASM parsers libraries

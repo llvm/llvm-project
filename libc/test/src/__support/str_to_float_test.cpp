@@ -206,8 +206,8 @@ TEST_F(LlvmLibcStrToFloatTest, SimpleDecimalConversion64BasicExponents) {
 }
 
 TEST_F(LlvmLibcStrToFloatTest, SimpleDecimalConversion64BasicSubnormals) {
-  SimpleDecimalConversionTest<double>("1e-320", 0x7e8, 0);
-  SimpleDecimalConversionTest<double>("1e-308", 0x730d67819e8d2, 0);
+  SimpleDecimalConversionTest<double>("1e-320", 0x7e8, 0, ERANGE);
+  SimpleDecimalConversionTest<double>("1e-308", 0x730d67819e8d2, 0, ERANGE);
   SimpleDecimalConversionTest<double>("2.9e-308", 0x14da6df5e4bcc8, 1);
 }
 
@@ -217,7 +217,7 @@ TEST_F(LlvmLibcStrToFloatTest, SimpleDecimalConversion64SubnormalRounding) {
   // but this is the shortest string that results in the maximum subnormal that
   // I found.
   SimpleDecimalConversionTest<double>("2.225073858507201e-308", 0xfffffffffffff,
-                                      0);
+                                      0, ERANGE);
 
   // Same here, if you were to extend the max subnormal out for another 800
   // digits, incrementing any one of those digits would create a normal number.
@@ -227,7 +227,8 @@ TEST_F(LlvmLibcStrToFloatTest, SimpleDecimalConversion64SubnormalRounding) {
 
 TEST_F(LlvmLibcStrToFloatTest, SimpleDecimalConversion32SpecificFailures) {
   SimpleDecimalConversionTest<float>(
-      "1.4012984643248170709237295832899161312802619418765e-45", 0x1, 0);
+      "1.4012984643248170709237295832899161312802619418765e-45", 0x1, 0,
+      ERANGE);
 }
 
 TEST(LlvmLibcStrToFloatTest, SimpleDecimalConversionExtraTypes) {

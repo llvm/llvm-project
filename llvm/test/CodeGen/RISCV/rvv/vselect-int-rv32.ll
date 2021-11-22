@@ -69,6 +69,40 @@ define <vscale x 2 x i8> @vmerge_iv_nxv2i8(<vscale x 2 x i8> %va, <vscale x 2 x 
   ret <vscale x 2 x i8> %vc
 }
 
+define <vscale x 3 x i8> @vmerge_vv_nxv3i8(<vscale x 3 x i8> %va, <vscale x 3 x i8> %vb, <vscale x 3 x i1> %cond) {
+; CHECK-LABEL: vmerge_vv_nxv3i8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a0, zero, e8, mf2, ta, mu
+; CHECK-NEXT:    vmerge.vvm v8, v9, v8, v0
+; CHECK-NEXT:    ret
+  %vc = select <vscale x 3 x i1> %cond, <vscale x 3 x i8> %va, <vscale x 3 x i8> %vb
+  ret <vscale x 3 x i8> %vc
+}
+
+define <vscale x 3 x i8> @vmerge_xv_nxv3i8(<vscale x 3 x i8> %va, i8 signext %b, <vscale x 3 x i1> %cond) {
+; CHECK-LABEL: vmerge_xv_nxv3i8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a1, zero, e8, mf2, ta, mu
+; CHECK-NEXT:    vmerge.vxm v8, v8, a0, v0
+; CHECK-NEXT:    ret
+  %head = insertelement <vscale x 3 x i8> undef, i8 %b, i32 0
+  %splat = shufflevector <vscale x 3 x i8> %head, <vscale x 3 x i8> undef, <vscale x 3 x i32> zeroinitializer
+  %vc = select <vscale x 3 x i1> %cond, <vscale x 3 x i8> %splat, <vscale x 3 x i8> %va
+  ret <vscale x 3 x i8> %vc
+}
+
+define <vscale x 3 x i8> @vmerge_iv_nxv3i8(<vscale x 3 x i8> %va, <vscale x 3 x i1> %cond) {
+; CHECK-LABEL: vmerge_iv_nxv3i8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a0, zero, e8, mf2, ta, mu
+; CHECK-NEXT:    vmerge.vim v8, v8, 3, v0
+; CHECK-NEXT:    ret
+  %head = insertelement <vscale x 3 x i8> undef, i8 3, i32 0
+  %splat = shufflevector <vscale x 3 x i8> %head, <vscale x 3 x i8> undef, <vscale x 3 x i32> zeroinitializer
+  %vc = select <vscale x 3 x i1> %cond, <vscale x 3 x i8> %splat, <vscale x 3 x i8> %va
+  ret <vscale x 3 x i8> %vc
+}
+
 define <vscale x 4 x i8> @vmerge_vv_nxv4i8(<vscale x 4 x i8> %va, <vscale x 4 x i8> %vb, <vscale x 4 x i1> %cond) {
 ; CHECK-LABEL: vmerge_vv_nxv4i8:
 ; CHECK:       # %bb.0:

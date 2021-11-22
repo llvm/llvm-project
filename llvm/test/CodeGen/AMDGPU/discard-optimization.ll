@@ -1,5 +1,6 @@
 ; RUN: llc -amdgpu-conditional-discard-transformations=1 --march=amdgcn -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,KILL %s
 ; RUN: llc -amdgpu-conditional-discard-transformations=1 -amdgpu-transform-discard-to-demote --march=amdgcn -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,DEMOTE %s
+; RUN: llc -amdgpu-conditional-discard-transformations=1 --march=amdgcn -mcpu=gfx900 -stop-after=amdgpu-conditional-discard < %s | FileCheck -check-prefix=GCN-IR %s
 
 ; Check that the branch is removed by the discard opt.
 
@@ -8,6 +9,11 @@
 ; GCN-NEXT: s_xor_b64 [[KILLED:s\[[0-9+]:[0-9+]\]]], vcc, exec
 ; GCN-NEXT: s_andn2_b64 [[LIVE:s\[[0-9+]:[0-9+]\]]], exec, [[KILLED]]
 ; GCN-NEXT: s_cbranch_scc0
+;
+; GCN-IR-LABEL: define amdgpu_ps void @if_with_kill_true_cond(i32 %arg)
+; GCN-IR: .entry
+; GCN-IR-NOT: .entry
+; GCN-IR: br label %endif{{$}}
 define amdgpu_ps void @if_with_kill_true_cond(i32 %arg) {
 .entry:
   %cmp = icmp eq i32 %arg, 32
@@ -288,6 +294,24 @@ end:
   ret <4 x float> %t4
 }
 
+
+; GCN-LABEL: {{^}}update_phi_no_dups:
+; GCN-IR-LABEL: define amdgpu_ps i32 @update_phi_no_dups(i32 %arg)
+; GCN-IR: endif:
+; GCN-IR-NEXT: %val = phi i32 [ 0, %.entry ]{{$}}
+define amdgpu_ps i32 @update_phi_no_dups(i32 %arg) {
+.entry:
+  %cmp = icmp eq i32 %arg, 32
+  br i1 %cmp, label %then, label %endif
+
+then:
+  tail call void @llvm.amdgcn.kill(i1 false)
+  br label %endif
+
+endif:
+  %val = phi i32 [ 0, %.entry ], [ 1, %then ]
+  ret i32 %val
+}
 
 attributes #0 = { nounwind }
 attributes #1 = { nounwind readnone }

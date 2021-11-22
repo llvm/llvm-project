@@ -35,7 +35,7 @@
 // CHECK-X86_64: "-fsanitize=safe-stack"
 // CHECK: "-stack-protector" "2"
 // CHECK-NOT: "-fcommon"
-// CHECK: {{.*}}ld.lld{{.*}}" "-z" "max-page-size=4096" "-z" "now" "-z" "rodynamic" "-z" "separate-loadable-segments" "--pack-dyn-relocs=relr"
+// CHECK: {{.*}}ld.lld{{.*}}" "-z" "max-page-size=4096" "-z" "now" "-z" "rodynamic" "-z" "separate-loadable-segments" "-z" "rel" "--pack-dyn-relocs=relr"
 // CHECK: "--sysroot=[[SYSROOT]]"
 // CHECK: "-pie"
 // CHECK: "--build-id"

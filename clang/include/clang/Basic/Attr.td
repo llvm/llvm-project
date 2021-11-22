@@ -2310,6 +2310,7 @@ def SwiftAttr : InheritableAttr {
   let Spellings = [GNU<"swift_attr">];
   let Args = [StringArgument<"Attribute">];
   let Documentation = [SwiftAttrDocs];
+  let PragmaAttributeSupport = 1;
 }
 
 def SwiftBridge : InheritableAttr {
@@ -3683,7 +3684,8 @@ def OMPAllocateDecl : InheritableAttr {
                    "OMPCGroupMemAlloc", "OMPPTeamMemAlloc", "OMPThreadMemAlloc",
                    "OMPUserDefinedMemAlloc"
                  ]>,
-    ExprArgument<"Allocator">
+    ExprArgument<"Allocator">,
+    ExprArgument<"Alignment">
   ];
   let Documentation = [Undocumented];
 }

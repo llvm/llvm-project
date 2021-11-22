@@ -27,12 +27,12 @@ def-use dependency between them into larger nodes that contain multiple-
 instructions.
 
 As described in [1]_ the DDG uses graph abstraction to group nodes
-that are part of a strongly connected component of the graph 
+that are part of a strongly connected component of the graph
 into special nodes called pi-blocks. pi-blocks represent cycles of data
 dependency that prevent reordering transformations. Since any strongly
 connected component of the graph is a maximal subgraph of all the nodes
 that form a cycle, pi-blocks are at most one level deep. In other words,
-no pi-blocks are nested inside another pi-block, resulting in a 
+no pi-blocks are nested inside another pi-block, resulting in a
 hierarchical representation that is at most one level deep.
 
 
@@ -130,7 +130,7 @@ The current implementation of DDG differs slightly from the dependence
 graph described in [1]_ in the following ways:
 
   1. The graph nodes in the paper represent three main program components, namely *assignment statements*, *for loop headers* and *while loop headers*. In this implementation, DDG nodes naturally represent LLVM IR instructions. An assignment statement in this implementation typically involves a node representing the ``store`` instruction along with a number of individual nodes computing the right-hand-side of the assignment that connect to the ``store`` node via a def-use edge.  The loop header instructions are not represented as special nodes in this implementation because they have limited uses and can be easily identified, for example, through ``LoopAnalysis``.
-  2. The paper describes five types of dependency edges between nodes namely *loop dependency*, *flow-*, *anti-*, *output-*, and *input-* dependencies. In this implementation *memory* edges represent the *flow-*, *anti-*, *output-*, and *input-* dependencies. However, *loop dependencies* are not made explicit, because they mainly represent association between a loop structure and the program elements inside the loop and this association is fairly obvious in LLVM IR itself. 
+  2. The paper describes five types of dependency edges between nodes namely *loop dependency*, *flow-*, *anti-*, *output-*, and *input-* dependencies. In this implementation *memory* edges represent the *flow-*, *anti-*, *output-*, and *input-* dependencies. However, *loop dependencies* are not made explicit, because they mainly represent association between a loop structure and the program elements inside the loop and this association is fairly obvious in LLVM IR itself.
   3. The paper describes two types of pi-blocks; *recurrences* whose bodies are SCCs and *IN* nodes whose bodies are not part of any SCC. In this implementation, pi-blocks are only created for *recurrences*. *IN* nodes remain as simple DDG nodes in the graph.
 
 

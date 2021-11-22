@@ -80,6 +80,12 @@ template <> struct FloatProperties<long double> {
       FloatProperties<double>::exponentMask;
   static constexpr uint32_t exponentBias =
       FloatProperties<double>::exponentBias;
+
+  // If a number x is a NAN, then it is a quiet NAN if:
+  //   QuietNaNMask & bits(x) != 0
+  // Else, it is a signalling NAN.
+  static constexpr BitsType quietNaNMask =
+      FloatProperties<double>::quietNaNMask;
 };
 #elif defined(SPECIAL_X86_LONG_DOUBLE)
 // Properties for numbers represented in 80 bits long double on non-Windows x86
@@ -99,6 +105,11 @@ template <> struct FloatProperties<long double> {
   static constexpr BitsType exponentMask = ((BitsType(1) << exponentWidth) - 1)
                                            << (mantissaWidth + 1);
   static constexpr uint32_t exponentBias = 16383;
+
+  // If a number x is a NAN, then it is a quiet NAN if:
+  //   QuietNaNMask & bits(x) != 0
+  // Else, it is a signalling NAN.
+  static constexpr BitsType quietNaNMask = BitsType(1) << (mantissaWidth - 1);
 };
 #else
 // Properties for numbers represented in 128 bits long double on non x86
@@ -117,6 +128,11 @@ template <> struct FloatProperties<long double> {
                                        << (exponentWidth + mantissaWidth);
   static constexpr BitsType exponentMask = ~(signMask | mantissaMask);
   static constexpr uint32_t exponentBias = 16383;
+
+  // If a number x is a NAN, then it is a quiet NAN if:
+  //   QuietNaNMask & bits(x) != 0
+  // Else, it is a signalling NAN.
+  static constexpr BitsType quietNaNMask = BitsType(1) << (mantissaWidth - 1);
 };
 #endif
 

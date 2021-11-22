@@ -15,6 +15,7 @@
 #include "Delta.h"
 #include "ReducerWorkItem.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/Bitcode/BitcodeWriter.h"
 #include "llvm/IR/Verifier.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ToolOutputFile.h"
@@ -27,6 +28,15 @@ static cl::opt<bool> AbortOnInvalidReduction(
     "abort-on-invalid-reduction",
     cl::desc("Abort if any reduction results in invalid IR"));
 
+static cl::opt<unsigned int> StartingGranularityLevel(
+    "starting-granularity-level",
+    cl::desc("Number of times to divide chunks prior to first test"));
+
+static cl::opt<bool> TmpFilesAsBitcode(
+    "write-tmp-files-as-bitcode",
+    cl::desc("Write temporary files as bitcode, instead of textual IR"),
+    cl::init(false));
+
 void writeOutput(ReducerWorkItem &M, llvm::StringRef Message);
 
 bool isReduced(ReducerWorkItem &M, TestRunner &Test,
@@ -34,12 +44,26 @@ bool isReduced(ReducerWorkItem &M, TestRunner &Test,
   // Write ReducerWorkItem to tmp file
   int FD;
   std::error_code EC = sys::fs::createTemporaryFile(
-      "llvm-reduce", M.isMIR() ? "mir" : "ll", FD, CurrentFilepath);
+      "llvm-reduce", M.isMIR() ? "mir" : (TmpFilesAsBitcode ? "bc" : "ll"), FD,
+      CurrentFilepath);
   if (EC) {
     errs() << "Error making unique filename: " << EC.message() << "!\n";
     exit(1);
   }
 
+  if (TmpFilesAsBitcode) {
+    llvm::raw_fd_ostream OutStream(FD, true);
+    WriteBitcodeToFile(M, OutStream);
+    OutStream.close();
+    if (OutStream.has_error()) {
+      errs() << "Error emitting bitcode to file '" << CurrentFilepath << "'!\n";
+      sys::fs::remove(CurrentFilepath);
+      exit(1);
+    }
+    bool Res = Test.run(CurrentFilepath);
+    sys::fs::remove(CurrentFilepath);
+    return Res;
+  }
   ToolOutputFile Out(CurrentFilepath, FD);
   M.print(Out.os(), /*AnnotationWriter=*/nullptr);
   Out.os().close();
@@ -92,15 +116,76 @@ static bool increaseGranularity(std::vector<Chunk> &Chunks) {
   }
   return SplitOne;
 }
+// Check if \p ChunkToCheckForUninterestingness is interesting. Returns the
+// modified module if the chunk resulted in a reduction.
+template <typename T>
+static std::unique_ptr<ReducerWorkItem>
+CheckChunk(Chunk &ChunkToCheckForUninterestingness, TestRunner &Test,
+           function_ref<void(Oracle &, T &)> ExtractChunksFromModule,
+           std::set<Chunk> &UninterestingChunks,
+           std::vector<Chunk> &ChunksStillConsideredInteresting) {
+  // Take all of ChunksStillConsideredInteresting chunks, except those we've
+  // already deemed uninteresting (UninterestingChunks) but didn't remove
+  // from ChunksStillConsideredInteresting yet, and additionally ignore
+  // ChunkToCheckForUninterestingness chunk.
+  std::vector<Chunk> CurrentChunks;
+  CurrentChunks.reserve(ChunksStillConsideredInteresting.size() -
+                        UninterestingChunks.size() - 1);
+  copy_if(ChunksStillConsideredInteresting, std::back_inserter(CurrentChunks),
+          [&](const Chunk &C) {
+            return !UninterestingChunks.count(C) &&
+                   C != ChunkToCheckForUninterestingness;
+          });
+
+  // Clone module before hacking it up..
+  std::unique_ptr<ReducerWorkItem> Clone =
+      cloneReducerWorkItem(Test.getProgram());
+  // Generate Module with only Targets inside Current Chunks
+  Oracle O(CurrentChunks);
+  ExtractChunksFromModule(O, *Clone);
+
+  // Some reductions may result in invalid IR. Skip such reductions.
+  if (verifyReducerWorkItem(*Clone, &errs())) {
+    if (AbortOnInvalidReduction) {
+      errs() << "Invalid reduction\n";
+      exit(1);
+    }
+    errs() << " **** WARNING | reduction resulted in invalid module, "
+              "skipping\n";
+    return nullptr;
+  }
+
+  errs() << "Ignoring: ";
+  ChunkToCheckForUninterestingness.print();
+  for (const Chunk &C : UninterestingChunks)
+    C.print();
+
+  SmallString<128> CurrentFilepath;
+  if (!isReduced(*Clone, Test, CurrentFilepath)) {
+    // Program became non-reduced, so this chunk appears to be interesting.
+    errs() << "\n";
+    return nullptr;
+  }
+  return Clone;
+}
 
 /// Runs the Delta Debugging algorithm, splits the code into chunks and
 /// reduces the amount of chunks that are considered interesting by the
 /// given test.
 template <typename T>
 void runDeltaPassInt(
-    TestRunner &Test, int Targets,
+    TestRunner &Test,
     function_ref<void(Oracle &, T &)> ExtractChunksFromModule) {
-  assert(Targets >= 0);
+  int Targets;
+  {
+    // Count the number of targets by counting the number of calls to
+    // Oracle::shouldKeep() but always returning true so no changes are
+    // made.
+    std::vector<Chunk> AllChunks = {{0, INT_MAX}};
+    Oracle Counter(AllChunks);
+    ExtractChunksFromModule(Counter, Test.getProgram());
+    Targets = Counter.count();
+  }
   if (!Targets) {
     errs() << "\nNothing to reduce\n";
     return;
@@ -115,8 +200,12 @@ void runDeltaPassInt(
   assert(!verifyReducerWorkItem(Test.getProgram(), &errs()) &&
          "input module is broken before making changes");
 
-  std::vector<Chunk> ChunksStillConsideredInteresting = {{1, Targets}};
+  std::vector<Chunk> ChunksStillConsideredInteresting = {{0, Targets - 1}};
   std::unique_ptr<ReducerWorkItem> ReducedProgram;
+
+  for (unsigned int Level = 0; Level < StartingGranularityLevel; Level++) {
+    increaseGranularity(ChunksStillConsideredInteresting);
+  }
 
   bool FoundAtLeastOneNewUninterestingChunkWithCurrentGranularity;
   do {
@@ -125,52 +214,15 @@ void runDeltaPassInt(
     std::set<Chunk> UninterestingChunks;
     for (Chunk &ChunkToCheckForUninterestingness :
          reverse(ChunksStillConsideredInteresting)) {
-      // Take all of ChunksStillConsideredInteresting chunks, except those we've
-      // already deemed uninteresting (UninterestingChunks) but didn't remove
-      // from ChunksStillConsideredInteresting yet, and additionally ignore
-      // ChunkToCheckForUninterestingness chunk.
-      std::vector<Chunk> CurrentChunks;
-      CurrentChunks.reserve(ChunksStillConsideredInteresting.size() -
-                            UninterestingChunks.size() - 1);
-      copy_if(ChunksStillConsideredInteresting,
-              std::back_inserter(CurrentChunks), [&](const Chunk &C) {
-                return !UninterestingChunks.count(C) &&
-                       C != ChunkToCheckForUninterestingness;
-              });
-
-      // Clone module before hacking it up..
-      std::unique_ptr<ReducerWorkItem> Clone =
-          cloneReducerWorkItem(Test.getProgram());
-      // Generate Module with only Targets inside Current Chunks
-      Oracle O(CurrentChunks);
-      ExtractChunksFromModule(O, *Clone);
-
-      // Some reductions may result in invalid IR. Skip such reductions.
-      if (verifyReducerWorkItem(*Clone, &errs())) {
-        if (AbortOnInvalidReduction) {
-          errs() << "Invalid reduction\n";
-          exit(1);
-        }
-        errs() << " **** WARNING | reduction resulted in invalid module, "
-                  "skipping\n";
+      std::unique_ptr<ReducerWorkItem> Result = CheckChunk(
+          ChunkToCheckForUninterestingness, Test, ExtractChunksFromModule,
+          UninterestingChunks, ChunksStillConsideredInteresting);
+      if (!Result)
         continue;
-      }
-
-      errs() << "Ignoring: ";
-      ChunkToCheckForUninterestingness.print();
-      for (const Chunk &C : UninterestingChunks)
-        C.print();
-
-      SmallString<128> CurrentFilepath;
-      if (!isReduced(*Clone, Test, CurrentFilepath)) {
-        // Program became non-reduced, so this chunk appears to be interesting.
-        errs() << "\n";
-        continue;
-      }
 
       FoundAtLeastOneNewUninterestingChunkWithCurrentGranularity = true;
       UninterestingChunks.insert(ChunkToCheckForUninterestingness);
-      ReducedProgram = std::move(Clone);
+      ReducedProgram = std::move(Result);
       errs() << " **** SUCCESS | lines: " << getLines(CurrentFilepath) << "\n";
       writeOutput(*ReducedProgram, "Saved new best reduction to ");
     }
@@ -190,13 +242,13 @@ void runDeltaPassInt(
 }
 
 void llvm::runDeltaPass(
-    TestRunner &Test, int Targets,
+    TestRunner &Test,
     function_ref<void(Oracle &, Module &)> ExtractChunksFromModule) {
-  runDeltaPassInt<Module>(Test, Targets, ExtractChunksFromModule);
+  runDeltaPassInt<Module>(Test, ExtractChunksFromModule);
 }
 
 void llvm::runDeltaPass(
-    TestRunner &Test, int Targets,
+    TestRunner &Test,
     function_ref<void(Oracle &, MachineFunction &)> ExtractChunksFromModule) {
-  runDeltaPassInt<MachineFunction>(Test, Targets, ExtractChunksFromModule);
+  runDeltaPassInt<MachineFunction>(Test, ExtractChunksFromModule);
 }

@@ -8,6 +8,7 @@
 
 #include "CheckerRegistration.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
+#include "clang/StaticAnalyzer/Core/PathSensitive/CallDescription.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CallEvent.h"
 #include "clang/StaticAnalyzer/Frontend/CheckerRegistry.h"
 #include "gtest/gtest.h"
@@ -21,7 +22,7 @@ class EvalCallBase : public Checker<eval::Call> {
 
 public:
   bool evalCall(const CallEvent &Call, CheckerContext &C) const {
-    return Call.isCalled(Foo);
+    return Foo.matches(Call);
   }
 };
 

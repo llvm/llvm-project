@@ -20,7 +20,6 @@ class ThreadPool;
 } // end namespace llvm
 
 namespace mlir {
-class AbstractOperation;
 class DebugActionManager;
 class DiagnosticEngine;
 class Dialect;
@@ -28,6 +27,7 @@ class DialectRegistry;
 class InFlightDiagnostic;
 class Location;
 class MLIRContextImpl;
+class RegisteredOperationName;
 class StorageUniquer;
 
 /// MLIRContext is the top-level object for a collection of MLIR operations. It
@@ -172,7 +172,7 @@ public:
   /// Return information about all registered operations.  This isn't very
   /// efficient: typically you should ask the operations about their properties
   /// directly.
-  std::vector<AbstractOperation *> getRegisteredOperations();
+  std::vector<RegisteredOperationName> getRegisteredOperations();
 
   /// Return true if this operation name is registered in this context.
   bool isOperationRegistered(StringRef name);

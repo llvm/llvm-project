@@ -257,7 +257,8 @@ struct CodegenStrategy {
 
   /// Apply the transformation patterns in sequence with cleanup
   /// transformations interleaved.
-  void configurePassPipeline(OpPassManager &pm, MLIRContext *context) const;
+  void configurePassPipeline(OpPassManager &pm, MLIRContext *context,
+                             bool addEnablePass = true) const;
 
 private:
   LogicalResult postPatternTransforms(Operation *func) const;

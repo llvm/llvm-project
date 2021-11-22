@@ -1565,7 +1565,7 @@ public:
             // producer scenarios will still go through profitability analysis
             // if only one of the stores is involved the producer-consumer
             // relationship of the candidate loops.
-            assert(producerStores.size() > 0 && "Expected producer store");
+            assert(!producerStores.empty() && "Expected producer store");
             if (producerStores.size() > 1)
               LLVM_DEBUG(llvm::dbgs() << "Skipping profitability analysis. Not "
                                          "supported for this case\n");

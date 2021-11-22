@@ -43,8 +43,8 @@ using namespace llvm::PatternMatch;
 
 bool RecurrenceDescriptor::areAllUsesIn(Instruction *I,
                                         SmallPtrSetImpl<Instruction *> &Set) {
-  for (User::op_iterator Use = I->op_begin(), E = I->op_end(); Use != E; ++Use)
-    if (!Set.count(dyn_cast<Instruction>(*Use)))
+  for (const Use &Use : I->operands())
+    if (!Set.count(dyn_cast<Instruction>(Use)))
       return false;
   return true;
 }
@@ -146,12 +146,9 @@ static std::pair<Type *, bool> computeRecurrenceType(Instruction *Exit,
       // meaning that we will use sext instructions instead of zext
       // instructions to restore the original type.
       IsSigned = true;
-      if (!Bits.isNegative())
-        // If the value is not known to be negative, we don't known what the
-        // upper bit is, and therefore, we don't know what kind of extend we
-        // will need. In this case, just increase the bit width by one bit and
-        // use sext.
-        ++MaxBitWidth;
+      // Make sure at at least one sign bit is included in the result, so it
+      // will get properly sign-extended.
+      ++MaxBitWidth;
     }
   }
   if (!isPowerOf2_64(MaxBitWidth))
@@ -201,7 +198,10 @@ static bool checkOrderedReduction(RecurKind Kind, Instruction *ExactFPMathInst,
   if (Kind != RecurKind::FAdd)
     return false;
 
-  if (Exit->getOpcode() != Instruction::FAdd || Exit != ExactFPMathInst)
+  // Ensure the exit instruction is an FAdd, and that it only has one user
+  // other than the reduction PHI
+  if (Exit->getOpcode() != Instruction::FAdd || Exit->hasNUsesOrMore(3) ||
+      Exit != ExactFPMathInst)
     return false;
 
   // The only pattern accepted is the one in which the reduction PHI

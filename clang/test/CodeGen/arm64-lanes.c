@@ -1,6 +1,8 @@
 // RUN: %clang_cc1 -triple arm64-apple-ios7 -target-feature +neon -ffreestanding -disable-O0-optnone -emit-llvm -o - %s | opt -S -mem2reg | FileCheck %s
 // RUN: %clang_cc1 -triple aarch64_be-linux-gnu -target-feature +neon -ffreestanding -disable-O0-optnone -emit-llvm -o - %s | opt -S -mem2reg | FileCheck %s --check-prefix CHECK-BE
 
+// REQUIRES: aarch64-registered-target || arm-registered-target
+
 #include <arm_neon.h>
 
 int8_t test_vdupb_lane_s8(int8x8_t src) {

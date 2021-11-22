@@ -385,7 +385,7 @@ void UnwrappedLineParser::parseLevel(bool HasOpeningBrace) {
       // be in a non-declaration context.
       if (!FormatTok->is(TT_MacroBlockBegin) && tryToParseBracedList())
         continue;
-      parseBlock(/*MustBeDeclaration=*/false);
+      parseBlock();
       addUnwrappedLine();
       break;
     case tok::r_brace:
@@ -1313,7 +1313,7 @@ void UnwrappedLineParser::parseStructuralElement(bool IsTopLevel) {
           if (Style.BraceWrapping.AfterControlStatement ==
               FormatStyle::BWACS_Always)
             addUnwrappedLine();
-          parseBlock(/*MustBeDeclaration=*/false);
+          parseBlock();
         }
         addUnwrappedLine();
         return;
@@ -1326,7 +1326,7 @@ void UnwrappedLineParser::parseStructuralElement(bool IsTopLevel) {
           if (Style.BraceWrapping.AfterControlStatement ==
               FormatStyle::BWACS_Always)
             addUnwrappedLine();
-          parseBlock(/*MustBeDeclaration=*/false);
+          parseBlock();
         }
         addUnwrappedLine();
         return;
@@ -1434,7 +1434,7 @@ void UnwrappedLineParser::parseStructuralElement(bool IsTopLevel) {
         if (Style.BraceWrapping.AfterFunction)
           addUnwrappedLine();
         FormatTok->setType(TT_FunctionLBrace);
-        parseBlock(/*MustBeDeclaration=*/false);
+        parseBlock();
         addUnwrappedLine();
         return;
       }
@@ -2078,7 +2078,7 @@ void UnwrappedLineParser::parseIfThenElse() {
   bool NeedsUnwrappedLine = false;
   if (FormatTok->Tok.is(tok::l_brace)) {
     CompoundStatementIndenter Indenter(this, Style, Line->Level);
-    parseBlock(/*MustBeDeclaration=*/false);
+    parseBlock();
     if (Style.BraceWrapping.BeforeElse)
       addUnwrappedLine();
     else
@@ -2096,7 +2096,7 @@ void UnwrappedLineParser::parseIfThenElse() {
       parseSquare();
     if (FormatTok->Tok.is(tok::l_brace)) {
       CompoundStatementIndenter Indenter(this, Style, Line->Level);
-      parseBlock(/*MustBeDeclaration=*/false);
+      parseBlock();
       addUnwrappedLine();
     } else if (FormatTok->Tok.is(tok::kw_if)) {
       FormatToken *Previous = AllTokens[Tokens->getPosition() - 1];
@@ -2158,7 +2158,7 @@ void UnwrappedLineParser::parseTryCatch() {
   }
   if (FormatTok->is(tok::l_brace)) {
     CompoundStatementIndenter Indenter(this, Style, Line->Level);
-    parseBlock(/*MustBeDeclaration=*/false);
+    parseBlock();
     if (Style.BraceWrapping.BeforeCatch) {
       addUnwrappedLine();
     } else {
@@ -2196,7 +2196,7 @@ void UnwrappedLineParser::parseTryCatch() {
     }
     NeedsUnwrappedLine = false;
     CompoundStatementIndenter Indenter(this, Style, Line->Level);
-    parseBlock(/*MustBeDeclaration=*/false);
+    parseBlock();
     if (Style.BraceWrapping.BeforeCatch)
       addUnwrappedLine();
     else
@@ -2216,7 +2216,7 @@ void UnwrappedLineParser::parseNamespace() {
     parseParens();
   } else {
     while (FormatTok->isOneOf(tok::identifier, tok::coloncolon, tok::kw_inline,
-                              tok::l_square)) {
+                              tok::l_square, tok::period)) {
       if (FormatTok->is(tok::l_square))
         parseSquare();
       else
@@ -2309,7 +2309,7 @@ void UnwrappedLineParser::parseForOrWhileLoop() {
     parseParens();
   if (FormatTok->Tok.is(tok::l_brace)) {
     CompoundStatementIndenter Indenter(this, Style, Line->Level);
-    parseBlock(/*MustBeDeclaration=*/false);
+    parseBlock();
     addUnwrappedLine();
   } else {
     addUnwrappedLine();
@@ -2324,7 +2324,7 @@ void UnwrappedLineParser::parseDoWhile() {
   nextToken();
   if (FormatTok->Tok.is(tok::l_brace)) {
     CompoundStatementIndenter Indenter(this, Style, Line->Level);
-    parseBlock(/*MustBeDeclaration=*/false);
+    parseBlock();
     if (Style.BraceWrapping.BeforeWhile)
       addUnwrappedLine();
   } else {
@@ -2363,7 +2363,7 @@ void UnwrappedLineParser::parseLabel(bool LeftAlignLabel) {
     CompoundStatementIndenter Indenter(this, Line->Level,
                                        Style.BraceWrapping.AfterCaseLabel,
                                        Style.BraceWrapping.IndentBraces);
-    parseBlock(/*MustBeDeclaration=*/false);
+    parseBlock();
     if (FormatTok->Tok.is(tok::kw_break)) {
       if (Style.BraceWrapping.AfterControlStatement ==
           FormatStyle::BWACS_Always) {
@@ -2405,7 +2405,7 @@ void UnwrappedLineParser::parseSwitch() {
     parseParens();
   if (FormatTok->Tok.is(tok::l_brace)) {
     CompoundStatementIndenter Indenter(this, Style, Line->Level);
-    parseBlock(/*MustBeDeclaration=*/false);
+    parseBlock();
     addUnwrappedLine();
   } else {
     addUnwrappedLine();
@@ -2457,7 +2457,7 @@ void UnwrappedLineParser::parseRequiresExpression(unsigned int OriginalLevel) {
     if (Style.BraceWrapping.AfterFunction)
       addUnwrappedLine();
     FormatTok->setType(TT_FunctionLBrace);
-    parseBlock(/*MustBeDeclaration=*/false);
+    parseBlock();
     addUnwrappedLine();
   } else {
     parseConstraintExpression(OriginalLevel);
@@ -2494,7 +2494,7 @@ void UnwrappedLineParser::parseConstraintExpression(
       if (Style.BraceWrapping.AfterFunction)
         addUnwrappedLine();
       FormatTok->setType(TT_FunctionLBrace);
-      parseBlock(/*MustBeDeclaration=*/false);
+      parseBlock();
     }
     if (FormatTok->Tok.is(tok::semi)) {
       // Eat any trailing semi.
@@ -2834,7 +2834,7 @@ void UnwrappedLineParser::parseObjCMethod() {
     } else if (FormatTok->Tok.is(tok::l_brace)) {
       if (Style.BraceWrapping.AfterFunction)
         addUnwrappedLine();
-      parseBlock(/*MustBeDeclaration=*/false);
+      parseBlock();
       addUnwrappedLine();
       return;
     } else {
@@ -2863,7 +2863,7 @@ void UnwrappedLineParser::parseObjCUntilAtEnd() {
       break;
     }
     if (FormatTok->is(tok::l_brace)) {
-      parseBlock(/*MustBeDeclaration=*/false);
+      parseBlock();
       // In ObjC interfaces, nothing should be following the "}".
       addUnwrappedLine();
     } else if (FormatTok->is(tok::r_brace)) {
@@ -3034,24 +3034,15 @@ LLVM_ATTRIBUTE_UNUSED static void printDebugInfo(const UnwrappedLine &Line,
   llvm::dbgs() << Prefix << "Line(" << Line.Level
                << ", FSC=" << Line.FirstStartColumn << ")"
                << (Line.InPPDirective ? " MACRO" : "") << ": ";
-  for (std::list<UnwrappedLineNode>::const_iterator I = Line.Tokens.begin(),
-                                                    E = Line.Tokens.end();
-       I != E; ++I) {
-    llvm::dbgs() << I->Tok->Tok.getName() << "["
-                 << "T=" << (unsigned)I->Tok->getType()
-                 << ", OC=" << I->Tok->OriginalColumn << "] ";
+  for (const auto &Node : Line.Tokens) {
+    llvm::dbgs() << Node.Tok->Tok.getName() << "["
+                 << "T=" << static_cast<unsigned>(Node.Tok->getType())
+                 << ", OC=" << Node.Tok->OriginalColumn << "] ";
   }
-  for (std::list<UnwrappedLineNode>::const_iterator I = Line.Tokens.begin(),
-                                                    E = Line.Tokens.end();
-       I != E; ++I) {
-    const UnwrappedLineNode &Node = *I;
-    for (SmallVectorImpl<UnwrappedLine>::const_iterator
-             I = Node.Children.begin(),
-             E = Node.Children.end();
-         I != E; ++I) {
-      printDebugInfo(*I, "\nChild: ");
-    }
-  }
+  for (const auto &Node : Line.Tokens)
+    for (const auto &ChildNode : Node.Children)
+      printDebugInfo(ChildNode, "\nChild: ");
+
   llvm::dbgs() << "\n";
 }
 

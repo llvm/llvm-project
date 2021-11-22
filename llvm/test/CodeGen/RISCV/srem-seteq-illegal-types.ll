@@ -367,19 +367,17 @@ define void @test_srem_vec(<3 x i33>* %X) nounwind {
 ; RV32-NEXT:    neg a4, a2
 ; RV32-NEXT:    neg a5, a0
 ; RV32-NEXT:    sw a5, 0(s0)
+; RV32-NEXT:    andi a4, a4, 7
+; RV32-NEXT:    sb a4, 12(s0)
 ; RV32-NEXT:    slli a3, a3, 1
 ; RV32-NEXT:    sub a0, a0, a3
 ; RV32-NEXT:    sw a0, 4(s0)
-; RV32-NEXT:    slli a0, a2, 2
-; RV32-NEXT:    srli a2, a4, 30
-; RV32-NEXT:    sub a2, a2, a0
-; RV32-NEXT:    andi a2, a2, 7
-; RV32-NEXT:    sb a2, 12(s0)
-; RV32-NEXT:    srli a2, a1, 31
+; RV32-NEXT:    srli a0, a1, 31
 ; RV32-NEXT:    andi a1, a1, 1
 ; RV32-NEXT:    slli a1, a1, 1
-; RV32-NEXT:    or a1, a2, a1
-; RV32-NEXT:    sub a0, a1, a0
+; RV32-NEXT:    or a0, a0, a1
+; RV32-NEXT:    slli a1, a2, 2
+; RV32-NEXT:    sub a0, a0, a1
 ; RV32-NEXT:    sw a0, 8(s0)
 ; RV32-NEXT:    lw s6, 0(sp) # 4-byte Folded Reload
 ; RV32-NEXT:    lw s5, 4(sp) # 4-byte Folded Reload
@@ -541,19 +539,17 @@ define void @test_srem_vec(<3 x i33>* %X) nounwind {
 ; RV32M-NEXT:    neg a4, a2
 ; RV32M-NEXT:    neg a5, a0
 ; RV32M-NEXT:    sw a5, 0(s0)
+; RV32M-NEXT:    andi a4, a4, 7
+; RV32M-NEXT:    sb a4, 12(s0)
 ; RV32M-NEXT:    slli a3, a3, 1
 ; RV32M-NEXT:    sub a0, a0, a3
 ; RV32M-NEXT:    sw a0, 4(s0)
-; RV32M-NEXT:    slli a0, a2, 2
-; RV32M-NEXT:    srli a2, a4, 30
-; RV32M-NEXT:    sub a2, a2, a0
-; RV32M-NEXT:    andi a2, a2, 7
-; RV32M-NEXT:    sb a2, 12(s0)
-; RV32M-NEXT:    srli a2, a1, 31
+; RV32M-NEXT:    srli a0, a1, 31
 ; RV32M-NEXT:    andi a1, a1, 1
 ; RV32M-NEXT:    slli a1, a1, 1
-; RV32M-NEXT:    or a1, a2, a1
-; RV32M-NEXT:    sub a0, a1, a0
+; RV32M-NEXT:    or a0, a0, a1
+; RV32M-NEXT:    slli a1, a2, 2
+; RV32M-NEXT:    sub a0, a0, a1
 ; RV32M-NEXT:    sw a0, 8(s0)
 ; RV32M-NEXT:    lw s6, 0(sp) # 4-byte Folded Reload
 ; RV32M-NEXT:    lw s5, 4(sp) # 4-byte Folded Reload

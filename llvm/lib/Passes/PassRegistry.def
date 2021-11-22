@@ -110,6 +110,7 @@ MODULE_PASS("verify", VerifierPass())
 MODULE_PASS("wholeprogramdevirt", WholeProgramDevirtPass())
 MODULE_PASS("dfsan", DataFlowSanitizerPass())
 MODULE_PASS("msan-module", ModuleMemorySanitizerPass({}))
+MODULE_PASS("module-inline", ModuleInlinerPass())
 MODULE_PASS("tsan-module", ModuleThreadSanitizerPass())
 MODULE_PASS("sancov-module", ModuleSanitizerCoveragePass())
 MODULE_PASS("memprof-module", ModuleMemProfilerPass())
@@ -200,6 +201,7 @@ FUNCTION_ANALYSIS("regions", RegionInfoAnalysis())
 FUNCTION_ANALYSIS("no-op-function", NoOpFunctionAnalysis())
 FUNCTION_ANALYSIS("opt-remark-emit", OptimizationRemarkEmitterAnalysis())
 FUNCTION_ANALYSIS("scalar-evolution", ScalarEvolutionAnalysis())
+FUNCTION_ANALYSIS("should-not-run-function-passes", ShouldNotRunFunctionPassesAnalysis())
 FUNCTION_ANALYSIS("stack-safety-local", StackSafetyAnalysis())
 FUNCTION_ANALYSIS("targetlibinfo", TargetLibraryAnalysis())
 FUNCTION_ANALYSIS("targetir",
@@ -335,7 +337,7 @@ FUNCTION_PASS("sink", SinkingPass())
 FUNCTION_PASS("slp-vectorizer", SLPVectorizerPass())
 FUNCTION_PASS("slsr", StraightLineStrengthReducePass())
 FUNCTION_PASS("speculative-execution", SpeculativeExecutionPass())
-FUNCTION_PASS("sroa", SROA())
+FUNCTION_PASS("sroa", SROAPass())
 FUNCTION_PASS("strip-gc-relocates", StripGCRelocates())
 FUNCTION_PASS("structurizecfg", StructurizeCFGPass())
 FUNCTION_PASS("tailcallelim", TailCallElimPass())
@@ -434,9 +436,9 @@ FUNCTION_PASS_WITH_PARAMS("mldst-motion",
                           parseMergedLoadStoreMotionOptions,
                           "no-split-footer-bb;split-footer-bb")
 FUNCTION_PASS_WITH_PARAMS("gvn",
-                          "GVN",
+                          "GVNPass",
                            [](GVNOptions Opts) {
-                             return GVN(Opts);
+                             return GVNPass(Opts);
                            },
                           parseGVNOptions,
                           "no-pre;pre;"

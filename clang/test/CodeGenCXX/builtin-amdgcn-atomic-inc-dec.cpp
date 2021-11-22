@@ -6,8 +6,8 @@
 // CHECK-LABEL: @_Z29test_non_volatile_parameter32Pj(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[PTR_ADDR:%.*]] = alloca i32*, align 8, addrspace(5)
-// CHECK-NEXT:    [[PTR_ADDR_ASCAST:%.*]] = addrspacecast i32* addrspace(5)* [[PTR_ADDR]] to i32**
 // CHECK-NEXT:    [[RES:%.*]] = alloca i32, align 4, addrspace(5)
+// CHECK-NEXT:    [[PTR_ADDR_ASCAST:%.*]] = addrspacecast i32* addrspace(5)* [[PTR_ADDR]] to i32**
 // CHECK-NEXT:    [[RES_ASCAST:%.*]] = addrspacecast i32 addrspace(5)* [[RES]] to i32*
 // CHECK-NEXT:    store i32* [[PTR:%.*]], i32** [[PTR_ADDR_ASCAST]], align 8
 // CHECK-NEXT:    [[TMP0:%.*]] = load i32*, i32** [[PTR_ADDR_ASCAST]], align 8
@@ -32,8 +32,8 @@ __attribute__((device)) void test_non_volatile_parameter32(__UINT32_TYPE__ *ptr)
 // CHECK-LABEL: @_Z29test_non_volatile_parameter64Py(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[PTR_ADDR:%.*]] = alloca i64*, align 8, addrspace(5)
-// CHECK-NEXT:    [[PTR_ADDR_ASCAST:%.*]] = addrspacecast i64* addrspace(5)* [[PTR_ADDR]] to i64**
 // CHECK-NEXT:    [[RES:%.*]] = alloca i64, align 8, addrspace(5)
+// CHECK-NEXT:    [[PTR_ADDR_ASCAST:%.*]] = addrspacecast i64* addrspace(5)* [[PTR_ADDR]] to i64**
 // CHECK-NEXT:    [[RES_ASCAST:%.*]] = addrspacecast i64 addrspace(5)* [[RES]] to i64*
 // CHECK-NEXT:    store i64* [[PTR:%.*]], i64** [[PTR_ADDR_ASCAST]], align 8
 // CHECK-NEXT:    [[TMP0:%.*]] = load i64*, i64** [[PTR_ADDR_ASCAST]], align 8
@@ -58,8 +58,8 @@ __attribute__((device)) void test_non_volatile_parameter64(__UINT64_TYPE__ *ptr)
 // CHECK-LABEL: @_Z25test_volatile_parameter32PVj(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[PTR_ADDR:%.*]] = alloca i32*, align 8, addrspace(5)
-// CHECK-NEXT:    [[PTR_ADDR_ASCAST:%.*]] = addrspacecast i32* addrspace(5)* [[PTR_ADDR]] to i32**
 // CHECK-NEXT:    [[RES:%.*]] = alloca i32, align 4, addrspace(5)
+// CHECK-NEXT:    [[PTR_ADDR_ASCAST:%.*]] = addrspacecast i32* addrspace(5)* [[PTR_ADDR]] to i32**
 // CHECK-NEXT:    [[RES_ASCAST:%.*]] = addrspacecast i32 addrspace(5)* [[RES]] to i32*
 // CHECK-NEXT:    store i32* [[PTR:%.*]], i32** [[PTR_ADDR_ASCAST]], align 8
 // CHECK-NEXT:    [[TMP0:%.*]] = load i32*, i32** [[PTR_ADDR_ASCAST]], align 8
@@ -84,8 +84,8 @@ __attribute__((device)) void test_volatile_parameter32(volatile __UINT32_TYPE__ 
 // CHECK-LABEL: @_Z25test_volatile_parameter64PVy(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[PTR_ADDR:%.*]] = alloca i64*, align 8, addrspace(5)
-// CHECK-NEXT:    [[PTR_ADDR_ASCAST:%.*]] = addrspacecast i64* addrspace(5)* [[PTR_ADDR]] to i64**
 // CHECK-NEXT:    [[RES:%.*]] = alloca i64, align 8, addrspace(5)
+// CHECK-NEXT:    [[PTR_ADDR_ASCAST:%.*]] = addrspacecast i64* addrspace(5)* [[PTR_ADDR]] to i64**
 // CHECK-NEXT:    [[RES_ASCAST:%.*]] = addrspacecast i64 addrspace(5)* [[RES]] to i64*
 // CHECK-NEXT:    store i64* [[PTR:%.*]], i64** [[PTR_ADDR_ASCAST]], align 8
 // CHECK-NEXT:    [[TMP0:%.*]] = load i64*, i64** [[PTR_ADDR_ASCAST]], align 8

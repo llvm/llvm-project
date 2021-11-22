@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -triple thumbv7k-apple-watchos2.0 -target-abi aapcs16 -target-cpu cortex-a7 %s -o - -emit-llvm | FileCheck %s
 
+// REQUIRES: aarch64-registered-target || arm-registered-target
+
 #include <arm_neon.h>
 
 // Make sure 64 and 128 bit types are naturally aligned by the v7k ABI:

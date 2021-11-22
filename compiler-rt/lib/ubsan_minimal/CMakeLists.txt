@@ -26,7 +26,7 @@ if(COMPILER_RT_HAS_UBSAN_MINIMAL)
   # Standalone minimal UBSan runtimes.
   add_compiler_rt_runtime(clang_rt.ubsan_minimal
     STATIC
-    OS ${SANITIZER_COMMON_SUPPORTED_OS}
+    OS ${UBSAN_SUPPORTED_OS}
     ARCHS ${UBSAN_SUPPORTED_ARCH}
     OBJECT_LIBS RTUbsan_minimal
     CFLAGS ${UBSAN_CFLAGS}
@@ -34,7 +34,7 @@ if(COMPILER_RT_HAS_UBSAN_MINIMAL)
 
   add_compiler_rt_runtime(clang_rt.ubsan_minimal
     SHARED
-    OS ${SANITIZER_COMMON_SUPPORTED_OS}
+    OS ${UBSAN_SUPPORTED_OS}
     ARCHS ${UBSAN_SUPPORTED_ARCH}
     OBJECT_LIBS RTUbsan_minimal
     CFLAGS ${UBSAN_CFLAGS}

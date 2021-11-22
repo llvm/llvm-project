@@ -25,32 +25,32 @@ archive files. If an SVR4 format archive is used with the :option:`r`
 (quick update) operations, the archive will be reconstructed in the format
 defined by :option:`--format`.
 
-Here's where :program:`llvm-ar` departs from previous :program:`ar` 
+Here's where :program:`llvm-ar` departs from previous :program:`ar`
 implementations:
 
 *The following option is not supported*
- 
+
  [f] - truncate inserted filenames
- 
+
 *The following options are ignored for compatibility*
 
  --plugin=<string> - load a plugin which adds support for other file formats
- 
- [l] - ignored in :program:`ar` 
+
+ [l] - ignored in :program:`ar`
 
 *Symbol Table*
 
  Since :program:`llvm-ar` supports bitcode files, the symbol table it creates
  includes both native and bitcode symbols.
- 
+
 *Deterministic Archives*
 
  By default, :program:`llvm-ar` always uses zero for timestamps and UIDs/GIDs
- to write archives in a deterministic mode. This is equivalent to the 
+ to write archives in a deterministic mode. This is equivalent to the
  :option:`D` modifier being enabled by default. If you wish to maintain
  compatibility with other :program:`ar` implementations, you can pass the
  :option:`U` modifier to write actual timestamps and UIDs/GIDs.
- 
+
 *Windows Paths*
 
  When on Windows :program:`llvm-ar` treats the names of archived *files* in the same
@@ -62,7 +62,7 @@ OPTIONS
 
 :program:`llvm-ar` operations are compatible with other :program:`ar`
 implementations. However, there are a few modifiers (:option:`L`) that are not
-found in other :program:`ar` implementations. The options for 
+found in other :program:`ar` implementations. The options for
 :program:`llvm-ar` specify a single basic Operation to perform on the archive,
 a variety of Modifiers for that Operation, the name of the archive file, and an
 optional list of file names. If the *files* option is not specified, it
@@ -127,7 +127,7 @@ Operations
  they do not exist. The :option:`a`, :option:`b`, :option:`T` and :option:`u`
  modifiers apply to this operation. If no *files* are specified, the archive
  is not modified.
- 
+
 t[v]
 .. option:: t [vO]
 
@@ -139,10 +139,10 @@ t[v]
  size, and the date. With the :option:`O` modifier, display member offsets. If
  any *files* are specified, the listing is only for those files. If no *files*
  are specified, the table of contents for the whole archive is printed.
- 
+
 .. option:: V
 
- A synonym for the :option:`--version` option. 
+ A synonym for the :option:`--version` option.
 
 .. option:: x [oP]
 
@@ -174,7 +174,7 @@ section to determine which modifiers are applicable to which operations.
 
 .. option:: i
 
- A synonym for the :option:`b` option. 
+ A synonym for the :option:`b` option.
 
 .. option:: L
 
@@ -188,13 +188,13 @@ section to determine which modifiers are applicable to which operations.
  selects the instance of the given name, with "1" indicating the first
  instance. If :option:`N` is not specified the first member of that name will
  be selected. If *count* is not supplied, the operation fails.*count* cannot be
- 
+
 .. option:: o
 
  When extracting files, use the modification times of any *files* as they
  appear in the ``archive``. By default *files* extracted from the archive
  use the time of extraction.
- 
+
 .. option:: O
 
  Display member offsets inside the archive.
@@ -248,12 +248,12 @@ The modifiers below may be applied to any operation.
  This modifier is the opposite of the :option:`s` modifier. It instructs
  :program:`llvm-ar` to not build the symbol table. If both :option:`s` and
  :option:`S` are used, the last modifier to occur in the options will prevail.
- 
+
 .. option:: u
 
  Only update ``archive`` members with *files* that have more recent
  timestamps.
- 
+
 .. option:: U
 
  Use actual timestamps and UIDs/GIDs.
@@ -277,7 +277,7 @@ Other
  stream. No other options are compatible with this option.
 
 .. option:: --rsp-quoting=<type>
- This option selects the quoting style ``<type>`` for response files, either 
+ This option selects the quoting style ``<type>`` for response files, either
  ``posix`` or ``windows``. The default when on Windows is ``windows``, otherwise the
  default is ``posix``.
 
@@ -296,11 +296,11 @@ MRI SCRIPTS
 supported by archivers following in the ar tradition. An MRI script contains a
 sequence of commands to be executed by the archiver. The :option:`-M` option
 allows for an MRI script to be passed to :program:`llvm-ar` through the
-standard input stream. 
- 
+standard input stream.
+
 Note that :program:`llvm-ar` has known limitations regarding the use of MRI
 scripts:
- 
+
 * Each script can only create one archive.
 * Existing archives can not be modified.
 

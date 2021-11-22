@@ -13,5 +13,5 @@ The following checks can be used to check for more forms of casting:
 
 - `cppcoreguidelines-pro-type-static-cast-downcast <cppcoreguidelines-pro-type-static-cast-downcast.html>`_
 - `cppcoreguidelines-pro-type-reinterpret-cast <cppcoreguidelines-pro-type-reinterpret-cast.html>`_
-- `cppcoreguidelines-pro-type-const-cast <cppcoreguidelines-pro-type-const-cast.html>`_ 
+- `cppcoreguidelines-pro-type-const-cast <cppcoreguidelines-pro-type-const-cast.html>`_
 - `cppcoreguidelines-pro-type-cstyle-cast <cppcoreguidelines-pro-type-cstyle-cast.html>`_

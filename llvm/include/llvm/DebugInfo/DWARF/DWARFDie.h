@@ -182,6 +182,8 @@ public:
   DWARFDie getAttributeValueAsReferencedDie(dwarf::Attribute Attr) const;
   DWARFDie getAttributeValueAsReferencedDie(const DWARFFormValue &V) const;
 
+  DWARFDie resolveTypeUnitReference() const;
+
   /// Extract the range base attribute from this DIE as absolute section offset.
   ///
   /// This is a utility function that checks for either the DW_AT_rnglists_base

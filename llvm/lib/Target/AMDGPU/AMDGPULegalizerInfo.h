@@ -109,8 +109,8 @@ public:
                                      Register Den) const;
 
   void legalizeUnsignedDIV_REM64Impl(MachineIRBuilder &B, Register DstDivReg,
-                                     Register DstRemReg, Register Numer,
-                                     Register Denom) const;
+                                     Register DstRemReg, Register Num,
+                                     Register Den) const;
 
   bool legalizeSignedDIV_REM(MachineInstr &MI, MachineRegisterInfo &MRI,
                              MachineIRBuilder &B) const;

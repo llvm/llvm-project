@@ -168,9 +168,9 @@ func @insert_slice_fun(%A0 : tensor<?xf32>,
   ->  (tensor<?xf32>, tensor<?xf32>, tensor<?xf32>, tensor<?xf32>)
 {
   // Hoisted allocs.
-  //      CHECK: %[[REALLOC_A1:.*]] = memref.alloc
   //      CHECK: %[[REALLOC_A0_2:.*]] = memref.alloc
   //      CHECK: %[[REALLOC_A0:.*]] = memref.alloc
+  //      CHECK: %[[REALLOC_A1:.*]] = memref.alloc
 
   // Alloc and copy the whole result tensor. Copy the tensor.extract_slice.
   //      CHECK: linalg.copy(%[[A0]], %[[REALLOC_A0]]
@@ -860,7 +860,6 @@ func @buffer_forwarding_no_conflict(
   %f = linalg.fill(%f0, %a) : f32, tensor<?xf32> -> tensor<?xf32>
 
   // Self-copy canonicalizes away later.
-  // CHECK: linalg.copy(%[[T_SUBVIEW]], %[[T_SUBVIEW]])
   %r1 = tensor.insert_slice %f into %t[42][%sz][1]: tensor<?xf32> into tensor<?xf32>
 
   return %r1: tensor<?xf32>
@@ -888,3 +887,32 @@ func @scf_if_inplace(%cond: i1,
   return %r : tensor<?xf32>
 }
 
+// -----
+
+// CHECK-LABEL: func @scf_if_inside_scf_for
+//   CHECK-DAG:   %[[c0:.*]] = arith.constant 0 : index
+//   CHECK-DAG:   %[[c1:.*]] = arith.constant 1 : index
+//   CHECK-DAG:   %[[c10:.*]] = arith.constant 10 : index
+//       CHECK:   scf.for %{{.*}} = %[[c0]] to %[[c10]] step %[[c1]] {
+//       CHECK:     scf.if %{{.*}} {
+//       CHECK:     } else {
+//       CHECK:       vector.transfer_write
+//       CHECK:     }
+//       CHECK:   }
+func @scf_if_inside_scf_for(%t1: tensor<?xf32> {linalg.inplaceable = true},
+                      %v: vector<5xf32>, %idx: index,
+                      %cond: i1) -> tensor<?xf32> {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c10 = arith.constant 10 : index
+  %r = scf.for %iv = %c0 to %c10 step %c1 iter_args(%bb = %t1) -> (tensor<?xf32>) {
+    %r2 = scf.if %cond -> (tensor<?xf32>) {
+      scf.yield %bb : tensor<?xf32>
+    } else {
+      %t2 = vector.transfer_write %v, %bb[%idx] : vector<5xf32>, tensor<?xf32>
+      scf.yield %t2 : tensor<?xf32>
+    }
+    scf.yield %r2 : tensor<?xf32>
+  }
+  return %r : tensor<?xf32>
+}

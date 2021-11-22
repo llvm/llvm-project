@@ -74,7 +74,6 @@
 
 namespace llvm {
   class APSInt;
-  template <typename ValueT> struct DenseMapInfo;
   template <typename ValueT, typename ValueInfoT> class DenseSet;
   class SmallBitVector;
   struct InlineAsmIdentifierInfo;
@@ -2359,11 +2358,13 @@ public:
                              const CXXScopeSpec &SS, QualType T,
                              TagDecl *OwnedTagDecl = nullptr);
 
-  QualType BuildTypeofExprType(Expr *E, SourceLocation Loc);
+  // Returns the underlying type of a decltype with the given expression.
+  QualType getDecltypeForExpr(Expr *E);
+
+  QualType BuildTypeofExprType(Expr *E);
   /// If AsUnevaluated is false, E is treated as though it were an evaluated
   /// context, such as when building a type for decltype(auto).
-  QualType BuildDecltypeType(Expr *E, SourceLocation Loc,
-                             bool AsUnevaluated = true);
+  QualType BuildDecltypeType(Expr *E, bool AsUnevaluated = true);
   QualType BuildUnaryTransformType(QualType BaseType,
                                    UnaryTransformType::UTTKind UKind,
                                    SourceLocation Loc);
@@ -3502,7 +3503,7 @@ public:
   bool IsFunctionConversion(QualType FromType, QualType ToType,
                             QualType &ResultTy);
   bool DiagnoseMultipleUserDefinedConversion(Expr *From, QualType ToType);
-  bool isSameOrCompatibleFunctionType(CanQualType Param, CanQualType Arg);
+  bool isSameOrCompatibleFunctionType(QualType Param, QualType Arg);
 
   bool CanPerformAggregateInitializationForOverloadResolution(
       const InitializedEntity &Entity, InitListExpr *From);
@@ -5113,7 +5114,8 @@ public:
   /// type -- entities referenced by the type are now referenced.
   void MarkDeclarationsReferencedInType(SourceLocation Loc, QualType T);
   void MarkDeclarationsReferencedInExpr(Expr *E,
-                                        bool SkipLocalVariables = false);
+                                        bool SkipLocalVariables = false,
+                                        ArrayRef<const Expr *> StopAt = None);
 
   /// Try to recover by turning the given expression into a
   /// call.  Returns true if recovery was attempted or an error was
@@ -8565,6 +8567,14 @@ public:
   /// Substitute Replacement for auto in TypeWithAuto
   TypeSourceInfo* SubstAutoTypeSourceInfo(TypeSourceInfo *TypeWithAuto,
                                           QualType Replacement);
+
+  // Substitute auto in TypeWithAuto for a Dependent auto type
+  QualType SubstAutoTypeDependent(QualType TypeWithAuto);
+
+  // Substitute auto in TypeWithAuto for a Dependent auto type
+  TypeSourceInfo *
+  SubstAutoTypeSourceInfoDependent(TypeSourceInfo *TypeWithAuto);
+
   /// Completely replace the \c auto in \p TypeWithAuto by
   /// \p Replacement. This does not retain any \c auto type sugar.
   QualType ReplaceAutoType(QualType TypeWithAuto, QualType Replacement);
@@ -10743,7 +10753,8 @@ public:
   StmtResult ActOnOpenMPBarrierDirective(SourceLocation StartLoc,
                                          SourceLocation EndLoc);
   /// Called on well-formed '\#pragma omp taskwait'.
-  StmtResult ActOnOpenMPTaskwaitDirective(SourceLocation StartLoc,
+  StmtResult ActOnOpenMPTaskwaitDirective(ArrayRef<OMPClause *> Clauses,
+                                          SourceLocation StartLoc,
                                           SourceLocation EndLoc);
   /// Called on well-formed '\#pragma omp taskgroup'.
   StmtResult ActOnOpenMPTaskgroupDirective(ArrayRef<OMPClause *> Clauses,
@@ -11034,6 +11045,10 @@ public:
                                          SourceLocation StartLoc,
                                          SourceLocation LParenLoc,
                                          SourceLocation EndLoc);
+  /// Called on well-formed 'align' clause.
+  OMPClause *ActOnOpenMPAlignClause(Expr *Alignment, SourceLocation StartLoc,
+                                    SourceLocation LParenLoc,
+                                    SourceLocation EndLoc);
   /// Called on well-formed 'safelen' clause.
   OMPClause *ActOnOpenMPSafelenClause(Expr *Length,
                                       SourceLocation StartLoc,

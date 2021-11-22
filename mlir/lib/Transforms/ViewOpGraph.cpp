@@ -221,8 +221,8 @@ private:
       if (printAttrs) {
         os << "\n";
         for (const NamedAttribute &attr : op->getAttrs()) {
-          os << '\n' << attr.first << ": ";
-          emitMlirAttr(os, attr.second);
+          os << '\n' << attr.getName().getValue() << ": ";
+          emitMlirAttr(os, attr.getValue());
         }
       }
     });

@@ -923,6 +923,11 @@ static void LoadLibStdcppFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
       SyntheticChildrenSP(new ScriptedSyntheticChildren(
           stl_synth_flags,
           "lldb.formatters.cpp.gnu_libstdcpp.StdListSynthProvider")));
+  cpp_category_sp->GetRegexTypeSyntheticsContainer()->Add(
+      RegularExpression("^std::(__cxx11::)?forward_list<.+>(( )?&)?$"),
+      SyntheticChildrenSP(new ScriptedSyntheticChildren(
+          stl_synth_flags,
+          "lldb.formatters.cpp.gnu_libstdcpp.StdForwardListSynthProvider")));
   stl_summary_flags.SetDontShowChildren(false);
   stl_summary_flags.SetSkipPointers(false);
   cpp_category_sp->GetRegexTypeSummariesContainer()->Add(
@@ -951,6 +956,10 @@ static void LoadLibStdcppFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
           new StringSummaryFormat(stl_summary_flags, "size=${svar%#}")));
   cpp_category_sp->GetRegexTypeSummariesContainer()->Add(
       RegularExpression("^std::(__cxx11::)?list<.+>(( )?&)?$"),
+      TypeSummaryImplSP(
+          new StringSummaryFormat(stl_summary_flags, "size=${svar%#}")));
+  cpp_category_sp->GetRegexTypeSummariesContainer()->Add(
+      RegularExpression("^std::(__cxx11::)?forward_list<.+>(( )?&)?$"),
       TypeSummaryImplSP(
           new StringSummaryFormat(stl_summary_flags, "size=${svar%#}")));
 

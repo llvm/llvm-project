@@ -1357,7 +1357,7 @@ void DarwinClang::AddLinkRuntimeLibArgs(const ArgList &Args,
     return;
   }
 
-  const SanitizerArgs &Sanitize = getSanitizerArgs();
+  const SanitizerArgs &Sanitize = getSanitizerArgs(Args);
   if (Sanitize.needsAsanRt())
     AddLinkSanitizerLibArgs(Args, CmdArgs, "asan");
   if (Sanitize.needsLsanRt())
@@ -2783,7 +2783,7 @@ bool Darwin::SupportsEmbeddedBitcode() const {
 
 bool MachO::isPICDefault() const { return true; }
 
-bool MachO::isPIEDefault() const { return false; }
+bool MachO::isPIEDefault(const llvm::opt::ArgList &Args) const { return false; }
 
 bool MachO::isPICDefaultForced() const {
   return (getArch() == llvm::Triple::x86_64 ||

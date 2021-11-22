@@ -29,8 +29,9 @@ namespace tblgen {
 // TableGen.
 class TypeConstraint : public Constraint {
 public:
-  explicit TypeConstraint(const llvm::Record *record);
-  explicit TypeConstraint(const llvm::DefInit *init);
+  using Constraint::Constraint;
+
+  TypeConstraint(const llvm::DefInit *record);
 
   static bool classof(const Constraint *c) { return c->getKind() == CK_Type; }
 

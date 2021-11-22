@@ -37,7 +37,7 @@ class ScriptedProcess:
             self.args = args
 
     @abstractmethod
-    def get_memory_region_containing_address(addr):
+    def get_memory_region_containing_address(self, addr):
         """ Get the memory region for the scripted process, containing a
             specific address.
 
@@ -52,7 +52,7 @@ class ScriptedProcess:
         pass
 
     @abstractmethod
-    def get_thread_with_id(tid):
+    def get_thread_with_id(self, tid):
         """ Get the scripted process thread with a specific ID.
 
         Args:
@@ -66,7 +66,7 @@ class ScriptedProcess:
         pass
 
     @abstractmethod
-    def get_registers_for_thread(tid):
+    def get_registers_for_thread(self, tid):
         """ Get the register context dictionary for a certain thread of
             the scripted process.
 
@@ -81,7 +81,7 @@ class ScriptedProcess:
         pass
 
     @abstractmethod
-    def read_memory_at_address(addr, size):
+    def read_memory_at_address(self, addr, size):
         """ Get a memory buffer from the scripted process at a certain address,
             of a certain size.
 
@@ -190,18 +190,20 @@ class ScriptedThread:
     """
 
     @abstractmethod
-    def __init__(self, target):
+    def __init__(self, process, args):
         """ Construct a scripted thread.
 
         Args:
-            target (lldb.SBTarget): The target launching the scripted process.
+            process (lldb.SBProcess): The scripted process owning this thread.
             args (lldb.SBStructuredData): A Dictionary holding arbitrary
-                key/value pairs used by the scripted process.
+                key/value pairs used by the scripted thread.
         """
         self.target = None
+        self.process = None
         self.args = None
-        if isinstance(target, lldb.SBTarget) and target.IsValid():
-            self.target = target
+        if isinstance(process, lldb.SBProcess) and process.IsValid():
+            self.process = process
+            self.target = process.GetTarget()
 
         self.id = None
         self.name = None
@@ -209,7 +211,7 @@ class ScriptedThread:
         self.state = None
         self.stop_reason = None
         self.register_info = None
-        self.register_ctx = []
+        self.register_ctx = {}
         self.frames = []
 
     @abstractmethod
@@ -292,7 +294,7 @@ class ScriptedThread:
             if triple:
                 arch = triple.split('-')[0]
                 if arch == 'x86_64':
-                    self.register_info['sets'] = ['GPR', 'FPU', 'EXC']
+                    self.register_info['sets'] = ['General Purpose Registers']
                     self.register_info['registers'] = [
                         {'name': 'rax', 'bitsize': 64, 'offset': 0, 'encoding': 'uint', 'format': 'hex', 'set': 0, 'gcc': 0, 'dwarf': 0},
                         {'name': 'rbx', 'bitsize': 64, 'offset': 8, 'encoding': 'uint', 'format': 'hex', 'set': 0, 'gcc': 3, 'dwarf': 3},

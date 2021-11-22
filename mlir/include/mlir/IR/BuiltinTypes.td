@@ -542,7 +542,7 @@ def Builtin_MemRef : Builtin_Type<"MemRef", [
   ];
   let extraClassDeclaration = [{
     /// This is a builder type that keeps local references to arguments.
-    /// Arguments that are passed into the builder must out-live the builder.
+    /// Arguments that are passed into the builder must outlive the builder.
     class Builder;
 
     /// [deprecated] Returns the memory space in old raw integer representation.
@@ -600,13 +600,13 @@ def Builtin_Opaque : Builtin_Type<"Opaque"> {
     ```
   }];
   let parameters = (ins
-    "Identifier":$dialectNamespace,
+    "StringAttr":$dialectNamespace,
     StringRefParameter<"">:$typeData
   );
 
   let builders = [
     TypeBuilderWithInferredContext<(ins
-      "Identifier":$dialectNamespace, CArg<"StringRef", "{}">:$typeData
+      "StringAttr":$dialectNamespace, CArg<"StringRef", "{}">:$typeData
     ), [{
       return $_get(dialectNamespace.getContext(), dialectNamespace, typeData);
     }]>
@@ -701,6 +701,11 @@ def Builtin_RankedTensor : Builtin_Type<"RankedTensor", [
       return $_get(elementType.getContext(), shape, elementType, encoding);
     }]>
   ];
+  let extraClassDeclaration = [{
+    /// This is a builder type that keeps local references to arguments.
+    /// Arguments that are passed into the builder must outlive the builder.
+    class Builder;
+  }];
   let skipDefaultBuilders = 1;
   let genVerifyDecl = 1;
 }
@@ -890,7 +895,7 @@ def Builtin_Vector : Builtin_Type<"Vector", [
     vector-type ::= `vector` `<` static-dimension-list vector-element-type `>`
     vector-element-type ::= float-type | integer-type | index-type
 
-    static-dimension-list ::= (decimal-literal `x`)+
+    static-dimension-list ::= (decimal-literal `x`)*
     ```
 
     The vector type represents a SIMD style vector, used by target-specific
@@ -898,12 +903,12 @@ def Builtin_Vector : Builtin_Type<"Vector", [
     vector<16 x f32>) we also support multidimensional registers on targets that
     support them (like TPUs).
 
-    Vector shapes must be positive decimal integers.
+    Vector shapes must be positive decimal integers. 0D vectors are allowed by
+    omitting the dimension: `vector<f32>`.
 
     Note: hexadecimal integer literals are not allowed in vector type
     declarations, `vector<0x42xi32>` is invalid because it is interpreted as a
     2D vector with shape `(0, 42)` and zero shapes are not allowed.
-
 
     Examples:
 
@@ -924,6 +929,10 @@ def Builtin_Vector : Builtin_Type<"Vector", [
     }]>
   ];
   let extraClassDeclaration = [{
+    /// This is a builder type that keeps local references to arguments.
+    /// Arguments that are passed into the builder must outlive the builder.
+    class Builder;
+
     /// Returns true of the given type can be used as an element of a vector
     /// type. In particular, vectors can consist of integer, index, or float
     /// primitives.

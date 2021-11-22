@@ -236,7 +236,7 @@ auto UnwrapConvertedExpr(B &x) -> common::Constify<A, B> * {
 // a pointer to the Symbol with TypeParamDetails.
 template <typename A> const Symbol *ExtractBareLenParameter(const A &expr) {
   if (const auto *typeParam{
-          evaluate::UnwrapConvertedExpr<evaluate::TypeParamInquiry>(expr)}) {
+          UnwrapConvertedExpr<evaluate::TypeParamInquiry>(expr)}) {
     if (!typeParam->base()) {
       const Symbol &symbol{typeParam->parameter()};
       if (const auto *tpd{symbol.detailsIf<semantics::TypeParamDetails>()}) {
@@ -1034,6 +1034,10 @@ Constant<T> PackageConstant(std::vector<Scalar<T>> &&elements,
 namespace Fortran::semantics {
 
 class Scope;
+
+// If a symbol represents an ENTRY, return the symbol of the main entry
+// point to its subprogram.
+const Symbol *GetMainEntry(const Symbol *);
 
 // These functions are used in Evaluate so they are defined here rather than in
 // Semantics to avoid a link-time dependency on Semantics.

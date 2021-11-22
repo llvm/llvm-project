@@ -107,10 +107,6 @@ define dso_local void @hoge_5(i8 %arg) {
 ; UPPER-NEXT:    store i8 [[ARG:%.*]], i8* [[PTR_NEXT]], align 1
 ; UPPER-NEXT:    [[TMP1:%.*]] = icmp ult i32 [[IV_NEXT]], 17
 ; UPPER-NEXT:    br i1 [[TMP1]], label [[LOOP_1:%.*]], label [[EXIT_LOOPEXIT:%.*]]
-; UPPER:       exit.loopexit:
-; UPPER-NEXT:    br label [[EXIT]]
-; UPPER:       exit:
-; UPPER-NEXT:    ret void
 ; UPPER:       loop.1:
 ; UPPER-NEXT:    [[IV_NEXT_1:%.*]] = add nuw i32 [[IV_NEXT]], 4
 ; UPPER-NEXT:    [[PTR_NEXT_1:%.*]] = getelementptr inbounds i8, i8* [[PTR_NEXT]], i32 1
@@ -139,6 +135,10 @@ define dso_local void @hoge_5(i8 %arg) {
 ; UPPER-NEXT:    [[PTR_NEXT_5:%.*]] = getelementptr inbounds i8, i8* [[PTR_NEXT_4]], i32 1
 ; UPPER-NEXT:    store i8 [[ARG]], i8* [[PTR_NEXT_5]], align 1
 ; UPPER-NEXT:    br label [[EXIT_LOOPEXIT]]
+; UPPER:       exit.loopexit:
+; UPPER-NEXT:    br label [[EXIT]]
+; UPPER:       exit:
+; UPPER-NEXT:    ret void
 ;
 entry:
   %x = load i32, i32* @global, align 4

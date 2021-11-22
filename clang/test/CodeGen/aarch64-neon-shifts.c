@@ -1,6 +1,8 @@
 // RUN: %clang_cc1 -triple arm64-none-linux-gnu -target-feature +neon \
 // RUN:  -disable-O0-optnone -ffp-contract=fast -S -emit-llvm -o - %s | opt -S -mem2reg | FileCheck %s
 
+// REQUIRES: aarch64-registered-target || arm-registered-target
+
 #include <arm_neon.h>
 
 uint8x8_t test_shift_vshr(uint8x8_t a) {

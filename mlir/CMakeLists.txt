@@ -96,6 +96,8 @@ set(MLIR_INSTALL_AGGREGATE_OBJECTS 1 CACHE BOOL
     not desired. Enabling this will result in object files being written \
     under lib/objects-{CMAKE_BUILD_TYPE}.")
 
+set(MLIR_BUILD_MLIR_C_DYLIB 0 CACHE BOOL "Builds libMLIR-C shared library.")
+
 #-------------------------------------------------------------------------------
 # Python Bindings Configuration
 # Requires:

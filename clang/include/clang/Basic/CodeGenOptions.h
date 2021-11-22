@@ -97,6 +97,11 @@ public:
     Embed_Marker    // Embed a marker as a placeholder for bitcode.
   };
 
+  enum InlineAsmDialectKind {
+    IAD_ATT,
+    IAD_Intel,
+  };
+
   // This field stores one of the allowed values for the option
   // -fbasic-block-sections=.  The allowed values with this option are:
   // {"labels", "all", "list=<file>", "none"}.
@@ -463,7 +468,8 @@ public:
   // Check if any one of SanitizeCoverage* is enabled.
   bool hasSanitizeCoverage() const {
     return SanitizeCoverageType || SanitizeCoverageIndirectCalls ||
-           SanitizeCoverageTraceCmp;
+           SanitizeCoverageTraceCmp || SanitizeCoverageTraceLoads ||
+           SanitizeCoverageTraceStores;
   }
 };
 

@@ -33,6 +33,12 @@
 // RUN: %clang %s -c -E -dM -fopenmp=libomp -fopenmp-version=50 | FileCheck --check-prefix=CHECK-50-VERSION %s
 // CHECK-50-VERSION: #define _OPENMP 201811
 
+// RUN: %clang %s -c -E -dM -fopenmp=libomp -fopenmp-version=51 | FileCheck --check-prefix=CHECK-51-VERSION %s
+// CHECK-51-VERSION: #define _OPENMP 202011
+
+// RUN: %clang %s -c -E -dM -fopenmp=libomp -fopenmp-version=52 | FileCheck --check-prefix=CHECK-52-VERSION %s
+// CHECK-52-VERSION: #define _OPENMP 202111
+
 // RUN: %clang %s -c -E -dM -fopenmp-version=1 | FileCheck --check-prefix=CHECK-VERSION %s
 // RUN: %clang %s -c -E -dM -fopenmp-version=31 | FileCheck --check-prefix=CHECK-VERSION %s
 // RUN: %clang %s -c -E -dM -fopenmp-version=40 | FileCheck --check-prefix=CHECK-VERSION %s

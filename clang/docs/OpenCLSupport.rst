@@ -148,7 +148,7 @@ if full functionality is required.
 **Example of Use**:
 
     .. code-block:: console
- 
+
       $ clang -Xclang -fdeclare-opencl-builtins test.cl
 
 .. _opencl_fake_address_space_map:

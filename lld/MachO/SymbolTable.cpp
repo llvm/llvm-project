@@ -49,8 +49,8 @@ Defined *SymbolTable::addDefined(StringRef name, InputFile *file,
                                  InputSection *isec, uint64_t value,
                                  uint64_t size, bool isWeakDef,
                                  bool isPrivateExtern, bool isThumb,
-                                 bool isReferencedDynamically,
-                                 bool noDeadStrip) {
+                                 bool isReferencedDynamically, bool noDeadStrip,
+                                 bool isWeakDefCanBeHidden) {
   Symbol *s;
   bool wasInserted;
   bool overridesWeakDef = false;
@@ -62,28 +62,32 @@ Defined *SymbolTable::addDefined(StringRef name, InputFile *file,
   if (!wasInserted) {
     if (auto *defined = dyn_cast<Defined>(s)) {
       if (isWeakDef) {
+        // See further comment in createDefined() in InputFiles.cpp
         if (defined->isWeakDef()) {
-          // Both old and new symbol weak (e.g. inline function in two TUs):
-          // If one of them isn't private extern, the merged symbol isn't.
           defined->privateExtern &= isPrivateExtern;
+          defined->weakDefCanBeHidden &= isWeakDefCanBeHidden;
           defined->referencedDynamically |= isReferencedDynamically;
           defined->noDeadStrip |= noDeadStrip;
-
-          // FIXME: Handle this for bitcode files.
-          // FIXME: We currently only do this if both symbols are weak.
-          //        We could do this if either is weak (but getting the
-          //        case where !isWeakDef && defined->isWeakDef() right
-          //        requires some care and testing).
-          if (auto concatIsec = dyn_cast_or_null<ConcatInputSection>(isec))
-            concatIsec->wasCoalesced = true;
         }
-
+        // FIXME: Handle this for bitcode files.
+        if (auto concatIsec = dyn_cast_or_null<ConcatInputSection>(isec))
+          concatIsec->wasCoalesced = true;
         return defined;
       }
-      if (!defined->isWeakDef())
+
+      if (defined->isWeakDef()) {
+        // FIXME: Handle this for bitcode files.
+        if (auto concatIsec =
+                dyn_cast_or_null<ConcatInputSection>(defined->isec)) {
+          concatIsec->wasCoalesced = true;
+          concatIsec->symbols.erase(llvm::find(concatIsec->symbols, defined));
+        }
+      } else {
         error("duplicate symbol: " + name + "\n>>> defined in " +
               toString(defined->getFile()) + "\n>>> defined in " +
               toString(file));
+      }
+
     } else if (auto *dysym = dyn_cast<DylibSymbol>(s)) {
       overridesWeakDef = !isWeakDef && dysym->isWeakDef();
       dysym->unreference();
@@ -94,8 +98,8 @@ Defined *SymbolTable::addDefined(StringRef name, InputFile *file,
 
   Defined *defined = replaceSymbol<Defined>(
       s, name, file, isec, value, size, isWeakDef, /*isExternal=*/true,
-      isPrivateExtern, isThumb, isReferencedDynamically, noDeadStrip);
-  defined->overridesWeakDef = overridesWeakDef;
+      isPrivateExtern, isThumb, isReferencedDynamically, noDeadStrip,
+      overridesWeakDef, isWeakDefCanBeHidden);
   return defined;
 }
 
@@ -191,10 +195,11 @@ Defined *SymbolTable::addSynthetic(StringRef name, InputSection *isec,
                                    uint64_t value, bool isPrivateExtern,
                                    bool includeInSymtab,
                                    bool referencedDynamically) {
-  Defined *s = addDefined(name, nullptr, isec, value, /*size=*/0,
-                          /*isWeakDef=*/false, isPrivateExtern,
-                          /*isThumb=*/false, referencedDynamically,
-                          /*noDeadStrip=*/false);
+  Defined *s =
+      addDefined(name, nullptr, isec, value, /*size=*/0,
+                 /*isWeakDef=*/false, isPrivateExtern,
+                 /*isThumb=*/false, referencedDynamically,
+                 /*noDeadStrip=*/false, /*isWeakDefCanBeHidden=*/false);
   s->includeInSymtab = includeInSymtab;
   return s;
 }

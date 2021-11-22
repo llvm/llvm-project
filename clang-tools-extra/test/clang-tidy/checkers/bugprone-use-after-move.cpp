@@ -1338,3 +1338,15 @@ void typeId() {
   Foo Other{std::move(Bar)};
 }
 } // namespace UnevalContext
+
+class PR38187 {
+public:
+  PR38187(std::string val) : val_(std::move(val)) {
+    val.empty();
+    // CHECK-NOTES: [[@LINE-1]]:5: warning: 'val' used after it was moved
+    // CHECK-NOTES: [[@LINE-3]]:30: note: move occurred here
+  }
+
+private:
+  std::string val_;
+};

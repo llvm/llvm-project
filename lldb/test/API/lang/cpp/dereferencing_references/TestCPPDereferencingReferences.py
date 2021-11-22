@@ -21,3 +21,7 @@ class TestCase(TestBase):
         # Same as above for rvalue references.
         rref_val = self.expect_var_path("r_ref", type="TTT &&")
         self.assertEqual(rref_val.Dereference().GetType().GetName(), "TTT")
+
+        # Typedef to a reference should dereference to the underlying type.
+        td_val = self.expect_var_path("td_to_ref_type", type="td_int_ref")
+        self.assertEqual(td_val.Dereference().GetType().GetName(), "int")

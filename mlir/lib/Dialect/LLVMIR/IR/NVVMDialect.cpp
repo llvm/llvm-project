@@ -43,33 +43,6 @@ static void printNVVMIntrinsicOp(OpAsmPrinter &p, Operation *op) {
     p << " : " << op->getResultTypes();
 }
 
-// <operation> ::=
-//     `llvm.nvvm.shfl.sync.bfly %dst, %val, %offset, %clamp_and_mask`
-//      ({return_value_and_is_valid})? : result_type
-static ParseResult parseNVVMShflSyncBflyOp(OpAsmParser &parser,
-                                           OperationState &result) {
-  SmallVector<OpAsmParser::OperandType, 8> ops;
-  Type resultType;
-  if (parser.parseOperandList(ops) ||
-      parser.parseOptionalAttrDict(result.attributes) ||
-      parser.parseColonType(resultType) ||
-      parser.addTypeToList(resultType, result.types))
-    return failure();
-
-  for (auto &attr : result.attributes) {
-    if (attr.first != "return_value_and_is_valid")
-      continue;
-    auto structType = resultType.dyn_cast<LLVM::LLVMStructType>();
-    if (structType && !structType.getBody().empty())
-      resultType = structType.getBody()[0];
-    break;
-  }
-
-  auto int32Ty = IntegerType::get(parser.getContext(), 32);
-  return parser.resolveOperands(ops, {int32Ty, resultType, int32Ty, int32Ty},
-                                parser.getNameLoc(), result.operands);
-}
-
 // <operation> ::= `llvm.nvvm.vote.ballot.sync %mask, %pred` : result_type
 static ParseResult parseNVVMVoteBallotOp(OpAsmParser &parser,
                                          OperationState &result) {
@@ -249,7 +222,7 @@ void NVVMDialect::initialize() {
 LogicalResult NVVMDialect::verifyOperationAttribute(Operation *op,
                                                     NamedAttribute attr) {
   // Kernel function attribute should be attached to functions.
-  if (attr.first == NVVMDialect::getKernelFuncAttrName()) {
+  if (attr.getName() == NVVMDialect::getKernelFuncAttrName()) {
     if (!isa<LLVM::LLVMFuncOp>(op)) {
       return op->emitError() << "'" << NVVMDialect::getKernelFuncAttrName()
                              << "' attribute attached to unexpected op";

@@ -116,6 +116,8 @@ MLInlineAdvisor::MLInlineAdvisor(Module &M, ModuleAnalysisManager &MAM,
 void MLInlineAdvisor::onPassEntry() {
   // Function passes executed between InlinerPass runs may have changed the
   // module-wide features.
+  if (!Invalid)
+    return;
   NodeCount = 0;
   EdgeCount = 0;
   for (auto &F : M)
@@ -123,6 +125,7 @@ void MLInlineAdvisor::onPassEntry() {
       ++NodeCount;
       EdgeCount += getLocalCalls(F);
     }
+  Invalid = false;
 }
 
 int64_t MLInlineAdvisor::getLocalCalls(Function &F) {

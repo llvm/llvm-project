@@ -1346,7 +1346,7 @@ let Predicates = [isR600] in {
 
 
 //===----------------------------------------------------------------------===//
-// Regist loads and stores - for indirect addressing
+// Register loads and stores - for indirect addressing
 //===----------------------------------------------------------------------===//
 
 let Namespace = "R600" in {

@@ -139,13 +139,16 @@ Type SPIRVTypeConverter::getIndexType() const {
   MAP_FN(spirv::StorageClass::CrossWorkgroup, 11)                              \
   MAP_FN(spirv::StorageClass::AtomicCounter, 12)                               \
   MAP_FN(spirv::StorageClass::Image, 13)                                       \
-  MAP_FN(spirv::StorageClass::CallableDataNV, 14)                              \
-  MAP_FN(spirv::StorageClass::IncomingCallableDataNV, 15)                      \
-  MAP_FN(spirv::StorageClass::RayPayloadNV, 16)                                \
-  MAP_FN(spirv::StorageClass::HitAttributeNV, 17)                              \
-  MAP_FN(spirv::StorageClass::IncomingRayPayloadNV, 18)                        \
-  MAP_FN(spirv::StorageClass::ShaderRecordBufferNV, 19)                        \
-  MAP_FN(spirv::StorageClass::PhysicalStorageBuffer, 20)
+  MAP_FN(spirv::StorageClass::CallableDataKHR, 14)                             \
+  MAP_FN(spirv::StorageClass::IncomingCallableDataKHR, 15)                     \
+  MAP_FN(spirv::StorageClass::RayPayloadKHR, 16)                               \
+  MAP_FN(spirv::StorageClass::HitAttributeKHR, 17)                             \
+  MAP_FN(spirv::StorageClass::IncomingRayPayloadKHR, 18)                       \
+  MAP_FN(spirv::StorageClass::ShaderRecordBufferKHR, 19)                       \
+  MAP_FN(spirv::StorageClass::PhysicalStorageBuffer, 20)                       \
+  MAP_FN(spirv::StorageClass::CodeSectionINTEL, 21)                            \
+  MAP_FN(spirv::StorageClass::DeviceOnlyINTEL, 22)                             \
+  MAP_FN(spirv::StorageClass::HostOnlyINTEL, 23)
 
 unsigned
 SPIRVTypeConverter::getMemorySpaceForStorageClass(spirv::StorageClass storage) {
@@ -577,9 +580,9 @@ FuncOpConversion::matchAndRewrite(FuncOp funcOp, OpAdaptor adaptor,
 
   // Copy over all attributes other than the function name and type.
   for (const auto &namedAttr : funcOp->getAttrs()) {
-    if (namedAttr.first != function_like_impl::getTypeAttrName() &&
-        namedAttr.first != SymbolTable::getSymbolAttrName())
-      newFuncOp->setAttr(namedAttr.first, namedAttr.second);
+    if (namedAttr.getName() != function_like_impl::getTypeAttrName() &&
+        namedAttr.getName() != SymbolTable::getSymbolAttrName())
+      newFuncOp->setAttr(namedAttr.getName(), namedAttr.getValue());
   }
 
   rewriter.inlineRegionBefore(funcOp.getBody(), newFuncOp.getBody(),
@@ -876,6 +879,11 @@ bool SPIRVConversionTarget::isLegalOp(Operation *op) {
   SmallVector<Type, 4> valueTypes;
   valueTypes.append(op->operand_type_begin(), op->operand_type_end());
   valueTypes.append(op->result_type_begin(), op->result_type_end());
+
+  // Ensure that all types have been converted to SPIRV types.
+  if (llvm::any_of(valueTypes,
+                   [](Type t) { return !t.isa<spirv::SPIRVType>(); }))
+    return false;
 
   // Special treatment for global variables, whose type requirements are
   // conveyed by type attributes.

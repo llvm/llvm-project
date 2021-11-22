@@ -17,7 +17,6 @@
 
 #include "mlir/CAPI/Wrap.h"
 #include "mlir/IR/BuiltinOps.h"
-#include "mlir/IR/Identifier.h"
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/IR/Operation.h"
 
@@ -30,7 +29,7 @@ DEFINE_C_API_PTR_METHODS(MlirRegion, mlir::Region)
 DEFINE_C_API_PTR_METHODS(MlirSymbolTable, mlir::SymbolTable)
 
 DEFINE_C_API_METHODS(MlirAttribute, mlir::Attribute)
-DEFINE_C_API_METHODS(MlirIdentifier, mlir::Identifier)
+DEFINE_C_API_METHODS(MlirIdentifier, mlir::StringAttr)
 DEFINE_C_API_METHODS(MlirLocation, mlir::Location)
 DEFINE_C_API_METHODS(MlirModule, mlir::ModuleOp)
 DEFINE_C_API_METHODS(MlirType, mlir::Type)

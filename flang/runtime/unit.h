@@ -76,6 +76,7 @@ public:
   bool Emit(
       const char *, std::size_t, std::size_t elementBytes, IoErrorHandler &);
   bool Receive(char *, std::size_t, std::size_t elementBytes, IoErrorHandler &);
+  std::size_t GetNextInputBytes(const char *&, IoErrorHandler &);
   std::optional<char32_t> GetCurrentChar(IoErrorHandler &);
   void SetLeftTabLimit();
   bool BeginReadingRecord(IoErrorHandler &);

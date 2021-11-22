@@ -13,11 +13,11 @@
 
 #include "OpFormatGen.h"
 #include "OpGenHelpers.h"
+#include "mlir/TableGen/Class.h"
 #include "mlir/TableGen/CodeGenHelpers.h"
 #include "mlir/TableGen/Format.h"
 #include "mlir/TableGen/GenInfo.h"
 #include "mlir/TableGen/Interfaces.h"
-#include "mlir/TableGen/OpClass.h"
 #include "mlir/TableGen/Operator.h"
 #include "mlir/TableGen/SideEffects.h"
 #include "mlir/TableGen/Trait.h"
@@ -42,13 +42,7 @@ static const char *const generatedArgName = "odsArg";
 static const char *const odsBuilder = "odsBuilder";
 static const char *const builderOpState = "odsState";
 
-// Code for OpAdaptors to lookup an attribute using strings on the provided
-// DictionaryAttr.
-//
-// {0}: The attribute name.
-static const char *const adaptorGetAttr = "odsAttrs.get(\"{0}\")";
-
-// Code for Ops to lookup an attribute using the cached identifier.
+// Code for an Op to lookup an attribute. Uses cached identifiers.
 //
 // {0}: The attribute's getter name.
 static const char *const opGetAttr = "(*this)->getAttr({0}AttrName())";
@@ -63,7 +57,7 @@ static const char *const opGetAttr = "(*this)->getAttr({0}AttrName())";
 // {2}: The total number of variadic operands/results.
 // {3}: The total number of actual values.
 // {4}: "operand" or "result".
-const char *sameVariadicSizeValueRangeCalcCode = R"(
+static const char *const sameVariadicSizeValueRangeCalcCode = R"(
   bool isVariadic[] = {{{0}};
   int prevVariadicCount = 0;
   for (unsigned i = 0; i < index; ++i)
@@ -87,14 +81,15 @@ const char *sameVariadicSizeValueRangeCalcCode = R"(
 // (variadic or not).
 //
 // {0}: The name of the attribute specifying the segment sizes.
-const char *adapterSegmentSizeAttrInitCode = R"(
+static const char *const adapterSegmentSizeAttrInitCode = R"(
   assert(odsAttrs && "missing segment size attribute for op");
   auto sizeAttr = odsAttrs.get("{0}").cast<::mlir::DenseIntElementsAttr>();
 )";
-const char *opSegmentSizeAttrInitCode = R"(
-  auto sizeAttr = (*this)->getAttr({0}).cast<::mlir::DenseIntElementsAttr>();
+static const char *const opSegmentSizeAttrInitCode = R"(
+  auto sizeAttr =
+      (*this)->getAttr({0}AttrName()).cast<::mlir::DenseIntElementsAttr>();
 )";
-const char *attrSizedSegmentValueRangeCalcCode = R"(
+static const char *const attrSizedSegmentValueRangeCalcCode = R"(
   const uint32_t *sizeAttrValueIt = &*sizeAttr.value_begin<uint32_t>();
   if (sizeAttr.isSplat())
     return {*sizeAttrValueIt * index, *sizeAttrValueIt};
@@ -109,7 +104,7 @@ const char *attrSizedSegmentValueRangeCalcCode = R"(
 //
 // {0}: The name of the segment attribute.
 // {1}: The index of the main operand.
-const char *variadicOfVariadicAdaptorCalcCode = R"(
+static const char *const variadicOfVariadicAdaptorCalcCode = R"(
   auto tblgenTmpOperands = getODSOperands({1});
   auto sizeAttrValues = {0}().getValues<uint32_t>();
   auto sizeAttrIt = sizeAttrValues.begin();
@@ -126,19 +121,11 @@ const char *variadicOfVariadicAdaptorCalcCode = R"(
 //
 // {0}: The begin iterator of the actual values.
 // {1}: The call to generate the start and length of the value range.
-const char *valueRangeReturnCode = R"(
+static const char *const valueRangeReturnCode = R"(
   auto valueRange = {1};
   return {{std::next({0}, valueRange.first),
            std::next({0}, valueRange.first + valueRange.second)};
 )";
-
-const char *typeVerifierSignature =
-    "static ::mlir::LogicalResult {0}(::mlir::Operation *op, ::mlir::Type "
-    "type, ::llvm::StringRef valueKind, unsigned valueGroupStartIndex)";
-
-const char *typeVerifierErrorHandler =
-    " op->emitOpError(valueKind) << \" #\" << valueGroupStartIndex << \" must "
-    "be {0}, but got \" << type";
 
 static const char *const opCommentHeader = R"(
 //===----------------------------------------------------------------------===//
@@ -166,7 +153,7 @@ static std::string replaceAllSubstrs(std::string str, const std::string &match,
 // via getValueAsString.
 static inline bool hasStringAttribute(const Record &record,
                                       StringRef fieldName) {
-  auto valueInit = record.getValueInit(fieldName);
+  auto *valueInit = record.getValueInit(fieldName);
   return isa<StringInit>(valueInit);
 }
 
@@ -184,6 +171,90 @@ static bool canUseUnwrappedRawValue(const tblgen::Attribute &attr) {
          // so we need to make sure that the attribute specifies how to do that.
          !attr.getConstBuilderTemplate().empty();
 }
+
+namespace {
+/// Helper class to select between OpAdaptor and Op code templates.
+class OpOrAdaptorHelper {
+public:
+  OpOrAdaptorHelper(const Operator &op, bool emitForOp)
+      : op(op), emitForOp(emitForOp) {}
+
+  /// Object that wraps a functor in a stream operator for interop with
+  /// llvm::formatv.
+  class Formatter {
+  public:
+    template <typename Functor>
+    Formatter(Functor &&func) : func(std::forward<Functor>(func)) {}
+
+    std::string str() const {
+      std::string result;
+      llvm::raw_string_ostream os(result);
+      os << *this;
+      return os.str();
+    }
+
+  private:
+    std::function<raw_ostream &(raw_ostream &)> func;
+
+    friend raw_ostream &operator<<(raw_ostream &os, const Formatter &fmt) {
+      return fmt.func(os);
+    }
+  };
+
+  // Generate code for getting an attribute.
+  Formatter getAttr(StringRef attrName) const {
+    return [this, attrName](raw_ostream &os) -> raw_ostream & {
+      if (!emitForOp)
+        return os << formatv("odsAttrs.get(\"{0}\")", attrName);
+      return os << formatv(opGetAttr, op.getGetterName(attrName));
+    };
+  }
+
+  // Get the prefix code for emitting an error.
+  Formatter emitErrorPrefix() const {
+    return [this](raw_ostream &os) -> raw_ostream & {
+      if (emitForOp)
+        return os << "emitOpError(";
+      return os << formatv("emitError(loc, \"'{0}' op \"",
+                           op.getOperationName());
+    };
+  }
+
+  // Get the call to get an operand or segment of operands.
+  Formatter getOperand(unsigned index) const {
+    return [this, index](raw_ostream &os) -> raw_ostream & {
+      return os << formatv(op.getOperand(index).isVariadic()
+                               ? "this->getODSOperands({0})"
+                               : "(*this->getODSOperands({0}).begin())",
+                           index);
+    };
+  }
+
+  // Get the call to get a result of segment of results.
+  Formatter getResult(unsigned index) const {
+    return [this, index](raw_ostream &os) -> raw_ostream & {
+      if (!emitForOp)
+        return os << "<no results should be generated>";
+      return os << formatv(op.getResult(index).isVariadic()
+                               ? "this->getODSResults({0})"
+                               : "(*this->getODSResults({0}).begin())",
+                           index);
+    };
+  }
+
+  // Return whether an op instance is available.
+  bool isEmittingForOp() const { return emitForOp; }
+
+  // Return the ODS operation wrapper.
+  const Operator &getOp() const { return op; }
+
+private:
+  // The operation ODS wrapper.
+  const Operator &op;
+  // True if code is being generate for an op. False for an adaptor.
+  const bool emitForOp;
+};
+} // end anonymous namespace
 
 //===----------------------------------------------------------------------===//
 // Op emitter
@@ -290,7 +361,7 @@ private:
   // types. `inferredAttributes` is populated with any attributes that are
   // elided from the build list. The given `typeParamKind` and `attrParamKind`
   // controls how result types and attributes are placed in the parameter list.
-  void buildParamList(llvm::SmallVectorImpl<OpMethodParameter> &paramList,
+  void buildParamList(SmallVectorImpl<MethodParameter> &paramList,
                       llvm::StringSet<> &inferredAttributes,
                       SmallVectorImpl<std::string> &resultTypeNames,
                       TypeParamKind typeParamKind,
@@ -298,7 +369,7 @@ private:
 
   // Adds op arguments and regions into operation state for build() methods.
   void
-  genCodeForAddingArgAndRegionForBuilder(OpMethodBody &body,
+  genCodeForAddingArgAndRegionForBuilder(MethodBody &body,
                                          llvm::StringSet<> &inferredAttributes,
                                          bool isRawValueAttr = false);
 
@@ -319,17 +390,16 @@ private:
 
   // Generates verify statements for operands and results in the operation.
   // The generated code will be attached to `body`.
-  void genOperandResultVerifier(OpMethodBody &body,
-                                Operator::value_range values,
+  void genOperandResultVerifier(MethodBody &body, Operator::value_range values,
                                 StringRef valueKind);
 
   // Generates verify statements for regions in the operation.
   // The generated code will be attached to `body`.
-  void genRegionVerifier(OpMethodBody &body);
+  void genRegionVerifier(MethodBody &body);
 
   // Generates verify statements for successors in the operation.
   // The generated code will be attached to `body`.
-  void genSuccessorVerifier(OpMethodBody &body);
+  void genSuccessorVerifier(MethodBody &body);
 
   // Generates the traits used by the object.
   void genTraits();
@@ -342,8 +412,8 @@ private:
 
   // Generate op interface method for the given interface method. If
   // 'declaration' is true, generates a declaration, else a definition.
-  OpMethod *genOpInterfaceMethod(const tblgen::InterfaceMethod &method,
-                                 bool declaration = true);
+  Method *genOpInterfaceMethod(const tblgen::InterfaceMethod &method,
+                               bool declaration = true);
 
   // Generate the side effect interface methods.
   void genSideEffectInterfaceMethods();
@@ -374,81 +444,68 @@ private:
 
 // Populate the format context `ctx` with substitutions of attributes, operands
 // and results.
-// - attrGet corresponds to the name of the function to call to get value of
-//   attribute (the generated function call returns an Attribute);
-// - operandGet corresponds to the name of the function with which to retrieve
-//   an operand (the generated function call returns an OperandRange);
-// - resultGet corresponds to the name of the function to get an result (the
-//   generated function call returns a ValueRange);
-// - opRequired whether an op instance is needed
-static void populateSubstitutions(const Operator &op, const char *attrGet,
-                                  const char *operandGet, const char *resultGet,
-                                  FmtContext &ctx, bool opRequired) {
-  // Populate substitutions for attributes and named operands.
-  for (const auto &namedAttr : op.getAttributes()) {
-    ctx.addSubst(namedAttr.name,
-                 formatv(attrGet, opRequired ? op.getGetterName(namedAttr.name)
-                                             : namedAttr.name));
-  }
+static void populateSubstitutions(const OpOrAdaptorHelper &emitHelper,
+                                  FmtContext &ctx) {
+  // Populate substitutions for attributes.
+  auto &op = emitHelper.getOp();
+  for (const auto &namedAttr : op.getAttributes())
+    ctx.addSubst(namedAttr.name, emitHelper.getAttr(namedAttr.name).str());
+
+  // Populate substitutions for named operands.
   for (int i = 0, e = op.getNumOperands(); i < e; ++i) {
     auto &value = op.getOperand(i);
-    if (value.name.empty())
-      continue;
-
-    if (value.isVariadic())
-      ctx.addSubst(value.name, formatv("{0}({1})", operandGet, i));
-    else
-      ctx.addSubst(value.name, formatv("(*{0}({1}).begin())", operandGet, i));
+    if (!value.name.empty())
+      ctx.addSubst(value.name, emitHelper.getOperand(i).str());
   }
 
   // Populate substitutions for results.
   for (int i = 0, e = op.getNumResults(); i < e; ++i) {
     auto &value = op.getResult(i);
-    if (value.name.empty())
-      continue;
-
-    if (value.isVariadic())
-      ctx.addSubst(value.name, formatv("{0}({1})", resultGet, i));
-    else
-      ctx.addSubst(value.name, formatv("(*{0}({1}).begin())", resultGet, i));
+    if (!value.name.empty())
+      ctx.addSubst(value.name, emitHelper.getResult(i).str());
   }
 }
 
-// Generate attribute verification. If emitVerificationRequiringOp is set then
-// only verification for attributes whose value depend on op being known are
-// emitted, else only verification that doesn't depend on the op being known are
-// generated.
-// - emitErrorPrefix is the prefix for the error emitting call which consists
-//   of the entire function call up to start of error message fragment;
-// - emitVerificationRequiringOp specifies whether verification should be
-//   emitted for verification that require the op to exist;
-static void genAttributeVerifier(const Operator &op, const char *attrGet,
-                                 const Twine &emitErrorPrefix,
-                                 bool emitVerificationRequiringOp,
-                                 FmtContext &ctx, OpMethodBody &body) {
+// Generate attribute verification. If an op instance is not available, then
+// attribute checks that require one will not be emitted.
+static void genAttributeVerifier(
+    const OpOrAdaptorHelper &emitHelper, FmtContext &ctx, MethodBody &body,
+    const StaticVerifierFunctionEmitter &staticVerifierEmitter) {
   // Check that a required attribute exists.
   //
   // {0}: Attribute variable name.
   // {1}: Emit error prefix.
   // {2}: Attribute name.
-  const char *const checkRequiredAttr = R"(
+  const char *const verifyRequiredAttr = R"(
     if (!{0})
       return {1}"requires attribute '{2}'");
-  )";
-  // Check the condition on an attribute if it is required. This assumes that
-  // default values are valid.
+)";
+  // Verify the attribute if it is present. This assumes that default values
+  // are valid. This code snippet pastes the condition inline.
+  //
   // TODO: verify the default value is valid (perhaps in debug mode only).
   //
   // {0}: Attribute variable name.
   // {1}: Attribute condition code.
   // {2}: Emit error prefix.
-  // {3}: Attribute/constraint description.
-  const char *const checkAttrCondition = R"(
+  // {3}: Attribute name.
+  // {4}: Attribute/constraint description.
+  const char *const verifyAttrInline = R"(
     if ({0} && !({1}))
       return {2}"attribute '{3}' failed to satisfy constraint: {4}");
-  )";
+)";
+  // Verify the attribute using a uniqued constraint. Can only be used within
+  // the context of an op.
+  //
+  // {0}: Unique constraint name.
+  // {1}: Attribute variable name.
+  // {2}: Attribute name.
+  const char *const verifyAttrUnique = R"(
+    if (::mlir::failed({0}(*this, {1}, "{2}")))
+      return ::mlir::failure();
+)";
 
-  for (const auto &namedAttr : op.getAttributes()) {
+  for (const auto &namedAttr : emitHelper.getOp().getAttributes()) {
     const auto &attr = namedAttr.attr;
     StringRef attrName = namedAttr.name;
     if (attr.isDerivedAttr())
@@ -460,7 +517,8 @@ static void genAttributeVerifier(const Operator &op, const char *attrGet,
     // If the attribute's condition needs an op but none is available, then the
     // condition cannot be emitted.
     bool canEmitCondition =
-        !StringRef(condition).contains("$_op") || emitVerificationRequiringOp;
+        !condition.empty() && (!StringRef(condition).contains("$_op") ||
+                               emitHelper.isEmittingForOp());
 
     // Prefix with `tblgen_` to avoid hiding the attribute accessor.
     Twine varName = tblgenNamePrefix + attrName;
@@ -471,18 +529,25 @@ static void genAttributeVerifier(const Operator &op, const char *attrGet,
       continue;
 
     body << formatv("  {\n    auto {0} = {1};", varName,
-                    formatv(attrGet, emitVerificationRequiringOp
-                                         ? op.getGetterName(attrName)
-                                         : attrName));
+                    emitHelper.getAttr(attrName));
 
-    if (!allowMissingAttr)
-      body << formatv(checkRequiredAttr, varName, emitErrorPrefix, attrName);
-    if (canEmitCondition) {
-      body << formatv(checkAttrCondition, varName,
-                      tgfmt(condition, &ctx.withSelf(varName)), emitErrorPrefix,
-                      attrName, escapeString(attr.getSummary()));
+    if (!allowMissingAttr) {
+      body << formatv(verifyRequiredAttr, varName, emitHelper.emitErrorPrefix(),
+                      attrName);
     }
-    body << "}\n";
+    if (canEmitCondition) {
+      Optional<StringRef> constraintFn;
+      if (emitHelper.isEmittingForOp() &&
+          (constraintFn = staticVerifierEmitter.getAttrConstraintFn(attr))) {
+        body << formatv(verifyAttrUnique, *constraintFn, varName, attrName);
+      } else {
+        body << formatv(verifyAttrInline, varName,
+                        tgfmt(condition, &ctx.withSelf(varName)),
+                        emitHelper.emitErrorPrefix(), attrName,
+                        escapeString(attr.getSummary()));
+      }
+    }
+    body << "  }\n";
   }
 }
 
@@ -536,7 +601,7 @@ void OpEmitter::emitDecl(raw_ostream &os) { opClass.writeDeclTo(os); }
 
 void OpEmitter::emitDef(raw_ostream &os) { opClass.writeDefTo(os); }
 
-static void errorIfPruned(size_t line, OpMethod *m, const Twine &methodName,
+static void errorIfPruned(size_t line, Method *m, const Twine &methodName,
                           const Operator &op) {
   if (m)
     return;
@@ -561,18 +626,15 @@ void OpEmitter::genAttrNameGetters() {
   for (const NamedAttribute &namedAttr : op.getAttributes())
     addAttrName(namedAttr.name);
   // Include key attributes from several traits as implicitly registered.
-  std::string operandSizes = "operand_segment_sizes";
   if (op.getTrait("::mlir::OpTrait::AttrSizedOperandSegments"))
-    addAttrName(operandSizes);
-  std::string attrSizes = "result_segment_sizes";
+    addAttrName("operand_segment_sizes");
   if (op.getTrait("::mlir::OpTrait::AttrSizedResultSegments"))
-    addAttrName(attrSizes);
+    addAttrName("result_segment_sizes");
 
   // Emit the getAttributeNames method.
   {
-    auto *method = opClass.addMethodAndPrune(
-        "::llvm::ArrayRef<::llvm::StringRef>", "getAttributeNames",
-        OpMethod::Property(OpMethod::MP_Static | OpMethod::MP_Inline));
+    auto *method = opClass.addStaticInlineMethod(
+        "::llvm::ArrayRef<::llvm::StringRef>", "getAttributeNames");
     ERROR_IF_PRUNED(method, "getAttributeNames", op);
     auto &body = method->body();
     if (attributeNames.empty()) {
@@ -592,24 +654,22 @@ void OpEmitter::genAttrNameGetters() {
 
   // Emit the getAttributeNameForIndex methods.
   {
-    auto *method = opClass.addMethodAndPrune(
-        "::mlir::Identifier", "getAttributeNameForIndex",
-        OpMethod::Property(OpMethod::MP_Private | OpMethod::MP_Inline),
-        "unsigned", "index");
+    auto *method = opClass.addInlineMethod<Method::MP_Private>(
+        "::mlir::StringAttr", "getAttributeNameForIndex",
+        MethodParameter("unsigned", "index"));
     ERROR_IF_PRUNED(method, "getAttributeNameForIndex", op);
     method->body()
         << "  return getAttributeNameForIndex((*this)->getName(), index);";
   }
   {
-    auto *method = opClass.addMethodAndPrune(
-        "::mlir::Identifier", "getAttributeNameForIndex",
-        OpMethod::Property(OpMethod::MP_Private | OpMethod::MP_Inline |
-                           OpMethod::MP_Static),
-        "::mlir::OperationName name, unsigned index");
+    auto *method = opClass.addStaticInlineMethod<Method::MP_Private>(
+        "::mlir::StringAttr", "getAttributeNameForIndex",
+        MethodParameter("::mlir::OperationName", "name"),
+        MethodParameter("unsigned", "index"));
     ERROR_IF_PRUNED(method, "getAttributeNameForIndex", op);
     method->body() << "assert(index < " << attributeNames.size()
                    << " && \"invalid attribute index\");\n"
-                      "  return name.getAbstractOperation()"
+                      "  return name.getRegisteredInfo()"
                       "->getAttributeNames()[index];";
   }
 
@@ -623,8 +683,7 @@ void OpEmitter::genAttrNameGetters() {
       // Generate the non-static variant.
       {
         auto *method =
-            opClass.addMethodAndPrune("::mlir::Identifier", methodName,
-                                      OpMethod::Property(OpMethod::MP_Inline));
+            opClass.addInlineMethod("::mlir::StringAttr", methodName);
         ERROR_IF_PRUNED(method, methodName, op);
         method->body()
             << llvm::formatv(attrNameMethodBody, attrIt.second).str();
@@ -632,10 +691,9 @@ void OpEmitter::genAttrNameGetters() {
 
       // Generate the static variant.
       {
-        auto *method = opClass.addMethodAndPrune(
-            "::mlir::Identifier", methodName,
-            OpMethod::Property(OpMethod::MP_Inline | OpMethod::MP_Static),
-            "::mlir::OperationName", "name");
+        auto *method = opClass.addStaticInlineMethod(
+            "::mlir::StringAttr", methodName,
+            MethodParameter("::mlir::OperationName", "name"));
         ERROR_IF_PRUNED(method, methodName, op);
         method->body() << llvm::formatv(attrNameMethodBody,
                                         "name, " + Twine(attrIt.second))
@@ -651,13 +709,13 @@ void OpEmitter::genAttrGetters() {
 
   // Emit the derived attribute body.
   auto emitDerivedAttr = [&](StringRef name, Attribute attr) {
-    if (auto *method = opClass.addMethodAndPrune(attr.getReturnType(), name))
+    if (auto *method = opClass.addMethod(attr.getReturnType(), name))
       method->body() << "  " << attr.getDerivedCodeBody() << "\n";
   };
 
   // Emit with return type specified.
   auto emitAttrWithReturnType = [&](StringRef name, Attribute attr) {
-    auto *method = opClass.addMethodAndPrune(attr.getReturnType(), name);
+    auto *method = opClass.addMethod(attr.getReturnType(), name);
     ERROR_IF_PRUNED(method, name, op);
     auto &body = method->body();
     body << "  auto attr = " << name << "Attr();\n";
@@ -682,16 +740,14 @@ void OpEmitter::genAttrGetters() {
   // use the string interface for better compile time verification.
   auto emitAttrWithStorageType = [&](StringRef name, Attribute attr) {
     auto *method =
-        opClass.addMethodAndPrune(attr.getStorageType(), (name + "Attr").str());
+        opClass.addMethod(attr.getStorageType(), (name + "Attr").str());
     if (!method)
       return;
-    auto &body = method->body();
-    body << "  return (*this)->getAttr(" << name << "AttrName()).template ";
-    if (attr.isOptional() || attr.hasDefaultValue())
-      body << "dyn_cast_or_null<";
-    else
-      body << "cast<";
-    body << attr.getStorageType() << ">();";
+    method->body() << formatv(
+        "  return {0}.{1}<{2}>();", formatv(opGetAttr, name),
+        attr.isOptional() || attr.hasDefaultValue() ? "dyn_cast_or_null"
+                                                    : "cast",
+        attr.getStorageType());
   };
 
   for (const NamedAttribute &namedAttr : op.getAttributes()) {
@@ -709,68 +765,69 @@ void OpEmitter::genAttrGetters() {
                                         [](const NamedAttribute &namedAttr) {
                                           return namedAttr.attr.isDerivedAttr();
                                         });
-  if (!derivedAttrs.empty()) {
-    opClass.addTrait("::mlir::DerivedAttributeOpInterface::Trait");
-    // Generate helper method to query whether a named attribute is a derived
-    // attribute. This enables, for example, avoiding adding an attribute that
-    // overlaps with a derived attribute.
-    {
-      auto *method = opClass.addMethodAndPrune("bool", "isDerivedAttribute",
-                                               OpMethod::MP_Static,
-                                               "::llvm::StringRef", "name");
-      ERROR_IF_PRUNED(method, "isDerivedAttribute", op);
-      auto &body = method->body();
-      for (auto namedAttr : derivedAttrs)
-        body << "  if (name == \"" << namedAttr.name << "\") return true;\n";
-      body << " return false;";
-    }
-    // Generate method to materialize derived attributes as a DictionaryAttr.
-    {
-      auto *method = opClass.addMethodAndPrune("::mlir::DictionaryAttr",
-                                               "materializeDerivedAttributes");
-      ERROR_IF_PRUNED(method, "materializeDerivedAttributes", op);
-      auto &body = method->body();
+  if (derivedAttrs.empty())
+    return;
 
-      auto nonMaterializable =
-          make_filter_range(derivedAttrs, [](const NamedAttribute &namedAttr) {
-            return namedAttr.attr.getConvertFromStorageCall().empty();
-          });
-      if (!nonMaterializable.empty()) {
-        std::string attrs;
-        llvm::raw_string_ostream os(attrs);
-        interleaveComma(nonMaterializable, os, [&](const NamedAttribute &attr) {
-          os << op.getGetterName(attr.name);
+  opClass.addTrait("::mlir::DerivedAttributeOpInterface::Trait");
+  // Generate helper method to query whether a named attribute is a derived
+  // attribute. This enables, for example, avoiding adding an attribute that
+  // overlaps with a derived attribute.
+  {
+    auto *method =
+        opClass.addStaticMethod("bool", "isDerivedAttribute",
+                                MethodParameter("::llvm::StringRef", "name"));
+    ERROR_IF_PRUNED(method, "isDerivedAttribute", op);
+    auto &body = method->body();
+    for (auto namedAttr : derivedAttrs)
+      body << "  if (name == \"" << namedAttr.name << "\") return true;\n";
+    body << " return false;";
+  }
+  // Generate method to materialize derived attributes as a DictionaryAttr.
+  {
+    auto *method = opClass.addMethod("::mlir::DictionaryAttr",
+                                     "materializeDerivedAttributes");
+    ERROR_IF_PRUNED(method, "materializeDerivedAttributes", op);
+    auto &body = method->body();
+
+    auto nonMaterializable =
+        make_filter_range(derivedAttrs, [](const NamedAttribute &namedAttr) {
+          return namedAttr.attr.getConvertFromStorageCall().empty();
         });
-        PrintWarning(
-            op.getLoc(),
-            formatv(
-                "op has non-materializable derived attributes '{0}', skipping",
-                os.str()));
-        body << formatv("  emitOpError(\"op has non-materializable derived "
-                        "attributes '{0}'\");\n",
-                        attrs);
-        body << "  return nullptr;";
-        return;
-      }
-
-      body << "  ::mlir::MLIRContext* ctx = getContext();\n";
-      body << "  ::mlir::Builder odsBuilder(ctx); (void)odsBuilder;\n";
-      body << "  return ::mlir::DictionaryAttr::get(";
-      body << "  ctx, {\n";
-      interleave(
-          derivedAttrs, body,
-          [&](const NamedAttribute &namedAttr) {
-            auto tmpl = namedAttr.attr.getConvertFromStorageCall();
-            std::string name = op.getGetterName(namedAttr.name);
-            body << "    {" << name << "AttrName(),\n"
-                 << tgfmt(tmpl, &fctx.withSelf(name + "()")
-                                     .withBuilder("odsBuilder")
-                                     .addSubst("_ctx", "ctx"))
-                 << "}";
-          },
-          ",\n");
-      body << "});";
+    if (!nonMaterializable.empty()) {
+      std::string attrs;
+      llvm::raw_string_ostream os(attrs);
+      interleaveComma(nonMaterializable, os, [&](const NamedAttribute &attr) {
+        os << op.getGetterName(attr.name);
+      });
+      PrintWarning(
+          op.getLoc(),
+          formatv(
+              "op has non-materializable derived attributes '{0}', skipping",
+              os.str()));
+      body << formatv("  emitOpError(\"op has non-materializable derived "
+                      "attributes '{0}'\");\n",
+                      attrs);
+      body << "  return nullptr;";
+      return;
     }
+
+    body << "  ::mlir::MLIRContext* ctx = getContext();\n";
+    body << "  ::mlir::Builder odsBuilder(ctx); (void)odsBuilder;\n";
+    body << "  return ::mlir::DictionaryAttr::get(";
+    body << "  ctx, {\n";
+    interleave(
+        derivedAttrs, body,
+        [&](const NamedAttribute &namedAttr) {
+          auto tmpl = namedAttr.attr.getConvertFromStorageCall();
+          std::string name = op.getGetterName(namedAttr.name);
+          body << "    {" << name << "AttrName(),\n"
+               << tgfmt(tmpl, &fctx.withSelf(name + "()")
+                                   .withBuilder("odsBuilder")
+                                   .addSubst("_ctx", "ctx"))
+               << "}";
+        },
+        ",\n");
+    body << "});";
   }
 }
 
@@ -780,19 +837,21 @@ void OpEmitter::genAttrSetters() {
   // for better compile time verification.
   auto emitAttrWithStorageType = [&](StringRef setterName, StringRef getterName,
                                      Attribute attr) {
-    auto *method = opClass.addMethodAndPrune(
-        "void", (setterName + "Attr").str(), attr.getStorageType(), "attr");
+    auto *method =
+        opClass.addMethod("void", (setterName + "Attr").str(),
+                          MethodParameter(attr.getStorageType(), "attr"));
     if (method)
-      method->body() << "  (*this)->setAttr(" << getterName
-                     << "AttrName(), attr);";
+      method->body() << formatv("  (*this)->setAttr({0}AttrName(), attr);",
+                                getterName);
   };
 
   for (const NamedAttribute &namedAttr : op.getAttributes()) {
-    if (!namedAttr.attr.isDerivedAttr())
-      for (auto names : llvm::zip(op.getSetterNames(namedAttr.name),
-                                  op.getGetterNames(namedAttr.name)))
-        emitAttrWithStorageType(std::get<0>(names), std::get<1>(names),
-                                namedAttr.attr);
+    if (namedAttr.attr.isDerivedAttr())
+      continue;
+    for (auto names : llvm::zip(op.getSetterNames(namedAttr.name),
+                                op.getGetterNames(namedAttr.name)))
+      emitAttrWithStorageType(std::get<0>(names), std::get<1>(names),
+                              namedAttr.attr);
   }
 }
 
@@ -802,12 +861,12 @@ void OpEmitter::genOptionalAttrRemovers() {
   auto emitRemoveAttr = [&](StringRef name) {
     auto upperInitial = name.take_front().upper();
     auto suffix = name.drop_front();
-    auto *method = opClass.addMethodAndPrune(
+    auto *method = opClass.addMethod(
         "::mlir::Attribute", ("remove" + upperInitial + suffix + "Attr").str());
     if (!method)
       return;
-    method->body() << "  return (*this)->removeAttr(" << op.getGetterName(name)
-                   << "AttrName());";
+    method->body() << formatv("  return (*this)->removeAttr({0}AttrName());",
+                              op.getGetterName(name));
   };
 
   for (const NamedAttribute &namedAttr : op.getAttributes())
@@ -823,8 +882,8 @@ generateValueRangeStartAndEnd(Class &opClass, StringRef methodName,
                               int numVariadic, int numNonVariadic,
                               StringRef rangeSizeCall, bool hasAttrSegmentSize,
                               StringRef sizeAttrInit, RangeT &&odsValues) {
-  auto *method = opClass.addMethodAndPrune("std::pair<unsigned, unsigned>",
-                                           methodName, "unsigned", "index");
+  auto *method = opClass.addMethod("std::pair<unsigned, unsigned>", methodName,
+                                   MethodParameter("unsigned", "index"));
   if (!method)
     return;
   auto &body = method->body();
@@ -836,7 +895,7 @@ generateValueRangeStartAndEnd(Class &opClass, StringRef methodName,
     // Because the op can have arbitrarily interleaved variadic and non-variadic
     // operands, we need to embed a list in the "sink" getter method for
     // calculation at run-time.
-    llvm::SmallVector<StringRef, 4> isVariadic;
+    SmallVector<StringRef, 4> isVariadic;
     isVariadic.reserve(llvm::size(odsValues));
     for (auto &it : odsValues)
       isVariadic.push_back(it.isVariableLength() ? "true" : "false");
@@ -895,8 +954,8 @@ static void generateNamedOperandGetters(const Operator &op, Class &opClass,
                                 rangeSizeCall, attrSizedOperands, sizeAttrInit,
                                 const_cast<Operator &>(op).getOperands());
 
-  auto *m = opClass.addMethodAndPrune(rangeType, "getODSOperands", "unsigned",
-                                      "index");
+  auto *m = opClass.addMethod(rangeType, "getODSOperands",
+                              MethodParameter("unsigned", "index"));
   ERROR_IF_PRUNED(m, "getODSOperands", op);
   auto &body = m->body();
   body << formatv(valueRangeReturnCode, rangeBeginCall,
@@ -910,7 +969,7 @@ static void generateNamedOperandGetters(const Operator &op, Class &opClass,
       continue;
     for (StringRef name : op.getGetterNames(operand.name)) {
       if (operand.isOptional()) {
-        m = opClass.addMethodAndPrune("::mlir::Value", name);
+        m = opClass.addMethod("::mlir::Value", name);
         ERROR_IF_PRUNED(m, name, op);
         m->body() << "  auto operands = getODSOperands(" << i << ");\n"
                   << "  return operands.empty() ? ::mlir::Value() : "
@@ -919,24 +978,24 @@ static void generateNamedOperandGetters(const Operator &op, Class &opClass,
         std::string segmentAttr = op.getGetterName(
             operand.constraint.getVariadicOfVariadicSegmentSizeAttr());
         if (isAdaptor) {
-          m = opClass.addMethodAndPrune(
-              "::llvm::SmallVector<::mlir::ValueRange>", name);
+          m = opClass.addMethod("::llvm::SmallVector<::mlir::ValueRange>",
+                                name);
           ERROR_IF_PRUNED(m, name, op);
           m->body() << llvm::formatv(variadicOfVariadicAdaptorCalcCode,
                                      segmentAttr, i);
           continue;
         }
 
-        m = opClass.addMethodAndPrune("::mlir::OperandRangeRange", name);
+        m = opClass.addMethod("::mlir::OperandRangeRange", name);
         ERROR_IF_PRUNED(m, name, op);
         m->body() << "  return getODSOperands(" << i << ").split("
                   << segmentAttr << "Attr());";
       } else if (operand.isVariadic()) {
-        m = opClass.addMethodAndPrune(rangeType, name);
+        m = opClass.addMethod(rangeType, name);
         ERROR_IF_PRUNED(m, name, op);
         m->body() << "  return getODSOperands(" << i << ");";
       } else {
-        m = opClass.addMethodAndPrune("::mlir::Value", name);
+        m = opClass.addMethod("::mlir::Value", name);
         ERROR_IF_PRUNED(m, name, op);
         m->body() << "  return *getODSOperands(" << i << ").begin();";
       }
@@ -949,7 +1008,7 @@ void OpEmitter::genNamedOperandGetters() {
   // array.
   std::string attrSizeInitCode;
   if (op.getTrait("::mlir::OpTrait::AttrSizedOperandSegments")) {
-    std::string attr = op.getGetterName("operand_segment_sizes") + "AttrName()";
+    std::string attr = op.getGetterName("operand_segment_sizes");
     attrSizeInitCode = formatv(opSegmentSizeAttrInitCode, attr).str();
   }
 
@@ -971,10 +1030,10 @@ void OpEmitter::genNamedOperandSetters() {
     if (operand.name.empty())
       continue;
     for (StringRef name : op.getGetterNames(operand.name)) {
-      auto *m = opClass.addMethodAndPrune(
-          operand.isVariadicOfVariadic() ? "::mlir::MutableOperandRangeRange"
-                                         : "::mlir::MutableOperandRange",
-          (name + "Mutable").str());
+      auto *m = opClass.addMethod(operand.isVariadicOfVariadic()
+                                      ? "::mlir::MutableOperandRangeRange"
+                                      : "::mlir::MutableOperandRange",
+                                  (name + "Mutable").str());
       ERROR_IF_PRUNED(m, name, op);
       auto &body = m->body();
       body << "  auto range = getODSOperandIndexAndLength(" << i << ");\n"
@@ -1037,7 +1096,7 @@ void OpEmitter::genNamedResultGetters() {
   // Build the initializer string for the result segment size attribute.
   std::string attrSizeInitCode;
   if (attrSizedResults) {
-    std::string attr = op.getGetterName("result_segment_sizes") + "AttrName()";
+    std::string attr = op.getGetterName("result_segment_sizes");
     attrSizeInitCode = formatv(opSegmentSizeAttrInitCode, attr).str();
   }
 
@@ -1046,8 +1105,9 @@ void OpEmitter::genNamedResultGetters() {
       numNormalResults, "getOperation()->getNumResults()", attrSizedResults,
       attrSizeInitCode, op.getResults());
 
-  auto *m = opClass.addMethodAndPrune("::mlir::Operation::result_range",
-                                      "getODSResults", "unsigned", "index");
+  auto *m =
+      opClass.addMethod("::mlir::Operation::result_range", "getODSResults",
+                        MethodParameter("unsigned", "index"));
   ERROR_IF_PRUNED(m, "getODSResults", op);
   m->body() << formatv(valueRangeReturnCode, "getOperation()->result_begin()",
                        "getODSResultIndexAndLength(index)");
@@ -1058,17 +1118,17 @@ void OpEmitter::genNamedResultGetters() {
       continue;
     for (StringRef name : op.getGetterNames(result.name)) {
       if (result.isOptional()) {
-        m = opClass.addMethodAndPrune("::mlir::Value", name);
+        m = opClass.addMethod("::mlir::Value", name);
         ERROR_IF_PRUNED(m, name, op);
         m->body()
             << "  auto results = getODSResults(" << i << ");\n"
             << "  return results.empty() ? ::mlir::Value() : *results.begin();";
       } else if (result.isVariadic()) {
-        m = opClass.addMethodAndPrune("::mlir::Operation::result_range", name);
+        m = opClass.addMethod("::mlir::Operation::result_range", name);
         ERROR_IF_PRUNED(m, name, op);
         m->body() << "  return getODSResults(" << i << ");";
       } else {
-        m = opClass.addMethodAndPrune("::mlir::Value", name);
+        m = opClass.addMethod("::mlir::Value", name);
         ERROR_IF_PRUNED(m, name, op);
         m->body() << "  return *getODSResults(" << i << ").begin();";
       }
@@ -1086,15 +1146,15 @@ void OpEmitter::genNamedRegionGetters() {
     for (StringRef name : op.getGetterNames(region.name)) {
       // Generate the accessors for a variadic region.
       if (region.isVariadic()) {
-        auto *m = opClass.addMethodAndPrune(
-            "::mlir::MutableArrayRef<::mlir::Region>", name);
+        auto *m =
+            opClass.addMethod("::mlir::MutableArrayRef<::mlir::Region>", name);
         ERROR_IF_PRUNED(m, name, op);
         m->body() << formatv("  return (*this)->getRegions().drop_front({0});",
                              i);
         continue;
       }
 
-      auto *m = opClass.addMethodAndPrune("::mlir::Region &", name);
+      auto *m = opClass.addMethod("::mlir::Region &", name);
       ERROR_IF_PRUNED(m, name, op);
       m->body() << formatv("  return (*this)->getRegion({0});", i);
     }
@@ -1111,7 +1171,7 @@ void OpEmitter::genNamedSuccessorGetters() {
     for (StringRef name : op.getGetterNames(successor.name)) {
       // Generate the accessors for a variadic successor list.
       if (successor.isVariadic()) {
-        auto *m = opClass.addMethodAndPrune("::mlir::SuccessorRange", name);
+        auto *m = opClass.addMethod("::mlir::SuccessorRange", name);
         ERROR_IF_PRUNED(m, name, op);
         m->body() << formatv(
             "  return {std::next((*this)->successor_begin(), {0}), "
@@ -1120,7 +1180,7 @@ void OpEmitter::genNamedSuccessorGetters() {
         continue;
       }
 
-      auto *m = opClass.addMethodAndPrune("::mlir::Block *", name);
+      auto *m = opClass.addMethod("::mlir::Block *", name);
       ERROR_IF_PRUNED(m, name, op);
       m->body() << formatv("  return (*this)->getSuccessor({0});", i);
     }
@@ -1163,14 +1223,13 @@ void OpEmitter::genSeparateArgParamBuilder() {
   // inferring result type.
   auto emit = [&](AttrParamKind attrType, TypeParamKind paramKind,
                   bool inferType) {
-    llvm::SmallVector<OpMethodParameter, 4> paramList;
-    llvm::SmallVector<std::string, 4> resultNames;
+    SmallVector<MethodParameter> paramList;
+    SmallVector<std::string, 4> resultNames;
     llvm::StringSet<> inferredAttributes;
     buildParamList(paramList, inferredAttributes, resultNames, paramKind,
                    attrType);
 
-    auto *m = opClass.addMethodAndPrune("void", "build", OpMethod::MP_Static,
-                                        std::move(paramList));
+    auto *m = opClass.addStaticMethod("void", "build", std::move(paramList));
     // If the builder is redundant, skip generating the method.
     if (!m)
       return;
@@ -1244,7 +1303,7 @@ void OpEmitter::genUseOperandAsResultTypeCollectiveParamBuilder() {
   int numResults = op.getNumResults();
 
   // Signature
-  llvm::SmallVector<OpMethodParameter, 4> paramList;
+  SmallVector<MethodParameter> paramList;
   paramList.emplace_back("::mlir::OpBuilder &", "odsBuilder");
   paramList.emplace_back("::mlir::OperationState &", builderOpState);
   paramList.emplace_back("::mlir::ValueRange", "operands");
@@ -1255,8 +1314,7 @@ void OpEmitter::genUseOperandAsResultTypeCollectiveParamBuilder() {
   if (op.getNumVariadicRegions())
     paramList.emplace_back("unsigned", "numRegions");
 
-  auto *m = opClass.addMethodAndPrune("void", "build", OpMethod::MP_Static,
-                                      std::move(paramList));
+  auto *m = opClass.addStaticMethod("void", "build", std::move(paramList));
   // If the builder is redundant, skip generating the method
   if (!m)
     return;
@@ -1284,14 +1342,13 @@ void OpEmitter::genUseOperandAsResultTypeCollectiveParamBuilder() {
 
 void OpEmitter::genInferredTypeCollectiveParamBuilder() {
   // TODO: Expand to support regions.
-  SmallVector<OpMethodParameter, 4> paramList;
+  SmallVector<MethodParameter> paramList;
   paramList.emplace_back("::mlir::OpBuilder &", "odsBuilder");
   paramList.emplace_back("::mlir::OperationState &", builderOpState);
   paramList.emplace_back("::mlir::ValueRange", "operands");
   paramList.emplace_back("::llvm::ArrayRef<::mlir::NamedAttribute>",
                          "attributes", "{}");
-  auto *m = opClass.addMethodAndPrune("void", "build", OpMethod::MP_Static,
-                                      std::move(paramList));
+  auto *m = opClass.addStaticMethod("void", "build", std::move(paramList));
   // If the builder is redundant, skip generating the method
   if (!m)
     return;
@@ -1343,14 +1400,13 @@ void OpEmitter::genInferredTypeCollectiveParamBuilder() {
 }
 
 void OpEmitter::genUseOperandAsResultTypeSeparateParamBuilder() {
-  llvm::SmallVector<OpMethodParameter, 4> paramList;
-  llvm::SmallVector<std::string, 4> resultNames;
+  SmallVector<MethodParameter> paramList;
+  SmallVector<std::string, 4> resultNames;
   llvm::StringSet<> inferredAttributes;
   buildParamList(paramList, inferredAttributes, resultNames,
                  TypeParamKind::None);
 
-  auto *m = opClass.addMethodAndPrune("void", "build", OpMethod::MP_Static,
-                                      std::move(paramList));
+  auto *m = opClass.addStaticMethod("void", "build", std::move(paramList));
   // If the builder is redundant, skip generating the method
   if (!m)
     return;
@@ -1372,14 +1428,13 @@ void OpEmitter::genUseOperandAsResultTypeSeparateParamBuilder() {
 }
 
 void OpEmitter::genUseAttrAsResultTypeBuilder() {
-  SmallVector<OpMethodParameter, 4> paramList;
+  SmallVector<MethodParameter> paramList;
   paramList.emplace_back("::mlir::OpBuilder &", "odsBuilder");
   paramList.emplace_back("::mlir::OperationState &", builderOpState);
   paramList.emplace_back("::mlir::ValueRange", "operands");
   paramList.emplace_back("::llvm::ArrayRef<::mlir::NamedAttribute>",
                          "attributes", "{}");
-  auto *m = opClass.addMethodAndPrune("void", "build", OpMethod::MP_Static,
-                                      std::move(paramList));
+  auto *m = opClass.addStaticMethod("void", "build", std::move(paramList));
   // If the builder is redundant, skip generating the method
   if (!m)
     return;
@@ -1394,11 +1449,11 @@ void OpEmitter::genUseAttrAsResultTypeBuilder() {
        << "AttrName(" << builderOpState
        << ".name);\n"
           "  for (auto attr : attributes) {\n"
-          "    if (attr.first != attrName) continue;\n";
+          "    if (attr.getName() != attrName) continue;\n";
   if (namedAttr.attr.isTypeAttr()) {
-    resultType = "attr.second.cast<::mlir::TypeAttr>().getValue()";
+    resultType = "attr.getValue().cast<::mlir::TypeAttr>().getValue()";
   } else {
-    resultType = "attr.second.getType()";
+    resultType = "attr.getValue().getType()";
   }
 
   // Operands
@@ -1416,16 +1471,15 @@ void OpEmitter::genUseAttrAsResultTypeBuilder() {
 
 /// Returns a signature of the builder. Updates the context `fctx` to enable
 /// replacement of $_builder and $_state in the body.
-static std::string getBuilderSignature(const Builder &builder) {
+static SmallVector<MethodParameter>
+getBuilderSignature(const Builder &builder) {
   ArrayRef<Builder::Parameter> params(builder.getParameters());
 
   // Inject builder and state arguments.
-  llvm::SmallVector<std::string, 8> arguments;
+  SmallVector<MethodParameter> arguments;
   arguments.reserve(params.size() + 2);
-  arguments.push_back(
-      llvm::formatv("::mlir::OpBuilder &{0}", odsBuilder).str());
-  arguments.push_back(
-      llvm::formatv("::mlir::OperationState &{0}", builderOpState).str());
+  arguments.emplace_back("::mlir::OpBuilder &", odsBuilder);
+  arguments.emplace_back("::mlir::OperationState &", builderOpState);
 
   for (unsigned i = 0, e = params.size(); i < e; ++i) {
     // If no name is provided, generate one.
@@ -1433,27 +1487,27 @@ static std::string getBuilderSignature(const Builder &builder) {
     std::string name =
         paramName ? paramName->str() : "odsArg" + std::to_string(i);
 
-    std::string defaultValue;
+    StringRef defaultValue;
     if (Optional<StringRef> defaultParamValue = params[i].getDefaultValue())
-      defaultValue = llvm::formatv(" = {0}", *defaultParamValue).str();
-    arguments.push_back(
-        llvm::formatv("{0} {1}{2}", params[i].getCppType(), name, defaultValue)
-            .str());
+      defaultValue = *defaultParamValue;
+
+    arguments.emplace_back(params[i].getCppType(), std::move(name),
+                           defaultValue);
   }
 
-  return llvm::join(arguments, ", ");
+  return arguments;
 }
 
 void OpEmitter::genBuilder() {
   // Handle custom builders if provided.
   for (const Builder &builder : op.getBuilders()) {
-    std::string paramStr = getBuilderSignature(builder);
+    SmallVector<MethodParameter> arguments = getBuilderSignature(builder);
 
     Optional<StringRef> body = builder.getBody();
-    OpMethod::Property properties =
-        body ? OpMethod::MP_Static : OpMethod::MP_StaticDeclaration;
+    Method::Property properties =
+        body ? Method::MP_Static : Method::MP_StaticDeclaration;
     auto *method =
-        opClass.addMethodAndPrune("void", "build", properties, paramStr);
+        opClass.addMethod("void", "build", properties, std::move(arguments));
     if (body)
       ERROR_IF_PRUNED(method, "build", op);
 
@@ -1497,7 +1551,7 @@ void OpEmitter::genCollectiveParamBuilder() {
   int numVariadicOperands = op.getNumVariableLengthOperands();
   int numNonVariadicOperands = numOperands - numVariadicOperands;
 
-  SmallVector<OpMethodParameter, 4> paramList;
+  SmallVector<MethodParameter> paramList;
   paramList.emplace_back("::mlir::OpBuilder &", "");
   paramList.emplace_back("::mlir::OperationState &", builderOpState);
   paramList.emplace_back("::mlir::TypeRange", "resultTypes");
@@ -1509,8 +1563,7 @@ void OpEmitter::genCollectiveParamBuilder() {
   if (op.getNumVariadicRegions())
     paramList.emplace_back("unsigned", "numRegions");
 
-  auto *m = opClass.addMethodAndPrune("void", "build", OpMethod::MP_Static,
-                                      std::move(paramList));
+  auto *m = opClass.addStaticMethod("void", "build", std::move(paramList));
   // If the builder is redundant, skip generating the method
   if (!m)
     return;
@@ -1548,7 +1601,7 @@ void OpEmitter::genCollectiveParamBuilder() {
     genInferredTypeCollectiveParamBuilder();
 }
 
-void OpEmitter::buildParamList(SmallVectorImpl<OpMethodParameter> &paramList,
+void OpEmitter::buildParamList(SmallVectorImpl<MethodParameter> &paramList,
                                llvm::StringSet<> &inferredAttributes,
                                SmallVectorImpl<std::string> &resultTypeNames,
                                TypeParamKind typeParamKind,
@@ -1573,11 +1626,8 @@ void OpEmitter::buildParamList(SmallVectorImpl<OpMethodParameter> &paramList,
 
       StringRef type =
           result.isVariadic() ? "::mlir::TypeRange" : "::mlir::Type";
-      OpMethodParameter::Property properties = OpMethodParameter::PP_None;
-      if (result.isOptional())
-        properties = OpMethodParameter::PP_Optional;
 
-      paramList.emplace_back(type, resultName, properties);
+      paramList.emplace_back(type, resultName, result.isOptional());
       resultTypeNames.emplace_back(std::move(resultName));
     }
   } break;
@@ -1635,11 +1685,8 @@ void OpEmitter::buildParamList(SmallVectorImpl<OpMethodParameter> &paramList,
       else
         type = "::mlir::Value";
 
-      OpMethodParameter::Property properties = OpMethodParameter::PP_None;
-      if (operand->isOptional())
-        properties = OpMethodParameter::PP_Optional;
       paramList.emplace_back(type, getArgumentName(op, numOperands++),
-                             properties);
+                             operand->isOptional());
       continue;
     }
     const NamedAttribute &namedAttr = *arg.get<NamedAttribute *>();
@@ -1648,10 +1695,6 @@ void OpEmitter::buildParamList(SmallVectorImpl<OpMethodParameter> &paramList,
     // inferred attributes don't need to be added to the param list.
     if (inferredAttributes.contains(namedAttr.name))
       continue;
-
-    OpMethodParameter::Property properties = OpMethodParameter::PP_None;
-    if (attr.isOptional())
-      properties = OpMethodParameter::PP_Optional;
 
     StringRef type;
     switch (attrParamKind) {
@@ -1672,7 +1715,8 @@ void OpEmitter::buildParamList(SmallVectorImpl<OpMethodParameter> &paramList,
         i >= defaultValuedAttrStartIndex) {
       defaultValue += attr.getDefaultValue();
     }
-    paramList.emplace_back(type, namedAttr.name, defaultValue, properties);
+    paramList.emplace_back(type, namedAttr.name, defaultValue,
+                           attr.isOptional());
   }
 
   /// Insert parameters for each successor.
@@ -1690,7 +1734,7 @@ void OpEmitter::buildParamList(SmallVectorImpl<OpMethodParameter> &paramList,
 }
 
 void OpEmitter::genCodeForAddingArgAndRegionForBuilder(
-    OpMethodBody &body, llvm::StringSet<> &inferredAttributes,
+    MethodBody &body, llvm::StringSet<> &inferredAttributes,
     bool isRawValueAttr) {
   // Push all operands to the result.
   for (int i = 0, e = op.getNumOperands(); i < e; ++i) {
@@ -1807,12 +1851,11 @@ void OpEmitter::genCanonicalizerDecls() {
   if (hasCanonicalizeMethod) {
     // static LogicResult FooOp::
     // canonicalize(FooOp op, PatternRewriter &rewriter);
-    SmallVector<OpMethodParameter, 2> paramList;
+    SmallVector<MethodParameter> paramList;
     paramList.emplace_back(op.getCppClassName(), "op");
     paramList.emplace_back("::mlir::PatternRewriter &", "rewriter");
-    auto *m = opClass.addMethodAndPrune("::mlir::LogicalResult", "canonicalize",
-                                        OpMethod::MP_StaticDeclaration,
-                                        std::move(paramList));
+    auto *m = opClass.declareStaticMethod("::mlir::LogicalResult",
+                                          "canonicalize", std::move(paramList));
     ERROR_IF_PRUNED(m, "canonicalize", op);
   }
 
@@ -1828,12 +1871,12 @@ void OpEmitter::genCanonicalizerDecls() {
 
   // Add a signature for getCanonicalizationPatterns if implemented by the
   // dialect or if synthesized to call 'canonicalize'.
-  SmallVector<OpMethodParameter, 2> paramList;
+  SmallVector<MethodParameter> paramList;
   paramList.emplace_back("::mlir::RewritePatternSet &", "results");
   paramList.emplace_back("::mlir::MLIRContext *", "context");
-  auto kind = hasBody ? OpMethod::MP_Static : OpMethod::MP_StaticDeclaration;
-  auto *method = opClass.addMethodAndPrune(
-      "void", "getCanonicalizationPatterns", kind, std::move(paramList));
+  auto kind = hasBody ? Method::MP_Static : Method::MP_StaticDeclaration;
+  auto *method = opClass.addMethod("void", "getCanonicalizationPatterns", kind,
+                                   std::move(paramList));
 
   // If synthesizing the method, fill it it.
   if (hasBody) {
@@ -1848,18 +1891,17 @@ void OpEmitter::genFolderDecls() {
 
   if (def.getValueAsBit("hasFolder")) {
     if (hasSingleResult) {
-      auto *m = opClass.addMethodAndPrune(
-          "::mlir::OpFoldResult", "fold", OpMethod::MP_Declaration,
-          "::llvm::ArrayRef<::mlir::Attribute>", "operands");
+      auto *m = opClass.declareMethod(
+          "::mlir::OpFoldResult", "fold",
+          MethodParameter("::llvm::ArrayRef<::mlir::Attribute>", "operands"));
       ERROR_IF_PRUNED(m, "operands", op);
     } else {
-      SmallVector<OpMethodParameter, 2> paramList;
+      SmallVector<MethodParameter> paramList;
       paramList.emplace_back("::llvm::ArrayRef<::mlir::Attribute>", "operands");
       paramList.emplace_back("::llvm::SmallVectorImpl<::mlir::OpFoldResult> &",
                              "results");
-      auto *m = opClass.addMethodAndPrune("::mlir::LogicalResult", "fold",
-                                          OpMethod::MP_Declaration,
-                                          std::move(paramList));
+      auto *m = opClass.declareMethod("::mlir::LogicalResult", "fold",
+                                      std::move(paramList));
       ERROR_IF_PRUNED(m, "fold", op);
     }
   }
@@ -1889,18 +1931,18 @@ void OpEmitter::genOpInterfaceMethods(const tblgen::InterfaceTrait *opTrait) {
   }
 }
 
-OpMethod *OpEmitter::genOpInterfaceMethod(const InterfaceMethod &method,
-                                          bool declaration) {
-  SmallVector<OpMethodParameter, 4> paramList;
+Method *OpEmitter::genOpInterfaceMethod(const InterfaceMethod &method,
+                                        bool declaration) {
+  SmallVector<MethodParameter> paramList;
   for (const InterfaceMethod::Argument &arg : method.getArguments())
     paramList.emplace_back(arg.type, arg.name);
 
-  auto properties = method.isStatic() ? OpMethod::MP_Static : OpMethod::MP_None;
+  auto properties = method.isStatic() ? Method::MP_Static : Method::MP_None;
   if (declaration)
     properties =
-        static_cast<OpMethod::Property>(properties | OpMethod::MP_Declaration);
-  return opClass.addMethodAndPrune(method.getReturnType(), method.getName(),
-                                   properties, std::move(paramList));
+        static_cast<Method::Property>(properties | Method::MP_Declaration);
+  return opClass.addMethod(method.getReturnType(), method.getName(), properties,
+                           std::move(paramList));
 }
 
 void OpEmitter::genOpInterfaceMethods() {
@@ -1975,8 +2017,8 @@ void OpEmitter::genSideEffectInterfaceMethods() {
                                      "SideEffects::EffectInstance<{0}>> &",
                                      it.first())
                            .str();
-    auto *getEffects =
-        opClass.addMethodAndPrune("void", "getEffects", type, "effects");
+    auto *getEffects = opClass.addMethod("void", "getEffects",
+                                         MethodParameter(type, "effects"));
     ERROR_IF_PRUNED(getEffects, "getEffects", op);
     auto &body = getEffects->body();
 
@@ -2018,7 +2060,7 @@ void OpEmitter::genTypeInterfaceMethods() {
   const auto *trait = dyn_cast<InterfaceTrait>(
       op.getTrait("::mlir::InferTypeOpInterface::Trait"));
   Interface interface = trait->getInterface();
-  OpMethod *method = [&]() -> OpMethod * {
+  Method *method = [&]() -> Method * {
     for (const InterfaceMethod &interfaceMethod : interface.getMethods()) {
       if (interfaceMethod.getName() == "inferReturnTypes") {
         return genOpInterfaceMethod(interfaceMethod, /*declaration=*/false);
@@ -2035,20 +2077,17 @@ void OpEmitter::genTypeInterfaceMethods() {
   fctx.withBuilder("odsBuilder");
   body << "  ::mlir::Builder odsBuilder(context);\n";
 
-  auto emitType =
-      [&](const tblgen::Operator::ArgOrType &type) -> OpMethodBody & {
-    if (type.isArg()) {
-      auto argIndex = type.getArg();
-      assert(!op.getArg(argIndex).is<NamedAttribute *>());
-      auto arg = op.getArgToOperandOrAttribute(argIndex);
-      if (arg.kind() == Operator::OperandOrAttribute::Kind::Operand)
-        return body << "operands[" << arg.operandOrAttributeIndex()
-                    << "].getType()";
-      return body << "attributes[" << arg.operandOrAttributeIndex()
-                  << "].getType()";
-    } else {
+  auto emitType = [&](const tblgen::Operator::ArgOrType &type) -> MethodBody & {
+    if (!type.isArg())
       return body << tgfmt(*type.getType().getBuilderCall(), &fctx);
-    }
+    auto argIndex = type.getArg();
+    assert(!op.getArg(argIndex).is<NamedAttribute *>());
+    auto arg = op.getArgToOperandOrAttribute(argIndex);
+    if (arg.kind() == Operator::OperandOrAttribute::Kind::Operand)
+      return body << "operands[" << arg.operandOrAttributeIndex()
+                  << "].getType()";
+    return body << "attributes[" << arg.operandOrAttributeIndex()
+                << "].getType()";
   };
 
   for (int i = 0, e = op.getNumResults(); i != e; ++i) {
@@ -2067,12 +2106,11 @@ void OpEmitter::genParser() {
       hasStringAttribute(def, "assemblyFormat"))
     return;
 
-  SmallVector<OpMethodParameter, 2> paramList;
+  SmallVector<MethodParameter> paramList;
   paramList.emplace_back("::mlir::OpAsmParser &", "parser");
   paramList.emplace_back("::mlir::OperationState &", "result");
-  auto *method =
-      opClass.addMethodAndPrune("::mlir::ParseResult", "parse",
-                                OpMethod::MP_Static, std::move(paramList));
+  auto *method = opClass.addStaticMethod("::mlir::ParseResult", "parse",
+                                         std::move(paramList));
   ERROR_IF_PRUNED(method, "parse", op);
 
   FmtContext fctx;
@@ -2085,13 +2123,13 @@ void OpEmitter::genPrinter() {
   if (hasStringAttribute(def, "assemblyFormat"))
     return;
 
-  auto valueInit = def.getValueInit("printer");
+  auto *valueInit = def.getValueInit("printer");
   StringInit *stringInit = dyn_cast<StringInit>(valueInit);
   if (!stringInit)
     return;
 
-  auto *method =
-      opClass.addMethodAndPrune("void", "print", "::mlir::OpAsmPrinter &", "p");
+  auto *method = opClass.addMethod(
+      "void", "print", MethodParameter("::mlir::OpAsmPrinter &", "p"));
   ERROR_IF_PRUNED(method, "print", op);
   FmtContext fctx;
   fctx.addSubst("cppClass", opClass.getClassName());
@@ -2100,10 +2138,8 @@ void OpEmitter::genPrinter() {
 }
 
 /// Generate verification on native traits requiring attributes.
-static void genNativeTraitAttrVerifier(OpMethodBody &body, const Operator &op,
-                                       const char *const attrGet,
-                                       const Twine &emitError,
-                                       bool opRequired) {
+static void genNativeTraitAttrVerifier(MethodBody &body,
+                                       const OpOrAdaptorHelper &emitHelper) {
   // Check that the variadic segment sizes attribute exists and contains the
   // expected number of elements.
   //
@@ -2127,6 +2163,7 @@ static void genNativeTraitAttrVerifier(OpMethodBody &body, const Operator &op,
 
   // Verify a few traits first so that we can use getODSOperands() and
   // getODSResults() in the rest of the verifier.
+  auto &op = emitHelper.getOp();
   for (auto &trait : op.getTraits()) {
     auto *t = dyn_cast<tblgen::NativeTrait>(&trait);
     if (!t)
@@ -2134,37 +2171,33 @@ static void genNativeTraitAttrVerifier(OpMethodBody &body, const Operator &op,
     std::string traitName = t->getFullyQualifiedTraitName();
     if (traitName == "::mlir::OpTrait::AttrSizedOperandSegments") {
       StringRef attrName = "operand_segment_sizes";
-      body << formatv(
-          checkAttrSizedValueSegmentsCode, attrName, op.getNumOperands(),
-          "operand",
-          formatv(attrGet, opRequired ? op.getGetterName(attrName) : attrName),
-          emitError);
+      body << formatv(checkAttrSizedValueSegmentsCode, attrName,
+                      op.getNumOperands(), "operand",
+                      emitHelper.getAttr(attrName),
+                      emitHelper.emitErrorPrefix());
     } else if (traitName == "::mlir::OpTrait::AttrSizedResultSegments") {
       StringRef attrName = "result_segment_sizes";
       body << formatv(
           checkAttrSizedValueSegmentsCode, attrName, op.getNumResults(),
-          "result",
-          formatv(attrGet, opRequired ? op.getGetterName(attrName) : attrName),
-          emitError);
+          "result", emitHelper.getAttr(attrName), emitHelper.emitErrorPrefix());
     }
   }
 }
 
 void OpEmitter::genVerifier() {
-  auto *method = opClass.addMethodAndPrune("::mlir::LogicalResult", "verify");
+  auto *method = opClass.addMethod("::mlir::LogicalResult", "verify");
   ERROR_IF_PRUNED(method, "verify", op);
   auto &body = method->body();
 
-  genNativeTraitAttrVerifier(body, op, opGetAttr, "emitOpError(", true);
+  OpOrAdaptorHelper emitHelper(op, /*isOp=*/true);
+  genNativeTraitAttrVerifier(body, emitHelper);
 
   auto *valueInit = def.getValueInit("verifier");
   StringInit *stringInit = dyn_cast<StringInit>(valueInit);
   bool hasCustomVerify = stringInit && !stringInit->getValue().empty();
-  populateSubstitutions(op, opGetAttr, "this->getODSOperands",
-                        "this->getODSResults", verifyCtx, /*opRequired=*/true);
+  populateSubstitutions(emitHelper, verifyCtx);
 
-  genAttributeVerifier(op, opGetAttr, "emitOpError(",
-                       /*emitVerificationRequiringOp=*/true, verifyCtx, body);
+  genAttributeVerifier(emitHelper, verifyCtx, body, staticVerifierEmitter);
   genOperandResultVerifier(body, op.getOperands(), "operand");
   genOperandResultVerifier(body, op.getResults(), "result");
 
@@ -2190,13 +2223,41 @@ void OpEmitter::genVerifier() {
   }
 }
 
-void OpEmitter::genOperandResultVerifier(OpMethodBody &body,
+void OpEmitter::genOperandResultVerifier(MethodBody &body,
                                          Operator::value_range values,
                                          StringRef valueKind) {
+  // Check that an optional value is at most 1 element.
+  //
+  // {0}: Value index.
+  // {1}: "operand" or "result"
+  const char *const verifyOptional = R"(
+    if (valueGroup{0}.size() > 1) {
+      return emitOpError("{1} group starting at #") << index
+          << " requires 0 or 1 element, but found " << valueGroup{0}.size();
+    }
+)";
+  // Check the types of a range of values.
+  //
+  // {0}: Value index.
+  // {1}: Type constraint function.
+  // {2}: "operand" or "result"
+  const char *const verifyValues = R"(
+    for (auto v : valueGroup{0}) {
+      if (::mlir::failed({1}(*this, v.getType(), "{2}", index++)))
+        return ::mlir::failure();
+    }
+)";
+
+  const auto canSkip = [](const NamedTypeConstraint &value) {
+    return !value.hasPredicate() && !value.isOptional() &&
+           !value.isVariadicOfVariadic();
+  };
+  if (values.empty() || llvm::all_of(values, canSkip))
+    return;
+
   FmtContext fctx;
 
-  body << "  {\n";
-  body << "    unsigned index = 0; (void)index;\n";
+  body << "  {\n    unsigned index = 0; (void)index;\n";
 
   for (auto staticValue : llvm::enumerate(values)) {
     const NamedTypeConstraint &value = staticValue.value();
@@ -2214,11 +2275,7 @@ void OpEmitter::genOperandResultVerifier(OpMethodBody &body,
     // If the constraint is optional check that the value group has at most 1
     // value.
     if (isOptional) {
-      body << formatv("    if (valueGroup{0}.size() > 1)\n"
-                      "      return emitOpError(\"{1} group starting at #\") "
-                      "<< index << \" requires 0 or 1 element, but found \" << "
-                      "valueGroup{0}.size();\n",
-                      staticValue.index(), valueKind);
+      body << formatv(verifyOptional, staticValue.index(), valueKind);
     } else if (isVariadicOfVariadic) {
       body << formatv(
           "    if (::mlir::failed(::mlir::OpTrait::impl::verifyValueSizeAttr("
@@ -2233,93 +2290,89 @@ void OpEmitter::genOperandResultVerifier(OpMethodBody &body,
       continue;
     // Emit a loop to check all the dynamic values in the pack.
     StringRef constraintFn =
-        staticVerifierEmitter.getConstraintFn(value.constraint);
-    body << "    for (::mlir::Value v : valueGroup" << staticValue.index()
-         << ") {\n"
-         << "      if (::mlir::failed(" << constraintFn
-         << "(getOperation(), v.getType(), \"" << valueKind << "\", index)))\n"
-         << "        return ::mlir::failure();\n"
-         << "      ++index;\n"
-         << "    }\n";
+        staticVerifierEmitter.getTypeConstraintFn(value.constraint);
+    body << formatv(verifyValues, staticValue.index(), constraintFn, valueKind);
   }
 
   body << "  }\n";
 }
 
-void OpEmitter::genRegionVerifier(OpMethodBody &body) {
+void OpEmitter::genRegionVerifier(MethodBody &body) {
+  /// Code to verify a region.
+  ///
+  /// {0}: Getter for the regions.
+  /// {1}: The region constraint.
+  /// {2}: The region's name.
+  /// {3}: The region description.
+  const char *const verifyRegion = R"(
+    for (auto &region : {0})
+      if (::mlir::failed({1}(*this, region, "{2}", index++)))
+        return ::mlir::failure();
+)";
+  /// Get a single region.
+  ///
+  /// {0}: The region's index.
+  const char *const getSingleRegion =
+      "::llvm::makeMutableArrayRef((*this)->getRegion({0}))";
+
   // If we have no regions, there is nothing more to do.
-  unsigned numRegions = op.getNumRegions();
-  if (numRegions == 0)
+  const auto canSkip = [](const NamedRegion &region) {
+    return region.constraint.getPredicate().isNull();
+  };
+  auto regions = op.getRegions();
+  if (regions.empty() && llvm::all_of(regions, canSkip))
     return;
 
-  body << "{\n";
-  body << "    unsigned index = 0; (void)index;\n";
-
-  for (unsigned i = 0; i < numRegions; ++i) {
-    const auto &region = op.getRegion(i);
-    if (region.constraint.getPredicate().isNull())
+  body << "  {\n    unsigned index = 0; (void)index;\n";
+  for (auto it : llvm::enumerate(regions)) {
+    const auto &region = it.value();
+    if (canSkip(region))
       continue;
 
-    body << "    for (::mlir::Region &region : ";
-    body << formatv(region.isVariadic()
-                        ? "{0}()"
-                        : "::mlir::MutableArrayRef<::mlir::Region>((*this)"
-                          "->getRegion({1}))",
-                    op.getGetterName(region.name), i);
-    body << ") {\n";
-    auto constraint = tgfmt(region.constraint.getConditionTemplate(),
-                            &verifyCtx.withSelf("region"))
-                          .str();
-
-    body << formatv("      (void)region;\n"
-                    "      if (!({0})) {\n        "
-                    "return emitOpError(\"region #\") << index << \" {1}"
-                    "failed to "
-                    "verify constraint: {2}\";\n      }\n",
-                    constraint,
-                    region.name.empty() ? "" : "('" + region.name + "') ",
-                    region.constraint.getSummary())
-         << "      ++index;\n"
-         << "    }\n";
+    auto getRegion = region.isVariadic()
+                         ? formatv("{0}()", op.getGetterName(region.name)).str()
+                         : formatv(getSingleRegion, it.index()).str();
+    auto constraintFn =
+        staticVerifierEmitter.getRegionConstraintFn(region.constraint);
+    body << formatv(verifyRegion, getRegion, constraintFn, region.name);
   }
   body << "  }\n";
 }
 
-void OpEmitter::genSuccessorVerifier(OpMethodBody &body) {
+void OpEmitter::genSuccessorVerifier(MethodBody &body) {
+  const char *const verifySuccessor = R"(
+    for (auto *successor : {0})
+      if (::mlir::failed({1}(*this, successor, "{2}", index++)))
+        return ::mlir::failure();
+)";
+  /// Get a single successor.
+  ///
+  /// {0}: The successor's name.
+  const char *const getSingleSuccessor = "::llvm::makeMutableArrayRef({0}())";
+
   // If we have no successors, there is nothing more to do.
-  unsigned numSuccessors = op.getNumSuccessors();
-  if (numSuccessors == 0)
+  const auto canSkip = [](const NamedSuccessor &successor) {
+    return successor.constraint.getPredicate().isNull();
+  };
+  auto successors = op.getSuccessors();
+  if (successors.empty() && llvm::all_of(successors, canSkip))
     return;
 
-  body << "{\n";
-  body << "    unsigned index = 0; (void)index;\n";
+  body << "  {\n    unsigned index = 0; (void)index;\n";
 
-  for (unsigned i = 0; i < numSuccessors; ++i) {
-    const auto &successor = op.getSuccessor(i);
-    if (successor.constraint.getPredicate().isNull())
+  for (auto it : llvm::enumerate(successors)) {
+    const auto &successor = it.value();
+    if (canSkip(successor))
       continue;
 
-    if (successor.isVariadic()) {
-      body << formatv("    for (::mlir::Block *successor : {0}()) {\n",
-                      successor.name);
-    } else {
-      body << "    {\n";
-      body << formatv("      ::mlir::Block *successor = {0}();\n",
-                      successor.name);
-    }
-    auto constraint = tgfmt(successor.constraint.getConditionTemplate(),
-                            &verifyCtx.withSelf("successor"))
-                          .str();
-
-    body << formatv("      (void)successor;\n"
-                    "      if (!({0})) {\n        "
-                    "return emitOpError(\"successor #\") << index << \"('{1}') "
-                    "failed to "
-                    "verify constraint: {2}\";\n      }\n",
-                    constraint, successor.name,
-                    successor.constraint.getSummary())
-         << "      ++index;\n"
-         << "    }\n";
+    auto getSuccessor =
+        formatv(successor.isVariadic() ? "{0}()" : getSingleSuccessor,
+                successor.name, it.index())
+            .str();
+    auto constraintFn =
+        staticVerifierEmitter.getSuccessorConstraintFn(successor.constraint);
+    body << formatv(verifySuccessor, getSuccessor, constraintFn,
+                    successor.name);
   }
   body << "  }\n";
 }
@@ -2400,17 +2453,16 @@ void OpEmitter::genTraits() {
 
   // Add the native and interface traits.
   for (const auto &trait : op.getTraits()) {
-    if (auto opTrait = dyn_cast<tblgen::NativeTrait>(&trait))
+    if (auto *opTrait = dyn_cast<tblgen::NativeTrait>(&trait))
       opClass.addTrait(opTrait->getFullyQualifiedTraitName());
-    else if (auto opTrait = dyn_cast<tblgen::InterfaceTrait>(&trait))
+    else if (auto *opTrait = dyn_cast<tblgen::InterfaceTrait>(&trait))
       opClass.addTrait(opTrait->getFullyQualifiedTraitName());
   }
 }
 
 void OpEmitter::genOpNameGetter() {
-  auto *method = opClass.addMethodAndPrune(
-      "::llvm::StringLiteral", "getOperationName",
-      OpMethod::Property(OpMethod::MP_Static | OpMethod::MP_Constexpr));
+  auto *method = opClass.addStaticMethod<Method::MP_Constexpr>(
+      "::llvm::StringLiteral", "getOperationName");
   ERROR_IF_PRUNED(method, "getOperationName", op);
   method->body() << "  return ::llvm::StringLiteral(\"" << op.getOperationName()
                  << "\");";
@@ -2437,8 +2489,9 @@ void OpEmitter::genOpAsmInterface() {
   opClass.addTrait("::mlir::OpAsmOpInterface::Trait");
 
   // Generate the right accessor for the number of results.
-  auto *method = opClass.addMethodAndPrune(
-      "void", "getAsmResultNames", "::mlir::OpAsmSetValueNameFn", "setNameFn");
+  auto *method = opClass.addMethod(
+      "void", "getAsmResultNames",
+      MethodParameter("::mlir::OpAsmSetValueNameFn", "setNameFn"));
   ERROR_IF_PRUNED(method, "getAsmResultNames", op);
   auto &body = method->body();
   for (int i = 0; i != numResults; ++i) {
@@ -2459,11 +2512,16 @@ namespace {
 // getters identical to those defined in the Op.
 class OpOperandAdaptorEmitter {
 public:
-  static void emitDecl(const Operator &op, raw_ostream &os);
-  static void emitDef(const Operator &op, raw_ostream &os);
+  static void emitDecl(const Operator &op,
+                       StaticVerifierFunctionEmitter &staticVerifierEmitter,
+                       raw_ostream &os);
+  static void emitDef(const Operator &op,
+                      StaticVerifierFunctionEmitter &staticVerifierEmitter,
+                      raw_ostream &os);
 
 private:
-  explicit OpOperandAdaptorEmitter(const Operator &op);
+  explicit OpOperandAdaptorEmitter(
+      const Operator &op, StaticVerifierFunctionEmitter &staticVerifierEmitter);
 
   // Add verification function. This generates a verify method for the adaptor
   // which verifies all the op-independent attribute constraints.
@@ -2471,18 +2529,21 @@ private:
 
   const Operator &op;
   Class adaptor;
+  StaticVerifierFunctionEmitter &staticVerifierEmitter;
 };
-} // end namespace
+} // end anonymous namespace
 
-OpOperandAdaptorEmitter::OpOperandAdaptorEmitter(const Operator &op)
-    : op(op), adaptor(op.getAdaptorName()) {
+OpOperandAdaptorEmitter::OpOperandAdaptorEmitter(
+    const Operator &op, StaticVerifierFunctionEmitter &staticVerifierEmitter)
+    : op(op), adaptor(op.getAdaptorName()),
+      staticVerifierEmitter(staticVerifierEmitter) {
   adaptor.newField("::mlir::ValueRange", "odsOperands");
   adaptor.newField("::mlir::DictionaryAttr", "odsAttrs");
   adaptor.newField("::mlir::RegionRange", "odsRegions");
   const auto *attrSizedOperands =
       op.getTrait("::mlir::OpTrait::AttrSizedOperandSegments");
   {
-    SmallVector<OpMethodParameter, 2> paramList;
+    SmallVector<MethodParameter> paramList;
     paramList.emplace_back("::mlir::ValueRange", "values");
     paramList.emplace_back("::mlir::DictionaryAttr", "attrs",
                            attrSizedOperands ? "" : "nullptr");
@@ -2496,14 +2557,14 @@ OpOperandAdaptorEmitter::OpOperandAdaptorEmitter(const Operator &op)
 
   {
     auto *constructor = adaptor.addConstructorAndPrune(
-        llvm::formatv("{0}&", op.getCppClassName()).str(), "op");
+        MethodParameter(op.getCppClassName() + " &", "op"));
     constructor->addMemberInitializer("odsOperands", "op->getOperands()");
     constructor->addMemberInitializer("odsAttrs", "op->getAttrDictionary()");
     constructor->addMemberInitializer("odsRegions", "op->getRegions()");
   }
 
   {
-    auto *m = adaptor.addMethodAndPrune("::mlir::ValueRange", "getOperands");
+    auto *m = adaptor.addMethod("::mlir::ValueRange", "getOperands");
     ERROR_IF_PRUNED(m, "getOperands", op);
     m->body() << "  return odsOperands;";
   }
@@ -2520,7 +2581,7 @@ OpOperandAdaptorEmitter::OpOperandAdaptorEmitter(const Operator &op)
   fctx.withBuilder("::mlir::Builder(odsAttrs.getContext())");
 
   auto emitAttr = [&](StringRef name, StringRef emitName, Attribute attr) {
-    auto *method = adaptor.addMethodAndPrune(attr.getStorageType(), emitName);
+    auto *method = adaptor.addMethod(attr.getStorageType(), emitName);
     ERROR_IF_PRUNED(method, "Adaptor::" + emitName, op);
     auto &body = method->body();
     body << "  assert(odsAttrs && \"no attributes when constructing adapter\");"
@@ -2544,8 +2605,7 @@ OpOperandAdaptorEmitter::OpOperandAdaptorEmitter(const Operator &op)
   };
 
   {
-    auto *m =
-        adaptor.addMethodAndPrune("::mlir::DictionaryAttr", "getAttributes");
+    auto *m = adaptor.addMethod("::mlir::DictionaryAttr", "getAttributes");
     ERROR_IF_PRUNED(m, "Adaptor::getAttributes", op);
     m->body() << "  return odsAttrs;";
   }
@@ -2560,7 +2620,7 @@ OpOperandAdaptorEmitter::OpOperandAdaptorEmitter(const Operator &op)
 
   unsigned numRegions = op.getNumRegions();
   if (numRegions > 0) {
-    auto *m = adaptor.addMethodAndPrune("::mlir::RegionRange", "getRegions");
+    auto *m = adaptor.addMethod("::mlir::RegionRange", "getRegions");
     ERROR_IF_PRUNED(m, "Adaptor::getRegions", op);
     m->body() << "  return odsRegions;";
   }
@@ -2572,13 +2632,13 @@ OpOperandAdaptorEmitter::OpOperandAdaptorEmitter(const Operator &op)
     // Generate the accessors for a variadic region.
     for (StringRef name : op.getGetterNames(region.name)) {
       if (region.isVariadic()) {
-        auto *m = adaptor.addMethodAndPrune("::mlir::RegionRange", name);
+        auto *m = adaptor.addMethod("::mlir::RegionRange", name);
         ERROR_IF_PRUNED(m, "Adaptor::" + name, op);
         m->body() << formatv("  return odsRegions.drop_front({0});", i);
         continue;
       }
 
-      auto *m = adaptor.addMethodAndPrune("::mlir::Region &", name);
+      auto *m = adaptor.addMethod("::mlir::Region &", name);
       ERROR_IF_PRUNED(m, "Adaptor::" + name, op);
       m->body() << formatv("  return *odsRegions[{0}];", i);
     }
@@ -2589,32 +2649,31 @@ OpOperandAdaptorEmitter::OpOperandAdaptorEmitter(const Operator &op)
 }
 
 void OpOperandAdaptorEmitter::addVerification() {
-  auto *method = adaptor.addMethodAndPrune("::mlir::LogicalResult", "verify",
-                                           "::mlir::Location", "loc");
+  auto *method = adaptor.addMethod("::mlir::LogicalResult", "verify",
+                                   MethodParameter("::mlir::Location", "loc"));
   ERROR_IF_PRUNED(method, "verify", op);
   auto &body = method->body();
 
-  std::string emitError =
-      "emitError(loc, \"'" + op.getOperationName() + "' op \"";
-  genNativeTraitAttrVerifier(body, op, adaptorGetAttr, emitError,
-                             /*opRequired=*/false);
-
+  OpOrAdaptorHelper emitHelper(op, /*isOp=*/false);
+  genNativeTraitAttrVerifier(body, emitHelper);
   FmtContext verifyCtx;
-  populateSubstitutions(op, adaptorGetAttr, "getODSOperands",
-                        "<no results should be generated>", verifyCtx,
-                        /*opRequired=*/false);
-  genAttributeVerifier(op, adaptorGetAttr, emitError,
-                       /*emitVerificationRequiringOp*/ false, verifyCtx, body);
+  populateSubstitutions(emitHelper, verifyCtx);
+
+  genAttributeVerifier(emitHelper, verifyCtx, body, staticVerifierEmitter);
 
   body << "  return ::mlir::success();";
 }
 
-void OpOperandAdaptorEmitter::emitDecl(const Operator &op, raw_ostream &os) {
-  OpOperandAdaptorEmitter(op).adaptor.writeDeclTo(os);
+void OpOperandAdaptorEmitter::emitDecl(
+    const Operator &op, StaticVerifierFunctionEmitter &staticVerifierEmitter,
+    raw_ostream &os) {
+  OpOperandAdaptorEmitter(op, staticVerifierEmitter).adaptor.writeDeclTo(os);
 }
 
-void OpOperandAdaptorEmitter::emitDef(const Operator &op, raw_ostream &os) {
-  OpOperandAdaptorEmitter(op).adaptor.writeDefTo(os);
+void OpOperandAdaptorEmitter::emitDef(
+    const Operator &op, StaticVerifierFunctionEmitter &staticVerifierEmitter,
+    raw_ostream &os) {
+  OpOperandAdaptorEmitter(op, staticVerifierEmitter).adaptor.writeDefTo(os);
 }
 
 // Emits the opcode enum and op classes.
@@ -2639,27 +2698,9 @@ static void emitOpClasses(const RecordKeeper &recordKeeper,
     return;
 
   // Generate all of the locally instantiated methods first.
-  StaticVerifierFunctionEmitter staticVerifierEmitter(recordKeeper);
+  StaticVerifierFunctionEmitter staticVerifierEmitter(os, recordKeeper);
   os << formatv(opCommentHeader, "Local Utility Method", "Definitions");
-  staticVerifierEmitter.setSelf("type");
-
-  // Collect a set of all of the used type constraints within the operation
-  // definitions.
-  llvm::SetVector<const void *> typeConstraints;
-  for (Record *def : defs) {
-    Operator op(*def);
-    for (NamedTypeConstraint &operand : op.getOperands())
-      if (operand.hasPredicate())
-        typeConstraints.insert(operand.constraint.getAsOpaquePointer());
-    for (NamedTypeConstraint &result : op.getResults())
-      if (result.hasPredicate())
-        typeConstraints.insert(result.constraint.getAsOpaquePointer());
-  }
-
-  staticVerifierEmitter.emitConstraintMethodsInNamespace(
-      typeVerifierSignature, typeVerifierErrorHandler,
-      Operator(*defs[0]).getCppNamespace(), typeConstraints.getArrayRef(), os,
-      emitDecl);
+  staticVerifierEmitter.emitOpConstraints(defs, emitDecl);
 
   for (auto *def : defs) {
     Operator op(*def);
@@ -2668,7 +2709,7 @@ static void emitOpClasses(const RecordKeeper &recordKeeper,
         NamespaceEmitter emitter(os, op.getCppNamespace());
         os << formatv(opCommentHeader, op.getQualCppClassName(),
                       "declarations");
-        OpOperandAdaptorEmitter::emitDecl(op, os);
+        OpOperandAdaptorEmitter::emitDecl(op, staticVerifierEmitter, os);
         OpEmitter::emitDecl(op, os, staticVerifierEmitter);
       }
       // Emit the TypeID explicit specialization to have a single definition.
@@ -2679,7 +2720,7 @@ static void emitOpClasses(const RecordKeeper &recordKeeper,
       {
         NamespaceEmitter emitter(os, op.getCppNamespace());
         os << formatv(opCommentHeader, op.getQualCppClassName(), "definitions");
-        OpOperandAdaptorEmitter::emitDef(op, os);
+        OpOperandAdaptorEmitter::emitDef(op, staticVerifierEmitter, os);
         OpEmitter::emitDef(op, os, staticVerifierEmitter);
       }
       // Emit the TypeID explicit specialization to have a single definition.

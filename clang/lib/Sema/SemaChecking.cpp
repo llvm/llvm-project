@@ -2741,8 +2741,8 @@ static bool isValidBPFPreserveFieldInfoArg(Expr *Arg) {
   // to BPF backend to check whether the access is a
   // field access or not.
   return (Arg->IgnoreParens()->getObjectKind() == OK_BitField ||
-          dyn_cast<MemberExpr>(Arg->IgnoreParens()) ||
-          dyn_cast<ArraySubscriptExpr>(Arg->IgnoreParens()));
+          isa<MemberExpr>(Arg->IgnoreParens()) ||
+          isa<ArraySubscriptExpr>(Arg->IgnoreParens()));
 }
 
 static bool isEltOfVectorTy(ASTContext &Context, CallExpr *Call, Sema &S,
@@ -2766,8 +2766,8 @@ static bool isValidBPFPreserveTypeInfoArg(Expr *Arg) {
   //   1. __builtin_preserve_type_info(*(<type> *)0, flag);
   //   2. <type> var;
   //      __builtin_preserve_type_info(var, flag);
-  if (!dyn_cast<DeclRefExpr>(Arg->IgnoreParens()) &&
-      !dyn_cast<UnaryOperator>(Arg->IgnoreParens()))
+  if (!isa<DeclRefExpr>(Arg->IgnoreParens()) &&
+      !isa<UnaryOperator>(Arg->IgnoreParens()))
     return false;
 
   // Typedef type.
@@ -5532,8 +5532,8 @@ ExprResult Sema::BuildAtomicExpr(SourceRange CallRange, SourceRange ExprRange,
 
   // For an arithmetic operation, the implied arithmetic must be well-formed.
   if (Form == Arithmetic) {
-    // gcc does not enforce these rules for GNU atomics, but we do so for
-    // sanity.
+    // GCC does not enforce these rules for GNU atomics, but we do, because if
+    // we didn't it would be very confusing. FIXME:  For whom? How so?
     auto IsAllowedValueType = [&](QualType ValType) {
       if (ValType->isIntegerType())
         return true;
@@ -5574,7 +5574,8 @@ ExprResult Sema::BuildAtomicExpr(SourceRange CallRange, SourceRange ExprRange,
   if (!IsC11 && !AtomTy.isTriviallyCopyableType(Context) &&
       !AtomTy->isScalarType()) {
     // For GNU atomics, require a trivially-copyable type. This is not part of
-    // the GNU atomics specification, but we enforce it for sanity.
+    // the GNU atomics specification, but we enforce it, because if we didn't it
+    // would be very confusing. FIXME:  For whom? How so?
     Diag(ExprRange.getBegin(), diag::err_atomic_op_needs_trivial_copy)
         << Ptr->getType() << Ptr->getSourceRange();
     return ExprError();
@@ -7553,11 +7554,11 @@ bool Sema::SemaBuiltinPPCMMACall(CallExpr *TheCall, unsigned BuiltinID,
       StrippedRVType = StrippedRVType.getCanonicalType().getUnqualifiedType();
 
     // The only case where the argument type and expected type are allowed to
-    // mismatch is if the argument type is a non-void pointer and expected type
-    // is a void pointer.
+    // mismatch is if the argument type is a non-void pointer (or array) and
+    // expected type is a void pointer.
     if (StrippedRVType != ExpectedType)
       if (!(ExpectedType->isVoidPointerType() &&
-            StrippedRVType->isPointerType()))
+            (StrippedRVType->isPointerType() || StrippedRVType->isArrayType())))
         return Diag(Arg->getBeginLoc(),
                     diag::err_typecheck_convert_incompatible)
                << PassedType << ExpectedType << 1 << 0 << 0;
@@ -16611,10 +16612,8 @@ void Sema::RefersToMemberWithReducedAlignment(
 
   // Synthesize offset of the whole access.
   CharUnits Offset;
-  for (auto I = ReverseMemberChain.rbegin(); I != ReverseMemberChain.rend();
-       I++) {
-    Offset += Context.toCharUnitsFromBits(Context.getFieldOffset(*I));
-  }
+  for (const FieldDecl *FD : llvm::reverse(ReverseMemberChain))
+    Offset += Context.toCharUnitsFromBits(Context.getFieldOffset(FD));
 
   // Compute the CompleteObjectAlignment as the alignment of the whole chain.
   CharUnits CompleteObjectAlignment = Context.getTypeAlignInChars(

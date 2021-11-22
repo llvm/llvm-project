@@ -159,13 +159,10 @@ bool RealOutputEditingBase::EmitSuffix(const DataEdit &edit) {
 
 template <int binaryPrecision>
 decimal::ConversionToDecimalResult RealOutputEditing<binaryPrecision>::Convert(
-    int significantDigits, const DataEdit &edit, int flags) {
-  if (edit.modes.editingFlags & signPlus) {
-    flags |= decimal::AlwaysSign;
-  }
+    int significantDigits, enum decimal::FortranRounding rounding, int flags) {
   auto converted{decimal::ConvertToDecimal<binaryPrecision>(buffer_,
       sizeof buffer_, static_cast<enum decimal::DecimalConversionFlags>(flags),
-      significantDigits, edit.modes.round, x_)};
+      significantDigits, rounding, x_)};
   if (!converted.str) { // overflow
     io_.GetIoErrorHandler().Crash(
         "RealOutputEditing::Convert : buffer size %zd was insufficient",
@@ -181,6 +178,9 @@ bool RealOutputEditing<binaryPrecision>::EditEorDOutput(const DataEdit &edit) {
   int editWidth{edit.width.value_or(0)}; // 'w' field
   int significantDigits{editDigits};
   int flags{0};
+  if (edit.modes.editingFlags & signPlus) {
+    flags |= decimal::AlwaysSign;
+  }
   if (editWidth == 0) { // "the processor selects the field width"
     if (edit.digits.has_value()) { // E0.d
       editWidth = editDigits + 6; // -.666E+ee
@@ -204,7 +204,7 @@ bool RealOutputEditing<binaryPrecision>::EditEorDOutput(const DataEdit &edit) {
   // In EN editing, multiple attempts may be necessary, so it's in a loop.
   while (true) {
     decimal::ConversionToDecimalResult converted{
-        Convert(significantDigits, edit, flags)};
+        Convert(significantDigits, edit.modes.round, flags)};
     if (IsInfOrNaN(converted)) {
       return EmitPrefix(edit, converted.length, editWidth) &&
           io_.Emit(converted.str, converted.length) && EmitSuffix(edit);
@@ -261,7 +261,11 @@ template <int binaryPrecision>
 bool RealOutputEditing<binaryPrecision>::EditFOutput(const DataEdit &edit) {
   int fracDigits{edit.digits.value_or(0)}; // 'd' field
   const int editWidth{edit.width.value_or(0)}; // 'w' field
+  enum decimal::FortranRounding rounding{edit.modes.round};
   int flags{0};
+  if (edit.modes.editingFlags & signPlus) {
+    flags |= decimal::AlwaysSign;
+  }
   if (editWidth == 0) { // "the processor selects the field width"
     if (!edit.digits.has_value()) { // F0
       flags |= decimal::Minimize;
@@ -274,13 +278,16 @@ bool RealOutputEditing<binaryPrecision>::EditFOutput(const DataEdit &edit) {
   bool canIncrease{true};
   while (true) {
     decimal::ConversionToDecimalResult converted{
-        Convert(extraDigits + fracDigits, edit, flags)};
+        Convert(extraDigits + fracDigits, rounding, flags)};
     if (IsInfOrNaN(converted)) {
       return EmitPrefix(edit, converted.length, editWidth) &&
           io_.Emit(converted.str, converted.length) && EmitSuffix(edit);
     }
     int scale{IsZero() ? 1 : edit.modes.scale}; // kP
     int expo{converted.decimalExponent + scale};
+    int signLength{*converted.str == '-' || *converted.str == '+' ? 1 : 0};
+    int convertedDigits{static_cast<int>(converted.length) - signLength};
+    int trailingOnes{0};
     if (expo > extraDigits && extraDigits >= 0 && canIncrease) {
       extraDigits = expo;
       if (!edit.digits.has_value()) { // F0
@@ -288,26 +295,42 @@ bool RealOutputEditing<binaryPrecision>::EditFOutput(const DataEdit &edit) {
       }
       canIncrease = false; // only once
       continue;
+    } else if (expo == -fracDigits && convertedDigits > 0) {
+      if (rounding != decimal::FortranRounding::RoundToZero) {
+        // Convert again without rounding so that we can round here
+        rounding = decimal::FortranRounding::RoundToZero;
+        continue;
+      } else if (converted.str[signLength] >= '5') {
+        // Value rounds up to a scaled 1 (e.g., 0.06 for F5.1 -> 0.1)
+        ++expo;
+        convertedDigits = 0;
+        trailingOnes = 1;
+      } else {
+        // Value rounds down to zero
+        expo = 0;
+        convertedDigits = 0;
+      }
     } else if (expo < extraDigits && extraDigits > -fracDigits) {
       extraDigits = std::max(expo, -fracDigits);
       continue;
     }
-    int signLength{*converted.str == '-' || *converted.str == '+' ? 1 : 0};
-    int convertedDigits{static_cast<int>(converted.length) - signLength};
     int digitsBeforePoint{std::max(0, std::min(expo, convertedDigits))};
     int zeroesBeforePoint{std::max(0, expo - digitsBeforePoint)};
     int zeroesAfterPoint{std::min(fracDigits, std::max(0, -expo))};
     int digitsAfterPoint{convertedDigits - digitsBeforePoint};
     int trailingZeroes{flags & decimal::Minimize
             ? 0
-            : std::max(0, fracDigits - (zeroesAfterPoint + digitsAfterPoint))};
+            : std::max(0,
+                  fracDigits -
+                      (zeroesAfterPoint + digitsAfterPoint + trailingOnes))};
     if (digitsBeforePoint + zeroesBeforePoint + zeroesAfterPoint +
-            digitsAfterPoint + trailingZeroes ==
+            digitsAfterPoint + trailingOnes + trailingZeroes ==
         0) {
       zeroesBeforePoint = 1; // "." -> "0."
     }
     int totalLength{signLength + digitsBeforePoint + zeroesBeforePoint +
-        1 /*'.'*/ + zeroesAfterPoint + digitsAfterPoint + trailingZeroes};
+        1 /*'.'*/ + zeroesAfterPoint + digitsAfterPoint + trailingOnes +
+        trailingZeroes};
     int width{editWidth > 0 ? editWidth : totalLength};
     if (totalLength > width) {
       return io_.EmitRepeated('*', width);
@@ -323,6 +346,7 @@ bool RealOutputEditing<binaryPrecision>::EditFOutput(const DataEdit &edit) {
         io_.EmitRepeated('0', zeroesAfterPoint) &&
         io_.Emit(
             converted.str + signLength + digitsBeforePoint, digitsAfterPoint) &&
+        io_.EmitRepeated('1', trailingOnes) &&
         io_.EmitRepeated('0', trailingZeroes) &&
         io_.EmitRepeated(' ', trailingBlanks_) && EmitSuffix(edit);
   }
@@ -337,8 +361,12 @@ DataEdit RealOutputEditing<binaryPrecision>::EditForGOutput(DataEdit edit) {
   if (!edit.width.has_value() || (*edit.width > 0 && significantDigits == 0)) {
     return edit; // Gw.0 -> Ew.0 for w > 0
   }
+  int flags{0};
+  if (edit.modes.editingFlags & signPlus) {
+    flags |= decimal::AlwaysSign;
+  }
   decimal::ConversionToDecimalResult converted{
-      Convert(significantDigits, edit)};
+      Convert(significantDigits, edit.modes.round, flags)};
   if (IsInfOrNaN(converted)) {
     return edit;
   }
@@ -365,7 +393,7 @@ DataEdit RealOutputEditing<binaryPrecision>::EditForGOutput(DataEdit edit) {
 template <int binaryPrecision>
 bool RealOutputEditing<binaryPrecision>::EditListDirectedOutput(
     const DataEdit &edit) {
-  decimal::ConversionToDecimalResult converted{Convert(1, edit)};
+  decimal::ConversionToDecimalResult converted{Convert(1, edit.modes.round)};
   if (IsInfOrNaN(converted)) {
     return EditEorDOutput(edit);
   }

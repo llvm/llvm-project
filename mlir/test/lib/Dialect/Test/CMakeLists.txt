@@ -13,7 +13,7 @@ mlir_tablegen(TestOpInterfaces.h.inc -gen-op-interface-decls)
 mlir_tablegen(TestOpInterfaces.cpp.inc -gen-op-interface-defs)
 add_public_tablegen_target(MLIRTestInterfaceIncGen)
 
-set(LLVM_TARGET_DEFINITIONS TestAttrDefs.td)
+set(LLVM_TARGET_DEFINITIONS TestOps.td)
 mlir_tablegen(TestAttrDefs.h.inc -gen-attrdef-decls)
 mlir_tablegen(TestAttrDefs.cpp.inc -gen-attrdef-defs)
 add_public_tablegen_target(MLIRTestAttrDefIncGen)

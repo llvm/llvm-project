@@ -41,7 +41,7 @@ OPTIONS
 .. option:: --demangle, -C
 
  Display demangled symbol names in the output.
- 
+
 .. option:: --dependent-libraries
 
  Display the dependent libraries section.
@@ -118,7 +118,7 @@ OPTIONS
 .. option:: --needed-libs
 
  Display the needed libraries.
-  
+
 .. option:: --no-demangle
 
  Do not display demangled symbol names in the output. On by default.
@@ -196,11 +196,11 @@ OPTIONS
 .. option:: --version-info, -V
 
  Display version sections.
- 
+
 .. option:: --wide, -W
 
  Ignored for GNU readelf compatibility. The output is already similar to when using -W with GNU readelf.
- 
+
 .. option:: @<FILE>
 
  Read command-line options from response file `<FILE>`.

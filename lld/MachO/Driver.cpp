@@ -1021,26 +1021,30 @@ static void gatherInputSections() {
   TimeTraceScope timeScope("Gathering input sections");
   int inputOrder = 0;
   for (const InputFile *file : inputFiles) {
-    for (const SubsectionMap &map : file->subsections) {
+    for (const Section &section : file->sections) {
+      const Subsections &subsections = section.subsections;
+      if (subsections.empty())
+        continue;
+      if (subsections[0].isec->getName() == section_names::compactUnwind)
+        // Compact unwind entries require special handling elsewhere.
+        continue;
       ConcatOutputSection *osec = nullptr;
-      for (const SubsectionEntry &entry : map) {
-        if (auto *isec = dyn_cast<ConcatInputSection>(entry.isec)) {
+      for (const Subsection &subsection : subsections) {
+        if (auto *isec = dyn_cast<ConcatInputSection>(subsection.isec)) {
           if (isec->isCoalescedWeak())
             continue;
-          if (isec->getSegName() == segment_names::ld) {
-            assert(isec->getName() == section_names::compactUnwind);
-            continue;
-          }
           isec->outSecOff = inputOrder++;
           if (!osec)
             osec = ConcatOutputSection::getOrCreateForInput(isec);
           isec->parent = osec;
           inputSections.push_back(isec);
-        } else if (auto *isec = dyn_cast<CStringInputSection>(entry.isec)) {
+        } else if (auto *isec =
+                       dyn_cast<CStringInputSection>(subsection.isec)) {
           if (in.cStringSection->inputOrder == UnspecifiedInputOrder)
             in.cStringSection->inputOrder = inputOrder++;
           in.cStringSection->addInput(isec);
-        } else if (auto *isec = dyn_cast<WordLiteralInputSection>(entry.isec)) {
+        } else if (auto *isec =
+                       dyn_cast<WordLiteralInputSection>(subsection.isec)) {
           if (in.wordLiteralSection->inputOrder == UnspecifiedInputOrder)
             in.wordLiteralSection->inputOrder = inputOrder++;
           in.wordLiteralSection->addInput(isec);
@@ -1157,7 +1161,9 @@ bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
       // (ie., it has a slash suffix) whereas real_path() doesn't.
       // So we have to append '/' to be consistent.
       StringRef sep = sys::path::get_separator();
-      if (config->osoPrefix.equals(".") && !expanded.endswith(sep))
+      // real_path removes trailing slashes as part of the normalization, but
+      // these are meaningful for our text based stripping
+      if (config->osoPrefix.equals(".") || config->osoPrefix.endswith(sep))
         expanded += sep;
       config->osoPrefix = saver.save(expanded.str());
     }
@@ -1258,6 +1264,8 @@ bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
   config->icfLevel = getICFLevel(args);
   config->dedupLiterals = args.hasArg(OPT_deduplicate_literals) ||
                           config->icfLevel != ICFLevel::none;
+  config->warnDylibInstallName = args.hasFlag(
+      OPT_warn_dylib_install_name, OPT_no_warn_dylib_install_name, false);
 
   // FIXME: Add a commandline flag for this too.
   config->zeroModTime = getenv("ZERO_AR_DATE");
@@ -1274,8 +1282,10 @@ bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
 #endif
 
   if (const Arg *arg = args.getLastArg(OPT_install_name)) {
-    if (config->outputType != MH_DYLIB)
-      warn(arg->getAsString(args) + ": ignored, only has effect with -dylib");
+    if (config->warnDylibInstallName && config->outputType != MH_DYLIB)
+      warn(
+          arg->getAsString(args) +
+          ": ignored, only has effect with -dylib [--warn-dylib-install-name]");
     else
       config->installName = arg->getValue();
   } else if (config->outputType == MH_DYLIB) {
@@ -1460,24 +1470,33 @@ bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
     createSyntheticSymbols();
 
     if (!config->exportedSymbols.empty()) {
-      for (Symbol *sym : symtab->getSymbols()) {
+      parallelForEach(symtab->getSymbols(), [](Symbol *sym) {
         if (auto *defined = dyn_cast<Defined>(sym)) {
           StringRef symbolName = defined->getName();
           if (config->exportedSymbols.match(symbolName)) {
             if (defined->privateExtern) {
-              warn("cannot export hidden symbol " + symbolName +
-                   "\n>>> defined in " + toString(defined->getFile()));
+              if (defined->weakDefCanBeHidden) {
+                // weak_def_can_be_hidden symbols behave similarly to
+                // private_extern symbols in most cases, except for when
+                // it is explicitly exported.
+                // The former can be exported but the latter cannot.
+                defined->privateExtern = false;
+              } else {
+                warn("cannot export hidden symbol " + symbolName +
+                     "\n>>> defined in " + toString(defined->getFile()));
+              }
             }
           } else {
             defined->privateExtern = true;
           }
         }
-      }
+      });
     } else if (!config->unexportedSymbols.empty()) {
-      for (Symbol *sym : symtab->getSymbols())
+      parallelForEach(symtab->getSymbols(), [](Symbol *sym) {
         if (auto *defined = dyn_cast<Defined>(sym))
           if (config->unexportedSymbols.match(defined->getName()))
             defined->privateExtern = true;
+      });
     }
 
     for (const Arg *arg : args.filtered(OPT_sectcreate)) {

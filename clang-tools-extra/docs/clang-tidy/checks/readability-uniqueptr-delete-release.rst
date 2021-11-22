@@ -15,7 +15,7 @@ The latter is shorter, simpler and does not require use of raw pointer APIs.
 
   std::unique_ptr<int> P;
   P = nullptr;
-  
+
 Options
 -------
 

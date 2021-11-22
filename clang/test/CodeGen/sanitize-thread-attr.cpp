@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 -triple x86_64-apple-darwin -emit-llvm -o - %s | FileCheck -check-prefix=WITHOUT %s
 // RUN: %clang_cc1 -triple x86_64-apple-darwin -emit-llvm -o - %s -fsanitize=thread | FileCheck -check-prefix=TSAN %s
 // RUN: echo "src:%s" | sed -e 's/\\/\\\\/g' > %t
-// RUN: %clang_cc1 -triple x86_64-apple-darwin -emit-llvm -o - %s -fsanitize=thread -fsanitize-blacklist=%t | FileCheck -check-prefix=BL %s
+// RUN: %clang_cc1 -triple x86_64-apple-darwin -emit-llvm -o - %s -fsanitize=thread -fsanitize-ignorelist=%t | FileCheck -check-prefix=BL %s
 
 // The sanitize_thread attribute should be attached to functions
 // when ThreadSanitizer is enabled, unless no_sanitize_thread attribute

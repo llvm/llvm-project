@@ -662,9 +662,9 @@ void Linux::AddIAMCUIncludeArgs(const ArgList &DriverArgs,
   }
 }
 
-bool Linux::isPIEDefault() const {
-  return (getTriple().isAndroid() && !getTriple().isAndroidVersionLT(16)) ||
-          getTriple().isMusl() || getSanitizerArgs().requiresPIE();
+bool Linux::isPIEDefault(const llvm::opt::ArgList &Args) const {
+  return getTriple().isAndroid() || getTriple().isMusl() ||
+         getSanitizerArgs(Args).requiresPIE();
 }
 
 bool Linux::IsAArch64OutlineAtomicsDefault(const ArgList &Args) const {
@@ -678,10 +678,6 @@ bool Linux::IsAArch64OutlineAtomicsDefault(const ArgList &Args) const {
   if (GCCInstallation.getVersion().isOlderThan(9, 3, 1))
     return false;
   return true;
-}
-
-bool Linux::isNoExecStackDefault() const {
-    return getTriple().isAndroid();
 }
 
 bool Linux::IsMathErrnoDefault() const {

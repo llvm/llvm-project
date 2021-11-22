@@ -1,8 +1,8 @@
-// RUN: %clang_cc1 -verify -triple x86_64-unknown-linux -fopenmp -fopenmp-version=51 -DOMP51 -std=c++11 -o - %s
-// RUN: %clang_cc1 -verify -triple x86_64-unknown-linux -fopenmp -fopenmp-version=51 -DOMP51 -std=c++11 \
+// RUN: %clang_cc1 -verify -triple x86_64-unknown-linux -fopenmp -fopenmp-version=51 -std=c++11 -o - %s
+// RUN: %clang_cc1 -verify -triple x86_64-unknown-linux -fopenmp -fopenmp-version=51 -std=c++11 \
 // RUN:  -DNO_INTEROP_T_DEF -o - %s
-// RUN: %clang_cc1 -verify -triple x86_64-unknown-linux -fopenmp -fopenmp-version=50 -DOMP50 -std=c++11 -o - %s
-// RUN: %clang_cc1 -verify -triple x86_64-unknown-linux -fopenmp -fopenmp-version=51 -DOMP51 -DC -x c -o - %s
+// RUN: %clang_cc1 -verify -triple x86_64-unknown-linux -fopenmp -fopenmp-version=50 -std=c++11 -o - %s
+// RUN: %clang_cc1 -verify -triple x86_64-unknown-linux -fopenmp -fopenmp-version=51 -DC -x c -o - %s
 
 #ifdef NO_INTEROP_T_DEF
 void foo_v1(float *, void *);
@@ -15,7 +15,7 @@ typedef void *omp_interop_t;
 
 int Other;
 
-#ifdef OMP51
+#if _OPENMP >= 202011  // At least OpenMP 5.1
 #ifdef __cplusplus
 class A {
 public:
@@ -83,14 +83,14 @@ template <typename T> void templatebar(const T& t) {}
                         append_args(interop(target),interop(target))
 void templatebar(const int &t) {}
 #endif // __cplusplus
-#endif // OMP51
+#endif // _OPENMP >= 202011
 
 void foo_v1(float *AAA, float *BBB, int *I) { return; }
 void foo_v2(float *AAA, float *BBB, int *I) { return; }
 void foo_v3(float *AAA, float *BBB, int *I) { return; }
 void foo_v4(float *AAA, float *BBB, int *I, omp_interop_t IOp) { return; }
 
-#ifdef OMP51
+#if _OPENMP >= 202011 // At least OpenMP 5.1
 void vararg_foo(const char *fmt, omp_interop_t it, ...);
 // expected-error@+3 {{'append_args' is not allowed with varargs functions}}
 #pragma omp declare variant(vararg_foo) match(construct={dispatch}) \
@@ -184,15 +184,15 @@ void vararg_bar2(const char *fmt) { return; }
 // expected-error@+1 {{variant in '#pragma omp declare variant' with type 'void (float *, float *, int *, omp_interop_t)' (aka 'void (float *, float *, int *, void *)') is incompatible with type 'void (float *, float *, int *)'}}
 #pragma omp declare variant(foo_v4) match(construct={dispatch})
 
-#endif // OMP51
-#ifdef OMP50
+#endif // _OPENMP >= 202011
+#if _OPENMP < 202011  // OpenMP 5.0 or lower
 // expected-error@+2 {{expected 'match' clause on 'omp declare variant' directive}}
 #pragma omp declare variant(foo_v1)                            \
    adjust_args(need_device_ptr:AAA) match(device={arch(arm)})
 // expected-error@+2 {{expected 'match' clause on 'omp declare variant' directive}}
 #pragma omp declare variant(foo_v1)                            \
    append_args(interop(target)) match(device={arch(arm)})
-#endif // OMP50
+#endif // _OPENMP < 202011
 
 void foo(float *AAA, float *BBB, int *I) { return; }
 

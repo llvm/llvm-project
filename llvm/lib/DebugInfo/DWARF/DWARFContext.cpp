@@ -693,6 +693,18 @@ void DWARFContext::dump(
     getDebugNames().dump(OS);
 }
 
+DWARFTypeUnit *DWARFContext::getTypeUnitForHash(uint16_t Version, uint64_t Hash,
+                                                bool IsDWO) {
+  // FIXME: Check for/use the tu_index here, if there is one.
+  for (const auto &U : IsDWO ? dwo_units() : normal_units()) {
+    if (DWARFTypeUnit *TU = dyn_cast<DWARFTypeUnit>(U.get())) {
+      if (TU->getTypeHash() == Hash)
+        return TU;
+    }
+  }
+  return nullptr;
+}
+
 DWARFCompileUnit *DWARFContext::getDWOCompileUnitForHash(uint64_t Hash) {
   parseDWOUnits(LazyParse);
 

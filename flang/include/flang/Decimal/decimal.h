@@ -101,21 +101,21 @@ template <int PREC> struct ConversionToBinaryResult {
 };
 
 template <int PREC>
-ConversionToBinaryResult<PREC> ConvertToBinary(
-    const char *&, enum FortranRounding = RoundNearest);
+ConversionToBinaryResult<PREC> ConvertToBinary(const char *&,
+    enum FortranRounding = RoundNearest, const char *end = nullptr);
 
 extern template ConversionToBinaryResult<8> ConvertToBinary<8>(
-    const char *&, enum FortranRounding);
+    const char *&, enum FortranRounding, const char *end);
 extern template ConversionToBinaryResult<11> ConvertToBinary<11>(
-    const char *&, enum FortranRounding);
+    const char *&, enum FortranRounding, const char *end);
 extern template ConversionToBinaryResult<24> ConvertToBinary<24>(
-    const char *&, enum FortranRounding);
+    const char *&, enum FortranRounding, const char *end);
 extern template ConversionToBinaryResult<53> ConvertToBinary<53>(
-    const char *&, enum FortranRounding);
+    const char *&, enum FortranRounding, const char *end);
 extern template ConversionToBinaryResult<64> ConvertToBinary<64>(
-    const char *&, enum FortranRounding);
+    const char *&, enum FortranRounding, const char *end);
 extern template ConversionToBinaryResult<113> ConvertToBinary<113>(
-    const char *&, enum FortranRounding);
+    const char *&, enum FortranRounding, const char *end);
 } // namespace Fortran::decimal
 extern "C" {
 #define NS(x) Fortran::decimal::x

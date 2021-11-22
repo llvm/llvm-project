@@ -15,10 +15,10 @@ class PtyServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase):
         super().setUp()
         import pty
         import tty
-        master, slave = pty.openpty()
-        tty.setraw(master)
-        self._master = io.FileIO(master, 'r+b')
-        self._slave = io.FileIO(slave, 'r+b')
+        primary, secondary = pty.openpty()
+        tty.setraw(primary)
+        self._primary = io.FileIO(primary, 'r+b')
+        self._secondary = io.FileIO(secondary, 'r+b')
 
     def get_debug_monitor_command_line_args(self, attach_pid=None):
         commandline_args = self.debug_monitor_extra_args
@@ -28,7 +28,7 @@ class PtyServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase):
         libc = ctypes.CDLL(None)
         libc.ptsname.argtypes = (ctypes.c_int,)
         libc.ptsname.restype = ctypes.c_char_p
-        pty_path = libc.ptsname(self._master.fileno()).decode()
+        pty_path = libc.ptsname(self._primary.fileno()).decode()
         commandline_args += ["serial://%s" % (pty_path,)]
         return commandline_args
 
@@ -48,7 +48,7 @@ class PtyServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase):
             def recv(self, count):
                 return self.fd.read(count)
 
-        self.sock = FakeSocket(self._master)
+        self.sock = FakeSocket(self._primary)
         self._server = Server(self.sock, server)
         return server
 

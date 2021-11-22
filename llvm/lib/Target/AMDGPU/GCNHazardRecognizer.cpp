@@ -1326,11 +1326,11 @@ bool GCNHazardRecognizer::fixVALUPartialForwardingHazard(MachineInstr *MI) {
   const int IntvMaxVALUs = 6;
   const int NoHazardVALUWaitStates = IntvMaxVALUs + 2;
 
-  typedef struct {
+  struct StateType {
     SmallDenseMap<Register, int, 4> DefPos;
     int ExecPos = std::numeric_limits<int>::max();
     int VALUs = 0;
-  } StateType;
+  };
 
   StateType State;
 
@@ -1828,7 +1828,7 @@ int GCNHazardRecognizer::checkMAIHazards90A(MachineInstr *MI) {
 }
 
 int GCNHazardRecognizer::checkMAILdStHazards(MachineInstr *MI) {
-  // On gfx90a+ releveant hazards are checked in checkMAIVALUHazards()
+  // On gfx90a+ relevant hazards are checked in checkMAIVALUHazards()
   if (!ST.hasMAIInsts() || ST.hasGFX90AInsts())
     return 0;
 

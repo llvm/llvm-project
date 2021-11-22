@@ -4769,6 +4769,66 @@ TEST(ForEachConstructorInitializer, MatchesInitializers) {
     cxxConstructorDecl(forEachConstructorInitializer(cxxCtorInitializer()))));
 }
 
+TEST(ForEachLambdaCapture, MatchesCaptures) {
+  EXPECT_TRUE(matches(
+      "int main() { int x, y; auto f = [x, y]() { return x + y; }; }",
+      lambdaExpr(forEachLambdaCapture(lambdaCapture())), langCxx11OrLater()));
+  auto matcher = lambdaExpr(forEachLambdaCapture(
+      lambdaCapture(capturesVar(varDecl(hasType(isInteger())))).bind("LC")));
+  EXPECT_TRUE(matchAndVerifyResultTrue(
+      "int main() { int x, y; float z; auto f = [=]() { return x + y + z; }; }",
+      matcher, std::make_unique<VerifyIdIsBoundTo<LambdaCapture>>("LC", 2)));
+  EXPECT_TRUE(matchAndVerifyResultTrue(
+      "int main() { int x, y; float z; auto f = [x, y, z]() { return x + y + "
+      "z; }; }",
+      matcher, std::make_unique<VerifyIdIsBoundTo<LambdaCapture>>("LC", 2)));
+}
+
+TEST(ForEachLambdaCapture, IgnoreUnlessSpelledInSource) {
+  auto matcher =
+      traverse(TK_IgnoreUnlessSpelledInSource,
+               lambdaExpr(forEachLambdaCapture(
+                   lambdaCapture(capturesVar(varDecl(hasType(isInteger()))))
+                       .bind("LC"))));
+  EXPECT_TRUE(
+      notMatches("int main() { int x, y; auto f = [=]() { return x + y; }; }",
+                 matcher, langCxx11OrLater()));
+  EXPECT_TRUE(
+      notMatches("int main() { int x, y; auto f = [&]() { return x + y; }; }",
+                 matcher, langCxx11OrLater()));
+  EXPECT_TRUE(matchAndVerifyResultTrue(
+      R"cc(
+      int main() {
+        int x, y;
+        float z;
+        auto f = [=, &y]() { return x + y + z; };
+      }
+      )cc",
+      matcher, std::make_unique<VerifyIdIsBoundTo<LambdaCapture>>("LC", 1)));
+}
+
+TEST(ForEachLambdaCapture, MatchImplicitCapturesOnly) {
+  auto matcher =
+      lambdaExpr(forEachLambdaCapture(lambdaCapture(isImplicit()).bind("LC")));
+  EXPECT_TRUE(matchAndVerifyResultTrue(
+      "int main() { int x, y, z; auto f = [=, &z]() { return x + y + z; }; }",
+      matcher, std::make_unique<VerifyIdIsBoundTo<LambdaCapture>>("LC", 2)));
+  EXPECT_TRUE(matchAndVerifyResultTrue(
+      "int main() { int x, y, z; auto f = [&, z]() { return x + y + z; }; }",
+      matcher, std::make_unique<VerifyIdIsBoundTo<LambdaCapture>>("LC", 2)));
+}
+
+TEST(ForEachLambdaCapture, MatchExplicitCapturesOnly) {
+  auto matcher = lambdaExpr(
+      forEachLambdaCapture(lambdaCapture(unless(isImplicit())).bind("LC")));
+  EXPECT_TRUE(matchAndVerifyResultTrue(
+      "int main() { int x, y, z; auto f = [=, &z]() { return x + y + z; }; }",
+      matcher, std::make_unique<VerifyIdIsBoundTo<LambdaCapture>>("LC", 1)));
+  EXPECT_TRUE(matchAndVerifyResultTrue(
+      "int main() { int x, y, z; auto f = [&, z]() { return x + y + z; }; }",
+      matcher, std::make_unique<VerifyIdIsBoundTo<LambdaCapture>>("LC", 1)));
+}
+
 TEST(HasConditionVariableStatement, DoesNotMatchCondition) {
   EXPECT_TRUE(notMatches(
     "void x() { if(true) {} }",

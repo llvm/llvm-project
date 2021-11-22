@@ -47,7 +47,7 @@ define void @pointer_induction_used_as_vector(i8** noalias %start.1, i8* noalias
 ; CHECK-NEXT:    [[TMP6:%.*]] = call <vscale x 2 x i64> @llvm.experimental.stepvector.nxv2i64()
 ; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <vscale x 2 x i64> poison, i64 [[INDEX]], i32 0
 ; CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <vscale x 2 x i64> [[DOTSPLATINSERT]], <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP7:%.*]] = add <vscale x 2 x i64> shufflevector (<vscale x 2 x i64> insertelement (<vscale x 2 x i64> poison, i64 0, i32 0), <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer), [[TMP6]]
+; CHECK-NEXT:    [[TMP7:%.*]] = add <vscale x 2 x i64> zeroinitializer, [[TMP6]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = add <vscale x 2 x i64> [[DOTSPLAT]], [[TMP7]]
 ; CHECK-NEXT:    [[NEXT_GEP4:%.*]] = getelementptr i8, i8* [[START_2]], <vscale x 2 x i64> [[TMP8]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = add i64 [[INDEX]], 0
@@ -126,7 +126,7 @@ define void @pointer_induction(i8* noalias %start, i64 %N) {
 ; CHECK-NEXT:    [[TMP5:%.*]] = call <vscale x 2 x i64> @llvm.experimental.stepvector.nxv2i64()
 ; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <vscale x 2 x i64> poison, i64 [[INDEX1]], i32 0
 ; CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <vscale x 2 x i64> [[DOTSPLATINSERT]], <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP6:%.*]] = add <vscale x 2 x i64> shufflevector (<vscale x 2 x i64> insertelement (<vscale x 2 x i64> poison, i64 0, i32 0), <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer), [[TMP5]]
+; CHECK-NEXT:    [[TMP6:%.*]] = add <vscale x 2 x i64> zeroinitializer, [[TMP5]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = add <vscale x 2 x i64> [[DOTSPLAT]], [[TMP6]]
 ; CHECK-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, i8* [[START]], <vscale x 2 x i64> [[TMP7]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = add i64 [[INDEX1]], 0

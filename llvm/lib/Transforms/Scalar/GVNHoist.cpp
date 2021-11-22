@@ -169,7 +169,7 @@ class InsnInfo {
 
 public:
   // Inserts I and its value number in VNtoScalars.
-  void insert(Instruction *I, GVN::ValueTable &VN) {
+  void insert(Instruction *I, GVNPass::ValueTable &VN) {
     // Scalar instruction.
     unsigned V = VN.lookupOrAdd(I);
     VNtoScalars[{V, InvalidVN}].push_back(I);
@@ -184,7 +184,7 @@ class LoadInfo {
 
 public:
   // Insert Load and the value number of its memory address in VNtoLoads.
-  void insert(LoadInst *Load, GVN::ValueTable &VN) {
+  void insert(LoadInst *Load, GVNPass::ValueTable &VN) {
     if (Load->isSimple()) {
       unsigned V = VN.lookupOrAdd(Load->getPointerOperand());
       VNtoLoads[{V, InvalidVN}].push_back(Load);
@@ -201,7 +201,7 @@ class StoreInfo {
 public:
   // Insert the Store and a hash number of the store address and the stored
   // value in VNtoStores.
-  void insert(StoreInst *Store, GVN::ValueTable &VN) {
+  void insert(StoreInst *Store, GVNPass::ValueTable &VN) {
     if (!Store->isSimple())
       return;
     // Hash the store address and the stored value.
@@ -221,7 +221,7 @@ class CallInfo {
 
 public:
   // Insert Call and its value numbering in one of the VNtoCalls* containers.
-  void insert(CallInst *Call, GVN::ValueTable &VN) {
+  void insert(CallInst *Call, GVNPass::ValueTable &VN) {
     // A call that doesNotAccessMemory is handled as a Scalar,
     // onlyReadsMemory will be handled as a Load instruction,
     // all other calls will be handled as stores.
@@ -274,7 +274,7 @@ public:
   unsigned int rank(const Value *V) const;
 
 private:
-  GVN::ValueTable VN;
+  GVNPass::ValueTable VN;
   DominatorTree *DT;
   PostDominatorTree *PDT;
   AliasAnalysis *AA;

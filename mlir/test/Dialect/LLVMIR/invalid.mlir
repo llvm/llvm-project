@@ -495,21 +495,21 @@ func @null_non_llvm_type() {
 
 func @nvvm_invalid_shfl_pred_1(%arg0 : i32, %arg1 : i32, %arg2 : i32, %arg3 : i32) {
   // expected-error@+1 {{expected return type to be a two-element struct with i1 as the second element}}
-  %0 = nvvm.shfl.sync.bfly %arg0, %arg3, %arg1, %arg2 {return_value_and_is_valid} : i32
+  %0 = nvvm.shfl.sync "bfly" %arg0, %arg3, %arg1, %arg2 {return_value_and_is_valid} : i32 -> i32
 }
 
 // -----
 
 func @nvvm_invalid_shfl_pred_2(%arg0 : i32, %arg1 : i32, %arg2 : i32, %arg3 : i32) {
   // expected-error@+1 {{expected return type to be a two-element struct with i1 as the second element}}
-  %0 = nvvm.shfl.sync.bfly %arg0, %arg3, %arg1, %arg2 {return_value_and_is_valid} : !llvm.struct<(i32)>
+  %0 = nvvm.shfl.sync "bfly" %arg0, %arg3, %arg1, %arg2 {return_value_and_is_valid} : i32 -> !llvm.struct<(i32)>
 }
 
 // -----
 
 func @nvvm_invalid_shfl_pred_3(%arg0 : i32, %arg1 : i32, %arg2 : i32, %arg3 : i32) {
   // expected-error@+1 {{expected return type to be a two-element struct with i1 as the second element}}
-  %0 = nvvm.shfl.sync.bfly %arg0, %arg3, %arg1, %arg2 {return_value_and_is_valid} : !llvm.struct<(i32, i32)>
+  %0 = nvvm.shfl.sync "bfly" %arg0, %arg3, %arg1, %arg2 {return_value_and_is_valid} : i32 -> !llvm.struct<(i32, i32)>
 }
 
 // -----
@@ -805,7 +805,7 @@ module attributes {llvm.data_layout = "#vjkr32"} {
 
 func @switch_wrong_number_of_weights(%arg0 : i32) {
   // expected-error@+1 {{expects number of branch weights to match number of successors: 3 vs 2}}
-  llvm.switch %arg0, ^bb1 [
+  llvm.switch %arg0 : i32, ^bb1 [
     42: ^bb2(%arg0, %arg0 : i32, i32)
   ] {branch_weights = dense<[13, 17, 19]> : vector<3xi32>}
 

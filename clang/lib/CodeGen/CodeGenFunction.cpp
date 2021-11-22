@@ -424,6 +424,14 @@ void CodeGenFunction::FinishFunction(SourceLocation EndLoc) {
   AllocaInsertPt = nullptr;
   Ptr->eraseFromParent();
 
+  // PostAllocaInsertPt, if created, was lazily created when it was required,
+  // remove it now since it was just created for our own convenience.
+  if (PostAllocaInsertPt) {
+    llvm::Instruction *PostPtr = PostAllocaInsertPt;
+    PostAllocaInsertPt = nullptr;
+    PostPtr->eraseFromParent();
+  }
+
   // If someone took the address of a label but never did an indirect goto, we
   // made a zero entry PHI node, which is illegal, zap it now.
   if (IndirectBranch) {

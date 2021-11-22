@@ -1,6 +1,8 @@
 // RUN: %clang_cc1 -triple arm64-apple-ios7 -target-feature +neon -target-abi darwinpcs -ffreestanding -emit-llvm -w -o - %s | FileCheck %s --check-prefixes=CHECK,CHECK-LE
 // RUN: %clang_cc1 -triple aarch64_be-none-linux-gnu -target-feature +neon -target-abi darwinpcs -ffreestanding -emit-llvm -w -o - %s | FileCheck %s --check-prefixes=CHECK,CHECK-BE
 
+// REQUIRES: aarch64-registered-target || arm-registered-target
+
 // CHECK: define{{.*}} signext i8 @f0()
 char f0(void) {
   return 0;

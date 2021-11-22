@@ -20,8 +20,6 @@ define void @test(i32* %x, i32 %n) {
 ; CHECK-NEXT:    [[INCDEC_PTR:%.*]] = getelementptr inbounds i32, i32* [[X]], i64 1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[REM]], 1
 ; CHECK-NEXT:    br i1 [[CMP]], label [[WHILE_BODY_1:%.*]], label [[WHILE_END]]
-; CHECK:       while.end:
-; CHECK-NEXT:    ret void
 ; CHECK:       while.body.1:
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i32, i32* [[INCDEC_PTR]], align 4
 ; CHECK-NEXT:    [[CMP1_1:%.*]] = icmp slt i32 [[TMP1]], 10
@@ -40,6 +38,8 @@ define void @test(i32* %x, i32 %n) {
 ; CHECK:       if.then.2:
 ; CHECK-NEXT:    store i32 0, i32* [[INCDEC_PTR_1]], align 4
 ; CHECK-NEXT:    br label [[WHILE_END]]
+; CHECK:       while.end:
+; CHECK-NEXT:    ret void
 ;
 entry:
   %sub = add nsw i32 %n, -1
@@ -76,9 +76,9 @@ define i32 @test2(i32 %l86) {
 ; CHECK-NEXT:    [[L86_OFF:%.*]] = add i32 [[L86:%.*]], -1
 ; CHECK-NEXT:    [[SWITCH:%.*]] = icmp ult i32 [[L86_OFF]], 24
 ; CHECK-NEXT:    [[DOTNOT30:%.*]] = icmp ne i32 [[L86]], 25
-; CHECK-NEXT:    [[SPEC_SELECT24:%.*]] = zext i1 [[DOTNOT30]] to i32
-; CHECK-NEXT:    [[COMMON_RET31_OP:%.*]] = select i1 [[SWITCH]], i32 0, i32 [[SPEC_SELECT24]]
-; CHECK-NEXT:    ret i32 [[COMMON_RET31_OP]]
+; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = zext i1 [[DOTNOT30]] to i32
+; CHECK-NEXT:    [[COMMON_RET_OP:%.*]] = select i1 [[SWITCH]], i32 0, i32 [[SPEC_SELECT]]
+; CHECK-NEXT:    ret i32 [[COMMON_RET_OP]]
 ;
 entry:
   br label %for.body.i.i

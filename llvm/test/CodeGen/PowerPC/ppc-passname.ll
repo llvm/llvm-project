@@ -42,7 +42,7 @@
 
 ; RUN: llc -mtriple=powerpc64le-unknown-unknown < %s -debug-pass=Structure -stop-after=ppc-early-ret -o /dev/null 2>&1 | FileCheck %s -check-prefix=STOP-AFTER-EARLY-RET
 ; STOP-AFTER-EARLY-RET: -ppc-early-ret
-; STOP-AFTER-ERALY-RET-NOT: "ppc-early-ret" pass is not registered.
+; STOP-AFTER-EARLY-RET-NOT: "ppc-early-ret" pass is not registered.
 ; STOP-AFTER-EARLY-RET: PowerPC Early-Return Creation
 
 

@@ -67,8 +67,6 @@ void DFsanThread::Destroy() {
 }
 
 thread_return_t DFsanThread::ThreadStart() {
-  Init();
-
   if (!start_routine_) {
     // start_routine_ == 0 if we're on the main thread or on one of the
     // OS X libdispatch worker threads. But nobody is supposed to call

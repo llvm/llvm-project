@@ -113,7 +113,7 @@ n-ranked tensor. This disallows the equivalent of pointer arithmetic or the
 ability to index into the same memref in other ways (something which C arrays
 allow for example). Furthermore, for the affine constructs, the compiler can
 follow use-def chains (e.g. through
-[affine.apply operations](../Dialects/Affine.md/#affineapply-affineapplyop)) or
+[affine.apply operations](../Dialects/Affine.md/#affineapply-affineapplyop) or
 through the map attributes of
 [affine operations](../Dialects/Affine.md/#operations)) to precisely analyze
 references at compile-time using polyhedral techniques. This is possible because

@@ -9,7 +9,7 @@ The `rule 6.1.2 <http://www.codingstandard.com/rule/6-1-2-explicitly-cover-all-p
 and `rule 6.1.4 <http://www.codingstandard.com/rule/6-1-4-ensure-that-a-switch-statement-has-at-least-two-case-labels-distinct-from-the-default-label/>`_
 of the High Integrity C++ Coding Standard are enforced.
 
-``if-else if`` chains that miss a final ``else`` branch might lead to unexpected 
+``if-else if`` chains that miss a final ``else`` branch might lead to unexpected
 program execution and be the result of a logical error.
 If the missing ``else`` branch is intended you can leave it empty with a clarifying
 comment.
@@ -20,10 +20,10 @@ This warning can be noisy on some code bases, so it is disabled by default.
   void f1() {
     int i = determineTheNumber();
 
-     if(i > 0) { 
-       // Some Calculation 
-     } else if (i < 0) { 
-       // Precondition violated or something else. 
+     if(i > 0) {
+       // Some Calculation
+     } else if (i < 0) {
+       // Precondition violated or something else.
      }
      // ...
   }
@@ -72,16 +72,16 @@ Degenerated ``switch`` statements without any labels are caught as well.
   }
 
   // Should rather be the following:
-  if (i == 1) { 
-    // do something here 
+  if (i == 1) {
+    // do something here
   }
-  else { 
-    // do something here 
+  else {
+    // do something here
   }
 
 
 .. code-block:: c++
-  
+
   // A completely degenerated switch will be diagnosed.
   int i = 42;
   switch(i) {}

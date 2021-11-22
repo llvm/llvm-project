@@ -21,129 +21,66 @@
 #  include "asan_interceptors.h"
 #  include "asan_internal.h"
 #  include "asan_stack.h"
+#  include "lsan/lsan_common.h"
 #  include "sanitizer_common/sanitizer_allocator_checks.h"
+#  include "sanitizer_common/sanitizer_allocator_dlsym.h"
 #  include "sanitizer_common/sanitizer_errno.h"
 #  include "sanitizer_common/sanitizer_tls_get_addr.h"
 
 // ---------------------- Replacement functions ---------------- {{{1
 using namespace __asan;
 
-static uptr allocated_for_dlsym;
-static uptr last_dlsym_alloc_size_in_words;
-static const uptr kDlsymAllocPoolSize = 1024;
-static uptr alloc_memory_for_dlsym[kDlsymAllocPoolSize];
-
-static inline bool IsInDlsymAllocPool(const void *ptr) {
-  uptr off = (uptr)ptr - (uptr)alloc_memory_for_dlsym;
-  return off < allocated_for_dlsym * sizeof(alloc_memory_for_dlsym[0]);
-}
-
-static void *AllocateFromLocalPool(uptr size_in_bytes) {
-  uptr size_in_words = RoundUpTo(size_in_bytes, kWordSize) / kWordSize;
-  void *mem = (void*)&alloc_memory_for_dlsym[allocated_for_dlsym];
-  last_dlsym_alloc_size_in_words = size_in_words;
-  allocated_for_dlsym += size_in_words;
-  CHECK_LT(allocated_for_dlsym, kDlsymAllocPoolSize);
-  return mem;
-}
-
-static void DeallocateFromLocalPool(const void *ptr) {
-  // Hack: since glibc 2.27 dlsym no longer uses stack-allocated memory to store
-  // error messages and instead uses malloc followed by free. To avoid pool
-  // exhaustion due to long object filenames, handle that special case here.
-  uptr prev_offset = allocated_for_dlsym - last_dlsym_alloc_size_in_words;
-  void *prev_mem = (void*)&alloc_memory_for_dlsym[prev_offset];
-  if (prev_mem == ptr) {
-    REAL(memset)(prev_mem, 0, last_dlsym_alloc_size_in_words * kWordSize);
-    allocated_for_dlsym = prev_offset;
-    last_dlsym_alloc_size_in_words = 0;
+struct DlsymAlloc : public DlSymAllocator<DlsymAlloc> {
+  static bool UseImpl() { return asan_init_is_running; }
+  static void OnAllocate(const void *ptr, uptr size) {
+#  if CAN_SANITIZE_LEAKS
+    // Suppress leaks from dlerror(). Previously dlsym hack on global array was
+    // used by leak sanitizer as a root region.
+    __lsan_register_root_region(ptr, size);
+#  endif
   }
-}
-
-static int PosixMemalignFromLocalPool(void **memptr, uptr alignment,
-                                      uptr size_in_bytes) {
-  if (UNLIKELY(!CheckPosixMemalignAlignment(alignment)))
-    return errno_EINVAL;
-
-  CHECK(alignment >= kWordSize);
-
-  uptr addr = (uptr)&alloc_memory_for_dlsym[allocated_for_dlsym];
-  uptr aligned_addr = RoundUpTo(addr, alignment);
-  uptr aligned_size = RoundUpTo(size_in_bytes, kWordSize);
-
-  uptr *end_mem = (uptr*)(aligned_addr + aligned_size);
-  uptr allocated = end_mem - alloc_memory_for_dlsym;
-  if (allocated >= kDlsymAllocPoolSize)
-    return errno_ENOMEM;
-
-  allocated_for_dlsym = allocated;
-  *memptr = (void*)aligned_addr;
-  return 0;
-}
-
-static inline bool MaybeInDlsym() {
-  // Fuchsia doesn't use dlsym-based interceptors.
-  return !SANITIZER_FUCHSIA && asan_init_is_running;
-}
-
-static inline bool UseLocalPool() { return MaybeInDlsym(); }
-
-static void *ReallocFromLocalPool(void *ptr, uptr size) {
-  const uptr offset = (uptr)ptr - (uptr)alloc_memory_for_dlsym;
-  const uptr copy_size = Min(size, kDlsymAllocPoolSize - offset);
-  void *new_ptr;
-  if (UNLIKELY(UseLocalPool())) {
-    new_ptr = AllocateFromLocalPool(size);
-  } else {
-    ENSURE_ASAN_INITED();
-    GET_STACK_TRACE_MALLOC;
-    new_ptr = asan_malloc(size, &stack);
+  static void OnFree(const void *ptr, uptr size) {
+#  if CAN_SANITIZE_LEAKS
+    __lsan_unregister_root_region(ptr, size);
+#  endif
   }
-  internal_memcpy(new_ptr, ptr, copy_size);
-  return new_ptr;
-}
+};
 
 INTERCEPTOR(void, free, void *ptr) {
-  if (UNLIKELY(IsInDlsymAllocPool(ptr))) {
-    DeallocateFromLocalPool(ptr);
-    return;
-  }
+  if (DlsymAlloc::PointerIsMine(ptr))
+    return DlsymAlloc::Free(ptr);
   GET_STACK_TRACE_FREE;
   asan_free(ptr, &stack, FROM_MALLOC);
 }
 
 #if SANITIZER_INTERCEPT_CFREE
 INTERCEPTOR(void, cfree, void *ptr) {
-  if (UNLIKELY(IsInDlsymAllocPool(ptr)))
-    return;
+  if (DlsymAlloc::PointerIsMine(ptr))
+    return DlsymAlloc::Free(ptr);
   GET_STACK_TRACE_FREE;
   asan_free(ptr, &stack, FROM_MALLOC);
 }
 #endif // SANITIZER_INTERCEPT_CFREE
 
 INTERCEPTOR(void*, malloc, uptr size) {
-  if (UNLIKELY(UseLocalPool()))
-    // Hack: dlsym calls malloc before REAL(malloc) is retrieved from dlsym.
-    return AllocateFromLocalPool(size);
+  if (DlsymAlloc::Use())
+    return DlsymAlloc::Allocate(size);
   ENSURE_ASAN_INITED();
   GET_STACK_TRACE_MALLOC;
   return asan_malloc(size, &stack);
 }
 
 INTERCEPTOR(void*, calloc, uptr nmemb, uptr size) {
-  if (UNLIKELY(UseLocalPool()))
-    // Hack: dlsym calls calloc before REAL(calloc) is retrieved from dlsym.
-    return AllocateFromLocalPool(nmemb * size);
+  if (DlsymAlloc::Use())
+    return DlsymAlloc::Callocate(nmemb, size);
   ENSURE_ASAN_INITED();
   GET_STACK_TRACE_MALLOC;
   return asan_calloc(nmemb, size, &stack);
 }
 
 INTERCEPTOR(void*, realloc, void *ptr, uptr size) {
-  if (UNLIKELY(IsInDlsymAllocPool(ptr)))
-    return ReallocFromLocalPool(ptr, size);
-  if (UNLIKELY(UseLocalPool()))
-    return AllocateFromLocalPool(size);
+  if (DlsymAlloc::Use() || DlsymAlloc::PointerIsMine(ptr))
+    return DlsymAlloc::Realloc(ptr, size);
   ENSURE_ASAN_INITED();
   GET_STACK_TRACE_MALLOC;
   return asan_realloc(ptr, size, &stack);
@@ -205,8 +142,6 @@ INTERCEPTOR(int, mallopt, int cmd, int value) {
 #endif // SANITIZER_INTERCEPT_MALLOPT_AND_MALLINFO
 
 INTERCEPTOR(int, posix_memalign, void **memptr, uptr alignment, uptr size) {
-  if (UNLIKELY(UseLocalPool()))
-    return PosixMemalignFromLocalPool(memptr, alignment, size);
   GET_STACK_TRACE_MALLOC;
   return asan_posix_memalign(memptr, alignment, size, &stack);
 }

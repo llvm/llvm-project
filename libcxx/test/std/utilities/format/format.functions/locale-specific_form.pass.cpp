@@ -10,8 +10,13 @@
 // UNSUPPORTED: libcpp-has-no-localization
 // UNSUPPORTED: libcpp-has-no-incomplete-format
 
-// TODO(mordante): Investigate these localization/format failures since updating the Docker image in CI
-// UNSUPPORTED: stdlib=libc++
+// The issue is caused in __format_spec::__determine_grouping().
+// There a string iterator is modified. The string is returned
+// from the dylib's use_facet<numpunct<_CharT>>::grouping()
+// XFAIL: LIBCXX-DEBUG-FIXME
+
+// TODO FMT Evaluate gcc-11 status
+// UNSUPPORTED: gcc-11
 
 // REQUIRES: locale.en_US.UTF-8
 

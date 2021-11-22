@@ -85,7 +85,7 @@ std::optional<std::vector<int>> ValidateDimensionOrder(
       if (dim < 1 || dim > rank || seenDimensions.test(dim - 1)) {
         return std::nullopt;
       }
-      dimOrder[dim - 1] = j;
+      dimOrder[j] = dim - 1;
       seenDimensions.set(dim - 1);
     }
     return dimOrder;

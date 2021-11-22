@@ -233,7 +233,6 @@ opt<bool> EnableFunctionArgSnippets{
          "function calls. When enabled, completions also contain "
          "placeholders for method parameters"),
     init(CodeCompleteOptions().EnableFunctionArgSnippets),
-    Hidden,
 };
 
 opt<CodeCompleteOptions::IncludeInsertion> HeaderInsertion{

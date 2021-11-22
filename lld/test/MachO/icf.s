@@ -32,8 +32,9 @@
 # CHECK: [[#%x,CALL_RECURSIVE_2:]]          l     F __TEXT,__text _call_recursive_2
 # CHECK: [[#%x,CHECK_LENGTH_1:]]            l     F __TEXT,__text _check_length_1
 # CHECK: [[#%x,CHECK_LENGTH_2:]]            l     F __TEXT,__text _check_length_2
-# CHECK: [[#%x,HAS_UNWIND_1:]]              l     F __TEXT,__text _has_unwind_1
+# CHECK: [[#%x,HAS_UNWIND_2:]]              l     F __TEXT,__text _has_unwind_1
 # CHECK: [[#%x,HAS_UNWIND_2:]]              l     F __TEXT,__text _has_unwind_2
+# CHECK: [[#%x,HAS_UNWIND_3:]]              l     F __TEXT,__text _has_unwind_3
 # CHECK: [[#%x,MUTALLY_RECURSIVE_2:]]       l     F __TEXT,__text _mutually_recursive_1
 # CHECK: [[#%x,MUTALLY_RECURSIVE_2:]]       l     F __TEXT,__text _mutually_recursive_2
 # CHECK: [[#%x,INIT_2:]]                    l     F __TEXT,__text _init_1
@@ -64,8 +65,9 @@
 # CHECK: callq 0x[[#%x,CALL_RECURSIVE_2:]]          <_call_recursive_2>
 # CHECK: callq 0x[[#%x,CHECK_LENGTH_1:]]            <_check_length_1>
 # CHECK: callq 0x[[#%x,CHECK_LENGTH_2:]]            <_check_length_2>
-# CHECK: callq 0x[[#%x,HAS_UNWIND_1:]]              <_has_unwind_1>
 # CHECK: callq 0x[[#%x,HAS_UNWIND_2:]]              <_has_unwind_2>
+# CHECK: callq 0x[[#%x,HAS_UNWIND_2:]]              <_has_unwind_2>
+# CHECK: callq 0x[[#%x,HAS_UNWIND_3:]]              <_has_unwind_3>
 # CHECK: callq 0x[[#%x,MUTALLY_RECURSIVE_2:]]       <_mutually_recursive_2>
 # CHECK: callq 0x[[#%x,MUTALLY_RECURSIVE_2:]]       <_mutually_recursive_2>
 ## FIXME: Mutually-recursive functions with identical bodies (see below)
@@ -170,8 +172,7 @@ _check_length_2:
 _my_personality:
   mov $1345, %rax
 
-## No fold: functions have unwind info.
-## FIXME: Fold functions with identical unwind info.
+## Functions with identical unwind info should be folded.
 _has_unwind_1:
   .cfi_startproc
   .cfi_personality 155, _my_personality
@@ -183,6 +184,15 @@ _has_unwind_2:
   .cfi_startproc
   .cfi_personality 155, _my_personality
   .cfi_def_cfa_offset 16
+  ret
+  .cfi_endproc
+
+## This function has different unwind info from the preceding two, and therefore
+## should not be folded.
+_has_unwind_3:
+  .cfi_startproc
+  .cfi_personality 155, _my_personality
+  .cfi_def_cfa_offset 8
   ret
   .cfi_endproc
 
@@ -253,6 +263,7 @@ _main:
   callq _check_length_2
   callq _has_unwind_1
   callq _has_unwind_2
+  callq _has_unwind_3
   callq _mutually_recursive_1
   callq _mutually_recursive_2
   callq _asymmetric_recursive_1

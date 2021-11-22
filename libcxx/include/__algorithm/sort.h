@@ -18,6 +18,10 @@
 #include <__utility/swap.h>
 #include <memory>
 
+#if defined(_LIBCPP_DEBUG_RANDOMIZE_UNSPECIFIED_STABILITY)
+#  include <__algorithm/shuffle.h>
+#endif
+
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #pragma GCC system_header
 #endif
@@ -127,7 +131,7 @@ __selection_sort(_BidirectionalIterator __first, _BidirectionalIterator __last, 
     _BidirectionalIterator __lm1 = __last;
     for (--__lm1; __first != __lm1; ++__first)
     {
-        _BidirectionalIterator __i = _VSTD::min_element<_BidirectionalIterator, _Compare&>(__first, __last, __comp);
+        _BidirectionalIterator __i = _VSTD::min_element(__first, __last, __comp);
         if (__i != __first)
             swap(*__first, *__i);
     }
@@ -156,10 +160,11 @@ template <class _Compare, class _RandomAccessIterator>
 void
 __insertion_sort_3(_RandomAccessIterator __first, _RandomAccessIterator __last, _Compare __comp)
 {
+    typedef typename iterator_traits<_RandomAccessIterator>::difference_type difference_type;
     typedef typename iterator_traits<_RandomAccessIterator>::value_type value_type;
-    _RandomAccessIterator __j = __first+2;
-    _VSTD::__sort3<_Compare>(__first, __first+1, __j, __comp);
-    for (_RandomAccessIterator __i = __j+1; __i != __last; ++__i)
+    _RandomAccessIterator __j = __first+difference_type(2);
+    _VSTD::__sort3<_Compare>(__first, __first+difference_type(1), __j, __comp);
+    for (_RandomAccessIterator __i = __j+difference_type(1); __i != __last; ++__i)
     {
         if (__comp(*__i, *__j))
         {
@@ -181,6 +186,7 @@ template <class _Compare, class _RandomAccessIterator>
 bool
 __insertion_sort_incomplete(_RandomAccessIterator __first, _RandomAccessIterator __last, _Compare __comp)
 {
+    typedef typename iterator_traits<_RandomAccessIterator>::difference_type difference_type;
     switch (__last - __first)
     {
     case 0:
@@ -191,21 +197,21 @@ __insertion_sort_incomplete(_RandomAccessIterator __first, _RandomAccessIterator
             swap(*__first, *__last);
         return true;
     case 3:
-        _VSTD::__sort3<_Compare>(__first, __first+1, --__last, __comp);
+        _VSTD::__sort3<_Compare>(__first, __first+difference_type(1), --__last, __comp);
         return true;
     case 4:
-        _VSTD::__sort4<_Compare>(__first, __first+1, __first+2, --__last, __comp);
+        _VSTD::__sort4<_Compare>(__first, __first+difference_type(1), __first+difference_type(2), --__last, __comp);
         return true;
     case 5:
-        _VSTD::__sort5<_Compare>(__first, __first+1, __first+2, __first+3, --__last, __comp);
+        _VSTD::__sort5<_Compare>(__first, __first+difference_type(1), __first+difference_type(2), __first+difference_type(3), --__last, __comp);
         return true;
     }
     typedef typename iterator_traits<_RandomAccessIterator>::value_type value_type;
-    _RandomAccessIterator __j = __first+2;
-    _VSTD::__sort3<_Compare>(__first, __first+1, __j, __comp);
+    _RandomAccessIterator __j = __first+difference_type(2);
+    _VSTD::__sort3<_Compare>(__first, __first+difference_type(1), __j, __comp);
     const unsigned __limit = 8;
     unsigned __count = 0;
-    for (_RandomAccessIterator __i = __j+1; __i != __last; ++__i)
+    for (_RandomAccessIterator __i = __j+difference_type(1); __i != __last; ++__i)
     {
         if (__comp(*__i, *__j))
         {
@@ -263,7 +269,8 @@ __insertion_sort_move(_BidirectionalIterator __first1, _BidirectionalIterator __
 
 template <class _Compare, class _RandomAccessIterator>
 void
-__sort(_RandomAccessIterator __first, _RandomAccessIterator __last, _Compare __comp)
+__introsort(_RandomAccessIterator __first, _RandomAccessIterator __last, _Compare __comp,
+            typename iterator_traits<_RandomAccessIterator>::difference_type __depth)
 {
     typedef typename iterator_traits<_RandomAccessIterator>::difference_type difference_type;
     typedef typename iterator_traits<_RandomAccessIterator>::value_type value_type;
@@ -283,13 +290,13 @@ __sort(_RandomAccessIterator __first, _RandomAccessIterator __last, _Compare __c
                 swap(*__first, *__last);
             return;
         case 3:
-            _VSTD::__sort3<_Compare>(__first, __first+1, --__last, __comp);
+            _VSTD::__sort3<_Compare>(__first, __first+difference_type(1), --__last, __comp);
             return;
         case 4:
-            _VSTD::__sort4<_Compare>(__first, __first+1, __first+2, --__last, __comp);
+            _VSTD::__sort4<_Compare>(__first, __first+difference_type(1), __first+difference_type(2), --__last, __comp);
             return;
         case 5:
-            _VSTD::__sort5<_Compare>(__first, __first+1, __first+2, __first+3, --__last, __comp);
+            _VSTD::__sort5<_Compare>(__first, __first+difference_type(1), __first+difference_type(2), __first+difference_type(3), --__last, __comp);
             return;
         }
         if (__len <= __limit)
@@ -298,6 +305,13 @@ __sort(_RandomAccessIterator __first, _RandomAccessIterator __last, _Compare __c
             return;
         }
         // __len > 5
+        if (__depth == 0)
+        {
+          // Fallback to heap sort as Introsort suggests.
+          _VSTD::__partial_sort<_Compare>(__first, __last, __last, __comp);
+          return;
+        }
+        --__depth;
         _RandomAccessIterator __m = __first;
         _RandomAccessIterator __lm1 = __last;
         --__lm1;
@@ -421,7 +435,7 @@ __sort(_RandomAccessIterator __first, _RandomAccessIterator __last, _Compare __c
         if (__n_swaps == 0)
         {
             bool __fs = _VSTD::__insertion_sort_incomplete<_Compare>(__first, __i, __comp);
-            if (_VSTD::__insertion_sort_incomplete<_Compare>(__i+1, __last, __comp))
+            if (_VSTD::__insertion_sort_incomplete<_Compare>(__i+difference_type(1), __last, __comp))
             {
                 if (__fs)
                     return;
@@ -440,17 +454,32 @@ __sort(_RandomAccessIterator __first, _RandomAccessIterator __last, _Compare __c
         // sort smaller range with recursive call and larger with tail recursion elimination
         if (__i - __first < __last - __i)
         {
-            _VSTD::__sort<_Compare>(__first, __i, __comp);
-            // _VSTD::__sort<_Compare>(__i+1, __last, __comp);
-            __first = ++__i;
+          _VSTD::__introsort<_Compare>(__first, __i, __comp, __depth);
+          __first = ++__i;
         }
         else
         {
-            _VSTD::__sort<_Compare>(__i+1, __last, __comp);
-            // _VSTD::__sort<_Compare>(__first, __i, __comp);
-            __last = __i;
+          _VSTD::__introsort<_Compare>(__i + difference_type(1), __last, __comp, __depth);
+          __last = __i;
         }
     }
+}
+
+template <typename _Number>
+inline _LIBCPP_HIDE_FROM_ABI _Number __log2i(_Number __n) {
+  _Number __log2 = 0;
+  while (__n > 1) {
+    __log2++;
+    __n >>= 1;
+  }
+  return __log2;
+}
+
+template <class _Compare, class _RandomAccessIterator>
+void __sort(_RandomAccessIterator __first, _RandomAccessIterator __last, _Compare __comp) {
+  typedef typename iterator_traits<_RandomAccessIterator>::difference_type difference_type;
+  difference_type __depth_limit = 2 * __log2i(__last - __first);
+  _VSTD::__introsort<_Compare>(__first, __last, __comp, __depth_limit);
 }
 
 template <class _Compare, class _Tp>
@@ -505,12 +534,13 @@ inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17
 void
 sort(_RandomAccessIterator __first, _RandomAccessIterator __last, _Compare __comp)
 {
-    typedef typename __comp_ref_type<_Compare>::type _Comp_ref;
-    if (__libcpp_is_constant_evaluated()) {
-        _VSTD::__partial_sort<_Comp_ref>(__first, __last, __last, _Comp_ref(__comp));
-    } else {
-        _VSTD::__sort<_Comp_ref>(_VSTD::__unwrap_iter(__first), _VSTD::__unwrap_iter(__last), _Comp_ref(__comp));
-    }
+  _LIBCPP_DEBUG_RANDOMIZE_RANGE(__first, __last);
+  typedef typename __comp_ref_type<_Compare>::type _Comp_ref;
+  if (__libcpp_is_constant_evaluated()) {
+    _VSTD::__partial_sort<_Comp_ref>(__first, __last, __last, _Comp_ref(__comp));
+  } else {
+    _VSTD::__sort<_Comp_ref>(_VSTD::__unwrap_iter(__first), _VSTD::__unwrap_iter(__last), _Comp_ref(__comp));
+  }
 }
 
 template <class _RandomAccessIterator>

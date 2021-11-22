@@ -63,6 +63,8 @@ public:
     return lldb::eLanguageTypeUnknown;
   }
 
+  lldb::FunctionSP GetOrCreateFunction(CompileUnit &comp_unit);
+
   size_t ParseFunctions(CompileUnit &comp_unit) override;
 
   bool ParseLineTable(CompileUnit &comp_unit) override;
@@ -79,7 +81,7 @@ public:
     return false;
   }
 
-  size_t ParseBlocksRecursive(Function &func) override { return 0; }
+  size_t ParseBlocksRecursive(Function &func) override;
 
   void FindGlobalVariables(ConstString name,
                            const CompilerDeclContext &parent_decl_ctx,
@@ -221,11 +223,13 @@ private:
                          UnwindPlan::Row &row);
   lldb::UnwindPlanSP ParseWinUnwindPlan(const Bookmark &bookmark,
                                         const RegisterInfoResolver &resolver);
+  void ParseInlineOriginRecords();
 
   using CompUnitMap = RangeDataVector<lldb::addr_t, lldb::addr_t, CompUnitData>;
 
   llvm::Optional<std::vector<FileSpec>> m_files;
   llvm::Optional<CompUnitMap> m_cu_data;
+  llvm::Optional<std::vector<llvm::StringRef>> m_inline_origins;
 
   using UnwindMap = RangeDataVector<lldb::addr_t, lldb::addr_t, Bookmark>;
   struct UnwindData {

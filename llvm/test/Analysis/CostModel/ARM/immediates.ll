@@ -6,6 +6,8 @@
 ; RUN: opt < %s -cost-model -analyze -cost-kind=throughput -mtriple=thumbv8m.base   | FileCheck %s --check-prefix=CHECK-T1-THROUGHPUT
 ; RUN: opt < %s -cost-model -analyze -cost-kind=throughput -mtriple=thumbv8m.main   | FileCheck %s --check-prefix=CHECK-T2-THROUGHPUT
 
+target datalayout = "e-m:e-p:32:32-Fi8-i64:64-v128:64:128-a:0:32-n32-S64"
+
 define i32 @const_costs() {
 ; CHECK-T1-SIZE-LABEL: 'const_costs'
 ; CHECK-T1-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %add_1 = add i32 undef, 1

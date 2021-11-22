@@ -51,9 +51,9 @@ static constexpr const char kNonTemporalAttrName[] = "nontemporal";
 static auto processFMFAttr(ArrayRef<NamedAttribute> attrs) {
   SmallVector<NamedAttribute, 8> filteredAttrs(
       llvm::make_filter_range(attrs, [&](NamedAttribute attr) {
-        if (attr.first == "fastmathFlags") {
-          auto defAttr = FMFAttr::get(attr.second.getContext(), {});
-          return defAttr != attr.second;
+        if (attr.getName() == "fastmathFlags") {
+          auto defAttr = FMFAttr::get(attr.getValue().getContext(), {});
+          return defAttr != attr.getValue();
         }
         return true;
       }));
@@ -201,7 +201,8 @@ static ParseResult parseAllocaOp(OpAsmParser &parser, OperationState &result) {
   Optional<NamedAttribute> alignmentAttr =
       result.attributes.getNamed("alignment");
   if (alignmentAttr.hasValue()) {
-    auto alignmentInt = alignmentAttr.getValue().second.dyn_cast<IntegerAttr>();
+    auto alignmentInt =
+        alignmentAttr.getValue().getValue().dyn_cast<IntegerAttr>();
     if (!alignmentInt)
       return parser.emitError(parser.getNameLoc(),
                               "expected integer alignment");
@@ -269,20 +270,21 @@ void SwitchOp::build(OpBuilder &builder, OperationState &result, Value value,
 /// <cases> ::= integer `:` bb-id (`(` ssa-use-and-type-list `)`)?
 ///             ( `,` integer `:` bb-id (`(` ssa-use-and-type-list `)`)? )?
 static ParseResult parseSwitchOpCases(
-    OpAsmParser &parser, ElementsAttr &caseValues,
+    OpAsmParser &parser, Type flagType, ElementsAttr &caseValues,
     SmallVectorImpl<Block *> &caseDestinations,
     SmallVectorImpl<SmallVector<OpAsmParser::OperandType>> &caseOperands,
     SmallVectorImpl<SmallVector<Type>> &caseOperandTypes) {
-  SmallVector<int32_t> values;
-  int32_t value = 0;
+  SmallVector<APInt> values;
+  unsigned bitWidth = flagType.getIntOrFloatBitWidth();
   do {
+    int64_t value = 0;
     OptionalParseResult integerParseResult = parser.parseOptionalInteger(value);
     if (values.empty() && !integerParseResult.hasValue())
       return success();
 
     if (!integerParseResult.hasValue() || integerParseResult.getValue())
       return failure();
-    values.push_back(value);
+    values.push_back(APInt(bitWidth, value));
 
     Block *destination;
     SmallVector<OpAsmParser::OperandType> operands;
@@ -299,11 +301,13 @@ static ParseResult parseSwitchOpCases(
     caseOperandTypes.emplace_back(operandTypes);
   } while (!parser.parseOptionalComma());
 
-  caseValues = parser.getBuilder().getI32VectorAttr(values);
+  ShapedType caseValueType =
+      VectorType::get(static_cast<int64_t>(values.size()), flagType);
+  caseValues = DenseIntElementsAttr::get(caseValueType, values);
   return success();
 }
 
-static void printSwitchOpCases(OpAsmPrinter &p, SwitchOp op,
+static void printSwitchOpCases(OpAsmPrinter &p, SwitchOp op, Type flagType,
                                ElementsAttr caseValues,
                                SuccessorRange caseDestinations,
                                OperandRangeRange caseOperands,
@@ -1155,6 +1159,21 @@ OpFoldResult LLVM::ExtractValueOp::fold(ArrayRef<Attribute> operands) {
   while (insertValueOp) {
     if (getPosition() == insertValueOp.getPosition())
       return insertValueOp.getValue();
+    unsigned min =
+        std::min(getPosition().size(), insertValueOp.getPosition().size());
+    // If one is fully prefix of the other, stop propagating back as it will
+    // miss dependencies. For instance, %3 should not fold to %f0 in the
+    // following example:
+    // ```
+    //   %1 = llvm.insertvalue %f0, %0[0, 0] :
+    //     !llvm.array<4 x !llvm.array<4xf32>>
+    //   %2 = llvm.insertvalue %arr, %1[0] :
+    //     !llvm.array<4 x !llvm.array<4xf32>>
+    //   %3 = llvm.extractvalue %2[0, 0] : !llvm.array<4 x !llvm.array<4xf32>>
+    // ```
+    if (getPosition().getValue().take_front(min) ==
+        insertValueOp.getPosition().getValue().take_front(min))
+      return {};
     insertValueOp = insertValueOp.getContainer().getDefiningOp<InsertValueOp>();
   }
   return {};
@@ -2299,15 +2318,15 @@ LogicalResult LLVMDialect::verifyOperationAttribute(Operation *op,
                                                     NamedAttribute attr) {
   // If the `llvm.loop` attribute is present, enforce the following structure,
   // which the module translation can assume.
-  if (attr.first.strref() == LLVMDialect::getLoopAttrName()) {
-    auto loopAttr = attr.second.dyn_cast<DictionaryAttr>();
+  if (attr.getName() == LLVMDialect::getLoopAttrName()) {
+    auto loopAttr = attr.getValue().dyn_cast<DictionaryAttr>();
     if (!loopAttr)
       return op->emitOpError() << "expected '" << LLVMDialect::getLoopAttrName()
                                << "' to be a dictionary attribute";
     Optional<NamedAttribute> parallelAccessGroup =
         loopAttr.getNamed(LLVMDialect::getParallelAccessAttrName());
     if (parallelAccessGroup.hasValue()) {
-      auto accessGroups = parallelAccessGroup->second.dyn_cast<ArrayAttr>();
+      auto accessGroups = parallelAccessGroup->getValue().dyn_cast<ArrayAttr>();
       if (!accessGroups)
         return op->emitOpError()
                << "expected '" << LLVMDialect::getParallelAccessAttrName()
@@ -2335,7 +2354,8 @@ LogicalResult LLVMDialect::verifyOperationAttribute(Operation *op,
 
     Optional<NamedAttribute> loopOptions =
         loopAttr.getNamed(LLVMDialect::getLoopOptionsAttrName());
-    if (loopOptions.hasValue() && !loopOptions->second.isa<LoopOptionsAttr>())
+    if (loopOptions.hasValue() &&
+        !loopOptions->getValue().isa<LoopOptionsAttr>())
       return op->emitOpError()
              << "expected '" << LLVMDialect::getLoopOptionsAttrName()
              << "' to be a `loopopts` attribute";
@@ -2345,9 +2365,9 @@ LogicalResult LLVMDialect::verifyOperationAttribute(Operation *op,
   // syntax. Try parsing it and report errors in case of failure. Users of this
   // attribute may assume it is well-formed and can pass it to the (asserting)
   // llvm::DataLayout constructor.
-  if (attr.first.strref() != LLVM::LLVMDialect::getDataLayoutAttrName())
+  if (attr.getName() != LLVM::LLVMDialect::getDataLayoutAttrName())
     return success();
-  if (auto stringAttr = attr.second.dyn_cast<StringAttr>())
+  if (auto stringAttr = attr.getValue().dyn_cast<StringAttr>())
     return verifyDataLayoutString(
         stringAttr.getValue(),
         [op](const Twine &message) { op->emitOpError() << message.str(); });
@@ -2363,13 +2383,13 @@ LogicalResult LLVMDialect::verifyRegionArgAttribute(Operation *op,
                                                     unsigned argIdx,
                                                     NamedAttribute argAttr) {
   // Check that llvm.noalias is a unit attribute.
-  if (argAttr.first == LLVMDialect::getNoAliasAttrName() &&
-      !argAttr.second.isa<UnitAttr>())
+  if (argAttr.getName() == LLVMDialect::getNoAliasAttrName() &&
+      !argAttr.getValue().isa<UnitAttr>())
     return op->emitError()
            << "expected llvm.noalias argument attribute to be a unit attribute";
   // Check that llvm.align is an integer attribute.
-  if (argAttr.first == LLVMDialect::getAlignAttrName() &&
-      !argAttr.second.isa<IntegerAttr>())
+  if (argAttr.getName() == LLVMDialect::getAlignAttrName() &&
+      !argAttr.getValue().isa<IntegerAttr>())
     return op->emitError()
            << "llvm.align argument attribute of non integer type";
   return success();
@@ -2425,8 +2445,8 @@ static constexpr const FastmathFlags fastmathFlagsList[] = {
     // clang-format on
 };
 
-void FMFAttr::print(DialectAsmPrinter &printer) const {
-  printer << "fastmath<";
+void FMFAttr::print(AsmPrinter &printer) const {
+  printer << "<";
   auto flags = llvm::make_filter_range(fastmathFlagsList, [&](auto flag) {
     return bitEnumContains(this->getFlags(), flag);
   });
@@ -2435,7 +2455,7 @@ void FMFAttr::print(DialectAsmPrinter &printer) const {
   printer << ">";
 }
 
-Attribute FMFAttr::parse(DialectAsmParser &parser, Type type) {
+Attribute FMFAttr::parse(AsmParser &parser, Type type) {
   if (failed(parser.parseLess()))
     return {};
 
@@ -2463,8 +2483,8 @@ Attribute FMFAttr::parse(DialectAsmParser &parser, Type type) {
   return FMFAttr::get(parser.getContext(), flags);
 }
 
-void LinkageAttr::print(DialectAsmPrinter &printer) const {
-  printer << "linkage<";
+void LinkageAttr::print(AsmPrinter &printer) const {
+  printer << "<";
   if (static_cast<uint64_t>(getLinkage()) <= getMaxEnumValForLinkage())
     printer << stringifyEnum(getLinkage());
   else
@@ -2472,7 +2492,7 @@ void LinkageAttr::print(DialectAsmPrinter &printer) const {
   printer << ">";
 }
 
-Attribute LinkageAttr::parse(DialectAsmParser &parser, Type type) {
+Attribute LinkageAttr::parse(AsmParser &parser, Type type) {
   StringRef elemName;
   if (parser.parseLess() || parser.parseKeyword(&elemName) ||
       parser.parseGreater())
@@ -2579,8 +2599,8 @@ LoopOptionsAttr LoopOptionsAttr::get(MLIRContext *context,
   return Base::get(context, optionBuilders.options);
 }
 
-void LoopOptionsAttr::print(DialectAsmPrinter &printer) const {
-  printer << getMnemonic() << "<";
+void LoopOptionsAttr::print(AsmPrinter &printer) const {
+  printer << "<";
   llvm::interleaveComma(getOptions(), printer, [&](auto option) {
     printer << stringifyEnum(option.first) << " = ";
     switch (option.first) {
@@ -2598,7 +2618,7 @@ void LoopOptionsAttr::print(DialectAsmPrinter &printer) const {
   printer << ">";
 }
 
-Attribute LoopOptionsAttr::parse(DialectAsmParser &parser, Type type) {
+Attribute LoopOptionsAttr::parse(AsmParser &parser, Type type) {
   if (failed(parser.parseLess()))
     return {};
 

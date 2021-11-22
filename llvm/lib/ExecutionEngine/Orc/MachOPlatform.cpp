@@ -136,13 +136,14 @@ StringRef ObjCImageInfoSectionName = "__DATA,__objc_image_info";
 StringRef ObjCSelRefsSectionName = "__DATA,__objc_selrefs";
 StringRef Swift5ProtoSectionName = "__TEXT,__swift5_proto";
 StringRef Swift5ProtosSectionName = "__TEXT,__swift5_protos";
+StringRef Swift5TypesSectionName = "__TEXT,__swift5_types";
 StringRef ThreadBSSSectionName = "__DATA,__thread_bss";
 StringRef ThreadDataSectionName = "__DATA,__thread_data";
 StringRef ThreadVarsSectionName = "__DATA,__thread_vars";
 
 StringRef InitSectionNames[] = {
     ModInitFuncSectionName, ObjCSelRefsSectionName, ObjCClassListSectionName,
-    Swift5ProtosSectionName, Swift5ProtoSectionName};
+    Swift5ProtosSectionName, Swift5ProtoSectionName, Swift5TypesSectionName};
 
 } // end anonymous namespace
 

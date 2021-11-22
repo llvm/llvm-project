@@ -24,6 +24,7 @@ class CXXModulesImportTestCase(TestBase):
     
     @skipUnlessDarwin
     @skipIf(macos_version=["<", "10.12"])
+    @skipIf(compiler="clang", compiler_version=['<', '14.0'])
     def test_expr(self):
         self.build()
         target, process, thread, bkpt = lldbutil.run_to_source_breakpoint(
@@ -36,6 +37,7 @@ class CXXModulesImportTestCase(TestBase):
 
     @skipUnlessDarwin
     @skipIf(macos_version=["<", "10.12"])
+    @skipIf(compiler="clang", compiler_version=['<', '14.0'])
     def test_expr_failing_import(self):
         self.build()
         shutil.rmtree(self.getBuildArtifact('include'))

@@ -42,7 +42,7 @@ public:
 
   void GetStatus(Stream &strm) override;
 
-  bool GetSupportedArchitectureAtIndex(uint32_t idx, ArchSpec &arch) override;
+  std::vector<ArchSpec> GetSupportedArchitectures() override;
 
   uint32_t GetResumeCountForLaunchInfo(ProcessLaunchInfo &launch_info) override;
 
@@ -50,10 +50,15 @@ public:
 
   void CalculateTrapHandlerSymbolNames() override;
 
+  lldb::UnwindPlanSP GetTrapHandlerUnwindPlan(const llvm::Triple &triple,
+                                              ConstString name) override;
+
   MmapArgList GetMmapArgumentList(const ArchSpec &arch, lldb::addr_t addr,
                                   lldb::addr_t length, unsigned prot,
                                   unsigned flags, lldb::addr_t fd,
                                   lldb::addr_t offset) override;
+
+  std::vector<ArchSpec> m_supported_architectures;
 };
 
 } // namespace platform_linux

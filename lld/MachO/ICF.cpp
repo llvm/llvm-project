@@ -114,7 +114,8 @@ static bool equalsConstant(const ConcatInputSection *ia,
       if (sa->kind() != sb->kind())
         return false;
       if (!isa<Defined>(sa)) {
-        assert(isa<DylibSymbol>(sa));
+        // ICF runs before Undefineds are reported.
+        assert(isa<DylibSymbol>(sa) || isa<Undefined>(sa));
         return sa == sb;
       }
       const auto *da = cast<Defined>(sa);
@@ -180,8 +181,31 @@ static bool equalsVariable(const ConcatInputSection *ia,
     }
     return isecA->icfEqClass[icfPass % 2] == isecB->icfEqClass[icfPass % 2];
   };
-  return std::equal(ia->relocs.begin(), ia->relocs.end(), ib->relocs.begin(),
-                    f);
+  if (!std::equal(ia->relocs.begin(), ia->relocs.end(), ib->relocs.begin(), f))
+    return false;
+
+  // If there are symbols with associated unwind info, check that the unwind
+  // info matches. For simplicity, we only handle the case where there are only
+  // symbols at offset zero within the section (which is typically the case with
+  // .subsections_via_symbols.)
+  auto hasCU = [](Defined *d) { return d->unwindEntry != nullptr; };
+  auto itA = std::find_if(ia->symbols.begin(), ia->symbols.end(), hasCU);
+  auto itB = std::find_if(ib->symbols.begin(), ib->symbols.end(), hasCU);
+  if (itA == ia->symbols.end())
+    return itB == ib->symbols.end();
+  if (itB == ib->symbols.end())
+    return false;
+  const Defined *da = *itA;
+  const Defined *db = *itB;
+  if (da->unwindEntry->icfEqClass[icfPass % 2] !=
+          db->unwindEntry->icfEqClass[icfPass % 2] ||
+      da->value != 0 || db->value != 0)
+    return false;
+  auto isZero = [](Defined *d) { return d->value == 0; };
+  return std::find_if_not(std::next(itA), ia->symbols.end(), isZero) ==
+             ia->symbols.end() &&
+         std::find_if_not(std::next(itB), ib->symbols.end(), isZero) ==
+             ib->symbols.end();
 }
 
 // Find the first InputSection after BEGIN whose equivalence class differs
@@ -252,7 +276,7 @@ void ICF::run() {
             } else {
               hash += defined->value;
             }
-          } else if (!isa<Undefined>(sym))
+          } else if (!isa<Undefined>(sym)) // ICF runs before Undefined diags.
             llvm_unreachable("foldIdenticalSections symbol kind");
         }
       }
@@ -337,18 +361,14 @@ void macho::foldIdenticalSections() {
     // FIXME: consider non-code __text sections as hashable?
     bool isHashable = (isCodeSection(isec) || isCfStringSection(isec)) &&
                       !isec->shouldOmitFromOutput() && isec->isHashableForICF();
-    // ICF can't fold functions with unwind info
-    if (isHashable)
-      for (Defined *d : isec->symbols)
-        if (d->compactUnwind) {
-          isHashable = false;
-          break;
-        }
-
-    if (isHashable)
+    if (isHashable) {
       hashable.push_back(isec);
-    else
+      for (Defined *d : isec->symbols)
+        if (d->unwindEntry)
+          hashable.push_back(d->unwindEntry);
+    } else {
       isec->icfEqClass[0] = ++icfUniqueID;
+    }
   }
   parallelForEach(hashable,
                   [](ConcatInputSection *isec) { isec->hashForICF(); });

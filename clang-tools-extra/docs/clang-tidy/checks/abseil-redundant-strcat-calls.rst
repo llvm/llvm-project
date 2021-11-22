@@ -3,7 +3,7 @@
 abseil-redundant-strcat-calls
 =============================
 
-Suggests removal of unnecessary calls to ``absl::StrCat`` when the result is 
+Suggests removal of unnecessary calls to ``absl::StrCat`` when the result is
 being passed to another call to ``absl::StrCat`` or ``absl::StrAppend``.
 
 The extra calls cause unnecessary temporary strings to be constructed. Removing
@@ -21,6 +21,6 @@ Examples:
 
   absl::StrAppend(&s, absl::StrCat("E", "F", "G"));
   //before
-  
+
   absl::StrAppend(&s, "E", "F", "G");
   //after

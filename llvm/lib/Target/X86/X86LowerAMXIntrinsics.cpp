@@ -560,8 +560,8 @@ bool X86LowerAMXIntrinsics::lowerTileZero(Instruction *TileZero) {
   IRBuilder<> Builder(TileZero);
   FixedVectorType *V256I32Ty = FixedVectorType::get(Builder.getInt32Ty(), 256);
   Value *VecZero = Constant::getNullValue(V256I32Ty);
-  for (auto UI = TileZero->use_begin(), UE = TileZero->use_end(); UI != UE;) {
-    Instruction *I = cast<Instruction>((UI++)->getUser());
+  for (Use &U : llvm::make_early_inc_range(TileZero->uses())) {
+    Instruction *I = cast<Instruction>(U.getUser());
     Value *Vec;
     if (match(I, m_BitCast(m_Value(Vec)))) {
       I->replaceAllUsesWith(VecZero);

@@ -228,7 +228,7 @@ static bool updateOperand(FoldCandidate &Fold,
       MachineOperand &Mod = MI->getOperand(ModIdx);
       unsigned Val = Mod.getImm();
       if (!(Val & SISrcMods::OP_SEL_0) && (Val & SISrcMods::OP_SEL_1)) {
-        // Only apply the following transformation if that operand requries
+        // Only apply the following transformation if that operand requires
         // a packed immediate.
         switch (TII.get(Opcode).OpInfo[OpNo].OperandType) {
         case AMDGPU::OPERAND_REG_IMM_V2FP16:
@@ -646,7 +646,7 @@ void SIFoldOperands::foldOperand(
     return;
 
   if (frameIndexMayFold(TII, *UseMI, UseOpIdx, OpToFold)) {
-    // Sanity check that this is a stack access.
+    // Verify that this is a stack access.
     // FIXME: Should probably use stack pseudos before frame lowering.
 
     if (TII->isMUBUF(*UseMI)) {
@@ -690,7 +690,7 @@ void SIFoldOperands::foldOperand(
 
     // Don't fold into a copy to a physical register with the same class. Doing
     // so would interfere with the register coalescer's logic which would avoid
-    // redundant initalizations.
+    // redundant initializations.
     if (DestReg.isPhysical() && SrcRC->contains(DestReg))
       return;
 
@@ -904,7 +904,7 @@ void SIFoldOperands::foldOperand(
     tryAddToFoldList(FoldList, UseMI, UseOpIdx, &OpToFold, TII);
 
     // FIXME: We could try to change the instruction from 64-bit to 32-bit
-    // to enable more folding opportunites.  The shrink operands pass
+    // to enable more folding opportunities.  The shrink operands pass
     // already does this.
     return;
   }
@@ -1394,7 +1394,7 @@ bool SIFoldOperands::tryFoldClamp(MachineInstr &MI) {
   // Use of output modifiers forces VOP3 encoding for a VOP2 mac/fmac
   // instruction, so we might as well convert it to the more flexible VOP3-only
   // mad/fma form.
-  if (TII->convertToThreeAddress(*Def, nullptr))
+  if (TII->convertToThreeAddress(*Def, nullptr, nullptr))
     Def->eraseFromParent();
 
   return true;
@@ -1539,7 +1539,7 @@ bool SIFoldOperands::tryFoldOMod(MachineInstr &MI) {
   // Use of output modifiers forces VOP3 encoding for a VOP2 mac/fmac
   // instruction, so we might as well convert it to the more flexible VOP3-only
   // mad/fma form.
-  if (TII->convertToThreeAddress(*Def, nullptr))
+  if (TII->convertToThreeAddress(*Def, nullptr, nullptr))
     Def->eraseFromParent();
 
   return true;

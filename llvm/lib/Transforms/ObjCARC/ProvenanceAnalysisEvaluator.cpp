@@ -58,11 +58,11 @@ bool PAEval::runOnFunction(Function &F) {
   for (auto &Arg : F.args())
     insertIfNamed(Values, &Arg);
 
-  for (auto I = inst_begin(F), E = inst_end(F); I != E; ++I) {
-    insertIfNamed(Values, &*I);
+  for (Instruction &I : instructions(F)) {
+    insertIfNamed(Values, &I);
 
-    for (auto &Op : I->operands())
-    insertIfNamed(Values, Op);
+    for (auto &Op : I.operands())
+      insertIfNamed(Values, Op);
   }
 
   ProvenanceAnalysis PA;

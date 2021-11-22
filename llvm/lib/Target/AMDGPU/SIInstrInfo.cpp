@@ -19,6 +19,7 @@
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "SIMachineFunctionInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
+#include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/LiveVariables.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineScheduler.h"
@@ -1905,7 +1906,7 @@ bool SIInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
                               .addImm(AMDGPU::VGPRIndexMode::DST_ENABLE);
     SetOn->getOperand(3).setIsUndef();
 
-    const MCInstrDesc &OpDesc = get(AMDGPU::V_MOV_B32_indirect);
+    const MCInstrDesc &OpDesc = get(AMDGPU::V_MOV_B32_indirect_write);
     MachineInstrBuilder MIB =
         BuildMI(MBB, MI, DL, OpDesc)
             .addReg(RI.getSubReg(VecReg, SubReg), RegState::Undef)
@@ -1945,11 +1946,10 @@ bool SIInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
                               .addImm(AMDGPU::VGPRIndexMode::SRC0_ENABLE);
     SetOn->getOperand(3).setIsUndef();
 
-    BuildMI(MBB, MI, DL, get(AMDGPU::V_MOV_B32_e32))
+    BuildMI(MBB, MI, DL, get(AMDGPU::V_MOV_B32_indirect_read))
         .addDef(Dst)
         .addReg(RI.getSubReg(VecReg, SubReg), RegState::Undef)
-        .addReg(VecReg, RegState::Implicit | (IsUndef ? RegState::Undef : 0))
-        .addReg(AMDGPU::M0, RegState::Implicit);
+        .addReg(VecReg, RegState::Implicit | (IsUndef ? RegState::Undef : 0));
 
     MachineInstr *SetOff = BuildMI(MBB, MI, DL, get(AMDGPU::S_SET_GPR_IDX_OFF));
 
@@ -2716,14 +2716,7 @@ bool SIInstrInfo::isFoldableCopy(const MachineInstr &MI) {
   switch (MI.getOpcode()) {
   case AMDGPU::V_MOV_B32_e32:
   case AMDGPU::V_MOV_B32_e64:
-  case AMDGPU::V_MOV_B64_PSEUDO: {
-    // If there are additional implicit register operands, this may be used for
-    // register indexing so the source register operand isn't simply copied.
-    unsigned NumOps = MI.getDesc().getNumOperands() +
-      MI.getDesc().getNumImplicitUses();
-
-    return MI.getNumOperands() == NumOps;
-  }
+  case AMDGPU::V_MOV_B64_PSEUDO:
   case AMDGPU::S_MOV_B32:
   case AMDGPU::S_MOV_B64:
   case AMDGPU::COPY:
@@ -3123,7 +3116,8 @@ static void updateLiveVariables(LiveVariables *LV, MachineInstr &MI,
 }
 
 MachineInstr *SIInstrInfo::convertToThreeAddress(MachineInstr &MI,
-                                                 LiveVariables *LV) const {
+                                                 LiveVariables *LV,
+                                                 LiveIntervals *LIS) const {
   unsigned Opc = MI.getOpcode();
   bool IsF16 = false;
   bool IsFMA = Opc == AMDGPU::V_FMAC_F32_e32 || Opc == AMDGPU::V_FMAC_F32_e64 ||
@@ -3191,6 +3185,8 @@ MachineInstr *SIInstrInfo::convertToThreeAddress(MachineInstr &MI,
                   .add(*Src1)
                   .addImm(Imm);
         updateLiveVariables(LV, MI, *MIB);
+        if (LIS)
+          LIS->ReplaceMachineInstrInMaps(MI, *MIB);
         return MIB;
       }
     }
@@ -3205,6 +3201,8 @@ MachineInstr *SIInstrInfo::convertToThreeAddress(MachineInstr &MI,
                   .addImm(Imm)
                   .add(*Src2);
         updateLiveVariables(LV, MI, *MIB);
+        if (LIS)
+          LIS->ReplaceMachineInstrInMaps(MI, *MIB);
         return MIB;
       }
     }
@@ -3219,6 +3217,8 @@ MachineInstr *SIInstrInfo::convertToThreeAddress(MachineInstr &MI,
                   .addImm(Imm)
                   .add(*Src2);
         updateLiveVariables(LV, MI, *MIB);
+        if (LIS)
+          LIS->ReplaceMachineInstrInMaps(MI, *MIB);
         return MIB;
       }
     }
@@ -3242,6 +3242,8 @@ MachineInstr *SIInstrInfo::convertToThreeAddress(MachineInstr &MI,
             .addImm(Clamp ? Clamp->getImm() : 0)
             .addImm(Omod ? Omod->getImm() : 0);
   updateLiveVariables(LV, MI, *MIB);
+  if (LIS)
+    LIS->ReplaceMachineInstrInMaps(MI, *MIB);
   return MIB;
 }
 

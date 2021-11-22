@@ -77,6 +77,7 @@ private:
           Sec.getName() == "__DATA,__objc_classlist" ||
           Sec.getName() == "__TEXT,__swift5_protos" ||
           Sec.getName() == "__TEXT,__swift5_proto" ||
+          Sec.getName() == "__TEXT,__swift5_types" ||
           Sec.getName() == "__DATA,__mod_init_func")
         return true;
     return false;
@@ -422,7 +423,8 @@ private:
     std::vector<std::pair<SymbolStringPtr, Symbol *>> NameToSym;
 
     auto ProcessSymbol = [&](Symbol *Sym) {
-      if (Sym->hasName() && Sym->getLinkage() == Linkage::Weak) {
+      if (Sym->hasName() && Sym->getLinkage() == Linkage::Weak &&
+          Sym->getScope() != Scope::Local) {
         auto Name = ES.intern(Sym->getName());
         if (!MR->getSymbols().count(ES.intern(Sym->getName()))) {
           JITSymbolFlags SF = JITSymbolFlags::Weak;

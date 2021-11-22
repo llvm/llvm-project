@@ -6672,33 +6672,53 @@ void CGObjCNonFragileABIMac::GenerateCategory(const ObjCCategoryImplDecl *OCD) {
     }
   }
 
-  values.add(emitMethodList(listName, MethodListType::CategoryInstanceMethods,
-                            instanceMethods));
-  values.add(emitMethodList(listName, MethodListType::CategoryClassMethods,
-                            classMethods));
+  auto instanceMethodList = emitMethodList(
+      listName, MethodListType::CategoryInstanceMethods, instanceMethods);
+  auto classMethodList = emitMethodList(
+      listName, MethodListType::CategoryClassMethods, classMethods);
+  values.add(instanceMethodList);
+  values.add(classMethodList);
+  // Keep track of whether we have actual metadata to emit.
+  bool isEmptyCategory =
+      instanceMethodList->isNullValue() && classMethodList->isNullValue();
 
   const ObjCCategoryDecl *Category =
-    Interface->FindCategoryDeclaration(OCD->getIdentifier());
+      Interface->FindCategoryDeclaration(OCD->getIdentifier());
   if (Category) {
     SmallString<256> ExtName;
-    llvm::raw_svector_ostream(ExtName) << Interface->getObjCRuntimeNameAsString() << "_$_"
-                                       << OCD->getName();
-    values.add(EmitProtocolList("_OBJC_CATEGORY_PROTOCOLS_$_"
-                                   + Interface->getObjCRuntimeNameAsString() + "_$_"
-                                   + Category->getName(),
-                                Category->protocol_begin(),
-                                Category->protocol_end()));
-    values.add(EmitPropertyList("_OBJC_$_PROP_LIST_" + ExtName.str(),
-                                OCD, Category, ObjCTypes, false));
-    values.add(EmitPropertyList("_OBJC_$_CLASS_PROP_LIST_" + ExtName.str(),
-                                OCD, Category, ObjCTypes, true));
+    llvm::raw_svector_ostream(ExtName)
+        << Interface->getObjCRuntimeNameAsString() << "_$_" << OCD->getName();
+    auto protocolList =
+        EmitProtocolList("_OBJC_CATEGORY_PROTOCOLS_$_" +
+                             Interface->getObjCRuntimeNameAsString() + "_$_" +
+                             Category->getName(),
+                         Category->protocol_begin(), Category->protocol_end());
+    auto propertyList = EmitPropertyList("_OBJC_$_PROP_LIST_" + ExtName.str(),
+                                         OCD, Category, ObjCTypes, false);
+    auto classPropertyList =
+        EmitPropertyList("_OBJC_$_CLASS_PROP_LIST_" + ExtName.str(), OCD,
+                         Category, ObjCTypes, true);
+    values.add(protocolList);
+    values.add(propertyList);
+    values.add(classPropertyList);
+    isEmptyCategory &= protocolList->isNullValue() &&
+                       propertyList->isNullValue() &&
+                       classPropertyList->isNullValue();
   } else {
     values.addNullPointer(ObjCTypes.ProtocolListnfABIPtrTy);
     values.addNullPointer(ObjCTypes.PropertyListPtrTy);
     values.addNullPointer(ObjCTypes.PropertyListPtrTy);
   }
 
-  unsigned Size = CGM.getDataLayout().getTypeAllocSize(ObjCTypes.CategorynfABITy);
+  if (isEmptyCategory) {
+    // Empty category, don't emit any metadata.
+    values.abandon();
+    MethodDefinitions.clear();
+    return;
+  }
+
+  unsigned Size =
+      CGM.getDataLayout().getTypeAllocSize(ObjCTypes.CategorynfABITy);
   values.addInt(ObjCTypes.IntTy, Size);
 
   llvm::GlobalVariable *GCATV =

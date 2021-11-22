@@ -4178,23 +4178,55 @@ SDValue DAGTypeLegalizer::WidenVecRes_LOAD(SDNode *N) {
   else
     Result = GenWidenVectorLoads(LdChain, LD);
 
-  if (!Result)
-    report_fatal_error("Unable to widen vector load");
+  if (Result) {
+    // If we generate a single load, we can use that for the chain.  Otherwise,
+    // build a factor node to remember the multiple loads are independent and
+    // chain to that.
+    SDValue NewChain;
+    if (LdChain.size() == 1)
+      NewChain = LdChain[0];
+    else
+      NewChain = DAG.getNode(ISD::TokenFactor, SDLoc(LD), MVT::Other, LdChain);
 
-  // If we generate a single load, we can use that for the chain.  Otherwise,
-  // build a factor node to remember the multiple loads are independent and
-  // chain to that.
-  SDValue NewChain;
-  if (LdChain.size() == 1)
-    NewChain = LdChain[0];
-  else
-    NewChain = DAG.getNode(ISD::TokenFactor, SDLoc(LD), MVT::Other, LdChain);
+    // Modified the chain - switch anything that used the old chain to use
+    // the new one.
+    ReplaceValueWith(SDValue(N, 1), NewChain);
 
-  // Modified the chain - switch anything that used the old chain to use
-  // the new one.
-  ReplaceValueWith(SDValue(N, 1), NewChain);
+    return Result;
+  }
 
-  return Result;
+  // Generate a vector-predicated load if it is custom/legal on the target. To
+  // avoid possible recursion, only do this if the widened mask type is legal.
+  // FIXME: Not all targets may support EVL in VP_LOAD. These will have been
+  // removed from the IR by the ExpandVectorPredication pass but we're
+  // reintroducing them here.
+  EVT LdVT = LD->getMemoryVT();
+  EVT WideVT = TLI.getTypeToTransformTo(*DAG.getContext(), LdVT);
+  EVT WideMaskVT = EVT::getVectorVT(*DAG.getContext(), MVT::i1,
+                                    WideVT.getVectorElementCount());
+  if (ExtType == ISD::NON_EXTLOAD && WideVT.isScalableVector() &&
+      TLI.isOperationLegalOrCustom(ISD::VP_LOAD, WideVT) &&
+      TLI.isTypeLegal(WideMaskVT)) {
+    SDLoc DL(N);
+    SDValue Mask = DAG.getAllOnesConstant(DL, WideMaskVT);
+    MVT EVLVT = TLI.getVPExplicitVectorLengthTy();
+    unsigned NumVTElts = LdVT.getVectorMinNumElements();
+    SDValue EVL =
+        DAG.getVScale(DL, EVLVT, APInt(EVLVT.getScalarSizeInBits(), NumVTElts));
+    const auto *MMO = LD->getMemOperand();
+    SDValue NewLoad =
+        DAG.getLoadVP(WideVT, DL, LD->getChain(), LD->getBasePtr(), Mask, EVL,
+                      MMO->getPointerInfo(), MMO->getAlign(), MMO->getFlags(),
+                      MMO->getAAInfo());
+
+    // Modified the chain - switch anything that used the old chain to use
+    // the new one.
+    ReplaceValueWith(SDValue(N, 1), NewLoad.getValue(1));
+
+    return NewLoad;
+  }
+
+  report_fatal_error("Unable to widen vector load");
 }
 
 SDValue DAGTypeLegalizer::WidenVecRes_MLOAD(MaskedLoadSDNode *N) {
@@ -4495,7 +4527,7 @@ SDValue DAGTypeLegalizer::WidenVSELECTMask(SDNode *N) {
 
 SDValue DAGTypeLegalizer::WidenVecRes_SELECT(SDNode *N) {
   EVT WidenVT = TLI.getTypeToTransformTo(*DAG.getContext(), N->getValueType(0));
-  unsigned WidenNumElts = WidenVT.getVectorNumElements();
+  ElementCount WidenEC = WidenVT.getVectorElementCount();
 
   SDValue Cond1 = N->getOperand(0);
   EVT CondVT = Cond1.getValueType();
@@ -4509,8 +4541,7 @@ SDValue DAGTypeLegalizer::WidenVecRes_SELECT(SDNode *N) {
     }
 
     EVT CondEltVT = CondVT.getVectorElementType();
-    EVT CondWidenVT =  EVT::getVectorVT(*DAG.getContext(),
-                                        CondEltVT, WidenNumElts);
+    EVT CondWidenVT = EVT::getVectorVT(*DAG.getContext(), CondEltVT, WidenEC);
     if (getTypeAction(CondVT) == TargetLowering::TypeWidenVector)
       Cond1 = GetWidenedVector(Cond1);
 
@@ -5035,13 +5066,42 @@ SDValue DAGTypeLegalizer::WidenVecOp_STORE(SDNode *N) {
     return TLI.scalarizeVectorStore(ST, DAG);
 
   SmallVector<SDValue, 16> StChain;
-  if (!GenWidenVectorStores(StChain, ST))
-    report_fatal_error("Unable to widen vector store");
+  if (GenWidenVectorStores(StChain, ST)) {
+    if (StChain.size() == 1)
+      return StChain[0];
 
-  if (StChain.size() == 1)
-    return StChain[0];
+    return DAG.getNode(ISD::TokenFactor, SDLoc(ST), MVT::Other, StChain);
+  }
 
-  return DAG.getNode(ISD::TokenFactor, SDLoc(ST), MVT::Other, StChain);
+  // Generate a vector-predicated store if it is custom/legal on the target.
+  // To avoid possible recursion, only do this if the widened mask type is
+  // legal.
+  // FIXME: Not all targets may support EVL in VP_STORE. These will have been
+  // removed from the IR by the ExpandVectorPredication pass but we're
+  // reintroducing them here.
+  SDValue StVal = ST->getValue();
+  EVT StVT = StVal.getValueType();
+  EVT WideVT = TLI.getTypeToTransformTo(*DAG.getContext(), StVT);
+  EVT WideMaskVT = EVT::getVectorVT(*DAG.getContext(), MVT::i1,
+                                    WideVT.getVectorElementCount());
+  if (WideVT.isScalableVector() &&
+      TLI.isOperationLegalOrCustom(ISD::VP_STORE, WideVT) &&
+      TLI.isTypeLegal(WideMaskVT)) {
+    // Widen the value.
+    SDLoc DL(N);
+    StVal = GetWidenedVector(StVal);
+    SDValue Mask = DAG.getAllOnesConstant(DL, WideMaskVT);
+    MVT EVLVT = TLI.getVPExplicitVectorLengthTy();
+    unsigned NumVTElts = StVT.getVectorMinNumElements();
+    SDValue EVL =
+        DAG.getVScale(DL, EVLVT, APInt(EVLVT.getScalarSizeInBits(), NumVTElts));
+    const auto *MMO = ST->getMemOperand();
+    return DAG.getStoreVP(ST->getChain(), DL, StVal, ST->getBasePtr(), Mask,
+                          EVL, MMO->getPointerInfo(), MMO->getAlign(),
+                          MMO->getFlags(), MMO->getAAInfo());
+  }
+
+  report_fatal_error("Unable to widen vector store");
 }
 
 SDValue DAGTypeLegalizer::WidenVecOp_MSTORE(SDNode *N, unsigned OpNo) {

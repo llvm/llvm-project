@@ -3,10 +3,10 @@
 // before exit.
 
 // RUN: %clang_memprof -O0 %s -o %t
-// RUN: %env_memprof_opts=log_path=stderr %run %t 2>&1 | FileCheck %s
+// RUN: %env_memprof_opts=print_text=true:log_path=stderr %run %t 2>&1 | FileCheck %s
 
 // RUN: %clang_memprof -DFREE -O0 %s -o %t
-// RUN: %env_memprof_opts=log_path=stderr %run %t 2>&1 | FileCheck %s
+// RUN: %env_memprof_opts=print_text=true:log_path=stderr %run %t 2>&1 | FileCheck %s
 
 // This is actually:
 //  Memory allocation stack id = STACKID

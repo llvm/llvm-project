@@ -20,7 +20,7 @@
 /// A secondary more general goal is to be able to isolate optimization on
 /// unrelated parts of the IR module. This is useful to ensure our
 /// optimizations are principled and don't miss oportunities where refinement
-/// of one part of the module influence transformations in another part of the
+/// of one part of the module influences transformations in another part of the
 /// module. But this is also useful if we want to parallelize the optimizations
 /// across common large module graph shapes which tend to be very wide and have
 /// large regions of unrelated cliques.
@@ -221,7 +221,7 @@ using ModuleAnalysisManagerCGSCCProxy =
                               LazyCallGraph &>;
 
 /// Support structure for SCC passes to communicate updates the call graph back
-/// to the CGSCC pass manager infrsatructure.
+/// to the CGSCC pass manager infrastructure.
 ///
 /// The CGSCC pass manager runs SCC passes which are allowed to update the call
 /// graph and SCC structures. This means the structure the pass manager works
@@ -280,22 +280,22 @@ struct CGSCCUpdateResult {
 
   /// If non-null, the updated current \c RefSCC being processed.
   ///
-  /// This is set when a graph refinement takes place an the "current" point in
-  /// the graph moves "down" or earlier in the post-order walk. This will often
-  /// cause the "current" RefSCC to be a newly created RefSCC object and the
-  /// old one to be added to the above worklist. When that happens, this
+  /// This is set when a graph refinement takes place and the "current" point
+  /// in the graph moves "down" or earlier in the post-order walk. This will
+  /// often cause the "current" RefSCC to be a newly created RefSCC object and
+  /// the old one to be added to the above worklist. When that happens, this
   /// pointer is non-null and can be used to continue processing the "top" of
   /// the post-order walk.
   LazyCallGraph::RefSCC *UpdatedRC;
 
   /// If non-null, the updated current \c SCC being processed.
   ///
-  /// This is set when a graph refinement takes place an the "current" point in
-  /// the graph moves "down" or earlier in the post-order walk. This will often
-  /// cause the "current" SCC to be a newly created SCC object and the old one
-  /// to be added to the above worklist. When that happens, this pointer is
-  /// non-null and can be used to continue processing the "top" of the
-  /// post-order walk.
+  /// This is set when a graph refinement takes place and the "current" point
+  /// in the graph moves "down" or earlier in the post-order walk. This will
+  /// often cause the "current" SCC to be a newly created SCC object and the
+  /// old one to be added to the above worklist. When that happens, this
+  /// pointer is non-null and can be used to continue processing the "top" of
+  /// the post-order walk.
   LazyCallGraph::SCC *UpdatedC;
 
   /// Preserved analyses across SCCs.
@@ -304,7 +304,7 @@ struct CGSCCUpdateResult {
   /// (changing both the CG structure and the function IR itself). However,
   /// this means we need to take special care to correctly mark what analyses
   /// are preserved *across* SCCs. We have to track this out-of-band here
-  /// because within the main `PassManeger` infrastructure we need to mark
+  /// because within the main `PassManager` infrastructure we need to mark
   /// everything within an SCC as preserved in order to avoid repeatedly
   /// invalidating the same analyses as we unnest pass managers and adaptors.
   /// So we track the cross-SCC version of the preserved analyses here from any
@@ -478,11 +478,13 @@ public:
   using PassConceptT = detail::PassConcept<Function, FunctionAnalysisManager>;
 
   explicit CGSCCToFunctionPassAdaptor(std::unique_ptr<PassConceptT> Pass,
-                                      bool EagerlyInvalidate)
-      : Pass(std::move(Pass)), EagerlyInvalidate(EagerlyInvalidate) {}
+                                      bool EagerlyInvalidate, bool NoRerun)
+      : Pass(std::move(Pass)), EagerlyInvalidate(EagerlyInvalidate),
+        NoRerun(NoRerun) {}
 
   CGSCCToFunctionPassAdaptor(CGSCCToFunctionPassAdaptor &&Arg)
-      : Pass(std::move(Arg.Pass)), EagerlyInvalidate(Arg.EagerlyInvalidate) {}
+      : Pass(std::move(Arg.Pass)), EagerlyInvalidate(Arg.EagerlyInvalidate),
+        NoRerun(Arg.NoRerun) {}
 
   friend void swap(CGSCCToFunctionPassAdaptor &LHS,
                    CGSCCToFunctionPassAdaptor &RHS) {
@@ -513,6 +515,7 @@ public:
 private:
   std::unique_ptr<PassConceptT> Pass;
   bool EagerlyInvalidate;
+  bool NoRerun;
 };
 
 /// A function to deduce a function pass type and wrap it in the
@@ -520,7 +523,8 @@ private:
 template <typename FunctionPassT>
 CGSCCToFunctionPassAdaptor
 createCGSCCToFunctionPassAdaptor(FunctionPassT &&Pass,
-                                 bool EagerlyInvalidate = false) {
+                                 bool EagerlyInvalidate = false,
+                                 bool NoRerun = false) {
   using PassModelT =
       detail::PassModel<Function, FunctionPassT, PreservedAnalyses,
                         FunctionAnalysisManager>;
@@ -529,8 +533,22 @@ createCGSCCToFunctionPassAdaptor(FunctionPassT &&Pass,
   return CGSCCToFunctionPassAdaptor(
       std::unique_ptr<CGSCCToFunctionPassAdaptor::PassConceptT>(
           new PassModelT(std::forward<FunctionPassT>(Pass))),
-      EagerlyInvalidate);
+      EagerlyInvalidate, NoRerun);
 }
+
+// A marker to determine if function passes should be run on a function within a
+// CGSCCToFunctionPassAdaptor. This is used to prevent running an expensive
+// function pass (manager) on a function multiple times if SCC mutations cause a
+// function to be visited multiple times and the function is not modified by
+// other SCC passes.
+class ShouldNotRunFunctionPassesAnalysis
+    : public AnalysisInfoMixin<ShouldNotRunFunctionPassesAnalysis> {
+public:
+  static AnalysisKey Key;
+  struct Result {};
+
+  Result run(Function &F, FunctionAnalysisManager &FAM) { return Result(); }
+};
 
 /// A helper that repeats an SCC pass each time an indirect call is refined to
 /// a direct call by that pass.

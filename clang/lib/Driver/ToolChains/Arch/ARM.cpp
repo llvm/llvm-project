@@ -148,13 +148,21 @@ bool arm::useAAPCSForMachO(const llvm::Triple &T) {
 }
 
 // Select mode for reading thread pointer (-mtp=soft/cp15).
-arm::ReadTPMode arm::getReadTPMode(const Driver &D, const ArgList &Args) {
+arm::ReadTPMode arm::getReadTPMode(const Driver &D, const ArgList &Args,
+                                   const llvm::Triple &Triple) {
   if (Arg *A = Args.getLastArg(options::OPT_mtp_mode_EQ)) {
     arm::ReadTPMode ThreadPointer =
         llvm::StringSwitch<arm::ReadTPMode>(A->getValue())
             .Case("cp15", ReadTPMode::Cp15)
             .Case("soft", ReadTPMode::Soft)
             .Default(ReadTPMode::Invalid);
+    if (ThreadPointer == ReadTPMode::Cp15 &&
+        getARMSubArchVersionNumber(Triple) < 7 &&
+        llvm::ARM::parseArch(Triple.getArchName()) !=
+            llvm::ARM::ArchKind::ARMV6T2) {
+      D.Diag(diag::err_target_unsupported_tp_hard) << Triple.getArchName();
+      return ReadTPMode::Invalid;
+    }
     if (ThreadPointer != ReadTPMode::Invalid)
       return ThreadPointer;
     if (StringRef(A->getValue()).empty())
@@ -422,7 +430,7 @@ void arm::getARMTargetFeatures(const Driver &D, const llvm::Triple &Triple,
   bool KernelOrKext =
       Args.hasArg(options::OPT_mkernel, options::OPT_fapple_kext);
   arm::FloatABI ABI = arm::getARMFloatABI(D, Triple, Args);
-  arm::ReadTPMode ThreadPointer = arm::getReadTPMode(D, Args);
+  arm::ReadTPMode ThreadPointer = arm::getReadTPMode(D, Args, Triple);
   llvm::Optional<std::pair<const Arg *, StringRef>> WaCPU, WaFPU, WaHDiv,
       WaArch;
 

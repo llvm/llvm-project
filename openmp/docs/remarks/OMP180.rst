@@ -3,17 +3,17 @@
 Replacing OpenMP runtime call <call> with <value>.
 ====================================================================
 
-This optimization remark indicates that analysis determined an OpenMP runtime 
-calls can be replaced with a constant value. This can occur when an OpenMP 
-runtime call that queried some internal state was found to always return a 
+This optimization remark indicates that analysis determined an OpenMP runtime
+calls can be replaced with a constant value. This can occur when an OpenMP
+runtime call that queried some internal state was found to always return a
 single value after analysis.
 
 Example
 -------
 
-This optimization will trigger for most target regions to simplify the runtime 
-once certain constants are known. This will trigger for internal runtime 
-functions so it requires enabling verbose remarks with 
+This optimization will trigger for most target regions to simplify the runtime
+once certain constants are known. This will trigger for internal runtime
+functions so it requires enabling verbose remarks with
 `-openmp-opt-verbose-remarks`.
 
 .. code-block:: c++

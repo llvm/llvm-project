@@ -446,6 +446,58 @@ define i32 @and_or_not_or8(i32 %A, i32 %B) {
   ret i32 %i5
 }
 
+; (A | B) | (A ^ B) --> A | B
+
+define i69 @or_or_xor(i69 %A, i69 %B) {
+; CHECK-LABEL: @or_or_xor(
+; CHECK-NEXT:    [[I1:%.*]] = or i69 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i69 [[I1]]
+;
+  %i1 = or i69 %A, %B
+  %i2 = xor i69 %A, %B
+  %i3 = or i69 %i1, %i2
+  ret i69 %i3
+}
+
+; (B | A) | (A ^ B) --> B | A
+
+define i8 @or_or_xor_inner_or_commuted(i8 %A, i8 %B) {
+; CHECK-LABEL: @or_or_xor_inner_or_commuted(
+; CHECK-NEXT:    [[I1:%.*]] = or i8 [[B:%.*]], [[A:%.*]]
+; CHECK-NEXT:    ret i8 [[I1]]
+;
+  %i1 = or i8 %B, %A
+  %i2 = xor i8 %A, %B
+  %i3 = or i8 %i1, %i2
+  ret i8 %i3
+}
+
+; (A ^ B) | (A | B) --> A | B
+
+define <4 x i4> @or_or_xor_commuted(<4 x i4> %A, <4 x i4> %B) {
+; CHECK-LABEL: @or_or_xor_commuted(
+; CHECK-NEXT:    [[I1:%.*]] = or <4 x i4> [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret <4 x i4> [[I1]]
+;
+  %i1 = or <4 x i4> %A, %B
+  %i2 = xor <4 x i4> %A, %B
+  %i3 = or <4 x i4> %i2, %i1
+  ret <4 x i4> %i3
+}
+
+; (A ^ B) | (B | A) --> B | A
+
+define i4 @or_or_xor_inner_or_outer_or_commuted(i4 %A, i4 %B) {
+; CHECK-LABEL: @or_or_xor_inner_or_outer_or_commuted(
+; CHECK-NEXT:    [[I1:%.*]] = or i4 [[B:%.*]], [[A:%.*]]
+; CHECK-NEXT:    ret i4 [[I1]]
+;
+  %i1 = or i4 %B, %A
+  %i2 = xor i4 %A, %B
+  %i3 = or i4 %i2, %i1
+  ret i4 %i3
+}
+
 define i32 @shifted_all_ones(i32 %shamt) {
 ; CHECK-LABEL: @shifted_all_ones(
 ; CHECK-NEXT:    ret i32 -1

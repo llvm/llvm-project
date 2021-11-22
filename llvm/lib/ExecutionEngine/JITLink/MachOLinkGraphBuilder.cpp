@@ -23,7 +23,7 @@ MachOLinkGraphBuilder::~MachOLinkGraphBuilder() {}
 
 Expected<std::unique_ptr<LinkGraph>> MachOLinkGraphBuilder::buildGraph() {
 
-  // Sanity check: we only operate on relocatable objects.
+  // We only operate on relocatable objects.
   if (!Obj.isRelocatableObject())
     return make_error<JITLinkError>("Object is not a relocatable MachO");
 
@@ -180,17 +180,10 @@ Error MachOLinkGraphBuilder::createNormalizedSections() {
     else
       Prot = MemProt::Read | MemProt::Write;
 
-    if (!isDebugSection(NSec)) {
-      auto FullyQualifiedName =
-          G->allocateString(StringRef(NSec.SegName) + "," + NSec.SectName);
-      NSec.GraphSection = &G->createSection(
-          StringRef(FullyQualifiedName.data(), FullyQualifiedName.size()),
-          Prot);
-    } else
-      LLVM_DEBUG({
-        dbgs() << "    " << NSec.SegName << "," << NSec.SectName
-               << " is a debug section: No graph section will be created.\n";
-      });
+    auto FullyQualifiedName =
+        G->allocateString(StringRef(NSec.SegName) + "," + NSec.SectName);
+    NSec.GraphSection = &G->createSection(
+        StringRef(FullyQualifiedName.data(), FullyQualifiedName.size()), Prot);
 
     IndexToSection.insert(std::make_pair(SecIndex, std::move(NSec)));
   }
@@ -288,7 +281,7 @@ Error MachOLinkGraphBuilder::createNormalizedSymbols() {
       dbgs() << "\n";
     });
 
-    // If this symbol has a section, sanity check that the addresses line up.
+    // If this symbol has a section, verify that the addresses line up.
     if (Sect != 0) {
       auto NSec = findSectionByIndex(Sect - 1);
       if (!NSec)
@@ -318,16 +311,19 @@ Error MachOLinkGraphBuilder::createNormalizedSymbols() {
 }
 
 void MachOLinkGraphBuilder::addSectionStartSymAndBlock(
-    Section &GraphSec, uint64_t Address, const char *Data, uint64_t Size,
-    uint32_t Alignment, bool IsLive) {
+    unsigned SecIndex, Section &GraphSec, uint64_t Address, const char *Data,
+    uint64_t Size, uint32_t Alignment, bool IsLive) {
   Block &B =
       Data ? G->createContentBlock(GraphSec, ArrayRef<char>(Data, Size),
                                    Address, Alignment, 0)
            : G->createZeroFillBlock(GraphSec, Size, Address, Alignment, 0);
   auto &Sym = G->addAnonymousSymbol(B, 0, Size, false, IsLive);
-  assert(!AddrToCanonicalSymbol.count(Sym.getAddress()) &&
+  auto SecI = IndexToSection.find(SecIndex);
+  assert(SecI != IndexToSection.end() && "SecIndex invalid");
+  auto &NSec = SecI->second;
+  assert(!NSec.CanonicalSymbols.count(Sym.getAddress()) &&
          "Anonymous block start symbol clashes with existing symbol address");
-  AddrToCanonicalSymbol[Sym.getAddress()] = &Sym;
+  NSec.CanonicalSymbols[Sym.getAddress()] = &Sym;
 }
 
 Error MachOLinkGraphBuilder::graphifyRegularSymbols() {
@@ -441,8 +437,8 @@ Error MachOLinkGraphBuilder::graphifyRegularSymbols() {
                  << formatv("{0:x16}", NSec.Address) << " -- "
                  << formatv("{0:x16}", NSec.Address + NSec.Size) << "\n";
         });
-        addSectionStartSymAndBlock(*NSec.GraphSection, NSec.Address, NSec.Data,
-                                   NSec.Size, NSec.Alignment,
+        addSectionStartSymAndBlock(SecIndex, *NSec.GraphSection, NSec.Address,
+                                   NSec.Data, NSec.Size, NSec.Alignment,
                                    SectionIsNoDeadStrip);
       } else
         LLVM_DEBUG({
@@ -480,8 +476,8 @@ Error MachOLinkGraphBuilder::graphifyRegularSymbols() {
                << formatv("{0:x16}", NSec.Address) << " -- "
                << formatv("{0:x16}", NSec.Address + AnonBlockSize) << " ]\n";
       });
-      addSectionStartSymAndBlock(*NSec.GraphSection, NSec.Address, NSec.Data,
-                                 AnonBlockSize, NSec.Alignment,
+      addSectionStartSymAndBlock(SecIndex, *NSec.GraphSection, NSec.Address,
+                                 NSec.Data, AnonBlockSize, NSec.Alignment,
                                  SectionIsNoDeadStrip);
     }
 
@@ -580,7 +576,7 @@ Symbol &MachOLinkGraphBuilder::createStandardGraphSymbol(NormalizedSymbol &NSym,
   NSym.GraphSymbol = &Sym;
 
   if (IsCanonical)
-    setCanonicalSymbol(Sym);
+    setCanonicalSymbol(getSectionByIndex(NSym.Sect - 1), Sym);
 
   return Sym;
 }
@@ -607,7 +603,6 @@ Error MachOLinkGraphBuilder::graphifySectionsWithCustomParsers() {
 
 Error MachOLinkGraphBuilder::graphifyCStringSection(
     NormalizedSection &NSec, std::vector<NormalizedSymbol *> NSyms) {
-
   assert(NSec.GraphSection && "C string literal section missing graph section");
   assert(NSec.Data && "C string literal section has no data");
 
@@ -661,7 +656,7 @@ Error MachOLinkGraphBuilder::graphifyCStringSection(
       // If there's no symbol at the start of this block then create one.
       if (NSyms.empty() || NSyms.back()->Value != B.getAddress()) {
         auto &S = G->addAnonymousSymbol(B, 0, BlockSize, false, false);
-        setCanonicalSymbol(S);
+        setCanonicalSymbol(NSec, S);
         LLVM_DEBUG({
           dbgs() << "      Adding anonymous symbol for c-string block "
                  << formatv("{0:x16} -- {1:x16}", S.getAddress(),

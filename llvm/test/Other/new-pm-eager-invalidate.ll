@@ -3,8 +3,8 @@
 ; RUN: opt -disable-verify -debug-pass-manager -passes='function<eager-inv>(require<no-op-function>)' -disable-output %s 2>&1 | FileCheck %s --check-prefix=EAGER
 ; RUN: opt -disable-verify -debug-pass-manager -passes='cgscc(function<eager-inv>(require<no-op-function>))' -disable-output %s 2>&1 | FileCheck %s --check-prefix=EAGER
 
-; RUN: opt -disable-verify -debug-pass-manager -passes='default<O2>' -disable-output %s 2>&1 | FileCheck %s --check-prefix=PIPELINE
-; RUN: opt -disable-verify -debug-pass-manager -passes='default<O2>' -eagerly-invalidate-analyses -disable-output %s 2>&1 | FileCheck %s --check-prefix=PIPELINE-EAGER
+; RUN: opt -disable-verify -debug-pass-manager -passes='default<O2>' -eagerly-invalidate-analyses=0 -disable-output %s 2>&1 | FileCheck %s --check-prefix=PIPELINE
+; RUN: opt -disable-verify -debug-pass-manager -passes='default<O2>' -eagerly-invalidate-analyses=1 -disable-output %s 2>&1 | FileCheck %s --check-prefix=PIPELINE-EAGER
 
 ; NORMAL-NOT: Invalidating analysis: NoOpFunctionAnalysis
 ; EAGER: Invalidating analysis: NoOpFunctionAnalysis

@@ -987,20 +987,17 @@ Operation *OperationParser::parseGenericOperation() {
   OperationState result(srcLocation, name);
 
   // Lazy load dialects in the context as needed.
-  if (!result.name.getAbstractOperation()) {
+  if (!result.name.isRegistered()) {
     StringRef dialectName = StringRef(name).split('.').first;
-    if (!getContext()->getLoadedDialect(dialectName)) {
-      if (getContext()->getOrLoadDialect(dialectName)) {
-        result.name = OperationName(name, getContext());
-      } else if (!getContext()->allowsUnregisteredDialects()) {
-        // Emit an error if the dialect couldn't be loaded (i.e., it was not
-        // registered) and unregistered dialects aren't allowed.
-        return emitError(
-                   "operation being parsed with an unregistered dialect. If "
-                   "this is intended, please use -allow-unregistered-dialect "
-                   "with the MLIR tool used"),
-               nullptr;
-      }
+    if (!getContext()->getLoadedDialect(dialectName) &&
+        !getContext()->getOrLoadDialect(dialectName) &&
+        !getContext()->allowsUnregisteredDialects()) {
+      // Emit an error if the dialect couldn't be loaded (i.e., it was not
+      // registered) and unregistered dialects aren't allowed.
+      emitError("operation being parsed with an unregistered dialect. If "
+                "this is intended, please use -allow-unregistered-dialect "
+                "with the MLIR tool used");
+      return nullptr;
     }
   }
 
@@ -1018,9 +1015,8 @@ Operation *OperationParser::parseGenericOperation() {
 
   // Parse the successor list.
   if (getToken().is(Token::l_square)) {
-    // Check if the operation is a known terminator.
-    const AbstractOperation *abstractOp = result.name.getAbstractOperation();
-    if (abstractOp && !abstractOp->hasTrait<OpTrait::IsTerminator>())
+    // Check if the operation is not a known terminator.
+    if (!result.name.mightHaveTrait<OpTrait::IsTerminator>())
       return emitError("successors in non-terminator"), nullptr;
 
     SmallVector<Block *, 2> successors;
@@ -1127,7 +1123,7 @@ public:
     Optional<NamedAttribute> duplicate = opState.attributes.findDuplicate();
     if (duplicate)
       return emitError(getNameLoc(), "attribute '")
-             << duplicate->first
+             << duplicate->getName().getValue()
              << "' occurs more than once in the attribute list";
     return success();
   }
@@ -1514,11 +1510,12 @@ Operation *
 OperationParser::parseCustomOperation(ArrayRef<ResultRecord> resultIDs) {
   llvm::SMLoc opLoc = getToken().getLoc();
   std::string opName = getTokenSpelling().str();
-  auto *opDefinition = AbstractOperation::lookup(opName, getContext());
+  Optional<RegisteredOperationName> opInfo =
+      RegisteredOperationName::lookup(opName, getContext());
   StringRef defaultDialect = getState().defaultDialectStack.back();
   Dialect *dialect = nullptr;
-  if (opDefinition) {
-    dialect = &opDefinition->dialect;
+  if (opInfo) {
+    dialect = &opInfo->getDialect();
   } else {
     if (StringRef(opName).contains('.')) {
       // This op has a dialect, we try to check if we can register it in the
@@ -1526,19 +1523,19 @@ OperationParser::parseCustomOperation(ArrayRef<ResultRecord> resultIDs) {
       StringRef dialectName = StringRef(opName).split('.').first;
       dialect = getContext()->getLoadedDialect(dialectName);
       if (!dialect && (dialect = getContext()->getOrLoadDialect(dialectName)))
-        opDefinition = AbstractOperation::lookup(opName, getContext());
+        opInfo = RegisteredOperationName::lookup(opName, getContext());
     } else {
       // If the operation name has no namespace prefix we lookup the current
       // default dialect (set through OpAsmOpInterface).
-      opDefinition = AbstractOperation::lookup(
+      opInfo = RegisteredOperationName::lookup(
           Twine(defaultDialect + "." + opName).str(), getContext());
-      if (!opDefinition && getContext()->getOrLoadDialect("std")) {
-        opDefinition = AbstractOperation::lookup(Twine("std." + opName).str(),
+      if (!opInfo && getContext()->getOrLoadDialect("std")) {
+        opInfo = RegisteredOperationName::lookup(Twine("std." + opName).str(),
                                                  getContext());
       }
-      if (opDefinition) {
-        dialect = &opDefinition->dialect;
-        opName = opDefinition->name.str();
+      if (opInfo) {
+        dialect = &opInfo->getDialect();
+        opName = opInfo->getStringRef().str();
       } else if (!defaultDialect.empty()) {
         dialect = getContext()->getOrLoadDialect(defaultDialect);
         opName = (defaultDialect + "." + opName).str();
@@ -1548,16 +1545,15 @@ OperationParser::parseCustomOperation(ArrayRef<ResultRecord> resultIDs) {
 
   // This is the actual hook for the custom op parsing, usually implemented by
   // the op itself (`Op::parse()`). We retrieve it either from the
-  // AbstractOperation or from the Dialect.
+  // RegisteredOperationName or from the Dialect.
   function_ref<ParseResult(OpAsmParser &, OperationState &)> parseAssemblyFn;
   bool isIsolatedFromAbove = false;
 
   defaultDialect = "";
-  if (opDefinition) {
-    parseAssemblyFn = opDefinition->getParseAssemblyFn();
-    isIsolatedFromAbove =
-        opDefinition->hasTrait<OpTrait::IsIsolatedFromAbove>();
-    auto *iface = opDefinition->getInterface<OpAsmOpInterface>();
+  if (opInfo) {
+    parseAssemblyFn = opInfo->getParseAssemblyFn();
+    isIsolatedFromAbove = opInfo->hasTrait<OpTrait::IsIsolatedFromAbove>();
+    auto *iface = opInfo->getInterface<OpAsmOpInterface>();
     if (iface && !iface->getDefaultDialect().empty())
       defaultDialect = iface->getDefaultDialect();
   } else {

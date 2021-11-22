@@ -1,5 +1,6 @@
 // RUN: %clang_cc1 -triple arm64-apple-ios7.0 -target-feature +neon -target-feature +aes -target-feature +sha2 -ffreestanding -Os -S -o - %s | FileCheck %s
 // RUN: %clang_cc1 -triple arm64-apple-ios7.0 -target-feature +neon -target-feature +aes -target-feature +sha2 -ffreestanding -fexperimental-new-pass-manager -Os -S -o - %s | FileCheck %s
+
 // REQUIRES: aarch64-registered-target
 
 #include <arm_neon.h>

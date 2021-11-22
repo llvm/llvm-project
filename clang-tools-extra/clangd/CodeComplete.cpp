@@ -466,32 +466,27 @@ private:
       // FIXME(ibiryukov): sometimes add template arguments to a snippet, e.g.
       // we need to complete 'forward<$1>($0)'.
       return "($0)";
-    // Suppress function argument snippets cursor is followed by left
-    // parenthesis (and potentially arguments) or if there are potentially
-    // template arguments. There are cases where it would be wrong (e.g. next
-    // '<' token is a comparison rather than template argument list start) but
-    // it is less common and suppressing snippet provides better UX.
-    if (Completion.Kind == CompletionItemKind::Function ||
-        Completion.Kind == CompletionItemKind::Method ||
-        Completion.Kind == CompletionItemKind::Constructor) {
-      // If there is a potential template argument list, drop snippet and just
-      // complete symbol name. Ideally, this could generate an edit that would
-      // paste function arguments after template argument list but it would be
-      // complicated. Example:
-      //
-      // fu^<int> -> function<int>
+
+    bool MayHaveArgList = Completion.Kind == CompletionItemKind::Function ||
+                          Completion.Kind == CompletionItemKind::Method ||
+                          Completion.Kind == CompletionItemKind::Constructor ||
+                          Completion.Kind == CompletionItemKind::Text /*Macro*/;
+    // If likely arg list already exists, don't add new parens & placeholders.
+    //   Snippet: function(int x, int y)
+    //   func^(1,2) -> function(1, 2)
+    //             NOT function(int x, int y)(1, 2)
+    if (MayHaveArgList) {
+      // Check for a template argument list in the code.
+      //   Snippet: function<class T>(int x)
+      //   fu^<int>(1) -> function<int>(1)
       if (NextTokenKind == tok::less && Snippet->front() == '<')
         return "";
-      // Potentially followed by argument list.
+      // Potentially followed by regular argument list.
       if (NextTokenKind == tok::l_paren) {
-        // If snippet contains template arguments we will emit them and drop
-        // function arguments. Example:
-        //
-        // fu^(42) -> function<int>(42);
+        //   Snippet: function<class T>(int x)
+        //   fu^(1,2) -> function<class T>(1, 2)
         if (Snippet->front() == '<') {
-          // Find matching '>'. Snippet->find('>') will not work in cases like
-          // template <typename T=std::vector<int>>. Hence, iterate through
-          // the snippet until the angle bracket balance reaches zero.
+          // Find matching '>', handling nested brackets.
           int Balance = 0;
           size_t I = 0;
           do {
@@ -512,8 +507,7 @@ private:
     // Replace argument snippets with a simplified pattern.
     if (Snippet->empty())
       return "";
-    if (Completion.Kind == CompletionItemKind::Function ||
-        Completion.Kind == CompletionItemKind::Method) {
+    if (MayHaveArgList) {
       // Functions snippets can be of 2 types:
       // - containing only function arguments, e.g.
       //   foo(${1:int p1}, ${2:int p2});
@@ -878,6 +872,28 @@ struct ScoredSignature {
   SignatureQualitySignals Quality;
 };
 
+// Returns the index of the parameter matching argument number "Arg.
+// This is usually just "Arg", except for variadic functions/templates, where
+// "Arg" might be higher than the number of parameters. When that happens, we
+// assume the last parameter is variadic and assume all further args are
+// part of it.
+int paramIndexForArg(const CodeCompleteConsumer::OverloadCandidate &Candidate,
+                     int Arg) {
+  int NumParams = 0;
+  if (const auto *F = Candidate.getFunction()) {
+    NumParams = F->getNumParams();
+    if (F->isVariadic())
+      ++NumParams;
+  } else if (auto *T = Candidate.getFunctionType()) {
+    if (auto *Proto = T->getAs<FunctionProtoType>()) {
+      NumParams = Proto->getNumParams();
+      if (Proto->isVariadic())
+        ++NumParams;
+    }
+  }
+  return std::min(Arg, std::max(NumParams - 1, 0));
+}
+
 class SignatureHelpCollector final : public CodeCompleteConsumer {
 public:
   SignatureHelpCollector(const clang::CodeCompleteOptions &CodeCompleteOpts,
@@ -908,7 +924,9 @@ public:
     SigHelp.activeSignature = 0;
     assert(CurrentArg <= (unsigned)std::numeric_limits<int>::max() &&
            "too many arguments");
+
     SigHelp.activeParameter = static_cast<int>(CurrentArg);
+
     for (unsigned I = 0; I < NumCandidates; ++I) {
       OverloadCandidate Candidate = Candidates[I];
       // We want to avoid showing instantiated signatures, because they may be
@@ -917,6 +935,14 @@ public:
       if (auto *Func = Candidate.getFunction()) {
         if (auto *Pattern = Func->getTemplateInstantiationPattern())
           Candidate = OverloadCandidate(Pattern);
+      }
+      if (static_cast<int>(I) == SigHelp.activeSignature) {
+        // The activeParameter in LSP relates to the activeSignature. There is
+        // another, per-signature field, but we currently do not use it and not
+        // all clients might support it.
+        // FIXME: Add support for per-signature activeParameter field.
+        SigHelp.activeParameter =
+            paramIndexForArg(Candidate, SigHelp.activeParameter);
       }
 
       const auto *CCS = Candidate.CreateSignatureString(
@@ -2113,8 +2139,12 @@ CompletionItem CodeCompletion::render(const CodeCompleteOptions &Opts) const {
   // FIXME(kadircet): Do not even fill insertText after making sure textEdit is
   // compatible with most of the editors.
   LSP.insertText = LSP.textEdit->newText;
-  LSP.insertTextFormat = Opts.EnableSnippets ? InsertTextFormat::Snippet
-                                             : InsertTextFormat::PlainText;
+  // Some clients support snippets but work better with plaintext.
+  // So if the snippet is trivial, let the client know.
+  // https://github.com/clangd/clangd/issues/922
+  LSP.insertTextFormat = (Opts.EnableSnippets && !SnippetSuffix.empty())
+                             ? InsertTextFormat::Snippet
+                             : InsertTextFormat::PlainText;
   if (InsertInclude && InsertInclude->Insertion)
     LSP.additionalTextEdits.push_back(*InsertInclude->Insertion);
 

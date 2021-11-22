@@ -26,7 +26,7 @@ using namespace test;
 
 // Custom parser for SignednessSemantics.
 static ParseResult
-parseSignedness(DialectAsmParser &parser,
+parseSignedness(AsmParser &parser,
                 TestIntegerType::SignednessSemantics &result) {
   StringRef signStr;
   auto loc = parser.getCurrentLocation();
@@ -46,7 +46,7 @@ parseSignedness(DialectAsmParser &parser,
 }
 
 // Custom printer for SignednessSemantics.
-static void printSignedness(DialectAsmPrinter &printer,
+static void printSignedness(AsmPrinter &printer,
                             const TestIntegerType::SignednessSemantics &ss) {
   switch (ss) {
   case TestIntegerType::SignednessSemantics::Unsigned:
@@ -87,7 +87,7 @@ static llvm::hash_code test::hash_value(const FieldInfo &fi) { // NOLINT
 // CompoundAType
 //===----------------------------------------------------------------------===//
 
-Type CompoundAType::parse(DialectAsmParser &parser) {
+Type CompoundAType::parse(AsmParser &parser) {
   int widthOfSomething;
   Type oneType;
   SmallVector<int, 4> arrayOfInts;
@@ -108,9 +108,8 @@ Type CompoundAType::parse(DialectAsmParser &parser) {
 
   return get(parser.getContext(), widthOfSomething, oneType, arrayOfInts);
 }
-void CompoundAType::print(DialectAsmPrinter &printer) const {
-  printer << "cmpnd_a<" << getWidthOfSomething() << ", " << getOneType()
-          << ", [";
+void CompoundAType::print(AsmPrinter &printer) const {
+  printer << "<" << getWidthOfSomething() << ", " << getOneType() << ", [";
   auto intArray = getArrayOfInts();
   llvm::interleaveComma(intArray, printer);
   printer << "]>";
@@ -142,15 +141,15 @@ void TestType::printTypeC(Location loc) const {
 // TestTypeWithLayout
 //===----------------------------------------------------------------------===//
 
-Type TestTypeWithLayoutType::parse(DialectAsmParser &parser) {
+Type TestTypeWithLayoutType::parse(AsmParser &parser) {
   unsigned val;
   if (parser.parseLess() || parser.parseInteger(val) || parser.parseGreater())
     return Type();
   return TestTypeWithLayoutType::get(parser.getContext(), val);
 }
 
-void TestTypeWithLayoutType::print(DialectAsmPrinter &printer) const {
-  printer << "test_type_with_layout<" << getKey() << ">";
+void TestTypeWithLayoutType::print(AsmPrinter &printer) const {
+  printer << "<" << getKey() << ">";
 }
 
 unsigned
@@ -235,7 +234,7 @@ void TestDialect::registerTypes() {
   SimpleAType::attachInterface<PtrElementModel>(*getContext());
 }
 
-static Type parseTestType(DialectAsmParser &parser, SetVector<Type> &stack) {
+static Type parseTestType(AsmParser &parser, SetVector<Type> &stack) {
   StringRef typeTag;
   if (failed(parser.parseKeyword(&typeTag)))
     return Type();
@@ -282,7 +281,7 @@ Type TestDialect::parseType(DialectAsmParser &parser) const {
   return parseTestType(parser, stack);
 }
 
-static void printTestType(Type type, DialectAsmPrinter &printer,
+static void printTestType(Type type, AsmPrinter &printer,
                           SetVector<Type> &stack) {
   if (succeeded(generatedTypePrinter(type, printer)))
     return;

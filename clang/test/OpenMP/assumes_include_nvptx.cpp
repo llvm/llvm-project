@@ -24,7 +24,7 @@
 // CHECK:       attributes [[attr1]]
 // CHECK-SAME:  "llvm.assume"="ompx_check_that_this_is_attached_to_included_functions_and_template_instantiations"
 // CHECK:       attributes [[attr2]]
-// CHECK-SAME:  "llvm.assume"="ompx_check_that_this_is_attached_to_included_functions_and_template_instantiations,ompx_check_that_this_is_attached_to_included_functions_and_template_instantiations"
+// CHECK-SAME:  "llvm.assume"="ompx_check_that_this_is_attached_to_included_functions_and_template_instantiations"
 
 
 template <typename T>

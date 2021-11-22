@@ -1,5 +1,5 @@
 // RUN: mlir-opt %s -canonicalize -cse -linalg-comprehensive-module-bufferize |\
-// RUN: mlir-opt -convert-vector-to-scf -lower-affine -convert-linalg-to-loops |\
+// RUN: mlir-opt -buffer-deallocation -convert-vector-to-scf -lower-affine -convert-linalg-to-loops |\
 // RUN: mlir-opt -canonicalize -convert-scf-to-std -convert-vector-to-llvm -convert-memref-to-llvm -convert-std-to-llvm -reconcile-unrealized-casts | \
 
 // RUN: mlir-cpu-runner -O3 -e main -entry-point-result=void \

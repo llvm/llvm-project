@@ -326,8 +326,8 @@ ProgramStateRef ExprEngine::createTemporaryRegionIfNeeded(
     }
     Result = InitWithAdjustments;
   } else {
-    // We need to create a region no matter what. For sanity, make sure we don't
-    // try to stuff a Loc into a non-pointer temporary region.
+    // We need to create a region no matter what. Make sure we don't try to
+    // stuff a Loc into a non-pointer temporary region.
     assert(!InitValWithAdjustments.getAs<Loc>() ||
            Loc::isLocType(Result->getType()) ||
            Result->getType()->isMemberPointerType());
@@ -393,8 +393,7 @@ ProgramStateRef ExprEngine::createTemporaryRegionIfNeeded(
   SVal BaseReg = Reg;
 
   // Make the necessary adjustments to obtain the sub-object.
-  for (auto I = Adjustments.rbegin(), E = Adjustments.rend(); I != E; ++I) {
-    const SubobjectAdjustment &Adj = *I;
+  for (const SubobjectAdjustment &Adj : llvm::reverse(Adjustments)) {
     switch (Adj.Kind) {
     case SubobjectAdjustment::DerivedToBaseAdjustment:
       Reg = StoreMgr.evalDerivedToBase(Reg, Adj.DerivedToBase.BasePath);

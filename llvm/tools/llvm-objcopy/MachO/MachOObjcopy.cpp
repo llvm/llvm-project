@@ -389,6 +389,11 @@ Error objcopy::macho::executeObjcopyOnBinary(const CommonConfig &Config,
   if (!O)
     return createFileError(Config.InputFilename, O.takeError());
 
+  if (O->get()->Header.FileType == MachO::HeaderFileType::MH_PRELOAD)
+    return createStringError(std::errc::not_supported,
+                             "%s: MH_PRELOAD files are not supported",
+                             Config.InputFilename.str().c_str());
+
   if (Error E = handleArgs(Config, MachOConfig, **O))
     return createFileError(Config.InputFilename, std::move(E));
 

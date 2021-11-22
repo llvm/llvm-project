@@ -13,26 +13,8 @@ using namespace mlir;
 using namespace mlir::detail;
 
 //===----------------------------------------------------------------------===//
-// AttributeStorage
-//===----------------------------------------------------------------------===//
-
-AttributeStorage::AttributeStorage(Type type)
-    : type(type.getAsOpaquePointer()) {}
-AttributeStorage::AttributeStorage() : type(nullptr) {}
-
-Type AttributeStorage::getType() const {
-  return Type::getFromOpaquePointer(type);
-}
-void AttributeStorage::setType(Type newType) {
-  type = newType.getAsOpaquePointer();
-}
-
-//===----------------------------------------------------------------------===//
 // Attribute
 //===----------------------------------------------------------------------===//
-
-/// Return the type of this attribute.
-Type Attribute::getType() const { return impl->getType(); }
 
 /// Return the context this attribute belongs to.
 MLIRContext *Attribute::getContext() const { return getDialect().getContext(); }
@@ -41,14 +23,27 @@ MLIRContext *Attribute::getContext() const { return getDialect().getContext(); }
 // NamedAttribute
 //===----------------------------------------------------------------------===//
 
-bool mlir::operator<(const NamedAttribute &lhs, const NamedAttribute &rhs) {
-  return strcmp(lhs.first.data(), rhs.first.data()) < 0;
+NamedAttribute::NamedAttribute(StringAttr name, Attribute value)
+    : name(name), value(value) {
+  assert(name && value && "expected valid attribute name and value");
+  assert(name.size() != 0 && "expected valid attribute name");
 }
-bool mlir::operator<(const NamedAttribute &lhs, StringRef rhs) {
-  // This is correct even when attr.first.data()[name.size()] is not a zero
-  // string terminator, because we only care about a less than comparison.
-  // This can't use memcmp, because it doesn't guarantee that it will stop
-  // reading both buffers if one is shorter than the other, even if there is
-  // a difference.
-  return strncmp(lhs.first.data(), rhs.data(), rhs.size()) < 0;
+
+StringAttr NamedAttribute::getName() const { return name.cast<StringAttr>(); }
+
+Dialect *NamedAttribute::getNameDialect() const {
+  return getName().getReferencedDialect();
+}
+
+void NamedAttribute::setName(StringAttr newName) {
+  assert(name && "expected valid attribute name");
+  name = newName;
+}
+
+bool NamedAttribute::operator<(const NamedAttribute &rhs) const {
+  return getName().compare(rhs.getName()) < 0;
+}
+
+bool NamedAttribute::operator<(StringRef rhs) const {
+  return getName().getValue().compare(rhs) < 0;
 }

@@ -17,24 +17,28 @@ def OpA : NS_Op<"op_for_CPred_containing_multiple_same_placeholder", []> {
 }
 
 // CHECK: static ::mlir::LogicalResult [[$INTEGER_FLOAT_CONSTRAINT:__mlir_ods_local_type_constraint.*]](
-// CHECK-NEXT:  if (!((type.isInteger(32) || type.isF32()))) {
-// CHECK-NEXT:    return op->emitOpError(valueKind) << " #" << valueGroupStartIndex << " must be 32-bit integer or floating-point type, but got " << type;
+// CHECK:      if (!((type.isInteger(32) || type.isF32()))) {
+// CHECK-NEXT:   return op->emitOpError(valueKind) << " #" << valueIndex
+// CHECK-NEXT:       << " must be 32-bit integer or floating-point type, but got " << type;
 
 // Check there is no verifier with same predicate generated.
 // CHECK-NOT:  if (!((type.isInteger(32) || type.isF32()))) {
-// CHECK-NOT:    return op->emitOpError(valueKind) << " #" << valueGroupStartIndex << " must be 32-bit integer or floating-point type, but got " << type;
+// CHECK-NOT:    return op->emitOpError(valueKind) << " #" << valueIndex
+// CHECK-NOT.        << " must be 32-bit integer or floating-point type, but got " << type;
 
 // CHECK: static ::mlir::LogicalResult [[$TENSOR_CONSTRAINT:__mlir_ods_local_type_constraint.*]](
-// CHECK-NEXT:  if (!(((type.isa<::mlir::TensorType>())) && ((true)))) {
-// CHECK-NEXT:    return op->emitOpError(valueKind) << " #" << valueGroupStartIndex << " must be tensor of any type values, but got " << type;
+// CHECK:       if (!(((type.isa<::mlir::TensorType>())) && ([](::mlir::Type elementType) { return (true); }(type.cast<::mlir::ShapedType>().getElementType())))) {
+// CHECK-NEXT:    return op->emitOpError(valueKind) << " #" << valueIndex
+// CHECK-NEXT:        << " must be tensor of any type values, but got " << type;
 
 // CHECK: static ::mlir::LogicalResult [[$TENSOR_INTEGER_FLOAT_CONSTRAINT:__mlir_ods_local_type_constraint.*]](
-// CHECK-NEXT:  if (!(((type.isa<::mlir::TensorType>())) && (((type.cast<::mlir::ShapedType>().getElementType().isF32())) || ((type.cast<::mlir::ShapedType>().getElementType().isSignlessInteger(32)))))) {
-// CHECK-NEXT:    return op->emitOpError(valueKind) << " #" << valueGroupStartIndex << " must be tensor of 32-bit float or 32-bit signless integer values, but got " << type;
+// CHECK:       if (!(((type.isa<::mlir::TensorType>())) && ([](::mlir::Type elementType) { return ((elementType.isF32())) || ((elementType.isSignlessInteger(32))); }(type.cast<::mlir::ShapedType>().getElementType())))) {
+// CHECK-NEXT:    return op->emitOpError(valueKind) << " #" << valueIndex
+// CHECK-NEXT:        << " must be tensor of 32-bit float or 32-bit signless integer values, but got " << type;
 
 // CHECK-LABEL: OpA::verify
 // CHECK: auto valueGroup0 = getODSOperands(0);
-// CHECK: for (::mlir::Value v : valueGroup0) {
+// CHECK: for (auto v : valueGroup0) {
 // CHECK:   if (::mlir::failed([[$INTEGER_FLOAT_CONSTRAINT]]
 
 def OpB : NS_Op<"op_for_And_PredOpTrait", [
@@ -109,7 +113,7 @@ def OpK : NS_Op<"op_for_AnyTensorOf", []> {
 
 // CHECK-LABEL: OpK::verify
 // CHECK: auto valueGroup0 = getODSOperands(0);
-// CHECK: for (::mlir::Value v : valueGroup0) {
+// CHECK: for (auto v : valueGroup0) {
 // CHECK: if (::mlir::failed([[$TENSOR_INTEGER_FLOAT_CONSTRAINT]]
 
 def OpL : NS_Op<"op_for_StringEscaping", []> {

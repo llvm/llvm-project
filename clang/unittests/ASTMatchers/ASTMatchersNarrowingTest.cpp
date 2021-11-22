@@ -1439,6 +1439,22 @@ TEST_P(ASTMatchersTest, IsStaticLocal) {
   EXPECT_TRUE(notMatches("int X;", M));
 }
 
+TEST_P(ASTMatchersTest, IsInitCapture) {
+  if (!GetParam().isCXX11OrLater()) {
+    return;
+  }
+  auto M = varDecl(hasName("vd"), isInitCapture());
+  EXPECT_TRUE(notMatches(
+      "int main() { int vd = 3; auto f = [vd]() { return vd; }; }", M));
+
+  if (!GetParam().isCXX14OrLater()) {
+    return;
+  }
+  EXPECT_TRUE(matches("int main() { auto f = [vd=3]() { return vd; }; }", M));
+  EXPECT_TRUE(matches(
+      "int main() { int x = 3; auto f = [vd=x]() { return vd; }; }", M));
+}
+
 TEST_P(ASTMatchersTest, StorageDuration) {
   StringRef T =
       "void f() { int x; static int y; } int a;static int b;extern int c;";

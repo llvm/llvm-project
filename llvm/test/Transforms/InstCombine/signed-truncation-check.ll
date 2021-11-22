@@ -909,11 +909,8 @@ define i1 @negative_not_less_than_logical(i32 %arg) {
 
 define i1 @negative_not_power_of_two(i32 %arg) {
 ; CHECK-LABEL: @negative_not_power_of_two(
-; CHECK-NEXT:    [[T1:%.*]] = icmp sgt i32 [[ARG:%.*]], -1
-; CHECK-NEXT:    [[T2:%.*]] = add i32 [[ARG]], 255
-; CHECK-NEXT:    [[T3:%.*]] = icmp ult i32 [[T2]], 256
-; CHECK-NEXT:    [[T4:%.*]] = and i1 [[T1]], [[T3]]
-; CHECK-NEXT:    ret i1 [[T4]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i32 [[ARG:%.*]], 0
+; CHECK-NEXT:    ret i1 [[TMP1]]
 ;
   %t1 = icmp sgt i32 %arg, -1
   %t2 = add i32 %arg, 255 ; should be power of two
@@ -924,11 +921,8 @@ define i1 @negative_not_power_of_two(i32 %arg) {
 
 define i1 @negative_not_power_of_two_logical(i32 %arg) {
 ; CHECK-LABEL: @negative_not_power_of_two_logical(
-; CHECK-NEXT:    [[T1:%.*]] = icmp sgt i32 [[ARG:%.*]], -1
-; CHECK-NEXT:    [[T2:%.*]] = add i32 [[ARG]], 255
-; CHECK-NEXT:    [[T3:%.*]] = icmp ult i32 [[T2]], 256
-; CHECK-NEXT:    [[T4:%.*]] = and i1 [[T1]], [[T3]]
-; CHECK-NEXT:    ret i1 [[T4]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i32 [[ARG:%.*]], 0
+; CHECK-NEXT:    ret i1 [[TMP1]]
 ;
   %t1 = icmp sgt i32 %arg, -1
   %t2 = add i32 %arg, 255 ; should be power of two
@@ -939,11 +933,8 @@ define i1 @negative_not_power_of_two_logical(i32 %arg) {
 
 define i1 @negative_not_next_power_of_two(i32 %arg) {
 ; CHECK-LABEL: @negative_not_next_power_of_two(
-; CHECK-NEXT:    [[T1:%.*]] = icmp sgt i32 [[ARG:%.*]], -1
-; CHECK-NEXT:    [[T2:%.*]] = add i32 [[ARG]], 64
-; CHECK-NEXT:    [[T3:%.*]] = icmp ult i32 [[T2]], 256
-; CHECK-NEXT:    [[T4:%.*]] = and i1 [[T1]], [[T3]]
-; CHECK-NEXT:    ret i1 [[T4]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i32 [[ARG:%.*]], 192
+; CHECK-NEXT:    ret i1 [[TMP1]]
 ;
   %t1 = icmp sgt i32 %arg, -1
   %t2 = add i32 %arg, 64 ; should be 256 >> 1
@@ -954,11 +945,8 @@ define i1 @negative_not_next_power_of_two(i32 %arg) {
 
 define i1 @negative_not_next_power_of_two_logical(i32 %arg) {
 ; CHECK-LABEL: @negative_not_next_power_of_two_logical(
-; CHECK-NEXT:    [[T1:%.*]] = icmp sgt i32 [[ARG:%.*]], -1
-; CHECK-NEXT:    [[T2:%.*]] = add i32 [[ARG]], 64
-; CHECK-NEXT:    [[T3:%.*]] = icmp ult i32 [[T2]], 256
-; CHECK-NEXT:    [[T4:%.*]] = and i1 [[T1]], [[T3]]
-; CHECK-NEXT:    ret i1 [[T4]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i32 [[ARG:%.*]], 192
+; CHECK-NEXT:    ret i1 [[TMP1]]
 ;
   %t1 = icmp sgt i32 %arg, -1
   %t2 = add i32 %arg, 64 ; should be 256 >> 1
@@ -967,15 +955,11 @@ define i1 @negative_not_next_power_of_two_logical(i32 %arg) {
   ret i1 %t4
 }
 
-; I don't think this can be folded, at least not into single instruction.
 define i1 @two_signed_truncation_checks(i32 %arg) {
 ; CHECK-LABEL: @two_signed_truncation_checks(
-; CHECK-NEXT:    [[T1:%.*]] = add i32 [[ARG:%.*]], 512
-; CHECK-NEXT:    [[T2:%.*]] = icmp ult i32 [[T1]], 1024
-; CHECK-NEXT:    [[T3:%.*]] = add i32 [[ARG]], 128
-; CHECK-NEXT:    [[T4:%.*]] = icmp ult i32 [[T3]], 256
-; CHECK-NEXT:    [[T5:%.*]] = and i1 [[T2]], [[T4]]
-; CHECK-NEXT:    ret i1 [[T5]]
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[ARG:%.*]], 128
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ult i32 [[TMP1]], 256
+; CHECK-NEXT:    ret i1 [[TMP2]]
 ;
   %t1 = add i32 %arg, 512
   %t2 = icmp ult i32 %t1, 1024
@@ -987,12 +971,9 @@ define i1 @two_signed_truncation_checks(i32 %arg) {
 
 define i1 @two_signed_truncation_checks_logical(i32 %arg) {
 ; CHECK-LABEL: @two_signed_truncation_checks_logical(
-; CHECK-NEXT:    [[T1:%.*]] = add i32 [[ARG:%.*]], 512
-; CHECK-NEXT:    [[T2:%.*]] = icmp ult i32 [[T1]], 1024
-; CHECK-NEXT:    [[T3:%.*]] = add i32 [[ARG]], 128
-; CHECK-NEXT:    [[T4:%.*]] = icmp ult i32 [[T3]], 256
-; CHECK-NEXT:    [[T5:%.*]] = and i1 [[T2]], [[T4]]
-; CHECK-NEXT:    ret i1 [[T5]]
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[ARG:%.*]], 128
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ult i32 [[TMP1]], 256
+; CHECK-NEXT:    ret i1 [[TMP2]]
 ;
   %t1 = add i32 %arg, 512
   %t2 = icmp ult i32 %t1, 1024

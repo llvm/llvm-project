@@ -1359,9 +1359,7 @@ SDValue SelectionDAGLegalize::ExpandExtractFromVectorThroughStack(SDValue Op) {
   Visited.insert(Op.getNode());
   Worklist.push_back(Idx.getNode());
   SDValue StackPtr, Ch;
-  for (SDNode::use_iterator UI = Vec.getNode()->use_begin(),
-       UE = Vec.getNode()->use_end(); UI != UE; ++UI) {
-    SDNode *User = *UI;
+  for (SDNode *User : Vec.getNode()->uses()) {
     if (StoreSDNode *ST = dyn_cast<StoreSDNode>(User)) {
       if (ST->isIndexed() || ST->isTruncatingStore() ||
           ST->getValue() != Vec)
@@ -2223,9 +2221,7 @@ static bool useSinCos(SDNode *Node) {
     ? ISD::FCOS : ISD::FSIN;
 
   SDValue Op0 = Node->getOperand(0);
-  for (SDNode::use_iterator UI = Op0.getNode()->use_begin(),
-       UE = Op0.getNode()->use_end(); UI != UE; ++UI) {
-    SDNode *User = *UI;
+  for (const SDNode *User : Op0.getNode()->uses()) {
     if (User == Node)
       continue;
     // The other user might have been turned into sincos already.
@@ -4760,6 +4756,7 @@ void SelectionDAGLegalize::PromoteNode(SDNode *Node) {
     break;
   case ISD::STRICT_FFLOOR:
   case ISD::STRICT_FCEIL:
+  case ISD::STRICT_FROUND:
   case ISD::STRICT_FSIN:
   case ISD::STRICT_FCOS:
   case ISD::STRICT_FLOG:

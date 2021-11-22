@@ -128,5 +128,5 @@ Options
 .. option::  WantToUseSafeFunctions
 
    The value `true` specifies that the target environment is considered to
-   implement '_s' suffixed memory and string handler functions which are safer 
+   implement '_s' suffixed memory and string handler functions which are safer
    than older versions (e.g. 'memcpy_s()'). The default value is `true`.

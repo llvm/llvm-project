@@ -15,6 +15,7 @@
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
 #include "clang/StaticAnalyzer/Core/CheckerManager.h"
+#include "clang/StaticAnalyzer/Core/PathSensitive/CallDescription.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CallEvent.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
 
@@ -126,15 +127,15 @@ void ValistChecker::checkPreCall(const CallEvent &Call,
                                  CheckerContext &C) const {
   if (!Call.isGlobalCFunction())
     return;
-  if (Call.isCalled(VaStart))
+  if (VaStart.matches(Call))
     checkVAListStartCall(Call, C, false);
-  else if (Call.isCalled(VaCopy))
+  else if (VaCopy.matches(Call))
     checkVAListStartCall(Call, C, true);
-  else if (Call.isCalled(VaEnd))
+  else if (VaEnd.matches(Call))
     checkVAListEndCall(Call, C);
   else {
     for (auto FuncInfo : VAListAccepters) {
-      if (!Call.isCalled(FuncInfo.Func))
+      if (!FuncInfo.Func.matches(Call))
         continue;
       bool Symbolic;
       const MemRegion *VAList =

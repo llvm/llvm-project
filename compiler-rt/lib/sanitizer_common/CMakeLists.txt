@@ -73,6 +73,7 @@ set(SANITIZER_COVERAGE_SOURCES
 set(SANITIZER_SYMBOLIZER_SOURCES
   sanitizer_allocator_report.cpp
   sanitizer_chained_origin_depot.cpp
+  sanitizer_stack_store.cpp
   sanitizer_stackdepot.cpp
   sanitizer_stacktrace.cpp
   sanitizer_stacktrace_libcdep.cpp
@@ -100,6 +101,7 @@ set(SANITIZER_IMPL_HEADERS
   sanitizer_allocator.h
   sanitizer_allocator_checks.h
   sanitizer_allocator_combined.h
+  sanitizer_allocator_dlsym.h
   sanitizer_allocator_interface.h
   sanitizer_allocator_internal.h
   sanitizer_allocator_local_cache.h
@@ -130,6 +132,8 @@ set(SANITIZER_IMPL_HEADERS
   sanitizer_dbghelp.h
   sanitizer_deadlock_detector.h
   sanitizer_deadlock_detector_interface.h
+  sanitizer_dense_map.h
+  sanitizer_dense_map_info.h
   sanitizer_errno.h
   sanitizer_errno_codes.h
   sanitizer_file.h
@@ -153,7 +157,6 @@ set(SANITIZER_IMPL_HEADERS
   sanitizer_mac.h
   sanitizer_malloc_mac.inc
   sanitizer_mutex.h
-  sanitizer_persistent_allocator.h
   sanitizer_placement_new.h
   sanitizer_platform.h
   sanitizer_platform_interceptors.h
@@ -167,6 +170,7 @@ set(SANITIZER_IMPL_HEADERS
   sanitizer_report_decorator.h
   sanitizer_ring_buffer.h
   sanitizer_signal_interceptors.inc
+  sanitizer_stack_store.h
   sanitizer_stackdepot.h
   sanitizer_stackdepotbase.h
   sanitizer_stacktrace.h

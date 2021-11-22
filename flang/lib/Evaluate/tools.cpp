@@ -911,12 +911,12 @@ std::optional<std::string> FindImpureCall(
   return FindImpureCallHelper{context}(proc);
 }
 
-// Compare procedure characteristics for equality except that lhs may be
-// Pure or Elemental when rhs is not.
+// Compare procedure characteristics for equality except that rhs may be
+// Pure or Elemental when lhs is not.
 static bool CharacteristicsMatch(const characteristics::Procedure &lhs,
     const characteristics::Procedure &rhs) {
   using Attr = characteristics::Procedure::Attr;
-  auto lhsAttrs{rhs.attrs};
+  auto lhsAttrs{lhs.attrs};
   lhsAttrs.set(
       Attr::Pure, lhs.attrs.test(Attr::Pure) || rhs.attrs.test(Attr::Pure));
   lhsAttrs.set(Attr::Elemental,
@@ -954,12 +954,17 @@ std::optional<parser::MessageFixedText> CheckProcCompatibility(bool isCall,
           " designator '%s'"_err_en_US;
   } else if (lhsProcedure->HasExplicitInterface() &&
       !rhsProcedure->HasExplicitInterface()) {
+    // Section 10.2.2.4, paragraph 3 prohibits associating a procedure pointer
+    // with an explicit interface with a procedure with an implicit interface
     msg = "Procedure %s with explicit interface may not be associated with"
           " procedure designator '%s' with implicit interface"_err_en_US;
   } else if (!lhsProcedure->HasExplicitInterface() &&
       rhsProcedure->HasExplicitInterface()) {
-    msg = "Procedure %s with implicit interface may not be associated with"
-          " procedure designator '%s' with explicit interface"_err_en_US;
+    if (!rhsProcedure->CanBeCalledViaImplicitInterface()) {
+      msg = "Procedure %s with implicit interface may not be associated "
+            "with procedure designator '%s' with explicit interface that "
+            "cannot be called via an implicit interface"_err_en_US;
+    }
   } else {
     msg = "Procedure %s associated with incompatible procedure"
           " designator '%s'"_err_en_US;
@@ -1031,6 +1036,19 @@ const Symbol &GetAssociationRoot(const Symbol &original) {
   return symbol;
 }
 
+const Symbol *GetMainEntry(const Symbol *symbol) {
+  if (symbol) {
+    if (const auto *subpDetails{symbol->detailsIf<SubprogramDetails>()}) {
+      if (const Scope * scope{subpDetails->entryScope()}) {
+        if (const Symbol * main{scope->symbol()}) {
+          return main;
+        }
+      }
+    }
+  }
+  return symbol;
+}
+
 bool IsVariableName(const Symbol &original) {
   const Symbol &symbol{ResolveAssociations(original)};
   if (symbol.has<ObjectEntityDetails>()) {
@@ -1044,7 +1062,8 @@ bool IsVariableName(const Symbol &original) {
 }
 
 bool IsPureProcedure(const Symbol &original) {
-  const Symbol &symbol{original.GetUltimate()};
+  // An ENTRY is pure if its containing subprogram is
+  const Symbol &symbol{DEREF(GetMainEntry(&original.GetUltimate()))};
   if (const auto *procDetails{symbol.detailsIf<ProcEntityDetails>()}) {
     if (const Symbol * procInterface{procDetails->interface().symbol()}) {
       // procedure component with a pure interface

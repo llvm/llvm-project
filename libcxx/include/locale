@@ -1,5 +1,5 @@
 // -*- C++ -*-
-//===-------------------------- locale ------------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -1476,7 +1476,7 @@ num_put<_CharT, _OutputIterator>::__do_put_integral(iter_type __s, ios_base& __i
                                                     char const* __len) const
 {
     // Stage 1 - Get number in narrow char
-    char __fmt[6] = {'%', 0};
+    char __fmt[8] = {'%', 0};
     this->__format_int(__fmt+1, __len, is_signed<_Integral>::value, __iob.flags());
     // Worst case is octal, with showbase enabled. Note that octal is always
     // printed as an unsigned value.
@@ -1486,7 +1486,10 @@ num_put<_CharT, _OutputIterator>::__do_put_integral(iter_type __s, ios_base& __i
         + ((numeric_limits<_Unsigned>::digits % 3) != 0) // round up
         + 2; // base prefix + terminating null character
     char __nar[__nbuf];
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wformat-nonliteral"
     int __nc = __libcpp_snprintf_l(__nar, sizeof(__nar), _LIBCPP_GET_C_LOCALE, __fmt, __v);
+#pragma clang diagnostic pop
     char* __ne = __nar + __nc;
     char* __np = this->__identify_padding(__nar, __ne, __iob);
     // Stage 2 - Widen __nar while adding thousands separators
@@ -1546,6 +1549,8 @@ num_put<_CharT, _OutputIterator>::__do_put_floating_point(iter_type __s, ios_bas
     char __nar[__nbuf];
     char* __nb = __nar;
     int __nc;
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wformat-nonliteral"
     if (__specify_precision)
         __nc = __libcpp_snprintf_l(__nb, __nbuf, _LIBCPP_GET_C_LOCALE, __fmt,
                                    (int)__iob.precision(), __v);
@@ -1562,6 +1567,7 @@ num_put<_CharT, _OutputIterator>::__do_put_floating_point(iter_type __s, ios_bas
             __throw_bad_alloc();
         __nbh.reset(__nb);
     }
+#pragma clang diagnostic pop
     char* __ne = __nb + __nc;
     char* __np = this->__identify_padding(__nb, __ne, __iob);
     // Stage 2 - Widen __nar while adding thousands separators
@@ -1606,10 +1612,9 @@ num_put<_CharT, _OutputIterator>::do_put(iter_type __s, ios_base& __iob,
                                          char_type __fl, const void* __v) const
 {
     // Stage 1 - Get pointer in narrow char
-    char __fmt[6] = "%p";
     const unsigned __nbuf = 20;
     char __nar[__nbuf];
-    int __nc = __libcpp_snprintf_l(__nar, sizeof(__nar), _LIBCPP_GET_C_LOCALE, __fmt, __v);
+    int __nc = __libcpp_snprintf_l(__nar, sizeof(__nar), _LIBCPP_GET_C_LOCALE, "%p", __v);
     char* __ne = __nar + __nc;
     char* __np = this->__identify_padding(__nar, __ne, __iob);
     // Stage 2 - Widen __nar

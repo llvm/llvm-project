@@ -100,24 +100,6 @@ LLDB_PLUGIN_DEFINE(SymbolFileDWARF)
 
 char SymbolFileDWARF::ID;
 
-// static inline bool
-// child_requires_parent_class_union_or_struct_to_be_completed (dw_tag_t tag)
-//{
-//    switch (tag)
-//    {
-//    default:
-//        break;
-//    case DW_TAG_subprogram:
-//    case DW_TAG_inlined_subroutine:
-//    case DW_TAG_class_type:
-//    case DW_TAG_structure_type:
-//    case DW_TAG_union_type:
-//        return true;
-//    }
-//    return false;
-//}
-//
-
 namespace {
 
 #define LLDB_PROPERTIES_symbolfiledwarf
@@ -2603,7 +2585,7 @@ TypeSP SymbolFileDWARF::GetTypeForDIE(const DWARFDIE &die,
 
       type_sp = ParseType(sc, die, nullptr);
     } else if (type_ptr != DIE_IS_BEING_PARSED) {
-      // Grab the existing type from the master types lists
+      // Get the original shared pointer for this type
       type_sp = type_ptr->shared_from_this();
     }
   }

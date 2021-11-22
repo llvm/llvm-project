@@ -3240,10 +3240,8 @@ public:
   /// vector.
   static void FindPredecessorBlocks(LDVSSABlock *BB,
                                     SmallVectorImpl<LDVSSABlock *> *Preds) {
-    for (MachineBasicBlock::pred_iterator PI = BB->BB.pred_begin(),
-                                          E = BB->BB.pred_end();
-         PI != E; ++PI)
-      Preds->push_back(BB->Updater.getSSALDVBlock(*PI));
+    for (MachineBasicBlock *Pred : BB->BB.predecessors())
+      Preds->push_back(BB->Updater.getSSALDVBlock(Pred));
   }
 
   /// GetUndefVal - Normally creates an IMPLICIT_DEF instruction with a new

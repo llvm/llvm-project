@@ -1,5 +1,5 @@
 ; RUN: llc -mtriple=x86_64-pc-linux-gnu < %s | FileCheck -check-prefix=ASM %s
-; RUN: llc -mtriple=x86_64-pc-linux-gnu -filetype=obj < %s | llvm-dwarfdump -v - | FileCheck %s
+; RUN: llc -mtriple=x86_64-pc-linux-gnu -filetype=obj < %s | llvm-dwarfdump --debug-info --debug-gnu-pubnames --debug-gnu-pubtypes - | FileCheck %s --implicit-check-not "{{DW_TAG|NULL}}"
 ; ModuleID = 'dwarf-public-names.cpp'
 ;
 ; Generated from:
@@ -73,170 +73,121 @@
 ; ASM-NEXT: .asciz  "C"                     # External Name
 
 ; CHECK: .debug_info contents:
-; CHECK: Compile Unit:
-; CHECK: DW_AT_GNU_pubnames [DW_FORM_flag_present]   (true)
+; CHECK: DW_TAG_compile_unit
+; CHECK:   DW_AT_GNU_pubnames (true)
 ; CHECK-NOT: DW_AT_GNU_pubtypes [
 
-; CHECK: [[STATIC_MEM_VAR:0x[0-9a-f]+]]: DW_TAG_variable
-; CHECK-NEXT: DW_AT_specification {{.*}} "static_member_variable"
+; CHECK:   [[STATIC_MEM_VAR:0x[0-9a-f]+]]: DW_TAG_variable
+; CHECK:     DW_AT_specification {{.*}} "static_member_variable"
 
-; CHECK: [[C:0x[0-9a-f]+]]: DW_TAG_structure_type
-; CHECK-NOT: {{DW_TAG|NULL}}
-; CHECK: DW_AT_name {{.*}} "C"
+; CHECK:   [[C:0x[0-9a-f]+]]: DW_TAG_structure_type
+; CHECK:     DW_AT_name ("C")
+; CHECK:     DW_TAG_member
+; CHECK:       DW_AT_name ("static_member_variable")
+; CHECK:     DW_TAG_subprogram
+; CHECK:       DW_AT_linkage_name
+; CHECK:       DW_AT_name ("member_function")
+; CHECK:       DW_TAG_formal_parameter
+; CHECK:       NULL
+; CHECK:     DW_TAG_subprogram
+; CHECK:       DW_AT_linkage_name
+; CHECK:       DW_AT_name ("static_member_function")
+; CHECK:     NULL
 
-; CHECK: DW_TAG_member
-; CHECK-NOT: {{DW_TAG|NULL}}
-; CHECK: DW_AT_name {{.*}} "static_member_variable"
+; CHECK:   [[INT:0x[0-9a-f]+]]: DW_TAG_base_type
+; CHECK:     DW_AT_name ("int")
+; CHECK:   DW_TAG_pointer_type
 
-; CHECK: DW_TAG_subprogram
-; CHECK-NOT: {{DW_TAG|NULL}}
-; CHECK: DW_AT_linkage_name
-; CHECK-NOT: {{DW_TAG|NULL}}
-; CHECK: DW_AT_name {{.*}} "member_function"
+; CHECK:   [[GLOB_VAR:0x[0-9a-f]+]]: DW_TAG_variable
+; CHECK:     DW_AT_name ("global_variable")
 
-; CHECK: DW_TAG_subprogram
-; CHECK-NOT: {{DW_TAG|NULL}}
-; CHECK: DW_AT_linkage_name
-; CHECK-NOT: {{DW_TAG|NULL}}
-; CHECK: DW_AT_name {{.*}} "static_member_function"
+; CHECK:   [[NS:0x[0-9a-f]+]]: DW_TAG_namespace
+; CHECK:     DW_AT_name ("ns")
+; CHECK:     [[GLOB_NS_VAR:0x[0-9a-f]+]]: DW_TAG_variable
+; CHECK:       DW_AT_name ("global_namespace_variable")
+; CHECK-NOT:   DW_AT_specification
+; CHECK:       DW_AT_location
+; CHECK-NOT:   DW_AT_specification
+; CHECK:     [[D_VAR:0x[0-9a-f]+]]: DW_TAG_variable
+; CHECK:       DW_AT_name ("d")
+; CHECK-NOT:   DW_AT_specification
+; CHECK:       DW_AT_location
+; CHECK-NOT:   DW_AT_specification
+; CHECK:     [[D:0x[0-9a-f]+]]: DW_TAG_structure_type
+; CHECK:       DW_AT_name ("D")
+; CHECK:       DW_TAG_member
+; CHECK:       NULL
+; CHECK:     DW_TAG_variable
+; CHECK:     [[GLOB_NS_FUNC:0x[0-9a-f]+]]: DW_TAG_subprogram
+; CHECK:       DW_AT_linkage_name
+; CHECK:       DW_AT_name ("global_namespace_function")
+; CHECK:     NULL
 
-; CHECK: [[INT:0x[0-9a-f]+]]: DW_TAG_base_type
-; CHECK-NOT: {{DW_TAG|NULL}}
-; CHECK: DW_AT_name {{.*}} "int"
+; CHECK:   DW_TAG_subprogram
+; CHECK:     DW_AT_name ("f3")
+; CHECK:     [[F3_Z:.*]]: DW_TAG_variable
+; CHECK:       DW_AT_name ("z")
+; CHECK:       DW_AT_location
+; CHECK:     NULL
 
-; CHECK: [[GLOB_VAR:0x[0-9a-f]+]]: DW_TAG_variable
-; CHECK-NOT: {{DW_TAG|NULL}}
-; CHECK: DW_AT_name {{.*}} "global_variable"
+; CHECK:   [[ANON:.*]]: DW_TAG_namespace
+; CHECK-NOT: DW_AT_name
+; CHECK:     [[ANON_I:.*]]: DW_TAG_variable
+; CHECK:       DW_AT_name ("i")
+; CHECK:       [[ANON_INNER:.*]]:  DW_TAG_namespace
+; CHECK:         DW_AT_name ("inner")
+; CHECK:         [[ANON_INNER_B:.*]]: DW_TAG_variable
+; CHECK:           DW_AT_name ("b")
+; CHECK:         NULL
+; CHECK:     NULL
 
-; CHECK: [[NS:0x[0-9a-f]+]]: DW_TAG_namespace
-; CHECK-NOT: {{DW_TAG|NULL}}
-; CHECK: DW_AT_name {{.*}} "ns"
-
-; CHECK: [[GLOB_NS_VAR:0x[0-9a-f]+]]: DW_TAG_variable
-; CHECK-NOT: {{DW_TAG|NULL|DW_AT_specification}}
-; CHECK: DW_AT_name {{.*}} "global_namespace_variable"
-; CHECK-NOT: {{DW_TAG|NULL|DW_AT_specification}}
-; CHECK-NOT: DW_AT_specification
-; CHECK: DW_AT_location
-; CHECK-NOT: DW_AT_specification
-
-; CHECK: [[D_VAR:0x[0-9a-f]+]]: DW_TAG_variable
-; CHECK-NOT: {{DW_TAG|NULL}}
-; CHECK: DW_AT_name {{.*}} "d"
-; CHECK-NOT: {{DW_TAG|NULL|DW_AT_specification}}
-; CHECK: DW_AT_location
-; CHECK-NOT: DW_AT_specification
-
-; CHECK: [[D:0x[0-9a-f]+]]: DW_TAG_structure_type
-; CHECK-NOT: {{DW_TAG|NULL}}
-; CHECK: DW_AT_name {{.*}} "D"
-
-; CHECK: [[GLOB_NS_FUNC:0x[0-9a-f]+]]: DW_TAG_subprogram
-; CHECK-NOT: {{DW_TAG|NULL}}
-; CHECK: DW_AT_linkage_name
-; CHECK-NOT: {{DW_TAG|NULL}}
-; CHECK: DW_AT_name {{.*}} "global_namespace_function"
-
-; CHECK: DW_TAG_subprogram
-; CHECK-NOT: {{DW_TAG|NULL}}
-; CHECK:   DW_AT_name {{.*}} "f3"
-; CHECK-NOT: {{DW_TAG|NULL}}
-; CHECK: [[F3_Z:.*]]:   DW_TAG_variable
-; CHECK-NOT: DW_TAG
-; CHECK:     DW_AT_name {{.*}} "z"
-; CHECK-NOT: {{DW_TAG|NULL}}
-; CHECK:     DW_AT_location
-; CHECK-NOT: {{DW_TAG|NULL}}
-; CHECK:   NULL
-; CHECK-NOT: {{DW_TAG|NULL}}
-
-; CHECK: [[ANON:.*]]: DW_TAG_namespace
+; CHECK:   [[OUTER:.*]]: DW_TAG_namespace
+; CHECK:     DW_AT_name ("outer")
+; CHECK:     [[OUTER_ANON:.*]]:  DW_TAG_namespace
 ; CHECK-NOT:   DW_AT_name
-; CHECK: [[ANON_I:.*]]: DW_TAG_variable
-; CHECK-NOT: {{DW_TAG|NULL}}
-; CHECK:     DW_AT_name {{.*}} "i"
-; CHECK-NOT: {{DW_TAG|NULL}}
-; CHECK: [[ANON_INNER:.*]]:  DW_TAG_namespace
-; CHECK-NOT: DW_TAG
-; CHECK:     DW_AT_name {{.*}} "inner"
-; CHECK-NOT: {{DW_TAG|NULL}}
-; CHECK: [[ANON_INNER_B:.*]]: DW_TAG_variable
-; CHECK-NOT: DW_TAG
-; CHECK:       DW_AT_name {{.*}} "b"
-; CHECK-NOT: {{DW_TAG|NULL}}
+; CHECK:       [[OUTER_ANON_C:.*]]: DW_TAG_variable
+; CHECK:         DW_AT_name ("c")
+; CHECK:       NULL
 ; CHECK:     NULL
-; CHECK-NOT: {{DW_TAG|NULL}}
+
+; CHECK:   DW_TAG_enumeration
+; CHECK:     [[UNNAMED_ENUM_ENUMERATOR:0x[0-9a-f]+]]:  DW_TAG_enumerator
+; CHECK:       DW_AT_name ("unnamed_enum_enumerator")
+; CHECK:     NULL
+
+; CHECK:   [[UNSIGNED_INT:0x[0-9a-f]+]]: DW_TAG_base_type
+; CHECK:     DW_AT_name ("unsigned int")
+
+; CHECK:   [[NAMED_ENUM:0x[0-9a-f]+]]: DW_TAG_enumeration
+; CHECK:     DW_AT_name ("named_enum")
+; CHECK:     [[NAMED_ENUM_ENUMERATOR:0x[0-9a-f]+]]:  DW_TAG_enumerator
+; CHECK:       DW_AT_name ("named_enum_enumerator")
+; CHECK:     NULL
+
+; CHECK:   [[NAMED_ENUM_CLASS:0x[0-9a-f]+]]: DW_TAG_enumeration
+; CHECK:     DW_AT_name ("named_enum_class")
+; CHECK:     [[NAMED_ENUM_CLASS_ENUMERATOR:0x[0-9a-f]+]]:  DW_TAG_enumerator
+; CHECK:       DW_AT_name ("named_enum_class_enumerator")
+; CHECK:     NULL
+
+; CHECK:   DW_TAG_imported_declaration
+
+; CHECK:   [[MEM_FUNC:0x[0-9a-f]+]]: DW_TAG_subprogram
+; CHECK:     DW_AT_specification {{.*}} "_ZN1C15member_functionEv"
+; CHECK:     DW_TAG_formal_parameter
+; CHECK:     NULL
+
+; CHECK:   [[STATIC_MEM_FUNC:0x[0-9a-f]+]]: DW_TAG_subprogram
+; CHECK:     DW_AT_specification {{.*}} "_ZN1C22static_member_functionEv"
+
+; CHECK:   [[GLOBAL_FUNC:0x[0-9a-f]+]]: DW_TAG_subprogram
+; CHECK:     DW_AT_linkage_name
+; CHECK:     DW_AT_name ("global_function")
+
+; CHECK:   DW_TAG_subprogram
+; CHECK:   DW_TAG_pointer_type
+; CHECK:   DW_TAG_pointer_type
 ; CHECK:   NULL
-; CHECK-NOT: {{DW_TAG|NULL}}
-
-; CHECK: [[OUTER:.*]]: DW_TAG_namespace
-; CHECK-NOT: {{DW_TAG|NULL}}
-; CHECK:   DW_AT_name {{.*}} "outer"
-; CHECK-NOT: {{DW_TAG|NULL}}
-; CHECK: [[OUTER_ANON:.*]]:  DW_TAG_namespace
-; CHECK-NOT: {{DW_TAG|NULL}}
-; CHECK-NOT:     DW_AT_name
-; CHECK: [[OUTER_ANON_C:.*]]: DW_TAG_variable
-; CHECK-NOT: DW_TAG
-; CHECK:       DW_AT_name {{.*}} "c"
-; CHECK-NOT: {{DW_TAG|NULL}}
-; CHECK:     NULL
-; CHECK-NOT: {{DW_TAG|NULL}}
-; CHECK:     NULL
-; CHECK-NOT: {{DW_TAG|NULL}}
-
-; CHECK: DW_TAG_enumeration
-; CHECK-NOT: {{DW_AT_name|DW_TAG|NULL}}
-; CHECK: [[UNNAMED_ENUM_ENUMERATOR:0x[0-9a-f]+]]:  DW_TAG_enumerator
-; CHECK-NOT: {{DW_TAG|NULL}}
-; CHECK: DW_AT_name {{.*}} "unnamed_enum_enumerator"
-; CHECK-NOT: {{DW_TAG|NULL}}
-; CHECK: NULL
-; CHECK-NOT: {{DW_TAG|NULL}}
-
-; CHECK: [[UNSIGNED_INT:0x[0-9a-f]+]]: DW_TAG_base_type
-; CHECK-NOT: {{DW_TAG|NULL}}
-; CHECK:   DW_AT_name {{.*}} "unsigned int"
-; CHECK-NOT: {{DW_TAG|NULL}}
-
-; CHECK: [[NAMED_ENUM:0x[0-9a-f]+]]: DW_TAG_enumeration
-; CHECK-NOT: {{DW_TAG|NULL}}
-; CHECK:   DW_AT_name {{.*}} "named_enum"
-; CHECK-NOT: {{DW_TAG|NULL}}
-; CHECK: [[NAMED_ENUM_ENUMERATOR:0x[0-9a-f]+]]:  DW_TAG_enumerator
-; CHECK-NOT: {{DW_TAG|NULL}}
-; CHECK: DW_AT_name {{.*}} "named_enum_enumerator"
-; CHECK-NOT: {{DW_TAG|NULL}}
-; CHECK: NULL
-; CHECK-NOT: {{DW_TAG|NULL}}
-
-; CHECK: [[NAMED_ENUM_CLASS:0x[0-9a-f]+]]: DW_TAG_enumeration
-; CHECK-NOT: {{DW_TAG|NULL}}
-; CHECK:   DW_AT_name {{.*}} "named_enum_class"
-; CHECK-NOT: {{DW_TAG|NULL}}
-; CHECK: [[NAMED_ENUM_CLASS_ENUMERATOR:0x[0-9a-f]+]]:  DW_TAG_enumerator
-; CHECK-NOT: {{DW_TAG|NULL}}
-; CHECK: DW_AT_name {{.*}} "named_enum_class_enumerator"
-; CHECK-NOT: {{DW_TAG|NULL}}
-; CHECK: NULL
-; CHECK-NOT: {{DW_TAG|NULL}}
-
-; CHECK: DW_TAG_imported_declaration
-; CHECK-NOT: {{DW_TAG|NULL}}
-
-; CHECK: [[MEM_FUNC:0x[0-9a-f]+]]: DW_TAG_subprogram
-; CHECK-NOT: {{DW_TAG|NULL}}
-; CHECK: DW_AT_specification {{.*}} "_ZN1C15member_functionEv"
-
-; CHECK: [[STATIC_MEM_FUNC:0x[0-9a-f]+]]: DW_TAG_subprogram
-; CHECK-NOT: {{DW_TAG|NULL}}
-; CHECK: DW_AT_specification {{.*}} "_ZN1C22static_member_functionEv"
-
-; CHECK: [[GLOBAL_FUNC:0x[0-9a-f]+]]: DW_TAG_subprogram
-; CHECK-NOT: {{DW_TAG|NULL}}
-; CHECK: DW_AT_linkage_name
-; CHECK-NOT: {{DW_TAG|NULL}}
-; CHECK: DW_AT_name {{.*}} "global_function"
 
 ; CHECK-LABEL: .debug_gnu_pubnames contents:
 ; CHECK-NEXT: length = {{.*}}, version = 0x0002, unit_offset = 0x00000000, unit_size = {{.*}}

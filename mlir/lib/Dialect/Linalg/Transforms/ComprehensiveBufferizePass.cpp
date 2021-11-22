@@ -7,7 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "PassDetail.h"
+#include "mlir/Dialect/Linalg/ComprehensiveBufferize/BufferizableOpInterface.h"
 #include "mlir/Dialect/Linalg/ComprehensiveBufferize/ComprehensiveBufferize.h"
+#include "mlir/Dialect/Linalg/ComprehensiveBufferize/LinalgInterfaceImpl.h"
 #include "mlir/Dialect/Linalg/Passes.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Pass/PassManager.h"
@@ -16,6 +18,7 @@
 
 using namespace mlir;
 using namespace mlir::linalg;
+using namespace mlir::linalg::comprehensive_bufferize;
 
 namespace {
 struct LinalgComprehensiveModuleBufferize
@@ -32,8 +35,9 @@ struct LinalgComprehensiveModuleBufferize
     registry
         .insert<linalg::LinalgDialect, memref::MemRefDialect,
                 tensor::TensorDialect, vector::VectorDialect, scf::SCFDialect,
-                arith::ArithmeticDialect, StandardOpsDialect>();
+                arith::ArithmeticDialect, StandardOpsDialect, AffineDialect>();
     registerBufferizableOpInterfaceExternalModels(registry);
+    linalg_ext::registerBufferizableOpInterfaceExternalModels(registry);
   }
 };
 } // end namespace
@@ -59,9 +63,19 @@ void LinalgComprehensiveModuleBufferize::runOnOperation() {
     options.allocationFns->deallocationFn = [](OpBuilder &b, Location loc,
                                                Value v) {};
   }
+  // TODO: Change to memref::CopyOp (default memCpyFn).
+  options.allocationFns->memCpyFn = [](OpBuilder &b, Location loc, Value from,
+                                       Value to) {
+    b.create<linalg::CopyOp>(loc, from, to);
+  };
+
   options.allowReturnMemref = allowReturnMemref;
   options.analysisFuzzerSeed = analysisFuzzerSeed;
   options.testAnalysisOnly = testAnalysisOnly;
+
+  // Enable InitTensorOp elimination.
+  options.addPostAnalysisStep<
+      linalg_ext::InsertSliceAnchoredInitTensorEliminationStep>();
 
   ModuleOp moduleOp = getOperation();
   applyEnablingTransformations(moduleOp);

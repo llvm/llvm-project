@@ -10,6 +10,7 @@
 #define LLVM_TOOLS_LLVM_PROFGEN_PROFILEDBINARY_H
 
 #include "CallContext.h"
+#include "ErrorHandling.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
@@ -172,6 +173,8 @@ class ProfiledBinary {
   Triple TheTriple;
   // The runtime base address that the first executable segment is loaded at.
   uint64_t BaseAddress = 0;
+  // The runtime base address that the first loadabe segment is loaded at.
+  uint64_t FirstLoadableAddress = 0;
   // The preferred load address of each executable segment.
   std::vector<uint64_t> PreferredTextSegmentAddresses;
   // The file offset of each executable segment.
@@ -261,6 +264,9 @@ class ProfiledBinary {
   // function and also set false to the non-function label.
   void setIsFuncEntry(uint64_t Offset, StringRef RangeSymName);
 
+  // Warn if no entry range exists in the function.
+  void warnNoFuncEntry();
+
   /// Dissassemble the text section and build various address maps.
   void disassemble(const ELFObjectFileBase *O);
 
@@ -301,6 +307,8 @@ public:
 
   // Return the preferred load address for the first executable segment.
   uint64_t getPreferredBaseAddress() const { return PreferredTextSegmentAddresses[0]; }
+  // Return the preferred load address for the first loadable segment.
+  uint64_t getFirstLoadableAddress() const { return FirstLoadableAddress; }
   // Return the file offset for the first executable segment.
   uint64_t getTextSegmentOffset() const { return TextSegmentOffsets[0]; }
   const std::vector<uint64_t> &getPreferredTextSegmentAddresses() const {

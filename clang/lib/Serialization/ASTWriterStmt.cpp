@@ -2380,6 +2380,7 @@ void ASTStmtWriter::VisitOMPBarrierDirective(OMPBarrierDirective *D) {
 
 void ASTStmtWriter::VisitOMPTaskwaitDirective(OMPTaskwaitDirective *D) {
   VisitStmt(D);
+  Record.push_back(D->getNumClauses());
   VisitOMPExecutableDirective(D);
   Code = serialization::STMT_OMP_TASKWAIT_DIRECTIVE;
 }

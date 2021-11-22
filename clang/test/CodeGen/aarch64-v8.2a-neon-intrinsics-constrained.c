@@ -18,7 +18,7 @@
 // RUN: -fallow-half-arguments-and-returns -flax-vector-conversions=none -S -disable-O0-optnone -emit-llvm -o - %s \
 // RUN: | opt -S -mem2reg | llc -o=- - \
 // RUN: | FileCheck --check-prefix=COMMON --check-prefix=CHECK-ASM %s
-//
+
 // REQUIRES: aarch64-registered-target
 
 // Test that the constrained intrinsics are picking up the exception

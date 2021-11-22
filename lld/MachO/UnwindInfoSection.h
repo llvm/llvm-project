@@ -34,6 +34,7 @@ protected:
   llvm::MapVector<std::pair<const InputSection *, uint64_t /*Defined::value*/>,
                   const Defined *>
       symbols;
+  std::vector<decltype(symbols)::value_type> symbolsVec;
   uint64_t unwindInfoSize = 0;
   bool allEntriesAreOmitted = true;
 };

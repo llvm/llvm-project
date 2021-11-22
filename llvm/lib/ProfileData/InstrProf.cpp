@@ -74,53 +74,82 @@ static cl::opt<unsigned> StaticFuncStripDirNamePrefix(
     cl::desc("Strip specified level of directory name from source path in "
              "the profile counter name for static functions."));
 
-static std::string getInstrProfErrString(instrprof_error Err) {
+static std::string getInstrProfErrString(instrprof_error Err,
+                                         const std::string &ErrMsg = "") {
+  std::string Msg;
+  raw_string_ostream OS(Msg);
+
   switch (Err) {
   case instrprof_error::success:
-    return "success";
+    OS << "success";
+    break;
   case instrprof_error::eof:
-    return "end of File";
+    OS << "end of File";
+    break;
   case instrprof_error::unrecognized_format:
-    return "unrecognized instrumentation profile encoding format";
+    OS << "unrecognized instrumentation profile encoding format";
+    break;
   case instrprof_error::bad_magic:
-    return "invalid instrumentation profile data (bad magic)";
+    OS << "invalid instrumentation profile data (bad magic)";
+    break;
   case instrprof_error::bad_header:
-    return "invalid instrumentation profile data (file header is corrupt)";
+    OS << "invalid instrumentation profile data (file header is corrupt)";
+    break;
   case instrprof_error::unsupported_version:
-    return "unsupported instrumentation profile format version";
+    OS << "unsupported instrumentation profile format version";
+    break;
   case instrprof_error::unsupported_hash_type:
-    return "unsupported instrumentation profile hash type";
+    OS << "unsupported instrumentation profile hash type";
+    break;
   case instrprof_error::too_large:
-    return "too much profile data";
+    OS << "too much profile data";
+    break;
   case instrprof_error::truncated:
-    return "truncated profile data";
+    OS << "truncated profile data";
+    break;
   case instrprof_error::malformed:
-    return "malformed instrumentation profile data";
+    OS << "malformed instrumentation profile data";
+    break;
   case instrprof_error::invalid_prof:
-    return "invalid profile created. Please file a bug "
-           "at: " BUG_REPORT_URL
-           " and include the profraw files that caused this error.";
+    OS << "invalid profile created. Please file a bug "
+          "at: " BUG_REPORT_URL
+          " and include the profraw files that caused this error.";
+    break;
   case instrprof_error::unknown_function:
-    return "no profile data available for function";
+    OS << "no profile data available for function";
+    break;
   case instrprof_error::hash_mismatch:
-    return "function control flow change detected (hash mismatch)";
+    OS << "function control flow change detected (hash mismatch)";
+    break;
   case instrprof_error::count_mismatch:
-    return "function basic block count change detected (counter mismatch)";
+    OS << "function basic block count change detected (counter mismatch)";
+    break;
   case instrprof_error::counter_overflow:
-    return "counter overflow";
+    OS << "counter overflow";
+    break;
   case instrprof_error::value_site_count_mismatch:
-    return "function value site count change detected (counter mismatch)";
+    OS << "function value site count change detected (counter mismatch)";
+    break;
   case instrprof_error::compress_failed:
-    return "failed to compress data (zlib)";
+    OS << "failed to compress data (zlib)";
+    break;
   case instrprof_error::uncompress_failed:
-    return "failed to uncompress data (zlib)";
+    OS << "failed to uncompress data (zlib)";
+    break;
   case instrprof_error::empty_raw_profile:
-    return "empty raw profile file";
+    OS << "empty raw profile file";
+    break;
   case instrprof_error::zlib_unavailable:
-    return "profile uses zlib compression but the profile reader was built "
-           "without zlib support";
+    OS << "profile uses zlib compression but the profile reader was built "
+          "without zlib support";
+    break;
   }
-  llvm_unreachable("A value of instrprof_error has no message.");
+
+  // If optional error message is not empty, append it to the message.
+  if (!ErrMsg.empty())
+    OS << ": " << ErrMsg;
+
+  return OS.str();
 }
 
 namespace {
@@ -217,7 +246,7 @@ void SoftInstrProfErrors::addError(instrprof_error IE) {
 }
 
 std::string InstrProfError::message() const {
-  return getInstrProfErrString(Err);
+  return getInstrProfErrString(Err, Msg);
 }
 
 char InstrProfError::ID = 0;
@@ -878,18 +907,23 @@ static std::unique_ptr<ValueProfData> allocValueProfData(uint32_t TotalSize) {
 
 Error ValueProfData::checkIntegrity() {
   if (NumValueKinds > IPVK_Last + 1)
-    return make_error<InstrProfError>(instrprof_error::malformed);
-  // Total size needs to be mulltiple of quadword size.
+    return make_error<InstrProfError>(
+        instrprof_error::malformed, "number of value profile kinds is invalid");
+  // Total size needs to be multiple of quadword size.
   if (TotalSize % sizeof(uint64_t))
-    return make_error<InstrProfError>(instrprof_error::malformed);
+    return make_error<InstrProfError>(
+        instrprof_error::malformed, "total size is not multiples of quardword");
 
   ValueProfRecord *VR = getFirstValueProfRecord(this);
   for (uint32_t K = 0; K < this->NumValueKinds; K++) {
     if (VR->Kind > IPVK_Last)
-      return make_error<InstrProfError>(instrprof_error::malformed);
+      return make_error<InstrProfError>(instrprof_error::malformed,
+                                        "value kind is invalid");
     VR = getValueProfRecordNext(VR);
     if ((char *)VR - (char *)this > (ptrdiff_t)TotalSize)
-      return make_error<InstrProfError>(instrprof_error::malformed);
+      return make_error<InstrProfError>(
+          instrprof_error::malformed,
+          "value profile address is greater than total size");
   }
   return Error::success();
 }

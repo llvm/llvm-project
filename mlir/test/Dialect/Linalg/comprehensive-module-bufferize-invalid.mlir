@@ -35,6 +35,22 @@ func @swappy(%cond1 : i1, %cond2 : i1, %t1 : tensor<f32>, %t2 : tensor<f32>)
 
 // -----
 
+func @scf_if_not_equivalent(
+    %cond: i1, %t1: tensor<?xf32> {linalg.inplaceable = true},
+    %idx: index) -> tensor<?xf32> {
+  // expected-error @+1 {{result buffer is ambiguous}}
+  %r = scf.if %cond -> (tensor<?xf32>) {
+    scf.yield %t1 : tensor<?xf32>
+  } else {
+    // This buffer aliases, but is not equivalent.
+    %t2 = tensor.extract_slice %t1 [%idx] [%idx] [1] : tensor<?xf32> to tensor<?xf32>
+    scf.yield %t2 : tensor<?xf32>
+  }
+  return %r : tensor<?xf32>
+}
+
+// -----
+
 // expected-error @-3 {{expected callgraph to be free of circular dependencies}}
 
 func @foo() {
@@ -144,23 +160,10 @@ func @mini_test_case1() -> tensor<10x20xf32> {
 // -----
 
 func @main() -> tensor<4xi32> {
-  // expected-error @+1 {{expected result-less scf.execute_region containing op}}
+  // expected-error @+1 {{unsupported op with tensors}}
   %r = scf.execute_region -> tensor<4xi32> {
     %A = arith.constant dense<[1, 2, 3, 4]> : tensor<4xi32>
     scf.yield %A: tensor<4xi32>
   }
   return %r: tensor<4xi32>
-}
-
-// -----
-
-func @main() -> i32 {
-  %c0 = arith.constant 0: index
-  // expected-error @+1 {{expected result-less scf.execute_region containing op}}
-  %r = scf.execute_region -> i32 {
-    %A = arith.constant dense<[1, 2, 3, 4]> : tensor<4xi32>
-    %e = tensor.extract %A[%c0]: tensor<4xi32>
-    scf.yield %e: i32
-  }
-  return %r: i32
 }
