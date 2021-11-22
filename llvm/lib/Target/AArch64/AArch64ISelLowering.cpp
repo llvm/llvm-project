@@ -11924,6 +11924,12 @@ static bool areOperandsOfVmullHighP64(Value *Op1, Value *Op2) {
   return isOperandOfVmullHighP64(Op1) && isOperandOfVmullHighP64(Op2);
 }
 
+static bool isSplatShuffle(Value *V) {
+  if (auto *Shuf = dyn_cast<ShuffleVectorInst>(V))
+    return is_splat(Shuf->getShuffleMask());
+  return false;
+}
+
 /// Check if sinking \p I's operands to I's basic block is profitable, because
 /// the operands can be folded into a target instruction, e.g.
 /// shufflevectors extracts and/or sext/zext can be folded into (u,s)subl(2).
@@ -11934,12 +11940,24 @@ bool AArch64TargetLowering::shouldSinkOperands(
 
   if (IntrinsicInst *II = dyn_cast<IntrinsicInst>(I)) {
     switch (II->getIntrinsicID()) {
+    case Intrinsic::aarch64_neon_smull:
     case Intrinsic::aarch64_neon_umull:
-      if (!areExtractShuffleVectors(II->getOperand(0), II->getOperand(1)))
-        return false;
-      Ops.push_back(&II->getOperandUse(0));
-      Ops.push_back(&II->getOperandUse(1));
-      return true;
+      if (areExtractShuffleVectors(II->getOperand(0), II->getOperand(1))) {
+        Ops.push_back(&II->getOperandUse(0));
+        Ops.push_back(&II->getOperandUse(1));
+        return true;
+      }
+      LLVM_FALLTHROUGH;
+
+    case Intrinsic::aarch64_neon_sqdmull:
+    case Intrinsic::aarch64_neon_sqdmulh:
+    case Intrinsic::aarch64_neon_sqrdmulh:
+      // Sink splats for index lane variants
+      if (isSplatShuffle(II->getOperand(0)))
+        Ops.push_back(&II->getOperandUse(0));
+      if (isSplatShuffle(II->getOperand(1)))
+        Ops.push_back(&II->getOperandUse(1));
+      return !Ops.empty();
 
     case Intrinsic::aarch64_neon_pmull64:
       if (!areOperandsOfVmullHighP64(II->getArgOperand(0),
