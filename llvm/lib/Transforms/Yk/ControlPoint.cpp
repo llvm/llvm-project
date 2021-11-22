@@ -63,12 +63,14 @@
 //    value that indicates if we should start/stop tracing, or jump to machine
 //    code etc.
 //
-//  - Because we haven't yet implemented guards or trace stitching, a machine
-//    code trace will always return to the interpreter after one full run of
-//    the traced interpreter loop. This means that the JIT doesn't yet
-//    correctly implement the right program semantics. When we have trace
-//    stitching, a machine code trace will only return upon a guard failure.
+//  - Guards are currently assumed to abort the program.
+//    https://github.com/ykjit/yk/issues/443
 //
+//  - The block that performs the call to JITted code branches back to itself
+//    to achieve rudimentary trace stitching. The looping should really be
+//    implemented in the JITted code itself so that it isn't necessary to
+//    repeatedly enter and exit the JITted code.
+//    https://github.com/ykjit/yk/issues/442
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Yk/ControlPoint.h"
@@ -214,7 +216,7 @@ void createControlPoint(Module &Mod, Function *F, std::vector<Value *> LiveVars,
   CallInst *CTResult = Builder.CreateCall(FType, CastTrace, F->getArg(1));
   createJITStatePrint(Builder, &Mod, "exit-jit-code");
   CTResult->setTailCall(true);
-  Builder.CreateBr(BBReturn);
+  Builder.CreateBr(BBExecuteTrace);
 
   // Create block that decides when to stop tracing.
   Builder.SetInsertPoint(BBTracing);
@@ -243,7 +245,6 @@ void createControlPoint(Module &Mod, Function *F, std::vector<Value *> LiveVars,
   Value *YkCtrlPointVars = F->getArg(1);
   PHINode *Phi = Builder.CreatePHI(YkCtrlPointStruct, 3);
   Phi->addIncoming(YkCtrlPointVars, BBHasTrace);
-  Phi->addIncoming(CTResult, BBExecuteTrace);
   Phi->addIncoming(YkCtrlPointVars, BBTracing);
   Phi->addIncoming(YkCtrlPointVars, BBHasNoTrace);
   Phi->addIncoming(YkCtrlPointVars, BBStopTracing);
