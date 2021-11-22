@@ -1254,7 +1254,7 @@ void HCE::collect(MachineFunction &MF) {
 
 void HCE::assignInits(const ExtRoot &ER, unsigned Begin, unsigned End,
       AssignmentMap &IMap) {
-  // Sanity check: make sure that all extenders in the range [Begin..End)
+  // Basic correctness: make sure that all extenders in the range [Begin..End)
   // share the same root ER.
   for (unsigned I = Begin; I != End; ++I)
     assert(ER == ExtRoot(Extenders[I].getOp()));

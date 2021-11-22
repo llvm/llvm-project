@@ -411,7 +411,7 @@ bool HexagonGenPredicate::convertToPredForm(MachineInstr *MI) {
     NumOps = 2;
   }
 
-  // Some sanity: check that def is in operand #0.
+  // Check that def is in operand #0.
   MachineOperand &Op0 = MI->getOperand(0);
   assert(Op0.isDef());
   RegisterSubReg OutR(Op0);

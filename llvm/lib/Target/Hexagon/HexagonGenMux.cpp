@@ -328,7 +328,7 @@ bool HexagonGenMux::genMuxInBlock(MachineBasicBlock &B) {
     unsigned MxOpc = getMuxOpcode(*MX.SrcT, *MX.SrcF);
     if (!MxOpc)
       continue;
-    // Basic sanity check: since we are deleting instructions, validate the
+    // Basic correctness check: since we are deleting instructions, validate the
     // iterators. There is a possibility that one of Def1 or Def2 is translated
     // to "mux" and being considered for other "mux" instructions.
     if (!MX.At->getParent() || !MX.Def1->getParent() || !MX.Def2->getParent())

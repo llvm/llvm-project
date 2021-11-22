@@ -1501,7 +1501,7 @@ bool HexagonGenInsert::runOnMachineFunction(MachineFunction &MF) {
   bool Timing = OptTiming, TimingDetail = Timing && OptTimingDetail;
   bool Changed = false;
 
-  // Sanity check: one, but not both.
+  // Verify: one, but not both.
   assert(!OptSelectAll0 || !OptSelectHas0);
 
   IFMap.clear();
