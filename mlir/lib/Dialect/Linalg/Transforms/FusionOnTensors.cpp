@@ -390,6 +390,17 @@ ValueRange TileLoopNest::getRootOpReplacementResults() {
   return tileLoopOps.front()->getOpResults();
 }
 
+SmallVector<LinalgOp> TileLoopNest::getAllTiledAndFusedOps() {
+  SmallVector<LinalgOp> result;
+  for (const auto &kvp : tiledRootAndFusedOpsLoops) {
+    auto linalgOp = dyn_cast<LinalgOp>(kvp.getFirst());
+    assert(linalgOp &&
+           "expect all tiled and fused operations are linalg operations");
+    result.push_back(linalgOp);
+  }
+  return result;
+}
+
 //===----------------------------------------------------------------------===//
 // Tile and fuse entry-points.
 //===----------------------------------------------------------------------===//

@@ -520,6 +520,75 @@ LogicalResult mlir::linalg::LinalgPaddingPattern::matchAndRewrite(
   return success();
 }
 
+/// Linalg tile and fuse tensor ops pattern.
+mlir::linalg::LinalgTileAndFuseTensorOpsPattern::
+    LinalgTileAndFuseTensorOpsPattern(MLIRContext *context,
+                                      LinalgTilingAndFusionOptions options,
+                                      LinalgTransformationFilter filter,
+                                      PatternBenefit benefit)
+    : RewritePattern(MatchAnyOpTypeTag(), benefit, context), filter(filter),
+      options(options) {}
+
+mlir::linalg::LinalgTileAndFuseTensorOpsPattern::
+    LinalgTileAndFuseTensorOpsPattern(StringRef opName, MLIRContext *context,
+                                      LinalgTilingAndFusionOptions options,
+                                      LinalgTransformationFilter filter,
+                                      PatternBenefit benefit)
+    : RewritePattern(opName, benefit, context), filter(filter),
+      options(options) {}
+
+LogicalResult mlir::linalg::LinalgTileAndFuseTensorOpsPattern::matchAndRewrite(
+    Operation *op, PatternRewriter &rewriter) const {
+  LinalgOp rootOp = dyn_cast<LinalgOp>(op);
+  if (!rootOp)
+    return failure();
+  if (failed(filter.checkAndNotify(rewriter, op)))
+    return failure();
+
+  // Check `tileSizes` contains a tile size for every `rootOp` loop dimension.
+  if (options.tileSizes.size() < rootOp.getNumLoops())
+    return rewriter.notifyMatchFailure(op, "expect #tile sizes >= #loops");
+
+  // Check `tileInterchange` contains no entries or as many as `tileSizes`.
+  if (!options.tileInterchange.empty() &&
+      options.tileInterchange.size() != options.tileSizes.size())
+    return rewriter.notifyMatchFailure(
+        op, "expect the number of tile sizes and interchange dims to match");
+
+  // Copy the `tileSizes` and `tileInterchange` prefixes needed for `rootOp`.
+  SmallVector<int64_t> rootTileSizes(options.tileSizes.begin(),
+                                     options.tileSizes.begin() +
+                                         rootOp.getNumLoops());
+  SmallVector<int64_t> rootInterchange =
+      options.tileInterchange.empty()
+          ? llvm::to_vector<6>(llvm::seq<int64_t>(0, rootOp.getNumLoops()))
+          : SmallVector<int64_t>(options.tileInterchange.begin(),
+                                 options.tileInterchange.begin() +
+                                     rootOp.getNumLoops());
+
+  // Check `rootInterchange` is a permutation of the `rootOp` loop dimensions.
+  // It has to be a permutation since the tiling cannot tile the same loop
+  // dimension multiple times.
+  if (!isPermutation(rootInterchange))
+    return rewriter.notifyMatchFailure(
+        op, "expect the tile interchange permutes the root loops");
+
+  // Tile `rootOp` and fuse its producers.
+  FailureOr<TileLoopNest> tileLoopNest = tileConsumerAndFuseProducers(
+      rewriter, rootOp, rootTileSizes, rootInterchange);
+  if (failed(tileLoopNest))
+    return rewriter.notifyMatchFailure(
+        op, "tileConsumerAndFuseProducers failed unexpectedly");
+
+  // Replace all uses of the tiled loop operation.
+  rootOp->replaceAllUsesWith(tileLoopNest->getRootOpReplacementResults());
+
+  // Apply the filter if specified.
+  for (LinalgOp linalgOp : tileLoopNest->getAllTiledAndFusedOps())
+    filter.replaceLinalgTransformationFilter(rewriter, linalgOp);
+  return failure();
+}
+
 /// Linalg generic interchange pattern.
 mlir::linalg::GenericOpInterchangePattern::GenericOpInterchangePattern(
     MLIRContext *context, ArrayRef<unsigned> interchangeVector,

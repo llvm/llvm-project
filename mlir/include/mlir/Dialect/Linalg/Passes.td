@@ -235,6 +235,18 @@ def LinalgTileAndFuseTensorOps
   let dependentDialects = ["linalg::LinalgDialect", "scf::SCFDialect"];
 }
 
+def LinalgStrategyTileAndFusePass
+    : FunctionPass<"linalg-strategy-tile-and-fuse-pass"> {
+  let summary = "Configurable pass to apply pattern-based tiling and fusion.";
+  let constructor = "mlir::createLinalgStrategyTileAndFusePass()";
+  let options = [
+    Option<"anchorFuncName", "anchor-func", "std::string", /*default=*/"",
+      "Which func op is the anchor to latch on.">,
+    Option<"anchorOpName", "anchor-op", "std::string", /*default=*/"",
+      "Which linalg op within the func is the anchor to latch on.">,
+  ];
+}
+
 def LinalgStrategyTilePass
     : FunctionPass<"linalg-strategy-tile-pass"> {
   let summary = "Configurable pass to apply pattern-based linalg tiling.";
