@@ -18,7 +18,7 @@ define i32 @test() nounwind {
 ; RV32I-FPELIM-NEXT:    sw zero, 8(sp)
 ; RV32I-FPELIM-NEXT:    addi a0, sp, 12
 ; RV32I-FPELIM-NEXT:    call test1@plt
-; RV32I-FPELIM-NEXT:    mv a0, zero
+; RV32I-FPELIM-NEXT:    li a0, 0
 ; RV32I-FPELIM-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
 ; RV32I-FPELIM-NEXT:    addi sp, sp, 32
 ; RV32I-FPELIM-NEXT:    ret
@@ -36,9 +36,9 @@ define i32 @test() nounwind {
 ; RV32I-WITHFP-NEXT:    sw zero, -32(s0)
 ; RV32I-WITHFP-NEXT:    addi a0, s0, -28
 ; RV32I-WITHFP-NEXT:    call test1@plt
-; RV32I-WITHFP-NEXT:    mv a0, zero
-; RV32I-WITHFP-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
+; RV32I-WITHFP-NEXT:    li a0, 0
 ; RV32I-WITHFP-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
+; RV32I-WITHFP-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
 ; RV32I-WITHFP-NEXT:    addi sp, sp, 32
 ; RV32I-WITHFP-NEXT:    ret
   %key = alloca %struct.key_t, align 4

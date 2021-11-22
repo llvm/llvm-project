@@ -91,10 +91,10 @@ define i32 @f4() shadowcallstack {
 ; RV32-NEXT:    add a1, s3, s1
 ; RV32-NEXT:    add a0, s0, a0
 ; RV32-NEXT:    add a0, a1, a0
-; RV32-NEXT:    lw s3, 0(sp) # 4-byte Folded Reload
-; RV32-NEXT:    lw s1, 4(sp) # 4-byte Folded Reload
-; RV32-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
 ; RV32-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
+; RV32-NEXT:    lw s1, 4(sp) # 4-byte Folded Reload
+; RV32-NEXT:    lw s3, 0(sp) # 4-byte Folded Reload
 ; RV32-NEXT:    addi sp, sp, 16
 ; RV32-NEXT:    lw ra, -4(s2)
 ; RV32-NEXT:    addi s2, s2, -4
@@ -124,10 +124,10 @@ define i32 @f4() shadowcallstack {
 ; RV64-NEXT:    addw a1, s3, s1
 ; RV64-NEXT:    addw a0, s0, a0
 ; RV64-NEXT:    addw a0, a1, a0
-; RV64-NEXT:    ld s3, 0(sp) # 8-byte Folded Reload
-; RV64-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
-; RV64-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
 ; RV64-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
+; RV64-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
+; RV64-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
+; RV64-NEXT:    ld s3, 0(sp) # 8-byte Folded Reload
 ; RV64-NEXT:    addi sp, sp, 32
 ; RV64-NEXT:    ld ra, -8(s2)
 ; RV64-NEXT:    addi s2, s2, -8

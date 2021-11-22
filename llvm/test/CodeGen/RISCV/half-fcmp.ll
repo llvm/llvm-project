@@ -11,22 +11,22 @@
 define i32 @fcmp_false(half %a, half %b) nounwind {
 ; RV32IZFH-LABEL: fcmp_false:
 ; RV32IZFH:       # %bb.0:
-; RV32IZFH-NEXT:    mv a0, zero
+; RV32IZFH-NEXT:    li a0, 0
 ; RV32IZFH-NEXT:    ret
 ;
 ; RV64IZFH-LABEL: fcmp_false:
 ; RV64IZFH:       # %bb.0:
-; RV64IZFH-NEXT:    mv a0, zero
+; RV64IZFH-NEXT:    li a0, 0
 ; RV64IZFH-NEXT:    ret
 ;
 ; RV32I-LABEL: fcmp_false:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    mv a0, zero
+; RV32I-NEXT:    li a0, 0
 ; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: fcmp_false:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    mv a0, zero
+; RV64I-NEXT:    li a0, 0
 ; RV64I-NEXT:    ret
   %1 = fcmp false half %a, %b
   %2 = zext i1 %1 to i32
@@ -502,22 +502,22 @@ define i32 @fcmp_uno(half %a, half %b) nounwind {
 define i32 @fcmp_true(half %a, half %b) nounwind {
 ; RV32IZFH-LABEL: fcmp_true:
 ; RV32IZFH:       # %bb.0:
-; RV32IZFH-NEXT:    addi a0, zero, 1
+; RV32IZFH-NEXT:    li a0, 1
 ; RV32IZFH-NEXT:    ret
 ;
 ; RV64IZFH-LABEL: fcmp_true:
 ; RV64IZFH:       # %bb.0:
-; RV64IZFH-NEXT:    addi a0, zero, 1
+; RV64IZFH-NEXT:    li a0, 1
 ; RV64IZFH-NEXT:    ret
 ;
 ; RV32I-LABEL: fcmp_true:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    addi a0, zero, 1
+; RV32I-NEXT:    li a0, 1
 ; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: fcmp_true:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    addi a0, zero, 1
+; RV64I-NEXT:    li a0, 1
 ; RV64I-NEXT:    ret
   %1 = fcmp true half %a, %b
   %2 = zext i1 %1 to i32

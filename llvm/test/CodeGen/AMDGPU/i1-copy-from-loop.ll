@@ -8,10 +8,10 @@ define amdgpu_ps void @i1_copy_from_loop(<4 x i32> inreg %rsrc, i32 %tid) {
 ; SI-NEXT:    s_mov_b64 s[4:5], 0
 ; SI-NEXT:    ; implicit-def: $sgpr6_sgpr7
 ; SI-NEXT:    ; implicit-def: $sgpr8_sgpr9
-; SI-NEXT:    s_branch BB0_3
-; SI-NEXT:  BB0_1: ; in Loop: Header=BB0_3 Depth=1
+; SI-NEXT:    s_branch .LBB0_3
+; SI-NEXT:  .LBB0_1: ; in Loop: Header=BB0_3 Depth=1
 ; SI-NEXT:    ; implicit-def: $sgpr14
-; SI-NEXT:  BB0_2: ; %Flow
+; SI-NEXT:  .LBB0_2: ; %Flow
 ; SI-NEXT:    ; in Loop: Header=BB0_3 Depth=1
 ; SI-NEXT:    s_and_b64 s[12:13], exec, s[8:9]
 ; SI-NEXT:    s_or_b64 s[4:5], s[12:13], s[4:5]
@@ -19,14 +19,14 @@ define amdgpu_ps void @i1_copy_from_loop(<4 x i32> inreg %rsrc, i32 %tid) {
 ; SI-NEXT:    s_and_b64 s[10:11], s[10:11], exec
 ; SI-NEXT:    s_or_b64 s[6:7], s[6:7], s[10:11]
 ; SI-NEXT:    s_andn2_b64 exec, exec, s[4:5]
-; SI-NEXT:    s_cbranch_execz BB0_7
-; SI-NEXT:  BB0_3: ; %for.body
+; SI-NEXT:    s_cbranch_execz .LBB0_7
+; SI-NEXT:  .LBB0_3: ; %for.body
 ; SI-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; SI-NEXT:    s_cmp_lt_u32 s14, 4
 ; SI-NEXT:    s_cselect_b64 s[10:11], -1, 0
 ; SI-NEXT:    s_or_b64 s[8:9], s[8:9], exec
 ; SI-NEXT:    s_cmp_gt_u32 s14, 3
-; SI-NEXT:    s_cbranch_scc1 BB0_1
+; SI-NEXT:    s_cbranch_scc1 .LBB0_1
 ; SI-NEXT:  ; %bb.4: ; %mid.loop
 ; SI-NEXT:    ; in Loop: Header=BB0_3 Depth=1
 ; SI-NEXT:    v_mov_b32_e32 v1, s14
@@ -43,14 +43,14 @@ define amdgpu_ps void @i1_copy_from_loop(<4 x i32> inreg %rsrc, i32 %tid) {
 ; SI-NEXT:  ; %bb.6: ; %Flow1
 ; SI-NEXT:    ; in Loop: Header=BB0_3 Depth=1
 ; SI-NEXT:    s_or_b64 exec, exec, s[12:13]
-; SI-NEXT:    s_branch BB0_2
-; SI-NEXT:  BB0_7: ; %for.end
+; SI-NEXT:    s_branch .LBB0_2
+; SI-NEXT:  .LBB0_7: ; %for.end
 ; SI-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; SI-NEXT:    s_and_saveexec_b64 s[0:1], s[6:7]
-; SI-NEXT:    s_cbranch_execz BB0_9
+; SI-NEXT:    s_cbranch_execz .LBB0_9
 ; SI-NEXT:  ; %bb.8: ; %if
 ; SI-NEXT:    exp mrt0 v0, v0, v0, v0 done vm
-; SI-NEXT:  BB0_9: ; %end
+; SI-NEXT:  .LBB0_9: ; %end
 ; SI-NEXT:    s_endpgm
 entry:
   br label %for.body

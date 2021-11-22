@@ -11,7 +11,7 @@ declare float @dummy(float)
 define void @br_fcmp_false(float %a, float %b) nounwind {
 ; RV32IF-LABEL: br_fcmp_false:
 ; RV32IF:       # %bb.0:
-; RV32IF-NEXT:    addi a0, zero, 1
+; RV32IF-NEXT:    li a0, 1
 ; RV32IF-NEXT:    bnez a0, .LBB0_2
 ; RV32IF-NEXT:  # %bb.1: # %if.then
 ; RV32IF-NEXT:    ret
@@ -22,7 +22,7 @@ define void @br_fcmp_false(float %a, float %b) nounwind {
 ;
 ; RV64IF-LABEL: br_fcmp_false:
 ; RV64IF:       # %bb.0:
-; RV64IF-NEXT:    addi a0, zero, 1
+; RV64IF-NEXT:    li a0, 1
 ; RV64IF-NEXT:    bnez a0, .LBB0_2
 ; RV64IF-NEXT:  # %bb.1: # %if.then
 ; RV64IF-NEXT:    ret
@@ -587,7 +587,7 @@ if.then:
 define void @br_fcmp_true(float %a, float %b) nounwind {
 ; RV32IF-LABEL: br_fcmp_true:
 ; RV32IF:       # %bb.0:
-; RV32IF-NEXT:    addi a0, zero, 1
+; RV32IF-NEXT:    li a0, 1
 ; RV32IF-NEXT:    bnez a0, .LBB16_2
 ; RV32IF-NEXT:  # %bb.1: # %if.else
 ; RV32IF-NEXT:    ret
@@ -598,7 +598,7 @@ define void @br_fcmp_true(float %a, float %b) nounwind {
 ;
 ; RV64IF-LABEL: br_fcmp_true:
 ; RV64IF:       # %bb.0:
-; RV64IF-NEXT:    addi a0, zero, 1
+; RV64IF-NEXT:    li a0, 1
 ; RV64IF-NEXT:    bnez a0, .LBB16_2
 ; RV64IF-NEXT:  # %bb.1: # %if.else
 ; RV64IF-NEXT:    ret
@@ -623,7 +623,7 @@ define i32 @br_fcmp_store_load_stack_slot(float %a, float %b) nounwind {
 ; RV32IF:       # %bb.0: # %entry
 ; RV32IF-NEXT:    addi sp, sp, -16
 ; RV32IF-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32IF-NEXT:    mv a0, zero
+; RV32IF-NEXT:    li a0, 0
 ; RV32IF-NEXT:    call dummy@plt
 ; RV32IF-NEXT:    fmv.w.x ft0, a0
 ; RV32IF-NEXT:    fmv.w.x ft1, zero
@@ -631,14 +631,14 @@ define i32 @br_fcmp_store_load_stack_slot(float %a, float %b) nounwind {
 ; RV32IF-NEXT:    feq.s a0, ft0, ft1
 ; RV32IF-NEXT:    beqz a0, .LBB17_3
 ; RV32IF-NEXT:  # %bb.1: # %if.end
-; RV32IF-NEXT:    mv a0, zero
+; RV32IF-NEXT:    li a0, 0
 ; RV32IF-NEXT:    call dummy@plt
 ; RV32IF-NEXT:    fmv.w.x ft0, a0
 ; RV32IF-NEXT:    flw ft1, 8(sp) # 4-byte Folded Reload
 ; RV32IF-NEXT:    feq.s a0, ft0, ft1
 ; RV32IF-NEXT:    beqz a0, .LBB17_3
 ; RV32IF-NEXT:  # %bb.2: # %if.end4
-; RV32IF-NEXT:    mv a0, zero
+; RV32IF-NEXT:    li a0, 0
 ; RV32IF-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32IF-NEXT:    addi sp, sp, 16
 ; RV32IF-NEXT:    ret
@@ -667,9 +667,9 @@ define i32 @br_fcmp_store_load_stack_slot(float %a, float %b) nounwind {
 ; RV64IF-NEXT:    feq.s a0, ft0, ft1
 ; RV64IF-NEXT:    beqz a0, .LBB17_3
 ; RV64IF-NEXT:  # %bb.2: # %if.end4
-; RV64IF-NEXT:    mv a0, zero
-; RV64IF-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
+; RV64IF-NEXT:    li a0, 0
 ; RV64IF-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
+; RV64IF-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
 ; RV64IF-NEXT:    addi sp, sp, 32
 ; RV64IF-NEXT:    ret
 ; RV64IF-NEXT:  .LBB17_3: # %if.then

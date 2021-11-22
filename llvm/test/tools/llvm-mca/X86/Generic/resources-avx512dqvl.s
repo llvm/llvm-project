@@ -203,6 +203,18 @@ vxorps            %ymm16, %ymm17, %ymm19 {z}{k1}
 vxorps            (%rax), %ymm17, %ymm19 {z}{k1}
 vxorps            (%rax){1to8}, %ymm17, %ymm19 {z}{k1}
 
+vpmovm2d          %k0, %xmm0
+vpmovm2q          %k0, %xmm0
+
+vpmovm2d          %k0, %ymm0
+vpmovm2q          %k0, %ymm0
+
+vpmovd2m          %xmm0, %k0
+vpmovq2m          %xmm0, %k0
+
+vpmovd2m          %ymm0, %k0
+vpmovq2m          %ymm0, %k0
+
 # CHECK:      Instruction Info:
 # CHECK-NEXT: [1]: #uOps
 # CHECK-NEXT: [2]: Latency
@@ -392,6 +404,14 @@ vxorps            (%rax){1to8}, %ymm17, %ymm19 {z}{k1}
 # CHECK-NEXT:  1      1     1.00                        vxorps	%ymm16, %ymm17, %ymm19 {%k1} {z}
 # CHECK-NEXT:  2      8     1.00    *                   vxorps	(%rax), %ymm17, %ymm19 {%k1} {z}
 # CHECK-NEXT:  2      8     1.00    *                   vxorps	(%rax){1to8}, %ymm17, %ymm19 {%k1} {z}
+# CHECK-NEXT:  1      1     0.33                        vpmovm2d	%k0, %xmm0
+# CHECK-NEXT:  1      1     0.33                        vpmovm2q	%k0, %xmm0
+# CHECK-NEXT:  1      1     0.33                        vpmovm2d	%k0, %ymm0
+# CHECK-NEXT:  1      1     0.33                        vpmovm2q	%k0, %ymm0
+# CHECK-NEXT:  1      1     0.33                        vpmovd2m	%xmm0, %k0
+# CHECK-NEXT:  1      1     0.33                        vpmovq2m	%xmm0, %k0
+# CHECK-NEXT:  1      1     0.33                        vpmovd2m	%ymm0, %k0
+# CHECK-NEXT:  1      1     0.33                        vpmovq2m	%ymm0, %k0
 
 # CHECK:      Resources:
 # CHECK-NEXT: [0]   - SBDivider
@@ -405,7 +425,7 @@ vxorps            (%rax){1to8}, %ymm17, %ymm19 {z}{k1}
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6.0]  [6.1]
-# CHECK-NEXT:  -      -     12.00  42.00   -     144.00 59.00  59.00
+# CHECK-NEXT:  -      -     14.67  44.67   -     146.67 59.00  59.00
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6.0]  [6.1]  Instructions:
@@ -589,3 +609,11 @@ vxorps            (%rax){1to8}, %ymm17, %ymm19 {z}{k1}
 # CHECK-NEXT:  -      -      -      -      -     1.00    -      -     vxorps	%ymm16, %ymm17, %ymm19 {%k1} {z}
 # CHECK-NEXT:  -      -      -      -      -     1.00   0.50   0.50   vxorps	(%rax), %ymm17, %ymm19 {%k1} {z}
 # CHECK-NEXT:  -      -      -      -      -     1.00   0.50   0.50   vxorps	(%rax){1to8}, %ymm17, %ymm19 {%k1} {z}
+# CHECK-NEXT:  -      -     0.33   0.33    -     0.33    -      -     vpmovm2d	%k0, %xmm0
+# CHECK-NEXT:  -      -     0.33   0.33    -     0.33    -      -     vpmovm2q	%k0, %xmm0
+# CHECK-NEXT:  -      -     0.33   0.33    -     0.33    -      -     vpmovm2d	%k0, %ymm0
+# CHECK-NEXT:  -      -     0.33   0.33    -     0.33    -      -     vpmovm2q	%k0, %ymm0
+# CHECK-NEXT:  -      -     0.33   0.33    -     0.33    -      -     vpmovd2m	%xmm0, %k0
+# CHECK-NEXT:  -      -     0.33   0.33    -     0.33    -      -     vpmovq2m	%xmm0, %k0
+# CHECK-NEXT:  -      -     0.33   0.33    -     0.33    -      -     vpmovd2m	%ymm0, %k0
+# CHECK-NEXT:  -      -     0.33   0.33    -     0.33    -      -     vpmovq2m	%ymm0, %k0

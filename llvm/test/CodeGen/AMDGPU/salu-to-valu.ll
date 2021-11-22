@@ -440,7 +440,7 @@ entry:
 ; GCN: s_load_dword [[SGPR:s[0-9]+]]
 ; GCN: v_cmp_le_u32_e32 vcc, [[SGPR]], v{{[0-9]+}}
 ; GCN: s_and_b64 vcc, exec, vcc
-; GCN: s_cbranch_vccnz [[EXIT:[A-Z0-9_]+]]
+; GCN: s_cbranch_vccnz [[EXIT:.L[A-Z0-9_]+]]
 ; GCN: v_mov_b32_e32 [[ONE:v[0-9]+]], 1
 ; GCN-NOHSA: buffer_store_dword [[ONE]]
 ; GCN-HSA: flat_store_dword v[{{[0-9]+:[0-9]+}}], [[ONE]]
@@ -487,7 +487,7 @@ bb4:
 ; GCN-LABEL: {{^}}phi_imm_in_sgprs
 ; GCN: s_movk_i32 [[A:s[0-9]+]], 0x400
 ; GCN: s_movk_i32 [[B:s[0-9]+]], 0x400
-; GCN: [[LOOP_LABEL:[0-9a-zA-Z_]+]]:
+; GCN: [[LOOP_LABEL:.L[0-9a-zA-Z_]+]]:
 ; GCN: s_xor_b32 [[B]], [[B]], [[A]]
 ; GCN: s_cbranch_scc{{[01]}} [[LOOP_LABEL]]
 define amdgpu_kernel void @phi_imm_in_sgprs(i32 addrspace(3)* %out, i32 %cond) {

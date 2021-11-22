@@ -100,7 +100,7 @@ PYBIND11_MODULE(_mlirExecutionEngine, m) {
       .def(
           "raw_lookup",
           [](PyExecutionEngine &executionEngine, const std::string &func) {
-            auto *res = mlirExecutionEngineLookup(
+            auto *res = mlirExecutionEngineLookupPacked(
                 executionEngine.get(),
                 mlirStringRefCreate(func.c_str(), func.size()));
             return reinterpret_cast<uintptr_t>(res);

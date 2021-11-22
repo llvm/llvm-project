@@ -165,46 +165,6 @@ static cl::opt<unsigned> MemorySSAPathCheckLimit(
 using OverlapIntervalsTy = std::map<int64_t, int64_t>;
 using InstOverlapIntervalsTy = DenseMap<Instruction *, OverlapIntervalsTy>;
 
-/// Does this instruction write some memory?  This only returns true for things
-/// that we can analyze with other helpers below.
-static bool hasAnalyzableMemoryWrite(Instruction *I,
-                                     const TargetLibraryInfo &TLI) {
-  if (isa<StoreInst>(I))
-    return true;
-  if (IntrinsicInst *II = dyn_cast<IntrinsicInst>(I)) {
-    switch (II->getIntrinsicID()) {
-    default:
-      return false;
-    case Intrinsic::memset:
-    case Intrinsic::memmove:
-    case Intrinsic::memcpy:
-    case Intrinsic::memcpy_inline:
-    case Intrinsic::memcpy_element_unordered_atomic:
-    case Intrinsic::memmove_element_unordered_atomic:
-    case Intrinsic::memset_element_unordered_atomic:
-    case Intrinsic::init_trampoline:
-    case Intrinsic::lifetime_end:
-    case Intrinsic::masked_store:
-      return true;
-    }
-  }
-  if (auto *CB = dyn_cast<CallBase>(I)) {
-    LibFunc LF;
-    if (TLI.getLibFunc(*CB, LF) && TLI.has(LF)) {
-      switch (LF) {
-      case LibFunc_strcpy:
-      case LibFunc_strncpy:
-      case LibFunc_strcat:
-      case LibFunc_strncat:
-        return true;
-      default:
-        return false;
-      }
-    }
-  }
-  return false;
-}
-
 /// If the value of this instruction and the memory it writes to is unused, may
 /// we delete this instruction?
 static bool isRemovable(Instruction *I) {
@@ -214,7 +174,7 @@ static bool isRemovable(Instruction *I) {
 
   if (IntrinsicInst *II = dyn_cast<IntrinsicInst>(I)) {
     switch (II->getIntrinsicID()) {
-    default: llvm_unreachable("doesn't pass 'hasAnalyzableMemoryWrite' predicate");
+    default: llvm_unreachable("Does not have LocForWrite");
     case Intrinsic::lifetime_end:
       // Never remove dead lifetime_end's, e.g. because it is followed by a
       // free.
@@ -1380,14 +1340,10 @@ struct DSEState {
         return None;
       }
 
-      // If Current cannot be analyzed or is not removable, check the next
-      // candidate.
-      if (!hasAnalyzableMemoryWrite(CurrentI, TLI) || !isRemovable(CurrentI))
-        continue;
-
-      // If Current does not have an analyzable write location, skip it
+      // If Current does not have an analyzable write location or is not
+      // removable, skip it.
       CurrentLoc = getLocForWriteEx(CurrentI);
-      if (!CurrentLoc)
+      if (!CurrentLoc || !isRemovable(CurrentI))
         continue;
 
       // AliasAnalysis does not account for loops. Limit elimination to

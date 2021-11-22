@@ -1,8 +1,8 @@
 # RUN: llc -march=amdgcn -mcpu=gfx1010 -start-before=greedy -verify-machineinstrs -o - %s | FileCheck -check-prefix=GCN %s
 ...
 # GCN-LABEL: {{^}}"subvector-basic-bb"
-# GCN: s_subvector_loop_begin [[RS:s[0-9]]], BB0_2
-# GCN: s_subvector_loop_end [[RS]], BB0_1
+# GCN: s_subvector_loop_begin [[RS:s[0-9]]], .LBB0_2
+# GCN: s_subvector_loop_end [[RS]], .LBB0_1
 name:            subvector-basic-bb
 tracksRegLiveness: true
 machineFunctionInfo:

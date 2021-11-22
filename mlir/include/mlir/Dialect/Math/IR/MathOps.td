@@ -10,6 +10,7 @@
 #define MATH_OPS
 
 include "mlir/Dialect/Math/IR/MathBase.td"
+include "mlir/Interfaces/InferTypeOpInterface.td"
 include "mlir/Interfaces/VectorInterfaces.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 

@@ -20,7 +20,7 @@
 ; TOVMEM: buffer_store_dword [[SPILL_VREG]], off, s{{\[[0-9]+:[0-9]+\]}}, 0 offset:4 ; 4-byte Folded Spill
 ; TOVMEM: s_mov_b64 exec, [[COPY_EXEC]]
 
-; GCN: s_cbranch_scc1 [[ENDIF:BB[0-9]+_[0-9]+]]
+; GCN: s_cbranch_scc1 [[ENDIF:.LBB[0-9]+_[0-9]+]]
 
 ; GCN: [[ENDIF]]:
 ; TOVGPR: v_readlane_b32 [[M0_RESTORE:s[0-9]+]], [[SPILL_VREG]], [[M0_LANE]]

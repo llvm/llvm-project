@@ -94,7 +94,7 @@ define i1 @extractelt_v16i1(<16 x i8>* %x, i64 %idx) nounwind {
 define i1 @extractelt_v32i1(<32 x i8>* %x, i64 %idx) nounwind {
 ; CHECK-LABEL: extractelt_v32i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a2, zero, 32
+; CHECK-NEXT:    li a2, 32
 ; CHECK-NEXT:    vsetvli zero, a2, e8, m2, ta, mu
 ; CHECK-NEXT:    vle8.v v8, (a0)
 ; CHECK-NEXT:    vmseq.vi v0, v8, 0
@@ -113,7 +113,7 @@ define i1 @extractelt_v32i1(<32 x i8>* %x, i64 %idx) nounwind {
 define i1 @extractelt_v64i1(<64 x i8>* %x, i64 %idx) nounwind {
 ; CHECK-LABEL: extractelt_v64i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a2, zero, 64
+; CHECK-NEXT:    li a2, 64
 ; CHECK-NEXT:    vsetvli zero, a2, e8, m4, ta, mu
 ; CHECK-NEXT:    vle8.v v8, (a0)
 ; CHECK-NEXT:    vmseq.vi v0, v8, 0
@@ -132,7 +132,7 @@ define i1 @extractelt_v64i1(<64 x i8>* %x, i64 %idx) nounwind {
 define i1 @extractelt_v128i1(<128 x i8>* %x, i64 %idx) nounwind {
 ; CHECK-LABEL: extractelt_v128i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a2, zero, 128
+; CHECK-NEXT:    li a2, 128
 ; CHECK-NEXT:    vsetvli zero, a2, e8, m8, ta, mu
 ; CHECK-NEXT:    vle8.v v8, (a0)
 ; CHECK-NEXT:    vmseq.vi v0, v8, 0
@@ -158,7 +158,7 @@ define i1 @extractelt_v256i1(<256 x i8>* %x, i64 %idx) nounwind {
 ; RV32-NEXT:    andi sp, sp, -128
 ; RV32-NEXT:    andi a1, a1, 255
 ; RV32-NEXT:    addi a2, a0, 128
-; RV32-NEXT:    addi a3, zero, 128
+; RV32-NEXT:    li a3, 128
 ; RV32-NEXT:    vsetvli zero, a3, e8, m8, ta, mu
 ; RV32-NEXT:    vle8.v v16, (a0)
 ; RV32-NEXT:    vle8.v v24, (a2)
@@ -176,8 +176,8 @@ define i1 @extractelt_v256i1(<256 x i8>* %x, i64 %idx) nounwind {
 ; RV32-NEXT:    vse8.v v8, (a1)
 ; RV32-NEXT:    lb a0, 0(a0)
 ; RV32-NEXT:    addi sp, s0, -512
-; RV32-NEXT:    lw s0, 504(sp) # 4-byte Folded Reload
 ; RV32-NEXT:    lw ra, 508(sp) # 4-byte Folded Reload
+; RV32-NEXT:    lw s0, 504(sp) # 4-byte Folded Reload
 ; RV32-NEXT:    addi sp, sp, 512
 ; RV32-NEXT:    ret
 ;
@@ -190,7 +190,7 @@ define i1 @extractelt_v256i1(<256 x i8>* %x, i64 %idx) nounwind {
 ; RV64-NEXT:    andi sp, sp, -128
 ; RV64-NEXT:    andi a1, a1, 255
 ; RV64-NEXT:    addi a2, a0, 128
-; RV64-NEXT:    addi a3, zero, 128
+; RV64-NEXT:    li a3, 128
 ; RV64-NEXT:    vsetvli zero, a3, e8, m8, ta, mu
 ; RV64-NEXT:    vle8.v v16, (a0)
 ; RV64-NEXT:    vle8.v v24, (a2)
@@ -208,8 +208,8 @@ define i1 @extractelt_v256i1(<256 x i8>* %x, i64 %idx) nounwind {
 ; RV64-NEXT:    vse8.v v8, (a1)
 ; RV64-NEXT:    lb a0, 0(a0)
 ; RV64-NEXT:    addi sp, s0, -512
-; RV64-NEXT:    ld s0, 496(sp) # 8-byte Folded Reload
 ; RV64-NEXT:    ld ra, 504(sp) # 8-byte Folded Reload
+; RV64-NEXT:    ld s0, 496(sp) # 8-byte Folded Reload
 ; RV64-NEXT:    addi sp, sp, 512
 ; RV64-NEXT:    ret
   %a = load <256 x i8>, <256 x i8>* %x

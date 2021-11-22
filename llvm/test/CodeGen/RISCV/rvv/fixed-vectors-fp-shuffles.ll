@@ -5,7 +5,7 @@
 define <4 x half> @shuffle_v4f16(<4 x half> %x, <4 x half> %y) {
 ; CHECK-LABEL: shuffle_v4f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a0, zero, 11
+; CHECK-NEXT:    li a0, 11
 ; CHECK-NEXT:    vsetivli zero, 1, e8, mf8, ta, mu
 ; CHECK-NEXT:    vmv.s.x v0, a0
 ; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, mu
@@ -18,7 +18,7 @@ define <4 x half> @shuffle_v4f16(<4 x half> %x, <4 x half> %y) {
 define <8 x float> @shuffle_v8f32(<8 x float> %x, <8 x float> %y) {
 ; CHECK-LABEL: shuffle_v8f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a0, zero, 236
+; CHECK-NEXT:    li a0, 236
 ; CHECK-NEXT:    vsetivli zero, 1, e8, mf8, ta, mu
 ; CHECK-NEXT:    vmv.s.x v0, a0
 ; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, mu
@@ -31,7 +31,7 @@ define <8 x float> @shuffle_v8f32(<8 x float> %x, <8 x float> %y) {
 define <4 x double> @shuffle_fv_v4f64(<4 x double> %x) {
 ; RV32-LABEL: shuffle_fv_v4f64:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    addi a0, zero, 9
+; RV32-NEXT:    li a0, 9
 ; RV32-NEXT:    lui a1, %hi(.LCPI2_0)
 ; RV32-NEXT:    fld ft0, %lo(.LCPI2_0)(a1)
 ; RV32-NEXT:    vsetivli zero, 1, e8, mf8, ta, mu
@@ -44,7 +44,7 @@ define <4 x double> @shuffle_fv_v4f64(<4 x double> %x) {
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    lui a0, %hi(.LCPI2_0)
 ; RV64-NEXT:    fld ft0, %lo(.LCPI2_0)(a0)
-; RV64-NEXT:    addi a0, zero, 9
+; RV64-NEXT:    li a0, 9
 ; RV64-NEXT:    vsetivli zero, 1, e8, mf8, ta, mu
 ; RV64-NEXT:    vmv.s.x v0, a0
 ; RV64-NEXT:    vsetivli zero, 4, e64, m2, ta, mu
@@ -57,7 +57,7 @@ define <4 x double> @shuffle_fv_v4f64(<4 x double> %x) {
 define <4 x double> @shuffle_vf_v4f64(<4 x double> %x) {
 ; RV32-LABEL: shuffle_vf_v4f64:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    addi a0, zero, 6
+; RV32-NEXT:    li a0, 6
 ; RV32-NEXT:    lui a1, %hi(.LCPI3_0)
 ; RV32-NEXT:    fld ft0, %lo(.LCPI3_0)(a1)
 ; RV32-NEXT:    vsetivli zero, 1, e8, mf8, ta, mu
@@ -70,7 +70,7 @@ define <4 x double> @shuffle_vf_v4f64(<4 x double> %x) {
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    lui a0, %hi(.LCPI3_0)
 ; RV64-NEXT:    fld ft0, %lo(.LCPI3_0)(a0)
-; RV64-NEXT:    addi a0, zero, 6
+; RV64-NEXT:    li a0, 6
 ; RV64-NEXT:    vsetivli zero, 1, e8, mf8, ta, mu
 ; RV64-NEXT:    vmv.s.x v0, a0
 ; RV64-NEXT:    vsetivli zero, 4, e64, m2, ta, mu
@@ -139,7 +139,7 @@ define <4 x double> @vrgather_shuffle_vv_v4f64(<4 x double> %x, <4 x double> %y)
 ; RV32-NEXT:    vle16.v v14, (a0)
 ; RV32-NEXT:    vsetvli zero, zero, e64, m2, ta, mu
 ; RV32-NEXT:    vrgatherei16.vv v12, v8, v14
-; RV32-NEXT:    addi a0, zero, 8
+; RV32-NEXT:    li a0, 8
 ; RV32-NEXT:    vsetivli zero, 1, e8, mf8, ta, mu
 ; RV32-NEXT:    vmv.s.x v0, a0
 ; RV32-NEXT:    vsetivli zero, 4, e64, m2, ta, mu
@@ -154,7 +154,7 @@ define <4 x double> @vrgather_shuffle_vv_v4f64(<4 x double> %x, <4 x double> %y)
 ; RV64-NEXT:    vsetivli zero, 4, e64, m2, ta, mu
 ; RV64-NEXT:    vle64.v v14, (a0)
 ; RV64-NEXT:    vrgather.vv v12, v8, v14
-; RV64-NEXT:    addi a0, zero, 8
+; RV64-NEXT:    li a0, 8
 ; RV64-NEXT:    vsetivli zero, 1, e8, mf8, ta, mu
 ; RV64-NEXT:    vmv.s.x v0, a0
 ; RV64-NEXT:    vsetivli zero, 4, e64, m2, ta, mu
@@ -168,7 +168,7 @@ define <4 x double> @vrgather_shuffle_vv_v4f64(<4 x double> %x, <4 x double> %y)
 define <4 x double> @vrgather_shuffle_xv_v4f64(<4 x double> %x) {
 ; RV32-LABEL: vrgather_shuffle_xv_v4f64:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    addi a0, zero, 12
+; RV32-NEXT:    li a0, 12
 ; RV32-NEXT:    vsetivli zero, 1, e8, mf8, ta, mu
 ; RV32-NEXT:    vmv.s.x v0, a0
 ; RV32-NEXT:    vsetivli zero, 4, e16, mf2, ta, mu
@@ -184,7 +184,7 @@ define <4 x double> @vrgather_shuffle_xv_v4f64(<4 x double> %x) {
 ;
 ; RV64-LABEL: vrgather_shuffle_xv_v4f64:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    addi a0, zero, 12
+; RV64-NEXT:    li a0, 12
 ; RV64-NEXT:    vsetivli zero, 1, e8, mf8, ta, mu
 ; RV64-NEXT:    vmv.s.x v0, a0
 ; RV64-NEXT:    vsetivli zero, 4, e64, m2, ta, mu
@@ -205,7 +205,7 @@ define <4 x double> @vrgather_shuffle_vx_v4f64(<4 x double> %x) {
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    vsetivli zero, 4, e16, mf2, ta, mu
 ; RV32-NEXT:    vid.v v10
-; RV32-NEXT:    addi a0, zero, 3
+; RV32-NEXT:    li a0, 3
 ; RV32-NEXT:    vmul.vx v12, v10, a0
 ; RV32-NEXT:    vsetivli zero, 1, e8, mf8, ta, mu
 ; RV32-NEXT:    vmv.s.x v0, a0
@@ -221,7 +221,7 @@ define <4 x double> @vrgather_shuffle_vx_v4f64(<4 x double> %x) {
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    vsetivli zero, 4, e64, m2, ta, mu
 ; RV64-NEXT:    vid.v v10
-; RV64-NEXT:    addi a0, zero, 3
+; RV64-NEXT:    li a0, 3
 ; RV64-NEXT:    vmul.vx v12, v10, a0
 ; RV64-NEXT:    vsetivli zero, 1, e8, mf8, ta, mu
 ; RV64-NEXT:    vmv.s.x v0, a0

@@ -35,6 +35,15 @@ void Copy(char *__restrict dst, const char *__restrict src, size_t size) {
   Element::Copy(dst, src, size);
 }
 
+// Fixed-size move from 'src' to 'dst'.
+template <typename Element> void Move(char *dst, const char *src) {
+  Element::Move(dst, src);
+}
+// Runtime-size move from 'src' to 'dst'.
+template <typename Element> void Move(char *dst, const char *src, size_t size) {
+  Element::Move(dst, src, size);
+}
+
 // Fixed-size equality between 'lhs' and 'rhs'.
 template <typename Element> bool Equals(const char *lhs, const char *rhs) {
   return Element::Equals(lhs, rhs);
@@ -67,6 +76,9 @@ void SplatSet(char *dst, const unsigned char value, size_t size) {
   Element::SplatSet(dst, value, size);
 }
 
+// Stack placeholder for Move operations.
+template <typename Element> struct Storage { char bytes[Element::kSize]; };
+
 // Fixed-size Higher-Order Operations
 // ----------------------------------
 // - Repeated<Type, ElementCount>: Repeat the operation several times in a row.
@@ -81,6 +93,13 @@ template <typename Element, size_t ElementCount> struct Repeated {
       const size_t offset = i * Element::kSize;
       Element::Copy(dst + offset, src + offset);
     }
+  }
+
+  static void Move(char *dst, const char *src) {
+    const auto Value = Element::Load(src);
+    Repeated<Element, ElementCount - 1>::Move(dst + Element::kSize,
+                                              src + Element::kSize);
+    Element::Store(dst, Value);
   }
 
   static bool Equals(const char *lhs, const char *rhs) {
@@ -109,6 +128,20 @@ template <typename Element, size_t ElementCount> struct Repeated {
       Element::SplatSet(dst + offset, value);
     }
   }
+
+  static Storage<Element> Load(const char *ptr) {
+    Storage<Element> value;
+    Copy(reinterpret_cast<char *>(&value), ptr);
+    return value;
+  }
+
+  static void Store(char *ptr, Storage<Element> value) {
+    Copy(ptr, reinterpret_cast<const char *>(&value));
+  }
+};
+
+template <typename Element> struct Repeated<Element, 0> {
+  static void Move(char *dst, const char *src) {}
 };
 
 // Chain the operation of several types.
@@ -122,6 +155,12 @@ template <typename Head, typename... Tail> struct Chained<Head, Tail...> {
   static void Copy(char *__restrict dst, const char *__restrict src) {
     Chained<Tail...>::Copy(dst + Head::kSize, src + Head::kSize);
     __llvm_libc::Copy<Head>(dst, src);
+  }
+
+  static void Move(char *dst, const char *src) {
+    const auto Value = Head::Load(src);
+    Chained<Tail...>::Move(dst + Head::kSize, src + Head::kSize);
+    Head::Store(dst, Value);
   }
 
   static bool Equals(const char *lhs, const char *rhs) {
@@ -146,6 +185,7 @@ template <typename Head, typename... Tail> struct Chained<Head, Tail...> {
 template <> struct Chained<> {
   static constexpr size_t kSize = 0;
   static void Copy(char *__restrict dst, const char *__restrict src) {}
+  static void Move(char *dst, const char *src) {}
   static bool Equals(const char *lhs, const char *rhs) { return true; }
   static int ThreeWayCompare(const char *lhs, const char *rhs) { return 0; }
   static void SplatSet(char *dst, const unsigned char value) {}
@@ -164,6 +204,13 @@ struct Overlap {
   static void Copy(char *__restrict dst, const char *__restrict src) {
     ElementA::Copy(dst, src);
     ElementB::Copy(dst + kOffset, src + kOffset);
+  }
+
+  static void Move(char *dst, const char *src) {
+    const auto ValueA = ElementA::Load(src);
+    const auto ValueB = ElementB::Load(src + kOffset);
+    ElementB::Store(dst + kOffset, ValueB);
+    ElementA::Store(dst, ValueA);
   }
 
   static bool Equals(const char *lhs, const char *rhs) {
@@ -239,6 +286,14 @@ template <typename T> struct HeadTail {
                    size_t size) {
     T::Copy(dst, src);
     Tail<T>::Copy(dst, src, size);
+  }
+
+  static void Move(char *dst, const char *src, size_t size) {
+    const size_t offset = Tail<T>::offset(size);
+    const auto HeadValue = T::Load(src);
+    const auto TailValue = T::Load(src + offset);
+    T::Store(dst + offset, TailValue);
+    T::Store(dst, HeadValue);
   }
 
   static bool Equals(const char *lhs, const char *rhs, size_t size) {
@@ -460,6 +515,16 @@ template <size_t Size> struct Builtin {
 #endif
   }
 
+  static void Move(char *dst, const char *src) {
+#if LLVM_LIBC_HAVE_MEMORY_SANITIZER || LLVM_LIBC_HAVE_ADDRESS_SANITIZER
+    ForLoopMove(dst, src);
+#elif __has_builtin(__builtin_memmove)
+    __builtin_memmove(dst, src, kSize);
+#else
+    ForLoopMove(dst, src);
+#endif
+  }
+
 #if __has_builtin(__builtin_memcmp_inline)
 #define LLVM_LIBC_MEMCMP __builtin_memcmp_inline
 #else
@@ -483,6 +548,11 @@ private:
   // This code requires the use of `-fno-builtin-memcpy` to prevent the compiler
   // from turning the for-loop back into `__builtin_memcpy`.
   static void ForLoopCopy(char *__restrict dst, const char *__restrict src) {
+    for (size_t i = 0; i < kSize; ++i)
+      dst[i] = src[i];
+  }
+
+  static void ForLoopMove(char *dst, const char *src) {
     for (size_t i = 0; i < kSize; ++i)
       dst[i] = src[i];
   }
@@ -512,6 +582,8 @@ template <typename T> struct Scalar {
     Store(dst, Load(src));
   }
 
+  static void Move(char *dst, const char *src) { Store(dst, Load(src)); }
+
   static bool Equals(const char *lhs, const char *rhs) {
     return Load(lhs) == Load(rhs);
   }
@@ -526,15 +598,17 @@ template <typename T> struct Scalar {
 
   static int ScalarThreeWayCompare(T a, T b);
 
-private:
   static T Load(const char *ptr) {
     T value;
     builtin::Builtin<kSize>::Copy(reinterpret_cast<char *>(&value), ptr);
     return value;
   }
+
   static void Store(char *ptr, T value) {
     builtin::Builtin<kSize>::Copy(ptr, reinterpret_cast<const char *>(&value));
   }
+
+private:
   static T GetSplattedValue(const unsigned char value) {
     return T(~0) / T(0xFF) * T(value);
   }

@@ -71,7 +71,7 @@ declare <2 x i64> @llvm.abs.v2i64(<2 x i64>, i1)
 define void @abs_v32i8(<32 x i8>* %x) {
 ; LMULMAX2-LABEL: abs_v32i8:
 ; LMULMAX2:       # %bb.0:
-; LMULMAX2-NEXT:    addi a1, zero, 32
+; LMULMAX2-NEXT:    li a1, 32
 ; LMULMAX2-NEXT:    vsetvli zero, a1, e8, m2, ta, mu
 ; LMULMAX2-NEXT:    vle8.v v8, (a0)
 ; LMULMAX2-NEXT:    vrsub.vi v10, v8, 0

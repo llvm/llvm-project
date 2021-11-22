@@ -111,7 +111,7 @@ define amdgpu_kernel void @partial_no_vgprs_last_sgpr_spill(i32 addrspace(1)* %o
 ; GCN-NEXT:    s_mov_b32 s5, 0
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    s_cmp_lg_u32 s4, s5
-; GCN-NEXT:    s_cbranch_scc1 BB0_2
+; GCN-NEXT:    s_cbranch_scc1 .LBB0_2
 ; GCN-NEXT:  ; %bb.1: ; %bb0
 ; GCN-NEXT:    v_readlane_b32 s4, v23, 0
 ; GCN-NEXT:    v_readlane_b32 s5, v23, 1
@@ -202,7 +202,7 @@ define amdgpu_kernel void @partial_no_vgprs_last_sgpr_spill(i32 addrspace(1)* %o
 ; GCN-NEXT:    ;;#ASMSTART
 ; GCN-NEXT:    ; use s[4:5]
 ; GCN-NEXT:    ;;#ASMEND
-; GCN-NEXT:  BB0_2: ; %ret
+; GCN-NEXT:  .LBB0_2: ; %ret
 ; GCN-NEXT:    s_endpgm
   call void asm sideeffect "", "~{v[0:7]}" () #0
   call void asm sideeffect "", "~{v[8:15]}" () #0

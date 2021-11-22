@@ -1000,9 +1000,6 @@ def SPV_SelectOp : SPV_Op<"Select",
     SPV_SelectType:$result
   );
 
-  let builders = [
-    OpBuilder<(ins "Value":$cond, "Value":$trueValue, "Value":$falseValue)>];
-
   let assemblyFormat = [{
     operands attr-dict `:` type($condition) `,` type($result)
   }];

@@ -3,7 +3,7 @@
 ;RUN: llc < %s -march=amdgcn -mcpu=gfx1010 -verify-machineinstrs | FileCheck %s -check-prefix=CHECK -check-prefix=GFX10
 
 ;CHECK-LABEL: {{^}}raw_atomic_buffer_load
-;CHECK-LABEL: BB0_1: ; %bb1
+;CHECK-LABEL: .LBB0_1: ; %bb1
 ;CHECK-NEXT: ; =>This Inner Loop Header: Depth=1
 ;CHECK-NEXT: s_waitcnt lgkmcnt(0)
 ;CHECK-NEXT: buffer_load_dword v1, off, s[0:3], 0 offset:4 glc
@@ -14,7 +14,7 @@
 ;GFX10-NEXT: s_or_b32 s4, vcc_lo, s4
 ;SI-NEXT: s_andn2_b64 exec, exec, s[4:5]
 ;GFX10-NEXT: s_andn2_b32 exec_lo, exec_lo, s4
-;CHECK-NEXT: s_cbranch_execnz BB0_1
+;CHECK-NEXT: s_cbranch_execnz .LBB0_1
 define amdgpu_kernel void @raw_atomic_buffer_load(<4 x i32> %addr) {
 bb:
   %tmp0 = tail call i32 @llvm.amdgcn.workitem.id.x()
@@ -35,7 +35,7 @@ bb2:
 ;GFX10-NEXT: s_or_b32 s0, s1, s0
 ;SI-NEXT: s_andn2_b64 exec, exec, s[0:1]
 ;GFX10-NEXT: s_andn2_b32 exec_lo, exec_lo, s0
-;CHECK-NEXT: s_cbranch_execnz BB1_1
+;CHECK-NEXT: s_cbranch_execnz .LBB1_1
 define amdgpu_kernel void @raw_nonatomic_buffer_load(<4 x i32> %addr) {
 bb:
   %tmp0 = tail call i32 @llvm.amdgcn.workitem.id.x()

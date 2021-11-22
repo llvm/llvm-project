@@ -6,7 +6,7 @@
 
 
 ; GCN-LABEL: {{^}}uniform_br_trivial_ret_divergent_br_trivial_unreachable:
-; GCN: s_cbranch_scc1 [[RET_BB:BB[0-9]+_[0-9]+]]
+; GCN: s_cbranch_scc1 [[RET_BB:.LBB[0-9]+_[0-9]+]]
 
 ; GCN-NEXT: ; %else
 
@@ -57,15 +57,15 @@ ret.bb:                                          ; preds = %else, %main_body
 ; GCN: s_cbranch_vccz
 
 ; GCN: ; %bb.{{[0-9]+}}: ; %Flow
-; GCN: s_cbranch_execnz [[RETURN:BB[0-9]+_[0-9]+]]
+; GCN: s_cbranch_execnz [[RETURN:.LBB[0-9]+_[0-9]+]]
 
 ; GCN: ; %UnifiedReturnBlock
 ; GCN-NEXT: s_or_b64 exec, exec
 ; GCN-NEXT: s_waitcnt
 
-; GCN: BB{{[0-9]+_[0-9]+}}: ; %else
+; GCN: .LBB{{[0-9]+_[0-9]+}}: ; %else
 ; GCN: s_and_saveexec_b64 [[SAVE_EXEC:s\[[0-9]+:[0-9]+\]]], vcc
-; GCN-NEXT: s_cbranch_execz BB1_{{[0-9]+}}
+; GCN-NEXT: s_cbranch_execz .LBB1_{{[0-9]+}}
 
 ; GCN-NEXT:  ; %unreachable.bb
 ; GCN: ds_write_b32

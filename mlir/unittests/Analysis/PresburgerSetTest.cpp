@@ -224,8 +224,15 @@ TEST(SetTest, Intersect) {
 }
 
 TEST(SetTest, Subtract) {
-  // The interval [2, 8] minus
-  // the interval [10, 20].
+  // The interval [2, 8] minus the interval [10, 20].
+  testSubtractAtPoints(
+      makeSetFromFACs(1, {makeFACFromIneqs(1, {{1, -2},      // x >= 2.
+                                               {-1, 8}})}),  // x <= 8.
+      makeSetFromFACs(1, {makeFACFromIneqs(1, {{1, -10},     // x >= 10.
+                                               {-1, 20}})}), // x <= 20.
+      {{1}, {2}, {8}, {9}, {10}, {20}, {21}});
+
+  // Universe minus [2, 8] U [10, 20]
   testSubtractAtPoints(
       makeSetFromFACs(1, {makeFACFromIneqs(1, {})}),
       makeSetFromFACs(1,

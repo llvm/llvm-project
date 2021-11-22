@@ -847,7 +847,7 @@ define signext i64 @vpreduce_add_v2i64(i64 signext %s, <2 x i64> %v, <2 x i1> %m
 ; RV32-NEXT:    vsetvli zero, a2, e64, m1, tu, mu
 ; RV32-NEXT:    vredsum.vs v9, v8, v9, v0.t
 ; RV32-NEXT:    vmv.x.s a0, v9
-; RV32-NEXT:    addi a1, zero, 32
+; RV32-NEXT:    li a1, 32
 ; RV32-NEXT:    vsetivli zero, 1, e64, m1, ta, mu
 ; RV32-NEXT:    vsrl.vx v8, v9, a1
 ; RV32-NEXT:    vmv.x.s a1, v8
@@ -881,7 +881,7 @@ define signext i64 @vpreduce_umax_v2i64(i64 signext %s, <2 x i64> %v, <2 x i1> %
 ; RV32-NEXT:    vsetvli zero, a2, e64, m1, tu, mu
 ; RV32-NEXT:    vredmaxu.vs v9, v8, v9, v0.t
 ; RV32-NEXT:    vmv.x.s a0, v9
-; RV32-NEXT:    addi a1, zero, 32
+; RV32-NEXT:    li a1, 32
 ; RV32-NEXT:    vsetivli zero, 1, e64, m1, ta, mu
 ; RV32-NEXT:    vsrl.vx v8, v9, a1
 ; RV32-NEXT:    vmv.x.s a1, v8
@@ -915,7 +915,7 @@ define signext i64 @vpreduce_smax_v2i64(i64 signext %s, <2 x i64> %v, <2 x i1> %
 ; RV32-NEXT:    vsetvli zero, a2, e64, m1, tu, mu
 ; RV32-NEXT:    vredmax.vs v9, v8, v9, v0.t
 ; RV32-NEXT:    vmv.x.s a0, v9
-; RV32-NEXT:    addi a1, zero, 32
+; RV32-NEXT:    li a1, 32
 ; RV32-NEXT:    vsetivli zero, 1, e64, m1, ta, mu
 ; RV32-NEXT:    vsrl.vx v8, v9, a1
 ; RV32-NEXT:    vmv.x.s a1, v8
@@ -949,7 +949,7 @@ define signext i64 @vpreduce_umin_v2i64(i64 signext %s, <2 x i64> %v, <2 x i1> %
 ; RV32-NEXT:    vsetvli zero, a2, e64, m1, tu, mu
 ; RV32-NEXT:    vredminu.vs v9, v8, v9, v0.t
 ; RV32-NEXT:    vmv.x.s a0, v9
-; RV32-NEXT:    addi a1, zero, 32
+; RV32-NEXT:    li a1, 32
 ; RV32-NEXT:    vsetivli zero, 1, e64, m1, ta, mu
 ; RV32-NEXT:    vsrl.vx v8, v9, a1
 ; RV32-NEXT:    vmv.x.s a1, v8
@@ -983,7 +983,7 @@ define signext i64 @vpreduce_smin_v2i64(i64 signext %s, <2 x i64> %v, <2 x i1> %
 ; RV32-NEXT:    vsetvli zero, a2, e64, m1, tu, mu
 ; RV32-NEXT:    vredmin.vs v9, v8, v9, v0.t
 ; RV32-NEXT:    vmv.x.s a0, v9
-; RV32-NEXT:    addi a1, zero, 32
+; RV32-NEXT:    li a1, 32
 ; RV32-NEXT:    vsetivli zero, 1, e64, m1, ta, mu
 ; RV32-NEXT:    vsrl.vx v8, v9, a1
 ; RV32-NEXT:    vmv.x.s a1, v8
@@ -1017,7 +1017,7 @@ define signext i64 @vpreduce_and_v2i64(i64 signext %s, <2 x i64> %v, <2 x i1> %m
 ; RV32-NEXT:    vsetvli zero, a2, e64, m1, tu, mu
 ; RV32-NEXT:    vredand.vs v9, v8, v9, v0.t
 ; RV32-NEXT:    vmv.x.s a0, v9
-; RV32-NEXT:    addi a1, zero, 32
+; RV32-NEXT:    li a1, 32
 ; RV32-NEXT:    vsetivli zero, 1, e64, m1, ta, mu
 ; RV32-NEXT:    vsrl.vx v8, v9, a1
 ; RV32-NEXT:    vmv.x.s a1, v8
@@ -1051,7 +1051,7 @@ define signext i64 @vpreduce_or_v2i64(i64 signext %s, <2 x i64> %v, <2 x i1> %m,
 ; RV32-NEXT:    vsetvli zero, a2, e64, m1, tu, mu
 ; RV32-NEXT:    vredor.vs v9, v8, v9, v0.t
 ; RV32-NEXT:    vmv.x.s a0, v9
-; RV32-NEXT:    addi a1, zero, 32
+; RV32-NEXT:    li a1, 32
 ; RV32-NEXT:    vsetivli zero, 1, e64, m1, ta, mu
 ; RV32-NEXT:    vsrl.vx v8, v9, a1
 ; RV32-NEXT:    vmv.x.s a1, v8
@@ -1085,7 +1085,7 @@ define signext i64 @vpreduce_xor_v2i64(i64 signext %s, <2 x i64> %v, <2 x i1> %m
 ; RV32-NEXT:    vsetvli zero, a2, e64, m1, tu, mu
 ; RV32-NEXT:    vredxor.vs v9, v8, v9, v0.t
 ; RV32-NEXT:    vmv.x.s a0, v9
-; RV32-NEXT:    addi a1, zero, 32
+; RV32-NEXT:    li a1, 32
 ; RV32-NEXT:    vsetivli zero, 1, e64, m1, ta, mu
 ; RV32-NEXT:    vsrl.vx v8, v9, a1
 ; RV32-NEXT:    vmv.x.s a1, v8
@@ -1119,7 +1119,7 @@ define signext i64 @vpreduce_add_v4i64(i64 signext %s, <4 x i64> %v, <4 x i1> %m
 ; RV32-NEXT:    vsetvli zero, a2, e64, m2, tu, mu
 ; RV32-NEXT:    vredsum.vs v10, v8, v10, v0.t
 ; RV32-NEXT:    vmv.x.s a0, v10
-; RV32-NEXT:    addi a1, zero, 32
+; RV32-NEXT:    li a1, 32
 ; RV32-NEXT:    vsetivli zero, 1, e64, m1, ta, mu
 ; RV32-NEXT:    vsrl.vx v8, v10, a1
 ; RV32-NEXT:    vmv.x.s a1, v8
@@ -1153,7 +1153,7 @@ define signext i64 @vpreduce_umax_v4i64(i64 signext %s, <4 x i64> %v, <4 x i1> %
 ; RV32-NEXT:    vsetvli zero, a2, e64, m2, tu, mu
 ; RV32-NEXT:    vredmaxu.vs v10, v8, v10, v0.t
 ; RV32-NEXT:    vmv.x.s a0, v10
-; RV32-NEXT:    addi a1, zero, 32
+; RV32-NEXT:    li a1, 32
 ; RV32-NEXT:    vsetivli zero, 1, e64, m1, ta, mu
 ; RV32-NEXT:    vsrl.vx v8, v10, a1
 ; RV32-NEXT:    vmv.x.s a1, v8
@@ -1187,7 +1187,7 @@ define signext i64 @vpreduce_smax_v4i64(i64 signext %s, <4 x i64> %v, <4 x i1> %
 ; RV32-NEXT:    vsetvli zero, a2, e64, m2, tu, mu
 ; RV32-NEXT:    vredmax.vs v10, v8, v10, v0.t
 ; RV32-NEXT:    vmv.x.s a0, v10
-; RV32-NEXT:    addi a1, zero, 32
+; RV32-NEXT:    li a1, 32
 ; RV32-NEXT:    vsetivli zero, 1, e64, m1, ta, mu
 ; RV32-NEXT:    vsrl.vx v8, v10, a1
 ; RV32-NEXT:    vmv.x.s a1, v8
@@ -1221,7 +1221,7 @@ define signext i64 @vpreduce_umin_v4i64(i64 signext %s, <4 x i64> %v, <4 x i1> %
 ; RV32-NEXT:    vsetvli zero, a2, e64, m2, tu, mu
 ; RV32-NEXT:    vredminu.vs v10, v8, v10, v0.t
 ; RV32-NEXT:    vmv.x.s a0, v10
-; RV32-NEXT:    addi a1, zero, 32
+; RV32-NEXT:    li a1, 32
 ; RV32-NEXT:    vsetivli zero, 1, e64, m1, ta, mu
 ; RV32-NEXT:    vsrl.vx v8, v10, a1
 ; RV32-NEXT:    vmv.x.s a1, v8
@@ -1255,7 +1255,7 @@ define signext i64 @vpreduce_smin_v4i64(i64 signext %s, <4 x i64> %v, <4 x i1> %
 ; RV32-NEXT:    vsetvli zero, a2, e64, m2, tu, mu
 ; RV32-NEXT:    vredmin.vs v10, v8, v10, v0.t
 ; RV32-NEXT:    vmv.x.s a0, v10
-; RV32-NEXT:    addi a1, zero, 32
+; RV32-NEXT:    li a1, 32
 ; RV32-NEXT:    vsetivli zero, 1, e64, m1, ta, mu
 ; RV32-NEXT:    vsrl.vx v8, v10, a1
 ; RV32-NEXT:    vmv.x.s a1, v8
@@ -1289,7 +1289,7 @@ define signext i64 @vpreduce_and_v4i64(i64 signext %s, <4 x i64> %v, <4 x i1> %m
 ; RV32-NEXT:    vsetvli zero, a2, e64, m2, tu, mu
 ; RV32-NEXT:    vredand.vs v10, v8, v10, v0.t
 ; RV32-NEXT:    vmv.x.s a0, v10
-; RV32-NEXT:    addi a1, zero, 32
+; RV32-NEXT:    li a1, 32
 ; RV32-NEXT:    vsetivli zero, 1, e64, m1, ta, mu
 ; RV32-NEXT:    vsrl.vx v8, v10, a1
 ; RV32-NEXT:    vmv.x.s a1, v8
@@ -1323,7 +1323,7 @@ define signext i64 @vpreduce_or_v4i64(i64 signext %s, <4 x i64> %v, <4 x i1> %m,
 ; RV32-NEXT:    vsetvli zero, a2, e64, m2, tu, mu
 ; RV32-NEXT:    vredor.vs v10, v8, v10, v0.t
 ; RV32-NEXT:    vmv.x.s a0, v10
-; RV32-NEXT:    addi a1, zero, 32
+; RV32-NEXT:    li a1, 32
 ; RV32-NEXT:    vsetivli zero, 1, e64, m1, ta, mu
 ; RV32-NEXT:    vsrl.vx v8, v10, a1
 ; RV32-NEXT:    vmv.x.s a1, v8
@@ -1357,7 +1357,7 @@ define signext i64 @vpreduce_xor_v4i64(i64 signext %s, <4 x i64> %v, <4 x i1> %m
 ; RV32-NEXT:    vsetvli zero, a2, e64, m2, tu, mu
 ; RV32-NEXT:    vredxor.vs v10, v8, v10, v0.t
 ; RV32-NEXT:    vmv.x.s a0, v10
-; RV32-NEXT:    addi a1, zero, 32
+; RV32-NEXT:    li a1, 32
 ; RV32-NEXT:    vsetivli zero, 1, e64, m1, ta, mu
 ; RV32-NEXT:    vsrl.vx v8, v10, a1
 ; RV32-NEXT:    vmv.x.s a1, v8

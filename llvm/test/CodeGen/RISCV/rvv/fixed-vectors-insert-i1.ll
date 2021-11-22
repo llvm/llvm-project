@@ -156,7 +156,7 @@ define <8 x i1> @insertelt_idx_v8i1(<8 x i1> %x, i1 %elt, i32 zeroext %idx) noun
 define <64 x i1> @insertelt_v64i1(<64 x i1> %x, i1 %elt) nounwind {
 ; CHECK-LABEL: insertelt_v64i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a1, zero, 64
+; CHECK-NEXT:    li a1, 64
 ; CHECK-NEXT:    vsetvli zero, a1, e8, m4, ta, mu
 ; CHECK-NEXT:    vmv.s.x v8, a0
 ; CHECK-NEXT:    vmv.v.i v12, 0
@@ -174,7 +174,7 @@ define <64 x i1> @insertelt_v64i1(<64 x i1> %x, i1 %elt) nounwind {
 define <64 x i1> @insertelt_idx_v64i1(<64 x i1> %x, i1 %elt, i32 zeroext %idx) nounwind {
 ; RV32-LABEL: insertelt_idx_v64i1:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    addi a2, zero, 64
+; RV32-NEXT:    li a2, 64
 ; RV32-NEXT:    vsetvli zero, a2, e8, m4, ta, mu
 ; RV32-NEXT:    vmv.s.x v8, a0
 ; RV32-NEXT:    vmv.v.i v12, 0
@@ -189,7 +189,7 @@ define <64 x i1> @insertelt_idx_v64i1(<64 x i1> %x, i1 %elt, i32 zeroext %idx) n
 ;
 ; RV64-LABEL: insertelt_idx_v64i1:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    addi a2, zero, 64
+; RV64-NEXT:    li a2, 64
 ; RV64-NEXT:    vsetvli zero, a2, e8, m4, ta, mu
 ; RV64-NEXT:    vmv.s.x v8, a0
 ; RV64-NEXT:    vmv.v.i v12, 0

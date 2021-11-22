@@ -26,11 +26,11 @@ entry:
 ; CHECK-LABEL: {{^}}extract_adjacent_blocks:
 ; CHECK: s_load_dword [[ARG:s[0-9]+]]
 ; CHECK: s_cmp_lg_u32
-; CHECK: s_cbranch_scc1 [[BB4:BB[0-9]+_[0-9]+]]
+; CHECK: s_cbranch_scc1 [[BB4:.LBB[0-9]+_[0-9]+]]
 
 ; CHECK: buffer_load_dwordx4
 
-; CHECK: s_branch [[ENDBB:BB[0-9]+_[0-9]+]]
+; CHECK: s_branch [[ENDBB:.LBB[0-9]+_[0-9]+]]
 
 ; CHECK: [[BB4]]:
 ; CHECK: buffer_load_dwordx4
