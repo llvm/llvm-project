@@ -483,7 +483,6 @@ cc_library(
     deps = [
         "//mlir:Affine",
         "//mlir:Analysis",
-        "//mlir:LLVMDialect",
         "//mlir:LinalgOps",
         "//mlir:LinalgTransforms",
         "//mlir:MemRefDialect",
@@ -493,7 +492,6 @@ cc_library(
         "//mlir:TransformUtils",
         "//mlir:VectorOps",
         "//mlir:VectorToSCF",
-        "//mlir:X86Vector",
     ],
 )
 
