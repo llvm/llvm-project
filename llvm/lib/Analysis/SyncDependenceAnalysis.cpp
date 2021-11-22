@@ -15,21 +15,18 @@
 // The SyncDependenceAnalysis is used in the DivergenceAnalysis to model
 // control-induced divergence in phi nodes.
 //
-// -- Summary --
-// The SyncDependenceAnalysis lazily computes sync dependences [3].
-// The analysis evaluates the disjoint path criterion [2] by a reduction
-// to SSA construction. The SSA construction algorithm is implemented as
-// a simple data-flow analysis [1].
 //
-// [1] "A Simple, Fast Dominance Algorithm", SPI '01, Cooper, Harvey and Kennedy
-// [2] "Efficiently Computing Static Single Assignment Form
-//     and the Control Dependence Graph", TOPLAS '91,
-//           Cytron, Ferrante, Rosen, Wegman and Zadeck
-// [3] "Improving Performance of OpenCL on CPUs", CC '12, Karrenberg and Hack
-// [4] "Divergence Analysis", TOPLAS '13, Sampaio, Souza, Collange and Pereira
+// -- Reference --
+// The algorithm is presented in Section 5 of 
+//
+//   An abstract interpretation for SPMD divergence
+//       on reducible control flow graphs.
+//   Julian Rosemann, Simon Moll and Sebastian Hack
+//   POPL '21
+//
 //
 // -- Sync dependence --
-// Sync dependence [4] characterizes the control flow aspect of the
+// Sync dependence characterizes the control flow aspect of the
 // propagation of branch divergence. For example,
 //
 //   %cond = icmp slt i32 %tid, 10
@@ -46,9 +43,10 @@
 // because the branch "br i1 %cond" depends on %tid and affects which value %a
 // is assigned to.
 //
+//
 // -- Reduction to SSA construction --
 // There are two disjoint paths from A to X, if a certain variant of SSA
-// construction places a phi node in X under the following set-up scheme [2].
+// construction places a phi node in X under the following set-up scheme.
 //
 // This variant of SSA construction ignores incoming undef values.
 // That is paths from the entry without a definition do not result in
@@ -63,6 +61,7 @@
 //    D     E
 //     \   /
 //       F
+//
 // Assume that A contains a divergent branch. We are interested
 // in the set of all blocks where each block is reachable from A
 // via two disjoint paths. This would be the set {D, F} in this
@@ -70,6 +69,7 @@
 // To generally reduce this query to SSA construction we introduce
 // a virtual variable x and assign to x different values in each
 // successor block of A.
+//
 //           entry
 //         /      \
 //        A        \
@@ -79,23 +79,41 @@
 //        D     E
 //         \   /
 //           F
+//
 // Our flavor of SSA construction for x will construct the following
+//
 //            entry
 //          /      \
 //         A        \
 //       /   \       Y
 // x0 = 0   x1 = 1  /
 //       \   /   \ /
-//      x2=phi    E
+//     x2 = phi   E
 //         \     /
-//          x3=phi
+//         x3 = phi
+//
 // The blocks D and F contain phi nodes and are thus each reachable
 // by two disjoins paths from A.
 //
 // -- Remarks --
-// In case of loop exits we need to check the disjoint path criterion for loops
-// [2]. To this end, we check whether the definition of x differs between the
-// loop exit and the loop header (_after_ SSA construction).
+// * In case of loop exits we need to check the disjoint path criterion for loops.
+//   To this end, we check whether the definition of x differs between the
+//   loop exit and the loop header (_after_ SSA construction).
+//
+// -- Known Limitations & Future Work --
+// * The algorithm requires reducible loops because the implementation
+//   implicitly performs a single iteration of the underlying data flow analysis.
+//   This was done for pragmatism, simplicity and speed.
+//
+//   Relevant related work for extending the algorithm to irreducible control:
+//     A simple algorithm for global data flow analysis problems.
+//     Matthew S. Hecht and Jeffrey D. Ullman.
+//     SIAM Journal on Computing, 4(4):519–532, December 1975.
+//
+// * Another reason for requiring reducible loops is that points of
+//   synchronization in irreducible loops aren't 'obvious' - there is no unique
+//   header where threads 'should' synchronize when entering or coming back
+//   around from the latch.
 //
 //===----------------------------------------------------------------------===//
 #include "llvm/Analysis/SyncDependenceAnalysis.h"
@@ -128,8 +146,9 @@ using namespace llvm;
 //
 // We cannot use the vanilla (R)PO computation of LLVM because:
 // * We (virtually) modify the CFG.
-// * We want a loop-compact block enumeration, that is the numbers assigned by
-//   the traveral to the blocks of a loop are an interval.
+// * We want a loop-compact block enumeration, that is the numbers assigned to
+//   blocks of a loop form an interval
+//   
 using POCB = std::function<void(const BasicBlock &)>;
 using VisitedSet = std::set<const BasicBlock *>;
 using BlockStack = std::vector<const BasicBlock *>;
