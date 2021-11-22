@@ -140,6 +140,12 @@ An overview of all the command-line options:
                                      When the value is empty, clang-tidy will
                                      attempt to find a file named .clang-tidy for
                                      each source file in its parent directories.
+    --config-file=<string>         - 
+                                    Specify the path of .clang-tidy or custom config file:
+                                      e.g. --config-file=/some/path/myTidyConfigFile
+                                    This option internally works exactly the same way as
+                                      --config option after reading specified config file.
+                                    Use either --config-file or --config, not both.
     --dump-config                  -
                                      Dumps configuration in the YAML format to
                                      stdout. This option can be used along with a
@@ -160,9 +166,9 @@ An overview of all the command-line options:
                                      YAML file to store suggested fixes in. The
                                      stored fixes can be applied to the input source
                                      code with clang-apply-replacements.
-    --extra-arg=<string>           - Additional argument to append to the compiler command line
+    --extra-arg=<string>           - Additional argument to append to the compiler command line.
                                      Can be used several times.
-    --extra-arg-before=<string>    - Additional argument to prepend to the compiler command line
+    --extra-arg-before=<string>    - Additional argument to prepend to the compiler command line.
                                      Can be used several times.
     --fix                          -
                                      Apply suggested fixes. Without -fix-errors
@@ -223,6 +229,12 @@ An overview of all the command-line options:
                                      format to stderr. When this option is passed,
                                      these per-TU profiles are instead stored as JSON.
     --system-headers               - Display the errors from system headers.
+    --use-color                    - 
+                                    Use colors in diagnostics. If not set, colors
+                                    will be used if the terminal connected to
+                                    standard output supports colors.
+                                    This option overrides the 'UseColor' option in
+                                    .clang-tidy file, if any.
     --vfsoverlay=<filename>        -
                                      Overlay the virtual filesystem described by file
                                      over the real file system.
