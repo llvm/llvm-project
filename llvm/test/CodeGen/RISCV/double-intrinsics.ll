@@ -668,7 +668,7 @@ define double @fabs_f64(double %a) nounwind {
 ;
 ; RV64IFD-LABEL: fabs_f64:
 ; RV64IFD:       # %bb.0:
-; RV64IFD-NEXT:    addi a1, zero, -1
+; RV64IFD-NEXT:    li a1, -1
 ; RV64IFD-NEXT:    srli a1, a1, 1
 ; RV64IFD-NEXT:    and a0, a0, a1
 ; RV64IFD-NEXT:    ret
@@ -682,7 +682,7 @@ define double @fabs_f64(double %a) nounwind {
 ;
 ; RV64I-LABEL: fabs_f64:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    addi a1, zero, -1
+; RV64I-NEXT:    li a1, -1
 ; RV64I-NEXT:    srli a1, a1, 1
 ; RV64I-NEXT:    and a0, a0, a1
 ; RV64I-NEXT:    ret
@@ -841,7 +841,7 @@ define double @copysign_f64(double %a, double %b) nounwind {
 ;
 ; RV64I-LABEL: copysign_f64:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    addi a2, zero, -1
+; RV64I-NEXT:    li a2, -1
 ; RV64I-NEXT:    slli a3, a2, 63
 ; RV64I-NEXT:    and a1, a1, a3
 ; RV64I-NEXT:    srli a2, a2, 1

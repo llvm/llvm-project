@@ -6,7 +6,7 @@
 define hidden i32 @"_Z54bar$ompvariant$bar"() {
 ; CHECK-LABEL: _Z54bar$ompvariant$bar:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    addi a0, zero, 2
+; CHECK-NEXT:    li a0, 2
 ; CHECK-NEXT:    ret
 entry:
   ret i32 2

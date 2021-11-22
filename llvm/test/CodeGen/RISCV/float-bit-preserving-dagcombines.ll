@@ -110,7 +110,7 @@ define double @bitcast_double_and(double %a1, double %a2) nounwind {
 ; RV64F-NEXT:    sd s0, 0(sp) # 8-byte Folded Spill
 ; RV64F-NEXT:    mv s0, a0
 ; RV64F-NEXT:    call __adddf3@plt
-; RV64F-NEXT:    addi a1, zero, -1
+; RV64F-NEXT:    li a1, -1
 ; RV64F-NEXT:    srli a1, a1, 1
 ; RV64F-NEXT:    and a1, a0, a1
 ; RV64F-NEXT:    mv a0, s0
@@ -233,7 +233,7 @@ define double @bitcast_double_xor(double %a1, double %a2) nounwind {
 ; RV64F-NEXT:    sd s0, 0(sp) # 8-byte Folded Spill
 ; RV64F-NEXT:    mv s0, a0
 ; RV64F-NEXT:    call __muldf3@plt
-; RV64F-NEXT:    addi a1, zero, -1
+; RV64F-NEXT:    li a1, -1
 ; RV64F-NEXT:    slli a1, a1, 63
 ; RV64F-NEXT:    xor a1, a0, a1
 ; RV64F-NEXT:    mv a0, s0
@@ -360,7 +360,7 @@ define double @bitcast_double_or(double %a1, double %a2) nounwind {
 ; RV64F-NEXT:    sd s0, 0(sp) # 8-byte Folded Spill
 ; RV64F-NEXT:    mv s0, a0
 ; RV64F-NEXT:    call __muldf3@plt
-; RV64F-NEXT:    addi a1, zero, -1
+; RV64F-NEXT:    li a1, -1
 ; RV64F-NEXT:    slli a1, a1, 63
 ; RV64F-NEXT:    or a1, a0, a1
 ; RV64F-NEXT:    mv a0, s0

@@ -8,13 +8,13 @@
 define i64 @vscale_zero() nounwind {
 ; RV64-LABEL: vscale_zero:
 ; RV64:       # %bb.0: # %entry
-; RV64-NEXT:    mv a0, zero
+; RV64-NEXT:    li a0, 0
 ; RV64-NEXT:    ret
 ;
 ; RV32-LABEL: vscale_zero:
 ; RV32:       # %bb.0: # %entry
-; RV32-NEXT:    mv a0, zero
-; RV32-NEXT:    mv a1, zero
+; RV32-NEXT:    li a0, 0
+; RV32-NEXT:    li a1, 0
 ; RV32-NEXT:    ret
 entry:
   %0 = call i64 @llvm.vscale.i64()
@@ -33,7 +33,7 @@ define i64 @vscale_one() nounwind {
 ; RV32:       # %bb.0: # %entry
 ; RV32-NEXT:    csrr a0, vlenb
 ; RV32-NEXT:    srli a0, a0, 3
-; RV32-NEXT:    mv a1, zero
+; RV32-NEXT:    li a1, 0
 ; RV32-NEXT:    ret
 entry:
   %0 = call i64 @llvm.vscale.i64()
@@ -52,7 +52,7 @@ define i64 @vscale_uimmpow2xlen() nounwind {
 ; RV32:       # %bb.0: # %entry
 ; RV32-NEXT:    csrr a0, vlenb
 ; RV32-NEXT:    slli a0, a0, 3
-; RV32-NEXT:    mv a1, zero
+; RV32-NEXT:    li a1, 0
 ; RV32-NEXT:    ret
 entry:
   %0 = call i64 @llvm.vscale.i64()
@@ -73,7 +73,7 @@ define i64 @vscale_non_pow2() nounwind {
 ; RV32-NEXT:    csrr a0, vlenb
 ; RV32-NEXT:    slli a1, a0, 1
 ; RV32-NEXT:    add a0, a1, a0
-; RV32-NEXT:    mv a1, zero
+; RV32-NEXT:    li a1, 0
 ; RV32-NEXT:    ret
 entry:
   %0 = call i64 @llvm.vscale.i64()
@@ -97,7 +97,7 @@ define i64 @vscale_select(i32 %x, i32 %y) {
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    csrr a0, vlenb
 ; RV32-NEXT:    srli a0, a0, 3
-; RV32-NEXT:    mv a1, zero
+; RV32-NEXT:    li a1, 0
 ; RV32-NEXT:    ret
   %a = call i64 @llvm.vscale.i64()
   %b = and i64 %a, 4294967295

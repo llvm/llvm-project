@@ -48,7 +48,7 @@ define i64 @selecti64i64(i64 %a) {
 define i32 @selecti64i32(i64 %a) {
 ; RV32-LABEL: selecti64i32:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    addi a0, zero, -1
+; RV32-NEXT:    li a0, -1
 ; RV32-NEXT:    slt a0, a0, a1
 ; RV32-NEXT:    lui a1, 524288
 ; RV32-NEXT:    sub a0, a1, a0

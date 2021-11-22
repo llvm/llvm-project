@@ -23,13 +23,13 @@ define void @vec3_setcc_crash(<3 x i8>* %in, <3 x i8>* %out) {
 ; RV32-NEXT:    mv a5, a0
 ; RV32-NEXT:    bgtz a3, .LBB0_2
 ; RV32-NEXT:  # %bb.1:
-; RV32-NEXT:    mv a5, zero
+; RV32-NEXT:    li a5, 0
 ; RV32-NEXT:  .LBB0_2:
 ; RV32-NEXT:    srai a4, a4, 24
 ; RV32-NEXT:    andi a5, a5, 255
 ; RV32-NEXT:    bgtz a6, .LBB0_4
 ; RV32-NEXT:  # %bb.3:
-; RV32-NEXT:    mv a2, zero
+; RV32-NEXT:    li a2, 0
 ; RV32-NEXT:    j .LBB0_5
 ; RV32-NEXT:  .LBB0_4:
 ; RV32-NEXT:    srli a2, a2, 8
@@ -38,7 +38,7 @@ define void @vec3_setcc_crash(<3 x i8>* %in, <3 x i8>* %out) {
 ; RV32-NEXT:    or a2, a5, a2
 ; RV32-NEXT:    bgtz a4, .LBB0_7
 ; RV32-NEXT:  # %bb.6:
-; RV32-NEXT:    mv a0, zero
+; RV32-NEXT:    li a0, 0
 ; RV32-NEXT:    j .LBB0_8
 ; RV32-NEXT:  .LBB0_7:
 ; RV32-NEXT:    srli a0, a0, 16
@@ -61,13 +61,13 @@ define void @vec3_setcc_crash(<3 x i8>* %in, <3 x i8>* %out) {
 ; RV64-NEXT:    mv a5, a0
 ; RV64-NEXT:    bgtz a3, .LBB0_2
 ; RV64-NEXT:  # %bb.1:
-; RV64-NEXT:    mv a5, zero
+; RV64-NEXT:    li a5, 0
 ; RV64-NEXT:  .LBB0_2:
 ; RV64-NEXT:    srai a4, a4, 56
 ; RV64-NEXT:    andi a5, a5, 255
 ; RV64-NEXT:    bgtz a6, .LBB0_4
 ; RV64-NEXT:  # %bb.3:
-; RV64-NEXT:    mv a2, zero
+; RV64-NEXT:    li a2, 0
 ; RV64-NEXT:    j .LBB0_5
 ; RV64-NEXT:  .LBB0_4:
 ; RV64-NEXT:    srli a2, a2, 8
@@ -76,7 +76,7 @@ define void @vec3_setcc_crash(<3 x i8>* %in, <3 x i8>* %out) {
 ; RV64-NEXT:    or a2, a5, a2
 ; RV64-NEXT:    bgtz a4, .LBB0_7
 ; RV64-NEXT:  # %bb.6:
-; RV64-NEXT:    mv a0, zero
+; RV64-NEXT:    li a0, 0
 ; RV64-NEXT:    j .LBB0_8
 ; RV64-NEXT:  .LBB0_7:
 ; RV64-NEXT:    srli a0, a0, 16

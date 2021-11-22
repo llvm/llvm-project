@@ -105,7 +105,7 @@ define signext i32 @foo(i32 signext %a, i32 *%b) nounwind {
 ; RV32IBT-NEXT:    slti a2, a5, 1
 ; RV32IBT-NEXT:    lw a1, 0(a1)
 ; RV32IBT-NEXT:    cmov a0, a2, a0, a5
-; RV32IBT-NEXT:    addi a2, zero, -1
+; RV32IBT-NEXT:    li a2, -1
 ; RV32IBT-NEXT:    slt a2, a2, a5
 ; RV32IBT-NEXT:    cmov a0, a2, a0, a1
 ; RV32IBT-NEXT:    ret

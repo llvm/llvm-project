@@ -34,15 +34,15 @@ define float @caller_onstack_f32_noop(float %a) nounwind {
 ; RV32IF-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32IF-NEXT:    sw a0, 4(sp)
 ; RV32IF-NEXT:    lui a1, 264704
-; RV32IF-NEXT:    addi a0, zero, 1
-; RV32IF-NEXT:    addi a2, zero, 2
-; RV32IF-NEXT:    addi a4, zero, 3
-; RV32IF-NEXT:    addi a6, zero, 4
+; RV32IF-NEXT:    li a0, 1
+; RV32IF-NEXT:    li a2, 2
+; RV32IF-NEXT:    li a4, 3
+; RV32IF-NEXT:    li a6, 4
 ; RV32IF-NEXT:    sw a1, 0(sp)
-; RV32IF-NEXT:    mv a1, zero
-; RV32IF-NEXT:    mv a3, zero
-; RV32IF-NEXT:    mv a5, zero
-; RV32IF-NEXT:    mv a7, zero
+; RV32IF-NEXT:    li a1, 0
+; RV32IF-NEXT:    li a3, 0
+; RV32IF-NEXT:    li a5, 0
+; RV32IF-NEXT:    li a7, 0
 ; RV32IF-NEXT:    call onstack_f32_noop@plt
 ; RV32IF-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32IF-NEXT:    addi sp, sp, 16
@@ -61,15 +61,15 @@ define float @caller_onstack_f32_fadd(float %a, float %b) nounwind {
 ; RV32IF-NEXT:    fadd.s ft2, ft1, ft0
 ; RV32IF-NEXT:    fsub.s ft0, ft0, ft1
 ; RV32IF-NEXT:    fsw ft0, 4(sp)
-; RV32IF-NEXT:    addi a0, zero, 1
-; RV32IF-NEXT:    addi a2, zero, 2
-; RV32IF-NEXT:    addi a4, zero, 3
-; RV32IF-NEXT:    addi a6, zero, 4
+; RV32IF-NEXT:    li a0, 1
+; RV32IF-NEXT:    li a2, 2
+; RV32IF-NEXT:    li a4, 3
+; RV32IF-NEXT:    li a6, 4
 ; RV32IF-NEXT:    fsw ft2, 0(sp)
-; RV32IF-NEXT:    mv a1, zero
-; RV32IF-NEXT:    mv a3, zero
-; RV32IF-NEXT:    mv a5, zero
-; RV32IF-NEXT:    mv a7, zero
+; RV32IF-NEXT:    li a1, 0
+; RV32IF-NEXT:    li a3, 0
+; RV32IF-NEXT:    li a5, 0
+; RV32IF-NEXT:    li a7, 0
 ; RV32IF-NEXT:    call onstack_f32_noop@plt
 ; RV32IF-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32IF-NEXT:    addi sp, sp, 16

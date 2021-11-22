@@ -4,8 +4,8 @@
 # RUN:     | llvm-objdump -d -M numeric - \
 # RUN:     | FileCheck -check-prefix=CHECK-NUMERIC %s
 
-# CHECK-NUMERIC: addi x10, x0, 1
-# CHECK-NUMERIC-NEXT: addi x10, x0, 1
+# CHECK-NUMERIC: li x10, 1
+# CHECK-NUMERIC-NEXT: li x10, 1
 addi a0, x0, 1
 addi a0, zero, 1
 

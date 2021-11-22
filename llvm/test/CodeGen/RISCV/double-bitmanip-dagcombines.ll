@@ -32,14 +32,14 @@ define double @fneg(double %a) nounwind {
 ;
 ; RV64I-LABEL: fneg:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    addi a1, zero, -1
+; RV64I-NEXT:    li a1, -1
 ; RV64I-NEXT:    slli a1, a1, 63
 ; RV64I-NEXT:    xor a0, a0, a1
 ; RV64I-NEXT:    ret
 ;
 ; RV64IFD-LABEL: fneg:
 ; RV64IFD:       # %bb.0:
-; RV64IFD-NEXT:    addi a1, zero, -1
+; RV64IFD-NEXT:    li a1, -1
 ; RV64IFD-NEXT:    slli a1, a1, 63
 ; RV64IFD-NEXT:    xor a0, a0, a1
 ; RV64IFD-NEXT:    ret
@@ -66,14 +66,14 @@ define double @fabs(double %a) nounwind {
 ;
 ; RV64I-LABEL: fabs:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    addi a1, zero, -1
+; RV64I-NEXT:    li a1, -1
 ; RV64I-NEXT:    srli a1, a1, 1
 ; RV64I-NEXT:    and a0, a0, a1
 ; RV64I-NEXT:    ret
 ;
 ; RV64IFD-LABEL: fabs:
 ; RV64IFD:       # %bb.0:
-; RV64IFD-NEXT:    addi a1, zero, -1
+; RV64IFD-NEXT:    li a1, -1
 ; RV64IFD-NEXT:    srli a1, a1, 1
 ; RV64IFD-NEXT:    and a0, a0, a1
 ; RV64IFD-NEXT:    ret
@@ -117,7 +117,7 @@ define double @fcopysign_fneg(double %a, double %b) nounwind {
 ; RV64I-LABEL: fcopysign_fneg:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    not a1, a1
-; RV64I-NEXT:    addi a2, zero, -1
+; RV64I-NEXT:    li a2, -1
 ; RV64I-NEXT:    slli a3, a2, 63
 ; RV64I-NEXT:    and a1, a1, a3
 ; RV64I-NEXT:    srli a2, a2, 1
@@ -127,7 +127,7 @@ define double @fcopysign_fneg(double %a, double %b) nounwind {
 ;
 ; RV64IFD-LABEL: fcopysign_fneg:
 ; RV64IFD:       # %bb.0:
-; RV64IFD-NEXT:    addi a2, zero, -1
+; RV64IFD-NEXT:    li a2, -1
 ; RV64IFD-NEXT:    slli a2, a2, 63
 ; RV64IFD-NEXT:    xor a1, a1, a2
 ; RV64IFD-NEXT:    fmv.d.x ft0, a1

@@ -38,7 +38,7 @@
 nop
 
 # CHECK-S-OBJ-NOALIAS: addi t6, zero, 0
-# CHECK-S-OBJ: mv t6, zero
+# CHECK-S-OBJ: li t6, 0
 mv x31, zero
 # CHECK-S-OBJ-NOALIAS: addi a2, a3, 0
 # CHECK-S-OBJ: mv a2, a3

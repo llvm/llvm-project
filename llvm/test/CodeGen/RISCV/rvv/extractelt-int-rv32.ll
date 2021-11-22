@@ -581,7 +581,7 @@ define i32 @extractelt_nxv16i32_idx(<vscale x 16 x i32> %v, i32 %idx) {
 define i64 @extractelt_nxv1i64_0(<vscale x 1 x i64> %v) {
 ; CHECK-LABEL: extractelt_nxv1i64_0:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a0, zero, 32
+; CHECK-NEXT:    li a0, 32
 ; CHECK-NEXT:    vsetivli zero, 1, e64, m1, ta, mu
 ; CHECK-NEXT:    vsrl.vx v9, v8, a0
 ; CHECK-NEXT:    vmv.x.s a1, v9
@@ -597,7 +597,7 @@ define i64 @extractelt_nxv1i64_imm(<vscale x 1 x i64> %v) {
 ; CHECK-NEXT:    vsetivli zero, 1, e64, m1, ta, mu
 ; CHECK-NEXT:    vslidedown.vi v8, v8, 2
 ; CHECK-NEXT:    vmv.x.s a0, v8
-; CHECK-NEXT:    addi a1, zero, 32
+; CHECK-NEXT:    li a1, 32
 ; CHECK-NEXT:    vsrl.vx v8, v8, a1
 ; CHECK-NEXT:    vmv.x.s a1, v8
 ; CHECK-NEXT:    ret
@@ -611,7 +611,7 @@ define i64 @extractelt_nxv1i64_idx(<vscale x 1 x i64> %v, i32 %idx) {
 ; CHECK-NEXT:    vsetivli zero, 1, e64, m1, ta, mu
 ; CHECK-NEXT:    vslidedown.vx v8, v8, a0
 ; CHECK-NEXT:    vmv.x.s a0, v8
-; CHECK-NEXT:    addi a1, zero, 32
+; CHECK-NEXT:    li a1, 32
 ; CHECK-NEXT:    vsrl.vx v8, v8, a1
 ; CHECK-NEXT:    vmv.x.s a1, v8
 ; CHECK-NEXT:    ret
@@ -622,7 +622,7 @@ define i64 @extractelt_nxv1i64_idx(<vscale x 1 x i64> %v, i32 %idx) {
 define i64 @extractelt_nxv2i64_0(<vscale x 2 x i64> %v) {
 ; CHECK-LABEL: extractelt_nxv2i64_0:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a0, zero, 32
+; CHECK-NEXT:    li a0, 32
 ; CHECK-NEXT:    vsetivli zero, 1, e64, m2, ta, mu
 ; CHECK-NEXT:    vsrl.vx v10, v8, a0
 ; CHECK-NEXT:    vmv.x.s a1, v10
@@ -638,7 +638,7 @@ define i64 @extractelt_nxv2i64_imm(<vscale x 2 x i64> %v) {
 ; CHECK-NEXT:    vsetivli zero, 1, e64, m2, ta, mu
 ; CHECK-NEXT:    vslidedown.vi v8, v8, 2
 ; CHECK-NEXT:    vmv.x.s a0, v8
-; CHECK-NEXT:    addi a1, zero, 32
+; CHECK-NEXT:    li a1, 32
 ; CHECK-NEXT:    vsrl.vx v8, v8, a1
 ; CHECK-NEXT:    vmv.x.s a1, v8
 ; CHECK-NEXT:    ret
@@ -652,7 +652,7 @@ define i64 @extractelt_nxv2i64_idx(<vscale x 2 x i64> %v, i32 %idx) {
 ; CHECK-NEXT:    vsetivli zero, 1, e64, m2, ta, mu
 ; CHECK-NEXT:    vslidedown.vx v8, v8, a0
 ; CHECK-NEXT:    vmv.x.s a0, v8
-; CHECK-NEXT:    addi a1, zero, 32
+; CHECK-NEXT:    li a1, 32
 ; CHECK-NEXT:    vsrl.vx v8, v8, a1
 ; CHECK-NEXT:    vmv.x.s a1, v8
 ; CHECK-NEXT:    ret
@@ -663,7 +663,7 @@ define i64 @extractelt_nxv2i64_idx(<vscale x 2 x i64> %v, i32 %idx) {
 define i64 @extractelt_nxv4i64_0(<vscale x 4 x i64> %v) {
 ; CHECK-LABEL: extractelt_nxv4i64_0:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a0, zero, 32
+; CHECK-NEXT:    li a0, 32
 ; CHECK-NEXT:    vsetivli zero, 1, e64, m4, ta, mu
 ; CHECK-NEXT:    vsrl.vx v12, v8, a0
 ; CHECK-NEXT:    vmv.x.s a1, v12
@@ -679,7 +679,7 @@ define i64 @extractelt_nxv4i64_imm(<vscale x 4 x i64> %v) {
 ; CHECK-NEXT:    vsetivli zero, 1, e64, m4, ta, mu
 ; CHECK-NEXT:    vslidedown.vi v8, v8, 2
 ; CHECK-NEXT:    vmv.x.s a0, v8
-; CHECK-NEXT:    addi a1, zero, 32
+; CHECK-NEXT:    li a1, 32
 ; CHECK-NEXT:    vsrl.vx v8, v8, a1
 ; CHECK-NEXT:    vmv.x.s a1, v8
 ; CHECK-NEXT:    ret
@@ -693,7 +693,7 @@ define i64 @extractelt_nxv4i64_idx(<vscale x 4 x i64> %v, i32 %idx) {
 ; CHECK-NEXT:    vsetivli zero, 1, e64, m4, ta, mu
 ; CHECK-NEXT:    vslidedown.vx v8, v8, a0
 ; CHECK-NEXT:    vmv.x.s a0, v8
-; CHECK-NEXT:    addi a1, zero, 32
+; CHECK-NEXT:    li a1, 32
 ; CHECK-NEXT:    vsrl.vx v8, v8, a1
 ; CHECK-NEXT:    vmv.x.s a1, v8
 ; CHECK-NEXT:    ret
@@ -704,7 +704,7 @@ define i64 @extractelt_nxv4i64_idx(<vscale x 4 x i64> %v, i32 %idx) {
 define i64 @extractelt_nxv8i64_0(<vscale x 8 x i64> %v) {
 ; CHECK-LABEL: extractelt_nxv8i64_0:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a0, zero, 32
+; CHECK-NEXT:    li a0, 32
 ; CHECK-NEXT:    vsetivli zero, 1, e64, m8, ta, mu
 ; CHECK-NEXT:    vsrl.vx v16, v8, a0
 ; CHECK-NEXT:    vmv.x.s a1, v16
@@ -720,7 +720,7 @@ define i64 @extractelt_nxv8i64_imm(<vscale x 8 x i64> %v) {
 ; CHECK-NEXT:    vsetivli zero, 1, e64, m8, ta, mu
 ; CHECK-NEXT:    vslidedown.vi v8, v8, 2
 ; CHECK-NEXT:    vmv.x.s a0, v8
-; CHECK-NEXT:    addi a1, zero, 32
+; CHECK-NEXT:    li a1, 32
 ; CHECK-NEXT:    vsrl.vx v8, v8, a1
 ; CHECK-NEXT:    vmv.x.s a1, v8
 ; CHECK-NEXT:    ret
@@ -734,7 +734,7 @@ define i64 @extractelt_nxv8i64_idx(<vscale x 8 x i64> %v, i32 %idx) {
 ; CHECK-NEXT:    vsetivli zero, 1, e64, m8, ta, mu
 ; CHECK-NEXT:    vslidedown.vx v8, v8, a0
 ; CHECK-NEXT:    vmv.x.s a0, v8
-; CHECK-NEXT:    addi a1, zero, 32
+; CHECK-NEXT:    li a1, 32
 ; CHECK-NEXT:    vsrl.vx v8, v8, a1
 ; CHECK-NEXT:    vmv.x.s a1, v8
 ; CHECK-NEXT:    ret

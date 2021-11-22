@@ -1090,7 +1090,7 @@ define half @fmsub_s(half %a, half %b, half %c) nounwind {
 ; RV32I-NEXT:    addi s0, a0, -1
 ; RV32I-NEXT:    and a0, a2, s0
 ; RV32I-NEXT:    call __gnu_h2f_ieee@plt
-; RV32I-NEXT:    mv a1, zero
+; RV32I-NEXT:    li a1, 0
 ; RV32I-NEXT:    call __addsf3@plt
 ; RV32I-NEXT:    call __gnu_f2h_ieee@plt
 ; RV32I-NEXT:    and a0, a0, s0
@@ -1136,7 +1136,7 @@ define half @fmsub_s(half %a, half %b, half %c) nounwind {
 ; RV64I-NEXT:    addiw s0, a0, -1
 ; RV64I-NEXT:    and a0, a2, s0
 ; RV64I-NEXT:    call __gnu_h2f_ieee@plt
-; RV64I-NEXT:    mv a1, zero
+; RV64I-NEXT:    li a1, 0
 ; RV64I-NEXT:    call __addsf3@plt
 ; RV64I-NEXT:    call __gnu_f2h_ieee@plt
 ; RV64I-NEXT:    and a0, a0, s0
@@ -1204,13 +1204,13 @@ define half @fnmadd_s(half %a, half %b, half %c) nounwind {
 ; RV32I-NEXT:    addi s1, a1, -1
 ; RV32I-NEXT:    and a0, a0, s1
 ; RV32I-NEXT:    call __gnu_h2f_ieee@plt
-; RV32I-NEXT:    mv a1, zero
+; RV32I-NEXT:    li a1, 0
 ; RV32I-NEXT:    call __addsf3@plt
 ; RV32I-NEXT:    call __gnu_f2h_ieee@plt
 ; RV32I-NEXT:    mv s4, a0
 ; RV32I-NEXT:    and a0, s3, s1
 ; RV32I-NEXT:    call __gnu_h2f_ieee@plt
-; RV32I-NEXT:    mv a1, zero
+; RV32I-NEXT:    li a1, 0
 ; RV32I-NEXT:    call __addsf3@plt
 ; RV32I-NEXT:    call __gnu_f2h_ieee@plt
 ; RV32I-NEXT:    mv s0, a0
@@ -1262,13 +1262,13 @@ define half @fnmadd_s(half %a, half %b, half %c) nounwind {
 ; RV64I-NEXT:    addiw s1, a1, -1
 ; RV64I-NEXT:    and a0, a0, s1
 ; RV64I-NEXT:    call __gnu_h2f_ieee@plt
-; RV64I-NEXT:    mv a1, zero
+; RV64I-NEXT:    li a1, 0
 ; RV64I-NEXT:    call __addsf3@plt
 ; RV64I-NEXT:    call __gnu_f2h_ieee@plt
 ; RV64I-NEXT:    mv s4, a0
 ; RV64I-NEXT:    and a0, s3, s1
 ; RV64I-NEXT:    call __gnu_h2f_ieee@plt
-; RV64I-NEXT:    mv a1, zero
+; RV64I-NEXT:    li a1, 0
 ; RV64I-NEXT:    call __addsf3@plt
 ; RV64I-NEXT:    call __gnu_f2h_ieee@plt
 ; RV64I-NEXT:    mv s0, a0
@@ -1344,13 +1344,13 @@ define half @fnmadd_s_2(half %a, half %b, half %c) nounwind {
 ; RV32I-NEXT:    addi s1, a0, -1
 ; RV32I-NEXT:    and a0, a1, s1
 ; RV32I-NEXT:    call __gnu_h2f_ieee@plt
-; RV32I-NEXT:    mv a1, zero
+; RV32I-NEXT:    li a1, 0
 ; RV32I-NEXT:    call __addsf3@plt
 ; RV32I-NEXT:    call __gnu_f2h_ieee@plt
 ; RV32I-NEXT:    mv s4, a0
 ; RV32I-NEXT:    and a0, s3, s1
 ; RV32I-NEXT:    call __gnu_h2f_ieee@plt
-; RV32I-NEXT:    mv a1, zero
+; RV32I-NEXT:    li a1, 0
 ; RV32I-NEXT:    call __addsf3@plt
 ; RV32I-NEXT:    call __gnu_f2h_ieee@plt
 ; RV32I-NEXT:    mv s0, a0
@@ -1402,13 +1402,13 @@ define half @fnmadd_s_2(half %a, half %b, half %c) nounwind {
 ; RV64I-NEXT:    addiw s1, a0, -1
 ; RV64I-NEXT:    and a0, a1, s1
 ; RV64I-NEXT:    call __gnu_h2f_ieee@plt
-; RV64I-NEXT:    mv a1, zero
+; RV64I-NEXT:    li a1, 0
 ; RV64I-NEXT:    call __addsf3@plt
 ; RV64I-NEXT:    call __gnu_f2h_ieee@plt
 ; RV64I-NEXT:    mv s4, a0
 ; RV64I-NEXT:    and a0, s3, s1
 ; RV64I-NEXT:    call __gnu_h2f_ieee@plt
-; RV64I-NEXT:    mv a1, zero
+; RV64I-NEXT:    li a1, 0
 ; RV64I-NEXT:    call __addsf3@plt
 ; RV64I-NEXT:    call __gnu_f2h_ieee@plt
 ; RV64I-NEXT:    mv s0, a0
@@ -1482,7 +1482,7 @@ define half @fnmsub_s(half %a, half %b, half %c) nounwind {
 ; RV32I-NEXT:    addi s0, a1, -1
 ; RV32I-NEXT:    and a0, a0, s0
 ; RV32I-NEXT:    call __gnu_h2f_ieee@plt
-; RV32I-NEXT:    mv a1, zero
+; RV32I-NEXT:    li a1, 0
 ; RV32I-NEXT:    call __addsf3@plt
 ; RV32I-NEXT:    call __gnu_f2h_ieee@plt
 ; RV32I-NEXT:    and a0, a0, s0
@@ -1527,7 +1527,7 @@ define half @fnmsub_s(half %a, half %b, half %c) nounwind {
 ; RV64I-NEXT:    addiw s0, a1, -1
 ; RV64I-NEXT:    and a0, a0, s0
 ; RV64I-NEXT:    call __gnu_h2f_ieee@plt
-; RV64I-NEXT:    mv a1, zero
+; RV64I-NEXT:    li a1, 0
 ; RV64I-NEXT:    call __addsf3@plt
 ; RV64I-NEXT:    call __gnu_f2h_ieee@plt
 ; RV64I-NEXT:    and a0, a0, s0
@@ -1592,7 +1592,7 @@ define half @fnmsub_s_2(half %a, half %b, half %c) nounwind {
 ; RV32I-NEXT:    addi s0, a0, -1
 ; RV32I-NEXT:    and a0, a1, s0
 ; RV32I-NEXT:    call __gnu_h2f_ieee@plt
-; RV32I-NEXT:    mv a1, zero
+; RV32I-NEXT:    li a1, 0
 ; RV32I-NEXT:    call __addsf3@plt
 ; RV32I-NEXT:    call __gnu_f2h_ieee@plt
 ; RV32I-NEXT:    and a0, a0, s0
@@ -1638,7 +1638,7 @@ define half @fnmsub_s_2(half %a, half %b, half %c) nounwind {
 ; RV64I-NEXT:    addiw s0, a0, -1
 ; RV64I-NEXT:    and a0, a1, s0
 ; RV64I-NEXT:    call __gnu_h2f_ieee@plt
-; RV64I-NEXT:    mv a1, zero
+; RV64I-NEXT:    li a1, 0
 ; RV64I-NEXT:    call __addsf3@plt
 ; RV64I-NEXT:    call __gnu_f2h_ieee@plt
 ; RV64I-NEXT:    and a0, a0, s0
@@ -1794,7 +1794,7 @@ define half @fmsub_s_contract(half %a, half %b, half %c) nounwind {
 ; RV32I-NEXT:    addi s0, a0, -1
 ; RV32I-NEXT:    and a0, a2, s0
 ; RV32I-NEXT:    call __gnu_h2f_ieee@plt
-; RV32I-NEXT:    mv a1, zero
+; RV32I-NEXT:    li a1, 0
 ; RV32I-NEXT:    call __addsf3@plt
 ; RV32I-NEXT:    call __gnu_f2h_ieee@plt
 ; RV32I-NEXT:    mv s2, a0
@@ -1838,7 +1838,7 @@ define half @fmsub_s_contract(half %a, half %b, half %c) nounwind {
 ; RV64I-NEXT:    addiw s0, a0, -1
 ; RV64I-NEXT:    and a0, a2, s0
 ; RV64I-NEXT:    call __gnu_h2f_ieee@plt
-; RV64I-NEXT:    mv a1, zero
+; RV64I-NEXT:    li a1, 0
 ; RV64I-NEXT:    call __addsf3@plt
 ; RV64I-NEXT:    call __gnu_f2h_ieee@plt
 ; RV64I-NEXT:    mv s2, a0
@@ -1907,19 +1907,19 @@ define half @fnmadd_s_contract(half %a, half %b, half %c) nounwind {
 ; RV32I-NEXT:    addi s1, a1, -1
 ; RV32I-NEXT:    and a0, a0, s1
 ; RV32I-NEXT:    call __gnu_h2f_ieee@plt
-; RV32I-NEXT:    mv a1, zero
+; RV32I-NEXT:    li a1, 0
 ; RV32I-NEXT:    call __addsf3@plt
 ; RV32I-NEXT:    call __gnu_f2h_ieee@plt
 ; RV32I-NEXT:    mv s3, a0
 ; RV32I-NEXT:    and a0, s0, s1
 ; RV32I-NEXT:    call __gnu_h2f_ieee@plt
-; RV32I-NEXT:    mv a1, zero
+; RV32I-NEXT:    li a1, 0
 ; RV32I-NEXT:    call __addsf3@plt
 ; RV32I-NEXT:    call __gnu_f2h_ieee@plt
 ; RV32I-NEXT:    mv s4, a0
 ; RV32I-NEXT:    and a0, s2, s1
 ; RV32I-NEXT:    call __gnu_h2f_ieee@plt
-; RV32I-NEXT:    mv a1, zero
+; RV32I-NEXT:    li a1, 0
 ; RV32I-NEXT:    call __addsf3@plt
 ; RV32I-NEXT:    call __gnu_f2h_ieee@plt
 ; RV32I-NEXT:    mv s2, a0
@@ -1970,19 +1970,19 @@ define half @fnmadd_s_contract(half %a, half %b, half %c) nounwind {
 ; RV64I-NEXT:    addiw s1, a1, -1
 ; RV64I-NEXT:    and a0, a0, s1
 ; RV64I-NEXT:    call __gnu_h2f_ieee@plt
-; RV64I-NEXT:    mv a1, zero
+; RV64I-NEXT:    li a1, 0
 ; RV64I-NEXT:    call __addsf3@plt
 ; RV64I-NEXT:    call __gnu_f2h_ieee@plt
 ; RV64I-NEXT:    mv s3, a0
 ; RV64I-NEXT:    and a0, s0, s1
 ; RV64I-NEXT:    call __gnu_h2f_ieee@plt
-; RV64I-NEXT:    mv a1, zero
+; RV64I-NEXT:    li a1, 0
 ; RV64I-NEXT:    call __addsf3@plt
 ; RV64I-NEXT:    call __gnu_f2h_ieee@plt
 ; RV64I-NEXT:    mv s4, a0
 ; RV64I-NEXT:    and a0, s2, s1
 ; RV64I-NEXT:    call __gnu_h2f_ieee@plt
-; RV64I-NEXT:    mv a1, zero
+; RV64I-NEXT:    li a1, 0
 ; RV64I-NEXT:    call __addsf3@plt
 ; RV64I-NEXT:    call __gnu_f2h_ieee@plt
 ; RV64I-NEXT:    mv s2, a0
@@ -2057,13 +2057,13 @@ define half @fnmsub_s_contract(half %a, half %b, half %c) nounwind {
 ; RV32I-NEXT:    addi s0, a1, -1
 ; RV32I-NEXT:    and a0, a0, s0
 ; RV32I-NEXT:    call __gnu_h2f_ieee@plt
-; RV32I-NEXT:    mv a1, zero
+; RV32I-NEXT:    li a1, 0
 ; RV32I-NEXT:    call __addsf3@plt
 ; RV32I-NEXT:    call __gnu_f2h_ieee@plt
 ; RV32I-NEXT:    mv s3, a0
 ; RV32I-NEXT:    and a0, s1, s0
 ; RV32I-NEXT:    call __gnu_h2f_ieee@plt
-; RV32I-NEXT:    mv a1, zero
+; RV32I-NEXT:    li a1, 0
 ; RV32I-NEXT:    call __addsf3@plt
 ; RV32I-NEXT:    call __gnu_f2h_ieee@plt
 ; RV32I-NEXT:    mv s1, a0
@@ -2108,13 +2108,13 @@ define half @fnmsub_s_contract(half %a, half %b, half %c) nounwind {
 ; RV64I-NEXT:    addiw s0, a1, -1
 ; RV64I-NEXT:    and a0, a0, s0
 ; RV64I-NEXT:    call __gnu_h2f_ieee@plt
-; RV64I-NEXT:    mv a1, zero
+; RV64I-NEXT:    li a1, 0
 ; RV64I-NEXT:    call __addsf3@plt
 ; RV64I-NEXT:    call __gnu_f2h_ieee@plt
 ; RV64I-NEXT:    mv s3, a0
 ; RV64I-NEXT:    and a0, s1, s0
 ; RV64I-NEXT:    call __gnu_h2f_ieee@plt
-; RV64I-NEXT:    mv a1, zero
+; RV64I-NEXT:    li a1, 0
 ; RV64I-NEXT:    call __addsf3@plt
 ; RV64I-NEXT:    call __gnu_f2h_ieee@plt
 ; RV64I-NEXT:    mv s1, a0

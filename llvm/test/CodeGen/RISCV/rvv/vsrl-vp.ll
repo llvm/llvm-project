@@ -9,7 +9,7 @@ declare <vscale x 8 x i7> @llvm.vp.lshr.nxv8i7(<vscale x 8 x i7>, <vscale x 8 x 
 define <vscale x 8 x i7> @vsrl_vx_nxv8i7(<vscale x 8 x i7> %a, i7 signext %b, <vscale x 8 x i1> %mask, i32 zeroext %evl) {
 ; CHECK-LABEL: vsrl_vx_nxv8i7:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a2, zero, 127
+; CHECK-NEXT:    li a2, 127
 ; CHECK-NEXT:    vsetvli a3, zero, e8, m1, ta, mu
 ; CHECK-NEXT:    vand.vx v8, v8, a2
 ; CHECK-NEXT:    vmv.v.x v9, a0

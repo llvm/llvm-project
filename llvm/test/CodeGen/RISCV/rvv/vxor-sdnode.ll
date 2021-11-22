@@ -51,7 +51,7 @@ define <vscale x 1 x i8> @vxor_vi_nxv1i8_1(<vscale x 1 x i8> %va) {
 define <vscale x 1 x i8> @vxor_vi_nxv1i8_2(<vscale x 1 x i8> %va) {
 ; CHECK-LABEL: vxor_vi_nxv1i8_2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a0, zero, 16
+; CHECK-NEXT:    li a0, 16
 ; CHECK-NEXT:    vsetvli a1, zero, e8, mf8, ta, mu
 ; CHECK-NEXT:    vxor.vx v8, v8, a0
 ; CHECK-NEXT:    ret
@@ -110,7 +110,7 @@ define <vscale x 2 x i8> @vxor_vi_nxv2i8_1(<vscale x 2 x i8> %va) {
 define <vscale x 2 x i8> @vxor_vi_nxv2i8_2(<vscale x 2 x i8> %va) {
 ; CHECK-LABEL: vxor_vi_nxv2i8_2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a0, zero, 16
+; CHECK-NEXT:    li a0, 16
 ; CHECK-NEXT:    vsetvli a1, zero, e8, mf4, ta, mu
 ; CHECK-NEXT:    vxor.vx v8, v8, a0
 ; CHECK-NEXT:    ret
@@ -169,7 +169,7 @@ define <vscale x 4 x i8> @vxor_vi_nxv4i8_1(<vscale x 4 x i8> %va) {
 define <vscale x 4 x i8> @vxor_vi_nxv4i8_2(<vscale x 4 x i8> %va) {
 ; CHECK-LABEL: vxor_vi_nxv4i8_2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a0, zero, 16
+; CHECK-NEXT:    li a0, 16
 ; CHECK-NEXT:    vsetvli a1, zero, e8, mf2, ta, mu
 ; CHECK-NEXT:    vxor.vx v8, v8, a0
 ; CHECK-NEXT:    ret
@@ -228,7 +228,7 @@ define <vscale x 8 x i8> @vxor_vi_nxv8i8_1(<vscale x 8 x i8> %va) {
 define <vscale x 8 x i8> @vxor_vi_nxv8i8_2(<vscale x 8 x i8> %va) {
 ; CHECK-LABEL: vxor_vi_nxv8i8_2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a0, zero, 16
+; CHECK-NEXT:    li a0, 16
 ; CHECK-NEXT:    vsetvli a1, zero, e8, m1, ta, mu
 ; CHECK-NEXT:    vxor.vx v8, v8, a0
 ; CHECK-NEXT:    ret
@@ -287,7 +287,7 @@ define <vscale x 16 x i8> @vxor_vi_nxv16i8_1(<vscale x 16 x i8> %va) {
 define <vscale x 16 x i8> @vxor_vi_nxv16i8_2(<vscale x 16 x i8> %va) {
 ; CHECK-LABEL: vxor_vi_nxv16i8_2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a0, zero, 16
+; CHECK-NEXT:    li a0, 16
 ; CHECK-NEXT:    vsetvli a1, zero, e8, m2, ta, mu
 ; CHECK-NEXT:    vxor.vx v8, v8, a0
 ; CHECK-NEXT:    ret
@@ -346,7 +346,7 @@ define <vscale x 32 x i8> @vxor_vi_nxv32i8_1(<vscale x 32 x i8> %va) {
 define <vscale x 32 x i8> @vxor_vi_nxv32i8_2(<vscale x 32 x i8> %va) {
 ; CHECK-LABEL: vxor_vi_nxv32i8_2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a0, zero, 16
+; CHECK-NEXT:    li a0, 16
 ; CHECK-NEXT:    vsetvli a1, zero, e8, m4, ta, mu
 ; CHECK-NEXT:    vxor.vx v8, v8, a0
 ; CHECK-NEXT:    ret
@@ -405,7 +405,7 @@ define <vscale x 64 x i8> @vxor_vi_nxv64i8_1(<vscale x 64 x i8> %va) {
 define <vscale x 64 x i8> @vxor_vi_nxv64i8_2(<vscale x 64 x i8> %va) {
 ; CHECK-LABEL: vxor_vi_nxv64i8_2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a0, zero, 16
+; CHECK-NEXT:    li a0, 16
 ; CHECK-NEXT:    vsetvli a1, zero, e8, m8, ta, mu
 ; CHECK-NEXT:    vxor.vx v8, v8, a0
 ; CHECK-NEXT:    ret
@@ -464,7 +464,7 @@ define <vscale x 1 x i16> @vxor_vi_nxv1i16_1(<vscale x 1 x i16> %va) {
 define <vscale x 1 x i16> @vxor_vi_nxv1i16_2(<vscale x 1 x i16> %va) {
 ; CHECK-LABEL: vxor_vi_nxv1i16_2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a0, zero, 16
+; CHECK-NEXT:    li a0, 16
 ; CHECK-NEXT:    vsetvli a1, zero, e16, mf4, ta, mu
 ; CHECK-NEXT:    vxor.vx v8, v8, a0
 ; CHECK-NEXT:    ret
@@ -523,7 +523,7 @@ define <vscale x 2 x i16> @vxor_vi_nxv2i16_1(<vscale x 2 x i16> %va) {
 define <vscale x 2 x i16> @vxor_vi_nxv2i16_2(<vscale x 2 x i16> %va) {
 ; CHECK-LABEL: vxor_vi_nxv2i16_2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a0, zero, 16
+; CHECK-NEXT:    li a0, 16
 ; CHECK-NEXT:    vsetvli a1, zero, e16, mf2, ta, mu
 ; CHECK-NEXT:    vxor.vx v8, v8, a0
 ; CHECK-NEXT:    ret
@@ -582,7 +582,7 @@ define <vscale x 4 x i16> @vxor_vi_nxv4i16_1(<vscale x 4 x i16> %va) {
 define <vscale x 4 x i16> @vxor_vi_nxv4i16_2(<vscale x 4 x i16> %va) {
 ; CHECK-LABEL: vxor_vi_nxv4i16_2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a0, zero, 16
+; CHECK-NEXT:    li a0, 16
 ; CHECK-NEXT:    vsetvli a1, zero, e16, m1, ta, mu
 ; CHECK-NEXT:    vxor.vx v8, v8, a0
 ; CHECK-NEXT:    ret
@@ -641,7 +641,7 @@ define <vscale x 8 x i16> @vxor_vi_nxv8i16_1(<vscale x 8 x i16> %va) {
 define <vscale x 8 x i16> @vxor_vi_nxv8i16_2(<vscale x 8 x i16> %va) {
 ; CHECK-LABEL: vxor_vi_nxv8i16_2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a0, zero, 16
+; CHECK-NEXT:    li a0, 16
 ; CHECK-NEXT:    vsetvli a1, zero, e16, m2, ta, mu
 ; CHECK-NEXT:    vxor.vx v8, v8, a0
 ; CHECK-NEXT:    ret
@@ -700,7 +700,7 @@ define <vscale x 16 x i16> @vxor_vi_nxv16i16_1(<vscale x 16 x i16> %va) {
 define <vscale x 16 x i16> @vxor_vi_nxv16i16_2(<vscale x 16 x i16> %va) {
 ; CHECK-LABEL: vxor_vi_nxv16i16_2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a0, zero, 16
+; CHECK-NEXT:    li a0, 16
 ; CHECK-NEXT:    vsetvli a1, zero, e16, m4, ta, mu
 ; CHECK-NEXT:    vxor.vx v8, v8, a0
 ; CHECK-NEXT:    ret
@@ -759,7 +759,7 @@ define <vscale x 32 x i16> @vxor_vi_nxv32i16_1(<vscale x 32 x i16> %va) {
 define <vscale x 32 x i16> @vxor_vi_nxv32i16_2(<vscale x 32 x i16> %va) {
 ; CHECK-LABEL: vxor_vi_nxv32i16_2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a0, zero, 16
+; CHECK-NEXT:    li a0, 16
 ; CHECK-NEXT:    vsetvli a1, zero, e16, m8, ta, mu
 ; CHECK-NEXT:    vxor.vx v8, v8, a0
 ; CHECK-NEXT:    ret
@@ -818,7 +818,7 @@ define <vscale x 1 x i32> @vxor_vi_nxv1i32_1(<vscale x 1 x i32> %va) {
 define <vscale x 1 x i32> @vxor_vi_nxv1i32_2(<vscale x 1 x i32> %va) {
 ; CHECK-LABEL: vxor_vi_nxv1i32_2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a0, zero, 16
+; CHECK-NEXT:    li a0, 16
 ; CHECK-NEXT:    vsetvli a1, zero, e32, mf2, ta, mu
 ; CHECK-NEXT:    vxor.vx v8, v8, a0
 ; CHECK-NEXT:    ret
@@ -877,7 +877,7 @@ define <vscale x 2 x i32> @vxor_vi_nxv2i32_1(<vscale x 2 x i32> %va) {
 define <vscale x 2 x i32> @vxor_vi_nxv2i32_2(<vscale x 2 x i32> %va) {
 ; CHECK-LABEL: vxor_vi_nxv2i32_2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a0, zero, 16
+; CHECK-NEXT:    li a0, 16
 ; CHECK-NEXT:    vsetvli a1, zero, e32, m1, ta, mu
 ; CHECK-NEXT:    vxor.vx v8, v8, a0
 ; CHECK-NEXT:    ret
@@ -936,7 +936,7 @@ define <vscale x 4 x i32> @vxor_vi_nxv4i32_1(<vscale x 4 x i32> %va) {
 define <vscale x 4 x i32> @vxor_vi_nxv4i32_2(<vscale x 4 x i32> %va) {
 ; CHECK-LABEL: vxor_vi_nxv4i32_2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a0, zero, 16
+; CHECK-NEXT:    li a0, 16
 ; CHECK-NEXT:    vsetvli a1, zero, e32, m2, ta, mu
 ; CHECK-NEXT:    vxor.vx v8, v8, a0
 ; CHECK-NEXT:    ret
@@ -995,7 +995,7 @@ define <vscale x 8 x i32> @vxor_vi_nxv8i32_1(<vscale x 8 x i32> %va) {
 define <vscale x 8 x i32> @vxor_vi_nxv8i32_2(<vscale x 8 x i32> %va) {
 ; CHECK-LABEL: vxor_vi_nxv8i32_2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a0, zero, 16
+; CHECK-NEXT:    li a0, 16
 ; CHECK-NEXT:    vsetvli a1, zero, e32, m4, ta, mu
 ; CHECK-NEXT:    vxor.vx v8, v8, a0
 ; CHECK-NEXT:    ret
@@ -1054,7 +1054,7 @@ define <vscale x 16 x i32> @vxor_vi_nxv16i32_1(<vscale x 16 x i32> %va) {
 define <vscale x 16 x i32> @vxor_vi_nxv16i32_2(<vscale x 16 x i32> %va) {
 ; CHECK-LABEL: vxor_vi_nxv16i32_2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a0, zero, 16
+; CHECK-NEXT:    li a0, 16
 ; CHECK-NEXT:    vsetvli a1, zero, e32, m8, ta, mu
 ; CHECK-NEXT:    vxor.vx v8, v8, a0
 ; CHECK-NEXT:    ret
@@ -1126,7 +1126,7 @@ define <vscale x 1 x i64> @vxor_vi_nxv1i64_1(<vscale x 1 x i64> %va) {
 define <vscale x 1 x i64> @vxor_vi_nxv1i64_2(<vscale x 1 x i64> %va) {
 ; CHECK-LABEL: vxor_vi_nxv1i64_2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a0, zero, 16
+; CHECK-NEXT:    li a0, 16
 ; CHECK-NEXT:    vsetvli a1, zero, e64, m1, ta, mu
 ; CHECK-NEXT:    vxor.vx v8, v8, a0
 ; CHECK-NEXT:    ret
@@ -1198,7 +1198,7 @@ define <vscale x 2 x i64> @vxor_vi_nxv2i64_1(<vscale x 2 x i64> %va) {
 define <vscale x 2 x i64> @vxor_vi_nxv2i64_2(<vscale x 2 x i64> %va) {
 ; CHECK-LABEL: vxor_vi_nxv2i64_2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a0, zero, 16
+; CHECK-NEXT:    li a0, 16
 ; CHECK-NEXT:    vsetvli a1, zero, e64, m2, ta, mu
 ; CHECK-NEXT:    vxor.vx v8, v8, a0
 ; CHECK-NEXT:    ret
@@ -1270,7 +1270,7 @@ define <vscale x 4 x i64> @vxor_vi_nxv4i64_1(<vscale x 4 x i64> %va) {
 define <vscale x 4 x i64> @vxor_vi_nxv4i64_2(<vscale x 4 x i64> %va) {
 ; CHECK-LABEL: vxor_vi_nxv4i64_2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a0, zero, 16
+; CHECK-NEXT:    li a0, 16
 ; CHECK-NEXT:    vsetvli a1, zero, e64, m4, ta, mu
 ; CHECK-NEXT:    vxor.vx v8, v8, a0
 ; CHECK-NEXT:    ret
@@ -1342,7 +1342,7 @@ define <vscale x 8 x i64> @vxor_vi_nxv8i64_1(<vscale x 8 x i64> %va) {
 define <vscale x 8 x i64> @vxor_vi_nxv8i64_2(<vscale x 8 x i64> %va) {
 ; CHECK-LABEL: vxor_vi_nxv8i64_2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a0, zero, 16
+; CHECK-NEXT:    li a0, 16
 ; CHECK-NEXT:    vsetvli a1, zero, e64, m8, ta, mu
 ; CHECK-NEXT:    vxor.vx v8, v8, a0
 ; CHECK-NEXT:    ret

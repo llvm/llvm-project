@@ -167,7 +167,7 @@ define void @vselect_vi_v16i16(<16 x i16>* %b, <16 x i1>* %cc, <16 x i16>* %z) {
 define void @vselect_vv_v32f16(<32 x half>* %a, <32 x half>* %b, <32 x i1>* %cc, <32 x half>* %z) {
 ; CHECK-LABEL: vselect_vv_v32f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a4, zero, 32
+; CHECK-NEXT:    li a4, 32
 ; CHECK-NEXT:    vsetvli zero, a4, e16, m4, ta, mu
 ; CHECK-NEXT:    vle16.v v8, (a0)
 ; CHECK-NEXT:    vlm.v v0, (a2)
@@ -186,7 +186,7 @@ define void @vselect_vv_v32f16(<32 x half>* %a, <32 x half>* %b, <32 x i1>* %cc,
 define void @vselect_vx_v32f16(half %a, <32 x half>* %b, <32 x i1>* %cc, <32 x half>* %z) {
 ; CHECK-LABEL: vselect_vx_v32f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a3, zero, 32
+; CHECK-NEXT:    li a3, 32
 ; CHECK-NEXT:    vsetvli zero, a3, e16, m4, ta, mu
 ; CHECK-NEXT:    vlm.v v0, (a1)
 ; CHECK-NEXT:    vle16.v v8, (a0)
@@ -205,7 +205,7 @@ define void @vselect_vx_v32f16(half %a, <32 x half>* %b, <32 x i1>* %cc, <32 x h
 define void @vselect_vfpzero_v32f16(<32 x half>* %b, <32 x i1>* %cc, <32 x half>* %z) {
 ; CHECK-LABEL: vselect_vfpzero_v32f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a3, zero, 32
+; CHECK-NEXT:    li a3, 32
 ; CHECK-NEXT:    vsetvli zero, a3, e16, m4, ta, mu
 ; CHECK-NEXT:    vlm.v v0, (a1)
 ; CHECK-NEXT:    vle16.v v8, (a0)
@@ -272,7 +272,7 @@ define <16 x i1> @vselect_v16i1(<16 x i1> %a, <16 x i1> %b, <16 x i1> %cc) {
 define <32 x i1> @vselect_v32i1(<32 x i1> %a, <32 x i1> %b, <32 x i1> %cc) {
 ; CHECK-LABEL: vselect_v32i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a0, zero, 32
+; CHECK-NEXT:    li a0, 32
 ; CHECK-NEXT:    vsetvli zero, a0, e8, m2, ta, mu
 ; CHECK-NEXT:    vmandn.mm v8, v8, v9
 ; CHECK-NEXT:    vmand.mm v9, v0, v9
@@ -285,7 +285,7 @@ define <32 x i1> @vselect_v32i1(<32 x i1> %a, <32 x i1> %b, <32 x i1> %cc) {
 define <64 x i1> @vselect_v64i1(<64 x i1> %a, <64 x i1> %b, <64 x i1> %cc) {
 ; CHECK-LABEL: vselect_v64i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a0, zero, 64
+; CHECK-NEXT:    li a0, 64
 ; CHECK-NEXT:    vsetvli zero, a0, e8, m4, ta, mu
 ; CHECK-NEXT:    vmandn.mm v8, v8, v9
 ; CHECK-NEXT:    vmand.mm v9, v0, v9

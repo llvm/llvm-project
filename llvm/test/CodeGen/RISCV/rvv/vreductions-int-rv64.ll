@@ -36,7 +36,7 @@ declare i8 @llvm.vector.reduce.smax.nxv1i8(<vscale x 1 x i8>)
 define signext i8 @vreduce_smax_nxv1i8(<vscale x 1 x i8> %v) {
 ; CHECK-LABEL: vreduce_smax_nxv1i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a0, zero, -128
+; CHECK-NEXT:    li a0, -128
 ; CHECK-NEXT:    vsetvli a1, zero, e8, m1, ta, mu
 ; CHECK-NEXT:    vmv.v.x v9, a0
 ; CHECK-NEXT:    vsetvli a0, zero, e8, mf8, ta, mu
@@ -67,7 +67,7 @@ declare i8 @llvm.vector.reduce.smin.nxv1i8(<vscale x 1 x i8>)
 define signext i8 @vreduce_smin_nxv1i8(<vscale x 1 x i8> %v) {
 ; CHECK-LABEL: vreduce_smin_nxv1i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a0, zero, 127
+; CHECK-NEXT:    li a0, 127
 ; CHECK-NEXT:    vsetvli a1, zero, e8, m1, ta, mu
 ; CHECK-NEXT:    vmv.v.x v9, a0
 ; CHECK-NEXT:    vsetvli a0, zero, e8, mf8, ta, mu
@@ -158,7 +158,7 @@ declare i8 @llvm.vector.reduce.smax.nxv2i8(<vscale x 2 x i8>)
 define signext i8 @vreduce_smax_nxv2i8(<vscale x 2 x i8> %v) {
 ; CHECK-LABEL: vreduce_smax_nxv2i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a0, zero, -128
+; CHECK-NEXT:    li a0, -128
 ; CHECK-NEXT:    vsetvli a1, zero, e8, m1, ta, mu
 ; CHECK-NEXT:    vmv.v.x v9, a0
 ; CHECK-NEXT:    vsetvli a0, zero, e8, mf4, ta, mu
@@ -189,7 +189,7 @@ declare i8 @llvm.vector.reduce.smin.nxv2i8(<vscale x 2 x i8>)
 define signext i8 @vreduce_smin_nxv2i8(<vscale x 2 x i8> %v) {
 ; CHECK-LABEL: vreduce_smin_nxv2i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a0, zero, 127
+; CHECK-NEXT:    li a0, 127
 ; CHECK-NEXT:    vsetvli a1, zero, e8, m1, ta, mu
 ; CHECK-NEXT:    vmv.v.x v9, a0
 ; CHECK-NEXT:    vsetvli a0, zero, e8, mf4, ta, mu
@@ -280,7 +280,7 @@ declare i8 @llvm.vector.reduce.smax.nxv4i8(<vscale x 4 x i8>)
 define signext i8 @vreduce_smax_nxv4i8(<vscale x 4 x i8> %v) {
 ; CHECK-LABEL: vreduce_smax_nxv4i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a0, zero, -128
+; CHECK-NEXT:    li a0, -128
 ; CHECK-NEXT:    vsetvli a1, zero, e8, m1, ta, mu
 ; CHECK-NEXT:    vmv.v.x v9, a0
 ; CHECK-NEXT:    vsetvli a0, zero, e8, mf2, ta, mu
@@ -311,7 +311,7 @@ declare i8 @llvm.vector.reduce.smin.nxv4i8(<vscale x 4 x i8>)
 define signext i8 @vreduce_smin_nxv4i8(<vscale x 4 x i8> %v) {
 ; CHECK-LABEL: vreduce_smin_nxv4i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a0, zero, 127
+; CHECK-NEXT:    li a0, 127
 ; CHECK-NEXT:    vsetvli a1, zero, e8, m1, ta, mu
 ; CHECK-NEXT:    vmv.v.x v9, a0
 ; CHECK-NEXT:    vsetvli a0, zero, e8, mf2, ta, mu
@@ -1122,7 +1122,7 @@ declare i64 @llvm.vector.reduce.smax.nxv1i64(<vscale x 1 x i64>)
 define i64 @vreduce_smax_nxv1i64(<vscale x 1 x i64> %v) {
 ; CHECK-LABEL: vreduce_smax_nxv1i64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a0, zero, -1
+; CHECK-NEXT:    li a0, -1
 ; CHECK-NEXT:    slli a0, a0, 63
 ; CHECK-NEXT:    vsetvli a1, zero, e64, m1, ta, mu
 ; CHECK-NEXT:    vmv.v.x v9, a0
@@ -1152,7 +1152,7 @@ declare i64 @llvm.vector.reduce.smin.nxv1i64(<vscale x 1 x i64>)
 define i64 @vreduce_smin_nxv1i64(<vscale x 1 x i64> %v) {
 ; CHECK-LABEL: vreduce_smin_nxv1i64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a0, zero, -1
+; CHECK-NEXT:    li a0, -1
 ; CHECK-NEXT:    srli a0, a0, 1
 ; CHECK-NEXT:    vsetvli a1, zero, e64, m1, ta, mu
 ; CHECK-NEXT:    vmv.v.x v9, a0
@@ -1240,7 +1240,7 @@ declare i64 @llvm.vector.reduce.smax.nxv2i64(<vscale x 2 x i64>)
 define i64 @vreduce_smax_nxv2i64(<vscale x 2 x i64> %v) {
 ; CHECK-LABEL: vreduce_smax_nxv2i64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a0, zero, -1
+; CHECK-NEXT:    li a0, -1
 ; CHECK-NEXT:    slli a0, a0, 63
 ; CHECK-NEXT:    vsetvli a1, zero, e64, m1, ta, mu
 ; CHECK-NEXT:    vmv.v.x v10, a0
@@ -1272,7 +1272,7 @@ declare i64 @llvm.vector.reduce.smin.nxv2i64(<vscale x 2 x i64>)
 define i64 @vreduce_smin_nxv2i64(<vscale x 2 x i64> %v) {
 ; CHECK-LABEL: vreduce_smin_nxv2i64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a0, zero, -1
+; CHECK-NEXT:    li a0, -1
 ; CHECK-NEXT:    srli a0, a0, 1
 ; CHECK-NEXT:    vsetvli a1, zero, e64, m1, ta, mu
 ; CHECK-NEXT:    vmv.v.x v10, a0
@@ -1364,7 +1364,7 @@ declare i64 @llvm.vector.reduce.smax.nxv4i64(<vscale x 4 x i64>)
 define i64 @vreduce_smax_nxv4i64(<vscale x 4 x i64> %v) {
 ; CHECK-LABEL: vreduce_smax_nxv4i64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a0, zero, -1
+; CHECK-NEXT:    li a0, -1
 ; CHECK-NEXT:    slli a0, a0, 63
 ; CHECK-NEXT:    vsetvli a1, zero, e64, m1, ta, mu
 ; CHECK-NEXT:    vmv.v.x v12, a0
@@ -1396,7 +1396,7 @@ declare i64 @llvm.vector.reduce.smin.nxv4i64(<vscale x 4 x i64>)
 define i64 @vreduce_smin_nxv4i64(<vscale x 4 x i64> %v) {
 ; CHECK-LABEL: vreduce_smin_nxv4i64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a0, zero, -1
+; CHECK-NEXT:    li a0, -1
 ; CHECK-NEXT:    srli a0, a0, 1
 ; CHECK-NEXT:    vsetvli a1, zero, e64, m1, ta, mu
 ; CHECK-NEXT:    vmv.v.x v12, a0

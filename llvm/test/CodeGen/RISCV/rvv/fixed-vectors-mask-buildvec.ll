@@ -71,7 +71,7 @@ define <2 x i1> @buildvec_mask_optsize_nonconst_v2i1(i1 %x, i1 %y) optsize {
 define <3 x i1> @buildvec_mask_v1i1() {
 ; CHECK-LABEL: buildvec_mask_v1i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a0, zero, 2
+; CHECK-NEXT:    li a0, 2
 ; CHECK-NEXT:    vsetivli zero, 1, e8, mf8, ta, mu
 ; CHECK-NEXT:    vmv.s.x v0, a0
 ; CHECK-NEXT:    ret
@@ -81,7 +81,7 @@ define <3 x i1> @buildvec_mask_v1i1() {
 define <3 x i1> @buildvec_mask_optsize_v1i1() optsize {
 ; CHECK-LABEL: buildvec_mask_optsize_v1i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a0, zero, 2
+; CHECK-NEXT:    li a0, 2
 ; CHECK-NEXT:    vsetivli zero, 1, e8, mf8, ta, mu
 ; CHECK-NEXT:    vmv.s.x v0, a0
 ; CHECK-NEXT:    ret
@@ -91,7 +91,7 @@ define <3 x i1> @buildvec_mask_optsize_v1i1() optsize {
 define <4 x i1> @buildvec_mask_v4i1() {
 ; CHECK-LABEL: buildvec_mask_v4i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a0, zero, 6
+; CHECK-NEXT:    li a0, 6
 ; CHECK-NEXT:    vsetivli zero, 1, e8, mf8, ta, mu
 ; CHECK-NEXT:    vmv.s.x v0, a0
 ; CHECK-NEXT:    ret
@@ -101,7 +101,7 @@ define <4 x i1> @buildvec_mask_v4i1() {
 define <4 x i1> @buildvec_mask_nonconst_v4i1(i1 %x, i1 %y) {
 ; CHECK-LABEL: buildvec_mask_nonconst_v4i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a2, zero, 3
+; CHECK-NEXT:    li a2, 3
 ; CHECK-NEXT:    vsetivli zero, 1, e8, mf8, ta, mu
 ; CHECK-NEXT:    vmv.s.x v0, a2
 ; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, mu
@@ -147,7 +147,7 @@ define <4 x i1> @buildvec_mask_nonconst_v4i1_2(i1 %x, i1 %y) {
 ; CHECK-NEXT:    addi sp, sp, -16
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    sb a1, 15(sp)
-; CHECK-NEXT:    addi a1, zero, 1
+; CHECK-NEXT:    li a1, 1
 ; CHECK-NEXT:    sb a1, 14(sp)
 ; CHECK-NEXT:    sb a0, 13(sp)
 ; CHECK-NEXT:    sb zero, 12(sp)
@@ -168,7 +168,7 @@ define <4 x i1> @buildvec_mask_nonconst_v4i1_2(i1 %x, i1 %y) {
 define <8 x i1> @buildvec_mask_v8i1() {
 ; CHECK-LABEL: buildvec_mask_v8i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a0, zero, 182
+; CHECK-NEXT:    li a0, 182
 ; CHECK-NEXT:    vsetivli zero, 1, e8, mf8, ta, mu
 ; CHECK-NEXT:    vmv.s.x v0, a0
 ; CHECK-NEXT:    ret
@@ -178,7 +178,7 @@ define <8 x i1> @buildvec_mask_v8i1() {
 define <8 x i1> @buildvec_mask_nonconst_v8i1(i1 %x, i1 %y) {
 ; CHECK-LABEL: buildvec_mask_nonconst_v8i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a2, zero, 19
+; CHECK-NEXT:    li a2, 19
 ; CHECK-NEXT:    vsetivli zero, 1, e8, mf8, ta, mu
 ; CHECK-NEXT:    vmv.s.x v0, a2
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
@@ -208,7 +208,7 @@ define <8 x i1> @buildvec_mask_nonconst_v8i1_2(i1 %x, i1 %y, i1 %z, i1 %w) {
 ; CHECK-NEXT:    sb a3, 13(sp)
 ; CHECK-NEXT:    sb a0, 12(sp)
 ; CHECK-NEXT:    sb a1, 11(sp)
-; CHECK-NEXT:    addi a1, zero, 1
+; CHECK-NEXT:    li a1, 1
 ; CHECK-NEXT:    sb a1, 10(sp)
 ; CHECK-NEXT:    sb a0, 9(sp)
 ; CHECK-NEXT:    sb a0, 8(sp)
@@ -240,7 +240,7 @@ define <8 x i1> @buildvec_mask_optsize_nonconst_v8i1_2(i1 %x, i1 %y, i1 %z, i1 %
 ; CHECK-NEXT:    sb a3, 13(sp)
 ; CHECK-NEXT:    sb a0, 12(sp)
 ; CHECK-NEXT:    sb a1, 11(sp)
-; CHECK-NEXT:    addi a1, zero, 1
+; CHECK-NEXT:    li a1, 1
 ; CHECK-NEXT:    sb a1, 10(sp)
 ; CHECK-NEXT:    sb a0, 9(sp)
 ; CHECK-NEXT:    sb a0, 8(sp)
@@ -296,7 +296,7 @@ define <8 x i1> @buildvec_mask_optsize_nonconst_v8i1(i1 %x, i1 %y) optsize {
 define <10 x i1> @buildvec_mask_v10i1() {
 ; CHECK-LABEL: buildvec_mask_v10i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a0, zero, 949
+; CHECK-NEXT:    li a0, 949
 ; CHECK-NEXT:    vsetivli zero, 1, e16, mf4, ta, mu
 ; CHECK-NEXT:    vmv.s.x v0, a0
 ; CHECK-NEXT:    ret
@@ -325,7 +325,7 @@ define <16 x i1> @buildvec_mask_v16i1() {
 define <16 x i1> @buildvec_mask_v16i1_undefs() {
 ; CHECK-LABEL: buildvec_mask_v16i1_undefs:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a0, zero, 1722
+; CHECK-NEXT:    li a0, 1722
 ; CHECK-NEXT:    vsetivli zero, 1, e16, mf4, ta, mu
 ; CHECK-NEXT:    vmv.s.x v0, a0
 ; CHECK-NEXT:    ret
@@ -335,7 +335,7 @@ define <16 x i1> @buildvec_mask_v16i1_undefs() {
 define <32 x i1> @buildvec_mask_v32i1() {
 ; RV32-LMULMAX1-LABEL: buildvec_mask_v32i1:
 ; RV32-LMULMAX1:       # %bb.0:
-; RV32-LMULMAX1-NEXT:    addi a0, zero, 1776
+; RV32-LMULMAX1-NEXT:    li a0, 1776
 ; RV32-LMULMAX1-NEXT:    vsetivli zero, 1, e16, mf4, ta, mu
 ; RV32-LMULMAX1-NEXT:    vmv.s.x v0, a0
 ; RV32-LMULMAX1-NEXT:    lui a0, 11
@@ -345,7 +345,7 @@ define <32 x i1> @buildvec_mask_v32i1() {
 ;
 ; RV64-LMULMAX1-LABEL: buildvec_mask_v32i1:
 ; RV64-LMULMAX1:       # %bb.0:
-; RV64-LMULMAX1-NEXT:    addi a0, zero, 1776
+; RV64-LMULMAX1-NEXT:    li a0, 1776
 ; RV64-LMULMAX1-NEXT:    vsetivli zero, 1, e16, mf4, ta, mu
 ; RV64-LMULMAX1-NEXT:    vmv.s.x v0, a0
 ; RV64-LMULMAX1-NEXT:    lui a0, 11
@@ -406,7 +406,7 @@ define <32 x i1> @buildvec_mask_v32i1() {
 define <64 x i1> @buildvec_mask_v64i1() {
 ; RV32-LMULMAX1-LABEL: buildvec_mask_v64i1:
 ; RV32-LMULMAX1:       # %bb.0:
-; RV32-LMULMAX1-NEXT:    addi a0, zero, 1776
+; RV32-LMULMAX1-NEXT:    li a0, 1776
 ; RV32-LMULMAX1-NEXT:    vsetivli zero, 1, e16, mf4, ta, mu
 ; RV32-LMULMAX1-NEXT:    vmv.s.x v0, a0
 ; RV32-LMULMAX1-NEXT:    lui a0, 4
@@ -420,7 +420,7 @@ define <64 x i1> @buildvec_mask_v64i1() {
 ;
 ; RV64-LMULMAX1-LABEL: buildvec_mask_v64i1:
 ; RV64-LMULMAX1:       # %bb.0:
-; RV64-LMULMAX1-NEXT:    addi a0, zero, 1776
+; RV64-LMULMAX1-NEXT:    li a0, 1776
 ; RV64-LMULMAX1-NEXT:    vsetivli zero, 1, e16, mf4, ta, mu
 ; RV64-LMULMAX1-NEXT:    vmv.s.x v0, a0
 ; RV64-LMULMAX1-NEXT:    lui a0, 4
@@ -513,7 +513,7 @@ define <64 x i1> @buildvec_mask_v64i1() {
 define <128 x i1> @buildvec_mask_v128i1() {
 ; RV32-LMULMAX1-LABEL: buildvec_mask_v128i1:
 ; RV32-LMULMAX1:       # %bb.0:
-; RV32-LMULMAX1-NEXT:    addi a0, zero, 1776
+; RV32-LMULMAX1-NEXT:    li a0, 1776
 ; RV32-LMULMAX1-NEXT:    vsetivli zero, 1, e16, mf4, ta, mu
 ; RV32-LMULMAX1-NEXT:    vmv.s.x v0, a0
 ; RV32-LMULMAX1-NEXT:    lui a0, 11
@@ -535,7 +535,7 @@ define <128 x i1> @buildvec_mask_v128i1() {
 ;
 ; RV64-LMULMAX1-LABEL: buildvec_mask_v128i1:
 ; RV64-LMULMAX1:       # %bb.0:
-; RV64-LMULMAX1-NEXT:    addi a0, zero, 1776
+; RV64-LMULMAX1-NEXT:    li a0, 1776
 ; RV64-LMULMAX1-NEXT:    vsetivli zero, 1, e16, mf4, ta, mu
 ; RV64-LMULMAX1-NEXT:    vmv.s.x v0, a0
 ; RV64-LMULMAX1-NEXT:    lui a0, 11
@@ -685,7 +685,7 @@ define <128 x i1> @buildvec_mask_v128i1() {
 define <128 x i1> @buildvec_mask_optsize_v128i1() optsize {
 ; RV32-LMULMAX1-LABEL: buildvec_mask_optsize_v128i1:
 ; RV32-LMULMAX1:       # %bb.0:
-; RV32-LMULMAX1-NEXT:    addi a0, zero, 1776
+; RV32-LMULMAX1-NEXT:    li a0, 1776
 ; RV32-LMULMAX1-NEXT:    vsetivli zero, 1, e16, mf4, ta, mu
 ; RV32-LMULMAX1-NEXT:    vmv.s.x v0, a0
 ; RV32-LMULMAX1-NEXT:    lui a0, 11
@@ -707,7 +707,7 @@ define <128 x i1> @buildvec_mask_optsize_v128i1() optsize {
 ;
 ; RV64-LMULMAX1-LABEL: buildvec_mask_optsize_v128i1:
 ; RV64-LMULMAX1:       # %bb.0:
-; RV64-LMULMAX1-NEXT:    addi a0, zero, 1776
+; RV64-LMULMAX1-NEXT:    li a0, 1776
 ; RV64-LMULMAX1-NEXT:    vsetivli zero, 1, e16, mf4, ta, mu
 ; RV64-LMULMAX1-NEXT:    vmv.s.x v0, a0
 ; RV64-LMULMAX1-NEXT:    lui a0, 11
@@ -765,7 +765,7 @@ define <128 x i1> @buildvec_mask_optsize_v128i1() optsize {
 ; RV32-LMULMAX4:       # %bb.0:
 ; RV32-LMULMAX4-NEXT:    lui a0, %hi(.LCPI21_0)
 ; RV32-LMULMAX4-NEXT:    addi a0, a0, %lo(.LCPI21_0)
-; RV32-LMULMAX4-NEXT:    addi a1, zero, 64
+; RV32-LMULMAX4-NEXT:    li a1, 64
 ; RV32-LMULMAX4-NEXT:    vsetvli zero, a1, e8, m4, ta, mu
 ; RV32-LMULMAX4-NEXT:    vlm.v v0, (a0)
 ; RV32-LMULMAX4-NEXT:    lui a0, %hi(.LCPI21_1)
@@ -798,7 +798,7 @@ define <128 x i1> @buildvec_mask_optsize_v128i1() optsize {
 ; RV32-LMULMAX8:       # %bb.0:
 ; RV32-LMULMAX8-NEXT:    lui a0, %hi(.LCPI21_0)
 ; RV32-LMULMAX8-NEXT:    addi a0, a0, %lo(.LCPI21_0)
-; RV32-LMULMAX8-NEXT:    addi a1, zero, 128
+; RV32-LMULMAX8-NEXT:    li a1, 128
 ; RV32-LMULMAX8-NEXT:    vsetvli zero, a1, e8, m8, ta, mu
 ; RV32-LMULMAX8-NEXT:    vlm.v v0, (a0)
 ; RV32-LMULMAX8-NEXT:    ret
@@ -807,7 +807,7 @@ define <128 x i1> @buildvec_mask_optsize_v128i1() optsize {
 ; RV64-LMULMAX8:       # %bb.0:
 ; RV64-LMULMAX8-NEXT:    lui a0, %hi(.LCPI21_0)
 ; RV64-LMULMAX8-NEXT:    addi a0, a0, %lo(.LCPI21_0)
-; RV64-LMULMAX8-NEXT:    addi a1, zero, 128
+; RV64-LMULMAX8-NEXT:    li a1, 128
 ; RV64-LMULMAX8-NEXT:    vsetvli zero, a1, e8, m8, ta, mu
 ; RV64-LMULMAX8-NEXT:    vlm.v v0, (a0)
 ; RV64-LMULMAX8-NEXT:    ret

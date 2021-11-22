@@ -13,7 +13,7 @@ define <vscale x 8 x i7> @vsra_vx_nxv8i7(<vscale x 8 x i7> %a, i7 signext %b, <v
 ; CHECK-NEXT:    vadd.vv v8, v8, v8
 ; CHECK-NEXT:    vsra.vi v8, v8, 1
 ; CHECK-NEXT:    vmv.v.x v9, a0
-; CHECK-NEXT:    addi a0, zero, 127
+; CHECK-NEXT:    li a0, 127
 ; CHECK-NEXT:    vand.vx v9, v9, a0
 ; CHECK-NEXT:    vsetvli zero, a1, e8, m1, ta, mu
 ; CHECK-NEXT:    vsra.vv v8, v8, v9, v0.t
