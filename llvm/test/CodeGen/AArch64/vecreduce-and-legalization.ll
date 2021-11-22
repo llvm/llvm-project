@@ -86,8 +86,7 @@ define i8 @test_v3i8(<3 x i8> %a) nounwind {
 ; CHECK-LABEL: test_v3i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    and w8, w0, w1
-; CHECK-NEXT:    and w8, w8, w2
-; CHECK-NEXT:    and w0, w8, #0xff
+; CHECK-NEXT:    and w0, w8, w2
 ; CHECK-NEXT:    ret
   %b = call i8 @llvm.vector.reduce.and.v3i8(<3 x i8> %a)
   ret i8 %b
