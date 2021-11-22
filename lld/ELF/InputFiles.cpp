@@ -966,7 +966,7 @@ InputSectionBase *ObjFile<ELFT>::createInputSection(uint32_t idx,
     // `nullptr` for the normal case. However, if -r or --emit-relocs is
     // specified, we need to copy them to the output. (Some post link analysis
     // tools specify --emit-relocs to obtain the information.)
-    if (!config->relocatable && !config->emitRelocs)
+    if (!config->copyRelocs)
       return nullptr;
     InputSection *relocSec = make<InputSection>(*this, sec, name);
     // If the relocated section is discarded (due to /DISCARD/ or
