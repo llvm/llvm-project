@@ -16,7 +16,7 @@ define void @test1(float* %a, float* %b) nounwind {
 ; RV64-LABEL: test1:
 ; RV64:       # %bb.0: # %entry
 ; RV64-NEXT:    lw a1, 0(a1)
-; RV64-NEXT:    addi a2, zero, 1
+; RV64-NEXT:    li a2, 1
 ; RV64-NEXT:    slli a2, a2, 31
 ; RV64-NEXT:    xor a1, a1, a2
 ; RV64-NEXT:    sw a1, 0(a0)
@@ -42,7 +42,7 @@ define void @test2(double* %a, double* %b) nounwind {
 ; RV64-LABEL: test2:
 ; RV64:       # %bb.0: # %entry
 ; RV64-NEXT:    ld a1, 0(a1)
-; RV64-NEXT:    addi a2, zero, -1
+; RV64-NEXT:    li a2, -1
 ; RV64-NEXT:    slli a2, a2, 63
 ; RV64-NEXT:    xor a1, a1, a2
 ; RV64-NEXT:    sd a1, 0(a0)
@@ -73,7 +73,7 @@ define void @test3(fp128* %a, fp128* %b) nounwind {
 ; RV64:       # %bb.0: # %entry
 ; RV64-NEXT:    ld a2, 8(a1)
 ; RV64-NEXT:    ld a1, 0(a1)
-; RV64-NEXT:    addi a3, zero, -1
+; RV64-NEXT:    li a3, -1
 ; RV64-NEXT:    slli a3, a3, 63
 ; RV64-NEXT:    xor a2, a2, a3
 ; RV64-NEXT:    sd a1, 0(a0)

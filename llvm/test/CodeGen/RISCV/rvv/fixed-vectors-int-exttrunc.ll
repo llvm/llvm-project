@@ -77,7 +77,7 @@ define void @sext_v8i8_v8i32(<8 x i8>* %x, <8 x i32>* %z) {
 define void @sext_v32i8_v32i32(<32 x i8>* %x, <32 x i32>* %z) {
 ; LMULMAX8-LABEL: sext_v32i8_v32i32:
 ; LMULMAX8:       # %bb.0:
-; LMULMAX8-NEXT:    addi a2, zero, 32
+; LMULMAX8-NEXT:    li a2, 32
 ; LMULMAX8-NEXT:    vsetvli zero, a2, e8, m2, ta, mu
 ; LMULMAX8-NEXT:    vle8.v v8, (a0)
 ; LMULMAX8-NEXT:    vsetvli zero, zero, e32, m8, ta, mu
@@ -87,7 +87,7 @@ define void @sext_v32i8_v32i32(<32 x i8>* %x, <32 x i32>* %z) {
 ;
 ; LMULMAX2-LABEL: sext_v32i8_v32i32:
 ; LMULMAX2:       # %bb.0:
-; LMULMAX2-NEXT:    addi a2, zero, 32
+; LMULMAX2-NEXT:    li a2, 32
 ; LMULMAX2-NEXT:    vsetvli zero, a2, e8, m2, ta, mu
 ; LMULMAX2-NEXT:    vle8.v v8, (a0)
 ; LMULMAX2-NEXT:    vsetivli zero, 8, e8, m1, ta, mu

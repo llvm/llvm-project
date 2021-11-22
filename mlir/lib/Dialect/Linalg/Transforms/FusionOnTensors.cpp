@@ -317,8 +317,11 @@ LogicalResult TileLoopNest::tileRootOp(OpBuilder &b,
 
 FailureOr<LinalgOp> TileLoopNest::fuseProducer(OpBuilder &b,
                                                OpOperand *consumerOpOperand) {
-  assert(tiledRootAndFusedOpsLoops.count(consumerOpOperand->getOwner()) != 0 &&
-         "expect the operand owner is the root operation or a fused producer");
+  // Check if the consumer has been tiled before. For example, it may not have
+  // been tiled if the outermost tile loop is a reduction loop.
+  if (tiledRootAndFusedOpsLoops.count(consumerOpOperand->getOwner()) == 0)
+    return failure();
+
   assert(this->isValid() &&
          "expect the tile loop nest to satisfy all invariants");
 
@@ -385,6 +388,17 @@ FailureOr<LinalgOp> TileLoopNest::fuseProducer(OpBuilder &b,
 ValueRange TileLoopNest::getRootOpReplacementResults() {
   assert(!isEmpty() && "expect tile loop nest to be non-empty");
   return tileLoopOps.front()->getOpResults();
+}
+
+SmallVector<LinalgOp> TileLoopNest::getAllTiledAndFusedOps() {
+  SmallVector<LinalgOp> result;
+  for (const auto &kvp : tiledRootAndFusedOpsLoops) {
+    auto linalgOp = dyn_cast<LinalgOp>(kvp.getFirst());
+    assert(linalgOp &&
+           "expect all tiled and fused operations are linalg operations");
+    result.push_back(linalgOp);
+  }
+  return result;
 }
 
 //===----------------------------------------------------------------------===//

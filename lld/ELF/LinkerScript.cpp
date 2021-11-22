@@ -163,23 +163,22 @@ OutputSection *LinkerScript::getOrCreateOutputSection(StringRef name) {
 
 // Expands the memory region by the specified size.
 static void expandMemoryRegion(MemoryRegion *memRegion, uint64_t size,
-                               StringRef regionName, StringRef secName) {
+                               StringRef secName) {
   memRegion->curPos += size;
   uint64_t newSize = memRegion->curPos - (memRegion->origin)().getValue();
   uint64_t length = (memRegion->length)().getValue();
   if (newSize > length)
-    error("section '" + secName + "' will not fit in region '" + regionName +
-          "': overflowed by " + Twine(newSize - length) + " bytes");
+    error("section '" + secName + "' will not fit in region '" +
+          memRegion->name + "': overflowed by " + Twine(newSize - length) +
+          " bytes");
 }
 
 void LinkerScript::expandMemoryRegions(uint64_t size) {
   if (ctx->memRegion)
-    expandMemoryRegion(ctx->memRegion, size, ctx->memRegion->name,
-                       ctx->outSec->name);
+    expandMemoryRegion(ctx->memRegion, size, ctx->outSec->name);
   // Only expand the LMARegion if it is different from memRegion.
   if (ctx->lmaRegion && ctx->memRegion != ctx->lmaRegion)
-    expandMemoryRegion(ctx->lmaRegion, size, ctx->lmaRegion->name,
-                       ctx->outSec->name);
+    expandMemoryRegion(ctx->lmaRegion, size, ctx->outSec->name);
 }
 
 void LinkerScript::expandOutputSection(uint64_t size) {
@@ -1026,7 +1025,7 @@ void LinkerScript::assignOffsets(OutputSection *sec) {
     // between the previous section, if any, and the start of this section.
     if (ctx->memRegion && ctx->memRegion->curPos < dot)
       expandMemoryRegion(ctx->memRegion, dot - ctx->memRegion->curPos,
-                         ctx->memRegion->name, sec->name);
+                         sec->name);
   }
 
   switchTo(sec);
@@ -1042,7 +1041,7 @@ void LinkerScript::assignOffsets(OutputSection *sec) {
   } else if (MemoryRegion *mr = sec->lmaRegion) {
     uint64_t lmaStart = alignTo(mr->curPos, sec->alignment);
     if (mr->curPos < lmaStart)
-      expandMemoryRegion(mr, lmaStart - mr->curPos, mr->name, sec->name);
+      expandMemoryRegion(mr, lmaStart - mr->curPos, sec->name);
     ctx->lmaOffset = lmaStart - dot;
   } else if (!sameMemRegion || !prevLMARegionIsDefault) {
     ctx->lmaOffset = 0;

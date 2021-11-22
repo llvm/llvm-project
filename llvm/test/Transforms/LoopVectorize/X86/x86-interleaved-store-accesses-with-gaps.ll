@@ -382,8 +382,8 @@ define dso_local void @test(i16* noalias nocapture %points, i16* noalias nocaptu
 ; ENABLED_MASKED_STRIDED-NEXT:    [[TMP1:%.*]] = bitcast i16* [[TMP0]] to <4 x i16>*
 ; ENABLED_MASKED_STRIDED-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i16>, <4 x i16>* [[TMP1]], align 2
 ; ENABLED_MASKED_STRIDED-NEXT:    [[TMP2:%.*]] = icmp sgt <4 x i16> [[WIDE_LOAD]], zeroinitializer
-; ENABLED_MASKED_STRIDED-NEXT:    [[TMP3:%.*]] = mul nuw nsw i64 [[INDEX]], 3
-; ENABLED_MASKED_STRIDED-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i16, i16* [[POINTS:%.*]], i64 [[TMP3]]
+; ENABLED_MASKED_STRIDED-NEXT:    [[TMP3:%.*]] = mul i64 [[INDEX]], 3
+; ENABLED_MASKED_STRIDED-NEXT:    [[TMP4:%.*]] = getelementptr i16, i16* [[POINTS:%.*]], i64 [[TMP3]]
 ; ENABLED_MASKED_STRIDED-NEXT:    [[TMP5:%.*]] = bitcast i16* [[TMP4]] to <12 x i16>*
 ; ENABLED_MASKED_STRIDED-NEXT:    [[INTERLEAVED_VEC:%.*]] = shufflevector <4 x i16> [[WIDE_LOAD]], <4 x i16> poison, <12 x i32> <i32 0, i32 undef, i32 undef, i32 1, i32 undef, i32 undef, i32 2, i32 undef, i32 undef, i32 3, i32 undef, i32 undef>
 ; ENABLED_MASKED_STRIDED-NEXT:    [[INTERLEAVED_MASK:%.*]] = shufflevector <4 x i1> [[TMP2]], <4 x i1> poison, <12 x i32> <i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 2, i32 2, i32 2, i32 3, i32 3, i32 3>

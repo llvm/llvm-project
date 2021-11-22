@@ -325,7 +325,7 @@ define <vscale x 8 x i1> @icmp_ult_xv_nxv8i8(<vscale x 8 x i8> %va, i8 %b) {
 define <vscale x 8 x i1> @icmp_ult_vi_nxv8i8_0(<vscale x 8 x i8> %va) {
 ; CHECK-LABEL: icmp_ult_vi_nxv8i8_0:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a0, zero, -16
+; CHECK-NEXT:    li a0, -16
 ; CHECK-NEXT:    vsetvli a1, zero, e8, m1, ta, mu
 ; CHECK-NEXT:    vmsltu.vx v0, v8, a0
 ; CHECK-NEXT:    ret
@@ -638,7 +638,7 @@ define <vscale x 8 x i1> @icmp_slt_xv_nxv8i8(<vscale x 8 x i8> %va, i8 %b) {
 define <vscale x 8 x i1> @icmp_slt_vi_nxv8i8_0(<vscale x 8 x i8> %va) {
 ; CHECK-LABEL: icmp_slt_vi_nxv8i8_0:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a0, zero, -16
+; CHECK-NEXT:    li a0, -16
 ; CHECK-NEXT:    vsetvli a1, zero, e8, m1, ta, mu
 ; CHECK-NEXT:    vmslt.vx v0, v8, a0
 ; CHECK-NEXT:    ret
@@ -1081,7 +1081,7 @@ define <vscale x 8 x i1> @icmp_ult_xv_nxv8i16(<vscale x 8 x i16> %va, i16 %b) {
 define <vscale x 8 x i1> @icmp_ult_vi_nxv8i16_0(<vscale x 8 x i16> %va) {
 ; CHECK-LABEL: icmp_ult_vi_nxv8i16_0:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a0, zero, -16
+; CHECK-NEXT:    li a0, -16
 ; CHECK-NEXT:    vsetvli a1, zero, e16, m2, ta, mu
 ; CHECK-NEXT:    vmsltu.vx v0, v8, a0
 ; CHECK-NEXT:    ret
@@ -1380,7 +1380,7 @@ define <vscale x 8 x i1> @icmp_slt_xv_nxv8i16(<vscale x 8 x i16> %va, i16 %b) {
 define <vscale x 8 x i1> @icmp_slt_vi_nxv8i16_0(<vscale x 8 x i16> %va) {
 ; CHECK-LABEL: icmp_slt_vi_nxv8i16_0:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a0, zero, -16
+; CHECK-NEXT:    li a0, -16
 ; CHECK-NEXT:    vsetvli a1, zero, e16, m2, ta, mu
 ; CHECK-NEXT:    vmslt.vx v0, v8, a0
 ; CHECK-NEXT:    ret
@@ -1809,7 +1809,7 @@ define <vscale x 8 x i1> @icmp_ult_xv_nxv8i32(<vscale x 8 x i32> %va, i32 %b) {
 define <vscale x 8 x i1> @icmp_ult_vi_nxv8i32_0(<vscale x 8 x i32> %va) {
 ; CHECK-LABEL: icmp_ult_vi_nxv8i32_0:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a0, zero, -16
+; CHECK-NEXT:    li a0, -16
 ; CHECK-NEXT:    vsetvli a1, zero, e32, m4, ta, mu
 ; CHECK-NEXT:    vmsltu.vx v0, v8, a0
 ; CHECK-NEXT:    ret
@@ -2108,7 +2108,7 @@ define <vscale x 8 x i1> @icmp_slt_xv_nxv8i32(<vscale x 8 x i32> %va, i32 %b) {
 define <vscale x 8 x i1> @icmp_slt_vi_nxv8i32_0(<vscale x 8 x i32> %va) {
 ; CHECK-LABEL: icmp_slt_vi_nxv8i32_0:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a0, zero, -16
+; CHECK-NEXT:    li a0, -16
 ; CHECK-NEXT:    vsetvli a1, zero, e32, m4, ta, mu
 ; CHECK-NEXT:    vmslt.vx v0, v8, a0
 ; CHECK-NEXT:    ret
@@ -2601,7 +2601,7 @@ define <vscale x 8 x i1> @icmp_ult_xv_nxv8i64(<vscale x 8 x i64> %va, i64 %b) {
 define <vscale x 8 x i1> @icmp_ult_vi_nxv8i64_0(<vscale x 8 x i64> %va) {
 ; CHECK-LABEL: icmp_ult_vi_nxv8i64_0:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a0, zero, -16
+; CHECK-NEXT:    li a0, -16
 ; CHECK-NEXT:    vsetvli a1, zero, e64, m8, ta, mu
 ; CHECK-NEXT:    vmsltu.vx v0, v8, a0
 ; CHECK-NEXT:    ret
@@ -2951,7 +2951,7 @@ define <vscale x 8 x i1> @icmp_slt_xv_nxv8i64(<vscale x 8 x i64> %va, i64 %b) {
 define <vscale x 8 x i1> @icmp_slt_vi_nxv8i64_0(<vscale x 8 x i64> %va) {
 ; CHECK-LABEL: icmp_slt_vi_nxv8i64_0:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a0, zero, -16
+; CHECK-NEXT:    li a0, -16
 ; CHECK-NEXT:    vsetvli a1, zero, e64, m8, ta, mu
 ; CHECK-NEXT:    vmslt.vx v0, v8, a0
 ; CHECK-NEXT:    ret

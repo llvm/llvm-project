@@ -238,7 +238,7 @@ define signext i1 @vreduce_or_v32i1(<32 x i1> %v) {
 ;
 ; LMULMAX8-LABEL: vreduce_or_v32i1:
 ; LMULMAX8:       # %bb.0:
-; LMULMAX8-NEXT:    addi a0, zero, 32
+; LMULMAX8-NEXT:    li a0, 32
 ; LMULMAX8-NEXT:    vsetvli zero, a0, e8, m2, ta, mu
 ; LMULMAX8-NEXT:    vcpop.m a0, v0
 ; LMULMAX8-NEXT:    snez a0, a0
@@ -262,7 +262,7 @@ define signext i1 @vreduce_xor_v32i1(<32 x i1> %v) {
 ;
 ; LMULMAX8-LABEL: vreduce_xor_v32i1:
 ; LMULMAX8:       # %bb.0:
-; LMULMAX8-NEXT:    addi a0, zero, 32
+; LMULMAX8-NEXT:    li a0, 32
 ; LMULMAX8-NEXT:    vsetvli zero, a0, e8, m2, ta, mu
 ; LMULMAX8-NEXT:    vcpop.m a0, v0
 ; LMULMAX8-NEXT:    andi a0, a0, 1
@@ -286,7 +286,7 @@ define signext i1 @vreduce_and_v32i1(<32 x i1> %v) {
 ;
 ; LMULMAX8-LABEL: vreduce_and_v32i1:
 ; LMULMAX8:       # %bb.0:
-; LMULMAX8-NEXT:    addi a0, zero, 32
+; LMULMAX8-NEXT:    li a0, 32
 ; LMULMAX8-NEXT:    vsetvli zero, a0, e8, m2, ta, mu
 ; LMULMAX8-NEXT:    vmnand.mm v8, v0, v0
 ; LMULMAX8-NEXT:    vcpop.m a0, v8
@@ -313,7 +313,7 @@ define signext i1 @vreduce_or_v64i1(<64 x i1> %v) {
 ;
 ; LMULMAX8-LABEL: vreduce_or_v64i1:
 ; LMULMAX8:       # %bb.0:
-; LMULMAX8-NEXT:    addi a0, zero, 64
+; LMULMAX8-NEXT:    li a0, 64
 ; LMULMAX8-NEXT:    vsetvli zero, a0, e8, m4, ta, mu
 ; LMULMAX8-NEXT:    vcpop.m a0, v0
 ; LMULMAX8-NEXT:    snez a0, a0
@@ -339,7 +339,7 @@ define signext i1 @vreduce_xor_v64i1(<64 x i1> %v) {
 ;
 ; LMULMAX8-LABEL: vreduce_xor_v64i1:
 ; LMULMAX8:       # %bb.0:
-; LMULMAX8-NEXT:    addi a0, zero, 64
+; LMULMAX8-NEXT:    li a0, 64
 ; LMULMAX8-NEXT:    vsetvli zero, a0, e8, m4, ta, mu
 ; LMULMAX8-NEXT:    vcpop.m a0, v0
 ; LMULMAX8-NEXT:    andi a0, a0, 1
@@ -365,7 +365,7 @@ define signext i1 @vreduce_and_v64i1(<64 x i1> %v) {
 ;
 ; LMULMAX8-LABEL: vreduce_and_v64i1:
 ; LMULMAX8:       # %bb.0:
-; LMULMAX8-NEXT:    addi a0, zero, 64
+; LMULMAX8-NEXT:    li a0, 64
 ; LMULMAX8-NEXT:    vsetvli zero, a0, e8, m4, ta, mu
 ; LMULMAX8-NEXT:    vmnand.mm v8, v0, v0
 ; LMULMAX8-NEXT:    vcpop.m a0, v8

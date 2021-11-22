@@ -41,14 +41,14 @@ define <vscale x 8 x i64> @vsplat_nxv8i64_2() {
 define <vscale x 8 x i64> @vsplat_nxv8i64_3() {
 ; RV32V-LABEL: vsplat_nxv8i64_3:
 ; RV32V:       # %bb.0:
-; RV32V-NEXT:    addi a0, zero, 255
+; RV32V-NEXT:    li a0, 255
 ; RV32V-NEXT:    vsetvli a1, zero, e64, m8, ta, mu
 ; RV32V-NEXT:    vmv.v.x v8, a0
 ; RV32V-NEXT:    ret
 ;
 ; RV64V-LABEL: vsplat_nxv8i64_3:
 ; RV64V:       # %bb.0:
-; RV64V-NEXT:    addi a0, zero, 255
+; RV64V-NEXT:    li a0, 255
 ; RV64V-NEXT:    vsetvli a1, zero, e64, m8, ta, mu
 ; RV64V-NEXT:    vmv.v.x v8, a0
 ; RV64V-NEXT:    ret
@@ -74,7 +74,7 @@ define <vscale x 8 x i64> @vsplat_nxv8i64_4() {
 ;
 ; RV64V-LABEL: vsplat_nxv8i64_4:
 ; RV64V:       # %bb.0:
-; RV64V-NEXT:    addi a0, zero, 251
+; RV64V-NEXT:    li a0, 251
 ; RV64V-NEXT:    slli a0, a0, 24
 ; RV64V-NEXT:    addi a0, a0, -1281
 ; RV64V-NEXT:    vsetvli a1, zero, e64, m8, ta, mu
@@ -147,14 +147,14 @@ define <vscale x 8 x i64> @vadd_vx_nxv8i64_7(<vscale x 8 x i64> %v) {
 define <vscale x 8 x i64> @vadd_vx_nxv8i64_8(<vscale x 8 x i64> %v) {
 ; RV32V-LABEL: vadd_vx_nxv8i64_8:
 ; RV32V:       # %bb.0:
-; RV32V-NEXT:    addi a0, zero, 255
+; RV32V-NEXT:    li a0, 255
 ; RV32V-NEXT:    vsetvli a1, zero, e64, m8, ta, mu
 ; RV32V-NEXT:    vadd.vx v8, v8, a0
 ; RV32V-NEXT:    ret
 ;
 ; RV64V-LABEL: vadd_vx_nxv8i64_8:
 ; RV64V:       # %bb.0:
-; RV64V-NEXT:    addi a0, zero, 255
+; RV64V-NEXT:    li a0, 255
 ; RV64V-NEXT:    vsetvli a1, zero, e64, m8, ta, mu
 ; RV64V-NEXT:    vadd.vx v8, v8, a0
 ; RV64V-NEXT:    ret
@@ -204,7 +204,7 @@ define <vscale x 8 x i64> @vadd_vx_nxv8i64_10(<vscale x 8 x i64> %v) {
 ;
 ; RV64V-LABEL: vadd_vx_nxv8i64_10:
 ; RV64V:       # %bb.0:
-; RV64V-NEXT:    addi a0, zero, 251
+; RV64V-NEXT:    li a0, 251
 ; RV64V-NEXT:    slli a0, a0, 24
 ; RV64V-NEXT:    addi a0, a0, -1281
 ; RV64V-NEXT:    vsetvli a1, zero, e64, m8, ta, mu
@@ -221,7 +221,7 @@ define <vscale x 8 x i64> @vadd_vx_nxv8i64_11(<vscale x 8 x i64> %v) {
 ; RV32V:       # %bb.0:
 ; RV32V-NEXT:    addi sp, sp, -16
 ; RV32V-NEXT:    .cfi_def_cfa_offset 16
-; RV32V-NEXT:    addi a0, zero, 1
+; RV32V-NEXT:    li a0, 1
 ; RV32V-NEXT:    sw a0, 12(sp)
 ; RV32V-NEXT:    lui a0, 1028096
 ; RV32V-NEXT:    addi a0, a0, -1281
@@ -235,7 +235,7 @@ define <vscale x 8 x i64> @vadd_vx_nxv8i64_11(<vscale x 8 x i64> %v) {
 ;
 ; RV64V-LABEL: vadd_vx_nxv8i64_11:
 ; RV64V:       # %bb.0:
-; RV64V-NEXT:    addi a0, zero, 507
+; RV64V-NEXT:    li a0, 507
 ; RV64V-NEXT:    slli a0, a0, 24
 ; RV64V-NEXT:    addi a0, a0, -1281
 ; RV64V-NEXT:    vsetvli a1, zero, e64, m8, ta, mu

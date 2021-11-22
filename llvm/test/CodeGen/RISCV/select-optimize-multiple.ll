@@ -15,7 +15,7 @@
 define i64 @cmovcc64(i32 signext %a, i64 %b, i64 %c) nounwind {
 ; RV32I-LABEL: cmovcc64:
 ; RV32I:       # %bb.0: # %entry
-; RV32I-NEXT:    addi a5, zero, 123
+; RV32I-NEXT:    li a5, 123
 ; RV32I-NEXT:    beq a0, a5, .LBB0_2
 ; RV32I-NEXT:  # %bb.1: # %entry
 ; RV32I-NEXT:    mv a1, a3
@@ -34,7 +34,7 @@ define i64 @cmovcc64(i32 signext %a, i64 %b, i64 %c) nounwind {
 ;
 ; RV64I-LABEL: cmovcc64:
 ; RV64I:       # %bb.0: # %entry
-; RV64I-NEXT:    addi a3, zero, 123
+; RV64I-NEXT:    li a3, 123
 ; RV64I-NEXT:    beq a0, a3, .LBB0_2
 ; RV64I-NEXT:  # %bb.1: # %entry
 ; RV64I-NEXT:    mv a1, a2
@@ -119,7 +119,7 @@ define i128 @cmovcc128(i64 signext %a, i128 %b, i128 %c) nounwind {
 ;
 ; RV64I-LABEL: cmovcc128:
 ; RV64I:       # %bb.0: # %entry
-; RV64I-NEXT:    addi a5, zero, 123
+; RV64I-NEXT:    li a5, 123
 ; RV64I-NEXT:    beq a0, a5, .LBB1_2
 ; RV64I-NEXT:  # %bb.1: # %entry
 ; RV64I-NEXT:    mv a1, a3
@@ -412,7 +412,7 @@ entry:
 define i32 @cmovccdep(i32 signext %a, i32 %b, i32 %c, i32 %d) nounwind {
 ; RV32I-LABEL: cmovccdep:
 ; RV32I:       # %bb.0: # %entry
-; RV32I-NEXT:    addi a4, zero, 123
+; RV32I-NEXT:    li a4, 123
 ; RV32I-NEXT:    bne a0, a4, .LBB6_3
 ; RV32I-NEXT:  # %bb.1: # %entry
 ; RV32I-NEXT:    mv a2, a1
@@ -439,7 +439,7 @@ define i32 @cmovccdep(i32 signext %a, i32 %b, i32 %c, i32 %d) nounwind {
 ;
 ; RV64I-LABEL: cmovccdep:
 ; RV64I:       # %bb.0: # %entry
-; RV64I-NEXT:    addi a4, zero, 123
+; RV64I-NEXT:    li a4, 123
 ; RV64I-NEXT:    bne a0, a4, .LBB6_3
 ; RV64I-NEXT:  # %bb.1: # %entry
 ; RV64I-NEXT:    mv a2, a1

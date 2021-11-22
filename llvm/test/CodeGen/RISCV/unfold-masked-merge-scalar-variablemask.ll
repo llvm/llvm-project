@@ -1039,7 +1039,7 @@ define i32 @out_constant_varx_42(i32 %x, i32 %y, i32 %mask) {
 ; RV32ZBB-LABEL: out_constant_varx_42:
 ; RV32ZBB:       # %bb.0:
 ; RV32ZBB-NEXT:    and a0, a2, a0
-; RV32ZBB-NEXT:    addi a1, zero, 42
+; RV32ZBB-NEXT:    li a1, 42
 ; RV32ZBB-NEXT:    andn a1, a1, a2
 ; RV32ZBB-NEXT:    or a0, a0, a1
 ; RV32ZBB-NEXT:    ret
@@ -1047,7 +1047,7 @@ define i32 @out_constant_varx_42(i32 %x, i32 %y, i32 %mask) {
 ; RV64ZBB-LABEL: out_constant_varx_42:
 ; RV64ZBB:       # %bb.0:
 ; RV64ZBB-NEXT:    and a0, a2, a0
-; RV64ZBB-NEXT:    addi a1, zero, 42
+; RV64ZBB-NEXT:    li a1, 42
 ; RV64ZBB-NEXT:    andn a1, a1, a2
 ; RV64ZBB-NEXT:    or a0, a0, a1
 ; RV64ZBB-NEXT:    ret
@@ -1375,7 +1375,7 @@ define i32 @out_constant_42_vary_invmask(i32 %x, i32 %y, i32 %mask) {
 ;
 ; RV32ZBB-LABEL: out_constant_42_vary_invmask:
 ; RV32ZBB:       # %bb.0:
-; RV32ZBB-NEXT:    addi a0, zero, 42
+; RV32ZBB-NEXT:    li a0, 42
 ; RV32ZBB-NEXT:    andn a0, a0, a2
 ; RV32ZBB-NEXT:    and a1, a2, a1
 ; RV32ZBB-NEXT:    or a0, a0, a1
@@ -1383,7 +1383,7 @@ define i32 @out_constant_42_vary_invmask(i32 %x, i32 %y, i32 %mask) {
 ;
 ; RV64ZBB-LABEL: out_constant_42_vary_invmask:
 ; RV64ZBB:       # %bb.0:
-; RV64ZBB-NEXT:    addi a0, zero, 42
+; RV64ZBB-NEXT:    li a0, 42
 ; RV64ZBB-NEXT:    andn a0, a0, a2
 ; RV64ZBB-NEXT:    and a1, a2, a1
 ; RV64ZBB-NEXT:    or a0, a0, a1

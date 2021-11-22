@@ -31,7 +31,7 @@ define <2 x i8> @usub_v2i8_vx(<2 x i8> %va, i8 %b) {
 define <2 x i8> @usub_v2i8_vi(<2 x i8> %va) {
 ; CHECK-LABEL: usub_v2i8_vi:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a0, zero, 2
+; CHECK-NEXT:    li a0, 2
 ; CHECK-NEXT:    vsetivli zero, 2, e8, mf8, ta, mu
 ; CHECK-NEXT:    vssubu.vx v8, v8, a0
 ; CHECK-NEXT:    ret
@@ -68,7 +68,7 @@ define <4 x i8> @usub_v4i8_vx(<4 x i8> %va, i8 %b) {
 define <4 x i8> @usub_v4i8_vi(<4 x i8> %va) {
 ; CHECK-LABEL: usub_v4i8_vi:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a0, zero, 2
+; CHECK-NEXT:    li a0, 2
 ; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, mu
 ; CHECK-NEXT:    vssubu.vx v8, v8, a0
 ; CHECK-NEXT:    ret
@@ -105,7 +105,7 @@ define <8 x i8> @usub_v8i8_vx(<8 x i8> %va, i8 %b) {
 define <8 x i8> @usub_v8i8_vi(<8 x i8> %va) {
 ; CHECK-LABEL: usub_v8i8_vi:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a0, zero, 2
+; CHECK-NEXT:    li a0, 2
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
 ; CHECK-NEXT:    vssubu.vx v8, v8, a0
 ; CHECK-NEXT:    ret
@@ -142,7 +142,7 @@ define <16 x i8> @usub_v16i8_vx(<16 x i8> %va, i8 %b) {
 define <16 x i8> @usub_v16i8_vi(<16 x i8> %va) {
 ; CHECK-LABEL: usub_v16i8_vi:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a0, zero, 2
+; CHECK-NEXT:    li a0, 2
 ; CHECK-NEXT:    vsetivli zero, 16, e8, m1, ta, mu
 ; CHECK-NEXT:    vssubu.vx v8, v8, a0
 ; CHECK-NEXT:    ret
@@ -179,7 +179,7 @@ define <2 x i16> @usub_v2i16_vx(<2 x i16> %va, i16 %b) {
 define <2 x i16> @usub_v2i16_vi(<2 x i16> %va) {
 ; CHECK-LABEL: usub_v2i16_vi:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a0, zero, 2
+; CHECK-NEXT:    li a0, 2
 ; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, mu
 ; CHECK-NEXT:    vssubu.vx v8, v8, a0
 ; CHECK-NEXT:    ret
@@ -216,7 +216,7 @@ define <4 x i16> @usub_v4i16_vx(<4 x i16> %va, i16 %b) {
 define <4 x i16> @usub_v4i16_vi(<4 x i16> %va) {
 ; CHECK-LABEL: usub_v4i16_vi:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a0, zero, 2
+; CHECK-NEXT:    li a0, 2
 ; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, mu
 ; CHECK-NEXT:    vssubu.vx v8, v8, a0
 ; CHECK-NEXT:    ret
@@ -253,7 +253,7 @@ define <8 x i16> @usub_v8i16_vx(<8 x i16> %va, i16 %b) {
 define <8 x i16> @usub_v8i16_vi(<8 x i16> %va) {
 ; CHECK-LABEL: usub_v8i16_vi:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a0, zero, 2
+; CHECK-NEXT:    li a0, 2
 ; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, mu
 ; CHECK-NEXT:    vssubu.vx v8, v8, a0
 ; CHECK-NEXT:    ret
@@ -290,7 +290,7 @@ define <16 x i16> @usub_v16i16_vx(<16 x i16> %va, i16 %b) {
 define <16 x i16> @usub_v16i16_vi(<16 x i16> %va) {
 ; CHECK-LABEL: usub_v16i16_vi:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a0, zero, 2
+; CHECK-NEXT:    li a0, 2
 ; CHECK-NEXT:    vsetivli zero, 16, e16, m2, ta, mu
 ; CHECK-NEXT:    vssubu.vx v8, v8, a0
 ; CHECK-NEXT:    ret
@@ -327,7 +327,7 @@ define <2 x i32> @usub_v2i32_vx(<2 x i32> %va, i32 %b) {
 define <2 x i32> @usub_v2i32_vi(<2 x i32> %va) {
 ; CHECK-LABEL: usub_v2i32_vi:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a0, zero, 2
+; CHECK-NEXT:    li a0, 2
 ; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, mu
 ; CHECK-NEXT:    vssubu.vx v8, v8, a0
 ; CHECK-NEXT:    ret
@@ -364,7 +364,7 @@ define <4 x i32> @usub_v4i32_vx(<4 x i32> %va, i32 %b) {
 define <4 x i32> @usub_v4i32_vi(<4 x i32> %va) {
 ; CHECK-LABEL: usub_v4i32_vi:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a0, zero, 2
+; CHECK-NEXT:    li a0, 2
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, mu
 ; CHECK-NEXT:    vssubu.vx v8, v8, a0
 ; CHECK-NEXT:    ret
@@ -401,7 +401,7 @@ define <8 x i32> @usub_v8i32_vx(<8 x i32> %va, i32 %b) {
 define <8 x i32> @usub_v8i32_vi(<8 x i32> %va) {
 ; CHECK-LABEL: usub_v8i32_vi:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a0, zero, 2
+; CHECK-NEXT:    li a0, 2
 ; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, mu
 ; CHECK-NEXT:    vssubu.vx v8, v8, a0
 ; CHECK-NEXT:    ret
@@ -438,7 +438,7 @@ define <16 x i32> @usub_v16i32_vx(<16 x i32> %va, i32 %b) {
 define <16 x i32> @usub_v16i32_vi(<16 x i32> %va) {
 ; CHECK-LABEL: usub_v16i32_vi:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a0, zero, 2
+; CHECK-NEXT:    li a0, 2
 ; CHECK-NEXT:    vsetivli zero, 16, e32, m4, ta, mu
 ; CHECK-NEXT:    vssubu.vx v8, v8, a0
 ; CHECK-NEXT:    ret
@@ -488,7 +488,7 @@ define <2 x i64> @usub_v2i64_vx(<2 x i64> %va, i64 %b) {
 define <2 x i64> @usub_v2i64_vi(<2 x i64> %va) {
 ; CHECK-LABEL: usub_v2i64_vi:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a0, zero, 2
+; CHECK-NEXT:    li a0, 2
 ; CHECK-NEXT:    vsetivli zero, 2, e64, m1, ta, mu
 ; CHECK-NEXT:    vssubu.vx v8, v8, a0
 ; CHECK-NEXT:    ret
@@ -538,7 +538,7 @@ define <4 x i64> @usub_v4i64_vx(<4 x i64> %va, i64 %b) {
 define <4 x i64> @usub_v4i64_vi(<4 x i64> %va) {
 ; CHECK-LABEL: usub_v4i64_vi:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a0, zero, 2
+; CHECK-NEXT:    li a0, 2
 ; CHECK-NEXT:    vsetivli zero, 4, e64, m2, ta, mu
 ; CHECK-NEXT:    vssubu.vx v8, v8, a0
 ; CHECK-NEXT:    ret
@@ -588,7 +588,7 @@ define <8 x i64> @usub_v8i64_vx(<8 x i64> %va, i64 %b) {
 define <8 x i64> @usub_v8i64_vi(<8 x i64> %va) {
 ; CHECK-LABEL: usub_v8i64_vi:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a0, zero, 2
+; CHECK-NEXT:    li a0, 2
 ; CHECK-NEXT:    vsetivli zero, 8, e64, m4, ta, mu
 ; CHECK-NEXT:    vssubu.vx v8, v8, a0
 ; CHECK-NEXT:    ret
@@ -638,7 +638,7 @@ define <16 x i64> @usub_v16i64_vx(<16 x i64> %va, i64 %b) {
 define <16 x i64> @usub_v16i64_vi(<16 x i64> %va) {
 ; CHECK-LABEL: usub_v16i64_vi:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a0, zero, 2
+; CHECK-NEXT:    li a0, 2
 ; CHECK-NEXT:    vsetivli zero, 16, e64, m8, ta, mu
 ; CHECK-NEXT:    vssubu.vx v8, v8, a0
 ; CHECK-NEXT:    ret

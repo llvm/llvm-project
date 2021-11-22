@@ -36,6 +36,43 @@ using namespace linalg;
 
 namespace {
 
+/// Configurable pass to apply pattern-based tiling and fusion.
+struct LinalgStrategyTileAndFusePass
+    : public LinalgStrategyTileAndFusePassBase<LinalgStrategyTileAndFusePass> {
+
+  LinalgStrategyTileAndFusePass() = default;
+
+  LinalgStrategyTileAndFusePass(StringRef opName,
+                                LinalgTilingAndFusionOptions opt,
+                                LinalgTransformationFilter filt)
+      : options(opt), filter(filt) {
+    this->anchorOpName.setValue(opName.str());
+  }
+
+  void runOnFunction() override {
+    auto funcOp = getFunction();
+    if (!anchorFuncName.empty() && funcOp.getName() != anchorFuncName)
+      return;
+
+    RewritePatternSet tilingAndFusionPattern(funcOp.getContext());
+    if (!anchorOpName.empty()) {
+      tilingAndFusionPattern.add<LinalgTileAndFuseTensorOpsPattern>(
+          anchorOpName, funcOp.getContext(), options, filter);
+    } else {
+      tilingAndFusionPattern.add<LinalgTileAndFuseTensorOpsPattern>(
+          funcOp.getContext(), options, filter);
+    }
+    // Search the root operation using bottom up traversal.
+    GreedyRewriteConfig grc;
+    grc.useTopDownTraversal = false;
+    (void)applyPatternsAndFoldGreedily(funcOp,
+                                       std::move(tilingAndFusionPattern), grc);
+  }
+
+  LinalgTilingAndFusionOptions options;
+  LinalgTransformationFilter filter;
+};
+
 /// Configurable pass to apply pattern-based linalg tiling.
 struct LinalgStrategyTilePass
     : public LinalgStrategyTilePassBase<LinalgStrategyTilePass> {
@@ -379,6 +416,15 @@ struct LinalgStrategyRemoveMarkersPass
   }
 };
 } // namespace
+
+/// Create a LinalgStrategyTileAndFusePass.
+std::unique_ptr<OperationPass<FuncOp>>
+mlir::createLinalgStrategyTileAndFusePass(StringRef opName,
+                                          LinalgTilingAndFusionOptions options,
+                                          LinalgTransformationFilter filter) {
+  return std::make_unique<LinalgStrategyTileAndFusePass>(opName, options,
+                                                         filter);
+}
 
 /// Create a LinalgStrategyTilePass.
 std::unique_ptr<OperationPass<FuncOp>>
