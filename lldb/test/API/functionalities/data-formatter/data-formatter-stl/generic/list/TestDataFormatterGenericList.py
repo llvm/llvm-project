@@ -9,8 +9,10 @@ from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
+USE_LIBSTDCPP = "USE_LIBSTDCPP"
+USE_LIBCPP = "USE_LIBCPP"
 
-class StdListDataFormatterTestCase(TestBase):
+class GenericListDataFormatterTestCase(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
@@ -24,11 +26,9 @@ class StdListDataFormatterTestCase(TestBase):
         self.final_line = line_number(
             'main.cpp', '// Set final break point at this line.')
 
-    @add_test_categories(["libstdcxx"])
-    @expectedFailureAll(bugnumber="llvm.org/pr50861", compiler="gcc")
-    def test_with_run_command(self):
+    def do_test_with_run_command(self, stdlib_type):
         """Test that that file and class static variables display correctly."""
-        self.build()
+        self.build(dictionary={stdlib_type: "1"})
         self.runCmd("file " + self.getBuildArtifact("a.out"), CURRENT_EXECUTABLE_SET)
 
         lldbutil.run_break_set_by_file_and_line(
@@ -205,3 +205,11 @@ class StdListDataFormatterTestCase(TestBase):
         self.assertTrue(
             self.frame().FindVariable("text_list").MightHaveChildren(),
             "text_list.MightHaveChildren() says False for non empty!")
+    
+    @add_test_categories(["libstdcxx"])
+    def test_with_run_command_libstdcpp(self):
+        self.do_test_with_run_command(USE_LIBSTDCPP)
+
+    @add_test_categories(["libc++"])
+    def test_with_run_command_libcpp(self):
+        self.do_test_with_run_command(USE_LIBCPP)

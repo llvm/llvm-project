@@ -336,6 +336,11 @@ public:
   /// unit from the Architecture's code bus
   uint32_t GetCodeByteSize();
 
+  /// Gets the target.max-children-count value
+  /// It should be used to limit the number of
+  /// children of large data structures to be displayed.
+  uint32_t GetMaximumNumberOfChildrenToDisplay() const;
+
   /// Set the base load address for a module section.
   ///
   /// \param[in] section
