@@ -7105,10 +7105,16 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     return;
   }
   case Intrinsic::get_active_lane_mask: {
-    SDValue Index = getValue(I.getOperand(0));
-    SDValue TripCount = getValue(I.getOperand(1));
-    EVT ElementVT = Index.getValueType();
     EVT CCVT = TLI.getValueType(DAG.getDataLayout(), I.getType());
+    SDValue Index = getValue(I.getOperand(0));
+    EVT ElementVT = Index.getValueType();
+
+    if (!TLI.shouldExpandGetActiveLaneMask(CCVT, ElementVT)) {
+      visitTargetIntrinsic(I, Intrinsic);
+      return;
+    }
+
+    SDValue TripCount = getValue(I.getOperand(1));
     auto VecTy = CCVT.changeVectorElementType(ElementVT);
 
     SDValue VectorIndex, VectorTripCount;
