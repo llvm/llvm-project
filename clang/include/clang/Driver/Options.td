@@ -2853,7 +2853,6 @@ defm unique_section_names : BoolFOption<"unique-section-names",
   CodeGenOpts<"UniqueSectionNames">, DefaultTrue,
   NegFlag<SetFalse, [CC1Option], "Don't use unique names for text and data sections">,
   PosFlag<SetTrue>>;
-
 defm split_machine_functions: BoolFOption<"split-machine-functions",
   CodeGenOpts<"SplitMachineFunctions">, DefaultFalse,
   PosFlag<SetTrue, [CC1Option], "Enable">, NegFlag<SetFalse, [], "Disable">,
@@ -6459,3 +6458,6 @@ def _SLASH_Ze : CLFlag<"Ze">;
 def _SLASH_Zg : CLFlag<"Zg">;
 def _SLASH_ZI : CLFlag<"ZI">;
 def _SLASH_ZW : CLJoined<"ZW">;
+def fhash_long_section_names_EQ : Joined<["-"],"fhash-long-section-names=">, Group<f_Group>,
+  Flags<[CC1Option,CC1AsOption]>, MarshallingInfoInt<CodeGenOpts<"HashLongSectionNames">, "0">,
+  HelpText<"Hash long section names. Valid values in [16, 65535]. Defaults to \"0\" (no hashing).">;
