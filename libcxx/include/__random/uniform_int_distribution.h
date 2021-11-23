@@ -11,6 +11,7 @@
 
 #include <__bits>
 #include <__config>
+#include <__random/log2.h>
 #include <cstddef>
 #include <cstdint>
 #include <iosfwd>
@@ -25,34 +26,6 @@ _LIBCPP_PUSH_MACROS
 #include <__undef_macros>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
-
-// __independent_bits_engine
-
-template <unsigned long long _Xp, size_t _Rp>
-struct __log2_imp
-{
-    static const size_t value = _Xp & ((unsigned long long)(1) << _Rp) ? _Rp
-                                           : __log2_imp<_Xp, _Rp - 1>::value;
-};
-
-template <unsigned long long _Xp>
-struct __log2_imp<_Xp, 0>
-{
-    static const size_t value = 0;
-};
-
-template <size_t _Rp>
-struct __log2_imp<0, _Rp>
-{
-    static const size_t value = _Rp + 1;
-};
-
-template <class _UIntType, _UIntType _Xp>
-struct __log2
-{
-    static const size_t value = __log2_imp<_Xp,
-                                         sizeof(_UIntType) * __CHAR_BIT__ - 1>::value;
-};
 
 template<class _Engine, class _UIntType>
 class __independent_bits_engine

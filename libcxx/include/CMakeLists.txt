@@ -236,7 +236,41 @@ set(files
   __mutex_base
   __node_handle
   __nullptr
+  __random/bernoulli_distribution.h
+  __random/binomial_distribution.h
+  __random/cauchy_distribution.h
+  __random/chi_squared_distribution.h
+  __random/default_random_engine.h
+  __random/discard_block_engine.h
+  __random/discrete_distribution.h
+  __random/exponential_distribution.h
+  __random/extreme_value_distribution.h
+  __random/fisher_f_distribution.h
+  __random/gamma_distribution.h
+  __random/generate_canonical.h
+  __random/geometric_distribution.h
+  __random/independent_bits_engine.h
+  __random/is_seed_sequence.h
+  __random/knuth_b.h
+  __random/linear_congruential_engine.h
+  __random/log2.h
+  __random/lognormal_distribution.h
+  __random/mersenne_twister_engine.h
+  __random/negative_binomial_distribution.h
+  __random/normal_distribution.h
+  __random/piecewise_constant_distribution.h
+  __random/piecewise_linear_distribution.h
+  __random/poisson_distribution.h
+  __random/random_device.h
+  __random/ranlux.h
+  __random/seed_seq.h
+  __random/shuffle_order_engine.h
+  __random/student_t_distribution.h
+  __random/subtract_with_carry_engine.h
   __random/uniform_int_distribution.h
+  __random/uniform_random_bit_generator.h
+  __random/uniform_real_distribution.h
+  __random/weibull_distribution.h
   __ranges/access.h
   __ranges/all.h
   __ranges/common_view.h
