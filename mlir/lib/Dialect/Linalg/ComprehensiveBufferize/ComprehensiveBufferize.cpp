@@ -982,8 +982,8 @@ bufferizableInPlaceAnalysisImpl(OpOperand &operand, OpResult result,
   return success();
 }
 
-/// Determine if `operand` can be bufferized in-place with one of the op's
-/// results.
+/// Analyze the `ops` to determine which OpResults are inplaceable. Walk ops in
+/// reverse and bufferize ops greedily. This is a good starter heuristic.
 ///
 /// Even if an op does not read or write, it may still create an alias when
 /// bufferized in-place. An example of such ops is tensor.extract_slice.
@@ -1000,24 +1000,10 @@ bufferizableInPlaceAnalysisImpl(OpOperand &operand, OpResult result,
 ///
 /// An analysis is required to ensure inplace bufferization would not result in
 /// RaW dependence violations.
-static LogicalResult
-bufferizableInPlaceAnalysis(OpOperand &operand,
-                            BufferizationAliasInfo &aliasInfo,
-                            const DominanceInfo &domInfo) {
-  auto bufferizableOp = dyn_cast<BufferizableOpInterface>(operand.getOwner());
-  if (!bufferizableOp)
-    return success();
-  if (OpResult result = bufferizableOp.getAliasingOpResult(operand))
-    return bufferizableInPlaceAnalysisImpl(operand, result, aliasInfo, domInfo);
-  return success();
-}
-
-/// Analyze the `ops` to determine which OpResults are inplaceable. Walk ops in
-/// reverse and bufferize ops greedily. This is a good starter heuristic.
-/// ExtractSliceOps are interleaved with other ops in traversal order.
-LogicalResult mlir::linalg::comprehensive_bufferize::inPlaceAnalysis(
-    SmallVector<Operation *> &ops, BufferizationAliasInfo &aliasInfo,
-    const DominanceInfo &domInfo, unsigned analysisFuzzerSeed) {
+static LogicalResult inPlaceAnalysis(SmallVector<Operation *> &ops,
+                                     BufferizationAliasInfo &aliasInfo,
+                                     const DominanceInfo &domInfo,
+                                     unsigned analysisFuzzerSeed = 0) {
   if (analysisFuzzerSeed) {
     // This is a fuzzer. For testing purposes only. Randomize the order in which
     // operations are analyzed. The bufferization quality is likely worse, but
@@ -1030,8 +1016,11 @@ LogicalResult mlir::linalg::comprehensive_bufferize::inPlaceAnalysis(
   for (Operation *op : reverse(ops))
     for (OpOperand &opOperand : op->getOpOperands())
       if (opOperand.get().getType().isa<TensorType>())
-        if (failed(bufferizableInPlaceAnalysis(opOperand, aliasInfo, domInfo)))
-          return failure();
+        if (auto bufferizableOp = dyn_cast<BufferizableOpInterface>(op))
+          if (OpResult opResult = bufferizableOp.getAliasingOpResult(opOperand))
+            if (failed(bufferizableInPlaceAnalysisImpl(opOperand, opResult,
+                                                       aliasInfo, domInfo)))
+              return failure();
 
   return success();
 }
@@ -1075,26 +1064,6 @@ inPlaceAnalysisFuncOpBody(FuncOp funcOp, BufferizationAliasInfo &aliasInfo,
 //===----------------------------------------------------------------------===//
 // Bufferization entry-point for functions.
 //===----------------------------------------------------------------------===//
-
-Optional<Value> mlir::linalg::comprehensive_bufferize::defaultAllocationFn(
-    OpBuilder &b, Location loc, MemRefType type,
-    const SmallVector<Value> &dynShape) {
-  Value allocated = b.create<memref::AllocOp>(
-      loc, type, dynShape, b.getI64IntegerAttr(kBufferAlignments));
-  return allocated;
-}
-
-void mlir::linalg::comprehensive_bufferize::defaultDeallocationFn(
-    OpBuilder &b, Location loc, Value allocatedBuffer) {
-  b.create<memref::DeallocOp>(loc, allocatedBuffer);
-}
-
-void mlir::linalg::comprehensive_bufferize::defaultMemCpyFn(OpBuilder &b,
-                                                            Location loc,
-                                                            Value from,
-                                                            Value to) {
-  b.create<memref::CopyOp>(loc, from, to);
-}
 
 LogicalResult mlir::linalg::comprehensive_bufferize::bufferizeOp(
     Operation *op, BufferizationState &state,
@@ -1640,6 +1609,30 @@ LogicalResult mlir::linalg::comprehensive_bufferize::runComprehensiveBufferize(
   });
 
   return success();
+}
+
+/// Default allocation function that is used by the comprehensive bufferization
+/// pass. The default currently creates a ranked memref using `memref.alloc`.
+static Optional<Value> defaultAllocationFn(OpBuilder &b, Location loc,
+                                           MemRefType type,
+                                           const SmallVector<Value> &dynShape) {
+  Value allocated = b.create<memref::AllocOp>(
+      loc, type, dynShape, b.getI64IntegerAttr(kBufferAlignments));
+  return allocated;
+}
+
+/// Default deallocation function that is used by the comprehensive
+/// bufferization pass. It expects to recieve back the value called from the
+/// `defaultAllocationFn`.
+static void defaultDeallocationFn(OpBuilder &b, Location loc,
+                                  Value allocatedBuffer) {
+  b.create<memref::DeallocOp>(loc, allocatedBuffer);
+}
+
+/// Default memory copy function that is used by the comprehensive bufferization
+/// pass. Creates a `memref.copy` op.
+static void defaultMemCpyFn(OpBuilder &b, Location loc, Value from, Value to) {
+  b.create<memref::CopyOp>(loc, from, to);
 }
 
 std::unique_ptr<AllocationCallbacks>
