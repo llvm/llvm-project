@@ -15,6 +15,21 @@
 
 include "mlir/Pass/PassBase.td"
 
+def TosaDecomposeTransposeConv : FunctionPass<"tosa-decompose-transpose-conv"> {
+  let summary = "Deompose transpose convolutiions into standard convolutions.";
+  let description = [{
+    Pass that uses shape manipulation and convolution operations to transform
+    a transpose convolution into a regular convolution.
+  }];
+
+  let constructor = "createTosaDecomposeTransposeConvPass()";
+  let dependentDialects = [
+    "StandardOpsDialect",
+    "tensor::TensorDialect",
+    "tosa::TosaDialect",
+  ];
+}
+
 def TosaInferShapes : FunctionPass<"tosa-infer-shapes"> {
   let summary = "Propagate shapes across TOSA operations";
   let description = [{
