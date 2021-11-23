@@ -14,10 +14,10 @@ define void @test_v16f(<16 x i32> %x) {
   ; CHECK-NEXT:   [[AVX_SET0_:%[0-9]+]]:vr256 = AVX_SET0
   ; CHECK-NEXT:   [[VPCMPEQDYrr:%[0-9]+]]:vr256 = VPCMPEQDYrr [[COPY]], [[AVX_SET0_]]
   ; CHECK-NEXT:   [[VPCMPEQDYrr1:%[0-9]+]]:vr256 = VPCMPEQDYrr [[COPY1]], [[AVX_SET0_]]
-  ; CHECK-NEXT:   [[VMASKMOVPSYrm:%[0-9]+]]:vr256 = VMASKMOVPSYrm [[VPCMPEQDYrr1]], %stack.0.stack_input_vec, 1, $noreg, 0, $noreg :: (load (s256) from %ir.stack_input_vec, align 4)
-  ; CHECK-NEXT:   [[VMASKMOVPSYrm1:%[0-9]+]]:vr256 = VMASKMOVPSYrm [[VPCMPEQDYrr]], %stack.0.stack_input_vec, 1, $noreg, 32, $noreg :: (load (s256) from %ir.stack_input_vec + 32, align 4)
-  ; CHECK-NEXT:   VMASKMOVPSYmr %stack.1.stack_output_vec, 1, $noreg, 32, $noreg, [[VPCMPEQDYrr]], killed [[VMASKMOVPSYrm1]] :: (store (s256) into %ir.stack_output_vec + 32, align 4)
-  ; CHECK-NEXT:   VMASKMOVPSYmr %stack.1.stack_output_vec, 1, $noreg, 0, $noreg, [[VPCMPEQDYrr1]], killed [[VMASKMOVPSYrm]] :: (store (s256) into %ir.stack_output_vec, align 4)
+  ; CHECK-NEXT:   [[VMASKMOVPSYrm:%[0-9]+]]:vr256 = VMASKMOVPSYrm [[VPCMPEQDYrr1]], %stack.0.stack_input_vec, 1, $noreg, 0, $noreg :: (load unknown-size from %ir.stack_input_vec, align 4)
+  ; CHECK-NEXT:   [[VMASKMOVPSYrm1:%[0-9]+]]:vr256 = VMASKMOVPSYrm [[VPCMPEQDYrr]], %stack.0.stack_input_vec, 1, $noreg, 32, $noreg :: (load unknown-size from %ir.stack_input_vec + 32, align 4)
+  ; CHECK-NEXT:   VMASKMOVPSYmr %stack.1.stack_output_vec, 1, $noreg, 32, $noreg, [[VPCMPEQDYrr]], killed [[VMASKMOVPSYrm1]] :: (store unknown-size into %ir.stack_output_vec + 32, align 4)
+  ; CHECK-NEXT:   VMASKMOVPSYmr %stack.1.stack_output_vec, 1, $noreg, 0, $noreg, [[VPCMPEQDYrr1]], killed [[VMASKMOVPSYrm]] :: (store unknown-size into %ir.stack_output_vec, align 4)
   ; CHECK-NEXT:   RET 0
 bb:
   %stack_input_vec = alloca <16 x float>, align 64
@@ -41,10 +41,10 @@ define void @test_v8d(<8 x i64> %x) {
   ; CHECK-NEXT:   [[AVX_SET0_:%[0-9]+]]:vr256 = AVX_SET0
   ; CHECK-NEXT:   [[VPCMPEQQYrr:%[0-9]+]]:vr256 = VPCMPEQQYrr [[COPY]], [[AVX_SET0_]]
   ; CHECK-NEXT:   [[VPCMPEQQYrr1:%[0-9]+]]:vr256 = VPCMPEQQYrr [[COPY1]], [[AVX_SET0_]]
-  ; CHECK-NEXT:   [[VMASKMOVPDYrm:%[0-9]+]]:vr256 = VMASKMOVPDYrm [[VPCMPEQQYrr1]], %stack.0.stack_input_vec, 1, $noreg, 0, $noreg :: (load (s256) from %ir.stack_input_vec, align 4)
-  ; CHECK-NEXT:   [[VMASKMOVPDYrm1:%[0-9]+]]:vr256 = VMASKMOVPDYrm [[VPCMPEQQYrr]], %stack.0.stack_input_vec, 1, $noreg, 32, $noreg :: (load (s256) from %ir.stack_input_vec + 32, align 4)
-  ; CHECK-NEXT:   VMASKMOVPDYmr %stack.1.stack_output_vec, 1, $noreg, 32, $noreg, [[VPCMPEQQYrr]], killed [[VMASKMOVPDYrm1]] :: (store (s256) into %ir.stack_output_vec + 32, align 4)
-  ; CHECK-NEXT:   VMASKMOVPDYmr %stack.1.stack_output_vec, 1, $noreg, 0, $noreg, [[VPCMPEQQYrr1]], killed [[VMASKMOVPDYrm]] :: (store (s256) into %ir.stack_output_vec, align 4)
+  ; CHECK-NEXT:   [[VMASKMOVPDYrm:%[0-9]+]]:vr256 = VMASKMOVPDYrm [[VPCMPEQQYrr1]], %stack.0.stack_input_vec, 1, $noreg, 0, $noreg :: (load unknown-size from %ir.stack_input_vec, align 4)
+  ; CHECK-NEXT:   [[VMASKMOVPDYrm1:%[0-9]+]]:vr256 = VMASKMOVPDYrm [[VPCMPEQQYrr]], %stack.0.stack_input_vec, 1, $noreg, 32, $noreg :: (load unknown-size from %ir.stack_input_vec + 32, align 4)
+  ; CHECK-NEXT:   VMASKMOVPDYmr %stack.1.stack_output_vec, 1, $noreg, 32, $noreg, [[VPCMPEQQYrr]], killed [[VMASKMOVPDYrm1]] :: (store unknown-size into %ir.stack_output_vec + 32, align 4)
+  ; CHECK-NEXT:   VMASKMOVPDYmr %stack.1.stack_output_vec, 1, $noreg, 0, $noreg, [[VPCMPEQQYrr1]], killed [[VMASKMOVPDYrm]] :: (store unknown-size into %ir.stack_output_vec, align 4)
   ; CHECK-NEXT:   RET 0
 bb:
   %stack_input_vec = alloca <8 x double>, align 64

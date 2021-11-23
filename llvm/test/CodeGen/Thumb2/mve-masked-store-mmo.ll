@@ -11,15 +11,15 @@ define i32 @incorrectmmo() {
 ; CHECK-NEXT:    adr r0, .LCPI0_0
 ; CHECK-NEXT:    vldrw.u32 q0, [r0]
 ; CHECK-NEXT:    add.w r0, sp, #2
-; CHECK-NEXT:    ldrb.w r1, [sp, #3]
 ; CHECK-NEXT:    vpst
 ; CHECK-NEXT:    vstrbt.8 q0, [r0]
-; CHECK-NEXT:    ldrb.w r2, [sp, #4]
 ; CHECK-NEXT:    ldrb.w r0, [sp, #2]
-; CHECK-NEXT:    ldrb.w r3, [sp, #10]
+; CHECK-NEXT:    ldrb.w r1, [sp, #3]
+; CHECK-NEXT:    ldrb.w r2, [sp, #4]
 ; CHECK-NEXT:    add r0, r1
-; CHECK-NEXT:    ldrb.w r1, [sp, #11]
+; CHECK-NEXT:    ldrb.w r3, [sp, #10]
 ; CHECK-NEXT:    add r0, r2
+; CHECK-NEXT:    ldrb.w r1, [sp, #11]
 ; CHECK-NEXT:    add r0, r3
 ; CHECK-NEXT:    add r0, r1
 ; CHECK-NEXT:    add sp, #12
