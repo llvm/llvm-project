@@ -1032,15 +1032,7 @@ int64_t llvm::getPtrStride(PredicatedScalarEvolution &PSE, Type *AccessTy,
                            bool ShouldCheckWrap) {
   Type *Ty = Ptr->getType();
   assert(Ty->isPointerTy() && "Unexpected non-ptr");
-  unsigned AddrSpace = Ty->getPointerAddressSpace();
-
-  // Make sure we're not accessing an aggregate type.
-  // TODO: Why? This doesn't make any sense.
-  if (AccessTy->isAggregateType()) {
-    LLVM_DEBUG(dbgs() << "LAA: Bad stride - Not a pointer to a scalar type"
-                      << *Ptr << "\n");
-    return 0;
-  }
+  assert(!AccessTy->isAggregateType() && "Bad stride - Not a pointer to a scalar type");
 
   const SCEV *PtrScev = replaceSymbolicStrideSCEV(PSE, StridesMap, Ptr);
 
@@ -1068,6 +1060,7 @@ int64_t llvm::getPtrStride(PredicatedScalarEvolution &PSE, Type *AccessTy,
   // An getelementptr without an inbounds attribute and unit stride would have
   // to access the pointer value "0" which is undefined behavior in address
   // space 0, therefore we can also vectorize this case.
+  unsigned AddrSpace = Ty->getPointerAddressSpace();
   bool IsInBoundsGEP = isInBoundsGep(Ptr);
   bool IsNoWrapAddRec = !ShouldCheckWrap ||
     PSE.hasNoOverflow(Ptr, SCEVWrapPredicate::IncrementNUSW) ||
