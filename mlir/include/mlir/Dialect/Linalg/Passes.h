@@ -128,7 +128,8 @@ createLinalgStrategyVectorizePass(StringRef opName = "",
                                   linalg::LinalgVectorizationOptions opt =
                                       linalg::LinalgVectorizationOptions(),
                                   linalg::LinalgTransformationFilter filter =
-                                      linalg::LinalgTransformationFilter());
+                                      linalg::LinalgTransformationFilter(),
+                                  bool padVectorize = false);
 
 /// Create a LinalgStrategyEnablePass.
 std::unique_ptr<OperationPass<FuncOp>> createLinalgStrategyEnablePass(
