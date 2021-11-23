@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/Linalg/ComprehensiveBufferize/BufferizableOpInterface.h"
+#include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/IR/AsmState.h"
 #include "mlir/IR/BlockAndValueMapping.h"
 #include "mlir/IR/BuiltinOps.h"
@@ -388,6 +389,31 @@ Value mlir::linalg::comprehensive_bufferize::getResultBuffer(
 
   // Bufferizing in-place. No need to allocate a new buffer.
   return operandBuffer;
+}
+
+LogicalResult
+mlir::linalg::comprehensive_bufferize::bufferizeOp(Operation *op,
+                                                   BufferizationState &state) {
+  OpBuilder b(op->getContext());
+
+  // Skip BufferCast and TensorLoad ops.
+  if (isa<memref::BufferCastOp, memref::TensorLoadOp>(op))
+    return success();
+
+  // Check if op has tensor results or operands.
+  auto isaTensor = [](Type t) { return t.isa<TensorType>(); };
+  bool hasTensorResult = any_of(op->getResultTypes(), isaTensor);
+  bool hasTensorOperand = any_of(op->getOperandTypes(), isaTensor);
+  if (!hasTensorResult && !hasTensorOperand)
+    return success();
+
+  // Bufferize using `BufferizableOpInterface`.
+  b.setInsertionPoint(op);
+  if (auto bufferizableOp = dyn_cast<BufferizableOpInterface>(op))
+    return bufferizableOp.bufferize(b, state);
+
+  // Other op with tensors. No bufferization method specified.
+  return op->emitError() << "unsupported op with tensors";
 }
 
 //===----------------------------------------------------------------------===//

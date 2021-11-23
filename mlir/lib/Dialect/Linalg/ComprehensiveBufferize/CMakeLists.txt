@@ -12,6 +12,7 @@ add_mlir_dialect_library(MLIRBufferizableOpInterface
 
   LINK_LIBS PUBLIC
   MLIRIR
+  MLIRMemRef
 )
 
 add_mlir_dialect_library(MLIRLinalgBufferizableOpInterfaceImpl
