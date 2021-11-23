@@ -164,7 +164,6 @@ bool IsFinalizable(
 bool IsFinalizable(
     const DerivedTypeSpec &, std::set<const DerivedTypeSpec *> * = nullptr);
 bool HasImpureFinal(const DerivedTypeSpec &);
-bool IsCoarray(const Symbol &);
 bool IsInBlankCommon(const Symbol &);
 inline bool IsAssumedSizeArray(const Symbol &symbol) {
   const auto *details{symbol.detailsIf<ObjectEntityDetails>()};

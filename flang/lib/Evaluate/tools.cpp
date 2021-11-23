@@ -1193,6 +1193,10 @@ bool IsAutomatic(const Symbol &original) {
   return false;
 }
 
+bool IsCoarray(const Symbol &symbol) {
+  return GetAssociationRoot(symbol).Corank() > 0;
+}
+
 bool IsSaved(const Symbol &original) {
   const Symbol &symbol{GetAssociationRoot(original)};
   const Scope &scope{symbol.owner()};
