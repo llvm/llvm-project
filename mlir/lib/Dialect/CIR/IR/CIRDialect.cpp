@@ -123,6 +123,58 @@ mlir::LogicalResult ReturnOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
+// IfOp
+//===----------------------------------------------------------------------===//
+
+Block *IfOp::thenBlock() { return &getThenRegion().back(); }
+Block *IfOp::elseBlock() {
+  Region &r = getElseRegion();
+  if (r.empty())
+    return nullptr;
+  return &r.back();
+}
+
+/// Default callback for IfOp builders. Inserts nothing for now.
+void mlir::cir::buildTerminatedBody(OpBuilder &builder, Location loc) {}
+
+/// Given the region at `index`, or the parent operation if `index` is None,
+/// return the successor regions. These are the regions that may be selected
+/// during the flow of control. `operands` is a set of optional attributes that
+/// correspond to a constant value for each operand, or null if that operand is
+/// not a constant.
+void IfOp::getSuccessorRegions(mlir::RegionBranchPoint point,
+                               SmallVectorImpl<RegionSuccessor> &regions) {
+  // The `then` and the `else` region branch back to the parent operation.
+  if (!point.isParent()) {
+    regions.push_back(RegionSuccessor());
+    return;
+  }
+
+  // Don't consider the else region if it is empty.
+  Region *elseRegion = &this->getElseRegion();
+  if (elseRegion->empty())
+    elseRegion = nullptr;
+
+  // Otherwise, the successor is dependent on the condition.
+  // bool condition;
+  // if (auto condAttr = operands.front().dyn_cast_or_null<IntegerAttr>()) {
+  //   assert(0 && "not implemented");
+  // condition = condAttr.getValue().isOneValue();
+  // Add the successor regions using the condition.
+  // regions.push_back(RegionSuccessor(condition ? &thenRegion() :
+  // elseRegion));
+  // return;
+  // }
+
+  // If the condition isn't constant, both regions may be executed.
+  regions.push_back(RegionSuccessor(&getThenRegion()));
+  // If the else region does not exist, it is not a viable successor.
+  if (elseRegion)
+    regions.push_back(RegionSuccessor(elseRegion));
+  return;
+}
+
+//===----------------------------------------------------------------------===//
 // TableGen'd op method definitions
 //===----------------------------------------------------------------------===//
 

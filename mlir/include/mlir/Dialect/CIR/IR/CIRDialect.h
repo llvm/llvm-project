@@ -13,10 +13,12 @@
 #ifndef MLIR_DIALECT_CIR_CIRDIALECT_H_
 #define MLIR_DIALECT_CIR_CIRDIALECT_H_
 
+#include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/OpDefinition.h"
+#include "mlir/Interfaces/ControlFlowInterfaces.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 
 namespace mlir {
@@ -29,6 +31,12 @@ using FuncOp = func::FuncOp;
 #include "mlir/Dialect/CIR/IR/CIROpsDialect.h.inc"
 #include "mlir/Dialect/CIR/IR/CIROpsEnums.h.inc"
 #include "mlir/Dialect/CIR/IR/CIRTypes.h"
+
+namespace mlir {
+namespace cir {
+void buildTerminatedBody(OpBuilder &builder, Location loc);
+} // namespace cir
+} // namespace mlir
 
 #define GET_OP_CLASSES
 #include "mlir/Dialect/CIR/IR/CIROps.h.inc"
