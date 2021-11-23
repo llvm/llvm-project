@@ -1832,6 +1832,28 @@ void AArch64TargetLowering::computeKnownBitsForTargetNode(
     Known = KnownBits::commonBits(Known, Known2);
     break;
   }
+  case AArch64ISD::BICi: {
+    // Compute the bit cleared value.
+    uint64_t Mask =
+        ~(Op->getConstantOperandVal(1) << Op->getConstantOperandVal(2));
+    Known = DAG.computeKnownBits(Op->getOperand(0), Depth + 1);
+    Known &= KnownBits::makeConstant(APInt(Known.getBitWidth(), Mask));
+    break;
+  }
+  case AArch64ISD::VLSHR: {
+    KnownBits Known2;
+    Known = DAG.computeKnownBits(Op->getOperand(0), Depth + 1);
+    Known2 = DAG.computeKnownBits(Op->getOperand(1), Depth + 1);
+    Known = KnownBits::lshr(Known, Known2);
+    break;
+  }
+  case AArch64ISD::VASHR: {
+    KnownBits Known2;
+    Known = DAG.computeKnownBits(Op->getOperand(0), Depth + 1);
+    Known2 = DAG.computeKnownBits(Op->getOperand(1), Depth + 1);
+    Known = KnownBits::ashr(Known, Known2);
+    break;
+  }
   case AArch64ISD::LOADgot:
   case AArch64ISD::ADDlow: {
     if (!Subtarget->isTargetILP32())

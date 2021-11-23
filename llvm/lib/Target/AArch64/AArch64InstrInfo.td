@@ -6423,6 +6423,22 @@ def : Pat<(int_aarch64_neon_sqdmulls_scalar (i32 FPR32:$Rn),
                                                            VectorIndexS:$idx)),
           (SQDMULLv1i64_indexed FPR32:$Rn, V128:$Vm, VectorIndexS:$idx)>;
 
+// Match add node and also treat an 'or' node is as an 'add' if the or'ed operands
+// have no common bits.
+def add_and_or_is_add : PatFrags<(ops node:$lhs, node:$rhs),
+                         [(add node:$lhs, node:$rhs), (or node:$lhs, node:$rhs)],[{
+   if (N->getOpcode() == ISD::ADD)
+     return true;
+   return CurDAG->haveNoCommonBitsSet(N->getOperand(0), N->getOperand(1));
+}]> {
+  let GISelPredicateCode = [{
+     // Only handle G_ADD for now. FIXME. build capability to compute whether
+     // operands of G_OR have common bits set or not.
+     return MI.getOpcode() == TargetOpcode::G_ADD;
+  }];
+}
+
+
 //----------------------------------------------------------------------------
 // AdvSIMD scalar shift instructions
 //----------------------------------------------------------------------------
@@ -6528,7 +6544,7 @@ defm SRSRA    : SIMDScalarRShiftDTied<   0, 0b00110, "srsra",
                    (AArch64srshri node:$MHS, node:$RHS))>>;
 defm SSHR     : SIMDScalarRShiftD<   0, 0b00000, "sshr", AArch64vashr>;
 defm SSRA     : SIMDScalarRShiftDTied<   0, 0b00010, "ssra",
-    TriOpFrag<(add node:$LHS,
+    TriOpFrag<(add_and_or_is_add node:$LHS,
                    (AArch64vashr node:$MHS, node:$RHS))>>;
 defm UQRSHRN  : SIMDScalarRShiftBHS< 1, 0b10011, "uqrshrn",
                                      int_aarch64_neon_uqrshrn>;
@@ -6541,7 +6557,7 @@ defm URSRA    : SIMDScalarRShiftDTied<   1, 0b00110, "ursra",
                    (AArch64urshri node:$MHS, node:$RHS))>>;
 defm USHR     : SIMDScalarRShiftD<   1, 0b00000, "ushr", AArch64vlshr>;
 defm USRA     : SIMDScalarRShiftDTied<   1, 0b00010, "usra",
-    TriOpFrag<(add node:$LHS,
+    TriOpFrag<(add_and_or_is_add node:$LHS,
                    (AArch64vlshr node:$MHS, node:$RHS))>>;
 
 //----------------------------------------------------------------------------
@@ -6583,7 +6599,7 @@ defm SSHLL   : SIMDVectorLShiftLongBHSD<0, 0b10100, "sshll",
 
 defm SSHR    : SIMDVectorRShiftBHSD<0, 0b00000, "sshr", AArch64vashr>;
 defm SSRA    : SIMDVectorRShiftBHSDTied<0, 0b00010, "ssra",
-                TriOpFrag<(add node:$LHS, (AArch64vashr node:$MHS, node:$RHS))>>;
+                TriOpFrag<(add_and_or_is_add node:$LHS, (AArch64vashr node:$MHS, node:$RHS))>>;
 defm UCVTF   : SIMDVectorRShiftToFP<1, 0b11100, "ucvtf",
                         int_aarch64_neon_vcvtfxu2fp>;
 defm UQRSHRN : SIMDVectorRShiftNarrowBHS<1, 0b10011, "uqrshrn",
@@ -6599,7 +6615,7 @@ defm USHLL   : SIMDVectorLShiftLongBHSD<1, 0b10100, "ushll",
                 BinOpFrag<(AArch64vshl (zext node:$LHS), node:$RHS)>>;
 defm USHR    : SIMDVectorRShiftBHSD<1, 0b00000, "ushr", AArch64vlshr>;
 defm USRA    : SIMDVectorRShiftBHSDTied<1, 0b00010, "usra",
-                TriOpFrag<(add node:$LHS, (AArch64vlshr node:$MHS, node:$RHS))> >;
+                TriOpFrag<(add_and_or_is_add node:$LHS, (AArch64vlshr node:$MHS, node:$RHS))> >;
 
 // RADDHN patterns for when RSHRN shifts by half the size of the vector element
 def : Pat<(v8i8 (int_aarch64_neon_rshrn (v8i16 V128:$Vn), (i32 8))),
