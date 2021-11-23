@@ -80,7 +80,7 @@ fir.global @symbol : i64 {
 fir.global internal @_QEmultiarray : !fir.array<32x32xi32> {
   %c0_i32 = arith.constant 1 : i32
   %0 = fir.undefined !fir.array<32x32xi32>
-  %2 = fir.insert_on_range %0, %c0_i32, [0 : index, 31 : index, 0 : index, 31 : index] : (!fir.array<32x32xi32>, i32) -> !fir.array<32x32xi32>
+  %2 = fir.insert_on_range %0, %c0_i32 from (0, 0) to (31, 31) : (!fir.array<32x32xi32>, i32) -> !fir.array<32x32xi32>
   fir.has_value %2 : !fir.array<32x32xi32>
 }
 
@@ -97,7 +97,7 @@ fir.global internal @_QEmultiarray : !fir.array<32x32xi32> {
 fir.global internal @_QEmultiarray : !fir.array<32xi32> {
   %c0_i32 = arith.constant 1 : i32
   %0 = fir.undefined !fir.array<32xi32>
-  %2 = fir.insert_on_range %0, %c0_i32, [5 : index, 31 : index] : (!fir.array<32xi32>, i32) -> !fir.array<32xi32>
+  %2 = fir.insert_on_range %0, %c0_i32 from (5) to (31) : (!fir.array<32xi32>, i32) -> !fir.array<32xi32>
   fir.has_value %2 : !fir.array<32xi32>
 }
 

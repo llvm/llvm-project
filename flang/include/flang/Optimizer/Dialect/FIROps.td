@@ -1971,18 +1971,18 @@ def fir_InsertOnRangeOp : fir_OneResultOp<"insert_on_range", [NoSideEffect]> {
     ```mlir
       %a = fir.undefined !fir.array<10x10xf32>
       %c = arith.constant 3.0 : f32
-      %1 = fir.insert_on_range %a, %c, [0 : index, 7 : index, 0 : index, 2 : index] : (!fir.array<10x10xf32>, f32) -> !fir.array<10x10xf32>
+      %1 = fir.insert_on_range %a, %c from (0, 0) to (7, 2) : (!fir.array<10x10xf32>, f32) -> !fir.array<10x10xf32>
     ```
 
     The first 28 elements of %1, with coordinates from (0,0) to (7,2), have
     the value 3.0.
   }];
 
-  let arguments = (ins fir_SequenceType:$seq, AnyType:$val, ArrayAttr:$coor);
+  let arguments = (ins fir_SequenceType:$seq, AnyType:$val, IndexElementsAttr:$coor);
   let results = (outs fir_SequenceType);
 
   let assemblyFormat = [{
-    $seq `,` $val `,` $coor attr-dict `:` functional-type(operands, results)
+    $seq `,` $val custom<CustomRangeSubscript>($coor) attr-dict `:` functional-type(operands, results)
   }];
 
   let verifier = "return ::verify(*this);";
