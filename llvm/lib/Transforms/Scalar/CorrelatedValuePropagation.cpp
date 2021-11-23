@@ -688,7 +688,7 @@ static bool processCallSite(CallBase &CB, LazyValueInfo *LVI) {
     ArgNo++;
   }
 
-  assert(ArgNo == CB.arg_size() && "sanity check");
+  assert(ArgNo == CB.arg_size() && "Call arguments not processed correctly.");
 
   if (ArgNos.empty())
     return Changed;

@@ -486,7 +486,7 @@ bool LoopInvariantCodeMotion::runOnLoop(
 
   // Check that neither this loop nor its parent have had LCSSA broken. LICM is
   // specifically moving instructions across the loop boundary and so it is
-  // especially in need of sanity checking here.
+  // especially in need of basic functional correctness checking here.
   assert(L->isLCSSAForm(*DT) && "Loop not left in LCSSA form after LICM!");
   assert((L->isOutermost() || L->getParentLoop()->isLCSSAForm(*DT)) &&
          "Parent loop not left in LCSSA form after LICM!");
