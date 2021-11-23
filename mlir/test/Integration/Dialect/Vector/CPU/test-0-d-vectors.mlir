@@ -10,8 +10,15 @@ func @extract_element_0d(%a: vector<f32>) {
   return
 }
 
+func @insert_element_0d(%a: f32, %b: vector<f32>) -> (vector<f32>) {
+  %1 = vector.insertelement %a, %b[] : vector<f32>
+  return %1: vector<f32>
+}
+
 func @entry() {
-  %1 = arith.constant dense<42.0> : vector<f32>
-  call  @extract_element_0d(%1) : (vector<f32>) -> ()
+  %0 = arith.constant 42.0 : f32
+  %1 = arith.constant dense<0.0> : vector<f32>
+  %2 = call  @insert_element_0d(%0, %1) : (f32, vector<f32>) -> (vector<f32>)
+  call  @extract_element_0d(%2) : (vector<f32>) -> ()
   return
 }

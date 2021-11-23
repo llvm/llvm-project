@@ -666,16 +666,18 @@ def Vector_InsertElementOp :
                     "result", "source",
                     "$_self.cast<ShapedType>().getElementType()">,
      AllTypesMatch<["dest", "result"]>]>,
-     Arguments<(ins AnyType:$source, AnyVector:$dest,
-                    AnySignlessIntegerOrIndex:$position)>,
-     Results<(outs AnyVector:$result)> {
+     Arguments<(ins AnyType:$source, AnyVectorOfAnyRank:$dest,
+                    Optional<AnySignlessIntegerOrIndex>:$position)>,
+     Results<(outs AnyVectorOfAnyRank:$result)> {
   let summary = "insertelement operation";
   let description = [{
-    Takes a scalar source, an 1-D destination vector and a dynamic index
-    position and inserts the source into the destination at the proper
-    position.  Note that this instruction resembles vector.insert, but
-    is restricted to 1-D vectors and relaxed to dynamic indices. It is
-    meant to be closer to LLVM's version:
+    Takes a scalar source, a 0-D or 1-D destination vector and a dynamic index
+    position and inserts the source into the destination at the proper position.
+
+    Note that this instruction resembles vector.insert, but is restricted to 0-D
+    and 1-D vectors and relaxed to dynamic indices. 
+
+    It is meant to be closer to LLVM's version:
     https://llvm.org/docs/LangRef.html#insertelement-instruction
 
     Example:
@@ -684,14 +686,18 @@ def Vector_InsertElementOp :
     %c = arith.constant 15 : i32
     %f = arith.constant 0.0f : f32
     %1 = vector.insertelement %f, %0[%c : i32]: vector<16xf32>
+    %2 = vector.insertelement %f, %z[]: vector<f32>
     ```
   }];
   let assemblyFormat = [{
-    $source `,` $dest `[` $position `:` type($position) `]` attr-dict `:`
+    $source `,` $dest `[` ($position^ `:` type($position))? `]`  attr-dict `:`
     type($result)
   }];
 
   let builders = [
+    // 0-D builder.
+    OpBuilder<(ins "Value":$source, "Value":$dest)>,
+    // 1-D + position builder.
     OpBuilder<(ins "Value":$source, "Value":$dest, "Value":$position)>
   ];
   let extraClassDeclaration = [{
