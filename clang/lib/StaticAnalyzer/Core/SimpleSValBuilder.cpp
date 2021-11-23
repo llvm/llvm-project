@@ -1183,6 +1183,19 @@ SVal SimpleSValBuilder::simplifySVal(ProgramStateRef State, SVal V) {
           S, SVB.evalBinOp(State, S->getOpcode(), LHS, RHS, S->getType()));
     }
 
+    SVal VisitIntSymExpr(const IntSymExpr *S) {
+      auto I = Cached.find(S);
+      if (I != Cached.end())
+        return I->second;
+
+      SVal RHS = Visit(S->getRHS());
+      if (isUnchanged(S->getRHS(), RHS))
+        return skip(S);
+      SVal LHS = SVB.makeIntVal(S->getLHS());
+      return cache(
+          S, SVB.evalBinOp(State, S->getOpcode(), LHS, RHS, S->getType()));
+    }
+
     SVal VisitSymSymExpr(const SymSymExpr *S) {
       auto I = Cached.find(S);
       if (I != Cached.end())
