@@ -34,6 +34,10 @@ cl::opt<bool> NoWarnSampleUnused(
     cl::desc("Use this option to turn off/on warnings about function with "
              "samples but without debug information to use those samples. "));
 
+cl::opt<bool> SampleProfileUseProfi(
+    "sample-profile-use-profi", cl::init(false), cl::Hidden, cl::ZeroOrMore,
+    cl::desc("Use profi to infer block and edge counts."));
+
 namespace sampleprofutil {
 
 /// Return true if the given callsite is hot wrt to hot cutoff threshold.
