@@ -24,9 +24,6 @@ static constexpr int64_t kBufferAlignments = 128;
 /// Return default allocation callbacks.
 std::unique_ptr<AllocationCallbacks> defaultAllocationCallbacks();
 
-/// Bufferize one particular op.
-LogicalResult bufferizeOp(Operation *op, BufferizationState &state);
-
 /// Register external models implemented for the `BufferizableOpInterface`.
 void registerBufferizableOpInterfaceExternalModels(DialectRegistry &registry);
 
