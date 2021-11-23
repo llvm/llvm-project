@@ -226,30 +226,6 @@ class DenseMapBase {
     return FindAndConstruct(__sanitizer::move(Key)).second;
   }
 
-  /// Equality comparison for DenseMap.
-  ///
-  /// Iterates over elements of LHS confirming that each (key, value) pair in
-  /// LHS is also in RHS, and that no additional pairs are in RHS. Equivalent to
-  /// N calls to RHS.find and N value comparisons. Amortized complexity is
-  /// linear, worst case is O(N^2) (if every hash collides).
-  bool operator==(const DenseMapBase &RHS) const {
-    if (size() != RHS.size())
-      return false;
-
-    const KeyT EmptyKey = getEmptyKey(), TombstoneKey = getTombstoneKey();
-    for (auto *P = getBuckets(), *E = getBucketsEnd(); P != E; ++P) {
-      const KeyT K = P->getFirst();
-      if (!KeyInfoT::isEqual(K, EmptyKey) &&
-          !KeyInfoT::isEqual(K, TombstoneKey)) {
-        const auto *I = RHS.find(K);
-        if (!I || P->getSecond() != I->getSecond())
-          return false;
-      }
-    }
-
-    return true;
-  }
-
   /// Iterate over active entries of the container.
   ///
   /// Function can return fast to stop the process.
@@ -264,6 +240,12 @@ class DenseMapBase {
           return;
       }
     }
+  }
+
+  template <class Fn>
+  void forEach(Fn fn) const {
+    const_cast<DenseMapBase *>(this)->forEach(
+        [&](const value_type &KV) { return fn(KV); });
   }
 
  protected:
@@ -539,6 +521,35 @@ class DenseMapBase {
     return RoundUpTo(getNumBuckets() * sizeof(BucketT), GetPageSizeCached());
   }
 };
+
+/// Equality comparison for DenseMap.
+///
+/// Iterates over elements of LHS confirming that each (key, value) pair in LHS
+/// is also in RHS, and that no additional pairs are in RHS.
+/// Equivalent to N calls to RHS.find and N value comparisons. Amortized
+/// complexity is linear, worst case is O(N^2) (if every hash collides).
+template <typename DerivedT, typename KeyT, typename ValueT, typename KeyInfoT,
+          typename BucketT>
+bool operator==(
+    const DenseMapBase<DerivedT, KeyT, ValueT, KeyInfoT, BucketT> &LHS,
+    const DenseMapBase<DerivedT, KeyT, ValueT, KeyInfoT, BucketT> &RHS) {
+  if (LHS.size() != RHS.size())
+    return false;
+
+  bool R = true;
+  LHS.forEach(
+      [&](const typename DenseMapBase<DerivedT, KeyT, ValueT, KeyInfoT,
+                                      BucketT>::value_type &KV) -> bool {
+        const auto *I = RHS.find(KV.first);
+        if (!I || I->second != KV.second) {
+          R = false;
+          return false;
+        }
+        return true;
+      });
+
+  return R;
+}
 
 /// Inequality comparison for DenseMap.
 ///
