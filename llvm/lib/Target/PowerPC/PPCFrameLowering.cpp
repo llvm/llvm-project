@@ -391,9 +391,8 @@ void PPCFrameLowering::replaceFPWithRealFP(MachineFunction &MF) const {
   unsigned BPReg  = HasBP ? (unsigned) RegInfo->getBaseRegister(MF) : FPReg;
   unsigned BP8Reg = HasBP ? (unsigned) PPC::X30 : FP8Reg;
 
-  for (MachineFunction::iterator BI = MF.begin(), BE = MF.end();
-       BI != BE; ++BI)
-    for (MachineBasicBlock::iterator MBBI = BI->end(); MBBI != BI->begin(); ) {
+  for (MachineBasicBlock &MBB : MF)
+    for (MachineBasicBlock::iterator MBBI = MBB.end(); MBBI != MBB.begin();) {
       --MBBI;
       for (unsigned I = 0, E = MBBI->getNumOperands(); I != E; ++I) {
         MachineOperand &MO = MBBI->getOperand(I);

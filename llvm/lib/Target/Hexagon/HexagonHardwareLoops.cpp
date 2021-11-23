@@ -1875,8 +1875,7 @@ MachineBasicBlock *HexagonHardwareLoops::createPreheaderForLoop(
   if (TII->analyzeBranch(*ExitingBlock, TB, FB, Tmp1, false))
     return nullptr;
 
-  for (MBBVector::iterator I = Preds.begin(), E = Preds.end(); I != E; ++I) {
-    MachineBasicBlock *PB = *I;
+  for (MachineBasicBlock *PB : Preds) {
     bool NotAnalyzed = TII->analyzeBranch(*PB, TB, FB, Tmp1, false);
     if (NotAnalyzed)
       return nullptr;

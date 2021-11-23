@@ -53,9 +53,8 @@ namespace {
       // instructions to fill delay slot.
       F.getRegInfo().invalidateLiveness();
 
-      for (MachineFunction::iterator FI = F.begin(), FE = F.end();
-           FI != FE; ++FI)
-        Changed |= runOnMachineBasicBlock(*FI);
+      for (MachineBasicBlock &MBB : F)
+        Changed |= runOnMachineBasicBlock(MBB);
       return Changed;
     }
 

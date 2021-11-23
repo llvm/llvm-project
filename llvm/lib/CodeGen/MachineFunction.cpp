@@ -1327,9 +1327,9 @@ bool MachineJumpTableInfo::ReplaceMBBInJumpTable(unsigned Idx,
   assert(Old != New && "Not making a change?");
   bool MadeChange = false;
   MachineJumpTableEntry &JTE = JumpTables[Idx];
-  for (size_t j = 0, e = JTE.MBBs.size(); j != e; ++j)
-    if (JTE.MBBs[j] == Old) {
-      JTE.MBBs[j] = New;
+  for (MachineBasicBlock *&MBB : JTE.MBBs)
+    if (MBB == Old) {
+      MBB = New;
       MadeChange = true;
     }
   return MadeChange;
@@ -1342,8 +1342,8 @@ void MachineJumpTableInfo::print(raw_ostream &OS) const {
 
   for (unsigned i = 0, e = JumpTables.size(); i != e; ++i) {
     OS << printJumpTableEntryReference(i) << ':';
-    for (unsigned j = 0, f = JumpTables[i].MBBs.size(); j != f; ++j)
-      OS << ' ' << printMBBReference(*JumpTables[i].MBBs[j]);
+    for (const MachineBasicBlock *MBB : JumpTables[i].MBBs)
+      OS << ' ' << printMBBReference(*MBB);
     if (i != e)
       OS << '\n';
   }
