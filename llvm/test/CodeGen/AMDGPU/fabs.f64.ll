@@ -21,8 +21,7 @@ define amdgpu_kernel void @v_fabs_f64(double addrspace(1)* %out, double addrspac
 }
 
 ; FUNC-LABEL: {{^}}fabs_f64:
-; SI: v_and_b32
-; SI-NOT: v_and_b32
+; SI: s_bitset0_b32
 ; SI: s_endpgm
 define amdgpu_kernel void @fabs_f64(double addrspace(1)* %out, double %in) {
   %fabs = call double @llvm.fabs.f64(double %in)
@@ -31,8 +30,8 @@ define amdgpu_kernel void @fabs_f64(double addrspace(1)* %out, double %in) {
 }
 
 ; FUNC-LABEL: {{^}}fabs_v2f64:
-; SI: v_and_b32
-; SI: v_and_b32
+; SI: s_and_b32
+; SI: s_and_b32
 ; SI: s_endpgm
 define amdgpu_kernel void @fabs_v2f64(<2 x double> addrspace(1)* %out, <2 x double> %in) {
   %fabs = call <2 x double> @llvm.fabs.v2f64(<2 x double> %in)
@@ -41,10 +40,10 @@ define amdgpu_kernel void @fabs_v2f64(<2 x double> addrspace(1)* %out, <2 x doub
 }
 
 ; FUNC-LABEL: {{^}}fabs_v4f64:
-; SI: v_and_b32
-; SI: v_and_b32
-; SI: v_and_b32
-; SI: v_and_b32
+; SI: s_and_b32
+; SI: s_and_b32
+; SI: s_and_b32
+; SI: s_and_b32
 ; SI: s_endpgm
 define amdgpu_kernel void @fabs_v4f64(<4 x double> addrspace(1)* %out, <4 x double> %in) {
   %fabs = call <4 x double> @llvm.fabs.v4f64(<4 x double> %in)
@@ -77,7 +76,7 @@ define amdgpu_kernel void @fabs_fn_fold_f64(double addrspace(1)* %out, [8 x i32]
 }
 
 ; FUNC-LABEL: {{^}}fabs_free_f64:
-; SI: v_and_b32
+; SI: s_bitset0_b32
 ; SI: s_endpgm
 define amdgpu_kernel void @fabs_free_f64(double addrspace(1)* %out, i64 %in) {
   %bc= bitcast i64 %in to double
@@ -87,7 +86,7 @@ define amdgpu_kernel void @fabs_free_f64(double addrspace(1)* %out, i64 %in) {
 }
 
 ; FUNC-LABEL: {{^}}fabs_fn_free_f64:
-; SI: v_and_b32
+; SI: s_bitset0_b32
 ; SI: s_endpgm
 define amdgpu_kernel void @fabs_fn_free_f64(double addrspace(1)* %out, i64 %in) {
   %bc= bitcast i64 %in to double
