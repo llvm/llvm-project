@@ -11,6 +11,7 @@
 
 #include "mlir/IR/BlockAndValueMapping.h"
 #include "mlir/IR/Builders.h"
+#include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/Support/LLVM.h"
@@ -240,9 +241,8 @@ struct AllocationCallbacks {
 /// BufferizationState keeps track of bufferization state and provides access to
 /// the results of the analysis.
 struct BufferizationState {
-  BufferizationState(BufferizationAliasInfo &aliasInfo,
-                     AllocationCallbacks &allocationFns)
-      : aliasInfo(aliasInfo), allocationFns(allocationFns) {}
+  BufferizationState(ModuleOp moduleOp, AllocationCallbacks &allocationFns)
+      : aliasInfo(moduleOp), allocationFns(allocationFns) {}
 
   // BufferizationState should be passed as a reference.
   BufferizationState(const BufferizationState &) = delete;
@@ -270,8 +270,11 @@ struct BufferizationState {
   /// Mark `op` as obsolete, so that it is deleted after bufferization.
   void markOpObsolete(Operation *op);
 
+  /// Erase all ops that were marked obsolete.
+  void eraseObsoleteOps();
+
   /// `aliasInfo` keeps track of aliasing and equivalent values.
-  BufferizationAliasInfo &aliasInfo;
+  BufferizationAliasInfo aliasInfo;
 
   /// `allocationFns` contains helper functions for creating alloc ops, dealloc
   /// ops and memcpy ops.
@@ -283,6 +286,10 @@ struct BufferizationState {
 
   /// Obsolete ops that should be deleted after bufferization.
   SmallVector<Operation *> obsoleteOps;
+
+  /// A map for looking up bufferized function types.
+  // TODO: Entangle function calls and FuncOps from the remaining bufferization.
+  DenseMap<FuncOp, FunctionType> bufferizedFunctionTypes;
 };
 
 /// Return the result buffer (memref) for a given OpResult (tensor). Allocate
