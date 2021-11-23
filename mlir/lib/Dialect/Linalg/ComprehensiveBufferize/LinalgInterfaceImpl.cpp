@@ -340,7 +340,8 @@ struct TiledLoopOpInterface
              static_cast<int>(oldInputs.size()) + numNewInputBuffers,
              static_cast<int>(oldOutputs.size()) + numNewOutputBuffers}));
 
-    return success();
+    // Bufferize loop body.
+    return comprehensive_bufferize::bufferize(&tiledLoopOp.region(), state);
   }
 };
 

@@ -163,8 +163,13 @@ def BufferizableOpInterface : OpInterface<"BufferizableOpInterface"> {
       InterfaceMethod<
         /*desc=*/[{
           Bufferize this op, i.e., rewrite it into a memref-based equivalent.
-          `bvm` maps tensor values to memref values and this method should map
-          tensor results to memref results after creating/modifying ops.
+          Tensor values should be mapped to buffer values using `state`.
+
+          Implementations are required to required to bufferize nested ops
+          before returning. Otherwise, nested ops will not be bufferized.
+
+          This method will never be called on ops that do not have at least one
+          tensor operand or result.
         }],
         /*retType=*/"LogicalResult",
         /*methodName=*/"bufferize",
