@@ -8,6 +8,34 @@ import lldb.formatters.Logger
 # You are encouraged to look at the STL implementation for your platform
 # before relying on these formatters to do the right thing for your setup
 
+def StdOptionalSummaryProvider(valobj, dict):
+    has_value = valobj.GetNumChildren() > 0
+    # We add wrapping spaces for consistency with the libcxx formatter
+    return " Has Value=" + ("true" if has_value else "false") + " "
+
+
+class StdOptionalSynthProvider:
+    def __init__(self, valobj, dict):
+        self.valobj = valobj
+
+    def update(self):
+        try:
+            self.payload = self.valobj.GetChildMemberWithName('_M_payload')
+            self.value = self.payload.GetChildMemberWithName('_M_payload')
+            self.count = self.payload.GetChildMemberWithName('_M_engaged').GetValueAsUnsigned(0)
+        except:
+            self.count = 0
+        return False
+
+
+    def num_children(self):
+        return self.count
+
+    def get_child_index(self, name):
+        return 0
+
+    def get_child_at_index(self, index):
+        return self.value.Clone('Value')
 
 """
  This formatter can be applied to all
@@ -26,15 +54,15 @@ class StdUnorderedMapSynthProvider:
     def extract_type(self):
         type = self.valobj.GetType()
         # type of std::pair<key, value> is the first template
-        # argument type of the 4th template argument to std::map and 
-        # 3rd template argument for std::set. That's why 
+        # argument type of the 4th template argument to std::map and
+        # 3rd template argument for std::set. That's why
         # we need to know kind of the object
         template_arg_num = 4 if self.kind == "map" else 3
         allocator_type = type.GetTemplateArgumentType(template_arg_num)
         data_type = allocator_type.GetTemplateArgumentType(0)
         return data_type
 
-    def update(self): 
+    def update(self):
         # preemptively setting this to None - we might end up changing our mind
         # later
         self.count = None
@@ -64,12 +92,12 @@ class StdUnorderedMapSynthProvider:
             return None
         try:
             offset = index
-            current = self.next     
+            current = self.next
             while offset > 0:
                 current = current.GetChildMemberWithName('_M_nxt')
                 offset = offset - 1
             return current.CreateChildAtOffset( '[' + str(index) + ']', self.skip_size, self.data_type)
-        
+
         except:
             logger >> "Cannot get child"
             return None
@@ -115,7 +143,7 @@ class AbstractListSynthProvider:
         else:
             logger >> "synthetic value is not valid"
         return valid
-    
+
     def value(self, node):
         logger = lldb.formatters.Logger.Logger()
         value = node.GetValueAsUnsigned()
@@ -161,7 +189,7 @@ class AbstractListSynthProvider:
             # After a std::list has been initialized, both next and prev will
             # be non-NULL
             next_val = self.next.GetValueAsUnsigned(0)
-            if next_val == 0: 
+            if next_val == 0:
                 return 0
             if self.has_loop():
                 return 0
@@ -172,14 +200,14 @@ class AbstractListSynthProvider:
                 if next_val == self.node_address:
                     return 0
                 if next_val == prev_val:
-                    return 1   
+                    return 1
             size = 1
             current = self.next
             while current.GetChildMemberWithName(
                     '_M_next').GetValueAsUnsigned(0) != self.get_end_of_list_address():
                 size = size + 1
                 current = current.GetChildMemberWithName('_M_next')
-            return size 
+            return size
         except:
             logger >> "Error determining the size"
             return 0
@@ -190,7 +218,7 @@ class AbstractListSynthProvider:
             return int(name.lstrip('[').rstrip(']'))
         except:
             return -1
-      
+
     def get_child_at_index(self, index):
         logger = lldb.formatters.Logger.Logger()
         logger >> "Fetching child " + str(index)
@@ -247,7 +275,7 @@ class AbstractListSynthProvider:
 
     def has_children(self):
         return True
-        
+
     '''
      Method is used to identify if a node traversal has reached its end
      and is mandatory to be overriden in each AbstractListSynthProvider subclass
@@ -368,7 +396,7 @@ class StdVectorSynthProvider:
                     self.count = 0
             except:
                 pass
-            return False 
+            return False
 
     class StdVBoolImplementation(object):
 
