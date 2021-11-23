@@ -392,8 +392,26 @@ Value mlir::linalg::comprehensive_bufferize::getResultBuffer(
 }
 
 LogicalResult
-mlir::linalg::comprehensive_bufferize::bufferizeOp(Operation *op,
-                                                   BufferizationState &state) {
+mlir::linalg::comprehensive_bufferize::bufferize(Region *region,
+                                                 BufferizationState &state) {
+  for (Block &block : *region)
+    if (failed(bufferize(&block, state)))
+      return failure();
+  return success();
+}
+
+LogicalResult
+mlir::linalg::comprehensive_bufferize::bufferize(Block *block,
+                                                 BufferizationState &state) {
+  for (Operation &op : *block)
+    if (failed(bufferize(&op, state)))
+      return failure();
+  return success();
+}
+
+LogicalResult
+mlir::linalg::comprehensive_bufferize::bufferize(Operation *op,
+                                                 BufferizationState &state) {
   OpBuilder b(op->getContext());
 
   // Skip BufferCast and TensorLoad ops.
@@ -404,15 +422,22 @@ mlir::linalg::comprehensive_bufferize::bufferizeOp(Operation *op,
   auto isaTensor = [](Type t) { return t.isa<TensorType>(); };
   bool hasTensorResult = any_of(op->getResultTypes(), isaTensor);
   bool hasTensorOperand = any_of(op->getOperandTypes(), isaTensor);
-  if (!hasTensorResult && !hasTensorOperand)
-    return success();
 
-  // Bufferize using `BufferizableOpInterface`.
+  // No tensor results or operands: Simply bufferize all nested ops.
+  if (!hasTensorResult && !hasTensorOperand) {
+    for (Region &region : op->getRegions())
+      if (failed(bufferize(&region, state)))
+        return failure();
+    return success();
+  }
+
+  // Bufferize using `BufferizableOpInterface`. Interface implementations are
+  // responsible for bufferizing nested ops.
   b.setInsertionPoint(op);
   if (auto bufferizableOp = dyn_cast<BufferizableOpInterface>(op))
     return bufferizableOp.bufferize(b, state);
 
-  // Other op with tensors. No bufferization method specified.
+  // Emit error if tensor op is not bufferizable.
   return op->emitError() << "unsupported op with tensors";
 }
 
