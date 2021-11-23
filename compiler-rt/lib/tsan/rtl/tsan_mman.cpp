@@ -219,17 +219,8 @@ void *user_reallocarray(ThreadState *thr, uptr pc, void *p, uptr size, uptr n) {
 
 void OnUserAlloc(ThreadState *thr, uptr pc, uptr p, uptr sz, bool write) {
   DPrintf("#%d: alloc(%zu) = 0x%zx\n", thr->tid, sz, p);
-  // Note: this can run before thread initialization/after finalization.
-  // As a result this is not necessarily synchronized with DoReset,
-  // which iterates over and resets all sync objects,
-  // but it is fine to create new MBlocks in this context.
   ctx->metamap.AllocBlock(thr, pc, p, sz);
-  // If this runs before thread initialization/after finalization
-  // and we don't have trace initialized, we can't imitate writes.
-  // In such case just reset the shadow range, it is fine since
-  // it affects only a small fraction of special objects.
-  if (write && thr->ignore_reads_and_writes == 0 &&
-      atomic_load_relaxed(&thr->trace_pos))
+  if (write && thr->ignore_reads_and_writes == 0 && thr->is_inited)
     MemoryRangeImitateWrite(thr, pc, (uptr)p, sz);
   else
     MemoryResetRange(thr, pc, (uptr)p, sz);
@@ -237,16 +228,9 @@ void OnUserAlloc(ThreadState *thr, uptr pc, uptr p, uptr sz, bool write) {
 
 void OnUserFree(ThreadState *thr, uptr pc, uptr p, bool write) {
   CHECK_NE(p, (void*)0);
-  if (!thr->slot) {
-    // Very early/late in thread lifetime, or during fork.
-    UNUSED uptr sz = ctx->metamap.FreeBlock(thr->proc(), p, false);
-    DPrintf("#%d: free(0x%zx, %zu) (no slot)\n", thr->tid, p, sz);
-    return;
-  }
-  SlotLocker locker(thr);
-  uptr sz = ctx->metamap.FreeBlock(thr->proc(), p, true);
+  uptr sz = ctx->metamap.FreeBlock(thr->proc(), p);
   DPrintf("#%d: free(0x%zx, %zu)\n", thr->tid, p, sz);
-  if (write && thr->ignore_reads_and_writes == 0)
+  if (write && thr->ignore_reads_and_writes == 0 && thr->is_inited)
     MemoryRangeFreed(thr, pc, (uptr)p, sz);
 }
 
@@ -409,6 +393,8 @@ uptr __sanitizer_get_allocated_size(const void *p) {
 
 void __tsan_on_thread_idle() {
   ThreadState *thr = cur_thread();
+  thr->clock.ResetCached(&thr->proc()->clock_cache);
+  thr->last_sleep_clock.ResetCached(&thr->proc()->clock_cache);
   allocator()->SwallowCache(&thr->proc()->alloc_cache);
   internal_allocator()->SwallowCache(&thr->proc()->internal_alloc_cache);
   ctx->metamap.OnProcIdle(thr->proc());
