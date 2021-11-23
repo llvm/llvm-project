@@ -314,6 +314,8 @@ bool MIRProfileLoaderPass::runOnMachineFunction(MachineFunction &MF) {
   }
 
   bool Changed = MIRSampleLoader->runOnFunction(MF);
+  if (Changed)
+    MBFI->calculate(MF, *MBFI->getMBPI(), *&getAnalysis<MachineLoopInfo>());
 
   if (ViewBFIAfter && ViewBlockLayoutWithBFI != GVDT_None &&
       (ViewBlockFreqFuncName.empty() ||

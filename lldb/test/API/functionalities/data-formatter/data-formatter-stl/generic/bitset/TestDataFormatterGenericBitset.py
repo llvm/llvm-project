@@ -21,13 +21,13 @@ class GenericBitsetDataFormatterTestCase(TestBase):
 
     def setUp(self):
         TestBase.setUp(self)
-        primes = [1]*300
+        primes = [1]*1000
         primes[0] = primes[1] = 0
         for i in range(2, len(primes)):
             for j in range(2*i, len(primes), i):
                 primes[j] = 0
         self.primes = primes
-    
+
     def getBitsetVariant(self, size, variant):
         if variant == VALUE:
             return "std::bitset<" + str(size) + ">"
@@ -47,7 +47,7 @@ class GenericBitsetDataFormatterTestCase(TestBase):
             children.append(ValueCheck(value=str(bool(child.GetValueAsUnsigned())).lower()))
             self.assertEqual(child.GetValueAsUnsigned(), self.primes[i],
                     "variable: %s, index: %d"%(name, size))
-        self.expect_var_path(name,type=self.getBitsetVariant(size,variant),children=children) 
+        self.expect_var_path(name,type=self.getBitsetVariant(size,variant),children=children)
 
     def do_test_value(self, stdlib_type):
         """Test that std::bitset is displayed correctly"""
@@ -58,7 +58,8 @@ class GenericBitsetDataFormatterTestCase(TestBase):
 
         self.check("empty", 0, VALUE)
         self.check("small", 13, VALUE)
-        self.check("large", 70, VALUE)
+        self.check("medium", 70, VALUE)
+        self.check("large", 1000, VALUE)
 
     @add_test_categories(["libstdcxx"])
     def test_value_libstdcpp(self):
@@ -83,6 +84,11 @@ class GenericBitsetDataFormatterTestCase(TestBase):
 
         self.check("ref", 70, REFERENCE)
         self.check("ptr", 70, POINTER)
+
+        lldbutil.continue_to_breakpoint(process, bkpt)
+
+        self.check("ref", 1000, REFERENCE)
+        self.check("ptr", 1000, POINTER)
 
     @add_test_categories(["libstdcxx"])
     def test_ptr_and_ref_libstdcpp(self):

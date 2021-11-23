@@ -23,7 +23,7 @@ class StackStore {
   using Id = uptr;
 
   Id Store(const StackTrace &trace);
-  StackTrace Load(Id id);
+  StackTrace Load(Id id) const;
   uptr Allocated() const;
 
   void TestOnlyUnmap();
