@@ -31,6 +31,11 @@ void AvoidCStyleCastsCheck::registerMatchers(
           unless(isInTemplateInstantiation()))
           .bind("cast"),
       this);
+  Finder->addMatcher(
+      cxxFunctionalCastExpr(unless(hasDescendant(cxxConstructExpr())),
+                            unless(hasDescendant(initListExpr())))
+          .bind("cast"),
+      this);
 }
 
 static bool needsConstCast(QualType SourceType, QualType DestType) {
@@ -55,8 +60,39 @@ static bool pointedUnqualifiedTypesAreEqual(QualType T1, QualType T2) {
   return T1.getUnqualifiedType() == T2.getUnqualifiedType();
 }
 
+static clang::CharSourceRange getReplaceRange(const ExplicitCastExpr *Expr) {
+  if (const auto *CastExpr = dyn_cast<CStyleCastExpr>(Expr)) {
+    return CharSourceRange::getCharRange(
+        CastExpr->getLParenLoc(),
+        CastExpr->getSubExprAsWritten()->getBeginLoc());
+  } else if (const auto *CastExpr = dyn_cast<CXXFunctionalCastExpr>(Expr)) {
+    return CharSourceRange::getCharRange(CastExpr->getBeginLoc(),
+                                         CastExpr->getLParenLoc());
+  } else
+    llvm_unreachable("Unsupported CastExpr");
+}
+
+static StringRef getDestTypeString(const SourceManager &SM,
+                                   const LangOptions &LangOpts,
+                                   const ExplicitCastExpr *Expr) {
+  SourceLocation BeginLoc;
+  SourceLocation EndLoc;
+
+  if (const auto *CastExpr = dyn_cast<CStyleCastExpr>(Expr)) {
+    BeginLoc = CastExpr->getLParenLoc().getLocWithOffset(1);
+    EndLoc = CastExpr->getRParenLoc().getLocWithOffset(-1);
+  } else if (const auto *CastExpr = dyn_cast<CXXFunctionalCastExpr>(Expr)) {
+    BeginLoc = CastExpr->getBeginLoc();
+    EndLoc = CastExpr->getLParenLoc().getLocWithOffset(-1);
+  } else
+    llvm_unreachable("Unsupported CastExpr");
+
+  return Lexer::getSourceText(CharSourceRange::getTokenRange(BeginLoc, EndLoc),
+                              SM, LangOpts);
+}
+
 void AvoidCStyleCastsCheck::check(const MatchFinder::MatchResult &Result) {
-  const auto *CastExpr = Result.Nodes.getNodeAs<CStyleCastExpr>("cast");
+  const auto *CastExpr = Result.Nodes.getNodeAs<ExplicitCastExpr>("cast");
 
   // Ignore casts in macros.
   if (CastExpr->getExprLoc().isMacroID())
@@ -80,8 +116,7 @@ void AvoidCStyleCastsCheck::check(const MatchFinder::MatchResult &Result) {
   const QualType SourceType = SourceTypeAsWritten.getCanonicalType();
   const QualType DestType = DestTypeAsWritten.getCanonicalType();
 
-  auto ReplaceRange = CharSourceRange::getCharRange(
-      CastExpr->getLParenLoc(), CastExpr->getSubExprAsWritten()->getBeginLoc());
+  CharSourceRange ReplaceRange = getReplaceRange(CastExpr);
 
   bool FnToFnCast =
       IsFunction(SourceTypeAsWritten) && IsFunction(DestTypeAsWritten);
@@ -124,18 +159,14 @@ void AvoidCStyleCastsCheck::check(const MatchFinder::MatchResult &Result) {
 
   // Leave type spelling exactly as it was (unlike
   // getTypeAsWritten().getAsString() which would spell enum types 'enum X').
-  StringRef DestTypeString =
-      Lexer::getSourceText(CharSourceRange::getTokenRange(
-                               CastExpr->getLParenLoc().getLocWithOffset(1),
-                               CastExpr->getRParenLoc().getLocWithOffset(-1)),
-                           SM, getLangOpts());
+  StringRef DestTypeString = getDestTypeString(SM, getLangOpts(), CastExpr);
 
   auto Diag =
       diag(CastExpr->getBeginLoc(), "C-style casts are discouraged; use %0");
 
   auto ReplaceWithCast = [&](std::string CastText) {
     const Expr *SubExpr = CastExpr->getSubExprAsWritten()->IgnoreImpCasts();
-    if (!isa<ParenExpr>(SubExpr)) {
+    if (!isa<ParenExpr>(SubExpr) && !isa<CXXFunctionalCastExpr>(CastExpr)) {
       CastText.push_back('(');
       Diag << FixItHint::CreateInsertion(
           Lexer::getLocForEndOfToken(SubExpr->getEndLoc(), 0, SM,
