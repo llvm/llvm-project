@@ -5,10 +5,6 @@
 // RUN: not %run %t -1 2>&1 | FileCheck --check-prefixes=CHECK,LSYM %s
 // RUN: not %env_hwasan_opts=symbolize=0 %run %t -1 2>&1 | FileCheck --check-prefixes=CHECK,LNOSYM %s
 
-// Test with LTO, since it invokes the integrated assembler separately.
-// RUN: %clang_hwasan -flto %s -o %t
-// RUN: not %run %t 1 2>&1 | FileCheck --check-prefixes=CHECK,RSYM %s
-
 // Test with and without optimizations, with and without PIC, since different
 // backend passes run depending on these flags.
 // RUN: %clang_hwasan -fno-pic %s -o %t
