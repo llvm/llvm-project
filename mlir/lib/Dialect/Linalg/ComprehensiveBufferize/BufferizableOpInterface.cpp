@@ -470,3 +470,10 @@ void mlir::linalg::comprehensive_bufferize::BufferizationState::markOpObsolete(
     Operation *op) {
   obsoleteOps.push_back(op);
 }
+
+void mlir::linalg::comprehensive_bufferize::BufferizationState::
+    eraseObsoleteOps() {
+  for (Operation *op : obsoleteOps)
+    op->erase();
+  obsoleteOps.clear();
+}
