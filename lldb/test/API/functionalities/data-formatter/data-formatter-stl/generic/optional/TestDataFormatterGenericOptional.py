@@ -12,6 +12,15 @@ class GenericOptionalDataFormatterTestCase(TestBase):
 
     def do_test_with_run_command(self, stdlib_type):
         """Test that that file and class static variables display correctly."""
+        # This is the function to remove the custom formats in order to have a
+        # clean slate for the next test case.
+        def cleanup():
+            self.runCmd('type format clear', check=False)
+            self.runCmd('type summary clear', check=False)
+            self.runCmd('type filter clear', check=False)
+            self.runCmd('type synth clear', check=False)
+        self.addTearDownHook(cleanup)
+
         self.build(dictionary={stdlib_type: "1"})
         self.runCmd("file " + self.getBuildArtifact("a.out"), CURRENT_EXECUTABLE_SET)
 
