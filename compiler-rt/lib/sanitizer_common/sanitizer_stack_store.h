@@ -24,7 +24,7 @@ class StackStore {
 
   Id Store(const StackTrace &trace);
   StackTrace Load(Id id);
-  uptr Allocated() const { return atomic_load_relaxed(&mapped_size_); }
+  uptr Allocated() const;
 
   void TestOnlyUnmap();
 
