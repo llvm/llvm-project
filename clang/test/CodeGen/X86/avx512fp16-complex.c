@@ -1,5 +1,4 @@
 // RUN: %clang_cc1 %s -O0 -emit-llvm -triple x86_64-unknown-unknown -target-feature +avx512fp16 -o - | FileCheck %s --check-prefix=X86
-// RUN: %clang_cc1 %s -O0 -emit-llvm -triple x86_64-unknown-unknown -o - | FileCheck %s --check-prefix=X86
 
 _Float16 _Complex add_half_rr(_Float16 a, _Float16 b) {
   // X86-LABEL: @add_half_rr(
