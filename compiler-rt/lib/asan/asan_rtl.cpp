@@ -85,12 +85,8 @@ void ShowStatsAndAbort() {
 NOINLINE
 static void ReportGenericErrorWrapper(uptr addr, bool is_write, int size,
                                       int exp_arg, bool fatal) {
-  if (__asan_test_only_reported_buggy_pointer) {
-    *__asan_test_only_reported_buggy_pointer = addr;
-  } else {
-    GET_CALLER_PC_BP_SP;
-    ReportGenericError(pc, bp, sp, addr, is_write, size, exp_arg, fatal);
-  }
+  GET_CALLER_PC_BP_SP;
+  ReportGenericError(pc, bp, sp, addr, is_write, size, exp_arg, fatal);
 }
 
 // --------------- LowLevelAllocateCallbac ---------- {{{1
