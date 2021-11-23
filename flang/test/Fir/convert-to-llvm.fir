@@ -2196,7 +2196,7 @@ func @foo(%arg0: !fir.box<!fir.array<?x!fir.type<t{i:i32,c:!fir.char<1,10>}>>>) 
 
 // -----
 
-// Test `fir.coordinate_of` conversion
+// Test `fir.coordinate_of` conversion (items inside `!fir.box`)
 
 // 1. COMPLEX TYPE (`fir.complex` is a special case)
 // Complex type wrapped in `fir.ref`
@@ -2225,7 +2225,7 @@ func @coordinate_box_complex(%arg0: !fir.box<!fir.complex<16>>, %arg1: index) {
 
 // -----
 
-// Test `fir.coordinate_of` conversion
+// Test `fir.coordinate_of` conversion (items inside `!fir.box`)
 
 // 2. BOX TYPE (objects wrapped in `fir.box`)
 // Derived type - basic case (1 index)
@@ -2278,7 +2278,7 @@ func @coordinate_box_derived_2(%arg0: !fir.box<!fir.type<derived_2{field_1:!fir.
 
 // -----
 
-// Test `fir.coordinate_of` conversion
+// Test `fir.coordinate_of` conversion (items inside `!fir.box`)
 
 // 3. BOX TYPE - `fir.array` wrapped in `fir.box`
 // `fir.array` inside a `fir.box` (1d)
@@ -2391,7 +2391,7 @@ func @coordinate_box_array_2d(%arg0: !fir.box<!fir.array<10 x 10 x f32>>, %arg1:
 
 // -----
 
-// Test `fir.coordinate_of` conversion
+// Test `fir.coordinate_of` conversion (items inside `!fir.box`)
 
 // 4. BOX TYPE - `fir.derived` inside `fir.array`
 func @coordinate_box_derived_inside_array(%arg0: !fir.box<!fir.array<10 x !fir.type<derived_3{field_1:f32, field_2:f32}>>>, %arg1 : index) {
@@ -2424,3 +2424,118 @@ func @coordinate_box_derived_inside_array(%arg0: !fir.box<!fir.array<10 x !fir.t
 // CHECK:         %[[VAL_21:.*]] = llvm.bitcast %[[VAL_20]] : !llvm.ptr<f32> to !llvm.ptr<i8>
 // CHECK:         %[[VAL_22:.*]] = llvm.bitcast %[[VAL_21]] : !llvm.ptr<i8> to !llvm.ptr<f32>
 // CHECK:         llvm.return
+
+// -----
+
+// Test `fir.coordinate_of` conversion (items inside `!fir.ref`)
+
+// 5.1. `fir.array`
+func @coordinate_array_unknown_size_1d(%arg0: !fir.ref<!fir.array<? x i32>>, %arg1 : index) {
+   %q = fir.coordinate_of %arg0, %arg1 : (!fir.ref<!fir.array<? x i32>>, index) -> !fir.ref<i32>
+   return
+}
+// CHECK-LABEL:   llvm.func @coordinate_array_unknown_size_1d(
+// CHECK-SAME:    %[[VAL_0:.*]]: !llvm.ptr<i32>,
+// CHECK-SAME:    %[[VAL_1:.*]]: i64) {
+// CHECK:           %[[VAL_2:.*]] = llvm.getelementptr %[[VAL_0]]{{\[}}%[[VAL_1]]] : (!llvm.ptr<i32>, i64) -> !llvm.ptr<i32>
+// CHECK:           llvm.return
+// CHECK:         }
+
+func @coordinate_array_known_size_1d(%arg0: !fir.ref<!fir.array<10 x i32>>, %arg1 : index) {
+   %q = fir.coordinate_of %arg0, %arg1 : (!fir.ref<!fir.array<10 x i32>>, index) -> !fir.ref<i32>
+   return
+}
+// CHECK-LABEL:   llvm.func @coordinate_array_known_size_1d(
+// CHECK-SAME:    %[[VAL_0:.*]]: !llvm.ptr<array<10 x i32>>,
+// CHECK-SAME:    %[[VAL_1:.*]]: i64) {
+// CHECK:           %[[VAL_2:.*]] = llvm.mlir.constant(0 : i64) : i64
+// CHECK:           %[[VAL_3:.*]] = llvm.getelementptr %[[VAL_0]]{{\[}}%[[VAL_2]], %[[VAL_1]]] : (!llvm.ptr<array<10 x i32>>, i64, i64) -> !llvm.ptr<i32>
+// CHECK:           llvm.return
+// CHECK:         }
+
+func @coordinate_array_known_size_2d(%arg0: !fir.ref<!fir.array<10 x 10 x i32>>, %arg1 : index, %arg2 : index) {
+   %q = fir.coordinate_of %arg0, %arg1, %arg2 : (!fir.ref<!fir.array<10 x 10 x i32>>, index, index) -> !fir.ref<i32>
+   return
+}
+// CHECK-LABEL:   llvm.func @coordinate_array_known_size_2d(
+// CHECK-SAME:    %[[VAL_0:.*]]: !llvm.ptr<array<10 x array<10 x i32>>>,
+// CHECK-SAME:    %[[VAL_1:.*]]: i64,
+// CHECK-SAME:    %[[VAL_2:.*]]: i64) {
+// CHECK:           %[[VAL_3:.*]] = llvm.mlir.constant(0 : i64) : i64
+// CHECK:           %[[VAL_4:.*]] = llvm.getelementptr %[[VAL_0]]{{\[}}%[[VAL_3]], %[[VAL_2]], %[[VAL_1]]] : (!llvm.ptr<array<10 x array<10 x i32>>>, i64, i64, i64) -> !llvm.ptr<i32>
+// CHECK:           llvm.return
+// CHECK:         }
+
+// 5.2. `fir.derived`
+func @coordinate_ref_derived(%arg0: !fir.ref<!fir.type<dervied_4{field_1:i32, field_2:i32}>>) {
+  %idx = fir.field_index field_2, !fir.type<dervied_4{field_1:i32, field_2:i32}>
+  %q = fir.coordinate_of %arg0, %idx : (!fir.ref<!fir.type<dervied_4{field_1:i32, field_2:i32}>>, !fir.field) -> !fir.ref<i32>
+  return
+}
+// CHECK-LABEL:   llvm.func @coordinate_ref_derived(
+// CHECK-SAME:    %[[VAL_0:.*]]: !llvm.ptr<struct<"dervied_4", (i32, i32)>>) {
+// CHECK:           %[[VAL_1:.*]] = llvm.mlir.constant(1 : i32) : i32
+// CHECK:           %[[VAL_2:.*]] = llvm.mlir.constant(0 : i64) : i64
+// CHECK:           %[[VAL_3:.*]] = llvm.getelementptr %[[VAL_0]]{{\[}}%[[VAL_2]], %[[VAL_1]]] : (!llvm.ptr<struct<"dervied_4", (i32, i32)>>, i64, i32) -> !llvm.ptr<i32>
+// CHECK:           llvm.return
+// CHECK:         }
+
+func @coordinate_ref_derived_nested(%arg0: !fir.ref<!fir.type<derived_5{field_1:!fir.type<nested_derived{inner1:i32, inner2:f32}>, field_2:i32}>>) {
+  %idx0 = fir.field_index field_1, !fir.type<derived_5{field_1:!fir.type<nested_derived{inner1:i32, inner2:f32}>, field_2:i32}>
+  %idx1 = fir.field_index inner2, !fir.type<nested_derived{inner1:i32, inner2:f32}>
+  %q = fir.coordinate_of %arg0, %idx0, %idx1 : (!fir.ref<!fir.type<derived_5{field_1:!fir.type<nested_derived{inner1:i32, inner2:f32}>, field_2:i32}>>, !fir.field, !fir.field) -> !fir.ref<i32>
+  return
+}
+// CHECK-LABEL:   llvm.func @coordinate_ref_derived_nested(
+// CHECK-SAME:    %[[VAL_0:.*]]: !llvm.ptr<struct<"derived_5", (struct<"nested_derived", (i32, f32)>, i32)>>) {
+// CHECK:           %[[VAL_1:.*]] = llvm.mlir.constant(0 : i32) : i32
+// CHECK:           %[[VAL_2:.*]] = llvm.mlir.constant(1 : i32) : i32
+// CHECK:           %[[VAL_3:.*]] = llvm.mlir.constant(0 : i64) : i64
+// CHECK:           %[[VAL_4:.*]] = llvm.getelementptr %[[VAL_0]]{{\[}}%[[VAL_3]], %[[VAL_1]], %[[VAL_2]]] : (!llvm.ptr<struct<"derived_5", (struct<"nested_derived", (i32, f32)>, i32)>>, i64, i32, i32) -> !llvm.ptr<i32>
+// CHECK:           llvm.return
+// CHECK:         }
+
+// 5.3 `fir.char`
+func @test_coordinate_of_char(%arr : !fir.ref<!fir.char<10, 2>>) {
+  %1 = arith.constant 10 : i32
+  %2 = fir.coordinate_of %arr, %1 : (!fir.ref<!fir.char<10, 2>>, i32) -> !fir.ref<i80>
+  return
+}
+// CHECK-LABEL:   llvm.func @test_coordinate_of_char(
+// CHECK-SAME:    %[[VAL_0:.*]]: !llvm.ptr<array<2 x i80>>) {
+// CHECK:           %[[VAL_1:.*]] = llvm.mlir.constant(10 : i32) : i32
+// CHECK:           %[[VAL_2:.*]] = llvm.getelementptr %[[VAL_0]]{{\[}}%[[VAL_1]]] : (!llvm.ptr<array<2 x i80>>, i32) -> !llvm.ptr<i80>
+// CHECK:           llvm.return
+// CHECK:         }
+
+// 5.4 `mlir.tuple`
+func @test_coordinate_of_tuple(%tup : !fir.ref<tuple<!fir.ref<i32>>>) {
+  %1 = arith.constant 0 : i64
+  %2 = fir.coordinate_of %tup, %1 : (!fir.ref<tuple<!fir.ref<i32>>>, i64) -> !fir.ref<i32>
+  return
+}
+// CHECK-LABEL:   llvm.func @test_coordinate_of_tuple(
+// CHECK-SAME:                                     %[[VAL_0:.*]]: !llvm.ptr<struct<(ptr<i32>)>>) {
+// CHECK:           %[[VAL_1:.*]] = llvm.mlir.constant(0 : i64) : i64
+// CHECK:           %[[VAL_2:.*]] = llvm.mlir.constant(0 : i64) : i64
+// CHECK:           %[[VAL_3:.*]] = llvm.getelementptr %[[VAL_0]]{{\[}}%[[VAL_2]], %[[VAL_1]]] : (!llvm.ptr<struct<(ptr<i32>)>>, i64, i64) -> !llvm.ptr<i32>
+// CHECK:           llvm.return
+// CHECK:         }
+
+// -----
+
+// Test `fir.coordinate_of` conversion - items inside `!fir.ptr`. This should
+// be almost identical to `!fir.ref` (i.e. it's the same code path in the code
+// gen). Instead of duplicating the tests, only one for sanity-checking is added.
+
+// 6.1. `fir.array`
+func @coordinate_array_unknown_size_1d(%arg0: !fir.ptr<!fir.array<? x i32>>, %arg1 : index) {
+   %q = fir.coordinate_of %arg0, %arg1 : (!fir.ptr<!fir.array<? x i32>>, index) -> !fir.ref<i32>
+   return
+}
+// CHECK-LABEL:   llvm.func @coordinate_array_unknown_size_1d(
+// CHECK-SAME:    %[[VAL_0:.*]]: !llvm.ptr<i32>,
+// CHECK-SAME:    %[[VAL_1:.*]]: i64) {
+// CHECK:           %[[VAL_2:.*]] = llvm.getelementptr %[[VAL_0]]{{\[}}%[[VAL_1]]] : (!llvm.ptr<i32>, i64) -> !llvm.ptr<i32>
+// CHECK:           llvm.return
+// CHECK:         }

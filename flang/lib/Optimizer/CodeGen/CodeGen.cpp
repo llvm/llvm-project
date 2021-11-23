@@ -2940,17 +2940,13 @@ struct CoordinateOpConversion
       return success();
     }
 
-    // Box type - get the base pointer from the box
-    if (auto boxTy = baseObjectTy.dyn_cast<fir::BoxType>()) {
-      doRewriteBox(coor, ty, operands, loc, rewriter);
-      return success();
-    }
+    // Boxed type - get the base pointer from the box
+    if (baseObjectTy.dyn_cast<fir::BoxType>())
+      return doRewriteBox(coor, ty, operands, loc, rewriter);
 
-    // Sequence type (e.g. fir.array)
-    if (auto arrTy = objectTy.dyn_cast<fir::SequenceType>()) {
-      doRewriteSequence(loc);
-      return success();
-    }
+    // Reference or pointer type
+    if (baseObjectTy.isa<fir::ReferenceType, fir::PointerType>())
+      return doRewriteRefOrPtr(coor, ty, operands, loc, rewriter);
 
     return rewriter.notifyMatchFailure(
         coor, "fir.coordinate_of base operand has unsupported type");
@@ -2976,10 +2972,70 @@ struct CoordinateOpConversion
     fir::emitFatalError(val.getLoc(), "must be a constant");
   }
 
+  bool hasSubDimensions(mlir::Type type) const {
+    return type.isa<fir::SequenceType, fir::RecordType, mlir::TupleType>();
+  }
+
+  /// Check whether this form of `!fir.coordinate_of` is supported. These
+  /// additional checks are required, because we are not yet able to convert
+  /// all valid forms of `!fir.coordinate_of`.
+  /// TODO: Either implement the unsupported cases or extend the verifier
+  /// in FIROps.cpp instead.
+  bool supportedCoordinate(mlir::Type type, mlir::ValueRange coors) const {
+    const std::size_t numOfCoors = coors.size();
+    std::size_t i = 0;
+    bool subEle = false;
+    bool ptrEle = false;
+    for (; i < numOfCoors; ++i) {
+      mlir::Value nxtOpnd = coors[i];
+      if (auto arrTy = type.dyn_cast<fir::SequenceType>()) {
+        subEle = true;
+        i += arrTy.getDimension() - 1;
+        type = arrTy.getEleTy();
+      } else if (auto recTy = type.dyn_cast<fir::RecordType>()) {
+        subEle = true;
+        type = recTy.getType(getFieldNumber(recTy, nxtOpnd));
+      } else if (auto tupTy = type.dyn_cast<mlir::TupleType>()) {
+        subEle = true;
+        type = tupTy.getType(getIntValue(nxtOpnd));
+      } else {
+        ptrEle = true;
+      }
+    }
+    if (ptrEle)
+      return (!subEle) && (numOfCoors == 1);
+    return subEle && (i >= numOfCoors);
+  }
+
+  /// Walk the abstract memory layout and determine if the path traverses any
+  /// array types with unknown shape. Return true iff all the array types have a
+  /// constant shape along the path.
+  bool arraysHaveKnownShape(mlir::Type type, mlir::ValueRange coors) const {
+    const std::size_t sz = coors.size();
+    std::size_t i = 0;
+    for (; i < sz; ++i) {
+      mlir::Value nxtOpnd = coors[i];
+      if (auto arrTy = type.dyn_cast<fir::SequenceType>()) {
+        if (fir::sequenceWithNonConstantShape(arrTy))
+          return false;
+        i += arrTy.getDimension() - 1;
+        type = arrTy.getEleTy();
+      } else if (auto strTy = type.dyn_cast<fir::RecordType>()) {
+        type = strTy.getType(getFieldNumber(strTy, nxtOpnd));
+      } else if (auto strTy = type.dyn_cast<mlir::TupleType>()) {
+        type = strTy.getType(getIntValue(nxtOpnd));
+      } else {
+        return true;
+      }
+    }
+    return true;
+  }
+
 private:
-  void doRewriteBox(fir::CoordinateOp coor, mlir::Type ty,
-                    mlir::ValueRange operands, mlir::Location loc,
-                    mlir::ConversionPatternRewriter &rewriter) const {
+  mlir::LogicalResult
+  doRewriteBox(fir::CoordinateOp coor, mlir::Type ty, mlir::ValueRange operands,
+               mlir::Location loc,
+               mlir::ConversionPatternRewriter &rewriter) const {
     mlir::Type boxObjTy = coor.getBaseType();
     assert(boxObjTy.dyn_cast<fir::BoxType>() && "This is not a `fir.box`");
 
@@ -3064,11 +3120,118 @@ private:
     }
 
     rewriter.replaceOpWithNewOp<mlir::LLVM::BitcastOp>(coor, ty, resultAddr);
-    return;
+    return success();
   }
 
-  void doRewriteSequence(mlir::Location loc) const {
-    TODO(loc, "fir.coordinate_of codegen for sequence types");
+  mlir::LogicalResult
+  doRewriteRefOrPtr(fir::CoordinateOp coor, mlir::Type ty,
+                    mlir::ValueRange operands, mlir::Location loc,
+                    mlir::ConversionPatternRewriter &rewriter) const {
+    mlir::Type baseObjectTy = coor.getBaseType();
+
+    mlir::Type currentObjTy = fir::dyn_cast_ptrOrBoxEleTy(baseObjectTy);
+    bool hasSubdimension = hasSubDimensions(currentObjTy);
+    bool columnIsDeferred = !hasSubdimension;
+
+    if (!supportedCoordinate(currentObjTy, operands.drop_front(1))) {
+      TODO(loc, "unsupported combination of coordinate operands");
+    }
+
+    const bool hasKnownShape =
+        arraysHaveKnownShape(currentObjTy, operands.drop_front(1));
+
+    // If only the column is `?`, then we can simply place the column value in
+    // the 0-th GEP position.
+    if (auto arrTy = currentObjTy.dyn_cast<fir::SequenceType>()) {
+      if (!hasKnownShape) {
+        const unsigned sz = arrTy.getDimension();
+        if (arraysHaveKnownShape(arrTy.getEleTy(),
+                                 operands.drop_front(1 + sz))) {
+          llvm::ArrayRef<int64_t> shape = arrTy.getShape();
+          bool allConst = true;
+          for (unsigned i = 0; i < sz - 1; ++i) {
+            if (shape[i] < 0) {
+              allConst = false;
+              break;
+            }
+          }
+          if (allConst)
+            columnIsDeferred = true;
+        }
+      }
+    }
+
+    if (fir::hasDynamicSize(fir::unwrapSequenceType(currentObjTy))) {
+      mlir::emitError(
+          loc, "fir.coordinate_of with a dynamic element size is unsupported");
+      return failure();
+    }
+
+    if (hasKnownShape || columnIsDeferred) {
+      SmallVector<mlir::Value> offs;
+      if (hasKnownShape && hasSubdimension) {
+        mlir::LLVM::ConstantOp c0 =
+            genConstantIndex(loc, lowerTy().indexType(), rewriter, 0);
+        offs.push_back(c0);
+      }
+      const std::size_t sz = operands.size();
+      Optional<int> dims;
+      SmallVector<mlir::Value> arrIdx;
+      for (std::size_t i = 1; i < sz; ++i) {
+        mlir::Value nxtOpnd = operands[i];
+
+        if (!currentObjTy) {
+          mlir::emitError(loc, "invalid coordinate/check failed");
+          return failure();
+        }
+
+        // check if the i-th coordinate relates to an array
+        if (dims.hasValue()) {
+          arrIdx.push_back(nxtOpnd);
+          int dimsLeft = *dims;
+          if (dimsLeft > 1) {
+            dims = dimsLeft - 1;
+            continue;
+          }
+          currentObjTy = currentObjTy.cast<fir::SequenceType>().getEleTy();
+          // append array range in reverse (FIR arrays are column-major)
+          offs.append(arrIdx.rbegin(), arrIdx.rend());
+          arrIdx.clear();
+          dims.reset();
+          continue;
+        }
+        if (auto arrTy = currentObjTy.dyn_cast<fir::SequenceType>()) {
+          int d = arrTy.getDimension() - 1;
+          if (d > 0) {
+            dims = d;
+            arrIdx.push_back(nxtOpnd);
+            continue;
+          }
+          currentObjTy = currentObjTy.cast<fir::SequenceType>().getEleTy();
+          offs.push_back(nxtOpnd);
+          continue;
+        }
+
+        // check if the i-th coordinate relates to a field
+        if (auto recTy = currentObjTy.dyn_cast<fir::RecordType>())
+          currentObjTy = recTy.getType(getFieldNumber(recTy, nxtOpnd));
+        else if (auto tupTy = currentObjTy.dyn_cast<mlir::TupleType>())
+          currentObjTy = tupTy.getType(getIntValue(nxtOpnd));
+        else
+          currentObjTy = nullptr;
+
+        offs.push_back(nxtOpnd);
+      }
+      if (dims.hasValue())
+        offs.append(arrIdx.rbegin(), arrIdx.rend());
+      mlir::Value base = operands[0];
+      mlir::Value retval = genGEP(loc, ty, rewriter, base, offs);
+      rewriter.replaceOp(coor, retval);
+      return success();
+    }
+
+    mlir::emitError(loc, "fir.coordinate_of base operand has unsupported type");
+    return failure();
   }
 };
 
