@@ -95,6 +95,7 @@ set(files
   __availability
   __bit_reference
   __bit/bit_cast.h
+  __bit/byteswap.h
   __bits
   __bsd_locale_defaults.h
   __bsd_locale_fallbacks.h

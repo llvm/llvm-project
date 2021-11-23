@@ -4991,6 +4991,7 @@ cc_library(
         ":IR",
         ":Parser",
         ":Support",
+        "//llvm:AllTargetsAsmParsers",
         "//llvm:Support",
     ],
 )

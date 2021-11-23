@@ -7,12 +7,11 @@ define <4 x i32> @smull(<4 x i16> %x, <4 x i16> *%y) {
 ; CHECK-NEXT:    fmov d1, d0
 ; CHECK-NEXT:    mov w8, #1
 ; CHECK-NEXT:    movi v0.2d, #0000000000000000
-; CHECK-NEXT:    dup v1.4h, v1.h[3]
 ; CHECK-NEXT:  .LBB0_1: // %l1
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    ldr d2, [x0]
 ; CHECK-NEXT:    subs w8, w8, #1
-; CHECK-NEXT:    smlal v0.4s, v2.4h, v1.4h
+; CHECK-NEXT:    smlal v0.4s, v2.4h, v1.h[3]
 ; CHECK-NEXT:    b.eq .LBB0_1
 ; CHECK-NEXT:  // %bb.2: // %l2
 ; CHECK-NEXT:    ret
@@ -40,12 +39,11 @@ define <4 x i32> @umull(<4 x i16> %x, <4 x i16> *%y) {
 ; CHECK-NEXT:    fmov d1, d0
 ; CHECK-NEXT:    mov w8, #1
 ; CHECK-NEXT:    movi v0.2d, #0000000000000000
-; CHECK-NEXT:    dup v1.4h, v1.h[3]
 ; CHECK-NEXT:  .LBB1_1: // %l1
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    ldr d2, [x0]
 ; CHECK-NEXT:    subs w8, w8, #1
-; CHECK-NEXT:    umlal v0.4s, v2.4h, v1.4h
+; CHECK-NEXT:    umlal v0.4s, v2.4h, v1.h[3]
 ; CHECK-NEXT:    b.eq .LBB1_1
 ; CHECK-NEXT:  // %bb.2: // %l2
 ; CHECK-NEXT:    ret
@@ -73,12 +71,11 @@ define <4 x i32> @sqadd(<4 x i32> %x, <4 x i32> *%y) {
 ; CHECK-NEXT:    mov v1.16b, v0.16b
 ; CHECK-NEXT:    mov w8, #1
 ; CHECK-NEXT:    movi v0.2d, #0000000000000000
-; CHECK-NEXT:    dup v1.4s, v1.s[3]
 ; CHECK-NEXT:  .LBB2_1: // %l1
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    ldr q2, [x0]
 ; CHECK-NEXT:    subs w8, w8, #1
-; CHECK-NEXT:    sqrdmulh v2.4s, v2.4s, v1.4s
+; CHECK-NEXT:    sqrdmulh v2.4s, v2.4s, v1.s[3]
 ; CHECK-NEXT:    sqadd v0.4s, v0.4s, v2.4s
 ; CHECK-NEXT:    b.eq .LBB2_1
 ; CHECK-NEXT:  // %bb.2: // %l2
@@ -107,12 +104,11 @@ define <4 x i32> @sqsub(<4 x i32> %x, <4 x i32> *%y) {
 ; CHECK-NEXT:    mov v1.16b, v0.16b
 ; CHECK-NEXT:    mov w8, #1
 ; CHECK-NEXT:    movi v0.2d, #0000000000000000
-; CHECK-NEXT:    dup v1.4s, v1.s[3]
 ; CHECK-NEXT:  .LBB3_1: // %l1
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    ldr q2, [x0]
 ; CHECK-NEXT:    subs w8, w8, #1
-; CHECK-NEXT:    sqrdmulh v2.4s, v2.4s, v1.4s
+; CHECK-NEXT:    sqrdmulh v2.4s, v2.4s, v1.s[3]
 ; CHECK-NEXT:    sqsub v0.4s, v0.4s, v2.4s
 ; CHECK-NEXT:    b.eq .LBB3_1
 ; CHECK-NEXT:  // %bb.2: // %l2
@@ -141,12 +137,11 @@ define <4 x i32> @sqdmulh(<4 x i32> %x, <4 x i32> *%y) {
 ; CHECK-NEXT:    mov v1.16b, v0.16b
 ; CHECK-NEXT:    mov w8, #1
 ; CHECK-NEXT:    movi v0.2d, #0000000000000000
-; CHECK-NEXT:    dup v1.4s, v1.s[3]
 ; CHECK-NEXT:  .LBB4_1: // %l1
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    ldr q2, [x0]
 ; CHECK-NEXT:    subs w8, w8, #1
-; CHECK-NEXT:    sqdmulh v2.4s, v2.4s, v1.4s
+; CHECK-NEXT:    sqdmulh v2.4s, v2.4s, v1.s[3]
 ; CHECK-NEXT:    add v0.4s, v0.4s, v2.4s
 ; CHECK-NEXT:    b.eq .LBB4_1
 ; CHECK-NEXT:  // %bb.2: // %l2
@@ -175,12 +170,11 @@ define <4 x i32> @sqdmull(<4 x i16> %x, <4 x i16> *%y) {
 ; CHECK-NEXT:    fmov d1, d0
 ; CHECK-NEXT:    mov w8, #1
 ; CHECK-NEXT:    movi v0.2d, #0000000000000000
-; CHECK-NEXT:    dup v1.4h, v1.h[3]
 ; CHECK-NEXT:  .LBB5_1: // %l1
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    ldr d2, [x0]
 ; CHECK-NEXT:    subs w8, w8, #1
-; CHECK-NEXT:    sqdmull v2.4s, v2.4h, v1.4h
+; CHECK-NEXT:    sqdmull v2.4s, v2.4h, v1.h[3]
 ; CHECK-NEXT:    add v0.4s, v0.4s, v2.4s
 ; CHECK-NEXT:    b.eq .LBB5_1
 ; CHECK-NEXT:  // %bb.2: // %l2

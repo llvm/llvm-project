@@ -14,7 +14,7 @@ define signext i16 @func(i16* %a, i16* %b) {
 ; RV32-NEXT:  # %bb.2: # %.LBB0_2
 ; RV32-NEXT:    ret
 ; RV32-NEXT:  .LBB0_3: # %return
-; RV32-NEXT:    mv a0, zero
+; RV32-NEXT:    li a0, 0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: func:
@@ -26,7 +26,7 @@ define signext i16 @func(i16* %a, i16* %b) {
 ; RV64-NEXT:  # %bb.2: # %.LBB0_2
 ; RV64-NEXT:    ret
 ; RV64-NEXT:  .LBB0_3: # %return
-; RV64-NEXT:    mv a0, zero
+; RV64-NEXT:    li a0, 0
 ; RV64-NEXT:    ret
 entry:
   %0 = load i16, i16* %a

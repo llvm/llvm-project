@@ -28,7 +28,7 @@ define void @seteq_vv_v16i8(<16 x i8>* %x, <16 x i8>* %y) {
 define void @setne_vv_v32i8(<32 x i8>* %x, <32 x i8>* %y) {
 ; CHECK-LABEL: setne_vv_v32i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a2, zero, 32
+; CHECK-NEXT:    li a2, 32
 ; CHECK-NEXT:    vsetvli zero, a2, e8, m2, ta, mu
 ; CHECK-NEXT:    vle8.v v8, (a0)
 ; CHECK-NEXT:    vle8.v v10, (a1)
@@ -48,7 +48,7 @@ define void @setne_vv_v32i8(<32 x i8>* %x, <32 x i8>* %y) {
 define void @setgt_vv_v64i8(<64 x i8>* %x, <64 x i8>* %y, <64 x i1>* %z) {
 ; CHECK-LABEL: setgt_vv_v64i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a3, zero, 64
+; CHECK-NEXT:    li a3, 64
 ; CHECK-NEXT:    vsetvli zero, a3, e8, m4, ta, mu
 ; CHECK-NEXT:    vle8.v v8, (a0)
 ; CHECK-NEXT:    vle8.v v12, (a1)
@@ -65,7 +65,7 @@ define void @setgt_vv_v64i8(<64 x i8>* %x, <64 x i8>* %y, <64 x i1>* %z) {
 define void @setlt_vv_v128i8(<128 x i8>* %x, <128 x i8>* %y, <128 x i1>* %z) {
 ; CHECK-LABEL: setlt_vv_v128i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a3, zero, 128
+; CHECK-NEXT:    li a3, 128
 ; CHECK-NEXT:    vsetvli zero, a3, e8, m8, ta, mu
 ; CHECK-NEXT:    vle8.v v8, (a0)
 ; CHECK-NEXT:    vle8.v v16, (a1)
@@ -114,7 +114,7 @@ define void @setle_vv_v16i8(<16 x i8>* %x, <16 x i8>* %y, <16 x i1>* %z) {
 define void @setugt_vv_v32i8(<32 x i8>* %x, <32 x i8>* %y, <32 x i1>* %z) {
 ; CHECK-LABEL: setugt_vv_v32i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a3, zero, 32
+; CHECK-NEXT:    li a3, 32
 ; CHECK-NEXT:    vsetvli zero, a3, e8, m2, ta, mu
 ; CHECK-NEXT:    vle8.v v8, (a0)
 ; CHECK-NEXT:    vle8.v v10, (a1)
@@ -131,7 +131,7 @@ define void @setugt_vv_v32i8(<32 x i8>* %x, <32 x i8>* %y, <32 x i1>* %z) {
 define void @setult_vv_v64i8(<64 x i8>* %x, <64 x i8>* %y, <64 x i1>* %z) {
 ; CHECK-LABEL: setult_vv_v64i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a3, zero, 64
+; CHECK-NEXT:    li a3, 64
 ; CHECK-NEXT:    vsetvli zero, a3, e8, m4, ta, mu
 ; CHECK-NEXT:    vle8.v v8, (a0)
 ; CHECK-NEXT:    vle8.v v12, (a1)
@@ -148,7 +148,7 @@ define void @setult_vv_v64i8(<64 x i8>* %x, <64 x i8>* %y, <64 x i1>* %z) {
 define void @setuge_vv_v128i8(<128 x i8>* %x, <128 x i8>* %y, <128 x i1>* %z) {
 ; CHECK-LABEL: setuge_vv_v128i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a3, zero, 128
+; CHECK-NEXT:    li a3, 128
 ; CHECK-NEXT:    vsetvli zero, a3, e8, m8, ta, mu
 ; CHECK-NEXT:    vle8.v v8, (a0)
 ; CHECK-NEXT:    vle8.v v16, (a1)
@@ -197,7 +197,7 @@ define void @seteq_vx_v16i8(<16 x i8>* %x, i8 %y, <16 x i1>* %z) {
 define void @setne_vx_v32i8(<32 x i8>* %x, i8 %y, <32 x i1>* %z) {
 ; CHECK-LABEL: setne_vx_v32i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a3, zero, 32
+; CHECK-NEXT:    li a3, 32
 ; CHECK-NEXT:    vsetvli zero, a3, e8, m2, ta, mu
 ; CHECK-NEXT:    vle8.v v8, (a0)
 ; CHECK-NEXT:    vmsne.vx v10, v8, a1
@@ -214,7 +214,7 @@ define void @setne_vx_v32i8(<32 x i8>* %x, i8 %y, <32 x i1>* %z) {
 define void @setgt_vx_v64i8(<64 x i8>* %x, i8 %y, <64 x i1>* %z) {
 ; CHECK-LABEL: setgt_vx_v64i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a3, zero, 64
+; CHECK-NEXT:    li a3, 64
 ; CHECK-NEXT:    vsetvli zero, a3, e8, m4, ta, mu
 ; CHECK-NEXT:    vle8.v v8, (a0)
 ; CHECK-NEXT:    vmsgt.vx v12, v8, a1
@@ -231,7 +231,7 @@ define void @setgt_vx_v64i8(<64 x i8>* %x, i8 %y, <64 x i1>* %z) {
 define void @setlt_vx_v128i8(<128 x i8>* %x, i8 %y, <128 x i1>* %z) {
 ; CHECK-LABEL: setlt_vx_v128i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a3, zero, 128
+; CHECK-NEXT:    li a3, 128
 ; CHECK-NEXT:    vsetvli zero, a3, e8, m8, ta, mu
 ; CHECK-NEXT:    vle8.v v8, (a0)
 ; CHECK-NEXT:    vmslt.vx v16, v8, a1
@@ -281,7 +281,7 @@ define void @setle_vx_v16i8(<16 x i8>* %x, i8 %y, <16 x i1>* %z) {
 define void @setugt_vx_v32i8(<32 x i8>* %x, i8 %y, <32 x i1>* %z) {
 ; CHECK-LABEL: setugt_vx_v32i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a3, zero, 32
+; CHECK-NEXT:    li a3, 32
 ; CHECK-NEXT:    vsetvli zero, a3, e8, m2, ta, mu
 ; CHECK-NEXT:    vle8.v v8, (a0)
 ; CHECK-NEXT:    vmsgtu.vx v10, v8, a1
@@ -298,7 +298,7 @@ define void @setugt_vx_v32i8(<32 x i8>* %x, i8 %y, <32 x i1>* %z) {
 define void @setult_vx_v64i8(<64 x i8>* %x, i8 %y, <64 x i1>* %z) {
 ; CHECK-LABEL: setult_vx_v64i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a3, zero, 64
+; CHECK-NEXT:    li a3, 64
 ; CHECK-NEXT:    vsetvli zero, a3, e8, m4, ta, mu
 ; CHECK-NEXT:    vle8.v v8, (a0)
 ; CHECK-NEXT:    vmsltu.vx v12, v8, a1
@@ -315,7 +315,7 @@ define void @setult_vx_v64i8(<64 x i8>* %x, i8 %y, <64 x i1>* %z) {
 define void @setuge_vx_v128i8(<128 x i8>* %x, i8 %y, <128 x i1>* %z) {
 ; CHECK-LABEL: setuge_vx_v128i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a3, zero, 128
+; CHECK-NEXT:    li a3, 128
 ; CHECK-NEXT:    vsetvli zero, a3, e8, m8, ta, mu
 ; CHECK-NEXT:    vle8.v v8, (a0)
 ; CHECK-NEXT:    vmv.v.x v16, a1
@@ -365,7 +365,7 @@ define void @seteq_xv_v16i8(<16 x i8>* %x, i8 %y, <16 x i1>* %z) {
 define void @setne_xv_v32i8(<32 x i8>* %x, i8 %y, <32 x i1>* %z) {
 ; CHECK-LABEL: setne_xv_v32i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a3, zero, 32
+; CHECK-NEXT:    li a3, 32
 ; CHECK-NEXT:    vsetvli zero, a3, e8, m2, ta, mu
 ; CHECK-NEXT:    vle8.v v8, (a0)
 ; CHECK-NEXT:    vmsne.vx v10, v8, a1
@@ -382,7 +382,7 @@ define void @setne_xv_v32i8(<32 x i8>* %x, i8 %y, <32 x i1>* %z) {
 define void @setgt_xv_v64i8(<64 x i8>* %x, i8 %y, <64 x i1>* %z) {
 ; CHECK-LABEL: setgt_xv_v64i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a3, zero, 64
+; CHECK-NEXT:    li a3, 64
 ; CHECK-NEXT:    vsetvli zero, a3, e8, m4, ta, mu
 ; CHECK-NEXT:    vle8.v v8, (a0)
 ; CHECK-NEXT:    vmslt.vx v12, v8, a1
@@ -399,7 +399,7 @@ define void @setgt_xv_v64i8(<64 x i8>* %x, i8 %y, <64 x i1>* %z) {
 define void @setlt_xv_v128i8(<128 x i8>* %x, i8 %y, <128 x i1>* %z) {
 ; CHECK-LABEL: setlt_xv_v128i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a3, zero, 128
+; CHECK-NEXT:    li a3, 128
 ; CHECK-NEXT:    vsetvli zero, a3, e8, m8, ta, mu
 ; CHECK-NEXT:    vle8.v v8, (a0)
 ; CHECK-NEXT:    vmsgt.vx v16, v8, a1
@@ -449,7 +449,7 @@ define void @setle_xv_v16i8(<16 x i8>* %x, i8 %y, <16 x i1>* %z) {
 define void @setugt_xv_v32i8(<32 x i8>* %x, i8 %y, <32 x i1>* %z) {
 ; CHECK-LABEL: setugt_xv_v32i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a3, zero, 32
+; CHECK-NEXT:    li a3, 32
 ; CHECK-NEXT:    vsetvli zero, a3, e8, m2, ta, mu
 ; CHECK-NEXT:    vle8.v v8, (a0)
 ; CHECK-NEXT:    vmsltu.vx v10, v8, a1
@@ -466,7 +466,7 @@ define void @setugt_xv_v32i8(<32 x i8>* %x, i8 %y, <32 x i1>* %z) {
 define void @setult_xv_v64i8(<64 x i8>* %x, i8 %y, <64 x i1>* %z) {
 ; CHECK-LABEL: setult_xv_v64i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a3, zero, 64
+; CHECK-NEXT:    li a3, 64
 ; CHECK-NEXT:    vsetvli zero, a3, e8, m4, ta, mu
 ; CHECK-NEXT:    vle8.v v8, (a0)
 ; CHECK-NEXT:    vmsgtu.vx v12, v8, a1
@@ -483,7 +483,7 @@ define void @setult_xv_v64i8(<64 x i8>* %x, i8 %y, <64 x i1>* %z) {
 define void @setuge_xv_v128i8(<128 x i8>* %x, i8 %y, <128 x i1>* %z) {
 ; CHECK-LABEL: setuge_xv_v128i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a3, zero, 128
+; CHECK-NEXT:    li a3, 128
 ; CHECK-NEXT:    vsetvli zero, a3, e8, m8, ta, mu
 ; CHECK-NEXT:    vle8.v v8, (a0)
 ; CHECK-NEXT:    vmsleu.vx v16, v8, a1
@@ -533,7 +533,7 @@ define void @seteq_vi_v16i8(<16 x i8>* %x, <16 x i1>* %z) {
 define void @setne_vi_v32i8(<32 x i8>* %x, <32 x i1>* %z) {
 ; CHECK-LABEL: setne_vi_v32i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a2, zero, 32
+; CHECK-NEXT:    li a2, 32
 ; CHECK-NEXT:    vsetvli zero, a2, e8, m2, ta, mu
 ; CHECK-NEXT:    vle8.v v8, (a0)
 ; CHECK-NEXT:    vmsne.vi v10, v8, 0
@@ -550,7 +550,7 @@ define void @setne_vi_v32i8(<32 x i8>* %x, <32 x i1>* %z) {
 define void @setgt_vi_v64i8(<64 x i8>* %x, <64 x i1>* %z) {
 ; CHECK-LABEL: setgt_vi_v64i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a2, zero, 64
+; CHECK-NEXT:    li a2, 64
 ; CHECK-NEXT:    vsetvli zero, a2, e8, m4, ta, mu
 ; CHECK-NEXT:    vle8.v v8, (a0)
 ; CHECK-NEXT:    vmsgt.vx v12, v8, zero
@@ -567,7 +567,7 @@ define void @setgt_vi_v64i8(<64 x i8>* %x, <64 x i1>* %z) {
 define void @setlt_vi_v128i8(<128 x i8>* %x, <128 x i1>* %z) {
 ; CHECK-LABEL: setlt_vi_v128i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a2, zero, 128
+; CHECK-NEXT:    li a2, 128
 ; CHECK-NEXT:    vsetvli zero, a2, e8, m8, ta, mu
 ; CHECK-NEXT:    vle8.v v8, (a0)
 ; CHECK-NEXT:    vmsle.vi v16, v8, -1
@@ -616,10 +616,10 @@ define void @setle_vi_v16i8(<16 x i8>* %x, <16 x i1>* %z) {
 define void @setugt_vi_v32i8(<32 x i8>* %x, <32 x i1>* %z) {
 ; CHECK-LABEL: setugt_vi_v32i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a2, zero, 32
+; CHECK-NEXT:    li a2, 32
 ; CHECK-NEXT:    vsetvli zero, a2, e8, m2, ta, mu
 ; CHECK-NEXT:    vle8.v v8, (a0)
-; CHECK-NEXT:    addi a0, zero, 5
+; CHECK-NEXT:    li a0, 5
 ; CHECK-NEXT:    vmsgtu.vx v10, v8, a0
 ; CHECK-NEXT:    vsm.v v10, (a1)
 ; CHECK-NEXT:    ret
@@ -634,7 +634,7 @@ define void @setugt_vi_v32i8(<32 x i8>* %x, <32 x i1>* %z) {
 define void @setult_vi_v64i8(<64 x i8>* %x, <64 x i1>* %z) {
 ; CHECK-LABEL: setult_vi_v64i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a2, zero, 64
+; CHECK-NEXT:    li a2, 64
 ; CHECK-NEXT:    vsetvli zero, a2, e8, m4, ta, mu
 ; CHECK-NEXT:    vle8.v v8, (a0)
 ; CHECK-NEXT:    vmsleu.vi v12, v8, 4
@@ -651,7 +651,7 @@ define void @setult_vi_v64i8(<64 x i8>* %x, <64 x i1>* %z) {
 define void @setuge_vi_v128i8(<128 x i8>* %x, <128 x i1>* %z) {
 ; CHECK-LABEL: setuge_vi_v128i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a2, zero, 128
+; CHECK-NEXT:    li a2, 128
 ; CHECK-NEXT:    vsetvli zero, a2, e8, m8, ta, mu
 ; CHECK-NEXT:    vle8.v v8, (a0)
 ; CHECK-NEXT:    vmsgtu.vi v16, v8, 4

@@ -49,7 +49,7 @@ define i64 @extractelt_v2i64(<2 x i64>* %x) nounwind {
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    vsetivli zero, 2, e64, m1, ta, mu
 ; RV32-NEXT:    vle64.v v8, (a0)
-; RV32-NEXT:    addi a0, zero, 32
+; RV32-NEXT:    li a0, 32
 ; RV32-NEXT:    vsetivli zero, 1, e64, m1, ta, mu
 ; RV32-NEXT:    vsrl.vx v9, v8, a0
 ; RV32-NEXT:    vmv.x.s a1, v9
@@ -110,7 +110,7 @@ define double @extractelt_v2f64(<2 x double>* %x) nounwind {
 define i8 @extractelt_v32i8(<32 x i8>* %x) nounwind {
 ; CHECK-LABEL: extractelt_v32i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a1, zero, 32
+; CHECK-NEXT:    li a1, 32
 ; CHECK-NEXT:    vsetvli zero, a1, e8, m2, ta, mu
 ; CHECK-NEXT:    vle8.v v8, (a0)
 ; CHECK-NEXT:    vsetivli zero, 1, e8, m2, ta, mu
@@ -158,7 +158,7 @@ define i64 @extractelt_v4i64(<4 x i64>* %x) nounwind {
 ; RV32-NEXT:    vsetivli zero, 1, e64, m2, ta, mu
 ; RV32-NEXT:    vslidedown.vi v8, v8, 3
 ; RV32-NEXT:    vmv.x.s a0, v8
-; RV32-NEXT:    addi a1, zero, 32
+; RV32-NEXT:    li a1, 32
 ; RV32-NEXT:    vsrl.vx v8, v8, a1
 ; RV32-NEXT:    vmv.x.s a1, v8
 ; RV32-NEXT:    ret
@@ -298,7 +298,7 @@ define i64 @extractelt_v2i64_idx(<2 x i64>* %x, i32 signext %idx) nounwind {
 ; RV32-NEXT:    vsetivli zero, 1, e64, m1, ta, mu
 ; RV32-NEXT:    vslidedown.vx v8, v8, a1
 ; RV32-NEXT:    vmv.x.s a0, v8
-; RV32-NEXT:    addi a1, zero, 32
+; RV32-NEXT:    li a1, 32
 ; RV32-NEXT:    vsrl.vx v8, v8, a1
 ; RV32-NEXT:    vmv.x.s a1, v8
 ; RV32-NEXT:    ret
@@ -369,7 +369,7 @@ define double @extractelt_v2f64_idx(<2 x double>* %x, i32 signext %idx) nounwind
 define i8 @extractelt_v32i8_idx(<32 x i8>* %x, i32 signext %idx) nounwind {
 ; CHECK-LABEL: extractelt_v32i8_idx:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a2, zero, 32
+; CHECK-NEXT:    li a2, 32
 ; CHECK-NEXT:    vsetvli zero, a2, e8, m2, ta, mu
 ; CHECK-NEXT:    vle8.v v8, (a0)
 ; CHECK-NEXT:    vsetivli zero, 1, e8, m2, ta, mu
@@ -420,7 +420,7 @@ define i64 @extractelt_v4i64_idx(<4 x i64>* %x, i32 signext %idx) nounwind {
 ; RV32-NEXT:    vsetivli zero, 1, e64, m2, ta, mu
 ; RV32-NEXT:    vslidedown.vx v8, v8, a1
 ; RV32-NEXT:    vmv.x.s a0, v8
-; RV32-NEXT:    addi a1, zero, 32
+; RV32-NEXT:    li a1, 32
 ; RV32-NEXT:    vsrl.vx v8, v8, a1
 ; RV32-NEXT:    vmv.x.s a1, v8
 ; RV32-NEXT:    ret
@@ -575,7 +575,7 @@ define void @store_extractelt_v4i64(<2 x i64>* %x, i64* %p) nounwind {
 ; RV32-NEXT:    vle64.v v8, (a0)
 ; RV32-NEXT:    vsetivli zero, 1, e64, m1, ta, mu
 ; RV32-NEXT:    vslidedown.vi v8, v8, 1
-; RV32-NEXT:    addi a0, zero, 32
+; RV32-NEXT:    li a0, 32
 ; RV32-NEXT:    vsrl.vx v9, v8, a0
 ; RV32-NEXT:    vmv.x.s a0, v9
 ; RV32-NEXT:    vmv.x.s a2, v8

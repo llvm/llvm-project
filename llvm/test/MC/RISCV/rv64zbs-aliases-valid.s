@@ -49,13 +49,13 @@ li x5, -2863311530 # 0xffffffff55555556
 
 # CHECK-S-OBJ-NOALIAS: addi t0, zero, 1365
 # CHECK-S-OBJ-NOALIAS-NEXT: bseti t0, t0, 31
-# CHECK-S-OBJ: addi t0, zero, 1365
+# CHECK-S-OBJ: li t0, 1365
 # CHECK-S-OBJ-NEXT: bseti t0, t0, 31
 li x5, 2147485013
 
 # CHECK-S-OBJ-NOALIAS: addi t0, zero, -1365
 # CHECK-S-OBJ-NOALIAS-NEXT: bclri t0, t0, 31
-# CHECK-S-OBJ: addi t0, zero, -1365
+# CHECK-S-OBJ: li t0, -1365
 # CHECK-S-OBJ-NEXT: bclri t0, t0, 31
 li x5, -2147485013
 

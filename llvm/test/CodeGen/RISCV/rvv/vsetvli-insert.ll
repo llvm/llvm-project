@@ -101,7 +101,7 @@ define void @test6(i32* nocapture readonly %A, i32* nocapture %B, i64 %n) {
 ; CHECK-NEXT:    vsetvli a6, a2, e32, m1, ta, mu
 ; CHECK-NEXT:    beqz a6, .LBB5_3
 ; CHECK-NEXT:  # %bb.1: # %for.body.preheader
-; CHECK-NEXT:    mv a4, zero
+; CHECK-NEXT:    li a4, 0
 ; CHECK-NEXT:  .LBB5_2: # %for.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    slli a5, a4, 2

@@ -193,7 +193,7 @@ public:
   Optional<Fraction> computeOptimum(Direction direction,
                                     ArrayRef<int64_t> coeffs);
 
-  /// Returns whether the perpendicular of the specified constraint is a
+  /// Returns whether the perpendicular of the specified constraint
   /// is a direction along which the polytope is bounded.
   bool isBoundedAlongConstraint(unsigned constraintIndex);
 

@@ -270,8 +270,8 @@ bool SystemZELFFrameLowering::spillCalleeSavedRegisters(
 
     // Make sure all call-saved GPRs are included as operands and are
     // marked as live on entry.
-    for (unsigned I = 0, E = CSI.size(); I != E; ++I) {
-      unsigned Reg = CSI[I].getReg();
+    for (const CalleeSavedInfo &I : CSI) {
+      unsigned Reg = I.getReg();
       if (SystemZ::GR64BitRegClass.contains(Reg))
         addSavedGPR(MBB, MIB, Reg, true);
     }
@@ -283,16 +283,16 @@ bool SystemZELFFrameLowering::spillCalleeSavedRegisters(
   }
 
   // Save FPRs/VRs in the normal TargetInstrInfo way.
-  for (unsigned I = 0, E = CSI.size(); I != E; ++I) {
-    unsigned Reg = CSI[I].getReg();
+  for (const CalleeSavedInfo &I : CSI) {
+    unsigned Reg = I.getReg();
     if (SystemZ::FP64BitRegClass.contains(Reg)) {
       MBB.addLiveIn(Reg);
-      TII->storeRegToStackSlot(MBB, MBBI, Reg, true, CSI[I].getFrameIdx(),
+      TII->storeRegToStackSlot(MBB, MBBI, Reg, true, I.getFrameIdx(),
                                &SystemZ::FP64BitRegClass, TRI);
     }
     if (SystemZ::VR128BitRegClass.contains(Reg)) {
       MBB.addLiveIn(Reg);
-      TII->storeRegToStackSlot(MBB, MBBI, Reg, true, CSI[I].getFrameIdx(),
+      TII->storeRegToStackSlot(MBB, MBBI, Reg, true, I.getFrameIdx(),
                                &SystemZ::VR128BitRegClass, TRI);
     }
   }
@@ -313,13 +313,13 @@ bool SystemZELFFrameLowering::restoreCalleeSavedRegisters(
   DebugLoc DL = MBBI != MBB.end() ? MBBI->getDebugLoc() : DebugLoc();
 
   // Restore FPRs/VRs in the normal TargetInstrInfo way.
-  for (unsigned I = 0, E = CSI.size(); I != E; ++I) {
-    unsigned Reg = CSI[I].getReg();
+  for (const CalleeSavedInfo &I : CSI) {
+    unsigned Reg = I.getReg();
     if (SystemZ::FP64BitRegClass.contains(Reg))
-      TII->loadRegFromStackSlot(MBB, MBBI, Reg, CSI[I].getFrameIdx(),
+      TII->loadRegFromStackSlot(MBB, MBBI, Reg, I.getFrameIdx(),
                                 &SystemZ::FP64BitRegClass, TRI);
     if (SystemZ::VR128BitRegClass.contains(Reg))
-      TII->loadRegFromStackSlot(MBB, MBBI, Reg, CSI[I].getFrameIdx(),
+      TII->loadRegFromStackSlot(MBB, MBBI, Reg, I.getFrameIdx(),
                                 &SystemZ::VR128BitRegClass, TRI);
   }
 
@@ -345,8 +345,8 @@ bool SystemZELFFrameLowering::restoreCalleeSavedRegisters(
     MIB.addImm(RestoreGPRs.GPROffset);
 
     // Do a second scan adding regs as being defined by instruction
-    for (unsigned I = 0, E = CSI.size(); I != E; ++I) {
-      unsigned Reg = CSI[I].getReg();
+    for (const CalleeSavedInfo &I : CSI) {
+      unsigned Reg = I.getReg();
       if (Reg != RestoreGPRs.LowGPR && Reg != RestoreGPRs.HighGPR &&
           SystemZ::GR64BitRegClass.contains(Reg))
         MIB.addReg(Reg, RegState::ImplicitDefine);
@@ -965,24 +965,24 @@ bool SystemZXPLINKFrameLowering::spillCalleeSavedRegisters(
     // Make sure all call-saved GPRs are included as operands and are
     // marked as live on entry.
     auto &GRRegClass = SystemZ::GR64BitRegClass;
-    for (unsigned I = 0, E = CSI.size(); I != E; ++I) {
-      unsigned Reg = CSI[I].getReg();
+    for (const CalleeSavedInfo &I : CSI) {
+      unsigned Reg = I.getReg();
       if (GRRegClass.contains(Reg))
         addSavedGPR(MBB, MIB, Reg, true);
     }
   }
 
   // Spill FPRs to the stack in the normal TargetInstrInfo way
-  for (unsigned I = 0, E = CSI.size(); I != E; ++I) {
-    unsigned Reg = CSI[I].getReg();
+  for (const CalleeSavedInfo &I : CSI) {
+    unsigned Reg = I.getReg();
     if (SystemZ::FP64BitRegClass.contains(Reg)) {
       MBB.addLiveIn(Reg);
-      TII->storeRegToStackSlot(MBB, MBBI, Reg, true, CSI[I].getFrameIdx(),
+      TII->storeRegToStackSlot(MBB, MBBI, Reg, true, I.getFrameIdx(),
                                &SystemZ::FP64BitRegClass, TRI);
     }
     if (SystemZ::VR128BitRegClass.contains(Reg)) {
       MBB.addLiveIn(Reg);
-      TII->storeRegToStackSlot(MBB, MBBI, Reg, true, CSI[I].getFrameIdx(),
+      TII->storeRegToStackSlot(MBB, MBBI, Reg, true, I.getFrameIdx(),
                                &SystemZ::VR128BitRegClass, TRI);
     }
   }

@@ -34,6 +34,9 @@ extern "C" void __tsan_resume() {
   __tsan_resumed = 1;
 }
 
+SANITIZER_WEAK_DEFAULT_IMPL
+void __tsan_test_only_on_fork() {}
+
 namespace __tsan {
 
 #if !SANITIZER_GO
@@ -499,7 +502,11 @@ void ForkBefore(ThreadState *thr, uptr pc) NO_THREAD_SAFETY_ANALYSIS {
   thr->suppress_reports++;
   // On OS X, REAL(fork) can call intercepted functions (OSSpinLockLock), and
   // we'll assert in CheckNoLocks() unless we ignore interceptors.
+  // On OS X libSystem_atfork_prepare/parent/child callbacks are called
+  // after/before our callbacks and they call free.
   thr->ignore_interceptors++;
+
+  __tsan_test_only_on_fork();
 }
 
 void ForkParentAfter(ThreadState *thr, uptr pc) NO_THREAD_SAFETY_ANALYSIS {
