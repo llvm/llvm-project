@@ -39,6 +39,7 @@ template <> struct ilist_alloc_traits<MCFragment> {
 class MCSection {
 public:
   static constexpr unsigned NonUniqueID = ~0U;
+  static constexpr unsigned LongSectionNameThreshold = 16U;
 
   enum SectionVariant {
     SV_COFF = 0,
@@ -111,6 +112,7 @@ protected:
   StringRef Name;
   SectionVariant Variant;
   SectionKind Kind;
+  char HashedName[MCSection::LongSectionNameThreshold];
 
   MCSection(SectionVariant V, StringRef Name, SectionKind K, MCSymbol *Begin);
   ~MCSection();
@@ -119,7 +121,7 @@ public:
   MCSection(const MCSection &) = delete;
   MCSection &operator=(const MCSection &) = delete;
 
-  StringRef getName() const { return Name; }
+  StringRef getName() const;
   SectionKind getKind() const { return Kind; }
 
   SectionVariant getVariant() const { return Variant; }
@@ -209,6 +211,9 @@ public:
   /// Associate all pending labels with empty data fragments. One fragment
   /// will be created for each subsection as necessary.
   void flushPendingLabels();
+
+  static bool hashLongSectionNames();
+  static std::string hashLongSectionName(StringRef Name);
 };
 
 } // end namespace llvm

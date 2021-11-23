@@ -266,6 +266,9 @@ public:
 
   bool getUniqueSectionNames() const { return Options.UniqueSectionNames; }
 
+  bool getHashLongSectionNames() const { return Options.HashLongSectionNames; }
+
+
   /// Return true if unique basic block section names must be generated.
   bool getUniqueBasicBlockSectionNames() const {
     return Options.UniqueBasicBlockSectionNames;

@@ -426,7 +426,7 @@ MCSectionMachO *MCContext::getMachOSection(StringRef Segment, StringRef Section,
   // diagnosed by the client as an error.
 
   // Form the name to look up.
-  assert(Section.size() <= 16 && "section name is too long");
+  assert((MCSection::hashLongSectionNames() || Section.size() <= 16) && "section name is too long");
   assert(!memchr(Section.data(), '\0', Section.size()) &&
          "section name cannot contain NUL");
 

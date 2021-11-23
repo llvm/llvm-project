@@ -133,7 +133,7 @@ namespace llvm {
           DisableIntegratedAS(false), RelaxELFRelocations(false),
           FunctionSections(false), DataSections(false),
           IgnoreXCOFFVisibility(false), XCOFFTracebackTable(true),
-          UniqueSectionNames(true), UniqueBasicBlockSectionNames(false),
+          UniqueSectionNames(true), HashLongSectionNames(0), UniqueBasicBlockSectionNames(false),
           TrapUnreachable(false), NoTrapAfterNoreturn(false), TLSSize(0),
           EmulatedTLS(false), ExplicitEmulatedTLS(false), EnableIPRA(false),
           EmitStackSizeSection(false), EnableMachineOutliner(false),
@@ -266,6 +266,8 @@ namespace llvm {
     unsigned XCOFFTracebackTable : 1;
 
     unsigned UniqueSectionNames : 1;
+
+    unsigned HashLongSectionNames;
 
     /// Use unique names for basic block sections.
     unsigned UniqueBasicBlockSectionNames : 1;

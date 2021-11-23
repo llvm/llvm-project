@@ -82,6 +82,7 @@ CGOPT(std::string, BBSections)
 CGOPT(unsigned, TLSSize)
 CGOPT(bool, EmulatedTLS)
 CGOPT(bool, UniqueSectionNames)
+CGOPT(bool, HashLongSectionNames)
 CGOPT(bool, UniqueBasicBlockSectionNames)
 CGOPT(EABI, EABIVersion)
 CGOPT(DebuggerKind, DebuggerTuningOpt)
@@ -383,6 +384,11 @@ codegen::RegisterCodeGenFlags::RegisterCodeGenFlags() {
       cl::init(true));
   CGBINDOPT(UniqueSectionNames);
 
+static cl::opt<bool> HashLongSectionNames(
+      "hash-long-section-names", cl::desc("Hash long section names"),
+      cl::init(false));
+  CGBINDOPT(HashLongSectionNames);
+
   static cl::opt<bool> UniqueBasicBlockSectionNames(
       "unique-basic-block-section-names",
       cl::desc("Give unique names to every basic block section"),
@@ -524,6 +530,7 @@ codegen::InitTargetOptionsFromCodeGenFlags(const Triple &TheTriple) {
   Options.XCOFFTracebackTable = getXCOFFTracebackTable();
   Options.BBSections = getBBSectionsMode(Options);
   Options.UniqueSectionNames = getUniqueSectionNames();
+  Options.HashLongSectionNames = getHashLongSectionNames();
   Options.UniqueBasicBlockSectionNames = getUniqueBasicBlockSectionNames();
   Options.TLSSize = getTLSSize();
   Options.EmulatedTLS = getEmulatedTLS();

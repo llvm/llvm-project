@@ -85,6 +85,7 @@ MCSectionMachO::MCSectionMachO(StringRef Segment, StringRef Section,
                                MCSymbol *Begin)
     : MCSection(SV_MachO, Section, K, Begin), TypeAndAttributes(TAA),
       Reserved2(reserved2) {
+
   assert(Segment.size() <= 16 && Section.size() <= 16 &&
          "Segment or section string too long");
   for (unsigned i = 0; i != 16; ++i) {
@@ -201,10 +202,10 @@ Error MCSectionMachO::ParseSectionSpecifier(StringRef Spec,       // In.
                              "and section separated by a comma");
 
   // Verify that the section is not too long.
-  if (Section.size() > 16)
+  if (!hashLongSectionNames() && Section.size() > 16)
     return createStringError(inconvertibleErrorCode(),
-                             "mach-o section specifier requires a section "
-                             "whose length is between 1 and 16 characters");
+                            "mach-o section specifier requires a section "
+                            "whose length is between 1 and 16 characters");
 
   // If there is no comma after the section, we're done.
   TAA = 0;

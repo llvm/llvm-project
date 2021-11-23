@@ -12,9 +12,12 @@
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCFragment.h"
 #include "llvm/MC/MCSymbol.h"
+#include "llvm/Support/Base64.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Support/SHA256.h"
+#include "llvm/Support/SHA256.h"
 #include <algorithm>
 #include <utility>
 
@@ -24,7 +27,14 @@ MCSection::MCSection(SectionVariant V, StringRef Name, SectionKind K,
                      MCSymbol *Begin)
     : Begin(Begin), BundleGroupBeforeFirstInst(false), HasInstructions(false),
       IsRegistered(false), DummyFragment(this), Name(Name), Variant(V),
-      Kind(K) {}
+      Kind(K) {
+
+        if (Name.size() > MCSection::LongSectionNameThreshold && hashLongSectionNames()) {
+          auto s = hashLongSectionName(Name);
+          copy(s.begin(), s.end(), &HashedName[0]);
+          Name = StringRef(&HashedName[0], MCSection::LongSectionNameThreshold);
+        }
+      }
 
 MCSymbol *MCSection::getEndSymbol(MCContext &Ctx) {
   if (!End)
@@ -121,6 +131,28 @@ void MCSection::flushPendingLabels() {
     F->setParent(this);
     flushPendingLabels(F, 0, Label.Subsection);
   }
+}
+
+bool MCSection::hashLongSectionNames() {
+  return true;
+}
+
+std::string MCSection::hashLongSectionName(StringRef Name) {
+  std::string r;
+  SHA256 Hasher;
+
+  Hasher.update(Name);
+  r = encodeBase64(Hasher.result()).substr(0, 16);
+
+  return r;
+}
+
+StringRef MCSection::getName() const {
+  if (Name.size() > MCSection::LongSectionNameThreshold && hashLongSectionNames()) {
+    return StringRef(HashedName);
+  }
+
+  return Name;
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
