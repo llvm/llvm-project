@@ -796,16 +796,18 @@ FunctionStartsSection::FunctionStartsSection()
 void FunctionStartsSection::finalizeContents() {
   raw_svector_ostream os{contents};
   std::vector<uint64_t> addrs;
-  for (const Symbol *sym : symtab->getSymbols()) {
-    if (const auto *defined = dyn_cast<Defined>(sym)) {
-      if (!defined->isec || !isCodeSection(defined->isec) || !defined->isLive())
-        continue;
-      if (const auto *concatIsec = dyn_cast<ConcatInputSection>(defined->isec))
-        if (concatIsec->shouldOmitFromOutput())
-          continue;
-      // TODO: Add support for thumbs, in that case
-      // the lowest bit of nextAddr needs to be set to 1.
-      addrs.push_back(defined->getVA());
+  for (const InputFile *file : inputFiles) {
+    if (auto *objFile = dyn_cast<ObjFile>(file)) {
+      for (const Symbol *sym : objFile->symbols) {
+        if (const auto *defined = dyn_cast_or_null<Defined>(sym)) {
+          if (!defined->isec || !isCodeSection(defined->isec) ||
+              !defined->isLive())
+            continue;
+          // TODO: Add support for thumbs, in that case
+          // the lowest bit of nextAddr needs to be set to 1.
+          addrs.push_back(defined->getVA());
+        }
+      }
     }
   }
   llvm::sort(addrs);
