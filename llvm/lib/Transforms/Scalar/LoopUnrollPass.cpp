@@ -807,27 +807,25 @@ static Optional<unsigned> shouldFullUnroll(
     const unsigned FullUnrollTripCount, const UnrollCostEstimator UCE,
     const TargetTransformInfo::UnrollingPreferences &UP) {
 
-  if (FullUnrollTripCount && FullUnrollTripCount <= UP.FullUnrollMaxCount) {
-    // When computing the unrolled size, note that BEInsns are not replicated
-    // like the rest of the loop body.
-    if (UCE.getUnrolledLoopSize(UP) < UP.Threshold) {
-      return FullUnrollTripCount;
+  if (!FullUnrollTripCount || FullUnrollTripCount >= UP.FullUnrollMaxCount)
+    return None;
 
-    } else {
-      // The loop isn't that small, but we still can fully unroll it if that
-      // helps to remove a significant number of instructions.
-      // To check that, run additional analysis on the loop.
-      if (Optional<EstimatedUnrollCost> Cost = analyzeLoopUnrollCost(
-              L, FullUnrollTripCount, DT, SE, EphValues, TTI,
-              UP.Threshold * UP.MaxPercentThresholdBoost / 100,
-              UP.MaxIterationsCountToAnalyze)) {
-        unsigned Boost =
-            getFullUnrollBoostingFactor(*Cost, UP.MaxPercentThresholdBoost);
-        if (Cost->UnrolledCost < UP.Threshold * Boost / 100) {
-          return FullUnrollTripCount;
-        }
-      }
-    }
+  // When computing the unrolled size, note that BEInsns are not replicated
+  // like the rest of the loop body.
+  if (UCE.getUnrolledLoopSize(UP) < UP.Threshold)
+    return FullUnrollTripCount;
+
+  // The loop isn't that small, but we still can fully unroll it if that
+  // helps to remove a significant number of instructions.
+  // To check that, run additional analysis on the loop.
+  if (Optional<EstimatedUnrollCost> Cost = analyzeLoopUnrollCost(
+          L, FullUnrollTripCount, DT, SE, EphValues, TTI,
+          UP.Threshold * UP.MaxPercentThresholdBoost / 100,
+          UP.MaxIterationsCountToAnalyze)) {
+    unsigned Boost =
+      getFullUnrollBoostingFactor(*Cost, UP.MaxPercentThresholdBoost);
+    if (Cost->UnrolledCost < UP.Threshold * Boost / 100)
+      return FullUnrollTripCount;
   }
   return None;
 }
