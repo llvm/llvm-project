@@ -400,8 +400,7 @@ bool HexagonStoreWidening::createWideStores(InstrGroup &OG, InstrGroup &NG,
   unsigned Acc = 0;  // Value accumulator.
   unsigned Shift = 0;
 
-  for (InstrGroup::iterator I = OG.begin(), E = OG.end(); I != E; ++I) {
-    MachineInstr *MI = *I;
+  for (MachineInstr *MI : OG) {
     const MachineMemOperand &MMO = getStoreTarget(MI);
     MachineOperand &SO = MI->getOperand(2);  // Source.
     assert(SO.isImm() && "Expecting an immediate operand");

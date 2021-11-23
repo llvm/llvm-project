@@ -2211,8 +2211,7 @@ bool ARMConstantIslands::optimizeThumb2JumpTables() {
     unsigned JTOffset = BBUtils->getOffsetOf(MI) + 4;
     const std::vector<MachineBasicBlock*> &JTBBs = JT[JTI].MBBs;
     BBInfoVector &BBInfo = BBUtils->getBBInfo();
-    for (unsigned j = 0, ee = JTBBs.size(); j != ee; ++j) {
-      MachineBasicBlock *MBB = JTBBs[j];
+    for (MachineBasicBlock *MBB : JTBBs) {
       unsigned DstOffset = BBInfo[MBB->getNumber()].Offset;
       // Negative offset is not ok. FIXME: We should change BB layout to make
       // sure all the branches are forward.
@@ -2405,8 +2404,7 @@ bool ARMConstantIslands::reorderThumb2JumpTables() {
     // and try to adjust them such that that's true.
     int JTNumber = MI->getParent()->getNumber();
     const std::vector<MachineBasicBlock*> &JTBBs = JT[JTI].MBBs;
-    for (unsigned j = 0, ee = JTBBs.size(); j != ee; ++j) {
-      MachineBasicBlock *MBB = JTBBs[j];
+    for (MachineBasicBlock *MBB : JTBBs) {
       int DTNumber = MBB->getNumber();
 
       if (DTNumber < JTNumber) {
@@ -2415,7 +2413,7 @@ bool ARMConstantIslands::reorderThumb2JumpTables() {
         MachineBasicBlock *NewBB =
           adjustJTTargetBlockForward(MBB, MI->getParent());
         if (NewBB)
-          MJTI->ReplaceMBBInJumpTable(JTI, JTBBs[j], NewBB);
+          MJTI->ReplaceMBBInJumpTable(JTI, MBB, NewBB);
         MadeChange = true;
       }
     }
