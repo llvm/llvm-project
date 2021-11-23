@@ -14,15 +14,32 @@
 
 namespace __sanitizer {
 
-static constexpr u32 kStackSizeBits = 16;
+namespace {
+struct StackTraceHeader {
+  static constexpr u32 kStackSizeBits = 16;
+
+  u32 size;
+  u32 tag;
+  explicit StackTraceHeader(const StackTrace &trace)
+      : size(trace.size), tag(trace.tag) {
+    CHECK_LT(trace.size, 1 << kStackSizeBits);
+  }
+  explicit StackTraceHeader(uptr h)
+      : size(h & ((1 << kStackSizeBits) - 1)), tag(h >> kStackSizeBits) {}
+
+  uptr ToUptr() const {
+    return static_cast<uptr>(size) | (static_cast<uptr>(tag) << kStackSizeBits);
+  }
+};
+}  // namespace
 
 StackStore::Id StackStore::Store(const StackTrace &trace) {
   if (!trace.size && !trace.tag)
     return 0;
-  uptr *stack_trace = Alloc(trace.size + 1);
-  CHECK_LT(trace.size, 1 << kStackSizeBits);
-  *stack_trace = trace.size + (trace.tag << kStackSizeBits);
-  internal_memcpy(stack_trace + 1, trace.trace, trace.size * sizeof(uptr));
+  StackTraceHeader h(trace);
+  uptr *stack_trace = Alloc(h.size + 1);
+  *stack_trace = h.ToUptr();
+  internal_memcpy(stack_trace + 1, trace.trace, h.size * sizeof(uptr));
   return reinterpret_cast<StackStore::Id>(stack_trace);
 }
 
@@ -30,9 +47,8 @@ StackTrace StackStore::Load(Id id) {
   if (!id)
     return {};
   const uptr *stack_trace = reinterpret_cast<const uptr *>(id);
-  uptr size = *stack_trace & ((1 << kStackSizeBits) - 1);
-  uptr tag = *stack_trace >> kStackSizeBits;
-  return StackTrace(stack_trace + 1, size, tag);
+  StackTraceHeader h(*stack_trace);
+  return StackTrace(stack_trace + 1, h.size, h.tag);
 }
 
 uptr StackStore::Allocated() const {
