@@ -27,7 +27,7 @@ class GenericBitsetDataFormatterTestCase(TestBase):
             for j in range(2*i, len(primes), i):
                 primes[j] = 0
         self.primes = primes
-    
+
     def getBitsetVariant(self, size, variant):
         if variant == VALUE:
             return "std::bitset<" + str(size) + ">"
@@ -47,7 +47,7 @@ class GenericBitsetDataFormatterTestCase(TestBase):
             children.append(ValueCheck(value=str(bool(child.GetValueAsUnsigned())).lower()))
             self.assertEqual(child.GetValueAsUnsigned(), self.primes[i],
                     "variable: %s, index: %d"%(name, size))
-        self.expect_var_path(name,type=self.getBitsetVariant(size,variant),children=children) 
+        self.expect_var_path(name,type=self.getBitsetVariant(size,variant),children=children)
 
     def do_test_value(self, stdlib_type):
         """Test that std::bitset is displayed correctly"""

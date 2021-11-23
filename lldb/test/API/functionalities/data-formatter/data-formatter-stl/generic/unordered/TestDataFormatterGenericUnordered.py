@@ -1,10 +1,3 @@
-"""
-Test lldb data formatter subsystem.
-"""
-
-
-
-import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
@@ -49,6 +42,12 @@ class GenericUnorderedDataFormatterTestCase(TestBase):
         self.addTearDownHook(cleanup)
 
         ns = self.namespace
+
+        # We check here that the map shows 0 children even with corrupt data.
+        self.look_for_content_and_continue(
+            "corrupt_map", ['%s::unordered_map' %
+                    ns, 'size=0 {}'])
+
         self.look_for_content_and_continue(
             "map", ['%s::unordered_map' %
                     ns, 'size=5 {', 'hello', 'world', 'this', 'is', 'me'])

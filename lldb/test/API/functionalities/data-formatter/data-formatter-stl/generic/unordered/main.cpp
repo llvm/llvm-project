@@ -14,7 +14,11 @@ int thefoo_rw(int arg = 1) {
 }
 
 int main() {
-  std::unordered_map<int, std::string> map;
+
+  char buffer[sizeof(std::unordered_map<int, std::string>)] = {0};
+  std::unordered_map<int, std::string> &corrupt_map = *(std::unordered_map<int, std::string> *)buffer;
+
+  std::unordered_map<int, std::string> map; // Set break point at this line.
   map.emplace(1, "hello");
   map.emplace(2, "world");
   map.emplace(3, "this");
