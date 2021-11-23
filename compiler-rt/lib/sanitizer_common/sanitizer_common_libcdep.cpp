@@ -15,13 +15,14 @@
 #include "sanitizer_common.h"
 #include "sanitizer_flags.h"
 #include "sanitizer_procmaps.h"
-
+#include "sanitizer_stackdepot.h"
 
 namespace __sanitizer {
 
 #if (SANITIZER_LINUX || SANITIZER_NETBSD) && !SANITIZER_GO
 // Weak default implementation for when sanitizer_stackdepot is not linked in.
 SANITIZER_WEAK_ATTRIBUTE StackDepotStats StackDepotGetStats() { return {}; }
+SANITIZER_WEAK_ATTRIBUTE void StackDepotStopBackgroundThread() {}
 
 void *BackgroundThread(void *arg) {
   VPrintf(1, "%s: Started BackgroundThread\n", SanitizerToolName);
@@ -201,6 +202,9 @@ void ProtectGap(uptr addr, uptr size, uptr zero_base_shadow_start,
 
 SANITIZER_INTERFACE_WEAK_DEF(void, __sanitizer_sandbox_on_notify,
                              __sanitizer_sandbox_arguments *args) {
+#if (SANITIZER_LINUX || SANITIZER_NETBSD) && !SANITIZER_GO
+  __sanitizer::StackDepotStopBackgroundThread();
+#endif
   __sanitizer::PlatformPrepareForSandboxing(args);
   if (__sanitizer::sandboxing_callback)
     __sanitizer::sandboxing_callback();
