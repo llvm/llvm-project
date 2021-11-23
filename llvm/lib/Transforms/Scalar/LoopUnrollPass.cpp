@@ -982,8 +982,6 @@ bool llvm::computeUnrollCount(
   if (UnrollFactor) {
     UP.Count = *UnrollFactor;
     UseUpperBound = (FullUnrollMaxTripCount == FullUnrollTripCount);
-    TripCount = FullUnrollTripCount;
-    TripMultiple = UP.UpperBound ? 1 : TripMultiple;
     return ExplicitUnroll;
   } else {
     UP.Count = FullUnrollTripCount;
