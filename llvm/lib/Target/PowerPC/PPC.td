@@ -203,6 +203,22 @@ def FeatureLogicalFusion :
   SubtargetFeature<"fuse-logical", "HasLogicalFusion", "true",
                    "Target supports Logical Operations fusion",
                    [FeatureFusion]>;
+def FeatureSha3Fusion :
+  SubtargetFeature<"fuse-sha3", "HasSha3Fusion", "true",
+                   "Target supports SHA3 assist fusion",
+                   [FeatureFusion]>;
+def FeatureCompareFusion:
+  SubtargetFeature<"fuse-cmp", "HasCompareFusion", "true",
+                   "Target supports Comparison Operations fusion",
+                   [FeatureFusion]>;
+def FeatureWideImmFusion:
+  SubtargetFeature<"fuse-wideimm", "HasWideImmFusion", "true",
+                   "Target supports Wide-Immediate fusion",
+                   [FeatureFusion]>;
+def FeatureZeroMoveFusion:
+  SubtargetFeature<"fuse-zeromove", "HasZeroMoveFusion", "true",
+                   "Target supports move to SPR with branch fusion",
+                   [FeatureFusion]>;
 def FeatureUnalignedFloats :
   SubtargetFeature<"allow-unaligned-fp-access", "AllowsUnalignedFPAccess",
                    "true", "CPU does not trap on unaligned FP access">;
@@ -393,7 +409,7 @@ def ProcessorFeatures {
   // still exist with the exception of those we know are Power9 specific.
   list<SubtargetFeature> FusionFeatures = [
     FeatureStoreFusion, FeatureAddLogicalFusion, FeatureLogicalAddFusion,
-    FeatureLogicalFusion, FeatureArithAddFusion
+    FeatureLogicalFusion, FeatureArithAddFusion, FeatureSha3Fusion,
   ];
   list<SubtargetFeature> P10AdditionalFeatures =
     !listconcat(FusionFeatures, [
