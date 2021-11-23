@@ -38,6 +38,7 @@ class MachODumper {
                        ArrayRef<uint8_t> OpcodeBuffer, bool Lazy = false);
   void dumpExportTrie(std::unique_ptr<MachOYAML::Object> &Y);
   void dumpSymbols(std::unique_ptr<MachOYAML::Object> &Y);
+  void dumpIndirectSymbols(std::unique_ptr<MachOYAML::Object> &Y);
 
   template <typename SectionType>
   Expected<MachOYAML::Section> constructSectionCommon(SectionType Sec,
@@ -351,6 +352,7 @@ void MachODumper::dumpLinkEdit(std::unique_ptr<MachOYAML::Object> &Y) {
                   true);
   dumpExportTrie(Y);
   dumpSymbols(Y);
+  dumpIndirectSymbols(Y);
 }
 
 void MachODumper::dumpRebaseOpcodes(std::unique_ptr<MachOYAML::Object> &Y) {
@@ -597,6 +599,14 @@ void MachODumper::dumpSymbols(std::unique_ptr<MachOYAML::Object> &Y) {
     RemainingTable = SymbolPair.second;
     LEData.StringTable.push_back(SymbolPair.first);
   }
+}
+
+void MachODumper::dumpIndirectSymbols(std::unique_ptr<MachOYAML::Object> &Y) {
+  MachOYAML::LinkEditData &LEData = Y->LinkEdit;
+
+  MachO::dysymtab_command DLC = Obj.getDysymtabLoadCommand();
+  for (unsigned i = 0; i < DLC.nindirectsyms; ++i)
+    LEData.IndirectSymbols.push_back(Obj.getIndirectSymbolTableEntry(DLC, i));
 }
 
 Error macho2yaml(raw_ostream &Out, const object::MachOObjectFile &Obj,
