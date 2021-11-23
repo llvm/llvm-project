@@ -260,9 +260,11 @@ struct LinalgStrategyVectorizePass
   LinalgStrategyVectorizePass() = default;
 
   LinalgStrategyVectorizePass(StringRef opName, LinalgVectorizationOptions opt,
-                              LinalgTransformationFilter filt)
+                              LinalgTransformationFilter filt,
+                              bool padVectorize = false)
       : options(opt), filter(filt) {
     this->anchorOpName.setValue(opName.str());
+    this->vectorizePadding.setValue(padVectorize);
   }
 
   void runOnFunction() override {
@@ -284,6 +286,9 @@ struct LinalgStrategyVectorizePass
     vectorizationPatterns.add<linalg::LinalgCopyVTRForwardingPattern,
                               linalg::LinalgCopyVTWForwardingPattern>(
         funcOp.getContext(), /*benefit=*/2);
+    if (vectorizePadding) {
+      linalg::populatePadTensorOpVectorizationPatterns(vectorizationPatterns);
+    }
     (void)applyPatternsAndFoldGreedily(funcOp,
                                        std::move(vectorizationPatterns));
   }
@@ -471,11 +476,11 @@ mlir::createLinalgStrategyInterchangePass(ArrayRef<int64_t> iteratorInterchange,
 }
 
 /// Create a LinalgStrategyVectorizePass.
-std::unique_ptr<OperationPass<FuncOp>>
-mlir::createLinalgStrategyVectorizePass(StringRef opName,
-                                        LinalgVectorizationOptions opt,
-                                        LinalgTransformationFilter filter) {
-  return std::make_unique<LinalgStrategyVectorizePass>(opName, opt, filter);
+std::unique_ptr<OperationPass<FuncOp>> mlir::createLinalgStrategyVectorizePass(
+    StringRef opName, LinalgVectorizationOptions opt,
+    LinalgTransformationFilter filter, bool padVectorize) {
+  return std::make_unique<LinalgStrategyVectorizePass>(opName, opt, filter,
+                                                       padVectorize);
 }
 
 /// Create a LinalgStrategyEnablePass.

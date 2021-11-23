@@ -319,6 +319,8 @@ def LinalgStrategyVectorizePass
       "Which func op is the anchor to latch on.">,
     Option<"anchorOpName", "anchor-op", "std::string", /*default=*/"",
       "Which linalg op within the func is the anchor to latch on.">,
+    Option<"vectorizePadding", "vectorize-padding", "bool", "false",
+      "Enable vectorization of padding ops.">,
   ];
 }
 
