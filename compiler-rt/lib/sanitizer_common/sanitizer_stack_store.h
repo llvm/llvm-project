@@ -25,7 +25,9 @@ class StackStore {
  public:
   constexpr StackStore() = default;
 
-  using Id = uptr;
+  using Id = u32;  // Enough for 2^32 * sizeof(uptr) bytes of traces.
+  static_assert(u64(kBlockCount) * kBlockSizeFrames == 1ull << (sizeof(Id) * 8),
+                "");
 
   Id Store(const StackTrace &trace);
   StackTrace Load(Id id) const;
@@ -42,7 +44,19 @@ class StackStore {
     return frame_idx % kBlockSizeFrames;
   }
 
-  uptr *Alloc(uptr count);
+  static constexpr uptr IdToOffset(Id id) {
+    CHECK_NE(id, 0);
+    return id - 1;  // Avoid zero as id.
+  }
+
+  static constexpr uptr OffsetToId(Id id) {
+    // This makes UINT32_MAX to 0 and it will be retrived as and empty stack.
+    // But this is not a problem as we will not be able to store anything after
+    // that anyway.
+    return id + 1;  // Avoid zero as id.
+  }
+
+  uptr *Alloc(uptr count, uptr *idx);
 
   // Total number of allocated frames.
   atomic_uintptr_t total_frames_ = {};
@@ -53,9 +67,9 @@ class StackStore {
     StaticSpinMutex mtx_;  // Protects alloc of new blocks.
 
     uptr *Create();
-    uptr *Get() const;
 
    public:
+    uptr *Get() const;
     uptr *GetOrCreate();
     void TestOnlyUnmap();
   };
