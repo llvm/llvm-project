@@ -25,11 +25,7 @@ static constexpr int64_t kBufferAlignments = 128;
 std::unique_ptr<AllocationCallbacks> defaultAllocationCallbacks();
 
 /// Bufferize one particular op.
-/// `bufferizedFunctionTypes` (resp. `globalCreator`) are expected to be
-/// non-null if `op` is a CallOpInterface (resp. GlobalCreator).
-LogicalResult
-bufferizeOp(Operation *op, BufferizationState &state,
-            DenseMap<FuncOp, FunctionType> *bufferizedFunctionTypes = nullptr);
+LogicalResult bufferizeOp(Operation *op, BufferizationState &state);
 
 /// Register external models implemented for the `BufferizableOpInterface`.
 void registerBufferizableOpInterfaceExternalModels(DialectRegistry &registry);
