@@ -43,7 +43,7 @@ StackStore::Id StackStore::Store(const StackTrace &trace) {
   return reinterpret_cast<StackStore::Id>(stack_trace);
 }
 
-StackTrace StackStore::Load(Id id) {
+StackTrace StackStore::Load(Id id) const {
   if (!id)
     return {};
   const uptr *stack_trace = reinterpret_cast<const uptr *>(id);
