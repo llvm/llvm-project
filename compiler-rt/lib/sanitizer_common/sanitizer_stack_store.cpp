@@ -31,6 +31,10 @@ StackTrace StackStore::Load(Id id) {
   return StackTrace(stack_trace + 1, size, tag);
 }
 
+uptr StackStore::Allocated() const {
+  return atomic_load_relaxed(&mapped_size_);
+}
+
 uptr *StackStore::TryAlloc(uptr count) {
   // Optimisic lock-free allocation, essentially try to bump the region ptr.
   for (;;) {
