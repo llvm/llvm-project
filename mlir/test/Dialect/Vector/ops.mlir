@@ -163,6 +163,13 @@ func @shuffle2D(%a: vector<1x4xf32>, %b: vector<2x4xf32>) -> vector<3x4xf32> {
   return %1 : vector<3x4xf32>
 }
 
+// CHECK-LABEL: @extract_element_0d
+func @extract_element_0d(%a: vector<f32>) -> f32 {
+  // CHECK-NEXT: vector.extractelement %{{.*}}[] : vector<f32>
+  %1 = vector.extractelement %a[] : vector<f32>
+  return %1 : f32
+}
+
 // CHECK-LABEL: @extract_element
 func @extract_element(%a: vector<16xf32>) -> f32 {
   // CHECK:      %[[C15:.*]] = arith.constant 15 : i32
