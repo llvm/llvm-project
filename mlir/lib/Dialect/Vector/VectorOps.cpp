@@ -1554,6 +1554,12 @@ static ParseResult parseShuffleOp(OpAsmParser &parser, OperationState &result) {
 //===----------------------------------------------------------------------===//
 
 void InsertElementOp::build(OpBuilder &builder, OperationState &result,
+                            Value source, Value dest) {
+  result.addOperands({source, dest});
+  result.addTypes(dest.getType());
+}
+
+void InsertElementOp::build(OpBuilder &builder, OperationState &result,
                             Value source, Value dest, Value position) {
   result.addOperands({source, dest, position});
   result.addTypes(dest.getType());
@@ -1561,8 +1567,15 @@ void InsertElementOp::build(OpBuilder &builder, OperationState &result,
 
 static LogicalResult verify(InsertElementOp op) {
   auto dstVectorType = op.getDestVectorType();
+  if (dstVectorType.getRank() == 0) {
+    if (op.position())
+      return op.emitOpError("expected position to be empty with 0-D vector");
+    return success();
+  }
   if (dstVectorType.getRank() != 1)
-    return op.emitOpError("expected 1-D vector");
+    return op.emitOpError("unexpected >1 vector rank");
+  if (!op.position())
+    return op.emitOpError("expected position for 1-D vector");
   return success();
 }
 
