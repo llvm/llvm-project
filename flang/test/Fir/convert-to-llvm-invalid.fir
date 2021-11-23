@@ -86,6 +86,16 @@ fir.global @global_derived : !fir.type<minez(f:i32)> {
 
 // -----
 
+// Test `fir.len_param_index` conversion failure. Not implemented yet.
+
+func @lenparamindex() {
+  // expected-error@+1{{failed to legalize operation 'fir.len_param_index'}}
+  %0 = fir.len_param_index l1, !fir.type<twolens(l1:i32, l2:i32){i:i32, f:f32, l:i64}>
+  return
+}
+
+// -----
+
 // Test `fir.gentypedesc` conversion failure. Not implemented yet.
 
 func @gentypedesc() {

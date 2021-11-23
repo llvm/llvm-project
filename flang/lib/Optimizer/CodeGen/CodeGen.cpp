@@ -827,6 +827,20 @@ struct GlobalLenOpConversion : public FIROpConversion<fir::GlobalLenOp> {
   }
 };
 
+/// Lower fir.len_param_index
+struct LenParamIndexOpConversion
+    : public FIROpConversion<fir::LenParamIndexOp> {
+  using FIROpConversion::FIROpConversion;
+
+  // FIXME: this should be specialized by the runtime target
+  mlir::LogicalResult
+  matchAndRewrite(fir::LenParamIndexOp lenp, OpAdaptor,
+                  mlir::ConversionPatternRewriter &rewriter) const override {
+    return rewriter.notifyMatchFailure(
+        lenp, "fir.len_param_index codegen is not implemented yet");
+  }
+};
+
 /// Lower `fir.gentypedesc` to a global constant.
 struct GenTypeDescOpConversion : public FIROpConversion<fir::GenTypeDescOp> {
   using FIROpConversion::FIROpConversion;
@@ -2179,14 +2193,15 @@ public:
         EmboxProcOpConversion, ExtractValueOpConversion, FieldIndexOpConversion,
         FirEndOpConversion, HasValueOpConversion, GenTypeDescOpConversion,
         GlobalLenOpConversion, GlobalOpConversion, InsertOnRangeOpConversion,
-        InsertValueOpConversion, IsPresentOpConversion, LoadOpConversion,
-        NegcOpConversion, NoReassocOpConversion, MulcOpConversion,
-        SelectCaseOpConversion, SelectOpConversion, SelectRankOpConversion,
-        SelectTypeOpConversion, ShapeOpConversion, ShapeShiftOpConversion,
-        ShiftOpConversion, SliceOpConversion, StoreOpConversion,
-        StringLitOpConversion, SubcOpConversion, UnboxCharOpConversion,
-        UnboxProcOpConversion, UndefOpConversion, UnreachableOpConversion,
-        ZeroOpConversion>(typeConverter);
+        InsertValueOpConversion, IsPresentOpConversion,
+        LenParamIndexOpConversion, LoadOpConversion, NegcOpConversion,
+        NoReassocOpConversion, MulcOpConversion, SelectCaseOpConversion,
+        SelectOpConversion, SelectRankOpConversion, SelectTypeOpConversion,
+        ShapeOpConversion, ShapeShiftOpConversion, ShiftOpConversion,
+        SliceOpConversion, StoreOpConversion, StringLitOpConversion,
+        SubcOpConversion, UnboxCharOpConversion, UnboxProcOpConversion,
+        UndefOpConversion, UnreachableOpConversion, ZeroOpConversion>(
+        typeConverter);
     mlir::populateStdToLLVMConversionPatterns(typeConverter, pattern);
     mlir::arith::populateArithmeticToLLVMConversionPatterns(typeConverter,
                                                             pattern);
