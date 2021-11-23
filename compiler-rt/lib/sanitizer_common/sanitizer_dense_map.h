@@ -250,6 +250,22 @@ class DenseMapBase {
     return true;
   }
 
+  /// Iterate over active entries of the container.
+  ///
+  /// Function can return fast to stop the process.
+  template <class Fn>
+  void forEach(Fn fn) {
+    const KeyT EmptyKey = getEmptyKey(), TombstoneKey = getTombstoneKey();
+    for (auto *P = getBuckets(), *E = getBucketsEnd(); P != E; ++P) {
+      const KeyT K = P->getFirst();
+      if (!KeyInfoT::isEqual(K, EmptyKey) &&
+          !KeyInfoT::isEqual(K, TombstoneKey)) {
+        if (!fn(*P))
+          return;
+      }
+    }
+  }
+
  protected:
   DenseMapBase() = default;
 

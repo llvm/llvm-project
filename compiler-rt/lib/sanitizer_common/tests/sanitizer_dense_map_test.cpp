@@ -299,6 +299,29 @@ TYPED_TEST(DenseMapTest, SwapTest) {
     EXPECT_EQ(this->getValue(i), this->Map[this->getKey(i)]);
 }
 
+// A more complex iteration test
+TYPED_TEST(DenseMapTest, IterationTest) {
+  int visited[100];
+  std::map<typename TypeParam::key_type, unsigned> visitedIndex;
+
+  // Insert 100 numbers into the map
+  for (int i = 0; i < 100; ++i) {
+    visited[i] = 0;
+    visitedIndex[this->getKey(i)] = i;
+
+    this->Map[this->getKey(i)] = this->getValue(i);
+  }
+
+  // Iterate over all numbers and mark each one found.
+  this->Map.forEach([&](const typename TypeParam::value_type &kv) {
+    ++visited[visitedIndex[kv.first]];
+    return true;
+  });
+
+  // Ensure every number was visited.
+  for (int i = 0; i < 100; ++i) ASSERT_EQ(1, visited[i]);
+}
+
 namespace {
 // Simple class that counts how many moves and copy happens when growing a map
 struct CountCopyAndMove {
