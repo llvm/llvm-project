@@ -2353,11 +2353,20 @@ Value *InstCombinerImpl::getSelectCondition(Value *A, Value *B) {
   Value *Cond;
   Value *NotB;
   if (match(A, m_SExt(m_Value(Cond))) &&
-      Cond->getType()->isIntOrIntVectorTy(1) &&
-      match(B, m_OneUse(m_Not(m_Value(NotB))))) {
-    NotB = peekThroughBitcast(NotB, true);
-    if (match(NotB, m_SExt(m_Specific(Cond))))
+      Cond->getType()->isIntOrIntVectorTy(1)) {
+    // A = sext i1 Cond; B = sext (not (i1 Cond))
+    if (match(B, m_SExt(m_Not(m_Specific(Cond)))))
       return Cond;
+
+    // A = sext i1 Cond; B = not ({bitcast} (sext (i1 Cond)))
+    // TODO: The one-use checks are unnecessary or misplaced. If the caller
+    //       checked for uses on logic ops/casts, that should be enough to
+    //       make this transform worthwhile.
+    if (match(B, m_OneUse(m_Not(m_Value(NotB))))) {
+      NotB = peekThroughBitcast(NotB, true);
+      if (match(NotB, m_SExt(m_Specific(Cond))))
+        return Cond;
+    }
   }
 
   // All scalar (and most vector) possibilities should be handled now.
