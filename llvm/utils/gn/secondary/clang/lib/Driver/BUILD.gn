@@ -83,6 +83,7 @@ static_library("Driver") {
     "ToolChains/NaCl.cpp",
     "ToolChains/NetBSD.cpp",
     "ToolChains/OpenBSD.cpp",
+    "ToolChains/PPCFreeBSD.cpp",
     "ToolChains/PPCLinux.cpp",
     "ToolChains/PS4CPU.cpp",
     "ToolChains/RISCVToolchain.cpp",
