@@ -256,8 +256,8 @@ private:
         }
     }
 
-    // Sanity check: amount of dead and live loop blocks should match the total
-    // number of blocks in loop.
+    // Amount of dead and live loop blocks should match the total number of
+    // blocks in loop.
     assert(L.getNumBlocks() == LiveLoopBlocks.size() + DeadLoopBlocks.size() &&
            "Malformed block sets?");
 
@@ -305,7 +305,6 @@ private:
         BlocksInLoopAfterFolding.insert(BB);
     }
 
-    // Sanity check: header must be in loop.
     assert(BlocksInLoopAfterFolding.count(L.getHeader()) &&
            "Header not in loop?");
     assert(BlocksInLoopAfterFolding.size() <= LiveLoopBlocks.size() &&

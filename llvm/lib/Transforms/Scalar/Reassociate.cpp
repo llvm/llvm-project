@@ -494,7 +494,7 @@ static bool LinearizeExprTree(Instruction *I,
   SmallVector<Value *, 8> LeafOrder; // Ensure deterministic leaf output order.
 
 #ifndef NDEBUG
-  SmallPtrSet<Value *, 8> Visited; // For sanity checking the iteration scheme.
+  SmallPtrSet<Value *, 8> Visited; // For checking the iteration scheme.
 #endif
   while (!Worklist.empty()) {
     std::pair<Instruction*, APInt> P = Worklist.pop_back_val();

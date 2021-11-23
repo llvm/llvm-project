@@ -2641,7 +2641,7 @@ Instruction *InstCombinerImpl::visitCallBase(CallBase &Call) {
     ArgNo++;
   }
 
-  assert(ArgNo == Call.arg_size() && "sanity check");
+  assert(ArgNo == Call.arg_size() && "Call arguments not processed correctly.");
 
   if (!ArgNos.empty()) {
     AttributeList AS = Call.getAttributes();
