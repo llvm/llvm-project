@@ -227,6 +227,7 @@ template <class T>
 #include <__utility/move.h>
 #include <__utility/pair.h>
 #include <__utility/piecewise_construct.h>
+#include <__utility/priority_tag.h>
 #include <__utility/rel_ops.h>
 #include <__utility/swap.h>
 #include <__utility/to_underlying.h>

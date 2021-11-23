@@ -391,7 +391,8 @@ FreeBSD::FreeBSD(const Driver &D, const llvm::Triple &Triple,
 }
 
 ToolChain::CXXStdlibType FreeBSD::GetDefaultCXXStdlibType() const {
-  if (getTriple().getOSMajorVersion() >= 10)
+  unsigned Major = getTriple().getOSMajorVersion();
+  if (Major >= 10 || Major == 0)
     return ToolChain::CST_Libcxx;
   return ToolChain::CST_Libstdcxx;
 }

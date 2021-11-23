@@ -238,18 +238,18 @@ define void @callee() nounwind {
 ; ILP32D-NEXT:    fsd ft2, 16(a1)
 ; ILP32D-NEXT:    fsd ft1, %lo(var+8)(a0)
 ; ILP32D-NEXT:    fsd ft0, %lo(var)(a0)
-; ILP32D-NEXT:    fld fs11, 0(sp) # 8-byte Folded Reload
-; ILP32D-NEXT:    fld fs10, 8(sp) # 8-byte Folded Reload
-; ILP32D-NEXT:    fld fs9, 16(sp) # 8-byte Folded Reload
-; ILP32D-NEXT:    fld fs8, 24(sp) # 8-byte Folded Reload
-; ILP32D-NEXT:    fld fs7, 32(sp) # 8-byte Folded Reload
-; ILP32D-NEXT:    fld fs6, 40(sp) # 8-byte Folded Reload
-; ILP32D-NEXT:    fld fs5, 48(sp) # 8-byte Folded Reload
-; ILP32D-NEXT:    fld fs4, 56(sp) # 8-byte Folded Reload
-; ILP32D-NEXT:    fld fs3, 64(sp) # 8-byte Folded Reload
-; ILP32D-NEXT:    fld fs2, 72(sp) # 8-byte Folded Reload
-; ILP32D-NEXT:    fld fs1, 80(sp) # 8-byte Folded Reload
 ; ILP32D-NEXT:    fld fs0, 88(sp) # 8-byte Folded Reload
+; ILP32D-NEXT:    fld fs1, 80(sp) # 8-byte Folded Reload
+; ILP32D-NEXT:    fld fs2, 72(sp) # 8-byte Folded Reload
+; ILP32D-NEXT:    fld fs3, 64(sp) # 8-byte Folded Reload
+; ILP32D-NEXT:    fld fs4, 56(sp) # 8-byte Folded Reload
+; ILP32D-NEXT:    fld fs5, 48(sp) # 8-byte Folded Reload
+; ILP32D-NEXT:    fld fs6, 40(sp) # 8-byte Folded Reload
+; ILP32D-NEXT:    fld fs7, 32(sp) # 8-byte Folded Reload
+; ILP32D-NEXT:    fld fs8, 24(sp) # 8-byte Folded Reload
+; ILP32D-NEXT:    fld fs9, 16(sp) # 8-byte Folded Reload
+; ILP32D-NEXT:    fld fs10, 8(sp) # 8-byte Folded Reload
+; ILP32D-NEXT:    fld fs11, 0(sp) # 8-byte Folded Reload
 ; ILP32D-NEXT:    addi sp, sp, 96
 ; ILP32D-NEXT:    ret
 ;
@@ -334,18 +334,18 @@ define void @callee() nounwind {
 ; LP64D-NEXT:    fsd ft2, 16(a1)
 ; LP64D-NEXT:    fsd ft1, %lo(var+8)(a0)
 ; LP64D-NEXT:    fsd ft0, %lo(var)(a0)
-; LP64D-NEXT:    fld fs11, 0(sp) # 8-byte Folded Reload
-; LP64D-NEXT:    fld fs10, 8(sp) # 8-byte Folded Reload
-; LP64D-NEXT:    fld fs9, 16(sp) # 8-byte Folded Reload
-; LP64D-NEXT:    fld fs8, 24(sp) # 8-byte Folded Reload
-; LP64D-NEXT:    fld fs7, 32(sp) # 8-byte Folded Reload
-; LP64D-NEXT:    fld fs6, 40(sp) # 8-byte Folded Reload
-; LP64D-NEXT:    fld fs5, 48(sp) # 8-byte Folded Reload
-; LP64D-NEXT:    fld fs4, 56(sp) # 8-byte Folded Reload
-; LP64D-NEXT:    fld fs3, 64(sp) # 8-byte Folded Reload
-; LP64D-NEXT:    fld fs2, 72(sp) # 8-byte Folded Reload
-; LP64D-NEXT:    fld fs1, 80(sp) # 8-byte Folded Reload
 ; LP64D-NEXT:    fld fs0, 88(sp) # 8-byte Folded Reload
+; LP64D-NEXT:    fld fs1, 80(sp) # 8-byte Folded Reload
+; LP64D-NEXT:    fld fs2, 72(sp) # 8-byte Folded Reload
+; LP64D-NEXT:    fld fs3, 64(sp) # 8-byte Folded Reload
+; LP64D-NEXT:    fld fs4, 56(sp) # 8-byte Folded Reload
+; LP64D-NEXT:    fld fs5, 48(sp) # 8-byte Folded Reload
+; LP64D-NEXT:    fld fs6, 40(sp) # 8-byte Folded Reload
+; LP64D-NEXT:    fld fs7, 32(sp) # 8-byte Folded Reload
+; LP64D-NEXT:    fld fs8, 24(sp) # 8-byte Folded Reload
+; LP64D-NEXT:    fld fs9, 16(sp) # 8-byte Folded Reload
+; LP64D-NEXT:    fld fs10, 8(sp) # 8-byte Folded Reload
+; LP64D-NEXT:    fld fs11, 0(sp) # 8-byte Folded Reload
 ; LP64D-NEXT:    addi sp, sp, 96
 ; LP64D-NEXT:    ret
   %val = load [32 x double], [32 x double]* @var
@@ -498,9 +498,9 @@ define void @caller() nounwind {
 ; ILP32-NEXT:    fsd ft0, %lo(var+8)(s0)
 ; ILP32-NEXT:    fld ft0, 248(sp) # 8-byte Folded Reload
 ; ILP32-NEXT:    fsd ft0, %lo(var)(s0)
-; ILP32-NEXT:    lw s1, 260(sp) # 4-byte Folded Reload
-; ILP32-NEXT:    lw s0, 264(sp) # 4-byte Folded Reload
 ; ILP32-NEXT:    lw ra, 268(sp) # 4-byte Folded Reload
+; ILP32-NEXT:    lw s0, 264(sp) # 4-byte Folded Reload
+; ILP32-NEXT:    lw s1, 260(sp) # 4-byte Folded Reload
 ; ILP32-NEXT:    addi sp, sp, 272
 ; ILP32-NEXT:    ret
 ;
@@ -641,9 +641,9 @@ define void @caller() nounwind {
 ; LP64-NEXT:    fsd ft0, %lo(var+8)(s0)
 ; LP64-NEXT:    fld ft0, 256(sp) # 8-byte Folded Reload
 ; LP64-NEXT:    fsd ft0, %lo(var)(s0)
-; LP64-NEXT:    ld s1, 264(sp) # 8-byte Folded Reload
-; LP64-NEXT:    ld s0, 272(sp) # 8-byte Folded Reload
 ; LP64-NEXT:    ld ra, 280(sp) # 8-byte Folded Reload
+; LP64-NEXT:    ld s0, 272(sp) # 8-byte Folded Reload
+; LP64-NEXT:    ld s1, 264(sp) # 8-byte Folded Reload
 ; LP64-NEXT:    addi sp, sp, 288
 ; LP64-NEXT:    ret
 ;
@@ -772,21 +772,21 @@ define void @caller() nounwind {
 ; ILP32D-NEXT:    fsd ft0, %lo(var+8)(s0)
 ; ILP32D-NEXT:    fld ft0, 152(sp) # 8-byte Folded Reload
 ; ILP32D-NEXT:    fsd ft0, %lo(var)(s0)
-; ILP32D-NEXT:    fld fs11, 160(sp) # 8-byte Folded Reload
-; ILP32D-NEXT:    fld fs10, 168(sp) # 8-byte Folded Reload
-; ILP32D-NEXT:    fld fs9, 176(sp) # 8-byte Folded Reload
-; ILP32D-NEXT:    fld fs8, 184(sp) # 8-byte Folded Reload
-; ILP32D-NEXT:    fld fs7, 192(sp) # 8-byte Folded Reload
-; ILP32D-NEXT:    fld fs6, 200(sp) # 8-byte Folded Reload
-; ILP32D-NEXT:    fld fs5, 208(sp) # 8-byte Folded Reload
-; ILP32D-NEXT:    fld fs4, 216(sp) # 8-byte Folded Reload
-; ILP32D-NEXT:    fld fs3, 224(sp) # 8-byte Folded Reload
-; ILP32D-NEXT:    fld fs2, 232(sp) # 8-byte Folded Reload
-; ILP32D-NEXT:    fld fs1, 240(sp) # 8-byte Folded Reload
-; ILP32D-NEXT:    fld fs0, 248(sp) # 8-byte Folded Reload
-; ILP32D-NEXT:    lw s1, 260(sp) # 4-byte Folded Reload
-; ILP32D-NEXT:    lw s0, 264(sp) # 4-byte Folded Reload
 ; ILP32D-NEXT:    lw ra, 268(sp) # 4-byte Folded Reload
+; ILP32D-NEXT:    lw s0, 264(sp) # 4-byte Folded Reload
+; ILP32D-NEXT:    lw s1, 260(sp) # 4-byte Folded Reload
+; ILP32D-NEXT:    fld fs0, 248(sp) # 8-byte Folded Reload
+; ILP32D-NEXT:    fld fs1, 240(sp) # 8-byte Folded Reload
+; ILP32D-NEXT:    fld fs2, 232(sp) # 8-byte Folded Reload
+; ILP32D-NEXT:    fld fs3, 224(sp) # 8-byte Folded Reload
+; ILP32D-NEXT:    fld fs4, 216(sp) # 8-byte Folded Reload
+; ILP32D-NEXT:    fld fs5, 208(sp) # 8-byte Folded Reload
+; ILP32D-NEXT:    fld fs6, 200(sp) # 8-byte Folded Reload
+; ILP32D-NEXT:    fld fs7, 192(sp) # 8-byte Folded Reload
+; ILP32D-NEXT:    fld fs8, 184(sp) # 8-byte Folded Reload
+; ILP32D-NEXT:    fld fs9, 176(sp) # 8-byte Folded Reload
+; ILP32D-NEXT:    fld fs10, 168(sp) # 8-byte Folded Reload
+; ILP32D-NEXT:    fld fs11, 160(sp) # 8-byte Folded Reload
 ; ILP32D-NEXT:    addi sp, sp, 272
 ; ILP32D-NEXT:    ret
 ;
@@ -915,21 +915,21 @@ define void @caller() nounwind {
 ; LP64D-NEXT:    fsd ft0, %lo(var+8)(s0)
 ; LP64D-NEXT:    fld ft0, 160(sp) # 8-byte Folded Reload
 ; LP64D-NEXT:    fsd ft0, %lo(var)(s0)
-; LP64D-NEXT:    fld fs11, 168(sp) # 8-byte Folded Reload
-; LP64D-NEXT:    fld fs10, 176(sp) # 8-byte Folded Reload
-; LP64D-NEXT:    fld fs9, 184(sp) # 8-byte Folded Reload
-; LP64D-NEXT:    fld fs8, 192(sp) # 8-byte Folded Reload
-; LP64D-NEXT:    fld fs7, 200(sp) # 8-byte Folded Reload
-; LP64D-NEXT:    fld fs6, 208(sp) # 8-byte Folded Reload
-; LP64D-NEXT:    fld fs5, 216(sp) # 8-byte Folded Reload
-; LP64D-NEXT:    fld fs4, 224(sp) # 8-byte Folded Reload
-; LP64D-NEXT:    fld fs3, 232(sp) # 8-byte Folded Reload
-; LP64D-NEXT:    fld fs2, 240(sp) # 8-byte Folded Reload
-; LP64D-NEXT:    fld fs1, 248(sp) # 8-byte Folded Reload
-; LP64D-NEXT:    fld fs0, 256(sp) # 8-byte Folded Reload
-; LP64D-NEXT:    ld s1, 264(sp) # 8-byte Folded Reload
-; LP64D-NEXT:    ld s0, 272(sp) # 8-byte Folded Reload
 ; LP64D-NEXT:    ld ra, 280(sp) # 8-byte Folded Reload
+; LP64D-NEXT:    ld s0, 272(sp) # 8-byte Folded Reload
+; LP64D-NEXT:    ld s1, 264(sp) # 8-byte Folded Reload
+; LP64D-NEXT:    fld fs0, 256(sp) # 8-byte Folded Reload
+; LP64D-NEXT:    fld fs1, 248(sp) # 8-byte Folded Reload
+; LP64D-NEXT:    fld fs2, 240(sp) # 8-byte Folded Reload
+; LP64D-NEXT:    fld fs3, 232(sp) # 8-byte Folded Reload
+; LP64D-NEXT:    fld fs4, 224(sp) # 8-byte Folded Reload
+; LP64D-NEXT:    fld fs5, 216(sp) # 8-byte Folded Reload
+; LP64D-NEXT:    fld fs6, 208(sp) # 8-byte Folded Reload
+; LP64D-NEXT:    fld fs7, 200(sp) # 8-byte Folded Reload
+; LP64D-NEXT:    fld fs8, 192(sp) # 8-byte Folded Reload
+; LP64D-NEXT:    fld fs9, 184(sp) # 8-byte Folded Reload
+; LP64D-NEXT:    fld fs10, 176(sp) # 8-byte Folded Reload
+; LP64D-NEXT:    fld fs11, 168(sp) # 8-byte Folded Reload
 ; LP64D-NEXT:    addi sp, sp, 288
 ; LP64D-NEXT:    ret
   %val = load [32 x double], [32 x double]* @var

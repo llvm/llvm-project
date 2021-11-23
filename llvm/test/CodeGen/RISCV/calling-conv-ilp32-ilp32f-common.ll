@@ -28,8 +28,8 @@ define i32 @callee_double_in_regs(i32 %a, double %b) nounwind {
 ; RV32I-FPELIM-NEXT:    mv a1, a2
 ; RV32I-FPELIM-NEXT:    call __fixdfsi@plt
 ; RV32I-FPELIM-NEXT:    add a0, s0, a0
-; RV32I-FPELIM-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
 ; RV32I-FPELIM-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32I-FPELIM-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
 ; RV32I-FPELIM-NEXT:    addi sp, sp, 16
 ; RV32I-FPELIM-NEXT:    ret
 ;
@@ -45,9 +45,9 @@ define i32 @callee_double_in_regs(i32 %a, double %b) nounwind {
 ; RV32I-WITHFP-NEXT:    mv a1, a2
 ; RV32I-WITHFP-NEXT:    call __fixdfsi@plt
 ; RV32I-WITHFP-NEXT:    add a0, s1, a0
-; RV32I-WITHFP-NEXT:    lw s1, 4(sp) # 4-byte Folded Reload
-; RV32I-WITHFP-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
 ; RV32I-WITHFP-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32I-WITHFP-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
+; RV32I-WITHFP-NEXT:    lw s1, 4(sp) # 4-byte Folded Reload
 ; RV32I-WITHFP-NEXT:    addi sp, sp, 16
 ; RV32I-WITHFP-NEXT:    ret
   %b_fptosi = fptosi double %b to i32
@@ -78,8 +78,8 @@ define i32 @caller_double_in_regs() nounwind {
 ; RV32I-WITHFP-NEXT:    lui a2, 262144
 ; RV32I-WITHFP-NEXT:    li a1, 0
 ; RV32I-WITHFP-NEXT:    call callee_double_in_regs@plt
-; RV32I-WITHFP-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
 ; RV32I-WITHFP-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32I-WITHFP-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
 ; RV32I-WITHFP-NEXT:    addi sp, sp, 16
 ; RV32I-WITHFP-NEXT:    ret
   %1 = call i32 @callee_double_in_regs(i32 1, double 2.0)
@@ -121,8 +121,8 @@ define i32 @callee_aligned_stack(i32 %a, i32 %b, fp128 %c, i32 %d, i32 %e, i64 %
 ; RV32I-WITHFP-NEXT:    add a0, a0, a3
 ; RV32I-WITHFP-NEXT:    add a0, a0, a4
 ; RV32I-WITHFP-NEXT:    add a0, a0, a1
-; RV32I-WITHFP-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
 ; RV32I-WITHFP-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32I-WITHFP-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
 ; RV32I-WITHFP-NEXT:    addi sp, sp, 16
 ; RV32I-WITHFP-NEXT:    ret
   %1 = bitcast fp128 %c to i128
@@ -227,8 +227,8 @@ define void @caller_aligned_stack() nounwind {
 ; RV32I-WITHFP-NEXT:    li a7, 14
 ; RV32I-WITHFP-NEXT:    sw t0, -32(s0)
 ; RV32I-WITHFP-NEXT:    call callee_aligned_stack@plt
-; RV32I-WITHFP-NEXT:    lw s0, 56(sp) # 4-byte Folded Reload
 ; RV32I-WITHFP-NEXT:    lw ra, 60(sp) # 4-byte Folded Reload
+; RV32I-WITHFP-NEXT:    lw s0, 56(sp) # 4-byte Folded Reload
 ; RV32I-WITHFP-NEXT:    addi sp, sp, 64
 ; RV32I-WITHFP-NEXT:    ret
   %1 = call i32 @callee_aligned_stack(i32 1, i32 11,
@@ -253,8 +253,8 @@ define double @callee_small_scalar_ret() nounwind {
 ; RV32I-WITHFP-NEXT:    addi s0, sp, 16
 ; RV32I-WITHFP-NEXT:    lui a1, 261888
 ; RV32I-WITHFP-NEXT:    li a0, 0
-; RV32I-WITHFP-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
 ; RV32I-WITHFP-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32I-WITHFP-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
 ; RV32I-WITHFP-NEXT:    addi sp, sp, 16
 ; RV32I-WITHFP-NEXT:    ret
   ret double 1.0
@@ -277,8 +277,8 @@ define i64 @caller_small_scalar_ret() nounwind {
 ; RV32I-WITHFP-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
 ; RV32I-WITHFP-NEXT:    addi s0, sp, 16
 ; RV32I-WITHFP-NEXT:    call callee_small_scalar_ret@plt
-; RV32I-WITHFP-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
 ; RV32I-WITHFP-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32I-WITHFP-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
 ; RV32I-WITHFP-NEXT:    addi sp, sp, 16
 ; RV32I-WITHFP-NEXT:    ret
   %1 = call double @callee_small_scalar_ret()

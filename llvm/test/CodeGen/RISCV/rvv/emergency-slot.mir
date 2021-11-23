@@ -163,19 +163,19 @@ body:             |
   ; CHECK-NEXT:   $x10 = frame-destroy ADDIW killed $x10, -1792
   ; CHECK-NEXT:   $x2 = frame-destroy SUB $x8, killed $x10
   ; CHECK-NEXT:   $x2 = frame-destroy ADDI $x2, 272
-  ; CHECK-NEXT:   $x27 = LD $x2, 1928 :: (load (s64) from %stack.15)
-  ; CHECK-NEXT:   $x26 = LD $x2, 1936 :: (load (s64) from %stack.14)
-  ; CHECK-NEXT:   $x25 = LD $x2, 1944 :: (load (s64) from %stack.13)
-  ; CHECK-NEXT:   $x24 = LD $x2, 1952 :: (load (s64) from %stack.12)
-  ; CHECK-NEXT:   $x23 = LD $x2, 1960 :: (load (s64) from %stack.11)
-  ; CHECK-NEXT:   $x22 = LD $x2, 1968 :: (load (s64) from %stack.10)
-  ; CHECK-NEXT:   $x21 = LD $x2, 1976 :: (load (s64) from %stack.9)
-  ; CHECK-NEXT:   $x20 = LD $x2, 1984 :: (load (s64) from %stack.8)
-  ; CHECK-NEXT:   $x19 = LD $x2, 1992 :: (load (s64) from %stack.7)
-  ; CHECK-NEXT:   $x18 = LD $x2, 2000 :: (load (s64) from %stack.6)
-  ; CHECK-NEXT:   $x9 = LD $x2, 2008 :: (load (s64) from %stack.5)
-  ; CHECK-NEXT:   $x8 = LD $x2, 2016 :: (load (s64) from %stack.4)
   ; CHECK-NEXT:   $x1 = LD $x2, 2024 :: (load (s64) from %stack.3)
+  ; CHECK-NEXT:   $x8 = LD $x2, 2016 :: (load (s64) from %stack.4)
+  ; CHECK-NEXT:   $x9 = LD $x2, 2008 :: (load (s64) from %stack.5)
+  ; CHECK-NEXT:   $x18 = LD $x2, 2000 :: (load (s64) from %stack.6)
+  ; CHECK-NEXT:   $x19 = LD $x2, 1992 :: (load (s64) from %stack.7)
+  ; CHECK-NEXT:   $x20 = LD $x2, 1984 :: (load (s64) from %stack.8)
+  ; CHECK-NEXT:   $x21 = LD $x2, 1976 :: (load (s64) from %stack.9)
+  ; CHECK-NEXT:   $x22 = LD $x2, 1968 :: (load (s64) from %stack.10)
+  ; CHECK-NEXT:   $x23 = LD $x2, 1960 :: (load (s64) from %stack.11)
+  ; CHECK-NEXT:   $x24 = LD $x2, 1952 :: (load (s64) from %stack.12)
+  ; CHECK-NEXT:   $x25 = LD $x2, 1944 :: (load (s64) from %stack.13)
+  ; CHECK-NEXT:   $x26 = LD $x2, 1936 :: (load (s64) from %stack.14)
+  ; CHECK-NEXT:   $x27 = LD $x2, 1928 :: (load (s64) from %stack.15)
   ; CHECK-NEXT:   $x2 = frame-destroy ADDI $x2, 2032
   ; CHECK-NEXT:   PseudoRET
   bb.0:

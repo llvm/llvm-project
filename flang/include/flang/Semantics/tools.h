@@ -111,7 +111,6 @@ bool IsInitialized(const Symbol &, bool ignoreDATAstatements = false);
 bool IsDestructible(const Symbol &, const Symbol *derivedType = nullptr);
 bool HasIntrinsicTypeName(const Symbol &);
 bool IsSeparateModuleProcedureInterface(const Symbol *);
-bool IsAutomatic(const Symbol &);
 bool HasAlternateReturns(const Symbol &);
 bool InCommonBlock(const Symbol &);
 
@@ -165,9 +164,7 @@ bool IsFinalizable(
 bool IsFinalizable(
     const DerivedTypeSpec &, std::set<const DerivedTypeSpec *> * = nullptr);
 bool HasImpureFinal(const DerivedTypeSpec &);
-bool IsCoarray(const Symbol &);
 bool IsInBlankCommon(const Symbol &);
-bool IsAutomaticObject(const Symbol &);
 inline bool IsAssumedSizeArray(const Symbol &symbol) {
   const auto *details{symbol.detailsIf<ObjectEntityDetails>()};
   return details && details->IsAssumedSize();

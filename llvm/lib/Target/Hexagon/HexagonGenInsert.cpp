@@ -942,12 +942,11 @@ void HexagonGenInsert::collectInBlock(MachineBasicBlock *B,
   // can remove them from the list of available registers once all DT
   // successors have been processed.
   RegisterSet BlockDefs, InsDefs;
-  for (MachineBasicBlock::iterator I = B->begin(), E = B->end(); I != E; ++I) {
-    MachineInstr *MI = &*I;
+  for (MachineInstr &MI : *B) {
     InsDefs.clear();
-    getInstrDefs(MI, InsDefs);
+    getInstrDefs(&MI, InsDefs);
     // Leave those alone. They are more transparent than "insert".
-    bool Skip = MI->isCopy() || MI->isRegSequence();
+    bool Skip = MI.isCopy() || MI.isRegSequence();
 
     if (!Skip) {
       // Visit all defined registers, and attempt to find the corresponding
@@ -1501,7 +1500,7 @@ bool HexagonGenInsert::runOnMachineFunction(MachineFunction &MF) {
   bool Timing = OptTiming, TimingDetail = Timing && OptTimingDetail;
   bool Changed = false;
 
-  // Sanity check: one, but not both.
+  // Verify: one, but not both.
   assert(!OptSelectAll0 || !OptSelectHas0);
 
   IFMap.clear();

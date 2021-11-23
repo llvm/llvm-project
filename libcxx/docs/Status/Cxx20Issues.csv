@@ -244,7 +244,7 @@
 "`3320 <https://wg21.link/LWG3320>`__","``span::cbegin/cend``\  methods produce different results than ``std::[ranges::]cbegin/cend``\ ","Prague","|Complete|",""
 "`3321 <https://wg21.link/LWG3321>`__","``uninitialized_construct_using_allocator``\  should use ``construct_at``\ ","Prague","",""
 "`3323 <https://wg21.link/LWG3323>`__","``*has-tuple-element*``\  helper concept needs ``convertible_to``\ ","Prague","","","|ranges|"
-"`3324 <https://wg21.link/LWG3324>`__","Special-case ``std::strong/weak/partial_order``\  for pointers","Prague","","","|spaceship|"
+"`3324 <https://wg21.link/LWG3324>`__","Special-case ``std::strong/weak/partial_order``\  for pointers","Prague","|Complete|","14.0","|spaceship|"
 "`3325 <https://wg21.link/LWG3325>`__","Constrain return type of transformation function for ``transform_view``\ ","Prague","","","|ranges|"
 "`3326 <https://wg21.link/LWG3326>`__","``enable_view``\  has false positives","Prague","|In progress|","","|ranges|"
 "`3327 <https://wg21.link/LWG3327>`__","Format alignment specifiers vs. text direction","Prague","|Nothing To Do|","","|format|"

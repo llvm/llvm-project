@@ -1,29 +1,18 @@
-"""
-Test lldb data formatter subsystem.
-"""
-
-
-
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
+USE_LIBSTDCPP = "USE_LIBSTDCPP"
+USE_LIBCPP = "USE_LIBCPP"
 
-class LibcxxOptionalDataFormatterTestCase(TestBase):
+class GenericOptionalDataFormatterTestCase(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    @add_test_categories(["libc++"])
-    ## Clang 7.0 is the oldest Clang that can reliably parse newer libc++ versions
-    ## with -std=c++17.
-    @skipIf(oslist=no_match(["macosx"]), compiler="clang", compiler_version=['<', '7.0'])
-    ## We are skipping gcc version less that 5.1 since this test requires -std=c++17
-    @skipIf(compiler="gcc", compiler_version=['<', '5.1'])
-
-    def test_with_run_command(self):
+    def do_test_with_run_command(self, stdlib_type):
         """Test that that file and class static variables display correctly."""
-        self.build()
+        self.build(dictionary={stdlib_type: "1"})
         self.runCmd("file " + self.getBuildArtifact("a.out"), CURRENT_EXECUTABLE_SET)
 
         bkpt = self.target().FindBreakpointByID(
@@ -45,7 +34,7 @@ class LibcxxOptionalDataFormatterTestCase(TestBase):
         ## detected we have a sufficient libc++ version to support optional
         ## false means we do not and therefore should skip the test
         if output.find("(bool) has_optional = false") != -1 :
-           self.skipTest( "Optional not supported" ) 
+           self.skipTest( "Optional not supported" )
 
         lldbutil.continue_to_breakpoint(self.process(), bkpt)
 
@@ -71,3 +60,21 @@ class LibcxxOptionalDataFormatterTestCase(TestBase):
                     substrs=['(optional_string) ostring =  Has Value=true  {',
                         'Value = "hello"',
                         '}'])
+
+    @add_test_categories(["libc++"])
+    ## Clang 7.0 is the oldest Clang that can reliably parse newer libc++ versions
+    ## with -std=c++17.
+    @skipIf(oslist=no_match(["macosx"]), compiler="clang", compiler_version=['<', '7.0'])
+    ## We are skipping gcc version less that 5.1 since this test requires -std=c++17
+    @skipIf(compiler="gcc", compiler_version=['<', '5.1'])
+    def test_with_run_command_libcpp(self):
+        self.do_test_with_run_command(USE_LIBCPP)
+
+    @add_test_categories(["libstdcxx"])
+    ## Clang 7.0 is the oldest Clang that can reliably parse newer libc++ versions
+    ## with -std=c++17.
+    @skipIf(compiler="clang", compiler_version=['<', '7.0'])
+    ## We are skipping gcc version less that 5.1 since this test requires -std=c++17
+    @skipIf(compiler="gcc", compiler_version=['<', '5.1'])
+    def test_with_run_command_libstdcpp(self):
+        self.do_test_with_run_command(USE_LIBSTDCPP)

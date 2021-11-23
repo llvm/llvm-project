@@ -303,15 +303,15 @@ static bool TryFastPathRealInput(
   for (; p < limit && (*p == ' ' || *p == '\t'); ++p) {
   }
   if (edit.descriptor == DataEdit::ListDirectedImaginaryPart) {
-    // Need a trailing ')'
+    // Need to consume a trailing ')' and any white space after
     if (p >= limit || *p != ')') {
       return false;
     }
-    for (++ ++p; p < limit && (*p == ' ' || *p == '\t'); ++p) {
+    for (++p; p < limit && (*p == ' ' || *p == '\t'); ++p) {
     }
   }
-  if (p < limit) {
-    return false; // unconverted characters remain in field
+  if (edit.width && p < str + *edit.width) {
+    return false; // unconverted characters remain in fixed width field
   }
   // Success on the fast path!
   // TODO: raise converted.flags as exceptions?
