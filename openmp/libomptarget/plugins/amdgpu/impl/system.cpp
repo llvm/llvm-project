@@ -381,7 +381,7 @@ static hsa_status_t get_code_object_custom_metadata(
       return HSA_STATUS_ERROR_INVALID_CODE_OBJECT;
     }
 
-    atl_kernel_info_t info = {0, 0, 0, 0, 0, 0, 0, 0, 0};
+    atl_kernel_info_t info = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 
     uint64_t sgpr_count, vgpr_count, sgpr_spill_count, vgpr_spill_count;
     msgpack_errors += map_lookup_uint64_t(element, ".sgpr_count", &sgpr_count);
@@ -446,8 +446,6 @@ static hsa_status_t get_code_object_custom_metadata(
         return HSA_STATUS_ERROR_INVALID_CODE_OBJECT;
       }
 
-      info.num_args = argsSize;
-
       for (size_t i = 0; i < argsSize; ++i) {
         KernelArgMD lcArg;
 
@@ -476,8 +474,10 @@ static hsa_status_t get_code_object_custom_metadata(
         // check if the arg is a hidden/implicit arg
         // this logic assumes that all hidden args are 8-byte aligned
         if (!isImplicit(lcArg.valueKind_)) {
+          info.explicit_argument_count++;
           kernel_explicit_args_size += lcArg.size_;
         } else {
+          info.implicit_argument_count++;
           hasHiddenArgs = true;
         }
         kernel_explicit_args_size += padding;

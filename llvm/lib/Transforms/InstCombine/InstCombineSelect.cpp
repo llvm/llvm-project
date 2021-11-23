@@ -246,12 +246,16 @@ static Value *foldSelectICmpAnd(SelectInst &Sel, ICmpInst *Cmp,
 static unsigned getSelectFoldableOperands(BinaryOperator *I) {
   switch (I->getOpcode()) {
   case Instruction::Add:
+  case Instruction::FAdd:
   case Instruction::Mul:
+  case Instruction::FMul:
   case Instruction::And:
   case Instruction::Or:
   case Instruction::Xor:
     return 3;              // Can fold through either operand.
   case Instruction::Sub:   // Can only fold on the amount subtracted.
+  case Instruction::FSub:
+  case Instruction::FDiv:  // Can only fold on the divisor amount.
   case Instruction::Shl:   // Can only fold on the shift amount.
   case Instruction::LShr:
   case Instruction::AShr:

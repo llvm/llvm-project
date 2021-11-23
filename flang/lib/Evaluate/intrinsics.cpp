@@ -281,7 +281,7 @@ static const IntrinsicInterface genericIntrinsicFunction[]{
     {"acosh", {{"x", SameFloating}}, SameFloating},
     {"adjustl", {{"string", SameChar}}, SameChar},
     {"adjustr", {{"string", SameChar}}, SameChar},
-    {"aimag", {{"x", SameComplex}}, SameReal},
+    {"aimag", {{"z", SameComplex}}, SameReal},
     {"aint", {{"a", SameReal}, MatchingDefaultKIND}, KINDReal},
     {"all", {{"mask", SameLogical, Rank::array}, OptionalDIM}, SameLogical,
         Rank::dimReduced, IntrinsicClass::transformationalFunction},
