@@ -25,9 +25,9 @@ define void @quux(i32 signext %arg, i32 signext %arg1) nounwind {
 ; RV64I-NEXT:    addiw s1, s1, 1
 ; RV64I-NEXT:    bne s1, s0, .LBB0_2
 ; RV64I-NEXT:  .LBB0_3: # %bb6
-; RV64I-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 32
 ; RV64I-NEXT:    ret
 bb:

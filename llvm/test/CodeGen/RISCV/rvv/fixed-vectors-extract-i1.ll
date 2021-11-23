@@ -176,8 +176,8 @@ define i1 @extractelt_v256i1(<256 x i8>* %x, i64 %idx) nounwind {
 ; RV32-NEXT:    vse8.v v8, (a1)
 ; RV32-NEXT:    lb a0, 0(a0)
 ; RV32-NEXT:    addi sp, s0, -512
-; RV32-NEXT:    lw s0, 504(sp) # 4-byte Folded Reload
 ; RV32-NEXT:    lw ra, 508(sp) # 4-byte Folded Reload
+; RV32-NEXT:    lw s0, 504(sp) # 4-byte Folded Reload
 ; RV32-NEXT:    addi sp, sp, 512
 ; RV32-NEXT:    ret
 ;
@@ -208,8 +208,8 @@ define i1 @extractelt_v256i1(<256 x i8>* %x, i64 %idx) nounwind {
 ; RV64-NEXT:    vse8.v v8, (a1)
 ; RV64-NEXT:    lb a0, 0(a0)
 ; RV64-NEXT:    addi sp, s0, -512
-; RV64-NEXT:    ld s0, 496(sp) # 8-byte Folded Reload
 ; RV64-NEXT:    ld ra, 504(sp) # 8-byte Folded Reload
+; RV64-NEXT:    ld s0, 496(sp) # 8-byte Folded Reload
 ; RV64-NEXT:    addi sp, sp, 512
 ; RV64-NEXT:    ret
   %a = load <256 x i8>, <256 x i8>* %x

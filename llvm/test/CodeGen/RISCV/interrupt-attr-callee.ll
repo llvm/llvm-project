@@ -22,8 +22,8 @@ define dso_local void @handler() nounwind {
 ; CHECK-RV32-NEXT:    mv s0, a0
 ; CHECK-RV32-NEXT:    call callee@plt
 ; CHECK-RV32-NEXT:    mv a0, s0
-; CHECK-RV32-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
 ; CHECK-RV32-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; CHECK-RV32-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
 ; CHECK-RV32-NEXT:    addi sp, sp, 16
 ; CHECK-RV32-NEXT:    tail write@plt
 ;
@@ -38,8 +38,8 @@ define dso_local void @handler() nounwind {
 ; CHECK-RV32-F-NEXT:    mv s0, a0
 ; CHECK-RV32-F-NEXT:    call callee@plt
 ; CHECK-RV32-F-NEXT:    mv a0, s0
-; CHECK-RV32-F-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
 ; CHECK-RV32-F-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; CHECK-RV32-F-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
 ; CHECK-RV32-F-NEXT:    addi sp, sp, 16
 ; CHECK-RV32-F-NEXT:    tail write@plt
 ;
@@ -54,8 +54,8 @@ define dso_local void @handler() nounwind {
 ; CHECK-RV32-FD-NEXT:    mv s0, a0
 ; CHECK-RV32-FD-NEXT:    call callee@plt
 ; CHECK-RV32-FD-NEXT:    mv a0, s0
-; CHECK-RV32-FD-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
 ; CHECK-RV32-FD-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; CHECK-RV32-FD-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
 ; CHECK-RV32-FD-NEXT:    addi sp, sp, 16
 ; CHECK-RV32-FD-NEXT:    tail write@plt
 entry:

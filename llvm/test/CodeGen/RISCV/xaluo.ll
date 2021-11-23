@@ -959,10 +959,10 @@ define zeroext i1 @smulo.i64(i64 %v1, i64 %v2, i64* %res) {
 ; RV32-NEXT:    sw a0, 0(a4)
 ; RV32-NEXT:    sw a6, 4(a4)
 ; RV32-NEXT:    mv a0, a1
-; RV32-NEXT:    lw s3, 0(sp) # 4-byte Folded Reload
-; RV32-NEXT:    lw s2, 4(sp) # 4-byte Folded Reload
-; RV32-NEXT:    lw s1, 8(sp) # 4-byte Folded Reload
 ; RV32-NEXT:    lw s0, 12(sp) # 4-byte Folded Reload
+; RV32-NEXT:    lw s1, 8(sp) # 4-byte Folded Reload
+; RV32-NEXT:    lw s2, 4(sp) # 4-byte Folded Reload
+; RV32-NEXT:    lw s3, 0(sp) # 4-byte Folded Reload
 ; RV32-NEXT:    addi sp, sp, 16
 ; RV32-NEXT:    ret
 ;
@@ -1036,10 +1036,10 @@ define zeroext i1 @smulo.i64(i64 %v1, i64 %v2, i64* %res) {
 ; RV32ZBA-NEXT:    sw a0, 0(a4)
 ; RV32ZBA-NEXT:    sw a6, 4(a4)
 ; RV32ZBA-NEXT:    mv a0, a1
-; RV32ZBA-NEXT:    lw s3, 0(sp) # 4-byte Folded Reload
-; RV32ZBA-NEXT:    lw s2, 4(sp) # 4-byte Folded Reload
-; RV32ZBA-NEXT:    lw s1, 8(sp) # 4-byte Folded Reload
 ; RV32ZBA-NEXT:    lw s0, 12(sp) # 4-byte Folded Reload
+; RV32ZBA-NEXT:    lw s1, 8(sp) # 4-byte Folded Reload
+; RV32ZBA-NEXT:    lw s2, 4(sp) # 4-byte Folded Reload
+; RV32ZBA-NEXT:    lw s3, 0(sp) # 4-byte Folded Reload
 ; RV32ZBA-NEXT:    addi sp, sp, 16
 ; RV32ZBA-NEXT:    ret
 ;
@@ -2393,9 +2393,9 @@ define i64 @smulo.select.i64(i64 %v1, i64 %v2) {
 ; RV32-NEXT:    mv a0, a2
 ; RV32-NEXT:    mv a1, a3
 ; RV32-NEXT:  .LBB44_2: # %entry
-; RV32-NEXT:    lw s2, 4(sp) # 4-byte Folded Reload
-; RV32-NEXT:    lw s1, 8(sp) # 4-byte Folded Reload
 ; RV32-NEXT:    lw s0, 12(sp) # 4-byte Folded Reload
+; RV32-NEXT:    lw s1, 8(sp) # 4-byte Folded Reload
+; RV32-NEXT:    lw s2, 4(sp) # 4-byte Folded Reload
 ; RV32-NEXT:    addi sp, sp, 16
 ; RV32-NEXT:    ret
 ;
@@ -2468,9 +2468,9 @@ define i64 @smulo.select.i64(i64 %v1, i64 %v2) {
 ; RV32ZBA-NEXT:    mv a0, a2
 ; RV32ZBA-NEXT:    mv a1, a3
 ; RV32ZBA-NEXT:  .LBB44_2: # %entry
-; RV32ZBA-NEXT:    lw s2, 4(sp) # 4-byte Folded Reload
-; RV32ZBA-NEXT:    lw s1, 8(sp) # 4-byte Folded Reload
 ; RV32ZBA-NEXT:    lw s0, 12(sp) # 4-byte Folded Reload
+; RV32ZBA-NEXT:    lw s1, 8(sp) # 4-byte Folded Reload
+; RV32ZBA-NEXT:    lw s2, 4(sp) # 4-byte Folded Reload
 ; RV32ZBA-NEXT:    addi sp, sp, 16
 ; RV32ZBA-NEXT:    ret
 ;
@@ -2546,9 +2546,9 @@ define i1 @smulo.not.i64(i64 %v1, i64 %v2) {
 ; RV32-NEXT:    xor a1, t6, a1
 ; RV32-NEXT:    or a0, a1, a0
 ; RV32-NEXT:    seqz a0, a0
-; RV32-NEXT:    lw s2, 4(sp) # 4-byte Folded Reload
-; RV32-NEXT:    lw s1, 8(sp) # 4-byte Folded Reload
 ; RV32-NEXT:    lw s0, 12(sp) # 4-byte Folded Reload
+; RV32-NEXT:    lw s1, 8(sp) # 4-byte Folded Reload
+; RV32-NEXT:    lw s2, 4(sp) # 4-byte Folded Reload
 ; RV32-NEXT:    addi sp, sp, 16
 ; RV32-NEXT:    ret
 ;
@@ -2615,9 +2615,9 @@ define i1 @smulo.not.i64(i64 %v1, i64 %v2) {
 ; RV32ZBA-NEXT:    xor a1, t6, a1
 ; RV32ZBA-NEXT:    or a0, a1, a0
 ; RV32ZBA-NEXT:    seqz a0, a0
-; RV32ZBA-NEXT:    lw s2, 4(sp) # 4-byte Folded Reload
-; RV32ZBA-NEXT:    lw s1, 8(sp) # 4-byte Folded Reload
 ; RV32ZBA-NEXT:    lw s0, 12(sp) # 4-byte Folded Reload
+; RV32ZBA-NEXT:    lw s1, 8(sp) # 4-byte Folded Reload
+; RV32ZBA-NEXT:    lw s2, 4(sp) # 4-byte Folded Reload
 ; RV32ZBA-NEXT:    addi sp, sp, 16
 ; RV32ZBA-NEXT:    ret
 ;
@@ -3534,9 +3534,9 @@ define zeroext i1 @smulo.br.i64(i64 %v1, i64 %v2) {
 ; RV32-NEXT:  .LBB59_2: # %continue
 ; RV32-NEXT:    li a0, 1
 ; RV32-NEXT:  .LBB59_3: # %overflow
-; RV32-NEXT:    lw s2, 4(sp) # 4-byte Folded Reload
-; RV32-NEXT:    lw s1, 8(sp) # 4-byte Folded Reload
 ; RV32-NEXT:    lw s0, 12(sp) # 4-byte Folded Reload
+; RV32-NEXT:    lw s1, 8(sp) # 4-byte Folded Reload
+; RV32-NEXT:    lw s2, 4(sp) # 4-byte Folded Reload
 ; RV32-NEXT:    addi sp, sp, 16
 ; RV32-NEXT:    ret
 ;
@@ -3613,9 +3613,9 @@ define zeroext i1 @smulo.br.i64(i64 %v1, i64 %v2) {
 ; RV32ZBA-NEXT:  .LBB59_2: # %continue
 ; RV32ZBA-NEXT:    li a0, 1
 ; RV32ZBA-NEXT:  .LBB59_3: # %overflow
-; RV32ZBA-NEXT:    lw s2, 4(sp) # 4-byte Folded Reload
-; RV32ZBA-NEXT:    lw s1, 8(sp) # 4-byte Folded Reload
 ; RV32ZBA-NEXT:    lw s0, 12(sp) # 4-byte Folded Reload
+; RV32ZBA-NEXT:    lw s1, 8(sp) # 4-byte Folded Reload
+; RV32ZBA-NEXT:    lw s2, 4(sp) # 4-byte Folded Reload
 ; RV32ZBA-NEXT:    addi sp, sp, 16
 ; RV32ZBA-NEXT:    ret
 ;

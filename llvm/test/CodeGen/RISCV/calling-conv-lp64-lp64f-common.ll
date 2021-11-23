@@ -19,8 +19,8 @@ define i64 @callee_double_in_regs(i64 %a, double %b) nounwind {
 ; RV64I-NEXT:    mv a0, a1
 ; RV64I-NEXT:    call __fixdfdi@plt
 ; RV64I-NEXT:    add a0, s0, a0
-; RV64I-NEXT:    ld s0, 0(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s0, 0(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
   %b_fptosi = fptosi double %b to i64

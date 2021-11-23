@@ -37,9 +37,9 @@ define void @caller(i1* %p) personality i8* bitcast (i32 (...)* @__gxx_personali
 ; RV32I-NEXT:    call foo@plt
 ; RV32I-NEXT:  .Ltmp3:
 ; RV32I-NEXT:  .LBB0_3: # %end2
-; RV32I-NEXT:    lw s1, 4(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s1, 4(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
 ; RV32I-NEXT:  .LBB0_4: # %lpad
@@ -74,9 +74,9 @@ define void @caller(i1* %p) personality i8* bitcast (i32 (...)* @__gxx_personali
 ; RV64I-NEXT:    call foo@plt
 ; RV64I-NEXT:  .Ltmp3:
 ; RV64I-NEXT:  .LBB0_3: # %end2
-; RV64I-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 32
 ; RV64I-NEXT:    ret
 ; RV64I-NEXT:  .LBB0_4: # %lpad
