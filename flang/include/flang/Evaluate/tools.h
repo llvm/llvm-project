@@ -1050,6 +1050,7 @@ bool IsFunction(const Scope &);
 bool IsProcedure(const Symbol &);
 bool IsProcedure(const Scope &);
 bool IsProcedurePointer(const Symbol &);
+bool IsAutomatic(const Symbol &);
 bool IsSaved(const Symbol &); // saved implicitly or explicitly
 bool IsDummy(const Symbol &);
 bool IsFunctionResult(const Symbol &);
