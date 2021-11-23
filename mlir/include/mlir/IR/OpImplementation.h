@@ -907,6 +907,10 @@ public:
   virtual Operation *parseGenericOperation(Block *insertBlock,
                                            Block::iterator insertPt) = 0;
 
+  /// Parse the name of an operation, in the custom form. On success, return a
+  /// an object of type 'OperationName'. Otherwise, failure is returned.
+  virtual FailureOr<OperationName> parseCustomOperationName() = 0;
+
   //===--------------------------------------------------------------------===//
   // Operand Parsing
   //===--------------------------------------------------------------------===//
@@ -917,6 +921,20 @@ public:
     StringRef name;       // Value name, e.g. %42 or %abc
     unsigned number;      // Number, e.g. 12 for an operand like %xyz#12
   };
+
+  /// Parse different components, viz., use-info of operand(s), successor(s),
+  /// region(s), attribute(s) and function-type, of the generic form of an
+  /// operation instance and populate the input operation-state 'result' with
+  /// those components. If any of the components is explicitly provided, then
+  /// skip parsing that component.
+  virtual ParseResult parseGenericOperationAfterOpName(
+      OperationState &result,
+      Optional<ArrayRef<OperandType>> parsedOperandType = llvm::None,
+      Optional<ArrayRef<Block *>> parsedSuccessors = llvm::None,
+      Optional<MutableArrayRef<std::unique_ptr<Region>>> parsedRegions =
+          llvm::None,
+      Optional<ArrayRef<NamedAttribute>> parsedAttributes = llvm::None,
+      Optional<FunctionType> parsedFnType = llvm::None) = 0;
 
   /// Parse a single operand.
   virtual ParseResult parseOperand(OperandType &result) = 0;
