@@ -9358,9 +9358,6 @@ AMDGPUTargetCodeGenInfo::getLLVMSyncScopeID(const LangOptions &LangOpts,
   case SyncScope::OpenCLAllSVMDevices:
     Name = "";
     break;
-  default:
-    assert(false && "NOT IMPLEMENTED");
-    break;
   }
 
   if (Ordering != llvm::AtomicOrdering::SequentiallyConsistent) {
