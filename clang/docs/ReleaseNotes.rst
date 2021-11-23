@@ -187,7 +187,6 @@ X86 Support in Clang
 --------------------
 
 - Support for ``AVX512-FP16`` instructions has been added.
-- Support for ``_Float16`` type has been added.
 
 Arm and AArch64 Support in Clang
 --------------------------------
