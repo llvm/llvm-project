@@ -78,8 +78,8 @@ bb:
   ret { i64, i1 } %umulo
 }
 
-define { i64, i1 } @smulo_i64_s_s(i64 %x, i64 %y) {
-; SI-LABEL: smulo_i64_s_s:
+define { i64, i1 } @smulo_i64_v_v(i64 %x, i64 %y) {
+; SI-LABEL: smulo_i64_v_v:
 ; SI:       ; %bb.0: ; %bb
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SI-NEXT:    v_mul_hi_u32 v6, v1, v2
@@ -116,7 +116,7 @@ define { i64, i1 } @smulo_i64_s_s(i64 %x, i64 %y) {
 ; SI-NEXT:    v_mov_b32_e32 v1, v5
 ; SI-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX9-LABEL: smulo_i64_s_s:
+; GFX9-LABEL: smulo_i64_v_v:
 ; GFX9:       ; %bb.0: ; %bb
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    v_mul_lo_u32 v5, v0, v3
@@ -151,7 +151,7 @@ define { i64, i1 } @smulo_i64_s_s(i64 %x, i64 %y) {
 ; GFX9-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX10-LABEL: smulo_i64_s_s:
+; GFX10-LABEL: smulo_i64_v_v:
 ; GFX10:       ; %bb.0: ; %bb
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
