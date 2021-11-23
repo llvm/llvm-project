@@ -297,6 +297,11 @@ struct BufferizationState {
 /// bufferization is necessary.
 Value getResultBuffer(OpBuilder &b, OpResult result, BufferizationState &state);
 
+/// Bufferize the given op. If the op has no tensor OpOperands/OpResults, this
+/// function returns immediately. Otherwise, it calls the `bufferize` interface
+/// method of `BufferizableOpInterface`.
+LogicalResult bufferizeOp(Operation *op, BufferizationState &state);
+
 /// PostAnalysisSteps can be registered with `BufferizationOptions` and are
 /// executed after the analysis, but before bufferization. They can be used
 /// implement custom dialect-specific optimizations.

@@ -927,30 +927,6 @@ inPlaceAnalysisFuncOpBody(FuncOp funcOp, BufferizationAliasInfo &aliasInfo,
 // Bufferization entry-point for functions.
 //===----------------------------------------------------------------------===//
 
-LogicalResult
-mlir::linalg::comprehensive_bufferize::bufferizeOp(Operation *op,
-                                                   BufferizationState &state) {
-  OpBuilder b(op->getContext());
-
-  // Skip BufferCast and TensorLoad ops.
-  if (isa<memref::BufferCastOp, memref::TensorLoadOp>(op))
-    return success();
-
-  // Check if op has tensor results or operands.
-  auto isaTensor = [](Type t) { return t.isa<TensorType>(); };
-  bool hasTensorResult = any_of(op->getResultTypes(), isaTensor);
-  bool hasTensorOperand = any_of(op->getOperandTypes(), isaTensor);
-  if (!hasTensorResult && !hasTensorOperand)
-    return success();
-
-  // Bufferize using `BufferizableOpInterface`.
-  if (auto bufferizableOp = dyn_cast<BufferizableOpInterface>(op))
-    return bufferizableOp.bufferize(b, state);
-
-  // Other op with tensors. No bufferization method specified.
-  return op->emitError() << "unsupported op with tensors";
-}
-
 static LogicalResult bufferizeFuncOpInternals(FuncOp funcOp,
                                               BufferizationState &state) {
   LLVM_DEBUG(llvm::dbgs() << "\n\n");

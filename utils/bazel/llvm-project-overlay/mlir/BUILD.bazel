@@ -6299,6 +6299,7 @@ cc_library(
     deps = [
         ":BufferizableOpInterfaceIncGen",
         ":IR",
+        ":MemRefDialect",
         ":Support",
         "//llvm:Support",
     ],
