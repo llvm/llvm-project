@@ -564,6 +564,7 @@ public:
   /// This variant does not erase \p MI after calling the build function.
   void applyBuildFnNoErase(MachineInstr &MI, BuildFnTy &MatchInfo);
 
+  bool matchOrShiftToFunnelShift(MachineInstr &MI, BuildFnTy &MatchInfo);
   bool matchFunnelShiftToRotate(MachineInstr &MI);
   void applyFunnelShiftToRotate(MachineInstr &MI);
   bool matchRotateOutOfRange(MachineInstr &MI);
