@@ -829,20 +829,15 @@ define i64 @bitcast_int_scalar_cond(<2 x i1> %b, i64 %c, i64 %d) {
   ret i64 %r
 }
 
-; TODO:
 ; Peek through bitcasts and sexts to find negated bool condition.
 
 define <1 x i6> @bitcast_sext_cond(<2 x i1> %cmp, <1 x i6> %a, <1 x i6> %b) {
 ; CHECK-LABEL: @bitcast_sext_cond(
-; CHECK-NEXT:    [[SEXT:%.*]] = sext <2 x i1> [[CMP:%.*]] to <2 x i3>
-; CHECK-NEXT:    [[BC1:%.*]] = bitcast <2 x i3> [[SEXT]] to <1 x i6>
-; CHECK-NEXT:    [[NEG:%.*]] = xor <2 x i1> [[CMP]], <i1 true, i1 true>
-; CHECK-NEXT:    [[SEXT2:%.*]] = sext <2 x i1> [[NEG]] to <2 x i3>
-; CHECK-NEXT:    [[BC2:%.*]] = bitcast <2 x i3> [[SEXT2]] to <1 x i6>
-; CHECK-NEXT:    [[AND1:%.*]] = and <1 x i6> [[BC1]], [[A:%.*]]
-; CHECK-NEXT:    [[AND2:%.*]] = and <1 x i6> [[BC2]], [[B:%.*]]
-; CHECK-NEXT:    [[OR:%.*]] = or <1 x i6> [[AND1]], [[AND2]]
-; CHECK-NEXT:    ret <1 x i6> [[OR]]
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <1 x i6> [[A:%.*]] to <2 x i3>
+; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <1 x i6> [[B:%.*]] to <2 x i3>
+; CHECK-NEXT:    [[TMP3:%.*]] = select <2 x i1> [[CMP:%.*]], <2 x i3> [[TMP1]], <2 x i3> [[TMP2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <2 x i3> [[TMP3]] to <1 x i6>
+; CHECK-NEXT:    ret <1 x i6> [[TMP4]]
 ;
   %sext = sext <2 x i1> %cmp to <2 x i3>
   %bc1 = bitcast <2 x i3> %sext to <1 x i6>
@@ -855,7 +850,6 @@ define <1 x i6> @bitcast_sext_cond(<2 x i1> %cmp, <1 x i6> %a, <1 x i6> %b) {
   ret <1 x i6> %or
 }
 
-; TODO:
 ; Extra uses may prevent other transforms from creating the canonical patterns.
 
 define i8 @sext_cond_extra_uses(i1 %cmp, i8 %a, i8 %b) {
@@ -865,10 +859,8 @@ define i8 @sext_cond_extra_uses(i1 %cmp, i8 %a, i8 %b) {
 ; CHECK-NEXT:    call void @use(i8 [[SEXT1]])
 ; CHECK-NEXT:    [[SEXT2:%.*]] = sext i1 [[NEG]] to i8
 ; CHECK-NEXT:    call void @use(i8 [[SEXT2]])
-; CHECK-NEXT:    [[AND1:%.*]] = and i8 [[SEXT1]], [[A:%.*]]
-; CHECK-NEXT:    [[AND2:%.*]] = and i8 [[SEXT2]], [[B:%.*]]
-; CHECK-NEXT:    [[OR:%.*]] = or i8 [[AND1]], [[AND2]]
-; CHECK-NEXT:    ret i8 [[OR]]
+; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[CMP]], i8 [[A:%.*]], i8 [[B:%.*]]
+; CHECK-NEXT:    ret i8 [[TMP1]]
 ;
   %neg = xor i1 %cmp, -1
   %sext1 = sext i1 %cmp to i8
