@@ -35,6 +35,10 @@ class StdOptionalSynthProvider:
         return 0
 
     def get_child_at_index(self, index):
+        # some versions of libstdcpp have an additional _M_value child with the actual value
+        possible_value = self.value.GetChildMemberWithName('_M_value')
+        if possible_value.IsValid():
+            return possible_value.Clone('Value')
         return self.value.Clone('Value')
 
 """
