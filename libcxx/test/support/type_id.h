@@ -8,9 +8,7 @@
 #ifndef SUPPORT_TYPE_ID_H
 #define SUPPORT_TYPE_ID_H
 
-#include <functional>
 #include <string>
-#include <cstdio>
 #include <cassert>
 
 #include "test_macros.h"
@@ -68,22 +66,6 @@ struct ArgumentListID {};
 template <class ...Args>
 inline  TypeID const& makeArgumentID() {
   return makeTypeIDImp<ArgumentListID<Args...>>();
-}
-
-
-// COMPARE_TYPEID(...) is a utility macro for generating diagnostics when
-// two typeid's are expected to be equal
-#define COMPARE_TYPEID(LHS, RHS) CompareTypeIDVerbose(#LHS, LHS, #RHS, RHS)
-
-inline bool CompareTypeIDVerbose(const char* LHSString, TypeID const* LHS,
-                                 const char* RHSString, TypeID const* RHS) {
-  if (*LHS == *RHS)
-    return true;
-  std::printf("TypeID's not equal:\n");
-  std::printf("%s: %s\n----------\n%s: %s\n",
-              LHSString, LHS->name().c_str(),
-              RHSString, RHS->name().c_str());
-  return false;
 }
 
 #endif // SUPPORT_TYPE_ID_H
