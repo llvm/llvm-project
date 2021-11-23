@@ -4992,7 +4992,6 @@ cc_library(
         ":IR",
         ":Parser",
         ":Support",
-        "//llvm:AllTargetsAsmParsers",
         "//llvm:Support",
     ],
 )
@@ -5245,6 +5244,7 @@ cc_library(
         ":Support",
         ":ToLLVMIRTranslation",
         ":Translation",
+        "//llvm:AllTargetsAsmParsers",
         "//llvm:BitReader",
         "//llvm:BitWriter",
         "//llvm:Core",
