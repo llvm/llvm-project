@@ -846,6 +846,19 @@ void tools::gnutools::Assembler::ConstructJob(Compilation &C,
     mips::getMipsCPUAndABI(Args, getToolChain().getTriple(), CPUName, ABIName);
     ABIName = mips::getGnuCompatibleMipsABIName(ABIName);
 
+    // Use call-stub optimisation in the NanoMips assembler if optimising for
+    // code size.
+    if (getToolChain().getArch() == llvm::Triple::nanomips) {
+      if (Arg *A = Args.getLastArg(options::OPT_O_Group)) {
+        if (A->getOption().matches(options::OPT_O)) {
+          char C = A->getValue()[0];
+          if (C == 's' || C == 'z') {
+            CmdArgs.push_back("-mbalc-stubs");
+          }
+        }
+      }
+    }
+
     CmdArgs.push_back("-march");
     CmdArgs.push_back(CPUName.data());
 
