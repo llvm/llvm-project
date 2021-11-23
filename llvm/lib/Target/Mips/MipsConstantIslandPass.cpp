@@ -637,8 +637,8 @@ initializeFunctionInfo(const std::vector<MachineInstr*> &CPEMIs) {
   // has any inline assembly in it. If so, we have to be conservative about
   // alignment assumptions, as we don't know for sure the size of any
   // instructions in the inline assembly.
-  for (MachineFunction::iterator I = MF->begin(), E = MF->end(); I != E; ++I)
-    computeBlockSize(&*I);
+  for (MachineBasicBlock &MBB : *MF)
+    computeBlockSize(&MBB);
 
   // Compute block offsets.
   adjustBBOffsetsAfter(&MF->front());
@@ -1633,10 +1633,10 @@ MipsConstantIslands::fixupConditionalBr(ImmBranch &Br) {
 void MipsConstantIslands::prescanForConstants() {
   unsigned J = 0;
   (void)J;
-  for (MachineFunction::iterator B =
-         MF->begin(), E = MF->end(); B != E; ++B) {
-    for (MachineBasicBlock::instr_iterator I =
-        B->instr_begin(), EB = B->instr_end(); I != EB; ++I) {
+  for (MachineBasicBlock &B : *MF) {
+    for (MachineBasicBlock::instr_iterator I = B.instr_begin(),
+                                           EB = B.instr_end();
+         I != EB; ++I) {
       switch(I->getDesc().getOpcode()) {
         case Mips::LwConstant32: {
           PrescannedForConstants = true;
