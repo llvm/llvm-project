@@ -482,14 +482,20 @@ def Vector_ExtractElementOp :
      TypesMatchWith<"result type matches element type of vector operand",
                     "vector", "result",
                     "$_self.cast<ShapedType>().getElementType()">]>,
-    Arguments<(ins AnyVector:$vector, AnySignlessIntegerOrIndex:$position)>,
+    Arguments<(ins AnyVectorOfAnyRank:$vector,
+                   Optional<AnySignlessIntegerOrIndex>:$position)>,
     Results<(outs AnyType:$result)> {
   let summary = "extractelement operation";
   let description = [{
-    Takes an 1-D vector and a dynamic index position and extracts the
-    scalar at that position. Note that this instruction resembles
-    vector.extract, but is restricted to 1-D vectors and relaxed
-    to dynamic indices. It is meant to be closer to LLVM's version:
+    Takes a 0-D or 1-D vector and a optional dynamic index position and
+    extracts the scalar at that position.
+
+    Note that this instruction resembles vector.extract, but is restricted to
+    0-D and 1-D vectors and relaxed to dynamic indices.
+    If the vector is 0-D, the position must be llvm::None.
+
+
+    It is meant to be closer to LLVM's version:
     https://llvm.org/docs/LangRef.html#extractelement-instruction
 
     Example:
@@ -497,14 +503,18 @@ def Vector_ExtractElementOp :
     ```mlir
     %c = arith.constant 15 : i32
     %1 = vector.extractelement %0[%c : i32]: vector<16xf32>
+    %2 = vector.extractelement %z[]: vector<f32>
     ```
   }];
   let assemblyFormat = [{
-    $vector `[` $position `:` type($position) `]` attr-dict `:` type($vector)
+    $vector `[` ($position^ `:` type($position))? `]` attr-dict `:` type($vector)
   }];
 
   let builders = [
-    OpBuilder<(ins "Value":$source, "Value":$position)>
+    // 0-D builder.
+    OpBuilder<(ins "Value":$source)>,
+    // 1-D + position builder.
+    OpBuilder<(ins "Value":$source, "Value":$position)>,
   ];
   let extraClassDeclaration = [{
     VectorType getVectorType() {
