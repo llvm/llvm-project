@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/__support/CPP/Array.h"
+#include "src/__support/CPP/ArrayRef.h"
 #include "src/string/memory_utils/elements.h"
 #include "utils/UnitTest/Test.h"
 
@@ -50,11 +51,16 @@ char GetRandomChar() {
   return seed;
 }
 
-template <typename Element> using Buffer = cpp::Array<char, Element::kSize>;
-template <typename Element> Buffer<Element> GetRandomBuffer() {
-  Buffer<Element> buffer;
+void Randomize(cpp::MutableArrayRef<char> buffer) {
   for (auto &current : buffer)
     current = GetRandomChar();
+}
+
+template <typename Element> using Buffer = cpp::Array<char, Element::kSize>;
+
+template <typename Element> Buffer<Element> GetRandomBuffer() {
+  Buffer<Element> buffer;
+  Randomize(buffer);
   return buffer;
 }
 
@@ -64,6 +70,34 @@ TYPED_TEST(LlvmLibcMemoryElements, Copy, FixedSizeTypes) {
   Copy<ParamType>(Dst.data(), buffer.data());
   for (size_t i = 0; i < ParamType::kSize; ++i)
     EXPECT_EQ(Dst[i], buffer[i]);
+}
+
+template <typename T> T Copy(const T &Input) {
+  T Output;
+  for (size_t I = 0; I < Input.size(); ++I)
+    Output[I] = Input[I];
+  return Output;
+}
+
+TYPED_TEST(LlvmLibcMemoryElements, Move, FixedSizeTypes) {
+  constexpr size_t kSize = ParamType::kSize;
+  using LargeBuffer = cpp::Array<char, kSize * 2>;
+  LargeBuffer GroundTruth;
+  Randomize(GroundTruth);
+  // Forward, we move the kSize first bytes from offset 0 to kSize.
+  for (size_t Offset = 0; Offset < kSize; ++Offset) {
+    LargeBuffer Buffer = Copy(GroundTruth);
+    Move<ParamType>(&Buffer[Offset], &Buffer[0]);
+    for (size_t I = 0; I < kSize; ++I)
+      EXPECT_EQ(Buffer[I + Offset], GroundTruth[I]);
+  }
+  // Backward, we move the kSize last bytes from offset 0 to kSize.
+  for (size_t Offset = 0; Offset < kSize; ++Offset) {
+    LargeBuffer Buffer = Copy(GroundTruth);
+    Move<ParamType>(&Buffer[Offset], &Buffer[kSize]);
+    for (size_t I = 0; I < kSize; ++I)
+      EXPECT_EQ(Buffer[I + Offset], GroundTruth[kSize + I]);
+  }
 }
 
 TYPED_TEST(LlvmLibcMemoryElements, Equals, FixedSizeTypes) {
