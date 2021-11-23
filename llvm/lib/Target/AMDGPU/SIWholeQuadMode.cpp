@@ -497,8 +497,7 @@ char SIWholeQuadMode::scanInstructions(MachineFunction &MF,
     MachineBasicBlock &MBB = **BI;
     BlockInfo &BBI = Blocks[&MBB];
 
-    for (auto II = MBB.begin(), IE = MBB.end(); II != IE; ++II) {
-      MachineInstr &MI = *II;
+    for (MachineInstr &MI : MBB) {
       InstrInfo &III = Instructions[&MI];
       unsigned Opcode = MI.getOpcode();
       char Flags = 0;

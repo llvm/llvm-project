@@ -1451,8 +1451,7 @@ bool HexagonGenInsert::removeDeadCode(MachineDomTreeNode *N) {
   for (auto I = B->rbegin(), E = B->rend(); I != E; ++I)
     Instrs.push_back(&*I);
 
-  for (auto I = Instrs.begin(), E = Instrs.end(); I != E; ++I) {
-    MachineInstr *MI = *I;
+  for (MachineInstr *MI : Instrs) {
     unsigned Opc = MI->getOpcode();
     // Do not touch lifetime markers. This is why the target-independent DCE
     // cannot be used.
