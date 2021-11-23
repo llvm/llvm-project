@@ -58,9 +58,9 @@ void LiveVariables::getAnalysisUsage(AnalysisUsage &AU) const {
 
 MachineInstr *
 LiveVariables::VarInfo::findKill(const MachineBasicBlock *MBB) const {
-  for (unsigned i = 0, e = Kills.size(); i != e; ++i)
-    if (Kills[i]->getParent() == MBB)
-      return Kills[i];
+  for (MachineInstr *MI : Kills)
+    if (MI->getParent() == MBB)
+      return MI;
   return nullptr;
 }
 
@@ -811,8 +811,8 @@ bool LiveVariables::isLiveOut(Register Reg, const MachineBasicBlock &MBB) {
   LiveVariables::VarInfo &VI = getVarInfo(Reg);
 
   SmallPtrSet<const MachineBasicBlock *, 8> Kills;
-  for (unsigned i = 0, e = VI.Kills.size(); i != e; ++i)
-    Kills.insert(VI.Kills[i]->getParent());
+  for (MachineInstr *MI : VI.Kills)
+    Kills.insert(MI->getParent());
 
   // Loop over all of the successors of the basic block, checking to see if
   // the value is either live in the block, or if it is killed in the block.
