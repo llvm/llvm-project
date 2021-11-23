@@ -17,6 +17,8 @@ namespace __sanitizer {
 static constexpr u32 kStackSizeBits = 16;
 
 StackStore::Id StackStore::Store(const StackTrace &trace) {
+  if (!trace.size && !trace.tag)
+    return 0;
   uptr *stack_trace = Alloc(trace.size + 1);
   CHECK_LT(trace.size, 1 << kStackSizeBits);
   *stack_trace = trace.size + (trace.tag << kStackSizeBits);
@@ -25,6 +27,8 @@ StackStore::Id StackStore::Store(const StackTrace &trace) {
 }
 
 StackTrace StackStore::Load(Id id) {
+  if (!id)
+    return {};
   const uptr *stack_trace = reinterpret_cast<const uptr *>(id);
   uptr size = *stack_trace & ((1 << kStackSizeBits) - 1);
   uptr tag = *stack_trace >> kStackSizeBits;
