@@ -5049,16 +5049,94 @@ void PPCDAGToDAGISel::Select(SDNode *N) {
     // value for the comparison. When selecting through a .td file, a type
     // error is raised. Must check this first so we never break on the
     // !Subtarget->isISA3_1() check.
-    if (N->getConstantOperandVal(0) == Intrinsic::ppc_fsels) {
+    auto IntID = N->getConstantOperandVal(0);
+    if (IntID == Intrinsic::ppc_fsels) {
       SDValue Ops[] = {N->getOperand(1), N->getOperand(2), N->getOperand(3)};
       CurDAG->SelectNodeTo(N, PPC::FSELS, MVT::f32, Ops);
+      return;
+    }
+
+    if (IntID == Intrinsic::ppc_bcdadd_p || IntID == Intrinsic::ppc_bcdsub_p) {
+      auto Pred = N->getConstantOperandVal(1);
+      unsigned Opcode =
+          IntID == Intrinsic::ppc_bcdadd_p ? PPC::BCDADD_rec : PPC::BCDSUB_rec;
+      unsigned SubReg = 0;
+      unsigned ShiftVal = 0;
+      bool Reverse = false;
+      switch (Pred) {
+      case 0:
+        SubReg = PPC::sub_eq;
+        ShiftVal = 1;
+        break;
+      case 1:
+        SubReg = PPC::sub_eq;
+        ShiftVal = 1;
+        Reverse = true;
+        break;
+      case 2:
+        SubReg = PPC::sub_lt;
+        ShiftVal = 3;
+        break;
+      case 3:
+        SubReg = PPC::sub_lt;
+        ShiftVal = 3;
+        Reverse = true;
+        break;
+      case 4:
+        SubReg = PPC::sub_gt;
+        ShiftVal = 2;
+        break;
+      case 5:
+        SubReg = PPC::sub_gt;
+        ShiftVal = 2;
+        Reverse = true;
+        break;
+      case 6:
+        SubReg = PPC::sub_un;
+        break;
+      case 7:
+        SubReg = PPC::sub_un;
+        Reverse = true;
+        break;
+      }
+
+      EVT VTs[] = {MVT::v16i8, MVT::Glue};
+      SDValue Ops[] = {N->getOperand(2), N->getOperand(3),
+                       CurDAG->getTargetConstant(0, dl, MVT::i32)};
+      SDValue BCDOp = SDValue(CurDAG->getMachineNode(Opcode, dl, VTs, Ops), 0);
+      SDValue CR6Reg = CurDAG->getRegister(PPC::CR6, MVT::i32);
+      // On Power10, we can use SETBC[R]. On prior architectures, we have to use
+      // MFOCRF and shift/negate the value.
+      if (Subtarget->isISA3_1()) {
+        SDValue SubRegIdx = CurDAG->getTargetConstant(SubReg, dl, MVT::i32);
+        SDValue CRBit = SDValue(
+            CurDAG->getMachineNode(TargetOpcode::EXTRACT_SUBREG, dl, MVT::i1,
+                                   CR6Reg, SubRegIdx, BCDOp.getValue(1)),
+            0);
+        CurDAG->SelectNodeTo(N, Reverse ? PPC::SETBCR : PPC::SETBC, MVT::i32,
+                             CRBit);
+      } else {
+        SDValue Move =
+            SDValue(CurDAG->getMachineNode(PPC::MFOCRF, dl, MVT::i32, CR6Reg,
+                                           BCDOp.getValue(1)),
+                    0);
+        SDValue Ops[] = {Move, getI32Imm((32 - (4 + ShiftVal)) & 31, dl),
+                         getI32Imm(31, dl), getI32Imm(31, dl)};
+        if (!Reverse)
+          CurDAG->SelectNodeTo(N, PPC::RLWINM, MVT::i32, Ops);
+        else {
+          SDValue Shift = SDValue(
+              CurDAG->getMachineNode(PPC::RLWINM, dl, MVT::i32, Ops), 0);
+          CurDAG->SelectNodeTo(N, PPC::XORI, MVT::i32, Shift, getI32Imm(1, dl));
+        }
+      }
       return;
     }
 
     if (!Subtarget->isISA3_1())
       break;
     unsigned Opcode = 0;
-    switch (N->getConstantOperandVal(0)) {
+    switch (IntID) {
     default:
       break;
     case Intrinsic::ppc_altivec_vstribr_p:
