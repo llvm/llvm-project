@@ -3246,6 +3246,12 @@ bool TokenAnnotator::spaceRequiredBefore(const AnnotatedLine &Line,
   };
   if (Right.Tok.getIdentifierInfo() && Left.Tok.getIdentifierInfo())
     return true; // Never ever merge two identifiers.
+
+  // Leave a space between * and /* to avoid C4138 `comment end` found outside
+  // of comment.
+  if (Left.is(tok::star) && Right.is(tok::comment))
+    return true;
+
   if (Style.isCpp()) {
     if (Left.is(tok::kw_operator))
       return Right.is(tok::coloncolon);
