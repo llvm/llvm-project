@@ -516,8 +516,6 @@ define void @compressstore_v16f64_v16i1(double* %base, <16 x double> %V, <16 x i
 ; AVX512F-NEXT:    vpmovsxbd %xmm2, %zmm2
 ; AVX512F-NEXT:    vpslld $31, %zmm2, %zmm2
 ; AVX512F-NEXT:    vptestmd %zmm2, %zmm2, %k1
-; AVX512F-NEXT:    kshiftrw $8, %k1, %k2
-; AVX512F-NEXT:    vcompresspd %zmm0, (%rdi) {%k1}
 ; AVX512F-NEXT:    kmovw %k1, %eax
 ; AVX512F-NEXT:    movzbl %al, %eax
 ; AVX512F-NEXT:    movl %eax, %ecx
@@ -535,7 +533,9 @@ define void @compressstore_v16f64_v16i1(double* %base, <16 x double> %V, <16 x i
 ; AVX512F-NEXT:    andl $252645135, %ecx ## imm = 0xF0F0F0F
 ; AVX512F-NEXT:    imull $16843009, %ecx, %eax ## imm = 0x1010101
 ; AVX512F-NEXT:    shrl $24, %eax
+; AVX512F-NEXT:    kshiftrw $8, %k1, %k2
 ; AVX512F-NEXT:    vcompresspd %zmm1, (%rdi,%rax,8) {%k2}
+; AVX512F-NEXT:    vcompresspd %zmm0, (%rdi) {%k1}
 ; AVX512F-NEXT:    vzeroupper
 ; AVX512F-NEXT:    retq
 ;
@@ -570,8 +570,6 @@ define void @compressstore_v16f64_v16i1(double* %base, <16 x double> %V, <16 x i
 ; AVX512VLBW:       ## %bb.0:
 ; AVX512VLBW-NEXT:    vpsllw $7, %xmm2, %xmm2
 ; AVX512VLBW-NEXT:    vpmovb2m %xmm2, %k1
-; AVX512VLBW-NEXT:    kshiftrw $8, %k1, %k2
-; AVX512VLBW-NEXT:    vcompresspd %zmm0, (%rdi) {%k1}
 ; AVX512VLBW-NEXT:    kmovd %k1, %eax
 ; AVX512VLBW-NEXT:    movzbl %al, %eax
 ; AVX512VLBW-NEXT:    movl %eax, %ecx
@@ -589,7 +587,9 @@ define void @compressstore_v16f64_v16i1(double* %base, <16 x double> %V, <16 x i
 ; AVX512VLBW-NEXT:    andl $252645135, %ecx ## imm = 0xF0F0F0F
 ; AVX512VLBW-NEXT:    imull $16843009, %ecx, %eax ## imm = 0x1010101
 ; AVX512VLBW-NEXT:    shrl $24, %eax
+; AVX512VLBW-NEXT:    kshiftrw $8, %k1, %k2
 ; AVX512VLBW-NEXT:    vcompresspd %zmm1, (%rdi,%rax,8) {%k2}
+; AVX512VLBW-NEXT:    vcompresspd %zmm0, (%rdi) {%k1}
 ; AVX512VLBW-NEXT:    vzeroupper
 ; AVX512VLBW-NEXT:    retq
   call void @llvm.masked.compressstore.v16f64(<16 x double> %V, double* %base, <16 x i1> %mask)

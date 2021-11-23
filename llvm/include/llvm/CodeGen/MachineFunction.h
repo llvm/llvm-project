@@ -938,7 +938,8 @@ public:
                                           int64_t Offset, LLT Ty);
   MachineMemOperand *getMachineMemOperand(const MachineMemOperand *MMO,
                                           int64_t Offset, uint64_t Size) {
-    return getMachineMemOperand(MMO, Offset, LLT::scalar(8 * Size));
+    return getMachineMemOperand(
+        MMO, Offset, Size == ~UINT64_C(0) ? LLT() : LLT::scalar(8 * Size));
   }
 
   /// getMachineMemOperand - Allocate a new MachineMemOperand by copying
