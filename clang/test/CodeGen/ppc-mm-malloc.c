@@ -7,7 +7,6 @@
 // failures. So this test will focus on native build only.
 
 // RUN: %clang -target powerpc64-unknown-linux-gnu -S -emit-llvm %s -fno-discard-value-names -mllvm -disable-llvm-optzns -o - | llvm-cxxfilt | FileCheck %s
-// RUN: %clang -target powerpc64-unknown-freebsd13.0 -S -emit-llvm %s -fno-discard-value-names -mllvm -disable-llvm-optzns -o - | llvm-cxxfilt | FileCheck %s
 
 #include <mm_malloc.h>
 
