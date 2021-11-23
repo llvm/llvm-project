@@ -174,6 +174,26 @@ void IfOp::getSuccessorRegions(mlir::RegionBranchPoint point,
   return;
 }
 
+void IfOp::build(OpBuilder &builder, OperationState &result, Value cond,
+                 function_ref<void(OpBuilder &, Location)> thenBuilder,
+                 function_ref<void(OpBuilder &, Location)> elseBuilder) {
+  assert(thenBuilder && "the builder callback for 'then' must be present");
+
+  result.addOperands(cond);
+
+  OpBuilder::InsertionGuard guard(builder);
+  Region *thenRegion = result.addRegion();
+  builder.createBlock(thenRegion);
+  thenBuilder(builder, result.location);
+
+  Region *elseRegion = result.addRegion();
+  if (!elseBuilder)
+    return;
+
+  builder.createBlock(elseRegion);
+  elseBuilder(builder, result.location);
+}
+
 //===----------------------------------------------------------------------===//
 // TableGen'd op method definitions
 //===----------------------------------------------------------------------===//
