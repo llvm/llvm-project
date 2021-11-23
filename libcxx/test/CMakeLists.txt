@@ -59,7 +59,6 @@ pythonize_bool(LIBCXX_ENABLE_SHARED)
 pythonize_bool(LIBCXX_LINK_TESTS_WITH_SHARED_LIBCXX)
 pythonize_bool(LIBCXX_LINK_TESTS_WITH_SHARED_LIBCXXABI)
 pythonize_bool(LIBCXX_ENABLE_FILESYSTEM)
-pythonize_bool(LIBCXX_BUILD_32_BITS)
 pythonize_bool(LIBCXX_GENERATE_COVERAGE)
 pythonize_bool(LIBCXXABI_ENABLE_SHARED)
 pythonize_bool(LIBCXXABI_USE_LLVM_UNWINDER)
@@ -111,10 +110,6 @@ endif()
 
 if (LLVM_USE_SANITIZER)
   serialize_lit_param(use_sanitizer "\"${LLVM_USE_SANITIZER}\"")
-endif()
-
-if (LIBCXX_BUILD_32_BITS)
-  serialize_lit_param(enable_32bit True)
 endif()
 
 foreach(param IN LISTS LIBCXX_TEST_PARAMS)

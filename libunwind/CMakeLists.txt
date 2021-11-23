@@ -57,7 +57,11 @@ include(CMakeDependentOption)
 include(HandleCompilerRT)
 
 # Define options.
-option(LIBUNWIND_BUILD_32_BITS "Build 32 bit libunwind" ${LLVM_BUILD_32_BITS})
+option(LIBUNWIND_BUILD_32_BITS "Build 32 bit multilib libunwind. This option is not supported anymore when building the runtimes. Please specify a full triple instead." ${LLVM_BUILD_32_BITS})
+if (LIBUNWIND_BUILD_32_BITS)
+  message(WARNING "LIBUNWIND_BUILD_32_BITS is not supported anymore when building the runtimes, please specify a full triple instead.")
+endif()
+
 option(LIBUNWIND_ENABLE_CET "Build libunwind with CET enabled." OFF)
 option(LIBUNWIND_ENABLE_ASSERTIONS "Enable assertions independent of build mode." ON)
 option(LIBUNWIND_ENABLE_PEDANTIC "Compile with pedantic enabled." ON)
@@ -119,15 +123,6 @@ if (LIBUNWIND_ENABLE_CET AND MSVC)
   message(FATAL_ERROR "libunwind CET support is not available for MSVC!")
 endif()
 
-# Check that we can build with 32 bits if requested.
-if (CMAKE_SIZEOF_VOID_P EQUAL 8 AND NOT WIN32)
-  if (LIBUNWIND_BUILD_32_BITS AND NOT LLVM_BUILD_32_BITS) # Don't duplicate the output from LLVM
-    message(STATUS "Building 32 bits executables and libraries.")
-  endif()
-elseif(LIBUNWIND_BUILD_32_BITS)
-  message(FATAL_ERROR "LIBUNWIND_BUILD_32_BITS=ON is not supported on this platform.")
-endif()
-
 option(LIBUNWIND_HIDE_SYMBOLS
   "Do not export any symbols from the static library." OFF)
 
@@ -179,9 +174,6 @@ include(HandleLibunwindFlags)
 #===============================================================================
 # Setup Compiler Flags
 #===============================================================================
-
-# Get required flags.
-add_target_flags_if(LIBUNWIND_BUILD_32_BITS "-m32")
 
 # Compiler tests may be failing if the compiler implicitly links in libunwind,
 # which doesn't exist yet. This gets waived by --unwindlib=none

@@ -148,3 +148,12 @@ Build System Changes
     .. code-block:: bash
 
         $ cmake -S <monorepo>/runtimes -B build -DLLVM_ENABLE_RUNTIMES="libcxx;libcxxabi" <LIBCXX-OPTIONS> <LIBCXXABI-OPTIONS>
+
+  - Support for building the runtimes using the GCC 32 bit multilib flag (``-m32``) has been removed. Support
+    for this had been flaky for a while, and we didn't know of anyone depending on this. Instead, please perform
+    a normal cross-compilation of the runtimes using the appropriate target, such as passing the following to
+    your bootstrapping build:
+
+    .. code-block:: bash
+
+        -DLLVM_RUNTIME_TARGETS=i386-unknown-linux

@@ -218,12 +218,6 @@ libc++ specific options
 
   Build libc++ with assertions enabled.
 
-.. option:: LIBCXX_BUILD_32_BITS:BOOL
-
-  **Default**: ``OFF``
-
-  Build libc++ as a 32 bit library. Also see `LLVM_BUILD_32_BITS`.
-
 .. option:: LIBCXX_ENABLE_SHARED:BOOL
 
   **Default**: ``ON``
