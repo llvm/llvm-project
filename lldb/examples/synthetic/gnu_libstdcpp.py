@@ -1,5 +1,4 @@
 from __future__ import division
-import re
 import lldb.formatters.Logger
 
 # C++ STL formatters for LLDB
@@ -22,14 +21,14 @@ class StdOptionalSynthProvider:
         try:
             self.payload = self.valobj.GetChildMemberWithName('_M_payload')
             self.value = self.payload.GetChildMemberWithName('_M_payload')
-            self.count = self.payload.GetChildMemberWithName('_M_engaged').GetValueAsUnsigned(0)
+            self.has_value = self.payload.GetChildMemberWithName('_M_engaged').GetValueAsUnsigned(0) != 0
         except:
-            self.count = 0
+            self.has_value = False
         return False
 
 
     def num_children(self):
-        return self.count
+        return 1 if self.has_value else 0
 
     def get_child_index(self, name):
         return 0
