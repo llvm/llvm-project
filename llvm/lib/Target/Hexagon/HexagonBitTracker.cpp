@@ -189,7 +189,7 @@ bool HexagonEvaluator::evaluate(const MachineInstr &MI,
 
   unsigned NumDefs = 0;
 
-  // Sanity verification: there should not be any defs with subregisters.
+  // Basic correctness check: there should not be any defs with subregisters.
   for (const MachineOperand &MO : MI.operands()) {
     if (!MO.isReg() || !MO.isDef())
       continue;
