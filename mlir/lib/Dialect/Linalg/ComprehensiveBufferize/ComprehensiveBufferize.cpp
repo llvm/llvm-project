@@ -1516,6 +1516,46 @@ struct ConstantOpInterface
 
 namespace scf_ext {
 
+struct ExecuteRegionOpInterface
+    : public BufferizableOpInterface::ExternalModel<ExecuteRegionOpInterface,
+                                                    scf::ExecuteRegionOp> {
+  SmallVector<OpOperand *> getAliasingOpOperand(Operation *op,
+                                                OpResult opResult) const {
+    // ExecuteRegionOps do not have tensor OpOperands. The yielded value can be
+    // any SSA value that is in scope. To allow for use-def chain traversal
+    // through ExecuteRegionOps in the analysis, the corresponding yield value
+    // is considered to be aliasing with the result.
+    auto executeRegionOp = cast<scf::ExecuteRegionOp>(op);
+    size_t resultNum = std::distance(op->getOpResults().begin(),
+                                     llvm::find(op->getOpResults(), opResult));
+    assert(executeRegionOp.region().getBlocks().size() == 1 &&
+           "expected exactly 1 block");
+    auto yieldOp = dyn_cast<scf::YieldOp>(
+        executeRegionOp.region().front().getTerminator());
+    assert(yieldOp && "expected scf.yield terminator in scf.execute_region");
+    return {&yieldOp->getOpOperand(resultNum)};
+  }
+
+  bool mustBufferizeInPlace(Operation *op, OpResult opResult) const {
+    // ExecuteRegionOp results always bufferize in-place. Since they have no
+    // OpOperands, they are mostly ignored by the analysis once alias sets are
+    // set up.
+    return true;
+  }
+
+  LogicalResult bufferize(Operation *op, OpBuilder &b,
+                          BufferizationState &state) const {
+    // TODO: Add bufferization support when needed. scf.execute_region should be
+    // bufferized similar to scf.if.
+    bool hasTensorReturnType = any_of(
+        op->getResultTypes(), [](Type t) { return t.isa<TensorType>(); });
+    if (hasTensorReturnType)
+      return op->emitError(
+          "scf.execute_region with tensor result not supported");
+    return success();
+  }
+};
+
 struct IfOpInterface
     : public BufferizableOpInterface::ExternalModel<IfOpInterface, scf::IfOp> {
   SmallVector<OpOperand *> getAliasingOpOperand(Operation *op,
@@ -2490,6 +2530,8 @@ struct TransferWriteOpInterface
 
 void registerBufferizableOpInterfaceExternalModels(DialectRegistry &registry) {
   registry.addOpInterface<arith::ConstantOp, arith_ext::ConstantOpInterface>();
+  registry.addOpInterface<scf::ExecuteRegionOp,
+                          scf_ext::ExecuteRegionOpInterface>();
   registry.addOpInterface<scf::ForOp, scf_ext::ForOpInterface>();
   registry.addOpInterface<scf::IfOp, scf_ext::IfOpInterface>();
   registry.addOpInterface<scf::YieldOp, scf_ext::YieldOpInterface>();
