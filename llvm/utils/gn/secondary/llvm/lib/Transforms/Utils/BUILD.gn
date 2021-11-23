@@ -65,7 +65,6 @@ static_library("Utils") {
     "SCCPSolver.cpp",
     "SSAUpdater.cpp",
     "SSAUpdaterBulk.cpp",
-    "SampleProfileInference.cpp",
     "SampleProfileLoaderBaseUtil.cpp",
     "SanitizerStats.cpp",
     "ScalarEvolutionExpander.cpp",
