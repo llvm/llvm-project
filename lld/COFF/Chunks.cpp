@@ -214,7 +214,8 @@ void SectionChunk::applyRelARM(uint8_t *off, uint16_t type, OutputSection *os,
 // the page offset from the current instruction to the target.
 void applyArm64Addr(uint8_t *off, uint64_t s, uint64_t p, int shift) {
   uint32_t orig = read32le(off);
-  uint64_t imm = ((orig >> 29) & 0x3) | ((orig >> 3) & 0x1FFFFC);
+  int64_t imm =
+      SignExtend64<21>(((orig >> 29) & 0x3) | ((orig >> 3) & 0x1FFFFC));
   s += imm;
   imm = (s >> shift) - (p >> shift);
   uint32_t immLo = (imm & 0x3) << 29;
