@@ -21,6 +21,7 @@ include "mlir/Dialect/CIR/IR/CIRAttrs.td"
 include "mlir/IR/EnumAttr.td"
 include "mlir/IR/SymbolInterfaces.td"
 include "mlir/IR/BuiltinAttributeInterfaces.td"
+include "mlir/Interfaces/ControlFlowInterfaces.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 
 //===----------------------------------------------------------------------===//
@@ -237,6 +238,66 @@ def ReturnOp : CIR_Op<"return", [Pure, HasParent<"FuncOp">, Terminator]> {
   }];
 
   let hasVerifier = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// IfOp
+//===----------------------------------------------------------------------===//
+def IfOp : CIR_Op<"if",
+      [DeclareOpInterfaceMethods<RegionBranchOpInterface>,
+       SingleBlock, RecursivelySpeculatable, AutomaticAllocationScope,
+       NoRegionArguments]> {
+  let summary = "if-then-else operation";
+  let description = [{
+    The `scf.if` operation represents an if-then-else construct for
+    conditionally executing two regions of code. The operand to an if operation
+    is a boolean value. For example:
+
+    ```mlir
+    cir.if %b  {
+      ...
+    } else {
+      ...
+    }
+    ```
+
+    "cir.if" defines no values and the 'else' can be omitted.
+
+    Example:
+
+    ```mlir
+    cir.if %b  {
+      ...
+    }
+    ```
+  }];
+  let arguments = (ins I1:$condition);
+  let regions = (region SizedRegion<1>:$thenRegion, AnyRegion:$elseRegion);
+
+  let skipDefaultBuilders = 1;
+  let builders = [
+    OpBuilder<(ins "Value":$cond, "bool":$withElseRegion)>,
+    OpBuilder<(ins "Value":$cond,
+      CArg<"function_ref<void(OpBuilder &, Location)>",
+           "buildTerminatedBody">:$thenBuilder,
+      CArg<"function_ref<void(OpBuilder &, Location)>",
+           "nullptr">:$elseBuilder)>
+  ];
+
+  let extraClassDeclaration = [{
+    OpBuilder getThenBodyBuilder(OpBuilder::Listener *listener = nullptr) {
+      Block* body = getBody(0);
+      return OpBuilder::atBlockTerminator(body, listener);
+    }
+    OpBuilder getElseBodyBuilder(OpBuilder::Listener *listener = nullptr) {
+      Block* body = getBody(1);
+      return OpBuilder::atBlockTerminator(body, listener);
+    }
+    Block* thenBlock();
+    Block* elseBlock();
+  }];
+
+  // TODO: let hasCanonicalizer = 1;
 }
 
 
