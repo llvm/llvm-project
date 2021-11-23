@@ -475,10 +475,14 @@ public:
             Builder.getLoc(E->getExprLoc()), Ty,
             mlir::cir::NullAttr::get(Builder.builder.getContext(), Ty));
       }
+      case CK_IntegralToBoolean: {
+        return buildIntToBoolConversion(Visit(E));
+      }
       default:
         emitError(Builder.getLoc(CE->getExprLoc()),
                   "cast kind not implemented: '")
             << CE->getCastKindName() << "'";
+        assert(0 && "not implemented");
         return nullptr;
       }
     }
@@ -495,6 +499,124 @@ public:
           << E->getStmtClassName() << "'";
       assert(0 && "shouldn't be here!");
       return {};
+    }
+
+    mlir::Value buildIntToBoolConversion(mlir::Value V) {
+      // Because of the type rules of C, we often end up computing a
+      // logical value, then zero extending it to int, then wanting it
+      // as a logical value again. TODO: optimize this common case here
+      // or leave it for later CIR passes?
+      assert(0 && "not implemented");
+      // return Builder.CreateIsNotNull(V, "tobool");
+      return nullptr;
+    }
+
+    /// EmitConversionToBool - Convert the specified expression value to a
+    /// boolean (i1) truth value.  This is equivalent to "Val != 0".
+    mlir::Value buildConversionToBool(mlir::Value Src, QualType SrcType) {
+      assert(SrcType.isCanonical() && "EmitScalarConversion strips typedefs");
+
+      if (SrcType->isRealFloatingType())
+        assert(0 && "not implemented");
+
+      if (const MemberPointerType *MPT = dyn_cast<MemberPointerType>(SrcType))
+        assert(0 && "not implemented");
+
+      assert((SrcType->isIntegerType() ||
+              Src.getType().isa<::mlir::cir::PointerType>()) &&
+             "Unknown scalar type to convert");
+
+      assert(Src.getType().isa<mlir::IntegerType>() &&
+             "pointer source not implemented");
+      return buildIntToBoolConversion(Src);
+    }
+
+    /// Emit a conversion from the specified type to the specified destination
+    /// type, both of which are CIR scalar types.
+    /// TODO: do we need ScalarConversionOpts here? Should be done in another
+    /// pass.
+    mlir::Value buildScalarConversion(mlir::Value Src, QualType SrcType,
+                                      QualType DstType, SourceLocation Loc) {
+      if (SrcType->isFixedPointType()) {
+        assert(0 && "not implemented");
+      } else if (DstType->isFixedPointType()) {
+        assert(0 && "not implemented");
+      }
+
+      SrcType = Builder.astCtx.getCanonicalType(SrcType);
+      DstType = Builder.astCtx.getCanonicalType(DstType);
+      if (SrcType == DstType)
+        return Src;
+
+      if (DstType->isVoidType())
+        return nullptr;
+      mlir::Type SrcTy = Src.getType();
+
+      // Handle conversions to bool first, they are special: comparisons against
+      // 0.
+      if (DstType->isBooleanType())
+        return buildConversionToBool(Src, SrcType);
+
+      mlir::Type DstTy = Builder.getCIRType(DstType);
+
+      // Cast from half through float if half isn't a native type.
+      if (SrcType->isHalfType() &&
+          !Builder.astCtx.getLangOpts().NativeHalfType) {
+        assert(0 && "not implemented");
+      }
+
+      // LLVM codegen ignore conversions like int -> uint, we should probably
+      // emit it here in case lowering to sanitizers dialect at some point.
+      if (SrcTy == DstTy) {
+        assert(0 && "not implemented");
+      }
+
+      // Handle pointer conversions next: pointers can only be converted to/from
+      // other pointers and integers.
+      if (DstTy.isa<::mlir::cir::PointerType>()) {
+        assert(0 && "not implemented");
+      }
+
+      if (SrcTy.isa<::mlir::cir::PointerType>()) {
+        // Must be an ptr to int cast.
+        assert(DstTy.isa<mlir::IntegerType>() && "not ptr->int?");
+        assert(0 && "not implemented");
+      }
+
+      // A scalar can be splatted to an extended vector of the same element type
+      if (DstType->isExtVectorType() && !SrcType->isVectorType()) {
+        // Sema should add casts to make sure that the source expression's type
+        // is the same as the vector's element type (sans qualifiers)
+        assert(
+            DstType->castAs<ExtVectorType>()->getElementType().getTypePtr() ==
+                SrcType.getTypePtr() &&
+            "Splatted expr doesn't match with vector element type?");
+
+        assert(0 && "not implemented");
+      }
+
+      if (SrcType->isMatrixType() && DstType->isMatrixType())
+        assert(0 && "not implemented");
+
+      // Finally, we have the arithmetic types: real int/float.
+      assert(0 && "not implemented");
+      mlir::Value Res = nullptr;
+      mlir::Type ResTy = DstTy;
+
+      // TODO: implement CGF.SanOpts.has(SanitizerKind::FloatCastOverflow)
+
+      // Cast to half through float if half isn't a native type.
+      if (DstType->isHalfType() &&
+          !Builder.astCtx.getLangOpts().NativeHalfType) {
+        assert(0 && "not implemented");
+      }
+
+      // TODO: Res = EmitScalarCast(Src, SrcType, DstType, SrcTy, DstTy, Opts);
+      if (DstTy != ResTy) {
+        assert(0 && "not implemented");
+      }
+
+      return Res;
     }
 
     // Leaves.
@@ -999,6 +1121,17 @@ public:
     return ScalarExprEmitter(*CurCCGF, *this).Visit(const_cast<Expr *>(E));
   }
 
+  /// Emit a conversion from the specified type to the specified destination
+  /// type, both of which are CIR scalar types.
+  mlir::Value buildScalarConversion(mlir::Value Src, QualType SrcTy,
+                                    QualType DstTy, SourceLocation Loc) {
+    assert(CIRCodeGenFunction::hasScalarEvaluationKind(SrcTy) &&
+           CIRCodeGenFunction::hasScalarEvaluationKind(DstTy) &&
+           "Invalid scalar expression to emit");
+    return ScalarExprEmitter(*CurCCGF, *this)
+        .buildScalarConversion(Src, SrcTy, DstTy, Loc);
+  }
+
   mlir::LogicalResult buildReturnStmt(const ReturnStmt &S) {
     assert(!(astCtx.getLangOpts().ElideConstructors && S.getNRVOCandidate() &&
              S.getNRVOCandidate()->isNRVOVariable()) &&
@@ -1351,6 +1484,143 @@ public:
     buildLValue(E);
   }
 
+  /// If the specified expression does not fold
+  /// to a constant, or if it does but contains a label, return false.  If it
+  /// constant folds return true and set the boolean result in Result.
+  bool ConstantFoldsToSimpleInteger(const Expr *Cond, bool &ResultBool,
+                                    bool AllowLabels) {
+    llvm::APSInt ResultInt;
+    if (!ConstantFoldsToSimpleInteger(Cond, ResultInt, AllowLabels))
+      return false;
+
+    ResultBool = ResultInt.getBoolValue();
+    return true;
+  }
+
+  /// Return true if the statement contains a label in it.  If
+  /// this statement is not executed normally, it not containing a label means
+  /// that we can just remove the code.
+  bool ContainsLabel(const Stmt *S, bool IgnoreCaseStmts = false) {
+    // Null statement, not a label!
+    if (!S)
+      return false;
+
+    // If this is a label, we have to emit the code, consider something like:
+    // if (0) {  ...  foo:  bar(); }  goto foo;
+    //
+    // TODO: If anyone cared, we could track __label__'s, since we know that you
+    // can't jump to one from outside their declared region.
+    if (isa<LabelStmt>(S))
+      return true;
+
+    // If this is a case/default statement, and we haven't seen a switch, we
+    // have to emit the code.
+    if (isa<SwitchCase>(S) && !IgnoreCaseStmts)
+      return true;
+
+    // If this is a switch statement, we want to ignore cases below it.
+    if (isa<SwitchStmt>(S))
+      IgnoreCaseStmts = true;
+
+    // Scan subexpressions for verboten labels.
+    for (const Stmt *SubStmt : S->children())
+      if (ContainsLabel(SubStmt, IgnoreCaseStmts))
+        return true;
+
+    return false;
+  }
+
+  /// If the specified expression does not fold
+  /// to a constant, or if it does but contains a label, return false.  If it
+  /// constant folds return true and set the folded value.
+  bool ConstantFoldsToSimpleInteger(const Expr *Cond, llvm::APSInt &ResultInt,
+                                    bool AllowLabels) {
+    // FIXME: Rename and handle conversion of other evaluatable things
+    // to bool.
+    Expr::EvalResult Result;
+    if (!Cond->EvaluateAsInt(Result, astCtx))
+      return false; // Not foldable, not integer or not fully evaluatable.
+
+    llvm::APSInt Int = Result.Val.getInt();
+    if (!AllowLabels && ContainsLabel(Cond))
+      return false; // Contains a label.
+
+    ResultInt = Int;
+    return true;
+  }
+
+  /// Perform the usual unary conversions on the specified
+  /// expression and compare the result against zero, returning an Int1Ty value.
+  mlir::Value evaluateExprAsBool(const Expr *E) {
+    // TODO: PGO
+    if (const MemberPointerType *MPT =
+            E->getType()->getAs<MemberPointerType>()) {
+      assert(0 && "not implemented");
+    }
+
+    QualType BoolTy = astCtx.BoolTy;
+    SourceLocation Loc = E->getExprLoc();
+    // TODO: CGFPOptionsRAII for FP stuff.
+    assert(!E->getType()->isAnyComplexType() &&
+           "complex to scalar not implemented");
+    return buildScalarConversion(buildScalarExpr(E), E->getType(), BoolTy, Loc);
+  }
+
+  /// Emit an if on a boolean condition to the specified blocks.
+  /// FIXME: Based on the condition, this might try to simplify the codegen of
+  /// the conditional based on the branch. TrueCount should be the number of
+  /// times we expect the condition to evaluate to true based on PGO data. We
+  /// might decide to leave this as a separate pass (see EmitBranchOnBoolExpr
+  /// for extra ideas).
+  void buildIfOnBoolExpr(const Expr *cond, mlir::Location loc,
+                         const Stmt *thenS, const Stmt *elseS) {
+    // TODO: scoped ApplyDebugLocation DL(*this, Cond);
+    // TODO: __builtin_unpredictable and profile counts?
+    cond = cond->IgnoreParens();
+    mlir::Value condV = evaluateExprAsBool(cond);
+    builder.create<mlir::cir::IfOp>(
+        loc, condV,
+        /*thenBuilder=*/
+        [&](mlir::OpBuilder &b, mlir::Location loc) { (void)buildStmt(thenS); },
+        /*elseBuilder=*/
+        [&](mlir::OpBuilder &b, mlir::Location loc) {
+          if (elseS)
+            return;
+          (void)buildStmt(elseS);
+        });
+  }
+
+  mlir::LogicalResult buildIfStmt(const IfStmt &S) {
+    // The else branch of a consteval if statement is always the only branch
+    // that can be runtime evaluated.
+    assert(!S.isConsteval() && "not implemented");
+
+    // C99 6.8.4.1: The first substatement is executed if the expression
+    // compares unequal to 0.  The condition must be a scalar type.
+    // TODO: add cir.scope, add a new scoped symbol table as well.
+    // LexicalScope ConditionScope(*this, S.getCond()->getSourceRange());
+    if (S.getInit())
+      if (buildStmt(S.getInit()).failed())
+        return mlir::failure();
+
+    if (S.getConditionVariable())
+      buildDecl(*S.getConditionVariable());
+
+    // If the condition constant folds and can be elided, try to avoid emitting
+    // the condition and the dead arm of the if/else.
+    // FIXME: should this be done as part of a constant folder pass instead?
+    bool CondConstant;
+    if (ConstantFoldsToSimpleInteger(S.getCond(), CondConstant,
+                                     S.isConstexpr())) {
+      assert(0 && "not implemented");
+    }
+
+    // TODO: PGO and likelihood.
+    buildIfOnBoolExpr(S.getCond(), getLoc(S.getSourceRange().getBegin()),
+                      S.getThen(), S.getElse());
+    return mlir::success();
+  }
+
   mlir::LogicalResult buildStmt(const Stmt *S) {
     if (mlir::succeeded(buildSimpleStmt(S)))
       return mlir::success();
@@ -1423,8 +1693,11 @@ public:
         break;
       }
 
-    case Stmt::IndirectGotoStmtClass:
     case Stmt::IfStmtClass:
+      if (buildIfStmt(cast<IfStmt>(*S)).failed())
+        return mlir::failure();
+      break;
+    case Stmt::IndirectGotoStmtClass:
     case Stmt::WhileStmtClass:
     case Stmt::DoStmtClass:
     case Stmt::ForStmtClass:
@@ -1532,6 +1805,13 @@ public:
     // Create a scope in the symbol table to hold variable declarations local
     // to this compound statement.
     SymTableScopeTy varScope(symbolTable);
+    if (buildCompoundStmtWithoutScope(S).failed())
+      return mlir::failure();
+
+    return mlir::success();
+  }
+
+  mlir::LogicalResult buildCompoundStmtWithoutScope(const CompoundStmt &S) {
     for (auto *CurStmt : S.body())
       if (buildStmt(CurStmt).failed())
         return mlir::failure();
