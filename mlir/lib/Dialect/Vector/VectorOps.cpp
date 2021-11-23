@@ -833,6 +833,12 @@ void ContractionOp::getCanonicalizationPatterns(RewritePatternSet &results,
 //===----------------------------------------------------------------------===//
 
 void vector::ExtractElementOp::build(OpBuilder &builder, OperationState &result,
+                                     Value source) {
+  result.addOperands({source});
+  result.addTypes(source.getType().cast<VectorType>().getElementType());
+}
+
+void vector::ExtractElementOp::build(OpBuilder &builder, OperationState &result,
                                      Value source, Value position) {
   result.addOperands({source, position});
   result.addTypes(source.getType().cast<VectorType>().getElementType());
@@ -840,8 +846,15 @@ void vector::ExtractElementOp::build(OpBuilder &builder, OperationState &result,
 
 static LogicalResult verify(vector::ExtractElementOp op) {
   VectorType vectorType = op.getVectorType();
+  if (vectorType.getRank() == 0) {
+    if (op.position())
+      return op.emitOpError("expected position to be empty with 0-D vector");
+    return success();
+  }
   if (vectorType.getRank() != 1)
-    return op.emitOpError("expected 1-D vector");
+    return op.emitOpError("unexpected >1 vector rank");
+  if (!op.position())
+    return op.emitOpError("expected position for 1-D vector");
   return success();
 }
 

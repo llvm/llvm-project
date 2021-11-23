@@ -40,6 +40,7 @@ static Value insertOne(ConversionPatternRewriter &rewriter,
                        LLVMTypeConverter &typeConverter, Location loc,
                        Value val1, Value val2, Type llvmType, int64_t rank,
                        int64_t pos) {
+  assert(rank > 0 && "0-D vector corner case should have been handled already");
   if (rank == 1) {
     auto idxType = rewriter.getIndexType();
     auto constant = rewriter.create<LLVM::ConstantOp>(
@@ -56,6 +57,7 @@ static Value insertOne(ConversionPatternRewriter &rewriter,
 static Value extractOne(ConversionPatternRewriter &rewriter,
                         LLVMTypeConverter &typeConverter, Location loc,
                         Value val, Type llvmType, int64_t rank, int64_t pos) {
+  assert(rank > 0 && "0-D vector corner case should have been handled already");
   if (rank == 1) {
     auto idxType = rewriter.getIndexType();
     auto constant = rewriter.create<LLVM::ConstantOp>(
@@ -541,6 +543,17 @@ public:
     // Bail if result type cannot be lowered.
     if (!llvmType)
       return failure();
+
+    if (vectorType.getRank() == 0) {
+      Location loc = extractEltOp.getLoc();
+      auto idxType = rewriter.getIndexType();
+      auto zero = rewriter.create<LLVM::ConstantOp>(
+          loc, typeConverter->convertType(idxType),
+          rewriter.getIntegerAttr(idxType, 0));
+      rewriter.replaceOpWithNewOp<LLVM::ExtractElementOp>(
+          extractEltOp, llvmType, adaptor.vector(), zero);
+      return success();
+    }
 
     rewriter.replaceOpWithNewOp<LLVM::ExtractElementOp>(
         extractEltOp, llvmType, adaptor.vector(), adaptor.position());
