@@ -26,6 +26,7 @@ class StackStore {
   enum class Compression : u8 {
     None = 0,
     Delta,
+    LZW,
   };
 
   constexpr StackStore() = default;

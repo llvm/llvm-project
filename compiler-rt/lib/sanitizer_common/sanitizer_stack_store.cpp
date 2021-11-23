@@ -12,6 +12,8 @@
 #include "sanitizer_common.h"
 #include "sanitizer_internal_defs.h"
 #include "sanitizer_leb128.h"
+#include "sanitizer_lzw.h"
+#include "sanitizer_placement_new.h"
 #include "sanitizer_stacktrace.h"
 
 namespace __sanitizer {
@@ -203,6 +205,22 @@ static uptr *UncompressDelta(const u8 *from, const u8 *from_end, uptr *to,
   return to;
 }
 
+static u8 *CompressLzw(const uptr *from, const uptr *from_end, u8 *to,
+                       u8 *to_end) {
+  SLeb128Encoder encoder(to, to_end);
+  encoder = LzwEncode<uptr>(from, from_end, encoder);
+  return encoder.base();
+}
+
+static uptr *UncompressLzw(const u8 *from, const u8 *from_end, uptr *to,
+                           uptr *to_end) {
+  SLeb128Decoder decoder(from, from_end);
+  SLeb128Decoder end(from_end, from_end);
+  to = LzwDecode<uptr>(decoder, end, to);
+  CHECK_EQ(to, to_end);
+  return to;
+}
+
 namespace {
 struct PackedHeader {
   uptr size;
@@ -239,6 +257,10 @@ uptr *StackStore::BlockInfo::GetOrUnpack() {
     case Compression::Delta:
       unpacked_end = UncompressDelta(header->data, ptr + header->size, unpacked,
                                      unpacked + kBlockSizeFrames);
+      break;
+    case Compression::LZW:
+      unpacked_end = UncompressLzw(header->data, ptr + header->size, unpacked,
+                                   unpacked + kBlockSizeFrames);
       break;
     default:
       UNREACHABLE("Unexpected type");
@@ -282,6 +304,10 @@ uptr StackStore::BlockInfo::Pack(Compression type) {
     case Compression::Delta:
       packed_end =
           CompressDelta(ptr, ptr + kBlockSizeFrames, header->data, alloc_end);
+      break;
+    case Compression::LZW:
+      packed_end =
+          CompressLzw(ptr, ptr + kBlockSizeFrames, header->data, alloc_end);
       break;
     default:
       UNREACHABLE("Unexpected type");

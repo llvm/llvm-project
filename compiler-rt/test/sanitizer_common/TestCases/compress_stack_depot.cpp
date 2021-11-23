@@ -1,6 +1,7 @@
 // RUN: %clangxx %s -fsanitize-memory-track-origins=1 -o %t
 // RUN: %env_tool_opts="compress_stack_depot=0:malloc_context_size=128:verbosity=1" %run %t 2>&1 | FileCheck %s --implicit-check-not="StackDepot released"
 // RUN: %env_tool_opts="compress_stack_depot=1:malloc_context_size=128:verbosity=1" %run %t 2>&1 | FileCheck %s --check-prefixes=COMPRESS
+// RUN: %env_tool_opts="compress_stack_depot=2:malloc_context_size=128:verbosity=1" %run %t 2>&1 | FileCheck %s --check-prefixes=COMPRESS
 
 // Ubsan does not store stacks.
 // UNSUPPORTED: ubsan
