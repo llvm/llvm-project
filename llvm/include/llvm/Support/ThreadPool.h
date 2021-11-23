@@ -56,8 +56,7 @@ public:
 
   /// Asynchronous submission of a task to the pool. The returned future can be
   /// used to wait for the task to finish and is *non-blocking* on destruction.
-  template <typename Func>
-  auto async(Func &&F) -> std::shared_future<decltype(F())> {
+  template <typename Func> auto async(Func &&F) -> std::future<decltype(F())> {
     return asyncImpl(std::function<decltype(F())()>(std::forward<Func>(F)));
   }
 
@@ -101,7 +100,7 @@ private:
   /// Asynchronous submission of a task to the pool. The returned future can be
   /// used to wait for the task to finish and is *non-blocking* on destruction.
   template <typename ResTy>
-  std::shared_future<ResTy> asyncImpl(std::function<ResTy()> Task) {
+  std::future<ResTy> asyncImpl(std::function<ResTy()> Task) {
 
 #if LLVM_ENABLE_THREADS
     /// Wrap the Task in a std::function<void()> that sets the result of the
@@ -117,12 +116,12 @@ private:
       Tasks.push(std::move(R.first));
     }
     QueueCondition.notify_one();
-    return R.second.share();
+    return std::move(R.second);
 
 #else // LLVM_ENABLE_THREADS Disabled
 
     // Get a Future with launch::deferred execution using std::async
-    auto Future = std::async(std::launch::deferred, std::move(Task)).share();
+    auto Future = std::async(std::launch::deferred, std::move(Task));
     // Wrap the future so that both ThreadPool::wait() can operate and the
     // returned future can be sync'ed on.
     Tasks.push([Future]() { Future.get(); });

@@ -4336,9 +4336,7 @@ void SelectionDAGBuilder::visitMaskedStore(const CallInst &I,
 
   MachineMemOperand *MMO = DAG.getMachineFunction().getMachineMemOperand(
       MachinePointerInfo(PtrOperand), MachineMemOperand::MOStore,
-      // TODO: Make MachineMemOperands aware of scalable
-      // vectors.
-      VT.getStoreSize().getKnownMinSize(), *Alignment, I.getAAMetadata());
+      MemoryLocation::UnknownSize, *Alignment, I.getAAMetadata());
   SDValue StoreNode =
       DAG.getMaskedStore(getMemoryRoot(), sdl, Src0, Ptr, Offset, Mask, VT, MMO,
                          ISD::UNINDEXED, false /* Truncating */, IsCompressing);
@@ -4496,22 +4494,14 @@ void SelectionDAGBuilder::visitMaskedLoad(const CallInst &I, bool IsExpanding) {
   const MDNode *Ranges = I.getMetadata(LLVMContext::MD_range);
 
   // Do not serialize masked loads of constant memory with anything.
-  MemoryLocation ML;
-  if (VT.isScalableVector())
-    ML = MemoryLocation::getAfter(PtrOperand);
-  else
-    ML = MemoryLocation(PtrOperand, LocationSize::precise(
-                           DAG.getDataLayout().getTypeStoreSize(I.getType())),
-                           AAInfo);
+  MemoryLocation ML = MemoryLocation::getAfter(PtrOperand, AAInfo);
   bool AddToChain = !AA || !AA->pointsToConstantMemory(ML);
 
   SDValue InChain = AddToChain ? DAG.getRoot() : DAG.getEntryNode();
 
   MachineMemOperand *MMO = DAG.getMachineFunction().getMachineMemOperand(
       MachinePointerInfo(PtrOperand), MachineMemOperand::MOLoad,
-      // TODO: Make MachineMemOperands aware of scalable
-      // vectors.
-      VT.getStoreSize().getKnownMinSize(), *Alignment, AAInfo, Ranges);
+      MemoryLocation::UnknownSize, *Alignment, AAInfo, Ranges);
 
   SDValue Load =
       DAG.getMaskedLoad(VT, sdl, InChain, Ptr, Offset, Mask, Src0, VT, MMO,
