@@ -377,8 +377,11 @@ module std [system] {
       module compare_three_way_result   { private header "__compare/compare_three_way_result.h"   }
       module is_eq                      { private header "__compare/is_eq.h"                      }
       module ordering                   { private header "__compare/ordering.h"                   }
+      module partial_order              { private header "__compare/partial_order.h"              }
+      module strong_order               { private header "__compare/strong_order.h"               }
       module synth_three_way            { private header "__compare/synth_three_way.h"            }
       module three_way_comparable       { private header "__compare/three_way_comparable.h"       }
+      module weak_order                 { private header "__compare/weak_order.h"                 }
     }
   }
   module complex {
@@ -883,6 +886,7 @@ module std [system] {
       module move                { private header "__utility/move.h"                }
       module pair                { private header "__utility/pair.h"                }
       module piecewise_construct { private header "__utility/piecewise_construct.h" }
+      module priority_tag        { private header "__utility/priority_tag.h"        }
       module rel_ops             { private header "__utility/rel_ops.h"             }
       module swap                { private header "__utility/swap.h"                }
       module to_underlying       { private header "__utility/to_underlying.h"       }

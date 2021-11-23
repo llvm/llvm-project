@@ -107,8 +107,11 @@ set(files
   __compare/compare_three_way_result.h
   __compare/is_eq.h
   __compare/ordering.h
+  __compare/partial_order.h
+  __compare/strong_order.h
   __compare/synth_three_way.h
   __compare/three_way_comparable.h
+  __compare/weak_order.h
   __concepts/arithmetic.h
   __concepts/assignable.h
   __concepts/boolean_testable.h
@@ -334,6 +337,7 @@ set(files
   __utility/move.h
   __utility/pair.h
   __utility/piecewise_construct.h
+  __utility/priority_tag.h
   __utility/rel_ops.h
   __utility/swap.h
   __utility/to_underlying.h
