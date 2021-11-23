@@ -151,6 +151,31 @@ TEST_F(ThreadPoolTest, GetFuture) {
   ASSERT_EQ(2, i.load());
 }
 
+TEST_F(ThreadPoolTest, GetFutureWithResult) {
+  CHECK_UNSUPPORTED();
+  ThreadPool Pool(hardware_concurrency(2));
+  auto F1 = Pool.async([] { return 1; });
+  auto F2 = Pool.async([] { return 2; });
+
+  setMainThreadReady();
+  Pool.wait();
+  ASSERT_EQ(1, F1.get());
+  ASSERT_EQ(2, F2.get());
+}
+
+TEST_F(ThreadPoolTest, GetFutureWithResultAndArgs) {
+  CHECK_UNSUPPORTED();
+  ThreadPool Pool(hardware_concurrency(2));
+  auto Fn = [](int x) { return x; };
+  auto F1 = Pool.async(Fn, 1);
+  auto F2 = Pool.async(Fn, 2);
+
+  setMainThreadReady();
+  Pool.wait();
+  ASSERT_EQ(1, F1.get());
+  ASSERT_EQ(2, F2.get());
+}
+
 TEST_F(ThreadPoolTest, PoolDestruction) {
   CHECK_UNSUPPORTED();
   // Test that we are waiting on destruction
