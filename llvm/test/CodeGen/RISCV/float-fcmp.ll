@@ -11,22 +11,22 @@
 define i32 @fcmp_false(float %a, float %b) nounwind {
 ; RV32IF-LABEL: fcmp_false:
 ; RV32IF:       # %bb.0:
-; RV32IF-NEXT:    mv a0, zero
+; RV32IF-NEXT:    li a0, 0
 ; RV32IF-NEXT:    ret
 ;
 ; RV64IF-LABEL: fcmp_false:
 ; RV64IF:       # %bb.0:
-; RV64IF-NEXT:    mv a0, zero
+; RV64IF-NEXT:    li a0, 0
 ; RV64IF-NEXT:    ret
 ;
 ; RV32I-LABEL: fcmp_false:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    mv a0, zero
+; RV32I-NEXT:    li a0, 0
 ; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: fcmp_false:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    mv a0, zero
+; RV64I-NEXT:    li a0, 0
 ; RV64I-NEXT:    ret
   %1 = fcmp false float %a, %b
   %2 = zext i1 %1 to i32
@@ -131,7 +131,7 @@ define i32 @fcmp_oge(float %a, float %b) nounwind {
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    call __gesf2@plt
-; RV32I-NEXT:    addi a1, zero, -1
+; RV32I-NEXT:    li a1, -1
 ; RV32I-NEXT:    slt a0, a1, a0
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
@@ -142,7 +142,7 @@ define i32 @fcmp_oge(float %a, float %b) nounwind {
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    call __gesf2@plt
-; RV64I-NEXT:    addi a1, zero, -1
+; RV64I-NEXT:    li a1, -1
 ; RV64I-NEXT:    slt a0, a1, a0
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
@@ -476,7 +476,7 @@ define i32 @fcmp_uge(float %a, float %b) nounwind {
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    call __ltsf2@plt
-; RV32I-NEXT:    addi a1, zero, -1
+; RV32I-NEXT:    li a1, -1
 ; RV32I-NEXT:    slt a0, a1, a0
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
@@ -487,7 +487,7 @@ define i32 @fcmp_uge(float %a, float %b) nounwind {
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    call __ltsf2@plt
-; RV64I-NEXT:    addi a1, zero, -1
+; RV64I-NEXT:    li a1, -1
 ; RV64I-NEXT:    slt a0, a1, a0
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
@@ -668,22 +668,22 @@ define i32 @fcmp_uno(float %a, float %b) nounwind {
 define i32 @fcmp_true(float %a, float %b) nounwind {
 ; RV32IF-LABEL: fcmp_true:
 ; RV32IF:       # %bb.0:
-; RV32IF-NEXT:    addi a0, zero, 1
+; RV32IF-NEXT:    li a0, 1
 ; RV32IF-NEXT:    ret
 ;
 ; RV64IF-LABEL: fcmp_true:
 ; RV64IF:       # %bb.0:
-; RV64IF-NEXT:    addi a0, zero, 1
+; RV64IF-NEXT:    li a0, 1
 ; RV64IF-NEXT:    ret
 ;
 ; RV32I-LABEL: fcmp_true:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    addi a0, zero, 1
+; RV32I-NEXT:    li a0, 1
 ; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: fcmp_true:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    addi a0, zero, 1
+; RV64I-NEXT:    li a0, 1
 ; RV64I-NEXT:    ret
   %1 = fcmp true float %a, %b
   %2 = zext i1 %1 to i32

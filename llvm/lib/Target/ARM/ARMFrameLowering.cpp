@@ -523,9 +523,9 @@ void ARMFrameLowering::emitPrologue(MachineFunction &MF,
   }
 
   // Determine spill area sizes.
-  for (unsigned i = 0, e = CSI.size(); i != e; ++i) {
-    unsigned Reg = CSI[i].getReg();
-    int FI = CSI[i].getFrameIdx();
+  for (const CalleeSavedInfo &I : CSI) {
+    unsigned Reg = I.getReg();
+    int FI = I.getFrameIdx();
     switch (Reg) {
     case ARM::R8:
     case ARM::R9:
@@ -1317,11 +1317,11 @@ static void emitAlignedDPRCS2Spills(MachineBasicBlock &MBB,
   // Mark the D-register spill slots as properly aligned.  Since MFI computes
   // stack slot layout backwards, this can actually mean that the d-reg stack
   // slot offsets can be wrong. The offset for d8 will always be correct.
-  for (unsigned i = 0, e = CSI.size(); i != e; ++i) {
-    unsigned DNum = CSI[i].getReg() - ARM::D8;
+  for (const CalleeSavedInfo &I : CSI) {
+    unsigned DNum = I.getReg() - ARM::D8;
     if (DNum > NumAlignedDPRCS2Regs - 1)
       continue;
-    int FI = CSI[i].getFrameIdx();
+    int FI = I.getFrameIdx();
     // The even-numbered registers will be 16-byte aligned, the odd-numbered
     // registers will be 8-byte aligned.
     MFI.setObjectAlignment(FI, DNum % 2 ? Align(8) : Align(16));
@@ -1488,9 +1488,9 @@ static void emitAlignedDPRCS2Restores(MachineBasicBlock &MBB,
 
   // Find the frame index assigned to d8.
   int D8SpillFI = 0;
-  for (unsigned i = 0, e = CSI.size(); i != e; ++i)
-    if (CSI[i].getReg() == ARM::D8) {
-      D8SpillFI = CSI[i].getFrameIdx();
+  for (const CalleeSavedInfo &I : CSI)
+    if (I.getReg() == ARM::D8) {
+      D8SpillFI = I.getFrameIdx();
       break;
     }
 

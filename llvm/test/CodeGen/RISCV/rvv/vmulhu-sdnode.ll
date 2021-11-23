@@ -39,14 +39,14 @@ define <vscale x 1 x i32> @vmulhu_vx_nxv1i32(<vscale x 1 x i32> %va, i32 %x) {
 define <vscale x 1 x i32> @vmulhu_vi_nxv1i32_0(<vscale x 1 x i32> %va) {
 ; RV32-LABEL: vmulhu_vi_nxv1i32_0:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    addi a0, zero, -7
+; RV32-NEXT:    li a0, -7
 ; RV32-NEXT:    vsetvli a1, zero, e32, mf2, ta, mu
 ; RV32-NEXT:    vmulhu.vx v8, v8, a0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vmulhu_vi_nxv1i32_0:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    addi a0, zero, 1
+; RV64-NEXT:    li a0, 1
 ; RV64-NEXT:    slli a0, a0, 32
 ; RV64-NEXT:    addi a0, a0, -7
 ; RV64-NEXT:    vsetvli a1, zero, e32, mf2, ta, mu
@@ -73,7 +73,7 @@ define <vscale x 1 x i32> @vmulhu_vi_nxv1i32_1(<vscale x 1 x i32> %va) {
 ;
 ; RV64-LABEL: vmulhu_vi_nxv1i32_1:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    addi a0, zero, 16
+; RV64-NEXT:    li a0, 16
 ; RV64-NEXT:    vsetvli a1, zero, e32, mf2, ta, mu
 ; RV64-NEXT:    vmulhu.vx v8, v8, a0
 ; RV64-NEXT:    ret
@@ -126,14 +126,14 @@ define <vscale x 2 x i32> @vmulhu_vx_nxv2i32(<vscale x 2 x i32> %va, i32 %x) {
 define <vscale x 2 x i32> @vmulhu_vi_nxv2i32_0(<vscale x 2 x i32> %va) {
 ; RV32-LABEL: vmulhu_vi_nxv2i32_0:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    addi a0, zero, -7
+; RV32-NEXT:    li a0, -7
 ; RV32-NEXT:    vsetvli a1, zero, e32, m1, ta, mu
 ; RV32-NEXT:    vmulhu.vx v8, v8, a0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vmulhu_vi_nxv2i32_0:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    addi a0, zero, 1
+; RV64-NEXT:    li a0, 1
 ; RV64-NEXT:    slli a0, a0, 32
 ; RV64-NEXT:    addi a0, a0, -7
 ; RV64-NEXT:    vsetvli a1, zero, e32, m1, ta, mu
@@ -160,7 +160,7 @@ define <vscale x 2 x i32> @vmulhu_vi_nxv2i32_1(<vscale x 2 x i32> %va) {
 ;
 ; RV64-LABEL: vmulhu_vi_nxv2i32_1:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    addi a0, zero, 16
+; RV64-NEXT:    li a0, 16
 ; RV64-NEXT:    vsetvli a1, zero, e32, m1, ta, mu
 ; RV64-NEXT:    vmulhu.vx v8, v8, a0
 ; RV64-NEXT:    ret
@@ -213,14 +213,14 @@ define <vscale x 4 x i32> @vmulhu_vx_nxv4i32(<vscale x 4 x i32> %va, i32 %x) {
 define <vscale x 4 x i32> @vmulhu_vi_nxv4i32_0(<vscale x 4 x i32> %va) {
 ; RV32-LABEL: vmulhu_vi_nxv4i32_0:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    addi a0, zero, -7
+; RV32-NEXT:    li a0, -7
 ; RV32-NEXT:    vsetvli a1, zero, e32, m2, ta, mu
 ; RV32-NEXT:    vmulhu.vx v8, v8, a0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vmulhu_vi_nxv4i32_0:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    addi a0, zero, 1
+; RV64-NEXT:    li a0, 1
 ; RV64-NEXT:    slli a0, a0, 32
 ; RV64-NEXT:    addi a0, a0, -7
 ; RV64-NEXT:    vsetvli a1, zero, e32, m2, ta, mu
@@ -247,7 +247,7 @@ define <vscale x 4 x i32> @vmulhu_vi_nxv4i32_1(<vscale x 4 x i32> %va) {
 ;
 ; RV64-LABEL: vmulhu_vi_nxv4i32_1:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    addi a0, zero, 16
+; RV64-NEXT:    li a0, 16
 ; RV64-NEXT:    vsetvli a1, zero, e32, m2, ta, mu
 ; RV64-NEXT:    vmulhu.vx v8, v8, a0
 ; RV64-NEXT:    ret
@@ -300,14 +300,14 @@ define <vscale x 8 x i32> @vmulhu_vx_nxv8i32(<vscale x 8 x i32> %va, i32 %x) {
 define <vscale x 8 x i32> @vmulhu_vi_nxv8i32_0(<vscale x 8 x i32> %va) {
 ; RV32-LABEL: vmulhu_vi_nxv8i32_0:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    addi a0, zero, -7
+; RV32-NEXT:    li a0, -7
 ; RV32-NEXT:    vsetvli a1, zero, e32, m4, ta, mu
 ; RV32-NEXT:    vmulhu.vx v8, v8, a0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vmulhu_vi_nxv8i32_0:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    addi a0, zero, 1
+; RV64-NEXT:    li a0, 1
 ; RV64-NEXT:    slli a0, a0, 32
 ; RV64-NEXT:    addi a0, a0, -7
 ; RV64-NEXT:    vsetvli a1, zero, e32, m4, ta, mu
@@ -334,7 +334,7 @@ define <vscale x 8 x i32> @vmulhu_vi_nxv8i32_1(<vscale x 8 x i32> %va) {
 ;
 ; RV64-LABEL: vmulhu_vi_nxv8i32_1:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    addi a0, zero, 16
+; RV64-NEXT:    li a0, 16
 ; RV64-NEXT:    vsetvli a1, zero, e32, m4, ta, mu
 ; RV64-NEXT:    vmulhu.vx v8, v8, a0
 ; RV64-NEXT:    ret

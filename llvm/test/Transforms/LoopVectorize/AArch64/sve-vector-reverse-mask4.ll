@@ -1,4 +1,4 @@
-; This is the loop in c++ being vectorize in this file with 
+; This is the loop in c++ being vectorize in this file with
 ; experimental.vector.reverse
 
 ;#pragma clang loop vectorize_width(4, scalable)
@@ -18,7 +18,7 @@ target triple = "aarch64-unknown-linux-gnu"
 define void @vector_reverse_mask_nxv4i1(double* %a, double* %cond, i64 %N) #0 {
 ; CHECK-LABEL: vector.body:
 ; CHECK: %[[REVERSE6:.*]] = call <vscale x 4 x i1> @llvm.experimental.vector.reverse.nxv4i1(<vscale x 4 x i1> %{{.*}})
-; CHECK: %[[WIDEMSKLOAD:.*]] = call <vscale x 4 x double> @llvm.masked.load.nxv4f64.p0nxv4f64(<vscale x 4 x double>* nonnull %{{.*}}, i32 8, <vscale x 4 x i1> %[[REVERSE6]], <vscale x 4 x double> poison)
+; CHECK: %[[WIDEMSKLOAD:.*]] = call <vscale x 4 x double> @llvm.masked.load.nxv4f64.p0nxv4f64(<vscale x 4 x double>* %{{.*}}, i32 8, <vscale x 4 x i1> %[[REVERSE6]], <vscale x 4 x double> poison)
 ; CHECK-NEXT: %[[FADD:.*]] = fadd <vscale x 4 x double> %[[WIDEMSKLOAD]]
 ; CHECK:  %[[REVERSE9:.*]] = call <vscale x 4 x i1> @llvm.experimental.vector.reverse.nxv4i1(<vscale x 4 x i1> %{{.*}})
 ; CHECK: call void @llvm.masked.store.nxv4f64.p0nxv4f64(<vscale x 4 x double> %[[FADD]], <vscale x 4 x double>* %{{.*}}, i32 8, <vscale x 4 x i1> %[[REVERSE9]]

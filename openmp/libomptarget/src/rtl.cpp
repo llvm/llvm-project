@@ -438,6 +438,9 @@ static bool _ImageIsCompatibleWithEnv(__tgt_image_info *img_info,
   if (!img_info)
     return true;
 
+  if (!active_env->capabilities)
+    return false;
+
   // Each runtime requirement for the compiled image is stored in
   // the img_info->offload_arch (TargetID) string.
   // Each runtime capability obtained from "offload-arch -c" is stored in
@@ -467,7 +470,7 @@ static bool _ImageIsCompatibleWithEnv(__tgt_image_info *img_info,
 void RTLsTy::RegisterLib(__tgt_bin_desc *desc) {
 
   // Get the current active offload environment
-  __tgt_active_offload_env offload_env;
+  __tgt_active_offload_env offload_env = { nullptr };
   // Need a buffer to hold results of offload-arch -c command
   size_t offload_arch_output_buffer_size = MAX_CAPS_STR_SIZE;
   std::vector<char> offload_arch_output_buffer;

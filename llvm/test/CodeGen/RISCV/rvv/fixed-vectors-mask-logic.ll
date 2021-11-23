@@ -39,7 +39,7 @@ define void @or_v16i1(<16 x i1>* %x, <16 x i1>* %y) {
 define void @xor_v32i1(<32 x i1>* %x, <32 x i1>* %y) {
 ; CHECK-LABEL: xor_v32i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a2, zero, 32
+; CHECK-NEXT:    li a2, 32
 ; CHECK-NEXT:    vsetvli zero, a2, e8, m2, ta, mu
 ; CHECK-NEXT:    vlm.v v8, (a0)
 ; CHECK-NEXT:    vlm.v v9, (a1)
@@ -56,7 +56,7 @@ define void @xor_v32i1(<32 x i1>* %x, <32 x i1>* %y) {
 define void @not_v64i1(<64 x i1>* %x, <64 x i1>* %y) {
 ; CHECK-LABEL: not_v64i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a1, zero, 64
+; CHECK-NEXT:    li a1, 64
 ; CHECK-NEXT:    vsetvli zero, a1, e8, m4, ta, mu
 ; CHECK-NEXT:    vlm.v v8, (a0)
 ; CHECK-NEXT:    vmnand.mm v8, v8, v8
@@ -106,7 +106,7 @@ define void @ornot_v16i1(<16 x i1>* %x, <16 x i1>* %y) {
 define void @xornot_v32i1(<32 x i1>* %x, <32 x i1>* %y) {
 ; CHECK-LABEL: xornot_v32i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a2, zero, 32
+; CHECK-NEXT:    li a2, 32
 ; CHECK-NEXT:    vsetvli zero, a2, e8, m2, ta, mu
 ; CHECK-NEXT:    vlm.v v8, (a0)
 ; CHECK-NEXT:    vlm.v v9, (a1)
@@ -158,7 +158,7 @@ define void @nor_v16i1(<16 x i1>* %x, <16 x i1>* %y) {
 define void @xnor_v32i1(<32 x i1>* %x, <32 x i1>* %y) {
 ; CHECK-LABEL: xnor_v32i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a2, zero, 32
+; CHECK-NEXT:    li a2, 32
 ; CHECK-NEXT:    vsetvli zero, a2, e8, m2, ta, mu
 ; CHECK-NEXT:    vlm.v v8, (a0)
 ; CHECK-NEXT:    vlm.v v9, (a1)

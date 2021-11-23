@@ -21,7 +21,7 @@ zext.w x5, x6
 
 # CHECK-S-OBJ-NOALIAS: addi t1, zero, -2
 # CHECK-S-OBJ-NOALIAS-NEXT: add.uw t1, t1, zero
-# CHECK-S-OBJ: addi t1, zero, -2
+# CHECK-S-OBJ: li t1, -2
 # CHECK-S-OBJ-NEXT: zext.w t1, t1
 li x6, 0xfffffffe
 

@@ -29,13 +29,13 @@ define signext i32 @wobble() nounwind {
 ; CHECK-NEXT:    mul a1, a1, a2
 ; CHECK-NEXT:    srli a1, a1, 18
 ; CHECK-NEXT:    lui a2, %hi(global.3)
-; CHECK-NEXT:    addi a3, zero, 5
+; CHECK-NEXT:    li a3, 5
 ; CHECK-NEXT:    sw a1, %lo(global.3)(a2)
 ; CHECK-NEXT:    bltu a0, a3, .LBB0_2
 ; CHECK-NEXT:  # %bb.1: # %bb10
 ; CHECK-NEXT:    call quux@plt
 ; CHECK-NEXT:  .LBB0_2: # %bb12
-; CHECK-NEXT:    mv a0, zero
+; CHECK-NEXT:    li a0, 0
 ; CHECK-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; CHECK-NEXT:    addi sp, sp, 16
 ; CHECK-NEXT:    ret

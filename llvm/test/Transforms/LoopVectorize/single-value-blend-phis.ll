@@ -112,8 +112,8 @@ define void @single_incoming_phi_with_blend_mask(i64 %a, i64 %b) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = trunc i64 [[INDEX]] to i16
 ; CHECK-NEXT:    [[TMP3:%.*]] = add i16 [[TMP2]], 0
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp ugt <2 x i64> [[VEC_IND]], [[BROADCAST_SPLAT]]
-; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds [32 x i16], [32 x i16]* @src, i16 0, i16 [[TMP3]]
-; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i16, i16* [[TMP5]], i32 0
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr [32 x i16], [32 x i16]* @src, i16 0, i16 [[TMP3]]
+; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr i16, i16* [[TMP5]], i32 0
 ; CHECK-NEXT:    [[TMP7:%.*]] = bitcast i16* [[TMP6]] to <2 x i16>*
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i16>, <2 x i16>* [[TMP7]], align 1
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp sgt <2 x i64> [[VEC_IND]], [[BROADCAST_SPLAT]]

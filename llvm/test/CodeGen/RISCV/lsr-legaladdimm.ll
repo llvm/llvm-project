@@ -11,7 +11,7 @@
 define i32 @main() nounwind {
 ; RV32I-LABEL: main:
 ; RV32I:       # %bb.0: # %entry
-; RV32I-NEXT:    mv a0, zero
+; RV32I-NEXT:    li a0, 0
 ; RV32I-NEXT:    lui a1, %hi(b)
 ; RV32I-NEXT:    addi a1, a1, %lo(b)
 ; RV32I-NEXT:    lui a2, %hi(a)
@@ -27,7 +27,7 @@ define i32 @main() nounwind {
 ; RV32I-NEXT:    addi a2, a2, 4
 ; RV32I-NEXT:    bne a0, a3, .LBB0_1
 ; RV32I-NEXT:  # %bb.2: # %for.end
-; RV32I-NEXT:    mv a0, zero
+; RV32I-NEXT:    li a0, 0
 ; RV32I-NEXT:    ret
 entry:
   br label %for.body

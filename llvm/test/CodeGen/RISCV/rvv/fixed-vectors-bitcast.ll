@@ -17,14 +17,14 @@
 define <32 x i1> @bitcast_v4i8_v32i1(<4 x i8> %a, <32 x i1> %b) {
 ; CHECK-LABEL: bitcast_v4i8_v32i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a0, zero, 32
+; CHECK-NEXT:    li a0, 32
 ; CHECK-NEXT:    vsetvli zero, a0, e8, m2, ta, mu
 ; CHECK-NEXT:    vmxor.mm v0, v0, v8
 ; CHECK-NEXT:    ret
 ;
 ; ELEN32-LABEL: bitcast_v4i8_v32i1:
 ; ELEN32:       # %bb.0:
-; ELEN32-NEXT:    addi a0, zero, 32
+; ELEN32-NEXT:    li a0, 32
 ; ELEN32-NEXT:    vsetvli zero, a0, e8, m2, ta, mu
 ; ELEN32-NEXT:    vmxor.mm v0, v0, v8
 ; ELEN32-NEXT:    ret
@@ -132,7 +132,7 @@ define i32 @bitcast_v1i32_i32(<1 x i32> %a) {
 define i64 @bitcast_v8i8_i64(<8 x i8> %a) {
 ; RV32-LABEL: bitcast_v8i8_i64:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    addi a0, zero, 32
+; RV32-NEXT:    li a0, 32
 ; RV32-NEXT:    vsetivli zero, 1, e64, m1, ta, mu
 ; RV32-NEXT:    vsrl.vx v9, v8, a0
 ; RV32-NEXT:    vmv.x.s a1, v9
@@ -170,7 +170,7 @@ define i64 @bitcast_v8i8_i64(<8 x i8> %a) {
 define i64 @bitcast_v4i16_i64(<4 x i16> %a) {
 ; RV32-LABEL: bitcast_v4i16_i64:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    addi a0, zero, 32
+; RV32-NEXT:    li a0, 32
 ; RV32-NEXT:    vsetivli zero, 1, e64, m1, ta, mu
 ; RV32-NEXT:    vsrl.vx v9, v8, a0
 ; RV32-NEXT:    vmv.x.s a1, v9
@@ -208,7 +208,7 @@ define i64 @bitcast_v4i16_i64(<4 x i16> %a) {
 define i64 @bitcast_v2i32_i64(<2 x i32> %a) {
 ; RV32-LABEL: bitcast_v2i32_i64:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    addi a0, zero, 32
+; RV32-NEXT:    li a0, 32
 ; RV32-NEXT:    vsetivli zero, 1, e64, m1, ta, mu
 ; RV32-NEXT:    vsrl.vx v9, v8, a0
 ; RV32-NEXT:    vmv.x.s a1, v9
@@ -246,7 +246,7 @@ define i64 @bitcast_v2i32_i64(<2 x i32> %a) {
 define i64 @bitcast_v1i64_i64(<1 x i64> %a) {
 ; RV32-LABEL: bitcast_v1i64_i64:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    addi a0, zero, 32
+; RV32-NEXT:    li a0, 32
 ; RV32-NEXT:    vsetivli zero, 1, e64, m1, ta, mu
 ; RV32-NEXT:    vsrl.vx v9, v8, a0
 ; RV32-NEXT:    vmv.x.s a1, v9
