@@ -212,16 +212,13 @@ struct BufferizationState;
 // functions in the future.
 struct AllocationCallbacks {
   using AllocationFn = std::function<Optional<Value>(
-      OpBuilder &, Location, MemRefType, const SmallVector<Value> &)>;
+      OpBuilder &, Location, MemRefType, ArrayRef<Value>)>;
   using DeallocationFn = std::function<void(OpBuilder &, Location, Value)>;
   using MemCpyFn = std::function<void(OpBuilder &, Location, Value, Value)>;
-  using CreateAllocDeallocFn =
-      std::function<Value(OpBuilder &, Location, Value, BufferizationState &)>;
 
   AllocationCallbacks(AllocationFn allocFn, DeallocationFn deallocFn,
-                      MemCpyFn copyFn, CreateAllocDeallocFn allocDeallocFn)
-      : allocationFn(allocFn), deallocationFn(deallocFn), memCpyFn(copyFn),
-        createAllocDeallocFn(allocDeallocFn) {}
+                      MemCpyFn copyFn)
+      : allocationFn(allocFn), deallocationFn(deallocFn), memCpyFn(copyFn) {}
 
   /// A function that allocates memory.
   AllocationFn allocationFn;
@@ -231,11 +228,6 @@ struct AllocationCallbacks {
 
   /// A function that copies memory between two allocations.
   MemCpyFn memCpyFn;
-
-  /// A function that creates an alloc-dealloc pair. This function may perform
-  /// additional optimizations such as buffer allocation hoisting. This function
-  /// calls `allocationFn` and `deallocationFn` to create (de)allocations.
-  CreateAllocDeallocFn createAllocDeallocFn;
 };
 
 /// BufferizationState keeps track of bufferization state and provides access to
@@ -246,6 +238,12 @@ struct BufferizationState {
 
   // BufferizationState should be passed as a reference.
   BufferizationState(const BufferizationState &) = delete;
+
+  /// A function that creates an alloc-dealloc pair. This function may perform
+  /// additional optimizations such as buffer allocation hoisting. This function
+  /// calls `allocationFn` and `deallocationFn` to create (de)allocations.
+  Value createAllocDeallocFn(OpBuilder &builder, Location loc,
+                             Value shapedValue);
 
   /// Map tensor values to memref buffers.
   void mapBuffer(ValueRange tensors, ValueRange buffers);
