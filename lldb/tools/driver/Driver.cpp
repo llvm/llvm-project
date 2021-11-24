@@ -24,7 +24,6 @@
 #include "llvm/Support/Format.h"
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/Path.h"
-#include "llvm/Support/Process.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/WithColor.h"
 #include "llvm/Support/raw_ostream.h"
@@ -43,14 +42,6 @@
 #include <cstdlib>
 #include <cstring>
 #include <fcntl.h>
-
-// Includes for pipe()
-#if defined(_WIN32)
-#include <fcntl.h>
-#include <io.h>
-#else
-#include <unistd.h>
-#endif
 
 #if !defined(__APPLE__)
 #include "llvm/Support/DataTypes.h"
@@ -421,60 +412,6 @@ SBError Driver::ProcessArgs(const opt::InputArgList &args, bool &exiting) {
   return error;
 }
 
-static inline int OpenPipe(int fds[2], std::size_t size) {
-#ifdef _WIN32
-  return _pipe(fds, size, O_BINARY);
-#else
-  (void)size;
-  return pipe(fds);
-#endif
-}
-
-static ::FILE *PrepareCommandsForSourcing(const char *commands_data,
-                                          size_t commands_size) {
-  enum PIPES { READ, WRITE }; // Indexes for the read and write fds
-  int fds[2] = {-1, -1};
-
-  if (OpenPipe(fds, commands_size) != 0) {
-    WithColor::error()
-        << "can't create pipe file descriptors for LLDB commands\n";
-    return nullptr;
-  }
-
-  ssize_t nrwr = write(fds[WRITE], commands_data, commands_size);
-  if (size_t(nrwr) != commands_size) {
-    WithColor::error()
-        << format(
-               "write(%i, %p, %" PRIu64
-               ") failed (errno = %i) when trying to open LLDB commands pipe",
-               fds[WRITE], static_cast<const void *>(commands_data),
-               static_cast<uint64_t>(commands_size), errno)
-        << '\n';
-    llvm::sys::Process::SafelyCloseFileDescriptor(fds[READ]);
-    llvm::sys::Process::SafelyCloseFileDescriptor(fds[WRITE]);
-    return nullptr;
-  }
-
-  // Close the write end of the pipe, so that the command interpreter will exit
-  // when it consumes all the data.
-  llvm::sys::Process::SafelyCloseFileDescriptor(fds[WRITE]);
-
-  // Open the read file descriptor as a FILE * that we can return as an input
-  // handle.
-  ::FILE *commands_file = fdopen(fds[READ], "rb");
-  if (commands_file == nullptr) {
-    WithColor::error() << format("fdopen(%i, \"rb\") failed (errno = %i) "
-                                 "when trying to open LLDB commands pipe",
-                                 fds[READ], errno)
-                       << '\n';
-    llvm::sys::Process::SafelyCloseFileDescriptor(fds[READ]);
-    return nullptr;
-  }
-
-  // 'commands_file' now owns the read descriptor.
-  return commands_file;
-}
-
 std::string EscapeString(std::string arg) {
   std::string::size_type pos = 0;
   while ((pos = arg.find_first_of("\"\\", pos)) != std::string::npos) {
@@ -604,20 +541,14 @@ int Driver::MainLoop() {
   // Check if we have any data in the commands stream, and if so, save it to a
   // temp file
   // so we can then run the command interpreter using the file contents.
-  const char *commands_data = commands_stream.GetData();
-  const size_t commands_size = commands_stream.GetSize();
-
   bool go_interactive = true;
-  if ((commands_data != nullptr) && (commands_size != 0u)) {
-    FILE *commands_file =
-        PrepareCommandsForSourcing(commands_data, commands_size);
-
-    if (commands_file == nullptr) {
-      // We should have already printed an error in PrepareCommandsForSourcing.
+  if ((commands_stream.GetData() != nullptr) &&
+      (commands_stream.GetSize() != 0u)) {
+    SBError error = m_debugger.SetInputString(commands_stream.GetData());
+    if (error.Fail()) {
+      WithColor::error() << error.GetCString() << '\n';
       return 1;
     }
-
-    m_debugger.SetInputFileHandle(commands_file, true);
 
     // Set the debugger into Sync mode when running the command file. Otherwise
     // command files that run the target won't run in a sensible way.
@@ -651,12 +582,9 @@ int Driver::MainLoop() {
       SBStream crash_commands_stream;
       WriteCommandsForSourcing(eCommandPlacementAfterCrash,
                                crash_commands_stream);
-      const char *crash_commands_data = crash_commands_stream.GetData();
-      const size_t crash_commands_size = crash_commands_stream.GetSize();
-      commands_file =
-          PrepareCommandsForSourcing(crash_commands_data, crash_commands_size);
-      if (commands_file != nullptr) {
-        m_debugger.SetInputFileHandle(commands_file, true);
+      SBError error =
+          m_debugger.SetInputString(crash_commands_stream.GetData());
+      if (error.Success()) {
         SBCommandInterpreterRunResult local_results =
             m_debugger.RunCommandInterpreter(options);
         if (local_results.GetResult() ==
