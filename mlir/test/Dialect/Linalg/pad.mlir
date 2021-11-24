@@ -1,5 +1,6 @@
 // RUN: mlir-opt %s -test-linalg-codegen-strategy="anchor-op=linalg.matmul pad pack-paddings=1,1,0 run-enable-pass=false" -cse -canonicalize -split-input-file | FileCheck %s
 // RUN: mlir-opt %s -test-linalg-codegen-strategy="anchor-op=linalg.fill pad pack-paddings=1,1,0 run-enable-pass=false" -cse -canonicalize -split-input-file | FileCheck %s --check-prefix=CHECK-FILL
+// RUN: mlir-opt %s -test-linalg-codegen-strategy="anchor-op=linalg.matmul pad pack-paddings=1,1,0 pad-inputs-only run-enable-pass=false" -cse -canonicalize -split-input-file | FileCheck %s --check-prefix=INPUTS-ONLY
 
 // CHECK-DAG: #[[MAP0:[0-9a-z]+]] = affine_map<(d0) -> (7, -d0 + 12)>
 // CHECK-DAG: #[[MAP1:[0-9a-z]+]] = affine_map<(d0) -> (-d0 + 7)>
@@ -245,4 +246,110 @@ func @scalar_operand(%arg0: f32, %arg1: tensor<24x12xf32>) -> tensor<24x12xf32> 
     scf.yield %1 : tensor<24x12xf32>
   }
   return %0 : tensor<24x12xf32>
+}
+
+// -----
+
+#map0 = affine_map<()[s0] -> (7, s0)>
+
+//      CHECK:  static_extract_slice_missing
+// CHECK-SAME:    %[[ARG2:[0-9a-zA-Z]*]]: tensor<4x5xf32>,
+func @static_extract_slice_missing(%arg0: tensor<24x12xf32>,
+                                   %arg1: tensor<12x25xf32>,
+                                   %arg2: tensor<4x5xf32>,
+                                   %iv0 : index, %iv1 : index, %iv2 : index) -> tensor<4x5xf32> {
+  %0 = affine.min #map0()[%iv2]
+  %1 = tensor.extract_slice %arg0[%iv0, %iv2] [4, %0] [1, 1] : tensor<24x12xf32> to tensor<4x?xf32>
+  %2 = tensor.extract_slice %arg1[%iv2, %iv1] [%0, 5] [1, 1] : tensor<12x25xf32> to tensor<?x5xf32>
+
+  // Check the matmul inputs are padded despite the missing slice for the static output.
+  //      CHECK:  %[[T0:.*]] = linalg.pad_tensor
+  //      CHECK:  %[[T1:.*]] = linalg.pad_tensor
+  //      CHECK:  = linalg.matmul ins(%[[T0]], %[[T1]]
+  // CHECK-SAME:                 outs(%[[ARG2]]
+  %3 = linalg.matmul ins(%1, %2 : tensor<4x?xf32>, tensor<?x5xf32>) outs(%arg2 : tensor<4x5xf32>) -> tensor<4x5xf32>
+  return %3 : tensor<4x5xf32>
+}
+
+// -----
+
+#map0 = affine_map<()[s0] -> (7, s0)>
+
+//      CHECK:  dynamic_extract_slice_missing
+// CHECK-SAME:    %[[ARG0:[0-9a-zA-Z]*]]: tensor<4x?xf32>,
+// CHECK-SAME:    %[[ARG1:[0-9a-zA-Z]*]]: tensor<12x25xf32>,
+// CHECK-SAME:    %[[ARG2:[0-9a-zA-Z]*]]: tensor<24x25xf32>,
+func @dynamic_extract_slice_missing(%arg0: tensor<4x?xf32>,
+                                    %arg1: tensor<12x25xf32>,
+                                    %arg2: tensor<24x25xf32>,
+                                    %iv0 : index, %iv1 : index, %iv2 : index) -> tensor<24x25xf32> {
+  %0 = affine.min #map0()[%iv2]
+
+  //      CHECK:  %[[T0:.*]] = tensor.extract_slice %[[ARG1]]
+  //      CHECK:  %[[T1:.*]] = tensor.extract_slice %[[ARG2]]
+  %2 = tensor.extract_slice %arg1[%iv2, %iv1] [%0, 5] [1, 1] : tensor<12x25xf32> to tensor<?x5xf32>
+  %3 = tensor.extract_slice %arg2[%iv0, %iv1] [4, 5] [1, 1] : tensor<24x25xf32> to tensor<4x5xf32>
+
+  // Check the matmul is not padded due to the missing slice for the dynamic input.
+  //      CHECK:  = linalg.matmul ins(%[[ARG0]], %[[T0]]
+  // CHECK-SAME:                 outs(%[[T1]]
+  %4 = linalg.matmul ins(%arg0, %2 : tensor<4x?xf32>, tensor<?x5xf32>) outs(%3 : tensor<4x5xf32>) -> tensor<4x5xf32>
+  %5 = tensor.insert_slice %4 into %arg2[%iv0, %iv1] [4, 5] [1, 1] : tensor<4x5xf32> into tensor<24x25xf32>
+  return %5 : tensor<24x25xf32>
+}
+
+// -----
+
+#map0 = affine_map<()[s0] -> (7, s0)>
+
+//      INPUTS-ONLY:  static_input_padding_only
+// INPUTS-ONLY-SAME:    %[[ARG2:[0-9a-zA-Z]*]]: tensor<24x25xf32>,
+func @static_input_padding_only(%arg0: tensor<24x12xf32>,
+                                %arg1: tensor<12x25xf32>,
+                                %arg2: tensor<24x25xf32>,
+                                %iv0 : index, %iv1 : index, %iv2 : index) -> tensor<24x25xf32> {
+  %0 = affine.min #map0()[%iv2]
+  %1 = tensor.extract_slice %arg0[%iv0, %iv2] [4, %0] [1, 1] : tensor<24x12xf32> to tensor<4x?xf32>
+  %2 = tensor.extract_slice %arg1[%iv2, %iv1] [%0, 5] [1, 1] : tensor<12x25xf32> to tensor<?x5xf32>
+
+  // INPUTS-ONLY:  %[[T0:.*]] = tensor.extract_slice %[[ARG2]]
+  %3 = tensor.extract_slice %arg2[%iv0, %iv1] [4, 5] [1, 1] : tensor<24x25xf32> to tensor<4x5xf32>
+
+  // Check the matmul inputs are padded despite the failure to compute a padding value for the static output.
+  // INPUTS-ONLY:  %[[T1:.*]] = linalg.pad_tensor
+  // INPUTS-ONLY:  %[[T2:.*]] = linalg.pad_tensor
+  // INPUTS-ONLY:  = linalg.matmul ins(%[[T1]], %[[T2]]
+  // INPUTS-ONLY-SAME:             outs(%[[T0]]
+  %4 = linalg.matmul ins(%1, %2 : tensor<4x?xf32>, tensor<?x5xf32>) outs(%3 : tensor<4x5xf32>) -> tensor<4x5xf32>
+  %5 = tensor.insert_slice %4 into %arg2[%iv0, %iv1] [4, 5] [1, 1] : tensor<4x5xf32> into tensor<24x25xf32>
+  return %5 : tensor<24x25xf32>
+}
+
+// -----
+
+#map0 = affine_map<()[s0] -> (7, s0)>
+
+//      INPUTS-ONLY:  dynamic_input_padding_only
+// INPUTS-ONLY-SAME:    %[[ARG0:[0-9a-zA-Z]*]]: tensor<24x12xf32>,
+// INPUTS-ONLY-SAME:    %[[ARG1:[0-9a-zA-Z]*]]: tensor<12x25xf32>,
+// INPUTS-ONLY-SAME:    %[[ARG2:[0-9a-zA-Z]*]]: tensor<24x25xf32>,
+func @dynamic_input_padding_only(%arg0: tensor<24x12xf32>,
+                                 %arg1: tensor<12x25xf32>,
+                                 %arg2: tensor<24x25xf32>,
+                                 %iv0 : index, %iv1 : index, %iv2 : index) -> tensor<24x25xf32> {
+  %0 = affine.min #map0()[%iv2]
+
+  // INPUTS-ONLY:  %[[T0:.*]] = tensor.extract_slice %[[ARG0]]
+  // INPUTS-ONLY:  %[[T1:.*]] = tensor.extract_slice %[[ARG1]]
+  // INPUTS-ONLY:  %[[T2:.*]] = tensor.extract_slice %[[ARG2]]
+  %1 = tensor.extract_slice %arg0[%iv0, %iv2] [4, %0] [1, 1] : tensor<24x12xf32> to tensor<4x?xf32>
+  %2 = tensor.extract_slice %arg1[%iv2, %iv1] [%0, %0] [1, 1] : tensor<12x25xf32> to tensor<?x?xf32>
+  %3 = tensor.extract_slice %arg2[%iv0, %iv1] [4, %0] [1, 1] : tensor<24x25xf32> to tensor<4x?xf32>
+
+  // Check the matmul is not padded due to the failure to compute a padding value for the dynamic output.
+  // INPUTS-ONLY:  = linalg.matmul ins(%[[T0]], %[[T1]]
+  // INPUTS-ONLY-SAME:             outs(%[[T2]]
+  %4 = linalg.matmul ins(%1, %2 : tensor<4x?xf32>, tensor<?x?xf32>) outs(%3 : tensor<4x?xf32>) -> tensor<4x?xf32>
+  %5 = tensor.insert_slice %4 into %arg2[%iv0, %iv1] [4, %0] [1, 1] : tensor<4x?xf32> into tensor<24x25xf32>
+  return %5 : tensor<24x25xf32>
 }
