@@ -239,10 +239,12 @@ class SPIRVOpInterface<string name> : OpInterface<name> {
 // TODO: the following interfaces definitions are duplicating with the above.
 // Remove them once we are able to support dialect-specific contents in ODS.
 def QueryMinVersionInterface : SPIRVOpInterface<"QueryMinVersionInterface"> {
-  let methods = [InterfaceMethod<"", "::mlir::spirv::Version", "getMinVersion">];
+  let methods = [InterfaceMethod<
+    "", "::llvm::Optional<::mlir::spirv::Version>", "getMinVersion">];
 }
 def QueryMaxVersionInterface : SPIRVOpInterface<"QueryMaxVersionInterface"> {
-  let methods = [InterfaceMethod<"", "::mlir::spirv::Version", "getMaxVersion">];
+  let methods = [InterfaceMethod<
+    "", "::llvm::Optional<::mlir::spirv::Version>", "getMaxVersion">];
 }
 def QueryExtensionInterface : SPIRVOpInterface<"QueryExtensionInterface"> {
   let methods = [InterfaceMethod<
