@@ -25,6 +25,8 @@ class MutexSet {
   struct Desc {
     uptr addr;
     StackID stack_id;
+    u64 id;
+    u64 epoch;
     u32 seq;
     u32 count;
     bool write;
@@ -38,7 +40,10 @@ class MutexSet {
   };
 
   MutexSet();
-  void Reset();
+  // The 'id' is obtained from SyncVar::GetId().
+  void Add(u64 id, bool write, u64 epoch);
+  void Del(u64 id, bool write);
+  void Remove(u64 id);  // Removes the mutex completely (if it's destroyed).
   void AddAddr(uptr addr, StackID stack_id, bool write);
   void DelAddr(uptr addr, bool destroy = false);
   uptr Size() const;
@@ -77,7 +82,9 @@ class DynamicMutexSet {
 // in different goroutine).
 #if SANITIZER_GO
 MutexSet::MutexSet() {}
-void MutexSet::Reset() {}
+void MutexSet::Add(u64 id, bool write, u64 epoch) {}
+void MutexSet::Del(u64 id, bool write) {}
+void MutexSet::Remove(u64 id) {}
 void MutexSet::AddAddr(uptr addr, StackID stack_id, bool write) {}
 void MutexSet::DelAddr(uptr addr, bool destroy) {}
 uptr MutexSet::Size() const { return 0; }
