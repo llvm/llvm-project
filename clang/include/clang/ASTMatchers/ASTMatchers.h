@@ -7710,6 +7710,27 @@ AST_MATCHER_P(Decl, hasAttr, attr::Kind, AttrKind) {
   return false;
 }
 
+/// Matches declaration that has a section attribute greater than length.
+///
+/// Given
+/// \code
+///   __attribute__((section("alice"))) void sender() { ... }
+///   __attribute__((section("bob"))) int receiver;
+/// \endcode
+/// decl(hasSectionAttrWithLengthGreaterThan(3)) matches the function declaration of
+/// alice but not the variable declaration bob.
+AST_MATCHER_P(Decl, hasSectionAttrWithNameLengthGreaterThan, unsigned int, length) {
+  for (const auto *Attr : Node.attrs()) {
+    if (Attr->getKind() == clang::attr::Section) {
+      auto *Attr2 = static_cast<const SectionAttr*>(Attr);
+      if (Attr2->getNameLength() > length ) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
 /// Matches the return value expression of a return statement
 ///
 /// Given
