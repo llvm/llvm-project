@@ -15,8 +15,6 @@
 
 #include <type_traits>
 
-#include "test_macros.h"
-
-int main(int, char**) {
+void f() {
   [[maybe_unused]] std::result_of<int (*())()> a; // expected-warning {{'result_of<int (*())()>' is deprecated}}
 }
