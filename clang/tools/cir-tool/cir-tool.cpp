@@ -17,6 +17,7 @@
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
+#include "mlir/InitAllPasses.h"
 #include "mlir/Pass/PassRegistry.h"
 #include "mlir/Tools/mlir-opt/MlirOptMain.h"
 #include "clang/CIR/Passes.h"
@@ -34,6 +35,8 @@ int main(int argc, char **argv) {
   ::mlir::registerPass([]() -> std::unique_ptr<::mlir::Pass> {
     return cir::createConvertCIRToMemRefPass();
   });
+
+  mlir::registerTransformsPasses();
 
   return failed(MlirOptMain(
       argc, argv, "Clang IR analysis and optimization tool\n", registry));
