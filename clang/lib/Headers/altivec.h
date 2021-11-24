@@ -19,6 +19,10 @@
 #define __CR6_EQ_REV 1
 #define __CR6_LT 2
 #define __CR6_LT_REV 3
+#define __CR6_GT 4
+#define __CR6_GT_REV 5
+#define __CR6_SO 6
+#define __CR6_SO_REV 7
 
 /* Constants for vec_test_data_class */
 #define __VEC_CLASS_FP_SUBNORMAL_N (1 << 0)
@@ -19036,6 +19040,51 @@ vec_sra(vector signed __int128 __a, vector unsigned __int128 __b) {
 
 #endif /* __SIZEOF_INT128__ */
 #endif /* __POWER10_VECTOR__ */
+
+#ifdef __POWER8_VECTOR__
+#define __bcdadd(__a, __b, __ps) __builtin_ppc_bcdadd((__a), (__b), (__ps))
+#define __bcdsub(__a, __b, __ps) __builtin_ppc_bcdsub((__a), (__b), (__ps))
+
+static __inline__ long __bcdadd_ofl(vector unsigned char __a,
+                                    vector unsigned char __b) {
+  return __builtin_ppc_bcdadd_p(__CR6_SO, __a, __b);
+}
+
+static __inline__ long __bcdsub_ofl(vector unsigned char __a,
+                                    vector unsigned char __b) {
+  return __builtin_ppc_bcdsub_p(__CR6_SO, __a, __b);
+}
+
+static __inline__ long __bcd_invalid(vector unsigned char __a) {
+  return __builtin_ppc_bcdsub_p(__CR6_SO, __a, __a);
+}
+
+static __inline__ long __bcdcmpeq(vector unsigned char __a,
+                                  vector unsigned char __b) {
+  return __builtin_ppc_bcdsub_p(__CR6_EQ, __a, __b);
+}
+
+static __inline__ long __bcdcmplt(vector unsigned char __a,
+                                  vector unsigned char __b) {
+  return __builtin_ppc_bcdsub_p(__CR6_LT, __a, __b);
+}
+
+static __inline__ long __bcdcmpgt(vector unsigned char __a,
+                                  vector unsigned char __b) {
+  return __builtin_ppc_bcdsub_p(__CR6_GT, __a, __b);
+}
+
+static __inline__ long __bcdcmple(vector unsigned char __a,
+                                  vector unsigned char __b) {
+  return __builtin_ppc_bcdsub_p(__CR6_GT_REV, __a, __b);
+}
+
+static __inline__ long __bcdcmpge(vector unsigned char __a,
+                                  vector unsigned char __b) {
+  return __builtin_ppc_bcdsub_p(__CR6_LT_REV, __a, __b);
+}
+
+#endif // __POWER8_VECTOR__
 
 #undef __ATTRS_o_ai
 
