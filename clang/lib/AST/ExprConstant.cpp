@@ -7483,7 +7483,7 @@ public:
     const Expr *Source = E->getSourceExpr();
     if (!Source)
       return Error(E);
-    if (Source == E) { // sanity checking.
+    if (Source == E) {
       assert(0 && "OpaqueValueExpr recursively refers to itself");
       return Error(E);
     }

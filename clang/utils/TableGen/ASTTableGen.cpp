@@ -107,7 +107,7 @@ static void visitASTNodeRecursive(ASTNode node, ASTNode base,
 static void visitHierarchy(RecordKeeper &records,
                            StringRef nodeClassName,
                            ASTNodeHierarchyVisitor<ASTNode> visit) {
-  // Check for the node class, just as a sanity check.
+  // Check for the node class, just as a basic correctness check.
   if (!records.getClass(nodeClassName)) {
     PrintFatalError(Twine("cannot find definition for node class ")
                       + nodeClassName);
