@@ -20,7 +20,7 @@ namespace __sanitizer {
 
 struct BufferedStackTrace;
 
-static const u32 kStackTraceMax = 256;
+static const u32 kStackTraceMax = 255;
 
 #if SANITIZER_LINUX && defined(__mips__)
 # define SANITIZER_CAN_FAST_UNWIND 0
