@@ -1613,7 +1613,7 @@ static LogicalResult verify(InsertOp op) {
        static_cast<unsigned>(destVectorType.getRank())))
     return op.emitOpError("expected position attribute rank + source rank to "
                           "match dest vector rank");
-  else if (!srcVectorType && (positionAttr.size() !=
+  if (!srcVectorType && (positionAttr.size() !=
                               static_cast<unsigned>(destVectorType.getRank())))
     return op.emitOpError(
         "expected position attribute rank to match the dest vector rank");
@@ -2174,7 +2174,7 @@ public:
                                 PatternRewriter &rewriter) const override {
     // Return if 'extractStridedSliceOp' operand is not defined by a
     // ConstantMaskOp.
-    auto defOp = extractStridedSliceOp.vector().getDefiningOp();
+    auto *defOp = extractStridedSliceOp.vector().getDefiningOp();
     auto constantMaskOp = dyn_cast_or_null<ConstantMaskOp>(defOp);
     if (!constantMaskOp)
       return failure();
@@ -3126,7 +3126,7 @@ namespace {
 ///
 /// `%w0 = vector.transfer_write` op will be removed by DCE if it doesn't have
 /// any other uses.
-class foldWAW final : public OpRewritePattern<TransferWriteOp> {
+class FoldWaw final : public OpRewritePattern<TransferWriteOp> {
 public:
   using OpRewritePattern<TransferWriteOp>::OpRewritePattern;
   LogicalResult matchAndRewrite(TransferWriteOp writeOp,
@@ -3209,7 +3209,7 @@ public:
 
 void TransferWriteOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                                   MLIRContext *context) {
-  results.add<foldWAW, FoldInsertSliceIntoTransferWrite>(context);
+  results.add<FoldWaw, FoldInsertSliceIntoTransferWrite>(context);
 }
 
 //===----------------------------------------------------------------------===//
@@ -3956,9 +3956,9 @@ static LogicalResult verify(ConstantMaskOp &op) {
   }
   // Verify that if one mask dim size is zero, they all should be zero (because
   // the mask region is a conjunction of each mask dimension interval).
-  bool any_zeros = llvm::is_contained(maskDimSizes, 0);
-  bool all_zeros = llvm::all_of(maskDimSizes, [](int64_t s) { return s == 0; });
-  if (any_zeros && !all_zeros)
+  bool anyZeros = llvm::is_contained(maskDimSizes, 0);
+  bool allZeros = llvm::all_of(maskDimSizes, [](int64_t s) { return s == 0; });
+  if (anyZeros && !allZeros)
     return op.emitOpError("expected all mask dim sizes to be zeros, "
                           "as a result of conjunction with zero mask dim");
   return success();
@@ -3987,15 +3987,15 @@ public:
   LogicalResult matchAndRewrite(CreateMaskOp createMaskOp,
                                 PatternRewriter &rewriter) const override {
     // Return if any of 'createMaskOp' operands are not defined by a constant.
-    auto is_not_def_by_constant = [](Value operand) {
+    auto isNotDefByConstant = [](Value operand) {
       return !isa_and_nonnull<arith::ConstantIndexOp>(operand.getDefiningOp());
     };
-    if (llvm::any_of(createMaskOp.operands(), is_not_def_by_constant))
+    if (llvm::any_of(createMaskOp.operands(), isNotDefByConstant))
       return failure();
     // Gather constant mask dimension sizes.
     SmallVector<int64_t, 4> maskDimSizes;
     for (auto operand : createMaskOp.operands()) {
-      auto defOp = operand.getDefiningOp();
+      auto *defOp = operand.getDefiningOp();
       maskDimSizes.push_back(cast<arith::ConstantIndexOp>(defOp).value());
     }
     // Replace 'createMaskOp' with ConstantMaskOp.
