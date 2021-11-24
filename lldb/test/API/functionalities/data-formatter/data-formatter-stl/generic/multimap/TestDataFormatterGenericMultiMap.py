@@ -70,6 +70,17 @@ class GenericMultiMapDataFormatterTestCase(TestBase):
         self.addTearDownHook(cleanup)
 
         multimap = self.namespace + "::multimap"
+
+        self.expect('frame variable ii',
+                    substrs=[multimap, 'size=0',
+                             '{}'])
+
+        self.expect('frame variable si',
+                    substrs=[multimap, 'size=0',
+                             '{}'])
+
+        lldbutil.continue_to_breakpoint(self.process(), bkpt)
+
         self.expect('frame variable ii',
                     substrs=[multimap, 'size=0',
                              '{}'])
@@ -326,4 +337,3 @@ class GenericMultiMapDataFormatterTestCase(TestBase):
     @add_test_categories(["libc++"])
     def test_with_run_command_libcpp(self):
         self.do_test_with_run_command(USE_LIBCPP)
-

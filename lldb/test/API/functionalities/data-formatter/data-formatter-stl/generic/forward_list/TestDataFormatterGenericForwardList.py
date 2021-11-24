@@ -21,7 +21,7 @@ class TestDataFormatterGenericForwardList(TestBase):
         self.line = line_number('main.cpp', '// break here')
         self.namespace = 'std'
 
-    
+
     def do_test(self, stdlib_type):
         """Test that std::forward_list is displayed correctly"""
         self.build(dictionary={stdlib_type: "1"})
@@ -59,4 +59,3 @@ class TestDataFormatterGenericForwardList(TestBase):
     @add_test_categories(["libc++"])
     def test_libcpp(self):
          self.do_test(USE_LIBCPP)
-    
