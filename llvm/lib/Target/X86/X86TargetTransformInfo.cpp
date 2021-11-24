@@ -3772,6 +3772,10 @@ X86TTIImpl::getReplicationShuffleCost(Type *EltTy, int ReplicationFactor,
         PromEltTyBits = 16; // promote to i16, AVX512BW.
       break;
     }
+    if (ST->hasDQI()) {
+      PromEltTyBits = 32; // promote to i32, AVX512F.
+      break;
+    }
     return bailout();
   default:
     return bailout();
