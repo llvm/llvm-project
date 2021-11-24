@@ -4,7 +4,7 @@ void clang_analyzer_eval(int);
 #define CHECK(expr) if (!(expr)) return; clang_analyzer_eval(expr)
 
 void testPersistentConstraints(int x, int y) {
-  // Sanity check
+  // Basic check
   CHECK(x); // expected-warning{{TRUE}}
   CHECK(x & 1); // expected-warning{{TRUE}}
   

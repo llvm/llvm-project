@@ -73,7 +73,7 @@ void functionScope() {
 //===----------------------------------------------------------------------===//
 
 // Export function declaration. Check different placements.
-__attribute__((dllexport)) void decl1A(); // Sanity check with __attribute__
+__attribute__((dllexport)) void decl1A(); // Basic check with __attribute__
 __declspec(dllexport)      void decl1B();
 
 void __attribute__((dllexport)) decl2A();

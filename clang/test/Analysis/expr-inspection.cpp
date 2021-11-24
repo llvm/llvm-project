@@ -5,7 +5,7 @@
 void clang_analyzer_denote(int x, const char *str);
 void clang_analyzer_express(int x);
 
-// Invalid declarations to test sanity checks.
+// Invalid declarations to test basic correctness checks.
 void clang_analyzer_denote();
 void clang_analyzer_denote(int x);
 void clang_analyzer_express();

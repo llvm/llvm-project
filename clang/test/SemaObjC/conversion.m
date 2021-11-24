@@ -10,7 +10,7 @@ void radar14415662(RDar14415662 *f, char x, int y) {
   f.otherStuff = !f.stuff; // no-warning
   BOOL b = !f.stuff; // no-warning
 
-  // True positive to sanity check warning is working.
+  // True positive to verify warning is working.
   x = y; // expected-warning {{implicit conversion loses integer precision: 'int' to 'char'}}
 }
 
