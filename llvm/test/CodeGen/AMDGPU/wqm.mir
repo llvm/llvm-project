@@ -1,5 +1,48 @@
 # RUN: llc -march=amdgcn -mcpu=fiji -verify-machineinstrs -run-pass si-wqm -o -  %s | FileCheck %s
 
+--- |
+  define amdgpu_ps void @test_strict_wwm_scc() {
+    ret void
+  }
+  define amdgpu_ps void @test_strict_wwm_scc2() {
+    ret void
+  }
+  define amdgpu_ps void @no_cfg() {
+    ret void
+  }
+  define amdgpu_ps void @copy_exec() {
+    ret void
+  }
+  define amdgpu_ps void @scc_always_live() {
+    ret void
+  }
+  define amdgpu_ps void @test_wwm_set_inactive_propagation() {
+    ret void
+  }
+  define amdgpu_ps void @test_wqm_lr_phi() {
+    ret void
+  }
+  define amdgpu_cs void @no_wqm_in_cs() {
+    ret void
+  }
+  define amdgpu_es void @no_wqm_in_es() {
+    ret void
+  }
+  define amdgpu_gs void @no_wqm_in_gs() {
+    ret void
+  }
+  define amdgpu_hs void @no_wqm_in_hs() {
+    ret void
+  }
+  define amdgpu_ls void @no_wqm_in_ls() {
+    ret void
+  }
+  define amdgpu_vs void @no_wqm_in_vs() {
+    ret void
+  }
+...
+---
+
 ---
 # Check for awareness that s_or_saveexec_b64 clobbers SCC
 #
@@ -297,4 +340,106 @@ body:             |
     $vgpr0 = COPY %4.sub0:vreg_128
     $vgpr1 = COPY %4.sub1:vreg_128
     SI_RETURN_TO_EPILOG $vgpr0, $vgpr1
+...
+
+---
+#CHECK-LABEL: name: no_wqm_in_cs
+#CHECK-NOT: S_WQM
+name:            no_wqm_in_cs
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $vgpr1, $vgpr2
+
+    undef %0.sub0:vreg_64 = COPY $vgpr1
+    %0.sub1:vreg_64 = COPY $vgpr2
+    %100:sgpr_256 = IMPLICIT_DEF
+    %101:sgpr_128 = IMPLICIT_DEF
+
+    %4:vreg_128 = IMAGE_SAMPLE_V4_V2 %0:vreg_64, %100:sgpr_256, %101:sgpr_128, 15, 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s128), align 4, addrspace 4)
+...
+
+---
+#CHECK-LABEL: name: no_wqm_in_es
+#CHECK-NOT: S_WQM
+name:            no_wqm_in_es
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $vgpr1, $vgpr2
+
+    undef %0.sub0:vreg_64 = COPY $vgpr1
+    %0.sub1:vreg_64 = COPY $vgpr2
+    %100:sgpr_256 = IMPLICIT_DEF
+    %101:sgpr_128 = IMPLICIT_DEF
+
+    %4:vreg_128 = IMAGE_SAMPLE_V4_V2 %0:vreg_64, %100:sgpr_256, %101:sgpr_128, 15, 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s128), align 4, addrspace 4)
+...
+
+---
+#CHECK-LABEL: name: no_wqm_in_gs
+#CHECK-NOT: S_WQM
+name:            no_wqm_in_gs
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $vgpr1, $vgpr2
+
+    undef %0.sub0:vreg_64 = COPY $vgpr1
+    %0.sub1:vreg_64 = COPY $vgpr2
+    %100:sgpr_256 = IMPLICIT_DEF
+    %101:sgpr_128 = IMPLICIT_DEF
+
+    %4:vreg_128 = IMAGE_SAMPLE_V4_V2 %0:vreg_64, %100:sgpr_256, %101:sgpr_128, 15, 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s128), align 4, addrspace 4)
+...
+
+---
+#CHECK-LABEL: name: no_wqm_in_hs
+#CHECK-NOT: S_WQM
+name:            no_wqm_in_hs
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $vgpr1, $vgpr2
+
+    undef %0.sub0:vreg_64 = COPY $vgpr1
+    %0.sub1:vreg_64 = COPY $vgpr2
+    %100:sgpr_256 = IMPLICIT_DEF
+    %101:sgpr_128 = IMPLICIT_DEF
+
+    %4:vreg_128 = IMAGE_SAMPLE_V4_V2 %0:vreg_64, %100:sgpr_256, %101:sgpr_128, 15, 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s128), align 4, addrspace 4)
+...
+
+---
+#CHECK-LABEL: name: no_wqm_in_ls
+#CHECK-NOT: S_WQM
+name:            no_wqm_in_ls
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $vgpr1, $vgpr2
+
+    undef %0.sub0:vreg_64 = COPY $vgpr1
+    %0.sub1:vreg_64 = COPY $vgpr2
+    %100:sgpr_256 = IMPLICIT_DEF
+    %101:sgpr_128 = IMPLICIT_DEF
+
+    %4:vreg_128 = IMAGE_SAMPLE_V4_V2 %0:vreg_64, %100:sgpr_256, %101:sgpr_128, 15, 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s128), align 4, addrspace 4)
+...
+
+---
+#CHECK-LABEL: name: no_wqm_in_vs
+#CHECK-NOT: S_WQM
+name:            no_wqm_in_vs
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $vgpr1, $vgpr2
+
+    undef %0.sub0:vreg_64 = COPY $vgpr1
+    %0.sub1:vreg_64 = COPY $vgpr2
+    %100:sgpr_256 = IMPLICIT_DEF
+    %101:sgpr_128 = IMPLICIT_DEF
+
+    %4:vreg_128 = IMAGE_SAMPLE_V4_V2 %0:vreg_64, %100:sgpr_256, %101:sgpr_128, 15, 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s128), align 4, addrspace 4)
 ...
