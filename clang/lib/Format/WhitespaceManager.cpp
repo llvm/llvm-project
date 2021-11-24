@@ -913,7 +913,8 @@ void WhitespaceManager::alignTrailingComments(unsigned Start, unsigned End,
               Changes[i].StartOfBlockComment->StartOfTokenColumn -
               Changes[i].StartOfTokenColumn;
     }
-    if (Shift < 0) continue;
+    if (Shift < 0)
+      continue;
     Changes[i].Spaces += Shift;
     if (i + 1 != Changes.size())
       Changes[i + 1].PreviousEndOfTokenColumn += Shift;
@@ -1269,7 +1270,7 @@ void WhitespaceManager::generateChanges() {
   for (unsigned i = 0, e = Changes.size(); i != e; ++i) {
     const Change &C = Changes[i];
     if (i > 0 && Changes[i - 1].OriginalWhitespaceRange.getBegin() ==
-                 C.OriginalWhitespaceRange.getBegin()) {
+                     C.OriginalWhitespaceRange.getBegin()) {
       // Do not generate two replacements for the same location.
       continue;
     }
