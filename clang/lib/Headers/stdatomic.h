@@ -12,8 +12,12 @@
 
 /* If we're hosted, fall back to the system's stdatomic.h. FreeBSD, for
  * example, already has a Clang-compatible stdatomic.h header.
+ *
+ * Exclude the MSVC path as well as the MSVC header as of the 14.31.30818
+ * explicitly disallows `stdatomic.h` in the C mode via an `#error`.  Fallback
+ * to the clang resource header until that is fully supported.
  */
-#if __STDC_HOSTED__ && __has_include_next(<stdatomic.h>)
+#if __STDC_HOSTED__ && __has_include_next(<stdatomic.h>) && !defined(_MSC_VER)
 # include_next <stdatomic.h>
 #else
 
