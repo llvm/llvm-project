@@ -94,13 +94,17 @@ struct TestLinalgCodegenStrategy
       llvm::cl::init(false)};
   Option<bool> pad{*this, "pad", llvm::cl::desc("Pad the operands."),
                    llvm::cl::init(false)};
+  Option<bool> padInputsOnly{
+      *this, "pad-inputs-only",
+      llvm::cl::desc("Only pad input operands when test-pad-pattern"),
+      llvm::cl::init(false)};
   ListOption<int64_t> packPaddings{
       *this, "pack-paddings",
-      llvm::cl::desc("Operand packing flags when test-pad-pattern"),
+      llvm::cl::desc("Operand packing flags when test-pad-pattern."),
       llvm::cl::ZeroOrMore, llvm::cl::MiscFlags::CommaSeparated};
   ListOption<int64_t> hoistPaddings{
       *this, "hoist-paddings",
-      llvm::cl::desc("Operand hoisting depths when test-pad-pattern"),
+      llvm::cl::desc("Operand hoisting depths when test-pad-pattern."),
       llvm::cl::ZeroOrMore, llvm::cl::MiscFlags::CommaSeparated};
   Option<bool> generalize{*this, "generalize",
                           llvm::cl::desc("Generalize named operations."),
@@ -244,6 +248,17 @@ void TestLinalgCodegenStrategy::runOnFunction() {
   paddingOptions.setPaddingValueComputationFunction(getNeutralOfLinalgOp);
   paddingOptions.setPaddingNoFoldComputationFunction(packFunc);
   paddingOptions.setPaddingHoistComputationFunction(hoistingFunc);
+
+  // Compute input padding values only an return failure for output operands.
+  if (padInputsOnly) {
+    paddingOptions.setPaddingValueComputationFunction(
+        [](OpBuilder &b, OpOperand &op) -> FailureOr<Value> {
+          auto linalgOp = dyn_cast<LinalgOp>(op.getOwner());
+          if (linalgOp && linalgOp.isInputTensor(&op))
+            return getNeutralOfLinalgOp(b, op);
+          return failure();
+        });
+  }
 
   vector::VectorContractLowering vectorContractLowering =
       llvm::StringSwitch<vector::VectorContractLowering>(

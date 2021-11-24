@@ -156,26 +156,37 @@ LinalgTilingOptions &mlir::linalg::LinalgTilingOptions::scalarizeDynamicDims() {
   return *this;
 }
 
-/// Helper function that tries to pad `opOperand`. Exit early and return success
-/// for scalar operands or if `paddingFunc` returns failure. Otherwise, try to
-/// pad the operand even if it already has a static shape. Set `result` to the
-/// result of the created PadTensorOp or return failure if the operand cannot be
-/// padded to a static shape.
+/// Helper function that tries to pad `opOperand`. Exit early for scalar
+/// operands, if `paddingFunc` returns failure, or if `opOperand` is not defined
+/// by an ExtractSliceOp. Otherwise, try to pad the operand even if it already
+/// has a static shape. Set `result` to the result of the created PadTensorOp or
+/// and return success if the operand either has been padded to a static shape
+/// or already had a static shape and failure otherwise.
 static LogicalResult padOperandToSmallestStaticBoundingBox(
     OpBuilder &b, linalg::LinalgOp opToPad, OpOperand *opOperand,
     const PaddingValueComputationFunction &paddingFunc,
     const PaddingNoFoldComputationFunction &nofoldFunc, Value &result) {
-  // Can't pad scalars.
-  if (opToPad.getShape(opOperand).empty())
+  // Get the shape of the operand and check if it has a dynamic shape. Only
+  // return failure if the operand is not a scalar and has a dynamic shape.
+  ArrayRef<int64_t> shape = opToPad.getShape(opOperand);
+  bool hasDynamicShape = llvm::is_contained(shape, ShapedType::kDynamicSize);
+
+  // Cannot pad scalar operands.
+  if (shape.empty())
     return success();
-  // Can't pad if no padding value is known.
+
+  // Cannot pad if the padding value is unknown.
   FailureOr<Value> paddingValue = paddingFunc(b, *opOperand);
   if (failed(paddingValue))
-    return success();
+    return failure(hasDynamicShape);
+
+  // Cannot construct a static bounding box if the operand is not defined by an
+  // ExtractSliceOp.
   auto sliceOp = opOperand->get().getDefiningOp<tensor::ExtractSliceOp>();
-  // Not a slice op, cannot construct a static bounding box.
   if (!sliceOp)
-    return failure();
+    return failure(hasDynamicShape);
+
+  // Upper bound the `sliceOp` sizes to obtain a static bounding box.
   SmallVector<int64_t> staticSizes;
   staticSizes.reserve(opToPad.getRank(opOperand));
   auto shapedOp = cast<OffsetSizeAndStrideOpInterface>(sliceOp.getOperation());
@@ -195,6 +206,8 @@ static LogicalResult padOperandToSmallestStaticBoundingBox(
     }
     staticSizes.push_back(upperBound.getValue());
   }
+
+  // Pad the operand to the bounding box defined by `staticSizes`.
   auto staticTensorType = RankedTensorType::get(
       staticSizes, getElementTypeOrSelf(opOperand->get()));
   bool nofold = nofoldFunc ? nofoldFunc(*opOperand) : false;
@@ -490,8 +503,10 @@ LogicalResult mlir::linalg::LinalgPaddingPattern::matchAndRewrite(
   FailureOr<SmallVector<Value>> newResults = rewriteAsPaddedOp(
       rewriter, linalgOp, options.paddingValueComputationFunction,
       options.paddingNoFoldComputationFunction, paddedOp);
-  if (failed(newResults))
+  if (failed(newResults)) {
+    filter.replaceLinalgTransformationFilter(rewriter, linalgOp);
     return failure();
+  }
 
   // Compute the desired hoisting depths.
   SmallVector<int64_t> depths;
