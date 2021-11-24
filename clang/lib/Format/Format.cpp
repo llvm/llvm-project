@@ -2988,9 +2988,8 @@ reformat(const FormatStyle &Style, StringRef Code,
   // JSON only needs the formatting passing.
   if (Style.isJson()) {
     std::vector<tooling::Range> Ranges(1, tooling::Range(0, Code.size()));
-    auto Env =
-        Environment::make(Code, FileName, Ranges, FirstStartColumn,
-                                      NextStartColumn, LastStartColumn);
+    auto Env = Environment::make(Code, FileName, Ranges, FirstStartColumn,
+                                 NextStartColumn, LastStartColumn);
     if (!Env)
       return {};
     // Perform the actual formatting pass.
@@ -3118,9 +3117,7 @@ tooling::Replacements fixNamespaceEndComments(const FormatStyle &Style,
   auto Env = Environment::make(Code, FileName, Ranges);
   if (!Env)
     return {};
-  return NamespaceEndCommentsFixer(*Env, Style)
-      .process()
-      .first;
+  return NamespaceEndCommentsFixer(*Env, Style).process().first;
 }
 
 tooling::Replacements sortUsingDeclarations(const FormatStyle &Style,
@@ -3130,9 +3127,7 @@ tooling::Replacements sortUsingDeclarations(const FormatStyle &Style,
   auto Env = Environment::make(Code, FileName, Ranges);
   if (!Env)
     return {};
-  return UsingDeclarationsSorter(*Env, Style)
-      .process()
-      .first;
+  return UsingDeclarationsSorter(*Env, Style).process().first;
 }
 
 LangOptions getFormattingLangOpts(const FormatStyle &Style) {

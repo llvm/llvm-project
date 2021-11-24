@@ -553,9 +553,7 @@ tooling::Replacements sortJavaScriptImports(const FormatStyle &Style,
   auto Env = Environment::make(Code, FileName, Ranges);
   if (!Env)
     return {};
-  return JavaScriptImportSorter(*Env, Style)
-      .process()
-      .first;
+  return JavaScriptImportSorter(*Env, Style).process().first;
 }
 
 } // end namespace format
