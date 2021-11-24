@@ -6345,6 +6345,24 @@ cc_library(
     ],
 )
 
+cc_library(
+    name = "VectorBufferizableOpInterfaceImpl",
+    srcs = [
+        "lib/Dialect/Linalg/ComprehensiveBufferize/VectorInterfaceImpl.cpp",
+    ],
+    hdrs = [
+        "include/mlir/Dialect/Linalg/ComprehensiveBufferize/VectorInterfaceImpl.h",
+    ],
+    includes = ["include"],
+    deps = [
+        ":BufferizableOpInterface",
+        ":IR",
+        ":Support",
+        ":VectorOps",
+        "//llvm:Support",
+    ],
+)
+
 td_library(
     name = "LinalgDocTdFiles",
     srcs = ["include/mlir/Dialect/Linalg/IR/LinalgDoc.td"],
@@ -6567,6 +6585,7 @@ cc_library(
         ":TensorBufferizableOpInterfaceImpl",
         ":TensorDialect",
         ":TransformUtils",
+        ":VectorBufferizableOpInterfaceImpl",
         ":VectorOps",
         ":VectorToSCF",
         ":X86VectorTransforms",
@@ -6596,7 +6615,6 @@ cc_library(
         ":StandardOps",
         ":Support",
         ":TransformUtils",
-        ":VectorOps",
         "//llvm:Support",
     ],
 )

@@ -53,6 +53,7 @@ add_mlir_dialect_library(MLIRLinalgTransforms
   MLIRTransforms
   MLIRTransformUtils
   MLIRVector
+  MLIRVectorBufferizableOpInterfaceImpl
   MLIRX86VectorTransforms
   MLIRVectorToSCF
 )
