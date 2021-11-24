@@ -71,11 +71,8 @@ class GenericMultiMapDataFormatterTestCase(TestBase):
 
         multimap = self.namespace + "::multimap"
 
-        self.expect('frame variable ii',
-                    substrs=[multimap, 'size=0',
-                             '{}'])
-
-        self.expect('frame variable si',
+        # We expect that in some malformed cases the map shows size 0
+        self.expect('frame variable corrupt_map',
                     substrs=[multimap, 'size=0',
                              '{}'])
 

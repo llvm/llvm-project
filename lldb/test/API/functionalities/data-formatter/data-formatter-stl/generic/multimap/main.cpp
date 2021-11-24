@@ -18,9 +18,12 @@ int thefoo_rw(int arg = 1)
 	return g_the_foo;
 }
 
-int main()  // Set break point at this line.
+int main()
 {
-    intint_map ii;
+    char buffer[sizeof(intint_map)] = {0};
+    intint_map &corrupt_map = *(intint_map *)buffer;
+
+    intint_map ii; // Set break point at this line.
 
     ii.emplace(0,0); // Set break point at this line.
     ii.emplace(1,1);
