@@ -89,7 +89,7 @@ define float @print_reduction(i64 %n, float* noalias %y) {
 ; CHECK-NEXT:   WIDEN-REDUCTION-PHI ir<%red> = phi ir<0.000000e+00>, ir<%red.next>
 ; CHECK-NEXT:   CLONE ir<%arrayidx> = getelementptr ir<%y>, ir<%iv>
 ; CHECK-NEXT:   WIDEN ir<%lv> = load ir<%arrayidx>
-; CHECK-NEXT:   REDUCE ir<%red.next> = ir<%red> + reduce.fadd (ir<%lv>)
+; CHECK-NEXT:   REDUCE ir<%red.next> = ir<%red> + fast reduce.fadd (ir<%lv>)
 ; CHECK-NEXT: No successors
 ; CHECK-NEXT: }
 ; CHECK-NEXT: No successors
@@ -254,7 +254,7 @@ define float @print_fmuladd_strict(float* %a, float* %b, i64 %n) {
 ; CHECK-NEXT:   CLONE ir<%arrayidx2> = getelementptr ir<%b>, ir<%iv>
 ; CHECK-NEXT:   WIDEN ir<%1> = load ir<%arrayidx2>
 ; CHECK-NEXT:   EMIT vp<%6> = fmul nnan ninf nsz ir<%0> ir<%1>
-; CHECK-NEXT:   REDUCE ir<%muladd> = ir<%sum.07> + reduce.fadd (vp<%6>)
+; CHECK-NEXT:   REDUCE ir<%muladd> = ir<%sum.07> + nnan ninf nsz reduce.fadd (vp<%6>)
 ; CHECK-NEXT:   No successors
 ; CHECK-NEXT: }
 

@@ -1210,8 +1210,10 @@ void VPReductionRecipe::print(raw_ostream &O, const Twine &Indent,
   printAsOperand(O, SlotTracker);
   O << " = ";
   getChainOp()->printAsOperand(O, SlotTracker);
-  O << " + reduce." << Instruction::getOpcodeName(RdxDesc->getOpcode())
-    << " (";
+  O << " +";
+  if (isa<FPMathOperator>(getUnderlyingInstr()))
+    O << getUnderlyingInstr()->getFastMathFlags();
+  O << " reduce." << Instruction::getOpcodeName(RdxDesc->getOpcode()) << " (";
   getVecOp()->printAsOperand(O, SlotTracker);
   if (getCondOp()) {
     O << ", ";
