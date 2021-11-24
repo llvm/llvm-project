@@ -1725,39 +1725,10 @@ bool TargetLowering::SimplifyDemandedBits(
   case ISD::ROTR: {
     SDValue Op0 = Op.getOperand(0);
     SDValue Op1 = Op.getOperand(1);
-    bool IsROTL = (Op.getOpcode() == ISD::ROTL);
 
     // If we're rotating an 0/-1 value, then it stays an 0/-1 value.
     if (BitWidth == TLO.DAG.ComputeNumSignBits(Op0, DemandedElts, Depth + 1))
       return TLO.CombineTo(Op, Op0);
-
-    if (ConstantSDNode *SA = isConstOrConstSplat(Op1, DemandedElts)) {
-      unsigned Amt = SA->getAPIntValue().urem(BitWidth);
-      unsigned RevAmt = BitWidth - Amt;
-
-      // rotl: (Op0 << Amt) | (Op0 >> (BW - Amt))
-      // rotr: (Op0 << (BW - Amt)) | (Op0 >> Amt)
-      APInt Demanded0 = DemandedBits.rotr(IsROTL ? Amt : RevAmt);
-      if (SimplifyDemandedBits(Op0, Demanded0, DemandedElts, Known2, TLO,
-                               Depth + 1))
-        return true;
-
-      // rot*(x, 0) --> x
-      if (Amt == 0)
-        return TLO.CombineTo(Op, Op0);
-
-      // See if we don't demand either half of the rotated bits.
-      if ((!TLO.LegalOperations() || isOperationLegal(ISD::SHL, VT)) &&
-          DemandedBits.countTrailingZeros() >= (IsROTL ? Amt : RevAmt)) {
-        Op1 = TLO.DAG.getConstant(IsROTL ? Amt : RevAmt, dl, Op1.getValueType());
-        return TLO.CombineTo(Op, TLO.DAG.getNode(ISD::SHL, dl, VT, Op0, Op1));
-      }
-      if ((!TLO.LegalOperations() || isOperationLegal(ISD::SRL, VT)) &&
-          DemandedBits.countLeadingZeros() >= (IsROTL ? RevAmt : Amt)) {
-        Op1 = TLO.DAG.getConstant(IsROTL ? RevAmt : Amt, dl, Op1.getValueType());
-        return TLO.CombineTo(Op, TLO.DAG.getNode(ISD::SRL, dl, VT, Op0, Op1));
-      }
-    }
 
     // For pow-2 bitwidths we only demand the bottom modulo amt bits.
     if (isPowerOf2_32(BitWidth)) {

@@ -2926,10 +2926,17 @@ let AddedComplexity = 1 in
 def : T2Pat<(and     rGPR:$src, t2_so_imm_not:$imm),
             (t2BICri rGPR:$src, t2_so_imm_not:$imm)>;
 
+// top16Zero - answer true if the upper 16 bits of $src are 0, false otherwise
+def top16Zero: PatLeaf<(i32 rGPR:$src), [{
+  return !SDValue(N,0)->getValueType(0).isVector() &&
+         CurDAG->MaskedValueIsZero(SDValue(N,0), APInt::getHighBitsSet(32, 16));
+  }]>;
+
 // so_imm_notSext is needed instead of so_imm_not, as the value of imm
 // will match the extended, not the original bitWidth for $src.
 def : T2Pat<(and top16Zero:$src, t2_so_imm_notSext:$imm),
             (t2BICri rGPR:$src, t2_so_imm_notSext:$imm)>;
+
 
 // FIXME: Disable this pattern on Darwin to workaround an assembler bug.
 def : T2Pat<(or      rGPR:$src, t2_so_imm_not:$imm),
@@ -3275,9 +3282,6 @@ def t2REV16 : T2I_misc<0b01, 0b01, (outs rGPR:$Rd), (ins rGPR:$Rm), IIC_iUNAr,
                        "rev16", ".w\t$Rd, $Rm",
                 [(set rGPR:$Rd, (rotr (bswap rGPR:$Rm), (i32 16)))]>,
                 Sched<[WriteALU]>;
-
-def : T2Pat<(srl (bswap top16Zero:$Rn), (i32 16)),
-            (t2REV16 rGPR:$Rn)>;
 
 def t2REVSH : T2I_misc<0b01, 0b11, (outs rGPR:$Rd), (ins rGPR:$Rm), IIC_iUNAr,
                        "revsh", ".w\t$Rd, $Rm",
