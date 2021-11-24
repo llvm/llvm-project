@@ -757,14 +757,17 @@ using namespace __tsan;
 MutexMeta mutex_meta[] = {
     {MutexInvalid, "Invalid", {}},
     {MutexThreadRegistry, "ThreadRegistry", {}},
-    {MutexTypeTrace, "Trace", {MutexLeaf}},
-    {MutexTypeReport, "Report", {MutexTypeSyncVar, MutexTypeGlobalProc}},
-    {MutexTypeSyncVar, "SyncVar", {}},
+    {MutexTypeTrace, "Trace", {}},
+    {MutexTypeReport,
+     "Report",
+     {MutexTypeSyncVar, MutexTypeGlobalProc, MutexTypeTrace}},
+    {MutexTypeSyncVar, "SyncVar", {MutexTypeTrace}},
     {MutexTypeAnnotations, "Annotations", {}},
     {MutexTypeAtExit, "AtExit", {MutexTypeSyncVar}},
     {MutexTypeFired, "Fired", {MutexLeaf}},
     {MutexTypeRacy, "Racy", {MutexLeaf}},
     {MutexTypeGlobalProc, "GlobalProc", {}},
+    {MutexTypeInternalAlloc, "InternalAlloc", {MutexLeaf}},
     {},
 };
 

@@ -228,6 +228,7 @@ enum MutexType {
   MutexTypeFired,
   MutexTypeRacy,
   MutexTypeGlobalProc,
+  MutexTypeInternalAlloc,
 };
 
 }  // namespace __tsan
