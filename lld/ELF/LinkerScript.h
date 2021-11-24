@@ -132,16 +132,32 @@ enum class ConstraintKind { NoConstraint, ReadOnly, ReadWrite };
 // MEMORY command.
 struct MemoryRegion {
   MemoryRegion(StringRef name, Expr origin, Expr length, uint32_t flags,
-               uint32_t negFlags)
+               uint32_t invFlags, uint32_t negFlags, uint32_t negInvFlags)
       : name(std::string(name)), origin(origin), length(length), flags(flags),
-        negFlags(negFlags) {}
+        invFlags(invFlags), negFlags(negFlags), negInvFlags(negInvFlags) {}
 
   std::string name;
   Expr origin;
   Expr length;
+  // A section can be assigned to the region if any of these ELF section flags
+  // are set...
   uint32_t flags;
+  // ... or any of these flags are not set.
+  // For example, the memory region attribute "r" maps to SHF_WRITE.
+  uint32_t invFlags;
+  // A section cannot be assigned to the region if any of these ELF section
+  // flags are set...
   uint32_t negFlags;
+  // ... or any of these flags are not set.
+  // For example, the memory region attribute "!r" maps to SHF_WRITE.
+  uint32_t negInvFlags;
   uint64_t curPos = 0;
+
+  bool compatibleWith(uint32_t secFlags) const {
+    if ((secFlags & negFlags) || (~secFlags & negInvFlags))
+      return false;
+    return (secFlags & flags) || (~secFlags & invFlags);
+  }
 };
 
 // This struct represents one section match pattern in SECTIONS() command.
