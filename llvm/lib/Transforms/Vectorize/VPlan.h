@@ -808,13 +808,6 @@ public:
       : VPRecipeBase(VPRecipeBase::VPInstructionSC, Operands),
         VPValue(VPValue::VPVInstructionSC, nullptr, this), Opcode(Opcode) {}
 
-  VPInstruction(unsigned Opcode, ArrayRef<VPInstruction *> Operands)
-      : VPRecipeBase(VPRecipeBase::VPInstructionSC, {}),
-        VPValue(VPValue::VPVInstructionSC, nullptr, this), Opcode(Opcode) {
-    for (auto *I : Operands)
-      addOperand(I->getVPSingleValue());
-  }
-
   VPInstruction(unsigned Opcode, std::initializer_list<VPValue *> Operands)
       : VPInstruction(Opcode, ArrayRef<VPValue *>(Operands)) {}
 
