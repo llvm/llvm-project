@@ -7,8 +7,8 @@
 //===----------------------------------------------------------------------===//
 //
 /// \file
-/// This file is a part of HWAddressSanitizer, an address sanity checker
-/// based on tagged addressing.
+/// This file is a part of HWAddressSanitizer, an address basic correctness
+/// checker based on tagged addressing.
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Instrumentation/HWAddressSanitizer.h"

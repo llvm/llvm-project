@@ -976,7 +976,7 @@ void SelectionDAG::DeallocateNode(SDNode *N) {
 }
 
 #ifndef NDEBUG
-/// VerifySDNode - Sanity check the given SDNode.  Aborts if it is invalid.
+/// VerifySDNode - Check the given SDNode.  Aborts if it is invalid.
 static void VerifySDNode(SDNode *N) {
   switch (N->getOpcode()) {
   default:
@@ -5072,7 +5072,6 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
       return getUNDEF(VT);
     break;
   case ISD::BITCAST:
-    // Basic sanity checking.
     assert(VT.getSizeInBits() == Operand.getValueSizeInBits() &&
            "Cannot BITCAST between types of different sizes!");
     if (VT == Operand.getValueType()) return Operand;  // noop conversion.

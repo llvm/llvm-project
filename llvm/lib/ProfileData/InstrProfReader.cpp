@@ -62,7 +62,6 @@ InstrProfReader::create(const Twine &Path) {
 
 Expected<std::unique_ptr<InstrProfReader>>
 InstrProfReader::create(std::unique_ptr<MemoryBuffer> Buffer) {
-  // Sanity check the buffer.
   if (uint64_t(Buffer->getBufferSize()) > std::numeric_limits<uint64_t>::max())
     return make_error<InstrProfError>(instrprof_error::too_large);
 
@@ -113,7 +112,6 @@ IndexedInstrProfReader::create(const Twine &Path, const Twine &RemappingPath) {
 Expected<std::unique_ptr<IndexedInstrProfReader>>
 IndexedInstrProfReader::create(std::unique_ptr<MemoryBuffer> Buffer,
                                std::unique_ptr<MemoryBuffer> RemappingBuffer) {
-  // Sanity check the buffer.
   if (uint64_t(Buffer->getBufferSize()) > std::numeric_limits<uint64_t>::max())
     return make_error<InstrProfError>(instrprof_error::too_large);
 

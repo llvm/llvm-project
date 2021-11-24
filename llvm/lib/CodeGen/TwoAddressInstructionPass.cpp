@@ -685,7 +685,6 @@ bool TwoAddressInstructionPass::convertInstTo3Addr(
 
   // If the old instruction is debug value tracked, an update is required.
   if (auto OldInstrNum = mi->peekDebugInstrNum()) {
-    // Sanity check.
     assert(mi->getNumExplicitDefs() == 1);
     assert(NewMI->getNumExplicitDefs() == 1);
 

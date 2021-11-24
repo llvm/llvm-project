@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 //
 // This file defines the function verifier interface, that can be used for some
-// sanity checking of input to the system.
+// basic correctness checking of input to the system.
 //
 // Note that this does not provide full `Java style' security and verifications,
 // instead it just tries to ensure that code is well-formed.
@@ -1604,7 +1604,7 @@ Verifier::visitModuleFlag(const MDNode *Op,
   Assert(ID, "invalid ID operand in module flag (expected metadata string)",
          Op->getOperand(1));
 
-  // Sanity check the values for behaviors with additional requirements.
+  // Check the values for behaviors with additional requirements.
   switch (MFB) {
   case Module::Error:
   case Module::Warning:

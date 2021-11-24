@@ -187,7 +187,7 @@ Timer &TimePassesHandler::getPassTimer(StringRef PassID) {
 
   Timer *T = new Timer(PassID, FullDesc, TG);
   Timers.emplace_back(T);
-  assert(Count == Timers.size() && "sanity check");
+  assert(Count == Timers.size() && "Timers vector not adjusted correctly.");
 
   return *T;
 }

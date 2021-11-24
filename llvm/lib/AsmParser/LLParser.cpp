@@ -124,8 +124,8 @@ void LLParser::restoreParsingState(const SlotMapping *Slots) {
         std::make_pair(I.first, std::make_pair(I.second, LocTy())));
 }
 
-/// validateEndOfModule - Do final validity and sanity checks at the end of the
-/// module.
+/// validateEndOfModule - Do final validity and basic correctness checks at the
+/// end of the module.
 bool LLParser::validateEndOfModule(bool UpgradeDebugInfo) {
   if (!M)
     return false;
@@ -271,7 +271,7 @@ bool LLParser::validateEndOfModule(bool UpgradeDebugInfo) {
   return false;
 }
 
-/// Do final validity and sanity checks at the end of the index.
+/// Do final validity and basic correctness checks at the end of the index.
 bool LLParser::validateEndOfIndex() {
   if (!Index)
     return false;
@@ -2989,9 +2989,10 @@ BasicBlock *LLParser::PerFunctionState::defineBB(const std::string &Name,
 /// parseValID - parse an abstract value that doesn't necessarily have a
 /// type implied.  For example, if we parse "4" we don't know what integer type
 /// it has.  The value will later be combined with its type and checked for
-/// sanity.  PFS is used to convert function-local operands of metadata (since
-/// metadata operands are not just parsed here but also converted to values).
-/// PFS can be null when we are not parsing metadata values inside a function.
+/// basic correctness.  PFS is used to convert function-local operands of
+/// metadata (since metadata operands are not just parsed here but also
+/// converted to values). PFS can be null when we are not parsing metadata
+/// values inside a function.
 bool LLParser::parseValID(ValID &ID, PerFunctionState *PFS, Type *ExpectedTy) {
   ID.Loc = Lex.getLoc();
   switch (Lex.getKind()) {
