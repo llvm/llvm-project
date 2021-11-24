@@ -71,14 +71,14 @@ LogicalResult failableParallelForEach(MLIRContext *context, IteratorT begin,
   // Otherwise, process the elements in parallel.
   llvm::ThreadPool &threadPool = context->getThreadPool();
   size_t numActions = std::min(numElements, threadPool.getThreadCount());
-  SmallVector<std::future<void>> threadFutures;
+  SmallVector<std::shared_future<void>> threadFutures;
   threadFutures.reserve(numActions - 1);
   for (unsigned i = 1; i < numActions; ++i)
     threadFutures.emplace_back(threadPool.async(processFn));
   processFn();
 
   // Wait for all of the threads to finish.
-  for (std::future<void> &future : threadFutures)
+  for (std::shared_future<void> &future : threadFutures)
     future.wait();
   return failure(processingFailed);
 }
