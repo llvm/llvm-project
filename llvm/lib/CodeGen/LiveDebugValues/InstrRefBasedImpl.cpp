@@ -1288,6 +1288,10 @@ void InstrRefBasedLDV::transferRegisterDef(MachineInstr &MI) {
   } else if (MI.isMetaInstruction())
     return;
 
+  auto IgnoreSPAlias = [this, &MI](Register R) -> bool {
+    return MI.isCall() && MTracker->SPAliases.count(R);
+  };
+
   // Find the regs killed by MI, and find regmasks of preserved regs.
   // Max out the number of statically allocated elements in `DeadRegs`, as this
   // prevents fallback to std::set::count() operations.
@@ -1298,7 +1302,7 @@ void InstrRefBasedLDV::transferRegisterDef(MachineInstr &MI) {
     // Determine whether the operand is a register def.
     if (MO.isReg() && MO.isDef() && MO.getReg() &&
         Register::isPhysicalRegister(MO.getReg()) &&
-        !(MI.isCall() && MTracker->SPAliases.count(MO.getReg()))) {
+        !IgnoreSPAlias(MO.getReg())) {
       // Remove ranges of all aliased registers.
       for (MCRegAliasIterator RAI(MO.getReg(), TRI, true); RAI.isValid(); ++RAI)
         // FIXME: Can we break out of this loop early if no insertion occurs?
@@ -1347,6 +1351,9 @@ void InstrRefBasedLDV::transferRegisterDef(MachineInstr &MI) {
       continue;
 
     Register Reg = MTracker->LocIdxToLocID[L.Idx];
+    if (IgnoreSPAlias(Reg))
+      continue;
+
     for (auto *MO : RegMaskPtrs)
       if (MO->clobbersPhysReg(Reg))
         TTracker->clobberMloc(L.Idx, MI.getIterator(), false);
