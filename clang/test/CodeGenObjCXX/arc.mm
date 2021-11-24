@@ -293,7 +293,7 @@ id Test39::bar() { return 0; }
 // CHECK-NEXT: ret i8*
 
 // rdar://13617051
-// Just a basic sanity-check that IR-gen still works after instantiating
+// Just a basic correctness check that IR-gen still works after instantiating
 // a non-dependent message send that requires writeback.
 @interface Test40
 + (void) foo:(id *)errorPtr;
