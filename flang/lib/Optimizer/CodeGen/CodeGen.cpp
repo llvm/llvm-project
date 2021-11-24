@@ -929,14 +929,16 @@ struct GlobalOpConversion : public FIROpConversion<fir::GlobalOp> {
     return success();
   }
 
-  bool isFullRange(mlir::ArrayAttr indexes, fir::SequenceType seqTy) const {
+  bool isFullRange(mlir::DenseIntElementsAttr indexes,
+                   fir::SequenceType seqTy) const {
     auto extents = seqTy.getShape();
-    if (indexes.size() / 2 != extents.size())
+    if (indexes.size() / 2 != static_cast<int64_t>(extents.size()))
       return false;
+    auto cur_index = indexes.value_begin<int64_t>();
     for (unsigned i = 0; i < indexes.size(); i += 2) {
-      if (indexes[i].cast<IntegerAttr>().getInt() != 0)
+      if (*(cur_index++) != 0)
         return false;
-      if (indexes[i + 1].cast<IntegerAttr>().getInt() != extents[i / 2] - 1)
+      if (*(cur_index++) != extents[i / 2] - 1)
         return false;
     }
     return true;
@@ -1728,14 +1730,10 @@ struct InsertOnRangeOpConversion
     SmallVector<uint64_t> lBounds;
     SmallVector<uint64_t> uBounds;
 
-    // Extract integer value from the attribute
-    SmallVector<int64_t> coordinates = llvm::to_vector<4>(
-        llvm::map_range(range.coor(), [](Attribute a) -> int64_t {
-          return a.cast<IntegerAttr>().getInt();
-        }));
-
     // Unzip the upper and lower bound and convert to a row major format.
-    for (auto i = coordinates.rbegin(), e = coordinates.rend(); i != e; ++i) {
+    mlir::DenseIntElementsAttr coor = range.coor();
+    auto reversedCoor = llvm::reverse(coor.getValues<int64_t>());
+    for (auto i = reversedCoor.begin(), e = reversedCoor.end(); i != e; ++i) {
       uBounds.push_back(*i++);
       lBounds.push_back(*i);
     }
