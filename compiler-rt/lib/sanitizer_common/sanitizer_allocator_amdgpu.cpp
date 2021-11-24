@@ -71,19 +71,17 @@ void AmdgpuMemFuncs::Deallocate(void *p) {
   UNUSED hsa_status_t status = hsa_amd.memory_pool_free(p);
 }
 
-bool AmdgpuMemFuncs::GetBlockBeginEnd(const void *ptr, uptr *beg, uptr *end) {
+bool AmdgpuMemFuncs::GetPointerInfo(uptr ptr, DevivePointerInfo *ptr_info) {
   hsa_amd_pointer_info_t info;
   info.size = sizeof(hsa_amd_pointer_info_t);
   hsa_status_t status =
-      hsa_amd.pointer_info(const_cast<void *>(ptr), &info, 0, 0, 0);
+      hsa_amd.pointer_info(reinterpret_cast<void *>(ptr), &info, 0, 0, 0);
 
   if (status != HSA_STATUS_SUCCESS)
     return false;
 
-  if (beg)
-    *beg = reinterpret_cast<uptr>(info.agentBaseAddress);
-  if (end)
-    *end = reinterpret_cast<uptr>(info.agentBaseAddress) + info.sizeInBytes;
+  ptr_info->map_beg = reinterpret_cast<uptr>(info.agentBaseAddress);
+  ptr_info->map_size = info.sizeInBytes;
 
   return true;
 }

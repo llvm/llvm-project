@@ -31,6 +31,11 @@ struct DeviceAllocationInfo {
   DeviceAllocationType type_;
 };
 
+struct DevivePointerInfo {
+  uptr map_beg;
+  uptr map_size;
+};
+
 #include "sanitizer_allocator_amdgpu.h"
 
 template <class MapUnmapCallback = NoOpMapUnmapCallback>
@@ -46,12 +51,12 @@ class DeviceAllocatorT {
       return;
     kMetadataSize_ = kMetadataSize;
     chunks_ = reinterpret_cast<uptr *>(ptr_array_.Init());
-    CheckAndInitMemFuncs(false);
+    InitMemFuncs();
   }
 
   void *Allocate(AllocatorStats *stat, uptr size, uptr alignment,
                  DeviceAllocationInfo *da_info) {
-    if (!da_info || !CheckAndInitMemFuncs(false))
+    if (!da_info || !InitMemFuncs())
       return nullptr;
 
     // Allocate an extra page for Metadata
@@ -103,7 +108,7 @@ class DeviceAllocatorT {
   }
 
   void Deallocate(AllocatorStats *stat, void *p) {
-    uptr map_beg, map_size;
+    Header header, *h;
     {
       SpinMutexLock l(&mutex_);
       uptr idx, end;
@@ -115,73 +120,78 @@ class DeviceAllocatorT {
       }
       CHECK_EQ(chunks_[idx], p_);
       CHECK_LT(idx, n_chunks_);
+      h = GetHeader(chunks_[idx], &header);
+      CHECK_NE(h, nullptr);
       chunks_[idx] = chunks_[--n_chunks_];
       chunks_sorted_ = false;
       stats.n_frees++;
-      map_beg = p_;
-      bool ret = DeviceMemFuncs::GetBlockBeginEnd(p, nullptr, &end);
-      CHECK_EQ(ret, true);
-      map_size = end - map_beg + 1;
-      stats.currently_allocated -= map_size;
-      stat->Sub(AllocatorStatAllocated, map_size);
-      stat->Sub(AllocatorStatMapped, map_size);
+      stats.currently_allocated -= h->map_size;
+      stat->Sub(AllocatorStatAllocated, h->map_size);
+      stat->Sub(AllocatorStatMapped, h->map_size);
     }
-    MapUnmapCallback().OnUnmap(map_beg, map_size);
+    MapUnmapCallback().OnUnmap(h->map_beg, h->map_size);
     DeviceMemFuncs::Deallocate(p);
   }
 
-  bool PointerIsMine(const void *p) { return GetBlockBegin(p) != nullptr; }
-
-  void *GetBlockBegin(const void *ptr) {
-    if (!CheckAndInitMemFuncs())
-      return nullptr;
+  uptr TotalMemoryUsed() {
+    Header header;
     SpinMutexLock l(&mutex_);
-    return GetBlockBeginFastLocked(const_cast<void *>(ptr));
-  }
-
-  void *GetBlockBeginFastLocked(void *ptr) {
-    if (!CheckAndInitMemFuncs())
-      return nullptr;
-
-    uptr ptr_ = reinterpret_cast<uptr>(ptr);
-    mutex_.CheckLocked();
-    EnsureSortedChunks();  // Avoid doing the sort while iterating.
-    uptr idx;
-    for (idx = 0; idx < n_chunks_; idx++) {
-      if (chunks_[idx] >= ptr_)
-        break;
+    uptr res = 0, beg, end;
+    for (uptr i = 0; i < n_chunks_; i++) {
+      Header *h = GetHeader(chunks_[i], &header);
+      CHECK_NE(h, nullptr);
+      res += RoundUpMapSize(h->map_size);
     }
-    if (idx < n_chunks_ && chunks_[idx] == ptr_)
-      return ptr;
-    if (idx == 0)
-      return nullptr;
-
-    void *p = reinterpret_cast<void *>(chunks_[idx - 1]);
-    uptr end;
-    if (!DeviceMemFuncs::GetBlockBeginEnd(p, nullptr, &end) || ptr_ >= end)
-      return nullptr;
-    else
-      return p;
+    return res;
   }
 
-  void *GetMetaData(const void *p) {
-    uptr end;
-    if (!DeviceMemFuncs::GetBlockBeginEnd(p, nullptr, &end))
-      return nullptr;
-    else
-      return reinterpret_cast<void *>(end - kMetadataSize_);
+  bool PointerIsMine(const void *p) const {
+    return GetBlockBegin(p) != nullptr;
   }
 
   uptr GetActuallyAllocatedSize(void *p) {
-    uptr beg, end;
-    if (DeviceMemFuncs::GetBlockBeginEnd(p, &beg, &end))
-      return end - beg;
-    else
-      return 0;
+    Header header;
+    uptr p_ = reinterpret_cast<uptr>(p);
+    Header *h = GetHeader(p_, &header);
+    return h ? h->map_size : 0;
   }
 
-  void ForceLock() { mutex_.Lock(); }
-  void ForceUnlock() { mutex_.Unlock(); }
+  void *GetMetaData(const void *p) {
+    Header header;
+    uptr p_ = reinterpret_cast<uptr>(p);
+    Header *h = GetHeader(p_, &header);
+    return h ? reinterpret_cast<void *>(h->map_beg + h->map_size -
+                                        kMetadataSize_)
+             : nullptr;
+  }
+
+  void *GetBlockBegin(const void *ptr) const {
+    Header header;
+    if (!mem_funcs_inited_) return nullptr;
+    uptr p = reinterpret_cast<uptr>(ptr);
+    SpinMutexLock l(&mutex_);
+    uptr nearest_chunk = 0;
+    // Cache-friendly linear search.
+    for (uptr i = 0; i < n_chunks_; i++) {
+      uptr ch = chunks_[i];
+      if (p < ch)
+        continue;  // p is at left to this chunk, skip it.
+      if (p - ch < p - nearest_chunk)
+        nearest_chunk = ch;
+    }
+    if (!nearest_chunk)
+      return nullptr;
+    if (p != nearest_chunk) {
+      Header *h = GetHeader(nearest_chunk, &header);
+      CHECK_NE(h, nullptr);
+      CHECK_GE(nearest_chunk, h->map_beg);
+      CHECK_LT(nearest_chunk, h->map_beg + h->map_size);
+      CHECK_LE(nearest_chunk, p);
+      if (h->map_beg + h->map_size <= p)
+        return nullptr;
+    }
+    return GetUser(nearest_chunk);
+  }
 
   void EnsureSortedChunks() {
     if (chunks_sorted_)
@@ -190,25 +200,47 @@ class DeviceAllocatorT {
     chunks_sorted_ = true;
   }
 
-  void ForEachChunk(ForEachChunkCallback callback, void *arg) {
-    EnsureSortedChunks();  // Avoid doing the sort while iterating.
-    for (uptr i = 0; i < n_chunks_; i++) {
-      const uptr t = chunks_[i];
-      callback(t, arg);
-      // Consistency check: verify that the array did not change.
-      CHECK_EQ(chunks_[i], t);
+  // This function does the same as GetBlockBegin, but is much faster.
+  // Must be called with the allocator locked.
+  void *GetBlockBeginFastLocked(void *ptr) {
+    if (!mem_funcs_inited_) return nullptr;
+    mutex_.CheckLocked();
+    uptr p = reinterpret_cast<uptr>(ptr);
+    uptr n = n_chunks_;
+    if (!n) return nullptr;
+    EnsureSortedChunks();
+    Header header, *h;
+    h = GetHeader(chunks_[n - 1], &header);
+    CHECK_NE(h, nullptr);
+    uptr min_mmap_ = chunks_[0];
+    uptr max_mmap_ = chunks_[n - 1] + h->map_size;
+    if (p < min_mmap_ || p >= max_mmap_)
+      return nullptr;
+    uptr beg = 0, end = n - 1;
+    // This loop is a log(n) lower_bound. It does not check for the exact match
+    // to avoid expensive cache-thrashing loads.
+    while (end - beg >= 2) {
+      uptr mid = (beg + end) / 2;  // Invariant: mid >= beg + 1
+      if (p < chunks_[mid])
+        end = mid - 1;  // We are not interested in chunks[mid].
+      else
+        beg = mid;  // chunks[mid] may still be what we want.
     }
-  }
 
-  uptr TotalMemoryUsed() {
-    SpinMutexLock l(&mutex_);
-    uptr res = 0, beg, end;
-    for (uptr i = 0; i < n_chunks_; i++) {
-      void *p = chunks_[i];
-      DeviceMemFuncs::GetBlockBeginEnd(p, &beg, &end);
-      res += RoundUpMapSize(end - beg + 1);
+    if (beg < end) {
+      CHECK_EQ(beg + 1, end);
+      // There are 2 chunks left, choose one.
+      if (p >= chunks_[end])
+        beg = end;
     }
-    return res;
+
+    if (p != chunks_[beg]) {
+      h = GetHeader(chunks_[beg], &header);
+      CHECK_NE(h, nullptr);
+      if (h->map_beg + h->map_size <= p || p < h->map_beg)
+        return nullptr;
+    }
+    return GetUser(chunks_[beg]);
   }
 
   void PrintStats() {
@@ -224,12 +256,27 @@ class DeviceAllocatorT {
     Printf("\n");
   }
 
+  // ForceLock() and ForceUnlock() are needed to implement Darwin malloc zone
+  // introspection API.
+  void ForceLock() ACQUIRE(mutex_) { mutex_.Lock(); }
+
+  void ForceUnlock() RELEASE(mutex_) { mutex_.Unlock(); }
+
+  // Iterate over all existing chunks.
+  // The allocator must be locked when calling this function.
+  void ForEachChunk(ForEachChunkCallback callback, void *arg) {
+    EnsureSortedChunks();  // Avoid doing the sort while iterating.
+    for (uptr i = 0; i < n_chunks_; i++) {
+      const uptr t = chunks_[i];
+      callback(t, arg);
+      // Consistency check: verify that the array did not change.
+      CHECK_EQ(chunks_[i], t);
+    }
+  }
+
  private:
-  bool CheckAndInitMemFuncs(bool check_only = true) {
-    if (!enabled_ ||
-        check_only ||
-        mem_funcs_inited_ ||
-        mem_funcs_init_count_ >= 2) {
+  bool InitMemFuncs() {
+    if (!enabled_ || mem_funcs_inited_ || mem_funcs_init_count_ >= 2) {
       return mem_funcs_inited_;
     }
     mem_funcs_inited_ = DeviceMemFuncs::Init();
@@ -237,6 +284,17 @@ class DeviceAllocatorT {
     if (mem_funcs_inited_)
       page_size_ = DeviceMemFuncs::GetPageSize();
     return mem_funcs_inited_;
+  }
+
+  typedef DevivePointerInfo Header;
+
+  Header *GetHeader(uptr p, Header* h) const {
+    CHECK(IsAligned(p, page_size_));
+    return DeviceMemFuncs::GetPointerInfo(p, h) ? h : nullptr;
+  }
+
+  void *GetUser(const uptr ptr) const {
+    return reinterpret_cast<void *>(ptr);
   }
 
   uptr RoundUpMapSize(uptr size) {
@@ -259,6 +317,6 @@ class DeviceAllocatorT {
   struct Stats {
     uptr n_allocs, n_frees, currently_allocated, max_allocated, by_size_log[64];
   } stats;
-  StaticSpinMutex mutex_;
+  mutable StaticSpinMutex mutex_;
 };
 #endif  // SANITIZER_AMDGPU
