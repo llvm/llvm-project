@@ -612,7 +612,7 @@ InstrBuilder::createInstrDescImpl(const MCInst &MCI) {
   LLVM_DEBUG(dbgs() << "\t\tMaxLatency=" << ID->MaxLatency << '\n');
   LLVM_DEBUG(dbgs() << "\t\tNumMicroOps=" << ID->NumMicroOps << '\n');
 
-  // Sanity check on the instruction descriptor.
+  // Validation check on the instruction descriptor.
   if (Error Err = verifyInstrDesc(*ID, MCI))
     return std::move(Err);
 

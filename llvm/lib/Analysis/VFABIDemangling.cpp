@@ -445,7 +445,6 @@ Optional<VFInfo> VFABI::tryDemangleForVFABI(StringRef MangledName,
     VF = EC.getKnownMinValue();
   }
 
-  // Sanity checks.
   // 1. We don't accept a zero lanes vectorization factor.
   // 2. We don't accept the demangling if the vector function is not
   // present in the module.

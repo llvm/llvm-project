@@ -368,8 +368,8 @@ FunctionPass *WebAssemblyPassConfig::createTargetRegisterAllocator(bool) {
   return nullptr; // No reg alloc
 }
 
-static void checkSanityForEHAndSjLj(const TargetMachine *TM) {
-  // Sanity checking related to -exception-model
+static void basicCheckForEHAndSjLj(const TargetMachine *TM) {
+  // Basic Correctness checking related to -exception-model
   if (TM->Options.ExceptionModel != ExceptionHandling::None &&
       TM->Options.ExceptionModel != ExceptionHandling::Wasm)
     report_fatal_error("-exception-model should be either 'none' or 'wasm'");
@@ -431,7 +431,7 @@ void WebAssemblyPassConfig::addIRPasses() {
   if (getOptLevel() != CodeGenOpt::None)
     addPass(createWebAssemblyOptimizeReturned());
 
-  checkSanityForEHAndSjLj(TM);
+  basicCheckForEHAndSjLj(TM);
 
   // If exception handling is not enabled and setjmp/longjmp handling is
   // enabled, we lower invokes into calls and delete unreachable landingpad

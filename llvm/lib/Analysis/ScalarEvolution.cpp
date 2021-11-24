@@ -12387,7 +12387,7 @@ const SCEV *SCEVAddRecExpr::getNumIterationsInRange(const ConstantRange &Range,
     if (Range.contains(Val->getValue()))
       return SE.getCouldNotCompute();  // Something strange happened
 
-    // Ensure that the previous value is in the range.  This is a sanity check.
+    // Ensure that the previous value is in the range.
     assert(Range.contains(
            EvaluateConstantChrecAtConstant(this,
            ConstantInt::get(SE.getContext(), ExitVal - 1), SE)->getValue()) &&

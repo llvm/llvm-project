@@ -69,7 +69,7 @@ static bool VerifySubExpr(Value *Expr,
   }
 
   // If it isn't in the InstInputs list it is a subexpr incorporated into the
-  // address.  Sanity check that it is phi translatable.
+  // address.  Validate that it is phi translatable.
   if (!CanPHITrans(I)) {
     errs() << "Instruction in PHITransAddr is not phi-translatable:\n";
     errs() << *I << '\n';
