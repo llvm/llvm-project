@@ -43,6 +43,9 @@ public:
                               const TargetRegisterInfo *TRI,
                               std::vector<CalleeSavedInfo> &CSI) const override;
 
+  bool allocateScavengingFrameIndexesNearIncomingSP(
+    const MachineFunction &MF) const override;
+
   bool isSupportedStackID(TargetStackID::Value ID) const override;
 
   void processFunctionBeforeFrameFinalized(
