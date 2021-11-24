@@ -44,10 +44,6 @@ public:
                                         Status &error, bool &interrupt,
                                         bool &quit);
 
-  // After connecting, do a little handshake with the client to make sure
-  // we are at least communicating
-  bool HandshakeWithClient();
-
 protected:
   std::map<StringExtractorGDBRemote::ServerPacketType, PacketHandler>
       m_packet_handlers;

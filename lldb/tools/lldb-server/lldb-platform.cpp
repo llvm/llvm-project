@@ -364,23 +364,17 @@ int main_platform(int argc, char *argv[]) {
           fprintf(stderr, "failed to start gdbserver: %s\n", error.AsCString());
       }
 
-      // After we connected, we need to get an initial ack from...
-      if (platform.HandshakeWithClient()) {
-        bool interrupt = false;
-        bool done = false;
-        while (!interrupt && !done) {
-          if (platform.GetPacketAndSendResponse(llvm::None, error, interrupt,
-                                                done) !=
-              GDBRemoteCommunication::PacketResult::Success)
-            break;
-        }
-
-        if (error.Fail()) {
-          WithColor::error() << error.AsCString() << '\n';
-        }
-      } else {
-        WithColor::error() << "handshake with client failed\n";
+      bool interrupt = false;
+      bool done = false;
+      while (!interrupt && !done) {
+        if (platform.GetPacketAndSendResponse(llvm::None, error, interrupt,
+                                              done) !=
+            GDBRemoteCommunication::PacketResult::Success)
+          break;
       }
+
+      if (error.Fail())
+        WithColor::error() << error.AsCString() << '\n';
     }
   } while (g_server);
 
