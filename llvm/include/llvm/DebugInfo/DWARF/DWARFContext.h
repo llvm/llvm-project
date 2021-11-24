@@ -156,6 +156,11 @@ public:
                                    NormalUnits.getNumInfoUnits());
   }
 
+  const DWARFUnitVector &getNormalUnitsVector() {
+    parseNormalUnits();
+    return NormalUnits;
+  }
+
   /// Get units from .debug_types in this context.
   unit_iterator_range types_section_units() {
     parseNormalUnits();

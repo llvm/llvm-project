@@ -1,7 +1,7 @@
 # RUN: yaml2obj %s -o %t.o
 # RUN: not llvm-dwarfdump -verify %t.o | FileCheck %s
 
-#      CHECK: Verifying .debug_info Unit Header Chain...
+#      CHECK: Verifying non-dwo Units...
 # CHECK-NEXT: error: DIEs have overlapping address ranges
 
 --- !ELF
