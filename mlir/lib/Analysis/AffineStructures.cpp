@@ -3566,12 +3566,20 @@ IntegerSet FlatAffineConstraints::getAsIntegerSet(MLIRContext *context) const {
   if (failed(computeLocalVars(*this, memo, context))) {
     // Check if the local variables without an explicit representation have
     // zero coefficients everywhere.
-    for (unsigned i = getNumDimAndSymbolIds(), e = getNumIds(); i < e; ++i) {
-      if (!memo[i] && !isColZero(*this, /*pos=*/i)) {
-        LLVM_DEBUG(llvm::dbgs() << "one or more local exprs do not have an "
-                                   "explicit representation");
-        return IntegerSet();
-      }
+    SmallVector<unsigned> noLocalRepVars;
+    unsigned numDimsSymbols = getNumDimAndSymbolIds();
+    for (unsigned i = numDimsSymbols, e = getNumIds(); i < e; ++i) {
+      if (!memo[i] && !isColZero(*this, /*pos=*/i))
+        noLocalRepVars.push_back(i - numDimsSymbols);
+    }
+    if (!noLocalRepVars.empty()) {
+      LLVM_DEBUG({
+        llvm::dbgs() << "local variables at position(s) ";
+        llvm::interleaveComma(noLocalRepVars, llvm::dbgs());
+        llvm::dbgs() << " do not have an explicit representation in:\n";
+        this->dump();
+      });
+      return IntegerSet();
     }
   }
 
