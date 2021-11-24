@@ -61,6 +61,7 @@ struct NMLoadStoreOpt : public MachineFunctionPass {
   bool isValidLoadStore(MachineInstr &MI, bool IsLoad);
   bool isValidNextLoadStore(LSIns Prev, LSIns Next, bool &IsAscending);
   bool generateLoadStoreMultiple(MachineBasicBlock &MBB, bool IsLoad);
+  bool generatePCRelative(MachineBasicBlock &MBB);
 };
 } // namespace
 
@@ -77,6 +78,7 @@ bool NMLoadStoreOpt::runOnMachineFunction(MachineFunction &Fn) {
     Modified |= generateSaveOrRestore(MBB, /*IsRestore=*/true);
     Modified |= generateLoadStoreMultiple(MBB, /*IsLoad=*/false);
     Modified |= generateLoadStoreMultiple(MBB, /*IsLoad=*/true);
+    Modified |= generatePCRelative(MBB);
   }
 
   return Modified;
@@ -554,6 +556,132 @@ bool NMLoadStoreOpt::generateLoadStoreMultiple(MachineBasicBlock &MBB,
     }
 
     Modified = true;
+  }
+  return Modified;
+}
+
+// Check if the instruction is lw, sw or addiu with Reg as second operand.
+static bool isLoadStoreOrAddiuWithReg(MachineInstr *MI, Register Reg) {
+  switch (MI->getOpcode()) {
+  case Mips::SW_NM:
+  case Mips::SWs9_NM:
+  case Mips::LW_NM:
+  case Mips::LWs9_NM:
+  case Mips::ADDiu_NM:
+    if (MI->getOperand(1).getReg() == Reg)
+      return true;
+    [[clang::fallthrough]];
+  default:
+    return false;
+  }
+}
+
+// Generates lwpc and swpc or improves la instruction. Replacement happens only
+// if there is just a single use of 'symbol'. If it's used by multiple
+// instructions, then the replacement would end up being a regression.
+//
+// la $a0, symbol       -> lwpc $a1, symbol+4
+// lw $a1, 4($a0)
+//
+// or:
+//
+// la $a0, symbol       -> swpc $a1, symbol
+// sw $a1, 0($a0)
+//
+// or:
+//
+// la $a0, symbol       -> la $a1, symbol+8
+// addiu $a1, $a0, 8
+//
+bool NMLoadStoreOpt::generatePCRelative(MachineBasicBlock &MBB) {
+  bool Modified = false;
+  SmallVector<std::pair<MachineInstr *, MachineInstr *>> Candidates;
+  for (auto &MI : MBB) {
+    if (MI.getOpcode() == Mips::LA_NM) {
+      int UsedCount = 0;
+      bool IsRedefined = false;
+      MachineInstr *FirstUse = nullptr;
+      Register Dst = MI.getOperand(0).getReg();
+
+      // Iterate over all of the remaining instructions in the basic block and
+      // count how many times the result of LA has been used. If it has been
+      // used more than once, then it doesn't pay off to replace it. This loop
+      // also checks if the register used by LA has been reused, this stops the
+      // search.
+      for (MBBIter MII = std::next(MBBIter(MI)); MII != MBB.end(); MII++) {
+        for (auto Use : MII->uses())
+          if (Use.isReg() && Use.getReg() == Dst) {
+            UsedCount++;
+            if (UsedCount > 1)
+              break;
+            FirstUse = &(*MII);
+          }
+        if (UsedCount > 1)
+          break;
+        for (auto Def : MII->defs())
+          if (Def.isReg() && Def.getReg() == Dst) {
+            IsRedefined = true;
+            break;
+          }
+        if (IsRedefined)
+          break;
+      }
+
+      // Used by multiple instructions, too expensive for replacement.
+      if (UsedCount > 1)
+        continue;
+
+      // Check if the register used by LA is live-in for the successor basic
+      // blocks. In case it is, this means that it used by those basic block and
+      // that it probably doesn't pay off to replace it. If the register has
+      // been redefined in the current basic block then the check makes no sense
+      // anymore.
+      bool IsUsedInOtherBBs = false;
+      if (!IsRedefined)
+        for (auto *Succ : MBB.successors())
+          if (Succ->isLiveIn(Dst)) {
+            IsUsedInOtherBBs = true;
+            break;
+          }
+
+      // Used by other basic block, this usually (not always though) means that
+      // it's used by multiple instructions.
+      if (IsUsedInOtherBBs)
+        continue;
+
+      assert(UsedCount == 1 && FirstUse != nullptr);
+
+      if (!isLoadStoreOrAddiuWithReg(FirstUse, Dst))
+        continue;
+
+      Candidates.push_back({&MI, FirstUse});
+    }
+  }
+
+  for (auto Pair : Candidates) {
+    auto *LA = Pair.first;
+    auto *Use = Pair.second;
+    auto &Address = LA->getOperand(1);
+    auto Dst = Use->getOperand(0).getReg();
+    int64_t Offset = Use->getOperand(2).getImm() + Address.getOffset();
+
+    assert(Address.isGlobal());
+
+    if (Use->getOpcode() == Mips::ADDiu_NM) {
+      Address.setOffset(Offset);
+      LA->getOperand(0).setReg(Dst);
+      MBB.erase(Use);
+    } else {
+      auto InsertBefore = std::next(MBBIter(Use));
+      bool IsLoad = Use->mayLoad();
+      unsigned Opcode = IsLoad ? Mips::LWPC_NM : Mips::SWPC_NM;
+      unsigned Flags = Address.getTargetFlags();
+      BuildMI(MBB, InsertBefore, Use->getDebugLoc(), TII->get(Opcode))
+          .addReg(Dst, IsLoad ? RegState::Define : 0)
+          .addGlobalAddress(Address.getGlobal(), Offset, Flags);
+      MBB.erase(LA);
+      MBB.erase(Use);
+    }
   }
   return Modified;
 }

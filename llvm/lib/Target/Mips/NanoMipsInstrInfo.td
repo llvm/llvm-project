@@ -169,6 +169,18 @@ class StoreMemoryNM<string opstr, DAGOperand RO, DAGOperand MO,
   string BaseOpcode = opstr;
 }
 
+class LoadPCBase<DAGOperand RO, DAGOperand MO> :
+    InstNM<(outs RO:$rt), (ins MO:$addr), "lwpc\t$rt, $addr", [], II_LW>,
+    InstSize48 {
+  let mayLoad = 1;
+}
+
+class StorePCBase<DAGOperand RO, DAGOperand MO> :
+    InstNM<(outs), (ins RO:$rt, MO:$addr), "swpc\t$rt, $addr", [], II_SW>,
+    InstSize48 {
+  let mayStore = 1;
+}
+
 class CallNM<string opstr,
              SDPatternOperator OpNode = null_frag,
              SDPatternOperator imm_type = null_frag> :
@@ -650,6 +662,9 @@ def UASH_NM : UnalignedStore<"uash", NMUnalignedSH>;
 def UASW_NM : UnalignedStore<"uasw", NMUnalignedSW>;
 
 def LWGP_NM : LoadMemoryNM<"lw", GPR32NMOpnd, mem>, InstSize32;
+
+def SWPC_NM : StorePCBase<GPR32NMOpnd, simm32>;
+def LWPC_NM : LoadPCBase<GPR32NMOpnd, simm32>;
 
 def LWM_NM : LoadMultipleNM<"lwm">;
 def UALWM_NM : LoadMultipleNM<"ualwm">;
