@@ -666,6 +666,29 @@ static bool isNoWrap(PredicatedScalarEvolution &PSE,
   return false;
 }
 
+static void visitPointers(Value *StartPtr, const Loop &InnermostLoop,
+                          function_ref<void(Value *)> AddPointer) {
+  SmallPtrSet<Value *, 8> Visited;
+  SmallVector<Value *> WorkList;
+  WorkList.push_back(StartPtr);
+
+  while (!WorkList.empty()) {
+    Value *Ptr = WorkList.pop_back_val();
+    if (!Visited.insert(Ptr).second)
+      continue;
+    auto *PN = dyn_cast<PHINode>(Ptr);
+    // SCEV does not look through non-header PHIs inside the loop. Such phis
+    // can be analyzed by adding separate accesses for each incoming pointer
+    // value.
+    if (PN && InnermostLoop.contains(PN->getParent()) &&
+        PN->getParent() != InnermostLoop.getHeader()) {
+      for (const Use &Inc : PN->incoming_values())
+        WorkList.push_back(Inc);
+    } else
+      AddPointer(Ptr);
+  }
+}
+
 bool AccessAnalysis::createCheckForAccess(RuntimePointerChecking &RtCheck,
                                           MemAccessInfo Access,
                                           const ValueToValueMap &StridesMap,
@@ -1254,29 +1277,6 @@ bool llvm::isConsecutiveAccess(Value *A, Value *B, const DataLayout &DL,
   Optional<int> Diff = getPointersDiff(ElemTyA, PtrA, ElemTyB, PtrB, DL, SE,
                                        /*StrictCheck=*/true, CheckType);
   return Diff && *Diff == 1;
-}
-
-static void visitPointers(Value *StartPtr, const Loop &InnermostLoop,
-                          function_ref<void(Value *)> AddPointer) {
-  SmallPtrSet<Value *, 8> Visited;
-  SmallVector<Value *> WorkList;
-  WorkList.push_back(StartPtr);
-
-  while (!WorkList.empty()) {
-    Value *Ptr = WorkList.pop_back_val();
-    if (!Visited.insert(Ptr).second)
-      continue;
-    auto *PN = dyn_cast<PHINode>(Ptr);
-    // SCEV does not look through non-header PHIs inside the loop. Such phis
-    // can be analyzed by adding separate accesses for each incoming pointer
-    // value.
-    if (PN && InnermostLoop.contains(PN->getParent()) &&
-        PN->getParent() != InnermostLoop.getHeader()) {
-      for (const Use &Inc : PN->incoming_values())
-        WorkList.push_back(Inc);
-    } else
-      AddPointer(Ptr);
-  }
 }
 
 void MemoryDepChecker::addAccess(StoreInst *SI) {
