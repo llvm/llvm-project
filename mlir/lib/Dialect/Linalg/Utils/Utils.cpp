@@ -322,6 +322,66 @@ tensor::ExtractSliceOp makeComposedExtractSliceOp(
                                           foldedOffsets, sizes, strides);
 }
 
+Value makeComposedPadHighOp(OpBuilder &b, Location loc, RankedTensorType type,
+                            Value source, Value pad, bool nofold) {
+  assert(type.hasStaticShape() && "expect tensor type to have static shape");
+
+  // Exit if `source` is not defined by an ExtractSliceOp.
+  auto sliceOp = source.getDefiningOp<tensor::ExtractSliceOp>();
+  if (!sliceOp)
+    return PadTensorOp::createPadHighOp(type, source, pad, nofold, loc, b);
+
+  // Search the `source` use-def chain for padded LinalgOps.
+  Value current = sliceOp.source();
+  while (current) {
+    auto linalgOp = current.getDefiningOp<LinalgOp>();
+    if (!linalgOp)
+      break;
+    OpResult opResult = current.cast<OpResult>();
+    current = linalgOp.getOutputOperand(opResult.getResultNumber())->get();
+  }
+  auto padTensorOp = current ? current.getDefiningOp<PadTensorOp>() : nullptr;
+
+  // Exit if the search fails to match a PadTensorOp at the end of the matched
+  // LinalgOp sequence.
+  if (!padTensorOp)
+    return PadTensorOp::createPadHighOp(type, source, pad, nofold, loc, b);
+
+  // Exit if the padded result type does not match.
+  if (sliceOp.source().getType() != type)
+    return PadTensorOp::createPadHighOp(type, source, pad, nofold, loc, b);
+
+  // Exit if the LinalgOps are not high padded.
+  if (llvm::any_of(padTensorOp.getMixedLowPad(), [](OpFoldResult ofr) {
+        return getConstantIntValue(ofr) != static_cast<int64_t>(0);
+      }))
+    return PadTensorOp::createPadHighOp(type, source, pad, nofold, loc, b);
+
+  // Exit if the sizes of the dynamic sizes of `sliceOp` do not match the size
+  // of the slice padded by `padTensorOp`.
+  auto padTensorOpSliceOp =
+      padTensorOp.source().getDefiningOp<tensor::ExtractSliceOp>();
+  if (!padTensorOpSliceOp ||
+      llvm::any_of(llvm::zip(sliceOp.getMixedSizes(),
+                             padTensorOpSliceOp.getMixedSizes()),
+                   [](std::tuple<OpFoldResult, OpFoldResult> it) {
+                     return !isEqualConstantIntOrValue(std::get<0>(it),
+                                                       std::get<1>(it));
+                   }))
+    return PadTensorOp::createPadHighOp(type, source, pad, nofold, loc, b);
+
+  // Exit if the padding values do not match.
+  Attribute padTensorOpPadAttr, padAttr;
+  Value padTensorOpPad = padTensorOp.getConstantPaddingValue();
+  if (!padTensorOpPad ||
+      !matchPattern(padTensorOpPad, m_Constant(&padTensorOpPadAttr)) ||
+      !matchPattern(pad, m_Constant(&padAttr)) || padTensorOpPadAttr != padAttr)
+    return PadTensorOp::createPadHighOp(type, source, pad, nofold, loc, b);
+
+  // Return the padded result if the padding values and sizes match.
+  return sliceOp.source();
+}
+
 /// Specialization to build an scf "for" nest.
 template <>
 void GenerateLoopNest<scf::ForOp>::doit(

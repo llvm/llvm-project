@@ -93,19 +93,41 @@ FailureOr<int64_t> getConstantUpperBoundForIndex(Value value);
 ///
 /// Example:
 /// ```
-///   %0 = tensor.extract_slice %arg0[3, 4][3, 32][1, 1] : tensor<64x64xf32> to
+/// %0 = tensor.extract_slice %arg0[3, 4][3, 32][1, 1] : tensor<64x64xf32> to
 ///                                                        tensor<3x32xf32>
-///   %1 = tensor.extract_slice %0[0, 5][3, 4][1, 1] : tensor<3x32xf32> to
+/// %1 = tensor.extract_slice %0[0, 5][3, 4][1, 1] : tensor<3x32xf32> to
 ///                                                    tensor<3x4xf32>
 /// ```
 /// folds into:
 /// ```
-///   %1 = tensor.extract_slice %arg0[3, 9][3, 4][1, 1] : tensor<64x64xf32> to
-///                                                         tensor<3x4xf32>
+/// %1 = tensor.extract_slice %arg0[3, 9][3, 4][1, 1] : tensor<64x64xf32> to
+///                                                       tensor<3x4xf32>
 /// ```
 tensor::ExtractSliceOp makeComposedExtractSliceOp(
     OpBuilder &b, Location loc, Value source, ArrayRef<OpFoldResult> offsets,
     ArrayRef<OpFoldResult> sizes, ArrayRef<OpFoldResult> strides);
+
+/// Create a PadTensorOp that pads `source` to the size of the statically sized
+/// `type` whose static sizes are assumed to be greater than the dynamic
+/// `source` size. The padding introduces trailing `pad` values until the target
+/// size is met. If `source` is defined by one or more LinalgOps that have been
+/// padded with the same value and sizes, return their padded result instead of
+/// creating a PadTensorOp.
+///
+/// Example:
+/// ```
+/// %0 = tensor.extract_slice %arg0 [%iv0, %iv1] [%sz0, %sz1]
+/// %1 = linalg.pad_tensor %0 low[0, 0] high[...] { linalg.yield %cst }
+/// %2 = linalg.matmul ins(...) outs(%1)
+/// %3 = tensor.extract_slice %2 [0, 0] [%sz0, %sz1]
+/// ```
+/// makeComposedPadHighOp(source=%3, pad=%cst) returns %2
+/// makeComposedPadHighOp(source=%3, pad=%other_cst) returns %4
+/// ```
+/// %4 = linalg.pad_tensor %3 low[0, 0] high[...] { linalg.yield %other_cst }
+/// ```
+Value makeComposedPadHighOp(OpBuilder &b, Location loc, RankedTensorType type,
+                            Value source, Value pad, bool nofold);
 
 //===----------------------------------------------------------------------===//
 // Fusion / Tiling utilities

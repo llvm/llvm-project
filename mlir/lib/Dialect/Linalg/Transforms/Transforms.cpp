@@ -211,9 +211,9 @@ static LogicalResult padOperandToSmallestStaticBoundingBox(
   auto staticTensorType = RankedTensorType::get(
       staticSizes, getElementTypeOrSelf(opOperand->get()));
   bool nofold = nofoldFunc ? nofoldFunc(*opOperand) : false;
-  result = linalg::PadTensorOp::createPadHighOp(
-      staticTensorType, opOperand->get(), paddingValue.getValue(),
-      /*nofold=*/nofold, opToPad->getLoc(), b);
+  result =
+      makeComposedPadHighOp(b, opToPad->getLoc(), staticTensorType,
+                            opOperand->get(), paddingValue.getValue(), nofold);
   return success();
 }
 
