@@ -204,6 +204,7 @@ private:
           if (SuccBB == &BB) {
             BasicBlock *DBB = makeDisambiguationBB(Context, &BB, NewBBs);
             BI->setSuccessor(SuccIdx, DBB);
+            BB.replacePhiUsesWith(&BB, DBB);
           }
         }
       } else if (isa<SwitchInst>(TI)) {
@@ -214,6 +215,7 @@ private:
           if (SuccBB == &BB) {
             BasicBlock *DBB = makeDisambiguationBB(Context, &BB, NewBBs);
             SI->setSuccessor(SuccIdx, DBB);
+            BB.replacePhiUsesWith(&BB, DBB);
           }
         }
       }
