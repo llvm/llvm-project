@@ -191,6 +191,8 @@ COMMON_FLAG(const char *, stack_trace_format, "DEFAULT",
             "Format string used to render stack frames. "
             "See sanitizer_stacktrace_printer.h for the format description. "
             "Use DEFAULT to get default format.")
+COMMON_FLAG(int, compress_stack_depot, 0,
+            "Compress stack depot to save memory.")
 COMMON_FLAG(bool, no_huge_pages_for_shadow, true,
             "If true, the shadow is not allowed to use huge pages. ")
 COMMON_FLAG(bool, strict_string_checks, false,
