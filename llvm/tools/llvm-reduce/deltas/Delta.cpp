@@ -267,7 +267,7 @@ void runDeltaPassInt(
       WriteBitcodeToFile(*Test.getProgram().M, BCOS);
     }
 
-    std::deque<std::future<SmallString<0>>> TaskQueue;
+    std::deque<std::shared_future<SmallString<0>>> TaskQueue;
     for (auto I = ChunksStillConsideredInteresting.rbegin(),
               E = ChunksStillConsideredInteresting.rend();
          I != E; ++I) {
