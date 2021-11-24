@@ -15,9 +15,11 @@
 #include "Delta.h"
 #include "ReducerWorkItem.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/Bitcode/BitcodeReader.h"
 #include "llvm/Bitcode/BitcodeWriter.h"
 #include "llvm/IR/Verifier.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/ThreadPool.h"
 #include "llvm/Support/ToolOutputFile.h"
 #include <fstream>
 #include <set>
@@ -36,6 +38,16 @@ static cl::opt<bool> TmpFilesAsBitcode(
     "write-tmp-files-as-bitcode",
     cl::desc("Write temporary files as bitcode, instead of textual IR"),
     cl::init(false));
+
+#ifdef LLVM_ENABLE_THREADS
+static cl::opt<unsigned> NumJobs(
+    "j",
+    cl::desc("Maximum number of threads to use to process chunks. Set to 1 to "
+             "disables parallelism."),
+    cl::init(1));
+#else
+unsigned NumJobs = 1;
+#endif
 
 void writeOutput(ReducerWorkItem &M, llvm::StringRef Message);
 
@@ -120,7 +132,8 @@ static bool increaseGranularity(std::vector<Chunk> &Chunks) {
 // modified module if the chunk resulted in a reduction.
 template <typename T>
 static std::unique_ptr<ReducerWorkItem>
-CheckChunk(Chunk &ChunkToCheckForUninterestingness, TestRunner &Test,
+CheckChunk(Chunk &ChunkToCheckForUninterestingness,
+           std::unique_ptr<ReducerWorkItem> Clone, TestRunner &Test,
            function_ref<void(Oracle &, T &)> ExtractChunksFromModule,
            std::set<Chunk> &UninterestingChunks,
            std::vector<Chunk> &ChunksStillConsideredInteresting) {
@@ -137,9 +150,6 @@ CheckChunk(Chunk &ChunkToCheckForUninterestingness, TestRunner &Test,
                    C != ChunkToCheckForUninterestingness;
           });
 
-  // Clone module before hacking it up..
-  std::unique_ptr<ReducerWorkItem> Clone =
-      cloneReducerWorkItem(Test.getProgram());
   // Generate Module with only Targets inside Current Chunks
   Oracle O(CurrentChunks);
   ExtractChunksFromModule(O, *Clone);
@@ -167,6 +177,36 @@ CheckChunk(Chunk &ChunkToCheckForUninterestingness, TestRunner &Test,
     return nullptr;
   }
   return Clone;
+}
+
+template <typename T>
+SmallString<0> ProcessChunkFromSerializedBitcode(
+    Chunk &ChunkToCheckForUninterestingness, TestRunner &Test,
+    function_ref<void(Oracle &, T &)> ExtractChunksFromModule,
+    std::set<Chunk> &UninterestingChunks,
+    std::vector<Chunk> &ChunksStillConsideredInteresting,
+    SmallString<0> &OriginalBC, std::atomic<bool> &AnyReduced) {
+  LLVMContext Ctx;
+  Expected<std::unique_ptr<Module>> MOrErr = parseBitcodeFile(
+      MemoryBufferRef(StringRef(OriginalBC.data(), OriginalBC.size()),
+                      "<llvm-reduce tmp module>"),
+      Ctx);
+  if (!MOrErr)
+    report_fatal_error("Failed to read bitcode");
+  auto CloneMMM = std::make_unique<ReducerWorkItem>();
+  CloneMMM->M = std::move(MOrErr.get());
+
+  SmallString<0> Result;
+  if (std::unique_ptr<ReducerWorkItem> ChunkResult =
+          CheckChunk(ChunkToCheckForUninterestingness, std::move(CloneMMM),
+                     Test, ExtractChunksFromModule, UninterestingChunks,
+                     ChunksStillConsideredInteresting)) {
+    raw_svector_ostream BCOS(Result);
+    WriteBitcodeToFile(*ChunkResult->M, BCOS);
+    // Communicate that the task reduced a chunk.
+    AnyReduced = true;
+  }
+  return Result;
 }
 
 /// Runs the Delta Debugging algorithm, splits the code into chunks and
@@ -207,19 +247,112 @@ void runDeltaPassInt(
     increaseGranularity(ChunksStillConsideredInteresting);
   }
 
+  std::atomic<bool> AnyReduced;
+  std::unique_ptr<ThreadPool> ChunkThreadPoolPtr;
+  if (NumJobs > 1)
+    ChunkThreadPoolPtr =
+        std::make_unique<ThreadPool>(hardware_concurrency(NumJobs));
+
   bool FoundAtLeastOneNewUninterestingChunkWithCurrentGranularity;
   do {
     FoundAtLeastOneNewUninterestingChunkWithCurrentGranularity = false;
 
     std::set<Chunk> UninterestingChunks;
-    for (Chunk &ChunkToCheckForUninterestingness :
-         reverse(ChunksStillConsideredInteresting)) {
-      std::unique_ptr<ReducerWorkItem> Result = CheckChunk(
-          ChunkToCheckForUninterestingness, Test, ExtractChunksFromModule,
-          UninterestingChunks, ChunksStillConsideredInteresting);
+
+    // When running with more than one thread, serialize the original bitcode
+    // to OriginalBC.
+    SmallString<0> OriginalBC;
+    if (NumJobs > 1) {
+      raw_svector_ostream BCOS(OriginalBC);
+      WriteBitcodeToFile(*Test.getProgram().M, BCOS);
+    }
+
+    std::deque<std::future<SmallString<0>>> TaskQueue;
+    for (auto I = ChunksStillConsideredInteresting.rbegin(),
+              E = ChunksStillConsideredInteresting.rend();
+         I != E; ++I) {
+      std::unique_ptr<ReducerWorkItem> Result = nullptr;
+      unsigned WorkLeft = std::distance(I, E);
+
+      // Run in parallel mode, if the user requested more than one thread and
+      // there are at least a few chunks to process.
+      if (NumJobs > 1 && WorkLeft > 1) {
+        unsigned NumInitialTasks = std::min(WorkLeft, unsigned(NumJobs));
+        unsigned NumChunksProcessed = 0;
+
+        ThreadPool &ChunkThreadPool = *ChunkThreadPoolPtr;
+        TaskQueue.clear();
+
+        AnyReduced = false;
+        // Queue jobs to process NumInitialTasks chunks in parallel using
+        // ChunkThreadPool. When the tasks are added to the pool, parse the
+        // original module from OriginalBC with a fresh LLVMContext object. This
+        // ensures that the cloned module of each task uses an independent
+        // LLVMContext object. If a task reduces the input, serialize the result
+        // back in the corresponding Result element.
+        for (unsigned J = 0; J < NumInitialTasks; ++J) {
+          TaskQueue.emplace_back(ChunkThreadPool.async(
+              [J, I, &Test, &ExtractChunksFromModule, &UninterestingChunks,
+               &ChunksStillConsideredInteresting, &OriginalBC, &AnyReduced]() {
+                return ProcessChunkFromSerializedBitcode(
+                    *(I + J), Test, ExtractChunksFromModule,
+                    UninterestingChunks, ChunksStillConsideredInteresting,
+                    OriginalBC, AnyReduced);
+              }));
+        }
+
+        // Start processing results of the queued tasks. We wait for the first
+        // task in the queue to finish. If it reduced a chunk, we parse the
+        // result and exit the loop.
+        //  Otherwise we will try to schedule a new task, if
+        //  * no other pending job reduced a chunk and
+        //  * we have not reached the end of the chunk.
+        while (!TaskQueue.empty()) {
+          auto &Future = TaskQueue.front();
+          Future.wait();
+
+          NumChunksProcessed++;
+          SmallString<0> Res = Future.get();
+          TaskQueue.pop_front();
+          if (Res.empty()) {
+            unsigned NumScheduledTasks = NumChunksProcessed + TaskQueue.size();
+            if (!AnyReduced && I + NumScheduledTasks != E) {
+              Chunk &ChunkToCheck = *(I + NumScheduledTasks);
+              TaskQueue.emplace_back(ChunkThreadPool.async(
+                  [&Test, &ExtractChunksFromModule, &UninterestingChunks,
+                   &ChunksStillConsideredInteresting, &OriginalBC,
+                   &ChunkToCheck, &AnyReduced]() {
+                    return ProcessChunkFromSerializedBitcode(
+                        ChunkToCheck, Test, ExtractChunksFromModule,
+                        UninterestingChunks, ChunksStillConsideredInteresting,
+                        OriginalBC, AnyReduced);
+                  }));
+            }
+            continue;
+          }
+
+          Expected<std::unique_ptr<Module>> MOrErr = parseBitcodeFile(
+              MemoryBufferRef(StringRef(Res.data(), Res.size()),
+                              "<llvm-reduce tmp module>"),
+              Test.getProgram().M->getContext());
+          if (!MOrErr)
+            report_fatal_error("Failed to read bitcode");
+          Result = std::make_unique<ReducerWorkItem>();
+          Result->M = std::move(MOrErr.get());
+          break;
+        }
+        // Forward I to the last chunk processed in parallel.
+        I += NumChunksProcessed - 1;
+      } else {
+        Result = CheckChunk(*I, cloneReducerWorkItem(Test.getProgram()), Test,
+                            ExtractChunksFromModule, UninterestingChunks,
+                            ChunksStillConsideredInteresting);
+      }
+
       if (!Result)
         continue;
 
+      Chunk &ChunkToCheckForUninterestingness = *I;
       FoundAtLeastOneNewUninterestingChunkWithCurrentGranularity = true;
       UninterestingChunks.insert(ChunkToCheckForUninterestingness);
       ReducedProgram = std::move(Result);
