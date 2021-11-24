@@ -3,7 +3,7 @@
 
 module {
   func.func @foo() -> i32 {
-    %0 = cir.alloca i32, cir.ptr <i32>, [cinit]
+    %0 = cir.alloca i32, cir.ptr <i32>, [cinit] {alignment = 4 : i64}
     %1 = cir.cst(1 : i32) : i32
     cir.store %1, %0 : i32, cir.ptr <i32>
     %2 = cir.load %0 lvalue_to_rvalue : cir.ptr <i32>, i32
@@ -13,7 +13,7 @@ module {
 
 //      MLIR: module  {
 // MLIR-NEXT:   func.func @foo() -> i32 {
-// MLIR-NEXT:     %0 = memref.alloc() : memref<i32>
+// MLIR-NEXT:     %0 = memref.alloc() {alignment = 4 : i64} : memref<i32>
 // MLIR-NEXT:     %c1_i32 = arith.constant 1 : i32
 // MLIR-NEXT:     memref.store %c1_i32, %0[] : memref<i32>
 // MLIR-NEXT:     %1 = memref.load %0[] : memref<i32>
