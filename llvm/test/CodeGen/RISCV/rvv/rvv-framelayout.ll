@@ -31,8 +31,8 @@ define void @rvv_vla(i64 %n, i64 %i) nounwind {
 ; CHECK-NEXT:    add a0, a0, a1
 ; CHECK-NEXT:    lw a0, 0(a0)
 ; CHECK-NEXT:    addi sp, s0, -32
-; CHECK-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
 ; CHECK-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
 ; CHECK-NEXT:    addi sp, sp, 32
 ; CHECK-NEXT:    ret
   %vla.addr = alloca i32, i64 %n
@@ -69,8 +69,8 @@ define void @rvv_overaligned() nounwind {
 ; CHECK-NEXT:    vl2re64.v v8, (a0)
 ; CHECK-NEXT:    lw a0, 64(sp)
 ; CHECK-NEXT:    addi sp, s0, -128
-; CHECK-NEXT:    ld s0, 112(sp) # 8-byte Folded Reload
 ; CHECK-NEXT:    ld ra, 120(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld s0, 112(sp) # 8-byte Folded Reload
 ; CHECK-NEXT:    addi sp, sp, 128
 ; CHECK-NEXT:    ret
   %overaligned = alloca i32, align 64
@@ -116,9 +116,9 @@ define void @rvv_vla_and_overaligned(i64 %n, i64 %i) nounwind {
 ; CHECK-NEXT:    add a0, a0, a1
 ; CHECK-NEXT:    lw a0, 0(a0)
 ; CHECK-NEXT:    addi sp, s0, -128
-; CHECK-NEXT:    ld s1, 104(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s0, 112(sp) # 8-byte Folded Reload
 ; CHECK-NEXT:    ld ra, 120(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld s0, 112(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld s1, 104(sp) # 8-byte Folded Reload
 ; CHECK-NEXT:    addi sp, sp, 128
 ; CHECK-NEXT:    ret
   %overaligned = alloca i32, align 64

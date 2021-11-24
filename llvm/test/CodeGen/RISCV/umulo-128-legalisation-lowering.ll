@@ -100,13 +100,13 @@ define { i128, i8 } @muloti_test(i128 %l, i128 %r) #0 {
 ; RISCV32-NEXT:    sw t1, 8(a0)
 ; RISCV32-NEXT:    sw t4, 12(a0)
 ; RISCV32-NEXT:    sb a1, 16(a0)
-; RISCV32-NEXT:    lw s6, 4(sp) # 4-byte Folded Reload
-; RISCV32-NEXT:    lw s5, 8(sp) # 4-byte Folded Reload
-; RISCV32-NEXT:    lw s4, 12(sp) # 4-byte Folded Reload
-; RISCV32-NEXT:    lw s3, 16(sp) # 4-byte Folded Reload
-; RISCV32-NEXT:    lw s2, 20(sp) # 4-byte Folded Reload
-; RISCV32-NEXT:    lw s1, 24(sp) # 4-byte Folded Reload
 ; RISCV32-NEXT:    lw s0, 28(sp) # 4-byte Folded Reload
+; RISCV32-NEXT:    lw s1, 24(sp) # 4-byte Folded Reload
+; RISCV32-NEXT:    lw s2, 20(sp) # 4-byte Folded Reload
+; RISCV32-NEXT:    lw s3, 16(sp) # 4-byte Folded Reload
+; RISCV32-NEXT:    lw s4, 12(sp) # 4-byte Folded Reload
+; RISCV32-NEXT:    lw s5, 8(sp) # 4-byte Folded Reload
+; RISCV32-NEXT:    lw s6, 4(sp) # 4-byte Folded Reload
 ; RISCV32-NEXT:    addi sp, sp, 32
 ; RISCV32-NEXT:    ret
 start:

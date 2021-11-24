@@ -207,7 +207,8 @@ Optional<bool> ComputationSliceState::isSliceMaximalFastCheck() const {
 
     // Check if src and dst loop bounds are the same. If not, we can guarantee
     // that the slice is not maximal.
-    if (srcLbResult != dstLbResult || srcUbResult != dstUbResult)
+    if (srcLbResult != dstLbResult || srcUbResult != dstUbResult ||
+        srcLoop.getStep() != dstLoop.getStep())
       return false;
   }
 

@@ -42,7 +42,8 @@ int main() {
   return 0;
 }
 
-void __tsan_on_report(void *report) {
+__attribute__((disable_sanitizer_instrumentation)) void
+__tsan_on_report(void *report) {
   const char *type;
   void *addr;
   void *start;

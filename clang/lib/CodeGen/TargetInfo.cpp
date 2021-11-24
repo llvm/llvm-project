@@ -9373,7 +9373,7 @@ AMDGPUTargetCodeGenInfo::getLLVMSyncScopeID(const LangOptions &LangOpts,
     Name = "";
     break;
   default:
-    assert(false && "NOT IMPLEMENTED!");
+    assert(false && "NOT IMPLEMENTED");
     break;
   }
 

@@ -74,8 +74,8 @@ define <vscale x 1 x double> @foo(<vscale x 1 x double> %a, <vscale x 1 x double
 ; SPILL-O2-NEXT:    csrr a0, vlenb
 ; SPILL-O2-NEXT:    slli a0, a0, 1
 ; SPILL-O2-NEXT:    add sp, sp, a0
-; SPILL-O2-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
 ; SPILL-O2-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
+; SPILL-O2-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
 ; SPILL-O2-NEXT:    addi sp, sp, 32
 ; SPILL-O2-NEXT:    ret
 {

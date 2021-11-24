@@ -124,8 +124,8 @@ define half @flh_stack(half %a) nounwind {
 ; RV32IZFH-NEXT:    call notdead@plt
 ; RV32IZFH-NEXT:    flh ft0, 4(sp)
 ; RV32IZFH-NEXT:    fadd.h fa0, ft0, fs0
-; RV32IZFH-NEXT:    flw fs0, 8(sp) # 4-byte Folded Reload
 ; RV32IZFH-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32IZFH-NEXT:    flw fs0, 8(sp) # 4-byte Folded Reload
 ; RV32IZFH-NEXT:    addi sp, sp, 16
 ; RV32IZFH-NEXT:    ret
 ;
@@ -139,8 +139,8 @@ define half @flh_stack(half %a) nounwind {
 ; RV64IZFH-NEXT:    call notdead@plt
 ; RV64IZFH-NEXT:    flh ft0, 0(sp)
 ; RV64IZFH-NEXT:    fadd.h fa0, ft0, fs0
-; RV64IZFH-NEXT:    flw fs0, 4(sp) # 4-byte Folded Reload
 ; RV64IZFH-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64IZFH-NEXT:    flw fs0, 4(sp) # 4-byte Folded Reload
 ; RV64IZFH-NEXT:    addi sp, sp, 16
 ; RV64IZFH-NEXT:    ret
   %1 = alloca half, align 4
