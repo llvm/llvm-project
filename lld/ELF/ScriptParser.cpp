@@ -113,7 +113,8 @@ private:
   Expr getPageSize();
 
   Expr readMemoryAssignment(StringRef, StringRef, StringRef);
-  std::pair<uint32_t, uint32_t> readMemoryAttributes();
+  void readMemoryAttributes(uint32_t &flags, uint32_t &invFlags,
+                            uint32_t &negFlags, uint32_t &negInvFlags);
 
   Expr combine(StringRef op, Expr l, Expr r);
   Expr readExpr();
@@ -1614,9 +1615,11 @@ void ScriptParser::readMemory() {
     }
 
     uint32_t flags = 0;
+    uint32_t invFlags = 0;
     uint32_t negFlags = 0;
+    uint32_t negInvFlags = 0;
     if (consume("(")) {
-      std::tie(flags, negFlags) = readMemoryAttributes();
+      readMemoryAttributes(flags, invFlags, negFlags, negInvFlags);
       expect(")");
     }
     expect(":");
@@ -1626,7 +1629,8 @@ void ScriptParser::readMemory() {
     Expr length = readMemoryAssignment("LENGTH", "len", "l");
 
     // Add the memory region to the region map.
-    MemoryRegion *mr = make<MemoryRegion>(tok, origin, length, flags, negFlags);
+    MemoryRegion *mr = make<MemoryRegion>(tok, origin, length, flags, invFlags,
+                                          negFlags, negInvFlags);
     if (!script->memoryRegions.insert({tok, mr}).second)
       setError("region '" + tok + "' already defined");
   }
@@ -1635,30 +1639,34 @@ void ScriptParser::readMemory() {
 // This function parses the attributes used to match against section
 // flags when placing output sections in a memory region. These flags
 // are only used when an explicit memory region name is not used.
-std::pair<uint32_t, uint32_t> ScriptParser::readMemoryAttributes() {
-  uint32_t flags = 0;
-  uint32_t negFlags = 0;
+void ScriptParser::readMemoryAttributes(uint32_t &flags, uint32_t &invFlags,
+                                        uint32_t &negFlags,
+                                        uint32_t &negInvFlags) {
   bool invert = false;
 
   for (char c : next().lower()) {
-    uint32_t flag = 0;
-    if (c == '!')
+    if (c == '!') {
       invert = !invert;
-    else if (c == 'w')
-      flag = SHF_WRITE;
+      std::swap(flags, negFlags);
+      std::swap(invFlags, negInvFlags);
+      continue;
+    }
+    if (c == 'w')
+      flags |= SHF_WRITE;
     else if (c == 'x')
-      flag = SHF_EXECINSTR;
+      flags |= SHF_EXECINSTR;
     else if (c == 'a')
-      flag = SHF_ALLOC;
-    else if (c != 'r')
-      setError("invalid memory region attribute");
-
-    if (invert)
-      negFlags |= flag;
+      flags |= SHF_ALLOC;
+    else if (c == 'r')
+      invFlags |= SHF_WRITE;
     else
-      flags |= flag;
+      setError("invalid memory region attribute");
   }
-  return {flags, negFlags};
+
+  if (invert) {
+    std::swap(flags, negFlags);
+    std::swap(invFlags, negInvFlags);
+  }
 }
 
 void elf::readLinkerScript(MemoryBufferRef mb) {
