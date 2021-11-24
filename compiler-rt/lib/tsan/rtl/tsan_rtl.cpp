@@ -494,6 +494,7 @@ void ForkBefore(ThreadState *thr, uptr pc) NO_THREAD_SAFETY_ANALYSIS {
   ctx->thread_registry.Lock();
   ctx->report_mtx.Lock();
   ScopedErrorReportLock::Lock();
+  AllocatorLock();
   // Suppress all reports in the pthread_atfork callbacks.
   // Reports will deadlock on the report_mtx.
   // We could ignore sync operations as well,
@@ -512,6 +513,7 @@ void ForkBefore(ThreadState *thr, uptr pc) NO_THREAD_SAFETY_ANALYSIS {
 void ForkParentAfter(ThreadState *thr, uptr pc) NO_THREAD_SAFETY_ANALYSIS {
   thr->suppress_reports--;  // Enabled in ForkBefore.
   thr->ignore_interceptors--;
+  AllocatorUnlock();
   ScopedErrorReportLock::Unlock();
   ctx->report_mtx.Unlock();
   ctx->thread_registry.Unlock();
@@ -521,6 +523,7 @@ void ForkChildAfter(ThreadState *thr, uptr pc,
                     bool start_thread) NO_THREAD_SAFETY_ANALYSIS {
   thr->suppress_reports--;  // Enabled in ForkBefore.
   thr->ignore_interceptors--;
+  AllocatorUnlock();
   ScopedErrorReportLock::Unlock();
   ctx->report_mtx.Unlock();
   ctx->thread_registry.Unlock();
@@ -755,7 +758,7 @@ MutexMeta mutex_meta[] = {
     {MutexInvalid, "Invalid", {}},
     {MutexThreadRegistry, "ThreadRegistry", {}},
     {MutexTypeTrace, "Trace", {MutexLeaf}},
-    {MutexTypeReport, "Report", {MutexTypeSyncVar}},
+    {MutexTypeReport, "Report", {MutexTypeSyncVar, MutexTypeGlobalProc}},
     {MutexTypeSyncVar, "SyncVar", {}},
     {MutexTypeAnnotations, "Annotations", {}},
     {MutexTypeAtExit, "AtExit", {MutexTypeSyncVar}},

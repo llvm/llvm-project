@@ -110,6 +110,16 @@ ScopedGlobalProcessor::~ScopedGlobalProcessor() {
   gp->mtx.Unlock();
 }
 
+void AllocatorLock() NO_THREAD_SAFETY_ANALYSIS {
+  global_proc()->mtx.Lock();
+  InternalAllocatorLock();
+}
+
+void AllocatorUnlock() NO_THREAD_SAFETY_ANALYSIS {
+  InternalAllocatorUnlock();
+  global_proc()->mtx.Unlock();
+}
+
 static constexpr uptr kMaxAllowedMallocSize = 1ull << 40;
 static uptr max_user_defined_malloc_size;
 
