@@ -207,6 +207,9 @@ public:
     }
 
     SBError
+    SetInputString (const char* data);
+
+    SBError
     SetInputFile (SBFile file);
 
     SBError

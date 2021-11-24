@@ -852,3 +852,20 @@ class FileHandleTestCase(lldbtest.TestBase):
         self.assertTrue(f.closed)
         with open(self.out_filename, 'r') as f:
             self.assertEqual(f.read().strip(), "Frobozz")
+
+    @skipIfReproducer # lldb::FileSP used in typemap cannot be instrumented.
+    def test_set_sbstream(self):
+        with open(self.out_filename, 'w') as outf:
+            outsbf = lldb.SBFile(outf.fileno(), "w", False)
+            status = self.dbg.SetOutputFile(outsbf)
+            self.assertTrue(status.Success())
+            self.dbg.SetInputString("version\nhelp\n")
+
+            opts = lldb.SBCommandInterpreterRunOptions()
+            self.dbg.RunCommandInterpreter(True, False, opts, 0, False, False)
+            self.dbg.GetOutputFile().Flush()
+
+        with open(self.out_filename, 'r') as f:
+            output = f.read()
+            self.assertTrue(re.search(r'Show a list of all debugger commands', output))
+            self.assertTrue(re.search(r'llvm revision', output))
