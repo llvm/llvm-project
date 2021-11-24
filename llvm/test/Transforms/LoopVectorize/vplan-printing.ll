@@ -250,11 +250,11 @@ define float @print_fmuladd_strict(float* %a, float* %b, i64 %n) {
 ; CHECK-NEXT:   WIDEN-INDUCTION %iv = phi 0, %iv.next
 ; CHECK-NEXT:   WIDEN-REDUCTION-PHI ir<%sum.07> = phi ir<0.000000e+00>, ir<%muladd>
 ; CHECK-NEXT:   CLONE ir<%arrayidx> = getelementptr ir<%a>, ir<%iv>
-; CHECK-NEXT:   WIDEN ir<%0> = load ir<%arrayidx>
+; CHECK-NEXT:   WIDEN ir<%l.a> = load ir<%arrayidx>
 ; CHECK-NEXT:   CLONE ir<%arrayidx2> = getelementptr ir<%b>, ir<%iv>
-; CHECK-NEXT:   WIDEN ir<%1> = load ir<%arrayidx2>
-; CHECK-NEXT:   EMIT vp<%6> = fmul nnan ninf nsz ir<%0> ir<%1>
-; CHECK-NEXT:   REDUCE ir<%muladd> = ir<%sum.07> + nnan ninf nsz reduce.fadd (vp<%6>)
+; CHECK-NEXT:   WIDEN ir<%l.b> = load ir<%arrayidx2>
+; CHECK-NEXT:   EMIT vp<[[FMUL:%.]]> = fmul nnan ninf nsz ir<%l.a> ir<%l.b>
+; CHECK-NEXT:   REDUCE ir<[[MULADD:%.+]]> = ir<%sum.07> + nnan ninf nsz reduce.fadd (vp<[[FMUL]]>)
 ; CHECK-NEXT:   No successors
 ; CHECK-NEXT: }
 
@@ -265,10 +265,10 @@ for.body:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
   %sum.07 = phi float [ 0.000000e+00, %entry ], [ %muladd, %for.body ]
   %arrayidx = getelementptr inbounds float, float* %a, i64 %iv
-  %0 = load float, float* %arrayidx, align 4
+  %l.a = load float, float* %arrayidx, align 4
   %arrayidx2 = getelementptr inbounds float, float* %b, i64 %iv
-  %1 = load float, float* %arrayidx2, align 4
-  %muladd = tail call nnan ninf nsz float @llvm.fmuladd.f32(float %0, float %1, float %sum.07)
+  %l.b = load float, float* %arrayidx2, align 4
+  %muladd = tail call nnan ninf nsz float @llvm.fmuladd.f32(float %l.a, float %l.b, float %sum.07)
   %iv.next = add nuw nsw i64 %iv, 1
   %exitcond.not = icmp eq i64 %iv.next, %n
   br i1 %exitcond.not, label %for.end, label %for.body
