@@ -101,8 +101,8 @@ class AllocaTypesMatchWith<string summary, string lhsArg, string rhsArg,
 
 // FIXME: add alignment, bool attr on being param, automatic scope?.
 def AllocaOp : CIR_Op<"alloca", [
-  AllocaTypesMatchWith<"'type' matches pointee type of 'addr'",
-                 "addr", "type",
+  AllocaTypesMatchWith<"'allocaType' matches pointee type of 'addr'",
+                 "addr", "allocaType",
                  "$_self.cast<PointerType>().getPointee()">]> {
   let summary = "local variable";
   let description = [{
@@ -122,16 +122,17 @@ def AllocaOp : CIR_Op<"alloca", [
   }];
 
   let arguments = (ins
-    TypeAttr:$type,
+    TypeAttr:$allocaType,
     // FIXME: add "uninitialzed" as default mode
-    Arg<InitStyle, "initialization style">:$init
+    Arg<InitStyle, "initialization style">:$init,
+    ConfinedAttr<OptionalAttr<I64Attr>, [IntMinValue<0>]>:$alignment
   );
 
   let results = (outs Res<CIR_PointerType, "",
                       [MemAlloc<AutomaticAllocationScopeResource>]>:$addr);
 
   let assemblyFormat = [{
-    $type `,` `cir.ptr` type($addr) `,` `[` $init `]`  attr-dict
+    $allocaType `,` `cir.ptr` type($addr) `,` `[` $init `]`  attr-dict
   }];
 
   let hasVerifier = 0;
