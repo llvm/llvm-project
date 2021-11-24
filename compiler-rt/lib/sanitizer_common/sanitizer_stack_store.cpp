@@ -16,13 +16,13 @@ namespace __sanitizer {
 
 namespace {
 struct StackTraceHeader {
-  static constexpr u32 kStackSizeBits = 16;
+  static constexpr u32 kStackSizeBits = 8;
 
-  u32 size;
-  u32 tag;
+  u8 size;
+  u8 tag;
   explicit StackTraceHeader(const StackTrace &trace)
-      : size(trace.size), tag(trace.tag) {
-    CHECK_LT(trace.size, 1 << kStackSizeBits);
+      : size(Min<uptr>(trace.size, (1u << 8) - 1)), tag(trace.tag) {
+    CHECK_EQ(trace.tag, static_cast<uptr>(tag));
   }
   explicit StackTraceHeader(uptr h)
       : size(h & ((1 << kStackSizeBits) - 1)), tag(h >> kStackSizeBits) {}
