@@ -12,6 +12,7 @@
 #include "mlir/IR/BlockAndValueMapping.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/Operation.h"
+#include "mlir/IR/TypeUtilities.h"
 #include "mlir/IR/Value.h"
 #include "llvm/Support/Debug.h"
 
@@ -527,4 +528,32 @@ void mlir::linalg::comprehensive_bufferize::BufferizationState::
   for (Operation *op : obsoleteOps)
     op->erase();
   obsoleteOps.clear();
+}
+
+MemRefType mlir::linalg::comprehensive_bufferize::getContiguousMemRefType(
+    ShapedType shapedType, MemRefLayoutAttrInterface layout,
+    Attribute memorySpace) {
+  return MemRefType::get(shapedType.getShape(), shapedType.getElementType(),
+                         layout, memorySpace);
+}
+
+Type mlir::linalg::comprehensive_bufferize::getContiguousOrUnrankedMemRefType(
+    Type type, MemRefLayoutAttrInterface layout, Attribute memorySpace) {
+  if (type.isa<RankedTensorType, MemRefType>())
+    return getContiguousMemRefType(type.cast<ShapedType>(), layout,
+                                   memorySpace);
+  assert(!layout && "expected empty layout with UnrankedMemRefType");
+  return UnrankedMemRefType::get(getElementTypeOrSelf(type), memorySpace);
+}
+
+MemRefType mlir::linalg::comprehensive_bufferize::getDynamicMemRefType(
+    RankedTensorType tensorType, unsigned addressSpace) {
+  // TODO: address space decisions to connect with the actual alloc.
+  int64_t dynamicOffset = ShapedType::kDynamicStrideOrOffset;
+  SmallVector<int64_t> dynamicStrides(tensorType.getRank(),
+                                      ShapedType::kDynamicStrideOrOffset);
+  AffineMap stridedLayout = makeStridedLinearLayoutMap(
+      dynamicStrides, dynamicOffset, tensorType.getContext());
+  return MemRefType::get(tensorType.getShape(), tensorType.getElementType(),
+                         stridedLayout, addressSpace);
 }

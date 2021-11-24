@@ -322,6 +322,26 @@ struct PostAnalysisStep {
                             SmallVector<Operation *> &newOps) = 0;
 };
 
+/// Return a contiguous MemRefType (i.e. with canonical/empty layout map)
+/// with the same shape as `shapedType` and specified `layout` and
+/// `addressSpace`.
+MemRefType getContiguousMemRefType(ShapedType shapedType,
+                                   MemRefLayoutAttrInterface layout = {},
+                                   Attribute memorySpace = {});
+
+/// Return a contiguous MemRefType (i.e. with canonical/empty layout map)
+/// with the same shape as `shapedType` and specified `layout` and
+/// `addressSpace` or an UnrankedMemRefType otherwise.
+Type getContiguousOrUnrankedMemRefType(Type type,
+                                       MemRefLayoutAttrInterface layout = {},
+                                       Attribute memorySpace = {});
+
+/// Return a MemRefType to which the `tensorType` can be bufferized in a
+/// composable fashion. The layout must be the most dynamic possible and
+/// canonicalize away once bufferization is finished.
+MemRefType getDynamicMemRefType(RankedTensorType tensorType,
+                                unsigned addressSpace = 0);
+
 } // namespace comprehensive_bufferize
 } // namespace linalg
 } // namespace mlir
