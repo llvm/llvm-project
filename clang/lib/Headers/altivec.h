@@ -8413,9 +8413,20 @@ static __inline__ vector float __ATTRS_o_ai vec_round(vector float __a) {
 }
 
 #ifdef __VSX__
+#ifdef __XL_COMPAT_ALTIVEC__
+static __inline__ vector double __ATTRS_o_ai vec_rint(vector double __a);
+static __inline__ vector double __ATTRS_o_ai vec_round(vector double __a) {
+  double __fpscr = __builtin_readflm();
+  __builtin_setrnd(0);
+  vector double __rounded = vec_rint(__a);
+  __builtin_setflm(__fpscr);
+  return __rounded;
+}
+#else
 static __inline__ vector double __ATTRS_o_ai vec_round(vector double __a) {
   return __builtin_vsx_xvrdpi(__a);
 }
+#endif
 
 /* vec_rint */
 
