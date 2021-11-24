@@ -21,7 +21,7 @@ class GenericBitsetDataFormatterTestCase(TestBase):
 
     def setUp(self):
         TestBase.setUp(self)
-        primes = [1]*300
+        primes = [1]*1000
         primes[0] = primes[1] = 0
         for i in range(2, len(primes)):
             for j in range(2*i, len(primes), i):
@@ -58,7 +58,8 @@ class GenericBitsetDataFormatterTestCase(TestBase):
 
         self.check("empty", 0, VALUE)
         self.check("small", 13, VALUE)
-        self.check("large", 70, VALUE)
+        self.check("medium", 70, VALUE)
+        self.check("large", 1000, VALUE)
 
     @add_test_categories(["libstdcxx"])
     def test_value_libstdcpp(self):
@@ -83,6 +84,11 @@ class GenericBitsetDataFormatterTestCase(TestBase):
 
         self.check("ref", 70, REFERENCE)
         self.check("ptr", 70, POINTER)
+
+        lldbutil.continue_to_breakpoint(process, bkpt)
+
+        self.check("ref", 1000, REFERENCE)
+        self.check("ptr", 1000, POINTER)
 
     @add_test_categories(["libstdcxx"])
     def test_ptr_and_ref_libstdcpp(self):

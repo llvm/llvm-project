@@ -81,12 +81,11 @@ bool GenericBitsetFrontEnd::Update() {
   TargetSP target_sp = m_backend.GetTargetSP();
   if (!target_sp)
     return false;
-  size_t capping_size = target_sp->GetMaximumNumberOfChildrenToDisplay();
 
   size_t size = 0;
 
   if (auto arg = m_backend.GetCompilerType().GetIntegralTemplateArgument(0))
-    size = arg->value.getLimitedValue(capping_size);
+    size = arg->value.getLimitedValue();
 
   m_elements.assign(size, ValueObjectSP());
   m_first = m_backend.GetChildMemberWithName(GetDataContainerMemberName(), true)
