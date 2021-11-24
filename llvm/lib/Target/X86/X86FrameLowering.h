@@ -55,6 +55,8 @@ public:
                       MachineBasicBlock::iterator MBBI, const DebugLoc &DL,
                       bool InProlog) const;
 
+  bool stackProbeFunctionModifiesSP() const override;
+
   /// Replace a StackProbe inline-stub with the actual probe code inline.
   void inlineStackProbe(MachineFunction &MF,
                         MachineBasicBlock &PrologMBB) const override;

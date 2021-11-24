@@ -499,6 +499,10 @@ void X86FrameLowering::emitStackProbe(MachineFunction &MF,
   }
 }
 
+bool X86FrameLowering::stackProbeFunctionModifiesSP() const {
+  return STI.isOSWindows() && !STI.isTargetWin64();
+}
+
 void X86FrameLowering::inlineStackProbe(MachineFunction &MF,
                                         MachineBasicBlock &PrologMBB) const {
   auto Where = llvm::find_if(PrologMBB, [](MachineInstr &MI) {

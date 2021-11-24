@@ -223,6 +223,9 @@ public:
   virtual void inlineStackProbe(MachineFunction &MF,
                                 MachineBasicBlock &PrologueMBB) const {}
 
+  /// Does the stack probe function call return with a modified stack pointer?
+  virtual bool stackProbeFunctionModifiesSP() const { return false; }
+
   /// Adjust the prologue to have the function use segmented stacks. This works
   /// by adding a check even before the "normal" function prologue.
   virtual void adjustForSegmentedStacks(MachineFunction &MF,

@@ -1288,7 +1288,21 @@ void InstrRefBasedLDV::transferRegisterDef(MachineInstr &MI) {
   } else if (MI.isMetaInstruction())
     return;
 
-  auto IgnoreSPAlias = [this, &MI](Register R) -> bool {
+  // We always ignore SP defines on call instructions, they don't actually
+  // change the value of the stack pointer... except for win32's _chkstk. This
+  // is rare: filter quickly for the common case (no stack adjustments, not a
+  // call, etc). If it is a call that modifies SP, recognise the SP register
+  // defs.
+  bool CallChangesSP = false;
+  if (AdjustsStackInCalls && MI.isCall() && MI.getOperand(0).isSymbol() &&
+      !strcmp(MI.getOperand(0).getSymbolName(), StackProbeSymbolName.data()))
+    CallChangesSP = true;
+
+  // Test whether we should ignore a def of this register due to it being part
+  // of the stack pointer.
+  auto IgnoreSPAlias = [this, &MI, CallChangesSP](Register R) -> bool {
+    if (CallChangesSP)
+      return false;
     return MI.isCall() && MTracker->SPAliases.count(R);
   };
 
@@ -2885,6 +2899,12 @@ bool InstrRefBasedLDV::ExtendRanges(MachineFunction &MF,
   TFI->getCalleeSaves(MF, CalleeSavedRegs);
   MFI = &MF.getFrameInfo();
   LS.initialize(MF);
+
+  const auto &STI = MF.getSubtarget();
+  AdjustsStackInCalls = MFI->adjustsStack() &&
+                        STI.getFrameLowering()->stackProbeFunctionModifiesSP();
+  if (AdjustsStackInCalls)
+    StackProbeSymbolName = STI.getTargetLowering()->getStackProbeSymbolName(MF);
 
   MTracker =
       new MLocTracker(MF, *TII, *TRI, *MF.getSubtarget().getTargetLowering());
