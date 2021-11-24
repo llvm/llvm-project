@@ -84,7 +84,8 @@ public:
   matchAndRewrite(mlir::cir::AllocaOp op,
                   mlir::PatternRewriter &rewriter) const override {
     auto ty = mlir::MemRefType::get({}, op.getAllocaType());
-    rewriter.replaceOpWithNewOp<mlir::memref::AllocOp>(op, ty);
+    rewriter.replaceOpWithNewOp<mlir::memref::AllocOp>(op, ty,
+                                                       op.getAlignmentAttr());
     return mlir::LogicalResult::success();
   }
 };
