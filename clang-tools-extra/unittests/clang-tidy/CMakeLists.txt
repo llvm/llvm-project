@@ -20,6 +20,7 @@ add_extra_unittest(ClangTidyTests
   AddConstTest.cpp
   ClangTidyDiagnosticConsumerTest.cpp
   ClangTidyOptionsTest.cpp
+  DeclRefExprUtilsTest.cpp
   IncludeInserterTest.cpp
   GlobListTest.cpp
   GoogleModuleTest.cpp
