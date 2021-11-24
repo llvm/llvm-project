@@ -628,118 +628,6 @@ static FunctionType getOrCreateBufferizedFunctionType(
 }
 
 //===----------------------------------------------------------------------===//
-// Bufferization-specific scoped alloc/dealloc insertion support.
-//===----------------------------------------------------------------------===//
-
-/// Move the insertion point of the given builder to the beginning of a
-/// surrounding block as much as possible, while not crossing any allocation
-/// hoisting barriers.
-static void moveInsertionPointToAllocationHoistingBarrier(OpBuilder &b) {
-  Operation *op = b.getInsertionBlock()->getParentOp();
-  while (op) {
-    if (auto bufferizableOp = dyn_cast<BufferizableOpInterface>(op))
-      if (bufferizableOp.isAllocationHoistingBarrier())
-        break;
-    op = op->getParentOp();
-  }
-
-  // FuncOp is an allocation hoisting barrier, so the above loop should never
-  // run out of parents.
-  assert(
-      (op && cast<BufferizableOpInterface>(op).isAllocationHoistingBarrier()) &&
-      "expected traversal to end at allocation hoisting barrier");
-
-  // TODO: Handle cases where allocation hoisting barrier has more than one
-  // region or block.
-  assert(op->getNumRegions() == 1 &&
-         "allocation hoisting barriers with >1 regions not supported");
-  assert(op->getRegion(0).getBlocks().size() == 1 &&
-         "allocation hoisting barriers with >1 blocks not supported");
-  b.setInsertionPointToStart(&(op->getRegion(0).front()));
-}
-
-/// Compute the type of the `memref` to use for allocating the buffer for
-/// `shapedValue`. Also returns (by reference in `dynShape`), the value for the
-/// dynamic dimensions in the returned `memref` type. The function may also set
-/// the insertion point to an earlier location, where the allocation should
-/// happen ("allocation hoisting").
-static MemRefType getAllocationTypeAndShape(OpBuilder &b, Location loc,
-                                            Value shapedValue,
-                                            SmallVectorImpl<Value> &dynShape) {
-  MemRefType allocMemRefType =
-      getContiguousMemRefType(shapedValue.getType().cast<ShapedType>());
-
-  // Compute the dynamic part of the shape.
-  bool reifiedShapes = false;
-  if (auto rankedOp = dyn_cast_or_null<ReifyRankedShapedTypeOpInterface>(
-          shapedValue.getDefiningOp())) {
-    ReifiedRankedShapedTypeDims resultDims;
-    if (succeeded(rankedOp.reifyResultShapes(b, resultDims))) {
-      reifiedShapes = true;
-      OpResult resultValue = shapedValue.dyn_cast<OpResult>();
-      auto &shape = resultDims[resultValue.getResultNumber()];
-      for (auto dim : enumerate(allocMemRefType.getShape()))
-        if (ShapedType::isDynamic(dim.value()))
-          dynShape.push_back(shape[dim.index()]);
-    }
-  }
-
-  if (!reifiedShapes) {
-    for (auto dim : enumerate(allocMemRefType.getShape()))
-      if (ShapedType::isDynamic(dim.value())) {
-        assert((shapedValue.getType().isa<UnrankedMemRefType>() ||
-                shapedValue.getType().isa<MemRefType>()) &&
-               "expected MemRef type");
-        dynShape.push_back(
-            b.create<memref::DimOp>(loc, shapedValue, dim.index()));
-      }
-  }
-
-  // If the buffer is statically shaped, try to hoist it to the first enclosing
-  // parallel region.
-  // TODO: also hoist in the dynamic case. For now this relies on subsequent
-  // calls to LICM and buffer hoisting which will most likely not succeed.
-  // TODO: when packing, allocate a static bounding box which will enable more
-  // hoisting.
-  if (dynShape.empty())
-    moveInsertionPointToAllocationHoistingBarrier(b);
-
-  return allocMemRefType;
-}
-
-/// Create an Allocop/DeAllocOp pair, where the AllocOp is after
-/// `shapedValue.getDefiningOp` (or at the top of the block in case of a
-/// bbArg) and the DeallocOp is at the end of the block.
-static Value createNewAllocDeallocPairForShapedValue(
-    OpBuilder &b, Location loc, Value shapedValue, BufferizationState &state) {
-  // Take a guard before anything else.
-  OpBuilder::InsertionGuard g(b);
-
-  // 1. Create memory allocation.
-  assert(shapedValue.getType().isa<ShapedType>());
-  MemRefType memRefType = shapedValue.getType().dyn_cast<MemRefType>();
-  SmallVector<Value> dynShape;
-  // Note: getAllocationTypeAndShape also sets the insertion point.
-  MemRefType allocMemRefType =
-      getAllocationTypeAndShape(b, loc, shapedValue, dynShape);
-  Optional<Value> allocated =
-      state.allocationFns.allocationFn(b, loc, allocMemRefType, dynShape);
-  // TODO: For now just assert the value is returned. Eventually need to
-  // error-propagate.
-  assert(allocated && "allocation failed");
-  Value casted = allocated.getValue();
-  if (memRefType && memRefType != allocMemRefType) {
-    casted = b.create<memref::CastOp>(loc, memRefType, allocated.getValue());
-    state.aliasInfo.insertNewBufferEquivalence(casted, allocated.getValue());
-  }
-
-  // 2. Create memory deallocation.
-  b.setInsertionPoint(allocated.getValue().getParentBlock()->getTerminator());
-  state.allocationFns.deallocationFn(b, loc, allocated.getValue());
-  return casted;
-}
-
-//===----------------------------------------------------------------------===//
 // Bufferization as simple BlockAndValueMapping rewrites.
 //===----------------------------------------------------------------------===//
 
@@ -1358,7 +1246,7 @@ LogicalResult mlir::linalg::comprehensive_bufferize::runComprehensiveBufferize(
 /// pass. The default currently creates a ranked memref using `memref.alloc`.
 static Optional<Value> defaultAllocationFn(OpBuilder &b, Location loc,
                                            MemRefType type,
-                                           const SmallVector<Value> &dynShape) {
+                                           ArrayRef<Value> dynShape) {
   Value allocated = b.create<memref::AllocOp>(
       loc, type, dynShape, b.getI64IntegerAttr(kBufferAlignments));
   return allocated;
@@ -1381,8 +1269,7 @@ static void defaultMemCpyFn(OpBuilder &b, Location loc, Value from, Value to) {
 std::unique_ptr<AllocationCallbacks>
 mlir::linalg::comprehensive_bufferize::defaultAllocationCallbacks() {
   return std::make_unique<AllocationCallbacks>(
-      defaultAllocationFn, defaultDeallocationFn, defaultMemCpyFn,
-      createNewAllocDeallocPairForShapedValue);
+      defaultAllocationFn, defaultDeallocationFn, defaultMemCpyFn);
 }
 
 // Default constructor for BufferizationOptions that sets all allocation
