@@ -9775,12 +9775,17 @@ void LoopVectorizationPlanner::adjustRecipesForReductions(
       unsigned FirstOpId;
       assert(!RecurrenceDescriptor::isSelectCmpRecurrenceKind(Kind) &&
              "Only min/max recurrences allowed for inloop reductions");
+      // Recognize a call to the llvm.fmuladd intrinsic.
+      bool IsFMulAdd = (Kind == RecurKind::FMulAdd);
+      assert((!IsFMulAdd || RecurrenceDescriptor::isFMulAddIntrinsic(R)) &&
+             "Expected instruction to be a call to the llvm.fmuladd intrinsic");
       if (RecurrenceDescriptor::isMinMaxRecurrenceKind(Kind)) {
         assert(isa<VPWidenSelectRecipe>(WidenRecipe) &&
                "Expected to replace a VPWidenSelectSC");
         FirstOpId = 1;
       } else {
-        assert((MinVF.isScalar() || isa<VPWidenRecipe>(WidenRecipe)) &&
+        assert((MinVF.isScalar() || isa<VPWidenRecipe>(WidenRecipe) ||
+                (IsFMulAdd && isa<VPWidenCallRecipe>(WidenRecipe))) &&
                "Expected to replace a VPWidenSC");
         FirstOpId = 0;
       }
@@ -9791,8 +9796,19 @@ void LoopVectorizationPlanner::adjustRecipesForReductions(
       auto *CondOp = CM.foldTailByMasking()
                          ? RecipeBuilder.createBlockInMask(R->getParent(), Plan)
                          : nullptr;
-      VPReductionRecipe *RedRecipe = new VPReductionRecipe(
-          &RdxDesc, R, ChainOp, VecOp, CondOp, TTI);
+
+      if (IsFMulAdd) {
+        // If the instruction is a call to the llvm.fmuladd intrinsic then we
+        // need to create an fmul recipe to use as the vector operand for the
+        // fadd reduction.
+        VPInstruction *FMulRecipe = new VPInstruction(
+            Instruction::FMul, {VecOp, Plan->getVPValue(R->getOperand(1))});
+        WidenRecipe->getParent()->insert(FMulRecipe,
+                                         WidenRecipe->getIterator());
+        VecOp = FMulRecipe;
+      }
+      VPReductionRecipe *RedRecipe =
+          new VPReductionRecipe(&RdxDesc, R, ChainOp, VecOp, CondOp, TTI);
       WidenRecipe->getVPSingleValue()->replaceAllUsesWith(RedRecipe);
       Plan->removeVPValueFor(R);
       Plan->addVPValue(R, RedRecipe);

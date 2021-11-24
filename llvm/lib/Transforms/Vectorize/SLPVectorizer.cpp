@@ -8791,6 +8791,8 @@ private:
     assert(VectorizedValue && "Need to have a vectorized tree node");
     assert(isPowerOf2_32(ReduxWidth) &&
            "We only handle power-of-two reductions for now");
+    assert(RdxKind != RecurKind::FMulAdd &&
+           "A call to the llvm.fmuladd intrinsic is not handled yet");
 
     ++NumVectorInstructions;
     return createSimpleTargetReduction(Builder, TTI, VectorizedValue, RdxKind,
