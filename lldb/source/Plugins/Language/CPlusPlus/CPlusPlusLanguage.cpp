@@ -981,7 +981,7 @@ static void LoadLibStdcppFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
   cpp_category_sp->GetRegexTypeSummariesContainer()->Add(
       RegularExpression("^std::(__cxx11::)?forward_list<.+>(( )?&)?$"),
       TypeSummaryImplSP(
-          new StringSummaryFormat(stl_summary_flags, "size=${svar%#}")));
+          new ScriptSummaryFormat(stl_summary_flags, "lldb.formatters.cpp.gnu_libstdcpp.ForwardListSummaryProvider")));
 
   AddCXXSynthetic(
       cpp_category_sp,

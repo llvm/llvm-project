@@ -6,6 +6,14 @@ import lldb.formatters.Logger
 # implementation for your platform before relying on these formatters to do the right
 # thing for your setup
 
+def ForwardListSummaryProvider(valobj, dict):
+    list_capping_size = valobj.GetTarget().GetMaximumNumberOfChildrenToDisplay()
+    text = "size=" + str(valobj.GetNumChildren())
+    if valobj.GetNumChildren() > list_capping_size:
+        return "(capped) " + text
+    else:
+        return text
+
 def StdOptionalSummaryProvider(valobj, dict):
     has_value = valobj.GetNumChildren() > 0
     # We add wrapping spaces for consistency with the libcxx formatter
@@ -132,6 +140,7 @@ class AbstractListSynthProvider:
         self.valobj = valobj
         self.count = None
         self.has_prev = has_prev
+        self.list_capping_size = self.valobj.GetTarget().GetMaximumNumberOfChildrenToDisplay()
         logger >> "Providing synthetic children for a list named " + \
             str(valobj.GetName())
 
@@ -213,6 +222,8 @@ class AbstractListSynthProvider:
                 if not current.IsValid():
                     break
                 size = size + 1
+                if size >= self.list_capping_size:
+                    break
 
             return size
         except:
