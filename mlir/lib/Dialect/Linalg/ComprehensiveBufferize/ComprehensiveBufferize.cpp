@@ -114,7 +114,6 @@
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/SCF/SCF.h"
 #include "mlir/Dialect/Utils/StaticValueUtils.h"
-#include "mlir/Dialect/Vector/VectorOps.h"
 #include "mlir/IR/AsmState.h"
 #include "mlir/IR/BlockAndValueMapping.h"
 #include "mlir/IR/Operation.h"
@@ -1926,102 +1925,6 @@ struct ReturnOpInterface
 
 } // namespace std_ext
 
-namespace vector_ext {
-
-struct TransferReadOpInterface
-    : public BufferizableOpInterface::ExternalModel<TransferReadOpInterface,
-                                                    vector::TransferReadOp> {
-  bool bufferizesToMemoryRead(Operation *op, OpOperand &opOperand) const {
-    assert(opOperand.get().getType().isa<RankedTensorType>() &&
-           "only tensor types expected");
-    return true;
-  }
-
-  bool bufferizesToMemoryWrite(Operation *op, OpOperand &opOperand) const {
-    assert(opOperand.get().getType().isa<RankedTensorType>() &&
-           "only tensor types expected");
-    return false;
-  }
-
-  OpResult getAliasingOpResult(Operation *op, OpOperand &opOperand) const {
-    return OpResult();
-  }
-
-  LogicalResult bufferize(Operation *op, OpBuilder &b,
-                          BufferizationState &state) const {
-    auto transferReadOp = cast<vector::TransferReadOp>(op);
-
-    // Take a guard before anything else.
-    OpBuilder::InsertionGuard g(b);
-    b.setInsertionPoint(op);
-
-    // TransferReadOp always reads from the bufferized op.source().
-    assert(transferReadOp.getShapedType().isa<TensorType>() &&
-           "only tensor types expected");
-    Value v = state.lookupBuffer(transferReadOp.source());
-    transferReadOp.sourceMutable().assign(v);
-    return success();
-  }
-};
-
-struct TransferWriteOpInterface
-    : public BufferizableOpInterface::ExternalModel<TransferWriteOpInterface,
-                                                    vector::TransferWriteOp> {
-  bool bufferizesToMemoryRead(Operation *op, OpOperand &opOperand) const {
-    assert(opOperand.get().getType().isa<TensorType>() &&
-           "only tensor types expected");
-    return true;
-  }
-
-  bool bufferizesToMemoryWrite(Operation *op, OpOperand &opOperand) const {
-    assert(opOperand.get().getType().isa<TensorType>() &&
-           "only tensor types expected");
-    return true;
-  }
-
-  SmallVector<OpOperand *> getAliasingOpOperand(Operation *op,
-                                                OpResult opResult) const {
-    return {&op->getOpOperand(1)};
-  }
-
-  OpResult getAliasingOpResult(Operation *op, OpOperand &opOperand) const {
-    assert(opOperand.get().getType().isa<TensorType>() &&
-           "only tensor types expected");
-    return op->getOpResult(0);
-  }
-
-  BufferRelation bufferRelation(Operation *op, OpOperand &opOperand) const {
-    return BufferRelation::Equivalent;
-  }
-
-  LogicalResult bufferize(Operation *op, OpBuilder &b,
-                          BufferizationState &state) const {
-    auto writeOp = cast<vector::TransferWriteOp>(op);
-
-    // Take a guard before anything else.
-    OpBuilder::InsertionGuard g(b);
-    b.setInsertionPoint(op);
-
-    // Create a new transfer_write on buffer that doesn't have a return value.
-    // Leave the previous transfer_write to dead code as it still has uses at
-    // this point.
-    assert(writeOp.getShapedType().isa<TensorType>() &&
-           "only tensor types expected");
-    Value resultBuffer = getResultBuffer(b, op->getResult(0), state);
-    if (!resultBuffer)
-      return failure();
-    b.create<vector::TransferWriteOp>(
-        writeOp.getLoc(), writeOp.vector(), resultBuffer, writeOp.indices(),
-        writeOp.permutation_map(),
-        writeOp.in_bounds() ? *writeOp.in_bounds() : ArrayAttr());
-    state.mapBuffer(op->getResult(0), resultBuffer);
-
-    return success();
-  }
-};
-
-} // namespace vector_ext
-
 void registerBufferizableOpInterfaceExternalModels(DialectRegistry &registry) {
   registry.addOpInterface<arith::ConstantOp, arith_ext::ConstantOpInterface>();
   registry.addOpInterface<scf::ExecuteRegionOp,
@@ -2031,10 +1934,6 @@ void registerBufferizableOpInterfaceExternalModels(DialectRegistry &registry) {
   registry.addOpInterface<scf::YieldOp, scf_ext::YieldOpInterface>();
   registry.addOpInterface<CallOp, std_ext::CallOpInterface>();
   registry.addOpInterface<ReturnOp, std_ext::ReturnOpInterface>();
-  registry.addOpInterface<vector::TransferReadOp,
-                          vector_ext::TransferReadOpInterface>();
-  registry.addOpInterface<vector::TransferWriteOp,
-                          vector_ext::TransferWriteOpInterface>();
 
   // Ops that are not bufferizable but are allocation hoisting barriers.
   registry.addOpInterface<FuncOp, AllocationHoistingBarrierOnly<FuncOp>>();

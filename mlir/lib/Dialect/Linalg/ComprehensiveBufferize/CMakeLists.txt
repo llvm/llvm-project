@@ -3,6 +3,7 @@ set(LLVM_OPTIONAL_SOURCES
   ComprehensiveBufferize.cpp
   LinalgInterfaceImpl.cpp
   TensorInterfaceImpl.cpp
+  VectorInterfaceImpl.cpp
 )
 
 add_mlir_dialect_library(MLIRBufferizableOpInterface
@@ -36,6 +37,15 @@ add_mlir_dialect_library(MLIRTensorBufferizableOpInterfaceImpl
   MLIRTensor
 )
 
+add_mlir_dialect_library(MLIRVectorBufferizableOpInterfaceImpl
+  VectorInterfaceImpl.cpp
+
+  LINK_LIBS PUBLIC
+  MLIRBufferizableOpInterface
+  MLIRIR
+  MLIRVector
+)
+
 add_mlir_dialect_library(MLIRComprehensiveBufferize
   ComprehensiveBufferize.cpp
 
@@ -48,5 +58,4 @@ add_mlir_dialect_library(MLIRComprehensiveBufferize
   MLIRSCF
   MLIRStandard
   MLIRStandardOpsTransforms
-  MLIRVector
 )
