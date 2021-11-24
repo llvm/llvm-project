@@ -136,6 +136,10 @@ private:
   bool isUniformLoad(const SDNode *N) const;
   bool isUniformBr(const SDNode *N) const;
 
+  // Returns true if ISD::AND SDNode `N`'s masking of the shift amount operand's
+  // `ShAmtBits` bits is unneeded.
+  bool isUnneededShiftMask(const SDNode *N, unsigned ShAmtBits) const;
+
   bool isBaseWithConstantOffset64(SDValue Addr, SDValue &LHS,
                                   SDValue &RHS) const;
 
