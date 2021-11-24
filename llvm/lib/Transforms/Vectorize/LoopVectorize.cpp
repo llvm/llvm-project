@@ -9803,6 +9803,7 @@ void LoopVectorizationPlanner::adjustRecipesForReductions(
         // fadd reduction.
         VPInstruction *FMulRecipe = new VPInstruction(
             Instruction::FMul, {VecOp, Plan->getVPValue(R->getOperand(1))});
+        FMulRecipe->setFastMathFlags(R->getFastMathFlags());
         WidenRecipe->getParent()->insert(FMulRecipe,
                                          WidenRecipe->getIterator());
         VecOp = FMulRecipe;
