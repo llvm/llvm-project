@@ -1347,6 +1347,42 @@ IsStructurallyEquivalentLambdas(StructuralEquivalenceContext &Context,
   return true;
 }
 
+/// Determine if context of a class is equivalent.
+static bool IsRecordContextStructurallyEquivalent(RecordDecl *D1,
+                                                  RecordDecl *D2) {
+  // The context should be completely equal, including anonymous and inline
+  // namespaces.
+  // We compare objects as part of full translation units, not subtrees of
+  // translation units.
+  DeclContext *DC1 = D1->getDeclContext()->getNonTransparentContext();
+  DeclContext *DC2 = D2->getDeclContext()->getNonTransparentContext();
+  while (true) {
+    // Special case: We allow a struct defined in a function to be equivalent
+    // with a similar struct defined outside of a function.
+    if ((DC1->isFunctionOrMethod() && DC2->isTranslationUnit()) ||
+        (DC2->isFunctionOrMethod() && DC1->isTranslationUnit()))
+      return true;
+
+    if (DC1->getDeclKind() != DC2->getDeclKind())
+      return false;
+    if (DC1->isTranslationUnit())
+      break;
+    if (DC1->isInlineNamespace() != DC2->isInlineNamespace())
+      return false;
+    if (const auto *ND1 = dyn_cast<NamedDecl>(DC1)) {
+      const auto *ND2 = cast<NamedDecl>(DC2);
+      if (!DC1->isInlineNamespace() &&
+          !IsStructurallyEquivalent(ND1->getIdentifier(), ND2->getIdentifier()))
+        return false;
+    }
+
+    DC1 = DC1->getParent()->getNonTransparentContext();
+    DC2 = DC2->getParent()->getNonTransparentContext();
+  }
+
+  return true;
+}
+
 /// Determine structural equivalence of two records.
 static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
                                      RecordDecl *D1, RecordDecl *D2) {
@@ -1385,6 +1421,12 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
       }
     }
   }
+
+  // If the records occur in different context (namespace), these should be
+  // different. This is specially important if the definition of one or both
+  // records is missing.
+  if (!IsRecordContextStructurallyEquivalent(D1, D2))
+    return false;
 
   // If both declarations are class template specializations, we know
   // the ODR applies, so check the template and template arguments.
