@@ -13,7 +13,7 @@ module {
 
 //      MLIR: module  {
 // MLIR-NEXT:   func.func @foo() -> i32 {
-// MLIR-NEXT:     %0 = memref.alloc() {alignment = 4 : i64} : memref<i32>
+// MLIR-NEXT:     %0 = memref.alloca() {alignment = 4 : i64} : memref<i32>
 // MLIR-NEXT:     %c1_i32 = arith.constant 1 : i32
 // MLIR-NEXT:     memref.store %c1_i32, %0[] : memref<i32>
 // MLIR-NEXT:     %1 = memref.load %0[] : memref<i32>
