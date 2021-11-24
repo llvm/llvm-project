@@ -131,3 +131,152 @@ define i64 @or_shift1_and1_64(i64 %x, i64 %y) {
   ret i64 %or
 }
 
+; In the following patterns, lhs and rhs of the or instruction have no common bits.
+
+define i32 @or_and_and_rhs_neg_i32(i32 %x, i32 %y, i32 %z) {
+; CHECK-LABEL: or_and_and_rhs_neg_i32:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    # kill: def $esi killed $esi def $rsi
+; CHECK-NEXT:    andl %esi, %edx
+; CHECK-NEXT:    notl %esi
+; CHECK-NEXT:    andl %edi, %esi
+; CHECK-NEXT:    orl %edx, %esi
+; CHECK-NEXT:    leal 1(%rsi), %eax
+; CHECK-NEXT:    retq
+entry:
+  %and1 = and i32 %z, %y
+  %xor = xor i32 %y, -1
+  %and2 = and i32 %x, %xor
+  %or = or i32 %and1, %and2
+  %inc = add i32 %or, 1
+  ret i32 %inc
+}
+
+define i32 @or_and_and_lhs_neg_i32(i32 %x, i32 %y, i32 %z) {
+; CHECK-LABEL: or_and_and_lhs_neg_i32:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    # kill: def $esi killed $esi def $rsi
+; CHECK-NEXT:    andl %esi, %edx
+; CHECK-NEXT:    notl %esi
+; CHECK-NEXT:    andl %edi, %esi
+; CHECK-NEXT:    orl %edx, %esi
+; CHECK-NEXT:    leal 1(%rsi), %eax
+; CHECK-NEXT:    retq
+entry:
+  %and1 = and i32 %z, %y
+  %xor = xor i32 %y, -1
+  %and2 = and i32 %xor, %x
+  %or = or i32 %and1, %and2
+  %inc = add i32 %or, 1
+  ret i32 %inc
+}
+
+define i32 @or_and_rhs_neg_and_i32(i32 %x, i32 %y, i32 %z) {
+; CHECK-LABEL: or_and_rhs_neg_and_i32:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    # kill: def $esi killed $esi def $rsi
+; CHECK-NEXT:    andl %esi, %edi
+; CHECK-NEXT:    notl %esi
+; CHECK-NEXT:    andl %edx, %esi
+; CHECK-NEXT:    orl %edi, %esi
+; CHECK-NEXT:    leal 1(%rsi), %eax
+; CHECK-NEXT:    retq
+entry:
+  %xor = xor i32 %y, -1
+  %and1 = and i32 %z, %xor
+  %and2 = and i32 %x, %y
+  %or = or i32 %and1, %and2
+  %inc = add i32 %or, 1
+  ret i32 %inc
+}
+
+define i32 @or_and_lhs_neg_and_i32(i32 %x, i32 %y, i32 %z) {
+; CHECK-LABEL: or_and_lhs_neg_and_i32:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    # kill: def $esi killed $esi def $rsi
+; CHECK-NEXT:    andl %esi, %edi
+; CHECK-NEXT:    notl %esi
+; CHECK-NEXT:    andl %edx, %esi
+; CHECK-NEXT:    orl %edi, %esi
+; CHECK-NEXT:    leal 1(%rsi), %eax
+; CHECK-NEXT:    retq
+entry:
+  %xor = xor i32 %y, -1
+  %and1 = and i32 %xor, %z
+  %and2 = and i32 %x, %y
+  %or = or i32 %and1, %and2
+  %inc = add i32 %or, 1
+  ret i32 %inc
+}
+
+define i64 @or_and_and_rhs_neg_i64(i64 %x, i64 %y, i64 %z) {
+; CHECK-LABEL: or_and_and_rhs_neg_i64:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    andq %rsi, %rdx
+; CHECK-NEXT:    notq %rsi
+; CHECK-NEXT:    andq %rdi, %rsi
+; CHECK-NEXT:    orq %rdx, %rsi
+; CHECK-NEXT:    leaq 1(%rsi), %rax
+; CHECK-NEXT:    retq
+entry:
+  %and1 = and i64 %z, %y
+  %xor = xor i64 %y, -1
+  %and2 = and i64 %x, %xor
+  %or = or i64 %and1, %and2
+  %inc = add i64 %or, 1
+  ret i64 %inc
+}
+
+define i64 @or_and_and_lhs_neg_i64(i64 %x, i64 %y, i64 %z) {
+; CHECK-LABEL: or_and_and_lhs_neg_i64:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    andq %rsi, %rdx
+; CHECK-NEXT:    notq %rsi
+; CHECK-NEXT:    andq %rdi, %rsi
+; CHECK-NEXT:    orq %rdx, %rsi
+; CHECK-NEXT:    leaq 1(%rsi), %rax
+; CHECK-NEXT:    retq
+entry:
+  %and1 = and i64 %z, %y
+  %xor = xor i64 %y, -1
+  %and2 = and i64 %xor, %x
+  %or = or i64 %and1, %and2
+  %inc = add i64 %or, 1
+  ret i64 %inc
+}
+
+define i64 @or_and_rhs_neg_and_i64(i64 %x, i64 %y, i64 %z) {
+; CHECK-LABEL: or_and_rhs_neg_and_i64:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    andq %rsi, %rdi
+; CHECK-NEXT:    notq %rsi
+; CHECK-NEXT:    andq %rdx, %rsi
+; CHECK-NEXT:    orq %rdi, %rsi
+; CHECK-NEXT:    leaq 1(%rsi), %rax
+; CHECK-NEXT:    retq
+entry:
+  %xor = xor i64 %y, -1
+  %and1 = and i64 %z, %xor
+  %and2 = and i64 %x, %y
+  %or = or i64 %and1, %and2
+  %inc = add i64 %or, 1
+  ret i64 %inc
+}
+
+define i64 @or_and_lhs_neg_and_i64(i64 %x, i64 %y, i64 %z) {
+; CHECK-LABEL: or_and_lhs_neg_and_i64:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    andq %rsi, %rdi
+; CHECK-NEXT:    notq %rsi
+; CHECK-NEXT:    andq %rdx, %rsi
+; CHECK-NEXT:    orq %rdi, %rsi
+; CHECK-NEXT:    leaq 1(%rsi), %rax
+; CHECK-NEXT:    retq
+entry:
+  %xor = xor i64 %y, -1
+  %and1 = and i64 %xor, %z
+  %and2 = and i64 %x, %y
+  %or = or i64 %and1, %and2
+  %inc = add i64 %or, 1
+  ret i64 %inc
+}
