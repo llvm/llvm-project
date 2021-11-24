@@ -310,25 +310,7 @@ public:
 
   /// Get the platform's supported architectures in the order in which they
   /// should be searched.
-  ///
-  /// \param[in] idx
-  ///     A zero based architecture index
-  ///
-  /// \param[out] arch
-  ///     A copy of the architecture at index if the return value is
-  ///     \b true.
-  ///
-  /// \return
-  ///     \b true if \a arch was filled in and is valid, \b false
-  ///     otherwise.
-  virtual bool GetSupportedArchitectureAtIndex(uint32_t idx,
-                                               ArchSpec &arch);
-
-  /// Get the platform's supported architectures in the order in which they
-  /// should be searched.
-  /// NB: This implementation is mutually recursive with
-  /// GetSupportedArchitectureAtIndex. Subclasses should implement one of them.
-  virtual std::vector<ArchSpec> GetSupportedArchitectures();
+  virtual std::vector<ArchSpec> GetSupportedArchitectures() = 0;
 
   virtual size_t GetSoftwareBreakpointTrapOpcode(Target &target,
                                                  BreakpointSite *bp_site);
