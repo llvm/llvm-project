@@ -603,3 +603,48 @@ define <4 x i32> @test_vrev32_bswap(<4 x i32> %source) nounwind {
 }
 
 declare <4 x i32> @llvm.bswap.v4i32(<4 x i32>) nounwind readnone
+
+; Reduced regression from D114354
+define void @test_rev16_truncstore() {
+; CHECK-LABEL: test_rev16_truncstore:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    cbnz wzr, .LBB30_2
+; CHECK-NEXT:  .LBB30_1: // %cleanup
+; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    ldrh w8, [x8]
+; CHECK-NEXT:    rev16 w8, w8
+; CHECK-NEXT:    strh w8, [x8]
+; CHECK-NEXT:    cbz wzr, .LBB30_1
+; CHECK-NEXT:  .LBB30_2: // %fail
+; CHECK-NEXT:    ret
+;
+; GISEL-LABEL: test_rev16_truncstore:
+; GISEL:       // %bb.0: // %entry
+; GISEL-NEXT:    tbnz wzr, #0, .LBB30_2
+; GISEL-NEXT:  .LBB30_1: // %cleanup
+; GISEL-NEXT:    // =>This Inner Loop Header: Depth=1
+; GISEL-NEXT:    ldrh w8, [x8]
+; GISEL-NEXT:    rev w8, w8
+; GISEL-NEXT:    lsr w8, w8, #16
+; GISEL-NEXT:    strh w8, [x8]
+; GISEL-NEXT:    tbz wzr, #0, .LBB30_1
+; GISEL-NEXT:  .LBB30_2: // %fail
+; GISEL-NEXT:    ret
+entry:
+  br label %body
+
+body:
+  %out.6269.i = phi i16* [ undef, %cleanup ], [ undef, %entry ]
+  %0 = load i16, i16* undef, align 2
+  %1 = icmp eq i16 undef, -10240
+  br i1 %1, label %fail, label %cleanup
+
+cleanup:
+  %or130.i = call i16 @llvm.bswap.i16(i16 %0)
+  store i16 %or130.i, i16* %out.6269.i, align 2
+  br label %body
+
+fail:
+  ret void
+}
+declare i16 @llvm.bswap.i16(i16)
