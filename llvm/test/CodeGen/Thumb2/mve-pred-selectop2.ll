@@ -427,6 +427,64 @@ entry:
   ret <8 x half> %b
 }
 
+define arm_aapcs_vfpcc <4 x float> @fmai_v4f32_x(<4 x float> %x, <4 x float> %y, <4 x float> %z, i32 %n) {
+; CHECK-LABEL: fmai_v4f32_x:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vctp.32 r0
+; CHECK-NEXT:    vpst
+; CHECK-NEXT:    vfmat.f32 q0, q1, q2
+; CHECK-NEXT:    bx lr
+entry:
+  %c = call <4 x i1> @llvm.arm.mve.vctp32(i32 %n)
+  %a = call <4 x float> @llvm.fma.v4f32(<4 x float> %y, <4 x float> %z, <4 x float> %x)
+  %b = select <4 x i1> %c, <4 x float> %a, <4 x float> %x
+  ret <4 x float> %b
+}
+
+define arm_aapcs_vfpcc <8 x half> @fmai_v8f16_x(<8 x half> %x, <8 x half> %y, <8 x half> %z, i32 %n) {
+; CHECK-LABEL: fmai_v8f16_x:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vctp.16 r0
+; CHECK-NEXT:    vpst
+; CHECK-NEXT:    vfmat.f16 q0, q1, q2
+; CHECK-NEXT:    bx lr
+entry:
+  %c = call <8 x i1> @llvm.arm.mve.vctp16(i32 %n)
+  %a = call <8 x half> @llvm.fma.v8f16(<8 x half> %y, <8 x half> %z, <8 x half> %x)
+  %b = select <8 x i1> %c, <8 x half> %a, <8 x half> %x
+  ret <8 x half> %b
+}
+
+define arm_aapcs_vfpcc <4 x float> @fma_v4f32_x(<4 x float> %x, <4 x float> %y, <4 x float> %z, i32 %n) {
+; CHECK-LABEL: fma_v4f32_x:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vctp.32 r0
+; CHECK-NEXT:    vpst
+; CHECK-NEXT:    vfmat.f32 q0, q1, q2
+; CHECK-NEXT:    bx lr
+entry:
+  %c = call <4 x i1> @llvm.arm.mve.vctp32(i32 %n)
+  %m = fmul fast <4 x float> %y, %z
+  %a = fadd fast <4 x float> %m, %x
+  %b = select <4 x i1> %c, <4 x float> %a, <4 x float> %x
+  ret <4 x float> %b
+}
+
+define arm_aapcs_vfpcc <8 x half> @fma_v8f16_x(<8 x half> %x, <8 x half> %y, <8 x half> %z, i32 %n) {
+; CHECK-LABEL: fma_v8f16_x:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vctp.16 r0
+; CHECK-NEXT:    vpst
+; CHECK-NEXT:    vfmat.f16 q0, q1, q2
+; CHECK-NEXT:    bx lr
+entry:
+  %c = call <8 x i1> @llvm.arm.mve.vctp16(i32 %n)
+  %m = fmul fast <8 x half> %y, %z
+  %a = fadd fast <8 x half> %m, %x
+  %b = select <8 x i1> %c, <8 x half> %a, <8 x half> %x
+  ret <8 x half> %b
+}
+
 define arm_aapcs_vfpcc <4 x i32> @icmp_slt_v4i32_x(<4 x i32> %x, <4 x i32> %y, i32 %n) {
 ; CHECK-LABEL: icmp_slt_v4i32_x:
 ; CHECK:       @ %bb.0: @ %entry
@@ -2669,6 +2727,8 @@ declare <4 x i32> @llvm.ssub.sat.v4i32(<4 x i32>, <4 x i32>)
 declare <16 x i8> @llvm.usub.sat.v16i8(<16 x i8>, <16 x i8>)
 declare <8 x i16> @llvm.usub.sat.v8i16(<8 x i16>, <8 x i16>)
 declare <4 x i32> @llvm.usub.sat.v4i32(<4 x i32>, <4 x i32>)
+declare <4 x float> @llvm.fma.v4f32(<4 x float>, <4 x float>, <4 x float>)
+declare <8 x half> @llvm.fma.v8f16(<8 x half>, <8 x half>, <8 x half>)
 
 declare <16 x i1> @llvm.arm.mve.vctp8(i32)
 declare <8 x i1> @llvm.arm.mve.vctp16(i32)
