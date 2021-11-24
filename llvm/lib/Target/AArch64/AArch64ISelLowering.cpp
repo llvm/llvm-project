@@ -1545,7 +1545,7 @@ void AArch64TargetLowering::addTypeForFixedLengthSVE(MVT VT) {
     setCondCodeAction(ISD::SETUNE, VT, Expand);
   }
 
-  // Mark integer truncating stores as having custom lowering
+  // Mark integer truncating stores/extending loads as having custom lowering
   if (VT.isInteger()) {
     MVT InnerVT = VT.changeVectorElementType(MVT::i8);
     while (InnerVT != VT) {
@@ -1554,6 +1554,18 @@ void AArch64TargetLowering::addTypeForFixedLengthSVE(MVT VT) {
       setLoadExtAction(ISD::SEXTLOAD, VT, InnerVT, Custom);
       InnerVT = InnerVT.changeVectorElementType(
           MVT::getIntegerVT(2 * InnerVT.getScalarSizeInBits()));
+    }
+  }
+
+  // Mark floating-point truncating stores/extending loads as having custom
+  // lowering
+  if (VT.isFloatingPoint()) {
+    MVT InnerVT = VT.changeVectorElementType(MVT::f16);
+    while (InnerVT != VT) {
+      setTruncStoreAction(VT, InnerVT, Custom);
+      setLoadExtAction(ISD::EXTLOAD, VT, InnerVT, Custom);
+      InnerVT = InnerVT.changeVectorElementType(
+          MVT::getFloatingPointVT(2 * InnerVT.getScalarSizeInBits()));
     }
   }
 
@@ -18658,12 +18670,29 @@ SDValue AArch64TargetLowering::LowerFixedLengthVectorLoadToSVE(
   SDLoc DL(Op);
   EVT VT = Op.getValueType();
   EVT ContainerVT = getContainerForFixedLengthVector(DAG, VT);
+  EVT LoadVT = ContainerVT;
+  EVT MemVT = Load->getMemoryVT();
+
+  auto Pg = getPredicateForFixedLengthVector(DAG, DL, VT);
+
+  if (VT.isFloatingPoint() && Load->getExtensionType() == ISD::EXTLOAD) {
+    LoadVT = ContainerVT.changeTypeToInteger();
+    MemVT = MemVT.changeTypeToInteger();
+  }
 
   auto NewLoad = DAG.getMaskedLoad(
-      ContainerVT, DL, Load->getChain(), Load->getBasePtr(), Load->getOffset(),
-      getPredicateForFixedLengthVector(DAG, DL, VT), DAG.getUNDEF(ContainerVT),
-      Load->getMemoryVT(), Load->getMemOperand(), Load->getAddressingMode(),
-      Load->getExtensionType());
+      LoadVT, DL, Load->getChain(), Load->getBasePtr(), Load->getOffset(), Pg,
+      DAG.getUNDEF(LoadVT), MemVT, Load->getMemOperand(),
+      Load->getAddressingMode(), Load->getExtensionType());
+
+  if (VT.isFloatingPoint() && Load->getExtensionType() == ISD::EXTLOAD) {
+    EVT ExtendVT = ContainerVT.changeVectorElementType(
+        Load->getMemoryVT().getVectorElementType());
+
+    NewLoad = getSVESafeBitCast(ExtendVT, NewLoad, DAG);
+    NewLoad = DAG.getNode(AArch64ISD::FP_EXTEND_MERGE_PASSTHRU, DL, ContainerVT,
+                          Pg, NewLoad, DAG.getUNDEF(ContainerVT));
+  }
 
   auto Result = convertFromScalableVector(DAG, VT, NewLoad);
   SDValue MergedValues[2] = {Result, Load->getChain()};
@@ -18738,13 +18767,26 @@ SDValue AArch64TargetLowering::LowerFixedLengthVectorStoreToSVE(
   SDLoc DL(Op);
   EVT VT = Store->getValue().getValueType();
   EVT ContainerVT = getContainerForFixedLengthVector(DAG, VT);
+  EVT MemVT = Store->getMemoryVT();
 
+  auto Pg = getPredicateForFixedLengthVector(DAG, DL, VT);
   auto NewValue = convertToScalableVector(DAG, ContainerVT, Store->getValue());
-  return DAG.getMaskedStore(
-      Store->getChain(), DL, NewValue, Store->getBasePtr(), Store->getOffset(),
-      getPredicateForFixedLengthVector(DAG, DL, VT), Store->getMemoryVT(),
-      Store->getMemOperand(), Store->getAddressingMode(),
-      Store->isTruncatingStore());
+
+  if (VT.isFloatingPoint() && Store->isTruncatingStore()) {
+    EVT TruncVT = ContainerVT.changeVectorElementType(
+        Store->getMemoryVT().getVectorElementType());
+    MemVT = MemVT.changeTypeToInteger();
+    NewValue = DAG.getNode(AArch64ISD::FP_ROUND_MERGE_PASSTHRU, DL, TruncVT, Pg,
+                           NewValue, DAG.getTargetConstant(0, DL, MVT::i64),
+                           DAG.getUNDEF(TruncVT));
+    NewValue =
+        getSVESafeBitCast(ContainerVT.changeTypeToInteger(), NewValue, DAG);
+  }
+
+  return DAG.getMaskedStore(Store->getChain(), DL, NewValue,
+                            Store->getBasePtr(), Store->getOffset(), Pg, MemVT,
+                            Store->getMemOperand(), Store->getAddressingMode(),
+                            Store->isTruncatingStore());
 }
 
 SDValue AArch64TargetLowering::LowerFixedLengthVectorMStoreToSVE(
