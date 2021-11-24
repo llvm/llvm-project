@@ -4447,6 +4447,9 @@ llvm::DILocalVariable *CGDebugInfo::EmitDeclare(const VarDecl *VD,
                                                 llvm::Optional<unsigned> ArgNo,
                                                 CGBuilderTy &Builder,
                                                 const bool UsePointerValue) {
+  if (CGM.getCodeGenOpts().HeterogeneousDwarf)
+    return EmitDef(VD, Storage, ArgNo, Builder, UsePointerValue);
+
   assert(CGM.getCodeGenOpts().hasReducedDebugInfo());
   assert(!LexicalBlockStack.empty() && "Region stack mismatch, stack empty!");
   if (VD->hasAttr<NoDebugAttr>())
@@ -4622,6 +4625,196 @@ llvm::DILocalVariable *CGDebugInfo::EmitDeclare(const VarDecl *VD,
                          llvm::DILocation::get(CGM.getLLVMContext(), Line,
                                                Column, Scope, CurInlinedAt),
                          Builder.GetInsertBlock());
+
+  return D;
+}
+
+llvm::DILocalVariable *CGDebugInfo::EmitDef(const VarDecl *VD,
+                                            llvm::Value *Storage,
+                                            llvm::Optional<unsigned> ArgNo,
+                                            CGBuilderTy &Builder,
+                                            const bool UsePointerValue) {
+  assert(CGM.getCodeGenOpts().hasReducedDebugInfo() &&
+         "Call to EmitDef below ReducedDebugInfo");
+  assert(CGM.getCodeGenOpts().HeterogeneousDwarf &&
+         "Call to EmitDef without HeterogeneousDwarf enabled");
+  assert(!LexicalBlockStack.empty() && "Region stack mismatch, stack empty!");
+  if (VD->hasAttr<NoDebugAttr>())
+    return nullptr;
+
+  bool Unwritten =
+      VD->isImplicit() || (isa<Decl>(VD->getDeclContext()) &&
+                           cast<Decl>(VD->getDeclContext())->isImplicit());
+  llvm::DIFile *Unit = nullptr;
+  unsigned Line = 0;
+  unsigned Column = 0;
+  if (!Unwritten) {
+    Unit = getOrCreateFile(VD->getLocation());
+    // Get location information.
+    Line = getLineNumber(VD->getLocation());
+    Column = getColumnNumber(VD->getLocation());
+  }
+  llvm::DIType *Ty;
+  uint64_t XOffset = 0;
+  if (VD->hasAttr<BlocksAttr>())
+    Ty = EmitTypeForVarWithBlocksAttr(VD, &XOffset).WrappedType;
+  else
+    Ty = getOrCreateType(VD->getType(), Unit);
+
+  // If there is no debug info for this type then do not emit debug info
+  // for this variable.
+  if (!Ty)
+    return nullptr;
+
+  // FIXME: This was previously hard-coded, but we should be deriving this from
+  // the blocks somehow. Can this differ between the referrer alloca block ref
+  // and the block ref pointed to by __forwarding?
+  unsigned BlockAddressSpace = 0;
+
+  llvm::DINode::DIFlags Flags = llvm::DINode::FlagZero;
+  if (Unwritten)
+    Flags |= llvm::DINode::FlagArtificial;
+
+  auto Align = getDeclAlignIfRequired(VD, CGM.getContext());
+  StringRef Name = VD->getName();
+
+  llvm::Type *VDMemTy = CGM.getTypes().ConvertTypeForMem(VD->getType());
+  llvm::Type *BlockPtrTy =
+      llvm::Type::getInt8PtrTy(CGM.getLLVMContext(), BlockAddressSpace);
+
+  llvm::DIExprBuilder ExprBuilder(CGM.getLLVMContext());
+  ExprBuilder.append<llvm::DIOp::Referrer>(Storage->getType());
+  llvm::Type *ReferrerPointeeTy =
+      (!Name.empty() && VD->isEscapingByref()) ? BlockPtrTy : VDMemTy;
+  ExprBuilder.append<llvm::DIOp::Deref>(ReferrerPointeeTy);
+
+  // If this is implicit parameter of CXXThis or ObjCSelf kind, then give it an
+  // object pointer flag.
+  if (const auto *IPD = dyn_cast<ImplicitParamDecl>(VD)) {
+    if (IPD->getParameterKind() == ImplicitParamDecl::CXXThis ||
+        IPD->getParameterKind() == ImplicitParamDecl::ObjCSelf)
+      Flags |= llvm::DINode::FlagObjectPointer;
+  }
+
+  auto *Scope = cast<llvm::DIScope>(LexicalBlockStack.back());
+  if (!Name.empty()) {
+    // __block vars are stored on the heap if they are captured by a block that
+    // can escape the local scope.
+    if (VD->isEscapingByref()) {
+      auto ToChars = [&](uint64_t BitSize) {
+        return CGM.getContext().toCharUnitsFromBits(BitSize).getQuantity();
+      };
+      auto *Int64Ty = llvm::Type::getInt64Ty(CGM.getLLVMContext());
+      // offset to __forwarding field
+      ExprBuilder.append<llvm::DIOp::Constant>(llvm::ConstantInt::get(
+          Int64Ty,
+          ToChars(CGM.getTarget().getPointerWidth(BlockAddressSpace))));
+      ExprBuilder.append<llvm::DIOp::ByteOffset>(BlockPtrTy);
+      // follow __forwarding field
+      ExprBuilder.append<llvm::DIOp::Deref>(BlockPtrTy);
+      // offset of x field
+      ExprBuilder.append<llvm::DIOp::Constant>(
+          llvm::ConstantInt::get(Int64Ty, ToChars(XOffset)));
+      ExprBuilder.append<llvm::DIOp::ByteOffset>(VDMemTy);
+    }
+  } else if (const auto *RT = dyn_cast<RecordType>(VD->getType())) {
+    // If VD is an anonymous union then Storage represents value for
+    // all union fields.
+    const RecordDecl *RD = RT->getDecl();
+    if (RD->isUnion() && RD->isAnonymousStructOrUnion()) {
+      // GDB has trouble finding local variables in anonymous unions, so we emit
+      // artificial local variables for each of the members.
+      //
+      // FIXME: Remove this code as soon as GDB supports this.
+      // The debug info verifier in LLVM operates based on the assumption that a
+      // variable has the same size as its storage and we had to disable the
+      // check for artificial variables.
+      for (const auto *Field : RD->fields()) {
+        llvm::DIType *FieldTy = getOrCreateType(Field->getType(), Unit);
+        StringRef FieldName = Field->getName();
+
+        // Ignore unnamed fields. Do not ignore unnamed records.
+        if (FieldName.empty() && !isa<RecordType>(Field->getType()))
+          continue;
+
+        // Use VarDecl's Tag, Scope and Line number.
+        auto FieldAlign = getDeclAlignIfRequired(Field, CGM.getContext());
+        auto *D = DBuilder.createAutoVariable(
+            Scope, FieldName, Unit, Line, FieldTy, /*AlwaysPreserve=*/true,
+            Flags | llvm::DINode::FlagArtificial, FieldAlign);
+
+        // Insert an llvm.dbg.def into the current block.
+        DBuilder.insertDef(
+            DBuilder.createBoundedLifetime(D, ExprBuilder.intoExpr()), Storage,
+            llvm::DILocation::get(CGM.getLLVMContext(), Line, Column, Scope,
+                                  CurInlinedAt),
+            Builder.GetInsertBlock());
+      }
+    }
+  }
+
+  // Clang stores the sret pointer provided by the caller in a static alloca.
+  // Use DW_OP_deref to tell the debugger to load the pointer and treat it as
+  // the address of the variable.
+  if (UsePointerValue)
+    ExprBuilder.append<llvm::DIOp::Deref>(VDMemTy);
+
+  llvm::DILocalVariable *D = nullptr;
+  if (ArgNo) {
+    D = DBuilder.createParameterVariable(Scope, Name, *ArgNo, Unit, Line, Ty,
+                                         /*AlwaysPreserve=*/true, Flags);
+  } else {
+    // For normal local variable, we will try to find out whether 'VD' is the
+    // copy parameter of coroutine.
+    // If yes, we are going to use DIVariable of the origin parameter instead
+    // of creating the new one.
+    // If no, it might be a normal alloc, we just create a new one for it.
+
+    // Check whether the VD is move parameters.
+    auto RemapCoroArgToLocalVar = [&]() -> llvm::DILocalVariable * {
+      // The scope of parameter and move-parameter should be distinct
+      // DISubprogram.
+      if (!isa<llvm::DISubprogram>(Scope) || !Scope->isDistinct())
+        return nullptr;
+
+      auto Iter = llvm::find_if(CoroutineParameterMappings, [&](auto &Pair) {
+        Stmt *StmtPtr = const_cast<Stmt *>(Pair.second);
+        if (DeclStmt *DeclStmtPtr = dyn_cast<DeclStmt>(StmtPtr)) {
+          DeclGroupRef DeclGroup = DeclStmtPtr->getDeclGroup();
+          Decl *Decl = DeclGroup.getSingleDecl();
+          if (VD == dyn_cast_or_null<VarDecl>(Decl))
+            return true;
+        }
+        return false;
+      });
+
+      if (Iter != CoroutineParameterMappings.end()) {
+        ParmVarDecl *PD = const_cast<ParmVarDecl *>(Iter->first);
+        auto Iter2 = llvm::find_if(ParamDbgMappings, [&](auto &DbgPair) {
+          return DbgPair.first == PD && DbgPair.second->getScope() == Scope;
+        });
+        if (Iter2 != ParamDbgMappings.end())
+          return const_cast<llvm::DILocalVariable *>(Iter2->second);
+      }
+      return nullptr;
+    };
+
+    // If we couldn't find a move param DIVariable, create a new one.
+    D = RemapCoroArgToLocalVar();
+    // Or we will create a new DIVariable for this Decl if D dose not exists.
+    if (!D)
+      D = DBuilder.createAutoVariable(Scope, Name, Unit, Line, Ty,
+                                      /*AlwaysPreserve=*/true, Flags, Align);
+  }
+  // Insert an llvm.dbg.def into the current block.
+  DBuilder.insertDef(DBuilder.createBoundedLifetime(D, ExprBuilder.intoExpr()),
+                     Storage,
+                     llvm::DILocation::get(CGM.getLLVMContext(), Line, Column,
+                                           Scope, CurInlinedAt),
+                     Builder.GetInsertBlock());
+
+  llvm::Function *Parent = Builder.GetInsertBlock()->getParent();
+  assert(Parent->getSubprogram() && "expected DISubprogram");
 
   return D;
 }
@@ -4966,6 +5159,34 @@ llvm::DIGlobalVariableExpression *CGDebugInfo::CollectAnonRecordDecls(
   return GVE;
 }
 
+llvm::DIGlobalVariable *
+CGDebugInfo::CollectAnonRecordDeclsForHeterogeneousDwarf(
+    const RecordDecl *RD, llvm::DIFile *Unit, unsigned LineNo,
+    StringRef LinkageName, llvm::GlobalVariable *Var, llvm::DIScope *DContext) {
+  assert(CGM.getCodeGenOpts().HeterogeneousDwarf);
+
+  llvm::DIGlobalVariable *GV = nullptr;
+
+  for (const auto *Field : RD->fields()) {
+    llvm::DIType *FieldTy = getOrCreateType(Field->getType(), Unit);
+    StringRef FieldName = Field->getName();
+
+    // Ignore unnamed fields, but recurse into anonymous records.
+    if (FieldName.empty()) {
+      if (const auto *RT = dyn_cast<RecordType>(Field->getType()))
+        GV = CollectAnonRecordDeclsForHeterogeneousDwarf(
+            RT->getDecl(), Unit, LineNo, LinkageName, Var, DContext);
+      continue;
+    }
+    // Use VarDecl's Tag, Scope and Line number.
+    GV = DBuilder.createGlobalVariable(
+        DContext, FieldName, LinkageName, Unit, LineNo, FieldTy,
+        Var->hasLocalLinkage());
+    Var->addDebugInfo(GV);
+  }
+  return GV;
+}
+
 namespace {
 struct ReconstitutableType : public RecursiveASTVisitor<ReconstitutableType> {
   bool Reconstitutable = true;
@@ -5138,6 +5359,11 @@ std::string CGDebugInfo::GetName(const Decl *D, bool Qualified) const {
 
 void CGDebugInfo::EmitGlobalVariable(llvm::GlobalVariable *Var,
                                      const VarDecl *D) {
+  if (CGM.getCodeGenOpts().HeterogeneousDwarf) {
+    EmitGlobalVariableForHeterogeneousDwarf(Var, D);
+    return;
+  }
+
   assert(CGM.getCodeGenOpts().hasReducedDebugInfo());
   if (D->hasAttr<NoDebugAttr>())
     return;
@@ -5180,15 +5406,7 @@ void CGDebugInfo::EmitGlobalVariable(llvm::GlobalVariable *Var,
 
     SmallVector<int64_t, 4> Expr;
     unsigned AddressSpace =
-        CGM.getContext().getTargetAddressSpace(D->getType());
-    if (CGM.getLangOpts().CUDA && CGM.getLangOpts().CUDAIsDevice) {
-      if (D->hasAttr<CUDASharedAttr>())
-        AddressSpace =
-            CGM.getContext().getTargetAddressSpace(LangAS::cuda_shared);
-      else if (D->hasAttr<CUDAConstantAttr>())
-        AddressSpace =
-            CGM.getContext().getTargetAddressSpace(LangAS::cuda_constant);
-    }
+        CGM.getContext().getTargetAddressSpace(CGM.GetGlobalVarAddressSpace(D));
     AppendAddressSpaceXDeref(AddressSpace, Expr);
 
     TypeLoc TL;
@@ -5207,7 +5425,89 @@ void CGDebugInfo::EmitGlobalVariable(llvm::GlobalVariable *Var,
   DeclCache[D->getCanonicalDecl()].reset(GVE);
 }
 
+void CGDebugInfo::EmitGlobalVariableForHeterogeneousDwarf(
+    llvm::GlobalVariable *Var, const VarDecl *D) {
+  assert(CGM.getCodeGenOpts().hasReducedDebugInfo());
+  assert(CGM.getCodeGenOpts().HeterogeneousDwarf);
+  if (D->hasAttr<NoDebugAttr>())
+    return;
+
+  llvm::TimeTraceScope TimeScope("DebugGlobalVariable", [&]() {
+    std::string Name;
+    llvm::raw_string_ostream OS(Name);
+    D->getNameForDiagnostic(OS, getPrintingPolicy(),
+                            /*Qualified=*/true);
+    return Name;
+  });
+
+  // FIXME: Need to handle cases like the NOADDROF lines in
+  // clang/test/CodeGen/debug-info-global-constant-heterogeneous-dwarf.c where
+  // we should conceptually produce both a memory location description *and* an
+  // implicit location description because of optimizations along the lines of
+  // really-early constant folding. Maybe this is an example of why we need to
+  // support multiple computed lifetime segments for global variables? For now
+  // just do what existing LLVM does and prefer the implicit location.
+  auto &GV = DeclCache[D->getCanonicalDecl()];
+  if (GV)
+    return;
+
+  // Create global variable debug descriptor.
+  llvm::DIFile *Unit = nullptr;
+  llvm::DIScope *DContext = nullptr;
+  unsigned LineNo;
+  StringRef DeclName, LinkageName;
+  QualType T;
+  llvm::MDTuple *TemplateParameters = nullptr;
+  collectVarDeclProps(D, Unit, LineNo, T, DeclName, LinkageName,
+                      TemplateParameters, DContext);
+
+  // Attempt to store one global variable for the declaration - even if we
+  // emit a lot of fields.
+  llvm::DIGlobalVariable *DGV = nullptr;
+
+  // If this is an anonymous union then we'll want to emit a global
+  // variable for each member of the anonymous union so that it's possible
+  // to find the name of any field in the union.
+  if (T->isUnionType() && DeclName.empty()) {
+    const RecordDecl *RD = T->castAs<RecordType>()->getDecl();
+    assert(RD->isAnonymousStructOrUnion() &&
+           "unnamed non-anonymous struct or union?");
+    // FIXME(KZHURAVL): No tests for this path.
+    DGV = CollectAnonRecordDeclsForHeterogeneousDwarf(
+        RD, Unit, LineNo, LinkageName, Var, DContext);
+  } else {
+    // Create DIExpr.
+    llvm::DIExprBuilder ExprBuilder(CGM.getLLVMContext());
+    ExprBuilder.append<llvm::DIOp::Arg>(0, Var->getType());
+    ExprBuilder.append<llvm::DIOp::Deref>(Var->getValueType());
+
+    // Create DIGlobalVariable.
+    DGV = DBuilder.createGlobalVariable(
+        DContext, DeclName, LinkageName, Unit, LineNo, getOrCreateType(T, Unit),
+        Var->hasLocalLinkage(), true,
+        getOrCreateStaticDataMemberDeclarationOrNull(D), TemplateParameters,
+        getDeclAlignIfRequired(D, CGM.getContext()));
+
+    // Create DIFragment.
+    llvm::DIFragment *Fragment = DBuilder.createFragment();
+    SmallVector<llvm::Metadata*> LifetimeArgs;
+    LifetimeArgs.push_back(Fragment);
+
+    // Create DILifetime and add to llvm.dbg.retainedNodes named metadata.
+    DBuilder.createComputedLifetime(DGV, ExprBuilder.intoExpr(), LifetimeArgs);
+
+    // Attach metadata to GlobalVariable.
+    Var->addDebugInfo(Fragment);
+  }
+
+  GV.reset(DGV);
+}
+
 void CGDebugInfo::EmitGlobalVariable(const ValueDecl *VD, const APValue &Init) {
+  if (CGM.getCodeGenOpts().HeterogeneousDwarf) {
+    EmitGlobalVariableForHeterogeneousDwarf(VD, Init);
+    return;
+  }
   assert(CGM.getCodeGenOpts().hasReducedDebugInfo());
   if (VD->hasAttr<NoDebugAttr>())
     return;
@@ -5290,6 +5590,96 @@ void CGDebugInfo::EmitGlobalVariable(const ValueDecl *VD, const APValue &Init) {
       DContext, Name, StringRef(), Unit, getLineNumber(VD->getLocation()), Ty,
       true, true, InitExpr, getOrCreateStaticDataMemberDeclarationOrNull(VarD),
       TemplateParameters, Align));
+}
+
+void CGDebugInfo::EmitGlobalVariableForHeterogeneousDwarf(
+    const ValueDecl *VD, const APValue &Init) {
+  assert(CGM.getCodeGenOpts().hasReducedDebugInfo());
+  if (VD->hasAttr<NoDebugAttr>())
+    return;
+  llvm::TimeTraceScope TimeScope("DebugConstGlobalVariable", [&]() {
+    return GetName(VD, true);
+  });
+
+  auto Align = getDeclAlignIfRequired(VD, CGM.getContext());
+  // Create the descriptor for the variable.
+  llvm::DIFile *Unit = getOrCreateFile(VD->getLocation());
+  StringRef Name = VD->getName();
+  llvm::DIType *Ty = getOrCreateType(VD->getType(), Unit);
+
+  if (const auto *ECD = dyn_cast<EnumConstantDecl>(VD)) {
+    const auto *ED = cast<EnumDecl>(ECD->getDeclContext());
+    assert(isa<EnumType>(ED->getTypeForDecl()) && "Enum without EnumType?");
+
+    if (CGM.getCodeGenOpts().EmitCodeView) {
+      // If CodeView, emit enums as global variables, unless they are defined
+      // inside a class. We do this because MSVC doesn't emit S_CONSTANTs for
+      // enums in classes, and because it is difficult to attach this scope
+      // information to the global variable.
+      if (isa<RecordDecl>(ED->getDeclContext()))
+        return;
+    } else {
+      // If not CodeView, emit DW_TAG_enumeration_type if necessary. For
+      // example: for "enum { ZERO };", a DW_TAG_enumeration_type is created the
+      // first time `ZERO` is referenced in a function.
+      llvm::DIType *EDTy =
+          getOrCreateType(QualType(ED->getTypeForDecl(), 0), Unit);
+      assert (EDTy->getTag() == llvm::dwarf::DW_TAG_enumeration_type);
+      (void)EDTy;
+      return;
+    }
+  }
+
+  // Do not emit separate definitions for function local consts.
+  if (isa<FunctionDecl>(VD->getDeclContext()))
+    return;
+
+  VD = cast<ValueDecl>(VD->getCanonicalDecl());
+  auto *VarD = dyn_cast<VarDecl>(VD);
+  if (VarD && VarD->isStaticDataMember()) {
+    auto *RD = cast<RecordDecl>(VarD->getDeclContext());
+    getDeclContextDescriptor(VarD);
+    // Ensure that the type is retained even though it's otherwise unreferenced.
+    //
+    // FIXME: This is probably unnecessary, since Ty should reference RD
+    // through its scope.
+    RetainedTypes.push_back(
+        CGM.getContext().getRecordType(RD).getAsOpaquePtr());
+
+    return;
+  }
+  llvm::DIScope *DContext = getDeclContextDescriptor(VD);
+
+  auto &GV = DeclCache[VD];
+  if (GV)
+    return;
+
+  llvm::MDTuple *TemplateParameters = nullptr;
+
+  if (isa<VarTemplateSpecializationDecl>(VD))
+    if (VarD) {
+      llvm::DINodeArray parameterNodes = CollectVarTemplateParams(VarD, &*Unit);
+      TemplateParameters = parameterNodes.get();
+    }
+
+  llvm::DIExprBuilder ExprBuilder(CGM.getLLVMContext());
+  // FIXME: There isn't general support for getting a Constant from an APValue,
+  // but we should be able to support all possibilities here.
+  if (Init.isInt())
+    ExprBuilder.append<llvm::DIOp::Constant>(
+        llvm::ConstantInt::get(CGM.getLLVMContext(), Init.getInt()));
+  else if (Init.isFloat())
+    ExprBuilder.append<llvm::DIOp::Constant>(
+        llvm::ConstantFP::get(CGM.getLLVMContext(), Init.getFloat()));
+
+  llvm::DIGlobalVariable *DGV = DBuilder.createGlobalVariable(
+      DContext, Name, StringRef(), Unit, getLineNumber(VD->getLocation()), Ty,
+      true, true, getOrCreateStaticDataMemberDeclarationOrNull(VarD),
+      TemplateParameters, Align);
+
+  DBuilder.createComputedLifetime(DGV, ExprBuilder.intoExpr(), {});
+
+  GV.reset(DGV);
 }
 
 void CGDebugInfo::EmitExternalVariable(llvm::GlobalVariable *Var,

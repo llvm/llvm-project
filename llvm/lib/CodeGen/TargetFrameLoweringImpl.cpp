@@ -14,11 +14,13 @@
 #include "llvm/ADT/BitVector.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/CallingConv.h"
+#include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/MC/MCRegisterInfo.h"
@@ -55,6 +57,16 @@ TargetFrameLowering::getFrameIndexReference(const MachineFunction &MF, int FI,
   return StackOffset::getFixed(MFI.getObjectOffset(FI) + MFI.getStackSize() -
                                getOffsetOfLocalArea() +
                                MFI.getOffsetAdjustment());
+}
+
+DIExprBuilder::Iterator TargetFrameLowering::insertFrameLocation(
+    const MachineFunction &MF, DIExprBuilder &Builder,
+    DIExprBuilder::Iterator BI, Type *ResultType) const {
+  std::initializer_list<DIOp::Variant> IL = {
+      DIOp::Referrer(PointerType::get(ResultType,
+                                      MF.getDataLayout().getAllocaAddrSpace())),
+      DIOp::Deref(ResultType)};
+  return Builder.insert(BI, IL) + IL.size();
 }
 
 bool TargetFrameLowering::needsFrameIndexResolution(

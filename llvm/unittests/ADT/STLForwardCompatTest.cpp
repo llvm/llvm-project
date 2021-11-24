@@ -42,6 +42,17 @@ TEST(STLForwardCompatTest, DisjunctionTest) {
                                  std::true_type>::value));
 }
 
+TEST(STLForwardCompatTest, MakeArrayTest) {
+  ASSERT_EQ((llvm::make_array<int>()), (std::array<int, 0u>{}));
+  ASSERT_EQ((llvm::make_array<size_t>()), (std::array<size_t, 0u>{}));
+  ASSERT_EQ((llvm::make_array<size_t>(1u, 2u, 3u)),
+            (std::array<size_t, 3u>{1, 2, 3}));
+  ASSERT_EQ((llvm::make_array<size_t>(1u, 2u, 3u)),
+            (llvm::make_array(size_t(1), size_t(2u), size_t(3u))));
+  ASSERT_EQ((llvm::make_array(true, false, false, true)),
+            (std::array<bool, 4u>{true, false, false, true}));
+}
+
 template <typename T>
 class STLForwardCompatRemoveCVRefTest : public ::testing::Test {};
 

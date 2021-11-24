@@ -488,6 +488,7 @@ enum Kind {
   DISPFlag,         // DISPFlagFoo
   DwarfMacinfo,     // DW_MACINFO_foo
   ChecksumKind,     // CSK_foo
+  DIOp,             // DIOpFoo
 
   // Type valued tokens (TyVal).
   Type,

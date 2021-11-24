@@ -1104,6 +1104,21 @@ template <> struct MDNodeKeyImpl<DIExpression> {
   }
 };
 
+template <> struct MDNodeKeyImpl<DIExpr> {
+  ArrayRef<DIOp::Variant> Elements;
+
+  MDNodeKeyImpl(ArrayRef<DIOp::Variant> Elements) : Elements(Elements) {}
+  MDNodeKeyImpl(const DIExpr *N) : Elements(N->Elements) {}
+
+  bool isKeyOf(const DIExpr *RHS) const {
+    return Elements == ArrayRef<DIOp::Variant>(RHS->Elements);
+  }
+
+  unsigned getHashValue() const {
+    return hash_combine_range(Elements.begin(), Elements.end());
+  }
+};
+
 template <> struct MDNodeKeyImpl<DIGlobalVariableExpression> {
   Metadata *Variable;
   Metadata *Expression;
@@ -1389,6 +1404,7 @@ public:
 
 #define HANDLE_MDNODE_LEAF_UNIQUABLE(CLASS)                                    \
   DenseSet<CLASS *, CLASS##Info> CLASS##s;
+#define HANDLE_MDNODE_LEAF_UNIQUED(CLASS) HANDLE_MDNODE_LEAF_UNIQUABLE(CLASS)
 #include "llvm/IR/Metadata.def"
 
   // Optional map for looking up composite types by identifier.

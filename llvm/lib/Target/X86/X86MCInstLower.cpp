@@ -2627,6 +2627,8 @@ void X86AsmPrinter::emitInstruction(const MachineInstr *MI) {
     addConstantComments(MI, *OutStreamer);
 
   switch (MI->getOpcode()) {
+  case TargetOpcode::DBG_DEF:
+  case TargetOpcode::DBG_KILL:
   case TargetOpcode::DBG_VALUE:
     llvm_unreachable("Should be handled target independently");
 

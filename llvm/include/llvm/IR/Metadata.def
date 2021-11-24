@@ -8,12 +8,39 @@
 //
 // Macros for running through all types of metadata.
 //
+// Definitions for terms used to describe metadata include:
+//
+// * BRANCH: refers to an "abstract" metadata kind, which exists only in the
+//   C++ class hierarchy. These cannot appear directly in IR/bitcode.
+// * LEAF: refers to a "concrete" metadata kind. These can appear directly in
+//   IR/bitcode.
+// * SPECIALIZED: refers to non-MDTuple MDNodes, i.e. those that use the
+//   syntax "!CLASS(...)" in IR.
+// * UNIQUABLE: refers to nodes which can use uniqued, distinct, or temporary
+//   storage without any restrictions.
+// * UNIQUED: refers to nodes which must use uniqued or temporary storage.
+// * DISTINCT: refers to nodes which must use distinct or temporary storage.
+//
+// In LLVM IR, UNIQUABLE and DISTINCT nodes must be referred to by MDNode ID,
+// as in `!0`, whereas UNIQUED nodes canonically appear inline at each use, as
+// in `DIExpression(...)`. This is because `distinct` nodes maintain their
+// identity irrespective of contents, making the inline syntax ambiguous in
+// some cases.
+//
+// Note: UNIQUABLE, UNIQUED, and DISTINCT are mutually exclusive. For example,
+// code which intends to consider all nodes which can use uniqued storage must
+// consider both UNIQUABLE and UNIQUED nodes.
+//
 //===----------------------------------------------------------------------===//
 
 #if !(defined HANDLE_METADATA || defined HANDLE_METADATA_LEAF ||               \
       defined HANDLE_METADATA_BRANCH || defined HANDLE_MDNODE_LEAF ||          \
-      defined HANDLE_MDNODE_LEAF_UNIQUABLE || defined HANDLE_MDNODE_BRANCH ||  \
+      defined HANDLE_MDNODE_LEAF_UNIQUABLE ||                                  \
+      defined HANDLE_MDNODE_LEAF_UNIQUED ||                                    \
+      defined HANDLE_MDNODE_LEAF_DISTINCT || defined HANDLE_MDNODE_BRANCH ||   \
       defined HANDLE_SPECIALIZED_MDNODE_LEAF_UNIQUABLE ||                      \
+      defined HANDLE_SPECIALIZED_MDNODE_LEAF_UNIQUED ||                        \
+      defined HANDLE_SPECIALIZED_MDNODE_LEAF_DISTINCT ||                       \
       defined HANDLE_SPECIALIZED_MDNODE_LEAF ||                                \
       defined HANDLE_SPECIALIZED_MDNODE_BRANCH)
 #error "Missing macro definition of HANDLE_METADATA*"
@@ -34,7 +61,7 @@
 #define HANDLE_METADATA_BRANCH(CLASS) HANDLE_METADATA(CLASS)
 #endif
 
-// Handler for specialized and uniquable leaf nodes under MDNode.  Defers to
+// Handler for specialized and uniquable leaf nodes under MDNode. Defers to
 // HANDLE_MDNODE_LEAF_UNIQUABLE if it's defined, otherwise to
 // HANDLE_SPECIALIZED_MDNODE_LEAF.
 #ifndef HANDLE_SPECIALIZED_MDNODE_LEAF_UNIQUABLE
@@ -47,9 +74,45 @@
 #endif
 #endif
 
-// Handler for leaf nodes under MDNode.
+// Handler for specialized and always-uniqued leaf nodes under MDNode. Defers to
+// HANDLE_MDNODE_LEAF_UNIQUED if it's defined, otherwise to
+// HANDLE_SPECIALIZED_MDNODE_LEAF.
+#ifndef HANDLE_SPECIALIZED_MDNODE_LEAF_UNIQUED
+#ifdef HANDLE_MDNODE_LEAF_UNIQUED
+#define HANDLE_SPECIALIZED_MDNODE_LEAF_UNIQUED(CLASS)                        \
+  HANDLE_MDNODE_LEAF_UNIQUED(CLASS)
+#else
+#define HANDLE_SPECIALIZED_MDNODE_LEAF_UNIQUED(CLASS)                        \
+  HANDLE_SPECIALIZED_MDNODE_LEAF(CLASS)
+#endif
+#endif
+
+// Handler for specialized and always-distinct leaf nodes under MDNode. Defers
+// to HANDLE_MDNODE_LEAF_DISTINCT if it's defined, otherwise to
+// HANDLE_SPECIALIZED_MDNODE_LEAF.
+#ifndef HANDLE_SPECIALIZED_MDNODE_LEAF_DISTINCT
+#ifdef HANDLE_MDNODE_LEAF_DISTINCT
+#define HANDLE_SPECIALIZED_MDNODE_LEAF_DISTINCT(CLASS)                        \
+  HANDLE_MDNODE_LEAF_DISTINCT(CLASS)
+#else
+#define HANDLE_SPECIALIZED_MDNODE_LEAF_DISTINCT(CLASS)                        \
+  HANDLE_SPECIALIZED_MDNODE_LEAF(CLASS)
+#endif
+#endif
+
+// Handler for uniquable leaf nodes under MDNode.
 #ifndef HANDLE_MDNODE_LEAF_UNIQUABLE
 #define HANDLE_MDNODE_LEAF_UNIQUABLE(CLASS) HANDLE_MDNODE_LEAF(CLASS)
+#endif
+
+// Handler for uniqued leaf nodes under MDNode.
+#ifndef HANDLE_MDNODE_LEAF_UNIQUED
+#define HANDLE_MDNODE_LEAF_UNIQUED(CLASS) HANDLE_MDNODE_LEAF(CLASS)
+#endif
+
+// Handler for distinct leaf nodes under MDNode.
+#ifndef HANDLE_MDNODE_LEAF_DISTINCT
+#define HANDLE_MDNODE_LEAF_DISTINCT(CLASS) HANDLE_MDNODE_LEAF(CLASS)
 #endif
 
 // Handler for leaf nodes under MDNode.
@@ -80,7 +143,8 @@ HANDLE_METADATA_LEAF(DistinctMDOperandPlaceholder)
 HANDLE_MDNODE_BRANCH(MDNode)
 HANDLE_MDNODE_LEAF_UNIQUABLE(MDTuple)
 HANDLE_SPECIALIZED_MDNODE_LEAF_UNIQUABLE(DILocation)
-HANDLE_SPECIALIZED_MDNODE_LEAF_UNIQUABLE(DIExpression)
+HANDLE_SPECIALIZED_MDNODE_LEAF_UNIQUED(DIExpression)
+HANDLE_SPECIALIZED_MDNODE_LEAF_UNIQUED(DIExpr)
 HANDLE_SPECIALIZED_MDNODE_LEAF_UNIQUABLE(DIGlobalVariableExpression)
 HANDLE_SPECIALIZED_MDNODE_BRANCH(DINode)
 HANDLE_SPECIALIZED_MDNODE_LEAF_UNIQUABLE(GenericDINode)
@@ -93,7 +157,7 @@ HANDLE_SPECIALIZED_MDNODE_LEAF_UNIQUABLE(DIDerivedType)
 HANDLE_SPECIALIZED_MDNODE_LEAF_UNIQUABLE(DICompositeType)
 HANDLE_SPECIALIZED_MDNODE_LEAF_UNIQUABLE(DISubroutineType)
 HANDLE_SPECIALIZED_MDNODE_LEAF_UNIQUABLE(DIFile)
-HANDLE_SPECIALIZED_MDNODE_LEAF(DICompileUnit)
+HANDLE_SPECIALIZED_MDNODE_LEAF_DISTINCT(DICompileUnit)
 HANDLE_SPECIALIZED_MDNODE_BRANCH(DILocalScope)
 HANDLE_SPECIALIZED_MDNODE_LEAF_UNIQUABLE(DISubprogram)
 HANDLE_SPECIALIZED_MDNODE_BRANCH(DILexicalBlockBase)
@@ -104,6 +168,8 @@ HANDLE_SPECIALIZED_MDNODE_LEAF_UNIQUABLE(DIModule)
 HANDLE_SPECIALIZED_MDNODE_BRANCH(DITemplateParameter)
 HANDLE_SPECIALIZED_MDNODE_LEAF_UNIQUABLE(DITemplateTypeParameter)
 HANDLE_SPECIALIZED_MDNODE_LEAF_UNIQUABLE(DITemplateValueParameter)
+HANDLE_SPECIALIZED_MDNODE_BRANCH(DIObject)
+HANDLE_SPECIALIZED_MDNODE_LEAF_DISTINCT(DIFragment)
 HANDLE_SPECIALIZED_MDNODE_BRANCH(DIVariable)
 HANDLE_SPECIALIZED_MDNODE_LEAF_UNIQUABLE(DIGlobalVariable)
 HANDLE_SPECIALIZED_MDNODE_LEAF_UNIQUABLE(DILocalVariable)
@@ -114,16 +180,21 @@ HANDLE_SPECIALIZED_MDNODE_BRANCH(DIMacroNode)
 HANDLE_SPECIALIZED_MDNODE_LEAF_UNIQUABLE(DIMacro)
 HANDLE_SPECIALIZED_MDNODE_LEAF_UNIQUABLE(DIMacroFile)
 HANDLE_SPECIALIZED_MDNODE_LEAF_UNIQUABLE(DICommonBlock)
-HANDLE_SPECIALIZED_MDNODE_LEAF_UNIQUABLE(DIArgList)
+HANDLE_SPECIALIZED_MDNODE_LEAF_UNIQUED(DIArgList)
 HANDLE_SPECIALIZED_MDNODE_LEAF_UNIQUABLE(DIStringType)
 HANDLE_SPECIALIZED_MDNODE_LEAF_UNIQUABLE(DIGenericSubrange)
+HANDLE_SPECIALIZED_MDNODE_LEAF_DISTINCT(DILifetime)
 
 #undef HANDLE_METADATA
 #undef HANDLE_METADATA_LEAF
 #undef HANDLE_METADATA_BRANCH
 #undef HANDLE_MDNODE_LEAF
 #undef HANDLE_MDNODE_LEAF_UNIQUABLE
+#undef HANDLE_MDNODE_LEAF_UNIQUED
+#undef HANDLE_MDNODE_LEAF_DISTINCT
 #undef HANDLE_MDNODE_BRANCH
 #undef HANDLE_SPECIALIZED_MDNODE_LEAF
 #undef HANDLE_SPECIALIZED_MDNODE_LEAF_UNIQUABLE
+#undef HANDLE_SPECIALIZED_MDNODE_LEAF_UNIQUED
+#undef HANDLE_SPECIALIZED_MDNODE_LEAF_DISTINCT
 #undef HANDLE_SPECIALIZED_MDNODE_BRANCH

@@ -434,6 +434,121 @@ public:
   }
 };
 
+// FIXME(KZHURAVL): Write documentation for DIEDwarfExprAST.
+class DIEDwarfExprAST final {
+private:
+  class Node {
+  private:
+    DIOp::Variant Element;
+    // FIXME(KZHURAVL): Use pool/arena allocator instead of individual smart
+    // pointers?
+    SmallVector<std::unique_ptr<Node>> Children;
+
+    bool IsLowered = false;
+    Type *ResultType = nullptr;
+
+  public:
+    Node(DIOp::Variant Element)
+        : Element(Element) {}
+
+    const DIOp::Variant &getElement() const {
+      return Element;
+    }
+    const SmallVector<std::unique_ptr<Node>> &getChildren() const {
+      return Children;
+    }
+
+    DIOp::Variant &getElement() {
+      return Element;
+    }
+    SmallVector<std::unique_ptr<Node>> &getChildren() {
+      return Children;
+    }
+
+    const bool &isLowered() const {
+      return IsLowered;
+    }
+    const Type *getResultType() const {
+      return ResultType;
+    }
+
+    bool &isLowered() {
+      return IsLowered;
+    }
+    Type *getResultType() {
+      return ResultType;
+    }
+
+    void setIsLowered(bool IL = true) {
+      IsLowered = IL;
+    }
+    void setResultType(Type *RT) {
+      ResultType = RT;
+    }
+
+    size_t getChildrenCount() const;
+    Optional<uint8_t> getEquivalentDwarfOp() const;
+  };
+
+  const AsmPrinter &AP;
+  const TargetRegisterInfo &TRI;
+  DwarfCompileUnit &CU;
+  DIELoc &OutDIE;
+  std::unique_ptr<DIEDwarfExprAST::Node> Root;
+
+  void buildDIExprAST(const DIExpr &Expr);
+  void traverseAndLower(DIEDwarfExprAST::Node *OpNode);
+  void lower(DIEDwarfExprAST::Node *OpNode);
+  void lowerDIOpArg(DIEDwarfExprAST::Node *OpNode);
+  void lowerDIOpConstant(DIEDwarfExprAST::Node *OpNode);
+  void lowerDIOpPushLane(DIEDwarfExprAST::Node *OpNode);
+  void lowerDIOpReferrer(DIEDwarfExprAST::Node *OpNode);
+  void lowerDIOpTypeObject(DIEDwarfExprAST::Node *OpNode);
+  void lowerDIOpAddrOf(DIEDwarfExprAST::Node *OpNode);
+  void lowerDIOpConvert(DIEDwarfExprAST::Node *OpNode);
+  void lowerDIOpDeref(DIEDwarfExprAST::Node *OpNode);
+  void lowerDIOpExtend(DIEDwarfExprAST::Node *OpNode);
+  void lowerDIOpRead(DIEDwarfExprAST::Node *OpNode);
+  void lowerDIOpReinterpret(DIEDwarfExprAST::Node *OpNode);
+  void lowerDIOpAdd(DIEDwarfExprAST::Node *OpNode);
+  void lowerDIOpBitOffset(DIEDwarfExprAST::Node *OpNode);
+  void lowerDIOpByteOffset(DIEDwarfExprAST::Node *OpNode);
+  void lowerDIOpDiv(DIEDwarfExprAST::Node *OpNode);
+  void lowerDIOpMul(DIEDwarfExprAST::Node *OpNode);
+  void lowerDIOpShl(DIEDwarfExprAST::Node *OpNode);
+  void lowerDIOpShr(DIEDwarfExprAST::Node *OpNode);
+  void lowerDIOpSub(DIEDwarfExprAST::Node *OpNode);
+  void lowerDIOpSelect(DIEDwarfExprAST::Node *OpNode);
+  void lowerDIOpComposite(DIEDwarfExprAST::Node *OpNode);
+
+  void lowerBitOrByteOffset(DIEDwarfExprAST::Node *OpNode);
+  void lowerMathOp(DIEDwarfExprAST::Node *OpNode);
+  void readToValue(DIEDwarfExprAST::Node *OpNode, bool NeedsSwap);
+
+  void emitReg(int32_t DwarfReg, const char *Comment = nullptr);
+  void emitSigned(int64_t SignedValue);
+  void emitUnsigned(uint64_t UnsignedValue);
+
+  DIELoc &getActiveDIE();
+  void emitDwarfData1(uint8_t Data1Value);
+  void emitDwarfOp(uint8_t DwarfOpValue, const char *Comment = nullptr);
+  void emitDwarfSigned(int64_t SignedValue);
+  void emitDwarfUnsigned(uint64_t UnsignedValue);
+
+public:
+  DIEDwarfExprAST(const AsmPrinter &AP, const TargetRegisterInfo &TRI,
+                  const DIExpr &Expr, DwarfCompileUnit &CU, DIELoc &DIE)
+      : AP(AP), TRI(TRI), CU(CU), OutDIE(DIE) {
+    buildDIExprAST(Expr);
+  }
+  DIEDwarfExprAST(const DIEDwarfExprAST &) = default;
+
+  DIELoc *finalize() {
+    traverseAndLower(Root.get());
+    return &OutDIE;
+  }
+};
+
 } // end namespace llvm
 
 #endif // LLVM_LIB_CODEGEN_ASMPRINTER_DWARFEXPRESSION_H

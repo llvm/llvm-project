@@ -23,6 +23,7 @@ User Guide for AMDGPU Backend
    AMDGPUInstructionSyntax
    AMDGPUInstructionNotation
    AMDGPUDwarfExtensionsForHeterogeneousDebugging
+   AMDGPULLVMExtensionsForHeterogeneousDebugging
 
 Introduction
 ============
@@ -1702,6 +1703,10 @@ object executable code and data to the source language constructs. It can be
 used by tools such as debuggers and profilers. It uses features defined in
 :doc:`AMDGPUDwarfExtensionsForHeterogeneousDebugging` that are made available in
 DWARF Version 4 and DWARF Version 5 as an LLVM vendor extension.
+
+AMDGPU uses LLVM features defined in
+:doc:`AMDGPULLVMExtensionsForHeterogeneousDebugging` to implement the generation
+of DWARF.
 
 This section defines the AMDGPU target architecture specific DWARF mappings.
 

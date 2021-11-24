@@ -1,0 +1,125 @@
+//===- llvm/IR/DIExprOps.def - DIExpr Op definitions ------------*- C++ -*-===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+//
+// Macros for running through all DIExpr operations.
+//
+//===----------------------------------------------------------------------===//
+
+#if !(defined HANDLE_OP_NAME || defined HANDLE_OP0 || defined HANDLE_OP1 ||    \
+      defined HANDLE_OP2)
+#error "Missing macro definition of HANDLE_OP*"
+#endif
+
+#if defined HANDLE_OP_NAME &&                                                  \
+    (defined HANDLE_OP0 || defined HANDLE_OP1 || defined HANDLE_OP2)
+#error "HANDLE_OP_NAME cannot be defined together with HANDLE_OP{0,1,2}"
+#endif
+
+/// If defined, HANDLE_OP_NAME is invoked for each DIExpr operation.
+///
+/// It is invoked with one argument, which is the identifier for the name of
+/// the operation.
+///
+/// If defined, none of HANDLE_OP{0,1,2} may be defined.
+#ifndef HANDLE_OP_NAME
+#define HANDLE_OP_NAME(NAME)
+#endif
+
+/// If defined, HANDLE_OP0 is invoked once for each DIExpr operation which has
+/// exactly zero arguments.
+///
+/// It is invoked with one argument, which is the identifier for the name of
+/// the operation.
+#ifndef HANDLE_OP0
+#define HANDLE_OP0(NAME) HANDLE_OP_NAME(NAME)
+#endif
+
+/// If defined, HANDLE_OP1 is invoked once for each DIExpr operation which has
+/// exactly one argument.
+///
+/// It is invoked with three arguments:
+///
+/// 1. The identifier for the name of the operation.
+/// 2. The type of the first argument to the operation.
+/// 3. The identifier for the first argument to the operation.
+#ifndef HANDLE_OP1
+#define HANDLE_OP1(NAME, ...) HANDLE_OP_NAME(NAME)
+#endif
+
+/// If defined, HANDLE_OP2 is invoked once for each DIExpr operation which has
+/// exactly two arguments.
+///
+/// It is invoked with five arguments:
+///
+/// 1. The identifier for the name of the operation.
+/// 2. The type of the first argument to the operation.
+/// 3. The identifier for the first argument to the operation.
+/// 4. The type of the second argument to the operation.
+/// 5. The identifier for the second argument to the operation.
+#ifndef HANDLE_OP2
+#define HANDLE_OP2(NAME, ...) HANDLE_OP_NAME(NAME)
+#endif
+
+/// If defined, SEPARATOR is invoked between each invocation of the HANDLE_OP*
+/// macros.
+#ifndef SEPARATOR
+#define SEPARATOR
+#endif
+
+// FIXME: It seems like `Type` doesn't need to be `const` correct? For some
+// reason `TypePrinting` in `AsmPrinter` has no `const` variant.
+
+// Note that the order of parameters here does not necessarily correspond to
+// the order in the IR or bitcode.
+HANDLE_OP1(Referrer, Type *, ResultType)
+SEPARATOR
+HANDLE_OP2(Arg, uint32_t, Index, Type *, ResultType)
+SEPARATOR
+HANDLE_OP1(TypeObject, Type *, ResultType)
+SEPARATOR
+HANDLE_OP1(Constant, ConstantData *, LiteralValue)
+SEPARATOR
+HANDLE_OP1(Convert, Type *, ResultType)
+SEPARATOR
+HANDLE_OP1(Reinterpret, Type *, ResultType)
+SEPARATOR
+HANDLE_OP1(BitOffset, Type *, ResultType)
+SEPARATOR
+HANDLE_OP1(ByteOffset, Type *, ResultType)
+SEPARATOR
+HANDLE_OP2(Composite, uint32_t, Count, Type *, ResultType)
+SEPARATOR
+HANDLE_OP1(Extend, uint32_t, Count)
+SEPARATOR
+HANDLE_OP0(Select)
+SEPARATOR
+HANDLE_OP1(AddrOf, uint32_t, AddressSpace)
+SEPARATOR
+HANDLE_OP1(Deref, Type *, ResultType)
+SEPARATOR
+HANDLE_OP0(Read)
+SEPARATOR
+HANDLE_OP0(Add)
+SEPARATOR
+HANDLE_OP0(Sub)
+SEPARATOR
+HANDLE_OP0(Mul)
+SEPARATOR
+HANDLE_OP0(Div)
+SEPARATOR
+HANDLE_OP0(Shr)
+SEPARATOR
+HANDLE_OP0(Shl)
+SEPARATOR
+HANDLE_OP1(PushLane, Type *, ResultType)
+
+#undef SEPARATOR
+#undef HANDLE_OP2
+#undef HANDLE_OP1
+#undef HANDLE_OP0
+#undef HANDLE_OP_NAME

@@ -28,6 +28,7 @@ namespace llvm {
 class DbgDeclareInst;
 class DbgValueInst;
 class DbgVariableIntrinsic;
+class DbgDefKillIntrinsic;
 class Instruction;
 class Module;
 
@@ -79,6 +80,10 @@ void updateLoopMetadataDebugLocations(
 /// Return Debug Info Metadata Version by checking module flags.
 unsigned getDebugMetadataVersionFromModule(const Module &M);
 
+/// Return true if Debug Info Metadata Version for the module is
+/// DEBUG_METADATA_VERSION_HETEROGENEOUS_DWARF.
+bool isHeterogeneousDebug(const Module &M);
+
 /// Utility to find all debug info in a module.
 ///
 /// DebugInfoFinder tries to list all debug info MDNodes used in a module. To
@@ -102,6 +107,12 @@ public:
   /// Process subprogram.
   void processSubprogram(DISubprogram *SP);
 
+  /// Process DILifetime
+  void processLifetime(DILifetime *DL);
+
+  /// Process DIObject
+  void processObject(DIObject *DO);
+
   /// Clear all lists.
   void reset();
 
@@ -111,6 +122,9 @@ private:
   void processType(DIType *DT);
   bool addCompileUnit(DICompileUnit *CU);
   bool addGlobalVariable(DIGlobalVariableExpression *DIG);
+  // FIXME: The use of "heterogeneous" is just to disambiguate from the
+  // (arguably misnamed) addGlobalVariable. We could instead rename both.
+  bool addHeterogeneousGlobalVariable(DIGlobalVariable *DGV);
   bool addScope(DIScope *Scope);
   bool addSubprogram(DISubprogram *SP);
   bool addType(DIType *DT);
@@ -121,6 +135,8 @@ public:
   using subprogram_iterator = SmallVectorImpl<DISubprogram *>::const_iterator;
   using global_variable_expression_iterator =
       SmallVectorImpl<DIGlobalVariableExpression *>::const_iterator;
+  using heterogeneous_global_variable_iterator =
+      SmallVectorImpl<DIGlobalVariable *>::const_iterator;
   using type_iterator = SmallVectorImpl<DIType *>::const_iterator;
   using scope_iterator = SmallVectorImpl<DIScope *>::const_iterator;
 
@@ -136,6 +152,11 @@ public:
     return make_range(GVs.begin(), GVs.end());
   }
 
+  iterator_range<heterogeneous_global_variable_iterator>
+  heterogeneous_global_variables() const {
+    return make_range(HGVs.begin(), HGVs.end());
+  }
+
   iterator_range<type_iterator> types() const {
     return make_range(TYs.begin(), TYs.end());
   }
@@ -146,6 +167,7 @@ public:
 
   unsigned compile_unit_count() const { return CUs.size(); }
   unsigned global_variable_count() const { return GVs.size(); }
+  unsigned heterogeneous_global_variable_count() const { return HGVs.size(); }
   unsigned subprogram_count() const { return SPs.size(); }
   unsigned type_count() const { return TYs.size(); }
   unsigned scope_count() const { return Scopes.size(); }
@@ -154,6 +176,7 @@ private:
   SmallVector<DICompileUnit *, 8> CUs;
   SmallVector<DISubprogram *, 8> SPs;
   SmallVector<DIGlobalVariableExpression *, 8> GVs;
+  SmallVector<DIGlobalVariable *, 8> HGVs;
   SmallVector<DIType *, 8> TYs;
   SmallVector<DIScope *, 8> Scopes;
   SmallPtrSet<const MDNode *, 32> NodesSeen;

@@ -920,6 +920,22 @@ static void emitKill(const MachineInstr *MI, AsmPrinter &AP) {
   AP.OutStreamer->AddBlankLine();
 }
 
+/// emitDebugDefComment - This method handles the target-independent form
+/// of DBG_DEF, returning true if it was able to do so.  A false return
+/// means the target will need to handle MI in EmitInstruction.
+static bool emitDebugDefComment(const MachineInstr *MI, AsmPrinter &AP) {
+  // FIXME(KZHURAVL): Implement emitDebugDefComment.
+  return true;
+}
+
+/// emitDebugKillComment - This method handles the target-independent form
+/// of DBG_KILL, returning true if it was able to do so.  A false return
+/// means the target will need to handle MI in EmitInstruction.
+static bool emitDebugKillComment(const MachineInstr *MI, AsmPrinter &AP) {
+  // FIXME(KZHURAVL): Implement emitDebugKillComment.
+  return true;
+}
+
 /// emitDebugValueComment - This method handles the target-independent form
 /// of DBG_VALUE, returning true if it was able to do so.  A false return
 /// means the target will need to handle MI in EmitInstruction.
@@ -1307,6 +1323,18 @@ void AsmPrinter::emitFunctionBody() {
       case TargetOpcode::INLINEASM:
       case TargetOpcode::INLINEASM_BR:
         emitInlineAsm(&MI);
+        break;
+      case TargetOpcode::DBG_DEF:
+        if (isVerbose()) {
+          if (!emitDebugDefComment(&MI, *this))
+            emitInstruction(&MI);
+        }
+        break;
+      case TargetOpcode::DBG_KILL:
+        if (isVerbose()) {
+          if (!emitDebugKillComment(&MI, *this))
+            emitInstruction(&MI);
+        }
         break;
       case TargetOpcode::DBG_VALUE:
       case TargetOpcode::DBG_VALUE_LIST:

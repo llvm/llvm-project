@@ -362,8 +362,7 @@ class PlaceholderQueue {
 
 public:
   ~PlaceholderQueue() {
-    assert(empty() &&
-           "PlaceholderQueue hasn't been flushed before being destroyed");
+    assert(empty() && "PlaceholderQueue hasn't been flushed before being destroyed");
   }
   bool empty() const { return PHs.empty(); }
   DistinctMDOperandPlaceholder &getPlaceholderOp(unsigned ID);
@@ -546,7 +545,7 @@ class MetadataLoader::MetadataLoaderImpl {
         if (auto *DDI = dyn_cast<DbgDeclareInst>(&I))
           if (auto *DIExpr = DDI->getExpression())
             if (DIExpr->startsWithDeref() &&
-                isa_and_nonnull<Argument>(DDI->getAddress())) {
+                dyn_cast_or_null<Argument>(DDI->getAddress())) {
               SmallVector<uint64_t, 8> Ops;
               Ops.append(std::next(DIExpr->elements_begin()),
                          DIExpr->elements_end());
@@ -555,7 +554,7 @@ class MetadataLoader::MetadataLoaderImpl {
   }
 
   /// Upgrade the expression from previous versions.
-  Error upgradeDIExpression(uint64_t FromVersion,
+  Error upgradeDIExpression(uint64_t FromVersion, bool &IsDistinct,
                             MutableArrayRef<uint64_t> &Expr,
                             SmallVectorImpl<uint64_t> &Buffer) {
     auto N = Expr.size();
@@ -604,7 +603,7 @@ class MetadataLoader::MetadataLoaderImpl {
         // If the expression is malformed, make sure we don't
         // copy more elements than we should.
         HistoricSize = std::min(SubExpr.size(), HistoricSize);
-        ArrayRef<uint64_t> Args = SubExpr.slice(1, HistoricSize - 1);
+        ArrayRef<uint64_t> Args = SubExpr.slice(1, HistoricSize-1);
 
         switch (SubExpr.front()) {
         case dwarf::DW_OP_plus:
@@ -629,6 +628,9 @@ class MetadataLoader::MetadataLoaderImpl {
       LLVM_FALLTHROUGH;
     }
     case 3:
+      IsDistinct = false;
+      LLVM_FALLTHROUGH;
+    case 4:
       // Up-to-date!
       break;
     }
@@ -875,6 +877,9 @@ MetadataLoader::MetadataLoaderImpl::lazyLoadModuleMetadataBlock() {
       case bitc::METADATA_IMPORTED_ENTITY:
       case bitc::METADATA_GLOBAL_VAR_EXPR:
       case bitc::METADATA_GENERIC_SUBRANGE:
+      case bitc::METADATA_EXPR:
+      case bitc::METADATA_FRAGMENT:
+      case bitc::METADATA_LIFETIME:
         // We don't expect to see any of these, if we see one, give up on
         // lazy-loading and fallback.
         MDStringRef.clear();
@@ -1409,9 +1414,8 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
       return error("Invalid record");
 
     IsDistinct = Record[0];
-    DINode::DIFlags Flags = (Record.size() > 6)
-                                ? static_cast<DINode::DIFlags>(Record[6])
-                                : DINode::FlagZero;
+    DINode::DIFlags Flags = (Record.size() > 6) ?
+                    static_cast<DINode::DIFlags>(Record[6]) : DINode::FlagZero;
 
     MetadataList.assignValue(
         GET_OR_DISTINCT(DIBasicType,
@@ -1672,9 +1676,9 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
       SPFlags |= DISubprogram::SPFlagMainSubprogram;
     else if (!HasSPFlags)
       SPFlags = DISubprogram::toSPFlags(
-          /*IsLocalToUnit=*/Record[7], /*IsDefinition=*/Record[8],
-          /*IsOptimized=*/Record[14], /*Virtuality=*/Record[11],
-          /*DIFlagMainSubprogram=*/HasOldMainSubprogramFlag);
+                    /*IsLocalToUnit=*/Record[7], /*IsDefinition=*/Record[8],
+                    /*IsOptimized=*/Record[14], /*Virtuality=*/Record[11],
+                    /*DIFlagMainSubprogram*/HasOldMainSubprogramFlag);
 
     // All definitions should be distinct.
     IsDistinct = (Record[0] & 1) || (SPFlags & DISubprogram::SPFlagDefinition);
@@ -1711,26 +1715,26 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
     DISubprogram *SP = GET_OR_DISTINCT(
         DISubprogram,
         (Context,
-         getDITypeRefOrNull(Record[1]),           // scope
-         getMDString(Record[2]),                  // name
-         getMDString(Record[3]),                  // linkageName
-         getMDOrNull(Record[4]),                  // file
-         Record[5],                               // line
-         getMDOrNull(Record[6]),                  // type
-         Record[7 + OffsetA],                     // scopeLine
-         getDITypeRefOrNull(Record[8 + OffsetA]), // containingType
-         Record[10 + OffsetA],                    // virtualIndex
-         HasThisAdj ? Record[16 + OffsetB] : 0,   // thisAdjustment
-         Flags,                                   // flags
-         SPFlags,                                 // SPFlags
-         HasUnit ? CUorFn : nullptr,              // unit
-         getMDOrNull(Record[13 + OffsetB]),       // templateParams
-         getMDOrNull(Record[14 + OffsetB]),       // declaration
-         getMDOrNull(Record[15 + OffsetB]),       // retainedNodes
+         getDITypeRefOrNull(Record[1]),                     // scope
+         getMDString(Record[2]),                            // name
+         getMDString(Record[3]),                            // linkageName
+         getMDOrNull(Record[4]),                            // file
+         Record[5],                                         // line
+         getMDOrNull(Record[6]),                            // type
+         Record[7 + OffsetA],                               // scopeLine
+         getDITypeRefOrNull(Record[8 + OffsetA]),           // containingType
+         Record[10 + OffsetA],                              // virtualIndex
+         HasThisAdj ? Record[16 + OffsetB] : 0,             // thisAdjustment
+         Flags,                                             // flags
+         SPFlags,                                           // SPFlags
+         HasUnit ? CUorFn : nullptr,                        // unit
+         getMDOrNull(Record[13 + OffsetB]),                 // templateParams
+         getMDOrNull(Record[14 + OffsetB]),                 // declaration
+         getMDOrNull(Record[15 + OffsetB]),                 // retainedNodes
          HasThrownTypes ? getMDOrNull(Record[17 + OffsetB])
-                        : nullptr, // thrownTypes
+                        : nullptr,                          // thrownTypes
          HasAnnotations ? getMDOrNull(Record[18 + OffsetB])
-                        : nullptr // annotations
+                        : nullptr                           // annotations
          ));
     MetadataList.assignValue(SP, NextMetadataNo);
     NextMetadataNo++;
@@ -1877,13 +1881,13 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
         Annotations = getMDOrNull(Record[12]);
 
       MetadataList.assignValue(
-          GET_OR_DISTINCT(DIGlobalVariable,
-                          (Context, getMDOrNull(Record[1]),
-                           getMDString(Record[2]), getMDString(Record[3]),
-                           getMDOrNull(Record[4]), Record[5],
-                           getDITypeRefOrNull(Record[6]), Record[7], Record[8],
-                           getMDOrNull(Record[9]), getMDOrNull(Record[10]),
-                           Record[11], Annotations)),
+          GET_OR_DISTINCT(
+              DIGlobalVariable,
+              (Context, getMDOrNull(Record[1]), getMDString(Record[2]),
+               getMDString(Record[3]), getMDOrNull(Record[4]), Record[5],
+               getDITypeRefOrNull(Record[6]), Record[7], Record[8],
+               getMDOrNull(Record[9]), getMDOrNull(Record[10]), Record[11],
+               Annotations)),
           NextMetadataNo);
 
       NextMetadataNo++;
@@ -1891,12 +1895,13 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
       // No upgrade necessary. A null field will be introduced to indicate
       // that no parameter information is available.
       MetadataList.assignValue(
-          GET_OR_DISTINCT(
-              DIGlobalVariable,
-              (Context, getMDOrNull(Record[1]), getMDString(Record[2]),
-               getMDString(Record[3]), getMDOrNull(Record[4]), Record[5],
-               getDITypeRefOrNull(Record[6]), Record[7], Record[8],
-               getMDOrNull(Record[10]), nullptr, Record[11], nullptr)),
+          GET_OR_DISTINCT(DIGlobalVariable,
+                          (Context, getMDOrNull(Record[1]),
+                           getMDString(Record[2]), getMDString(Record[3]),
+                           getMDOrNull(Record[4]), Record[5],
+                           getDITypeRefOrNull(Record[6]), Record[7], Record[8],
+                           getMDOrNull(Record[10]), nullptr, Record[11],
+                           nullptr)),
           NextMetadataNo);
 
       NextMetadataNo++;
@@ -1974,7 +1979,8 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
                          getMDString(Record[2 + HasTag]),
                          getMDOrNull(Record[3 + HasTag]), Record[4 + HasTag],
                          getDITypeRefOrNull(Record[5 + HasTag]),
-                         Record[6 + HasTag], Flags, AlignInBits, Annotations)),
+                         Record[6 + HasTag], Flags, AlignInBits,
+                         Annotations)),
         NextMetadataNo);
     NextMetadataNo++;
     break;
@@ -1985,9 +1991,10 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
 
     IsDistinct = Record[0] & 1;
     MetadataList.assignValue(
-        GET_OR_DISTINCT(DILabel, (Context, getMDOrNull(Record[1]),
-                                  getMDString(Record[2]),
-                                  getMDOrNull(Record[3]), Record[4])),
+        GET_OR_DISTINCT(DILabel,
+                        (Context, getMDOrNull(Record[1]),
+                         getMDString(Record[2]),
+                         getMDOrNull(Record[3]), Record[4])),
         NextMetadataNo);
     NextMetadataNo++;
     break;
@@ -2001,11 +2008,166 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
     auto Elts = MutableArrayRef<uint64_t>(Record).slice(1);
 
     SmallVector<uint64_t, 6> Buffer;
-    if (Error Err = upgradeDIExpression(Version, Elts, Buffer))
+    if (Error Err = upgradeDIExpression(Version, IsDistinct, Elts, Buffer))
       return Err;
 
-    MetadataList.assignValue(GET_OR_DISTINCT(DIExpression, (Context, Elts)),
-                             NextMetadataNo);
+    if (IsDistinct)
+      return error("Invalid record");
+
+    MetadataList.assignValue(DIExpression::get(Context, Elts), NextMetadataNo);
+    NextMetadataNo++;
+    break;
+  }
+  case bitc::METADATA_EXPR: {
+    if (Record.size() < 1)
+      return error("Invalid record");
+
+    uint64_t Version = Record[0];
+    if (Version != 0)
+      return error("Invalid record: unknown DIExpr version " + Twine(Version));
+
+    DIExprBuilder Builder(Context);
+
+    for (auto Elems = ArrayRef<uint64_t>(Record).slice(1); Elems.size() > 0;) {
+      auto DIOpID = Elems[0];
+      Elems = Elems.slice(1);
+      switch (DIOpID) {
+#define HANDLE_OP0(NAME)                                                       \
+  case DIOp::NAME::getBitcodeID():                                             \
+    Builder.append<DIOp::NAME>();                                              \
+    break;
+#include "llvm/IR/DIExprOps.def"
+      case DIOp::Referrer::getBitcodeID(): {
+        if (Elems.size() < 1)
+          return error("Invalid record");
+        Type *Ty = getTypeByID(Elems[0]);
+        if (!Ty || !Ty->isFirstClassType())
+          return error("Invalid record");
+        Builder.append<DIOp::Referrer>(Ty);
+        Elems = Elems.slice(1);
+        break;
+      }
+      case DIOp::Arg::getBitcodeID(): {
+        if (Elems.size() < 2)
+          return error("Invalid record");
+        Type *Ty = getTypeByID(Elems[0]);
+        if (!Ty || !Ty->isFirstClassType())
+          return error("Invalid record");
+        Builder.append<DIOp::Arg>(Elems[1], Ty);
+        Elems = Elems.slice(2);
+        break;
+      }
+      case DIOp::TypeObject::getBitcodeID(): {
+        if (Elems.size() < 1)
+          return error("Invalid record");
+        Type *Ty = getTypeByID(Elems[0]);
+        if (!Ty || !Ty->isFirstClassType())
+          return error("Invalid record");
+        Builder.append<DIOp::TypeObject>(Ty);
+        Elems = Elems.slice(1);
+        break;
+      }
+      case DIOp::Constant::getBitcodeID(): {
+        if (Elems.size() < 2)
+          return error("Invalid record");
+        Type *Ty = getTypeByID(Elems[0]);
+        if (!Ty || !Ty->isFirstClassType())
+          return error("Invalid record");
+        Constant *V = ValueList.getConstantFwdRef(Elems[1], Ty);
+        if (!V || !isa<ConstantData>(V))
+          return error("Invalid record");
+        Builder.append<DIOp::Constant>(cast<ConstantData>(V));
+        Elems = Elems.slice(2);
+        break;
+      }
+      case DIOp::Convert::getBitcodeID(): {
+        if (Elems.size() < 1)
+          return error("Invalid record");
+        Type *Ty = getTypeByID(Elems[0]);
+        if (!Ty || !Ty->isFirstClassType())
+          return error("Invalid record");
+        Builder.append<DIOp::Convert>(Ty);
+        Elems = Elems.slice(1);
+        break;
+      }
+      case DIOp::Reinterpret::getBitcodeID(): {
+        if (Elems.size() < 1)
+          return error("Invalid record");
+        Type *Ty = getTypeByID(Elems[0]);
+        if (!Ty || !Ty->isFirstClassType())
+          return error("Invalid record");
+        Builder.append<DIOp::Reinterpret>(Ty);
+        Elems = Elems.slice(1);
+        break;
+      }
+      case DIOp::BitOffset::getBitcodeID(): {
+        if (Elems.size() < 1)
+          return error("Invalid record");
+        Type *Ty = getTypeByID(Elems[0]);
+        if (!Ty || !Ty->isFirstClassType())
+          return error("Invalid record");
+        Builder.append<DIOp::BitOffset>(Ty);
+        Elems = Elems.slice(1);
+        break;
+      }
+      case DIOp::ByteOffset::getBitcodeID(): {
+        if (Elems.size() < 1)
+          return error("Invalid record");
+        Type *Ty = getTypeByID(Elems[0]);
+        if (!Ty || !Ty->isFirstClassType())
+          return error("Invalid record");
+        Builder.append<DIOp::ByteOffset>(Ty);
+        Elems = Elems.slice(1);
+        break;
+      }
+      case DIOp::Composite::getBitcodeID(): {
+        if (Elems.size() < 2)
+          return error("Invalid record");
+        Type *Ty = getTypeByID(Elems[0]);
+        if (!Ty || !Ty->isFirstClassType())
+          return error("Invalid record");
+        Builder.append<DIOp::Composite>(Elems[1], Ty);
+        Elems = Elems.slice(2);
+        break;
+      }
+      case DIOp::Extend::getBitcodeID(): {
+        if (Elems.size() < 1)
+          return error("Invalid record");
+        Builder.append<DIOp::Extend>(Elems[0]);
+        Elems = Elems.slice(1);
+        break;
+      }
+      case DIOp::AddrOf::getBitcodeID(): {
+        if (Elems.size() < 1)
+          return error("Invalid record");
+        Builder.append<DIOp::AddrOf>(Elems[0]);
+        Elems = Elems.slice(1);
+        break;
+      }
+      case DIOp::Deref::getBitcodeID(): {
+        if (Elems.size() < 1)
+          return error("Invalid record");
+        Type *Ty = getTypeByID(Elems[0]);
+        if (!Ty || !Ty->isFirstClassType())
+          return error("Invalid record");
+        Builder.append<DIOp::Deref>(Ty);
+        Elems = Elems.slice(1);
+        break;
+      }
+      case DIOp::PushLane::getBitcodeID(): {
+        if (Elems.size() < 1)
+          return error("Invalid record");
+        Type *Ty = getTypeByID(Elems[0]);
+        if (!Ty || !Ty->isFirstClassType())
+          return error("Invalid record");
+        Builder.append<DIOp::PushLane>(Ty);
+        Elems = Elems.slice(1);
+        break;
+      }
+      }
+    }
+
+    MetadataList.assignValue(Builder.intoExpr(), NextMetadataNo);
     NextMetadataNo++;
     break;
   }
@@ -2090,6 +2252,15 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
         return Err;
     break;
   }
+  case bitc::METADATA_FRAGMENT: {
+    if (Record.size() != 0)
+      return error("Invalid record");
+    IsDistinct = true;
+    MetadataList.assignValue(DIFragment::getDistinct(Context),
+                             NextMetadataNo);
+    NextMetadataNo++;
+    break;
+  }
   case bitc::METADATA_KIND: {
     // Support older bitcode files that had METADATA_KIND records in a
     // block with METADATA_BLOCK_ID.
@@ -2111,6 +2282,19 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
     }
 
     MetadataList.assignValue(DIArgList::get(Context, Elts), NextMetadataNo);
+    NextMetadataNo++;
+    break;
+  }
+  case bitc::METADATA_LIFETIME: {
+    if (Record.size() < 2)
+      return error("Invalid record");
+    Metadata *Obj = getMD(Record[0]);
+    Metadata *Loc = getMD(Record[1]);
+    SmallVector<Metadata *> Args;
+    for (auto ArgID : ArrayRef<uint64_t>(Record).slice(2))
+      Args.push_back(getMD(ArgID));
+    MetadataList.assignValue(DILifetime::getDistinct(Context, Obj, Loc, Args),
+                             NextMetadataNo);
     NextMetadataNo++;
     break;
   }

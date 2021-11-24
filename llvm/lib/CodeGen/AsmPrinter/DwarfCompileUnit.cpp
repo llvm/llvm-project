@@ -850,6 +850,17 @@ DIE *DwarfCompileUnit::constructVariableDIEImpl(const DbgVariable &DV,
     return VariableDie;
   }
 
+  // Check if it is a heterogeneous dwarf.
+  if (const auto *NDV = dyn_cast<NewDbgVariable>(&DV)) {
+    for (auto &Lifetime : NDV->getLifetimes()) {
+      DIELoc *Loc = new (DIEValueAllocator) DIELoc;
+      DIEDwarfExprAST ExprAST(*Asm, *Asm->MF->getSubtarget().getRegisterInfo(),
+                              *Lifetime->getLocation(), *this, *Loc);
+      addBlock(*VariableDie, dwarf::DW_AT_location, ExprAST.finalize());
+    }
+    return VariableDie;
+  }
+
   // .. else use frame index.
   if (!DV.hasFrameIndexExprs())
     return VariableDie;
@@ -1361,7 +1372,7 @@ void DwarfCompileUnit::createAbstractEntity(const DINode *Node,
   assert(Scope && Scope->isAbstractScope());
   auto &Entity = getAbstractEntities()[Node];
   if (isa<const DILocalVariable>(Node)) {
-    Entity = std::make_unique<DbgVariable>(
+    Entity = std::make_unique<OldDbgVariable>(
                         cast<const DILocalVariable>(Node), nullptr /* IA */);;
     DU->addScopeVariable(Scope, cast<DbgVariable>(Entity.get()));
   } else if (isa<const DILabel>(Node)) {

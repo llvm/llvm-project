@@ -14,6 +14,7 @@
 #define LLVM_CODEGEN_TARGETFRAMELOWERING_H
 
 #include "llvm/CodeGen/MachineBasicBlock.h"
+#include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/Support/TypeSize.h"
 #include <vector>
 
@@ -296,6 +297,14 @@ public:
   /// returned directly, and the base register is returned via FrameReg.
   virtual StackOffset getFrameIndexReference(const MachineFunction &MF, int FI,
                                              Register &FrameReg) const;
+
+  /// insertFrameLocation - This method should insert an expression intoto @p
+  /// Builder at @p BI which yields the location description of type @p
+  /// ResultType for the base of the current frame of @p MF, and return the
+  /// iterator to one past the last element inserted.
+  virtual DIExprBuilder::Iterator
+  insertFrameLocation(const MachineFunction &MF, DIExprBuilder &Builder,
+                      DIExprBuilder::Iterator BI, Type *ResultType) const;
 
   /// Same as \c getFrameIndexReference, except that the stack pointer (as
   /// opposed to the frame pointer) will be the preferred value for \p
