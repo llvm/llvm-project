@@ -577,7 +577,7 @@ define amdgpu_kernel void @v_sext_in_reg_i1_i16(i16 addrspace(3)* %out, i16 addr
 ; GCN: {{buffer|flat|global}}_load_ushort [[VAL0:v[0-9]+]]
 ; GCN: {{buffer|flat|global}}_load_ushort [[VAL1:v[0-9]+]]
 
-; SI: v_lshl_b32_e32 [[REG:v[0-9]+]], [[VAL0]], [[VAL1]]
+; SI: v_lshlrev_b32_e32 [[REG:v[0-9]+]], [[VAL1]], [[VAL0]]
 ; GFX89: v_lshlrev_b16_e32 [[REG:v[0-9]+]], [[VAL1]], [[VAL0]]
 
 ; GCN: v_bfe_i32 [[BFE:v[0-9]+]], [[REG]], 0, 1{{$}}
