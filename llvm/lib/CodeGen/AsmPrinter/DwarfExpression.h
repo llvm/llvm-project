@@ -440,6 +440,8 @@ private:
   class Node {
   private:
     DIOp::Variant Element;
+    // FIXME(KZHURAVL): Use pool/arena allocator instead of individual smart
+    // pointers?
     SmallVector<std::unique_ptr<Node>> Children;
 
     bool IsLowered = false;
@@ -521,7 +523,7 @@ private:
 
   void lowerBitOrByteOffset(DIEDwarfExprAST::Node *OpNode);
   void lowerMathOp(DIEDwarfExprAST::Node *OpNode);
-  void unstackify(DIEDwarfExprAST::Node *OpNode, bool NeedsSwap);
+  void readToValue(DIEDwarfExprAST::Node *OpNode, bool NeedsSwap);
 
   void emitReg(int32_t DwarfReg, const char *Comment = nullptr);
   void emitSigned(int64_t SignedValue);

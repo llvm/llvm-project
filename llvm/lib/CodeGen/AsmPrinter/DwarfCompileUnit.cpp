@@ -851,9 +851,7 @@ DIE *DwarfCompileUnit::constructVariableDIEImpl(const DbgVariable &DV,
   }
 
   // Check if it is a heterogeneous dwarf.
-  if (NewDbgVariable::classof(&DV)) {
-    const NewDbgVariable *NDV = dyn_cast<NewDbgVariable>(&DV);
-
+  if (const auto *NDV = dyn_cast<NewDbgVariable>(&DV)) {
     for (auto &Lifetime : NDV->getLifetimes()) {
       DIELoc *Loc = new (DIEValueAllocator) DIELoc;
       DIEDwarfExprAST ExprAST(*Asm, *Asm->MF->getSubtarget().getRegisterInfo(),

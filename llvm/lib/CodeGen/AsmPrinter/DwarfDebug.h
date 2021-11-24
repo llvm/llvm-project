@@ -108,6 +108,8 @@ public:
 // FIXME(KZHURAVL): Write documentation for DbgVariable.
 class DbgVariable : public DbgEntity {
 protected:
+  // FIXME(KZHURAVL): Move FrameIndexExpr and getFrameIndexExprs into
+  // OldDbgVariable.
   struct FrameIndexExpr {
     int FI;
     const DIExpression *Expr;
@@ -282,43 +284,43 @@ public:
   NewDbgVariable(const DILocalVariable *V, const DILocation *IA)
       : DbgVariable(V, IA, NewDbgVariableKind) {}
 
-  void initializeMMI(const DIExpression *E, int FI) {
+  void initializeMMI(const DIExpression *E, int FI) override {
     llvm_unreachable("NewDbgVariable::initializeMMI is not supported");
   }
-  void initializeDbgValue(DbgValueLoc Value) {
+  void initializeDbgValue(DbgValueLoc Value) override {
     llvm_unreachable("NewDbgVariable::initializeDbgValue is not supported");
   }
-  void initializeDbgValue(const MachineInstr *DbgValue) {
+  void initializeDbgValue(const MachineInstr *DbgValue) override {
     llvm_unreachable("NewDbgVariable::initializeDbgValue is not supported");
   }
-  const DIExpression *getSingleExpression() const {
+  const DIExpression *getSingleExpression() const override {
     llvm_unreachable("NewDbgVariable::getSingleExpression is not supported");
   }
-  void setDebugLocListIndex(unsigned O) {
+  void setDebugLocListIndex(unsigned O) override {
     llvm_unreachable("NewDbgVariable::setDebugLocListIndex is not supported");
   }
-  unsigned getDebugLocListIndex() const {
+  unsigned getDebugLocListIndex() const override {
     return ~0u; // FIXME(KZHURAVL).
   }
-  void setDebugLocListTagOffset(uint8_t O) {
+  void setDebugLocListTagOffset(uint8_t O) override {
     llvm_unreachable("NewDbgVariable::setDebugLocListTagOffset is not supported");
   }
-  Optional<uint8_t> getDebugLocListTagOffset() const {
+  Optional<uint8_t> getDebugLocListTagOffset() const override {
     llvm_unreachable("NewDbgVariable::getDebugLocListTagOffset is not supported");
   }
-  const DbgValueLoc *getValueLoc() const {
+  const DbgValueLoc *getValueLoc() const override {
     return nullptr; // FIXME(KZHURAVL).
   }
-  ArrayRef<FrameIndexExpr> getFrameIndexExprs() const {
+  ArrayRef<FrameIndexExpr> getFrameIndexExprs() const override {
     llvm_unreachable("NewDbgVariable::getFrameIndexExprs is not supported");
   }
-  bool hasFrameIndexExprs() const {
+  bool hasFrameIndexExprs() const override {
     return false; // FIXME(KZHURAVL).
   }
-  void addMMIEntry(const DbgVariable &V) {
-    llvm_unreachable("NewDbgVariable::addMMIEntry is not supported");
+  void addMMIEntry(const DbgVariable &V) override {
+    // FIXME(KZHURAVL): Assume it is a duplicate entry for -O0.
   }
-  bool hasComplexAddress() const {
+  bool hasComplexAddress() const override {
     llvm_unreachable("NewDbgVariable::hasComplexAddress is not supported");
   }
 

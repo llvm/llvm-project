@@ -825,6 +825,8 @@ void DIEDwarfExprAST::traverseAndLower(DIEDwarfExprAST::Node *OpNode) {
   }
 
   for (auto &ChildOpNode : OpNode->getChildren()) {
+    // FIXME(KZHURAVL): Do this iteratively, otherwise we may hit stack size
+    // problems.
     traverseAndLower(ChildOpNode.get());
   }
 
@@ -906,7 +908,6 @@ void DIEDwarfExprAST::lowerDIOpConstant(DIEDwarfExprAST::Node *OpNode) {
   emitDwarfOp(dwarf::DW_OP_stack_value);
 
   OpNode->setIsLowered();
-  // FIXME(KZHURAVL): Is the following result type correct?
   OpNode->setResultType(IntLiteralValue->getType());
 }
 
@@ -922,6 +923,8 @@ void DIEDwarfExprAST::lowerDIOpReferrer(DIEDwarfExprAST::Node *OpNode) {
   auto LLVMFrameRegister = TRI.getFrameRegister(*AP.MF);
   auto DWARFFrameRegister = TRI.getDwarfRegNum(LLVMFrameRegister, false);
 
+  // FIXME(KZHURAVL): This is fine at -O0. Need to record the actual Value which
+  // is acting as the referrer for each lifetime when we walk the MF.
   emitReg(DWARFFrameRegister);
 
   OpNode->setIsLowered();
@@ -1054,7 +1057,7 @@ void DIEDwarfExprAST::lowerBitOrByteOffset(DIEDwarfExprAST::Node *OpNode) {
          "Expected bit or byte offset op, but got something else");
   assert(OpNode->getChildren().size() == 2 && "Expected 2 children");
 
-  unstackify(OpNode->getChildren()[1].get(), /*NeedsSwap=*/false);
+  readToValue(OpNode->getChildren()[1].get(), /*NeedsSwap=*/false);
 
   Optional<uint8_t> DwarfOp = OpNode->getEquivalentDwarfOp();
   assert(DwarfOp.hasValue() && "Expected equivalent dwarf operation");
@@ -1086,7 +1089,7 @@ void DIEDwarfExprAST::lowerMathOp(DIEDwarfExprAST::Node *OpNode) {
     assert(ChildOpNode->isLowered() && "Expected lowered child");
     assert(ChildOpNode->getResultType() && "Expected non-null result type");
 
-    unstackify(ChildOpNode.get(), /*NeedsSwap=*/true);
+    readToValue(ChildOpNode.get(), /*NeedsSwap=*/true);
   }
 
   Optional<uint8_t> DwarfOp = OpNode->getEquivalentDwarfOp();
@@ -1100,8 +1103,8 @@ void DIEDwarfExprAST::lowerMathOp(DIEDwarfExprAST::Node *OpNode) {
   OpNode->setResultType(OpNode->getChildren()[0]->getResultType());
 }
 
-void DIEDwarfExprAST::unstackify(DIEDwarfExprAST::Node *OpNode,
-                                 bool NeedsSwap) {
+void DIEDwarfExprAST::readToValue(DIEDwarfExprAST::Node *OpNode,
+                                  bool NeedsSwap) {
   uint64_t PrimitiveSizeInBits =
       OpNode->getResultType()->getPrimitiveSizeInBits();
   assert(PrimitiveSizeInBits != 0 && "Expected primitive type");

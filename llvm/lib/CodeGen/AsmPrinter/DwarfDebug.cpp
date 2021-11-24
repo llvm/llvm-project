@@ -1527,15 +1527,17 @@ void DwarfDebug::collectVariableInfoFromMF(
 
       LLVM_DEBUG(dbgs() << "Processing instruction: " << MI);
 
+      // FIXME(KZHURAVL): This is fine at -O0. Need to handle DIFragment and
+      // DIGlobalVariable at other optimization levels.
       const DILifetime *LT = MI.getDebugLifetime();
       const DILocalVariable *LV = dyn_cast<DILocalVariable>(LT->getObject());
       assert(LV && "DILifetime's object is not DILocalVariable");
-      assert(LV->isValidLocationForIntrinsic(MI.getDebugLoc().get()) &&
-             "Expected inlined-at fields to agree");
 
       InlinedEntity Var(LV, MI.getDebugLoc().get());
       Processed.insert(Var);
-      LexicalScope *Scope = LScopes.findLexicalScope(MI.getDebugLoc().get());
+      LexicalScope *Scope = MI.getDebugLoc().get() ?
+          LScopes.findLexicalScope(MI.getDebugLoc().get()) :
+          LScopes.findLexicalScope(LV->getScope());
 
       // If variable scope is not found then skip this variable.
       if (!Scope) {
@@ -1997,6 +1999,11 @@ void DwarfDebug::collectEntityInfo(DwarfCompileUnit &TheCU,
     /// actually address when generating Dwarf DIE.
     MCSymbol *Sym = getLabelBeforeInsn(MI);
     createConcreteEntity(TheCU, *Scope, Label, IL.second, Sym);
+  }
+
+  // FIXME(KZHURAVL): Do we need following *for* loop for heterogeneous debug?
+  if (isHeterogeneousDebug(*Asm->MF->getFunction().getParent())) {
+    return;
   }
 
   // Collect info for variables/labels that were optimized out.
