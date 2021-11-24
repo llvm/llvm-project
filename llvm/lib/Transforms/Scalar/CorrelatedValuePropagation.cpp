@@ -52,6 +52,11 @@ using namespace llvm;
 
 #define DEBUG_TYPE "correlated-value-propagation"
 
+static cl::opt<bool> CanonicalizeICmpPredicatesToUnsigned(
+    "canonicalize-icmp-predicates-to-unsigned", cl::init(true), cl::Hidden,
+    cl::desc("Enables canonicalization of signed relational predicates to "
+             "unsigned (e.g. sgt => ugt)"));
+
 STATISTIC(NumPhis,      "Number of phis propagated");
 STATISTIC(NumPhiCommon, "Number of phis deleted via common incoming value");
 STATISTIC(NumSelects,   "Number of selects propagated");
@@ -297,6 +302,9 @@ static bool processMemAccess(Instruction *I, LazyValueInfo *LVI) {
 }
 
 static bool processICmp(ICmpInst *Cmp, LazyValueInfo *LVI) {
+  if (!CanonicalizeICmpPredicatesToUnsigned)
+    return false;
+
   // Only for signed relational comparisons of scalar integers.
   if (Cmp->getType()->isVectorTy() ||
       !Cmp->getOperand(0)->getType()->isIntegerTy())
