@@ -836,6 +836,15 @@ MachineInstrBuilder MLocTracker::emitLoc(Optional<LocIdx> MLoc,
       unsigned Base = Spill.SpillBase;
       MIB.addReg(Base);
       MIB.addImm(0);
+
+      // Being on the stack makes this location indirect; if it was _already_
+      // indirect though, we need to add extra indirection. See this test for
+      // a scenario where this happens:
+      //     llvm/test/DebugInfo/X86/spill-nontrivial-param.ll
+      if (Properties.Indirect) {
+        std::vector<uint64_t> Elts = {dwarf::DW_OP_deref};
+        Expr = DIExpression::append(Expr, Elts);
+      }
     } else {
       // This is a stack location with a weird subregister offset: emit an undef
       // DBG_VALUE instead.
