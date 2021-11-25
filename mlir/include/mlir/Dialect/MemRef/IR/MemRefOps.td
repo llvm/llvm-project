@@ -286,43 +286,6 @@ def MemRef_AllocaScopeReturnOp : MemRef_Op<"alloca_scope.return",
 }
 
 //===----------------------------------------------------------------------===//
-// BufferCastOp
-//===----------------------------------------------------------------------===//
-
-def MemRef_BufferCastOp : MemRef_Op<"buffer_cast",
-    [SameOperandsAndResultShape, SameOperandsAndResultElementType, NoSideEffect,
-     TypesMatchWith<"type of 'tensor' is the tensor equivalent of 'memref'",
-                    "memref", "tensor",
-                    "getTensorTypeFromMemRefType($_self)">]> {
-  let summary = "tensor to memref cast operation";
-  let description = [{
-    Casts a tensor to a memref.
-
-    ```mlir
-    // Result type is tensor<4x?xf32>
-    %12 = memref.buffer_cast %10 : memref<4x?xf32, #map0, 42>
-    ```
-
-    Note, that mutating the result of the buffer cast operation leads to
-    undefined behavior.
-
-    This operation is a specialized variant of the built-in
-    unrealized_conversion_cast and is intended for use in the context of
-    gradual bufferization.
-  }];
-
-  let arguments = (ins AnyTensor:$tensor);
-  let results = (outs AnyRankedOrUnrankedMemRef:$memref);
-  // This op is fully verified by traits.
-  let verifier = ?;
-
-  let assemblyFormat = "$tensor attr-dict `:` type($memref)";
-
-  let hasFolder = 1;
-  let hasCanonicalizer = 1;
-}
-
-//===----------------------------------------------------------------------===//
 // CastOp
 //===----------------------------------------------------------------------===//
 
@@ -406,49 +369,6 @@ def MemRef_CastOp : MemRef_Op<"cast", [
   }];
 
   let hasFolder = 1;
-}
-
-//===----------------------------------------------------------------------===//
-// CloneOp
-//===----------------------------------------------------------------------===//
-
-def CloneOp : MemRef_Op<"clone", [
-    CopyOpInterface,
-    DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
-  ]> {
-  let builders = [
-    OpBuilder<(ins "Value":$value), [{
-      return build($_builder, $_state, value.getType(), value);
-    }]>];
-
-  let description = [{
-    Clones the data in the input view into an implicitly defined output view.
-
-    Usage:
-
-    ```mlir
-    %arg1 = memref.clone %arg0 : memref<?xf32> to memref<?xf32>
-    ```
-
-    Valid implementations of this operation may alias the input and output
-    views or create an actual copy. Mutating the source or result
-    of the clone operation after the clone operation thus leads to undefined
-    behavior.
-  }];
-
-  let arguments = (ins Arg<AnyRankedOrUnrankedMemRef, "", []>:$input);
-  let results = (outs Arg<AnyRankedOrUnrankedMemRef, "", []>:$output);
-
-  let extraClassDeclaration = [{
-    Value getSource() { return input(); }
-    Value getTarget() { return output(); }
-  }];
-
-  let assemblyFormat = "$input attr-dict `:` type($input) `to` type($output)";
-
-  let hasFolder = 1;
-  let verifier = ?;
-  let hasCanonicalizer = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -940,7 +860,6 @@ def LoadOp : MemRef_Op<"load",
     operand_range getIndices() { return {operand_begin() + 1, operand_end()}; }
   }];
 
-  let hasCanonicalizer = 1;
   let hasFolder = 1;
 
   let assemblyFormat = "$memref `[` $indices `]` attr-dict `:` type($memref)";
@@ -1588,64 +1507,6 @@ def SubViewOp : BaseOpWithOffsetSizesAndStrides<
     /// the result is rank-reduced.
     llvm::SmallDenseSet<unsigned> getDroppedDims();
   }];
-
-  let hasCanonicalizer = 1;
-  let hasFolder = 1;
-}
-
-//===----------------------------------------------------------------------===//
-// TensorLoadOp
-//===----------------------------------------------------------------------===//
-
-def TensorLoadOp : MemRef_Op<"tensor_load",
-    [SameOperandsAndResultShape, SameOperandsAndResultElementType,
-     TypesMatchWith<"result type matches tensor equivalent of 'memref'",
-                    "memref", "result",
-                    "getTensorTypeFromMemRefType($_self)">]> {
-  let summary = "tensor load operation";
-  let description = [{
-    Create a tensor from a memref, making an independent copy of the element
-    data. The result value is a tensor whose shape and element type match the
-    memref operand.
-
-    The opposite of this op is buffer_cast. Together, these two ops are
-    useful for source/target materializations when doing type conversions
-    involving tensors and memrefs.
-
-    Example:
-
-    ```mlir
-    // Produces a value of tensor<4x?xf32> type.
-    %12 = memref.tensor_load %10 : memref<4x?xf32, #layout, memspace0>
-    ```
-
-    If tensor load is used in the bufferization steps, mutating the source
-    buffer after loading leads to undefined behavior.
-  }];
-
-  let arguments = (ins Arg<AnyRankedOrUnrankedMemRef,
-                       "the reference to load from", [MemRead]>:$memref);
-  let results = (outs AnyTensor:$result);
-  // TensorLoadOp is fully verified by traits.
-  let verifier = ?;
-
-  let builders = [
-    OpBuilder<(ins "Value":$memref), [{
-      $_state.addOperands(memref);
-      $_state.addTypes(getTensorTypeFromMemRefType(memref.getType()));
-    }]>];
-
-  let extraClassDeclaration = [{
-    /// The result of a tensor_load is always a tensor.
-    TensorType getType() {
-      Type resultType = getResult().getType();
-      if (resultType.isa<TensorType>())
-        return resultType.cast<TensorType>();
-      return {};
-    }
-  }];
-
-  let assemblyFormat = "$memref attr-dict `:` type($memref)";
 
   let hasCanonicalizer = 1;
   let hasFolder = 1;

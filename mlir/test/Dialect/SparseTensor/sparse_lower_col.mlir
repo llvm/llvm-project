@@ -33,8 +33,8 @@
 // CHECK-HIR:           %[[VAL_6:.*]] = sparse_tensor.pointers %[[VAL_0]], %[[VAL_5]] : tensor<32x64xf64, #sparse_tensor.encoding<{ dimLevelType = [ "dense", "compressed" ], dimOrdering = affine_map<(d0, d1) -> (d1, d0)>, pointerBitWidth = 0, indexBitWidth = 0 }>> to memref<?xindex>
 // CHECK-HIR:           %[[VAL_7:.*]] = sparse_tensor.indices %[[VAL_0]], %[[VAL_5]] : tensor<32x64xf64, #sparse_tensor.encoding<{ dimLevelType = [ "dense", "compressed" ], dimOrdering = affine_map<(d0, d1) -> (d1, d0)>, pointerBitWidth = 0, indexBitWidth = 0 }>> to memref<?xindex>
 // CHECK-HIR:           %[[VAL_8:.*]] = sparse_tensor.values %[[VAL_0]] : tensor<32x64xf64, #sparse_tensor.encoding<{ dimLevelType = [ "dense", "compressed" ], dimOrdering = affine_map<(d0, d1) -> (d1, d0)>, pointerBitWidth = 0, indexBitWidth = 0 }>> to memref<?xf64>
-// CHECK-HIR:           %[[VAL_9:.*]] = memref.buffer_cast %[[VAL_1]] : memref<64xf64>
-// CHECK-HIR:           %[[VAL_10:.*]] = memref.buffer_cast %[[VAL_2]] : memref<32xf64>
+// CHECK-HIR:           %[[VAL_9:.*]] = bufferization.to_memref %[[VAL_1]] : memref<64xf64>
+// CHECK-HIR:           %[[VAL_10:.*]] = bufferization.to_memref %[[VAL_2]] : memref<32xf64>
 // CHECK-HIR:           %[[VAL_11:.*]] = memref.alloc() : memref<32xf64>
 // CHECK-HIR:           memref.copy %[[VAL_10]], %[[VAL_11]] : memref<32xf64> to memref<32xf64>
 // CHECK-HIR:           scf.for %[[VAL_12:.*]] = %[[VAL_4]] to %[[VAL_3]] step %[[VAL_5]] {
@@ -51,7 +51,7 @@
 // CHECK-HIR:               memref.store %[[VAL_22]], %[[VAL_11]]{{\[}}%[[VAL_18]]] : memref<32xf64>
 // CHECK-HIR:             }
 // CHECK-HIR:           }
-// CHECK-HIR:           %[[VAL_23:.*]] = memref.tensor_load %[[VAL_11]] : memref<32xf64>
+// CHECK-HIR:           %[[VAL_23:.*]] = bufferization.to_tensor %[[VAL_11]] : memref<32xf64>
 // CHECK-HIR:           return %[[VAL_23]] : tensor<32xf64>
 // CHECK-HIR:         }
 
@@ -65,8 +65,8 @@
 // CHECK-MIR:           %[[VAL_7:.*]] = call @sparsePointers(%[[VAL_0]], %[[VAL_6]]) : (!llvm.ptr<i8>, index) -> memref<?xindex>
 // CHECK-MIR:           %[[VAL_8:.*]] = call @sparseIndices(%[[VAL_0]], %[[VAL_6]]) : (!llvm.ptr<i8>, index) -> memref<?xindex>
 // CHECK-MIR:           %[[VAL_9:.*]] = call @sparseValuesF64(%[[VAL_0]]) : (!llvm.ptr<i8>) -> memref<?xf64>
-// CHECK-MIR:           %[[VAL_10:.*]] = memref.buffer_cast %[[VAL_1]] : memref<64xf64>
-// CHECK-MIR:           %[[VAL_11:.*]] = memref.buffer_cast %[[VAL_2]] : memref<32xf64>
+// CHECK-MIR:           %[[VAL_10:.*]] = bufferization.to_memref %[[VAL_1]] : memref<64xf64>
+// CHECK-MIR:           %[[VAL_11:.*]] = bufferization.to_memref %[[VAL_2]] : memref<32xf64>
 // CHECK-MIR:           %[[VAL_12:.*]] = memref.alloc() : memref<32xf64>
 // CHECK-MIR:           memref.copy %[[VAL_11]], %[[VAL_12]] : memref<32xf64> to memref<32xf64>
 // CHECK-MIR:           scf.for %[[VAL_15:.*]] = %[[VAL_5]] to %[[VAL_3]] step %[[VAL_6]] {
@@ -83,7 +83,7 @@
 // CHECK-MIR:               memref.store %[[VAL_25]], %[[VAL_12]]{{\[}}%[[VAL_21]]] : memref<32xf64>
 // CHECK-MIR:             }
 // CHECK-MIR:           }
-// CHECK-MIR:           %[[VAL_26:.*]] = memref.tensor_load %[[VAL_12]] : memref<32xf64>
+// CHECK-MIR:           %[[VAL_26:.*]] = bufferization.to_tensor %[[VAL_12]] : memref<32xf64>
 // CHECK-MIR:           return %[[VAL_26]] : tensor<32xf64>
 // CHECK-MIR:         }
 

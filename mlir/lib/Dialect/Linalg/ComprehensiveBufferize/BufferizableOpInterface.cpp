@@ -8,6 +8,7 @@
 
 #include "mlir/Dialect/Linalg/ComprehensiveBufferize/BufferizableOpInterface.h"
 
+#include "mlir/Dialect/Bufferization/IR/Bufferization.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/IR/AsmState.h"
 #include "mlir/IR/BlockAndValueMapping.h"
@@ -415,8 +416,8 @@ mlir::linalg::comprehensive_bufferize::bufferize(Operation *op,
                                                  BufferizationState &state) {
   OpBuilder b(op->getContext());
 
-  // Skip BufferCast and TensorLoad ops.
-  if (isa<memref::BufferCastOp, memref::TensorLoadOp>(op))
+  // Skip ToMemrefOp and ToTensorOp.
+  if (isa<bufferization::ToMemrefOp, bufferization::ToTensorOp>(op))
     return success();
 
   // Check if op has tensor results or operands.

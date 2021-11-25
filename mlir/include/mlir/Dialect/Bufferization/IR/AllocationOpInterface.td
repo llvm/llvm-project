@@ -50,10 +50,7 @@ def AllocationOpInterface : OpInterface<"AllocationOpInterface"> {
       }],
       "::mlir::Optional<::mlir::Value>", "buildClone",
       (ins "::mlir::OpBuilder&":$builder, "::mlir::Value":$alloc), [{}],
-      /*defaultImplementation=*/[{
-          return builder.create<memref::CloneOp>(alloc.getLoc(), alloc)
-            .getResult();
-      }]
+      /*defaultImplementation=*/[{ return llvm::None; }]
     >
   ];
 }

@@ -22,6 +22,10 @@ namespace arith {
 class ArithmeticDialect;
 } // end namespace arith
 
+namespace bufferization {
+class BufferizationDialect;
+} // end namespace bufferization
+
 namespace linalg {
 class LinalgDialect;
 } // end namespace linalg

@@ -30,8 +30,8 @@
 // CHECK-HIR:           %[[VAL_6:.*]] = sparse_tensor.pointers %[[VAL_0]], %[[VAL_5]] : tensor<32x64xf64, #sparse_tensor.encoding<{{{.*}}}>>
 // CHECK-HIR:           %[[VAL_7:.*]] = sparse_tensor.indices %[[VAL_0]], %[[VAL_5]] : tensor<32x64xf64, #sparse_tensor.encoding<{{{.*}}}>>
 // CHECK-HIR:           %[[VAL_8:.*]] = sparse_tensor.values %[[VAL_0]] : tensor<32x64xf64, #sparse_tensor.encoding<{{{.*}}}>>
-// CHECK-HIR:           %[[VAL_9:.*]] = memref.buffer_cast %[[VAL_1]] : memref<64xf64>
-// CHECK-HIR:           %[[VAL_10:.*]] = memref.buffer_cast %[[VAL_2]] : memref<32xf64>
+// CHECK-HIR:           %[[VAL_9:.*]] = bufferization.to_memref %[[VAL_1]] : memref<64xf64>
+// CHECK-HIR:           %[[VAL_10:.*]] = bufferization.to_memref %[[VAL_2]] : memref<32xf64>
 // CHECK-HIR:           scf.for %[[VAL_11:.*]] = %[[VAL_4]] to %[[VAL_3]] step %[[VAL_5]] {
 // CHECK-HIR-DAG:         %[[VAL_12:.*]] = memref.load %[[VAL_6]]{{\[}}%[[VAL_11]]] : memref<?xindex>
 // CHECK-HIR-DAG:         %[[VAL_13:.*]] = arith.addi %[[VAL_11]], %[[VAL_5]] : index
@@ -47,7 +47,7 @@
 // CHECK-HIR:             }
 // CHECK-HIR:             memref.store %[[VAL_16]], %[[VAL_10]]{{\[}}%[[VAL_11]]] : memref<32xf64>
 // CHECK-HIR:           }
-// CHECK-HIR:           %[[VAL_25:.*]] = memref.tensor_load %[[VAL_10]] : memref<32xf64>
+// CHECK-HIR:           %[[VAL_25:.*]] = bufferization.to_tensor %[[VAL_10]] : memref<32xf64>
 // CHECK-HIR:           return %[[VAL_25]] : tensor<32xf64>
 // CHECK-HIR:         }
 
@@ -61,8 +61,8 @@
 // CHECK-MIR:           %[[VAL_6:.*]] = call @sparsePointers(%[[VAL_0]], %[[VAL_5]]) : (!llvm.ptr<i8>, index) -> memref<?xindex>
 // CHECK-MIR:           %[[VAL_7:.*]] = call @sparseIndices(%[[VAL_0]], %[[VAL_5]]) : (!llvm.ptr<i8>, index) -> memref<?xindex>
 // CHECK-MIR:           %[[VAL_8:.*]] = call @sparseValuesF64(%[[VAL_0]]) : (!llvm.ptr<i8>) -> memref<?xf64>
-// CHECK-MIR:           %[[VAL_9:.*]] = memref.buffer_cast %[[VAL_1]] : memref<64xf64>
-// CHECK-MIR:           %[[VAL_10:.*]] = memref.buffer_cast %[[VAL_2]] : memref<32xf64>
+// CHECK-MIR:           %[[VAL_9:.*]] = bufferization.to_memref %[[VAL_1]] : memref<64xf64>
+// CHECK-MIR:           %[[VAL_10:.*]] = bufferization.to_memref %[[VAL_2]] : memref<32xf64>
 // CHECK-MIR:           scf.for %[[VAL_11:.*]] = %[[VAL_4]] to %[[VAL_3]] step %[[VAL_5]] {
 // CHECK-MIR-DAG:         %[[VAL_12:.*]] = memref.load %[[VAL_6]]{{\[}}%[[VAL_11]]] : memref<?xindex>
 // CHECK-MIR-DAG:         %[[VAL_13:.*]] = arith.addi %[[VAL_11]], %[[VAL_5]] : index
@@ -78,7 +78,7 @@
 // CHECK-MIR:             }
 // CHECK-MIR:             memref.store %[[VAL_16]], %[[VAL_10]]{{\[}}%[[VAL_11]]] : memref<32xf64>
 // CHECK-MIR:           }
-// CHECK-MIR:           %[[VAL_25:.*]] = memref.tensor_load %[[VAL_10]] : memref<32xf64>
+// CHECK-MIR:           %[[VAL_25:.*]] = bufferization.to_tensor %[[VAL_10]] : memref<32xf64>
 // CHECK-MIR:           return %[[VAL_25]] : tensor<32xf64>
 // CHECK-MIR:         }
 

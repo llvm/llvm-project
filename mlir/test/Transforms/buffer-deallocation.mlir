@@ -30,11 +30,11 @@ func @condBranch(%arg0: i1, %arg1: memref<2xf32>, %arg2: memref<2xf32>) {
 }
 
 // CHECK-NEXT: cond_br
-//      CHECK: %[[ALLOC0:.*]] = memref.clone
+//      CHECK: %[[ALLOC0:.*]] = bufferization.clone
 // CHECK-NEXT: br ^bb3(%[[ALLOC0]]
 //      CHECK: %[[ALLOC1:.*]] = memref.alloc
 // CHECK-NEXT: test.buffer_based
-// CHECK-NEXT: %[[ALLOC2:.*]] = memref.clone %[[ALLOC1]]
+// CHECK-NEXT: %[[ALLOC2:.*]] = bufferization.clone %[[ALLOC1]]
 // CHECK-NEXT: memref.dealloc %[[ALLOC1]]
 // CHECK-NEXT: br ^bb3(%[[ALLOC2]]
 //      CHECK: test.copy
@@ -75,12 +75,12 @@ func @condBranchDynamicType(
 }
 
 // CHECK-NEXT: cond_br
-//      CHECK: %[[ALLOC0:.*]] = memref.clone
+//      CHECK: %[[ALLOC0:.*]] = bufferization.clone
 // CHECK-NEXT: br ^bb3(%[[ALLOC0]]
 //      CHECK: ^bb2(%[[IDX:.*]]:{{.*}})
 // CHECK-NEXT: %[[ALLOC1:.*]] = memref.alloc(%[[IDX]])
 // CHECK-NEXT: test.buffer_based
-// CHECK-NEXT: %[[ALLOC2:.*]] = memref.clone
+// CHECK-NEXT: %[[ALLOC2:.*]] = bufferization.clone
 // CHECK-NEXT: memref.dealloc %[[ALLOC1]]
 // CHECK-NEXT: br ^bb3
 // CHECK-NEXT: ^bb3(%[[ALLOC3:.*]]:{{.*}})
@@ -112,12 +112,12 @@ func @condBranchUnrankedType(
 }
 
 // CHECK-NEXT: cond_br
-//      CHECK: %[[ALLOC0:.*]] = memref.clone
+//      CHECK: %[[ALLOC0:.*]] = bufferization.clone
 // CHECK-NEXT: br ^bb3(%[[ALLOC0]]
 //      CHECK: ^bb2(%[[IDX:.*]]:{{.*}})
 // CHECK-NEXT: %[[ALLOC1:.*]] = memref.alloc(%[[IDX]])
 //      CHECK: test.buffer_based
-// CHECK-NEXT: %[[ALLOC2:.*]] = memref.clone
+// CHECK-NEXT: %[[ALLOC2:.*]] = bufferization.clone
 // CHECK-NEXT: memref.dealloc %[[ALLOC1]]
 // CHECK-NEXT: br ^bb3
 // CHECK-NEXT: ^bb3(%[[ALLOC3:.*]]:{{.*}})
@@ -175,7 +175,7 @@ func @condBranchDynamicTypeNested(
 
 // CHECK-NEXT: cond_br{{.*}}
 // CHECK-NEXT: ^bb1
-// CHECK-NEXT: %[[ALLOC0:.*]] = memref.clone
+// CHECK-NEXT: %[[ALLOC0:.*]] = bufferization.clone
 // CHECK-NEXT: br ^bb6(%[[ALLOC0]]
 //      CHECK: ^bb2(%[[IDX:.*]]:{{.*}})
 // CHECK-NEXT: %[[ALLOC1:.*]] = memref.alloc(%[[IDX]])
@@ -186,7 +186,7 @@ func @condBranchDynamicTypeNested(
 //      CHECK: ^bb4:
 // CHECK-NEXT: br ^bb5(%[[ALLOC1]]{{.*}})
 // CHECK-NEXT: ^bb5(%[[ALLOC2:.*]]:{{.*}})
-// CHECK-NEXT: %[[ALLOC3:.*]] = memref.clone %[[ALLOC2]]
+// CHECK-NEXT: %[[ALLOC3:.*]] = bufferization.clone %[[ALLOC2]]
 // CHECK-NEXT: memref.dealloc %[[ALLOC1]]
 // CHECK-NEXT: br ^bb6(%[[ALLOC3]]{{.*}})
 // CHECK-NEXT: ^bb6(%[[ALLOC4:.*]]:{{.*}})
@@ -235,11 +235,11 @@ func @criticalEdge(%arg0: i1, %arg1: memref<2xf32>, %arg2: memref<2xf32>) {
   return
 }
 
-// CHECK-NEXT: %[[ALLOC0:.*]] = memref.clone
+// CHECK-NEXT: %[[ALLOC0:.*]] = bufferization.clone
 // CHECK-NEXT: cond_br
 //      CHECK: %[[ALLOC1:.*]] = memref.alloc()
 // CHECK-NEXT: test.buffer_based
-// CHECK-NEXT: %[[ALLOC2:.*]] = memref.clone %[[ALLOC1]]
+// CHECK-NEXT: %[[ALLOC2:.*]] = bufferization.clone %[[ALLOC1]]
 // CHECK-NEXT: memref.dealloc %[[ALLOC1]]
 //      CHECK: test.copy
 // CHECK-NEXT: memref.dealloc
@@ -448,13 +448,13 @@ func @moving_alloc_and_inserting_missing_dealloc(
 // CHECK-NEXT: ^bb1
 //      CHECK: %[[ALLOC0:.*]] = memref.alloc()
 // CHECK-NEXT: test.buffer_based
-// CHECK-NEXT: %[[ALLOC1:.*]] = memref.clone %[[ALLOC0]]
+// CHECK-NEXT: %[[ALLOC1:.*]] = bufferization.clone %[[ALLOC0]]
 // CHECK-NEXT: memref.dealloc %[[ALLOC0]]
 // CHECK-NEXT: br ^bb3(%[[ALLOC1]]
 // CHECK-NEXT: ^bb2
 // CHECK-NEXT: %[[ALLOC2:.*]] = memref.alloc()
 // CHECK-NEXT: test.buffer_based
-// CHECK-NEXT: %[[ALLOC3:.*]] = memref.clone %[[ALLOC2]]
+// CHECK-NEXT: %[[ALLOC3:.*]] = bufferization.clone %[[ALLOC2]]
 // CHECK-NEXT: memref.dealloc %[[ALLOC2]]
 // CHECK-NEXT: br ^bb3(%[[ALLOC3]]
 // CHECK-NEXT: ^bb3(%[[ALLOC4:.*]]:{{.*}})
@@ -567,7 +567,7 @@ func @nested_regions_and_cond_branch(
 }
 //      CHECK: (%[[cond:.*]]: {{.*}}, %[[ARG1:.*]]: {{.*}}, %{{.*}}: {{.*}})
 // CHECK-NEXT:   cond_br %[[cond]], ^[[BB1:.*]], ^[[BB2:.*]]
-//      CHECK:   %[[ALLOC0:.*]] = memref.clone %[[ARG1]]
+//      CHECK:   %[[ALLOC0:.*]] = bufferization.clone %[[ARG1]]
 //      CHECK: ^[[BB2]]:
 //      CHECK:   %[[ALLOC1:.*]] = memref.alloc()
 // CHECK-NEXT:   test.region_buffer_based in(%[[ARG1]]{{.*}}out(%[[ALLOC1]]
@@ -575,7 +575,7 @@ func @nested_regions_and_cond_branch(
 // CHECK-NEXT:     test.buffer_based in(%[[ARG1]]{{.*}}out(%[[ALLOC2]]
 //      CHECK:     memref.dealloc %[[ALLOC2]]
 // CHECK-NEXT:     %{{.*}} = math.exp
-//      CHECK:   %[[ALLOC3:.*]] = memref.clone %[[ALLOC1]]
+//      CHECK:   %[[ALLOC3:.*]] = bufferization.clone %[[ALLOC1]]
 // CHECK-NEXT:   memref.dealloc %[[ALLOC1]]
 //      CHECK:  ^[[BB3:.*]]({{.*}}):
 //      CHECK:  test.copy
@@ -661,10 +661,10 @@ func @nested_region_control_flow_div(
 
 //      CHECK: %[[ALLOC0:.*]] = memref.alloc(%arg0, %arg0)
 // CHECK-NEXT: %[[ALLOC1:.*]] = scf.if
-// CHECK-NEXT: %[[ALLOC2:.*]] = memref.clone %[[ALLOC0]]
+// CHECK-NEXT: %[[ALLOC2:.*]] = bufferization.clone %[[ALLOC0]]
 //      CHECK: scf.yield %[[ALLOC2]]
 //      CHECK: %[[ALLOC3:.*]] = memref.alloc(%arg0, %arg1)
-// CHECK-NEXT: %[[ALLOC4:.*]] = memref.clone %[[ALLOC3]]
+// CHECK-NEXT: %[[ALLOC4:.*]] = bufferization.clone %[[ALLOC3]]
 //      CHECK: memref.dealloc %[[ALLOC3]]
 //      CHECK: scf.yield %[[ALLOC4]]
 //      CHECK: memref.dealloc %[[ALLOC0]]
@@ -841,14 +841,14 @@ func @nestedRegionsAndCondBranchAlloca(
 //      CHECK: (%[[cond:.*]]: {{.*}}, %[[ARG1:.*]]: {{.*}}, %{{.*}}: {{.*}})
 // CHECK-NEXT:   cond_br %[[cond]], ^[[BB1:.*]], ^[[BB2:.*]]
 //      CHECK: ^[[BB1]]:
-//      CHECK: %[[ALLOC0:.*]] = memref.clone
+//      CHECK: %[[ALLOC0:.*]] = bufferization.clone
 //      CHECK: ^[[BB2]]:
 //      CHECK:   %[[ALLOC1:.*]] = memref.alloc()
 // CHECK-NEXT:   test.region_buffer_based in(%[[ARG1]]{{.*}}out(%[[ALLOC1]]
 //      CHECK:     %[[ALLOCA:.*]] = memref.alloca()
 // CHECK-NEXT:     test.buffer_based in(%[[ARG1]]{{.*}}out(%[[ALLOCA]]
 //      CHECK:     %{{.*}} = math.exp
-//      CHECK:  %[[ALLOC2:.*]] = memref.clone %[[ALLOC1]]
+//      CHECK:  %[[ALLOC2:.*]] = bufferization.clone %[[ALLOC1]]
 // CHECK-NEXT:  memref.dealloc %[[ALLOC1]]
 //      CHECK:  ^[[BB3:.*]]({{.*}}):
 //      CHECK:  test.copy
@@ -904,13 +904,13 @@ func @loop_alloc(
 
 //      CHECK: %[[ALLOC0:.*]] = memref.alloc()
 // CHECK-NEXT: memref.dealloc %[[ALLOC0]]
-// CHECK-NEXT: %[[ALLOC1:.*]] = memref.clone %arg3
+// CHECK-NEXT: %[[ALLOC1:.*]] = bufferization.clone %arg3
 //      CHECK: %[[ALLOC2:.*]] = scf.for {{.*}} iter_args
 // CHECK-SAME: (%[[IALLOC:.*]] = %[[ALLOC1]]
 //      CHECK:    arith.cmpi
 //      CHECK:    memref.dealloc %[[IALLOC]]
 //      CHECK:    %[[ALLOC3:.*]] = memref.alloc()
-//      CHECK:    %[[ALLOC4:.*]] = memref.clone %[[ALLOC3]]
+//      CHECK:    %[[ALLOC4:.*]] = bufferization.clone %[[ALLOC3]]
 //      CHECK:    memref.dealloc %[[ALLOC3]]
 //      CHECK:    scf.yield %[[ALLOC4]]
 //      CHECK: }
@@ -988,21 +988,21 @@ func @loop_nested_if_alloc(
 }
 
 //      CHECK: %[[ALLOC0:.*]] = memref.alloc()
-// CHECK-NEXT: %[[ALLOC1:.*]] = memref.clone %arg3
+// CHECK-NEXT: %[[ALLOC1:.*]] = bufferization.clone %arg3
 // CHECK-NEXT: %[[ALLOC2:.*]] = scf.for {{.*}} iter_args
 // CHECK-SAME: (%[[IALLOC:.*]] = %[[ALLOC1]]
 //      CHECK: memref.dealloc %[[IALLOC]]
 //      CHECK: %[[ALLOC3:.*]] = scf.if
 
 //      CHECK: %[[ALLOC4:.*]] = memref.alloc()
-// CHECK-NEXT: %[[ALLOC5:.*]] = memref.clone %[[ALLOC4]]
+// CHECK-NEXT: %[[ALLOC5:.*]] = bufferization.clone %[[ALLOC4]]
 // CHECK-NEXT: memref.dealloc %[[ALLOC4]]
 // CHECK-NEXT: scf.yield %[[ALLOC5]]
 
-//      CHECK: %[[ALLOC6:.*]] = memref.clone %[[ALLOC0]]
+//      CHECK: %[[ALLOC6:.*]] = bufferization.clone %[[ALLOC0]]
 // CHECK-NEXT: scf.yield %[[ALLOC6]]
 
-//      CHECK: %[[ALLOC7:.*]] = memref.clone %[[ALLOC3]]
+//      CHECK: %[[ALLOC7:.*]] = bufferization.clone %[[ALLOC3]]
 // CHECK-NEXT: memref.dealloc %[[ALLOC3]]
 // CHECK-NEXT: scf.yield %[[ALLOC7]]
 
@@ -1050,14 +1050,14 @@ func @loop_nested_alloc(
 
 //      CHECK: %[[ALLOC0:.*]] = memref.alloc()
 // CHECK-NEXT: memref.dealloc %[[ALLOC0]]
-// CHECK-NEXT: %[[ALLOC1:.*]] = memref.clone %arg3
+// CHECK-NEXT: %[[ALLOC1:.*]] = bufferization.clone %arg3
 // CHECK-NEXT: %[[VAL_7:.*]] = scf.for {{.*}} iter_args
 // CHECK-SAME: (%[[IALLOC0:.*]] = %[[ALLOC1]])
-// CHECK-NEXT: %[[ALLOC2:.*]] = memref.clone %[[IALLOC0]]
+// CHECK-NEXT: %[[ALLOC2:.*]] = bufferization.clone %[[IALLOC0]]
 // CHECK-NEXT: memref.dealloc %[[IALLOC0]]
 // CHECK-NEXT: %[[ALLOC3:.*]] = scf.for {{.*}} iter_args
 // CHECK-SAME: (%[[IALLOC1:.*]] = %[[ALLOC2]])
-// CHECK-NEXT: %[[ALLOC5:.*]] = memref.clone %[[IALLOC1]]
+// CHECK-NEXT: %[[ALLOC5:.*]] = bufferization.clone %[[IALLOC1]]
 // CHECK-NEXT: memref.dealloc %[[IALLOC1]]
 
 //      CHECK: %[[ALLOC6:.*]] = scf.for {{.*}} iter_args
@@ -1067,23 +1067,23 @@ func @loop_nested_alloc(
 //      CHECK: %[[ALLOC9:.*]] = scf.if
 
 //      CHECK: %[[ALLOC11:.*]] = memref.alloc()
-// CHECK-NEXT: %[[ALLOC12:.*]] = memref.clone %[[ALLOC11]]
+// CHECK-NEXT: %[[ALLOC12:.*]] = bufferization.clone %[[ALLOC11]]
 // CHECK-NEXT: memref.dealloc %[[ALLOC11]]
 // CHECK-NEXT: scf.yield %[[ALLOC12]]
 
-//      CHECK: %[[ALLOC13:.*]] = memref.clone %[[IALLOC2]]
+//      CHECK: %[[ALLOC13:.*]] = bufferization.clone %[[IALLOC2]]
 // CHECK-NEXT: scf.yield %[[ALLOC13]]
 
 //      CHECK: memref.dealloc %[[IALLOC2]]
-// CHECK-NEXT: %[[ALLOC10:.*]] = memref.clone %[[ALLOC9]]
+// CHECK-NEXT: %[[ALLOC10:.*]] = bufferization.clone %[[ALLOC9]]
 // CHECK-NEXT: memref.dealloc %[[ALLOC9]]
 // CHECK-NEXT: scf.yield %[[ALLOC10]]
 
-//      CHECK: %[[ALLOC7:.*]] = memref.clone %[[ALLOC6]]
+//      CHECK: %[[ALLOC7:.*]] = bufferization.clone %[[ALLOC6]]
 // CHECK-NEXT: memref.dealloc %[[ALLOC6]]
 // CHECK-NEXT: scf.yield %[[ALLOC7]]
 
-//      CHECK: %[[ALLOC4:.*]] = memref.clone %[[ALLOC3]]
+//      CHECK: %[[ALLOC4:.*]] = bufferization.clone %[[ALLOC3]]
 // CHECK-NEXT: memref.dealloc %[[ALLOC3]]
 // CHECK-NEXT: scf.yield %[[ALLOC4]]
 
@@ -1185,7 +1185,7 @@ func @assumingOp(
 // CHECK-NEXT:    shape.assuming_yield %[[ARG1]]
 //      CHECK: %[[ASSUMING_RESULT:.*]] = shape.assuming %[[ARG0]]
 // CHECK-NEXT:    %[[TMP_ALLOC:.*]] = memref.alloc()
-// CHECK-NEXT:    %[[RETURNING_ALLOC:.*]] = memref.clone %[[TMP_ALLOC]]
+// CHECK-NEXT:    %[[RETURNING_ALLOC:.*]] = bufferization.clone %[[TMP_ALLOC]]
 // CHECK-NEXT:    memref.dealloc %[[TMP_ALLOC]]
 // CHECK-NEXT:    shape.assuming_yield %[[RETURNING_ALLOC]]
 //      CHECK: test.copy(%[[ASSUMING_RESULT:.*]], %[[ARG2]])
@@ -1212,13 +1212,13 @@ func @noRegionBranchOpInterface() {
 
 // CHECK-LABEL: func @dealloc_existing_clones
 // CHECK: (%[[ARG0:.*]]: memref<?x?xf64>, %[[ARG1:.*]]: memref<?x?xf64>)
-// CHECK: %[[RES0:.*]] = memref.clone %[[ARG0]]
-// CHECK: %[[RES1:.*]] = memref.clone %[[ARG1]]
+// CHECK: %[[RES0:.*]] = bufferization.clone %[[ARG0]]
+// CHECK: %[[RES1:.*]] = bufferization.clone %[[ARG1]]
 // CHECK-NOT: memref.dealloc %[[RES0]]
 // CHECK: memref.dealloc %[[RES1]]
 // CHECK: return %[[RES0]]
 func @dealloc_existing_clones(%arg0: memref<?x?xf64>, %arg1: memref<?x?xf64>) -> memref<?x?xf64> {
-  %0 = memref.clone %arg0 : memref<?x?xf64> to memref<?x?xf64>
-  %1 = memref.clone %arg1 : memref<?x?xf64> to memref<?x?xf64>
+  %0 = bufferization.clone %arg0 : memref<?x?xf64> to memref<?x?xf64>
+  %1 = bufferization.clone %arg1 : memref<?x?xf64> to memref<?x?xf64>
   return %0 : memref<?x?xf64>
 }

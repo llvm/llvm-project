@@ -9,6 +9,7 @@
 #include "mlir/Transforms/Bufferize.h"
 #include "PassDetail.h"
 #include "mlir/Dialect/Arithmetic/Transforms/Passes.h"
+#include "mlir/Dialect/Bufferization/IR/Bufferization.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 
 using namespace mlir;
