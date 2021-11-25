@@ -2380,21 +2380,8 @@ void GnuHashTableSection::writeTo(uint8_t *buf) {
   write32(buf + 12, Shift2);
   buf += 16;
 
-  // Write a bloom filter and a hash table.
-  writeBloomFilter(buf);
-  buf += config->wordsize * maskWords;
-  writeHashTable(buf);
-}
-
-// This function writes a 2-bit bloom filter. This bloom filter alone
-// usually filters out 80% or more of all symbol lookups [1].
-// The dynamic linker uses the hash table only when a symbol is not
-// filtered out by a bloom filter.
-//
-// [1] Ulrich Drepper (2011), "How To Write Shared Libraries" (Ver. 4.1.2),
-//     p.9, https://www.akkadia.org/drepper/dsohowto.pdf
-void GnuHashTableSection::writeBloomFilter(uint8_t *buf) {
-  unsigned c = config->is64 ? 64 : 32;
+  // Write the 2-bit bloom filter.
+  const unsigned c = config->is64 ? 64 : 32;
   for (const Entry &sym : symbols) {
     // When C = 64, we choose a word with bits [6:...] and set 1 to two bits in
     // the word using bits [0:5] and [26:31].
@@ -2404,9 +2391,9 @@ void GnuHashTableSection::writeBloomFilter(uint8_t *buf) {
     val |= uint64_t(1) << ((sym.hash >> Shift2) % c);
     writeUint(buf + i * config->wordsize, val);
   }
-}
+  buf += config->wordsize * maskWords;
 
-void GnuHashTableSection::writeHashTable(uint8_t *buf) {
+  // Write the hash table.
   uint32_t *buckets = reinterpret_cast<uint32_t *>(buf);
   uint32_t oldBucket = -1;
   uint32_t *values = buckets + nBuckets;

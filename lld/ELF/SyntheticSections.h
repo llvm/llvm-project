@@ -675,9 +675,6 @@ private:
   // See the comment in writeBloomFilter.
   enum { Shift2 = 26 };
 
-  void writeBloomFilter(uint8_t *buf);
-  void writeHashTable(uint8_t *buf);
-
   struct Entry {
     Symbol *sym;
     size_t strTabOffset;
