@@ -25,7 +25,8 @@ enum class Access { Sequential, Direct, Stream };
 inline bool IsRecordFile(Access a) { return a != Access::Stream; }
 
 // These characteristics of a connection are immutable after being
-// established in an OPEN statement.
+// established in an OPEN statement, except for recordLength,
+// which is immutable only when isFixedRecordLength is true.
 struct ConnectionAttributes {
   Access access{Access::Sequential}; // ACCESS='SEQUENTIAL', 'DIRECT', 'STREAM'
   std::optional<bool> isUnformatted; // FORM='UNFORMATTED' if true

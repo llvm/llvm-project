@@ -107,7 +107,7 @@ void ExternalFileUnit::OpenUnit(std::optional<OpenStatus> status,
   swapEndianness_ = convert == Convert::Swap ||
       (convert == Convert::LittleEndian && !isHostLittleEndian) ||
       (convert == Convert::BigEndian && isHostLittleEndian);
-  if (IsOpen()) {
+  if (IsConnected()) {
     bool isSamePath{newPath.get() && path() && pathLength() == newPathLength &&
         std::memcmp(path(), newPath.get(), newPathLength) == 0};
     if (status && *status != OpenStatus::Old && isSamePath) {
