@@ -1043,7 +1043,7 @@ define <64 x i8> @splatconstant_rotate_v64i8(<64 x i8> %a) nounwind {
 define <8 x i64> @splatconstant_rotate_mask_v8i64(<8 x i64> %a) nounwind {
 ; AVX512-LABEL: splatconstant_rotate_mask_v8i64:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vprolq $15, %zmm0, %zmm0
+; AVX512-NEXT:    vpsrlq $49, %zmm0, %zmm0
 ; AVX512-NEXT:    vpandq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm0, %zmm0
 ; AVX512-NEXT:    retq
   %shl = shl <8 x i64> %a, <i64 15, i64 15, i64 15, i64 15, i64 15, i64 15, i64 15, i64 15>

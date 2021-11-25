@@ -437,6 +437,18 @@ def non_temporal_store :
          cast<MaskedStoreSDNode>(N)->isNonTemporal();
 }]>;
 
+// top16Zero - answer true if the upper 16 bits of $src are 0, false otherwise
+def top16Zero: PatLeaf<(i32 GPR32:$src), [{
+  return SDValue(N,0)->getValueType(0) == MVT::i32 &&
+         CurDAG->MaskedValueIsZero(SDValue(N,0), APInt::getHighBitsSet(32, 16));
+  }]>;
+
+// top32Zero - answer true if the upper 32 bits of $src are 0, false otherwise
+def top32Zero: PatLeaf<(i64 GPR64:$src), [{
+  return SDValue(N,0)->getValueType(0) == MVT::i64 &&
+         CurDAG->MaskedValueIsZero(SDValue(N,0), APInt::getHighBitsSet(64, 32));
+  }]>;
+
 // Node definitions.
 def AArch64adrp          : SDNode<"AArch64ISD::ADRP", SDTIntUnaryOp, []>;
 def AArch64adr           : SDNode<"AArch64ISD::ADR", SDTIntUnaryOp, []>;
@@ -2045,6 +2057,10 @@ def : InstAlias<"rev64 $Rd, $Rn", (REVXr GPR64:$Rd, GPR64:$Rn), 0>;
 // orders.
 def : Pat<(bswap (rotr GPR32:$Rn, (i64 16))), (REV16Wr GPR32:$Rn)>;
 def : Pat<(bswap (rotr GPR64:$Rn, (i64 32))), (REV32Xr GPR64:$Rn)>;
+
+// Match (srl (bswap x), C) -> revC if the upper bswap bits are known zero.
+def : Pat<(srl (bswap top16Zero:$Rn), (i64 16)), (REV16Wr GPR32:$Rn)>;
+def : Pat<(srl (bswap top32Zero:$Rn), (i64 32)), (REV32Xr GPR64:$Rn)>;
 
 //===----------------------------------------------------------------------===//
 // Bitfield immediate extraction instruction.
