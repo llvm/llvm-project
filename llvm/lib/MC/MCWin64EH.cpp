@@ -1197,7 +1197,8 @@ static uint32_t ARMCountOfUnwindCodes(ArrayRef<WinEH::Instruction> Insns) {
   return Count;
 }
 
-static uint32_t ARMCountOfInstructionBytes(ArrayRef<WinEH::Instruction> Insns) {
+static uint32_t ARMCountOfInstructionBytes(ArrayRef<WinEH::Instruction> Insns,
+                                           bool *HasCustom = nullptr) {
   uint32_t Count = 0;
   for (const auto &I : Insns) {
     switch (static_cast<Win64EH::UnwindOpcodes>(I.Operation)) {
@@ -1247,10 +1248,48 @@ static uint32_t ARMCountOfInstructionBytes(ArrayRef<WinEH::Instruction> Insns) {
       // We can't reason about what instructions this maps to; return a
       // phony number to make sure we don't accidentally do epilog packing.
       Count += 1000;
+      if (HasCustom)
+        *HasCustom = true;
       break;
     }
   }
   return Count;
+}
+
+static void checkARMInstructions(MCStreamer &Streamer,
+                                 ArrayRef<WinEH::Instruction> Insns,
+                                 const MCSymbol *Begin, const MCSymbol *End,
+                                 StringRef Name, StringRef Type) {
+  if (!End)
+    return;
+  Optional<int64_t> MaybeDistance =
+      GetOptionalAbsDifference(Streamer, End, Begin);
+  if (!MaybeDistance)
+    return;
+  uint32_t Distance = (uint32_t)*MaybeDistance;
+  bool HasCustom = false;
+  uint32_t InstructionBytes = ARMCountOfInstructionBytes(Insns, &HasCustom);
+  if (HasCustom)
+    return;
+  if (Distance != InstructionBytes) {
+    Streamer.getContext().reportError(
+        SMLoc(), "Incorrect size for " + Name + " " + Type + ": " +
+                     Twine(Distance) +
+                     " bytes of instructions in range, but .seh directives "
+                     "corresponding to " +
+                     Twine(InstructionBytes) + " bytes\n");
+  }
+}
+
+static bool isARMTerminator(const WinEH::Instruction &inst) {
+  switch (static_cast<Win64EH::UnwindOpcodes>(inst.Operation)) {
+  case Win64EH::UOP_End:
+  case Win64EH::UOP_EndNop:
+  case Win64EH::UOP_WideEndNop:
+    return true;
+  default:
+    return false;
+  }
 }
 
 // Unwind opcode encodings and restrictions are documented at
@@ -1959,6 +1998,27 @@ static void ARMEmitUnwindInfo(MCStreamer &streamer, WinEH::FrameInfo *info,
   streamer.emitValueToAlignment(4);
   streamer.emitLabel(Label);
   info->Symbol = Label;
+
+  if (!info->PrologEnd)
+    streamer.getContext().reportError(SMLoc(), "Prologue in " +
+                                                   info->Function->getName() +
+                                                   " not correctly terminated");
+
+  if (info->PrologEnd && !info->Fragment)
+    checkARMInstructions(streamer, info->Instructions, info->Begin,
+                         info->PrologEnd, info->Function->getName(),
+                         "prologue");
+  for (auto &I : info->EpilogMap) {
+    MCSymbol *EpilogStart = I.first;
+    auto &Epilog = I.second;
+    checkARMInstructions(streamer, Epilog.Instructions, EpilogStart, Epilog.End,
+                         info->Function->getName(), "epilogue");
+    if (Epilog.Instructions.empty() ||
+        !isARMTerminator(Epilog.Instructions.back()))
+      streamer.getContext().reportError(
+          SMLoc(), "Epilogue in " + info->Function->getName() +
+                       " not correctly terminated");
+  }
 
   Optional<int64_t> RawFuncLength;
   const MCExpr *FuncLengthExpr = nullptr;

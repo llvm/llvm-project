@@ -958,7 +958,7 @@ void WinCOFFObjectWriter::assignFileOffsets(MCAssembler &Asm,
   for (const auto &Section : Asm) {
     COFFSection *Sec = SectionMap[&Section];
 
-    if (Sec->Number == -1)
+    if (!Sec || Sec->Number == -1)
       continue;
 
     Sec->Header.SizeOfRawData = Layout.getSectionAddressSize(&Section);
