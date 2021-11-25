@@ -8,7 +8,7 @@
 ; YAML-NEXT:  Function:        build_vec_v2i64
 ; YAML-NEXT:  Args:
 ; YAML-NEXT:    - String:          'SLP vectorized with cost '
-; YAML-NEXT:    - Cost:            '-10'
+; YAML-NEXT:    - Cost:            '-8'
 ; YAML-NEXT:    - String:          ' and with tree size '
 ; YAML-NEXT:    - TreeSize:        '8'
 
@@ -17,9 +17,11 @@ define <2 x i64> @build_vec_v2i64(<2 x i64> %v0, <2 x i64> %v1) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = add <2 x i64> [[V0:%.*]], [[V1:%.*]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = sub <2 x i64> [[V0]], [[V1]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <2 x i64> [[TMP1]], <2 x i64> [[TMP2]], <2 x i32> <i32 1, i32 2>
-; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <2 x i64> [[TMP1]], <2 x i64> [[TMP2]], <2 x i32> <i32 0, i32 3>
-; CHECK-NEXT:    [[TMP5:%.*]] = add <2 x i64> [[TMP4]], [[TMP3]]
-; CHECK-NEXT:    ret <2 x i64> [[TMP5]]
+; CHECK-NEXT:    [[TMP4:%.*]] = add <2 x i64> [[V0]], [[V1]]
+; CHECK-NEXT:    [[TMP5:%.*]] = sub <2 x i64> [[V0]], [[V1]]
+; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <2 x i64> [[TMP4]], <2 x i64> [[TMP5]], <2 x i32> <i32 0, i32 3>
+; CHECK-NEXT:    [[TMP7:%.*]] = add <2 x i64> [[TMP6]], [[TMP3]]
+; CHECK-NEXT:    ret <2 x i64> [[TMP7]]
 ;
   %v0.0 = extractelement <2 x i64> %v0, i32 0
   %v0.1 = extractelement <2 x i64> %v0, i32 1

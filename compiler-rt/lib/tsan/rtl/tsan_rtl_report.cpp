@@ -346,7 +346,7 @@ void ScopedReportBase::AddLocation(uptr addr, uptr size) {
     ThreadContext *tctx = FindThreadByTidLocked(b->tid);
     auto *loc = New<ReportLocation>();
     loc->type = ReportLocationHeap;
-    loc->heap_chunk_start = (uptr)allocator()->GetBlockBegin((void *)addr);
+    loc->heap_chunk_start = block_begin;
     loc->heap_chunk_size = b->siz;
     loc->external_tag = b->tag;
     loc->tid = tctx ? tctx->tid : b->tid;
