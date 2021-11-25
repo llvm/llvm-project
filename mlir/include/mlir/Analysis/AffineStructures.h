@@ -385,7 +385,6 @@ public:
 
   /// Returns the constant bound for the pos^th identifier if there is one;
   /// None otherwise.
-  // TODO: Support EQ bounds.
   Optional<int64_t> getConstantBound(BoundType type, unsigned pos) const;
 
   /// Gets the lower and upper bound of the `offset` + `pos`th identifier

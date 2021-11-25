@@ -2836,11 +2836,22 @@ FlatAffineConstraints::computeConstantLowerOrUpperBound(unsigned pos) {
 
 Optional<int64_t> FlatAffineConstraints::getConstantBound(BoundType type,
                                                           unsigned pos) const {
-  assert(type != BoundType::EQ && "EQ not implemented");
   FlatAffineConstraints tmpCst(*this);
   if (type == BoundType::LB)
-    return tmpCst.computeConstantLowerOrUpperBound</*isLower=*/true>(pos);
-  return tmpCst.computeConstantLowerOrUpperBound</*isLower=*/false>(pos);
+    return FlatAffineConstraints(*this)
+        .computeConstantLowerOrUpperBound</*isLower=*/true>(pos);
+  if (type == BoundType::UB)
+    return FlatAffineConstraints(*this)
+        .computeConstantLowerOrUpperBound</*isLower=*/false>(pos);
+
+  assert(type == BoundType::EQ && "expected EQ");
+  Optional<int64_t> lb =
+      FlatAffineConstraints(*this)
+          .computeConstantLowerOrUpperBound</*isLower=*/true>(pos);
+  Optional<int64_t> ub =
+      FlatAffineConstraints(*this)
+          .computeConstantLowerOrUpperBound</*isLower=*/false>(pos);
+  return (lb && ub && *lb == *ub) ? Optional<int64_t>(*ub) : None;
 }
 
 // A simple (naive and conservative) check for hyper-rectangularity.
