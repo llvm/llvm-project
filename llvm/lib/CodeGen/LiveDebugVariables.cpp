@@ -1875,34 +1875,57 @@ void LDVImpl::emitDebugValues(VirtRegMap *VRM) {
 
   LLVM_DEBUG(dbgs() << "********** EMITTING INSTR REFERENCES **********\n");
 
-  // Re-insert any debug instrs back in the position they were. Ordering
-  // is preserved by vector. We must re-insert in the same order to ensure that
-  // debug instructions don't swap, which could re-order assignments.
-  for (auto &P : StashedDebugInstrs) {
-    SlotIndex Idx = P.Idx;
+  // Re-insert any debug instrs back in the position they were. We must
+  // re-insert in the same order to ensure that debug instructions don't swap,
+  // which could re-order assignments. Do so in a batch -- once we find the
+  // insert position, insert all instructions at the same SlotIdx. They are
+  // guaranteed to appear in-sequence in StashedDebugInstrs because we insert
+  // them in order.
+  for (auto StashIt = StashedDebugInstrs.begin();
+       StashIt != StashedDebugInstrs.end(); ++StashIt) {
+    SlotIndex Idx = StashIt->Idx;
+    MachineBasicBlock *MBB = StashIt->MBB;
+    MachineInstr *MI = StashIt->MI;
+
+    auto EmitInstsHere = [this, &StashIt, MBB, Idx,
+                          MI](MachineBasicBlock::iterator InsertPos) {
+      // Insert this debug instruction.
+      MBB->insert(InsertPos, MI);
+
+      // Look at subsequent stashed debug instructions: if they're at the same
+      // index, insert those too.
+      auto NextItem = std::next(StashIt);
+      while (NextItem != StashedDebugInstrs.end() && NextItem->Idx == Idx) {
+        assert(NextItem->MBB == MBB && "Instrs with same slot index should be"
+               "in the same block");
+        MBB->insert(InsertPos, NextItem->MI);
+        StashIt = NextItem;
+        NextItem = std::next(StashIt);
+      };
+    };
 
     // Start block index: find the first non-debug instr in the block, and
     // insert before it.
-    if (Idx == Slots->getMBBStartIdx(P.MBB)) {
+    if (Idx == Slots->getMBBStartIdx(MBB)) {
       MachineBasicBlock::iterator InsertPos =
-          findInsertLocation(P.MBB, Idx, *LIS, BBSkipInstsMap);
-      P.MBB->insert(InsertPos, P.MI);
+          findInsertLocation(MBB, Idx, *LIS, BBSkipInstsMap);
+      EmitInstsHere(InsertPos);
       continue;
     }
 
     if (MachineInstr *Pos = Slots->getInstructionFromIndex(Idx)) {
       // Insert at the end of any debug instructions.
       auto PostDebug = std::next(Pos->getIterator());
-      PostDebug = skipDebugInstructionsForward(PostDebug, P.MBB->instr_end());
-      P.MBB->insert(PostDebug, P.MI);
+      PostDebug = skipDebugInstructionsForward(PostDebug, MBB->instr_end());
+      EmitInstsHere(PostDebug);
     } else {
       // Insert position disappeared; walk forwards through slots until we
       // find a new one.
-      SlotIndex End = Slots->getMBBEndIdx(P.MBB);
+      SlotIndex End = Slots->getMBBEndIdx(MBB);
       for (; Idx < End; Idx = Slots->getNextNonNullIndex(Idx)) {
         Pos = Slots->getInstructionFromIndex(Idx);
         if (Pos) {
-          P.MBB->insert(Pos->getIterator(), P.MI);
+          EmitInstsHere(Pos->getIterator());
           break;
         }
       }
@@ -1911,8 +1934,8 @@ void LDVImpl::emitDebugValues(VirtRegMap *VRM) {
       // insert! It's not safe to discard any debug instructions; place them
       // in front of the first terminator, or in front of end().
       if (Idx >= End) {
-        auto TermIt = P.MBB->getFirstTerminator();
-        P.MBB->insert(TermIt, P.MI);
+        auto TermIt = MBB->getFirstTerminator();
+        EmitInstsHere(TermIt);
       }
     }
   }
