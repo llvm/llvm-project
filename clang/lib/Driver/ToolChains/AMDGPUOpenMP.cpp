@@ -451,12 +451,9 @@ void AMDGCN::OpenMPLinker::constructLldCommand(
   auto &D = TC.getDriver();
   auto TargetID = TC.getTargetID();
   auto FileName = llvm::sys::path::stem(Output.getFilename());
-  auto OutFileName = Twine(FileName + "-" + TargetID +
-                           llvm::sys::path::extension(Output.getFilename()))
+  auto OutFileName = Twine(FileName + llvm::sys::path::extension(Output.getFilename()) + "-" + TargetID)
                          .str();
-  if (C.getDriver().isSaveTempsEnabled()) {
-    OutFileName.append(".out");
-  }
+
   LldArgs.push_back(Args.MakeArgString(OutFileName.c_str()));
 
   LldArgs.push_back(Args.MakeArgString(InputFileName));
