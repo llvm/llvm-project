@@ -318,7 +318,7 @@ bool X86_64::deleteFallThruJmpInsn(InputSection &is, InputFile *file,
 RelExpr X86_64::getRelExpr(RelType type, const Symbol &s,
                            const uint8_t *loc) const {
   if (type == R_X86_64_GOTTPOFF)
-    config->hasStaticTlsModel = true;
+    config->hasTlsIe = true;
 
   switch (type) {
   case R_X86_64_8:
