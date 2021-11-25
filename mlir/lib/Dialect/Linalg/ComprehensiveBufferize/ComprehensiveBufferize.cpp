@@ -430,9 +430,8 @@ hasReadAfterWriteInterference(const DenseSet<OpOperand *> &usesRead,
                                               aliasInfo))
             continue;
 
-      // Special rules for branches.
-      // TODO: Use an interface.
-      if (scf::insideMutuallyExclusiveBranches(readingOp, conflictingWritingOp))
+      // Ops are not conflicting if they are in mutually exclusive regions.
+      if (insideMutuallyExclusiveRegions(readingOp, conflictingWritingOp))
         continue;
 
       LDBG("WRITE = #" << printValueInfo(lastWrite) << "\n");
