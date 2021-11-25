@@ -832,6 +832,23 @@ func @vector_print_scalar_f64(%arg0: f64) {
 
 // -----
 
+func @vector_print_vector_0d(%arg0: vector<f32>) {
+  vector.print %arg0 : vector<f32>
+  return
+}
+// CHECK-LABEL: @vector_print_vector_0d(
+// CHECK-SAME: %[[A:.*]]: vector<f32>)
+//       CHECK: %[[T0:.*]] = builtin.unrealized_conversion_cast %[[A]] : vector<f32> to vector<1xf32>
+//       CHECK: llvm.call @printOpen() : () -> ()
+//       CHECK: %[[T1:.*]] = llvm.mlir.constant(0 : index) : i64
+//       CHECK: %[[T2:.*]] = llvm.extractelement %[[T0]][%[[T1]] : i64] : vector<1xf32>
+//       CHECK: llvm.call @printF32(%[[T2]]) : (f32) -> ()
+//       CHECK: llvm.call @printClose() : () -> ()
+//       CHECK: llvm.call @printNewline() : () -> ()
+//       CHECK: return
+
+// -----
+
 func @vector_print_vector(%arg0: vector<2x2xf32>) {
   vector.print %arg0 : vector<2x2xf32>
   return
