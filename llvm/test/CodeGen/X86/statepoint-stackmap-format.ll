@@ -1,9 +1,9 @@
 ; RUN: llc < %s -verify-machineinstrs -stack-symbol-ordering=0 -mtriple="x86_64-pc-linux-gnu" | FileCheck %s
 ; RUN: llc < %s -verify-machineinstrs -stack-symbol-ordering=0 -mtriple="x86_64-pc-unknown-elf" | FileCheck %s
 
-; This test is a sanity check to ensure statepoints are generating StackMap
-; sections correctly.  This is not intended to be a rigorous test of the 
-; StackMap format (see the stackmap tests for that).
+; This test is a basic correctness check to ensure statepoints are generating
+; StackMap sections correctly.  This is not intended to be a rigorous test of
+; the StackMap format (see the stackmap tests for that).
 
 target datalayout = "e-i64:64-f80:128-n8:16:32:64-S128"
 

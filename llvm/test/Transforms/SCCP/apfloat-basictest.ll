@@ -1,5 +1,5 @@
-; This is a basic sanity check for constant propagation. The fneg instruction
-; should be eliminated.
+; This is a basic correctness check for constant propagation. The fneg
+; instruction should be eliminated.
 
 ; RUN: opt < %s -sccp -S | FileCheck %s
 

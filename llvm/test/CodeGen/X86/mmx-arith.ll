@@ -2,7 +2,7 @@
 ; RUN: llc < %s -mtriple=i686-unknown-unknown -mattr=+mmx,+sse2 | FileCheck -check-prefix=X32 %s
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+mmx,+sse2 | FileCheck -check-prefix=X64 %s
 
-;; A basic sanity check to make sure that MMX arithmetic actually compiles.
+;; A basic functional check to make sure that MMX arithmetic actually compiles.
 ;; First is a straight translation of the original with bitcasts as needed.
 
 define void @test0(x86_mmx* %A, x86_mmx* %B) {

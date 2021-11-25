@@ -4,7 +4,7 @@
 ; RUN: llc -mtriple=riscv64 -verify-machineinstrs < %s \
 ; RUN:   | FileCheck -check-prefix=RV64IF %s
 
-; This file provides a simple sanity check of float and double operations for
+; This file provides a simple test of float and double operations for
 ; RV32I and RV64I. This is primarily intended to ensure that custom
 ; legalisation or DAG combines aren't incorrectly triggered when the F
 ; extension isn't enabled.

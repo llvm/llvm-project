@@ -8,7 +8,7 @@
 ## separate string tables, whereas the assembler shares them.
 
 # RUN: llvm-mc -filetype=obj -triple x86_64-pc-linux %s -o %t.o
-## Sanity check that the string tables are shared:
+## Verify check that the string tables are shared:
 # RUN: llvm-readobj --section-headers %t.o \
 # RUN:   | FileCheck %s --check-prefix=VALIDATE --implicit-check-not=.shstrtab
 

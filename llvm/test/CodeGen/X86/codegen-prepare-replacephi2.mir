@@ -64,5 +64,5 @@
 
 ...
 
-# Sanity check to verify that something got through.
+# A check to verify that something got through.
 # CHECK-LABEL: entry:

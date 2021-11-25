@@ -1,4 +1,4 @@
-; Basic sanity test to check that instruction operands are encoded with
+; Basic correctness test to check that instruction operands are encoded with
 ; relative IDs.
 ; RUN: llvm-as < %s | llvm-bcanalyzer -dump | FileCheck %s
 ; RUN: verify-uselistorder < %s
