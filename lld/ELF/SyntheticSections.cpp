@@ -1382,7 +1382,7 @@ template <class ELFT> void DynamicSection<ELFT>::finalizeContents() {
   }
   if (!config->zText)
     dtFlags |= DF_TEXTREL;
-  if (config->hasTlsIe)
+  if (config->hasTlsIe && config->shared)
     dtFlags |= DF_STATIC_TLS;
 
   if (dtFlags)
