@@ -38,6 +38,8 @@ using namespace IRSimilarity;
 // matching and outlining.
 extern cl::opt<bool> DisableBranches;
 
+
+
 // Set to true if the user wants the ir outliner to run on linkonceodr linkage
 // functions. This is false by default because the linker can dedupe linkonceodr
 // functions. Since the outliner is confined to a single module (modulo LTO),
@@ -54,6 +56,13 @@ static cl::opt<bool> NoCostModel(
     "ir-outlining-no-cost", cl::init(false), cl::ReallyHidden,
     cl::desc("Debug option to outline greedily, without restriction that "
              "calculated benefit outweighs cost"));
+
+
+static 
+cl::opt<bool>
+KeepOldBlocks("iroutline-copy", cl::init(false),
+    cl::Hidden,
+    cl::desc("Copy instead of moving instructions from original function."));
 
 /// The OutlinableGroup holds all the overarching information for outlining
 /// a set of regions that are structurally similar to one another, such as the
@@ -1903,7 +1912,7 @@ bool IROutliner::extractSection(OutlinableRegion &Region) {
   Function *OrigF = Region.StartBB->getParent();
   CodeExtractorAnalysisCache CEAC(*OrigF);
   Region.ExtractedFunction =
-      Region.CE->extractCodeRegion(CEAC, ArgInputs, Outputs);
+      Region.CE->extractCodeRegion(CEAC, ArgInputs, Outputs, KeepOldBlocks);
 
   // If the extraction was successful, find the BasicBlock, and reassign the
   // OutlinableRegion blocks
