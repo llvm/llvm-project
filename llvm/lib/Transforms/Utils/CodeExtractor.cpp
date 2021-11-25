@@ -1877,6 +1877,20 @@ void CodeExtractor::prepareForExtraction(const CodeExtractorAnalysisCache &CEAC,
 
 }
 
+
+static void applyFirstDebugLoc(Function *oldFunction, ArrayRef<BasicBlock*> Blocks, Instruction *BranchI) {
+    if (oldFunction->getSubprogram()) {
+        any_of(Blocks, [&BranchI](const BasicBlock *BB) {
+            return any_of(*BB, [&BranchI](const Instruction &I) {
+                if (!I.getDebugLoc())
+                    return false;
+                BranchI->setDebugLoc(I.getDebugLoc());
+                return true;
+                });
+            });
+    }
+}
+
 Function *
 CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
                                  ValueSet &inputs, ValueSet &outputs, bool KeepOldBlocks ) {
@@ -1985,10 +1999,6 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
     
 
 
-
-
-
-
   // This takes place of the original loop
   BasicBlock *codeReplacer = BasicBlock::Create(header->getContext(),
       "codeRepl", oldFunction,
@@ -2001,6 +2011,8 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
 
 
       auto *BranchI = BranchInst::Create(header);
+
+#if 0
       // If the original function has debug info, we have to add a debug location
       // to the new branch instruction from the artificial entry block.
       // We use the debug location of the first instruction in the extracted
@@ -2015,6 +2027,9 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
                   });
               });
       }
+#endif 
+      applyFirstDebugLoc(oldFunction, Blocks.getArrayRef(), BranchI);
+      
       newFuncRoot->getInstList().push_back(BranchI);
 
 
@@ -2488,7 +2503,8 @@ Function *CodeExtractor::extractCodeRegionByCopy(const CodeExtractorAnalysisCach
         //return newFunction;
 #endif
         BasicBlock *AllocaBlock = BasicBlock::Create(header->getContext(),  "entry", newFunction,  newRootNode);
-        BranchInst::Create(newRootNode, AllocaBlock);
+     auto  BranchI =   BranchInst::Create(newRootNode, AllocaBlock);
+     applyFirstDebugLoc(oldFunction, Blocks.getArrayRef(), BranchI);
 
         // Recursive calls to oldFunction still call the old Function from extracted function.
 
@@ -2869,7 +2885,8 @@ Function *CodeExtractor::extractCodeRegionByCopy(const CodeExtractorAnalysisCach
    
         auto HeaderCopy  = VMap.lookup(header);
         assert(HeaderCopy);
-        auto *BranchI = BranchInst::Create(header, newRootNode);
+        auto *BranchI2 = BranchInst::Create(header, newRootNode);
+        applyFirstDebugLoc(oldFunction, Blocks.getArrayRef(), BranchI2);
 
     // Mark the new function `noreturn` if applicable. Terminators which resume
     // exception propagation are treated as returning instructions. This is to
