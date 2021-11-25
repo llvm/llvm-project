@@ -5,7 +5,7 @@
 # RUN: yaml2obj %s -o %t.exec -DTYPE=EXEC
 # RUN: llvm-objcopy --strip-unneeded %t.exec %t2.exec
 # RUN: llvm-readobj --section-headers %t2.exec | FileCheck %s --check-prefix=NOSYMTAB
-## Sanity check that the symtab wouldn't be removed if the input were an ET_REL.
+## Validate that the symtab wouldn't be removed if the input were an ET_REL.
 # RUN: yaml2obj %s -o %t.rel -DTYPE=REL
 # RUN: llvm-objcopy --strip-unneeded %t.rel %t2.rel
 # RUN: llvm-readobj --section-headers %t2.rel | FileCheck %s --check-prefix=SYMTAB

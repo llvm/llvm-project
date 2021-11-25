@@ -1088,18 +1088,6 @@ void GDBRemoteCommunicationServerLLGS::NewSubprocess(
 void GDBRemoteCommunicationServerLLGS::DataAvailableCallback() {
   Log *log(GetLogIfAnyCategoriesSet(GDBR_LOG_COMM));
 
-  if (!m_handshake_completed) {
-    if (!HandshakeWithClient()) {
-      LLDB_LOGF(log,
-                "GDBRemoteCommunicationServerLLGS::%s handshake with "
-                "client failed, exiting",
-                __FUNCTION__);
-      m_mainloop.RequestTermination();
-      return;
-    }
-    m_handshake_completed = true;
-  }
-
   bool interrupt = false;
   bool done = false;
   Status error;

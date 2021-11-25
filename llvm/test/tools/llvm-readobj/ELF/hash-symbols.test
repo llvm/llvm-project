@@ -261,7 +261,7 @@ ProgramHeaders:
 
 # NO-HASH-NOT: {{.}}
 
-## Sanity check that we can still find the dynamic symbols (i.e. the above test
+## Check that we can still find the dynamic symbols (i.e. the above test
 ## doesn't pass due to a mistake in the dynamic section).
 # RUN: llvm-readelf --dyn-symbols %t4.so | FileCheck %s --check-prefix DYNSYMS
 

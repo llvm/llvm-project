@@ -111,7 +111,7 @@ entry:
   call void @test2_f(i1 true)
 ; CHECK-NOT: @test2_f
 
-  ; Sanity check that two calls with the hard predicate remain uninlined.
+  ; Check that two calls with the hard predicate remain uninlined.
   call void @test2_g(i1 true)
   call void @test2_g(i1 true)
 ; CHECK: call void @test2_g(i1 true)
@@ -183,7 +183,7 @@ entry:
   call void @test3_f(i1 false)
 ; CHECK-NOT: @test3_f
 
-  ; Sanity check that two calls with the hard predicate remain uninlined.
+  ; Check that two calls with the hard predicate remain uninlined.
   call void @test3_g(i1 true)
   call void @test3_g(i1 true)
 ; CHECK: call void @test3_g(i1 true)
