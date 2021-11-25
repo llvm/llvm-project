@@ -43,7 +43,8 @@ using namespace mlir::linalg;
 ///   2. Pad op does not have a constant padding value.
 ///   3. There is no immediately enclosing scf::ForOp.
 ///   4. The backward slice from the pad op to the scf::ForOp to hoist above
-///      contains an unknown op with a region.
+///      contains an unknown op with non index type operands, a region, or a
+///      memory effect.
 ///   5. The backward slice from the pad op to the scf::ForOp to hoist above is
 ///      empty.
 ///   6. The source tensor of pad op is not defined by an extract slice op.
@@ -80,7 +81,8 @@ private:
   /// operands consumed by `padTensorOp` and `sliceOp` and drops the operations
   /// not part of this index computation. Afterwards, the filtered
   /// `backwardSlice` contains only the loops whose induction variable is used,
-  /// directly or indirectly, to index the padded tensor.
+  /// directly or indirectly, to index the padded tensor. The method returns
+  /// failure if the filtered backward slice contains an unexpected operation.
   ///
   /// Example:
   /// ```
@@ -96,8 +98,8 @@ private:
   /// ```
   /// dropNonIndexDependencies(%padded_slice, %slice)
   /// removes [scf.for %k, linalg.fill(%cst, %arg1)] from backwardSlice.
-  void dropNonIndexDependencies(PadTensorOp padTensorOp,
-                                tensor::ExtractSliceOp sliceOp);
+  LogicalResult dropNonIndexDependencies(PadTensorOp padTensorOp,
+                                         tensor::ExtractSliceOp sliceOp);
 
   /// Encodes whether the analysis is valid and hoisting can proceed.
   bool valid;
@@ -209,18 +211,8 @@ HoistingAnalysis::HoistingAnalysis(PadTensorOp padTensorOp, int numLoops) {
   // Remove all ops in the backward slice that are not used to index the padded
   // tensor. In particular, keep `padTensorOp`, `sliceOp`, and the loop and
   // affine operations used for the index computation.
-  dropNonIndexDependencies(padTensorOp, sliceOp);
-
-  // Check if an op has a region it is either `padTensorOp`, a scf::ForOp, or a
-  // LinalgOp.
-  for (Operation *op : backwardSlice) {
-    if (op != padTensorOp && op->getNumRegions() > 0 &&
-        !isa<scf::ForOp, LinalgOp>(op)) {
-      LLVM_DEBUG(DBGS() << "Unsupported op with region: " << *op
-                        << " -> skip\n");
-      return;
-    }
-  }
+  if (failed(dropNonIndexDependencies(padTensorOp, sliceOp)))
+    return;
 
   // Add only the loops part of the filtered `backwardSlice` to the packing
   // loops. All other loops are not used to index the padded data and
@@ -239,8 +231,9 @@ HoistingAnalysis::HoistingAnalysis(PadTensorOp padTensorOp, int numLoops) {
   valid = true;
 }
 
-void HoistingAnalysis::dropNonIndexDependencies(
-    PadTensorOp padTensorOp, tensor::ExtractSliceOp sliceOp) {
+LogicalResult
+HoistingAnalysis::dropNonIndexDependencies(PadTensorOp padTensorOp,
+                                           tensor::ExtractSliceOp sliceOp) {
   // Set of all values used for index computation.
   SetVector<Value> indexEdges;
 
@@ -289,7 +282,7 @@ void HoistingAnalysis::dropNonIndexDependencies(
     // Add the index operands of the loop if its induction variable is
     // used for index computation.
     if (auto forOp = dyn_cast<scf::ForOp>(op)) {
-      if (indexEdges.contains(forOp.getInductionVar())) {
+      if (!hasIndexResult(op) && indexEdges.contains(forOp.getInductionVar())) {
         addIndexOperandsToIndexEdges(op);
         continue;
       }
@@ -298,6 +291,21 @@ void HoistingAnalysis::dropNonIndexDependencies(
     // used for index computation.
     if (hasIndexResult(op)) {
       addIndexOperandsToIndexEdges(op);
+      // Check the operands of the remaining operations all have index type.
+      if (llvm::any_of(op->getOperandTypes(),
+                       [](Type type) { return !type.isIndex(); })) {
+        LLVM_DEBUG(DBGS() << "Unsupported op with non index type operands: "
+                          << op << " -> skip\n");
+        return failure();
+      }
+      // Check the remaining operations do not have regions or memory effects.
+      auto effectInterface = dyn_cast<MemoryEffectOpInterface>(op);
+      bool hasMemoryEffect = effectInterface && !effectInterface.hasNoEffect();
+      if (hasMemoryEffect || op->getNumRegions() != 0) {
+        LLVM_DEBUG(DBGS() << "Unsupported op with region or memory effect: "
+                          << op << " -> skip\n");
+        return failure();
+      }
       continue;
     }
     // Remove all other operation not used by the index computation except for
@@ -305,6 +313,7 @@ void HoistingAnalysis::dropNonIndexDependencies(
     if (!isa<arith::ConstantOp>(op))
       backwardSlice.remove(op);
   }
+  return success();
 }
 
 SmallVector<Value>
@@ -416,18 +425,13 @@ FailureOr<Value> mlir::linalg::hoistPaddingOnTensors(PadTensorOp opToHoist,
     if (auto sliceOp = dyn_cast<tensor::ExtractSliceOp>(op))
       if (bvm.lookupOrDefault(sliceOp.source()) == packedTensor)
         continue;
-    auto effects = dyn_cast<MemoryEffectOpInterface>(op);
-    bool hasNoEffects = !effects || effects.hasNoEffect();
-    if (hasNoEffects &&
-        (op->getNumRegions() == 0 || isa<linalg::PadTensorOp>(op))) {
+    // Clone all operations except it is a loop.
+    auto forOp = dyn_cast<scf::ForOp>(op);
+    if (!forOp) {
       b.clone(*op, bvm);
       continue;
     }
-    // TODO: support more cases as they appear.
-    auto forOp = dyn_cast<scf::ForOp>(op);
-    assert(forOp && llvm::is_contained(analysis.packingLoops, forOp) &&
-           "expect an scf::ForOp that is a packing loop");
-
+    // Create a packing loop that takes `packedTensor` as iteration argument.
     auto clonedForOp =
         b.create<scf::ForOp>(loc, bvm.lookupOrDefault(forOp.lowerBound()),
                              bvm.lookupOrDefault(forOp.upperBound()),

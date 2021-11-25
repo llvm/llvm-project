@@ -436,3 +436,154 @@ func @non_constant_padding(%arg0: tensor<24x12xf32>,
   return %0 : tensor<24x25xf32>
 }
 
+// -----
+
+#map0 = affine_map<(d0) -> (5, -d0 + 24)>
+#map1 = affine_map<(d0) -> (7, -d0 + 25)>
+#map2 = affine_map<(d0) -> (-d0 + 5)>
+#map3 = affine_map<(d0) -> (-d0 + 7)>
+
+//      CHECK:  unexpected_operation
+//      CHECK-DOUBLE:  unexpected_operation
+// CHECK-SAME:    %[[ARG3:[0-9a-zA-Z]*]]: memref<?xindex>
+// CHECK-SAME:    %[[ARG4:[0-9a-zA-Z]*]]: i32
+func @unexpected_operation(%arg0: tensor<24x12xf32>,
+                           %arg1: tensor<12x25xf32>,
+                           %arg2: tensor<24x25xf32>,
+                           %arg3: memref<?xindex>,
+                           %arg4: i32) -> tensor<24x25xf32> {
+  %cst = arith.constant 0.000000e+00 : f32
+  %c5 = arith.constant 5 : index
+  %c7 = arith.constant 7 : index
+  %c6 = arith.constant 6 : index
+  %c24 = arith.constant 24 : index
+  %c25 = arith.constant 25 : index
+  %c12 = arith.constant 12 : index
+  %c0 = arith.constant 0 : index
+
+  //      CHECK:  scf.for %[[IV0:[0-9a-zA-Z]*]] =
+  %0 = scf.for %arg5 = %c0 to %c24 step %c5 iter_args(%arg6 = %arg2) -> (tensor<24x25xf32>) {
+
+    // CHECK-NEXT:  scf.for %[[IV1:[0-9a-zA-Z]*]] =
+    %1 = scf.for %arg7 = %c0 to %c25 step %c7 iter_args(%arg8 = %arg6) -> (tensor<24x25xf32>) {
+
+      // CHECK-NEXT:  scf.for %[[IV2:[0-9a-zA-Z]*]] =
+      %2 = scf.for %arg9 = %c0 to %c12 step %c6 iter_args(%arg10 = %arg8) -> (tensor<24x25xf32>) {
+        %3 = affine.min #map0(%arg5)
+        %4 = tensor.extract_slice %arg0[%arg5, %arg9] [%3, 6] [1, 1] : tensor<24x12xf32> to tensor<?x6xf32>
+        %5 = affine.min #map1(%arg7)
+        %6 = tensor.extract_slice %arg1[%arg9, %arg7] [6, %5] [1, 1] : tensor<12x25xf32> to tensor<6x?xf32>
+        %7 = tensor.extract_slice %arg10[%arg5, %arg7] [%3, %5] [1, 1] : tensor<24x25xf32> to tensor<?x?xf32>
+        %8 = affine.apply #map2(%3)
+
+        // Check cannot hoist due to unexpected operation with memory effect.
+        //      CHECK: %[[IDX0:.*]] = memref.load %[[ARG3]]
+        //      CHECK: %[[T0:.*]] = linalg.pad_tensor {{.*}}, %[[IDX0]]
+        %9 = memref.load %arg3[%c0] : memref<?xindex>
+        %10 = linalg.pad_tensor %4 nofold low[%c0, %c0] high[%8, %9]  {
+        ^bb0(%arg11: index, %arg12: index):  // no predecessors
+          linalg.yield %cst : f32
+        } : tensor<?x6xf32> to tensor<5x6xf32>
+        %11 = affine.apply #map3(%5)
+
+        // Check cannot hoist due to unexpected operation with non index operand.
+        //      CHECK: %[[IDX1:.*]] = arith.index_cast %[[ARG4]]
+        //      CHECK: %[[T1:.*]] = linalg.pad_tensor {{.*}}[%[[IDX1]]
+        %12 = arith.index_cast %arg4 : i32 to index
+        %13 = linalg.pad_tensor %6 nofold low[%c0, %c0] high[%12, %11]  {
+        ^bb0(%arg11: index, %arg12: index):  // no predecessors
+          linalg.yield %cst : f32
+        } : tensor<6x?xf32> to tensor<6x7xf32>
+        %14 = linalg.pad_tensor %7 low[%c0, %c0] high[%8, %11]  {
+        ^bb0(%arg11: index, %arg12: index):  // no predecessors
+          linalg.yield %cst : f32
+        } : tensor<?x?xf32> to tensor<5x7xf32>
+
+        //      CHECK:  = linalg.matmul ins(%[[T0]], %[[T1]]
+        %15 = linalg.matmul ins(%10, %13 : tensor<5x6xf32>, tensor<6x7xf32>) outs(%14 : tensor<5x7xf32>) -> tensor<5x7xf32>
+        %16 = tensor.extract_slice %15[0, 0] [%3, %5] [1, 1] : tensor<5x7xf32> to tensor<?x?xf32>
+        %17 = tensor.insert_slice %16 into %arg10[%arg5, %arg7] [%3, %5] [1, 1] : tensor<?x?xf32> into tensor<24x25xf32>
+        scf.yield %17 : tensor<24x25xf32>
+      }
+      scf.yield %2 : tensor<24x25xf32>
+    }
+    scf.yield %1 : tensor<24x25xf32>
+  }
+  return %0 : tensor<24x25xf32>
+}
+
+// -----
+
+#map0 = affine_map<(d0) -> (5, -d0 + 24)>
+#map1 = affine_map<(d0) -> (7, -d0 + 25)>
+#map2 = affine_map<(d0) -> (-d0 + 5)>
+#map3 = affine_map<(d0) -> (-d0 + 7)>
+
+//      CHECK:  unexpected_loop
+//      CHECK-DOUBLE:  unexpected_loop
+// CHECK-SAME:    %[[ARG3:[0-9a-zA-Z]*]]: index
+func @unexpected_loop(%arg0: tensor<24x12xf32>,
+                      %arg1: tensor<12x25xf32>,
+                      %arg2: tensor<24x25xf32>,
+                      %arg3: index) -> tensor<24x25xf32> {
+  %c0 = arith.constant 0 : index
+  %c12 = arith.constant 12 : index
+  %c25 = arith.constant 25 : index
+  %c24 = arith.constant 24 : index
+  %c6 = arith.constant 6 : index
+  %c7 = arith.constant 7 : index
+  %c5 = arith.constant 5 : index
+  %cst = arith.constant 0.000000e+00 : f32
+
+  //      CHECK:  scf.for %[[IV0:[0-9a-zA-Z]*]] =
+  %0 = scf.for %arg4 = %c0 to %c24 step %c5 iter_args(%arg5 = %arg2) -> (tensor<24x25xf32>) {
+
+    // CHECK-NEXT:  scf.for %[[IV1:[0-9a-zA-Z]*]] =
+    %1 = scf.for %arg6 = %c0 to %c25 step %c7 iter_args(%arg7 = %arg5) -> (tensor<24x25xf32>) {
+
+      // Check the padding of the first input operand is hoisted.
+      //      CHECK:  = linalg.pad_tensor
+
+      //      CHECK:  scf.for %[[IV2:[0-9a-zA-Z]*]] =
+      %2 = scf.for %arg8 = %c0 to %c12 step %c6 iter_args(%arg9 = %arg7) -> (tensor<24x25xf32>) {
+        %3 = affine.min #map0(%arg4)
+        %4 = tensor.extract_slice %arg0[%arg4, %arg8] [%3, 6] [1, 1] : tensor<24x12xf32> to tensor<?x6xf32>
+        %5 = affine.min #map1(%arg6)
+        %6 = tensor.extract_slice %arg1[%arg8, %arg6] [6, %5] [1, 1] : tensor<12x25xf32> to tensor<6x?xf32>
+        %7 = tensor.extract_slice %arg9[%arg4, %arg6] [%3, %5] [1, 1] : tensor<24x25xf32> to tensor<?x?xf32>
+        %8 = affine.apply #map2(%3)
+
+        // Check cannot hoist due to unexpected operation that has a region.
+        //      CHECK: %[[IDX0:.*]] = scf.for {{.*}} step %[[ARG3]]
+        //      CHECK: %[[T0:.*]] = linalg.pad_tensor {{.*}}, %[[IDX0]]
+        %9 = scf.for %arg10 = %c0 to %c24 step %arg3 iter_args(%arg11 = %c0) -> (index) {
+          %17 = arith.addi %arg3, %arg11 : index
+          scf.yield %17 : index
+        }
+        %10 = linalg.pad_tensor %4 nofold low[%c0, %c0] high[%8, %9]  {
+        ^bb0(%arg10: index, %arg11: index):  // no predecessors
+          linalg.yield %cst : f32
+        } : tensor<?x6xf32> to tensor<5x6xf32>
+        %11 = affine.apply #map3(%5)
+        %12 = linalg.pad_tensor %6 nofold low[%c0, %c0] high[%c0, %11]  {
+        ^bb0(%arg10: index, %arg11: index):  // no predecessors
+          linalg.yield %cst : f32
+        } : tensor<6x?xf32> to tensor<6x7xf32>
+        %13 = linalg.pad_tensor %7 low[%c0, %c0] high[%8, %11]  {
+        ^bb0(%arg10: index, %arg11: index):  // no predecessors
+          linalg.yield %cst : f32
+        } : tensor<?x?xf32> to tensor<5x7xf32>
+
+        //      CHECK:  = linalg.matmul ins(%[[T0]]
+        %14 = linalg.matmul ins(%10, %12 : tensor<5x6xf32>, tensor<6x7xf32>) outs(%13 : tensor<5x7xf32>) -> tensor<5x7xf32>
+        %15 = tensor.extract_slice %14[0, 0] [%3, %5] [1, 1] : tensor<5x7xf32> to tensor<?x?xf32>
+        %16 = tensor.insert_slice %15 into %arg9[%arg4, %arg6] [%3, %5] [1, 1] : tensor<?x?xf32> into tensor<24x25xf32>
+        scf.yield %16 : tensor<24x25xf32>
+      }
+      scf.yield %2 : tensor<24x25xf32>
+    }
+    scf.yield %1 : tensor<24x25xf32>
+  }
+  return %0 : tensor<24x25xf32>
+}
+
