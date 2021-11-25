@@ -903,9 +903,13 @@ private:
           break;
         }
       }
-      if (Contexts.back().ColonIsDictLiteral ||
-          Style.Language == FormatStyle::LK_Proto ||
-          Style.Language == FormatStyle::LK_TextProto) {
+      if (Line.First->isOneOf(Keywords.kw_module, Keywords.kw_import) ||
+          Line.First->startsSequence(tok::kw_export, Keywords.kw_module) ||
+          Line.First->startsSequence(tok::kw_export, Keywords.kw_import)) {
+        Tok->setType(TT_ModulePartitionColon);
+      } else if (Contexts.back().ColonIsDictLiteral ||
+                 Style.Language == FormatStyle::LK_Proto ||
+                 Style.Language == FormatStyle::LK_TextProto) {
         Tok->setType(TT_DictLiteral);
         if (Style.Language == FormatStyle::LK_TextProto) {
           if (FormatToken *Previous = Tok->getPreviousNonComment())
@@ -3244,6 +3248,7 @@ bool TokenAnnotator::spaceRequiredBefore(const AnnotatedLine &Line,
   auto HasExistingWhitespace = [&Right]() {
     return Right.WhitespaceRange.getBegin() != Right.WhitespaceRange.getEnd();
   };
+
   if (Right.Tok.getIdentifierInfo() && Left.Tok.getIdentifierInfo())
     return true; // Never ever merge two identifiers.
 
@@ -3253,6 +3258,25 @@ bool TokenAnnotator::spaceRequiredBefore(const AnnotatedLine &Line,
     return true;
 
   if (Style.isCpp()) {
+    // Space between import <iostream>.
+    // or import .....;
+    if (Left.is(Keywords.kw_import) && Right.isOneOf(tok::less, tok::ellipsis))
+      return true;
+    // No space between module :.
+    if (Left.isOneOf(Keywords.kw_module, Keywords.kw_import) &&
+        Right.is(TT_ModulePartitionColon))
+      return true;
+    // No space between import foo:bar but keep a space between import :bar;
+    if (Left.is(tok::identifier) && Right.is(TT_ModulePartitionColon))
+      return false;
+    // No space between :bar;
+    if (Left.is(TT_ModulePartitionColon) &&
+        Right.isOneOf(tok::identifier, tok::kw_private))
+      return false;
+    if (Left.is(tok::ellipsis) && Right.is(tok::identifier) &&
+        Line.First->is(Keywords.kw_import))
+      return false;
+
     if (Left.is(tok::kw_operator))
       return Right.is(tok::coloncolon);
     if (Right.is(tok::l_brace) && Right.is(BK_BracedInit) &&
