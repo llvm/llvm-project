@@ -316,14 +316,14 @@ bool LocalStackSlotPass::insertFrameReferenceRegisters(MachineFunction &Fn) {
       // than that, but the increased register pressure makes that a
       // tricky thing to balance. Investigate if re-materializing these
       // becomes an issue.
-      for (unsigned i = 0, e = MI.getNumOperands(); i != e; ++i) {
+      for (const MachineOperand &MO : MI.operands()) {
         // Consider replacing all frame index operands that reference
         // an object allocated in the local block.
-        if (MI.getOperand(i).isFI()) {
+        if (MO.isFI()) {
           // Don't try this with values not in the local block.
-          if (!MFI.isObjectPreAllocated(MI.getOperand(i).getIndex()))
+          if (!MFI.isObjectPreAllocated(MO.getIndex()))
             break;
-          int Idx = MI.getOperand(i).getIndex();
+          int Idx = MO.getIndex();
           int64_t LocalOffset = LocalOffsets[Idx];
           if (!TRI->needsFrameBaseReg(&MI, LocalOffset))
             break;

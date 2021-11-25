@@ -356,9 +356,8 @@ void AsmPrinter::emitInlineAsm(const MachineInstr *MI) const {
   // it.
   uint64_t LocCookie = 0;
   const MDNode *LocMD = nullptr;
-  for (unsigned i = MI->getNumOperands(); i != 0; --i) {
-    if (MI->getOperand(i-1).isMetadata() &&
-        (LocMD = MI->getOperand(i-1).getMetadata()) &&
+  for (const MachineOperand &MO : llvm::reverse(MI->operands())) {
+    if (MO.isMetadata() && (LocMD = MO.getMetadata()) &&
         LocMD->getNumOperands() != 0) {
       if (const ConstantInt *CI =
               mdconst::dyn_extract<ConstantInt>(LocMD->getOperand(0))) {

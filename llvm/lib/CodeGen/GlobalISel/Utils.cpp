@@ -834,10 +834,9 @@ bool llvm::isKnownToBeAPowerOfTwo(Register Reg, const MachineRegisterInfo &MRI,
   case TargetOpcode::G_BUILD_VECTOR: {
     // TODO: Probably should have a recursion depth guard since you could have
     // bitcasted vector elements.
-    for (unsigned I = 1, E = MI.getNumOperands(); I != E; ++I) {
-      if (!isKnownToBeAPowerOfTwo(MI.getOperand(I).getReg(), MRI, KB))
+    for (const MachineOperand &MO : llvm::drop_begin(MI.operands()))
+      if (!isKnownToBeAPowerOfTwo(MO.getReg(), MRI, KB))
         return false;
-    }
 
     return true;
   }
@@ -845,8 +844,8 @@ bool llvm::isKnownToBeAPowerOfTwo(Register Reg, const MachineRegisterInfo &MRI,
     // Only handle constants since we would need to know if number of leading
     // zeros is greater than the truncation amount.
     const unsigned BitWidth = Ty.getScalarSizeInBits();
-    for (unsigned I = 1, E = MI.getNumOperands(); I != E; ++I) {
-      auto Const = getIConstantVRegVal(MI.getOperand(I).getReg(), MRI);
+    for (const MachineOperand &MO : llvm::drop_begin(MI.operands())) {
+      auto Const = getIConstantVRegVal(MO.getReg(), MRI);
       if (!Const || !Const->zextOrTrunc(BitWidth).isPowerOf2())
         return false;
     }
