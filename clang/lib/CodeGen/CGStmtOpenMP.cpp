@@ -4510,6 +4510,9 @@ void CodeGenFunction::EmitOMPTaskBasedDirective(
         Address Replacement(CGF.Builder.CreateLoad(Pair.second),
                             CGF.getContext().getDeclAlign(Pair.first));
         Scope.addPrivate(Pair.first, [Replacement]() { return Replacement; });
+        if (auto *DI = CGF.getDebugInfo())
+          DI->EmitDeclareOfAutoVariable(Pair.first, Pair.second.getPointer(),
+                                        CGF.Builder, /*UsePointerValue*/ true);
       }
       // Adjust mapping for internal locals by mapping actual memory instead of
       // a pointer to this memory.
