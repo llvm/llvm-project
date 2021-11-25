@@ -46,4 +46,5 @@ RUN powershell -Command `
 # To determine version
 RUN choco install -y git
 
+# For the automated test suite
 RUN choco install -y python --version=3.9.0
