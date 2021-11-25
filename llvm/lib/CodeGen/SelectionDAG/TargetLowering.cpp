@@ -5586,7 +5586,7 @@ TargetLowering::prepareUREMEqFold(EVT SETCCVT, SDValue REMNode,
                   .multiplicativeInverse(APInt::getSignedMinValue(W + 1))
                   .trunc(W);
     assert(!P.isZero() && "No multiplicative inverse!"); // unreachable
-    assert((D0 * P).isOne() && "Multiplicative inverse sanity check.");
+    assert((D0 * P).isOne() && "Multiplicative inverse basic check failed.");
 
     // Q = floor((2^W - 1) u/ D)
     // R = ((2^W - 1) u% D)
@@ -5832,7 +5832,7 @@ TargetLowering::prepareSREMEqFold(EVT SETCCVT, SDValue REMNode,
                   .multiplicativeInverse(APInt::getSignedMinValue(W + 1))
                   .trunc(W);
     assert(!P.isZero() && "No multiplicative inverse!"); // unreachable
-    assert((D0 * P).isOne() && "Multiplicative inverse sanity check.");
+    assert((D0 * P).isOne() && "Multiplicative inverse basic check failed.");
 
     // A = floor((2^(W - 1) - 1) / D0) & -2^K
     APInt A = APInt::getSignedMaxValue(W).udiv(D0);

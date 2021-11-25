@@ -1,5 +1,8 @@
 // RUN: %clangxx_tsan -O1 %s -o %t && %run %t 2>&1 | FileCheck %s
 // UNSUPPORTED: darwin
+// Fails episodically on powerpc bots:
+// https://lab.llvm.org/buildbot/#/builders/121/builds/13391
+// UNSUPPORTED: powerpc64, powerpc64le
 #include "test.h"
 #include <errno.h>
 #include <signal.h>

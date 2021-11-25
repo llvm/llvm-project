@@ -2342,16 +2342,15 @@ void TokenAnnotator::setCommentLineLevels(
     if (NextNonCommentLine && CommentLine &&
         NextNonCommentLine->First->NewlinesBefore <= 1 &&
         NextNonCommentLine->First->OriginalColumn ==
-        AL->First->OriginalColumn) {
+            AL->First->OriginalColumn) {
       // Align comments for preprocessor lines with the # in column 0 if
       // preprocessor lines are not indented. Otherwise, align with the next
       // line.
-      AL->Level =
-          (Style.IndentPPDirectives != FormatStyle::PPDIS_BeforeHash &&
-           (NextNonCommentLine->Type == LT_PreprocessorDirective ||
-            NextNonCommentLine->Type == LT_ImportStatement))
-              ? 0
-              : NextNonCommentLine->Level;
+      AL->Level = (Style.IndentPPDirectives != FormatStyle::PPDIS_BeforeHash &&
+                   (NextNonCommentLine->Type == LT_PreprocessorDirective ||
+                    NextNonCommentLine->Type == LT_ImportStatement))
+                      ? 0
+                      : NextNonCommentLine->Level;
     } else {
       NextNonCommentLine = AL->First->isNot(tok::r_brace) ? AL : nullptr;
     }
@@ -3246,6 +3245,12 @@ bool TokenAnnotator::spaceRequiredBefore(const AnnotatedLine &Line,
   };
   if (Right.Tok.getIdentifierInfo() && Left.Tok.getIdentifierInfo())
     return true; // Never ever merge two identifiers.
+
+  // Leave a space between * and /* to avoid C4138 `comment end` found outside
+  // of comment.
+  if (Left.is(tok::star) && Right.is(tok::comment))
+    return true;
+
   if (Style.isCpp()) {
     if (Left.is(tok::kw_operator))
       return Right.is(tok::coloncolon);

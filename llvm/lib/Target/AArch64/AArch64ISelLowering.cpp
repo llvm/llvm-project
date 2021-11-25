@@ -4506,7 +4506,7 @@ SDValue AArch64TargetLowering::LowerMGATHER(SDValue Op,
     }
     InputVT = DAG.getValueType(MemVT.changeTypeToInteger());
     Mask = DAG.getNode(
-        ISD::ZERO_EXTEND, DL,
+        ISD::SIGN_EXTEND, DL,
         VT.changeVectorElementType(IndexVT.getVectorElementType()), Mask);
   }
 
@@ -4618,7 +4618,7 @@ SDValue AArch64TargetLowering::LowerMSCATTER(SDValue Op,
         VT.changeVectorElementType(IndexVT.getVectorElementType()), StoreVal);
     StoreVal = convertToScalableVector(DAG, IndexVT, StoreVal);
     Mask = DAG.getNode(
-        ISD::ZERO_EXTEND, DL,
+        ISD::SIGN_EXTEND, DL,
         VT.changeVectorElementType(IndexVT.getVectorElementType()), Mask);
   } else if (VT.isFloatingPoint()) {
     // Handle FP data by casting the data so an integer scatter can be used.
@@ -18627,12 +18627,15 @@ static SDValue convertFixedMaskToScalableVector(SDValue Mask,
   EVT InVT = Mask.getValueType();
   EVT ContainerVT = getContainerForFixedLengthVector(DAG, InVT);
 
-  auto Op1 = convertToScalableVector(DAG, ContainerVT, Mask);
-  auto Op2 = DAG.getConstant(0, DL, ContainerVT);
   auto Pg = getPredicateForFixedLengthVector(DAG, DL, InVT);
 
-  EVT CmpVT = Pg.getValueType();
-  return DAG.getNode(AArch64ISD::SETCC_MERGE_ZERO, DL, CmpVT,
+  if (ISD::isBuildVectorAllOnes(Mask.getNode()))
+    return Pg;
+
+  auto Op1 = convertToScalableVector(DAG, ContainerVT, Mask);
+  auto Op2 = DAG.getConstant(0, DL, ContainerVT);
+
+  return DAG.getNode(AArch64ISD::SETCC_MERGE_ZERO, DL, Pg.getValueType(),
                      {Pg, Op1, Op2, DAG.getCondCode(ISD::SETNE)});
 }
 

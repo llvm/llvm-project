@@ -27,6 +27,7 @@ unittest("ClangTidyTests") {
     "AddConstTest.cpp",
     "ClangTidyDiagnosticConsumerTest.cpp",
     "ClangTidyOptionsTest.cpp",
+    "DeclRefExprUtilsTest.cpp",
     "GlobListTest.cpp",
     "GoogleModuleTest.cpp",
     "IncludeInserterTest.cpp",

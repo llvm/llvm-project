@@ -3271,15 +3271,14 @@ VariableSP SymbolFileDWARF::ParseVariableDIE(const SymbolContext &sc,
   }
 
   const DWARFDIE parent_context_die = GetDeclContextDIEContainingDIE(die);
-  const dw_tag_t parent_tag = die.GetParent().Tag();
+  const DWARFDIE sc_parent_die = GetParentSymbolContextDIE(die);
+  const dw_tag_t parent_tag = sc_parent_die.Tag();
   bool is_static_member = (parent_tag == DW_TAG_compile_unit ||
                            parent_tag == DW_TAG_partial_unit) &&
                           (parent_context_die.Tag() == DW_TAG_class_type ||
                            parent_context_die.Tag() == DW_TAG_structure_type);
 
   ValueType scope = eValueTypeInvalid;
-
-  const DWARFDIE sc_parent_die = GetParentSymbolContextDIE(die);
   SymbolContextScope *symbol_context_scope = nullptr;
 
   bool has_explicit_mangled = mangled != nullptr;

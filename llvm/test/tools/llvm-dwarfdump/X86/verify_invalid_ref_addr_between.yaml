@@ -1,7 +1,7 @@
 # RUN: yaml2obj %s -o %t.o
 # RUN: not llvm-dwarfdump -debug-info -verify %t.o | FileCheck %s
 
-#      CHECK: Verifying .debug_info
+#      CHECK: Verifying non-dwo Units...
 # CHECK-NEXT: error: invalid DIE reference 0x00000011. Offset is in between DIEs:
 
 --- !ELF

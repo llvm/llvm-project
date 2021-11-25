@@ -443,7 +443,8 @@ class MetadataLoader::MetadataLoaderImpl {
   uint64_t GlobalDeclAttachmentPos = 0;
 
 #ifndef NDEBUG
-  /// Sanity check that we end up parsing all of the global decl attachments.
+  /// Baisic correctness check that we end up parsing all of the global decl
+  /// attachments.
   unsigned NumGlobalDeclAttachSkipped = 0;
   unsigned NumGlobalDeclAttachParsed = 0;
 #endif
@@ -922,7 +923,7 @@ Expected<bool> MetadataLoader::MetadataLoaderImpl::loadGlobalDeclAttachments() {
     case BitstreamEntry::Error:
       return error("Malformed block");
     case BitstreamEntry::EndBlock:
-      // Sanity check that we parsed them all.
+      // Check that we parsed them all.
       assert(NumGlobalDeclAttachSkipped == NumGlobalDeclAttachParsed);
       return true;
     case BitstreamEntry::Record:
@@ -934,7 +935,7 @@ Expected<bool> MetadataLoader::MetadataLoaderImpl::loadGlobalDeclAttachments() {
       return MaybeCode.takeError();
     if (MaybeCode.get() != bitc::METADATA_GLOBAL_DECL_ATTACHMENT) {
       // Anything other than a global decl attachment signals the end of
-      // these records. sanity check that we parsed them all.
+      // these records. Check that we parsed them all.
       assert(NumGlobalDeclAttachSkipped == NumGlobalDeclAttachParsed);
       return true;
     }

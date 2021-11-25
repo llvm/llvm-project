@@ -1727,18 +1727,16 @@ static Instruction *foldComplexAndOrPatterns(BinaryOperator &I,
       (Opcode == Instruction::And) ? Instruction::Or : Instruction::And;
 
   Value *Op0 = I.getOperand(0), *Op1 = I.getOperand(1);
-  Value *A, *B, *C, *X, *Y, *Z;
+  Value *A, *B, *C;
 
   // (~(A | B) & C) | ... --> ...
   // (~(A & B) | C) & ... --> ...
   // TODO: One use checks are conservative. We just need to check that a total
   //       number of multiple used values does not exceed reduction
   //       in operations.
-  if (match(Op0,
-            m_c_BinOp(FlippedOpcode,
-                      m_CombineAnd(m_Value(X), m_Not(m_BinOp(Opcode, m_Value(A),
-                                                             m_Value(B)))),
-                      m_Value(C)))) {
+  if (match(Op0, m_c_BinOp(FlippedOpcode,
+                           m_Not(m_BinOp(Opcode, m_Value(A), m_Value(B))),
+                           m_Value(C)))) {
     // (~(A | B) & C) | (~(A | C) & B) --> (B ^ C) & ~A
     // (~(A & B) | C) & (~(A & C) | B) --> ~((B ^ C) & A)
     if (match(Op1,
@@ -1778,28 +1776,6 @@ static Instruction *foldComplexAndOrPatterns(BinaryOperator &I,
                        m_c_BinOp(Opcode, m_Specific(B), m_Specific(C)))))))
       return BinaryOperator::CreateNot(Builder.CreateBinOp(
           Opcode, Builder.CreateBinOp(FlippedOpcode, A, C), B));
-
-    // (~(A | B) & C) | ~(C | (A ^ B)) --> ~((A | B) & (C | (A ^ B)))
-    // (~(A & B) | C) & ~(C & (A ^ B)) --> (A ^ B ^ C) | ~(A | C)
-    // Note: X = ~(A | B) or ~(A & B)
-    if (Op0->hasOneUse() &&
-        match(Op1, m_OneUse(m_Not(m_CombineAnd(
-                       m_Value(Z),
-                       m_c_BinOp(Opcode, m_Specific(C),
-                                 m_CombineAnd(m_Value(Y),
-                                              m_c_Xor(m_Specific(A),
-                                                      m_Specific(B))))))))) {
-      Value *AndOr = cast<BinaryOperator>(X)->getOperand(0);
-      if (Opcode == Instruction::Or) {
-        // Z = (C | (A ^ B)
-        return BinaryOperator::CreateNot(Builder.CreateAnd(AndOr, Z));
-      } else if (X->hasOneUse() && AndOr->hasOneUse() && Z->hasOneUse()) {
-        // Y = A ^ B
-        Value *Xor = Builder.CreateXor(Y, C);
-        return BinaryOperator::CreateOr(
-            Xor, Builder.CreateNot(Builder.CreateOr(A, C)));
-      }
-    }
   }
 
   return nullptr;
@@ -2353,11 +2329,20 @@ Value *InstCombinerImpl::getSelectCondition(Value *A, Value *B) {
   Value *Cond;
   Value *NotB;
   if (match(A, m_SExt(m_Value(Cond))) &&
-      Cond->getType()->isIntOrIntVectorTy(1) &&
-      match(B, m_OneUse(m_Not(m_Value(NotB))))) {
-    NotB = peekThroughBitcast(NotB, true);
-    if (match(NotB, m_SExt(m_Specific(Cond))))
+      Cond->getType()->isIntOrIntVectorTy(1)) {
+    // A = sext i1 Cond; B = sext (not (i1 Cond))
+    if (match(B, m_SExt(m_Not(m_Specific(Cond)))))
       return Cond;
+
+    // A = sext i1 Cond; B = not ({bitcast} (sext (i1 Cond)))
+    // TODO: The one-use checks are unnecessary or misplaced. If the caller
+    //       checked for uses on logic ops/casts, that should be enough to
+    //       make this transform worthwhile.
+    if (match(B, m_OneUse(m_Not(m_Value(NotB))))) {
+      NotB = peekThroughBitcast(NotB, true);
+      if (match(NotB, m_SExt(m_Specific(Cond))))
+        return Cond;
+    }
   }
 
   // All scalar (and most vector) possibilities should be handled now.

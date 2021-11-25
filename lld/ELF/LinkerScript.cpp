@@ -977,7 +977,7 @@ LinkerScript::findMemoryRegion(OutputSection *sec, MemoryRegion *hint) {
   // See if a region can be found by matching section flags.
   for (auto &pair : memoryRegions) {
     MemoryRegion *m = pair.second;
-    if ((m->flags & sec->flags) && (m->negFlags & sec->flags) == 0)
+    if (m->compatibleWith(sec->flags))
       return {m, nullptr};
   }
 

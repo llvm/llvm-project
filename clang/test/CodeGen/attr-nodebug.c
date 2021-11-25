@@ -19,7 +19,7 @@ void t2()
 // CHECK-NOT:   dbg
 // CHECK:       }
 
-// For sanity, check those things do occur normally.
+// Verify those things do occur normally.
 // CHECK-LABEL: @t2
 // CHECK:       call{{.*}}llvm.dbg
 // CHECK:       !dbg

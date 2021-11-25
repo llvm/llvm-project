@@ -1272,3 +1272,85 @@ vector unsigned int test_vec_subec_unsigned (vector unsigned int a, vector unsig
 // CHECK: xor <4 x i32> {{%[0-9]+}}, <i32 -1, i32 -1, i32 -1, i32 -1>
 // CHECK: ret <4 x i32>
 }
+
+int test_bcd_invalid(vector unsigned char a) {
+  // CHECK-LABEL: test_bcd_invalid
+  // CHECK: call i32 @llvm.ppc.bcdsub.p(i32 6, <16 x i8>
+  // CHECK-LE-LABEL: test_bcd_invalid
+  // CHECK-LE: call i32 @llvm.ppc.bcdsub.p(i32 6, <16 x i8>
+  return __bcd_invalid(a);
+}
+
+vector unsigned char test_bcd_add(vector unsigned char a, vector unsigned char b,
+                              int ps) {
+  // CHECK-LABEL: test_bcd_add
+  // CHECK: call <16 x i8> @llvm.ppc.bcdadd(<16 x i8>
+  // CHECK-LE-LABEL: test_bcd_add
+  // CHECK-LE: call <16 x i8> @llvm.ppc.bcdadd(<16 x i8>
+  return __bcdadd(a, b, 1);
+}
+
+int test_bcd_add_ofl(vector unsigned char a, vector unsigned char b, long ps) {
+  // CHECK-LABEL: test_bcd_add_ofl
+  // CHECK: call i32 @llvm.ppc.bcdadd.p(i32 6, <16 x i8>
+  // CHECK-LE-LABEL: test_bcd_add_ofl
+  // CHECK-LE: call i32 @llvm.ppc.bcdadd.p(i32 6, <16 x i8>
+  return __bcdadd_ofl(a, b);
+}
+
+vector unsigned char test_bcd_sub(vector unsigned char a, vector unsigned char b,
+                              int ps) {
+  // CHECK-LABEL: test_bcd_sub
+  // CHECK: call <16 x i8> @llvm.ppc.bcdsub(<16 x i8>
+  // CHECK-LE-LABEL: test_bcd_sub
+  // CHECK-LE: call <16 x i8> @llvm.ppc.bcdsub(<16 x i8>
+  return __bcdsub(a, b, 0);
+}
+
+int test_bcd_sub_ofl(vector unsigned char a, vector unsigned char b, long ps) {
+  // CHECK-LABEL: test_bcd_sub_ofl
+  // CHECK: call i32 @llvm.ppc.bcdsub.p(i32 6, <16 x i8>
+  // CHECK-LE-LABEL: test_bcd_sub_ofl
+  // CHECK-LE: call i32 @llvm.ppc.bcdsub.p(i32 6, <16 x i8>
+  return __bcdsub_ofl(a, b);
+}
+
+int test_bcd_cmplt(vector unsigned char a, vector unsigned char b) {
+  // CHECK-LABEL: test_bcd_cmplt
+  // CHECK: call i32 @llvm.ppc.bcdsub.p(i32 2, <16 x i8>
+  // CHECK-LE-LABEL: test_bcd_cmplt
+  // CHECK-LE: call i32 @llvm.ppc.bcdsub.p(i32 2, <16 x i8>
+  return __bcdcmplt(a, b);
+}
+
+int test_bcd_cmpgt(vector unsigned char a, vector unsigned char b) {
+  // CHECK-LABEL: test_bcd_cmpgt
+  // CHECK: call i32 @llvm.ppc.bcdsub.p(i32 4, <16 x i8>
+  // CHECK-LE-LABEL: test_bcd_cmpgt
+  // CHECK-LE: call i32 @llvm.ppc.bcdsub.p(i32 4, <16 x i8>
+  return __bcdcmpgt(a, b);
+}
+
+int test_bcd_cmpeq(vector unsigned char a, vector unsigned char b) {
+  // CHECK-LABEL: test_bcd_cmpeq
+  // CHECK: call i32 @llvm.ppc.bcdsub.p(i32 0, <16 x i8>
+  // CHECK-LE-LABEL: test_bcd_cmpeq
+  // CHECK-LE: call i32 @llvm.ppc.bcdsub.p(i32 0, <16 x i8>
+  return __bcdcmpeq(a, b);
+}
+
+int test_bcd_cmpge(vector unsigned char a, vector unsigned char b) {
+  // CHECK-LABEL: test_bcd_cmpge
+  // CHECK: call i32 @llvm.ppc.bcdsub.p(i32 3, <16 x i8>
+  // CHECK-LE-LABEL: test_bcd_cmpge
+  // CHECK-LE: call i32 @llvm.ppc.bcdsub.p(i32 3, <16 x i8>
+  return __bcdcmpge(a, b);
+}
+
+int test_bcd_cmple(vector unsigned char a, vector unsigned char b) {
+  // CHECK-LABEL: test_bcd_cmple
+  // CHECK: call i32 @llvm.ppc.bcdsub.p(i32 5, <16 x i8>
+  // CHECK-LE-LABEL: test_bcd_cmple
+  // CHECK-LE: call i32 @llvm.ppc.bcdsub.p(i32 5, <16 x i8>
+  return __bcdcmple(a, b);
+}

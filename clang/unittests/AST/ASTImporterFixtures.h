@@ -268,7 +268,7 @@ class TestImportBase
     if (!ToImport)
       return testing::AssertionFailure() << "Node type mismatch!";
 
-    // Sanity check: the node being imported should match in the same way as
+    // The node being imported should match in the same way as
     // the result node.
     internal::BindableMatcher<NodeType> WrapperMatcher(VerificationMatcher);
     EXPECT_TRUE(Verifier.match(ToImport, WrapperMatcher));

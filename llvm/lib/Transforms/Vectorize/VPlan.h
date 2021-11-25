@@ -794,6 +794,7 @@ public:
 private:
   typedef unsigned char OpcodeTy;
   OpcodeTy Opcode;
+  FastMathFlags FMF;
 
   /// Utility method serving execute(): generates a single instance of the
   /// modeled instruction.
@@ -806,13 +807,6 @@ public:
   VPInstruction(unsigned Opcode, ArrayRef<VPValue *> Operands)
       : VPRecipeBase(VPRecipeBase::VPInstructionSC, Operands),
         VPValue(VPValue::VPVInstructionSC, nullptr, this), Opcode(Opcode) {}
-
-  VPInstruction(unsigned Opcode, ArrayRef<VPInstruction *> Operands)
-      : VPRecipeBase(VPRecipeBase::VPInstructionSC, {}),
-        VPValue(VPValue::VPVInstructionSC, nullptr, this), Opcode(Opcode) {
-    for (auto *I : Operands)
-      addOperand(I->getVPSingleValue());
-  }
 
   VPInstruction(unsigned Opcode, std::initializer_list<VPValue *> Operands)
       : VPInstruction(Opcode, ArrayRef<VPValue *>(Operands)) {}
@@ -875,6 +869,9 @@ public:
       return true;
     }
   }
+
+  /// Set the fast-math flags.
+  void setFastMathFlags(FastMathFlags FMFNew);
 };
 
 /// VPWidenRecipe is a recipe for producing a copy of vector type its

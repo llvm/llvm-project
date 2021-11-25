@@ -820,7 +820,7 @@ void IRSimilarityIdentifier::populateMapper(
 /// subsequence from the \p InstrList, and create an IRSimilarityCandidate from
 /// the IRInstructionData in subsequence.
 ///
-/// \param [in] Mapper - The instruction mapper for sanity checks.
+/// \param [in] Mapper - The instruction mapper for basic correctness checks.
 /// \param [in] InstrList - The vector that holds the instruction data.
 /// \param [in] IntegerMapping - The vector that holds the mapped integers.
 /// \param [out] CandsForRepSubstring - The vector to store the generated

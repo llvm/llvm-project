@@ -6,9 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file defines the function verifier interface, that can be used for some
-// sanity checking of input to the system, and for checking that transformations
-// haven't done something bad.
+// This file defines the function verifier interface, that can be used for
+// validation checking of input to the system, and for checking that
+// transformations haven't done something bad.
 //
 // Note that this does not provide full 'java style' security and verifications,
 // instead it just tries to ensure that code is well formed.

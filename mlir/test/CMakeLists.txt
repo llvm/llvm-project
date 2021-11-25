@@ -32,6 +32,7 @@ if (MLIR_INCLUDE_INTEGRATION_TESTS)
   # Copy test data over.
   file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/Integration/data/mttkrp_b.tns
             ${CMAKE_CURRENT_SOURCE_DIR}/Integration/data/test.mtx
+            ${CMAKE_CURRENT_SOURCE_DIR}/Integration/data/test_symmetric.mtx
             ${CMAKE_CURRENT_SOURCE_DIR}/Integration/data/test.tns
             ${CMAKE_CURRENT_SOURCE_DIR}/Integration/data/wide.mtx
             ${CMAKE_CURRENT_SOURCE_DIR}/Integration/data/zero.mtx

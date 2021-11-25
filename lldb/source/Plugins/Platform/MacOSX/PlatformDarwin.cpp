@@ -1367,3 +1367,11 @@ FileSpec PlatformDarwin::GetCurrentCommandLineToolsDirectory() {
     return FileSpec(FindComponentInPath(fspec.GetPath(), "CommandLineTools"));
   return {};
 }
+
+std::vector<ArchSpec> PlatformDarwin::GetSupportedArchitectures() {
+  std::vector<ArchSpec> result;
+  ArchSpec arch;
+  for (uint32_t idx = 0; GetSupportedArchitectureAtIndex(idx, arch); ++idx)
+    result.push_back(arch);
+  return result;
+}

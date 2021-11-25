@@ -28,9 +28,28 @@ namespace format {
 class FormatTokenSource {
 public:
   virtual ~FormatTokenSource() {}
+
+  // Returns the next token in the token stream.
   virtual FormatToken *getNextToken() = 0;
 
+  // Returns the token precedint the token returned by the last call to
+  // getNextToken() in the token stream, or nullptr if no such token exists.
+  virtual FormatToken *getPreviousToken() = 0;
+
+  // Returns the token that would be returned by the next call to
+  // getNextToken().
+  virtual FormatToken *peekNextToken() = 0;
+
+  // Returns whether we are at the end of the file.
+  // This can be different from whether getNextToken() returned an eof token
+  // when the FormatTokenSource is a view on a part of the token stream.
+  virtual bool isEOF() = 0;
+
+  // Gets the current position in the token stream, to be used by setPosition().
   virtual unsigned getPosition() = 0;
+
+  // Resets the token stream to the state it was in when getPosition() returned
+  // Position, and return the token at that position in the stream.
   virtual FormatToken *setPosition(unsigned Position) = 0;
 };
 
@@ -107,6 +126,18 @@ public:
       return &FakeEOF;
     return Token;
   }
+
+  FormatToken *getPreviousToken() override {
+    return PreviousTokenSource->getPreviousToken();
+  }
+
+  FormatToken *peekNextToken() override {
+    if (eof())
+      return &FakeEOF;
+    return PreviousTokenSource->peekNextToken();
+  }
+
+  bool isEOF() override { return PreviousTokenSource->isEOF(); }
 
   unsigned getPosition() override { return PreviousTokenSource->getPosition(); }
 
@@ -199,18 +230,45 @@ public:
       : Tokens(Tokens), Position(-1) {}
 
   FormatToken *getNextToken() override {
-    if (Position >= 0 && Tokens[Position]->is(tok::eof))
+    if (Position >= 0 && Tokens[Position]->is(tok::eof)) {
+      LLVM_DEBUG({
+        llvm::dbgs() << "Next ";
+        dbgToken(Position);
+      });
       return Tokens[Position];
+    }
     ++Position;
+    LLVM_DEBUG({
+      llvm::dbgs() << "Next ";
+      dbgToken(Position);
+    });
     return Tokens[Position];
   }
 
+  FormatToken *getPreviousToken() override {
+    assert(Position > 0);
+    return Tokens[Position - 1];
+  }
+
+  FormatToken *peekNextToken() override {
+    int Next = Position + 1;
+    LLVM_DEBUG({
+      llvm::dbgs() << "Peeking ";
+      dbgToken(Next);
+    });
+    return Tokens[Next];
+  }
+
+  bool isEOF() override { return Tokens[Position]->is(tok::eof); }
+
   unsigned getPosition() override {
+    LLVM_DEBUG(llvm::dbgs() << "Getting Position: " << Position << "\n");
     assert(Position >= 0);
     return Position;
   }
 
   FormatToken *setPosition(unsigned P) override {
+    LLVM_DEBUG(llvm::dbgs() << "Setting Position: " << P << "\n");
     Position = P;
     return Tokens[Position];
   }
@@ -218,6 +276,13 @@ public:
   void reset() { Position = -1; }
 
 private:
+  void dbgToken(int Position, llvm::StringRef Indent = "") {
+    FormatToken *Tok = Tokens[Position];
+    llvm::dbgs() << Indent << "[" << Position
+                 << "] Token: " << Tok->Tok.getName() << " / " << Tok->TokenText
+                 << ", Macro: " << !!Tok->MacroCtx << "\n";
+  }
+
   ArrayRef<FormatToken *> Tokens;
   int Position;
 };
@@ -877,10 +942,7 @@ void UnwrappedLineParser::parsePPEndIf() {
   parsePPUnknown();
   // If the #endif of a potential include guard is the last thing in the file,
   // then we found an include guard.
-  unsigned TokenPosition = Tokens->getPosition();
-  FormatToken *PeekNext = AllTokens[TokenPosition];
-  if (IncludeGuard == IG_Defined && PPBranchLevel == -1 &&
-      PeekNext->is(tok::eof) &&
+  if (IncludeGuard == IG_Defined && PPBranchLevel == -1 && Tokens->isEOF() &&
       Style.IndentPPDirectives != FormatStyle::PPDIS_None)
     IncludeGuard = IG_Found;
 }
@@ -1403,9 +1465,7 @@ void UnwrappedLineParser::parseStructuralElement(bool IsTopLevel) {
       // declaration.
       if (!IsTopLevel || !Style.isCpp() || !Previous || FormatTok->is(tok::eof))
         break;
-      const unsigned Position = Tokens->getPosition() + 1;
-      assert(Position < AllTokens.size());
-      if (isC78ParameterDecl(FormatTok, AllTokens[Position], Previous)) {
+      if (isC78ParameterDecl(FormatTok, Tokens->peekNextToken(), Previous)) {
         addUnwrappedLine();
         return;
       }
@@ -2100,8 +2160,8 @@ void UnwrappedLineParser::parseIfThenElse() {
       parseBlock();
       addUnwrappedLine();
     } else if (FormatTok->Tok.is(tok::kw_if)) {
-      FormatToken *Previous = AllTokens[Tokens->getPosition() - 1];
-      bool PrecededByComment = Previous->is(tok::comment);
+      FormatToken *Previous = Tokens->getPreviousToken();
+      bool PrecededByComment = Previous && Previous->is(tok::comment);
       if (PrecededByComment) {
         addUnwrappedLine();
         ++Line->Level;

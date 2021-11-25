@@ -32,6 +32,7 @@ add_mlir_library(MLIRTransforms
   LINK_LIBS PUBLIC
   MLIRAffine
   MLIRAnalysis
+  MLIRAllocationOpInterface
   MLIRCopyOpInterface
   MLIRLoopLikeInterface
   MLIRMemRef

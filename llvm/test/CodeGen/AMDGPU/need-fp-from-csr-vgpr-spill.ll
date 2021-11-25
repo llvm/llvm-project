@@ -10,7 +10,7 @@ define hidden fastcc void @callee_has_fp() #1 {
 ; CHECK-NEXT:    s_mov_b32 s33, s32
 ; CHECK-NEXT:    s_addk_i32 s32, 0x200
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 1
-; CHECK-NEXT:    buffer_store_dword v0, off, s[0:3], s33 offset:4
+; CHECK-NEXT:    buffer_store_dword v0, off, s[0:3], s33
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    s_addk_i32 s32, 0xfe00
 ; CHECK-NEXT:    s_mov_b32 s33, s4

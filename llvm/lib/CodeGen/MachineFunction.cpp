@@ -1170,9 +1170,10 @@ auto MachineFunction::salvageCopySSA(MachineInstr &MI)
 void MachineFunction::finalizeDebugInstrRefs() {
   auto *TII = getSubtarget().getInstrInfo();
 
-  auto MakeDbgValue = [&](MachineInstr &MI) {
+  auto MakeUndefDbgValue = [&](MachineInstr &MI) {
     const MCInstrDesc &RefII = TII->get(TargetOpcode::DBG_VALUE);
     MI.setDesc(RefII);
+    MI.getOperand(0).setReg(0);
     MI.getOperand(1).ChangeToRegister(0, false);
   };
 
@@ -1187,15 +1188,15 @@ void MachineFunction::finalizeDebugInstrRefs() {
       Register Reg = MI.getOperand(0).getReg();
 
       // Some vregs can be deleted as redundant in the meantime. Mark those
-      // as DBG_VALUE $noreg.
-      if (Reg == 0) {
-        MakeDbgValue(MI);
+      // as DBG_VALUE $noreg. Additionally, some normal instructions are
+      // quickly deleted, leaving dangling references to vregs with no def.
+      if (Reg == 0 || !RegInfo->hasOneDef(Reg)) {
+        MakeUndefDbgValue(MI);
         continue;
       }
 
       assert(Reg.isVirtual());
       MachineInstr &DefMI = *RegInfo->def_instr_begin(Reg);
-      assert(RegInfo->hasOneDef(Reg));
 
       // If we've found a copy-like instruction, follow it back to the
       // instruction that defines the source value, see salvageCopySSA docs
@@ -1327,9 +1328,9 @@ bool MachineJumpTableInfo::ReplaceMBBInJumpTable(unsigned Idx,
   assert(Old != New && "Not making a change?");
   bool MadeChange = false;
   MachineJumpTableEntry &JTE = JumpTables[Idx];
-  for (size_t j = 0, e = JTE.MBBs.size(); j != e; ++j)
-    if (JTE.MBBs[j] == Old) {
-      JTE.MBBs[j] = New;
+  for (MachineBasicBlock *&MBB : JTE.MBBs)
+    if (MBB == Old) {
+      MBB = New;
       MadeChange = true;
     }
   return MadeChange;
@@ -1342,8 +1343,8 @@ void MachineJumpTableInfo::print(raw_ostream &OS) const {
 
   for (unsigned i = 0, e = JumpTables.size(); i != e; ++i) {
     OS << printJumpTableEntryReference(i) << ':';
-    for (unsigned j = 0, f = JumpTables[i].MBBs.size(); j != f; ++j)
-      OS << ' ' << printMBBReference(*JumpTables[i].MBBs[j]);
+    for (const MachineBasicBlock *MBB : JumpTables[i].MBBs)
+      OS << ' ' << printMBBReference(*MBB);
     if (i != e)
       OS << '\n';
   }

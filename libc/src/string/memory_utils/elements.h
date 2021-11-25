@@ -129,13 +129,13 @@ template <typename Element, size_t ElementCount> struct Repeated {
     }
   }
 
-  static Storage<Element> Load(const char *ptr) {
-    Storage<Element> value;
+  static Storage<Repeated> Load(const char *ptr) {
+    Storage<Repeated> value;
     Copy(reinterpret_cast<char *>(&value), ptr);
     return value;
   }
 
-  static void Store(char *ptr, Storage<Element> value) {
+  static void Store(char *ptr, Storage<Repeated> value) {
     Copy(ptr, reinterpret_cast<const char *>(&value));
   }
 };

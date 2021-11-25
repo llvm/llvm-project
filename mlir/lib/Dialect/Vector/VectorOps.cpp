@@ -833,6 +833,12 @@ void ContractionOp::getCanonicalizationPatterns(RewritePatternSet &results,
 //===----------------------------------------------------------------------===//
 
 void vector::ExtractElementOp::build(OpBuilder &builder, OperationState &result,
+                                     Value source) {
+  result.addOperands({source});
+  result.addTypes(source.getType().cast<VectorType>().getElementType());
+}
+
+void vector::ExtractElementOp::build(OpBuilder &builder, OperationState &result,
                                      Value source, Value position) {
   result.addOperands({source, position});
   result.addTypes(source.getType().cast<VectorType>().getElementType());
@@ -840,8 +846,15 @@ void vector::ExtractElementOp::build(OpBuilder &builder, OperationState &result,
 
 static LogicalResult verify(vector::ExtractElementOp op) {
   VectorType vectorType = op.getVectorType();
+  if (vectorType.getRank() == 0) {
+    if (op.position())
+      return op.emitOpError("expected position to be empty with 0-D vector");
+    return success();
+  }
   if (vectorType.getRank() != 1)
-    return op.emitOpError("expected 1-D vector");
+    return op.emitOpError("unexpected >1 vector rank");
+  if (!op.position())
+    return op.emitOpError("expected position for 1-D vector");
   return success();
 }
 
@@ -1541,6 +1554,12 @@ static ParseResult parseShuffleOp(OpAsmParser &parser, OperationState &result) {
 //===----------------------------------------------------------------------===//
 
 void InsertElementOp::build(OpBuilder &builder, OperationState &result,
+                            Value source, Value dest) {
+  result.addOperands({source, dest});
+  result.addTypes(dest.getType());
+}
+
+void InsertElementOp::build(OpBuilder &builder, OperationState &result,
                             Value source, Value dest, Value position) {
   result.addOperands({source, dest, position});
   result.addTypes(dest.getType());
@@ -1548,8 +1567,15 @@ void InsertElementOp::build(OpBuilder &builder, OperationState &result,
 
 static LogicalResult verify(InsertElementOp op) {
   auto dstVectorType = op.getDestVectorType();
+  if (dstVectorType.getRank() == 0) {
+    if (op.position())
+      return op.emitOpError("expected position to be empty with 0-D vector");
+    return success();
+  }
   if (dstVectorType.getRank() != 1)
-    return op.emitOpError("expected 1-D vector");
+    return op.emitOpError("unexpected >1 vector rank");
+  if (!op.position())
+    return op.emitOpError("expected position for 1-D vector");
   return success();
 }
 
@@ -1587,7 +1613,7 @@ static LogicalResult verify(InsertOp op) {
        static_cast<unsigned>(destVectorType.getRank())))
     return op.emitOpError("expected position attribute rank + source rank to "
                           "match dest vector rank");
-  else if (!srcVectorType && (positionAttr.size() !=
+  if (!srcVectorType && (positionAttr.size() !=
                               static_cast<unsigned>(destVectorType.getRank())))
     return op.emitOpError(
         "expected position attribute rank to match the dest vector rank");
@@ -2148,7 +2174,7 @@ public:
                                 PatternRewriter &rewriter) const override {
     // Return if 'extractStridedSliceOp' operand is not defined by a
     // ConstantMaskOp.
-    auto defOp = extractStridedSliceOp.vector().getDefiningOp();
+    auto *defOp = extractStridedSliceOp.vector().getDefiningOp();
     auto constantMaskOp = dyn_cast_or_null<ConstantMaskOp>(defOp);
     if (!constantMaskOp)
       return failure();
@@ -3100,7 +3126,7 @@ namespace {
 ///
 /// `%w0 = vector.transfer_write` op will be removed by DCE if it doesn't have
 /// any other uses.
-class foldWAW final : public OpRewritePattern<TransferWriteOp> {
+class FoldWaw final : public OpRewritePattern<TransferWriteOp> {
 public:
   using OpRewritePattern<TransferWriteOp>::OpRewritePattern;
   LogicalResult matchAndRewrite(TransferWriteOp writeOp,
@@ -3183,7 +3209,7 @@ public:
 
 void TransferWriteOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                                   MLIRContext *context) {
-  results.add<foldWAW, FoldInsertSliceIntoTransferWrite>(context);
+  results.add<FoldWaw, FoldInsertSliceIntoTransferWrite>(context);
 }
 
 //===----------------------------------------------------------------------===//
@@ -3930,9 +3956,9 @@ static LogicalResult verify(ConstantMaskOp &op) {
   }
   // Verify that if one mask dim size is zero, they all should be zero (because
   // the mask region is a conjunction of each mask dimension interval).
-  bool any_zeros = llvm::is_contained(maskDimSizes, 0);
-  bool all_zeros = llvm::all_of(maskDimSizes, [](int64_t s) { return s == 0; });
-  if (any_zeros && !all_zeros)
+  bool anyZeros = llvm::is_contained(maskDimSizes, 0);
+  bool allZeros = llvm::all_of(maskDimSizes, [](int64_t s) { return s == 0; });
+  if (anyZeros && !allZeros)
     return op.emitOpError("expected all mask dim sizes to be zeros, "
                           "as a result of conjunction with zero mask dim");
   return success();
@@ -3961,15 +3987,15 @@ public:
   LogicalResult matchAndRewrite(CreateMaskOp createMaskOp,
                                 PatternRewriter &rewriter) const override {
     // Return if any of 'createMaskOp' operands are not defined by a constant.
-    auto is_not_def_by_constant = [](Value operand) {
+    auto isNotDefByConstant = [](Value operand) {
       return !isa_and_nonnull<arith::ConstantIndexOp>(operand.getDefiningOp());
     };
-    if (llvm::any_of(createMaskOp.operands(), is_not_def_by_constant))
+    if (llvm::any_of(createMaskOp.operands(), isNotDefByConstant))
       return failure();
     // Gather constant mask dimension sizes.
     SmallVector<int64_t, 4> maskDimSizes;
     for (auto operand : createMaskOp.operands()) {
-      auto defOp = operand.getDefiningOp();
+      auto *defOp = operand.getDefiningOp();
       maskDimSizes.push_back(cast<arith::ConstantIndexOp>(defOp).value());
     }
     // Replace 'createMaskOp' with ConstantMaskOp.

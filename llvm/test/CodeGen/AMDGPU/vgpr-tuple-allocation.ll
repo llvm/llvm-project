@@ -19,6 +19,7 @@ define <4 x float> @non_preserved_vgpr_tuple8(<8 x i32> %rsrc, <4 x i32> %samp, 
 ; GFX9-NEXT: v_mov_b32_e32 v34, v14
 ; GFX9-NEXT: v_mov_b32_e32 v33, v13
 ; GFX9-NEXT: v_mov_b32_e32 v32, v12
+
 ; GFX9: ;;#ASMSTART
 ; GFX9-NEXT: ;;#ASMEND
 ; GFX9: image_gather4_c_b_cl v[41:44], v[32:36], s[4:11], s[4:7] dmask:0x1

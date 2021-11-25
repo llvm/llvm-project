@@ -597,19 +597,13 @@ void HexagonGenInsert::dump_map() const {
 void HexagonGenInsert::buildOrderingMF(RegisterOrdering &RO) const {
   unsigned Index = 0;
 
-  using mf_iterator = MachineFunction::const_iterator;
-
-  for (mf_iterator A = MFN->begin(), Z = MFN->end(); A != Z; ++A) {
-    const MachineBasicBlock &B = *A;
+  for (const MachineBasicBlock &B : *MFN) {
     if (!CMS->BT.reached(&B))
       continue;
 
-    using mb_iterator = MachineBasicBlock::const_iterator;
-
-    for (mb_iterator I = B.begin(), E = B.end(); I != E; ++I) {
-      const MachineInstr *MI = &*I;
-      for (unsigned i = 0, n = MI->getNumOperands(); i < n; ++i) {
-        const MachineOperand &MO = MI->getOperand(i);
+    for (const MachineInstr &MI : B) {
+      for (unsigned i = 0, n = MI.getNumOperands(); i < n; ++i) {
+        const MachineOperand &MO = MI.getOperand(i);
         if (MO.isReg() && MO.isDef()) {
           Register R = MO.getReg();
           assert(MO.getSubReg() == 0 && "Unexpected subregister in definition");
@@ -1457,8 +1451,7 @@ bool HexagonGenInsert::removeDeadCode(MachineDomTreeNode *N) {
   for (auto I = B->rbegin(), E = B->rend(); I != E; ++I)
     Instrs.push_back(&*I);
 
-  for (auto I = Instrs.begin(), E = Instrs.end(); I != E; ++I) {
-    MachineInstr *MI = *I;
+  for (MachineInstr *MI : Instrs) {
     unsigned Opc = MI->getOpcode();
     // Do not touch lifetime markers. This is why the target-independent DCE
     // cannot be used.

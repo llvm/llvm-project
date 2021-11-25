@@ -21,7 +21,7 @@ class TestDataFormatterGenericForwardList(TestBase):
         self.line = line_number('main.cpp', '// break here')
         self.namespace = 'std'
 
-    
+
     def do_test(self, stdlib_type):
         """Test that std::forward_list is displayed correctly"""
         self.build(dictionary={stdlib_type: "1"})
@@ -52,6 +52,38 @@ class TestDataFormatterGenericForwardList(TestBase):
                              '[4] = 55555',
                              '}'])
 
+        self.expect("settings show target.max-children-count", matching=True,
+                    substrs=['target.max-children-count (int) = 256'])
+
+        self.expect("frame variable thousand_elts",matching=False,
+                    substrs=[ 
+                             '[256]',
+                             '[333]',
+                             '[444]',
+                             '[555]',
+                             '[666]',
+                             '...'
+                             ])
+        self.runCmd(
+                "settings set target.max-children-count 3",
+                check=False)
+
+        self.expect("frame variable thousand_elts",matching=False,
+                    substrs=[
+                             '[3]',
+                             '[4]',
+                             '[5]',
+                             ])
+
+        self.expect("frame variable thousand_elts",matching=True,
+                    substrs=[
+                             'size=256',
+                             '[0]',
+                             '[1]',
+                             '[2]',
+                             '...'
+                             ])
+
     @add_test_categories(["libstdcxx"])
     def test_libstdcpp(self):
         self.do_test(USE_LIBSTDCPP)
@@ -59,4 +91,3 @@ class TestDataFormatterGenericForwardList(TestBase):
     @add_test_categories(["libc++"])
     def test_libcpp(self):
          self.do_test(USE_LIBCPP)
-    

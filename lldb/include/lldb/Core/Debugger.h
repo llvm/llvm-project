@@ -176,7 +176,13 @@ public:
 
   repro::DataRecorder *GetInputRecorder();
 
-  void SetInputFile(lldb::FileSP file, repro::DataRecorder *recorder = nullptr);
+  Status SetInputString(const char *data);
+
+  // This method will setup data recorder if reproducer enabled.
+  // On reply mode this method should take instructions from reproducer file.
+  Status SetInputFile(lldb::FileSP file);
+
+  void SetInputFile(lldb::FileSP file, repro::DataRecorder *recorder);
 
   void SetOutputFile(lldb::FileSP file);
 

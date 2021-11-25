@@ -409,10 +409,6 @@ void test1() {
 // CHECK: call <4 x float> @llvm.ppc.altivec.vrfin(<4 x float>
 // CHECK-LE: call <4 x float> @llvm.ppc.altivec.vrfin(<4 x float>
 
-  res_vd = vec_round(vd);
-// CHECK: call <2 x double> @llvm.round.v2f64(<2 x double>
-// CHECK-LE: call <2 x double> @llvm.round.v2f64(<2 x double>
-
   res_vd = vec_perm(vd, vd, vuc);
 // CHECK: @llvm.ppc.altivec.vperm
 // CHECK-LE: @llvm.ppc.altivec.vperm

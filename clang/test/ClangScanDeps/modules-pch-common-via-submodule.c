@@ -1,3 +1,7 @@
+// Unsupported on AIX because we don't support the requisite "__clangast"
+// section in XCOFF yet.
+// UNSUPPORTED: aix
+
 // Check that we discover dependency on a precompiled module (and generate the
 // appropriate `-fmodule-file=` argument) when it's imported by a **submodule**
 // instead of a top-level module.

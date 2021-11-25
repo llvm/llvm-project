@@ -6,7 +6,7 @@
 /// Note that the cortex-a8 is armv7-a, the cortex-a32 is armv8-a
 /// and clang's default Arm architecture is armv4t.
 
-/// Sanity check how the options behave when passed to the compiler
+/// Basic correctness check for how the options behave when passed to the compiler
 // RUN: %clang -target arm-linux-gnueabi -### -c -march=armv7-a %s 2>&1 | \
 // RUN: FileCheck --check-prefix=TRIPLE-ARMV7 %s
 // RUN: %clang -target arm-linux-gnueabi -### -c -march=armv7-a+crc %s 2>&1 | \

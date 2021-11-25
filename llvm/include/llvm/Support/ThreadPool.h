@@ -122,7 +122,8 @@ private:
 #else // LLVM_ENABLE_THREADS Disabled
 
     // Get a Future with launch::deferred execution using std::async
-    auto Future = std::async(std::launch::deferred, std::move(Task)).share();
+    std::future<void> Future =
+        std::async(std::launch::deferred, std::move(Task)).share();
     // Wrap the future so that both ThreadPool::wait() can operate and the
     // returned future can be sync'ed on.
     Tasks.push([Future]() { Future.get(); });

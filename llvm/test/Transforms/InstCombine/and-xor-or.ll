@@ -2018,15 +2018,17 @@ define i32 @and_or_not_not_wrong_b(i32 %a, i32 %b, i32 %c, i32 %d) {
   ret i32 %and3
 }
 
-; (a & ~(b | c)) | ~(a | (b ^ c)) --> ~((b | c) & (a | (b ^ c)))
+; (a & ~(b | c)) | ~(a | (b ^ c)) --> (~a & b & c) | ~(b | c)
 
 define i32 @and_not_or_or_not_or_xor(i32 %a, i32 %b, i32 %c) {
 ; CHECK-LABEL: @and_not_or_or_not_or_xor(
 ; CHECK-NEXT:    [[OR1:%.*]] = or i32 [[B:%.*]], [[C:%.*]]
+; CHECK-NEXT:    [[NOT1:%.*]] = xor i32 [[OR1]], -1
+; CHECK-NEXT:    [[AND1:%.*]] = and i32 [[NOT1]], [[A:%.*]]
 ; CHECK-NEXT:    [[XOR1:%.*]] = xor i32 [[B]], [[C]]
-; CHECK-NEXT:    [[OR2:%.*]] = or i32 [[XOR1]], [[A:%.*]]
-; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[OR1]], [[OR2]]
-; CHECK-NEXT:    [[OR3:%.*]] = xor i32 [[TMP1]], -1
+; CHECK-NEXT:    [[OR2:%.*]] = or i32 [[XOR1]], [[A]]
+; CHECK-NEXT:    [[NOT2:%.*]] = xor i32 [[OR2]], -1
+; CHECK-NEXT:    [[OR3:%.*]] = or i32 [[AND1]], [[NOT2]]
 ; CHECK-NEXT:    ret i32 [[OR3]]
 ;
   %or1 = or i32 %b, %c
@@ -2042,10 +2044,12 @@ define i32 @and_not_or_or_not_or_xor(i32 %a, i32 %b, i32 %c) {
 define i32 @and_not_or_or_not_or_xor_commute1(i32 %a, i32 %b, i32 %c) {
 ; CHECK-LABEL: @and_not_or_or_not_or_xor_commute1(
 ; CHECK-NEXT:    [[OR1:%.*]] = or i32 [[C:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[NOT1:%.*]] = xor i32 [[OR1]], -1
+; CHECK-NEXT:    [[AND1:%.*]] = and i32 [[NOT1]], [[A:%.*]]
 ; CHECK-NEXT:    [[XOR1:%.*]] = xor i32 [[B]], [[C]]
-; CHECK-NEXT:    [[OR2:%.*]] = or i32 [[XOR1]], [[A:%.*]]
-; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[OR1]], [[OR2]]
-; CHECK-NEXT:    [[OR3:%.*]] = xor i32 [[TMP1]], -1
+; CHECK-NEXT:    [[OR2:%.*]] = or i32 [[XOR1]], [[A]]
+; CHECK-NEXT:    [[NOT2:%.*]] = xor i32 [[OR2]], -1
+; CHECK-NEXT:    [[OR3:%.*]] = or i32 [[AND1]], [[NOT2]]
 ; CHECK-NEXT:    ret i32 [[OR3]]
 ;
   %or1 = or i32 %c, %b
@@ -2062,10 +2066,12 @@ define i32 @and_not_or_or_not_or_xor_commute2(i32 %a0, i32 %b, i32 %c) {
 ; CHECK-LABEL: @and_not_or_or_not_or_xor_commute2(
 ; CHECK-NEXT:    [[A:%.*]] = sdiv i32 42, [[A0:%.*]]
 ; CHECK-NEXT:    [[OR1:%.*]] = or i32 [[B:%.*]], [[C:%.*]]
+; CHECK-NEXT:    [[NOT1:%.*]] = xor i32 [[OR1]], -1
+; CHECK-NEXT:    [[AND1:%.*]] = and i32 [[A]], [[NOT1]]
 ; CHECK-NEXT:    [[XOR1:%.*]] = xor i32 [[B]], [[C]]
 ; CHECK-NEXT:    [[OR2:%.*]] = or i32 [[XOR1]], [[A]]
-; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[OR1]], [[OR2]]
-; CHECK-NEXT:    [[OR3:%.*]] = xor i32 [[TMP1]], -1
+; CHECK-NEXT:    [[NOT2:%.*]] = xor i32 [[OR2]], -1
+; CHECK-NEXT:    [[OR3:%.*]] = or i32 [[AND1]], [[NOT2]]
 ; CHECK-NEXT:    ret i32 [[OR3]]
 ;
   %a = sdiv i32 42, %a0 ; thwart complexity-based canonicalization
@@ -2082,10 +2088,12 @@ define i32 @and_not_or_or_not_or_xor_commute2(i32 %a0, i32 %b, i32 %c) {
 define i32 @and_not_or_or_not_or_xor_commute3(i32 %a, i32 %b, i32 %c) {
 ; CHECK-LABEL: @and_not_or_or_not_or_xor_commute3(
 ; CHECK-NEXT:    [[OR1:%.*]] = or i32 [[B:%.*]], [[C:%.*]]
+; CHECK-NEXT:    [[NOT1:%.*]] = xor i32 [[OR1]], -1
+; CHECK-NEXT:    [[AND1:%.*]] = and i32 [[NOT1]], [[A:%.*]]
 ; CHECK-NEXT:    [[XOR1:%.*]] = xor i32 [[C]], [[B]]
-; CHECK-NEXT:    [[OR2:%.*]] = or i32 [[XOR1]], [[A:%.*]]
-; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[OR1]], [[OR2]]
-; CHECK-NEXT:    [[OR3:%.*]] = xor i32 [[TMP1]], -1
+; CHECK-NEXT:    [[OR2:%.*]] = or i32 [[XOR1]], [[A]]
+; CHECK-NEXT:    [[NOT2:%.*]] = xor i32 [[OR2]], -1
+; CHECK-NEXT:    [[OR3:%.*]] = or i32 [[AND1]], [[NOT2]]
 ; CHECK-NEXT:    ret i32 [[OR3]]
 ;
   %or1 = or i32 %b, %c
@@ -2102,10 +2110,12 @@ define i32 @and_not_or_or_not_or_xor_commute4(i32 %a0, i32 %b, i32 %c) {
 ; CHECK-LABEL: @and_not_or_or_not_or_xor_commute4(
 ; CHECK-NEXT:    [[A:%.*]] = sdiv i32 42, [[A0:%.*]]
 ; CHECK-NEXT:    [[OR1:%.*]] = or i32 [[B:%.*]], [[C:%.*]]
+; CHECK-NEXT:    [[NOT1:%.*]] = xor i32 [[OR1]], -1
+; CHECK-NEXT:    [[AND1:%.*]] = and i32 [[A]], [[NOT1]]
 ; CHECK-NEXT:    [[XOR1:%.*]] = xor i32 [[B]], [[C]]
 ; CHECK-NEXT:    [[OR2:%.*]] = or i32 [[A]], [[XOR1]]
-; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[OR1]], [[OR2]]
-; CHECK-NEXT:    [[OR3:%.*]] = xor i32 [[TMP1]], -1
+; CHECK-NEXT:    [[NOT2:%.*]] = xor i32 [[OR2]], -1
+; CHECK-NEXT:    [[OR3:%.*]] = or i32 [[AND1]], [[NOT2]]
 ; CHECK-NEXT:    ret i32 [[OR3]]
 ;
   %a = sdiv i32 42, %a0 ; thwart complexity-based canonicalization
@@ -2122,10 +2132,12 @@ define i32 @and_not_or_or_not_or_xor_commute4(i32 %a0, i32 %b, i32 %c) {
 define i32 @and_not_or_or_not_or_xor_commute5(i32 %a, i32 %b, i32 %c) {
 ; CHECK-LABEL: @and_not_or_or_not_or_xor_commute5(
 ; CHECK-NEXT:    [[OR1:%.*]] = or i32 [[B:%.*]], [[C:%.*]]
+; CHECK-NEXT:    [[NOT1:%.*]] = xor i32 [[OR1]], -1
+; CHECK-NEXT:    [[AND1:%.*]] = and i32 [[NOT1]], [[A:%.*]]
 ; CHECK-NEXT:    [[XOR1:%.*]] = xor i32 [[B]], [[C]]
-; CHECK-NEXT:    [[OR2:%.*]] = or i32 [[XOR1]], [[A:%.*]]
-; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[OR1]], [[OR2]]
-; CHECK-NEXT:    [[OR3:%.*]] = xor i32 [[TMP1]], -1
+; CHECK-NEXT:    [[OR2:%.*]] = or i32 [[XOR1]], [[A]]
+; CHECK-NEXT:    [[NOT2:%.*]] = xor i32 [[OR2]], -1
+; CHECK-NEXT:    [[OR3:%.*]] = or i32 [[AND1]], [[NOT2]]
 ; CHECK-NEXT:    ret i32 [[OR3]]
 ;
   %or1 = or i32 %b, %c
@@ -2141,10 +2153,12 @@ define i32 @and_not_or_or_not_or_xor_commute5(i32 %a, i32 %b, i32 %c) {
 define i32 @and_not_or_or_not_or_xor_use1(i32 %a, i32 %b, i32 %c) {
 ; CHECK-LABEL: @and_not_or_or_not_or_xor_use1(
 ; CHECK-NEXT:    [[OR1:%.*]] = or i32 [[B:%.*]], [[C:%.*]]
+; CHECK-NEXT:    [[NOT1:%.*]] = xor i32 [[OR1]], -1
+; CHECK-NEXT:    [[AND1:%.*]] = and i32 [[NOT1]], [[A:%.*]]
 ; CHECK-NEXT:    [[XOR1:%.*]] = xor i32 [[B]], [[C]]
-; CHECK-NEXT:    [[OR2:%.*]] = or i32 [[XOR1]], [[A:%.*]]
-; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[OR1]], [[OR2]]
-; CHECK-NEXT:    [[OR3:%.*]] = xor i32 [[TMP1]], -1
+; CHECK-NEXT:    [[OR2:%.*]] = or i32 [[XOR1]], [[A]]
+; CHECK-NEXT:    [[NOT2:%.*]] = xor i32 [[OR2]], -1
+; CHECK-NEXT:    [[OR3:%.*]] = or i32 [[AND1]], [[NOT2]]
 ; CHECK-NEXT:    call void @use(i32 [[OR1]])
 ; CHECK-NEXT:    ret i32 [[OR3]]
 ;
@@ -2163,10 +2177,11 @@ define i32 @and_not_or_or_not_or_xor_use2(i32 %a, i32 %b, i32 %c) {
 ; CHECK-LABEL: @and_not_or_or_not_or_xor_use2(
 ; CHECK-NEXT:    [[OR1:%.*]] = or i32 [[B:%.*]], [[C:%.*]]
 ; CHECK-NEXT:    [[NOT1:%.*]] = xor i32 [[OR1]], -1
+; CHECK-NEXT:    [[AND1:%.*]] = and i32 [[NOT1]], [[A:%.*]]
 ; CHECK-NEXT:    [[XOR1:%.*]] = xor i32 [[B]], [[C]]
-; CHECK-NEXT:    [[OR2:%.*]] = or i32 [[XOR1]], [[A:%.*]]
-; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[OR1]], [[OR2]]
-; CHECK-NEXT:    [[OR3:%.*]] = xor i32 [[TMP1]], -1
+; CHECK-NEXT:    [[OR2:%.*]] = or i32 [[XOR1]], [[A]]
+; CHECK-NEXT:    [[NOT2:%.*]] = xor i32 [[OR2]], -1
+; CHECK-NEXT:    [[OR3:%.*]] = or i32 [[AND1]], [[NOT2]]
 ; CHECK-NEXT:    call void @use(i32 [[NOT1]])
 ; CHECK-NEXT:    ret i32 [[OR3]]
 ;
@@ -2207,10 +2222,12 @@ define i32 @and_not_or_or_not_or_xor_use3(i32 %a, i32 %b, i32 %c) {
 define i32 @and_not_or_or_not_or_xor_use4(i32 %a, i32 %b, i32 %c) {
 ; CHECK-LABEL: @and_not_or_or_not_or_xor_use4(
 ; CHECK-NEXT:    [[OR1:%.*]] = or i32 [[B:%.*]], [[C:%.*]]
+; CHECK-NEXT:    [[NOT1:%.*]] = xor i32 [[OR1]], -1
+; CHECK-NEXT:    [[AND1:%.*]] = and i32 [[NOT1]], [[A:%.*]]
 ; CHECK-NEXT:    [[XOR1:%.*]] = xor i32 [[B]], [[C]]
-; CHECK-NEXT:    [[OR2:%.*]] = or i32 [[XOR1]], [[A:%.*]]
-; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[OR1]], [[OR2]]
-; CHECK-NEXT:    [[OR3:%.*]] = xor i32 [[TMP1]], -1
+; CHECK-NEXT:    [[OR2:%.*]] = or i32 [[XOR1]], [[A]]
+; CHECK-NEXT:    [[NOT2:%.*]] = xor i32 [[OR2]], -1
+; CHECK-NEXT:    [[OR3:%.*]] = or i32 [[AND1]], [[NOT2]]
 ; CHECK-NEXT:    call void @use(i32 [[XOR1]])
 ; CHECK-NEXT:    ret i32 [[OR3]]
 ;
@@ -2228,10 +2245,12 @@ define i32 @and_not_or_or_not_or_xor_use4(i32 %a, i32 %b, i32 %c) {
 define i32 @and_not_or_or_not_or_xor_use5(i32 %a, i32 %b, i32 %c) {
 ; CHECK-LABEL: @and_not_or_or_not_or_xor_use5(
 ; CHECK-NEXT:    [[OR1:%.*]] = or i32 [[B:%.*]], [[C:%.*]]
+; CHECK-NEXT:    [[NOT1:%.*]] = xor i32 [[OR1]], -1
+; CHECK-NEXT:    [[AND1:%.*]] = and i32 [[NOT1]], [[A:%.*]]
 ; CHECK-NEXT:    [[XOR1:%.*]] = xor i32 [[B]], [[C]]
-; CHECK-NEXT:    [[OR2:%.*]] = or i32 [[XOR1]], [[A:%.*]]
-; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[OR1]], [[OR2]]
-; CHECK-NEXT:    [[OR3:%.*]] = xor i32 [[TMP1]], -1
+; CHECK-NEXT:    [[OR2:%.*]] = or i32 [[XOR1]], [[A]]
+; CHECK-NEXT:    [[NOT2:%.*]] = xor i32 [[OR2]], -1
+; CHECK-NEXT:    [[OR3:%.*]] = or i32 [[AND1]], [[NOT2]]
 ; CHECK-NEXT:    call void @use(i32 [[OR2]])
 ; CHECK-NEXT:    ret i32 [[OR3]]
 ;
@@ -2273,11 +2292,12 @@ define i32 @and_not_or_or_not_or_xor_use6(i32 %a, i32 %b, i32 %c) {
 
 define i32 @or_not_and_and_not_and_xor(i32 %a, i32 %b, i32 %c) {
 ; CHECK-LABEL: @or_not_and_and_not_and_xor(
-; CHECK-NEXT:    [[XOR1:%.*]] = xor i32 [[B:%.*]], [[C:%.*]]
-; CHECK-NEXT:    [[TMP1:%.*]] = xor i32 [[XOR1]], [[A:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = or i32 [[B]], [[A]]
-; CHECK-NEXT:    [[TMP3:%.*]] = xor i32 [[TMP2]], -1
-; CHECK-NEXT:    [[AND3:%.*]] = or i32 [[TMP1]], [[TMP3]]
+; CHECK-NEXT:    [[AND1:%.*]] = and i32 [[B:%.*]], [[C:%.*]]
+; CHECK-NEXT:    [[NOT1:%.*]] = xor i32 [[AND1]], -1
+; CHECK-NEXT:    [[OR1:%.*]] = or i32 [[NOT1]], [[A:%.*]]
+; CHECK-NEXT:    [[XOR1:%.*]] = xor i32 [[B]], [[C]]
+; CHECK-NEXT:    [[AND2:%.*]] = and i32 [[XOR1]], [[A]]
+; CHECK-NEXT:    [[AND3:%.*]] = xor i32 [[AND2]], [[OR1]]
 ; CHECK-NEXT:    ret i32 [[AND3]]
 ;
   %and1 = and i32 %b, %c
@@ -2292,11 +2312,12 @@ define i32 @or_not_and_and_not_and_xor(i32 %a, i32 %b, i32 %c) {
 
 define i32 @or_not_and_and_not_and_xor_commute1(i32 %a, i32 %b, i32 %c) {
 ; CHECK-LABEL: @or_not_and_and_not_and_xor_commute1(
-; CHECK-NEXT:    [[XOR1:%.*]] = xor i32 [[B:%.*]], [[C:%.*]]
-; CHECK-NEXT:    [[TMP1:%.*]] = xor i32 [[XOR1]], [[A:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = or i32 [[C]], [[A]]
-; CHECK-NEXT:    [[TMP3:%.*]] = xor i32 [[TMP2]], -1
-; CHECK-NEXT:    [[AND3:%.*]] = or i32 [[TMP1]], [[TMP3]]
+; CHECK-NEXT:    [[AND1:%.*]] = and i32 [[C:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[NOT1:%.*]] = xor i32 [[AND1]], -1
+; CHECK-NEXT:    [[OR1:%.*]] = or i32 [[NOT1]], [[A:%.*]]
+; CHECK-NEXT:    [[XOR1:%.*]] = xor i32 [[B]], [[C]]
+; CHECK-NEXT:    [[AND2:%.*]] = and i32 [[XOR1]], [[A]]
+; CHECK-NEXT:    [[AND3:%.*]] = xor i32 [[AND2]], [[OR1]]
 ; CHECK-NEXT:    ret i32 [[AND3]]
 ;
   %and1 = and i32 %c, %b
@@ -2312,11 +2333,12 @@ define i32 @or_not_and_and_not_and_xor_commute1(i32 %a, i32 %b, i32 %c) {
 define i32 @or_not_and_and_not_and_xor_commute2(i32 %a0, i32 %b, i32 %c) {
 ; CHECK-LABEL: @or_not_and_and_not_and_xor_commute2(
 ; CHECK-NEXT:    [[A:%.*]] = sdiv i32 42, [[A0:%.*]]
-; CHECK-NEXT:    [[XOR1:%.*]] = xor i32 [[B:%.*]], [[C:%.*]]
-; CHECK-NEXT:    [[TMP1:%.*]] = xor i32 [[XOR1]], [[A]]
-; CHECK-NEXT:    [[TMP2:%.*]] = or i32 [[A]], [[B]]
-; CHECK-NEXT:    [[TMP3:%.*]] = xor i32 [[TMP2]], -1
-; CHECK-NEXT:    [[AND3:%.*]] = or i32 [[TMP1]], [[TMP3]]
+; CHECK-NEXT:    [[AND1:%.*]] = and i32 [[B:%.*]], [[C:%.*]]
+; CHECK-NEXT:    [[NOT1:%.*]] = xor i32 [[AND1]], -1
+; CHECK-NEXT:    [[OR1:%.*]] = or i32 [[A]], [[NOT1]]
+; CHECK-NEXT:    [[XOR1:%.*]] = xor i32 [[B]], [[C]]
+; CHECK-NEXT:    [[AND2:%.*]] = and i32 [[XOR1]], [[A]]
+; CHECK-NEXT:    [[AND3:%.*]] = xor i32 [[AND2]], [[OR1]]
 ; CHECK-NEXT:    ret i32 [[AND3]]
 ;
   %a = sdiv i32 42, %a0 ; thwart complexity-based canonicalization
@@ -2332,11 +2354,12 @@ define i32 @or_not_and_and_not_and_xor_commute2(i32 %a0, i32 %b, i32 %c) {
 
 define i32 @or_not_and_and_not_and_xor_commute3(i32 %a, i32 %b, i32 %c) {
 ; CHECK-LABEL: @or_not_and_and_not_and_xor_commute3(
-; CHECK-NEXT:    [[XOR1:%.*]] = xor i32 [[C:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[TMP1:%.*]] = xor i32 [[XOR1]], [[A:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = or i32 [[B]], [[A]]
-; CHECK-NEXT:    [[TMP3:%.*]] = xor i32 [[TMP2]], -1
-; CHECK-NEXT:    [[AND3:%.*]] = or i32 [[TMP1]], [[TMP3]]
+; CHECK-NEXT:    [[AND1:%.*]] = and i32 [[B:%.*]], [[C:%.*]]
+; CHECK-NEXT:    [[NOT1:%.*]] = xor i32 [[AND1]], -1
+; CHECK-NEXT:    [[OR1:%.*]] = or i32 [[NOT1]], [[A:%.*]]
+; CHECK-NEXT:    [[XOR1:%.*]] = xor i32 [[C]], [[B]]
+; CHECK-NEXT:    [[AND2:%.*]] = and i32 [[XOR1]], [[A]]
+; CHECK-NEXT:    [[AND3:%.*]] = xor i32 [[AND2]], [[OR1]]
 ; CHECK-NEXT:    ret i32 [[AND3]]
 ;
   %and1 = and i32 %b, %c
@@ -2352,11 +2375,12 @@ define i32 @or_not_and_and_not_and_xor_commute3(i32 %a, i32 %b, i32 %c) {
 define i32 @or_not_and_and_not_and_xor_commute4(i32 %a0, i32 %b, i32 %c) {
 ; CHECK-LABEL: @or_not_and_and_not_and_xor_commute4(
 ; CHECK-NEXT:    [[A:%.*]] = sdiv i32 42, [[A0:%.*]]
-; CHECK-NEXT:    [[XOR1:%.*]] = xor i32 [[B:%.*]], [[C:%.*]]
-; CHECK-NEXT:    [[TMP1:%.*]] = xor i32 [[XOR1]], [[A]]
-; CHECK-NEXT:    [[TMP2:%.*]] = or i32 [[A]], [[B]]
-; CHECK-NEXT:    [[TMP3:%.*]] = xor i32 [[TMP2]], -1
-; CHECK-NEXT:    [[AND3:%.*]] = or i32 [[TMP1]], [[TMP3]]
+; CHECK-NEXT:    [[AND1:%.*]] = and i32 [[B:%.*]], [[C:%.*]]
+; CHECK-NEXT:    [[NOT1:%.*]] = xor i32 [[AND1]], -1
+; CHECK-NEXT:    [[OR1:%.*]] = or i32 [[A]], [[NOT1]]
+; CHECK-NEXT:    [[XOR1:%.*]] = xor i32 [[B]], [[C]]
+; CHECK-NEXT:    [[AND2:%.*]] = and i32 [[A]], [[XOR1]]
+; CHECK-NEXT:    [[AND3:%.*]] = xor i32 [[AND2]], [[OR1]]
 ; CHECK-NEXT:    ret i32 [[AND3]]
 ;
   %a = sdiv i32 42, %a0 ; thwart complexity-based canonicalization
@@ -2372,11 +2396,12 @@ define i32 @or_not_and_and_not_and_xor_commute4(i32 %a0, i32 %b, i32 %c) {
 
 define i32 @or_not_and_and_not_and_xor_commute5(i32 %a, i32 %b, i32 %c) {
 ; CHECK-LABEL: @or_not_and_and_not_and_xor_commute5(
-; CHECK-NEXT:    [[XOR1:%.*]] = xor i32 [[B:%.*]], [[C:%.*]]
-; CHECK-NEXT:    [[TMP1:%.*]] = xor i32 [[XOR1]], [[A:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = or i32 [[B]], [[A]]
-; CHECK-NEXT:    [[TMP3:%.*]] = xor i32 [[TMP2]], -1
-; CHECK-NEXT:    [[AND3:%.*]] = or i32 [[TMP1]], [[TMP3]]
+; CHECK-NEXT:    [[AND1:%.*]] = and i32 [[B:%.*]], [[C:%.*]]
+; CHECK-NEXT:    [[NOT1:%.*]] = xor i32 [[AND1]], -1
+; CHECK-NEXT:    [[OR1:%.*]] = or i32 [[NOT1]], [[A:%.*]]
+; CHECK-NEXT:    [[XOR1:%.*]] = xor i32 [[B]], [[C]]
+; CHECK-NEXT:    [[AND2:%.*]] = and i32 [[XOR1]], [[A]]
+; CHECK-NEXT:    [[AND3:%.*]] = xor i32 [[AND2]], [[OR1]]
 ; CHECK-NEXT:    ret i32 [[AND3]]
 ;
   %and1 = and i32 %b, %c
@@ -2457,11 +2482,12 @@ define i32 @or_not_and_and_not_and_xor_use3(i32 %a, i32 %b, i32 %c) {
 
 define i32 @or_not_and_and_not_and_xor_use4(i32 %a, i32 %b, i32 %c) {
 ; CHECK-LABEL: @or_not_and_and_not_and_xor_use4(
-; CHECK-NEXT:    [[XOR1:%.*]] = xor i32 [[B:%.*]], [[C:%.*]]
-; CHECK-NEXT:    [[TMP1:%.*]] = xor i32 [[XOR1]], [[A:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = or i32 [[B]], [[A]]
-; CHECK-NEXT:    [[TMP3:%.*]] = xor i32 [[TMP2]], -1
-; CHECK-NEXT:    [[AND3:%.*]] = or i32 [[TMP1]], [[TMP3]]
+; CHECK-NEXT:    [[AND1:%.*]] = and i32 [[B:%.*]], [[C:%.*]]
+; CHECK-NEXT:    [[NOT1:%.*]] = xor i32 [[AND1]], -1
+; CHECK-NEXT:    [[OR1:%.*]] = or i32 [[NOT1]], [[A:%.*]]
+; CHECK-NEXT:    [[XOR1:%.*]] = xor i32 [[B]], [[C]]
+; CHECK-NEXT:    [[AND2:%.*]] = and i32 [[XOR1]], [[A]]
+; CHECK-NEXT:    [[AND3:%.*]] = xor i32 [[AND2]], [[OR1]]
 ; CHECK-NEXT:    call void @use(i32 [[XOR1]])
 ; CHECK-NEXT:    ret i32 [[AND3]]
 ;
@@ -3746,360 +3772,4 @@ define i32 @not_or_or_and_no_and_use8(i32 %a, i32 %b, i32 %c) {
   %and2 = and i32 %or2, %not1
   call void @use(i32 %or2)
   ret i32 %and2
-}
-
-; (~(a | b) & c) | ~(a | (b | c)) -> ~(a | b)
-; (~(a | b) & c) | ~(b | (a | c)) -> ~(a | b)
-
-define i32 @not_or_and_or_not_or_or(i32 %a, i32 %b, i32 %c) {
-; CHECK-LABEL: @not_or_and_or_not_or_or(
-; CHECK-NEXT:    [[OR1:%.*]] = or i32 [[B:%.*]], [[C:%.*]]
-; CHECK-NEXT:    [[OR2:%.*]] = or i32 [[OR1]], [[A:%.*]]
-; CHECK-NEXT:    [[NOT1:%.*]] = xor i32 [[OR2]], -1
-; CHECK-NEXT:    [[OR3:%.*]] = or i32 [[B]], [[A]]
-; CHECK-NEXT:    [[NOT2:%.*]] = xor i32 [[OR3]], -1
-; CHECK-NEXT:    [[AND2:%.*]] = and i32 [[NOT2]], [[C]]
-; CHECK-NEXT:    [[OR4:%.*]] = or i32 [[AND2]], [[NOT1]]
-; CHECK-NEXT:    ret i32 [[OR4]]
-;
-  %or1 = or i32 %b, %c
-  %or2 = or i32 %or1, %a
-  %not1 = xor i32 %or2, -1
-  %or3 = or i32 %b, %a
-  %not2 = xor i32 %or3, -1
-  %and2 = and i32 %not2, %c
-  %or4 = or i32 %and2, %not1
-  ret i32 %or4
-}
-
-define i32 @not_or_and_or_not_or_or_commute1(i32 %a, i32 %b, i32 %c) {
-; CHECK-LABEL: @not_or_and_or_not_or_or_commute1(
-; CHECK-NEXT:    [[OR1:%.*]] = or i32 [[A:%.*]], [[C:%.*]]
-; CHECK-NEXT:    [[OR2:%.*]] = or i32 [[OR1]], [[B:%.*]]
-; CHECK-NEXT:    [[NOT1:%.*]] = xor i32 [[OR2]], -1
-; CHECK-NEXT:    [[OR3:%.*]] = or i32 [[B]], [[A]]
-; CHECK-NEXT:    [[NOT2:%.*]] = xor i32 [[OR3]], -1
-; CHECK-NEXT:    [[AND2:%.*]] = and i32 [[NOT2]], [[C]]
-; CHECK-NEXT:    [[OR4:%.*]] = or i32 [[AND2]], [[NOT1]]
-; CHECK-NEXT:    ret i32 [[OR4]]
-;
-  %or1 = or i32 %a, %c
-  %or2 = or i32 %or1, %b
-  %not1 = xor i32 %or2, -1
-  %or3 = or i32 %b, %a
-  %not2 = xor i32 %or3, -1
-  %and2 = and i32 %not2, %c
-  %or4 = or i32 %and2, %not1
-  ret i32 %or4
-}
-
-define i32 @not_or_and_or_not_or_or_commute2(i32 %a, i32 %b, i32 %c) {
-; CHECK-LABEL: @not_or_and_or_not_or_or_commute2(
-; CHECK-NEXT:    [[OR1:%.*]] = or i32 [[C:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[OR2:%.*]] = or i32 [[OR1]], [[A:%.*]]
-; CHECK-NEXT:    [[NOT1:%.*]] = xor i32 [[OR2]], -1
-; CHECK-NEXT:    [[OR3:%.*]] = or i32 [[B]], [[A]]
-; CHECK-NEXT:    [[NOT2:%.*]] = xor i32 [[OR3]], -1
-; CHECK-NEXT:    [[AND2:%.*]] = and i32 [[NOT2]], [[C]]
-; CHECK-NEXT:    [[OR4:%.*]] = or i32 [[AND2]], [[NOT1]]
-; CHECK-NEXT:    ret i32 [[OR4]]
-;
-  %or1 = or i32 %c, %b
-  %or2 = or i32 %or1, %a
-  %not1 = xor i32 %or2, -1
-  %or3 = or i32 %b, %a
-  %not2 = xor i32 %or3, -1
-  %and2 = and i32 %not2, %c
-  %or4 = or i32 %and2, %not1
-  ret i32 %or4
-}
-
-define i32 @not_or_and_or_not_or_or_commute3(i32 %a0, i32 %b, i32 %c) {
-; CHECK-LABEL: @not_or_and_or_not_or_or_commute3(
-; CHECK-NEXT:    [[A:%.*]] = sdiv i32 42, [[A0:%.*]]
-; CHECK-NEXT:    [[OR1:%.*]] = or i32 [[B:%.*]], [[C:%.*]]
-; CHECK-NEXT:    [[OR2:%.*]] = or i32 [[A]], [[OR1]]
-; CHECK-NEXT:    [[NOT1:%.*]] = xor i32 [[OR2]], -1
-; CHECK-NEXT:    [[OR3:%.*]] = or i32 [[A]], [[B]]
-; CHECK-NEXT:    [[NOT2:%.*]] = xor i32 [[OR3]], -1
-; CHECK-NEXT:    [[AND2:%.*]] = and i32 [[NOT2]], [[C]]
-; CHECK-NEXT:    [[OR4:%.*]] = or i32 [[AND2]], [[NOT1]]
-; CHECK-NEXT:    ret i32 [[OR4]]
-;
-  %a = sdiv i32 42, %a0 ; thwart complexity-based canonicalization
-  %or1 = or i32 %b, %c
-  %or2 = or i32 %a, %or1
-  %not1 = xor i32 %or2, -1
-  %or3 = or i32 %a, %b
-  %not2 = xor i32 %or3, -1
-  %and2 = and i32 %not2, %c
-  %or4 = or i32 %and2, %not1
-  ret i32 %or4
-}
-
-define i32 @not_or_and_or_not_or_or_commute4(i32 %a, i32 %b0, i32 %c) {
-; CHECK-LABEL: @not_or_and_or_not_or_or_commute4(
-; CHECK-NEXT:    [[B:%.*]] = sdiv i32 42, [[B0:%.*]]
-; CHECK-NEXT:    [[OR1:%.*]] = or i32 [[A:%.*]], [[C:%.*]]
-; CHECK-NEXT:    [[OR2:%.*]] = or i32 [[B]], [[OR1]]
-; CHECK-NEXT:    [[NOT1:%.*]] = xor i32 [[OR2]], -1
-; CHECK-NEXT:    [[OR3:%.*]] = or i32 [[B]], [[A]]
-; CHECK-NEXT:    [[NOT2:%.*]] = xor i32 [[OR3]], -1
-; CHECK-NEXT:    [[AND2:%.*]] = and i32 [[NOT2]], [[C]]
-; CHECK-NEXT:    [[OR4:%.*]] = or i32 [[AND2]], [[NOT1]]
-; CHECK-NEXT:    ret i32 [[OR4]]
-;
-  %b = sdiv i32 42, %b0 ; thwart complexity-based canonicalization
-  %or1 = or i32 %a, %c
-  %or2 = or i32 %b, %or1
-  %not1 = xor i32 %or2, -1
-  %or3 = or i32 %b, %a
-  %not2 = xor i32 %or3, -1
-  %and2 = and i32 %not2, %c
-  %or4 = or i32 %and2, %not1
-  ret i32 %or4
-}
-
-define i32 @not_or_and_or_not_or_or_commute5(i32 %a, i32 %b, i32 %c0) {
-; CHECK-LABEL: @not_or_and_or_not_or_or_commute5(
-; CHECK-NEXT:    [[C:%.*]] = sdiv i32 42, [[C0:%.*]]
-; CHECK-NEXT:    [[OR1:%.*]] = or i32 [[C]], [[A:%.*]]
-; CHECK-NEXT:    [[OR2:%.*]] = or i32 [[OR1]], [[B:%.*]]
-; CHECK-NEXT:    [[NOT1:%.*]] = xor i32 [[OR2]], -1
-; CHECK-NEXT:    [[OR3:%.*]] = or i32 [[B]], [[A]]
-; CHECK-NEXT:    [[NOT2:%.*]] = xor i32 [[OR3]], -1
-; CHECK-NEXT:    [[AND2:%.*]] = and i32 [[C]], [[NOT2]]
-; CHECK-NEXT:    [[OR4:%.*]] = or i32 [[AND2]], [[NOT1]]
-; CHECK-NEXT:    ret i32 [[OR4]]
-;
-  %c = sdiv i32 42, %c0 ; thwart complexity-based canonicalization
-  %or1 = or i32 %c, %a
-  %or2 = or i32 %or1, %b
-  %not1 = xor i32 %or2, -1
-  %or3 = or i32 %b, %a
-  %not2 = xor i32 %or3, -1
-  %and2 = and i32 %c, %not2
-  %or4 = or i32 %and2, %not1
-  ret i32 %or4
-}
-
-define i32 @not_or_and_or_not_or_or_use1(i32 %a, i32 %b, i32 %c) {
-; CHECK-LABEL: @not_or_and_or_not_or_or_use1(
-; CHECK-NEXT:    [[OR1:%.*]] = or i32 [[B:%.*]], [[C:%.*]]
-; CHECK-NEXT:    [[OR2:%.*]] = or i32 [[OR1]], [[A:%.*]]
-; CHECK-NEXT:    [[NOT1:%.*]] = xor i32 [[OR2]], -1
-; CHECK-NEXT:    [[OR3:%.*]] = or i32 [[B]], [[A]]
-; CHECK-NEXT:    [[NOT2:%.*]] = xor i32 [[OR3]], -1
-; CHECK-NEXT:    [[AND2:%.*]] = and i32 [[NOT2]], [[C]]
-; CHECK-NEXT:    [[OR4:%.*]] = or i32 [[AND2]], [[NOT1]]
-; CHECK-NEXT:    call void @use(i32 [[NOT1]])
-; CHECK-NEXT:    ret i32 [[OR4]]
-;
-  %or1 = or i32 %b, %c
-  %or2 = or i32 %or1, %a
-  %not1 = xor i32 %or2, -1
-  %or3 = or i32 %b, %a
-  %not2 = xor i32 %or3, -1
-  %and2 = and i32 %not2, %c
-  %or4 = or i32 %and2, %not1
-  call void @use(i32 %not1)
-  ret i32 %or4
-}
-
-define i32 @not_or_and_or_not_or_or_use2(i32 %a, i32 %b, i32 %c) {
-; CHECK-LABEL: @not_or_and_or_not_or_or_use2(
-; CHECK-NEXT:    [[OR1:%.*]] = or i32 [[A:%.*]], [[C:%.*]]
-; CHECK-NEXT:    [[OR2:%.*]] = or i32 [[OR1]], [[B:%.*]]
-; CHECK-NEXT:    [[NOT1:%.*]] = xor i32 [[OR2]], -1
-; CHECK-NEXT:    [[OR3:%.*]] = or i32 [[B]], [[A]]
-; CHECK-NEXT:    [[NOT2:%.*]] = xor i32 [[OR3]], -1
-; CHECK-NEXT:    [[AND2:%.*]] = and i32 [[NOT2]], [[C]]
-; CHECK-NEXT:    [[OR4:%.*]] = or i32 [[AND2]], [[NOT1]]
-; CHECK-NEXT:    call void @use(i32 [[NOT1]])
-; CHECK-NEXT:    ret i32 [[OR4]]
-;
-  %or1 = or i32 %a, %c
-  %or2 = or i32 %or1, %b
-  %not1 = xor i32 %or2, -1
-  %or3 = or i32 %b, %a
-  %not2 = xor i32 %or3, -1
-  %and2 = and i32 %not2, %c
-  %or4 = or i32 %and2, %not1
-  call void @use(i32 %not1)
-  ret i32 %or4
-}
-
-; (~(a & b) | c) & ~(a & (b & c)) -> ~(a & b)
-; (~(a & b) | c) & ~(b & (a & c)) -> ~(a & b)
-
-define i32 @not_and_or_and_not_and_and(i32 %a, i32 %b, i32 %c) {
-; CHECK-LABEL: @not_and_or_and_not_and_and(
-; CHECK-NEXT:    [[AND1:%.*]] = and i32 [[B:%.*]], [[C:%.*]]
-; CHECK-NEXT:    [[AND2:%.*]] = and i32 [[AND1]], [[A:%.*]]
-; CHECK-NEXT:    [[AND3:%.*]] = and i32 [[B]], [[A]]
-; CHECK-NEXT:    [[NOT2:%.*]] = xor i32 [[AND3]], -1
-; CHECK-NEXT:    [[OR2:%.*]] = or i32 [[NOT2]], [[C]]
-; CHECK-NEXT:    [[AND4:%.*]] = xor i32 [[AND2]], [[OR2]]
-; CHECK-NEXT:    ret i32 [[AND4]]
-;
-  %and1 = and i32 %b, %c
-  %and2 = and i32 %and1, %a
-  %not1 = xor i32 %and2, -1
-  %and3 = and i32 %b, %a
-  %not2 = xor i32 %and3, -1
-  %or2 = or i32 %not2, %c
-  %and4 = and i32 %or2, %not1
-  ret i32 %and4
-}
-
-define i32 @not_and_or_and_not_and_and_commute1(i32 %a, i32 %b, i32 %c) {
-; CHECK-LABEL: @not_and_or_and_not_and_and_commute1(
-; CHECK-NEXT:    [[AND1:%.*]] = and i32 [[A:%.*]], [[C:%.*]]
-; CHECK-NEXT:    [[AND2:%.*]] = and i32 [[AND1]], [[B:%.*]]
-; CHECK-NEXT:    [[AND3:%.*]] = and i32 [[B]], [[A]]
-; CHECK-NEXT:    [[NOT2:%.*]] = xor i32 [[AND3]], -1
-; CHECK-NEXT:    [[OR2:%.*]] = or i32 [[NOT2]], [[C]]
-; CHECK-NEXT:    [[AND4:%.*]] = xor i32 [[AND2]], [[OR2]]
-; CHECK-NEXT:    ret i32 [[AND4]]
-;
-  %and1 = and i32 %a, %c
-  %and2 = and i32 %and1, %b
-  %not1 = xor i32 %and2, -1
-  %and3 = and i32 %b, %a
-  %not2 = xor i32 %and3, -1
-  %or2 = or i32 %not2, %c
-  %and4 = and i32 %or2, %not1
-  ret i32 %and4
-}
-
-define i32 @not_and_or_and_not_and_and_commute2(i32 %a, i32 %b, i32 %c) {
-; CHECK-LABEL: @not_and_or_and_not_and_and_commute2(
-; CHECK-NEXT:    [[AND1:%.*]] = and i32 [[C:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[AND2:%.*]] = and i32 [[AND1]], [[A:%.*]]
-; CHECK-NEXT:    [[AND3:%.*]] = and i32 [[B]], [[A]]
-; CHECK-NEXT:    [[NOT2:%.*]] = xor i32 [[AND3]], -1
-; CHECK-NEXT:    [[OR2:%.*]] = or i32 [[NOT2]], [[C]]
-; CHECK-NEXT:    [[AND4:%.*]] = xor i32 [[AND2]], [[OR2]]
-; CHECK-NEXT:    ret i32 [[AND4]]
-;
-  %and1 = and i32 %c, %b
-  %and2 = and i32 %and1, %a
-  %not1 = xor i32 %and2, -1
-  %and3 = and i32 %b, %a
-  %not2 = xor i32 %and3, -1
-  %or2 = or i32 %not2, %c
-  %and4 = and i32 %or2, %not1
-  ret i32 %and4
-}
-
-define i32 @not_and_or_and_not_and_and_commute3(i32 %a0, i32 %b, i32 %c) {
-; CHECK-LABEL: @not_and_or_and_not_and_and_commute3(
-; CHECK-NEXT:    [[A:%.*]] = sdiv i32 42, [[A0:%.*]]
-; CHECK-NEXT:    [[AND1:%.*]] = and i32 [[B:%.*]], [[C:%.*]]
-; CHECK-NEXT:    [[AND2:%.*]] = and i32 [[A]], [[AND1]]
-; CHECK-NEXT:    [[AND3:%.*]] = and i32 [[A]], [[B]]
-; CHECK-NEXT:    [[NOT2:%.*]] = xor i32 [[AND3]], -1
-; CHECK-NEXT:    [[OR2:%.*]] = or i32 [[NOT2]], [[C]]
-; CHECK-NEXT:    [[AND4:%.*]] = xor i32 [[AND2]], [[OR2]]
-; CHECK-NEXT:    ret i32 [[AND4]]
-;
-  %a = sdiv i32 42, %a0 ; thwart complexity-based canonicalization
-  %and1 = and i32 %b, %c
-  %and2 = and i32 %a, %and1
-  %not1 = xor i32 %and2, -1
-  %and3 = and i32 %a, %b
-  %not2 = xor i32 %and3, -1
-  %or2 = or i32 %not2, %c
-  %and4 = and i32 %or2, %not1
-  ret i32 %and4
-}
-
-define i32 @not_and_or_and_not_and_and_commute4(i32 %a, i32 %b0, i32 %c) {
-; CHECK-LABEL: @not_and_or_and_not_and_and_commute4(
-; CHECK-NEXT:    [[B:%.*]] = sdiv i32 42, [[B0:%.*]]
-; CHECK-NEXT:    [[AND1:%.*]] = and i32 [[A:%.*]], [[C:%.*]]
-; CHECK-NEXT:    [[AND2:%.*]] = and i32 [[B]], [[AND1]]
-; CHECK-NEXT:    [[AND3:%.*]] = and i32 [[B]], [[A]]
-; CHECK-NEXT:    [[NOT2:%.*]] = xor i32 [[AND3]], -1
-; CHECK-NEXT:    [[OR2:%.*]] = or i32 [[NOT2]], [[C]]
-; CHECK-NEXT:    [[AND4:%.*]] = xor i32 [[AND2]], [[OR2]]
-; CHECK-NEXT:    ret i32 [[AND4]]
-;
-  %b = sdiv i32 42, %b0 ; thwart complexity-based canonicalization
-  %and1 = and i32 %a, %c
-  %and2 = and i32 %b, %and1
-  %not1 = xor i32 %and2, -1
-  %and3 = and i32 %b, %a
-  %not2 = xor i32 %and3, -1
-  %or2 = or i32 %not2, %c
-  %and4 = and i32 %or2, %not1
-  ret i32 %and4
-}
-
-define i32 @not_and_or_and_not_and_and_commute5(i32 %a, i32 %b, i32 %c0) {
-; CHECK-LABEL: @not_and_or_and_not_and_and_commute5(
-; CHECK-NEXT:    [[C:%.*]] = sdiv i32 42, [[C0:%.*]]
-; CHECK-NEXT:    [[AND1:%.*]] = and i32 [[C]], [[A:%.*]]
-; CHECK-NEXT:    [[AND2:%.*]] = and i32 [[AND1]], [[B:%.*]]
-; CHECK-NEXT:    [[AND3:%.*]] = and i32 [[B]], [[A]]
-; CHECK-NEXT:    [[NOT2:%.*]] = xor i32 [[AND3]], -1
-; CHECK-NEXT:    [[OR2:%.*]] = or i32 [[C]], [[NOT2]]
-; CHECK-NEXT:    [[AND4:%.*]] = xor i32 [[AND2]], [[OR2]]
-; CHECK-NEXT:    ret i32 [[AND4]]
-;
-  %c = sdiv i32 42, %c0 ; thwart complexity-based canonicalization
-  %and1 = and i32 %c, %a
-  %and2 = and i32 %and1, %b
-  %not1 = xor i32 %and2, -1
-  %and3 = and i32 %b, %a
-  %not2 = xor i32 %and3, -1
-  %or2 = or i32 %c, %not2
-  %and4 = and i32 %or2, %not1
-  ret i32 %and4
-}
-
-define i32 @not_and_or_and_not_and_and_use1(i32 %a, i32 %b, i32 %c) {
-; CHECK-LABEL: @not_and_or_and_not_and_and_use1(
-; CHECK-NEXT:    [[AND1:%.*]] = and i32 [[B:%.*]], [[C:%.*]]
-; CHECK-NEXT:    [[AND2:%.*]] = and i32 [[AND1]], [[A:%.*]]
-; CHECK-NEXT:    [[NOT1:%.*]] = xor i32 [[AND2]], -1
-; CHECK-NEXT:    [[AND3:%.*]] = and i32 [[B]], [[A]]
-; CHECK-NEXT:    [[NOT2:%.*]] = xor i32 [[AND3]], -1
-; CHECK-NEXT:    [[OR2:%.*]] = or i32 [[NOT2]], [[C]]
-; CHECK-NEXT:    [[AND4:%.*]] = xor i32 [[AND2]], [[OR2]]
-; CHECK-NEXT:    call void @use(i32 [[NOT1]])
-; CHECK-NEXT:    ret i32 [[AND4]]
-;
-  %and1 = and i32 %b, %c
-  %and2 = and i32 %and1, %a
-  %not1 = xor i32 %and2, -1
-  %and3 = and i32 %b, %a
-  %not2 = xor i32 %and3, -1
-  %or2 = or i32 %not2, %c
-  %and4 = and i32 %or2, %not1
-  call void @use(i32 %not1)
-  ret i32 %and4
-}
-
-define i32 @not_and_or_and_not_and_and_use2(i32 %a, i32 %b, i32 %c) {
-; CHECK-LABEL: @not_and_or_and_not_and_and_use2(
-; CHECK-NEXT:    [[AND1:%.*]] = and i32 [[A:%.*]], [[C:%.*]]
-; CHECK-NEXT:    [[AND2:%.*]] = and i32 [[AND1]], [[B:%.*]]
-; CHECK-NEXT:    [[NOT1:%.*]] = xor i32 [[AND2]], -1
-; CHECK-NEXT:    [[AND3:%.*]] = and i32 [[B]], [[A]]
-; CHECK-NEXT:    [[NOT2:%.*]] = xor i32 [[AND3]], -1
-; CHECK-NEXT:    [[OR2:%.*]] = or i32 [[NOT2]], [[C]]
-; CHECK-NEXT:    [[AND4:%.*]] = xor i32 [[AND2]], [[OR2]]
-; CHECK-NEXT:    call void @use(i32 [[NOT1]])
-; CHECK-NEXT:    ret i32 [[AND4]]
-;
-  %and1 = and i32 %a, %c
-  %and2 = and i32 %and1, %b
-  %not1 = xor i32 %and2, -1
-  %and3 = and i32 %b, %a
-  %not2 = xor i32 %and3, -1
-  %or2 = or i32 %not2, %c
-  %and4 = and i32 %or2, %not1
-  call void @use(i32 %not1)
-  ret i32 %and4
 }

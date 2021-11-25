@@ -641,8 +641,7 @@ PartialInlinerImpl::computeOutliningInfo(Function &F) const {
   if (!CandidateFound)
     return std::unique_ptr<FunctionOutliningInfo>();
 
-  // Do sanity check of the entries: threre should not
-  // be any successors (not in the entry set) other than
+  // There should not be any successors (not in the entry set) other than
   // {ReturnBlock, NonReturnBlock}
   assert(OutliningInfo->Entries[0] == &F.front() &&
          "Function Entry must be the first in Entries vector");

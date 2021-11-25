@@ -782,7 +782,7 @@ func @replace_if_with_cond3(%arg0 : i1, %arg2: i64) -> (i32, i64) {
 // -----
 
 // CHECK-LABEL: @while_cond_true
-func @while_cond_true() {
+func @while_cond_true() -> i1 {
   %0 = scf.while () : () -> i1 {
     %condition = "test.condition"() : () -> i1
     scf.condition(%condition) %condition : i1
@@ -791,7 +791,7 @@ func @while_cond_true() {
     "test.use"(%arg0) : (i1) -> ()
     scf.yield
   }
-  return
+  return %0 : i1
 }
 // CHECK-NEXT:         %[[true:.+]] = arith.constant true
 // CHECK-NEXT:         %{{.+}} = scf.while : () -> i1 {
@@ -802,6 +802,34 @@ func @while_cond_true() {
 // CHECK-NEXT:           "test.use"(%[[true]]) : (i1) -> ()
 // CHECK-NEXT:           scf.yield
 // CHECK-NEXT:         }
+
+// -----
+
+// CHECK-LABEL: @while_unused_result
+func @while_unused_result() -> i32 {
+  %0:2 = scf.while () : () -> (i32, i64) {
+    %condition = "test.condition"() : () -> i1
+    %v1 = "test.get_some_value"() : () -> i32
+    %v2 = "test.get_some_value"() : () -> i64
+    scf.condition(%condition) %v1, %v2 : i32, i64
+  } do {
+  ^bb0(%arg0: i32, %arg1: i64):
+    "test.use"(%arg0) : (i32) -> ()
+    scf.yield
+  }
+  return %0#0 : i32
+}
+// CHECK-NEXT:         %[[res:.*]] = scf.while : () -> i32 {
+// CHECK-NEXT:           %[[cmp:.*]] = "test.condition"() : () -> i1
+// CHECK-NEXT:           %[[val:.*]] = "test.get_some_value"() : () -> i32
+// CHECK-NEXT:           %{{.*}} = "test.get_some_value"() : () -> i64
+// CHECK-NEXT:           scf.condition(%[[cmp]]) %[[val]] : i32
+// CHECK-NEXT:         } do {
+// CHECK-NEXT:         ^bb0(%[[arg:.*]]: i32):  // no predecessors
+// CHECK-NEXT:           "test.use"(%[[arg]]) : (i32) -> ()
+// CHECK-NEXT:           scf.yield
+// CHECK-NEXT:         }
+// CHECK-NEXT:         return %[[res]] : i32
 
 // -----
 

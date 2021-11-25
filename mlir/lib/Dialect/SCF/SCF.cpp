@@ -2255,11 +2255,102 @@ struct WhileConditionTruth : public OpRewritePattern<WhileOp> {
     return success(replaced);
   }
 };
+
+/// Remove WhileOp results that are also unused in 'after' block.
+///
+///  %0:2 = scf.while () : () -> (i32, i64) {
+///    %condition = "test.condition"() : () -> i1
+///    %v1 = "test.get_some_value"() : () -> i32
+///    %v2 = "test.get_some_value"() : () -> i64
+///    scf.condition(%condition) %v1, %v2 : i32, i64
+///  } do {
+///  ^bb0(%arg0: i32, %arg1: i64):
+///    "test.use"(%arg0) : (i32) -> ()
+///    scf.yield
+///  }
+///  return %0#0 : i32
+///
+/// becomes
+///  %0 = scf.while () : () -> (i32) {
+///    %condition = "test.condition"() : () -> i1
+///    %v1 = "test.get_some_value"() : () -> i32
+///    %v2 = "test.get_some_value"() : () -> i64
+///    scf.condition(%condition) %v1 : i32
+///  } do {
+///  ^bb0(%arg0: i32):
+///    "test.use"(%arg0) : (i32) -> ()
+///    scf.yield
+///  }
+///  return %0 : i32
+struct WhileUnusedResult : public OpRewritePattern<WhileOp> {
+  using OpRewritePattern<WhileOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(WhileOp op,
+                                PatternRewriter &rewriter) const override {
+    auto term = op.getConditionOp();
+    auto afterArgs = op.getAfterArguments();
+    auto termArgs = term.args();
+
+    // Collect results mapping, new terminator args and new result types.
+    SmallVector<unsigned> newResultsIndices;
+    SmallVector<Type> newResultTypes;
+    SmallVector<Value> newTermArgs;
+    bool needUpdate = false;
+    for (auto it :
+         llvm::enumerate(llvm::zip(op.getResults(), afterArgs, termArgs))) {
+      auto i = static_cast<unsigned>(it.index());
+      Value result = std::get<0>(it.value());
+      Value afterArg = std::get<1>(it.value());
+      Value termArg = std::get<2>(it.value());
+      if (result.use_empty() && afterArg.use_empty()) {
+        needUpdate = true;
+      } else {
+        newResultsIndices.emplace_back(i);
+        newTermArgs.emplace_back(termArg);
+        newResultTypes.emplace_back(result.getType());
+      }
+    }
+
+    if (!needUpdate)
+      return failure();
+
+    {
+      OpBuilder::InsertionGuard g(rewriter);
+      rewriter.setInsertionPoint(term);
+      rewriter.replaceOpWithNewOp<ConditionOp>(term, term.condition(),
+                                               newTermArgs);
+    }
+
+    auto newWhile =
+        rewriter.create<WhileOp>(op.getLoc(), newResultTypes, op.inits());
+
+    Block &newAfterBlock = *rewriter.createBlock(
+        &newWhile.after(), /*insertPt*/ {}, newResultTypes);
+
+    // Build new results list and new after block args (unused entries will be
+    // null).
+    SmallVector<Value> newResults(op.getNumResults());
+    SmallVector<Value> newAfterBlockArgs(op.getNumResults());
+    for (auto it : llvm::enumerate(newResultsIndices)) {
+      newResults[it.value()] = newWhile.getResult(it.index());
+      newAfterBlockArgs[it.value()] = newAfterBlock.getArgument(it.index());
+    }
+
+    rewriter.inlineRegionBefore(op.before(), newWhile.before(),
+                                newWhile.before().begin());
+
+    Block &afterBlock = op.after().front();
+    rewriter.mergeBlocks(&afterBlock, &newAfterBlock, newAfterBlockArgs);
+
+    rewriter.replaceOp(op, newResults);
+    return success();
+  }
+};
 } // namespace
 
 void WhileOp::getCanonicalizationPatterns(OwningRewritePatternList &results,
                                           MLIRContext *context) {
-  results.insert<WhileConditionTruth>(context);
+  results.insert<WhileConditionTruth, WhileUnusedResult>(context);
 }
 
 //===----------------------------------------------------------------------===//

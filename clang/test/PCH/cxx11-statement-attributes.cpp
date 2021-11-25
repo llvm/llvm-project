@@ -1,4 +1,4 @@
-// Sanity check.
+// Basic correctness check.
 // RUN: %clang_cc1 -include %S/Inputs/cxx11-statement-attributes.h -std=c++11 -Wimplicit-fallthrough -fsyntax-only %s -o - -verify
 // RUN: %clang_cc1 -include %S/Inputs/cxx11-statement-attributes.h -std=c++1z -Wimplicit-fallthrough -fsyntax-only %s -o - -verify
 // Run the same tests, this time with the attributes loaded from the PCH file.

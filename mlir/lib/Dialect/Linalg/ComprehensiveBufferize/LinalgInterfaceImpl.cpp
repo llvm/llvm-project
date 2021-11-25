@@ -167,8 +167,8 @@ struct InitTensorOpInterface
     OpBuilder::InsertionGuard g(b);
     b.setInsertionPoint(initTensorOp);
 
-    Value alloc = state.allocationFns.createAllocDeallocFn(
-        b, initTensorOp->getLoc(), initTensorOp.result(), state);
+    Value alloc = state.createAllocDeallocFn(b, initTensorOp->getLoc(),
+                                             initTensorOp.result());
     state.mapBuffer(initTensorOp.result(), alloc);
     return success();
   }
@@ -340,7 +340,8 @@ struct TiledLoopOpInterface
              static_cast<int>(oldInputs.size()) + numNewInputBuffers,
              static_cast<int>(oldOutputs.size()) + numNewOutputBuffers}));
 
-    return success();
+    // Bufferize loop body.
+    return comprehensive_bufferize::bufferize(&tiledLoopOp.region(), state);
   }
 };
 

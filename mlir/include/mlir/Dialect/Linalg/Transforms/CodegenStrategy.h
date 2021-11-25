@@ -128,21 +128,27 @@ private:
 /// Represent one application of createLinalgStrategyVectorizePass.
 struct Vectorize : public Transformation {
   explicit Vectorize(linalg::LinalgVectorizationOptions options,
-                     LinalgTransformationFilter::FilterFunction f = nullptr)
-      : Transformation(f), opName(), options(options) {}
+                     LinalgTransformationFilter::FilterFunction f = nullptr,
+                     bool padVectorize = false)
+      : Transformation(f), opName(), options(options),
+        vectorizePadding(padVectorize) {}
 
   Vectorize(StringRef name, linalg::LinalgVectorizationOptions options,
-            LinalgTransformationFilter::FilterFunction f = nullptr)
-      : Transformation(f), opName(name), options(options) {}
+            LinalgTransformationFilter::FilterFunction f = nullptr,
+            bool padVectorize = false)
+      : Transformation(f), opName(name), options(options),
+        vectorizePadding(padVectorize) {}
 
   void addToPassPipeline(OpPassManager &pm,
                          LinalgTransformationFilter m) const override {
-    pm.addPass(createLinalgStrategyVectorizePass(opName, options, m));
+    pm.addPass(createLinalgStrategyVectorizePass(opName, options, m,
+                                                 vectorizePadding));
   }
 
 private:
   std::string opName;
   linalg::LinalgVectorizationOptions options;
+  bool vectorizePadding;
 };
 
 /// Represent one application of createLinalgStrategyLowerVectorsPass.
@@ -260,18 +266,20 @@ struct CodegenStrategy {
   /// Append a pattern to rewrite `LinalgOpType` as a vector operation.
   CodegenStrategy &
   vectorize(StringRef opName,
-            LinalgTransformationFilter::FilterFunction f = nullptr) {
+            LinalgTransformationFilter::FilterFunction f = nullptr,
+            bool vectorizePadding = false) {
     assert(!opName.empty() && "expected an op name");
     transformationSequence.emplace_back(std::make_unique<Vectorize>(
-        opName, linalg::LinalgVectorizationOptions(), f));
+        opName, linalg::LinalgVectorizationOptions(), f, vectorizePadding));
     return *this;
   }
   /// Conditionally append a pattern to rewrite `LinalgOpType` as a vector
   /// operation.
   CodegenStrategy &
   vectorizeIf(bool b, StringRef opName,
-              LinalgTransformationFilter::FilterFunction f = nullptr) {
-    return b ? vectorize(opName, f) : *this;
+              LinalgTransformationFilter::FilterFunction f = nullptr,
+              bool vectorizePadding = false) {
+    return b ? vectorize(opName, f, vectorizePadding) : *this;
     return *this;
   }
   /// Append a pattern to lower all vector operations.

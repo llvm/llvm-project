@@ -60,14 +60,14 @@ entry:
 
 ; SGPR33 = 65
 ; CHECK: v_mov_b32_e32 [[TMP_VGPR:v[0-9]+]], s33
-; GFX900: buffer_store_dword [[TMP_VGPR]], off, s[0:3], s32 offset:452 ; 4-byte Folded Spill
-; GFX90A-V2A-DIS: buffer_store_dword [[TMP_VGPR]], off, s[0:3], s32 offset:452 ; 4-byte Folded Spill
-; GFX90A-V2A-EN: buffer_store_dword [[TMP_VGPR]], off, s[0:3], s32 offset:324 ; 4-byte Folded Spill
+; GFX900: buffer_store_dword [[TMP_VGPR]], off, s[0:3], s32 offset:448 ; 4-byte Folded Spill
+; GFX90A-V2A-DIS: buffer_store_dword [[TMP_VGPR]], off, s[0:3], s32 offset:448 ; 4-byte Folded Spill
+; GFX90A-V2A-EN: buffer_store_dword [[TMP_VGPR]], off, s[0:3], s32 offset:320 ; 4-byte Folded Spill
 
-; GFX900: .cfi_offset 65, 28928
-; GFX90A-V2A-DIS: .cfi_offset 65, 28928
-; GFX90A-V2A-EN: .cfi_offset 65, 20736
-; WAVE32: .cfi_offset 65, 14464
+; GFX900: .cfi_offset 65, 28672
+; GFX90A-V2A-DIS: .cfi_offset 65, 28672
+; GFX90A-V2A-EN: .cfi_offset 65, 20480
+; WAVE32: .cfi_offset 65, 14336
 
 ; CHECK: .cfi_endproc
 define void @callee_need_to_spill_fp_to_memory() #1 {

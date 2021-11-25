@@ -2474,7 +2474,7 @@ bool ShuffleVectorInst::isReplicationMask(ArrayRef<int> Mask,
   // Additionally, mask size is a replication factor multiplied by vector size,
   // which further significantly reduces the search space.
 
-  // Before doing that, let's perform basic sanity check first.
+  // Before doing that, let's perform basic correctness checking first.
   int Largest = -1;
   for (int MaskElt : Mask) {
     if (MaskElt == UndefMaskElem)

@@ -1,7 +1,7 @@
 # RUN: yaml2obj %s -o %t.o
 # RUN: not llvm-dwarfdump -debug-info -verify %t.o | FileCheck %s
 
-#      CHECK: Verifying .debug_info Unit Header Chain...
+#      CHECK: Verifying non-dwo Units...
 # CHECK-NEXT: error: DW_FORM_ref4 CU offset 0x00001234 is invalid (must be less than CU size of 0x0000001a):
 
 --- !ELF

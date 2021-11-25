@@ -56,23 +56,16 @@ bool NVPTXReplaceImageHandles::runOnMachineFunction(MachineFunction &MF) {
   bool Changed = false;
   InstrsToRemove.clear();
 
-  for (MachineFunction::iterator BI = MF.begin(), BE = MF.end(); BI != BE;
-       ++BI) {
-    for (MachineBasicBlock::iterator I = (*BI).begin(), E = (*BI).end();
-         I != E; ++I) {
-      MachineInstr &MI = *I;
+  for (MachineBasicBlock &MBB : MF)
+    for (MachineInstr &MI : MBB)
       Changed |= processInstr(MI);
-    }
-  }
 
   // Now clean up any handle-access instructions
   // This is needed in debug mode when code cleanup passes are not executed,
   // but we need the handle access to be eliminated because they are not
   // valid instructions when image handles are disabled.
-  for (DenseSet<MachineInstr *>::iterator I = InstrsToRemove.begin(),
-       E = InstrsToRemove.end(); I != E; ++I) {
-    (*I)->eraseFromParent();
-  }
+  for (MachineInstr *MI : InstrsToRemove)
+    MI->eraseFromParent();
   return Changed;
 }
 

@@ -109,13 +109,17 @@ void UpdateVCEPass::runOnOperation() {
   // requirements.
   WalkResult walkResult = module.walk([&](Operation *op) -> WalkResult {
     // Op min version requirements
-    if (auto minVersion = dyn_cast<spirv::QueryMinVersionInterface>(op)) {
-      deducedVersion = std::max(deducedVersion, minVersion.getMinVersion());
-      if (deducedVersion > allowedVersion) {
-        return op->emitError("'") << op->getName() << "' requires min version "
-                                  << spirv::stringifyVersion(deducedVersion)
-                                  << " but target environment allows up to "
-                                  << spirv::stringifyVersion(allowedVersion);
+    if (auto minVersionIfx = dyn_cast<spirv::QueryMinVersionInterface>(op)) {
+      Optional<spirv::Version> minVersion = minVersionIfx.getMinVersion();
+      if (minVersion) {
+        deducedVersion = std::max(deducedVersion, *minVersion);
+        if (deducedVersion > allowedVersion) {
+          return op->emitError("'")
+                 << op->getName() << "' requires min version "
+                 << spirv::stringifyVersion(deducedVersion)
+                 << " but target environment allows up to "
+                 << spirv::stringifyVersion(allowedVersion);
+        }
       }
     }
 

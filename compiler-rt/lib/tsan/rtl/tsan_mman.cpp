@@ -69,13 +69,27 @@ Allocator *allocator() {
 struct GlobalProc {
   Mutex mtx;
   Processor *proc;
+  // This mutex represents the internal allocator combined for
+  // the purposes of deadlock detection. The internal allocator
+  // uses multiple mutexes, moreover they are locked only occasionally
+  // and they are spin mutexes which don't support deadlock detection.
+  // So we use this fake mutex to serve as a substitute for these mutexes.
+  CheckedMutex internal_alloc_mtx;
 
-  GlobalProc() : mtx(MutexTypeGlobalProc), proc(ProcCreate()) {}
+  GlobalProc()
+      : mtx(MutexTypeGlobalProc),
+        proc(ProcCreate()),
+        internal_alloc_mtx(MutexTypeInternalAlloc) {}
 };
 
 static char global_proc_placeholder[sizeof(GlobalProc)] ALIGNED(64);
 GlobalProc *global_proc() {
   return reinterpret_cast<GlobalProc*>(&global_proc_placeholder);
+}
+
+static void InternalAllocAccess() {
+  global_proc()->internal_alloc_mtx.Lock();
+  global_proc()->internal_alloc_mtx.Unlock();
 }
 
 ScopedGlobalProcessor::ScopedGlobalProcessor() {
@@ -108,6 +122,18 @@ ScopedGlobalProcessor::~ScopedGlobalProcessor() {
     return;
   ProcUnwire(gp->proc, thr);
   gp->mtx.Unlock();
+}
+
+void AllocatorLock() NO_THREAD_SAFETY_ANALYSIS {
+  global_proc()->mtx.Lock();
+  global_proc()->internal_alloc_mtx.Lock();
+  InternalAllocatorLock();
+}
+
+void AllocatorUnlock() NO_THREAD_SAFETY_ANALYSIS {
+  InternalAllocatorUnlock();
+  global_proc()->internal_alloc_mtx.Unlock();
+  global_proc()->mtx.Unlock();
 }
 
 static constexpr uptr kMaxAllowedMallocSize = 1ull << 40;
@@ -342,6 +368,7 @@ void *Alloc(uptr sz) {
     thr->nomalloc = 0;  // CHECK calls internal_malloc().
     CHECK(0);
   }
+  InternalAllocAccess();
   return InternalAlloc(sz, &thr->proc()->internal_alloc_cache);
 }
 
@@ -351,6 +378,7 @@ void FreeImpl(void *p) {
     thr->nomalloc = 0;  // CHECK calls internal_malloc().
     CHECK(0);
   }
+  InternalAllocAccess();
   InternalFree(p, &thr->proc()->internal_alloc_cache);
 }
 
