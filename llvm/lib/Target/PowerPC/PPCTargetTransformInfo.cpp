@@ -318,9 +318,20 @@ InstructionCost PPCTTIImpl::getIntImmCostInst(unsigned Opcode, unsigned Idx,
   return PPCTTIImpl::getIntImmCost(Imm, Ty, CostKind);
 }
 
+// Check if the current Type is an MMA vector type. Valid MMA types are
+// v256i1 and v512i1 respectively.
+static bool isMMAType(Type *Ty) {
+  return Ty->isVectorTy() && (Ty->getScalarSizeInBits() == 1) &&
+         (Ty->getPrimitiveSizeInBits() > 128);
+}
+
 InstructionCost PPCTTIImpl::getUserCost(const User *U,
                                         ArrayRef<const Value *> Operands,
                                         TTI::TargetCostKind CostKind) {
+  // Set the max cost if an MMA type is present (v256i1, v512i1).
+  if (isMMAType(U->getType()))
+    return InstructionCost::getMax();
+
   // We already implement getCastInstrCost and getMemoryOpCost where we perform
   // the vector adjustment there.
   if (isa<CastInst>(U) || isa<LoadInst>(U) || isa<StoreInst>(U))
@@ -942,32 +953,39 @@ unsigned PPCTTIImpl::getMaxInterleaveFactor(unsigned VF) {
   return 2;
 }
 
-// Adjust the cost of vector instructions on targets which there is overlap
-// between the vector and scalar units, thereby reducing the overall throughput
-// of vector code wrt. scalar code.
-InstructionCost PPCTTIImpl::vectorCostAdjustment(InstructionCost Cost,
-                                                 unsigned Opcode, Type *Ty1,
-                                                 Type *Ty2) {
+// Returns a cost adjustment factor to adjust the cost of vector instructions
+// on targets which there is overlap between the vector and scalar units,
+// thereby reducing the overall throughput of vector code wrt. scalar code.
+// An invalid instruction cost is returned if the type is an MMA vector type.
+InstructionCost PPCTTIImpl::vectorCostAdjustmentFactor(unsigned Opcode,
+                                                       Type *Ty1, Type *Ty2) {
+  // If the vector type is of an MMA type (v256i1, v512i1), an invalid
+  // instruction cost is returned. This is to signify to other cost computing
+  // functions to return the maximum instruction cost in order to prevent any
+  // opportunities for the optimizer to produce MMA types within the IR.
+  if (isMMAType(Ty1))
+    return InstructionCost::getInvalid();
+
   if (!ST->vectorsUseTwoUnits() || !Ty1->isVectorTy())
-    return Cost;
+    return InstructionCost(1);
 
   std::pair<InstructionCost, MVT> LT1 = TLI->getTypeLegalizationCost(DL, Ty1);
   // If type legalization involves splitting the vector, we don't want to
   // double the cost at every step - only the last step.
   if (LT1.first != 1 || !LT1.second.isVector())
-    return Cost;
+    return InstructionCost(1);
 
   int ISD = TLI->InstructionOpcodeToISD(Opcode);
   if (TLI->isOperationExpand(ISD, LT1.second))
-    return Cost;
+    return InstructionCost(1);
 
   if (Ty2) {
     std::pair<InstructionCost, MVT> LT2 = TLI->getTypeLegalizationCost(DL, Ty2);
     if (LT2.first != 1 || !LT2.second.isVector())
-      return Cost;
+      return InstructionCost(1);
   }
 
-  return Cost * 2;
+  return InstructionCost(2);
 }
 
 InstructionCost PPCTTIImpl::getArithmeticInstrCost(
@@ -977,6 +995,11 @@ InstructionCost PPCTTIImpl::getArithmeticInstrCost(
     TTI::OperandValueProperties Opd2PropInfo, ArrayRef<const Value *> Args,
     const Instruction *CxtI) {
   assert(TLI->InstructionOpcodeToISD(Opcode) && "Invalid opcode");
+
+  InstructionCost CostFactor = vectorCostAdjustmentFactor(Opcode, Ty, nullptr);
+  if (!CostFactor.isValid())
+    return InstructionCost::getMax();
+
   // TODO: Handle more cost kinds.
   if (CostKind != TTI::TCK_RecipThroughput)
     return BaseT::getArithmeticInstrCost(Opcode, Ty, CostKind, Op1Info,
@@ -986,12 +1009,18 @@ InstructionCost PPCTTIImpl::getArithmeticInstrCost(
   // Fallback to the default implementation.
   InstructionCost Cost = BaseT::getArithmeticInstrCost(
       Opcode, Ty, CostKind, Op1Info, Op2Info, Opd1PropInfo, Opd2PropInfo);
-  return vectorCostAdjustment(Cost, Opcode, Ty, nullptr);
+  return Cost * CostFactor;
 }
 
 InstructionCost PPCTTIImpl::getShuffleCost(TTI::ShuffleKind Kind, Type *Tp,
                                            ArrayRef<int> Mask, int Index,
                                            Type *SubTp) {
+
+  InstructionCost CostFactor =
+      vectorCostAdjustmentFactor(Instruction::ShuffleVector, Tp, nullptr);
+  if (!CostFactor.isValid())
+    return InstructionCost::getMax();
+
   // Legalize the type.
   std::pair<InstructionCost, MVT> LT = TLI->getTypeLegalizationCost(DL, Tp);
 
@@ -1000,8 +1029,7 @@ InstructionCost PPCTTIImpl::getShuffleCost(TTI::ShuffleKind Kind, Type *Tp,
   // instruction). We need one such shuffle instruction for each actual
   // register (this is not true for arbitrary shuffles, but is true for the
   // structured types of shuffles covered by TTI::ShuffleKind).
-  return vectorCostAdjustment(LT.first, Instruction::ShuffleVector, Tp,
-                              nullptr);
+  return LT.first * CostFactor;
 }
 
 InstructionCost PPCTTIImpl::getCFInstrCost(unsigned Opcode,
@@ -1020,9 +1048,13 @@ InstructionCost PPCTTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
                                              const Instruction *I) {
   assert(TLI->InstructionOpcodeToISD(Opcode) && "Invalid opcode");
 
+  InstructionCost CostFactor = vectorCostAdjustmentFactor(Opcode, Dst, Src);
+  if (!CostFactor.isValid())
+    return InstructionCost::getMax();
+
   InstructionCost Cost =
       BaseT::getCastInstrCost(Opcode, Dst, Src, CCH, CostKind, I);
-  Cost = vectorCostAdjustment(Cost, Opcode, Dst, Src);
+  Cost *= CostFactor;
   // TODO: Allow non-throughput costs that aren't binary.
   if (CostKind != TTI::TCK_RecipThroughput)
     return Cost == 0 ? 0 : 1;
@@ -1034,12 +1066,17 @@ InstructionCost PPCTTIImpl::getCmpSelInstrCost(unsigned Opcode, Type *ValTy,
                                                CmpInst::Predicate VecPred,
                                                TTI::TargetCostKind CostKind,
                                                const Instruction *I) {
+  InstructionCost CostFactor =
+      vectorCostAdjustmentFactor(Opcode, ValTy, nullptr);
+  if (!CostFactor.isValid())
+    return InstructionCost::getMax();
+
   InstructionCost Cost =
       BaseT::getCmpSelInstrCost(Opcode, ValTy, CondTy, VecPred, CostKind, I);
   // TODO: Handle other cost kinds.
   if (CostKind != TTI::TCK_RecipThroughput)
     return Cost;
-  return vectorCostAdjustment(Cost, Opcode, ValTy, nullptr);
+  return Cost * CostFactor;
 }
 
 InstructionCost PPCTTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val,
@@ -1049,8 +1086,12 @@ InstructionCost PPCTTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val,
   int ISD = TLI->InstructionOpcodeToISD(Opcode);
   assert(ISD && "Invalid opcode");
 
+  InstructionCost CostFactor = vectorCostAdjustmentFactor(Opcode, Val, nullptr);
+  if (!CostFactor.isValid())
+    return InstructionCost::getMax();
+
   InstructionCost Cost = BaseT::getVectorInstrCost(Opcode, Val, Index);
-  Cost = vectorCostAdjustment(Cost, Opcode, Val, nullptr);
+  Cost *= CostFactor;
 
   if (ST->hasVSX() && Val->getScalarType()->isDoubleTy()) {
     // Double-precision scalars are already located in index #0 (or #1 if LE).
@@ -1065,7 +1106,7 @@ InstructionCost PPCTTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val,
       if (ISD == ISD::INSERT_VECTOR_ELT)
         // A move-to VSR and a permute/insert.  Assume vector operation cost
         // for both (cost will be 2x on P9).
-        return vectorCostAdjustment(2, Opcode, Val, nullptr);
+        return 2 * CostFactor;
 
       // It's an extract.  Maybe we can do a cheap move-from VSR.
       unsigned EltSize = Val->getScalarSizeInBits();
@@ -1082,7 +1123,7 @@ InstructionCost PPCTTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val,
       // We need a vector extract (or mfvsrld).  Assume vector operation cost.
       // The cost of the load constant for a vector extract is disregarded
       // (invariant, easily schedulable).
-      return vectorCostAdjustment(1, Opcode, Val, nullptr);
+      return CostFactor;
 
     } else if (ST->hasDirectMove())
       // Assume permute has standard cost.
@@ -1114,6 +1155,11 @@ InstructionCost PPCTTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
                                             unsigned AddressSpace,
                                             TTI::TargetCostKind CostKind,
                                             const Instruction *I) {
+
+  InstructionCost CostFactor = vectorCostAdjustmentFactor(Opcode, Src, nullptr);
+  if (!CostFactor.isValid())
+    return InstructionCost::getMax();
+
   if (TLI->getValueType(DL, Src,  true) == MVT::Other)
     return BaseT::getMemoryOpCost(Opcode, Src, Alignment, AddressSpace,
                                   CostKind);
@@ -1128,7 +1174,7 @@ InstructionCost PPCTTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
   if (CostKind != TTI::TCK_RecipThroughput)
     return Cost;
 
-  Cost = vectorCostAdjustment(Cost, Opcode, Src, nullptr);
+  Cost *= CostFactor;
 
   bool IsAltivecType = ST->hasAltivec() &&
                        (LT.second == MVT::v16i8 || LT.second == MVT::v8i16 ||
@@ -1194,6 +1240,11 @@ InstructionCost PPCTTIImpl::getInterleavedMemoryOpCost(
     unsigned Opcode, Type *VecTy, unsigned Factor, ArrayRef<unsigned> Indices,
     Align Alignment, unsigned AddressSpace, TTI::TargetCostKind CostKind,
     bool UseMaskForCond, bool UseMaskForGaps) {
+  InstructionCost CostFactor =
+      vectorCostAdjustmentFactor(Opcode, VecTy, nullptr);
+  if (!CostFactor.isValid())
+    return InstructionCost::getMax();
+
   if (UseMaskForCond || UseMaskForGaps)
     return BaseT::getInterleavedMemoryOpCost(Opcode, VecTy, Factor, Indices,
                                              Alignment, AddressSpace, CostKind,

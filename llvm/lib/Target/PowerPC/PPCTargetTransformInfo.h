@@ -100,8 +100,8 @@ public:
   unsigned getCacheLineSize() const override;
   unsigned getPrefetchDistance() const override;
   unsigned getMaxInterleaveFactor(unsigned VF);
-  InstructionCost vectorCostAdjustment(InstructionCost Cost, unsigned Opcode,
-                                       Type *Ty1, Type *Ty2);
+  InstructionCost vectorCostAdjustmentFactor(unsigned Opcode, Type *Ty1,
+                                             Type *Ty2);
   InstructionCost getArithmeticInstrCost(
       unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind,
       TTI::OperandValueKind Opd1Info = TTI::OK_AnyValue,
