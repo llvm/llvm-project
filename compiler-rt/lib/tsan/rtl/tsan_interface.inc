@@ -34,6 +34,10 @@ void __tsan_read8(void *addr) {
   MemoryAccess(cur_thread(), CALLERPC, (uptr)addr, 8, kAccessRead);
 }
 
+void __tsan_read16(void *addr) {
+  MemoryAccess16(cur_thread(), CALLERPC, (uptr)addr, kAccessRead);
+}
+
 void __tsan_write1(void *addr) {
   MemoryAccess(cur_thread(), CALLERPC, (uptr)addr, 1, kAccessWrite);
 }
@@ -48,6 +52,10 @@ void __tsan_write4(void *addr) {
 
 void __tsan_write8(void *addr) {
   MemoryAccess(cur_thread(), CALLERPC, (uptr)addr, 8, kAccessWrite);
+}
+
+void __tsan_write16(void *addr) {
+  MemoryAccess16(cur_thread(), CALLERPC, (uptr)addr, kAccessWrite);
 }
 
 void __tsan_read1_pc(void *addr, void *pc) {
