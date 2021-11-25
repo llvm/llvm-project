@@ -253,7 +253,7 @@ declare_mlir_python_extension(MLIRPythonExtension.ExecutionEngine
   PRIVATE_LINK_LIBS
     LLVMSupport
   EMBED_CAPI_LINK_LIBS
-    MLIRCEXECUTIONENGINE
+    MLIRCAPIExecutionEngine
 )
 
 declare_mlir_python_extension(MLIRPythonExtension.GPUDialectPasses
