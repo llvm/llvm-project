@@ -33,8 +33,8 @@
 // CHECK:           %[[VAL_11:.*]] = sparse_tensor.pointers %[[VAL_0]], %[[VAL_7]] : tensor<32x16xf32, #sparse_tensor.encoding<{{.*}}>> to memref<?xindex>
 // CHECK:           %[[VAL_12:.*]] = sparse_tensor.indices %[[VAL_0]], %[[VAL_7]] : tensor<32x16xf32, #sparse_tensor.encoding<{{.*}}>> to memref<?xindex>
 // CHECK:           %[[VAL_13:.*]] = sparse_tensor.values %[[VAL_0]] : tensor<32x16xf32, #sparse_tensor.encoding<{{.*}}>> to memref<?xf32>
-// CHECK:           %[[VAL_14:.*]] = memref.buffer_cast %[[VAL_1]] : memref<f32>
-// CHECK:           %[[VAL_15:.*]] = memref.buffer_cast %[[VAL_4]] : memref<32x16xf32>
+// CHECK:           %[[VAL_14:.*]] = bufferization.to_memref %[[VAL_1]] : memref<f32>
+// CHECK:           %[[VAL_15:.*]] = bufferization.to_memref %[[VAL_4]] : memref<32x16xf32>
 // CHECK:           %[[VAL_16:.*]] = memref.load %[[VAL_14]][] : memref<f32>
 // CHECK:           %[[VAL_17:.*]] = memref.load %[[VAL_9]]{{\[}}%[[VAL_6]]] : memref<?xindex>
 // CHECK:           %[[VAL_18:.*]] = memref.load %[[VAL_9]]{{\[}}%[[VAL_7]]] : memref<?xindex>
@@ -56,7 +56,7 @@
 // CHECK:               memref.store %[[VAL_33]], %[[VAL_15]]{{\[}}%[[VAL_20]], %[[VAL_25]]] : memref<32x16xf32>
 // CHECK:             }
 // CHECK:           }
-// CHECK:           %[[VAL_34:.*]] = memref.tensor_load %[[VAL_15]] : memref<32x16xf32>
+// CHECK:           %[[VAL_34:.*]] = bufferization.to_tensor %[[VAL_15]] : memref<32x16xf32>
 // CHECK:           return %[[VAL_34]] : tensor<32x16xf32>
 // CHECK:         }
 func @mul(%arga: tensor<32x16xf32, #SparseMatrix>,

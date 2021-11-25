@@ -97,8 +97,8 @@ module {
         memref.store %i0, %xdata[%i, %j] : memref<?x?xf64>
       }
     }
-    %b = memref.tensor_load %bdata : memref<?x?xf64>
-    %x = memref.tensor_load %xdata : memref<?x?xf64>
+    %b = bufferization.to_tensor %bdata : memref<?x?xf64>
+    %x = bufferization.to_tensor %xdata : memref<?x?xf64>
 
     // Call kernel.
     %0 = call @kernel_spmm(%a, %b, %x)
@@ -108,7 +108,7 @@ module {
     //
     // CHECK: ( ( 3548, 3550, 3552, 3554 ), ( 6052, 6053, 6054, 6055 ), ( -56, -63, -70, -77 ), ( -13704, -13709, -13714, -13719 ) )
     //
-    %m = memref.buffer_cast %0 : memref<?x?xf64>
+    %m = bufferization.to_memref %0 : memref<?x?xf64>
     %v = vector.transfer_read %m[%c0, %c0], %i0: memref<?x?xf64>, vector<4x4xf64>
     vector.print %v : vector<4x4xf64>
 

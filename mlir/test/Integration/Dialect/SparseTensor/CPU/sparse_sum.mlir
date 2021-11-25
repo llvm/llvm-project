@@ -73,7 +73,7 @@ module {
     // initialized to zero.
     %xdata = memref.alloc() : memref<f64>
     memref.store %d0, %xdata[] : memref<f64>
-    %x = memref.tensor_load %xdata : memref<f64>
+    %x = bufferization.to_tensor %xdata : memref<f64>
 
     // Read the sparse matrix from file, construct sparse storage.
     %fileName = call @getTensorFilename(%c0) : (index) -> (!Filename)
@@ -87,7 +87,7 @@ module {
     //
     // CHECK: 30.2
     //
-    %m = memref.buffer_cast %0 : memref<f64>
+    %m = bufferization.to_memref %0 : memref<f64>
     %v = memref.load %m[] : memref<f64>
     vector.print %v : f64
 

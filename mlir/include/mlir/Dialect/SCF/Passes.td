@@ -14,7 +14,8 @@ include "mlir/Pass/PassBase.td"
 def SCFBufferize : FunctionPass<"scf-bufferize"> {
   let summary = "Bufferize the scf dialect.";
   let constructor = "mlir::createSCFBufferizePass()";
-  let dependentDialects = ["memref::MemRefDialect"];
+  let dependentDialects = ["bufferization::BufferizationDialect",
+                           "memref::MemRefDialect"];
 }
 
 // Note: Making these canonicalization patterns would require a dependency

@@ -22,6 +22,12 @@ func @float32_unary_scalar(%arg0: f32) {
   %6 = math.tanh %arg0 : f32
   // CHECK: spv.GLSL.Sin %{{.*}}: f32
   %7 = math.sin %arg0 : f32
+  // CHECK: spv.GLSL.FAbs %{{.*}}: f32
+  %8 = math.abs %arg0 : f32
+  // CHECK: spv.GLSL.Ceil %{{.*}}: f32
+  %9 = math.ceil %arg0 : f32
+  // CHECK: spv.GLSL.Floor %{{.*}}: f32
+  %10 = math.floor %arg0 : f32
   return
 }
 

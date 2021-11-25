@@ -15,7 +15,7 @@
 // CHECK: @basic
 func @basic() -> tensor<3x4xf32> {
   // CHECK: %[[MEMREF:.*]] = memref.get_global @__constant_3x4xf32 : memref<3x4xf32>
-  // CHECK: %[[TENSOR:.*]] = memref.tensor_load %[[MEMREF]]
+  // CHECK: %[[TENSOR:.*]] = bufferization.to_tensor %[[MEMREF]]
   %0 = arith.constant dense<7.0> : tensor<3x4xf32>
   // CHECK: return %[[TENSOR]]
   return %0 : tensor<3x4xf32>

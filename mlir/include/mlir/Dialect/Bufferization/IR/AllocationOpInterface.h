@@ -13,7 +13,6 @@
 #ifndef MLIR_DIALECT_BUFFERIZATION_IR_ALLOCATIONOPINTERFACE_H_
 #define MLIR_DIALECT_BUFFERIZATION_IR_ALLOCATIONOPINTERFACE_H_
 
-#include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/IR/Builders.h"
 
 #include "mlir/Dialect/Bufferization/IR/AllocationOpInterface.h.inc"

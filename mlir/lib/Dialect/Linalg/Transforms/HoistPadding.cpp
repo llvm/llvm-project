@@ -40,15 +40,17 @@ using namespace mlir::linalg;
 /// Analysis class to support PadTensorOp hoisting across multiple enclosing
 /// loops. The failure conditions are:
 ///   1. Pad op has a use that is not an input of a LinalgOp.
-///   2. There is no immediately enclosing scf::ForOp.
-///   3. The backward slice from the pad op to the scf::ForOp to hoist above
-///      contains an unknown op with a region.
-///   4. The backward slice from the pad op to the scf::ForOp to hoist above is
+///   2. Pad op does not have a constant padding value.
+///   3. There is no immediately enclosing scf::ForOp.
+///   4. The backward slice from the pad op to the scf::ForOp to hoist above
+///      contains an unknown op with non index type operands, a region, or a
+///      memory effect.
+///   5. The backward slice from the pad op to the scf::ForOp to hoist above is
 ///      empty.
-///   5. The source tensor of pad op is not defined by an extract slice op.
-///   6. The source tensor of the extract slice op is not defined outside of
+///   6. The source tensor of pad op is not defined by an extract slice op.
+///   7. The source tensor of the extract slice op is not defined outside of
 ///      the outermost enclosing scf::ForOp.
-///   7. There is no enclosing scf::ForOp that indexes the padded data.
+///   8. There is no enclosing scf::ForOp that indexes the padded data.
 /// Other cases succeed and will trigger hoisting of the pad op.
 struct HoistingAnalysis {
   HoistingAnalysis(PadTensorOp padTensorOp, int numLoops);
@@ -74,25 +76,30 @@ struct HoistingAnalysis {
   SmallVector<scf::ForOp> packingLoops;
 
 private:
-  /// Returns the loops in `backwardSlice` used to index the padded data. The
-  /// method starts from `padTensorOp` and `sliceOp`, follows the use-def
-  /// chains of their index operands, and stores any enclosing loop whose
-  /// induction variable is part of the walked index computation.
+  /// Drop any non-index dependencies of `padTensorOp` and `sliceOp` from
+  /// `backwardSlice`. The method follows the use-def chains of the index
+  /// operands consumed by `padTensorOp` and `sliceOp` and drops the operations
+  /// not part of this index computation. Afterwards, the filtered
+  /// `backwardSlice` contains only the loops whose induction variable is used,
+  /// directly or indirectly, to index the padded tensor. The method returns
+  /// failure if the filtered backward slice contains an unexpected operation.
   ///
   /// Example:
   /// ```
   /// %source = linalg.fill(%cst, %arg0)
   /// scf.for %i
-  ///   scf.for %j
-  ///     scf.for %k // not used to index %source!
+  ///   %unrelated = linalg.fill(%cst, %arg1)    // not used to index %source!
+  ///   scf.for %j (%arg2 = %unrelated)
+  ///     scf.for %k                             // not used to index %source!
   ///       %ubi = affine.min #map(%i)
   ///       %ubj = affine.min #map(%j)
   ///       %slice = tensor.extract_slice %source [%i, %j] [%ubi, %ubj]
   ///       %padded_slice = linalg.pad_tensor %slice
   /// ```
-  /// getIndexingLoops(%padded_slice, %slice) returns [scf.for %i, scf.for %j]
-  SmallVector<scf::ForOp> getIndexingLoops(PadTensorOp padTensorOp,
-                                           tensor::ExtractSliceOp sliceOp);
+  /// dropNonIndexDependencies(%padded_slice, %slice)
+  /// removes [scf.for %k, linalg.fill(%cst, %arg1)] from backwardSlice.
+  LogicalResult dropNonIndexDependencies(PadTensorOp padTensorOp,
+                                         tensor::ExtractSliceOp sliceOp);
 
   /// Encodes whether the analysis is valid and hoisting can proceed.
   bool valid;
@@ -144,7 +151,7 @@ HoistingAnalysis::HoistingAnalysis(PadTensorOp padTensorOp, int numLoops) {
   if (!isOnlyUsedAsInputOfLinalgOp(padTensorOp))
     return;
 
-  // Get at most nLevels of immediately enclosing loops.
+  // Get at most `numLoops` of immediately enclosing loops.
   SmallVector<scf::ForOp> reverseEnclosingLoops;
   getAtMostNEnclosingLoops(padTensorOp, numLoops, reverseEnclosingLoops);
   if (reverseEnclosingLoops.empty()) {
@@ -153,28 +160,6 @@ HoistingAnalysis::HoistingAnalysis(PadTensorOp padTensorOp, int numLoops) {
   }
 
   outermostEnclosingForOp = reverseEnclosingLoops.back();
-
-  // Get all the ops in the backwards slice starting from `padTensorOp` and that
-  // are dominated by the outermost enclosing loop.
-  // Bail on any op with a region that is not either a scf::ForOp or a LinalgOp.
-  bool analysisFailure = false;
-  DominanceInfo domInfo(outermostEnclosingForOp);
-  getBackwardSlice(
-      padTensorOp.getOperation(), &backwardSlice, [&](Operation *op) {
-        if (!domInfo.dominates(outermostEnclosingForOp, op))
-          return false;
-        if (op != padTensorOp && op->getNumRegions() > 0 &&
-            !isa<scf::ForOp, LinalgOp>(op)) {
-          analysisFailure = true;
-          LLVM_DEBUG(DBGS()
-                     << "Unsupported op with region: " << *op << " -> skip\n");
-          return false;
-        }
-        return true;
-      });
-
-  if (analysisFailure || backwardSlice.empty())
-    return;
 
   // Get the `sliceOp` that defines the source tensor of `padTensorOp` and
   // check its source is defined outside of the outermost loop. This check
@@ -201,21 +186,42 @@ HoistingAnalysis::HoistingAnalysis(PadTensorOp padTensorOp, int numLoops) {
     return;
   }
 
-  // Search the loops found in `backwardSlice` used to index the padded data.
-  SmallVector<scf::ForOp> indexingLoops =
-      getIndexingLoops(padTensorOp, sliceOp);
+  // Check the region of `padTensorOp` depends on a constant only. Adding
+  // hoisting support for arbitrary padding regions would require cloning all
+  // dependencies captured by the padding region.
+  Value paddingValue = padTensorOp.getConstantPaddingValue();
+  if (!paddingValue ||
+      !isa_and_nonnull<arith::ConstantOp>(paddingValue.getDefiningOp())) {
+    LLVM_DEBUG(DBGS() << "Cannot find constant padding value -> skip\n");
+    return;
+  }
 
-  // Add only the loops part of `indexingLoops` to the packing loops. All other
-  // loops are not used to index the padded data and consequently access the
-  // same data in every loop iteration. Adding them to the packing loops would
-  // increase the cache footprint of the packed data by storing the same data
-  // multiple times.
+  // Get all the ops in the backwards slice starting from `padTensorOp` and that
+  // are dominated by the outermost enclosing loop.
+  DominanceInfo domInfo(outermostEnclosingForOp);
+  getBackwardSlice(padTensorOp.getOperation(), &backwardSlice,
+                   [&](Operation *op) {
+                     return domInfo.dominates(outermostEnclosingForOp, op);
+                   });
+  if (backwardSlice.empty())
+    return;
+  // Add `padTensorOp` itself to the backward slice.
+  backwardSlice.insert(padTensorOp.getOperation());
+
+  // Remove all ops in the backward slice that are not used to index the padded
+  // tensor. In particular, keep `padTensorOp`, `sliceOp`, and the loop and
+  // affine operations used for the index computation.
+  if (failed(dropNonIndexDependencies(padTensorOp, sliceOp)))
+    return;
+
+  // Add only the loops part of the filtered `backwardSlice` to the packing
+  // loops. All other loops are not used to index the padded data and
+  // consequently access the same data in every loop iteration. Adding them to
+  // the packing loops would increase the cache footprint of the packed data
+  // by storing the same data multiple times.
   for (scf::ForOp forOp : llvm::reverse(reverseEnclosingLoops))
-    if (!indexingLoops.empty() && indexingLoops.back() == forOp)
-      packingLoops.push_back(indexingLoops.pop_back_val());
-  assert(indexingLoops.empty() &&
-         "expect the all indexing loops are enclosing loops");
-
+    if (backwardSlice.contains(forOp))
+      packingLoops.push_back(forOp);
   if (packingLoops.empty()) {
     LLVM_DEBUG(DBGS() << "Cannot find a packing loop -> skip\n");
     return;
@@ -225,9 +231,9 @@ HoistingAnalysis::HoistingAnalysis(PadTensorOp padTensorOp, int numLoops) {
   valid = true;
 }
 
-SmallVector<scf::ForOp>
-HoistingAnalysis::getIndexingLoops(PadTensorOp padTensorOp,
-                                   tensor::ExtractSliceOp sliceOp) {
+LogicalResult
+HoistingAnalysis::dropNonIndexDependencies(PadTensorOp padTensorOp,
+                                           tensor::ExtractSliceOp sliceOp) {
   // Set of all values used for index computation.
   SetVector<Value> indexEdges;
 
@@ -239,17 +245,25 @@ HoistingAnalysis::getIndexingLoops(PadTensorOp padTensorOp,
         indexEdges.insert(operand);
   };
 
+  // Check if any operation result is contained in `indexEdges`.
+  auto hasIndexResult = [&](Operation *operation) {
+    return llvm::any_of(operation->getResults(), [&](Value result) {
+      return indexEdges.contains(result);
+    });
+  };
+
   // Starting from `padTensorOp` and `sliceOp` walk the use-def edges of index
   // type in `backwardSlice`. Add the index operands of an operation to
-  // `indexEdges` if one of its results is an index edge found so far and store
-  // all loops part of the index computation to `indexingLoops`.
+  // `indexEdges` and remove all operations from `backwardSlice` that are not
+  // part of the index computation.
   //
   // Example:
   // ```
   // %source = linalg.fill(%cst, %arg0)
   // scf.for %i
-  //   scf.for %j
-  //     scf.for %k // not used to index %source!
+  //   %unrelated = linalg.fill(%cst, %arg1)    // not used to index %source!
+  //   scf.for %j (%arg2 = %unrelated)
+  //     scf.for %k                             // not used to index %source!
   //       %ubi = affine.min #map(%i)
   //       %ubj = affine.min #map(%j)
   //       %slice = tensor.extract_slice %source [%i, %j] [%ubi, %ubj]
@@ -257,8 +271,7 @@ HoistingAnalysis::getIndexingLoops(PadTensorOp padTensorOp,
   // ```
   // After iterating `backwardSlice` we obtain:
   // indexEdges = [%i, %j, %ubi, %ubj]
-  // indexingLoops = [scf.for %i, scf.for %j]
-  SmallVector<scf::ForOp> indexingLoops;
+  // backwardSlice = backwardSlice / [linalg.fill(%cst, %arg1), scf.for %k]
   for (Operation *op : llvm::reverse(backwardSlice)) {
     // Add the index operands of `padTensorOp` and `sliceOp` to start the
     // exploration of the index computation.
@@ -267,22 +280,40 @@ HoistingAnalysis::getIndexingLoops(PadTensorOp padTensorOp,
       continue;
     }
     // Add the index operands of the loop if its induction variable is
-    // used for index computation. Additionally, insert the loop into
-    // `indexingLoops`
+    // used for index computation.
     if (auto forOp = dyn_cast<scf::ForOp>(op)) {
-      if (indexEdges.contains(forOp.getInductionVar())) {
+      if (!hasIndexResult(op) && indexEdges.contains(forOp.getInductionVar())) {
         addIndexOperandsToIndexEdges(op);
-        indexingLoops.push_back(forOp);
         continue;
       }
     }
     // Add the index operands of all other operations if at least one result is
     // used for index computation.
-    if (llvm::any_of(op->getResults(),
-                     [&](Value result) { return indexEdges.contains(result); }))
+    if (hasIndexResult(op)) {
       addIndexOperandsToIndexEdges(op);
+      // Check the operands of the remaining operations all have index type.
+      if (llvm::any_of(op->getOperandTypes(),
+                       [](Type type) { return !type.isIndex(); })) {
+        LLVM_DEBUG(DBGS() << "Unsupported op with non index type operands: "
+                          << op << " -> skip\n");
+        return failure();
+      }
+      // Check the remaining operations do not have regions or memory effects.
+      auto effectInterface = dyn_cast<MemoryEffectOpInterface>(op);
+      bool hasMemoryEffect = effectInterface && !effectInterface.hasNoEffect();
+      if (hasMemoryEffect || op->getNumRegions() != 0) {
+        LLVM_DEBUG(DBGS() << "Unsupported op with region or memory effect: "
+                          << op << " -> skip\n");
+        return failure();
+      }
+      continue;
+    }
+    // Remove all other operation not used by the index computation except for
+    // constant operations that may be padding values used by `padTensorOp`.
+    if (!isa<arith::ConstantOp>(op))
+      backwardSlice.remove(op);
   }
-  return indexingLoops;
+  return success();
 }
 
 SmallVector<Value>
@@ -387,8 +418,6 @@ FailureOr<Value> mlir::linalg::hoistPaddingOnTensors(PadTensorOp opToHoist,
   clonedLoopIvs.reserve(nPackedLoops);
   leadingPackedTensorIndexings.reserve(nPackedLoops);
   BlockAndValueMapping bvm;
-  // Insert `opToHoist` into the backwardSlice so we clone it too.
-  analysis.backwardSlice.insert(opToHoist);
   // Stack step 1. iteratively clone loops and push `packedTensor`.
   for (Operation *op : analysis.backwardSlice) {
     // Specifically sit out in the extract_slice(packedTensor) case: this is the
@@ -396,20 +425,13 @@ FailureOr<Value> mlir::linalg::hoistPaddingOnTensors(PadTensorOp opToHoist,
     if (auto sliceOp = dyn_cast<tensor::ExtractSliceOp>(op))
       if (bvm.lookupOrDefault(sliceOp.source()) == packedTensor)
         continue;
-    auto effects = dyn_cast<MemoryEffectOpInterface>(op);
-    bool hasNoEffects = !effects || effects.hasNoEffect();
-    if (hasNoEffects &&
-        (op->getNumRegions() == 0 || isa<linalg::PadTensorOp>(op))) {
+    // Clone all operations except it is a loop.
+    auto forOp = dyn_cast<scf::ForOp>(op);
+    if (!forOp) {
       b.clone(*op, bvm);
       continue;
     }
-    // TODO: support more cases as they appear.
-    auto forOp = dyn_cast<scf::ForOp>(op);
-    assert(forOp && "Expected scf::ForOp when hoisting pad ops");
-    // Unused loop, just skip it.
-    if (!llvm::is_contained(analysis.packingLoops, forOp))
-      continue;
-
+    // Create a packing loop that takes `packedTensor` as iteration argument.
     auto clonedForOp =
         b.create<scf::ForOp>(loc, bvm.lookupOrDefault(forOp.lowerBound()),
                              bvm.lookupOrDefault(forOp.upperBound()),
