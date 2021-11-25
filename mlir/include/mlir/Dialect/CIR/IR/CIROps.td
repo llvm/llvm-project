@@ -32,6 +32,43 @@ class CIR_Op<string mnemonic, list<Trait> traits = []> :
     Op<CIR_Dialect, mnemonic, traits>;
 
 //===----------------------------------------------------------------------===//
+// CastOp
+//===----------------------------------------------------------------------===//
+
+// The enumaration value isn't in sync with clang.
+def CK_IntegralToBoolean : I32EnumAttrCase<"int_to_bool", 1>;
+
+def CastKind : I32EnumAttr<
+    "CastKind",
+    "cast kind",
+    [CK_IntegralToBoolean]> {
+  let cppNamespace = "::mlir::cir";
+}
+
+def CastOp : CIR_Op<"cast", [Pure]> {
+  // FIXME: not all conversions are free of side effects.
+  let summary = "cast";
+  let description = [{
+    Apply C/C++ usual conversions rules between types. The full list of those
+    can be seen in clang/include/clang/AST/OperationKinds.def, but note that some
+    of the conversions aren't implemented in terms of cir.cast, lvalue-to-rvalue
+    for instance is modeled as a load.
+
+    ```mlir
+    %4 = cir.cast (int_to_bool, %3 : i32), i1
+    ```
+  }];
+
+  let arguments = (ins CastKind:$kind, AnyType:$src);
+  let results = (outs AnyType:$res);
+
+  let assemblyFormat = "`(` $kind `,` $src `:` type($src) `)` `,` type($res) attr-dict";
+
+  // The input and output types should match the cast kind.
+  //let verifier = [{ return ::verify(*this); }];
+}
+
+//===----------------------------------------------------------------------===//
 // ConstantOp
 //===----------------------------------------------------------------------===//
 
