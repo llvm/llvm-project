@@ -19,7 +19,7 @@ services:
       resources:
         limits:
           cpus: ${NUMBER_OF_PROCESSORS}
-    # I tried with 8GB and it crashed
+          # I tried with 8GB and it crashed
           memory: 16GB
     volumes:
       # Mount the source code inside as readonly
