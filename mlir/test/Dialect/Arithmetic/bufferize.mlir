@@ -7,8 +7,8 @@ func @index_cast(%tensor: tensor<i32>, %scalar: i32) -> (tensor<index>, index) {
   %index_scalar = arith.index_cast %scalar : i32 to index
   return %index_tensor, %index_scalar : tensor<index>, index
 }
-// CHECK:  %[[MEMREF:.*]] = memref.buffer_cast %[[TENSOR]] : memref<i32>
+// CHECK:  %[[MEMREF:.*]] = bufferization.to_memref %[[TENSOR]] : memref<i32>
 // CHECK-NEXT: %[[INDEX_MEMREF:.*]] = arith.index_cast %[[MEMREF]]
 // CHECK-SAME:   memref<i32> to memref<index>
-// CHECK-NEXT: %[[INDEX_TENSOR:.*]] = memref.tensor_load %[[INDEX_MEMREF]]
+// CHECK-NEXT: %[[INDEX_TENSOR:.*]] = bufferization.to_tensor %[[INDEX_MEMREF]]
 // CHECK: return %[[INDEX_TENSOR]]

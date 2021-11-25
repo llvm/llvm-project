@@ -573,8 +573,7 @@ entry:
 ;
 ; TODO: Why is the constant not peepholed into the v_or_b32_e32?
 ;
-; NOSDWA: s_mov_b32 [[CONST:s[0-9]+]], 0x10000
-; NOSDWA: v_or_b32_e32 v{{[0-9]+}}, s0,
+; NOSDWA: v_or_b32_e32 v{{[0-9]+}}, 0x10000,
 ; SDWA: v_or_b32_e32 v{{[0-9]+}}, 0x10000,
 define amdgpu_kernel void @sdwa_crash_inlineasm_def() #0 {
 bb:

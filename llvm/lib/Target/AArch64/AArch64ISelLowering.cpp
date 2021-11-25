@@ -890,7 +890,6 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
   setTargetDAGCombine(ISD::ADD);
   setTargetDAGCombine(ISD::ABS);
   setTargetDAGCombine(ISD::SUB);
-  setTargetDAGCombine(ISD::SRL);
   setTargetDAGCombine(ISD::XOR);
   setTargetDAGCombine(ISD::SINT_TO_FP);
   setTargetDAGCombine(ISD::UINT_TO_FP);
@@ -4506,7 +4505,7 @@ SDValue AArch64TargetLowering::LowerMGATHER(SDValue Op,
     }
     InputVT = DAG.getValueType(MemVT.changeTypeToInteger());
     Mask = DAG.getNode(
-        ISD::ZERO_EXTEND, DL,
+        ISD::SIGN_EXTEND, DL,
         VT.changeVectorElementType(IndexVT.getVectorElementType()), Mask);
   }
 
@@ -4618,7 +4617,7 @@ SDValue AArch64TargetLowering::LowerMSCATTER(SDValue Op,
         VT.changeVectorElementType(IndexVT.getVectorElementType()), StoreVal);
     StoreVal = convertToScalableVector(DAG, IndexVT, StoreVal);
     Mask = DAG.getNode(
-        ISD::ZERO_EXTEND, DL,
+        ISD::SIGN_EXTEND, DL,
         VT.changeVectorElementType(IndexVT.getVectorElementType()), Mask);
   } else if (VT.isFloatingPoint()) {
     // Handle FP data by casting the data so an integer scatter can be used.
@@ -13876,34 +13875,6 @@ static SDValue performANDCombine(SDNode *N,
   return SDValue();
 }
 
-static SDValue performSRLCombine(SDNode *N,
-                                 TargetLowering::DAGCombinerInfo &DCI) {
-  SelectionDAG &DAG = DCI.DAG;
-  EVT VT = N->getValueType(0);
-  if (VT != MVT::i32 && VT != MVT::i64)
-    return SDValue();
-
-  // Canonicalize (srl (bswap i32 x), 16) to (rotr (bswap i32 x), 16), if the
-  // high 16-bits of x are zero. Similarly, canonicalize (srl (bswap i64 x), 32)
-  // to (rotr (bswap i64 x), 32), if the high 32-bits of x are zero.
-  SDValue N0 = N->getOperand(0);
-  if (N0.getOpcode() == ISD::BSWAP) {
-    SDLoc DL(N);
-    SDValue N1 = N->getOperand(1);
-    SDValue N00 = N0.getOperand(0);
-    if (ConstantSDNode *C = dyn_cast<ConstantSDNode>(N1)) {
-      uint64_t ShiftAmt = C->getZExtValue();
-      if (VT == MVT::i32 && ShiftAmt == 16 &&
-          DAG.MaskedValueIsZero(N00, APInt::getHighBitsSet(32, 16)))
-        return DAG.getNode(ISD::ROTR, DL, VT, N0, N1);
-      if (VT == MVT::i64 && ShiftAmt == 32 &&
-          DAG.MaskedValueIsZero(N00, APInt::getHighBitsSet(64, 32)))
-        return DAG.getNode(ISD::ROTR, DL, VT, N0, N1);
-    }
-  }
-  return SDValue();
-}
-
 // Attempt to form urhadd(OpA, OpB) from
 // truncate(vlshr(sub(zext(OpB), xor(zext(OpA), Ones(ElemSizeInBits))), 1))
 // or uhadd(OpA, OpB) from truncate(vlshr(add(zext(OpA), zext(OpB)), 1)).
@@ -17271,8 +17242,6 @@ SDValue AArch64TargetLowering::PerformDAGCombine(SDNode *N,
     return performORCombine(N, DCI, Subtarget);
   case ISD::AND:
     return performANDCombine(N, DCI);
-  case ISD::SRL:
-    return performSRLCombine(N, DCI);
   case ISD::INTRINSIC_WO_CHAIN:
     return performIntrinsicCombine(N, DCI, Subtarget);
   case ISD::ANY_EXTEND:
@@ -18627,12 +18596,15 @@ static SDValue convertFixedMaskToScalableVector(SDValue Mask,
   EVT InVT = Mask.getValueType();
   EVT ContainerVT = getContainerForFixedLengthVector(DAG, InVT);
 
-  auto Op1 = convertToScalableVector(DAG, ContainerVT, Mask);
-  auto Op2 = DAG.getConstant(0, DL, ContainerVT);
   auto Pg = getPredicateForFixedLengthVector(DAG, DL, InVT);
 
-  EVT CmpVT = Pg.getValueType();
-  return DAG.getNode(AArch64ISD::SETCC_MERGE_ZERO, DL, CmpVT,
+  if (ISD::isBuildVectorAllOnes(Mask.getNode()))
+    return Pg;
+
+  auto Op1 = convertToScalableVector(DAG, ContainerVT, Mask);
+  auto Op2 = DAG.getConstant(0, DL, ContainerVT);
+
+  return DAG.getNode(AArch64ISD::SETCC_MERGE_ZERO, DL, Pg.getValueType(),
                      {Pg, Op1, Op2, DAG.getCondCode(ISD::SETNE)});
 }
 

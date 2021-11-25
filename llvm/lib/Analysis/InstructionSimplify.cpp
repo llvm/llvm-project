@@ -2414,23 +2414,30 @@ static Value *SimplifyXorInst(Value *Op0, Value *Op1, const SimplifyQuery &Q,
       match(Op1, m_Not(m_Specific(Op0))))
     return Constant::getAllOnesValue(Op0->getType());
 
-  // (~A | B) ^ (A & B) --> ~A -- There are 8 commuted variants.
-  // The 'not' op must contain a complete -1 operand (no undef elements for
-  // vector) for the transform to be safe.
-  auto matchNotA = [](Value *X, Value *Y) -> Value * {
-    Value *A, *B, *NotA;
+  auto foldAndOrNot = [](Value *X, Value *Y) -> Value * {
+    Value *A, *B;
+    // (~A & B) ^ (A | B) --> A -- There are 8 commuted variants.
+    if (match(X, m_c_And(m_Not(m_Value(A)), m_Value(B))) &&
+        match(Y, m_c_Or(m_Specific(A), m_Specific(B))))
+      return A;
+
+    // (~A | B) ^ (A & B) --> ~A -- There are 8 commuted variants.
+    // The 'not' op must contain a complete -1 operand (no undef elements for
+    // vector) for the transform to be safe.
+    Value *NotA;
     const APInt *C;
     if (match(X, m_c_Or(m_CombineAnd(m_Xor(m_Value(A), m_APIntForbidUndef(C)),
                                      m_Value(NotA)),
                         m_Value(B))) &&
         match(Y, m_c_And(m_Specific(A), m_Specific(B))) && C->isAllOnes())
       return NotA;
+
     return nullptr;
   };
-  if (Value *NotA = matchNotA(Op0, Op1))
-    return NotA;
-  if (Value *NotA = matchNotA(Op1, Op0))
-    return NotA;
+  if (Value *R = foldAndOrNot(Op0, Op1))
+    return R;
+  if (Value *R = foldAndOrNot(Op1, Op0))
+    return R;
 
   if (Value *V = simplifyLogicOfAddSub(Op0, Op1, Instruction::Xor))
     return V;

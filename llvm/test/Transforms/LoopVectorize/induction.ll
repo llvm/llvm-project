@@ -400,30 +400,30 @@ for.end:
 ; CHECK-LABEL: @iv_vector_and_scalar_users(
 ; CHECK: vector.body:
 ; CHECK:   %index = phi i64 [ 0, %vector.ph ], [ %index.next, %vector.body ]
-; CHECK:   %vec.ind = phi <2 x i64> [ <i64 0, i64 1>, %vector.ph ], [ %vec.ind.next, %vector.body ]
-; CHECK:   %vec.ind1 = phi <2 x i32> [ <i32 0, i32 1>, %vector.ph ], [ %vec.ind.next2, %vector.body ]
+; CHECK:   [[VEC_IV_1:%.+]] = phi <2 x i64> [ <i64 0, i64 1>, %vector.ph ], [ [[VEC_IV_1_NEXT:%.+]], %vector.body ]
+; CHECK:   [[VEC_IV_2:%.+]] = phi <2 x i32> [ <i32 0, i32 1>, %vector.ph ], [ [[VEC_IV_2_NEXT:%.+]], %vector.body ]
 ; CHECK:   %[[i0:.+]] = add i64 %index, 0
 ; CHECK:   %[[i1:.+]] = add i64 %index, 1
 ; CHECK:   getelementptr inbounds %pair.i16, %pair.i16* %p, i64 %[[i0]], i32 1
 ; CHECK:   getelementptr inbounds %pair.i16, %pair.i16* %p, i64 %[[i1]], i32 1
 ; CHECK:   %index.next = add nuw i64 %index, 2
-; CHECK:   %vec.ind.next = add <2 x i64> %vec.ind, <i64 2, i64 2>
-; CHECK:   %vec.ind.next2 = add <2 x i32> %vec.ind1, <i32 2, i32 2>
+; CHECK:   [[VEC_IV_1_NEXT]] = add <2 x i64> [[VEC_IV_1]], <i64 2, i64 2>
+; CHECK:   [[VEC_IV_2_NEXT]] = add <2 x i32> [[VEC_IV_2]], <i32 2, i32 2>
 ;
 ; IND-LABEL: @iv_vector_and_scalar_users(
 ; IND: vector.body:
 ; IND:   %index = phi i64 [ 0, %vector.ph ], [ %index.next, %vector.body ]
-; IND:   %vec.ind1 = phi <2 x i32> [ <i32 0, i32 1>, %vector.ph ], [ %vec.ind.next2, %vector.body ]
+; IND:   [[VEC_IV:%.+]] = phi <2 x i32> [ <i32 0, i32 1>, %vector.ph ], [ [[VEC_IV_NEXT:%.+]], %vector.body ]
 ; IND:   %[[i1:.+]] = or i64 %index, 1
 ; IND:   getelementptr inbounds %pair.i16, %pair.i16* %p, i64 %index, i32 1
 ; IND:   getelementptr inbounds %pair.i16, %pair.i16* %p, i64 %[[i1]], i32 1
 ; IND:   %index.next = add nuw i64 %index, 2
-; IND:   %vec.ind.next2 = add <2 x i32> %vec.ind1, <i32 2, i32 2>
+; IND:   [[VEC_IV_NEXT]] = add <2 x i32> [[VEC_IV]], <i32 2, i32 2>
 ;
 ; UNROLL-LABEL: @iv_vector_and_scalar_users(
 ; UNROLL: vector.body:
 ; UNROLL:   %index = phi i64 [ 0, %vector.ph ], [ %index.next, %vector.body ]
-; UNROLL:   %vec.ind2 = phi <2 x i32> [ <i32 0, i32 1>, %vector.ph ], [ %vec.ind.next5, %vector.body ]
+; UNROLL:   [[VEC_IV:%.+]] = phi <2 x i32> [ <i32 0, i32 1>, %vector.ph ], [ [[VEC_IV_NEXT:%.+]], %vector.body ]
 ; UNROLL:   %[[i1:.+]] = or i64 %index, 1
 ; UNROLL:   %[[i2:.+]] = or i64 %index, 2
 ; UNROLL:   %[[i3:.+]] = or i64 %index, 3
@@ -433,7 +433,7 @@ for.end:
 ; UNROLL:   getelementptr inbounds %pair.i16, %pair.i16* %p, i64 %[[i2]], i32 1
 ; UNROLL:   getelementptr inbounds %pair.i16, %pair.i16* %p, i64 %[[i3]], i32 1
 ; UNROLL:   %index.next = add nuw i64 %index, 4
-; UNROLL:   %vec.ind.next5 = add <2 x i32> %vec.ind2, <i32 4, i32 4>
+; UNROLL:   [[VEC_IV_NEXT]] = add <2 x i32> [[VEC_IV]], <i32 4, i32 4>
 
 %pair.i16 = type { i16, i16 }
 define void @iv_vector_and_scalar_users(%pair.i16* %p, i32 %a, i32 %n) {
@@ -860,12 +860,12 @@ define i64 @trunc_with_first_order_recurrence() {
 ; CHECK-LABEL: vector.body:
 ; CHECK-NEXT:    %index = phi i64 [ 0, %vector.ph ], [ %index.next, %vector.body ]
 ; CHECK-NEXT:    %vec.phi = phi <2 x i64>
-; CHECK-NEXT:    %vec.ind = phi <2 x i64> [ <i64 1, i64 2>, %vector.ph ], [ %vec.ind.next, %vector.body ]
-; CHECK-NEXT:    %vec.ind2 = phi <2 x i32> [ <i32 1, i32 2>, %vector.ph ], [ %vec.ind.next3, %vector.body ]
-; CHECK-NEXT:    %vector.recur = phi <2 x i32> [ <i32 poison, i32 42>, %vector.ph ], [ %vec.ind4, %vector.body ]
-; CHECK-NEXT:    %vec.ind4 = phi <2 x i32> [ <i32 1, i32 2>, %vector.ph ], [ %vec.ind.next5, %vector.body ]
-; CHECK-NEXT:    %vec.ind6 = phi <2 x i32> [ <i32 1, i32 2>, %vector.ph ], [ %vec.ind.next7, %vector.body ]
-; CHECK-NEXT:    shufflevector <2 x i32> %vector.recur, <2 x i32> %vec.ind4, <2 x i32> <i32 1, i32 2>
+; CHECK-NEXT:    [[VEC_IV_1:%.+]] = phi <2 x i64> [ <i64 1, i64 2>, %vector.ph ], [ [[VEC_IV_1_NEXT:%.+]], %vector.body ]
+; CHECK-NEXT:    [[VEC_IV_2:%.+]] = phi <2 x i32> [ <i32 1, i32 2>, %vector.ph ], [ [[VEC_IV_2_NEXT:%.+]], %vector.body ]
+; CHECK-NEXT:    [[VEC_RECUR:%.+]] = phi <2 x i32> [ <i32 poison, i32 42>, %vector.ph ], [ [[VEC_IV_3:%.+]], %vector.body ]
+; CHECK-NEXT:    [[VEC_IV_3]] = phi <2 x i32> [ <i32 1, i32 2>, %vector.ph ], [ [[VEC_IV_3_NEXT:%.+]], %vector.body ]
+; CHECK-NEXT:    [[VEC_IV_4:%.+]] = phi <2 x i32> [ <i32 1, i32 2>, %vector.ph ], [ [[VEC_IV_4_NEXT:%.+]], %vector.body ]
+; CHECK-NEXT:    shufflevector <2 x i32> [[VEC_RECUR]], <2 x i32> [[VEC_IV_3]], <2 x i32> <i32 1, i32 2>
 entry:
   br label %loop
 

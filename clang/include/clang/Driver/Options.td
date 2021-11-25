@@ -2504,6 +2504,9 @@ defm rwpi : BoolFOption<"rwpi",
   NegFlag<SetFalse>>;
 def fplugin_EQ : Joined<["-"], "fplugin=">, Group<f_Group>, Flags<[NoXarchOption]>, MetaVarName<"<dsopath>">,
   HelpText<"Load the named plugin (dynamic shared object)">;
+def fplugin_arg : Joined<["-"], "fplugin-arg-">,
+  MetaVarName<"<name>-<arg>">,
+  HelpText<"Pass <arg> to plugin <name>">;
 def fpass_plugin_EQ : Joined<["-"], "fpass-plugin=">,
   Group<f_Group>, Flags<[CC1Option]>, MetaVarName<"<dsopath>">,
   HelpText<"Load pass plugin from a dynamic shared object file (only with new pass manager).">,

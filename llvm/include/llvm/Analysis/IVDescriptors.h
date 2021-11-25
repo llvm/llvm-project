@@ -20,6 +20,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instruction.h"
+#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Operator.h"
 #include "llvm/IR/ValueHandle.h"
 #include "llvm/Support/Casting.h"
@@ -50,6 +51,7 @@ enum class RecurKind {
   FMul,       ///< Product of floats.
   FMin,       ///< FP min implemented in terms of select(cmp()).
   FMax,       ///< FP max implemented in terms of select(cmp()).
+  FMulAdd,    ///< Fused multiply-add of floats (a * b + c).
   SelectICmp, ///< Integer select(icmp(),x,y) where one of (x,y) is loop
               ///< invariant
   SelectFCmp  ///< Integer select(fcmp(),x,y) where one of (x,y) is loop
@@ -259,6 +261,12 @@ public:
   /// be treated as a set of reductions instructions for in-loop reductions.
   SmallVector<Instruction *, 4> getReductionOpChain(PHINode *Phi,
                                                     Loop *L) const;
+
+  /// Returns true if the instruction is a call to the llvm.fmuladd intrinsic.
+  static bool isFMulAddIntrinsic(Instruction *I) {
+    return isa<IntrinsicInst>(I) &&
+           cast<IntrinsicInst>(I)->getIntrinsicID() == Intrinsic::fmuladd;
+  }
 
 private:
   // The starting value of the recurrence.

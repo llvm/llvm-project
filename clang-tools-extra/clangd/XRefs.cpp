@@ -1906,7 +1906,9 @@ prepareCallHierarchy(ParsedAST &AST, Position Pos, PathRef TUPath) {
     return Result;
   }
   for (const NamedDecl *Decl : getDeclAtPosition(AST, *Loc, {})) {
-    if (!Decl->isFunctionOrFunctionTemplate())
+    if (!(isa<DeclContext>(Decl) &&
+          cast<DeclContext>(Decl)->isFunctionOrMethod()) &&
+        Decl->getKind() != Decl::Kind::FunctionTemplate)
       continue;
     if (auto CHI = declToCallHierarchyItem(*Decl))
       Result.emplace_back(std::move(*CHI));

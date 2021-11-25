@@ -2271,7 +2271,7 @@ void useAfterAutorelease() {
 }
 
 void useAfterRelease() {
-  // Sanity check that the previous example would have warned with CFRelease.
+  // Verify that the previous example would have warned with CFRelease.
   extern CFTypeRef CFCreateSomething();
   CFTypeRef obj = CFCreateSomething();
   CFRelease(obj);

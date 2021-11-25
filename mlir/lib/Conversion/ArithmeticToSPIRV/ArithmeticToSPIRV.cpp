@@ -45,11 +45,20 @@ struct ConstantScalarOpPattern final
                   ConversionPatternRewriter &rewriter) const override;
 };
 
-/// Converts arith.remsi to SPIR-V ops.
+/// Converts arith.remsi to GLSL SPIR-V ops.
 ///
 /// This cannot be merged into the template unary/binary pattern due to Vulkan
 /// restrictions over spv.SRem and spv.SMod.
-struct RemSIOpPattern final : public OpConversionPattern<arith::RemSIOp> {
+struct RemSIOpGLSLPattern final : public OpConversionPattern<arith::RemSIOp> {
+  using OpConversionPattern<arith::RemSIOp>::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(arith::RemSIOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override;
+};
+
+/// Converts arith.remsi to OpenCL SPIR-V ops.
+struct RemSIOpOCLPattern final : public OpConversionPattern<arith::RemSIOp> {
   using OpConversionPattern<arith::RemSIOp>::OpConversionPattern;
 
   LogicalResult
@@ -396,7 +405,7 @@ LogicalResult ConstantScalarOpPattern::matchAndRewrite(
 }
 
 //===----------------------------------------------------------------------===//
-// RemSIOpPattern
+// RemSIOpGLSLPattern
 //===----------------------------------------------------------------------===//
 
 /// Returns signed remainder for `lhs` and `rhs` and lets the result follow
@@ -406,6 +415,7 @@ LogicalResult ConstantScalarOpPattern::matchAndRewrite(
 /// spec, "for the OpSRem and OpSMod instructions, if either operand is negative
 /// the result is undefined."  So we cannot directly use spv.SRem/spv.SMod
 /// if either operand can be negative. Emulate it via spv.UMod.
+template <typename SignedAbsOp>
 static Value emulateSignedRemainder(Location loc, Value lhs, Value rhs,
                                     Value signOperand, OpBuilder &builder) {
   assert(lhs.getType() == rhs.getType());
@@ -414,8 +424,8 @@ static Value emulateSignedRemainder(Location loc, Value lhs, Value rhs,
   Type type = lhs.getType();
 
   // Calculate the remainder with spv.UMod.
-  Value lhsAbs = builder.create<spirv::GLSLSAbsOp>(loc, type, lhs);
-  Value rhsAbs = builder.create<spirv::GLSLSAbsOp>(loc, type, rhs);
+  Value lhsAbs = builder.create<SignedAbsOp>(loc, type, lhs);
+  Value rhsAbs = builder.create<SignedAbsOp>(loc, type, rhs);
   Value abs = builder.create<spirv::UModOp>(loc, lhsAbs, rhsAbs);
 
   // Fix the sign.
@@ -429,11 +439,26 @@ static Value emulateSignedRemainder(Location loc, Value lhs, Value rhs,
 }
 
 LogicalResult
-RemSIOpPattern::matchAndRewrite(arith::RemSIOp op, OpAdaptor adaptor,
-                                ConversionPatternRewriter &rewriter) const {
-  Value result = emulateSignedRemainder(op.getLoc(), adaptor.getOperands()[0],
-                                        adaptor.getOperands()[1],
-                                        adaptor.getOperands()[0], rewriter);
+RemSIOpGLSLPattern::matchAndRewrite(arith::RemSIOp op, OpAdaptor adaptor,
+                                    ConversionPatternRewriter &rewriter) const {
+  Value result = emulateSignedRemainder<spirv::GLSLSAbsOp>(
+      op.getLoc(), adaptor.getOperands()[0], adaptor.getOperands()[1],
+      adaptor.getOperands()[0], rewriter);
+  rewriter.replaceOp(op, result);
+
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// RemSIOpOCLPattern
+//===----------------------------------------------------------------------===//
+
+LogicalResult
+RemSIOpOCLPattern::matchAndRewrite(arith::RemSIOp op, OpAdaptor adaptor,
+                                   ConversionPatternRewriter &rewriter) const {
+  Value result = emulateSignedRemainder<spirv::OCLSAbsOp>(
+      op.getLoc(), adaptor.getOperands()[0], adaptor.getOperands()[1],
+      adaptor.getOperands()[0], rewriter);
   rewriter.replaceOp(op, result);
 
   return success();
@@ -762,7 +787,7 @@ void mlir::arith::populateArithmeticToSPIRVPatterns(
     spirv::UnaryAndBinaryOpPattern<arith::DivUIOp, spirv::UDivOp>,
     spirv::UnaryAndBinaryOpPattern<arith::DivSIOp, spirv::SDivOp>,
     spirv::UnaryAndBinaryOpPattern<arith::RemUIOp, spirv::UModOp>,
-    RemSIOpPattern,
+    RemSIOpGLSLPattern, RemSIOpOCLPattern,
     BitwiseOpPattern<arith::AndIOp, spirv::LogicalAndOp, spirv::BitwiseAndOp>,
     BitwiseOpPattern<arith::OrIOp, spirv::LogicalOrOp, spirv::BitwiseOrOp>,
     XOrIOpLogicalPattern, XOrIOpBooleanPattern,

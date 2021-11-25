@@ -69,6 +69,14 @@ void test_pointer() {
     assert(s.get_deleter().state() == 0);
   }
   assert(A::count == 0);
+  {
+    A* p = newValue<ValueT>(expect_alive);
+    assert(A::count == expect_alive);
+    std::unique_ptr<ValueT, DefaultCtorDeleter<ValueT> > s(p);
+    assert(s.get() == p);
+    assert(s.get_deleter().state() == 0);
+  }
+  assert(A::count == 0);
 }
 
 void test_derived() {

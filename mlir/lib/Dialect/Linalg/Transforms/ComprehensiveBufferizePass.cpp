@@ -7,9 +7,15 @@
 //===----------------------------------------------------------------------===//
 
 #include "PassDetail.h"
+
+#include "mlir/Dialect/Bufferization/IR/Bufferization.h"
+#include "mlir/Dialect/Linalg/ComprehensiveBufferize/ArithInterfaceImpl.h"
 #include "mlir/Dialect/Linalg/ComprehensiveBufferize/BufferizableOpInterface.h"
 #include "mlir/Dialect/Linalg/ComprehensiveBufferize/ComprehensiveBufferize.h"
 #include "mlir/Dialect/Linalg/ComprehensiveBufferize/LinalgInterfaceImpl.h"
+#include "mlir/Dialect/Linalg/ComprehensiveBufferize/SCFInterfaceImpl.h"
+#include "mlir/Dialect/Linalg/ComprehensiveBufferize/TensorInterfaceImpl.h"
+#include "mlir/Dialect/Linalg/ComprehensiveBufferize/VectorInterfaceImpl.h"
 #include "mlir/Dialect/Linalg/Passes.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Pass/PassManager.h"
@@ -33,11 +39,16 @@ struct LinalgComprehensiveModuleBufferize
 
   void getDependentDialects(DialectRegistry &registry) const override {
     registry
-        .insert<linalg::LinalgDialect, memref::MemRefDialect,
-                tensor::TensorDialect, vector::VectorDialect, scf::SCFDialect,
+        .insert<bufferization::BufferizationDialect, linalg::LinalgDialect,
+                memref::MemRefDialect, tensor::TensorDialect,
+                vector::VectorDialect, scf::SCFDialect,
                 arith::ArithmeticDialect, StandardOpsDialect, AffineDialect>();
     registerBufferizableOpInterfaceExternalModels(registry);
+    arith_ext::registerBufferizableOpInterfaceExternalModels(registry);
     linalg_ext::registerBufferizableOpInterfaceExternalModels(registry);
+    scf_ext::registerBufferizableOpInterfaceExternalModels(registry);
+    tensor_ext::registerBufferizableOpInterfaceExternalModels(registry);
+    vector_ext::registerBufferizableOpInterfaceExternalModels(registry);
   }
 };
 } // end namespace
@@ -48,9 +59,9 @@ static void applyEnablingTransformations(ModuleOp moduleOp) {
   (void)applyPatternsAndFoldGreedily(moduleOp, std::move(patterns));
 }
 
-static Optional<Value>
-allocationFnUsingAlloca(OpBuilder &b, Location loc, MemRefType type,
-                        const SmallVector<Value> &dynShape) {
+static Optional<Value> allocationFnUsingAlloca(OpBuilder &b, Location loc,
+                                               MemRefType type,
+                                               ArrayRef<Value> dynShape) {
   Value allocated = b.create<memref::AllocaOp>(
       loc, type, dynShape, b.getI64IntegerAttr(kBufferAlignments));
   return allocated;

@@ -149,7 +149,7 @@ void functionScope() {
 //===----------------------------------------------------------------------===//
 
 // Import function declaration. Check different placements.
-__attribute__((dllimport)) void decl1A(); // Sanity check with __attribute__
+__attribute__((dllimport)) void decl1A(); // Basic check with __attribute__
 __declspec(dllimport)      void decl1B();
 
 void __attribute__((dllimport)) decl2A();

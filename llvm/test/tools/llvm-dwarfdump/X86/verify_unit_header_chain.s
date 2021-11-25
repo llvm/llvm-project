@@ -9,8 +9,6 @@
 # CHECK-NEXT: error: Units[2] - start offset: 0x00000026
 # CHECK-NEXT: note: The 16 bit unit header version is not valid.
 # CHECK-NEXT: note: The offset into the .debug_abbrev section is not valid.
-# CHECK-NEXT: error: Compilation unit root DIE is not a unit DIE: DW_TAG_null.
-# CHECK-NEXT: error: Compilation unit type (DW_UT_compile) and root DIE (DW_TAG_null) do not match.
 # CHECK-NEXT: error: Units[4] - start offset: 0x00000041
 # CHECK-NEXT: note: The length for this unit is too large for the .debug_info provided.
 

@@ -460,6 +460,10 @@ template <class T>
 constexpr T Max(T a, T b) {
   return a > b ? a : b;
 }
+template <class T>
+constexpr T Abs(T a) {
+  return a < 0 ? -a : a;
+}
 template<class T> void Swap(T& a, T& b) {
   T tmp = a;
   a = b;

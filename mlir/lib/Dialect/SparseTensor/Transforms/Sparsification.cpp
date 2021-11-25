@@ -12,6 +12,7 @@
 
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
+#include "mlir/Dialect/Bufferization/IR/Bufferization.h"
 #include "mlir/Dialect/Linalg/ComprehensiveBufferize/BufferizableOpInterface.h"
 #include "mlir/Dialect/Linalg/IR/LinalgOps.h"
 #include "mlir/Dialect/Linalg/Utils/Utils.h"
@@ -457,7 +458,7 @@ static Value genOutputBuffer(CodeGen &codegen, PatternRewriter &rewriter,
   // the major advantage that the sparse kernel only updates the nonzero
   // positions for the output tensor.
   if (isInPlace(tensor))
-    return rewriter.create<memref::BufferCastOp>(loc, denseTp, tensor);
+    return rewriter.create<bufferization::ToMemrefOp>(loc, denseTp, tensor);
   // By default, a new buffer is allocated which is initialized to the
   // tensor defined in the outs() clause. This is always correct but
   // introduces a dense initialization component that may negatively
@@ -472,7 +473,7 @@ static Value genOutputBuffer(CodeGen &codegen, PatternRewriter &rewriter,
     rewriter.create<linalg::FillOp>(loc, zero, alloc);
     return alloc;
   }
-  Value init = rewriter.create<memref::BufferCastOp>(loc, denseTp, tensor);
+  Value init = rewriter.create<bufferization::ToMemrefOp>(loc, denseTp, tensor);
   Value alloc = rewriter.create<memref::AllocOp>(loc, denseTp, args);
   rewriter.create<memref::CopyOp>(loc, init, alloc);
   return alloc;
@@ -532,7 +533,7 @@ static void genBuffers(Merger &merger, CodeGen &codegen,
       auto denseTp = MemRefType::get(shape, elementType);
       if (tensor < op.getNumInputs())
         codegen.buffers[tensor] =
-            rewriter.create<memref::BufferCastOp>(loc, denseTp, t->get());
+            rewriter.create<bufferization::ToMemrefOp>(loc, denseTp, t->get());
       else
         codegen.buffers[tensor] =
             genOutputBuffer(codegen, rewriter, op, denseTp, args);
@@ -1466,7 +1467,7 @@ static void genResult(Merger &merger, CodeGen &codegen,
     // To rematerialize an non-annotated tensor, simply load it
     // from the bufferized value.
     Value val = codegen.buffers.back(); // value array
-    rewriter.replaceOpWithNewOp<memref::TensorLoadOp>(op, resType, val);
+    rewriter.replaceOpWithNewOp<bufferization::ToTensorOp>(op, resType, val);
   }
 }
 

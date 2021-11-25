@@ -440,18 +440,18 @@ func @test_splat_op(%s : f32) {
 }
 
 // CHECK-LABEL: func @tensor_load_store
-func @tensor_load_store(%0 : memref<4x4xi32>) {
-  // CHECK: %[[TENSOR:.*]] = memref.tensor_load %[[MEMREF:.*]] : memref<4x4xi32>
-  %1 = memref.tensor_load %0 : memref<4x4xi32>
+func @tensor_load_store(%0 : memref<4x4xi32>, %1 : tensor<4x4xi32>) {
+  // CHECK-SAME: (%[[MEMREF:.*]]: memref<4x4xi32>,
+  // CHECK-SAME:  %[[TENSOR:.*]]: tensor<4x4xi32>)
   // CHECK: memref.tensor_store %[[TENSOR]], %[[MEMREF]] : memref<4x4xi32>
   memref.tensor_store %1, %0 : memref<4x4xi32>
   return
 }
 
 // CHECK-LABEL: func @unranked_tensor_load_store
-func @unranked_tensor_load_store(%0 : memref<*xi32>) {
-  // CHECK: %[[TENSOR:.*]] = memref.tensor_load %[[MEMREF:.*]] : memref<*xi32>
-  %1 = memref.tensor_load %0 : memref<*xi32>
+func @unranked_tensor_load_store(%0 : memref<*xi32>, %1 : tensor<*xi32>) {
+  // CHECK-SAME: (%[[MEMREF:.*]]: memref<*xi32>,
+  // CHECK-SAME:  %[[TENSOR:.*]]: tensor<*xi32>)
   // CHECK: memref.tensor_store %[[TENSOR]], %[[MEMREF]] : memref<*xi32>
   memref.tensor_store %1, %0 : memref<*xi32>
   return

@@ -5,8 +5,8 @@
 // RUN: ln -s %S/Inputs/NameInDirInferred.framework %t/NameInImportInferred.framework
 // RUN: %clang_cc1 -fmodules -fmodules-cache-path=%t.mcp -fimplicit-module-maps -I %S/Inputs -F %S/Inputs -F %t -Wauto-import -verify %s
 
-// Sanity check that we won't somehow find non-canonical module names or
-// modules where we shouldn't search the framework.
+// Verify that we won't somehow find non-canonical module names or modules where
+// we shouldn't search the framework.
 // RUN: echo '@import NameInModMap;' | not %clang_cc1 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t.mcp -F %S/Inputs -F %t -Wauto-import -x objective-c - 2>&1 | FileCheck %s
 // RUN: echo '@import NameInDir;' | not %clang_cc1 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t.mcp -F %S/Inputs -F %t -Wauto-import -x objective-c - 2>&1 | FileCheck %s
 // RUN: echo '@import NameInImport;' | not %clang_cc1 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t.mcp -F %S/Inputs -F %t -Wauto-import -x objective-c - 2>&1 | FileCheck %s

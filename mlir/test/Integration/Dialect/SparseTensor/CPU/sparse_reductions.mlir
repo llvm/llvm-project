@@ -201,19 +201,19 @@ module {
     // CHECK: 15
     // CHECK: 10
     //
-    %m0 = memref.buffer_cast %0 : memref<i32>
+    %m0 = bufferization.to_memref %0 : memref<i32>
     call @dump_i32(%m0) : (memref<i32>) -> ()
-    %m1 = memref.buffer_cast %1 : memref<f32>
+    %m1 = bufferization.to_memref %1 : memref<f32>
     call @dump_f32(%m1) : (memref<f32>) -> ()
-    %m2 = memref.buffer_cast %2 : memref<i32>
+    %m2 = bufferization.to_memref %2 : memref<i32>
     call @dump_i32(%m2) : (memref<i32>) -> ()
-    %m3 = memref.buffer_cast %3 : memref<f32>
+    %m3 = bufferization.to_memref %3 : memref<f32>
     call @dump_f32(%m3) : (memref<f32>) -> ()
-    %m4 = memref.buffer_cast %4 : memref<i32>
+    %m4 = bufferization.to_memref %4 : memref<i32>
     call @dump_i32(%m4) : (memref<i32>) -> ()
-    %m5 = memref.buffer_cast %5 : memref<i32>
+    %m5 = bufferization.to_memref %5 : memref<i32>
     call @dump_i32(%m5) : (memref<i32>) -> ()
-    %m6 = memref.buffer_cast %6 : memref<i32>
+    %m6 = bufferization.to_memref %6 : memref<i32>
     call @dump_i32(%m6) : (memref<i32>) -> ()
 
     // Release the resources.

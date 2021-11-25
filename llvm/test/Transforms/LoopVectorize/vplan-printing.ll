@@ -89,7 +89,7 @@ define float @print_reduction(i64 %n, float* noalias %y) {
 ; CHECK-NEXT:   WIDEN-REDUCTION-PHI ir<%red> = phi ir<0.000000e+00>, ir<%red.next>
 ; CHECK-NEXT:   CLONE ir<%arrayidx> = getelementptr ir<%y>, ir<%iv>
 ; CHECK-NEXT:   WIDEN ir<%lv> = load ir<%arrayidx>
-; CHECK-NEXT:   REDUCE ir<%red.next> = ir<%red> + reduce.fadd (ir<%lv>)
+; CHECK-NEXT:   REDUCE ir<%red.next> = ir<%red> + fast reduce.fadd (ir<%lv>)
 ; CHECK-NEXT: No successors
 ; CHECK-NEXT: }
 ; CHECK-NEXT: No successors
@@ -242,4 +242,40 @@ for.end:
   ret void
 }
 
+define float @print_fmuladd_strict(float* %a, float* %b, i64 %n) {
+; CHECK-LABEL: Checking a loop in "print_fmuladd_strict"
+; CHECK:      VPlan 'Initial VPlan for VF={4},UF>=1' {
+; CHECK-NEXT: <x1> vector loop: {
+; CHECK-NEXT: for.body:
+; CHECK-NEXT:   WIDEN-INDUCTION %iv = phi 0, %iv.next
+; CHECK-NEXT:   WIDEN-REDUCTION-PHI ir<%sum.07> = phi ir<0.000000e+00>, ir<%muladd>
+; CHECK-NEXT:   CLONE ir<%arrayidx> = getelementptr ir<%a>, ir<%iv>
+; CHECK-NEXT:   WIDEN ir<%l.a> = load ir<%arrayidx>
+; CHECK-NEXT:   CLONE ir<%arrayidx2> = getelementptr ir<%b>, ir<%iv>
+; CHECK-NEXT:   WIDEN ir<%l.b> = load ir<%arrayidx2>
+; CHECK-NEXT:   EMIT vp<[[FMUL:%.]]> = fmul nnan ninf nsz ir<%l.a> ir<%l.b>
+; CHECK-NEXT:   REDUCE ir<[[MULADD:%.+]]> = ir<%sum.07> + nnan ninf nsz reduce.fadd (vp<[[FMUL]]>)
+; CHECK-NEXT:   No successors
+; CHECK-NEXT: }
+
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
+  %sum.07 = phi float [ 0.000000e+00, %entry ], [ %muladd, %for.body ]
+  %arrayidx = getelementptr inbounds float, float* %a, i64 %iv
+  %l.a = load float, float* %arrayidx, align 4
+  %arrayidx2 = getelementptr inbounds float, float* %b, i64 %iv
+  %l.b = load float, float* %arrayidx2, align 4
+  %muladd = tail call nnan ninf nsz float @llvm.fmuladd.f32(float %l.a, float %l.b, float %sum.07)
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond.not = icmp eq i64 %iv.next, %n
+  br i1 %exitcond.not, label %for.end, label %for.body
+
+for.end:
+  ret float %muladd
+}
+
 declare float @llvm.sqrt.f32(float) nounwind readnone
+declare float @llvm.fmuladd.f32(float, float, float)

@@ -7,6 +7,7 @@
 // CHECK-NEXT: arm_neon
 // CHECK-NEXT: arm_sve
 // CHECK-NEXT: async
+// CHECK-NEXT: bufferization
 // CHECK-NEXT: builtin
 // CHECK-NEXT: complex
 // CHECK-NEXT: dlti

@@ -31,6 +31,7 @@ add_mlir_dialect_library(MLIRLinalgTransforms
   MLIRAffine
   MLIRAffineUtils
   MLIRAnalysis
+  MLIRArithBufferizableOpInterfaceImpl
   MLIRArithmetic
   MLIRBufferizableOpInterface
   MLIRComplex
@@ -43,15 +44,18 @@ add_mlir_dialect_library(MLIRLinalgTransforms
   MLIRLinalgBufferizableOpInterfaceImpl
   MLIRLinalgUtils
   MLIRSCF
+  MLIRSCFBufferizableOpInterfaceImpl
   MLIRSCFTransforms
   MLIRPass
   MLIRStandard
   MLIRStandardOpsTransforms
   MLIRStandardToLLVM
   MLIRTensor
+  MLIRTensorBufferizableOpInterfaceImpl
   MLIRTransforms
   MLIRTransformUtils
   MLIRVector
+  MLIRVectorBufferizableOpInterfaceImpl
   MLIRX86VectorTransforms
   MLIRVectorToSCF
 )

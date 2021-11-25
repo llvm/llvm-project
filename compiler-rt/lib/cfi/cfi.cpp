@@ -230,7 +230,7 @@ uptr find_cfi_check_in_dso(dl_phdr_info *info) {
   }
 
   if (symtab > strtab) {
-    VReport(1, "Can not handle: symtab > strtab (%p > %zx)\n", symtab, strtab);
+    VReport(1, "Can not handle: symtab > strtab (%zx > %zx)\n", symtab, strtab);
     return 0;
   }
 
@@ -250,7 +250,7 @@ uptr find_cfi_check_in_dso(dl_phdr_info *info) {
   if (phdr_idx == info->dlpi_phnum) {
     // Nope, either different segments or just bogus pointers.
     // Can not handle this.
-    VReport(1, "Can not handle: symtab %p, strtab %zx\n", symtab, strtab);
+    VReport(1, "Can not handle: symtab %zx, strtab %zx\n", symtab, strtab);
     return 0;
   }
 

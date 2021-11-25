@@ -15,6 +15,10 @@ namespace mlir {
 
 class StandardOpsDialect;
 
+namespace bufferization {
+class BufferizationDialect;
+} // end namespace bufferization
+
 namespace memref {
 class MemRefDialect;
 } // end namespace memref

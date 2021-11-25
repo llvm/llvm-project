@@ -6,11 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file defines lint interfaces that can be used for some sanity checking
-// of input to the system, and for checking that transformations
-// haven't done something bad. In contrast to the Verifier, the Lint checker
-// checks for undefined behavior or constructions with likely unintended
-// behavior.
+// This file defines lint interfaces that can be used for some validation of
+// input to the system, and for checking that transformations haven't done
+// something bad. In contrast to the Verifier, the Lint checker checks for
+// undefined behavior or constructions with likely unintended behavior.
 //
 // To see what specifically is checked, look at Lint.cpp
 //

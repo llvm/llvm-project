@@ -331,8 +331,7 @@ define amdgpu_kernel void @test_smul24_i64(i64 addrspace(1)* %out, [8 x i32], i3
 ; VI-NEXT:    s_bfe_i32 s0, s0, 0x180000
 ; VI-NEXT:    v_mov_b32_e32 v0, s1
 ; VI-NEXT:    v_mul_hi_i32_i24_e32 v1, s0, v0
-; VI-NEXT:    s_mul_i32 s0, s0, s1
-; VI-NEXT:    v_mov_b32_e32 v0, s0
+; VI-NEXT:    v_mul_i32_i24_e32 v0, s0, v0
 ; VI-NEXT:    buffer_store_dwordx2 v[0:1], off, s[4:7], 0
 ; VI-NEXT:    s_endpgm
 ;
@@ -428,8 +427,7 @@ define amdgpu_kernel void @test_smul24_i64_square(i64 addrspace(1)* %out, i32 %a
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    s_bfe_i32 s0, s0, 0x180000
 ; VI-NEXT:    v_mul_hi_i32_i24_e64 v1, s0, s0
-; VI-NEXT:    s_mul_i32 s0, s0, s0
-; VI-NEXT:    v_mov_b32_e32 v0, s0
+; VI-NEXT:    v_mul_i32_i24_e64 v0, s0, s0
 ; VI-NEXT:    buffer_store_dwordx2 v[0:1], off, s[4:7], 0
 ; VI-NEXT:    s_endpgm
 ;
@@ -528,8 +526,7 @@ define amdgpu_kernel void @test_smul24_i33(i64 addrspace(1)* %out, i33 %a, i33 %
 ; VI-NEXT:    s_ashr_i64 s[0:1], s[0:1], 40
 ; VI-NEXT:    v_mov_b32_e32 v0, s2
 ; VI-NEXT:    v_mul_hi_i32_i24_e32 v1, s0, v0
-; VI-NEXT:    s_mul_i32 s0, s0, s2
-; VI-NEXT:    v_mov_b32_e32 v0, s0
+; VI-NEXT:    v_mul_i32_i24_e32 v0, s0, v0
 ; VI-NEXT:    v_lshlrev_b64 v[0:1], 31, v[0:1]
 ; VI-NEXT:    v_ashrrev_i64 v[0:1], 31, v[0:1]
 ; VI-NEXT:    buffer_store_dwordx2 v[0:1], off, s[4:7], 0

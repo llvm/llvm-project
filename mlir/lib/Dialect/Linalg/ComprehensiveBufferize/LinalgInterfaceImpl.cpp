@@ -167,8 +167,8 @@ struct InitTensorOpInterface
     OpBuilder::InsertionGuard g(b);
     b.setInsertionPoint(initTensorOp);
 
-    Value alloc = state.allocationFns.createAllocDeallocFn(
-        b, initTensorOp->getLoc(), initTensorOp.result(), state);
+    Value alloc = state.createAllocDeallocFn(b, initTensorOp->getLoc(),
+                                             initTensorOp.result());
     state.mapBuffer(initTensorOp.result(), alloc);
     return success();
   }

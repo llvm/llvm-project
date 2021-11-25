@@ -94,8 +94,8 @@ module {
     scf.for %i = %c0 to %c4 step %c1 {
       memref.store %i0, %xdata[%i] : memref<?xi32>
     }
-    %b = memref.tensor_load %bdata : memref<?xi32>
-    %x = memref.tensor_load %xdata : memref<?xi32>
+    %b = bufferization.to_tensor %bdata : memref<?xi32>
+    %x = bufferization.to_tensor %xdata : memref<?xi32>
 
     // Call kernel.
     %0 = call @kernel_matvec(%a, %b, %x)
@@ -105,7 +105,7 @@ module {
     //
     // CHECK: ( 889, 1514, -21, -3431 )
     //
-    %m = memref.buffer_cast %0 : memref<?xi32>
+    %m = bufferization.to_memref %0 : memref<?xi32>
     %v = vector.transfer_read %m[%c0], %i0: memref<?xi32>, vector<4xi32>
     vector.print %v : vector<4xi32>
 

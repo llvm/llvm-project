@@ -114,7 +114,7 @@ public:
     }
 
     // Single-threaded debugging code.  This would be racy in multithreaded
-    // mode, but provides not sanity checks in single threaded mode.
+    // mode, but provides not basic checks in single threaded mode.
     ++readers;
     return true;
   }
@@ -126,7 +126,7 @@ public:
     }
 
     // Single-threaded debugging code.  This would be racy in multithreaded
-    // mode, but provides not sanity checks in single threaded mode.
+    // mode, but provides not basic checks in single threaded mode.
     assert(readers > 0 && "Reader lock not acquired before release!");
     --readers;
     return true;
@@ -139,7 +139,7 @@ public:
     }
 
     // Single-threaded debugging code.  This would be racy in multithreaded
-    // mode, but provides not sanity checks in single threaded mode.
+    // mode, but provides not basic checks in single threaded mode.
     assert(writers == 0 && "Writer lock already acquired!");
     ++writers;
     return true;
@@ -152,7 +152,7 @@ public:
     }
 
     // Single-threaded debugging code.  This would be racy in multithreaded
-    // mode, but provides not sanity checks in single threaded mode.
+    // mode, but provides not basic checks in single threaded mode.
     assert(writers == 1 && "Writer lock not acquired before release!");
     --writers;
     return true;

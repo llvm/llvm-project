@@ -314,10 +314,11 @@ private:
     //
     // void (*FunctionPointer)(void);
     // void (&FunctionReference)(void);
+    // void (&&FunctionReference)(void);
     // void (^ObjCBlock)(void);
     bool MightBeFunctionType = !Contexts[Contexts.size() - 2].IsExpression;
     bool ProbablyFunctionType =
-        CurrentToken->isOneOf(tok::star, tok::amp, tok::caret);
+        CurrentToken->isOneOf(tok::star, tok::amp, tok::ampamp, tok::caret);
     bool HasMultipleLines = false;
     bool HasMultipleParametersOnALine = false;
     bool MightBeObjCForRangeLoop =
@@ -2342,16 +2343,15 @@ void TokenAnnotator::setCommentLineLevels(
     if (NextNonCommentLine && CommentLine &&
         NextNonCommentLine->First->NewlinesBefore <= 1 &&
         NextNonCommentLine->First->OriginalColumn ==
-        AL->First->OriginalColumn) {
+            AL->First->OriginalColumn) {
       // Align comments for preprocessor lines with the # in column 0 if
       // preprocessor lines are not indented. Otherwise, align with the next
       // line.
-      AL->Level =
-          (Style.IndentPPDirectives != FormatStyle::PPDIS_BeforeHash &&
-           (NextNonCommentLine->Type == LT_PreprocessorDirective ||
-            NextNonCommentLine->Type == LT_ImportStatement))
-              ? 0
-              : NextNonCommentLine->Level;
+      AL->Level = (Style.IndentPPDirectives != FormatStyle::PPDIS_BeforeHash &&
+                   (NextNonCommentLine->Type == LT_PreprocessorDirective ||
+                    NextNonCommentLine->Type == LT_ImportStatement))
+                      ? 0
+                      : NextNonCommentLine->Level;
     } else {
       NextNonCommentLine = AL->First->isNot(tok::r_brace) ? AL : nullptr;
     }

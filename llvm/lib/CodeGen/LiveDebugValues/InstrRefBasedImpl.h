@@ -817,6 +817,16 @@ private:
   OverlapMap OverlapFragments;
   VarToFragments SeenFragments;
 
+  /// True if we need to examine call instructions for stack clobbers. We
+  /// normally assume that they don't clobber SP, but stack probes on Windows
+  /// do.
+  bool AdjustsStackInCalls = false;
+
+  /// If AdjustsStackInCalls is true, this holds the name of the target's stack
+  /// probe function, which is the function we expect will alter the stack
+  /// pointer.
+  StringRef StackProbeSymbolName;
+
   /// Tests whether this instruction is a spill to a stack slot.
   bool isSpillInstruction(const MachineInstr &MI, MachineFunction *MF);
 

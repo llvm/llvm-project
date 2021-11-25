@@ -1057,6 +1057,12 @@ int64_t llvm::getPtrStride(PredicatedScalarEvolution &PSE, Type *AccessTy,
   assert(Ty->isPointerTy() && "Unexpected non-ptr");
   assert(!AccessTy->isAggregateType() && "Bad stride - Not a pointer to a scalar type");
 
+  if (isa<ScalableVectorType>(AccessTy)) {
+    LLVM_DEBUG(dbgs() << "LAA: Bad stride - Scalable object: " << *AccessTy
+                      << "\n");
+    return 0;
+  }
+
   const SCEV *PtrScev = replaceSymbolicStrideSCEV(PSE, StridesMap, Ptr);
 
   const SCEVAddRecExpr *AR = dyn_cast<SCEVAddRecExpr>(PtrScev);
@@ -1117,7 +1123,8 @@ int64_t llvm::getPtrStride(PredicatedScalarEvolution &PSE, Type *AccessTy,
   }
 
   auto &DL = Lp->getHeader()->getModule()->getDataLayout();
-  int64_t Size = DL.getTypeAllocSize(AccessTy);
+  TypeSize AllocSize = DL.getTypeAllocSize(AccessTy);
+  int64_t Size = AllocSize.getFixedSize();
   const APInt &APStepVal = C->getAPInt();
 
   // Huge step value - give up.

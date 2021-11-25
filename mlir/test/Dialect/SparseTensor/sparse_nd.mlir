@@ -34,13 +34,13 @@
 // CHECK:           %[[VAL_10:.*]] = arith.constant 80 : index
 // CHECK:           %[[VAL_11:.*]] = arith.constant 0 : index
 // CHECK:           %[[VAL_12:.*]] = arith.constant 1 : index
-// CHECK:           %[[VAL_13:.*]] = memref.buffer_cast %[[VAL_0]] : memref<10x20x30x40x50x60x70x80xf32>
+// CHECK:           %[[VAL_13:.*]] = bufferization.to_memref %[[VAL_0]] : memref<10x20x30x40x50x60x70x80xf32>
 // CHECK:           %[[VAL_14:.*]] = sparse_tensor.pointers %[[VAL_1]], %[[VAL_3]] : tensor<80x70x60x50x40x30x20x10xf32, #sparse_tensor.encoding<{ dimLevelType = [ "dense", "dense", "dense", "compressed", "compressed", "dense", "dense", "dense" ], pointerBitWidth = 0, indexBitWidth = 0 }>> to memref<?xindex>
 // CHECK:           %[[VAL_15:.*]] = sparse_tensor.indices %[[VAL_1]], %[[VAL_3]] : tensor<80x70x60x50x40x30x20x10xf32, #sparse_tensor.encoding<{ dimLevelType = [ "dense", "dense", "dense", "compressed", "compressed", "dense", "dense", "dense" ], pointerBitWidth = 0, indexBitWidth = 0 }>> to memref<?xindex>
 // CHECK:           %[[VAL_16:.*]] = sparse_tensor.pointers %[[VAL_1]], %[[VAL_4]] : tensor<80x70x60x50x40x30x20x10xf32, #sparse_tensor.encoding<{ dimLevelType = [ "dense", "dense", "dense", "compressed", "compressed", "dense", "dense", "dense" ], pointerBitWidth = 0, indexBitWidth = 0 }>> to memref<?xindex>
 // CHECK:           %[[VAL_17:.*]] = sparse_tensor.indices %[[VAL_1]], %[[VAL_4]] : tensor<80x70x60x50x40x30x20x10xf32, #sparse_tensor.encoding<{ dimLevelType = [ "dense", "dense", "dense", "compressed", "compressed", "dense", "dense", "dense" ], pointerBitWidth = 0, indexBitWidth = 0 }>> to memref<?xindex>
 // CHECK:           %[[VAL_18:.*]] = sparse_tensor.values %[[VAL_1]] : tensor<80x70x60x50x40x30x20x10xf32, #sparse_tensor.encoding<{ dimLevelType = [ "dense", "dense", "dense", "compressed", "compressed", "dense", "dense", "dense" ], pointerBitWidth = 0, indexBitWidth = 0 }>> to memref<?xf32>
-// CHECK:           %[[VAL_19:.*]] = memref.buffer_cast %[[VAL_2]] : memref<10x20x30x40x50x60x70x80xf32>
+// CHECK:           %[[VAL_19:.*]] = bufferization.to_memref %[[VAL_2]] : memref<10x20x30x40x50x60x70x80xf32>
 // CHECK:           %[[VAL_20:.*]] = memref.alloc() : memref<10x20x30x40x50x60x70x80xf32>
 // CHECK:           memref.copy %[[VAL_19]], %[[VAL_20]] : memref<10x20x30x40x50x60x70x80xf32> to memref<10x20x30x40x50x60x70x80xf32>
 // CHECK:           scf.for %[[VAL_21:.*]] = %[[VAL_11]] to %[[VAL_10]] step %[[VAL_12]] {
@@ -81,7 +81,7 @@
 // CHECK:               }
 // CHECK:             }
 // CHECK:           }
-// CHECK:           %[[VAL_50:.*]] = memref.tensor_load %[[VAL_20]] : memref<10x20x30x40x50x60x70x80xf32>
+// CHECK:           %[[VAL_50:.*]] = bufferization.to_tensor %[[VAL_20]] : memref<10x20x30x40x50x60x70x80xf32>
 // CHECK:           return %[[VAL_50]] : tensor<10x20x30x40x50x60x70x80xf32>
 // CHECK:         }
 func @mul(%arga: tensor<10x20x30x40x50x60x70x80xf32>,
