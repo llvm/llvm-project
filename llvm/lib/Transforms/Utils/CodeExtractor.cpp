@@ -1240,6 +1240,14 @@ Function *CodeExtractor::constructFunction2(const ValueSet &inputs,
 }
 
 
+
+void CodeExtractor::handleParams( 
+    Function *oldFunction, Function *newFunction,
+    const ValueSet &inputs,
+    const ValueSet &outputs)  {
+}
+
+
 /// Erase lifetime.start markers which reference inputs to the extraction
 /// region, and insert the referenced memory into \p LifetimesStart.
 ///
@@ -1976,15 +1984,30 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
 
     Function *newFunction = constructFunction2(inputs, outputs, header,   oldFunction, oldFunction->getParent());
 
+
+    // The new function needs a root node because other nodes can branch to the
+    // head of the region, but the entry node of a function cannot have preds.
+    BasicBlock *newFuncRoot = BasicBlock::Create(header->getContext(), "newFuncRoot", newFunction);
+    BasicBlock *   newRootNode=newFuncRoot;
+
+
+
+    // This takes place of the original loop
+    BasicBlock *codeReplacer = BasicBlock::Create(header->getContext(),
+        "codeRepl", oldFunction,
+        header);
+
+
     if (KeepOldBlocks)
-        return extractCodeRegionByCopy(CEAC, inputs, outputs, EntryFreq,ExitWeights,ExitBlocks,SinkingCands,HoistingCands,CommonExit, newFunction );
+        return extractCodeRegionByCopy(CEAC, inputs, outputs, EntryFreq,ExitWeights,ExitBlocks,SinkingCands,HoistingCands,CommonExit, newFunction, codeReplacer,nullptr,newRootNode  );
+
+
 
 
 
 
     // Transforms/HotColdSplit/stale-assume-in-original-func.ll
     // TODO: remove assumes only after moving
-
         // Remove @llvm.assume calls that will be moved to the new function from the
         // old function's assumption cache.
         for (BasicBlock* Block : Blocks) {
@@ -1999,18 +2022,10 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
     
 
 
-  // This takes place of the original loop
-  BasicBlock *codeReplacer = BasicBlock::Create(header->getContext(),
-      "codeRepl", oldFunction,
-      header);
 
 
-      // The new function needs a root node because other nodes can branch to the
-      // head of the region, but the entry node of a function cannot have preds.
-      BasicBlock *newFuncRoot = BasicBlock::Create(header->getContext(), "newFuncRoot");
-
-
-      auto *BranchI = BranchInst::Create(header);
+     
+      auto *BranchI = BranchInst::Create(header, newFuncRoot);
 
 #if 0
       // If the original function has debug info, we have to add a debug location
@@ -2028,9 +2043,8 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
               });
       }
 #endif 
-      applyFirstDebugLoc(oldFunction, Blocks.getArrayRef(), BranchI);
-      
-      newFuncRoot->getInstList().push_back(BranchI);
+      applyFirstDebugLoc(oldFunction, Blocks.getArrayRef(), BranchI);      
+     // newFuncRoot->getInstList().push_back(BranchI);
 
 
 
@@ -2073,15 +2087,8 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
 #if 0
       Function *newFunction = constructFunction(inputs, outputs, header, newFuncRoot, codeReplacer,  oldFunction, oldFunction->getParent(),false,VMap);
 #else
-      auto newRootNode = newFuncRoot;
+    //  auto newRootNode = newFuncRoot;
       auto newHeader = codeReplacer ;
-
-      if (newRootNode) {
-          newFunction->getBasicBlockList().push_back(newRootNode);
-      }  else {
-          newRootNode = BasicBlock::Create(newFunction->getContext(), "newFuncRoot", newFunction);
-          //  auto BranchI = BranchInst::Create(newRootNode, newRootNode); // FIXME
-      }
 
 
       StructType *StructTy = nullptr;
@@ -2232,7 +2239,9 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
 Function *CodeExtractor::extractCodeRegionByCopy(const CodeExtractorAnalysisCache &CEAC,  ValueSet &inputs, ValueSet &outputs,const  BlockFrequency& EntryFreq,
     const  DenseMap<BasicBlock *, BlockFrequency> &ExitWeights,  
     const   SmallPtrSet<BasicBlock *, 1> &ExitBlocks,
-    const  ValueSet &SinkingCands,const ValueSet & HoistingCands, BasicBlock *CommonExit,Function *newFunction) {
+    const  ValueSet &SinkingCands,const ValueSet & HoistingCands, BasicBlock *CommonExit,Function *newFunction, 
+    BasicBlock *   codeReplacer,
+    BasicBlock *  NewEntry,   BasicBlock *  newRootNode ) {
     // Assumption: this is a single-entry code region, and the header is the first block in the region.
     BasicBlock *header = *Blocks.begin();
     Function *oldFunction = header->getParent();
@@ -2240,207 +2249,19 @@ Function *CodeExtractor::extractCodeRegionByCopy(const CodeExtractorAnalysisCach
 
 
 
-    // This takes place of the original loop // TODO: move to after construction function
-    BasicBlock *codeReplacer = BasicBlock::Create(header->getContext(),
-        "codeRepl", oldFunction,
-        header);
 
-        BasicBlock *newRootNode = nullptr;
+
         auto newHeader = codeReplacer;
         ValueToValueMapTy VMap;
         Module *M = oldFunction->getParent();
         auto KeepOldBlocks = true;
-#if 0
-        newFunction = constructFunction(inputs, outputs, header, NewRoot, codeReplacer,  oldFunction, oldFunction->getParent(), true,VMap);
-        /*
-        Function *CodeExtractor::constructFunction(
-            const ValueSet &inputs,
-            const ValueSet &outputs,
-            BasicBlock *header,
-            BasicBlock *&newRootNode,
-            BasicBlock *newHeader,
-            Function *oldFunction,
-            Module *M,    bool KeepOldBlocks,     ValueToValueMapTy &VMap) {
-            */
-#else
-#if 0
-        LLVM_DEBUG(dbgs() << "inputs: " << inputs.size() << "\n");
-        LLVM_DEBUG(dbgs() << "outputs: " << outputs.size() << "\n");
-
-        // This function returns unsigned, outputs will go back by reference.
-        switch (NumExitBlocks) {
-        case 0:
-        case 1: RetTy = Type::getVoidTy(header->getContext()); break;
-        case 2: RetTy = Type::getInt1Ty(header->getContext()); break;
-        default: RetTy = Type::getInt16Ty(header->getContext()); break;
-        }
-
-        std::vector<Type *> paramTy;
-        SmallVector<Value*> VMapArg;
-        // Add the types of the input values to the function's argument list
-        for (Value *value : inputs) {
-            LLVM_DEBUG(dbgs() << "value used in func: " << *value << "\n");
-            paramTy.push_back(value->getType()); VMapArg.push_back(value);
-        }
-
-        // Add the types of the output values to the function's argument list.
-        for (Value *output : outputs) {
-            LLVM_DEBUG(dbgs() << "instr used in func: " << *output << "\n"); 
-            if (AggregateArgs)
-                paramTy.push_back(output->getType()); 
-            else
-                paramTy.push_back(PointerType::getUnqual(output->getType()));
-        }
-
-        LLVM_DEBUG({
-            dbgs() << "Function type: " << *RetTy << " f(";
-        for (Type *i : paramTy)
-            dbgs() << *i << ", ";
-        dbgs() << ")\n";
-            });
-
-        StructType *StructTy = nullptr;
-        if (AggregateArgs && (inputs.size() + outputs.size() > 0)) {
-            StructTy = StructType::get(M->getContext(), paramTy);
-            paramTy.clear();
-            paramTy.push_back(PointerType::getUnqual(StructTy));
-        }
-        FunctionType *funcType =
-            FunctionType::get(RetTy, paramTy,
-                AllowVarArgs && oldFunction->isVarArg());
-
-        std::string SuffixToUse =
-            Suffix.empty()
-            ? (header->getName().empty() ? "extracted" : header->getName().str())
-            : Suffix;
-        // Create the new function
-        Function *newFunction = Function::Create(
-            funcType, GlobalValue::InternalLinkage, oldFunction->getAddressSpace(),
-            oldFunction->getName() + "." + SuffixToUse, M);
-
-        // If the old function is no-throw, so is the new one.
-        if (oldFunction->doesNotThrow())
-            newFunction->setDoesNotThrow();
-
-        // Inherit the uwtable attribute if we need to.
-        if (oldFunction->hasUWTable())
-            newFunction->setHasUWTable();
-
-        // Inherit all of the target dependent attributes and white-listed
-        // target independent attributes.
-        //  (e.g. If the extracted region contains a call to an x86.sse
-        //  instruction we need to make sure that the extracted region has the
-        //  "target-features" attribute allowing it to be lowered.
-        // FIXME: This should be changed to check to see if a specific
-        //           attribute can not be inherited.
-        for (const auto &Attr : oldFunction->getAttributes().getFnAttrs()) {
-            if (Attr.isStringAttribute()) {
-                if (Attr.getKindAsString() == "thunk")
-                    continue;
-            } else
-                switch (Attr.getKindAsEnum()) {
-                    // Those attributes cannot be propagated safely. Explicitly list them
-                    // here so we get a warning if new attributes are added. This list also
-                    // includes non-function attributes.
-                case Attribute::Alignment:
-                case Attribute::AllocSize:
-                case Attribute::ArgMemOnly:
-                case Attribute::Builtin:
-                case Attribute::ByVal:
-                case Attribute::Convergent:
-                case Attribute::Dereferenceable:
-                case Attribute::DereferenceableOrNull:
-                case Attribute::ElementType:
-                case Attribute::InAlloca:
-                case Attribute::InReg:
-                case Attribute::InaccessibleMemOnly:
-                case Attribute::InaccessibleMemOrArgMemOnly:
-                case Attribute::JumpTable:
-                case Attribute::Naked:
-                case Attribute::Nest:
-                case Attribute::NoAlias:
-                case Attribute::NoBuiltin:
-                case Attribute::NoCapture:
-                case Attribute::NoMerge:
-                case Attribute::NoReturn:
-                case Attribute::NoSync:
-                case Attribute::NoUndef:
-                case Attribute::None:
-                case Attribute::NonNull:
-                case Attribute::Preallocated:
-                case Attribute::ReadNone:
-                case Attribute::ReadOnly:
-                case Attribute::Returned:
-                case Attribute::ReturnsTwice:
-                case Attribute::SExt:
-                case Attribute::Speculatable:
-                case Attribute::StackAlignment:
-                case Attribute::StructRet:
-                case Attribute::SwiftError:
-                case Attribute::SwiftSelf:
-                case Attribute::SwiftAsync:
-                case Attribute::WillReturn:
-                case Attribute::WriteOnly:
-                case Attribute::ZExt:
-                case Attribute::ImmArg:
-                case Attribute::ByRef:
-                case Attribute::EndAttrKinds:
-                case Attribute::EmptyKey:
-                case Attribute::TombstoneKey:
-                    continue;
-                    // Those attributes should be safe to propagate to the extracted function.
-                case Attribute::AlwaysInline:
-                case Attribute::Cold:
-                case Attribute::DisableSanitizerInstrumentation:
-                case Attribute::Hot:
-                case Attribute::NoRecurse:
-                case Attribute::InlineHint:
-                case Attribute::MinSize:
-                case Attribute::NoCallback:
-                case Attribute::NoDuplicate:
-                case Attribute::NoFree:
-                case Attribute::NoImplicitFloat:
-                case Attribute::NoInline:
-                case Attribute::NonLazyBind:
-                case Attribute::NoRedZone:
-                case Attribute::NoUnwind:
-                case Attribute::NoSanitizeCoverage:
-                case Attribute::NullPointerIsValid:
-                case Attribute::OptForFuzzing:
-                case Attribute::OptimizeNone:
-                case Attribute::OptimizeForSize:
-                case Attribute::SafeStack:
-                case Attribute::ShadowCallStack:
-                case Attribute::SanitizeAddress:
-                case Attribute::SanitizeMemory:
-                case Attribute::SanitizeThread:
-                case Attribute::SanitizeHWAddress:
-                case Attribute::SanitizeMemTag:
-                case Attribute::SpeculativeLoadHardening:
-                case Attribute::StackProtect:
-                case Attribute::StackProtectReq:
-                case Attribute::StackProtectStrong:
-                case Attribute::StrictFP:
-                case Attribute::UWTable:
-                case Attribute::VScaleRange:
-                case Attribute::NoCfCheck:
-                case Attribute::MustProgress:
-                case Attribute::NoProfile:
-                    break;
-                }
-
-            newFunction->addFnAttr(Attr);
-        }
-#endif
-
-        if (newRootNode) {
-            newFunction->getBasicBlockList().push_back(newRootNode);
-        }  else {
-            newRootNode = BasicBlock::Create(newFunction->getContext(), "newFuncRoot", newFunction);
-            //  auto BranchI = BranchInst::Create(newRootNode, newRootNode); // FIXME
-        }
 
 
+
+     
+
+
+        // TODO: Make StructTy a field
         StructType *StructTy = nullptr;
         if (AggregateArgs && (inputs.size() + outputs.size() > 0)) {
             //StructTy = StructType::get(M->getContext(), paramTy);
@@ -2501,7 +2322,7 @@ Function *CodeExtractor::extractCodeRegionByCopy(const CodeExtractorAnalysisCach
                     I->replaceUsesOfWith(header, newHeader);
 
         //return newFunction;
-#endif
+
         BasicBlock *AllocaBlock = BasicBlock::Create(header->getContext(),  "entry", newFunction,  newRootNode);
      auto  BranchI =   BranchInst::Create(newRootNode, AllocaBlock);
      applyFirstDebugLoc(oldFunction, Blocks.getArrayRef(), BranchI);

@@ -169,7 +169,10 @@ public:
         ValueSet &Inputs, ValueSet &Outputs, 
       const   BlockFrequency& EntryFreq,
         const  DenseMap<BasicBlock *, BlockFrequency> &ExitWeights,  const   SmallPtrSet<BasicBlock *, 1> &ExitBlocks,
-       const  ValueSet &SinkingCands,const ValueSet & HoistingCands, BasicBlock *CommonExit,   Function *newFunction );
+       const  ValueSet &SinkingCands,const ValueSet & HoistingCands, BasicBlock *CommonExit,   Function *newFunction, 
+        BasicBlock *   codeReplacer,
+        BasicBlock *  NewEntry,
+        BasicBlock *  newRootNode  );
 
     /// Verify that assumption cache isn't stale after a region is extracted.
     /// Returns true when verifier finds errors. AssumptionCache is passed as
@@ -249,6 +252,12 @@ public:
                                 BasicBlock *header,
                                 BasicBlock *&newRootNode, BasicBlock *newHeader,
                                 Function *oldFunction, Module *M,   bool KeepOldBlocks,    ValueToValueMapTy &VMap);
+
+    void handleParams( 
+        Function *oldFunction, Function *newFunction,
+        const ValueSet &inputs,
+        const ValueSet &outputs) ;
+
 
     Function *constructFunction2(const ValueSet &inputs,
         const ValueSet &outputs,
