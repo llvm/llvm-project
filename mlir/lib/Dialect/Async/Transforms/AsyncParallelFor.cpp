@@ -252,12 +252,9 @@ createParallelComputeFunction(scf::ParallelOp op, PatternRewriter &rewriter) {
   Value blockFirstIndex = b.create<arith::MulIOp>(blockIndex, blockSize);
 
   // The last one-dimensional index in the block defined by the `blockIndex`:
-  //   blockLastIndex = max(blockFirstIndex + blockSize, tripCount) - 1
   Value blockEnd0 = b.create<arith::AddIOp>(blockFirstIndex, blockSize);
-  Value blockEnd1 =
-      b.create<arith::CmpIOp>(arith::CmpIPredicate::sge, blockEnd0, tripCount);
-  Value blockEnd2 = b.create<SelectOp>(blockEnd1, tripCount, blockEnd0);
-  Value blockLastIndex = b.create<arith::SubIOp>(blockEnd2, c1);
+  Value blockEnd1 = b.create<arith::MinSIOp>(blockEnd0, tripCount);
+  Value blockLastIndex = b.create<arith::SubIOp>(blockEnd1, c1);
 
   // Convert one-dimensional indices to multi-dimensional coordinates.
   auto blockFirstCoord = delinearize(b, blockFirstIndex, tripCounts);
@@ -696,17 +693,9 @@ AsyncParallelForRewrite::matchAndRewrite(scf::ParallelOp op,
     //   blockSize = min(tripCount,
     //                   max(ceil_div(tripCount, maxComputeBlocks),
     //                       ceil_div(minTaskSize, bodySize)))
-    Value bs0 = b.create<arith::DivSIOp>(tripCount, maxComputeBlocks);
-    Value bs1 =
-        b.create<arith::CmpIOp>(arith::CmpIPredicate::sge, bs0, minTaskSizeCst);
-    Value bs2 = b.create<SelectOp>(bs1, bs0, minTaskSizeCst);
-    Value bs3 =
-        b.create<arith::CmpIOp>(arith::CmpIPredicate::sle, tripCount, bs2);
-    Value blockSize0 = b.create<SelectOp>(bs3, tripCount, bs2);
-    Value blockCount0 = b.create<arith::CeilDivSIOp>(tripCount, blockSize0);
-
-    // Compute balanced block size for the estimated block count.
-    Value blockSize = b.create<arith::CeilDivSIOp>(tripCount, blockCount0);
+    Value bs0 = b.create<arith::CeilDivSIOp>(tripCount, maxComputeBlocks);
+    Value bs1 = b.create<arith::MaxSIOp>(bs0, minTaskSizeCst);
+    Value blockSize = b.create<arith::MinSIOp>(tripCount, bs1);
     Value blockCount = b.create<arith::CeilDivSIOp>(tripCount, blockSize);
 
     // Create a parallel compute function that takes a block id and computes the
