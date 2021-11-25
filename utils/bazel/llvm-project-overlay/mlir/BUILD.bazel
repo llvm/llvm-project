@@ -6347,6 +6347,24 @@ cc_library(
 )
 
 cc_library(
+    name = "SCFBufferizableOpInterfaceImpl",
+    srcs = [
+        "lib/Dialect/Linalg/ComprehensiveBufferize/SCFInterfaceImpl.cpp",
+    ],
+    hdrs = [
+        "include/mlir/Dialect/Linalg/ComprehensiveBufferize/SCFInterfaceImpl.h",
+    ],
+    includes = ["include"],
+    deps = [
+        ":BufferizableOpInterface",
+        ":IR",
+        ":SCFDialect",
+        ":Support",
+        "//llvm:Support",
+    ],
+)
+
+cc_library(
     name = "TensorBufferizableOpInterfaceImpl",
     srcs = [
         "lib/Dialect/Linalg/ComprehensiveBufferize/TensorInterfaceImpl.cpp",
@@ -6598,6 +6616,7 @@ cc_library(
         ":MathDialect",
         ":MemRefDialect",
         ":Pass",
+        ":SCFBufferizableOpInterfaceImpl",
         ":SCFDialect",
         ":SCFTransforms",
         ":StandardOps",
@@ -6631,7 +6650,6 @@ cc_library(
         ":InferTypeOpInterface",
         ":MemRefDialect",
         ":Pass",
-        ":SCFDialect",
         ":StandardOps",
         ":Support",
         "//llvm:Support",
