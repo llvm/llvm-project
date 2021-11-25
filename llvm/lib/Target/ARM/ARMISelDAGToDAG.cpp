@@ -3274,7 +3274,8 @@ bool ARMDAGToDAGISel::tryFP_TO_INT(SDNode *N, SDLoc dl) {
     return false;
   unsigned int ScalarBits = Type.getScalarSizeInBits();
 
-  bool IsUnsigned = N->getOpcode() == ISD::FP_TO_UINT;
+  bool IsUnsigned = N->getOpcode() == ISD::FP_TO_UINT ||
+                    N->getOpcode() == ISD::FP_TO_UINT_SAT;
   SDNode *Node = N->getOperand(0).getNode();
 
   // floating-point to fixed-point with one fractional bit gets turned into an
@@ -3764,6 +3765,8 @@ void ARMDAGToDAGISel::Select(SDNode *N) {
     break;
   case ISD::FP_TO_UINT:
   case ISD::FP_TO_SINT:
+  case ISD::FP_TO_UINT_SAT:
+  case ISD::FP_TO_SINT_SAT:
     if (tryFP_TO_INT(N, dl))
       return;
     break;
