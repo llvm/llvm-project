@@ -460,7 +460,7 @@ public:
     mlir::Value VisitCastExpr(CastExpr *CE) {
       Expr *E = CE->getSubExpr();
       QualType DestTy = CE->getType();
-      CastKind Kind = CE->getCastKind();
+      clang::CastKind Kind = CE->getCastKind();
       switch (Kind) {
       case CK_LValueToRValue:
         assert(Builder.astCtx.hasSameUnqualifiedType(E->getType(), DestTy));

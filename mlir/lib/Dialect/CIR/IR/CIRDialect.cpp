@@ -144,6 +144,8 @@ void mlir::cir::buildTerminatedBody(OpBuilder &builder, Location loc) {}
 /// not a constant.
 void IfOp::getSuccessorRegions(mlir::RegionBranchPoint point,
                                SmallVectorImpl<RegionSuccessor> &regions) {
+  assert(0 && "not implemented");
+
   // The `then` and the `else` region branch back to the parent operation.
   if (!point.isParent()) {
     regions.push_back(RegionSuccessor());
