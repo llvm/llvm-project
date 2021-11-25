@@ -78,14 +78,15 @@ int main(int, char**)
     std::list<int>   l; l.push_back(2);
     std::array<int, 1> a; a[0] = 3;
     std::initializer_list<int> il = { 4 };
+    using SSize = std::common_type_t<std::ptrdiff_t, std::make_signed_t<std::size_t>>;
     test_container ( v );
-    ASSERT_SAME_TYPE(ptrdiff_t, decltype(std::ssize(v)));
+    ASSERT_SAME_TYPE(SSize, decltype(std::ssize(v)));
     test_container ( l );
-    ASSERT_SAME_TYPE(ptrdiff_t, decltype(std::ssize(l)));
+    ASSERT_SAME_TYPE(SSize, decltype(std::ssize(l)));
     test_container ( a );
-    ASSERT_SAME_TYPE(ptrdiff_t, decltype(std::ssize(a)));
+    ASSERT_SAME_TYPE(SSize, decltype(std::ssize(a)));
     test_container ( il );
-    ASSERT_SAME_TYPE(ptrdiff_t, decltype(std::ssize(il)));
+    ASSERT_SAME_TYPE(SSize, decltype(std::ssize(il)));
 
     test_const_container ( v );
     test_const_container ( l );
@@ -94,7 +95,7 @@ int main(int, char**)
 
     std::string_view sv{"ABC"};
     test_container ( sv );
-    ASSERT_SAME_TYPE(ptrdiff_t, decltype(std::ssize(sv)));
+    ASSERT_SAME_TYPE(SSize, decltype(std::ssize(sv)));
     test_const_container ( sv );
 
     static constexpr int arrA [] { 1, 2, 3 };
