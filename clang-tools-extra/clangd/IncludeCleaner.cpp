@@ -317,12 +317,12 @@ std::vector<const Inclusion *> computeUnusedIncludes(ParsedAST &AST) {
 
 std::vector<Diag> issueUnusedIncludesDiagnostics(ParsedAST &AST,
                                                  llvm::StringRef Code) {
-  trace::Span Tracer("IncludeCleaner::issueUnusedIncludesDiagnostics");
   const Config &Cfg = Config::current();
   if (Cfg.Diagnostics.UnusedIncludes != Config::UnusedIncludesPolicy::Strict ||
       Cfg.Diagnostics.SuppressAll ||
       Cfg.Diagnostics.Suppress.contains("unused-includes"))
     return {};
+  trace::Span Tracer("IncludeCleaner::issueUnusedIncludesDiagnostics");
   std::vector<Diag> Result;
   std::string FileName =
       AST.getSourceManager()
