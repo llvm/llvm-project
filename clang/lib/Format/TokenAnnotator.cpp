@@ -314,6 +314,7 @@ private:
     //
     // void (*FunctionPointer)(void);
     // void (&FunctionReference)(void);
+    // void (&&FunctionReference)(void);
     // void (^ObjCBlock)(void);
     bool MightBeFunctionType = !Contexts[Contexts.size() - 2].IsExpression;
     bool ProbablyFunctionType =
