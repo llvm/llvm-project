@@ -1,0 +1,44 @@
+version: "3.4"
+
+services:
+
+
+  llvm-debug:
+    image: llvm-debug
+    # LLVM doesn't need Administrator to compile
+    user: ContainerUser
+    storage_opt:
+    # Default windows container C: drive max size is 20G, let's be safe here
+      size: '100G'
+    build:
+      context: "."
+    deploy:
+    # If you use Process Isolation you can remove these
+    # If you use Hyper-V and don't set a limit it will default to 
+    # something like 2 cores and ~1GB of RAM
+      resources:
+        limits:
+          cpus: ${NUMBER_OF_PROCESSORS}
+    # I tried with 8GB and it crashed
+          memory: 16GB
+    volumes:
+      # Mount the source code inside as readonly
+      - ../../../../:C:/llvm-project:ro
+      # Volume to get the artifacts out
+      - ./llvm-build-debug:C:/build/Debug
+    # Disable network access, not needed
+    networks:
+      - none
+    # https://llvm.org/docs/GettingStarted.html#local-llvm-configuration
+    # This for example will build llvm+clang+X86 target using x64 host build tools
+    command: >
+      cmd /c "echo [Creating LLVM CMake project]
+      && cd C:\build
+      && cmake -DLLVM_ENABLE_PROJECTS=clang -DLLVM_TARGETS_TO_BUILD=X86 -G "Visual Studio 16 2019" -A x64 -Thost=x64 C:\llvm-project\llvm
+      && echo [Building LLVM]
+      && cmake --build ."
+
+networks:
+
+  none:
+    external: true
