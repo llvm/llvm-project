@@ -177,6 +177,7 @@ struct ThreadSignalContext {
 struct AtExitCtx {
   void (*f)();
   void *arg;
+  uptr pc;
 };
 
 // InterceptorContext holds all global data required for interceptors.
@@ -367,7 +368,10 @@ TSAN_INTERCEPTOR(int, pause, int fake) {
   return BLOCK_REAL(pause)(fake);
 }
 
-static void at_exit_wrapper() {
+// Note: we specifically call the function in such strange way
+// with "installed_at" because in reports it will appear between
+// callback frames and the frame that installed the callback.
+static void at_exit_callback_installed_at() {
   AtExitCtx *ctx;
   {
     // Ensure thread-safety.
@@ -379,15 +383,21 @@ static void at_exit_wrapper() {
     interceptor_ctx()->AtExitStack.PopBack();
   }
 
-  Acquire(cur_thread(), (uptr)0, (uptr)ctx);
+  ThreadState *thr = cur_thread();
+  Acquire(thr, ctx->pc, (uptr)ctx);
+  FuncEntry(thr, ctx->pc);
   ((void(*)())ctx->f)();
+  FuncExit(thr);
   Free(ctx);
 }
 
-static void cxa_at_exit_wrapper(void *arg) {
-  Acquire(cur_thread(), 0, (uptr)arg);
+static void cxa_at_exit_callback_installed_at(void *arg) {
+  ThreadState *thr = cur_thread();
   AtExitCtx *ctx = (AtExitCtx*)arg;
+  Acquire(thr, ctx->pc, (uptr)arg);
+  FuncEntry(thr, ctx->pc);
   ((void(*)(void *arg))ctx->f)(ctx->arg);
+  FuncExit(thr);
   Free(ctx);
 }
 
@@ -401,7 +411,7 @@ TSAN_INTERCEPTOR(int, atexit, void (*f)()) {
   // We want to setup the atexit callback even if we are in ignored lib
   // or after fork.
   SCOPED_INTERCEPTOR_RAW(atexit, f);
-  return setup_at_exit_wrapper(thr, pc, (void(*)())f, 0, 0);
+  return setup_at_exit_wrapper(thr, GET_CALLER_PC(), (void (*)())f, 0, 0);
 }
 #endif
 
@@ -409,7 +419,7 @@ TSAN_INTERCEPTOR(int, __cxa_atexit, void (*f)(void *a), void *arg, void *dso) {
   if (in_symbolizer())
     return 0;
   SCOPED_TSAN_INTERCEPTOR(__cxa_atexit, f, arg, dso);
-  return setup_at_exit_wrapper(thr, pc, (void(*)())f, arg, dso);
+  return setup_at_exit_wrapper(thr, GET_CALLER_PC(), (void (*)())f, arg, dso);
 }
 
 static int setup_at_exit_wrapper(ThreadState *thr, uptr pc, void(*f)(),
@@ -417,6 +427,7 @@ static int setup_at_exit_wrapper(ThreadState *thr, uptr pc, void(*f)(),
   auto *ctx = New<AtExitCtx>();
   ctx->f = f;
   ctx->arg = arg;
+  ctx->pc = pc;
   Release(thr, pc, (uptr)ctx);
   // Memory allocation in __cxa_atexit will race with free during exit,
   // because we do not see synchronization around atexit callback list.
@@ -432,25 +443,27 @@ static int setup_at_exit_wrapper(ThreadState *thr, uptr pc, void(*f)(),
     // due to atexit_mu held on exit from the calloc interceptor.
     ScopedIgnoreInterceptors ignore;
 
-    res = REAL(__cxa_atexit)((void (*)(void *a))at_exit_wrapper, 0, 0);
+    res = REAL(__cxa_atexit)((void (*)(void *a))at_exit_callback_installed_at,
+                             0, 0);
     // Push AtExitCtx on the top of the stack of callback functions
     if (!res) {
       interceptor_ctx()->AtExitStack.PushBack(ctx);
     }
   } else {
-    res = REAL(__cxa_atexit)(cxa_at_exit_wrapper, ctx, dso);
+    res = REAL(__cxa_atexit)(cxa_at_exit_callback_installed_at, ctx, dso);
   }
   ThreadIgnoreEnd(thr);
   return res;
 }
 
 #if !SANITIZER_MAC && !SANITIZER_NETBSD
-static void on_exit_wrapper(int status, void *arg) {
+static void on_exit_callback_installed_at(int status, void *arg) {
   ThreadState *thr = cur_thread();
-  uptr pc = 0;
-  Acquire(thr, pc, (uptr)arg);
   AtExitCtx *ctx = (AtExitCtx*)arg;
+  Acquire(thr, ctx->pc, (uptr)arg);
+  FuncEntry(thr, ctx->pc);
   ((void(*)(int status, void *arg))ctx->f)(status, ctx->arg);
+  FuncExit(thr);
   Free(ctx);
 }
 
@@ -461,11 +474,12 @@ TSAN_INTERCEPTOR(int, on_exit, void(*f)(int, void*), void *arg) {
   auto *ctx = New<AtExitCtx>();
   ctx->f = (void(*)())f;
   ctx->arg = arg;
+  ctx->pc = GET_CALLER_PC();
   Release(thr, pc, (uptr)ctx);
   // Memory allocation in __cxa_atexit will race with free during exit,
   // because we do not see synchronization around atexit callback list.
   ThreadIgnoreBegin(thr, pc);
-  int res = REAL(on_exit)(on_exit_wrapper, ctx);
+  int res = REAL(on_exit)(on_exit_callback_installed_at, ctx);
   ThreadIgnoreEnd(thr);
   return res;
 }
