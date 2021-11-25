@@ -79,6 +79,24 @@ void thread(int tid) {
     }
     break;
   }
+#if TSAN_VECTORIZE
+  case 12: {
+    // The compiler wants to optimize all this away.
+    // Use volatile to prevent optimization, but then use kBlock
+    // to avoid the additional non-vector load in the inner loop.
+    // Also use only even indexes to prevent compiler from
+    // inserting memset.
+    const int kBlock = 128;
+    __m128i data[kBlock * 2];
+    __m128i *volatile vptr = data;
+    for (int i = 0; i < bench_niter / kBlock; i++) {
+      __m128i *ptr = vptr;
+      for (int j = 0; j < kBlock; j++)
+        _mm_store_si128(&ptr[j * 2], _mm_setzero_si128());
+    }
+    break;
+  }
+#endif
   }
 }
 
