@@ -40,15 +40,16 @@ using namespace mlir::linalg;
 /// Analysis class to support PadTensorOp hoisting across multiple enclosing
 /// loops. The failure conditions are:
 ///   1. Pad op has a use that is not an input of a LinalgOp.
-///   2. There is no immediately enclosing scf::ForOp.
-///   3. The backward slice from the pad op to the scf::ForOp to hoist above
+///   2. Pad op does not have a constant padding value.
+///   3. There is no immediately enclosing scf::ForOp.
+///   4. The backward slice from the pad op to the scf::ForOp to hoist above
 ///      contains an unknown op with a region.
-///   4. The backward slice from the pad op to the scf::ForOp to hoist above is
+///   5. The backward slice from the pad op to the scf::ForOp to hoist above is
 ///      empty.
-///   5. The source tensor of pad op is not defined by an extract slice op.
-///   6. The source tensor of the extract slice op is not defined outside of
+///   6. The source tensor of pad op is not defined by an extract slice op.
+///   7. The source tensor of the extract slice op is not defined outside of
 ///      the outermost enclosing scf::ForOp.
-///   7. There is no enclosing scf::ForOp that indexes the padded data.
+///   8. There is no enclosing scf::ForOp that indexes the padded data.
 /// Other cases succeed and will trigger hoisting of the pad op.
 struct HoistingAnalysis {
   HoistingAnalysis(PadTensorOp padTensorOp, int numLoops);
@@ -180,6 +181,16 @@ HoistingAnalysis::HoistingAnalysis(PadTensorOp padTensorOp, int numLoops) {
   }
   if (!outermostEnclosingForOp.isDefinedOutsideOfLoop(sliceOp.source())) {
     LLVM_DEBUG(DBGS() << "Source not defined outside of loops -> skip\n");
+    return;
+  }
+
+  // Check the region of `padTensorOp` depends on a constant only. Adding
+  // hoisting support for arbitrary padding regions would require cloning all
+  // dependencies captured by the padding region.
+  Value paddingValue = padTensorOp.getConstantPaddingValue();
+  if (!paddingValue ||
+      !isa_and_nonnull<arith::ConstantOp>(paddingValue.getDefiningOp())) {
+    LLVM_DEBUG(DBGS() << "Cannot find constant padding value -> skip\n");
     return;
   }
 
