@@ -162,9 +162,7 @@ bool EHStreamer::callToNoUnwindFunction(const MachineInstr *MI) {
   bool MarkedNoUnwind = false;
   bool SawFunc = false;
 
-  for (unsigned I = 0, E = MI->getNumOperands(); I != E; ++I) {
-    const MachineOperand &MO = MI->getOperand(I);
-
+  for (const MachineOperand &MO : MI->operands()) {
     if (!MO.isGlobal()) continue;
 
     const Function *F = dyn_cast<Function>(MO.getGlobal());
