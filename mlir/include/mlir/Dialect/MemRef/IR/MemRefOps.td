@@ -37,7 +37,7 @@ class MemRef_Op<string mnemonic, list<OpTrait> traits = []>
 
 // Base class for memref allocating ops: alloca and alloc.
 //
-//   %0 = alloclike(%m)[%s] : memref<8x?xf32, (d0, d1)[s0] -> ((d0 + s0), d1)>
+//   %0 = alloclike(%m)[%s] : memref<8x?xf32, affine_map<(d0, d1)[s0] -> (d0 + s0, d1)>>
 //
 class AllocLikeOp<string mnemonic,
                   Resource resource,
@@ -423,8 +423,8 @@ def MemRef_DeallocOp : MemRef_Op<"dealloc", [MemRefsNormalizable]> {
     Example:
 
     ```mlir
-    %0 = memref.alloc() : memref<8x64xf32, (d0, d1) -> (d0, d1), 1>
-    memref.dealloc %0 : memref<8x64xf32, (d0, d1) -> (d0, d1), 1>
+    %0 = memref.alloc() : memref<8x64xf32, affine_map<(d0, d1) -> (d0, d1), 1>>
+    memref.dealloc %0 : memref<8x64xf32,  affine_map<(d0, d1) -> (d0, d1), 1>>
     ```
   }];
 
@@ -518,11 +518,11 @@ def MemRef_DmaStartOp : MemRef_Op<"dma_start"> {
     ```mlir
     %num_elements = arith.constant 256
     %idx = arith.constant 0 : index
-    %tag = alloc() : memref<1 x i32, (d0) -> (d0), 4>
+    %tag = alloc() : memref<1 x i32, affine_map<(d0) -> (d0)>, 4>
     dma_start %src[%i, %j], %dst[%k, %l], %num_elements, %tag[%idx] :
-      memref<40 x 128 x f32>, (d0) -> (d0), 0>,
-      memref<2 x 1024 x f32>, (d0) -> (d0), 1>,
-      memref<1 x i32>, (d0) -> (d0), 2>
+      memref<40 x 128 x f32>, affine_map<(d0) -> (d0)>, 0>,
+      memref<2 x 1024 x f32>, affine_map<(d0) -> (d0)>, 1>,
+      memref<1 x i32>, affine_map<(d0) -> (d0)>, 2>
     ```
 
     If %stride and %num_elt_per_stride are specified, the DMA is expected to
@@ -661,12 +661,12 @@ def MemRef_DmaWaitOp : MemRef_Op<"dma_wait"> {
 
    ```mlir
     dma_start %src[%i, %j], %dst[%k, %l], %num_elements, %tag[%index] :
-      memref<2048 x f32>, (d0) -> (d0), 0>,
-      memref<256 x f32>, (d0) -> (d0), 1>
-      memref<1 x i32>, (d0) -> (d0), 2>
+      memref<2048 x f32>, affine_map<(d0) -> (d0)>, 0>,
+      memref<256 x f32>, affine_map<(d0) -> (d0)>, 1>
+      memref<1 x i32>, affine_map<(d0) -> (d0)>, 2>
     ...
     ...
-    dma_wait %tag[%index], %num_elements : memref<1 x i32, (d0) -> (d0), 2>
+    dma_wait %tag[%index], %num_elements : memref<1 x i32, affine_map<(d0) -> (d0)>, 2>
     ```
   }];
   let arguments = (ins AnyMemRef:$tagMemRef,
@@ -1312,19 +1312,19 @@ def SubViewOp : BaseOpWithOffsetSizesAndStrides<
     Example 1:
 
     ```mlir
-    %0 = memref.alloc() : memref<64x4xf32, (d0, d1) -> (d0 * 4 + d1)>
+    %0 = memref.alloc() : memref<64x4xf32, affine_map<(d0, d1) -> (d0 * 4 + d1)>>
 
     // Create a sub-view of "base" memref '%0' with offset arguments '%c0',
     // dynamic sizes for each dimension, and stride arguments '%c1'.
     %1 = memref.subview %0[%c0, %c0][%size0, %size1][%c1, %c1]
-      : memref<64x4xf32, (d0, d1) -> (d0 * 4 + d1) > to
-        memref<?x?xf32, (d0, d1)[s0, s1] -> (d0 * s1 + d1 + s0)>
+      : memref<64x4xf32, affine_map<(d0, d1) -> (d0 * 4 + d1)>> to
+        memref<?x?xf32, affine_map<(d0, d1)[s0, s1] -> (d0 * s1 + d1 + s0)>>
     ```
 
     Example 2:
 
     ```mlir
-    %0 = memref.alloc() : memref<8x16x4xf32, (d0, d1, d1) -> (d0 * 64 + d1 * 4 + d2)>
+    %0 = memref.alloc() : memref<8x16x4xf32, affine_map<(d0, d1, d2) -> (d0 * 64 + d1 * 4 + d2)>>
 
     // Create a sub-view of "base" memref '%0' with dynamic offsets, sizes,
     // and strides.
@@ -1334,20 +1334,20 @@ def SubViewOp : BaseOpWithOffsetSizesAndStrides<
     // strides in each dimension, are represented in the view memref layout
     // map as symbols 's1', 's2' and 's3'.
     %1 = memref.subview %0[%i, %j, %k][%size0, %size1, %size2][%x, %y, %z]
-      : memref<8x16x4xf32, (d0, d1, d2) -> (d0 * 64 + d1 * 4 + d2)> to
+      : memref<8x16x4xf32, affine_map<(d0, d1, d2) -> (d0 * 64 + d1 * 4 + d2)>> to
         memref<?x?x?xf32,
-          (d0, d1, d2)[s0, s1, s2, s3] -> (d0 * s1 + d1 * s2 + d2 * s3 + s0)>
+          affine_map<(d0, d1, d2)[s0, s1, s2, s3] -> (d0 * s1 + d1 * s2 + d2 * s3 + s0)>>
     ```
 
     Example 3:
 
     ```mlir
-    %0 = memref.alloc() : memref<8x16x4xf32, (d0, d1, d1) -> (d0 * 64 + d1 * 4 + d2)>
+    %0 = memref.alloc() : memref<8x16x4xf32, affine_map<(d0, d1, d2) -> (d0 * 64 + d1 * 4 + d2)>>
 
     // Subview with constant offsets, sizes and strides.
-    %1 = memref.subview %0[0, 2, 0][4, 4, 4][64, 4, 1]
-      : memref<8x16x4xf32, (d0, d1, d2) -> (d0 * 64 + d1 * 4 + d2)> to
-        memref<4x4x4xf32, (d0, d1, d2) -> (d0 * 64 + d1 * 4 + d2 + 8)>
+    %1 = memref.subview %0[0, 2, 0][4, 4, 4][1, 1, 1]
+      : memref<8x16x4xf32, affine_map<(d0, d1, d2) -> (d0 * 64 + d1 * 4 + d2)>> to
+        memref<4x4x4xf32, affine_map<(d0, d1, d2) -> (d0 * 64 + d1 * 4 + d2 + 8)>>
     ```
 
     Example 4:
@@ -1390,8 +1390,8 @@ def SubViewOp : BaseOpWithOffsetSizesAndStrides<
     //
     // where, r0 = o0 * s1 + o1 * s2 + s0, r1 = s1 * t0, r2 = s2 * t1.
     %1 = memref.subview %0[%i, %j][4, 4][%x, %y] :
-      : memref<?x?xf32, (d0, d1)[s0, s1, s2] -> (d0 * s1 + d1 * s2 + s0)> to
-        memref<4x4xf32, (d0, d1)[r0, r1, r2] -> (d0 * r1 + d1 * r2 + r0)>
+      : memref<?x?xf32, affine_map<(d0, d1)[s0, s1, s2] -> (d0 * s1 + d1 * s2 + s0)>> to
+        memref<4x4xf32, affine_map<(d0, d1)[r0, r1, r2] -> (d0 * r1 + d1 * r2 + r0)>>
 
     // Note that the subview op does not guarantee that the result
     // memref is "inbounds" w.r.t to base memref. It is upto the client
@@ -1405,6 +1405,13 @@ def SubViewOp : BaseOpWithOffsetSizesAndStrides<
     // Rank-reducing subview.
     %1 = memref.subview %0[0, 0, 0][1, 16, 4][1, 1, 1] :
       memref<8x16x4xf32> to memref<16x4xf32>
+
+    // Original layout:
+    // (d0, d1, d2) -> (64 * d0 + 16 * d1 + d2)
+    // Subviewed layout:
+    // (d0, d1, d2) -> (64 * (d0 + 3) + 4 * (d1 + 4) + d2 + 2) = (64 * d0 + 4 * d1 + d2 + 210)
+    // After rank reducing:
+    // (d0, d1) -> (4 * d0 + d1 + 210)
     %3 = memref.subview %2[3, 4, 2][1, 6, 3][1, 1, 1] :
       memref<8x16x4xf32> to memref<6x3xf32, offset: 210, strides: [4, 1]>
     ```
