@@ -476,7 +476,8 @@ public:
             mlir::cir::NullAttr::get(Builder.builder.getContext(), Ty));
       }
       case CK_IntegralToBoolean: {
-        return buildIntToBoolConversion(Visit(E));
+        return buildIntToBoolConversion(
+            Visit(E), Builder.getLoc(CE->getSourceRange().getBegin()));
       }
       default:
         emitError(Builder.getLoc(CE->getExprLoc()),
@@ -501,19 +502,22 @@ public:
       return {};
     }
 
-    mlir::Value buildIntToBoolConversion(mlir::Value V) {
+    mlir::Value buildIntToBoolConversion(mlir::Value srcVal,
+                                         mlir::Location loc) {
       // Because of the type rules of C, we often end up computing a
       // logical value, then zero extending it to int, then wanting it
-      // as a logical value again. TODO: optimize this common case here
-      // or leave it for later CIR passes?
-      assert(0 && "not implemented");
-      // return Builder.CreateIsNotNull(V, "tobool");
-      return nullptr;
+      // as a logical value again.
+      // TODO: optimize this common case here or leave it for later
+      // CIR passes?
+      mlir::Type boolTy = Builder.getCIRType(Builder.astCtx.BoolTy);
+      return Builder.builder.create<mlir::cir::CastOp>(
+          loc, boolTy, mlir::cir::CastKind::int_to_bool, srcVal);
     }
 
     /// EmitConversionToBool - Convert the specified expression value to a
     /// boolean (i1) truth value.  This is equivalent to "Val != 0".
-    mlir::Value buildConversionToBool(mlir::Value Src, QualType SrcType) {
+    mlir::Value buildConversionToBool(mlir::Value Src, QualType SrcType,
+                                      mlir::Location loc) {
       assert(SrcType.isCanonical() && "EmitScalarConversion strips typedefs");
 
       if (SrcType->isRealFloatingType())
@@ -528,7 +532,7 @@ public:
 
       assert(Src.getType().isa<mlir::IntegerType>() &&
              "pointer source not implemented");
-      return buildIntToBoolConversion(Src);
+      return buildIntToBoolConversion(Src, loc);
     }
 
     /// Emit a conversion from the specified type to the specified destination
@@ -555,7 +559,7 @@ public:
       // Handle conversions to bool first, they are special: comparisons against
       // 0.
       if (DstType->isBooleanType())
-        return buildConversionToBool(Src, SrcType);
+        return buildConversionToBool(Src, SrcType, Builder.getLoc(Loc));
 
       mlir::Type DstTy = Builder.getCIRType(DstType);
 
