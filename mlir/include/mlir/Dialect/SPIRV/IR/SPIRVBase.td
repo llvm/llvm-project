@@ -1210,19 +1210,22 @@ def SPV_C_IntegerFunctions2INTEL                      : I32EnumAttrCase<"Integer
   ];
 }
 def SPV_C_AtomicFloat32AddEXT                         : I32EnumAttrCase<"AtomicFloat32AddEXT", 6033> {
-  list<I32EnumAttrCase> implies = [SPV_C_Shader];
+  // Float atomics also supported in kernels (https://github.com/KhronosGroup/SPIRV-Headers/pull/257).
+  // list<I32EnumAttrCase> implies = [SPV_C_Shader];
   list<Availability> availability = [
     Extension<[SPV_EXT_shader_atomic_float_add]>
   ];
 }
 def SPV_C_AtomicFloat64AddEXT                         : I32EnumAttrCase<"AtomicFloat64AddEXT", 6034> {
-  list<I32EnumAttrCase> implies = [SPV_C_Shader];
+  // Float atomics also supported in kernels (https://github.com/KhronosGroup/SPIRV-Headers/pull/257).
+  // list<I32EnumAttrCase> implies = [SPV_C_Shader];
   list<Availability> availability = [
     Extension<[SPV_EXT_shader_atomic_float_add]>
   ];
 }
 def SPV_C_AtomicFloat16AddEXT                         : I32EnumAttrCase<"AtomicFloat16AddEXT", 6095> {
-  list<I32EnumAttrCase> implies = [SPV_C_Shader];
+  // Float atomics also supported in kernels (https://github.com/KhronosGroup/SPIRV-Headers/pull/257).
+  // list<I32EnumAttrCase> implies = [SPV_C_Shader];
   list<Availability> availability = [
     Extension<[SPV_EXT_shader_atomic_float16_add]>
   ];
