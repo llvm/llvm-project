@@ -8,7 +8,7 @@
 # RUN: llvm-readelf -hx .shstrtab %t | cmp %t.hexdump.out -
 # RUN: llvm-readelf -hx.shstrtab %t | cmp %t.hexdump.out -
 
-## A sanity check to verify that the .shstrtab section has index 2.
+## A basic correctness check to verify that the .shstrtab section has index 2.
 # RUN: llvm-readelf -S %t | FileCheck %s --check-prefix=ELF-SEC
 # ELF-SEC: [ 2] .shstrtab
 

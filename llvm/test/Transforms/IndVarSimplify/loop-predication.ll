@@ -170,7 +170,7 @@ exit:                                             ; preds = %guarded, %entry
 
 
 
-; Base case, but in LFTR form (just for sanity checking)
+; Base case, but in LFTR form (just for basic correctness checking)
 define i32 @test2(i32* %array, i32 %length, i32 %n) {
 ; CHECK-LABEL: @test2(
 ; CHECK-NEXT:  loop.preheader:

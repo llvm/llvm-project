@@ -3,8 +3,8 @@
 # RUN:     | llvm-objdump --mattr=+e -M no-aliases -d -r - \
 # RUN:     | FileCheck -check-prefix=CHECK-DIS %s
 
-# Perform a simple sanity check that registers x16-x31 (and the equivalent
-# ABI names) are rejected for RV32E, when both assembling and disassembling.
+# Perform a simple check that registers x16-x31 (and the equivalent ABI names)
+# are rejected for RV32E, when both assembling and disassembling.
 
 
 # CHECK-DIS: 37 18 00 00 <unknown>

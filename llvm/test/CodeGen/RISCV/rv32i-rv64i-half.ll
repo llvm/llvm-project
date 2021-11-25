@@ -4,7 +4,7 @@
 ; RUN: llc -mtriple=riscv64 -verify-machineinstrs < %s \
 ; RUN:   | FileCheck -check-prefix=RV64I %s
 
-; This file provides a simple sanity check of half operations for
+; This file provides a simple test check of half operations for
 ; RV32I and RV64I. This is primarily intended to ensure that custom
 ; legalisation or DAG combines aren't incorrectly triggered when the Zfh
 ; extension isn't enabled.

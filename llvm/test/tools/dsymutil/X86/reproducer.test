@@ -10,14 +10,14 @@ RUN: cp %p/../Inputs/basic1.macho.x86_64.o %t/Inputs
 RUN: cp %p/../Inputs/basic2.macho.x86_64.o %t/Inputs
 RUN: cp %p/../Inputs/basic3.macho.x86_64.o %t/Inputs
 
-# Sanity check all the files are present.
+# Verify all the files are present.
 RUN: dsymutil -f -o - -oso-prepend-path=%t %t/Inputs/basic.macho.x86_64 | llvm-dwarfdump -a - | FileCheck %s
 
 # Create a reproducer.
 RUN: env DSYMUTIL_REPRODUCER_PATH=%t.repro dsymutil -gen-reproducer -f -o %t.generate -oso-prepend-path=%t %t/Inputs/basic.macho.x86_64 | FileCheck %s --check-prefixes=REPRODUCER
 RUN: llvm-dwarfdump -a %t.generate | FileCheck %s
 
-# Remove the input files and sanity check that was successful.
+# Remove the input files and verify that was successful.
 RUN: rm -rf %t
 RUN: not dsymutil -f -o %t.error -oso-prepend-path=%t %t/Inputs/basic.macho.x86_64 2>&1 | FileCheck %s --check-prefix=ERROR
 

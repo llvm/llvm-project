@@ -4,7 +4,7 @@
 # RUN:     | llvm-objdump -M no-aliases -d -r - \
 # RUN:     | FileCheck -check-prefixes=CHECK-OBJ,CHECK-ASM-AND-OBJ %s
 
-# This file provides a basic sanity check for RV32E, checking that the expected
+# This file provides a basic test for RV32E, checking that the expected
 # set of registers and instructions are accepted.
 
 # CHECK-ASM-AND-OBJ: lui zero, 1

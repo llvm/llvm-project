@@ -2,8 +2,8 @@
 ; RUN: llc -mtriple=riscv32 -mattr=+d -verify-machineinstrs < %s \
 ; RUN:   | FileCheck -check-prefix=RV32IFD %s
 
-; Sanity checks for calling convention lowering for RV32D. This can be
-; somewhat error-prone for soft-float RV32D due to the fact that f64 is legal
+; Basic correctness checks for calling convention lowering for RV32D. This can
+; be somewhat error-prone for soft-float RV32D due to the fact that f64 is legal
 ; but i64 is not, and there is no instruction to move values directly between
 ; the GPRs and 64-bit FPRs.
 

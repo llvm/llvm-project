@@ -1,5 +1,5 @@
-; This is a basic sanity check for constant propagation.  It tests the basic
-; logic operations.
+; This is a basic correctness check for constant propagation.  It tests the
+; basic logic operations.
 
 
 ; RUN: opt < %s -sccp -S | not grep and
