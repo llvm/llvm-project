@@ -1030,8 +1030,7 @@ define arm_aapcs_vfpcc <4 x i32> @vcvt_negative2(<4 x float> %0) {
 define arm_aapcs_vfpcc <8 x i16> @vcvt_sat_s16_1(<8 x half> %0) {
 ; CHECK-LABEL: vcvt_sat_s16_1:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    vadd.f16 q0, q0, q0
-; CHECK-NEXT:    vcvt.s16.f16 q0, q0
+; CHECK-NEXT:    vcvt.s16.f16 q0, q0, #1
 ; CHECK-NEXT:    bx lr
   %2 = fmul fast <8 x half> %0, <half 0xH4000, half 0xH4000, half 0xH4000, half 0xH4000, half 0xH4000, half 0xH4000, half 0xH4000, half 0xH4000>
   %3 = call <8 x i16> @llvm.fptosi.sat.v8i16.v8f16(<8 x half> %2)
@@ -1041,8 +1040,7 @@ define arm_aapcs_vfpcc <8 x i16> @vcvt_sat_s16_1(<8 x half> %0) {
 define arm_aapcs_vfpcc <8 x i16> @vcvt_sat_u16_1(<8 x half> %0) {
 ; CHECK-LABEL: vcvt_sat_u16_1:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    vadd.f16 q0, q0, q0
-; CHECK-NEXT:    vcvt.u16.f16 q0, q0
+; CHECK-NEXT:    vcvt.u16.f16 q0, q0, #1
 ; CHECK-NEXT:    bx lr
   %2 = fmul fast <8 x half> %0, <half 0xH4000, half 0xH4000, half 0xH4000, half 0xH4000, half 0xH4000, half 0xH4000, half 0xH4000, half 0xH4000>
   %3 = call <8 x i16> @llvm.fptoui.sat.v8i16.v8f16(<8 x half> %2)
@@ -1052,9 +1050,7 @@ define arm_aapcs_vfpcc <8 x i16> @vcvt_sat_u16_1(<8 x half> %0) {
 define arm_aapcs_vfpcc <8 x i16> @vcvt_sat_s16_6(<8 x half> %0) {
 ; CHECK-LABEL: vcvt_sat_s16_6:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    vmov.i16 q1, #0x5400
-; CHECK-NEXT:    vmul.f16 q0, q0, q1
-; CHECK-NEXT:    vcvt.s16.f16 q0, q0
+; CHECK-NEXT:    vcvt.s16.f16 q0, q0, #6
 ; CHECK-NEXT:    bx lr
   %2 = fmul fast <8 x half> %0, <half 0xH5400, half 0xH5400, half 0xH5400, half 0xH5400, half 0xH5400, half 0xH5400, half 0xH5400, half 0xH5400>
   %3 = call <8 x i16> @llvm.fptosi.sat.v8i16.v8f16(<8 x half> %2)
@@ -1064,9 +1060,7 @@ define arm_aapcs_vfpcc <8 x i16> @vcvt_sat_s16_6(<8 x half> %0) {
 define arm_aapcs_vfpcc <8 x i16> @vcvt_sat_u16_7(<8 x half> %0) {
 ; CHECK-LABEL: vcvt_sat_u16_7:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    vmov.i16 q1, #0x5800
-; CHECK-NEXT:    vmul.f16 q0, q0, q1
-; CHECK-NEXT:    vcvt.u16.f16 q0, q0
+; CHECK-NEXT:    vcvt.u16.f16 q0, q0, #7
 ; CHECK-NEXT:    bx lr
   %2 = fmul fast <8 x half> %0, <half 0xH5800, half 0xH5800, half 0xH5800, half 0xH5800, half 0xH5800, half 0xH5800, half 0xH5800, half 0xH5800>
   %3 = call <8 x i16> @llvm.fptoui.sat.v8i16.v8f16(<8 x half> %2)
@@ -1077,8 +1071,7 @@ define arm_aapcs_vfpcc <8 x i16> @vcvt_sat_u16_7(<8 x half> %0) {
 define arm_aapcs_vfpcc <4 x i32> @vcvt_sat_s32_1(<4 x float> %0) {
 ; CHECK-LABEL: vcvt_sat_s32_1:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    vadd.f32 q0, q0, q0
-; CHECK-NEXT:    vcvt.s32.f32 q0, q0
+; CHECK-NEXT:    vcvt.s32.f32 q0, q0, #1
 ; CHECK-NEXT:    bx lr
   %2 = fmul fast <4 x float> %0, <float 2.000000e+00, float 2.000000e+00, float 2.000000e+00, float 2.000000e+00>
   %3 = call <4 x i32> @llvm.fptosi.sat.v4i32.v4f32(<4 x float> %2)
@@ -1088,8 +1081,7 @@ define arm_aapcs_vfpcc <4 x i32> @vcvt_sat_s32_1(<4 x float> %0) {
 define arm_aapcs_vfpcc <4 x i32> @vcvt_sat_u32_1(<4 x float> %0) {
 ; CHECK-LABEL: vcvt_sat_u32_1:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    vadd.f32 q0, q0, q0
-; CHECK-NEXT:    vcvt.u32.f32 q0, q0
+; CHECK-NEXT:    vcvt.u32.f32 q0, q0, #1
 ; CHECK-NEXT:    bx lr
   %2 = fmul fast <4 x float> %0, <float 2.000000e+00, float 2.000000e+00, float 2.000000e+00, float 2.000000e+00>
   %3 = call <4 x i32> @llvm.fptoui.sat.v4i32.v4f32(<4 x float> %2)
@@ -1099,9 +1091,7 @@ define arm_aapcs_vfpcc <4 x i32> @vcvt_sat_u32_1(<4 x float> %0) {
 define arm_aapcs_vfpcc <4 x i32> @vcvt_sat_u32_11(<4 x float> %0) {
 ; CHECK-LABEL: vcvt_sat_u32_11:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    vmov.i32 q1, #0x45000000
-; CHECK-NEXT:    vmul.f32 q0, q0, q1
-; CHECK-NEXT:    vcvt.s32.f32 q0, q0
+; CHECK-NEXT:    vcvt.s32.f32 q0, q0, #11
 ; CHECK-NEXT:    bx lr
   %2 = fmul fast <4 x float> %0, <float 2.048000e+03, float 2.048000e+03, float 2.048000e+03, float 2.048000e+03>
   %3 = call <4 x i32> @llvm.fptosi.sat.v4i32.v4f32(<4 x float> %2)
@@ -1111,9 +1101,7 @@ define arm_aapcs_vfpcc <4 x i32> @vcvt_sat_u32_11(<4 x float> %0) {
 define arm_aapcs_vfpcc <4 x i32> @vcvt_sat_u32_7(<4 x float> %0) {
 ; CHECK-LABEL: vcvt_sat_u32_7:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    vmov.i32 q1, #0x4b000000
-; CHECK-NEXT:    vmul.f32 q0, q0, q1
-; CHECK-NEXT:    vcvt.u32.f32 q0, q0
+; CHECK-NEXT:    vcvt.u32.f32 q0, q0, #23
 ; CHECK-NEXT:    bx lr
   %2 = fmul fast <4 x float> %0, <float 0x4160000000000000, float 0x4160000000000000, float 0x4160000000000000, float 0x4160000000000000>
   %3 = call <4 x i32> @llvm.fptoui.sat.v4i32.v4f32(<4 x float> %2)
@@ -1123,10 +1111,8 @@ define arm_aapcs_vfpcc <4 x i32> @vcvt_sat_u32_7(<4 x float> %0) {
 define arm_aapcs_vfpcc <4 x i32> @vcvt_sat_u32_7_24(<4 x float> %0) {
 ; CHECK-LABEL: vcvt_sat_u32_7_24:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    vmov.i32 q2, #0x4b000000
 ; CHECK-NEXT:    vmov.i32 q1, #0xffffff
-; CHECK-NEXT:    vmul.f32 q0, q0, q2
-; CHECK-NEXT:    vcvt.u32.f32 q0, q0
+; CHECK-NEXT:    vcvt.u32.f32 q0, q0, #23
 ; CHECK-NEXT:    vmin.u32 q0, q0, q1
 ; CHECK-NEXT:    vbic.i32 q0, #0xff000000
 ; CHECK-NEXT:    bx lr
