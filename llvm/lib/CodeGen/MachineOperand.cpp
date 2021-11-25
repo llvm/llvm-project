@@ -1071,7 +1071,9 @@ void MachineMemOperand::refineAlignment(const MachineMemOperand *MMO) {
   // The Value and Offset may differ due to CSE. But the flags and size
   // should be the same.
   assert(MMO->getFlags() == getFlags() && "Flags mismatch!");
-  assert(MMO->getSize() == getSize() && "Size mismatch!");
+  assert((MMO->getSize() == ~UINT64_C(0) || getSize() == ~UINT64_C(0) ||
+          MMO->getSize() == getSize()) &&
+         "Size mismatch!");
 
   if (MMO->getBaseAlign() >= getBaseAlign()) {
     // Update the alignment value.
