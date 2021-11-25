@@ -195,6 +195,82 @@ func @dynamic_sizes(%arg0: tensor<?x?xf32>,
 
 // -----
 
+// CHECK-DAG: #[[DIV3:[0-9a-z]+]] = affine_map<(d0) -> (d0 ceildiv 3)>
+
+//      CHECK:  multiple_operations
+//      CHECK-DOUBLE:  multiple_operations
+// CHECK-SAME:    %[[ARG0:[0-9a-zA-Z]*]]: tensor<24x12xf32>
+// CHECK-SAME:    %[[ARG1:[0-9a-zA-Z]*]]: tensor<12x25xf32>
+// CHECK-SAME:    %[[ARG2:[0-9a-zA-Z]*]]: tensor<24x25xf32>
+func @multiple_operations(%arg0: tensor<24x12xf32>,
+                          %arg1: tensor<12x25xf32>,
+                          %arg2: tensor<24x25xf32>) -> tensor<24x25xf32> {
+  %c12 = arith.constant 12 : index
+  %c3 = arith.constant 3 : index
+  %c0 = arith.constant 0 : index
+  %c25 = arith.constant 25 : index
+  %c24 = arith.constant 24 : index
+  %c5 = arith.constant 5 : index
+  %c4 = arith.constant 4 : index
+  %cst = arith.constant 0.000000e+00 : f32
+
+  //      CHECK:  scf.for %[[IV0:[0-9a-zA-Z]*]] =
+  %0 = scf.for %arg3 = %c0 to %c24 step %c4 iter_args(%arg4 = %arg2) -> (tensor<24x25xf32>) {
+
+    // Packing the first input operand for all values of IV2 (IV2x4x3).
+    //      CHECK:  = linalg.init_tensor [4, 4, 3]
+    //      CHECK:  %[[PT0:.*]] = scf.for %[[PIV0:[0-9a-z]+]] =
+    //        CHECK:   %[[PIDX0:.*]] = affine.apply #[[DIV3]](%[[PIV0]])
+    //        CHECK:   %[[T0:.*]] = tensor.extract_slice %[[ARG0]]
+    //        CHECK:   %[[T1:.*]] = linalg.pad_tensor %[[T0]] nofold
+    //        CHECK:   %[[T2:.*]] = tensor.insert_slice %[[T1:.*]] into %{{.*}}[%[[PIDX0]], 0, 0]
+    //        CHECK:   scf.yield %[[T2:.*]]
+
+    //      CHECK:  scf.for %[[IV1:[0-9a-zA-Z]*]] =
+    %1 = scf.for %arg5 = %c0 to %c25 step %c5 iter_args(%arg6 = %arg4) -> (tensor<24x25xf32>) {
+      %2 = tensor.extract_slice %arg6[%arg3, %arg5] [4, 5] [1, 1] : tensor<24x25xf32> to tensor<4x5xf32>
+
+      // Check the fill and pad_tensor ops do not prevent hoisting.
+      %3 = linalg.pad_tensor %2 nofold low[%c0, %c0] high[%c0, %c0]  {
+      ^bb0(%arg7: index, %arg8: index):  // no predecessors
+        linalg.yield %cst : f32
+      } : tensor<4x5xf32> to tensor<4x5xf32>
+      %4 = linalg.fill(%cst, %3) : f32, tensor<4x5xf32> -> tensor<4x5xf32>
+
+      // Packing the second input operand for all values of IV2 (IV2x3x5).
+      //      CHECK:  = linalg.init_tensor [4, 3, 5]
+      //      CHECK:  %[[PT1:.*]] = scf.for %[[PIV1:[0-9a-z]+]] =
+      //        CHECK:   %[[PIDX1:.*]] = affine.apply #[[DIV3]](%[[PIV1]])
+      //        CHECK:   %[[T3:.*]] = tensor.extract_slice %[[ARG1]]
+      //        CHECK:   %[[T4:.*]] = linalg.pad_tensor %[[T3]] nofold
+      //        CHECK:   %[[T5:.*]] = tensor.insert_slice %[[T4:.*]] into %{{.*}}[%[[PIDX1]], 0, 0]
+      //        CHECK:   scf.yield %[[T5:.*]]
+
+      //      CHECK:  scf.for %[[IV2:[0-9a-zA-Z]*]] =
+      %5 = scf.for %arg7 = %c0 to %c12 step %c3 iter_args(%arg8 = %4) -> (tensor<4x5xf32>) {
+
+        // Index the packed operands.
+        //  CHECK-DAG:   %[[IDX0:.*]] = affine.apply #[[DIV3]](%[[IV2]])
+        //  CHECK-DAG:   %[[T6:.*]] = tensor.extract_slice %[[PT0]][%[[IDX0]]
+        //  CHECK-DAG:   %[[T7:.*]] = tensor.extract_slice %[[PT1]][%[[IDX0]]
+        %7 = tensor.extract_slice %arg0[%arg3, %arg7] [4, 3] [1, 1] : tensor<24x12xf32> to tensor<4x3xf32>
+        %8 = tensor.extract_slice %arg1[%arg7, %arg5] [3, 5] [1, 1] : tensor<12x25xf32> to tensor<3x5xf32>
+
+        // Check matmul uses the packed input operands.
+        //      CHECK:   = linalg.matmul ins(%[[T6]], %[[T7]]
+        %9 = linalg.matmul ins(%7, %8 : tensor<4x3xf32>, tensor<3x5xf32>) outs(%arg8 : tensor<4x5xf32>) -> tensor<4x5xf32>
+        scf.yield %9 : tensor<4x5xf32>
+      }
+      %6 = tensor.insert_slice %5 into %arg6[%arg3, %arg5] [4, 5] [1, 1] : tensor<4x5xf32> into tensor<24x25xf32>
+      scf.yield %6 : tensor<24x25xf32>
+    }
+    scf.yield %1 : tensor<24x25xf32>
+  }
+  return %0 : tensor<24x25xf32>
+}
+
+// -----
+
 // CHECK-DOUBLE-DAG: #[[DIV5:[0-9a-z]+]] = affine_map<(d0) -> (d0 ceildiv 5)>
 // CHECK-DOUBLE-DAG: #[[DIV6:[0-9a-z]+]] = affine_map<(d0) -> (d0 ceildiv 6)>
 #map0 = affine_map<(d0) -> (15, -d0 + 24)>
