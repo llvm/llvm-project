@@ -193,20 +193,19 @@ public:
 
     // Use the dependency scanning optimized file system if requested to do so.
     if (DepFS) {
-      DepFS->clearIgnoredFiles();
-      // Ignore any files that contributed to prebuilt modules. The implicit
-      // build validates the modules by comparing the reported sizes of their
-      // inputs to the current state of the filesystem. Minimization would throw
-      // this mechanism off.
+      DepFS->enableMinimizationOfAllFiles();
+      // Don't minimize any files that contributed to prebuilt modules. The
+      // implicit build validates the modules by comparing the reported sizes of
+      // their inputs to the current state of the filesystem. Minimization would
+      // throw this mechanism off.
       for (const auto &File : PrebuiltModulesInputFiles)
-        DepFS->ignoreFile(File.getKey());
-      // Add any filenames that were explicity passed in the build settings and
-      // that might be opened, as we want to ensure we don't run source
-      // minimization on them.
+        DepFS->disableMinimization(File.getKey());
+      // Don't minimize any files that were explicitly passed in the build
+      // settings and that might be opened.
       for (const auto &E : ScanInstance.getHeaderSearchOpts().UserEntries)
-        DepFS->ignoreFile(E.Path);
+        DepFS->disableMinimization(E.Path);
       for (const auto &F : ScanInstance.getHeaderSearchOpts().VFSOverlayFiles)
-        DepFS->ignoreFile(F);
+        DepFS->disableMinimization(F);
 
       // Support for virtual file system overlays on top of the caching
       // filesystem.

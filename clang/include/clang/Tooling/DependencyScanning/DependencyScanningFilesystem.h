@@ -195,11 +195,14 @@ public:
   llvm::ErrorOr<std::unique_ptr<llvm::vfs::File>>
   openFileForRead(const Twine &Path) override;
 
-  void clearIgnoredFiles() { IgnoredFiles.clear(); }
-  void ignoreFile(StringRef Filename);
+  /// Disable minimization of the given file.
+  void disableMinimization(StringRef Filename);
+  /// Enable minimization of all files.
+  void enableMinimizationOfAllFiles() { NotToBeMinimized.clear(); }
 
 private:
-  bool shouldIgnoreFile(StringRef Filename);
+  /// Check whether the file should be minimized.
+  bool shouldMinimize(StringRef Filename);
 
   llvm::ErrorOr<const CachedFileSystemEntry *>
   getOrCreateFileSystemEntry(const StringRef Filename);
@@ -214,7 +217,7 @@ private:
   /// currently active preprocessor.
   ExcludedPreprocessorDirectiveSkipMapping *PPSkipMappings;
   /// The set of files that should not be minimized.
-  llvm::StringSet<> IgnoredFiles;
+  llvm::StringSet<> NotToBeMinimized;
 };
 
 } // end namespace dependencies
