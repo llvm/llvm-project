@@ -94,7 +94,6 @@ enum {
   MemMeta,
   MemFile,
   MemMmap,
-  MemTrace,
   MemHeap,
   MemOther,
   MemCount,
@@ -112,8 +111,6 @@ void FillProfileCallback(uptr p, uptr rss, bool file, uptr *mem) {
     mem[file ? MemFile : MemMmap] += rss;
   else if (p >= HeapMemBeg() && p < HeapMemEnd())
     mem[MemHeap] += rss;
-  else if (p >= TraceMemBeg() && p < TraceMemEnd())
-    mem[MemTrace] += rss;
   else
     mem[MemOther] += rss;
 }
@@ -126,42 +123,33 @@ void WriteMemoryProfile(char *buf, uptr buf_size, u64 uptime_ns) {
   StackDepotStats stacks = StackDepotGetStats();
   uptr nthread, nlive;
   ctx->thread_registry.GetNumberOfThreads(&nthread, &nlive);
+  uptr trace_mem;
+  {
+    Lock l(&ctx->slot_mtx);
+    trace_mem = ctx->trace_part_total_allocated * sizeof(TracePart);
+  }
   uptr internal_stats[AllocatorStatCount];
   internal_allocator()->GetStats(internal_stats);
   // All these are allocated from the common mmap region.
-  mem[MemMmap] -= meta.mem_block + meta.sync_obj + stacks.allocated +
-                  internal_stats[AllocatorStatMapped];
+  mem[MemMmap] -= meta.mem_block + meta.sync_obj + trace_mem +
+                  stacks.allocated + internal_stats[AllocatorStatMapped];
   if (s64(mem[MemMmap]) < 0)
     mem[MemMmap] = 0;
   internal_snprintf(
       buf, buf_size,
-      "%llus: RSS %zd MB: shadow:%zd meta:%zd file:%zd mmap:%zd"
-      " trace:%zd heap:%zd other:%zd intalloc:%zd memblocks:%zd syncobj:%zu"
-      " stacks=%zd[%zd] nthr=%zd/%zd\n",
-      uptime_ns / (1000 * 1000 * 1000), mem[MemTotal] >> 20,
-      mem[MemShadow] >> 20, mem[MemMeta] >> 20, mem[MemFile] >> 20,
-      mem[MemMmap] >> 20, mem[MemTrace] >> 20, mem[MemHeap] >> 20,
+      "==%zu== %llus [%zu]: RSS %zd MB: shadow:%zd meta:%zd file:%zd"
+      " mmap:%zd heap:%zd other:%zd intalloc:%zd memblocks:%zd syncobj:%zu"
+      " trace:%zu stacks=%zd threads=%zu/%zu\n",
+      internal_getpid(), uptime_ns / (1000 * 1000 * 1000), ctx->global_epoch,
+      mem[MemTotal] >> 20, mem[MemShadow] >> 20, mem[MemMeta] >> 20,
+      mem[MemFile] >> 20, mem[MemMmap] >> 20, mem[MemHeap] >> 20,
       mem[MemOther] >> 20, internal_stats[AllocatorStatMapped] >> 20,
-      meta.mem_block >> 20, meta.sync_obj >> 20, stacks.allocated >> 20,
-      stacks.n_uniq_ids, nlive, nthread);
-}
-
-#  if SANITIZER_LINUX
-void FlushShadowMemoryCallback(
-    const SuspendedThreadsList &suspended_threads_list,
-    void *argument) {
-  ReleaseMemoryPagesToOS(ShadowBeg(), ShadowEnd());
-}
-#endif
-
-void FlushShadowMemory() {
-#if SANITIZER_LINUX
-  StopTheWorld(FlushShadowMemoryCallback, 0);
-#endif
+      meta.mem_block >> 20, meta.sync_obj >> 20, trace_mem >> 20,
+      stacks.allocated >> 20, nlive, nthread);
 }
 
 #if !SANITIZER_GO
-// Mark shadow for .rodata sections with the special kShadowRodata marker.
+// Mark shadow for .rodata sections with the special Shadow::kRodata marker.
 // Accesses to .rodata can't race, so this saves time, memory and trace space.
 static void MapRodata() {
   // First create temp file.
@@ -182,13 +170,13 @@ static void MapRodata() {
     return;
   internal_unlink(name);  // Unlink it now, so that we can reuse the buffer.
   fd_t fd = openrv;
-  // Fill the file with kShadowRodata.
+  // Fill the file with Shadow::kRodata.
   const uptr kMarkerSize = 512 * 1024 / sizeof(RawShadow);
   InternalMmapVector<RawShadow> marker(kMarkerSize);
   // volatile to prevent insertion of memset
   for (volatile RawShadow *p = marker.data(); p < marker.data() + kMarkerSize;
        p++)
-    *p = kShadowRodata;
+    *p = Shadow::kRodata;
   internal_write(fd, marker.data(), marker.size() * sizeof(RawShadow));
   // Map the file into memory.
   uptr page = internal_mmap(0, GetPageSizeCached(), PROT_READ | PROT_WRITE,
