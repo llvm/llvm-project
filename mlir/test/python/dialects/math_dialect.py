@@ -1,5 +1,8 @@
 # RUN: %PYTHON %s | FileCheck %s
 
+# Naming this file with a `_dialect` suffix to avoid a naming conflict with
+# python package's math module (coming in from random.py).
+
 from mlir.ir import *
 import mlir.dialects.builtin as builtin
 import mlir.dialects.math as mlir_math
