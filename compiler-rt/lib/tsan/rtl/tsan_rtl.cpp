@@ -506,6 +506,8 @@ void ForkBefore(ThreadState *thr, uptr pc) NO_THREAD_SAFETY_ANALYSIS {
   // On OS X libSystem_atfork_prepare/parent/child callbacks are called
   // after/before our callbacks and they call free.
   thr->ignore_interceptors++;
+  // Disables memory write in OnUserAlloc/Free.
+  thr->ignore_reads_and_writes++;
 
   __tsan_test_only_on_fork();
 }
@@ -513,6 +515,7 @@ void ForkBefore(ThreadState *thr, uptr pc) NO_THREAD_SAFETY_ANALYSIS {
 void ForkParentAfter(ThreadState *thr, uptr pc) NO_THREAD_SAFETY_ANALYSIS {
   thr->suppress_reports--;  // Enabled in ForkBefore.
   thr->ignore_interceptors--;
+  thr->ignore_reads_and_writes--;
   AllocatorUnlock();
   ScopedErrorReportLock::Unlock();
   ctx->report_mtx.Unlock();
@@ -523,6 +526,7 @@ void ForkChildAfter(ThreadState *thr, uptr pc,
                     bool start_thread) NO_THREAD_SAFETY_ANALYSIS {
   thr->suppress_reports--;  // Enabled in ForkBefore.
   thr->ignore_interceptors--;
+  thr->ignore_reads_and_writes--;
   AllocatorUnlock();
   ScopedErrorReportLock::Unlock();
   ctx->report_mtx.Unlock();
