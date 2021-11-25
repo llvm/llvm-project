@@ -14109,6 +14109,9 @@ static SDValue performConcatVectorsCombine(SDNode *N,
   SDValue N0 = N->getOperand(0), N1 = N->getOperand(1);
   unsigned N0Opc = N0->getOpcode(), N1Opc = N1->getOpcode();
 
+  if (VT.isScalableVector())
+    return SDValue();
+
   // Optimize concat_vectors of truncated vectors, where the intermediate
   // type is illegal, to avoid said illegality,  e.g.,
   //   (v4i16 (concat_vectors (v2i16 (truncate (v2i64))),
