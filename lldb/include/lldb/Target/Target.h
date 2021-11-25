@@ -21,6 +21,7 @@
 #include "lldb/Core/Architecture.h"
 #include "lldb/Core/Disassembler.h"
 #include "lldb/Core/ModuleList.h"
+#include "lldb/Core/StructuredDataImpl.h"
 #include "lldb/Core/UserSettingsController.h"
 #include "lldb/Expression/Expression.h"
 #include "lldb/Host/ProcessLaunchInfo.h"
@@ -1309,8 +1310,7 @@ public:
     std::string m_class_name;
     /// This holds the dictionary of keys & values that can be used to
     /// parametrize any given callback's behavior.
-    StructuredDataImpl *m_extra_args; // We own this structured data,
-                                      // but the SD itself manages the UP.
+    StructuredDataImpl m_extra_args;
     /// This holds the python callback object.
     StructuredData::GenericSP m_implementation_sp;
 

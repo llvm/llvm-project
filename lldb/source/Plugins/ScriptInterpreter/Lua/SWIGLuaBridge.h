@@ -17,7 +17,8 @@ namespace lldb_private {
 
 llvm::Expected<bool> LLDBSwigLuaBreakpointCallbackFunction(
     lua_State *L, lldb::StackFrameSP stop_frame_sp,
-    lldb::BreakpointLocationSP bp_loc_sp, StructuredDataImpl *extra_args_impl);
+    lldb::BreakpointLocationSP bp_loc_sp,
+    const StructuredDataImpl &extra_args_impl);
 
 llvm::Expected<bool> LLDBSwigLuaWatchpointCallbackFunction(
     lua_State *L, lldb::StackFrameSP stop_frame_sp, lldb::WatchpointSP wp_sp);

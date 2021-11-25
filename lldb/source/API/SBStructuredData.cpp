@@ -39,10 +39,10 @@ SBStructuredData::SBStructuredData(const lldb::EventSP &event_sp)
   LLDB_RECORD_CONSTRUCTOR(SBStructuredData, (const lldb::EventSP &), event_sp);
 }
 
-SBStructuredData::SBStructuredData(lldb_private::StructuredDataImpl *impl)
-    : m_impl_up(impl ? impl : new StructuredDataImpl()) {
+SBStructuredData::SBStructuredData(const lldb_private::StructuredDataImpl &impl)
+    : m_impl_up(new StructuredDataImpl(impl)) {
   LLDB_RECORD_CONSTRUCTOR(SBStructuredData,
-                          (lldb_private::StructuredDataImpl *), impl);
+                          (const lldb_private::StructuredDataImpl &), impl);
 }
 
 SBStructuredData::~SBStructuredData() = default;
@@ -210,7 +210,7 @@ template <> void RegisterMethods<SBStructuredData>(Registry &R) {
   LLDB_REGISTER_CONSTRUCTOR(SBStructuredData, (const lldb::SBStructuredData &));
   LLDB_REGISTER_CONSTRUCTOR(SBStructuredData, (const lldb::EventSP &));
   LLDB_REGISTER_CONSTRUCTOR(SBStructuredData,
-                            (lldb_private::StructuredDataImpl *));
+                            (const lldb_private::StructuredDataImpl &));
   LLDB_REGISTER_METHOD(
       lldb::SBStructuredData &,
       SBStructuredData, operator=,(const lldb::SBStructuredData &));

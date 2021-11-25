@@ -69,8 +69,8 @@ SBThreadPlan::SBThreadPlan(lldb::SBThread &sb_thread, const char *class_name) {
 
   Thread *thread = sb_thread.get();
   if (thread)
-    m_opaque_wp =
-        std::make_shared<ThreadPlanPython>(*thread, class_name, nullptr);
+    m_opaque_wp = std::make_shared<ThreadPlanPython>(*thread, class_name,
+                                                     StructuredDataImpl());
 }
 
 SBThreadPlan::SBThreadPlan(lldb::SBThread &sb_thread, const char *class_name,
@@ -82,7 +82,7 @@ SBThreadPlan::SBThreadPlan(lldb::SBThread &sb_thread, const char *class_name,
   Thread *thread = sb_thread.get();
   if (thread)
     m_opaque_wp = std::make_shared<ThreadPlanPython>(*thread, class_name,
-                                                     args_data.m_impl_up.get());
+                                                     *args_data.m_impl_up);
 }
 
 // Assignment operator

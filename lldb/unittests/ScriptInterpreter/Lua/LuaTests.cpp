@@ -16,7 +16,8 @@ extern "C" int luaopen_lldb(lua_State *L) { return 0; }
 
 llvm::Expected<bool> lldb_private::LLDBSwigLuaBreakpointCallbackFunction(
     lua_State *L, lldb::StackFrameSP stop_frame_sp,
-    lldb::BreakpointLocationSP bp_loc_sp, StructuredDataImpl *extra_args_impl) {
+    lldb::BreakpointLocationSP bp_loc_sp,
+    const StructuredDataImpl &extra_args_impl) {
   return false;
 }
 

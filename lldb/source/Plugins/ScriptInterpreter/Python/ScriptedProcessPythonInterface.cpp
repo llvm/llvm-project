@@ -37,11 +37,7 @@ StructuredData::GenericSP ScriptedProcessPythonInterface::CreatePluginObject(
     return {};
 
   TargetSP target_sp = exe_ctx.GetTargetSP();
-  StructuredDataImpl *args_impl = nullptr;
-  if (args_sp) {
-    args_impl = new StructuredDataImpl();
-    args_impl->SetObjectSP(args_sp);
-  }
+  StructuredDataImpl args_impl(args_sp);
   std::string error_string;
 
   Locker py_lock(&m_interpreter, Locker::AcquireLock | Locker::NoSTDIN,
