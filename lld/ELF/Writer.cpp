@@ -365,7 +365,6 @@ template <class ELFT> void elf::createSyntheticSections() {
           make<RelocationSection<ELFT>>(relaDynName, config->zCombreloc);
 
     if (config->hasDynSymTab) {
-      part.dynSymTab = make<SymbolTableSection<ELFT>>(*part.dynStrTab);
       add(part.dynSymTab);
 
       part.verSym = make<VersionTableSection>();
