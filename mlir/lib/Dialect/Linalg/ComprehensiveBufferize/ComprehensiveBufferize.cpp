@@ -116,16 +116,17 @@
 #include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "mlir/IR/AsmState.h"
 #include "mlir/IR/BlockAndValueMapping.h"
+#include "mlir/IR/Dominance.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/Interfaces/InferTypeOpInterface.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Pass/PassManager.h"
-#include "mlir/Transforms/BufferUtils.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/TypeSwitch.h"
+#include "llvm/Support/Debug.h"
 #include "llvm/Support/FormatVariadic.h"
 
 #define DEBUG_TYPE "comprehensive-module-bufferize"
@@ -1287,52 +1288,6 @@ BufferizationOptions::BufferizationOptions()
 namespace mlir {
 namespace linalg {
 namespace comprehensive_bufferize {
-namespace arith_ext {
-
-struct ConstantOpInterface
-    : public BufferizableOpInterface::ExternalModel<ConstantOpInterface,
-                                                    arith::ConstantOp> {
-  SmallVector<OpOperand *> getAliasingOpOperand(Operation *op,
-                                                OpResult opResult) const {
-    return {};
-  }
-
-  LogicalResult bufferize(Operation *op, OpBuilder &b,
-                          BufferizationState &state) const {
-    auto constantOp = cast<arith::ConstantOp>(op);
-    if (!isaTensor(constantOp.getResult().getType()))
-      return success();
-    assert(constantOp.getType().dyn_cast<RankedTensorType>() &&
-           "not a constant ranked tensor");
-    auto moduleOp = constantOp->getParentOfType<ModuleOp>();
-    if (!moduleOp) {
-      return constantOp.emitError(
-          "cannot bufferize constants not within builtin.module op");
-    }
-    GlobalCreator globalCreator(moduleOp);
-
-    // Take a guard before anything else.
-    OpBuilder::InsertionGuard g(b);
-    b.setInsertionPoint(constantOp);
-
-    auto globalMemref = globalCreator.getGlobalFor(constantOp);
-    Value memref = b.create<memref::GetGlobalOp>(
-        constantOp.getLoc(), globalMemref.type(), globalMemref.getName());
-    state.aliasInfo.insertNewBufferEquivalence(memref, constantOp.getResult());
-    state.mapBuffer(constantOp, memref);
-
-    return success();
-  }
-
-  bool isWritable(Operation *op, Value value) const {
-    // Memory locations returned by memref::GetGlobalOp may not be written to.
-    assert(value.isa<OpResult>());
-    return false;
-  }
-};
-
-} // namespace arith_ext
-
 namespace scf_ext {
 
 struct ExecuteRegionOpInterface
@@ -1813,7 +1768,6 @@ struct ReturnOpInterface
 } // namespace std_ext
 
 void registerBufferizableOpInterfaceExternalModels(DialectRegistry &registry) {
-  registry.addOpInterface<arith::ConstantOp, arith_ext::ConstantOpInterface>();
   registry.addOpInterface<scf::ExecuteRegionOp,
                           scf_ext::ExecuteRegionOpInterface>();
   registry.addOpInterface<scf::ForOp, scf_ext::ForOpInterface>();

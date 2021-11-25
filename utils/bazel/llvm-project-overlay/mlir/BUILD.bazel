@@ -6307,6 +6307,26 @@ cc_library(
 )
 
 cc_library(
+    name = "ArithBufferizableOpInterfaceImpl",
+    srcs = [
+        "lib/Dialect/Linalg/ComprehensiveBufferize/ArithInterfaceImpl.cpp",
+    ],
+    hdrs = [
+        "include/mlir/Dialect/Linalg/ComprehensiveBufferize/ArithInterfaceImpl.h",
+    ],
+    includes = ["include"],
+    deps = [
+        ":ArithmeticDialect",
+        ":BufferizableOpInterface",
+        ":IR",
+        ":MemRefDialect",
+        ":Support",
+        ":TransformUtils",
+        "//llvm:Support",
+    ],
+)
+
+cc_library(
     name = "LinalgBufferizableOpInterfaceImpl",
     srcs = [
         "lib/Dialect/Linalg/ComprehensiveBufferize/LinalgInterfaceImpl.cpp",
@@ -6563,6 +6583,7 @@ cc_library(
         ":Affine",
         ":AffineUtils",
         ":Analysis",
+        ":ArithBufferizableOpInterfaceImpl",
         ":ArithmeticDialect",
         ":BufferizableOpInterface",
         ":ComplexDialect",
@@ -6604,7 +6625,6 @@ cc_library(
     includes = ["include"],
     deps = [
         ":Affine",
-        ":ArithmeticDialect",
         ":BufferizableOpInterface",
         ":DialectUtils",
         ":IR",
@@ -6614,7 +6634,6 @@ cc_library(
         ":SCFDialect",
         ":StandardOps",
         ":Support",
-        ":TransformUtils",
         "//llvm:Support",
     ],
 )
