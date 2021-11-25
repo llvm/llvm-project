@@ -39,6 +39,7 @@ int main() {
   const int kBlockSize = 32;
   __tsan_func_entry(3456 | kExternalPCBit);
   __tsan_java_alloc(jheap, kBlockSize);
+  print_address("addr:", 2, jheap, jheap + 16);
   __tsan_func_exit();
   pthread_t th;
   pthread_create(&th, 0, Thread, (void*)jheap);
@@ -52,18 +53,19 @@ int main() {
   return __tsan_java_fini();
 }
 
+// CHECK: addr:[[BLOCK:0x[0-9,a-f]+]] [[ADDR:0x[0-9,a-f]+]]
 // CHECK: WARNING: ThreadSanitizer: data race
-// CHECK:   Write
+// CHECK:   Write of size 1 at [[ADDR]] by thread T1:
 // CHECK:     #0 MyInnerFunc MyInnerFile.java:1234:56
 // CHECK:     #1 MyOuterFunc MyOuterFile.java:4321:65
 // CHECK:     #2 Caller1 CallerFile.java:111:22
 // CHECK:     #3 Caller2 CallerFile.java:333:44
-// CHECK:   Previous write
+// CHECK:   Previous write of size 1 at [[ADDR]] by main thread:
 // CHECK:     #0 MyInnerFunc MyInnerFile.java:1234:56
 // CHECK:     #1 MyOuterFunc MyOuterFile.java:4321:65
 // CHECK:     #2 Caller1 CallerFile.java:111:22
 // CHECK:     #3 Caller2 CallerFile.java:333:44
-// CHECK:   Location is heap block of size 32 at {{.*}} allocated by main thread:
+// CHECK:   Location is heap block of size 32 at [[BLOCK]] allocated by main thread:
 // CHECK:     #0 Allocer1 Alloc.java:11:222
 // CHECK:     #1 Allocer2 Alloc.java:33:444
 // CHECK: DONE
