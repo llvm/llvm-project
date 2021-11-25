@@ -188,7 +188,7 @@ GDBRemoteCommunication::SendRawPacketNoLock(llvm::StringRef packet,
 
 GDBRemoteCommunication::PacketResult GDBRemoteCommunication::GetAck() {
   StringExtractorGDBRemote packet;
-  PacketResult result = ReadPacket(packet, GetPacketTimeout(), false);
+  PacketResult result = WaitForPacketNoLock(packet, GetPacketTimeout(), false);
   if (result == PacketResult::Success) {
     if (packet.GetResponseType() ==
         StringExtractorGDBRemote::ResponseType::eAck)
@@ -220,7 +220,18 @@ GDBRemoteCommunication::PacketResult
 GDBRemoteCommunication::ReadPacket(StringExtractorGDBRemote &response,
                                    Timeout<std::micro> timeout,
                                    bool sync_on_timeout) {
-  return WaitForPacketNoLock(response, timeout, sync_on_timeout);
+  using ResponseType = StringExtractorGDBRemote::ResponseType;
+
+  Log *log(ProcessGDBRemoteLog::GetLogIfAllCategoriesSet(GDBR_LOG_PACKETS));
+  for (;;) {
+    PacketResult result =
+        WaitForPacketNoLock(response, timeout, sync_on_timeout);
+    if (result != PacketResult::Success ||
+        (response.GetResponseType() != ResponseType::eAck &&
+         response.GetResponseType() != ResponseType::eNack))
+      return result;
+    LLDB_LOG(log, "discarding spurious `{0}` packet", response.GetStringRef());
+  }
 }
 
 GDBRemoteCommunication::PacketResult
