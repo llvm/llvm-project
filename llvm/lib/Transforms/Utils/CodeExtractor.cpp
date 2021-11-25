@@ -1982,6 +1982,8 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
     // Find inputs to, outputs from the code region.
     findInputsOutputs(inputs, outputs, SinkingCands);
 
+
+    // Construct new function based on inputs/outputs & add allocas for all defs.
     Function *newFunction = constructFunction2(inputs, outputs, header,   oldFunction, oldFunction->getParent());
 
 
@@ -1993,9 +1995,49 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
 
 
     // This takes place of the original loop
-    BasicBlock *codeReplacer = BasicBlock::Create(header->getContext(),
-        "codeRepl", oldFunction,
-        header);
+    BasicBlock *codeReplacer = BasicBlock::Create(header->getContext(),        "codeRepl", oldFunction,        header);
+    auto newHeader = codeReplacer;
+
+      ValueToValueMapTy VMap;
+
+    StructType *StructTy = nullptr;
+    if (AggregateArgs && (inputs.size() + outputs.size() > 0)) {
+        //StructTy = StructType::get(M->getContext(), paramTy);
+        StructTy =  cast<StructType>(newFunction->getArg(0)->getType());
+    }
+
+
+
+    // Create an iterator to name all of the arguments we inserted.
+    Function::arg_iterator AI = newFunction->arg_begin();
+
+    // Rewrite all users of the inputs in the extracted region to use the
+    // arguments (or appropriate addressing into struct) instead.
+    SmallVector<Value*> NewValues;
+
+    for (unsigned i = 0, e = inputs.size(); i != e; ++i) {
+        Value *RewriteVal;
+        if (AggregateArgs) {
+            Value *Idx[2];
+            Idx[0] = Constant::getNullValue(Type::getInt32Ty(header->getContext()));
+            Idx[1] = ConstantInt::get(Type::getInt32Ty(header->getContext()), i);
+            Instruction *TI = newFunction->begin()->getTerminator();
+            GetElementPtrInst *GEP = GetElementPtrInst::Create(StructTy, &*AI, Idx, "gep_" + inputs[i]->getName(), TI);
+            RewriteVal = new LoadInst(StructTy->getElementType(i), GEP, "loadgep_" + inputs[i]->getName(), TI);
+        } else
+            RewriteVal = &*AI++;
+
+        NewValues.push_back(RewriteVal);
+    }
+
+    // Set names for input and output arguments.
+    if (!AggregateArgs) {
+        AI = newFunction->arg_begin();
+        for (unsigned i = 0, e = inputs.size(); i != e; ++i, ++AI)
+            AI->setName(inputs[i]->getName());
+        for (unsigned i = 0, e = outputs.size(); i != e; ++i, ++AI)
+            AI->setName(outputs[i]->getName()+".out");
+    }
 
 
     if (KeepOldBlocks)
@@ -2023,26 +2065,7 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
 
 
 
-
-     
       auto *BranchI = BranchInst::Create(header, newFuncRoot);
-
-#if 0
-      // If the original function has debug info, we have to add a debug location
-      // to the new branch instruction from the artificial entry block.
-      // We use the debug location of the first instruction in the extracted
-      // blocks, as there is no other equivalent line in the source code.
-      if (oldFunction->getSubprogram()) {
-          any_of(Blocks, [&BranchI](const BasicBlock *BB) {
-              return any_of(*BB, [&BranchI](const Instruction &I) {
-                  if (!I.getDebugLoc())
-                      return false;
-                  BranchI->setDebugLoc(I.getDebugLoc());
-                  return true;
-                  });
-              });
-      }
-#endif 
       applyFirstDebugLoc(oldFunction, Blocks.getArrayRef(), BranchI);      
      // newFuncRoot->getInstList().push_back(BranchI);
 
@@ -2067,6 +2090,7 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
           }
       }
 
+
       if (!HoistingCands.empty()) {
           auto *HoistToBlock = findOrCreateBlockForHoisting(CommonExit);
           Instruction *TI = HoistToBlock->getTerminator();
@@ -2081,45 +2105,19 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
       ValueSet LifetimesStart;
       eraseLifetimeMarkersOnInputs(Blocks, SinkingCands, LifetimesStart);
 
-      // Construct new function based on inputs/outputs & add allocas for all defs.
-      ValueToValueMapTy VMap;
+
+
      
-#if 0
-      Function *newFunction = constructFunction(inputs, outputs, header, newFuncRoot, codeReplacer,  oldFunction, oldFunction->getParent(),false,VMap);
-#else
-    //  auto newRootNode = newFuncRoot;
-      auto newHeader = codeReplacer ;
+    
 
 
-      StructType *StructTy = nullptr;
-      if (AggregateArgs && (inputs.size() + outputs.size() > 0)) {
-          //StructTy = StructType::get(M->getContext(), paramTy);
-          StructTy =  cast<StructType>( newFunction->getArg(0)->getType());
-      }
-
-
-      // Create an iterator to name all of the arguments we inserted.
-      Function::arg_iterator AI = newFunction->arg_begin();
-
-      // Rewrite all users of the inputs in the extracted region to use the
-      // arguments (or appropriate addressing into struct) instead.
       for (unsigned i = 0, e = inputs.size(); i != e; ++i) {
-          Value *RewriteVal;
-          if (AggregateArgs) {
-              Value *Idx[2];
-              Idx[0] = Constant::getNullValue(Type::getInt32Ty(header->getContext()));
-              Idx[1] = ConstantInt::get(Type::getInt32Ty(header->getContext()), i);
-              Instruction *TI = newFunction->begin()->getTerminator();
-              GetElementPtrInst *GEP = GetElementPtrInst::Create(
-                  StructTy, &*AI, Idx, "gep_" + inputs[i]->getName(), TI);
-              RewriteVal = new LoadInst(StructTy->getElementType(i), GEP,
-                  "loadgep_" + inputs[i]->getName(), TI);
-          } else
-              RewriteVal = &*AI++;
+          Value *RewriteVal = NewValues[i];
+
 
           if (KeepOldBlocks) {
-              VMap[ inputs[i]] = RewriteVal ; 
-          }    else {
+              VMap[inputs[i]] = RewriteVal;
+          }  else {
               std::vector<User*> Users(inputs[i]->user_begin(), inputs[i]->user_end());
               for (User* use : Users)
                   if (Instruction* inst = dyn_cast<Instruction>(use))
@@ -2128,14 +2126,6 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
           }
       }
 
-      // Set names for input and output arguments.
-      if (!AggregateArgs) {
-          AI = newFunction->arg_begin();
-          for (unsigned i = 0, e = inputs.size(); i != e; ++i, ++AI)
-              AI->setName(inputs[i]->getName());
-          for (unsigned i = 0, e = outputs.size(); i != e; ++i, ++AI)
-              AI->setName(outputs[i]->getName()+".out");
-      }
 
       // Rewrite branches to basic blocks outside of the loop to new dummy blocks
       // within the new function. This must be done before we lose track of which
@@ -2148,7 +2138,7 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
               if (I->isTerminator() && I->getFunction() == oldFunction &&
                   !Blocks.count(I->getParent()))
                   I->replaceUsesOfWith(header, newHeader);
-#endif
+
 
 
       // Propagate personality info to the new function if there is one.
@@ -2163,7 +2153,6 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
                   ProfileCount(Count.getValue(), Function::PCT_Real)); // FIXME
           BFI->setBlockFreq(codeReplacer, EntryFreq.getFrequency());
       }
-
 
 
 
