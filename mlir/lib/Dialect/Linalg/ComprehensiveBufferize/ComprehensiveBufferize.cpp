@@ -32,9 +32,9 @@
 //          #map = affine_map<(d0)[s0, s1] -> (d0 * s1 + s0)>
 //           func @foo(%A: tensor<?xf32> {linalg.inplaceable = true})
 //              -> tensor<?xf32> {
-//            %0 = memref.buffer_cast %A : memref<?xf32, #map>
+//            %0 = bufferization.to_memref %A : memref<?xf32, #map>
 //            // ... uses of %0
-//            %res = memref.tensor_load %0 : memref<?xf32, #map>
+//            %res = bufferization.to_tensor %0 : memref<?xf32, #map>
 //            return %res : tensor<?xf32>
 //          }
 //        ```
@@ -57,13 +57,13 @@
 //          #map = affine_map<(d0)[s0, s1] -> (d0 * s1 + s0)>
 //          func @foo(%A: tensor<?xf32> {linalg.inplaceable = true})
 //              -> tensor<?xf32> {
-//            %0 = memref.buffer_cast %A : memref<?xf32, #map>
+//            %0 = bufferization.to_memref %A : memref<?xf32, #map>
 //            %1 = memref.dim %0, %c0 : memref<?xf32, #map>
 //            %2 = memref.alloc(%1) : memref<?xf32>
 //            %3 = memref.cast %2 : memref<?xf32> to memref<?xf32, #map>
 //            // ... uses of %3
 //            memref.dealloc %2 : memref<?xf32, #map>
-//            %res = memref.tensor_load %3 : memref<?xf32, #map>
+//            %res = bufferization.to_tensor %3 : memref<?xf32, #map>
 //            return %res : tensor<?xf32>
 //          }
 //       ```
@@ -87,11 +87,11 @@
 //          #map = affine_map<(d0)[s0, s1] -> (d0 * s1 + s0)>
 //          func @foo(%arg0: tensor<?xf32> {linalg.inplaceable = true})
 //              -> tensor<4xf32> {
-//            %0 = memref.buffer_cast %arg0 : memref<?xf32, #map>
+//            %0 = bufferization.to_memref %arg0 : memref<?xf32, #map>
 //            %1 = memref.subview %0[0] [4] [1] : memref<?xf32, #map> to
 //                                                memref<4xf32, #map>
 //            // ... inplace computes into %1
-//            %3 = memref.tensor_load %1 : memref<4xf32, #map>
+//            %3 = bufferization.to_tensor %1 : memref<4xf32, #map>
 //            return %3 : tensor<4xf32>
 //          }
 //        ```
@@ -110,6 +110,7 @@
 #include <random>
 
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
+#include "mlir/Dialect/Bufferization/IR/Bufferization.h"
 #include "mlir/Dialect/Linalg/ComprehensiveBufferize/BufferizableOpInterface.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/Utils/StaticValueUtils.h"
@@ -648,7 +649,7 @@ static LogicalResult bufferizeFuncOp(FuncOp funcOp, BufferizationState &state) {
                           ? getDynamicMemRefType(rankedTensorType)
                           : getContiguousOrUnrankedMemRefType(tensorType);
     Value bufferCast =
-        b.create<memref::BufferCastOp>(funcOp.getLoc(), memRefType, bbArg);
+        b.create<bufferization::ToMemrefOp>(funcOp.getLoc(), memRefType, bbArg);
     state.aliasInfo.insertNewBufferEquivalence(bufferCast, bbArg);
     state.mapBuffer(bbArg, bufferCast);
   }
@@ -932,22 +933,23 @@ static LogicalResult bufferizeFuncOpBoundary(
     Value memref = frontBlock.addArgument(memrefType);
     OpBuilder b(funcOp->getContext());
     b.setInsertionPointToStart(&frontBlock);
-    // Replace all uses of bbArg through a BufferCastOp by a memref::CastOp.
+    // Replace all uses of bbArg through a ToMemrefOp by a memref::CastOp.
     for (auto &use : llvm::make_early_inc_range(bbArg.getUses())) {
-      if (auto bufferCastOp = dyn_cast<memref::BufferCastOp>(use.getOwner())) {
+      if (auto toMemrefOp =
+              dyn_cast<bufferization::ToMemrefOp>(use.getOwner())) {
         auto castOp = b.create<memref::CastOp>(
-            funcOp.getLoc(), bufferCastOp.memref().getType(), memref);
-        bufferCastOp.memref().replaceAllUsesWith(castOp);
+            funcOp.getLoc(), toMemrefOp.memref().getType(), memref);
+        toMemrefOp.memref().replaceAllUsesWith(castOp);
         aliasInfo.insertNewBufferEquivalence(castOp.dest(),
-                                             bufferCastOp.memref());
+                                             toMemrefOp.memref());
       }
     }
     // Replace all remaining uses by a tensor_load.
     if (!bbArg.use_empty()) {
-      auto tensorLoadOp =
-          b.create<memref::TensorLoadOp>(funcOp.getLoc(), memref);
-      aliasInfo.insertNewBufferEquivalence(tensorLoadOp, bbArg);
-      bbArg.replaceAllUsesWith(tensorLoadOp);
+      auto toTensorOp =
+          b.create<bufferization::ToTensorOp>(funcOp.getLoc(), memref);
+      aliasInfo.insertNewBufferEquivalence(toTensorOp, bbArg);
+      bbArg.replaceAllUsesWith(toTensorOp);
     }
     frontBlock.eraseArgument(0);
     // TODO: add support to erase aliasInfo entries if deemed necessary.
@@ -1376,16 +1378,16 @@ struct CallOpInterface
           // info.
           state.aliasInfo.insertNewBufferEquivalence(oldRes, buffer);
           state.mapBuffer(oldRes, buffer);
-          // Add a TensorLoadOp to kill all uses of the CallOp return.
+          // Add a ToTensorOp to kill all uses of the CallOp return.
           // Replace all uses of the CallOp results so we can erase the CallOp.
-          // This TensorLoadOp must fold/DCE away or bufferization should be
+          // This ToTensorOp must fold/DCE away or bufferization should be
           // considered failed.
-          Value tensorLoad =
-              b.create<memref::TensorLoadOp>(callOp.getLoc(), buffer);
-          oldRes.replaceAllUsesWith(tensorLoad);
+          Value toTensor =
+              b.create<bufferization::ToTensorOp>(callOp.getLoc(), buffer);
+          oldRes.replaceAllUsesWith(toTensor);
           // Add new op equivalence info.
-          state.aliasInfo.insertNewBufferEquivalence(tensorLoad, buffer);
-          state.mapBuffer(tensorLoad, buffer);
+          state.aliasInfo.insertNewBufferEquivalence(toTensor, buffer);
+          state.mapBuffer(toTensor, buffer);
           continue;
         }
 
@@ -1493,7 +1495,8 @@ struct ReturnOpInterface
       if (!tensorType)
         continue;
       Value v = state.lookupBuffer(operand.get());
-      Value returnTensor = b.create<memref::TensorLoadOp>(returnOp.getLoc(), v);
+      Value returnTensor =
+          b.create<bufferization::ToTensorOp>(returnOp.getLoc(), v);
       operand.set(returnTensor);
       state.aliasInfo.insertNewBufferEquivalence(returnTensor, v);
       state.mapBuffer(returnTensor, v);

@@ -14,6 +14,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "mlir/Dialect/Bufferization/IR/Bufferization.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/Linalg/Utils/Utils.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
@@ -659,7 +660,7 @@ class SparseTensorConvertConverter : public OpConversionPattern<ConvertOp> {
       insertScalarIntoDenseTensor(rewriter, loc, elemPtr, dst, rank, ind);
       rewriter.create<scf::YieldOp>(loc);
       rewriter.setInsertionPointAfter(whileOp);
-      rewriter.replaceOpWithNewOp<memref::TensorLoadOp>(op, resType, dst);
+      rewriter.replaceOpWithNewOp<bufferization::ToTensorOp>(op, resType, dst);
       return success();
     }
     if (!encDst && !encSrc) {

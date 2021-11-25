@@ -26,7 +26,7 @@
 // CHECK-HIR:           %[[VAL_6:.*]] = tensor.dim %[[VAL_0]], %[[VAL_3]] : tensor<?x?x?xf32, #sparse_tensor.encoding<{{{.*}}}>>
 // CHECK-HIR:           %[[VAL_7:.*]] = tensor.dim %[[VAL_0]], %[[VAL_2]] : tensor<?x?x?xf32, #sparse_tensor.encoding<{{{.*}}}>>
 // CHECK-HIR:           %[[VAL_8:.*]] = sparse_tensor.values %[[VAL_0]] : tensor<?x?x?xf32, #sparse_tensor.encoding<{{{.*}}}>>
-// CHECK-HIR:           %[[VAL_9:.*]] = memref.buffer_cast %[[VAL_1]] : memref<f32>
+// CHECK-HIR:           %[[VAL_9:.*]] = bufferization.to_memref %[[VAL_1]] : memref<f32>
 // CHECK-HIR:           %[[VAL_10:.*]] = memref.alloc() : memref<f32>
 // CHECK-HIR:           memref.copy %[[VAL_9]], %[[VAL_10]] : memref<f32> to memref<f32>
 // CHECK-HIR:           %[[VAL_11:.*]] = memref.load %[[VAL_10]][] : memref<f32>
@@ -46,7 +46,7 @@
 // CHECK-HIR:             scf.yield %[[VAL_15]] : f32
 // CHECK-HIR:           }
 // CHECK-HIR:           memref.store %[[VAL_12]], %[[VAL_10]][] : memref<f32>
-// CHECK-HIR:           %[[VAL_30:.*]] = memref.tensor_load %[[VAL_10]] : memref<f32>
+// CHECK-HIR:           %[[VAL_30:.*]] = bufferization.to_tensor %[[VAL_10]] : memref<f32>
 // CHECK-HIR:           return %[[VAL_30]] : tensor<f32>
 // CHECK-HIR:         }
 //
@@ -60,7 +60,7 @@
 // CHECK-MIR:           %[[VAL_6:.*]] = call @sparseDimSize(%[[VAL_0]], %[[VAL_3]]) : (!llvm.ptr<i8>, index) -> index
 // CHECK-MIR:           %[[VAL_7:.*]] = call @sparseDimSize(%[[VAL_0]], %[[VAL_2]]) : (!llvm.ptr<i8>, index) -> index
 // CHECK-MIR:           %[[VAL_8:.*]] = call @sparseValuesF32(%[[VAL_0]]) : (!llvm.ptr<i8>) -> memref<?xf32>
-// CHECK-MIR:           %[[VAL_9:.*]] = memref.buffer_cast %[[VAL_1]] : memref<f32>
+// CHECK-MIR:           %[[VAL_9:.*]] = bufferization.to_memref %[[VAL_1]] : memref<f32>
 // CHECK-MIR:           %[[VAL_10:.*]] = memref.alloc() : memref<f32>
 // CHECK-MIR:           memref.copy %[[VAL_9]], %[[VAL_10]] : memref<f32> to memref<f32>
 // CHECK-MIR:           %[[VAL_11:.*]] = memref.load %[[VAL_10]][] : memref<f32>
@@ -80,7 +80,7 @@
 // CHECK-MIR:             scf.yield %[[VAL_15]] : f32
 // CHECK-MIR:           }
 // CHECK-MIR:           memref.store %[[VAL_12]], %[[VAL_10]][] : memref<f32>
-// CHECK-MIR:           %[[VAL_30:.*]] = memref.tensor_load %[[VAL_10]] : memref<f32>
+// CHECK-MIR:           %[[VAL_30:.*]] = bufferization.to_tensor %[[VAL_10]] : memref<f32>
 // CHECK-MIR:           return %[[VAL_30]] : tensor<f32>
 // CHECK-MIR:         }
 func @sparse_dynamic_dims(%arga: tensor<?x?x?xf32, #X>,

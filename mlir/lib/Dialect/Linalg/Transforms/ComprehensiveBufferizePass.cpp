@@ -7,6 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "PassDetail.h"
+
+#include "mlir/Dialect/Bufferization/IR/Bufferization.h"
 #include "mlir/Dialect/Linalg/ComprehensiveBufferize/ArithInterfaceImpl.h"
 #include "mlir/Dialect/Linalg/ComprehensiveBufferize/BufferizableOpInterface.h"
 #include "mlir/Dialect/Linalg/ComprehensiveBufferize/ComprehensiveBufferize.h"
@@ -37,8 +39,9 @@ struct LinalgComprehensiveModuleBufferize
 
   void getDependentDialects(DialectRegistry &registry) const override {
     registry
-        .insert<linalg::LinalgDialect, memref::MemRefDialect,
-                tensor::TensorDialect, vector::VectorDialect, scf::SCFDialect,
+        .insert<bufferization::BufferizationDialect, linalg::LinalgDialect,
+                memref::MemRefDialect, tensor::TensorDialect,
+                vector::VectorDialect, scf::SCFDialect,
                 arith::ArithmeticDialect, StandardOpsDialect, AffineDialect>();
     registerBufferizableOpInterfaceExternalModels(registry);
     arith_ext::registerBufferizableOpInterfaceExternalModels(registry);

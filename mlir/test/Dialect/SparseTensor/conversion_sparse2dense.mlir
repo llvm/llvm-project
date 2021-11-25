@@ -46,7 +46,7 @@
 //       CHECK:   memref.store %[[ElemVal]], %[[M]][%[[Iv0]]] : memref<13xi32>
 //       CHECK:   scf.yield
 //       CHECK: }
-//       CHECK: %[[T:.*]] = memref.tensor_load %[[M]] : memref<13xi32>
+//       CHECK: %[[T:.*]] = bufferization.to_tensor %[[M]] : memref<13xi32>
 //       CHECK: return %[[T]] : tensor<13xi32>
 func @sparse_convert_1d(%arg0: tensor<13xi32, #SparseVector>) -> tensor<13xi32> {
   %0 = sparse_tensor.convert %arg0 : tensor<13xi32, #SparseVector> to tensor<13xi32>
@@ -86,7 +86,7 @@ func @sparse_convert_1d(%arg0: tensor<13xi32, #SparseVector>) -> tensor<13xi32> 
 //       CHECK:   memref.store %[[ElemVal]], %[[M]][%[[Iv0]]] : memref<?xi32>
 //       CHECK:   scf.yield
 //       CHECK: }
-//       CHECK: %[[T:.*]] = memref.tensor_load %[[M]] : memref<?xi32>
+//       CHECK: %[[T:.*]] = bufferization.to_tensor %[[M]] : memref<?xi32>
 //       CHECK: return %[[T]] : tensor<?xi32>
 func @sparse_convert_1d_dyn(%arg0: tensor<?xi32, #SparseVector>) -> tensor<?xi32> {
   %0 = sparse_tensor.convert %arg0 : tensor<?xi32, #SparseVector> to tensor<?xi32>
@@ -130,7 +130,7 @@ func @sparse_convert_1d_dyn(%arg0: tensor<?xi32, #SparseVector>) -> tensor<?xi32
 //       CHECK:   memref.store %[[ElemVal]], %[[M]][%[[Iv0]], %[[Iv1]]] : memref<2x4xf64>
 //       CHECK:   scf.yield
 //       CHECK: }
-//       CHECK: %[[T:.*]] = memref.tensor_load %[[M]] : memref<2x4xf64>
+//       CHECK: %[[T:.*]] = bufferization.to_tensor %[[M]] : memref<2x4xf64>
 //       CHECK: return %[[T]] : tensor<2x4xf64>
 func @sparse_convert_2d(%arg0: tensor<2x4xf64, #SparseMatrix>) -> tensor<2x4xf64> {
   %0 = sparse_tensor.convert %arg0 : tensor<2x4xf64, #SparseMatrix> to tensor<2x4xf64>
@@ -174,7 +174,7 @@ func @sparse_convert_2d(%arg0: tensor<2x4xf64, #SparseMatrix>) -> tensor<2x4xf64
 //       CHECK:   memref.store %[[ElemVal]], %[[M]][%[[Iv0]], %[[Iv1]]] : memref<?x4xf64>
 //       CHECK:   scf.yield
 //       CHECK: }
-//       CHECK: %[[T:.*]] = memref.tensor_load %[[M]] : memref<?x4xf64>
+//       CHECK: %[[T:.*]] = bufferization.to_tensor %[[M]] : memref<?x4xf64>
 //       CHECK: return %[[T]] : tensor<?x4xf64>
 func @sparse_convert_2d_dyn0(%arg0: tensor<?x4xf64, #SparseMatrix>) -> tensor<?x4xf64> {
   %0 = sparse_tensor.convert %arg0 : tensor<?x4xf64, #SparseMatrix> to tensor<?x4xf64>
@@ -218,7 +218,7 @@ func @sparse_convert_2d_dyn0(%arg0: tensor<?x4xf64, #SparseMatrix>) -> tensor<?x
 //       CHECK:   memref.store %[[ElemVal]], %[[M]][%[[Iv0]], %[[Iv1]]] : memref<2x?xf64>
 //       CHECK:   scf.yield
 //       CHECK: }
-//       CHECK: %[[T:.*]] = memref.tensor_load %[[M]] : memref<2x?xf64>
+//       CHECK: %[[T:.*]] = bufferization.to_tensor %[[M]] : memref<2x?xf64>
 //       CHECK: return %[[T]] : tensor<2x?xf64>
 func @sparse_convert_2d_dyn1(%arg0: tensor<2x?xf64, #SparseMatrix>) -> tensor<2x?xf64> {
   %0 = sparse_tensor.convert %arg0 : tensor<2x?xf64, #SparseMatrix> to tensor<2x?xf64>
@@ -262,7 +262,7 @@ func @sparse_convert_2d_dyn1(%arg0: tensor<2x?xf64, #SparseMatrix>) -> tensor<2x
 //       CHECK:   memref.store %[[ElemVal]], %[[M]][%[[Iv0]], %[[Iv1]]] : memref<?x?xf64>
 //       CHECK:   scf.yield
 //       CHECK: }
-//       CHECK: %[[T:.*]] = memref.tensor_load %[[M]] : memref<?x?xf64>
+//       CHECK: %[[T:.*]] = bufferization.to_tensor %[[M]] : memref<?x?xf64>
 //       CHECK: return %[[T]] : tensor<?x?xf64>
 func @sparse_convert_2d_dyn2(%arg0: tensor<?x?xf64, #SparseMatrix>) -> tensor<?x?xf64> {
   %0 = sparse_tensor.convert %arg0 : tensor<?x?xf64, #SparseMatrix> to tensor<?x?xf64>
@@ -311,7 +311,7 @@ func @sparse_convert_2d_dyn2(%arg0: tensor<?x?xf64, #SparseMatrix>) -> tensor<?x
 //       CHECK:   memref.store %[[ElemVal]], %[[M]][%[[Iv0]], %[[Iv1]], %[[Iv2]]] : memref<2x3x4xf64>
 //       CHECK:   scf.yield
 //       CHECK: }
-//       CHECK: %[[T:.*]] = memref.tensor_load %[[M]] : memref<2x3x4xf64>
+//       CHECK: %[[T:.*]] = bufferization.to_tensor %[[M]] : memref<2x3x4xf64>
 //       CHECK: return %[[T]] : tensor<2x3x4xf64>
 func @sparse_convert_3d(%arg0: tensor<2x3x4xf64, #SparseTensor>) -> tensor<2x3x4xf64> {
   %0 = sparse_tensor.convert %arg0 : tensor<2x3x4xf64, #SparseTensor> to tensor<2x3x4xf64>

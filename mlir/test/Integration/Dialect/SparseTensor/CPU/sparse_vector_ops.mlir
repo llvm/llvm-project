@@ -154,7 +154,7 @@ module {
     vector.print %1 : vector<16xf64>
     // Dump the dense vector to verify structure is correct.
     %dv = sparse_tensor.convert %arg0 : tensor<?xf64, #SparseVector> to tensor<?xf64>
-    %2 = memref.buffer_cast %dv : memref<?xf64>
+    %2 = bufferization.to_memref %dv : memref<?xf64>
     %3 = vector.transfer_read %2[%c0], %d0: memref<?xf64>, vector<32xf64>
     vector.print %3 : vector<32xf64>
     memref.dealloc %2 : memref<?xf64>
@@ -181,7 +181,7 @@ module {
     // Setup memory for a single reduction scalar.
     %xdata = memref.alloc() : memref<f64>
     memref.store %d1, %xdata[] : memref<f64>
-    %x = memref.tensor_load %xdata : memref<f64>
+    %x = bufferization.to_tensor %xdata : memref<f64>
 
     // Call sparse vector kernels.
     %0 = call @vector_scale(%sv1)
@@ -228,7 +228,7 @@ module {
     %m4 = sparse_tensor.values %4 : tensor<?xf64, #DenseVector> to memref<?xf64>
     %v4 = vector.load %m4[%c0]: memref<?xf64>, vector<32xf64>
     vector.print %v4 : vector<32xf64>
-    %m5 = memref.buffer_cast %5 : memref<f64>
+    %m5 = bufferization.to_memref %5 : memref<f64>
     %v5 = memref.load %m5[] : memref<f64>
     vector.print %v5 : f64
 

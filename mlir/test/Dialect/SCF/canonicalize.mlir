@@ -564,12 +564,12 @@ func @last_value(%t0: tensor<128x128xf32>, %t1: tensor<128x128xf32>,
                  %lb : index, %ub : index, %step : index)
   -> (tensor<128x128xf32>, tensor<128x128xf32>, tensor<128x128xf32>)
 {
-  // CHECK-NEXT: %[[M1:.*]] = memref.buffer_cast %[[T1]] : memref<128x128xf32>
+  // CHECK-NEXT: %[[M1:.*]] = bufferization.to_memref %[[T1]] : memref<128x128xf32>
   // CHECK-NEXT: %[[FOR_RES:.*]] = scf.for {{.*}} iter_args(%[[BBARG_T2:.*]] = %[[T2]]) -> (tensor<128x128xf32>) {
   %0:3 = scf.for %arg0 = %lb to %ub step %step iter_args(%arg1 = %t0, %arg2 = %t1, %arg3 = %t2)
     -> (tensor<128x128xf32>, tensor<128x128xf32>, tensor<128x128xf32>)
   {
-    %m1 = memref.buffer_cast %arg2 : memref<128x128xf32>
+    %m1 = bufferization.to_memref %arg2 : memref<128x128xf32>
 
     // CHECK-NEXT:   call @process(%[[M0]]) : (memref<128x128xf32>) -> ()
     call @process(%m0) : (memref<128x128xf32>) -> ()
@@ -579,13 +579,13 @@ func @last_value(%t0: tensor<128x128xf32>, %t1: tensor<128x128xf32>,
 
     // This does not hoist (fails the bbArg has at most a single check).
     // CHECK-NEXT:   %[[T:.*]] = call @process_tensor(%[[BBARG_T2]]) : (tensor<128x128xf32>) -> memref<128x128xf32>
-    // CHECK-NEXT:   %[[YIELD_T:.*]] = memref.tensor_load %[[T:.*]]
+    // CHECK-NEXT:   %[[YIELD_T:.*]] = bufferization.to_tensor %[[T:.*]]
     %m2 = call @process_tensor(%arg3): (tensor<128x128xf32>) -> memref<128x128xf32>
-    %3 = memref.tensor_load %m2 : memref<128x128xf32>
+    %3 = bufferization.to_tensor %m2 : memref<128x128xf32>
 
     // All this stuff goes away, incrementally
-    %1 = memref.tensor_load %m0 : memref<128x128xf32>
-    %2 = memref.tensor_load %m1 : memref<128x128xf32>
+    %1 = bufferization.to_tensor %m0 : memref<128x128xf32>
+    %2 = bufferization.to_tensor %m1 : memref<128x128xf32>
 
     // CHECK-NEXT:   scf.yield %[[YIELD_T]] : tensor<128x128xf32>
     scf.yield %1, %2, %3 : tensor<128x128xf32>, tensor<128x128xf32>, tensor<128x128xf32>
@@ -593,8 +593,8 @@ func @last_value(%t0: tensor<128x128xf32>, %t1: tensor<128x128xf32>,
   // CHECK-NEXT: }
   }
 
-  // CHECK-NEXT: %[[R0:.*]] = memref.tensor_load %[[M0]] : memref<128x128xf32>
-  // CHECK-NEXT: %[[R1:.*]] = memref.tensor_load %[[M1]] : memref<128x128xf32>
+  // CHECK-NEXT: %[[R0:.*]] = bufferization.to_tensor %[[M0]] : memref<128x128xf32>
+  // CHECK-NEXT: %[[R1:.*]] = bufferization.to_tensor %[[M1]] : memref<128x128xf32>
   // CHECK-NEXT: return %[[R0]], %[[R1]], %[[FOR_RES]] : tensor<128x128xf32>, tensor<128x128xf32>, tensor<128x128xf32>
   return %0#0, %0#1, %0#2 : tensor<128x128xf32>, tensor<128x128xf32>, tensor<128x128xf32>
 }
