@@ -46,10 +46,11 @@
 // YKFIXME: The control point cannot yet be used in an interpreter using
 // threaded dispatch.
 //
-// YKFIXME: The tracing logic is currently over-simplified:
+// YKFIXME: The tracing logic is currently over-simplified. The following items
+// need to be fixed:
 //
-//  - A JIT location is assumed to be a simple integer program counter. It
-//    should be a `ykrt::Location`.
+//  - The address of `YkLocation` instances are used for identity, but they are
+//    intended to be freely moved by the user.
 //
 //  - Tracing starts when we encounter a location for which we have no machine
 //    code. A hot counter should be used instead.
@@ -123,7 +124,7 @@ void createJITStatePrint(IRBuilder<> &Builder, Module *Mod, std::string Str) {
 /// Generates the new control point, which includes all logic to start/stop
 /// tracing and to compile/execute traces.
 void createControlPoint(Module &Mod, Function *F, std::vector<Value *> LiveVars,
-                        StructType *YkCtrlPointStruct) {
+                        StructType *YkCtrlPointStruct, Type *YkLocTy) {
   auto &Context = Mod.getContext();
 
   // Create control point blocks and setup the IRBuilder.
@@ -166,9 +167,8 @@ void createControlPoint(Module &Mod, Function *F, std::vector<Value *> LiveVars,
       PtNull, "compiled_trace", (GlobalVariable *)nullptr);
 
   GlobalVariable *GVStartLoc = new GlobalVariable(
-      Mod, Type::getInt32Ty(Context), false, GlobalVariable::InternalLinkage,
-      ConstantInt::get(Context, APInt(32, -1)), "start_loc",
-      (GlobalVariable *)nullptr);
+      Mod, YkLocTy, false, GlobalVariable::InternalLinkage,
+      Constant::getNullValue(YkLocTy), "start_loc", (GlobalVariable *)nullptr);
 
   // Create control point entry block. Checks if we are currently tracing.
   Value *GVTracingVal = Builder.CreateLoad(Type::getInt8Ty(Context), GVTracing);
@@ -196,8 +196,7 @@ void createControlPoint(Module &Mod, Function *F, std::vector<Value *> LiveVars,
   // Create block that checks if we've reached the same location again so we
   // can execute a compiled trace.
   Builder.SetInsertPoint(BBHasTrace);
-  Value *ValStartLoc =
-      Builder.CreateLoad(Type::getInt32Ty(Context), GVStartLoc);
+  Value *ValStartLoc = Builder.CreateLoad(YkLocTy, GVStartLoc);
   Value *ExecTraceCond = Builder.CreateICmp(CmpInst::Predicate::ICMP_EQ,
                                             ValStartLoc, F->getArg(0));
   Builder.CreateCondBr(ExecTraceCond, BBExecuteTrace, BBReturn);
@@ -220,8 +219,7 @@ void createControlPoint(Module &Mod, Function *F, std::vector<Value *> LiveVars,
 
   // Create block that decides when to stop tracing.
   Builder.SetInsertPoint(BBTracing);
-  Value *ValStartLoc2 =
-      Builder.CreateLoad(Type::getInt32Ty(Context), GVStartLoc);
+  Value *ValStartLoc2 = Builder.CreateLoad(YkLocTy, GVStartLoc);
   Value *StopTracingCond = Builder.CreateICmp(CmpInst::Predicate::ICMP_EQ,
                                               ValStartLoc2, F->getArg(0));
   Builder.CreateCondBr(StopTracingCond, BBStopTracing, BBReturn);
@@ -312,8 +310,9 @@ PreservedAnalyses YkControlPointPass::run(Module &M,
       StructType::create(TypeParams, "YkCtrlPointVars");
 
   // Create the new control point.
-  FunctionType *FType = FunctionType::get(
-      CtrlPointReturnTy, {Type::getInt32Ty(Context), CtrlPointReturnTy}, false);
+  Type *YkLocTy = OldCtrlPointCall->getArgOperand(0)->getType();
+  FunctionType *FType =
+      FunctionType::get(CtrlPointReturnTy, {YkLocTy, CtrlPointReturnTy}, false);
   Function *NF = Function::Create(FType, GlobalVariable::ExternalLinkage,
                                   YK_NEW_CONTROL_POINT, M);
 
@@ -347,7 +346,7 @@ PreservedAnalyses YkControlPointPass::run(Module &M,
   OldCtrlPointCall->eraseFromParent();
 
   // Generate new control point logic.
-  createControlPoint(M, NF, LiveVals, CtrlPointReturnTy);
+  createControlPoint(M, NF, LiveVals, CtrlPointReturnTy, YkLocTy);
 
   return PreservedAnalyses::none();
 }
