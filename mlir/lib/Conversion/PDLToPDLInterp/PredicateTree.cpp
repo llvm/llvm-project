@@ -491,6 +491,7 @@ void visitUpward(std::vector<PositionalPredicate> &predList, OpIndex opIndex,
         // cheaper to start the traversal at this value rather than at the
         // `connector`, violating the optimality of our spanning tree.
         bool inserted = valueToPosition.try_emplace(value, opPos).second;
+        (void)inserted;
         assert(inserted && "duplicate upward visit");
 
         // Obtain the tree predicates at the current value.
