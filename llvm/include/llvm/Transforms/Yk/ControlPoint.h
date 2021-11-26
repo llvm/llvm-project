@@ -2,6 +2,7 @@
 #define LLVM_TRANSFORMS_YK_CONTROLPOINT_H
 
 #include "llvm/IR/PassManager.h"
+#include "llvm/Pass.h"
 
 // The name of the "dummy function" that the user puts in their interpreter
 // implementation and that we will replace with our own code.
@@ -11,11 +12,7 @@
 #define YK_NEW_CONTROL_POINT "yk_new_control_point"
 
 namespace llvm {
-class YkControlPointPass : public PassInfoMixin<YkControlPointPass> {
-public:
-  explicit YkControlPointPass();
-  PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
-};
+ModulePass *createYkControlPointPass();
 } // namespace llvm
 
 #endif

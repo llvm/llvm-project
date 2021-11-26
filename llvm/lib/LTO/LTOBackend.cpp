@@ -330,13 +330,6 @@ static void runNewPMPasses(const Config &Conf, Module &Mod, TargetMachine *TM,
     MPM.addPass(PB.buildLTODefaultPipeline(OL, ExportSummary));
   }
 
-  // We add the yk control point pass late in the pipeline (after all
-  // optimisation and just before verification and codegen) so that no IR
-  // optimisation passes have a chance to change the interface to the control
-  // point. The JIT runtime relies on the signature not being changed.
-  if (YkPatchCtrlPoint)
-    MPM.addPass(YkControlPointPass());
-
   if (!Conf.DisableVerify)
     MPM.addPass(VerifierPass());
 
