@@ -327,10 +327,9 @@ struct PostAnalysisStep {
   virtual ~PostAnalysisStep() {}
 
   /// Run the post analysis step. This function may modify the IR, but must keep
-  /// `aliasInfo` consistent. Newly created operations and operations that
-  /// should be re-analyzed must be stored in `newOps`.
-  virtual LogicalResult run(FuncOp funcOp, BufferizationAliasInfo &aliasInfo,
-                            DominanceInfo &domInfo,
+  /// `aliasInfo` (inside `state`) consistent. Newly created operations and
+  /// operations that should be re-analyzed must be stored in `newOps`.
+  virtual LogicalResult run(FuncOp funcOp, BufferizationState &state,
                             SmallVector<Operation *> &newOps) = 0;
 };
 

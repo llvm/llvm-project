@@ -407,12 +407,12 @@ struct LinalgOpInterfaceHelper<> {
 /// OpOperand, that eventually ends at a single InitTensorOp.
 LogicalResult mlir::linalg::comprehensive_bufferize::linalg_ext::
     InitTensorEliminationStep::eliminateInitTensors(
-        FuncOp funcOp, BufferizationAliasInfo &aliasInfo,
-        DominanceInfo &domInfo,
+        FuncOp funcOp, BufferizationState &state,
         std::function<bool(OpOperand &)> anchorMatchFunc,
         std::function<Value(OpBuilder &, Location, OpOperand &)> rewriteFunc,
         SmallVector<Operation *> &newOps) {
   OpBuilder b(funcOp->getContext());
+  BufferizationAliasInfo &aliasInfo = state.aliasInfo;
 
   WalkResult status = funcOp->walk([&](Operation *op) {
     for (OpOperand &operand : op->getOpOperands()) {
@@ -501,17 +501,17 @@ LogicalResult mlir::linalg::comprehensive_bufferize::linalg_ext::
 /// out-of-place due to RaW conflicts.
 LogicalResult mlir::linalg::comprehensive_bufferize::linalg_ext::
     InsertSliceAnchoredInitTensorEliminationStep::run(
-        FuncOp funcOp, BufferizationAliasInfo &aliasInfo,
-        DominanceInfo &domInfo, SmallVector<Operation *> &newOps) {
+        FuncOp funcOp, BufferizationState &state,
+        SmallVector<Operation *> &newOps) {
   return eliminateInitTensors(
-      funcOp, aliasInfo, domInfo,
+      funcOp, state,
       [&](OpOperand &operand) {
         auto insertSliceOp =
             dyn_cast<tensor::InsertSliceOp>(operand.getOwner());
         if (!insertSliceOp)
           return false;
         // Only inplace bufferized InsertSliceOps are eligible.
-        if (!aliasInfo.isInPlace(insertSliceOp->getOpResult(0)))
+        if (!state.aliasInfo.isInPlace(insertSliceOp->getOpResult(0)))
           return false;
         return &operand == &insertSliceOp->getOpOperand(0) /*source*/;
       },
