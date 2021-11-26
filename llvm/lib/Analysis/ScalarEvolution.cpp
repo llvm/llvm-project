@@ -5341,9 +5341,12 @@ const SCEV *ScalarEvolution::createSimpleAffineAddRec(PHINode *PN,
   // We can add Flags to the post-inc expression only if we
   // know that it is *undefined behavior* for BEValueV to
   // overflow.
-  if (auto *BEInst = dyn_cast<Instruction>(BEValueV))
-    if (isLoopInvariant(Accum, L) && isAddRecNeverPoison(BEInst, L))
+  if (auto *BEInst = dyn_cast<Instruction>(BEValueV)) {
+    assert(isLoopInvariant(Accum, L) &&
+           "Accum is defined outside L, but is not invariant?");
+    if (isAddRecNeverPoison(BEInst, L))
       (void)getAddRecExpr(getAddExpr(StartVal, Accum), Accum, L, Flags);
+  }
 
   return PHISCEV;
 }
