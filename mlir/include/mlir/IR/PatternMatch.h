@@ -446,6 +446,9 @@ public:
   /// Print this value to the provided output stream.
   void print(raw_ostream &os) const;
 
+  /// Print the specified value kind to an output stream.
+  static void print(raw_ostream &os, Kind kind);
+
 private:
   /// Find the index of a given type in a range of other types.
   template <typename...>
@@ -488,6 +491,11 @@ private:
 
 inline raw_ostream &operator<<(raw_ostream &os, PDLValue value) {
   value.print(os);
+  return os;
+}
+
+inline raw_ostream &operator<<(raw_ostream &os, PDLValue::Kind kind) {
+  PDLValue::print(os, kind);
   return os;
 }
 
