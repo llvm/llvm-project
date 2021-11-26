@@ -932,7 +932,7 @@ void PPC64R2SaveStub::writeTo(uint8_t *buf) {
     write32(buf + 4, 0x48000000 | (offset & 0x03fffffc)); // b    <offset>
   } else if (isInt<34>(offset)) {
     int nextInstOffset;
-    if (!config->Power10Stub) {
+    if (!config->power10Stubs) {
       uint64_t tocOffset = destination.getVA() - getPPC64TocBase();
       if (tocOffset >> 16 > 0) {
         const uint64_t addi = ADDI_R12_TO_R12_NO_DISP | (tocOffset & 0xffff);
@@ -980,7 +980,7 @@ void PPC64R12SetupStub::writeTo(uint8_t *buf) {
     reportRangeError(buf, offset, 34, destination, "R12 setup stub offset");
 
   int nextInstOffset;
-  if (!config->Power10Stub) {
+  if (!config->power10Stubs) {
     uint32_t off = destination.getVA(addend) - getThunkTargetSym()->getVA() - 8;
     write32(buf + 0, 0x7c0802a6);                      // mflr r12
     write32(buf + 4, 0x429f0005);                      // bcl 20,31,.+4
@@ -1013,7 +1013,7 @@ void PPC64PCRelPLTStub::writeTo(uint8_t *buf) {
   int nextInstOffset = 0;
   int64_t offset = destination.getGotPltVA() - getThunkTargetSym()->getVA();
 
-  if (config->Power10Stub) {
+  if (config->power10Stubs) {
     if (!isInt<34>(offset))
       reportRangeError(buf, offset, 34, destination,
                        "PC-relative PLT stub offset");
@@ -1068,7 +1068,7 @@ void PPC64PCRelLongBranchThunk::writeTo(uint8_t *buf) {
                      "PC-relative long branch stub offset");
 
   int nextInstOffset;
-  if (!config->Power10Stub) {
+  if (!config->power10Stubs) {
     uint32_t off = destination.getVA(addend) - getThunkTargetSym()->getVA() - 8;
     write32(buf + 0, 0x7c0802a6);                      // mflr r12
     write32(buf + 4, 0x429f0005);                      // bcl 20,31,.+4
