@@ -5,6 +5,7 @@ function(add_mlir_unittest test_dirname)
 endfunction()
 
 add_subdirectory(Analysis)
+add_subdirectory(Conversion)
 add_subdirectory(Dialect)
 add_subdirectory(ExecutionEngine)
 add_subdirectory(Interfaces)

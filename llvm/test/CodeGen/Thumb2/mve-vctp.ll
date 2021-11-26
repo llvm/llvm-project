@@ -56,19 +56,11 @@ define void @vctp32(i32 %arg, <4 x i32> *%in, <4 x i32>* %out) {
 define arm_aapcs_vfpcc <4 x i32> @vcmp_ult_v4i32(i32 %n, <4 x i32> %a, <4 x i32> %b) {
 ; CHECK-LABEL: vcmp_ult_v4i32:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vdup.32 q2, r0
-; CHECK-NEXT:    adr r0, .LCPI3_0
-; CHECK-NEXT:    vldrw.u32 q3, [r0]
-; CHECK-NEXT:    vcmp.u32 hi, q2, q3
-; CHECK-NEXT:    vpsel q0, q0, q1
+; CHECK-NEXT:    vctp.32 r0
+; CHECK-NEXT:    vpst
+; CHECK-NEXT:    vmovt q1, q0
+; CHECK-NEXT:    vmov q0, q1
 ; CHECK-NEXT:    bx lr
-; CHECK-NEXT:    .p2align 4
-; CHECK-NEXT:  @ %bb.1:
-; CHECK-NEXT:  .LCPI3_0:
-; CHECK-NEXT:    .long 0 @ 0x0
-; CHECK-NEXT:    .long 1 @ 0x1
-; CHECK-NEXT:    .long 2 @ 0x2
-; CHECK-NEXT:    .long 3 @ 0x3
 entry:
   %i = insertelement <4 x i32> undef, i32 %n, i32 0
   %ns = shufflevector <4 x i32> %i, <4 x i32> undef, <4 x i32> zeroinitializer
@@ -80,19 +72,11 @@ entry:
 define arm_aapcs_vfpcc <4 x i32> @vcmp_uge_v4i32(i32 %n, <4 x i32> %a, <4 x i32> %b) {
 ; CHECK-LABEL: vcmp_uge_v4i32:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vdup.32 q2, r0
-; CHECK-NEXT:    adr r0, .LCPI4_0
-; CHECK-NEXT:    vldrw.u32 q3, [r0]
-; CHECK-NEXT:    vcmp.u32 cs, q2, q3
-; CHECK-NEXT:    vpsel q0, q0, q1
+; CHECK-NEXT:    vctp.32 r0
+; CHECK-NEXT:    vpst
+; CHECK-NEXT:    vmovt q1, q0
+; CHECK-NEXT:    vmov q0, q1
 ; CHECK-NEXT:    bx lr
-; CHECK-NEXT:    .p2align 4
-; CHECK-NEXT:  @ %bb.1:
-; CHECK-NEXT:  .LCPI4_0:
-; CHECK-NEXT:    .long 0 @ 0x0
-; CHECK-NEXT:    .long 1 @ 0x1
-; CHECK-NEXT:    .long 2 @ 0x2
-; CHECK-NEXT:    .long 3 @ 0x3
 entry:
   %i = insertelement <4 x i32> undef, i32 %n, i32 0
   %ns = shufflevector <4 x i32> %i, <4 x i32> undef, <4 x i32> zeroinitializer
@@ -104,19 +88,11 @@ entry:
 define arm_aapcs_vfpcc <4 x i32> @vcmp_ult_v4i32_undef(i32 %n, <4 x i32> %a, <4 x i32> %b) {
 ; CHECK-LABEL: vcmp_ult_v4i32_undef:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vdup.32 q2, r0
-; CHECK-NEXT:    adr r0, .LCPI5_0
-; CHECK-NEXT:    vldrw.u32 q3, [r0]
-; CHECK-NEXT:    vcmp.u32 hi, q2, q3
-; CHECK-NEXT:    vpsel q0, q0, q1
+; CHECK-NEXT:    vctp.32 r0
+; CHECK-NEXT:    vpst
+; CHECK-NEXT:    vmovt q1, q0
+; CHECK-NEXT:    vmov q0, q1
 ; CHECK-NEXT:    bx lr
-; CHECK-NEXT:    .p2align 4
-; CHECK-NEXT:  @ %bb.1:
-; CHECK-NEXT:  .LCPI5_0:
-; CHECK-NEXT:    .long 0 @ 0x0
-; CHECK-NEXT:    .long 1 @ 0x1
-; CHECK-NEXT:    .zero 4
-; CHECK-NEXT:    .zero 4
 entry:
   %i = insertelement <4 x i32> undef, i32 %n, i32 0
   %ns = shufflevector <4 x i32> %i, <4 x i32> undef, <4 x i32> zeroinitializer
@@ -129,23 +105,12 @@ entry:
 define arm_aapcs_vfpcc <8 x i16> @vcmp_ult_v8i16(i16 %n, <8 x i16> %a, <8 x i16> %b) {
 ; CHECK-LABEL: vcmp_ult_v8i16:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vdup.16 q2, r0
-; CHECK-NEXT:    adr r0, .LCPI6_0
-; CHECK-NEXT:    vldrw.u32 q3, [r0]
-; CHECK-NEXT:    vcmp.u16 hi, q2, q3
-; CHECK-NEXT:    vpsel q0, q0, q1
+; CHECK-NEXT:    uxth r0, r0
+; CHECK-NEXT:    vctp.16 r0
+; CHECK-NEXT:    vpst
+; CHECK-NEXT:    vmovt q1, q0
+; CHECK-NEXT:    vmov q0, q1
 ; CHECK-NEXT:    bx lr
-; CHECK-NEXT:    .p2align 4
-; CHECK-NEXT:  @ %bb.1:
-; CHECK-NEXT:  .LCPI6_0:
-; CHECK-NEXT:    .short 0 @ 0x0
-; CHECK-NEXT:    .short 1 @ 0x1
-; CHECK-NEXT:    .short 2 @ 0x2
-; CHECK-NEXT:    .short 3 @ 0x3
-; CHECK-NEXT:    .short 4 @ 0x4
-; CHECK-NEXT:    .short 5 @ 0x5
-; CHECK-NEXT:    .short 6 @ 0x6
-; CHECK-NEXT:    .short 7 @ 0x7
 entry:
   %i = insertelement <8 x i16> undef, i16 %n, i32 0
   %ns = shufflevector <8 x i16> %i, <8 x i16> undef, <8 x i32> zeroinitializer
@@ -157,23 +122,12 @@ entry:
 define arm_aapcs_vfpcc <8 x i16> @vcmp_uge_v8i16(i16 %n, <8 x i16> %a, <8 x i16> %b) {
 ; CHECK-LABEL: vcmp_uge_v8i16:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vdup.16 q2, r0
-; CHECK-NEXT:    adr r0, .LCPI7_0
-; CHECK-NEXT:    vldrw.u32 q3, [r0]
-; CHECK-NEXT:    vcmp.u16 cs, q2, q3
-; CHECK-NEXT:    vpsel q0, q0, q1
+; CHECK-NEXT:    uxth r0, r0
+; CHECK-NEXT:    vctp.16 r0
+; CHECK-NEXT:    vpst
+; CHECK-NEXT:    vmovt q1, q0
+; CHECK-NEXT:    vmov q0, q1
 ; CHECK-NEXT:    bx lr
-; CHECK-NEXT:    .p2align 4
-; CHECK-NEXT:  @ %bb.1:
-; CHECK-NEXT:  .LCPI7_0:
-; CHECK-NEXT:    .short 0 @ 0x0
-; CHECK-NEXT:    .short 1 @ 0x1
-; CHECK-NEXT:    .short 2 @ 0x2
-; CHECK-NEXT:    .short 3 @ 0x3
-; CHECK-NEXT:    .short 4 @ 0x4
-; CHECK-NEXT:    .short 5 @ 0x5
-; CHECK-NEXT:    .short 6 @ 0x6
-; CHECK-NEXT:    .short 7 @ 0x7
 entry:
   %i = insertelement <8 x i16> undef, i16 %n, i32 0
   %ns = shufflevector <8 x i16> %i, <8 x i16> undef, <8 x i32> zeroinitializer
@@ -186,31 +140,12 @@ entry:
 define arm_aapcs_vfpcc <16 x i8> @vcmp_ult_v16i8(i8 %n, <16 x i8> %a, <16 x i8> %b) {
 ; CHECK-LABEL: vcmp_ult_v16i8:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vdup.8 q2, r0
-; CHECK-NEXT:    adr r0, .LCPI8_0
-; CHECK-NEXT:    vldrw.u32 q3, [r0]
-; CHECK-NEXT:    vcmp.u8 hi, q2, q3
-; CHECK-NEXT:    vpsel q0, q0, q1
+; CHECK-NEXT:    uxtb r0, r0
+; CHECK-NEXT:    vctp.8 r0
+; CHECK-NEXT:    vpst
+; CHECK-NEXT:    vmovt q1, q0
+; CHECK-NEXT:    vmov q0, q1
 ; CHECK-NEXT:    bx lr
-; CHECK-NEXT:    .p2align 4
-; CHECK-NEXT:  @ %bb.1:
-; CHECK-NEXT:  .LCPI8_0:
-; CHECK-NEXT:    .byte 0 @ 0x0
-; CHECK-NEXT:    .byte 1 @ 0x1
-; CHECK-NEXT:    .byte 2 @ 0x2
-; CHECK-NEXT:    .byte 3 @ 0x3
-; CHECK-NEXT:    .byte 4 @ 0x4
-; CHECK-NEXT:    .byte 5 @ 0x5
-; CHECK-NEXT:    .byte 6 @ 0x6
-; CHECK-NEXT:    .byte 7 @ 0x7
-; CHECK-NEXT:    .byte 8 @ 0x8
-; CHECK-NEXT:    .byte 9 @ 0x9
-; CHECK-NEXT:    .byte 10 @ 0xa
-; CHECK-NEXT:    .byte 11 @ 0xb
-; CHECK-NEXT:    .byte 12 @ 0xc
-; CHECK-NEXT:    .byte 13 @ 0xd
-; CHECK-NEXT:    .byte 14 @ 0xe
-; CHECK-NEXT:    .byte 15 @ 0xf
 entry:
   %i = insertelement <16 x i8> undef, i8 %n, i32 0
   %ns = shufflevector <16 x i8> %i, <16 x i8> undef, <16 x i32> zeroinitializer
@@ -222,31 +157,12 @@ entry:
 define arm_aapcs_vfpcc <16 x i8> @vcmp_uge_v16i8(i8 %n, <16 x i8> %a, <16 x i8> %b) {
 ; CHECK-LABEL: vcmp_uge_v16i8:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vdup.8 q2, r0
-; CHECK-NEXT:    adr r0, .LCPI9_0
-; CHECK-NEXT:    vldrw.u32 q3, [r0]
-; CHECK-NEXT:    vcmp.u8 cs, q2, q3
-; CHECK-NEXT:    vpsel q0, q0, q1
+; CHECK-NEXT:    uxtb r0, r0
+; CHECK-NEXT:    vctp.8 r0
+; CHECK-NEXT:    vpst
+; CHECK-NEXT:    vmovt q1, q0
+; CHECK-NEXT:    vmov q0, q1
 ; CHECK-NEXT:    bx lr
-; CHECK-NEXT:    .p2align 4
-; CHECK-NEXT:  @ %bb.1:
-; CHECK-NEXT:  .LCPI9_0:
-; CHECK-NEXT:    .byte 0 @ 0x0
-; CHECK-NEXT:    .byte 1 @ 0x1
-; CHECK-NEXT:    .byte 2 @ 0x2
-; CHECK-NEXT:    .byte 3 @ 0x3
-; CHECK-NEXT:    .byte 4 @ 0x4
-; CHECK-NEXT:    .byte 5 @ 0x5
-; CHECK-NEXT:    .byte 6 @ 0x6
-; CHECK-NEXT:    .byte 7 @ 0x7
-; CHECK-NEXT:    .byte 8 @ 0x8
-; CHECK-NEXT:    .byte 9 @ 0x9
-; CHECK-NEXT:    .byte 10 @ 0xa
-; CHECK-NEXT:    .byte 11 @ 0xb
-; CHECK-NEXT:    .byte 12 @ 0xc
-; CHECK-NEXT:    .byte 13 @ 0xd
-; CHECK-NEXT:    .byte 14 @ 0xe
-; CHECK-NEXT:    .byte 15 @ 0xf
 entry:
   %i = insertelement <16 x i8> undef, i8 %n, i32 0
   %ns = shufflevector <16 x i8> %i, <16 x i8> undef, <16 x i32> zeroinitializer
