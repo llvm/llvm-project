@@ -1691,7 +1691,7 @@ static void handleUndefined(Symbol *sym, const char *option) {
 
   if (!sym->isLazy())
     return;
-  sym->fetch();
+  sym->extract();
   if (!config->whyExtract.empty())
     whyExtract.emplace_back(option, sym->file, *sym);
 }
@@ -1706,14 +1706,12 @@ static void handleUndefinedGlob(StringRef arg) {
     return;
   }
 
+  // Calling sym->extract() in the loop is not safe because it may add new
+  // symbols to the symbol table, invalidating the current iterator.
   std::vector<Symbol *> syms;
-  for (Symbol *sym : symtab->symbols()) {
-    // Calling Sym->fetch() from here is not safe because it may
-    // add new symbols to the symbol table, invalidating the
-    // current iterator. So we just keep a note.
+  for (Symbol *sym : symtab->symbols())
     if (pat->match(sym->getName()))
       syms.push_back(sym);
-  }
 
   for (Symbol *sym : syms)
     handleUndefined(sym, "--undefined-glob");
@@ -1731,7 +1729,7 @@ static void handleLibcall(StringRef name) {
     mb = cast<LazyArchive>(sym)->getMemberBuffer();
 
   if (isBitcode(mb))
-    sym->fetch();
+    sym->extract();
 }
 
 // Handle --dependency-file=<path>. If that option is given, lld creates a
@@ -2207,7 +2205,7 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
     symtab->insert(arg->getValue())->traced = true;
 
   // Handle -u/--undefined before input files. If both a.a and b.so define foo,
-  // -u foo a.a b.so will fetch a.a.
+  // -u foo a.a b.so will extract a.a.
   for (StringRef name : config->undefined)
     addUnusedUndefined(name)->referenced = true;
 

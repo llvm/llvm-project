@@ -294,8 +294,8 @@ void elf::writeArchiveStats() {
     return;
   }
 
-  os << "members\tfetched\tarchive\n";
+  os << "members\textracted\tarchive\n";
   for (const ArchiveFile *f : archiveFiles)
-    os << f->getMemberCount() << '\t' << f->getFetchedMemberCount() << '\t'
+    os << f->getMemberCount() << '\t' << f->getExtractedMemberCount() << '\t'
        << f->getName() << '\n';
 }

@@ -93,7 +93,7 @@ public:
   // Symbol binding. This is not overwritten by replace() to track
   // changes during resolution. In particular:
   //  - An undefined weak is still weak when it resolves to a shared library.
-  //  - An undefined weak will not fetch archive members, but we have to
+  //  - An undefined weak will not extract archive members, but we have to
   //    remember it is weak.
   uint8_t binding;
 
@@ -216,10 +216,10 @@ public:
   void mergeProperties(const Symbol &other);
   void resolve(const Symbol &other);
 
-  // If this is a lazy symbol, fetch an input file and add the symbol
+  // If this is a lazy symbol, extract an input file and add the symbol
   // in the file to the symbol table. Calling this function on
   // non-lazy object causes a runtime error.
-  void fetch() const;
+  void extract() const;
 
   static bool isExportDynamic(Kind k, uint8_t visibility) {
     if (k == SharedKind)

@@ -12,7 +12,7 @@
 # RUN: FileCheck --input-file=%t.txt -DT=%t %s --match-full-lines --strict-whitespace
 
 ## Fetches 0 member from %tweak.a and 2 members from %t1.a
-#      CHECK:members	fetched	archive
+#      CHECK:members	extracted	archive
 # CHECK-NEXT:1	0	[[T]]weak.a
 # CHECK-NEXT:3	2	[[T]]1.a
 
@@ -22,7 +22,7 @@
 ## The second %t1.a has 0 fetched member.
 # RUN: ld.lld %t.o %tweak.a %t1.a %t1.a --print-archive-stats=- -o /dev/null | \
 # RUN:   FileCheck --check-prefix=CHECK2 %s
-# CHECK2:      members	fetched	archive
+# CHECK2:      members	extracted	archive
 # CHECK2-NEXT: 1	0	{{.*}}weak.a
 # CHECK2-NEXT: 3	2	{{.*}}1.a
 # CHECK2-NEXT: 3	0	{{.*}}1.a

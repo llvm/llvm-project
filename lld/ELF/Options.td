@@ -338,7 +338,7 @@ defm print_icf_sections: B<"print-icf-sections",
 
 def print_archive_stats: J<"print-archive-stats=">,
   HelpText<"Write archive usage statistics to the specified file. "
-           "Print the numbers of members and fetched members for each archive">;
+           "Print the numbers of members and extracted members for each archive">;
 
 defm print_symbol_order: Eq<"print-symbol-order",
   "Print a symbol order specified by --call-graph-ordering-file into the specified file">;
@@ -468,8 +468,8 @@ def power10_stubs_eq:
 defm version_script: Eq<"version-script", "Read a version script">;
 
 defm warn_backrefs: BB<"warn-backrefs",
-    "Warn about backward symbol references to fetch archive members",
-    "Do not warn about backward symbol references to fetch archive members (default)">;
+    "Warn about backward symbol references to extract archive members",
+    "Do not warn about backward symbol references to extract archive members (default)">;
 
 defm warn_backrefs_exclude
     : EEq<"warn-backrefs-exclude",
