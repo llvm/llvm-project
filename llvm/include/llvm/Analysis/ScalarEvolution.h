@@ -1923,9 +1923,6 @@ private:
   /// Erase Value from ValueExprMap and ExprValueMap.
   void eraseValueFromMap(Value *V);
 
-  /// Insert V to S mapping into ValueExprMap and ExprValueMap.
-  void insertValueToMap(Value *V, const SCEV *S);
-
   /// Return false iff given SCEV contains a SCEVUnknown with NULL value-
   /// pointer.
   bool checkValidity(const SCEV *S) const;
