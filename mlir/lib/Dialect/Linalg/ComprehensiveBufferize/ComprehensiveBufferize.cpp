@@ -109,10 +109,10 @@
 
 #include <random>
 
-#include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Bufferization/IR/Bufferization.h"
 #include "mlir/Dialect/Linalg/ComprehensiveBufferize/BufferizableOpInterface.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
+#include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "mlir/IR/AsmState.h"
 #include "mlir/IR/BlockAndValueMapping.h"
@@ -1513,8 +1513,6 @@ void registerBufferizableOpInterfaceExternalModels(DialectRegistry &registry) {
 
   // Ops that are not bufferizable but are allocation hoisting barriers.
   registry.addOpInterface<FuncOp, AllocationHoistingBarrierOnly<FuncOp>>();
-  registry.addOpInterface<AffineParallelOp,
-                          AllocationHoistingBarrierOnly<AffineParallelOp>>();
 }
 
 } // namespace comprehensive_bufferize
