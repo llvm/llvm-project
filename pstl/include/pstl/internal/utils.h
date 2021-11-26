@@ -63,15 +63,15 @@ void __invoke_if_not(std::true_type, _Fp)
 }
 
 template <typename _F1, typename _F2>
-typename std::invoke_result<_F1()>::type
-__invoke_if_else(std::true_type, _F1 __f1, _F2)
+auto
+__invoke_if_else(std::true_type, _F1 __f1, _F2) -> decltype(__f1())
 {
     return __f1();
 }
 
 template <typename _F1, typename _F2>
-typename std::invoke_result<_F2()>::type
-__invoke_if_else(std::false_type, _F1, _F2 __f2)
+auto
+__invoke_if_else(std::false_type, _F1, _F2 __f2) -> decltype(__f2())
 {
     return __f2();
 }
