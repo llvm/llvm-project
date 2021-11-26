@@ -16,15 +16,7 @@
 using namespace lldb;
 using namespace lldb_private;
 
-OptionGroupFormat::OptionGroupFormat(lldb::Format default_format,
-                                     uint64_t default_byte_size,
-                                     uint64_t default_count)
-    : m_format(default_format, default_format),
-      m_byte_size(default_byte_size, default_byte_size),
-      m_count(default_count, default_count), m_prev_gdb_format('x'),
-      m_prev_gdb_size('w') {}
-
-static constexpr OptionDefinition g_option_table[] = {
+static constexpr OptionDefinition g_default_option_definitions[] = {
     {LLDB_OPT_SET_1, false, "format", 'f', OptionParser::eRequiredArgument,
      nullptr, {}, 0, eArgTypeFormat,
      "Specify a format to be used for display."},
@@ -39,8 +31,34 @@ static constexpr OptionDefinition g_option_table[] = {
      "The number of total items to display."},
 };
 
+OptionGroupFormat::OptionGroupFormat(
+    lldb::Format default_format, uint64_t default_byte_size,
+    uint64_t default_count, OptionGroupFormatUsageTextVector usage_text_vector)
+    : m_format(default_format, default_format),
+      m_byte_size(default_byte_size, default_byte_size),
+      m_count(default_count, default_count), m_prev_gdb_format('x'),
+      m_prev_gdb_size('w') {
+  // Copy the default option definitions.
+  std::copy(std::begin(g_default_option_definitions),
+            std::end(g_default_option_definitions),
+            std::begin(m_option_definitions));
+
+  for (auto usage_text_tuple : usage_text_vector) {
+    switch (std::get<0>(usage_text_tuple)) {
+    case eArgTypeFormat:
+      m_option_definitions[0].usage_text = std::get<1>(usage_text_tuple);
+      break;
+    case eArgTypeByteSize:
+      m_option_definitions[2].usage_text = std::get<1>(usage_text_tuple);
+      break;
+    default:
+      llvm_unreachable("Unimplemented option");
+    }
+  }
+}
+
 llvm::ArrayRef<OptionDefinition> OptionGroupFormat::GetDefinitions() {
-  auto result = llvm::makeArrayRef(g_option_table);
+  auto result = llvm::makeArrayRef(m_option_definitions);
   if (m_byte_size.GetDefaultValue() < UINT64_MAX) {
     if (m_count.GetDefaultValue() < UINT64_MAX)
       return result;
@@ -54,7 +72,7 @@ Status OptionGroupFormat::SetOptionValue(uint32_t option_idx,
                                          llvm::StringRef option_arg,
                                          ExecutionContext *execution_context) {
   Status error;
-  const int short_option = g_option_table[option_idx].short_option;
+  const int short_option = m_option_definitions[option_idx].short_option;
 
   switch (short_option) {
   case 'f':
