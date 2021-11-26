@@ -795,6 +795,8 @@ bool SIGfx6CacheControl::enableLoadCacheBypass(
     switch (Scope) {
     case SIAtomicScope::SYSTEM:
     case SIAtomicScope::AGENT:
+      // Set L1 cache policy to MISS_EVICT.
+      // Note: there is no L2 cache bypass policy at the ISA level.
       Changed |= enableGLCBit(MI);
       break;
     case SIAtomicScope::WORKGROUP:
@@ -837,8 +839,10 @@ bool SIGfx6CacheControl::enableRMWCacheBypass(
   assert(MI->mayLoad() && MI->mayStore());
   bool Changed = false;
 
-  /// The L1 cache is write through so does not need to be bypassed. There is no
-  /// bypass control for the L2 cache at the isa level.
+  /// Do not set GLC for RMW atomic operations as L0/L1 cache is automatically
+  /// bypassed, and the GLC bit is instead used to indicate if they are
+  /// return or no-return.
+  /// Note: there is no L2 cache coherent bypass control at the ISA level.
 
   return Changed;
 }
@@ -860,6 +864,9 @@ bool SIGfx6CacheControl::enableVolatileAndOrNonTemporal(
   bool Changed = false;
 
   if (IsVolatile) {
+    // Set L1 cache policy to be MISS_EVICT for load instructions
+    // and MISS_LRU for store instructions.
+    // Note: there is no L2 cache bypass policy at the ISA level.
     if (Op == SIMemOp::LOAD)
       Changed |= enableGLCBit(MI);
 
@@ -875,7 +882,8 @@ bool SIGfx6CacheControl::enableVolatileAndOrNonTemporal(
   }
 
   if (IsNonTemporal) {
-    // Request L1 MISS_EVICT and L2 STREAM for load and store instructions.
+    // Setting both GLC and SLC configures L1 cache policy to MISS_EVICT
+    // for both loads and stores, and the L2 cache policy to STREAM.
     Changed |= enableGLCBit(MI);
     Changed |= enableSLCBit(MI);
     return Changed;
@@ -1097,6 +1105,8 @@ bool SIGfx90ACacheControl::enableLoadCacheBypass(
     switch (Scope) {
     case SIAtomicScope::SYSTEM:
     case SIAtomicScope::AGENT:
+      // Set the L1 cache policy to MISS_LRU.
+      // Note: there is no L2 cache bypass policy at the ISA level.
       Changed |= enableGLCBit(MI);
       break;
     case SIAtomicScope::WORKGROUP:
@@ -1206,6 +1216,9 @@ bool SIGfx90ACacheControl::enableVolatileAndOrNonTemporal(
   bool Changed = false;
 
   if (IsVolatile) {
+    // Set L1 cache policy to be MISS_EVICT for load instructions
+    // and MISS_LRU for store instructions.
+    // Note: there is no L2 cache bypass policy at the ISA level.
     if (Op == SIMemOp::LOAD)
       Changed |= enableGLCBit(MI);
 
@@ -1221,7 +1234,8 @@ bool SIGfx90ACacheControl::enableVolatileAndOrNonTemporal(
   }
 
   if (IsNonTemporal) {
-    // Request L1 MISS_EVICT and L2 STREAM for load and store instructions.
+    // Setting both GLC and SLC configures L1 cache policy to MISS_EVICT
+    // for both loads and stores, and the L2 cache policy to STREAM.
     Changed |= enableGLCBit(MI);
     Changed |= enableSLCBit(MI);
     return Changed;
@@ -1380,12 +1394,11 @@ bool SIGfx10CacheControl::enableLoadCacheBypass(
   bool Changed = false;
 
   if ((AddrSpace & SIAtomicAddrSpace::GLOBAL) != SIAtomicAddrSpace::NONE) {
-    /// TODO Do not set glc for rmw atomic operations as they
-    /// implicitly bypass the L0/L1 caches.
-
     switch (Scope) {
     case SIAtomicScope::SYSTEM:
     case SIAtomicScope::AGENT:
+      // Set the L0 and L1 cache policies to MISS_EVICT.
+      // Note: there is no L2 cache coherent bypass control at the ISA level.
       Changed |= enableGLCBit(MI);
       Changed |= enableDLCBit(MI);
       break;
@@ -1434,6 +1447,9 @@ bool SIGfx10CacheControl::enableVolatileAndOrNonTemporal(
   bool Changed = false;
 
   if (IsVolatile) {
+    // Set L0 and L1 cache policy to be MISS_EVICT for load instructions
+    // and MISS_LRU for store instructions.
+    // Note: there is no L2 cache coherent bypass control at the ISA level.
     if (Op == SIMemOp::LOAD) {
       Changed |= enableGLCBit(MI);
       Changed |= enableDLCBit(MI);
@@ -1450,8 +1466,14 @@ bool SIGfx10CacheControl::enableVolatileAndOrNonTemporal(
   }
 
   if (IsNonTemporal) {
-    // Request L0/L1 HIT_EVICT and L2 STREAM for load and store instructions.
+    // For loads setting SLC configures L0 and L1 cache policy to HIT_EVICT
+    // and L2 cache policy to STREAM.
+    // For stores setting both GLC and SLC configures L0 and L1 cache policy
+    // to MISS_EVICT and the L2 cache policy to STREAM.
+    if (Op == SIMemOp::STORE)
+      Changed |= enableGLCBit(MI);
     Changed |= enableSLCBit(MI);
+
     return Changed;
   }
 

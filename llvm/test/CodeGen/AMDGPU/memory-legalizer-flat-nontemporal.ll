@@ -216,7 +216,7 @@ define amdgpu_kernel void @flat_nontemporal_store_0(
 ; GFX10-WGP-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX10-WGP-NEXT:    v_mov_b32_e32 v1, s3
 ; GFX10-WGP-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX10-WGP-NEXT:    flat_store_dword v[0:1], v2 slc
+; GFX10-WGP-NEXT:    flat_store_dword v[0:1], v2 glc slc
 ; GFX10-WGP-NEXT:    s_endpgm
 ;
 ; GFX10-CU-LABEL: flat_nontemporal_store_0:
@@ -229,7 +229,7 @@ define amdgpu_kernel void @flat_nontemporal_store_0(
 ; GFX10-CU-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX10-CU-NEXT:    v_mov_b32_e32 v1, s3
 ; GFX10-CU-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX10-CU-NEXT:    flat_store_dword v[0:1], v2 slc
+; GFX10-CU-NEXT:    flat_store_dword v[0:1], v2 glc slc
 ; GFX10-CU-NEXT:    s_endpgm
 ;
 ; SKIP-CACHE-INV-LABEL: flat_nontemporal_store_0:
@@ -306,7 +306,7 @@ define amdgpu_kernel void @flat_nontemporal_store_1(
 ; GFX10-WGP-NEXT:    flat_load_dword v2, v[1:2]
 ; GFX10-WGP-NEXT:    v_add_co_ci_u32_e64 v1, s0, s3, 0, s0
 ; GFX10-WGP-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX10-WGP-NEXT:    flat_store_dword v[0:1], v2 slc
+; GFX10-WGP-NEXT:    flat_store_dword v[0:1], v2 glc slc
 ; GFX10-WGP-NEXT:    s_endpgm
 ;
 ; GFX10-CU-LABEL: flat_nontemporal_store_1:
@@ -320,7 +320,7 @@ define amdgpu_kernel void @flat_nontemporal_store_1(
 ; GFX10-CU-NEXT:    flat_load_dword v2, v[1:2]
 ; GFX10-CU-NEXT:    v_add_co_ci_u32_e64 v1, s0, s3, 0, s0
 ; GFX10-CU-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX10-CU-NEXT:    flat_store_dword v[0:1], v2 slc
+; GFX10-CU-NEXT:    flat_store_dword v[0:1], v2 glc slc
 ; GFX10-CU-NEXT:    s_endpgm
 ;
 ; SKIP-CACHE-INV-LABEL: flat_nontemporal_store_1:
