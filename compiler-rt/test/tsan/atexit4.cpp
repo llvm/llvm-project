@@ -27,3 +27,8 @@ int main() {
 
 // CHECK: DONE
 // CHECK: WARNING: ThreadSanitizer: data race
+// CHECK:   Write of size 4
+// CHECK:     #0 thread
+// CHECK:   Previous write of size 4
+// CHECK:     #0 race
+// CHECK:     #1 at_exit_wrapper
