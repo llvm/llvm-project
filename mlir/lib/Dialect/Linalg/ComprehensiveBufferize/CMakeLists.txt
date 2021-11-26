@@ -4,6 +4,7 @@ set(LLVM_OPTIONAL_SOURCES
   BufferizableOpInterface.cpp
   ComprehensiveBufferize.cpp
   LinalgInterfaceImpl.cpp
+  ModuleBufferization.cpp
   SCFInterfaceImpl.cpp
   TensorInterfaceImpl.cpp
   VectorInterfaceImpl.cpp
@@ -80,6 +81,7 @@ add_mlir_dialect_library(MLIRVectorBufferizableOpInterfaceImpl
 
 add_mlir_dialect_library(MLIRComprehensiveBufferize
   ComprehensiveBufferize.cpp
+  ModuleBufferization.cpp
 
   LINK_LIBS PUBLIC
   MLIRBufferizableOpInterface
