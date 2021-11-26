@@ -5023,6 +5023,130 @@ bool CombinerHelper::matchCombineFAddFMAFMulToFMadOrFMA(
   return false;
 }
 
+bool CombinerHelper::matchCombineFAddFpExtFMulToFMadOrFMAAggressive(
+    MachineInstr &MI, std::function<void(MachineIRBuilder &)> &MatchInfo) {
+  assert(MI.getOpcode() == TargetOpcode::G_FADD);
+
+  bool AllowFusionGlobally, HasFMAD, Aggressive;
+  if (!canCombineFMadOrFMA(MI, AllowFusionGlobally, HasFMAD, Aggressive))
+    return false;
+
+  if (!Aggressive)
+    return false;
+
+  const auto &TLI = *MI.getMF()->getSubtarget().getTargetLowering();
+  LLT DstType = MRI.getType(MI.getOperand(0).getReg());
+  MachineInstr *LHS = MRI.getVRegDef(MI.getOperand(1).getReg());
+  MachineInstr *RHS = MRI.getVRegDef(MI.getOperand(2).getReg());
+
+  unsigned PreferredFusedOpcode =
+      HasFMAD ? TargetOpcode::G_FMAD : TargetOpcode::G_FMA;
+
+  // If we have two choices trying to fold (fadd (fmul u, v), (fmul x, y)),
+  // prefer to fold the multiply with fewer uses.
+  if (Aggressive && isContractableFMul(*LHS, AllowFusionGlobally) &&
+      isContractableFMul(*RHS, AllowFusionGlobally)) {
+    if (hasMoreUses(*LHS, *RHS, MRI))
+      std::swap(LHS, RHS);
+  }
+
+  // Builds: (fma x, y, (fma (fpext u), (fpext v), z))
+  auto buildMatchInfo = [=, &MI](Register U, Register V, Register Z, Register X,
+                                 Register Y, MachineIRBuilder &B) {
+    Register FpExtU = B.buildFPExt(DstType, U).getReg(0);
+    Register FpExtV = B.buildFPExt(DstType, V).getReg(0);
+    Register InnerFMA =
+        B.buildInstr(PreferredFusedOpcode, {DstType}, {FpExtU, FpExtV, Z})
+            .getReg(0);
+    B.buildInstr(PreferredFusedOpcode, {MI.getOperand(0).getReg()},
+                 {X, Y, InnerFMA});
+  };
+
+  MachineInstr *FMulMI, *FMAMI;
+  // fold (fadd (fma x, y, (fpext (fmul u, v))), z)
+  //   -> (fma x, y, (fma (fpext u), (fpext v), z))
+  if (LHS->getOpcode() == PreferredFusedOpcode &&
+      mi_match(LHS->getOperand(3).getReg(), MRI, m_GFPExt(m_MInstr(FMulMI))) &&
+      isContractableFMul(*FMulMI, AllowFusionGlobally) &&
+      TLI.isFPExtFoldable(MI, PreferredFusedOpcode, DstType,
+                          MRI.getType(FMulMI->getOperand(0).getReg()))) {
+    MatchInfo = [=](MachineIRBuilder &B) {
+      buildMatchInfo(FMulMI->getOperand(1).getReg(),
+                     FMulMI->getOperand(2).getReg(),
+                     RHS->getOperand(0).getReg(), LHS->getOperand(1).getReg(),
+                     LHS->getOperand(2).getReg(), B);
+    };
+    return true;
+  }
+
+  // fold (fadd (fpext (fma x, y, (fmul u, v))), z)
+  //   -> (fma (fpext x), (fpext y), (fma (fpext u), (fpext v), z))
+  // FIXME: This turns two single-precision and one double-precision
+  // operation into two double-precision operations, which might not be
+  // interesting for all targets, especially GPUs.
+  if (mi_match(LHS->getOperand(0).getReg(), MRI, m_GFPExt(m_MInstr(FMAMI))) &&
+      FMAMI->getOpcode() == PreferredFusedOpcode) {
+    MachineInstr *FMulMI = MRI.getVRegDef(FMAMI->getOperand(3).getReg());
+    if (isContractableFMul(*FMulMI, AllowFusionGlobally) &&
+        TLI.isFPExtFoldable(MI, PreferredFusedOpcode, DstType,
+                            MRI.getType(FMAMI->getOperand(0).getReg()))) {
+      MatchInfo = [=](MachineIRBuilder &B) {
+        Register X = FMAMI->getOperand(1).getReg();
+        Register Y = FMAMI->getOperand(2).getReg();
+        X = B.buildFPExt(DstType, X).getReg(0);
+        Y = B.buildFPExt(DstType, Y).getReg(0);
+        buildMatchInfo(FMulMI->getOperand(1).getReg(),
+                       FMulMI->getOperand(2).getReg(),
+                       RHS->getOperand(0).getReg(), X, Y, B);
+      };
+
+      return true;
+    }
+  }
+
+  // fold (fadd z, (fma x, y, (fpext (fmul u, v)))
+  //   -> (fma x, y, (fma (fpext u), (fpext v), z))
+  if (RHS->getOpcode() == PreferredFusedOpcode &&
+      mi_match(RHS->getOperand(3).getReg(), MRI, m_GFPExt(m_MInstr(FMulMI))) &&
+      isContractableFMul(*FMulMI, AllowFusionGlobally) &&
+      TLI.isFPExtFoldable(MI, PreferredFusedOpcode, DstType,
+                          MRI.getType(FMulMI->getOperand(0).getReg()))) {
+    MatchInfo = [=](MachineIRBuilder &B) {
+      buildMatchInfo(FMulMI->getOperand(1).getReg(),
+                     FMulMI->getOperand(2).getReg(),
+                     LHS->getOperand(0).getReg(), RHS->getOperand(1).getReg(),
+                     RHS->getOperand(2).getReg(), B);
+    };
+    return true;
+  }
+
+  // fold (fadd z, (fpext (fma x, y, (fmul u, v)))
+  //   -> (fma (fpext x), (fpext y), (fma (fpext u), (fpext v), z))
+  // FIXME: This turns two single-precision and one double-precision
+  // operation into two double-precision operations, which might not be
+  // interesting for all targets, especially GPUs.
+  if (mi_match(RHS->getOperand(0).getReg(), MRI, m_GFPExt(m_MInstr(FMAMI))) &&
+      FMAMI->getOpcode() == PreferredFusedOpcode) {
+    MachineInstr *FMulMI = MRI.getVRegDef(FMAMI->getOperand(3).getReg());
+    if (isContractableFMul(*FMulMI, AllowFusionGlobally) &&
+        TLI.isFPExtFoldable(MI, PreferredFusedOpcode, DstType,
+                            MRI.getType(FMAMI->getOperand(0).getReg()))) {
+      MatchInfo = [=](MachineIRBuilder &B) {
+        Register X = FMAMI->getOperand(1).getReg();
+        Register Y = FMAMI->getOperand(2).getReg();
+        X = B.buildFPExt(DstType, X).getReg(0);
+        Y = B.buildFPExt(DstType, Y).getReg(0);
+        buildMatchInfo(FMulMI->getOperand(1).getReg(),
+                       FMulMI->getOperand(2).getReg(),
+                       LHS->getOperand(0).getReg(), X, Y, B);
+      };
+      return true;
+    }
+  }
+
+  return false;
+}
+
 bool CombinerHelper::tryCombine(MachineInstr &MI) {
   if (tryCombineCopy(MI))
     return true;
