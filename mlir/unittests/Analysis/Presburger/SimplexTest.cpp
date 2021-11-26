@@ -14,19 +14,31 @@
 namespace mlir {
 
 /// Take a snapshot, add constraints making the set empty, and rollback.
-/// The set should not be empty after rolling back.
+/// The set should not be empty after rolling back. We add additional
+/// constraints after the set is already empty and roll back the addition
+/// of these. The set should be marked non-empty only once we rollback
+/// past the addition of the first constraint that made it empty.
 TEST(SimplexTest, emptyRollback) {
   Simplex simplex(2);
   // (u - v) >= 0
   simplex.addInequality({1, -1, 0});
-  EXPECT_FALSE(simplex.isEmpty());
+  ASSERT_FALSE(simplex.isEmpty());
 
   unsigned snapshot = simplex.getSnapshot();
   // (u - v) <= -1
   simplex.addInequality({-1, 1, -1});
-  EXPECT_TRUE(simplex.isEmpty());
+  ASSERT_TRUE(simplex.isEmpty());
+
+  unsigned snapshot2 = simplex.getSnapshot();
+  // (u - v) <= -3
+  simplex.addInequality({-1, 1, -3});
+  ASSERT_TRUE(simplex.isEmpty());
+
+  simplex.rollback(snapshot2);
+  ASSERT_TRUE(simplex.isEmpty());
+
   simplex.rollback(snapshot);
-  EXPECT_FALSE(simplex.isEmpty());
+  ASSERT_FALSE(simplex.isEmpty());
 }
 
 /// Check that the set gets marked as empty when we add contradictory
