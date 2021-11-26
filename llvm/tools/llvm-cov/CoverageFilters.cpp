@@ -34,6 +34,13 @@ bool NameRegexCoverageFilter::matchesFilename(StringRef Filename) const {
   return llvm::Regex(Regex).match(Filename);
 }
 
+bool NameAllowlistCoverageFilter::matches(
+    const coverage::CoverageMapping &,
+    const coverage::FunctionRecord &Function) const {
+  return Allowlist.inSection("llvmcov", "allowlist_fun", Function.Name);
+}
+
+// TODO: remove this when -name-whitelist option is removed.
 bool NameWhitelistCoverageFilter::matches(
     const coverage::CoverageMapping &,
     const coverage::FunctionRecord &Function) const {
