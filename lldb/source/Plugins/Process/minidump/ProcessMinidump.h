@@ -75,6 +75,9 @@ public:
 
   ArchSpec GetArchitecture();
 
+  Status GetMemoryRegionInfo(lldb::addr_t load_addr,
+                             MemoryRegionInfo &range_info) override;
+
   Status GetMemoryRegions(
       lldb_private::MemoryRegionInfos &region_list) override;
 
@@ -94,9 +97,6 @@ protected:
 
   bool DoUpdateThreadList(ThreadList &old_thread_list,
                           ThreadList &new_thread_list) override;
-
-  Status DoGetMemoryRegionInfo(lldb::addr_t load_addr,
-                               MemoryRegionInfo &range_info) override;
 
   void ReadModuleList();
 

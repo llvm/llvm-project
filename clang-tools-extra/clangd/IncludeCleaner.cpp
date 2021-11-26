@@ -8,6 +8,7 @@
 
 #include "IncludeCleaner.h"
 #include "Config.h"
+#include "Headers.h"
 #include "ParsedAST.h"
 #include "Protocol.h"
 #include "SourceCode.h"
@@ -16,6 +17,7 @@
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/Basic/SourceLocation.h"
+#include "clang/Basic/SourceManager.h"
 #include "clang/Lex/HeaderSearch.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Tooling/Syntax/Tokens.h"
@@ -221,6 +223,31 @@ bool mayConsiderUnused(const Inclusion &Inc, ParsedAST &AST) {
   return true;
 }
 
+// In case symbols are coming from non self-contained header, we need to find
+// its first includer that is self-contained. This is the header users can
+// include, so it will be responsible for bringing the symbols from given
+// header into the scope.
+FileID headerResponsible(FileID ID, const SourceManager &SM,
+                         const IncludeStructure &Includes) {
+  // Unroll the chain of non self-contained headers until we find the one that
+  // can be included.
+  for (const FileEntry *FE = SM.getFileEntryForID(ID); ID != SM.getMainFileID();
+       FE = SM.getFileEntryForID(ID)) {
+    // If FE is nullptr, we consider it to be the responsible header.
+    if (!FE)
+      break;
+    auto HID = Includes.getID(FE);
+    assert(HID && "We're iterating over headers already existing in "
+                  "IncludeStructure");
+    if (Includes.isSelfContained(*HID))
+      break;
+    // The header is not self-contained: put the responsibility for its symbols
+    // on its includer.
+    ID = SM.getFileID(SM.getIncludeLoc(ID));
+  }
+  return ID;
+}
+
 } // namespace
 
 ReferencedLocations findReferencedLocations(ParsedAST &AST) {
@@ -234,20 +261,27 @@ ReferencedLocations findReferencedLocations(ParsedAST &AST) {
 
 llvm::DenseSet<FileID>
 findReferencedFiles(const llvm::DenseSet<SourceLocation> &Locs,
-                    const SourceManager &SM) {
+                    const IncludeStructure &Includes, const SourceManager &SM) {
   std::vector<SourceLocation> Sorted{Locs.begin(), Locs.end()};
   llvm::sort(Sorted); // Group by FileID.
-  ReferencedFiles Result(SM);
+  ReferencedFiles Files(SM);
   for (auto It = Sorted.begin(); It < Sorted.end();) {
     FileID FID = SM.getFileID(*It);
-    Result.add(FID, *It);
+    Files.add(FID, *It);
     // Cheaply skip over all the other locations from the same FileID.
     // This avoids lots of redundant Loc->File lookups for the same file.
     do
       ++It;
     while (It != Sorted.end() && SM.isInFileID(*It, FID));
   }
-  return std::move(Result.Files);
+  // If a header is not self-contained, we consider its symbols a logical part
+  // of the including file. Therefore, mark the parents of all used
+  // non-self-contained FileIDs as used. Perform this on FileIDs rather than
+  // HeaderIDs, as each inclusion of a non-self-contained file is distinct.
+  llvm::DenseSet<FileID> Result;
+  for (FileID ID : Files.Files)
+    Result.insert(headerResponsible(ID, SM, Includes));
+  return Result;
 }
 
 std::vector<const Inclusion *>
@@ -304,12 +338,8 @@ std::vector<const Inclusion *> computeUnusedIncludes(ParsedAST &AST) {
   const auto &SM = AST.getSourceManager();
 
   auto Refs = findReferencedLocations(AST);
-  // FIXME(kirillbobyrev): Attribute the symbols from non self-contained
-  // headers to their parents while the information about respective
-  // SourceLocations and FileIDs is not lost. It is not possible to do that
-  // later when non-guarded headers included multiple times will get same
-  // HeaderID.
-  auto ReferencedFileIDs = findReferencedFiles(Refs, SM);
+  auto ReferencedFileIDs = findReferencedFiles(Refs, AST.getIncludeStructure(),
+                                               AST.getSourceManager());
   auto ReferencedHeaders =
       translateToHeaderIDs(ReferencedFileIDs, AST.getIncludeStructure(), SM);
   return getUnused(AST, ReferencedHeaders);

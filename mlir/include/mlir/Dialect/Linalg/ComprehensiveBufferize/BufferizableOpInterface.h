@@ -230,6 +230,13 @@ struct AllocationCallbacks {
   MemCpyFn memCpyFn;
 };
 
+/// Dialect-specific bufferization state. Analysis/bufferization information
+/// that is specific to ops from a certain dialect can be stored in derived
+/// variants of this struct.
+struct DialectBufferizationState {
+  virtual ~DialectBufferizationState() = default;
+};
+
 /// BufferizationState keeps track of bufferization state and provides access to
 /// the results of the analysis.
 struct BufferizationState {
@@ -271,6 +278,14 @@ struct BufferizationState {
   /// Erase all ops that were marked obsolete.
   void eraseObsoleteOps();
 
+  /// Return dialect-specific bufferization state.
+  template <typename StateT> StateT &getDialectState(StringRef name) {
+    // Create state if it does not exist yet.
+    if (!dialectState.count(name))
+      dialectState[name] = std::make_unique<StateT>();
+    return static_cast<StateT &>(*dialectState[name]);
+  }
+
   /// `aliasInfo` keeps track of aliasing and equivalent values.
   BufferizationAliasInfo aliasInfo;
 
@@ -285,9 +300,8 @@ struct BufferizationState {
   /// Obsolete ops that should be deleted after bufferization.
   SmallVector<Operation *> obsoleteOps;
 
-  /// A map for looking up bufferized function types.
-  // TODO: Entangle function calls and FuncOps from the remaining bufferization.
-  DenseMap<FuncOp, FunctionType> bufferizedFunctionTypes;
+  /// Dialect-specific bufferization state.
+  DenseMap<StringRef, std::unique_ptr<DialectBufferizationState>> dialectState;
 };
 
 /// Return the result buffer (memref) for a given OpResult (tensor). Allocate
@@ -313,10 +327,9 @@ struct PostAnalysisStep {
   virtual ~PostAnalysisStep() {}
 
   /// Run the post analysis step. This function may modify the IR, but must keep
-  /// `aliasInfo` consistent. Newly created operations and operations that
-  /// should be re-analyzed must be stored in `newOps`.
-  virtual LogicalResult run(FuncOp funcOp, BufferizationAliasInfo &aliasInfo,
-                            DominanceInfo &domInfo,
+  /// `aliasInfo` (inside `state`) consistent. Newly created operations and
+  /// operations that should be re-analyzed must be stored in `newOps`.
+  virtual LogicalResult run(FuncOp funcOp, BufferizationState &state,
                             SmallVector<Operation *> &newOps) = 0;
 };
 

@@ -515,6 +515,12 @@ module @ir attributes { test.check_types_1 } {
 // -----
 
 //===----------------------------------------------------------------------===//
+// pdl_interp::ContinueOp
+//===----------------------------------------------------------------------===//
+
+// Fully tested within the tests for other operations.
+
+//===----------------------------------------------------------------------===//
 // pdl_interp::CreateAttributeOp
 //===----------------------------------------------------------------------===//
 
@@ -577,10 +583,275 @@ module @ir attributes { test.create_type_1 } {
 // Fully tested within the tests for other operations.
 
 //===----------------------------------------------------------------------===//
+// pdl_interp::ExtractOp
+//===----------------------------------------------------------------------===//
+
+module @patterns {
+  func @matcher(%root : !pdl.operation) {
+    %val = pdl_interp.get_result 0 of %root
+    %ops = pdl_interp.get_users of %val : !pdl.value
+    %op1 = pdl_interp.extract 1 of %ops : !pdl.operation
+    pdl_interp.is_not_null %op1 : !pdl.operation -> ^success, ^end
+  ^success:
+    pdl_interp.record_match @rewriters::@success(%op1 : !pdl.operation) : benefit(1), loc([%root]) -> ^end
+  ^end:
+    pdl_interp.finalize
+  }
+
+  module @rewriters {
+    func @success(%matched : !pdl.operation) {
+      %op = pdl_interp.create_operation "test.success"
+      pdl_interp.erase %matched
+      pdl_interp.finalize
+    }
+  }
+}
+
+// CHECK-LABEL: test.extract_op
+// CHECK: "test.success"
+// CHECK: %[[OPERAND:.*]] = "test.op"
+// CHECK: "test.op"(%[[OPERAND]])
+module @ir attributes { test.extract_op } {
+  %operand = "test.op"() : () -> i32
+  "test.op"(%operand) : (i32) -> (i32)
+  "test.op"(%operand, %operand) : (i32, i32) -> (i32)
+}
+
+// -----
+
+module @patterns {
+  func @matcher(%root : !pdl.operation) {
+    %vals = pdl_interp.get_results of %root : !pdl.range<value>
+    %types = pdl_interp.get_value_type of %vals : !pdl.range<type>
+    %type1 = pdl_interp.extract 1 of %types : !pdl.type
+    pdl_interp.is_not_null %type1 : !pdl.type -> ^success, ^end
+  ^success:
+    pdl_interp.record_match @rewriters::@success(%root : !pdl.operation) : benefit(1), loc([%root]) -> ^end
+  ^end:
+    pdl_interp.finalize
+  }
+
+  module @rewriters {
+    func @success(%matched : !pdl.operation) {
+      %op = pdl_interp.create_operation "test.success"
+      pdl_interp.erase %matched
+      pdl_interp.finalize
+    }
+  }
+}
+
+// CHECK-LABEL: test.extract_type
+// CHECK: %[[OPERAND:.*]] = "test.op"
+// CHECK: "test.success"
+// CHECK: "test.op"(%[[OPERAND]])
+module @ir attributes { test.extract_type } {
+  %operand = "test.op"() : () -> i32
+  "test.op"(%operand) : (i32) -> (i32, i32)
+  "test.op"(%operand) : (i32) -> (i32)
+}
+
+// -----
+
+module @patterns {
+  func @matcher(%root : !pdl.operation) {
+    %vals = pdl_interp.get_results of %root : !pdl.range<value>
+    %val1 = pdl_interp.extract 1 of %vals : !pdl.value
+    pdl_interp.is_not_null %val1 : !pdl.value -> ^success, ^end
+  ^success:
+    pdl_interp.record_match @rewriters::@success(%root : !pdl.operation) : benefit(1), loc([%root]) -> ^end
+  ^end:
+    pdl_interp.finalize
+  }
+
+  module @rewriters {
+    func @success(%matched : !pdl.operation) {
+      %op = pdl_interp.create_operation "test.success"
+      pdl_interp.erase %matched
+      pdl_interp.finalize
+    }
+  }
+}
+
+// CHECK-LABEL: test.extract_value
+// CHECK: %[[OPERAND:.*]] = "test.op"
+// CHECK: "test.success"
+// CHECK: "test.op"(%[[OPERAND]])
+module @ir attributes { test.extract_value } {
+  %operand = "test.op"() : () -> i32
+  "test.op"(%operand) : (i32) -> (i32, i32)
+  "test.op"(%operand) : (i32) -> (i32)
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
 // pdl_interp::FinalizeOp
 //===----------------------------------------------------------------------===//
 
 // Fully tested within the tests for other operations.
+
+//===----------------------------------------------------------------------===//
+// pdl_interp::ForEachOp
+//===----------------------------------------------------------------------===//
+
+module @patterns {
+  func @matcher(%root : !pdl.operation) {
+    %val1 = pdl_interp.get_result 0 of %root
+    %ops1 = pdl_interp.get_users of %val1 : !pdl.value
+    pdl_interp.foreach %op1 : !pdl.operation in %ops1 {
+      %val2 = pdl_interp.get_result 0 of %op1
+      %ops2 = pdl_interp.get_users of %val2 : !pdl.value
+      pdl_interp.foreach %op2 : !pdl.operation in %ops2 {
+        pdl_interp.record_match @rewriters::@success(%op2 : !pdl.operation) : benefit(1), loc([%root]) -> ^cont
+      ^cont:
+        pdl_interp.continue
+      } -> ^cont
+    ^cont:
+      pdl_interp.continue
+    } -> ^end
+  ^end:
+    pdl_interp.finalize
+  }
+
+  module @rewriters {
+    func @success(%matched : !pdl.operation) {
+      %op = pdl_interp.create_operation "test.success"
+      pdl_interp.erase %matched
+      pdl_interp.finalize
+    }
+  }
+}
+
+// CHECK-LABEL: test.foreach
+// CHECK: "test.success"
+// CHECK: "test.success"
+// CHECK: "test.success"
+// CHECK: "test.success"
+// CHECK: %[[ROOT:.*]] = "test.op"
+// CHECK: %[[VALA:.*]] = "test.op"(%[[ROOT]])
+// CHECK: %[[VALB:.*]] = "test.op"(%[[ROOT]])
+module @ir attributes { test.foreach } {
+  %root = "test.op"() : () -> i32
+  %valA = "test.op"(%root) : (i32) -> (i32)
+  "test.op"(%valA) : (i32) -> (i32)
+  "test.op"(%valA) : (i32) -> (i32)
+  %valB = "test.op"(%root) : (i32) -> (i32)
+  "test.op"(%valB) : (i32) -> (i32)
+  "test.op"(%valB) : (i32) -> (i32)
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// pdl_interp::GetUsersOp
+//===----------------------------------------------------------------------===//
+
+module @patterns {
+  func @matcher(%root : !pdl.operation) {
+    %val = pdl_interp.get_result 0 of %root
+    %ops = pdl_interp.get_users of %val : !pdl.value
+    pdl_interp.foreach %op : !pdl.operation in %ops {
+      pdl_interp.record_match @rewriters::@success(%op : !pdl.operation) : benefit(1), loc([%root]) -> ^cont
+    ^cont:
+      pdl_interp.continue
+    } -> ^end
+  ^end:
+    pdl_interp.finalize
+  }
+
+  module @rewriters {
+    func @success(%matched : !pdl.operation) {
+      %op = pdl_interp.create_operation "test.success"
+      pdl_interp.erase %matched
+      pdl_interp.finalize
+    }
+  }
+}
+
+// CHECK-LABEL: test.get_users_of_value
+// CHECK: "test.success"
+// CHECK: "test.success"
+// CHECK: %[[OPERAND:.*]] = "test.op"
+module @ir attributes { test.get_users_of_value } {
+  %operand = "test.op"() : () -> i32
+  "test.op"(%operand) : (i32) -> (i32)
+  "test.op"(%operand, %operand) : (i32, i32) -> (i32)
+}
+
+// -----
+
+module @patterns {
+  func @matcher(%root : !pdl.operation) {
+    pdl_interp.check_result_count of %root is at_least 2 -> ^next, ^end
+  ^next:
+    %vals = pdl_interp.get_results of %root : !pdl.range<value>
+    %ops = pdl_interp.get_users of %vals : !pdl.range<value>
+    pdl_interp.foreach %op : !pdl.operation in %ops {
+      pdl_interp.record_match @rewriters::@success(%op : !pdl.operation) : benefit(1), loc([%root]) -> ^cont
+    ^cont:
+      pdl_interp.continue
+    } -> ^end
+  ^end:
+    pdl_interp.finalize
+  }
+
+  module @rewriters {
+    func @success(%matched : !pdl.operation) {
+      %op = pdl_interp.create_operation "test.success"
+      pdl_interp.erase %matched
+      pdl_interp.finalize
+    }
+  }
+}
+
+// CHECK-LABEL: test.get_all_users_of_range
+// CHECK: "test.success"
+// CHECK: "test.success"
+// CHECK: %[[OPERANDS:.*]]:2 = "test.op"
+module @ir attributes { test.get_all_users_of_range } {
+  %operands:2 = "test.op"() : () -> (i32, i32)
+  "test.op"(%operands#0) : (i32) -> (i32)
+  "test.op"(%operands#1) : (i32) -> (i32)
+}
+
+// -----
+
+module @patterns {
+  func @matcher(%root : !pdl.operation) {
+    pdl_interp.check_result_count of %root is at_least 2 -> ^next, ^end
+  ^next:
+    %vals = pdl_interp.get_results of %root : !pdl.range<value>
+    %val = pdl_interp.extract 0 of %vals : !pdl.value
+    %ops = pdl_interp.get_users of %val : !pdl.value
+    pdl_interp.foreach %op : !pdl.operation in %ops {
+      pdl_interp.record_match @rewriters::@success(%op : !pdl.operation) : benefit(1), loc([%root]) -> ^cont
+    ^cont:
+      pdl_interp.continue
+    } -> ^end
+  ^end:
+    pdl_interp.finalize
+  }
+
+  module @rewriters {
+    func @success(%matched : !pdl.operation) {
+      %op = pdl_interp.create_operation "test.success"
+      pdl_interp.erase %matched
+      pdl_interp.finalize
+    }
+  }
+}
+
+// CHECK-LABEL: test.get_first_users_of_range
+// CHECK: "test.success"
+// CHECK: %[[OPERANDS:.*]]:2 = "test.op"
+// CHECK: "test.op"
+module @ir attributes { test.get_first_users_of_range } {
+  %operands:2 = "test.op"() : () -> (i32, i32)
+  "test.op"(%operands#0) : (i32) -> (i32)
+  "test.op"(%operands#1) : (i32) -> (i32)
+}
+
+// -----
 
 //===----------------------------------------------------------------------===//
 // pdl_interp::GetAttributeOp

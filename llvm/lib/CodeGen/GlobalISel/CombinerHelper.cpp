@@ -3732,8 +3732,7 @@ void CombinerHelper::applyExtendThroughPhis(MachineInstr &MI,
   Builder.setInstrAndDebugLoc(MI);
   auto NewPhi = Builder.buildInstrNoInsert(TargetOpcode::G_PHI);
   NewPhi.addDef(DstReg);
-  for (unsigned SrcIdx = 1; SrcIdx < MI.getNumOperands(); ++SrcIdx) {
-    auto &MO = MI.getOperand(SrcIdx);
+  for (const MachineOperand &MO : llvm::drop_begin(MI.operands())) {
     if (!MO.isReg()) {
       NewPhi.addMBB(MO.getMBB());
       continue;
@@ -3865,6 +3864,51 @@ void CombinerHelper::applyBuildFnNoErase(
     MachineInstr &MI, std::function<void(MachineIRBuilder &)> &MatchInfo) {
   Builder.setInstrAndDebugLoc(MI);
   MatchInfo(Builder);
+}
+
+bool CombinerHelper::matchOrShiftToFunnelShift(MachineInstr &MI,
+                                               BuildFnTy &MatchInfo) {
+  assert(MI.getOpcode() == TargetOpcode::G_OR);
+
+  Register Dst = MI.getOperand(0).getReg();
+  LLT Ty = MRI.getType(Dst);
+  unsigned BitWidth = Ty.getScalarSizeInBits();
+
+  Register ShlSrc, ShlAmt, LShrSrc, LShrAmt;
+  unsigned FshOpc = 0;
+
+  // TODO: Handle vector types.
+  // Match (or (shl x, amt), (lshr y, sub(bw, amt))).
+  if (mi_match(Dst, MRI,
+               // m_GOr() handles the commuted version as well.
+               m_GOr(m_GShl(m_Reg(ShlSrc), m_Reg(ShlAmt)),
+                     m_GLShr(m_Reg(LShrSrc), m_GSub(m_SpecificICst(BitWidth),
+                                                    m_Reg(LShrAmt)))))) {
+    FshOpc = TargetOpcode::G_FSHL;
+
+    // Match (or (shl x, sub(bw, amt)), (lshr y, amt)).
+  } else if (mi_match(
+                 Dst, MRI,
+                 m_GOr(m_GLShr(m_Reg(LShrSrc), m_Reg(LShrAmt)),
+                       m_GShl(m_Reg(ShlSrc), m_GSub(m_SpecificICst(BitWidth),
+                                                    m_Reg(ShlAmt)))))) {
+    FshOpc = TargetOpcode::G_FSHR;
+
+  } else {
+    return false;
+  }
+
+  if (ShlAmt != LShrAmt)
+    return false;
+
+  LLT AmtTy = MRI.getType(ShlAmt);
+  if (!isLegalOrBeforeLegalizer({FshOpc, {Ty, AmtTy}}))
+    return false;
+
+  MatchInfo = [=](MachineIRBuilder &B) {
+    B.buildInstr(FshOpc, {Dst}, {ShlSrc, LShrSrc, ShlAmt});
+  };
+  return true;
 }
 
 /// Match an FSHL or FSHR that can be combined to a ROTR or ROTL rotate.

@@ -24,9 +24,6 @@ static constexpr int64_t kBufferAlignments = 128;
 /// Return default allocation callbacks.
 std::unique_ptr<AllocationCallbacks> defaultAllocationCallbacks();
 
-/// Register external models implemented for the `BufferizableOpInterface`.
-void registerBufferizableOpInterfaceExternalModels(DialectRegistry &registry);
-
 /// Options for ComprehensiveBufferize.
 struct BufferizationOptions {
   BufferizationOptions();
@@ -61,8 +58,12 @@ struct BufferizationOptions {
   std::vector<std::unique_ptr<PostAnalysisStep>> postAnalysisSteps;
 };
 
-LogicalResult runComprehensiveBufferize(ModuleOp moduleOp,
-                                        const BufferizationOptions &options);
+/// Bufferize the given function. Does not bufferize the function boundary.
+// TODO: This function is meant to be called from ModuleBufferize and not can
+// not yet be called standalone.
+LogicalResult runComprehensiveBufferize(FuncOp funcOp,
+                                        const BufferizationOptions &options,
+                                        BufferizationState &state);
 
 } // namespace comprehensive_bufferize
 } // namespace linalg

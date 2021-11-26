@@ -187,9 +187,14 @@ static _Unwind_Reason_Code unwindOneFrame(_Unwind_State state,
   if (result != _URC_CONTINUE_UNWIND)
     return result;
 
-  if (__unw_step(reinterpret_cast<unw_cursor_t *>(context)) != UNW_STEP_SUCCESS)
+  switch (__unw_step(reinterpret_cast<unw_cursor_t *>(context))) {
+  case UNW_STEP_SUCCESS:
+    return _URC_CONTINUE_UNWIND;
+  case UNW_STEP_END:
+    return _URC_END_OF_STACK;
+  default:
     return _URC_FAILURE;
-  return _URC_CONTINUE_UNWIND;
+  }
 }
 
 // Generates mask discriminator for _Unwind_VRS_Pop, e.g. for _UVRSC_CORE /
@@ -678,12 +683,13 @@ static _Unwind_Reason_Code
 unwind_phase2_forced(unw_context_t *uc, unw_cursor_t *cursor,
                      _Unwind_Exception *exception_object, _Unwind_Stop_Fn stop,
                      void *stop_parameter) {
+  bool endOfStack = false;
   // See comment at the start of unwind_phase1 regarding VRS integrity.
   __unw_init_local(cursor, uc);
   _LIBUNWIND_TRACE_UNWINDING("unwind_phase2_force(ex_ojb=%p)",
                              static_cast<void *>(exception_object));
   // Walk each frame until we reach where search phase said to stop
-  while (true) {
+  while (!endOfStack) {
     // Update info about this frame.
     unw_proc_info_t frameInfo;
     if (__unw_get_proc_info(cursor, &frameInfo) != UNW_ESUCCESS) {
@@ -755,6 +761,14 @@ unwind_phase2_forced(unw_context_t *uc, unw_cursor_t *cursor,
                                    (void *)exception_object);
         // We may get control back if landing pad calls _Unwind_Resume().
         __unw_resume(cursor);
+        break;
+      case _URC_END_OF_STACK:
+        _LIBUNWIND_TRACE_UNWINDING("unwind_phase2_forced(ex_ojb=%p): "
+                                   "personality returned "
+                                   "_URC_END_OF_STACK",
+                                   (void *)exception_object);
+        // Personalty routine did the step and it can't step forward.
+        endOfStack = true;
         break;
       default:
         // Personality routine returned an unknown result code.
@@ -1133,9 +1147,14 @@ extern "C" _LIBUNWIND_EXPORT _Unwind_Reason_Code
 __gnu_unwind_frame(_Unwind_Exception *exception_object,
                    struct _Unwind_Context *context) {
   unw_cursor_t *cursor = (unw_cursor_t *)context;
-  if (__unw_step(cursor) != UNW_STEP_SUCCESS)
+  switch (__unw_step(cursor)) {
+  case UNW_STEP_SUCCESS:
+    return _URC_OK;
+  case UNW_STEP_END:
+    return _URC_END_OF_STACK;
+  default:
     return _URC_FAILURE;
-  return _URC_OK;
+  }
 }
 
 #endif  // defined(_LIBUNWIND_ARM_EHABI)

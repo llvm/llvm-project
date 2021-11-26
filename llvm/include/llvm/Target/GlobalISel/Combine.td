@@ -645,6 +645,13 @@ def extract_vec_elt_combines : GICombineGroup<[
   extract_vec_elt_build_vec,
   extract_all_elts_from_build_vector]>;
 
+def funnel_shift_from_or_shift : GICombineRule<
+  (defs root:$root, build_fn_matchinfo:$info),
+  (match (wip_match_opcode G_OR):$root,
+    [{ return Helper.matchOrShiftToFunnelShift(*${root}, ${info}); }]),
+  (apply [{ Helper.applyBuildFn(*${root}, ${info}); }])
+>;
+
 def funnel_shift_to_rotate : GICombineRule<
   (defs root:$root),
   (match (wip_match_opcode G_FSHL, G_FSHR):$root,
@@ -683,7 +690,8 @@ def bitfield_extract_from_and : GICombineRule<
     [{ return Helper.matchBitfieldExtractFromAnd(*${root}, ${info}); }]),
   (apply [{ Helper.applyBuildFn(*${root}, ${info}); }])>;
 
-def funnel_shift_combines : GICombineGroup<[funnel_shift_to_rotate]>;
+def funnel_shift_combines : GICombineGroup<[funnel_shift_from_or_shift,
+                                            funnel_shift_to_rotate]>;
 
 def bitfield_extract_from_sext_inreg : GICombineRule<
   (defs root:$root, build_fn_matchinfo:$info),

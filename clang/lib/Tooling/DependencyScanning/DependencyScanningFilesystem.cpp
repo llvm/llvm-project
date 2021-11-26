@@ -129,7 +129,7 @@ DependencyScanningFilesystemSharedCache::get(StringRef Key, bool Minimized) {
 ///
 /// This is kinda hacky, it would be better if we knew what kind of file Clang
 /// was expecting instead.
-static bool shouldMinimize(StringRef Filename) {
+static bool shouldMinimizeBasedOnExtension(StringRef Filename) {
   StringRef Ext = llvm::sys::path::extension(Filename);
   if (Ext.empty())
     return true; // C++ standard library
@@ -147,26 +147,43 @@ static bool shouldCacheStatFailures(StringRef Filename) {
   StringRef Ext = llvm::sys::path::extension(Filename);
   if (Ext.empty())
     return false; // This may be the module cache directory.
-  return shouldMinimize(Filename); // Only cache stat failures on source files.
+  // Only cache stat failures on source files.
+  return shouldMinimizeBasedOnExtension(Filename);
 }
 
-void DependencyScanningWorkerFilesystem::ignoreFile(StringRef RawFilename) {
-  llvm::SmallString<256> Filename;
-  llvm::sys::path::native(RawFilename, Filename);
-  IgnoredFiles.insert(Filename);
-}
-
-bool DependencyScanningWorkerFilesystem::shouldIgnoreFile(
+void DependencyScanningWorkerFilesystem::disableMinimization(
     StringRef RawFilename) {
   llvm::SmallString<256> Filename;
   llvm::sys::path::native(RawFilename, Filename);
-  return IgnoredFiles.contains(Filename);
+  NotToBeMinimized.insert(Filename);
+}
+
+bool DependencyScanningWorkerFilesystem::shouldMinimize(StringRef RawFilename) {
+  if (!shouldMinimizeBasedOnExtension(RawFilename))
+    return false;
+
+  llvm::SmallString<256> Filename;
+  llvm::sys::path::native(RawFilename, Filename);
+  return !NotToBeMinimized.contains(Filename);
+}
+
+CachedFileSystemEntry DependencyScanningWorkerFilesystem::createFileSystemEntry(
+    llvm::ErrorOr<llvm::vfs::Status> &&MaybeStatus, StringRef Filename,
+    bool ShouldMinimize) {
+  if (!MaybeStatus)
+    return CachedFileSystemEntry(MaybeStatus.getError());
+
+  if (MaybeStatus->isDirectory())
+    return CachedFileSystemEntry::createDirectoryEntry(std::move(*MaybeStatus));
+
+  return CachedFileSystemEntry::createFileEntry(Filename, getUnderlyingFS(),
+                                                ShouldMinimize);
 }
 
 llvm::ErrorOr<const CachedFileSystemEntry *>
 DependencyScanningWorkerFilesystem::getOrCreateFileSystemEntry(
     const StringRef Filename) {
-  bool ShouldMinimize = !shouldIgnoreFile(Filename) && shouldMinimize(Filename);
+  bool ShouldMinimize = shouldMinimize(Filename);
 
   if (const auto *Entry = Cache.getCachedEntry(Filename, ShouldMinimize))
     return Entry;
@@ -182,23 +199,15 @@ DependencyScanningWorkerFilesystem::getOrCreateFileSystemEntry(
     CachedFileSystemEntry &CacheEntry = SharedCacheEntry.Value;
 
     if (!CacheEntry.isValid()) {
-      llvm::vfs::FileSystem &FS = getUnderlyingFS();
-      auto MaybeStatus = FS.status(Filename);
-      if (!MaybeStatus) {
-        if (!shouldCacheStatFailures(Filename))
-          // HACK: We need to always restat non source files if the stat fails.
-          //   This is because Clang first looks up the module cache and module
-          //   files before building them, and then looks for them again. If we
-          //   cache the stat failure, it won't see them the second time.
-          return MaybeStatus.getError();
-        else
-          CacheEntry = CachedFileSystemEntry(MaybeStatus.getError());
-      } else if (MaybeStatus->isDirectory())
-        CacheEntry = CachedFileSystemEntry::createDirectoryEntry(
-            std::move(*MaybeStatus));
-      else
-        CacheEntry = CachedFileSystemEntry::createFileEntry(Filename, FS,
-                                                            ShouldMinimize);
+      auto MaybeStatus = getUnderlyingFS().status(Filename);
+      if (!MaybeStatus && !shouldCacheStatFailures(Filename))
+        // HACK: We need to always restat non source files if the stat fails.
+        //   This is because Clang first looks up the module cache and module
+        //   files before building them, and then looks for them again. If we
+        //   cache the stat failure, it won't see them the second time.
+        return MaybeStatus.getError();
+      CacheEntry = createFileSystemEntry(std::move(MaybeStatus), Filename,
+                                         ShouldMinimize);
     }
 
     Result = &CacheEntry;
