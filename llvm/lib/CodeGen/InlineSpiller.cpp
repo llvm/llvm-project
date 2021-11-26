@@ -274,11 +274,9 @@ static Register isFullCopyOf(const MachineInstr &MI, Register Reg) {
 }
 
 static void getVDefInterval(const MachineInstr &MI, LiveIntervals &LIS) {
-  for (unsigned I = 0, E = MI.getNumOperands(); I != E; ++I) {
-    const MachineOperand &MO = MI.getOperand(I);
+  for (const MachineOperand &MO : MI.operands())
     if (MO.isReg() && MO.isDef() && Register::isVirtualRegister(MO.getReg()))
       LIS.getInterval(MO.getReg());
-  }
 }
 
 /// isSnippet - Identify if a live interval is a snippet that should be spilled.

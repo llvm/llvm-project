@@ -3,7 +3,7 @@
 
 # RUN: yaml2obj %s -o %t.o
 
-## Base case: no switches, should strip. Used as a sanity check for later test cases.
+## Base case: no switches, should strip. Used as a basic correctness check for later test cases.
 # RUN: llvm-strip %t.o -o %t1.o
 # RUN: llvm-readobj --file-headers --sections %t1.o | FileCheck %s --check-prefix=ALL
 

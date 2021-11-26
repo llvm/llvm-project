@@ -1492,22 +1492,22 @@ public:
 #endif // !_LIBCPP_HAS_NO_LOCALIZATION
 
   friend _LIBCPP_INLINE_VISIBILITY bool operator==(const path& __lhs, const path& __rhs) noexcept {
-    return __lhs.compare(__rhs) == 0;
+    return __lhs.__compare(__rhs.__pn_) == 0;
   }
   friend _LIBCPP_INLINE_VISIBILITY bool operator!=(const path& __lhs, const path& __rhs) noexcept {
-    return __lhs.compare(__rhs) != 0;
+    return __lhs.__compare(__rhs.__pn_) != 0;
   }
   friend _LIBCPP_INLINE_VISIBILITY bool operator<(const path& __lhs, const path& __rhs) noexcept {
-    return __lhs.compare(__rhs) < 0;
+    return __lhs.__compare(__rhs.__pn_) < 0;
   }
   friend _LIBCPP_INLINE_VISIBILITY bool operator<=(const path& __lhs, const path& __rhs) noexcept {
-    return __lhs.compare(__rhs) <= 0;
+    return __lhs.__compare(__rhs.__pn_) <= 0;
   }
   friend _LIBCPP_INLINE_VISIBILITY bool operator>(const path& __lhs, const path& __rhs) noexcept {
-    return __lhs.compare(__rhs) > 0;
+    return __lhs.__compare(__rhs.__pn_) > 0;
   }
   friend _LIBCPP_INLINE_VISIBILITY bool operator>=(const path& __lhs, const path& __rhs) noexcept {
-    return __lhs.compare(__rhs) >= 0;
+    return __lhs.__compare(__rhs.__pn_) >= 0;
   }
 
   friend _LIBCPP_INLINE_VISIBILITY path operator/(const path& __lhs,

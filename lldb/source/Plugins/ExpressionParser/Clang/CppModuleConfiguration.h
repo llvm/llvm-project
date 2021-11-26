@@ -42,8 +42,15 @@ class CppModuleConfiguration {
 
   /// If valid, the include path used for the std module.
   SetOncePath m_std_inc;
+  /// If valid, the per-target include path used for the std module.
+  /// This is an optional path only required on some systems.
+  SetOncePath m_std_target_inc;
   /// If valid, the include path to the C library (e.g. /usr/include).
   SetOncePath m_c_inc;
+  /// If valid, the include path to target-specific C library files
+  /// (e.g. /usr/include/x86_64-linux-gnu).
+  /// This is an optional path only required on some systems.
+  SetOncePath m_c_target_inc;
   /// The Clang resource include path for this configuration.
   std::string m_resource_inc;
 
@@ -53,11 +60,13 @@ class CppModuleConfiguration {
   /// Analyze a given source file to build the current configuration.
   /// Returns false iff there was a fatal error that makes analyzing any
   /// further files pointless as the configuration is now invalid.
-  bool analyzeFile(const FileSpec &f);
+  bool analyzeFile(const FileSpec &f, const llvm::Triple &triple);
 
 public:
   /// Creates a configuration by analyzing the given list of used source files.
-  explicit CppModuleConfiguration(const FileSpecList &support_files);
+  /// The triple (if valid) is used to search for target-specific include paths.
+  explicit CppModuleConfiguration(const FileSpecList &support_files,
+                                  const llvm::Triple &triple);
   /// Creates an empty and invalid configuration.
   CppModuleConfiguration() = default;
 

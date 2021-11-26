@@ -493,9 +493,6 @@ private:
 template <class ELFT> class DynamicSection final : public SyntheticSection {
   LLVM_ELF_IMPORT_TYPES_ELFT(ELFT)
 
-  // finalizeContents() fills this vector with the section contents.
-  std::vector<std::pair<int32_t, std::function<uint64_t()>>> entries;
-
 public:
   DynamicSection();
   void finalizeContents() override;
@@ -503,14 +500,7 @@ public:
   size_t getSize() const override { return size; }
 
 private:
-  void add(int32_t tag, std::function<uint64_t()> fn);
-  void addInt(int32_t tag, uint64_t val);
-  void addInSec(int32_t tag, InputSection *sec);
-  void addInSecRelative(int32_t tag, InputSection *sec);
-  void addOutSec(int32_t tag, OutputSection *sec);
-  void addSize(int32_t tag, OutputSection *sec);
-  void addSym(int32_t tag, Symbol *sym);
-
+  std::vector<std::pair<int32_t, uint64_t>> computeContents();
   uint64_t size = 0;
 };
 
@@ -684,9 +674,6 @@ public:
 private:
   // See the comment in writeBloomFilter.
   enum { Shift2 = 26 };
-
-  void writeBloomFilter(uint8_t *buf);
-  void writeHashTable(uint8_t *buf);
 
   struct Entry {
     Symbol *sym;
