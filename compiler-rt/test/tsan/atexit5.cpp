@@ -23,5 +23,5 @@ int main() {
 // CHECK:   Write of size 8
 // The exact spelling and number of std frames is hard to guess.
 // CHECK:     unique_ptr
-// CHECK:     #{{1|2}} cxa_at_exit_callback_installed_at
-// CHECK:     #{{2|3}} __cxx_global_var_init
+// CHECK:     #{{[1-9]}} cxa_at_exit_callback_installed_at
+// CHECK:     #{{[2-9]}} __cxx_global_var_init
