@@ -144,7 +144,7 @@ define double @test_multiple_register_outputs_mixed() #0 {
   ; CHECK-NEXT:   liveins: $sgpr30_sgpr31
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:sgpr_64 = COPY $sgpr30_sgpr31
-  ; CHECK-NEXT:   INLINEASM &"v_mov_b32 $0, 0; v_add_f64 $1, 0, 0", 0 /* attdialect */, 1835018 /* regdef:VGPR_32 */, def %1, 2883594 /* regdef:VReg_64 */, def %2
+  ; CHECK-NEXT:   INLINEASM &"v_mov_b32 $0, 0; v_add_f64 $1, 0, 0", 0 /* attdialect */, 1835018 /* regdef:VGPR_32 */, def %1, 2949130 /* regdef:VReg_64 */, def %2
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY %1
   ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(s64) = COPY %2
   ; CHECK-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY2]](s64)

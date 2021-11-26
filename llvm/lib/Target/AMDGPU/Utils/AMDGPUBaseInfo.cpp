@@ -1626,13 +1626,14 @@ unsigned getRegBitWidth(unsigned RCID) {
     return 32;
   case AMDGPU::SGPR_64RegClassID:
   case AMDGPU::VS_64RegClassID:
-  case AMDGPU::AV_64RegClassID:
   case AMDGPU::SReg_64RegClassID:
   case AMDGPU::VReg_64RegClassID:
   case AMDGPU::AReg_64RegClassID:
   case AMDGPU::SReg_64_XEXECRegClassID:
   case AMDGPU::VReg_64_Align2RegClassID:
   case AMDGPU::AReg_64_Align2RegClassID:
+  case AMDGPU::AV_64RegClassID:
+  case AMDGPU::AV_64_Align2RegClassID:
     return 64;
   case AMDGPU::SGPR_96RegClassID:
   case AMDGPU::SReg_96RegClassID:
@@ -1641,6 +1642,7 @@ unsigned getRegBitWidth(unsigned RCID) {
   case AMDGPU::VReg_96_Align2RegClassID:
   case AMDGPU::AReg_96_Align2RegClassID:
   case AMDGPU::AV_96RegClassID:
+  case AMDGPU::AV_96_Align2RegClassID:
     return 96;
   case AMDGPU::SGPR_128RegClassID:
   case AMDGPU::SReg_128RegClassID:
@@ -1649,6 +1651,7 @@ unsigned getRegBitWidth(unsigned RCID) {
   case AMDGPU::VReg_128_Align2RegClassID:
   case AMDGPU::AReg_128_Align2RegClassID:
   case AMDGPU::AV_128RegClassID:
+  case AMDGPU::AV_128_Align2RegClassID:
     return 128;
   case AMDGPU::SGPR_160RegClassID:
   case AMDGPU::SReg_160RegClassID:
@@ -1657,6 +1660,7 @@ unsigned getRegBitWidth(unsigned RCID) {
   case AMDGPU::VReg_160_Align2RegClassID:
   case AMDGPU::AReg_160_Align2RegClassID:
   case AMDGPU::AV_160RegClassID:
+  case AMDGPU::AV_160_Align2RegClassID:
     return 160;
   case AMDGPU::SGPR_192RegClassID:
   case AMDGPU::SReg_192RegClassID:
@@ -1664,6 +1668,8 @@ unsigned getRegBitWidth(unsigned RCID) {
   case AMDGPU::AReg_192RegClassID:
   case AMDGPU::VReg_192_Align2RegClassID:
   case AMDGPU::AReg_192_Align2RegClassID:
+  case AMDGPU::AV_192RegClassID:
+  case AMDGPU::AV_192_Align2RegClassID:
     return 192;
   case AMDGPU::SGPR_224RegClassID:
   case AMDGPU::SReg_224RegClassID:
@@ -1671,6 +1677,8 @@ unsigned getRegBitWidth(unsigned RCID) {
   case AMDGPU::AReg_224RegClassID:
   case AMDGPU::VReg_224_Align2RegClassID:
   case AMDGPU::AReg_224_Align2RegClassID:
+  case AMDGPU::AV_224RegClassID:
+  case AMDGPU::AV_224_Align2RegClassID:
     return 224;
   case AMDGPU::SGPR_256RegClassID:
   case AMDGPU::SReg_256RegClassID:
@@ -1678,6 +1686,8 @@ unsigned getRegBitWidth(unsigned RCID) {
   case AMDGPU::AReg_256RegClassID:
   case AMDGPU::VReg_256_Align2RegClassID:
   case AMDGPU::AReg_256_Align2RegClassID:
+  case AMDGPU::AV_256RegClassID:
+  case AMDGPU::AV_256_Align2RegClassID:
     return 256;
   case AMDGPU::SGPR_512RegClassID:
   case AMDGPU::SReg_512RegClassID:
@@ -1685,6 +1695,8 @@ unsigned getRegBitWidth(unsigned RCID) {
   case AMDGPU::AReg_512RegClassID:
   case AMDGPU::VReg_512_Align2RegClassID:
   case AMDGPU::AReg_512_Align2RegClassID:
+  case AMDGPU::AV_512RegClassID:
+  case AMDGPU::AV_512_Align2RegClassID:
     return 512;
   case AMDGPU::SGPR_1024RegClassID:
   case AMDGPU::SReg_1024RegClassID:
@@ -1692,6 +1704,8 @@ unsigned getRegBitWidth(unsigned RCID) {
   case AMDGPU::AReg_1024RegClassID:
   case AMDGPU::VReg_1024_Align2RegClassID:
   case AMDGPU::AReg_1024_Align2RegClassID:
+  case AMDGPU::AV_1024RegClassID:
+  case AMDGPU::AV_1024_Align2RegClassID:
     return 1024;
   default:
     llvm_unreachable("Unexpected register class");

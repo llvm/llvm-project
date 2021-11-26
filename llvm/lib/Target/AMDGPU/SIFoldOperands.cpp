@@ -1586,17 +1586,9 @@ bool SIFoldOperands::tryFoldRegSequence(MachineInstr &MI) {
 
   unsigned OpIdx = Op - &UseMI->getOperand(0);
   const MCInstrDesc &InstDesc = UseMI->getDesc();
-  const MCOperandInfo &OpInfo = InstDesc.OpInfo[OpIdx];
-  switch (OpInfo.RegClass) {
-  case AMDGPU::AV_32RegClassID:  LLVM_FALLTHROUGH;
-  case AMDGPU::AV_64RegClassID:  LLVM_FALLTHROUGH;
-  case AMDGPU::AV_96RegClassID:  LLVM_FALLTHROUGH;
-  case AMDGPU::AV_128RegClassID: LLVM_FALLTHROUGH;
-  case AMDGPU::AV_160RegClassID:
-    break;
-  default:
+  if (!TRI->isVectorSuperClass(
+          TRI->getRegClass(InstDesc.OpInfo[OpIdx].RegClass)))
     return false;
-  }
 
   const auto *NewDstRC = TRI->getEquivalentAGPRClass(MRI->getRegClass(Reg));
   auto Dst = MRI->createVirtualRegister(NewDstRC);

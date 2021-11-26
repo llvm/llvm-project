@@ -74,11 +74,11 @@ unsigned GCNRegPressure::getRegKind(Register Reg,
   assert(Reg.isVirtual());
   const auto RC = MRI.getRegClass(Reg);
   auto STI = static_cast<const SIRegisterInfo*>(MRI.getTargetRegisterInfo());
-  return STI->isSGPRClass(RC) ?
-    (STI->getRegSizeInBits(*RC) == 32 ? SGPR32 : SGPR_TUPLE) :
-    STI->hasAGPRs(RC) ?
-      (STI->getRegSizeInBits(*RC) == 32 ? AGPR32 : AGPR_TUPLE) :
-      (STI->getRegSizeInBits(*RC) == 32 ? VGPR32 : VGPR_TUPLE);
+  return STI->isSGPRClass(RC)
+             ? (STI->getRegSizeInBits(*RC) == 32 ? SGPR32 : SGPR_TUPLE)
+         : STI->isAGPRClass(RC)
+             ? (STI->getRegSizeInBits(*RC) == 32 ? AGPR32 : AGPR_TUPLE)
+             : (STI->getRegSizeInBits(*RC) == 32 ? VGPR32 : VGPR_TUPLE);
 }
 
 void GCNRegPressure::inc(unsigned Reg,

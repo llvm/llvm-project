@@ -1099,7 +1099,7 @@ void SIRegisterInfo::buildSpillLoadStore(
 
   const TargetRegisterClass *RC = getRegClassForReg(MF->getRegInfo(), ValueReg);
   // On gfx90a+ AGPR is a regular VGPR acceptable for loads and stores.
-  const bool IsAGPR = !ST.hasGFX90AInsts() && hasAGPRs(RC);
+  const bool IsAGPR = !ST.hasGFX90AInsts() && isAGPRClass(RC);
   const unsigned RegWidth = AMDGPU::getRegBitWidth(RC->getID()) / 8;
 
   // Always use 4 byte operations for AGPRs because we need to scavenge
@@ -2163,6 +2163,65 @@ SIRegisterInfo::getAGPRClassForBitWidth(unsigned BitWidth) const {
                                 : getAnyAGPRClassForBitWidth(BitWidth);
 }
 
+static const TargetRegisterClass *
+getAnyVectorSuperClassForBitWidth(unsigned BitWidth) {
+  if (BitWidth <= 64)
+    return &AMDGPU::AV_64RegClass;
+  if (BitWidth <= 96)
+    return &AMDGPU::AV_96RegClass;
+  if (BitWidth <= 128)
+    return &AMDGPU::AV_128RegClass;
+  if (BitWidth <= 160)
+    return &AMDGPU::AV_160RegClass;
+  if (BitWidth <= 192)
+    return &AMDGPU::AV_192RegClass;
+  if (BitWidth <= 224)
+    return &AMDGPU::AV_224RegClass;
+  if (BitWidth <= 256)
+    return &AMDGPU::AV_256RegClass;
+  if (BitWidth <= 512)
+    return &AMDGPU::AV_512RegClass;
+  if (BitWidth <= 1024)
+    return &AMDGPU::AV_1024RegClass;
+
+  return nullptr;
+}
+
+static const TargetRegisterClass *
+getAlignedVectorSuperClassForBitWidth(unsigned BitWidth) {
+  if (BitWidth <= 64)
+    return &AMDGPU::AV_64_Align2RegClass;
+  if (BitWidth <= 96)
+    return &AMDGPU::AV_96_Align2RegClass;
+  if (BitWidth <= 128)
+    return &AMDGPU::AV_128_Align2RegClass;
+  if (BitWidth <= 160)
+    return &AMDGPU::AV_160_Align2RegClass;
+  if (BitWidth <= 192)
+    return &AMDGPU::AV_192_Align2RegClass;
+  if (BitWidth <= 224)
+    return &AMDGPU::AV_224_Align2RegClass;
+  if (BitWidth <= 256)
+    return &AMDGPU::AV_256_Align2RegClass;
+  if (BitWidth <= 512)
+    return &AMDGPU::AV_512_Align2RegClass;
+  if (BitWidth <= 1024)
+    return &AMDGPU::AV_1024_Align2RegClass;
+
+  return nullptr;
+}
+
+const TargetRegisterClass *
+SIRegisterInfo::getVectorSuperClassForBitWidth(unsigned BitWidth) const {
+  if (BitWidth <= 16)
+    return &AMDGPU::VGPR_LO16RegClass;
+  if (BitWidth <= 32)
+    return &AMDGPU::AV_32RegClass;
+  return ST.needsAlignedVGPRs()
+             ? getAlignedVectorSuperClassForBitWidth(BitWidth)
+             : getAnyVectorSuperClassForBitWidth(BitWidth);
+}
+
 const TargetRegisterClass *
 SIRegisterInfo::getSGPRClassForBitWidth(unsigned BitWidth) {
   if (BitWidth <= 16)
@@ -2305,15 +2364,14 @@ const TargetRegisterClass *SIRegisterInfo::getSubRegClass(
 
   // We can assume that each lane corresponds to one 32-bit register.
   unsigned Size = getNumChannelsFromSubReg(SubIdx) * 32;
-  if (isSGPRClass(RC)) {
-    if (Size == 32)
-      RC = &AMDGPU::SGPR_32RegClass;
-    else
-      RC = getSGPRClassForBitWidth(Size);
-  } else if (hasAGPRs(RC)) {
+  if (isAGPRClass(RC)) {
     RC = getAGPRClassForBitWidth(Size);
-  } else {
+  } else if (isVGPRClass(RC)) {
     RC = getVGPRClassForBitWidth(Size);
+  } else if (isVectorSuperClass(RC)) {
+    RC = getVectorSuperClassForBitWidth(Size);
+  } else {
+    RC = getSGPRClassForBitWidth(Size);
   }
   assert(RC && "Invalid sub-register class size");
   return RC;
@@ -2626,10 +2684,13 @@ bool SIRegisterInfo::isProperlyAlignedRC(const TargetRegisterClass &RC) const {
   if (!ST.needsAlignedVGPRs())
     return true;
 
-  if (hasVGPRs(&RC))
+  if (isVGPRClass(&RC))
     return RC.hasSuperClassEq(getVGPRClassForBitWidth(getRegSizeInBits(RC)));
-  if (hasAGPRs(&RC))
+  if (isAGPRClass(&RC))
     return RC.hasSuperClassEq(getAGPRClassForBitWidth(getRegSizeInBits(RC)));
+  if (isVectorSuperClass(&RC))
+    return RC.hasSuperClassEq(
+        getVectorSuperClassForBitWidth(getRegSizeInBits(RC)));
 
   return true;
 }

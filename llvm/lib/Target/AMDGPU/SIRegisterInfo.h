@@ -156,6 +156,10 @@ public:
   const TargetRegisterClass *getAGPRClassForBitWidth(unsigned BitWidth) const;
 
   LLVM_READONLY
+  const TargetRegisterClass *
+  getVectorSuperClassForBitWidth(unsigned BitWidth) const;
+
+  LLVM_READONLY
   static const TargetRegisterClass *getSGPRClassForBitWidth(unsigned BitWidth);
 
   /// Return the 'base' register class for this register.
@@ -182,6 +186,11 @@ public:
   /// \returns true if this class contains only AGPR registers
   static bool isAGPRClass(const TargetRegisterClass *RC) {
     return hasAGPRs(RC) && !hasVGPRs(RC);
+  }
+
+  /// \returns true only if this class contains both VGPR and AGPR registers
+  bool isVectorSuperClass(const TargetRegisterClass *RC) const {
+    return hasVGPRs(RC) && hasAGPRs(RC);
   }
 
   /// \returns true if this class contains VGPR registers.
