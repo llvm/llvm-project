@@ -2823,7 +2823,8 @@ bool TargetLowering::SimplifyDemandedVectorElts(
     KnownUndef = SrcUndef.zextOrTrunc(NumElts);
 
     if (IsLE && Op.getOpcode() == ISD::ANY_EXTEND_VECTOR_INREG &&
-        Op.getValueSizeInBits() == Src.getValueSizeInBits()) {
+        Op.getValueSizeInBits() == Src.getValueSizeInBits() &&
+        DemandedSrcElts == 1) {
       // aext - if we just need the bottom element then we can bitcast.
       return TLO.CombineTo(Op, TLO.DAG.getBitcast(VT, Src));
     }
