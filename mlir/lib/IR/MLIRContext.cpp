@@ -1012,6 +1012,29 @@ AffineMap AffineMap::getImpl(unsigned dimCount, unsigned symbolCount,
       });
 }
 
+/// Check whether the arguments passed to the AffineMap::get() are consistent.
+/// This method checks whether the highest index of dimensional identifier
+/// present in result expressions is less than `dimCount` and the highest index
+/// of symbolic identifier present in result expressions is less than
+/// `symbolCount`.
+[[nodiscard]] static bool willBeValidAffineMap(unsigned dimCount,
+                                               unsigned symbolCount,
+                                               ArrayRef<AffineExpr> results) {
+  int64_t maxDimPosition = -1;
+  int64_t maxSymbolPosition = -1;
+  getMaxDimAndSymbol(ArrayRef<ArrayRef<AffineExpr>>(results), maxDimPosition,
+                     maxSymbolPosition);
+  if ((maxDimPosition >= dimCount) || (maxSymbolPosition >= symbolCount)) {
+    LLVM_DEBUG(
+        llvm::dbgs()
+        << "maximum dimensional identifier position in result expression must "
+           "be less than `dimCount` and maximum symbolic identifier position "
+           "in result expression must be less than `symbolCount`\n");
+    return false;
+  }
+  return true;
+}
+
 AffineMap AffineMap::get(MLIRContext *context) {
   return getImpl(/*dimCount=*/0, /*symbolCount=*/0, /*results=*/{}, context);
 }
@@ -1023,11 +1046,13 @@ AffineMap AffineMap::get(unsigned dimCount, unsigned symbolCount,
 
 AffineMap AffineMap::get(unsigned dimCount, unsigned symbolCount,
                          AffineExpr result) {
+  assert(willBeValidAffineMap(dimCount, symbolCount, {result}));
   return getImpl(dimCount, symbolCount, {result}, result.getContext());
 }
 
 AffineMap AffineMap::get(unsigned dimCount, unsigned symbolCount,
                          ArrayRef<AffineExpr> results, MLIRContext *context) {
+  assert(willBeValidAffineMap(dimCount, symbolCount, results));
   return getImpl(dimCount, symbolCount, results, context);
 }
 
