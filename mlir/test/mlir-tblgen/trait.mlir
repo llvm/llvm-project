@@ -93,3 +93,11 @@ func @testTripleIdempotent(%arg0: i32) -> i32 {
   // CHECK: return [[IDEMPOTENT]]
   return %2: i32
 }
+
+// CHECK-LABEL: func @testBinaryIdempotent
+// CHECK-SAME:  ([[ARG0:%.+]]: i32)
+func @testBinaryIdempotent(%arg0 : i32) -> i32 {
+  %0 = "test.op_idempotent_trait_binary"(%arg0, %arg0) : (i32, i32) -> i32
+  // CHECK: return [[ARG0]]
+  return %0: i32
+}
