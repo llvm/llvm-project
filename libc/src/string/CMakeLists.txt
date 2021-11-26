@@ -409,7 +409,6 @@ function(add_memmove memmove_name)
     HDRS ${LIBC_SOURCE_DIR}/src/string/memmove.h
     DEPENDS
       .memory_utils.memory_utils
-      .memory_utils.memcpy_implementation
       libc.include.string
     COMPILE_OPTIONS
       -fno-builtin

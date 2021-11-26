@@ -131,6 +131,10 @@ private:
 public:
   // From Array.
   template <size_t N> MutableArrayRef(Array<T, N> &Arr) : Impl(Arr.Data, N) {}
+
+  operator ArrayRef<T>() const {
+    return ArrayRef<T>(this->data(), this->size());
+  }
 };
 
 } // namespace cpp

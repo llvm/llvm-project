@@ -261,6 +261,8 @@ function(add_libc_multi_impl_test name)
           ${LIBC_COMPILE_OPTIONS_NATIVE}
         ${ARGN}
       )
+      get_fq_target_name(${fq_config_name}_test fq_target_name)
+      target_link_libraries(${fq_target_name} PRIVATE LibcMemoryHelpers)
     else()
       message(STATUS "Skipping test for '${fq_config_name}' insufficient host cpu features '${required_cpu_features}'")
     endif()

@@ -43,6 +43,11 @@ template <typename Element> void move(char *dst, const char *src) {
 template <typename Element> void move(char *dst, const char *src, size_t size) {
   Element::move(dst, src, size);
 }
+// Runtime-size move from 'src' to 'dst'.
+template <typename Element>
+void move_backward(char *dst, const char *src, size_t size) {
+  Element::move_backward(dst, src, size);
+}
 
 // Fixed-size equality between 'lhs' and 'rhs'.
 template <typename Element> bool equals(const char *lhs, const char *rhs) {
@@ -96,10 +101,8 @@ template <typename Element, size_t ElementCount> struct Repeated {
   }
 
   static void move(char *dst, const char *src) {
-    const auto value = Element::load(src);
-    Repeated<Element, ElementCount - 1>::move(dst + Element::SIZE,
-                                              src + Element::SIZE);
-    Element::store(dst, value);
+    const auto value = load(src);
+    store(dst, value);
   }
 
   static bool equals(const char *lhs, const char *rhs) {
@@ -341,6 +344,55 @@ template <typename T, typename TailT = T> struct Loop {
     Tail<TailT>::copy(dst, src, size);
   }
 
+  // Move forward suitable when dst < src. We load the tail bytes before
+  // handling the loop.
+  //
+  // e.g. Moving two bytes
+  // [   |       |       |       |       |]
+  // [___XXXXXXXXXXXXXXXXXXXXXXXXXXXXXX___]
+  // [_________________________LLLLLLLL___]
+  // [___LLLLLLLL_________________________]
+  // [_SSSSSSSS___________________________]
+  // [___________LLLLLLLL_________________]
+  // [_________SSSSSSSS___________________]
+  // [___________________LLLLLLLL_________]
+  // [_________________SSSSSSSS___________]
+  // [_______________________SSSSSSSS_____]
+  static void move(char *dst, const char *src, size_t size) {
+    const size_t tail_offset = Tail<T>::offset(size);
+    const auto tail_value = TailT::load(src + tail_offset);
+    size_t offset = 0;
+    do {
+      T::move(dst + offset, src + offset);
+      offset += T::SIZE;
+    } while (offset < size - T::SIZE);
+    TailT::store(dst + tail_offset, tail_value);
+  }
+
+  // Move forward suitable when dst > src. We load the head bytes before
+  // handling the loop.
+  //
+  // e.g. Moving two bytes
+  // [   |       |       |       |       |]
+  // [___XXXXXXXXXXXXXXXXXXXXXXXXXXXXXX___]
+  // [___LLLLLLLL_________________________]
+  // [_________________________LLLLLLLL___]
+  // [___________________________SSSSSSSS_]
+  // [_________________LLLLLLLL___________]
+  // [___________________SSSSSSSS_________]
+  // [_________LLLLLLLL___________________]
+  // [___________SSSSSSSS_________________]
+  // [_____SSSSSSSS_______________________]
+  static void move_backward(char *dst, const char *src, size_t size) {
+    const auto head_value = TailT::load(src);
+    ptrdiff_t offset = size - T::SIZE;
+    do {
+      T::move(dst + offset, src + offset);
+      offset -= T::SIZE;
+    } while (offset >= 0);
+    TailT::store(dst, head_value);
+  }
+
   static bool equals(const char *lhs, const char *rhs, size_t size) {
     size_t offset = 0;
     do {
@@ -375,30 +427,38 @@ enum class Arg { _1, _2, Dst = _1, Src = _2, Lhs = _1, Rhs = _2 };
 
 namespace internal {
 
-// Provides a specialized bump function that adjusts pointers and size so first
-// argument (resp. second argument) gets aligned to Alignment.
-// We make sure the compiler knows about the adjusted pointer alignment.
-template <Arg arg, size_t Alignment> struct AlignHelper {};
+template <Arg arg> struct ArgSelector {};
 
-template <size_t Alignment> struct AlignHelper<Arg::_1, Alignment> {
+template <> struct ArgSelector<Arg::_1> {
   template <typename T1, typename T2>
-  static void bump(T1 *__restrict &p1ref, T2 *__restrict &p2ref, size_t &size) {
-    const intptr_t offset = offset_to_next_aligned<Alignment>(p1ref);
-    p1ref += offset;
-    p2ref += offset;
-    size -= offset;
-    p1ref = assume_aligned<Alignment>(p1ref);
+  static T1 *__restrict &Select(T1 *__restrict &p1ref, T2 *__restrict &p2ref) {
+    return p1ref;
   }
 };
 
-template <size_t Alignment> struct AlignHelper<Arg::_2, Alignment> {
+template <> struct ArgSelector<Arg::_2> {
   template <typename T1, typename T2>
-  static void bump(T1 *__restrict &p1ref, T2 *__restrict &p2ref, size_t &size) {
-    const intptr_t offset = offset_to_next_aligned<Alignment>(p2ref);
+  static T2 *__restrict &Select(T1 *__restrict &p1ref, T2 *__restrict &p2ref) {
+    return p2ref;
+  }
+};
+
+// Provides a specialized bump function that adjusts pointers and size so first
+// argument (resp. second argument) gets aligned to Alignment.
+// We make sure the compiler knows about the adjusted pointer alignment.
+// The 'additional_bumps' parameter allows to reach previous / next aligned
+// pointers.
+template <Arg arg, size_t Alignment> struct Align {
+  template <typename T1, typename T2>
+  static void bump(T1 *__restrict &p1ref, T2 *__restrict &p2ref, size_t &size,
+                   int additional_bumps = 0) {
+    auto &aligned_ptr = ArgSelector<arg>::Select(p1ref, p2ref);
+    auto offset = offset_to_next_aligned<Alignment>(aligned_ptr);
+    offset += additional_bumps * Alignment;
     p1ref += offset;
     p2ref += offset;
     size -= offset;
-    p2ref = assume_aligned<Alignment>(p2ref);
+    aligned_ptr = assume_aligned<Alignment>(aligned_ptr);
   }
 };
 
@@ -423,14 +483,70 @@ public:
     static void copy(char *__restrict dst, const char *__restrict src,
                      size_t size) {
       AlignmentT::copy(dst, src);
-      internal::AlignHelper<AlignOn, ALIGNMENT>::bump(dst, src, size);
+      internal::Align<AlignOn, ALIGNMENT>::bump(dst, src, size);
       NextT::copy(dst, src, size);
+    }
+
+    // Move forward suitable when dst < src. The alignment is performed with an
+    // HeadTail operation of size ∈ [Alignment, 2 x Alignment].
+    //
+    // e.g. Moving two bytes and making sure src is then aligned.
+    // [  |       |       |       |      ]
+    // [____XXXXXXXXXXXXXXXXXXXXXXXXXXXX_]
+    // [____LLLLLLLL_____________________]
+    // [___________LLLLLLLL______________]
+    // [_SSSSSSSS________________________]
+    // [________SSSSSSSS_________________]
+    //
+    // e.g. Moving two bytes and making sure dst is then aligned.
+    // [  |       |       |       |      ]
+    // [____XXXXXXXXXXXXXXXXXXXXXXXXXXXX_]
+    // [____LLLLLLLL_____________________]
+    // [______LLLLLLLL___________________]
+    // [_SSSSSSSS________________________]
+    // [___SSSSSSSS______________________]
+    static void move(char *dst, const char *src, size_t size) {
+      char *next_dst = dst;
+      const char *next_src = src;
+      size_t next_size = size;
+      internal::Align<AlignOn, ALIGNMENT>::bump(next_dst, next_src, next_size,
+                                                1);
+      HeadTail<AlignmentT>::move(dst, src, size - next_size);
+      NextT::move(next_dst, next_src, next_size);
+    }
+
+    // Move backward suitable when dst > src. The alignment is performed with an
+    // HeadTail operation of size ∈ [Alignment, 2 x Alignment].
+    //
+    // e.g. Moving two bytes backward and making sure src is then aligned.
+    // [  |       |       |       |      ]
+    // [____XXXXXXXXXXXXXXXXXXXXXXXX_____]
+    // [ _________________LLLLLLLL_______]
+    // [ ___________________LLLLLLLL_____]
+    // [____________________SSSSSSSS_____]
+    // [______________________SSSSSSSS___]
+    //
+    // e.g. Moving two bytes and making sure dst is then aligned.
+    // [  |       |       |       |      ]
+    // [____XXXXXXXXXXXXXXXXXXXXXXXX_____]
+    // [ _______________LLLLLLLL_________]
+    // [ ___________________LLLLLLLL_____]
+    // [__________________SSSSSSSS_______]
+    // [______________________SSSSSSSS___]
+    static void move_backward(char *dst, const char *src, size_t size) {
+      char *headtail_dst = dst + size;
+      const char *headtail_src = src + size;
+      size_t headtail_size = 0;
+      internal::Align<AlignOn, ALIGNMENT>::bump(headtail_dst, headtail_src,
+                                                headtail_size, -2);
+      HeadTail<AlignmentT>::move(headtail_dst, headtail_src, headtail_size);
+      NextT::move_backward(dst, src, size - headtail_size);
     }
 
     static bool equals(const char *lhs, const char *rhs, size_t size) {
       if (!AlignmentT::equals(lhs, rhs))
         return false;
-      internal::AlignHelper<AlignOn, ALIGNMENT>::bump(lhs, rhs, size);
+      internal::Align<AlignOn, ALIGNMENT>::bump(lhs, rhs, size);
       return NextT::equals(lhs, rhs, size);
     }
 
@@ -438,14 +554,14 @@ public:
                                  size_t size) {
       if (!AlignmentT::equals(lhs, rhs))
         return AlignmentT::three_way_compare(lhs, rhs);
-      internal::AlignHelper<AlignOn, ALIGNMENT>::bump(lhs, rhs, size);
+      internal::Align<AlignOn, ALIGNMENT>::bump(lhs, rhs, size);
       return NextT::three_way_compare(lhs, rhs, size);
     }
 
     static void splat_set(char *dst, const unsigned char value, size_t size) {
       AlignmentT::splat_set(dst, value);
       char *dummy = nullptr;
-      internal::AlignHelper<Arg::_1, ALIGNMENT>::bump(dst, dummy, size);
+      internal::Align<Arg::_1, ALIGNMENT>::bump(dst, dummy, size);
       NextT::splat_set(dst, value, size);
     }
   };
