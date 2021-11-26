@@ -585,8 +585,8 @@ simpleLibcall(MachineInstr &MI, MachineIRBuilder &MIRBuilder, unsigned Size,
 
   // FIXME: What does the original arg index mean here?
   SmallVector<CallLowering::ArgInfo, 3> Args;
-  for (unsigned i = 1; i < MI.getNumOperands(); i++)
-    Args.push_back({MI.getOperand(i).getReg(), OpType, 0});
+  for (const MachineOperand &MO : llvm::drop_begin(MI.operands()))
+    Args.push_back({MO.getReg(), OpType, 0});
   return createLibcall(MIRBuilder, Libcall,
                        {MI.getOperand(0).getReg(), OpType, 0}, Args);
 }
@@ -1500,8 +1500,8 @@ LegalizerHelper::widenScalarMergeValues(MachineInstr &MI, unsigned TypeIdx,
   LLT WideDstTy = LLT::scalar(NumMerge * WideSize);
 
   // Decompose the original operands if they don't evenly divide.
-  for (int I = 1, E = MI.getNumOperands(); I != E; ++I) {
-    Register SrcReg = MI.getOperand(I).getReg();
+  for (const MachineOperand &MO : llvm::drop_begin(MI.operands())) {
+    Register SrcReg = MO.getReg();
     if (GCD == SrcSize) {
       Unmerges.push_back(SrcReg);
     } else {
@@ -4037,8 +4037,8 @@ LegalizerHelper::fewerElementsVectorMerge(MachineInstr &MI, unsigned TypeIdx,
 
   // Break into a common type
   SmallVector<Register, 16> Parts;
-  for (unsigned I = 1, E = MI.getNumOperands(); I != E; ++I)
-    extractGCDType(Parts, GCDTy, MI.getOperand(I).getReg());
+  for (const MachineOperand &MO : llvm::drop_begin(MI.operands()))
+    extractGCDType(Parts, GCDTy, MO.getReg());
 
   // Build the requested new merge, padding with undef.
   LLT LCMTy = buildLCMMergePieces(DstTy, NarrowTy, GCDTy, Parts,
