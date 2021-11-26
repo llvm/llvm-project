@@ -650,7 +650,8 @@ public:
   bool matchRedundantNegOperands(MachineInstr &MI, BuildFnTy &MatchInfo);
 
   bool canCombineFMadOrFMA(MachineInstr &MI, bool &AllowFusionGlobally,
-                           bool &HasFMAD, bool &Aggressive);
+                           bool &HasFMAD, bool &Aggressive,
+                           bool CanReassociate = false);
 
   /// Transform (fadd (fmul x, y), z) -> (fma x, y, z)
   ///           (fadd (fmul x, y), z) -> (fmad x, y, z)
@@ -660,6 +661,11 @@ public:
   ///           (fadd (fpext (fmul x, y)), z) -> (fmad (fpext x), (fpext y), z)
   bool matchCombineFAddFpExtFMulToFMadOrFMA(MachineInstr &MI,
                                             BuildFnTy &MatchInfo);
+
+  /// Transform (fadd (fma x, y, (fmul u, v)), z) -> (fma x, y, (fma u, v, z))
+  ///          (fadd (fmad x, y, (fmul u, v)), z) -> (fmad x, y, (fmad u, v, z))
+  bool matchCombineFAddFMAFMulToFMadOrFMA(MachineInstr &MI,
+                                          BuildFnTy &MatchInfo);
 
 private:
   /// Given a non-indexed load or store instruction \p MI, find an offset that
