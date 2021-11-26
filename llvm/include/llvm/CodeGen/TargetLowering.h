@@ -2719,6 +2719,14 @@ public:
   /// Return true if an fpext operation input to an \p Opcode operation is free
   /// (for instance, because half-precision floating-point numbers are
   /// implicitly extended to float-precision) for an FMA instruction.
+  virtual bool isFPExtFoldable(const MachineInstr &MI, unsigned Opcode,
+                               LLT DestTy, LLT SrcTy) const {
+    return false;
+  }
+
+  /// Return true if an fpext operation input to an \p Opcode operation is free
+  /// (for instance, because half-precision floating-point numbers are
+  /// implicitly extended to float-precision) for an FMA instruction.
   virtual bool isFPExtFoldable(const SelectionDAG &DAG, unsigned Opcode,
                                EVT DestVT, EVT SrcVT) const {
     assert(DestVT.isFloatingPoint() && SrcVT.isFloatingPoint() &&

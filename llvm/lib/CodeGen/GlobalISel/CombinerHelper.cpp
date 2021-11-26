@@ -4893,6 +4893,67 @@ bool CombinerHelper::matchCombineFAddFMulToFMadOrFMA(
   return false;
 }
 
+bool CombinerHelper::matchCombineFAddFpExtFMulToFMadOrFMA(
+    MachineInstr &MI, std::function<void(MachineIRBuilder &)> &MatchInfo) {
+  assert(MI.getOpcode() == TargetOpcode::G_FADD);
+
+  bool AllowFusionGlobally, HasFMAD, Aggressive;
+  if (!canCombineFMadOrFMA(MI, AllowFusionGlobally, HasFMAD, Aggressive))
+    return false;
+
+  const auto &TLI = *MI.getMF()->getSubtarget().getTargetLowering();
+  MachineInstr *LHS = MRI.getVRegDef(MI.getOperand(1).getReg());
+  MachineInstr *RHS = MRI.getVRegDef(MI.getOperand(2).getReg());
+  LLT DstType = MRI.getType(MI.getOperand(0).getReg());
+
+  unsigned PreferredFusedOpcode =
+      HasFMAD ? TargetOpcode::G_FMAD : TargetOpcode::G_FMA;
+
+  // If we have two choices trying to fold (fadd (fmul u, v), (fmul x, y)),
+  // prefer to fold the multiply with fewer uses.
+  if (Aggressive && isContractableFMul(*LHS, AllowFusionGlobally) &&
+      isContractableFMul(*RHS, AllowFusionGlobally)) {
+    if (hasMoreUses(*LHS, *RHS, MRI))
+      std::swap(LHS, RHS);
+  }
+
+  // fold (fadd (fpext (fmul x, y)), z) -> (fma (fpext x), (fpext y), z)
+  MachineInstr *FpExtSrc;
+  if (mi_match(LHS->getOperand(0).getReg(), MRI,
+               m_GFPExt(m_MInstr(FpExtSrc))) &&
+      isContractableFMul(*FpExtSrc, AllowFusionGlobally) &&
+      TLI.isFPExtFoldable(MI, PreferredFusedOpcode, DstType,
+                          MRI.getType(FpExtSrc->getOperand(1).getReg()))) {
+    MatchInfo = [=, &MI](MachineIRBuilder &B) {
+      auto FpExtX = B.buildFPExt(DstType, FpExtSrc->getOperand(1).getReg());
+      auto FpExtY = B.buildFPExt(DstType, FpExtSrc->getOperand(2).getReg());
+      B.buildInstr(
+          PreferredFusedOpcode, {MI.getOperand(0).getReg()},
+          {FpExtX.getReg(0), FpExtY.getReg(0), RHS->getOperand(0).getReg()});
+    };
+    return true;
+  }
+
+  // fold (fadd z, (fpext (fmul x, y))) -> (fma (fpext x), (fpext y), z)
+  // Note: Commutes FADD operands.
+  if (mi_match(RHS->getOperand(0).getReg(), MRI,
+               m_GFPExt(m_MInstr(FpExtSrc))) &&
+      isContractableFMul(*FpExtSrc, AllowFusionGlobally) &&
+      TLI.isFPExtFoldable(MI, PreferredFusedOpcode, DstType,
+                          MRI.getType(FpExtSrc->getOperand(1).getReg()))) {
+    MatchInfo = [=, &MI](MachineIRBuilder &B) {
+      auto FpExtX = B.buildFPExt(DstType, FpExtSrc->getOperand(1).getReg());
+      auto FpExtY = B.buildFPExt(DstType, FpExtSrc->getOperand(2).getReg());
+      B.buildInstr(
+          PreferredFusedOpcode, {MI.getOperand(0).getReg()},
+          {FpExtX.getReg(0), FpExtY.getReg(0), LHS->getOperand(0).getReg()});
+    };
+    return true;
+  }
+
+  return false;
+}
+
 bool CombinerHelper::tryCombine(MachineInstr &MI) {
   if (tryCombineCopy(MI))
     return true;

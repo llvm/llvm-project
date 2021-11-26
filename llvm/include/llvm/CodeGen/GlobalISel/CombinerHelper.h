@@ -656,6 +656,11 @@ public:
   ///           (fadd (fmul x, y), z) -> (fmad x, y, z)
   bool matchCombineFAddFMulToFMadOrFMA(MachineInstr &MI, BuildFnTy &MatchInfo);
 
+  /// Transform (fadd (fpext (fmul x, y)), z) -> (fma (fpext x), (fpext y), z)
+  ///           (fadd (fpext (fmul x, y)), z) -> (fmad (fpext x), (fpext y), z)
+  bool matchCombineFAddFpExtFMulToFMadOrFMA(MachineInstr &MI,
+                                            BuildFnTy &MatchInfo);
+
 private:
   /// Given a non-indexed load or store instruction \p MI, find an offset that
   /// can be usefully and legally folded into it as a post-indexing operation.

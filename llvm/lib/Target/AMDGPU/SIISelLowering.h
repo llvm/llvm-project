@@ -253,6 +253,9 @@ public:
   bool isFPExtFoldable(const SelectionDAG &DAG, unsigned Opcode, EVT DestVT,
                        EVT SrcVT) const override;
 
+  bool isFPExtFoldable(const MachineInstr &MI, unsigned Opcode, LLT DestTy,
+                       LLT SrcTy) const override;
+
   bool isShuffleMaskLegal(ArrayRef<int> /*Mask*/, EVT /*VT*/) const override;
 
   bool getTgtMemIntrinsic(IntrinsicInfo &, const CallInst &,
