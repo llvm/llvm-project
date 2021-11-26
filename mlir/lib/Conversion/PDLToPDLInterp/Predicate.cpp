@@ -44,3 +44,8 @@ OperandPosition::OperandPosition(const KeyTy &key) : Base(key) {
 OperandGroupPosition::OperandGroupPosition(const KeyTy &key) : Base(key) {
   parent = std::get<0>(key);
 }
+
+//===----------------------------------------------------------------------===//
+// OperationPosition
+
+constexpr unsigned OperationPosition::kDown;
