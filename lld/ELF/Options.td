@@ -454,16 +454,13 @@ def verbose: F<"verbose">, HelpText<"Verbose mode">;
 
 def version: F<"version">, HelpText<"Display the version number and exit">;
 
-def power10_stubs: F<"power10-stubs">, HelpText<"Alias for --power10-stubs=auto">;
-
-def no_power10_stubs: F<"no-power10-stubs">, HelpText<"Alias for --power10-stubs=no">;
-
-def power10_stubs_eq:
-  J<"power10-stubs=">, HelpText<
-                     "Enables Power10 instructions in all stubs without options, "
-                     "options override previous flags."
-                     "auto: Allow Power10 instructions in stubs if applicable."
-                     "no:   No Power10 instructions in stubs.">;
+def power10_stubs_eq: JJ<"power10-stubs=">, MetaVarName<"<mode>">,
+  HelpText<"Whether to use Power10 instructions in call stubs for R_PPC64_REL24_NOTOC and TOC/NOTOC "
+  "interworking (yes (default): use; no: don't use). \"auto\" is currently the same as \"yes\"">;
+def power10_stubs: FF<"power10-stubs">, Alias<power10_stubs_eq>, AliasArgs<["yes"]>,
+  HelpText<"Alias for --power10-stubs=auto">;
+def no_power10_stubs: FF<"no-power10-stubs">, Alias<power10_stubs_eq>, AliasArgs<["no"]>,
+  HelpText<"Alias for --power10-stubs=no">;
 
 defm version_script: Eq<"version-script", "Read a version script">;
 
