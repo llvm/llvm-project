@@ -264,6 +264,7 @@ bool NMMoveOpt::generateMoveBalc(MachineBasicBlock &MBB) {
       New.addGlobalAddress(Balc->getOperand(0).getGlobal());
     else
       New.addExternalSymbol(Balc->getOperand(0).getSymbolName());
+    New.copyImplicitOps(*Balc);
     MBB.erase(Move);
     MBB.erase(Balc);
   }
