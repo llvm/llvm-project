@@ -1207,10 +1207,8 @@ bool IsSaved(const Symbol &original) {
     return false; // this is a component
   } else if (symbol.attrs().test(Attr::SAVE)) {
     return true; // explicit SAVE attribute
-  } else if (symbol.test(Symbol::Flag::InDataStmt)) {
-    return true;
   } else if (IsDummy(symbol) || IsFunctionResult(symbol) ||
-      IsAutomatic(symbol)) {
+      IsAutomatic(symbol) || IsNamedConstant(symbol)) {
     return false;
   } else if (scopeKind == Scope::Kind::Module ||
       (scopeKind == Scope::Kind::MainProgram &&
@@ -1228,13 +1226,8 @@ bool IsSaved(const Symbol &original) {
     // -fno-automatic/-save/-Msave option applies to objects in
     // executable subprograms unless they are explicitly RECURSIVE.
     return true;
-  } else if (IsNamedConstant(symbol)) {
-    // TODO: lowering needs named constants in modules to be static,
-    // so this test for a named constant has lower precedence for the
-    // time being; when lowering is corrected, this case should be
-    // moved up above module logic, since named constants don't really
-    // have implied SAVE attributes.
-    return false;
+  } else if (symbol.test(Symbol::Flag::InDataStmt)) {
+    return true;
   } else if (const auto *object{symbol.detailsIf<ObjectEntityDetails>()};
              object && object->init()) {
     return true;
