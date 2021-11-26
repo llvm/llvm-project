@@ -276,7 +276,7 @@ OPTIONS
  Show code coverage only for functions listed in the given file. Each line in
  the file should start with `whitelist_fun:`, immediately followed by the name
  of the function to accept. This name can be a wildcard expression. This option
- will be deprecated for `-name-allowlist=<FILE> in future releases.
+ will be deprecated for `-name-allowlist=<FILE>` in future releases.
 
 .. option:: -name-regex=<PATTERN>
 
