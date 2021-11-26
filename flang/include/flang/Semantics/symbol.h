@@ -188,11 +188,11 @@ public:
   }
   bool IsArray() const { return !shape_.empty(); }
   bool IsCoarray() const { return !coshape_.empty(); }
-  bool IsAssumedShape() const { return isDummy() && shape_.IsAssumedShape(); }
-  bool IsDeferredShape() const {
-    return !isDummy() && shape_.IsDeferredShape();
+  bool CanBeAssumedShape() const {
+    return isDummy() && shape_.CanBeAssumedShape();
   }
-  bool IsAssumedSize() const { return isDummy() && shape_.IsAssumedSize(); }
+  bool CanBeDeferredShape() const { return shape_.CanBeDeferredShape(); }
+  bool IsAssumedSize() const { return isDummy() && shape_.CanBeAssumedSize(); }
   bool IsAssumedRank() const { return isDummy() && shape_.IsAssumedRank(); }
 
 private:

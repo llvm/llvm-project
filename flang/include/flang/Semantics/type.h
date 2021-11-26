@@ -47,11 +47,17 @@ using SubscriptIntExpr = evaluate::Expr<evaluate::SubscriptInteger>;
 using MaybeSubscriptIntExpr = std::optional<SubscriptIntExpr>;
 using KindExpr = SubscriptIntExpr;
 
-// An array spec bound: an explicit integer expression or ASSUMED or DEFERRED
+// An array spec bound: an explicit integer expression, assumed size
+// or implied shape(*), or assumed or deferred shape(:).  In the absence
+// of explicit lower bounds it is not possible to distinguish assumed
+// shape bounds from deferred shape bounds without knowing whether the
+// particular symbol is an allocatable/pointer or a non-allocatable
+// non-pointer dummy; use the symbol-based predicates for those
+// determinations.
 class Bound {
 public:
-  static Bound Assumed() { return Bound(Category::Assumed); }
-  static Bound Deferred() { return Bound(Category::Deferred); }
+  static Bound Star() { return Bound(Category::Star); }
+  static Bound Colon() { return Bound(Category::Colon); }
   explicit Bound(MaybeSubscriptIntExpr &&expr) : expr_{std::move(expr)} {}
   explicit Bound(common::ConstantSubscript bound);
   Bound(const Bound &) = default;
@@ -59,8 +65,8 @@ public:
   Bound &operator=(const Bound &) = default;
   Bound &operator=(Bound &&) = default;
   bool isExplicit() const { return category_ == Category::Explicit; }
-  bool isAssumed() const { return category_ == Category::Assumed; }
-  bool isDeferred() const { return category_ == Category::Deferred; }
+  bool isStar() const { return category_ == Category::Star; }
+  bool isColon() const { return category_ == Category::Colon; }
   MaybeSubscriptIntExpr &GetExplicit() { return expr_; }
   const MaybeSubscriptIntExpr &GetExplicit() const { return expr_; }
   void SetExplicit(MaybeSubscriptIntExpr &&expr) {
@@ -69,7 +75,7 @@ public:
   }
 
 private:
-  enum class Category { Explicit, Deferred, Assumed };
+  enum class Category { Explicit, Star, Colon };
   Bound(Category category) : category_{category} {}
   Bound(Category category, MaybeSubscriptIntExpr &&expr)
       : category_{category}, expr_{std::move(expr)} {}
@@ -78,7 +84,8 @@ private:
   friend llvm::raw_ostream &operator<<(llvm::raw_ostream &, const Bound &);
 };
 
-// A type parameter value: integer expression or assumed or deferred.
+// A type parameter value: integer expression, assumed/implied(*),
+// or deferred(:).
 class ParamValue {
 public:
   static ParamValue Assumed(common::TypeParamAttr attr) {
@@ -176,28 +183,26 @@ public:
     return MakeExplicit(Bound{1}, std::move(ub));
   }
   // 1:
-  static ShapeSpec MakeAssumed() {
-    return ShapeSpec(Bound{1}, Bound::Deferred());
+  static ShapeSpec MakeAssumedShape() {
+    return ShapeSpec(Bound{1}, Bound::Colon());
   }
   // lb:
-  static ShapeSpec MakeAssumed(Bound &&lb) {
-    return ShapeSpec(std::move(lb), Bound::Deferred());
+  static ShapeSpec MakeAssumedShape(Bound &&lb) {
+    return ShapeSpec(std::move(lb), Bound::Colon());
   }
   // :
   static ShapeSpec MakeDeferred() {
-    return ShapeSpec(Bound::Deferred(), Bound::Deferred());
+    return ShapeSpec(Bound::Colon(), Bound::Colon());
   }
   // 1:*
-  static ShapeSpec MakeImplied() {
-    return ShapeSpec(Bound{1}, Bound::Assumed());
-  }
+  static ShapeSpec MakeImplied() { return ShapeSpec(Bound{1}, Bound::Star()); }
   // lb:*
   static ShapeSpec MakeImplied(Bound &&lb) {
-    return ShapeSpec(std::move(lb), Bound::Assumed());
+    return ShapeSpec(std::move(lb), Bound::Star());
   }
   // ..
   static ShapeSpec MakeAssumedRank() {
-    return ShapeSpec(Bound::Assumed(), Bound::Assumed());
+    return ShapeSpec(Bound::Star(), Bound::Star());
   }
 
   ShapeSpec(const ShapeSpec &) = default;
@@ -220,11 +225,15 @@ private:
 struct ArraySpec : public std::vector<ShapeSpec> {
   ArraySpec() {}
   int Rank() const { return size(); }
+  // These names are not exclusive, as some categories cannot be
+  // distinguished without knowing whether the particular symbol
+  // is allocatable, pointer, or a non-allocatable non-pointer dummy.
+  // Use the symbol-based predicates for exact results.
   inline bool IsExplicitShape() const;
-  inline bool IsAssumedShape() const;
-  inline bool IsDeferredShape() const;
-  inline bool IsImpliedShape() const;
-  inline bool IsAssumedSize() const;
+  inline bool CanBeAssumedShape() const;
+  inline bool CanBeDeferredShape() const;
+  inline bool CanBeImpliedShape() const;
+  inline bool CanBeAssumedSize() const;
   inline bool IsAssumedRank() const;
 
 private:
@@ -399,25 +408,25 @@ private:
 inline bool ArraySpec::IsExplicitShape() const {
   return CheckAll([](const ShapeSpec &x) { return x.ubound().isExplicit(); });
 }
-inline bool ArraySpec::IsAssumedShape() const {
-  return CheckAll([](const ShapeSpec &x) { return x.ubound().isDeferred(); });
+inline bool ArraySpec::CanBeAssumedShape() const {
+  return CheckAll([](const ShapeSpec &x) { return x.ubound().isColon(); });
 }
-inline bool ArraySpec::IsDeferredShape() const {
+inline bool ArraySpec::CanBeDeferredShape() const {
   return CheckAll([](const ShapeSpec &x) {
-    return x.lbound().isDeferred() && x.ubound().isDeferred();
+    return x.lbound().isColon() && x.ubound().isColon();
   });
 }
-inline bool ArraySpec::IsImpliedShape() const {
+inline bool ArraySpec::CanBeImpliedShape() const {
   return !IsAssumedRank() &&
-      CheckAll([](const ShapeSpec &x) { return x.ubound().isAssumed(); });
+      CheckAll([](const ShapeSpec &x) { return x.ubound().isStar(); });
 }
-inline bool ArraySpec::IsAssumedSize() const {
-  return !empty() && !IsAssumedRank() && back().ubound().isAssumed() &&
+inline bool ArraySpec::CanBeAssumedSize() const {
+  return !empty() && !IsAssumedRank() && back().ubound().isStar() &&
       std::all_of(begin(), end() - 1,
           [](const ShapeSpec &x) { return x.ubound().isExplicit(); });
 }
 inline bool ArraySpec::IsAssumedRank() const {
-  return Rank() == 1 && front().lbound().isAssumed();
+  return Rank() == 1 && front().lbound().isStar();
 }
 
 inline IntrinsicTypeSpec *DeclTypeSpec::AsIntrinsic() {

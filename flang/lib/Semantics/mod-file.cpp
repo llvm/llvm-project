@@ -531,15 +531,15 @@ void PutEntity(llvm::raw_ostream &os, const Symbol &symbol) {
 }
 
 void PutShapeSpec(llvm::raw_ostream &os, const ShapeSpec &x) {
-  if (x.lbound().isAssumed()) {
-    CHECK(x.ubound().isAssumed());
-    os << "..";
+  if (x.lbound().isStar()) {
+    CHECK(x.ubound().isStar());
+    os << ".."; // assumed rank
   } else {
-    if (!x.lbound().isDeferred()) {
+    if (!x.lbound().isColon()) {
       PutBound(os, x.lbound());
     }
     os << ':';
-    if (!x.ubound().isDeferred()) {
+    if (!x.ubound().isColon()) {
       PutBound(os, x.ubound());
     }
   }
@@ -639,9 +639,9 @@ void PutInit(llvm::raw_ostream &os, const MaybeIntExpr &init) {
 }
 
 void PutBound(llvm::raw_ostream &os, const Bound &x) {
-  if (x.isAssumed()) {
+  if (x.isStar()) {
     os << '*';
-  } else if (x.isDeferred()) {
+  } else if (x.isColon()) {
     os << ':';
   } else {
     x.GetExplicit()->AsFortran(os);

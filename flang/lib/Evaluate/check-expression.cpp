@@ -659,18 +659,12 @@ public:
       // simple contiguity to allow their use in contexts like
       // data targets in pointer assignments with remapping.
       return true;
-    } else if (semantics::IsPointer(ultimate)) {
+    } else if (semantics::IsPointer(ultimate) ||
+        semantics::IsAssumedShape(ultimate)) {
       return false;
-    } else if (semantics::IsAllocatable(ultimate)) {
-      // TODO: this could be merged with the case below if
-      // details->IsAssumedShape() did not return true for allocatables. Current
-      // ArraySpec building in semantics does not allow making a difference
-      // between some_assumed_shape(:) and some_allocatable(:). Both
-      // isDeferredShape() and isAssumedShape() are true in each case.
-      return true;
     } else if (const auto *details{
                    ultimate.detailsIf<semantics::ObjectEntityDetails>()}) {
-      return !details->IsAssumedShape() && !details->IsAssumedRank();
+      return !details->IsAssumedRank();
     } else if (auto assoc{Base::operator()(ultimate)}) {
       return assoc;
     } else {
