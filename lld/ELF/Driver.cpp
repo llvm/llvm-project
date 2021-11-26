@@ -750,20 +750,6 @@ static OrphanHandlingPolicy getOrphanHandling(opt::InputArgList &args) {
   return OrphanHandlingPolicy::Place;
 }
 
-// Parses --power10-stubs= flags, to disable or enable Power 10
-// instructions in stubs.
-static bool getP10StubOpt(opt::InputArgList &args) {
-
-  if (args.getLastArgValue(OPT_power10_stubs_eq)== "no")
-    return false;
-
-  if (!args.hasArg(OPT_power10_stubs_eq) &&
-      args.hasArg(OPT_no_power10_stubs))
-    return false;
-
-  return true;
-}
-
 // Parse --build-id or --build-id=<style>. We handle "tree" as a
 // synonym for "sha1" because all our hash functions including
 // --build-id=sha1 are actually tree hashes for performance reasons.
@@ -1190,7 +1176,7 @@ static void readConfigs(opt::InputArgList &args) {
   config->zText = getZFlag(args, "text", "notext", true);
   config->zWxneeded = hasZOption(args, "wxneeded");
   setUnresolvedSymbolPolicy(args);
-  config->Power10Stub = getP10StubOpt(args);
+  config->power10Stubs = args.getLastArgValue(OPT_power10_stubs_eq) != "no";
 
   if (opt::Arg *arg = args.getLastArg(OPT_eb, OPT_el)) {
     if (arg->getOption().matches(OPT_eb))
