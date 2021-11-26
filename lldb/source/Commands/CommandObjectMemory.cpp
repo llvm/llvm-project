@@ -1240,6 +1240,7 @@ public:
     // Define the first (and only) variant of this arg.
     value_arg.arg_type = eArgTypeValue;
     value_arg.arg_repetition = eArgRepeatPlus;
+    value_arg.arg_opt_set_association = LLDB_OPT_SET_1;
 
     // There is only one variant this argument could be; put it into the
     // argument entry.
@@ -1275,6 +1276,12 @@ protected:
       if (argc < 1) {
         result.AppendErrorWithFormat(
             "%s takes a destination address when writing file contents.\n",
+            m_cmd_name.c_str());
+        return false;
+      }
+      if (argc > 1) {
+        result.AppendErrorWithFormat(
+            "%s takes only a destination address when writing file contents.\n",
             m_cmd_name.c_str());
         return false;
       }
