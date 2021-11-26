@@ -21,6 +21,7 @@
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Format/Format.h"
+#include "clang/Lex/HeaderSearch.h"
 #include "clang/Tooling/Core/Replacement.h"
 #include "clang/Tooling/Syntax/Tokens.h"
 #include "llvm/ADT/StringRef.h"
@@ -323,6 +324,11 @@ bool isHeaderFile(llvm::StringRef FileName,
 
 /// Returns true if the given location is in a generated protobuf file.
 bool isProtoFile(SourceLocation Loc, const SourceManager &SourceMgr);
+
+/// This scans source code, and should not be called when using a preamble.
+/// Prefer to access the cache in IncludeStructure::isSelfContained if you can.
+bool isSelfContainedHeader(const FileEntry *FE, FileID ID,
+                           const SourceManager &SM, HeaderSearch &HeaderInfo);
 
 } // namespace clangd
 } // namespace clang

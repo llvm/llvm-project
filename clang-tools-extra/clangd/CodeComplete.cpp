@@ -1272,8 +1272,7 @@ bool semaCodeComplete(std::unique_ptr<CodeCompleteConsumer> Consumer,
   // Force them to be deserialized so SemaCodeComplete sees them.
   loadMainFilePreambleMacros(Clang->getPreprocessor(), Input.Preamble);
   if (Includes)
-    Clang->getPreprocessor().addPPCallbacks(
-        Includes->collect(Clang->getSourceManager()));
+    Clang->getPreprocessor().addPPCallbacks(Includes->collect(*Clang));
   if (llvm::Error Err = Action.Execute()) {
     log("Execute() failed when running codeComplete for {0}: {1}",
         Input.FileName, toString(std::move(Err)));

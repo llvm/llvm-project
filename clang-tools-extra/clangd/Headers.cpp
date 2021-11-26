@@ -22,12 +22,12 @@
 
 namespace clang {
 namespace clangd {
-namespace {
 
-class RecordHeaders : public PPCallbacks {
+class IncludeStructure::RecordHeaders : public PPCallbacks {
 public:
-  RecordHeaders(const SourceManager &SM, IncludeStructure *Out)
-      : SM(SM), Out(Out) {}
+  RecordHeaders(const SourceManager &SM, HeaderSearch &HeaderInfo,
+                IncludeStructure *Out)
+      : SM(SM), HeaderInfo(HeaderInfo), Out(Out) {}
 
   // Record existing #includes - both written and resolved paths. Only #includes
   // in the main file are collected.
@@ -85,10 +85,17 @@ public:
         InBuiltinFile = true;
       }
       break;
-    case PPCallbacks::ExitFile:
+    case PPCallbacks::ExitFile: {
       if (PrevFID == BuiltinFile)
         InBuiltinFile = false;
+      // At file exit time HeaderSearchInfo is valid and can be used to
+      // determine whether the file was a self-contained header or not.
+      if (const FileEntry *FE = SM.getFileEntryForID(PrevFID))
+        if (!isSelfContainedHeader(FE, PrevFID, SM, HeaderInfo))
+          Out->NonSelfContained.insert(
+              *Out->getID(SM.getFileEntryForID(PrevFID)));
       break;
+    }
     case PPCallbacks::RenameFile:
     case PPCallbacks::SystemHeaderPragma:
       break;
@@ -97,6 +104,7 @@ public:
 
 private:
   const SourceManager &SM;
+  HeaderSearch &HeaderInfo;
   // Set after entering the <built-in> file.
   FileID BuiltinFile;
   // Indicates whether <built-in> file is part of include stack.
@@ -104,8 +112,6 @@ private:
 
   IncludeStructure *Out;
 };
-
-} // namespace
 
 bool isLiteralInclude(llvm::StringRef Include) {
   return Include.startswith("<") || Include.startswith("\"");
@@ -152,9 +158,11 @@ llvm::SmallVector<llvm::StringRef, 1> getRankedIncludes(const Symbol &Sym) {
 }
 
 std::unique_ptr<PPCallbacks>
-IncludeStructure::collect(const SourceManager &SM) {
+IncludeStructure::collect(const CompilerInstance &CI) {
+  auto &SM = CI.getSourceManager();
   MainFileEntry = SM.getFileEntryForID(SM.getMainFileID());
-  return std::make_unique<RecordHeaders>(SM, this);
+  return std::make_unique<RecordHeaders>(
+      SM, CI.getPreprocessor().getHeaderSearchInfo(), this);
 }
 
 llvm::Optional<IncludeStructure::HeaderID>
