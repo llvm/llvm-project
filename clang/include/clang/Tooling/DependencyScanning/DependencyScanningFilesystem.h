@@ -207,6 +207,11 @@ private:
   llvm::ErrorOr<const CachedFileSystemEntry *>
   getOrCreateFileSystemEntry(const StringRef Filename);
 
+  /// Create a cached file system entry based on the initial status result.
+  CachedFileSystemEntry
+  createFileSystemEntry(llvm::ErrorOr<llvm::vfs::Status> &&MaybeStatus,
+                        StringRef Filename, bool ShouldMinimize);
+
   /// The global cache shared between worker threads.
   DependencyScanningFilesystemSharedCache &SharedCache;
   /// The local cache is used by the worker thread to cache file system queries

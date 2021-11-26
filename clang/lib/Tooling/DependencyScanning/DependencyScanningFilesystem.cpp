@@ -167,6 +167,19 @@ bool DependencyScanningWorkerFilesystem::shouldMinimize(StringRef RawFilename) {
   return !NotToBeMinimized.contains(Filename);
 }
 
+CachedFileSystemEntry DependencyScanningWorkerFilesystem::createFileSystemEntry(
+    llvm::ErrorOr<llvm::vfs::Status> &&MaybeStatus, StringRef Filename,
+    bool ShouldMinimize) {
+  if (!MaybeStatus)
+    return CachedFileSystemEntry(MaybeStatus.getError());
+
+  if (MaybeStatus->isDirectory())
+    return CachedFileSystemEntry::createDirectoryEntry(std::move(*MaybeStatus));
+
+  return CachedFileSystemEntry::createFileEntry(Filename, getUnderlyingFS(),
+                                                ShouldMinimize);
+}
+
 llvm::ErrorOr<const CachedFileSystemEntry *>
 DependencyScanningWorkerFilesystem::getOrCreateFileSystemEntry(
     const StringRef Filename) {
@@ -186,22 +199,15 @@ DependencyScanningWorkerFilesystem::getOrCreateFileSystemEntry(
     CachedFileSystemEntry &CacheEntry = SharedCacheEntry.Value;
 
     if (!CacheEntry.isValid()) {
-      llvm::vfs::FileSystem &FS = getUnderlyingFS();
-      auto MaybeStatus = FS.status(Filename);
-      if (!MaybeStatus) {
-        if (!shouldCacheStatFailures(Filename))
-          // HACK: We need to always restat non source files if the stat fails.
-          //   This is because Clang first looks up the module cache and module
-          //   files before building them, and then looks for them again. If we
-          //   cache the stat failure, it won't see them the second time.
-          return MaybeStatus.getError();
-        CacheEntry = CachedFileSystemEntry(MaybeStatus.getError());
-      } else if (MaybeStatus->isDirectory())
-        CacheEntry = CachedFileSystemEntry::createDirectoryEntry(
-            std::move(*MaybeStatus));
-      else
-        CacheEntry = CachedFileSystemEntry::createFileEntry(Filename, FS,
-                                                            ShouldMinimize);
+      auto MaybeStatus = getUnderlyingFS().status(Filename);
+      if (!MaybeStatus && !shouldCacheStatFailures(Filename))
+        // HACK: We need to always restat non source files if the stat fails.
+        //   This is because Clang first looks up the module cache and module
+        //   files before building them, and then looks for them again. If we
+        //   cache the stat failure, it won't see them the second time.
+        return MaybeStatus.getError();
+      CacheEntry = createFileSystemEntry(std::move(MaybeStatus), Filename,
+                                         ShouldMinimize);
     }
 
     Result = &CacheEntry;
