@@ -385,8 +385,7 @@ static AffineMap linearizeCollapsedDims(AffineMap sourceMap,
         makeCanonicalStridedLayoutExpr(sizes, dimExprs, context);
     resultExprs.push_back(linearizedExpr);
   }
-  return AffineMap::get(sourceMap.getNumDims(), sourceMap.getNumSymbols(),
-                        resultExprs, context);
+  return AffineMap::inferFromExprList({resultExprs}).front();
 }
 
 // TensorExpandShapeOp is fusable with its consumer (i.e. reshape as a
