@@ -20,7 +20,7 @@ class TestQemuLaunch(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
     def set_emulator_setting(self, name, value):
-        self.runCmd("settings set platform.plugin.qemu-user.%s %s" %
+        self.runCmd("settings set -- platform.plugin.qemu-user.%s %s" %
                 (name, value))
 
     def setUp(self):
@@ -43,7 +43,7 @@ class TestQemuLaunch(TestBase):
         self.set_emulator_setting("architecture", self.getArchitecture())
         self.set_emulator_setting("emulator-path", emulator)
 
-    def test_basic_launch(self):
+    def _run_and_get_state(self):
         self.build()
         exe = self.getBuildArtifact()
 
@@ -63,7 +63,11 @@ class TestQemuLaunch(TestBase):
 
         # Verify the qemu invocation parameters.
         with open(self.getBuildArtifact("state.log")) as s:
-            state = json.load(s)
+            return json.load(s)
+
+    def test_basic_launch(self):
+        state = self._run_and_get_state()
+
         self.assertEqual(state["program"], self.getBuildArtifact())
         self.assertEqual(state["args"],
                 ["dump:" + self.getBuildArtifact("state.log")])
@@ -159,3 +163,9 @@ class TestQemuLaunch(TestBase):
         target.Launch(info, error)
         self.assertTrue(error.Fail())
         self.assertIn("doesn't exist", error.GetCString())
+
+    def test_extra_args(self):
+        self.set_emulator_setting("emulator-args", "-fake-arg fake-value")
+        state = self._run_and_get_state()
+
+        self.assertEqual(state["fake-arg"], "fake-value")
