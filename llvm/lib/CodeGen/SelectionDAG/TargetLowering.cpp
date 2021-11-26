@@ -645,6 +645,7 @@ SDValue TargetLowering::SimplifyMultipleUseDemandedBits(
   if (DemandedBits == 0 || DemandedElts == 0)
     return DAG.getUNDEF(Op.getValueType());
 
+  bool IsLE = DAG.getDataLayout().isLittleEndian();
   unsigned NumElts = DemandedElts.getBitWidth();
   unsigned BitWidth = DemandedBits.getBitWidth();
   KnownBits LHSKnown, RHSKnown;
@@ -664,8 +665,7 @@ SDValue TargetLowering::SimplifyMultipleUseDemandedBits(
         return DAG.getBitcast(DstVT, V);
 
     // TODO - bigendian once we have test coverage.
-    if (SrcVT.isVector() && (NumDstEltBits % NumSrcEltBits) == 0 &&
-        DAG.getDataLayout().isLittleEndian()) {
+    if (IsLE && SrcVT.isVector() && (NumDstEltBits % NumSrcEltBits) == 0) {
       unsigned Scale = NumDstEltBits / NumSrcEltBits;
       unsigned NumSrcElts = SrcVT.getVectorNumElements();
       APInt DemandedSrcBits = APInt::getZero(NumSrcEltBits);
@@ -687,8 +687,7 @@ SDValue TargetLowering::SimplifyMultipleUseDemandedBits(
     }
 
     // TODO - bigendian once we have test coverage.
-    if ((NumSrcEltBits % NumDstEltBits) == 0 &&
-        DAG.getDataLayout().isLittleEndian()) {
+    if (IsLE && (NumSrcEltBits % NumDstEltBits) == 0) {
       unsigned Scale = NumSrcEltBits / NumDstEltBits;
       unsigned NumSrcElts = SrcVT.isVector() ? SrcVT.getVectorNumElements() : 1;
       APInt DemandedSrcBits = APInt::getZero(NumSrcEltBits);
@@ -802,8 +801,8 @@ SDValue TargetLowering::SimplifyMultipleUseDemandedBits(
     SDValue Src = Op.getOperand(0);
     EVT SrcVT = Src.getValueType();
     EVT DstVT = Op.getValueType();
-    if (DemandedElts == 1 && DstVT.getSizeInBits() == SrcVT.getSizeInBits() &&
-        DAG.getDataLayout().isLittleEndian() &&
+    if (IsLE && DemandedElts == 1 &&
+        DstVT.getSizeInBits() == SrcVT.getSizeInBits() &&
         DemandedBits.getActiveBits() <= SrcVT.getScalarSizeInBits()) {
       return DAG.getBitcast(DstVT, Src);
     }
@@ -913,6 +912,7 @@ bool TargetLowering::SimplifyDemandedBits(
   if (Op.getValueType().isScalableVector())
     return false;
 
+  bool IsLE = TLO.DAG.getDataLayout().isLittleEndian();
   unsigned NumElts = OriginalDemandedElts.getBitWidth();
   assert((!Op.getValueType().isVector() ||
           NumElts == Op.getValueType().getVectorNumElements()) &&
@@ -1916,9 +1916,8 @@ bool TargetLowering::SimplifyDemandedBits(
     if (DemandedBits.getActiveBits() <= InBits) {
       // If we only need the non-extended bits of the bottom element
       // then we can just bitcast to the result.
-      if (IsVecInReg && DemandedElts == 1 &&
-          VT.getSizeInBits() == SrcVT.getSizeInBits() &&
-          TLO.DAG.getDataLayout().isLittleEndian())
+      if (IsLE && IsVecInReg && DemandedElts == 1 &&
+          VT.getSizeInBits() == SrcVT.getSizeInBits())
         return TLO.CombineTo(Op, TLO.DAG.getBitcast(VT, Src));
 
       unsigned Opc =
@@ -1954,9 +1953,8 @@ bool TargetLowering::SimplifyDemandedBits(
     if (DemandedBits.getActiveBits() <= InBits) {
       // If we only need the non-extended bits of the bottom element
       // then we can just bitcast to the result.
-      if (IsVecInReg && DemandedElts == 1 &&
-          VT.getSizeInBits() == SrcVT.getSizeInBits() &&
-          TLO.DAG.getDataLayout().isLittleEndian())
+      if (IsLE && IsVecInReg && DemandedElts == 1 &&
+          VT.getSizeInBits() == SrcVT.getSizeInBits())
         return TLO.CombineTo(Op, TLO.DAG.getBitcast(VT, Src));
 
       unsigned Opc =
@@ -2005,9 +2003,8 @@ bool TargetLowering::SimplifyDemandedBits(
 
     // If we only need the bottom element then we can just bitcast.
     // TODO: Handle ANY_EXTEND?
-    if (IsVecInReg && DemandedElts == 1 &&
-        VT.getSizeInBits() == SrcVT.getSizeInBits() &&
-        TLO.DAG.getDataLayout().isLittleEndian())
+    if (IsLE && IsVecInReg && DemandedElts == 1 &&
+        VT.getSizeInBits() == SrcVT.getSizeInBits())
       return TLO.CombineTo(Op, TLO.DAG.getBitcast(VT, Src));
 
     APInt InDemandedBits = DemandedBits.trunc(InBits);
@@ -2170,8 +2167,7 @@ bool TargetLowering::SimplifyDemandedBits(
     // Bitcast from a vector using SimplifyDemanded Bits/VectorElts.
     // Demand the elt/bit if any of the original elts/bits are demanded.
     // TODO - bigendian once we have test coverage.
-    if (SrcVT.isVector() && (BitWidth % NumSrcEltBits) == 0 &&
-        TLO.DAG.getDataLayout().isLittleEndian()) {
+    if (IsLE && SrcVT.isVector() && (BitWidth % NumSrcEltBits) == 0) {
       unsigned Scale = BitWidth / NumSrcEltBits;
       unsigned NumSrcElts = SrcVT.getVectorNumElements();
       APInt DemandedSrcBits = APInt::getZero(NumSrcEltBits);
@@ -2196,8 +2192,7 @@ bool TargetLowering::SimplifyDemandedBits(
       if (SimplifyDemandedBits(Src, DemandedSrcBits, DemandedSrcElts,
                                KnownSrcBits, TLO, Depth + 1))
         return true;
-    } else if ((NumSrcEltBits % BitWidth) == 0 &&
-               TLO.DAG.getDataLayout().isLittleEndian()) {
+    } else if (IsLE && (NumSrcEltBits % BitWidth) == 0) {
       unsigned Scale = NumSrcEltBits / BitWidth;
       unsigned NumSrcElts = SrcVT.isVector() ? SrcVT.getVectorNumElements() : 1;
       APInt DemandedSrcBits = APInt::getZero(NumSrcEltBits);
@@ -2438,6 +2433,7 @@ bool TargetLowering::SimplifyDemandedVectorElts(
 
   SDLoc DL(Op);
   unsigned EltSizeInBits = VT.getScalarSizeInBits();
+  bool IsLE = TLO.DAG.getDataLayout().isLittleEndian();
 
   // Helper for demanding the specified elements and all the bits of both binary
   // operands.
@@ -2513,7 +2509,7 @@ bool TargetLowering::SimplifyDemandedVectorElts(
       // Try calling SimplifyDemandedBits, converting demanded elts to the bits
       // of the large element.
       // TODO - bigendian once we have test coverage.
-      if (TLO.DAG.getDataLayout().isLittleEndian()) {
+      if (IsLE) {
         unsigned SrcEltSizeInBits = SrcVT.getScalarSizeInBits();
         APInt SrcDemandedBits = APInt::getZero(SrcEltSizeInBits);
         for (unsigned i = 0; i != NumElts; ++i)
@@ -2826,9 +2822,8 @@ bool TargetLowering::SimplifyDemandedVectorElts(
     KnownZero = SrcZero.zextOrTrunc(NumElts);
     KnownUndef = SrcUndef.zextOrTrunc(NumElts);
 
-    if (Op.getOpcode() == ISD::ANY_EXTEND_VECTOR_INREG &&
-        Op.getValueSizeInBits() == Src.getValueSizeInBits() &&
-        DemandedSrcElts == 1 && TLO.DAG.getDataLayout().isLittleEndian()) {
+    if (IsLE && Op.getOpcode() == ISD::ANY_EXTEND_VECTOR_INREG &&
+        Op.getValueSizeInBits() == Src.getValueSizeInBits()) {
       // aext - if we just need the bottom element then we can bitcast.
       return TLO.CombineTo(Op, TLO.DAG.getBitcast(VT, Src));
     }
@@ -2841,8 +2836,8 @@ bool TargetLowering::SimplifyDemandedVectorElts(
 
       // zext - if we just need the bottom element then we can mask:
       // zext(and(x,c)) -> and(x,c') iff the zext is the only user of the and.
-      if (DemandedSrcElts == 1 && TLO.DAG.getDataLayout().isLittleEndian() &&
-          Src.getOpcode() == ISD::AND && Op->isOnlyUserOf(Src.getNode()) &&
+      if (IsLE && DemandedSrcElts == 1 && Src.getOpcode() == ISD::AND &&
+          Op->isOnlyUserOf(Src.getNode()) &&
           Op.getValueSizeInBits() == Src.getValueSizeInBits()) {
         SDLoc DL(Op);
         EVT SrcVT = Src.getValueType();
