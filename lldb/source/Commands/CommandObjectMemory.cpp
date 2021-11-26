@@ -1222,7 +1222,15 @@ public:
             interpreter, "memory write",
             "Write to the memory of the current target process.", nullptr,
             eCommandRequiresProcess | eCommandProcessMustBeLaunched),
-        m_option_group(), m_format_options(eFormatBytes, 1, UINT64_MAX),
+        m_option_group(),
+        m_format_options(
+            eFormatBytes, 1, UINT64_MAX,
+            {std::make_tuple(
+                 eArgTypeFormat,
+                 "The format to use for each of the value to be written."),
+             std::make_tuple(
+                 eArgTypeByteSize,
+                 "The size in bytes to write from input file or each value.")}),
         m_memory_options() {
     CommandArgumentEntry arg1;
     CommandArgumentEntry arg2;
