@@ -1376,10 +1376,12 @@ extern "C" _LIBCPP_FUNC_VIS void __sanitizer_annotate_contiguous_container(
 #endif
 
 #if defined(__GNUC__) || defined(__clang__)
-#define _LIBCPP_FORMAT_PRINTF(a, b)                                            \
-  __attribute__((__format__(__printf__, a, b)))
+  // The attribute uses 1-based indices for ordinary and static member functions.
+  // The attribute uses 2-based indices for non-static member functions.
+# define _LIBCPP_ATTRIBUTE_FORMAT(archetype, format_string_index, first_format_arg_index) \
+    __attribute__((__format__(archetype, format_string_index, first_format_arg_index)))
 #else
-#define _LIBCPP_FORMAT_PRINTF(a, b)
+# define _LIBCPP_ATTRIBUTE_FORMAT(archetype, format_string_index, first_format_arg_index) /* nothing */
 #endif
 
 #endif // __cplusplus
