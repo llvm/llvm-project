@@ -44,9 +44,9 @@
 ; OBJ-NEXT:   OffsetInParent: 0
 ; OBJ-NEXT:   BasePointerOffset: 12
 ; OBJ-NEXT:   LocalVariableAddrRange {
-; OBJ-NEXT:     OffsetStart: .text+0x8
+; OBJ-NEXT:     OffsetStart: .text+0xA
 ; OBJ-NEXT:     ISectStart: 0x0
-; OBJ-NEXT:     Range: 0x1A
+; OBJ-NEXT:     Range: 0x1C
 ; OBJ-NEXT:   }
 ; OBJ-NEXT: }
 

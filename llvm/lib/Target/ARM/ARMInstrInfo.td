@@ -6476,3 +6476,24 @@ def CompilerBarrier : PseudoInst<(outs), (ins i32imm:$ordering), NoItinerary,
   let AsmString = "@ COMPILER BARRIER";
   let hasNoSchedulingInfo = 1;
 }
+
+//===----------------------------------------------------------------------===//
+// Instructions used for emitting unwind opcodes on Windows.
+//===----------------------------------------------------------------------===//
+let isPseudo = 1 in {
+  def SEH_StackAlloc : PseudoInst<(outs), (ins i32imm:$size, i32imm:$wide), NoItinerary, []>, Sched<[]>;
+  def SEH_SaveRegs : PseudoInst<(outs), (ins i32imm:$mask, i32imm:$wide), NoItinerary, []>, Sched<[]>;
+  let isTerminator = 1 in
+  def SEH_SaveRegs_Ret : PseudoInst<(outs), (ins i32imm:$mask, i32imm:$wide), NoItinerary, []>, Sched<[]>;
+  def SEH_SaveSP : PseudoInst<(outs), (ins i32imm:$reg), NoItinerary, []>, Sched<[]>;
+  def SEH_SaveFRegs : PseudoInst<(outs), (ins i32imm:$first, i32imm:$last), NoItinerary, []>, Sched<[]>;
+  let isTerminator = 1 in
+  def SEH_SaveLR : PseudoInst<(outs), (ins i32imm:$offst), NoItinerary, []>, Sched<[]>;
+  def SEH_Nop : PseudoInst<(outs), (ins i32imm:$wide), NoItinerary, []>, Sched<[]>;
+  let isTerminator = 1 in
+  def SEH_Nop_Ret : PseudoInst<(outs), (ins i32imm:$wide), NoItinerary, []>, Sched<[]>;
+  def SEH_PrologEnd : PseudoInst<(outs), (ins), NoItinerary, []>, Sched<[]>;
+  def SEH_EpilogStart : PseudoInst<(outs), (ins), NoItinerary, []>, Sched<[]>;
+  let isTerminator = 1 in
+  def SEH_EpilogEnd : PseudoInst<(outs), (ins), NoItinerary, []>, Sched<[]>;
+}
