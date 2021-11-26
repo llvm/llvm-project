@@ -630,7 +630,7 @@ bool AArch64Err843419Patcher::createFixes() {
   for (OutputSection *os : outputSections) {
     if (!(os->flags & SHF_ALLOC) || !(os->flags & SHF_EXECINSTR))
       continue;
-    for (BaseCommand *bc : os->sectionCommands)
+    for (BaseCommand *bc : os->commands)
       if (auto *isd = dyn_cast<InputSectionDescription>(bc)) {
         std::vector<Patch843419Section *> patches =
             patchInputSectionDescription(*isd);

@@ -100,10 +100,9 @@ static bool canMergeToProgbits(unsigned type) {
 void OutputSection::recordSection(InputSectionBase *isec) {
   partition = isec->partition;
   isec->parent = this;
-  if (sectionCommands.empty() ||
-      !isa<InputSectionDescription>(sectionCommands.back()))
-    sectionCommands.push_back(make<InputSectionDescription>(""));
-  auto *isd = cast<InputSectionDescription>(sectionCommands.back());
+  if (commands.empty() || !isa<InputSectionDescription>(commands.back()))
+    commands.push_back(make<InputSectionDescription>(""));
+  auto *isd = cast<InputSectionDescription>(commands.back());
   isd->sectionBases.push_back(isec);
 }
 
@@ -166,7 +165,7 @@ void OutputSection::commitSection(InputSection *isec) {
 // to compute an output offset for each piece of each input section.
 void OutputSection::finalizeInputSections() {
   std::vector<MergeSyntheticSection *> mergeSections;
-  for (BaseCommand *base : sectionCommands) {
+  for (BaseCommand *base : commands) {
     auto *cmd = dyn_cast<InputSectionDescription>(base);
     if (!cmd)
       continue;
@@ -243,7 +242,7 @@ bool OutputSection::classof(const BaseCommand *c) {
 
 void OutputSection::sort(llvm::function_ref<int(InputSectionBase *s)> order) {
   assert(isLive());
-  for (BaseCommand *b : sectionCommands)
+  for (BaseCommand *b : commands)
     if (auto *isd = dyn_cast<InputSectionDescription>(b))
       sortByOrder(isd->sections, order);
 }
@@ -367,7 +366,7 @@ template <class ELFT> void OutputSection::writeTo(uint8_t *buf) {
 
   // Linker scripts may have BYTE()-family commands with which you
   // can write arbitrary bytes to the output. Process them if any.
-  for (BaseCommand *base : sectionCommands)
+  for (BaseCommand *base : commands)
     if (auto *data = dyn_cast<ByteCommand>(base))
       writeInt(buf + data->offset, data->expression().getValue(), data->size);
 }
@@ -485,8 +484,8 @@ static bool compCtors(const InputSection *a, const InputSection *b) {
 // Unfortunately, the rules are different from the one for .{init,fini}_array.
 // Read the comment above.
 void OutputSection::sortCtorsDtors() {
-  assert(sectionCommands.size() == 1);
-  auto *isd = cast<InputSectionDescription>(sectionCommands[0]);
+  assert(commands.size() == 1);
+  auto *isd = cast<InputSectionDescription>(commands[0]);
   llvm::stable_sort(isd->sections, compCtors);
 }
 
@@ -505,7 +504,7 @@ int elf::getPriority(StringRef s) {
 }
 
 InputSection *elf::getFirstInputSection(const OutputSection *os) {
-  for (BaseCommand *base : os->sectionCommands)
+  for (BaseCommand *base : os->commands)
     if (auto *isd = dyn_cast<InputSectionDescription>(base))
       if (!isd->sections.empty())
         return isd->sections[0];
@@ -514,7 +513,7 @@ InputSection *elf::getFirstInputSection(const OutputSection *os) {
 
 std::vector<InputSection *> elf::getInputSections(const OutputSection *os) {
   std::vector<InputSection *> ret;
-  for (BaseCommand *base : os->sectionCommands)
+  for (BaseCommand *base : os->commands)
     if (auto *isd = dyn_cast<InputSectionDescription>(base))
       ret.insert(ret.end(), isd->sections.begin(), isd->sections.end());
   return ret;

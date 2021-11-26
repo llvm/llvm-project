@@ -849,7 +849,7 @@ OutputSection *ScriptParser::readOverlaySectionDescription() {
     uint64_t withoutFlags = 0;
     if (consume("INPUT_SECTION_FLAGS"))
       std::tie(withFlags, withoutFlags) = readInputSectionFlags();
-    cmd->sectionCommands.push_back(
+    cmd->commands.push_back(
         readInputSectionRules(next(), withFlags, withoutFlags));
   }
   return cmd;
@@ -885,9 +885,9 @@ OutputSection *ScriptParser::readOutputSectionDescription(StringRef outSec) {
     if (tok == ";") {
       // Empty commands are allowed. Do nothing here.
     } else if (SymbolAssignment *assign = readAssignment(tok)) {
-      cmd->sectionCommands.push_back(assign);
+      cmd->commands.push_back(assign);
     } else if (ByteCommand *data = readByteCommand(tok)) {
-      cmd->sectionCommands.push_back(data);
+      cmd->commands.push_back(data);
     } else if (tok == "CONSTRUCTORS") {
       // CONSTRUCTORS is a keyword to make the linker recognize C++ ctors/dtors
       // by name. This is for very old file formats such as ECOFF/XCOFF.
@@ -904,7 +904,7 @@ OutputSection *ScriptParser::readOutputSectionDescription(StringRef outSec) {
     } else if (tok == "INCLUDE") {
       readInclude();
     } else if (peek() == "(") {
-      cmd->sectionCommands.push_back(readInputSectionDescription(tok));
+      cmd->commands.push_back(readInputSectionDescription(tok));
     } else {
       // We have a file name and no input sections description. It is not a
       // commonly used syntax, but still acceptable. In that case, all sections
@@ -914,7 +914,7 @@ OutputSection *ScriptParser::readOutputSectionDescription(StringRef outSec) {
       // case above.
       auto *isd = make<InputSectionDescription>(tok);
       isd->sectionPatterns.push_back({{}, StringMatcher("*")});
-      cmd->sectionCommands.push_back(isd);
+      cmd->commands.push_back(isd);
     }
   }
 

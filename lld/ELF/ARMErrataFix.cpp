@@ -525,7 +525,7 @@ bool ARMErr657417Patcher::createFixes() {
   for (OutputSection *os : outputSections) {
     if (!(os->flags & SHF_ALLOC) || !(os->flags & SHF_EXECINSTR))
       continue;
-    for (BaseCommand *bc : os->sectionCommands)
+    for (BaseCommand *bc : os->commands)
       if (auto *isd = dyn_cast<InputSectionDescription>(bc)) {
         std::vector<Patch657417Section *> patches =
             patchInputSectionDescription(*isd);

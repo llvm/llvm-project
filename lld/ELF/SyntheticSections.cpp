@@ -900,7 +900,7 @@ void MipsGotSection::build() {
          got.pagesMap) {
       const OutputSection *os = p.first;
       uint64_t secSize = 0;
-      for (BaseCommand *cmd : os->sectionCommands) {
+      for (BaseCommand *cmd : os->commands) {
         if (auto *isd = dyn_cast<InputSectionDescription>(cmd))
           for (InputSection *isec : isd->sections) {
             uint64_t off = alignTo(secSize, isec->alignment);
@@ -3604,7 +3604,7 @@ PPC32Got2Section::PPC32Got2Section()
 bool PPC32Got2Section::isNeeded() const {
   // See the comment below. This is not needed if there is no other
   // InputSection.
-  for (BaseCommand *base : getParent()->sectionCommands)
+  for (BaseCommand *base : getParent()->commands)
     if (auto *isd = dyn_cast<InputSectionDescription>(base))
       for (InputSection *isec : isd->sections)
         if (isec != this)
@@ -3618,7 +3618,7 @@ void PPC32Got2Section::finalizeContents() {
   // PPC32PltCallStub::writeTo(). The purpose of this empty synthetic section is
   // to collect input sections named ".got2".
   uint32_t offset = 0;
-  for (BaseCommand *base : getParent()->sectionCommands)
+  for (BaseCommand *base : getParent()->commands)
     if (auto *isd = dyn_cast<InputSectionDescription>(base)) {
       for (InputSection *isec : isd->sections) {
         if (isec == this)

@@ -366,10 +366,10 @@ template <class ELFT> static void addCopyRelSymbol(SharedSymbol &ss) {
 
   // At this point, sectionBases has been migrated to sections. Append sec to
   // sections.
-  if (osec->sectionCommands.empty() ||
-      !isa<InputSectionDescription>(osec->sectionCommands.back()))
-    osec->sectionCommands.push_back(make<InputSectionDescription>(""));
-  auto *isd = cast<InputSectionDescription>(osec->sectionCommands.back());
+  if (osec->commands.empty() ||
+      !isa<InputSectionDescription>(osec->commands.back()))
+    osec->commands.push_back(make<InputSectionDescription>(""));
+  auto *isd = cast<InputSectionDescription>(osec->commands.back());
   isd->sections.push_back(sec);
   osec->commitSection(sec);
 
@@ -1640,7 +1640,7 @@ static void forEachInputSectionDescription(
   for (OutputSection *os : outputSections) {
     if (!(os->flags & SHF_ALLOC) || !(os->flags & SHF_EXECINSTR))
       continue;
-    for (BaseCommand *bc : os->sectionCommands)
+    for (BaseCommand *bc : os->commands)
       if (auto *isd = dyn_cast<InputSectionDescription>(bc))
         fn(os, isd);
   }
@@ -1817,7 +1817,7 @@ ThunkSection *ThunkCreator::getISThunkSec(InputSection *isec) {
   // Find InputSectionRange within Target Output Section (TOS) that the
   // InputSection (IS) that we need to precede is in.
   OutputSection *tos = isec->getParent();
-  for (BaseCommand *bc : tos->sectionCommands) {
+  for (BaseCommand *bc : tos->commands) {
     auto *isd = dyn_cast<InputSectionDescription>(bc);
     if (!isd || isd->sections.empty())
       continue;
