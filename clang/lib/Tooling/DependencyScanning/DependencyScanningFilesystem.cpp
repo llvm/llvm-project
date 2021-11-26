@@ -191,8 +191,7 @@ DependencyScanningWorkerFilesystem::getOrCreateFileSystemEntry(
           //   files before building them, and then looks for them again. If we
           //   cache the stat failure, it won't see them the second time.
           return MaybeStatus.getError();
-        else
-          CacheEntry = CachedFileSystemEntry(MaybeStatus.getError());
+        CacheEntry = CachedFileSystemEntry(MaybeStatus.getError());
       } else if (MaybeStatus->isDirectory())
         CacheEntry = CachedFileSystemEntry::createDirectoryEntry(
             std::move(*MaybeStatus));
