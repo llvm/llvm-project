@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/string/strdup.h"
-#include "src/string/memcpy.h"
+#include "src/string/memory_utils/memcpy_implementations.h"
 #include "src/string/string_utils.h"
 
 #include "src/__support/common.h"
@@ -25,8 +25,8 @@ LLVM_LIBC_FUNCTION(char *, strdup, (const char *src)) {
   if (dest == nullptr) {
     return nullptr;
   }
-  char *result = reinterpret_cast<char *>(__llvm_libc::memcpy(dest, src, len));
-  return result;
+  inline_memcpy(dest, src, len);
+  return dest;
 }
 
 } // namespace __llvm_libc
