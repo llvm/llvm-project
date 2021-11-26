@@ -10,7 +10,7 @@
 
 // B-DAG: rw-p {{.*}}SizeClassAllocator: region info]
 // B-DAG: rw-p {{.*}}LargeMmapAllocator]
-// B-DAG: rw-p {{.*}}stack depot]
+// B-DAG: rw-p {{.*}}StackStore]
 
 #include <errno.h>
 #include <fcntl.h>
