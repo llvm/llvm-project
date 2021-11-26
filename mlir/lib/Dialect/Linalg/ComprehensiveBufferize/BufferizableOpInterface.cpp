@@ -459,11 +459,13 @@ static void moveInsertionPointToAllocationHoistingBarrier(OpBuilder &b) {
     op = op->getParentOp();
   }
 
-  // FuncOp is an allocation hoisting barrier, so the above loop should never
-  // run out of parents.
-  assert(
-      (op && cast<BufferizableOpInterface>(op).isAllocationHoistingBarrier()) &&
-      "expected traversal to end at allocation hoisting barrier");
+  if (!op) {
+    // No allocation hoisting barrier found. Hoist to FuncOp.
+    op = b.getInsertionBlock()->getParentOp();
+    if (!isa<FuncOp>(op))
+      op = op->getParentOfType<FuncOp>();
+    assert(op && "could not find enclosing FuncOp");
+  }
 
   // TODO: Handle cases where allocation hoisting barrier has more than one
   // region or block.

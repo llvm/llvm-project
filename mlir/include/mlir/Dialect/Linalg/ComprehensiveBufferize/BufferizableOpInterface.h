@@ -284,10 +284,6 @@ struct BufferizationState {
 
   /// Obsolete ops that should be deleted after bufferization.
   SmallVector<Operation *> obsoleteOps;
-
-  /// A map for looking up bufferized function types.
-  // TODO: Entangle function calls and FuncOps from the remaining bufferization.
-  DenseMap<FuncOp, FunctionType> bufferizedFunctionTypes;
 };
 
 /// Return the result buffer (memref) for a given OpResult (tensor). Allocate
