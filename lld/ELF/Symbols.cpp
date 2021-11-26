@@ -257,17 +257,10 @@ void Symbol::parseSymbolVersion() {
 }
 
 void Symbol::extract() const {
-  if (auto *sym = dyn_cast<LazyArchive>(this)) {
+  if (auto *sym = dyn_cast<LazyArchive>(this))
     cast<ArchiveFile>(sym->file)->extract(sym->sym);
-    return;
-  }
-
-  if (auto *sym = dyn_cast<LazyObject>(this)) {
-    dyn_cast<LazyObjFile>(sym->file)->extract();
-    return;
-  }
-
-  llvm_unreachable("Symbol::extract() is called on a non-lazy symbol");
+  else
+    cast<LazyObjFile>(this->file)->extract();
 }
 
 MemoryBufferRef LazyArchive::getMemberBuffer() {

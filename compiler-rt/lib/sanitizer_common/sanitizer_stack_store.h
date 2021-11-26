@@ -10,6 +10,7 @@
 #define SANITIZER_STACK_STORE_H
 
 #include "sanitizer_atomic.h"
+#include "sanitizer_common.h"
 #include "sanitizer_internal_defs.h"
 #include "sanitizer_mutex.h"
 #include "sanitizer_stacktrace.h"
@@ -17,6 +18,10 @@
 namespace __sanitizer {
 
 class StackStore {
+  static constexpr uptr kBlockSizeFrames = 0x100000;
+  static constexpr uptr kBlockCount = 0x1000;
+  static constexpr uptr kBlockSizeBytes = kBlockSizeFrames * sizeof(uptr);
+
  public:
   constexpr StackStore() = default;
 
@@ -29,20 +34,32 @@ class StackStore {
   void TestOnlyUnmap();
 
  private:
-  uptr *Alloc(uptr count = 1);
-  uptr *TryAlloc(uptr count);
-  uptr *RefillAndAlloc(uptr count);
-  mutable StaticSpinMutex mtx_ = {};  // Protects alloc of new blocks.
-  atomic_uintptr_t region_pos_ = {};  // Region allocator for Node's.
-  atomic_uintptr_t region_end_ = {};
-  atomic_uintptr_t mapped_size_ = {};
+  static constexpr uptr GetBlockIdx(uptr frame_idx) {
+    return frame_idx / kBlockSizeFrames;
+  }
 
-  struct BlockInfo {
-    const BlockInfo *next;
-    uptr ptr;
-    uptr size;
+  static constexpr uptr GetInBlockIdx(uptr frame_idx) {
+    return frame_idx % kBlockSizeFrames;
+  }
+
+  uptr *Alloc(uptr count);
+
+  // Total number of allocated frames.
+  atomic_uintptr_t total_frames_ = {};
+
+  // Each block will hold pointer to exactly kBlockSizeFrames.
+  class BlockInfo {
+    atomic_uintptr_t data_;
+    StaticSpinMutex mtx_;  // Protects alloc of new blocks.
+
+    uptr *Create();
+    uptr *Get() const;
+
+   public:
+    uptr *GetOrCreate();
+    void TestOnlyUnmap();
   };
-  const BlockInfo *curr_ = nullptr;
+  BlockInfo blocks_[kBlockCount] = {};
 };
 
 }  // namespace __sanitizer
