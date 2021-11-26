@@ -1680,8 +1680,9 @@ Error MaterializationResponsibility::withResourceKeyDo(Func &&F) const {
 template <typename GeneratorT>
 GeneratorT &JITDylib::addGenerator(std::unique_ptr<GeneratorT> DefGenerator) {
   auto &G = *DefGenerator;
-  std::lock_guard<std::mutex> Lock(GeneratorsMutex);
-  DefGenerators.push_back(std::move(DefGenerator));
+  ES.runSessionLocked([&] {
+    DefGenerators.push_back(std::move(DefGenerator));
+  });
   return G;
 }
 

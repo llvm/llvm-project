@@ -642,13 +642,14 @@ ResourceTrackerSP JITDylib::createResourceTracker() {
 }
 
 void JITDylib::removeGenerator(DefinitionGenerator &G) {
-  std::lock_guard<std::mutex> Lock(GeneratorsMutex);
-  auto I = llvm::find_if(DefGenerators,
-                         [&](const std::shared_ptr<DefinitionGenerator> &H) {
-                           return H.get() == &G;
-                         });
-  assert(I != DefGenerators.end() && "Generator not found");
-  DefGenerators.erase(I);
+  ES.runSessionLocked([&] {
+    auto I = llvm::find_if(DefGenerators,
+                           [&](const std::shared_ptr<DefinitionGenerator> &H) {
+                             return H.get() == &G;
+                           });
+    assert(I != DefGenerators.end() && "Generator not found");
+    DefGenerators.erase(I);
+  });
 }
 
 Expected<SymbolFlagsMap>
@@ -2311,8 +2312,11 @@ void ExecutionSession::OL_applyQueryPhase1(
       });
 
       // Build the definition generator stack for this JITDylib.
-      for (auto &DG : reverse(JD.DefGenerators))
-        IPLS->CurDefGeneratorStack.push_back(DG);
+      runSessionLocked([&] {
+        IPLS->CurDefGeneratorStack.reserve(JD.DefGenerators.size());
+        for (auto &DG : reverse(JD.DefGenerators))
+          IPLS->CurDefGeneratorStack.push_back(DG);
+      });
 
       // Flag that we've done our initialization.
       IPLS->NewJITDylib = false;
