@@ -3878,21 +3878,21 @@ bool CombinerHelper::matchOrShiftToFunnelShift(MachineInstr &MI,
   Register ShlSrc, ShlAmt, LShrSrc, LShrAmt;
   unsigned FshOpc = 0;
 
-  // TODO: Handle vector types.
   // Match (or (shl x, amt), (lshr y, sub(bw, amt))).
-  if (mi_match(Dst, MRI,
-               // m_GOr() handles the commuted version as well.
-               m_GOr(m_GShl(m_Reg(ShlSrc), m_Reg(ShlAmt)),
-                     m_GLShr(m_Reg(LShrSrc), m_GSub(m_SpecificICst(BitWidth),
-                                                    m_Reg(LShrAmt)))))) {
+  if (mi_match(
+          Dst, MRI,
+          // m_GOr() handles the commuted version as well.
+          m_GOr(m_GShl(m_Reg(ShlSrc), m_Reg(ShlAmt)),
+                m_GLShr(m_Reg(LShrSrc), m_GSub(m_SpecificICstOrSplat(BitWidth),
+                                               m_Reg(LShrAmt)))))) {
     FshOpc = TargetOpcode::G_FSHL;
 
     // Match (or (shl x, sub(bw, amt)), (lshr y, amt)).
-  } else if (mi_match(
-                 Dst, MRI,
-                 m_GOr(m_GLShr(m_Reg(LShrSrc), m_Reg(LShrAmt)),
-                       m_GShl(m_Reg(ShlSrc), m_GSub(m_SpecificICst(BitWidth),
-                                                    m_Reg(ShlAmt)))))) {
+  } else if (mi_match(Dst, MRI,
+                      m_GOr(m_GLShr(m_Reg(LShrSrc), m_Reg(LShrAmt)),
+                            m_GShl(m_Reg(ShlSrc),
+                                   m_GSub(m_SpecificICstOrSplat(BitWidth),
+                                          m_Reg(ShlAmt)))))) {
     FshOpc = TargetOpcode::G_FSHR;
 
   } else {
@@ -4543,20 +4543,9 @@ bool CombinerHelper::matchNarrowBinopFeedingAnd(
 bool CombinerHelper::matchMulOBy2(MachineInstr &MI, BuildFnTy &MatchInfo) {
   unsigned Opc = MI.getOpcode();
   assert(Opc == TargetOpcode::G_UMULO || Opc == TargetOpcode::G_SMULO);
-  // Check for a constant 2 or a splat of 2 on the RHS.
-  auto RHS = MI.getOperand(3).getReg();
-  bool IsVector = MRI.getType(RHS).isVector();
-  if (!IsVector && !mi_match(MI.getOperand(3).getReg(), MRI, m_SpecificICst(2)))
+
+  if (!mi_match(MI.getOperand(3).getReg(), MRI, m_SpecificICstOrSplat(2)))
     return false;
-  if (IsVector) {
-    // FIXME: There's no mi_match pattern for this yet.
-    auto *RHSDef = getDefIgnoringCopies(RHS, MRI);
-    if (!RHSDef)
-      return false;
-    auto Splat = getBuildVectorConstantSplat(*RHSDef, MRI);
-    if (!Splat || *Splat != 2)
-      return false;
-  }
 
   MatchInfo = [=, &MI](MachineIRBuilder &B) {
     Observer.changingInstr(MI);

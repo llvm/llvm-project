@@ -28,6 +28,33 @@ body: |
 ...
 
 ---
+name: fshl_v2i32
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $vgpr0_vgpr1, $vgpr2_vgpr3, $vgpr4_vgpr5, $vgpr6_vgpr7
+
+    ; CHECK-LABEL: name: fshl_v2i32
+    ; CHECK: liveins: $vgpr0_vgpr1, $vgpr2_vgpr3, $vgpr4_vgpr5, $vgpr6_vgpr7
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %a:_(<2 x s32>) = COPY $vgpr0_vgpr1
+    ; CHECK-NEXT: %b:_(<2 x s32>) = COPY $vgpr2_vgpr3
+    ; CHECK-NEXT: %amt:_(<2 x s32>) = COPY $vgpr4_vgpr5
+    ; CHECK-NEXT: %or:_(<2 x s32>) = G_FSHL %a, %b, %amt(<2 x s32>)
+    ; CHECK-NEXT: $vgpr6_vgpr7 = COPY %or(<2 x s32>)
+    %a:_(<2 x s32>) = COPY $vgpr0_vgpr1
+    %b:_(<2 x s32>) = COPY $vgpr2_vgpr3
+    %amt:_(<2 x s32>) = COPY $vgpr4_vgpr5
+    %scalar_bw:_(s32) = G_CONSTANT i32 32
+    %bw:_(<2 x s32>) = G_BUILD_VECTOR %scalar_bw(s32), %scalar_bw(s32)
+    %shl:_(<2 x s32>) = G_SHL %a:_, %amt:_(<2 x s32>)
+    %sub:_(<2 x s32>) = G_SUB %bw:_, %amt:_
+    %lshr:_(<2 x s32>) = G_LSHR %b:_, %sub:_(<2 x s32>)
+    %or:_(<2 x s32>) = G_OR %shl:_, %lshr:_
+    $vgpr6_vgpr7 = COPY %or
+...
+
+---
 name: fshl_commute_i32
 tracksRegLiveness: true
 body: |
