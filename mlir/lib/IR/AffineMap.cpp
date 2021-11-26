@@ -216,21 +216,6 @@ AffineMap AffineMap::getPermutationMap(ArrayRef<unsigned> permutation,
 }
 
 template <typename AffineExprContainer>
-static void getMaxDimAndSymbol(ArrayRef<AffineExprContainer> exprsList,
-                               int64_t &maxDim, int64_t &maxSym) {
-  for (const auto &exprs : exprsList) {
-    for (auto expr : exprs) {
-      expr.walk([&maxDim, &maxSym](AffineExpr e) {
-        if (auto d = e.dyn_cast<AffineDimExpr>())
-          maxDim = std::max(maxDim, static_cast<int64_t>(d.getPosition()));
-        if (auto s = e.dyn_cast<AffineSymbolExpr>())
-          maxSym = std::max(maxSym, static_cast<int64_t>(s.getPosition()));
-      });
-    }
-  }
-}
-
-template <typename AffineExprContainer>
 static SmallVector<AffineMap, 4>
 inferFromExprList(ArrayRef<AffineExprContainer> exprsList) {
   assert(!exprsList.empty());
