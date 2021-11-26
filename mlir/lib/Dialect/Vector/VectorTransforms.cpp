@@ -546,9 +546,26 @@ public:
     VectorType srcType = op.getSourceType().dyn_cast<VectorType>();
     Type eltType = dstType.getElementType();
 
+    // Scalar to any vector can use splat.
+    if (!srcType) {
+      rewriter.replaceOpWithNewOp<SplatOp>(op, dstType, op.source());
+      return success();
+    }
+
     // Determine rank of source and destination.
-    int64_t srcRank = srcType ? srcType.getRank() : 0;
+    int64_t srcRank = srcType.getRank();
     int64_t dstRank = dstType.getRank();
+
+    // Stretching scalar inside vector (e.g. vector<1xf32>) can use splat.
+    if (srcRank <= 1 && dstRank == 1) {
+      Value ext;
+      if (srcRank == 0)
+        ext = rewriter.create<vector::ExtractElementOp>(loc, op.source());
+      else
+        ext = rewriter.create<vector::ExtractOp>(loc, op.source(), 0);
+      rewriter.replaceOpWithNewOp<SplatOp>(op, dstType, ext);
+      return success();
+    }
 
     // Duplicate this rank.
     // For example:
@@ -560,11 +577,6 @@ public:
     //   %b = [%y,%y]       : (n-1)-D
     //   %x = [%b,%b,%b,%b] : n-D
     if (srcRank < dstRank) {
-      // Scalar to any vector can use splat.
-      if (srcRank == 0) {
-        rewriter.replaceOpWithNewOp<SplatOp>(op, dstType, op.source());
-        return success();
-      }
       // Duplication.
       VectorType resType =
           VectorType::get(dstType.getShape().drop_front(), eltType);
@@ -590,14 +602,6 @@ public:
     // All trailing dimensions are the same. Simply pass through.
     if (m == -1) {
       rewriter.replaceOp(op, op.source());
-      return success();
-    }
-
-    // Stretching scalar inside vector (e.g. vector<1xf32>) can use splat.
-    if (srcRank == 1) {
-      assert(m == 0);
-      Value ext = rewriter.create<vector::ExtractOp>(loc, op.source(), 0);
-      rewriter.replaceOpWithNewOp<SplatOp>(op, dstType, ext);
       return success();
     }
 
