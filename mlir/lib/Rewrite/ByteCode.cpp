@@ -420,6 +420,17 @@ struct ByteCodeWriter {
     append(field2, fields...);
   }
 
+  /// Appends a value as a pointer, stored inline within the bytecode.
+  template <typename T>
+  std::enable_if_t<llvm::is_detected<has_pointer_traits, T>::value>
+  appendInline(T value) {
+    constexpr size_t numParts = sizeof(const void *) / sizeof(ByteCodeField);
+    const void *pointer = value.getAsOpaquePointer();
+    ByteCodeField fieldParts[numParts];
+    std::memcpy(fieldParts, &pointer, sizeof(const void *));
+    bytecode.append(fieldParts, fieldParts + numParts);
+  }
+
   /// Successor references in the bytecode that have yet to be resolved.
   DenseMap<Block *, SmallVector<unsigned, 4>> unresolvedSuccessorRefs;
 
@@ -696,6 +707,13 @@ void Generator::generate(Region *region, ByteCodeWriter &writer) {
 }
 
 void Generator::generate(Operation *op, ByteCodeWriter &writer) {
+  LLVM_DEBUG({
+    // The following list must contain all the operations that do not
+    // produce any bytecode.
+    if (!isa<pdl_interp::CreateAttributeOp, pdl_interp::CreateTypeOp,
+             pdl_interp::InferredTypesOp>(op))
+      writer.appendInline(op->getLoc());
+  });
   TypeSwitch<Operation *>(op)
       .Case<pdl_interp::ApplyConstraintOp, pdl_interp::ApplyRewriteOp,
             pdl_interp::AreEqualOp, pdl_interp::BranchOp,
@@ -1098,6 +1116,17 @@ private:
     resumeCodeIt.pop_back();
   }
 
+  /// Return the bytecode iterator at the start of the current op code.
+  const ByteCodeField *getPrevCodeIt() const {
+    LLVM_DEBUG({
+      // Account for the op code and the Location stored inline.
+      return curCodeIt - 1 - sizeof(const void *) / sizeof(ByteCodeField);
+    });
+
+    // Account for the op code only.
+    return curCodeIt - 1;
+  }
+
   /// Read a value from the bytecode buffer, optionally skipping a certain
   /// number of prefix values. These methods always update the buffer to point
   /// to the next field after the read data.
@@ -1127,6 +1156,16 @@ private:
         list.append(values->begin(), values->end());
       }
     }
+  }
+
+  /// Read a value stored inline as a pointer.
+  template <typename T>
+  std::enable_if_t<llvm::is_detected<has_pointer_traits, T>::value, T>
+  readInline() {
+    const void *pointer;
+    std::memcpy(&pointer, curCodeIt, sizeof(const void *));
+    curCodeIt += sizeof(const void *) / sizeof(ByteCodeField);
+    return T::getFromOpaquePointer(pointer);
   }
 
   /// Jump to a specific successor based on a predicate value.
@@ -1551,8 +1590,7 @@ void ByteCodeExecutor::executeFinalize() {
 
 void ByteCodeExecutor::executeForEach() {
   LLVM_DEBUG(llvm::dbgs() << "Executing ForEach:\n");
-  // Subtract 1 for the op code.
-  const ByteCodeField *it = curCodeIt - 1;
+  const ByteCodeField *prevCodeIt = getPrevCodeIt();
   unsigned rangeIndex = read();
   unsigned memIndex = read();
   const void *value = nullptr;
@@ -1579,7 +1617,7 @@ void ByteCodeExecutor::executeForEach() {
 
   // Store the iterate value and the stack address.
   memory[memIndex] = value;
-  pushCodeIt(it);
+  pushCodeIt(prevCodeIt);
 
   // Skip over the successor (we will enter the body of the loop).
   read<ByteCodeAddr>();
@@ -1970,6 +2008,9 @@ void ByteCodeExecutor::execute(
     SmallVectorImpl<PDLByteCode::MatchResult> *matches,
     Optional<Location> mainRewriteLoc) {
   while (true) {
+    // Print the location of the operation being executed.
+    LLVM_DEBUG(llvm::dbgs() << readInline<Location>() << "\n");
+
     OpCode opCode = static_cast<OpCode>(read());
     switch (opCode) {
     case ApplyConstraint:
