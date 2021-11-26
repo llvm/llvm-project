@@ -71,6 +71,33 @@ static inline bool isARMArea2Register(unsigned Reg, bool SplitFramePushPop) {
   }
 }
 
+static inline bool isSplitFPArea1Register(unsigned Reg,
+                                          bool SplitFramePushPop) {
+  using namespace ARM;
+
+  switch (Reg) {
+    case R0:  case R1:  case R2:  case R3:
+    case R4:  case R5:  case R6:  case R7:
+    case R8:  case R9:  case R10: case R12:
+    case SP:  case PC:
+      return true;
+    default:
+      return false;
+  }
+}
+
+static inline bool isSplitFPArea2Register(unsigned Reg,
+                                          bool SplitFramePushPop) {
+  using namespace ARM;
+
+  switch (Reg) {
+    case R11: case LR:
+      return true;
+    default:
+      return false;
+  }
+}
+
 static inline bool isARMArea3Register(unsigned Reg, bool SplitFramePushPop) {
   using namespace ARM;
 
