@@ -2863,9 +2863,19 @@ bool TargetLowering::SimplifyDemandedVectorElts(
 
   // TODO: There are more binop opcodes that could be handled here - MIN,
   // MAX, saturated math, etc.
+  case ISD::ADD: {
+    SDValue Op0 = Op.getOperand(0);
+    SDValue Op1 = Op.getOperand(1);
+    if (Op0 == Op1 && Op->isOnlyUserOf(Op0.getNode())) {
+      APInt UndefLHS, ZeroLHS;
+      if (SimplifyDemandedVectorElts(Op0, DemandedElts, UndefLHS, ZeroLHS, TLO,
+                                     Depth + 1, /*AssumeSingleUse*/ true))
+        return true;
+    }
+    LLVM_FALLTHROUGH;
+  }
   case ISD::OR:
   case ISD::XOR:
-  case ISD::ADD:
   case ISD::SUB:
   case ISD::FADD:
   case ISD::FSUB:
