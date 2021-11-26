@@ -52,14 +52,9 @@ lldb_private::LLDBSwigPythonBreakpointCallbackFunction
 
     auto result = [&] () -> Expected<PythonObject> {
         // If the called function doesn't take extra_args, drop them here:
-        if (max_positional_args < 4) {
+        if (max_positional_args < 4)
             return pfunc.Call(frame_arg, bp_loc_arg, dict);
-        } else {
-            // FIXME: SBStructuredData leaked here
-            lldb::SBStructuredData *args_value = new lldb::SBStructuredData(args_impl);
-            PythonObject args_arg(PyRefType::Owned, SBTypeToSWIGWrapper(*args_value));
-            return pfunc.Call(frame_arg, bp_loc_arg, args_arg, dict);
-        }
+        return pfunc.Call(frame_arg, bp_loc_arg, ToSWIGWrapper(args_impl), dict);
     } ();
 
     if (!result)
@@ -289,11 +284,7 @@ lldb_private::LLDBSwigPythonCreateScriptedProcess
 
     PythonObject result = {};
     if (arg_info.get().max_positional_args == 2) {
-        // FIXME: SBStructuredData leaked here
-        PythonObject args_arg(
-            PyRefType::Owned,
-            SBTypeToSWIGWrapper(*new lldb::SBStructuredData(args_impl)));
-        result = pfunc(target_arg, args_arg);
+        result = pfunc(target_arg, ToSWIGWrapper(args_impl));
     } else {
         error_string.assign("wrong number of arguments in __init__, should be 2 (not including self)");
         Py_RETURN_NONE;
@@ -343,11 +334,7 @@ lldb_private::LLDBSwigPythonCreateScriptedThread
 
     PythonObject result = {};
     if (arg_info.get().max_positional_args == 2) {
-        // FIXME: SBStructuredData leaked here
-        PythonObject args_arg(
-            PyRefType::Owned,
-            SBTypeToSWIGWrapper(*new lldb::SBStructuredData(args_impl)));
-        result = pfunc(ToSWIGWrapper(process_sp), args_arg);
+        result = pfunc(ToSWIGWrapper(process_sp), ToSWIGWrapper(args_impl));
     } else {
         error_string.assign("wrong number of arguments in __init__, should be 2 (not including self)");
         Py_RETURN_NONE;
@@ -399,8 +386,7 @@ lldb_private::LLDBSwigPythonCreateScriptedThreadPlan
     }
 
     PythonObject result = {};
-    // FIXME: SBStructuredData leaked here
-    auto *args_sb = new lldb::SBStructuredData(args_impl);
+    auto args_sb = std::make_unique<lldb::SBStructuredData>(args_impl);
     if (arg_info.get().max_positional_args == 2) {
         if (args_sb->IsValid()) {
            error_string.assign("args passed, but __init__ does not take an args dictionary");
@@ -408,8 +394,7 @@ lldb_private::LLDBSwigPythonCreateScriptedThreadPlan
         }
         result = pfunc(tp_arg, dict);
     } else if (arg_info.get().max_positional_args >= 3) {
-        PythonObject args_arg(PyRefType::Owned, SBTypeToSWIGWrapper(*args_sb));
-        result = pfunc(tp_arg, args_arg, dict);
+        result = pfunc(tp_arg, ToSWIGWrapper(std::move(args_sb)), dict);
     } else {
         error_string.assign("wrong number of arguments in __init__, should be 2 or 3 (not including self)");
         Py_RETURN_NONE;
@@ -486,11 +471,8 @@ void *lldb_private::LLDBSwigPythonCreateScriptedBreakpointResolver(
     if (!pfunc.IsAllocated())
         return nullptr;
 
-    // FIXME: SBStructuredData leaked here
-    lldb::SBStructuredData *args_value = new lldb::SBStructuredData(args_impl);
-    PythonObject args_arg(PyRefType::Owned, SBTypeToSWIGWrapper(*args_value));
-
-    PythonObject result = pfunc(ToSWIGWrapper(breakpoint_sp), args_arg, dict);
+    PythonObject result =
+        pfunc(ToSWIGWrapper(breakpoint_sp), ToSWIGWrapper(args_impl), dict);
     // FIXME: At this point we should check that the class we found supports all the methods
     // that we need.
 
@@ -591,11 +573,8 @@ lldb_private::LLDBSwigPythonCreateScriptedStopHook
         return nullptr;
     }
 
-    // FIXME: SBStructuredData leaked here
-    lldb::SBStructuredData *args_value = new lldb::SBStructuredData(args_impl);
-    PythonObject args_arg(PyRefType::Owned, SBTypeToSWIGWrapper(*args_value));
-
-    PythonObject result = pfunc(ToSWIGWrapper(target_sp), args_arg, dict);
+    PythonObject result =
+        pfunc(ToSWIGWrapper(target_sp), ToSWIGWrapper(args_impl), dict);
 
     if (result.IsAllocated())
     {
