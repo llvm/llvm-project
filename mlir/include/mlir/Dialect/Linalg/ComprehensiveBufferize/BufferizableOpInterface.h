@@ -230,6 +230,13 @@ struct AllocationCallbacks {
   MemCpyFn memCpyFn;
 };
 
+/// Dialect-specific bufferization state. Analysis/bufferization information
+/// that is specific to ops from a certain dialect can be stored in derived
+/// variants of this struct.
+struct DialectBufferizationState {
+  virtual ~DialectBufferizationState() = default;
+};
+
 /// BufferizationState keeps track of bufferization state and provides access to
 /// the results of the analysis.
 struct BufferizationState {
@@ -271,6 +278,14 @@ struct BufferizationState {
   /// Erase all ops that were marked obsolete.
   void eraseObsoleteOps();
 
+  /// Return dialect-specific bufferization state.
+  template <typename StateT> StateT &getDialectState(StringRef name) {
+    // Create state if it does not exist yet.
+    if (!dialectState.count(name))
+      dialectState[name] = std::make_unique<StateT>();
+    return static_cast<StateT &>(*dialectState[name]);
+  }
+
   /// `aliasInfo` keeps track of aliasing and equivalent values.
   BufferizationAliasInfo aliasInfo;
 
@@ -284,6 +299,9 @@ struct BufferizationState {
 
   /// Obsolete ops that should be deleted after bufferization.
   SmallVector<Operation *> obsoleteOps;
+
+  /// Dialect-specific bufferization state.
+  DenseMap<StringRef, std::unique_ptr<DialectBufferizationState>> dialectState;
 };
 
 /// Return the result buffer (memref) for a given OpResult (tensor). Allocate
