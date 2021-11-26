@@ -1017,9 +1017,9 @@ AffineMap AffineMap::getImpl(unsigned dimCount, unsigned symbolCount,
 /// present in result expressions is less than `dimCount` and the highest index
 /// of symbolic identifier present in result expressions is less than
 /// `symbolCount`.
-[[nodiscard]] static bool willBeValidAffineMap(unsigned dimCount,
-                                               unsigned symbolCount,
-                                               ArrayRef<AffineExpr> results) {
+LLVM_NODISCARD static bool willBeValidAffineMap(unsigned dimCount,
+                                                unsigned symbolCount,
+                                                ArrayRef<AffineExpr> results) {
   int64_t maxDimPosition = -1;
   int64_t maxSymbolPosition = -1;
   getMaxDimAndSymbol(ArrayRef<ArrayRef<AffineExpr>>(results), maxDimPosition,
