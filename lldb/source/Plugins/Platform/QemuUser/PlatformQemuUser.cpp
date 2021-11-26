@@ -126,6 +126,11 @@ lldb::ProcessSP PlatformQemuUser::DebugProcess(ProcessLaunchInfo &launch_info,
   launch_info.SetMonitorProcessCallback(ProcessLaunchInfo::NoOpMonitorCallback,
                                         false);
 
+  // This is automatically done for host platform in
+  // Target::FinalizeFileActions, but we're not a host platform.
+  llvm::Error Err = launch_info.SetUpPtyRedirection();
+  LLDB_LOG_ERROR(log, std::move(Err), "SetUpPtyRedirection failed: {0}");
+
   error = Host::LaunchProcess(launch_info);
   if (error.Fail())
     return nullptr;
@@ -134,6 +139,7 @@ lldb::ProcessSP PlatformQemuUser::DebugProcess(ProcessLaunchInfo &launch_info,
       launch_info.GetListener(),
       process_gdb_remote::ProcessGDBRemote::GetPluginNameStatic(), nullptr,
       true);
+
   ListenerSP listener_sp =
       Listener::MakeListener("lldb.platform_qemu_user.debugprocess");
   launch_info.SetHijackListener(listener_sp);
@@ -142,6 +148,11 @@ lldb::ProcessSP PlatformQemuUser::DebugProcess(ProcessLaunchInfo &launch_info,
   error = process_sp->ConnectRemote(("unix-connect://" + socket_path).str());
   if (error.Fail())
     return nullptr;
+
+  if (launch_info.GetPTY().GetPrimaryFileDescriptor() !=
+      PseudoTerminal::invalid_fd)
+    process_sp->SetSTDIOFileDescriptor(
+        launch_info.GetPTY().ReleasePrimaryFileDescriptor());
 
   process_sp->WaitForProcessToStop(llvm::None, nullptr, false, listener_sp);
   return process_sp;
