@@ -179,7 +179,7 @@ void elf::writeMapFile() {
     os << osec->name << '\n';
 
     // Dump symbols for each input section.
-    for (BaseCommand *base : osec->sectionCommands) {
+    for (BaseCommand *base : osec->commands) {
       if (auto *isd = dyn_cast<InputSectionDescription>(base)) {
         for (InputSection *isec : isd->sections) {
           if (auto *ehSec = dyn_cast<EhFrameSection>(isec)) {

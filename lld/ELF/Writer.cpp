@@ -729,12 +729,12 @@ template <class ELFT> void Writer<ELFT>::addSectionSymbols() {
     auto *sec = dyn_cast<OutputSection>(base);
     if (!sec)
       continue;
-    auto i = llvm::find_if(sec->sectionCommands, [](BaseCommand *base) {
+    auto i = llvm::find_if(sec->commands, [](BaseCommand *base) {
       if (auto *isd = dyn_cast<InputSectionDescription>(base))
         return !isd->sections.empty();
       return false;
     });
-    if (i == sec->sectionCommands.end())
+    if (i == sec->commands.end())
       continue;
     InputSectionBase *isec = cast<InputSectionDescription>(*i)->sections[0];
 
@@ -1420,7 +1420,7 @@ static void sortSection(OutputSection *sec,
   // digit radix sort. The sections may be sorted stably again by a more
   // significant key.
   if (!order.empty())
-    for (BaseCommand *b : sec->sectionCommands)
+    for (BaseCommand *b : sec->commands)
       if (auto *isd = dyn_cast<InputSectionDescription>(b))
         sortISDBySectionOrder(isd, order);
 
@@ -1437,8 +1437,8 @@ static void sortSection(OutputSection *sec,
     // addressable range of [.got, .got + 0xFFFC] for GOT-relative relocations.
     // To reduce the risk of relocation overflow, .toc contents are sorted so
     // that sections having smaller relocation offsets are at beginning of .toc
-    assert(sec->sectionCommands.size() == 1);
-    auto *isd = cast<InputSectionDescription>(sec->sectionCommands[0]);
+    assert(sec->commands.size() == 1);
+    auto *isd = cast<InputSectionDescription>(sec->commands[0]);
     llvm::stable_sort(isd->sections,
                       [](const InputSection *a, const InputSection *b) -> bool {
                         return a->file->ppc64SmallCodeModelTocRelocs &&
@@ -1608,7 +1608,7 @@ template <class ELFT> void Writer<ELFT>::resolveShfLinkOrder() {
     // Sorting is performed separately.
     std::vector<InputSection **> scriptSections;
     std::vector<InputSection *> sections;
-    for (BaseCommand *base : sec->sectionCommands) {
+    for (BaseCommand *base : sec->commands) {
       auto *isd = dyn_cast<InputSectionDescription>(base);
       if (!isd)
         continue;
@@ -1842,7 +1842,7 @@ static void removeUnusedSyntheticSections() {
         // If we reach here, then ss is an unused synthetic section and we want
         // to remove it from the corresponding input section description, and
         // orphanSections.
-        for (BaseCommand *b : os->sectionCommands)
+        for (BaseCommand *b : os->commands)
           if (auto *isd = dyn_cast<InputSectionDescription>(b))
             isdSet.insert(isd);
 

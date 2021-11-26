@@ -82,7 +82,7 @@ public:
   Expr alignExpr;
   Expr lmaExpr;
   Expr subalignExpr;
-  std::vector<BaseCommand *> sectionCommands;
+  std::vector<BaseCommand *> commands;
   std::vector<StringRef> phdrs;
   llvm::Optional<std::array<uint8_t, 4>> filler;
   ConstraintKind constraint = ConstraintKind::NoConstraint;
