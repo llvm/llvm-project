@@ -2476,8 +2476,8 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
     // merging MergeInputSections into a single MergeSyntheticSection. From this
     // point onwards InputSectionDescription::sections should be used instead of
     // sectionBases.
-    for (BaseCommand *base : script->sectionCommands)
-      if (auto *sec = dyn_cast<OutputSection>(base))
+    for (SectionCommand *cmd : script->sectionCommands)
+      if (auto *sec = dyn_cast<OutputSection>(cmd))
         sec->finalizeInputSections();
     llvm::erase_if(inputSections, [](InputSectionBase *s) {
       return isa<MergeInputSection>(s);
