@@ -82,17 +82,18 @@ enum SectionsCommandKind {
   ByteKind    // BYTE(expr), SHORT(expr), LONG(expr) or QUAD(expr)
 };
 
-struct BaseCommand {
-  BaseCommand(int k) : kind(k) {}
+struct SectionCommand {
+  SectionCommand(int k) : kind(k) {}
   int kind;
 };
 
 // This represents ". = <expr>" or "<symbol> = <expr>".
-struct SymbolAssignment : BaseCommand {
+struct SymbolAssignment : SectionCommand {
   SymbolAssignment(StringRef name, Expr e, std::string loc)
-      : BaseCommand(AssignmentKind), name(name), expression(e), location(loc) {}
+      : SectionCommand(AssignmentKind), name(name), expression(e),
+        location(loc) {}
 
-  static bool classof(const BaseCommand *c) {
+  static bool classof(const SectionCommand *c) {
     return c->kind == AssignmentKind;
   }
 
@@ -182,7 +183,7 @@ public:
   SortSectionPolicy sortInner;
 };
 
-class InputSectionDescription : public BaseCommand {
+class InputSectionDescription : public SectionCommand {
   SingleStringMatcher filePat;
 
   // Cache of the most recent input argument and result of matchesFile().
@@ -191,10 +192,10 @@ class InputSectionDescription : public BaseCommand {
 public:
   InputSectionDescription(StringRef filePattern, uint64_t withFlags = 0,
                           uint64_t withoutFlags = 0)
-      : BaseCommand(InputSectionKind), filePat(filePattern),
+      : SectionCommand(InputSectionKind), filePat(filePattern),
         withFlags(withFlags), withoutFlags(withoutFlags) {}
 
-  static bool classof(const BaseCommand *c) {
+  static bool classof(const SectionCommand *c) {
     return c->kind == InputSectionKind;
   }
 
@@ -223,12 +224,12 @@ public:
 };
 
 // Represents BYTE(), SHORT(), LONG(), or QUAD().
-struct ByteCommand : BaseCommand {
+struct ByteCommand : SectionCommand {
   ByteCommand(Expr e, unsigned size, std::string commandString)
-      : BaseCommand(ByteKind), commandString(commandString), expression(e),
+      : SectionCommand(ByteKind), commandString(commandString), expression(e),
         size(size) {}
 
-  static bool classof(const BaseCommand *c) { return c->kind == ByteKind; }
+  static bool classof(const SectionCommand *c) { return c->kind == ByteKind; }
 
   // Keeps string representing the command. Used for -Map" is perhaps better.
   std::string commandString;
@@ -340,7 +341,7 @@ public:
   void processInsertCommands();
 
   // SECTIONS command list.
-  std::vector<BaseCommand *> sectionCommands;
+  std::vector<SectionCommand *> sectionCommands;
 
   // PHDRS command list.
   std::vector<PhdrsCommand> phdrsCommands;

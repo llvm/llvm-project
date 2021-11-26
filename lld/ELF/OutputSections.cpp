@@ -69,7 +69,7 @@ void OutputSection::writeHeaderTo(typename ELFT::Shdr *shdr) {
 }
 
 OutputSection::OutputSection(StringRef name, uint32_t type, uint64_t flags)
-    : BaseCommand(OutputSectionKind),
+    : SectionCommand(OutputSectionKind),
       SectionBase(Output, name, flags, /*Entsize*/ 0, /*Alignment*/ 1, type,
                   /*Info*/ 0, /*Link*/ 0) {}
 
@@ -165,15 +165,15 @@ void OutputSection::commitSection(InputSection *isec) {
 // to compute an output offset for each piece of each input section.
 void OutputSection::finalizeInputSections() {
   std::vector<MergeSyntheticSection *> mergeSections;
-  for (BaseCommand *base : commands) {
-    auto *cmd = dyn_cast<InputSectionDescription>(base);
-    if (!cmd)
+  for (SectionCommand *cmd : commands) {
+    auto *isd = dyn_cast<InputSectionDescription>(cmd);
+    if (!isd)
       continue;
-    cmd->sections.reserve(cmd->sectionBases.size());
-    for (InputSectionBase *s : cmd->sectionBases) {
+    isd->sections.reserve(isd->sectionBases.size());
+    for (InputSectionBase *s : isd->sectionBases) {
       MergeInputSection *ms = dyn_cast<MergeInputSection>(s);
       if (!ms) {
-        cmd->sections.push_back(cast<InputSection>(s));
+        isd->sections.push_back(cast<InputSection>(s));
         continue;
       }
 
@@ -202,17 +202,17 @@ void OutputSection::finalizeInputSections() {
         mergeSections.push_back(syn);
         i = std::prev(mergeSections.end());
         syn->entsize = ms->entsize;
-        cmd->sections.push_back(syn);
+        isd->sections.push_back(syn);
       }
       (*i)->addSection(ms);
     }
 
     // sectionBases should not be used from this point onwards. Clear it to
     // catch misuses.
-    cmd->sectionBases.clear();
+    isd->sectionBases.clear();
 
     // Some input sections may be removed from the list after ICF.
-    for (InputSection *s : cmd->sections)
+    for (InputSection *s : isd->sections)
       commitSection(s);
   }
   for (auto *ms : mergeSections)
@@ -236,13 +236,13 @@ uint64_t elf::getHeaderSize() {
   return Out::elfHeader->size + Out::programHeaders->size;
 }
 
-bool OutputSection::classof(const BaseCommand *c) {
+bool OutputSection::classof(const SectionCommand *c) {
   return c->kind == OutputSectionKind;
 }
 
 void OutputSection::sort(llvm::function_ref<int(InputSectionBase *s)> order) {
   assert(isLive());
-  for (BaseCommand *b : commands)
+  for (SectionCommand *b : commands)
     if (auto *isd = dyn_cast<InputSectionDescription>(b))
       sortByOrder(isd->sections, order);
 }
@@ -366,8 +366,8 @@ template <class ELFT> void OutputSection::writeTo(uint8_t *buf) {
 
   // Linker scripts may have BYTE()-family commands with which you
   // can write arbitrary bytes to the output. Process them if any.
-  for (BaseCommand *base : commands)
-    if (auto *data = dyn_cast<ByteCommand>(base))
+  for (SectionCommand *cmd : commands)
+    if (auto *data = dyn_cast<ByteCommand>(cmd))
       writeInt(buf + data->offset, data->expression().getValue(), data->size);
 }
 
@@ -504,8 +504,8 @@ int elf::getPriority(StringRef s) {
 }
 
 InputSection *elf::getFirstInputSection(const OutputSection *os) {
-  for (BaseCommand *base : os->commands)
-    if (auto *isd = dyn_cast<InputSectionDescription>(base))
+  for (SectionCommand *cmd : os->commands)
+    if (auto *isd = dyn_cast<InputSectionDescription>(cmd))
       if (!isd->sections.empty())
         return isd->sections[0];
   return nullptr;
@@ -513,8 +513,8 @@ InputSection *elf::getFirstInputSection(const OutputSection *os) {
 
 std::vector<InputSection *> elf::getInputSections(const OutputSection *os) {
   std::vector<InputSection *> ret;
-  for (BaseCommand *base : os->commands)
-    if (auto *isd = dyn_cast<InputSectionDescription>(base))
+  for (SectionCommand *cmd : os->commands)
+    if (auto *isd = dyn_cast<InputSectionDescription>(cmd))
       ret.insert(ret.end(), isd->sections.begin(), isd->sections.end());
   return ret;
 }

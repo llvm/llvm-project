@@ -66,10 +66,10 @@ using namespace lld;
 using namespace lld::elf;
 
 static Optional<std::string> getLinkerScriptLocation(const Symbol &sym) {
-  for (BaseCommand *base : script->sectionCommands)
-    if (auto *cmd = dyn_cast<SymbolAssignment>(base))
-      if (cmd->sym == &sym)
-        return cmd->location;
+  for (SectionCommand *cmd : script->sectionCommands)
+    if (auto *assign = dyn_cast<SymbolAssignment>(cmd))
+      if (assign->sym == &sym)
+        return assign->location;
   return None;
 }
 
@@ -1640,7 +1640,7 @@ static void forEachInputSectionDescription(
   for (OutputSection *os : outputSections) {
     if (!(os->flags & SHF_ALLOC) || !(os->flags & SHF_EXECINSTR))
       continue;
-    for (BaseCommand *bc : os->commands)
+    for (SectionCommand *bc : os->commands)
       if (auto *isd = dyn_cast<InputSectionDescription>(bc))
         fn(os, isd);
   }
@@ -1817,7 +1817,7 @@ ThunkSection *ThunkCreator::getISThunkSec(InputSection *isec) {
   // Find InputSectionRange within Target Output Section (TOS) that the
   // InputSection (IS) that we need to precede is in.
   OutputSection *tos = isec->getParent();
-  for (BaseCommand *bc : tos->commands) {
+  for (SectionCommand *bc : tos->commands) {
     auto *isd = dyn_cast<InputSectionDescription>(bc);
     if (!isd || isd->sections.empty())
       continue;

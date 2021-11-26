@@ -93,7 +93,7 @@ private:
   void readSectionAddressType(OutputSection *cmd);
   OutputSection *readOverlaySectionDescription();
   OutputSection *readOutputSectionDescription(StringRef outSec);
-  std::vector<BaseCommand *> readOverlay();
+  std::vector<SectionCommand *> readOverlay();
   std::vector<StringRef> readOutputSectionPhdrs();
   std::pair<uint64_t, uint64_t> readInputSectionFlags();
   InputSectionDescription *readInputSectionDescription(StringRef tok);
@@ -519,7 +519,7 @@ void ScriptParser::readSearchDir() {
 // sections that use the same virtual memory range and normally would trigger
 // linker's sections sanity check failures.
 // https://sourceware.org/binutils/docs/ld/Overlay-Description.html#Overlay-Description
-std::vector<BaseCommand *> ScriptParser::readOverlay() {
+std::vector<SectionCommand *> ScriptParser::readOverlay() {
   // VA and LMA expressions are optional, though for simplicity of
   // implementation we assume they are not. That is what OVERLAY was designed
   // for first of all: to allow sections with overlapping VAs at different LMAs.
@@ -529,7 +529,7 @@ std::vector<BaseCommand *> ScriptParser::readOverlay() {
   Expr lmaExpr = readParenExpr();
   expect("{");
 
-  std::vector<BaseCommand *> v;
+  std::vector<SectionCommand *> v;
   OutputSection *prev = nullptr;
   while (!errorCount() && !consume("}")) {
     // VA is the same for all sections. The LMAs are consecutive in memory
@@ -550,7 +550,7 @@ std::vector<BaseCommand *> ScriptParser::readOverlay() {
   // Here we want to create the Dot assignment command to achieve that.
   Expr moveDot = [=] {
     uint64_t max = 0;
-    for (BaseCommand *cmd : v)
+    for (SectionCommand *cmd : v)
       max = std::max(max, cast<OutputSection>(cmd)->size);
     return addrExpr().getValue() + max;
   };
@@ -566,11 +566,11 @@ void ScriptParser::readOverwriteSections() {
 
 void ScriptParser::readSections() {
   expect("{");
-  std::vector<BaseCommand *> v;
+  std::vector<SectionCommand *> v;
   while (!errorCount() && !consume("}")) {
     StringRef tok = next();
     if (tok == "OVERLAY") {
-      for (BaseCommand *cmd : readOverlay())
+      for (SectionCommand *cmd : readOverlay())
         v.push_back(cmd);
       continue;
     } else if (tok == "INCLUDE") {
@@ -578,7 +578,7 @@ void ScriptParser::readSections() {
       continue;
     }
 
-    if (BaseCommand *cmd = readAssignment(tok))
+    if (SectionCommand *cmd = readAssignment(tok))
       v.push_back(cmd);
     else
       v.push_back(readOutputSectionDescription(tok));
@@ -598,7 +598,7 @@ void ScriptParser::readSections() {
     setError("expected AFTER/BEFORE, but got '" + next() + "'");
   StringRef where = next();
   std::vector<StringRef> names;
-  for (BaseCommand *cmd : v)
+  for (SectionCommand *cmd : v)
     if (auto *os = dyn_cast<OutputSection>(cmd))
       names.push_back(os->name);
   if (!names.empty())
