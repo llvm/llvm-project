@@ -339,14 +339,18 @@ bool NMLoadStoreOpt::generateSaveOrRestore(MachineBasicBlock &MBB,
     auto MII = BuildMI(MBB, InsertBefore, DL, TII->get(Opcode));
     MII.addImm(StackOffset);
     MBB.erase(AdjustStack);
-    if (Return && !NewStackOffset)
-      MBB.erase(Return);
 
     for (size_t InsNo = 0; InsNo < LoadStoreList.size(); InsNo++) {
       MachineInstr *MI = LoadStoreList[InsNo];
       MII.addReg(MI->getOperand(0).getReg(),
                  IsRestore ? RegState::Define : RegState::Kill);
       MBB.erase(MI);
+    }
+
+    if (Return && !NewStackOffset) {
+      // Copy return-value registers, if any.
+      MII.copyImplicitOps(*Return);
+      MBB.erase(Return);
     }
 
     if (NewStackOffset) {
