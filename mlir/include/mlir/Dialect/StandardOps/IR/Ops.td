@@ -802,7 +802,8 @@ def SplatOp : Std_Op<"splat", [NoSideEffect,
 
   let arguments = (ins AnyTypeOf<[AnySignlessInteger, Index, AnyFloat],
                                  "integer/index/float type">:$input);
-  let results = (outs AnyTypeOf<[AnyVector, AnyStaticShapeTensor]>:$aggregate);
+  let results = (outs AnyTypeOf<[AnyVectorOfAnyRank,
+                                 AnyStaticShapeTensor]>:$aggregate);
 
   let builders = [
     OpBuilder<(ins "Value":$element, "Type":$aggregateType),

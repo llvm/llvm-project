@@ -702,7 +702,7 @@ struct SwitchOpLowering
 };
 
 // The Splat operation is lowered to an insertelement + a shufflevector
-// operation. Splat to only 1-d vector result types are lowered.
+// operation. Splat to only 0-d and 1-d vector result types are lowered.
 struct SplatOpLowering : public ConvertOpToLLVMPattern<SplatOp> {
   using ConvertOpToLLVMPattern<SplatOp>::ConvertOpToLLVMPattern;
 
@@ -710,7 +710,7 @@ struct SplatOpLowering : public ConvertOpToLLVMPattern<SplatOp> {
   matchAndRewrite(SplatOp splatOp, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     VectorType resultType = splatOp.getType().dyn_cast<VectorType>();
-    if (!resultType || resultType.getRank() != 1)
+    if (!resultType || resultType.getRank() > 1)
       return failure();
 
     // First insert it into an undef vector so we can shuffle it.
@@ -721,6 +721,14 @@ struct SplatOpLowering : public ConvertOpToLLVMPattern<SplatOp> {
         typeConverter->convertType(rewriter.getIntegerType(32)),
         rewriter.getZeroAttr(rewriter.getIntegerType(32)));
 
+    // For 0-d vector, we simply do `insertelement`.
+    if (resultType.getRank() == 0) {
+      rewriter.replaceOpWithNewOp<LLVM::InsertElementOp>(
+          splatOp, vectorType, undef, adaptor.getInput(), zero);
+      return success();
+    }
+
+    // For 1-d vector, we additionally do a `vectorshuffle`.
     auto v = rewriter.create<LLVM::InsertElementOp>(
         splatOp.getLoc(), vectorType, undef, adaptor.getInput(), zero);
 
@@ -745,7 +753,7 @@ struct SplatNdOpLowering : public ConvertOpToLLVMPattern<SplatOp> {
   matchAndRewrite(SplatOp splatOp, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     VectorType resultType = splatOp.getType().dyn_cast<VectorType>();
-    if (!resultType || resultType.getRank() == 1)
+    if (!resultType || resultType.getRank() <= 1)
       return failure();
 
     // First insert it into an undef vector so we can shuffle it.
