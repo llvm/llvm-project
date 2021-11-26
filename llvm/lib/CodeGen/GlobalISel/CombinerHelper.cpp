@@ -3732,8 +3732,7 @@ void CombinerHelper::applyExtendThroughPhis(MachineInstr &MI,
   Builder.setInstrAndDebugLoc(MI);
   auto NewPhi = Builder.buildInstrNoInsert(TargetOpcode::G_PHI);
   NewPhi.addDef(DstReg);
-  for (unsigned SrcIdx = 1; SrcIdx < MI.getNumOperands(); ++SrcIdx) {
-    auto &MO = MI.getOperand(SrcIdx);
+  for (const MachineOperand &MO : llvm::drop_begin(MI.operands())) {
     if (!MO.isReg()) {
       NewPhi.addMBB(MO.getMBB());
       continue;
