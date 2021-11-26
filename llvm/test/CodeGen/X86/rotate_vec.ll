@@ -138,7 +138,7 @@ define <4 x i32> @rot_v4i32_mask_ashr0(<4 x i32> %a0) {
 define <4 x i32> @rot_v4i32_mask_ashr1(<4 x i32> %a0) {
 ; XOPAVX1-LABEL: rot_v4i32_mask_ashr1:
 ; XOPAVX1:       # %bb.0:
-; XOPAVX1-NEXT:    vpshad {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; XOPAVX1-NEXT:    vpsrad $25, %xmm0, %xmm0
 ; XOPAVX1-NEXT:    vpaddd %xmm0, %xmm0, %xmm0
 ; XOPAVX1-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
 ; XOPAVX1-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
@@ -146,7 +146,7 @@ define <4 x i32> @rot_v4i32_mask_ashr1(<4 x i32> %a0) {
 ;
 ; XOPAVX2-LABEL: rot_v4i32_mask_ashr1:
 ; XOPAVX2:       # %bb.0:
-; XOPAVX2-NEXT:    vpsravd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; XOPAVX2-NEXT:    vpsrad $25, %xmm0, %xmm0
 ; XOPAVX2-NEXT:    vpaddd %xmm0, %xmm0, %xmm0
 ; XOPAVX2-NEXT:    vpbroadcastd %xmm0, %xmm0
 ; XOPAVX2-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
@@ -154,7 +154,7 @@ define <4 x i32> @rot_v4i32_mask_ashr1(<4 x i32> %a0) {
 ;
 ; AVX512-LABEL: rot_v4i32_mask_ashr1:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpsravd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX512-NEXT:    vpsrad $25, %xmm0, %xmm0
 ; AVX512-NEXT:    vpaddd %xmm0, %xmm0, %xmm0
 ; AVX512-NEXT:    vpbroadcastd %xmm0, %xmm0
 ; AVX512-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
