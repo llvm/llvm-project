@@ -42,6 +42,36 @@ pdl.pattern @rewrite_with_args_and_params : benefit(1) {
 
 // -----
 
+pdl.pattern @rewrite_multi_root_optimal : benefit(2) {
+  %input1 = pdl.operand
+  %input2 = pdl.operand
+  %type = pdl.type
+  %op1 = pdl.operation(%input1 : !pdl.value) -> (%type : !pdl.type)
+  %val1 = pdl.result 0 of %op1
+  %root1 = pdl.operation(%val1 : !pdl.value)
+  %op2 = pdl.operation(%input2 : !pdl.value) -> (%type : !pdl.type)
+  %val2 = pdl.result 0 of %op2
+  %root2 = pdl.operation(%val1, %val2 : !pdl.value, !pdl.value)
+  pdl.rewrite with "rewriter"["I am param"](%root1, %root2 : !pdl.operation, !pdl.operation)
+}
+
+// -----
+
+pdl.pattern @rewrite_multi_root_forced : benefit(2) {
+  %input1 = pdl.operand
+  %input2 = pdl.operand
+  %type = pdl.type
+  %op1 = pdl.operation(%input1 : !pdl.value) -> (%type : !pdl.type)
+  %val1 = pdl.result 0 of %op1
+  %root1 = pdl.operation(%val1 : !pdl.value)
+  %op2 = pdl.operation(%input2 : !pdl.value) -> (%type : !pdl.type)
+  %val2 = pdl.result 0 of %op2
+  %root2 = pdl.operation(%val1, %val2 : !pdl.value, !pdl.value)
+  pdl.rewrite %root1 with "rewriter"["I am param"](%root2 : !pdl.operation)
+}
+
+// -----
+
 // Check that the result type of an operation within a rewrite can be inferred
 // from a pdl.replace.
 pdl.pattern @infer_type_from_operation_replace : benefit(1) {
