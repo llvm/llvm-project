@@ -454,6 +454,9 @@ void CommandObject::GetFormattedCommandArguments(Stream &str,
         opt_set_mask == LLDB_OPT_SET_ALL
             ? m_arguments[i]
             : OptSetFiltered(opt_set_mask, m_arguments[i]);
+    // This argument is not associated with the current option set, so skip it.
+    if (arg_entry.empty())
+      continue;
     int num_alternatives = arg_entry.size();
 
     if ((num_alternatives == 2) && IsPairType(arg_entry[0].arg_repetition)) {
