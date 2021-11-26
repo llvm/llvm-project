@@ -27,6 +27,7 @@
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetLowering.h"
+#include "llvm/Target/TargetMachine.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/Support/Casting.h"
@@ -4801,6 +4802,95 @@ bool CombinerHelper::matchRedundantNegOperands(MachineInstr &MI,
     Observer.changedInstr(MI);
   };
   return true;
+}
+
+/// Checks if \p MI is TargetOpcode::G_FMUL and contractable either
+/// due to global flags or MachineInstr flags.
+static bool isContractableFMul(MachineInstr &MI, bool AllowFusionGlobally) {
+  if (MI.getOpcode() != TargetOpcode::G_FMUL)
+    return false;
+  return AllowFusionGlobally || MI.getFlag(MachineInstr::MIFlag::FmContract);
+}
+
+static bool hasMoreUses(const MachineInstr &MI0, const MachineInstr &MI1,
+                        const MachineRegisterInfo &MRI) {
+  return std::distance(MRI.use_instr_nodbg_begin(MI0.getOperand(0).getReg()),
+                       MRI.use_instr_nodbg_end()) >
+         std::distance(MRI.use_instr_nodbg_begin(MI1.getOperand(0).getReg()),
+                       MRI.use_instr_nodbg_end());
+}
+
+bool CombinerHelper::canCombineFMadOrFMA(MachineInstr &MI,
+                                         bool &AllowFusionGlobally,
+                                         bool &HasFMAD, bool &Aggressive) {
+  auto *MF = MI.getMF();
+  const auto &TLI = *MF->getSubtarget().getTargetLowering();
+  const TargetOptions &Options = MF->getTarget().Options;
+  LLT DstType = MRI.getType(MI.getOperand(0).getReg());
+
+  // Floating-point multiply-add with intermediate rounding.
+  HasFMAD = (LI && TLI.isFMADLegal(MI, DstType));
+  // Floating-point multiply-add without intermediate rounding.
+  bool HasFMA = TLI.isFMAFasterThanFMulAndFAdd(*MF, DstType) &&
+                isLegalOrBeforeLegalizer({TargetOpcode::G_FMA, {DstType}});
+  // No valid opcode, do not combine.
+  if (!HasFMAD && !HasFMA)
+    return false;
+
+  AllowFusionGlobally = Options.AllowFPOpFusion == FPOpFusion::Fast ||
+                        Options.UnsafeFPMath || HasFMAD;
+  // If the addition is not contractable, do not combine.
+  if (!AllowFusionGlobally && !MI.getFlag(MachineInstr::MIFlag::FmContract))
+    return false;
+
+  Aggressive = TLI.enableAggressiveFMAFusion(DstType);
+  return true;
+}
+
+bool CombinerHelper::matchCombineFAddFMulToFMadOrFMA(
+    MachineInstr &MI, std::function<void(MachineIRBuilder &)> &MatchInfo) {
+  assert(MI.getOpcode() == TargetOpcode::G_FADD);
+
+  bool AllowFusionGlobally, HasFMAD, Aggressive;
+  if (!canCombineFMadOrFMA(MI, AllowFusionGlobally, HasFMAD, Aggressive))
+    return false;
+
+  MachineInstr *LHS = MRI.getVRegDef(MI.getOperand(1).getReg());
+  MachineInstr *RHS = MRI.getVRegDef(MI.getOperand(2).getReg());
+  unsigned PreferredFusedOpcode =
+      HasFMAD ? TargetOpcode::G_FMAD : TargetOpcode::G_FMA;
+
+  // If we have two choices trying to fold (fadd (fmul u, v), (fmul x, y)),
+  // prefer to fold the multiply with fewer uses.
+  if (Aggressive && isContractableFMul(*LHS, AllowFusionGlobally) &&
+      isContractableFMul(*RHS, AllowFusionGlobally)) {
+    if (hasMoreUses(*LHS, *RHS, MRI))
+      std::swap(LHS, RHS);
+  }
+
+  // fold (fadd (fmul x, y), z) -> (fma x, y, z)
+  if (isContractableFMul(*LHS, AllowFusionGlobally) &&
+      (Aggressive || MRI.hasOneNonDBGUse(LHS->getOperand(0).getReg()))) {
+    MatchInfo = [=, &MI](MachineIRBuilder &B) {
+      B.buildInstr(PreferredFusedOpcode, {MI.getOperand(0).getReg()},
+                   {LHS->getOperand(1).getReg(), LHS->getOperand(2).getReg(),
+                    RHS->getOperand(0).getReg()});
+    };
+    return true;
+  }
+
+  // fold (fadd x, (fmul y, z)) -> (fma y, z, x)
+  if (isContractableFMul(*RHS, AllowFusionGlobally) &&
+      (Aggressive || MRI.hasOneNonDBGUse(RHS->getOperand(0).getReg()))) {
+    MatchInfo = [=, &MI](MachineIRBuilder &B) {
+      B.buildInstr(PreferredFusedOpcode, {MI.getOperand(0).getReg()},
+                   {RHS->getOperand(1).getReg(), RHS->getOperand(2).getReg(),
+                    LHS->getOperand(0).getReg()});
+    };
+    return true;
+  }
+
+  return false;
 }
 
 bool CombinerHelper::tryCombine(MachineInstr &MI) {
