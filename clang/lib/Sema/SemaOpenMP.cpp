@@ -18636,22 +18636,19 @@ Sema::ActOnOpenMPDependClause(Expr *DepModifier, OpenMPDependClauseKind DepKind,
         if (!RefExpr->isValueDependent() && !RefExpr->isTypeDependent() &&
             !RefExpr->isInstantiationDependent() &&
             !RefExpr->containsUnexpandedParameterPack() &&
-            (OMPDependTFound &&
-             DSAStack->getOMPDependT().getTypePtr() == ExprTy.getTypePtr())) {
+            (!RefExpr->IgnoreParenImpCasts()->isLValue() ||
+             (OMPDependTFound &&
+              DSAStack->getOMPDependT().getTypePtr() == ExprTy.getTypePtr()))) {
           Diag(ELoc, diag::err_omp_expected_addressable_lvalue_or_array_item)
-              << (LangOpts.OpenMP >= 50 ? 1 : 0) << 1
-              << RefExpr->getSourceRange();
+              << (LangOpts.OpenMP >= 50 ? 1 : 0)
+              << (LangOpts.OpenMP >= 50 ? 1 : 0) << RefExpr->getSourceRange();
           continue;
         }
 
         auto *ASE = dyn_cast<ArraySubscriptExpr>(SimpleExpr);
-        if (!RefExpr->IgnoreParenImpCasts()->isLValue() ||
-            (ASE && !ASE->getBase()->isTypeDependent() &&
-             !ASE->getBase()
-                  ->getType()
-                  .getNonReferenceType()
-                  ->isPointerType() &&
-             !ASE->getBase()->getType().getNonReferenceType()->isArrayType())) {
+        if (ASE && !ASE->getBase()->isTypeDependent() &&
+            !ASE->getBase()->getType().getNonReferenceType()->isPointerType() &&
+            !ASE->getBase()->getType().getNonReferenceType()->isArrayType()) {
           Diag(ELoc, diag::err_omp_expected_addressable_lvalue_or_array_item)
               << (LangOpts.OpenMP >= 50 ? 1 : 0)
               << (LangOpts.OpenMP >= 50 ? 1 : 0) << RefExpr->getSourceRange();

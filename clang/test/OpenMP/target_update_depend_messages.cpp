@@ -39,7 +39,7 @@ int tmain(T argc, S **argv, R *env[]) {
 #pragma omp target update to(z) depend(out:)    // expected-error {{expected expression}}
 #pragma omp target update to(z) depend(inout : foobool(argc)), depend(in, argc) // omp4-error {{expected addressable lvalue expression, array element or array section}} omp5-error {{expected addressable lvalue expression, array element, array section or array shaping expression of non 'omp_depend_t' type}} expected-warning {{missing ':' after dependency type - ignoring}} expected-error {{expected expression}}
 #pragma omp target update to(z) depend(out : S1) // expected-error {{'S1' does not refer to a value}}
-#pragma omp target update to(z) depend(in : argv[1][1] = '2') // omp4-error {{expected addressable lvalue expression, array element or array section}} omp5-error {{expected addressable lvalue expression, array element, array section or array shaping expression of non 'omp_depend_t' type}}
+#pragma omp target update to(z) depend(in : argv[1][1] = '2')
 #pragma omp target update to(z) depend(in : vec[1]) // omp4-error {{expected addressable lvalue expression, array element or array section}} omp5-error {{expected addressable lvalue expression, array element, array section or array shaping expression of non 'omp_depend_t' type}}
 #pragma omp target update to(z) depend(in : argv[0])
 #pragma omp target update to(z) depend(in:) // expected-error {{expected expression}}
