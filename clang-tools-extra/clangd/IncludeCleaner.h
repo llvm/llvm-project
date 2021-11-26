@@ -52,6 +52,7 @@ ReferencedLocations findReferencedLocations(ParsedAST &AST);
 /// The output only includes things SourceManager sees as files (not macro IDs).
 /// This can include <built-in>, <scratch space> etc that are not true files.
 llvm::DenseSet<FileID> findReferencedFiles(const ReferencedLocations &Locs,
+                                           const IncludeStructure &Includes,
                                            const SourceManager &SM);
 
 /// Maps FileIDs to the internal IncludeStructure representation (HeaderIDs).

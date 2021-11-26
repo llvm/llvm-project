@@ -24,7 +24,7 @@ add_entrypoint_object(
   HDRS
     mempcpy.h
   DEPENDS
-    libc.src.string.memcpy
+    .memory_utils.memcpy_implementation
 )
 
 add_entrypoint_object(
@@ -45,7 +45,7 @@ add_entrypoint_object(
     memmove.h
   DEPENDS
     libc.src.__support.integer_operations
-    libc.src.string.memcpy
+    .memory_utils.memcpy_implementation
 )
 
 add_entrypoint_object(
@@ -74,7 +74,7 @@ add_entrypoint_object(
   HDRS
     stpncpy.h
   DEPENDS
-    .bzero
+    .memory_utils.memset_implementation
 )
 
 add_entrypoint_object(
@@ -111,7 +111,7 @@ add_entrypoint_object(
   HDRS
     strcpy.h
   DEPENDS
-    .memcpy
+    .memory_utils.memcpy_implementation
     .string_utils
 )
 
@@ -132,7 +132,7 @@ add_entrypoint_object(
   HDRS
     strdup.h
   DEPENDS
-    .memcpy
+    .memory_utils.memcpy_implementation
     .string_utils
     libc.include.stdlib
 )
@@ -181,7 +181,7 @@ add_entrypoint_object(
   HDRS
     strndup.h
   DEPENDS
-    .memcpy
+    .memory_utils.memcpy_implementation
     .string_utils
     libc.include.stdlib
 )
@@ -317,7 +317,7 @@ function(add_bzero bzero_name)
     SRCS ${LIBC_SOURCE_DIR}/src/string/bzero.cpp
     HDRS ${LIBC_SOURCE_DIR}/src/string/bzero.h
     DEPENDS
-      .memory_utils.memory_utils
+      .memory_utils.memset_implementation
       libc.include.string
     COMPILE_OPTIONS
       -fno-builtin-bzero
@@ -346,7 +346,7 @@ function(add_memcmp memcmp_name)
     SRCS ${LIBC_SOURCE_DIR}/src/string/memcmp.cpp
     HDRS ${LIBC_SOURCE_DIR}/src/string/memcmp.h
     DEPENDS
-      .memory_utils.memory_utils
+      .memory_utils.memcmp_implementation
       libc.include.string
     COMPILE_OPTIONS
       -fno-builtin-memcmp
@@ -378,7 +378,7 @@ function(add_memcpy memcpy_name)
     SRCS ${LIBC_SOURCE_DIR}/src/string/memcpy.cpp
     HDRS ${LIBC_SOURCE_DIR}/src/string/memcpy.h
     DEPENDS
-      .memory_utils.memory_utils
+      .memory_utils.memcpy_implementation
       libc.include.string
     COMPILE_OPTIONS
       -fno-builtin-memcpy
@@ -413,7 +413,7 @@ function(add_memset memset_name)
     SRCS ${LIBC_SOURCE_DIR}/src/string/memset.cpp
     HDRS ${LIBC_SOURCE_DIR}/src/string/memset.h
     DEPENDS
-      .memory_utils.memory_utils
+      .memory_utils.memset_implementation
       libc.include.string
     COMPILE_OPTIONS
       -fno-builtin-memset

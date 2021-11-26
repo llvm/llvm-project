@@ -151,19 +151,19 @@ class TestProgramOutput(SetupConfigs):
         """
         self.assertEqual(dsl.programOutput(self.config, source), "")
 
-    def test_invalid_program_returns_None_1(self):
+    def test_program_that_fails_to_run_raises_runtime_error(self):
         # The program compiles, but exits with an error
         source = """
         int main(int, char**) { return 1; }
         """
-        self.assertEqual(dsl.programOutput(self.config, source), None)
+        self.assertRaises(dsl.ConfigurationRuntimeError, lambda: dsl.programOutput(self.config, source))
 
-    def test_invalid_program_returns_None_2(self):
+    def test_program_that_fails_to_compile_raises_compilation_error(self):
         # The program doesn't compile
         source = """
         int main(int, char**) { this doesnt compile }
         """
-        self.assertEqual(dsl.programOutput(self.config, source), None)
+        self.assertRaises(dsl.ConfigurationCompilationError, lambda: dsl.programOutput(self.config, source))
 
     def test_pass_arguments_to_program(self):
         source = """
@@ -230,6 +230,11 @@ class TestHasLocale(SetupConfigs):
 
     def test_nonexistent_locale(self):
         self.assertFalse(dsl.hasAnyLocale(self.config, ['for_sure_this_is_not_an_existing_locale']))
+
+    def test_localization_program_doesnt_compile(self):
+        compilerIndex = findIndex(self.config.substitutions, lambda x: x[0] == '%{cxx}')
+        self.config.substitutions[compilerIndex] = ('%{cxx}', 'this-is-certainly-not-a-valid-compiler!!')
+        self.assertRaises(dsl.ConfigurationCompilationError, lambda: dsl.hasAnyLocale(self.config, ['en_US.UTF-8']))
 
 
 class TestCompilerMacros(SetupConfigs):

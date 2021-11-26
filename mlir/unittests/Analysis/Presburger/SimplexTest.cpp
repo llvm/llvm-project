@@ -373,6 +373,29 @@ TEST(SimplexTest, isMarkedRedundantTiledLoopNestConstraints) {
   EXPECT_FALSE(simplex.isMarkedRedundant(5));
 }
 
+TEST(Simplextest, pivotRedundantRegressionTest) {
+  Simplex simplex(2);
+  simplex.addInequality({-1, 0, -1}); // x <= -1.
+  unsigned snapshot = simplex.getSnapshot();
+
+  simplex.addInequality({-1, 0, -2}); // x <= -2.
+  simplex.addInequality({-3, 0, -6});
+
+  // This first marks x <= -1 as redundant. Then it performs some more pivots
+  // to check if the other constraints are redundant. Pivot must update the
+  // non-redundant rows as well, otherwise these pivots result in an incorrect
+  // tableau state. In particular, after the rollback below, some rows that are
+  // NOT marked redundant will have an incorrect state.
+  simplex.detectRedundant();
+
+  // After the rollback, the only remaining constraint is x <= -1.
+  // The maximum value of x should be -1.
+  simplex.rollback(snapshot);
+  Optional<Fraction> maxX =
+      simplex.computeOptimum(Simplex::Direction::Up, {1, 0, 0});
+  EXPECT_TRUE(maxX.hasValue() && *maxX == Fraction(-1, 1));
+}
+
 TEST(SimplexTest, addInequality_already_redundant) {
   Simplex simplex(1);
   simplex.addInequality({1, -1}); // x >= 1.
