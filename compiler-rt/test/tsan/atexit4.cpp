@@ -31,4 +31,5 @@ int main() {
 // CHECK:     #0 thread
 // CHECK:   Previous write of size 4
 // CHECK:     #0 race
-// CHECK:     #1 at_exit_wrapper
+// CHECK:     #1 at_exit_callback_installed_at
+// CHECK:     #2 X
