@@ -5853,13 +5853,6 @@ Process::AdvanceAddressToNextBranchInstruction(Address default_stop_addr,
   return retval;
 }
 
-Status Process::GetMemoryRegionInfo(lldb::addr_t load_addr,
-                                    MemoryRegionInfo &range_info) {
-  if (auto abi = GetABI())
-    load_addr = abi->FixDataAddress(load_addr);
-  return DoGetMemoryRegionInfo(load_addr, range_info);
-}
-
 Status
 Process::GetMemoryRegions(lldb_private::MemoryRegionInfos &region_list) {
 
