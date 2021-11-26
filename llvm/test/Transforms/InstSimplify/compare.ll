@@ -582,9 +582,7 @@ define i1 @lshr_nonzero_eq(i32 %x) {
 ; CHECK-LABEL: @lshr_nonzero_eq(
 ; CHECK-NEXT:    [[X_NE_0:%.*]] = icmp ne i32 [[X:%.*]], 0
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[X_NE_0]])
-; CHECK-NEXT:    [[LHS:%.*]] = lshr i32 [[X]], 1
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[LHS]], [[X]]
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 false
 ;
   %x_ne_0 = icmp ne i32 %x, 0
   call void @llvm.assume(i1 %x_ne_0)
@@ -597,9 +595,7 @@ define i1 @lshr_nonzero_uge(i32 %x) {
 ; CHECK-LABEL: @lshr_nonzero_uge(
 ; CHECK-NEXT:    [[X_NE_0:%.*]] = icmp ne i32 [[X:%.*]], 0
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[X_NE_0]])
-; CHECK-NEXT:    [[LHS:%.*]] = lshr i32 [[X]], 1
-; CHECK-NEXT:    [[CMP:%.*]] = icmp uge i32 [[LHS]], [[X]]
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 false
 ;
   %x_ne_0 = icmp ne i32 %x, 0
   call void @llvm.assume(i1 %x_ne_0)
@@ -612,9 +608,7 @@ define i1 @lshr_nonzero_ne(i32 %x) {
 ; CHECK-LABEL: @lshr_nonzero_ne(
 ; CHECK-NEXT:    [[X_NE_0:%.*]] = icmp ne i32 [[X:%.*]], 0
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[X_NE_0]])
-; CHECK-NEXT:    [[LHS:%.*]] = lshr i32 [[X]], 1
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[LHS]], [[X]]
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 true
 ;
   %x_ne_0 = icmp ne i32 %x, 0
   call void @llvm.assume(i1 %x_ne_0)
@@ -627,9 +621,7 @@ define i1 @lshr_nonzero_ult(i32 %x) {
 ; CHECK-LABEL: @lshr_nonzero_ult(
 ; CHECK-NEXT:    [[X_NE_0:%.*]] = icmp ne i32 [[X:%.*]], 0
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[X_NE_0]])
-; CHECK-NEXT:    [[LHS:%.*]] = lshr i32 [[X]], 1
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[LHS]], [[X]]
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 true
 ;
   %x_ne_0 = icmp ne i32 %x, 0
   call void @llvm.assume(i1 %x_ne_0)
@@ -998,9 +990,7 @@ define i1 @udiv_nonzero_eq(i32 %x) {
 ; CHECK-LABEL: @udiv_nonzero_eq(
 ; CHECK-NEXT:    [[X_NE_0:%.*]] = icmp ne i32 [[X:%.*]], 0
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[X_NE_0]])
-; CHECK-NEXT:    [[LHS:%.*]] = udiv i32 [[X]], 3
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[LHS]], [[X]]
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 false
 ;
   %x_ne_0 = icmp ne i32 %x, 0
   call void @llvm.assume(i1 %x_ne_0)
@@ -1013,9 +1003,7 @@ define i1 @udiv_nonzero_uge(i32 %x) {
 ; CHECK-LABEL: @udiv_nonzero_uge(
 ; CHECK-NEXT:    [[X_NE_0:%.*]] = icmp ne i32 [[X:%.*]], 0
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[X_NE_0]])
-; CHECK-NEXT:    [[LHS:%.*]] = udiv i32 [[X]], 3
-; CHECK-NEXT:    [[CMP:%.*]] = icmp uge i32 [[LHS]], [[X]]
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 false
 ;
   %x_ne_0 = icmp ne i32 %x, 0
   call void @llvm.assume(i1 %x_ne_0)
@@ -1028,9 +1016,7 @@ define i1 @udiv_nonzero_ne(i32 %x) {
 ; CHECK-LABEL: @udiv_nonzero_ne(
 ; CHECK-NEXT:    [[X_NE_0:%.*]] = icmp ne i32 [[X:%.*]], 0
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[X_NE_0]])
-; CHECK-NEXT:    [[LHS:%.*]] = udiv i32 [[X]], 3
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[LHS]], [[X]]
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 true
 ;
   %x_ne_0 = icmp ne i32 %x, 0
   call void @llvm.assume(i1 %x_ne_0)
@@ -1043,9 +1029,7 @@ define i1 @udiv_nonzero_ult(i32 %x) {
 ; CHECK-LABEL: @udiv_nonzero_ult(
 ; CHECK-NEXT:    [[X_NE_0:%.*]] = icmp ne i32 [[X:%.*]], 0
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[X_NE_0]])
-; CHECK-NEXT:    [[LHS:%.*]] = udiv i32 [[X]], 3
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[LHS]], [[X]]
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 true
 ;
   %x_ne_0 = icmp ne i32 %x, 0
   call void @llvm.assume(i1 %x_ne_0)
