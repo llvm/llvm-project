@@ -152,7 +152,9 @@ During this release ...
 Changes to the LLVM tools
 ---------------------------------
 
-* ...
+* llvm-cov: `-name-allowlist` is now accepted in addition to `-name-whitelist`.
+  `-name-whitelist` is marked as deprecated and to be removed in future
+  releases.
 
 Changes to LLDB
 ---------------------------------
