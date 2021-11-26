@@ -1032,8 +1032,7 @@ bool HexagonHardwareLoops::containsInvalidInstruction(MachineLoop *L,
 bool HexagonHardwareLoops::isDead(const MachineInstr *MI,
                               SmallVectorImpl<MachineInstr *> &DeadPhis) const {
   // Examine each operand.
-  for (unsigned i = 0, e = MI->getNumOperands(); i != e; ++i) {
-    const MachineOperand &MO = MI->getOperand(i);
+  for (const MachineOperand &MO : MI->operands()) {
     if (!MO.isReg() || !MO.isDef())
       continue;
 
@@ -1087,8 +1086,7 @@ void HexagonHardwareLoops::removeIfDead(MachineInstr *MI) {
     // It is possible that some DBG_VALUE instructions refer to this
     // instruction.  Examine each def operand for such references;
     // if found, mark the DBG_VALUE as undef (but don't delete it).
-    for (unsigned i = 0, e = MI->getNumOperands(); i != e; ++i) {
-      const MachineOperand &MO = MI->getOperand(i);
+    for (const MachineOperand &MO : MI->operands()) {
       if (!MO.isReg() || !MO.isDef())
         continue;
       Register Reg = MO.getReg();
