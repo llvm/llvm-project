@@ -41,7 +41,7 @@ class ThunkSection;
 struct ExprValue {
   ExprValue(SectionBase *sec, bool forceAbsolute, uint64_t val,
             const Twine &loc)
-      : sec(sec), forceAbsolute(forceAbsolute), val(val), loc(loc.str()) {}
+      : sec(sec), val(val), forceAbsolute(forceAbsolute), loc(loc.str()) {}
 
   ExprValue(uint64_t val) : ExprValue(nullptr, false, val, "") {}
 
@@ -53,16 +53,16 @@ struct ExprValue {
   // If a value is relative to a section, it has a non-null Sec.
   SectionBase *sec;
 
-  // True if this expression is enclosed in ABSOLUTE().
-  // This flag affects the return value of getValue().
-  bool forceAbsolute;
-
   uint64_t val;
   uint64_t alignment = 1;
 
   // The original st_type if the expression represents a symbol. Any operation
   // resets type to STT_NOTYPE.
   uint8_t type = llvm::ELF::STT_NOTYPE;
+
+  // True if this expression is enclosed in ABSOLUTE().
+  // This flag affects the return value of getValue().
+  bool forceAbsolute;
 
   // Original source location. Used for error messages.
   std::string loc;
@@ -82,17 +82,18 @@ enum SectionsCommandKind {
   ByteKind    // BYTE(expr), SHORT(expr), LONG(expr) or QUAD(expr)
 };
 
-struct BaseCommand {
-  BaseCommand(int k) : kind(k) {}
+struct SectionCommand {
+  SectionCommand(int k) : kind(k) {}
   int kind;
 };
 
 // This represents ". = <expr>" or "<symbol> = <expr>".
-struct SymbolAssignment : BaseCommand {
+struct SymbolAssignment : SectionCommand {
   SymbolAssignment(StringRef name, Expr e, std::string loc)
-      : BaseCommand(AssignmentKind), name(name), expression(e), location(loc) {}
+      : SectionCommand(AssignmentKind), name(name), expression(e),
+        location(loc) {}
 
-  static bool classof(const BaseCommand *c) {
+  static bool classof(const SectionCommand *c) {
     return c->kind == AssignmentKind;
   }
 
@@ -182,7 +183,7 @@ public:
   SortSectionPolicy sortInner;
 };
 
-class InputSectionDescription : public BaseCommand {
+class InputSectionDescription : public SectionCommand {
   SingleStringMatcher filePat;
 
   // Cache of the most recent input argument and result of matchesFile().
@@ -191,10 +192,10 @@ class InputSectionDescription : public BaseCommand {
 public:
   InputSectionDescription(StringRef filePattern, uint64_t withFlags = 0,
                           uint64_t withoutFlags = 0)
-      : BaseCommand(InputSectionKind), filePat(filePattern),
+      : SectionCommand(InputSectionKind), filePat(filePattern),
         withFlags(withFlags), withoutFlags(withoutFlags) {}
 
-  static bool classof(const BaseCommand *c) {
+  static bool classof(const SectionCommand *c) {
     return c->kind == InputSectionKind;
   }
 
@@ -223,12 +224,12 @@ public:
 };
 
 // Represents BYTE(), SHORT(), LONG(), or QUAD().
-struct ByteCommand : BaseCommand {
+struct ByteCommand : SectionCommand {
   ByteCommand(Expr e, unsigned size, std::string commandString)
-      : BaseCommand(ByteKind), commandString(commandString), expression(e),
+      : SectionCommand(ByteKind), commandString(commandString), expression(e),
         size(size) {}
 
-  static bool classof(const BaseCommand *c) { return c->kind == ByteKind; }
+  static bool classof(const SectionCommand *c) { return c->kind == ByteKind; }
 
   // Keeps string representing the command. Used for -Map" is perhaps better.
   std::string commandString;
@@ -340,7 +341,7 @@ public:
   void processInsertCommands();
 
   // SECTIONS command list.
-  std::vector<BaseCommand *> sectionCommands;
+  std::vector<SectionCommand *> sectionCommands;
 
   // PHDRS command list.
   std::vector<PhdrsCommand> phdrsCommands;

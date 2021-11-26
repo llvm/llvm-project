@@ -34,7 +34,7 @@ struct InitTensorEliminationStep : public PostAnalysisStep {
   /// * The result of `rewriteFunc` must usually be analyzed for inplacability.
   ///   This analysis can be skipped with `skipAnalysis`.
   LogicalResult eliminateInitTensors(
-      FuncOp funcOp, BufferizationAliasInfo &aliasInfo, DominanceInfo &domInfo,
+      FuncOp funcOp, BufferizationState &state,
       std::function<bool(OpOperand &)> anchorMatchFunc,
       std::function<Value(OpBuilder &, Location, OpOperand &)> rewriteFunc,
       SmallVector<Operation *> &newOps);
@@ -45,8 +45,7 @@ struct InitTensorEliminationStep : public PostAnalysisStep {
 /// (and some other conditions are met).
 struct InsertSliceAnchoredInitTensorEliminationStep
     : public InitTensorEliminationStep {
-  LogicalResult run(FuncOp funcOp, BufferizationAliasInfo &aliasInfo,
-                    DominanceInfo &domInfo,
+  LogicalResult run(FuncOp funcOp, BufferizationState &state,
                     SmallVector<Operation *> &newOps) override;
 };
 
