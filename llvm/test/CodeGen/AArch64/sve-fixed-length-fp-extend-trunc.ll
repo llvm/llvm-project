@@ -63,17 +63,14 @@ define void @fcvt_v16f16_v16f32(<16 x half>* %a, <16 x float>* %b) #0 {
 ; Ensure sensible type legalisation.
 ; VBITS_EQ_256-LABEL: fcvt_v16f16_v16f32:
 ; VBITS_EQ_256:       // %bb.0:
-; VBITS_EQ_256-NEXT:    ptrue p0.h, vl16
 ; VBITS_EQ_256-NEXT:    mov x8, #8
-; VBITS_EQ_256-NEXT:    ld1h { z0.h }, p0/z, [x0]
 ; VBITS_EQ_256-NEXT:    ptrue p0.s, vl8
-; VBITS_EQ_256-NEXT:    uunpklo z1.s, z0.h
-; VBITS_EQ_256-NEXT:    ext z0.b, z0.b, z0.b, #16
-; VBITS_EQ_256-NEXT:    uunpklo z0.s, z0.h
-; VBITS_EQ_256-NEXT:    fcvt z1.s, p0/m, z1.h
+; VBITS_EQ_256-NEXT:    ld1sh { z0.s }, p0/z, [x0, x8, lsl #1]
+; VBITS_EQ_256-NEXT:    ld1sh { z1.s }, p0/z, [x0]
 ; VBITS_EQ_256-NEXT:    fcvt z0.s, p0/m, z0.h
-; VBITS_EQ_256-NEXT:    st1w { z1.s }, p0, [x1]
+; VBITS_EQ_256-NEXT:    fcvt z1.s, p0/m, z1.h
 ; VBITS_EQ_256-NEXT:    st1w { z0.s }, p0, [x1, x8, lsl #2]
+; VBITS_EQ_256-NEXT:    st1w { z1.s }, p0, [x1]
 ; VBITS_EQ_256-NEXT:    ret
 ;
 ; VBITS_GE_512-LABEL: fcvt_v16f16_v16f32:
@@ -164,18 +161,14 @@ define void @fcvt_v4f16_v4f64(<4 x half>* %a, <4 x double>* %b) #0 {
 define void @fcvt_v8f16_v8f64(<8 x half>* %a, <8 x double>* %b) #0 {
 ; VBITS_EQ_256-LABEL: fcvt_v8f16_v8f64:
 ; VBITS_EQ_256:       // %bb.0:
-; VBITS_EQ_256-NEXT:    ldr q0, [x0]
 ; VBITS_EQ_256-NEXT:    mov x8, #4
 ; VBITS_EQ_256-NEXT:    ptrue p0.d, vl4
-; VBITS_EQ_256-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
-; VBITS_EQ_256-NEXT:    uunpklo z0.s, z0.h
-; VBITS_EQ_256-NEXT:    uunpklo z0.d, z0.s
+; VBITS_EQ_256-NEXT:    ld1sh { z0.d }, p0/z, [x0, x8, lsl #1]
+; VBITS_EQ_256-NEXT:    ld1sh { z1.d }, p0/z, [x0]
 ; VBITS_EQ_256-NEXT:    fcvt z0.d, p0/m, z0.h
-; VBITS_EQ_256-NEXT:    st1d { z0.d }, p0, [x1]
-; VBITS_EQ_256-NEXT:    uunpklo z1.s, z1.h
-; VBITS_EQ_256-NEXT:    uunpklo z1.d, z1.s
 ; VBITS_EQ_256-NEXT:    fcvt z1.d, p0/m, z1.h
-; VBITS_EQ_256-NEXT:    st1d { z1.d }, p0, [x1, x8, lsl #3]
+; VBITS_EQ_256-NEXT:    st1d { z0.d }, p0, [x1, x8, lsl #3]
+; VBITS_EQ_256-NEXT:    st1d { z1.d }, p0, [x1]
 ; VBITS_EQ_256-NEXT:    ret
 ;
 ; VBITS_GE_512-LABEL: fcvt_v8f16_v8f64:
@@ -263,17 +256,14 @@ define void @fcvt_v8f32_v8f64(<8 x float>* %a, <8 x double>* %b) #0 {
 ; Ensure sensible type legalisation.
 ; VBITS_EQ_256-LABEL: fcvt_v8f32_v8f64:
 ; VBITS_EQ_256:       // %bb.0:
-; VBITS_EQ_256-NEXT:    ptrue p0.s, vl8
 ; VBITS_EQ_256-NEXT:    mov x8, #4
-; VBITS_EQ_256-NEXT:    ld1w { z0.s }, p0/z, [x0]
 ; VBITS_EQ_256-NEXT:    ptrue p0.d, vl4
-; VBITS_EQ_256-NEXT:    uunpklo z1.d, z0.s
-; VBITS_EQ_256-NEXT:    ext z0.b, z0.b, z0.b, #16
-; VBITS_EQ_256-NEXT:    uunpklo z0.d, z0.s
-; VBITS_EQ_256-NEXT:    fcvt z1.d, p0/m, z1.s
+; VBITS_EQ_256-NEXT:    ld1sw { z0.d }, p0/z, [x0, x8, lsl #2]
+; VBITS_EQ_256-NEXT:    ld1sw { z1.d }, p0/z, [x0]
 ; VBITS_EQ_256-NEXT:    fcvt z0.d, p0/m, z0.s
-; VBITS_EQ_256-NEXT:    st1d { z1.d }, p0, [x1]
+; VBITS_EQ_256-NEXT:    fcvt z1.d, p0/m, z1.s
 ; VBITS_EQ_256-NEXT:    st1d { z0.d }, p0, [x1, x8, lsl #3]
+; VBITS_EQ_256-NEXT:    st1d { z1.d }, p0, [x1]
 ; VBITS_EQ_256-NEXT:    ret
 ;
 ; VBITS_GE_512-LABEL: fcvt_v8f32_v8f64:
@@ -366,15 +356,10 @@ define void @fcvt_v16f32_v16f16(<16 x float>* %a, <16 x half>* %b) #0 {
 ; VBITS_EQ_256-NEXT:    ptrue p0.s, vl8
 ; VBITS_EQ_256-NEXT:    ld1w { z0.s }, p0/z, [x0, x8, lsl #2]
 ; VBITS_EQ_256-NEXT:    ld1w { z1.s }, p0/z, [x0]
-; VBITS_EQ_256-NEXT:    ptrue p0.s
 ; VBITS_EQ_256-NEXT:    fcvt z0.h, p0/m, z0.s
 ; VBITS_EQ_256-NEXT:    fcvt z1.h, p0/m, z1.s
-; VBITS_EQ_256-NEXT:    uzp1 z0.h, z0.h, z0.h
-; VBITS_EQ_256-NEXT:    uzp1 z1.h, z1.h, z1.h
-; VBITS_EQ_256-NEXT:    ptrue p0.h, vl8
-; VBITS_EQ_256-NEXT:    splice z1.h, p0, z1.h, z0.h
-; VBITS_EQ_256-NEXT:    ptrue p0.h, vl16
-; VBITS_EQ_256-NEXT:    st1h { z1.h }, p0, [x1]
+; VBITS_EQ_256-NEXT:    st1h { z0.s }, p0, [x1, x8, lsl #1]
+; VBITS_EQ_256-NEXT:    st1h { z1.s }, p0, [x1]
 ; VBITS_EQ_256-NEXT:    ret
 ;
 ; VBITS_GE_512-LABEL: fcvt_v16f32_v16f16:
@@ -573,15 +558,10 @@ define void @fcvt_v8f64_v8f32(<8 x double>* %a, <8 x float>* %b) #0 {
 ; VBITS_EQ_256-NEXT:    ptrue p0.d, vl4
 ; VBITS_EQ_256-NEXT:    ld1d { z0.d }, p0/z, [x0, x8, lsl #3]
 ; VBITS_EQ_256-NEXT:    ld1d { z1.d }, p0/z, [x0]
-; VBITS_EQ_256-NEXT:    ptrue p0.d
 ; VBITS_EQ_256-NEXT:    fcvt z0.s, p0/m, z0.d
 ; VBITS_EQ_256-NEXT:    fcvt z1.s, p0/m, z1.d
-; VBITS_EQ_256-NEXT:    uzp1 z0.s, z0.s, z0.s
-; VBITS_EQ_256-NEXT:    uzp1 z1.s, z1.s, z1.s
-; VBITS_EQ_256-NEXT:    ptrue p0.s, vl4
-; VBITS_EQ_256-NEXT:    splice z1.s, p0, z1.s, z0.s
-; VBITS_EQ_256-NEXT:    ptrue p0.s, vl8
-; VBITS_EQ_256-NEXT:    st1w { z1.s }, p0, [x1]
+; VBITS_EQ_256-NEXT:    st1w { z0.d }, p0, [x1, x8, lsl #2]
+; VBITS_EQ_256-NEXT:    st1w { z1.d }, p0, [x1]
 ; VBITS_EQ_256-NEXT:    ret
 ;
 ; VBITS_GE_512-LABEL: fcvt_v8f64_v8f32:
