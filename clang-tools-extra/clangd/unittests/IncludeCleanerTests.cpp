@@ -281,7 +281,8 @@ TEST(IncludeCleaner, VirtualBuffers) {
   auto &SM = AST.getSourceManager();
   auto &Includes = AST.getIncludeStructure();
 
-  auto ReferencedFiles = findReferencedFiles(findReferencedLocations(AST), SM);
+  auto ReferencedFiles =
+      findReferencedFiles(findReferencedLocations(AST), Includes, SM);
   llvm::StringSet<> ReferencedFileNames;
   for (FileID FID : ReferencedFiles)
     ReferencedFileNames.insert(
@@ -301,6 +302,80 @@ TEST(IncludeCleaner, VirtualBuffers) {
 
   // Sanity check.
   EXPECT_THAT(getUnused(AST, ReferencedHeaders), ::testing::IsEmpty());
+}
+
+TEST(IncludeCleaner, DistinctUnguardedInclusions) {
+  TestTU TU;
+  TU.Code = R"cpp(
+    #include "bar.h"
+    #include "foo.h"
+
+    int LocalFoo = foo::Variable;
+    )cpp";
+  TU.AdditionalFiles["foo.h"] = R"cpp(
+    #pragma once
+    namespace foo {
+    #include "unguarded.h"
+    }
+    )cpp";
+  TU.AdditionalFiles["bar.h"] = R"cpp(
+    #pragma once
+    namespace bar {
+    #include "unguarded.h"
+    }
+    )cpp";
+  TU.AdditionalFiles["unguarded.h"] = R"cpp(
+    constexpr int Variable = 42;
+    )cpp";
+
+  ParsedAST AST = TU.build();
+
+  auto ReferencedFiles =
+      findReferencedFiles(findReferencedLocations(AST),
+                          AST.getIncludeStructure(), AST.getSourceManager());
+  llvm::StringSet<> ReferencedFileNames;
+  auto &SM = AST.getSourceManager();
+  for (FileID FID : ReferencedFiles)
+    ReferencedFileNames.insert(
+        SM.getPresumedLoc(SM.getLocForStartOfFile(FID)).getFilename());
+  // Note that we have uplifted the referenced files from non self-contained
+  // headers to header-guarded ones.
+  EXPECT_THAT(ReferencedFileNames.keys(),
+              UnorderedElementsAre(testPath("foo.h")));
+}
+
+TEST(IncludeCleaner, NonSelfContainedHeaders) {
+  TestTU TU;
+  TU.Code = R"cpp(
+    #include "foo.h"
+
+    int LocalFoo = Variable;
+    )cpp";
+  TU.AdditionalFiles["foo.h"] = R"cpp(
+    #pragma once
+    #include "indirection.h"
+    )cpp";
+  TU.AdditionalFiles["indirection.h"] = R"cpp(
+    #include "unguarded.h"
+    )cpp";
+  TU.AdditionalFiles["unguarded.h"] = R"cpp(
+    constexpr int Variable = 42;
+    )cpp";
+
+  ParsedAST AST = TU.build();
+
+  auto ReferencedFiles =
+      findReferencedFiles(findReferencedLocations(AST),
+                          AST.getIncludeStructure(), AST.getSourceManager());
+  llvm::StringSet<> ReferencedFileNames;
+  auto &SM = AST.getSourceManager();
+  for (FileID FID : ReferencedFiles)
+    ReferencedFileNames.insert(
+        SM.getPresumedLoc(SM.getLocForStartOfFile(FID)).getFilename());
+  // Note that we have uplifted the referenced files from non self-contained
+  // headers to header-guarded ones.
+  EXPECT_THAT(ReferencedFileNames.keys(),
+              UnorderedElementsAre(testPath("foo.h")));
 }
 
 } // namespace
