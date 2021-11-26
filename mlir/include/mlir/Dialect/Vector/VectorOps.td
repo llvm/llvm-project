@@ -302,7 +302,7 @@ def Vector_MultiDimReductionOp :
     Results<(outs AnyType:$dest)> {
   let summary = "Multi-dimensional reduction operation";
   let description = [{
-    Reduces an n-D vector into an (n-k)-D vector (or a scalar when k == n) 
+    Reduces an n-D vector into an (n-k)-D vector (or a scalar when k == n)
     using the given operation (add/mul/min/max for int/fp and and/or/xor for
     int only).
 
@@ -380,7 +380,7 @@ def Vector_BroadcastOp :
      PredOpTrait<"source operand and result have same element type",
                  TCresVTEtIsSameAsOpBase<0, 0>>]>,
     Arguments<(ins AnyType:$source)>,
-    Results<(outs AnyVector:$vector)> {
+    Results<(outs AnyVectorOfAnyRank:$vector)> {
   let summary = "broadcast operation";
   let description = [{
     Broadcasts the scalar or k-D vector value in the source operand
