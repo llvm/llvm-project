@@ -111,7 +111,7 @@ entry:
 ; Since there doesn't seem to be an unambiguous optimal selection and
 ; scheduling of uxth and mov instructions below in lieu of the 'returned'
 ; optimization, don't bother checking: just verify that the calls are made
-; in the correct order as a basic sanity check
+; in the correct order as a basic correctness check.
 
 ; CHECKELF-LABEL: test_matched_paramext2:
 ; CHECKELF: bl paramzext16

@@ -910,8 +910,7 @@ static void emitKill(const MachineInstr *MI, AsmPrinter &AP) {
   std::string Str;
   raw_string_ostream OS(Str);
   OS << "kill:";
-  for (unsigned i = 0, e = MI->getNumOperands(); i != e; ++i) {
-    const MachineOperand &Op = MI->getOperand(i);
+  for (const MachineOperand &Op : MI->operands()) {
     assert(Op.isReg() && "KILL instruction must have only register operands");
     OS << ' ' << (Op.isDef() ? "def " : "killed ")
        << printReg(Op.getReg(), AP.MF->getSubtarget().getRegisterInfo());

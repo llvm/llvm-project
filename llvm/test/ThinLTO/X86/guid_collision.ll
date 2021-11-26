@@ -12,7 +12,7 @@
 ; RUN: opt -function-import -import-all-index -summary-file %t.bc.thinlto.bc %t.bc -o %t.out
 ; RUN: llvm-dis -o - %t.out | FileCheck %s
 
-; Sanity check that G was imported
+; Validate that G was imported
 ; CHECK: define available_externally i64 @G
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"

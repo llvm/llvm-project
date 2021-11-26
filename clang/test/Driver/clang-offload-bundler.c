@@ -1,5 +1,6 @@
 // REQUIRES: x86-registered-target
-// UNSUPPORTED: darwin
+// REQUIRES: powerpc-registered-target
+// UNSUPPORTED: darwin, aix
 
 //
 // Generate all the types of files we can bundle.

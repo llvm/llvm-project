@@ -3,7 +3,7 @@
 ## function correctly without corrupting the names of unchanged sections/symbols.
 
 # RUN: yaml2obj %s -o %t.o
-## Sanity check that the strings have been pooled.
+## Validate that the strings have been pooled.
 # RUN: llvm-readobj %t.o --string-dump .strtab --string-dump .shstrtab \
 # RUN:   | FileCheck %s --check-prefix=VALIDATE --implicit-check-not='] bar' --implicit-check-not=.blag
 

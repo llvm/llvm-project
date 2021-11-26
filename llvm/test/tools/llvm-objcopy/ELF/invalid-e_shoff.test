@@ -5,7 +5,7 @@
 # RUN: yaml2obj %s -o %t.o
 # RUN: cp %t.o %t2.o
 
-## Sanity check that the section header table is at offset 64:
+## Validate that the section header table is at offset 64:
 # RUN: llvm-readobj --file-headers %t.o | FileCheck %s --check-prefix=VALIDATE
 # VALIDATE: SectionHeaderOffset: 0x80{{$}}
 

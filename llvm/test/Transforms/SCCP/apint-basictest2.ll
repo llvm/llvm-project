@@ -1,5 +1,5 @@
-; This is a basic sanity check for constant propagation.  The add instruction
-; and phi instruction should be eliminated.
+; This is a basic correctness check for constant propagation.  The add
+; instruction and phi instruction should be eliminated.
 
 ; RUN: opt < %s -sccp -S | not grep phi
 ; RUN: opt < %s -sccp -S | not grep add

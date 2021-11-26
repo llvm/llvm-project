@@ -9,9 +9,6 @@
 
 // Ensure that functions marked as signal frames are reported as such.
 
-// TODO: Investigate these failures
-// XFAIL: asan, tsan, ubsan
-
 // TODO: Investigate this failure on macOS
 // XFAIL: target={{.+}}-apple-darwin{{.+}}
 

@@ -191,8 +191,6 @@ namespace std {
 
 */
 
-#include <__concepts/convertible_to.h>
-#include <__concepts/same_as.h>
 #include <__config>
 #include <__debug>
 #include <__ranges/enable_borrowed_range.h>
@@ -282,7 +280,7 @@ public:
 
 #if _LIBCPP_STD_VER > 17 && !defined(_LIBCPP_HAS_NO_RANGES)
     template <contiguous_iterator _It, sized_sentinel_for<_It> _End>
-      requires (same_as<iter_value_t<_It>, _CharT> && !convertible_to<_End, size_type>)
+      requires (is_same_v<iter_value_t<_It>, _CharT> && !is_convertible_v<_End, size_type>)
     constexpr _LIBCPP_HIDE_FROM_ABI basic_string_view(_It __begin, _End __end)
        : __data(_VSTD::to_address(__begin)), __size(__end - __begin)
     {

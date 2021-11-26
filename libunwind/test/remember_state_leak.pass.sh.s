@@ -2,9 +2,6 @@
 # RUN: %{build}
 # RUN: %{run}
 
-// TODO: Investigate these failures
-// XFAIL: asan, tsan, ubsan
-
 // TODO: Investigate this failure
 // XFAIL: 32bits-on-64bits
 

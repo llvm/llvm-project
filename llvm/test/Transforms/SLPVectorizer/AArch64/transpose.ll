@@ -9,9 +9,11 @@ define <2 x i64> @build_vec_v2i64(<2 x i64> %v0, <2 x i64> %v1) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = add <2 x i64> [[V0:%.*]], [[V1:%.*]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = sub <2 x i64> [[V0]], [[V1]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <2 x i64> [[TMP1]], <2 x i64> [[TMP2]], <2 x i32> <i32 1, i32 2>
-; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <2 x i64> [[TMP1]], <2 x i64> [[TMP2]], <2 x i32> <i32 0, i32 3>
-; CHECK-NEXT:    [[TMP5:%.*]] = add <2 x i64> [[TMP4]], [[TMP3]]
-; CHECK-NEXT:    ret <2 x i64> [[TMP5]]
+; CHECK-NEXT:    [[TMP4:%.*]] = add <2 x i64> [[V0]], [[V1]]
+; CHECK-NEXT:    [[TMP5:%.*]] = sub <2 x i64> [[V0]], [[V1]]
+; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <2 x i64> [[TMP4]], <2 x i64> [[TMP5]], <2 x i32> <i32 0, i32 3>
+; CHECK-NEXT:    [[TMP7:%.*]] = add <2 x i64> [[TMP6]], [[TMP3]]
+; CHECK-NEXT:    ret <2 x i64> [[TMP7]]
 ;
   %v0.0 = extractelement <2 x i64> %v0, i32 0
   %v0.1 = extractelement <2 x i64> %v0, i32 1
@@ -37,10 +39,12 @@ define void @store_chain_v2i64(i64* %a, i64* %b, i64* %c) {
 ; CHECK-NEXT:    [[TMP5:%.*]] = add <2 x i64> [[TMP2]], [[TMP4]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = sub <2 x i64> [[TMP2]], [[TMP4]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <2 x i64> [[TMP5]], <2 x i64> [[TMP6]], <2 x i32> <i32 1, i32 2>
-; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <2 x i64> [[TMP5]], <2 x i64> [[TMP6]], <2 x i32> <i32 0, i32 3>
-; CHECK-NEXT:    [[TMP9:%.*]] = add <2 x i64> [[TMP8]], [[TMP7]]
-; CHECK-NEXT:    [[TMP10:%.*]] = bitcast i64* [[C:%.*]] to <2 x i64>*
-; CHECK-NEXT:    store <2 x i64> [[TMP9]], <2 x i64>* [[TMP10]], align 8
+; CHECK-NEXT:    [[TMP8:%.*]] = add <2 x i64> [[TMP2]], [[TMP4]]
+; CHECK-NEXT:    [[TMP9:%.*]] = sub <2 x i64> [[TMP2]], [[TMP4]]
+; CHECK-NEXT:    [[TMP10:%.*]] = shufflevector <2 x i64> [[TMP8]], <2 x i64> [[TMP9]], <2 x i32> <i32 0, i32 3>
+; CHECK-NEXT:    [[TMP11:%.*]] = add <2 x i64> [[TMP10]], [[TMP7]]
+; CHECK-NEXT:    [[TMP12:%.*]] = bitcast i64* [[C:%.*]] to <2 x i64>*
+; CHECK-NEXT:    store <2 x i64> [[TMP11]], <2 x i64>* [[TMP12]], align 8
 ; CHECK-NEXT:    ret void
 ;
   %a.0 = getelementptr i64, i64* %a, i64 0
@@ -69,9 +73,11 @@ define <4 x i32> @build_vec_v4i32(<4 x i32> %v0, <4 x i32> %v1) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = add <4 x i32> [[V0:%.*]], [[V1:%.*]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = sub <4 x i32> [[V0]], [[V1]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <4 x i32> [[TMP1]], <4 x i32> [[TMP2]], <4 x i32> <i32 1, i32 4, i32 3, i32 6>
-; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <4 x i32> [[TMP1]], <4 x i32> [[TMP2]], <4 x i32> <i32 0, i32 5, i32 2, i32 7>
-; CHECK-NEXT:    [[TMP5:%.*]] = add <4 x i32> [[TMP4]], [[TMP3]]
-; CHECK-NEXT:    ret <4 x i32> [[TMP5]]
+; CHECK-NEXT:    [[TMP4:%.*]] = add <4 x i32> [[V0]], [[V1]]
+; CHECK-NEXT:    [[TMP5:%.*]] = sub <4 x i32> [[V0]], [[V1]]
+; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <4 x i32> [[TMP4]], <4 x i32> [[TMP5]], <4 x i32> <i32 0, i32 5, i32 2, i32 7>
+; CHECK-NEXT:    [[TMP7:%.*]] = add <4 x i32> [[TMP6]], [[TMP3]]
+; CHECK-NEXT:    ret <4 x i32> [[TMP7]]
 ;
   %v0.0 = extractelement <4 x i32> %v0, i32 0
   %v0.1 = extractelement <4 x i32> %v0, i32 1
@@ -105,9 +111,11 @@ define <4 x i32> @build_vec_v4i32_reuse_0(<2 x i32> %v0, <2 x i32> %v1) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = add <2 x i32> [[V0:%.*]], [[V1:%.*]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = sub <2 x i32> [[V0]], [[V1]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <2 x i32> [[TMP1]], <2 x i32> [[TMP2]], <2 x i32> <i32 1, i32 2>
-; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <2 x i32> [[TMP1]], <2 x i32> [[TMP2]], <2 x i32> <i32 0, i32 3>
-; CHECK-NEXT:    [[TMP5:%.*]] = add <2 x i32> [[TMP4]], [[TMP3]]
-; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <2 x i32> [[TMP5]], <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 0, i32 1>
+; CHECK-NEXT:    [[TMP4:%.*]] = add <2 x i32> [[V0]], [[V1]]
+; CHECK-NEXT:    [[TMP5:%.*]] = sub <2 x i32> [[V0]], [[V1]]
+; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <2 x i32> [[TMP4]], <2 x i32> [[TMP5]], <2 x i32> <i32 0, i32 3>
+; CHECK-NEXT:    [[TMP7:%.*]] = add <2 x i32> [[TMP6]], [[TMP3]]
+; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <2 x i32> [[TMP7]], <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 0, i32 1>
 ; CHECK-NEXT:    ret <4 x i32> [[SHUFFLE]]
 ;
   %v0.0 = extractelement <2 x i32> %v0, i32 0
@@ -216,15 +224,17 @@ define i32 @reduction_v4i32(<4 x i32> %v0, <4 x i32> %v1) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = sub <4 x i32> [[V0:%.*]], [[V1:%.*]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = add <4 x i32> [[V0]], [[V1]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <4 x i32> [[TMP1]], <4 x i32> [[TMP2]], <4 x i32> <i32 1, i32 4, i32 7, i32 2>
-; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <4 x i32> [[TMP1]], <4 x i32> [[TMP2]], <4 x i32> <i32 0, i32 5, i32 6, i32 3>
-; CHECK-NEXT:    [[TMP5:%.*]] = add <4 x i32> [[TMP4]], [[TMP3]]
-; CHECK-NEXT:    [[TMP6:%.*]] = lshr <4 x i32> [[TMP5]], <i32 15, i32 15, i32 15, i32 15>
-; CHECK-NEXT:    [[TMP7:%.*]] = and <4 x i32> [[TMP6]], <i32 65537, i32 65537, i32 65537, i32 65537>
-; CHECK-NEXT:    [[TMP8:%.*]] = mul nuw <4 x i32> [[TMP7]], <i32 65535, i32 65535, i32 65535, i32 65535>
-; CHECK-NEXT:    [[TMP9:%.*]] = add <4 x i32> [[TMP8]], [[TMP5]]
-; CHECK-NEXT:    [[TMP10:%.*]] = xor <4 x i32> [[TMP9]], [[TMP8]]
-; CHECK-NEXT:    [[TMP11:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP10]])
-; CHECK-NEXT:    ret i32 [[TMP11]]
+; CHECK-NEXT:    [[TMP4:%.*]] = sub <4 x i32> [[V0]], [[V1]]
+; CHECK-NEXT:    [[TMP5:%.*]] = add <4 x i32> [[V0]], [[V1]]
+; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <4 x i32> [[TMP4]], <4 x i32> [[TMP5]], <4 x i32> <i32 0, i32 5, i32 6, i32 3>
+; CHECK-NEXT:    [[TMP7:%.*]] = add <4 x i32> [[TMP6]], [[TMP3]]
+; CHECK-NEXT:    [[TMP8:%.*]] = lshr <4 x i32> [[TMP7]], <i32 15, i32 15, i32 15, i32 15>
+; CHECK-NEXT:    [[TMP9:%.*]] = and <4 x i32> [[TMP8]], <i32 65537, i32 65537, i32 65537, i32 65537>
+; CHECK-NEXT:    [[TMP10:%.*]] = mul nuw <4 x i32> [[TMP9]], <i32 65535, i32 65535, i32 65535, i32 65535>
+; CHECK-NEXT:    [[TMP11:%.*]] = add <4 x i32> [[TMP10]], [[TMP7]]
+; CHECK-NEXT:    [[TMP12:%.*]] = xor <4 x i32> [[TMP11]], [[TMP10]]
+; CHECK-NEXT:    [[TMP13:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP12]])
+; CHECK-NEXT:    ret i32 [[TMP13]]
 ;
   %v0.0 = extractelement <4 x i32> %v0, i32 0
   %v0.1 = extractelement <4 x i32> %v0, i32 1

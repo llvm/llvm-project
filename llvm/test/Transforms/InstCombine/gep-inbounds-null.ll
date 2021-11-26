@@ -179,7 +179,7 @@ entry:
 }
 
 
-;; Finally, some negative tests for sanity checking.
+;; Finally, some negative tests for basic correctness checking.
 
 define i1 @neq_noinbounds(i8* %base, i64 %idx) {
 ; CHECK-LABEL: @neq_noinbounds(

@@ -836,6 +836,15 @@ MachineInstrBuilder MLocTracker::emitLoc(Optional<LocIdx> MLoc,
       unsigned Base = Spill.SpillBase;
       MIB.addReg(Base);
       MIB.addImm(0);
+
+      // Being on the stack makes this location indirect; if it was _already_
+      // indirect though, we need to add extra indirection. See this test for
+      // a scenario where this happens:
+      //     llvm/test/DebugInfo/X86/spill-nontrivial-param.ll
+      if (Properties.Indirect) {
+        std::vector<uint64_t> Elts = {dwarf::DW_OP_deref};
+        Expr = DIExpression::append(Expr, Elts);
+      }
     } else {
       // This is a stack location with a weird subregister offset: emit an undef
       // DBG_VALUE instead.
@@ -2487,11 +2496,10 @@ void InstrRefBasedLDV::buildVLocValueMap(const DILocation *DILoc,
   // "blocks that are potentially in scope. See comment at start of vlocJoin.
   SmallPtrSet<const MachineBasicBlock *, 8> InScopeBlocks = BlocksToExplore;
 
-  // Old LiveDebugValues tracks variable locations that come out of blocks
-  // not in scope, where DBG_VALUEs occur. This is something we could
-  // legitimately ignore, but lets allow it for now.
-  if (EmulateOldLDV)
-    BlocksToExplore.insert(AssignBlocks.begin(), AssignBlocks.end());
+  // VarLoc LiveDebugValues tracks variable locations that are defined in
+  // blocks not in scope. This is something we could legitimately ignore, but
+  // lets allow it for now for the sake of coverage.
+  BlocksToExplore.insert(AssignBlocks.begin(), AssignBlocks.end());
 
   // We also need to propagate variable values through any artificial blocks
   // that immediately follow blocks in scope.

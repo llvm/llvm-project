@@ -6,7 +6,7 @@
 
 ; Test a cross-section of intrinsics for various cost-kinds.
 ; Other test files may check for accuracy of a particular intrinsic
-; across subtargets or types. This is just a sanity check using the
+; across subtargets or types. This is just a basic correctness check using the
 ; default x86 target and a legal scalar type (i32/float) and/or an
 ; illegal vector type (16 x i32/float).
 

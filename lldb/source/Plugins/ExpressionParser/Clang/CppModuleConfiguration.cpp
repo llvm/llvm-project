@@ -10,6 +10,7 @@
 
 #include "ClangHost.h"
 #include "lldb/Host/FileSystem.h"
+#include "llvm/ADT/Triple.h"
 
 using namespace lldb_private;
 
@@ -30,7 +31,35 @@ bool CppModuleConfiguration::SetOncePath::TrySet(llvm::StringRef path) {
   return false;
 }
 
-bool CppModuleConfiguration::analyzeFile(const FileSpec &f) {
+static llvm::SmallVector<std::string, 2>
+getTargetIncludePaths(const llvm::Triple &triple) {
+  llvm::SmallVector<std::string, 2> paths;
+  if (!triple.str().empty()) {
+    paths.push_back("/usr/include/" + triple.str());
+    if (!triple.getArchName().empty() ||
+        triple.getOSAndEnvironmentName().empty())
+      paths.push_back(("/usr/include/" + triple.getArchName() + "-" +
+                       triple.getOSAndEnvironmentName())
+                          .str());
+  }
+  return paths;
+}
+
+/// Returns the include path matching the given pattern for the given file
+/// path (or None if the path doesn't match the pattern).
+static llvm::Optional<llvm::StringRef>
+guessIncludePath(llvm::StringRef path_to_file, llvm::StringRef pattern) {
+  if (pattern.empty())
+    return llvm::NoneType();
+  size_t pos = path_to_file.find(pattern);
+  if (pos == llvm::StringRef::npos)
+    return llvm::NoneType();
+
+  return path_to_file.substr(0, pos + pattern.size());
+}
+
+bool CppModuleConfiguration::analyzeFile(const FileSpec &f,
+                                         const llvm::Triple &triple) {
   using namespace llvm::sys::path;
   // Convert to slashes to make following operations simpler.
   std::string dir_buffer = convert_to_slash(f.GetDirectory().GetStringRef());
@@ -43,15 +72,25 @@ bool CppModuleConfiguration::analyzeFile(const FileSpec &f) {
   // need to be specified in the header search.
   if (libcpp_regex.match(f.GetPath()) &&
       parent_path(posix_dir, Style::posix).endswith("c++")) {
-    return m_std_inc.TrySet(posix_dir);
+    if (!m_std_inc.TrySet(posix_dir))
+      return false;
+    if (triple.str().empty())
+      return true;
+
+    posix_dir.consume_back("c++/v1");
+    // Check if this is a target-specific libc++ include directory.
+    return m_std_target_inc.TrySet(
+        (posix_dir + triple.str() + "/c++/v1").str());
   }
 
-  // Check for /usr/include. On Linux this might be /usr/include/bits, so
-  // we should remove that '/bits' suffix to get the actual include directory.
-  if (posix_dir.endswith("/usr/include/bits"))
-    posix_dir.consume_back("/bits");
-  if (posix_dir.endswith("/usr/include"))
-    return m_c_inc.TrySet(posix_dir);
+  llvm::Optional<llvm::StringRef> inc_path;
+  // Target specific paths contains /usr/include, so we check them first
+  for (auto &path : getTargetIncludePaths(triple)) {
+    if ((inc_path = guessIncludePath(posix_dir, path)))
+      return m_c_target_inc.TrySet(*inc_path);
+  }
+  if ((inc_path = guessIncludePath(posix_dir, "/usr/include")))
+    return m_c_inc.TrySet(*inc_path);
 
   // File wasn't interesting, continue analyzing.
   return true;
@@ -92,11 +131,11 @@ bool CppModuleConfiguration::hasValidConfig() {
 }
 
 CppModuleConfiguration::CppModuleConfiguration(
-    const FileSpecList &support_files) {
+    const FileSpecList &support_files, const llvm::Triple &triple) {
   // Analyze all files we were given to build the configuration.
   bool error = !llvm::all_of(support_files,
                              std::bind(&CppModuleConfiguration::analyzeFile,
-                                       this, std::placeholders::_1));
+                                       this, std::placeholders::_1, triple));
   // If we have a valid configuration at this point, set the
   // include directories and module list that should be used.
   if (!error && hasValidConfig()) {
@@ -109,6 +148,10 @@ CppModuleConfiguration::CppModuleConfiguration(
     // This order matches the way Clang orders these directories.
     m_include_dirs = {m_std_inc.Get().str(), m_resource_inc,
                       m_c_inc.Get().str()};
+    if (m_c_target_inc.Valid())
+      m_include_dirs.push_back(m_c_target_inc.Get().str());
+    if (m_std_target_inc.Valid())
+      m_include_dirs.push_back(m_std_target_inc.Get().str());
     m_imported_modules = {"std"};
   }
 }

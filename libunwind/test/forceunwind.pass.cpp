@@ -9,9 +9,6 @@
 
 // REQUIRES: linux
 
-// TODO: Investigate these failures
-// XFAIL: asan, tsan, ubsan
-
 // Basic test for _Unwind_ForcedUnwind.
 // See libcxxabi/test/forced_unwind* tests too.
 
