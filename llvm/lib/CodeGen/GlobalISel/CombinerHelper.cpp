@@ -5147,6 +5147,56 @@ bool CombinerHelper::matchCombineFAddFpExtFMulToFMadOrFMAAggressive(
   return false;
 }
 
+bool CombinerHelper::matchCombineFSubFMulToFMadOrFMA(
+    MachineInstr &MI, std::function<void(MachineIRBuilder &)> &MatchInfo) {
+  assert(MI.getOpcode() == TargetOpcode::G_FSUB);
+
+  bool AllowFusionGlobally, HasFMAD, Aggressive;
+  if (!canCombineFMadOrFMA(MI, AllowFusionGlobally, HasFMAD, Aggressive))
+    return false;
+
+  MachineInstr *LHS = MRI.getVRegDef(MI.getOperand(1).getReg());
+  MachineInstr *RHS = MRI.getVRegDef(MI.getOperand(2).getReg());
+  LLT DstTy = MRI.getType(MI.getOperand(0).getReg());
+
+  // If we have two choices trying to fold (fadd (fmul u, v), (fmul x, y)),
+  // prefer to fold the multiply with fewer uses.
+  int FirstMulHasFewerUses = true;
+  if (isContractableFMul(*LHS, AllowFusionGlobally) &&
+      isContractableFMul(*RHS, AllowFusionGlobally) &&
+      hasMoreUses(*LHS, *RHS, MRI))
+    FirstMulHasFewerUses = false;
+
+  unsigned PreferredFusedOpcode =
+      HasFMAD ? TargetOpcode::G_FMAD : TargetOpcode::G_FMA;
+
+  // fold (fsub (fmul x, y), z) -> (fma x, y, -z)
+  if (FirstMulHasFewerUses &&
+      (isContractableFMul(*LHS, AllowFusionGlobally) &&
+       (Aggressive || MRI.hasOneNonDBGUse(LHS->getOperand(0).getReg())))) {
+    MatchInfo = [=, &MI](MachineIRBuilder &B) {
+      Register NegZ = B.buildFNeg(DstTy, RHS->getOperand(0).getReg()).getReg(0);
+      B.buildInstr(
+          PreferredFusedOpcode, {MI.getOperand(0).getReg()},
+          {LHS->getOperand(1).getReg(), LHS->getOperand(2).getReg(), NegZ});
+    };
+    return true;
+  }
+  // fold (fsub x, (fmul y, z)) -> (fma -y, z, x)
+  else if ((isContractableFMul(*RHS, AllowFusionGlobally) &&
+            (Aggressive || MRI.hasOneNonDBGUse(RHS->getOperand(0).getReg())))) {
+    MatchInfo = [=, &MI](MachineIRBuilder &B) {
+      Register NegY = B.buildFNeg(DstTy, RHS->getOperand(1).getReg()).getReg(0);
+      B.buildInstr(
+          PreferredFusedOpcode, {MI.getOperand(0).getReg()},
+          {NegY, RHS->getOperand(2).getReg(), LHS->getOperand(0).getReg()});
+    };
+    return true;
+  }
+
+  return false;
+}
+
 bool CombinerHelper::tryCombine(MachineInstr &MI) {
   if (tryCombineCopy(MI))
     return true;
