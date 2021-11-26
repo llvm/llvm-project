@@ -602,8 +602,7 @@ void HexagonGenInsert::buildOrderingMF(RegisterOrdering &RO) const {
       continue;
 
     for (const MachineInstr &MI : B) {
-      for (unsigned i = 0, n = MI.getNumOperands(); i < n; ++i) {
-        const MachineOperand &MO = MI.getOperand(i);
+      for (const MachineOperand &MO : MI.operands()) {
         if (MO.isReg() && MO.isDef()) {
           Register R = MO.getReg();
           assert(MO.getSubReg() == 0 && "Unexpected subregister in definition");
@@ -719,8 +718,7 @@ bool HexagonGenInsert::findNonSelfReference(unsigned VR) const {
 
 void HexagonGenInsert::getInstrDefs(const MachineInstr *MI,
       RegisterSet &Defs) const {
-  for (unsigned i = 0, n = MI->getNumOperands(); i < n; ++i) {
-    const MachineOperand &MO = MI->getOperand(i);
+  for (const MachineOperand &MO : MI->operands()) {
     if (!MO.isReg() || !MO.isDef())
       continue;
     Register R = MO.getReg();
@@ -732,8 +730,7 @@ void HexagonGenInsert::getInstrDefs(const MachineInstr *MI,
 
 void HexagonGenInsert::getInstrUses(const MachineInstr *MI,
       RegisterSet &Uses) const {
-  for (unsigned i = 0, n = MI->getNumOperands(); i < n; ++i) {
-    const MachineOperand &MO = MI->getOperand(i);
+  for (const MachineOperand &MO : MI->operands()) {
     if (!MO.isReg() || !MO.isUse())
       continue;
     Register R = MO.getReg();

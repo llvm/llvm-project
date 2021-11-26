@@ -310,8 +310,7 @@ ARMBaseInstrInfo::convertToThreeAddress(MachineInstr &MI, LiveVariables *LV,
 
   // Transfer LiveVariables states, kill / dead info.
   if (LV) {
-    for (unsigned i = 0, e = MI.getNumOperands(); i != e; ++i) {
-      MachineOperand &MO = MI.getOperand(i);
+    for (const MachineOperand &MO : MI.operands()) {
       if (MO.isReg() && Register::isVirtualRegister(MO.getReg())) {
         Register Reg = MO.getReg();
 
@@ -634,8 +633,7 @@ bool ARMBaseInstrInfo::ClobbersPredicate(MachineInstr &MI,
                                          std::vector<MachineOperand> &Pred,
                                          bool SkipDead) const {
   bool Found = false;
-  for (unsigned i = 0, e = MI.getNumOperands(); i != e; ++i) {
-    const MachineOperand &MO = MI.getOperand(i);
+  for (const MachineOperand &MO : MI.operands()) {
     bool ClobbersCPSR = MO.isRegMask() && MO.clobbersPhysReg(ARM::CPSR);
     bool IsCPSR = MO.isReg() && MO.isDef() && MO.getReg() == ARM::CPSR;
     if (ClobbersCPSR || IsCPSR) {
@@ -732,8 +730,7 @@ bool ARMBaseInstrInfo::isPredicable(const MachineInstr &MI) const {
 namespace llvm {
 
 template <> bool IsCPSRDead<MachineInstr>(const MachineInstr *MI) {
-  for (unsigned i = 0, e = MI->getNumOperands(); i != e; ++i) {
-    const MachineOperand &MO = MI->getOperand(i);
+  for (const MachineOperand &MO : MI->operands()) {
     if (!MO.isReg() || MO.isUndef() || MO.isUse())
       continue;
     if (MO.getReg() != ARM::CPSR)
@@ -2312,8 +2309,7 @@ ARMBaseInstrInfo::canFoldIntoMOVCC(Register Reg, const MachineRegisterInfo &MRI,
     return nullptr;
   // Check if MI has any non-dead defs or physreg uses. This also detects
   // predicated instructions which will be reading CPSR.
-  for (unsigned i = 1, e = MI->getNumOperands(); i != e; ++i) {
-    const MachineOperand &MO = MI->getOperand(i);
+  for (const MachineOperand &MO : llvm::drop_begin(MI->operands(), 1)) {
     // Reject frame index operands, PEI can't handle the predicated pseudos.
     if (MO.isFI() || MO.isCPI() || MO.isJTI())
       return nullptr;
@@ -4857,11 +4853,10 @@ bool ARMBaseInstrInfo::verifyInstruction(const MachineInstr &MI,
   if (MI.getOpcode() == ARM::tPUSH ||
       MI.getOpcode() == ARM::tPOP ||
       MI.getOpcode() == ARM::tPOP_RET) {
-    for (int i = 2, e = MI.getNumOperands(); i < e; ++i) {
-      if (MI.getOperand(i).isImplicit() ||
-          !MI.getOperand(i).isReg())
+    for (const MachineOperand &MO : llvm::drop_begin(MI.operands(), 2)) {
+      if (MO.isImplicit() || !MO.isReg())
         continue;
-      Register Reg = MI.getOperand(i).getReg();
+      Register Reg = MO.getReg();
       if (Reg < ARM::R0 || Reg > ARM::R7) {
         if (!(MI.getOpcode() == ARM::tPUSH && Reg == ARM::LR) &&
             !(MI.getOpcode() == ARM::tPOP_RET && Reg == ARM::PC)) {

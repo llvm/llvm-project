@@ -125,9 +125,8 @@ void ARMExpandPseudo::TransferImpOps(MachineInstr &OldMI,
                                      MachineInstrBuilder &UseMI,
                                      MachineInstrBuilder &DefMI) {
   const MCInstrDesc &Desc = OldMI.getDesc();
-  for (unsigned i = Desc.getNumOperands(), e = OldMI.getNumOperands();
-       i != e; ++i) {
-    const MachineOperand &MO = OldMI.getOperand(i);
+  for (const MachineOperand &MO :
+       llvm::drop_begin(OldMI.operands(), Desc.getNumOperands())) {
     assert(MO.isReg() && MO.getReg());
     if (MO.isUse())
       UseMI.add(MO);
@@ -2252,8 +2251,8 @@ bool ARMExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
               .add(predOps(ARMCC::AL))
               .addReg(JumpReg, RegState::Kill);
 
-      for (int I = 1, E = MI.getNumOperands(); I != E; ++I)
-        NewCall->addOperand(MI.getOperand(I));
+      for (const MachineOperand &MO : llvm::drop_begin(MI.operands()))
+        NewCall->addOperand(MO);
       if (MI.isCandidateForCallSiteEntry())
         MI.getMF()->moveCallSiteInfo(&MI, NewCall.getInstr());
 
@@ -3065,7 +3064,8 @@ bool ARMExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
         MIB = BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(ARM::BL));
       }
       MIB.cloneMemRefs(MI);
-      for (unsigned i = 1; i < MI.getNumOperands(); ++i) MIB.add(MI.getOperand(i));
+      for (const MachineOperand &MO : llvm::drop_begin(MI.operands()))
+        MIB.add(MO);
       MI.eraseFromParent();
       return true;
     }
@@ -3080,8 +3080,8 @@ bool ARMExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
                       Opcode == ARM::LOADDUAL ? RegState::Define : 0)
               .addReg(TRI->getSubReg(PairReg, ARM::gsub_1),
                       Opcode == ARM::LOADDUAL ? RegState::Define : 0);
-      for (unsigned i = 1; i < MI.getNumOperands(); i++)
-        MIB.add(MI.getOperand(i));
+      for (const MachineOperand &MO : llvm::drop_begin(MI.operands()))
+        MIB.add(MO);
       MIB.add(predOps(ARMCC::AL));
       MIB.cloneMemRefs(MI);
       MI.eraseFromParent();

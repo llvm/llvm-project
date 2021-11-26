@@ -11771,8 +11771,8 @@ ARMTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     case ARM::STRH_preidx: NewOpc = ARM::STRH_PRE; break;
     }
     MachineInstrBuilder MIB = BuildMI(*BB, MI, dl, TII->get(NewOpc));
-    for (unsigned i = 0; i < MI.getNumOperands(); ++i)
-      MIB.add(MI.getOperand(i));
+    for (const MachineOperand &MO : MI.operands())
+      MIB.add(MO);
     MI.eraseFromParent();
     return BB;
   }

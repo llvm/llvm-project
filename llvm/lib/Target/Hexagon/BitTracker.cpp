@@ -850,8 +850,7 @@ void BT::visitNonBranch(const MachineInstr &MI) {
   bool Eval = ME.evaluate(MI, Map, ResMap);
 
   if (Trace && Eval) {
-    for (unsigned i = 0, n = MI.getNumOperands(); i < n; ++i) {
-      const MachineOperand &MO = MI.getOperand(i);
+    for (const MachineOperand &MO : MI.operands()) {
       if (!MO.isReg() || !MO.isUse())
         continue;
       RegisterRef RU(MO);
