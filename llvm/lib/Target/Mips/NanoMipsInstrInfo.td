@@ -473,7 +473,6 @@ class CBranchNM<string opstr, DAGOperand opnd, PatFrag cond_op,
   let isBranch = 1;
   let isTerminator = 1;
   let hasDelaySlot = 0;
-  let Defs = [AT_NM];
   bit isCTI = 1;
 }
 
@@ -487,7 +486,6 @@ class CBranchImmNM<string opstr, DAGOperand opnd, PatFrag cond_op,
   let isBranch = 1;
   let isTerminator = 1;
   let hasDelaySlot = 0;
-  let Defs = [AT_NM];
   bit isCTI = 1;
 }
 
@@ -499,7 +497,6 @@ class CBranchZeroNM<string opstr, DAGOperand opnd, PatFrag cond_op,
              [(brcond (i32 (cond_op RO:$rs, 0)), bb:$offset)]> {
   let isBranch = 1;
   let isTerminator = 1;
-  let Defs = [AT_NM];
   bit isCTI = 1;
 }
 
@@ -513,7 +510,6 @@ class CBranchBitNM<string opstr, DAGOperand opnd, PatFrag cond_op,
   let isBranch = 1;
   let isTerminator = 1;
   let hasDelaySlot = 0;
-  let Defs = [AT_NM];
   bit isCTI = 1;
 }
 
