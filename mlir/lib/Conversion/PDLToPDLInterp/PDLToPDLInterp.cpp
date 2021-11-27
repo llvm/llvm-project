@@ -208,8 +208,9 @@ Block *PatternLowering::generateMatcher(MatcherNode &node, Region &region) {
 
   // Dispatch to the correct method based on derived node type.
   TypeSwitch<MatcherNode *>(&node)
-      .Case<BoolNode, SwitchNode>(
-          [&](auto *derivedNode) { generate(derivedNode, currentBlock, val); })
+      .Case<BoolNode, SwitchNode>([&](auto *derivedNode) {
+        this->generate(derivedNode, currentBlock, val);
+      })
       .Case([&](SuccessNode *successNode) {
         generate(successNode, currentBlock);
       });
