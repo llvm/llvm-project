@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/string/stpncpy.h"
-#include "src/string/bzero.h"
+#include "src/string/memory_utils/memset_implementations.h"
 
 #include "src/__support/common.h"
 
@@ -22,7 +22,7 @@ LLVM_LIBC_FUNCTION(char *, stpncpy,
     dest[i] = src[i];
   // When n>strlen(src), n-strlen(src) \0 are appended.
   if (n > i)
-    __llvm_libc::bzero(dest + i, n - i);
+    inline_memset(dest + i, 0, n - i);
   return dest + i;
 }
 

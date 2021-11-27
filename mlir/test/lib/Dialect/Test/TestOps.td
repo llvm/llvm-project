@@ -1001,6 +1001,13 @@ def TestIdempotentTraitOp
   let results = (outs I32);
 }
 
+def TestIdempotentTraitBinaryOp
+    : TEST_Op<"op_idempotent_trait_binary",
+              [SameOperandsAndResultType, NoSideEffect, Idempotent]> {
+  let arguments = (ins I32:$op1, I32:$op2);
+  let results = (outs I32);
+}
+
 def TestInvolutionTraitNoOperationFolderOp
  : TEST_Op<"op_involution_trait_no_operation_fold",
            [SameOperandsAndResultType, NoSideEffect, Involution]> {

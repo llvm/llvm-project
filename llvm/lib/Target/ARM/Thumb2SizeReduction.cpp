@@ -502,8 +502,8 @@ Thumb2SizeReduce::ReduceLoadStore(MachineBasicBlock &MBB, MachineInstr *MI,
     // For the non-writeback version (this one), the base register must be
     // one of the registers being loaded.
     bool isOK = false;
-    for (unsigned i = 3; i < MI->getNumOperands(); ++i) {
-      if (MI->getOperand(i).getReg() == BaseReg) {
+    for (const MachineOperand &MO : llvm::drop_begin(MI->operands(), 3)) {
+      if (MO.getReg() == BaseReg) {
         isOK = true;
         break;
       }
@@ -527,8 +527,8 @@ Thumb2SizeReduce::ReduceLoadStore(MachineBasicBlock &MBB, MachineInstr *MI,
     // numbered register (i.e. it's in operand 4 onwards) then with writeback
     // the stored value is unknown, so we can't convert to tSTMIA_UPD.
     Register BaseReg = MI->getOperand(0).getReg();
-    for (unsigned i = 4; i < MI->getNumOperands(); ++i)
-      if (MI->getOperand(i).getReg() == BaseReg)
+    for (const MachineOperand &MO : llvm::drop_begin(MI->operands(), 4))
+      if (MO.getReg() == BaseReg)
         return false;
 
     break;
@@ -611,8 +611,8 @@ Thumb2SizeReduce::ReduceLoadStore(MachineBasicBlock &MBB, MachineInstr *MI,
   }
 
   // Transfer the rest of operands.
-  for (unsigned e = MI->getNumOperands(); OpNum != e; ++OpNum)
-    MIB.add(MI->getOperand(OpNum));
+  for (const MachineOperand &MO : llvm::drop_begin(MI->operands(), OpNum))
+    MIB.add(MO);
 
   // Transfer memoperands.
   MIB.setMemRefs(MI->memoperands());
