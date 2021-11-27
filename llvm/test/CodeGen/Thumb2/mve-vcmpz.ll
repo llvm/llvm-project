@@ -364,13 +364,9 @@ define arm_aapcs_vfpcc <2 x i64> @vcmp_eqz_v2i64(<2 x i64> %src, <2 x i64> %a, <
 ; CHECK-NEXT:    vmov r0, r1, d1
 ; CHECK-NEXT:    orrs r0, r1
 ; CHECK-NEXT:    vmov r1, r2, d0
-; CHECK-NEXT:    cset r0, eq
-; CHECK-NEXT:    cmp r0, #0
-; CHECK-NEXT:    csetm r0, ne
+; CHECK-NEXT:    csetm r0, eq
 ; CHECK-NEXT:    orrs r1, r2
-; CHECK-NEXT:    cset r1, eq
-; CHECK-NEXT:    cmp r1, #0
-; CHECK-NEXT:    csetm r1, ne
+; CHECK-NEXT:    csetm r1, eq
 ; CHECK-NEXT:    vmov q0[2], q0[0], r1, r0
 ; CHECK-NEXT:    vmov q0[3], q0[1], r1, r0
 ; CHECK-NEXT:    vbic q2, q2, q0
@@ -389,13 +385,9 @@ define arm_aapcs_vfpcc <2 x i32> @vcmp_eqz_v2i32(<2 x i64> %src, <2 x i32> %a, <
 ; CHECK-NEXT:    vmov r0, r1, d1
 ; CHECK-NEXT:    orrs r0, r1
 ; CHECK-NEXT:    vmov r1, r2, d0
-; CHECK-NEXT:    cset r0, eq
-; CHECK-NEXT:    cmp r0, #0
-; CHECK-NEXT:    csetm r0, ne
+; CHECK-NEXT:    csetm r0, eq
 ; CHECK-NEXT:    orrs r1, r2
-; CHECK-NEXT:    cset r1, eq
-; CHECK-NEXT:    cmp r1, #0
-; CHECK-NEXT:    csetm r1, ne
+; CHECK-NEXT:    csetm r1, eq
 ; CHECK-NEXT:    vmov q0[2], q0[0], r1, r0
 ; CHECK-NEXT:    vmov q0[3], q0[1], r1, r0
 ; CHECK-NEXT:    vbic q2, q2, q0
@@ -774,13 +766,9 @@ define arm_aapcs_vfpcc <2 x i64> @vcmp_r_eqz_v2i64(<2 x i64> %src, <2 x i64> %a,
 ; CHECK-NEXT:    vmov r0, r1, d1
 ; CHECK-NEXT:    orrs r0, r1
 ; CHECK-NEXT:    vmov r1, r2, d0
-; CHECK-NEXT:    cset r0, eq
-; CHECK-NEXT:    cmp r0, #0
-; CHECK-NEXT:    csetm r0, ne
+; CHECK-NEXT:    csetm r0, eq
 ; CHECK-NEXT:    orrs r1, r2
-; CHECK-NEXT:    cset r1, eq
-; CHECK-NEXT:    cmp r1, #0
-; CHECK-NEXT:    csetm r1, ne
+; CHECK-NEXT:    csetm r1, eq
 ; CHECK-NEXT:    vmov q0[2], q0[0], r1, r0
 ; CHECK-NEXT:    vmov q0[3], q0[1], r1, r0
 ; CHECK-NEXT:    vbic q2, q2, q0
@@ -799,13 +787,9 @@ define arm_aapcs_vfpcc <2 x i32> @vcmp_r_eqz_v2i32(<2 x i64> %src, <2 x i32> %a,
 ; CHECK-NEXT:    vmov r0, r1, d1
 ; CHECK-NEXT:    orrs r0, r1
 ; CHECK-NEXT:    vmov r1, r2, d0
-; CHECK-NEXT:    cset r0, eq
-; CHECK-NEXT:    cmp r0, #0
-; CHECK-NEXT:    csetm r0, ne
+; CHECK-NEXT:    csetm r0, eq
 ; CHECK-NEXT:    orrs r1, r2
-; CHECK-NEXT:    cset r1, eq
-; CHECK-NEXT:    cmp r1, #0
-; CHECK-NEXT:    csetm r1, ne
+; CHECK-NEXT:    csetm r1, eq
 ; CHECK-NEXT:    vmov q0[2], q0[0], r1, r0
 ; CHECK-NEXT:    vmov q0[3], q0[1], r1, r0
 ; CHECK-NEXT:    vbic q2, q2, q0

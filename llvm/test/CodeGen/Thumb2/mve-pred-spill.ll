@@ -17,13 +17,9 @@ define arm_aapcs_vfpcc <2 x i64> @shuffle1_v2i64(<2 x i64> %src, <2 x i64> %a) {
 ; CHECK-LE-NEXT:    vmov r0, r1, d1
 ; CHECK-LE-NEXT:    orrs r0, r1
 ; CHECK-LE-NEXT:    vmov r1, r2, d0
-; CHECK-LE-NEXT:    cset r0, eq
-; CHECK-LE-NEXT:    cmp r0, #0
-; CHECK-LE-NEXT:    csetm r0, ne
+; CHECK-LE-NEXT:    csetm r0, eq
 ; CHECK-LE-NEXT:    orrs r1, r2
-; CHECK-LE-NEXT:    cset r1, eq
-; CHECK-LE-NEXT:    cmp r1, #0
-; CHECK-LE-NEXT:    csetm r1, ne
+; CHECK-LE-NEXT:    csetm r1, eq
 ; CHECK-LE-NEXT:    vmov q5[2], q5[0], r1, r0
 ; CHECK-LE-NEXT:    vmov q5[3], q5[1], r1, r0
 ; CHECK-LE-NEXT:    vand q4, q1, q5
@@ -44,13 +40,9 @@ define arm_aapcs_vfpcc <2 x i64> @shuffle1_v2i64(<2 x i64> %src, <2 x i64> %a) {
 ; CHECK-BE-NEXT:    vmov r0, r1, d5
 ; CHECK-BE-NEXT:    orrs r0, r1
 ; CHECK-BE-NEXT:    vmov r1, r2, d4
-; CHECK-BE-NEXT:    cset r0, eq
-; CHECK-BE-NEXT:    cmp r0, #0
-; CHECK-BE-NEXT:    csetm r0, ne
+; CHECK-BE-NEXT:    csetm r0, eq
 ; CHECK-BE-NEXT:    orrs r1, r2
-; CHECK-BE-NEXT:    cset r1, eq
-; CHECK-BE-NEXT:    cmp r1, #0
-; CHECK-BE-NEXT:    csetm r1, ne
+; CHECK-BE-NEXT:    csetm r1, eq
 ; CHECK-BE-NEXT:    vmov q0[2], q0[0], r1, r0
 ; CHECK-BE-NEXT:    vmov q0[3], q0[1], r1, r0
 ; CHECK-BE-NEXT:    vrev64.32 q2, q0

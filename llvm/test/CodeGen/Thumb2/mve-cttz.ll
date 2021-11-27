@@ -6,27 +6,23 @@ define arm_aapcs_vfpcc <2 x i64> @cttz_2i64_0_t(<2 x i64> %src){
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vmov r0, r1, d1
 ; CHECK-NEXT:    rbit r1, r1
-; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    rbit r2, r0
 ; CHECK-NEXT:    clz r1, r1
-; CHECK-NEXT:    cset r2, ne
-; CHECK-NEXT:    adds r1, #32
-; CHECK-NEXT:    rbit r0, r0
-; CHECK-NEXT:    cmp r2, #0
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    add.w r1, r1, #32
 ; CHECK-NEXT:    it ne
-; CHECK-NEXT:    clzne r1, r0
+; CHECK-NEXT:    clzne r1, r2
 ; CHECK-NEXT:    vmov s2, r1
 ; CHECK-NEXT:    vmov r0, r1, d0
 ; CHECK-NEXT:    vldr s1, .LCPI0_0
 ; CHECK-NEXT:    vmov.f32 s3, s1
 ; CHECK-NEXT:    rbit r1, r1
-; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    rbit r2, r0
 ; CHECK-NEXT:    clz r1, r1
-; CHECK-NEXT:    cset r2, ne
-; CHECK-NEXT:    adds r1, #32
-; CHECK-NEXT:    rbit r0, r0
-; CHECK-NEXT:    cmp r2, #0
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    add.w r1, r1, #32
 ; CHECK-NEXT:    it ne
-; CHECK-NEXT:    clzne r1, r0
+; CHECK-NEXT:    clzne r1, r2
 ; CHECK-NEXT:    vmov s0, r1
 ; CHECK-NEXT:    bx lr
 ; CHECK-NEXT:    .p2align 2
@@ -79,27 +75,23 @@ define arm_aapcs_vfpcc <2 x i64> @cttz_2i64_1_t(<2 x i64> %src){
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vmov r0, r1, d1
 ; CHECK-NEXT:    rbit r1, r1
-; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    rbit r2, r0
 ; CHECK-NEXT:    clz r1, r1
-; CHECK-NEXT:    cset r2, ne
-; CHECK-NEXT:    adds r1, #32
-; CHECK-NEXT:    rbit r0, r0
-; CHECK-NEXT:    cmp r2, #0
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    add.w r1, r1, #32
 ; CHECK-NEXT:    it ne
-; CHECK-NEXT:    clzne r1, r0
+; CHECK-NEXT:    clzne r1, r2
 ; CHECK-NEXT:    vmov s2, r1
 ; CHECK-NEXT:    vmov r0, r1, d0
 ; CHECK-NEXT:    vldr s1, .LCPI4_0
 ; CHECK-NEXT:    vmov.f32 s3, s1
 ; CHECK-NEXT:    rbit r1, r1
-; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    rbit r2, r0
 ; CHECK-NEXT:    clz r1, r1
-; CHECK-NEXT:    cset r2, ne
-; CHECK-NEXT:    adds r1, #32
-; CHECK-NEXT:    rbit r0, r0
-; CHECK-NEXT:    cmp r2, #0
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    add.w r1, r1, #32
 ; CHECK-NEXT:    it ne
-; CHECK-NEXT:    clzne r1, r0
+; CHECK-NEXT:    clzne r1, r2
 ; CHECK-NEXT:    vmov s0, r1
 ; CHECK-NEXT:    bx lr
 ; CHECK-NEXT:    .p2align 2
