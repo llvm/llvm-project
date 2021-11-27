@@ -159,8 +159,7 @@ void StackSlotColoring::ScanForSpillSlotRefs(MachineFunction &MF) {
   // FIXME: Need the equivalent of MachineRegisterInfo for frameindex operands.
   for (MachineBasicBlock &MBB : MF) {
     for (MachineInstr &MI : MBB) {
-      for (unsigned i = 0, e = MI.getNumOperands(); i != e; ++i) {
-        MachineOperand &MO = MI.getOperand(i);
+      for (const MachineOperand &MO : MI.operands()) {
         if (!MO.isFI())
           continue;
         int FI = MO.getIndex();

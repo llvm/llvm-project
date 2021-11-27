@@ -193,9 +193,7 @@ static inline void parseOperands(const MachineInstr &MI,
   Defs.clear();
   Uses.clear();
 
-  for (unsigned i = 0, e = MI.getNumOperands(); i != e; ++i) {
-    const MachineOperand &MO = MI.getOperand(i);
-
+  for (const MachineOperand &MO : MI.operands()) {
     if (!MO.isReg())
       continue;
 
@@ -1644,8 +1642,7 @@ bool HexagonInstrInfo::ClobbersPredicate(MachineInstr &MI,
                                          bool SkipDead) const {
   const HexagonRegisterInfo &HRI = *Subtarget.getRegisterInfo();
 
-  for (unsigned oper = 0; oper < MI.getNumOperands(); ++oper) {
-    MachineOperand MO = MI.getOperand(oper);
+  for (const MachineOperand &MO : MI.operands()) {
     if (MO.isReg()) {
       if (!MO.isDef())
         continue;

@@ -1326,8 +1326,8 @@ bool ARMLoadStoreOpt::MergeBaseUpdateLSMultiple(MachineInstr *MI) {
         return false;
 
       bool HighRegsUsed = false;
-      for (unsigned i = 2, e = MI->getNumOperands(); i != e; ++i)
-        if (MI->getOperand(i).getReg() >= ARM::R8) {
+      for (const MachineOperand &MO : llvm::drop_begin(MI->operands(), 2))
+        if (MO.getReg() >= ARM::R8) {
           HighRegsUsed = true;
           break;
         }

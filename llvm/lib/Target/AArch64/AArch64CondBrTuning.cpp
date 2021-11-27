@@ -104,8 +104,8 @@ MachineInstr *AArch64CondBrTuning::convertToFlagSetting(MachineInstr &MI,
 
   MachineInstrBuilder MIB = BuildMI(*MI.getParent(), MI, MI.getDebugLoc(),
                                     TII->get(NewOpc), NewDestReg);
-  for (unsigned I = 1, E = MI.getNumOperands(); I != E; ++I)
-    MIB.add(MI.getOperand(I));
+  for (const MachineOperand &MO : llvm::drop_begin(MI.operands()))
+    MIB.add(MO);
 
   return MIB;
 }

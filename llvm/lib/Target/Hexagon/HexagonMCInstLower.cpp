@@ -109,8 +109,7 @@ void llvm::HexagonLowerToMC(const MCInstrInfo &MCII, const MachineInstr *MI,
   assert(MCI->getOpcode() == static_cast<unsigned>(MI->getOpcode()) &&
          "MCI opcode should have been set on construction");
 
-  for (unsigned i = 0, e = MI->getNumOperands(); i < e; i++) {
-    const MachineOperand &MO = MI->getOperand(i);
+  for (const MachineOperand &MO : MI->operands()) {
     MCOperand MCO;
     bool MustExtend = MO.getTargetFlags() & HexagonII::HMOTF_ConstExtended;
 

@@ -73,8 +73,7 @@ void ModuloScheduleExpander::expand() {
   // stage difference for each use.  Keep the maximum value.
   for (MachineInstr *MI : Schedule.getInstructions()) {
     int DefStage = Schedule.getStage(MI);
-    for (unsigned i = 0, e = MI->getNumOperands(); i < e; ++i) {
-      MachineOperand &Op = MI->getOperand(i);
+    for (const MachineOperand &Op : MI->operands()) {
       if (!Op.isReg() || !Op.isDef())
         continue;
 
