@@ -23,6 +23,12 @@ _start:
  .inst 0xe24f1008
  .reloc 4, R_ARM_ALU_PC_G0, unaligned
 
+ .balign 512
+/// ldrd r0, r1, _start
+// CHECK: {{.*}}.s.tmp.o:(.os1+0x200): relocation R_ARM_LDRS_PC_G0 out of range: 512 is not in [0, 255]; references _start
+ .reloc ., R_ARM_LDRS_PC_G0, _start
+ .inst 0xe14f00d0
+
  .section .os2, "ax", %progbits
  .balign 1024
  .thumb_func
