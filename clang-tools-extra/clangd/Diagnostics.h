@@ -144,6 +144,8 @@ public:
   void HandleDiagnostic(DiagnosticsEngine::Level DiagLevel,
                         const clang::Diagnostic &Info) override;
 
+  /// When passed a main diagnostic, returns fixes to add to it.
+  /// When passed a note diagnostic, returns fixes to replace it with.
   using DiagFixer = std::function<std::vector<Fix>(DiagnosticsEngine::Level,
                                                    const clang::Diagnostic &)>;
   using LevelAdjuster = std::function<DiagnosticsEngine::Level(

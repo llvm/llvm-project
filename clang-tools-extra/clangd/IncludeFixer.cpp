@@ -31,7 +31,6 @@
 #include "clang/Sema/Scope.h"
 #include "clang/Sema/Sema.h"
 #include "clang/Sema/TypoCorrection.h"
-#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/None.h"
 #include "llvm/ADT/Optional.h"
@@ -47,6 +46,27 @@
 
 namespace clang {
 namespace clangd {
+namespace {
+
+llvm::Optional<llvm::StringRef> getArgStr(const clang::Diagnostic &Info,
+                                          unsigned Index) {
+  switch (Info.getArgKind(Index)) {
+  case DiagnosticsEngine::ak_c_string:
+    return llvm::StringRef(Info.getArgCStr(Index));
+  case DiagnosticsEngine::ak_std_string:
+    return llvm::StringRef(Info.getArgStdStr(Index));
+  default:
+    return llvm::None;
+  }
+}
+
+std::vector<Fix> only(llvm::Optional<Fix> F) {
+  if (F)
+    return {std::move(*F)};
+  return {};
+}
+
+} // namespace
 
 std::vector<Fix> IncludeFixer::fix(DiagnosticsEngine::Level DiagLevel,
                                    const clang::Diagnostic &Info) const {
@@ -102,8 +122,51 @@ std::vector<Fix> IncludeFixer::fix(DiagnosticsEngine::Level DiagLevel,
           LastUnresolvedName->Loc == Info.getLocation())
         return fixUnresolvedName();
     }
+    break;
+  // Cases where clang explicitly knows which header to include.
+  // (There's no fix provided for boring formatting reasons).
+  case diag::err_implied_std_initializer_list_not_found:
+    return only(insertHeader("<initializer_list>"));
+  case diag::err_need_header_before_typeid:
+    return only(insertHeader("<typeid>"));
+  case diag::err_need_header_before_ms_uuidof:
+    return only(insertHeader("<guiddef.h>"));
+  case diag::err_need_header_before_placement_new:
+  case diag::err_implicit_coroutine_std_nothrow_type_not_found:
+    return only(insertHeader("<new>"));
+  case diag::err_omp_implied_type_not_found:
+  case diag::err_omp_interop_type_not_found:
+    return only(insertHeader("<omp.h>"));
+  case diag::err_implied_coroutine_type_not_found:
+    return only(insertHeader("<coroutine>"));
+  case diag::err_implied_comparison_category_type_not_found:
+    return only(insertHeader("<compare>"));
+  case diag::note_include_header_or_declare:
+    if (Info.getNumArgs() > 0)
+      if (auto Header = getArgStr(Info, 0))
+        return only(insertHeader(("<" + *Header + ">").str(),
+                                 getArgStr(Info, 1).getValueOr("")));
+    break;
   }
+
   return {};
+}
+
+llvm::Optional<Fix> IncludeFixer::insertHeader(llvm::StringRef Spelled,
+                                               llvm::StringRef Symbol) const {
+  Fix F;
+
+  if (auto Edit = Inserter->insert(Spelled))
+    F.Edits.push_back(std::move(*Edit));
+  else
+    return llvm::None;
+
+  if (Symbol.empty())
+    F.Message = llvm::formatv("Include {0}", Spelled);
+  else
+    F.Message = llvm::formatv("Include {0} for symbol {1}", Spelled, Symbol);
+
+  return F;
 }
 
 std::vector<Fix> IncludeFixer::fixIncompleteType(const Type &T) const {
@@ -160,14 +223,11 @@ std::vector<Fix> IncludeFixer::fixesForSymbols(const SymbolSlab &Syms) const {
     for (const auto &Inc : getRankedIncludes(Sym)) {
       if (auto ToInclude = Inserted(Sym, Inc)) {
         if (ToInclude->second) {
-          auto I = InsertedHeaders.try_emplace(ToInclude->first);
-          if (!I.second)
+          if (!InsertedHeaders.try_emplace(ToInclude->first).second)
             continue;
-          if (auto Edit = Inserter->insert(ToInclude->first))
-            Fixes.push_back(Fix{std::string(llvm::formatv(
-                                    "Add include {0} for symbol {1}{2}",
-                                    ToInclude->first, Sym.Scope, Sym.Name)),
-                                {std::move(*Edit)}});
+          if (auto Fix =
+                  insertHeader(ToInclude->first, (Sym.Scope + Sym.Name).str()))
+            Fixes.push_back(std::move(*Fix));
         }
       } else {
         vlog("Failed to calculate include insertion for {0} into {1}: {2}", Inc,
