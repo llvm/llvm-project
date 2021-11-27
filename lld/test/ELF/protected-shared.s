@@ -1,52 +1,26 @@
-// REQUIRES: x86
-// RUN: llvm-mc -filetype=obj -triple=x86_64-pc-linux %s -o %t.o
-// RUN: llvm-mc -filetype=obj -triple=x86_64-pc-linux %p/Inputs/protected-shared.s -o %t2.o
-// RUN: ld.lld -shared %t2.o -o %t2.so
-// RUN: ld.lld %t.o %t2.so -o %t
-// RUN: llvm-readobj --symbols --dyn-symbols %t | FileCheck %s
+# REQUIRES: x86
+# RUN: llvm-mc -filetype=obj -triple=x86_64 %s -o %t.o
+# RUN: llvm-mc -filetype=obj -triple=x86_64 %p/Inputs/protected-shared.s -o %t2.o
+# RUN: ld.lld -shared --soname=t2 %t2.o -o %t2.so
+# RUN: ld.lld %t.o %t2.so -o %t
+# RUN: llvm-readelf -s %t | FileCheck %s
+# RUN: ld.lld %t2.so %t.o -o %t1
+# RUN: llvm-readelf -s %t1 | FileCheck %s
+
+# CHECK: Symbol table '.dynsym'
+# CHECK:    Num:    Value          Size Type    Bind   Vis      Ndx Name
+# CHECK:      1: 0000000000000000     0 NOTYPE  GLOBAL DEFAULT  UND foo
+
+# CHECK: Symbol table '.symtab'
+# CHECK:    Num:    Value          Size Type    Bind   Vis      Ndx Name
+# CHECK:         0000000000000000     0 NOTYPE  GLOBAL DEFAULT  UND foo
+# CHECK:         {{.*}}               0 NOTYPE  GLOBAL DEFAULT [[#]] bar
 
         .global  _start
 _start:
 
-        .global bar
-bar:
-
         .data
         .quad foo
 
-// CHECK:      Name: bar
-// CHECK-NEXT: Value:
-// CHECK-NEXT: Size: 0
-// CHECK-NEXT: Binding: Global
-// CHECK-NEXT: Type: None
-// CHECK-NEXT: Other: 0
-// CHECK-NEXT: Section: .text
-
-// CHECK:      Name: foo
-// CHECK-NEXT: Value: 0x0
-// CHECK-NEXT: Size: 0
-// CHECK-NEXT: Binding: Global
-// CHECK-NEXT: Type: None
-// CHECK-NEXT: Other: 0
-// CHECK-NEXT: Section: Undefined
-
-// CHECK:      DynamicSymbols [
-// CHECK-NEXT:   Symbol {
-// CHECK-NEXT:     Name:
-// CHECK-NEXT:     Value: 0x0
-// CHECK-NEXT:     Size: 0
-// CHECK-NEXT:     Binding: Local (0x0)
-// CHECK-NEXT:     Type: None (0x0)
-// CHECK-NEXT:     Other: 0
-// CHECK-NEXT:     Section: Undefined (0x0)
-// CHECK-NEXT:   }
-// CHECK-NEXT:   Symbol {
-// CHECK-NEXT:     Name: foo
-// CHECK-NEXT:     Value: 0x0
-// CHECK-NEXT:     Size: 0
-// CHECK-NEXT:     Binding: Global
-// CHECK-NEXT:     Type: None
-// CHECK-NEXT:     Other: 0
-// CHECK-NEXT:     Section: Undefined
-// CHECK-NEXT:   }
-// CHECK-NEXT: ]
+        .global bar
+bar:
