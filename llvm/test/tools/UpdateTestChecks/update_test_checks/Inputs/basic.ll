@@ -1,5 +1,5 @@
 ; Example input for update_test_checks (taken from test/Transforms/InstSimplify/add.ll)
-; RUN: opt < %s -instsimplify -S | FileCheck %s
+; RUN: opt < %s -passes=instsimplify -S | FileCheck %s
 
 define i32 @common_sub_operand(i32 %X, i32 %Y) {
 ; CHECK-LABEL: @common_sub_operand(
