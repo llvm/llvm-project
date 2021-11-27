@@ -730,8 +730,8 @@ initializeFunctionInfo(const std::vector<MachineInstr*> &CPEMIs) {
         continue;
 
       // Scan the instructions for constant pool operands.
-      for (unsigned op = 0, e = MI.getNumOperands(); op != e; ++op)
-        if (MI.getOperand(op).isCPI()) {
+      for (const MachineOperand &MO : MI.operands())
+        if (MO.isCPI()) {
           // We found one.  The addressing mode tells us the max displacement
           // from the PC that this instruction permits.
 
@@ -759,7 +759,7 @@ initializeFunctionInfo(const std::vector<MachineInstr*> &CPEMIs) {
             break;
           }
           // Remember that this is a user of a CP entry.
-          unsigned CPI = MI.getOperand(op).getIndex();
+          unsigned CPI = MO.getIndex();
           MachineInstr *CPEMI = CPEMIs[CPI];
           unsigned MaxOffs = ((1 << Bits)-1) * Scale;
           unsigned LongFormMaxOffs = ((1 << LongFormBits)-1) * LongFormScale;

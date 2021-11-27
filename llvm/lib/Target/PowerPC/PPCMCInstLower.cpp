@@ -152,9 +152,9 @@ void llvm::LowerPPCMachineInstrToMCInst(const MachineInstr *MI, MCInst &OutMI,
                                         AsmPrinter &AP) {
   OutMI.setOpcode(MI->getOpcode());
 
-  for (unsigned i = 0, e = MI->getNumOperands(); i != e; ++i) {
+  for (const MachineOperand &MO : MI->operands()) {
     MCOperand MCOp;
-    if (LowerPPCMachineOperandToMCOperand(MI->getOperand(i), MCOp, AP))
+    if (LowerPPCMachineOperandToMCOperand(MO, MCOp, AP))
       OutMI.addOperand(MCOp);
   }
 }
