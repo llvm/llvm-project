@@ -1,6 +1,6 @@
 ; Tests that VFE is not performed when the Virtual Function Elim metadata set
 ; to 0. This is the same as virtual-functions.ll otherwise.
-; RUN: opt < %s -globaldce -S | FileCheck %s
+; RUN: opt < %s -passes=globaldce -S | FileCheck %s
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 

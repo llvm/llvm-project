@@ -1,4 +1,4 @@
-; RUN: opt < %s -globalopt -S | FileCheck %s
+; RUN: opt < %s -passes=globalopt -S | FileCheck %s
 
 @G1 = internal global i32 123            ; <i32*> [#uses=1]
 @A1 = internal alias i32, i32* @G1

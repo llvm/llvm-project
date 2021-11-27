@@ -1,4 +1,4 @@
-; RUN: opt < %s -sccp -disable-output
+; RUN: opt < %s -passes=sccp -disable-output
 ; PR1431
 
 define void @_ada_bench() personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {

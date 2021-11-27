@@ -1,4 +1,4 @@
-; RUN: opt < %s -constmerge -S | FileCheck %s
+; RUN: opt < %s -passes=constmerge -S | FileCheck %s
 
 ; Don't merge constants with specified sections.
 

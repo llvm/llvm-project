@@ -2,9 +2,9 @@
 ; basic logic operations.
 
 
-; RUN: opt < %s -sccp -S | not grep and
-; RUN: opt < %s -sccp -S | not grep trunc
-; RUN: opt < %s -sccp -S | grep "ret i100 -1"
+; RUN: opt < %s -passes=sccp -S | not grep and
+; RUN: opt < %s -passes=sccp -S | not grep trunc
+; RUN: opt < %s -passes=sccp -S | grep "ret i100 -1"
 
 define i100 @test(i133 %A) {
         %B = and i133 0, %A

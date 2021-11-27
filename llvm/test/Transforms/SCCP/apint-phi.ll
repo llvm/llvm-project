@@ -1,4 +1,4 @@
-; RUN: opt < %s -sccp -S | not grep phi
+; RUN: opt < %s -passes=sccp -S | not grep phi
 
 define i999 @test(i999%A, i1 %c) {
 bb1:

@@ -1,4 +1,4 @@
-; RUN: opt < %s -tailcallelim -verify-dom-info -S | grep call | count 4
+; RUN: opt < %s -passes=tailcallelim -verify-dom-info -S | grep call | count 4
 ; PR4323
 
 ; Several cases where tail call elimination should not move the load above the
