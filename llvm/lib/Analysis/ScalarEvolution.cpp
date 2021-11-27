@@ -4442,42 +4442,6 @@ static void PushDefUseChildren(Instruction *I,
   }
 }
 
-void ScalarEvolution::forgetSymbolicName(Instruction *PN, const SCEV *SymName) {
-  SmallVector<Instruction *, 16> Worklist;
-  SmallPtrSet<Instruction *, 8> Visited;
-  SmallVector<const SCEV *, 8> ToForget;
-  Visited.insert(PN);
-  Worklist.push_back(PN);
-  while (!Worklist.empty()) {
-    Instruction *I = Worklist.pop_back_val();
-
-    auto It = ValueExprMap.find_as(static_cast<Value *>(I));
-    if (It != ValueExprMap.end()) {
-      const SCEV *Old = It->second;
-
-      // Short-circuit the def-use traversal if the symbolic name
-      // ceases to appear in expressions.
-      if (Old != SymName && !hasOperand(Old, SymName))
-        continue;
-
-      // SCEVUnknown for a PHI either means that it has an unrecognized
-      // structure, it's a PHI that's in the progress of being computed
-      // by createNodeForPHI, or it's a single-value PHI. In the first case,
-      // additional loop trip count information isn't going to change anything.
-      // In the second case, createNodeForPHI will perform the necessary
-      // updates on its own when it gets to that point. In the third, we do
-      // want to forget the SCEVUnknown.
-      if (!isa<PHINode>(I) || !isa<SCEVUnknown>(Old) || Old == SymName) {
-        eraseValueFromMap(It->first);
-        ToForget.push_back(Old);
-      }
-    }
-
-    PushDefUseChildren(I, Worklist, Visited);
-  }
-  forgetMemoizedResults(ToForget);
-}
-
 namespace {
 
 /// Takes SCEV S and Loop L. For each AddRec sub-expression, use its start
@@ -5469,7 +5433,7 @@ const SCEV *ScalarEvolution::createAddRecFromPHI(PHINode *PN) {
         // Okay, for the entire analysis of this edge we assumed the PHI
         // to be symbolic.  We now need to go back and purge all of the
         // entries for the scalars that use the symbolic expression.
-        forgetSymbolicName(PN, SymbolicName);
+        forgetMemoizedResults(SymbolicName);
         insertValueToMap(PN, PHISCEV);
 
         // We can add Flags to the post-inc expression only if we
@@ -5501,7 +5465,7 @@ const SCEV *ScalarEvolution::createAddRecFromPHI(PHINode *PN) {
         // Okay, for the entire analysis of this edge we assumed the PHI
         // to be symbolic.  We now need to go back and purge all of the
         // entries for the scalars that use the symbolic expression.
-        forgetSymbolicName(PN, SymbolicName);
+        forgetMemoizedResults(SymbolicName);
         insertValueToMap(PN, Shifted);
         return Shifted;
       }
