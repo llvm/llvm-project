@@ -513,9 +513,7 @@ define <2 x i64> @large_i128(<2 x double> %x) {
 ; CHECK-NEXT:    mov.w r9, #1
 ; CHECK-NEXT:    sbcs r7, r3, #0
 ; CHECK-NEXT:    mov.w r4, #0
-; CHECK-NEXT:    mov.w r7, #0
-; CHECK-NEXT:    it lt
-; CHECK-NEXT:    movlt r7, #1
+; CHECK-NEXT:    cset r7, lt
 ; CHECK-NEXT:    cmp r7, #0
 ; CHECK-NEXT:    csel r0, r0, r7, ne
 ; CHECK-NEXT:    csel r3, r3, r7, ne
@@ -525,9 +523,7 @@ define <2 x i64> @large_i128(<2 x double> %x) {
 ; CHECK-NEXT:    sbcs.w r7, r4, r1
 ; CHECK-NEXT:    sbcs.w r2, r4, r2
 ; CHECK-NEXT:    sbcs.w r2, r4, r3
-; CHECK-NEXT:    mov.w r2, #0
-; CHECK-NEXT:    it lt
-; CHECK-NEXT:    movlt r2, #1
+; CHECK-NEXT:    cset r2, lt
 ; CHECK-NEXT:    cmp r2, #0
 ; CHECK-NEXT:    csel r6, r0, r2, ne
 ; CHECK-NEXT:    csel r7, r1, r2, ne
@@ -536,9 +532,7 @@ define <2 x i64> @large_i128(<2 x double> %x) {
 ; CHECK-NEXT:    bl __fixdfti
 ; CHECK-NEXT:    subs r5, r2, #1
 ; CHECK-NEXT:    sbcs r5, r3, #0
-; CHECK-NEXT:    mov.w r5, #0
-; CHECK-NEXT:    it lt
-; CHECK-NEXT:    movlt r5, #1
+; CHECK-NEXT:    cset r5, lt
 ; CHECK-NEXT:    cmp r5, #0
 ; CHECK-NEXT:    csel r0, r0, r5, ne
 ; CHECK-NEXT:    csel r3, r3, r5, ne
@@ -548,11 +542,10 @@ define <2 x i64> @large_i128(<2 x double> %x) {
 ; CHECK-NEXT:    sbcs.w r5, r4, r1
 ; CHECK-NEXT:    sbcs.w r2, r4, r2
 ; CHECK-NEXT:    sbcs.w r2, r4, r3
-; CHECK-NEXT:    it lt
-; CHECK-NEXT:    movlt r4, #1
-; CHECK-NEXT:    cmp r4, #0
-; CHECK-NEXT:    csel r2, r0, r4, ne
-; CHECK-NEXT:    csel r3, r1, r4, ne
+; CHECK-NEXT:    cset r3, lt
+; CHECK-NEXT:    cmp r3, #0
+; CHECK-NEXT:    csel r2, r0, r3, ne
+; CHECK-NEXT:    csel r3, r1, r3, ne
 ; CHECK-NEXT:    mov r0, r6
 ; CHECK-NEXT:    mov r1, r7
 ; CHECK-NEXT:    add sp, #4
