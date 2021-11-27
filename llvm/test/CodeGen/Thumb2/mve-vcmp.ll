@@ -395,6 +395,41 @@ entry:
   ret <2 x i64> %s
 }
 
+define arm_aapcs_vfpcc <2 x i64> @vcmp_slt_v2i64(<2 x i64> %src, <2 x i64> %srcb, <2 x i64> %a, <2 x i64> %b) {
+; CHECK-LABEL: vcmp_slt_v2i64:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    .save {r7, lr}
+; CHECK-NEXT:    push {r7, lr}
+; CHECK-NEXT:    vmov r0, r12, d3
+; CHECK-NEXT:    movs r1, #0
+; CHECK-NEXT:    vmov r2, r3, d1
+; CHECK-NEXT:    subs r0, r2, r0
+; CHECK-NEXT:    sbcs.w r0, r3, r12
+; CHECK-NEXT:    vmov lr, r12, d2
+; CHECK-NEXT:    vmov r3, r2, d0
+; CHECK-NEXT:    mov.w r0, #0
+; CHECK-NEXT:    it lt
+; CHECK-NEXT:    movlt r0, #1
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    csetm r0, ne
+; CHECK-NEXT:    subs.w r3, r3, lr
+; CHECK-NEXT:    sbcs.w r2, r2, r12
+; CHECK-NEXT:    it lt
+; CHECK-NEXT:    movlt r1, #1
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, ne
+; CHECK-NEXT:    vmov q0[2], q0[0], r1, r0
+; CHECK-NEXT:    vmov q0[3], q0[1], r1, r0
+; CHECK-NEXT:    vbic q1, q3, q0
+; CHECK-NEXT:    vand q0, q2, q0
+; CHECK-NEXT:    vorr q0, q0, q1
+; CHECK-NEXT:    pop {r7, pc}
+entry:
+  %c = icmp slt <2 x i64> %src, %srcb
+  %s = select <2 x i1> %c, <2 x i64> %a, <2 x i64> %b
+  ret <2 x i64> %s
+}
+
 define arm_aapcs_vfpcc <2 x i32> @vcmp_eq_v2i32(<2 x i64> %src, <2 x i64> %srcb, <2 x i32> %a, <2 x i32> %b) {
 ; CHECK-LABEL: vcmp_eq_v2i32:
 ; CHECK:       @ %bb.0: @ %entry
