@@ -127,11 +127,11 @@ FunctionPass *llvm::createSIFixSGPRCopiesPass() {
 static bool hasVectorOperands(const MachineInstr &MI,
                               const SIRegisterInfo *TRI) {
   const MachineRegisterInfo &MRI = MI.getParent()->getParent()->getRegInfo();
-  for (unsigned i = 0, e = MI.getNumOperands(); i != e; ++i) {
-    if (!MI.getOperand(i).isReg() || !MI.getOperand(i).getReg().isVirtual())
+  for (const MachineOperand &MO : MI.operands()) {
+    if (!MO.isReg() || !MO.getReg().isVirtual())
       continue;
 
-    if (TRI->hasVectorRegisters(MRI.getRegClass(MI.getOperand(i).getReg())))
+    if (TRI->hasVectorRegisters(MRI.getRegClass(MO.getReg())))
       return true;
   }
   return false;

@@ -6511,8 +6511,7 @@ void AArch64InstructionSelector::processPHIs(MachineFunction &MF) {
     // %endbb:
     //   %dst:gpr(s16) = G_PHI %in1:gpr(s16), %bb1, %in2_copy:gpr(s16), %bb2
     bool HasGPROp = false, HasFPROp = false;
-    for (unsigned OpIdx = 1; OpIdx < MI->getNumOperands(); ++OpIdx) {
-      const auto &MO = MI->getOperand(OpIdx);
+    for (const MachineOperand &MO : llvm::drop_begin(MI->operands())) {
       if (!MO.isReg())
         continue;
       const LLT &Ty = MRI.getType(MO.getReg());

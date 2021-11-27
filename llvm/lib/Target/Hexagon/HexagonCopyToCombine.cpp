@@ -403,10 +403,7 @@ HexagonCopyToCombine::findPotentialNewifiableTFRs(MachineBasicBlock &BB) {
     // Mark TFRs that feed a potential new value store as such.
     if (TII->mayBeNewStore(MI)) {
       // Look for uses of TFR instructions.
-      for (unsigned OpdIdx = 0, OpdE = MI.getNumOperands(); OpdIdx != OpdE;
-           ++OpdIdx) {
-        MachineOperand &Op = MI.getOperand(OpdIdx);
-
+      for (const MachineOperand &Op : MI.operands()) {
         // Skip over anything except register uses.
         if (!Op.isReg() || !Op.isUse() || !Op.getReg())
           continue;
