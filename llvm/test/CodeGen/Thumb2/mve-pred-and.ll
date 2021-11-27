@@ -578,13 +578,9 @@ define arm_aapcs_vfpcc <2 x i64> @cmpeqz_v2i1(<2 x i64> %a, <2 x i64> %b) {
 ; CHECK-NEXT:    vmov r0, r1, d5
 ; CHECK-NEXT:    orrs r0, r1
 ; CHECK-NEXT:    vmov r1, r2, d4
-; CHECK-NEXT:    cset r0, eq
-; CHECK-NEXT:    cmp r0, #0
-; CHECK-NEXT:    csetm r0, ne
+; CHECK-NEXT:    csetm r0, eq
 ; CHECK-NEXT:    orrs r1, r2
-; CHECK-NEXT:    cset r1, eq
-; CHECK-NEXT:    cmp r1, #0
-; CHECK-NEXT:    csetm r1, ne
+; CHECK-NEXT:    csetm r1, eq
 ; CHECK-NEXT:    vmov q2[2], q2[0], r1, r0
 ; CHECK-NEXT:    vmov q2[3], q2[1], r1, r0
 ; CHECK-NEXT:    vbic q1, q1, q2
@@ -609,27 +605,19 @@ define arm_aapcs_vfpcc <2 x i64> @cmpeq_v2i1(<2 x i64> %a, <2 x i64> %b, <2 x i6
 ; CHECK-NEXT:    orrs r0, r1
 ; CHECK-NEXT:    vmov r12, r2, d4
 ; CHECK-NEXT:    vmov r3, r1, d2
-; CHECK-NEXT:    cset r0, eq
-; CHECK-NEXT:    cmp r0, #0
-; CHECK-NEXT:    csetm r0, ne
+; CHECK-NEXT:    csetm r0, eq
 ; CHECK-NEXT:    eors r1, r2
 ; CHECK-NEXT:    eor.w r2, r3, r12
 ; CHECK-NEXT:    orrs r1, r2
-; CHECK-NEXT:    cset r1, eq
-; CHECK-NEXT:    cmp r1, #0
-; CHECK-NEXT:    csetm r1, ne
+; CHECK-NEXT:    csetm r1, eq
 ; CHECK-NEXT:    vmov q2[2], q2[0], r1, r0
 ; CHECK-NEXT:    vmov q2[3], q2[1], r1, r0
 ; CHECK-NEXT:    vmov r0, r1, d1
 ; CHECK-NEXT:    orrs r0, r1
 ; CHECK-NEXT:    vmov r1, r2, d0
-; CHECK-NEXT:    cset r0, eq
-; CHECK-NEXT:    cmp r0, #0
-; CHECK-NEXT:    csetm r0, ne
+; CHECK-NEXT:    csetm r0, eq
 ; CHECK-NEXT:    orrs r1, r2
-; CHECK-NEXT:    cset r1, eq
-; CHECK-NEXT:    cmp r1, #0
-; CHECK-NEXT:    csetm r1, ne
+; CHECK-NEXT:    csetm r1, eq
 ; CHECK-NEXT:    vmov q3[2], q3[0], r1, r0
 ; CHECK-NEXT:    vmov q3[3], q3[1], r1, r0
 ; CHECK-NEXT:    vand q2, q3, q2
@@ -653,27 +641,19 @@ define arm_aapcs_vfpcc <2 x i64> @cmpeqr_v2i1(<2 x i64> %a, <2 x i64> %b, i64 %c
 ; CHECK-NEXT:    eors r2, r0
 ; CHECK-NEXT:    orrs r2, r3
 ; CHECK-NEXT:    vmov r12, r3, d2
-; CHECK-NEXT:    cset r2, eq
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, ne
+; CHECK-NEXT:    csetm r2, eq
 ; CHECK-NEXT:    eors r1, r3
 ; CHECK-NEXT:    eor.w r0, r0, r12
 ; CHECK-NEXT:    orrs r0, r1
-; CHECK-NEXT:    cset r0, eq
-; CHECK-NEXT:    cmp r0, #0
-; CHECK-NEXT:    csetm r0, ne
+; CHECK-NEXT:    csetm r0, eq
 ; CHECK-NEXT:    vmov q2[2], q2[0], r0, r2
 ; CHECK-NEXT:    vmov q2[3], q2[1], r0, r2
 ; CHECK-NEXT:    vmov r0, r1, d1
 ; CHECK-NEXT:    orrs r0, r1
 ; CHECK-NEXT:    vmov r1, r2, d0
-; CHECK-NEXT:    cset r0, eq
-; CHECK-NEXT:    cmp r0, #0
-; CHECK-NEXT:    csetm r0, ne
+; CHECK-NEXT:    csetm r0, eq
 ; CHECK-NEXT:    orrs r1, r2
-; CHECK-NEXT:    cset r1, eq
-; CHECK-NEXT:    cmp r1, #0
-; CHECK-NEXT:    csetm r1, ne
+; CHECK-NEXT:    csetm r1, eq
 ; CHECK-NEXT:    vmov q3[2], q3[0], r1, r0
 ; CHECK-NEXT:    vmov q3[3], q3[1], r1, r0
 ; CHECK-NEXT:    vand q2, q3, q2

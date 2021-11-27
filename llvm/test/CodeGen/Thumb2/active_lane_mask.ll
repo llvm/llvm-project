@@ -39,12 +39,8 @@ define <2 x i64> @v2i64(i32 %index, i32 %TC, <2 x i64> %V1, <2 x i64> %V2) {
 ; CHECK-NEXT:    vmov q0[2], q0[0], r0, r9
 ; CHECK-NEXT:    eor.w r0, r4, r8
 ; CHECK-NEXT:    orrs.w r0, r0, lr
-; CHECK-NEXT:    cset r0, ne
-; CHECK-NEXT:    cmp r0, #0
 ; CHECK-NEXT:    csetm r0, ne
 ; CHECK-NEXT:    teq.w r5, r12
-; CHECK-NEXT:    cset r1, ne
-; CHECK-NEXT:    cmp r1, #0
 ; CHECK-NEXT:    csetm r1, ne
 ; CHECK-NEXT:    vmov q1[2], q1[0], r1, r0
 ; CHECK-NEXT:    veor q1, q1, q2
@@ -504,14 +500,10 @@ define void @test_width2(i32* nocapture readnone %x, i32* nocapture %y, i8 zeroe
 ; CHECK-NEXT:    cmp r2, #0
 ; CHECK-NEXT:    csetm r2, ne
 ; CHECK-NEXT:    orrs.w r0, r0, r8
-; CHECK-NEXT:    cset r0, ne
 ; CHECK-NEXT:    vmov q3[2], q3[0], r2, r5
-; CHECK-NEXT:    cmp r0, #0
-; CHECK-NEXT:    vmov q3[3], q3[1], r2, r5
 ; CHECK-NEXT:    csetm r0, ne
 ; CHECK-NEXT:    teq.w r6, r9
-; CHECK-NEXT:    cset r2, ne
-; CHECK-NEXT:    cmp r2, #0
+; CHECK-NEXT:    vmov q3[3], q3[1], r2, r5
 ; CHECK-NEXT:    csetm r2, ne
 ; CHECK-NEXT:    vmov q4[2], q4[0], r2, r0
 ; CHECK-NEXT:    vmov q4[3], q4[1], r2, r0

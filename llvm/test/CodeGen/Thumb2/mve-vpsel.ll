@@ -43,12 +43,8 @@ define arm_aapcs_vfpcc <2 x i64> @vpsel_i64(<2 x i64> %mask, <2 x i64> %src1, <2
 ; CHECK-NEXT:    vmov r0, r1, d1
 ; CHECK-NEXT:    vmov r2, r3, d0
 ; CHECK-NEXT:    orrs r0, r1
-; CHECK-NEXT:    cset r0, ne
-; CHECK-NEXT:    cmp r0, #0
 ; CHECK-NEXT:    csetm r0, ne
 ; CHECK-NEXT:    orrs.w r1, r2, r3
-; CHECK-NEXT:    cset r1, ne
-; CHECK-NEXT:    cmp r1, #0
 ; CHECK-NEXT:    csetm r1, ne
 ; CHECK-NEXT:    vmov q0[2], q0[0], r1, r0
 ; CHECK-NEXT:    vmov q0[3], q0[1], r1, r0
@@ -92,12 +88,8 @@ define arm_aapcs_vfpcc <2 x double> @vpsel_f64(<2 x i64> %mask, <2 x double> %sr
 ; CHECK-NEXT:    vmov r0, r1, d1
 ; CHECK-NEXT:    vmov r2, r3, d0
 ; CHECK-NEXT:    orrs r0, r1
-; CHECK-NEXT:    cset r0, ne
-; CHECK-NEXT:    cmp r0, #0
 ; CHECK-NEXT:    csetm r0, ne
 ; CHECK-NEXT:    orrs.w r1, r2, r3
-; CHECK-NEXT:    cset r1, ne
-; CHECK-NEXT:    cmp r1, #0
 ; CHECK-NEXT:    csetm r1, ne
 ; CHECK-NEXT:    vmov q0[2], q0[0], r1, r0
 ; CHECK-NEXT:    vmov q0[3], q0[1], r1, r0
