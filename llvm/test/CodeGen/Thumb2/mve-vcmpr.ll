@@ -487,12 +487,11 @@ entry:
 define arm_aapcs_vfpcc <2 x i32> @vcmp_multi_v2i32(<2 x i64> %a, <2 x i32> %b, <2 x i32> %c) {
 ; CHECK-LABEL: vcmp_multi_v2i32:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    .save {r4, lr}
-; CHECK-NEXT:    push {r4, lr}
+; CHECK-NEXT:    .save {r7, lr}
+; CHECK-NEXT:    push {r7, lr}
 ; CHECK-NEXT:    .vsave {d8, d9}
 ; CHECK-NEXT:    vpush {d8, d9}
 ; CHECK-NEXT:    vmov r0, r1, d1
-; CHECK-NEXT:    movs r3, #0
 ; CHECK-NEXT:    orrs r0, r1
 ; CHECK-NEXT:    vmov r1, r2, d0
 ; CHECK-NEXT:    csetm r0, eq
@@ -503,22 +502,19 @@ define arm_aapcs_vfpcc <2 x i32> @vcmp_multi_v2i32(<2 x i64> %a, <2 x i32> %b, <
 ; CHECK-NEXT:    vmov q0[3], q0[1], r1, r0
 ; CHECK-NEXT:    vbic q0, q2, q0
 ; CHECK-NEXT:    vmov r0, s2
-; CHECK-NEXT:    subs r1, r0, r2
-; CHECK-NEXT:    asr.w r12, r0, #31
-; CHECK-NEXT:    sbcs.w r1, r12, r2, asr #31
-; CHECK-NEXT:    mov.w r1, #0
+; CHECK-NEXT:    subs r3, r0, r2
+; CHECK-NEXT:    asr.w r1, r0, #31
+; CHECK-NEXT:    vmov r3, s8
+; CHECK-NEXT:    sbcs.w r1, r1, r2, asr #31
 ; CHECK-NEXT:    vmov r2, s0
-; CHECK-NEXT:    it lt
-; CHECK-NEXT:    movlt r1, #1
+; CHECK-NEXT:    cset r1, lt
 ; CHECK-NEXT:    cmp r1, #0
-; CHECK-NEXT:    vmov r1, s8
 ; CHECK-NEXT:    csetm lr, ne
+; CHECK-NEXT:    subs r1, r2, r3
 ; CHECK-NEXT:    asr.w r12, r2, #31
-; CHECK-NEXT:    subs r4, r2, r1
-; CHECK-NEXT:    sbcs.w r1, r12, r1, asr #31
-; CHECK-NEXT:    it lt
-; CHECK-NEXT:    movlt r3, #1
-; CHECK-NEXT:    cmp r3, #0
+; CHECK-NEXT:    sbcs.w r1, r12, r3, asr #31
+; CHECK-NEXT:    cset r1, lt
+; CHECK-NEXT:    cmp r1, #0
 ; CHECK-NEXT:    csetm r1, ne
 ; CHECK-NEXT:    cmp r0, #0
 ; CHECK-NEXT:    vmov q3[2], q3[0], r1, lr
@@ -542,7 +538,7 @@ define arm_aapcs_vfpcc <2 x i32> @vcmp_multi_v2i32(<2 x i64> %a, <2 x i32> %b, <
 ; CHECK-NEXT:    vand q1, q2, q1
 ; CHECK-NEXT:    vorr q0, q1, q0
 ; CHECK-NEXT:    vpop {d8, d9}
-; CHECK-NEXT:    pop {r4, pc}
+; CHECK-NEXT:    pop {r7, pc}
   %a4 = icmp eq <2 x i64> %a, zeroinitializer
   %a5 = select <2 x i1> %a4, <2 x i32> zeroinitializer, <2 x i32> %c
   %a6 = icmp ne <2 x i32> %b, zeroinitializer
@@ -1042,12 +1038,11 @@ entry:
 define arm_aapcs_vfpcc <2 x i32> @vcmp_r_multi_v2i32(<2 x i64> %a, <2 x i32> %b, <2 x i32> %c) {
 ; CHECK-LABEL: vcmp_r_multi_v2i32:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    .save {r4, lr}
-; CHECK-NEXT:    push {r4, lr}
+; CHECK-NEXT:    .save {r7, lr}
+; CHECK-NEXT:    push {r7, lr}
 ; CHECK-NEXT:    .vsave {d8, d9}
 ; CHECK-NEXT:    vpush {d8, d9}
 ; CHECK-NEXT:    vmov r0, r1, d1
-; CHECK-NEXT:    movs r3, #0
 ; CHECK-NEXT:    orrs r0, r1
 ; CHECK-NEXT:    vmov r1, r2, d0
 ; CHECK-NEXT:    csetm r0, eq
@@ -1058,22 +1053,19 @@ define arm_aapcs_vfpcc <2 x i32> @vcmp_r_multi_v2i32(<2 x i64> %a, <2 x i32> %b,
 ; CHECK-NEXT:    vmov q0[3], q0[1], r1, r0
 ; CHECK-NEXT:    vbic q0, q2, q0
 ; CHECK-NEXT:    vmov r0, s2
-; CHECK-NEXT:    subs r1, r0, r2
-; CHECK-NEXT:    asr.w r12, r0, #31
-; CHECK-NEXT:    sbcs.w r1, r12, r2, asr #31
-; CHECK-NEXT:    mov.w r1, #0
+; CHECK-NEXT:    subs r3, r0, r2
+; CHECK-NEXT:    asr.w r1, r0, #31
+; CHECK-NEXT:    vmov r3, s8
+; CHECK-NEXT:    sbcs.w r1, r1, r2, asr #31
 ; CHECK-NEXT:    vmov r2, s0
-; CHECK-NEXT:    it lt
-; CHECK-NEXT:    movlt r1, #1
+; CHECK-NEXT:    cset r1, lt
 ; CHECK-NEXT:    cmp r1, #0
-; CHECK-NEXT:    vmov r1, s8
 ; CHECK-NEXT:    csetm lr, ne
+; CHECK-NEXT:    subs r1, r2, r3
 ; CHECK-NEXT:    asr.w r12, r2, #31
-; CHECK-NEXT:    subs r4, r2, r1
-; CHECK-NEXT:    sbcs.w r1, r12, r1, asr #31
-; CHECK-NEXT:    it lt
-; CHECK-NEXT:    movlt r3, #1
-; CHECK-NEXT:    cmp r3, #0
+; CHECK-NEXT:    sbcs.w r1, r12, r3, asr #31
+; CHECK-NEXT:    cset r1, lt
+; CHECK-NEXT:    cmp r1, #0
 ; CHECK-NEXT:    csetm r1, ne
 ; CHECK-NEXT:    cmp r0, #0
 ; CHECK-NEXT:    vmov q3[2], q3[0], r1, lr
@@ -1097,7 +1089,7 @@ define arm_aapcs_vfpcc <2 x i32> @vcmp_r_multi_v2i32(<2 x i64> %a, <2 x i32> %b,
 ; CHECK-NEXT:    vand q1, q2, q1
 ; CHECK-NEXT:    vorr q0, q1, q0
 ; CHECK-NEXT:    vpop {d8, d9}
-; CHECK-NEXT:    pop {r4, pc}
+; CHECK-NEXT:    pop {r7, pc}
   %a4 = icmp eq <2 x i64> %a, zeroinitializer
   %a5 = select <2 x i1> %a4, <2 x i32> zeroinitializer, <2 x i32> %c
   %a6 = icmp ne <2 x i32> %b, zeroinitializer

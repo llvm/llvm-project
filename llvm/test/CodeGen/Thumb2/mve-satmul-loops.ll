@@ -46,21 +46,17 @@ define arm_aapcs_vfpcc void @ssatmul_s_q31(i32* nocapture readonly %pSrcA, i32* 
 ; CHECK-NEXT:    smull r6, r5, r8, r5
 ; CHECK-NEXT:    rsbs.w r9, r4, #-2147483648
 ; CHECK-NEXT:    sbcs r3, r7
-; CHECK-NEXT:    mov.w r3, #0
+; CHECK-NEXT:    cset r3, lt
 ; CHECK-NEXT:    asrl r6, r5, #31
-; CHECK-NEXT:    it lt
-; CHECK-NEXT:    movlt r3, #1
 ; CHECK-NEXT:    cmp r3, #0
+; CHECK-NEXT:    vmov q4[2], q4[0], r6, r4
 ; CHECK-NEXT:    csetm r9, ne
 ; CHECK-NEXT:    rsbs.w r3, r6, #-2147483648
 ; CHECK-NEXT:    mov.w r3, #-1
-; CHECK-NEXT:    vmov q4[2], q4[0], r6, r4
-; CHECK-NEXT:    sbcs r3, r5
 ; CHECK-NEXT:    vmov q4[3], q4[1], r5, r7
-; CHECK-NEXT:    mov.w r3, #0
+; CHECK-NEXT:    sbcs r3, r5
 ; CHECK-NEXT:    mvn r6, #-2147483648
-; CHECK-NEXT:    it lt
-; CHECK-NEXT:    movlt r3, #1
+; CHECK-NEXT:    cset r3, lt
 ; CHECK-NEXT:    cmp r3, #0
 ; CHECK-NEXT:    csetm r3, ne
 ; CHECK-NEXT:    vmov q2[2], q2[0], r3, r9
@@ -72,17 +68,13 @@ define arm_aapcs_vfpcc void @ssatmul_s_q31(i32* nocapture readonly %pSrcA, i32* 
 ; CHECK-NEXT:    subs r3, r3, r6
 ; CHECK-NEXT:    sbcs r3, r4, #0
 ; CHECK-NEXT:    vmov r4, r5, d5
-; CHECK-NEXT:    mov.w r3, #0
-; CHECK-NEXT:    it lt
-; CHECK-NEXT:    movlt r3, #1
+; CHECK-NEXT:    cset r3, lt
 ; CHECK-NEXT:    cmp r3, #0
 ; CHECK-NEXT:    csetm r3, ne
 ; CHECK-NEXT:    vmov.32 q3[1], r3
 ; CHECK-NEXT:    subs r4, r4, r6
 ; CHECK-NEXT:    sbcs r4, r5, #0
-; CHECK-NEXT:    mov.w r4, #0
-; CHECK-NEXT:    it lt
-; CHECK-NEXT:    movlt r4, #1
+; CHECK-NEXT:    cset r4, lt
 ; CHECK-NEXT:    cmp r4, #0
 ; CHECK-NEXT:    csetm r4, ne
 ; CHECK-NEXT:    vmov q3[2], q3[0], r3, r4
@@ -110,9 +102,7 @@ define arm_aapcs_vfpcc void @ssatmul_s_q31(i32* nocapture readonly %pSrcA, i32* 
 ; CHECK-NEXT:    asrl r4, r3, #31
 ; CHECK-NEXT:    subs r5, r1, r4
 ; CHECK-NEXT:    sbcs.w r5, r0, r3
-; CHECK-NEXT:    mov.w r5, #0
-; CHECK-NEXT:    it lt
-; CHECK-NEXT:    movlt r5, #1
+; CHECK-NEXT:    cset r5, lt
 ; CHECK-NEXT:    cmp r5, #0
 ; CHECK-NEXT:    csel r4, r4, r1, ne
 ; CHECK-NEXT:    csel r3, r3, r0, ne
@@ -223,10 +213,10 @@ define arm_aapcs_vfpcc void @ssatmul_4_q31(i32* nocapture readonly %pSrcA, i32* 
 ; CHECK-NEXT:    cmp r3, #0
 ; CHECK-NEXT:    beq.w .LBB1_8
 ; CHECK-NEXT:  @ %bb.1: @ %for.body.preheader
-; CHECK-NEXT:    movs r7, #0
 ; CHECK-NEXT:    cmp r3, #3
 ; CHECK-NEXT:    bhi .LBB1_3
 ; CHECK-NEXT:  @ %bb.2:
+; CHECK-NEXT:    movs r7, #0
 ; CHECK-NEXT:    mov r12, r0
 ; CHECK-NEXT:    mov r9, r1
 ; CHECK-NEXT:    mov r11, r2
@@ -263,20 +253,16 @@ define arm_aapcs_vfpcc void @ssatmul_4_q31(i32* nocapture readonly %pSrcA, i32* 
 ; CHECK-NEXT:    vmov r6, s12
 ; CHECK-NEXT:    rsbs.w r5, r4, #-2147483648
 ; CHECK-NEXT:    sbcs.w r5, r2, r7
-; CHECK-NEXT:    mov.w r5, #0
-; CHECK-NEXT:    it lt
-; CHECK-NEXT:    movlt r5, #1
+; CHECK-NEXT:    cset r5, lt
 ; CHECK-NEXT:    cmp r5, #0
 ; CHECK-NEXT:    vmov r10, r5, d12
-; CHECK-NEXT:    csetm r8, ne
 ; CHECK-NEXT:    asrl r10, r5, #31
+; CHECK-NEXT:    csetm r8, ne
 ; CHECK-NEXT:    rsbs.w r3, r10, #-2147483648
 ; CHECK-NEXT:    vmov q6[2], q6[0], r10, r4
 ; CHECK-NEXT:    sbcs.w r3, r2, r5
 ; CHECK-NEXT:    vmov q6[3], q6[1], r5, r7
-; CHECK-NEXT:    mov.w r3, #0
-; CHECK-NEXT:    it lt
-; CHECK-NEXT:    movlt r3, #1
+; CHECK-NEXT:    cset r3, lt
 ; CHECK-NEXT:    cmp r3, #0
 ; CHECK-NEXT:    csetm r3, ne
 ; CHECK-NEXT:    vmov q4[2], q4[0], r3, r8
@@ -289,18 +275,14 @@ define arm_aapcs_vfpcc void @ssatmul_4_q31(i32* nocapture readonly %pSrcA, i32* 
 ; CHECK-NEXT:    subs.w r3, r3, r8
 ; CHECK-NEXT:    sbcs r3, r4, #0
 ; CHECK-NEXT:    vmov r4, r5, d9
-; CHECK-NEXT:    mov.w r3, #0
-; CHECK-NEXT:    it lt
-; CHECK-NEXT:    movlt r3, #1
+; CHECK-NEXT:    cset r3, lt
 ; CHECK-NEXT:    cmp r3, #0
 ; CHECK-NEXT:    csetm r3, ne
 ; CHECK-NEXT:    vmov.32 q5[1], r3
 ; CHECK-NEXT:    subs.w r4, r4, r8
 ; CHECK-NEXT:    sbcs r4, r5, #0
 ; CHECK-NEXT:    vmov r5, s8
-; CHECK-NEXT:    mov.w r4, #0
-; CHECK-NEXT:    it lt
-; CHECK-NEXT:    movlt r4, #1
+; CHECK-NEXT:    cset r4, lt
 ; CHECK-NEXT:    cmp r4, #0
 ; CHECK-NEXT:    csetm r4, ne
 ; CHECK-NEXT:    vmov q5[2], q5[0], r3, r4
@@ -318,16 +300,12 @@ define arm_aapcs_vfpcc void @ssatmul_4_q31(i32* nocapture readonly %pSrcA, i32* 
 ; CHECK-NEXT:    vmov q5[2], q5[0], r6, r4
 ; CHECK-NEXT:    sbcs.w r3, r2, r7
 ; CHECK-NEXT:    vmov q5[3], q5[1], r5, r7
-; CHECK-NEXT:    mov.w r3, #0
-; CHECK-NEXT:    it lt
-; CHECK-NEXT:    movlt r3, #1
+; CHECK-NEXT:    cset r3, lt
 ; CHECK-NEXT:    cmp r3, #0
 ; CHECK-NEXT:    csetm r3, ne
 ; CHECK-NEXT:    rsbs.w r1, r6, #-2147483648
 ; CHECK-NEXT:    sbcs.w r1, r2, r5
-; CHECK-NEXT:    mov.w r1, #0
-; CHECK-NEXT:    it lt
-; CHECK-NEXT:    movlt r1, #1
+; CHECK-NEXT:    cset r1, lt
 ; CHECK-NEXT:    cmp r1, #0
 ; CHECK-NEXT:    csetm r1, ne
 ; CHECK-NEXT:    vmov q2[2], q2[0], r1, r3
@@ -339,18 +317,14 @@ define arm_aapcs_vfpcc void @ssatmul_4_q31(i32* nocapture readonly %pSrcA, i32* 
 ; CHECK-NEXT:    vmov r4, r3, d4
 ; CHECK-NEXT:    subs.w r4, r4, r8
 ; CHECK-NEXT:    sbcs r3, r3, #0
-; CHECK-NEXT:    mov.w r3, #0
-; CHECK-NEXT:    it lt
-; CHECK-NEXT:    movlt r3, #1
+; CHECK-NEXT:    cset r3, lt
 ; CHECK-NEXT:    cmp r3, #0
 ; CHECK-NEXT:    vmov r3, r4, d5
 ; CHECK-NEXT:    csetm r5, ne
 ; CHECK-NEXT:    vmov.32 q3[1], r5
 ; CHECK-NEXT:    subs.w r3, r3, r8
 ; CHECK-NEXT:    sbcs r3, r4, #0
-; CHECK-NEXT:    mov.w r3, #0
-; CHECK-NEXT:    it lt
-; CHECK-NEXT:    movlt r3, #1
+; CHECK-NEXT:    cset r3, lt
 ; CHECK-NEXT:    cmp r3, #0
 ; CHECK-NEXT:    csetm r3, ne
 ; CHECK-NEXT:    vmov q3[2], q3[0], r5, r3
@@ -379,9 +353,7 @@ define arm_aapcs_vfpcc void @ssatmul_4_q31(i32* nocapture readonly %pSrcA, i32* 
 ; CHECK-NEXT:    asrl r4, r1, #31
 ; CHECK-NEXT:    subs r5, r3, r4
 ; CHECK-NEXT:    sbcs.w r5, r0, r1
-; CHECK-NEXT:    mov.w r5, #0
-; CHECK-NEXT:    it lt
-; CHECK-NEXT:    movlt r5, #1
+; CHECK-NEXT:    cset r5, lt
 ; CHECK-NEXT:    cmp r5, #0
 ; CHECK-NEXT:    csel r4, r4, r3, ne
 ; CHECK-NEXT:    csel r1, r1, r0, ne
@@ -532,21 +504,17 @@ define arm_aapcs_vfpcc void @ssatmul_4t_q31(i32* nocapture readonly %pSrcA, i32*
 ; CHECK-NEXT:    asrl r6, r5, #31
 ; CHECK-NEXT:    rsbs.w r7, r6, #-2147483648
 ; CHECK-NEXT:    sbcs.w r7, r12, r5
-; CHECK-NEXT:    mov.w r7, #0
-; CHECK-NEXT:    it lt
-; CHECK-NEXT:    movlt r7, #1
+; CHECK-NEXT:    cset r7, lt
 ; CHECK-NEXT:    cmp r7, #0
 ; CHECK-NEXT:    vmov r4, r7, d0
-; CHECK-NEXT:    csetm r10, ne
 ; CHECK-NEXT:    asrl r4, r7, #31
+; CHECK-NEXT:    csetm r10, ne
 ; CHECK-NEXT:    rsbs.w r3, r4, #-2147483648
 ; CHECK-NEXT:    vmov q7[2], q7[0], r4, r6
 ; CHECK-NEXT:    sbcs.w r3, r12, r7
 ; CHECK-NEXT:    vmov q7[3], q7[1], r7, r5
-; CHECK-NEXT:    mov.w r3, #0
+; CHECK-NEXT:    cset r3, lt
 ; CHECK-NEXT:    vmov r7, s20
-; CHECK-NEXT:    it lt
-; CHECK-NEXT:    movlt r3, #1
 ; CHECK-NEXT:    cmp r3, #0
 ; CHECK-NEXT:    csetm r3, ne
 ; CHECK-NEXT:    vmov q0[2], q0[0], r3, r10
@@ -558,17 +526,13 @@ define arm_aapcs_vfpcc void @ssatmul_4t_q31(i32* nocapture readonly %pSrcA, i32*
 ; CHECK-NEXT:    subs.w r3, r3, r8
 ; CHECK-NEXT:    sbcs r3, r4, #0
 ; CHECK-NEXT:    vmov r4, r5, d13
-; CHECK-NEXT:    mov.w r3, #0
-; CHECK-NEXT:    it lt
-; CHECK-NEXT:    movlt r3, #1
+; CHECK-NEXT:    cset r3, lt
 ; CHECK-NEXT:    cmp r3, #0
 ; CHECK-NEXT:    csetm r3, ne
 ; CHECK-NEXT:    vmov.32 q0[1], r3
 ; CHECK-NEXT:    subs.w r4, r4, r8
 ; CHECK-NEXT:    sbcs r4, r5, #0
-; CHECK-NEXT:    mov.w r4, #0
-; CHECK-NEXT:    it lt
-; CHECK-NEXT:    movlt r4, #1
+; CHECK-NEXT:    cset r4, lt
 ; CHECK-NEXT:    cmp r4, #0
 ; CHECK-NEXT:    csetm r4, ne
 ; CHECK-NEXT:    vmov q0[2], q0[0], r3, r4
@@ -584,9 +548,7 @@ define arm_aapcs_vfpcc void @ssatmul_4t_q31(i32* nocapture readonly %pSrcA, i32*
 ; CHECK-NEXT:    asrl r6, r5, #31
 ; CHECK-NEXT:    rsbs.w r3, r6, #-2147483648
 ; CHECK-NEXT:    sbcs.w r3, r12, r5
-; CHECK-NEXT:    mov.w r3, #0
-; CHECK-NEXT:    it lt
-; CHECK-NEXT:    movlt r3, #1
+; CHECK-NEXT:    cset r3, lt
 ; CHECK-NEXT:    cmp r3, #0
 ; CHECK-NEXT:    csetm r10, ne
 ; CHECK-NEXT:    smull r4, r7, r7, r4
@@ -595,9 +557,7 @@ define arm_aapcs_vfpcc void @ssatmul_4t_q31(i32* nocapture readonly %pSrcA, i32*
 ; CHECK-NEXT:    vmov q5[2], q5[0], r4, r6
 ; CHECK-NEXT:    sbcs.w r3, r12, r7
 ; CHECK-NEXT:    vmov q5[3], q5[1], r7, r5
-; CHECK-NEXT:    mov.w r3, #0
-; CHECK-NEXT:    it lt
-; CHECK-NEXT:    movlt r3, #1
+; CHECK-NEXT:    cset r3, lt
 ; CHECK-NEXT:    cmp r3, #0
 ; CHECK-NEXT:    csetm r3, ne
 ; CHECK-NEXT:    vmov q0[2], q0[0], r3, r10
@@ -609,17 +569,13 @@ define arm_aapcs_vfpcc void @ssatmul_4t_q31(i32* nocapture readonly %pSrcA, i32*
 ; CHECK-NEXT:    subs.w r3, r3, r8
 ; CHECK-NEXT:    sbcs r3, r4, #0
 ; CHECK-NEXT:    vmov r4, r5, d9
-; CHECK-NEXT:    mov.w r3, #0
-; CHECK-NEXT:    it lt
-; CHECK-NEXT:    movlt r3, #1
+; CHECK-NEXT:    cset r3, lt
 ; CHECK-NEXT:    cmp r3, #0
 ; CHECK-NEXT:    csetm r3, ne
 ; CHECK-NEXT:    vmov.32 q0[1], r3
 ; CHECK-NEXT:    subs.w r4, r4, r8
 ; CHECK-NEXT:    sbcs r4, r5, #0
-; CHECK-NEXT:    mov.w r4, #0
-; CHECK-NEXT:    it lt
-; CHECK-NEXT:    movlt r4, #1
+; CHECK-NEXT:    cset r4, lt
 ; CHECK-NEXT:    cmp r4, #0
 ; CHECK-NEXT:    csetm r4, ne
 ; CHECK-NEXT:    vmov q0[2], q0[0], r3, r4
@@ -733,9 +689,7 @@ define arm_aapcs_vfpcc void @usatmul_2_q31(i32* nocapture readonly %pSrcA, i32* 
 ; CHECK-NEXT:    subs.w r6, r4, #-1
 ; CHECK-NEXT:    umull r6, r7, r10, r7
 ; CHECK-NEXT:    sbcs r5, r5, #0
-; CHECK-NEXT:    mov.w r5, #0
-; CHECK-NEXT:    it lo
-; CHECK-NEXT:    movlo r5, #1
+; CHECK-NEXT:    cset r5, lo
 ; CHECK-NEXT:    cmp r5, #0
 ; CHECK-NEXT:    lsrl r6, r7, #31
 ; CHECK-NEXT:    csetm r9, ne
@@ -743,9 +697,7 @@ define arm_aapcs_vfpcc void @usatmul_2_q31(i32* nocapture readonly %pSrcA, i32* 
 ; CHECK-NEXT:    vmov.32 q0[1], r9
 ; CHECK-NEXT:    sbcs r5, r7, #0
 ; CHECK-NEXT:    vmov q1[2], q1[0], r4, r6
-; CHECK-NEXT:    mov.w r5, #0
-; CHECK-NEXT:    it lo
-; CHECK-NEXT:    movlo r5, #1
+; CHECK-NEXT:    cset r5, lo
 ; CHECK-NEXT:    cmp r5, #0
 ; CHECK-NEXT:    csetm r5, ne
 ; CHECK-NEXT:    vmov q0[2], q0[0], r9, r5
@@ -860,10 +812,10 @@ define arm_aapcs_vfpcc void @usatmul_4_q31(i32* nocapture readonly %pSrcA, i32* 
 ; CHECK-NEXT:    cmp r3, #0
 ; CHECK-NEXT:    beq.w .LBB4_8
 ; CHECK-NEXT:  @ %bb.1: @ %for.body.preheader
-; CHECK-NEXT:    mov.w r8, #0
 ; CHECK-NEXT:    cmp r3, #3
 ; CHECK-NEXT:    bhi .LBB4_3
 ; CHECK-NEXT:  @ %bb.2:
+; CHECK-NEXT:    mov.w r8, #0
 ; CHECK-NEXT:    mov r12, r0
 ; CHECK-NEXT:    mov r9, r1
 ; CHECK-NEXT:    mov r10, r2
@@ -892,19 +844,15 @@ define arm_aapcs_vfpcc void @usatmul_4_q31(i32* nocapture readonly %pSrcA, i32* 
 ; CHECK-NEXT:    subs.w r6, r4, #-1
 ; CHECK-NEXT:    sbcs r5, r5, #0
 ; CHECK-NEXT:    vmov r6, r7, d9
-; CHECK-NEXT:    mov.w r5, #0
+; CHECK-NEXT:    cset r5, lo
 ; CHECK-NEXT:    lsrl r6, r7, #31
-; CHECK-NEXT:    it lo
-; CHECK-NEXT:    movlo r5, #1
 ; CHECK-NEXT:    cmp r5, #0
+; CHECK-NEXT:    vmov q3[2], q3[0], r4, r6
 ; CHECK-NEXT:    csetm r11, ne
 ; CHECK-NEXT:    subs.w r5, r6, #-1
 ; CHECK-NEXT:    sbcs r5, r7, #0
 ; CHECK-NEXT:    vmov.32 q1[1], r11
-; CHECK-NEXT:    mov.w r5, #0
-; CHECK-NEXT:    vmov q3[2], q3[0], r4, r6
-; CHECK-NEXT:    it lo
-; CHECK-NEXT:    movlo r5, #1
+; CHECK-NEXT:    cset r5, lo
 ; CHECK-NEXT:    cmp r5, #0
 ; CHECK-NEXT:    csetm r5, ne
 ; CHECK-NEXT:    vmov q1[2], q1[0], r11, r5
@@ -916,19 +864,15 @@ define arm_aapcs_vfpcc void @usatmul_4_q31(i32* nocapture readonly %pSrcA, i32* 
 ; CHECK-NEXT:    subs.w r6, r4, #-1
 ; CHECK-NEXT:    sbcs r5, r5, #0
 ; CHECK-NEXT:    vmov r6, r7, d7
-; CHECK-NEXT:    mov.w r5, #0
+; CHECK-NEXT:    cset r5, lo
 ; CHECK-NEXT:    lsrl r6, r7, #31
-; CHECK-NEXT:    it lo
-; CHECK-NEXT:    movlo r5, #1
 ; CHECK-NEXT:    cmp r5, #0
+; CHECK-NEXT:    vmov q2[2], q2[0], r4, r6
 ; CHECK-NEXT:    csetm r11, ne
 ; CHECK-NEXT:    subs.w r5, r6, #-1
 ; CHECK-NEXT:    sbcs r5, r7, #0
 ; CHECK-NEXT:    vmov.32 q0[1], r11
-; CHECK-NEXT:    mov.w r5, #0
-; CHECK-NEXT:    vmov q2[2], q2[0], r4, r6
-; CHECK-NEXT:    it lo
-; CHECK-NEXT:    movlo r5, #1
+; CHECK-NEXT:    cset r5, lo
 ; CHECK-NEXT:    cmp r5, #0
 ; CHECK-NEXT:    csetm r5, ne
 ; CHECK-NEXT:    vmov q0[2], q0[0], r11, r5
