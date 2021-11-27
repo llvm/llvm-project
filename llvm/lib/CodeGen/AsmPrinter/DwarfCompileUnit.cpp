@@ -521,8 +521,8 @@ DIE &DwarfCompileUnit::updateSubprogramScopeDIE(const DISubprogram *SP) {
 }
 
 // Construct a DIE for this scope.
-void DwarfCompileUnit::constructScopeDIE(
-    LexicalScope *Scope, SmallVectorImpl<DIE *> &FinalChildren) {
+void DwarfCompileUnit::constructScopeDIE(LexicalScope *Scope,
+                                         DIE &ParentScopeDIE) {
   if (!Scope || !Scope->getScopeNode())
     return;
 
@@ -533,46 +533,27 @@ void DwarfCompileUnit::constructScopeDIE(
          "constructSubprogramScopeDIE for non-inlined "
          "subprograms");
 
-  SmallVector<DIE *, 8> Children;
-
-  // We try to create the scope DIE first, then the children DIEs. This will
-  // avoid creating un-used children then removing them later when we find out
-  // the scope DIE is null.
-  DIE *ScopeDIE;
+  // Emit inlined subprograms.
   if (Scope->getParent() && isa<DISubprogram>(DS)) {
-    ScopeDIE = constructInlinedScopeDIE(Scope);
+    DIE *ScopeDIE = constructInlinedScopeDIE(Scope);
     if (!ScopeDIE)
       return;
-    // We create children when the scope DIE is not null.
-    createScopeChildrenDIE(Scope, Children);
-  } else {
-    // Early exit when we know the scope DIE is going to be null.
-    if (DD->isLexicalScopeDIENull(Scope))
-      return;
 
-    bool HasNonScopeChildren = false;
-
-    // We create children here when we know the scope DIE is not going to be
-    // null and the children will be added to the scope DIE.
-    createScopeChildrenDIE(Scope, Children, &HasNonScopeChildren);
-
-    // If there are only other scopes as children, put them directly in the
-    // parent instead, as this scope would serve no purpose.
-    if (!HasNonScopeChildren) {
-      FinalChildren.insert(FinalChildren.end(),
-                           std::make_move_iterator(Children.begin()),
-                           std::make_move_iterator(Children.end()));
-      return;
-    }
-    ScopeDIE = constructLexicalScopeDIE(Scope);
-    assert(ScopeDIE && "Scope DIE should not be null.");
+    ParentScopeDIE.addChild(ScopeDIE);
+    createAndAddScopeChildren(Scope, *ScopeDIE);
+    return;
   }
 
-  // Add children
-  for (auto &I : Children)
-    ScopeDIE->addChild(std::move(I));
+  // Early exit when we know the scope DIE is going to be null.
+  if (DD->isLexicalScopeDIENull(Scope))
+    return;
 
-  FinalChildren.push_back(std::move(ScopeDIE));
+  // Emit lexical blocks.
+  DIE *ScopeDIE = constructLexicalScopeDIE(Scope);
+  assert(ScopeDIE && "Scope DIE should not be null.");
+
+  ParentScopeDIE.addChild(ScopeDIE);
+  createAndAddScopeChildren(Scope, *ScopeDIE);
 }
 
 void DwarfCompileUnit::addScopeRangeList(DIE &ScopeDIE,
@@ -1013,42 +994,6 @@ sortLocalVars(SmallVectorImpl<DbgVariable *> &Input) {
   return Result;
 }
 
-DIE *DwarfCompileUnit::createScopeChildrenDIE(LexicalScope *Scope,
-                                              SmallVectorImpl<DIE *> &Children,
-                                              bool *HasNonScopeChildren) {
-  assert(Children.empty());
-  DIE *ObjectPointer = nullptr;
-
-  // Emit function arguments (order is significant).
-  auto Vars = DU->getScopeVariables().lookup(Scope);
-  for (auto &DV : Vars.Args)
-    Children.push_back(constructVariableDIE(*DV.second, *Scope, ObjectPointer));
-
-  // Emit local variables.
-  auto Locals = sortLocalVars(Vars.Locals);
-  for (DbgVariable *DV : Locals)
-    Children.push_back(constructVariableDIE(*DV, *Scope, ObjectPointer));
-
-  // Skip imported directives in gmlt-like data.
-  if (!includeMinimalInlineScopes()) {
-    // There is no need to emit empty lexical block DIE.
-    for (const auto *IE : ImportedEntities[Scope->getScopeNode()])
-      Children.push_back(
-          constructImportedEntityDIE(cast<DIImportedEntity>(IE)));
-  }
-
-  if (HasNonScopeChildren)
-    *HasNonScopeChildren = !Children.empty();
-
-  for (DbgLabel *DL : DU->getScopeLabels().lookup(Scope))
-    Children.push_back(constructLabelDIE(*DL, *Scope));
-
-  for (LexicalScope *LS : Scope->getChildren())
-    constructScopeDIE(LS, Children);
-
-  return ObjectPointer;
-}
-
 DIE &DwarfCompileUnit::constructSubprogramScopeDIE(const DISubprogram *Sub,
                                                    LexicalScope *Scope) {
   DIE &ScopeDIE = updateSubprogramScopeDIE(Sub);
@@ -1079,13 +1024,48 @@ DIE &DwarfCompileUnit::constructSubprogramScopeDIE(const DISubprogram *Sub,
 
 DIE *DwarfCompileUnit::createAndAddScopeChildren(LexicalScope *Scope,
                                                  DIE &ScopeDIE) {
-  // We create children when the scope DIE is not null.
-  SmallVector<DIE *, 8> Children;
-  DIE *ObjectPointer = createScopeChildrenDIE(Scope, Children);
+  DIE *ObjectPointer = nullptr;
 
-  // Add children
-  for (auto &I : Children)
-    ScopeDIE.addChild(std::move(I));
+  // Emit function arguments (order is significant).
+  auto Vars = DU->getScopeVariables().lookup(Scope);
+  for (auto &DV : Vars.Args)
+    ScopeDIE.addChild(constructVariableDIE(*DV.second, *Scope, ObjectPointer));
+
+  // Emit local variables.
+  auto Locals = sortLocalVars(Vars.Locals);
+  for (DbgVariable *DV : Locals)
+    ScopeDIE.addChild(constructVariableDIE(*DV, *Scope, ObjectPointer));
+
+  // Emit imported entities (skipped in gmlt-like data).
+  if (!includeMinimalInlineScopes()) {
+    for (const auto *IE : ImportedEntities[Scope->getScopeNode()])
+      ScopeDIE.addChild(constructImportedEntityDIE(cast<DIImportedEntity>(IE)));
+  }
+
+  // Emit labels.
+  for (DbgLabel *DL : DU->getScopeLabels().lookup(Scope))
+    ScopeDIE.addChild(constructLabelDIE(*DL, *Scope));
+
+  // Emit inner lexical scopes.
+  auto needToEmitLexicalScope = [this](LexicalScope *LS) {
+    if (isa<DISubprogram>(LS->getScopeNode()))
+      return true;
+    auto Vars = DU->getScopeVariables().lookup(LS);
+    if (!Vars.Args.empty() || !Vars.Locals.empty())
+      return true;
+    if (!includeMinimalInlineScopes() &&
+        !ImportedEntities[LS->getScopeNode()].empty())
+      return true;
+    return false;
+  };
+  for (LexicalScope *LS : Scope->getChildren()) {
+    // If the lexical block doesn't have non-scope children, skip
+    // its emission and put its children directly to the parent scope.
+    if (needToEmitLexicalScope(LS))
+      constructScopeDIE(LS, ScopeDIE);
+    else
+      createAndAddScopeChildren(LS, ScopeDIE);
+  }
 
   return ObjectPointer;
 }
