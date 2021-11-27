@@ -159,6 +159,16 @@ static cl::opt<unsigned> MemorySSAPathCheckLimit(
     cl::desc("The maximum number of blocks to check when trying to prove that "
              "all paths to an exit go through a killing block (default = 50)"));
 
+// This flags allows or disallows DSE to optimize MemorySSA during its
+// traversal. Note that DSE optimizing MemorySSA may impact other passes
+// downstream of the DSE invocation and can lead to issues not being
+// reproducible in isolation (i.e. when MemorySSA is built from scratch). In
+// those cases, the flag can be used to check if DSE's MemorySSA optimizations
+// impact follow-up passes.
+static cl::opt<bool>
+    OptimizeMemorySSA("dse-optimize-memoryssa", cl::init(false), cl::Hidden,
+                      cl::desc("Allow DSE to optimize memory accesses"));
+
 //===----------------------------------------------------------------------===//
 // Helper functions
 //===----------------------------------------------------------------------===//
@@ -1273,6 +1283,15 @@ struct DSEState {
     Instruction *KillingI = KillingDef->getMemoryInst();
     LLVM_DEBUG(dbgs() << "  trying to get dominating access\n");
 
+    // Only optimize defining access of KillingDef when directly starting at its
+    // defining access. The defining access also must only access KillingLoc. At
+    // the moment we only support instructions with a single write location, so
+    // it should be sufficient to disable optimizations for instructions that
+    // also read from memory.
+    bool CanOptimize = OptimizeMemorySSA &&
+                       KillingDef->getDefiningAccess() == StartAccess &&
+                       !KillingI->mayReadFromMemory();
+
     // Find the next clobbering Mod access for DefLoc, starting at StartAccess.
     Optional<MemoryLocation> CurrentLoc;
     for (;; Current = cast<MemoryDef>(Current)->getDefiningAccess()) {
@@ -1314,8 +1333,10 @@ struct DSEState {
       Instruction *CurrentI = CurrentDef->getMemoryInst();
 
       if (canSkipDef(CurrentDef, !isInvisibleToCallerBeforeRet(KillingUndObj),
-                     TLI))
+                     TLI)) {
+        CanOptimize = false;
         continue;
+      }
 
       // Before we try to remove anything, check for any extra throwing
       // instructions that block us from DSEing
@@ -1352,8 +1373,10 @@ struct DSEState {
       // If Current does not have an analyzable write location or is not
       // removable, skip it.
       CurrentLoc = getLocForWriteEx(CurrentI);
-      if (!CurrentLoc || !isRemovable(CurrentI))
+      if (!CurrentLoc || !isRemovable(CurrentI)) {
+        CanOptimize = false;
         continue;
+      }
 
       // AliasAnalysis does not account for loops. Limit elimination to
       // candidates for which we can guarantee they always store to the same
@@ -1361,6 +1384,7 @@ struct DSEState {
       if (!isGuaranteedLoopIndependent(CurrentI, KillingI, *CurrentLoc)) {
         LLVM_DEBUG(dbgs() << "  ... not guaranteed loop independent\n");
         WalkerStepLimit -= 1;
+        CanOptimize = false;
         continue;
       }
 
@@ -1368,13 +1392,29 @@ struct DSEState {
         // If the killing def is a memory terminator (e.g. lifetime.end), check
         // the next candidate if the current Current does not write the same
         // underlying object as the terminator.
-        if (!isMemTerminator(*CurrentLoc, CurrentI, KillingI))
+        if (!isMemTerminator(*CurrentLoc, CurrentI, KillingI)) {
+          CanOptimize = false;
           continue;
+        }
       } else {
         int64_t KillingOffset = 0;
         int64_t DeadOffset = 0;
         auto OR = isOverwrite(KillingI, CurrentI, KillingLoc, *CurrentLoc,
                               KillingOffset, DeadOffset);
+        if (CanOptimize) {
+          // CurrentDef is the earliest write clobber of KillingDef. Use it as
+          // optimized access. Do not optimize if CurrentDef is already the
+          // defining access of KillingDef.
+          if (CurrentDef != KillingDef->getDefiningAccess() &&
+              (OR == OW_Complete || OR == OW_MaybePartial))
+            KillingDef->setOptimized(CurrentDef);
+
+          // Once a may-aliasing def is encountered do not set an optimized
+          // access.
+          if (OR != OW_None)
+            CanOptimize = false;
+        }
+
         // If Current does not write to the same object as KillingDef, check
         // the next candidate.
         if (OR == OW_Unknown || OR == OW_None)
