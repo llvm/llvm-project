@@ -9,9 +9,9 @@
 class InstM88k<dag outs, dag ins, string asm, string operands,
                list<dag> pattern = []>
   : Instruction {
-  field bits<32> Inst;
+  bits<32> Inst;
 
-  field bits<32> SoftFail = 0; // Needed by disassembler.
+  bits<32> SoftFail = 0; // Needed by disassembler.
 
   let Namespace = "M88k";
   let Size = 4;
