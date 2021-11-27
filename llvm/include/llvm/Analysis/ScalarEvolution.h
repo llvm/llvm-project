@@ -1912,16 +1912,20 @@ private:
                       SCEV::NoWrapFlags &Flags);
 
   /// Drop memoized information for all \p SCEVs.
-  void forgetMemoizedResults(ArrayRef<const SCEV *> SCEVs);
+  void forgetMemoizedResults(ArrayRef<const SCEV *> SCEVs,
+                             bool SkipUnknownPhis = false);
 
   /// Helper for forgetMemoizedResults.
-  void forgetMemoizedResultsImpl(const SCEV *S);
+  void forgetMemoizedResultsImpl(const SCEV *S, bool SkipUnknownPhis = false);
 
   /// Return an existing SCEV for V if there is one, otherwise return nullptr.
   const SCEV *getExistingSCEV(Value *V);
 
   /// Erase Value from ValueExprMap and ExprValueMap.
   void eraseValueFromMap(Value *V);
+
+  /// Insert V to S mapping into ValueExprMap and ExprValueMap.
+  void insertValueToMap(Value *V, const SCEV *S);
 
   /// Return false iff given SCEV contains a SCEVUnknown with NULL value-
   /// pointer.
