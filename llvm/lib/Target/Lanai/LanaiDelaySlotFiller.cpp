@@ -199,8 +199,7 @@ bool Filler::delayHasHazard(MachineBasicBlock::instr_iterator MI, bool &SawLoad,
   assert((!MI->isCall() && !MI->isReturn()) &&
          "Cannot put calls or returns in delay slot.");
 
-  for (unsigned I = 0, E = MI->getNumOperands(); I != E; ++I) {
-    const MachineOperand &MO = MI->getOperand(I);
+  for (const MachineOperand &MO : MI->operands()) {
     unsigned Reg;
 
     if (!MO.isReg() || !(Reg = MO.getReg()))

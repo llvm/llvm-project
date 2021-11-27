@@ -81,8 +81,7 @@ FunctionPass *llvm::createPPCCTRLoopsVerify() {
 }
 
 static bool clobbersCTR(const MachineInstr &MI) {
-  for (unsigned i = 0, e = MI.getNumOperands(); i != e; ++i) {
-    const MachineOperand &MO = MI.getOperand(i);
+  for (const MachineOperand &MO : MI.operands()) {
     if (MO.isReg()) {
       if (MO.isDef() && (MO.getReg() == PPC::CTR || MO.getReg() == PPC::CTR8))
         return true;
