@@ -63,18 +63,15 @@ class ImmediateOp<ValueType vt, string asmop> : Operand<vt> {
   let OperandType = "OPERAND_IMMEDIATE";
 }
 
-class ImmOpWithPattern<ValueType vt, string asmop, code pred, SDNodeXForm xform,
-      SDNode ImmNode = imm> :
-  ImmediateOp<vt, asmop>, PatLeaf<(vt ImmNode), pred, xform>;
+class ImmOpWithPattern<ValueType vt, string asmop, code pred, SDNodeXForm xform> :
+  ImmediateOp<vt, asmop>, IntImmLeaf<vt, pred, xform>;
 
 multiclass Immediate<ValueType vt, code pred, SDNodeXForm xform, string asmop> {
-  // def "" : ImmediateOp<vt, asmop>,
-  //          PatLeaf<(vt imm), pred, xform>;
   def "" : ImmOpWithPattern<vt, asmop, pred, xform>;
 
-//  def _timm : PatLeaf<(vt timm), pred, xform>;
-  def _timm : ImmOpWithPattern<vt, asmop, pred, xform, timm>;
+//  def _timm : ImmOpWithPattern<vt, asmop, pred, xform, timm>;
 }
+
 
 // Constructs an asm operand for a PC-relative address.  SIZE says how
 // many bits there are.
@@ -107,7 +104,7 @@ def BFImm : AsmOperandClass {
   let ParserMethod = "parseBitField";
 }
 def bfimm : ImmOpWithPattern<i32, "BFImm", [{
-  return isUInt<10>(N->getZExtValue());
+  return isUInt<10>(Imm.getZExtValue());
 }], NOOP_SDNodeXForm> {
   let PrintMethod = "printBitFieldOperand";
   let DecoderMethod = "decodeBitFieldOperand";
@@ -174,38 +171,39 @@ def HI16 : SDNodeXForm<imm, [{
 // Immediates for the lower and upper 16 bits of an i32, with the other
 // bits of the i32 being zero.
 defm imm32lo16 : Immediate<i32, [{
-  return (N->getZExtValue() & ~0x000000000000ffffULL) == 0;
+  return (Imm.getZExtValue() & ~0x000000000000ffffULL) == 0;
 }], LO16, "U16Imm">;
 
 defm imm32hi16 : Immediate<i32, [{
-  return (N->getZExtValue() & ~0x00000000ffff0000ULL) == 0;
+  return (Imm.getZExtValue() & ~0x00000000ffff0000ULL) == 0;
 }], HI16, "U16Imm">;
 
 // Immediates for the lower and upper 16 bits of an i32, with the other
 // bits of the i32 being one.
 defm imm32lo16c : Immediate<i32, [{
-  return (uint32_t(~N->getZExtValue()) & ~0x000000000000ffffULL) == 0;
+  uint64_t Val = Imm.getZExtValue();
+  return (uint32_t(~Val) & ~0x000000000000ffffULL) == 0;
 }], LO16, "U16Imm">;
 
 defm imm32hi16c : Immediate<i32, [{
-  return (uint32_t(~N->getZExtValue()) & ~0x00000000ffff0000ULL) == 0;
+  return (uint32_t(~Imm.getZExtValue()) & ~0x00000000ffff0000ULL) == 0;
 }], HI16, "U16Imm">;
 
 defm imm32zx5 : Immediate<i32, [{
-  return (N->getZExtValue() & ~0x000000000000001fULL) == 0;
+  return (Imm.getZExtValue() & ~0x000000000000001fULL) == 0;
 }], NOOP_SDNodeXForm, "U5Imm">;
 
 defm imm32zx16 : Immediate<i32, [{
-  return (N->getZExtValue() & ~0x00000000000000ffULL) == 0;
+  return (Imm.getZExtValue() & ~0x00000000000000ffULL) == 0;
 }], NOOP_SDNodeXForm, "U16Imm">;
 
 defm imm32zx5O : Immediate<i32, [{
-  return (N->getZExtValue() & ~0x000000000000001fULL) == 0;
+  return (Imm.getZExtValue() & ~0x000000000000001fULL) == 0;
 }], NOOP_SDNodeXForm, "U5ImmO">;
 
 // Predicate: Arbitrary 32 bit value.
-def uimm32 : PatLeaf<(imm), [{
-  uint64_t Val = N->getZExtValue();
+def uimm32 : IntImmLeaf<i32, [{
+  uint64_t Val = Imm.getZExtValue();
   return isUInt<32>(Val) && (Val & 0xffff);
 }]>;
 
@@ -286,7 +284,7 @@ def : Pat<(i32 imm:$imm),
           (ORri (ORriu (i32 R0), (HI16 i32:$imm)), (LO16 i32:$imm))>;
 
 // Multiclass for bit-field instructions with triadic registers or immediates.
-multiclass Bitfield<bits<6> Func, string OpcStr, SDNode OpNode, PatLeaf ImmOp> {
+multiclass Bitfield<bits<6> Func, string OpcStr, SDNode OpNode, ImmLeaf ImmOp> {
   def rr  : F_BR<Func, OpcStr,
                  [(set GPR:$rd, (OpNode GPR:$rs1, GPR:$rs2))]>;
   def rwo : F_BI<Func,
