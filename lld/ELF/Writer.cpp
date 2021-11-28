@@ -2549,17 +2549,6 @@ static uint64_t computeFileOffset(OutputSection *os, uint64_t off) {
   return first->offset + os->addr - first->addr;
 }
 
-// Set an in-file position to a given section and returns the end position of
-// the section.
-static uint64_t setFileOffset(OutputSection *os, uint64_t off) {
-  off = computeFileOffset(os, off);
-  os->offset = off;
-
-  if (os->type == SHT_NOBITS)
-    return off;
-  return off + os->size;
-}
-
 template <class ELFT> void Writer<ELFT>::assignFileOffsetsBinary() {
   // Compute the minimum LMA of all non-empty non-NOBITS sections as minAddr.
   auto needsOffset = [](OutputSection &sec) {
@@ -2601,7 +2590,10 @@ template <class ELFT> void Writer<ELFT>::assignFileOffsets() {
   for (OutputSection *sec : outputSections) {
     if (!(sec->flags & SHF_ALLOC))
       continue;
-    off = setFileOffset(sec, off);
+    off = computeFileOffset(sec, off);
+    sec->offset = off;
+    if (sec->type != SHT_NOBITS)
+      off += sec->size;
 
     // If this is a last section of the last executable segment and that
     // segment is the last loadable segment, align the offset of the
@@ -2610,9 +2602,11 @@ template <class ELFT> void Writer<ELFT>::assignFileOffsets() {
         lastRX->lastSec == sec)
       off = alignTo(off, config->maxPageSize);
   }
-  for (OutputSection *sec : outputSections)
-    if (!(sec->flags & SHF_ALLOC))
-      off = setFileOffset(sec, off);
+  for (OutputSection *osec : outputSections)
+    if (!(osec->flags & SHF_ALLOC)) {
+      osec->offset = alignTo(off, osec->alignment);
+      off = osec->offset + osec->size;
+    }
 
   sectionHeaderOff = alignTo(off, config->wordsize);
   fileSize = sectionHeaderOff + (outputSections.size() + 1) * sizeof(Elf_Shdr);
