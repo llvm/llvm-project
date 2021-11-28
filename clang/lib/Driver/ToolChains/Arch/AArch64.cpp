@@ -225,7 +225,7 @@ void aarch64::getAArch64TargetFeatures(const Driver &D,
   bool success = true;
   // Enable NEON by default.
   Features.push_back("+neon");
-  llvm::StringRef WaMArch = "";
+  llvm::StringRef WaMArch;
   if (ForAS)
     for (const auto *A :
          Args.filtered(options::OPT_Wa_COMMA, options::OPT_Xassembler))
@@ -235,7 +235,7 @@ void aarch64::getAArch64TargetFeatures(const Driver &D,
   // Call getAArch64ArchFeaturesFromMarch only if "-Wa,-march=" or
   // "-Xassembler -march" is detected. Otherwise it may return false
   // and causes Clang to error out.
-  if (WaMArch.size())
+  if (!WaMArch.empty())
     success = getAArch64ArchFeaturesFromMarch(D, WaMArch, Args, Features);
   else if ((A = Args.getLastArg(options::OPT_march_EQ)))
     success = getAArch64ArchFeaturesFromMarch(D, A->getValue(), Args, Features);
@@ -259,8 +259,15 @@ void aarch64::getAArch64TargetFeatures(const Driver &D,
     success = getAArch64MicroArchFeaturesFromMcpu(
         D, getAArch64TargetCPU(Args, Triple, A), Args, Features);
 
-  if (!success)
-    D.Diag(diag::err_drv_clang_unsupported) << A->getAsString(Args);
+  if (!success) {
+    auto Diag = D.Diag(diag::err_drv_clang_unsupported);
+    // If "-Wa,-march=" is used, 'WaMArch' will contain the argument's value,
+    // while 'A' is uninitialized. Only dereference 'A' in the other case.
+    if (!WaMArch.empty())
+      Diag << "-march=" + WaMArch.str();
+    else
+      Diag << A->getAsString(Args);
+  }
 
   if (Args.getLastArg(options::OPT_mgeneral_regs_only)) {
     Features.push_back("-fp-armv8");
