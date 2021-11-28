@@ -346,6 +346,10 @@ void test() {
   // Test pointer types.
 
   test<Context, const void*>(nullptr);
+  int i = 0;
+  test<Context, const void*>(static_cast<void*>(&i));
+  const int ci = 0;
+  test<Context, const void*>(static_cast<const void*>(&ci));
 }
 
 void test() {

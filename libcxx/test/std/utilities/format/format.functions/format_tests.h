@@ -2484,6 +2484,47 @@ void format_test_floating_point(TestFunction check, ExceptionTest check_exceptio
   format_test_floating_point<long double, CharT>(check, check_exception);
 }
 
+template <class P, class CharT, class TestFunction, class ExceptionTest>
+void format_test_pointer(TestFunction check, ExceptionTest check_exception) {
+  // *** align-fill & width ***
+  check(STR("answer is '   0x0'"), STR("answer is '{:6}'"), P(nullptr));
+  check(STR("answer is '   0x0'"), STR("answer is '{:>6}'"), P(nullptr));
+  check(STR("answer is '0x0   '"), STR("answer is '{:<6}'"), P(nullptr));
+  check(STR("answer is ' 0x0  '"), STR("answer is '{:^6}'"), P(nullptr));
+
+  check(STR("answer is '---0x0'"), STR("answer is '{:->6}'"), P(nullptr));
+  check(STR("answer is '0x0---'"), STR("answer is '{:-<6}'"), P(nullptr));
+  check(STR("answer is '-0x0--'"), STR("answer is '{:-^6}'"), P(nullptr));
+
+  // *** Sign ***
+  check_exception("The format-spec should consume the input or end with a '}'", STR("{:-}"), P(nullptr));
+  check_exception("The format-spec should consume the input or end with a '}'", STR("{:+}"), P(nullptr));
+  check_exception("The format-spec should consume the input or end with a '}'", STR("{: }"), P(nullptr));
+
+  // *** alternate form ***
+  check_exception("The format-spec should consume the input or end with a '}'", STR("{:#}"), P(nullptr));
+
+  // *** zero-padding ***
+  check_exception("A format-spec width field shouldn't have a leading zero", STR("{:0}"), P(nullptr));
+
+  // *** precision ***
+  check_exception("The format-spec should consume the input or end with a '}'", STR("{:.}"), P(nullptr));
+
+  // *** locale-specific form ***
+  check_exception("The format-spec should consume the input or end with a '}'", STR("{:L}"), P(nullptr));
+
+  // *** type ***
+  for (const auto& fmt : invalid_types<CharT>("p"))
+    check_exception("The format-spec type has a type not supported for a pointer argument", fmt, P(nullptr));
+}
+
+template <class CharT, class TestFunction, class ExceptionTest>
+void format_test_pointer(TestFunction check, ExceptionTest check_exception) {
+  format_test_pointer<std::nullptr_t, CharT>(check, check_exception);
+  format_test_pointer<void*, CharT>(check, check_exception);
+  format_test_pointer<const void*, CharT>(check, check_exception);
+}
+
 template <class CharT, class TestFunction, class ExceptionTest>
 void format_tests(TestFunction check, ExceptionTest check_exception) {
   // *** Test escaping  ***
@@ -2611,6 +2652,12 @@ void format_tests(TestFunction check, ExceptionTest check_exception) {
   check(STR("hello 42"), STR("hello {}"), static_cast<double>(42));
   check(STR("hello 42"), STR("hello {}"), static_cast<long double>(42));
   format_test_floating_point<CharT>(check, check_exception);
+
+  // *** Test pointer formater argument ***
+  check(STR("hello 0x0"), STR("hello {}"), nullptr);
+  check(STR("hello 0x42"), STR("hello {}"), reinterpret_cast<void*>(0x42));
+  check(STR("hello 0x42"), STR("hello {}"), reinterpret_cast<const void*>(0x42));
+  format_test_pointer<CharT>(check, check_exception);
 }
 
 #ifndef TEST_HAS_NO_WIDE_CHARACTERS

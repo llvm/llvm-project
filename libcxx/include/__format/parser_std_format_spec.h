@@ -826,7 +826,108 @@ protected:
   }
 };
 
-// TODO FMT Add a parser for pointer values.
+/**
+ * The parser for the std-format-spec.
+ *
+ * This implements the parser for the pointer types.
+ *
+ * See @ref __parser_string.
+ */
+template <class _CharT>
+class _LIBCPP_TEMPLATE_VIS __parser_pointer : public __parser_width,              // provides __width(|as_arg)
+                                              public __parser_fill_align<_CharT>, // provides __fill and uses __flags
+                                              public _Flags                       // provides __flags
+{
+public:
+  using char_type = _CharT;
+
+  _LIBCPP_HIDE_FROM_ABI constexpr __parser_pointer() {
+    // Implements LWG3612 Inconsistent pointer alignment in std::format.
+    // The issue's current status is "Tentatively Ready" and libc++ status is
+    // still experimental.
+    //
+    // TODO FMT Validate this with the final resolution of LWG3612.
+    this->__alignment = _Flags::_Alignment::__right;
+  }
+
+  /**
+   * The low-level std-format-spec parse function.
+   *
+   * @pre __begin points at the beginning of the std-format-spec. This means
+   * directly after the ':'.
+   * @pre The std-format-spec parses the entire input, or the first unmatched
+   * character is a '}'.
+   *
+   * @returns The iterator pointing at the last parsed character.
+   */
+  _LIBCPP_HIDE_FROM_ABI constexpr auto parse(auto& __parse_ctx) -> decltype(__parse_ctx.begin()) {
+    auto __it = __parse(__parse_ctx);
+    __process_display_type();
+    return __it;
+  }
+
+protected:
+  /**
+   * The low-level std-format-spec parse function.
+   *
+   * @pre __begin points at the beginning of the std-format-spec. This means
+   * directly after the ':'.
+   * @pre The std-format-spec parses the entire input, or the first unmatched
+   * character is a '}'.
+   *
+   * @returns The iterator pointing at the last parsed character.
+   */
+  _LIBCPP_HIDE_FROM_ABI constexpr auto __parse(auto& __parse_ctx) -> decltype(__parse_ctx.begin()) {
+    auto __begin = __parse_ctx.begin();
+    auto __end = __parse_ctx.end();
+    if (__begin == __end)
+      return __begin;
+
+    __begin = __parser_fill_align<_CharT>::__parse(__begin, __end, static_cast<_Flags&>(*this));
+    if (__begin == __end)
+      return __begin;
+
+    // An integer presentation type isn't defined in the Standard.
+    // Since a pointer is formatted as an integer it can be argued it's an
+    // integer presentation type. However there are two LWG-issues asserting it
+    // isn't an integer presentation type:
+    // - LWG3612 Inconsistent pointer alignment in std::format
+    // - LWG3644 std::format does not define "integer presentation type"
+    //
+    // There's a paper to make additional clarifications on the status of
+    // formatting pointers and proposes additional fields to be valid. That
+    // paper hasn't been reviewed by the Committee yet.
+    // - P2510 Formatting pointers
+    //
+    // The current implementation assumes formatting pointers isn't covered by
+    // "integer presentation type".
+    // TODO FMT Apply the LWG-issues/papers after approval/rejection by the Committee.
+
+    __begin = __parser_width::__parse(__begin, __end, __parse_ctx);
+    if (__begin == __end)
+      return __begin;
+
+    __begin = __parse_type(__begin, static_cast<_Flags&>(*this));
+
+    if (__begin != __end && *__begin != _CharT('}'))
+      __throw_format_error("The format-spec should consume the input or end with a '}'");
+
+    return __begin;
+  }
+
+  /** Processes the parsed std-format-spec based on the parsed display type. */
+  _LIBCPP_HIDE_FROM_ABI constexpr void __process_display_type() {
+    switch (this->__type) {
+    case _Flags::_Type::__default:
+      this->__type = _Flags::_Type::__pointer;
+      break;
+    case _Flags::_Type::__pointer:
+      break;
+    default:
+      __throw_format_error("The format-spec type has a type not supported for a pointer argument");
+    }
+  }
+};
 
 /** Helper struct returned from @ref __get_string_alignment. */
 template <class _CharT>

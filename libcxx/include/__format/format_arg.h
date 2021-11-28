@@ -245,7 +245,9 @@ private:
   explicit basic_format_arg(nullptr_t) noexcept
       : __ptr(nullptr), __type_(__format::__arg_t::__ptr) {}
 
-  // TODO FMT Implement the _Tp* constructor.
+  template <class _Tp>
+  requires is_void_v<_Tp> _LIBCPP_HIDE_FROM_ABI explicit basic_format_arg(_Tp* __p) noexcept
+      : __ptr(__p), __type_(__format::__arg_t::__ptr) {}
 };
 
 #endif // !defined(_LIBCPP_HAS_NO_CONCEPTS)
