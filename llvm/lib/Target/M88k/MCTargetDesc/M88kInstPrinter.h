@@ -51,6 +51,12 @@ public:
                         raw_ostream &O);
   void printBitFieldOperand(const MCInst *MI, int OpNum,
                             const MCSubtargetInfo &STI, raw_ostream &O);
+  void printBFWidthOperand(const MCInst *MI, int OpNum,
+                           const MCSubtargetInfo &STI, raw_ostream &O);
+  void printBFOffsetOperand(const MCInst *MI, int OpNum,
+                            const MCSubtargetInfo &STI, raw_ostream &O);
+  void printPixelRotOperand(const MCInst *MI, int OpNum,
+                            const MCSubtargetInfo &STI, raw_ostream &O);
   void printCCodeOperand(const MCInst *MI, int OpNum,
                          const MCSubtargetInfo &STI, raw_ostream &O);
   void printPCRelOperand(const MCInst *MI, uint64_t Address, int OpNum,

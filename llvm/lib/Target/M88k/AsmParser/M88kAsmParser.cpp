@@ -175,6 +175,21 @@ public:
     addExpr(Inst, getImm());
   }
 
+  void addBFWidthOperands(MCInst &Inst, unsigned N) const {
+    assert(N == 1 && "Invalid number of operands");
+    addExpr(Inst, getImm());
+  }
+
+  void addBFOffsetOperands(MCInst &Inst, unsigned N) const {
+    assert(N == 1 && "Invalid number of operands");
+    addExpr(Inst, getImm());
+  }
+
+  void addPixelRotOperands(MCInst &Inst, unsigned N) const {
+    assert(N == 1 && "Invalid number of operands");
+    addExpr(Inst, getImm());
+  }
+
   void addConditionCodeOperands(MCInst &Inst, unsigned N) const {
     assert(N == 1 && "Invalid number of operands");
     addExpr(Inst, getImm());
@@ -188,6 +203,9 @@ public:
   bool isVec9() const { return isImm(0, 511); }
 
   bool isBitField() const { return isImm(0, 1023); }
+  bool isBFWidth() const { return isImm(0, 31); }
+  bool isBFOffset() const { return isImm(0, 31); }
+  bool isPixelRot() const { return isImm(0, 60); }
   bool isCCode() const { return isImm(0, 31); }
 
   void print(raw_ostream &OS) const override {
@@ -237,6 +255,9 @@ class M88kAsmParser : public MCTargetAsmParser {
   OperandMatchResultTy parseScaledRegister(OperandVector &Operands);
 
   OperandMatchResultTy parseBitField(OperandVector &Operands);
+  OperandMatchResultTy parseBFWidth(OperandVector &Operands);
+  OperandMatchResultTy parseBFOffset(OperandVector &Operands);
+  OperandMatchResultTy parsePixelRot(OperandVector &Operands);
   OperandMatchResultTy parseConditionCode(OperandVector &Operands);
 
   OperandMatchResultTy parsePCRel(OperandVector &Operands, unsigned Bits);
@@ -482,6 +503,102 @@ OperandMatchResultTy M88kAsmParser::parseBitField(OperandVector &Operands) {
   // TODO Check values.
   int64_t Val = Width << 5 | Offset;
   const MCExpr *Expr = MCConstantExpr::create(Val, Ctx);
+  SMLoc EndLoc =
+    SMLoc::getFromPointer(Parser.getTok().getLoc().getPointer() - 1);
+  Operands.push_back(M88kOperand::createImm(Expr, StartLoc, EndLoc));
+
+  // Announce match.
+  return MatchOperand_Success;
+}
+
+OperandMatchResultTy M88kAsmParser::parseBFWidth(OperandVector &Operands) {
+  // Parses an immediate. Can be empty, but must be followed by <O>.
+  MCContext &Ctx = getContext();
+  SMLoc StartLoc = Parser.getTok().getLoc();
+  Optional<AsmToken> WidthTok;
+  int64_t Width = 0;
+  if (Lexer.is(AsmToken::Integer)) {
+    WidthTok = Parser.getTok();
+    Width = Parser.getTok().getIntVal();
+    Parser.Lex();
+  }
+  if (Lexer.isNot(AsmToken::Less)) {
+    if (WidthTok)
+      Lexer.UnLex(WidthTok.getValue());
+    return MatchOperand_NoMatch;
+  }
+
+  if (!isUInt<5>(Width)) {
+    Error(StartLoc, "Bitfield width out of range");
+    Width &= 0x1f;
+  }
+  const MCExpr *Expr = MCConstantExpr::create(Width, Ctx);
+  SMLoc EndLoc =
+    SMLoc::getFromPointer(Parser.getTok().getLoc().getPointer() - 1);
+  Operands.push_back(M88kOperand::createImm(Expr, StartLoc, EndLoc));
+
+  // Announce match.
+  return MatchOperand_Success;
+}
+
+OperandMatchResultTy M88kAsmParser::parseBFOffset(OperandVector &Operands) {
+  // Parses operands like <7>.
+  MCContext &Ctx = getContext();
+  SMLoc StartLoc = Parser.getTok().getLoc();
+
+  if (Lexer.isNot(AsmToken::Less)) {
+    return MatchOperand_NoMatch;
+  }
+  Parser.Lex();
+  if (Lexer.isNot(AsmToken::Integer))
+    return MatchOperand_ParseFail;
+  int64_t Offset = Parser.getTok().getIntVal();
+  Parser.Lex();
+  if (Lexer.isNot(AsmToken::Greater))
+    return MatchOperand_ParseFail;
+  Parser.Lex();
+
+  if (!isUInt<5>(Offset)) {
+    Error(StartLoc, "Bitfield offset out of range");
+    Offset &= 0x1f;
+  }
+  const MCExpr *Expr = MCConstantExpr::create(Offset, Ctx);
+  SMLoc EndLoc =
+    SMLoc::getFromPointer(Parser.getTok().getLoc().getPointer() - 1);
+  Operands.push_back(M88kOperand::createImm(Expr, StartLoc, EndLoc));
+
+  // Announce match.
+  return MatchOperand_Success;
+}
+
+OperandMatchResultTy M88kAsmParser::parsePixelRot(OperandVector &Operands) {
+  // Parses operands like <7>.
+  MCContext &Ctx = getContext();
+  SMLoc StartLoc = Parser.getTok().getLoc();
+
+  if (Lexer.isNot(AsmToken::Less)) {
+    return MatchOperand_NoMatch;
+  }
+  Parser.Lex();
+  if (Lexer.isNot(AsmToken::Integer))
+    return MatchOperand_ParseFail;
+  int64_t RotateSize = Parser.getTok().getIntVal();
+  Parser.Lex();
+  if (Lexer.isNot(AsmToken::Greater))
+    return MatchOperand_ParseFail;
+  Parser.Lex();
+
+  // TODO Check error handling.
+  if (RotateSize < 0 || RotateSize > 60) {
+    Error(StartLoc, "Pixel rotate size out of range");
+    RotateSize &= 0x3f;
+    RotateSize = (RotateSize & 0x3f) % 60;
+  }
+  if (RotateSize & 0x3) {
+    Warning(StartLoc, "Removed lower 2 bits of expression");
+    RotateSize &= ~0x3;
+  }
+  const MCExpr *Expr = MCConstantExpr::create(RotateSize, Ctx);
   SMLoc EndLoc =
     SMLoc::getFromPointer(Parser.getTok().getLoc().getPointer() - 1);
   Operands.push_back(M88kOperand::createImm(Expr, StartLoc, EndLoc));

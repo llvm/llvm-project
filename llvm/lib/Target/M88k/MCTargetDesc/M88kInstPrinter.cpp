@@ -112,6 +112,32 @@ void M88kInstPrinter::printBitFieldOperand(const MCInst *MI, int OpNum,
   O << Width << "<" << Offset << ">";
 }
 
+void M88kInstPrinter::printBFWidthOperand(const MCInst *MI, int OpNum,
+                                          const MCSubtargetInfo &STI,
+                                          raw_ostream &O) {
+  int64_t Value = MI->getOperand(OpNum).getImm();
+  assert(isUInt<5>(Value) && "Invalid bitfield width argument");
+  if (Value)
+    O << Value;
+}
+
+void M88kInstPrinter::printBFOffsetOperand(const MCInst *MI, int OpNum,
+                                           const MCSubtargetInfo &STI,
+                                           raw_ostream &O) {
+  int64_t Value = MI->getOperand(OpNum).getImm();
+  assert(isUInt<5>(Value) && "Invalid bitfield offset argument");
+  O << "<" << Value << ">";
+}
+
+void M88kInstPrinter::printPixelRotOperand(const MCInst *MI, int OpNum,
+                                           const MCSubtargetInfo &STI,
+                                           raw_ostream &O) {
+  int64_t Value = MI->getOperand(OpNum).getImm();
+  assert((isUInt<6>(Value) || !(Value & 0x3)) &&
+         "Invalid pixel rotation size argument");
+  O << "<" << Value << ">";
+}
+
 void M88kInstPrinter::printCCodeOperand(const MCInst *MI, int OpNum,
                                         const MCSubtargetInfo &STI,
                                         raw_ostream &O) {

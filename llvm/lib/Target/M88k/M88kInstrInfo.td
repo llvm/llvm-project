@@ -112,6 +112,51 @@ def bfimm : ImmOpWithPattern<i32, "BFImm", [{
   let OperandType = "OPERAND_BITFIELD";
 }
 
+// Bitfield width operand.
+def BFWidth : AsmOperandClass {
+  let Name = "BFWidth";
+  let RenderMethod = "addBFWidthOperands";
+  let ParserMethod = "parseBFWidth";
+}
+def bfwidth : ImmOpWithPattern<i32, "BFWidth", [{
+  return isUInt<5>(Imm.getZExtValue());
+}], NOOP_SDNodeXForm> {
+  let PrintMethod = "printBFWidthOperand";
+  let DecoderMethod = "decodeBFWidthOperand";
+  let OperandNamespace = "M88kOp";
+  let OperandType = "OPERAND_BFWIDTH";
+}
+
+// Bitfield offset operand.
+def BFOffset : AsmOperandClass {
+  let Name = "BFOffset";
+  let RenderMethod = "addBFOffsetOperands";
+  let ParserMethod = "parseBFOffset";
+}
+def bfoffset : ImmOpWithPattern<i32, "BFOffset", [{
+  return isUInt<5>(Imm.getZExtValue());
+}], NOOP_SDNodeXForm> {
+  let PrintMethod = "printBFOffsetOperand";
+  let DecoderMethod = "decodeBFOffsetOperand";
+  let OperandNamespace = "M88kOp";
+  let OperandType = "OPERAND_BFOFFSET";
+}
+
+// Pixel rotation size operand.
+def PixelRot : AsmOperandClass {
+  let Name = "PixelRot";
+  let RenderMethod = "addPixelRotOperands";
+  let ParserMethod = "parsePixelRot";
+}
+def pixelrot : ImmOpWithPattern<i32, "PixelRot", [{
+  return isUInt<6>(Imm.getZExtValue());
+}], NOOP_SDNodeXForm> {
+  let PrintMethod = "printPixelRotOperand";
+  let DecoderMethod = "decodePixelRotOperand";
+  let OperandNamespace = "M88kOp";
+  let OperandType = "OPERAND_PIXELROTATE";
+}
+
 // Condition code operands.
 def CCode : AsmOperandClass {
   let Name = "CCode";
@@ -284,21 +329,28 @@ def : Pat<(i32 imm:$imm),
           (ORri (ORriu (i32 R0), (HI16 i32:$imm)), (LO16 i32:$imm))>;
 
 // Multiclass for bit-field instructions with triadic registers or immediates.
-multiclass Bitfield<bits<6> Func, string OpcStr, SDNode OpNode, ImmLeaf ImmOp> {
+multiclass Bitfield<bits<6> Func, string OpcStr, SDNode OpNode> {
   def rr  : F_BR<Func, OpcStr,
                  [(set GPR:$rd, (OpNode GPR:$rs1, GPR:$rs2))]>;
-  def rwo : F_BI<Func,
-                 (outs GPR:$rd), (ins GPR:$rs1, ImmOp:$w5o5),
-                 OpcStr,
-                 [(set GPR:$rd, (OpNode GPR:$rs1, ImmOp:$w5o5))]>;
+  if !ne(OpcStr, "rot") then {
+    def rwo : F_BI<Func,
+                  (outs GPR:$rd), (ins GPR:$rs1, bfimm:$w5o5),
+                  OpcStr,
+                  [(set GPR:$rd, (OpNode GPR:$rs1, bfimm:$w5o5))]>;
+  } else {
+    def rwo : F_BIOFS<Func,
+                     (outs GPR:$rd), (ins GPR:$rs1, bfoffset:$o5),
+                     OpcStr,
+                     [(set GPR:$rd, (OpNode GPR:$rs1, bfoffset:$o5))]>;
+  }
 }
 
-defm CLR  : Bitfield<0b100000, "clr", m88k_clr, bfimm>;
-defm SET  : Bitfield<0b100010, "set", m88k_set, bfimm>;
-defm EXT  : Bitfield<0b100100, "ext", m88k_ext, bfimm>;
-defm EXTU : Bitfield<0b100110, "extu", m88k_extu, bfimm>;
-defm MAK  : Bitfield<0b101000, "mak", m88k_mak, bfimm>;
-defm ROT  : Bitfield<0b101010, "rot", m88k_rot, imm32zx5O>;
+defm CLR  : Bitfield<0b100000, "clr", m88k_clr>;
+defm SET  : Bitfield<0b100010, "set", m88k_set>;
+defm EXT  : Bitfield<0b100100, "ext", m88k_ext>;
+defm EXTU : Bitfield<0b100110, "extu", m88k_extu>;
+defm MAK  : Bitfield<0b101000, "mak", m88k_mak>;
+defm ROT  : Bitfield<0b101010, "rot", m88k_rot>;
 
 // Pattern for shifts
 def : Pat<(sra GPR:$rs1, GPR:$rs2), (EXTrr GPR:$rs1, GPR:$rs2)>;
@@ -308,7 +360,7 @@ def : Pat<(rotr GPR:$rs1, GPR:$rs2), (ROTrr GPR:$rs1, GPR:$rs2)>;
 def : Pat<(sra GPR:$rs1, imm32zx5O:$o5), (EXTrwo GPR:$rs1, imm32zx5O:$o5)>;
 def : Pat<(srl GPR:$rs1, imm32zx5O:$o5), (EXTUrwo GPR:$rs1, imm32zx5O:$o5)>;
 def : Pat<(shl GPR:$rs1, imm32zx5O:$o5), (MAKrwo GPR:$rs1, imm32zx5O:$o5)>;
-def : Pat<(rotr GPR:$rs1, imm32zx5O:$o5), (ROTrwo GPR:$rs1, imm32zx5O:$o5)>;
+def : Pat<(rotr GPR:$rs1, bfoffset:$o5), (ROTrwo GPR:$rs1, bfoffset:$o5)>;
 
 class FindBF<bits<6> Func, string OpcStr, SDNode OpNode> :
   F_BF<Func, (outs GPR:$rd), (ins GPR:$rs2),
@@ -1220,13 +1272,14 @@ defm PSUB : PArithPixel<0b00110, "psub">;
 defm PADDS : PArithPixelSat<0b00100, "padds">;
 defm PSUBS : PArithPixelSat<0b00110, "psubs">;
 defm PPACK : PPack;
-// TODO prot with rotation count
-def PROT : F_SFU2<0b01111, /*sat=*/ 0b00, /*ty=*/ 0b00,
-                  (outs GPR64:$rd), (ins GPR64:$rs1, GPR64:$rs2), "prot">;
+def PROTri : F_SFU2PROT<0b01110, (outs GPR64:$rd),
+                        (ins GPR64:$rs1, pixelrot:$o6), "prot">;
+def PROTrr : F_SFU2<0b01111, /*sat=*/ 0b00, /*ty=*/ 0b00,
+                    (outs GPR64:$rd), (ins GPR64:$rs1, GPR64:$rs2), "prot">;
 def PUNPKn : F_SFU2D<0b01101, /*sat=*/ 0b00, /*ty=*/ 0b00,
-                     (outs GPR64:$rd), (ins GPR64:$rs1, GPR64:$rs2), "punpk.n">;
+                     (outs GPR64:$rd), (ins GPR64:$rs1), "punpk.n">;
 def PUNPKb : F_SFU2D<0b01101, /*sat=*/ 0b00, /*ty=*/ 0b01,
-                     (outs GPR64:$rd), (ins GPR64:$rs1, GPR64:$rs2), "punpk.b">;
+                     (outs GPR64:$rd), (ins GPR64:$rs1), "punpk.b">;
 def PUNPKh : F_SFU2D<0b01101, /*sat=*/ 0b00, /*ty=*/ 0b10,
-                     (outs GPR64:$rd), (ins GPR64:$rs1, GPR64:$rs2), "punpk.h">;
+                     (outs GPR64:$rd), (ins GPR64:$rs1), "punpk.h">;
 }

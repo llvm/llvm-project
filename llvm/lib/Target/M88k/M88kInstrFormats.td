@@ -94,12 +94,24 @@ class F_BF<bits<6> func, dag outs, dag ins, string asm, list<dag> pattern =[]>
   let Inst{4-0} = rs2;
 }
 
-// Format: Bit-field with 10-bit immediate.
+// Format: Bit-field with 10-bit width / offset.
 class F_BI<bits<6> func, dag outs, dag ins, string asm, list<dag> pattern = []>
+//   : F_B<func, outs, ins, asm, "$rd, $rs1, $w5$o5", pattern> {
+//  bits<5> w5;
+//  bits<5> o5;
    : F_B<func, outs, ins, asm, "$rd, $rs1, $w5o5", pattern> {
   bits<10> w5o5;
   let Inst{26}  = 0b0;
   let Inst{9-0} = w5o5;
+}
+
+// Format: Bit-field with 5-bit offset.
+class F_BIOFS<bits<6> func, dag outs, dag ins, string asm, list<dag> pattern = []>
+   : F_B<func, outs, ins, asm, "$rd, $rs1, $o5", pattern> {
+  bits<5> o5;
+  let Inst{26}  = 0b0;
+  let Inst{9-5} = 0b00000;
+  let Inst{4-0} = o5;
 }
 
 // Category: Integer.
@@ -490,7 +502,7 @@ class F_SFU2<bits<5> func, bits<2> sat, bits<2> ty,
 // Format: Dyadic register.
 class F_SFU2D<bits<5> func, bits<2> sat, bits<2> ty,
               dag outs, dag ins, string asmstr, list<dag> pattern = []>
-   : F_SFU<outs, ins, asmstr, "$rd, $rs1, $rs2", pattern> {
+   : F_SFU<outs, ins, asmstr, "$rd, $rs1", pattern> {
   let rs2 = 0b00000;
 
   let Inst{28-26} = 0b010;
@@ -508,4 +520,16 @@ class F_SFU2PPACK<bits<5> func, bits<4> r, bits<2> ty,
   let Inst{15-11} = func;
   let Inst{10-7}  = r;
   let Inst{6-5}   = ty;
+}
+
+// Format: Dyadic register with 6 bit immediate - prot.
+class F_SFU2PROT<bits<5> func, dag outs, dag ins, string asmstr,
+                 list<dag> pattern = []>
+   : F_SFU<outs, ins, asmstr, "$rd, $rs1, $o6", pattern> {
+  bits<6> o6;
+  let rs2 = 0b00000;
+  let Inst{28-26} = 0b010;
+  let Inst{15-11} = func;
+  let Inst{10-7}  = o6{5-2};
+  let Inst{6-5}   = 0b00;
 }

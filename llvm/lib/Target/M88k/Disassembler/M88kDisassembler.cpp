@@ -199,6 +199,24 @@ static DecodeStatus decodeBitFieldOperand(MCInst &Inst, uint64_t Imm,
   return decodeUImmOperand<10>(Inst, Imm);
 }
 
+static DecodeStatus decodeBFWidthOperand(MCInst &Inst, uint64_t Imm,
+                                         uint64_t Address,
+                                         const void *Decoder) {
+  return decodeUImmOperand<5>(Inst, Imm);
+}
+
+static DecodeStatus decodeBFOffsetOperand(MCInst &Inst, uint64_t Imm,
+                                          uint64_t Address,
+                                          const void *Decoder) {
+  return decodeUImmOperand<5>(Inst, Imm);
+}
+
+static DecodeStatus decodePixelRotOperand(MCInst &Inst, uint64_t Imm,
+                                          uint64_t Address,
+                                          const void *Decoder) {
+  return decodeUImmOperand<6>(Inst, Imm << 2);
+}
+
 static DecodeStatus decodeCCodeOperand(MCInst &Inst, uint64_t Imm,
                                        uint64_t Address, const void *Decoder) {
   return decodeUImmOperand<5>(Inst, Imm);

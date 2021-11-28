@@ -448,8 +448,9 @@ isns:
 
 # pixel rotate left
   prot         %r2, %r4, %r6
-#  prot         %r4, %r6, <O>
+  prot         %r4, %r6, <36>
 # CHECK: prot         %r2, %r4, %r6      | encoding: [0x88,0x44,0x78,0x06]
+# CHECK: prot         %r4, %r6, <36>     | encoding: [0x88,0x86,0x74,0x80]
 
 # pixel subtract
   psub.b       %r2, %r4, %r6
@@ -480,12 +481,12 @@ isns:
 # CHECK: psubs.s      %r6, %r8, %r10     | encoding: [0x88,0xc8,0x31,0xea]
 
 # pixel unpack
-  punpk.n      %r2, %r4, %r6
-  punpk.b      %r4, %r6, %r8
-  punpk.h      %r6, %r8, %r10
-# CHECK: punpk.n      %r2, %r4, %r6      | encoding: [0x88,0x44,0x68,0x00]
-# CHECK: punpk.b      %r4, %r6, %r8      | encoding: [0x88,0x86,0x68,0x20]
-# CHECK: punpk.h      %r6, %r8, %r10     | encoding: [0x88,0xc8,0x68,0x40]
+  punpk.n      %r2, %r4
+  punpk.b      %r4, %r6
+  punpk.h      %r6, %r8
+# CHECK: punpk.n      %r2, %r4           | encoding: [0x88,0x44,0x68,0x00]
+# CHECK: punpk.b      %r4, %r6           | encoding: [0x88,0x86,0x68,0x20]
+# CHECK: punpk.h      %r6, %r8           | encoding: [0x88,0xc8,0x68,0x40]
 
 # store register to memory
   st.b.wt      %r0, %r1, %r2
