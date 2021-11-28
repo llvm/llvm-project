@@ -1,5 +1,13 @@
 // RUN: mlir-opt <%s -split-input-file -verify-diagnostics
 
+func @dim(%arg : tensor<1x?xf32>) {
+  %c2 = arith.constant 2 : index
+  tensor.dim %arg, %c2 : tensor<1x?xf32> // expected-error {{'tensor.dim' op index is out of range}}
+  return
+}
+
+// -----
+
 func @tensor.cast_mismatching_constants(%arg0: tensor<1xf32>) {
   // expected-error@+1 {{operand type 'tensor<1xf32>' and result type 'tensor<2xf32>' are cast incompatible}}
   %0 = tensor.cast %arg0 : tensor<1xf32> to tensor<2xf32>
@@ -137,4 +145,24 @@ func @tensor.reshape_num_elements_mismatch(
   // expected-error @+1 {{source and destination tensor should have the same number of elements}}
   tensor.reshape %buf(%shape)
     : (tensor<1xf32>, tensor<1xi32>) -> tensor<10xf32>
+}
+
+// -----
+
+func @slice_wrong_dynamic_type(%t: tensor<8x16x4xf32>, %idx : index) {
+      // expected-error @+1 {{expected result type to be 'tensor<4x4x4xf32>' or a rank-reduced version. (mismatch of result sizes)}}
+  %0 = tensor.extract_slice %t[0, 2, 0][4, 4, 4][1, 1, 1]
+    : tensor<8x16x4xf32> to tensor<?x4x4xf32>
+
+  return
+}
+
+// -----
+
+func @slice_wrong_static_type(%t: tensor<8x16x4xf32>, %idx : index) {
+      // expected-error @+1 {{expected result type to be 'tensor<?x3x?xf32>' or a rank-reduced version. (mismatch of result sizes)}}
+  %0 = tensor.extract_slice %t[0, 0, 0][%idx, 3, %idx][1, 1, 1]
+    : tensor<8x16x4xf32> to tensor<4x4x4xf32>
+
+  return
 }
