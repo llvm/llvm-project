@@ -1416,9 +1416,7 @@ template<class _Tp> using type_identity_t = typename type_identity<_Tp>::type;
 
 // is_signed
 
-// Before Clang 10, __is_signed didn't work for floating-point types or enums.
-#if __has_keyword(__is_signed) &&                                              \
-    !(defined(_LIBCPP_CLANG_VER) && _LIBCPP_CLANG_VER < 1000)
+#if __has_keyword(__is_signed)
 
 template<class _Tp>
 struct _LIBCPP_TEMPLATE_VIS is_signed : _BoolConstant<__is_signed(_Tp)> { };
