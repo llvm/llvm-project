@@ -105,6 +105,7 @@ PYBIND11_MODULE(_mlirExecutionEngine, m) {
                 mlirStringRefCreate(func.c_str(), func.size()));
             return reinterpret_cast<uintptr_t>(res);
           },
+          py::arg("func_name"),
           "Lookup function `func` in the ExecutionEngine.")
       .def(
           "raw_register_runtime",
@@ -127,5 +128,5 @@ PYBIND11_MODULE(_mlirExecutionEngine, m) {
                 executionEngine.get(),
                 mlirStringRefCreate(fileName.c_str(), fileName.size()));
           },
-          "Dump ExecutionEngine to an object file.");
+          py::arg("file_name"), "Dump ExecutionEngine to an object file.");
 }

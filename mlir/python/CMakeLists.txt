@@ -20,6 +20,11 @@ declare_mlir_python_sources(MLIRPythonSources.Core
     ir.py
     passmanager.py
     dialects/_ods_common.py
+
+    # The main _mlir module has submodules: include stubs from each.
+    _mlir_libs/_mlir/__init__.pyi
+    _mlir_libs/_mlir/ir.pyi
+    _mlir_libs/_mlir/passmanager.pyi
 )
 
 declare_mlir_python_sources(MLIRPythonSources.ExecutionEngine
@@ -27,6 +32,7 @@ declare_mlir_python_sources(MLIRPythonSources.ExecutionEngine
   ADD_TO_PARENT MLIRPythonSources
   SOURCES
     execution_engine.py
+    _mlir_libs/_mlirExecutionEngine.pyi
   SOURCES_GLOB
     runtime/*.py
 )
