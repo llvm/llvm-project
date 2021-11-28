@@ -63,19 +63,16 @@ class M88kOperand : public MCParsedAsmOperand {
   OperandKind Kind;
   SMLoc StartLoc, EndLoc;
 
-  // A string of length Length, starting at Data.
   struct TokenOp {
-    const char *Data;
-    unsigned Length;
+    StringRef Token;
   };
 
   struct RegOp {
     unsigned RegNo;
-    bool IsScaled;
   };
 
   union {
-    TokenOp Token;
+    TokenOp Tok;
     RegOp Reg;
     const MCExpr *Imm;
   };
@@ -100,15 +97,12 @@ public:
   // getEndLoc - Gets location of the last token of this operand
   SMLoc getEndLoc() const override { return EndLoc; }
 
-  bool isReg() const override { return Kind == OpKind_Reg && !Reg.IsScaled; }
+  bool isReg() const override { return Kind == OpKind_Reg; }
 
   unsigned getReg() const override {
     assert(isReg() && "Invalid type access!");
     return Reg.RegNo;
   }
-
-  // TODO
-  bool isScaledReg() const { return Kind == OpKind_Reg && Reg.IsScaled; }
 
   bool isImm() const override { return Kind == OpKind_Imm; }
 
@@ -125,23 +119,21 @@ public:
 
   StringRef getToken() const {
     assert(isToken() && "Not a token");
-    return StringRef(Token.Data, Token.Length);
+    return Tok.Token;
   }
 
   bool isMem() const override { return false; }
 
   static std::unique_ptr<M88kOperand> createToken(StringRef Str, SMLoc Loc) {
     auto Op = std::make_unique<M88kOperand>(OpKind_Token, Loc, Loc);
-    Op->Token.Data = Str.data();
-    Op->Token.Length = Str.size();
+    Op->Tok.Token = Str;
     return Op;
   }
 
-  static std::unique_ptr<M88kOperand> createReg(unsigned Num, bool IsScaled,
-                                                SMLoc StartLoc, SMLoc EndLoc) {
+  static std::unique_ptr<M88kOperand> createReg(unsigned Num, SMLoc StartLoc,
+                                                SMLoc EndLoc) {
     auto Op = std::make_unique<M88kOperand>(OpKind_Reg, StartLoc, EndLoc);
     Op->Reg.RegNo = Num;
-    Op->Reg.IsScaled = IsScaled;
     return Op;
   }
 
@@ -157,12 +149,6 @@ public:
   void addRegOperands(MCInst &Inst, unsigned N) const {
     assert(N == 1 && "Invalid number of operands");
     Inst.addOperand(MCOperand::createReg(getReg()));
-  }
-
-  void addScaledRegOperands(MCInst &Inst, unsigned N) const {
-    assert(N == 1 && "Invalid number of operands");
-    assert(isScaledReg() && "Expected a scaled register");
-    Inst.addOperand(MCOperand::createReg(Reg.RegNo));
   }
 
   void addImmOperands(MCInst &Inst, unsigned N) const {
@@ -218,9 +204,7 @@ public:
       break;
     case OpKind_Reg:
       OS << "Reg: ";
-      if (Reg.IsScaled) OS << "[";
       OS << "%r"; /*getReg() <<*/
-      if (Reg.IsScaled) OS << "]";
       OS << "\n";
       break;
     }
@@ -251,8 +235,7 @@ class M88kAsmParser : public MCTargetAsmParser {
   bool parseRegister(unsigned &RegNo, SMLoc &StartLoc, SMLoc &EndLoc,
                      bool RestoreOnFailure);
   bool parseOperand(OperandVector &Operands, StringRef Mnemonic);
-
-  OperandMatchResultTy parseScaledRegister(OperandVector &Operands);
+  bool parseScaledRegister(OperandVector &Operands);
 
   OperandMatchResultTy parseBitField(OperandVector &Operands);
   OperandMatchResultTy parseBFWidth(OperandVector &Operands);
@@ -387,7 +370,7 @@ bool M88kAsmParser::ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
           return Error(getLexer().getLoc(), "expected operand");
         }
       } else if (getLexer().is(AsmToken::LBrac)) {
-        if (parseScaledRegister(Operands) != MatchOperand_Success)
+        if (parseScaledRegister(Operands))
           return Error(getLexer().getLoc(), "expected scaled register operand");
       }
     }
@@ -417,9 +400,9 @@ bool M88kAsmParser::parseOperand(OperandVector &Operands, StringRef Mnemonic) {
   if (Lexer.is(AsmToken::Percent)) {
     unsigned RegNo;
     SMLoc StartLoc, EndLoc;
-    if (parseRegister(RegNo, StartLoc, EndLoc, false))
+    if (parseRegister(RegNo, StartLoc, EndLoc, /*RestoreOnFailure=*/false))
       return true;
-    Operands.push_back(M88kOperand::createReg(RegNo, false, StartLoc, EndLoc));
+    Operands.push_back(M88kOperand::createReg(RegNo, StartLoc, EndLoc));
     return false;
   }
 
@@ -435,44 +418,6 @@ bool M88kAsmParser::parseOperand(OperandVector &Operands, StringRef Mnemonic) {
   }
   // Failure
   return true;
-}
-
-OperandMatchResultTy
-M88kAsmParser::parseScaledRegister(OperandVector &Operands) {
-  SMLoc StartLoc = Parser.getTok().getLoc();
-
-  // Eat the '[' bracket.
-  if (Lexer.isNot(AsmToken::LBrac))
-    return MatchOperand_NoMatch;
-  const AsmToken &LBracTok = Parser.getTok();
-  Parser.Lex();
-
-  // Eat the '%' prefix.
-  if (Parser.getTok().isNot(AsmToken::Percent))
-    return MatchOperand_NoMatch;
-  Parser.Lex();
-
-  // Match the register.
-  unsigned RegNo;
-  if (Lexer.getKind() != AsmToken::Identifier ||
-      (RegNo = MatchRegisterName(Lexer.getTok().getIdentifier())) == 0) {
-    Lexer.UnLex(LBracTok);
-    return MatchOperand_NoMatch;
-  }
-  Parser.Lex();
-
-  // Eat the ']' bracket.
-  if (Lexer.isNot(AsmToken::RBrac)) {
-    Lexer.UnLex(LBracTok);
-    return MatchOperand_NoMatch;
-  }
-  SMLoc EndLoc = Parser.getTok().getLoc();
-  Parser.Lex();
-
-  Operands.push_back(M88kOperand::createReg(RegNo, true, StartLoc, EndLoc));
-
-  // Announce match.
-  return MatchOperand_Success;
 }
 
 OperandMatchResultTy M88kAsmParser::parseBitField(OperandVector &Operands) {
@@ -703,7 +648,7 @@ bool M88kAsmParser::parseRegister(unsigned &RegNo, SMLoc &StartLoc,
   const AsmToken &PercentTok = Parser.getTok();
   Parser.Lex();
 
-  // Match the register
+  // Match the register.
   if (Lexer.getKind() != AsmToken::Identifier ||
       (RegNo = MatchRegisterName(Lexer.getTok().getIdentifier())) == 0) {
     if (RestoreOnFailure)
@@ -711,8 +656,36 @@ bool M88kAsmParser::parseRegister(unsigned &RegNo, SMLoc &StartLoc,
     return Error(StartLoc, "invalid register");
   }
 
-  Parser.Lex(); // Eat identifier token
+  Parser.Lex(); // Eat identifier token.
   EndLoc = Parser.getTok().getLoc();
+  return false;
+}
+
+bool
+M88kAsmParser::parseScaledRegister(OperandVector &Operands) {
+  SMLoc LBracketLoc = Parser.getTok().getLoc();
+
+  // Eat the '[' bracket.
+  if (Lexer.isNot(AsmToken::LBrac))
+    return true;
+  Parser.Lex();
+
+  unsigned RegNo;
+  SMLoc StartLoc, EndLoc;
+  if (parseRegister(RegNo, StartLoc, EndLoc, /*RestoreOnFailure=*/ false))
+    return true;
+
+  // Eat the ']' bracket.
+  if (Lexer.isNot(AsmToken::RBrac))
+    return true;
+
+  SMLoc RBracLoc = Parser.getTok().getLoc();
+  Parser.Lex();
+
+  Operands.push_back(M88kOperand::createToken("[", LBracketLoc));
+  Operands.push_back(M88kOperand::createReg(RegNo, StartLoc, EndLoc));
+  Operands.push_back(M88kOperand::createToken("]", RBracLoc));
+
   return false;
 }
 

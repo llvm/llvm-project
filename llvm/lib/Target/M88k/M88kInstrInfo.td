@@ -184,22 +184,7 @@ def brtarget26 : PCRelOperand<OtherVT, PCRel26> {
   let DecoderMethod = "decodePC26BranchOperand";
 }
 
-def GPRScaledAsmOp : AsmOperandClass {
-  let Name = "ScaledReg";
-  let RenderMethod = "addScaledRegOperands";
-  let ParserMethod = "parseScaledRegister";
-}
-def GPRScaled : Operand<i32> {
-  let MIOperandInfo = (ops GPR:$rs2);
-  let PrintMethod = "printScaledRegister";
-  let DecoderMethod = "decodeScaledRegister";
-  let ParserMatchClass = GPRScaledAsmOp; //!cast<AsmOperandClass>(asmop);
-  let OperandNamespace = "M88kOp";
-  let OperandType = "OPERAND_REGISTER_SCALED";
-}
-
 // Extracting immediate operands from nodes.
-
 // Bits 0-15.
 def LO16 : SDNodeXForm<imm, [{
   uint32_t Value = N->getZExtValue() & 0x000000000000FFFFULL;
@@ -515,10 +500,10 @@ multiclass LoadUnsigned {
                                 (outs GPR:$rd), (ins GPR:$rs1, GPR:$rs2),
                                 !strconcat("ld.hu", Suffix)>;
     def urrsb#S : F_LSINDSCUNS</*ty=*/ 0b1, /*user=*/ U,
-                               (outs GPR:$rd), (ins GPR:$rs1, GPRScaled:$rs2),
+                               (outs GPR:$rd), (ins GPR:$rs1, GPR:$rs2),
                                !strconcat("ld.bu", Suffix)>;
     def urrsh#S : F_LSINDSCUNS</*ty=*/ 0b0, /*user=*/ U,
-                               (outs GPR:$rd), (ins GPR:$rs1, GPRScaled:$rs2),
+                               (outs GPR:$rd), (ins GPR:$rs1, GPR:$rs2),
                                !strconcat("ld.hu", Suffix)>;
   }
 }
@@ -584,48 +569,48 @@ multiclass LoadUnscaled<bits<4> Func, string OpcStr> {
 multiclass LoadScaled<bits<4> Func, string OpcStr> {
   let regfile = 1 in {
     def rrsd  : F_LSINDSC<Func, /*ty=*/ 0b00, /*user=*/ 0b0,
-                    (outs GPR64:$rd), (ins GPR:$rs1, GPRScaled:$rs2),
+                    (outs GPR64:$rd), (ins GPR:$rs1, GPR:$rs2),
                     !strconcat(OpcStr, ".d")>;
     def rrsw  : F_LSINDSC<Func, /*ty=*/ 0b01, /*user=*/ 0b0,
-                    (outs GPR:$rd), (ins GPR:$rs1, GPRScaled:$rs2),
+                    (outs GPR:$rd), (ins GPR:$rs1, GPR:$rs2),
                     OpcStr>;
     def rrsb  : F_LSINDSC<Func, /*ty=*/ 0b11, /*user=*/ 0b0,
-                    (outs GPR:$rd), (ins GPR:$rs1, GPRScaled:$rs2),
+                    (outs GPR:$rd), (ins GPR:$rs1, GPR:$rs2),
                     !strconcat(OpcStr, ".b")>;
     def rrsh  : F_LSINDSC<Func, /*ty=*/ 0b10, /*user=*/ 0b0,
-                    (outs GPR:$rd), (ins GPR:$rs1, GPRScaled:$rs2),
+                    (outs GPR:$rd), (ins GPR:$rs1, GPR:$rs2),
                     !strconcat(OpcStr, ".h")>;
     def rrsdu : F_LSINDSC<Func, /*ty=*/ 0b00, /*user=*/ 0b1,
-                    (outs GPR64:$rd), (ins GPR:$rs1, GPRScaled:$rs2),
+                    (outs GPR64:$rd), (ins GPR:$rs1, GPR:$rs2),
                     !strconcat(OpcStr, ".d.usr")>;
     def rrswu : F_LSINDSC<Func, /*ty=*/ 0b01, /*user=*/ 0b1,
-                    (outs GPR:$rd), (ins GPR:$rs1, GPRScaled:$rs2),
+                    (outs GPR:$rd), (ins GPR:$rs1, GPR:$rs2),
                     !strconcat(OpcStr, ".usr")>;
     def rrsbu : F_LSINDSC<Func, /*ty=*/ 0b11, /*user=*/ 0b1,
-                    (outs GPR:$rd), (ins GPR:$rs1, GPRScaled:$rs2),
+                    (outs GPR:$rd), (ins GPR:$rs1, GPR:$rs2),
                     !strconcat(OpcStr, ".b.usr")>;
     def rrshu : F_LSINDSC<Func, /*ty=*/ 0b10, /*user=*/ 0b1,
-                    (outs GPR:$rd), (ins GPR:$rs1, GPRScaled:$rs2),
+                    (outs GPR:$rd), (ins GPR:$rs1, GPR:$rs2),
                     !strconcat(OpcStr, ".h.usr")>;
   }
   let regfile = 0, Predicates = [IsMC881100] in {
     def xxsw  : F_LSINDSC<Func, /*ty=*/ 0b01, /*user=*/ 0b0,
-                    (outs XR:$rd), (ins GPR:$rs1, GPRScaled:$rs2),
+                    (outs XR:$rd), (ins GPR:$rs1, GPR:$rs2),
                     OpcStr>;
     def xxsd  : F_LSINDSC<Func, /*ty=*/ 0b00, /*user=*/ 0b0,
-                    (outs XR:$rd), (ins GPR:$rs1, GPRScaled:$rs2),
+                    (outs XR:$rd), (ins GPR:$rs1, GPR:$rs2),
                     !strconcat(OpcStr, ".d")>;
     def xxsq  : F_LSINDSC<Func, /*ty=*/ 0b10, /*user=*/ 0b0,
-                    (outs XR:$rd), (ins GPR:$rs1, GPRScaled:$rs2),
+                    (outs XR:$rd), (ins GPR:$rs1, GPR:$rs2),
                     !strconcat(OpcStr, ".x")>;
     def xxswu : F_LSINDSC<Func, /*ty=*/ 0b01, /*user=*/ 0b1,
-                    (outs XR:$rd), (ins GPR:$rs1, GPRScaled:$rs2),
+                    (outs XR:$rd), (ins GPR:$rs1, GPR:$rs2),
                     !strconcat(OpcStr, ".usr")>;
     def xxsdu : F_LSINDSC<Func, /*ty=*/ 0b00, /*user=*/ 0b1,
-                    (outs XR:$rd), (ins GPR:$rs1, GPRScaled:$rs2),
+                    (outs XR:$rd), (ins GPR:$rs1, GPR:$rs2),
                     !strconcat(OpcStr, ".d.usr")>;
     def xxsqu : F_LSINDSC<Func, /*ty=*/ 0b10, /*user=*/ 0b1,
-                    (outs XR:$rd), (ins GPR:$rs1, GPRScaled:$rs2),
+                    (outs XR:$rd), (ins GPR:$rs1, GPR:$rs2),
                     !strconcat(OpcStr, ".x.usr")>;
   }
 }
@@ -684,29 +669,29 @@ multiclass StoreScaled<bits<4> Func, string OpcStr> {
       let regfile = 1 in {
         let through = T in {
           def rrsd # s : F_LSINDSC<Func, /*ty=*/ 0b00, /*user=*/ U,
-                                   (outs GPR64:$rd), (ins GPR:$rs1, GPRScaled:$rs2),
+                                   (outs GPR64:$rd), (ins GPR:$rs1, GPR:$rs2),
                                    !strconcat(OpcStr, ".d", Suffix)>;
           def rrsw # s : F_LSINDSC<Func, /*ty=*/ 0b01, /*user=*/ U,
-                                   (outs GPR:$rd), (ins GPR:$rs1, GPRScaled:$rs2),
+                                   (outs GPR:$rd), (ins GPR:$rs1, GPR:$rs2),
                                    !strconcat(OpcStr, Suffix)>;
           def rrsb # s : F_LSINDSC<Func, /*ty=*/ 0b11, /*user=*/ U,
-                                   (outs GPR:$rd), (ins GPR:$rs1, GPRScaled:$rs2),
+                                   (outs GPR:$rd), (ins GPR:$rs1, GPR:$rs2),
                                    !strconcat(OpcStr, ".b", Suffix)>;
           def rrsh # s : F_LSINDSC<Func, /*ty=*/ 0b10, /*user=*/ U,
-                                   (outs GPR:$rd), (ins GPR:$rs1, GPRScaled:$rs2),
+                                   (outs GPR:$rd), (ins GPR:$rs1, GPR:$rs2),
                                    !strconcat(OpcStr, ".h", Suffix)>;
         }
       }
       let regfile = 0, Predicates = [IsMC881100] in {
         let through = T in {
           def xrss # s : F_LSINDSC<Func, /*ty=*/ 0b01, /*user=*/ U,
-                                   (outs XR:$rd), (ins GPR:$rs1, GPRScaled:$rs2),
+                                   (outs XR:$rd), (ins GPR:$rs1, GPR:$rs2),
                                    !strconcat(OpcStr, Suffix)>;
           def xrd # s : F_LSINDSC<Func, /*ty=*/ 0b00, /*user=*/ U,
-                                   (outs XR:$rd), (ins GPR:$rs1, GPRScaled:$rs2),
+                                   (outs XR:$rd), (ins GPR:$rs1, GPR:$rs2),
                                    !strconcat(OpcStr, ".d", Suffix)>;
           def xrsx # s : F_LSINDSC<Func, /*ty=*/ 0b10, /*user=*/ U,
-                                   (outs XR:$rd), (ins GPR:$rs1, GPRScaled:$rs2),
+                                   (outs XR:$rd), (ins GPR:$rs1, GPR:$rs2),
                                    !strconcat(OpcStr, ".x", Suffix)>;
         }
       }
@@ -715,18 +700,18 @@ multiclass StoreScaled<bits<4> Func, string OpcStr> {
 }
 
 multiclass LoadAddr {
-  def d : F_LADDR</*ty=*/ 0b00, (outs GPR:$rd), (ins GPR:$rs1, GPRScaled:$rs2),
+  def d : F_LADDR</*ty=*/ 0b00, (outs GPR:$rd), (ins GPR:$rs1, GPR:$rs2),
                   "lda.d">;
-  def w : F_LADDR</*ty=*/ 0b01, (outs GPR:$rd), (ins GPR:$rs1, GPRScaled:$rs2),
+  def w : F_LADDR</*ty=*/ 0b01, (outs GPR:$rd), (ins GPR:$rs1, GPR:$rs2),
                   "lda">;
-  def h : F_LADDR</*ty=*/ 0b10, (outs GPR:$rd), (ins GPR:$rs1, GPRScaled:$rs2),
+  def h : F_LADDR</*ty=*/ 0b10, (outs GPR:$rd), (ins GPR:$rs1, GPR:$rs2),
                   "lda.h">;
 // TODO
 //  let Predicates = [IsMC881000] in
-//    def b : F_LADDR</*ty=*/ 0b11, (outs GPR:$rd), (ins GPR:$rs1, GPRScaled:$rs2),
+//    def b : F_LADDR</*ty=*/ 0b11, (outs GPR:$rd), (ins GPR:$rs1, GPR:$rs2),
 //                    "lda.b">;
   let Predicates = [IsMC881100] in
-    def x : F_LADDR</*ty=*/ 0b11, (outs GPR:$rd), (ins GPR:$rs1, GPRScaled:$rs2),
+    def x : F_LADDR</*ty=*/ 0b11, (outs GPR:$rd), (ins GPR:$rs1, GPR:$rs2),
                     "lda.x">;
 }
 
@@ -751,10 +736,10 @@ multiclass Xmem {
                             (outs GPR:$rd), (ins GPR:$rs1, GPR:$rs2),
                             !strconcat("xmem", Suffix)>;
     def urrsb#S : F_XMEMSC</*ty=*/ 0b0, /*user=*/ U,
-                           (outs GPR:$rd), (ins GPR:$rs1, GPRScaled:$rs2),
+                           (outs GPR:$rd), (ins GPR:$rs1, GPR:$rs2),
                            !strconcat("xmem.bu", Suffix)>;
     def urrsh#S : F_XMEMSC</*ty=*/ 0b1, /*user=*/ U,
-                           (outs GPR:$rd), (ins GPR:$rs1, GPRScaled:$rs2),
+                           (outs GPR:$rd), (ins GPR:$rs1, GPR:$rs2),
                            !strconcat("xmem", Suffix)>;
   }
 }

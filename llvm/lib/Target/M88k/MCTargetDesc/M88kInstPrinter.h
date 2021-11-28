@@ -39,8 +39,6 @@ public:
   static void printOperand(const MCOperand &MO, const MCAsmInfo *MAI,
                            raw_ostream &O);
 
-  void printScaledRegister(const MCInst *MI, int OpNum,
-                           const MCSubtargetInfo &STI, raw_ostream &O);
   void printU5ImmOperand(const MCInst *MI, int OpNum,
                          const MCSubtargetInfo &STI, raw_ostream &O);
   void printU5ImmOOperand(const MCInst *MI, int OpNum,

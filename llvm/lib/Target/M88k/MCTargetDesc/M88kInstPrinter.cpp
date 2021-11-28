@@ -55,13 +55,6 @@ void M88kInstPrinter::printOperand(const MCOperand &MO, const MCAsmInfo *MAI,
     llvm_unreachable("Invalid operand");
 }
 
-void M88kInstPrinter::printScaledRegister(const MCInst *MI, int OpNum,
-                                          const MCSubtargetInfo &STI,
-                                          raw_ostream &O) {
-  assert(MI->getOperand(OpNum).isReg() && "Expected register");
-  O << "[" << '%' << getRegisterName(MI->getOperand(OpNum).getReg()) << "]";
-}
-
 void M88kInstPrinter::printU5ImmOperand(const MCInst *MI, int OpNum,
                                         const MCSubtargetInfo &STI,
                                         raw_ostream &O) {

@@ -159,12 +159,6 @@ static DecodeStatus decodeGPR64RegisterClass(MCInst &Inst, uint64_t RegNo,
   return decodeGPRRegisterClass(Inst, RegNo, Address, Decoder);
 }
 
-static DecodeStatus decodeScaledRegister(MCInst &Inst, uint64_t Imm,
-                                         uint64_t Address,
-                                         const void *Decoder) {
-  return MCDisassembler::Success;
-}
-
 template <unsigned N>
 static DecodeStatus decodeUImmOperand(MCInst &Inst, uint64_t Imm) {
   if (!isUInt<N>(Imm))

@@ -231,7 +231,7 @@ class F_LSINDUSC<bits<4> func, bits<2> ty, bits<1> user,
 class F_LSINDSC<bits<4> func, bits<2> ty, bits<1> user,
                 dag outs, dag ins, string asm, list<dag> pattern = []>
    : F_LSINDIRECT<func, ty, /*scaled=*/ 0b1, user, outs, ins, asm,
-                  "$rd, $rs1$rs2", pattern>;
+                  "$rd, $rs1[$rs2]", pattern>;
 
 // Format: Load register indirect with scaled or unscaled index (GRF, unsigned)
 class F_LSINDIRECTUNSIGNED<bits<1> ty, bits<1> scaled, bits<1> user,
@@ -261,7 +261,7 @@ class F_LSINDUSCUNS<bits<1> ty, bits<1> user,
 class F_LSINDSCUNS<bits<1> ty, bits<1> user,
                    dag outs, dag ins, string asm, list<dag> pattern = []>
    : F_LSINDIRECTUNSIGNED<ty, /*scaled=*/ 0b1, user, outs, ins, asm,
-                          "$rd, $rs1$rs2", pattern>;
+                          "$rd, $rs1[$rs2]", pattern>;
 
 class F_XMEMUNS<bits<1> ty, bits<1> user,
              dag outs, dag ins, string asm, list<dag> pattern = []>
@@ -273,7 +273,7 @@ class F_XMEMUNS<bits<1> ty, bits<1> user,
 class F_XMEMSC<bits<1> ty, bits<1> user,
                dag outs, dag ins, string asm, list<dag> pattern = []>
    : F_LSINDIRECTUNSIGNED<ty, /*scaled=*/ 0b1, user, outs, ins, asm,
-                          "$rd, $rs1$rs2", pattern> {
+                          "$rd, $rs1[$rs2]", pattern> {
   let Inst{15-11} = 0b00000;
 }
 
@@ -294,7 +294,7 @@ class F_XMEMIMM<bits<2> ty, dag outs, dag ins, string asm,
 // Format: Load/Store register indirect with scaled or unscaled index
 class F_LADDR<bits<2> ty, dag outs, dag ins, string asm,
               list<dag> pattern = []>
-   : InstM88k<outs, ins, asm, "$rd, $rs1$rs2", pattern> {
+   : InstM88k<outs, ins, asm, "$rd, $rs1[$rs2]", pattern> {
   bits<5>  rd;
   bits<5>  rs1;
   bits<5>  rs2;
