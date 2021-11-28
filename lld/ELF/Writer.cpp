@@ -2031,11 +2031,14 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
 
   sortSections();
 
-  // Now that we have the final list, create a list of all the
-  // OutputSections for convenience.
+  // Create a list of OutputSections, assign sectionIndex, and populate
+  // in.shStrTab.
   for (SectionCommand *cmd : script->sectionCommands)
-    if (auto *sec = dyn_cast<OutputSection>(cmd))
-      outputSections.push_back(sec);
+    if (auto *osec = dyn_cast<OutputSection>(cmd)) {
+      outputSections.push_back(osec);
+      osec->sectionIndex = outputSections.size();
+      osec->shName = in.shStrTab->addString(osec->name);
+    }
 
   // Prefer command line supplied address over other constraints.
   for (OutputSection *sec : outputSections) {
@@ -2058,12 +2061,6 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
   // particularly relevant.
   Out::elfHeader->sectionIndex = 1;
   Out::elfHeader->size = sizeof(typename ELFT::Ehdr);
-
-  for (size_t i = 0, e = outputSections.size(); i != e; ++i) {
-    OutputSection *sec = outputSections[i];
-    sec->sectionIndex = i + 1;
-    sec->shName = in.shStrTab->addString(sec->name);
-  }
 
   // Binary and relocatable output does not have PHDRS.
   // The headers have to be created before finalize as that can influence the
