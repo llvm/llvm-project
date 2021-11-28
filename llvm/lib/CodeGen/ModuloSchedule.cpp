@@ -1005,8 +1005,7 @@ void ModuloScheduleExpander::updateInstruction(MachineInstr *NewMI,
                                                unsigned CurStageNum,
                                                unsigned InstrStageNum,
                                                ValueMapTy *VRMap) {
-  for (unsigned i = 0, e = NewMI->getNumOperands(); i != e; ++i) {
-    MachineOperand &MO = NewMI->getOperand(i);
+  for (MachineOperand &MO : NewMI->operands()) {
     if (!MO.isReg() || !Register::isVirtualRegister(MO.getReg()))
       continue;
     Register reg = MO.getReg();

@@ -1258,8 +1258,7 @@ void RegAllocFast::allocateInstruction(MachineInstr &MI) {
     // Free registers occupied by defs.
     // Iterate operands in reverse order, so we see the implicit super register
     // defs first (we added them earlier in case of <def,read-undef>).
-    for (unsigned I = MI.getNumOperands(); I-- > 0;) {
-      MachineOperand &MO = MI.getOperand(I);
+    for (MachineOperand &MO : llvm::reverse(MI.operands())) {
       if (!MO.isReg() || !MO.isDef())
         continue;
 
@@ -1362,8 +1361,7 @@ void RegAllocFast::allocateInstruction(MachineInstr &MI) {
 
   // Free early clobbers.
   if (HasEarlyClobber) {
-    for (unsigned I = MI.getNumOperands(); I-- > 0; ) {
-      MachineOperand &MO = MI.getOperand(I);
+    for (MachineOperand &MO : llvm::reverse(MI.operands())) {
       if (!MO.isReg() || !MO.isDef() || !MO.isEarlyClobber())
         continue;
       // subreg defs don't free the full register. We left the subreg number
@@ -1440,8 +1438,7 @@ void RegAllocFast::handleBundle(MachineInstr &MI) {
   MachineBasicBlock::instr_iterator BundledMI = MI.getIterator();
   ++BundledMI;
   while (BundledMI->isBundledWithPred()) {
-    for (unsigned I = 0; I < BundledMI->getNumOperands(); ++I) {
-      MachineOperand &MO = BundledMI->getOperand(I);
+    for (MachineOperand &MO : BundledMI->operands()) {
       if (!MO.isReg())
         continue;
 

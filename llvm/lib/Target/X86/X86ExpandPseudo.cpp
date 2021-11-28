@@ -209,10 +209,8 @@ void X86ExpandPseudo::expandCALL_RVMARKER(MachineBasicBlock &MBB,
     llvm_unreachable("unexpected opcode");
 
   OriginalCall = BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(Opc)).getInstr();
-  unsigned OpStart = 1;
   bool RAXImplicitDead = false;
-  for (; OpStart < MI.getNumOperands(); ++OpStart) {
-    MachineOperand &Op = MI.getOperand(OpStart);
+  for (MachineOperand &Op : llvm::drop_begin(MI.operands())) {
     // RAX may be 'implicit dead', if there are no other users of the return
     // value. We introduce a new use, so change it to 'implicit def'.
     if (Op.isReg() && Op.isImplicit() && Op.isDead() &&
