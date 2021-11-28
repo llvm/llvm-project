@@ -2585,7 +2585,8 @@ Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
     return replaceInstUsesWith(I, V);
 
   Value *Op0 = I.getOperand(0), *Op1 = I.getOperand(1);
-  if (I.getType()->isIntOrIntVectorTy(1)) {
+  Type *Ty = I.getType();
+  if (Ty->isIntOrIntVectorTy(1)) {
     if (auto *SI0 = dyn_cast<SelectInst>(Op0)) {
       if (auto *I =
               foldAndOrOfSelectUsingImpliedCond(Op1, *SI0, /* IsAnd */ false))
@@ -2618,7 +2619,7 @@ Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
     // (X ^ C) | Y -> (X | Y) ^ C iff Y & C == 0
     // The check for a 'not' op is for efficiency (if Y is known zero --> ~X).
     Value *Or = Builder.CreateOr(X, Y);
-    return BinaryOperator::CreateXor(Or, ConstantInt::get(I.getType(), *CV));
+    return BinaryOperator::CreateXor(Or, ConstantInt::get(Ty, *CV));
   }
 
   // (A & C) | (B & D)
@@ -2651,14 +2652,14 @@ Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
         // iff (C0 & C1) == 0 and (X & ~C0) == 0
         if (match(A, m_c_Or(m_Value(X), m_Specific(B))) &&
             MaskedValueIsZero(X, ~*C0, 0, &I)) {
-          Constant *C01 = ConstantInt::get(I.getType(), *C0 | *C1);
+          Constant *C01 = ConstantInt::get(Ty, *C0 | *C1);
           return BinaryOperator::CreateAnd(A, C01);
         }
         // (A & C0) | ((X | A) & C1) --> (X | A) & (C0 | C1)
         // iff (C0 & C1) == 0 and (X & ~C1) == 0
         if (match(B, m_c_Or(m_Value(X), m_Specific(A))) &&
             MaskedValueIsZero(X, ~*C1, 0, &I)) {
-          Constant *C01 = ConstantInt::get(I.getType(), *C0 | *C1);
+          Constant *C01 = ConstantInt::get(Ty, *C0 | *C1);
           return BinaryOperator::CreateAnd(B, C01);
         }
         // ((X | C2) & C0) | ((X | C3) & C1) --> (X | C2 | C3) & (C0 | C1)
@@ -2668,7 +2669,7 @@ Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
             match(B, m_Or(m_Specific(X), m_APInt(C3))) &&
             (*C2 & ~*C0).isZero() && (*C3 & ~*C1).isZero()) {
           Value *Or = Builder.CreateOr(X, *C2 | *C3, "bitfield");
-          Constant *C01 = ConstantInt::get(I.getType(), *C0 | *C1);
+          Constant *C01 = ConstantInt::get(Ty, *C0 | *C1);
           return BinaryOperator::CreateAnd(Or, C01);
         }
       }
@@ -2814,10 +2815,10 @@ Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
   //       canonicalization?
   if (match(Op0, m_OneUse(m_SExt(m_Value(A)))) &&
       A->getType()->isIntOrIntVectorTy(1))
-    return SelectInst::Create(A, ConstantInt::getSigned(I.getType(), -1), Op1);
+    return SelectInst::Create(A, ConstantInt::getAllOnesValue(Ty), Op1);
   if (match(Op1, m_OneUse(m_SExt(m_Value(A)))) &&
       A->getType()->isIntOrIntVectorTy(1))
-    return SelectInst::Create(A, ConstantInt::getSigned(I.getType(), -1), Op0);
+    return SelectInst::Create(A, ConstantInt::getAllOnesValue(Ty), Op0);
 
   // Note: If we've gotten to the point of visiting the outer OR, then the
   // inner one couldn't be simplified.  If it was a constant, then it won't
@@ -2849,7 +2850,6 @@ Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
   // or(ashr(subNSW(Y, X), ScalarSizeInBits(Y) - 1), X)  --> X s> Y ? -1 : X.
   {
     Value *X, *Y;
-    Type *Ty = I.getType();
     if (match(&I, m_c_Or(m_OneUse(m_AShr(
                              m_NSWSub(m_Value(Y), m_Value(X)),
                              m_SpecificInt(Ty->getScalarSizeInBits() - 1))),
@@ -2899,7 +2899,6 @@ Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
   if (match(&I, m_c_Or(m_Add(m_Shl(m_One(), m_Value(X)), m_AllOnes()),
                        m_Shl(m_One(), m_Deferred(X)))) &&
       match(&I, m_c_Or(m_OneUse(m_Value()), m_Value()))) {
-    Type *Ty = X->getType();
     Value *Sub = Builder.CreateSub(
         ConstantInt::get(Ty, Ty->getScalarSizeInBits() - 1), X);
     return BinaryOperator::CreateLShr(Constant::getAllOnesValue(Ty), Sub);
