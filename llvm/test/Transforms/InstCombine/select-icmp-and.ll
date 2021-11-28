@@ -52,8 +52,8 @@ define <2 x i32> @test35vec(<2 x i32> %x) {
 ; Make sure we can still perform this optimization with a truncate present
 define i32 @test35_with_trunc(i64 %x) {
 ; CHECK-LABEL: @test35_with_trunc(
-; CHECK-NEXT:    [[X1:%.*]] = trunc i64 [[X:%.*]] to i32
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[X1]], -1
+; CHECK-NEXT:    [[TMP1:%.*]] = and i64 [[X:%.*]], 2147483648
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 [[TMP1]], 0
 ; CHECK-NEXT:    [[COND:%.*]] = select i1 [[CMP]], i32 60, i32 100
 ; CHECK-NEXT:    ret i32 [[COND]]
 ;
@@ -253,8 +253,8 @@ define <2 x i32> @test72vec(<2 x i32> %x) {
 
 define i32 @test73(i32 %x) {
 ; CHECK-LABEL: @test73(
-; CHECK-NEXT:    [[TMP1:%.*]] = trunc i32 [[X:%.*]] to i8
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp sgt i8 [[TMP1]], -1
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[X:%.*]], 128
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i32 [[TMP1]], 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = select i1 [[TMP2]], i32 40, i32 42
 ; CHECK-NEXT:    ret i32 [[TMP3]]
 ;
@@ -266,8 +266,8 @@ define i32 @test73(i32 %x) {
 
 define <2 x i32> @test73vec(<2 x i32> %x) {
 ; CHECK-LABEL: @test73vec(
-; CHECK-NEXT:    [[TMP1:%.*]] = trunc <2 x i32> [[X:%.*]] to <2 x i8>
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp sgt <2 x i8> [[TMP1]], <i8 -1, i8 -1>
+; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i32> [[X:%.*]], <i32 128, i32 128>
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq <2 x i32> [[TMP1]], zeroinitializer
 ; CHECK-NEXT:    [[TMP3:%.*]] = select <2 x i1> [[TMP2]], <2 x i32> <i32 40, i32 40>, <2 x i32> <i32 42, i32 42>
 ; CHECK-NEXT:    ret <2 x i32> [[TMP3]]
 ;
