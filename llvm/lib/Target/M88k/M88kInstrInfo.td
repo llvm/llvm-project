@@ -98,10 +98,13 @@ def U16Imm : ImmediateAsmOperand<"U16Imm">;
 def Vec9 : ImmediateAsmOperand<"Vec9">, ImmediateOp<i32, "Vec9">;
 
 // Bitfield operand.
+// TODO Replace usage with BFWidth/BFOffset.
 def BFImm : AsmOperandClass {
   let Name = "BitField";
   let RenderMethod = "addBitFieldOperands";
   let ParserMethod = "parseBitField";
+  let DiagnosticString = "operand must between 0 and 31";
+  let DiagnosticType = "InvalidBitfield";
 }
 def bfimm : ImmOpWithPattern<i32, "BFImm", [{
   return isUInt<10>(Imm.getZExtValue());
@@ -117,6 +120,8 @@ def BFWidth : AsmOperandClass {
   let Name = "BFWidth";
   let RenderMethod = "addBFWidthOperands";
   let ParserMethod = "parseBFWidth";
+  let DiagnosticString = "operand must between 0 and 31";
+  let DiagnosticType = "InvalidBitfieldWidth";
 }
 def bfwidth : ImmOpWithPattern<i32, "BFWidth", [{
   return isUInt<5>(Imm.getZExtValue());
@@ -132,6 +137,8 @@ def BFOffset : AsmOperandClass {
   let Name = "BFOffset";
   let RenderMethod = "addBFOffsetOperands";
   let ParserMethod = "parseBFOffset";
+  let DiagnosticString = "operand must between 0 and 31";
+  let DiagnosticType = "InvalidBitfieldOffset";
 }
 def bfoffset : ImmOpWithPattern<i32, "BFOffset", [{
   return isUInt<5>(Imm.getZExtValue());
@@ -147,6 +154,8 @@ def PixelRot : AsmOperandClass {
   let Name = "PixelRot";
   let RenderMethod = "addPixelRotOperands";
   let ParserMethod = "parsePixelRot";
+  let DiagnosticString = "operand must be a multiple of 4 between 0 and 60";
+  let DiagnosticType = "InvalidPixelRotationSize";
 }
 def pixelrot : ImmOpWithPattern<i32, "PixelRot", [{
   return isUInt<6>(Imm.getZExtValue());
