@@ -8,11 +8,13 @@ def run(f):
   f()
   gc.collect()
   assert Context._get_live_count() == 0
+  return f
 
 
 # Verify successful parse.
 # CHECK-LABEL: TEST: testParseSuccess
 # CHECK: module @successfulParse
+@run
 def testParseSuccess():
   ctx = Context()
   module = Module.parse(r"""module @successfulParse {}""", ctx)
@@ -23,12 +25,11 @@ def testParseSuccess():
   module.dump()  # Just outputs to stderr. Verifies that it functions.
   print(str(module))
 
-run(testParseSuccess)
-
 
 # Verify parse error.
 # CHECK-LABEL: TEST: testParseError
 # CHECK: testParseError: Unable to parse module assembly (see diagnostics)
+@run
 def testParseError():
   ctx = Context()
   try:
@@ -38,12 +39,11 @@ def testParseError():
   else:
     print("Exception not produced")
 
-run(testParseError)
-
 
 # Verify successful parse.
 # CHECK-LABEL: TEST: testCreateEmpty
 # CHECK: module {
+@run
 def testCreateEmpty():
   ctx = Context()
   loc = Location.unknown(ctx)
@@ -53,8 +53,6 @@ def testCreateEmpty():
   gc.collect()
   print(str(module))
 
-run(testCreateEmpty)
-
 
 # Verify round-trip of ASM that contains unicode.
 # Note that this does not test that the print path converts unicode properly
@@ -62,6 +60,7 @@ run(testCreateEmpty)
 # CHECK-LABEL: TEST: testRoundtripUnicode
 # CHECK: func private @roundtripUnicode()
 # CHECK: foo = "\F0\9F\98\8A"
+@run
 def testRoundtripUnicode():
   ctx = Context()
   module = Module.parse(r"""
@@ -69,11 +68,28 @@ def testRoundtripUnicode():
   """, ctx)
   print(str(module))
 
-run(testRoundtripUnicode)
+
+# Verify round-trip of ASM that contains unicode.
+# Note that this does not test that the print path converts unicode properly
+# because MLIR asm always normalizes it to the hex encoding.
+# CHECK-LABEL: TEST: testRoundtripBinary
+# CHECK: func private @roundtripUnicode()
+# CHECK: foo = "\F0\9F\98\8A"
+@run
+def testRoundtripBinary():
+  with Context():
+    module = Module.parse(r"""
+      func private @roundtripUnicode() attributes { foo = "😊" }
+    """)
+    binary_asm = module.operation.get_asm(binary=True)
+    assert isinstance(binary_asm, bytes)
+    module = Module.parse(binary_asm)
+    print(module)
 
 
 # Tests that module.operation works and correctly interns instances.
 # CHECK-LABEL: TEST: testModuleOperation
+@run
 def testModuleOperation():
   ctx = Context()
   module = Module.parse(r"""module @successfulParse {}""", ctx)
@@ -101,10 +117,9 @@ def testModuleOperation():
   assert ctx._get_live_operation_count() == 0
   assert ctx._get_live_module_count() == 0
 
-run(testModuleOperation)
-
 
 # CHECK-LABEL: TEST: testModuleCapsule
+@run
 def testModuleCapsule():
   ctx = Context()
   module = Module.parse(r"""module @successfulParse {}""", ctx)
@@ -122,5 +137,3 @@ def testModuleCapsule():
   gc.collect()
   assert ctx._get_live_module_count() == 0
 
-
-run(testModuleCapsule)

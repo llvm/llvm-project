@@ -175,7 +175,8 @@ def testBuildFuncOp():
 # CHECK-LABEL: TEST: testFuncArgumentAccess
 @run
 def testFuncArgumentAccess():
-  with Context(), Location.unknown():
+  with Context() as ctx, Location.unknown():
+    ctx.allow_unregistered_dialects = True
     module = Module.create()
     f32 = F32Type.get()
     f64 = F64Type.get()
@@ -185,38 +186,38 @@ def testFuncArgumentAccess():
         std.ReturnOp(func.arguments)
       func.arg_attrs = ArrayAttr.get([
           DictAttr.get({
-              "foo": StringAttr.get("bar"),
-              "baz": UnitAttr.get()
+              "custom_dialect.foo": StringAttr.get("bar"),
+              "custom_dialect.baz": UnitAttr.get()
           }),
-          DictAttr.get({"qux": ArrayAttr.get([])})
+          DictAttr.get({"custom_dialect.qux": ArrayAttr.get([])})
       ])
       func.result_attrs = ArrayAttr.get([
-          DictAttr.get({"res1": FloatAttr.get(f32, 42.0)}),
-          DictAttr.get({"res2": FloatAttr.get(f64, 256.0)})
+          DictAttr.get({"custom_dialect.res1": FloatAttr.get(f32, 42.0)}),
+          DictAttr.get({"custom_dialect.res2": FloatAttr.get(f64, 256.0)})
       ])
 
       other = builtin.FuncOp("other_func", ([f32, f32], []))
       with InsertionPoint(other.add_entry_block()):
         std.ReturnOp([])
       other.arg_attrs = [
-          DictAttr.get({"foo": StringAttr.get("qux")}),
+          DictAttr.get({"custom_dialect.foo": StringAttr.get("qux")}),
           DictAttr.get()
       ]
 
-  # CHECK: [{baz, foo = "bar"}, {qux = []}]
+  # CHECK: [{custom_dialect.baz, custom_dialect.foo = "bar"}, {custom_dialect.qux = []}]
   print(func.arg_attrs)
 
-  # CHECK: [{res1 = 4.200000e+01 : f32}, {res2 = 2.560000e+02 : f64}]
+  # CHECK: [{custom_dialect.res1 = 4.200000e+01 : f32}, {custom_dialect.res2 = 2.560000e+02 : f64}]
   print(func.result_attrs)
 
   # CHECK: func @some_func(
-  # CHECK: %[[ARG0:.*]]: f32 {baz, foo = "bar"},
-  # CHECK: %[[ARG1:.*]]: f32 {qux = []}) ->
-  # CHECK: f32 {res1 = 4.200000e+01 : f32},
-  # CHECK: f32 {res2 = 2.560000e+02 : f64})
+  # CHECK: %[[ARG0:.*]]: f32 {custom_dialect.baz, custom_dialect.foo = "bar"},
+  # CHECK: %[[ARG1:.*]]: f32 {custom_dialect.qux = []}) ->
+  # CHECK: f32 {custom_dialect.res1 = 4.200000e+01 : f32},
+  # CHECK: f32 {custom_dialect.res2 = 2.560000e+02 : f64})
   # CHECK: return %[[ARG0]], %[[ARG1]] : f32, f32
   #
   # CHECK: func @other_func(
-  # CHECK: %{{.*}}: f32 {foo = "qux"},
+  # CHECK: %{{.*}}: f32 {custom_dialect.foo = "qux"},
   # CHECK: %{{.*}}: f32)
   print(module)

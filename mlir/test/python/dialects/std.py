@@ -78,8 +78,11 @@ def testConstantIndexOp():
 @constructAndPrintInModule
 def testFunctionCalls():
   foo = builtin.FuncOp("foo", ([], []))
+  foo.sym_visibility = StringAttr.get("private")
   bar = builtin.FuncOp("bar", ([], [IndexType.get()]))
+  bar.sym_visibility = StringAttr.get("private")
   qux = builtin.FuncOp("qux", ([], [F32Type.get()]))
+  qux.sym_visibility = StringAttr.get("private")
 
   with InsertionPoint(builtin.FuncOp("caller", ([], [])).add_entry_block()):
     std.CallOp(foo, [])
@@ -88,9 +91,9 @@ def testFunctionCalls():
     std.ReturnOp([])
 
 
-# CHECK: func @foo()
-# CHECK: func @bar() -> index
-# CHECK: func @qux() -> f32
+# CHECK: func private @foo()
+# CHECK: func private @bar() -> index
+# CHECK: func private @qux() -> f32
 # CHECK: func @caller() {
 # CHECK:   call @foo() : () -> ()
 # CHECK:   %0 = call @bar() : () -> index
