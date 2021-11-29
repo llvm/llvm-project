@@ -384,8 +384,8 @@ MCSymbol *EHStreamer::emitExceptionTable() {
   SmallVector<const LandingPadInfo *, 64> LandingPads;
   LandingPads.reserve(PadInfos.size());
 
-  for (unsigned i = 0, N = PadInfos.size(); i != N; ++i)
-    LandingPads.push_back(&PadInfos[i]);
+  for (const LandingPadInfo &LPI : PadInfos)
+    LandingPads.push_back(&LPI);
 
   // Order landing pads lexicographically by type id.
   llvm::sort(LandingPads, [](const LandingPadInfo *L, const LandingPadInfo *R) {

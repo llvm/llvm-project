@@ -1455,17 +1455,15 @@ void SwingSchedulerDAG::computeNodeFunctions(NodeSetType &NodeSets) {
     int asap = 0;
     int zeroLatencyDepth = 0;
     SUnit *SU = &SUnits[I];
-    for (SUnit::const_pred_iterator IP = SU->Preds.begin(),
-                                    EP = SU->Preds.end();
-         IP != EP; ++IP) {
-      SUnit *pred = IP->getSUnit();
-      if (IP->getLatency() == 0)
+    for (const SDep &P : SU->Preds) {
+      SUnit *pred = P.getSUnit();
+      if (P.getLatency() == 0)
         zeroLatencyDepth =
             std::max(zeroLatencyDepth, getZeroLatencyDepth(pred) + 1);
-      if (ignoreDependence(*IP, true))
+      if (ignoreDependence(P, true))
         continue;
-      asap = std::max(asap, (int)(getASAP(pred) + IP->getLatency() -
-                                  getDistance(pred, SU, *IP) * MII));
+      asap = std::max(asap, (int)(getASAP(pred) + P.getLatency() -
+                                  getDistance(pred, SU, P) * MII));
     }
     maxASAP = std::max(maxASAP, asap);
     ScheduleInfo[I].ASAP = asap;
