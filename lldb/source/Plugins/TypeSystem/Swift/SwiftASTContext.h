@@ -538,9 +538,6 @@ public:
   static bool GetProtocolTypeInfo(const CompilerType &type,
                                   ProtocolInfo &protocol_info);
 
-  TypeAllocationStrategy
-  GetAllocationStrategy(lldb::opaque_compiler_type_t type) override;
-
   enum class NonTriviallyManagedReferenceStrategy {
     eWeak,
     eUnowned,

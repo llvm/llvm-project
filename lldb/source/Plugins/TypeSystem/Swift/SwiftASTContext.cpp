@@ -5529,28 +5529,6 @@ bool SwiftASTContext::GetProtocolTypeInfo(const CompilerType &type,
   return false;
 }
 
-TypeSystemSwift::TypeAllocationStrategy
-SwiftASTContext::GetAllocationStrategy(opaque_compiler_type_t type) {
-  VALID_OR_RETURN_CHECK_TYPE(type, TypeAllocationStrategy::eUnknown);
-
-  swift::Type swift_type = GetSwiftType(type);
-  if (!swift_type)
-    return TypeAllocationStrategy::eUnknown;
-  const swift::irgen::TypeInfo *type_info =
-      GetSwiftTypeInfo(swift_type.getPointer());
-  if (!type_info)
-    return TypeAllocationStrategy::eUnknown;
-  switch (type_info->getFixedPacking(GetIRGenModule())) {
-  case swift::irgen::FixedPacking::OffsetZero:
-    return TypeAllocationStrategy::eInline;
-  case swift::irgen::FixedPacking::Allocate:
-    return TypeAllocationStrategy::ePointer;
-  case swift::irgen::FixedPacking::Dynamic:
-    return TypeAllocationStrategy::eDynamic;
-  }
-  return TypeAllocationStrategy::eUnknown;
-}
-
 CompilerType
 SwiftASTContext::GetTypeRefType(lldb::opaque_compiler_type_t type) {
   return GetTypeSystemSwiftTypeRef().GetTypeFromMangledTypename(

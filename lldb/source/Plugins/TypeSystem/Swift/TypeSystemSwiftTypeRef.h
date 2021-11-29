@@ -246,8 +246,6 @@ public:
   CompilerType GetErrorType() override;
   CompilerType GetReferentType(lldb::opaque_compiler_type_t type) override;
   CompilerType GetInstanceType(lldb::opaque_compiler_type_t type) override;
-  TypeAllocationStrategy
-  GetAllocationStrategy(lldb::opaque_compiler_type_t type) override;
   CompilerType
   CreateTupleType(const std::vector<TupleElement> &elements) override;
   bool IsTupleType(lldb::opaque_compiler_type_t type) override;
