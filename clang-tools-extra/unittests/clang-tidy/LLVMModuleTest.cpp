@@ -219,6 +219,16 @@ TEST(LLVMHeaderGuardCheckTest, FixHeaderGuards) {
                 "", "/llvm-project/clang-tools-extra/clangd/foo.h",
                 StringRef("header is missing header guard")));
 
+  // Substitution of characters should not result in a header guard starting
+  // with "_".
+  EXPECT_EQ("#ifndef BAR_H\n"
+            "#define BAR_H\n"
+            "\n"
+            "\n"
+            "#endif\n",
+            runHeaderGuardCheck("", "include/--bar.h",
+                                StringRef("header is missing header guard")));
+
 #ifdef WIN32
   // Check interaction with Windows-style path separators (\).
   EXPECT_EQ(

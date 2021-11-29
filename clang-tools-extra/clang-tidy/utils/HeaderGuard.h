@@ -38,6 +38,9 @@ public:
   void registerPPCallbacks(const SourceManager &SM, Preprocessor *PP,
                            Preprocessor *ModuleExpanderPP) override;
 
+  /// Ensure that the provided header guard is a non-reserved identifier.
+  std::string sanitizeHeaderGuard(StringRef Guard);
+
   /// Returns ``true`` if the check should suggest inserting a trailing comment
   /// on the ``#endif`` of the header guard. It will use the same name as
   /// returned by ``HeaderGuardCheck::getHeaderGuard``.
