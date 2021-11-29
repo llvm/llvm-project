@@ -43,13 +43,13 @@ target triple = "x86_64-unknown-linux-gnu"
 ; ENABLED_MASKED_STRIDED: LV: Found an estimated cost of 13 for VF 2 For instruction:   store i16 %2, i16* %arrayidx7, align 2
 ;
 ; ENABLED_MASKED_STRIDED: LV: Found an estimated cost of 0 for VF 4 For instruction:   store i16 %0, i16* %arrayidx2, align 2
-; ENABLED_MASKED_STRIDED: LV: Found an estimated cost of 13 for VF 4 For instruction:   store i16 %2, i16* %arrayidx7, align 2
+; ENABLED_MASKED_STRIDED: LV: Found an estimated cost of 14 for VF 4 For instruction:   store i16 %2, i16* %arrayidx7, align 2
 ;
 ; ENABLED_MASKED_STRIDED: LV: Found an estimated cost of 0 for VF 8 For instruction:   store i16 %0, i16* %arrayidx2, align 2
-; ENABLED_MASKED_STRIDED: LV: Found an estimated cost of 16 for VF 8 For instruction:   store i16 %2, i16* %arrayidx7, align 2
+; ENABLED_MASKED_STRIDED: LV: Found an estimated cost of 14 for VF 8 For instruction:   store i16 %2, i16* %arrayidx7, align 2
 ;
 ; ENABLED_MASKED_STRIDED: LV: Found an estimated cost of 0 for VF 16 For instruction:   store i16 %0, i16* %arrayidx2, align 2
-; ENABLED_MASKED_STRIDED: LV: Found an estimated cost of 31 for VF 16 For instruction:   store i16 %2, i16* %arrayidx7, align 2
+; ENABLED_MASKED_STRIDED: LV: Found an estimated cost of 27 for VF 16 For instruction:   store i16 %2, i16* %arrayidx7, align 2
 
 define void @test1(i16* noalias nocapture %points, i16* noalias nocapture readonly %x, i16* noalias nocapture readonly %y) {
 entry:
@@ -110,13 +110,13 @@ for.end:
 ; ENABLED_MASKED_STRIDED: LV: Found an estimated cost of 13 for VF 2 For instruction:   store i16 %2, i16* %arrayidx7, align 2
 ;
 ; ENABLED_MASKED_STRIDED: LV: Found an estimated cost of 0 for VF 4 For instruction:   store i16 %0, i16* %arrayidx2, align 2
-; ENABLED_MASKED_STRIDED: LV: Found an estimated cost of 13 for VF 4 For instruction:   store i16 %2, i16* %arrayidx7, align 2
+; ENABLED_MASKED_STRIDED: LV: Found an estimated cost of 14 for VF 4 For instruction:   store i16 %2, i16* %arrayidx7, align 2
 ;
 ; ENABLED_MASKED_STRIDED: LV: Found an estimated cost of 0 for VF 8 For instruction:   store i16 %0, i16* %arrayidx2, align 2
-; ENABLED_MASKED_STRIDED: LV: Found an estimated cost of 16 for VF 8 For instruction:   store i16 %2, i16* %arrayidx7, align 2
+; ENABLED_MASKED_STRIDED: LV: Found an estimated cost of 14 for VF 8 For instruction:   store i16 %2, i16* %arrayidx7, align 2
 ;
 ; ENABLED_MASKED_STRIDED: LV: Found an estimated cost of 0 for VF 16 For instruction:   store i16 %0, i16* %arrayidx2, align 2
-; ENABLED_MASKED_STRIDED: LV: Found an estimated cost of 31 for VF 16 For instruction:   store i16 %2, i16* %arrayidx7, align 2
+; ENABLED_MASKED_STRIDED: LV: Found an estimated cost of 27 for VF 16 For instruction:   store i16 %2, i16* %arrayidx7, align 2
 
 define void @test2(i16* noalias nocapture %points, i32 %numPoints, i16* noalias nocapture readonly %x, i16* noalias nocapture readonly %y) {
 entry:

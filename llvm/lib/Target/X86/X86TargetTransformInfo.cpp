@@ -5285,7 +5285,6 @@ InstructionCost X86TTIImpl::getInterleavedMemoryOpCostAVX512(
   unsigned VF = VecTy->getNumElements() / Factor;
   MVT VT = MVT::getVectorVT(MVT::getVT(VecTy->getScalarType()), VF);
 
-  // FIXME: this is the most conservative estimate for the mask cost.
   InstructionCost MaskCost;
   if (UseMaskForCond || UseMaskForGaps) {
     APInt DemandedLoadStoreElts = APInt::getZero(VecTy->getNumElements());
@@ -5295,10 +5294,10 @@ InstructionCost X86TTIImpl::getInterleavedMemoryOpCostAVX512(
         DemandedLoadStoreElts.setBit(Index + Elm * Factor);
     }
 
-    Type *I8Type = Type::getInt8Ty(VecTy->getContext());
+    Type *I1Type = Type::getInt1Ty(VecTy->getContext());
 
     MaskCost = getReplicationShuffleCost(
-        I8Type, Factor, VF,
+        I1Type, Factor, VF,
         UseMaskForGaps ? DemandedLoadStoreElts
                        : APInt::getAllOnes(VecTy->getNumElements()),
         CostKind);
@@ -5309,7 +5308,7 @@ InstructionCost X86TTIImpl::getInterleavedMemoryOpCostAVX512(
     // memory access, we need to account for the cost of And-ing the two masks
     // inside the loop.
     if (UseMaskForGaps) {
-      auto *MaskVT = FixedVectorType::get(I8Type, VecTy->getNumElements());
+      auto *MaskVT = FixedVectorType::get(I1Type, VecTy->getNumElements());
       MaskCost += getArithmeticInstrCost(BinaryOperator::And, MaskVT, CostKind);
     }
   }
