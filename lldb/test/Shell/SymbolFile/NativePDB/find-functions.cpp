@@ -28,8 +28,8 @@ int main(int argc, char **argv) {
 // FIND-MAIN:      Function: id = {{.*}}, name = "main"
 // FIND-MAIN-NEXT: FuncType: id = {{.*}}, compiler_type = "int (int, char **)"
 
-// FIND-STATIC:      Function: id = {{.*}}, name = "static_fn"
+// FIND-STATIC:      Function: id = {{.*}}, name = "{{.*}}static_fn{{.*}}"
 // FIND-STATIC-NEXT: FuncType: id = {{.*}}, compiler_type = "int (void)"
 
-// FIND-VAR:      Function: id = {{.*}}, name = "varargs_fn"
+// FIND-VAR:      Function: id = {{.*}}, name = "{{.*}}varargs_fn{{.*}}"
 // FIND-VAR-NEXT: FuncType: id = {{.*}}, compiler_type = "int (int, int, ...)"
