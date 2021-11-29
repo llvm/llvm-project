@@ -30,4 +30,7 @@ INSTANTIATE_TEST_SUITE_P(DLangDemangleTest, DLangDemangleTestFixture,
                          testing::Values(std::make_pair("_Dmain", "D main"),
                                          std::make_pair(nullptr, nullptr),
                                          std::make_pair("_Z", nullptr),
-                                         std::make_pair("_DDD", nullptr)));
+                                         std::make_pair("_DDD", nullptr),
+                                         std::make_pair("_D88", nullptr),
+                                         std::make_pair("_D8demangleZ",
+                                                        "demangle")));
