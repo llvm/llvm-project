@@ -150,7 +150,7 @@ static inline T hypot(T x, T y) {
     return abs(y);
   }
 
-  if (x >= y) {
+  if (abs(x) >= abs(y)) {
     a_exp = x_bits.getUnbiasedExponent();
     a_mant = x_bits.getMantissa();
     b_exp = y_bits.getUnbiasedExponent();
@@ -178,10 +178,13 @@ static inline T hypot(T x, T y) {
     y_mant_width = MantissaWidth<T>::value + 1;
   } else {
     leading_one = internal::findLeadingOne(a_mant, y_mant_width);
+    a_exp = 1;
   }
 
   if (b_exp != 0) {
     b_mant |= one;
+  } else {
+    b_exp = 1;
   }
 
   a_mant_sq = static_cast<DUIntType>(a_mant) * a_mant;
