@@ -657,19 +657,18 @@ void InstrProfValueSiteRecord::merge(InstrProfValueSiteRecord &Input,
   Input.sortByTargetValues();
   auto I = ValueData.begin();
   auto IE = ValueData.end();
-  for (auto J = Input.ValueData.begin(), JE = Input.ValueData.end(); J != JE;
-       ++J) {
-    while (I != IE && I->Value < J->Value)
+  for (const InstrProfValueData &J : Input.ValueData) {
+    while (I != IE && I->Value < J.Value)
       ++I;
-    if (I != IE && I->Value == J->Value) {
+    if (I != IE && I->Value == J.Value) {
       bool Overflowed;
-      I->Count = SaturatingMultiplyAdd(J->Count, Weight, I->Count, &Overflowed);
+      I->Count = SaturatingMultiplyAdd(J.Count, Weight, I->Count, &Overflowed);
       if (Overflowed)
         Warn(instrprof_error::counter_overflow);
       ++I;
       continue;
     }
-    ValueData.insert(I, *J);
+    ValueData.insert(I, J);
   }
 }
 

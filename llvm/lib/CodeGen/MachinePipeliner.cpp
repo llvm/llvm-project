@@ -1519,9 +1519,8 @@ static bool pred_L(SetVector<SUnit *> &NodeOrder,
                    SmallSetVector<SUnit *, 8> &Preds,
                    const NodeSet *S = nullptr) {
   Preds.clear();
-  for (SetVector<SUnit *>::iterator I = NodeOrder.begin(), E = NodeOrder.end();
-       I != E; ++I) {
-    for (const SDep &Pred : (*I)->Preds) {
+  for (const SUnit *SU : NodeOrder) {
+    for (const SDep &Pred : SU->Preds) {
       if (S && S->count(Pred.getSUnit()) == 0)
         continue;
       if (ignoreDependence(Pred, true))
@@ -1530,7 +1529,7 @@ static bool pred_L(SetVector<SUnit *> &NodeOrder,
         Preds.insert(Pred.getSUnit());
     }
     // Back-edges are predecessors with an anti-dependence.
-    for (const SDep &Succ : (*I)->Succs) {
+    for (const SDep &Succ : SU->Succs) {
       if (Succ.getKind() != SDep::Anti)
         continue;
       if (S && S->count(Succ.getSUnit()) == 0)
