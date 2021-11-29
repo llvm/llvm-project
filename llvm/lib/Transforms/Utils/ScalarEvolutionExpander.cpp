@@ -18,6 +18,7 @@
 #include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
+#include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/IntrinsicInst.h"
@@ -1833,22 +1834,6 @@ Value *SCEVExpander::expandCodeForImpl(const SCEV *SH, Type *Ty, bool Root) {
   return V;
 }
 
-/// Check whether value has nuw/nsw/exact set but SCEV does not.
-/// TODO: In reality it is better to check the poison recursively
-/// but this is better than nothing.
-static bool SCEVLostPoisonFlags(const SCEV *S, const Instruction *I) {
-  if (isa<OverflowingBinaryOperator>(I)) {
-    if (auto *NS = dyn_cast<SCEVNAryExpr>(S)) {
-      if (I->hasNoSignedWrap() && !NS->hasNoSignedWrap())
-        return true;
-      if (I->hasNoUnsignedWrap() && !NS->hasNoUnsignedWrap())
-        return true;
-    }
-  } else if (isa<PossiblyExactOperator>(I) && I->isExact())
-    return true;
-  return false;
-}
-
 ScalarEvolution::ValueOffsetPair
 SCEVExpander::FindValueInExprValueMap(const SCEV *S,
                                       const Instruction *InsertPt) {
@@ -1872,8 +1857,7 @@ SCEVExpander::FindValueInExprValueMap(const SCEV *S,
         if (S->getType() == V->getType() &&
             SE.DT.dominates(EntInst, InsertPt) &&
             (SE.LI.getLoopFor(EntInst->getParent()) == nullptr ||
-             SE.LI.getLoopFor(EntInst->getParent())->contains(InsertPt)) &&
-            !SCEVLostPoisonFlags(S, EntInst))
+             SE.LI.getLoopFor(EntInst->getParent())->contains(InsertPt)))
           return {V, Offset};
       }
     }
@@ -1952,26 +1936,36 @@ Value *SCEVExpander::expand(const SCEV *S) {
 
   if (!V)
     V = visit(S);
-  else if (VO.second) {
-    if (PointerType *Vty = dyn_cast<PointerType>(V->getType())) {
-      Type *Ety = Vty->getPointerElementType();
-      int64_t Offset = VO.second->getSExtValue();
-      int64_t ESize = SE.getTypeSizeInBits(Ety);
-      if ((Offset * 8) % ESize == 0) {
-        ConstantInt *Idx =
+  else {
+    // If we're reusing an existing instruction, we are effectively CSEing two
+    // copies of the instruction (with potentially different flags).  As such,
+    // we need to drop any poison generating flags unless we can prove that
+    // said flags must be valid for all new users.
+    if (auto *I = dyn_cast<Instruction>(V))
+      if (I->hasPoisonGeneratingFlags() && !programUndefinedIfPoison(I))
+        I->dropPoisonGeneratingFlags();
+
+    if (VO.second) {
+      if (PointerType *Vty = dyn_cast<PointerType>(V->getType())) {
+        Type *Ety = Vty->getPointerElementType();
+        int64_t Offset = VO.second->getSExtValue();
+        int64_t ESize = SE.getTypeSizeInBits(Ety);
+        if ((Offset * 8) % ESize == 0) {
+          ConstantInt *Idx =
             ConstantInt::getSigned(VO.second->getType(), -(Offset * 8) / ESize);
-        V = Builder.CreateGEP(Ety, V, Idx, "scevgep");
-      } else {
-        ConstantInt *Idx =
+          V = Builder.CreateGEP(Ety, V, Idx, "scevgep");
+        } else {
+          ConstantInt *Idx =
             ConstantInt::getSigned(VO.second->getType(), -Offset);
-        unsigned AS = Vty->getAddressSpace();
-        V = Builder.CreateBitCast(V, Type::getInt8PtrTy(SE.getContext(), AS));
-        V = Builder.CreateGEP(Type::getInt8Ty(SE.getContext()), V, Idx,
-                              "uglygep");
-        V = Builder.CreateBitCast(V, Vty);
+          unsigned AS = Vty->getAddressSpace();
+          V = Builder.CreateBitCast(V, Type::getInt8PtrTy(SE.getContext(), AS));
+          V = Builder.CreateGEP(Type::getInt8Ty(SE.getContext()), V, Idx,
+                                "uglygep");
+          V = Builder.CreateBitCast(V, Vty);
+        }
+      } else {
+        V = Builder.CreateSub(V, VO.second);
       }
-    } else {
-      V = Builder.CreateSub(V, VO.second);
     }
   }
   // Remember the expanded value for this SCEV at this location.
@@ -2180,7 +2174,9 @@ SCEVExpander::getRelatedExistingExpansion(const SCEV *S, const Instruction *At,
   }
 
   // Use expand's logic which is used for reusing a previous Value in
-  // ExprValueMap.
+  // ExprValueMap.  Note that we don't currently model the cost of
+  // needing to drop poison generating flags on the instruction if we
+  // want to reuse it.  We effectively assume that has zero cost.
   ScalarEvolution::ValueOffsetPair VO = FindValueInExprValueMap(S, At);
   if (VO.first)
     return VO;
