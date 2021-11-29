@@ -347,12 +347,6 @@ int main(int argc, char **argv) {
   if (!STI->isCPUStringValid(MCPU))
     return 1;
 
-  bool IsOutOfOrder = STI->getSchedModel().isOutOfOrder();
-  if (!PrintInstructionTables && !IsOutOfOrder) {
-    WithColor::warning() << "support for in-order CPU '" << MCPU
-                         << "' is experimental.\n";
-  }
-
   if (!STI->getSchedModel().hasInstrSchedModel()) {
     WithColor::error()
         << "unable to find instruction-level scheduling information for"
@@ -367,6 +361,7 @@ int main(int argc, char **argv) {
   }
 
   // Apply overrides to llvm-mca specific options.
+  bool IsOutOfOrder = STI->getSchedModel().isOutOfOrder();
   processViewOptions(IsOutOfOrder);
 
   std::unique_ptr<MCRegisterInfo> MRI(TheTarget->createMCRegInfo(TripleName));
