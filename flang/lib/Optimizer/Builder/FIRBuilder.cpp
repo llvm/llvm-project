@@ -19,12 +19,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/MD5.h"
 
-static llvm::cl::opt<std::size_t>
-    nameLengthHashSize("length-to-hash-string-literal",
-                       llvm::cl::desc("string literals that exceed this length"
-                                      " will use a hash value as their symbol "
-                                      "name"),
-                       llvm::cl::init(32));
+static constexpr std::size_t nameLengthHashSize = 32;
 
 mlir::FuncOp fir::FirOpBuilder::createFunction(mlir::Location loc,
                                                mlir::ModuleOp module,
