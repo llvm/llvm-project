@@ -38,6 +38,7 @@ extern cl::opt<int> SampleColdCallSiteThreshold;
 extern cl::opt<int> ProfileInlineGrowthLimit;
 extern cl::opt<int> ProfileInlineLimitMin;
 extern cl::opt<int> ProfileInlineLimitMax;
+extern cl::opt<bool> SortProfiledSCC;
 
 cl::opt<bool> EnableCSPreInliner(
     "csspgo-preinliner", cl::Hidden, cl::init(false),
@@ -70,7 +71,13 @@ std::vector<StringRef> CSPreInliner::buildTopDownOrder() {
   // by building up SCC and reversing SCC order.
   scc_iterator<ProfiledCallGraph *> I = scc_begin(&ProfiledCG);
   while (!I.isAtEnd()) {
-    for (ProfiledCallGraphNode *Node : *I) {
+    auto Range = *I;
+    if (SortProfiledSCC) {
+      // Sort nodes in one SCC based on callsite hotness.
+      scc_member_iterator<ProfiledCallGraph *> SI(*I);
+      Range = *SI;
+    }
+    for (auto *Node : Range) {
       if (Node != ProfiledCG.getEntryNode())
         Order.push_back(Node->Name);
     }
