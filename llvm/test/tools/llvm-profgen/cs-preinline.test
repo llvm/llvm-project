@@ -11,7 +11,7 @@
 ; RUN: FileCheck %s --input-file %t --check-prefix=CHECK-NO-PREINL
 
 ; Test cold profile trimming. Only base profiles should be dropped.
-; RUN: llvm-profgen --format=text --perfscript=%S/Inputs/inline-cs-noprobe.perfscript --binary=%S/Inputs/inline-cs-noprobe.perfbin --output=%t --csspgo-preinliner=1  --csprof-trim-cold-context=1 --profile-summary-hot-count=250
+; RUN: llvm-profgen --format=text --perfscript=%S/Inputs/inline-cs-noprobe.perfscript --binary=%S/Inputs/inline-cs-noprobe.perfbin --output=%t --csspgo-preinliner=1  --trim-cold-profile=1 --profile-summary-hot-count=250
 
 ; RUN: FileCheck %s --input-file %t --check-prefix=CHECK-TRIM
 
