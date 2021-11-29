@@ -55,6 +55,7 @@ int32_t __llvm_omp_vprintf(const char *Format, void *Arguments, uint32_t Size) {
 }
 
 /// Current indentation level for the function trace. Only accessed by thread 0.
+__attribute__((loader_uninitialized))
 static uint32_t Level;
 #pragma omp allocate(Level) allocator(omp_pteam_mem_alloc)
 
