@@ -3169,9 +3169,13 @@ bool TokenAnnotator::spaceRequiredBetween(const AnnotatedLine &Line,
     if (Left.isIf(Line.Type != LT_PreprocessorDirective))
       return Style.SpaceBeforeParensOptions.AfterControlStatements ||
              spaceRequiredBeforeParens(Right);
+
+    // TODO add Operator overloading specific Options to
+    // SpaceBeforeParensOptions
+    if (Right.is(TT_OverloadedOperatorLParen))
+      return spaceRequiredBeforeParens(Right);
     // Function declaration or definition
-    if (Line.MightBeFunctionDecl && (Left.is(TT_FunctionDeclarationName) ||
-                                     Right.is(TT_OverloadedOperatorLParen))) {
+    if (Line.MightBeFunctionDecl && (Left.is(TT_FunctionDeclarationName))) {
       if (Line.mightBeFunctionDefinition())
         return Style.SpaceBeforeParensOptions.AfterFunctionDefinitionName ||
                spaceRequiredBeforeParens(Right);
