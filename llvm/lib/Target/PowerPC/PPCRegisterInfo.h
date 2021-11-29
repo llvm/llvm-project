@@ -91,6 +91,8 @@ public:
   void adjustStackMapLiveOutMask(uint32_t *Mask) const override;
 
   BitVector getReservedRegs(const MachineFunction &MF) const override;
+  bool isAsmClobberable(const MachineFunction &MF,
+                        MCRegister PhysReg) const override;
   bool isCallerPreservedPhysReg(MCRegister PhysReg,
                                 const MachineFunction &MF) const override;
 
