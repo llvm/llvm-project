@@ -910,6 +910,25 @@ public:
   /// the symbol trait.
   PyAttribute insert(PyOperationBase &symbol);
 
+  /// Gets and sets the name of a symbol op.
+  static PyAttribute getSymbolName(PyOperationBase &symbol);
+  static void setSymbolName(PyOperationBase &symbol, const std::string &name);
+
+  /// Gets and sets the visibility of a symbol op.
+  static PyAttribute getVisibility(PyOperationBase &symbol);
+  static void setVisibility(PyOperationBase &symbol,
+                            const std::string &visibility);
+
+  /// Replaces all symbol uses within an operation. See the API
+  /// mlirSymbolTableReplaceAllSymbolUses for all caveats.
+  static void replaceAllSymbolUses(const std::string &oldSymbol,
+                                   const std::string &newSymbol,
+                                   PyOperationBase &from);
+
+  /// Walks all symbol tables under and including 'from'.
+  static void walkSymbolTables(PyOperationBase &from, bool allSymUsesVisible,
+                               pybind11::object callback);
+
   /// Casts the bindings class into the C API structure.
   operator MlirSymbolTable() { return symbolTable; }
 
