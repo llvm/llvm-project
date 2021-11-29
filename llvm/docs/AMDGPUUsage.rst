@@ -5925,7 +5925,7 @@ in table :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx6-gfx9-table`.
      ------------------------------------------------------------------------------------
      load atomic  seq_cst      - singlethread - global   *Same as corresponding
                                - wavefront    - local    load atomic acquire,
-                                              - generic  except must generated
+                                              - generic  except must generate
                                                          all instructions even
                                                          for OpenCL.*
      load atomic  seq_cst      - workgroup    - global   1. s_waitcnt lgkmcnt(0)
@@ -5991,12 +5991,12 @@ in table :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx6-gfx9-table`.
                                                             instructions same as
                                                             corresponding load
                                                             atomic acquire,
-                                                            except must generated
+                                                            except must generate
                                                             all instructions even
                                                             for OpenCL.*
      load atomic  seq_cst      - workgroup    - local    *Same as corresponding
                                                          load atomic acquire,
-                                                         except must generated
+                                                         except must generate
                                                          all instructions even
                                                          for OpenCL.*
 
@@ -6088,22 +6088,22 @@ in table :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx6-gfx9-table`.
                                                             instructions same as
                                                             corresponding load
                                                             atomic acquire,
-                                                            except must generated
+                                                            except must generate
                                                             all instructions even
                                                             for OpenCL.*
      store atomic seq_cst      - singlethread - global   *Same as corresponding
                                - wavefront    - local    store atomic release,
-                               - workgroup    - generic  except must generated
+                               - workgroup    - generic  except must generate
                                - agent                   all instructions even
                                - system                  for OpenCL.*
      atomicrmw    seq_cst      - singlethread - global   *Same as corresponding
                                - wavefront    - local    atomicrmw acq_rel,
-                               - workgroup    - generic  except must generated
+                               - workgroup    - generic  except must generate
                                - agent                   all instructions even
                                - system                  for OpenCL.*
      fence        seq_cst      - singlethread *none*     *Same as corresponding
                                - wavefront               fence acq_rel,
-                               - workgroup               except must generated
+                               - workgroup               except must generate
                                - agent                   all instructions even
                                - system                  for OpenCL.*
      ============ ============ ============== ========== ================================
@@ -8288,7 +8288,7 @@ in table :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx90a-table`.
      ------------------------------------------------------------------------------------
      load atomic  seq_cst      - singlethread - global   *Same as corresponding
                                - wavefront    - local    load atomic acquire,
-                                              - generic  except must generated
+                                              - generic  except must generate
                                                          all instructions even
                                                          for OpenCL.*
      load atomic  seq_cst      - workgroup    - global   1. s_waitcnt lgkm/vmcnt(0)
@@ -8373,7 +8373,7 @@ in table :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx90a-table`.
                                                             instructions same as
                                                             corresponding load
                                                             atomic acquire,
-                                                            except must generated
+                                                            except must generate
                                                             all instructions even
                                                             for OpenCL.*
      load atomic  seq_cst      - workgroup    - local    *If TgSplit execution mode,
@@ -8382,7 +8382,7 @@ in table :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx90a-table`.
 
                                                          *Same as corresponding
                                                          load atomic acquire,
-                                                         except must generated
+                                                         except must generate
                                                          all instructions even
                                                          for OpenCL.*
 
@@ -8476,22 +8476,22 @@ in table :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx90a-table`.
                                                             instructions same as
                                                             corresponding load
                                                             atomic acquire,
-                                                            except must generated
+                                                            except must generate
                                                             all instructions even
                                                             for OpenCL.*
      store atomic seq_cst      - singlethread - global   *Same as corresponding
                                - wavefront    - local    store atomic release,
-                               - workgroup    - generic  except must generated
+                               - workgroup    - generic  except must generate
                                - agent                   all instructions even
                                - system                  for OpenCL.*
      atomicrmw    seq_cst      - singlethread - global   *Same as corresponding
                                - wavefront    - local    atomicrmw acq_rel,
-                               - workgroup    - generic  except must generated
+                               - workgroup    - generic  except must generate
                                - agent                   all instructions even
                                - system                  for OpenCL.*
      fence        seq_cst      - singlethread *none*     *Same as corresponding
                                - wavefront               fence acq_rel,
-                               - workgroup               except must generated
+                               - workgroup               except must generate
                                - agent                   all instructions even
                                - system                  for OpenCL.*
      ============ ============ ============== ========== ================================
@@ -10237,7 +10237,7 @@ table :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx10-table`.
      ------------------------------------------------------------------------------------
      load atomic  seq_cst      - singlethread - global   *Same as corresponding
                                - wavefront    - local    load atomic acquire,
-                                              - generic  except must generated
+                                              - generic  except must generate
                                                          all instructions even
                                                          for OpenCL.*
      load atomic  seq_cst      - workgroup    - global   1. s_waitcnt lgkmcnt(0) &
@@ -10347,7 +10347,7 @@ table :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx10-table`.
                                                             instructions same as
                                                             corresponding load
                                                             atomic acquire,
-                                                            except must generated
+                                                            except must generate
                                                             all instructions even
                                                             for OpenCL.*
      load atomic  seq_cst      - workgroup    - local
@@ -10440,7 +10440,7 @@ table :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx10-table`.
                                                             instructions same as
                                                             corresponding load
                                                             atomic acquire,
-                                                            except must generated
+                                                            except must generate
                                                             all instructions even
                                                             for OpenCL.*
 
@@ -10548,22 +10548,22 @@ table :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx10-table`.
                                                             instructions same as
                                                             corresponding load
                                                             atomic acquire,
-                                                            except must generated
+                                                            except must generate
                                                             all instructions even
                                                             for OpenCL.*
      store atomic seq_cst      - singlethread - global   *Same as corresponding
                                - wavefront    - local    store atomic release,
-                               - workgroup    - generic  except must generated
+                               - workgroup    - generic  except must generate
                                - agent                   all instructions even
                                - system                  for OpenCL.*
      atomicrmw    seq_cst      - singlethread - global   *Same as corresponding
                                - wavefront    - local    atomicrmw acq_rel,
-                               - workgroup    - generic  except must generated
+                               - workgroup    - generic  except must generate
                                - agent                   all instructions even
                                - system                  for OpenCL.*
      fence        seq_cst      - singlethread *none*     *Same as corresponding
                                - wavefront               fence acq_rel,
-                               - workgroup               except must generated
+                               - workgroup               except must generate
                                - agent                   all instructions even
                                - system                  for OpenCL.*
      ============ ============ ============== ========== ================================
