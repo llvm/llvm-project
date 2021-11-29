@@ -51,6 +51,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "PassDetail.h"
+
+#include "mlir/Dialect/Bufferization/IR/AllocationOpInterface.h"
+#include "mlir/Dialect/Bufferization/IR/Bufferization.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/IR/Operation.h"
@@ -193,7 +196,8 @@ private:
 /// introduce clones that in turn leads to additional deallocations.
 class BufferDeallocation : public BufferPlacementTransformationBase {
 public:
-  using AliasAllocationMapT = llvm::DenseMap<Value, AllocationOpInterface>;
+  using AliasAllocationMapT =
+      llvm::DenseMap<Value, bufferization::AllocationOpInterface>;
 
   BufferDeallocation(Operation *op)
       : BufferPlacementTransformationBase(op), dominators(op),
@@ -208,7 +212,8 @@ public:
     for (const BufferPlacementAllocs::AllocEntry &entry : allocs) {
       // Get the defining allocation operation.
       Value alloc = std::get<0>(entry);
-      auto allocationInterface = alloc.getDefiningOp<AllocationOpInterface>();
+      auto allocationInterface =
+          alloc.getDefiningOp<bufferization::AllocationOpInterface>();
       // If there is no existing deallocation operation and no implementation of
       // the AllocationOpInterface, we cannot apply the BufferDeallocation pass.
       if (!std::get<1>(entry) && !allocationInterface) {
@@ -577,7 +582,7 @@ private:
   /// Builds a clone operation compatible with the given allocation value. If
   /// there is no registered AllocationOpInterface implementation for the given
   /// value (e.g. in the case of a function parameter), this method builds a
-  /// memref::CloneOp.
+  /// bufferization::CloneOp.
   FailureOr<Value> buildClone(Operation *op, Value alloc) {
     OpBuilder builder(op);
     auto it = aliasToAllocations.find(alloc);
@@ -592,7 +597,8 @@ private:
                                 "are not supported");
     }
     // Build a "default" CloneOp for unknown allocation sources.
-    return builder.create<memref::CloneOp>(alloc.getLoc(), alloc).getResult();
+    return builder.create<bufferization::CloneOp>(alloc.getLoc(), alloc)
+        .getResult();
   }
 
   /// The dominator info to find the appropriate start operation to move the
@@ -614,10 +620,28 @@ private:
 // BufferDeallocationPass
 //===----------------------------------------------------------------------===//
 
+struct DefaultAllocationInterface
+    : public bufferization::AllocationOpInterface::ExternalModel<
+          DefaultAllocationInterface, memref::AllocOp> {
+  static Optional<Operation *> buildDealloc(OpBuilder &builder, Value alloc) {
+    return builder.create<memref::DeallocOp>(alloc.getLoc(), alloc)
+        .getOperation();
+  }
+  static Optional<Value> buildClone(OpBuilder &builder, Value alloc) {
+    return builder.create<bufferization::CloneOp>(alloc.getLoc(), alloc)
+        .getResult();
+  }
+};
+
 /// The actual buffer deallocation pass that inserts and moves dealloc nodes
 /// into the right positions. Furthermore, it inserts additional clones if
 /// necessary. It uses the algorithm described at the top of the file.
 struct BufferDeallocationPass : BufferDeallocationBase<BufferDeallocationPass> {
+  void getDependentDialects(DialectRegistry &registry) const override {
+    registry.insert<bufferization::BufferizationDialect>();
+    registry.insert<memref::MemRefDialect>();
+    registry.addOpInterface<memref::AllocOp, DefaultAllocationInterface>();
+  }
 
   void runOnFunction() override {
     // Ensure that there are supported loops only.

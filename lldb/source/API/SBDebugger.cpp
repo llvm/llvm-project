@@ -327,12 +327,32 @@ void SBDebugger::SkipAppInitFiles(bool b) {
 void SBDebugger::SetInputFileHandle(FILE *fh, bool transfer_ownership) {
   LLDB_RECORD_METHOD(void, SBDebugger, SetInputFileHandle, (FILE *, bool), fh,
                      transfer_ownership);
-  SetInputFile((FileSP)std::make_shared<NativeFile>(fh, transfer_ownership));
+  if (m_opaque_sp)
+    m_opaque_sp->SetInputFile(
+        (FileSP)std::make_shared<NativeFile>(fh, transfer_ownership));
 }
 
-SBError SBDebugger::SetInputFile(FileSP file_sp) {
-  LLDB_RECORD_METHOD(SBError, SBDebugger, SetInputFile, (FileSP), file_sp);
-  return LLDB_RECORD_RESULT(SetInputFile(SBFile(file_sp)));
+SBError SBDebugger::SetInputString(const char *data) {
+  LLDB_RECORD_METHOD(SBError, SBDebugger, SetInputString, (const char *), data);
+  SBError sb_error;
+  if (data == nullptr) {
+    sb_error.SetErrorString("String data is null");
+    return LLDB_RECORD_RESULT(sb_error);
+  }
+
+  size_t size = strlen(data);
+  if (size == 0) {
+    sb_error.SetErrorString("String data is empty");
+    return LLDB_RECORD_RESULT(sb_error);
+  }
+
+  if (!m_opaque_sp) {
+    sb_error.SetErrorString("invalid debugger");
+    return LLDB_RECORD_RESULT(sb_error);
+  }
+
+  sb_error.SetError(m_opaque_sp->SetInputString(data));
+  return LLDB_RECORD_RESULT(sb_error);
 }
 
 // Shouldn't really be settable after initialization as this could cause lots
@@ -346,34 +366,13 @@ SBError SBDebugger::SetInputFile(SBFile file) {
     error.ref().SetErrorString("invalid debugger");
     return LLDB_RECORD_RESULT(error);
   }
-
-  repro::DataRecorder *recorder = nullptr;
-  if (repro::Generator *g = repro::Reproducer::Instance().GetGenerator())
-    recorder = g->GetOrCreate<repro::CommandProvider>().GetNewRecorder();
-
-  FileSP file_sp = file.m_opaque_sp;
-
-  static std::unique_ptr<repro::MultiLoader<repro::CommandProvider>> loader =
-      repro::MultiLoader<repro::CommandProvider>::Create(
-          repro::Reproducer::Instance().GetLoader());
-  if (loader) {
-    llvm::Optional<std::string> nextfile = loader->GetNextFile();
-    FILE *fh = nextfile ? FileSystem::Instance().Fopen(nextfile->c_str(), "r")
-                        : nullptr;
-    // FIXME Jonas Devlieghere: shouldn't this error be propagated out to the
-    // reproducer somehow if fh is NULL?
-    if (fh) {
-      file_sp = std::make_shared<NativeFile>(fh, true);
-    }
-  }
-
-  if (!file_sp || !file_sp->IsValid()) {
-    error.ref().SetErrorString("invalid file");
-    return LLDB_RECORD_RESULT(error);
-  }
-
-  m_opaque_sp->SetInputFile(file_sp, recorder);
+  error.SetError(m_opaque_sp->SetInputFile(file.m_opaque_sp));
   return LLDB_RECORD_RESULT(error);
+}
+
+SBError SBDebugger::SetInputFile(FileSP file_sp) {
+  LLDB_RECORD_METHOD(SBError, SBDebugger, SetInputFile, (FileSP), file_sp);
+  return LLDB_RECORD_RESULT(SetInputFile(SBFile(file_sp)));
 }
 
 SBError SBDebugger::SetOutputFile(FileSP file_sp) {
@@ -1771,6 +1770,7 @@ template <> void RegisterMethods<SBDebugger>(Registry &R) {
   LLDB_REGISTER_METHOD(bool, SBDebugger, GetAsync, ());
   LLDB_REGISTER_METHOD(void, SBDebugger, SkipLLDBInitFiles, (bool));
   LLDB_REGISTER_METHOD(void, SBDebugger, SkipAppInitFiles, (bool));
+  LLDB_REGISTER_METHOD(SBError, SBDebugger, SetInputString, (const char *));
   LLDB_REGISTER_METHOD(void, SBDebugger, SetInputFileHandle, (FILE *, bool));
   LLDB_REGISTER_METHOD(FILE *, SBDebugger, GetInputFileHandle, ());
   LLDB_REGISTER_METHOD(FILE *, SBDebugger, GetOutputFileHandle, ());

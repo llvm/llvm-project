@@ -147,8 +147,9 @@ def LinalgBufferize : Pass<"linalg-bufferize", "FuncOp"> {
   let summary = "Bufferize the linalg dialect";
   let constructor = "mlir::createLinalgBufferizePass()";
   let dependentDialects = [
-    "linalg::LinalgDialect",
     "AffineDialect",
+    "bufferization::BufferizationDialect",
+    "linalg::LinalgDialect",
     "memref::MemRefDialect",
   ];
 }
@@ -221,18 +222,16 @@ def LinalgDetensorize : FunctionPass<"linalg-detensorize"> {
   }];
 }
 
-def LinalgTileAndFuseTensorOps
-    : FunctionPass<"linalg-tile-and-fuse-tensor-ops"> {
-  let summary = "Tile a LinalgOp and fuse its producers.";
-  let constructor = "mlir::createLinalgTileAndFuseTensorOpsPass()";
+def LinalgStrategyTileAndFusePass
+    : FunctionPass<"linalg-strategy-tile-and-fuse-pass"> {
+  let summary = "Configurable pass to apply pattern-based tiling and fusion.";
+  let constructor = "mlir::createLinalgStrategyTileAndFusePass()";
   let options = [
-    ListOption<"tileSizes", "tile-sizes", "int64_t", "Tile sizes",
-           "llvm::cl::ZeroOrMore, llvm::cl::MiscFlags::CommaSeparated">,
-    ListOption<"tileInterchange", "tile-interchange", "int64_t",
-           "Tile loop interchange",
-           "llvm::cl::ZeroOrMore, llvm::cl::MiscFlags::CommaSeparated">,
+    Option<"anchorFuncName", "anchor-func", "std::string", /*default=*/"",
+      "Which func op is the anchor to latch on.">,
+    Option<"anchorOpName", "anchor-op", "std::string", /*default=*/"",
+      "Which linalg op within the func is the anchor to latch on.">,
   ];
-  let dependentDialects = ["linalg::LinalgDialect", "scf::SCFDialect"];
 }
 
 def LinalgStrategyTilePass
@@ -321,6 +320,8 @@ def LinalgStrategyVectorizePass
       "Which func op is the anchor to latch on.">,
     Option<"anchorOpName", "anchor-op", "std::string", /*default=*/"",
       "Which linalg op within the func is the anchor to latch on.">,
+    Option<"vectorizePadding", "vectorize-padding", "bool", "false",
+      "Enable vectorization of padding ops.">,
   ];
 }
 

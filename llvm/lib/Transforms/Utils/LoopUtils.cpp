@@ -663,9 +663,8 @@ void llvm::deleteDeadLoop(Loop *L, DominatorTree *DT, ScalarEvolution *SE,
     // about ordering because we already dropped the references.
     // NOTE: This iteration is safe because erasing the block does not remove
     // its entry from the loop's block list.  We do that in the next section.
-    for (Loop::block_iterator LpI = L->block_begin(), LpE = L->block_end();
-         LpI != LpE; ++LpI)
-      (*LpI)->eraseFromParent();
+    for (BasicBlock *BB : L->blocks())
+      BB->eraseFromParent();
 
     // Finally, the blocks from loopinfo.  This has to happen late because
     // otherwise our loop iterators won't work.
@@ -1050,6 +1049,7 @@ Value *llvm::createSimpleTargetReduction(IRBuilderBase &Builder,
     return Builder.CreateOrReduce(Src);
   case RecurKind::Xor:
     return Builder.CreateXorReduce(Src);
+  case RecurKind::FMulAdd:
   case RecurKind::FAdd:
     return Builder.CreateFAddReduce(ConstantFP::getNegativeZero(SrcVecEltTy),
                                     Src);
@@ -1092,7 +1092,8 @@ Value *llvm::createTargetReduction(IRBuilderBase &B,
 Value *llvm::createOrderedReduction(IRBuilderBase &B,
                                     const RecurrenceDescriptor &Desc,
                                     Value *Src, Value *Start) {
-  assert(Desc.getRecurrenceKind() == RecurKind::FAdd &&
+  assert((Desc.getRecurrenceKind() == RecurKind::FAdd ||
+          Desc.getRecurrenceKind() == RecurKind::FMulAdd) &&
          "Unexpected reduction kind");
   assert(Src->getType()->isVectorTy() && "Expected a vector type");
   assert(!Start->getType()->isVectorTy() && "Expected a scalar type");
@@ -1501,10 +1502,9 @@ Loop *llvm::cloneLoop(Loop *L, Loop *PL, ValueToValueMapTy &VM,
     LPM->addLoop(New);
 
   // Add all of the blocks in L to the new loop.
-  for (Loop::block_iterator I = L->block_begin(), E = L->block_end();
-       I != E; ++I)
-    if (LI->getLoopFor(*I) == L)
-      New.addBasicBlockToLoop(cast<BasicBlock>(VM[*I]), *LI);
+  for (BasicBlock *BB : L->blocks())
+    if (LI->getLoopFor(BB) == L)
+      New.addBasicBlockToLoop(cast<BasicBlock>(VM[BB]), *LI);
 
   // Add all of the subloops to the new loop.
   for (Loop *I : *L)

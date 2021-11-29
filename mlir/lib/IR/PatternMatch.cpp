@@ -126,6 +126,29 @@ void PDLValue::print(raw_ostream &os) const {
   }
 }
 
+void PDLValue::print(raw_ostream &os, Kind kind) {
+  switch (kind) {
+  case Kind::Attribute:
+    os << "Attribute";
+    break;
+  case Kind::Operation:
+    os << "Operation";
+    break;
+  case Kind::Type:
+    os << "Type";
+    break;
+  case Kind::TypeRange:
+    os << "TypeRange";
+    break;
+  case Kind::Value:
+    os << "Value";
+    break;
+  case Kind::ValueRange:
+    os << "ValueRange";
+    break;
+  }
+}
+
 //===----------------------------------------------------------------------===//
 // PDLPatternModule
 //===----------------------------------------------------------------------===//

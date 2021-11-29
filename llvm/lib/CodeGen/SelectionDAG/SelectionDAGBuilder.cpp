@@ -4336,9 +4336,7 @@ void SelectionDAGBuilder::visitMaskedStore(const CallInst &I,
 
   MachineMemOperand *MMO = DAG.getMachineFunction().getMachineMemOperand(
       MachinePointerInfo(PtrOperand), MachineMemOperand::MOStore,
-      // TODO: Make MachineMemOperands aware of scalable
-      // vectors.
-      VT.getStoreSize().getKnownMinSize(), *Alignment, I.getAAMetadata());
+      MemoryLocation::UnknownSize, *Alignment, I.getAAMetadata());
   SDValue StoreNode =
       DAG.getMaskedStore(getMemoryRoot(), sdl, Src0, Ptr, Offset, Mask, VT, MMO,
                          ISD::UNINDEXED, false /* Truncating */, IsCompressing);
@@ -4496,22 +4494,14 @@ void SelectionDAGBuilder::visitMaskedLoad(const CallInst &I, bool IsExpanding) {
   const MDNode *Ranges = I.getMetadata(LLVMContext::MD_range);
 
   // Do not serialize masked loads of constant memory with anything.
-  MemoryLocation ML;
-  if (VT.isScalableVector())
-    ML = MemoryLocation::getAfter(PtrOperand);
-  else
-    ML = MemoryLocation(PtrOperand, LocationSize::precise(
-                           DAG.getDataLayout().getTypeStoreSize(I.getType())),
-                           AAInfo);
+  MemoryLocation ML = MemoryLocation::getAfter(PtrOperand, AAInfo);
   bool AddToChain = !AA || !AA->pointsToConstantMemory(ML);
 
   SDValue InChain = AddToChain ? DAG.getRoot() : DAG.getEntryNode();
 
   MachineMemOperand *MMO = DAG.getMachineFunction().getMachineMemOperand(
       MachinePointerInfo(PtrOperand), MachineMemOperand::MOLoad,
-      // TODO: Make MachineMemOperands aware of scalable
-      // vectors.
-      VT.getStoreSize().getKnownMinSize(), *Alignment, AAInfo, Ranges);
+      MemoryLocation::UnknownSize, *Alignment, AAInfo, Ranges);
 
   SDValue Load =
       DAG.getMaskedLoad(VT, sdl, InChain, Ptr, Offset, Mask, Src0, VT, MMO,
@@ -5807,8 +5797,7 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
   case Intrinsic::vscale: {
     match(&I, m_VScale(DAG.getDataLayout()));
     EVT VT = TLI.getValueType(DAG.getDataLayout(), I.getType());
-    setValue(&I,
-             DAG.getVScale(getCurSDLoc(), VT, APInt(VT.getSizeInBits(), 1)));
+    setValue(&I, DAG.getVScale(sdl, VT, APInt(VT.getSizeInBits(), 1)));
     return;
   }
   case Intrinsic::vastart:  visitVAStart(I); return;
@@ -6942,10 +6931,9 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     MVT PtrVT = TLI.getPointerTy(DAG.getDataLayout());
     const TargetRegisterClass *PtrRC = TLI.getRegClassFor(PtrVT);
     unsigned VReg = FuncInfo.getCatchPadExceptionPointerVReg(CPI, PtrRC);
-    SDValue N =
-        DAG.getCopyFromReg(DAG.getEntryNode(), getCurSDLoc(), VReg, PtrVT);
+    SDValue N = DAG.getCopyFromReg(DAG.getEntryNode(), sdl, VReg, PtrVT);
     if (Intrinsic == Intrinsic::eh_exceptioncode)
-      N = DAG.getZExtOrTrunc(N, getCurSDLoc(), MVT::i32);
+      N = DAG.getZExtOrTrunc(N, sdl, MVT::i32);
     setValue(&I, N);
     return;
   }
@@ -6957,7 +6945,6 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     if (Triple.getArch() != Triple::x86_64)
       return;
 
-    SDLoc DL = getCurSDLoc();
     SmallVector<SDValue, 8> Ops;
 
     // We want to say that we always want the arguments in registers.
@@ -6974,7 +6961,7 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     // see that some registers may be assumed clobbered and have to preserve
     // them across calls to the intrinsic.
     MachineSDNode *MN = DAG.getMachineNode(TargetOpcode::PATCHABLE_EVENT_CALL,
-                                           DL, NodeTys, Ops);
+                                           sdl, NodeTys, Ops);
     SDValue patchableNode = SDValue(MN, 0);
     DAG.setRoot(patchableNode);
     setValue(&I, patchableNode);
@@ -6988,7 +6975,6 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     if (Triple.getArch() != Triple::x86_64)
       return;
 
-    SDLoc DL = getCurSDLoc();
     SmallVector<SDValue, 8> Ops;
 
     // We want to say that we always want the arguments in registers.
@@ -7009,7 +6995,7 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     // see that some registers may be assumed clobbered and have to preserve
     // them across calls to the intrinsic.
     MachineSDNode *MN = DAG.getMachineNode(
-        TargetOpcode::PATCHABLE_TYPED_EVENT_CALL, DL, NodeTys, Ops);
+        TargetOpcode::PATCHABLE_TYPED_EVENT_CALL, sdl, NodeTys, Ops);
     SDValue patchableNode = SDValue(MN, 0);
     DAG.setRoot(patchableNode);
     setValue(&I, patchableNode);
@@ -7047,7 +7033,7 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     if (!Base)
       report_fatal_error(
           "llvm.icall.branch.funnel operand must be a GlobalValue");
-    Ops.push_back(DAG.getTargetGlobalAddress(Base, getCurSDLoc(), MVT::i64, 0));
+    Ops.push_back(DAG.getTargetGlobalAddress(Base, sdl, MVT::i64, 0));
 
     struct BranchFunnelTarget {
       int64_t Offset;
@@ -7068,8 +7054,8 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
         report_fatal_error(
             "llvm.icall.branch.funnel operand must be a GlobalValue");
       Targets.push_back({Offset, DAG.getTargetGlobalAddress(
-                                     GA->getGlobal(), getCurSDLoc(),
-                                     Val.getValueType(), GA->getOffset())});
+                                     GA->getGlobal(), sdl, Val.getValueType(),
+                                     GA->getOffset())});
     }
     llvm::sort(Targets,
                [](const BranchFunnelTarget &T1, const BranchFunnelTarget &T2) {
@@ -7077,13 +7063,13 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
                });
 
     for (auto &T : Targets) {
-      Ops.push_back(DAG.getTargetConstant(T.Offset, getCurSDLoc(), MVT::i32));
+      Ops.push_back(DAG.getTargetConstant(T.Offset, sdl, MVT::i32));
       Ops.push_back(T.Target);
     }
 
     Ops.push_back(DAG.getRoot()); // Chain
-    SDValue N(DAG.getMachineNode(TargetOpcode::ICALL_BRANCH_FUNNEL,
-                                 getCurSDLoc(), MVT::Other, Ops),
+    SDValue N(DAG.getMachineNode(TargetOpcode::ICALL_BRANCH_FUNNEL, sdl,
+                                 MVT::Other, Ops),
               0);
     DAG.setRoot(N);
     setValue(&I, N);
@@ -7102,7 +7088,7 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     const SelectionDAGTargetInfo &TSI = DAG.getSelectionDAGInfo();
     bool ZeroMemory = Intrinsic == Intrinsic::aarch64_settag_zero;
     SDValue Val = TSI.EmitTargetCodeForSetTag(
-        DAG, getCurSDLoc(), getRoot(), getValue(I.getArgOperand(0)),
+        DAG, sdl, getRoot(), getValue(I.getArgOperand(0)),
         getValue(I.getArgOperand(1)), MachinePointerInfo(I.getArgOperand(0)),
         ZeroMemory);
     DAG.setRoot(Val);
@@ -7114,46 +7100,42 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     SDValue Const = getValue(I.getOperand(1));
 
     EVT PtrVT = Ptr.getValueType();
-    setValue(&I, DAG.getNode(ISD::AND, getCurSDLoc(), PtrVT, Ptr,
-                             DAG.getZExtOrTrunc(Const, getCurSDLoc(), PtrVT)));
+    setValue(&I, DAG.getNode(ISD::AND, sdl, PtrVT, Ptr,
+                             DAG.getZExtOrTrunc(Const, sdl, PtrVT)));
     return;
   }
   case Intrinsic::get_active_lane_mask: {
-    auto DL = getCurSDLoc();
+    EVT CCVT = TLI.getValueType(DAG.getDataLayout(), I.getType());
     SDValue Index = getValue(I.getOperand(0));
-    SDValue TripCount = getValue(I.getOperand(1));
-    Type *ElementTy = I.getOperand(0)->getType();
-    EVT VT = TLI.getValueType(DAG.getDataLayout(), I.getType());
-    unsigned VecWidth = VT.getVectorNumElements();
+    EVT ElementVT = Index.getValueType();
 
-    SmallVector<SDValue, 16> OpsTripCount;
-    SmallVector<SDValue, 16> OpsIndex;
-    SmallVector<SDValue, 16> OpsStepConstants;
-    for (unsigned i = 0; i < VecWidth; i++) {
-      OpsTripCount.push_back(TripCount);
-      OpsIndex.push_back(Index);
-      OpsStepConstants.push_back(
-          DAG.getConstant(i, DL, EVT::getEVT(ElementTy)));
+    if (!TLI.shouldExpandGetActiveLaneMask(CCVT, ElementVT)) {
+      visitTargetIntrinsic(I, Intrinsic);
+      return;
     }
 
-    EVT CCVT = EVT::getVectorVT(I.getContext(), MVT::i1, VecWidth);
+    SDValue TripCount = getValue(I.getOperand(1));
+    auto VecTy = CCVT.changeVectorElementType(ElementVT);
 
-    auto VecTy = EVT::getEVT(FixedVectorType::get(ElementTy, VecWidth));
-    SDValue VectorIndex = DAG.getBuildVector(VecTy, DL, OpsIndex);
-    SDValue VectorStep = DAG.getBuildVector(VecTy, DL, OpsStepConstants);
+    SDValue VectorIndex, VectorTripCount;
+    if (VecTy.isScalableVector()) {
+      VectorIndex = DAG.getSplatVector(VecTy, sdl, Index);
+      VectorTripCount = DAG.getSplatVector(VecTy, sdl, TripCount);
+    } else {
+      VectorIndex = DAG.getSplatBuildVector(VecTy, sdl, Index);
+      VectorTripCount = DAG.getSplatBuildVector(VecTy, sdl, TripCount);
+    }
+    SDValue VectorStep = DAG.getStepVector(sdl, VecTy);
     SDValue VectorInduction = DAG.getNode(
-       ISD::UADDO, DL, DAG.getVTList(VecTy, CCVT), VectorIndex, VectorStep);
-    SDValue VectorTripCount = DAG.getBuildVector(VecTy, DL, OpsTripCount);
-    SDValue SetCC = DAG.getSetCC(DL, CCVT, VectorInduction.getValue(0),
+        ISD::UADDO, sdl, DAG.getVTList(VecTy, CCVT), VectorIndex, VectorStep);
+    SDValue SetCC = DAG.getSetCC(sdl, CCVT, VectorInduction.getValue(0),
                                  VectorTripCount, ISD::CondCode::SETULT);
-    setValue(&I, DAG.getNode(ISD::AND, DL, CCVT,
-                             DAG.getNOT(DL, VectorInduction.getValue(1), CCVT),
+    setValue(&I, DAG.getNode(ISD::AND, sdl, CCVT,
+                             DAG.getNOT(sdl, VectorInduction.getValue(1), CCVT),
                              SetCC));
     return;
   }
   case Intrinsic::experimental_vector_insert: {
-    auto DL = getCurSDLoc();
-
     SDValue Vec = getValue(I.getOperand(0));
     SDValue SubVec = getValue(I.getOperand(1));
     SDValue Index = getValue(I.getOperand(2));
@@ -7163,16 +7145,14 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     MVT VectorIdxTy = TLI.getVectorIdxTy(DAG.getDataLayout());
     if (Index.getValueType() != VectorIdxTy)
       Index = DAG.getVectorIdxConstant(
-          cast<ConstantSDNode>(Index)->getZExtValue(), DL);
+          cast<ConstantSDNode>(Index)->getZExtValue(), sdl);
 
     EVT ResultVT = TLI.getValueType(DAG.getDataLayout(), I.getType());
-    setValue(&I, DAG.getNode(ISD::INSERT_SUBVECTOR, DL, ResultVT, Vec, SubVec,
+    setValue(&I, DAG.getNode(ISD::INSERT_SUBVECTOR, sdl, ResultVT, Vec, SubVec,
                              Index));
     return;
   }
   case Intrinsic::experimental_vector_extract: {
-    auto DL = getCurSDLoc();
-
     SDValue Vec = getValue(I.getOperand(0));
     SDValue Index = getValue(I.getOperand(1));
     EVT ResultVT = TLI.getValueType(DAG.getDataLayout(), I.getType());
@@ -7182,9 +7162,10 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     MVT VectorIdxTy = TLI.getVectorIdxTy(DAG.getDataLayout());
     if (Index.getValueType() != VectorIdxTy)
       Index = DAG.getVectorIdxConstant(
-          cast<ConstantSDNode>(Index)->getZExtValue(), DL);
+          cast<ConstantSDNode>(Index)->getZExtValue(), sdl);
 
-    setValue(&I, DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, ResultVT, Vec, Index));
+    setValue(&I,
+             DAG.getNode(ISD::EXTRACT_SUBVECTOR, sdl, ResultVT, Vec, Index));
     return;
   }
   case Intrinsic::experimental_vector_reverse:
@@ -7314,9 +7295,9 @@ void SelectionDAGBuilder::visitConstrainedFPIntrinsic(
 static unsigned getISDForVPIntrinsic(const VPIntrinsic &VPIntrin) {
   Optional<unsigned> ResOPC;
   switch (VPIntrin.getIntrinsicID()) {
-#define BEGIN_REGISTER_VP_INTRINSIC(INTRIN, ...) case Intrinsic::INTRIN:
-#define BEGIN_REGISTER_VP_SDNODE(VPSDID, ...) ResOPC = ISD::VPSDID;
-#define END_REGISTER_VP_INTRINSIC(...) break;
+#define BEGIN_REGISTER_VP_INTRINSIC(VPID, ...) case Intrinsic::VPID:
+#define BEGIN_REGISTER_VP_SDNODE(VPSD, ...) ResOPC = ISD::VPSD;
+#define END_REGISTER_VP_INTRINSIC(VPID) break;
 #include "llvm/IR/VPIntrinsics.def"
   }
 

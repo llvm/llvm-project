@@ -1298,8 +1298,8 @@ bool ARMLoadStoreOpt::MergeBaseUpdateLSMultiple(MachineInstr *MI) {
 
   // Can't use an updating ld/st if the base register is also a dest
   // register. e.g. ldmdb r0!, {r0, r1, r2}. The behavior is undefined.
-  for (unsigned i = 2, e = MI->getNumOperands(); i != e; ++i)
-    if (MI->getOperand(i).getReg() == Base)
+  for (const MachineOperand &MO : llvm::drop_begin(MI->operands(), 2))
+    if (MO.getReg() == Base)
       return false;
 
   int Bytes = getLSMultipleTransferSize(MI);
@@ -1326,8 +1326,8 @@ bool ARMLoadStoreOpt::MergeBaseUpdateLSMultiple(MachineInstr *MI) {
         return false;
 
       bool HighRegsUsed = false;
-      for (unsigned i = 2, e = MI->getNumOperands(); i != e; ++i)
-        if (MI->getOperand(i).getReg() >= ARM::R8) {
+      for (const MachineOperand &MO : llvm::drop_begin(MI->operands(), 2))
+        if (MO.getReg() >= ARM::R8) {
           HighRegsUsed = true;
           break;
         }
@@ -1350,8 +1350,8 @@ bool ARMLoadStoreOpt::MergeBaseUpdateLSMultiple(MachineInstr *MI) {
     .addImm(Pred).addReg(PredReg);
 
   // Transfer the rest of operands.
-  for (unsigned OpNum = 3, e = MI->getNumOperands(); OpNum != e; ++OpNum)
-    MIB.add(MI->getOperand(OpNum));
+  for (const MachineOperand &MO : llvm::drop_begin(MI->operands(), 3))
+    MIB.add(MO);
 
   // Transfer memoperands.
   MIB.setMemRefs(MI->memoperands());
@@ -2119,9 +2119,7 @@ bool ARMLoadStoreOpt::runOnMachineFunction(MachineFunction &Fn) {
   isThumb1 = AFI->isThumbFunction() && !isThumb2;
 
   bool Modified = false;
-  for (MachineFunction::iterator MFI = Fn.begin(), E = Fn.end(); MFI != E;
-       ++MFI) {
-    MachineBasicBlock &MBB = *MFI;
+  for (MachineBasicBlock &MBB : Fn) {
     Modified |= LoadStoreMultipleOpti(MBB);
     if (STI->hasV5TOps())
       Modified |= MergeReturnIntoLDM(MBB);

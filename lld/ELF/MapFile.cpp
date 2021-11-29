@@ -164,30 +164,30 @@ void elf::writeMapFile() {
      << "     Size Align Out     In      Symbol\n";
 
   OutputSection* osec = nullptr;
-  for (BaseCommand *base : script->sectionCommands) {
-    if (auto *cmd = dyn_cast<SymbolAssignment>(base)) {
-      if (cmd->provide && !cmd->sym)
+  for (SectionCommand *cmd : script->sectionCommands) {
+    if (auto *assign = dyn_cast<SymbolAssignment>(cmd)) {
+      if (assign->provide && !assign->sym)
         continue;
-      uint64_t lma = osec ? osec->getLMA() + cmd->addr - osec->getVA(0) : 0;
-      writeHeader(os, cmd->addr, lma, cmd->size, 1);
-      os << cmd->commandString << '\n';
+      uint64_t lma = osec ? osec->getLMA() + assign->addr - osec->getVA(0) : 0;
+      writeHeader(os, assign->addr, lma, assign->size, 1);
+      os << assign->commandString << '\n';
       continue;
     }
 
-    osec = cast<OutputSection>(base);
+    osec = cast<OutputSection>(cmd);
     writeHeader(os, osec->addr, osec->getLMA(), osec->size, osec->alignment);
     os << osec->name << '\n';
 
     // Dump symbols for each input section.
-    for (BaseCommand *base : osec->sectionCommands) {
-      if (auto *isd = dyn_cast<InputSectionDescription>(base)) {
+    for (SectionCommand *subCmd : osec->commands) {
+      if (auto *isd = dyn_cast<InputSectionDescription>(subCmd)) {
         for (InputSection *isec : isd->sections) {
           if (auto *ehSec = dyn_cast<EhFrameSection>(isec)) {
             printEhFrame(os, ehSec);
             continue;
           }
 
-          writeHeader(os, isec->getVA(0), osec->getLMA() + isec->getOffset(0),
+          writeHeader(os, isec->getVA(), osec->getLMA() + isec->outSecOff,
                       isec->getSize(), isec->alignment);
           os << indent8 << toString(isec) << '\n';
           for (Symbol *sym : sectionSyms[isec])
@@ -196,19 +196,20 @@ void elf::writeMapFile() {
         continue;
       }
 
-      if (auto *cmd = dyn_cast<ByteCommand>(base)) {
-        writeHeader(os, osec->addr + cmd->offset, osec->getLMA() + cmd->offset,
-                    cmd->size, 1);
-        os << indent8 << cmd->commandString << '\n';
+      if (auto *data = dyn_cast<ByteCommand>(subCmd)) {
+        writeHeader(os, osec->addr + data->offset,
+                    osec->getLMA() + data->offset, data->size, 1);
+        os << indent8 << data->commandString << '\n';
         continue;
       }
 
-      if (auto *cmd = dyn_cast<SymbolAssignment>(base)) {
-        if (cmd->provide && !cmd->sym)
+      if (auto *assign = dyn_cast<SymbolAssignment>(subCmd)) {
+        if (assign->provide && !assign->sym)
           continue;
-        writeHeader(os, cmd->addr, osec->getLMA() + cmd->addr - osec->getVA(0),
-                    cmd->size, 1);
-        os << indent8 << cmd->commandString << '\n';
+        writeHeader(os, assign->addr,
+                    osec->getLMA() + assign->addr - osec->getVA(0),
+                    assign->size, 1);
+        os << indent8 << assign->commandString << '\n';
         continue;
       }
     }
@@ -293,8 +294,8 @@ void elf::writeArchiveStats() {
     return;
   }
 
-  os << "members\tfetched\tarchive\n";
+  os << "members\textracted\tarchive\n";
   for (const ArchiveFile *f : archiveFiles)
-    os << f->getMemberCount() << '\t' << f->getFetchedMemberCount() << '\t'
+    os << f->getMemberCount() << '\t' << f->getExtractedMemberCount() << '\t'
        << f->getName() << '\n';
 }

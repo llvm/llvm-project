@@ -492,8 +492,7 @@ void TwoAddressInstructionPass::removeClobberedSrcRegMap(MachineInstr *MI) {
       return;
   }
 
-  for (unsigned i = 0, NumOps = MI->getNumOperands(); i != NumOps; ++i) {
-    const MachineOperand &MO = MI->getOperand(i);
+  for (const MachineOperand &MO : MI->operands()) {
     if (MO.isRegMask()) {
       removeMapRegEntry(MO, SrcRegMap, TRI);
       continue;
@@ -685,7 +684,6 @@ bool TwoAddressInstructionPass::convertInstTo3Addr(
 
   // If the old instruction is debug value tracked, an update is required.
   if (auto OldInstrNum = mi->peekDebugInstrNum()) {
-    // Sanity check.
     assert(mi->getNumExplicitDefs() == 1);
     assert(NewMI->getNumExplicitDefs() == 1);
 
@@ -1336,8 +1334,7 @@ tryInstructionTransform(MachineBasicBlock::iterator &mi,
           // Success, or at least we made an improvement. Keep the unfolded
           // instructions and discard the original.
           if (LV) {
-            for (unsigned i = 0, e = MI.getNumOperands(); i != e; ++i) {
-              MachineOperand &MO = MI.getOperand(i);
+            for (const MachineOperand &MO : MI.operands()) {
               if (MO.isReg() && MO.getReg().isVirtual()) {
                 if (MO.isUse()) {
                   if (MO.isKill()) {

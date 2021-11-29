@@ -528,15 +528,11 @@ define amdgpu_kernel void @test_umul24_i64(i64 addrspace(1)* %out, i64 %a, i64 %
 ; VI-NEXT:    s_mov_b32 s3, 0xf000
 ; VI-NEXT:    s_mov_b32 s2, -1
 ; VI-NEXT:    s_mov_b32 s0, s4
-; VI-NEXT:    s_mov_b32 s4, 0xffffff
-; VI-NEXT:    s_mov_b32 s1, s5
-; VI-NEXT:    s_and_b32 s5, s6, s4
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
-; VI-NEXT:    s_and_b32 s4, s7, s4
-; VI-NEXT:    s_mul_i32 s5, s5, s4
 ; VI-NEXT:    v_mov_b32_e32 v0, s7
+; VI-NEXT:    s_mov_b32 s1, s5
 ; VI-NEXT:    v_mul_hi_u32_u24_e32 v1, s6, v0
-; VI-NEXT:    v_mov_b32_e32 v0, s5
+; VI-NEXT:    v_mul_u32_u24_e32 v0, s6, v0
 ; VI-NEXT:    buffer_store_dwordx2 v[0:1], off, s[0:3], 0
 ; VI-NEXT:    s_endpgm
 ;
@@ -623,10 +619,8 @@ define amdgpu_kernel void @test_umul24_i64_square(i64 addrspace(1)* %out, [8 x i
 ; VI-NEXT:    s_mov_b32 s7, 0xf000
 ; VI-NEXT:    s_mov_b32 s6, -1
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
-; VI-NEXT:    s_and_b32 s1, s0, 0xffffff
-; VI-NEXT:    s_mul_i32 s1, s1, s1
 ; VI-NEXT:    v_mul_hi_u32_u24_e64 v1, s0, s0
-; VI-NEXT:    v_mov_b32_e32 v0, s1
+; VI-NEXT:    v_mul_u32_u24_e64 v0, s0, s0
 ; VI-NEXT:    buffer_store_dwordx2 v[0:1], off, s[4:7], 0
 ; VI-NEXT:    s_endpgm
 ;
@@ -733,17 +727,13 @@ define amdgpu_kernel void @test_umul24_i33(i64 addrspace(1)* %out, i33 %a, i33 %
 ; VI-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x24
 ; VI-NEXT:    s_load_dword s2, s[0:1], 0x2c
 ; VI-NEXT:    s_load_dword s0, s[0:1], 0x34
-; VI-NEXT:    s_mov_b32 s1, 0xffffff
 ; VI-NEXT:    s_mov_b32 s7, 0xf000
 ; VI-NEXT:    s_mov_b32 s6, -1
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
-; VI-NEXT:    s_and_b32 s3, s2, s1
-; VI-NEXT:    s_and_b32 s1, s0, s1
-; VI-NEXT:    v_mov_b32_e32 v0, s0
-; VI-NEXT:    s_mul_i32 s3, s3, s1
-; VI-NEXT:    v_mul_hi_u32_u24_e32 v0, s2, v0
-; VI-NEXT:    v_and_b32_e32 v1, 1, v0
-; VI-NEXT:    v_mov_b32_e32 v0, s3
+; VI-NEXT:    v_mov_b32_e32 v1, s0
+; VI-NEXT:    v_mul_u32_u24_e32 v0, s2, v1
+; VI-NEXT:    v_mul_hi_u32_u24_e32 v1, s2, v1
+; VI-NEXT:    v_and_b32_e32 v1, 1, v1
 ; VI-NEXT:    buffer_store_dwordx2 v[0:1], off, s[4:7], 0
 ; VI-NEXT:    s_endpgm
 ;

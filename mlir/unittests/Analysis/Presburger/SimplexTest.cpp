@@ -14,19 +14,31 @@
 namespace mlir {
 
 /// Take a snapshot, add constraints making the set empty, and rollback.
-/// The set should not be empty after rolling back.
+/// The set should not be empty after rolling back. We add additional
+/// constraints after the set is already empty and roll back the addition
+/// of these. The set should be marked non-empty only once we rollback
+/// past the addition of the first constraint that made it empty.
 TEST(SimplexTest, emptyRollback) {
   Simplex simplex(2);
   // (u - v) >= 0
   simplex.addInequality({1, -1, 0});
-  EXPECT_FALSE(simplex.isEmpty());
+  ASSERT_FALSE(simplex.isEmpty());
 
   unsigned snapshot = simplex.getSnapshot();
   // (u - v) <= -1
   simplex.addInequality({-1, 1, -1});
-  EXPECT_TRUE(simplex.isEmpty());
+  ASSERT_TRUE(simplex.isEmpty());
+
+  unsigned snapshot2 = simplex.getSnapshot();
+  // (u - v) <= -3
+  simplex.addInequality({-1, 1, -3});
+  ASSERT_TRUE(simplex.isEmpty());
+
+  simplex.rollback(snapshot2);
+  ASSERT_TRUE(simplex.isEmpty());
+
   simplex.rollback(snapshot);
-  EXPECT_FALSE(simplex.isEmpty());
+  ASSERT_FALSE(simplex.isEmpty());
 }
 
 /// Check that the set gets marked as empty when we add contradictory
@@ -371,6 +383,29 @@ TEST(SimplexTest, isMarkedRedundantTiledLoopNestConstraints) {
   EXPECT_FALSE(simplex.isMarkedRedundant(3));
   EXPECT_FALSE(simplex.isMarkedRedundant(4));
   EXPECT_FALSE(simplex.isMarkedRedundant(5));
+}
+
+TEST(Simplextest, pivotRedundantRegressionTest) {
+  Simplex simplex(2);
+  simplex.addInequality({-1, 0, -1}); // x <= -1.
+  unsigned snapshot = simplex.getSnapshot();
+
+  simplex.addInequality({-1, 0, -2}); // x <= -2.
+  simplex.addInequality({-3, 0, -6});
+
+  // This first marks x <= -1 as redundant. Then it performs some more pivots
+  // to check if the other constraints are redundant. Pivot must update the
+  // non-redundant rows as well, otherwise these pivots result in an incorrect
+  // tableau state. In particular, after the rollback below, some rows that are
+  // NOT marked redundant will have an incorrect state.
+  simplex.detectRedundant();
+
+  // After the rollback, the only remaining constraint is x <= -1.
+  // The maximum value of x should be -1.
+  simplex.rollback(snapshot);
+  Optional<Fraction> maxX =
+      simplex.computeOptimum(Simplex::Direction::Up, {1, 0, 0});
+  EXPECT_TRUE(maxX.hasValue() && *maxX == Fraction(-1, 1));
 }
 
 TEST(SimplexTest, addInequality_already_redundant) {

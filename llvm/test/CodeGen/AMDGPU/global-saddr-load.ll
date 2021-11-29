@@ -3274,7 +3274,7 @@ define amdgpu_ps void @global_addr_64bit_lsr_iv(float addrspace(1)* inreg %arg) 
 ; GFX9:       ; %bb.0: ; %bb
 ; GFX9-NEXT:    s_mov_b64 s[0:1], 0
 ; GFX9-NEXT:    v_mov_b32_e32 v0, 0
-; GFX9-NEXT:  BB128_1: ; %bb3
+; GFX9-NEXT:  .LBB128_1: ; %bb3
 ; GFX9-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX9-NEXT:    s_add_u32 s4, s2, s0
 ; GFX9-NEXT:    s_addc_u32 s5, s3, s1
@@ -3283,7 +3283,7 @@ define amdgpu_ps void @global_addr_64bit_lsr_iv(float addrspace(1)* inreg %arg) 
 ; GFX9-NEXT:    s_add_u32 s0, s0, 4
 ; GFX9-NEXT:    s_addc_u32 s1, s1, 0
 ; GFX9-NEXT:    s_cmpk_eq_i32 s0, 0x400
-; GFX9-NEXT:    s_cbranch_scc0 BB128_1
+; GFX9-NEXT:    s_cbranch_scc0 .LBB128_1
 ; GFX9-NEXT:  ; %bb.2: ; %bb2
 ; GFX9-NEXT:    s_endpgm
 ;
@@ -3291,7 +3291,7 @@ define amdgpu_ps void @global_addr_64bit_lsr_iv(float addrspace(1)* inreg %arg) 
 ; GFX10:       ; %bb.0: ; %bb
 ; GFX10-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX10-NEXT:    s_mov_b64 s[0:1], 0
-; GFX10-NEXT:  BB128_1: ; %bb3
+; GFX10-NEXT:  .LBB128_1: ; %bb3
 ; GFX10-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX10-NEXT:    s_waitcnt_depctr 0xffe3
 ; GFX10-NEXT:    s_add_u32 s4, s2, s0
@@ -3301,7 +3301,7 @@ define amdgpu_ps void @global_addr_64bit_lsr_iv(float addrspace(1)* inreg %arg) 
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    s_addc_u32 s1, s1, 0
 ; GFX10-NEXT:    s_cmpk_eq_i32 s0, 0x400
-; GFX10-NEXT:    s_cbranch_scc0 BB128_1
+; GFX10-NEXT:    s_cbranch_scc0 .LBB128_1
 ; GFX10-NEXT:  ; %bb.2: ; %bb2
 ; GFX10-NEXT:    s_endpgm
 ;
@@ -3309,7 +3309,7 @@ define amdgpu_ps void @global_addr_64bit_lsr_iv(float addrspace(1)* inreg %arg) 
 ; GFX11:       ; %bb.0: ; %bb
 ; GFX11-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX11-NEXT:    s_mov_b64 s[0:1], 0
-; GFX11-NEXT:  BB128_1: ; %bb3
+; GFX11-NEXT:  .LBB128_1: ; %bb3
 ; GFX11-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX11-NEXT:    s_add_u32 s4, s2, s0
 ; GFX11-NEXT:    s_addc_u32 s5, s3, s1
@@ -3318,7 +3318,7 @@ define amdgpu_ps void @global_addr_64bit_lsr_iv(float addrspace(1)* inreg %arg) 
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    s_addc_u32 s1, s1, 0
 ; GFX11-NEXT:    s_cmpk_eq_i32 s0, 0x400
-; GFX11-NEXT:    s_cbranch_scc0 BB128_1
+; GFX11-NEXT:    s_cbranch_scc0 .LBB128_1
 ; GFX11-NEXT:  ; %bb.2: ; %bb2
 ; GFX11-NEXT:    s_endpgm
 bb:
@@ -3344,7 +3344,7 @@ define amdgpu_ps void @global_addr_64bit_lsr_iv_multiload(float addrspace(1)* in
 ; GFX9:       ; %bb.0: ; %bb
 ; GFX9-NEXT:    s_mov_b64 s[0:1], 0
 ; GFX9-NEXT:    v_mov_b32_e32 v0, 0
-; GFX9-NEXT:  BB129_1: ; %bb3
+; GFX9-NEXT:  .LBB129_1: ; %bb3
 ; GFX9-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX9-NEXT:    s_add_u32 s4, s2, s0
 ; GFX9-NEXT:    s_addc_u32 s5, s3, s1
@@ -3356,7 +3356,7 @@ define amdgpu_ps void @global_addr_64bit_lsr_iv_multiload(float addrspace(1)* in
 ; GFX9-NEXT:    s_addc_u32 s1, s1, 0
 ; GFX9-NEXT:    s_cmpk_eq_i32 s0, 0x400
 ; GFX9-NEXT:    ; kill: killed $sgpr4 killed $sgpr5
-; GFX9-NEXT:    s_cbranch_scc0 BB129_1
+; GFX9-NEXT:    s_cbranch_scc0 .LBB129_1
 ; GFX9-NEXT:  ; %bb.2: ; %bb2
 ; GFX9-NEXT:    s_endpgm
 ;
@@ -3364,7 +3364,7 @@ define amdgpu_ps void @global_addr_64bit_lsr_iv_multiload(float addrspace(1)* in
 ; GFX10:       ; %bb.0: ; %bb
 ; GFX10-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX10-NEXT:    s_mov_b64 s[0:1], 0
-; GFX10-NEXT:  BB129_1: ; %bb3
+; GFX10-NEXT:  .LBB129_1: ; %bb3
 ; GFX10-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX10-NEXT:    s_waitcnt_depctr 0xffe3
 ; GFX10-NEXT:    s_add_u32 s4, s2, s0
@@ -3377,7 +3377,7 @@ define amdgpu_ps void @global_addr_64bit_lsr_iv_multiload(float addrspace(1)* in
 ; GFX10-NEXT:    s_addc_u32 s1, s1, 0
 ; GFX10-NEXT:    s_cmpk_eq_i32 s0, 0x400
 ; GFX10-NEXT:    ; kill: killed $sgpr4 killed $sgpr5
-; GFX10-NEXT:    s_cbranch_scc0 BB129_1
+; GFX10-NEXT:    s_cbranch_scc0 .LBB129_1
 ; GFX10-NEXT:  ; %bb.2: ; %bb2
 ; GFX10-NEXT:    s_endpgm
 ;
@@ -3385,7 +3385,7 @@ define amdgpu_ps void @global_addr_64bit_lsr_iv_multiload(float addrspace(1)* in
 ; GFX11:       ; %bb.0: ; %bb
 ; GFX11-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX11-NEXT:    s_mov_b64 s[0:1], 0
-; GFX11-NEXT:  BB129_1: ; %bb3
+; GFX11-NEXT:  .LBB129_1: ; %bb3
 ; GFX11-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX11-NEXT:    s_add_u32 s4, s2, s0
 ; GFX11-NEXT:    s_addc_u32 s5, s3, s1
@@ -3396,7 +3396,7 @@ define amdgpu_ps void @global_addr_64bit_lsr_iv_multiload(float addrspace(1)* in
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    s_addc_u32 s1, s1, 0
 ; GFX11-NEXT:    s_cmpk_eq_i32 s0, 0x400
-; GFX11-NEXT:    s_cbranch_scc0 BB129_1
+; GFX11-NEXT:    s_cbranch_scc0 .LBB129_1
 ; GFX11-NEXT:  ; %bb.2: ; %bb2
 ; GFX11-NEXT:    s_endpgm
 bb:

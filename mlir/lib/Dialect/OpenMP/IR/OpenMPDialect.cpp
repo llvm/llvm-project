@@ -244,12 +244,51 @@ static void printLinearClause(OpAsmPrinter &p, OperandRange linearVars,
 // Parser and printer for Schedule Clause
 //===----------------------------------------------------------------------===//
 
+static ParseResult
+verifyScheduleModifiers(OpAsmParser &parser,
+                        SmallVectorImpl<SmallString<12>> &modifiers) {
+  if (modifiers.size() > 2)
+    return parser.emitError(parser.getNameLoc()) << " unexpected modifier(s)";
+  for (auto mod : modifiers) {
+    // Translate the string. If it has no value, then it was not a valid
+    // modifier!
+    auto symbol = symbolizeScheduleModifier(mod);
+    if (!symbol.hasValue())
+      return parser.emitError(parser.getNameLoc())
+             << " unknown modifier type: " << mod;
+  }
+
+  // If we have one modifier that is "simd", then stick a "none" modiifer in
+  // index 0.
+  if (modifiers.size() == 1) {
+    if (symbolizeScheduleModifier(modifiers[0]) ==
+        mlir::omp::ScheduleModifier::simd) {
+      modifiers.push_back(modifiers[0]);
+      modifiers[0] =
+          stringifyScheduleModifier(mlir::omp::ScheduleModifier::none);
+    }
+  } else if (modifiers.size() == 2) {
+    // If there are two modifier:
+    // First modifier should not be simd, second one should be simd
+    if (symbolizeScheduleModifier(modifiers[0]) ==
+            mlir::omp::ScheduleModifier::simd ||
+        symbolizeScheduleModifier(modifiers[1]) !=
+            mlir::omp::ScheduleModifier::simd)
+      return parser.emitError(parser.getNameLoc())
+             << " incorrect modifier order";
+  }
+  return success();
+}
+
 /// schedule ::= `schedule` `(` sched-list `)`
-/// sched-list ::= sched-val | sched-val sched-list
+/// sched-list ::= sched-val | sched-val sched-list |
+///                sched-val `,` sched-modifier
 /// sched-val ::= sched-with-chunk | sched-wo-chunk
 /// sched-with-chunk ::= sched-with-chunk-types (`=` ssa-id-and-type)?
 /// sched-with-chunk-types ::= `static` | `dynamic` | `guided`
 /// sched-wo-chunk ::=  `auto` | `runtime`
+/// sched-modifier ::=  sched-mod-val | sched-mod-val `,` sched-mod-val
+/// sched-mod-val ::=  `monotonic` | `nonmonotonic` | `simd` | `none`
 static ParseResult
 parseScheduleClause(OpAsmParser &parser, SmallString<8> &schedule,
                     SmallVectorImpl<SmallString<12>> &modifiers,
@@ -277,7 +316,7 @@ parseScheduleClause(OpAsmParser &parser, SmallString<8> &schedule,
   }
 
   // If there is a comma, we have one or more modifiers..
-  if (succeeded(parser.parseOptionalComma())) {
+  while (succeeded(parser.parseOptionalComma())) {
     StringRef mod;
     if (parser.parseKeyword(&mod))
       return failure();
@@ -287,19 +326,24 @@ parseScheduleClause(OpAsmParser &parser, SmallString<8> &schedule,
   if (parser.parseRParen())
     return failure();
 
+  if (verifyScheduleModifiers(parser, modifiers))
+    return failure();
+
   return success();
 }
 
 /// Print schedule clause
 static void printScheduleClause(OpAsmPrinter &p, StringRef &sched,
-                                llvm::Optional<StringRef> modifier,
+                                llvm::Optional<StringRef> modifier, bool simd,
                                 Value scheduleChunkVar) {
   std::string schedLower = sched.lower();
   p << "schedule(" << schedLower;
   if (scheduleChunkVar)
     p << " = " << scheduleChunkVar;
-  if (modifier && modifier.getValue() != "none")
+  if (modifier && modifier.hasValue())
     p << ", " << modifier;
+  if (simd)
+    p << ", simd";
   p << ") ";
 }
 
@@ -822,6 +866,13 @@ static ParseResult parseClauses(OpAsmParser &parser, OperationState &result,
     if (modifiers.size() > 0) {
       auto mod = parser.getBuilder().getStringAttr(modifiers[0]);
       result.addAttribute("schedule_modifier", mod);
+      // Only SIMD attribute is allowed here!
+      if (modifiers.size() > 1) {
+        assert(symbolizeScheduleModifier(modifiers[1]) ==
+               mlir::omp::ScheduleModifier::simd);
+        auto attr = UnitAttr::get(parser.getBuilder().getContext());
+        result.addAttribute("simd_modifier", attr);
+      }
     }
     if (scheduleChunkSize) {
       auto chunkSizeType = parser.getBuilder().getI32Type();
@@ -1026,7 +1077,7 @@ static void printWsLoopOp(OpAsmPrinter &p, WsLoopOp op) {
 
   if (auto sched = op.schedule_val())
     printScheduleClause(p, sched.getValue(), op.schedule_modifier(),
-                        op.schedule_chunk_var());
+                        op.simd_modifier(), op.schedule_chunk_var());
 
   if (auto collapse = op.collapse_val())
     p << "collapse(" << collapse << ") ";

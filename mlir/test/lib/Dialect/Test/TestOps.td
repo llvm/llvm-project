@@ -1001,6 +1001,13 @@ def TestIdempotentTraitOp
   let results = (outs I32);
 }
 
+def TestIdempotentTraitBinaryOp
+    : TEST_Op<"op_idempotent_trait_binary",
+              [SameOperandsAndResultType, NoSideEffect, Idempotent]> {
+  let arguments = (ins I32:$op1, I32:$op2);
+  let results = (outs I32);
+}
+
 def TestInvolutionTraitNoOperationFolderOp
  : TEST_Op<"op_involution_trait_no_operation_fold",
            [SameOperandsAndResultType, NoSideEffect, Involution]> {
@@ -1625,6 +1632,25 @@ def WrappingRegionOp : TEST_Op<"wrapping_region",
   }];
 
   let results = (outs Variadic<AnyType>);
+  let regions = (region SizedRegion<1>:$region);
+  let parser = [{ return ::parse$cppClass(parser, result); }];
+  let printer = [{ return ::print(p, *this); }];
+}
+
+def PrettyPrintedRegionOp : TEST_Op<"pretty_printed_region",
+    [SingleBlockImplicitTerminator<"TestReturnOp">]> {
+  let summary =  "pretty_printed_region operation";
+  let description = [{
+    Test-op can be printed either in a "pretty" or "non-pretty" way based on
+    some criteria. The custom parser parsers both the versions while testing
+    APIs: parseCustomOperationName & parseGenericOperationAfterOpName.
+  }];
+  let arguments = (ins
+    AnyType:$input1,
+    AnyType:$input2
+  );
+
+  let results = (outs AnyType);
   let regions = (region SizedRegion<1>:$region);
   let parser = [{ return ::parse$cppClass(parser, result); }];
   let printer = [{ return ::print(p, *this); }];

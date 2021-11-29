@@ -62,7 +62,8 @@ Non-comprehensive list of changes in this release
 New Compiler Flags
 ------------------
 
-- ...
+- Clang plugin arguments can now be passed through the compiler driver via
+  ``-fplugin-arg-pluginname-arg``, similar to GCC's ``-fplugin-arg``.
 
 Deprecated Compiler Flags
 -------------------------
@@ -187,7 +188,6 @@ X86 Support in Clang
 --------------------
 
 - Support for ``AVX512-FP16`` instructions has been added.
-- Support for ``_Float16`` type has been added.
 
 Arm and AArch64 Support in Clang
 --------------------------------
@@ -264,6 +264,8 @@ clang-format
 - Add a ``Custom`` style to ``SpaceBeforeParens``, to better configure the
   space before parentheses. The custom options can be set using
   ``SpaceBeforeParensOptions``.
+
+- Improved Cpp20 Modules support.
 
 libclang
 --------

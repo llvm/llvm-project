@@ -214,9 +214,9 @@ bool BT::RegisterCell::meet(const RegisterCell &RC, Register SelfR) {
 BT::RegisterCell &BT::RegisterCell::insert(const BT::RegisterCell &RC,
       const BitMask &M) {
   uint16_t B = M.first(), E = M.last(), W = width();
-  // Sanity: M must be a valid mask for *this.
+  // M must be a valid mask for *this.
   assert(B < W && E < W);
-  // Sanity: the masked part of *this must have the same number of bits
+  // The masked part of *this must have the same number of bits
   // as the source.
   assert(B > E || E-B+1 == RC.width());      // B <= E  =>  E-B+1 = |RC|.
   assert(B <= E || E+(W-B)+1 == RC.width()); // E < B   =>  E+(W-B)+1 = |RC|.
@@ -850,8 +850,7 @@ void BT::visitNonBranch(const MachineInstr &MI) {
   bool Eval = ME.evaluate(MI, Map, ResMap);
 
   if (Trace && Eval) {
-    for (unsigned i = 0, n = MI.getNumOperands(); i < n; ++i) {
-      const MachineOperand &MO = MI.getOperand(i);
+    for (const MachineOperand &MO : MI.operands()) {
       if (!MO.isReg() || !MO.isUse())
         continue;
       RegisterRef RU(MO);

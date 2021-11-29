@@ -4,7 +4,7 @@
 // RUN:     -fmodules-ignore-macro=PREFIX -DPREFIX -I %S/Inputs/va_list \
 // RUN:     -x objective-c-header %s -o %t.pch -emit-pch
 
-// Include the pch, as a sanity check.
+// Include the pch, as a basic correctness check.
 // RUN: %clang_cc1 -triple x86_64-apple-macosx10 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t \
 // RUN:     -fmodules-ignore-macro=PREFIX -I %S/Inputs/va_list -include-pch %t.pch \
 // RUN:     -x objective-c %s -fsyntax-only

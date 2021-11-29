@@ -93,6 +93,13 @@ Args:
   use_local_Scope: Whether to print in a way that is more optimized for
     multi-threaded access but may not be consistent with how the overall
     module prints.
+  assume_verified: By default, if not printing generic form, the verifier
+    will be run and if it fails, generic form will be printed with a comment
+    about failed verification. While a reasonable default for interactive use,
+    for systematic use, it is often better for the caller to verify explicitly
+    and report failures in a more robust fashion. Set this to True if doing this
+    in order to avoid running a redundant verification. If the IR is actually
+    invalid, behavior is undefined.
 )";
 
 static const char kOperationGetAsmDocstring[] =
@@ -828,14 +835,21 @@ void PyOperation::checkValid() const {
 void PyOperationBase::print(py::object fileObject, bool binary,
                             llvm::Optional<int64_t> largeElementsLimit,
                             bool enableDebugInfo, bool prettyDebugInfo,
-                            bool printGenericOpForm, bool useLocalScope) {
+                            bool printGenericOpForm, bool useLocalScope,
+                            bool assumeVerified) {
   PyOperation &operation = getOperation();
   operation.checkValid();
   if (fileObject.is_none())
     fileObject = py::module::import("sys").attr("stdout");
 
-  if (!printGenericOpForm && !mlirOperationVerify(operation)) {
-    fileObject.attr("write")("// Verification failed, printing generic form\n");
+  if (!assumeVerified && !printGenericOpForm &&
+      !mlirOperationVerify(operation)) {
+    std::string message("// Verification failed, printing generic form\n");
+    if (binary) {
+      fileObject.attr("write")(py::bytes(message));
+    } else {
+      fileObject.attr("write")(py::str(message));
+    }
     printGenericOpForm = true;
   }
 
@@ -857,8 +871,8 @@ void PyOperationBase::print(py::object fileObject, bool binary,
 py::object PyOperationBase::getAsm(bool binary,
                                    llvm::Optional<int64_t> largeElementsLimit,
                                    bool enableDebugInfo, bool prettyDebugInfo,
-                                   bool printGenericOpForm,
-                                   bool useLocalScope) {
+                                   bool printGenericOpForm, bool useLocalScope,
+                                   bool assumeVerified) {
   py::object fileObject;
   if (binary) {
     fileObject = py::module::import("io").attr("BytesIO")();
@@ -870,7 +884,8 @@ py::object PyOperationBase::getAsm(bool binary,
         /*enableDebugInfo=*/enableDebugInfo,
         /*prettyDebugInfo=*/prettyDebugInfo,
         /*printGenericOpForm=*/printGenericOpForm,
-        /*useLocalScope=*/useLocalScope);
+        /*useLocalScope=*/useLocalScope,
+        /*assumeVerified=*/assumeVerified);
 
   return fileObject.attr("getvalue")();
 }
@@ -2149,12 +2164,9 @@ void mlir::python::populateIRCore(py::module &m) {
           kDumpDocstring)
       .def(
           "__str__",
-          [](PyModule &self) {
-            MlirOperation operation = mlirModuleGetOperation(self.get());
-            PyPrintAccumulator printAccum;
-            mlirOperationPrint(operation, printAccum.getCallback(),
-                               printAccum.getUserData());
-            return printAccum.join();
+          [](py::object self) {
+            // Defer to the operation's __str__.
+            return self.attr("operation").attr("__str__")();
           },
           kOperationStrDunderDocstring);
 
@@ -2234,7 +2246,8 @@ void mlir::python::populateIRCore(py::module &m) {
                                /*enableDebugInfo=*/false,
                                /*prettyDebugInfo=*/false,
                                /*printGenericOpForm=*/false,
-                               /*useLocalScope=*/false);
+                               /*useLocalScope=*/false,
+                               /*assumeVerified=*/false);
           },
           "Returns the assembly form of the operation.")
       .def("print", &PyOperationBase::print,
@@ -2244,7 +2257,8 @@ void mlir::python::populateIRCore(py::module &m) {
            py::arg("enable_debug_info") = false,
            py::arg("pretty_debug_info") = false,
            py::arg("print_generic_op_form") = false,
-           py::arg("use_local_scope") = false, kOperationPrintDocstring)
+           py::arg("use_local_scope") = false,
+           py::arg("assume_verified") = false, kOperationPrintDocstring)
       .def("get_asm", &PyOperationBase::getAsm,
            // Careful: Lots of arguments must match up with get_asm method.
            py::arg("binary") = false,
@@ -2252,7 +2266,8 @@ void mlir::python::populateIRCore(py::module &m) {
            py::arg("enable_debug_info") = false,
            py::arg("pretty_debug_info") = false,
            py::arg("print_generic_op_form") = false,
-           py::arg("use_local_scope") = false, kOperationGetAsmDocstring)
+           py::arg("use_local_scope") = false,
+           py::arg("assume_verified") = false, kOperationGetAsmDocstring)
       .def(
           "verify",
           [](PyOperationBase &self) {

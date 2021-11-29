@@ -750,20 +750,6 @@ static OrphanHandlingPolicy getOrphanHandling(opt::InputArgList &args) {
   return OrphanHandlingPolicy::Place;
 }
 
-// Parses --power10-stubs= flags, to disable or enable Power 10
-// instructions in stubs.
-static bool getP10StubOpt(opt::InputArgList &args) {
-
-  if (args.getLastArgValue(OPT_power10_stubs_eq)== "no")
-    return false;
-
-  if (!args.hasArg(OPT_power10_stubs_eq) &&
-      args.hasArg(OPT_no_power10_stubs))
-    return false;
-
-  return true;
-}
-
 // Parse --build-id or --build-id=<style>. We handle "tree" as a
 // synonym for "sha1" because all our hash functions including
 // --build-id=sha1 are actually tree hashes for performance reasons.
@@ -1190,7 +1176,7 @@ static void readConfigs(opt::InputArgList &args) {
   config->zText = getZFlag(args, "text", "notext", true);
   config->zWxneeded = hasZOption(args, "wxneeded");
   setUnresolvedSymbolPolicy(args);
-  config->Power10Stub = getP10StubOpt(args);
+  config->power10Stubs = args.getLastArgValue(OPT_power10_stubs_eq) != "no";
 
   if (opt::Arg *arg = args.getLastArg(OPT_eb, OPT_el)) {
     if (arg->getOption().matches(OPT_eb))
@@ -1691,7 +1677,7 @@ static void handleUndefined(Symbol *sym, const char *option) {
 
   if (!sym->isLazy())
     return;
-  sym->fetch();
+  sym->extract();
   if (!config->whyExtract.empty())
     whyExtract.emplace_back(option, sym->file, *sym);
 }
@@ -1706,14 +1692,12 @@ static void handleUndefinedGlob(StringRef arg) {
     return;
   }
 
+  // Calling sym->extract() in the loop is not safe because it may add new
+  // symbols to the symbol table, invalidating the current iterator.
   std::vector<Symbol *> syms;
-  for (Symbol *sym : symtab->symbols()) {
-    // Calling Sym->fetch() from here is not safe because it may
-    // add new symbols to the symbol table, invalidating the
-    // current iterator. So we just keep a note.
+  for (Symbol *sym : symtab->symbols())
     if (pat->match(sym->getName()))
       syms.push_back(sym);
-  }
 
   for (Symbol *sym : syms)
     handleUndefined(sym, "--undefined-glob");
@@ -1731,7 +1715,7 @@ static void handleLibcall(StringRef name) {
     mb = cast<LazyArchive>(sym)->getMemberBuffer();
 
   if (isBitcode(mb))
-    sym->fetch();
+    sym->extract();
 }
 
 // Handle --dependency-file=<path>. If that option is given, lld creates a
@@ -2207,7 +2191,7 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
     symtab->insert(arg->getValue())->traced = true;
 
   // Handle -u/--undefined before input files. If both a.a and b.so define foo,
-  // -u foo a.a b.so will fetch a.a.
+  // -u foo a.a b.so will extract a.a.
   for (StringRef name : config->undefined)
     addUnusedUndefined(name)->referenced = true;
 
@@ -2297,7 +2281,6 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
   // Create elfHeader early. We need a dummy section in
   // addReservedSymbols to mark the created symbols as not absolute.
   Out::elfHeader = make<OutputSection>("", 0, SHF_ALLOC);
-  Out::elfHeader->size = sizeof(typename ELFT::Ehdr);
 
   std::vector<WrappedSymbol> wrapped = addWrappedSymbols(args);
 
@@ -2476,8 +2459,8 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
     // merging MergeInputSections into a single MergeSyntheticSection. From this
     // point onwards InputSectionDescription::sections should be used instead of
     // sectionBases.
-    for (BaseCommand *base : script->sectionCommands)
-      if (auto *sec = dyn_cast<OutputSection>(base))
+    for (SectionCommand *cmd : script->sectionCommands)
+      if (auto *sec = dyn_cast<OutputSection>(cmd))
         sec->finalizeInputSections();
     llvm::erase_if(inputSections, [](InputSectionBase *s) {
       return isa<MergeInputSection>(s);

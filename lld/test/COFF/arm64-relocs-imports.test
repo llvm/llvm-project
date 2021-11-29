@@ -47,13 +47,14 @@
 # BEFORE:       94:       01 00 00 54     b.ne    0x94
 # BEFORE:       98:       00 00 00 36     tbz     w0, #0, 0x98
 # BEFORE:       9c:       01 00 00 00     udf #1
+# BEFORE:       a0:       02 00 80 90     adrp    x2, 0xffffffff00000000
 
 # AFTER: Disassembly of section .text:
 # AFTER-EMPTY:
 # AFTER:  140001000:      fe 0f 1f f8     str     x30, [sp, #-16]!
 # AFTER:  140001004:      00 00 00 b0     adrp    x0, 0x140002000
 # AFTER:  140001008:      00 18 00 91     add     x0, x0, #6
-# AFTER:  14000100c:      25 00 00 94     bl      0x1400010a0
+# AFTER:  14000100c:      26 00 00 94     bl      0x1400010a4
 # AFTER:  140001010:      00 21 40 39     ldrb    w0, [x8, #8]
 # AFTER:  140001014:      00 11 40 79     ldrh    w0, [x8, #8]
 # AFTER:  140001018:      00 09 40 b9     ldr     w0, [x8, #8]
@@ -87,12 +88,13 @@
 # AFTER:  140001088:      00 c4 41 f9     ldr     x0, [x0, #904]
 # AFTER:  14000108c:      03 00 00 00     udf #3
 # AFTER:  140001090:      e0 95 09 30     adr     x0, #78525
-# AFTER:  140001094:      61 00 00 54     b.ne    0x1400010a0
-# AFTER:  140001098:      40 00 00 36     tbz     w0, #0, 0x1400010a0
+# AFTER:  140001094:      81 00 00 54     b.ne    0x1400010a4
+# AFTER:  140001098:      60 00 00 36     tbz     w0, #0, 0x1400010a4
 # AFTER:  14000109c:      61 ff ff ff     <unknown>
-# AFTER:  1400010a0:      10 00 00 b0     adrp    x16, 0x140002000
-# AFTER:  1400010a4:      10 2a 40 f9     ldr     x16, [x16, #80]
-# AFTER:  1400010a8:      00 02 1f d6     br      x16
+# AFTER:  1400010a0:      02 f8 ff b0     adrp    x2,  0x13ff02000
+# AFTER:  1400010a4:      10 00 00 b0     adrp    x16, 0x140002000
+# AFTER:  1400010a8:      10 2a 40 f9     ldr     x16, [x16, #80]
+# AFTER:  1400010ac:      00 02 1f d6     br      x16
 
 --- !COFF
 header:
@@ -102,7 +104,7 @@ sections:
   - Name:            .text
     Characteristics: [ IMAGE_SCN_CNT_CODE, IMAGE_SCN_MEM_EXECUTE, IMAGE_SCN_MEM_READ ]
     Alignment:       4
-    SectionData:     FE0F1FF80000009000080091000000940001403900014079000140B9000140F90001003900010079000100B9000100F90001403D0001407D000140BD000140FD0001C03D0001003D0001007D000100BD000100FD0001803D000540F9201A01B000FC4FF9E0031F2AFE0741F8C0035FD6080000000000000001000000010000000000009100004091000040f901000000201a0930010000540000003601000000
+    SectionData:     FE0F1FF80000009000080091000000940001403900014079000140B9000140F90001003900010079000100B9000100F90001403D0001407D000140BD000140FD0001C03D0001003D0001007D000100BD000100FD0001803D000540F9201A01B000FC4FF9E0031F2AFE0741F8C0035FD6080000000000000001000000010000000000009100004091000040f901000000201a093001000054000000360100000002008090
     Relocations:
       - VirtualAddress:  4
         SymbolName:      .Lstr
@@ -209,6 +211,9 @@ sections:
       - VirtualAddress:  156
         SymbolName:      main
         Type:            IMAGE_REL_ARM64_REL32
+      - VirtualAddress:  160
+        SymbolName:      .Lstr
+        Type:            IMAGE_REL_ARM64_PAGEBASE_REL21
   - Name:            .data
     Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_READ, IMAGE_SCN_MEM_WRITE ]
     Alignment:       4

@@ -1006,7 +1006,7 @@ static void packSegmentMask(ArrayRef<int> Mask, ArrayRef<unsigned> OutSegMap,
 
 static bool isPermutation(ArrayRef<int> Mask) {
   // Check by adding all numbers only works if there is no overflow.
-  assert(Mask.size() < 0x00007FFF && "Sanity failure");
+  assert(Mask.size() < 0x00007FFF && "Overflow failure");
   int Sum = 0;
   for (int Idx : Mask) {
     if (Idx == -1)
@@ -1217,7 +1217,7 @@ OpRef HvxSelector::packs(ShuffleMask SM, OpRef Va, OpRef Vb,
       } else if (Seg0 == ~1u) {
         Seg0 = SegList[0] != Seg1 ? SegList[0] : SegList[1];
       } else {
-        assert(Seg1 == ~1u); // Sanity
+        assert(Seg1 == ~1u);
         Seg1 = SegList[0] != Seg0 ? SegList[0] : SegList[1];
       }
     }
@@ -1265,7 +1265,7 @@ OpRef HvxSelector::packs(ShuffleMask SM, OpRef Va, OpRef Vb,
       } else {
         // BC or DA: this could be done via valign by SegLen.
         // Do nothing here, because valign (if possible) will be generated
-        // later on (make sure the Seg0 values are as expected, for sanity).
+        // later on (make sure the Seg0 values are as expected).
         assert(Seg0 == 1 || Seg0 == 3);
       }
     }
@@ -1414,7 +1414,7 @@ OpRef HvxSelector::shuffs1(ShuffleMask SM, OpRef Va, ResultStack &Results) {
     return OpRef::undef(getSingleVT(MVT::i8));
 
   unsigned HalfLen = HwLen / 2;
-  assert(isPowerOf2_32(HalfLen)); // Sanity.
+  assert(isPowerOf2_32(HalfLen));
 
   // Handle special case where the output is the same half of the input
   // repeated twice, i.e. if Va = AB, then handle the output of AA or BB.

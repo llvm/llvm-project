@@ -1,0 +1,13 @@
+%%MatrixMarket matrix coordinate real symmetric
+%
+% This is a test sparse matrix in Matrix Market Exchange Format.
+% see https://math.nist.gov/MatrixMarket
+%
+5 5 7
+1 1 5.0
+1 3 4.1
+2 2 3.0
+2 4 2.0
+3 3 1.0
+4 4 4.0
+5 5 5.0

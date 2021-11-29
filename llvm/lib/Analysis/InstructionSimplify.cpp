@@ -2414,6 +2414,31 @@ static Value *SimplifyXorInst(Value *Op0, Value *Op1, const SimplifyQuery &Q,
       match(Op1, m_Not(m_Specific(Op0))))
     return Constant::getAllOnesValue(Op0->getType());
 
+  auto foldAndOrNot = [](Value *X, Value *Y) -> Value * {
+    Value *A, *B;
+    // (~A & B) ^ (A | B) --> A -- There are 8 commuted variants.
+    if (match(X, m_c_And(m_Not(m_Value(A)), m_Value(B))) &&
+        match(Y, m_c_Or(m_Specific(A), m_Specific(B))))
+      return A;
+
+    // (~A | B) ^ (A & B) --> ~A -- There are 8 commuted variants.
+    // The 'not' op must contain a complete -1 operand (no undef elements for
+    // vector) for the transform to be safe.
+    Value *NotA;
+    const APInt *C;
+    if (match(X, m_c_Or(m_CombineAnd(m_Xor(m_Value(A), m_APIntForbidUndef(C)),
+                                     m_Value(NotA)),
+                        m_Value(B))) &&
+        match(Y, m_c_And(m_Specific(A), m_Specific(B))) && C->isAllOnes())
+      return NotA;
+
+    return nullptr;
+  };
+  if (Value *R = foldAndOrNot(Op0, Op1))
+    return R;
+  if (Value *R = foldAndOrNot(Op1, Op0))
+    return R;
+
   if (Value *V = simplifyLogicOfAddSub(Op0, Op1, Instruction::Xor))
     return V;
 
@@ -2935,8 +2960,10 @@ static Value *simplifyICmpWithBinOpOnLHS(
       return getFalse(ITy);
   }
 
-  // x >> y <=u x
-  // x udiv y <=u x.
+  // x >>u y <=u x --> true.
+  // x >>u y >u  x --> false.
+  // x udiv y <=u x --> true.
+  // x udiv y >u  x --> false.
   if (match(LBO, m_LShr(m_Specific(RHS), m_Value())) ||
       match(LBO, m_UDiv(m_Specific(RHS), m_Value()))) {
     // icmp pred (X op Y), X
@@ -2944,6 +2971,37 @@ static Value *simplifyICmpWithBinOpOnLHS(
       return getFalse(ITy);
     if (Pred == ICmpInst::ICMP_ULE)
       return getTrue(ITy);
+  }
+
+  // If x is nonzero:
+  // x >>u C <u  x --> true  for C != 0.
+  // x >>u C !=  x --> true  for C != 0.
+  // x >>u C >=u x --> false for C != 0.
+  // x >>u C ==  x --> false for C != 0.
+  // x udiv C <u  x --> true  for C != 1.
+  // x udiv C !=  x --> true  for C != 1.
+  // x udiv C >=u x --> false for C != 1.
+  // x udiv C ==  x --> false for C != 1.
+  // TODO: allow non-constant shift amount/divisor
+  const APInt *C;
+  if ((match(LBO, m_LShr(m_Specific(RHS), m_APInt(C))) && *C != 0) ||
+      (match(LBO, m_UDiv(m_Specific(RHS), m_APInt(C))) && *C != 1)) {
+    if (isKnownNonZero(RHS, Q.DL, 0, Q.AC, Q.CxtI, Q.DT)) {
+      switch (Pred) {
+      default:
+        break;
+      case ICmpInst::ICMP_EQ:
+      case ICmpInst::ICMP_UGE:
+        return getFalse(ITy);
+      case ICmpInst::ICMP_NE:
+      case ICmpInst::ICMP_ULT:
+        return getTrue(ITy);
+      case ICmpInst::ICMP_UGT:
+      case ICmpInst::ICMP_ULE:
+        // UGT/ULE are handled by the more general case just above
+        llvm_unreachable("Unexpected UGT/ULE, should have been handled");
+      }
+    }
   }
 
   // (x*C1)/C2 <= x for C1 <= C2.

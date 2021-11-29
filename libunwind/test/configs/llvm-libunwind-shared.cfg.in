@@ -47,7 +47,7 @@ config.substitutions.append(('%{compile_flags}',
     '-nostdinc++ -I {}/include {}'.format('@LIBUNWIND_SOURCE_DIR@', ' '.join(compile_flags))
 ))
 config.substitutions.append(('%{link_flags}',
-    '-nodefaultlibs -L {0} -Wl,-rpath,{0} -lunwind -ldl -lc {1}'.format('@LIBUNWIND_LIBRARY_DIR@', ' '.join(link_flags))
+    '-L {0} -Wl,-rpath,{0} -lunwind -ldl {1}'.format('@LIBUNWIND_LIBRARY_DIR@', ' '.join(link_flags))
 ))
 config.substitutions.append(('%{exec}', ''))
 

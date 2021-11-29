@@ -197,7 +197,7 @@ func @omp_wsloop_pretty(%lb : index, %ub : index, %step : index,
   }
 
   // CHECK: omp.wsloop (%{{.*}}) : index = (%{{.*}}) to (%{{.*}}) step (%{{.*}}) linear(%{{.*}} = %{{.*}} : memref<i32>) schedule(static)
-  omp.wsloop (%iv) : index = (%lb) to (%ub) step (%step) schedule(static, none) lastprivate(%data_var : memref<i32>) linear(%data_var = %linear_var : memref<i32>) {
+  omp.wsloop (%iv) : index = (%lb) to (%ub) step (%step) schedule(static) lastprivate(%data_var : memref<i32>) linear(%data_var = %linear_var : memref<i32>) {
     omp.yield
   }
 

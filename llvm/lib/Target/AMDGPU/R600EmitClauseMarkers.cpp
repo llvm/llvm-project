@@ -301,9 +301,7 @@ public:
     const R600Subtarget &ST = MF.getSubtarget<R600Subtarget>();
     TII = ST.getInstrInfo();
 
-    for (MachineFunction::iterator BB = MF.begin(), BB_E = MF.end();
-                                                    BB != BB_E; ++BB) {
-      MachineBasicBlock &MBB = *BB;
+    for (MachineBasicBlock &MBB : MF) {
       MachineBasicBlock::iterator I = MBB.begin();
       if (I != MBB.end() && I->getOpcode() == R600::CF_ALU)
         continue; // BB was already parsed

@@ -208,7 +208,12 @@ class SuccessorConstraint<Pred predicate, string summary = ""> :
 //===----------------------------------------------------------------------===//
 
 // Whether a type is a VectorType.
-def IsVectorTypePred : CPred<"$_self.isa<::mlir::VectorType>()">;
+// Explicitly disallow 0-D vectors for now until we have good enough coverage.
+def IsVectorTypePred : And<[CPred<"$_self.isa<::mlir::VectorType>()">,
+                            CPred<"$_self.cast<::mlir::VectorType>().getRank() > 0">]>;
+
+// Temporary vector type clone that allows gradual transition to 0-D vectors.
+def IsVectorOfAnyRankTypePred : CPred<"$_self.isa<::mlir::VectorType>()">;
 
 // Whether a type is a TensorType.
 def IsTensorTypePred : CPred<"$_self.isa<::mlir::TensorType>()">;
@@ -598,6 +603,10 @@ class HasAnyRankOfPred<list<int> ranks> : And<[
 class VectorOf<list<Type> allowedTypes> :
   ShapedContainerType<allowedTypes, IsVectorTypePred, "vector",
                       "::mlir::VectorType">;
+// Temporary vector type clone that allows gradual transition to 0-D vectors.
+class VectorOfAnyRankOf<list<Type> allowedTypes> :
+  ShapedContainerType<allowedTypes, IsVectorOfAnyRankTypePred, "vector",
+                      "::mlir::VectorType">;
 
 // Whether the number of elements of a vector is from the given
 // `allowedRanks` list
@@ -649,6 +658,8 @@ class VectorOfLengthAndType<list<int> allowedLengths,
   "::mlir::VectorType">;
 
 def AnyVector : VectorOf<[AnyType]>;
+// Temporary vector type clone that allows gradual transition to 0-D vectors.
+def AnyVectorOfAnyRank : VectorOfAnyRankOf<[AnyType]>;
 
 // Shaped types.
 
@@ -1934,7 +1945,7 @@ def ResultsBroadcastableShape :
   NativeOpTrait<"ResultsBroadcastableShape">;
 // X op Y == Y op X
 def Commutative  : NativeOpTrait<"IsCommutative">;
-// op op X == op X
+// op op X == op X (unary) / X op X == X (binary)
 def Idempotent  : NativeOpTrait<"IsIdempotent">;
 // op op X == X
 def Involution  : NativeOpTrait<"IsInvolution">;
@@ -1952,8 +1963,6 @@ def SameTypeOperands : NativeOpTrait<"SameTypeOperands">;
 def SameOperandsShape : NativeOpTrait<"SameOperandsShape">;
 // Op has same operand and result shape.
 def SameOperandsAndResultShape : NativeOpTrait<"SameOperandsAndResultShape">;
-// Op has the same operand and result type.
-def SameOperandsAndResultType : NativeOpTrait<"SameOperandsAndResultType">;
 // Op has the same element type (or type itself, if scalar) for all operands.
 def SameOperandsElementType : NativeOpTrait<"SameOperandsElementType">;
 // Op has the same operand and result element type (or type itself, if scalar).

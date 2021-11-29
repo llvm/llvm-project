@@ -1,5 +1,5 @@
-; RUN: opt < %s -ipsccp -S | grep "ret i32 42"
-; RUN: opt < %s -ipsccp -S | grep "ret i32 undef"
+; RUN: opt < %s -passes=ipsccp -S | grep "ret i32 42"
+; RUN: opt < %s -passes=ipsccp -S | grep "ret i32 undef"
 ; PR3325
 
 define i32 @main() personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {

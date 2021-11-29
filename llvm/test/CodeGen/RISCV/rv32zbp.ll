@@ -2944,13 +2944,13 @@ define i64 @packh_i64(i64 %a, i64 %b) nounwind {
 ; RV32I-NEXT:    slli a1, a2, 24
 ; RV32I-NEXT:    srli a1, a1, 16
 ; RV32I-NEXT:    or a0, a1, a0
-; RV32I-NEXT:    mv a1, zero
+; RV32I-NEXT:    li a1, 0
 ; RV32I-NEXT:    ret
 ;
 ; RV32ZBP-LABEL: packh_i64:
 ; RV32ZBP:       # %bb.0:
 ; RV32ZBP-NEXT:    packh a0, a0, a2
-; RV32ZBP-NEXT:    mv a1, zero
+; RV32ZBP-NEXT:    li a1, 0
 ; RV32ZBP-NEXT:    ret
   %and = and i64 %a, 255
   %and1 = shl i64 %b, 8
@@ -2981,13 +2981,13 @@ define i64 @zexth_i64(i64 %a) nounwind {
 ; RV32I-NEXT:    lui a1, 16
 ; RV32I-NEXT:    addi a1, a1, -1
 ; RV32I-NEXT:    and a0, a0, a1
-; RV32I-NEXT:    mv a1, zero
+; RV32I-NEXT:    li a1, 0
 ; RV32I-NEXT:    ret
 ;
 ; RV32ZBP-LABEL: zexth_i64:
 ; RV32ZBP:       # %bb.0:
 ; RV32ZBP-NEXT:    zext.h a0, a0
-; RV32ZBP-NEXT:    mv a1, zero
+; RV32ZBP-NEXT:    li a1, 0
 ; RV32ZBP-NEXT:    ret
   %and = and i64 %a, 65535
   ret i64 %and

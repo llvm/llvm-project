@@ -1,4 +1,4 @@
-; RUN: opt -S -globaldce < %s | FileCheck %s
+; RUN: opt -S -passes=globaldce < %s | FileCheck %s
 
 ; Test that the presence of debug intrinsics isn't affecting GlobalDCE.
 ; CHECK: @llvm.global_ctors = appending global [1 x { i32, void ()*, i8* }] [{ i32, void ()*, i8* } { i32 65535, void ()* @_notremovable, i8* null }]

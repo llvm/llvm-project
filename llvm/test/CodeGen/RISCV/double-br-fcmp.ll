@@ -10,7 +10,7 @@ declare void @exit(i32)
 define void @br_fcmp_false(double %a, double %b) nounwind {
 ; RV32IFD-LABEL: br_fcmp_false:
 ; RV32IFD:       # %bb.0:
-; RV32IFD-NEXT:    addi a0, zero, 1
+; RV32IFD-NEXT:    li a0, 1
 ; RV32IFD-NEXT:    bnez a0, .LBB0_2
 ; RV32IFD-NEXT:  # %bb.1: # %if.then
 ; RV32IFD-NEXT:    ret
@@ -21,7 +21,7 @@ define void @br_fcmp_false(double %a, double %b) nounwind {
 ;
 ; RV64IFD-LABEL: br_fcmp_false:
 ; RV64IFD:       # %bb.0:
-; RV64IFD-NEXT:    addi a0, zero, 1
+; RV64IFD-NEXT:    li a0, 1
 ; RV64IFD-NEXT:    bnez a0, .LBB0_2
 ; RV64IFD-NEXT:  # %bb.1: # %if.then
 ; RV64IFD-NEXT:    ret
@@ -676,7 +676,7 @@ if.then:
 define void @br_fcmp_true(double %a, double %b) nounwind {
 ; RV32IFD-LABEL: br_fcmp_true:
 ; RV32IFD:       # %bb.0:
-; RV32IFD-NEXT:    addi a0, zero, 1
+; RV32IFD-NEXT:    li a0, 1
 ; RV32IFD-NEXT:    bnez a0, .LBB16_2
 ; RV32IFD-NEXT:  # %bb.1: # %if.else
 ; RV32IFD-NEXT:    ret
@@ -687,7 +687,7 @@ define void @br_fcmp_true(double %a, double %b) nounwind {
 ;
 ; RV64IFD-LABEL: br_fcmp_true:
 ; RV64IFD:       # %bb.0:
-; RV64IFD-NEXT:    addi a0, zero, 1
+; RV64IFD-NEXT:    li a0, 1
 ; RV64IFD-NEXT:    bnez a0, .LBB16_2
 ; RV64IFD-NEXT:  # %bb.1: # %if.else
 ; RV64IFD-NEXT:    ret

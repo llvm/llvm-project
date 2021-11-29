@@ -4,7 +4,7 @@
 ; RUN: llc -mtriple=riscv64 -verify-machineinstrs < %s \
 ; RUN:   | FileCheck -check-prefix=RV64I %s
 
-; This file provides a simple sanity check of half operations for
+; This file provides a simple test check of half operations for
 ; RV32I and RV64I. This is primarily intended to ensure that custom
 ; legalisation or DAG combines aren't incorrectly triggered when the Zfh
 ; extension isn't enabled.
@@ -35,10 +35,10 @@ define half @half_test(half %a, half %b) nounwind {
 ; RV32I-NEXT:    mv a1, s0
 ; RV32I-NEXT:    call __divsf3@plt
 ; RV32I-NEXT:    call __gnu_f2h_ieee@plt
-; RV32I-NEXT:    lw s2, 0(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s1, 4(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s1, 4(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s2, 0(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
 ;
@@ -67,10 +67,10 @@ define half @half_test(half %a, half %b) nounwind {
 ; RV64I-NEXT:    mv a1, s0
 ; RV64I-NEXT:    call __divsf3@plt
 ; RV64I-NEXT:    call __gnu_f2h_ieee@plt
-; RV64I-NEXT:    ld s2, 0(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s2, 0(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 32
 ; RV64I-NEXT:    ret
   %1 = fadd half %a, %b

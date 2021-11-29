@@ -129,7 +129,7 @@ module iso_fortran_env
   integer, parameter :: current_team = -1, initial_team = -2, parent_team = -3
 
   integer, parameter :: input_unit = 5, output_unit = 6
-  integer, parameter :: error_unit = output_unit
+  integer, parameter :: error_unit = 0
   integer, parameter :: iostat_end = -1, iostat_eor = -2
   integer, parameter :: iostat_inquire_internal_unit = -1
 

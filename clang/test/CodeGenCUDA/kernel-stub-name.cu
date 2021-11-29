@@ -28,8 +28,8 @@
 // GNU: @[[HDKERN:_Z11kernel_declv]] = external constant void ()*, align 8
 
 // MSVC: @[[HCKERN:ckernel]] = dso_local constant void ()* @[[CSTUB:__device_stub__ckernel]], align 8
-// MSVC: @[[HNSKERN:"\?nskernel@ns@@YAXXZ.*"]] = dso_local constant void ()* @[[NSSTUB:"\?nskernel@ns@@YAXXZ"]], align 8
-// MSVC: @[[HTKERN:"\?\?\$kernelfunc@H@@YAXXZ.*"]] = linkonce_odr dso_local constant void ()* @[[TSTUB:"\?\?\$kernelfunc@H@@YAXXZ.*"]], comdat, align 8
+// MSVC: @[[HNSKERN:"\?nskernel@ns@@YAXXZ.*"]] = dso_local constant void ()* @[[NSSTUB:"\?__device_stub__nskernel@ns@@YAXXZ"]], align 8
+// MSVC: @[[HTKERN:"\?\?\$kernelfunc@H@@YAXXZ.*"]] = linkonce_odr dso_local constant void ()* @[[TSTUB:"\?\?\$__device_stub__kernelfunc@H@@YAXXZ.*"]], comdat, align 8
 // MSVC: @[[HDKERN:"\?kernel_decl@@YAXXZ.*"]] = external dso_local constant void ()*, align 8
 
 extern "C" __global__ void ckernel() {}
@@ -69,7 +69,7 @@ extern "C" void launch(void *kern);
 // CHECK: call void @[[NSSTUB]]()
 // CHECK: call void @[[TSTUB]]()
 // GNU: call void @[[DSTUB:_Z26__device_stub__kernel_declv]]()
-// MSVC: call void @[[DSTUB:"\?kernel_decl@@YAXXZ"]]()
+// MSVC: call void @[[DSTUB:"\?__device_stub__kernel_decl@@YAXXZ"]]()
 
 extern "C" void fun1(void) {
   ckernel<<<1, 1>>>();

@@ -75,12 +75,15 @@ std::unique_ptr<OperationPass<FuncOp>> createLinalgGeneralizationPass();
 /// work on primitive types, if possible.
 std::unique_ptr<Pass> createLinalgDetensorizePass();
 
-/// Create a pass to tile a LinalgOp and fuse its producers.
-std::unique_ptr<OperationPass<FuncOp>> createLinalgTileAndFuseTensorOpsPass();
-
 //===----------------------------------------------------------------------===//
 /// Linalg strategy passes.
 //===----------------------------------------------------------------------===//
+/// Create a LinalgStrategyTileAndFusePass.
+std::unique_ptr<OperationPass<FuncOp>> createLinalgStrategyTileAndFusePass(
+    StringRef opName = "", linalg::LinalgTilingAndFusionOptions opt = {},
+    linalg::LinalgTransformationFilter filter =
+        linalg::LinalgTransformationFilter());
+
 /// Create a LinalgStrategyTilePass.
 std::unique_ptr<OperationPass<FuncOp>> createLinalgStrategyTilePass(
     StringRef opName = "",
@@ -125,7 +128,8 @@ createLinalgStrategyVectorizePass(StringRef opName = "",
                                   linalg::LinalgVectorizationOptions opt =
                                       linalg::LinalgVectorizationOptions(),
                                   linalg::LinalgTransformationFilter filter =
-                                      linalg::LinalgTransformationFilter());
+                                      linalg::LinalgTransformationFilter(),
+                                  bool padVectorize = false);
 
 /// Create a LinalgStrategyEnablePass.
 std::unique_ptr<OperationPass<FuncOp>> createLinalgStrategyEnablePass(

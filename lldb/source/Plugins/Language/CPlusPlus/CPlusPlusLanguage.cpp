@@ -914,10 +914,20 @@ static void LoadLibStdcppFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
           stl_deref_flags,
           "lldb.formatters.cpp.gnu_libstdcpp.StdMapLikeSynthProvider")));
   cpp_category_sp->GetRegexTypeSyntheticsContainer()->Add(
+      RegularExpression("^std::optional<.+>(( )?&)?$"),
+      SyntheticChildrenSP(new ScriptedSyntheticChildren(
+          stl_synth_flags,
+          "lldb.formatters.cpp.gnu_libstdcpp.StdOptionalSynthProvider")));
+  cpp_category_sp->GetRegexTypeSyntheticsContainer()->Add(
       RegularExpression("^std::multiset<.+> >(( )?&)?$"),
       SyntheticChildrenSP(new ScriptedSyntheticChildren(
           stl_deref_flags,
           "lldb.formatters.cpp.gnu_libstdcpp.StdMapLikeSynthProvider")));
+  cpp_category_sp->GetRegexTypeSyntheticsContainer()->Add(
+      RegularExpression("^std::unordered_(multi)?(map|set)<.+> >$"),
+      SyntheticChildrenSP(new ScriptedSyntheticChildren(
+          stl_deref_flags,
+          "lldb.formatters.cpp.gnu_libstdcpp.StdUnorderedMapSynthProvider")));
   cpp_category_sp->GetRegexTypeSyntheticsContainer()->Add(
       RegularExpression("^std::(__cxx11::)?list<.+>(( )?&)?$"),
       SyntheticChildrenSP(new ScriptedSyntheticChildren(
@@ -928,8 +938,14 @@ static void LoadLibStdcppFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
       SyntheticChildrenSP(new ScriptedSyntheticChildren(
           stl_synth_flags,
           "lldb.formatters.cpp.gnu_libstdcpp.StdForwardListSynthProvider")));
+
   stl_summary_flags.SetDontShowChildren(false);
   stl_summary_flags.SetSkipPointers(false);
+  cpp_category_sp->GetRegexTypeSummariesContainer()->Add(
+      RegularExpression("^std::optional<.+>(( )?&)?$"),
+      TypeSummaryImplSP(new ScriptSummaryFormat(
+          stl_summary_flags,
+          "lldb.formatters.cpp.gnu_libstdcpp.StdOptionalSummaryProvider")));
   cpp_category_sp->GetRegexTypeSummariesContainer()->Add(
       RegularExpression("^std::bitset<.+>(( )?&)?$"),
       TypeSummaryImplSP(
@@ -955,13 +971,17 @@ static void LoadLibStdcppFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
       TypeSummaryImplSP(
           new StringSummaryFormat(stl_summary_flags, "size=${svar%#}")));
   cpp_category_sp->GetRegexTypeSummariesContainer()->Add(
+      RegularExpression("^std::unordered_(multi)?(map|set)<.+> >$"),
+      TypeSummaryImplSP(
+          new StringSummaryFormat(stl_summary_flags, "size=${svar%#}")));
+  cpp_category_sp->GetRegexTypeSummariesContainer()->Add(
       RegularExpression("^std::(__cxx11::)?list<.+>(( )?&)?$"),
       TypeSummaryImplSP(
           new StringSummaryFormat(stl_summary_flags, "size=${svar%#}")));
   cpp_category_sp->GetRegexTypeSummariesContainer()->Add(
       RegularExpression("^std::(__cxx11::)?forward_list<.+>(( )?&)?$"),
       TypeSummaryImplSP(
-          new StringSummaryFormat(stl_summary_flags, "size=${svar%#}")));
+          new ScriptSummaryFormat(stl_summary_flags, "lldb.formatters.cpp.gnu_libstdcpp.ForwardListSummaryProvider")));
 
   AddCXXSynthetic(
       cpp_category_sp,

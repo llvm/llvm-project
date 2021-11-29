@@ -1039,7 +1039,7 @@ define i32 @out_constant_varx_42(i32 %x, i32 %y, i32 %mask) {
 ; RV32ZBB-LABEL: out_constant_varx_42:
 ; RV32ZBB:       # %bb.0:
 ; RV32ZBB-NEXT:    and a0, a2, a0
-; RV32ZBB-NEXT:    addi a1, zero, 42
+; RV32ZBB-NEXT:    li a1, 42
 ; RV32ZBB-NEXT:    andn a1, a1, a2
 ; RV32ZBB-NEXT:    or a0, a0, a1
 ; RV32ZBB-NEXT:    ret
@@ -1047,7 +1047,7 @@ define i32 @out_constant_varx_42(i32 %x, i32 %y, i32 %mask) {
 ; RV64ZBB-LABEL: out_constant_varx_42:
 ; RV64ZBB:       # %bb.0:
 ; RV64ZBB-NEXT:    and a0, a2, a0
-; RV64ZBB-NEXT:    addi a1, zero, 42
+; RV64ZBB-NEXT:    li a1, 42
 ; RV64ZBB-NEXT:    andn a1, a1, a2
 ; RV64ZBB-NEXT:    or a0, a0, a1
 ; RV64ZBB-NEXT:    ret
@@ -1375,7 +1375,7 @@ define i32 @out_constant_42_vary_invmask(i32 %x, i32 %y, i32 %mask) {
 ;
 ; RV32ZBB-LABEL: out_constant_42_vary_invmask:
 ; RV32ZBB:       # %bb.0:
-; RV32ZBB-NEXT:    addi a0, zero, 42
+; RV32ZBB-NEXT:    li a0, 42
 ; RV32ZBB-NEXT:    andn a0, a0, a2
 ; RV32ZBB-NEXT:    and a1, a2, a1
 ; RV32ZBB-NEXT:    or a0, a0, a1
@@ -1383,7 +1383,7 @@ define i32 @out_constant_42_vary_invmask(i32 %x, i32 %y, i32 %mask) {
 ;
 ; RV64ZBB-LABEL: out_constant_42_vary_invmask:
 ; RV64ZBB:       # %bb.0:
-; RV64ZBB-NEXT:    addi a0, zero, 42
+; RV64ZBB-NEXT:    li a0, 42
 ; RV64ZBB-NEXT:    andn a0, a0, a2
 ; RV64ZBB-NEXT:    and a1, a2, a1
 ; RV64ZBB-NEXT:    or a0, a0, a1
@@ -1452,9 +1452,9 @@ define i32 @in_multiuse_A(i32 %x, i32 %y, i32 %z, i32 %mask) nounwind {
 ; RV32-NEXT:    mv a0, s1
 ; RV32-NEXT:    call use32@plt
 ; RV32-NEXT:    xor a0, s1, s0
-; RV32-NEXT:    lw s1, 4(sp) # 4-byte Folded Reload
-; RV32-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
 ; RV32-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
+; RV32-NEXT:    lw s1, 4(sp) # 4-byte Folded Reload
 ; RV32-NEXT:    addi sp, sp, 16
 ; RV32-NEXT:    ret
 ;
@@ -1470,9 +1470,9 @@ define i32 @in_multiuse_A(i32 %x, i32 %y, i32 %z, i32 %mask) nounwind {
 ; RV64-NEXT:    mv a0, s1
 ; RV64-NEXT:    call use32@plt
 ; RV64-NEXT:    xor a0, s1, s0
-; RV64-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
-; RV64-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
 ; RV64-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
+; RV64-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
+; RV64-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
 ; RV64-NEXT:    addi sp, sp, 32
 ; RV64-NEXT:    ret
   %n0 = xor i32 %x, %y
@@ -1494,9 +1494,9 @@ define i32 @in_multiuse_B(i32 %x, i32 %y, i32 %z, i32 %mask) nounwind {
 ; RV32-NEXT:    and s1, a0, a3
 ; RV32-NEXT:    call use32@plt
 ; RV32-NEXT:    xor a0, s1, s0
-; RV32-NEXT:    lw s1, 4(sp) # 4-byte Folded Reload
-; RV32-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
 ; RV32-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
+; RV32-NEXT:    lw s1, 4(sp) # 4-byte Folded Reload
 ; RV32-NEXT:    addi sp, sp, 16
 ; RV32-NEXT:    ret
 ;
@@ -1511,9 +1511,9 @@ define i32 @in_multiuse_B(i32 %x, i32 %y, i32 %z, i32 %mask) nounwind {
 ; RV64-NEXT:    and s1, a0, a3
 ; RV64-NEXT:    call use32@plt
 ; RV64-NEXT:    xor a0, s1, s0
-; RV64-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
-; RV64-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
 ; RV64-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
+; RV64-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
+; RV64-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
 ; RV64-NEXT:    addi sp, sp, 32
 ; RV64-NEXT:    ret
   %n0 = xor i32 %x, %y

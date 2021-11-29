@@ -57,10 +57,10 @@ nop
 addi ra, ra, -32
 
 # CHECK-BYTES: 85 50
-# CHECK-ALIAS: addi ra, zero, -31
+# CHECK-ALIAS: li ra, -31
 # CHECK-INST: c.li ra, -31
 # CHECK: # encoding: [0x85,0x50]
-addi ra, zero, -31
+li ra, -31
 
 # CHECK-BYTES: 39 71
 # CHECK-ALIAS: addi sp, sp, -64

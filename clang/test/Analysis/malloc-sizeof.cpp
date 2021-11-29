@@ -11,7 +11,7 @@ struct A {};
 struct B {};
 
 void foo(unsigned int unsignedInt, unsigned int readSize) {
-  // Sanity check the checker is working as expected.
+  // Verify the checker is working as expected.
   A* a = static_cast<A*>(malloc(sizeof(int))); // expected-warning {{Result of 'malloc' is converted to a pointer of type 'struct A', which is incompatible with sizeof operand type 'int'}}
   free(a);
 }

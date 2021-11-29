@@ -104,6 +104,8 @@ enum NodeType : unsigned {
   // Unpredicated vector instructions
   BIC,
 
+  SRAD_MERGE_OP1,
+
   // Predicated instructions with the result of inactive lanes provided by the
   // last operand.
   FABS_MERGE_PASSTHRU,
@@ -841,6 +843,8 @@ public:
 
   EVT getAsmOperandValueType(const DataLayout &DL, Type *Ty,
                              bool AllowUnknown = false) const override;
+
+  bool shouldExpandGetActiveLaneMask(EVT VT, EVT OpVT) const override;
 
 private:
   /// Keep a pointer to the AArch64Subtarget around so that we can

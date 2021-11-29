@@ -370,9 +370,7 @@ CriticalAntiDepBreaker::isNewRegClobberedByRefs(RegRefIter RegRefBegin,
 
     // Handle cases in which this instruction defines NewReg.
     MachineInstr *MI = RefOper->getParent();
-    for (unsigned i = 0, e = MI->getNumOperands(); i != e; ++i) {
-      const MachineOperand &CheckOper = MI->getOperand(i);
-
+    for (const MachineOperand &CheckOper : MI->operands()) {
       if (CheckOper.isRegMask() && CheckOper.clobbersPhysReg(NewReg))
         return true;
 
@@ -462,11 +460,10 @@ BreakAntiDependencies(const std::vector<SUnit> &SUnits,
 
   // Find the node at the bottom of the critical path.
   const SUnit *Max = nullptr;
-  for (unsigned i = 0, e = SUnits.size(); i != e; ++i) {
-    const SUnit *SU = &SUnits[i];
-    MISUnitMap[SU->getInstr()] = SU;
-    if (!Max || SU->getDepth() + SU->Latency > Max->getDepth() + Max->Latency)
-      Max = SU;
+  for (const SUnit &SU : SUnits) {
+    MISUnitMap[SU.getInstr()] = &SU;
+    if (!Max || SU.getDepth() + SU.Latency > Max->getDepth() + Max->Latency)
+      Max = &SU;
   }
   assert(Max && "Failed to find bottom of the critical path");
 
@@ -621,8 +618,7 @@ BreakAntiDependencies(const std::vector<SUnit> &SUnits,
       // is invalid.  If the instruction defines other registers,
       // save a list of them so that we don't pick a new register
       // that overlaps any of them.
-      for (unsigned i = 0, e = MI.getNumOperands(); i != e; ++i) {
-        MachineOperand &MO = MI.getOperand(i);
+      for (const MachineOperand &MO : MI.operands()) {
         if (!MO.isReg()) continue;
         Register Reg = MO.getReg();
         if (Reg == 0) continue;

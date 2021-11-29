@@ -274,11 +274,9 @@ static Register isFullCopyOf(const MachineInstr &MI, Register Reg) {
 }
 
 static void getVDefInterval(const MachineInstr &MI, LiveIntervals &LIS) {
-  for (unsigned I = 0, E = MI.getNumOperands(); I != E; ++I) {
-    const MachineOperand &MO = MI.getOperand(I);
+  for (const MachineOperand &MO : MI.operands())
     if (MO.isReg() && MO.isDef() && Register::isVirtualRegister(MO.getReg()))
       LIS.getInterval(MO.getReg());
-  }
 }
 
 /// isSnippet - Identify if a live interval is a snippet that should be spilled.
@@ -583,11 +581,9 @@ bool InlineSpiller::reMaterializeFor(LiveInterval &VirtReg, MachineInstr &MI) {
 
   if (!ParentVNI) {
     LLVM_DEBUG(dbgs() << "\tadding <undef> flags: ");
-    for (unsigned i = 0, e = MI.getNumOperands(); i != e; ++i) {
-      MachineOperand &MO = MI.getOperand(i);
+    for (MachineOperand &MO : MI.operands())
       if (MO.isReg() && MO.isUse() && MO.getReg() == VirtReg.reg())
         MO.setIsUndef();
-    }
     LLVM_DEBUG(dbgs() << UseIdx << '\t' << MI);
     return true;
   }

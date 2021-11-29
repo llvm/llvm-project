@@ -17,10 +17,14 @@
 #include "flang/Optimizer/Support/Utils.h"
 #include "mlir/Dialect/CommonFolders.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
+#include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/Diagnostics.h"
 #include "mlir/IR/Matchers.h"
+#include "mlir/IR/OpDefinition.h"
 #include "mlir/IR/PatternMatch.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/ADT/TypeSwitch.h"
 
@@ -1374,16 +1378,62 @@ void fir::FieldIndexOp::build(mlir::OpBuilder &builder,
 // InsertOnRangeOp
 //===----------------------------------------------------------------------===//
 
+static ParseResult
+parseCustomRangeSubscript(mlir::OpAsmParser &parser,
+                          mlir::DenseIntElementsAttr &coord) {
+  llvm::SmallVector<int64_t> lbounds;
+  llvm::SmallVector<int64_t> ubounds;
+  if (parser.parseKeyword("from") ||
+      parser.parseCommaSeparatedList(
+          AsmParser::Delimiter::Paren,
+          [&] { return parser.parseInteger(lbounds.emplace_back(0)); }) ||
+      parser.parseKeyword("to") ||
+      parser.parseCommaSeparatedList(AsmParser::Delimiter::Paren, [&] {
+        return parser.parseInteger(ubounds.emplace_back(0));
+      }))
+    return failure();
+  llvm::SmallVector<int64_t> zippedBounds;
+  for (auto zip : llvm::zip(lbounds, ubounds)) {
+    zippedBounds.push_back(std::get<0>(zip));
+    zippedBounds.push_back(std::get<1>(zip));
+  }
+  coord = mlir::Builder(parser.getContext()).getIndexTensorAttr(zippedBounds);
+  return success();
+}
+
+void printCustomRangeSubscript(mlir::OpAsmPrinter &printer, InsertOnRangeOp op,
+                               mlir::DenseIntElementsAttr coord) {
+  printer << "from (";
+  auto enumerate = llvm::enumerate(coord.getValues<int64_t>());
+  // Even entries are the lower bounds.
+  llvm::interleaveComma(
+      make_filter_range(
+          enumerate,
+          [](auto indexed_value) { return indexed_value.index() % 2 == 0; }),
+      printer, [&](auto indexed_value) { printer << indexed_value.value(); });
+  printer << ") to (";
+  // Odd entries are the upper bounds.
+  llvm::interleaveComma(
+      make_filter_range(
+          enumerate,
+          [](auto indexed_value) { return indexed_value.index() % 2 != 0; }),
+      printer, [&](auto indexed_value) { printer << indexed_value.value(); });
+  printer << ")";
+}
+
 /// Range bounds must be nonnegative, and the range must not be empty.
 static mlir::LogicalResult verify(fir::InsertOnRangeOp op) {
   if (fir::hasDynamicSize(op.seq().getType()))
     return op.emitOpError("must have constant shape and size");
-  if (op.coor().size() < 2 || op.coor().size() % 2 != 0)
+  mlir::DenseIntElementsAttr coor = op.coor();
+  if (coor.size() < 2 || coor.size() % 2 != 0)
     return op.emitOpError("has uneven number of values in ranges");
   bool rangeIsKnownToBeNonempty = false;
-  for (auto i = op.coor().end(), b = op.coor().begin(); i != b;) {
-    int64_t ub = (*--i).cast<IntegerAttr>().getInt();
-    int64_t lb = (*--i).cast<IntegerAttr>().getInt();
+  for (auto i = coor.getValues<int64_t>().end(),
+            b = coor.getValues<int64_t>().begin();
+       i != b;) {
+    int64_t ub = (*--i);
+    int64_t lb = (*--i);
     if (lb < 0 || ub < 0)
       return op.emitOpError("negative range bound");
     if (rangeIsKnownToBeNonempty)

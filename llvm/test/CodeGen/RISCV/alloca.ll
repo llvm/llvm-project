@@ -20,8 +20,8 @@ define void @simple_alloca(i32 %n) nounwind {
 ; RV32I-NEXT:    mv sp, a0
 ; RV32I-NEXT:    call notdead@plt
 ; RV32I-NEXT:    addi sp, s0, -16
-; RV32I-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
   %1 = alloca i8, i32 %n
@@ -48,9 +48,9 @@ define void @scoped_alloca(i32 %n) nounwind {
 ; RV32I-NEXT:    call notdead@plt
 ; RV32I-NEXT:    mv sp, s1
 ; RV32I-NEXT:    addi sp, s0, -16
-; RV32I-NEXT:    lw s1, 4(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s1, 4(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
   %sp = call i8* @llvm.stacksave()
@@ -76,26 +76,26 @@ define void @alloca_callframe(i32 %n) nounwind {
 ; RV32I-NEXT:    sub a0, sp, a0
 ; RV32I-NEXT:    mv sp, a0
 ; RV32I-NEXT:    addi sp, sp, -16
-; RV32I-NEXT:    addi a1, zero, 12
+; RV32I-NEXT:    li a1, 12
 ; RV32I-NEXT:    sw a1, 12(sp)
-; RV32I-NEXT:    addi a1, zero, 11
+; RV32I-NEXT:    li a1, 11
 ; RV32I-NEXT:    sw a1, 8(sp)
-; RV32I-NEXT:    addi a1, zero, 10
+; RV32I-NEXT:    li a1, 10
 ; RV32I-NEXT:    sw a1, 4(sp)
-; RV32I-NEXT:    addi t0, zero, 9
-; RV32I-NEXT:    addi a1, zero, 2
-; RV32I-NEXT:    addi a2, zero, 3
-; RV32I-NEXT:    addi a3, zero, 4
-; RV32I-NEXT:    addi a4, zero, 5
-; RV32I-NEXT:    addi a5, zero, 6
-; RV32I-NEXT:    addi a6, zero, 7
-; RV32I-NEXT:    addi a7, zero, 8
+; RV32I-NEXT:    li t0, 9
+; RV32I-NEXT:    li a1, 2
+; RV32I-NEXT:    li a2, 3
+; RV32I-NEXT:    li a3, 4
+; RV32I-NEXT:    li a4, 5
+; RV32I-NEXT:    li a5, 6
+; RV32I-NEXT:    li a6, 7
+; RV32I-NEXT:    li a7, 8
 ; RV32I-NEXT:    sw t0, 0(sp)
 ; RV32I-NEXT:    call func@plt
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    addi sp, s0, -16
-; RV32I-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
   %1 = alloca i8, i32 %n

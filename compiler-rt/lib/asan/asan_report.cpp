@@ -460,6 +460,10 @@ static bool SuppressErrorReport(uptr pc) {
 
 void ReportGenericError(uptr pc, uptr bp, uptr sp, uptr addr, bool is_write,
                         uptr access_size, u32 exp, bool fatal) {
+  if (__asan_test_only_reported_buggy_pointer) {
+    *__asan_test_only_reported_buggy_pointer = addr;
+    return;
+  }
   if (!fatal && SuppressErrorReport(pc)) return;
   ENABLE_FRAME_POINTER;
 

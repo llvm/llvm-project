@@ -66,6 +66,49 @@ func @concat_fold_cast(%arg0: tensor<?x1xf32>) -> tensor<?x?xf32> {
   return %0 : tensor<?x?xf32>
 }
 
+// ----
+
+// CHECK-LABEL: @pad_noop
+func @pad_noop(%arg0: tensor<?x?xf32>) -> tensor<?x?xf32> {
+  // CHECK: return %arg0
+  %0 = "tosa.const"() { value = dense<0> : tensor<2x2xi32>} : () -> tensor<2x2xi32> 
+  %1 = "tosa.pad"(%arg0, %0) : (tensor<?x?xf32>, tensor<2x2xi32>) -> tensor<?x?xf32>
+  return %1 : tensor<?x?xf32>
+}
+
+// ----
+
+// CHECK-LABEL: @pad_determine_val_i32
+func @pad_determine_val_i32(%arg0: tensor<?x?xi32>, %arg1 : tensor<2x2xi32>) -> tensor<?x?xi32> {
+  // CHECK: %[[ZERO:.+]] = "tosa.const"() {value = dense<0> : tensor<i32>}
+  // CHECK: "tosa.pad"(%arg0, %arg1, %[[ZERO]])
+  %0 = "tosa.const"() { value = dense<[[1, 0], [0, 1]]> : tensor<2x2xi32>} : () -> tensor<2x2xi32> 
+  %1 = "tosa.pad"(%arg0, %arg1) : (tensor<?x?xi32>, tensor<2x2xi32>) -> tensor<?x?xi32>
+  return %1 : tensor<?x?xi32>
+}
+
+// ----
+
+// CHECK-LABEL: @pad_determine_val_f32
+func @pad_determine_val_f32(%arg0: tensor<?x?xf32>, %arg1 : tensor<2x2xi32>) -> tensor<?x?xf32> {
+  // CHECK: %[[ZERO:.+]] = "tosa.const"() {value = dense<0.000000e+00> : tensor<f32>}
+  // CHECK: "tosa.pad"(%arg0, %arg1, %[[ZERO]])
+  %0 = "tosa.const"() { value = dense<[[1, 0], [0, 1]]> : tensor<2x2xi32>} : () -> tensor<2x2xi32> 
+  %1 = "tosa.pad"(%arg0, %arg1) : (tensor<?x?xf32>, tensor<2x2xi32>) -> tensor<?x?xf32>
+  return %1 : tensor<?x?xf32>
+}
+
+// ----
+
+// CHECK-LABEL: @pad_determine_val_quant
+func @pad_determine_val_quant(%arg0: tensor<?x?xi32>, %arg1 : tensor<2x2xi32>) -> tensor<?x?xi32> {
+  // CHECK: %[[ZERO:.+]] = "tosa.const"() {value = dense<42> : tensor<i32>}
+  // CHECK: "tosa.pad"(%arg0, %arg1, %[[ZERO]])
+  %0 = "tosa.const"() { value = dense<[[1, 0], [0, 1]]> : tensor<2x2xi32>} : () -> tensor<2x2xi32> 
+  %1 = "tosa.pad"(%arg0, %arg1) { quantization_info = {input_zp = 42:i32} } : (tensor<?x?xi32>, tensor<2x2xi32>) -> tensor<?x?xi32>
+  return %1 : tensor<?x?xi32>
+}
+
 // -----
 
 // CHECK-LABEL: @mul_one_different_shape

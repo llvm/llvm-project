@@ -833,17 +833,12 @@ static Optional<Instruction *> instCombineSVEVectorMul(InstCombiner &IC,
     return match(SplatValue, m_FPOne()) || match(SplatValue, m_One());
   };
 
-  // The OpMultiplier variable should always point to the dup (if any), so
-  // swap if necessary.
-  if (IsUnitDup(OpMultiplicand) || IsUnitSplat(OpMultiplicand))
-    std::swap(OpMultiplier, OpMultiplicand);
-
   if (IsUnitSplat(OpMultiplier)) {
-    // [f]mul pg (dupx 1) %n => %n
+    // [f]mul pg %n, (dupx 1) => %n
     OpMultiplicand->takeName(&II);
     return IC.replaceInstUsesWith(II, OpMultiplicand);
   } else if (IsUnitDup(OpMultiplier)) {
-    // [f]mul pg (dup pg 1) %n => %n
+    // [f]mul pg %n, (dup pg 1) => %n
     auto *DupInst = cast<IntrinsicInst>(OpMultiplier);
     auto *DupPg = DupInst->getOperand(1);
     // TODO: this is naive. The optimization is still valid if DupPg
@@ -2142,6 +2137,7 @@ bool AArch64TTIImpl::isLegalToVectorizeReduction(
   case RecurKind::FMax:
   case RecurKind::SelectICmp:
   case RecurKind::SelectFCmp:
+  case RecurKind::FMulAdd:
     return true;
   default:
     return false;

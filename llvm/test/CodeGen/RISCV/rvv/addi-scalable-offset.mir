@@ -50,8 +50,8 @@ body: |
     ; CHECK-NEXT: $x10 = frame-destroy PseudoReadVLENB
     ; CHECK-NEXT: $x2 = frame-destroy ADD $x2, killed $x10
     ; CHECK-NEXT: $x2 = frame-destroy ADDI $x2, 240
-    ; CHECK-NEXT: $x8 = LD $x2, 2016 :: (load (s64) from %stack.4)
     ; CHECK-NEXT: $x1 = LD $x2, 2024 :: (load (s64) from %stack.3)
+    ; CHECK-NEXT: $x8 = LD $x2, 2016 :: (load (s64) from %stack.4)
     ; CHECK-NEXT: $x2 = frame-destroy ADDI $x2, 2032
     ; CHECK-NEXT: PseudoRET
     %1:gprnox0 = COPY $x11

@@ -72,9 +72,25 @@ func @shuffle_empty_mask(%arg0: vector<2xf32>, %arg1: vector<2xf32>) {
 
 // -----
 
+func @extract_element(%arg0: vector<f32>) {
+  %c = arith.constant 3 : i32
+  // expected-error@+1 {{expected position to be empty with 0-D vector}}
+  %1 = vector.extractelement %arg0[%c : i32] : vector<f32>
+}
+
+// -----
+ 
+func @extract_element(%arg0: vector<4xf32>) {
+  %c = arith.constant 3 : i32
+  // expected-error@+1 {{expected position for 1-D vector}}
+  %1 = vector.extractelement %arg0[] : vector<4xf32>
+}
+
+// -----
+
 func @extract_element(%arg0: vector<4x4xf32>) {
   %c = arith.constant 3 : i32
-  // expected-error@+1 {{'vector.extractelement' op expected 1-D vector}}
+  // expected-error@+1 {{unexpected >1 vector rank}}
   %1 = vector.extractelement %arg0[%c : i32] : vector<4x4xf32>
 }
 
@@ -122,9 +138,25 @@ func @extract_position_overflow(%arg0: vector<4x8x16xf32>) {
 
 // -----
 
+func @insert_element(%arg0: f32, %arg1: vector<f32>) {
+  %c = arith.constant 3 : i32
+  // expected-error@+1 {{expected position to be empty with 0-D vector}}
+  %0 = vector.insertelement %arg0, %arg1[%c : i32] : vector<f32>
+}
+
+// -----
+
+func @insert_element(%arg0: f32, %arg1: vector<4xf32>) {
+  %c = arith.constant 3 : i32
+  // expected-error@+1 {{expected position for 1-D vector}}
+  %0 = vector.insertelement %arg0, %arg1[] : vector<4xf32>
+}
+
+// -----
+
 func @insert_element(%arg0: f32, %arg1: vector<4x4xf32>) {
   %c = arith.constant 3 : i32
-  // expected-error@+1 {{'vector.insertelement' op expected 1-D vector}}
+  // expected-error@+1 {{unexpected >1 vector rank}}
   %0 = vector.insertelement %arg0, %arg1[%c : i32] : vector<4x4xf32>
 }
 

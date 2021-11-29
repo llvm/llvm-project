@@ -191,8 +191,8 @@ One convenient utility provided by the MLIR bufferization infrastructure is the
 `BufferizeTypeConverter`, which comes pre-loaded with the necessary conversions
 and materializations between `tensor` and `memref`.
 
-In this case, the `MemRefOpsDialect` is marked as legal, so the
-`memref.tensor_load` and `memref.buffer_cast` ops, which are inserted
+In this case, the `BufferizationOpsDialect` is marked as legal, so the
+`bufferization.to_tensor` and `bufferization.to_memref` ops, which are inserted
 automatically by the dialect conversion framework as materializations, are
 legal. There is a helper `populateBufferizeMaterializationLegality`
 ([code](https://github.com/llvm/llvm-project/blob/a0b65a7bcd6065688189b3d678c42ed6af9603db/mlir/include/mlir/Transforms/Bufferize.h#L53))
@@ -252,9 +252,9 @@ from the program.
 
 The easiest way to write a finalizing bufferize pass is to not write one at all!
 MLIR provides a pass `finalizing-bufferize` which eliminates the
-`memref.tensor_load` / `memref.buffer_cast` materialization ops inserted by
-partial bufferization passes and emits an error if that is not sufficient to
-remove all tensors from the program.
+`bufferization.to_tensor` / `bufferization.to_memref` materialization ops
+inserted by partial bufferization passes and emits an error if that is not
+sufficient to remove all tensors from the program.
 
 This pass is sufficient when partial bufferization passes have bufferized all
 the ops in the program, leaving behind only the materializations. When possible,
@@ -272,7 +272,7 @@ downstream projects structured this way. This structure is not recommended in
 new code. A helper, `populateEliminateBufferizeMaterializationsPatterns`
 ([code](https://github.com/llvm/llvm-project/blob/a0b65a7bcd6065688189b3d678c42ed6af9603db/mlir/include/mlir/Transforms/Bufferize.h#L58))
 is available for such passes to provide patterns that eliminate
-`memref.tensor_load` and `memref.buffer_cast`.
+`bufferization.to_tensor` and `bufferization.to_memref`.
 
 ## Changes since [the talk](#the-talk)
 

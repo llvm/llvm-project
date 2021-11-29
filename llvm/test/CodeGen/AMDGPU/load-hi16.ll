@@ -806,15 +806,14 @@ entry:
 ; GCN-LABEL: {{^}}load_private_hi_v2i16_reglo_vreg_to_offset:
 ; GFX900-MUBUF:        buffer_store_dword
 ; GFX900-MUBUF-NEXT:   s_waitcnt vmcnt(0)
-; GFX900-MUBUF-NEXT:   buffer_load_short_d16_hi v{{[0-9]+}}, off, s[0:3], s32 offset:4094
+; GFX900-MUBUF-NEXT:   buffer_load_short_d16_hi v{{[0-9]+}}, off, s[0:3], s32 offset:4058
 ; GFX900-MUBUF-NEXT:   s_waitcnt vmcnt(0)
 ; GFX900-FLATSCR:      scratch_store_dword
 ; GFX900-FLATSCR-NEXT: s_waitcnt vmcnt(0)
-; GFX900-FLATSCR-NEXT: scratch_load_short_d16_hi v{{[0-9]+}}, off, s32 offset:4094
+; GFX900-FLATSCR-NEXT: scratch_load_short_d16_hi v{{[0-9]+}}, off, s32 offset:4058
 ; GFX900-FLATSCR-NEXT: s_waitcnt vmcnt(0)
-define void @load_private_hi_v2i16_reglo_vreg_to_offset(i16 %reg) #0 {
+define void @load_private_hi_v2i16_reglo_vreg_to_offset(i16 %reg, [10 x i32] addrspace(5)* %obj0) #0 {
 entry:
-  %obj0 = alloca [10 x i32], align 4, addrspace(5)
   %obj1 = alloca [4096 x i16], align 2, addrspace(5)
   %bc = bitcast [10 x i32] addrspace(5)* %obj0 to i32 addrspace(5)*
   store volatile i32 123, i32 addrspace(5)* %bc
@@ -829,15 +828,14 @@ entry:
 ; GCN-LABEL: {{^}}load_private_hi_v2i16_reglo_vreg_sexti8_to_offset:
 ; GFX900-MUBUF:        buffer_store_dword
 ; GFX900-MUBUF-NEXT:   s_waitcnt vmcnt(0)
-; GFX900-MUBUF-NEXT:   buffer_load_sbyte_d16_hi v{{[0-9]+}}, off, s[0:3], s32 offset:4095
+; GFX900-MUBUF-NEXT:   buffer_load_sbyte_d16_hi v{{[0-9]+}}, off, s[0:3], s32 offset:4059
 ; GFX900-MUBUF-NEXT:   s_waitcnt vmcnt(0)
 ; GFX900-FLATSCR:      scratch_store_dword
 ; GFX900-FLATSCR-NEXT: s_waitcnt vmcnt(0)
-; GFX900-FLATSCR-NEXT: scratch_load_sbyte_d16_hi v{{[0-9]+}}, off, s32 offset:4095
+; GFX900-FLATSCR-NEXT: scratch_load_sbyte_d16_hi v{{[0-9]+}}, off, s32 offset:4059
 ; GFX900-FLATSCR-NEXT: s_waitcnt vmcnt(0)
-define void @load_private_hi_v2i16_reglo_vreg_sexti8_to_offset(i16 %reg) #0 {
+define void @load_private_hi_v2i16_reglo_vreg_sexti8_to_offset(i16 %reg, [10 x i32] addrspace(5)* %obj0) #0 {
 entry:
-  %obj0 = alloca [10 x i32], align 4, addrspace(5)
   %obj1 = alloca [4096 x i8], align 2, addrspace(5)
   %bc = bitcast [10 x i32] addrspace(5)* %obj0 to i32 addrspace(5)*
   store volatile i32 123, i32 addrspace(5)* %bc
@@ -853,15 +851,14 @@ entry:
 ; GCN-LABEL: {{^}}load_private_hi_v2i16_reglo_vreg_zexti8_to_offset:
 ; GFX900-MUBUF:        buffer_store_dword
 ; GFX900-MUBUF-NEXT:   s_waitcnt vmcnt(0)
-; GFX900-MUBUF-NEXT:   buffer_load_ubyte_d16_hi v{{[0-9]+}}, off, s[0:3], s32 offset:4095
+; GFX900-MUBUF-NEXT:   buffer_load_ubyte_d16_hi v{{[0-9]+}}, off, s[0:3], s32 offset:4059
 ; GFX900-MUBUF-NEXT:   s_waitcnt vmcnt(0)
 ; GFX900-FLATSCR:      scratch_store_dword
 ; GFX900-FLATSCR-NEXT: s_waitcnt vmcnt(0)
-; GFX900-FLATSCR-NEXT: scratch_load_ubyte_d16_hi v{{[0-9]+}}, off, s32 offset:4095
+; GFX900-FLATSCR-NEXT: scratch_load_ubyte_d16_hi v{{[0-9]+}}, off, s32 offset:4059
 ; GFX900-FLATSCR-NEXT: s_waitcnt vmcnt(0)
-define void @load_private_hi_v2i16_reglo_vreg_zexti8_to_offset(i16 %reg) #0 {
+define void @load_private_hi_v2i16_reglo_vreg_zexti8_to_offset(i16 %reg, [10 x i32] addrspace(5)* %obj0) #0 {
 entry:
-  %obj0 = alloca [10 x i32], align 4, addrspace(5)
   %obj1 = alloca [4096 x i8], align 2, addrspace(5)
   %bc = bitcast [10 x i32] addrspace(5)* %obj0 to i32 addrspace(5)*
   store volatile i32 123, i32 addrspace(5)* %bc

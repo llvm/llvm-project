@@ -8,6 +8,7 @@
 
 #include "mlir/Dialect/SCF/SCF.h"
 #include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
+#include "mlir/Dialect/Bufferization/IR/Bufferization.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
@@ -875,9 +876,10 @@ struct ForOpTensorCastFolder : public OpRewritePattern<ForOp> {
   }
 };
 
-/// Canonicalize the iter_args of an scf::ForOp that involve a tensor_load and
-/// for which only the last loop iteration is actually visible outside of the
-/// loop. The canonicalization looks for a pattern such as:
+/// Canonicalize the iter_args of an scf::ForOp that involve a
+/// `bufferization.to_tensor` and for which only the last loop iteration is
+/// actually visible outside of the loop. The canonicalization looks for a
+/// pattern such as:
 /// ```
 ///    %t0 = ... : tensor_type
 ///    %0 = scf.for ... iter_args(%bb0 : %t0) -> (tensor_type) {
@@ -885,23 +887,25 @@ struct ForOpTensorCastFolder : public OpRewritePattern<ForOp> {
 ///      // %m is either buffer_cast(%bb00) or defined above the loop
 ///      %m... : memref_type
 ///      ... // uses of %m with potential inplace updates
-///      %new_tensor = tensor_load %m : memref_type
+///      %new_tensor = bufferization.to_tensor %m : memref_type
 ///      ...
 ///      scf.yield %new_tensor : tensor_type
 ///    }
 /// ```
 ///
 /// `%bb0` may have either 0 or 1 use. If it has 1 use it must be exactly a
-/// `%m = buffer_cast %bb0` op that feeds into the yielded `tensor_load`
-/// op.
+/// `%m = buffer_cast %bb0` op that feeds into the yielded
+/// `bufferization.to_tensor` op.
 ///
 /// If no aliasing write to the memref `%m`, from which `%new_tensor`is loaded,
-/// occurs between tensor_load and yield then the value %0 visible outside of
-/// the loop is the last `tensor_load` produced in the loop.
+/// occurs between `bufferization.to_tensor and yield then the value %0
+/// visible outside of the loop is the last `bufferization.to_tensor`
+/// produced in the loop.
 ///
 /// For now, we approximate the absence of aliasing by only supporting the case
-/// when the tensor_load is the operation immediately preceding the yield.
-///
+/// when the bufferization.to_tensor is the operation immediately preceding
+/// the yield.
+//
 /// The canonicalization rewrites the pattern as:
 /// ```
 ///    // %m is either a buffer_cast or defined above
@@ -910,7 +914,7 @@ struct ForOpTensorCastFolder : public OpRewritePattern<ForOp> {
 ///      ... // uses of %m with potential inplace updates
 ///      scf.yield %bb0: tensor_type
 ///    }
-///    %0 = tensor_load %m : memref_type
+///    %0 = bufferization.to_tensor %m : memref_type
 /// ```
 ///
 /// A later bbArg canonicalization will further rewrite as:
@@ -920,7 +924,7 @@ struct ForOpTensorCastFolder : public OpRewritePattern<ForOp> {
 ///    scf.for ... { // no iter_args
 ///      ... // uses of %m with potential inplace updates
 ///    }
-///    %0 = tensor_load %m : memref_type
+///    %0 = bufferization.to_tensor %m : memref_type
 /// ```
 struct LastTensorLoadCanonicalization : public OpRewritePattern<ForOp> {
   using OpRewritePattern<ForOp>::OpRewritePattern;
@@ -936,39 +940,39 @@ struct LastTensorLoadCanonicalization : public OpRewritePattern<ForOp> {
       unsigned idx = bbArg.getArgNumber() - /*numIv=*/1;
       auto yieldOp = cast<scf::YieldOp>(forOp.region().front().getTerminator());
       Value yieldVal = yieldOp->getOperand(idx);
-      auto tensorLoadOp = yieldVal.getDefiningOp<memref::TensorLoadOp>();
+      auto tensorLoadOp = yieldVal.getDefiningOp<bufferization::ToTensorOp>();
       bool isTensor = bbArg.getType().isa<TensorType>();
 
-      memref::BufferCastOp bufferCastOp;
+      bufferization::ToMemrefOp tensorToMemref;
       // Either bbArg has no use or it has a single buffer_cast use.
       if (bbArg.hasOneUse())
-        bufferCastOp =
-            dyn_cast<memref::BufferCastOp>(*bbArg.getUsers().begin());
-      if (!isTensor || !tensorLoadOp || (!bbArg.use_empty() && !bufferCastOp))
+        tensorToMemref =
+            dyn_cast<bufferization::ToMemrefOp>(*bbArg.getUsers().begin());
+      if (!isTensor || !tensorLoadOp || (!bbArg.use_empty() && !tensorToMemref))
         continue;
-      // If bufferCastOp is present, it must feed into the `tensorLoadOp`.
-      if (bufferCastOp && tensorLoadOp.memref() != bufferCastOp)
+      // If tensorToMemref is present, it must feed into the `ToTensorOp`.
+      if (tensorToMemref && tensorLoadOp.memref() != tensorToMemref)
         continue;
       // TODO: Any aliasing write of tensorLoadOp.memref() nested under `forOp`
-      // must be before `tensorLoadOp` in the block so that the lastWrite
+      // must be before `ToTensorOp` in the block so that the lastWrite
       // property is not subject to additional side-effects.
-      // For now, we only support the case when tensorLoadOp appears immediately
-      // before the terminator.
+      // For now, we only support the case when ToTensorOp appears
+      // immediately before the terminator.
       if (tensorLoadOp->getNextNode() != yieldOp)
         continue;
 
-      // Clone the optional bufferCastOp before forOp.
-      if (bufferCastOp) {
+      // Clone the optional tensorToMemref before forOp.
+      if (tensorToMemref) {
         rewriter.setInsertionPoint(forOp);
-        rewriter.replaceOpWithNewOp<memref::BufferCastOp>(
-            bufferCastOp, bufferCastOp.memref().getType(),
-            bufferCastOp.tensor());
+        rewriter.replaceOpWithNewOp<bufferization::ToMemrefOp>(
+            tensorToMemref, tensorToMemref.memref().getType(),
+            tensorToMemref.tensor());
       }
 
       // Clone the tensorLoad after forOp.
       rewriter.setInsertionPointAfter(forOp);
-      Value newTensorLoad =
-          rewriter.create<memref::TensorLoadOp>(loc, tensorLoadOp.memref());
+      Value newTensorLoad = rewriter.create<bufferization::ToTensorOp>(
+          loc, tensorLoadOp.memref());
       Value forOpResult = forOp.getResult(bbArg.getArgNumber() - /*iv=*/1);
       replacements.insert(std::make_pair(forOpResult, newTensorLoad));
 
@@ -2255,11 +2259,102 @@ struct WhileConditionTruth : public OpRewritePattern<WhileOp> {
     return success(replaced);
   }
 };
+
+/// Remove WhileOp results that are also unused in 'after' block.
+///
+///  %0:2 = scf.while () : () -> (i32, i64) {
+///    %condition = "test.condition"() : () -> i1
+///    %v1 = "test.get_some_value"() : () -> i32
+///    %v2 = "test.get_some_value"() : () -> i64
+///    scf.condition(%condition) %v1, %v2 : i32, i64
+///  } do {
+///  ^bb0(%arg0: i32, %arg1: i64):
+///    "test.use"(%arg0) : (i32) -> ()
+///    scf.yield
+///  }
+///  return %0#0 : i32
+///
+/// becomes
+///  %0 = scf.while () : () -> (i32) {
+///    %condition = "test.condition"() : () -> i1
+///    %v1 = "test.get_some_value"() : () -> i32
+///    %v2 = "test.get_some_value"() : () -> i64
+///    scf.condition(%condition) %v1 : i32
+///  } do {
+///  ^bb0(%arg0: i32):
+///    "test.use"(%arg0) : (i32) -> ()
+///    scf.yield
+///  }
+///  return %0 : i32
+struct WhileUnusedResult : public OpRewritePattern<WhileOp> {
+  using OpRewritePattern<WhileOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(WhileOp op,
+                                PatternRewriter &rewriter) const override {
+    auto term = op.getConditionOp();
+    auto afterArgs = op.getAfterArguments();
+    auto termArgs = term.args();
+
+    // Collect results mapping, new terminator args and new result types.
+    SmallVector<unsigned> newResultsIndices;
+    SmallVector<Type> newResultTypes;
+    SmallVector<Value> newTermArgs;
+    bool needUpdate = false;
+    for (auto it :
+         llvm::enumerate(llvm::zip(op.getResults(), afterArgs, termArgs))) {
+      auto i = static_cast<unsigned>(it.index());
+      Value result = std::get<0>(it.value());
+      Value afterArg = std::get<1>(it.value());
+      Value termArg = std::get<2>(it.value());
+      if (result.use_empty() && afterArg.use_empty()) {
+        needUpdate = true;
+      } else {
+        newResultsIndices.emplace_back(i);
+        newTermArgs.emplace_back(termArg);
+        newResultTypes.emplace_back(result.getType());
+      }
+    }
+
+    if (!needUpdate)
+      return failure();
+
+    {
+      OpBuilder::InsertionGuard g(rewriter);
+      rewriter.setInsertionPoint(term);
+      rewriter.replaceOpWithNewOp<ConditionOp>(term, term.condition(),
+                                               newTermArgs);
+    }
+
+    auto newWhile =
+        rewriter.create<WhileOp>(op.getLoc(), newResultTypes, op.inits());
+
+    Block &newAfterBlock = *rewriter.createBlock(
+        &newWhile.after(), /*insertPt*/ {}, newResultTypes);
+
+    // Build new results list and new after block args (unused entries will be
+    // null).
+    SmallVector<Value> newResults(op.getNumResults());
+    SmallVector<Value> newAfterBlockArgs(op.getNumResults());
+    for (auto it : llvm::enumerate(newResultsIndices)) {
+      newResults[it.value()] = newWhile.getResult(it.index());
+      newAfterBlockArgs[it.value()] = newAfterBlock.getArgument(it.index());
+    }
+
+    rewriter.inlineRegionBefore(op.before(), newWhile.before(),
+                                newWhile.before().begin());
+
+    Block &afterBlock = op.after().front();
+    rewriter.mergeBlocks(&afterBlock, &newAfterBlock, newAfterBlockArgs);
+
+    rewriter.replaceOp(op, newResults);
+    return success();
+  }
+};
 } // namespace
 
 void WhileOp::getCanonicalizationPatterns(OwningRewritePatternList &results,
                                           MLIRContext *context) {
-  results.insert<WhileConditionTruth>(context);
+  results.insert<WhileConditionTruth, WhileUnusedResult>(context);
 }
 
 //===----------------------------------------------------------------------===//

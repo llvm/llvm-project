@@ -263,7 +263,9 @@ module {
 //       CHECK:     %[[ST_FILL:.*]] = linalg.fill(%[[C0]], %[[ST]]) {__internal_linalg_transform__ = "after_out_fusion_producer"} : f32, tensor<?x?xf32> -> tensor<?x?xf32>
 //       CHECK:     %[[ST_MM_RES:.*]] = scf.for %[[K:.*]]{{.*}}iter_args(%[[BB:.*]] = %[[ST_FILL]]) -> (tensor<?x?xf32>) {
 //   CHECK-NOT:       fill
-//       CHECK:       %[[ST_MM:.*]] = linalg.matmul {__internal_linalg_transform__ = "after_out_fusion"} ins(%{{.*}}, %{{.*}} : tensor<?x?xf32>, tensor<?x?xf32>) outs(%[[BB]] : tensor<?x?xf32>) -> tensor<?x?xf32>
+//       CHECK:       %[[ST_FILL_SUB:.*]] = tensor.extract_slice %[[BB]][0, 0]
+//       CHECK:       %[[ST_MM_SUB:.*]] = linalg.matmul {__internal_linalg_transform__ = "after_out_fusion"} ins(%{{.*}}, %{{.*}} : tensor<?x?xf32>, tensor<?x?xf32>) outs(%[[ST_FILL_SUB]] : tensor<?x?xf32>) -> tensor<?x?xf32>
+//       CHECK:       %[[ST_MM:.*]] = tensor.insert_slice %[[ST_MM_SUB]] into %[[BB]]
 //       CHECK:       scf.yield %[[ST_MM]] : tensor<?x?xf32>
 //       CHECK:     %[[MM:.*]] = tensor.insert_slice %[[ST_MM_RES]] into {{.*}}
 //       CHECK:     scf.yield %[[MM]] : tensor<?x?xf32>
@@ -307,11 +309,13 @@ module {
 
 // TLOOP:      %[[A_SUB_SUB:.*]] = tensor.extract_slice %[[A_SUB_]][0, %[[K]]]
 // TLOOP:      %[[B_SUB_SUB:.*]] = tensor.extract_slice %[[B_SUB_]][%[[K]], 0]
+// TLOOP:      %[[INIT_SUB_SUB:.*]] = tensor.extract_slice %[[INIT_SUB_]][0, 0]
 
 // TLOOP:      %[[AB_SUB_SUB:.*]] = linalg.matmul
 // TLOOP-SAME:   ins(%[[A_SUB_SUB]], %[[B_SUB_SUB]] : [[TY]], [[TY]])
-// TLOOP-SAME:   outs(%[[INIT_SUB_]] : [[TY]]) -> [[TY]]
-// TLOOP:      linalg.yield %[[AB_SUB_SUB]] : [[TY]]
+// TLOOP-SAME:   outs(%[[INIT_SUB_SUB]] : [[TY]]) -> [[TY]]
+// TLOOP:      %[[AB_SUB_:.*]] = tensor.insert_slice %[[AB_SUB_SUB]] into %[[INIT_SUB_]]
+// TLOOP:      linalg.yield %[[AB_SUB_]] : [[TY]]
 // TLOOP:    }
 // TLOOP:    %[[SUB_RESULT:.*]] = tensor.insert_slice %[[AB_SUB]]
 // TLOOP-SAME:  into %[[OUT_]][%[[I]], %[[J]]]
@@ -380,11 +384,13 @@ module {
 
 // TLOOP:      %[[A_SUB_SUB:.*]] = tensor.extract_slice %[[A_SUB_]][0, %[[K]]]
 // TLOOP:      %[[B_SUB_SUB:.*]] = tensor.extract_slice %[[B_SUB_]][%[[K]], 0]
+// TLOOP:      %[[INIT_SUB_SUB:.*]] = tensor.extract_slice %[[INIT_SUB_]][0, 0]
 
 // TLOOP:      %[[AB_SUB_SUB:.*]] = linalg.matmul
 // TLOOP-SAME:   ins(%[[A_SUB_SUB]], %[[B_SUB_SUB]] : [[TY]], [[TY]])
-// TLOOP-SAME:   outs(%[[INIT_SUB_]] : [[TY]]) -> [[TY]]
-// TLOOP:      linalg.yield %[[AB_SUB_SUB]] : [[TY]]
+// TLOOP-SAME:   outs(%[[INIT_SUB_SUB]] : [[TY]]) -> [[TY]]
+// TLOOP:      %[[AB_SUB_:.*]] = tensor.insert_slice %[[AB_SUB_SUB]] into %[[INIT_SUB_]]
+// TLOOP:      linalg.yield %[[AB_SUB_]] : [[TY]]
 // TLOOP:    }
 // TLOOP:    %[[SUB_RESULT:.*]] = tensor.insert_slice %[[AB_SUB]]
 // TLOOP-SAME:  into %[[OUT_]][%[[I]], %[[J]]]

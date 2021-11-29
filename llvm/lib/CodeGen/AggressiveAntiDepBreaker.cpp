@@ -354,8 +354,7 @@ void AggressiveAntiDepBreaker::PrescanInstruction(
   // dead, or because only a subregister is live at the def. If we
   // don't do this the dead def will be incorrectly merged into the
   // previous def.
-  for (unsigned i = 0, e = MI.getNumOperands(); i != e; ++i) {
-    MachineOperand &MO = MI.getOperand(i);
+  for (const MachineOperand &MO : MI.operands()) {
     if (!MO.isReg() || !MO.isDef()) continue;
     Register Reg = MO.getReg();
     if (Reg == 0) continue;
@@ -407,8 +406,7 @@ void AggressiveAntiDepBreaker::PrescanInstruction(
 
   // Scan the register defs for this instruction and update
   // live-ranges.
-  for (unsigned i = 0, e = MI.getNumOperands(); i != e; ++i) {
-    MachineOperand &MO = MI.getOperand(i);
+  for (const MachineOperand &MO : MI.operands()) {
     if (!MO.isReg() || !MO.isDef()) continue;
     Register Reg = MO.getReg();
     if (Reg == 0) continue;
@@ -495,8 +493,7 @@ void AggressiveAntiDepBreaker::ScanInstruction(MachineInstr &MI,
     LLVM_DEBUG(dbgs() << "\tKill Group:");
 
     unsigned FirstReg = 0;
-    for (unsigned i = 0, e = MI.getNumOperands(); i != e; ++i) {
-      MachineOperand &MO = MI.getOperand(i);
+    for (const MachineOperand &MO : MI.operands()) {
       if (!MO.isReg()) continue;
       Register Reg = MO.getReg();
       if (Reg == 0) continue;
@@ -762,11 +759,8 @@ unsigned AggressiveAntiDepBreaker::BreakAntiDependencies(
 
   // ...need a map from MI to SUnit.
   std::map<MachineInstr *, const SUnit *> MISUnitMap;
-  for (unsigned i = 0, e = SUnits.size(); i != e; ++i) {
-    const SUnit *SU = &SUnits[i];
-    MISUnitMap.insert(std::pair<MachineInstr *, const SUnit *>(SU->getInstr(),
-                                                               SU));
-  }
+  for (const SUnit &SU : SUnits)
+    MISUnitMap.insert(std::make_pair(SU.getInstr(), &SU));
 
   // Track progress along the critical path through the SUnit graph as
   // we walk the instructions. This is needed for regclasses that only
@@ -774,12 +768,11 @@ unsigned AggressiveAntiDepBreaker::BreakAntiDependencies(
   const SUnit *CriticalPathSU = nullptr;
   MachineInstr *CriticalPathMI = nullptr;
   if (CriticalPathSet.any()) {
-    for (unsigned i = 0, e = SUnits.size(); i != e; ++i) {
-      const SUnit *SU = &SUnits[i];
+    for (const SUnit &SU : SUnits) {
       if (!CriticalPathSU ||
-          ((SU->getDepth() + SU->Latency) >
+          ((SU.getDepth() + SU.Latency) >
            (CriticalPathSU->getDepth() + CriticalPathSU->Latency))) {
-        CriticalPathSU = SU;
+        CriticalPathSU = &SU;
       }
     }
     assert(CriticalPathSU && "Failed to find SUnit critical path");
@@ -839,8 +832,7 @@ unsigned AggressiveAntiDepBreaker::BreakAntiDependencies(
     // but don't cause any anti-dependence breaking themselves)
     if (!MI.isKill()) {
       // Attempt to break each anti-dependency...
-      for (unsigned i = 0, e = Edges.size(); i != e; ++i) {
-        const SDep *Edge = Edges[i];
+      for (const SDep *Edge : Edges) {
         SUnit *NextSU = Edge->getSUnit();
 
         if ((Edge->getKind() != SDep::Anti) &&

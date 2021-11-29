@@ -29,7 +29,7 @@ ThreadPool::ThreadPool(ThreadPoolStrategy S)
     Threads.emplace_back([S, ThreadID, this] {
       S.apply_thread_strategy(ThreadID);
       while (true) {
-        PackagedTaskTy Task;
+        std::function<void()> Task;
         {
           std::unique_lock<std::mutex> LockGuard(QueueLock);
           // Wait for tasks to be pushed in the queue
@@ -80,23 +80,6 @@ bool ThreadPool::isWorkerThread() const {
   return false;
 }
 
-std::shared_future<void> ThreadPool::asyncImpl(TaskTy Task) {
-  /// Wrap the Task in a packaged_task to return a future object.
-  PackagedTaskTy PackagedTask(std::move(Task));
-  auto Future = PackagedTask.get_future();
-  {
-    // Lock the queue and push the new task
-    std::unique_lock<std::mutex> LockGuard(QueueLock);
-
-    // Don't allow enqueueing after disabling the pool
-    assert(EnableFlag && "Queuing a thread during ThreadPool destruction");
-
-    Tasks.push(std::move(PackagedTask));
-  }
-  QueueCondition.notify_one();
-  return Future.share();
-}
-
 // The destructor joins all threads, waiting for completion.
 ThreadPool::~ThreadPool() {
   {
@@ -126,16 +109,6 @@ void ThreadPool::wait() {
     Tasks.pop();
     Task();
   }
-}
-
-std::shared_future<void> ThreadPool::asyncImpl(TaskTy Task) {
-  // Get a Future with launch::deferred execution using std::async
-  auto Future = std::async(std::launch::deferred, std::move(Task)).share();
-  // Wrap the future so that both ThreadPool::wait() can operate and the
-  // returned future can be sync'ed on.
-  PackagedTaskTy PackagedTask([Future]() { Future.get(); });
-  Tasks.push(std::move(PackagedTask));
-  return Future;
 }
 
 ThreadPool::~ThreadPool() { wait(); }

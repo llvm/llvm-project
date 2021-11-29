@@ -1548,6 +1548,9 @@ def note_meant_to_use_typename : Note<
 let CategoryName = "Coroutines Issue" in {
 def err_for_co_await_not_range_for : Error<
   "'co_await' modifier can only be applied to range-based for loop">;
+def warn_deprecated_for_co_await : Warning<
+  "'for co_await' belongs to CoroutineTS instead of C++20, which is deprecated">,
+  InGroup<DeprecatedCoroutine>;
 }
 
 let CategoryName = "Concepts Issue" in {

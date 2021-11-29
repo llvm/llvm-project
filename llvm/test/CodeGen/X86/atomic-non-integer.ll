@@ -511,7 +511,7 @@ define fp128 @load_fp128(fp128* %fptr) {
 }
 
 
-; sanity check the seq_cst lowering since that's the
+; Check the seq_cst lowering since that's the
 ; interesting one from an ordering perspective on x86.
 
 define void @store_float_seq_cst(float* %fptr, float %v) {

@@ -91,7 +91,7 @@ static void VerifyDecl(clang::Decl *decl) {
   assert(decl && "VerifyDecl called with nullptr?");
 #ifndef NDEBUG
   // We don't care about the actual access value here but only want to trigger
-  // that Clang calls its internal Decl::AccessDeclContextSanity check.
+  // that Clang calls its internal Decl::AccessDeclContextCheck validation.
   decl->getAccess();
 #endif
 }

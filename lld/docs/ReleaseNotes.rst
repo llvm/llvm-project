@@ -36,6 +36,9 @@ Architecture specific changes:
 
 * The x86-32 port now supports TLSDESC (``-mtls-dialect=gnu2``).
   (`D112582 <https://reviews.llvm.org/D112582>`_)
+* The x86-64 port now handles non-RAX/non-adjacent ``R_X86_64_GOTPC32_TLSDESC``
+  and ``R_X86_64_TLSDESC_CALL`` (``-mtls-dialect=gnu2``).
+  (`D114416 <https://reviews.llvm.org/D114416>`_)
 * For x86-64, ``--no-relax`` now suppresses ``R_X86_64_GOTPCRELX`` and
   ``R_X86_64_REX_GOTPCRELX`` GOT optimization
   (`D113615 <https://reviews.llvm.org/D113615>`_)

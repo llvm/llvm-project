@@ -251,7 +251,7 @@ define void @fcmp_ole_vv_v4f64_nonans(<4 x double>* %x, <4 x double>* %y, <4 x i
 define void @fcmp_ule_vv_v32f16(<32 x half>* %x, <32 x half>* %y, <32 x i1>* %z) {
 ; CHECK-LABEL: fcmp_ule_vv_v32f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a3, zero, 32
+; CHECK-NEXT:    li a3, 32
 ; CHECK-NEXT:    vsetvli zero, a3, e16, m4, ta, mu
 ; CHECK-NEXT:    vle16.v v8, (a0)
 ; CHECK-NEXT:    vle16.v v12, (a1)
@@ -269,7 +269,7 @@ define void @fcmp_ule_vv_v32f16(<32 x half>* %x, <32 x half>* %y, <32 x i1>* %z)
 define void @fcmp_ule_vv_v32f16_nonans(<32 x half>* %x, <32 x half>* %y, <32 x i1>* %z) {
 ; CHECK-LABEL: fcmp_ule_vv_v32f16_nonans:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a3, zero, 32
+; CHECK-NEXT:    li a3, 32
 ; CHECK-NEXT:    vsetvli zero, a3, e16, m4, ta, mu
 ; CHECK-NEXT:    vle16.v v8, (a0)
 ; CHECK-NEXT:    vle16.v v12, (a1)
@@ -352,7 +352,7 @@ define void @fcmp_ult_vv_v8f64_nonans(<8 x double>* %x, <8 x double>* %y, <8 x i
 define void @fcmp_ugt_vv_v64f16(<64 x half>* %x, <64 x half>* %y, <64 x i1>* %z) {
 ; CHECK-LABEL: fcmp_ugt_vv_v64f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a3, zero, 64
+; CHECK-NEXT:    li a3, 64
 ; CHECK-NEXT:    vsetvli zero, a3, e16, m8, ta, mu
 ; CHECK-NEXT:    vle16.v v8, (a0)
 ; CHECK-NEXT:    vle16.v v16, (a1)
@@ -370,7 +370,7 @@ define void @fcmp_ugt_vv_v64f16(<64 x half>* %x, <64 x half>* %y, <64 x i1>* %z)
 define void @fcmp_ugt_vv_v64f16_nonans(<64 x half>* %x, <64 x half>* %y, <64 x i1>* %z) {
 ; CHECK-LABEL: fcmp_ugt_vv_v64f16_nonans:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a3, zero, 64
+; CHECK-NEXT:    li a3, 64
 ; CHECK-NEXT:    vsetvli zero, a3, e16, m8, ta, mu
 ; CHECK-NEXT:    vle16.v v8, (a0)
 ; CHECK-NEXT:    vle16.v v16, (a1)
@@ -387,7 +387,7 @@ define void @fcmp_ugt_vv_v64f16_nonans(<64 x half>* %x, <64 x half>* %y, <64 x i
 define void @fcmp_ueq_vv_v32f32(<32 x float>* %x, <32 x float>* %y, <32 x i1>* %z) {
 ; CHECK-LABEL: fcmp_ueq_vv_v32f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a3, zero, 32
+; CHECK-NEXT:    li a3, 32
 ; CHECK-NEXT:    vsetvli zero, a3, e32, m8, ta, mu
 ; CHECK-NEXT:    vle32.v v8, (a0)
 ; CHECK-NEXT:    vle32.v v16, (a1)
@@ -406,7 +406,7 @@ define void @fcmp_ueq_vv_v32f32(<32 x float>* %x, <32 x float>* %y, <32 x i1>* %
 define void @fcmp_ueq_vv_v32f32_nonans(<32 x float>* %x, <32 x float>* %y, <32 x i1>* %z) {
 ; CHECK-LABEL: fcmp_ueq_vv_v32f32_nonans:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a3, zero, 32
+; CHECK-NEXT:    li a3, 32
 ; CHECK-NEXT:    vsetvli zero, a3, e32, m8, ta, mu
 ; CHECK-NEXT:    vle32.v v8, (a0)
 ; CHECK-NEXT:    vle32.v v16, (a1)
@@ -757,7 +757,7 @@ define void @fcmp_ole_vf_v4f64_nonans(<4 x double>* %x, double %y, <4 x i1>* %z)
 define void @fcmp_ule_vf_v32f16(<32 x half>* %x, half %y, <32 x i1>* %z) {
 ; CHECK-LABEL: fcmp_ule_vf_v32f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a2, zero, 32
+; CHECK-NEXT:    li a2, 32
 ; CHECK-NEXT:    vsetvli zero, a2, e16, m4, ta, mu
 ; CHECK-NEXT:    vle16.v v8, (a0)
 ; CHECK-NEXT:    vmfgt.vf v12, v8, fa0
@@ -775,7 +775,7 @@ define void @fcmp_ule_vf_v32f16(<32 x half>* %x, half %y, <32 x i1>* %z) {
 define void @fcmp_ule_vf_v32f16_nonans(<32 x half>* %x, half %y, <32 x i1>* %z) {
 ; CHECK-LABEL: fcmp_ule_vf_v32f16_nonans:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a2, zero, 32
+; CHECK-NEXT:    li a2, 32
 ; CHECK-NEXT:    vsetvli zero, a2, e16, m4, ta, mu
 ; CHECK-NEXT:    vle16.v v8, (a0)
 ; CHECK-NEXT:    vmfle.vf v12, v8, fa0
@@ -858,7 +858,7 @@ define void @fcmp_ult_vf_v8f64_nonans(<8 x double>* %x, double %y, <8 x i1>* %z)
 define void @fcmp_ugt_vf_v64f16(<64 x half>* %x, half %y, <64 x i1>* %z) {
 ; CHECK-LABEL: fcmp_ugt_vf_v64f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a2, zero, 64
+; CHECK-NEXT:    li a2, 64
 ; CHECK-NEXT:    vsetvli zero, a2, e16, m8, ta, mu
 ; CHECK-NEXT:    vle16.v v8, (a0)
 ; CHECK-NEXT:    vmfle.vf v16, v8, fa0
@@ -876,7 +876,7 @@ define void @fcmp_ugt_vf_v64f16(<64 x half>* %x, half %y, <64 x i1>* %z) {
 define void @fcmp_ugt_vf_v64f16_nonans(<64 x half>* %x, half %y, <64 x i1>* %z) {
 ; CHECK-LABEL: fcmp_ugt_vf_v64f16_nonans:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a2, zero, 64
+; CHECK-NEXT:    li a2, 64
 ; CHECK-NEXT:    vsetvli zero, a2, e16, m8, ta, mu
 ; CHECK-NEXT:    vle16.v v8, (a0)
 ; CHECK-NEXT:    vmfgt.vf v16, v8, fa0
@@ -893,7 +893,7 @@ define void @fcmp_ugt_vf_v64f16_nonans(<64 x half>* %x, half %y, <64 x i1>* %z) 
 define void @fcmp_ueq_vf_v32f32(<32 x float>* %x, float %y, <32 x i1>* %z) {
 ; CHECK-LABEL: fcmp_ueq_vf_v32f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a2, zero, 32
+; CHECK-NEXT:    li a2, 32
 ; CHECK-NEXT:    vsetvli zero, a2, e32, m8, ta, mu
 ; CHECK-NEXT:    vle32.v v8, (a0)
 ; CHECK-NEXT:    vmflt.vf v16, v8, fa0
@@ -912,7 +912,7 @@ define void @fcmp_ueq_vf_v32f32(<32 x float>* %x, float %y, <32 x i1>* %z) {
 define void @fcmp_ueq_vf_v32f32_nonans(<32 x float>* %x, float %y, <32 x i1>* %z) {
 ; CHECK-LABEL: fcmp_ueq_vf_v32f32_nonans:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a2, zero, 32
+; CHECK-NEXT:    li a2, 32
 ; CHECK-NEXT:    vsetvli zero, a2, e32, m8, ta, mu
 ; CHECK-NEXT:    vle32.v v8, (a0)
 ; CHECK-NEXT:    vmfeq.vf v16, v8, fa0
@@ -1265,7 +1265,7 @@ define void @fcmp_ole_fv_v4f64_nonans(<4 x double>* %x, double %y, <4 x i1>* %z)
 define void @fcmp_ule_fv_v32f16(<32 x half>* %x, half %y, <32 x i1>* %z) {
 ; CHECK-LABEL: fcmp_ule_fv_v32f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a2, zero, 32
+; CHECK-NEXT:    li a2, 32
 ; CHECK-NEXT:    vsetvli zero, a2, e16, m4, ta, mu
 ; CHECK-NEXT:    vle16.v v8, (a0)
 ; CHECK-NEXT:    vmflt.vf v12, v8, fa0
@@ -1283,7 +1283,7 @@ define void @fcmp_ule_fv_v32f16(<32 x half>* %x, half %y, <32 x i1>* %z) {
 define void @fcmp_ule_fv_v32f16_nonans(<32 x half>* %x, half %y, <32 x i1>* %z) {
 ; CHECK-LABEL: fcmp_ule_fv_v32f16_nonans:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a2, zero, 32
+; CHECK-NEXT:    li a2, 32
 ; CHECK-NEXT:    vsetvli zero, a2, e16, m4, ta, mu
 ; CHECK-NEXT:    vle16.v v8, (a0)
 ; CHECK-NEXT:    vmfge.vf v12, v8, fa0
@@ -1366,7 +1366,7 @@ define void @fcmp_ult_fv_v8f64_nonans(<8 x double>* %x, double %y, <8 x i1>* %z)
 define void @fcmp_ugt_fv_v64f16(<64 x half>* %x, half %y, <64 x i1>* %z) {
 ; CHECK-LABEL: fcmp_ugt_fv_v64f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a2, zero, 64
+; CHECK-NEXT:    li a2, 64
 ; CHECK-NEXT:    vsetvli zero, a2, e16, m8, ta, mu
 ; CHECK-NEXT:    vle16.v v8, (a0)
 ; CHECK-NEXT:    vmfge.vf v16, v8, fa0
@@ -1384,7 +1384,7 @@ define void @fcmp_ugt_fv_v64f16(<64 x half>* %x, half %y, <64 x i1>* %z) {
 define void @fcmp_ugt_fv_v64f16_nonans(<64 x half>* %x, half %y, <64 x i1>* %z) {
 ; CHECK-LABEL: fcmp_ugt_fv_v64f16_nonans:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a2, zero, 64
+; CHECK-NEXT:    li a2, 64
 ; CHECK-NEXT:    vsetvli zero, a2, e16, m8, ta, mu
 ; CHECK-NEXT:    vle16.v v8, (a0)
 ; CHECK-NEXT:    vmflt.vf v16, v8, fa0
@@ -1401,7 +1401,7 @@ define void @fcmp_ugt_fv_v64f16_nonans(<64 x half>* %x, half %y, <64 x i1>* %z) 
 define void @fcmp_ueq_fv_v32f32(<32 x float>* %x, float %y, <32 x i1>* %z) {
 ; CHECK-LABEL: fcmp_ueq_fv_v32f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a2, zero, 32
+; CHECK-NEXT:    li a2, 32
 ; CHECK-NEXT:    vsetvli zero, a2, e32, m8, ta, mu
 ; CHECK-NEXT:    vle32.v v8, (a0)
 ; CHECK-NEXT:    vmfgt.vf v16, v8, fa0
@@ -1420,7 +1420,7 @@ define void @fcmp_ueq_fv_v32f32(<32 x float>* %x, float %y, <32 x i1>* %z) {
 define void @fcmp_ueq_fv_v32f32_nonans(<32 x float>* %x, float %y, <32 x i1>* %z) {
 ; CHECK-LABEL: fcmp_ueq_fv_v32f32_nonans:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a2, zero, 32
+; CHECK-NEXT:    li a2, 32
 ; CHECK-NEXT:    vsetvli zero, a2, e32, m8, ta, mu
 ; CHECK-NEXT:    vle32.v v8, (a0)
 ; CHECK-NEXT:    vmfeq.vf v16, v8, fa0

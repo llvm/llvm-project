@@ -31,10 +31,10 @@ define void @gather(i8* noalias nocapture %A, i8* noalias nocapture readonly %B)
 ;
 ; CHECK-ASM-LABEL: gather:
 ; CHECK-ASM:       # %bb.0: # %entry
-; CHECK-ASM-NEXT:    mv a2, zero
-; CHECK-ASM-NEXT:    addi a6, zero, 32
-; CHECK-ASM-NEXT:    addi a4, zero, 5
-; CHECK-ASM-NEXT:    addi a5, zero, 1024
+; CHECK-ASM-NEXT:    li a2, 0
+; CHECK-ASM-NEXT:    li a6, 32
+; CHECK-ASM-NEXT:    li a4, 5
+; CHECK-ASM-NEXT:    li a5, 1024
 ; CHECK-ASM-NEXT:  .LBB0_1: # %vector.body
 ; CHECK-ASM-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-ASM-NEXT:    vsetvli zero, a6, e8, m1, ta, mu
@@ -96,14 +96,14 @@ define void @gather_masked(i8* noalias nocapture %A, i8* noalias nocapture reado
 ;
 ; CHECK-ASM-LABEL: gather_masked:
 ; CHECK-ASM:       # %bb.0: # %entry
-; CHECK-ASM-NEXT:    mv a2, zero
+; CHECK-ASM-NEXT:    li a2, 0
 ; CHECK-ASM-NEXT:    lui a3, 983765
 ; CHECK-ASM-NEXT:    addiw a3, a3, 873
 ; CHECK-ASM-NEXT:    vsetivli zero, 1, e32, mf2, ta, mu
 ; CHECK-ASM-NEXT:    vmv.s.x v0, a3
-; CHECK-ASM-NEXT:    addi a6, zero, 32
-; CHECK-ASM-NEXT:    addi a4, zero, 5
-; CHECK-ASM-NEXT:    addi a5, zero, 1024
+; CHECK-ASM-NEXT:    li a6, 32
+; CHECK-ASM-NEXT:    li a4, 5
+; CHECK-ASM-NEXT:    li a5, 1024
 ; CHECK-ASM-NEXT:  .LBB1_1: # %vector.body
 ; CHECK-ASM-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-ASM-NEXT:    vsetvli zero, a6, e8, m1, ta, mu
@@ -166,11 +166,11 @@ define void @gather_negative_stride(i8* noalias nocapture %A, i8* noalias nocapt
 ;
 ; CHECK-ASM-LABEL: gather_negative_stride:
 ; CHECK-ASM:       # %bb.0: # %entry
-; CHECK-ASM-NEXT:    mv a2, zero
+; CHECK-ASM-NEXT:    li a2, 0
 ; CHECK-ASM-NEXT:    addi a1, a1, 155
-; CHECK-ASM-NEXT:    addi a6, zero, 32
-; CHECK-ASM-NEXT:    addi a4, zero, -5
-; CHECK-ASM-NEXT:    addi a5, zero, 1024
+; CHECK-ASM-NEXT:    li a6, 32
+; CHECK-ASM-NEXT:    li a4, -5
+; CHECK-ASM-NEXT:    li a5, 1024
 ; CHECK-ASM-NEXT:  .LBB2_1: # %vector.body
 ; CHECK-ASM-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-ASM-NEXT:    vsetvli zero, a6, e8, m1, ta, mu
@@ -232,9 +232,9 @@ define void @gather_zero_stride(i8* noalias nocapture %A, i8* noalias nocapture 
 ;
 ; CHECK-ASM-LABEL: gather_zero_stride:
 ; CHECK-ASM:       # %bb.0: # %entry
-; CHECK-ASM-NEXT:    mv a2, zero
-; CHECK-ASM-NEXT:    addi a3, zero, 32
-; CHECK-ASM-NEXT:    addi a4, zero, 1024
+; CHECK-ASM-NEXT:    li a2, 0
+; CHECK-ASM-NEXT:    li a3, 32
+; CHECK-ASM-NEXT:    li a4, 1024
 ; CHECK-ASM-NEXT:  .LBB3_1: # %vector.body
 ; CHECK-ASM-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-ASM-NEXT:    vsetvli zero, a3, e8, m1, ta, mu
@@ -302,10 +302,10 @@ define void @scatter(i8* noalias nocapture %A, i8* noalias nocapture readonly %B
 ;
 ; CHECK-ASM-LABEL: scatter:
 ; CHECK-ASM:       # %bb.0: # %entry
-; CHECK-ASM-NEXT:    mv a2, zero
-; CHECK-ASM-NEXT:    addi a6, zero, 32
-; CHECK-ASM-NEXT:    addi a4, zero, 5
-; CHECK-ASM-NEXT:    addi a5, zero, 1024
+; CHECK-ASM-NEXT:    li a2, 0
+; CHECK-ASM-NEXT:    li a6, 32
+; CHECK-ASM-NEXT:    li a4, 5
+; CHECK-ASM-NEXT:    li a5, 1024
 ; CHECK-ASM-NEXT:  .LBB4_1: # %vector.body
 ; CHECK-ASM-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-ASM-NEXT:    add a3, a1, a2
@@ -368,14 +368,14 @@ define void @scatter_masked(i8* noalias nocapture %A, i8* noalias nocapture read
 ;
 ; CHECK-ASM-LABEL: scatter_masked:
 ; CHECK-ASM:       # %bb.0: # %entry
-; CHECK-ASM-NEXT:    mv a2, zero
-; CHECK-ASM-NEXT:    addi a6, zero, 32
+; CHECK-ASM-NEXT:    li a2, 0
+; CHECK-ASM-NEXT:    li a6, 32
 ; CHECK-ASM-NEXT:    lui a4, 983765
 ; CHECK-ASM-NEXT:    addiw a4, a4, 873
 ; CHECK-ASM-NEXT:    vsetivli zero, 1, e32, mf2, ta, mu
 ; CHECK-ASM-NEXT:    vmv.s.x v0, a4
-; CHECK-ASM-NEXT:    addi a4, zero, 5
-; CHECK-ASM-NEXT:    addi a5, zero, 1024
+; CHECK-ASM-NEXT:    li a4, 5
+; CHECK-ASM-NEXT:    li a5, 1024
 ; CHECK-ASM-NEXT:  .LBB5_1: # %vector.body
 ; CHECK-ASM-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-ASM-NEXT:    add a3, a1, a2
@@ -442,9 +442,9 @@ define void @gather_pow2(i32* noalias nocapture %A, i32* noalias nocapture reado
 ;
 ; CHECK-ASM-LABEL: gather_pow2:
 ; CHECK-ASM:       # %bb.0: # %entry
-; CHECK-ASM-NEXT:    addi a2, zero, 1024
-; CHECK-ASM-NEXT:    addi a3, zero, 16
-; CHECK-ASM-NEXT:    addi a4, zero, 32
+; CHECK-ASM-NEXT:    li a2, 1024
+; CHECK-ASM-NEXT:    li a3, 16
+; CHECK-ASM-NEXT:    li a4, 32
 ; CHECK-ASM-NEXT:  .LBB6_1: # %vector.body
 ; CHECK-ASM-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-ASM-NEXT:    vsetivli zero, 8, e32, m1, ta, mu
@@ -517,9 +517,9 @@ define void @scatter_pow2(i32* noalias nocapture %A, i32* noalias nocapture read
 ;
 ; CHECK-ASM-LABEL: scatter_pow2:
 ; CHECK-ASM:       # %bb.0: # %entry
-; CHECK-ASM-NEXT:    addi a2, zero, 1024
-; CHECK-ASM-NEXT:    addi a3, zero, 32
-; CHECK-ASM-NEXT:    addi a4, zero, 16
+; CHECK-ASM-NEXT:    li a2, 1024
+; CHECK-ASM-NEXT:    li a3, 32
+; CHECK-ASM-NEXT:    li a4, 16
 ; CHECK-ASM-NEXT:  .LBB7_1: # %vector.body
 ; CHECK-ASM-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-ASM-NEXT:    vsetvli zero, a3, e8, m1, ta, mu
@@ -603,8 +603,8 @@ define void @struct_gather(i32* noalias nocapture %A, %struct.foo* noalias nocap
 ; CHECK-ASM:       # %bb.0: # %entry
 ; CHECK-ASM-NEXT:    addi a0, a0, 32
 ; CHECK-ASM-NEXT:    addi a1, a1, 132
-; CHECK-ASM-NEXT:    addi a2, zero, 1024
-; CHECK-ASM-NEXT:    addi a3, zero, 16
+; CHECK-ASM-NEXT:    li a2, 1024
+; CHECK-ASM-NEXT:    li a3, 16
 ; CHECK-ASM-NEXT:  .LBB8_1: # %vector.body
 ; CHECK-ASM-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-ASM-NEXT:    addi a4, a1, -128
@@ -742,9 +742,9 @@ define void @gather_unroll(i32* noalias nocapture %A, i32* noalias nocapture rea
 ;
 ; CHECK-ASM-LABEL: gather_unroll:
 ; CHECK-ASM:       # %bb.0: # %entry
-; CHECK-ASM-NEXT:    addi a2, zero, 256
-; CHECK-ASM-NEXT:    addi a3, zero, 64
-; CHECK-ASM-NEXT:    addi a4, zero, 16
+; CHECK-ASM-NEXT:    li a2, 256
+; CHECK-ASM-NEXT:    li a3, 64
+; CHECK-ASM-NEXT:    li a4, 16
 ; CHECK-ASM-NEXT:  .LBB9_1: # %vector.body
 ; CHECK-ASM-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-ASM-NEXT:    vsetivli zero, 8, e32, m1, ta, mu
@@ -858,8 +858,8 @@ define void @gather_of_pointers(i32** noalias nocapture %0, i32** noalias nocapt
 ; CHECK-ASM-LABEL: gather_of_pointers:
 ; CHECK-ASM:       # %bb.0:
 ; CHECK-ASM-NEXT:    addi a0, a0, 16
-; CHECK-ASM-NEXT:    addi a2, zero, 1024
-; CHECK-ASM-NEXT:    addi a3, zero, 40
+; CHECK-ASM-NEXT:    li a2, 1024
+; CHECK-ASM-NEXT:    li a3, 40
 ; CHECK-ASM-NEXT:  .LBB10_1: # =>This Inner Loop Header: Depth=1
 ; CHECK-ASM-NEXT:    addi a4, a1, 80
 ; CHECK-ASM-NEXT:    vsetivli zero, 2, e64, m1, ta, mu
@@ -934,8 +934,8 @@ define void @scatter_of_pointers(i32** noalias nocapture %0, i32** noalias nocap
 ; CHECK-ASM-LABEL: scatter_of_pointers:
 ; CHECK-ASM:       # %bb.0:
 ; CHECK-ASM-NEXT:    addi a1, a1, 16
-; CHECK-ASM-NEXT:    addi a2, zero, 1024
-; CHECK-ASM-NEXT:    addi a3, zero, 40
+; CHECK-ASM-NEXT:    li a2, 1024
+; CHECK-ASM-NEXT:    li a3, 40
 ; CHECK-ASM-NEXT:  .LBB11_1: # =>This Inner Loop Header: Depth=1
 ; CHECK-ASM-NEXT:    addi a4, a1, -16
 ; CHECK-ASM-NEXT:    vsetivli zero, 2, e64, m1, ta, mu

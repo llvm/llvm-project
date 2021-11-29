@@ -320,9 +320,9 @@ private:
     }
     // Try to merge a control statement block with left brace wrapped
     if (I[1]->First->is(tok::l_brace) &&
-        (TheLine->First->isOneOf(tok::kw_if, tok::kw_while, tok::kw_for,
-                                 tok::kw_switch, tok::kw_try, tok::kw_do,
-                                 TT_ForEachMacro) ||
+        (TheLine->First->isOneOf(tok::kw_if, tok::kw_else, tok::kw_while,
+                                 tok::kw_for, tok::kw_switch, tok::kw_try,
+                                 tok::kw_do, TT_ForEachMacro) ||
          (TheLine->First->is(tok::r_brace) && TheLine->First->Next &&
           TheLine->First->Next->isOneOf(tok::kw_else, tok::kw_catch))) &&
         Style.BraceWrapping.AfterControlStatement ==
@@ -335,7 +335,7 @@ private:
                  ? 1
                  : 0;
     } else if (I[1]->First->is(tok::l_brace) &&
-               TheLine->First->isOneOf(tok::kw_if, tok::kw_while,
+               TheLine->First->isOneOf(tok::kw_if, tok::kw_else, tok::kw_while,
                                        tok::kw_for)) {
       return (Style.BraceWrapping.AfterControlStatement ==
               FormatStyle::BWACS_Always)
@@ -569,7 +569,7 @@ private:
 
     // Check that the current line allows merging. This depends on whether we
     // are in a control flow statements as well as several style flags.
-    if (Line.First->isOneOf(tok::kw_else, tok::kw_case) ||
+    if (Line.First->is(tok::kw_case) ||
         (Line.First->Next && Line.First->Next->is(tok::kw_else)))
       return 0;
     // default: in switch statement
@@ -578,20 +578,21 @@ private:
       if (Tok && Tok->is(tok::colon))
         return 0;
     }
-    if (Line.First->isOneOf(tok::kw_if, tok::kw_while, tok::kw_do, tok::kw_try,
-                            tok::kw___try, tok::kw_catch, tok::kw___finally,
-                            tok::kw_for, tok::r_brace, Keywords.kw___except)) {
+    if (Line.First->isOneOf(tok::kw_if, tok::kw_else, tok::kw_while, tok::kw_do,
+                            tok::kw_try, tok::kw___try, tok::kw_catch,
+                            tok::kw___finally, tok::kw_for, tok::r_brace,
+                            Keywords.kw___except)) {
       if (Style.AllowShortBlocksOnASingleLine == FormatStyle::SBS_Never)
         return 0;
       // Don't merge when we can't except the case when
       // the control statement block is empty
       if (!Style.AllowShortIfStatementsOnASingleLine &&
-          Line.startsWith(tok::kw_if) &&
+          Line.First->isOneOf(tok::kw_if, tok::kw_else) &&
           !Style.BraceWrapping.AfterControlStatement &&
           !I[1]->First->is(tok::r_brace))
         return 0;
       if (!Style.AllowShortIfStatementsOnASingleLine &&
-          Line.startsWith(tok::kw_if) &&
+          Line.First->isOneOf(tok::kw_if, tok::kw_else) &&
           Style.BraceWrapping.AfterControlStatement ==
               FormatStyle::BWACS_Always &&
           I + 2 != E && !I[2]->First->is(tok::r_brace))
@@ -676,7 +677,7 @@ private:
         // { <-- current Line
         //   baz();
         // }
-        if (Line.First == Line.Last &&
+        if (Line.First == Line.Last && Line.First->isNot(TT_FunctionLBrace) &&
             Style.BraceWrapping.AfterControlStatement ==
                 FormatStyle::BWACS_MultiLine)
           return 0;

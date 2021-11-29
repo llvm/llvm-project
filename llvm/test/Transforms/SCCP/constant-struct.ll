@@ -1,5 +1,5 @@
 ; Test that constant structs are folded.
-; RUN: opt %s -sccp -S | FileCheck %s
+; RUN: opt %s -passes=sccp -S | FileCheck %s
 
 define internal {i64} @struct1() {
   %a = insertvalue {i64} undef, i64 24, 0

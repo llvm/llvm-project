@@ -1,4 +1,4 @@
-; RUN: opt < %s -globaldce
+; RUN: opt < %s -passes=globaldce
 
 ;; Should die when function %foo is killed
 @foo.upgrd.1 = internal global i32 7            ; <i32*> [#uses=3]

@@ -13,6 +13,7 @@
 
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
+#include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/Vector/VectorTransforms.h"
 #include "mlir/Interfaces/VectorInterfaces.h"
 
@@ -224,9 +225,15 @@ struct TransferOpReduceRank : public OpRewritePattern<vector::TransferReadOp> {
     // https://llvm.discourse.group/t/should-we-have-0-d-vectors/3097.
     // In the meantime, lower these to a scalar load when they pop up.
     if (reducedShapeRank == 0) {
-      Value newRead = rewriter.create<memref::LoadOp>(
-          op.getLoc(), originalVecType.getElementType(), op.source(),
-          op.indices());
+      Value newRead;
+      if (op.getShapedType().isa<TensorType>()) {
+        newRead = rewriter.create<tensor::ExtractOp>(op.getLoc(), op.source(),
+                                                     op.indices());
+      } else {
+        newRead = rewriter.create<memref::LoadOp>(
+            op.getLoc(), originalVecType.getElementType(), op.source(),
+            op.indices());
+      }
       rewriter.replaceOpWithNewOp<vector::BroadcastOp>(op, originalVecType,
                                                        newRead);
       return success();

@@ -428,7 +428,7 @@ fir.global internal @_QEmultiarray : !fir.array<32x32xi32> {
   %c0_i32 = arith.constant 1 : i32
   %0 = fir.undefined !fir.array<32x32xi32>
   // expected-error@+1 {{'fir.insert_on_range' op has uneven number of values in ranges}}
-  %2 = fir.insert_on_range %0, %c0_i32, [0 : index, 31 : index, 0 : index] : (!fir.array<32x32xi32>, i32) -> !fir.array<32x32xi32>
+  %2 = "fir.insert_on_range"(%0, %c0_i32) { coor = dense<[0, 31, 0]> : tensor<3xindex> } : (!fir.array<32x32xi32>, i32) -> !fir.array<32x32xi32>
   fir.has_value %2 : !fir.array<32x32xi32>
 }
 
@@ -438,7 +438,7 @@ fir.global internal @_QEmultiarray : !fir.array<32x32xi32> {
   %c0_i32 = arith.constant 1 : i32
   %0 = fir.undefined !fir.array<32x32xi32>
   // expected-error@+1 {{'fir.insert_on_range' op has uneven number of values in ranges}}
-  %2 = fir.insert_on_range %0, %c0_i32, [0 : index] : (!fir.array<32x32xi32>, i32) -> !fir.array<32x32xi32>
+  %2 = "fir.insert_on_range"(%0, %c0_i32) { coor = dense<[0]> : tensor<1xindex> }  : (!fir.array<32x32xi32>, i32) -> !fir.array<32x32xi32>
   fir.has_value %2 : !fir.array<32x32xi32>
 }
 
@@ -448,7 +448,7 @@ fir.global internal @_QEmultiarray : !fir.array<32x32xi32> {
   %c0_i32 = arith.constant 1 : i32
   %0 = fir.undefined !fir.array<32x32xi32>
   // expected-error@+1 {{'fir.insert_on_range' op negative range bound}}
-  %2 = fir.insert_on_range %0, %c0_i32, [-1 : index, 0 : index] : (!fir.array<32x32xi32>, i32) -> !fir.array<32x32xi32>
+  %2 = fir.insert_on_range %0, %c0_i32 from (-1) to (0) : (!fir.array<32x32xi32>, i32) -> !fir.array<32x32xi32>
   fir.has_value %2 : !fir.array<32x32xi32>
 }
 
@@ -458,7 +458,7 @@ fir.global internal @_QEmultiarray : !fir.array<32x32xi32> {
   %c0_i32 = arith.constant 1 : i32
   %0 = fir.undefined !fir.array<32x32xi32>
   // expected-error@+1 {{'fir.insert_on_range' op empty range}}
-  %2 = fir.insert_on_range %0, %c0_i32, [10 : index, 9 : index] : (!fir.array<32x32xi32>, i32) -> !fir.array<32x32xi32>
+  %2 = fir.insert_on_range %0, %c0_i32 from (10) to (9) : (!fir.array<32x32xi32>, i32) -> !fir.array<32x32xi32>
   fir.has_value %2 : !fir.array<32x32xi32>
 }
 
@@ -468,7 +468,7 @@ fir.global internal @_QEmultiarray : !fir.array<?xi32> {
   %c0_i32 = arith.constant 1 : i32
   %0 = fir.undefined !fir.array<?xi32>
   // expected-error@+1 {{'fir.insert_on_range' op must have constant shape and size}}
-  %2 = fir.insert_on_range %0, %c0_i32, [0 : index, 10 : index] : (!fir.array<?xi32>, i32) -> !fir.array<?xi32>
+  %2 = fir.insert_on_range %0, %c0_i32 from (0) to (10) : (!fir.array<?xi32>, i32) -> !fir.array<?xi32>
   fir.has_value %2 : !fir.array<?xi32>
 }
 
@@ -478,7 +478,7 @@ fir.global internal @_QEmultiarray : !fir.array<*:i32> {
   %c0_i32 = arith.constant 1 : i32
   %0 = fir.undefined !fir.array<*:i32>
   // expected-error@+1 {{'fir.insert_on_range' op must have constant shape and size}}
-  %2 = fir.insert_on_range %0, %c0_i32, [0 : index, 10 : index] : (!fir.array<*:i32>, i32) -> !fir.array<*:i32>
+  %2 = fir.insert_on_range %0, %c0_i32 from (0) to (10) : (!fir.array<*:i32>, i32) -> !fir.array<*:i32>
   fir.has_value %2 : !fir.array<*:i32>
 }
 

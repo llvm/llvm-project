@@ -527,9 +527,9 @@ static void updateLiveness(MachineFunction &MF) {
   const std::vector<CalleeSavedInfo> &CSI = MFI.getCalleeSavedInfo();
 
   MachineRegisterInfo &MRI = MF.getRegInfo();
-  for (unsigned i = 0, e = CSI.size(); i != e; ++i) {
+  for (const CalleeSavedInfo &I : CSI) {
     for (MachineBasicBlock *MBB : Visited) {
-      MCPhysReg Reg = CSI[i].getReg();
+      MCPhysReg Reg = I.getReg();
       // Add the callee-saved register as live-in.
       // It's killed at the spill.
       if (!MRI.isReserved(Reg) && !MBB->isLiveIn(Reg))
@@ -540,17 +540,16 @@ static void updateLiveness(MachineFunction &MF) {
     // each MBB between the prologue and epilogue so that it is not clobbered
     // before it is reloaded in the epilogue. The Visited set contains all
     // blocks outside of the region delimited by prologue/epilogue.
-    if (CSI[i].isSpilledToReg()) {
+    if (I.isSpilledToReg()) {
       for (MachineBasicBlock &MBB : MF) {
         if (Visited.count(&MBB))
           continue;
-        MCPhysReg DstReg = CSI[i].getDstReg();
+        MCPhysReg DstReg = I.getDstReg();
         if (!MBB.isLiveIn(DstReg))
           MBB.addLiveIn(DstReg);
       }
     }
   }
-
 }
 
 /// Insert restore code for the callee-saved registers used in the function.
@@ -902,9 +901,7 @@ void PEI::calculateFrameObjectOffsets(MachineFunction &MF) {
   // incoming stack pointer if a frame pointer is required and is closer
   // to the incoming rather than the final stack pointer.
   const TargetRegisterInfo *RegInfo = MF.getSubtarget().getRegisterInfo();
-  bool EarlyScavengingSlots = (TFI.hasFP(MF) && TFI.isFPCloseToIncomingSP() &&
-                               RegInfo->useFPForScavengingIndex(MF) &&
-                               !RegInfo->hasStackRealignment(MF));
+  bool EarlyScavengingSlots = TFI.allocateScavengingFrameIndexesNearIncomingSP(MF);
   if (RS && EarlyScavengingSlots) {
     SmallVector<int, 2> SFIs;
     RS->getScavengingFrameIndices(SFIs);

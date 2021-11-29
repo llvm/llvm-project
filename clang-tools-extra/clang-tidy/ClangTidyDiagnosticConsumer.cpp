@@ -79,16 +79,22 @@ protected:
       return CharSourceRange::getCharRange(SourceRange.getBegin(), End);
     };
 
+    // We are only interested in valid ranges.
+    auto ValidRanges =
+        llvm::make_filter_range(Ranges, [](const CharSourceRange &R) {
+          return R.getAsRange().isValid();
+        });
+
     if (Level == DiagnosticsEngine::Note) {
       Error.Notes.push_back(TidyMessage);
-      for (const CharSourceRange &SourceRange : Ranges)
+      for (const CharSourceRange &SourceRange : ValidRanges)
         Error.Notes.back().Ranges.emplace_back(Loc.getManager(),
                                                ToCharRange(SourceRange));
       return;
     }
     assert(Error.Message.Message.empty() && "Overwriting a diagnostic message");
     Error.Message = TidyMessage;
-    for (const CharSourceRange &SourceRange : Ranges)
+    for (const CharSourceRange &SourceRange : ValidRanges)
       Error.Message.Ranges.emplace_back(Loc.getManager(),
                                         ToCharRange(SourceRange));
   }

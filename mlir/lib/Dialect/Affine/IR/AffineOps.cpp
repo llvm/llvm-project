@@ -11,6 +11,7 @@
 #include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
+#include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/IR/BlockAndValueMapping.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/IntegerSet.h"
@@ -625,13 +626,13 @@ static LogicalResult replaceDimOrSym(AffineMap *map,
   ValueRange composeSyms =
       affineApply.getMapOperands().take_back(composeMap.getNumSymbols());
 
-  // Perform the replacement and append the dims and symbols where relevant.
+  // Append the dims and symbols where relevant and perform the replacement.
   MLIRContext *ctx = map->getContext();
   AffineExpr toReplace = isDimReplacement ? getAffineDimExpr(pos, ctx)
                                           : getAffineSymbolExpr(pos, ctx);
-  *map = map->replace(toReplace, composeExpr, dims.size(), syms.size());
   dims.append(composeDims.begin(), composeDims.end());
   syms.append(composeSyms.begin(), composeSyms.end());
+  *map = map->replace(toReplace, composeExpr, dims.size(), syms.size());
 
   return success();
 }

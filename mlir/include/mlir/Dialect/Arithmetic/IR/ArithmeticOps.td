@@ -11,6 +11,7 @@
 
 include "mlir/Dialect/Arithmetic/IR/ArithmeticBase.td"
 include "mlir/Interfaces/CastInterfaces.td"
+include "mlir/Interfaces/InferTypeOpInterface.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/Interfaces/VectorInterfaces.td"
 include "mlir/IR/OpAsmInterface.td"
@@ -407,7 +408,7 @@ def Arith_RemSIOp : Arith_IntBinaryOp<"remsi"> {
 // AndIOp
 //===----------------------------------------------------------------------===//
 
-def Arith_AndIOp : Arith_IntBinaryOp<"andi", [Commutative]> {
+def Arith_AndIOp : Arith_IntBinaryOp<"andi", [Commutative, Idempotent]> {
   let summary = "integer binary and";
   let description = [{
     The `andi` operation takes two operands and returns one result, each of
@@ -435,7 +436,7 @@ def Arith_AndIOp : Arith_IntBinaryOp<"andi", [Commutative]> {
 // OrIOp
 //===----------------------------------------------------------------------===//
 
-def Arith_OrIOp : Arith_IntBinaryOp<"ori", [Commutative]> {
+def Arith_OrIOp : Arith_IntBinaryOp<"ori", [Commutative, Idempotent]> {
   let summary = "integer binary or";
   let description = [{
     The `ori` operation takes two operands and returns one result, each of these

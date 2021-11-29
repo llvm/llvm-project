@@ -72,7 +72,7 @@ define void @gather_const_v64i8(<64 x i8>* %x) {
 ; LMULMAX4-LABEL: gather_const_v64i8:
 ; LMULMAX4:       # %bb.0:
 ; LMULMAX4-NEXT:    addi a1, a0, 32
-; LMULMAX4-NEXT:    addi a2, zero, 64
+; LMULMAX4-NEXT:    li a2, 64
 ; LMULMAX4-NEXT:    vsetvli zero, a2, e8, m4, ta, mu
 ; LMULMAX4-NEXT:    vlse8.v v8, (a1), zero
 ; LMULMAX4-NEXT:    vse8.v v8, (a0)
@@ -102,7 +102,7 @@ define void @gather_const_v16i16(<32 x i16>* %x) {
 ; LMULMAX4-LABEL: gather_const_v16i16:
 ; LMULMAX4:       # %bb.0:
 ; LMULMAX4-NEXT:    addi a1, a0, 50
-; LMULMAX4-NEXT:    addi a2, zero, 32
+; LMULMAX4-NEXT:    li a2, 32
 ; LMULMAX4-NEXT:    vsetvli zero, a2, e16, m4, ta, mu
 ; LMULMAX4-NEXT:    vlse16.v v8, (a1), zero
 ; LMULMAX4-NEXT:    vse16.v v8, (a0)

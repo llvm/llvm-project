@@ -250,7 +250,15 @@ public:
   bool operator!=(const FastMathFlags &OtherFlags) const {
     return Flags != OtherFlags.Flags;
   }
+
+  /// Print fast-math flags to \p O.
+  void print(raw_ostream &O) const;
 };
+
+inline raw_ostream &operator<<(raw_ostream &O, FastMathFlags FMF) {
+  FMF.print(O);
+  return O;
+}
 
 /// Utility class for floating point operations which can have
 /// information about relaxed accuracy requirements attached to them.

@@ -261,7 +261,7 @@ struct Configuration {
   UnresolvedPolicy unresolvedSymbols;
   UnresolvedPolicy unresolvedSymbolsInShlib;
   Target2Policy target2;
-  bool Power10Stub;
+  bool power10Stubs;
   ARMVFPArgKind armVFPArgs = ARMVFPArgKind::Default;
   BuildIdKind buildId = BuildIdKind::None;
   SeparateSegmentKind zSeparate;
@@ -309,19 +309,10 @@ struct Configuration {
   // if that's true.)
   bool isMips64EL;
 
-  // True if we need to set the DF_STATIC_TLS flag to an output file,
-  // which works as a hint to the dynamic loader that the file contains
-  // code compiled with the static TLS model. The thread-local variable
-  // compiled with the static TLS model is faster but less flexible, and
-  // it may not be loaded using dlopen().
-  //
-  // We set this flag to true when we see a relocation for the static TLS
-  // model. Once this becomes true, it will never become false.
-  //
-  // Since the flag is updated by multi-threaded code, we use std::atomic.
-  // (Writing to a variable is not considered thread-safe even if the
-  // variable is boolean and we always set the same value from all threads.)
-  std::atomic<bool> hasStaticTlsModel{false};
+  // True if we need to set the DF_STATIC_TLS flag to an output file, which
+  // works as a hint to the dynamic loader that the shared object contains code
+  // compiled with the initial-exec TLS model.
+  bool hasTlsIe = false;
 
   // Holds set of ELF header flags for the target.
   uint32_t eflags = 0;

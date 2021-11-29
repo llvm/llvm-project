@@ -1218,10 +1218,9 @@ static void AddReturnAttributes(CallBase &CB, ValueToValueMapTy &VMap) {
     if (!RI || !isa<CallBase>(RI->getOperand(0)))
       continue;
     auto *RetVal = cast<CallBase>(RI->getOperand(0));
-    // Sanity check that the cloned RetVal exists and is a call, otherwise we
-    // cannot add the attributes on the cloned RetVal.
-    // Simplification during inlining could have transformed the cloned
-    // instruction.
+    // Check that the cloned RetVal exists and is a call, otherwise we cannot
+    // add the attributes on the cloned RetVal. Simplification during inlining
+    // could have transformed the cloned instruction.
     auto *NewRetVal = dyn_cast_or_null<CallBase>(VMap.lookup(RetVal));
     if (!NewRetVal)
       continue;

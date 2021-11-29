@@ -5,11 +5,16 @@
 // RUN: %clang_cc1 -target-feature +altivec -target-feature +vsx \
 // RUN:   -triple powerpc64le-unknown-linux-gnu -emit-llvm %s -o - \
 // RUN:   -D__XL_COMPAT_ALTIVEC__ -target-cpu pwr8 | FileCheck %s
+// RUN: %clang_cc1 -target-feature +altivec -target-feature +vsx \
+// RUN:   -triple powerpc64le-unknown-linux-gnu -emit-llvm %s -o - \
+// RUN:   -U__XL_COMPAT_ALTIVEC__ -target-cpu pwr8 | FileCheck \
+// RUN:   --check-prefix=NOCOMPAT %s
 #include <altivec.h>
 vector double vd = { 3.4e22, 1.8e-3 };
 vector signed long long vsll = { -12345678999ll, 12345678999 };
 vector unsigned long long vull = { 11547229456923630743llu, 18014402265226391llu };
 vector float res_vf;
+vector double res_vd;
 vector signed int res_vsi;
 vector unsigned int res_vui;
 
@@ -38,4 +43,11 @@ void test() {
 // CHECK:         [[TMP8:%.*]] = load <2 x double>, <2 x double>* @vd, align 16
 // CHECK-NEXT:    fmul <2 x double> [[TMP8]], <double 1.600000e+01, double 1.600000e+01>
 // CHECK:         call <4 x i32> @llvm.ppc.vsx.xvcvdpuxws(<2 x double>
+
+  res_vd = vec_round(vd);
+// CHECK:         call double @llvm.ppc.readflm()
+// CHECK:         call double @llvm.ppc.setrnd(i32 0)
+// CHECK:         call <2 x double> @llvm.rint.v2f64(<2 x double>
+// CHECK:         call double @llvm.ppc.setflm(double
+// NOCOMPAT:      call <2 x double> @llvm.round.v2f64(<2 x double>
 }

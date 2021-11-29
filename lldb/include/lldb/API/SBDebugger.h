@@ -126,6 +126,8 @@ public:
 
   FILE *GetErrorFileHandle();
 
+  SBError SetInputString(const char *data);
+
   SBError SetInputFile(SBFile file);
 
   SBError SetOutputFile(SBFile file);

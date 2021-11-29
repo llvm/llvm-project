@@ -1,7 +1,7 @@
-; RUN: opt < %s -sccp -S | FileCheck %s
+; RUN: opt < %s -passes=sccp -S | FileCheck %s
 
-; This is a basic sanity check for constant propagation.  The add instruction 
-; should be eliminated.
+; This is a basic correctness check for constant propagation.  The add
+; instruction should be eliminated.
 
 define i32 @test1(i1 %B) {
 	br i1 %B, label %BB1, label %BB2

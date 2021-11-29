@@ -900,7 +900,7 @@ void MipsGotSection::build() {
          got.pagesMap) {
       const OutputSection *os = p.first;
       uint64_t secSize = 0;
-      for (BaseCommand *cmd : os->sectionCommands) {
+      for (SectionCommand *cmd : os->commands) {
         if (auto *isd = dyn_cast<InputSectionDescription>(cmd))
           for (InputSection *isec : isd->sections) {
             uint64_t off = alignTo(secSize, isec->alignment);
@@ -1258,43 +1258,6 @@ DynamicSection<ELFT>::DynamicSection()
     this->flags = SHF_ALLOC;
 }
 
-template <class ELFT>
-void DynamicSection<ELFT>::add(int32_t tag, std::function<uint64_t()> fn) {
-  entries.push_back({tag, fn});
-}
-
-template <class ELFT>
-void DynamicSection<ELFT>::addInt(int32_t tag, uint64_t val) {
-  entries.push_back({tag, [=] { return val; }});
-}
-
-template <class ELFT>
-void DynamicSection<ELFT>::addInSec(int32_t tag, InputSection *sec) {
-  entries.push_back({tag, [=] { return sec->getVA(0); }});
-}
-
-template <class ELFT>
-void DynamicSection<ELFT>::addInSecRelative(int32_t tag, InputSection *sec) {
-  size_t tagOffset = entries.size() * entsize;
-  entries.push_back(
-      {tag, [=] { return sec->getVA(0) - (getVA() + tagOffset); }});
-}
-
-template <class ELFT>
-void DynamicSection<ELFT>::addOutSec(int32_t tag, OutputSection *sec) {
-  entries.push_back({tag, [=] { return sec->addr; }});
-}
-
-template <class ELFT>
-void DynamicSection<ELFT>::addSize(int32_t tag, OutputSection *sec) {
-  entries.push_back({tag, [=] { return sec->size; }});
-}
-
-template <class ELFT>
-void DynamicSection<ELFT>::addSym(int32_t tag, Symbol *sym) {
-  entries.push_back({tag, [=] { return sym->getVA(); }});
-}
-
 // The output section .rela.dyn may include these synthetic sections:
 //
 // - part.relaDyn
@@ -1303,15 +1266,13 @@ void DynamicSection<ELFT>::addSym(int32_t tag, Symbol *sym) {
 //   .rela.dyn
 //
 // DT_RELASZ is the total size of the included sections.
-static std::function<uint64_t()> addRelaSz(RelocationBaseSection *relaDyn) {
-  return [=]() {
-    size_t size = relaDyn->getSize();
-    if (in.relaIplt->getParent() == relaDyn->getParent())
-      size += in.relaIplt->getSize();
-    if (in.relaPlt->getParent() == relaDyn->getParent())
-      size += in.relaPlt->getSize();
-    return size;
-  };
+static uint64_t addRelaSz(RelocationBaseSection *relaDyn) {
+  size_t size = relaDyn->getSize();
+  if (in.relaIplt->getParent() == relaDyn->getParent())
+    size += in.relaIplt->getSize();
+  if (in.relaPlt->getParent() == relaDyn->getParent())
+    size += in.relaPlt->getSize();
+  return size;
 }
 
 // A Linker script may assign the RELA relocation sections to the same
@@ -1327,9 +1288,19 @@ static uint64_t addPltRelSz() {
 }
 
 // Add remaining entries to complete .dynamic contents.
-template <class ELFT> void DynamicSection<ELFT>::finalizeContents() {
+template <class ELFT>
+std::vector<std::pair<int32_t, uint64_t>>
+DynamicSection<ELFT>::computeContents() {
   elf::Partition &part = getPartition();
   bool isMain = part.name.empty();
+  std::vector<std::pair<int32_t, uint64_t>> entries;
+
+  auto addInt = [&](int32_t tag, uint64_t val) {
+    entries.emplace_back(tag, val);
+  };
+  auto addInSec = [&](int32_t tag, const InputSection *sec) {
+    entries.emplace_back(tag, sec->getVA());
+  };
 
   for (StringRef s : config->filterList)
     addInt(DT_FILTER, part.dynStrTab->addString(s));
@@ -1382,7 +1353,7 @@ template <class ELFT> void DynamicSection<ELFT>::finalizeContents() {
   }
   if (!config->zText)
     dtFlags |= DF_TEXTREL;
-  if (config->hasStaticTlsModel)
+  if (config->hasTlsIe && config->shared)
     dtFlags |= DF_STATIC_TLS;
 
   if (dtFlags)
@@ -1401,14 +1372,11 @@ template <class ELFT> void DynamicSection<ELFT>::finalizeContents() {
   if (!config->shared && !config->relocatable && !config->zRodynamic)
     addInt(DT_DEBUG, 0);
 
-  if (OutputSection *sec = part.dynStrTab->getParent())
-    this->link = sec->sectionIndex;
-
   if (part.relaDyn->isNeeded() ||
       (in.relaIplt->isNeeded() &&
        part.relaDyn->getParent() == in.relaIplt->getParent())) {
     addInSec(part.relaDyn->dynamicTag, part.relaDyn);
-    entries.push_back({part.relaDyn->sizeDynamicTag, addRelaSz(part.relaDyn)});
+    entries.emplace_back(part.relaDyn->sizeDynamicTag, addRelaSz(part.relaDyn));
 
     bool isRela = config->isRela;
     addInt(isRela ? DT_RELAENT : DT_RELENT,
@@ -1426,8 +1394,8 @@ template <class ELFT> void DynamicSection<ELFT>::finalizeContents() {
   if (part.relrDyn && !part.relrDyn->relocs.empty()) {
     addInSec(config->useAndroidRelrTags ? DT_ANDROID_RELR : DT_RELR,
              part.relrDyn);
-    addSize(config->useAndroidRelrTags ? DT_ANDROID_RELRSZ : DT_RELRSZ,
-            part.relrDyn->getParent());
+    addInt(config->useAndroidRelrTags ? DT_ANDROID_RELRSZ : DT_RELRSZ,
+           part.relrDyn->getParent()->size);
     addInt(config->useAndroidRelrTags ? DT_ANDROID_RELRENT : DT_RELRENT,
            sizeof(Elf_Relr));
   }
@@ -1439,7 +1407,7 @@ template <class ELFT> void DynamicSection<ELFT>::finalizeContents() {
   // .rel[a].plt section.
   if (isMain && (in.relaPlt->isNeeded() || in.relaIplt->isNeeded())) {
     addInSec(DT_JMPREL, in.relaPlt);
-    entries.push_back({DT_PLTRELSZ, addPltRelSz});
+    entries.emplace_back(DT_PLTRELSZ, addPltRelSz());
     switch (config->emachine) {
     case EM_MIPS:
       addInSec(DT_MIPS_PLTGOT, in.gotPlt);
@@ -1481,24 +1449,24 @@ template <class ELFT> void DynamicSection<ELFT>::finalizeContents() {
 
   if (isMain) {
     if (Out::preinitArray) {
-      addOutSec(DT_PREINIT_ARRAY, Out::preinitArray);
-      addSize(DT_PREINIT_ARRAYSZ, Out::preinitArray);
+      addInt(DT_PREINIT_ARRAY, Out::preinitArray->addr);
+      addInt(DT_PREINIT_ARRAYSZ, Out::preinitArray->size);
     }
     if (Out::initArray) {
-      addOutSec(DT_INIT_ARRAY, Out::initArray);
-      addSize(DT_INIT_ARRAYSZ, Out::initArray);
+      addInt(DT_INIT_ARRAY, Out::initArray->addr);
+      addInt(DT_INIT_ARRAYSZ, Out::initArray->size);
     }
     if (Out::finiArray) {
-      addOutSec(DT_FINI_ARRAY, Out::finiArray);
-      addSize(DT_FINI_ARRAYSZ, Out::finiArray);
+      addInt(DT_FINI_ARRAY, Out::finiArray->addr);
+      addInt(DT_FINI_ARRAYSZ, Out::finiArray->size);
     }
 
     if (Symbol *b = symtab->find(config->init))
       if (b->isDefined())
-        addSym(DT_INIT, b);
+        addInt(DT_INIT, b->getVA());
     if (Symbol *b = symtab->find(config->fini))
       if (b->isDefined())
-        addSym(DT_FINI, b);
+        addInt(DT_FINI, b->getVA());
   }
 
   if (part.verSym && part.verSym->isNeeded())
@@ -1521,8 +1489,7 @@ template <class ELFT> void DynamicSection<ELFT>::finalizeContents() {
     addInt(DT_MIPS_FLAGS, RHF_NOTPOT);
     addInt(DT_MIPS_BASE_ADDRESS, target->getImageBase());
     addInt(DT_MIPS_SYMTABNO, part.dynSymTab->getNumSymbols());
-
-    add(DT_MIPS_LOCAL_GOTNO, [] { return in.mipsGot->getLocalEntriesNum(); });
+    addInt(DT_MIPS_LOCAL_GOTNO, in.mipsGot->getLocalEntriesNum());
 
     if (const Symbol *b = in.mipsGot->getFirstGlobalEntry())
       addInt(DT_MIPS_GOTSYM, b->dynsymIndex);
@@ -1534,37 +1501,39 @@ template <class ELFT> void DynamicSection<ELFT>::finalizeContents() {
         addInSec(DT_MIPS_RLD_MAP, in.mipsRldMap);
       // Store the offset to the .rld_map section
       // relative to the address of the tag.
-      addInSecRelative(DT_MIPS_RLD_MAP_REL, in.mipsRldMap);
+      addInt(DT_MIPS_RLD_MAP_REL,
+             in.mipsRldMap->getVA() - (getVA() + entries.size() * entsize));
     }
   }
 
   // DT_PPC_GOT indicates to glibc Secure PLT is used. If DT_PPC_GOT is absent,
   // glibc assumes the old-style BSS PLT layout which we don't support.
   if (config->emachine == EM_PPC)
-    add(DT_PPC_GOT, [] { return in.got->getVA(); });
+    addInSec(DT_PPC_GOT, in.got);
 
   // Glink dynamic tag is required by the V2 abi if the plt section isn't empty.
   if (config->emachine == EM_PPC64 && in.plt->isNeeded()) {
     // The Glink tag points to 32 bytes before the first lazy symbol resolution
     // stub, which starts directly after the header.
-    entries.push_back({DT_PPC64_GLINK, [=] {
-                         unsigned offset = target->pltHeaderSize - 32;
-                         return in.plt->getVA(0) + offset;
-                       }});
+    addInt(DT_PPC64_GLINK, in.plt->getVA() + target->pltHeaderSize - 32);
   }
 
   addInt(DT_NULL, 0);
+  return entries;
+}
 
-  getParent()->link = this->link;
-  this->size = entries.size() * this->entsize;
+template <class ELFT> void DynamicSection<ELFT>::finalizeContents() {
+  if (OutputSection *sec = getPartition().dynStrTab->getParent())
+    getParent()->link = sec->sectionIndex;
+  this->size = computeContents().size() * this->entsize;
 }
 
 template <class ELFT> void DynamicSection<ELFT>::writeTo(uint8_t *buf) {
   auto *p = reinterpret_cast<Elf_Dyn *>(buf);
 
-  for (std::pair<int32_t, std::function<uint64_t()>> &kv : entries) {
+  for (std::pair<int32_t, uint64_t> kv : computeContents()) {
     p->d_tag = kv.first;
-    p->d_un.d_val = kv.second();
+    p->d_un.d_val = kv.second;
     ++p;
   }
 }
@@ -2331,8 +2300,8 @@ bool SymtabShndxSection::isNeeded() const {
   // late, and we do not know them here. For simplicity, we just always create
   // a .symtab_shndx section when the amount of output sections is huge.
   size_t size = 0;
-  for (BaseCommand *base : script->sectionCommands)
-    if (isa<OutputSection>(base))
+  for (SectionCommand *cmd : script->sectionCommands)
+    if (isa<OutputSection>(cmd))
       ++size;
   return size >= SHN_LORESERVE;
 }
@@ -2411,21 +2380,8 @@ void GnuHashTableSection::writeTo(uint8_t *buf) {
   write32(buf + 12, Shift2);
   buf += 16;
 
-  // Write a bloom filter and a hash table.
-  writeBloomFilter(buf);
-  buf += config->wordsize * maskWords;
-  writeHashTable(buf);
-}
-
-// This function writes a 2-bit bloom filter. This bloom filter alone
-// usually filters out 80% or more of all symbol lookups [1].
-// The dynamic linker uses the hash table only when a symbol is not
-// filtered out by a bloom filter.
-//
-// [1] Ulrich Drepper (2011), "How To Write Shared Libraries" (Ver. 4.1.2),
-//     p.9, https://www.akkadia.org/drepper/dsohowto.pdf
-void GnuHashTableSection::writeBloomFilter(uint8_t *buf) {
-  unsigned c = config->is64 ? 64 : 32;
+  // Write the 2-bit bloom filter.
+  const unsigned c = config->is64 ? 64 : 32;
   for (const Entry &sym : symbols) {
     // When C = 64, we choose a word with bits [6:...] and set 1 to two bits in
     // the word using bits [0:5] and [26:31].
@@ -2435,9 +2391,9 @@ void GnuHashTableSection::writeBloomFilter(uint8_t *buf) {
     val |= uint64_t(1) << ((sym.hash >> Shift2) % c);
     writeUint(buf + i * config->wordsize, val);
   }
-}
+  buf += config->wordsize * maskWords;
 
-void GnuHashTableSection::writeHashTable(uint8_t *buf) {
+  // Write the hash table.
   uint32_t *buckets = reinterpret_cast<uint32_t *>(buf);
   uint32_t oldBucket = -1;
   uint32_t *values = buckets + nBuckets;
@@ -3160,7 +3116,7 @@ size_t VersionTableSection::getSize() const {
 void VersionTableSection::writeTo(uint8_t *buf) {
   buf += 2;
   for (const SymbolTableEntry &s : getPartition().dynSymTab->getSymbols()) {
-    // For an unfetched lazy symbol (undefined weak), it must have been
+    // For an unextracted lazy symbol (undefined weak), it must have been
     // converted to Undefined and have VER_NDX_GLOBAL version here.
     assert(!s.sym->isLazy());
     write16(buf, s.sym->versionId);
@@ -3648,8 +3604,8 @@ PPC32Got2Section::PPC32Got2Section()
 bool PPC32Got2Section::isNeeded() const {
   // See the comment below. This is not needed if there is no other
   // InputSection.
-  for (BaseCommand *base : getParent()->sectionCommands)
-    if (auto *isd = dyn_cast<InputSectionDescription>(base))
+  for (SectionCommand *cmd : getParent()->commands)
+    if (auto *isd = dyn_cast<InputSectionDescription>(cmd))
       for (InputSection *isec : isd->sections)
         if (isec != this)
           return true;
@@ -3662,8 +3618,8 @@ void PPC32Got2Section::finalizeContents() {
   // PPC32PltCallStub::writeTo(). The purpose of this empty synthetic section is
   // to collect input sections named ".got2".
   uint32_t offset = 0;
-  for (BaseCommand *base : getParent()->sectionCommands)
-    if (auto *isd = dyn_cast<InputSectionDescription>(base)) {
+  for (SectionCommand *cmd : getParent()->commands)
+    if (auto *isd = dyn_cast<InputSectionDescription>(cmd)) {
       for (InputSection *isec : isd->sections) {
         if (isec == this)
           continue;

@@ -14,6 +14,7 @@
 #include "llvm/DebugInfo/DWARF/DWARFAcceleratorTable.h"
 #include "llvm/DebugInfo/DWARF/DWARFDie.h"
 #include "llvm/DebugInfo/DWARF/DWARFUnitIndex.h"
+#include "llvm/DebugInfo/DWARF/DWARFUnit.h"
 #include <cstdint>
 #include <map>
 #include <set>
@@ -153,8 +154,8 @@ private:
   /// \param SectionKind The object-file section kind that S comes from.
   ///
   /// \returns The number of errors that occurred during verification.
-  unsigned verifyUnitSection(const DWARFSection &S,
-                             DWARFSectionKind SectionKind);
+  unsigned verifyUnitSection(const DWARFSection &S);
+  unsigned verifyUnits(const DWARFUnitVector &Units);
 
   /// Verifies that a call site entry is nested within a subprogram with a
   /// DW_AT_call attribute.

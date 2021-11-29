@@ -746,11 +746,9 @@ static inline T strtofloatingpoint(const char *__restrict src,
 
   if (isdigit(*src) || *src == DECIMAL_POINT) { // regular number
     int base = 10;
-    char exponentMarker = 'e';
     if (is_float_hex_start(src, DECIMAL_POINT)) {
       base = 16;
       src += 2;
-      exponentMarker = 'p';
       seenDigit = true;
     }
     char *newStrEnd = nullptr;

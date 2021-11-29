@@ -10,9 +10,6 @@
 // Ensure that the unwinder can cope with the signal handler.
 // REQUIRES: linux && (target={{aarch64-.+}} || target={{x86_64-.+}})
 
-// TODO: Investigate these failures
-// XFAIL: asan, tsan, ubsan
-
 #include <assert.h>
 #include <dlfcn.h>
 #include <signal.h>

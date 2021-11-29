@@ -277,7 +277,7 @@ define amdgpu_kernel void @global_nontemporal_store_0(
 ; GFX10-WGP-NEXT:    s_load_dword s0, s[0:1], 0x0
 ; GFX10-WGP-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-WGP-NEXT:    v_mov_b32_e32 v1, s0
-; GFX10-WGP-NEXT:    global_store_dword v0, v1, s[2:3] slc
+; GFX10-WGP-NEXT:    global_store_dword v0, v1, s[2:3] glc slc
 ; GFX10-WGP-NEXT:    s_endpgm
 ;
 ; GFX10-CU-LABEL: global_nontemporal_store_0:
@@ -288,7 +288,7 @@ define amdgpu_kernel void @global_nontemporal_store_0(
 ; GFX10-CU-NEXT:    s_load_dword s0, s[0:1], 0x0
 ; GFX10-CU-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-CU-NEXT:    v_mov_b32_e32 v1, s0
-; GFX10-CU-NEXT:    global_store_dword v0, v1, s[2:3] slc
+; GFX10-CU-NEXT:    global_store_dword v0, v1, s[2:3] glc slc
 ; GFX10-CU-NEXT:    s_endpgm
 ;
 ; SKIP-CACHE-INV-LABEL: global_nontemporal_store_0:
@@ -334,7 +334,7 @@ define amdgpu_kernel void @global_nontemporal_store_0(
 ; GFX11-WGP-NEXT:    s_load_b32 s0, s[0:1], 0x0
 ; GFX11-WGP-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-WGP-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s0
-; GFX11-WGP-NEXT:    global_store_b32 v0, v1, s[2:3] slc
+; GFX11-WGP-NEXT:    global_store_b32 v0, v1, s[2:3] glc slc
 ; GFX11-WGP-NEXT:    s_endpgm
 ;
 ; GFX11-CU-LABEL: global_nontemporal_store_0:
@@ -344,7 +344,7 @@ define amdgpu_kernel void @global_nontemporal_store_0(
 ; GFX11-CU-NEXT:    s_load_b32 s0, s[0:1], 0x0
 ; GFX11-CU-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-CU-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s0
-; GFX11-CU-NEXT:    global_store_b32 v0, v1, s[2:3] slc
+; GFX11-CU-NEXT:    global_store_b32 v0, v1, s[2:3] glc slc
 ; GFX11-CU-NEXT:    s_endpgm
     i32 addrspace(1)* %in, i32 addrspace(1)* %out) {
 entry:
@@ -391,7 +391,7 @@ define amdgpu_kernel void @global_nontemporal_store_1(
 ; GFX10-WGP-NEXT:    s_load_dword s0, s[0:1], 0x0
 ; GFX10-WGP-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-WGP-NEXT:    v_mov_b32_e32 v1, s0
-; GFX10-WGP-NEXT:    global_store_dword v0, v1, s[2:3] slc
+; GFX10-WGP-NEXT:    global_store_dword v0, v1, s[2:3] glc slc
 ; GFX10-WGP-NEXT:    s_endpgm
 ;
 ; GFX10-CU-LABEL: global_nontemporal_store_1:
@@ -402,7 +402,7 @@ define amdgpu_kernel void @global_nontemporal_store_1(
 ; GFX10-CU-NEXT:    s_load_dword s0, s[0:1], 0x0
 ; GFX10-CU-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-CU-NEXT:    v_mov_b32_e32 v1, s0
-; GFX10-CU-NEXT:    global_store_dword v0, v1, s[2:3] slc
+; GFX10-CU-NEXT:    global_store_dword v0, v1, s[2:3] glc slc
 ; GFX10-CU-NEXT:    s_endpgm
 ;
 ; SKIP-CACHE-INV-LABEL: global_nontemporal_store_1:
@@ -449,7 +449,7 @@ define amdgpu_kernel void @global_nontemporal_store_1(
 ; GFX11-WGP-NEXT:    s_load_b32 s0, s[0:1], 0x0
 ; GFX11-WGP-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-WGP-NEXT:    v_dual_mov_b32 v1, s0 :: v_dual_lshlrev_b32 v0, 2, v0
-; GFX11-WGP-NEXT:    global_store_b32 v0, v1, s[2:3] slc
+; GFX11-WGP-NEXT:    global_store_b32 v0, v1, s[2:3] glc slc
 ; GFX11-WGP-NEXT:    s_endpgm
 ;
 ; GFX11-CU-LABEL: global_nontemporal_store_1:
@@ -459,7 +459,7 @@ define amdgpu_kernel void @global_nontemporal_store_1(
 ; GFX11-CU-NEXT:    s_load_b32 s0, s[0:1], 0x0
 ; GFX11-CU-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-CU-NEXT:    v_dual_mov_b32 v1, s0 :: v_dual_lshlrev_b32 v0, 2, v0
-; GFX11-CU-NEXT:    global_store_b32 v0, v1, s[2:3] slc
+; GFX11-CU-NEXT:    global_store_b32 v0, v1, s[2:3] glc slc
 ; GFX11-CU-NEXT:    s_endpgm
     i32 addrspace(1)* %in, i32 addrspace(1)* %out) {
 entry:

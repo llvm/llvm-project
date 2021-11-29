@@ -34,7 +34,7 @@ define void @masked_gather_v2i8(<2 x i8>* %a, <2 x i8*>* %b) #0 {
 ; CHECK-NEXT:    ldrb w8, [x0, #1]
 ; CHECK-NEXT:    mov v0.s[1], w8
 ; CHECK-NEXT:    cmeq v0.2s, v0.2s, #0
-; CHECK-NEXT:    ushll v0.2d, v0.2s, #0
+; CHECK-NEXT:    sshll v0.2d, v0.2s, #0
 ; CHECK-NEXT:    cmpne p0.d, p0/z, z0.d, #0
 ; CHECK-NEXT:    ld1sb { z0.d }, p0/z, [z1.d]
 ; CHECK-NEXT:    ptrue p0.s, vl2
@@ -57,8 +57,8 @@ define void @masked_gather_v4i8(<4 x i8>* %a, <4 x i8*>* %b) #0 {
 ; CHECK-NEXT:    ld1d { z1.d }, p0/z, [x1]
 ; CHECK-NEXT:    ushll v0.8h, v0.8b, #0
 ; CHECK-NEXT:    cmeq v0.4h, v0.4h, #0
-; CHECK-NEXT:    uunpklo z0.s, z0.h
-; CHECK-NEXT:    uunpklo z0.d, z0.s
+; CHECK-NEXT:    sunpklo z0.s, z0.h
+; CHECK-NEXT:    sunpklo z0.d, z0.s
 ; CHECK-NEXT:    cmpne p0.d, p0/z, z0.d, #0
 ; CHECK-NEXT:    ld1sb { z0.d }, p0/z, [z1.d]
 ; CHECK-NEXT:    ptrue p0.h, vl4
@@ -90,10 +90,10 @@ define void @masked_gather_v8i8(<8 x i8>* %a, <8 x i8*>* %b) #0 {
 ; VBITS_EQ_256-NEXT:    shl v0.4h, v0.4h, #8
 ; VBITS_EQ_256-NEXT:    sshr v1.4h, v1.4h, #8
 ; VBITS_EQ_256-NEXT:    sshr v0.4h, v0.4h, #8
-; VBITS_EQ_256-NEXT:    uunpklo z1.s, z1.h
-; VBITS_EQ_256-NEXT:    uunpklo z0.s, z0.h
-; VBITS_EQ_256-NEXT:    uunpklo z1.d, z1.s
-; VBITS_EQ_256-NEXT:    uunpklo z0.d, z0.s
+; VBITS_EQ_256-NEXT:    sunpklo z1.s, z1.h
+; VBITS_EQ_256-NEXT:    sunpklo z0.s, z0.h
+; VBITS_EQ_256-NEXT:    sunpklo z1.d, z1.s
+; VBITS_EQ_256-NEXT:    sunpklo z0.d, z0.s
 ; VBITS_EQ_256-NEXT:    cmpne p1.d, p0/z, z1.d, #0
 ; VBITS_EQ_256-NEXT:    cmpne p0.d, p0/z, z0.d, #0
 ; VBITS_EQ_256-NEXT:    ld1sb { z0.d }, p1/z, [z2.d]
@@ -112,9 +112,9 @@ define void @masked_gather_v8i8(<8 x i8>* %a, <8 x i8*>* %b) #0 {
 ; VBITS_GE_512-NEXT:    ptrue p0.d, vl8
 ; VBITS_GE_512-NEXT:    ld1d { z1.d }, p0/z, [x1]
 ; VBITS_GE_512-NEXT:    cmeq v0.8b, v0.8b, #0
-; VBITS_GE_512-NEXT:    uunpklo z0.h, z0.b
-; VBITS_GE_512-NEXT:    uunpklo z0.s, z0.h
-; VBITS_GE_512-NEXT:    uunpklo z0.d, z0.s
+; VBITS_GE_512-NEXT:    sunpklo z0.h, z0.b
+; VBITS_GE_512-NEXT:    sunpklo z0.s, z0.h
+; VBITS_GE_512-NEXT:    sunpklo z0.d, z0.s
 ; VBITS_GE_512-NEXT:    cmpne p0.d, p0/z, z0.d, #0
 ; VBITS_GE_512-NEXT:    ld1b { z0.d }, p0/z, [z1.d]
 ; VBITS_GE_512-NEXT:    uzp1 z0.s, z0.s, z0.s
@@ -137,9 +137,9 @@ define void @masked_gather_v16i8(<16 x i8>* %a, <16 x i8*>* %b) #0 {
 ; VBITS_GE_1024-NEXT:    ptrue p0.d, vl16
 ; VBITS_GE_1024-NEXT:    ld1d { z1.d }, p0/z, [x1]
 ; VBITS_GE_1024-NEXT:    cmeq v0.16b, v0.16b, #0
-; VBITS_GE_1024-NEXT:    uunpklo z0.h, z0.b
-; VBITS_GE_1024-NEXT:    uunpklo z0.s, z0.h
-; VBITS_GE_1024-NEXT:    uunpklo z0.d, z0.s
+; VBITS_GE_1024-NEXT:    sunpklo z0.h, z0.b
+; VBITS_GE_1024-NEXT:    sunpklo z0.s, z0.h
+; VBITS_GE_1024-NEXT:    sunpklo z0.d, z0.s
 ; VBITS_GE_1024-NEXT:    cmpne p0.d, p0/z, z0.d, #0
 ; VBITS_GE_1024-NEXT:    ld1b { z0.d }, p0/z, [z1.d]
 ; VBITS_GE_1024-NEXT:    uzp1 z0.s, z0.s, z0.s
@@ -164,9 +164,9 @@ define void @masked_gather_v32i8(<32 x i8>* %a, <32 x i8*>* %b) #0 {
 ; VBITS_GE_2048-NEXT:    ld1d { z1.d }, p2/z, [x1]
 ; VBITS_GE_2048-NEXT:    cmpeq p1.b, p0/z, z0.b, #0
 ; VBITS_GE_2048-NEXT:    mov z0.b, p1/z, #-1 // =0xffffffffffffffff
-; VBITS_GE_2048-NEXT:    uunpklo z0.h, z0.b
-; VBITS_GE_2048-NEXT:    uunpklo z0.s, z0.h
-; VBITS_GE_2048-NEXT:    uunpklo z0.d, z0.s
+; VBITS_GE_2048-NEXT:    sunpklo z0.h, z0.b
+; VBITS_GE_2048-NEXT:    sunpklo z0.s, z0.h
+; VBITS_GE_2048-NEXT:    sunpklo z0.d, z0.s
 ; VBITS_GE_2048-NEXT:    cmpne p1.d, p2/z, z0.d, #0
 ; VBITS_GE_2048-NEXT:    ld1b { z0.d }, p1/z, [z1.d]
 ; VBITS_GE_2048-NEXT:    uzp1 z0.s, z0.s, z0.s
@@ -196,7 +196,7 @@ define void @masked_gather_v2i16(<2 x i16>* %a, <2 x i16*>* %b) #0 {
 ; CHECK-NEXT:    ldrh w8, [x0, #2]
 ; CHECK-NEXT:    mov v0.s[1], w8
 ; CHECK-NEXT:    cmeq v0.2s, v0.2s, #0
-; CHECK-NEXT:    ushll v0.2d, v0.2s, #0
+; CHECK-NEXT:    sshll v0.2d, v0.2s, #0
 ; CHECK-NEXT:    cmpne p0.d, p0/z, z0.d, #0
 ; CHECK-NEXT:    ld1sh { z0.d }, p0/z, [z1.d]
 ; CHECK-NEXT:    ptrue p0.s, vl2
@@ -218,8 +218,8 @@ define void @masked_gather_v4i16(<4 x i16>* %a, <4 x i16*>* %b) #0 {
 ; CHECK-NEXT:    ptrue p0.d, vl4
 ; CHECK-NEXT:    ld1d { z1.d }, p0/z, [x1]
 ; CHECK-NEXT:    cmeq v0.4h, v0.4h, #0
-; CHECK-NEXT:    uunpklo z0.s, z0.h
-; CHECK-NEXT:    uunpklo z0.d, z0.s
+; CHECK-NEXT:    sunpklo z0.s, z0.h
+; CHECK-NEXT:    sunpklo z0.d, z0.s
 ; CHECK-NEXT:    cmpne p0.d, p0/z, z0.d, #0
 ; CHECK-NEXT:    ld1h { z0.d }, p0/z, [z1.d]
 ; CHECK-NEXT:    uzp1 z0.s, z0.s, z0.s
@@ -245,12 +245,12 @@ define void @masked_gather_v8i16(<8 x i16>* %a, <8 x i16*>* %b) #0 {
 ; VBITS_EQ_256-NEXT:    ld1d { z2.d }, p0/z, [x1, x8, lsl #3]
 ; VBITS_EQ_256-NEXT:    ld1d { z3.d }, p0/z, [x1]
 ; VBITS_EQ_256-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
-; VBITS_EQ_256-NEXT:    uunpklo z0.s, z0.h
-; VBITS_EQ_256-NEXT:    uunpklo z0.d, z0.s
+; VBITS_EQ_256-NEXT:    sunpklo z0.s, z0.h
+; VBITS_EQ_256-NEXT:    sunpklo z0.d, z0.s
 ; VBITS_EQ_256-NEXT:    cmpne p1.d, p0/z, z0.d, #0
 ; VBITS_EQ_256-NEXT:    ld1h { z0.d }, p1/z, [z3.d]
-; VBITS_EQ_256-NEXT:    uunpklo z1.s, z1.h
-; VBITS_EQ_256-NEXT:    uunpklo z1.d, z1.s
+; VBITS_EQ_256-NEXT:    sunpklo z1.s, z1.h
+; VBITS_EQ_256-NEXT:    sunpklo z1.d, z1.s
 ; VBITS_EQ_256-NEXT:    cmpne p0.d, p0/z, z1.d, #0
 ; VBITS_EQ_256-NEXT:    ld1h { z1.d }, p0/z, [z2.d]
 ; VBITS_EQ_256-NEXT:    uzp1 z0.s, z0.s, z0.s
@@ -267,8 +267,8 @@ define void @masked_gather_v8i16(<8 x i16>* %a, <8 x i16*>* %b) #0 {
 ; VBITS_GE_512-NEXT:    ptrue p0.d, vl8
 ; VBITS_GE_512-NEXT:    ld1d { z1.d }, p0/z, [x1]
 ; VBITS_GE_512-NEXT:    cmeq v0.8h, v0.8h, #0
-; VBITS_GE_512-NEXT:    uunpklo z0.s, z0.h
-; VBITS_GE_512-NEXT:    uunpklo z0.d, z0.s
+; VBITS_GE_512-NEXT:    sunpklo z0.s, z0.h
+; VBITS_GE_512-NEXT:    sunpklo z0.d, z0.s
 ; VBITS_GE_512-NEXT:    cmpne p0.d, p0/z, z0.d, #0
 ; VBITS_GE_512-NEXT:    ld1h { z0.d }, p0/z, [z1.d]
 ; VBITS_GE_512-NEXT:    uzp1 z0.s, z0.s, z0.s
@@ -292,8 +292,8 @@ define void @masked_gather_v16i16(<16 x i16>* %a, <16 x i16*>* %b) #0 {
 ; VBITS_GE_1024-NEXT:    cmpeq p2.h, p0/z, z0.h, #0
 ; VBITS_GE_1024-NEXT:    ld1d { z0.d }, p1/z, [x1]
 ; VBITS_GE_1024-NEXT:    mov z1.h, p2/z, #-1 // =0xffffffffffffffff
-; VBITS_GE_1024-NEXT:    uunpklo z1.s, z1.h
-; VBITS_GE_1024-NEXT:    uunpklo z1.d, z1.s
+; VBITS_GE_1024-NEXT:    sunpklo z1.s, z1.h
+; VBITS_GE_1024-NEXT:    sunpklo z1.d, z1.s
 ; VBITS_GE_1024-NEXT:    cmpne p1.d, p1/z, z1.d, #0
 ; VBITS_GE_1024-NEXT:    ld1h { z0.d }, p1/z, [z0.d]
 ; VBITS_GE_1024-NEXT:    uzp1 z0.s, z0.s, z0.s
@@ -317,8 +317,8 @@ define void @masked_gather_v32i16(<32 x i16>* %a, <32 x i16*>* %b) #0 {
 ; VBITS_GE_2048-NEXT:    cmpeq p2.h, p0/z, z0.h, #0
 ; VBITS_GE_2048-NEXT:    ld1d { z0.d }, p1/z, [x1]
 ; VBITS_GE_2048-NEXT:    mov z1.h, p2/z, #-1 // =0xffffffffffffffff
-; VBITS_GE_2048-NEXT:    uunpklo z1.s, z1.h
-; VBITS_GE_2048-NEXT:    uunpklo z1.d, z1.s
+; VBITS_GE_2048-NEXT:    sunpklo z1.s, z1.h
+; VBITS_GE_2048-NEXT:    sunpklo z1.d, z1.s
 ; VBITS_GE_2048-NEXT:    cmpne p1.d, p1/z, z1.d, #0
 ; VBITS_GE_2048-NEXT:    ld1h { z0.d }, p1/z, [z0.d]
 ; VBITS_GE_2048-NEXT:    uzp1 z0.s, z0.s, z0.s
@@ -344,7 +344,7 @@ define void @masked_gather_v2i32(<2 x i32>* %a, <2 x i32*>* %b) #0 {
 ; CHECK-NEXT:    ptrue p0.d, vl2
 ; CHECK-NEXT:    ldr q1, [x1]
 ; CHECK-NEXT:    cmeq v0.2s, v0.2s, #0
-; CHECK-NEXT:    ushll v0.2d, v0.2s, #0
+; CHECK-NEXT:    sshll v0.2d, v0.2s, #0
 ; CHECK-NEXT:    cmpne p0.d, p0/z, z0.d, #0
 ; CHECK-NEXT:    ld1w { z0.d }, p0/z, [z1.d]
 ; CHECK-NEXT:    xtn v0.2s, v0.2d
@@ -365,7 +365,7 @@ define void @masked_gather_v4i32(<4 x i32>* %a, <4 x i32*>* %b) #0 {
 ; CHECK-NEXT:    ptrue p0.d, vl4
 ; CHECK-NEXT:    ld1d { z1.d }, p0/z, [x1]
 ; CHECK-NEXT:    cmeq v0.4s, v0.4s, #0
-; CHECK-NEXT:    uunpklo z0.d, z0.s
+; CHECK-NEXT:    sunpklo z0.d, z0.s
 ; CHECK-NEXT:    cmpne p0.d, p0/z, z0.d, #0
 ; CHECK-NEXT:    ld1w { z0.d }, p0/z, [z1.d]
 ; CHECK-NEXT:    uzp1 z0.s, z0.s, z0.s
@@ -391,9 +391,9 @@ define void @masked_gather_v8i32(<8 x i32>* %a, <8 x i32*>* %b) #0 {
 ; VBITS_EQ_256-NEXT:    ld1d { z2.d }, p1/z, [x1]
 ; VBITS_EQ_256-NEXT:    cmpeq p2.s, p0/z, z0.s, #0
 ; VBITS_EQ_256-NEXT:    mov z0.s, p2/z, #-1 // =0xffffffffffffffff
-; VBITS_EQ_256-NEXT:    uunpklo z3.d, z0.s
+; VBITS_EQ_256-NEXT:    sunpklo z3.d, z0.s
 ; VBITS_EQ_256-NEXT:    ext z0.b, z0.b, z0.b, #16
-; VBITS_EQ_256-NEXT:    uunpklo z0.d, z0.s
+; VBITS_EQ_256-NEXT:    sunpklo z0.d, z0.s
 ; VBITS_EQ_256-NEXT:    cmpne p2.d, p1/z, z3.d, #0
 ; VBITS_EQ_256-NEXT:    cmpne p1.d, p1/z, z0.d, #0
 ; VBITS_EQ_256-NEXT:    ld1w { z2.d }, p2/z, [z2.d]
@@ -413,7 +413,7 @@ define void @masked_gather_v8i32(<8 x i32>* %a, <8 x i32*>* %b) #0 {
 ; VBITS_GE_512-NEXT:    ld1d { z1.d }, p1/z, [x1]
 ; VBITS_GE_512-NEXT:    cmpeq p2.s, p0/z, z0.s, #0
 ; VBITS_GE_512-NEXT:    mov z0.s, p2/z, #-1 // =0xffffffffffffffff
-; VBITS_GE_512-NEXT:    uunpklo z0.d, z0.s
+; VBITS_GE_512-NEXT:    sunpklo z0.d, z0.s
 ; VBITS_GE_512-NEXT:    cmpne p1.d, p1/z, z0.d, #0
 ; VBITS_GE_512-NEXT:    ld1w { z0.d }, p1/z, [z1.d]
 ; VBITS_GE_512-NEXT:    uzp1 z0.s, z0.s, z0.s
@@ -436,7 +436,7 @@ define void @masked_gather_v16i32(<16 x i32>* %a, <16 x i32*>* %b) #0 {
 ; VBITS_GE_1024-NEXT:    ld1d { z1.d }, p1/z, [x1]
 ; VBITS_GE_1024-NEXT:    cmpeq p2.s, p0/z, z0.s, #0
 ; VBITS_GE_1024-NEXT:    mov z0.s, p2/z, #-1 // =0xffffffffffffffff
-; VBITS_GE_1024-NEXT:    uunpklo z0.d, z0.s
+; VBITS_GE_1024-NEXT:    sunpklo z0.d, z0.s
 ; VBITS_GE_1024-NEXT:    cmpne p1.d, p1/z, z0.d, #0
 ; VBITS_GE_1024-NEXT:    ld1w { z0.d }, p1/z, [z1.d]
 ; VBITS_GE_1024-NEXT:    uzp1 z0.s, z0.s, z0.s
@@ -459,7 +459,7 @@ define void @masked_gather_v32i32(<32 x i32>* %a, <32 x i32*>* %b) #0 {
 ; VBITS_GE_2048-NEXT:    ld1d { z1.d }, p1/z, [x1]
 ; VBITS_GE_2048-NEXT:    cmpeq p2.s, p0/z, z0.s, #0
 ; VBITS_GE_2048-NEXT:    mov z0.s, p2/z, #-1 // =0xffffffffffffffff
-; VBITS_GE_2048-NEXT:    uunpklo z0.d, z0.s
+; VBITS_GE_2048-NEXT:    sunpklo z0.d, z0.s
 ; VBITS_GE_2048-NEXT:    cmpne p1.d, p1/z, z0.d, #0
 ; VBITS_GE_2048-NEXT:    ld1w { z0.d }, p1/z, [z1.d]
 ; VBITS_GE_2048-NEXT:    uzp1 z0.s, z0.s, z0.s
@@ -633,8 +633,8 @@ define void @masked_gather_v2f16(<2 x half>* %a, <2 x half*>* %b) #0 {
 ; CHECK-NEXT:    mov v0.h[1], w9
 ; CHECK-NEXT:    shl v0.4h, v0.4h, #15
 ; CHECK-NEXT:    sshr v0.4h, v0.4h, #15
-; CHECK-NEXT:    uunpklo z0.s, z0.h
-; CHECK-NEXT:    uunpklo z0.d, z0.s
+; CHECK-NEXT:    sunpklo z0.s, z0.h
+; CHECK-NEXT:    sunpklo z0.d, z0.s
 ; CHECK-NEXT:    cmpne p0.d, p0/z, z0.d, #0
 ; CHECK-NEXT:    ld1h { z0.d }, p0/z, [z1.d]
 ; CHECK-NEXT:    uzp1 z0.s, z0.s, z0.s
@@ -656,8 +656,8 @@ define void @masked_gather_v4f16(<4 x half>* %a, <4 x half*>* %b) #0 {
 ; CHECK-NEXT:    ptrue p0.d, vl4
 ; CHECK-NEXT:    ld1d { z1.d }, p0/z, [x1]
 ; CHECK-NEXT:    fcmeq v0.4h, v0.4h, #0.0
-; CHECK-NEXT:    uunpklo z0.s, z0.h
-; CHECK-NEXT:    uunpklo z0.d, z0.s
+; CHECK-NEXT:    sunpklo z0.s, z0.h
+; CHECK-NEXT:    sunpklo z0.d, z0.s
 ; CHECK-NEXT:    cmpne p0.d, p0/z, z0.d, #0
 ; CHECK-NEXT:    ld1h { z0.d }, p0/z, [z1.d]
 ; CHECK-NEXT:    uzp1 z0.s, z0.s, z0.s
@@ -679,8 +679,8 @@ define void @masked_gather_v8f16(<8 x half>* %a, <8 x half*>* %b) #0 {
 ; VBITS_GE_512-NEXT:    ptrue p0.d, vl8
 ; VBITS_GE_512-NEXT:    ld1d { z1.d }, p0/z, [x1]
 ; VBITS_GE_512-NEXT:    fcmeq v0.8h, v0.8h, #0.0
-; VBITS_GE_512-NEXT:    uunpklo z0.s, z0.h
-; VBITS_GE_512-NEXT:    uunpklo z0.d, z0.s
+; VBITS_GE_512-NEXT:    sunpklo z0.s, z0.h
+; VBITS_GE_512-NEXT:    sunpklo z0.d, z0.s
 ; VBITS_GE_512-NEXT:    cmpne p0.d, p0/z, z0.d, #0
 ; VBITS_GE_512-NEXT:    ld1h { z0.d }, p0/z, [z1.d]
 ; VBITS_GE_512-NEXT:    uzp1 z0.s, z0.s, z0.s
@@ -704,8 +704,8 @@ define void @masked_gather_v16f16(<16 x half>* %a, <16 x half*>* %b) #0 {
 ; VBITS_GE_1024-NEXT:    fcmeq p2.h, p0/z, z0.h, #0.0
 ; VBITS_GE_1024-NEXT:    ld1d { z0.d }, p1/z, [x1]
 ; VBITS_GE_1024-NEXT:    mov z1.h, p2/z, #-1 // =0xffffffffffffffff
-; VBITS_GE_1024-NEXT:    uunpklo z1.s, z1.h
-; VBITS_GE_1024-NEXT:    uunpklo z1.d, z1.s
+; VBITS_GE_1024-NEXT:    sunpklo z1.s, z1.h
+; VBITS_GE_1024-NEXT:    sunpklo z1.d, z1.s
 ; VBITS_GE_1024-NEXT:    cmpne p1.d, p1/z, z1.d, #0
 ; VBITS_GE_1024-NEXT:    ld1h { z0.d }, p1/z, [z0.d]
 ; VBITS_GE_1024-NEXT:    uzp1 z0.s, z0.s, z0.s
@@ -729,8 +729,8 @@ define void @masked_gather_v32f16(<32 x half>* %a, <32 x half*>* %b) #0 {
 ; VBITS_GE_2048-NEXT:    fcmeq p2.h, p0/z, z0.h, #0.0
 ; VBITS_GE_2048-NEXT:    ld1d { z0.d }, p1/z, [x1]
 ; VBITS_GE_2048-NEXT:    mov z1.h, p2/z, #-1 // =0xffffffffffffffff
-; VBITS_GE_2048-NEXT:    uunpklo z1.s, z1.h
-; VBITS_GE_2048-NEXT:    uunpklo z1.d, z1.s
+; VBITS_GE_2048-NEXT:    sunpklo z1.s, z1.h
+; VBITS_GE_2048-NEXT:    sunpklo z1.d, z1.s
 ; VBITS_GE_2048-NEXT:    cmpne p1.d, p1/z, z1.d, #0
 ; VBITS_GE_2048-NEXT:    ld1h { z0.d }, p1/z, [z0.d]
 ; VBITS_GE_2048-NEXT:    uzp1 z0.s, z0.s, z0.s
@@ -756,7 +756,7 @@ define void @masked_gather_v2f32(<2 x float>* %a, <2 x float*>* %b) #0 {
 ; CHECK-NEXT:    ptrue p0.d, vl2
 ; CHECK-NEXT:    ldr q1, [x1]
 ; CHECK-NEXT:    fcmeq v0.2s, v0.2s, #0.0
-; CHECK-NEXT:    ushll v0.2d, v0.2s, #0
+; CHECK-NEXT:    sshll v0.2d, v0.2s, #0
 ; CHECK-NEXT:    cmpne p0.d, p0/z, z0.d, #0
 ; CHECK-NEXT:    ld1w { z0.d }, p0/z, [z1.d]
 ; CHECK-NEXT:    xtn v0.2s, v0.2d
@@ -777,7 +777,7 @@ define void @masked_gather_v4f32(<4 x float>* %a, <4 x float*>* %b) #0 {
 ; CHECK-NEXT:    ptrue p0.d, vl4
 ; CHECK-NEXT:    ld1d { z1.d }, p0/z, [x1]
 ; CHECK-NEXT:    fcmeq v0.4s, v0.4s, #0.0
-; CHECK-NEXT:    uunpklo z0.d, z0.s
+; CHECK-NEXT:    sunpklo z0.d, z0.s
 ; CHECK-NEXT:    cmpne p0.d, p0/z, z0.d, #0
 ; CHECK-NEXT:    ld1w { z0.d }, p0/z, [z1.d]
 ; CHECK-NEXT:    uzp1 z0.s, z0.s, z0.s
@@ -800,7 +800,7 @@ define void @masked_gather_v8f32(<8 x float>* %a, <8 x float*>* %b) #0 {
 ; VBITS_GE_512-NEXT:    ld1d { z1.d }, p1/z, [x1]
 ; VBITS_GE_512-NEXT:    fcmeq p2.s, p0/z, z0.s, #0.0
 ; VBITS_GE_512-NEXT:    mov z0.s, p2/z, #-1 // =0xffffffffffffffff
-; VBITS_GE_512-NEXT:    uunpklo z0.d, z0.s
+; VBITS_GE_512-NEXT:    sunpklo z0.d, z0.s
 ; VBITS_GE_512-NEXT:    cmpne p1.d, p1/z, z0.d, #0
 ; VBITS_GE_512-NEXT:    ld1w { z0.d }, p1/z, [z1.d]
 ; VBITS_GE_512-NEXT:    uzp1 z0.s, z0.s, z0.s
@@ -823,7 +823,7 @@ define void @masked_gather_v16f32(<16 x float>* %a, <16 x float*>* %b) #0 {
 ; VBITS_GE_1024-NEXT:    ld1d { z1.d }, p1/z, [x1]
 ; VBITS_GE_1024-NEXT:    fcmeq p2.s, p0/z, z0.s, #0.0
 ; VBITS_GE_1024-NEXT:    mov z0.s, p2/z, #-1 // =0xffffffffffffffff
-; VBITS_GE_1024-NEXT:    uunpklo z0.d, z0.s
+; VBITS_GE_1024-NEXT:    sunpklo z0.d, z0.s
 ; VBITS_GE_1024-NEXT:    cmpne p1.d, p1/z, z0.d, #0
 ; VBITS_GE_1024-NEXT:    ld1w { z0.d }, p1/z, [z1.d]
 ; VBITS_GE_1024-NEXT:    uzp1 z0.s, z0.s, z0.s
@@ -846,7 +846,7 @@ define void @masked_gather_v32f32(<32 x float>* %a, <32 x float*>* %b) #0 {
 ; VBITS_GE_2048-NEXT:    ld1d { z1.d }, p1/z, [x1]
 ; VBITS_GE_2048-NEXT:    fcmeq p2.s, p0/z, z0.s, #0.0
 ; VBITS_GE_2048-NEXT:    mov z0.s, p2/z, #-1 // =0xffffffffffffffff
-; VBITS_GE_2048-NEXT:    uunpklo z0.d, z0.s
+; VBITS_GE_2048-NEXT:    sunpklo z0.d, z0.s
 ; VBITS_GE_2048-NEXT:    cmpne p1.d, p1/z, z0.d, #0
 ; VBITS_GE_2048-NEXT:    ld1w { z0.d }, p1/z, [z1.d]
 ; VBITS_GE_2048-NEXT:    uzp1 z0.s, z0.s, z0.s
@@ -991,8 +991,8 @@ define void @masked_gather_32b_scaled_sext_f16(<32 x half>* %a, <32 x i32>* %b, 
 ; VBITS_GE_2048-NEXT:    fcmeq p2.h, p0/z, z0.h, #0.0
 ; VBITS_GE_2048-NEXT:    ld1sw { z0.d }, p1/z, [x1]
 ; VBITS_GE_2048-NEXT:    mov z1.h, p2/z, #-1 // =0xffffffffffffffff
-; VBITS_GE_2048-NEXT:    uunpklo z1.s, z1.h
-; VBITS_GE_2048-NEXT:    uunpklo z1.d, z1.s
+; VBITS_GE_2048-NEXT:    sunpklo z1.s, z1.h
+; VBITS_GE_2048-NEXT:    sunpklo z1.d, z1.s
 ; VBITS_GE_2048-NEXT:    cmpne p1.d, p1/z, z1.d, #0
 ; VBITS_GE_2048-NEXT:    ld1h { z0.d }, p1/z, [x2, z0.d, lsl #1]
 ; VBITS_GE_2048-NEXT:    uzp1 z0.s, z0.s, z0.s
@@ -1019,7 +1019,7 @@ define void @masked_gather_32b_scaled_sext_f32(<32 x float>* %a, <32 x i32>* %b,
 ; VBITS_GE_2048-NEXT:    ld1sw { z1.d }, p1/z, [x1]
 ; VBITS_GE_2048-NEXT:    fcmeq p2.s, p0/z, z0.s, #0.0
 ; VBITS_GE_2048-NEXT:    mov z0.s, p2/z, #-1 // =0xffffffffffffffff
-; VBITS_GE_2048-NEXT:    uunpklo z0.d, z0.s
+; VBITS_GE_2048-NEXT:    sunpklo z0.d, z0.s
 ; VBITS_GE_2048-NEXT:    cmpne p1.d, p1/z, z0.d, #0
 ; VBITS_GE_2048-NEXT:    ld1w { z0.d }, p1/z, [x2, z1.d, lsl #2]
 ; VBITS_GE_2048-NEXT:    uzp1 z0.s, z0.s, z0.s
@@ -1066,8 +1066,8 @@ define void @masked_gather_32b_scaled_zext(<32 x half>* %a, <32 x i32>* %b, half
 ; VBITS_GE_2048-NEXT:    fcmeq p2.h, p0/z, z0.h, #0.0
 ; VBITS_GE_2048-NEXT:    ld1w { z0.d }, p1/z, [x1]
 ; VBITS_GE_2048-NEXT:    mov z1.h, p2/z, #-1 // =0xffffffffffffffff
-; VBITS_GE_2048-NEXT:    uunpklo z1.s, z1.h
-; VBITS_GE_2048-NEXT:    uunpklo z1.d, z1.s
+; VBITS_GE_2048-NEXT:    sunpklo z1.s, z1.h
+; VBITS_GE_2048-NEXT:    sunpklo z1.d, z1.s
 ; VBITS_GE_2048-NEXT:    cmpne p1.d, p1/z, z1.d, #0
 ; VBITS_GE_2048-NEXT:    ld1h { z0.d }, p1/z, [x2, z0.d, lsl #1]
 ; VBITS_GE_2048-NEXT:    uzp1 z0.s, z0.s, z0.s
@@ -1094,8 +1094,8 @@ define void @masked_gather_32b_unscaled_sext(<32 x half>* %a, <32 x i32>* %b, i8
 ; VBITS_GE_2048-NEXT:    fcmeq p2.h, p0/z, z0.h, #0.0
 ; VBITS_GE_2048-NEXT:    ld1sw { z0.d }, p1/z, [x1]
 ; VBITS_GE_2048-NEXT:    mov z1.h, p2/z, #-1 // =0xffffffffffffffff
-; VBITS_GE_2048-NEXT:    uunpklo z1.s, z1.h
-; VBITS_GE_2048-NEXT:    uunpklo z1.d, z1.s
+; VBITS_GE_2048-NEXT:    sunpklo z1.s, z1.h
+; VBITS_GE_2048-NEXT:    sunpklo z1.d, z1.s
 ; VBITS_GE_2048-NEXT:    cmpne p1.d, p1/z, z1.d, #0
 ; VBITS_GE_2048-NEXT:    ld1h { z0.d }, p1/z, [x2, z0.d]
 ; VBITS_GE_2048-NEXT:    uzp1 z0.s, z0.s, z0.s
@@ -1123,8 +1123,8 @@ define void @masked_gather_32b_unscaled_zext(<32 x half>* %a, <32 x i32>* %b, i8
 ; VBITS_GE_2048-NEXT:    fcmeq p2.h, p0/z, z0.h, #0.0
 ; VBITS_GE_2048-NEXT:    ld1w { z0.d }, p1/z, [x1]
 ; VBITS_GE_2048-NEXT:    mov z1.h, p2/z, #-1 // =0xffffffffffffffff
-; VBITS_GE_2048-NEXT:    uunpklo z1.s, z1.h
-; VBITS_GE_2048-NEXT:    uunpklo z1.d, z1.s
+; VBITS_GE_2048-NEXT:    sunpklo z1.s, z1.h
+; VBITS_GE_2048-NEXT:    sunpklo z1.d, z1.s
 ; VBITS_GE_2048-NEXT:    cmpne p1.d, p1/z, z1.d, #0
 ; VBITS_GE_2048-NEXT:    ld1h { z0.d }, p1/z, [x2, z0.d]
 ; VBITS_GE_2048-NEXT:    uzp1 z0.s, z0.s, z0.s
@@ -1151,7 +1151,7 @@ define void @masked_gather_64b_scaled(<32 x float>* %a, <32 x i64>* %b, float* %
 ; VBITS_GE_2048-NEXT:    ld1d { z1.d }, p1/z, [x1]
 ; VBITS_GE_2048-NEXT:    fcmeq p2.s, p0/z, z0.s, #0.0
 ; VBITS_GE_2048-NEXT:    mov z0.s, p2/z, #-1 // =0xffffffffffffffff
-; VBITS_GE_2048-NEXT:    uunpklo z0.d, z0.s
+; VBITS_GE_2048-NEXT:    sunpklo z0.d, z0.s
 ; VBITS_GE_2048-NEXT:    cmpne p1.d, p1/z, z0.d, #0
 ; VBITS_GE_2048-NEXT:    ld1w { z0.d }, p1/z, [x2, z1.d, lsl #2]
 ; VBITS_GE_2048-NEXT:    uzp1 z0.s, z0.s, z0.s
@@ -1175,7 +1175,7 @@ define void @masked_gather_64b_unscaled(<32 x float>* %a, <32 x i64>* %b, i8* %b
 ; VBITS_GE_2048-NEXT:    ld1d { z1.d }, p1/z, [x1]
 ; VBITS_GE_2048-NEXT:    fcmeq p2.s, p0/z, z0.s, #0.0
 ; VBITS_GE_2048-NEXT:    mov z0.s, p2/z, #-1 // =0xffffffffffffffff
-; VBITS_GE_2048-NEXT:    uunpklo z0.d, z0.s
+; VBITS_GE_2048-NEXT:    sunpklo z0.d, z0.s
 ; VBITS_GE_2048-NEXT:    cmpne p1.d, p1/z, z0.d, #0
 ; VBITS_GE_2048-NEXT:    ld1w { z0.d }, p1/z, [x2, z1.d]
 ; VBITS_GE_2048-NEXT:    uzp1 z0.s, z0.s, z0.s
@@ -1203,7 +1203,7 @@ define void @masked_gather_vec_plus_reg(<32 x float>* %a, <32 x i8*>* %b, i64 %o
 ; VBITS_GE_2048-NEXT:    fcmeq p2.s, p0/z, z0.s, #0.0
 ; VBITS_GE_2048-NEXT:    add z1.d, p1/m, z1.d, z2.d
 ; VBITS_GE_2048-NEXT:    mov z0.s, p2/z, #-1 // =0xffffffffffffffff
-; VBITS_GE_2048-NEXT:    uunpklo z0.d, z0.s
+; VBITS_GE_2048-NEXT:    sunpklo z0.d, z0.s
 ; VBITS_GE_2048-NEXT:    cmpne p1.d, p1/z, z0.d, #0
 ; VBITS_GE_2048-NEXT:    ld1w { z0.d }, p1/z, [z1.d]
 ; VBITS_GE_2048-NEXT:    uzp1 z0.s, z0.s, z0.s
@@ -1231,7 +1231,7 @@ define void @masked_gather_vec_plus_imm(<32 x float>* %a, <32 x i8*>* %b) #0 {
 ; VBITS_GE_2048-NEXT:    fcmeq p2.s, p0/z, z0.s, #0.0
 ; VBITS_GE_2048-NEXT:    add z1.d, p1/m, z1.d, z2.d
 ; VBITS_GE_2048-NEXT:    mov z0.s, p2/z, #-1 // =0xffffffffffffffff
-; VBITS_GE_2048-NEXT:    uunpklo z0.d, z0.s
+; VBITS_GE_2048-NEXT:    sunpklo z0.d, z0.s
 ; VBITS_GE_2048-NEXT:    cmpne p1.d, p1/z, z0.d, #0
 ; VBITS_GE_2048-NEXT:    ld1w { z0.d }, p1/z, [z1.d]
 ; VBITS_GE_2048-NEXT:    uzp1 z0.s, z0.s, z0.s
@@ -1256,7 +1256,7 @@ define void @masked_gather_passthru(<32 x float>* %a, <32 x float*>* %b, <32 x f
 ; VBITS_GE_2048-NEXT:    ld1d { z1.d }, p1/z, [x1]
 ; VBITS_GE_2048-NEXT:    fcmeq p2.s, p0/z, z0.s, #0.0
 ; VBITS_GE_2048-NEXT:    mov z0.s, p2/z, #-1 // =0xffffffffffffffff
-; VBITS_GE_2048-NEXT:    uunpklo z0.d, z0.s
+; VBITS_GE_2048-NEXT:    sunpklo z0.d, z0.s
 ; VBITS_GE_2048-NEXT:    cmpne p1.d, p1/z, z0.d, #0
 ; VBITS_GE_2048-NEXT:    ld1w { z0.s }, p0/z, [x2]
 ; VBITS_GE_2048-NEXT:    ld1w { z1.d }, p1/z, [z1.d]
@@ -1282,7 +1282,7 @@ define void @masked_gather_passthru_0(<32 x float>* %a, <32 x float*>* %b) #0 {
 ; VBITS_GE_2048-NEXT:    ld1d { z1.d }, p1/z, [x1]
 ; VBITS_GE_2048-NEXT:    fcmeq p2.s, p0/z, z0.s, #0.0
 ; VBITS_GE_2048-NEXT:    mov z0.s, p2/z, #-1 // =0xffffffffffffffff
-; VBITS_GE_2048-NEXT:    uunpklo z0.d, z0.s
+; VBITS_GE_2048-NEXT:    sunpklo z0.d, z0.s
 ; VBITS_GE_2048-NEXT:    cmpne p1.d, p1/z, z0.d, #0
 ; VBITS_GE_2048-NEXT:    ld1w { z0.d }, p1/z, [z1.d]
 ; VBITS_GE_2048-NEXT:    uzp1 z0.s, z0.s, z0.s

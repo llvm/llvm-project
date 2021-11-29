@@ -14,6 +14,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "mlir/Dialect/Bufferization/IR/Bufferization.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/Linalg/Utils/Utils.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
@@ -83,6 +84,22 @@ static Value constantOverheadTypeEncoding(ConversionPatternRewriter &rewriter,
     break;
   }
   return constantI32(rewriter, loc, static_cast<uint32_t>(sec));
+}
+
+/// Generates a constant of the internal type encoding for pointer
+/// overhead storage.
+static Value constantPointerTypeEncoding(ConversionPatternRewriter &rewriter,
+                                         Location loc,
+                                         SparseTensorEncodingAttr &enc) {
+  return constantOverheadTypeEncoding(rewriter, loc, enc.getPointerBitWidth());
+}
+
+/// Generates a constant of the internal type encoding for index overhead
+/// storage.
+static Value constantIndexTypeEncoding(ConversionPatternRewriter &rewriter,
+                                       Location loc,
+                                       SparseTensorEncodingAttr &enc) {
+  return constantOverheadTypeEncoding(rewriter, loc, enc.getIndexBitWidth());
 }
 
 /// Generates a constant of the internal type encoding for primary storage.
@@ -277,10 +294,8 @@ static void newParams(ConversionPatternRewriter &rewriter,
   params.push_back(genBuffer(rewriter, loc, rev));
   // Secondary and primary types encoding.
   ShapedType resType = op->getResult(0).getType().cast<ShapedType>();
-  params.push_back(
-      constantOverheadTypeEncoding(rewriter, loc, enc.getPointerBitWidth()));
-  params.push_back(
-      constantOverheadTypeEncoding(rewriter, loc, enc.getIndexBitWidth()));
+  params.push_back(constantPointerTypeEncoding(rewriter, loc, enc));
+  params.push_back(constantIndexTypeEncoding(rewriter, loc, enc));
   params.push_back(
       constantPrimaryTypeEncoding(rewriter, loc, resType.getElementType()));
   // User action and pointer.
@@ -598,10 +613,8 @@ class SparseTensorConvertConverter : public OpConversionPattern<ConvertOp> {
           encSrc.getPointerBitWidth(), encSrc.getIndexBitWidth());
       newParams(rewriter, params, op, enc, Action::kToCOO, sizes, src);
       Value coo = genNewCall(rewriter, op, params);
-      params[3] = constantOverheadTypeEncoding(rewriter, loc,
-                                               encDst.getPointerBitWidth());
-      params[4] = constantOverheadTypeEncoding(rewriter, loc,
-                                               encDst.getIndexBitWidth());
+      params[3] = constantPointerTypeEncoding(rewriter, loc, encDst);
+      params[4] = constantIndexTypeEncoding(rewriter, loc, encDst);
       params[6] = constantAction(rewriter, loc, Action::kFromCOO);
       params[7] = coo;
       rewriter.replaceOp(op, genNewCall(rewriter, op, params));
@@ -647,7 +660,7 @@ class SparseTensorConvertConverter : public OpConversionPattern<ConvertOp> {
       insertScalarIntoDenseTensor(rewriter, loc, elemPtr, dst, rank, ind);
       rewriter.create<scf::YieldOp>(loc);
       rewriter.setInsertionPointAfter(whileOp);
-      rewriter.replaceOpWithNewOp<memref::TensorLoadOp>(op, resType, dst);
+      rewriter.replaceOpWithNewOp<bufferization::ToTensorOp>(op, resType, dst);
       return success();
     }
     if (!encDst && !encSrc) {

@@ -14,78 +14,106 @@
 
 namespace __sanitizer {
 
-static constexpr u32 kStackSizeBits = 16;
+namespace {
+struct StackTraceHeader {
+  static constexpr u32 kStackSizeBits = 8;
+
+  u8 size;
+  u8 tag;
+  explicit StackTraceHeader(const StackTrace &trace)
+      : size(Min<uptr>(trace.size, (1u << 8) - 1)), tag(trace.tag) {
+    CHECK_EQ(trace.tag, static_cast<uptr>(tag));
+  }
+  explicit StackTraceHeader(uptr h)
+      : size(h & ((1 << kStackSizeBits) - 1)), tag(h >> kStackSizeBits) {}
+
+  uptr ToUptr() const {
+    return static_cast<uptr>(size) | (static_cast<uptr>(tag) << kStackSizeBits);
+  }
+};
+}  // namespace
 
 StackStore::Id StackStore::Store(const StackTrace &trace) {
-  uptr *stack_trace = Alloc(trace.size + 1);
-  CHECK_LT(trace.size, 1 << kStackSizeBits);
-  *stack_trace = trace.size + (trace.tag << kStackSizeBits);
-  internal_memcpy(stack_trace + 1, trace.trace, trace.size * sizeof(uptr));
-  return reinterpret_cast<StackStore::Id>(stack_trace);
+  if (!trace.size && !trace.tag)
+    return 0;
+  StackTraceHeader h(trace);
+  uptr idx;
+  uptr *stack_trace = Alloc(h.size + 1, &idx);
+  *stack_trace = h.ToUptr();
+  internal_memcpy(stack_trace + 1, trace.trace, h.size * sizeof(uptr));
+  return OffsetToId(idx);
 }
 
-StackTrace StackStore::Load(Id id) {
-  const uptr *stack_trace = reinterpret_cast<const uptr *>(id);
-  uptr size = *stack_trace & ((1 << kStackSizeBits) - 1);
-  uptr tag = *stack_trace >> kStackSizeBits;
-  return StackTrace(stack_trace + 1, size, tag);
+StackTrace StackStore::Load(Id id) const {
+  if (!id)
+    return {};
+  uptr idx = IdToOffset(id);
+  uptr block_idx = GetBlockIdx(idx);
+  CHECK_LT(block_idx, ARRAY_SIZE(blocks_));
+  const uptr *stack_trace = blocks_[block_idx].Get();
+  if (!stack_trace)
+    return {};
+  stack_trace += GetInBlockIdx(idx);
+  StackTraceHeader h(*stack_trace);
+  return StackTrace(stack_trace + 1, h.size, h.tag);
 }
 
-uptr *StackStore::TryAlloc(uptr count) {
-  // Optimisic lock-free allocation, essentially try to bump the region ptr.
+uptr StackStore::Allocated() const {
+  return RoundUpTo(atomic_load_relaxed(&total_frames_) * sizeof(uptr),
+                   GetPageSizeCached()) +
+         sizeof(*this);
+}
+
+uptr *StackStore::Alloc(uptr count, uptr *idx) {
   for (;;) {
-    uptr cmp = atomic_load(&region_pos_, memory_order_acquire);
-    uptr end = atomic_load(&region_end_, memory_order_acquire);
-    uptr size = count * sizeof(uptr);
-    if (cmp == 0 || cmp + size > end)
-      return nullptr;
-    if (atomic_compare_exchange_weak(&region_pos_, &cmp, cmp + size,
-                                     memory_order_acquire))
-      return reinterpret_cast<uptr *>(cmp);
-  }
-}
+    // Optimisic lock-free allocation, essentially try to bump the
+    // total_frames_.
+    uptr start = atomic_fetch_add(&total_frames_, count, memory_order_relaxed);
+    uptr block_idx = GetBlockIdx(start);
+    if (LIKELY(block_idx == GetBlockIdx(start + count - 1))) {
+      // Fits into the a single block.
+      CHECK_LT(block_idx, ARRAY_SIZE(blocks_));
+      *idx = start;
+      return blocks_[block_idx].GetOrCreate() + GetInBlockIdx(start);
+    }
 
-uptr *StackStore::Alloc(uptr count) {
-  // First, try to allocate optimisitically.
-  uptr *s = TryAlloc(count);
-  if (LIKELY(s))
-    return s;
-  return RefillAndAlloc(count);
-}
-
-uptr *StackStore::RefillAndAlloc(uptr count) {
-  // If failed, lock, retry and alloc new superblock.
-  SpinMutexLock l(&mtx_);
-  for (;;) {
-    uptr *s = TryAlloc(count);
-    if (s)
-      return s;
-    atomic_store(&region_pos_, 0, memory_order_relaxed);
-    uptr size = count * sizeof(uptr) + sizeof(BlockInfo);
-    uptr allocsz = RoundUpTo(Max<uptr>(size, 64u * 1024u), GetPageSizeCached());
-    uptr mem = (uptr)MmapOrDie(allocsz, "stack depot");
-    BlockInfo *new_block = (BlockInfo *)(mem + allocsz) - 1;
-    new_block->next = curr_;
-    new_block->ptr = mem;
-    new_block->size = allocsz;
-    curr_ = new_block;
-
-    atomic_fetch_add(&mapped_size_, allocsz, memory_order_relaxed);
-
-    allocsz -= sizeof(BlockInfo);
-    atomic_store(&region_end_, mem + allocsz, memory_order_release);
-    atomic_store(&region_pos_, mem, memory_order_release);
+    // Retry. We can't use range allocated in two different blocks.
   }
 }
 
 void StackStore::TestOnlyUnmap() {
-  while (curr_) {
-    uptr mem = curr_->ptr;
-    uptr allocsz = curr_->size;
-    curr_ = curr_->next;
-    UnmapOrDie((void *)mem, allocsz);
-  }
+  for (BlockInfo &b : blocks_) b.TestOnlyUnmap();
   internal_memset(this, 0, sizeof(*this));
+}
+
+uptr *StackStore::BlockInfo::Get() const {
+  // Idiomatic double-checked locking uses memory_order_acquire here. But
+  // relaxed is find for us, justification is similar to
+  // TwoLevelMap::GetOrCreate.
+  return reinterpret_cast<uptr *>(atomic_load_relaxed(&data_));
+}
+
+uptr *StackStore::BlockInfo::Create() {
+  SpinMutexLock l(&mtx_);
+  uptr *ptr = Get();
+  if (!ptr) {
+    ptr = reinterpret_cast<uptr *>(
+        MmapNoReserveOrDie(kBlockSizeBytes, "StackStore"));
+    atomic_store(&data_, reinterpret_cast<uptr>(ptr), memory_order_release);
+  }
+  return ptr;
+}
+
+uptr *StackStore::BlockInfo::GetOrCreate() {
+  uptr *ptr = Get();
+  if (LIKELY(ptr))
+    return ptr;
+  return Create();
+}
+
+void StackStore::BlockInfo::TestOnlyUnmap() {
+  if (uptr *ptr = Get())
+    UnmapOrDie(ptr, StackStore::kBlockSizeBytes);
 }
 
 }  // namespace __sanitizer

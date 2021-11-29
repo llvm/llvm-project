@@ -8,7 +8,7 @@
 
 #include "mlir/Transforms/Bufferize.h"
 #include "PassDetail.h"
-#include "mlir/Dialect/MemRef/IR/MemRef.h"
+#include "mlir/Dialect/Bufferization/IR/Bufferization.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/Transforms/Passes.h"
 
@@ -22,7 +22,7 @@ static Value materializeTensorLoad(OpBuilder &builder, TensorType type,
                                    ValueRange inputs, Location loc) {
   assert(inputs.size() == 1);
   assert(inputs[0].getType().isa<BaseMemRefType>());
-  return builder.create<memref::TensorLoadOp>(loc, type, inputs[0]);
+  return builder.create<bufferization::ToTensorOp>(loc, type, inputs[0]);
 }
 
 /// Registers conversions into BufferizeTypeConverter
@@ -43,22 +43,23 @@ BufferizeTypeConverter::BufferizeTypeConverter() {
                               ValueRange inputs, Location loc) -> Value {
     assert(inputs.size() == 1);
     assert(inputs[0].getType().isa<TensorType>());
-    return builder.create<memref::BufferCastOp>(loc, type, inputs[0]);
+    return builder.create<bufferization::ToMemrefOp>(loc, type, inputs[0]);
   });
 }
 
 void mlir::populateBufferizeMaterializationLegality(ConversionTarget &target) {
-  target.addLegalOp<memref::TensorLoadOp, memref::BufferCastOp>();
+  target.addLegalOp<bufferization::ToTensorOp, bufferization::ToMemrefOp>();
 }
 
 namespace {
 // In a finalizing bufferize conversion, we know that all tensors have been
 // converted to memrefs, thus, this op becomes an identity.
-class BufferizeTensorLoadOp : public OpConversionPattern<memref::TensorLoadOp> {
+class BufferizeTensorLoadOp
+    : public OpConversionPattern<bufferization::ToTensorOp> {
 public:
   using OpConversionPattern::OpConversionPattern;
   LogicalResult
-  matchAndRewrite(memref::TensorLoadOp op, OpAdaptor adaptor,
+  matchAndRewrite(bufferization::ToTensorOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     rewriter.replaceOp(op, adaptor.memref());
     return success();
@@ -69,11 +70,11 @@ public:
 namespace {
 // In a finalizing bufferize conversion, we know that all tensors have been
 // converted to memrefs, thus, this op becomes an identity.
-class BufferizeCastOp : public OpConversionPattern<memref::BufferCastOp> {
+class BufferizeCastOp : public OpConversionPattern<bufferization::ToMemrefOp> {
 public:
   using OpConversionPattern::OpConversionPattern;
   LogicalResult
-  matchAndRewrite(memref::BufferCastOp op, OpAdaptor adaptor,
+  matchAndRewrite(bufferization::ToMemrefOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     rewriter.replaceOp(op, adaptor.tensor());
     return success();

@@ -105,7 +105,7 @@ define signext i32 @foo(i32 signext %a, i32 *%b) nounwind {
 ; RV32IBT-NEXT:    slti a2, a5, 1
 ; RV32IBT-NEXT:    lw a1, 0(a1)
 ; RV32IBT-NEXT:    cmov a0, a2, a0, a5
-; RV32IBT-NEXT:    addi a2, zero, -1
+; RV32IBT-NEXT:    li a2, -1
 ; RV32IBT-NEXT:    slt a2, a2, a5
 ; RV32IBT-NEXT:    cmov a0, a2, a0, a1
 ; RV32IBT-NEXT:    ret
@@ -179,8 +179,8 @@ define signext i16 @numsignbits(i16 signext %0, i16 signext %1, i16 signext %2, 
 ; RV32I-NEXT:    call bar@plt
 ; RV32I-NEXT:  .LBB1_4:
 ; RV32I-NEXT:    mv a0, s0
-; RV32I-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
 ;
@@ -196,8 +196,8 @@ define signext i16 @numsignbits(i16 signext %0, i16 signext %1, i16 signext %2, 
 ; RV32IBT-NEXT:    call bar@plt
 ; RV32IBT-NEXT:  .LBB1_2:
 ; RV32IBT-NEXT:    mv a0, s0
-; RV32IBT-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
 ; RV32IBT-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32IBT-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
 ; RV32IBT-NEXT:    addi sp, sp, 16
 ; RV32IBT-NEXT:    ret
   %5 = icmp eq i16 %0, 0

@@ -267,7 +267,7 @@ template<> __declspec(dllimport) int VarTmpl<ExplicitSpec_Def_Imported> = 1; // 
 //===----------------------------------------------------------------------===//
 
 // Import function declaration. Check different placements.
-__attribute__((dllimport)) void decl1A(); // Sanity check with __attribute__
+__attribute__((dllimport)) void decl1A(); // Validation check with __attribute__
 __declspec(dllimport)      void decl1B();
 
 void __attribute__((dllimport)) decl2A();

@@ -646,8 +646,6 @@ void MCELFStreamer::emitBundleAlignMode(unsigned AlignPow2) {
 void MCELFStreamer::emitBundleLock(bool AlignToEnd) {
   MCSection &Sec = *getCurrentSectionOnly();
 
-  // Sanity checks
-  //
   if (!getAssembler().isBundlingEnabled())
     report_fatal_error(".bundle_lock forbidden when bundling is disabled");
 
@@ -667,7 +665,6 @@ void MCELFStreamer::emitBundleLock(bool AlignToEnd) {
 void MCELFStreamer::emitBundleUnlock() {
   MCSection &Sec = *getCurrentSectionOnly();
 
-  // Sanity checks
   if (!getAssembler().isBundlingEnabled())
     report_fatal_error(".bundle_unlock forbidden when bundling is disabled");
   else if (!isBundleLocked())

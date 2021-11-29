@@ -314,10 +314,11 @@ private:
     //
     // void (*FunctionPointer)(void);
     // void (&FunctionReference)(void);
+    // void (&&FunctionReference)(void);
     // void (^ObjCBlock)(void);
     bool MightBeFunctionType = !Contexts[Contexts.size() - 2].IsExpression;
     bool ProbablyFunctionType =
-        CurrentToken->isOneOf(tok::star, tok::amp, tok::caret);
+        CurrentToken->isOneOf(tok::star, tok::amp, tok::ampamp, tok::caret);
     bool HasMultipleLines = false;
     bool HasMultipleParametersOnALine = false;
     bool MightBeObjCForRangeLoop =
@@ -902,9 +903,13 @@ private:
           break;
         }
       }
-      if (Contexts.back().ColonIsDictLiteral ||
-          Style.Language == FormatStyle::LK_Proto ||
-          Style.Language == FormatStyle::LK_TextProto) {
+      if (Line.First->isOneOf(Keywords.kw_module, Keywords.kw_import) ||
+          Line.First->startsSequence(tok::kw_export, Keywords.kw_module) ||
+          Line.First->startsSequence(tok::kw_export, Keywords.kw_import)) {
+        Tok->setType(TT_ModulePartitionColon);
+      } else if (Contexts.back().ColonIsDictLiteral ||
+                 Style.Language == FormatStyle::LK_Proto ||
+                 Style.Language == FormatStyle::LK_TextProto) {
         Tok->setType(TT_DictLiteral);
         if (Style.Language == FormatStyle::LK_TextProto) {
           if (FormatToken *Previous = Tok->getPreviousNonComment())
@@ -946,11 +951,15 @@ private:
                  !Line.First->isOneOf(tok::kw_enum, tok::kw_case,
                                       tok::kw_default)) {
         FormatToken *Prev = Tok->getPreviousNonComment();
+        if (!Prev)
+          break;
         if (Prev->isOneOf(tok::r_paren, tok::kw_noexcept))
           Tok->setType(TT_CtorInitializerColon);
         else if (Prev->is(tok::kw_try)) {
           // Member initializer list within function try block.
           FormatToken *PrevPrev = Prev->getPreviousNonComment();
+          if (!PrevPrev)
+            break;
           if (PrevPrev && PrevPrev->isOneOf(tok::r_paren, tok::kw_noexcept))
             Tok->setType(TT_CtorInitializerColon);
         } else
@@ -1578,6 +1587,8 @@ private:
         if (TemplateCloser->is(tok::l_paren)) {
           // No Matching Paren yet so skip to matching paren
           TemplateCloser = untilMatchingParen(TemplateCloser);
+          if (!TemplateCloser)
+            break;
         }
         if (TemplateCloser->is(tok::less))
           NestingLevel++;
@@ -2336,16 +2347,15 @@ void TokenAnnotator::setCommentLineLevels(
     if (NextNonCommentLine && CommentLine &&
         NextNonCommentLine->First->NewlinesBefore <= 1 &&
         NextNonCommentLine->First->OriginalColumn ==
-        AL->First->OriginalColumn) {
+            AL->First->OriginalColumn) {
       // Align comments for preprocessor lines with the # in column 0 if
       // preprocessor lines are not indented. Otherwise, align with the next
       // line.
-      AL->Level =
-          (Style.IndentPPDirectives != FormatStyle::PPDIS_BeforeHash &&
-           (NextNonCommentLine->Type == LT_PreprocessorDirective ||
-            NextNonCommentLine->Type == LT_ImportStatement))
-              ? 0
-              : NextNonCommentLine->Level;
+      AL->Level = (Style.IndentPPDirectives != FormatStyle::PPDIS_BeforeHash &&
+                   (NextNonCommentLine->Type == LT_PreprocessorDirective ||
+                    NextNonCommentLine->Type == LT_ImportStatement))
+                      ? 0
+                      : NextNonCommentLine->Level;
     } else {
       NextNonCommentLine = AL->First->isNot(tok::r_brace) ? AL : nullptr;
     }
@@ -2639,8 +2649,8 @@ void TokenAnnotator::calculateFormattingInformation(AnnotatedLine &Line) {
     if (Current->Role)
       Current->Role->precomputeFormattingInfos(Current);
     if (Current->MatchingParen &&
-        Current->MatchingParen->opensBlockOrBlockTypeList(Style)) {
-      assert(IndentLevel > 0);
+        Current->MatchingParen->opensBlockOrBlockTypeList(Style) &&
+        IndentLevel > 0) {
       --IndentLevel;
     }
     Current->IndentLevel = IndentLevel;
@@ -3238,9 +3248,35 @@ bool TokenAnnotator::spaceRequiredBefore(const AnnotatedLine &Line,
   auto HasExistingWhitespace = [&Right]() {
     return Right.WhitespaceRange.getBegin() != Right.WhitespaceRange.getEnd();
   };
+
   if (Right.Tok.getIdentifierInfo() && Left.Tok.getIdentifierInfo())
     return true; // Never ever merge two identifiers.
+
+  // Leave a space between * and /* to avoid C4138 `comment end` found outside
+  // of comment.
+  if (Left.is(tok::star) && Right.is(tok::comment))
+    return true;
+
   if (Style.isCpp()) {
+    // Space between import <iostream>.
+    // or import .....;
+    if (Left.is(Keywords.kw_import) && Right.isOneOf(tok::less, tok::ellipsis))
+      return true;
+    // No space between module :.
+    if (Left.isOneOf(Keywords.kw_module, Keywords.kw_import) &&
+        Right.is(TT_ModulePartitionColon))
+      return true;
+    // No space between import foo:bar but keep a space between import :bar;
+    if (Left.is(tok::identifier) && Right.is(TT_ModulePartitionColon))
+      return false;
+    // No space between :bar;
+    if (Left.is(TT_ModulePartitionColon) &&
+        Right.isOneOf(tok::identifier, tok::kw_private))
+      return false;
+    if (Left.is(tok::ellipsis) && Right.is(tok::identifier) &&
+        Line.First->is(Keywords.kw_import))
+      return false;
+
     if (Left.is(tok::kw_operator))
       return Right.is(tok::coloncolon);
     if (Right.is(tok::l_brace) && Right.is(BK_BracedInit) &&

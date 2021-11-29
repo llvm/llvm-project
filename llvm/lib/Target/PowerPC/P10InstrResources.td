@@ -626,7 +626,9 @@ def : InstRW<[P10W_DX_5C, P10W_DISP_ANY, P10DX_Read, P10DX_Read],
 // 5 Cycles Fixed-Point and BCD operations, 3 input operands
 def : InstRW<[P10W_DX_5C, P10W_DISP_ANY, P10DX_Read, P10DX_Read, P10DX_Read],
       (instrs
+    BCDADD_rec,
     BCDS_rec,
+    BCDSUB_rec,
     BCDTRUNC_rec,
     VADDECUQ,
     VADDEUQM,

@@ -9,6 +9,9 @@
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 // UNSUPPORTED: libcpp-no-concepts
 
+// This test uses iterator types from std::filesystem, which were introduced in macOS 10.15.
+// XFAIL: use_system_cxx_lib && target={{.+}}-apple-macosx10.{{9|10|11|12|13|14}}
+
 // template<class I>
 // concept __iterator_traits_detail::__cpp17_random_access_iterator;
 

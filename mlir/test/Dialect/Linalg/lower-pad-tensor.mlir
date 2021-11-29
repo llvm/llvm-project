@@ -5,12 +5,12 @@
 // CHECK-LABEL: func @pad_tensor_with_memrefs
 func @pad_tensor_with_memrefs(%arg0: memref<1x28x28x1xf32>) -> memref<2x31x31x3xf32> {
   %cst = arith.constant 0.000000e+00 : f32
-  %0 = memref.tensor_load %arg0 : memref<1x28x28x1xf32>
+  %0 = bufferization.to_tensor %arg0 : memref<1x28x28x1xf32>
   %1 = linalg.pad_tensor %0 low[1, 1, 1, 2] high[0, 2, 2, 0]  {
   ^bb0(%arg1: index, %arg2: index, %arg3: index, %arg4: index):  // no predecessors
     linalg.yield %cst : f32
   } : tensor<1x28x28x1xf32> to tensor<2x31x31x3xf32>
-  %2 = memref.buffer_cast %1 : memref<2x31x31x3xf32>
+  %2 = bufferization.to_memref %1 : memref<2x31x31x3xf32>
   return %2 : memref<2x31x31x3xf32>
 }
 

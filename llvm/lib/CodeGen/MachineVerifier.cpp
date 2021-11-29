@@ -1276,11 +1276,9 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
     if (DstTy.getNumElements() != MI->getNumOperands() - 1)
       report("G_BUILD_VECTOR must have an operand for each elemement", MI);
 
-    for (unsigned i = 2; i < MI->getNumOperands(); ++i) {
-      if (MRI->getType(MI->getOperand(1).getReg()) !=
-          MRI->getType(MI->getOperand(i).getReg()))
+    for (const MachineOperand &MO : llvm::drop_begin(MI->operands(), 2))
+      if (MRI->getType(MI->getOperand(1).getReg()) != MRI->getType(MO.getReg()))
         report("G_BUILD_VECTOR source operand types are not homogeneous", MI);
-    }
 
     break;
   }
@@ -1292,12 +1290,10 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
     if (!DstTy.isVector() || SrcEltTy.isVector())
       report("G_BUILD_VECTOR_TRUNC must produce a vector from scalar operands",
              MI);
-    for (unsigned i = 2; i < MI->getNumOperands(); ++i) {
-      if (MRI->getType(MI->getOperand(1).getReg()) !=
-          MRI->getType(MI->getOperand(i).getReg()))
+    for (const MachineOperand &MO : llvm::drop_begin(MI->operands(), 2))
+      if (MRI->getType(MI->getOperand(1).getReg()) != MRI->getType(MO.getReg()))
         report("G_BUILD_VECTOR_TRUNC source operand types are not homogeneous",
                MI);
-    }
     if (SrcEltTy.getSizeInBits() <= DstTy.getElementType().getSizeInBits())
       report("G_BUILD_VECTOR_TRUNC source operand types are not larger than "
              "dest elt type",
@@ -1316,11 +1312,9 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
     if (MI->getNumOperands() < 3)
       report("G_CONCAT_VECTOR requires at least 2 source operands", MI);
 
-    for (unsigned i = 2; i < MI->getNumOperands(); ++i) {
-      if (MRI->getType(MI->getOperand(1).getReg()) !=
-          MRI->getType(MI->getOperand(i).getReg()))
+    for (const MachineOperand &MO : llvm::drop_begin(MI->operands(), 2))
+      if (MRI->getType(MI->getOperand(1).getReg()) != MRI->getType(MO.getReg()))
         report("G_CONCAT_VECTOR source operand types are not homogeneous", MI);
-    }
     if (DstTy.getNumElements() !=
         SrcTy.getNumElements() * (MI->getNumOperands() - 1))
       report("G_CONCAT_VECTOR num dest and source elements should match", MI);
@@ -3063,9 +3057,9 @@ void MachineVerifier::verifyLiveRangeSegment(const LiveRange &LR,
       SlotIndex PEnd = LiveInts->getMBBEndIdx(Pred);
       // Predecessor of landing pad live-out on last call.
       if (MFI->isEHPad()) {
-        for (auto I = Pred->rbegin(), E = Pred->rend(); I != E; ++I) {
-          if (I->isCall()) {
-            PEnd = Indexes->getInstructionIndex(*I).getBoundaryIndex();
+        for (const MachineInstr &MI : llvm::reverse(*Pred)) {
+          if (MI.isCall()) {
+            PEnd = Indexes->getInstructionIndex(MI).getBoundaryIndex();
             break;
           }
         }

@@ -22,6 +22,7 @@ mlirExecutionEngineCreate(MlirModule op, int optLevel, int numPaths,
                           const MlirStringRef *sharedLibPaths) {
   static bool initOnce = [] {
     llvm::InitializeNativeTarget();
+    llvm::InitializeNativeTargetAsmParser(); // needed for inline_asm
     llvm::InitializeNativeTargetAsmPrinter();
     return true;
   }();
@@ -72,6 +73,14 @@ mlirExecutionEngineInvokePacked(MlirExecutionEngine jit, MlirStringRef name,
   if (error)
     return wrap(failure());
   return wrap(success());
+}
+
+extern "C" void *mlirExecutionEngineLookupPacked(MlirExecutionEngine jit,
+                                                 MlirStringRef name) {
+  auto expectedFPtr = unwrap(jit)->lookupPacked(unwrap(name));
+  if (!expectedFPtr)
+    return nullptr;
+  return reinterpret_cast<void *>(*expectedFPtr);
 }
 
 extern "C" void *mlirExecutionEngineLookup(MlirExecutionEngine jit,

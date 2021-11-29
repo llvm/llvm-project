@@ -1384,77 +1384,6 @@ public:
   }
 };
 
-class TransposeConvConverter
-    : public OpConversionPattern<tosa::TransposeConv2DOp> {
-public:
-  using OpConversionPattern<tosa::TransposeConv2DOp>::OpConversionPattern;
-  LogicalResult
-  matchAndRewrite(tosa::TransposeConv2DOp op, OpAdaptor adaptor,
-                  ConversionPatternRewriter &rewriter) const final {
-    Location loc = op->getLoc();
-    Value input = op->getOperand(0);
-    Value weight = op->getOperand(1);
-    Value bias = op->getOperand(2);
-
-    ShapedType inputTy = input.getType().cast<ShapedType>();
-    ShapedType weightTy = weight.getType().cast<ShapedType>();
-    ShapedType biasTy = bias.getType().cast<ShapedType>();
-    ShapedType resultTy = op->getResult(0).getType().cast<ShapedType>();
-
-    llvm::SmallVector<int64_t> pad;
-    llvm::SmallVector<int64_t> stride;
-    llvm::SmallVector<int64_t> dilation;
-
-    getValuesFromIntArrayAttribute(op.out_pad().cast<ArrayAttr>(), pad);
-    getValuesFromIntArrayAttribute(op.stride().cast<ArrayAttr>(), stride);
-    getValuesFromIntArrayAttribute(op.dilation().cast<ArrayAttr>(), dilation);
-
-    // If striding is all 1 we can modify padding and reverse the kernel along
-    // the x/y direction to make it a regular convolution. This is much simpler
-    // then handling striding....
-    if (llvm::all_of(stride, [](int64_t v) { return v == 1; })) {
-      if (!inputTy.hasStaticShape() || !weightTy.hasStaticShape() ||
-          !biasTy.hasStaticShape() || !resultTy.hasStaticShape())
-        return failure();
-
-      int64_t kernelHeight = (weightTy.getDimSize(1) - 1) * dilation[0] + 1;
-      int64_t kernelWidth = (weightTy.getDimSize(2) - 1) * dilation[1] + 1;
-      int64_t requiredInputHeight = resultTy.getDimSize(1) + kernelHeight - 1;
-      int64_t requiredInputWidth = resultTy.getDimSize(2) + kernelWidth - 1;
-
-      llvm::SmallVector<int64_t> convPad(4, 0);
-      convPad[0] = kernelHeight - 1 - pad[0];
-      convPad[2] = kernelWidth - 1 - pad[1];
-      convPad[1] = requiredInputHeight - convPad[0] - inputTy.getDimSize(1);
-      convPad[3] = requiredInputWidth - convPad[2] - inputTy.getDimSize(2);
-
-      auto reverse1 = rewriter.create<tosa::ReverseOp>(
-          loc, weightTy, weight, rewriter.getI64IntegerAttr(1));
-      auto reverse2 = rewriter.create<tosa::ReverseOp>(
-          loc, weightTy, reverse1, rewriter.getI64IntegerAttr(2));
-
-      Value conv2d;
-      if (op.quantization_info().hasValue()) {
-        conv2d = rewriter.create<tosa::Conv2DOp>(
-            loc, resultTy, input, reverse2, bias,
-            rewriter.getI64ArrayAttr(convPad), rewriter.getI64ArrayAttr(stride),
-            rewriter.getI64ArrayAttr(dilation),
-            op.quantization_info().getValue());
-      } else {
-        conv2d = rewriter.create<tosa::Conv2DOp>(
-            loc, resultTy, input, reverse2, bias,
-            rewriter.getI64ArrayAttr(convPad), rewriter.getI64ArrayAttr(stride),
-            rewriter.getI64ArrayAttr(dilation));
-      }
-
-      rewriter.replaceOp(op, conv2d);
-      return success();
-    }
-
-    return failure();
-  }
-};
-
 class MatMulConverter : public OpConversionPattern<tosa::MatMulOp> {
 public:
   using OpConversionPattern<tosa::MatMulOp>::OpConversionPattern;
@@ -3188,7 +3117,6 @@ void mlir::tosa::populateTosaToLinalgConversionPatterns(
       ConcatConverter,
       ConvConverter,
       DepthwiseConvConverter,
-      TransposeConvConverter,
       GatherConverter,
       PadConverter,
       ReshapeConverterCollapse,

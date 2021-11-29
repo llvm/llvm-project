@@ -4,10 +4,10 @@
 define signext i32 @mulw(i32 signext %s, i32 signext %n, i32 signext %k) nounwind {
 ; CHECK-LABEL: mulw:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    addi a2, zero, 1
+; CHECK-NEXT:    li a2, 1
 ; CHECK-NEXT:    bge a0, a1, .LBB0_3
 ; CHECK-NEXT:  # %bb.1: # %for.body.preheader
-; CHECK-NEXT:    addi a2, zero, 1
+; CHECK-NEXT:    li a2, 1
 ; CHECK-NEXT:  .LBB0_2: # %for.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    mulw a2, a0, a2

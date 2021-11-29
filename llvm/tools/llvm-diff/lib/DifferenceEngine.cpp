@@ -269,15 +269,35 @@ class FunctionDifferenceEngine {
     } else if (isa<CallInst>(L)) {
       return diffCallSites(cast<CallInst>(*L), cast<CallInst>(*R), Complain);
     } else if (isa<PHINode>(L)) {
-      // FIXME: implement.
+      const PHINode &LI = cast<PHINode>(*L);
+      const PHINode &RI = cast<PHINode>(*R);
 
       // This is really weird;  type uniquing is broken?
-      if (L->getType() != R->getType()) {
-        if (!L->getType()->isPointerTy() || !R->getType()->isPointerTy()) {
+      if (LI.getType() != RI.getType()) {
+        if (!LI.getType()->isPointerTy() || !RI.getType()->isPointerTy()) {
           if (Complain) Engine.log("different phi types");
           return true;
         }
       }
+
+      if (LI.getNumIncomingValues() != RI.getNumIncomingValues()) {
+        if (Complain)
+          Engine.log("PHI node # of incoming values differ");
+        return true;
+      }
+
+      for (unsigned I = 0; I < LI.getNumIncomingValues(); ++I) {
+        if (TryUnify)
+          tryUnify(LI.getIncomingBlock(I), RI.getIncomingBlock(I));
+
+        if (!equivalentAsOperands(LI.getIncomingValue(I),
+                                  RI.getIncomingValue(I))) {
+          if (Complain)
+            Engine.log("PHI node incoming values differ");
+          return true;
+        }
+      }
+
       return false;
 
     // Terminators.

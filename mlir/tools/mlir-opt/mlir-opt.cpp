@@ -31,7 +31,7 @@ using namespace mlir;
 namespace mlir {
 void registerConvertToTargetEnvPass();
 void registerPassManagerTestPass();
-void registerPrintOpAvailabilityPass();
+void registerPrintSpirvAvailabilityPass();
 void registerShapeFunctionTestPasses();
 void registerSideEffectTestPasses();
 void registerSliceAnalysisTestPass();
@@ -119,7 +119,7 @@ void registerTestDialect(DialectRegistry &);
 void registerTestPasses() {
   registerConvertToTargetEnvPass();
   registerPassManagerTestPass();
-  registerPrintOpAvailabilityPass();
+  registerPrintSpirvAvailabilityPass();
   registerShapeFunctionTestPasses();
   registerSideEffectTestPasses();
   registerSliceAnalysisTestPass();

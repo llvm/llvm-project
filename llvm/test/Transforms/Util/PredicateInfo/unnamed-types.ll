@@ -1,4 +1,4 @@
-; RUN: opt < %s -print-predicateinfo 2>&1 | FileCheck %s
+; RUN: opt < %s -passes=print-predicateinfo 2>&1 | FileCheck %s
 
 %1 = type opaque
 %0 = type opaque

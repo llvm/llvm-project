@@ -1,4 +1,4 @@
-; RUN: opt -S -globalopt < %s | FileCheck %s
+; RUN: opt -S -passes=globalopt < %s | FileCheck %s
 
 ; CHECK: @llvm.global_ctors = appending global [1 x {{.*}}@_GLOBAL__I_c
 @llvm.global_ctors = appending global [3 x { i32, void ()*, i8* }] [{ i32, void ()*, i8* } { i32 65535, void ()* @_GLOBAL__I_a, i8* null }, { i32, void ()*, i8* } { i32 65535, void ()* @_GLOBAL__I_b, i8* null }, { i32, void ()*, i8* } { i32 65535, void ()* @_GLOBAL__I_c, i8* null }]

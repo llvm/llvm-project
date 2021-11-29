@@ -70,12 +70,6 @@ static cl::opt<unsigned> TailDupIndirectBranchSize(
              "end with indirect branches."), cl::init(20),
     cl::Hidden);
 
-static cl::opt<unsigned> TailDupJmpTableLoopSize(
-    "tail-dup-jmptable-loop-size",
-    cl::desc("Maximum loop latches to consider tail duplication that are "
-             "successors of loop header."),
-    cl::init(128), cl::Hidden);
-
 static cl::opt<bool>
     TailDupVerify("tail-dup-verify",
                   cl::desc("Verify sanity of PHI instructions during taildup"),
@@ -567,29 +561,6 @@ bool TailDuplicator::shouldTailDuplicate(bool IsSimple,
 
   // Don't try to tail-duplicate single-block loops.
   if (TailBB.isSuccessor(&TailBB))
-    return false;
-
-  // When doing tail-duplication with jumptable loops like:
-  //    1 -> 2 <-> 3                 |
-  //          \  <-> 4               |
-  //           \   <-> 5             |
-  //            \    <-> ...         |
-  //             \---> rest          |
-  // quadratic number of edges and much more loops are added to CFG. This
-  // may cause compile time regression when jumptable is quiet large.
-  // So set the limit on jumptable cases.
-  auto isLargeJumpTableLoop = [](const MachineBasicBlock &TailBB) {
-    const SmallPtrSet<const MachineBasicBlock *, 8> Preds(TailBB.pred_begin(),
-                                                          TailBB.pred_end());
-    // Check the basic block has large number of successors, all of them only
-    // have one successor which is the basic block itself.
-    return llvm::count_if(
-               TailBB.successors(), [&](const MachineBasicBlock *SuccBB) {
-                 return Preds.count(SuccBB) && SuccBB->succ_size() == 1;
-               }) > TailDupJmpTableLoopSize;
-  };
-
-  if (isLargeJumpTableLoop(TailBB))
     return false;
 
   // Set the limit on the cost to duplicate. When optimizing for size,

@@ -240,7 +240,7 @@ void Simplex::pivot(unsigned pivotRow, unsigned pivotCol) {
   }
   normalizeRow(pivotRow);
 
-  for (unsigned row = nRedundant; row < nRow; ++row) {
+  for (unsigned row = 0; row < nRow; ++row) {
     if (row == pivotRow)
       continue;
     if (tableau(row, pivotCol) == 0) // Nothing to do.
@@ -259,8 +259,8 @@ void Simplex::pivot(unsigned pivotRow, unsigned pivotCol) {
 }
 
 /// Perform pivots until the unknown has a non-negative sample value or until
-/// no more upward pivots can be performed. Return the sign of the final sample
-/// value.
+/// no more upward pivots can be performed. Return success if we were able to
+/// bring the row to a non-negative sample value, and failure otherwise.
 LogicalResult Simplex::restoreRow(Unknown &u) {
   assert(u.orientation == Orientation::Row &&
          "unknown should be in row position");
@@ -357,6 +357,11 @@ void Simplex::swapColumns(unsigned i, unsigned j) {
 
 /// Mark this tableau empty and push an entry to the undo stack.
 void Simplex::markEmpty() {
+  // If the set is already empty, then we shouldn't add another UnmarkEmpty log
+  // entry, since in that case the Simplex will be erroneously marked as
+  // non-empty when rolling back past this point.
+  if (empty)
+    return;
   undoLog.push_back(UndoLogEntry::UnmarkEmpty);
   empty = true;
 }

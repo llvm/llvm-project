@@ -227,8 +227,7 @@ static bool iterativelySimplifyCFG(Function &F, const TargetTransformInfo &TTI,
   unsigned IterCnt = 0;
   (void)IterCnt;
   while (LocalChange) {
-    assert(IterCnt++ < 1000 &&
-           "Sanity: iterative simplification didn't converge!");
+    assert(IterCnt++ < 1000 && "Iterative simplification didn't converge!");
     LocalChange = false;
 
     // Loop over all of the basic blocks and remove them if they are unneeded.

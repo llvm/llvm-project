@@ -1,4 +1,4 @@
-; RUN: opt < %s -globalopt -disable-output
+; RUN: opt < %s -passes=globalopt -disable-output
 ; PR579
 
 @g_40507551 = internal global i16 31038         ; <i16*> [#uses=1]

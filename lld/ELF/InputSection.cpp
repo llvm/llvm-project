@@ -187,7 +187,7 @@ uint64_t SectionBase::getOffset(uint64_t offset) const {
   }
   case Regular:
   case Synthetic:
-    return cast<InputSection>(this)->getOffset(offset);
+    return cast<InputSection>(this)->outSecOff + offset;
   case EHFrame:
     // The file crtbeginT.o has relocations pointing to the start of an empty
     // .eh_frame that is known to be the first in the link. It does that to
@@ -196,7 +196,7 @@ uint64_t SectionBase::getOffset(uint64_t offset) const {
   case Merge:
     const MergeInputSection *ms = cast<MergeInputSection>(this);
     if (InputSection *isec = ms->getParent())
-      return isec->getOffset(ms->getParentOffset(offset));
+      return isec->outSecOff + ms->getParentOffset(offset);
     return ms->getParentOffset(offset);
   }
   llvm_unreachable("invalid section kind");

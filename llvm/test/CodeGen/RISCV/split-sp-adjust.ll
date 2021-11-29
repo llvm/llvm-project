@@ -11,7 +11,7 @@ define i32 @SplitSP() nounwind {
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    addi a0, sp, 16
 ; RV32I-NEXT:    call foo@plt
-; RV32I-NEXT:    mv a0, zero
+; RV32I-NEXT:    li a0, 0
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    lw ra, 2028(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 2032
@@ -31,7 +31,7 @@ define i32 @NoSplitSP() nounwind {
 ; RV32I-NEXT:    sw ra, 2028(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    addi a0, sp, 4
 ; RV32I-NEXT:    call foo@plt
-; RV32I-NEXT:    mv a0, zero
+; RV32I-NEXT:    li a0, 0
 ; RV32I-NEXT:    lw ra, 2028(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 2032
 ; RV32I-NEXT:    ret

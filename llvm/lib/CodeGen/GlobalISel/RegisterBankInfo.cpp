@@ -123,7 +123,7 @@ const RegisterBank *RegisterBankInfo::getRegBankFromConstraints(
 
   Register Reg = MI.getOperand(OpIdx).getReg();
   const RegisterBank &RegBank = getRegBankFromRegClass(*RC, MRI.getType(Reg));
-  // Sanity check that the target properly implemented getRegBankFromRegClass.
+  // Check that the target properly implemented getRegBankFromRegClass.
   assert(RegBank.covers(*RC) &&
          "The mapping of the register bank does not make sense");
   return &RegBank;

@@ -8,7 +8,7 @@
 ; VCCZ-BUG: s_waitcnt lgkmcnt(0)
 ; VCCZ-BUG: s_mov_b64 vcc, vcc
 ; GCN-NOT: s_mov_b64 vcc, vcc
-; GCN: s_cbranch_vccnz [[EXIT:[0-9A-Za-z_]+]]
+; GCN: s_cbranch_vccnz [[EXIT:.L[0-9A-Za-z_]+]]
 ; GCN: buffer_store_dword
 ; GCN: [[EXIT]]:
 ; GCN: s_endpgm
@@ -30,7 +30,7 @@ endif:
 ; GCN: v_cmp_neq_f32_e32 vcc, 0, v{{[0-9]+}}
 ; GCN-NOT: s_waitcnt lgkmcnt(0)
 ; GCN-NOT: s_mov_b64 vcc, vcc
-; GCN: s_cbranch_vccnz [[EXIT:[0-9A-Za-z_]+]]
+; GCN: s_cbranch_vccnz [[EXIT:.L[0-9A-Za-z_]+]]
 ; GCN: buffer_store_dword
 ; GCN: [[EXIT]]:
 ; GCN: s_endpgm

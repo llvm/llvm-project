@@ -283,12 +283,14 @@ public:
     return *this;
   }
 
-  /// Create a new RankedTensor by erasing a dim from shape @pos.
-  RankedTensorType dropDim(unsigned pos) {
+  /// Erase a dim from shape @pos.
+  Builder &dropDim(unsigned pos) {
     assert(pos < shape.size() && "overflow");
-    SmallVector<int64_t, 4> newShape(shape.begin(), shape.end());
-    newShape.erase(newShape.begin() + pos);
-    return setShape(newShape);
+    if (storage.empty())
+      storage.append(shape.begin(), shape.end());
+    storage.erase(storage.begin() + pos);
+    shape = {storage.data(), storage.size()};
+    return *this;
   }
 
   operator RankedTensorType() {
@@ -297,6 +299,8 @@ public:
 
 private:
   ArrayRef<int64_t> shape;
+  // Owning shape data for copy-on-write operations.
+  SmallVector<int64_t> storage;
   Type elementType;
   Attribute encoding;
 };
@@ -327,23 +331,29 @@ public:
     return *this;
   }
 
-  /// Create a new VectorType by erasing a dim from shape @pos.
+  /// Erase a dim from shape @pos.
+  Builder &dropDim(unsigned pos) {
+    assert(pos < shape.size() && "overflow");
+    if (storage.empty())
+      storage.append(shape.begin(), shape.end());
+    storage.erase(storage.begin() + pos);
+    shape = {storage.data(), storage.size()};
+    return *this;
+  }
+
   /// In the particular case where the vector has a single dimension that we
   /// drop, return the scalar element type.
   // TODO: unify once we have a VectorType that supports 0-D.
-  Type dropDim(unsigned pos) {
-    assert(pos < shape.size() && "overflow");
-    if (shape.size() == 1)
+  operator Type() {
+    if (shape.empty())
       return elementType;
-    SmallVector<int64_t, 4> newShape(shape.begin(), shape.end());
-    newShape.erase(newShape.begin() + pos);
-    return setShape(newShape);
+    return VectorType::get(shape, elementType);
   }
-
-  operator VectorType() { return VectorType::get(shape, elementType); }
 
 private:
   ArrayRef<int64_t> shape;
+  // Owning shape data for copy-on-write operations.
+  SmallVector<int64_t> storage;
   Type elementType;
 };
 

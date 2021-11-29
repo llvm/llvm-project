@@ -11,22 +11,22 @@
 define i32 @fcmp_false(double %a, double %b) nounwind {
 ; RV32IFD-LABEL: fcmp_false:
 ; RV32IFD:       # %bb.0:
-; RV32IFD-NEXT:    mv a0, zero
+; RV32IFD-NEXT:    li a0, 0
 ; RV32IFD-NEXT:    ret
 ;
 ; RV64IFD-LABEL: fcmp_false:
 ; RV64IFD:       # %bb.0:
-; RV64IFD-NEXT:    mv a0, zero
+; RV64IFD-NEXT:    li a0, 0
 ; RV64IFD-NEXT:    ret
 ;
 ; RV32I-LABEL: fcmp_false:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    mv a0, zero
+; RV32I-NEXT:    li a0, 0
 ; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: fcmp_false:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    mv a0, zero
+; RV64I-NEXT:    li a0, 0
 ; RV64I-NEXT:    ret
   %1 = fcmp false double %a, %b
   %2 = zext i1 %1 to i32
@@ -149,7 +149,7 @@ define i32 @fcmp_oge(double %a, double %b) nounwind {
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    call __gedf2@plt
-; RV32I-NEXT:    addi a1, zero, -1
+; RV32I-NEXT:    li a1, -1
 ; RV32I-NEXT:    slt a0, a1, a0
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
@@ -160,7 +160,7 @@ define i32 @fcmp_oge(double %a, double %b) nounwind {
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    call __gedf2@plt
-; RV64I-NEXT:    addi a1, zero, -1
+; RV64I-NEXT:    li a1, -1
 ; RV64I-NEXT:    slt a0, a1, a0
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
@@ -307,12 +307,12 @@ define i32 @fcmp_one(double %a, double %b) nounwind {
 ; RV32I-NEXT:    call __unorddf2@plt
 ; RV32I-NEXT:    seqz a0, a0
 ; RV32I-NEXT:    and a0, a0, s4
-; RV32I-NEXT:    lw s4, 8(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s3, 12(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s3, 12(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s4, 8(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 32
 ; RV32I-NEXT:    ret
 ;
@@ -332,10 +332,10 @@ define i32 @fcmp_one(double %a, double %b) nounwind {
 ; RV64I-NEXT:    call __unorddf2@plt
 ; RV64I-NEXT:    seqz a0, a0
 ; RV64I-NEXT:    and a0, a0, s2
-; RV64I-NEXT:    ld s2, 0(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s2, 0(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 32
 ; RV64I-NEXT:    ret
   %1 = fcmp one double %a, %b
@@ -441,12 +441,12 @@ define i32 @fcmp_ueq(double %a, double %b) nounwind {
 ; RV32I-NEXT:    call __unorddf2@plt
 ; RV32I-NEXT:    snez a0, a0
 ; RV32I-NEXT:    or a0, a0, s4
-; RV32I-NEXT:    lw s4, 8(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s3, 12(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s3, 12(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s4, 8(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 32
 ; RV32I-NEXT:    ret
 ;
@@ -466,10 +466,10 @@ define i32 @fcmp_ueq(double %a, double %b) nounwind {
 ; RV64I-NEXT:    call __unorddf2@plt
 ; RV64I-NEXT:    snez a0, a0
 ; RV64I-NEXT:    or a0, a0, s2
-; RV64I-NEXT:    ld s2, 0(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s2, 0(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 32
 ; RV64I-NEXT:    ret
   %1 = fcmp ueq double %a, %b
@@ -552,7 +552,7 @@ define i32 @fcmp_uge(double %a, double %b) nounwind {
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    call __ltdf2@plt
-; RV32I-NEXT:    addi a1, zero, -1
+; RV32I-NEXT:    li a1, -1
 ; RV32I-NEXT:    slt a0, a1, a0
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
@@ -563,7 +563,7 @@ define i32 @fcmp_uge(double %a, double %b) nounwind {
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    call __ltdf2@plt
-; RV64I-NEXT:    addi a1, zero, -1
+; RV64I-NEXT:    li a1, -1
 ; RV64I-NEXT:    slt a0, a1, a0
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
@@ -768,22 +768,22 @@ define i32 @fcmp_uno(double %a, double %b) nounwind {
 define i32 @fcmp_true(double %a, double %b) nounwind {
 ; RV32IFD-LABEL: fcmp_true:
 ; RV32IFD:       # %bb.0:
-; RV32IFD-NEXT:    addi a0, zero, 1
+; RV32IFD-NEXT:    li a0, 1
 ; RV32IFD-NEXT:    ret
 ;
 ; RV64IFD-LABEL: fcmp_true:
 ; RV64IFD:       # %bb.0:
-; RV64IFD-NEXT:    addi a0, zero, 1
+; RV64IFD-NEXT:    li a0, 1
 ; RV64IFD-NEXT:    ret
 ;
 ; RV32I-LABEL: fcmp_true:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    addi a0, zero, 1
+; RV32I-NEXT:    li a0, 1
 ; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: fcmp_true:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    addi a0, zero, 1
+; RV64I-NEXT:    li a0, 1
 ; RV64I-NEXT:    ret
   %1 = fcmp true double %a, %b
   %2 = zext i1 %1 to i32

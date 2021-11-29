@@ -23,7 +23,7 @@ _add_capi_test_executable(mlir-capi-execution-engine-test
   execution_engine.c
 LINK_LIBS PRIVATE
   MLIRCAPIConversion
-  MLIRCEXECUTIONENGINE
+  MLIRCAPIExecutionEngine
   MLIRCAPIRegistration
 )
 

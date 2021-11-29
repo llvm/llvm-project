@@ -110,6 +110,7 @@ func @scf_yield_needs_copy(%A : tensor<?xf32> {linalg.inplaceable = true}, %iter
 
 // -----
 
+// expected-error @+1 {{memref return type is unsupported}}
 func @extract_slice_fun(%A : tensor<?xf32> {linalg.inplaceable = true})
   ->  tensor<4xf32>
 {
@@ -121,7 +122,6 @@ func @extract_slice_fun(%A : tensor<?xf32> {linalg.inplaceable = true})
   //     argument aliasing).
   %r0 = tensor.extract_slice %A[0][4][1] : tensor<?xf32> to tensor<4xf32>
 
-  // expected-error @+1 {{buffer result #0 not produced by an alloc}}
   return %r0: tensor<4xf32>
 }
 
@@ -160,7 +160,7 @@ func @mini_test_case1() -> tensor<10x20xf32> {
 // -----
 
 func @main() -> tensor<4xi32> {
-  // expected-error @+1 {{unsupported op with tensors}}
+  // expected-error @+1 {{scf.execute_region with tensor result not supported}}
   %r = scf.execute_region -> tensor<4xi32> {
     %A = arith.constant dense<[1, 2, 3, 4]> : tensor<4xi32>
     scf.yield %A: tensor<4xi32>

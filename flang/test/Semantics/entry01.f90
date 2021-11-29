@@ -55,7 +55,6 @@ subroutine subr(goodarg1)
   common /badarg3/ x
   namelist /badarg4/ x
   !ERROR: A dummy argument must not be initialized
-  !ERROR: A dummy argument may not have the SAVE attribute
   integer :: badarg5 = 2
   entry okargs(goodarg1, goodarg2)
   !ERROR: RESULT(br1) may appear only in a function

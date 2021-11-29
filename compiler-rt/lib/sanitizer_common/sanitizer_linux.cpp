@@ -1760,6 +1760,8 @@ HandleSignalMode GetHandleSignalMode(int signum) {
 
 #if !SANITIZER_GO
 void *internal_start_thread(void *(*func)(void *arg), void *arg) {
+  if (&real_pthread_create == 0)
+    return nullptr;
   // Start the thread with signals blocked, otherwise it can steal user signals.
   ScopedBlockSignals block(nullptr);
   void *th;

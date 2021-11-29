@@ -13,9 +13,9 @@ define dso_local void @multiple_stores() local_unnamed_addr nounwind {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lui a0, %hi(s)
 ; CHECK-NEXT:    addi a0, a0, %lo(s)
-; CHECK-NEXT:    addi a1, zero, 10
+; CHECK-NEXT:    li a1, 10
 ; CHECK-NEXT:    sw a1, 160(a0)
-; CHECK-NEXT:    addi a1, zero, 20
+; CHECK-NEXT:    li a1, 20
 ; CHECK-NEXT:    sw a1, 164(a0)
 ; CHECK-NEXT:    ret
 entry:
@@ -32,7 +32,7 @@ define dso_local void @control_flow_with_mem_access() local_unnamed_addr nounwin
 ; CHECK-NEXT:    lw a1, 164(a0)
 ; CHECK-NEXT:    blez a1, .LBB1_2
 ; CHECK-NEXT:  # %bb.1: # %if.then
-; CHECK-NEXT:    addi a1, zero, 10
+; CHECK-NEXT:    li a1, 10
 ; CHECK-NEXT:    sw a1, 160(a0)
 ; CHECK-NEXT:  .LBB1_2: # %if.end
 ; CHECK-NEXT:    ret
@@ -149,10 +149,10 @@ define dso_local i32 @load_half() nounwind {
 ; RV32-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32-NEXT:    lui a0, %hi(foo+8)
 ; RV32-NEXT:    lhu a0, %lo(foo+8)(a0)
-; RV32-NEXT:    addi a1, zero, 140
+; RV32-NEXT:    li a1, 140
 ; RV32-NEXT:    bne a0, a1, .LBB7_2
 ; RV32-NEXT:  # %bb.1: # %if.end
-; RV32-NEXT:    mv a0, zero
+; RV32-NEXT:    li a0, 0
 ; RV32-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32-NEXT:    addi sp, sp, 16
 ; RV32-NEXT:    ret
@@ -165,10 +165,10 @@ define dso_local i32 @load_half() nounwind {
 ; RV64-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64-NEXT:    lui a0, %hi(foo+8)
 ; RV64-NEXT:    lhu a0, %lo(foo+8)(a0)
-; RV64-NEXT:    addi a1, zero, 140
+; RV64-NEXT:    li a1, 140
 ; RV64-NEXT:    bne a0, a1, .LBB7_2
 ; RV64-NEXT:  # %bb.1: # %if.end
-; RV64-NEXT:    mv a0, zero
+; RV64-NEXT:    li a0, 0
 ; RV64-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64-NEXT:    addi sp, sp, 16
 ; RV64-NEXT:    ret
@@ -193,7 +193,7 @@ define dso_local void @one_store() local_unnamed_addr nounwind {
 ; CHECK-LABEL: one_store:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lui a0, %hi(s+160)
-; CHECK-NEXT:    addi a1, zero, 10
+; CHECK-NEXT:    li a1, 10
 ; CHECK-NEXT:    sw a1, %lo(s+160)(a0)
 ; CHECK-NEXT:    ret
 entry:

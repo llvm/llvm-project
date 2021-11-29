@@ -369,13 +369,17 @@ Type LLVMTypeConverter::convertMemRefToBarePtr(BaseMemRefType type) {
   return LLVM::LLVMPointerType::get(elementType, type.getMemorySpaceAsInt());
 }
 
-/// Convert an n-D vector type to an LLVM vector type via (n-1)-D array type
-/// when n > 1. For example, `vector<4 x f32>` remains as is while,
-/// `vector<4x8x16xf32>` converts to `!llvm.array<4xarray<8 x vector<16xf32>>>`.
+/// Convert an n-D vector type to an LLVM vector type:
+///  * 0-D `vector<T>` are converted to vector<1xT>
+///  * 1-D `vector<axT>` remains as is while,
+///  * n>1 `vector<ax...xkxT>` convert via an (n-1)-D array type to
+///    `!llvm.array<ax...array<jxvector<kxT>>>`.
 Type LLVMTypeConverter::convertVectorType(VectorType type) {
   auto elementType = convertType(type.getElementType());
   if (!elementType)
     return {};
+  if (type.getShape().empty())
+    return VectorType::get({1}, elementType);
   Type vectorType = VectorType::get(type.getShape().back(), elementType);
   assert(LLVM::isCompatibleVectorType(vectorType) &&
          "expected vector type compatible with the LLVM dialect");

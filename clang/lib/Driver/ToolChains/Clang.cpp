@@ -403,7 +403,7 @@ shouldUseExceptionTablesForObjCExceptions(const ObjCRuntime &runtime,
 }
 
 /// Adds exception related arguments to the driver command arguments. There's a
-/// master flag, -fexceptions and also language specific flags to enable/disable
+/// main flag, -fexceptions and also language specific flags to enable/disable
 /// C++ and Objective-C exceptions. This makes it possible to for example
 /// disable C++ exceptions but enable Objective-C exceptions.
 static bool addExceptionArgs(const ArgList &Args, types::ID InputType,
@@ -6657,6 +6657,35 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back("-load");
     CmdArgs.push_back(A->getValue());
     A->claim();
+  }
+
+  // Turn -fplugin-arg-pluginname-key=value into
+  // -plugin-arg-pluginname key=value
+  // GCC has an actual plugin_argument struct with key/value pairs that it
+  // passes to its plugins, but we don't, so just pass it on as-is.
+  //
+  // The syntax for -fplugin-arg- is ambiguous if both plugin name and
+  // argument key are allowed to contain dashes. GCC therefore only
+  // allows dashes in the key. We do the same.
+  for (const Arg *A : Args.filtered(options::OPT_fplugin_arg)) {
+    auto ArgValue = StringRef(A->getValue());
+    auto FirstDashIndex = ArgValue.find('-');
+    StringRef PluginName = ArgValue.substr(0, FirstDashIndex);
+    StringRef Arg = ArgValue.substr(FirstDashIndex + 1);
+
+    A->claim();
+    if (FirstDashIndex == StringRef::npos || Arg.empty()) {
+      if (PluginName.empty()) {
+        D.Diag(diag::warn_drv_missing_plugin_name) << A->getAsString(Args);
+      } else {
+        D.Diag(diag::warn_drv_missing_plugin_arg)
+            << PluginName << A->getAsString(Args);
+      }
+      continue;
+    }
+
+    CmdArgs.push_back(Args.MakeArgString(Twine("-plugin-arg-") + PluginName));
+    CmdArgs.push_back(Args.MakeArgString(Arg));
   }
 
   // Forward -fpass-plugin=name.so to -cc1.

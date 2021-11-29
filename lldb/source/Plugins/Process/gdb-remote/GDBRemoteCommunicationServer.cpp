@@ -46,7 +46,7 @@ GDBRemoteCommunicationServer::GetPacketAndSendResponse(
     Timeout<std::micro> timeout, Status &error, bool &interrupt, bool &quit) {
   StringExtractorGDBRemote packet;
 
-  PacketResult packet_result = WaitForPacketNoLock(packet, timeout, false);
+  PacketResult packet_result = ReadPacket(packet, timeout, false);
   if (packet_result == PacketResult::Success) {
     const StringExtractorGDBRemote::ServerPacketType packet_type =
         packet.GetServerPacketType();
@@ -148,10 +148,6 @@ GDBRemoteCommunicationServer::SendIllFormedResponse(
 GDBRemoteCommunication::PacketResult
 GDBRemoteCommunicationServer::SendOKResponse() {
   return SendPacketNoLock("OK");
-}
-
-bool GDBRemoteCommunicationServer::HandshakeWithClient() {
-  return GetAck() == PacketResult::Success;
 }
 
 GDBRemoteCommunication::PacketResult

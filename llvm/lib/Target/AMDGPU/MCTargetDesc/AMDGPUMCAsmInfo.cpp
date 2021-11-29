@@ -28,7 +28,6 @@ AMDGPUMCAsmInfo::AMDGPUMCAsmInfo(const Triple &TT,
   MaxInstLength = (TT.getArch() == Triple::amdgcn) ? 20 : 16;
   SeparatorString = "\n";
   CommentString = ";";
-  PrivateLabelPrefix = "";
   InlineAsmStart = ";#ASMSTART";
   InlineAsmEnd = ";#ASMEND";
 

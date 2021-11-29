@@ -749,7 +749,6 @@ auto AlignVectors::realignGroup(const MoveGroup &Move) const -> bool {
                                       WithMaxAlign.ValTy, Adjust);
     int Diff = Start - (OffAtMax + Adjust);
     AlignVal = HVC.getConstInt(Diff);
-    // Sanity.
     assert(Diff >= 0);
     assert(static_cast<decltype(MinNeeded.value())>(Diff) < MinNeeded.value());
   } else {

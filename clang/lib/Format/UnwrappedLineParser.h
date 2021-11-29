@@ -110,6 +110,7 @@ private:
   void parseCaseLabel();
   void parseSwitch();
   void parseNamespace();
+  void parseModuleImport();
   void parseNew();
   void parseAccessSpecifier();
   bool parseEnum();

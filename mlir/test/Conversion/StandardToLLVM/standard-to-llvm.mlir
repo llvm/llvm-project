@@ -454,6 +454,21 @@ func @dfs_block_order(%arg0: i32) -> (i32) {
   br ^bb1
 }
 
+// -----
+
+// CHECK-LABEL: @splat_0d
+// CHECK-SAME: %[[ARG:.*]]: f32
+func @splat_0d(%a: f32) -> vector<f32> {
+  %v = splat %a : vector<f32>
+  return %v : vector<f32>
+}
+// CHECK-NEXT: %[[UNDEF:[0-9]+]] = llvm.mlir.undef : vector<1xf32>
+// CHECK-NEXT: %[[ZERO:[0-9]+]] = llvm.mlir.constant(0 : i32) : i32
+// CHECK-NEXT: %[[V:[0-9]+]] = llvm.insertelement %[[ARG]], %[[UNDEF]][%[[ZERO]] : i32] : vector<1xf32>
+// CHECK-NEXT: llvm.return %[[V]] : vector<1xf32>
+
+// -----
+
 // CHECK-LABEL: @splat
 // CHECK-SAME: %[[A:arg[0-9]+]]: vector<4xf32>
 // CHECK-SAME: %[[ELT:arg[0-9]+]]: f32

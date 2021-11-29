@@ -1,4 +1,4 @@
-; RUN: opt < %s -sccp -disable-output
+; RUN: opt < %s -passes=sccp -disable-output
 
 declare i32 @foo()
 

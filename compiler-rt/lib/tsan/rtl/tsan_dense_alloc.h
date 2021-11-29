@@ -104,6 +104,15 @@ class DenseSlabAlloc {
     return atomic_load_relaxed(&fillpos_) * kL2Size * sizeof(T);
   }
 
+  template <typename Func>
+  void ForEach(Func func) {
+    SpinMutexLock lock(&mtx_);
+    uptr fillpos = atomic_load_relaxed(&fillpos_);
+    for (uptr l1 = 0; l1 < fillpos; l1++) {
+      for (IndexT l2 = l1 == 0 ? 1 : 0; l2 < kL2Size; l2++) func(&map_[l1][l2]);
+    }
+  }
+
  private:
   T *map_[kL1Size];
   SpinMutex mtx_;

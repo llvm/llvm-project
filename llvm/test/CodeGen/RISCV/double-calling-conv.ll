@@ -2,8 +2,8 @@
 ; RUN: llc -mtriple=riscv32 -mattr=+d -verify-machineinstrs < %s \
 ; RUN:   | FileCheck -check-prefix=RV32IFD %s
 
-; Sanity checks for calling convention lowering for RV32D. This can be
-; somewhat error-prone for soft-float RV32D due to the fact that f64 is legal
+; Basic correctness checks for calling convention lowering for RV32D. This can
+; be somewhat error-prone for soft-float RV32D due to the fact that f64 is legal
 ; but i64 is not, and there is no instruction to move values directly between
 ; the GPRs and 64-bit FPRs.
 
@@ -81,12 +81,12 @@ define double @caller_double_split_reg_stack() nounwind {
 ; RV32IFD-NEXT:    addi a6, a0, 327
 ; RV32IFD-NEXT:    lui a0, 713032
 ; RV32IFD-NEXT:    addi a5, a0, -1311
-; RV32IFD-NEXT:    addi a0, zero, 1
-; RV32IFD-NEXT:    addi a1, zero, 2
-; RV32IFD-NEXT:    addi a3, zero, 3
+; RV32IFD-NEXT:    li a0, 1
+; RV32IFD-NEXT:    li a1, 2
+; RV32IFD-NEXT:    li a3, 3
 ; RV32IFD-NEXT:    sw a2, 0(sp)
-; RV32IFD-NEXT:    mv a2, zero
-; RV32IFD-NEXT:    mv a4, zero
+; RV32IFD-NEXT:    li a2, 0
+; RV32IFD-NEXT:    li a4, 0
 ; RV32IFD-NEXT:    mv a7, a5
 ; RV32IFD-NEXT:    call callee_double_split_reg_stack@plt
 ; RV32IFD-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
@@ -126,15 +126,15 @@ define double @caller_double_stack() nounwind {
 ; RV32IFD-NEXT:    lui a0, 262574
 ; RV32IFD-NEXT:    addi a0, a0, 327
 ; RV32IFD-NEXT:    sw a0, 12(sp)
-; RV32IFD-NEXT:    addi a0, zero, 1
-; RV32IFD-NEXT:    addi a2, zero, 2
-; RV32IFD-NEXT:    addi a4, zero, 3
-; RV32IFD-NEXT:    addi a6, zero, 4
+; RV32IFD-NEXT:    li a0, 1
+; RV32IFD-NEXT:    li a2, 2
+; RV32IFD-NEXT:    li a4, 3
+; RV32IFD-NEXT:    li a6, 4
 ; RV32IFD-NEXT:    sw a1, 8(sp)
-; RV32IFD-NEXT:    mv a1, zero
-; RV32IFD-NEXT:    mv a3, zero
-; RV32IFD-NEXT:    mv a5, zero
-; RV32IFD-NEXT:    mv a7, zero
+; RV32IFD-NEXT:    li a1, 0
+; RV32IFD-NEXT:    li a3, 0
+; RV32IFD-NEXT:    li a5, 0
+; RV32IFD-NEXT:    li a7, 0
 ; RV32IFD-NEXT:    call callee_double_stack@plt
 ; RV32IFD-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
 ; RV32IFD-NEXT:    addi sp, sp, 32

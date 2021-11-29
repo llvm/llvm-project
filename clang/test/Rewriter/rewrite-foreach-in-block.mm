@@ -20,12 +20,12 @@ typedef void (^CoreDAVCompletionBlock)(void);
 - (void)M {
     I* ace;
     self.c = ^() {
-          // sanity test for the changes.
+          // Basic correctness check for the changes.
 	  [ace ARR];
           for (I *privilege in [ace ARR]) { }
     };
     self.c = ^() {
-          // sanity test for the changes.
+          // Basic correctness test for the changes.
 	  [ace ARR];
     };
 }

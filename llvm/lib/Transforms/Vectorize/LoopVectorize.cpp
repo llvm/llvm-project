@@ -474,7 +474,7 @@ public:
   virtual BasicBlock *createVectorizedLoopSkeleton();
 
   /// Widen a single instruction within the innermost loop.
-  void widenInstruction(Instruction &I, VPValue *Def, VPUser &Operands,
+  void widenInstruction(Instruction &I, VPWidenRecipe *WidenRec,
                         VPTransformState &State);
 
   /// Widen a single call instruction within the innermost loop.
@@ -496,12 +496,6 @@ public:
   /// new unrolled loop, where UF is the unroll factor.
   using VectorParts = SmallVector<Value *, 2>;
 
-  /// Vectorize a single GetElementPtrInst based on information gathered and
-  /// decisions taken during planning.
-  void widenGEP(GetElementPtrInst *GEP, VPValue *VPDef, VPUser &Indices,
-                unsigned UF, ElementCount VF, bool IsPtrLoopInvariant,
-                SmallBitVector &IsIndexLoopInvariant, VPTransformState &State);
-
   /// Vectorize a single first-order recurrence or pointer induction PHINode in
   /// a block. This method handles the induction variable canonicalization. It
   /// supports both VF = 1 for unrolled loops and arbitrary length vectors.
@@ -511,9 +505,9 @@ public:
   /// A helper function to scalarize a single Instruction in the innermost loop.
   /// Generates a sequence of scalar instances for each lane between \p MinLane
   /// and \p MaxLane, times each part between \p MinPart and \p MaxPart,
-  /// inclusive. Uses the VPValue operands from \p Operands instead of \p
+  /// inclusive. Uses the VPValue operands from \p RepRecipe instead of \p
   /// Instr's operands.
-  void scalarizeInstruction(Instruction *Instr, VPValue *Def, VPUser &Operands,
+  void scalarizeInstruction(Instruction *Instr, VPReplicateRecipe *RepRecipe,
                             const VPIteration &Instance, bool IfPredicateInstr,
                             VPTransformState &State);
 
@@ -565,6 +559,17 @@ public:
   /// this is needed because each iteration in the loop corresponds to a SIMD
   /// element.
   virtual Value *getBroadcastInstrs(Value *V);
+
+  /// Add metadata from one instruction to another.
+  ///
+  /// This includes both the original MDs from \p From and additional ones (\see
+  /// addNewMetadata).  Use this for *newly created* instructions in the vector
+  /// loop.
+  void addMetadata(Instruction *To, Instruction *From);
+
+  /// Similar to the previous function but it adds the metadata to a
+  /// vector of instructions.
+  void addMetadata(ArrayRef<Value *> To, Instruction *From);
 
 protected:
   friend class LoopVectorizationPlanner;
@@ -741,16 +746,16 @@ protected:
   /// vector loop.
   void addNewMetadata(Instruction *To, const Instruction *Orig);
 
-  /// Add metadata from one instruction to another.
-  ///
-  /// This includes both the original MDs from \p From and additional ones (\see
-  /// addNewMetadata).  Use this for *newly created* instructions in the vector
-  /// loop.
-  void addMetadata(Instruction *To, Instruction *From);
-
-  /// Similar to the previous function but it adds the metadata to a
-  /// vector of instructions.
-  void addMetadata(ArrayRef<Value *> To, Instruction *From);
+  /// Collect poison-generating recipes that may generate a poison value that is
+  /// used after vectorization, even when their operands are not poison. Those
+  /// recipes meet the following conditions:
+  ///  * Contribute to the address computation of a recipe generating a widen
+  ///    memory load/store (VPWidenMemoryInstructionRecipe or
+  ///    VPInterleaveRecipe).
+  ///  * Such a widen memory load/store has at least one underlying Instruction
+  ///    that is in a basic block that needs predication and after vectorization
+  ///    the generated instruction won't be predicated.
+  void collectPoisonGeneratingRecipes(VPTransformState &State);
 
   /// Allow subclasses to override and print debug traces before/after vplan
   /// execution, when trace information is requested.
@@ -1173,6 +1178,84 @@ void InnerLoopVectorizer::addNewMetadata(Instruction *To,
     LVer->annotateInstWithNoAlias(To, Orig);
 }
 
+void InnerLoopVectorizer::collectPoisonGeneratingRecipes(
+    VPTransformState &State) {
+
+  // Collect recipes in the backward slice of `Root` that may generate a poison
+  // value that is used after vectorization.
+  SmallPtrSet<VPRecipeBase *, 16> Visited;
+  auto collectPoisonGeneratingInstrsInBackwardSlice([&](VPRecipeBase *Root) {
+    SmallVector<VPRecipeBase *, 16> Worklist;
+    Worklist.push_back(Root);
+
+    // Traverse the backward slice of Root through its use-def chain.
+    while (!Worklist.empty()) {
+      VPRecipeBase *CurRec = Worklist.back();
+      Worklist.pop_back();
+
+      if (!Visited.insert(CurRec).second)
+        continue;
+
+      // Prune search if we find another recipe generating a widen memory
+      // instruction. Widen memory instructions involved in address computation
+      // will lead to gather/scatter instructions, which don't need to be
+      // handled.
+      if (isa<VPWidenMemoryInstructionRecipe>(CurRec) ||
+          isa<VPInterleaveRecipe>(CurRec))
+        continue;
+
+      // This recipe contributes to the address computation of a widen
+      // load/store. Collect recipe if its underlying instruction has
+      // poison-generating flags.
+      Instruction *Instr = CurRec->getUnderlyingInstr();
+      if (Instr && cast<Operator>(Instr)->hasPoisonGeneratingFlags())
+        State.MayGeneratePoisonRecipes.insert(CurRec);
+
+      // Add new definitions to the worklist.
+      for (VPValue *operand : CurRec->operands())
+        if (VPDef *OpDef = operand->getDef())
+          Worklist.push_back(cast<VPRecipeBase>(OpDef));
+    }
+  });
+
+  // Traverse all the recipes in the VPlan and collect the poison-generating
+  // recipes in the backward slice starting at the address of a VPWidenRecipe or
+  // VPInterleaveRecipe.
+  auto Iter = depth_first(
+      VPBlockRecursiveTraversalWrapper<VPBlockBase *>(State.Plan->getEntry()));
+  for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(Iter)) {
+    for (VPRecipeBase &Recipe : *VPBB) {
+      if (auto *WidenRec = dyn_cast<VPWidenMemoryInstructionRecipe>(&Recipe)) {
+        Instruction *UnderlyingInstr = WidenRec->getUnderlyingInstr();
+        VPDef *AddrDef = WidenRec->getAddr()->getDef();
+        if (AddrDef && WidenRec->isConsecutive() && UnderlyingInstr &&
+            Legal->blockNeedsPredication(UnderlyingInstr->getParent()))
+          collectPoisonGeneratingInstrsInBackwardSlice(
+              cast<VPRecipeBase>(AddrDef));
+      } else if (auto *InterleaveRec = dyn_cast<VPInterleaveRecipe>(&Recipe)) {
+        VPDef *AddrDef = InterleaveRec->getAddr()->getDef();
+        if (AddrDef) {
+          // Check if any member of the interleave group needs predication.
+          const InterleaveGroup<Instruction> *InterGroup =
+              InterleaveRec->getInterleaveGroup();
+          bool NeedPredication = false;
+          for (int I = 0, NumMembers = InterGroup->getNumMembers();
+               I < NumMembers; ++I) {
+            Instruction *Member = InterGroup->getMember(I);
+            if (Member)
+              NeedPredication |=
+                  Legal->blockNeedsPredication(Member->getParent());
+          }
+
+          if (NeedPredication)
+            collectPoisonGeneratingInstrsInBackwardSlice(
+                cast<VPRecipeBase>(AddrDef));
+        }
+      }
+    }
+  }
+}
+
 void InnerLoopVectorizer::addMetadata(Instruction *To,
                                       Instruction *From) {
   propagateMetadata(To, From);
@@ -1541,7 +1624,16 @@ public:
   // Returns true if \p I is an instruction that will be predicated either
   // through scalar predication or masked load/store or masked gather/scatter.
   // Superset of instructions that return true for isScalarWithPredication.
-  bool isPredicatedInst(Instruction *I) {
+  bool isPredicatedInst(Instruction *I, bool IsKnownUniform = false) {
+    // When we know the load is uniform and the original scalar loop was not
+    // predicated we don't need to mark it as a predicated instruction. Any
+    // vectorised blocks created when tail-folding are something artificial we
+    // have introduced and we know there is always at least one active lane.
+    // That's why we call Legal->blockNeedsPredication here because it doesn't
+    // query tail-folding.
+    if (IsKnownUniform && isa<LoadInst>(I) &&
+        !Legal->blockNeedsPredication(I->getParent()))
+      return false;
     if (!blockNeedsPredicationForAnyReason(I->getParent()))
       return false;
     // Loads and stores that need some form of masked operation are predicated
@@ -1816,9 +1908,11 @@ private:
 
   /// Collect the instructions that are scalar after vectorization. An
   /// instruction is scalar if it is known to be uniform or will be scalarized
-  /// during vectorization. Non-uniform scalarized instructions will be
-  /// represented by VF values in the vectorized loop, each corresponding to an
-  /// iteration of the original scalar loop.
+  /// during vectorization. collectLoopScalars should only add non-uniform nodes
+  /// to the list if they are used by a load/store instruction that is marked as
+  /// CM_Scalarize. Non-uniform scalarized instructions will be represented by
+  /// VF values in the vectorized loop, each corresponding to an iteration of
+  /// the original scalar loop.
   void collectLoopScalars(ElementCount VF);
 
   /// Keeps cost model vectorization decision and cost for instructions.
@@ -3042,8 +3136,8 @@ void InnerLoopVectorizer::vectorizeMemoryInstruction(
   }
 }
 
-void InnerLoopVectorizer::scalarizeInstruction(Instruction *Instr, VPValue *Def,
-                                               VPUser &User,
+void InnerLoopVectorizer::scalarizeInstruction(Instruction *Instr,
+                                               VPReplicateRecipe *RepRecipe,
                                                const VPIteration &Instance,
                                                bool IfPredicateInstr,
                                                VPTransformState &State) {
@@ -3064,17 +3158,26 @@ void InnerLoopVectorizer::scalarizeInstruction(Instruction *Instr, VPValue *Def,
   if (!IsVoidRetTy)
     Cloned->setName(Instr->getName() + ".cloned");
 
+  // If the scalarized instruction contributes to the address computation of a
+  // widen masked load/store which was in a basic block that needed predication
+  // and is not predicated after vectorization, we can't propagate
+  // poison-generating flags (nuw/nsw, exact, inbounds, etc.). The scalarized
+  // instruction could feed a poison value to the base address of the widen
+  // load/store.
+  if (State.MayGeneratePoisonRecipes.count(RepRecipe) > 0)
+    Cloned->dropPoisonGeneratingFlags();
+
   State.Builder.SetInsertPoint(Builder.GetInsertBlock(),
                                Builder.GetInsertPoint());
   // Replace the operands of the cloned instructions with their scalar
   // equivalents in the new loop.
-  for (unsigned op = 0, e = User.getNumOperands(); op != e; ++op) {
+  for (unsigned op = 0, e = RepRecipe->getNumOperands(); op != e; ++op) {
     auto *Operand = dyn_cast<Instruction>(Instr->getOperand(op));
     auto InputInstance = Instance;
     if (!Operand || !OrigLoop->contains(Operand) ||
         (Cost->isUniformAfterVectorization(Operand, State.VF)))
       InputInstance.Lane = VPLane::getFirstLane();
-    auto *NewOp = State.get(User.getOperand(op), InputInstance);
+    auto *NewOp = State.get(RepRecipe->getOperand(op), InputInstance);
     Cloned->setOperand(op, NewOp);
   }
   addNewMetadata(Cloned, Instr);
@@ -3082,7 +3185,7 @@ void InnerLoopVectorizer::scalarizeInstruction(Instruction *Instr, VPValue *Def,
   // Place the cloned scalar in the new loop.
   Builder.Insert(Cloned);
 
-  State.set(Def, Cloned, Instance);
+  State.set(RepRecipe, Cloned, Instance);
 
   // If we just cloned a new assumption, add it the assumption cache.
   if (auto *II = dyn_cast<AssumeInst>(Cloned))
@@ -4615,77 +4718,6 @@ bool InnerLoopVectorizer::useOrderedReductions(RecurrenceDescriptor &RdxDesc) {
   return Cost->useOrderedReductions(RdxDesc);
 }
 
-void InnerLoopVectorizer::widenGEP(GetElementPtrInst *GEP, VPValue *VPDef,
-                                   VPUser &Operands, unsigned UF,
-                                   ElementCount VF, bool IsPtrLoopInvariant,
-                                   SmallBitVector &IsIndexLoopInvariant,
-                                   VPTransformState &State) {
-  // Construct a vector GEP by widening the operands of the scalar GEP as
-  // necessary. We mark the vector GEP 'inbounds' if appropriate. A GEP
-  // results in a vector of pointers when at least one operand of the GEP
-  // is vector-typed. Thus, to keep the representation compact, we only use
-  // vector-typed operands for loop-varying values.
-
-  if (VF.isVector() && IsPtrLoopInvariant && IsIndexLoopInvariant.all()) {
-    // If we are vectorizing, but the GEP has only loop-invariant operands,
-    // the GEP we build (by only using vector-typed operands for
-    // loop-varying values) would be a scalar pointer. Thus, to ensure we
-    // produce a vector of pointers, we need to either arbitrarily pick an
-    // operand to broadcast, or broadcast a clone of the original GEP.
-    // Here, we broadcast a clone of the original.
-    //
-    // TODO: If at some point we decide to scalarize instructions having
-    //       loop-invariant operands, this special case will no longer be
-    //       required. We would add the scalarization decision to
-    //       collectLoopScalars() and teach getVectorValue() to broadcast
-    //       the lane-zero scalar value.
-    auto *Clone = Builder.Insert(GEP->clone());
-    for (unsigned Part = 0; Part < UF; ++Part) {
-      Value *EntryPart = Builder.CreateVectorSplat(VF, Clone);
-      State.set(VPDef, EntryPart, Part);
-      addMetadata(EntryPart, GEP);
-    }
-  } else {
-    // If the GEP has at least one loop-varying operand, we are sure to
-    // produce a vector of pointers. But if we are only unrolling, we want
-    // to produce a scalar GEP for each unroll part. Thus, the GEP we
-    // produce with the code below will be scalar (if VF == 1) or vector
-    // (otherwise). Note that for the unroll-only case, we still maintain
-    // values in the vector mapping with initVector, as we do for other
-    // instructions.
-    for (unsigned Part = 0; Part < UF; ++Part) {
-      // The pointer operand of the new GEP. If it's loop-invariant, we
-      // won't broadcast it.
-      auto *Ptr = IsPtrLoopInvariant
-                      ? State.get(Operands.getOperand(0), VPIteration(0, 0))
-                      : State.get(Operands.getOperand(0), Part);
-
-      // Collect all the indices for the new GEP. If any index is
-      // loop-invariant, we won't broadcast it.
-      SmallVector<Value *, 4> Indices;
-      for (unsigned I = 1, E = Operands.getNumOperands(); I < E; I++) {
-        VPValue *Operand = Operands.getOperand(I);
-        if (IsIndexLoopInvariant[I - 1])
-          Indices.push_back(State.get(Operand, VPIteration(0, 0)));
-        else
-          Indices.push_back(State.get(Operand, Part));
-      }
-
-      // Create the new GEP. Note that this GEP may be a scalar if VF == 1,
-      // but it should be a vector, otherwise.
-      auto *NewGEP =
-          GEP->isInBounds()
-              ? Builder.CreateInBoundsGEP(GEP->getSourceElementType(), Ptr,
-                                          Indices)
-              : Builder.CreateGEP(GEP->getSourceElementType(), Ptr, Indices);
-      assert((VF.isScalar() || NewGEP->getType()->isVectorTy()) &&
-             "NewGEP is not a pointer vector");
-      State.set(VPDef, NewGEP, Part);
-      addMetadata(NewGEP, GEP);
-    }
-  }
-}
-
 void InnerLoopVectorizer::widenPHIInstruction(Instruction *PN,
                                               VPWidenPHIRecipe *PhiR,
                                               VPTransformState &State) {
@@ -4745,37 +4777,13 @@ void InnerLoopVectorizer::widenPHIInstruction(Instruction *PN,
       // iteration. If the instruction is uniform, we only need to generate the
       // first lane. Otherwise, we generate all VF values.
       bool IsUniform = Cost->isUniformAfterVectorization(P, State.VF);
-      unsigned Lanes = IsUniform ? 1 : State.VF.getKnownMinValue();
-
-      bool NeedsVectorIndex = !IsUniform && VF.isScalable();
-      Value *UnitStepVec = nullptr, *PtrIndSplat = nullptr;
-      if (NeedsVectorIndex) {
-        Type *VecIVTy = VectorType::get(PtrInd->getType(), VF);
-        UnitStepVec = Builder.CreateStepVector(VecIVTy);
-        PtrIndSplat = Builder.CreateVectorSplat(VF, PtrInd);
-      }
+      assert((IsUniform || !State.VF.isScalable()) &&
+             "Cannot scalarize a scalable VF");
+      unsigned Lanes = IsUniform ? 1 : State.VF.getFixedValue();
 
       for (unsigned Part = 0; Part < UF; ++Part) {
         Value *PartStart =
             createStepForVF(Builder, PtrInd->getType(), VF, Part);
-
-        if (NeedsVectorIndex) {
-          // Here we cache the whole vector, which means we can support the
-          // extraction of any lane. However, in some cases the extractelement
-          // instruction that is generated for scalar uses of this vector (e.g.
-          // a load instruction) is not folded away. Therefore we still
-          // calculate values for the first n lanes to avoid redundant moves
-          // (when extracting the 0th element) and to produce scalar code (i.e.
-          // additional add/gep instructions instead of expensive extractelement
-          // instructions) when extracting higher-order elements.
-          Value *PartStartSplat = Builder.CreateVectorSplat(VF, PartStart);
-          Value *Indices = Builder.CreateAdd(PartStartSplat, UnitStepVec);
-          Value *GlobalIndices = Builder.CreateAdd(PtrIndSplat, Indices);
-          Value *SclrGep =
-              emitTransformedIndex(Builder, GlobalIndices, PSE.getSE(), DL, II);
-          SclrGep->setName("next.gep");
-          State.set(PhiR, SclrGep, Part);
-        }
 
         for (unsigned Lane = 0; Lane < Lanes; ++Lane) {
           Value *Idx = Builder.CreateAdd(
@@ -4858,8 +4866,8 @@ static bool mayDivideByZero(Instruction &I) {
   return !CInt || CInt->isZero();
 }
 
-void InnerLoopVectorizer::widenInstruction(Instruction &I, VPValue *Def,
-                                           VPUser &User,
+void InnerLoopVectorizer::widenInstruction(Instruction &I,
+                                           VPWidenRecipe *WidenRec,
                                            VPTransformState &State) {
   switch (I.getOpcode()) {
   case Instruction::Call:
@@ -4892,16 +4900,25 @@ void InnerLoopVectorizer::widenInstruction(Instruction &I, VPValue *Def,
 
     for (unsigned Part = 0; Part < UF; ++Part) {
       SmallVector<Value *, 2> Ops;
-      for (VPValue *VPOp : User.operands())
+      for (VPValue *VPOp : WidenRec->operands())
         Ops.push_back(State.get(VPOp, Part));
 
       Value *V = Builder.CreateNAryOp(I.getOpcode(), Ops);
 
-      if (auto *VecOp = dyn_cast<Instruction>(V))
+      if (auto *VecOp = dyn_cast<Instruction>(V)) {
         VecOp->copyIRFlags(&I);
 
+        // If the instruction is vectorized and was in a basic block that needed
+        // predication, we can't propagate poison-generating flags (nuw/nsw,
+        // exact, etc.). The control flow has been linearized and the
+        // instruction is no longer guarded by the predicate, which could make
+        // the flag properties to no longer hold.
+        if (State.MayGeneratePoisonRecipes.count(WidenRec) > 0)
+          VecOp->dropPoisonGeneratingFlags();
+      }
+
       // Use this vector value for all users of the original instruction.
-      State.set(Def, V, Part);
+      State.set(WidenRec, V, Part);
       addMetadata(V, &I);
     }
 
@@ -4914,8 +4931,8 @@ void InnerLoopVectorizer::widenInstruction(Instruction &I, VPValue *Def,
     auto *Cmp = cast<CmpInst>(&I);
     setDebugLocFromInst(Cmp);
     for (unsigned Part = 0; Part < UF; ++Part) {
-      Value *A = State.get(User.getOperand(0), Part);
-      Value *B = State.get(User.getOperand(1), Part);
+      Value *A = State.get(WidenRec->getOperand(0), Part);
+      Value *B = State.get(WidenRec->getOperand(1), Part);
       Value *C = nullptr;
       if (FCmp) {
         // Propagate fast math flags.
@@ -4925,7 +4942,7 @@ void InnerLoopVectorizer::widenInstruction(Instruction &I, VPValue *Def,
       } else {
         C = Builder.CreateICmp(Cmp->getPredicate(), A, B);
       }
-      State.set(Def, C, Part);
+      State.set(WidenRec, C, Part);
       addMetadata(C, &I);
     }
 
@@ -4952,9 +4969,9 @@ void InnerLoopVectorizer::widenInstruction(Instruction &I, VPValue *Def,
         (VF.isScalar()) ? CI->getType() : VectorType::get(CI->getType(), VF);
 
     for (unsigned Part = 0; Part < UF; ++Part) {
-      Value *A = State.get(User.getOperand(0), Part);
+      Value *A = State.get(WidenRec->getOperand(0), Part);
       Value *Cast = Builder.CreateCast(CI->getOpcode(), A, DestTy);
-      State.set(Def, Cast, Part);
+      State.set(WidenRec, Cast, Part);
       addMetadata(Cast, &I);
     }
     break;
@@ -5103,38 +5120,11 @@ void LoopVectorizationCostModel::collectLoopScalars(ElementCount VF) {
            !TheLoop->isLoopInvariant(V);
   };
 
-  auto isScalarPtrInduction = [&](Instruction *MemAccess, Value *Ptr) {
-    if (!isa<PHINode>(Ptr) ||
-        !Legal->getInductionVars().count(cast<PHINode>(Ptr)))
-      return false;
-    auto &Induction = Legal->getInductionVars()[cast<PHINode>(Ptr)];
-    if (Induction.getKind() != InductionDescriptor::IK_PtrInduction)
-      return false;
-    return isScalarUse(MemAccess, Ptr);
-  };
-
-  // A helper that evaluates a memory access's use of a pointer. If the
-  // pointer is actually the pointer induction of a loop, it is being
-  // inserted into Worklist. If the use will be a scalar use, and the
-  // pointer is only used by memory accesses, we place the pointer in
-  // ScalarPtrs. Otherwise, the pointer is placed in PossibleNonScalarPtrs.
+  // A helper that evaluates a memory access's use of a pointer. If the use will
+  // be a scalar use and the pointer is only used by memory accesses, we place
+  // the pointer in ScalarPtrs. Otherwise, the pointer is placed in
+  // PossibleNonScalarPtrs.
   auto evaluatePtrUse = [&](Instruction *MemAccess, Value *Ptr) {
-    if (isScalarPtrInduction(MemAccess, Ptr)) {
-      Worklist.insert(cast<Instruction>(Ptr));
-      LLVM_DEBUG(dbgs() << "LV: Found new scalar instruction: " << *Ptr
-                        << "\n");
-
-      Instruction *Update = cast<Instruction>(
-          cast<PHINode>(Ptr)->getIncomingValueForBlock(Latch));
-
-      // If there is more than one user of Update (Ptr), we shouldn't assume it
-      // will be scalar after vectorisation as other users of the instruction
-      // may require widening. Otherwise, add it to ScalarPtrs.
-      if (Update->hasOneUse() && cast<Value>(*Update->user_begin()) == Ptr) {
-        ScalarPtrs.insert(Update);
-        return;
-      }
-    }
     // We only care about bitcast and getelementptr instructions contained in
     // the loop.
     if (!isLoopVaryingBitCastOrGEP(Ptr))
@@ -5226,11 +5216,22 @@ void LoopVectorizationCostModel::collectLoopScalars(ElementCount VF) {
     if (Ind == Legal->getPrimaryInduction() && foldTailByMasking())
       continue;
 
+    // Returns true if \p Indvar is a pointer induction that is used directly by
+    // load/store instruction \p I.
+    auto IsDirectLoadStoreFromPtrIndvar = [&](Instruction *Indvar,
+                                              Instruction *I) {
+      return Induction.second.getKind() ==
+                 InductionDescriptor::IK_PtrInduction &&
+             (isa<LoadInst>(I) || isa<StoreInst>(I)) &&
+             Indvar == getLoadStorePointerOperand(I) && isScalarUse(I, Indvar);
+    };
+
     // Determine if all users of the induction variable are scalar after
     // vectorization.
     auto ScalarInd = llvm::all_of(Ind->users(), [&](User *U) -> bool {
       auto *I = cast<Instruction>(U);
-      return I == IndUpdate || !TheLoop->contains(I) || Worklist.count(I);
+      return I == IndUpdate || !TheLoop->contains(I) || Worklist.count(I) ||
+             IsDirectLoadStoreFromPtrIndvar(Ind, I);
     });
     if (!ScalarInd)
       continue;
@@ -5240,7 +5241,8 @@ void LoopVectorizationCostModel::collectLoopScalars(ElementCount VF) {
     auto ScalarIndUpdate =
         llvm::all_of(IndUpdate->users(), [&](User *U) -> bool {
           auto *I = cast<Instruction>(U);
-          return I == Ind || !TheLoop->contains(I) || Worklist.count(I);
+          return I == Ind || !TheLoop->contains(I) || Worklist.count(I) ||
+                 IsDirectLoadStoreFromPtrIndvar(IndUpdate, I);
         });
     if (!ScalarIndUpdate)
       continue;
@@ -7286,6 +7288,12 @@ Optional<InstructionCost> LoopVectorizationCostModel::getReductionPatternCost(
   InstructionCost BaseCost = TTI.getArithmeticReductionCost(
       RdxDesc.getOpcode(), VectorTy, RdxDesc.getFastMathFlags(), CostKind);
 
+  // For a call to the llvm.fmuladd intrinsic we need to add the cost of a
+  // normal fmul instruction to the cost of the fadd reduction.
+  if (RdxDesc.getRecurrenceKind() == RecurKind::FMulAdd)
+    BaseCost +=
+        TTI.getArithmeticInstrCost(Instruction::FMul, VectorTy, CostKind);
+
   // If we're using ordered reductions then we can just return the base cost
   // here, since getArithmeticReductionCost calculates the full ordered
   // reduction cost when FP reassociation is not allowed.
@@ -7962,6 +7970,9 @@ LoopVectorizationCostModel::getInstructionCost(Instruction *I, ElementCount VF,
     return TTI.getCastInstrCost(Opcode, VectorTy, SrcVecTy, CCH, CostKind, I);
   }
   case Instruction::Call: {
+    if (RecurrenceDescriptor::isFMulAddIntrinsic(I))
+      if (auto RedCost = getReductionPatternCost(I, VF, VectorTy, CostKind))
+        return *RedCost;
     bool NeedToScalarize;
     CallInst *CI = cast<CallInst>(I);
     InstructionCost CallCost = getVectorCallCost(CI, VF, NeedToScalarize);
@@ -8260,6 +8271,7 @@ void LoopVectorizationPlanner::executePlan(ElementCount BestVF, unsigned BestUF,
   State.CFG.PrevBB = ILV.createVectorizedLoopSkeleton();
   State.TripCount = ILV.getOrCreateTripCount(nullptr);
   State.CanonicalIV = ILV.Induction;
+  ILV.collectPoisonGeneratingRecipes(State);
 
   ILV.printDebugTracesAtStart();
 
@@ -8468,7 +8480,8 @@ void EpilogueVectorizerMainLoop::printDebugTracesAtStart() {
 
 void EpilogueVectorizerMainLoop::printDebugTracesAtEnd() {
   DEBUG_WITH_TYPE(VerboseDebug, {
-    dbgs() << "intermediate fn:\n" << *Induction->getFunction() << "\n";
+    dbgs() << "intermediate fn:\n"
+           << *OrigLoop->getHeader()->getParent() << "\n";
   });
 }
 
@@ -8666,7 +8679,7 @@ void EpilogueVectorizerEpilogueLoop::printDebugTracesAtStart() {
 
 void EpilogueVectorizerEpilogueLoop::printDebugTracesAtEnd() {
   DEBUG_WITH_TYPE(VerboseDebug, {
-    dbgs() << "final fn:\n" << *Induction->getFunction() << "\n";
+    dbgs() << "final fn:\n" << *OrigLoop->getHeader()->getParent() << "\n";
   });
 }
 
@@ -9052,7 +9065,8 @@ VPBasicBlock *VPRecipeBuilder::handleReplication(
       Range);
 
   bool IsPredicated = LoopVectorizationPlanner::getDecisionAndClampRange(
-      [&](ElementCount VF) { return CM.isPredicatedInst(I); }, Range);
+      [&](ElementCount VF) { return CM.isPredicatedInst(I, IsUniform); },
+      Range);
 
   // Even if the instruction is not marked as uniform, there are certain
   // intrinsic calls that can be effectively treated as such, so we check for
@@ -9354,7 +9368,9 @@ VPlanPtr LoopVectorizationPlanner::buildVPlanWithVPRecipes(
     if (VPBB)
       VPBlockUtils::insertBlockAfter(FirstVPBBForBB, VPBB);
     else {
-      Plan->setEntry(FirstVPBBForBB);
+      auto *TopRegion = new VPRegionBlock("vector loop");
+      TopRegion->setEntry(FirstVPBBForBB);
+      Plan->setEntry(TopRegion);
       HeaderVPBB = FirstVPBBForBB;
     }
     VPBB = FirstVPBBForBB;
@@ -9426,9 +9442,11 @@ VPlanPtr LoopVectorizationPlanner::buildVPlanWithVPRecipes(
     }
   }
 
-  assert(isa<VPBasicBlock>(Plan->getEntry()) &&
+  assert(isa<VPRegionBlock>(Plan->getEntry()) &&
          !Plan->getEntry()->getEntryBasicBlock()->empty() &&
-         "entry block must be set to a non-empty VPBasicBlock");
+         "entry block must be set to a VPRegionBlock having a non-empty entry "
+         "VPBasicBlock");
+  cast<VPRegionBlock>(Plan->getEntry())->setExit(VPBB);
   RecipeBuilder.fixHeaderPhis();
 
   // ---------------------------------------------------------------------------
@@ -9653,12 +9671,17 @@ void LoopVectorizationPlanner::adjustRecipesForReductions(
       unsigned FirstOpId;
       assert(!RecurrenceDescriptor::isSelectCmpRecurrenceKind(Kind) &&
              "Only min/max recurrences allowed for inloop reductions");
+      // Recognize a call to the llvm.fmuladd intrinsic.
+      bool IsFMulAdd = (Kind == RecurKind::FMulAdd);
+      assert((!IsFMulAdd || RecurrenceDescriptor::isFMulAddIntrinsic(R)) &&
+             "Expected instruction to be a call to the llvm.fmuladd intrinsic");
       if (RecurrenceDescriptor::isMinMaxRecurrenceKind(Kind)) {
         assert(isa<VPWidenSelectRecipe>(WidenRecipe) &&
                "Expected to replace a VPWidenSelectSC");
         FirstOpId = 1;
       } else {
-        assert((MinVF.isScalar() || isa<VPWidenRecipe>(WidenRecipe)) &&
+        assert((MinVF.isScalar() || isa<VPWidenRecipe>(WidenRecipe) ||
+                (IsFMulAdd && isa<VPWidenCallRecipe>(WidenRecipe))) &&
                "Expected to replace a VPWidenSC");
         FirstOpId = 0;
       }
@@ -9669,8 +9692,20 @@ void LoopVectorizationPlanner::adjustRecipesForReductions(
       auto *CondOp = CM.foldTailByMasking()
                          ? RecipeBuilder.createBlockInMask(R->getParent(), Plan)
                          : nullptr;
-      VPReductionRecipe *RedRecipe = new VPReductionRecipe(
-          &RdxDesc, R, ChainOp, VecOp, CondOp, TTI);
+
+      if (IsFMulAdd) {
+        // If the instruction is a call to the llvm.fmuladd intrinsic then we
+        // need to create an fmul recipe to use as the vector operand for the
+        // fadd reduction.
+        VPInstruction *FMulRecipe = new VPInstruction(
+            Instruction::FMul, {VecOp, Plan->getVPValue(R->getOperand(1))});
+        FMulRecipe->setFastMathFlags(R->getFastMathFlags());
+        WidenRecipe->getParent()->insert(FMulRecipe,
+                                         WidenRecipe->getIterator());
+        VecOp = FMulRecipe;
+      }
+      VPReductionRecipe *RedRecipe =
+          new VPReductionRecipe(&RdxDesc, R, ChainOp, VecOp, CondOp, TTI);
       WidenRecipe->getVPSingleValue()->replaceAllUsesWith(RedRecipe);
       Plan->removeVPValueFor(R);
       Plan->addVPValue(R, RedRecipe);
@@ -9749,13 +9784,83 @@ void VPWidenSelectRecipe::execute(VPTransformState &State) {
 }
 
 void VPWidenRecipe::execute(VPTransformState &State) {
-  State.ILV->widenInstruction(*getUnderlyingInstr(), this, *this, State);
+  State.ILV->widenInstruction(*getUnderlyingInstr(), this, State);
 }
 
 void VPWidenGEPRecipe::execute(VPTransformState &State) {
-  State.ILV->widenGEP(cast<GetElementPtrInst>(getUnderlyingInstr()), this,
-                      *this, State.UF, State.VF, IsPtrLoopInvariant,
-                      IsIndexLoopInvariant, State);
+  auto *GEP = cast<GetElementPtrInst>(getUnderlyingInstr());
+  // Construct a vector GEP by widening the operands of the scalar GEP as
+  // necessary. We mark the vector GEP 'inbounds' if appropriate. A GEP
+  // results in a vector of pointers when at least one operand of the GEP
+  // is vector-typed. Thus, to keep the representation compact, we only use
+  // vector-typed operands for loop-varying values.
+
+  if (State.VF.isVector() && IsPtrLoopInvariant && IsIndexLoopInvariant.all()) {
+    // If we are vectorizing, but the GEP has only loop-invariant operands,
+    // the GEP we build (by only using vector-typed operands for
+    // loop-varying values) would be a scalar pointer. Thus, to ensure we
+    // produce a vector of pointers, we need to either arbitrarily pick an
+    // operand to broadcast, or broadcast a clone of the original GEP.
+    // Here, we broadcast a clone of the original.
+    //
+    // TODO: If at some point we decide to scalarize instructions having
+    //       loop-invariant operands, this special case will no longer be
+    //       required. We would add the scalarization decision to
+    //       collectLoopScalars() and teach getVectorValue() to broadcast
+    //       the lane-zero scalar value.
+    auto *Clone = State.Builder.Insert(GEP->clone());
+    for (unsigned Part = 0; Part < State.UF; ++Part) {
+      Value *EntryPart = State.Builder.CreateVectorSplat(State.VF, Clone);
+      State.set(this, EntryPart, Part);
+      State.ILV->addMetadata(EntryPart, GEP);
+    }
+  } else {
+    // If the GEP has at least one loop-varying operand, we are sure to
+    // produce a vector of pointers. But if we are only unrolling, we want
+    // to produce a scalar GEP for each unroll part. Thus, the GEP we
+    // produce with the code below will be scalar (if VF == 1) or vector
+    // (otherwise). Note that for the unroll-only case, we still maintain
+    // values in the vector mapping with initVector, as we do for other
+    // instructions.
+    for (unsigned Part = 0; Part < State.UF; ++Part) {
+      // The pointer operand of the new GEP. If it's loop-invariant, we
+      // won't broadcast it.
+      auto *Ptr = IsPtrLoopInvariant
+                      ? State.get(getOperand(0), VPIteration(0, 0))
+                      : State.get(getOperand(0), Part);
+
+      // Collect all the indices for the new GEP. If any index is
+      // loop-invariant, we won't broadcast it.
+      SmallVector<Value *, 4> Indices;
+      for (unsigned I = 1, E = getNumOperands(); I < E; I++) {
+        VPValue *Operand = getOperand(I);
+        if (IsIndexLoopInvariant[I - 1])
+          Indices.push_back(State.get(Operand, VPIteration(0, 0)));
+        else
+          Indices.push_back(State.get(Operand, Part));
+      }
+
+      // If the GEP instruction is vectorized and was in a basic block that
+      // needed predication, we can't propagate the poison-generating 'inbounds'
+      // flag. The control flow has been linearized and the GEP is no longer
+      // guarded by the predicate, which could make the 'inbounds' properties to
+      // no longer hold.
+      bool IsInBounds =
+          GEP->isInBounds() && State.MayGeneratePoisonRecipes.count(this) == 0;
+
+      // Create the new GEP. Note that this GEP may be a scalar if VF == 1,
+      // but it should be a vector, otherwise.
+      auto *NewGEP = IsInBounds
+                         ? State.Builder.CreateInBoundsGEP(
+                               GEP->getSourceElementType(), Ptr, Indices)
+                         : State.Builder.CreateGEP(GEP->getSourceElementType(),
+                                                   Ptr, Indices);
+      assert((State.VF.isScalar() || NewGEP->getType()->isVectorTy()) &&
+             "NewGEP is not a pointer vector");
+      State.set(this, NewGEP, Part);
+      State.ILV->addMetadata(NewGEP, GEP);
+    }
+  }
 }
 
 void VPWidenIntOrFpInductionRecipe::execute(VPTransformState &State) {
@@ -9867,8 +9972,8 @@ void VPReductionRecipe::execute(VPTransformState &State) {
 void VPReplicateRecipe::execute(VPTransformState &State) {
   if (State.Instance) { // Generate a single instance.
     assert(!State.VF.isScalable() && "Can't scalarize a scalable vector");
-    State.ILV->scalarizeInstruction(getUnderlyingInstr(), this, *this,
-                                    *State.Instance, IsPredicated, State);
+    State.ILV->scalarizeInstruction(getUnderlyingInstr(), this, *State.Instance,
+                                    IsPredicated, State);
     // Insert scalar instance packing it into a vector.
     if (AlsoPack && State.VF.isVector()) {
       // If we're constructing lane 0, initialize to start from poison.
@@ -9891,7 +9996,7 @@ void VPReplicateRecipe::execute(VPTransformState &State) {
          "Can't scalarize a scalable vector");
   for (unsigned Part = 0; Part < State.UF; ++Part)
     for (unsigned Lane = 0; Lane < EndLane; ++Lane)
-      State.ILV->scalarizeInstruction(getUnderlyingInstr(), this, *this,
+      State.ILV->scalarizeInstruction(getUnderlyingInstr(), this,
                                       VPIteration(Part, Lane), IsPredicated,
                                       State);
 }

@@ -52,6 +52,183 @@ define void @vctp32(i32 %arg, <4 x i32> *%in, <4 x i32>* %out) {
   ret void
 }
 
+
+define arm_aapcs_vfpcc <4 x i32> @vcmp_ult_v4i32(i32 %n, <4 x i32> %a, <4 x i32> %b) {
+; CHECK-LABEL: vcmp_ult_v4i32:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vctp.32 r0
+; CHECK-NEXT:    vpst
+; CHECK-NEXT:    vmovt q1, q0
+; CHECK-NEXT:    vmov q0, q1
+; CHECK-NEXT:    bx lr
+entry:
+  %i = insertelement <4 x i32> undef, i32 %n, i32 0
+  %ns = shufflevector <4 x i32> %i, <4 x i32> undef, <4 x i32> zeroinitializer
+  %c = icmp ult <4 x i32> <i32 0, i32 1, i32 2, i32 3>, %ns
+  %s = select <4 x i1> %c, <4 x i32> %a, <4 x i32> %b
+  ret <4 x i32> %s
+}
+
+define arm_aapcs_vfpcc <4 x i32> @vcmp_uge_v4i32(i32 %n, <4 x i32> %a, <4 x i32> %b) {
+; CHECK-LABEL: vcmp_uge_v4i32:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vctp.32 r0
+; CHECK-NEXT:    vpst
+; CHECK-NEXT:    vmovt q1, q0
+; CHECK-NEXT:    vmov q0, q1
+; CHECK-NEXT:    bx lr
+entry:
+  %i = insertelement <4 x i32> undef, i32 %n, i32 0
+  %ns = shufflevector <4 x i32> %i, <4 x i32> undef, <4 x i32> zeroinitializer
+  %c = icmp uge <4 x i32> %ns, <i32 0, i32 1, i32 2, i32 3>
+  %s = select <4 x i1> %c, <4 x i32> %a, <4 x i32> %b
+  ret <4 x i32> %s
+}
+
+define arm_aapcs_vfpcc <4 x i32> @vcmp_ult_v4i32_undef(i32 %n, <4 x i32> %a, <4 x i32> %b) {
+; CHECK-LABEL: vcmp_ult_v4i32_undef:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vctp.32 r0
+; CHECK-NEXT:    vpst
+; CHECK-NEXT:    vmovt q1, q0
+; CHECK-NEXT:    vmov q0, q1
+; CHECK-NEXT:    bx lr
+entry:
+  %i = insertelement <4 x i32> undef, i32 %n, i32 0
+  %ns = shufflevector <4 x i32> %i, <4 x i32> undef, <4 x i32> zeroinitializer
+  %c = icmp ult <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>, %ns
+  %s = select <4 x i1> %c, <4 x i32> %a, <4 x i32> %b
+  ret <4 x i32> %s
+}
+
+
+define arm_aapcs_vfpcc <8 x i16> @vcmp_ult_v8i16(i16 %n, <8 x i16> %a, <8 x i16> %b) {
+; CHECK-LABEL: vcmp_ult_v8i16:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    uxth r0, r0
+; CHECK-NEXT:    vctp.16 r0
+; CHECK-NEXT:    vpst
+; CHECK-NEXT:    vmovt q1, q0
+; CHECK-NEXT:    vmov q0, q1
+; CHECK-NEXT:    bx lr
+entry:
+  %i = insertelement <8 x i16> undef, i16 %n, i32 0
+  %ns = shufflevector <8 x i16> %i, <8 x i16> undef, <8 x i32> zeroinitializer
+  %c = icmp ult <8 x i16> <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7>, %ns
+  %s = select <8 x i1> %c, <8 x i16> %a, <8 x i16> %b
+  ret <8 x i16> %s
+}
+
+define arm_aapcs_vfpcc <8 x i16> @vcmp_uge_v8i16(i16 %n, <8 x i16> %a, <8 x i16> %b) {
+; CHECK-LABEL: vcmp_uge_v8i16:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    uxth r0, r0
+; CHECK-NEXT:    vctp.16 r0
+; CHECK-NEXT:    vpst
+; CHECK-NEXT:    vmovt q1, q0
+; CHECK-NEXT:    vmov q0, q1
+; CHECK-NEXT:    bx lr
+entry:
+  %i = insertelement <8 x i16> undef, i16 %n, i32 0
+  %ns = shufflevector <8 x i16> %i, <8 x i16> undef, <8 x i32> zeroinitializer
+  %c = icmp uge <8 x i16> %ns, <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7>
+  %s = select <8 x i1> %c, <8 x i16> %a, <8 x i16> %b
+  ret <8 x i16> %s
+}
+
+
+define arm_aapcs_vfpcc <16 x i8> @vcmp_ult_v16i8(i8 %n, <16 x i8> %a, <16 x i8> %b) {
+; CHECK-LABEL: vcmp_ult_v16i8:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    uxtb r0, r0
+; CHECK-NEXT:    vctp.8 r0
+; CHECK-NEXT:    vpst
+; CHECK-NEXT:    vmovt q1, q0
+; CHECK-NEXT:    vmov q0, q1
+; CHECK-NEXT:    bx lr
+entry:
+  %i = insertelement <16 x i8> undef, i8 %n, i32 0
+  %ns = shufflevector <16 x i8> %i, <16 x i8> undef, <16 x i32> zeroinitializer
+  %c = icmp ult <16 x i8> <i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 8, i8 9, i8 10, i8 11, i8 12, i8 13, i8 14, i8 15>, %ns
+  %s = select <16 x i1> %c, <16 x i8> %a, <16 x i8> %b
+  ret <16 x i8> %s
+}
+
+define arm_aapcs_vfpcc <16 x i8> @vcmp_uge_v16i8(i8 %n, <16 x i8> %a, <16 x i8> %b) {
+; CHECK-LABEL: vcmp_uge_v16i8:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    uxtb r0, r0
+; CHECK-NEXT:    vctp.8 r0
+; CHECK-NEXT:    vpst
+; CHECK-NEXT:    vmovt q1, q0
+; CHECK-NEXT:    vmov q0, q1
+; CHECK-NEXT:    bx lr
+entry:
+  %i = insertelement <16 x i8> undef, i8 %n, i32 0
+  %ns = shufflevector <16 x i8> %i, <16 x i8> undef, <16 x i32> zeroinitializer
+  %c = icmp uge <16 x i8> %ns, <i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 8, i8 9, i8 10, i8 11, i8 12, i8 13, i8 14, i8 15>
+  %s = select <16 x i1> %c, <16 x i8> %a, <16 x i8> %b
+  ret <16 x i8> %s
+}
+
+
+define arm_aapcs_vfpcc <2 x i64> @vcmp_ult_v2i64(i64 %n, <2 x i64> %a, <2 x i64> %b) {
+; CHECK-LABEL: vcmp_ult_v2i64:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    rsbs.w r3, r0, #1
+; CHECK-NEXT:    mov.w r2, #0
+; CHECK-NEXT:    sbcs.w r3, r2, r1
+; CHECK-NEXT:    cset r3, lo
+; CHECK-NEXT:    cmp r3, #0
+; CHECK-NEXT:    csetm r3, ne
+; CHECK-NEXT:    rsbs r0, r0, #0
+; CHECK-NEXT:    sbcs.w r0, r2, r1
+; CHECK-NEXT:    cset r0, lo
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    csetm r0, ne
+; CHECK-NEXT:    vmov q2[2], q2[0], r0, r3
+; CHECK-NEXT:    vmov q2[3], q2[1], r0, r3
+; CHECK-NEXT:    vbic q1, q1, q2
+; CHECK-NEXT:    vand q0, q0, q2
+; CHECK-NEXT:    vorr q0, q0, q1
+; CHECK-NEXT:    bx lr
+entry:
+  %i = insertelement <2 x i64> undef, i64 %n, i32 0
+  %ns = shufflevector <2 x i64> %i, <2 x i64> undef, <2 x i32> zeroinitializer
+  %c = icmp ult <2 x i64> <i64 0, i64 1>, %ns
+  %s = select <2 x i1> %c, <2 x i64> %a, <2 x i64> %b
+  ret <2 x i64> %s
+}
+
+define arm_aapcs_vfpcc <2 x i64> @vcmp_uge_v2i64(i64 %n, <2 x i64> %a, <2 x i64> %b) {
+; CHECK-LABEL: vcmp_uge_v2i64:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    subs r0, #1
+; CHECK-NEXT:    vldr s8, .LCPI11_0
+; CHECK-NEXT:    sbcs r0, r1, #0
+; CHECK-NEXT:    cset r0, hs
+; CHECK-NEXT:    vmov.f32 s9, s8
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    csetm r0, ne
+; CHECK-NEXT:    vmov s10, r0
+; CHECK-NEXT:    vmov.f32 s11, s10
+; CHECK-NEXT:    vbic q1, q1, q2
+; CHECK-NEXT:    vand q0, q0, q2
+; CHECK-NEXT:    vorr q0, q0, q1
+; CHECK-NEXT:    bx lr
+; CHECK-NEXT:    .p2align 2
+; CHECK-NEXT:  @ %bb.1:
+; CHECK-NEXT:  .LCPI11_0:
+; CHECK-NEXT:    .long 0xffffffff @ float NaN
+entry:
+  %i = insertelement <2 x i64> undef, i64 %n, i32 0
+  %ns = shufflevector <2 x i64> %i, <2 x i64> undef, <2 x i32> zeroinitializer
+  %c = icmp uge <2 x i64> %ns, <i64 0, i64 1>
+  %s = select <2 x i1> %c, <2 x i64> %a, <2 x i64> %b
+  ret <2 x i64> %s
+}
+
+
 declare <16 x i1> @llvm.arm.mve.vctp8(i32)
 declare <8 x i1> @llvm.arm.mve.vctp16(i32)
 declare <4 x i1> @llvm.arm.mve.vctp32(i32)

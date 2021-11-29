@@ -372,7 +372,7 @@ Error appendToError(Error Err, StringRef After) {
 
 /// This function populates a DynamicEntries struct using an ELFT::DynRange.
 /// After populating the struct, the members are validated with
-/// some basic sanity checks.
+/// some basic correctness checks.
 ///
 /// @param Dyn Target DynamicEntries struct to populate.
 /// @param DynTable Source dynamic table.

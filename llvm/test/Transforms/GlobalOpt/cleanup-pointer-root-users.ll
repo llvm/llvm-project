@@ -1,4 +1,4 @@
-; RUN: opt -globalopt -S -o - < %s | FileCheck %s
+; RUN: opt -passes=globalopt -S -o - < %s | FileCheck %s
 
 @glbl = internal global i8* null
 

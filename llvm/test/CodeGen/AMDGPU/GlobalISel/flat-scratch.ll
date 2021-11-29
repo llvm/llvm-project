@@ -603,9 +603,9 @@ define void @store_load_vindex_large_offset_foo(i32 %idx) {
 ; GFX9-LABEL: store_load_vindex_large_offset_foo:
 ; GFX9:       ; %bb.0: ; %bb
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    scratch_load_dword v1, off, s32 glc
+; GFX9-NEXT:    scratch_load_dword v1, off, s32 offset:4 glc
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-NEXT:    s_add_i32 vcc_hi, s32, 0x4000
+; GFX9-NEXT:    s_add_i32 vcc_hi, s32, 0x4004
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v1, 2, v0
 ; GFX9-NEXT:    v_mov_b32_e32 v2, vcc_hi
 ; GFX9-NEXT:    v_and_b32_e32 v0, 15, v0
@@ -624,14 +624,14 @@ define void @store_load_vindex_large_offset_foo(i32 %idx) {
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    v_and_b32_e32 v1, 15, v0
-; GFX10-NEXT:    s_add_i32 vcc_lo, s32, 0x4000
+; GFX10-NEXT:    s_add_i32 vcc_lo, s32, 0x4004
 ; GFX10-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; GFX10-NEXT:    v_mov_b32_e32 v2, vcc_lo
 ; GFX10-NEXT:    v_mov_b32_e32 v3, 15
 ; GFX10-NEXT:    v_lshlrev_b32_e32 v1, 2, v1
 ; GFX10-NEXT:    v_add_nc_u32_e32 v0, v2, v0
 ; GFX10-NEXT:    v_add_nc_u32_e32 v1, v2, v1
-; GFX10-NEXT:    scratch_load_dword v2, off, s32 glc dlc
+; GFX10-NEXT:    scratch_load_dword v2, off, s32 offset:4 glc dlc
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    scratch_store_dword v0, v3, off
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
@@ -645,13 +645,13 @@ define void @store_load_vindex_large_offset_foo(i32 %idx) {
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_dual_mov_b32 v2, 15 :: v_dual_and_b32 v1, 15, v0
 ; GFX11-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
-; GFX11-NEXT:    s_add_i32 vcc_lo, s32, 0x4000
-; GFX11-NEXT:    scratch_load_b32 v3, off, s32 glc dlc
+; GFX11-NEXT:    s_add_i32 vcc_lo, s32, 0x4004
+; GFX11-NEXT:    scratch_load_b32 v3, off, s32 offset:4 glc dlc
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    v_lshlrev_b32_e32 v1, 2, v1
 ; GFX11-NEXT:    scratch_store_b32 v0, v2, vcc_lo
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-NEXT:    s_add_i32 vcc_lo, s32, 0x4000
+; GFX11-NEXT:    s_add_i32 vcc_lo, s32, 0x4004
 ; GFX11-NEXT:    scratch_load_b32 v0, v1, vcc_lo glc dlc
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
@@ -735,10 +735,11 @@ define void @store_load_large_imm_offset_foo() {
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    v_mov_b32_e32 v0, 13
 ; GFX9-NEXT:    s_movk_i32 s0, 0x3e80
-; GFX9-NEXT:    scratch_store_dword off, v0, s32
+; GFX9-NEXT:    s_add_i32 vcc_hi, s32, 4
+; GFX9-NEXT:    scratch_store_dword off, v0, s32 offset:4
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_mov_b32_e32 v0, 15
-; GFX9-NEXT:    s_add_i32 s0, s0, s32
+; GFX9-NEXT:    s_add_i32 s0, s0, vcc_hi
 ; GFX9-NEXT:    scratch_store_dword off, v0, s0
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    scratch_load_dword v0, off, s0 glc
@@ -752,8 +753,9 @@ define void @store_load_large_imm_offset_foo() {
 ; GFX10-NEXT:    v_mov_b32_e32 v0, 13
 ; GFX10-NEXT:    v_mov_b32_e32 v1, 15
 ; GFX10-NEXT:    s_movk_i32 s0, 0x3e80
-; GFX10-NEXT:    s_add_i32 s0, s0, s32
-; GFX10-NEXT:    scratch_store_dword off, v0, s32
+; GFX10-NEXT:    s_add_i32 vcc_lo, s32, 4
+; GFX10-NEXT:    s_add_i32 s0, s0, vcc_lo
+; GFX10-NEXT:    scratch_store_dword off, v0, s32 offset:4
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    scratch_store_dword off, v1, s0
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
@@ -767,11 +769,11 @@ define void @store_load_large_imm_offset_foo() {
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_dual_mov_b32 v0, 13 :: v_dual_mov_b32 v1, 0x3e80
 ; GFX11-NEXT:    v_mov_b32_e32 v2, 15
-; GFX11-NEXT:    scratch_store_b32 off, v0, s32
+; GFX11-NEXT:    scratch_store_b32 off, v0, s32 offset:4
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-NEXT:    scratch_store_b32 v1, v2, s32
+; GFX11-NEXT:    scratch_store_b32 v1, v2, s32 offset:4
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-NEXT:    scratch_load_b32 v0, v1, s32 glc dlc
+; GFX11-NEXT:    scratch_load_b32 v0, v1, s32 offset:4 glc dlc
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
 bb:

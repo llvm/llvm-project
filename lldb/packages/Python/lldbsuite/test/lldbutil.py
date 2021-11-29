@@ -755,8 +755,13 @@ def check_breakpoint(
     expected_location_resolved - Extected resolved status for the location_id (True/False). Default - True.
     expected_location_hit_count - Expected hit count for the breakpoint at location_id. Must be set if the location_id parameter is set.
     """
-    
-    bkpt = test.target().FindBreakpointByID(bpno)
+
+    if isinstance(test.target, lldb.SBTarget):
+        target = test.target
+    else:
+        target = test.target()
+    bkpt = target.FindBreakpointByID(bpno)
+
     test.assertTrue(bkpt.IsValid(), "Breakpoint is not valid.")
 
     if expected_locations is not None:

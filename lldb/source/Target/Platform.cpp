@@ -1222,22 +1222,6 @@ Platform::CreateArchList(llvm::ArrayRef<llvm::Triple::ArchType> archs,
   return list;
 }
 
-bool Platform::GetSupportedArchitectureAtIndex(uint32_t idx, ArchSpec &arch) {
-  const auto &archs = GetSupportedArchitectures();
-  if (idx >= archs.size())
-    return false;
-  arch = archs[idx];
-  return true;
-}
-
-std::vector<ArchSpec> Platform::GetSupportedArchitectures() {
-  std::vector<ArchSpec> result;
-  ArchSpec arch;
-  for (uint32_t idx = 0; GetSupportedArchitectureAtIndex(idx, arch); ++idx)
-    result.push_back(arch);
-  return result;
-}
-
 /// Lets a platform answer if it is compatible with a given
 /// architecture and the target triple contained within.
 bool Platform::IsCompatibleArchitecture(const ArchSpec &arch,

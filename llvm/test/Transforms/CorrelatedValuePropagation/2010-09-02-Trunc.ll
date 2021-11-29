@@ -1,4 +1,4 @@
-; RUN: opt -S < %s -correlated-propagation | FileCheck %s
+; RUN: opt -S < %s -passes=correlated-propagation | FileCheck %s
 
 ; CHECK-LABEL: @test(
 define i16 @test(i32 %a, i1 %b) {

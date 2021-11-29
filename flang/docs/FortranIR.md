@@ -145,7 +145,7 @@ Once the basic blocks are constructed, CFG edges defined, and the CFG is simplif
 
 _Program_: A program instance is the top-level object that contains the representation of all the code being compiled, the compilation unit. It contains a list of procedures and a reference to the global symbol table.
 
-_Procedure_: This is a named Fortran procedure (subroutine or function). It contains a (hierarchical) list of regions. It also owns the master list of all basic blocks for the procedure.
+_Procedure_: This is a named Fortran procedure (subroutine or function). It contains a (hierarchical) list of regions. It also owns a list of all basic blocks for the procedure.
 
 _Region_: A region is owned by a procedure or by another region. A region owns a reference to a scope in the symbol table tree. The list of delineated basic blocks can also be requested from a region.
 

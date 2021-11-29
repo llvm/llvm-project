@@ -1417,6 +1417,9 @@ def Tosa_PadOp : Tosa_Op<"pad", [
 
   let builders = [Tosa_PadOpQuantInfoBuilder,
                   Tosa_ExplicitValuePadOpQuantInfoBuilder];
+
+  let hasCanonicalizer = 1;
+  let hasFolder = 1;
 }
 
 //===----------------------------------------------------------------------===//

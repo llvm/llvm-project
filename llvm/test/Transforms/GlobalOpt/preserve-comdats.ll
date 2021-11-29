@@ -1,4 +1,4 @@
-; RUN: opt -globalopt -S < %s | FileCheck %s
+; RUN: opt -passes=globalopt -S < %s | FileCheck %s
 
 $comdat_global = comdat any
 

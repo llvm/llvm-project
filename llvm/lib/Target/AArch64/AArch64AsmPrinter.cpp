@@ -818,18 +818,9 @@ void AArch64AsmPrinter::emitJumpTableInfo() {
   const std::vector<MachineJumpTableEntry> &JT = MJTI->getJumpTables();
   if (JT.empty()) return;
 
-  const Function &F = MF->getFunction();
   const TargetLoweringObjectFile &TLOF = getObjFileLowering();
-  bool JTInDiffSection =
-      !STI->isTargetCOFF() ||
-      !TLOF.shouldPutJumpTableInFunctionSection(
-          MJTI->getEntryKind() == MachineJumpTableInfo::EK_LabelDifference32,
-          F);
-  if (JTInDiffSection) {
-      // Drop it in the readonly section.
-      MCSection *ReadOnlySec = TLOF.getSectionForJumpTable(F, TM);
-      OutStreamer->SwitchSection(ReadOnlySec);
-  }
+  MCSection *ReadOnlySec = TLOF.getSectionForJumpTable(MF->getFunction(), TM);
+  OutStreamer->SwitchSection(ReadOnlySec);
 
   auto AFI = MF->getInfo<AArch64FunctionInfo>();
   for (unsigned JTI = 0, e = JT.size(); JTI != e; ++JTI) {

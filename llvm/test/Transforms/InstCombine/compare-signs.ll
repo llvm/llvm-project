@@ -69,8 +69,8 @@ define i32 @test3i(i32 %a, i32 %b) nounwind readnone {
 ; CHECK-LABEL: @test3i(
 ; CHECK-NEXT:    [[T01:%.*]] = xor i32 [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = xor i32 [[T01]], -1
-; CHECK-NEXT:    [[T4:%.*]] = lshr i32 [[TMP1]], 31
-; CHECK-NEXT:    ret i32 [[T4]]
+; CHECK-NEXT:    [[T01_LOBIT_NOT:%.*]] = lshr i32 [[TMP1]], 31
+; CHECK-NEXT:    ret i32 [[T01_LOBIT_NOT]]
 ;
   %t0 = lshr i32 %a, 29
   %t1 = lshr i32 %b, 29
@@ -178,13 +178,12 @@ define <2 x i1> @shift_trunc_signbit_test_vec_uses(<2 x i17> %x, <2 x i17>* %p1,
   ret <2 x i1> %r
 }
 
-; negative test
+; negative test - but this reduces with a mask op
 
 define i1 @shift_trunc_wrong_shift(i32 %x) {
 ; CHECK-LABEL: @shift_trunc_wrong_shift(
-; CHECK-NEXT:    [[SH:%.*]] = lshr i32 [[X:%.*]], 23
-; CHECK-NEXT:    [[TR:%.*]] = trunc i32 [[SH]] to i8
-; CHECK-NEXT:    [[R:%.*]] = icmp slt i8 [[TR]], 0
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[X:%.*]], 1073741824
+; CHECK-NEXT:    [[R:%.*]] = icmp ne i32 [[TMP1]], 0
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %sh = lshr i32 %x, 23

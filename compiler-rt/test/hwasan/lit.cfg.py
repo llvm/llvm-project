@@ -18,13 +18,6 @@ if config.target_arch == 'x86_64' and config.enable_aliases == '1':
 else:
   config.available_features.add('pointer-tagging')
 if config.target_arch == 'x86_64':
-  # By default the assembler uses R_X86_64_REX_GOTPCRELX relocations, which can
-  # be relaxed to direct references.  When tagged globals are enabled, these
-  # references fail to link since they have more than a 32-bit offset from RIP.
-  # As a workaround, we disable the relaxation.
-  # TODO: Implement a way to disable for the affected relocations only.
-  clang_hwasan_common_cflags += ["-Wa,-mrelax-relocations=no"]
-
   # The callback instrumentation used on x86_64 has a 1/64 chance of choosing a
   # stack tag of 0.  This causes stack tests to become flaky, so we force tags
   # to be generated via calls to __hwasan_generate_tag, which never returns 0.

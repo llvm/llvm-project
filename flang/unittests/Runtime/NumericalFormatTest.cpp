@@ -144,11 +144,11 @@ TEST(IOApiTests, MultilineOutputTest) {
 }
 
 TEST(IOApiTests, ListInputTest) {
-  static const char input[]{",1*,(5.,6..)"};
+  static const char input[]{",1*,(5.,6.),(7.0,8.0)"};
   auto cookie{IONAME(BeginInternalListInput)(input, sizeof input - 1)};
 
   // Create real values for IO tests
-  static constexpr int numRealValues{6};
+  static constexpr int numRealValues{8};
   float z[numRealValues];
   for (int j{0}; j < numRealValues; ++j) {
     z[j] = -(j + 1);
@@ -166,7 +166,7 @@ TEST(IOApiTests, ListInputTest) {
                        << static_cast<int>(status);
 
   // Ensure writing complex values from floats does not result in an error
-  static constexpr int bufferSize{33};
+  static constexpr int bufferSize{39};
   char output[bufferSize];
   output[bufferSize - 1] = '\0';
   cookie = IONAME(BeginInternalListOutput)(output, bufferSize - 1);
@@ -182,7 +182,8 @@ TEST(IOApiTests, ListInputTest) {
                        << static_cast<int>(status);
 
   // Verify output buffer against expected value
-  static const char expect[bufferSize]{" (-1.,-2.) (-3.,-4.) (5.,6.)    "};
+  static const char expect[bufferSize]{
+      " (-1.,-2.) (-3.,-4.) (5.,6.) (7.,8.)  "};
   ASSERT_EQ(std::strncmp(output, expect, bufferSize), 0)
       << "Failed complex list-directed output, expected '" << expect
       << "', but got '" << output << "'";
