@@ -50,7 +50,7 @@ StackTrace StackStore::Load(Id id) const {
   uptr idx = IdToOffset(id);
   uptr block_idx = GetBlockIdx(idx);
   CHECK_LT(block_idx, ARRAY_SIZE(blocks_));
-  uptr *stack_trace = blocks_[block_idx].Get();
+  const uptr *stack_trace = blocks_[block_idx].Get();
   if (!stack_trace)
     return {};
   stack_trace += GetInBlockIdx(idx);
