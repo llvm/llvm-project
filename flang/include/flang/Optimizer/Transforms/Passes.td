@@ -120,4 +120,17 @@ def ExternalNameConversion : Pass<"external-name-interop", "mlir::ModuleOp"> {
   let constructor = "::fir::createExternalNameConversionPass()";
 }
 
+def MemRefDataFlowOpt : FunctionPass<"fir-memref-dataflow-opt"> {
+  let summary =
+    "Perform store/load forwarding and potentially removing dead stores.";
+  let description = [{
+    This pass performs store to load forwarding to eliminate memory accesses and
+    potentially the entire allocation if all the accesses are forwarded.
+  }];
+  let constructor = "::fir::createMemDataFlowOptPass()";
+  let dependentDialects = [
+    "fir::FIROpsDialect", "mlir::StandardOpsDialect"
+  ];
+}
+
 #endif // FLANG_OPTIMIZER_TRANSFORMS_PASSES
