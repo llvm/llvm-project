@@ -69,6 +69,15 @@ private:
   /// \see https://dlang.org/spec/abi.html#Number .
   const char *decodeNumber(const char *Mangled, unsigned long *Ret);
 
+  /// Check whether it is the beginning of a symbol name.
+  ///
+  /// \param Mangled string to extract the symbol name.
+  ///
+  /// \return true on success, false otherwise.
+  ///
+  /// \see https://dlang.org/spec/abi.html#SymbolName .
+  bool isSymbolName(const char *Mangled);
+
   /// Extract and demangle an identifier from a given mangled symbol append it
   /// to the output string.
   ///
@@ -136,6 +145,14 @@ const char *Demangler::decodeNumber(const char *Mangled, unsigned long *Ret) {
   return Mangled;
 }
 
+bool Demangler::isSymbolName(const char *Mangled) {
+  if (std::isdigit(*Mangled))
+    return true;
+
+  // TODO: Handle symbol back references and template instances.
+  return false;
+}
+
 const char *Demangler::parseMangle(OutputBuffer *Demangled,
                                    const char *Mangled) {
   // A D mangled symbol is comprised of both scope and type information.
@@ -180,9 +197,18 @@ const char *Demangler::parseQualified(OutputBuffer *Demangled,
   //        SymbolName M TypeModifiers TypeFunctionNoReturn
   // The start pointer should be at the above location.
 
-  // TODO: Parse multiple identifiers
+  // Whether it has more than one symbol
+  size_t NotFirst = false;
+  do {
+    if (NotFirst)
+      *Demangled << '.';
+    NotFirst = true;
 
-  return parseIdentifier(Demangled, Mangled);
+    Mangled = parseIdentifier(Demangled, Mangled);
+
+  } while (Mangled && isSymbolName(Mangled));
+
+  return Mangled;
 }
 
 const char *Demangler::parseIdentifier(OutputBuffer *Demangled,
