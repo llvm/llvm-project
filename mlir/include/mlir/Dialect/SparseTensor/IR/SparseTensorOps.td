@@ -122,9 +122,9 @@ def SparseTensor_ToPointersOp : SparseTensor_Op<"pointers", [NoSideEffect]>,
   let description = [{
     Returns the pointers array of the sparse storage format at the
     given dimension for the given sparse tensor. This is similar to the
-    `memref.buffer_cast` operation in the sense that it provides a bridge
+    `bufferization.to_memref` operation in the sense that it provides a bridge
     between a tensor world view and a bufferized world view. Unlike the
-    `memref.buffer_cast` operation, however, this sparse operation actually
+    `bufferization.to_memref` operation, however, this sparse operation actually
     lowers into a call into a support library to obtain access to the
     pointers array.
 
@@ -146,9 +146,9 @@ def SparseTensor_ToIndicesOp : SparseTensor_Op<"indices", [NoSideEffect]>,
   let description = [{
     Returns the indices array of the sparse storage format at the
     given dimension for the given sparse tensor. This is similar to the
-    `memref.buffer_cast` operation in the sense that it provides a bridge
+    `bufferization.to_memref` operation in the sense that it provides a bridge
     between a tensor world view and a bufferized world view. Unlike the
-    `memref.buffer_cast` operation, however, this sparse operation actually
+    `bufferization.to_memref` operation, however, this sparse operation actually
     lowers into a call into a support library to obtain access to the
     indices array.
 
@@ -170,9 +170,9 @@ def SparseTensor_ToValuesOp : SparseTensor_Op<"values", [NoSideEffect]>,
   let description = [{
     Returns the values array of the sparse storage format for the given
     sparse tensor, independent of the actual dimension. This is similar to
-    the `memref.buffer_cast` operation in the sense that it provides a bridge
+    the `bufferization.to_memref` operation in the sense that it provides a bridge
     between a tensor world view and a bufferized world view. Unlike the
-    `memref.buffer_cast` operation, however, this sparse operation actually
+    `bufferization.to_memref` operation, however, this sparse operation actually
     lowers into a call into a support library to obtain access to the
     values array.
 
@@ -196,7 +196,7 @@ def SparseTensor_ToValuesOp : SparseTensor_Op<"values", [NoSideEffect]>,
 def SparseTensor_LexInsertOp : SparseTensor_Op<"lex_insert", []>,
     Arguments<(ins AnyTensor:$tensor,
                StridedMemRefRankOf<[Index], [1]>:$indices,
-	       AnyType:$value)> {
+               AnyType:$value)> {
   string summary = "Inserts a value into given sparse tensor in lexicograph index order";
   string description = [{
     Inserts the given value at given indices into the underlying sparse
@@ -226,11 +226,12 @@ def SparseTensor_LoadOp : SparseTensor_Op<"load", [SameOperandsAndResultType]>,
     "Rematerializes tensor from underlying sparse storage format";
   let description = [{
     Rematerializes a tensor from the underlying sparse storage format of the
-    given tensor. This is similar to the `memref.load` operation in the sense
-    that it provides a bridge between a bufferized world view and a tensor
-    world view. Unlike the `memref.load` operation, however, this sparse
-    operation is used only temporarily to maintain a correctly typed
-    intermediate representation during progressive bufferization.
+    given tensor. This is similar to the `bufferization.to_tensor` operation
+    in the sense that it provides a bridge between a bufferized world view
+    and a tensor world view. Unlike the `bufferization.to_tensor` operation,
+    however, this sparse operation is used only temporarily to maintain a
+    correctly typed intermediate representation during progressive
+    bufferization.
 
     The `hasInserts` attribute denote whether insertions to the underlying
     sparse storage format may have occurred, in which case the underlying
