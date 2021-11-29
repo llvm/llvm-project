@@ -260,10 +260,12 @@ bool IndirectBrExpandPass::runOnFunction(Function &F) {
   if (DTU) {
     // If there were multiple indirectbr's, they may have common successors,
     // but in the dominator tree, we only track unique edges.
-    SmallPtrSet<BasicBlock *, 8> UniqueSuccessors(BBs.begin(), BBs.end());
-    Updates.reserve(Updates.size() + UniqueSuccessors.size());
-    for (BasicBlock *BB : UniqueSuccessors)
-      Updates.push_back({DominatorTree::Insert, SwitchBB, BB});
+    SmallPtrSet<BasicBlock *, 8> UniqueSuccessors;
+    Updates.reserve(Updates.size() + BBs.size());
+    for (BasicBlock *BB : BBs) {
+      if (UniqueSuccessors.insert(BB).second)
+        Updates.push_back({DominatorTree::Insert, SwitchBB, BB});
+    }
     DTU->applyUpdates(Updates);
   }
 
