@@ -7,6 +7,11 @@ X(f)
 int a[-1];
 int b[0];
 
+void test(x);
+struct Foo {
+  member;
+};
+
 // CHECK-MESSAGES: -input.cpp:2:1: warning: no previous prototype for function 'ff' [clang-diagnostic-missing-prototypes]
 // CHECK-MESSAGES: -input.cpp:1:19: note: expanded from macro 'X'
 // CHECK-MESSAGES: {{^}}note: expanded from here{{$}}
@@ -14,6 +19,8 @@ int b[0];
 // CHECK-MESSAGES: -input.cpp:1:14: note: expanded from macro 'X'
 // CHECK-MESSAGES: -input.cpp:3:7: error: 'a' declared as an array with a negative size [clang-diagnostic-error]
 // CHECK-MESSAGES: -input.cpp:4:7: warning: zero size arrays are an extension [clang-diagnostic-zero-length-array]
+// CHECK-MESSAGES: -input.cpp:6:11: error: unknown type name 'x' [clang-diagnostic-error]
+// CHECK-MESSAGES: -input.cpp:8:3: error: C++ requires a type specifier for all declarations [clang-diagnostic-error]
 
 // CHECK-YAML: ---
 // CHECK-YAML-NEXT: MainSourceFile:  '{{.*}}-input.cpp'
@@ -70,5 +77,21 @@ int b[0];
 // CHECK-YAML-NEXT:          FileOffset:      52
 // CHECK-YAML-NEXT:          Length:          1
 // CHECK-YAML-NEXT:     Level:           Warning
+// CHECK-YAML-NEXT:     BuildDirectory:  '{{.*}}'
+// CHECK-YAML-NEXT:   - DiagnosticName:  clang-diagnostic-error
+// CHECK-YAML-NEXT:     DiagnosticMessage:
+// CHECK-YAML-NEXT:       Message:         'unknown type name ''x'''
+// CHECK-YAML-NEXT:       FilePath:        '{{.*}}-input.cpp'
+// CHECK-YAML-NEXT:       FileOffset:      67
+// CHECK-YAML-NEXT:       Replacements:    []
+// CHECK-YAML-NEXT:     Level:           Error
+// CHECK-YAML-NEXT:     BuildDirectory:  '{{.*}}'
+// CHECK-YAML-NEXT:   - DiagnosticName:  clang-diagnostic-error
+// CHECK-YAML-NEXT:     DiagnosticMessage:
+// CHECK-YAML-NEXT:       Message:         'C++ requires a type specifier for all declarations'
+// CHECK-YAML-NEXT:       FilePath:        '{{.*}}-input.cpp'
+// CHECK-YAML-NEXT:       FileOffset:      86
+// CHECK-YAML-NEXT:       Replacements:    []
+// CHECK-YAML-NEXT:     Level:           Error
 // CHECK-YAML-NEXT:     BuildDirectory:  '{{.*}}'
 // CHECK-YAML-NEXT: ...
