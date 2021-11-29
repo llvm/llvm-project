@@ -706,8 +706,8 @@ void ScheduleDAGSDNodes::dump() const {
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void ScheduleDAGSDNodes::dumpSchedule() const {
-  for (unsigned i = 0, e = Sequence.size(); i != e; i++) {
-    if (SUnit *SU = Sequence[i])
+  for (const SUnit *SU : Sequence) {
+    if (SU)
       dumpNode(*SU);
     else
       dbgs() << "**** NOOP ****\n";

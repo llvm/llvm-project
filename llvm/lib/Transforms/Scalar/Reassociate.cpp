@@ -2313,11 +2313,8 @@ void ReassociatePass::ReassociateExpression(BinaryOperator *I) {
   MadeChange |= LinearizeExprTree(I, Tree);
   SmallVector<ValueEntry, 8> Ops;
   Ops.reserve(Tree.size());
-  for (unsigned i = 0, e = Tree.size(); i != e; ++i) {
-    RepeatedValue E = Tree[i];
-    Ops.append(E.second.getZExtValue(),
-               ValueEntry(getRank(E.first), E.first));
-  }
+  for (const RepeatedValue &E : Tree)
+    Ops.append(E.second.getZExtValue(), ValueEntry(getRank(E.first), E.first));
 
   LLVM_DEBUG(dbgs() << "RAIn:\t"; PrintOps(I, Ops); dbgs() << '\n');
 

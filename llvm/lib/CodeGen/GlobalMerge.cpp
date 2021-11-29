@@ -399,8 +399,7 @@ bool GlobalMerge::doMerge(SmallVectorImpl<GlobalVariable*> &Globals,
   // having a single global, but is aggressive enough for any other case.
   if (GlobalMergeIgnoreSingleUse) {
     BitVector AllGlobals(Globals.size());
-    for (size_t i = 0, e = UsedGlobalSets.size(); i != e; ++i) {
-      const UsedGlobalSet &UGS = UsedGlobalSets[e - i - 1];
+    for (const UsedGlobalSet &UGS : llvm::reverse(UsedGlobalSets)) {
       if (UGS.UsageCount == 0)
         continue;
       if (UGS.Globals.count() > 1)
@@ -418,8 +417,7 @@ bool GlobalMerge::doMerge(SmallVectorImpl<GlobalVariable*> &Globals,
   BitVector PickedGlobals(Globals.size());
   bool Changed = false;
 
-  for (size_t i = 0, e = UsedGlobalSets.size(); i != e; ++i) {
-    const UsedGlobalSet &UGS = UsedGlobalSets[e - i - 1];
+  for (const UsedGlobalSet &UGS : llvm::reverse(UsedGlobalSets)) {
     if (UGS.UsageCount == 0)
       continue;
     if (PickedGlobals.anyCommon(UGS.Globals))

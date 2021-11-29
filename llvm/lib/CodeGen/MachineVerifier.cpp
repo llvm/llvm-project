@@ -3057,9 +3057,9 @@ void MachineVerifier::verifyLiveRangeSegment(const LiveRange &LR,
       SlotIndex PEnd = LiveInts->getMBBEndIdx(Pred);
       // Predecessor of landing pad live-out on last call.
       if (MFI->isEHPad()) {
-        for (auto I = Pred->rbegin(), E = Pred->rend(); I != E; ++I) {
-          if (I->isCall()) {
-            PEnd = Indexes->getInstructionIndex(*I).getBoundaryIndex();
+        for (const MachineInstr &MI : llvm::reverse(*Pred)) {
+          if (MI.isCall()) {
+            PEnd = Indexes->getInstructionIndex(MI).getBoundaryIndex();
             break;
           }
         }

@@ -442,8 +442,7 @@ HexagonTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     CLI.IsTailCall = IsEligibleForTailCallOptimization(Callee, CallConv,
                         IsVarArg, IsStructRet, StructAttrFlag, Outs,
                         OutVals, Ins, DAG);
-    for (unsigned i = 0, e = ArgLocs.size(); i != e; ++i) {
-      CCValAssign &VA = ArgLocs[i];
+    for (const CCValAssign &VA : ArgLocs) {
       if (VA.isMemLoc()) {
         CLI.IsTailCall = false;
         break;
