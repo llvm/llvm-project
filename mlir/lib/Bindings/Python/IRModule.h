@@ -394,11 +394,13 @@ public:
   /// Implements the bound 'print' method and helps with others.
   void print(pybind11::object fileObject, bool binary,
              llvm::Optional<int64_t> largeElementsLimit, bool enableDebugInfo,
-             bool prettyDebugInfo, bool printGenericOpForm, bool useLocalScope);
+             bool prettyDebugInfo, bool printGenericOpForm, bool useLocalScope,
+             bool assumeVerified);
   pybind11::object getAsm(bool binary,
                           llvm::Optional<int64_t> largeElementsLimit,
                           bool enableDebugInfo, bool prettyDebugInfo,
-                          bool printGenericOpForm, bool useLocalScope);
+                          bool printGenericOpForm, bool useLocalScope,
+                          bool assumeVerified);
 
   /// Moves the operation before or after the other operation.
   void moveAfter(PyOperationBase &other);

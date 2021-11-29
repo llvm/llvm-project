@@ -9,9 +9,10 @@ module m
     real, pointer, contiguous :: f(:)
     f => hosted
   end function
-  subroutine test(arr1, arr2, arr3, mat)
+  subroutine test(arr1, arr2, arr3, mat, alloc)
     real, intent(in) :: arr1(:), arr2(10), mat(10, 10)
     real, intent(in), contiguous :: arr3(:)
+    real, allocatable :: alloc(:)
     real :: scalar
     logical, parameter :: test_isc01 = is_contiguous(0)
     logical, parameter :: test_isc02 = is_contiguous(scalar)
@@ -24,5 +25,6 @@ module m
     logical, parameter :: test_isc09 = is_contiguous(arr2(1:10:1))
     logical, parameter :: test_isc10 = is_contiguous(arr3)
     logical, parameter :: test_isc11 = is_contiguous(f())
+    logical, parameter :: test_isc12 = is_contiguous(alloc)
   end subroutine
 end module

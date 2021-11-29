@@ -1836,36 +1836,30 @@ static void removeUnusedSyntheticSections() {
                             })
                    .base();
 
-  DenseSet<InputSectionDescription *> isdSet;
-  // Mark unused synthetic sections for deletion
-  auto end = std::stable_partition(
-      start, inputSections.end(), [&](InputSectionBase *s) {
-        SyntheticSection *ss = dyn_cast<SyntheticSection>(s);
-        OutputSection *os = ss->getParent();
-        if (!os || ss->isNeeded())
-          return true;
-
-        // If we reach here, then ss is an unused synthetic section and we want
-        // to remove it from the corresponding input section description, and
-        // orphanSections.
-        for (SectionCommand *b : os->commands)
-          if (auto *isd = dyn_cast<InputSectionDescription>(b))
-            isdSet.insert(isd);
-
-        llvm::erase_if(
-            script->orphanSections,
-            [=](const InputSectionBase *isec) { return isec == ss; });
-
-        return false;
+  // Remove unused synthetic sections from inputSections;
+  DenseSet<InputSectionBase *> unused;
+  auto end =
+      std::remove_if(start, inputSections.end(), [&](InputSectionBase *s) {
+        auto *sec = cast<SyntheticSection>(s);
+        if (sec->getParent() && sec->isNeeded())
+          return false;
+        unused.insert(sec);
+        return true;
       });
-
-  DenseSet<InputSectionBase *> unused(end, inputSections.end());
-  for (auto *isd : isdSet)
-    llvm::erase_if(isd->sections,
-                   [=](InputSection *isec) { return unused.count(isec); });
-
-  // Erase unused synthetic sections.
   inputSections.erase(end, inputSections.end());
+
+  // Remove unused synthetic sections from the corresponding input section
+  // description and orphanSections.
+  for (auto *sec : unused)
+    if (OutputSection *osec = cast<SyntheticSection>(sec)->getParent())
+      for (SectionCommand *cmd : osec->commands)
+        if (auto *isd = dyn_cast<InputSectionDescription>(cmd))
+          llvm::erase_if(isd->sections, [&](InputSection *isec) {
+            return unused.count(isec);
+          });
+  llvm::erase_if(script->orphanSections, [&](const InputSectionBase *sec) {
+    return unused.count(sec);
+  });
 }
 
 // Create output section objects and add them to OutputSections.
