@@ -34,4 +34,6 @@ INSTANTIATE_TEST_SUITE_P(
         std::make_pair("_D88", nullptr),
         std::make_pair("_D8demangleZ", "demangle"),
         std::make_pair("_D8demangle4testZ", "demangle.test"),
-        std::make_pair("_D8demangle4test5test2Z", "demangle.test.test2")));
+        std::make_pair("_D8demangle4test5test2Z", "demangle.test.test2"),
+        std::make_pair("_D8demangle4test0Z", "demangle.test"),
+        std::make_pair("_D8demangle4test03fooZ", "demangle.test.foo")));

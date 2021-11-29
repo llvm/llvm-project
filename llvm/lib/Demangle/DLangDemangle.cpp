@@ -200,6 +200,15 @@ const char *Demangler::parseQualified(OutputBuffer *Demangled,
   // Whether it has more than one symbol
   size_t NotFirst = false;
   do {
+    // Skip over anonymous symbols.
+    if (*Mangled == '0') {
+      do
+        ++Mangled;
+      while (*Mangled == '0');
+
+      continue;
+    }
+
     if (NotFirst)
       *Demangled << '.';
     NotFirst = true;
