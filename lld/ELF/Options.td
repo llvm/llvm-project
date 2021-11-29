@@ -129,7 +129,8 @@ def color_diagnostics_eq: J<"color-diagnostics=">,
   HelpText<"Use colors in diagnostics (default: auto)">,
   MetaVarName<"[auto,always,never]">;
 
-def cref: FF<"cref">, HelpText<"Output cross reference table">;
+def cref: FF<"cref">,
+  HelpText<"Output cross reference table. If -Map is specified, print to the map file">;
 
 defm define_common: B<"define-common",
     "Assign space to common symbols",
