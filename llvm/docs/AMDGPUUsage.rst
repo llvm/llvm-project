@@ -8676,13 +8676,13 @@ table :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx10-table`.
                                               - constant
                                                          - !volatile & nontemporal
 
-                                                            1. buffer/global/flat_store
-                                                               slc=1
+                                                           1. buffer/global/flat_store
+                                                              slc=1
 
                                                          - volatile
 
-                                                            1. buffer/global/flat_store
-                                                            2. s_waitcnt vscnt(0)
+                                                           1. buffer/global/flat_store
+                                                           2. s_waitcnt vscnt(0)
 
                                                             - Must happen before
                                                               any following volatile
