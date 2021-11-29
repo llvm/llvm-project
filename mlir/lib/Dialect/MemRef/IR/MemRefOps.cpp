@@ -1209,6 +1209,12 @@ static void print(OpAsmPrinter &p, CollapseShapeOp op) {
 static bool isReshapableDimBand(unsigned dim, unsigned extent,
                                 ArrayRef<int64_t> sizes,
                                 ArrayRef<AffineExpr> strides) {
+  // Bands of extent one can be reshaped, as they are not reshaped at all.
+  if (extent == 1)
+    return true;
+  // Otherwise, the size of the first dimension needs to be known.
+  if (ShapedType::isDynamic(sizes[dim]))
+    return false;
   assert(sizes.size() == strides.size() && "mismatched ranks");
   // off by 1 indexing to avoid out of bounds
   //                       V
@@ -1217,7 +1223,7 @@ static bool isReshapableDimBand(unsigned dim, unsigned extent,
     // there is no relation between dynamic sizes and dynamic strides: we do not
     // have enough information to know whether a "-1" size corresponds to the
     // proper symbol in the AffineExpr of a stride.
-    if (ShapedType::isDynamic(sizes[dim + 1]))
+    if (ShapedType::isDynamic(sizes[idx + 1]))
       return false;
     // TODO: Refine this by passing the proper nDims and nSymbols so we can
     // simplify on the fly and catch more reshapable cases.
