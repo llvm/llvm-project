@@ -29,3 +29,10 @@ define i32 @test_andi2(i32 %a) {
   %anded = and i32 %a, 4096
   ret i32 %anded
 }
+
+define i32 @test_andi3(i32 %a) {
+; CHECK: andi $a0, $a0, 65535
+; CHECK: ANDI_NM
+  %anded = and i32 %a, 65535
+  ret i32 %anded
+}

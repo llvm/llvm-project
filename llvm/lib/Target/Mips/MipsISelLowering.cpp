@@ -845,8 +845,8 @@ static SDValue attemptAndToExt(SDNode *N, SelectionDAG &DAG,
                        DAG.getConstant(Pos, DL, MVT::i32),
                        DAG.getConstant(SMSize, DL, MVT::i32));
   }
-  // ANDI should be used for 12-bit masks.
-  if (CN->getZExtValue() > 0xfff && SMPos == 0)
+  // ANDI should be used for 12-bit masks and 0xffff.
+  if (CN->getZExtValue() > 0xfff && CN->getZExtValue() != 0xffff && SMPos == 0)
     // Pattern match EXT.
     //     and $dst, $src, (2**size - 1)
     //  => ext $dst, $src, 0, size
@@ -883,8 +883,8 @@ static SDValue attemptAndToIns(SDNode *N, SelectionDAG &DAG,
   if (!(CN = dyn_cast<ConstantSDNode>(Mask)))
     return SDValue();
 
-  // ANDI should be used for 12-bit masks.
-  if (CN->getZExtValue() <= 0xfff)
+  // ANDI should be used for 12-bit masks and 0xffff.
+  if (CN->getZExtValue() <= 0xfff || CN->getZExtValue() == 0xffff)
     return SDValue();
 
   uint64_t SMPos, SMSize;

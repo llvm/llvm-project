@@ -29,6 +29,9 @@ def imm32_NM : IntImmLeaf<i32, [{
     return (uint32_t)Imm.getZExtValue() == (uint64_t)Imm.getZExtValue();
 }]>;
 def imm32ZExt12 : IntImmLeaf<i32, [{ return isUInt<12>(Imm.getZExtValue()); }]>;
+def imm32ZExt12ANDI :
+  IntImmLeaf<i32, [{ return isUInt<12>(Imm.getZExtValue()) ||
+                            Imm.getZExtValue() == 65535; }]>;
 def imm32ZExt5  : IntImmLeaf<i32, [{ return isUInt<5>(Imm.getZExtValue()); }]>;
 def imm32SExt12  : IntImmLeaf<i32, [{ return isInt<12>(Imm.getSExtValue()); }]>;
 // True if (N + 1) fits in 12-bit field.
@@ -341,7 +344,7 @@ def MODU_NM  : DivMod<"modu", urem>;
 // P.U12 pool of instructions
 def ORI_NM   : ArithLogicI32<"ori", uimm12_nm, GPR32NMOpnd, imm32ZExt12, or>;
 def XORI_NM  : ArithLogicI32<"xori", uimm12_nm, GPR32NMOpnd, imm32ZExt12, xor>;
-def ANDI_NM  : ArithLogicI32<"andi", uimm12_nm, GPR32NMOpnd, imm32ZExt12, and>;
+def ANDI_NM  : ArithLogicI32<"andi", uimm16, GPR32NMOpnd, imm32ZExt12ANDI, and>;
 def SLTI_NM  : ArithLogicI32<"slti", uimm12_nm, GPR32NMOpnd, imm32ZExt12, setlt>;
 def SLTIU_NM : ArithLogicI32<"sltiu", uimm12_nm, GPR32NMOpnd, imm32ZExt12, setult>;
 def SEQI_NM  : ArithLogicI32<"seqi", uimm12_nm, GPR32NMOpnd, imm32ZExt12, seteq>;
