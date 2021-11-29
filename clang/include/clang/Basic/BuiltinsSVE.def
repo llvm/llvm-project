@@ -15,6 +15,7 @@
 
 #define GET_SVE_BUILTINS
 #include "clang/Basic/arm_sve_builtins.inc"
+#include "clang/Basic/BuiltinsAArch64NeonSVEBridge.def"
 #undef GET_SVE_BUILTINS
 
 #undef BUILTIN
