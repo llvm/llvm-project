@@ -306,6 +306,11 @@ public:
   std::string getVirtualRegisterName(unsigned) const;
 
   const MCSymbol *getFunctionFrameSymbol() const override;
+
+  // Make emitGlobalVariable() no-op for NVPTX.
+  // Global variables have been already emitted by the time the base AsmPrinter
+  // attempts to do so in doFinalization() (see NVPTXAsmPrinter::emitGlobals()).
+  void emitGlobalVariable(const GlobalVariable *GV) override {}
 };
 
 } // end namespace llvm

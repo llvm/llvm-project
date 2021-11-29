@@ -1,4 +1,4 @@
-; RUN: opt < %s -ipsccp -S | FileCheck %s
+; RUN: opt < %s -passes=ipsccp -S | FileCheck %s
 
 ; CHECK-LABEL: @testf(
 ; CHECK:         ret i32 undef

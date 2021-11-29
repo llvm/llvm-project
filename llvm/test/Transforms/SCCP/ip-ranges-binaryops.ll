@@ -1,4 +1,4 @@
-; RUN: opt < %s -ipsccp -S | FileCheck %s
+; RUN: opt < %s -passes=ipsccp -S | FileCheck %s
 
 ; x = [10, 21), y = [100, 201)
 ; x + y = [110, 221)

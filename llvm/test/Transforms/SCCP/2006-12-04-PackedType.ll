@@ -1,7 +1,7 @@
 ; Test VectorType handling by SCCP.
 ; SCCP ignores VectorTypes until PR 1034 is fixed
 ;
-; RUN: opt < %s -sccp
+; RUN: opt < %s -passes=sccp
 ; END.
 
 target datalayout = "E-p:32:32"

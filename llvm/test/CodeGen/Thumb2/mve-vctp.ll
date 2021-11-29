@@ -178,16 +178,13 @@ define arm_aapcs_vfpcc <2 x i64> @vcmp_ult_v2i64(i64 %n, <2 x i64> %a, <2 x i64>
 ; CHECK-NEXT:    rsbs.w r3, r0, #1
 ; CHECK-NEXT:    mov.w r2, #0
 ; CHECK-NEXT:    sbcs.w r3, r2, r1
-; CHECK-NEXT:    mov.w r3, #0
-; CHECK-NEXT:    it lo
-; CHECK-NEXT:    movlo r3, #1
+; CHECK-NEXT:    cset r3, lo
 ; CHECK-NEXT:    cmp r3, #0
 ; CHECK-NEXT:    csetm r3, ne
 ; CHECK-NEXT:    rsbs r0, r0, #0
 ; CHECK-NEXT:    sbcs.w r0, r2, r1
-; CHECK-NEXT:    it lo
-; CHECK-NEXT:    movlo r2, #1
-; CHECK-NEXT:    cmp r2, #0
+; CHECK-NEXT:    cset r0, lo
+; CHECK-NEXT:    cmp r0, #0
 ; CHECK-NEXT:    csetm r0, ne
 ; CHECK-NEXT:    vmov q2[2], q2[0], r0, r3
 ; CHECK-NEXT:    vmov q2[3], q2[1], r0, r3
@@ -207,15 +204,13 @@ define arm_aapcs_vfpcc <2 x i64> @vcmp_uge_v2i64(i64 %n, <2 x i64> %a, <2 x i64>
 ; CHECK-LABEL: vcmp_uge_v2i64:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    subs r0, #1
-; CHECK-NEXT:    mov.w r2, #0
-; CHECK-NEXT:    sbcs r0, r1, #0
-; CHECK-NEXT:    it hs
-; CHECK-NEXT:    movhs r2, #1
-; CHECK-NEXT:    cmp r2, #0
 ; CHECK-NEXT:    vldr s8, .LCPI11_0
+; CHECK-NEXT:    sbcs r0, r1, #0
+; CHECK-NEXT:    cset r0, hs
+; CHECK-NEXT:    vmov.f32 s9, s8
+; CHECK-NEXT:    cmp r0, #0
 ; CHECK-NEXT:    csetm r0, ne
 ; CHECK-NEXT:    vmov s10, r0
-; CHECK-NEXT:    vmov.f32 s9, s8
 ; CHECK-NEXT:    vmov.f32 s11, s10
 ; CHECK-NEXT:    vbic q1, q1, q2
 ; CHECK-NEXT:    vand q0, q0, q2

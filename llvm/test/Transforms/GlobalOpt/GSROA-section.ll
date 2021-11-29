@@ -1,7 +1,7 @@
 ; This test lets globalopt split the global struct and array into different
 ; values. The pass needs to preserve section attribute.
 
-; RUN: opt < %s -globalopt -S | FileCheck %s
+; RUN: opt < %s -passes=globalopt -S | FileCheck %s
 ; Check that the new global values still have their section assignment.
 ; CHECK: @struct
 ; CHECK: section ".foo"

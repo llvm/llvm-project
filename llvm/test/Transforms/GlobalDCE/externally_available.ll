@@ -1,4 +1,4 @@
-; RUN: opt < %s -globaldce -S | FileCheck %s
+; RUN: opt < %s -passes=globaldce -S | FileCheck %s
 
 ; test_global should not be emitted to the .s file.
 ; CHECK-NOT: @test_global =

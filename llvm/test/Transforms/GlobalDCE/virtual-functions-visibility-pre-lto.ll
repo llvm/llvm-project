@@ -1,4 +1,4 @@
-; RUN: opt < %s -globaldce -S | FileCheck %s
+; RUN: opt < %s -passes=globaldce -S | FileCheck %s
 
 ; structs A, B and C have vcall_visibility of public, linkage-unit and
 ; translation-unit respectively. This test is run before LTO linking occurs

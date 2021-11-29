@@ -1,4 +1,4 @@
-; RUN: opt -S -globalopt < %s | FileCheck %s
+; RUN: opt -S -passes=globalopt < %s | FileCheck %s
 
 ; PR6112 - When globalopt does RAUW(@G, %G), the metadata reference should drop
 ; to null.  Function local metadata that references @G from a different function

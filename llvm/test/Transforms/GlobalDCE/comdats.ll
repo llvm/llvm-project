@@ -1,6 +1,6 @@
 ; Test the behavior of GlobalDCE in conjunction with comdats.
 ;
-; RUN: opt < %s -globaldce -S | FileCheck %s
+; RUN: opt < %s -passes=globaldce -S | FileCheck %s
 
 ; First test checks that if one function in a comdat group is used, both other
 ; functions and other globals even if unused will be preserved.

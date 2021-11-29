@@ -4094,6 +4094,18 @@ void ScalarEvolution::eraseValueFromMap(Value *V) {
   }
 }
 
+void ScalarEvolution::insertValueToMap(Value *V, const SCEV *S) {
+  auto It = ValueExprMap.find_as(V);
+  if (It == ValueExprMap.end()) {
+    ValueExprMap.insert({SCEVCallbackVH(V, this), S});
+    ExprValueMap[S].insert({V, nullptr});
+  } else {
+    // A recursive query may have already computed the SCEV. It should have
+    // arrived at the same value.
+    assert(It->second == S);
+  }
+}
+
 /// Return an existing SCEV if it exists, otherwise analyze the expression and
 /// create a new one.
 const SCEV *ScalarEvolution::getSCEV(Value *V) {
@@ -4134,10 +4146,9 @@ const SCEV *ScalarEvolution::getExistingSCEV(Value *V) {
   ValueExprMapType::iterator I = ValueExprMap.find_as(V);
   if (I != ValueExprMap.end()) {
     const SCEV *S = I->second;
-    if (checkValidity(S))
-      return S;
-    eraseValueFromMap(V);
-    forgetMemoizedResults(S);
+    assert(checkValidity(S) &&
+           "existing SCEV has not been properly invalidated");
+    return S;
   }
   return nullptr;
 }
@@ -4428,44 +4439,6 @@ static void PushDefUseChildren(Instruction *I,
     if (Visited.insert(UserInsn).second)
       Worklist.push_back(UserInsn);
   }
-}
-
-void ScalarEvolution::forgetSymbolicName(Instruction *PN, const SCEV *SymName) {
-  SmallVector<Instruction *, 16> Worklist;
-  SmallPtrSet<Instruction *, 8> Visited;
-  SmallVector<const SCEV *, 8> ToForget;
-  Visited.insert(PN);
-  Worklist.push_back(PN);
-  while (!Worklist.empty()) {
-    Instruction *I = Worklist.pop_back_val();
-
-    auto It = ValueExprMap.find_as(static_cast<Value *>(I));
-    if (It != ValueExprMap.end()) {
-      const SCEV *Old = It->second;
-
-      // Short-circuit the def-use traversal if the symbolic name
-      // ceases to appear in expressions.
-      if (Old != SymName && !hasOperand(Old, SymName))
-        continue;
-
-      // SCEVUnknown for a PHI either means that it has an unrecognized
-      // structure, it's a PHI that's in the progress of being computed
-      // by createNodeForPHI, or it's a single-value PHI. In the first case,
-      // additional loop trip count information isn't going to change anything.
-      // In the second case, createNodeForPHI will perform the necessary
-      // updates on its own when it gets to that point. In the third, we do
-      // want to forget the SCEVUnknown.
-      if (!isa<PHINode>(I) ||
-          !isa<SCEVUnknown>(Old) ||
-          (I != PN && Old == SymName)) {
-        eraseValueFromMap(It->first);
-        ToForget.push_back(Old);
-      }
-    }
-
-    PushDefUseChildren(I, Worklist, Visited);
-  }
-  forgetMemoizedResults(ToForget);
 }
 
 namespace {
@@ -5335,8 +5308,7 @@ const SCEV *ScalarEvolution::createSimpleAffineAddRec(PHINode *PN,
 
   const SCEV *StartVal = getSCEV(StartValueV);
   const SCEV *PHISCEV = getAddRecExpr(StartVal, Accum, L, Flags);
-
-  ValueExprMap[SCEVCallbackVH(PN, this)] = PHISCEV;
+  insertValueToMap(PN, PHISCEV);
 
   // We can add Flags to the post-inc expression only if we
   // know that it is *undefined behavior* for BEValueV to
@@ -5389,7 +5361,7 @@ const SCEV *ScalarEvolution::createAddRecFromPHI(PHINode *PN) {
 
   // Handle PHI node value symbolically.
   const SCEV *SymbolicName = getUnknown(PN);
-  ValueExprMap.insert({SCEVCallbackVH(PN, this), SymbolicName});
+  insertValueToMap(PN, SymbolicName);
 
   // Using this symbolic name for the PHI, analyze the value coming around
   // the back-edge.
@@ -5460,8 +5432,8 @@ const SCEV *ScalarEvolution::createAddRecFromPHI(PHINode *PN) {
         // Okay, for the entire analysis of this edge we assumed the PHI
         // to be symbolic.  We now need to go back and purge all of the
         // entries for the scalars that use the symbolic expression.
-        forgetSymbolicName(PN, SymbolicName);
-        ValueExprMap[SCEVCallbackVH(PN, this)] = PHISCEV;
+        forgetMemoizedResults(SymbolicName);
+        insertValueToMap(PN, PHISCEV);
 
         // We can add Flags to the post-inc expression only if we
         // know that it is *undefined behavior* for BEValueV to
@@ -5492,8 +5464,8 @@ const SCEV *ScalarEvolution::createAddRecFromPHI(PHINode *PN) {
         // Okay, for the entire analysis of this edge we assumed the PHI
         // to be symbolic.  We now need to go back and purge all of the
         // entries for the scalars that use the symbolic expression.
-        forgetSymbolicName(PN, SymbolicName);
-        ValueExprMap[SCEVCallbackVH(PN, this)] = Shifted;
+        forgetMemoizedResults(SymbolicName);
+        insertValueToMap(PN, Shifted);
         return Shifted;
       }
     }
@@ -7601,62 +7573,19 @@ ScalarEvolution::getBackedgeTakenInfo(const Loop *L) {
   // Now that we know more about the trip count for this loop, forget any
   // existing SCEV values for PHI nodes in this loop since they are only
   // conservative estimates made without the benefit of trip count
-  // information. This is similar to the code in forgetLoop, except that
-  // it handles SCEVUnknown PHI nodes specially.
+  // information. This invalidation is not necessary for correctness, and is
+  // only done to produce more precise results.
   if (Result.hasAnyInfo()) {
-    SmallVector<Instruction *, 16> Worklist;
-    SmallPtrSet<Instruction *, 8> Discovered;
+    // Invalidate any expression using an addrec in this loop.
     SmallVector<const SCEV *, 8> ToForget;
-    PushLoopPHIs(L, Worklist, Discovered);
-    while (!Worklist.empty()) {
-      Instruction *I = Worklist.pop_back_val();
-
-      ValueExprMapType::iterator It =
-        ValueExprMap.find_as(static_cast<Value *>(I));
-      if (It != ValueExprMap.end()) {
-        const SCEV *Old = It->second;
-
-        // SCEVUnknown for a PHI either means that it has an unrecognized
-        // structure, or it's a PHI that's in the progress of being computed
-        // by createNodeForPHI.  In the former case, additional loop trip
-        // count information isn't going to change anything. In the later
-        // case, createNodeForPHI will perform the necessary updates on its
-        // own when it gets to that point.
-        if (!isa<PHINode>(I) || !isa<SCEVUnknown>(Old)) {
-          eraseValueFromMap(It->first);
-          ToForget.push_back(Old);
-        }
-        if (PHINode *PN = dyn_cast<PHINode>(I))
-          ConstantEvolutionLoopExitValue.erase(PN);
-      }
-
-      // Since we don't need to invalidate anything for correctness and we're
-      // only invalidating to make SCEV's results more precise, we get to stop
-      // early to avoid invalidating too much.  This is especially important in
-      // cases like:
-      //
-      //   %v = f(pn0, pn1) // pn0 and pn1 used through some other phi node
-      // loop0:
-      //   %pn0 = phi
-      //   ...
-      // loop1:
-      //   %pn1 = phi
-      //   ...
-      //
-      // where both loop0 and loop1's backedge taken count uses the SCEV
-      // expression for %v.  If we don't have the early stop below then in cases
-      // like the above, getBackedgeTakenInfo(loop1) will clear out the trip
-      // count for loop0 and getBackedgeTakenInfo(loop0) will clear out the trip
-      // count for loop1, effectively nullifying SCEV's trip count cache.
-      for (auto *U : I->users())
-        if (auto *I = dyn_cast<Instruction>(U)) {
-          auto *LoopForUser = LI.getLoopFor(I->getParent());
-          if (LoopForUser && L->contains(LoopForUser) &&
-              Discovered.insert(I).second)
-            Worklist.push_back(I);
-        }
-    }
+    auto LoopUsersIt = LoopUsers.find(L);
+    if (LoopUsersIt != LoopUsers.end())
+      append_range(ToForget, LoopUsersIt->second);
     forgetMemoizedResults(ToForget);
+
+    // Invalidate constant-evolved loop header phis.
+    for (PHINode &PN : L->getHeader()->phis())
+      ConstantEvolutionLoopExitValue.erase(&PN);
   }
 
   // Re-lookup the insert position, since the call to
@@ -12996,9 +12925,20 @@ void ScalarEvolution::forgetMemoizedResultsImpl(const SCEV *S) {
   BlockDispositions.erase(S);
   UnsignedRanges.erase(S);
   SignedRanges.erase(S);
-  ExprValueMap.erase(S);
   HasRecMap.erase(S);
   MinTrailingZerosCache.erase(S);
+
+  auto ExprIt = ExprValueMap.find(S);
+  if (ExprIt != ExprValueMap.end()) {
+    for (auto &ValueAndOffset : ExprIt->second) {
+      if (ValueAndOffset.second == nullptr) {
+        auto ValueIt = ValueExprMap.find_as(ValueAndOffset.first);
+        if (ValueIt != ValueExprMap.end())
+          ValueExprMap.erase(ValueIt);
+      }
+    }
+    ExprValueMap.erase(ExprIt);
+  }
 }
 
 void
@@ -13103,13 +13043,40 @@ void ScalarEvolution::verify() const {
     ValidLoops.insert(L);
     Worklist.append(L->begin(), L->end());
   }
-  // Check for SCEV expressions referencing invalid/deleted loops.
   for (auto &KV : ValueExprMap) {
-    auto *AR = dyn_cast<SCEVAddRecExpr>(KV.second);
-    if (!AR)
-      continue;
-    assert(ValidLoops.contains(AR->getLoop()) &&
-           "AddRec references invalid loop");
+    // Check for SCEV expressions referencing invalid/deleted loops.
+    if (auto *AR = dyn_cast<SCEVAddRecExpr>(KV.second)) {
+      assert(ValidLoops.contains(AR->getLoop()) &&
+             "AddRec references invalid loop");
+    }
+
+    // Check that the value is also part of the reverse map.
+    auto It = ExprValueMap.find(KV.second);
+    if (It == ExprValueMap.end() || !It->second.contains({KV.first, nullptr})) {
+      dbgs() << "Value " << *KV.first
+             << " is in ValueExprMap but not in ExprValueMap\n";
+      std::abort();
+    }
+  }
+
+  for (const auto &KV : ExprValueMap) {
+    for (const auto &ValueAndOffset : KV.second) {
+      if (ValueAndOffset.second != nullptr)
+        continue;
+
+      auto It = ValueExprMap.find_as(ValueAndOffset.first);
+      if (It == ValueExprMap.end()) {
+        dbgs() << "Value " << *ValueAndOffset.first
+               << " is in ExprValueMap but not in ValueExprMap\n";
+        std::abort();
+      }
+      if (It->second != KV.first) {
+        dbgs() << "Value " << *ValueAndOffset.first
+               << " mapped to " << *It->second
+               << " rather than " << *KV.first << "\n";
+        std::abort();
+      }
+    }
   }
 
   // Verify intergity of SCEV users.

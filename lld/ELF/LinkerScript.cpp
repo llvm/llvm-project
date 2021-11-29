@@ -53,12 +53,6 @@ static bool isSectionPrefix(StringRef prefix, StringRef name) {
   return name.startswith(prefix) || name == prefix.drop_back();
 }
 
-static uint64_t getOutputSectionVA(SectionBase *sec) {
-  OutputSection *os = sec->getOutputSection();
-  assert(os && "input section has no output section assigned");
-  return os ? os->addr : 0;
-}
-
 static StringRef getOutputSectionName(const InputSectionBase *s) {
   if (config->relocatable)
     return s->name;
@@ -118,15 +112,13 @@ static StringRef getOutputSectionName(const InputSectionBase *s) {
 
 uint64_t ExprValue::getValue() const {
   if (sec)
-    return alignTo(sec->getOffset(val) + getOutputSectionVA(sec),
+    return alignTo(sec->getOutputSection()->addr + sec->getOffset(val),
                    alignment);
   return alignTo(val, alignment);
 }
 
 uint64_t ExprValue::getSecAddr() const {
-  if (sec)
-    return sec->getOffset(0) + getOutputSectionVA(sec);
-  return 0;
+  return sec ? sec->getOutputSection()->addr + sec->getOffset(0) : 0;
 }
 
 uint64_t ExprValue::getSectionOffset() const {
@@ -908,38 +900,6 @@ void LinkerScript::diagnoseOrphanHandling() const {
   }
 }
 
-uint64_t LinkerScript::advance(uint64_t size, unsigned alignment) {
-  dot = alignTo(dot, alignment) + size;
-  return dot;
-}
-
-void LinkerScript::output(InputSection *s) {
-  assert(ctx->outSec == s->getParent());
-  uint64_t before = advance(0, 1);
-  uint64_t pos = advance(s->getSize(), s->alignment);
-  s->outSecOff = pos - s->getSize() - ctx->outSec->addr;
-
-  // Update output section size after adding each section. This is so that
-  // SIZEOF works correctly in the case below:
-  // .foo { *(.aaa) a = SIZEOF(.foo); *(.bbb) }
-  expandOutputSection(pos - before);
-}
-
-void LinkerScript::switchTo(OutputSection *sec) {
-  ctx->outSec = sec;
-
-  uint64_t pos = advance(0, 1);
-  if (sec->addrExpr && script->hasSectionsCommand) {
-    // The alignment is ignored.
-    ctx->outSec->addr = pos;
-  } else {
-    // ctx->outSec->alignment is the max of ALIGN and the maximum of input
-    // section alignments.
-    ctx->outSec->addr = advance(0, ctx->outSec->alignment);
-    expandMemoryRegions(ctx->outSec->addr - pos);
-  }
-}
-
 // This function searches for a memory region to place the given output
 // section in. If found, a pointer to the appropriate memory region is
 // returned in the first member of the pair. Otherwise, a nullptr is returned.
@@ -1028,7 +988,18 @@ void LinkerScript::assignOffsets(OutputSection *sec) {
                          sec->name);
   }
 
-  switchTo(sec);
+  ctx->outSec = sec;
+  if (sec->addrExpr && script->hasSectionsCommand) {
+    // The alignment is ignored.
+    sec->addr = dot;
+  } else {
+    // sec->alignment is the max of ALIGN and the maximum of input
+    // section alignments.
+    const uint64_t pos = dot;
+    dot = alignTo(dot, sec->alignment);
+    sec->addr = dot;
+    expandMemoryRegions(dot - pos);
+  }
 
   // ctx->lmaOffset is LMA minus VMA. If LMA is explicitly specified via AT() or
   // AT>, recompute ctx->lmaOffset; otherwise, if both previous/current LMA
@@ -1048,7 +1019,7 @@ void LinkerScript::assignOffsets(OutputSection *sec) {
   }
 
   // Propagate ctx->lmaOffset to the first "non-header" section.
-  if (PhdrEntry *l = ctx->outSec->ptLoad)
+  if (PhdrEntry *l = sec->ptLoad)
     if (sec == findFirstSection(l))
       l->lmaOffset = ctx->lmaOffset;
 
@@ -1070,7 +1041,7 @@ void LinkerScript::assignOffsets(OutputSection *sec) {
 
     // Handle BYTE(), SHORT(), LONG(), or QUAD().
     if (auto *data = dyn_cast<ByteCommand>(cmd)) {
-      data->offset = dot - ctx->outSec->addr;
+      data->offset = dot - sec->addr;
       dot += data->size;
       expandOutputSection(data->size);
       continue;
@@ -1079,8 +1050,18 @@ void LinkerScript::assignOffsets(OutputSection *sec) {
     // Handle a single input section description command.
     // It calculates and assigns the offsets for each section and also
     // updates the output section size.
-    for (InputSection *sec : cast<InputSectionDescription>(cmd)->sections)
-      output(sec);
+    for (InputSection *isec : cast<InputSectionDescription>(cmd)->sections) {
+      assert(isec->getParent() == sec);
+      const uint64_t pos = dot;
+      dot = alignTo(dot, isec->alignment);
+      isec->outSecOff = dot - sec->addr;
+      dot += isec->getSize();
+
+      // Update output section size after adding each section. This is so that
+      // SIZEOF works correctly in the case below:
+      // .foo { *(.aaa) a = SIZEOF(.foo); *(.bbb) }
+      expandOutputSection(dot - pos);
+    }
   }
 
   // Non-SHF_ALLOC sections do not affect the addresses of other OutputSections
@@ -1327,10 +1308,10 @@ const Defined *LinkerScript::assignAddresses() {
     dot += getHeaderSize();
   }
 
-  auto deleter = std::make_unique<AddressState>();
-  ctx = deleter.get();
+  AddressState state;
+  ctx = &state;
   errorOnMissingSection = true;
-  switchTo(aether);
+  ctx->outSec = aether;
 
   SymbolAssignmentMap oldValues = getSymbolAssignmentValues(sectionCommands);
   for (SectionCommand *cmd : sectionCommands) {

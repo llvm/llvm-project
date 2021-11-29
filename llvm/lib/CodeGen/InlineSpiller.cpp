@@ -581,11 +581,9 @@ bool InlineSpiller::reMaterializeFor(LiveInterval &VirtReg, MachineInstr &MI) {
 
   if (!ParentVNI) {
     LLVM_DEBUG(dbgs() << "\tadding <undef> flags: ");
-    for (unsigned i = 0, e = MI.getNumOperands(); i != e; ++i) {
-      MachineOperand &MO = MI.getOperand(i);
+    for (MachineOperand &MO : MI.operands())
       if (MO.isReg() && MO.isUse() && MO.getReg() == VirtReg.reg())
         MO.setIsUndef();
-    }
     LLVM_DEBUG(dbgs() << UseIdx << '\t' << MI);
     return true;
   }

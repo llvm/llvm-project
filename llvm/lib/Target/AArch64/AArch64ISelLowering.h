@@ -844,6 +844,8 @@ public:
   EVT getAsmOperandValueType(const DataLayout &DL, Type *Ty,
                              bool AllowUnknown = false) const override;
 
+  bool shouldExpandGetActiveLaneMask(EVT VT, EVT OpVT) const override;
+
 private:
   /// Keep a pointer to the AArch64Subtarget around so that we can
   /// make the right decision when generating code for different targets.

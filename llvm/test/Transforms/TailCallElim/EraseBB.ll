@@ -1,4 +1,4 @@
-; RUN: opt -tailcallelim -verify-dom-info -S < %s 2>&1 | FileCheck %s
+; RUN: opt -passes=tailcallelim -verify-dom-info -S < %s 2>&1 | FileCheck %s
 
 ; CHECK: add nsw i32
 ; CHECK-NEXT: br label

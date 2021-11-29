@@ -1,4 +1,4 @@
-; RUN: opt < %s -S -globalopt | FileCheck %s
+; RUN: opt < %s -S -passes=globalopt | FileCheck %s
 
 @zero = internal global [10 x i32] zeroinitializer
 

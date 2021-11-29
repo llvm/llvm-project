@@ -1,4 +1,4 @@
-; RUN: opt -S -globalopt < %s | FileCheck %s
+; RUN: opt -S -passes=globalopt < %s | FileCheck %s
 
 target datalayout = "p:32:32:32-p1:16:16:16"
 

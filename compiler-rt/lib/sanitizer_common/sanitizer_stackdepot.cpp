@@ -23,6 +23,7 @@ struct StackDepotNode {
   using hash_type = u64;
   hash_type stack_hash;
   u32 link;
+  StackStore::Id store_id;
 
   static const u32 kTabSizeLog = SANITIZER_ANDROID ? 16 : 20;
 
@@ -53,11 +54,6 @@ static StackStore stackStore;
 typedef StackDepotBase<StackDepotNode, 1, StackDepotNode::kTabSizeLog>
     StackDepot;
 static StackDepot theDepot;
-// Keep rarely accessed stack traces out of frequently access nodes to improve
-// caching efficiency.
-static TwoLevelMap<StackStore::Id, StackDepot::kNodesSize1,
-                   StackDepot::kNodesSize2>
-    storeIds;
 // Keep mutable data out of frequently access nodes to improve caching
 // efficiency.
 static TwoLevelMap<atomic_uint32_t, StackDepot::kNodesSize1,
@@ -73,17 +69,15 @@ void StackDepotHandle::inc_use_count_unsafe() {
 }
 
 uptr StackDepotNode::allocated() {
-  return stackStore.Allocated() + storeIds.MemoryUsage() +
-         useCounts.MemoryUsage();
+  return stackStore.Allocated() + useCounts.MemoryUsage();
 }
 
 void StackDepotNode::store(u32 id, const args_type &args, hash_type hash) {
   stack_hash = hash;
-  storeIds[id] = stackStore.Store(args);
+  store_id = stackStore.Store(args);
 }
 
 StackDepotNode::args_type StackDepotNode::load(u32 id) const {
-  StackStore::Id store_id = storeIds[id];
   if (!store_id)
     return {};
   return stackStore.Load(store_id);
@@ -121,7 +115,6 @@ StackDepotHandle StackDepotNode::get_handle(u32 id) {
 
 void StackDepotTestOnlyUnmap() {
   theDepot.TestOnlyUnmap();
-  storeIds.TestOnlyUnmap();
   stackStore.TestOnlyUnmap();
 }
 

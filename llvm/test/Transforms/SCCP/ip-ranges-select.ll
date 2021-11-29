@@ -1,4 +1,4 @@
-; RUN: opt -ipsccp -S %s -o -| FileCheck %s
+; RUN: opt -passes=ipsccp -S %s -o -| FileCheck %s
 
 define void @caller.1(i8* %arg) {
 ; CHECK-LABEL: define void @caller.1(i8* %arg) {

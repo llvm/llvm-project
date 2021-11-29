@@ -1718,6 +1718,9 @@
 // RUN:     --target=powerpc64-pc-linux-musl \
 // RUN:   | FileCheck --check-prefix=CHECK-MUSL-PPC64 %s
 // RUN: %clang %s -### -o %t.o 2>&1 \
+// RUN:     --target=powerpcspe-pc-linux-musl \
+// RUN:   | FileCheck --check-prefix=CHECK-MUSL-PPCSPE %s
+// RUN: %clang %s -### -o %t.o 2>&1 \
 // RUN:     --target=thumb-pc-linux-musleabi \
 // RUN:   | FileCheck --check-prefix=CHECK-MUSL-ARM %s
 // RUN: %clang %s -### -o %t.o 2>&1 \
@@ -1767,6 +1770,7 @@
 // CHECK-MUSL-MIPS64EL:   "-dynamic-linker" "/lib/ld-musl-mips64el.so.1"
 // CHECK-MUSL-PPC:        "-dynamic-linker" "/lib/ld-musl-powerpc.so.1"
 // CHECK-MUSL-PPC64:      "-dynamic-linker" "/lib/ld-musl-powerpc64.so.1"
+// CHECK-MUSL-PPCSPE:     "-dynamic-linker" "/lib/ld-musl-powerpc-sf.so.1"
 // CHECK-MUSL-ARM:        "-dynamic-linker" "/lib/ld-musl-arm.so.1"
 // CHECK-MUSL-ARMHF:      "-dynamic-linker" "/lib/ld-musl-armhf.so.1"
 // CHECK-MUSL-ARMEB:      "-dynamic-linker" "/lib/ld-musl-armeb.so.1"

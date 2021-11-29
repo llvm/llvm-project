@@ -1,4 +1,4 @@
-; RUN: opt -ipsccp -S %s | FileCheck %s
+; RUN: opt -passes=ipsccp -S %s | FileCheck %s
 
 ; Test 1.
 ; Both arguments and return value of @callee can be tracked. The inferred range

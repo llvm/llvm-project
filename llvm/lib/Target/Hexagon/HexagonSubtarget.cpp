@@ -305,8 +305,7 @@ void HexagonSubtarget::CallMutation::apply(ScheduleDAGInstrs *DAGInstrs) {
         VRegHoldingReg[MI->getOperand(0).getReg()] = MI->getOperand(1).getReg();
         LastVRegUse.erase(MI->getOperand(1).getReg());
       } else {
-        for (unsigned i = 0, e = MI->getNumOperands(); i != e; ++i) {
-          const MachineOperand &MO = MI->getOperand(i);
+        for (const MachineOperand &MO : MI->operands()) {
           if (!MO.isReg())
             continue;
           if (MO.isUse() && !MI->isCopy() &&

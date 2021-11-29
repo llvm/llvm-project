@@ -1,4 +1,4 @@
-;RUN: opt -S -globalopt -f %s | FileCheck %s
+;RUN: opt -S -passes=globalopt -f %s | FileCheck %s
 
 ;CHECK: @foo = {{.*}}, !dbg !0
 @foo = global i64 ptrtoint ([1 x i64]* @baa to i64), align 8, !dbg !0

@@ -1503,6 +1503,24 @@ void AArch64TargetLowering::addTypeForNEON(MVT VT) {
   }
 }
 
+bool AArch64TargetLowering::shouldExpandGetActiveLaneMask(EVT ResVT,
+                                                          EVT OpVT) const {
+  // Only SVE has a 1:1 mapping from intrinsic -> instruction (whilelo).
+  if (!Subtarget->hasSVE())
+    return true;
+
+  // We can only support legal predicate result types.
+  if (ResVT != MVT::nxv2i1 && ResVT != MVT::nxv4i1 && ResVT != MVT::nxv8i1 &&
+      ResVT != MVT::nxv16i1)
+    return true;
+
+  // The whilelo instruction only works with i32 or i64 scalar inputs.
+  if (OpVT != MVT::i32 && OpVT != MVT::i64)
+    return true;
+
+  return false;
+}
+
 void AArch64TargetLowering::addTypeForFixedLengthSVE(MVT VT) {
   assert(VT.isFixedLengthVector() && "Expected fixed length vector type!");
 
@@ -4289,6 +4307,12 @@ SDValue AArch64TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
                           : AArch64ISD::SDOT;
     return DAG.getNode(Opcode, dl, Op.getValueType(), Op.getOperand(1),
                        Op.getOperand(2), Op.getOperand(3));
+  }
+  case Intrinsic::get_active_lane_mask: {
+    SDValue ID =
+        DAG.getTargetConstant(Intrinsic::aarch64_sve_whilelo, dl, MVT::i64);
+    return DAG.getNode(ISD::INTRINSIC_WO_CHAIN, dl, Op.getValueType(), ID,
+                       Op.getOperand(1), Op.getOperand(2));
   }
   }
 }

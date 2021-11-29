@@ -1,4 +1,4 @@
-; RUN: llvm-as < %s | opt -globalopt -disable-output
+; RUN: llvm-as < %s | opt -passes=globalopt -disable-output
 ; NOTE: This needs to run through 'llvm-as' first to reproduce the error!
 ; PR15440
 
