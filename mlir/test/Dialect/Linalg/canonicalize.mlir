@@ -279,6 +279,20 @@ func @fold_reshape_trailing_unit_dims_dynamic(%arg0: tensor<1x1x?x1x1x1xf32>) ->
 
 // -----
 
+func @fold_reshape_trailing_unit_dims(%arg0: tensor<12x42x1x1xf32>) -> tensor<12x42xf32>
+{
+  %0 = linalg.tensor_expand_shape %arg0 [[0], [1], [2], [3, 4]]
+      : tensor<12x42x1x1xf32> into tensor<12x42x1x1x1xf32>
+  %1 = linalg.tensor_collapse_shape %0 [[0], [1, 2, 3, 4]]
+      : tensor<12x42x1x1x1xf32> into tensor<12x42xf32>
+  return %1 : tensor<12x42xf32>
+}
+//       CHECK: func @fold_reshape_trailing_unit_dims
+//       CHECK: linalg.tensor_collapse_shape %{{.*}} {{\[}}[0], [1, 2, 3]]
+//  CHECK-SAME:   tensor<12x42x1x1xf32> into tensor<12x42xf32>
+
+// -----
+
 func @no_fold_reshapes(%arg0 : tensor<?x?x?xf32>) -> tensor<?x?xf32>
 {
   %0 = linalg.tensor_expand_shape %arg0 [[0], [1], [2, 3]]
