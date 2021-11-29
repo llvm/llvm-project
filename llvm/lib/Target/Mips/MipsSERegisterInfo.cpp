@@ -226,6 +226,17 @@ void MipsSERegisterInfo::eliminateFI(MachineBasicBlock::iterator II,
   LLVM_DEBUG(errs() << "Offset     : " << Offset << "\n"
                     << "<--------->\n");
 
+  if (MI.getOpcode() == Mips::LEA_ADDiu_NM && Offset == 0) {
+    auto &MBB = *MI.getParent();
+    const MipsSEInstrInfo &TII = *static_cast<const MipsSEInstrInfo *>(
+        MBB.getParent()->getSubtarget().getInstrInfo());
+    DebugLoc DL = MI.getDebugLoc();
+    BuildMI(MBB, II, DL, TII.get(Mips::MOVE_NM), MI.getOperand(0).getReg())
+        .addReg(FrameReg);
+    MI.eraseFromParent();
+    return;
+  }
+
   if (!MI.isDebugValue()) {
     // Make sure Offset fits within the field available.
     // For MSA instructions, this is a 10-bit signed immediate (scaled by
