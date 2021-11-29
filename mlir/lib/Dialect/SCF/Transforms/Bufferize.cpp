@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Transforms/Bufferize.h"
+#include "mlir/Dialect/Bufferization/Transforms/Bufferize.h"
 #include "PassDetail.h"
 #include "mlir/Dialect/Bufferization/IR/Bufferization.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
@@ -25,11 +25,11 @@ struct SCFBufferizePass : public SCFBufferizeBase<SCFBufferizePass> {
     auto func = getOperation();
     auto *context = &getContext();
 
-    BufferizeTypeConverter typeConverter;
+    bufferization::BufferizeTypeConverter typeConverter;
     RewritePatternSet patterns(context);
     ConversionTarget target(*context);
 
-    populateBufferizeMaterializationLegality(target);
+    bufferization::populateBufferizeMaterializationLegality(target);
     populateSCFStructuralTypeConversionsAndLegality(typeConverter, patterns,
                                                     target);
     if (failed(applyPartialConversion(func, target, std::move(patterns))))

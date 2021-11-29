@@ -6,20 +6,22 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Transforms/Bufferize.h"
 #include "PassDetail.h"
+
 #include "mlir/Dialect/Bufferization/IR/Bufferization.h"
+#include "mlir/Dialect/Bufferization/Transforms/Bufferize.h"
+#include "mlir/Dialect/Bufferization/Transforms/Passes.h"
 #include "mlir/IR/Operation.h"
-#include "mlir/Transforms/Passes.h"
 
 using namespace mlir;
+using namespace mlir::bufferization;
 
 //===----------------------------------------------------------------------===//
 // BufferizeTypeConverter
 //===----------------------------------------------------------------------===//
 
-static Value materializeTensorLoad(OpBuilder &builder, TensorType type,
-                                   ValueRange inputs, Location loc) {
+static Value materializeToTensor(OpBuilder &builder, TensorType type,
+                                 ValueRange inputs, Location loc) {
   assert(inputs.size() == 1);
   assert(inputs[0].getType().isa<BaseMemRefType>());
   return builder.create<bufferization::ToTensorOp>(loc, type, inputs[0]);
@@ -37,8 +39,8 @@ BufferizeTypeConverter::BufferizeTypeConverter() {
   addConversion([](UnrankedTensorType type) -> Type {
     return UnrankedMemRefType::get(type.getElementType(), 0);
   });
-  addArgumentMaterialization(materializeTensorLoad);
-  addSourceMaterialization(materializeTensorLoad);
+  addArgumentMaterialization(materializeToTensor);
+  addSourceMaterialization(materializeToTensor);
   addTargetMaterialization([](OpBuilder &builder, BaseMemRefType type,
                               ValueRange inputs, Location loc) -> Value {
     assert(inputs.size() == 1);
@@ -47,14 +49,15 @@ BufferizeTypeConverter::BufferizeTypeConverter() {
   });
 }
 
-void mlir::populateBufferizeMaterializationLegality(ConversionTarget &target) {
+void mlir::bufferization::populateBufferizeMaterializationLegality(
+    ConversionTarget &target) {
   target.addLegalOp<bufferization::ToTensorOp, bufferization::ToMemrefOp>();
 }
 
 namespace {
 // In a finalizing bufferize conversion, we know that all tensors have been
 // converted to memrefs, thus, this op becomes an identity.
-class BufferizeTensorLoadOp
+class BufferizeToTensorOp
     : public OpConversionPattern<bufferization::ToTensorOp> {
 public:
   using OpConversionPattern::OpConversionPattern;
@@ -70,7 +73,8 @@ public:
 namespace {
 // In a finalizing bufferize conversion, we know that all tensors have been
 // converted to memrefs, thus, this op becomes an identity.
-class BufferizeCastOp : public OpConversionPattern<bufferization::ToMemrefOp> {
+class BufferizeToMemrefOp
+    : public OpConversionPattern<bufferization::ToMemrefOp> {
 public:
   using OpConversionPattern::OpConversionPattern;
   LogicalResult
@@ -82,10 +86,10 @@ public:
 };
 } // namespace
 
-void mlir::populateEliminateBufferizeMaterializationsPatterns(
+void mlir::bufferization::populateEliminateBufferizeMaterializationsPatterns(
     BufferizeTypeConverter &typeConverter, RewritePatternSet &patterns) {
-  patterns.add<BufferizeTensorLoadOp, BufferizeCastOp>(typeConverter,
-                                                       patterns.getContext());
+  patterns.add<BufferizeToTensorOp, BufferizeToMemrefOp>(typeConverter,
+                                                         patterns.getContext());
 }
 
 namespace {
@@ -121,6 +125,7 @@ struct FinalizingBufferizePass
 };
 } // namespace
 
-std::unique_ptr<FunctionPass> mlir::createFinalizingBufferizePass() {
+std::unique_ptr<FunctionPass>
+mlir::bufferization::createFinalizingBufferizePass() {
   return std::make_unique<FinalizingBufferizePass>();
 }

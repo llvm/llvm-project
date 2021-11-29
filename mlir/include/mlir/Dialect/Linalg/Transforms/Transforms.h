@@ -18,12 +18,15 @@
 #include "mlir/Dialect/Vector/VectorTransforms.h"
 #include "mlir/Dialect/X86Vector/Transforms.h"
 #include "mlir/IR/PatternMatch.h"
-#include "mlir/Transforms/Bufferize.h"
+#include "mlir/Transforms/DialectConversion.h"
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/SmallSet.h"
 
 namespace mlir {
+namespace bufferization {
 class BufferizeTypeConverter;
+} // namespace bufferization
+
 class FrozenRewritePatternSet;
 
 namespace linalg {
@@ -90,8 +93,9 @@ void populateFoldUnitDimsReshapeOpsByLinearizationPatterns(
     RewritePatternSet &patterns);
 
 /// Populates the given list with patterns to bufferize linalg ops.
-void populateLinalgBufferizePatterns(BufferizeTypeConverter &converter,
-                                     RewritePatternSet &patterns);
+void populateLinalgBufferizePatterns(
+    bufferization::BufferizeTypeConverter &converter,
+    RewritePatternSet &patterns);
 
 /// Create linalg op on buffers given the original tensor-based operation and
 /// the buffers for the outputs.

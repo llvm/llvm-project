@@ -9,6 +9,7 @@ add_mlir_dialect_library(MLIRTensorTransforms
 
   LINK_LIBS PUBLIC
   MLIRArithmetic
+  MLIRBufferizationTransforms
   MLIRIR
   MLIRMemRef
   MLIRPass

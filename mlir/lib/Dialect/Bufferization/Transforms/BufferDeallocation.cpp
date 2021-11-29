@@ -54,14 +54,9 @@
 
 #include "mlir/Dialect/Bufferization/IR/AllocationOpInterface.h"
 #include "mlir/Dialect/Bufferization/IR/Bufferization.h"
+#include "mlir/Dialect/Bufferization/Transforms/Passes.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
-#include "mlir/Dialect/StandardOps/IR/Ops.h"
-#include "mlir/IR/Operation.h"
-#include "mlir/Interfaces/ControlFlowInterfaces.h"
-#include "mlir/Interfaces/LoopLikeInterface.h"
-#include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/BufferUtils.h"
-#include "mlir/Transforms/Passes.h"
 #include "llvm/ADT/SetOperations.h"
 
 using namespace mlir;
@@ -676,6 +671,6 @@ struct BufferDeallocationPass : BufferDeallocationBase<BufferDeallocationPass> {
 // BufferDeallocationPass construction
 //===----------------------------------------------------------------------===//
 
-std::unique_ptr<Pass> mlir::createBufferDeallocationPass() {
+std::unique_ptr<Pass> mlir::bufferization::createBufferDeallocationPass() {
   return std::make_unique<BufferDeallocationPass>();
 }
