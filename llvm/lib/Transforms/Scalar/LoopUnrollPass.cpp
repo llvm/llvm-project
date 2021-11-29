@@ -836,51 +836,48 @@ shouldPartialUnroll(const unsigned LoopSize, const unsigned TripCount,
                     const UnrollCostEstimator UCE,
                     const TargetTransformInfo::UnrollingPreferences &UP) {
 
+  if (!TripCount)
+    return None;
+
+  if (!UP.Partial) {
+    LLVM_DEBUG(dbgs() << "  will not try to unroll partially because "
+               << "-unroll-allow-partial not given\n");
+    return 0;
+  }
   unsigned count = UP.Count;
-  if (TripCount) {
-    if (!UP.Partial) {
-      LLVM_DEBUG(dbgs() << "  will not try to unroll partially because "
-                        << "-unroll-allow-partial not given\n");
-      count = 0;
-      return count;
-    }
-    if (count == 0)
-      count = TripCount;
-    if (UP.PartialThreshold != NoThreshold) {
-      // Reduce unroll count to be modulo of TripCount for partial unrolling.
-      if (UCE.getUnrolledLoopSize(UP, count) > UP.PartialThreshold)
-        count = (std::max(UP.PartialThreshold, UP.BEInsns + 1) - UP.BEInsns) /
-                (LoopSize - UP.BEInsns);
-      if (count > UP.MaxCount)
-        count = UP.MaxCount;
-      while (count != 0 && TripCount % count != 0)
-        count--;
-      if (UP.AllowRemainder && count <= 1) {
-        // If there is no Count that is modulo of TripCount, set Count to
-        // largest power-of-two factor that satisfies the threshold limit.
-        // As we'll create fixup loop, do the type of unrolling only if
-        // remainder loop is allowed.
-        count = UP.DefaultUnrollRuntimeCount;
-        while (count != 0 &&
-               UCE.getUnrolledLoopSize(UP, count) > UP.PartialThreshold)
-          count >>= 1;
-      }
-      if (count < 2) {
-        count = 0;
-      }
-    } else {
-      count = TripCount;
-    }
+  if (count == 0)
+    count = TripCount;
+  if (UP.PartialThreshold != NoThreshold) {
+    // Reduce unroll count to be modulo of TripCount for partial unrolling.
+    if (UCE.getUnrolledLoopSize(UP, count) > UP.PartialThreshold)
+      count = (std::max(UP.PartialThreshold, UP.BEInsns + 1) - UP.BEInsns) /
+        (LoopSize - UP.BEInsns);
     if (count > UP.MaxCount)
       count = UP.MaxCount;
-
-    LLVM_DEBUG(dbgs() << "  partially unrolling with count: " << count << "\n");
-
-    return count;
+    while (count != 0 && TripCount % count != 0)
+      count--;
+    if (UP.AllowRemainder && count <= 1) {
+      // If there is no Count that is modulo of TripCount, set Count to
+      // largest power-of-two factor that satisfies the threshold limit.
+      // As we'll create fixup loop, do the type of unrolling only if
+      // remainder loop is allowed.
+      count = UP.DefaultUnrollRuntimeCount;
+      while (count != 0 &&
+             UCE.getUnrolledLoopSize(UP, count) > UP.PartialThreshold)
+        count >>= 1;
+    }
+    if (count < 2) {
+      count = 0;
+    }
+  } else {
+    count = TripCount;
   }
+  if (count > UP.MaxCount)
+    count = UP.MaxCount;
 
-  // if didn't return until here, should continue to other priorties
-  return None;
+  LLVM_DEBUG(dbgs() << "  partially unrolling with count: " << count << "\n");
+
+  return count;
 }
 // Returns true if unroll count was set explicitly.
 // Calculates unroll count and writes it to UP.Count.
