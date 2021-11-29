@@ -402,7 +402,7 @@ uint32_t PlatformWindows::DoLoadImage(Process *process,
     // XXX(compnerd) should we use the compiler to get the sizeof(unsigned)?
     uint64_t error_code =
         process->ReadUnsignedIntegerFromMemory(injected_result + 2 * word_size + sizeof(unsigned),
-                                               word_size, ERROR_SUCCESS, status);
+                                               word_size, 0, status);
     if (status.Fail()) {
       error.SetErrorStringWithFormat("LoadLibrary error: could not read error status: %s",
                                      status.AsCString());
