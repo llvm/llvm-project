@@ -1,5 +1,5 @@
 # RUN: llc -debug-entry-values -run-pass=livedebugvalues -march=x86-64 -o - %s -experimental-debug-variable-locations=false | FileCheck %s --check-prefixes=CHECK,VARLOCLDV
-# RUN: llc -debug-entry-values -force-instr-ref-livedebugvalues=1 -run-pass=livedebugvalues -march=x86-64 -o - %s | FileCheck %s --check-prefixes=CHECK,INSTRREFLDV
+# RUN: llc -debug-entry-values -run-pass=livedebugvalues -march=x86-64 -o - %s -experimental-debug-variable-locations=true | FileCheck %s --check-prefixes=CHECK,INSTRREFLDV
 #
 # The test case was artificially adjusted, in order to make proper diamond basic
 # block structure relevant to the debug entry values clobbering.
