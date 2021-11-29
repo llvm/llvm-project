@@ -592,7 +592,7 @@ func @tiled_loop_reduction(%input_3d: tensor<16x24x32xf32>,
       linalg.yield %1 : f32
     } -> tensor<4xf32>
 
-    %sum_sub = tensor.insert_slice %acc into %o_[%j][%c4][1]
+    %sum_sub = tensor.insert_slice %acc into %o_[%j][4][1]
       : tensor<4xf32> into tensor<24xf32>
     linalg.yield %sum_sub : tensor<24xf32>
   }

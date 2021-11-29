@@ -149,8 +149,36 @@ func @tensor.reshape_num_elements_mismatch(
 
 // -----
 
-func @slice_wrong_dynamic_type(%t: tensor<8x16x4xf32>, %idx : index) {
-      // expected-error @+1 {{expected result type to be 'tensor<4x4x4xf32>' or a rank-reduced version. (mismatch of result sizes)}}
+func @extract_slice_wrong_result_rank(%t: tensor<?xf32>, %idx : index) {
+  // expected-error @+1 {{expected rank to be smaller or equal to the other rank.}}
+  %0 = tensor.extract_slice %t[0][4][1] : tensor<?xf32> to tensor<?x?xf32>
+
+  return
+}
+
+// -----
+
+func @extract_slice_wrong_result_rank(%t: tensor<?xf32>, %idx : index) {
+  // expected-error @+1 {{expected element type to be 'f32'}}
+  %0 = tensor.extract_slice %t[0][4][1] : tensor<?xf32> to tensor<4xi8>
+
+  return
+}
+
+// -----
+
+func @extract_slice_wrong_static_type(%t: tensor<8x16x4xf32>, %idx : index) {
+  // expected-error @+1 {{expected type to be 'tensor<?x4x4xf32>' or a rank-reduced version. (size mismatch)}}
+  %0 = tensor.extract_slice %t[0, 0, 0][%idx, 4, 4][1, 1, 1]
+    : tensor<8x16x4xf32> to tensor<4x4x4xf32>
+
+  return
+}
+
+// -----
+
+func @extract_slice_wrong_dynamic_type(%t: tensor<8x16x4xf32>, %idx : index) {
+  // expected-error @+1 {{expected type to be 'tensor<4x4x4xf32>' or a rank-reduced version. (size mismatch)}}
   %0 = tensor.extract_slice %t[0, 2, 0][4, 4, 4][1, 1, 1]
     : tensor<8x16x4xf32> to tensor<?x4x4xf32>
 
@@ -159,10 +187,38 @@ func @slice_wrong_dynamic_type(%t: tensor<8x16x4xf32>, %idx : index) {
 
 // -----
 
-func @slice_wrong_static_type(%t: tensor<8x16x4xf32>, %idx : index) {
-      // expected-error @+1 {{expected result type to be 'tensor<?x3x?xf32>' or a rank-reduced version. (mismatch of result sizes)}}
-  %0 = tensor.extract_slice %t[0, 0, 0][%idx, 3, %idx][1, 1, 1]
-    : tensor<8x16x4xf32> to tensor<4x4x4xf32>
+func @insert_slice_wrong_result_rank(%t1: tensor<?xf32>, %t2: tensor<?x?xf32>, %idx : index) {
+  // expected-error @+1 {{expected rank to be smaller or equal to the other rank.}}
+  %0 = tensor.insert_slice %t2 into %t1[0][4][1] : tensor<?x?xf32> into tensor<?xf32>
+
+  return
+}
+
+// -----
+
+func @insert_slice_wrong_result_rank(%t1: tensor<4xi8>, %t2: tensor<?xf32>, %idx : index) {
+  // expected-error @+1 {{expected element type to be 'f32'}}
+  %0 = tensor.insert_slice %t1 into %t2[0][4][1] : tensor<4xi8> into tensor<?xf32>
+
+  return
+}
+
+// -----
+
+func @insert_slice_wrong_static_type(%t1: tensor<4x4x4xf32>, %t2: tensor<8x16x4xf32>, %idx : index) {
+  // expected-error @+1 {{expected type to be 'tensor<?x4x4xf32>' or a rank-reduced version. (size mismatch)}}
+  %0 = tensor.insert_slice %t1 into %t2[0, 0, 0][%idx, 4, 4][1, 1, 1]
+    : tensor<4x4x4xf32> into tensor<8x16x4xf32>
+
+  return
+}
+
+// -----
+
+func @insert_slice_wrong_dynamic_type(%t1: tensor<?x4x4xf32>, %t2: tensor<8x16x4xf32>, %idx : index) {
+  // expected-error @+1 {{expected type to be 'tensor<4x4x4xf32>' or a rank-reduced version. (size mismatch)}}
+  %0 = tensor.insert_slice %t1 into %t2[0, 2, 0][4, 4, 4][1, 1, 1]
+    : tensor<?x4x4xf32> into tensor<8x16x4xf32>
 
   return
 }

@@ -348,8 +348,10 @@ func @rank_reducing_tensor_of_cast(%arg : tensor<4x6x16x32xi8>) -> tensor<16x32x
 //   CHECK-NOT:   tensor.cast
 //       CHECK:   return %[[S]] : tensor<4x6x16x32xi8>
 func @rank_reducing_insert_slice_of_cast(%a : tensor<16x32xi8>, %b : tensor<4x6x16x32xi8>) -> tensor<4x6x16x32xi8> {
+  %c0 = arith.constant 0: index
   %cast = tensor.cast %a : tensor<16x32xi8> to tensor<?x32xi8>
-  %res = tensor.insert_slice %cast into %b[0, 1, 0] [1, 1, 16] [1, 1, 1] : tensor<?x32xi8> into tensor<4x6x16x32xi8>
+  %sz = tensor.dim %cast, %c0: tensor<?x32xi8>
+  %res = tensor.insert_slice %cast into %b[0, 1, 0] [1, 1, %sz] [1, 1, 1] : tensor<?x32xi8> into tensor<4x6x16x32xi8>
   return %res : tensor<4x6x16x32xi8>
 }
 
@@ -408,9 +410,10 @@ func @rank_reducing_insert_slice_canonicalize(%arg0 : tensor<?x?xf32>, %arg1 : i
 }
 // CHECK-LABEL: func @rank_reducing_insert_slice_canonicalize
 //  CHECK-SAME:   %[[ARG0:.+]]: tensor<?x?xf32>
-//       CHECK:   %[[RESULT:.+]] = tensor.insert_slice %[[ARG0]]
+//       CHECK:   %[[CAST:.*]] = tensor.cast %[[ARG0]] : tensor<?x?xf32> to tensor<4x?xf32>
+//       CHECK:   %[[RESULT:.+]] = tensor.insert_slice %[[CAST]]
 //  CHECK-SAME:      [0, %{{.+}}, 1] [4, 1, %{{.+}}] [1, 1, 1]
-//  CHECK-SAME:      : tensor<?x?xf32> into tensor<?x?x?xf32>
+//  CHECK-SAME:      : tensor<4x?xf32> into tensor<?x?x?xf32>
 //       CHEKC:   return %[[RESULT]]
 
 // -----
@@ -450,7 +453,7 @@ func @insert_slice_propagate_dest_cast(%arg0 : tensor<2x?xi32>, %arg1 : tensor<i
   ^bb0(%arg4: index, %arg5: index):
     tensor.yield %1 : i32
   } : tensor<?x?xi32>
-  %3 = tensor.insert_slice %arg0 into %2[%c0, %arg3] [%c2, %0] [%c1, %c1] : tensor<2x?xi32> into tensor<?x?xi32>
+  %3 = tensor.insert_slice %arg0 into %2[0, %arg3] [2, %0] [1, 1] : tensor<2x?xi32> into tensor<?x?xi32>
   return %3 : tensor<?x?xi32>
 }
 // CHECK-LABEL: func @insert_slice_propagate_dest_cast
@@ -462,9 +465,6 @@ func @insert_slice_propagate_dest_cast(%arg0 : tensor<2x?xi32>, %arg1 : tensor<i
 // -----
 
 func @insert_slice_output_dest_canonicalize(%arg0 : tensor<2x3xi32>, %arg1 : tensor<i32>) -> tensor<3x9xi32> {
-  %c0 = arith.constant 0 : index
-  %c1 = arith.constant 1 : index
-  %c2 = arith.constant 2 : index
   %c9 = arith.constant 9 : index
   %c3 = arith.constant 3 : index
   %2 = tensor.extract %arg1[] : tensor<i32>
@@ -472,7 +472,7 @@ func @insert_slice_output_dest_canonicalize(%arg0 : tensor<2x3xi32>, %arg1 : ten
   ^bb0(%arg2: index, %arg3: index):
     tensor.yield %2 : i32
   } : tensor<?x?xi32>
-  %5 = tensor.insert_slice %arg0 into %4[%c0, %c1] [%c2, %c3] [1, 1] : tensor<2x3xi32> into tensor<?x?xi32>
+  %5 = tensor.insert_slice %arg0 into %4[0, 1] [2, 3] [1, 1] : tensor<2x3xi32> into tensor<?x?xi32>
   %6 = tensor.cast %5 : tensor<?x?xi32> to tensor<3x9xi32>
   return %6 : tensor<3x9xi32>
 }
@@ -527,8 +527,9 @@ func @fold_dim_of_tensor.cast(%arg0 : tensor<4x?xf32>) -> (index, index) {
 //      CHECK:    %[[r:.*]] =  tensor.insert_slice %[[cast]] into %[[arg1]][0, 1, 2] [64, 5, 64] [1, 1, 1] : tensor<64x5x64xf32> into tensor<?x?x?xf32>
 //      CHECK:    return %[[r]]
 func @insert_tensor_cast_on_insert_slice_src(
-  %arg0 : tensor<?x5x?xf32>,  %arg1 : tensor<?x?x?xf32>) -> tensor<?x?x?xf32> {
-  %r = tensor.insert_slice %arg0 into %arg1[0, 1, 2] [64, 5, 64] [1, 1, 1]
+    %arg0 : tensor<?x5x?xf32>,  %arg1 : tensor<?x?x?xf32>, %sz0: index, %sz2: index) -> tensor<?x?x?xf32> {
+  %c64 = arith.constant 64: index
+  %r = tensor.insert_slice %arg0 into %arg1[0, 1, 2] [%c64, 5, %c64] [1, 1, 1]
     : tensor<?x5x?xf32> into tensor<?x?x?xf32>
   return %r : tensor<?x?x?xf32>
 }
@@ -558,14 +559,4 @@ func @fold_overlapping_insert(%input : tensor<?x?x?xf32>, %slice1: tensor<4x?x8x
   %1 = tensor.insert_slice %slice2 into %0[%c0, %i, 0] [4, %size, 8] [1, 1, %c1] : tensor<4x?x8xf32> into tensor<?x?x?xf32>
   // CHECK: return %[[INSERT]]
   return %1 : tensor<?x?x?xf32>
-}
-
-// -----
-
-// CHECK-LABEL: func @folding_incorrect_ir_triggers_infinite_loop
-func @folding_incorrect_ir_triggers_infinite_loop(
-  %A : tensor<4x4xf32>, %C : tensor<?x?xf32>) -> tensor<?x?xf32> {
-  %rC = tensor.insert_slice %A into %C[0, 0][12345, 67890][1, 1] :
-    tensor<4x4xf32> into tensor<?x?xf32>
-  return %rC: tensor<?x?xf32>
 }

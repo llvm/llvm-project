@@ -21,9 +21,10 @@
 
 namespace mlir {
 
-/// Helper function to dispatch an OpFoldResult into either the `dynamicVec` if
-/// it is a Value or into `staticVec` if it is an IntegerAttr.
-/// In the case of a Value, a copy of the `sentinel` value is also pushed to
+/// Helper function to dispatch an OpFoldResult into `staticVec` if:
+///   a) it is an IntegerAttr
+/// In other cases, the OpFoldResult is dispached to the `dynamicVec`.
+/// In such dynamic cases, a copy of the `sentinel` value is also pushed to
 /// `staticVec`. This is useful to extract mixed static and dynamic entries that
 /// come from an AttrSizedOperandSegments trait.
 void dispatchIndexOpFoldResult(OpFoldResult ofr,
@@ -31,11 +32,8 @@ void dispatchIndexOpFoldResult(OpFoldResult ofr,
                                SmallVectorImpl<int64_t> &staticVec,
                                int64_t sentinel);
 
-/// Helper function to dispatch multiple OpFoldResults into either the
-/// `dynamicVec` (for Values) or into `staticVec` (for IntegerAttrs).
-/// In the case of a Value, a copy of the `sentinel` value is also pushed to
-/// `staticVec`. This is useful to extract mixed static and dynamic entries that
-/// come from an AttrSizedOperandSegments trait.
+/// Helper function to dispatch multiple OpFoldResults according to the behavior
+/// of `dispatchIndexOpFoldResult(OpFoldResult ofr` for a single OpFoldResult.
 void dispatchIndexOpFoldResults(ArrayRef<OpFoldResult> ofrs,
                                 SmallVectorImpl<Value> &dynamicVec,
                                 SmallVectorImpl<int64_t> &staticVec,

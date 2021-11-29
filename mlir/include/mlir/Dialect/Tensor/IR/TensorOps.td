@@ -184,11 +184,14 @@ def Tensor_ExtractSliceOp : BaseOpWithOffsetSizesAndStrides<
     ShapedType::kDynamicStrideOrOffset encodes that the corresponding entry has
     a dynamic value.
 
-    After buffer-allocation, the "extract_slice" op is expected to lower into a
-    "subview" op.
+    After buffer allocation, the "extract_slice" op is expected to lower into a
+    memref.subview op.
 
     An extract_slice operation may additionally reduce the rank of the resulting
     tensor by removing dimensions that are statically known to be of size 1.
+    This rank-reduction behavior is not required by the op semantics: this
+    flexibility allows to progressively drop unit dimensions while lowering
+    between different flavors of ops on that operate on tensors.
 
     Example:
 
@@ -196,8 +199,8 @@ def Tensor_ExtractSliceOp : BaseOpWithOffsetSizesAndStrides<
     // Rank-reducing extract_slice.
     %1 = tensor.extract_slice %0[0, 0, 0][1, 16, 4][1, 1, 1] :
       tensor<8x16x4xf32> to tensor<16x4xf32>
-    %3 = tensor.extract_slice %2[3, 4, 2][1, 6, 3][1, 1, 1] :
-      tensor<8x16x4xf32> to tensor<6x3xf32>
+    %3 = tensor.extract_slice %2[%o0, 4, %o2][1, %sz1, 1][1, %st1, 1] :
+      tensor<8x16x4xf32> to tensor<1x?xf32>
     ```
   }];
 
@@ -257,24 +260,28 @@ def Tensor_ExtractSliceOp : BaseOpWithOffsetSizesAndStrides<
     /// An extract_slice result type can be fully inferred from the source type
     /// and the static representation of offsets, sizes and strides. Special
     /// sentinels encode the dynamic case.
-    static Type inferResultType(RankedTensorType sourceRankedTensorType,
-                                ArrayRef<int64_t> staticOffsets,
-                                ArrayRef<int64_t> staticSizes,
-                                ArrayRef<int64_t> staticStrides);
-    static Type inferResultType(RankedTensorType sourceRankedTensorType,
-                                ArrayRef<OpFoldResult> staticOffsets,
-                                ArrayRef<OpFoldResult> staticSizes,
-                                ArrayRef<OpFoldResult> staticStrides);
-    static Type inferRankReducedResultType(unsigned resultRank,
-                                           RankedTensorType sourceRankedTensorType,
-                                           ArrayRef<int64_t> staticOffsets,
-                                           ArrayRef<int64_t> staticSizes,
-                                           ArrayRef<int64_t> staticStrides);
-    static Type inferRankReducedResultType(unsigned resultRank,
-                                           RankedTensorType sourceRankedTensorType,
-                                           ArrayRef<OpFoldResult> staticOffsets,
-                                           ArrayRef<OpFoldResult> staticSizes,
-                                           ArrayRef<OpFoldResult> staticStrides);
+    static RankedTensorType inferResultType(
+      RankedTensorType sourceRankedTensorType,
+      ArrayRef<int64_t> staticOffsets,
+      ArrayRef<int64_t> staticSizes,
+      ArrayRef<int64_t> staticStrides);
+    static RankedTensorType inferResultType(
+      RankedTensorType sourceRankedTensorType,
+      ArrayRef<OpFoldResult> staticOffsets,
+      ArrayRef<OpFoldResult> staticSizes,
+      ArrayRef<OpFoldResult> staticStrides);
+    static RankedTensorType inferRankReducedResultType(
+      unsigned resultRank,
+      RankedTensorType sourceRankedTensorType,
+      ArrayRef<int64_t> staticOffsets,
+      ArrayRef<int64_t> staticSizes,
+      ArrayRef<int64_t> staticStrides);
+    static RankedTensorType inferRankReducedResultType(
+      unsigned resultRank,
+      RankedTensorType sourceRankedTensorType,
+      ArrayRef<OpFoldResult> staticOffsets,
+      ArrayRef<OpFoldResult> staticSizes,
+      ArrayRef<OpFoldResult> staticStrides);
 
     /// Return the expected rank of each of the`static_offsets`, `static_sizes`
     /// and `static_strides` attributes.
@@ -469,8 +476,27 @@ def Tensor_InsertSliceOp : BaseOpWithOffsetSizesAndStrides<
     ShapedType::kDynamicStrideOrOffset encodes that the corresponding entry has
     a dynamic value.
 
-    After buffer-allocation, the "insert_slice" op is expected to become an
-    in-place buffer update.
+    After buffer allocation, the "insert_slice" op is expected to lower into a
+    memref.subview op.
+
+    An insert_slice operation may additionally specify insertion into a tensor
+    of higher rank than the source tensor, along dimensions that are statically
+    known to be of size 1.
+    This rank-altering behavior is not required by the op semantics: this
+    flexibility allows to progressively drop unit dimensions while lowering
+    between different flavors of ops on that operate on tensors.
+    The rank-altering behavior of tensor.insert_slice matches the rank-reducing
+    behavior of tensor.extract_slice.
+
+    Example:
+
+    ```
+    // Rank-reducing extract_slice.
+    %1 = tensor.insert_slice %t into %0[0, 0, 0][1, 16, 4][1, 1, 1] :
+      tensor<16x4xf32> into tensor<8x16x4xf32>
+    %3 = tensor.insert_slice %tt into %2[%o0, 4, %o2][1, %sz1, 1][1, %st1, 1] :
+      tensor<1x?xf32> into tensor<8x16x4xf32>
+    ```
   }];
 
   let arguments = (ins
@@ -492,8 +518,6 @@ def Tensor_InsertSliceOp : BaseOpWithOffsetSizesAndStrides<
     custom<OperandsOrIntegersOffsetsOrStridesList>($strides, $static_strides)
     attr-dict `:` type($source) `into` type($dest)
   }];
-
-  let verifier = ?;
 
   let builders = [
     // Build a InsertSliceOp with mixed static and dynamic entries.

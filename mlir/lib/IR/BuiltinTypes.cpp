@@ -571,7 +571,7 @@ mlir::computeRankReductionMask(ArrayRef<int64_t> originalShape,
   llvm::SmallDenseSet<unsigned> unusedDims;
   unsigned reducedIdx = 0;
   for (unsigned originalIdx = 0; originalIdx < originalRank; ++originalIdx) {
-    // Greedily insert `originalIdx` if no match.
+    // Greedily insert `originalIdx` if match.
     if (reducedIdx < reducedRank &&
         originalShape[originalIdx] == reducedShape[reducedIdx]) {
       reducedIdx++;
@@ -588,6 +588,39 @@ mlir::computeRankReductionMask(ArrayRef<int64_t> originalShape,
   if (reducedIdx != reducedRank)
     return llvm::None;
   return unusedDims;
+}
+
+SliceVerificationResult
+mlir::isRankReducedType(ShapedType originalType,
+                        ShapedType candidateReducedType) {
+  if (originalType == candidateReducedType)
+    return SliceVerificationResult::Success;
+
+  ShapedType originalShapedType = originalType.cast<ShapedType>();
+  ShapedType candidateReducedShapedType =
+      candidateReducedType.cast<ShapedType>();
+
+  // Rank and size logic is valid for all ShapedTypes.
+  ArrayRef<int64_t> originalShape = originalShapedType.getShape();
+  ArrayRef<int64_t> candidateReducedShape =
+      candidateReducedShapedType.getShape();
+  unsigned originalRank = originalShape.size(),
+           candidateReducedRank = candidateReducedShape.size();
+  if (candidateReducedRank > originalRank)
+    return SliceVerificationResult::RankTooLarge;
+
+  auto optionalUnusedDimsMask =
+      computeRankReductionMask(originalShape, candidateReducedShape);
+
+  // Sizes cannot be matched in case empty vector is returned.
+  if (!optionalUnusedDimsMask.hasValue())
+    return SliceVerificationResult::SizeMismatch;
+
+  if (originalShapedType.getElementType() !=
+      candidateReducedShapedType.getElementType())
+    return SliceVerificationResult::ElemTypeMismatch;
+
+  return SliceVerificationResult::Success;
 }
 
 bool mlir::detail::isSupportedMemorySpace(Attribute memorySpace) {
