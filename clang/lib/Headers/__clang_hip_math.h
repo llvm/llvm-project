@@ -378,17 +378,12 @@ long int lroundf(float __x) { return __ocml_round_f32(__x); }
 
 __DEVICE_NOCE__
 float modff(float __x, float *__iptr) {
-#ifdef __OPENMP_AMDGCN__
-  static __attribute__((address_space(5))) float __tmp;
-  float __r = __ocml_modf_f32(__x, &__tmp);
-#else
   float __tmp;
 #ifdef __OPENMP_AMDGCN__
 #pragma omp allocate(__tmp) allocator(omp_thread_mem_alloc)
 #endif
   float __r =
       __ocml_modf_f32(__x, (__attribute__((address_space(5))) float *)&__tmp);
-#endif
   *__iptr = __tmp;
   return __r;
 }
@@ -977,17 +972,12 @@ long int lround(double __x) { return __ocml_round_f64(__x); }
 
 __DEVICE_NOCE__
 double modf(double __x, double *__iptr) {
-#ifdef __OPENMP_AMDGCN__
-  static __attribute__((address_space(5))) double __tmp;
-  double __r = __ocml_modf_f64(__x, &__tmp);
-#else
   double __tmp;
 #ifdef __OPENMP_AMDGCN__
 #pragma omp allocate(__tmp) allocator(omp_thread_mem_alloc)
 #endif
   double __r =
       __ocml_modf_f64(__x, (__attribute__((address_space(5))) double *)&__tmp);
-#endif
   *__iptr = __tmp;
 
   return __r;
