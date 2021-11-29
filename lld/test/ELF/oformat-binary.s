@@ -1,7 +1,7 @@
 # REQUIRES: x86
 # RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %s -o %t
 
-# RUN: ld.lld -o %t.out %t --oformat binary
+# RUN: ld.lld -o %t.out %t --oformat=binary
 # RUN: od -t x1 -v %t.out | FileCheck %s
 # CHECK:      0000000 90 11 22
 # CHECK-NEXT: 0000003
@@ -46,7 +46,7 @@
 # ERR: unknown --oformat value: foo
 
 # RUN: ld.lld -o /dev/null %t --oformat elf
-# RUN: ld.lld -o /dev/null %t --oformat elf-foo
+# RUN: ld.lld -o /dev/null %t --oformat=elf-foo
 
 .text
 .align 4

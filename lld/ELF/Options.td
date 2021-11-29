@@ -304,8 +304,8 @@ def no_undefined: F<"no-undefined">,
 def o: JoinedOrSeparate<["-"], "o">, MetaVarName<"<path>">,
   HelpText<"Path to file to write output">;
 
-def oformat: Separate<["--"], "oformat">, MetaVarName<"<format>">,
-  HelpText<"Specify the binary format for the output object file">;
+defm oformat: EEq<"oformat", "Specify the binary format for the output object file">,
+  MetaVarName<"[elf,binary]">;
 
 def omagic: FF<"omagic">, MetaVarName<"<magic>">,
   HelpText<"Set the text and data sections to be readable and writable, do not page align sections, link against static libraries">;
