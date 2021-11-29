@@ -2281,7 +2281,6 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
   // Create elfHeader early. We need a dummy section in
   // addReservedSymbols to mark the created symbols as not absolute.
   Out::elfHeader = make<OutputSection>("", 0, SHF_ALLOC);
-  Out::elfHeader->size = sizeof(typename ELFT::Ehdr);
 
   std::vector<WrappedSymbol> wrapped = addWrappedSymbols(args);
 

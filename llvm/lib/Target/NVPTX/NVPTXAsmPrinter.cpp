@@ -130,10 +130,8 @@ VisitGlobalVariableForEmission(const GlobalVariable *GV,
   for (unsigned i = 0, e = GV->getNumOperands(); i != e; ++i)
     DiscoverDependentGlobals(GV->getOperand(i), Others);
 
-  for (DenseSet<const GlobalVariable *>::iterator I = Others.begin(),
-                                                  E = Others.end();
-       I != E; ++I)
-    VisitGlobalVariableForEmission(*I, Order, Visited, Visiting);
+  for (const GlobalVariable *GV : Others)
+    VisitGlobalVariableForEmission(GV, Order, Visited, Visiting);
 
   // Now we can visit ourself
   Order.push_back(GV);
@@ -699,35 +697,33 @@ static bool useFuncSeen(const Constant *C,
 
 void NVPTXAsmPrinter::emitDeclarations(const Module &M, raw_ostream &O) {
   DenseMap<const Function *, bool> seenMap;
-  for (Module::const_iterator FI = M.begin(), FE = M.end(); FI != FE; ++FI) {
-    const Function *F = &*FI;
-
-    if (F->getAttributes().hasFnAttr("nvptx-libcall-callee")) {
-      emitDeclaration(F, O);
+  for (const Function &F : M) {
+    if (F.getAttributes().hasFnAttr("nvptx-libcall-callee")) {
+      emitDeclaration(&F, O);
       continue;
     }
 
-    if (F->isDeclaration()) {
-      if (F->use_empty())
+    if (F.isDeclaration()) {
+      if (F.use_empty())
         continue;
-      if (F->getIntrinsicID())
+      if (F.getIntrinsicID())
         continue;
-      emitDeclaration(F, O);
+      emitDeclaration(&F, O);
       continue;
     }
-    for (const User *U : F->users()) {
+    for (const User *U : F.users()) {
       if (const Constant *C = dyn_cast<Constant>(U)) {
         if (usedInGlobalVarDef(C)) {
           // The use is in the initialization of a global variable
           // that is a function pointer, so print a declaration
           // for the original function
-          emitDeclaration(F, O);
+          emitDeclaration(&F, O);
           break;
         }
         // Emit a declaration of this function if the function that
         // uses this constant expr has already been seen.
         if (useFuncSeen(C, seenMap)) {
-          emitDeclaration(F, O);
+          emitDeclaration(&F, O);
           break;
         }
       }
@@ -746,11 +742,11 @@ void NVPTXAsmPrinter::emitDeclarations(const Module &M, raw_ostream &O) {
       // appearing in the module before the callee. so print out
       // a declaration for the callee.
       if (seenMap.find(caller) != seenMap.end()) {
-        emitDeclaration(F, O);
+        emitDeclaration(&F, O);
         break;
       }
     }
-    seenMap[F] = true;
+    seenMap[&F] = true;
   }
 }
 

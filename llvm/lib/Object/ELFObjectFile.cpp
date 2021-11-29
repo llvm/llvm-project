@@ -682,7 +682,7 @@ readDynsymVersionsImpl(const ELFFile<ELFT> &EF,
 
   std::vector<VersionEntry> Ret;
   size_t I = 0;
-  for (auto It = Symbols.begin(), E = Symbols.end(); It != E; ++It) {
+  for (const ELFSymbolRef &Sym : Symbols) {
     ++I;
     Expected<const typename ELFT::Versym *> VerEntryOrErr =
         EF.template getEntry<typename ELFT::Versym>(*VerSec, I);
@@ -691,7 +691,7 @@ readDynsymVersionsImpl(const ELFFile<ELFT> &EF,
                          " from " + describe(EF, *VerSec) + ": " +
                          toString(VerEntryOrErr.takeError()));
 
-    Expected<uint32_t> FlagsOrErr = It->getFlags();
+    Expected<uint32_t> FlagsOrErr = Sym.getFlags();
     if (!FlagsOrErr)
       return createError("unable to read flags for symbol with index " +
                          Twine(I) + ": " + toString(FlagsOrErr.takeError()));

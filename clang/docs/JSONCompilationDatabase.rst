@@ -36,6 +36,12 @@ works) with the option ``CMAKE_EXPORT_COMPILE_COMMANDS``.
 For projects on Linux, there is an alternative to intercept compiler
 calls with a tool called `Bear <https://github.com/rizsotto/Bear>`_.
 
+`Bazel <https://bazel.build>`_ can export a compilation database via 
+`this extractor extension 
+<https://github.com/hedronvision/bazel-compile-commands-extractor>`_.
+Bazel is otherwise resistant to Bear and other compiler-intercept
+techniques.
+
 Clang's tooling interface supports reading compilation databases; see
 the :doc:`LibTooling documentation <LibTooling>`. libclang and its
 python bindings also support this (since clang 3.2); see

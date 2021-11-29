@@ -292,10 +292,6 @@ class LinkerScript final {
   std::pair<MemoryRegion *, MemoryRegion *>
   findMemoryRegion(OutputSection *sec, MemoryRegion *hint);
 
-  void switchTo(OutputSection *sec);
-  uint64_t advance(uint64_t size, unsigned align);
-  void output(InputSection *sec);
-
   void assignOffsets(OutputSection *sec);
 
   // Ctx captures the local AddressState and makes it accessible

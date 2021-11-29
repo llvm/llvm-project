@@ -1236,9 +1236,8 @@ define i32 @xor_andn_commute4(i32 %pa, i32 %pb) {
 
 define <2 x i64> @xor_orn(<2 x i64> %a, <2 x i64> %b) {
 ; CHECK-LABEL: @xor_orn(
-; CHECK-NEXT:    [[NOTA:%.*]] = xor <2 x i64> [[A:%.*]], <i64 -1, i64 -1>
-; CHECK-NEXT:    [[L:%.*]] = or <2 x i64> [[NOTA]], [[B:%.*]]
-; CHECK-NEXT:    [[Z:%.*]] = xor <2 x i64> [[L]], [[A]]
+; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i64> [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[Z:%.*]] = xor <2 x i64> [[TMP1]], <i64 -1, i64 -1>
 ; CHECK-NEXT:    ret <2 x i64> [[Z]]
 ;
   %nota = xor <2 x i64> %a, <i64 -1, i64 -1>
@@ -1252,9 +1251,8 @@ define <2 x i64> @xor_orn(<2 x i64> %a, <2 x i64> %b) {
 define i8 @xor_orn_commute1(i8 %pa, i8 %b) {
 ; CHECK-LABEL: @xor_orn_commute1(
 ; CHECK-NEXT:    [[A:%.*]] = udiv i8 42, [[PA:%.*]]
-; CHECK-NEXT:    [[NOTA:%.*]] = xor i8 [[A]], -1
-; CHECK-NEXT:    [[L:%.*]] = or i8 [[NOTA]], [[B:%.*]]
-; CHECK-NEXT:    [[Z:%.*]] = xor i8 [[A]], [[L]]
+; CHECK-NEXT:    [[TMP1:%.*]] = and i8 [[A]], [[B:%.*]]
+; CHECK-NEXT:    [[Z:%.*]] = xor i8 [[TMP1]], -1
 ; CHECK-NEXT:    ret i8 [[Z]]
 ;
   %a = udiv i8 42, %pa
@@ -1269,9 +1267,8 @@ define i8 @xor_orn_commute1(i8 %pa, i8 %b) {
 define i32 @xor_orn_commute2(i32 %a, i32 %pb,i32* %s) {
 ; CHECK-LABEL: @xor_orn_commute2(
 ; CHECK-NEXT:    [[B:%.*]] = udiv i32 42, [[PB:%.*]]
-; CHECK-NEXT:    [[NOTA:%.*]] = xor i32 [[A:%.*]], -1
-; CHECK-NEXT:    [[L:%.*]] = or i32 [[B]], [[NOTA]]
-; CHECK-NEXT:    [[Z:%.*]] = xor i32 [[L]], [[A]]
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[B]], [[A:%.*]]
+; CHECK-NEXT:    [[Z:%.*]] = xor i32 [[TMP1]], -1
 ; CHECK-NEXT:    ret i32 [[Z]]
 ;
   %b = udiv i32 42, %pb
@@ -1281,14 +1278,13 @@ define i32 @xor_orn_commute2(i32 %a, i32 %pb,i32* %s) {
   ret i32 %z
 }
 
-
 define i32 @xor_orn_commute2_1use(i32 %a, i32 %pb,i32* %s) {
 ; CHECK-LABEL: @xor_orn_commute2_1use(
 ; CHECK-NEXT:    [[B:%.*]] = udiv i32 42, [[PB:%.*]]
 ; CHECK-NEXT:    [[NOTA:%.*]] = xor i32 [[A:%.*]], -1
-; CHECK-NEXT:    [[L:%.*]] = or i32 [[B]], [[NOTA]]
 ; CHECK-NEXT:    store i32 [[NOTA]], i32* [[S:%.*]], align 4
-; CHECK-NEXT:    [[Z:%.*]] = xor i32 [[L]], [[A]]
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[B]], [[A]]
+; CHECK-NEXT:    [[Z:%.*]] = xor i32 [[TMP1]], -1
 ; CHECK-NEXT:    ret i32 [[Z]]
 ;
   %b = udiv i32 42, %pb
@@ -1305,9 +1301,8 @@ define i67 @xor_orn_commute3(i67 %pa, i67 %pb, i67* %s) {
 ; CHECK-LABEL: @xor_orn_commute3(
 ; CHECK-NEXT:    [[A:%.*]] = udiv i67 42, [[PA:%.*]]
 ; CHECK-NEXT:    [[B:%.*]] = udiv i67 42, [[PB:%.*]]
-; CHECK-NEXT:    [[NOTA:%.*]] = xor i67 [[A]], -1
-; CHECK-NEXT:    [[L:%.*]] = or i67 [[B]], [[NOTA]]
-; CHECK-NEXT:    [[Z:%.*]] = xor i67 [[A]], [[L]]
+; CHECK-NEXT:    [[TMP1:%.*]] = and i67 [[A]], [[B]]
+; CHECK-NEXT:    [[Z:%.*]] = xor i67 [[TMP1]], -1
 ; CHECK-NEXT:    ret i67 [[Z]]
 ;
   %a = udiv i67 42, %pa
@@ -1336,7 +1331,6 @@ define i67 @xor_orn_commute3_1use(i67 %pa, i67 %pb, i67* %s) {
   %z = xor i67 %a, %l
   ret i67 %z
 }
-
 
 define i32 @xor_orn_2use(i32 %a, i32 %b, i32* %s1, i32* %s2) {
 ; CHECK-LABEL: @xor_orn_2use(

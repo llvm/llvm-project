@@ -128,7 +128,6 @@ std::vector<InputSection *> getInputSections(const OutputSection *os);
 // until Writer is initialized.
 struct Out {
   static uint8_t *bufferStart;
-  static uint8_t first;
   static PhdrEntry *tlsPhdr;
   static OutputSection *elfHeader;
   static OutputSection *programHeaders;

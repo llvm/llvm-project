@@ -13,6 +13,8 @@ add_flang_unittest(FlangOptimizerTests
   Builder/ComplexTest.cpp
   Builder/DoLoopHelperTest.cpp
   Builder/FIRBuilderTest.cpp
+  Builder/Runtime/AssignTest.cpp
+  Builder/Runtime/TransformationalTest.cpp
   FIRContextTest.cpp
   InternalNamesTest.cpp
   KindMappingTest.cpp

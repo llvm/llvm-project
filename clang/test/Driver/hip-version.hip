@@ -1,6 +1,7 @@
 // REQUIRES: clang-driver
 // REQUIRES: x86-registered-target
 // REQUIRES: amdgpu-registered-target
+// UNSUPPORTED: aix
 
 // RUN: %clang -v --rocm-path=%S/Inputs/rocm 2>&1 \
 // RUN:   | FileCheck -check-prefixes=FOUND %s

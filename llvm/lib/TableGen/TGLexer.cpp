@@ -1017,12 +1017,10 @@ void TGLexer::prepSkipToLineEnd() {
 }
 
 bool TGLexer::prepIsProcessingEnabled() {
-  for (auto I = PrepIncludeStack.back()->rbegin(),
-            E = PrepIncludeStack.back()->rend();
-       I != E; ++I) {
-    if (!I->IsDefined)
+  for (const PreprocessorControlDesc &I :
+       llvm::reverse(*PrepIncludeStack.back()))
+    if (!I.IsDefined)
       return false;
-  }
 
   return true;
 }
