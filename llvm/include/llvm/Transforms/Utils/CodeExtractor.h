@@ -18,6 +18,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/Transforms/Utils/ValueMapper.h"
 #include <limits>
 
 namespace llvm {
@@ -109,6 +110,13 @@ public:
     // label, if non-empty, otherwise "extracted".
     std::string Suffix;
 
+   // bool DeleteOldBlocks;
+
+    void analyzeBeforeExtraction(const CodeExtractorAnalysisCache &CEAC, ValueSet &inputs, ValueSet &outputs, BlockFrequency &EntryFreq,DenseMap<BasicBlock *, BlockFrequency> &ExitWeights,     SmallPtrSet<BasicBlock *, 1> &ExitBlocks);
+
+
+    void prepareForExtraction(const CodeExtractorAnalysisCache &CEAC, ValueSet &inputs, ValueSet &outputs);
+
   public:
     /// Create a code extractor for a sequence of blocks.
     ///
@@ -141,7 +149,7 @@ public:
     ///
     /// Returns zero when called on a CodeExtractor instance where isEligible
     /// returns false.
-    Function *extractCodeRegion(const CodeExtractorAnalysisCache &CEAC);
+    Function *extractCodeRegion(const CodeExtractorAnalysisCache &CEAC, bool KeepOldBlocks = false);
 
     /// Perform the extraction, returning the new function and providing an
     /// interface to see what was categorized as inputs and outputs.
@@ -155,7 +163,16 @@ public:
     /// \returns zero when called on a CodeExtractor instance where isEligible
     /// returns false.
     Function *extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
-                                ValueSet &Inputs, ValueSet &Outputs);
+                                ValueSet &Inputs, ValueSet &Outputs, bool KeepOldBlocks = false);
+
+    Function *extractCodeRegionByCopy(const CodeExtractorAnalysisCache &CEAC,
+        ValueSet &Inputs, ValueSet &Outputs, 
+      const   BlockFrequency& EntryFreq,
+        const  DenseMap<BasicBlock *, BlockFrequency> &ExitWeights,  const   SmallPtrSet<BasicBlock *, 1> &ExitBlocks,
+       const  ValueSet &SinkingCands,const ValueSet & HoistingCands, BasicBlock *CommonExit,   Function *newFunction, 
+        BasicBlock *   codeReplacer,
+        BasicBlock *  NewEntry,
+        BasicBlock *  newRootNode  );
 
     /// Verify that assumption cache isn't stale after a region is extracted.
     /// Returns true when verifier finds errors. AssumptionCache is passed as
@@ -233,8 +250,22 @@ public:
     Function *constructFunction(const ValueSet &inputs,
                                 const ValueSet &outputs,
                                 BasicBlock *header,
-                                BasicBlock *newRootNode, BasicBlock *newHeader,
-                                Function *oldFunction, Module *M);
+                                BasicBlock *&newRootNode, BasicBlock *newHeader,
+                                Function *oldFunction, Module *M,   bool KeepOldBlocks,    ValueToValueMapTy &VMap);
+
+    void handleParams( 
+        Function *oldFunction, Function *newFunction,
+        const ValueSet &inputs,
+        const ValueSet &outputs) ;
+
+
+    Function *constructFunction2(const ValueSet &inputs,
+        const ValueSet &outputs,
+        BasicBlock *header,
+    //    BasicBlock *&newRootNode, BasicBlock *newHeader,
+        Function *oldFunction, Module *M
+        //,   bool KeepOldBlocks,    ValueToValueMapTy &VMap
+    );
 
     void moveCodeToFunction(Function *newFunction);
 
@@ -243,9 +274,11 @@ public:
         DenseMap<BasicBlock *, BlockFrequency> &ExitWeights,
         BranchProbabilityInfo *BPI);
 
+
+
     CallInst *emitCallAndSwitchStatement(Function *newFunction,
                                          BasicBlock *newHeader,
-                                         ValueSet &inputs, ValueSet &outputs);
+                                         ValueSet &inputs, ValueSet &outputs,bool KeepOldBlocks ,   ValueToValueMapTy &VMap);
   };
 
 } // end namespace llvm
