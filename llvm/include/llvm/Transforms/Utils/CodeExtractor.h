@@ -274,6 +274,8 @@ public:
         DenseMap<BasicBlock *, BlockFrequency> &ExitWeights,
         BranchProbabilityInfo *BPI);
 
+
+
     CallInst *emitCallAndSwitchStatement(Function *newFunction,
                                          BasicBlock *newHeader,
                                          ValueSet &inputs, ValueSet &outputs,bool KeepOldBlocks ,   ValueToValueMapTy &VMap);

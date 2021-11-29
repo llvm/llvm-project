@@ -1128,6 +1128,10 @@ Function *CodeExtractor::constructFunction2(const ValueSet &inputs,
     if (oldFunction->hasUWTable())
         newFunction->setHasUWTable();
 
+    // Propagate personality info to the new function if there is one.
+    if (oldFunction->hasPersonalityFn())
+        newFunction->setPersonalityFn(oldFunction->getPersonalityFn());
+
     // Inherit all of the target dependent attributes and white-listed
     // target independent attributes.
     //  (e.g. If the extracted region contains a call to an x86.sse
@@ -1329,22 +1333,30 @@ static void insertLifetimeMarkersSurroundingCall(
   }
 }
 
+
+
+
+
+
+
 /// emitCallAndSwitchStatement - This method sets up the caller side by adding
 /// the call instruction, splitting any PHI nodes in the header block as
 /// necessary.
 CallInst *CodeExtractor::emitCallAndSwitchStatement(Function *newFunction,
                                                     BasicBlock *codeReplacer,
                                                     ValueSet &inputs,
-                                                    ValueSet &outputs, bool KeepOldBlocks,   ValueToValueMapTy &VMap) {
+                                                    ValueSet &outputs, bool KeepOldBlocks,  ValueToValueMapTy &VMap) {
   // Emit a call to the new function, passing in: *pointer to struct (if
   // aggregating parameters), or plan inputs and allocated memory for outputs
-  std::vector<Value *> params, StructValues, ReloadOutputs, Reloads;
+  std::vector<Value *>   ReloadOutputs, Reloads;
 
   Module *M = newFunction->getParent();
   LLVMContext &Context = M->getContext();
   const DataLayout &DL = M->getDataLayout();
   CallInst *call = nullptr;
 
+
+  // TOOD: Pass AllocaBlock
   BasicBlock *AllocaBlock ;
   if (KeepOldBlocks) {
       AllocaBlock = &newFunction->front();
@@ -1352,28 +1364,23 @@ CallInst *CodeExtractor::emitCallAndSwitchStatement(Function *newFunction,
       AllocaBlock = &codeReplacer->getParent()->front();
   }
 
-#if 0
-  auto NewAlloca = [&](Type *Ty, unsigned AddrSpace, Value *ArraySize,
-      const Twine &Name) {
-    if (!KeepOldBlocks)
-        return  new AllocaInst(Ty, AddrSpace,ArraySize, Name, &codeReplacer->getParent()->front().front());
-    return  new AllocaInst(Ty, AddrSpace,  ArraySize, Name,  &newFunction->front().front());
-  };
-#endif
 
   // Add inputs as params, or to be filled into the struct
   unsigned ArgNo = 0;
+  std::vector<Value *> params;
+  std::vector<Value *>  StructValues;
   SmallVector<unsigned, 1> SwiftErrorArgs;
   for (Value *input : inputs) {
-    if (AggregateArgs)
-      StructValues.push_back(input);
-    else {
-      params.push_back(input);
-      if (input->isSwiftError())
-        SwiftErrorArgs.push_back(ArgNo);
-    }
-    ++ArgNo;
+      if (AggregateArgs)
+          StructValues.push_back(input);
+      else {
+          params.push_back(input);
+          if (input->isSwiftError())
+              SwiftErrorArgs.push_back(ArgNo);
+      }
+      ++ArgNo;
   }
+ 
 
   // Create allocas for the outputs
   for (Value *output : outputs) {
@@ -1391,6 +1398,7 @@ CallInst *CodeExtractor::emitCallAndSwitchStatement(Function *newFunction,
       params.push_back(alloca);
     }
   }
+
 
   StructType *StructArgTy = nullptr;
   AllocaInst *Struct = nullptr;
@@ -1413,12 +1421,12 @@ CallInst *CodeExtractor::emitCallAndSwitchStatement(Function *newFunction,
       Value *Idx[2];
       Idx[0] = Constant::getNullValue(Type::getInt32Ty(Context));
       Idx[1] = ConstantInt::get(Type::getInt32Ty(Context), i);
-      GetElementPtrInst *GEP = GetElementPtrInst::Create(
-          StructArgTy, Struct, Idx, "gep_" + StructValues[i]->getName());
+      GetElementPtrInst *GEP = GetElementPtrInst::Create(StructArgTy, Struct, Idx, "gep_" + StructValues[i]->getName());
       codeReplacer->getInstList().push_back(GEP);
       new StoreInst(StructValues[i], GEP, codeReplacer);
     }
   }
+
 
   // Emit the call to the function
   call = CallInst::Create(newFunction, params,   NumExitBlocks > 1 ? "targetBlock" : "");
@@ -1436,7 +1444,7 @@ CallInst *CodeExtractor::emitCallAndSwitchStatement(Function *newFunction,
   codeReplacer->getInstList().push_back(call);
 
   // Set swifterror parameter attributes.
-  for (unsigned SwiftErrArgNo : SwiftErrorArgs) {
+  for (unsigned SwiftErrArgNo : SwiftErrorArgs) {  // TOOD: Move to constructFunction
     call->addParamAttr(SwiftErrArgNo, Attribute::SwiftError);
     newFunction->addParamAttr(SwiftErrArgNo, Attribute::SwiftError);
   }
@@ -1453,8 +1461,7 @@ CallInst *CodeExtractor::emitCallAndSwitchStatement(Function *newFunction,
       Value *Idx[2];
       Idx[0] = Constant::getNullValue(Type::getInt32Ty(Context));
       Idx[1] = ConstantInt::get(Type::getInt32Ty(Context), FirstOut + i);
-      GetElementPtrInst *GEP = GetElementPtrInst::Create(
-          StructArgTy, Struct, Idx, "gep_reload_" + outputs[i]->getName());
+      GetElementPtrInst *GEP = GetElementPtrInst::Create(StructArgTy, Struct, Idx, "gep_reload_" + outputs[i]->getName());
       codeReplacer->getInstList().push_back(GEP);
       Output = GEP;
     } else {
@@ -1467,8 +1474,10 @@ CallInst *CodeExtractor::emitCallAndSwitchStatement(Function *newFunction,
     std::vector<User *> Users(outputs[i]->user_begin(), outputs[i]->user_end());
     for (unsigned u = 0, e = Users.size(); u != e; ++u) {
       Instruction *inst = cast<Instruction>(Users[u]);
-      if (!Blocks.count(inst->getParent()))
-        inst->replaceUsesOfWith(outputs[i], load);
+      if (!KeepOldBlocks) {
+          if (!Blocks.count(inst->getParent()))
+              inst->replaceUsesOfWith(outputs[i], load);
+      }
     }
   }
 
@@ -1523,21 +1532,28 @@ CallInst *CodeExtractor::emitCallAndSwitchStatement(Function *newFunction,
                         OldTarget);
   }
 
-  //if (!KeepOldBlocks)
-  for (BasicBlock *Block : Blocks) {
-    Instruction *TI = Block->getTerminator();
-    for (unsigned i = 0, e = TI->getNumSuccessors(); i != e; ++i) {
-      if (Blocks.count(TI->getSuccessor(i)))
-        continue;
-      BasicBlock *OldTarget = TI->getSuccessor(i);
-      // add a new basic block which returns the appropriate value
-      BasicBlock *NewTarget = ExitBlockMap[OldTarget];
-      assert(NewTarget && "Unknown target block!");
 
-      // rewrite the original branch instruction with this new target
-     TI->setSuccessor(i, NewTarget);    
-   }
-  }
+
+      for (BasicBlock* Block : Blocks) {
+          Instruction* TI = Block->getTerminator();
+          for (unsigned i = 0, e = TI->getNumSuccessors(); i != e; ++i) {
+              if (Blocks.count(TI->getSuccessor(i)))
+                  continue;
+              BasicBlock* OldTarget = TI->getSuccessor(i);
+              // add a new basic block which returns the appropriate value
+              BasicBlock* NewTarget = ExitBlockMap[OldTarget];
+              assert(NewTarget && "Unknown target block!");
+
+              if (!KeepOldBlocks) {
+                  // rewrite the original branch instruction with this new target
+                  TI->setSuccessor(i, NewTarget);
+              } else {
+                  VMap[OldTarget] = NewTarget; 
+              }
+          }
+      }
+  
+
 
   // Store the arguments right after the definition of output value.
   // This should be proceeded after creating exit stubs to be ensure that invoke
@@ -2039,11 +2055,19 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
             AI->setName(outputs[i]->getName()+".out");
     }
 
+    // Update the entry count of the function.
+    if (BFI) {
+        auto Count = BFI->getProfileCountFromFreq(EntryFreq.getFrequency());
+        if (Count.hasValue())
+            newFunction->setEntryCount(
+                ProfileCount(Count.getValue(), Function::PCT_Real)); // FIXME
+        BFI->setBlockFreq(codeReplacer, EntryFreq.getFrequency());
+    }
+
+
 
     if (KeepOldBlocks)
         return extractCodeRegionByCopy(CEAC, inputs, outputs, EntryFreq,ExitWeights,ExitBlocks,SinkingCands,HoistingCands,CommonExit, newFunction, codeReplacer,nullptr,newRootNode  );
-
-
 
 
 
@@ -2082,8 +2106,7 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
                   FirstSunkAlloca = AI;
           }
       }
-      assert((SinkingCands.empty() || FirstSunkAlloca) &&
-          "Did not expect a sink candidate without any allocas");
+      assert((SinkingCands.empty() || FirstSunkAlloca) && "Did not expect a sink candidate without any allocas");
       for (auto *II : SinkingCands) {
           if (!isa<AllocaInst>(II)) {
               cast<Instruction>(II)->moveAfter(FirstSunkAlloca);
@@ -2114,17 +2137,14 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
       for (unsigned i = 0, e = inputs.size(); i != e; ++i) {
           Value *RewriteVal = NewValues[i];
 
-
-          if (KeepOldBlocks) {
-              VMap[inputs[i]] = RewriteVal;
-          }  else {
               std::vector<User*> Users(inputs[i]->user_begin(), inputs[i]->user_end());
               for (User* use : Users)
                   if (Instruction* inst = dyn_cast<Instruction>(use))
                       if (Blocks.count(inst->getParent()))
                           inst->replaceUsesOfWith(inputs[i], RewriteVal);
-          }
       }
+
+
 
 
       // Rewrite branches to basic blocks outside of the loop to new dummy blocks
@@ -2141,24 +2161,11 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
 
 
 
-      // Propagate personality info to the new function if there is one.
-      if (oldFunction->hasPersonalityFn())
-          newFunction->setPersonalityFn(oldFunction->getPersonalityFn());
-
-      // Update the entry count of the function.
-      if (BFI) {
-          auto Count = BFI->getProfileCountFromFreq(EntryFreq.getFrequency());
-          if (Count.hasValue())
-              newFunction->setEntryCount(
-                  ProfileCount(Count.getValue(), Function::PCT_Real)); // FIXME
-          BFI->setBlockFreq(codeReplacer, EntryFreq.getFrequency());
-      }
-
 
 
 
       CallInst *TheCall = emitCallAndSwitchStatement(newFunction, codeReplacer, inputs, outputs, false,VMap);
-
+      
 
       moveCodeToFunction(newFunction);
 
