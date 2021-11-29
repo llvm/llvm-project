@@ -661,10 +661,15 @@ public:
       return true;
     } else if (semantics::IsPointer(ultimate)) {
       return false;
+    } else if (semantics::IsAllocatable(ultimate)) {
+      // TODO: this could be merged with the case below if
+      // details->IsAssumedShape() did not return true for allocatables. Current
+      // ArraySpec building in semantics does not allow making a difference
+      // between some_assumed_shape(:) and some_allocatable(:). Both
+      // isDeferredShape() and isAssumedShape() are true in each case.
+      return true;
     } else if (const auto *details{
                    ultimate.detailsIf<semantics::ObjectEntityDetails>()}) {
-      // N.B. ALLOCATABLEs are deferred shape, not assumed, and
-      // are obviously contiguous.
       return !details->IsAssumedShape() && !details->IsAssumedRank();
     } else if (auto assoc{Base::operator()(ultimate)}) {
       return assoc;
