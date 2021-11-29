@@ -591,16 +591,24 @@ AnalysisConsumer::getModeForDecl(Decl *D, AnalysisMode Mode) {
   // - Main source file: run both path-sensitive and non-path-sensitive checks.
   // - Header files: run non-path-sensitive checks only.
   // - System headers: don't run any checks.
-  SourceManager &SM = Ctx->getSourceManager();
-  const Stmt *Body = D->getBody();
-  SourceLocation SL = Body ? Body->getBeginLoc() : D->getLocation();
-  SL = SM.getExpansionLoc(SL);
+  if (Opts->AnalyzeAll)
+    return Mode;
 
-  if (!Opts->AnalyzeAll && !Mgr->isInCodeFile(SL)) {
-    if (SL.isInvalid() || SM.isInSystemHeader(SL))
-      return AM_None;
+  const SourceManager &SM = Ctx->getSourceManager();
+
+  const SourceLocation Loc = [&SM](Decl *D) -> SourceLocation {
+    const Stmt *Body = D->getBody();
+    SourceLocation SL = Body ? Body->getBeginLoc() : D->getLocation();
+    return SM.getExpansionLoc(SL);
+  }(D);
+
+  // Ignore system headers.
+  if (Loc.isInvalid() || SM.isInSystemHeader(Loc))
+    return AM_None;
+
+  // Disable path sensitive analysis in user-headers.
+  if (!Mgr->isInCodeFile(Loc))
     return Mode & ~AM_Path;
-  }
 
   return Mode;
 }
