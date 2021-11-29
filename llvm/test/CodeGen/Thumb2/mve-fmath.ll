@@ -1024,67 +1024,59 @@ define arm_aapcs_vfpcc <8 x half> @copysign_float16_t(<8 x half> %src1, <8 x hal
 ; CHECK-NEXT:    ldrb.w r0, [sp, #25]
 ; CHECK-NEXT:    vmovx.f16 s4, s0
 ; CHECK-NEXT:    vabs.f16 s4, s4
-; CHECK-NEXT:    vabs.f16 s0, s0
-; CHECK-NEXT:    tst.w r0, #128
 ; CHECK-NEXT:    vneg.f16 s6, s4
-; CHECK-NEXT:    cset r0, ne
-; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    lsls r0, r0, #24
+; CHECK-NEXT:    it pl
+; CHECK-NEXT:    vmovpl.f32 s6, s4
 ; CHECK-NEXT:    ldrb.w r0, [sp, #29]
-; CHECK-NEXT:    vseleq.f16 s4, s4, s6
-; CHECK-NEXT:    vneg.f16 s6, s0
-; CHECK-NEXT:    tst.w r0, #128
-; CHECK-NEXT:    cset r0, ne
-; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    vabs.f16 s4, s0
+; CHECK-NEXT:    vneg.f16 s0, s4
+; CHECK-NEXT:    lsls r0, r0, #24
+; CHECK-NEXT:    it pl
+; CHECK-NEXT:    vmovpl.f32 s0, s4
 ; CHECK-NEXT:    ldrb.w r0, [sp, #17]
-; CHECK-NEXT:    vseleq.f16 s0, s0, s6
-; CHECK-NEXT:    tst.w r0, #128
-; CHECK-NEXT:    vins.f16 s0, s4
 ; CHECK-NEXT:    vmovx.f16 s4, s1
-; CHECK-NEXT:    cset r0, ne
 ; CHECK-NEXT:    vabs.f16 s4, s4
-; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    vins.f16 s0, s6
+; CHECK-NEXT:    vneg.f16 s6, s4
+; CHECK-NEXT:    lsls r0, r0, #24
+; CHECK-NEXT:    it pl
+; CHECK-NEXT:    vmovpl.f32 s6, s4
 ; CHECK-NEXT:    ldrb.w r0, [sp, #21]
-; CHECK-NEXT:    vneg.f16 s6, s4
-; CHECK-NEXT:    vseleq.f16 s4, s4, s6
-; CHECK-NEXT:    vabs.f16 s6, s1
-; CHECK-NEXT:    tst.w r0, #128
-; CHECK-NEXT:    vneg.f16 s8, s6
-; CHECK-NEXT:    cset r0, ne
-; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    vabs.f16 s4, s1
+; CHECK-NEXT:    vneg.f16 s1, s4
+; CHECK-NEXT:    lsls r0, r0, #24
+; CHECK-NEXT:    it pl
+; CHECK-NEXT:    vmovpl.f32 s1, s4
 ; CHECK-NEXT:    ldrb.w r0, [sp, #9]
-; CHECK-NEXT:    vseleq.f16 s1, s6, s8
-; CHECK-NEXT:    tst.w r0, #128
-; CHECK-NEXT:    vins.f16 s1, s4
 ; CHECK-NEXT:    vmovx.f16 s4, s2
-; CHECK-NEXT:    cset r0, ne
 ; CHECK-NEXT:    vabs.f16 s4, s4
-; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    vins.f16 s1, s6
+; CHECK-NEXT:    vneg.f16 s6, s4
+; CHECK-NEXT:    lsls r0, r0, #24
+; CHECK-NEXT:    it pl
+; CHECK-NEXT:    vmovpl.f32 s6, s4
 ; CHECK-NEXT:    ldrb.w r0, [sp, #13]
-; CHECK-NEXT:    vneg.f16 s6, s4
-; CHECK-NEXT:    vseleq.f16 s4, s4, s6
-; CHECK-NEXT:    vabs.f16 s2, s2
-; CHECK-NEXT:    tst.w r0, #128
-; CHECK-NEXT:    vneg.f16 s6, s2
-; CHECK-NEXT:    cset r0, ne
-; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    vabs.f16 s4, s2
+; CHECK-NEXT:    vneg.f16 s2, s4
+; CHECK-NEXT:    lsls r0, r0, #24
+; CHECK-NEXT:    it pl
+; CHECK-NEXT:    vmovpl.f32 s2, s4
 ; CHECK-NEXT:    ldrb.w r0, [sp, #1]
-; CHECK-NEXT:    vseleq.f16 s2, s2, s6
-; CHECK-NEXT:    tst.w r0, #128
-; CHECK-NEXT:    vins.f16 s2, s4
 ; CHECK-NEXT:    vmovx.f16 s4, s3
-; CHECK-NEXT:    cset r0, ne
 ; CHECK-NEXT:    vabs.f16 s4, s4
-; CHECK-NEXT:    cmp r0, #0
-; CHECK-NEXT:    ldrb.w r0, [sp, #5]
+; CHECK-NEXT:    vins.f16 s2, s6
 ; CHECK-NEXT:    vneg.f16 s6, s4
-; CHECK-NEXT:    vseleq.f16 s4, s4, s6
-; CHECK-NEXT:    vabs.f16 s6, s3
-; CHECK-NEXT:    tst.w r0, #128
-; CHECK-NEXT:    vneg.f16 s8, s6
-; CHECK-NEXT:    cset r0, ne
-; CHECK-NEXT:    cmp r0, #0
-; CHECK-NEXT:    vseleq.f16 s3, s6, s8
-; CHECK-NEXT:    vins.f16 s3, s4
+; CHECK-NEXT:    lsls r0, r0, #24
+; CHECK-NEXT:    it pl
+; CHECK-NEXT:    vmovpl.f32 s6, s4
+; CHECK-NEXT:    ldrb.w r0, [sp, #5]
+; CHECK-NEXT:    vabs.f16 s4, s3
+; CHECK-NEXT:    vneg.f16 s3, s4
+; CHECK-NEXT:    lsls r0, r0, #24
+; CHECK-NEXT:    it pl
+; CHECK-NEXT:    vmovpl.f32 s3, s4
+; CHECK-NEXT:    vins.f16 s3, s6
 ; CHECK-NEXT:    add sp, #32
 ; CHECK-NEXT:    bx lr
 entry:

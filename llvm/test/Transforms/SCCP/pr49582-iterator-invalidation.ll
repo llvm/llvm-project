@@ -1,4 +1,4 @@
-; RUN: opt < %s -ipsccp -disable-output
+; RUN: opt < %s -passes=ipsccp -disable-output
 ; PR49582: This test checks for an iterator invalidation issue, which only gets
 ; exposed on a large-enough test case. We intentionally do not check the output.
 

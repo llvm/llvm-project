@@ -1,4 +1,4 @@
-; RUN: opt -globalopt < %s -S -o - | FileCheck %s
+; RUN: opt -passes=globalopt < %s -S -o - | FileCheck %s
 
 @GV1 = internal global i64 1, align 8
 @GV2 = internal global i32 0, align 4

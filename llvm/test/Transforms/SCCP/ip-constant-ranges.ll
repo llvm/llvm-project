@@ -1,4 +1,4 @@
-; RUN: opt < %s -ipsccp -S | FileCheck %s
+; RUN: opt < %s -passes=ipsccp -S | FileCheck %s
 
 ; Constant range for %a is [1, 48) and for %b is [301, 1000)
 ; CHECK-LABEL: f1

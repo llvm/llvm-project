@@ -1,4 +1,4 @@
-; RUN: opt < %s -correlated-propagation -S | FileCheck %s
+; RUN: opt < %s -passes=correlated-propagation -S | FileCheck %s
 
 ; Removed several cases from switch.
 define i32 @switch1(i32 %s) {

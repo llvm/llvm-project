@@ -1,4 +1,4 @@
-; RUN: opt -data-layout=A5 -globalopt %s -S -o - | FileCheck %s
+; RUN: opt -data-layout=A5 -passes=globalopt %s -S -o - | FileCheck %s
 
 ; CHECK-NOT: @g
 @g = internal addrspace(1) global i32* zeroinitializer

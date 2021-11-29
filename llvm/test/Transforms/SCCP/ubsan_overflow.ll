@@ -1,4 +1,4 @@
-; RUN: opt -sccp -S %s | FileCheck %s
+; RUN: opt -passes=sccp -S %s | FileCheck %s
 
 @0 = private unnamed_addr constant [16 x i8] c"\01\00\00\00\01\01\00\00\01\01\01\00\01\01\01\01"
 

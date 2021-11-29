@@ -1,4 +1,4 @@
-; RUN: opt < %s -sccp -S | grep undef | count 1
+; RUN: opt < %s -passes=sccp -S | grep undef | count 1
 ; PR1938
 
 define i32 @main() {

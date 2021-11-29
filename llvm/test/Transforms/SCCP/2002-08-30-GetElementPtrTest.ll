@@ -1,4 +1,4 @@
-; RUN: opt < %s -sccp -S | not grep %X
+; RUN: opt < %s -passes=sccp -S | not grep %X
 
 @G = external global [40 x i32]		; <[40 x i32]*> [#uses=1]
 

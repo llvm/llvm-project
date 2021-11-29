@@ -285,9 +285,8 @@ R600TargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
 
       NewMI = BuildMI(*BB, I, BB->findDebugLoc(I),
                       TII->get(R600::getLDSNoRetOp(MI.getOpcode())));
-      for (unsigned i = 1, e = MI.getNumOperands(); i < e; ++i) {
-        NewMI.add(MI.getOperand(i));
-      }
+      for (const MachineOperand &MO : llvm::drop_begin(MI.operands()))
+        NewMI.add(MO);
     } else {
       return AMDGPUTargetLowering::EmitInstrWithCustomInserter(MI, BB);
     }

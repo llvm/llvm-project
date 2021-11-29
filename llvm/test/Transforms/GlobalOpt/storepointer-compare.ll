@@ -1,4 +1,4 @@
-; RUN: opt < %s -globalopt -S | FileCheck %s
+; RUN: opt < %s -passes=globalopt -S | FileCheck %s
 ; CHECK: call void @Actual
 
 ; Check that a comparison does not prevent an indirect call from being made 

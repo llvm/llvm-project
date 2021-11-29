@@ -191,8 +191,7 @@ public:
   /// variables.
   DIE &updateSubprogramScopeDIE(const DISubprogram *SP);
 
-  void constructScopeDIE(LexicalScope *Scope,
-                         SmallVectorImpl<DIE *> &FinalChildren);
+  void constructScopeDIE(LexicalScope *Scope, DIE &ParentScopeDIE);
 
   /// A helper function to construct a RangeSpanList for a given
   /// lexical scope.
@@ -219,11 +218,6 @@ public:
 
   /// Construct a DIE for the given DbgLabel.
   DIE *constructLabelDIE(DbgLabel &DL, const LexicalScope &Scope);
-
-  /// A helper function to create children of a Scope DIE.
-  DIE *createScopeChildrenDIE(LexicalScope *Scope,
-                              SmallVectorImpl<DIE *> &Children,
-                              bool *HasNonScopeChildren = nullptr);
 
   void createBaseTypeDIEs();
 

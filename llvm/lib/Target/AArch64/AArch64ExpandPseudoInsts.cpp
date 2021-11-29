@@ -102,9 +102,8 @@ INITIALIZE_PASS(AArch64ExpandPseudo, "aarch64-expand-pseudo",
 static void transferImpOps(MachineInstr &OldMI, MachineInstrBuilder &UseMI,
                            MachineInstrBuilder &DefMI) {
   const MCInstrDesc &Desc = OldMI.getDesc();
-  for (unsigned i = Desc.getNumOperands(), e = OldMI.getNumOperands(); i != e;
-       ++i) {
-    const MachineOperand &MO = OldMI.getOperand(i);
+  for (const MachineOperand &MO :
+       llvm::drop_begin(OldMI.operands(), Desc.getNumOperands())) {
     assert(MO.isReg() && MO.getReg());
     if (MO.isUse())
       UseMI.add(MO);
@@ -733,8 +732,9 @@ bool AArch64ExpandPseudo::expandCALL_RVMARKER(
         MOP.getReg(), /*Def=*/false, /*Implicit=*/true));
     RegMaskStartIdx++;
   }
-  for (; RegMaskStartIdx < MI.getNumOperands(); ++RegMaskStartIdx)
-    OriginalCall->addOperand(MI.getOperand(RegMaskStartIdx));
+  for (const MachineOperand &MO :
+       llvm::drop_begin(MI.operands(), RegMaskStartIdx))
+    OriginalCall->addOperand(MO);
 
   auto *Marker = BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(AArch64::ORRXrs))
                      .addReg(AArch64::FP, RegState::Define)

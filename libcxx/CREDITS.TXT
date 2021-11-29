@@ -149,6 +149,10 @@ N: Klaas de Vries
 E: klaas at klaasgaaf dot nl
 D: Minor bug fix.
 
+N: Mark de Wever
+E: koraq at xs4all dot nl
+D: Format library support.
+
 N: Zhang Xiongpang
 E: zhangxiongpang@gmail.com
 D: Minor patches and bug fixes.
