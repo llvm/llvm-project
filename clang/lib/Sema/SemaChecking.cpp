@@ -5297,6 +5297,7 @@ static bool isValidOrderingForOp(int64_t Ordering, AtomicExpr::AtomicOp Op) {
 
   case AtomicExpr::AO__c11_atomic_load:
   case AtomicExpr::AO__opencl_atomic_load:
+  case AtomicExpr::AO__hip_atomic_load:
   case AtomicExpr::AO__atomic_load_n:
   case AtomicExpr::AO__atomic_load:
     return OrderingCABI != llvm::AtomicOrderingCABI::release &&
@@ -5304,6 +5305,7 @@ static bool isValidOrderingForOp(int64_t Ordering, AtomicExpr::AtomicOp Op) {
 
   case AtomicExpr::AO__c11_atomic_store:
   case AtomicExpr::AO__opencl_atomic_store:
+  case AtomicExpr::AO__hip_atomic_store:
   case AtomicExpr::AO__atomic_store:
   case AtomicExpr::AO__atomic_store_n:
     return OrderingCABI != llvm::AtomicOrderingCABI::consume &&
@@ -5380,7 +5382,7 @@ ExprResult Sema::BuildAtomicExpr(SourceRange CallRange, SourceRange ExprRange,
                 "need to update code for modified C11 atomics");
   bool IsOpenCL = Op >= AtomicExpr::AO__opencl_atomic_init &&
                   Op <= AtomicExpr::AO__opencl_atomic_fetch_max;
-  bool IsHIP = Op >= AtomicExpr::AO__hip_atomic_compare_exchange_strong &&
+  bool IsHIP = Op >= AtomicExpr::AO__hip_atomic_load &&
                Op <= AtomicExpr::AO__hip_atomic_fetch_max;
   bool IsC11 = (Op >= AtomicExpr::AO__c11_atomic_init &&
                Op <= AtomicExpr::AO__c11_atomic_fetch_min) ||
@@ -5399,6 +5401,7 @@ ExprResult Sema::BuildAtomicExpr(SourceRange CallRange, SourceRange ExprRange,
 
   case AtomicExpr::AO__c11_atomic_load:
   case AtomicExpr::AO__opencl_atomic_load:
+  case AtomicExpr::AO__hip_atomic_load:
   case AtomicExpr::AO__atomic_load_n:
     Form = Load;
     break;
@@ -5409,6 +5412,7 @@ ExprResult Sema::BuildAtomicExpr(SourceRange CallRange, SourceRange ExprRange,
 
   case AtomicExpr::AO__c11_atomic_store:
   case AtomicExpr::AO__opencl_atomic_store:
+  case AtomicExpr::AO__hip_atomic_store:
   case AtomicExpr::AO__atomic_store:
   case AtomicExpr::AO__atomic_store_n:
     Form = Copy;
@@ -5474,6 +5478,7 @@ ExprResult Sema::BuildAtomicExpr(SourceRange CallRange, SourceRange ExprRange,
   case AtomicExpr::AO__hip_atomic_compare_exchange_strong:
   case AtomicExpr::AO__opencl_atomic_compare_exchange_strong:
   case AtomicExpr::AO__opencl_atomic_compare_exchange_weak:
+  case AtomicExpr::AO__hip_atomic_compare_exchange_weak:
     Form = C11CmpXchg;
     break;
 
@@ -5802,11 +5807,14 @@ ExprResult Sema::BuildAtomicExpr(SourceRange CallRange, SourceRange ExprRange,
   if ((Op == AtomicExpr::AO__c11_atomic_load ||
        Op == AtomicExpr::AO__c11_atomic_store ||
        Op == AtomicExpr::AO__opencl_atomic_load ||
-       Op == AtomicExpr::AO__opencl_atomic_store ) &&
+       Op == AtomicExpr::AO__hip_atomic_load ||
+       Op == AtomicExpr::AO__opencl_atomic_store ||
+       Op == AtomicExpr::AO__hip_atomic_store) &&
       Context.AtomicUsesUnsupportedLibcall(AE))
     Diag(AE->getBeginLoc(), diag::err_atomic_load_store_uses_lib)
         << ((Op == AtomicExpr::AO__c11_atomic_load ||
-             Op == AtomicExpr::AO__opencl_atomic_load)
+             Op == AtomicExpr::AO__opencl_atomic_load ||
+             Op == AtomicExpr::AO__hip_atomic_load)
                 ? 0
                 : 1);
 
