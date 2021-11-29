@@ -3133,13 +3133,6 @@ TypeSystemSwiftTypeRef::GetInstanceType(opaque_compiler_type_t type) {
                       (ReconstructType(type)));
 }
 
-TypeSystemSwift::TypeAllocationStrategy
-TypeSystemSwiftTypeRef::GetAllocationStrategy(opaque_compiler_type_t type) {
-  if (auto *swift_ast_context = GetSwiftASTContext())
-    return swift_ast_context->GetAllocationStrategy(ReconstructType(type));
-  return {};
-}
-
 CompilerType TypeSystemSwiftTypeRef::CreateTupleType(
     const std::vector<TupleElement> &elements) {
   auto impl = [&]() -> CompilerType {
