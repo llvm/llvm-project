@@ -2,8 +2,7 @@
 // RUN: %clang_hwasan -flto %s -o %t
 // RUN: not %run %t 1 2>&1 | FileCheck %s
 
-// REQUIRES: pointer-tagging
-// UNSUPPORTED: android
+// REQUIRES: pointer-tagging, x86_64-target-arch
 
 #include <stdlib.h>
 
