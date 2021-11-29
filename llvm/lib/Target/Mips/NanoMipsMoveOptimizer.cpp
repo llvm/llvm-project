@@ -235,6 +235,26 @@ bool NMMoveOpt::generateMoveP(MachineBasicBlock &MBB) {
   return Modified;
 }
 
+// Copies implicit operands, but removes implicit uses of the destination
+// register of move instruction, because it would otherwise result in use of an
+// undefined register.
+static void copyImplicitOps(MachineInstrBuilder &New, MachineInstr &Old) {
+  New.copyImplicitOps(Old);
+  auto *NewInstr = New.getInstr();
+  auto Dst = NewInstr->getOperand(0);
+  assert(Dst.isReg() && !Dst.isImplicit() && Dst.isDef() && Dst.isDead());
+  auto Reg = NewInstr->getOperand(0).getReg();
+
+  for (unsigned OpNo = 1; OpNo < NewInstr->getNumOperands(); OpNo++) {
+    auto Opnd = NewInstr->getOperand(OpNo);
+    if (Opnd.isReg() && Opnd.isImplicit() && Opnd.isUse() &&
+        Opnd.getReg() == Reg) {
+      New.getInstr()->RemoveOperand(OpNo);
+      break;
+    }
+  }
+}
+
 bool NMMoveOpt::generateMoveBalc(MachineBasicBlock &MBB) {
   SmallVector<std::pair<MachineInstr *, MachineInstr *>> MoveBalcPairs;
   MachineInstr *Balc = nullptr;
@@ -257,14 +277,15 @@ bool NMMoveOpt::generateMoveBalc(MachineBasicBlock &MBB) {
     auto InsertBefore = MBBIter(Move);
     auto DL = Move->getDebugLoc();
     auto New = BuildMI(MBB, InsertBefore, DL, TII->get(Mips::MOVEBALC_NM))
-                   .addReg(Move->getOperand(0).getReg(), RegState::Define)
+                   .addReg(Move->getOperand(0).getReg(),
+                           RegState::Define | RegState::Dead)
                    .addReg(Move->getOperand(1).getReg());
     assert(Balc->getOperand(0).isGlobal() || Balc->getOperand(0).isSymbol());
     if (Balc->getOperand(0).isGlobal())
       New.addGlobalAddress(Balc->getOperand(0).getGlobal());
     else
       New.addExternalSymbol(Balc->getOperand(0).getSymbolName());
-    New.copyImplicitOps(*Balc);
+    copyImplicitOps(New, *Balc);
     MBB.erase(Move);
     MBB.erase(Balc);
   }
