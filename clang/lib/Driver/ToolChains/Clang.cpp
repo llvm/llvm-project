@@ -8163,9 +8163,12 @@ void OffloadWrapper::ConstructJob(Compilation &C, const JobAction &JA,
       CmdArgs.push_back(Args.MakeArgString(OffloadArchs.c_str()));
 
       auto FileStem = llvm::sys::path::stem(I.getFilename());
-      auto FileName = Twine(FileStem +
-                            llvm::sys::path::extension(I.getFilename()) + "-" + TargetID)
+      auto FileName = Twine(FileStem + "-" + TargetID +
+                            llvm::sys::path::extension(I.getFilename()))
                           .str();
+      if (C.getDriver().isSaveTempsEnabled()) {
+        FileName.append(".out");
+      }
       CmdArgs.push_back(Args.MakeArgString(FileName.c_str()));
     }
   }

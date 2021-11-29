@@ -20,7 +20,7 @@
 // CHECK: llvm-link"{{.*}}openmp-offload-multi-save-temps-{{.*}}-gfx906-select.bc"{{.*}}"-o" "{{.*}}openmp-offload-multi-save-temps-{{.*}}-gfx906-linked.bc"
 // CHECK: opt"{{.*}}openmp-offload-multi-save-temps-{{.*}}-gfx906-linked.bc" "-mtriple=amdgcn-amd-amdhsa" "-mcpu=gfx906" "-o"{{.*}}openmp-offload-multi-save-temps-{{.*}}-gfx906-optimized.bc"
 // CHECK: llc{{.*}}openmp-offload-multi-save-temps-{{.*}}-gfx906-optimized.bc" "-mtriple=amdgcn-amd-amdhsa" "-mcpu=gfx906" "-filetype=obj"{{.*}}"-o"{{.*}}openmp-offload-multi-save-temps-{{.*}}-gfx906.o"
-// CHECK: lld{{.*}}"-flavor" "gnu" "--no-undefined" "-shared" "-o" "[[GFX906OUT:.*.out.*-gfx906]]" "{{.*}}openmp-offload-multi-save-temps-{{.*}}-gfx906.o"
+// CHECK: lld{{.*}}"-flavor" "gnu" "--no-undefined" "-shared" "-o" "[[GFX906OUT:.*.out]]" "{{.*}}openmp-offload-multi-save-temps-{{.*}}-gfx906.o"
 
 // compilation for offload target 2 : gfx908
 // CHECK: clang{{.*}}"-cc1"{{.*}}"-triple" "amdgcn-amd-amdhsa"{{.*}}"-save-temps=cwd"{{.*}}"-target-cpu" "gfx908"{{.*}}"-fopenmp-is-device"{{.*}}"-o" "{{.*}}.i" "-x" "c"{{.*}}.c
@@ -29,7 +29,7 @@
 // CHECK: llvm-link"{{.*}}openmp-offload-multi-save-temps-{{.*}}-gfx908-select.bc"{{.*}}"-o" "{{.*}}openmp-offload-multi-save-temps-{{.*}}-gfx908-linked.bc"
 // CHECK: opt"{{.*}}openmp-offload-multi-save-temps-{{.*}}-gfx908-linked.bc" "-mtriple=amdgcn-amd-amdhsa" "-mcpu=gfx908" "-o"{{.*}}openmp-offload-multi-save-temps-{{.*}}-gfx908-optimized.bc"
 // CHECK: llc{{.*}}openmp-offload-multi-save-temps-{{.*}}-gfx908-optimized.bc" "-mtriple=amdgcn-amd-amdhsa" "-mcpu=gfx908" "-filetype=obj"{{.*}}"-o"{{.*}}openmp-offload-multi-save-temps-{{.*}}-gfx908.o"
-// CHECK: lld{{.*}}"-flavor" "gnu" "--no-undefined" "-shared" "-o" "[[GFX908OUT:.*.out.*-gfx908]]" "{{.*}}openmp-offload-multi-save-temps-{{.*}}-gfx908.o" "-plugin-opt=mcpu=gfx908"
+// CHECK: lld{{.*}}"-flavor" "gnu" "--no-undefined" "-shared" "-o" "[[GFX908OUT:.*.out]]" "{{.*}}openmp-offload-multi-save-temps-{{.*}}-gfx908.o" "-plugin-opt=mcpu=gfx908"
 
 // Combining device images for offload targets
 // CHECK: clang-offload-wrapper"{{.*}}" "-o" "[[COMBINEDIR:.*.bc]]" "--offload-arch=gfx906" "[[GFX906OUT]]" "--offload-arch=gfx908" "[[GFX908OUT]]"
