@@ -37,16 +37,23 @@ StackStore::Id StackStore::Store(const StackTrace &trace) {
   if (!trace.size && !trace.tag)
     return 0;
   StackTraceHeader h(trace);
-  uptr *stack_trace = Alloc(h.size + 1);
+  uptr idx;
+  uptr *stack_trace = Alloc(h.size + 1, &idx);
   *stack_trace = h.ToUptr();
   internal_memcpy(stack_trace + 1, trace.trace, h.size * sizeof(uptr));
-  return reinterpret_cast<StackStore::Id>(stack_trace);
+  return OffsetToId(idx);
 }
 
 StackTrace StackStore::Load(Id id) const {
   if (!id)
     return {};
-  const uptr *stack_trace = reinterpret_cast<const uptr *>(id);
+  uptr idx = IdToOffset(id);
+  uptr block_idx = GetBlockIdx(idx);
+  CHECK_LT(block_idx, ARRAY_SIZE(blocks_));
+  uptr *stack_trace = blocks_[block_idx].Get();
+  if (!stack_trace)
+    return {};
+  stack_trace += GetInBlockIdx(idx);
   StackTraceHeader h(*stack_trace);
   return StackTrace(stack_trace + 1, h.size, h.tag);
 }
@@ -57,7 +64,7 @@ uptr StackStore::Allocated() const {
          sizeof(*this);
 }
 
-uptr *StackStore::Alloc(uptr count) {
+uptr *StackStore::Alloc(uptr count, uptr *idx) {
   for (;;) {
     // Optimisic lock-free allocation, essentially try to bump the
     // total_frames_.
@@ -66,6 +73,7 @@ uptr *StackStore::Alloc(uptr count) {
     if (LIKELY(block_idx == GetBlockIdx(start + count - 1))) {
       // Fits into the a single block.
       CHECK_LT(block_idx, ARRAY_SIZE(blocks_));
+      *idx = start;
       return blocks_[block_idx].GetOrCreate() + GetInBlockIdx(start);
     }
 
