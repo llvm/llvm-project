@@ -40,14 +40,19 @@ func @matmul(%arg0: tensor<72x72xf32>, %arg1: tensor<72x72xf32>, %arg2: tensor<7
 
 // -----
 
+//     CHECK-PAD-DAG: #[[MAP0:[0-9a-z]+]] = affine_map<(d0) -> (16, -d0 + 72)>
+
 //         CHECK-PAD: func @matmul(
 func @matmul(%arg0: tensor<72x72xf32>, %arg1: tensor<72x72xf32>, %arg2: tensor<72x72xf32>) -> tensor<72x72xf32> {
 
   // Check the padding of the input operands has been hoisted out of the tile loop nest.
   //      CHECK-PAD-COUNT=2: linalg.pad_tensor %{{.*}} nofold
-  //      CHECK-PAD-COUNT=3: scf.for
+  //              CHECK-PAD: scf.for
+  // Check CSE eliminates the duplicate min operations introduced by tiling.
+  //              CHECK-PAD: affine.min #[[MAP0]]
+  //          CHECK-PAD-NOT: affine.min #[[MAP0]]
+  //      CHECK-PAD-COUNT=2: scf.for
   //              CHECK-PAD: linalg.matmul
   %0 = linalg.matmul ins(%arg0, %arg1: tensor<72x72xf32>, tensor<72x72xf32>) outs(%arg2: tensor<72x72xf32>) -> tensor<72x72xf32>
   return %0 : tensor<72x72xf32>
 }
-
