@@ -395,16 +395,6 @@ uint32_t ObjFile<ELFT>::getSectionIndex(const Elf_Sym &sym) const {
       this);
 }
 
-template <class ELFT> ArrayRef<Symbol *> ObjFile<ELFT>::getLocalSymbols() {
-  if (this->symbols.empty())
-    return {};
-  return makeArrayRef(this->symbols).slice(1, this->firstGlobal - 1);
-}
-
-template <class ELFT> ArrayRef<Symbol *> ObjFile<ELFT>::getGlobalSymbols() {
-  return makeArrayRef(this->symbols).slice(this->firstGlobal);
-}
-
 template <class ELFT> void ObjFile<ELFT>::parse(bool ignoreComdats) {
   // Read a section table. justSymbols is usually false.
   if (this->justSymbols)
