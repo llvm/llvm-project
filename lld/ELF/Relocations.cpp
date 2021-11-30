@@ -1358,32 +1358,6 @@ static void scanReloc(InputSectionBase &sec, OffsetGetter &getOffset, RelTy *&i,
     }
   }
 
-  // Relax relocations.
-  //
-  // If we know that a PLT entry will be resolved within the same ELF module, we
-  // can skip PLT access and directly jump to the destination function. For
-  // example, if we are linking a main executable, all dynamic symbols that can
-  // be resolved within the executable will actually be resolved that way at
-  // runtime, because the main executable is always at the beginning of a search
-  // list. We can leverage that fact.
-  if (!sym.isPreemptible && (!sym.isGnuIFunc() || config->zIfuncNoplt)) {
-    if (expr != R_GOT_PC) {
-      // The 0x8000 bit of r_addend of R_PPC_PLTREL24 is used to choose call
-      // stub type. It should be ignored if optimized to R_PC.
-      if (config->emachine == EM_PPC && expr == R_PPC32_PLTREL)
-        addend &= ~0x8000;
-      // R_HEX_GD_PLT_B22_PCREL (call a@GDPLT) is transformed into
-      // call __tls_get_addr even if the symbol is non-preemptible.
-      if (!(config->emachine == EM_HEXAGON &&
-           (type == R_HEX_GD_PLT_B22_PCREL ||
-            type == R_HEX_GD_PLT_B22_PCREL_X ||
-            type == R_HEX_GD_PLT_B32_PCREL_X)))
-      expr = fromPlt(expr);
-    } else if (!isAbsoluteValue(sym)) {
-      expr = target->adjustGotPcExpr(type, addend, relocatedAddr);
-    }
-  }
-
   // If the relocation does not emit a GOT or GOTPLT entry but its computation
   // uses their addresses, we need GOT or GOTPLT to be created.
   //
@@ -1409,6 +1383,32 @@ static void scanReloc(InputSectionBase &sec, OffsetGetter &getOffset, RelTy *&i,
                  type, sym, sec, offset, addend, expr)) {
     i += (processed - 1);
     return;
+  }
+
+  // Relax relocations.
+  //
+  // If we know that a PLT entry will be resolved within the same ELF module, we
+  // can skip PLT access and directly jump to the destination function. For
+  // example, if we are linking a main executable, all dynamic symbols that can
+  // be resolved within the executable will actually be resolved that way at
+  // runtime, because the main executable is always at the beginning of a search
+  // list. We can leverage that fact.
+  if (!sym.isPreemptible && (!sym.isGnuIFunc() || config->zIfuncNoplt)) {
+    if (expr != R_GOT_PC) {
+      // The 0x8000 bit of r_addend of R_PPC_PLTREL24 is used to choose call
+      // stub type. It should be ignored if optimized to R_PC.
+      if (config->emachine == EM_PPC && expr == R_PPC32_PLTREL)
+        addend &= ~0x8000;
+      // R_HEX_GD_PLT_B22_PCREL (call a@GDPLT) is transformed into
+      // call __tls_get_addr even if the symbol is non-preemptible.
+      if (!(config->emachine == EM_HEXAGON &&
+           (type == R_HEX_GD_PLT_B22_PCREL ||
+            type == R_HEX_GD_PLT_B22_PCREL_X ||
+            type == R_HEX_GD_PLT_B32_PCREL_X)))
+      expr = fromPlt(expr);
+    } else if (!isAbsoluteValue(sym)) {
+      expr = target->adjustGotPcExpr(type, addend, relocatedAddr);
+    }
   }
 
   // We were asked not to generate PLT entries for ifuncs. Instead, pass the
