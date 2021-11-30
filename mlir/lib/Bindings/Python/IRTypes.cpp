@@ -262,6 +262,7 @@ public:
           self.requireHasRank();
           return mlirShapedTypeIsDynamicDim(self, dim);
         },
+        py::arg("dim"),
         "Returns whether the dim-th dimension of the given shaped type is "
         "dynamic.");
     c.def(
@@ -270,10 +271,12 @@ public:
           self.requireHasRank();
           return mlirShapedTypeGetDimSize(self, dim);
         },
+        py::arg("dim"),
         "Returns the dim-th dimension of the given ranked shaped type.");
     c.def_static(
         "is_dynamic_size",
         [](int64_t size) -> bool { return mlirShapedTypeIsDynamicSize(size); },
+        py::arg("dim_size"),
         "Returns whether the given dimension size indicates a dynamic "
         "dimension.");
     c.def(
@@ -282,6 +285,7 @@ public:
           self.requireHasRank();
           return mlirShapedTypeIsDynamicStrideOrOffset(val);
         },
+        py::arg("dim_size"),
         "Returns whether the given value is used as a placeholder for dynamic "
         "strides and offsets in shaped types.");
     c.def_property_readonly(
@@ -544,7 +548,7 @@ public:
           MlirType t = mlirTupleTypeGetType(self, pos);
           return PyType(self.getContext(), t);
         },
-        "Returns the pos-th type in the tuple type.");
+        py::arg("pos"), "Returns the pos-th type in the tuple type.");
     c.def_property_readonly(
         "num_types",
         [](PyTupleType &self) -> intptr_t {

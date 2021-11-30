@@ -11,18 +11,18 @@ define float @pr26491(<4 x float> %a0) {
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movaps %xmm0, %xmm1
 ; SSE2-NEXT:    shufps {{.*#+}} xmm1 = xmm1[1,1],xmm0[3,3]
-; SSE2-NEXT:    addps %xmm0, %xmm1
-; SSE2-NEXT:    movaps %xmm1, %xmm0
-; SSE2-NEXT:    unpckhpd {{.*#+}} xmm0 = xmm0[1],xmm1[1]
+; SSE2-NEXT:    addps %xmm1, %xmm0
+; SSE2-NEXT:    movaps %xmm0, %xmm1
+; SSE2-NEXT:    unpckhpd {{.*#+}} xmm1 = xmm1[1],xmm0[1]
 ; SSE2-NEXT:    addss %xmm1, %xmm0
 ; SSE2-NEXT:    retq
 ;
 ; SSSE3-SLOW-LABEL: pr26491:
 ; SSSE3-SLOW:       # %bb.0:
 ; SSSE3-SLOW-NEXT:    movshdup {{.*#+}} xmm1 = xmm0[1,1,3,3]
-; SSSE3-SLOW-NEXT:    addps %xmm0, %xmm1
-; SSSE3-SLOW-NEXT:    movaps %xmm1, %xmm0
-; SSSE3-SLOW-NEXT:    unpckhpd {{.*#+}} xmm0 = xmm0[1],xmm1[1]
+; SSSE3-SLOW-NEXT:    addps %xmm1, %xmm0
+; SSSE3-SLOW-NEXT:    movaps %xmm0, %xmm1
+; SSSE3-SLOW-NEXT:    unpckhpd {{.*#+}} xmm1 = xmm1[1],xmm0[1]
 ; SSSE3-SLOW-NEXT:    addss %xmm1, %xmm0
 ; SSSE3-SLOW-NEXT:    retq
 ;

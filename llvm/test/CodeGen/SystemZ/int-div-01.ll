@@ -51,7 +51,8 @@ define i32 @f4(i32 %dummy, i32 signext %a, i32 %b) {
 ; CHECK-NOT: {{%r[234]}}
 ; CHECK: dsgfr %r2, %r4
 ; CHECK-NOT: dsgfr
-; CHECK: or %r2, %r3
+; CHECK: or %r3, %r2
+; CHECK: lr %r2, %r3
 ; CHECK: br %r14
   %div = sdiv i32 %a, %b
   %rem = srem i32 %a, %b

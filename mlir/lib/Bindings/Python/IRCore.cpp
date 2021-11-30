@@ -1596,6 +1596,112 @@ PyAttribute PySymbolTable::insert(PyOperationBase &symbol) {
       mlirSymbolTableInsert(symbolTable, symbol.getOperation().get()));
 }
 
+PyAttribute PySymbolTable::getSymbolName(PyOperationBase &symbol) {
+  // Op must already be a symbol.
+  PyOperation &operation = symbol.getOperation();
+  operation.checkValid();
+  MlirStringRef attrName = mlirSymbolTableGetSymbolAttributeName();
+  MlirAttribute existingNameAttr =
+      mlirOperationGetAttributeByName(operation.get(), attrName);
+  if (mlirAttributeIsNull(existingNameAttr))
+    throw py::value_error("Expected operation to have a symbol name.");
+  return PyAttribute(symbol.getOperation().getContext(), existingNameAttr);
+}
+
+void PySymbolTable::setSymbolName(PyOperationBase &symbol,
+                                  const std::string &name) {
+  // Op must already be a symbol.
+  PyOperation &operation = symbol.getOperation();
+  operation.checkValid();
+  MlirStringRef attrName = mlirSymbolTableGetSymbolAttributeName();
+  MlirAttribute existingNameAttr =
+      mlirOperationGetAttributeByName(operation.get(), attrName);
+  if (mlirAttributeIsNull(existingNameAttr))
+    throw py::value_error("Expected operation to have a symbol name.");
+  MlirAttribute newNameAttr =
+      mlirStringAttrGet(operation.getContext()->get(), toMlirStringRef(name));
+  mlirOperationSetAttributeByName(operation.get(), attrName, newNameAttr);
+}
+
+PyAttribute PySymbolTable::getVisibility(PyOperationBase &symbol) {
+  PyOperation &operation = symbol.getOperation();
+  operation.checkValid();
+  MlirStringRef attrName = mlirSymbolTableGetVisibilityAttributeName();
+  MlirAttribute existingVisAttr =
+      mlirOperationGetAttributeByName(operation.get(), attrName);
+  if (mlirAttributeIsNull(existingVisAttr))
+    throw py::value_error("Expected operation to have a symbol visibility.");
+  return PyAttribute(symbol.getOperation().getContext(), existingVisAttr);
+}
+
+void PySymbolTable::setVisibility(PyOperationBase &symbol,
+                                  const std::string &visibility) {
+  if (visibility != "public" && visibility != "private" &&
+      visibility != "nested")
+    throw py::value_error(
+        "Expected visibility to be 'public', 'private' or 'nested'");
+  PyOperation &operation = symbol.getOperation();
+  operation.checkValid();
+  MlirStringRef attrName = mlirSymbolTableGetVisibilityAttributeName();
+  MlirAttribute existingVisAttr =
+      mlirOperationGetAttributeByName(operation.get(), attrName);
+  if (mlirAttributeIsNull(existingVisAttr))
+    throw py::value_error("Expected operation to have a symbol visibility.");
+  MlirAttribute newVisAttr = mlirStringAttrGet(operation.getContext()->get(),
+                                               toMlirStringRef(visibility));
+  mlirOperationSetAttributeByName(operation.get(), attrName, newVisAttr);
+}
+
+void PySymbolTable::replaceAllSymbolUses(const std::string &oldSymbol,
+                                         const std::string &newSymbol,
+                                         PyOperationBase &from) {
+  PyOperation &fromOperation = from.getOperation();
+  fromOperation.checkValid();
+  if (mlirLogicalResultIsFailure(mlirSymbolTableReplaceAllSymbolUses(
+          toMlirStringRef(oldSymbol), toMlirStringRef(newSymbol),
+          from.getOperation())))
+
+    throw py::value_error("Symbol rename failed");
+}
+
+void PySymbolTable::walkSymbolTables(PyOperationBase &from,
+                                     bool allSymUsesVisible,
+                                     py::object callback) {
+  PyOperation &fromOperation = from.getOperation();
+  fromOperation.checkValid();
+  struct UserData {
+    PyMlirContextRef context;
+    py::object callback;
+    bool gotException;
+    std::string exceptionWhat;
+    py::object exceptionType;
+  };
+  UserData userData{
+      fromOperation.getContext(), std::move(callback), false, {}, {}};
+  mlirSymbolTableWalkSymbolTables(
+      fromOperation.get(), allSymUsesVisible,
+      [](MlirOperation foundOp, bool isVisible, void *calleeUserDataVoid) {
+        UserData *calleeUserData = static_cast<UserData *>(calleeUserDataVoid);
+        auto pyFoundOp =
+            PyOperation::forOperation(calleeUserData->context, foundOp);
+        if (calleeUserData->gotException)
+          return;
+        try {
+          calleeUserData->callback(pyFoundOp.getObject(), isVisible);
+        } catch (py::error_already_set &e) {
+          calleeUserData->gotException = true;
+          calleeUserData->exceptionWhat = e.what();
+          calleeUserData->exceptionType = e.type();
+        }
+      },
+      static_cast<void *>(&userData));
+  if (userData.gotException) {
+    std::string message("Exception raised in callback: ");
+    message.append(userData.exceptionWhat);
+    throw std::runtime_error(std::move(message));
+  }
+}
+
 namespace {
 /// CRTP base class for Python MLIR values that subclass Value and should be
 /// castable from it. The value hierarchy is one level deep and is not supposed
@@ -1631,10 +1737,13 @@ public:
   /// Binds the Python module objects to functions of this class.
   static void bind(py::module &m) {
     auto cls = ClassTy(m, DerivedTy::pyClassName, py::module_local());
-    cls.def(py::init<PyValue &>(), py::keep_alive<0, 1>());
-    cls.def_static("isinstance", [](PyValue &otherValue) -> bool {
-      return DerivedTy::isaFunction(otherValue);
-    });
+    cls.def(py::init<PyValue &>(), py::keep_alive<0, 1>(), py::arg("value"));
+    cls.def_static(
+        "isinstance",
+        [](PyValue &otherValue) -> bool {
+          return DerivedTy::isaFunction(otherValue);
+        },
+        py::arg("other_value"));
     DerivedTy::bindDerived(cls);
   }
 
@@ -1657,9 +1766,12 @@ public:
     c.def_property_readonly("arg_number", [](PyBlockArgument &self) {
       return mlirBlockArgumentGetArgNumber(self.get());
     });
-    c.def("set_type", [](PyBlockArgument &self, PyType type) {
-      return mlirBlockArgumentSetType(self.get(), type);
-    });
+    c.def(
+        "set_type",
+        [](PyBlockArgument &self, PyType type) {
+          return mlirBlockArgumentSetType(self.get(), type);
+        },
+        py::arg("type"));
   }
 };
 
@@ -1952,6 +2064,7 @@ void mlir::python::populateIRCore(py::module &m) {
             }
             return PyDialectDescriptor(self.getRef(), dialect);
           },
+          py::arg("dialect_name"),
           "Gets or loads a dialect by name, returning its descriptor object")
       .def_property(
           "allow_unregistered_dialects",
@@ -1961,15 +2074,19 @@ void mlir::python::populateIRCore(py::module &m) {
           [](PyMlirContext &self, bool value) {
             mlirContextSetAllowUnregisteredDialects(self.get(), value);
           })
-      .def("enable_multithreading",
-           [](PyMlirContext &self, bool enable) {
-             mlirContextEnableMultithreading(self.get(), enable);
-           })
-      .def("is_registered_operation",
-           [](PyMlirContext &self, std::string &name) {
-             return mlirContextIsRegisteredOperation(
-                 self.get(), MlirStringRef{name.data(), name.size()});
-           });
+      .def(
+          "enable_multithreading",
+          [](PyMlirContext &self, bool enable) {
+            mlirContextEnableMultithreading(self.get(), enable);
+          },
+          py::arg("enable"))
+      .def(
+          "is_registered_operation",
+          [](PyMlirContext &self, std::string &name) {
+            return mlirContextIsRegisteredOperation(
+                self.get(), MlirStringRef{name.data(), name.size()});
+          },
+          py::arg("operation_name"));
 
   //----------------------------------------------------------------------------
   // Mapping of PyDialectDescriptor
@@ -2013,7 +2130,7 @@ void mlir::python::populateIRCore(py::module &m) {
   // Mapping of PyDialect
   //----------------------------------------------------------------------------
   py::class_<PyDialect>(m, "Dialect", py::module_local())
-      .def(py::init<py::object>(), "descriptor")
+      .def(py::init<py::object>(), py::arg("descriptor"))
       .def_property_readonly(
           "descriptor", [](PyDialect &self) { return self.getDescriptor(); })
       .def("__repr__", [](py::object self) {
@@ -2332,7 +2449,7 @@ void mlir::python::populateIRCore(py::module &m) {
 
   auto opViewClass =
       py::class_<PyOpView, PyOperationBase>(m, "OpView", py::module_local())
-          .def(py::init<py::object>())
+          .def(py::init<py::object>(), py::arg("operation"))
           .def_property_readonly("operation", &PyOpView::getOperationObject)
           .def_property_readonly(
               "context",
@@ -2426,7 +2543,7 @@ void mlir::python::populateIRCore(py::module &m) {
             mlirRegionInsertOwnedBlock(parent, 0, block);
             return PyBlock(parent.getParentOperation(), block);
           },
-          py::arg("parent"), py::arg("pyArgTypes") = py::list(),
+          py::arg("parent"), py::arg("arg_types") = py::list(),
           "Creates and returns a new Block at the beginning of the given "
           "region (with given argument types).")
       .def(
@@ -2499,6 +2616,7 @@ void mlir::python::populateIRCore(py::module &m) {
             operation.getOperation().setAttached(
                 self.getParentOperation().getObject());
           },
+          py::arg("operation"),
           "Appends an operation to this block. If the operation is currently "
           "in another block, it will be moved.");
 
@@ -2758,13 +2876,29 @@ void mlir::python::populateIRCore(py::module &m) {
   py::class_<PySymbolTable>(m, "SymbolTable", py::module_local())
       .def(py::init<PyOperationBase &>())
       .def("__getitem__", &PySymbolTable::dunderGetItem)
-      .def("insert", &PySymbolTable::insert)
-      .def("erase", &PySymbolTable::erase)
+      .def("insert", &PySymbolTable::insert, py::arg("operation"))
+      .def("erase", &PySymbolTable::erase, py::arg("operation"))
       .def("__delitem__", &PySymbolTable::dunderDel)
-      .def("__contains__", [](PySymbolTable &table, const std::string &name) {
-        return !mlirOperationIsNull(mlirSymbolTableLookup(
-            table, mlirStringRefCreate(name.data(), name.length())));
-      });
+      .def("__contains__",
+           [](PySymbolTable &table, const std::string &name) {
+             return !mlirOperationIsNull(mlirSymbolTableLookup(
+                 table, mlirStringRefCreate(name.data(), name.length())));
+           })
+      // Static helpers.
+      .def_static("set_symbol_name", &PySymbolTable::setSymbolName,
+                  py::arg("symbol"), py::arg("name"))
+      .def_static("get_symbol_name", &PySymbolTable::getSymbolName,
+                  py::arg("symbol"))
+      .def_static("get_visibility", &PySymbolTable::getVisibility,
+                  py::arg("symbol"))
+      .def_static("set_visibility", &PySymbolTable::setVisibility,
+                  py::arg("symbol"), py::arg("visibility"))
+      .def_static("replace_all_symbol_uses",
+                  &PySymbolTable::replaceAllSymbolUses, py::arg("old_symbol"),
+                  py::arg("new_symbol"), py::arg("from_op"))
+      .def_static("walk_symbol_tables", &PySymbolTable::walkSymbolTables,
+                  py::arg("from_op"), py::arg("all_sym_uses_visible"),
+                  py::arg("callback"));
 
   // Container bindings.
   PyBlockArgumentList::bind(m);

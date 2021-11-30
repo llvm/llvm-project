@@ -60,7 +60,8 @@ define i64 @f4(i64 %dummy, i64 %a, i64 %b) {
 ; CHECK-LABEL: f4:
 ; CHECK-NOT: {{%r[234]}}
 ; CHECK: mlgr %r2, %r4
-; CHECK: ogr %r2, %r3
+; CHECK: ogr %r3, %r2
+; CHECK: lgr %r2, %r3
 ; CHECK: br %r14
   %ax = zext i64 %a to i128
   %bx = zext i64 %b to i128
