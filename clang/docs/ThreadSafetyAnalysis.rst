@@ -466,9 +466,9 @@ Use of these attributes has been deprecated.
 Warning flags
 -------------
 
-* ``-Wthread-safety``:  Umbrella flag which turns on the following three:
+* ``-Wthread-safety``:  Umbrella flag which turns on the following:
 
-  + ``-Wthread-safety-attributes``: Sanity checks on attribute syntax.
+  + ``-Wthread-safety-attributes``: Semantic checks for thread safety attributes.
   + ``-Wthread-safety-analysis``: The core analysis.
   + ``-Wthread-safety-precise``: Requires that mutex expressions match precisely.
        This warning can be disabled for code which has a lot of aliases.
