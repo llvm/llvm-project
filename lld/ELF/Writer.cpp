@@ -2608,7 +2608,7 @@ template <class ELFT> void Writer<ELFT>::assignFileOffsets() {
     // following section to avoid loading non-segments parts of the file.
     if (config->zSeparate != SeparateSegmentKind::None && lastRX &&
         lastRX->lastSec == sec)
-      off = alignTo(off, config->commonPageSize);
+      off = alignTo(off, config->maxPageSize);
   }
   for (OutputSection *sec : outputSections)
     if (!(sec->flags & SHF_ALLOC))
@@ -2886,9 +2886,9 @@ template <class ELFT> void Writer<ELFT>::writeTrapInstr() {
     for (PhdrEntry *p : part.phdrs)
       if (p->p_type == PT_LOAD && (p->p_flags & PF_X))
         fillTrap(Out::bufferStart + alignDown(p->firstSec->offset + p->p_filesz,
-                                              config->commonPageSize),
+                                              config->maxPageSize),
                  Out::bufferStart + alignTo(p->firstSec->offset + p->p_filesz,
-                                            config->commonPageSize));
+                                            config->maxPageSize));
 
     // Round up the file size of the last segment to the page boundary iff it is
     // an executable segment to ensure that other tools don't accidentally
@@ -2900,7 +2900,7 @@ template <class ELFT> void Writer<ELFT>::writeTrapInstr() {
 
     if (last && (last->p_flags & PF_X))
       last->p_memsz = last->p_filesz =
-          alignTo(last->p_filesz, config->commonPageSize);
+          alignTo(last->p_filesz, config->maxPageSize);
   }
 }
 
