@@ -535,53 +535,53 @@ define <8 x i32> @pair_sum_v8i32_v4i32(<4 x i32> %0, <4 x i32> %1, <4 x i32> %2,
 define <4 x float> @sequential_sum_v4f32_v4f32(<4 x float> %0, <4 x float> %1, <4 x float> %2, <4 x float> %3) {
 ; SSSE3-SLOW-LABEL: sequential_sum_v4f32_v4f32:
 ; SSSE3-SLOW:       # %bb.0:
-; SSSE3-SLOW-NEXT:    movaps %xmm0, %xmm4
-; SSSE3-SLOW-NEXT:    haddps %xmm1, %xmm4
 ; SSSE3-SLOW-NEXT:    movaps %xmm0, %xmm5
-; SSSE3-SLOW-NEXT:    unpckhps {{.*#+}} xmm5 = xmm5[2],xmm1[2],xmm5[3],xmm1[3]
+; SSSE3-SLOW-NEXT:    haddps %xmm1, %xmm5
+; SSSE3-SLOW-NEXT:    movaps %xmm0, %xmm4
+; SSSE3-SLOW-NEXT:    unpckhps {{.*#+}} xmm4 = xmm4[2],xmm1[2],xmm4[3],xmm1[3]
 ; SSSE3-SLOW-NEXT:    shufps {{.*#+}} xmm1 = xmm1[3,3],xmm0[3,3]
 ; SSSE3-SLOW-NEXT:    movshdup {{.*#+}} xmm0 = xmm2[1,1,3,3]
 ; SSSE3-SLOW-NEXT:    addps %xmm2, %xmm0
-; SSSE3-SLOW-NEXT:    shufps {{.*#+}} xmm4 = xmm4[0,2],xmm0[0,1]
-; SSSE3-SLOW-NEXT:    shufps {{.*#+}} xmm5 = xmm5[0,1],xmm2[2,3]
-; SSSE3-SLOW-NEXT:    addps %xmm4, %xmm5
+; SSSE3-SLOW-NEXT:    shufps {{.*#+}} xmm5 = xmm5[0,2],xmm0[0,1]
+; SSSE3-SLOW-NEXT:    shufps {{.*#+}} xmm4 = xmm4[0,1],xmm2[2,3]
+; SSSE3-SLOW-NEXT:    addps %xmm5, %xmm4
 ; SSSE3-SLOW-NEXT:    shufps {{.*#+}} xmm1 = xmm1[2,0],xmm2[3,3]
-; SSSE3-SLOW-NEXT:    addps %xmm5, %xmm1
+; SSSE3-SLOW-NEXT:    addps %xmm1, %xmm4
 ; SSSE3-SLOW-NEXT:    movshdup {{.*#+}} xmm0 = xmm3[1,1,3,3]
 ; SSSE3-SLOW-NEXT:    addps %xmm3, %xmm0
-; SSSE3-SLOW-NEXT:    movaps %xmm3, %xmm2
-; SSSE3-SLOW-NEXT:    unpckhpd {{.*#+}} xmm2 = xmm2[1],xmm3[1]
-; SSSE3-SLOW-NEXT:    addps %xmm0, %xmm2
+; SSSE3-SLOW-NEXT:    movaps %xmm3, %xmm1
+; SSSE3-SLOW-NEXT:    unpckhpd {{.*#+}} xmm1 = xmm1[1],xmm3[1]
+; SSSE3-SLOW-NEXT:    addps %xmm0, %xmm1
 ; SSSE3-SLOW-NEXT:    shufps {{.*#+}} xmm3 = xmm3[3,3,3,3]
-; SSSE3-SLOW-NEXT:    addps %xmm2, %xmm3
-; SSSE3-SLOW-NEXT:    shufps {{.*#+}} xmm3 = xmm3[0,1],xmm1[2,3]
-; SSSE3-SLOW-NEXT:    shufps {{.*#+}} xmm1 = xmm1[0,1],xmm3[2,0]
-; SSSE3-SLOW-NEXT:    movaps %xmm1, %xmm0
+; SSSE3-SLOW-NEXT:    addps %xmm1, %xmm3
+; SSSE3-SLOW-NEXT:    shufps {{.*#+}} xmm3 = xmm3[0,1],xmm4[2,3]
+; SSSE3-SLOW-NEXT:    shufps {{.*#+}} xmm4 = xmm4[0,1],xmm3[2,0]
+; SSSE3-SLOW-NEXT:    movaps %xmm4, %xmm0
 ; SSSE3-SLOW-NEXT:    retq
 ;
 ; SSSE3-FAST-LABEL: sequential_sum_v4f32_v4f32:
 ; SSSE3-FAST:       # %bb.0:
-; SSSE3-FAST-NEXT:    movaps %xmm0, %xmm4
-; SSSE3-FAST-NEXT:    haddps %xmm1, %xmm4
 ; SSSE3-FAST-NEXT:    movaps %xmm0, %xmm5
-; SSSE3-FAST-NEXT:    unpckhps {{.*#+}} xmm5 = xmm5[2],xmm1[2],xmm5[3],xmm1[3]
+; SSSE3-FAST-NEXT:    haddps %xmm1, %xmm5
+; SSSE3-FAST-NEXT:    movaps %xmm0, %xmm4
+; SSSE3-FAST-NEXT:    unpckhps {{.*#+}} xmm4 = xmm4[2],xmm1[2],xmm4[3],xmm1[3]
 ; SSSE3-FAST-NEXT:    shufps {{.*#+}} xmm1 = xmm1[3,3],xmm0[3,3]
-; SSSE3-FAST-NEXT:    shufps {{.*#+}} xmm5 = xmm5[0,1],xmm2[2,3]
+; SSSE3-FAST-NEXT:    shufps {{.*#+}} xmm4 = xmm4[0,1],xmm2[2,3]
 ; SSSE3-FAST-NEXT:    shufps {{.*#+}} xmm1 = xmm1[2,0],xmm2[3,3]
 ; SSSE3-FAST-NEXT:    haddps %xmm2, %xmm2
-; SSSE3-FAST-NEXT:    shufps {{.*#+}} xmm4 = xmm4[0,2],xmm2[0,1]
-; SSSE3-FAST-NEXT:    addps %xmm4, %xmm5
-; SSSE3-FAST-NEXT:    addps %xmm5, %xmm1
+; SSSE3-FAST-NEXT:    shufps {{.*#+}} xmm5 = xmm5[0,2],xmm2[0,1]
+; SSSE3-FAST-NEXT:    addps %xmm5, %xmm4
+; SSSE3-FAST-NEXT:    addps %xmm1, %xmm4
 ; SSSE3-FAST-NEXT:    movaps %xmm3, %xmm0
 ; SSSE3-FAST-NEXT:    haddps %xmm3, %xmm0
-; SSSE3-FAST-NEXT:    movaps %xmm3, %xmm2
-; SSSE3-FAST-NEXT:    unpckhpd {{.*#+}} xmm2 = xmm2[1],xmm3[1]
-; SSSE3-FAST-NEXT:    addps %xmm0, %xmm2
+; SSSE3-FAST-NEXT:    movaps %xmm3, %xmm1
+; SSSE3-FAST-NEXT:    unpckhpd {{.*#+}} xmm1 = xmm1[1],xmm3[1]
+; SSSE3-FAST-NEXT:    addps %xmm0, %xmm1
 ; SSSE3-FAST-NEXT:    shufps {{.*#+}} xmm3 = xmm3[3,3,3,3]
-; SSSE3-FAST-NEXT:    addps %xmm2, %xmm3
-; SSSE3-FAST-NEXT:    shufps {{.*#+}} xmm3 = xmm3[0,1],xmm1[2,3]
-; SSSE3-FAST-NEXT:    shufps {{.*#+}} xmm1 = xmm1[0,1],xmm3[2,0]
-; SSSE3-FAST-NEXT:    movaps %xmm1, %xmm0
+; SSSE3-FAST-NEXT:    addps %xmm1, %xmm3
+; SSSE3-FAST-NEXT:    shufps {{.*#+}} xmm3 = xmm3[0,1],xmm4[2,3]
+; SSSE3-FAST-NEXT:    shufps {{.*#+}} xmm4 = xmm4[0,1],xmm3[2,0]
+; SSSE3-FAST-NEXT:    movaps %xmm4, %xmm0
 ; SSSE3-FAST-NEXT:    retq
 ;
 ; AVX-SLOW-LABEL: sequential_sum_v4f32_v4f32:
@@ -961,13 +961,13 @@ define <4 x float> @reduction_sum_v4f32_v4f32_reassoc(<4 x float> %0, <4 x float
 ; SSSE3-SLOW:       # %bb.0:
 ; SSSE3-SLOW-NEXT:    movaps %xmm0, %xmm4
 ; SSSE3-SLOW-NEXT:    unpckhpd {{.*#+}} xmm4 = xmm4[1],xmm0[1]
-; SSSE3-SLOW-NEXT:    addps %xmm0, %xmm4
-; SSSE3-SLOW-NEXT:    movshdup {{.*#+}} xmm0 = xmm4[1,1,3,3]
+; SSSE3-SLOW-NEXT:    addps %xmm4, %xmm0
+; SSSE3-SLOW-NEXT:    movshdup {{.*#+}} xmm4 = xmm0[1,1,3,3]
 ; SSSE3-SLOW-NEXT:    movaps %xmm1, %xmm5
 ; SSSE3-SLOW-NEXT:    unpckhpd {{.*#+}} xmm5 = xmm5[1],xmm1[1]
 ; SSSE3-SLOW-NEXT:    addps %xmm1, %xmm5
 ; SSSE3-SLOW-NEXT:    movshdup {{.*#+}} xmm1 = xmm5[1,1,3,3]
-; SSSE3-SLOW-NEXT:    unpcklps {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
+; SSSE3-SLOW-NEXT:    unpcklps {{.*#+}} xmm4 = xmm4[0],xmm1[0],xmm4[1],xmm1[1]
 ; SSSE3-SLOW-NEXT:    movaps %xmm2, %xmm1
 ; SSSE3-SLOW-NEXT:    unpckhpd {{.*#+}} xmm1 = xmm1[1],xmm2[1]
 ; SSSE3-SLOW-NEXT:    addps %xmm2, %xmm1
@@ -976,10 +976,10 @@ define <4 x float> @reduction_sum_v4f32_v4f32_reassoc(<4 x float> %0, <4 x float
 ; SSSE3-SLOW-NEXT:    addps %xmm3, %xmm2
 ; SSSE3-SLOW-NEXT:    movaps %xmm2, %xmm3
 ; SSSE3-SLOW-NEXT:    movlhps {{.*#+}} xmm3 = xmm3[0],xmm1[0]
-; SSSE3-SLOW-NEXT:    unpcklps {{.*#+}} xmm4 = xmm4[0],xmm5[0],xmm4[1],xmm5[1]
-; SSSE3-SLOW-NEXT:    shufps {{.*#+}} xmm4 = xmm4[0,1],xmm3[2,0]
+; SSSE3-SLOW-NEXT:    unpcklps {{.*#+}} xmm0 = xmm0[0],xmm5[0],xmm0[1],xmm5[1]
+; SSSE3-SLOW-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,1],xmm3[2,0]
 ; SSSE3-SLOW-NEXT:    shufps {{.*#+}} xmm2 = xmm2[1,1],xmm1[1,1]
-; SSSE3-SLOW-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,1],xmm2[2,0]
+; SSSE3-SLOW-NEXT:    shufps {{.*#+}} xmm4 = xmm4[0,1],xmm2[2,0]
 ; SSSE3-SLOW-NEXT:    addps %xmm4, %xmm0
 ; SSSE3-SLOW-NEXT:    retq
 ;
@@ -1050,12 +1050,12 @@ define <4 x i32> @reduction_sum_v4i32_v4i32(<4 x i32> %0, <4 x i32> %1, <4 x i32
 ; SSSE3-SLOW-LABEL: reduction_sum_v4i32_v4i32:
 ; SSSE3-SLOW:       # %bb.0:
 ; SSSE3-SLOW-NEXT:    pshufd {{.*#+}} xmm4 = xmm0[2,3,2,3]
-; SSSE3-SLOW-NEXT:    paddd %xmm0, %xmm4
-; SSSE3-SLOW-NEXT:    pshufd {{.*#+}} xmm0 = xmm4[1,1,1,1]
+; SSSE3-SLOW-NEXT:    paddd %xmm4, %xmm0
+; SSSE3-SLOW-NEXT:    pshufd {{.*#+}} xmm4 = xmm0[1,1,1,1]
 ; SSSE3-SLOW-NEXT:    pshufd {{.*#+}} xmm5 = xmm1[2,3,2,3]
 ; SSSE3-SLOW-NEXT:    paddd %xmm1, %xmm5
 ; SSSE3-SLOW-NEXT:    pshufd {{.*#+}} xmm1 = xmm5[1,1,1,1]
-; SSSE3-SLOW-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
+; SSSE3-SLOW-NEXT:    punpckldq {{.*#+}} xmm4 = xmm4[0],xmm1[0],xmm4[1],xmm1[1]
 ; SSSE3-SLOW-NEXT:    pshufd {{.*#+}} xmm1 = xmm2[2,3,2,3]
 ; SSSE3-SLOW-NEXT:    paddd %xmm2, %xmm1
 ; SSSE3-SLOW-NEXT:    pshufd {{.*#+}} xmm2 = xmm1[1,1,1,1]
@@ -1063,12 +1063,11 @@ define <4 x i32> @reduction_sum_v4i32_v4i32(<4 x i32> %0, <4 x i32> %1, <4 x i32
 ; SSSE3-SLOW-NEXT:    paddd %xmm3, %xmm6
 ; SSSE3-SLOW-NEXT:    pshufd {{.*#+}} xmm3 = xmm6[1,1,1,1]
 ; SSSE3-SLOW-NEXT:    punpckldq {{.*#+}} xmm2 = xmm2[0],xmm3[0],xmm2[1],xmm3[1]
-; SSSE3-SLOW-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm2[0]
+; SSSE3-SLOW-NEXT:    punpcklqdq {{.*#+}} xmm4 = xmm4[0],xmm2[0]
 ; SSSE3-SLOW-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm6[0],xmm1[1],xmm6[1]
-; SSSE3-SLOW-NEXT:    punpckldq {{.*#+}} xmm4 = xmm4[0],xmm5[0],xmm4[1],xmm5[1]
-; SSSE3-SLOW-NEXT:    punpcklqdq {{.*#+}} xmm4 = xmm4[0],xmm1[0]
-; SSSE3-SLOW-NEXT:    paddd %xmm0, %xmm4
-; SSSE3-SLOW-NEXT:    movdqa %xmm4, %xmm0
+; SSSE3-SLOW-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm5[0],xmm0[1],xmm5[1]
+; SSSE3-SLOW-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; SSSE3-SLOW-NEXT:    paddd %xmm4, %xmm0
 ; SSSE3-SLOW-NEXT:    retq
 ;
 ; SSSE3-FAST-LABEL: reduction_sum_v4i32_v4i32:
