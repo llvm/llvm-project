@@ -44,3 +44,12 @@
 // TARGET-FEATURE-3-NOT: "-target-feature" "+v8.4a"
 // TARGET-FEATURE-4: "-target-feature" "+v8.4a"
 // TARGET-FEATURE-4-NOT: "-target-feature" "+v8.3a"
+
+// Invalid -march settings
+// RUN: %clang --target=aarch64-linux-gnueabi -### -c -Wa,-march=all %s 2>&1 | \
+// RUN: FileCheck --check-prefix=INVALID-ARCH-1 %s
+// RUN: %clang --target=aarch64-linux-gnueabi -### -c -Wa,-march=foobar %s 2>&1 | \
+// RUN: FileCheck --check-prefix=INVALID-ARCH-2 %s
+
+// INVALID-ARCH-1: error: the clang compiler does not support '-march=all'
+// INVALID-ARCH-2: error: the clang compiler does not support '-march=foobar'
