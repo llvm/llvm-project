@@ -1324,6 +1324,7 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::MGATHER, VT, Custom);
       setOperationAction(ISD::MSCATTER, VT, Custom);
       setOperationAction(ISD::MLOAD, VT, Custom);
+      setOperationAction(ISD::INSERT_SUBVECTOR, VT, Custom);
     }
 
     setOperationAction(ISD::SPLAT_VECTOR, MVT::nxv8bf16, Custom);
