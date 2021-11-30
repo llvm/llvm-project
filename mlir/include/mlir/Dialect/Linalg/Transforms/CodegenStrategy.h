@@ -125,6 +125,17 @@ private:
   SmallVector<int64_t> iteratorInterchange;
 };
 
+/// Represent one application of createLinalgStrategyDecomposePass.
+struct Decompose : public Transformation {
+  explicit Decompose(LinalgTransformationFilter::FilterFunction f = nullptr)
+      : Transformation(f) {}
+
+  void addToPassPipeline(OpPassManager &pm,
+                         LinalgTransformationFilter m) const override {
+    pm.addPass(createLinalgStrategyDecomposePass(m));
+  }
+};
+
 /// Represent one application of createLinalgStrategyVectorizePass.
 struct Vectorize : public Transformation {
   explicit Vectorize(linalg::LinalgVectorizationOptions options,
@@ -261,6 +272,18 @@ struct CodegenStrategy {
   interchangeIf(bool b, ArrayRef<int64_t> iteratorInterchange,
                 LinalgTransformationFilter::FilterFunction f = nullptr) {
     return b ? interchange(iteratorInterchange, f) : *this;
+    return *this;
+  }
+  /// Append patterns to decompose convolutions.
+  CodegenStrategy &
+  decompose(LinalgTransformationFilter::FilterFunction f = nullptr) {
+    transformationSequence.emplace_back(std::make_unique<Decompose>(f));
+    return *this;
+  }
+  /// Conditionally append patterns to decompose convolutions.
+  CodegenStrategy &
+  decomposeIf(bool b, LinalgTransformationFilter::FilterFunction f = nullptr) {
+    return b ? decompose(f) : *this;
     return *this;
   }
   /// Append a pattern to rewrite `LinalgOpType` as a vector operation.

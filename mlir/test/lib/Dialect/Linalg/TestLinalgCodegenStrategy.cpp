@@ -112,6 +112,10 @@ struct TestLinalgCodegenStrategy
   ListOption<int64_t> iteratorInterchange{
       *this, "iterator-interchange", llvm::cl::MiscFlags::CommaSeparated,
       llvm::cl::desc("Specifies the iterator interchange.")};
+  Option<bool> decompose{
+      *this, "decompose",
+      llvm::cl::desc("Decompose convolutions to lower dimensional ones."),
+      llvm::cl::init(false)};
   Option<bool> vectorize{
       *this, "vectorize",
       llvm::cl::desc("Rewrite the linalg op as a vector operation."),
@@ -163,7 +167,6 @@ void TestLinalgCodegenStrategy::runStrategy(
     LinalgPaddingOptions paddingOptions,
     vector::VectorContractLowering vectorContractLowering,
     vector::VectorTransferSplit vectorTransferSplit) {
-  assert(!anchorOpName.empty());
   CodegenStrategy strategy;
   strategy
       .tileAndFuseIf(fuse && !tileSizes.empty(), anchorOpName,
@@ -180,6 +183,7 @@ void TestLinalgCodegenStrategy::runStrategy(
                      .setAlignment(16)
                      .setUseFullTileBuffersByDefault(registerPromoteFullTile))
       .padIf(pad, "", paddingOptions)
+      .decomposeIf(decompose)
       .generalizeIf(generalize, "")
       .interchangeIf(!iteratorInterchange.empty(), iteratorInterchange)
       .vectorizeIf(vectorize, "")
