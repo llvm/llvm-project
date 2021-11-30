@@ -281,7 +281,10 @@ static OutputSection *findSection(StringRef name, unsigned partition = 1) {
 template <class ELFT> void elf::createSyntheticSections() {
   // Initialize all pointers with NULL. This is needed because
   // you can call lld::elf::main more than once as a library.
-  memset(&Out::first, 0, sizeof(Out));
+  Out::tlsPhdr = nullptr;
+  Out::preinitArray = nullptr;
+  Out::initArray = nullptr;
+  Out::finiArray = nullptr;
 
   // Add the .interp section first because it is not a SyntheticSection.
   // The removeUnusedSyntheticSections() function relies on the
@@ -2054,6 +2057,7 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
   // to 1 to make __ehdr_start defined. The section number is not
   // particularly relevant.
   Out::elfHeader->sectionIndex = 1;
+  Out::elfHeader->size = sizeof(typename ELFT::Ehdr);
 
   for (size_t i = 0, e = outputSections.size(); i != e; ++i) {
     OutputSection *sec = outputSections[i];
