@@ -25,9 +25,11 @@
 #include "mlir/Dialect/Vector/VectorTransforms.h"
 #include "mlir/IR/AffineExpr.h"
 #include "mlir/IR/AffineMap.h"
+#include "mlir/Pass/PassManager.h"
 #include "mlir/Support/LLVM.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "mlir/Transforms/LoopUtils.h"
+#include "mlir/Transforms/Passes.h"
 #include "mlir/Transforms/Utils.h"
 
 using namespace mlir;
@@ -335,6 +337,12 @@ struct LinalgStrategyEnablePass
 
     if (options.hoistRedundantVectorTransfersOnTensor)
       hoistRedundantVectorTransfersOnTensor(funcOp);
+
+    // Run CSE to cleanup after canonicalization.
+    OpPassManager dynamicPM("builtin.func");
+    dynamicPM.addPass(createCSEPass());
+    if (failed(runPipeline(dynamicPM, funcOp)))
+      return signalPassFailure();
   }
 
   LinalgEnablingOptions options;
