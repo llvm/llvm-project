@@ -347,33 +347,46 @@ struct RuntimeTableEntry<RuntimeTableKey<KT>, RuntimeIdentifier<Cs...>> {
   static constexpr const char name[sizeof...(Cs) + 1] = {Cs..., '\0'};
 };
 
-#undef E
-#define E(L, I) (I < sizeof(L) / sizeof(*L) ? L[I] : 0)
-#define QuoteKey(X) #X
-#define ExpandAndQuoteKey(X) QuoteKey(X)
-#define MacroExpandKey(X)                                                      \
-  E(X, 0), E(X, 1), E(X, 2), E(X, 3), E(X, 4), E(X, 5), E(X, 6), E(X, 7),      \
-      E(X, 8), E(X, 9), E(X, 10), E(X, 11), E(X, 12), E(X, 13), E(X, 14),      \
-      E(X, 15), E(X, 16), E(X, 17), E(X, 18), E(X, 19), E(X, 20), E(X, 21),    \
-      E(X, 22), E(X, 23), E(X, 24), E(X, 25), E(X, 26), E(X, 27), E(X, 28),    \
-      E(X, 29), E(X, 30), E(X, 31), E(X, 32), E(X, 33), E(X, 34), E(X, 35),    \
-      E(X, 36), E(X, 37), E(X, 38), E(X, 39), E(X, 40), E(X, 41), E(X, 42),    \
-      E(X, 43), E(X, 44), E(X, 45), E(X, 46), E(X, 47), E(X, 48), E(X, 49)
-#define ExpandKey(X) MacroExpandKey(QuoteKey(X))
-#define FullSeq(X) std::integer_sequence<char, ExpandKey(X)>
-#define AsSequence(X) decltype(fir::runtime::details::filter(FullSeq(X){}))
-#define mkKey(X)                                                               \
+/// These macros are used to create the RuntimeTableEntry for runtime function.
+///
+/// For example the runtime function `SumReal4` will be expanded as shown below
+/// (simplified version)
+///
+/// ```
+/// fir::runtime::RuntimeTableEntry<fir::runtime::RuntimeTableKey<
+///     decltype(_FortranASumReal4)>, "_FortranASumReal4"))>
+/// ```
+/// These entries are then used to to generate the MLIR FunctionType that
+/// correspond to the runtime function declaration in C++.
+#undef FirE
+#define FirE(L, I) (I < sizeof(L) / sizeof(*L) ? L[I] : 0)
+#define FirQuoteKey(X) #X
+#define FirMacroExpandKey(X)                                                   \
+  FirE(X, 0), FirE(X, 1), FirE(X, 2), FirE(X, 3), FirE(X, 4), FirE(X, 5),      \
+      FirE(X, 6), FirE(X, 7), FirE(X, 8), FirE(X, 9), FirE(X, 10),             \
+      FirE(X, 11), FirE(X, 12), FirE(X, 13), FirE(X, 14), FirE(X, 15),         \
+      FirE(X, 16), FirE(X, 17), FirE(X, 18), FirE(X, 19), FirE(X, 20),         \
+      FirE(X, 21), FirE(X, 22), FirE(X, 23), FirE(X, 24), FirE(X, 25),         \
+      FirE(X, 26), FirE(X, 27), FirE(X, 28), FirE(X, 29), FirE(X, 30),         \
+      FirE(X, 31), FirE(X, 32), FirE(X, 33), FirE(X, 34), FirE(X, 35),         \
+      FirE(X, 36), FirE(X, 37), FirE(X, 38), FirE(X, 39), FirE(X, 40),         \
+      FirE(X, 41), FirE(X, 42), FirE(X, 43), FirE(X, 44), FirE(X, 45),         \
+      FirE(X, 46), FirE(X, 47), FirE(X, 48), FirE(X, 49)
+#define FirExpandKey(X) FirMacroExpandKey(FirQuoteKey(X))
+#define FirFullSeq(X) std::integer_sequence<char, FirExpandKey(X)>
+#define FirAsSequence(X)                                                       \
+  decltype(fir::runtime::details::filter(FirFullSeq(X){}))
+#define FirmkKey(X)                                                            \
   fir::runtime::RuntimeTableEntry<fir::runtime::RuntimeTableKey<decltype(X)>,  \
-                                  AsSequence(X)>
-#define mkRTKey(X) mkKey(RTNAME(X))
+                                  FirAsSequence(X)>
+#define mkRTKey(X) FirmkKey(RTNAME(X))
 
 /// Get (or generate) the MLIR FuncOp for a given runtime function. Its template
-/// argument is intended to be of the form: <mkRTKey(runtime function name)>
-/// Clients should add "using namespace Fortran::runtime"
-/// in order to use this function.
+/// argument is intended to be of the form: <mkRTKey(runtime function name)>.
 template <typename RuntimeEntry>
 static mlir::FuncOp getRuntimeFunc(mlir::Location loc,
                                    fir::FirOpBuilder &builder) {
+  using namespace Fortran::runtime;
   auto name = RuntimeEntry::name;
   auto func = builder.getNamedFunction(name);
   if (func)
