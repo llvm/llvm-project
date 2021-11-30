@@ -443,6 +443,20 @@ define void @dse_strncpy_test1(i8* noalias %out, i8* noalias %in) {
   ret void
 }
 
+declare i8* @__memset_chk(i8* writeonly, i32, i64, i64) argmemonly
+
+; strncpy -> __memset_chk, full overwrite
+define void @dse_strncpy_memset_chk_test1(i8* noalias %out, i8* noalias %in, i64 %n) {
+; CHECK-LABEL: @dse_strncpy_memset_chk_test1(
+; CHECK-NEXT:    [[CALL:%.*]] = tail call i8* @strncpy(i8* [[OUT:%.*]], i8* [[IN:%.*]], i64 100)
+; CHECK-NEXT:    [[CALL_2:%.*]] = tail call i8* @__memset_chk(i8* [[OUT]], i32 42, i64 100, i64 [[N:%.*]])
+; CHECK-NEXT:    ret void
+;
+  %call = tail call i8* @strncpy(i8* %out, i8* %in, i64 100)
+  %call.2 = tail call i8* @__memset_chk(i8* %out, i32 42, i64 100, i64 %n)
+  ret void
+}
+
 ; strncpy -> memset, partial overwrite
 define void @dse_strncpy_test2(i8* noalias %out, i8* noalias %in) {
 ; CHECK-LABEL: @dse_strncpy_test2(
@@ -452,6 +466,18 @@ define void @dse_strncpy_test2(i8* noalias %out, i8* noalias %in) {
 ;
   %call = tail call i8* @strncpy(i8* %out, i8* %in, i64 100)
   tail call void @llvm.memset.p0i8.i64(i8* %out, i8 42, i64 99, i1 false)
+  ret void
+}
+
+; strncpy -> memset_chk, partial overwrite
+define void @dse_strncpy_memset_chk_test2(i8* noalias %out, i8* noalias %in, i64 %n) {
+; CHECK-LABEL: @dse_strncpy_memset_chk_test2(
+; CHECK-NEXT:    [[CALL:%.*]] = tail call i8* @strncpy(i8* [[OUT:%.*]], i8* [[IN:%.*]], i64 100)
+; CHECK-NEXT:    [[CALL_2:%.*]] = tail call i8* @__memset_chk(i8* [[OUT]], i32 42, i64 99, i64 [[N:%.*]])
+; CHECK-NEXT:    ret void
+;
+  %call = tail call i8* @strncpy(i8* %out, i8* %in, i64 100)
+  %call.2 = tail call i8* @__memset_chk(i8* %out, i32 42, i64 99, i64 %n)
   ret void
 }
 
@@ -467,6 +493,17 @@ define void @dse_strncpy_test3(i8* noalias %out1, i8* noalias %out2, i8* noalias
   ret void
 }
 
+; strncpy -> memset_chk, different destination
+define void @dse_strncpy_chk_test3(i8* noalias %out1, i8* noalias %out2, i8* noalias %in, i64 %n) {
+; CHECK-LABEL: @dse_strncpy_chk_test3(
+; CHECK-NEXT:    [[CALL:%.*]] = tail call i8* @strncpy(i8* [[OUT1:%.*]], i8* [[IN:%.*]], i64 100)
+; CHECK-NEXT:    [[CALL_2:%.*]] = tail call i8* @__memset_chk(i8* [[OUT2:%.*]], i32 42, i64 100, i64 [[N:%.*]])
+; CHECK-NEXT:    ret void
+;
+  %call = tail call i8* @strncpy(i8* %out1, i8* %in, i64 100)
+  %call.2 = tail call i8* @__memset_chk(i8* %out2, i32 42, i64 100, i64 %n)
+  ret void
+}
 
 ; memset -> strncpy, full overwrite
 define void @dse_strncpy_test4(i8* noalias %out, i8* noalias %in) {
