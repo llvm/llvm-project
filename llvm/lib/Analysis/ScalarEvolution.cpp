@@ -13098,7 +13098,7 @@ void ScalarEvolution::verify() const {
     }
   }
 
-  // Verify intergity of SCEV users.
+  // Verify integrity of SCEV users.
   for (const auto &S : UniqueSCEVs) {
     SmallVector<const SCEV *, 4> Ops;
     collectUniqueOps(&S, Ops);
@@ -13111,6 +13111,40 @@ void ScalarEvolution::verify() const {
         continue;
       dbgs() << "Use of operand  " << *Op << " by user " << S
              << " is not being tracked!\n";
+      std::abort();
+    }
+  }
+
+  // Verify integrity of ValuesAtScopes users.
+  for (const auto &ValueAndVec : ValuesAtScopes) {
+    const SCEV *Value = ValueAndVec.first;
+    for (const auto &LoopAndValueAtScope : ValueAndVec.second) {
+      const Loop *L = LoopAndValueAtScope.first;
+      const SCEV *ValueAtScope = LoopAndValueAtScope.second;
+      if (!isa<SCEVConstant>(ValueAtScope)) {
+        auto It = ValuesAtScopesUsers.find(ValueAtScope);
+        if (It != ValuesAtScopesUsers.end() &&
+            is_contained(It->second, std::make_pair(L, Value)))
+          continue;
+        dbgs() << "Value: " << *Value << ", Loop: " << *L << ", ValueAtScope: "
+               << ValueAtScope << " missing in ValuesAtScopesUsers\n";
+        std::abort();
+      }
+    }
+  }
+
+  for (const auto &ValueAtScopeAndVec : ValuesAtScopesUsers) {
+    const SCEV *ValueAtScope = ValueAtScopeAndVec.first;
+    for (const auto &LoopAndValue : ValueAtScopeAndVec.second) {
+      const Loop *L = LoopAndValue.first;
+      const SCEV *Value = LoopAndValue.second;
+      assert(!isa<SCEVConstant>(Value));
+      auto It = ValuesAtScopes.find(Value);
+      if (It != ValuesAtScopes.end() &&
+          is_contained(It->second, std::make_pair(L, ValueAtScope)))
+        continue;
+      dbgs() << "Value: " << *Value << ", Loop: " << *L << ", ValueAtScope: "
+             << ValueAtScope << " missing in ValuesAtScopes";
       std::abort();
     }
   }
