@@ -111,7 +111,7 @@ void test2_helper(id);
 void doSomething(unsigned v);
 @implementation Test3
 - (void) test {
-  // 'addOperationWithBlock:' is specifically whitelisted.
+  // 'addOperationWithBlock:' is specifically allowlisted.
   [myOperationQueue addOperationWithBlock:^() { // no-warning
     if (count > 20) {
       doSomething(count);
