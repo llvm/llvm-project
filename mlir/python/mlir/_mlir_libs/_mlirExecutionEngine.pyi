@@ -4,7 +4,7 @@
 #   * Relative imports for cross-module references.
 #   * Add __all__
 
-from typing import List
+from typing import List, Sequence
 
 from ._mlir import ir as _ir
 
@@ -13,7 +13,7 @@ __all__ = [
 ]
 
 class ExecutionEngine:
-    def __init__(self, module: _ir.Module, opt_level: int = ..., shared_libs: List[str] = ...) -> None: ...
+    def __init__(self, module: _ir.Module, opt_level: int = 2, shared_libs: Sequence[str] = ...) -> None: ...
     def _CAPICreate(self) -> object: ...
     def _testing_release(self) -> None: ...
     def dump_to_object_file(self, file_name: str) -> None: ...
