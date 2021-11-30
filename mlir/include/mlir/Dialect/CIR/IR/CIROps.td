@@ -306,7 +306,7 @@ def IfOp : CIR_Op<"if",
     }
     ```
   }];
-  let arguments = (ins I1:$condition);
+  let arguments = (ins CIR_BoolType:$condition);
   let regions = (region SizedRegion<1>:$thenRegion, AnyRegion:$elseRegion);
 
   let skipDefaultBuilders = 1;
