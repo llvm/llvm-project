@@ -630,21 +630,50 @@ def testSingleResultProperty():
   print(module.body.operations[2])
 
 
-# CHECK-LABEL: TEST: testPrintInvalidOperation
+def create_invalid_operation():
+  # This module has two region and is invalid verify that we fallback
+  # to the generic printer for safety.
+  op = Operation.create("builtin.module", regions=2)
+  op.regions[0].blocks.append()
+  return op
+
+# CHECK-LABEL: TEST: testInvalidOperationStrSoftFails
 @run
-def testPrintInvalidOperation():
+def testInvalidOperationStrSoftFails():
   ctx = Context()
   with Location.unknown(ctx):
-    module = Operation.create("builtin.module", regions=2)
-    # This module has two region and is invalid verify that we fallback
-    # to the generic printer for safety.
-    block = module.regions[0].blocks.append()
+    invalid_op = create_invalid_operation()
+    # Verify that we fallback to the generic printer for safety.
     # CHECK: // Verification failed, printing generic form
     # CHECK: "builtin.module"() ( {
     # CHECK: }) : () -> ()
-    print(module)
+    print(invalid_op)
     # CHECK: .verify = False
-    print(f".verify = {module.operation.verify()}")
+    print(f".verify = {invalid_op.operation.verify()}")
+
+
+# CHECK-LABEL: TEST: testInvalidModuleStrSoftFails
+@run
+def testInvalidModuleStrSoftFails():
+  ctx = Context()
+  with Location.unknown(ctx):
+    module = Module.create()
+    with InsertionPoint(module.body):
+      invalid_op = create_invalid_operation()
+    # Verify that we fallback to the generic printer for safety.
+    # CHECK: // Verification failed, printing generic form
+    print(module)
+
+
+# CHECK-LABEL: TEST: testInvalidOperationGetAsmBinarySoftFails
+@run
+def testInvalidOperationGetAsmBinarySoftFails():
+  ctx = Context()
+  with Location.unknown(ctx):
+    invalid_op = create_invalid_operation()
+    # Verify that we fallback to the generic printer for safety.
+    # CHECK: b'// Verification failed, printing generic form\n
+    print(invalid_op.get_asm(binary=True))
 
 
 # CHECK-LABEL: TEST: testCreateWithInvalidAttributes
