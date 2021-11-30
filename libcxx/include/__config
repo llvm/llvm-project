@@ -1069,12 +1069,6 @@ typedef unsigned int   char32_t;
 #  define _LIBCPP_NODISCARD_AFTER_CXX17
 #endif
 
-#if !defined(_LIBCPP_DEBUG) && _LIBCPP_STD_VER > 11
-#   define _LIBCPP_CONSTEXPR_IF_NODEBUG constexpr
-#else
-#   define _LIBCPP_CONSTEXPR_IF_NODEBUG
-#endif
-
 #if __has_attribute(no_destroy)
 #  define _LIBCPP_NO_DESTROY __attribute__((__no_destroy__))
 #else
