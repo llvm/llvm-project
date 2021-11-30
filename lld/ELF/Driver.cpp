@@ -460,19 +460,21 @@ static bool isKnownZFlag(StringRef s) {
          s.startswith("start-stop-visibility=");
 }
 
-// Report an error for an unknown -z option.
+// Report a warning for an unknown -z option.
 static void checkZOptions(opt::InputArgList &args) {
   for (auto *arg : args.filtered(OPT_z))
     if (!isKnownZFlag(arg->getValue()))
-      error("unknown -z value: " + StringRef(arg->getValue()));
+      warn("unknown -z value: " + StringRef(arg->getValue()));
 }
 
 void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   ELFOptTable parser;
   opt::InputArgList args = parser.parse(argsArr.slice(1));
 
-  // Interpret this flag early because error() depends on them.
+  // Interpret the flags early because error()/warn() depend on them.
   errorHandler().errorLimit = args::getInteger(args, OPT_error_limit, 20);
+  errorHandler().fatalWarnings =
+      args.hasFlag(OPT_fatal_warnings, OPT_no_fatal_warnings, false);
   checkZOptions(args);
 
   // Handle -help
@@ -971,8 +973,6 @@ static void parseClangOption(StringRef opt, const Twine &msg) {
 // Initializes Config members by the command line options.
 static void readConfigs(opt::InputArgList &args) {
   errorHandler().verbose = args.hasArg(OPT_verbose);
-  errorHandler().fatalWarnings =
-      args.hasFlag(OPT_fatal_warnings, OPT_no_fatal_warnings, false);
   errorHandler().vsDiagnostics =
       args.hasArg(OPT_visual_studio_diagnostics_format, false);
 
