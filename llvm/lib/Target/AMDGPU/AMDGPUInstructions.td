@@ -259,7 +259,6 @@ def csh_mask_64 : PatFrag<(ops node:$src0), (and node:$src0, imm),
   }
 
 foreach width = [16, 32, 64] in {
-defvar mask = !sub(width, 1);
 defvar csh_mask = !cast<SDPatternOperator>("csh_mask_"#width);
 
 def cshl_#width : PatFrags<(ops node:$src0, node:$src1),
