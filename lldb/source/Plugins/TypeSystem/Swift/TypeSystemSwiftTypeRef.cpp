@@ -905,7 +905,7 @@ TypeSystemSwiftTypeRef::GetSwiftified(swift::Demangle::Demangler &dem,
 
 swift::Demangle::NodePointer TypeSystemSwiftTypeRef::GetNodeForPrintingImpl(
     swift::Demangle::Demangler &dem, swift::Demangle::NodePointer node,
-    bool resolve_objc_module, bool desugar) {
+    bool resolve_objc_module) {
   using namespace swift::Demangle;
   return Transform(dem, node, [&](NodePointer node) {
     NodePointer canonical = node;
@@ -957,26 +957,19 @@ swift::Demangle::NodePointer TypeSystemSwiftTypeRef::GetNodeForPrintingImpl(
     }
 
     case Node::Kind::SugaredOptional:
-      // This is particularly silly. The outermost sugared Optional is
-      // desugared. See SwiftASTContext::GetTypeName() and remove it there, too!
-      if (desugar && node->getNumChildren() == 1) {
-        desugar = false;
+      if (node->getNumChildren() == 1) {
         return Desugar(dem, node, Node::Kind::BoundGenericEnum,
                        Node::Kind::Enum, "Optional");
       }
       return node;
     case Node::Kind::SugaredArray:
-      // See comment on SugaredOptional.
-      if (desugar && node->getNumChildren() == 1) {
-        desugar = false;
+      if (node->getNumChildren() == 1) {
         return Desugar(dem, node, Node::Kind::BoundGenericStructure,
                        Node::Kind::Structure, "Array");
       }
       return node;
     case Node::Kind::SugaredDictionary:
-      // See comment on SugaredOptional.
-      if (desugar && node->getNumChildren() == 1) {
-        desugar = false;
+      if (node->getNumChildren() == 1) {
         return Desugar(dem, node, Node::Kind::BoundGenericStructure,
                        Node::Kind::Structure, "Dictionary");
       }

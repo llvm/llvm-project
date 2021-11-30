@@ -5568,7 +5568,7 @@ ConstString SwiftASTContext::GetTypeName(opaque_compiler_type_t type) {
   swift::Type swift_type(GetSwiftType(type));
 
   swift::Type normalized_type =
-      swift_type.transform([](swift::Type type) -> swift::Type {
+      swift_type.transformRec([](swift::Type type) -> swift::Type {
         if (swift::SyntaxSugarType *syntax_sugar_type =
                 swift::dyn_cast<swift::SyntaxSugarType>(type.getPointer())) {
           return syntax_sugar_type->getSinglyDesugaredType();
