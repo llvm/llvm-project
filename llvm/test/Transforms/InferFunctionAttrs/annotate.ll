@@ -643,6 +643,9 @@ declare i8* @memmove(i8*, i8*, i64)
 ; CHECK: declare i8* @memset(i8* writeonly, i32, i64) [[ARGMEMONLY_NOFREE_NOUNWIND_WILLRETURN:#[0-9]+]]
 declare i8* @memset(i8*, i32, i64)
 
+; CHECK: declare i8* @__memset_chk(i8*, i32, i64, i64) [[NOFREE:#[0-9]+]]
+declare i8* @__memset_chk(i8*, i32, i64, i64)
+
 ; CHECK: declare noundef i32 @mkdir(i8* nocapture noundef readonly, i16 noundef zeroext) [[NOFREE_NOUNWIND]]
 declare i32 @mkdir(i8*, i16 zeroext)
 
@@ -667,7 +670,7 @@ declare float @nearbyintf(float)
 ; CHECK: declare x86_fp80 @nearbyintl(x86_fp80) [[NOFREE_NOUNWIND_WILLRETURN]]
 declare x86_fp80 @nearbyintl(x86_fp80)
 
-; CHECK: declare noundef i32 @open(i8* nocapture noundef readonly, i32 noundef, ...) [[NOFREE:#[0-9]+]]
+; CHECK: declare noundef i32 @open(i8* nocapture noundef readonly, i32 noundef, ...) [[NOFREE]]
 declare i32 @open(i8*, i32, ...)
 
 ; CHECK-LINUX: declare noundef i32 @open64(i8* nocapture noundef readonly, i32 noundef, ...) [[NOFREE]]
