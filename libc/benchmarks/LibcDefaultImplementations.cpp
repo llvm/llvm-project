@@ -5,6 +5,7 @@
 namespace __llvm_libc {
 
 extern void *memcpy(void *__restrict, const void *__restrict, size_t);
+extern void *memmove(void *, const void *, size_t);
 extern void *memset(void *, int, size_t);
 extern void bzero(void *, size_t);
 extern int memcmp(const void *, const void *, size_t);
@@ -17,12 +18,18 @@ extern int bcmp(const void *, const void *, size_t);
 using llvm::libc_benchmarks::BzeroConfiguration;
 using llvm::libc_benchmarks::MemcmpOrBcmpConfiguration;
 using llvm::libc_benchmarks::MemcpyConfiguration;
+using llvm::libc_benchmarks::MemmoveConfiguration;
 using llvm::libc_benchmarks::MemsetConfiguration;
 
 llvm::ArrayRef<MemcpyConfiguration> getMemcpyConfigurations() {
   static constexpr MemcpyConfiguration kMemcpyConfigurations[] = {
       {__llvm_libc::memcpy, "__llvm_libc::memcpy"}};
   return llvm::makeArrayRef(kMemcpyConfigurations);
+}
+llvm::ArrayRef<MemmoveConfiguration> getMemmoveConfigurations() {
+  static constexpr MemmoveConfiguration kMemmoveConfigurations[] = {
+      {__llvm_libc::memmove, "__llvm_libc::memmove"}};
+  return llvm::makeArrayRef(kMemmoveConfigurations);
 }
 llvm::ArrayRef<MemcmpOrBcmpConfiguration> getMemcmpConfigurations() {
   static constexpr MemcmpOrBcmpConfiguration kMemcmpConfiguration[] = {

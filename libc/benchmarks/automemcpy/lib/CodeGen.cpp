@@ -548,6 +548,7 @@ static void Serialize(raw_ostream &Stream,
   Stream << "using llvm::libc_benchmarks::BzeroConfiguration;\n";
   Stream << "using llvm::libc_benchmarks::MemcmpOrBcmpConfiguration;\n";
   Stream << "using llvm::libc_benchmarks::MemcpyConfiguration;\n";
+  Stream << "using llvm::libc_benchmarks::MemmoveConfiguration;\n";
   Stream << "using llvm::libc_benchmarks::MemsetConfiguration;\n";
   Stream << "\n";
   Stream << "namespace __llvm_libc {\n";
@@ -599,6 +600,11 @@ template <BzeroStub Foo> void Wrap(void *dst, size_t size) {
 }
 )";
   codegen::configurations::Serialize(Stream, FunctionType::BZERO, Descriptors);
+  Stream << R"(
+llvm::ArrayRef<MemmoveConfiguration> getMemmoveConfigurations() {
+  return {};
+}
+)";
   Stream << "// Functions : " << Descriptors.size() << "\n";
 }
 
