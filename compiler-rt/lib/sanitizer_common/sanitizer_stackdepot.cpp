@@ -74,7 +74,8 @@ uptr StackDepotNode::allocated() {
 
 void StackDepotNode::store(u32 id, const args_type &args, hash_type hash) {
   stack_hash = hash;
-  store_id = stackStore.Store(args);
+  uptr pack = 0;
+  store_id = stackStore.Store(args, &pack);
 }
 
 StackDepotNode::args_type StackDepotNode::load(u32 id) const {
