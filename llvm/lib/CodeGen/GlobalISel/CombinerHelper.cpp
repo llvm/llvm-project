@@ -5295,6 +5295,65 @@ bool CombinerHelper::matchCombineFSubFpExtFMulToFMadOrFMA(
   return false;
 }
 
+bool CombinerHelper::matchCombineFSubFpExtFNegFMulToFMadOrFMA(
+    MachineInstr &MI, std::function<void(MachineIRBuilder &)> &MatchInfo) {
+  assert(MI.getOpcode() == TargetOpcode::G_FSUB);
+
+  bool AllowFusionGlobally, HasFMAD, Aggressive;
+  if (!canCombineFMadOrFMA(MI, AllowFusionGlobally, HasFMAD, Aggressive))
+    return false;
+
+  const auto &TLI = *MI.getMF()->getSubtarget().getTargetLowering();
+  LLT DstTy = MRI.getType(MI.getOperand(0).getReg());
+  Register LHSReg = MI.getOperand(1).getReg();
+  Register RHSReg = MI.getOperand(2).getReg();
+
+  unsigned PreferredFusedOpcode =
+      HasFMAD ? TargetOpcode::G_FMAD : TargetOpcode::G_FMA;
+
+  auto buildMatchInfo = [=](Register Dst, Register X, Register Y, Register Z,
+                            MachineIRBuilder &B) {
+    Register FpExtX = B.buildFPExt(DstTy, X).getReg(0);
+    Register FpExtY = B.buildFPExt(DstTy, Y).getReg(0);
+    B.buildInstr(PreferredFusedOpcode, {Dst}, {FpExtX, FpExtY, Z});
+  };
+
+  MachineInstr *FMulMI;
+  // fold (fsub (fpext (fneg (fmul x, y))), z) ->
+  //      (fneg (fma (fpext x), (fpext y), z))
+  // fold (fsub (fneg (fpext (fmul x, y))), z) ->
+  //      (fneg (fma (fpext x), (fpext y), z))
+  if ((mi_match(LHSReg, MRI, m_GFPExt(m_GFNeg(m_MInstr(FMulMI)))) ||
+       mi_match(LHSReg, MRI, m_GFNeg(m_GFPExt(m_MInstr(FMulMI))))) &&
+      isContractableFMul(*FMulMI, AllowFusionGlobally) &&
+      TLI.isFPExtFoldable(MI, PreferredFusedOpcode, DstTy,
+                          MRI.getType(FMulMI->getOperand(0).getReg()))) {
+    MatchInfo = [=, &MI](MachineIRBuilder &B) {
+      Register FMAReg = MRI.createGenericVirtualRegister(DstTy);
+      buildMatchInfo(FMAReg, FMulMI->getOperand(1).getReg(),
+                     FMulMI->getOperand(2).getReg(), RHSReg, B);
+      B.buildFNeg(MI.getOperand(0).getReg(), FMAReg);
+    };
+    return true;
+  }
+
+  // fold (fsub x, (fpext (fneg (fmul y, z)))) -> (fma (fpext y), (fpext z), x)
+  // fold (fsub x, (fneg (fpext (fmul y, z)))) -> (fma (fpext y), (fpext z), x)
+  if ((mi_match(RHSReg, MRI, m_GFPExt(m_GFNeg(m_MInstr(FMulMI)))) ||
+       mi_match(RHSReg, MRI, m_GFNeg(m_GFPExt(m_MInstr(FMulMI))))) &&
+      isContractableFMul(*FMulMI, AllowFusionGlobally) &&
+      TLI.isFPExtFoldable(MI, PreferredFusedOpcode, DstTy,
+                          MRI.getType(FMulMI->getOperand(0).getReg()))) {
+    MatchInfo = [=, &MI](MachineIRBuilder &B) {
+      buildMatchInfo(MI.getOperand(0).getReg(), FMulMI->getOperand(1).getReg(),
+                     FMulMI->getOperand(2).getReg(), LHSReg, B);
+    };
+    return true;
+  }
+
+  return false;
+}
+
 bool CombinerHelper::tryCombine(MachineInstr &MI) {
   if (tryCombineCopy(MI))
     return true;
