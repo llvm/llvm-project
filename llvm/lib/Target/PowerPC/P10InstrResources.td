@@ -1976,7 +1976,7 @@ def : InstRW<[P10W_SX, P10W_DISP_ANY],
     ICBLQ,
     ICBTLS,
     ICCCI,
-    LA,
+    LA, LA8,
     LDMX,
     MFDCR,
     MFPMR,
@@ -2075,3 +2075,4 @@ def : InstRW<[P10W_vMU_7C, P10W_DISP_ANY, P10vMU_Read, P10vMU_Read, P10vMU_Read]
     VMSUMUHM,
     VMSUMUHS
 )>;
+
