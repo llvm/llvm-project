@@ -511,14 +511,16 @@ static std::map<int64_t, unsigned> getNumOccurences(ArrayRef<int64_t> vals) {
 /// dimension is dropped the stride must be dropped too.
 static llvm::Optional<llvm::SmallDenseSet<unsigned>>
 computeMemRefRankReductionMask(MemRefType originalType, MemRefType reducedType,
-                               ArrayAttr staticSizes) {
+                               ArrayRef<OpFoldResult> sizes) {
   llvm::SmallDenseSet<unsigned> unusedDims;
   if (originalType.getRank() == reducedType.getRank())
     return unusedDims;
 
-  for (auto dim : llvm::enumerate(staticSizes))
-    if (dim.value().cast<IntegerAttr>().getInt() == 1)
-      unusedDims.insert(dim.index());
+  for (auto dim : llvm::enumerate(sizes))
+    if (auto attr = dim.value().dyn_cast<Attribute>())
+      if (attr.cast<IntegerAttr>().getInt() == 1)
+        unusedDims.insert(dim.index());
+
   SmallVector<int64_t> originalStrides, candidateStrides;
   int64_t originalOffset, candidateOffset;
   if (failed(
@@ -574,7 +576,7 @@ llvm::SmallDenseSet<unsigned> SubViewOp::getDroppedDims() {
   MemRefType sourceType = getSourceType();
   MemRefType resultType = getType();
   llvm::Optional<llvm::SmallDenseSet<unsigned>> unusedDims =
-      computeMemRefRankReductionMask(sourceType, resultType, static_sizes());
+      computeMemRefRankReductionMask(sourceType, resultType, getMixedSizes());
   assert(unusedDims && "unable to find unused dims of subview");
   return *unusedDims;
 }
@@ -1718,7 +1720,7 @@ enum SubViewVerificationResult {
 /// not matching dimension must be 1.
 static SubViewVerificationResult
 isRankReducedType(Type originalType, Type candidateReducedType,
-                  ArrayAttr staticSizes, std::string *errMsg = nullptr) {
+                  ArrayRef<OpFoldResult> sizes, std::string *errMsg = nullptr) {
   if (originalType == candidateReducedType)
     return SubViewVerificationResult::Success;
   if (!originalType.isa<MemRefType>())
@@ -1743,7 +1745,7 @@ isRankReducedType(Type originalType, Type candidateReducedType,
   MemRefType candidateReduced = candidateReducedType.cast<MemRefType>();
 
   auto optionalUnusedDimsMask =
-      computeMemRefRankReductionMask(original, candidateReduced, staticSizes);
+      computeMemRefRankReductionMask(original, candidateReduced, sizes);
 
   // Sizes cannot be matched in case empty vector is returned.
   if (!optionalUnusedDimsMask.hasValue())
@@ -1813,7 +1815,7 @@ static LogicalResult verify(SubViewOp op) {
 
   std::string errMsg;
   auto result =
-      isRankReducedType(expectedType, subViewType, op.static_sizes(), &errMsg);
+      isRankReducedType(expectedType, subViewType, op.getMixedSizes(), &errMsg);
   return produceSubViewErrorMsg(result, op, expectedType, errMsg);
 }
 
@@ -1854,21 +1856,29 @@ SmallVector<Range, 8> mlir::getOrCreateRanges(OffsetSizeAndStrideOpInterface op,
 /// Infer the canonical type of the result of a subview operation. Returns a
 /// type with rank `resultRank` that is either the rank of the rank-reduced
 /// type, or the non-rank-reduced type.
-static MemRefType
-getCanonicalSubViewResultType(unsigned resultRank, MemRefType sourceType,
-                              ArrayRef<OpFoldResult> mixedOffsets,
-                              ArrayRef<OpFoldResult> mixedSizes,
-                              ArrayRef<OpFoldResult> mixedStrides) {
-  auto resultType =
-      SubViewOp::inferRankReducedResultType(
-          resultRank, sourceType, mixedOffsets, mixedSizes, mixedStrides)
-          .cast<MemRefType>();
-  if (resultType.getRank() != resultRank) {
-    resultType = SubViewOp::inferResultType(sourceType, mixedOffsets,
-                                            mixedSizes, mixedStrides)
-                     .cast<MemRefType>();
+static MemRefType getCanonicalSubViewResultType(
+    MemRefType currentResultType, MemRefType sourceType,
+    ArrayRef<OpFoldResult> mixedOffsets, ArrayRef<OpFoldResult> mixedSizes,
+    ArrayRef<OpFoldResult> mixedStrides) {
+  auto nonRankReducedType = SubViewOp::inferResultType(sourceType, mixedOffsets,
+                                                       mixedSizes, mixedStrides)
+                                .cast<MemRefType>();
+  llvm::Optional<llvm::SmallDenseSet<unsigned>> unusedDims =
+      computeMemRefRankReductionMask(sourceType, currentResultType, mixedSizes);
+  // Return nullptr as failure mode.
+  if (!unusedDims)
+    return nullptr;
+  SmallVector<int64_t> shape;
+  for (auto sizes : llvm::enumerate(nonRankReducedType.getShape())) {
+    if (unusedDims->count(sizes.index()))
+      continue;
+    shape.push_back(sizes.value());
   }
-  return resultType;
+  AffineMap layoutMap = nonRankReducedType.getLayout().getAffineMap();
+  if (!layoutMap.isIdentity())
+    layoutMap = getProjectedMap(layoutMap, unusedDims.getValue());
+  return MemRefType::get(shape, nonRankReducedType.getElementType(), layoutMap,
+                         nonRankReducedType.getMemorySpace());
 }
 
 namespace {
@@ -1911,8 +1921,7 @@ public:
     /// the cast source operand type and the SubViewOp static information. This
     /// is the resulting type if the MemRefCastOp were folded.
     auto resultType = getCanonicalSubViewResultType(
-        subViewOp.getType().getRank(),
-        castOp.source().getType().cast<MemRefType>(),
+        subViewOp.getType(), castOp.source().getType().cast<MemRefType>(),
         subViewOp.getMixedOffsets(), subViewOp.getMixedSizes(),
         subViewOp.getMixedStrides());
     Value newSubView = rewriter.create<SubViewOp>(
@@ -1931,9 +1940,9 @@ struct SubViewReturnTypeCanonicalizer {
   MemRefType operator()(SubViewOp op, ArrayRef<OpFoldResult> mixedOffsets,
                         ArrayRef<OpFoldResult> mixedSizes,
                         ArrayRef<OpFoldResult> mixedStrides) {
-    return getCanonicalSubViewResultType(op.getType().getRank(),
-                                         op.getSourceType(), mixedOffsets,
-                                         mixedSizes, mixedStrides);
+    return getCanonicalSubViewResultType(op.getType(), op.getSourceType(),
+                                         mixedOffsets, mixedSizes,
+                                         mixedStrides);
   }
 };
 
