@@ -15,6 +15,7 @@
 #include "CGCleanup.h"
 #include "CGRecordLayout.h"
 #include "CodeGenFunction.h"
+#include "TargetInfo.h"
 #include "clang/AST/APValue.h"
 #include "clang/AST/Attr.h"
 #include "clang/AST/Decl.h"
@@ -6620,6 +6621,8 @@ void CGOpenMPRuntime::emitTargetOutlinedFunctionHelper(
     OutlinedFn->addFnAttr("omp_target_thread_limit",
                           std::to_string(DefaultValThreads));
   }
+
+  CGM.getTargetCodeGenInfo().setTargetAttributes(nullptr, OutlinedFn, CGM);
 }
 
 /// Checks if the expression is constant or does not have non-trivial function
