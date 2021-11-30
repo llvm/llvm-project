@@ -723,11 +723,11 @@ define <4 x i32> @test_v4f32_one_q(<4 x i32> %a, <4 x i32> %b, <4 x float> %f1, 
 ; SSE-32-NEXT:    movaps 8(%ebp), %xmm3
 ; SSE-32-NEXT:    movaps %xmm2, %xmm4
 ; SSE-32-NEXT:    cmpneqps %xmm3, %xmm4
-; SSE-32-NEXT:    cmpordps %xmm3, %xmm2
-; SSE-32-NEXT:    andps %xmm4, %xmm2
-; SSE-32-NEXT:    andps %xmm2, %xmm0
-; SSE-32-NEXT:    andnps %xmm1, %xmm2
-; SSE-32-NEXT:    orps %xmm2, %xmm0
+; SSE-32-NEXT:    cmpordps %xmm2, %xmm3
+; SSE-32-NEXT:    andps %xmm4, %xmm3
+; SSE-32-NEXT:    andps %xmm3, %xmm0
+; SSE-32-NEXT:    andnps %xmm1, %xmm3
+; SSE-32-NEXT:    orps %xmm3, %xmm0
 ; SSE-32-NEXT:    movl %ebp, %esp
 ; SSE-32-NEXT:    popl %ebp
 ; SSE-32-NEXT:    retl
@@ -737,10 +737,10 @@ define <4 x i32> @test_v4f32_one_q(<4 x i32> %a, <4 x i32> %b, <4 x float> %f1, 
 ; SSE-64-NEXT:    movaps %xmm2, %xmm4
 ; SSE-64-NEXT:    cmpneqps %xmm3, %xmm4
 ; SSE-64-NEXT:    cmpordps %xmm3, %xmm2
-; SSE-64-NEXT:    andps %xmm4, %xmm2
-; SSE-64-NEXT:    andps %xmm2, %xmm0
-; SSE-64-NEXT:    andnps %xmm1, %xmm2
-; SSE-64-NEXT:    orps %xmm2, %xmm0
+; SSE-64-NEXT:    andps %xmm2, %xmm4
+; SSE-64-NEXT:    andps %xmm4, %xmm0
+; SSE-64-NEXT:    andnps %xmm1, %xmm4
+; SSE-64-NEXT:    orps %xmm4, %xmm0
 ; SSE-64-NEXT:    retq
 ;
 ; AVX-32-LABEL: test_v4f32_one_q:
@@ -916,11 +916,11 @@ define <4 x i32> @test_v4f32_ueq_q(<4 x i32> %a, <4 x i32> %b, <4 x float> %f1, 
 ; SSE-32-NEXT:    movaps 8(%ebp), %xmm3
 ; SSE-32-NEXT:    movaps %xmm2, %xmm4
 ; SSE-32-NEXT:    cmpeqps %xmm3, %xmm4
-; SSE-32-NEXT:    cmpunordps %xmm3, %xmm2
-; SSE-32-NEXT:    orps %xmm4, %xmm2
-; SSE-32-NEXT:    andps %xmm2, %xmm0
-; SSE-32-NEXT:    andnps %xmm1, %xmm2
-; SSE-32-NEXT:    orps %xmm2, %xmm0
+; SSE-32-NEXT:    cmpunordps %xmm2, %xmm3
+; SSE-32-NEXT:    orps %xmm4, %xmm3
+; SSE-32-NEXT:    andps %xmm3, %xmm0
+; SSE-32-NEXT:    andnps %xmm1, %xmm3
+; SSE-32-NEXT:    orps %xmm3, %xmm0
 ; SSE-32-NEXT:    movl %ebp, %esp
 ; SSE-32-NEXT:    popl %ebp
 ; SSE-32-NEXT:    retl
@@ -930,10 +930,10 @@ define <4 x i32> @test_v4f32_ueq_q(<4 x i32> %a, <4 x i32> %b, <4 x float> %f1, 
 ; SSE-64-NEXT:    movaps %xmm2, %xmm4
 ; SSE-64-NEXT:    cmpeqps %xmm3, %xmm4
 ; SSE-64-NEXT:    cmpunordps %xmm3, %xmm2
-; SSE-64-NEXT:    orps %xmm4, %xmm2
-; SSE-64-NEXT:    andps %xmm2, %xmm0
-; SSE-64-NEXT:    andnps %xmm1, %xmm2
-; SSE-64-NEXT:    orps %xmm2, %xmm0
+; SSE-64-NEXT:    orps %xmm2, %xmm4
+; SSE-64-NEXT:    andps %xmm4, %xmm0
+; SSE-64-NEXT:    andnps %xmm1, %xmm4
+; SSE-64-NEXT:    orps %xmm4, %xmm0
 ; SSE-64-NEXT:    retq
 ;
 ; AVX-32-LABEL: test_v4f32_ueq_q:
@@ -2383,11 +2383,11 @@ define <2 x i64> @test_v2f64_one_q(<2 x i64> %a, <2 x i64> %b, <2 x double> %f1,
 ; SSE-32-NEXT:    movapd 8(%ebp), %xmm3
 ; SSE-32-NEXT:    movapd %xmm2, %xmm4
 ; SSE-32-NEXT:    cmpneqpd %xmm3, %xmm4
-; SSE-32-NEXT:    cmpordpd %xmm3, %xmm2
-; SSE-32-NEXT:    andpd %xmm4, %xmm2
-; SSE-32-NEXT:    andpd %xmm2, %xmm0
-; SSE-32-NEXT:    andnpd %xmm1, %xmm2
-; SSE-32-NEXT:    orpd %xmm2, %xmm0
+; SSE-32-NEXT:    cmpordpd %xmm2, %xmm3
+; SSE-32-NEXT:    andpd %xmm4, %xmm3
+; SSE-32-NEXT:    andpd %xmm3, %xmm0
+; SSE-32-NEXT:    andnpd %xmm1, %xmm3
+; SSE-32-NEXT:    orpd %xmm3, %xmm0
 ; SSE-32-NEXT:    movl %ebp, %esp
 ; SSE-32-NEXT:    popl %ebp
 ; SSE-32-NEXT:    retl
@@ -2397,10 +2397,10 @@ define <2 x i64> @test_v2f64_one_q(<2 x i64> %a, <2 x i64> %b, <2 x double> %f1,
 ; SSE-64-NEXT:    movapd %xmm2, %xmm4
 ; SSE-64-NEXT:    cmpneqpd %xmm3, %xmm4
 ; SSE-64-NEXT:    cmpordpd %xmm3, %xmm2
-; SSE-64-NEXT:    andpd %xmm4, %xmm2
-; SSE-64-NEXT:    andpd %xmm2, %xmm0
-; SSE-64-NEXT:    andnpd %xmm1, %xmm2
-; SSE-64-NEXT:    orpd %xmm2, %xmm0
+; SSE-64-NEXT:    andpd %xmm2, %xmm4
+; SSE-64-NEXT:    andpd %xmm4, %xmm0
+; SSE-64-NEXT:    andnpd %xmm1, %xmm4
+; SSE-64-NEXT:    orpd %xmm4, %xmm0
 ; SSE-64-NEXT:    retq
 ;
 ; AVX-32-LABEL: test_v2f64_one_q:
@@ -2576,11 +2576,11 @@ define <2 x i64> @test_v2f64_ueq_q(<2 x i64> %a, <2 x i64> %b, <2 x double> %f1,
 ; SSE-32-NEXT:    movapd 8(%ebp), %xmm3
 ; SSE-32-NEXT:    movapd %xmm2, %xmm4
 ; SSE-32-NEXT:    cmpeqpd %xmm3, %xmm4
-; SSE-32-NEXT:    cmpunordpd %xmm3, %xmm2
-; SSE-32-NEXT:    orpd %xmm4, %xmm2
-; SSE-32-NEXT:    andpd %xmm2, %xmm0
-; SSE-32-NEXT:    andnpd %xmm1, %xmm2
-; SSE-32-NEXT:    orpd %xmm2, %xmm0
+; SSE-32-NEXT:    cmpunordpd %xmm2, %xmm3
+; SSE-32-NEXT:    orpd %xmm4, %xmm3
+; SSE-32-NEXT:    andpd %xmm3, %xmm0
+; SSE-32-NEXT:    andnpd %xmm1, %xmm3
+; SSE-32-NEXT:    orpd %xmm3, %xmm0
 ; SSE-32-NEXT:    movl %ebp, %esp
 ; SSE-32-NEXT:    popl %ebp
 ; SSE-32-NEXT:    retl
@@ -2590,10 +2590,10 @@ define <2 x i64> @test_v2f64_ueq_q(<2 x i64> %a, <2 x i64> %b, <2 x double> %f1,
 ; SSE-64-NEXT:    movapd %xmm2, %xmm4
 ; SSE-64-NEXT:    cmpeqpd %xmm3, %xmm4
 ; SSE-64-NEXT:    cmpunordpd %xmm3, %xmm2
-; SSE-64-NEXT:    orpd %xmm4, %xmm2
-; SSE-64-NEXT:    andpd %xmm2, %xmm0
-; SSE-64-NEXT:    andnpd %xmm1, %xmm2
-; SSE-64-NEXT:    orpd %xmm2, %xmm0
+; SSE-64-NEXT:    orpd %xmm2, %xmm4
+; SSE-64-NEXT:    andpd %xmm4, %xmm0
+; SSE-64-NEXT:    andnpd %xmm1, %xmm4
+; SSE-64-NEXT:    orpd %xmm4, %xmm0
 ; SSE-64-NEXT:    retq
 ;
 ; AVX-32-LABEL: test_v2f64_ueq_q:
@@ -3338,10 +3338,10 @@ define <4 x i32> @test_v4f32_oeq_s(<4 x i32> %a, <4 x i32> %b, <4 x float> %f1, 
 ; SSE-32-NEXT:    movaps 8(%ebp), %xmm3
 ; SSE-32-NEXT:    movaps %xmm2, %xmm4
 ; SSE-32-NEXT:    cmpltps %xmm3, %xmm4
-; SSE-32-NEXT:    cmpeqps %xmm3, %xmm2
-; SSE-32-NEXT:    andps %xmm2, %xmm0
-; SSE-32-NEXT:    andnps %xmm1, %xmm2
-; SSE-32-NEXT:    orps %xmm2, %xmm0
+; SSE-32-NEXT:    cmpeqps %xmm2, %xmm3
+; SSE-32-NEXT:    andps %xmm3, %xmm0
+; SSE-32-NEXT:    andnps %xmm1, %xmm3
+; SSE-32-NEXT:    orps %xmm3, %xmm0
 ; SSE-32-NEXT:    movl %ebp, %esp
 ; SSE-32-NEXT:    popl %ebp
 ; SSE-32-NEXT:    retl
@@ -3816,11 +3816,11 @@ define <4 x i32> @test_v4f32_one_s(<4 x i32> %a, <4 x i32> %b, <4 x float> %f1, 
 ; SSE-32-NEXT:    cmpltps %xmm3, %xmm4
 ; SSE-32-NEXT:    movaps %xmm2, %xmm4
 ; SSE-32-NEXT:    cmpneqps %xmm3, %xmm4
-; SSE-32-NEXT:    cmpordps %xmm3, %xmm2
-; SSE-32-NEXT:    andps %xmm4, %xmm2
-; SSE-32-NEXT:    andps %xmm2, %xmm0
-; SSE-32-NEXT:    andnps %xmm1, %xmm2
-; SSE-32-NEXT:    orps %xmm2, %xmm0
+; SSE-32-NEXT:    cmpordps %xmm2, %xmm3
+; SSE-32-NEXT:    andps %xmm4, %xmm3
+; SSE-32-NEXT:    andps %xmm3, %xmm0
+; SSE-32-NEXT:    andnps %xmm1, %xmm3
+; SSE-32-NEXT:    orps %xmm3, %xmm0
 ; SSE-32-NEXT:    movl %ebp, %esp
 ; SSE-32-NEXT:    popl %ebp
 ; SSE-32-NEXT:    retl
@@ -3832,10 +3832,10 @@ define <4 x i32> @test_v4f32_one_s(<4 x i32> %a, <4 x i32> %b, <4 x float> %f1, 
 ; SSE-64-NEXT:    movaps %xmm2, %xmm4
 ; SSE-64-NEXT:    cmpneqps %xmm3, %xmm4
 ; SSE-64-NEXT:    cmpordps %xmm3, %xmm2
-; SSE-64-NEXT:    andps %xmm4, %xmm2
-; SSE-64-NEXT:    andps %xmm2, %xmm0
-; SSE-64-NEXT:    andnps %xmm1, %xmm2
-; SSE-64-NEXT:    orps %xmm2, %xmm0
+; SSE-64-NEXT:    andps %xmm2, %xmm4
+; SSE-64-NEXT:    andps %xmm4, %xmm0
+; SSE-64-NEXT:    andnps %xmm1, %xmm4
+; SSE-64-NEXT:    orps %xmm4, %xmm0
 ; SSE-64-NEXT:    retq
 ;
 ; AVX-32-LABEL: test_v4f32_one_s:
@@ -3918,10 +3918,10 @@ define <4 x i32> @test_v4f32_ord_s(<4 x i32> %a, <4 x i32> %b, <4 x float> %f1, 
 ; SSE-32-NEXT:    movaps 8(%ebp), %xmm3
 ; SSE-32-NEXT:    movaps %xmm2, %xmm4
 ; SSE-32-NEXT:    cmpltps %xmm3, %xmm4
-; SSE-32-NEXT:    cmpordps %xmm3, %xmm2
-; SSE-32-NEXT:    andps %xmm2, %xmm0
-; SSE-32-NEXT:    andnps %xmm1, %xmm2
-; SSE-32-NEXT:    orps %xmm2, %xmm0
+; SSE-32-NEXT:    cmpordps %xmm2, %xmm3
+; SSE-32-NEXT:    andps %xmm3, %xmm0
+; SSE-32-NEXT:    andnps %xmm1, %xmm3
+; SSE-32-NEXT:    orps %xmm3, %xmm0
 ; SSE-32-NEXT:    movl %ebp, %esp
 ; SSE-32-NEXT:    popl %ebp
 ; SSE-32-NEXT:    retl
@@ -4018,11 +4018,11 @@ define <4 x i32> @test_v4f32_ueq_s(<4 x i32> %a, <4 x i32> %b, <4 x float> %f1, 
 ; SSE-32-NEXT:    cmpltps %xmm3, %xmm4
 ; SSE-32-NEXT:    movaps %xmm2, %xmm4
 ; SSE-32-NEXT:    cmpeqps %xmm3, %xmm4
-; SSE-32-NEXT:    cmpunordps %xmm3, %xmm2
-; SSE-32-NEXT:    orps %xmm4, %xmm2
-; SSE-32-NEXT:    andps %xmm2, %xmm0
-; SSE-32-NEXT:    andnps %xmm1, %xmm2
-; SSE-32-NEXT:    orps %xmm2, %xmm0
+; SSE-32-NEXT:    cmpunordps %xmm2, %xmm3
+; SSE-32-NEXT:    orps %xmm4, %xmm3
+; SSE-32-NEXT:    andps %xmm3, %xmm0
+; SSE-32-NEXT:    andnps %xmm1, %xmm3
+; SSE-32-NEXT:    orps %xmm3, %xmm0
 ; SSE-32-NEXT:    movl %ebp, %esp
 ; SSE-32-NEXT:    popl %ebp
 ; SSE-32-NEXT:    retl
@@ -4034,10 +4034,10 @@ define <4 x i32> @test_v4f32_ueq_s(<4 x i32> %a, <4 x i32> %b, <4 x float> %f1, 
 ; SSE-64-NEXT:    movaps %xmm2, %xmm4
 ; SSE-64-NEXT:    cmpeqps %xmm3, %xmm4
 ; SSE-64-NEXT:    cmpunordps %xmm3, %xmm2
-; SSE-64-NEXT:    orps %xmm4, %xmm2
-; SSE-64-NEXT:    andps %xmm2, %xmm0
-; SSE-64-NEXT:    andnps %xmm1, %xmm2
-; SSE-64-NEXT:    orps %xmm2, %xmm0
+; SSE-64-NEXT:    orps %xmm2, %xmm4
+; SSE-64-NEXT:    andps %xmm4, %xmm0
+; SSE-64-NEXT:    andnps %xmm1, %xmm4
+; SSE-64-NEXT:    orps %xmm4, %xmm0
 ; SSE-64-NEXT:    retq
 ;
 ; AVX-32-LABEL: test_v4f32_ueq_s:
@@ -4498,10 +4498,10 @@ define <4 x i32> @test_v4f32_une_s(<4 x i32> %a, <4 x i32> %b, <4 x float> %f1, 
 ; SSE-32-NEXT:    movaps 8(%ebp), %xmm3
 ; SSE-32-NEXT:    movaps %xmm2, %xmm4
 ; SSE-32-NEXT:    cmpltps %xmm3, %xmm4
-; SSE-32-NEXT:    cmpneqps %xmm3, %xmm2
-; SSE-32-NEXT:    andps %xmm2, %xmm0
-; SSE-32-NEXT:    andnps %xmm1, %xmm2
-; SSE-32-NEXT:    orps %xmm2, %xmm0
+; SSE-32-NEXT:    cmpneqps %xmm2, %xmm3
+; SSE-32-NEXT:    andps %xmm3, %xmm0
+; SSE-32-NEXT:    andnps %xmm1, %xmm3
+; SSE-32-NEXT:    orps %xmm3, %xmm0
 ; SSE-32-NEXT:    movl %ebp, %esp
 ; SSE-32-NEXT:    popl %ebp
 ; SSE-32-NEXT:    retl
@@ -4596,10 +4596,10 @@ define <4 x i32> @test_v4f32_uno_s(<4 x i32> %a, <4 x i32> %b, <4 x float> %f1, 
 ; SSE-32-NEXT:    movaps 8(%ebp), %xmm3
 ; SSE-32-NEXT:    movaps %xmm2, %xmm4
 ; SSE-32-NEXT:    cmpltps %xmm3, %xmm4
-; SSE-32-NEXT:    cmpunordps %xmm3, %xmm2
-; SSE-32-NEXT:    andps %xmm2, %xmm0
-; SSE-32-NEXT:    andnps %xmm1, %xmm2
-; SSE-32-NEXT:    orps %xmm2, %xmm0
+; SSE-32-NEXT:    cmpunordps %xmm2, %xmm3
+; SSE-32-NEXT:    andps %xmm3, %xmm0
+; SSE-32-NEXT:    andnps %xmm1, %xmm3
+; SSE-32-NEXT:    orps %xmm3, %xmm0
 ; SSE-32-NEXT:    movl %ebp, %esp
 ; SSE-32-NEXT:    popl %ebp
 ; SSE-32-NEXT:    retl
@@ -4694,10 +4694,10 @@ define <2 x i64> @test_v2f64_oeq_s(<2 x i64> %a, <2 x i64> %b, <2 x double> %f1,
 ; SSE-32-NEXT:    movapd 8(%ebp), %xmm3
 ; SSE-32-NEXT:    movapd %xmm2, %xmm4
 ; SSE-32-NEXT:    cmpltpd %xmm3, %xmm4
-; SSE-32-NEXT:    cmpeqpd %xmm3, %xmm2
-; SSE-32-NEXT:    andpd %xmm2, %xmm0
-; SSE-32-NEXT:    andnpd %xmm1, %xmm2
-; SSE-32-NEXT:    orpd %xmm2, %xmm0
+; SSE-32-NEXT:    cmpeqpd %xmm2, %xmm3
+; SSE-32-NEXT:    andpd %xmm3, %xmm0
+; SSE-32-NEXT:    andnpd %xmm1, %xmm3
+; SSE-32-NEXT:    orpd %xmm3, %xmm0
 ; SSE-32-NEXT:    movl %ebp, %esp
 ; SSE-32-NEXT:    popl %ebp
 ; SSE-32-NEXT:    retl
@@ -5172,11 +5172,11 @@ define <2 x i64> @test_v2f64_one_s(<2 x i64> %a, <2 x i64> %b, <2 x double> %f1,
 ; SSE-32-NEXT:    cmpltpd %xmm3, %xmm4
 ; SSE-32-NEXT:    movapd %xmm2, %xmm4
 ; SSE-32-NEXT:    cmpneqpd %xmm3, %xmm4
-; SSE-32-NEXT:    cmpordpd %xmm3, %xmm2
-; SSE-32-NEXT:    andpd %xmm4, %xmm2
-; SSE-32-NEXT:    andpd %xmm2, %xmm0
-; SSE-32-NEXT:    andnpd %xmm1, %xmm2
-; SSE-32-NEXT:    orpd %xmm2, %xmm0
+; SSE-32-NEXT:    cmpordpd %xmm2, %xmm3
+; SSE-32-NEXT:    andpd %xmm4, %xmm3
+; SSE-32-NEXT:    andpd %xmm3, %xmm0
+; SSE-32-NEXT:    andnpd %xmm1, %xmm3
+; SSE-32-NEXT:    orpd %xmm3, %xmm0
 ; SSE-32-NEXT:    movl %ebp, %esp
 ; SSE-32-NEXT:    popl %ebp
 ; SSE-32-NEXT:    retl
@@ -5188,10 +5188,10 @@ define <2 x i64> @test_v2f64_one_s(<2 x i64> %a, <2 x i64> %b, <2 x double> %f1,
 ; SSE-64-NEXT:    movapd %xmm2, %xmm4
 ; SSE-64-NEXT:    cmpneqpd %xmm3, %xmm4
 ; SSE-64-NEXT:    cmpordpd %xmm3, %xmm2
-; SSE-64-NEXT:    andpd %xmm4, %xmm2
-; SSE-64-NEXT:    andpd %xmm2, %xmm0
-; SSE-64-NEXT:    andnpd %xmm1, %xmm2
-; SSE-64-NEXT:    orpd %xmm2, %xmm0
+; SSE-64-NEXT:    andpd %xmm2, %xmm4
+; SSE-64-NEXT:    andpd %xmm4, %xmm0
+; SSE-64-NEXT:    andnpd %xmm1, %xmm4
+; SSE-64-NEXT:    orpd %xmm4, %xmm0
 ; SSE-64-NEXT:    retq
 ;
 ; AVX-32-LABEL: test_v2f64_one_s:
@@ -5274,10 +5274,10 @@ define <2 x i64> @test_v2f64_ord_s(<2 x i64> %a, <2 x i64> %b, <2 x double> %f1,
 ; SSE-32-NEXT:    movapd 8(%ebp), %xmm3
 ; SSE-32-NEXT:    movapd %xmm2, %xmm4
 ; SSE-32-NEXT:    cmpltpd %xmm3, %xmm4
-; SSE-32-NEXT:    cmpordpd %xmm3, %xmm2
-; SSE-32-NEXT:    andpd %xmm2, %xmm0
-; SSE-32-NEXT:    andnpd %xmm1, %xmm2
-; SSE-32-NEXT:    orpd %xmm2, %xmm0
+; SSE-32-NEXT:    cmpordpd %xmm2, %xmm3
+; SSE-32-NEXT:    andpd %xmm3, %xmm0
+; SSE-32-NEXT:    andnpd %xmm1, %xmm3
+; SSE-32-NEXT:    orpd %xmm3, %xmm0
 ; SSE-32-NEXT:    movl %ebp, %esp
 ; SSE-32-NEXT:    popl %ebp
 ; SSE-32-NEXT:    retl
@@ -5374,11 +5374,11 @@ define <2 x i64> @test_v2f64_ueq_s(<2 x i64> %a, <2 x i64> %b, <2 x double> %f1,
 ; SSE-32-NEXT:    cmpltpd %xmm3, %xmm4
 ; SSE-32-NEXT:    movapd %xmm2, %xmm4
 ; SSE-32-NEXT:    cmpeqpd %xmm3, %xmm4
-; SSE-32-NEXT:    cmpunordpd %xmm3, %xmm2
-; SSE-32-NEXT:    orpd %xmm4, %xmm2
-; SSE-32-NEXT:    andpd %xmm2, %xmm0
-; SSE-32-NEXT:    andnpd %xmm1, %xmm2
-; SSE-32-NEXT:    orpd %xmm2, %xmm0
+; SSE-32-NEXT:    cmpunordpd %xmm2, %xmm3
+; SSE-32-NEXT:    orpd %xmm4, %xmm3
+; SSE-32-NEXT:    andpd %xmm3, %xmm0
+; SSE-32-NEXT:    andnpd %xmm1, %xmm3
+; SSE-32-NEXT:    orpd %xmm3, %xmm0
 ; SSE-32-NEXT:    movl %ebp, %esp
 ; SSE-32-NEXT:    popl %ebp
 ; SSE-32-NEXT:    retl
@@ -5390,10 +5390,10 @@ define <2 x i64> @test_v2f64_ueq_s(<2 x i64> %a, <2 x i64> %b, <2 x double> %f1,
 ; SSE-64-NEXT:    movapd %xmm2, %xmm4
 ; SSE-64-NEXT:    cmpeqpd %xmm3, %xmm4
 ; SSE-64-NEXT:    cmpunordpd %xmm3, %xmm2
-; SSE-64-NEXT:    orpd %xmm4, %xmm2
-; SSE-64-NEXT:    andpd %xmm2, %xmm0
-; SSE-64-NEXT:    andnpd %xmm1, %xmm2
-; SSE-64-NEXT:    orpd %xmm2, %xmm0
+; SSE-64-NEXT:    orpd %xmm2, %xmm4
+; SSE-64-NEXT:    andpd %xmm4, %xmm0
+; SSE-64-NEXT:    andnpd %xmm1, %xmm4
+; SSE-64-NEXT:    orpd %xmm4, %xmm0
 ; SSE-64-NEXT:    retq
 ;
 ; AVX-32-LABEL: test_v2f64_ueq_s:
@@ -5854,10 +5854,10 @@ define <2 x i64> @test_v2f64_une_s(<2 x i64> %a, <2 x i64> %b, <2 x double> %f1,
 ; SSE-32-NEXT:    movapd 8(%ebp), %xmm3
 ; SSE-32-NEXT:    movapd %xmm2, %xmm4
 ; SSE-32-NEXT:    cmpltpd %xmm3, %xmm4
-; SSE-32-NEXT:    cmpneqpd %xmm3, %xmm2
-; SSE-32-NEXT:    andpd %xmm2, %xmm0
-; SSE-32-NEXT:    andnpd %xmm1, %xmm2
-; SSE-32-NEXT:    orpd %xmm2, %xmm0
+; SSE-32-NEXT:    cmpneqpd %xmm2, %xmm3
+; SSE-32-NEXT:    andpd %xmm3, %xmm0
+; SSE-32-NEXT:    andnpd %xmm1, %xmm3
+; SSE-32-NEXT:    orpd %xmm3, %xmm0
 ; SSE-32-NEXT:    movl %ebp, %esp
 ; SSE-32-NEXT:    popl %ebp
 ; SSE-32-NEXT:    retl
@@ -5952,10 +5952,10 @@ define <2 x i64> @test_v2f64_uno_s(<2 x i64> %a, <2 x i64> %b, <2 x double> %f1,
 ; SSE-32-NEXT:    movapd 8(%ebp), %xmm3
 ; SSE-32-NEXT:    movapd %xmm2, %xmm4
 ; SSE-32-NEXT:    cmpltpd %xmm3, %xmm4
-; SSE-32-NEXT:    cmpunordpd %xmm3, %xmm2
-; SSE-32-NEXT:    andpd %xmm2, %xmm0
-; SSE-32-NEXT:    andnpd %xmm1, %xmm2
-; SSE-32-NEXT:    orpd %xmm2, %xmm0
+; SSE-32-NEXT:    cmpunordpd %xmm2, %xmm3
+; SSE-32-NEXT:    andpd %xmm3, %xmm0
+; SSE-32-NEXT:    andnpd %xmm1, %xmm3
+; SSE-32-NEXT:    orpd %xmm3, %xmm0
 ; SSE-32-NEXT:    movl %ebp, %esp
 ; SSE-32-NEXT:    popl %ebp
 ; SSE-32-NEXT:    retl

@@ -1265,11 +1265,12 @@ define <2 x i64> @unsigned_sat_variable_v2i64_using_cmp_sum(<2 x i64> %x, <2 x i
 ; SSE42-LABEL: unsigned_sat_variable_v2i64_using_cmp_sum:
 ; SSE42:       # %bb.0:
 ; SSE42-NEXT:    movdqa {{.*#+}} xmm2 = [9223372036854775808,9223372036854775808]
-; SSE42-NEXT:    paddq %xmm0, %xmm1
-; SSE42-NEXT:    pxor %xmm2, %xmm0
-; SSE42-NEXT:    pxor %xmm1, %xmm2
-; SSE42-NEXT:    pcmpgtq %xmm2, %xmm0
-; SSE42-NEXT:    por %xmm1, %xmm0
+; SSE42-NEXT:    movdqa %xmm0, %xmm3
+; SSE42-NEXT:    pxor %xmm2, %xmm3
+; SSE42-NEXT:    paddq %xmm1, %xmm0
+; SSE42-NEXT:    pxor %xmm0, %xmm2
+; SSE42-NEXT:    pcmpgtq %xmm2, %xmm3
+; SSE42-NEXT:    por %xmm3, %xmm0
 ; SSE42-NEXT:    retq
 ;
 ; AVX2-LABEL: unsigned_sat_variable_v2i64_using_cmp_sum:

@@ -36,7 +36,8 @@ define i64 @f3(i64 %dummy, i64 %a, i32 %b) {
 ; CHECK-LABEL: f3:
 ; CHECK-NOT: {{%r[234]}}
 ; CHECK: dsgfr %r2, %r4
-; CHECK: ogr %r2, %r3
+; CHECK: ogr %r3, %r2
+; CHECK: lgr %r2, %r3
 ; CHECK: br %r14
   %bext = sext i32 %b to i64
   %div = sdiv i64 %a, %bext
@@ -102,7 +103,8 @@ define i64 @f8(i64 %dummy, i64 %a, i32 *%src) {
 ; CHECK-NOT: {{%r[234]}}
 ; CHECK: dsgf %r2, 0(%r4)
 ; CHECK-NOT: {{dsgf|dsgfr}}
-; CHECK: ogr %r2, %r3
+; CHECK: ogr %r3, %r2
+; CHECK: lgr %r2, %r3
 ; CHECK: br %r14
   %b = load i32, i32 *%src
   %bext = sext i32 %b to i64

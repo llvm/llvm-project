@@ -430,19 +430,18 @@ define i64 @stest_f64i64(double %x) {
 ; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    callq __fixdfti@PLT
-; CHECK-NEXT:    xorl %esi, %esi
-; CHECK-NEXT:    movabsq $9223372036854775807, %rcx # imm = 0x7FFFFFFFFFFFFFFF
-; CHECK-NEXT:    cmpq %rcx, %rax
+; CHECK-NEXT:    xorl %ecx, %ecx
+; CHECK-NEXT:    movabsq $9223372036854775807, %rsi # imm = 0x7FFFFFFFFFFFFFFF
+; CHECK-NEXT:    cmpq %rsi, %rax
 ; CHECK-NEXT:    movq %rdx, %rdi
 ; CHECK-NEXT:    sbbq $0, %rdi
-; CHECK-NEXT:    cmovlq %rdx, %rsi
-; CHECK-NEXT:    cmovlq %rax, %rcx
-; CHECK-NEXT:    movabsq $-9223372036854775808, %rax # imm = 0x8000000000000000
-; CHECK-NEXT:    cmpq %rcx, %rax
-; CHECK-NEXT:    movq $-1, %rdx
-; CHECK-NEXT:    sbbq %rsi, %rdx
-; CHECK-NEXT:    cmovgeq %rax, %rcx
-; CHECK-NEXT:    movq %rcx, %rax
+; CHECK-NEXT:    cmovlq %rdx, %rcx
+; CHECK-NEXT:    cmovgeq %rsi, %rax
+; CHECK-NEXT:    movabsq $-9223372036854775808, %rdx # imm = 0x8000000000000000
+; CHECK-NEXT:    cmpq %rax, %rdx
+; CHECK-NEXT:    movq $-1, %rsi
+; CHECK-NEXT:    sbbq %rcx, %rsi
+; CHECK-NEXT:    cmovgeq %rdx, %rax
 ; CHECK-NEXT:    popq %rcx
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
@@ -511,19 +510,18 @@ define i64 @stest_f32i64(float %x) {
 ; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    callq __fixsfti@PLT
-; CHECK-NEXT:    xorl %esi, %esi
-; CHECK-NEXT:    movabsq $9223372036854775807, %rcx # imm = 0x7FFFFFFFFFFFFFFF
-; CHECK-NEXT:    cmpq %rcx, %rax
+; CHECK-NEXT:    xorl %ecx, %ecx
+; CHECK-NEXT:    movabsq $9223372036854775807, %rsi # imm = 0x7FFFFFFFFFFFFFFF
+; CHECK-NEXT:    cmpq %rsi, %rax
 ; CHECK-NEXT:    movq %rdx, %rdi
 ; CHECK-NEXT:    sbbq $0, %rdi
-; CHECK-NEXT:    cmovlq %rdx, %rsi
-; CHECK-NEXT:    cmovlq %rax, %rcx
-; CHECK-NEXT:    movabsq $-9223372036854775808, %rax # imm = 0x8000000000000000
-; CHECK-NEXT:    cmpq %rcx, %rax
-; CHECK-NEXT:    movq $-1, %rdx
-; CHECK-NEXT:    sbbq %rsi, %rdx
-; CHECK-NEXT:    cmovgeq %rax, %rcx
-; CHECK-NEXT:    movq %rcx, %rax
+; CHECK-NEXT:    cmovlq %rdx, %rcx
+; CHECK-NEXT:    cmovgeq %rsi, %rax
+; CHECK-NEXT:    movabsq $-9223372036854775808, %rdx # imm = 0x8000000000000000
+; CHECK-NEXT:    cmpq %rax, %rdx
+; CHECK-NEXT:    movq $-1, %rsi
+; CHECK-NEXT:    sbbq %rcx, %rsi
+; CHECK-NEXT:    cmovgeq %rdx, %rax
 ; CHECK-NEXT:    popq %rcx
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
@@ -594,19 +592,18 @@ define i64 @stest_f16i64(half %x) {
 ; CHECK-NEXT:    movzwl %di, %edi
 ; CHECK-NEXT:    callq __gnu_h2f_ieee@PLT
 ; CHECK-NEXT:    callq __fixsfti@PLT
-; CHECK-NEXT:    xorl %esi, %esi
-; CHECK-NEXT:    movabsq $9223372036854775807, %rcx # imm = 0x7FFFFFFFFFFFFFFF
-; CHECK-NEXT:    cmpq %rcx, %rax
+; CHECK-NEXT:    xorl %ecx, %ecx
+; CHECK-NEXT:    movabsq $9223372036854775807, %rsi # imm = 0x7FFFFFFFFFFFFFFF
+; CHECK-NEXT:    cmpq %rsi, %rax
 ; CHECK-NEXT:    movq %rdx, %rdi
 ; CHECK-NEXT:    sbbq $0, %rdi
-; CHECK-NEXT:    cmovlq %rdx, %rsi
-; CHECK-NEXT:    cmovlq %rax, %rcx
-; CHECK-NEXT:    movabsq $-9223372036854775808, %rax # imm = 0x8000000000000000
-; CHECK-NEXT:    cmpq %rcx, %rax
-; CHECK-NEXT:    movq $-1, %rdx
-; CHECK-NEXT:    sbbq %rsi, %rdx
-; CHECK-NEXT:    cmovgeq %rax, %rcx
-; CHECK-NEXT:    movq %rcx, %rax
+; CHECK-NEXT:    cmovlq %rdx, %rcx
+; CHECK-NEXT:    cmovgeq %rsi, %rax
+; CHECK-NEXT:    movabsq $-9223372036854775808, %rdx # imm = 0x8000000000000000
+; CHECK-NEXT:    cmpq %rax, %rdx
+; CHECK-NEXT:    movq $-1, %rsi
+; CHECK-NEXT:    sbbq %rcx, %rsi
+; CHECK-NEXT:    cmovgeq %rdx, %rax
 ; CHECK-NEXT:    popq %rcx
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
@@ -1084,18 +1081,17 @@ define i64 @stest_f64i64_mm(double %x) {
 ; CHECK-NEXT:    cmovbq %rax, %rsi
 ; CHECK-NEXT:    xorl %edi, %edi
 ; CHECK-NEXT:    testq %rdx, %rdx
-; CHECK-NEXT:    cmovsq %rax, %rcx
-; CHECK-NEXT:    cmoveq %rsi, %rcx
+; CHECK-NEXT:    cmovnsq %rcx, %rax
+; CHECK-NEXT:    cmoveq %rsi, %rax
 ; CHECK-NEXT:    cmovsq %rdx, %rdi
 ; CHECK-NEXT:    testq %rdi, %rdi
-; CHECK-NEXT:    movabsq $-9223372036854775808, %rax # imm = 0x8000000000000000
-; CHECK-NEXT:    movq %rax, %rdx
-; CHECK-NEXT:    cmovnsq %rcx, %rdx
-; CHECK-NEXT:    cmpq %rax, %rcx
-; CHECK-NEXT:    cmovbeq %rax, %rcx
+; CHECK-NEXT:    movabsq $-9223372036854775808, %rcx # imm = 0x8000000000000000
+; CHECK-NEXT:    movq %rcx, %rdx
+; CHECK-NEXT:    cmovnsq %rax, %rdx
+; CHECK-NEXT:    cmpq %rcx, %rax
+; CHECK-NEXT:    cmovbeq %rcx, %rax
 ; CHECK-NEXT:    cmpq $-1, %rdi
-; CHECK-NEXT:    cmovneq %rdx, %rcx
-; CHECK-NEXT:    movq %rcx, %rax
+; CHECK-NEXT:    cmovneq %rdx, %rax
 ; CHECK-NEXT:    popq %rcx
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
@@ -1166,18 +1162,17 @@ define i64 @stest_f32i64_mm(float %x) {
 ; CHECK-NEXT:    cmovbq %rax, %rsi
 ; CHECK-NEXT:    xorl %edi, %edi
 ; CHECK-NEXT:    testq %rdx, %rdx
-; CHECK-NEXT:    cmovsq %rax, %rcx
-; CHECK-NEXT:    cmoveq %rsi, %rcx
+; CHECK-NEXT:    cmovnsq %rcx, %rax
+; CHECK-NEXT:    cmoveq %rsi, %rax
 ; CHECK-NEXT:    cmovsq %rdx, %rdi
 ; CHECK-NEXT:    testq %rdi, %rdi
-; CHECK-NEXT:    movabsq $-9223372036854775808, %rax # imm = 0x8000000000000000
-; CHECK-NEXT:    movq %rax, %rdx
-; CHECK-NEXT:    cmovnsq %rcx, %rdx
-; CHECK-NEXT:    cmpq %rax, %rcx
-; CHECK-NEXT:    cmovbeq %rax, %rcx
+; CHECK-NEXT:    movabsq $-9223372036854775808, %rcx # imm = 0x8000000000000000
+; CHECK-NEXT:    movq %rcx, %rdx
+; CHECK-NEXT:    cmovnsq %rax, %rdx
+; CHECK-NEXT:    cmpq %rcx, %rax
+; CHECK-NEXT:    cmovbeq %rcx, %rax
 ; CHECK-NEXT:    cmpq $-1, %rdi
-; CHECK-NEXT:    cmovneq %rdx, %rcx
-; CHECK-NEXT:    movq %rcx, %rax
+; CHECK-NEXT:    cmovneq %rdx, %rax
 ; CHECK-NEXT:    popq %rcx
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
@@ -1250,18 +1245,17 @@ define i64 @stest_f16i64_mm(half %x) {
 ; CHECK-NEXT:    cmovbq %rax, %rsi
 ; CHECK-NEXT:    xorl %edi, %edi
 ; CHECK-NEXT:    testq %rdx, %rdx
-; CHECK-NEXT:    cmovsq %rax, %rcx
-; CHECK-NEXT:    cmoveq %rsi, %rcx
+; CHECK-NEXT:    cmovnsq %rcx, %rax
+; CHECK-NEXT:    cmoveq %rsi, %rax
 ; CHECK-NEXT:    cmovsq %rdx, %rdi
 ; CHECK-NEXT:    testq %rdi, %rdi
-; CHECK-NEXT:    movabsq $-9223372036854775808, %rax # imm = 0x8000000000000000
-; CHECK-NEXT:    movq %rax, %rdx
-; CHECK-NEXT:    cmovnsq %rcx, %rdx
-; CHECK-NEXT:    cmpq %rax, %rcx
-; CHECK-NEXT:    cmovbeq %rax, %rcx
+; CHECK-NEXT:    movabsq $-9223372036854775808, %rcx # imm = 0x8000000000000000
+; CHECK-NEXT:    movq %rcx, %rdx
+; CHECK-NEXT:    cmovnsq %rax, %rdx
+; CHECK-NEXT:    cmpq %rcx, %rax
+; CHECK-NEXT:    cmovbeq %rcx, %rax
 ; CHECK-NEXT:    cmpq $-1, %rdi
-; CHECK-NEXT:    cmovneq %rdx, %rcx
-; CHECK-NEXT:    movq %rcx, %rax
+; CHECK-NEXT:    cmovneq %rdx, %rax
 ; CHECK-NEXT:    popq %rcx
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq

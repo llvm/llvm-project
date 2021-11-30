@@ -61,11 +61,13 @@ define i8 @t0(i32 %a1_wide_orig, i32 %a2_wide_orig, i32 %inc) nounwind {
 ;
 ; X86_64-LABEL: t0:
 ; X86_64:       # %bb.0:
-; X86_64-NEXT:    movl %esi, %eax
-; X86_64-NEXT:    addl %edx, %edi
-; X86_64-NEXT:    addl %edx, %eax
-; X86_64-NEXT:    cmpb %al, %dil
-; X86_64-NEXT:    cmovgl %edi, %eax
+; X86_64-NEXT:    # kill: def $edx killed $edx def $rdx
+; X86_64-NEXT:    # kill: def $esi killed $esi def $rsi
+; X86_64-NEXT:    # kill: def $edi killed $edi def $rdi
+; X86_64-NEXT:    leal (%rdi,%rdx), %ecx
+; X86_64-NEXT:    leal (%rsi,%rdx), %eax
+; X86_64-NEXT:    cmpb %al, %cl
+; X86_64-NEXT:    cmovgl %ecx, %eax
 ; X86_64-NEXT:    # kill: def $al killed $al killed $eax
 ; X86_64-NEXT:    retq
   %a1_wide = add i32 %a1_wide_orig, %inc
@@ -134,11 +136,13 @@ define i8 @neg_only_one_truncation(i32 %a1_wide_orig, i8 %a2_orig, i32 %inc) nou
 ;
 ; X86_64-LABEL: neg_only_one_truncation:
 ; X86_64:       # %bb.0:
-; X86_64-NEXT:    addl %edx, %edi
+; X86_64-NEXT:    # kill: def $edx killed $edx def $rdx
+; X86_64-NEXT:    # kill: def $edi killed $edi def $rdi
+; X86_64-NEXT:    leal (%rdi,%rdx), %ecx
 ; X86_64-NEXT:    addb %sil, %dl
-; X86_64-NEXT:    cmpb %dl, %dil
+; X86_64-NEXT:    cmpb %dl, %cl
 ; X86_64-NEXT:    movzbl %dl, %eax
-; X86_64-NEXT:    cmovgl %edi, %eax
+; X86_64-NEXT:    cmovgl %ecx, %eax
 ; X86_64-NEXT:    # kill: def $al killed $al killed $eax
 ; X86_64-NEXT:    retq
   %a1_wide = add i32 %a1_wide_orig, %inc
@@ -205,11 +209,13 @@ define i8 @neg_type_mismatch(i32 %a1_wide_orig, i16 %a2_wide_orig, i32 %inc) nou
 ;
 ; X86_64-LABEL: neg_type_mismatch:
 ; X86_64:       # %bb.0:
-; X86_64-NEXT:    movl %esi, %eax
-; X86_64-NEXT:    addl %edx, %edi
-; X86_64-NEXT:    addl %edx, %eax
-; X86_64-NEXT:    cmpb %al, %dil
-; X86_64-NEXT:    cmovgl %edi, %eax
+; X86_64-NEXT:    # kill: def $edx killed $edx def $rdx
+; X86_64-NEXT:    # kill: def $esi killed $esi def $rsi
+; X86_64-NEXT:    # kill: def $edi killed $edi def $rdi
+; X86_64-NEXT:    leal (%rdi,%rdx), %ecx
+; X86_64-NEXT:    leal (%rsi,%rdx), %eax
+; X86_64-NEXT:    cmpb %al, %cl
+; X86_64-NEXT:    cmovgl %ecx, %eax
 ; X86_64-NEXT:    # kill: def $al killed $al killed $eax
 ; X86_64-NEXT:    retq
   %a1_wide = add i32 %a1_wide_orig, %inc
@@ -271,8 +277,9 @@ define i8 @negative_CopyFromReg(i32 %a1_wide, i32 %a2_wide_orig, i32 %inc) nounw
 ;
 ; X86_64-LABEL: negative_CopyFromReg:
 ; X86_64:       # %bb.0:
-; X86_64-NEXT:    movl %esi, %eax
-; X86_64-NEXT:    addl %edx, %eax
+; X86_64-NEXT:    # kill: def $edx killed $edx def $rdx
+; X86_64-NEXT:    # kill: def $esi killed $esi def $rsi
+; X86_64-NEXT:    leal (%rsi,%rdx), %eax
 ; X86_64-NEXT:    cmpb %al, %dil
 ; X86_64-NEXT:    cmovgl %edi, %eax
 ; X86_64-NEXT:    # kill: def $al killed $al killed $eax

@@ -34,7 +34,8 @@ define i64 @f3(i64 %dummy1, i64 %a, i64 %b) {
 ; CHECK-NOT: {{%r[234]}}
 ; CHECK: dsgr %r2, %r4
 ; CHECK-NOT: dsgr
-; CHECK: ogr %r2, %r3
+; CHECK: ogr %r3, %r2
+; CHECK: lgr %r2, %r3
 ; CHECK: br %r14
   %div = sdiv i64 %a, %b
   %rem = srem i64 %a, %b
@@ -74,7 +75,8 @@ define i64 @f6(i64 %dummy, i64 %a, i64 *%src) {
 ; CHECK-NOT: {{%r[234]}}
 ; CHECK: dsg %r2, 0(%r4)
 ; CHECK-NOT: {{dsg|dsgr}}
-; CHECK: ogr %r2, %r3
+; CHECK: ogr %r3, %r2
+; CHECK: lgr %r2, %r3
 ; CHECK: br %r14
   %b = load i64, i64 *%src
   %div = sdiv i64 %a, %b

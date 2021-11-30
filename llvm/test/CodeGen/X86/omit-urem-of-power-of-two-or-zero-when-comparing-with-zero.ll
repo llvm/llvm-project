@@ -159,10 +159,10 @@ define <4 x i1> @p5_vector_urem_by_const__nonsplat(<4 x i32> %x, <4 x i32> %y) {
 ; SSE4-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[1,1,3,3]
 ; SSE4-NEXT:    pblendw {{.*#+}} xmm2 = xmm2[0,1],xmm1[2,3],xmm2[4,5],xmm1[6,7]
 ; SSE4-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,0,2,2]
-; SSE4-NEXT:    pblendw {{.*#+}} xmm1 = xmm0[0,1],xmm1[2,3],xmm0[4,5],xmm1[6,7]
-; SSE4-NEXT:    por %xmm2, %xmm1
-; SSE4-NEXT:    movdqa {{.*#+}} xmm0 = [1431655765,858993459,715827882,477218588]
-; SSE4-NEXT:    pminud %xmm1, %xmm0
+; SSE4-NEXT:    pblendw {{.*#+}} xmm0 = xmm0[0,1],xmm1[2,3],xmm0[4,5],xmm1[6,7]
+; SSE4-NEXT:    por %xmm2, %xmm0
+; SSE4-NEXT:    movdqa {{.*#+}} xmm1 = [1431655765,858993459,715827882,477218588]
+; SSE4-NEXT:    pminud %xmm0, %xmm1
 ; SSE4-NEXT:    pcmpeqd %xmm1, %xmm0
 ; SSE4-NEXT:    retq
 ;

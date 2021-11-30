@@ -332,9 +332,8 @@ define <4 x float> @test13(<4 x float> %A, <4 x float> %B) {
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    shufps {{.*#+}} xmm0 = xmm0[3,3,3,3]
 ; SSE-NEXT:    shufps {{.*#+}} xmm1 = xmm1[3,3,3,3]
-; SSE-NEXT:    addss %xmm0, %xmm1
-; SSE-NEXT:    shufps {{.*#+}} xmm1 = xmm1[0,0,0,0]
-; SSE-NEXT:    movaps %xmm1, %xmm0
+; SSE-NEXT:    addss %xmm1, %xmm0
+; SSE-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,0,0,0]
 ; SSE-NEXT:    retq
 ;
 ; AVX1-LABEL: test13:

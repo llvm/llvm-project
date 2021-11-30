@@ -326,11 +326,10 @@ define <4 x float> @sub_to_shift_to_add_vec(<4 x i32> %x, <4 x i32> %y, <4 x flo
 ; SSE2-LABEL: sub_to_shift_to_add_vec:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    paddd %xmm1, %xmm1
-; SSE2-NEXT:    pcmpeqd %xmm0, %xmm1
-; SSE2-NEXT:    pand %xmm1, %xmm2
-; SSE2-NEXT:    pandn %xmm3, %xmm1
-; SSE2-NEXT:    por %xmm2, %xmm1
-; SSE2-NEXT:    movdqa %xmm1, %xmm0
+; SSE2-NEXT:    pcmpeqd %xmm1, %xmm0
+; SSE2-NEXT:    pand %xmm0, %xmm2
+; SSE2-NEXT:    pandn %xmm3, %xmm0
+; SSE2-NEXT:    por %xmm2, %xmm0
 ; SSE2-NEXT:    retq
 ;
 ; SSE41-LABEL: sub_to_shift_to_add_vec:

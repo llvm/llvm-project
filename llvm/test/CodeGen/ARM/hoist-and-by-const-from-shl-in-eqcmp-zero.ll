@@ -303,8 +303,8 @@ define i1 @scalar_i32_signbit_eq(i32 %x, i32 %y) nounwind {
 ; THUMB6-NEXT:    lsrs r0, r1
 ; THUMB6-NEXT:    movs r1, #1
 ; THUMB6-NEXT:    lsls r1, r1, #31
-; THUMB6-NEXT:    ands r1, r0
-; THUMB6-NEXT:    rsbs r0, r1, #0
+; THUMB6-NEXT:    ands r0, r1
+; THUMB6-NEXT:    rsbs r1, r0, #0
 ; THUMB6-NEXT:    adcs r0, r1
 ; THUMB6-NEXT:    bx lr
 ;
@@ -331,8 +331,8 @@ define i1 @scalar_i32_lowestbit_eq(i32 %x, i32 %y) nounwind {
 ; THUMB6:       @ %bb.0:
 ; THUMB6-NEXT:    lsrs r0, r1
 ; THUMB6-NEXT:    movs r1, #1
-; THUMB6-NEXT:    ands r1, r0
-; THUMB6-NEXT:    rsbs r0, r1, #0
+; THUMB6-NEXT:    ands r0, r1
+; THUMB6-NEXT:    rsbs r1, r0, #0
 ; THUMB6-NEXT:    adcs r0, r1
 ; THUMB6-NEXT:    bx lr
 ;
@@ -371,8 +371,8 @@ define i1 @scalar_i32_bitsinmiddle_eq(i32 %x, i32 %y) nounwind {
 ; THUMB6:       @ %bb.0:
 ; THUMB6-NEXT:    lsrs r0, r1
 ; THUMB6-NEXT:    ldr r1, .LCPI8_0
-; THUMB6-NEXT:    ands r1, r0
-; THUMB6-NEXT:    rsbs r0, r1, #0
+; THUMB6-NEXT:    ands r0, r1
+; THUMB6-NEXT:    rsbs r1, r0, #0
 ; THUMB6-NEXT:    adcs r0, r1
 ; THUMB6-NEXT:    bx lr
 ; THUMB6-NEXT:    .p2align 2
@@ -459,8 +459,8 @@ define i1 @scalar_i64_lowestbit_eq(i64 %x, i64 %y) nounwind {
 ; THUMB6-NEXT:    push {r7, lr}
 ; THUMB6-NEXT:    bl __lshrdi3
 ; THUMB6-NEXT:    movs r1, #1
-; THUMB6-NEXT:    ands r1, r0
-; THUMB6-NEXT:    rsbs r0, r1, #0
+; THUMB6-NEXT:    ands r0, r1
+; THUMB6-NEXT:    rsbs r1, r0, #0
 ; THUMB6-NEXT:    adcs r0, r1
 ; THUMB6-NEXT:    pop {r7, pc}
 ;
@@ -713,14 +713,14 @@ define <4 x i1> @vec_4xi32_nonsplat_eq(<4 x i32> %x, <4 x i32> %y) nounwind {
 ; THUMB6-NEXT:    ldr r4, [sp, #16]
 ; THUMB6-NEXT:    lsrs r2, r4
 ; THUMB6-NEXT:    ldr r4, .LCPI13_0
-; THUMB6-NEXT:    ands r4, r2
-; THUMB6-NEXT:    rsbs r2, r4, #0
+; THUMB6-NEXT:    ands r2, r4
+; THUMB6-NEXT:    rsbs r4, r2, #0
 ; THUMB6-NEXT:    adcs r2, r4
 ; THUMB6-NEXT:    ldr r4, [sp, #20]
 ; THUMB6-NEXT:    lsrs r3, r4
 ; THUMB6-NEXT:    lsls r4, r0, #31
-; THUMB6-NEXT:    ands r4, r3
-; THUMB6-NEXT:    rsbs r3, r4, #0
+; THUMB6-NEXT:    ands r3, r4
+; THUMB6-NEXT:    rsbs r4, r3, #0
 ; THUMB6-NEXT:    adcs r3, r4
 ; THUMB6-NEXT:    pop {r4, pc}
 ; THUMB6-NEXT:    .p2align 2
