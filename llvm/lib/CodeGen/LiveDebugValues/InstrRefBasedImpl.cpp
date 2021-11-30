@@ -544,8 +544,7 @@ public:
       // Re-state the variable location: if there's no replacement then NewLoc
       // is None and a $noreg DBG_VALUE will be created. Otherwise, a DBG_VALUE
       // identifying the alternative location will be emitted.
-      const DIExpression *Expr = ActiveVLocIt->second.Properties.DIExpr;
-      DbgValueProperties Properties(Expr, false);
+      const DbgValueProperties &Properties = ActiveVLocIt->second.Properties;
       PendingDbgValues.push_back(MTracker->emitLoc(NewLoc, Var, Properties));
 
       // Update machine locations <=> variable locations maps. Defer updating
