@@ -79,6 +79,14 @@ class BuilderDarwin(Builder):
         if configuration.dsymutil:
             args['DSYMUTIL'] = configuration.dsymutil
 
+        if 'internal' in configuration.apple_sdk:
+            sdk_root = lldbutil.get_xcode_sdk_root(configuration.apple_sdk)
+            if sdk_root:
+                private_frameworks = os.path.join(sdk_root, 'System',
+                                                  'Library',
+                                                  'PrivateFrameworks')
+                args['FRAMEWORK_INCLUDES'] = '-F{}'.format(private_frameworks)
+
         operating_system, env = get_os_and_env()
         if operating_system and operating_system != "macosx":
             builder_dir = os.path.dirname(os.path.abspath(__file__))
