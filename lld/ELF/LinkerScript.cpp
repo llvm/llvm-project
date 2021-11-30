@@ -53,12 +53,6 @@ static bool isSectionPrefix(StringRef prefix, StringRef name) {
   return name.startswith(prefix) || name == prefix.drop_back();
 }
 
-static uint64_t getOutputSectionVA(SectionBase *sec) {
-  OutputSection *os = sec->getOutputSection();
-  assert(os && "input section has no output section assigned");
-  return os ? os->addr : 0;
-}
-
 static StringRef getOutputSectionName(const InputSectionBase *s) {
   if (config->relocatable)
     return s->name;
@@ -118,15 +112,13 @@ static StringRef getOutputSectionName(const InputSectionBase *s) {
 
 uint64_t ExprValue::getValue() const {
   if (sec)
-    return alignTo(sec->getOffset(val) + getOutputSectionVA(sec),
+    return alignTo(sec->getOutputSection()->addr + sec->getOffset(val),
                    alignment);
   return alignTo(val, alignment);
 }
 
 uint64_t ExprValue::getSecAddr() const {
-  if (sec)
-    return sec->getOffset(0) + getOutputSectionVA(sec);
-  return 0;
+  return sec ? sec->getOutputSection()->addr + sec->getOffset(0) : 0;
 }
 
 uint64_t ExprValue::getSectionOffset() const {
