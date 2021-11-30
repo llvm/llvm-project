@@ -124,11 +124,9 @@ SUnit* R600SchedStrategy::pickNode(bool &IsTopNode) {
     DAG->dumpNode(*SU);
   } else {
     dbgs() << "NO NODE \n";
-    for (unsigned i = 0; i < DAG->SUnits.size(); i++) {
-      const SUnit &S = DAG->SUnits[i];
+    for (const SUnit &S : DAG->SUnits)
       if (!S.isScheduled)
         DAG->dumpNode(S);
-    }
   });
 
   return SU;

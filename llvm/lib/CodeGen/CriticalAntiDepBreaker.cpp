@@ -460,11 +460,10 @@ BreakAntiDependencies(const std::vector<SUnit> &SUnits,
 
   // Find the node at the bottom of the critical path.
   const SUnit *Max = nullptr;
-  for (unsigned i = 0, e = SUnits.size(); i != e; ++i) {
-    const SUnit *SU = &SUnits[i];
-    MISUnitMap[SU->getInstr()] = SU;
-    if (!Max || SU->getDepth() + SU->Latency > Max->getDepth() + Max->Latency)
-      Max = SU;
+  for (const SUnit &SU : SUnits) {
+    MISUnitMap[SU.getInstr()] = &SU;
+    if (!Max || SU.getDepth() + SU.Latency > Max->getDepth() + Max->Latency)
+      Max = &SU;
   }
   assert(Max && "Failed to find bottom of the critical path");
 
