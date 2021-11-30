@@ -79,7 +79,7 @@ class BuilderDarwin(Builder):
         if configuration.dsymutil:
             args['DSYMUTIL'] = configuration.dsymutil
 
-        if 'internal' in configuration.apple_sdk:
+        if configuration.apple_sdk and 'internal' in configuration.apple_sdk:
             sdk_root = lldbutil.get_xcode_sdk_root(configuration.apple_sdk)
             if sdk_root:
                 private_frameworks = os.path.join(sdk_root, 'System',
