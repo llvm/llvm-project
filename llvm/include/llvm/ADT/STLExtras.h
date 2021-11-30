@@ -1016,10 +1016,19 @@ public:
 private:
   std::tuple<RangeTs...> Ranges;
 
-  template <size_t... Ns> iterator begin_impl(std::index_sequence<Ns...>) {
+  template <size_t... Ns>
+  iterator begin_impl(std::index_sequence<Ns...>) {
+    return iterator(std::get<Ns>(Ranges)...);
+  }
+  template <size_t... Ns>
+  iterator begin_impl(std::index_sequence<Ns...>) const {
     return iterator(std::get<Ns>(Ranges)...);
   }
   template <size_t... Ns> iterator end_impl(std::index_sequence<Ns...>) {
+    return iterator(make_range(std::end(std::get<Ns>(Ranges)),
+                               std::end(std::get<Ns>(Ranges)))...);
+  }
+  template <size_t... Ns> iterator end_impl(std::index_sequence<Ns...>) const {
     return iterator(make_range(std::end(std::get<Ns>(Ranges)),
                                std::end(std::get<Ns>(Ranges)))...);
   }
@@ -1028,8 +1037,18 @@ public:
   concat_range(RangeTs &&... Ranges)
       : Ranges(std::forward<RangeTs>(Ranges)...) {}
 
-  iterator begin() { return begin_impl(std::index_sequence_for<RangeTs...>{}); }
-  iterator end() { return end_impl(std::index_sequence_for<RangeTs...>{}); }
+  iterator begin() {
+    return begin_impl(std::index_sequence_for<RangeTs...>{});
+  }
+  iterator begin() const {
+    return begin_impl(std::index_sequence_for<RangeTs...>{});
+  }
+  iterator end() {
+    return end_impl(std::index_sequence_for<RangeTs...>{});
+  }
+  iterator end() const {
+    return end_impl(std::index_sequence_for<RangeTs...>{});
+  }
 };
 
 } // end namespace detail
@@ -1977,8 +1996,14 @@ public:
   enumerator_iter<R> begin() {
     return enumerator_iter<R>(0, std::begin(TheRange));
   }
+  enumerator_iter<R> begin() const {
+    return enumerator_iter<R>(0, std::begin(TheRange));
+  }
 
   enumerator_iter<R> end() {
+    return enumerator_iter<R>(std::end(TheRange));
+  }
+  enumerator_iter<R> end() const {
     return enumerator_iter<R>(std::end(TheRange));
   }
 
