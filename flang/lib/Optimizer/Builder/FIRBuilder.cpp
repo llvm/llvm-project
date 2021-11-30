@@ -594,23 +594,3 @@ fir::factory::createExtents(fir::FirOpBuilder &builder, mlir::Location loc,
             : builder.createIntegerConstant(loc, idxTy, ext));
   return extents;
 }
-
-/// Can the assignment of this record type be implement with a simple memory
-/// copy ?
-static bool recordTypeCanBeMemCopied(fir::RecordType recordType) {
-  if (fir::hasDynamicSize(recordType))
-    return false;
-  for (auto [_, fieldType] : recordType.getTypeList()) {
-    // Derived type component may have user assignment (so far, we cannot tell
-    // in FIR, so assume it is always the case, TODO: get the actual info).
-    if (fir::unwrapSequenceType(fieldType).isa<fir::RecordType>())
-      return false;
-    // Allocatable components need deep copy.
-    if (auto boxType = fieldType.dyn_cast<fir::BoxType>())
-      if (boxType.getEleTy().isa<fir::HeapType>())
-        return false;
-  }
-  // Constant size components without user defined assignment and pointers can
-  // be memcopied.
-  return true;
-}
