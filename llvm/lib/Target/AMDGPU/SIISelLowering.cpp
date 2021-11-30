@@ -924,6 +924,16 @@ bool SITargetLowering::isFPExtFoldable(const SelectionDAG &DAG, unsigned Opcode,
     !hasFP32Denormals(DAG.getMachineFunction());
 }
 
+bool SITargetLowering::isFPExtFoldable(const MachineInstr &MI, unsigned Opcode,
+                                       LLT DestTy, LLT SrcTy) const {
+  return ((Opcode == TargetOpcode::G_FMAD && Subtarget->hasMadMixInsts()) ||
+          (Opcode == TargetOpcode::G_FMA && Subtarget->hasFmaMixInsts())) &&
+         DestTy.getScalarSizeInBits() == 32 &&
+         SrcTy.getScalarSizeInBits() == 16 &&
+         // TODO: This probably only requires no input flushing?
+         !hasFP32Denormals(*MI.getMF());
+}
+
 bool SITargetLowering::isShuffleMaskLegal(ArrayRef<int>, EVT) const {
   // SI has some legal vector types, but no legal vector operations. Say no
   // shuffles are legal in order to prefer scalarizing some vector operations.
