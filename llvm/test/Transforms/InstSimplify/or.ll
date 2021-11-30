@@ -58,13 +58,23 @@ define i32 @test6(i32 %A) {
 }
 
 ; A | ~A == -1
-define i32 @test7(i32 %A) {
-; CHECK-LABEL: @test7(
+
+define i32 @or_not(i32 %A) {
+; CHECK-LABEL: @or_not(
 ; CHECK-NEXT:    ret i32 -1
 ;
   %NotA = xor i32 %A, -1
   %B = or i32 %A, %NotA
   ret i32 %B
+}
+
+define <2 x i4> @or_not_commute_vec_undef(<2 x i4> %A) {
+; CHECK-LABEL: @or_not_commute_vec_undef(
+; CHECK-NEXT:    ret <2 x i4> <i4 -1, i4 -1>
+;
+  %NotA = xor <2 x i4> %A, <i4 -1, i4 undef>
+  %B = or <2 x i4> %NotA, %A
+  ret <2 x i4> %B
 }
 
 define i8 @test8(i8 %A) {
@@ -242,6 +252,44 @@ define <2 x i399> @test8_apint(<2 x i399> %V, <2 x i399> %M) {
   %D = and <2 x i399> %V, <i399 274877906943, i399 274877906943>
   %R = or <2 x i399> %D, %B
   ret <2 x i399> %R
+}
+
+; (A & B) | A = A
+
+define i8 @or_and_common_op_commute0(i8 %a, i8 %b) {
+; CHECK-LABEL: @or_and_common_op_commute0(
+; CHECK-NEXT:    ret i8 [[A:%.*]]
+;
+  %and = and i8 %a, %b
+  %or = or i8 %and, %a
+  ret i8 %or
+}
+
+define <2 x i8> @or_and_common_op_commute1(<2 x i8> %a, <2 x i8> %b) {
+; CHECK-LABEL: @or_and_common_op_commute1(
+; CHECK-NEXT:    ret <2 x i8> [[A:%.*]]
+;
+  %and = and <2 x i8> %b, %a
+  %or = or <2 x i8> %and, %a
+  ret <2 x i8> %or
+}
+
+define i8 @or_and_common_op_commute2(i8 %a, i8 %b) {
+; CHECK-LABEL: @or_and_common_op_commute2(
+; CHECK-NEXT:    ret i8 [[A:%.*]]
+;
+  %and = and i8 %a, %b
+  %or = or i8 %a, %and
+  ret i8 %or
+}
+
+define <2 x i8> @or_and_common_op_commute3(<2 x i8> %a, <2 x i8> %b) {
+; CHECK-LABEL: @or_and_common_op_commute3(
+; CHECK-NEXT:    ret <2 x i8> [[A:%.*]]
+;
+  %and = and <2 x i8> %b, %a
+  %or = or <2 x i8> %a, %and
+  ret <2 x i8> %or
 }
 
 ; A | ~(A & B) = -1
