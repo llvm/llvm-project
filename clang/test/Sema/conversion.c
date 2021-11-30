@@ -294,7 +294,7 @@ void test13(long double v) {
 }
 
 void test14(long l) {
-  // Fine because of the boolean whitelist.
+  // Fine because of the boolean allowlist.
   char c;
   c = (l == 4);
   c = ((l <= 4) && (l >= 0));

@@ -114,7 +114,7 @@ TEST_F(SanitizerArgsTest, Ignorelists) {
 }
 
 TEST_F(SanitizerArgsTest, XRayLists) {
-  const std::string XRayWhitelist = "/source/xray_whitelist.txt";
+  const std::string XRayAllowlist = "/source/xray_allowlist.txt";
   const std::string XRayIgnorelist = "/source/xray_ignorelist.txt";
   const std::string XRayAttrList = "/source/xray_attr_list.txt";
 
@@ -122,16 +122,16 @@ TEST_F(SanitizerArgsTest, XRayLists) {
       /*ExtraArgs=*/
       {
           "-fxray-instrument",
-          "-fxray-always-instrument=" + XRayWhitelist,
+          "-fxray-always-instrument=" + XRayAllowlist,
           "-fxray-never-instrument=" + XRayIgnorelist,
           "-fxray-attr-list=" + XRayAttrList,
       },
-      /*ExtraFiles=*/{XRayWhitelist, XRayIgnorelist, XRayAttrList});
+      /*ExtraFiles=*/{XRayAllowlist, XRayIgnorelist, XRayAttrList});
 
   // Ignorelists exist in the filesystem, so they should be added to the
   // compilation command, produced by the driver.
   EXPECT_THAT(Command.getArguments(),
-              Contains(StrEq("-fxray-always-instrument=" + XRayWhitelist)));
+              Contains(StrEq("-fxray-always-instrument=" + XRayAllowlist)));
   EXPECT_THAT(Command.getArguments(),
               Contains(StrEq("-fxray-never-instrument=" + XRayIgnorelist)));
   EXPECT_THAT(Command.getArguments(),
