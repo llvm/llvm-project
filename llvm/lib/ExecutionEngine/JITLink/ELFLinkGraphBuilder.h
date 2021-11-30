@@ -316,11 +316,6 @@ template <typename ELFT> Error ELFLinkGraphBuilder<ELFT>::graphifySections() {
     else
       Prot = MemProt::Read | MemProt::Write;
 
-    // For now we just use this to skip the "undefined" section, probably need
-    // to revist.
-    if (Sec.sh_size == 0)
-      continue;
-
     auto &GraphSec = G->createSection(*Name, Prot);
     if (Sec.sh_type != ELF::SHT_NOBITS) {
       auto Data = Obj.template getSectionContentsAsArray<char>(Sec);
