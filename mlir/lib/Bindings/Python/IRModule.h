@@ -244,8 +244,7 @@ class DefaultingPyMlirContext
     : public Defaulting<DefaultingPyMlirContext, PyMlirContext> {
 public:
   using Defaulting::Defaulting;
-  static constexpr const char kTypeDescription[] =
-      "[ThreadContextAware] mlir.ir.Context";
+  static constexpr const char kTypeDescription[] = "mlir.ir.Context";
   static PyMlirContext &resolve();
 };
 
@@ -339,8 +338,7 @@ class DefaultingPyLocation
     : public Defaulting<DefaultingPyLocation, PyLocation> {
 public:
   using Defaulting::Defaulting;
-  static constexpr const char kTypeDescription[] =
-      "[ThreadContextAware] mlir.ir.Location";
+  static constexpr const char kTypeDescription[] = "mlir.ir.Location";
   static PyLocation &resolve();
 
   operator MlirLocation() const { return *get(); }
@@ -678,10 +676,14 @@ public:
 
   static void bind(pybind11::module &m) {
     auto cls = ClassTy(m, DerivedTy::pyClassName, pybind11::module_local());
-    cls.def(pybind11::init<PyType &>(), pybind11::keep_alive<0, 1>());
-    cls.def_static("isinstance", [](PyType &otherType) -> bool {
-      return DerivedTy::isaFunction(otherType);
-    });
+    cls.def(pybind11::init<PyType &>(), pybind11::keep_alive<0, 1>(),
+            pybind11::arg("cast_from_type"));
+    cls.def_static(
+        "isinstance",
+        [](PyType &otherType) -> bool {
+          return DerivedTy::isaFunction(otherType);
+        },
+        pybind11::arg("other"));
     DerivedTy::bindDerived(cls);
   }
 
@@ -768,10 +770,14 @@ public:
   static void bind(pybind11::module &m) {
     auto cls = ClassTy(m, DerivedTy::pyClassName, pybind11::buffer_protocol(),
                        pybind11::module_local());
-    cls.def(pybind11::init<PyAttribute &>(), pybind11::keep_alive<0, 1>());
-    cls.def_static("isinstance", [](PyAttribute &otherAttr) -> bool {
-      return DerivedTy::isaFunction(otherAttr);
-    });
+    cls.def(pybind11::init<PyAttribute &>(), pybind11::keep_alive<0, 1>(),
+            pybind11::arg("cast_from_attr"));
+    cls.def_static(
+        "isinstance",
+        [](PyAttribute &otherAttr) -> bool {
+          return DerivedTy::isaFunction(otherAttr);
+        },
+        pybind11::arg("other"));
     cls.def_property_readonly("type", [](PyAttribute &attr) {
       return PyType(attr.getContext(), mlirAttributeGetType(attr));
     });

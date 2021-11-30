@@ -1631,10 +1631,13 @@ public:
   /// Binds the Python module objects to functions of this class.
   static void bind(py::module &m) {
     auto cls = ClassTy(m, DerivedTy::pyClassName, py::module_local());
-    cls.def(py::init<PyValue &>(), py::keep_alive<0, 1>());
-    cls.def_static("isinstance", [](PyValue &otherValue) -> bool {
-      return DerivedTy::isaFunction(otherValue);
-    });
+    cls.def(py::init<PyValue &>(), py::keep_alive<0, 1>(), py::arg("value"));
+    cls.def_static(
+        "isinstance",
+        [](PyValue &otherValue) -> bool {
+          return DerivedTy::isaFunction(otherValue);
+        },
+        py::arg("other_value"));
     DerivedTy::bindDerived(cls);
   }
 
@@ -1657,9 +1660,12 @@ public:
     c.def_property_readonly("arg_number", [](PyBlockArgument &self) {
       return mlirBlockArgumentGetArgNumber(self.get());
     });
-    c.def("set_type", [](PyBlockArgument &self, PyType type) {
-      return mlirBlockArgumentSetType(self.get(), type);
-    });
+    c.def(
+        "set_type",
+        [](PyBlockArgument &self, PyType type) {
+          return mlirBlockArgumentSetType(self.get(), type);
+        },
+        py::arg("type"));
   }
 };
 
@@ -1952,6 +1958,7 @@ void mlir::python::populateIRCore(py::module &m) {
             }
             return PyDialectDescriptor(self.getRef(), dialect);
           },
+          py::arg("dialect_name"),
           "Gets or loads a dialect by name, returning its descriptor object")
       .def_property(
           "allow_unregistered_dialects",
@@ -1961,15 +1968,19 @@ void mlir::python::populateIRCore(py::module &m) {
           [](PyMlirContext &self, bool value) {
             mlirContextSetAllowUnregisteredDialects(self.get(), value);
           })
-      .def("enable_multithreading",
-           [](PyMlirContext &self, bool enable) {
-             mlirContextEnableMultithreading(self.get(), enable);
-           })
-      .def("is_registered_operation",
-           [](PyMlirContext &self, std::string &name) {
-             return mlirContextIsRegisteredOperation(
-                 self.get(), MlirStringRef{name.data(), name.size()});
-           });
+      .def(
+          "enable_multithreading",
+          [](PyMlirContext &self, bool enable) {
+            mlirContextEnableMultithreading(self.get(), enable);
+          },
+          py::arg("enable"))
+      .def(
+          "is_registered_operation",
+          [](PyMlirContext &self, std::string &name) {
+            return mlirContextIsRegisteredOperation(
+                self.get(), MlirStringRef{name.data(), name.size()});
+          },
+          py::arg("operation_name"));
 
   //----------------------------------------------------------------------------
   // Mapping of PyDialectDescriptor
@@ -2013,7 +2024,7 @@ void mlir::python::populateIRCore(py::module &m) {
   // Mapping of PyDialect
   //----------------------------------------------------------------------------
   py::class_<PyDialect>(m, "Dialect", py::module_local())
-      .def(py::init<py::object>(), "descriptor")
+      .def(py::init<py::object>(), py::arg("descriptor"))
       .def_property_readonly(
           "descriptor", [](PyDialect &self) { return self.getDescriptor(); })
       .def("__repr__", [](py::object self) {
@@ -2332,7 +2343,7 @@ void mlir::python::populateIRCore(py::module &m) {
 
   auto opViewClass =
       py::class_<PyOpView, PyOperationBase>(m, "OpView", py::module_local())
-          .def(py::init<py::object>())
+          .def(py::init<py::object>(), py::arg("operation"))
           .def_property_readonly("operation", &PyOpView::getOperationObject)
           .def_property_readonly(
               "context",
@@ -2426,7 +2437,7 @@ void mlir::python::populateIRCore(py::module &m) {
             mlirRegionInsertOwnedBlock(parent, 0, block);
             return PyBlock(parent.getParentOperation(), block);
           },
-          py::arg("parent"), py::arg("pyArgTypes") = py::list(),
+          py::arg("parent"), py::arg("arg_types") = py::list(),
           "Creates and returns a new Block at the beginning of the given "
           "region (with given argument types).")
       .def(
@@ -2499,6 +2510,7 @@ void mlir::python::populateIRCore(py::module &m) {
             operation.getOperation().setAttached(
                 self.getParentOperation().getObject());
           },
+          py::arg("operation"),
           "Appends an operation to this block. If the operation is currently "
           "in another block, it will be moved.");
 
@@ -2758,8 +2770,8 @@ void mlir::python::populateIRCore(py::module &m) {
   py::class_<PySymbolTable>(m, "SymbolTable", py::module_local())
       .def(py::init<PyOperationBase &>())
       .def("__getitem__", &PySymbolTable::dunderGetItem)
-      .def("insert", &PySymbolTable::insert)
-      .def("erase", &PySymbolTable::erase)
+      .def("insert", &PySymbolTable::insert, py::arg("operation"))
+      .def("erase", &PySymbolTable::erase, py::arg("operation"))
       .def("__delitem__", &PySymbolTable::dunderDel)
       .def("__contains__", [](PySymbolTable &table, const std::string &name) {
         return !mlirOperationIsNull(mlirSymbolTableLookup(

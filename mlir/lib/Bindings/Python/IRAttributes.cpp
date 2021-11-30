@@ -337,7 +337,7 @@ public:
               mlirStringAttrTypedGet(type, toMlirStringRef(value));
           return PyStringAttribute(type.getContext(), attr);
         },
-
+        py::arg("type"), py::arg("value"),
         "Gets a uniqued string attribute associated to a type");
     c.def_property_readonly(
         "value",
