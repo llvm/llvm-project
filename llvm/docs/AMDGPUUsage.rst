@@ -8677,7 +8677,7 @@ table :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx10-table`.
                                                          - !volatile & nontemporal
 
                                                            1. buffer/global/flat_store
-                                                              slc=1
+                                                              glc=1 slc=1
 
                                                          - volatile
 
