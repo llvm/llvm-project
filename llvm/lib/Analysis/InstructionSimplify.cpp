@@ -2180,6 +2180,25 @@ Value *llvm::SimplifyAndInst(Value *Op0, Value *Op1, const SimplifyQuery &Q) {
   return ::SimplifyAndInst(Op0, Op1, Q, RecursionLimit);
 }
 
+static Value *simplifyOrLogic(Value *X, Value *Y) {
+  assert(X->getType() == Y->getType() && "Expected same type for 'or' ops");
+  Type *Ty = X->getType();
+
+  // X | ~X --> -1
+  if (match(Y, m_Not(m_Specific(X))))
+    return ConstantInt::getAllOnesValue(Ty);
+
+  // X | ~(X & ?) = -1
+  if (match(Y, m_Not(m_c_And(m_Specific(X), m_Value()))))
+    return ConstantInt::getAllOnesValue(Ty);
+
+  // X | (X & ?) --> X
+  if (match(Y, m_c_And(m_Specific(X), m_Value())))
+    return X;
+
+  return nullptr;
+}
+
 /// Given operands for an Or, see if we can fold the result.
 /// If not, this returns null.
 static Value *SimplifyOrInst(Value *Op0, Value *Op1, const SimplifyQuery &Q,
@@ -2202,26 +2221,10 @@ static Value *SimplifyOrInst(Value *Op0, Value *Op1, const SimplifyQuery &Q,
   if (Op0 == Op1 || match(Op1, m_Zero()))
     return Op0;
 
-  // A | ~A  =  ~A | A  =  -1
-  if (match(Op0, m_Not(m_Specific(Op1))) ||
-      match(Op1, m_Not(m_Specific(Op0))))
-    return Constant::getAllOnesValue(Op0->getType());
-
-  // (A & ?) | A = A
-  if (match(Op0, m_c_And(m_Specific(Op1), m_Value())))
-    return Op1;
-
-  // A | (A & ?) = A
-  if (match(Op1, m_c_And(m_Specific(Op0), m_Value())))
-    return Op0;
-
-  // ~(A & ?) | A = -1
-  if (match(Op0, m_Not(m_c_And(m_Specific(Op1), m_Value()))))
-    return Constant::getAllOnesValue(Op1->getType());
-
-  // A | ~(A & ?) = -1
-  if (match(Op1, m_Not(m_c_And(m_Specific(Op0), m_Value()))))
-    return Constant::getAllOnesValue(Op0->getType());
+  if (Value *R = simplifyOrLogic(Op0, Op1))
+    return R;
+  if (Value *R = simplifyOrLogic(Op1, Op0))
+    return R;
 
   if (Value *V = simplifyLogicOfAddSub(Op0, Op1, Instruction::Or))
     return V;
