@@ -155,14 +155,24 @@ bool DataInitializationCompiler::Scan(const parser::DataImpliedDo &ido) {
   const auto *stepExpr{
       bounds.step ? GetExpr(bounds.step->thing.thing) : nullptr};
   if (lowerExpr && upperExpr) {
-    auto lower{ToInt64(*lowerExpr)};
-    auto upper{ToInt64(*upperExpr)};
-    auto step{stepExpr ? ToInt64(*stepExpr) : std::nullopt};
-    auto stepVal{step.value_or(1)};
-    if (stepVal == 0) {
-      exprAnalyzer_.Say(name.source,
-          "DATA statement implied DO loop has a step value of zero"_err_en_US);
-    } else if (lower && upper) {
+    // Fold the bounds expressions (again) in case any of them depend
+    // on outer implied DO loops.
+    evaluate::FoldingContext &context{exprAnalyzer_.GetFoldingContext()};
+    std::int64_t stepVal{1};
+    if (stepExpr) {
+      auto foldedStep{evaluate::Fold(context, SomeExpr{*stepExpr})};
+      stepVal = ToInt64(foldedStep).value_or(1);
+      if (stepVal == 0) {
+        exprAnalyzer_.Say(name.source,
+            "DATA statement implied DO loop has a step value of zero"_err_en_US);
+        return false;
+      }
+    }
+    auto foldedLower{evaluate::Fold(context, SomeExpr{*lowerExpr})};
+    auto lower{ToInt64(foldedLower)};
+    auto foldedUpper{evaluate::Fold(context, SomeExpr{*upperExpr})};
+    auto upper{ToInt64(foldedUpper)};
+    if (lower && upper) {
       int kind{evaluate::ResultType<evaluate::ImpliedDoIndex>::kind};
       if (const auto dynamicType{evaluate::DynamicType::From(*name.symbol)}) {
         if (dynamicType->category() == TypeCategory::Integer) {
@@ -170,8 +180,7 @@ bool DataInitializationCompiler::Scan(const parser::DataImpliedDo &ido) {
         }
       }
       if (exprAnalyzer_.AddImpliedDo(name.source, kind)) {
-        auto &value{exprAnalyzer_.GetFoldingContext().StartImpliedDo(
-            name.source, *lower)};
+        auto &value{context.StartImpliedDo(name.source, *lower)};
         bool result{true};
         for (auto n{(*upper - value + stepVal) / stepVal}; n > 0;
              --n, value += stepVal) {
@@ -183,7 +192,7 @@ bool DataInitializationCompiler::Scan(const parser::DataImpliedDo &ido) {
             }
           }
         }
-        exprAnalyzer_.GetFoldingContext().EndImpliedDo(name.source);
+        context.EndImpliedDo(name.source);
         exprAnalyzer_.RemoveImpliedDo(name.source);
         return result;
       }
