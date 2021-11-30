@@ -899,7 +899,6 @@ bool llvm::computeUnrollCount(
     TargetTransformInfo::PeelingPreferences &PP, bool &UseUpperBound) {
 
   UnrollCostEstimator UCE(*L, LoopSize);
-  Optional<unsigned> UnrollFactor;
 
   const bool UserUnrollCount = UnrollCount.getNumOccurrences() > 0;
   const bool PragmaFullUnroll = hasUnrollFullPragma(L);
@@ -925,9 +924,8 @@ bool llvm::computeUnrollCount(
   // Check for explicit Count.
   // 1st priority is unroll count set by "unroll-count" option.
   // 2nd priority is unroll count set by pragma.
-  UnrollFactor = shouldPragmaUnroll(L, PInfo, TripMultiple, TripCount, UCE, UP);
-
-  if (UnrollFactor) {
+  if (auto UnrollFactor = shouldPragmaUnroll(L, PInfo, TripMultiple, TripCount,
+                                             UCE, UP)) {
     UP.Count = *UnrollFactor;
 
     if (UserUnrollCount || (PragmaCount > 0)) {
@@ -952,9 +950,8 @@ bool llvm::computeUnrollCount(
   UP.Count = 0;
   if (TripCount) {
     UP.Count = TripCount;
-    UnrollFactor =
-      shouldFullUnroll(L, TTI, DT, SE, EphValues, TripCount, UCE, UP);
-    if (UnrollFactor) {
+    if (auto UnrollFactor = shouldFullUnroll(L, TTI, DT, SE, EphValues,
+                                             TripCount, UCE, UP)) {
       UP.Count = *UnrollFactor;
       UseUpperBound = false;
       return ExplicitUnroll;
@@ -976,9 +973,8 @@ bool llvm::computeUnrollCount(
   if (!TripCount && MaxTripCount && (UP.UpperBound || MaxOrZero) &&
       MaxTripCount <= UnrollMaxUpperBound) {
     UP.Count = MaxTripCount;
-    UnrollFactor =
-      shouldFullUnroll(L, TTI, DT, SE, EphValues, MaxTripCount, UCE, UP);
-    if (UnrollFactor) {
+    if (auto UnrollFactor = shouldFullUnroll(L, TTI, DT, SE, EphValues,
+                                             MaxTripCount, UCE, UP)) {
       UP.Count = *UnrollFactor;
       UseUpperBound = true;
       return ExplicitUnroll;
@@ -1000,9 +996,7 @@ bool llvm::computeUnrollCount(
 
   // 6th priority is partial unrolling.
   // Try partial unroll only when TripCount could be statically calculated.
-  UnrollFactor = shouldPartialUnroll(LoopSize, TripCount, UCE, UP);
-
-  if (UnrollFactor) {
+  if (auto UnrollFactor = shouldPartialUnroll(LoopSize, TripCount, UCE, UP)) {
     UP.Count = *UnrollFactor;
 
     if ((PragmaFullUnroll || PragmaEnableUnroll) && TripCount &&
