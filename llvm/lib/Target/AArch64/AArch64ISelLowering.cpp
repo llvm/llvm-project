@@ -18496,15 +18496,6 @@ bool AArch64TargetLowering::preferIncOfAddToSubOfNot(EVT VT) const {
   return VT.isScalarInteger();
 }
 
-bool AArch64TargetLowering::shouldConvertFpToSat(unsigned Op, EVT FPVT,
-                                                 EVT VT) const {
-  // v8f16 without fp16 need to be extended to v8f32, which is more difficult to
-  // legalize.
-  if (FPVT == MVT::v8f16 && !Subtarget->hasFullFP16())
-    return false;
-  return TargetLowering::shouldConvertFpToSat(Op, FPVT, VT);
-}
-
 bool AArch64TargetLowering::enableAggressiveFMAFusion(EVT VT) const {
   return Subtarget->hasAggressiveFMA() && VT.isFloatingPoint();
 }

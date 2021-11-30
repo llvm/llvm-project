@@ -9860,23 +9860,6 @@ bool RISCVTargetLowering::shouldRemoveExtendFromGSIndex(EVT VT) const {
   return false;
 }
 
-bool RISCVTargetLowering::shouldConvertFpToSat(unsigned Op, EVT FPVT,
-                                               EVT VT) const {
-  if (!isOperationLegalOrCustom(Op, VT) || !FPVT.isSimple())
-    return false;
-
-  switch (FPVT.getSimpleVT().SimpleTy) {
-  case MVT::f16:
-    return Subtarget.hasStdExtZfh();
-  case MVT::f32:
-    return Subtarget.hasStdExtF();
-  case MVT::f64:
-    return Subtarget.hasStdExtD();
-  default:
-    return false;
-  }
-}
-
 bool RISCVTargetLowering::isFMAFasterThanFMulAndFAdd(const MachineFunction &MF,
                                                      EVT VT) const {
   VT = VT.getScalarType();
