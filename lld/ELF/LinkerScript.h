@@ -293,8 +293,6 @@ class LinkerScript final {
   findMemoryRegion(OutputSection *sec, MemoryRegion *hint);
 
   void switchTo(OutputSection *sec);
-  uint64_t advance(uint64_t size, unsigned align);
-  void output(InputSection *sec);
 
   void assignOffsets(OutputSection *sec);
 

@@ -900,35 +900,19 @@ void LinkerScript::diagnoseOrphanHandling() const {
   }
 }
 
-uint64_t LinkerScript::advance(uint64_t size, unsigned alignment) {
-  dot = alignTo(dot, alignment) + size;
-  return dot;
-}
-
-void LinkerScript::output(InputSection *s) {
-  assert(ctx->outSec == s->getParent());
-  uint64_t before = advance(0, 1);
-  uint64_t pos = advance(s->getSize(), s->alignment);
-  s->outSecOff = pos - s->getSize() - ctx->outSec->addr;
-
-  // Update output section size after adding each section. This is so that
-  // SIZEOF works correctly in the case below:
-  // .foo { *(.aaa) a = SIZEOF(.foo); *(.bbb) }
-  expandOutputSection(pos - before);
-}
-
 void LinkerScript::switchTo(OutputSection *sec) {
   ctx->outSec = sec;
 
-  uint64_t pos = advance(0, 1);
+  const uint64_t pos = dot;
   if (sec->addrExpr && script->hasSectionsCommand) {
     // The alignment is ignored.
     ctx->outSec->addr = pos;
   } else {
     // ctx->outSec->alignment is the max of ALIGN and the maximum of input
     // section alignments.
-    ctx->outSec->addr = advance(0, ctx->outSec->alignment);
-    expandMemoryRegions(ctx->outSec->addr - pos);
+    dot = alignTo(dot, ctx->outSec->alignment);
+    ctx->outSec->addr = dot;
+    expandMemoryRegions(dot - pos);
   }
 }
 
@@ -1071,8 +1055,18 @@ void LinkerScript::assignOffsets(OutputSection *sec) {
     // Handle a single input section description command.
     // It calculates and assigns the offsets for each section and also
     // updates the output section size.
-    for (InputSection *sec : cast<InputSectionDescription>(cmd)->sections)
-      output(sec);
+    for (InputSection *isec : cast<InputSectionDescription>(cmd)->sections) {
+      assert(ctx->outSec == isec->getParent());
+      const uint64_t pos = dot;
+      dot = alignTo(dot, isec->alignment);
+      isec->outSecOff = dot - ctx->outSec->addr;
+      dot += isec->getSize();
+
+      // Update output section size after adding each section. This is so that
+      // SIZEOF works correctly in the case below:
+      // .foo { *(.aaa) a = SIZEOF(.foo); *(.bbb) }
+      expandOutputSection(dot - pos);
+    }
   }
 
   // Non-SHF_ALLOC sections do not affect the addresses of other OutputSections
