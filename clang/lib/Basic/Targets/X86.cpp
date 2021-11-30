@@ -382,12 +382,10 @@ bool X86TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
   SimdDefaultAlign =
       hasFeature("avx512f") ? 512 : hasFeature("avx") ? 256 : 128;
 
-  if (!HasX87) {
-    if (LongDoubleFormat == &llvm::APFloat::x87DoubleExtended())
-      HasLongDouble = false;
-    if (getTriple().getArch() == llvm::Triple::x86)
-      HasFPReturn = false;
-  }
+  // FIXME: We should allow long double type on 32-bits to match with GCC.
+  // This requires backend to be able to lower f80 without x87 first.
+  if (!HasX87 && LongDoubleFormat == &llvm::APFloat::x87DoubleExtended())
+    HasLongDouble = false;
 
   return true;
 }

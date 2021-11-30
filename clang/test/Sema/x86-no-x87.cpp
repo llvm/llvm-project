@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -verify %s -triple i686-linux-gnu -target-feature -x87 -DRET_ERROR
+// RUN: %clang_cc1 -fsyntax-only -verify %s -triple i686-linux-gnu -target-feature -x87
 // RUN: %clang_cc1 -fsyntax-only -verify %s -triple i686-linux-gnu -DNOERROR
 
 #ifdef NOERROR
@@ -123,42 +123,22 @@ void assign5() {
   long_double ld = 0.42;
 }
 
-#ifndef NOERROR
-// expected-note@+3{{'d_ret1' defined here}}
-// expected-error@+2{{'d_ret1' requires  'double' return type support, but target 'i686-unknown-linux-gnu' does not support it}}
-#endif
 double d_ret1(float x) {
   return 0.0;
 }
 
-#ifndef NOERROR
-// expected-note@+2{{'d_ret2' defined here}}
-#endif
 double d_ret2(float x);
 
 int d_ret3(float x) {
-#ifndef NOERROR
-  // expected-error@+2{{'d_ret2' requires  'double' return type support, but target 'i686-unknown-linux-gnu' does not support it}}
-#endif
   return (int)d_ret2(x);
 }
 
-#ifndef NOERROR
-// expected-note@+3{{'f_ret1' defined here}}
-// expected-error@+2{{'f_ret1' requires  'float' return type support, but target 'i686-unknown-linux-gnu' does not support it}}
-#endif
 float f_ret1(float x) {
   return 0.0f;
 }
 
-#ifndef NOERROR
-// expected-note@+2{{'f_ret2' defined here}}
-#endif
 float f_ret2(float x);
 
 int f_ret3(float x) {
-#ifndef NOERROR
-  // expected-error@+2{{'f_ret2' requires  'float' return type support, but target 'i686-unknown-linux-gnu' does not support it}}
-#endif
   return (int)f_ret2(x);
 }
