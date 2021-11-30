@@ -600,9 +600,11 @@ typedef struct {
 // C++ for OpenCL - __remove_address_space
 #if defined(__OPENCL_CPP_VERSION__)
 template <typename _Tp> struct __remove_address_space { using type = _Tp; };
+#if defined(__opencl_c_generic_address_space)
 template <typename _Tp> struct __remove_address_space<__generic _Tp> {
   using type = _Tp;
 };
+#endif
 template <typename _Tp> struct __remove_address_space<__global _Tp> {
   using type = _Tp;
 };
