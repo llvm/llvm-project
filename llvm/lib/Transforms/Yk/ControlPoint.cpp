@@ -118,7 +118,7 @@ void createJITStatePrint(IRBuilder<> &Builder, Module *Mod, std::string Str) {
       FunctionType::get(Type::getVoidTy(Context),
                         PointerType::get(Type::getInt8Ty(Context), 0), true));
   Value *PutsString =
-      Builder.CreateGlobalStringPtr(StringRef(JIT_STATE_PREFIX + Str + "\n"));
+      Builder.CreateGlobalStringPtr(StringRef(JIT_STATE_PREFIX + Str));
   Builder.CreateCall(Puts, PutsString);
 }
 
