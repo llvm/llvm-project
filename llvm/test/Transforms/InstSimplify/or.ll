@@ -594,3 +594,213 @@ define i32 @shifted_all_ones_not_same_amt(i32 %shamt, i32 %other) {
   %o = or i32 %r, %l
   ret i32 %o
 }
+
+define i4 @or_nxor_and_commute0(i4 %a, i4 %b) {
+; CHECK-LABEL: @or_nxor_and_commute0(
+; CHECK-NEXT:    [[AND:%.*]] = and i4 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[XOR:%.*]] = xor i4 [[A]], [[B]]
+; CHECK-NEXT:    [[NOT:%.*]] = xor i4 [[XOR]], -1
+; CHECK-NEXT:    [[R:%.*]] = or i4 [[AND]], [[NOT]]
+; CHECK-NEXT:    ret i4 [[R]]
+;
+  %and = and i4 %a, %b
+  %xor = xor i4 %a, %b
+  %not = xor i4 %xor, -1
+  %r = or i4 %and, %not
+  ret i4 %r
+}
+
+define <2 x i4> @or_nxor_and_commute1(<2 x i4> %a, <2 x i4> %b) {
+; CHECK-LABEL: @or_nxor_and_commute1(
+; CHECK-NEXT:    [[AND:%.*]] = and <2 x i4> [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[XOR:%.*]] = xor <2 x i4> [[A]], [[B]]
+; CHECK-NEXT:    [[NOT:%.*]] = xor <2 x i4> [[XOR]], <i4 -1, i4 -1>
+; CHECK-NEXT:    [[R:%.*]] = or <2 x i4> [[NOT]], [[AND]]
+; CHECK-NEXT:    ret <2 x i4> [[R]]
+;
+  %and = and <2 x i4> %a, %b
+  %xor = xor <2 x i4> %a, %b
+  %not = xor <2 x i4> %xor, <i4 -1, i4 -1>
+  %r = or <2 x i4> %not, %and
+  ret <2 x i4> %r
+}
+
+define i74 @or_nxor_and_commute2(i74 %a, i74 %b) {
+; CHECK-LABEL: @or_nxor_and_commute2(
+; CHECK-NEXT:    [[AND:%.*]] = and i74 [[B:%.*]], [[A:%.*]]
+; CHECK-NEXT:    [[XOR:%.*]] = xor i74 [[A]], [[B]]
+; CHECK-NEXT:    [[NOT:%.*]] = xor i74 [[XOR]], -1
+; CHECK-NEXT:    [[R:%.*]] = or i74 [[AND]], [[NOT]]
+; CHECK-NEXT:    ret i74 [[R]]
+;
+  %and = and i74 %b, %a
+  %xor = xor i74 %a, %b
+  %not = xor i74 %xor, -1
+  %r = or i74 %and, %not
+  ret i74 %r
+}
+
+define <2 x i4> @or_nxor_and_commute3(<2 x i4> %a, <2 x i4> %b) {
+; CHECK-LABEL: @or_nxor_and_commute3(
+; CHECK-NEXT:    [[AND:%.*]] = and <2 x i4> [[B:%.*]], [[A:%.*]]
+; CHECK-NEXT:    [[XOR:%.*]] = xor <2 x i4> [[A]], [[B]]
+; CHECK-NEXT:    [[NOT:%.*]] = xor <2 x i4> [[XOR]], <i4 -1, i4 -1>
+; CHECK-NEXT:    [[R:%.*]] = or <2 x i4> [[NOT]], [[AND]]
+; CHECK-NEXT:    ret <2 x i4> [[R]]
+;
+  %and = and <2 x i4> %b, %a
+  %xor = xor <2 x i4> %a, %b
+  %not = xor <2 x i4> %xor, <i4 -1, i4 -1>
+  %r = or <2 x i4> %not, %and
+  ret <2 x i4> %r
+}
+
+define i4 @or_nxor_and_wrong_val1(i4 %a, i4 %b, i4 %c) {
+; CHECK-LABEL: @or_nxor_and_wrong_val1(
+; CHECK-NEXT:    [[AND:%.*]] = and i4 [[A:%.*]], [[C:%.*]]
+; CHECK-NEXT:    [[XOR:%.*]] = xor i4 [[A]], [[B:%.*]]
+; CHECK-NEXT:    [[NOT:%.*]] = xor i4 [[XOR]], -1
+; CHECK-NEXT:    [[R:%.*]] = or i4 [[AND]], [[NOT]]
+; CHECK-NEXT:    ret i4 [[R]]
+;
+  %and = and i4 %a, %c
+  %xor = xor i4 %a, %b
+  %not = xor i4 %xor, -1
+  %r = or i4 %and, %not
+  ret i4 %r
+}
+
+define i4 @or_nxor_and_wrong_val2(i4 %a, i4 %b, i4 %c) {
+; CHECK-LABEL: @or_nxor_and_wrong_val2(
+; CHECK-NEXT:    [[AND:%.*]] = and i4 [[C:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[XOR:%.*]] = xor i4 [[A:%.*]], [[B]]
+; CHECK-NEXT:    [[NOT:%.*]] = xor i4 [[XOR]], -1
+; CHECK-NEXT:    [[R:%.*]] = or i4 [[AND]], [[NOT]]
+; CHECK-NEXT:    ret i4 [[R]]
+;
+  %and = and i4 %c, %b
+  %xor = xor i4 %a, %b
+  %not = xor i4 %xor, -1
+  %r = or i4 %and, %not
+  ret i4 %r
+}
+
+define <2 x i4> @or_nxor_and_undef_elt(<2 x i4> %a, <2 x i4> %b) {
+; CHECK-LABEL: @or_nxor_and_undef_elt(
+; CHECK-NEXT:    [[AND:%.*]] = and <2 x i4> [[B:%.*]], [[A:%.*]]
+; CHECK-NEXT:    [[XOR:%.*]] = xor <2 x i4> [[A]], [[B]]
+; CHECK-NEXT:    [[NOT:%.*]] = xor <2 x i4> [[XOR]], <i4 -1, i4 undef>
+; CHECK-NEXT:    [[R:%.*]] = or <2 x i4> [[NOT]], [[AND]]
+; CHECK-NEXT:    ret <2 x i4> [[R]]
+;
+  %and = and <2 x i4> %b, %a
+  %xor = xor <2 x i4> %a, %b
+  %not = xor <2 x i4> %xor, <i4 -1, i4 undef>
+  %r = or <2 x i4> %not, %and
+  ret <2 x i4> %r
+}
+
+define i4 @or_nxor_or_commute0(i4 %a, i4 %b) {
+; CHECK-LABEL: @or_nxor_or_commute0(
+; CHECK-NEXT:    [[OR:%.*]] = or i4 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[XOR:%.*]] = xor i4 [[A]], [[B]]
+; CHECK-NEXT:    [[NOT:%.*]] = xor i4 [[XOR]], -1
+; CHECK-NEXT:    [[R:%.*]] = or i4 [[NOT]], [[OR]]
+; CHECK-NEXT:    ret i4 [[R]]
+;
+  %or = or i4 %a, %b
+  %xor = xor i4 %a, %b
+  %not = xor i4 %xor, -1
+  %r = or i4 %not, %or
+  ret i4 %r
+}
+
+define <2 x i4> @or_nxor_or_commute1(<2 x i4> %a, <2 x i4> %b) {
+; CHECK-LABEL: @or_nxor_or_commute1(
+; CHECK-NEXT:    [[OR:%.*]] = or <2 x i4> [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[XOR:%.*]] = xor <2 x i4> [[A]], [[B]]
+; CHECK-NEXT:    [[NOT:%.*]] = xor <2 x i4> [[XOR]], <i4 -1, i4 -1>
+; CHECK-NEXT:    [[R:%.*]] = or <2 x i4> [[OR]], [[NOT]]
+; CHECK-NEXT:    ret <2 x i4> [[R]]
+;
+  %or = or <2 x i4> %a, %b
+  %xor = xor <2 x i4> %a, %b
+  %not = xor <2 x i4> %xor, <i4 -1, i4 -1>
+  %r = or <2 x i4> %or, %not
+  ret <2 x i4> %r
+}
+
+define i74 @or_nxor_or_commute2(i74 %a, i74 %b) {
+; CHECK-LABEL: @or_nxor_or_commute2(
+; CHECK-NEXT:    [[OR:%.*]] = or i74 [[B:%.*]], [[A:%.*]]
+; CHECK-NEXT:    [[XOR:%.*]] = xor i74 [[A]], [[B]]
+; CHECK-NEXT:    [[NOT:%.*]] = xor i74 [[XOR]], -1
+; CHECK-NEXT:    [[R:%.*]] = or i74 [[NOT]], [[OR]]
+; CHECK-NEXT:    ret i74 [[R]]
+;
+  %or = or i74 %b, %a
+  %xor = xor i74 %a, %b
+  %not = xor i74 %xor, -1
+  %r = or i74 %not, %or
+  ret i74 %r
+}
+
+define <2 x i4> @or_nxor_or_commute3(<2 x i4> %a, <2 x i4> %b) {
+; CHECK-LABEL: @or_nxor_or_commute3(
+; CHECK-NEXT:    [[OR:%.*]] = or <2 x i4> [[B:%.*]], [[A:%.*]]
+; CHECK-NEXT:    [[XOR:%.*]] = xor <2 x i4> [[A]], [[B]]
+; CHECK-NEXT:    [[NOT:%.*]] = xor <2 x i4> [[XOR]], <i4 -1, i4 -1>
+; CHECK-NEXT:    [[R:%.*]] = or <2 x i4> [[OR]], [[NOT]]
+; CHECK-NEXT:    ret <2 x i4> [[R]]
+;
+  %or = or <2 x i4> %b, %a
+  %xor = xor <2 x i4> %a, %b
+  %not = xor <2 x i4> %xor, <i4 -1, i4 -1>
+  %r = or <2 x i4> %or, %not
+  ret <2 x i4> %r
+}
+
+define i4 @or_nxor_or_wrong_val1(i4 %a, i4 %b, i4 %c) {
+; CHECK-LABEL: @or_nxor_or_wrong_val1(
+; CHECK-NEXT:    [[OR:%.*]] = or i4 [[A:%.*]], [[C:%.*]]
+; CHECK-NEXT:    [[XOR:%.*]] = xor i4 [[A]], [[B:%.*]]
+; CHECK-NEXT:    [[NOT:%.*]] = xor i4 [[XOR]], -1
+; CHECK-NEXT:    [[R:%.*]] = or i4 [[NOT]], [[OR]]
+; CHECK-NEXT:    ret i4 [[R]]
+;
+  %or = or i4 %a, %c
+  %xor = xor i4 %a, %b
+  %not = xor i4 %xor, -1
+  %r = or i4 %not, %or
+  ret i4 %r
+}
+
+define i4 @or_nxor_or_wrong_val2(i4 %a, i4 %b, i4 %c) {
+; CHECK-LABEL: @or_nxor_or_wrong_val2(
+; CHECK-NEXT:    [[OR:%.*]] = or i4 [[C:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[XOR:%.*]] = xor i4 [[A:%.*]], [[B]]
+; CHECK-NEXT:    [[NOT:%.*]] = xor i4 [[XOR]], -1
+; CHECK-NEXT:    [[R:%.*]] = or i4 [[NOT]], [[OR]]
+; CHECK-NEXT:    ret i4 [[R]]
+;
+  %or = or i4 %c, %b
+  %xor = xor i4 %a, %b
+  %not = xor i4 %xor, -1
+  %r = or i4 %not, %or
+  ret i4 %r
+}
+
+define <2 x i4> @or_nxor_or_undef_elt(<2 x i4> %a, <2 x i4> %b) {
+; CHECK-LABEL: @or_nxor_or_undef_elt(
+; CHECK-NEXT:    [[OR:%.*]] = or <2 x i4> [[B:%.*]], [[A:%.*]]
+; CHECK-NEXT:    [[XOR:%.*]] = xor <2 x i4> [[A]], [[B]]
+; CHECK-NEXT:    [[NOT:%.*]] = xor <2 x i4> [[XOR]], <i4 -1, i4 undef>
+; CHECK-NEXT:    [[R:%.*]] = or <2 x i4> [[OR]], [[NOT]]
+; CHECK-NEXT:    ret <2 x i4> [[R]]
+;
+  %or = or <2 x i4> %b, %a
+  %xor = xor <2 x i4> %a, %b
+  %not = xor <2 x i4> %xor, <i4 -1, i4 undef>
+  %r = or <2 x i4> %or, %not
+  ret <2 x i4> %r
+}
