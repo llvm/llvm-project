@@ -8,7 +8,6 @@ add_flang_library(FIRBuilder
   FIRBuilder.cpp
   MutableBox.cpp
   Runtime/Assign.cpp
-  Runtime/Reduction.cpp
   Runtime/Transformational.cpp
 
   DEPENDS
