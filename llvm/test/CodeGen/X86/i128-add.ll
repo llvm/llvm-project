@@ -20,8 +20,8 @@ define i128 @add_i128(i128 %x, i128 %y) nounwind {
 ; X86-NEXT:    adcl $0, %edi
 ; X86-NEXT:    adcl $0, %edx
 ; X86-NEXT:    adcl $0, %ecx
-; X86-NEXT:    movl %esi, (%eax)
 ; X86-NEXT:    movl %edi, 4(%eax)
+; X86-NEXT:    movl %esi, (%eax)
 ; X86-NEXT:    movl %edx, 8(%eax)
 ; X86-NEXT:    movl %ecx, 12(%eax)
 ; X86-NEXT:    popl %esi
@@ -61,8 +61,8 @@ define <1 x i128> @add_v1i128(<1 x i128> %x, <1 x i128> %y) nounwind {
 ; X86-NEXT:    adcl $0, %edi
 ; X86-NEXT:    adcl $0, %edx
 ; X86-NEXT:    adcl $0, %ecx
-; X86-NEXT:    movl %esi, (%eax)
 ; X86-NEXT:    movl %edi, 4(%eax)
+; X86-NEXT:    movl %esi, (%eax)
 ; X86-NEXT:    movl %edx, 8(%eax)
 ; X86-NEXT:    movl %ecx, 12(%eax)
 ; X86-NEXT:    popl %esi

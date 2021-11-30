@@ -51,9 +51,9 @@ define i256 @add256(i256 %a, i256 %b) nounwind {
 ; CHECK-NEXT:    adcq {{[0-9]+}}(%rsp), %rdx
 ; CHECK-NEXT:    adcq {{[0-9]+}}(%rsp), %rcx
 ; CHECK-NEXT:    adcq {{[0-9]+}}(%rsp), %r8
+; CHECK-NEXT:    movq %rcx, 16(%rdi)
 ; CHECK-NEXT:    movq %rdx, 8(%rdi)
 ; CHECK-NEXT:    movq %rsi, (%rdi)
-; CHECK-NEXT:    movq %rcx, 16(%rdi)
 ; CHECK-NEXT:    movq %r8, 24(%rdi)
 ; CHECK-NEXT:    retq
 entry:

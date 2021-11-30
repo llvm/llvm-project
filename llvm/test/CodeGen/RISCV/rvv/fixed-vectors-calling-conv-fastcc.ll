@@ -101,56 +101,56 @@ define fastcc <64 x i32> @ret_split_v64i32(<64 x i32>* %x) {
 define fastcc <128 x i32> @ret_split_v128i32(<128 x i32>* %x) {
 ; LMULMAX8-LABEL: ret_split_v128i32:
 ; LMULMAX8:       # %bb.0:
-; LMULMAX8-NEXT:    li a2, 32
-; LMULMAX8-NEXT:    vsetvli zero, a2, e32, m8, ta, mu
-; LMULMAX8-NEXT:    vle32.v v8, (a1)
 ; LMULMAX8-NEXT:    addi a2, a1, 128
-; LMULMAX8-NEXT:    vle32.v v16, (a2)
-; LMULMAX8-NEXT:    addi a2, a1, 384
-; LMULMAX8-NEXT:    vle32.v v24, (a2)
-; LMULMAX8-NEXT:    addi a1, a1, 256
-; LMULMAX8-NEXT:    vle32.v v0, (a1)
+; LMULMAX8-NEXT:    li a3, 32
+; LMULMAX8-NEXT:    vsetvli zero, a3, e32, m8, ta, mu
+; LMULMAX8-NEXT:    vle32.v v8, (a2)
+; LMULMAX8-NEXT:    addi a2, a1, 256
+; LMULMAX8-NEXT:    vle32.v v16, (a1)
+; LMULMAX8-NEXT:    addi a1, a1, 384
+; LMULMAX8-NEXT:    vle32.v v24, (a1)
+; LMULMAX8-NEXT:    vle32.v v0, (a2)
+; LMULMAX8-NEXT:    vse32.v v16, (a0)
 ; LMULMAX8-NEXT:    addi a1, a0, 384
 ; LMULMAX8-NEXT:    vse32.v v24, (a1)
 ; LMULMAX8-NEXT:    addi a1, a0, 256
 ; LMULMAX8-NEXT:    vse32.v v0, (a1)
-; LMULMAX8-NEXT:    addi a1, a0, 128
-; LMULMAX8-NEXT:    vse32.v v16, (a1)
+; LMULMAX8-NEXT:    addi a0, a0, 128
 ; LMULMAX8-NEXT:    vse32.v v8, (a0)
 ; LMULMAX8-NEXT:    ret
 ;
 ; LMULMAX4-LABEL: ret_split_v128i32:
 ; LMULMAX4:       # %bb.0:
-; LMULMAX4-NEXT:    vsetivli zero, 16, e32, m4, ta, mu
-; LMULMAX4-NEXT:    vle32.v v8, (a1)
 ; LMULMAX4-NEXT:    addi a2, a1, 64
-; LMULMAX4-NEXT:    vle32.v v12, (a2)
+; LMULMAX4-NEXT:    vsetivli zero, 16, e32, m4, ta, mu
+; LMULMAX4-NEXT:    vle32.v v8, (a2)
 ; LMULMAX4-NEXT:    addi a2, a1, 128
-; LMULMAX4-NEXT:    vle32.v v16, (a2)
+; LMULMAX4-NEXT:    vle32.v v12, (a2)
 ; LMULMAX4-NEXT:    addi a2, a1, 192
-; LMULMAX4-NEXT:    vle32.v v20, (a2)
+; LMULMAX4-NEXT:    vle32.v v16, (a2)
 ; LMULMAX4-NEXT:    addi a2, a1, 256
-; LMULMAX4-NEXT:    vle32.v v24, (a2)
+; LMULMAX4-NEXT:    vle32.v v20, (a2)
 ; LMULMAX4-NEXT:    addi a2, a1, 320
-; LMULMAX4-NEXT:    vle32.v v28, (a2)
-; LMULMAX4-NEXT:    addi a2, a1, 448
-; LMULMAX4-NEXT:    vle32.v v0, (a2)
-; LMULMAX4-NEXT:    addi a1, a1, 384
-; LMULMAX4-NEXT:    vle32.v v4, (a1)
+; LMULMAX4-NEXT:    vle32.v v24, (a2)
+; LMULMAX4-NEXT:    addi a2, a1, 384
+; LMULMAX4-NEXT:    vle32.v v28, (a1)
+; LMULMAX4-NEXT:    addi a1, a1, 448
+; LMULMAX4-NEXT:    vle32.v v0, (a1)
+; LMULMAX4-NEXT:    vle32.v v4, (a2)
+; LMULMAX4-NEXT:    vse32.v v28, (a0)
 ; LMULMAX4-NEXT:    addi a1, a0, 448
 ; LMULMAX4-NEXT:    vse32.v v0, (a1)
 ; LMULMAX4-NEXT:    addi a1, a0, 384
 ; LMULMAX4-NEXT:    vse32.v v4, (a1)
 ; LMULMAX4-NEXT:    addi a1, a0, 320
-; LMULMAX4-NEXT:    vse32.v v28, (a1)
-; LMULMAX4-NEXT:    addi a1, a0, 256
 ; LMULMAX4-NEXT:    vse32.v v24, (a1)
-; LMULMAX4-NEXT:    addi a1, a0, 192
+; LMULMAX4-NEXT:    addi a1, a0, 256
 ; LMULMAX4-NEXT:    vse32.v v20, (a1)
-; LMULMAX4-NEXT:    addi a1, a0, 128
+; LMULMAX4-NEXT:    addi a1, a0, 192
 ; LMULMAX4-NEXT:    vse32.v v16, (a1)
-; LMULMAX4-NEXT:    addi a1, a0, 64
+; LMULMAX4-NEXT:    addi a1, a0, 128
 ; LMULMAX4-NEXT:    vse32.v v12, (a1)
+; LMULMAX4-NEXT:    addi a0, a0, 64
 ; LMULMAX4-NEXT:    vse32.v v8, (a0)
 ; LMULMAX4-NEXT:    ret
   %v = load <128 x i32>, <128 x i32>* %x

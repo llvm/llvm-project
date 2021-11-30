@@ -1279,29 +1279,29 @@ define <32 x i32> @mulhsw_v32i16_ashr(<32 x i16> %a, <32 x i16> %b) {
 ; SSE41:       # %bb.0:
 ; SSE41-NEXT:    movq %rdi, %rax
 ; SSE41-NEXT:    pmulhw %xmm4, %xmm0
-; SSE41-NEXT:    pshufd {{.*#+}} xmm4 = xmm0[2,3,2,3]
-; SSE41-NEXT:    pmovsxwd %xmm4, %xmm4
-; SSE41-NEXT:    pmulhw %xmm5, %xmm1
-; SSE41-NEXT:    pshufd {{.*#+}} xmm5 = xmm1[2,3,2,3]
-; SSE41-NEXT:    pmovsxwd %xmm5, %xmm5
-; SSE41-NEXT:    pmulhw %xmm6, %xmm2
-; SSE41-NEXT:    pshufd {{.*#+}} xmm6 = xmm2[2,3,2,3]
-; SSE41-NEXT:    pmovsxwd %xmm6, %xmm6
-; SSE41-NEXT:    pmulhw %xmm7, %xmm3
-; SSE41-NEXT:    pshufd {{.*#+}} xmm7 = xmm3[2,3,2,3]
-; SSE41-NEXT:    pmovsxwd %xmm7, %xmm7
+; SSE41-NEXT:    pmovsxwd %xmm0, %xmm4
+; SSE41-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[2,3,2,3]
 ; SSE41-NEXT:    pmovsxwd %xmm0, %xmm0
+; SSE41-NEXT:    pmulhw %xmm5, %xmm1
+; SSE41-NEXT:    pmovsxwd %xmm1, %xmm5
+; SSE41-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[2,3,2,3]
 ; SSE41-NEXT:    pmovsxwd %xmm1, %xmm1
+; SSE41-NEXT:    pmulhw %xmm6, %xmm2
+; SSE41-NEXT:    pmovsxwd %xmm2, %xmm6
+; SSE41-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[2,3,2,3]
 ; SSE41-NEXT:    pmovsxwd %xmm2, %xmm2
+; SSE41-NEXT:    pmulhw %xmm7, %xmm3
+; SSE41-NEXT:    pmovsxwd %xmm3, %xmm7
+; SSE41-NEXT:    pshufd {{.*#+}} xmm3 = xmm3[2,3,2,3]
 ; SSE41-NEXT:    pmovsxwd %xmm3, %xmm3
-; SSE41-NEXT:    movdqa %xmm3, 96(%rdi)
-; SSE41-NEXT:    movdqa %xmm2, 64(%rdi)
-; SSE41-NEXT:    movdqa %xmm1, 32(%rdi)
-; SSE41-NEXT:    movdqa %xmm0, (%rdi)
-; SSE41-NEXT:    movdqa %xmm7, 112(%rdi)
-; SSE41-NEXT:    movdqa %xmm6, 80(%rdi)
-; SSE41-NEXT:    movdqa %xmm5, 48(%rdi)
-; SSE41-NEXT:    movdqa %xmm4, 16(%rdi)
+; SSE41-NEXT:    movdqa %xmm3, 112(%rdi)
+; SSE41-NEXT:    movdqa %xmm7, 96(%rdi)
+; SSE41-NEXT:    movdqa %xmm2, 80(%rdi)
+; SSE41-NEXT:    movdqa %xmm6, 64(%rdi)
+; SSE41-NEXT:    movdqa %xmm1, 48(%rdi)
+; SSE41-NEXT:    movdqa %xmm5, 32(%rdi)
+; SSE41-NEXT:    movdqa %xmm0, 16(%rdi)
+; SSE41-NEXT:    movdqa %xmm4, (%rdi)
 ; SSE41-NEXT:    retq
 ;
 ; AVX2-LABEL: mulhsw_v32i16_ashr:
@@ -1770,53 +1770,53 @@ define <64 x i32> @mulhsw_v64i16_ashr(<64 x i16> %a, <64 x i16> %b) {
 ; SSE41:       # %bb.0:
 ; SSE41-NEXT:    movq %rdi, %rax
 ; SSE41-NEXT:    pmulhw {{[0-9]+}}(%rsp), %xmm0
-; SSE41-NEXT:    pshufd {{.*#+}} xmm8 = xmm0[2,3,2,3]
-; SSE41-NEXT:    pmovsxwd %xmm8, %xmm8
+; SSE41-NEXT:    pmovsxwd %xmm0, %xmm8
+; SSE41-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[2,3,2,3]
+; SSE41-NEXT:    pmovsxwd %xmm0, %xmm9
 ; SSE41-NEXT:    pmulhw {{[0-9]+}}(%rsp), %xmm1
-; SSE41-NEXT:    pshufd {{.*#+}} xmm9 = xmm1[2,3,2,3]
-; SSE41-NEXT:    pmovsxwd %xmm9, %xmm9
+; SSE41-NEXT:    pmovsxwd %xmm1, %xmm10
+; SSE41-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[2,3,2,3]
+; SSE41-NEXT:    pmovsxwd %xmm0, %xmm11
 ; SSE41-NEXT:    pmulhw {{[0-9]+}}(%rsp), %xmm2
-; SSE41-NEXT:    pshufd {{.*#+}} xmm10 = xmm2[2,3,2,3]
-; SSE41-NEXT:    pmovsxwd %xmm10, %xmm10
+; SSE41-NEXT:    pmovsxwd %xmm2, %xmm12
+; SSE41-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[2,3,2,3]
+; SSE41-NEXT:    pmovsxwd %xmm2, %xmm13
 ; SSE41-NEXT:    pmulhw {{[0-9]+}}(%rsp), %xmm3
-; SSE41-NEXT:    pshufd {{.*#+}} xmm11 = xmm3[2,3,2,3]
-; SSE41-NEXT:    pmovsxwd %xmm11, %xmm11
+; SSE41-NEXT:    pmovsxwd %xmm3, %xmm14
+; SSE41-NEXT:    pshufd {{.*#+}} xmm3 = xmm3[2,3,2,3]
+; SSE41-NEXT:    pmovsxwd %xmm3, %xmm15
 ; SSE41-NEXT:    pmulhw {{[0-9]+}}(%rsp), %xmm4
-; SSE41-NEXT:    pshufd {{.*#+}} xmm12 = xmm4[2,3,2,3]
-; SSE41-NEXT:    pmovsxwd %xmm12, %xmm12
-; SSE41-NEXT:    pmulhw {{[0-9]+}}(%rsp), %xmm5
-; SSE41-NEXT:    pshufd {{.*#+}} xmm13 = xmm5[2,3,2,3]
-; SSE41-NEXT:    pmovsxwd %xmm13, %xmm13
-; SSE41-NEXT:    pmulhw {{[0-9]+}}(%rsp), %xmm6
-; SSE41-NEXT:    pshufd {{.*#+}} xmm14 = xmm6[2,3,2,3]
-; SSE41-NEXT:    pmovsxwd %xmm14, %xmm14
-; SSE41-NEXT:    pmulhw {{[0-9]+}}(%rsp), %xmm7
-; SSE41-NEXT:    pshufd {{.*#+}} xmm15 = xmm7[2,3,2,3]
-; SSE41-NEXT:    pmovsxwd %xmm15, %xmm15
-; SSE41-NEXT:    pmovsxwd %xmm0, %xmm0
-; SSE41-NEXT:    pmovsxwd %xmm1, %xmm1
-; SSE41-NEXT:    pmovsxwd %xmm2, %xmm2
-; SSE41-NEXT:    pmovsxwd %xmm3, %xmm3
+; SSE41-NEXT:    pmovsxwd %xmm4, %xmm0
+; SSE41-NEXT:    pshufd {{.*#+}} xmm4 = xmm4[2,3,2,3]
 ; SSE41-NEXT:    pmovsxwd %xmm4, %xmm4
+; SSE41-NEXT:    pmulhw {{[0-9]+}}(%rsp), %xmm5
+; SSE41-NEXT:    pmovsxwd %xmm5, %xmm2
+; SSE41-NEXT:    pshufd {{.*#+}} xmm5 = xmm5[2,3,2,3]
 ; SSE41-NEXT:    pmovsxwd %xmm5, %xmm5
+; SSE41-NEXT:    pmulhw {{[0-9]+}}(%rsp), %xmm6
+; SSE41-NEXT:    pmovsxwd %xmm6, %xmm1
+; SSE41-NEXT:    pshufd {{.*#+}} xmm6 = xmm6[2,3,2,3]
 ; SSE41-NEXT:    pmovsxwd %xmm6, %xmm6
+; SSE41-NEXT:    pmulhw {{[0-9]+}}(%rsp), %xmm7
+; SSE41-NEXT:    pmovsxwd %xmm7, %xmm3
+; SSE41-NEXT:    pshufd {{.*#+}} xmm7 = xmm7[2,3,2,3]
 ; SSE41-NEXT:    pmovsxwd %xmm7, %xmm7
-; SSE41-NEXT:    movdqa %xmm7, 224(%rdi)
-; SSE41-NEXT:    movdqa %xmm6, 192(%rdi)
-; SSE41-NEXT:    movdqa %xmm5, 160(%rdi)
-; SSE41-NEXT:    movdqa %xmm4, 128(%rdi)
-; SSE41-NEXT:    movdqa %xmm3, 96(%rdi)
-; SSE41-NEXT:    movdqa %xmm2, 64(%rdi)
-; SSE41-NEXT:    movdqa %xmm1, 32(%rdi)
-; SSE41-NEXT:    movdqa %xmm0, (%rdi)
-; SSE41-NEXT:    movdqa %xmm15, 240(%rdi)
-; SSE41-NEXT:    movdqa %xmm14, 208(%rdi)
-; SSE41-NEXT:    movdqa %xmm13, 176(%rdi)
-; SSE41-NEXT:    movdqa %xmm12, 144(%rdi)
-; SSE41-NEXT:    movdqa %xmm11, 112(%rdi)
-; SSE41-NEXT:    movdqa %xmm10, 80(%rdi)
-; SSE41-NEXT:    movdqa %xmm9, 48(%rdi)
-; SSE41-NEXT:    movdqa %xmm8, 16(%rdi)
+; SSE41-NEXT:    movdqa %xmm7, 240(%rdi)
+; SSE41-NEXT:    movdqa %xmm3, 224(%rdi)
+; SSE41-NEXT:    movdqa %xmm6, 208(%rdi)
+; SSE41-NEXT:    movdqa %xmm1, 192(%rdi)
+; SSE41-NEXT:    movdqa %xmm5, 176(%rdi)
+; SSE41-NEXT:    movdqa %xmm2, 160(%rdi)
+; SSE41-NEXT:    movdqa %xmm4, 144(%rdi)
+; SSE41-NEXT:    movdqa %xmm0, 128(%rdi)
+; SSE41-NEXT:    movdqa %xmm15, 112(%rdi)
+; SSE41-NEXT:    movdqa %xmm14, 96(%rdi)
+; SSE41-NEXT:    movdqa %xmm13, 80(%rdi)
+; SSE41-NEXT:    movdqa %xmm12, 64(%rdi)
+; SSE41-NEXT:    movdqa %xmm11, 48(%rdi)
+; SSE41-NEXT:    movdqa %xmm10, 32(%rdi)
+; SSE41-NEXT:    movdqa %xmm9, 16(%rdi)
+; SSE41-NEXT:    movdqa %xmm8, (%rdi)
 ; SSE41-NEXT:    retq
 ;
 ; AVX2-LABEL: mulhsw_v64i16_ashr:
