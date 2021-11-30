@@ -1836,18 +1836,22 @@ static void removeUnusedSyntheticSections() {
                             })
                    .base();
 
-  // Mark unused synthetic sections for deletion
-  auto end = std::stable_partition(start, inputSections.end(),
-                                   [&](InputSectionBase *s) {
-                                     auto *sec = cast<SyntheticSection>(s);
-                                     return sec->getParent() && sec->isNeeded();
-                                   });
+  // Remove unused synthetic sections from inputSections;
+  DenseSet<InputSectionBase *> unused;
+  auto end =
+      std::remove_if(start, inputSections.end(), [&](InputSectionBase *s) {
+        auto *sec = cast<SyntheticSection>(s);
+        if (sec->getParent() && sec->isNeeded())
+          return false;
+        unused.insert(sec);
+        return true;
+      });
+  inputSections.erase(end, inputSections.end());
 
   // Remove unused synthetic sections from the corresponding input section
   // description and orphanSections.
-  DenseSet<InputSectionBase *> unused(end, inputSections.end());
-  for (auto it = end; it != inputSections.end(); ++it)
-    if (OutputSection *osec = cast<SyntheticSection>(*it)->getParent())
+  for (auto *sec : unused)
+    if (OutputSection *osec = cast<SyntheticSection>(sec)->getParent())
       for (SectionCommand *cmd : osec->commands)
         if (auto *isd = dyn_cast<InputSectionDescription>(cmd))
           llvm::erase_if(isd->sections, [&](InputSection *isec) {
@@ -1856,9 +1860,6 @@ static void removeUnusedSyntheticSections() {
   llvm::erase_if(script->orphanSections, [&](const InputSectionBase *sec) {
     return unused.count(sec);
   });
-
-  // Erase unused synthetic sections.
-  inputSections.erase(end, inputSections.end());
 }
 
 // Create output section objects and add them to OutputSections.
