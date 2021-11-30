@@ -11,6 +11,10 @@
   dimOrdering = affine_map<(i,j) -> (i,j)>
 }>
 
+#SparseTensor = #sparse_tensor.encoding<{
+  dimLevelType = [ "compressed", "compressed", "compressed" ]
+}>
+
 #trait_scale_inpl = {
   indexing_maps = [
     affine_map<(i,j) -> (i,j)>   // X (out)
@@ -181,4 +185,162 @@ func @sparse_truly_dynamic(%arga: tensor<10x20xf32, #CSR>) -> tensor<10x20xf32, 
         linalg.yield %1 : f32
   } -> tensor<10x20xf32, #DCSR>
   return %0 : tensor<10x20xf32, #DCSR>
+}
+
+#trait_sumred = {
+  indexing_maps = [
+    affine_map<(i,j,k) -> (i,j,k)>, // A
+    affine_map<(i,j,k) -> (i,j,k)>, // B
+    affine_map<(i,j,k) -> (i,j)>    // X (out)
+  ],
+  iterator_types = ["parallel", "parallel", "reduction"],
+  doc = "X(i,j) = SUM_k A(i,j,k) * B(i,j,k)"
+}
+
+// CHECK-LABEL:   func @sumred(
+// CHECK-SAME:      %[[VAL_0:.*]]: tensor<?x?x?xi32, #sparse_tensor.encoding<{ dimLevelType = [ "compressed", "compressed", "compressed" ], pointerBitWidth = 0, indexBitWidth = 0 }>>,
+// CHECK-SAME:      %[[VAL_1:.*]]: tensor<?x?x?xi32, #sparse_tensor.encoding<{ dimLevelType = [ "compressed", "compressed", "compressed" ], pointerBitWidth = 0, indexBitWidth = 0 }>>)
+// CHECK-DAG:       %[[VAL_2:.*]] = arith.constant 0 : index
+// CHECK-DAG:       %[[VAL_3:.*]] = arith.constant 1 : index
+// CHECK-DAG:       %[[VAL_4:.*]] = arith.constant 2 : index
+// CHECK-DAG:       %[[VAL_5:.*]] = arith.constant 0 : i32
+// CHECK:           %[[VAL_6:.*]] = tensor.dim %[[VAL_0]], %[[VAL_2]] : tensor<?x?x?xi32, #{{.*}}>>
+// CHECK:           %[[VAL_7:.*]] = tensor.dim %[[VAL_0]], %[[VAL_3]] : tensor<?x?x?xi32, #{{.*}}>>
+// CHECK:           %[[VAL_8:.*]] = sparse_tensor.init{{\[}}%[[VAL_6]], %[[VAL_7]]] : tensor<?x?xi32, #{{.*}}>>
+// CHECK:           %[[VAL_9:.*]] = sparse_tensor.pointers %[[VAL_0]], %[[VAL_2]] : tensor<?x?x?xi32, #{{.*}}>> to memref<?xindex>
+// CHECK:           %[[VAL_10:.*]] = sparse_tensor.indices %[[VAL_0]], %[[VAL_2]] : tensor<?x?x?xi32, #{{.*}}>> to memref<?xindex>
+// CHECK:           %[[VAL_11:.*]] = sparse_tensor.pointers %[[VAL_0]], %[[VAL_3]] : tensor<?x?x?xi32, #{{.*}}>> to memref<?xindex>
+// CHECK:           %[[VAL_12:.*]] = sparse_tensor.indices %[[VAL_0]], %[[VAL_3]] : tensor<?x?x?xi32, #{{.*}}>> to memref<?xindex>
+// CHECK:           %[[VAL_13:.*]] = sparse_tensor.pointers %[[VAL_0]], %[[VAL_4]] : tensor<?x?x?xi32, #{{.*}}>> to memref<?xindex>
+// CHECK:           %[[VAL_14:.*]] = sparse_tensor.indices %[[VAL_0]], %[[VAL_4]] : tensor<?x?x?xi32, #{{.*}}>> to memref<?xindex>
+// CHECK:           %[[VAL_15:.*]] = sparse_tensor.values %[[VAL_0]] : tensor<?x?x?xi32, #{{.*}}>> to memref<?xi32>
+// CHECK:           %[[VAL_16:.*]] = sparse_tensor.pointers %[[VAL_1]], %[[VAL_2]] : tensor<?x?x?xi32, #{{.*}}>> to memref<?xindex>
+// CHECK:           %[[VAL_17:.*]] = sparse_tensor.indices %[[VAL_1]], %[[VAL_2]] : tensor<?x?x?xi32, #{{.*}}>> to memref<?xindex>
+// CHECK:           %[[VAL_18:.*]] = sparse_tensor.pointers %[[VAL_1]], %[[VAL_3]] : tensor<?x?x?xi32, #{{.*}}>> to memref<?xindex>
+// CHECK:           %[[VAL_19:.*]] = sparse_tensor.indices %[[VAL_1]], %[[VAL_3]] : tensor<?x?x?xi32, #{{.*}}>> to memref<?xindex>
+// CHECK:           %[[VAL_20:.*]] = sparse_tensor.pointers %[[VAL_1]], %[[VAL_4]] : tensor<?x?x?xi32, #{{.*}}>> to memref<?xindex>
+// CHECK:           %[[VAL_21:.*]] = sparse_tensor.indices %[[VAL_1]], %[[VAL_4]] : tensor<?x?x?xi32, #{{.*}}>> to memref<?xindex>
+// CHECK:           %[[VAL_22:.*]] = sparse_tensor.values %[[VAL_1]] : tensor<?x?x?xi32, #{{.*}}>> to memref<?xi32>
+// CHECK:           %[[VAL_23:.*]] = memref.alloca(%[[VAL_4]]) : memref<?xindex>
+// CHECK:           %[[VAL_24:.*]] = memref.load %[[VAL_9]]{{\[}}%[[VAL_2]]] : memref<?xindex>
+// CHECK:           %[[VAL_25:.*]] = memref.load %[[VAL_9]]{{\[}}%[[VAL_3]]] : memref<?xindex>
+// CHECK:           %[[VAL_26:.*]] = memref.load %[[VAL_16]]{{\[}}%[[VAL_2]]] : memref<?xindex>
+// CHECK:           %[[VAL_27:.*]] = memref.load %[[VAL_16]]{{\[}}%[[VAL_3]]] : memref<?xindex>
+// CHECK:           %[[VAL_28:.*]]:2 = scf.while (%[[VAL_29:.*]] = %[[VAL_24]], %[[VAL_30:.*]] = %[[VAL_26]]) : (index, index) -> (index, index) {
+// CHECK:             %[[VAL_31:.*]] = arith.cmpi ult, %[[VAL_29]], %[[VAL_25]] : index
+// CHECK:             %[[VAL_32:.*]] = arith.cmpi ult, %[[VAL_30]], %[[VAL_27]] : index
+// CHECK:             %[[VAL_33:.*]] = arith.andi %[[VAL_31]], %[[VAL_32]] : i1
+// CHECK:             scf.condition(%[[VAL_33]]) %[[VAL_29]], %[[VAL_30]] : index, index
+// CHECK:           } do {
+// CHECK:           ^bb0(%[[VAL_34:.*]]: index, %[[VAL_35:.*]]: index):
+// CHECK:             %[[VAL_36:.*]] = memref.load %[[VAL_10]]{{\[}}%[[VAL_34]]] : memref<?xindex>
+// CHECK:             %[[VAL_37:.*]] = memref.load %[[VAL_17]]{{\[}}%[[VAL_35]]] : memref<?xindex>
+// CHECK:             %[[VAL_38:.*]] = arith.cmpi ult, %[[VAL_37]], %[[VAL_36]] : index
+// CHECK:             %[[VAL_39:.*]] = select %[[VAL_38]], %[[VAL_37]], %[[VAL_36]] : index
+// CHECK:             memref.store %[[VAL_39]], %[[VAL_23]]{{\[}}%[[VAL_2]]] : memref<?xindex>
+// CHECK:             %[[VAL_40:.*]] = arith.cmpi eq, %[[VAL_36]], %[[VAL_39]] : index
+// CHECK:             %[[VAL_41:.*]] = arith.cmpi eq, %[[VAL_37]], %[[VAL_39]] : index
+// CHECK:             %[[VAL_42:.*]] = arith.andi %[[VAL_40]], %[[VAL_41]] : i1
+// CHECK:             scf.if %[[VAL_42]] {
+// CHECK:               %[[VAL_43:.*]] = memref.load %[[VAL_11]]{{\[}}%[[VAL_34]]] : memref<?xindex>
+// CHECK:               %[[VAL_44:.*]] = arith.addi %[[VAL_34]], %[[VAL_3]] : index
+// CHECK:               %[[VAL_45:.*]] = memref.load %[[VAL_11]]{{\[}}%[[VAL_44]]] : memref<?xindex>
+// CHECK:               %[[VAL_46:.*]] = memref.load %[[VAL_18]]{{\[}}%[[VAL_35]]] : memref<?xindex>
+// CHECK:               %[[VAL_47:.*]] = arith.addi %[[VAL_35]], %[[VAL_3]] : index
+// CHECK:               %[[VAL_48:.*]] = memref.load %[[VAL_18]]{{\[}}%[[VAL_47]]] : memref<?xindex>
+// CHECK:               %[[VAL_49:.*]]:2 = scf.while (%[[VAL_50:.*]] = %[[VAL_43]], %[[VAL_51:.*]] = %[[VAL_46]]) : (index, index) -> (index, index) {
+// CHECK:                 %[[VAL_52:.*]] = arith.cmpi ult, %[[VAL_50]], %[[VAL_45]] : index
+// CHECK:                 %[[VAL_53:.*]] = arith.cmpi ult, %[[VAL_51]], %[[VAL_48]] : index
+// CHECK:                 %[[VAL_54:.*]] = arith.andi %[[VAL_52]], %[[VAL_53]] : i1
+// CHECK:                 scf.condition(%[[VAL_54]]) %[[VAL_50]], %[[VAL_51]] : index, index
+// CHECK:               } do {
+// CHECK:               ^bb0(%[[VAL_55:.*]]: index, %[[VAL_56:.*]]: index):
+// CHECK:                 %[[VAL_57:.*]] = memref.load %[[VAL_12]]{{\[}}%[[VAL_55]]] : memref<?xindex>
+// CHECK:                 %[[VAL_58:.*]] = memref.load %[[VAL_19]]{{\[}}%[[VAL_56]]] : memref<?xindex>
+// CHECK:                 %[[VAL_59:.*]] = arith.cmpi ult, %[[VAL_58]], %[[VAL_57]] : index
+// CHECK:                 %[[VAL_60:.*]] = select %[[VAL_59]], %[[VAL_58]], %[[VAL_57]] : index
+// CHECK:                 memref.store %[[VAL_60]], %[[VAL_23]]{{\[}}%[[VAL_3]]] : memref<?xindex>
+// CHECK:                 %[[VAL_61:.*]] = arith.cmpi eq, %[[VAL_57]], %[[VAL_60]] : index
+// CHECK:                 %[[VAL_62:.*]] = arith.cmpi eq, %[[VAL_58]], %[[VAL_60]] : index
+// CHECK:                 %[[VAL_63:.*]] = arith.andi %[[VAL_61]], %[[VAL_62]] : i1
+// CHECK:                 scf.if %[[VAL_63]] {
+// CHECK:                   %[[VAL_64:.*]] = memref.load %[[VAL_13]]{{\[}}%[[VAL_55]]] : memref<?xindex>
+// CHECK:                   %[[VAL_65:.*]] = arith.addi %[[VAL_55]], %[[VAL_3]] : index
+// CHECK:                   %[[VAL_66:.*]] = memref.load %[[VAL_13]]{{\[}}%[[VAL_65]]] : memref<?xindex>
+// CHECK:                   %[[VAL_67:.*]] = memref.load %[[VAL_20]]{{\[}}%[[VAL_56]]] : memref<?xindex>
+// CHECK:                   %[[VAL_68:.*]] = arith.addi %[[VAL_56]], %[[VAL_3]] : index
+// CHECK:                   %[[VAL_69:.*]] = memref.load %[[VAL_20]]{{\[}}%[[VAL_68]]] : memref<?xindex>
+// CHECK:                   %[[VAL_70:.*]]:3 = scf.while (%[[VAL_71:.*]] = %[[VAL_64]], %[[VAL_72:.*]] = %[[VAL_67]], %[[VAL_73:.*]] = %[[VAL_5]]) : (index, index, i32) -> (index, index, i32) {
+// CHECK:                     %[[VAL_74:.*]] = arith.cmpi ult, %[[VAL_71]], %[[VAL_66]] : index
+// CHECK:                     %[[VAL_75:.*]] = arith.cmpi ult, %[[VAL_72]], %[[VAL_69]] : index
+// CHECK:                     %[[VAL_76:.*]] = arith.andi %[[VAL_74]], %[[VAL_75]] : i1
+// CHECK:                     scf.condition(%[[VAL_76]]) %[[VAL_71]], %[[VAL_72]], %[[VAL_73]] : index, index, i32
+// CHECK:                   } do {
+// CHECK:                   ^bb0(%[[VAL_77:.*]]: index, %[[VAL_78:.*]]: index, %[[VAL_79:.*]]: i32):
+// CHECK:                     %[[VAL_80:.*]] = memref.load %[[VAL_14]]{{\[}}%[[VAL_77]]] : memref<?xindex>
+// CHECK:                     %[[VAL_81:.*]] = memref.load %[[VAL_21]]{{\[}}%[[VAL_78]]] : memref<?xindex>
+// CHECK:                     %[[VAL_82:.*]] = arith.cmpi ult, %[[VAL_81]], %[[VAL_80]] : index
+// CHECK:                     %[[VAL_83:.*]] = select %[[VAL_82]], %[[VAL_81]], %[[VAL_80]] : index
+// CHECK:                     memref.store %[[VAL_83]], %[[VAL_23]]{{\[}}%[[VAL_4]]] : memref<?xindex>
+// CHECK:                     %[[VAL_84:.*]] = arith.cmpi eq, %[[VAL_80]], %[[VAL_83]] : index
+// CHECK:                     %[[VAL_85:.*]] = arith.cmpi eq, %[[VAL_81]], %[[VAL_83]] : index
+// CHECK:                     %[[VAL_86:.*]] = arith.andi %[[VAL_84]], %[[VAL_85]] : i1
+// CHECK:                     %[[VAL_87:.*]] = scf.if %[[VAL_86]] -> (i32) {
+// CHECK:                       %[[VAL_88:.*]] = memref.load %[[VAL_15]]{{\[}}%[[VAL_77]]] : memref<?xi32>
+// CHECK:                       %[[VAL_89:.*]] = memref.load %[[VAL_22]]{{\[}}%[[VAL_78]]] : memref<?xi32>
+// CHECK:                       %[[VAL_90:.*]] = arith.muli %[[VAL_88]], %[[VAL_89]] : i32
+// CHECK:                       %[[VAL_91:.*]] = arith.addi %[[VAL_79]], %[[VAL_90]] : i32
+// CHECK:                       scf.yield %[[VAL_91]] : i32
+// CHECK:                     } else {
+// CHECK:                       scf.yield %[[VAL_79]] : i32
+// CHECK:                     }
+// CHECK:                     %[[VAL_92:.*]] = arith.cmpi eq, %[[VAL_80]], %[[VAL_83]] : index
+// CHECK:                     %[[VAL_93:.*]] = arith.addi %[[VAL_77]], %[[VAL_3]] : index
+// CHECK:                     %[[VAL_94:.*]] = select %[[VAL_92]], %[[VAL_93]], %[[VAL_77]] : index
+// CHECK:                     %[[VAL_95:.*]] = arith.cmpi eq, %[[VAL_81]], %[[VAL_83]] : index
+// CHECK:                     %[[VAL_96:.*]] = arith.addi %[[VAL_78]], %[[VAL_3]] : index
+// CHECK:                     %[[VAL_97:.*]] = select %[[VAL_95]], %[[VAL_96]], %[[VAL_78]] : index
+// CHECK:                     scf.yield %[[VAL_94]], %[[VAL_97]], %[[VAL_98:.*]] : index, index, i32
+// CHECK:                   }
+// CHECK:                   sparse_tensor.lex_insert %[[VAL_8]], %[[VAL_23]], %[[VAL_99:.*]]#2 : tensor<?x?xi32, #{{.*}}>, memref<?xindex>, i32
+// CHECK:                 } else {
+// CHECK:                 }
+// CHECK:                 %[[VAL_100:.*]] = arith.cmpi eq, %[[VAL_57]], %[[VAL_60]] : index
+// CHECK:                 %[[VAL_101:.*]] = arith.addi %[[VAL_55]], %[[VAL_3]] : index
+// CHECK:                 %[[VAL_102:.*]] = select %[[VAL_100]], %[[VAL_101]], %[[VAL_55]] : index
+// CHECK:                 %[[VAL_103:.*]] = arith.cmpi eq, %[[VAL_58]], %[[VAL_60]] : index
+// CHECK:                 %[[VAL_104:.*]] = arith.addi %[[VAL_56]], %[[VAL_3]] : index
+// CHECK:                 %[[VAL_105:.*]] = select %[[VAL_103]], %[[VAL_104]], %[[VAL_56]] : index
+// CHECK:                 scf.yield %[[VAL_102]], %[[VAL_105]] : index, index
+// CHECK:               }
+// CHECK:             } else {
+// CHECK:             }
+// CHECK:             %[[VAL_106:.*]] = arith.cmpi eq, %[[VAL_36]], %[[VAL_39]] : index
+// CHECK:             %[[VAL_107:.*]] = arith.addi %[[VAL_34]], %[[VAL_3]] : index
+// CHECK:             %[[VAL_108:.*]] = select %[[VAL_106]], %[[VAL_107]], %[[VAL_34]] : index
+// CHECK:             %[[VAL_109:.*]] = arith.cmpi eq, %[[VAL_37]], %[[VAL_39]] : index
+// CHECK:             %[[VAL_110:.*]] = arith.addi %[[VAL_35]], %[[VAL_3]] : index
+// CHECK:             %[[VAL_111:.*]] = select %[[VAL_109]], %[[VAL_110]], %[[VAL_35]] : index
+// CHECK:             scf.yield %[[VAL_108]], %[[VAL_111]] : index, index
+// CHECK:           }
+// CHECK:           %[[VAL_112:.*]] = sparse_tensor.load %[[VAL_8]] hasInserts : tensor<?x?xi32, #{{.*}}>
+// CHECK:           return %[[VAL_112]] : tensor<?x?xi32, #{{.*}}>
+// CHECK:         }
+func @sumred(%arga: tensor<?x?x?xi32, #SparseTensor>,
+             %argb: tensor<?x?x?xi32, #SparseTensor>) -> tensor<?x?xi32, #DCSR> {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %d0 = tensor.dim %arga, %c0 : tensor<?x?x?xi32, #SparseTensor>
+  %d1 = tensor.dim %arga, %c1 : tensor<?x?x?xi32, #SparseTensor>
+  %xinit = sparse_tensor.init [%d0, %d1] : tensor<?x?xi32, #DCSR>
+  %0 = linalg.generic #trait_sumred
+    ins(%arga, %argb: tensor<?x?x?xi32, #SparseTensor>,
+                      tensor<?x?x?xi32, #SparseTensor>)
+    outs(%xinit: tensor<?x?xi32, #DCSR>) {
+      ^bb(%a: i32, %b: i32, %x: i32):
+        %0 = arith.muli %a, %b : i32
+        %1 = arith.addi %x, %0 : i32
+        linalg.yield %1 : i32
+  } -> tensor<?x?xi32, #DCSR>
+  return %0 : tensor<?x?xi32, #DCSR>
 }
