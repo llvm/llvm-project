@@ -116,9 +116,10 @@ bool ObjectFileBreakpad::ParseHeader() {
   return true;
 }
 
-Symtab *ObjectFileBreakpad::GetSymtab() {
-  // TODO
-  return nullptr;
+void ObjectFileBreakpad::ParseSymtab(Symtab &symtab) {
+  // Nothing to do for breakpad files, all information is parsed as debug info
+  // which means "lldb_private::Function" objects are used, or symbols are added
+  // by the SymbolFileBreakpad::AddSymbols(...) function in the symbol file.
 }
 
 void ObjectFileBreakpad::CreateSections(SectionList &unified_section_list) {

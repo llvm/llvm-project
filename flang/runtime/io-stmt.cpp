@@ -824,26 +824,35 @@ bool InquireUnitState::Inquire(
   const char *str{nullptr};
   switch (inquiry) {
   case HashInquiryKeyword("ACCESS"):
-    switch (unit().access) {
-    case Access::Sequential:
-      str = "SEQUENTIAL";
-      break;
-    case Access::Direct:
-      str = "DIRECT";
-      break;
-    case Access::Stream:
-      str = "STREAM";
-      break;
+    if (!unit().IsConnected()) {
+      str = "UNDEFINED";
+    } else {
+      switch (unit().access) {
+      case Access::Sequential:
+        str = "SEQUENTIAL";
+        break;
+      case Access::Direct:
+        str = "DIRECT";
+        break;
+      case Access::Stream:
+        str = "STREAM";
+        break;
+      }
     }
     break;
   case HashInquiryKeyword("ACTION"):
-    str = unit().mayWrite() ? unit().mayRead() ? "READWRITE" : "WRITE" : "READ";
+    str = !unit().IsConnected() ? "UNDEFINED"
+        : unit().mayWrite()     ? unit().mayRead() ? "READWRITE" : "WRITE"
+                                : "READ";
     break;
   case HashInquiryKeyword("ASYNCHRONOUS"):
-    str = unit().mayAsynchronous() ? "YES" : "NO";
+    str = !unit().IsConnected()    ? "UNDEFINED"
+        : unit().mayAsynchronous() ? "YES"
+                                   : "NO";
     break;
   case HashInquiryKeyword("BLANK"):
-    str = unit().isUnformatted.value_or(true)   ? "UNDEFINED"
+    str = !unit().IsConnected() || unit().isUnformatted.value_or(true)
+        ? "UNDEFINED"
         : unit().modes.editingFlags & blankZero ? "ZERO"
                                                 : "NULL";
     break;
@@ -854,12 +863,13 @@ bool InquireUnitState::Inquire(
     str = unit().swapEndianness() ? "SWAP" : "NATIVE";
     break;
   case HashInquiryKeyword("DECIMAL"):
-    str = unit().isUnformatted.value_or(true)      ? "UNDEFINED"
+    str = !unit().IsConnected() || unit().isUnformatted.value_or(true)
+        ? "UNDEFINED"
         : unit().modes.editingFlags & decimalComma ? "COMMA"
                                                    : "POINT";
     break;
   case HashInquiryKeyword("DELIM"):
-    if (unit().isUnformatted.value_or(true)) {
+    if (!unit().IsConnected() || unit().isUnformatted.value_or(true)) {
       str = "UNDEFINED";
     } else {
       switch (unit().modes.delim) {
@@ -876,23 +886,26 @@ bool InquireUnitState::Inquire(
     }
     break;
   case HashInquiryKeyword("DIRECT"):
-    str = unit().access == Access::Direct ||
+    str = !unit().IsConnected() ? "UNKNOWN"
+        : unit().access == Access::Direct ||
             (unit().mayPosition() && unit().isFixedRecordLength)
         ? "YES"
         : "NO";
     break;
   case HashInquiryKeyword("ENCODING"):
-    str = unit().isUnformatted.value_or(true) ? "UNDEFINED"
+    str = !unit().IsConnected()               ? "UNKNOWN"
+        : unit().isUnformatted.value_or(true) ? "UNDEFINED"
         : unit().isUTF8                       ? "UTF-8"
                                               : "ASCII";
     break;
   case HashInquiryKeyword("FORM"):
-    str = !unit().isUnformatted ? "UNDEFINED"
-        : *unit().isUnformatted ? "UNFORMATTED"
-                                : "FORMATTED";
+    str = !unit().IsConnected() || !unit().isUnformatted ? "UNDEFINED"
+        : *unit().isUnformatted                          ? "UNFORMATTED"
+                                                         : "FORMATTED";
     break;
   case HashInquiryKeyword("FORMATTED"):
-    str = !unit().isUnformatted ? "UNKNOWN"
+    str = !unit().IsConnected() ? "UNDEFINED"
+        : !unit().isUnformatted ? "UNKNOWN"
         : *unit().isUnformatted ? "NO"
                                 : "YES";
     break;
@@ -903,33 +916,38 @@ bool InquireUnitState::Inquire(
     }
     break;
   case HashInquiryKeyword("PAD"):
-    str = unit().isUnformatted.value_or(true) ? "UNDEFINED"
-        : unit().modes.pad                    ? "YES"
-                                              : "NO";
+    str = !unit().IsConnected() || unit().isUnformatted.value_or(true)
+        ? "UNDEFINED"
+        : unit().modes.pad ? "YES"
+                           : "NO";
     break;
   case HashInquiryKeyword("POSITION"):
-    if (unit().access == Access::Direct) {
+    if (!unit().IsConnected() || unit().access == Access::Direct) {
       str = "UNDEFINED";
     } else {
-      auto size{unit().knownSize()};
-      auto pos{unit().position()};
-      if (pos == size.value_or(pos + 1)) {
-        str = "APPEND";
-      } else if (pos == 0 && unit().mayPosition()) {
+      switch (unit().InquirePosition()) {
+      case Position::Rewind:
         str = "REWIND";
-      } else {
-        str = "ASIS"; // processor-dependent & no common behavior
+        break;
+      case Position::Append:
+        str = "APPEND";
+        break;
+      case Position::AsIs:
+        str = "ASIS";
+        break;
       }
     }
     break;
   case HashInquiryKeyword("READ"):
-    str = unit().mayRead() ? "YES" : "NO";
+    str = !unit().IsConnected() ? "UNDEFINED" : unit().mayRead() ? "YES" : "NO";
     break;
   case HashInquiryKeyword("READWRITE"):
-    str = unit().mayRead() && unit().mayWrite() ? "YES" : "NO";
+    str = !unit().IsConnected()                 ? "UNDEFINED"
+        : unit().mayRead() && unit().mayWrite() ? "YES"
+                                                : "NO";
     break;
   case HashInquiryKeyword("ROUND"):
-    if (unit().isUnformatted.value_or(true)) {
+    if (!unit().IsConnected() || unit().isUnformatted.value_or(true)) {
       str = "UNDEFINED";
     } else {
       switch (unit().modes.round) {
@@ -954,23 +972,28 @@ bool InquireUnitState::Inquire(
   case HashInquiryKeyword("SEQUENTIAL"):
     // "NO" for Direct, since Sequential would not work if
     // the unit were reopened without RECL=.
-    str = unit().access == Access::Sequential ? "YES" : "NO";
+    str = !unit().IsConnected()               ? "UNKNOWN"
+        : unit().access == Access::Sequential ? "YES"
+                                              : "NO";
     break;
   case HashInquiryKeyword("SIGN"):
-    str = unit().isUnformatted.value_or(true)  ? "UNDEFINED"
+    str = !unit().IsConnected() || unit().isUnformatted.value_or(true)
+        ? "UNDEFINED"
         : unit().modes.editingFlags & signPlus ? "PLUS"
                                                : "SUPPRESS";
     break;
   case HashInquiryKeyword("STREAM"):
-    str = unit().access == Access::Stream ? "YES" : "NO";
-    break;
-  case HashInquiryKeyword("WRITE"):
-    str = unit().mayWrite() ? "YES" : "NO";
+    str = !unit().IsConnected()           ? "UNKNOWN"
+        : unit().access == Access::Stream ? "YES"
+                                          : "NO";
     break;
   case HashInquiryKeyword("UNFORMATTED"):
-    str = !unit().isUnformatted ? "UNKNOWN"
-        : *unit().isUnformatted ? "YES"
-                                : "NO";
+    str = !unit().IsConnected() || !unit().isUnformatted ? "UNKNOWN"
+        : *unit().isUnformatted                          ? "YES"
+                                                         : "NO";
+    break;
+  case HashInquiryKeyword("WRITE"):
+    str = !unit().IsConnected() ? "UNKNOWN" : unit().mayWrite() ? "YES" : "NO";
     break;
   }
   if (str) {
@@ -991,7 +1014,7 @@ bool InquireUnitState::Inquire(InquiryKeywordHash inquiry, bool &result) {
     result = unit().path() != nullptr;
     return true;
   case HashInquiryKeyword("OPENED"):
-    result = true;
+    result = unit().IsConnected();
     return true;
   case HashInquiryKeyword("PENDING"):
     result = false; // asynchronous I/O is not implemented
@@ -1023,13 +1046,15 @@ bool InquireUnitState::Inquire(
     }
     return true;
   case HashInquiryKeyword("NUMBER"):
-    result = unit().unitNumber();
+    result = unit().IsConnected() ? unit().unitNumber() : -1;
     return true;
   case HashInquiryKeyword("POS"):
     result = unit().position();
     return true;
   case HashInquiryKeyword("RECL"):
-    if (unit().access == Access::Stream) {
+    if (!unit().IsConnected()) {
+      result = -1;
+    } else if (unit().access == Access::Stream) {
       result = -2;
     } else if (unit().isFixedRecordLength && unit().recordLength) {
       result = *unit().recordLength;
@@ -1038,10 +1063,11 @@ bool InquireUnitState::Inquire(
     }
     return true;
   case HashInquiryKeyword("SIZE"):
-    if (auto size{unit().knownSize()}) {
-      result = *size;
-    } else {
-      result = -1;
+    result = -1;
+    if (unit().IsConnected()) {
+      if (auto size{unit().knownSize()}) {
+        result = *size;
+      }
     }
     return true;
   default:

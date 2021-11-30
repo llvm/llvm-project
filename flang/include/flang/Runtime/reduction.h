@@ -12,12 +12,15 @@
 #define FORTRAN_RUNTIME_REDUCTION_H_
 
 #include "flang/Common/uint128.h"
-#include "flang/Runtime/descriptor.h"
 #include "flang/Runtime/entry-names.h"
+#include <cinttypes>
 #include <complex>
 #include <cstdint>
 
 namespace Fortran::runtime {
+
+class Descriptor;
+
 extern "C" {
 
 // Reductions that are known to return scalars have per-type entry
