@@ -180,10 +180,11 @@ template <
 static constexpr decltype(auto)
 visitSameAlternative(VisitorT &&Visitor, HeadVariantT &&HeadVariant,
                      TailVariantTs &&...TailVariants) {
-  static_assert(conjunction<std::is_same<remove_cvref_t<HeadVariantT>,
-                                         remove_cvref_t<TailVariantTs>>...>{},
-                "all variant arguments to visitSameAlternative must "
-                "be of the same type");
+  static_assert(
+      conjunction<std::is_same<remove_cvref_t<HeadVariantT>,
+                               remove_cvref_t<TailVariantTs>>...>::value,
+      "all variant arguments to visitSameAlternative must "
+      "be of the same type");
   using Traits = variant_traits_detail::Traits<HeadVariantT>;
 #ifdef EXPENSIVE_CHECKS
   size_t Index = Traits::index(std::forward<HeadVariantT>(HeadVariant));

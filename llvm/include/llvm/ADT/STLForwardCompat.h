@@ -97,7 +97,7 @@ constexpr in_place_index_t<I>
 template <typename ExplicitT = void, typename... ArgTs>
 static constexpr auto
 make_array(ArgTs &&...Args) // NOLINT(readability-identifier-naming)
-    -> std::array<typename std::conditional_t<std::is_same<ExplicitT, void>{},
+    -> std::array<typename std::conditional_t<std::is_same<ExplicitT, void>::value,
                                               std::common_type<ArgTs...>,
                                               type_identity<ExplicitT>>::type,
                   sizeof...(ArgTs)> {

@@ -120,11 +120,11 @@ TEST(IntrusiveVariantTest, Comparison) {
 }
 
 TEST(IntrusiveVariantTest, IntrusiveVariantSize) {
-  constexpr auto One = IntrusiveVariantSize<IntrusiveVariant<I>>{};
+  constexpr auto One = IntrusiveVariantSize<IntrusiveVariant<I>>::value;
   EXPECT_EQ(One, 1u);
-  constexpr auto Two = IntrusiveVariantSize<IntrusiveVariant<I, F>>{};
+  constexpr auto Two = IntrusiveVariantSize<IntrusiveVariant<I, F>>::value;
   EXPECT_EQ(Two, 2u);
-  constexpr auto Three = IntrusiveVariantSize<IntrusiveVariant<I, F, D>>{};
+  constexpr auto Three = IntrusiveVariantSize<IntrusiveVariant<I, F, D>>::value;
   EXPECT_EQ(Three, 3u);
 }
 

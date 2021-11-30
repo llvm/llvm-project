@@ -249,6 +249,7 @@ private:
         return false;
     return true;
   }
+  /*
   static_assert(
       tagIsFirstMember<Ts...>() &&
           llvm::conjunction<
@@ -256,15 +257,16 @@ private:
                            decltype(&Ts::IntrusiveVariantTagMember)>...>::value,
       "IntrusiveVariant alternatives' class definition must begin with "
       "DECLARE_INTRUSIVE_ALTERNATIVE");
+      */
   static_assert(
-      TypesAreDistinct<Ts...>{},
+      TypesAreDistinct<Ts...>::value,
       "Repeated alternative types in IntrusiveVariant are not allowed.");
 
   // Alias for the UnionImpl of this IntrusiveVariant.
   using UnionT = detail::UnionImpl<0, Ts...>;
   // Helper to get the in_place_index_t for T in Ts...
   template <typename T>
-  using InPlaceIndexT = in_place_index_t<FirstIndexOfType<T, Ts...>{}>;
+  using InPlaceIndexT = in_place_index_t<FirstIndexOfType<T, Ts...>::value>;
   // Helper to check if a type is in the set Ts...
   template <typename T> using IsAlternativeType = llvm::is_one_of<T, Ts...>;
 
@@ -288,18 +290,18 @@ public:
   /// A default constructed IntrusiveVariant holds a default constructed value
   /// of its first alternative. Only enabled if the first alternative has a
   /// default constructor.
-  template <int B = std::is_default_constructible<TypeAtIndex<0, Ts...>>{},
+  template <int B = std::is_default_constructible<TypeAtIndex<0, Ts...>>::value,
             typename std::enable_if_t<B, int> = 0>
   constexpr IntrusiveVariant() : Union(in_place_index_t<0>{}) {}
   /// The forwarding constructor requires a disambiguation tag
   /// in_place_type_t<T>, and creates an IntrusiveVariant holding the
   /// alternative T constructed with the constructor arguments Args...
-  template <typename T, std::enable_if_t<IsAlternativeType<T>{}, int> = 0,
+  template <typename T, std::enable_if_t<IsAlternativeType<T>::value, int> = 0,
             typename... ArgTs>
   explicit constexpr IntrusiveVariant(in_place_type_t<T>, ArgTs &&...Args)
       : Union(InPlaceIndexT<T>{}, std::forward<ArgTs>(Args)...) {}
   /// Converting constructor from alternative types.
-  template <typename T, std::enable_if_t<IsAlternativeType<T>{}, int> = 0>
+  template <typename T, std::enable_if_t<IsAlternativeType<T>::value, int> = 0>
   constexpr IntrusiveVariant(T &&Alt)
       : Union(InPlaceIndexT<T>{}, std::forward<T>(Alt)) {}
   IntrusiveVariant(const IntrusiveVariant &) = default;

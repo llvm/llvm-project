@@ -1600,6 +1600,20 @@ unsigned DIOp::getBitcodeID(const Variant &V) {
   return visit(makeVisitor([](auto &&Op) { return Op.getBitcodeID(); }), V);
 }
 
+#define HANDLE_OP0(NAME)                                                       \
+  hash_code DIOp::hash_value(const DIOp::NAME &O) {                            \
+    return llvm::hash_value(0);                                                \
+  }
+#define HANDLE_OP1(NAME, TYPE1, NAME1)                                         \
+  hash_code DIOp::hash_value(const DIOp::NAME &O) {                            \
+    return llvm::hash_value(O.NAME1);                                          \
+  }
+#define HANDLE_OP2(NAME, TYPE1, NAME1, TYPE2, NAME2)                           \
+  hash_code DIOp::hash_value(const DIOp::NAME &O) {                            \
+    return hash_combine(O.NAME1, O.NAME2);                                     \
+  }
+#include "llvm/IR/DIExprOps.def"
+
 DIExprBuilder::DIExprBuilder(LLVMContext &C) : C(C) {}
 DIExprBuilder::DIExprBuilder(LLVMContext &C,
                          std::initializer_list<DIOp::Variant> IL)

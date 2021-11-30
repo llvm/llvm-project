@@ -3046,7 +3046,7 @@ namespace DIOp {
   public:                                                                      \
     explicit NAME() {}                                                         \
     bool operator==(const NAME &O) const { return true; }                      \
-    friend hash_code hash_value(const NAME &O) { return hash_value(0); }       \
+    friend hash_code hash_value(const NAME &O);                                \
     static constexpr StringRef getAsmName();                                   \
     static constexpr unsigned getBitcodeID();                                  \
   };
@@ -3058,7 +3058,7 @@ namespace DIOp {
   public:                                                                      \
     explicit NAME(TYPE1 NAME1) : NAME1(NAME1) {}                               \
     bool operator==(const NAME &O) const { return NAME1 == O.NAME1; }          \
-    friend hash_code hash_value(const NAME &O) { return hash_value(O.NAME1); } \
+    friend hash_code hash_value(const NAME &O);                                \
     static constexpr StringRef getAsmName();                                   \
     static constexpr unsigned getBitcodeID();                                  \
     TYPE1 get##NAME1() const { return NAME1; }                                 \
@@ -3075,9 +3075,7 @@ namespace DIOp {
     bool operator==(const NAME &O) const {                                     \
       return NAME1 == O.NAME1 && NAME2 == O.NAME2;                             \
     }                                                                          \
-    friend hash_code hash_value(const NAME &O) {                               \
-      return hash_combine(O.NAME1, O.NAME2);                                   \
-    }                                                                          \
+    friend hash_code hash_value(const NAME &O);                                \
     static constexpr StringRef getAsmName();                                   \
     static constexpr unsigned getBitcodeID();                                  \
     TYPE1 get##NAME1() const { return NAME1; }                                 \

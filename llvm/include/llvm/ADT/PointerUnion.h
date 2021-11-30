@@ -111,7 +111,7 @@ class PointerUnion
               void *, pointer_union_detail::bitsRequired(sizeof...(PTs)), int,
               pointer_union_detail::PointerUnionUIntTraits<PTs...>>,
           0, PTs...> {
-  static_assert(TypesAreDistinct<PTs...>{},
+  static_assert(TypesAreDistinct<PTs...>::value,
                 "PointerUnion alternative types cannot be repeated");
   // The first type is special because we want to directly cast a pointer to a
   // default-initialized union to a pointer to the first type. But we don't
@@ -135,7 +135,7 @@ public:
 
   /// Test if the Union currently holds the type matching T.
   template <typename T> bool is() const {
-    return this->Val.getInt() == FirstIndexOfType<T, PTs...>{};
+    return this->Val.getInt() == FirstIndexOfType<T, PTs...>::value;
   }
 
   /// Returns the value of the specified pointer type.

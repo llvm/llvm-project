@@ -182,7 +182,7 @@ struct TypesAreDistinct
 ///
 /// Typically only meaningful when it is otherwise statically known that the
 /// type pack has no duplicate types. This should be guaranteed explicitly with
-/// static_assert(TypesAreDistinct<Us...>{}).
+/// static_assert(TypesAreDistinct<Us...>::value).
 ///
 /// It is a compile-time error to instantiate when T is not present in Us, i.e.
 /// if is_one_of<T, Us...>::value is false.
