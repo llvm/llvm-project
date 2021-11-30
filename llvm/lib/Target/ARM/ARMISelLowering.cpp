@@ -13486,26 +13486,6 @@ bool ARMTargetLowering::preferIncOfAddToSubOfNot(EVT VT) const {
   return VT.isScalarInteger();
 }
 
-bool ARMTargetLowering::shouldConvertFpToSat(unsigned Op, EVT FPVT,
-                                             EVT VT) const {
-  if (!isOperationLegalOrCustom(Op, VT) || !FPVT.isSimple())
-    return false;
-
-  switch (FPVT.getSimpleVT().SimpleTy) {
-  case MVT::f16:
-    return Subtarget->hasVFP2Base();
-  case MVT::f32:
-    return Subtarget->hasVFP2Base();
-  case MVT::f64:
-    return Subtarget->hasFP64();
-  case MVT::v4f32:
-  case MVT::v8f16:
-    return Subtarget->hasMVEFloatOps();
-  default:
-    return false;
-  }
-}
-
 static SDValue PerformSHLSimplify(SDNode *N,
                                 TargetLowering::DAGCombinerInfo &DCI,
                                 const ARMSubtarget *ST) {
