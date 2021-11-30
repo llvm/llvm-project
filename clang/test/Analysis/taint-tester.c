@@ -59,7 +59,7 @@ void taintTracking(int x) {
   int tty = xy.y; // expected-warning + {{tainted}}
 }
 
-void BitwiseOp(int in, char inn) {
+void BitwiseOp(int in, char inn, int zz) {
   // Taint on bitwise operations, integer to integer cast.
   int m;
   int x = 0;
@@ -67,11 +67,12 @@ void BitwiseOp(int in, char inn) {
   int y = (in << (x << in)) * 5;// expected-warning + {{tainted}}
   // The next line tests integer to integer cast.
   int z = y & inn; // expected-warning + {{tainted}}
-  if (y == 5) // expected-warning + {{tainted}}
+  if (y == zz) { // expected-warning + {{tainted}}
     m = z | z;// expected-warning + {{tainted}}
+  }
   else
     m = inn;
-  int mm = m; // expected-warning + {{tainted}}
+  int mm = m; // expected-warning 1 {{tainted}}
 }
 
 // Test getenv.

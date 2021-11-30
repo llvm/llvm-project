@@ -1030,16 +1030,22 @@ Optional<ValueAndVReg> getAnyConstantSplat(Register VReg,
   return SplatValAndReg;
 }
 
-bool isBuildVectorConstantSplat(const MachineInstr &MI,
-                                const MachineRegisterInfo &MRI,
-                                int64_t SplatValue, bool AllowUndef) {
-  if (auto SplatValAndReg =
-          getAnyConstantSplat(MI.getOperand(0).getReg(), MRI, AllowUndef))
+} // end anonymous namespace
+
+bool llvm::isBuildVectorConstantSplat(const Register Reg,
+                                      const MachineRegisterInfo &MRI,
+                                      int64_t SplatValue, bool AllowUndef) {
+  if (auto SplatValAndReg = getAnyConstantSplat(Reg, MRI, AllowUndef))
     return mi_match(SplatValAndReg->VReg, MRI, m_SpecificICst(SplatValue));
   return false;
 }
 
-} // end anonymous namespace
+bool llvm::isBuildVectorConstantSplat(const MachineInstr &MI,
+                                      const MachineRegisterInfo &MRI,
+                                      int64_t SplatValue, bool AllowUndef) {
+  return isBuildVectorConstantSplat(MI.getOperand(0).getReg(), MRI, SplatValue,
+                                    AllowUndef);
+}
 
 Optional<int64_t>
 llvm::getBuildVectorConstantSplat(const MachineInstr &MI,

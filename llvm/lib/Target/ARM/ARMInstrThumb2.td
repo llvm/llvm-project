@@ -4055,6 +4055,8 @@ def t2HINT : T2I<(outs), (ins imm0_239:$imm), NoItinerary, "hint", ".w\t$imm",
   bits<8> imm;
   let Inst{31-3} = 0b11110011101011111000000000000;
   let Inst{7-0} = imm;
+
+  let DecoderMethod = "DecodeT2HintSpaceInstruction";
 }
 
 def : t2InstAlias<"hint$p $imm", (t2HINT imm0_239:$imm, pred:$p), 0>;
@@ -4074,6 +4076,11 @@ def : t2InstAlias<"esb$p", (t2HINT 16, pred:$p), 0> {
 }
 def : t2InstAlias<"csdb$p.w", (t2HINT 20, pred:$p), 0>;
 def : t2InstAlias<"csdb$p",   (t2HINT 20, pred:$p), 1>;
+
+def : t2InstAlias<"pacbti$p r12,lr,sp", (t2HINT 13, pred:$p), 1>;
+def : t2InstAlias<"bti$p", (t2HINT 15, pred:$p), 1>;
+def : t2InstAlias<"pac$p r12,lr,sp", (t2HINT 29, pred:$p), 1>;
+def : t2InstAlias<"aut$p r12,lr,sp", (t2HINT 45, pred:$p), 1>;
 
 def t2DBG : T2I<(outs), (ins imm0_15:$opt), NoItinerary, "dbg", "\t$opt",
                 [(int_arm_dbg imm0_15:$opt)]> {
@@ -5653,4 +5660,79 @@ let Predicates = [HasV8_1MMainline] in {
 
   def : InstAlias<"cneg\t$Rd, $Rn, $fcond",
                  (t2CSNEG rGPR:$Rd, GPRwithZRnosp:$Rn, GPRwithZRnosp:$Rn, pred_noal_inv:$fcond)>;
+}
+
+
+// PACBTI
+let Predicates = [IsThumb2, HasV8_1MMainline, HasPACBTI] in {
+def t2PACG : V8_1MI<(outs rGPR:$Rd),
+                    (ins pred:$p, GPRnopc:$Rn, GPRnopc:$Rm),
+                    AddrModeNone, NoItinerary, "pacg${p}", "$Rd, $Rn, $Rm", "", []> {
+  bits<4> Rd;
+  bits<4> Rn;
+  bits<4> Rm;
+  let Inst{31-20} = 0b111110110110;
+  let Inst{19-16} = Rn;
+  let Inst{15-12} = 0b1111;
+  let Inst{11-8}  = Rd;
+  let Inst{7-4}   = 0b0000;
+  let Inst{3-0}   = Rm;
+}
+
+let hasSideEffects = 1 in {
+class PACBTIAut<dag iops, string asm, bit b>
+  : V8_1MI<(outs), iops,
+           AddrModeNone, NoItinerary, asm, "$Ra, $Rn, $Rm", "", []> {
+  bits<4> Ra;
+  bits<4> Rn;
+  bits<4> Rm;
+  let Inst{31-20} = 0b111110110101;
+  let Inst{19-16} = Rn;
+  let Inst{15-12} = Ra;
+  let Inst{11-5}  = 0b1111000;
+  let Inst{4}     = b;
+  let Inst{3-0}   = Rm;
+}
+}
+
+def t2AUTG  : PACBTIAut<(ins pred:$p, GPRnosp:$Ra, GPRnopc:$Rn, GPRnopc:$Rm),
+                        "autg${p}", 0>;
+
+let isBranch = 1, isTerminator = 1, isIndirectBranch = 1 in {
+  def t2BXAUT : PACBTIAut<(ins pred:$p, GPRnosp:$Ra, rGPR:$Rn, GPRnopc:$Rm),
+                          "bxaut${p}", 1>;
+}
+}
+
+
+class PACBTIHintSpaceInst<string asm, string ops, bits<8> imm>
+  : V8_1MI<(outs), (ins), AddrModeNone, NoItinerary, asm, ops, "", []> {
+  let Inst{31-8} = 0b111100111010111110000000;
+  let Inst{7-0}  = imm;
+
+  let Unpredictable{19-16} = 0b1111;
+  let Unpredictable{13-11} = 0b101;
+
+  let DecoderMethod = "DecodeT2HintSpaceInstruction";
+}
+
+class PACBTIHintSpaceNoOpsInst<string asm, bits<8> imm>
+  : PACBTIHintSpaceInst<asm, "", imm>;
+
+class PACBTIHintSpaceDefInst<string asm, bits<8> imm>
+  : PACBTIHintSpaceInst<asm, "r12, lr, sp", imm> {
+  let Defs = [R12];
+  let Uses = [LR, SP];
+}
+
+class PACBTIHintSpaceUseInst<string asm, bits<8> imm>
+  : PACBTIHintSpaceInst<asm, "r12, lr, sp", imm> {
+  let Uses = [R12, LR, SP];
+}
+
+def t2PAC    : PACBTIHintSpaceDefInst<"pac", 0b00011101>;
+def t2PACBTI : PACBTIHintSpaceDefInst<"pacbti", 0b00001101>;
+def t2BTI    : PACBTIHintSpaceNoOpsInst<"bti", 0b00001111>;
+def t2AUT    : PACBTIHintSpaceUseInst<"aut", 0b00101101> {
+  let hasSideEffects = 1;
 }

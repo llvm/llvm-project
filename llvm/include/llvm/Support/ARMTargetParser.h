@@ -59,7 +59,7 @@ enum ArchExtKind : uint64_t {
   AEK_CDECP5 =      1 << 27,
   AEK_CDECP6 =      1 << 28,
   AEK_CDECP7 =      1 << 29,
-
+  AEK_PACBTI =      1 << 30,
   // Unsupported extensions.
   AEK_OS       =    1ULL << 59,
   AEK_IWMMXT   =    1ULL << 60,

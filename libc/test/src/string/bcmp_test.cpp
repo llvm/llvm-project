@@ -24,13 +24,13 @@ TEST(LlvmLibcBcmpTest, LhsRhsAreTheSame) {
 TEST(LlvmLibcBcmpTest, LhsBeforeRhsLexically) {
   const char *lhs = "ab";
   const char *rhs = "ac";
-  EXPECT_EQ(__llvm_libc::bcmp(lhs, rhs, 2), 1);
+  EXPECT_NE(__llvm_libc::bcmp(lhs, rhs, 2), 0);
 }
 
 TEST(LlvmLibcBcmpTest, LhsAfterRhsLexically) {
   const char *lhs = "ac";
   const char *rhs = "ab";
-  EXPECT_EQ(__llvm_libc::bcmp(lhs, rhs, 2), 1);
+  EXPECT_NE(__llvm_libc::bcmp(lhs, rhs, 2), 0);
 }
 
 TEST(LlvmLibcBcmpTest, Sweep) {
@@ -52,7 +52,7 @@ TEST(LlvmLibcBcmpTest, Sweep) {
   reset(rhs);
   for (size_t i = 0; i < kMaxSize; ++i) {
     rhs[i] = 'b';
-    EXPECT_EQ(__llvm_libc::bcmp(lhs, rhs, kMaxSize), 1);
+    EXPECT_NE(__llvm_libc::bcmp(lhs, rhs, kMaxSize), 0);
     rhs[i] = 'a';
   }
 }
