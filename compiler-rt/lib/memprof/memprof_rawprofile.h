@@ -5,17 +5,10 @@
 #include "sanitizer_common/sanitizer_procmaps.h"
 
 namespace __memprof {
-
-// TODO: pull these in from MemProfData.inc
-#define MEMPROF_RAW_MAGIC_64                                                   \
-  (u64)255 << 56 | (u64)'m' << 48 | (u64)'p' << 40 | (u64)'r' << 32 |          \
-      (u64)'o' << 24 | (u64)'f' << 16 | (u64)'r' << 8 | (u64)129
-
-#define MEMPROF_RAW_VERSION 1ULL
-
+// Serialize the in-memory representation of the memprof profile to the raw
+// binary format. The format itself is documented memprof_rawprofile.cpp.
 u64 SerializeToRawProfile(MIBMapTy &BlockCache, MemoryMappingLayoutBase &Layout,
                           char *&Buffer);
-
 } // namespace __memprof
 
 #endif // MEMPROF_RAWPROFILE_H_

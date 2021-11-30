@@ -49,12 +49,6 @@ void populateConvVectorizationPatterns(
     MLIRContext *context, SmallVectorImpl<RewritePatternSet> &patterns,
     ArrayRef<int64_t> tileSizes);
 
-/// Populates patterns to decompose high-D convolution ops into low-D ones. This
-/// is a step in progressive lowering for convolution ops, afterwards we can
-/// vectorize the low-D convolution ops.
-void populateDecomposeConvolutionPatterns(RewritePatternSet &patterns,
-                                          PatternBenefit benefit = 1);
-
 /// Populates patterns for vectorizing low-D convolution ops. This is a step in
 /// progressive lowering for convolution ops, it assume high-D convolution ops
 /// were decomposed previously.
@@ -1177,6 +1171,16 @@ private:
 void populateLinalgNamedOpsGeneralizationPatterns(
     RewritePatternSet &patterns,
     LinalgTransformationFilter filter = LinalgTransformationFilter());
+
+/// Linalg decompose convolutions patterns
+
+/// Populates patterns to decompose high-D convolution ops into low-D ones. This
+/// is a step in progressive lowering for convolution ops, afterwards we can
+/// vectorize the low-D convolution ops.
+void populateDecomposeConvolutionPatterns(
+    RewritePatternSet &patterns,
+    LinalgTransformationFilter filter = LinalgTransformationFilter(),
+    PatternBenefit benefit = 1);
 
 /// Linalg distribution patterns
 //

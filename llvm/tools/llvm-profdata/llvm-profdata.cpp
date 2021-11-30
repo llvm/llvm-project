@@ -17,6 +17,7 @@
 #include "llvm/ProfileData/InstrProfReader.h"
 #include "llvm/ProfileData/InstrProfWriter.h"
 #include "llvm/ProfileData/ProfileCommon.h"
+#include "llvm/ProfileData/RawMemProfReader.h"
 #include "llvm/ProfileData/SampleProfReader.h"
 #include "llvm/ProfileData/SampleProfWriter.h"
 #include "llvm/Support/CommandLine.h"
@@ -80,8 +81,8 @@ static void exitWithError(Error E, StringRef Whence = "") {
       instrprof_error instrError = IPE.get();
       StringRef Hint = "";
       if (instrError == instrprof_error::unrecognized_format) {
-        // Hint for common error of forgetting --sample for sample profiles.
-        Hint = "Perhaps you forgot to use the --sample option?";
+        // Hint in case user missed specifying the profile type.
+        Hint = "Perhaps you forgot to use the --sample or --memory option?";
       }
       exitWithError(IPE.message(), std::string(Whence), std::string(Hint));
     });
@@ -95,7 +96,7 @@ static void exitWithErrorCode(std::error_code EC, StringRef Whence = "") {
 }
 
 namespace {
-enum ProfileKinds { instr, sample };
+enum ProfileKinds { instr, sample, memory };
 enum FailureMode { failIfAnyAreInvalid, failIfAllAreInvalid };
 }
 
@@ -2447,6 +2448,17 @@ static int showSampleProfile(const std::string &Filename, bool ShowCounts,
   return 0;
 }
 
+static int showMemProfProfile(const std::string &Filename, raw_fd_ostream &OS) {
+  auto ReaderOr = llvm::memprof::RawMemProfReader::create(Filename);
+  if (Error E = ReaderOr.takeError())
+    exitWithError(std::move(E), Filename);
+
+  std::unique_ptr<llvm::memprof::RawMemProfReader> Reader(
+      ReaderOr.get().release());
+  Reader->printSummaries(OS);
+  return 0;
+}
+
 static int show_main(int argc, const char *argv[]) {
   cl::opt<std::string> Filename(cl::Positional, cl::Required,
                                 cl::desc("<profdata-file>"));
@@ -2487,7 +2499,8 @@ static int show_main(int argc, const char *argv[]) {
   cl::opt<ProfileKinds> ProfileKind(
       cl::desc("Profile kind:"), cl::init(instr),
       cl::values(clEnumVal(instr, "Instrumentation profile (default)"),
-                 clEnumVal(sample, "Sample profile")));
+                 clEnumVal(sample, "Sample profile"),
+                 clEnumVal(memory, "MemProf memory access profile")));
   cl::opt<uint32_t> TopNFunctions(
       "topn", cl::init(0),
       cl::desc("Show the list of functions with the largest internal counts"));
@@ -2532,11 +2545,12 @@ static int show_main(int argc, const char *argv[]) {
         ShowMemOPSizes, ShowDetailedSummary, DetailedSummaryCutoffs,
         ShowAllFunctions, ShowCS, ValueCutoff, OnlyListBelow, ShowFunction,
         TextFormat, ShowBinaryIds, OS);
-  else
+  if (ProfileKind == sample)
     return showSampleProfile(Filename, ShowCounts, TopNFunctions,
                              ShowAllFunctions, ShowDetailedSummary,
                              ShowFunction, ShowProfileSymbolList,
                              ShowSectionInfoOnly, ShowHotFuncList, OS);
+  return showMemProfProfile(Filename, OS);
 }
 
 int main(int argc, const char *argv[]) {
