@@ -70,6 +70,29 @@ define i32 @insert0_v4i8(i32 %x, i8 %y) {
   ret i32 %r
 }
 
+; i32 is a common type, so we can convert independently of the data layout.
+; Endian determines if a shift is needed (and so the transform is avoided).
+; half type can not be used in zext instruction (and so the transform is avoided).
+
+define i32 @insert0_v2half(i32 %x, half %y) {
+; BE-LABEL: @insert0_v2half(
+; BE-NEXT:    [[V:%.*]] = bitcast i32 [[X:%.*]] to <2 x half>
+; BE-NEXT:    [[I:%.*]] = insertelement <2 x half> [[V]], half [[Y:%.*]], i8 0
+; BE-NEXT:    [[R:%.*]] = bitcast <2 x half> [[I]] to i32
+; BE-NEXT:    ret i32 [[R]]
+;
+; LE-LABEL: @insert0_v2half(
+; LE-NEXT:    [[V:%.*]] = bitcast i32 [[X:%.*]] to <2 x half>
+; LE-NEXT:    [[I:%.*]] = insertelement <2 x half> [[V]], half [[Y:%.*]], i8 0
+; LE-NEXT:    [[R:%.*]] = bitcast <2 x half> [[I]] to i32
+; LE-NEXT:    ret i32 [[R]]
+;
+  %v = bitcast i32 %x to <2 x half>
+  %i = insertelement <2 x half> %v, half %y, i8 0
+  %r = bitcast <2 x half> %i to i32
+  ret i32 %r
+}
+
 ; i64 is a legal type, so we can convert based on the data layout.
 ; Endian determines if a shift is needed (and so the transform is avoided).
 
