@@ -2587,9 +2587,8 @@ static std::string rangeToString(uint64_t addr, uint64_t len) {
 
 // Assign file offsets to output sections.
 template <class ELFT> void Writer<ELFT>::assignFileOffsets() {
-  uint64_t off = 0;
-  off = setFileOffset(Out::elfHeader, off);
-  off = setFileOffset(Out::programHeaders, off);
+  Out::programHeaders->offset = Out::elfHeader->size;
+  uint64_t off = Out::elfHeader->size + Out::programHeaders->size;
 
   PhdrEntry *lastRX = nullptr;
   for (Partition &part : partitions)
