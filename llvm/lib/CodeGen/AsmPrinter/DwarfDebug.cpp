@@ -1533,7 +1533,7 @@ void DwarfDebug::collectVariableInfoFromMF(
       const DILocalVariable *LV = dyn_cast<DILocalVariable>(LT->getObject());
       assert(LV && "DILifetime's object is not DILocalVariable");
 
-      InlinedEntity Var(LV, MI.getDebugLoc().get());
+      InlinedEntity Var(LV, nullptr);
       Processed.insert(Var);
       LexicalScope *Scope = MI.getDebugLoc().get() ?
           LScopes.findLexicalScope(MI.getDebugLoc().get()) :
