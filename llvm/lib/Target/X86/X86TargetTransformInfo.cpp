@@ -4071,7 +4071,9 @@ InstructionCost X86TTIImpl::getAddressComputationCost(Type *Ty,
   // Even in the case of (loop invariant) stride whose value is not known at
   // compile time, the address computation will not incur more than one extra
   // ADD instruction.
-  if (Ty->isVectorTy() && SE) {
+  if (Ty->isVectorTy() && SE && !ST->hasAVX2()) {
+    // TODO: AVX2 is the current cut-off because we don't have correct
+    //       interleaving costs for prior ISA's.
     if (!BaseT::isStridedAccess(Ptr))
       return NumVectorInstToHideOverhead;
     if (!BaseT::getConstantStrideStep(SE, Ptr))
