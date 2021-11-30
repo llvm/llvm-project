@@ -40,6 +40,8 @@ struct TypeErasedLattice {
 /// Type-erased base class for dataflow analyses built on a single lattice type.
 class TypeErasedDataflowAnalysis {
 public:
+  virtual ~TypeErasedDataflowAnalysis() {}
+
   /// Returns the `ASTContext` that is used by the analysis.
   virtual ASTContext &getASTContext() = 0;
 
