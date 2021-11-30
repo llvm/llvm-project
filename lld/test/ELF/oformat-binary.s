@@ -30,7 +30,8 @@
 # RUN: od -t x1 %tempty | FileCheck %s
 
 ## NOBITS sections are ignored as well.
-# RUN: echo 'SECTIONS { .text : {*(.text .mysec*)} .data 0x100 (NOLOAD) : {BYTE(0)}}' > %tnobits.lds
+## Also test that SIZEOF_HEADERS evaluates to 0.
+# RUN: echo 'SECTIONS { .text : {. += SIZEOF_HEADERS; *(.text .mysec*)} .data 0x100 (NOLOAD) : {BYTE(0)}}' > %tnobits.lds
 # RUN: ld.lld -T %tnobits.lds %t --oformat binary -o %tnobits
 # RUN: od -t x1 %tnobits | FileCheck %s
 
