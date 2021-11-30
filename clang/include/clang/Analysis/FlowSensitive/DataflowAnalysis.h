@@ -60,7 +60,7 @@ public:
 
   ASTContext &getASTContext() final { return Context; }
 
-  AnyLatticeElement typeErasedInitialElement() final {
+  TypeErasedLattice typeErasedInitialElement() final {
     return {static_cast<Derived *>(this)->initialElement()};
   }
 
@@ -78,8 +78,8 @@ public:
     return L1 == L2;
   }
 
-  AnyLatticeElement transferTypeErased(const Stmt *Stmt,
-                                       const AnyLatticeElement &E,
+  TypeErasedLattice transferTypeErased(const Stmt *Stmt,
+                                       const TypeErasedLattice &E,
                                        Environment &Env) final {
     const Lattice &L = llvm::any_cast<const Lattice &>(E.Value);
     return {static_cast<Derived *>(this)->transfer(Stmt, L, Env)};
