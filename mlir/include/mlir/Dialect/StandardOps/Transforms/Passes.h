@@ -15,16 +15,19 @@
 #define MLIR_DIALECT_STANDARD_TRANSFORMS_PASSES_H_
 
 #include "mlir/Pass/Pass.h"
-#include "mlir/Transforms/Bufferize.h"
 
 namespace mlir {
+namespace bufferization {
+class BufferizeTypeConverter;
+} // end namespace bufferization
 
 class GlobalCreator;
 class RewritePatternSet;
 using OwningRewritePatternList = RewritePatternSet;
 
-void populateStdBufferizePatterns(BufferizeTypeConverter &typeConverter,
-                                  RewritePatternSet &patterns);
+void populateStdBufferizePatterns(
+    bufferization::BufferizeTypeConverter &typeConverter,
+    RewritePatternSet &patterns);
 
 /// Creates an instance of std bufferization pass.
 std::unique_ptr<Pass> createStdBufferizePass();
@@ -35,7 +38,8 @@ std::unique_ptr<Pass> createFuncBufferizePass();
 /// Add patterns to bufferize tensor constants into global memrefs to the given
 /// pattern list.
 void populateTensorConstantBufferizePatterns(
-    GlobalCreator &globalCreator, BufferizeTypeConverter &typeConverter,
+    GlobalCreator &globalCreator,
+    bufferization::BufferizeTypeConverter &typeConverter,
     RewritePatternSet &patterns);
 
 /// Creates an instance of tensor constant bufferization pass.

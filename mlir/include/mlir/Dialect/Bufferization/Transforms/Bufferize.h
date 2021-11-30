@@ -20,19 +20,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_TRANSFORMS_BUFFERIZE_H
-#define MLIR_TRANSFORMS_BUFFERIZE_H
+#ifndef MLIR_DIALECT_BUFFERIZATION_TRANSFORMS_BUFFERIZE_H
+#define MLIR_DIALECT_BUFFERIZATION_TRANSFORMS_BUFFERIZE_H
 
-#include "mlir/Analysis/BufferViewFlowAnalysis.h"
-#include "mlir/Analysis/Liveness.h"
-#include "mlir/Dialect/StandardOps/IR/Ops.h"
-#include "mlir/IR/Builders.h"
-#include "mlir/IR/BuiltinOps.h"
-#include "mlir/IR/Dominance.h"
-#include "mlir/IR/Operation.h"
 #include "mlir/Transforms/DialectConversion.h"
 
 namespace mlir {
+namespace bufferization {
 
 /// A helper type converter class that automatically populates the relevant
 /// materializations and type conversions for bufferization.
@@ -58,6 +52,7 @@ void populateBufferizeMaterializationLegality(ConversionTarget &target);
 void populateEliminateBufferizeMaterializationsPatterns(
     BufferizeTypeConverter &typeConverter, RewritePatternSet &patterns);
 
+} // end namespace bufferization
 } // end namespace mlir
 
-#endif // MLIR_TRANSFORMS_BUFFERIZE_H
+#endif // MLIR_DIALECT_BUFFERIZATION_TRANSFORMS_BUFFERIZE_H

@@ -6,10 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Transforms/Bufferize.h"
 #include "PassDetail.h"
+
 #include "mlir/Dialect/Arithmetic/Transforms/Passes.h"
 #include "mlir/Dialect/Bufferization/IR/Bufferization.h"
+#include "mlir/Dialect/Bufferization/Transforms/Bufferize.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 
 using namespace mlir;
@@ -35,7 +36,7 @@ struct BufferizeIndexCastOp : public OpConversionPattern<arith::IndexCastOp> {
 struct ArithmeticBufferizePass
     : public ArithmeticBufferizeBase<ArithmeticBufferizePass> {
   void runOnFunction() override {
-    BufferizeTypeConverter typeConverter;
+    bufferization::BufferizeTypeConverter typeConverter;
     RewritePatternSet patterns(&getContext());
     ConversionTarget target(getContext());
 
@@ -57,7 +58,8 @@ struct ArithmeticBufferizePass
 } // end anonymous namespace
 
 void mlir::arith::populateArithmeticBufferizePatterns(
-    BufferizeTypeConverter &typeConverter, RewritePatternSet &patterns) {
+    bufferization::BufferizeTypeConverter &typeConverter,
+    RewritePatternSet &patterns) {
   patterns.add<BufferizeIndexCastOp>(typeConverter, patterns.getContext());
 }
 
