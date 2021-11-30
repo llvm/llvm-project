@@ -31,14 +31,14 @@ body:             |
     ; CHECK: tSTRspi [[COPY]], %stack.0, 0, 14 /* CC::al */, $noreg
     ; CHECK: [[tLDRspi:%[0-9]+]]:tgpr = tLDRspi %stack.0, 0, 14 /* CC::al */, $noreg
     ; CHECK: [[COPY1:%[0-9]+]]:hgpr = COPY [[tLDRspi]]
-    ; CHECK: INLINEASM &"mov r12, $0", 1 /* sideeffect attdialect */, 1048585 /* reguse:GPRnoip_and_GPRwithAPSR_NZCVnosp */, [[COPY1]], 12 /* clobber */, implicit-def early-clobber $r12
+    ; CHECK: INLINEASM &"mov r12, $0", 1 /* sideeffect attdialect */, 1048585 /* reguse:GPRnoip_and_GPRnopc */, %1, 12 /* clobber */, implicit-def early-clobber $r12
     ; CHECK: tBX_RET 14 /* CC::al */, $noreg
     ; FAST-LABEL: name: constraint_h
     ; FAST: liveins: $r0
     ; FAST: tSTRspi killed renamable $r0, %stack.0, 0, 14 /* CC::al */, $noreg
     ; FAST: renamable $r0 = tLDRspi %stack.0, 0, 14 /* CC::al */, $noreg
     ; FAST: renamable $r8 = COPY killed renamable $r0
-    ; FAST: INLINEASM &"mov r12, $0", 1 /* sideeffect attdialect */, 1048585 /* reguse:GPRnoip_and_GPRwithAPSR_NZCVnosp */, killed renamable $r8, 12 /* clobber */, implicit-def dead early-clobber $r12
+    ; FAST: INLINEASM &"mov r12, $0", 1 /* sideeffect attdialect */, 1048585 /* reguse:GPRnoip_and_GPRnopc */, killed renamable $r8, 12 /* clobber */, implicit-def dead early-clobber $r12
     ; FAST: tBX_RET 14 /* CC::al */, $noreg
     %0:tgpr = COPY $r0
     tSTRspi %0, %stack.0, 0, 14 /* CC::al */, $noreg

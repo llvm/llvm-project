@@ -373,6 +373,8 @@ protected:
   /// HasLOB - if true, the processor supports the Low Overhead Branch extension
   bool HasLOB = false;
 
+  bool HasPACBTI = false;
+
   /// If true, the instructions "vmov.i32 d0, #0" and "vmov.i32 q0, #0" are
   /// particularly effective at zeroing a VFP register.
   bool HasZeroCycleZeroing = false;
@@ -671,6 +673,7 @@ public:
   bool hasCRC() const { return HasCRC; }
   bool hasRAS() const { return HasRAS; }
   bool hasLOB() const { return HasLOB; }
+  bool hasPACBTI() const { return HasPACBTI; }
   bool hasVirtualization() const { return HasVirtualization; }
 
   bool useNEONForSinglePrecisionFP() const {
