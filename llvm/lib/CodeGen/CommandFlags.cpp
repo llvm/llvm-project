@@ -699,5 +699,7 @@ void codegen::setFunctionAttributes(StringRef CPU, StringRef Features,
 }
 
 bool codegen::getDefaultValueTrackingVariableLocations(const llvm::Triple &T) {
+  if (T.getArch() == llvm::Triple::x86_64)
+    return true;
   return false;
 }

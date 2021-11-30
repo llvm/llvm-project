@@ -13,10 +13,6 @@
 ;; by llc by default, and that it can be turned explicitly on or off as
 ;; desired.
 
-;; XFail it for pre-landing the patch, and to allow a minimal delta if it
-;; has to be reverted.
-; XFAIL: *
-
 ; INSTRREFON: DBG_INSTR_REF
 ; INSTRREFOFF: DBG_VALUE
 
