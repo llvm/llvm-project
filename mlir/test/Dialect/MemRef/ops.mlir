@@ -5,6 +5,7 @@
 // CHECK-DAG: #[[$strided3D:.*]] = affine_map<(d0, d1, d2)[s0, s1, s2] -> (d0 * s1 + s0 + d1 * s2 + d2)>
 // CHECK-DAG: #[[$strided2DOFF0:.*]] = affine_map<(d0, d1)[s0] -> (d0 * s0 + d1)>
 // CHECK-DAG: #[[$strided3DOFF0:.*]] = affine_map<(d0, d1, d2)[s0, s1] -> (d0 * s0 + d1 * s1 + d2)>
+// CHECK-DAG: #[[$strided2D42:.*]] = affine_map<(d0, d1) -> (d0 * 42 + d1)>
 
 // CHECK-LABEL: func @memref_reinterpret_cast
 func @memref_reinterpret_cast(%in: memref<?xf32>)
@@ -143,7 +144,8 @@ func @expand_collapse_shape_static(%arg0: memref<3x4x5xf32>,
 
 func @expand_collapse_shape_dynamic(%arg0: memref<?x?x?xf32>,
          %arg1: memref<?x?x?xf32, offset : 0, strides : [?, ?, 1]>,
-         %arg2: memref<?x?x?xf32, offset : ?, strides : [?, ?, 1]>) {
+         %arg2: memref<?x?x?xf32, offset : ?, strides : [?, ?, 1]>,
+         %arg3: memref<?x42xf32, offset : 0, strides : [42, 1]>) {
   %0 = memref.collapse_shape %arg0 [[0, 1], [2]] :
     memref<?x?x?xf32> into memref<?x?xf32>
   %r0 = memref.expand_shape %0 [[0, 1], [2]] :
@@ -160,6 +162,12 @@ func @expand_collapse_shape_dynamic(%arg0: memref<?x?x?xf32>,
   %r2 = memref.expand_shape %2 [[0, 1], [2]] :
     memref<?x?xf32, offset : ?, strides : [?, 1]> into
     memref<?x4x?xf32, offset : ?, strides : [?, ?, 1]>
+  %3 = memref.collapse_shape %arg3 [[0, 1]] :
+    memref<?x42xf32, offset : 0, strides : [42, 1]> into
+    memref<?xf32, offset : 0, strides : [1]>
+  %r3 = memref.expand_shape %3 [[0, 1]] :
+    memref<?xf32, offset : 0, strides : [1]> into
+    memref<?x42xf32, offset : 0, strides : [42, 1]>
   return
 }
 // CHECK-LABEL: func @expand_collapse_shape_dynamic
@@ -175,6 +183,10 @@ func @expand_collapse_shape_dynamic(%arg0: memref<?x?x?xf32>,
 //  CHECK-SAME:     memref<?x?x?xf32, #[[$strided3D]]> into memref<?x?xf32, #[[$strided2D]]>
 //       CHECK:   memref.expand_shape {{.*}} {{\[}}[0, 1], [2]]
 //  CHECK-SAME:     memref<?x?xf32, #[[$strided2D]]> into memref<?x4x?xf32, #[[$strided3D]]>
+//       CHECK:   memref.collapse_shape {{.*}} {{\[}}[0, 1]]
+//  CHECK-SAME:     memref<?x42xf32, #[[$strided2D42]]> into memref<?xf32>
+//       CHECK:   memref.expand_shape {{.*}} {{\[}}[0, 1]]
+//  CHECK-SAME:     memref<?xf32> into memref<?x42xf32, #[[$strided2D42]]>
 
 func @expand_collapse_shape_zero_dim(%arg0 : memref<1x1xf32>, %arg1 : memref<f32>)
     -> (memref<f32>, memref<1x1xf32>) {

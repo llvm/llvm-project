@@ -1727,16 +1727,18 @@ static Instruction *foldComplexAndOrPatterns(BinaryOperator &I,
       (Opcode == Instruction::And) ? Instruction::Or : Instruction::And;
 
   Value *Op0 = I.getOperand(0), *Op1 = I.getOperand(1);
-  Value *A, *B, *C;
+  Value *A, *B, *C, *X, *Y;
 
   // (~(A | B) & C) | ... --> ...
   // (~(A & B) | C) & ... --> ...
   // TODO: One use checks are conservative. We just need to check that a total
   //       number of multiple used values does not exceed reduction
   //       in operations.
-  if (match(Op0, m_c_BinOp(FlippedOpcode,
-                           m_Not(m_BinOp(Opcode, m_Value(A), m_Value(B))),
-                           m_Value(C)))) {
+  if (match(Op0,
+            m_c_BinOp(FlippedOpcode,
+                      m_CombineAnd(m_Value(X), m_Not(m_BinOp(Opcode, m_Value(A),
+                                                             m_Value(B)))),
+                      m_Value(C)))) {
     // (~(A | B) & C) | (~(A | C) & B) --> (B ^ C) & ~A
     // (~(A & B) | C) & (~(A & C) | B) --> ~((B ^ C) & A)
     if (match(Op1,
@@ -1776,6 +1778,21 @@ static Instruction *foldComplexAndOrPatterns(BinaryOperator &I,
                        m_c_BinOp(Opcode, m_Specific(B), m_Specific(C)))))))
       return BinaryOperator::CreateNot(Builder.CreateBinOp(
           Opcode, Builder.CreateBinOp(FlippedOpcode, A, C), B));
+
+    // (~(A | B) & C) | ~(C | (A ^ B)) --> ~((A | B) & (C | (A ^ B)))
+    // Note, the pattern with swapped and/or is not handled because the
+    // result is more undefined than a source:
+    // (~(A & B) | C) & ~(C & (A ^ B)) --> (A ^ B ^ C) | ~(A | C) is invalid.
+    if (Opcode == Instruction::Or && Op0->hasOneUse() &&
+        match(Op1, m_OneUse(m_Not(m_CombineAnd(
+                       m_Value(Y),
+                       m_c_BinOp(Opcode, m_Specific(C),
+                                 m_c_Xor(m_Specific(A), m_Specific(B)))))))) {
+      // X = ~(A | B)
+      // Y = (C | (A ^ B)
+      Value *Or = cast<BinaryOperator>(X)->getOperand(0);
+      return BinaryOperator::CreateNot(Builder.CreateAnd(Or, Y));
+    }
   }
 
   return nullptr;
@@ -2620,6 +2637,15 @@ Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
     // The check for a 'not' op is for efficiency (if Y is known zero --> ~X).
     Value *Or = Builder.CreateOr(X, Y);
     return BinaryOperator::CreateXor(Or, ConstantInt::get(Ty, *CV));
+  }
+
+  // If the operands have no common bits set:
+  // or (mul X, Y), X --> add (mul X, Y), X --> mul X, (Y + 1)
+  if (match(&I,
+            m_c_Or(m_OneUse(m_Mul(m_Value(X), m_Value(Y))), m_Deferred(X))) &&
+      haveNoCommonBitsSet(Op0, Op1, DL)) {
+    Value *IncrementY = Builder.CreateAdd(Y, ConstantInt::get(Ty, 1));
+    return BinaryOperator::CreateMul(X, IncrementY);
   }
 
   // (A & C) | (B & D)
@@ -3622,6 +3648,14 @@ Instruction *InstCombinerImpl::visitXor(BinaryOperator &I) {
   // (~A & B) ^ A --> A | B -- There are 4 commuted variants.
   if (match(&I, m_c_Xor(m_c_And(m_Not(m_Value(A)), m_Value(B)), m_Deferred(A))))
     return BinaryOperator::CreateOr(A, B);
+
+  // (~A | B) ^ A --> ~(A & B)
+  if (match(Op0, m_OneUse(m_c_Or(m_Not(m_Specific(Op1)), m_Value(B)))))
+    return BinaryOperator::CreateNot(Builder.CreateAnd(Op1, B));
+
+  // A ^ (~A | B) --> ~(A & B)
+  if (match(Op1, m_OneUse(m_c_Or(m_Not(m_Specific(Op0)), m_Value(B)))))
+    return BinaryOperator::CreateNot(Builder.CreateAnd(Op0, B));
 
   // (A | B) ^ (A | C) --> (B ^ C) & ~A -- There are 4 commuted variants.
   // TODO: Loosen one-use restriction if common operand is a constant.

@@ -565,9 +565,8 @@ template <class ELFT> void Writer<ELFT>::run() {
   // --print-archive-stats=. Dump them before checkSections() because the files
   // may be useful in case checkSections() or openFile() fails, for example, due
   // to an erroneous file size.
-  writeMapFile();
+  writeMapAndCref();
   writeWhyExtract();
-  writeCrossReferenceTable();
   writeArchiveStats();
 
   if (config->checkSections)

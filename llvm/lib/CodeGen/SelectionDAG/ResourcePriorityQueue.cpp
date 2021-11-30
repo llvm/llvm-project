@@ -268,8 +268,8 @@ bool ResourcePriorityQueue::isResourceAvailable(SUnit *SU) {
 
   // Now see if there are no other dependencies
   // to instructions already in the packet.
-  for (unsigned i = 0, e = Packet.size(); i != e; ++i)
-    for (const SDep &Succ : Packet[i]->Succs) {
+  for (const SUnit *S : Packet)
+    for (const SDep &Succ : S->Succs) {
       // Since we do not add pseudos to packets, might as well
       // ignore order deps.
       if (Succ.isCtrl())

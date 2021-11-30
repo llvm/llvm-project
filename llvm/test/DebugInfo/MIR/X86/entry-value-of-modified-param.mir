@@ -1,7 +1,9 @@
 # RUN: llc -run-pass=livedebugvalues -march=x86-64 -o - %s  \
 # RUN:  -experimental-debug-variable-locations=false \
 # RUN: | FileCheck %s --check-prefixes=CHECK,VARLOCLDV
-# RUN: llc -force-instr-ref-livedebugvalues=1 -run-pass=livedebugvalues -march=x86-64 -o - %s | FileCheck %s --check-prefixes=CHECK,INSTRREFLDV
+# RUN: llc -run-pass=livedebugvalues -march=x86-64 -o - %s \
+# RUN:  -experimental-debug-variable-locations=true \
+# RUN: | FileCheck %s --check-prefixes=CHECK,INSTRREFLDV
 #
 #extern void fn1 (int, int, int);
 #
