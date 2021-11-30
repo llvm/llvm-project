@@ -92,9 +92,9 @@ class BuilderDarwin(Builder):
             builder_dir = os.path.dirname(os.path.abspath(__file__))
             test_dir = os.path.dirname(builder_dir)
             if env == "simulator":
-              entitlements_file = 'entitlements-simulator.plist'
+                entitlements_file = 'entitlements-simulator.plist'
             else:
-              entitlements_file = 'entitlements.plist'
+                entitlements_file = 'entitlements.plist'
             entitlements = os.path.join(test_dir, 'make', entitlements_file)
             args['CODESIGN'] = 'codesign --entitlements {}'.format(
                 entitlements)
