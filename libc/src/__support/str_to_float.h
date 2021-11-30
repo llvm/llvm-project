@@ -200,7 +200,7 @@ simpleDecimalConversion(const char *__restrict numStart,
           static_cast<int64_t>(fputil::FloatProperties<T>::exponentBias)) {
     *outputMantissa = 0;
     *outputExp2 = fputil::FPBits<T>::maxExponent;
-    errno = ERANGE; // NOLINT
+    errno = ERANGE;
     return;
   }
   // If the exponent is too small even for a subnormal, return 0.
@@ -210,7 +210,7 @@ simpleDecimalConversion(const char *__restrict numStart,
                                fputil::FloatProperties<T>::mantissaWidth)) {
     *outputMantissa = 0;
     *outputExp2 = 0;
-    errno = ERANGE; // NOLINT
+    errno = ERANGE;
     return;
   }
 
@@ -253,7 +253,7 @@ simpleDecimalConversion(const char *__restrict numStart,
   if (exp2 >= fputil::FPBits<T>::maxExponent) {
     *outputMantissa = 0;
     *outputExp2 = fputil::FPBits<T>::maxExponent;
-    errno = ERANGE; // NOLINT
+    errno = ERANGE;
     return;
   }
 
@@ -289,7 +289,7 @@ simpleDecimalConversion(const char *__restrict numStart,
   }
 
   if (exp2 == 0) {
-    errno = ERANGE; // NOLINT
+    errno = ERANGE;
   }
 
   *outputMantissa = finalMantissa;
@@ -391,7 +391,7 @@ decimalExpToFloat(typename fputil::FPBits<T>::UIntType mantissa, int32_t exp10,
       static_cast<int64_t>(fputil::FloatProperties<T>::exponentBias) / 3) {
     *outputMantissa = 0;
     *outputExp2 = fputil::FPBits<T>::maxExponent;
-    errno = ERANGE; // NOLINT
+    errno = ERANGE;
     return;
   }
   // If the exponent is too small even for a subnormal, return 0.
@@ -402,7 +402,7 @@ decimalExpToFloat(typename fputil::FPBits<T>::UIntType mantissa, int32_t exp10,
               2) {
     *outputMantissa = 0;
     *outputExp2 = 0;
-    errno = ERANGE; // NOLINT
+    errno = ERANGE;
     return;
   }
 
@@ -467,7 +467,7 @@ binaryExpToFloat(typename fputil::FPBits<T>::UIntType mantissa, int32_t exp2,
     // This indicates an overflow, so we make the result INF and set errno.
     *outputExp2 = (1 << fputil::FloatProperties<T>::exponentWidth) - 1;
     *outputMantissa = 0;
-    errno = ERANGE; // NOLINT
+    errno = ERANGE;
     return;
   }
 
@@ -483,7 +483,7 @@ binaryExpToFloat(typename fputil::FPBits<T>::UIntType mantissa, int32_t exp2,
       // Return 0 if the exponent is too small.
       *outputMantissa = 0;
       *outputExp2 = 0;
-      errno = ERANGE; // NOLINT
+      errno = ERANGE;
       return;
     }
   }
@@ -511,12 +511,12 @@ binaryExpToFloat(typename fputil::FPBits<T>::UIntType mantissa, int32_t exp2,
     ++biasedExponent;
 
     if (biasedExponent == INF_EXP) {
-      errno = ERANGE; // NOLINT
+      errno = ERANGE;
     }
   }
 
   if (biasedExponent == 0) {
-    errno = ERANGE; // NOLINT
+    errno = ERANGE;
   }
 
   *outputMantissa = mantissa & fputil::FloatProperties<T>::mantissaMask;

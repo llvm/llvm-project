@@ -47,7 +47,7 @@ func @subview_canonicalize(%arg0 : memref<?x?x?xf32>, %arg1 : index,
 
 // -----
 
-#map0 = affine_map<(d0, d1)[s0, s1, s2] -> (d0 * s1 + s0 + d1 * s2)>
+#map0 = affine_map<(d0, d1)[s0, s1] -> (d0 * s1 + s0 + d1)>
 func @rank_reducing_subview_canonicalize(%arg0 : memref<?x?x?xf32>, %arg1 : index,
     %arg2 : index) -> memref<?x?xf32, #map0>
 {
@@ -395,3 +395,25 @@ func @collapse_after_memref_cast(%arg0 : memref<?x512x1x?xf32>) -> memref<?x?xf3
   %collapsed = memref.collapse_shape %dynamic [[0], [1, 2, 3]] : memref<?x?x?x?xf32> into memref<?x?xf32>
   return %collapsed : memref<?x?xf32>
 }
+
+// -----
+
+func @reduced_memref(%arg0: memref<2x5x7x1xf32>, %arg1 :index)
+    -> memref<1x4x1xf32, affine_map<(d0, d1, d2)[s0] -> (d0 * 35 + s0 + d1 * 7 + d2)>> {
+  %c0 = arith.constant 0 : index
+  %c5 = arith.constant 5 : index
+  %c4 = arith.constant 4 : index
+  %c2 = arith.constant 2 : index
+  %c1 = arith.constant 1 : index
+  %0 = memref.subview %arg0[%arg1, %arg1, %arg1, 0] [%c1, %c4, %c1, 1] [1, 1, 1, 1]
+      : memref<2x5x7x1xf32> to memref<?x?x?xf32, affine_map<(d0, d1, d2)[s0] -> (d0 * 35 + s0 + d1 * 7 + d2)>>
+  %1 = memref.cast %0
+      : memref<?x?x?xf32, affine_map<(d0, d1, d2)[s0] -> (d0 * 35 + s0 + d1 * 7 + d2)>> to
+        memref<1x4x1xf32, affine_map<(d0, d1, d2)[s0] -> (d0 * 35 + s0 + d1 * 7 + d2)>>
+  return %1 : memref<1x4x1xf32, affine_map<(d0, d1, d2)[s0] -> (d0 * 35 + s0 + d1 * 7 + d2)>>
+}
+
+// CHECK-LABEL: func @reduced_memref
+//       CHECK:   %[[RESULT:.+]] = memref.subview
+//  CHECK-SAME:       memref<2x5x7x1xf32> to memref<1x4x1xf32, #{{.+}}>
+//       CHECK:   return %[[RESULT]]
