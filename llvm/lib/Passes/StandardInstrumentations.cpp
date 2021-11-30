@@ -225,8 +225,8 @@ std::string doSystemDiff(StringRef Before, StringRef After,
     return "Unable to read result.";
 
   // Clean up.
-  for (unsigned I = 0; I < NumFiles; ++I) {
-    std::error_code EC = sys::fs::remove(FileName[I]);
+  for (const std::string &I : FileName) {
+    std::error_code EC = sys::fs::remove(I);
     if (EC)
       return "Unable to remove temporary file.";
   }
