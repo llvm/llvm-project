@@ -268,7 +268,6 @@ struct CodegenStrategy {
   vectorize(StringRef opName,
             LinalgTransformationFilter::FilterFunction f = nullptr,
             bool vectorizePadding = false) {
-    assert(!opName.empty() && "expected an op name");
     transformationSequence.emplace_back(std::make_unique<Vectorize>(
         opName, linalg::LinalgVectorizationOptions(), f, vectorizePadding));
     return *this;

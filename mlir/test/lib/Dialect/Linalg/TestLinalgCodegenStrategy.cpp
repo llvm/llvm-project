@@ -165,24 +165,24 @@ void TestLinalgCodegenStrategy::runStrategy(
     vector::VectorTransferSplit vectorTransferSplit) {
   assert(!anchorOpName.empty());
   CodegenStrategy strategy;
-  StringRef genericOpName = GenericOp::getOperationName();
   strategy
       .tileAndFuseIf(fuse && !tileSizes.empty(), anchorOpName,
                      tilingAndFusionOptions)
       .tileIf(!fuse && !tileSizes.empty(), anchorOpName, tilingOptions)
-      .promoteIf(promote, anchorOpName,
+      .promoteIf(!fuse && promote, anchorOpName,
                  LinalgPromotionOptions()
                      .setAlignment(16)
                      .setUseFullTileBuffersByDefault(promoteFullTile))
-      .tileIf(!registerTileSizes.empty(), anchorOpName, registerTilingOptions)
-      .promoteIf(registerPromote, anchorOpName,
+      .tileIf(!fuse && !registerTileSizes.empty(), anchorOpName,
+              registerTilingOptions)
+      .promoteIf(!fuse && registerPromote, anchorOpName,
                  LinalgPromotionOptions()
                      .setAlignment(16)
                      .setUseFullTileBuffersByDefault(registerPromoteFullTile))
-      .padIf(pad, anchorOpName, paddingOptions)
-      .generalizeIf(generalize, anchorOpName)
+      .padIf(pad, "", paddingOptions)
+      .generalizeIf(generalize, "")
       .interchangeIf(!iteratorInterchange.empty(), iteratorInterchange)
-      .vectorizeIf(vectorize, generalize ? genericOpName : anchorOpName)
+      .vectorizeIf(vectorize, "")
       .vectorLowering(
           LinalgVectorLoweringOptions()
               .setVectorTransformsOptions(

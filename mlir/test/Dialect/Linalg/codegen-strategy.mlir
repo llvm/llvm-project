@@ -2,6 +2,7 @@
 // RUN: mlir-opt %s -test-linalg-codegen-strategy="anchor-func=matmul anchor-op=linalg.matmul tile-sizes=16,32,64 promote promote-full-tile-pad register-tile-sizes=2,4,8 vectorize vectorize-contraction-to=outerproduct split-transfers=true unroll-vector-transfers=false" -split-input-file | FileCheck %s --check-prefix=CHECK-OUTER
 // RUN: mlir-opt %s -test-linalg-codegen-strategy="anchor-func=matmul anchor-op=linalg.matmul tile-sizes=16,32,64 tile-interchange=1,2,0 generalize iterator-interchange=0,2,1" -split-input-file | FileCheck %s --check-prefix=CHECK-INTERCHANGE
 // RUN: mlir-opt %s -test-linalg-codegen-strategy="anchor-func=matmul anchor-op=linalg.matmul tile-sizes=16,32,64 pad pack-paddings=1,1,0 hoist-paddings=3,3,0" -split-input-file | FileCheck %s --check-prefix=CHECK-PAD
+// RUN: mlir-opt %s -test-linalg-codegen-strategy="anchor-func=matmul anchor-op=linalg.matmul tile-sizes=16,32,64 fuse pad vectorize" -split-input-file | FileCheck %s --check-prefix=CHECK-FUSE
 
 // CHECK-INTRINSIC: func @matmul(
 //     CHECK-OUTER: func @matmul(
@@ -55,4 +56,21 @@ func @matmul(%arg0: tensor<72x72xf32>, %arg1: tensor<72x72xf32>, %arg2: tensor<7
   //              CHECK-PAD: linalg.matmul
   %0 = linalg.matmul ins(%arg0, %arg1: tensor<72x72xf32>, tensor<72x72xf32>) outs(%arg2: tensor<72x72xf32>) -> tensor<72x72xf32>
   return %0 : tensor<72x72xf32>
+}
+
+// -----
+
+//         CHECK-FUSE: func @matmul(
+func @matmul(%arg0: tensor<72x72xf32>, %arg1: tensor<72x72xf32>, %arg2: tensor<72x72xf32>) -> tensor<72x72xf32> {
+
+  // Check the padding and vectorization applies to the fill operation due to the empty anchor op string.
+  //        CHECK-FUSE:  %[[CST:.*]] = arith.constant dense<0.000000e+00>
+  //        CHECK-FUSE:  vector.transfer_write %[[CST]]
+  %cst = arith.constant 0.0 : f32
+  %0 = linalg.fill(%cst, %arg0) : f32, tensor<72x72xf32> -> tensor<72x72xf32>
+
+  // Check the matmul is padded and vectorized despite the empty anchor op string.
+  //        CHECK-FUSE:  vector.outerproduct
+  %1 = linalg.matmul ins(%arg0, %arg1: tensor<72x72xf32>, tensor<72x72xf32>) outs(%0: tensor<72x72xf32>) -> tensor<72x72xf32>
+  return %1 : tensor<72x72xf32>
 }
