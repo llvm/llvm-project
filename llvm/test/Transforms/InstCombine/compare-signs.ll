@@ -178,13 +178,12 @@ define <2 x i1> @shift_trunc_signbit_test_vec_uses(<2 x i17> %x, <2 x i17>* %p1,
   ret <2 x i1> %r
 }
 
-; negative test
+; negative test - but this reduces with a mask op
 
 define i1 @shift_trunc_wrong_shift(i32 %x) {
 ; CHECK-LABEL: @shift_trunc_wrong_shift(
-; CHECK-NEXT:    [[SH:%.*]] = lshr i32 [[X:%.*]], 23
-; CHECK-NEXT:    [[TR:%.*]] = trunc i32 [[SH]] to i8
-; CHECK-NEXT:    [[R:%.*]] = icmp slt i8 [[TR]], 0
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[X:%.*]], 1073741824
+; CHECK-NEXT:    [[R:%.*]] = icmp ne i32 [[TMP1]], 0
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %sh = lshr i32 %x, 23
