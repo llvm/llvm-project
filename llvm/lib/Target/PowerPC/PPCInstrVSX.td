@@ -2471,6 +2471,7 @@ def DblwdCmp {
 // [HasVSX, HasP8Vector, IsLittleEndian]
 // [HasVSX, HasP8Vector, NoP9Vector, IsBigEndian, IsPPC64]
 // [HasVSX, HasP8Vector, NoP9Vector, IsLittleEndian]
+// [HasVSX, HasP8Altivec]
 // [HasVSX, HasDirectMove]
 // [HasVSX, HasDirectMove, IsBigEndian]
 // [HasVSX, HasDirectMove, IsLittleEndian]
@@ -2499,6 +2500,10 @@ let Predicates = [HasVSX, IsLittleEndian, HasP8Altivec] in
 let Predicates = [HasVSX, IsBigEndian, HasP8Altivec] in
   def : Pat<(v16i8 (int_ppc_altivec_crypto_vpermxor v16i8:$a,
                                                     v16i8:$b, v16i8:$c)),
+            (v16i8 (VPERMXOR $a, $b, $c))>;
+let Predicates = [HasVSX, HasP8Altivec] in
+  def : Pat<(v16i8 (int_ppc_altivec_crypto_vpermxor_be v16i8:$a,
+                                                       v16i8:$b, v16i8:$c)),
             (v16i8 (VPERMXOR $a, $b, $c))>;
 
 let AddedComplexity = 400 in {

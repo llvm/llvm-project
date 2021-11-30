@@ -1087,6 +1087,10 @@ let TargetPrefix = "ppc" in {  // All PPC intrinsics start with "llvm.ppc.".
               GCCBuiltin<"__builtin_altivec_crypto_vpermxor">,
               Intrinsic<[llvm_v16i8_ty], [llvm_v16i8_ty,
                          llvm_v16i8_ty, llvm_v16i8_ty], [IntrNoMem]>;
+  def int_ppc_altivec_crypto_vpermxor_be :
+              GCCBuiltin<"__builtin_altivec_crypto_vpermxor_be">,
+              Intrinsic<[llvm_v16i8_ty], [llvm_v16i8_ty,
+                         llvm_v16i8_ty, llvm_v16i8_ty], [IntrNoMem]>;
 
 def int_ppc_altivec_crypto_vshasigmad :
             GCCBuiltin<"__builtin_altivec_crypto_vshasigmad">,
