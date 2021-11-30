@@ -17,6 +17,7 @@
 #include "llvm/Demangle/StringView.h"
 #include "llvm/Demangle/Utility.h"
 
+#include <cctype>
 #include <cstring>
 #include <limits>
 
