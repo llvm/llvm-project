@@ -1,4 +1,9 @@
-; RUN: llc -start-after=codegenprepare -stop-before finalize-isel -o - %s -experimental-debug-variable-locations=false | FileCheck %s
+; RUN: llc -start-after=codegenprepare -stop-before finalize-isel -o - %s \
+; RUN:     -experimental-debug-variable-locations=false  \
+; RUN: | FileCheck %s --check-prefixes=CHECK,DBGVALUE
+; RUN: llc -start-after=codegenprepare -stop-before finalize-isel -o - %s \
+; RUN:     -experimental-debug-variable-locations=true  \
+; RUN: | FileCheck %s --check-prefixes=CHECK,INSTRREF
 
 ; This test case was generated from the following phi-split.c program,
 ; using: clang phi-split.c -g -O1 -S -o - --target=i386 -emit-llvm
@@ -59,18 +64,30 @@ for.cond.cleanup:                                 ; preds = %for.cond.cleanup.lo
 
 for.body:                                         ; preds = %for.body.lr.ph, %for.body
 ; CHECK-LABEL: bb.{{.*}}.for.body:
-; CHECK:      [[REG2:%[0-9]+]]:gr32 = PHI
-; CHECK-NEXT: [[REG3:%[0-9]+]]:gr32 = PHI
-; CHECK-NEXT: [[REG4:%[0-9]+]]:gr32 = PHI
-; CHECK-NEXT: [[REG5:%[0-9]+]]:gr32_nosp = PHI
-; CHECK-NEXT: [[REG6:%[0-9]+]]:gr32 = PHI
-; CHECK-NEXT: [[REG7:%[0-9]+]]:gr32 = PHI
-; CHECK-NEXT: DBG_VALUE [[REG2]], $noreg, !19, !DIExpression(DW_OP_LLVM_fragment, 0, 32)
-; CHECK-NEXT: DBG_VALUE [[REG3]], $noreg, !19, !DIExpression(DW_OP_LLVM_fragment, 32, 32)
-; CHECK-NEXT: DBG_VALUE [[REG4]], $noreg, !18, !DIExpression(DW_OP_LLVM_fragment, 0, 32)
-; CHECK-NEXT: DBG_VALUE [[REG5]], $noreg, !18, !DIExpression(DW_OP_LLVM_fragment, 32, 32)
-; CHECK-NEXT: DBG_VALUE [[REG6]], $noreg, !17, !DIExpression(DW_OP_LLVM_fragment, 0, 32)
-; CHECK-NEXT: DBG_VALUE [[REG7]], $noreg, !17, !DIExpression(DW_OP_LLVM_fragment, 32, 32)
+; CHECK:         [[REG2:%[0-9]+]]:gr32 = PHI
+; INSTRREF-SAME:    debug-instr-number 5
+; CHECK-NEXT:    [[REG3:%[0-9]+]]:gr32 = PHI
+; INSTRREF-SAME:    debug-instr-number 6
+; CHECK-NEXT:    [[REG4:%[0-9]+]]:gr32 = PHI
+; INSTRREF-SAME:    debug-instr-number 7
+; CHECK-NEXT:    [[REG5:%[0-9]+]]:gr32_nosp = PHI
+; INSTRREF-SAME:    debug-instr-number 8
+; CHECK-NEXT:    [[REG6:%[0-9]+]]:gr32 = PHI
+; INSTRREF-SAME:    debug-instr-number 9
+; CHECK-NEXT:    [[REG7:%[0-9]+]]:gr32 = PHI
+; INSTRREF-SAME:    debug-instr-number 10
+; INSTRREF-NEXT: DBG_INSTR_REF 5, 0, !19, !DIExpression(DW_OP_LLVM_fragment, 0, 32)
+; INSTRREF-NEXT: DBG_INSTR_REF 6, 0, !19, !DIExpression(DW_OP_LLVM_fragment, 32, 32)
+; INSTRREF-NEXT: DBG_INSTR_REF 7, 0, !18, !DIExpression(DW_OP_LLVM_fragment, 0, 32)
+; INSTRREF-NEXT: DBG_INSTR_REF 8, 0, !18, !DIExpression(DW_OP_LLVM_fragment, 32, 32)
+; INSTRREF-NEXT: DBG_INSTR_REF 9, 0, !17, !DIExpression(DW_OP_LLVM_fragment, 0, 32)
+; INSTRREF-NEXT: DBG_INSTR_REF 10, 0, !17, !DIExpression(DW_OP_LLVM_fragment, 32, 32)
+; DBGVALUE-NEXT: DBG_VALUE [[REG2]], $noreg, !19, !DIExpression(DW_OP_LLVM_fragment, 0, 32)
+; DBGVALUE-NEXT: DBG_VALUE [[REG3]], $noreg, !19, !DIExpression(DW_OP_LLVM_fragment, 32, 32)
+; DBGVALUE-NEXT: DBG_VALUE [[REG4]], $noreg, !18, !DIExpression(DW_OP_LLVM_fragment, 0, 32)
+; DBGVALUE-NEXT: DBG_VALUE [[REG5]], $noreg, !18, !DIExpression(DW_OP_LLVM_fragment, 32, 32)
+; DBGVALUE-NEXT: DBG_VALUE [[REG6]], $noreg, !17, !DIExpression(DW_OP_LLVM_fragment, 0, 32)
+; DBGVALUE-NEXT: DBG_VALUE [[REG7]], $noreg, !17, !DIExpression(DW_OP_LLVM_fragment, 32, 32)
   %u.023 = phi i64 [ 0, %for.body.lr.ph ], [ %inc, %for.body ]
   %y.022 = phi i64 [ 13, %for.body.lr.ph ], [ %mul, %for.body ]
   %x.021 = phi i64 [ 9, %for.body.lr.ph ], [ %add, %for.body ]
