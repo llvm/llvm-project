@@ -5244,6 +5244,57 @@ bool CombinerHelper::matchCombineFSubFNegFMulToFMadOrFMA(
   return false;
 }
 
+bool CombinerHelper::matchCombineFSubFpExtFMulToFMadOrFMA(
+    MachineInstr &MI, std::function<void(MachineIRBuilder &)> &MatchInfo) {
+  assert(MI.getOpcode() == TargetOpcode::G_FSUB);
+
+  bool AllowFusionGlobally, HasFMAD, Aggressive;
+  if (!canCombineFMadOrFMA(MI, AllowFusionGlobally, HasFMAD, Aggressive))
+    return false;
+
+  Register LHSReg = MI.getOperand(1).getReg();
+  Register RHSReg = MI.getOperand(2).getReg();
+  LLT DstTy = MRI.getType(MI.getOperand(0).getReg());
+
+  unsigned PreferredFusedOpcode =
+      HasFMAD ? TargetOpcode::G_FMAD : TargetOpcode::G_FMA;
+
+  MachineInstr *FMulMI;
+  // fold (fsub (fpext (fmul x, y)), z) -> (fma (fpext x), (fpext y), (fneg z))
+  if (mi_match(LHSReg, MRI, m_GFPExt(m_MInstr(FMulMI))) &&
+      isContractableFMul(*FMulMI, AllowFusionGlobally) &&
+      (Aggressive || MRI.hasOneNonDBGUse(LHSReg))) {
+    MatchInfo = [=, &MI](MachineIRBuilder &B) {
+      Register FpExtX =
+          B.buildFPExt(DstTy, FMulMI->getOperand(1).getReg()).getReg(0);
+      Register FpExtY =
+          B.buildFPExt(DstTy, FMulMI->getOperand(2).getReg()).getReg(0);
+      Register NegZ = B.buildFNeg(DstTy, RHSReg).getReg(0);
+      B.buildInstr(PreferredFusedOpcode, {MI.getOperand(0).getReg()},
+                   {FpExtX, FpExtY, NegZ});
+    };
+    return true;
+  }
+
+  // fold (fsub x, (fpext (fmul y, z))) -> (fma (fneg (fpext y)), (fpext z), x)
+  if (mi_match(RHSReg, MRI, m_GFPExt(m_MInstr(FMulMI))) &&
+      isContractableFMul(*FMulMI, AllowFusionGlobally) &&
+      (Aggressive || MRI.hasOneNonDBGUse(RHSReg))) {
+    MatchInfo = [=, &MI](MachineIRBuilder &B) {
+      Register FpExtY =
+          B.buildFPExt(DstTy, FMulMI->getOperand(1).getReg()).getReg(0);
+      Register NegY = B.buildFNeg(DstTy, FpExtY).getReg(0);
+      Register FpExtZ =
+          B.buildFPExt(DstTy, FMulMI->getOperand(2).getReg()).getReg(0);
+      B.buildInstr(PreferredFusedOpcode, {MI.getOperand(0).getReg()},
+                   {NegY, FpExtZ, LHSReg});
+    };
+    return true;
+  }
+
+  return false;
+}
+
 bool CombinerHelper::tryCombine(MachineInstr &MI) {
   if (tryCombineCopy(MI))
     return true;
