@@ -20,7 +20,7 @@ body:             |
   ; CHECK:   successors: %bb.1(0x80000000)
   ; CHECK:   [[DEF:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
   ; CHECK:   [[DEF1:%[0-9]+]]:vreg_1024_align2 = IMPLICIT_DEF
-  ; CHECK:   SI_SPILL_V1024_SAVE [[DEF1]], %stack.0, $sgpr32, 0, implicit $exec :: (store (s1024) into %stack.0, align 4, addrspace 5)
+  ; CHECK:   [[COPY:%[0-9]+]]:av_1024_align2 = COPY [[DEF1]]
   ; CHECK: bb.1:
   ; CHECK:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
   ; CHECK:   S_NOP 0, implicit [[DEF1]]
@@ -29,18 +29,17 @@ body:             |
   ; CHECK:   S_CBRANCH_VCCNZ %bb.1, implicit undef $vcc
   ; CHECK: bb.2:
   ; CHECK:   successors: %bb.3(0x80000000)
-  ; CHECK:   [[SI_SPILL_V1024_RESTORE:%[0-9]+]]:vreg_1024_align2 = SI_SPILL_V1024_RESTORE %stack.0, $sgpr32, 0, implicit $exec :: (load (s1024) from %stack.0, align 4, addrspace 5)
-  ; CHECK:   undef %5.sub1_sub2_sub3_sub4_sub5_sub6_sub7_sub8_sub9_sub10_sub11_sub12_sub13_sub14_sub15_sub16:vreg_1024_align2 = COPY [[SI_SPILL_V1024_RESTORE]].sub1_sub2_sub3_sub4_sub5_sub6_sub7_sub8_sub9_sub10_sub11_sub12_sub13_sub14_sub15_sub16 {
-  ; CHECK:     internal %5.sub16_sub17_sub18_sub19_sub20_sub21_sub22_sub23_sub24_sub25_sub26_sub27_sub28_sub29_sub30_sub31:vreg_1024_align2 = COPY [[SI_SPILL_V1024_RESTORE]].sub16_sub17_sub18_sub19_sub20_sub21_sub22_sub23_sub24_sub25_sub26_sub27_sub28_sub29_sub30_sub31
+  ; CHECK:   undef %5.sub1_sub2_sub3_sub4_sub5_sub6_sub7_sub8_sub9_sub10_sub11_sub12_sub13_sub14_sub15_sub16:av_1024_align2 = COPY [[COPY]].sub1_sub2_sub3_sub4_sub5_sub6_sub7_sub8_sub9_sub10_sub11_sub12_sub13_sub14_sub15_sub16 {
+  ; CHECK:     internal %5.sub16_sub17_sub18_sub19_sub20_sub21_sub22_sub23_sub24_sub25_sub26_sub27_sub28_sub29_sub30_sub31:av_1024_align2 = COPY [[COPY]].sub16_sub17_sub18_sub19_sub20_sub21_sub22_sub23_sub24_sub25_sub26_sub27_sub28_sub29_sub30_sub31
   ; CHECK:   }
-  ; CHECK:   %5.sub0:vreg_1024_align2 = IMPLICIT_DEF
+  ; CHECK:   %5.sub0:av_1024_align2 = IMPLICIT_DEF
   ; CHECK:   S_NOP 0, implicit %5.sub0
   ; CHECK: bb.3:
   ; CHECK:   successors: %bb.4(0x80000000)
   ; CHECK:   S_NOP 0, implicit %5
   ; CHECK: bb.4:
   ; CHECK:   successors: %bb.3(0x40000000), %bb.5(0x40000000)
-  ; CHECK:   [[DEF2:%[0-9]+]]:vreg_1024_align2 = IMPLICIT_DEF
+  ; CHECK:   [[DEF2:%[0-9]+]]:av_1024_align2 = IMPLICIT_DEF
   ; CHECK:   S_CBRANCH_VCCNZ %bb.3, implicit undef $vcc
   ; CHECK: bb.5:
   ; CHECK:   undef %3.sub0:vreg_1024_align2 = COPY [[DEF]]
