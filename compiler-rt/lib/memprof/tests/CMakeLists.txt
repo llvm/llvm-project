@@ -10,8 +10,12 @@ set(MEMPROF_UNITTEST_CFLAGS
   -O2
   -g
   -fno-rtti
-  -Wno-gnu-zero-variadic-macro-arguments
+  -Wno-pedantic
   -fno-omit-frame-pointer)
+
+# Suppress warnings for gmock variadic macros for clang and gcc respectively.
+append_list_if(SUPPORTS_GNU_ZERO_VARIADIC_MACRO_ARGUMENTS_FLAG -Wno-gnu-zero-variadic-macro-arguments MEMPROF_UNITTEST_CFLAGS)
+append_list_if(COMPILER_RT_HAS_WVARIADIC_MACROS_FLAG -Wno-variadic-macros MEMPROF_UNITTEST_CFLAGS)
 
 file(GLOB MEMPROF_HEADERS ../*.h)
 
