@@ -70,6 +70,7 @@ source_set("sources") {
     "sanitizer_hash.h",
     "sanitizer_interface_internal.h",
     "sanitizer_internal_defs.h",
+    "sanitizer_leb128.h",
     "sanitizer_lfstack.h",
     "sanitizer_libc.cpp",
     "sanitizer_libc.h",
