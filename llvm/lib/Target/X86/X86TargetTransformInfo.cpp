@@ -5275,7 +5275,8 @@ InstructionCost X86TTIImpl::getInterleavedMemoryOpCostAVX512(
   auto *SingleMemOpTy = FixedVectorType::get(VecTy->getElementType(),
                                              LegalVT.getVectorNumElements());
   InstructionCost MemOpCost;
-  if (UseMaskForCond || UseMaskForGaps)
+  bool UseMaskedMemOp = UseMaskForCond || UseMaskForGaps;
+  if (UseMaskedMemOp)
     MemOpCost = getMaskedMemoryOpCost(Opcode, SingleMemOpTy, Alignment,
                                       AddressSpace, CostKind);
   else
@@ -5286,7 +5287,7 @@ InstructionCost X86TTIImpl::getInterleavedMemoryOpCostAVX512(
   MVT VT = MVT::getVectorVT(MVT::getVT(VecTy->getScalarType()), VF);
 
   InstructionCost MaskCost;
-  if (UseMaskForCond || UseMaskForGaps) {
+  if (UseMaskedMemOp) {
     APInt DemandedLoadStoreElts = APInt::getZero(VecTy->getNumElements());
     for (unsigned Index : Indices) {
       assert(Index < Factor && "Invalid index for interleaved memory op");
@@ -5349,9 +5350,10 @@ InstructionCost X86TTIImpl::getInterleavedMemoryOpCostAVX512(
         NumOfLoadsInInterleaveGrp;
 
     // About a half of the loads may be folded in shuffles when we have only
-    // one result. If we have more than one result, we do not fold loads at all.
+    // one result. If we have more than one result, or the loads are masked,
+    // we do not fold loads at all.
     unsigned NumOfUnfoldedLoads =
-        NumOfResults > 1 ? NumOfMemOps : NumOfMemOps / 2;
+        UseMaskedMemOp || NumOfResults > 1 ? NumOfMemOps : NumOfMemOps / 2;
 
     // Get a number of shuffle operations per result.
     unsigned NumOfShufflesPerResult =
