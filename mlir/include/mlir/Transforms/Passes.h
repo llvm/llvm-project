@@ -33,10 +33,6 @@ enum FusionMode { Greedy, ProducerConsumer, Sibling };
 // Passes
 //===----------------------------------------------------------------------===//
 
-/// Creates an instance of the BufferDeallocation pass to free all allocated
-/// buffers.
-std::unique_ptr<Pass> createBufferDeallocationPass();
-
 /// Creates a pass that moves allocations upwards to reduce the number of
 /// required copies that are inserted during the BufferDeallocation pass.
 std::unique_ptr<Pass> createBufferHoistingPass();
@@ -57,10 +53,6 @@ createPromoteBuffersToStackPass(unsigned maxAllocSizeInBytes = 1024,
 /// Only buffers smaller with `isSmallAlloc(alloc) == true` are promoted.
 std::unique_ptr<Pass>
 createPromoteBuffersToStackPass(std::function<bool(Value)> isSmallAlloc);
-
-/// Creates a pass that finalizes a partial bufferization by removing remaining
-/// tensor_load and buffer_cast operations.
-std::unique_ptr<FunctionPass> createFinalizingBufferizePass();
 
 /// Creates a pass that converts memref function results to out-params.
 std::unique_ptr<Pass> createBufferResultsToOutParamsPass();

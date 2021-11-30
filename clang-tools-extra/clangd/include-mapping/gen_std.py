@@ -99,12 +99,12 @@ def main():
   index_page_path = os.path.join(page_root, "index.html")
   cppreference_modified_date = datetime.datetime.fromtimestamp(
     os.stat(index_page_path).st_mtime).strftime('%Y-%m-%d')
-  print CODE_PREFIX % (args.language.upper(), cppreference_modified_date)
+  print(CODE_PREFIX % (args.language.upper(), cppreference_modified_date))
   for symbol in symbols:
     if len(symbol.headers) == 1:
       # SYMBOL(unqualified_name, namespace, header)
-      print "SYMBOL(%s, %s, %s)" % (symbol.name, symbol.namespace,
-                                    symbol.headers[0])
+      print("SYMBOL(%s, %s, %s)" % (symbol.name, symbol.namespace,
+                                    symbol.headers[0]))
     elif len(symbol.headers) == 0:
       sys.stderr.write("No header found for symbol %s\n" % symbol.name)
     else:

@@ -442,6 +442,10 @@ def FeatureFixCMSE_CVE_2021_35465 : SubtargetFeature<"fix-cmse-cve-2021-35465",
                                         "Mitigate against the cve-2021-35465 "
                                         "security vulnurability">;
 
+def FeaturePACBTI         : SubtargetFeature<"pacbti", "HasPACBTI", "true",
+                                             "Enable Pointer Authentication and Branch "
+                                             "Target Identification">;
+
 //===----------------------------------------------------------------------===//
 // ARM architecture class
 //
