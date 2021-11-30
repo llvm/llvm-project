@@ -13,11 +13,14 @@
 
 #include "Mips.h"
 #include "MipsSubtarget.h"
+#include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/SmallSet.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include <algorithm>
 #include <cmath>
+#include <utility>
 
 using namespace llvm;
 
@@ -26,6 +29,9 @@ using namespace llvm;
 namespace {
 struct NMMoveOpt : public MachineFunctionPass {
   using MBBIter = MachineBasicBlock::iterator;
+  using MBBRIter = MachineBasicBlock::reverse_iterator;
+  using InstrPairs = SmallVector<std::pair<MachineInstr *, MachineInstr *>>;
+
   SmallVector<unsigned> GPR1 = {Mips::A0_NM, Mips::A1_NM};
   SmallVector<unsigned> GPR2REG1 = {Mips::A0_NM, Mips::A1_NM, Mips::A2_NM,
                                     Mips::A3_NM};
@@ -41,6 +47,7 @@ struct NMMoveOpt : public MachineFunctionPass {
       Mips::A4_NM, Mips::A5_NM, Mips::A6_NM, Mips::ZERO_NM,
       Mips::S0_NM, Mips::S1_NM, Mips::S2_NM, Mips::S3_NM,
       Mips::S4_NM, Mips::S5_NM, Mips::S6_NM, Mips::S7_NM};
+
   static char ID;
   const MipsSubtarget *STI;
   const TargetInstrInfo *TII;
@@ -177,7 +184,7 @@ bool NMMoveOpt::areMovePRevCompatibleMoves(MachineInstr *Move1,
 // move $a4, $a1
 //
 bool NMMoveOpt::generateMoveP(MachineBasicBlock &MBB) {
-  SmallVector<std::pair<MachineInstr *, MachineInstr *>> MovePairs;
+  InstrPairs MovePairs;
   MachineInstr *PrevMove = nullptr;
   bool Modified = false;
 
@@ -243,7 +250,7 @@ static void copyImplicitOps(MachineInstrBuilder &New, MachineInstr &Old) {
   auto *NewInstr = New.getInstr();
   auto Dst = NewInstr->getOperand(0);
   assert(Dst.isReg() && !Dst.isImplicit() && Dst.isDef() && Dst.isDead());
-  auto Reg = NewInstr->getOperand(0).getReg();
+  auto Reg = Dst.getReg();
 
   for (unsigned OpNo = 1; OpNo < NewInstr->getNumOperands(); OpNo++) {
     auto Opnd = NewInstr->getOperand(OpNo);
@@ -256,26 +263,59 @@ static void copyImplicitOps(MachineInstrBuilder &New, MachineInstr &Old) {
 }
 
 bool NMMoveOpt::generateMoveBalc(MachineBasicBlock &MBB) {
-  SmallVector<std::pair<MachineInstr *, MachineInstr *>> MoveBalcPairs;
-  MachineInstr *Balc = nullptr;
-  bool Modified = false;
+  InstrPairs MoveBalcPairs;
   for (auto &MI : make_range(MBB.rbegin(), MBB.rend())) {
     unsigned Opcode = MI.getOpcode();
     if (Opcode == Mips::BALC_NM) {
-      Balc = &MI;
-    } else if (Balc && Opcode == Mips::MOVE_NM &&
-               isInSet(GPR1, MI.getOperand(0).getReg()) &&
-               isInSet(GPR4ZERO, MI.getOperand(1).getReg())) {
-      MoveBalcPairs.push_back({&MI, Balc});
-      Balc = nullptr;
-    } else {
-      Balc = nullptr;
+      // Candidates can be only A0 and A1 registers, but they have to actually
+      // be used by BALC. They also cannot be used by any other instruction
+      // between MOVE and BALC.
+      SmallSet<unsigned, 2> CandidateDstRegs;
+      for (auto &Use : MI.uses())
+        if (Use.isReg() && Use.isImplicit() && Use.isUse() &&
+            isInSet(GPR1, Use.getReg()))
+          CandidateDstRegs.insert(Use.getReg());
+
+      if (CandidateDstRegs.empty())
+        continue;
+
+      DenseSet<unsigned> DefsBetween;
+      // Look for a MOVE instruction starting from the instruction before BALC
+      // and all the way to the start of basic block.
+      for (auto &MI2 : make_range(std::next(MBBRIter(MI)), MBB.rend())) {
+        if (MI2.isCall() || MI2.isBranch())
+          break;
+
+        if (CandidateDstRegs.empty())
+          break;
+
+        if (MI2.getOpcode() == Mips::MOVE_NM &&
+            // Make sure $rt is used only by BALC.
+            CandidateDstRegs.contains(MI2.getOperand(0).getReg()) &&
+            // Make sure $rs is not redefined between MOVE and BALC.
+            !DefsBetween.contains(MI2.getOperand(1).getReg()) &&
+            isInSet(GPR1, MI2.getOperand(0).getReg()) &&
+            isInSet(GPR4ZERO, MI2.getOperand(1).getReg())) {
+          MoveBalcPairs.push_back({&MI2, &MI});
+          break;
+        }
+
+        for (auto &Opnd : MI2.operands()) {
+          // Remove a candidate if it is used or defined by another instruction.
+          if (Opnd.isReg() && CandidateDstRegs.contains(Opnd.getReg()))
+            CandidateDstRegs.erase(Opnd.getReg());
+          // Collect registers defined between MOVE and BALC.
+          if (Opnd.isReg() && Opnd.isDef())
+            DefsBetween.insert(Opnd.getReg());
+        }
+      }
     }
   }
+
   for (const auto &Pair : MoveBalcPairs) {
     auto *Move = Pair.first, *Balc = Pair.second;
-    auto InsertBefore = MBBIter(Move);
-    auto DL = Move->getDebugLoc();
+    auto InsertBefore = std::next(MBBIter(Balc));
+    auto DL = Balc->getDebugLoc();
     auto New = BuildMI(MBB, InsertBefore, DL, TII->get(Mips::MOVEBALC_NM))
                    .addReg(Move->getOperand(0).getReg(),
                            RegState::Define | RegState::Dead)
@@ -290,10 +330,7 @@ bool NMMoveOpt::generateMoveBalc(MachineBasicBlock &MBB) {
     MBB.erase(Balc);
   }
 
-  if (MoveBalcPairs.size())
-    Modified = true;
-
-  return Modified;
+  return MoveBalcPairs.size() > 0;
 }
 
 namespace llvm {

@@ -17,3 +17,12 @@ define void @move.balc1(i32 %a) {
   call i32 @func1(i32 %add1, i32 %add2, i32 %a)
   ret void
 }
+
+declare i32 @func2(i32, i32)
+
+define void @move.balc2(i32 %a) {
+; CHECK: move.balc $a1, $a0, func2
+  %add1 = add i32 %a, 1
+  call i32 @func2(i32 %add1, i32 %a)
+  ret void
+}
