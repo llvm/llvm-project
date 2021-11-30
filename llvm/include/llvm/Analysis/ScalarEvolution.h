@@ -1492,6 +1492,11 @@ private:
   DenseMap<const SCEV *, SmallVector<std::pair<const Loop *, const SCEV *>, 2>>
       ValuesAtScopes;
 
+  /// Reverse map for invalidation purposes: Stores of which SCEV and which
+  /// loop this is the value-at-scope of.
+  DenseMap<const SCEV *, SmallVector<std::pair<const Loop *, const SCEV *>, 2>>
+      ValuesAtScopesUsers;
+
   /// Memoized computeLoopDisposition results.
   DenseMap<const SCEV *,
            SmallVector<PointerIntPair<const Loop *, 2, LoopDisposition>, 2>>
