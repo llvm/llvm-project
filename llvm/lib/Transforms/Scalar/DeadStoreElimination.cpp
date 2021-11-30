@@ -812,7 +812,7 @@ struct DSEState {
 
   /// Keep track of instructions (partly) overlapping with killing MemoryDefs per
   /// basic block.
-  DenseMap<BasicBlock *, InstOverlapIntervalsTy> IOLs;
+  MapVector<BasicBlock *, InstOverlapIntervalsTy> IOLs;
 
   // Class contains self-reference, make sure it's not copied/moved.
   DSEState(const DSEState &) = delete;
