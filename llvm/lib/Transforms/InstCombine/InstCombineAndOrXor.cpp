@@ -1727,16 +1727,18 @@ static Instruction *foldComplexAndOrPatterns(BinaryOperator &I,
       (Opcode == Instruction::And) ? Instruction::Or : Instruction::And;
 
   Value *Op0 = I.getOperand(0), *Op1 = I.getOperand(1);
-  Value *A, *B, *C;
+  Value *A, *B, *C, *X, *Y;
 
   // (~(A | B) & C) | ... --> ...
   // (~(A & B) | C) & ... --> ...
   // TODO: One use checks are conservative. We just need to check that a total
   //       number of multiple used values does not exceed reduction
   //       in operations.
-  if (match(Op0, m_c_BinOp(FlippedOpcode,
-                           m_Not(m_BinOp(Opcode, m_Value(A), m_Value(B))),
-                           m_Value(C)))) {
+  if (match(Op0,
+            m_c_BinOp(FlippedOpcode,
+                      m_CombineAnd(m_Value(X), m_Not(m_BinOp(Opcode, m_Value(A),
+                                                             m_Value(B)))),
+                      m_Value(C)))) {
     // (~(A | B) & C) | (~(A | C) & B) --> (B ^ C) & ~A
     // (~(A & B) | C) & (~(A & C) | B) --> ~((B ^ C) & A)
     if (match(Op1,
@@ -1776,6 +1778,21 @@ static Instruction *foldComplexAndOrPatterns(BinaryOperator &I,
                        m_c_BinOp(Opcode, m_Specific(B), m_Specific(C)))))))
       return BinaryOperator::CreateNot(Builder.CreateBinOp(
           Opcode, Builder.CreateBinOp(FlippedOpcode, A, C), B));
+
+    // (~(A | B) & C) | ~(C | (A ^ B)) --> ~((A | B) & (C | (A ^ B)))
+    // Note, the pattern with swapped and/or is not handled because the
+    // result is more undefined than a source:
+    // (~(A & B) | C) & ~(C & (A ^ B)) --> (A ^ B ^ C) | ~(A | C) is invalid.
+    if (Opcode == Instruction::Or && Op0->hasOneUse() &&
+        match(Op1, m_OneUse(m_Not(m_CombineAnd(
+                       m_Value(Y),
+                       m_c_BinOp(Opcode, m_Specific(C),
+                                 m_c_Xor(m_Specific(A), m_Specific(B)))))))) {
+      // X = ~(A | B)
+      // Y = (C | (A ^ B)
+      Value *Or = cast<BinaryOperator>(X)->getOperand(0);
+      return BinaryOperator::CreateNot(Builder.CreateAnd(Or, Y));
+    }
   }
 
   return nullptr;
