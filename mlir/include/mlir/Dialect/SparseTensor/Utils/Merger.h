@@ -192,10 +192,11 @@ public:
   /// Returns true if any set bit corresponds to queried dim.
   bool hasAnyDimOf(const llvm::BitVector &bits, Dim d) const;
 
-  /// Returns true if given tensor co-iterates with conjunction only in the
-  /// given tensor expression. For the output tensor, this defines a "simply
-  /// dynamic" operation [Bik96]. For instance: a(i) *=  b(i) * c(i)
-  bool isConjunction(unsigned t, unsigned e) const;
+  /// Returns true if given tensor iterates *only* in the given tensor
+  /// expression. For the output tensor, this defines a "simply dynamic"
+  /// operation [Bik96]. For instance: a(i) *= 2.0 or a(i) += a(i) for
+  /// sparse vector a.
+  bool isSingleCondition(unsigned t, unsigned e) const;
 
   /// Dimension setter.
   void setDim(unsigned t, unsigned i, Dim d) { dims[t][i] = d; }

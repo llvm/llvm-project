@@ -213,7 +213,7 @@ bool Merger::hasAnyDimOf(const llvm::BitVector &bits, Dim d) const {
   return false;
 }
 
-bool Merger::isConjunction(unsigned t, unsigned e) const {
+bool Merger::isSingleCondition(unsigned t, unsigned e) const {
   switch (tensorExps[e].kind) {
   case kTensor:
     return tensorExps[e].tensor == t;
@@ -232,22 +232,30 @@ bool Merger::isConjunction(unsigned t, unsigned e) const {
   case kCastU:
   case kTruncI:
   case kBitCast:
-    return isConjunction(t, tensorExps[e].children.e0);
+    return isSingleCondition(t, tensorExps[e].children.e0);
   case kDivF: // note: x / c only
   case kDivS:
   case kDivU:
     assert(!maybeZero(tensorExps[e].children.e1));
-    return isConjunction(t, tensorExps[e].children.e0);
+    return isSingleCondition(t, tensorExps[e].children.e0);
   case kShrS: // note: x >> inv only
   case kShrU:
   case kShlI:
     assert(isInvariant(tensorExps[e].children.e1));
-    return isConjunction(t, tensorExps[e].children.e0);
+    return isSingleCondition(t, tensorExps[e].children.e0);
   case kMulF:
   case kMulI:
   case kAndI:
-    return isConjunction(t, tensorExps[e].children.e0) ||
-           isConjunction(t, tensorExps[e].children.e1);
+    if (isSingleCondition(t, tensorExps[e].children.e0))
+      return isSingleCondition(t, tensorExps[e].children.e1) ||
+             isInvariant(tensorExps[e].children.e1);
+    if (isSingleCondition(t, tensorExps[e].children.e1))
+      return isInvariant(tensorExps[e].children.e0);
+    return false;
+  case kAddF:
+  case kAddI:
+    return isSingleCondition(t, tensorExps[e].children.e0) &&
+           isSingleCondition(t, tensorExps[e].children.e1);
   default:
     return false;
   }

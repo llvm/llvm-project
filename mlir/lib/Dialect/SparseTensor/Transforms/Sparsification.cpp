@@ -321,7 +321,7 @@ static bool isAdmissableTensorExp(Merger &merger, linalg::GenericOp op,
   // but not its nonzero structure, an operation called "simply dynamic" in
   // [Bik96,Ch9], is also admissable without special codegen, provided
   // the tensor's underlying sparse storage scheme can be modified in place.
-  if (merger.isConjunction(tensor, exp) && isInPlace(lhs->get()))
+  if (merger.isSingleCondition(tensor, exp) && isInPlace(lhs->get()))
     return true;
   // Accept "truly dynamic" if the output tensor materializes uninitialized
   // into the computation and insertions occur in lexicographic index order.
