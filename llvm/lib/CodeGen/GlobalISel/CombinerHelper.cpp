@@ -5197,6 +5197,53 @@ bool CombinerHelper::matchCombineFSubFMulToFMadOrFMA(
   return false;
 }
 
+bool CombinerHelper::matchCombineFSubFNegFMulToFMadOrFMA(
+    MachineInstr &MI, std::function<void(MachineIRBuilder &)> &MatchInfo) {
+  assert(MI.getOpcode() == TargetOpcode::G_FSUB);
+
+  bool AllowFusionGlobally, HasFMAD, Aggressive;
+  if (!canCombineFMadOrFMA(MI, AllowFusionGlobally, HasFMAD, Aggressive))
+    return false;
+
+  Register LHSReg = MI.getOperand(1).getReg();
+  Register RHSReg = MI.getOperand(2).getReg();
+  LLT DstTy = MRI.getType(MI.getOperand(0).getReg());
+
+  unsigned PreferredFusedOpcode =
+      HasFMAD ? TargetOpcode::G_FMAD : TargetOpcode::G_FMA;
+
+  MachineInstr *FMulMI;
+  // fold (fsub (fneg (fmul x, y)), z) -> (fma (fneg x), y, (fneg z))
+  if (mi_match(LHSReg, MRI, m_GFNeg(m_MInstr(FMulMI))) &&
+      (Aggressive || (MRI.hasOneNonDBGUse(LHSReg) &&
+                      MRI.hasOneNonDBGUse(FMulMI->getOperand(0).getReg()))) &&
+      isContractableFMul(*FMulMI, AllowFusionGlobally)) {
+    MatchInfo = [=, &MI](MachineIRBuilder &B) {
+      Register NegX =
+          B.buildFNeg(DstTy, FMulMI->getOperand(1).getReg()).getReg(0);
+      Register NegZ = B.buildFNeg(DstTy, RHSReg).getReg(0);
+      B.buildInstr(PreferredFusedOpcode, {MI.getOperand(0).getReg()},
+                   {NegX, FMulMI->getOperand(2).getReg(), NegZ});
+    };
+    return true;
+  }
+
+  // fold (fsub x, (fneg (fmul, y, z))) -> (fma y, z, x)
+  if (mi_match(RHSReg, MRI, m_GFNeg(m_MInstr(FMulMI))) &&
+      (Aggressive || (MRI.hasOneNonDBGUse(RHSReg) &&
+                      MRI.hasOneNonDBGUse(FMulMI->getOperand(0).getReg()))) &&
+      isContractableFMul(*FMulMI, AllowFusionGlobally)) {
+    MatchInfo = [=, &MI](MachineIRBuilder &B) {
+      B.buildInstr(PreferredFusedOpcode, {MI.getOperand(0).getReg()},
+                   {FMulMI->getOperand(1).getReg(),
+                    FMulMI->getOperand(2).getReg(), LHSReg});
+    };
+    return true;
+  }
+
+  return false;
+}
+
 bool CombinerHelper::tryCombine(MachineInstr &MI) {
   if (tryCombineCopy(MI))
     return true;

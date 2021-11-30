@@ -810,6 +810,15 @@ def combine_fsub_fmul_to_fmad_or_fma: GICombineRule<
                                                           ${info}); }]),
   (apply [{ Helper.applyBuildFn(*${root}, ${info}); }])>;
 
+// Transform (fsub (fneg (fmul, x, y)), z) -> (fma (fneg x), y, (fneg z))
+//           (fsub x, (fneg (fmul, y, z))) -> (fma y, z, x)
+def combine_fsub_fneg_fmul_to_fmad_or_fma: GICombineRule<
+  (defs root:$root, build_fn_matchinfo:$info),
+  (match (wip_match_opcode G_FSUB):$root,
+         [{ return Helper.matchCombineFSubFNegFMulToFMadOrFMA(*${root},
+                                                              ${info}); }]),
+  (apply [{ Helper.applyBuildFn(*${root}, ${info}); }])>;
+
 // FIXME: These should use the custom predicate feature once it lands.
 def undef_combines : GICombineGroup<[undef_to_fp_zero, undef_to_int_zero,
                                      undef_to_negative_one,
@@ -844,8 +853,8 @@ def trivial_combines : GICombineGroup<[copy_prop, mul_to_shl, add_p2i_to_ptradd,
 
 def fma_combines : GICombineGroup<[combine_fadd_fmul_to_fmad_or_fma,
   combine_fadd_fpext_fmul_to_fmad_or_fma, combine_fadd_fma_fmul_to_fmad_or_fma,
-  combine_fadd_fpext_fma_fmul_to_fmad_or_fma,
-  combine_fsub_fmul_to_fmad_or_fma]>;
+  combine_fadd_fpext_fma_fmul_to_fmad_or_fma, combine_fsub_fmul_to_fmad_or_fma,
+  combine_fsub_fneg_fmul_to_fmad_or_fma]>;
 
 def all_combines : GICombineGroup<[trivial_combines, insert_vec_elt_combines,
     extract_vec_elt_combines, combines_for_extload,
