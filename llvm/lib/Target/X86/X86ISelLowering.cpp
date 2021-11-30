@@ -45680,7 +45680,7 @@ static SDValue combineCompareEqual(SDNode *N, SelectionDAG &DAG,
           if (is64BitFP && !Subtarget.is64Bit()) {
             // On a 32-bit target, we cannot bitcast the 64-bit float to a
             // 64-bit integer, since that's not a legal type. Since
-            // OnesOrZeroesF is all ones of all zeroes, we don't need all the
+            // OnesOrZeroesF is all ones or all zeroes, we don't need all the
             // bits, but can do this little dance to extract the lowest 32 bits
             // and work with those going forward.
             SDValue Vector64 = DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, MVT::v2f64,
