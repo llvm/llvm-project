@@ -7,7 +7,7 @@ define void @ptriv_as2(i8 addrspace(2)* %base, i32 %n) nounwind {
 ; CHECK-LABEL: @ptriv_as2(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[IDX_TRUNC:%.*]] = trunc i32 [[N:%.*]] to i8
-; CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds i8, i8 addrspace(2)* [[BASE:%.*]], i8 [[IDX_TRUNC]]
+; CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr i8, i8 addrspace(2)* [[BASE:%.*]], i8 [[IDX_TRUNC]]
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp ult i8 addrspace(2)* [[BASE]], [[ADD_PTR]]
 ; CHECK-NEXT:    br i1 [[CMP1]], label [[FOR_BODY_PREHEADER:%.*]], label [[FOR_END:%.*]]
 ; CHECK:       for.body.preheader:
@@ -53,7 +53,7 @@ define void @ptriv_as3(i8 addrspace(3)* %base, i32 %n) nounwind {
 ; CHECK-LABEL: @ptriv_as3(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[IDX_TRUNC:%.*]] = trunc i32 [[N:%.*]] to i16
-; CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds i8, i8 addrspace(3)* [[BASE:%.*]], i16 [[IDX_TRUNC]]
+; CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr i8, i8 addrspace(3)* [[BASE:%.*]], i16 [[IDX_TRUNC]]
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp ult i8 addrspace(3)* [[BASE]], [[ADD_PTR]]
 ; CHECK-NEXT:    br i1 [[CMP1]], label [[FOR_BODY_PREHEADER:%.*]], label [[FOR_END:%.*]]
 ; CHECK:       for.body.preheader:
