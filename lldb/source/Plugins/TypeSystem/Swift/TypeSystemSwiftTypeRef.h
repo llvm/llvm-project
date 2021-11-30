@@ -331,7 +331,7 @@ private:
   swift::Demangle::NodePointer
   GetNodeForPrintingImpl(swift::Demangle::Demangler &dem,
                          swift::Demangle::NodePointer node,
-                         bool resolve_objc_module, bool desugar = true);
+                         bool resolve_objc_module);
 
   /// Return the demangle tree representation with all "__C" module
   /// names with their actual Clang module names.
