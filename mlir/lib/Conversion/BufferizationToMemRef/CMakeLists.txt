@@ -9,4 +9,6 @@ add_mlir_conversion_library(MLIRBufferizationToMemRef
 
   LINK_LIBS PUBLIC
   MLIRBufferization
+  MLIRPass
+  MLIRTransforms
   )
