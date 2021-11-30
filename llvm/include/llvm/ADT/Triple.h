@@ -10,7 +10,6 @@
 #define LLVM_ADT_TRIPLE_H
 
 #include "llvm/ADT/Twine.h"
-#include "llvm/Support/VersionTuple.h"
 
 // Some system headers or GCC predefined macros conflict with identifiers in
 // this file.  Undefine them here.
@@ -19,6 +18,8 @@
 #undef sparc
 
 namespace llvm {
+
+class VersionTuple;
 
 /// Triple - Helper class for working with autoconf configuration names. For
 /// historical reasons, we also call these 'triples' (they used to contain
@@ -331,7 +332,10 @@ public:
   /// triple, if present.
   ///
   /// For example, "fooos1.2.3" would return (1, 2, 3).
-  VersionTuple getEnvironmentVersion() const;
+  ///
+  /// If an entry is not defined, it will be returned as 0.
+  void getEnvironmentVersion(unsigned &Major, unsigned &Minor,
+                             unsigned &Micro) const;
 
   /// Get the object format for this triple.
   ObjectFormatType getObjectFormat() const { return ObjectFormat; }
@@ -340,25 +344,34 @@ public:
   /// present.
   ///
   /// For example, "fooos1.2.3" would return (1, 2, 3).
-  VersionTuple getOSVersion() const;
+  ///
+  /// If an entry is not defined, it will be returned as 0.
+  void getOSVersion(unsigned &Major, unsigned &Minor, unsigned &Micro) const;
 
   /// Return just the major version number, this is specialized because it is a
   /// common query.
-  unsigned getOSMajorVersion() const { return getOSVersion().getMajor(); }
+  unsigned getOSMajorVersion() const {
+    unsigned Maj, Min, Micro;
+    getOSVersion(Maj, Min, Micro);
+    return Maj;
+  }
 
   /// Parse the version number as with getOSVersion and then translate generic
   /// "darwin" versions to the corresponding OS X versions.  This may also be
   /// called with IOS triples but the OS X version number is just set to a
   /// constant 10.4.0 in that case.  Returns true if successful.
-  bool getMacOSXVersion(VersionTuple &Version) const;
+  bool getMacOSXVersion(unsigned &Major, unsigned &Minor,
+                        unsigned &Micro) const;
 
   /// Parse the version number as with getOSVersion.  This should only be called
   /// with IOS or generic triples.
-  VersionTuple getiOSVersion() const;
+  void getiOSVersion(unsigned &Major, unsigned &Minor,
+                     unsigned &Micro) const;
 
   /// Parse the version number as with getOSVersion.  This should only be called
   /// with WatchOS or generic triples.
-  VersionTuple getWatchOSVersion() const;
+  void getWatchOSVersion(unsigned &Major, unsigned &Minor,
+                         unsigned &Micro) const;
 
   /// @}
   /// @name Direct Component Access
@@ -415,17 +428,23 @@ public:
   /// the target triple.
   bool isOSVersionLT(unsigned Major, unsigned Minor = 0,
                      unsigned Micro = 0) const {
-    if (Minor == 0) {
-      return getOSVersion() < VersionTuple(Major);
-    }
-    if (Micro == 0) {
-      return getOSVersion() < VersionTuple(Major, Minor);
-    }
-    return getOSVersion() < VersionTuple(Major, Minor, Micro);
+    unsigned LHS[3];
+    getOSVersion(LHS[0], LHS[1], LHS[2]);
+
+    if (LHS[0] != Major)
+      return LHS[0] < Major;
+    if (LHS[1] != Minor)
+      return LHS[1] < Minor;
+    if (LHS[2] != Micro)
+      return LHS[2] < Micro;
+
+    return false;
   }
 
   bool isOSVersionLT(const Triple &Other) const {
-    return getOSVersion() < Other.getOSVersion();
+    unsigned RHS[3];
+    Other.getOSVersion(RHS[0], RHS[1], RHS[2]);
+    return isOSVersionLT(RHS[0], RHS[1], RHS[2]);
   }
 
   /// Comparison function for checking OS X version compatibility, which handles
@@ -659,13 +678,14 @@ public:
   bool isAndroidVersionLT(unsigned Major) const {
     assert(isAndroid() && "Not an Android triple!");
 
-    VersionTuple Version = getEnvironmentVersion();
+    unsigned Env[3];
+    getEnvironmentVersion(Env[0], Env[1], Env[2]);
 
     // 64-bit targets did not exist before API level 21 (Lollipop).
-    if (isArch64Bit() && Version.getMajor() < 21)
-      return VersionTuple(21) < VersionTuple(Major);
+    if (isArch64Bit() && Env[0] < 21)
+      Env[0] = 21;
 
-    return Version < VersionTuple(Major);
+    return Env[0] < Major;
   }
 
   /// Tests whether the environment is musl-libc

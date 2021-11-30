@@ -1412,8 +1412,8 @@ static std::string getSystemOrSDKMacOSVersion(StringRef MacOSSDKVersion) {
   llvm::Triple SystemTriple(llvm::sys::getProcessTriple());
   if (!SystemTriple.isMacOSX())
     return std::string(MacOSSDKVersion);
-  VersionTuple SystemVersion;
-  SystemTriple.getMacOSXVersion(SystemVersion);
+  SystemTriple.getMacOSXVersion(Major, Minor, Micro);
+  VersionTuple SystemVersion(Major, Minor, Micro);
   bool HadExtra;
   if (!Driver::GetReleaseVersion(MacOSSDKVersion, Major, Minor, Micro,
                                  HadExtra))
@@ -1554,10 +1554,12 @@ struct DarwinPlatform {
                    const Optional<DarwinSDKInfo> &SDKInfo) {
     DarwinPlatform Result(TargetArg, getPlatformFromOS(TT.getOS()), OSVersion,
                           A);
-    VersionTuple OsVersion = TT.getOSVersion();
-    if (OsVersion.getMajor() == 0)
+    unsigned Major, Minor, Micro;
+    TT.getOSVersion(Major, Minor, Micro);
+    if (Major == 0)
       Result.HasOSVersion = false;
-    Result.setEnvironment(TT.getEnvironment(), OsVersion, SDKInfo);
+    Result.setEnvironment(TT.getEnvironment(),
+                          VersionTuple(Major, Minor, Micro), SDKInfo);
     return Result;
   }
   static DarwinPlatform
@@ -1803,7 +1805,7 @@ inferDeploymentTargetFromSDK(DerivedArgList &Args,
 
 std::string getOSVersion(llvm::Triple::OSType OS, const llvm::Triple &Triple,
                          const Driver &TheDriver) {
-  VersionTuple OsVersion;
+  unsigned Major, Minor, Micro;
   llvm::Triple SystemTriple(llvm::sys::getProcessTriple());
   switch (OS) {
   case llvm::Triple::Darwin:
@@ -1812,22 +1814,24 @@ std::string getOSVersion(llvm::Triple::OSType OS, const llvm::Triple &Triple,
     // macos, use the host triple to infer OS version.
     if (Triple.isMacOSX() && SystemTriple.isMacOSX() &&
         !Triple.getOSMajorVersion())
-      SystemTriple.getMacOSXVersion(OsVersion);
-    else if (!Triple.getMacOSXVersion(OsVersion))
+      SystemTriple.getMacOSXVersion(Major, Minor, Micro);
+    else if (!Triple.getMacOSXVersion(Major, Minor, Micro))
       TheDriver.Diag(diag::err_drv_invalid_darwin_version)
           << Triple.getOSName();
     break;
   case llvm::Triple::IOS:
     if (Triple.isMacCatalystEnvironment() && !Triple.getOSMajorVersion()) {
-      OsVersion = VersionTuple(13, 1);
+      Major = 13;
+      Minor = 1;
+      Micro = 0;
     } else
-      OsVersion = Triple.getiOSVersion();
+      Triple.getiOSVersion(Major, Minor, Micro);
     break;
   case llvm::Triple::TvOS:
-    OsVersion = Triple.getOSVersion();
+    Triple.getOSVersion(Major, Minor, Micro);
     break;
   case llvm::Triple::WatchOS:
-    OsVersion = Triple.getWatchOSVersion();
+    Triple.getWatchOSVersion(Major, Minor, Micro);
     break;
   default:
     llvm_unreachable("Unexpected OS type");
@@ -1835,9 +1839,7 @@ std::string getOSVersion(llvm::Triple::OSType OS, const llvm::Triple &Triple,
   }
 
   std::string OSVersion;
-  llvm::raw_string_ostream(OSVersion)
-      << OsVersion.getMajor() << '.' << OsVersion.getMinor().getValueOr(0)
-      << '.' << OsVersion.getSubminor().getValueOr(0);
+  llvm::raw_string_ostream(OSVersion) << Major << '.' << Minor << '.' << Micro;
   return OSVersion;
 }
 
@@ -1907,13 +1909,15 @@ getDeploymentTargetFromMTargetOSArg(DerivedArgList &Args,
     return None;
   }
 
-  VersionTuple Version = TT.getOSVersion();
-  if (!Version.getMajor()) {
+  unsigned Major, Minor, Micro;
+  TT.getOSVersion(Major, Minor, Micro);
+  if (!Major) {
     TheDriver.Diag(diag::err_drv_invalid_version_number)
         << A->getAsString(Args);
     return None;
   }
-  return DarwinPlatform::createFromMTargetOS(TT.getOS(), Version,
+  return DarwinPlatform::createFromMTargetOS(TT.getOS(),
+                                             VersionTuple(Major, Minor, Micro),
                                              TT.getEnvironment(), A, SDKInfo);
 }
 

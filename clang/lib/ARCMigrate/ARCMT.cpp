@@ -162,7 +162,9 @@ static bool HasARCRuntime(CompilerInvocation &origCI) {
     return triple.getOSMajorVersion() >= 11;
 
   if (triple.getOS() == llvm::Triple::MacOSX) {
-    return triple.getOSVersion() >= VersionTuple(10, 7);
+    unsigned Major, Minor, Micro;
+    triple.getOSVersion(Major, Minor, Micro);
+    return Major > 10 || (Major == 10 && Minor >= 7);
   }
 
   return false;
