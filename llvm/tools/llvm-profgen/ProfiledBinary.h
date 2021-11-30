@@ -76,6 +76,14 @@ struct BinaryFunction {
   StringRef FuncName;
   // End of range is an exclusive bound.
   RangesTy Ranges;
+
+  uint64_t getFuncSize() {
+    uint64_t Sum = 0;
+    for (auto &R : Ranges) {
+      Sum += R.second - R.first;
+    }
+    return Sum;
+  }
 };
 
 // Info about function range. A function can be split into multiple
@@ -404,6 +412,13 @@ public:
   const std::unordered_map<std::string, BinaryFunction> &
   getAllBinaryFunctions() {
     return BinaryFunctions;
+  }
+
+  BinaryFunction *getBinaryFunction(StringRef FName) {
+    auto I = BinaryFunctions.find(FName.str());
+    if (I == BinaryFunctions.end())
+      return nullptr;
+    return &I->second;
   }
 
   uint32_t getFuncSizeForContext(SampleContext &Context) {
