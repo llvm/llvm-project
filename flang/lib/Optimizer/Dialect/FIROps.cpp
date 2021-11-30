@@ -499,6 +499,8 @@ static mlir::LogicalResult verify(fir::ArrayFetchOp op) {
 //===----------------------------------------------------------------------===//
 
 static mlir::LogicalResult verify(fir::ArrayUpdateOp op) {
+  if (fir::isa_ref_type(op.merge().getType()))
+    return op.emitOpError("does not support reference type for merge");
   auto arrTy = op.sequence().getType().cast<fir::SequenceType>();
   auto indSize = op.indices().size();
   if (indSize < arrTy.getDimension())
@@ -1148,6 +1150,10 @@ static mlir::LogicalResult verify(fir::GenTypeDescOp &op) {
 // GlobalOp
 //===----------------------------------------------------------------------===//
 
+mlir::Type fir::GlobalOp::resultType() {
+  return wrapAllocaResultType(getType());
+}
+
 static ParseResult parseGlobalOp(OpAsmParser &parser, OperationState &result) {
   // Parse the optional linkage
   llvm::StringRef linkage;
@@ -1281,10 +1287,6 @@ mlir::ParseResult fir::GlobalOp::verifyValidLinkage(StringRef linkage) {
 //===----------------------------------------------------------------------===//
 // GlobalLenOp
 //===----------------------------------------------------------------------===//
-
-mlir::Type fir::GlobalOp::resultType() {
-  return wrapAllocaResultType(getType());
-}
 
 static mlir::ParseResult parseGlobalLenOp(mlir::OpAsmParser &parser,
                                           mlir::OperationState &result) {
