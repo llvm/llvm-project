@@ -759,6 +759,18 @@ def redundant_neg_operands: GICombineRule<
     [{ return Helper.matchRedundantNegOperands(*${root}, ${matchinfo}); }]),
   (apply [{ Helper.applyBuildFnNoErase(*${root}, ${matchinfo}); }])>;
 
+// Transform (fadd x, (fmul y, z)) -> (fma y, z, x)
+//           (fadd x, (fmul y, z)) -> (fmad y, z, x)
+// Transform (fadd (fmul x, y), z) -> (fma x, y, z)
+//           (fadd (fmul x, y), z) -> (fmad x, y, z)
+def combine_fadd_fmul_to_fmad_or_fma: GICombineRule<
+  (defs root:$root, build_fn_matchinfo:$info),
+  (match (wip_match_opcode G_FADD):$root,
+         [{ return Helper.matchCombineFAddFMulToFMadOrFMA(*${root},
+                                                          ${info}); }]),
+  (apply [{ Helper.applyBuildFn(*${root}, ${info}); }])>;
+
+
 // FIXME: These should use the custom predicate feature once it lands.
 def undef_combines : GICombineGroup<[undef_to_fp_zero, undef_to_int_zero,
                                      undef_to_negative_one,
@@ -791,6 +803,8 @@ def select_combines : GICombineGroup<[select_undef_cmp, select_constant_cmp]>;
 def trivial_combines : GICombineGroup<[copy_prop, mul_to_shl, add_p2i_to_ptradd,
                                        mul_by_neg_one]>;
 
+def fma_combines : GICombineGroup<[combine_fadd_fmul_to_fmad_or_fma]>;
+
 def all_combines : GICombineGroup<[trivial_combines, insert_vec_elt_combines,
     extract_vec_elt_combines, combines_for_extload,
     combine_indexed_load_store, undef_combines, identity_combines, phi_combines,
@@ -807,7 +821,7 @@ def all_combines : GICombineGroup<[trivial_combines, insert_vec_elt_combines,
     truncstore_merge, div_rem_to_divrem, funnel_shift_combines,
     form_bitfield_extract, constant_fold, fabs_fneg_fold,
     intdiv_combines, mulh_combines, redundant_neg_operands,
-    and_or_disjoint_mask ]>;
+    and_or_disjoint_mask, fma_combines]>;
 
 // A combine group used to for prelegalizer combiners at -O0. The combines in
 // this group have been selected based on experiments to balance code size and

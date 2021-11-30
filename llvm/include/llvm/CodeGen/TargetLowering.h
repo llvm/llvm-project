@@ -812,9 +812,12 @@ public:
   /// Return true if target always benefits from combining into FMA for a
   /// given value type. This must typically return false on targets where FMA
   /// takes more cycles to execute than FADD.
-  virtual bool enableAggressiveFMAFusion(EVT VT) const {
-    return false;
-  }
+  virtual bool enableAggressiveFMAFusion(EVT VT) const { return false; }
+
+  /// Return true if target always benefits from combining into FMA for a
+  /// given value type. This must typically return false on targets where FMA
+  /// takes more cycles to execute than FADD.
+  virtual bool enableAggressiveFMAFusion(LLT Ty) const { return false; }
 
   /// Return the ValueType of the result of SETCC operations.
   virtual EVT getSetCCResultType(const DataLayout &DL, LLVMContext &Context,
@@ -2754,8 +2757,44 @@ public:
     return false;
   }
 
+  /// Return true if an FMA operation is faster than a pair of fmul and fadd
+  /// instructions. fmuladd intrinsics will be expanded to FMAs when this method
+  /// returns true, otherwise fmuladd is expanded to fmul + fadd.
+  ///
+  /// NOTE: This may be called before legalization on types for which FMAs are
+  /// not legal, but should return true if those types will eventually legalize
+  /// to types that support FMAs. After legalization, it will only be called on
+  /// types that support FMAs (via Legal or Custom actions)
+  virtual bool isFMAFasterThanFMulAndFAdd(const MachineFunction &MF,
+                                          LLT) const {
+    return false;
+  }
+
   /// IR version
   virtual bool isFMAFasterThanFMulAndFAdd(const Function &F, Type *) const {
+    return false;
+  }
+
+  /// Returns true if \p MI can be combined with another instruction to
+  /// form TargetOpcode::G_FMAD. \p N may be an TargetOpcode::G_FADD,
+  /// TargetOpcode::G_FSUB, or an TargetOpcode::G_FMUL which will be
+  /// distributed into an fadd/fsub.
+  virtual bool isFMADLegal(const MachineInstr &MI, LLT Ty) const {
+    assert((MI.getOpcode() == TargetOpcode::G_FADD ||
+            MI.getOpcode() == TargetOpcode::G_FSUB ||
+            MI.getOpcode() == TargetOpcode::G_FMUL) &&
+           "unexpected node in FMAD forming combine");
+    switch (Ty.getScalarSizeInBits()) {
+    case 16:
+      return isOperationLegal(TargetOpcode::G_FMAD, MVT::f16);
+    case 32:
+      return isOperationLegal(TargetOpcode::G_FMAD, MVT::f32);
+    case 64:
+      return isOperationLegal(TargetOpcode::G_FMAD, MVT::f64);
+    default:
+      break;
+    }
+
     return false;
   }
 
