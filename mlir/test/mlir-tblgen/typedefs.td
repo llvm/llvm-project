@@ -9,7 +9,7 @@ include "mlir/IR/OpBase.td"
 // DECL: namespace mlir {
 // DECL: class AsmParser;
 // DECL: class AsmPrinter;
-// DECL: } // namespace mlir
+// DECL: } // end namespace mlir
 
 // DEF: #ifdef GET_TYPEDEF_LIST
 // DEF: #undef GET_TYPEDEF_LIST
@@ -20,9 +20,9 @@ include "mlir/IR/OpBase.td"
 // DEF: ::test::IntegerType
 
 // DEF-LABEL: ::mlir::OptionalParseResult generatedTypeParser(
-// DEF-NEXT: ::mlir::AsmParser &parser,
-// DEF-NEXT: ::llvm::StringRef mnemonic,
-// DEF-NEXT: ::mlir::Type &value) {
+// DEF-SAME: ::mlir::AsmParser &parser,
+// DEF-SAME: ::llvm::StringRef mnemonic,
+// DEF-SAME: ::mlir::Type &value) {
 // DEF: if (mnemonic == ::test::CompoundAType::getMnemonic()) {
 // DEF-NEXT:   value = ::test::CompoundAType::parse(parser);
 // DEF-NEXT:   return ::mlir::success(!!value);
@@ -66,10 +66,10 @@ def B_CompoundTypeA : TestType<"CompoundA"> {
   let genVerifyDecl = 1;
 
 // DECL-LABEL: class CompoundAType : public ::mlir::Type
-// DECL: static CompoundAType getChecked(llvm::function_ref<::mlir::InFlightDiagnostic()> emitError, ::mlir::MLIRContext *context, int widthOfSomething, ::test::SimpleTypeA exampleTdType, SomeCppStruct exampleCppType, ::llvm::ArrayRef<int> dims, ::mlir::Type inner);
+// DECL: static CompoundAType getChecked(::llvm::function_ref<::mlir::InFlightDiagnostic()> emitError, ::mlir::MLIRContext *context, int widthOfSomething, ::test::SimpleTypeA exampleTdType, SomeCppStruct exampleCppType, ::llvm::ArrayRef<int> dims, ::mlir::Type inner);
 // DECL: static ::mlir::LogicalResult verify(::llvm::function_ref<::mlir::InFlightDiagnostic()> emitError, int widthOfSomething, ::test::SimpleTypeA exampleTdType, SomeCppStruct exampleCppType, ::llvm::ArrayRef<int> dims, ::mlir::Type inner);
 // DECL: static constexpr ::llvm::StringLiteral getMnemonic() {
-// DECL:   return ::llvm::StringLiteral("cmpnd_a");
+// DECL:   return "cmpnd_a";
 // DECL: }
 // DECL: static ::mlir::Type parse(::mlir::AsmParser &parser);
 // DECL: void print(::mlir::AsmPrinter &printer) const;
@@ -88,7 +88,7 @@ def C_IndexType : TestType<"Index"> {
 
 // DECL-LABEL: class IndexType : public ::mlir::Type
 // DECL: static constexpr ::llvm::StringLiteral getMnemonic() {
-// DECL:   return ::llvm::StringLiteral("index");
+// DECL:   return "index";
 // DECL: }
 // DECL: static ::mlir::Type parse(::mlir::AsmParser &parser);
 // DECL: void print(::mlir::AsmPrinter &printer) const;
@@ -101,7 +101,7 @@ def D_SingleParameterType : TestType<"SingleParameter"> {
   );
 // DECL-LABEL: struct SingleParameterTypeStorage;
 // DECL-LABEL: class SingleParameterType
-// DECL-NEXT:                   detail::SingleParameterTypeStorage
+// DECL-SAME:  detail::SingleParameterTypeStorage
 }
 
 def E_IntegerType : TestType<"Integer"> {
