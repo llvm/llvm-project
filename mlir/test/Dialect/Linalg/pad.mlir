@@ -163,6 +163,28 @@ func @dynamic_sizes(%arg0: tensor<?x?xf32>,
 
 #map0 = affine_map<()[s0] -> (64, s0)>
 
+//      FILL:  pad_multiple
+// FILL-SAME:    %[[ARG0:[0-9a-zA-Z]*]]: tensor<64x64xf32>
+func @pad_multiple(%arg0: tensor<64x64xf32>,
+                      %iv0 : index) -> tensor<?x?xf32> {
+  %cst = arith.constant 0.0 : f32
+  %size = affine.min #map0()[%iv0]
+  %0 = tensor.extract_slice %arg0[0, 0] [%size, %size] [1, 1] : tensor<64x64xf32> to tensor<?x?xf32>
+
+  // Check both fill operations are padded by the same pad tensor operation.
+  //      FILL:  %[[T0:.*]] = linalg.pad_tensor
+  //      FILL:  %[[T1:.*]] = linalg.fill(%{{.*}}, %[[T0]])
+  //      FILL:  %[[T2:.*]] = linalg.fill(%{{.*}}, %[[T1]])
+  //      FILL:  = tensor.extract_slice %[[T2]]
+  %1 = linalg.fill(%cst, %0) : f32, tensor<?x?xf32> -> tensor<?x?xf32>
+  %2 = linalg.fill(%cst, %1) : f32, tensor<?x?xf32> -> tensor<?x?xf32>
+  return %2 : tensor<?x?xf32>
+}
+
+// -----
+
+#map0 = affine_map<()[s0] -> (64, s0)>
+
 //      MATMUL:  compose_padding
 // MATMUL-SAME:    %[[ARG0:[0-9a-zA-Z]*]]: tensor<64x64xf32>
 func @compose_padding(%arg0: tensor<64x64xf32>,
