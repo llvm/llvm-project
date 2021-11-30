@@ -662,9 +662,9 @@ ConstString Type::GetQualifiedName() {
   return GetForwardCompilerType().GetTypeName();
 }
 
-bool Type::GetTypeScopeAndBasename(const llvm::StringRef name,
-                                   llvm::StringRef scope,
-                                   llvm::StringRef basename,
+bool Type::GetTypeScopeAndBasename(const llvm::StringRef& name,
+                                   llvm::StringRef &scope,
+                                   llvm::StringRef &basename,
                                    TypeClass &type_class) {
   type_class = eTypeClassAny;
 
