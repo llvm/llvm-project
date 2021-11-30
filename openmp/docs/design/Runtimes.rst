@@ -461,13 +461,14 @@ unit starting from top layer downwards. E.g. the number of sockets (top layer
 units), cores per socket, and the threads per core, to use with an OpenMP
 application, as an alternative to writing complicated explicit affinity settings
 or a limiting process affinity mask. You can also specify an offset value to set
-which resources to use.
+which resources to use. When available, you can specify attributes to select
+different subsets of resources.
 
 An extended syntax is available when ``KMP_TOPOLOGY_METHOD=hwloc``. Depending on what
 resources are detected, you may be able to specify additional resources, such as
 NUMA domains and groups of hardware resources that share certain cache levels.
 
-**Basic syntax:** ``num_unitsID[@offset] [,num_unitsID[@offset]...]``
+**Basic syntax:** ``num_unitsID[@offset][:attribute] [,num_unitsID[@offset][:attribute]...]``
 
 Supported unit IDs are not case-insensitive.
 
@@ -484,6 +485,14 @@ Supported unit IDs are not case-insensitive.
 | ``num_units`` specifies the requested number of HW threads per core.
 
 ``offset`` - (Optional) The number of units to skip.
+
+``attribute`` - (Optional) An attribute differentiating resources at a particular level. The attributes available to users are:
+
+* **Core type** - On Intel architectures, this can be ``intel_atom`` or ``intel_core``
+* **Core efficiency** - This is specified as ``eff``:emphasis:`num` where :emphasis:`num` is a number from 0
+  to the number of core efficiencies detected in the machine topology minus one.
+  E.g., ``eff0``. The greater the efficiency number the more performant the core. There may be
+  more core efficiencies than core types and can be viewed by setting ``KMP_AFFINITY=verbose``
 
 .. note::
     The hardware cache can be specified as a unit, e.g. L2 for L2 cache,
@@ -513,7 +522,10 @@ The run-time library prints a warning, and the setting of
 
 * a resource is specified, but detection of that resource is not supported
   by the chosen topology detection method and/or
-* a resource is specified twice.
+* a resource is specified twice. An exception to this condition is if attributes
+  differentiate the resource.
+* attributes are used when not detected in the machine topology or conflict with
+  each other.
 
 This variable does not work if ``KMP_AFFINITY=disabled``.
 
@@ -532,6 +544,10 @@ available hardware resources.
 * ``1T``: Use all cores on all sockets, 1 thread per core.
 * ``1s, 1d, 1n, 1c, 1t``: Use 1 socket, 1 die, 1 NUMA node, 1 core, 1 thread
   - use HW thread as a result.
+* ``4c:intel_atom,5c:intel_core``: Use all available sockets and use 4
+  Intel Atom(R) processor cores and 5 Intel(R) Core(TM) processor cores per socket.
+* ``2c:eff0@1,3c:eff1``: Use all available sockets, skip the first core with efficiency 0
+  and use the next 2 cores with efficiency 0 and 3 cores with efficiency 1 per socket.
 * ``1s, 1c, 1t``: Use 1 socket, 1 core, 1 thread. This may result in using
   single thread on a 3-layer topology architecture, or multiple threads on
   4-layer or 5-layer architecture. Result may even be different on the same

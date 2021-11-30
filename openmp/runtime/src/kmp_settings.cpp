@@ -4961,28 +4961,76 @@ static void __kmp_stg_parse_hw_subset(char const *name, char const *value,
 
   // Check each component
   for (int i = 0; i < level; ++i) {
-    int offset = 0;
-    int num = atoi(components[i]); // each component should start with a number
-    if (num <= 0) {
-      goto err; // only positive integers are valid for count
+    int core_level = 0;
+    char *core_components[MAX_T_LEVEL];
+    // Split possible core components by '&' delimiter
+    pos = components[i];
+    core_components[core_level++] = pos;
+    while ((pos = strchr(pos, '&'))) {
+      if (core_level >= MAX_T_LEVEL)
+        goto err; // too many different core types
+      *pos = '\0'; // modify input and avoid more copying
+      core_components[core_level++] = ++pos; // expect something after '&'
     }
-    if ((pos = strchr(components[i], '@'))) {
-      offset = atoi(pos + 1); // save offset
-      *pos = '\0'; // cut the offset from the component
+
+    for (int j = 0; j < core_level; ++j) {
+      char *offset_ptr;
+      char *attr_ptr;
+      int offset = 0;
+      kmp_hw_attr_t attr;
+      int num =
+          atoi(core_components[j]); // each component should start with a number
+      if (num <= 0) {
+        goto err; // only positive integers are valid for count
+      }
+
+      offset_ptr = strchr(core_components[j], '@');
+      attr_ptr = strchr(core_components[j], ':');
+
+      if (offset_ptr) {
+        offset = atoi(offset_ptr + 1); // save offset
+        *offset_ptr = '\0'; // cut the offset from the component
+      }
+      if (attr_ptr) {
+        attr.clear();
+        // save the attribute
+        if (__kmp_str_match("intel_core", -1, attr_ptr + 1)) {
+          attr.set_core_type(KMP_HW_CORE_TYPE_CORE);
+        } else if (__kmp_str_match("intel_atom", -1, attr_ptr + 1)) {
+          attr.set_core_type(KMP_HW_CORE_TYPE_ATOM);
+        } else if (__kmp_str_match("eff", 3, attr_ptr + 1)) {
+          const char *number = attr_ptr + 1;
+          // skip the eff[iciency] token
+          while (isalpha(*number))
+            number++;
+          if (!isdigit(*number)) {
+            goto err;
+          }
+          int efficiency = atoi(number);
+          attr.set_core_eff(efficiency);
+        } else {
+          goto err;
+        }
+        *attr_ptr = '\0'; // cut the attribute from the component
+      }
+      pos = core_components[j] + strspn(core_components[j], digits);
+      if (pos == core_components[j]) {
+        goto err;
+      }
+      // detect the component type
+      kmp_hw_t type = __kmp_stg_parse_hw_subset_name(pos);
+      if (type == KMP_HW_UNKNOWN) {
+        goto err;
+      }
+      // Only the core type can have attributes
+      if (attr && type != KMP_HW_CORE)
+        goto err;
+      // Must allow core be specified more than once
+      if (type != KMP_HW_CORE && __kmp_hw_subset->specified(type)) {
+        goto err;
+      }
+      __kmp_hw_subset->push_back(num, type, offset, attr);
     }
-    pos = components[i] + strspn(components[i], digits);
-    if (pos == components[i]) {
-      goto err;
-    }
-    // detect the component type
-    kmp_hw_t type = __kmp_stg_parse_hw_subset_name(pos);
-    if (type == KMP_HW_UNKNOWN) {
-      goto err;
-    }
-    if (__kmp_hw_subset->specified(type)) {
-      goto err;
-    }
-    __kmp_hw_subset->push_back(num, type, offset);
   }
   return;
 err:
@@ -4992,6 +5040,21 @@ err:
     __kmp_hw_subset = nullptr;
   }
   return;
+}
+
+static inline const char *
+__kmp_hw_get_core_type_keyword(kmp_hw_core_type_t type) {
+  switch (type) {
+  case KMP_HW_CORE_TYPE_UNKNOWN:
+    return "unknown";
+#if KMP_ARCH_X86 || KMP_ARCH_X86_64
+  case KMP_HW_CORE_TYPE_ATOM:
+    return "intel_atom";
+  case KMP_HW_CORE_TYPE_CORE:
+    return "intel_core";
+#endif
+  }
+  return "unknown";
 }
 
 static void __kmp_stg_print_hw_subset(kmp_str_buf_t *buffer, char const *name,
@@ -5009,10 +5072,20 @@ static void __kmp_stg_print_hw_subset(kmp_str_buf_t *buffer, char const *name,
   depth = __kmp_hw_subset->get_depth();
   for (int i = 0; i < depth; ++i) {
     const auto &item = __kmp_hw_subset->at(i);
-    __kmp_str_buf_print(&buf, "%s%d%s", (i > 0 ? "," : ""), item.num,
-                        __kmp_hw_get_keyword(item.type));
-    if (item.offset)
-      __kmp_str_buf_print(&buf, "@%d", item.offset);
+    if (i > 0)
+      __kmp_str_buf_print(&buf, "%c", ',');
+    for (int j = 0; j < item.num_attrs; ++j) {
+      __kmp_str_buf_print(&buf, "%s%d%s", (j > 0 ? "&" : ""), item.num[j],
+                          __kmp_hw_get_keyword(item.type));
+      if (item.attr[j].is_core_type_valid())
+        __kmp_str_buf_print(
+            &buf, ":%s",
+            __kmp_hw_get_core_type_keyword(item.attr[j].get_core_type()));
+      if (item.attr[j].is_core_eff_valid())
+        __kmp_str_buf_print(&buf, ":eff%d", item.attr[j].get_core_eff());
+      if (item.offset[j])
+        __kmp_str_buf_print(&buf, "@%d", item.offset[j]);
+    }
   }
   __kmp_str_buf_print(buffer, "%s'\n", buf.str);
   __kmp_str_buf_free(&buf);
