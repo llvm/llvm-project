@@ -2066,16 +2066,13 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
 
 
 
-    if (KeepOldBlocks)
-        return extractCodeRegionByCopy(CEAC, inputs, outputs, EntryFreq,ExitWeights,ExitBlocks,SinkingCands,HoistingCands,CommonExit, newFunction, codeReplacer,nullptr,newRootNode  );
-
-
-
-
-    // Transforms/HotColdSplit/stale-assume-in-original-func.ll
-    // TODO: remove assumes only after moving
-        // Remove @llvm.assume calls that will be moved to the new function from the
-        // old function's assumption cache.
+    if (KeepOldBlocks) {
+        extractCodeRegionByCopy(CEAC, inputs, outputs, EntryFreq, ExitWeights, ExitBlocks, SinkingCands, HoistingCands, CommonExit, newFunction, codeReplacer, nullptr, newRootNode);
+    } else {
+        // Transforms/HotColdSplit/stale-assume-in-original-func.ll
+        // TODO: remove assumes only after moving
+            // Remove @llvm.assume calls that will be moved to the new function from the
+            // old function's assumption cache.
         for (BasicBlock* Block : Blocks) {
             for (Instruction& I : llvm::make_early_inc_range(*Block)) {
                 if (auto* AI = dyn_cast<AssumeInst>(&I)) {
@@ -2085,129 +2082,129 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
                 }
             }
         }
-    
-
-
-
-      auto *BranchI = BranchInst::Create(header, newFuncRoot);
-      applyFirstDebugLoc(oldFunction, Blocks.getArrayRef(), BranchI);      
-     // newFuncRoot->getInstList().push_back(BranchI);
-
-
-
-      // Now sink all instructions which only have non-phi uses inside the region.
-      // Group the allocas at the start of the block, so that any bitcast uses of
-      // the allocas are well-defined.
-      AllocaInst *FirstSunkAlloca = nullptr;
-      for (auto *II : SinkingCands) {
-          if (auto *AI = dyn_cast<AllocaInst>(II)) {
-              AI->moveBefore(*newFuncRoot, newFuncRoot->getFirstInsertionPt());
-              if (!FirstSunkAlloca)
-                  FirstSunkAlloca = AI;
-          }
-      }
-      assert((SinkingCands.empty() || FirstSunkAlloca) && "Did not expect a sink candidate without any allocas");
-      for (auto *II : SinkingCands) {
-          if (!isa<AllocaInst>(II)) {
-              cast<Instruction>(II)->moveAfter(FirstSunkAlloca);
-          }
-      }
-
-
-      if (!HoistingCands.empty()) {
-          auto *HoistToBlock = findOrCreateBlockForHoisting(CommonExit);
-          Instruction *TI = HoistToBlock->getTerminator();
-          for (auto *II : HoistingCands)
-              cast<Instruction>(II)->moveBefore(TI);
-      }
-
-      // Collect objects which are inputs to the extraction region and also
-      // referenced by lifetime start markers within it. The effects of these
-      // markers must be replicated in the calling function to prevent the stack
-      // coloring pass from merging slots which store input objects.
-      ValueSet LifetimesStart;
-      eraseLifetimeMarkersOnInputs(Blocks, SinkingCands, LifetimesStart);
-
-
-
-     
-    
-
-
-      for (unsigned i = 0, e = inputs.size(); i != e; ++i) {
-          Value *RewriteVal = NewValues[i];
-
-              std::vector<User*> Users(inputs[i]->user_begin(), inputs[i]->user_end());
-              for (User* use : Users)
-                  if (Instruction* inst = dyn_cast<Instruction>(use))
-                      if (Blocks.count(inst->getParent()))
-                          inst->replaceUsesOfWith(inputs[i], RewriteVal);
-      }
 
 
 
 
-      // Rewrite branches to basic blocks outside of the loop to new dummy blocks
-      // within the new function. This must be done before we lose track of which
-      // blocks were originally in the code region.
-      std::vector<User *> Users(header->user_begin(), header->user_end());
-      for (auto &U : Users) // FIXME: KeepOldBlocks?
-                            // The BasicBlock which contains the branch is not in the region
-                            // modify the branch target to a new block
-          if (Instruction *I = dyn_cast<Instruction>(U))
-              if (I->isTerminator() && I->getFunction() == oldFunction &&
-                  !Blocks.count(I->getParent()))
-                  I->replaceUsesOfWith(header, newHeader);
+        auto* BranchI = BranchInst::Create(header, newFuncRoot);
+        applyFirstDebugLoc(oldFunction, Blocks.getArrayRef(), BranchI);
+        // newFuncRoot->getInstList().push_back(BranchI);
+
+
+
+         // Now sink all instructions which only have non-phi uses inside the region.
+         // Group the allocas at the start of the block, so that any bitcast uses of
+         // the allocas are well-defined.
+        AllocaInst* FirstSunkAlloca = nullptr;
+        for (auto* II : SinkingCands) {
+            if (auto* AI = dyn_cast<AllocaInst>(II)) {
+                AI->moveBefore(*newFuncRoot, newFuncRoot->getFirstInsertionPt());
+                if (!FirstSunkAlloca)
+                    FirstSunkAlloca = AI;
+            }
+        }
+        assert((SinkingCands.empty() || FirstSunkAlloca) && "Did not expect a sink candidate without any allocas");
+        for (auto* II : SinkingCands) {
+            if (!isa<AllocaInst>(II)) {
+                cast<Instruction>(II)->moveAfter(FirstSunkAlloca);
+            }
+        }
+
+
+        if (!HoistingCands.empty()) {
+            auto* HoistToBlock = findOrCreateBlockForHoisting(CommonExit);
+            Instruction* TI = HoistToBlock->getTerminator();
+            for (auto* II : HoistingCands)
+                cast<Instruction>(II)->moveBefore(TI);
+        }
+
+        // Collect objects which are inputs to the extraction region and also
+        // referenced by lifetime start markers within it. The effects of these
+        // markers must be replicated in the calling function to prevent the stack
+        // coloring pass from merging slots which store input objects.
+        ValueSet LifetimesStart;
+        eraseLifetimeMarkersOnInputs(Blocks, SinkingCands, LifetimesStart);
 
 
 
 
 
 
-      CallInst *TheCall = emitCallAndSwitchStatement(newFunction, codeReplacer, inputs, outputs, false,VMap);
-      
 
-      moveCodeToFunction(newFunction);
+        for (unsigned i = 0, e = inputs.size(); i != e; ++i) {
+            Value* RewriteVal = NewValues[i];
 
-      // Replicate the effects of any lifetime start/end markers which referenced
-      // input objects in the extraction region by placing markers around the call.
-      insertLifetimeMarkersSurroundingCall(
-          oldFunction->getParent(), LifetimesStart.getArrayRef(), {}, TheCall);
+            std::vector<User*> Users(inputs[i]->user_begin(), inputs[i]->user_end());
+            for (User* use : Users)
+                if (Instruction* inst = dyn_cast<Instruction>(use))
+                    if (Blocks.count(inst->getParent()))
+                        inst->replaceUsesOfWith(inputs[i], RewriteVal);
+        }
 
-      // Update the branch weights for the exit block.
-      if (BFI && NumExitBlocks > 1)
-          calculateNewCallTerminatorWeights(codeReplacer, ExitWeights, BPI);
 
-      // Loop over all of the PHI nodes in the header and exit blocks, and change
-      // any references to the old incoming edge to be the new incoming edge.
-      for (BasicBlock::iterator I = header->begin(); isa<PHINode>(I); ++I) {
-          PHINode* PN = cast<PHINode>(I);
-          for (unsigned i = 0, e = PN->getNumIncomingValues(); i != e; ++i)
-              if (!Blocks.count(PN->getIncomingBlock(i)))
-                  PN->setIncomingBlock(i, newFuncRoot);
-      }
 
-      for (BasicBlock* ExitBB : ExitBlocks)
-          for (PHINode& PN : ExitBB->phis()) {
-              Value* IncomingCodeReplacerVal = nullptr;
-              for (unsigned i = 0, e = PN.getNumIncomingValues(); i != e; ++i) {
-                  // Ignore incoming values from outside of the extracted region.
-                  if (!Blocks.count(PN.getIncomingBlock(i)))
-                      continue;
 
-                  // Ensure that there is only one incoming value from codeReplacer.
-                  if (!IncomingCodeReplacerVal) {
-                      PN.setIncomingBlock(i, codeReplacer);
-                      IncomingCodeReplacerVal = PN.getIncomingValue(i);
-                  }
-                  else
-                      assert(IncomingCodeReplacerVal == PN.getIncomingValue(i) &&
-                          "PHI has two incompatbile incoming values from codeRepl");
-              }
-          }
+        // Rewrite branches to basic blocks outside of the loop to new dummy blocks
+        // within the new function. This must be done before we lose track of which
+        // blocks were originally in the code region.
+        std::vector<User*> Users(header->user_begin(), header->user_end());
+        for (auto& U : Users) // FIXME: KeepOldBlocks?
+                              // The BasicBlock which contains the branch is not in the region
+                              // modify the branch target to a new block
+            if (Instruction* I = dyn_cast<Instruction>(U))
+                if (I->isTerminator() && I->getFunction() == oldFunction &&
+                    !Blocks.count(I->getParent()))
+                    I->replaceUsesOfWith(header, newHeader);
 
-      fixupDebugInfoPostExtraction(*oldFunction, *newFunction, *TheCall);
-  
+
+
+
+
+
+        CallInst* TheCall = emitCallAndSwitchStatement(newFunction, codeReplacer, inputs, outputs, false, VMap);
+
+
+        moveCodeToFunction(newFunction);
+
+        // Replicate the effects of any lifetime start/end markers which referenced
+        // input objects in the extraction region by placing markers around the call.
+        insertLifetimeMarkersSurroundingCall(
+            oldFunction->getParent(), LifetimesStart.getArrayRef(), {}, TheCall);
+
+        // Update the branch weights for the exit block.
+        if (BFI && NumExitBlocks > 1)
+            calculateNewCallTerminatorWeights(codeReplacer, ExitWeights, BPI);
+
+        // Loop over all of the PHI nodes in the header and exit blocks, and change
+        // any references to the old incoming edge to be the new incoming edge.
+        for (BasicBlock::iterator I = header->begin(); isa<PHINode>(I); ++I) {
+            PHINode* PN = cast<PHINode>(I);
+            for (unsigned i = 0, e = PN->getNumIncomingValues(); i != e; ++i)
+                if (!Blocks.count(PN->getIncomingBlock(i)))
+                    PN->setIncomingBlock(i, newFuncRoot);
+        }
+
+        for (BasicBlock* ExitBB : ExitBlocks)
+            for (PHINode& PN : ExitBB->phis()) {
+                Value* IncomingCodeReplacerVal = nullptr;
+                for (unsigned i = 0, e = PN.getNumIncomingValues(); i != e; ++i) {
+                    // Ignore incoming values from outside of the extracted region.
+                    if (!Blocks.count(PN.getIncomingBlock(i)))
+                        continue;
+
+                    // Ensure that there is only one incoming value from codeReplacer.
+                    if (!IncomingCodeReplacerVal) {
+                        PN.setIncomingBlock(i, codeReplacer);
+                        IncomingCodeReplacerVal = PN.getIncomingValue(i);
+                    }
+                    else
+                        assert(IncomingCodeReplacerVal == PN.getIncomingValue(i) &&
+                            "PHI has two incompatbile incoming values from codeRepl");
+                }
+            }
+
+        fixupDebugInfoPostExtraction(*oldFunction, *newFunction, *TheCall);
+    }
 
       // Mark the new function `noreturn` if applicable. Terminators which resume
       // exception propagation are treated as returning instructions. This is to
@@ -2698,35 +2695,16 @@ Function *CodeExtractor::extractCodeRegionByCopy(const CodeExtractorAnalysisCach
                 RemapInstruction(&II, VMap, RF_NoModuleLevelChanges);
         }
 
-        int b = 0;
-   
+
         auto HeaderCopy  = VMap.lookup(header);
         assert(HeaderCopy);
         auto *BranchI2 = BranchInst::Create(header, newRootNode);
         applyFirstDebugLoc(oldFunction, Blocks.getArrayRef(), BranchI2);
 
-    // Mark the new function `noreturn` if applicable. Terminators which resume
-    // exception propagation are treated as returning instructions. This is to
-    // avoid inserting traps after calls to outlined functions which unwind.
-    bool doesNotReturn = none_of(*newFunction, [](const BasicBlock& BB) {
-        const Instruction* Term = BB.getTerminator();
-        if (!Term) return false; // for "newFuncRoot"
-        return isa<ReturnInst>(Term) || isa<ResumeInst>(Term);
-        });
-    if (doesNotReturn)
-        newFunction->setDoesNotReturn();
 
-
-    LLVM_DEBUG(if (verifyFunction(*newFunction, &errs())) {
-        newFunction->dump();
-        report_fatal_error("verification of newFunction failed!");
-    });
-    LLVM_DEBUG(if (verifyFunction(*oldFunction))
-        report_fatal_error("verification of oldFunction failed!"));
-    LLVM_DEBUG(if (AC && verifyAssumptionCache(*oldFunction, *newFunction, AC))
-        report_fatal_error("Stale Asumption cache for old Function!"));
     return newFunction;
 }
+
 
 bool CodeExtractor::verifyAssumptionCache(const Function &OldFunc,
                                           const Function &NewFunc,
