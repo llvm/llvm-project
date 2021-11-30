@@ -5,44 +5,46 @@
 define signext i32 @foo(i32 signext %aa) #0 {
 ; CHECK-LABEL: foo:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    addi sp, sp, -64
-; CHECK-NEXT:    .cfi_def_cfa_offset 64
-; CHECK-NEXT:    sd ra, 56(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s0, 48(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    addi sp, sp, -80
+; CHECK-NEXT:    .cfi_def_cfa_offset 80
+; CHECK-NEXT:    sd ra, 72(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd s0, 64(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd s1, 56(sp) # 8-byte Folded Spill
 ; CHECK-NEXT:    .cfi_offset ra, -8
 ; CHECK-NEXT:    .cfi_offset s0, -16
-; CHECK-NEXT:    addi s0, sp, 64
+; CHECK-NEXT:    .cfi_offset s1, -24
+; CHECK-NEXT:    addi s0, sp, 80
 ; CHECK-NEXT:    .cfi_def_cfa s0, 0
 ; CHECK-NEXT:    csrr a1, vlenb
 ; CHECK-NEXT:    sub sp, sp, a1
 ; CHECK-NEXT:    andi sp, sp, -8
-; CHECK-NEXT:    lw t0, 36(sp)
-; CHECK-NEXT:    lw a2, 32(sp)
-; CHECK-NEXT:    lw a3, 28(sp)
-; CHECK-NEXT:    lw a4, 24(sp)
-; CHECK-NEXT:    lw a5, 20(sp)
-; CHECK-NEXT:    lw a6, 16(sp)
-; CHECK-NEXT:    lw a7, 12(sp)
-; CHECK-NEXT:    lw t1, 8(sp)
-; CHECK-NEXT:    lw t2, 4(sp)
-; CHECK-NEXT:    lw a1, 0(sp)
-; CHECK-NEXT:    sw a0, 44(sp)
-; CHECK-NEXT:    sw a0, 40(sp)
+; CHECK-NEXT:    mv s1, sp
+; CHECK-NEXT:    lw t0, 44(s1)
+; CHECK-NEXT:    lw a2, 40(s1)
+; CHECK-NEXT:    lw a3, 36(s1)
+; CHECK-NEXT:    lw a4, 32(s1)
+; CHECK-NEXT:    lw a5, 28(s1)
+; CHECK-NEXT:    lw a6, 24(s1)
+; CHECK-NEXT:    lw a7, 20(s1)
+; CHECK-NEXT:    lw t1, 16(s1)
+; CHECK-NEXT:    lw t2, 12(s1)
+; CHECK-NEXT:    lw a1, 8(s1)
+; CHECK-NEXT:    sw a0, 52(s1)
+; CHECK-NEXT:    sw a0, 48(s1)
 ; CHECK-NEXT:    addi sp, sp, -32
 ; CHECK-NEXT:    sd a1, 16(sp)
 ; CHECK-NEXT:    sd t2, 8(sp)
-; CHECK-NEXT:    addi a1, sp, 40
-; This is the incorrect calculation. It's after the addi sp, sp, -32. The 40
-; doesn't consider the -32 adjustment that was made.
+; CHECK-NEXT:    addi a1, s1, 48
 ; CHECK-NEXT:    sd t1, 0(sp)
 ; CHECK-NEXT:    mv a0, t0
 ; CHECK-NEXT:    call gfunc@plt
 ; CHECK-NEXT:    addi sp, sp, 32
 ; CHECK-NEXT:    li a0, 0
-; CHECK-NEXT:    addi sp, s0, -64
-; CHECK-NEXT:    ld ra, 56(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s0, 48(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    addi sp, sp, 64
+; CHECK-NEXT:    addi sp, s0, -80
+; CHECK-NEXT:    ld ra, 72(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld s0, 64(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld s1, 56(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    addi sp, sp, 80
 ; CHECK-NEXT:    ret
 entry:
   %aa.addr = alloca i32, align 4

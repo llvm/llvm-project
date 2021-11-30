@@ -237,7 +237,13 @@ bool RISCVFrameLowering::hasBP(const MachineFunction &MF) const {
   const MachineFrameInfo &MFI = MF.getFrameInfo();
   const TargetRegisterInfo *TRI = STI.getRegisterInfo();
 
-  return MFI.hasVarSizedObjects() && TRI->hasStackRealignment(MF);
+  // If we do not reserve stack space for outgoing arguments in prologue,
+  // we will adjust the stack pointer before call instruction. After the
+  // adjustment, we can not use SP to access the stack objects for the
+  // arguments. Instead, use BP to access these stack objects.
+  return (MFI.hasVarSizedObjects() ||
+          (!hasReservedCallFrame(MF) && MFI.getMaxCallFrameSize() != 0)) &&
+         TRI->hasStackRealignment(MF);
 }
 
 // Determines the size of the frame and maximum call frame size.
