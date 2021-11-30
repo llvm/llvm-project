@@ -63,6 +63,8 @@ public:
     ResultTypeFunc resultTypeFunc;
     auto resultType =
         resultTypeFunc(op, mixedOffsets, mixedSizes, mixedStrides);
+    if (!resultType)
+      return failure();
     auto newOp =
         rewriter.create<OpType>(op.getLoc(), resultType, op.source(),
                                 mixedOffsets, mixedSizes, mixedStrides);
