@@ -915,12 +915,26 @@ public:
                               const SymbolLookupSet &LookupSet) = 0;
 };
 
-/// A symbol table that supports asynchoronous symbol queries.
+/// Represents a JIT'd dynamic library.
 ///
-/// Represents a virtual shared object. Instances can not be copied or moved, so
-/// their addresses may be used as keys for resource management.
-/// JITDylib state changes must be made via an ExecutionSession to guarantee
-/// that they are synchronized with respect to other JITDylib operations.
+/// This class aims to mimic the behavior of a regular dylib or shared object,
+/// but without requiring the contained program representations to be compiled
+/// up-front. The JITDylib's content is defined by adding MaterializationUnits,
+/// and contained MaterializationUnits will typically rely on the JITDylib's
+/// links-against order to resolve external references (similar to a regular
+/// dylib).
+///
+/// The JITDylib object is a thin wrapper that references state held by the
+/// ExecutionSession. JITDylibs can be removed, clearing this underlying state
+/// and leaving the JITDylib object in a defunct state. In this state the
+/// JITDylib's name is guaranteed to remain accessible. If the ExecutionSession
+/// is still alive then other operations are callable but will return an Error
+/// or null result (depending on the API). It is illegal to call any operation
+/// other than getName on a JITDylib after the ExecutionSession has been torn
+/// down.
+///
+/// JITDylibs cannot be moved or copied. Their address is stable, and useful as
+/// a key in some JIT data structures.
 class JITDylib : public ThreadSafeRefCountedBase<JITDylib>,
                  public jitlink::JITLinkDylib {
   friend class AsynchronousSymbolQuery;
@@ -933,9 +947,20 @@ public:
   JITDylib &operator=(const JITDylib &) = delete;
   JITDylib(JITDylib &&) = delete;
   JITDylib &operator=(JITDylib &&) = delete;
+  ~JITDylib();
 
   /// Get a reference to the ExecutionSession for this JITDylib.
+  ///
+  /// It is legal to call this method on a defunct JITDylib, however the result
+  /// will only usable if the ExecutionSession is still alive. If this JITDylib
+  /// is held by an error that may have torn down the JIT then the result
+  /// should not be used.
   ExecutionSession &getExecutionSession() const { return ES; }
+
+  /// Dump current JITDylib state to OS.
+  ///
+  /// It is legal to call this method on a defunct JITDylib.
+  void dump(raw_ostream &OS);
 
   /// Calls remove on all trackers currently associated with this JITDylib.
   /// Does not run static deinits.
@@ -944,12 +969,21 @@ public:
   /// added concurrently while the clear is underway, and the newly added
   /// code will *not* be cleared. Adding new code concurrently with a clear
   /// is usually a bug and should be avoided.
+  ///
+  /// It is illegal to call this method on a defunct JITDylib and the client
+  /// is responsible for ensuring that they do not do so.
   Error clear();
 
   /// Get the default resource tracker for this JITDylib.
+  ///
+  /// It is illegal to call this method on a defunct JITDylib and the client
+  /// is responsible for ensuring that they do not do so.
   ResourceTrackerSP getDefaultResourceTracker();
 
   /// Create a resource tracker for this JITDylib.
+  ///
+  /// It is illegal to call this method on a defunct JITDylib and the client
+  /// is responsible for ensuring that they do not do so.
   ResourceTrackerSP createResourceTracker();
 
   /// Adds a definition generator to this JITDylib and returns a referenece to
@@ -958,6 +992,9 @@ public:
   /// When JITDylibs are searched during lookup, if no existing definition of
   /// a symbol is found, then any generators that have been added are run (in
   /// the order that they were added) to potentially generate a definition.
+  ///
+  /// It is illegal to call this method on a defunct JITDylib and the client
+  /// is responsible for ensuring that they do not do so.
   template <typename GeneratorT>
   GeneratorT &addGenerator(std::unique_ptr<GeneratorT> DefGenerator);
 
@@ -965,6 +1002,9 @@ public:
   ///
   /// The given generator must exist in this JITDylib's generators list (i.e.
   /// have been added and not yet removed).
+  ///
+  /// It is illegal to call this method on a defunct JITDylib and the client
+  /// is responsible for ensuring that they do not do so.
   void removeGenerator(DefinitionGenerator &G);
 
   /// Set the link order to be used when fixing up definitions in JITDylib.
@@ -985,26 +1025,41 @@ public:
   /// as the first in the link order (instead of this dylib) ensures that
   /// definitions within this dylib resolve to the lazy-compiling stubs,
   /// rather than immediately materializing the definitions in this dylib.
+  ///
+  /// It is illegal to call this method on a defunct JITDylib and the client
+  /// is responsible for ensuring that they do not do so.
   void setLinkOrder(JITDylibSearchOrder NewSearchOrder,
                     bool LinkAgainstThisJITDylibFirst = true);
 
   /// Add the given JITDylib to the link order for definitions in this
   /// JITDylib.
+  ///
+  /// It is illegal to call this method on a defunct JITDylib and the client
+  /// is responsible for ensuring that they do not do so.
   void addToLinkOrder(JITDylib &JD,
                       JITDylibLookupFlags JDLookupFlags =
                           JITDylibLookupFlags::MatchExportedSymbolsOnly);
 
   /// Replace OldJD with NewJD in the link order if OldJD is present.
   /// Otherwise this operation is a no-op.
+  ///
+  /// It is illegal to call this method on a defunct JITDylib and the client
+  /// is responsible for ensuring that they do not do so.
   void replaceInLinkOrder(JITDylib &OldJD, JITDylib &NewJD,
                           JITDylibLookupFlags JDLookupFlags =
                               JITDylibLookupFlags::MatchExportedSymbolsOnly);
 
   /// Remove the given JITDylib from the link order for this JITDylib if it is
   /// present. Otherwise this operation is a no-op.
+  ///
+  /// It is illegal to call this method on a defunct JITDylib and the client
+  /// is responsible for ensuring that they do not do so.
   void removeFromLinkOrder(JITDylib &JD);
 
   /// Do something with the link order (run under the session lock).
+  ///
+  /// It is illegal to call this method on a defunct JITDylib and the client
+  /// is responsible for ensuring that they do not do so.
   template <typename Func>
   auto withLinkOrderDo(Func &&F)
       -> decltype(F(std::declval<const JITDylibSearchOrder &>()));
@@ -1016,6 +1071,9 @@ public:
   ///
   /// This overload always takes ownership of the MaterializationUnit. If any
   /// errors occur, the MaterializationUnit consumed.
+  ///
+  /// It is illegal to call this method on a defunct JITDylib and the client
+  /// is responsible for ensuring that they do not do so.
   template <typename MaterializationUnitType>
   Error define(std::unique_ptr<MaterializationUnitType> &&MU,
                ResourceTrackerSP RT = nullptr);
@@ -1027,6 +1085,9 @@ public:
   /// generated. If an error occurs, ownership remains with the caller. This
   /// may allow the caller to modify the MaterializationUnit to correct the
   /// issue, then re-call define.
+  ///
+  /// It is illegal to call this method on a defunct JITDylib and the client
+  /// is responsible for ensuring that they do not do so.
   template <typename MaterializationUnitType>
   Error define(std::unique_ptr<MaterializationUnitType> &MU,
                ResourceTrackerSP RT = nullptr);
@@ -1041,28 +1102,40 @@ public:
   ///
   /// On success, all symbols are removed. On failure, the JITDylib state is
   /// left unmodified (no symbols are removed).
+  ///
+  /// It is illegal to call this method on a defunct JITDylib and the client
+  /// is responsible for ensuring that they do not do so.
   Error remove(const SymbolNameSet &Names);
-
-  /// Dump current JITDylib state to OS.
-  void dump(raw_ostream &OS);
 
   /// Returns the given JITDylibs and all of their transitive dependencies in
   /// DFS order (based on linkage relationships). Each JITDylib will appear
   /// only once.
+  ///
+  /// It is illegal to call this method on a defunct JITDylib and the client
+  /// is responsible for ensuring that they do not do so.
   static std::vector<JITDylibSP> getDFSLinkOrder(ArrayRef<JITDylibSP> JDs);
 
   /// Returns the given JITDylibs and all of their transitive dependensies in
   /// reverse DFS order (based on linkage relationships). Each JITDylib will
   /// appear only once.
+  ///
+  /// It is illegal to call this method on a defunct JITDylib and the client
+  /// is responsible for ensuring that they do not do so.
   static std::vector<JITDylibSP>
   getReverseDFSLinkOrder(ArrayRef<JITDylibSP> JDs);
 
   /// Return this JITDylib and its transitive dependencies in DFS order
   /// based on linkage relationships.
+  ///
+  /// It is illegal to call this method on a defunct JITDylib and the client
+  /// is responsible for ensuring that they do not do so.
   std::vector<JITDylibSP> getDFSLinkOrder();
 
   /// Rteurn this JITDylib and its transitive dependencies in reverse DFS order
   /// based on linkage relationships.
+  ///
+  /// It is illegal to call this method on a defunct JITDylib and the client
+  /// is responsible for ensuring that they do not do so.
   std::vector<JITDylibSP> getReverseDFSLinkOrder();
 
 private:
@@ -1198,8 +1271,8 @@ private:
       failSymbols(FailedSymbolsWorklist);
 
   ExecutionSession &ES;
+  enum { Open, Closing, Closed } State = Open;
   std::mutex GeneratorsMutex;
-  bool Open = true;
   SymbolTable Symbols;
   UnmaterializedInfosMap UnmaterializedInfos;
   MaterializingInfosMap MaterializingInfos;
@@ -1364,6 +1437,18 @@ public:
   /// install standard platform symbols (e.g. standard library interposes).
   /// If no Platform is attached this call is equivalent to createBareJITDylib.
   Expected<JITDylib &> createJITDylib(std::string Name);
+
+  /// Closes the given JITDylib.
+  ///
+  /// This method clears all resources held for the JITDylib, puts it in the
+  /// closed state, and clears all references held by the ExecutionSession and
+  /// other JITDylibs. No further code can be added to the JITDylib, and the
+  /// object will be freed once any remaining JITDylibSPs to it are destroyed.
+  ///
+  /// This method does *not* run static destructors.
+  ///
+  /// This method can only be called once for each JITDylib.
+  Error removeJITDylib(JITDylib &JD);
 
   /// Set the error reporter function.
   ExecutionSession &setErrorReporter(ErrorReporter ReportError) {
@@ -1681,6 +1766,7 @@ template <typename GeneratorT>
 GeneratorT &JITDylib::addGenerator(std::unique_ptr<GeneratorT> DefGenerator) {
   auto &G = *DefGenerator;
   ES.runSessionLocked([&] {
+    assert(State == Open && "Cannot add generator to closed JITDylib");
     DefGenerators.push_back(std::move(DefGenerator));
   });
   return G;
@@ -1689,6 +1775,7 @@ GeneratorT &JITDylib::addGenerator(std::unique_ptr<GeneratorT> DefGenerator) {
 template <typename Func>
 auto JITDylib::withLinkOrderDo(Func &&F)
     -> decltype(F(std::declval<const JITDylibSearchOrder &>())) {
+  assert(State == Open && "Cannot use link order of closed JITDylib");
   return ES.runSessionLocked([&]() { return F(LinkOrder); });
 }
 
@@ -1717,6 +1804,8 @@ Error JITDylib::define(std::unique_ptr<MaterializationUnitType> &&MU,
     });
 
   return ES.runSessionLocked([&, this]() -> Error {
+    assert(State == Open && "JD is defunct");
+
     if (auto Err = defineImpl(*MU))
       return Err;
 
@@ -1758,6 +1847,8 @@ Error JITDylib::define(std::unique_ptr<MaterializationUnitType> &MU,
     });
 
   return ES.runSessionLocked([&, this]() -> Error {
+    assert(State == Open && "JD is defunct");
+
     if (auto Err = defineImpl(*MU))
       return Err;
 

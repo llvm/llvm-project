@@ -612,9 +612,14 @@ void LookupState::continueLookup(Error Err) {
 
 DefinitionGenerator::~DefinitionGenerator() {}
 
+JITDylib::~JITDylib() {
+  LLVM_DEBUG(dbgs() << "Destroying JITDylib " << getName() << "\n");
+}
+
 Error JITDylib::clear() {
   std::vector<ResourceTrackerSP> TrackersToRemove;
   ES.runSessionLocked([&]() {
+    assert(State != Closed && "JD is defunct");
     for (auto &KV : TrackerSymbols)
       TrackersToRemove.push_back(KV.first);
     TrackersToRemove.push_back(getDefaultResourceTracker());
@@ -628,6 +633,7 @@ Error JITDylib::clear() {
 
 ResourceTrackerSP JITDylib::getDefaultResourceTracker() {
   return ES.runSessionLocked([this] {
+    assert(State != Closed && "JD is defunct");
     if (!DefaultTracker)
       DefaultTracker = new ResourceTracker(this);
     return DefaultTracker;
@@ -636,6 +642,7 @@ ResourceTrackerSP JITDylib::getDefaultResourceTracker() {
 
 ResourceTrackerSP JITDylib::createResourceTracker() {
   return ES.runSessionLocked([this] {
+    assert(State == Open && "JD is defunct");
     ResourceTrackerSP RT = new ResourceTracker(this);
     return RT;
   });
@@ -643,6 +650,7 @@ ResourceTrackerSP JITDylib::createResourceTracker() {
 
 void JITDylib::removeGenerator(DefinitionGenerator &G) {
   ES.runSessionLocked([&] {
+    assert(State == Open && "JD is defunct");
     auto I = llvm::find_if(DefGenerators,
                            [&](const std::shared_ptr<DefinitionGenerator> &H) {
                              return H.get() == &G;
@@ -902,6 +910,11 @@ Error JITDylib::resolve(MaterializationResponsibility &MR,
         if (MR.RT->isDefunct())
           return make_error<ResourceTrackerDefunct>(MR.RT);
 
+        if (State != Open)
+          return make_error<StringError>("JITDylib " + getName() +
+                                             " is defunct",
+                                         inconvertibleErrorCode());
+
         struct WorklistEntry {
           SymbolTable::iterator SymI;
           JITEvaluatedSymbol ResolvedSym;
@@ -997,6 +1010,11 @@ Error JITDylib::emit(MaterializationResponsibility &MR,
   if (auto Err = ES.runSessionLocked([&, this]() -> Error {
         if (MR.RT->isDefunct())
           return make_error<ResourceTrackerDefunct>(MR.RT);
+
+        if (State != Open)
+          return make_error<StringError>("JITDylib " + getName() +
+                                             " is defunct",
+                                         inconvertibleErrorCode());
 
         SymbolNameSet SymbolsInErrorState;
         std::vector<SymbolTable::iterator> Worklist;
@@ -1164,8 +1182,16 @@ JITDylib::failSymbols(FailedSymbolsWorklist Worklist) {
 
     (*FailedSymbolsMap)[&JD].insert(Name);
 
-    assert(JD.Symbols.count(Name) && "No symbol table entry for Name");
-    auto &Sym = JD.Symbols[Name];
+    // Look up the symbol to fail.
+    auto SymI = JD.Symbols.find(Name);
+
+    // It's possible that this symbol has already been removed, e.g. if a
+    // materialization failure happens concurrently with a ResourceTracker or
+    // JITDylib removal. In that case we can safely skip this symbol and
+    // continue.
+    if (SymI == JD.Symbols.end())
+      continue;
+    auto &Sym = SymI->second;
 
     // Move the symbol into the error state.
     // Note that this may be redundant: The symbol might already have been
@@ -1262,6 +1288,7 @@ JITDylib::failSymbols(FailedSymbolsWorklist Worklist) {
 void JITDylib::setLinkOrder(JITDylibSearchOrder NewLinkOrder,
                             bool LinkAgainstThisJITDylibFirst) {
   ES.runSessionLocked([&]() {
+    assert(State == Open && "JD is defunct");
     if (LinkAgainstThisJITDylibFirst) {
       LinkOrder.clear();
       if (NewLinkOrder.empty() || NewLinkOrder.front().first != this)
@@ -1280,6 +1307,7 @@ void JITDylib::addToLinkOrder(JITDylib &JD, JITDylibLookupFlags JDLookupFlags) {
 void JITDylib::replaceInLinkOrder(JITDylib &OldJD, JITDylib &NewJD,
                                   JITDylibLookupFlags JDLookupFlags) {
   ES.runSessionLocked([&]() {
+    assert(State == Open && "JD is defunct");
     for (auto &KV : LinkOrder)
       if (KV.first == &OldJD) {
         KV = {&NewJD, JDLookupFlags};
@@ -1290,6 +1318,7 @@ void JITDylib::replaceInLinkOrder(JITDylib &OldJD, JITDylib &NewJD,
 
 void JITDylib::removeFromLinkOrder(JITDylib &JD) {
   ES.runSessionLocked([&]() {
+    assert(State == Open && "JD is defunct");
     auto I = llvm::find_if(LinkOrder,
                            [&](const JITDylibSearchOrder::value_type &KV) {
                              return KV.first == &JD;
@@ -1301,6 +1330,7 @@ void JITDylib::removeFromLinkOrder(JITDylib &JD) {
 
 Error JITDylib::remove(const SymbolNameSet &Names) {
   return ES.runSessionLocked([&]() -> Error {
+    assert(State == Open && "JD is defunct");
     using SymbolMaterializerItrPair =
         std::pair<SymbolTable::iterator, UnmaterializedInfosMap::iterator>;
     std::vector<SymbolMaterializerItrPair> SymbolsToRemove;
@@ -1360,8 +1390,23 @@ Error JITDylib::remove(const SymbolNameSet &Names) {
 void JITDylib::dump(raw_ostream &OS) {
   ES.runSessionLocked([&, this]() {
     OS << "JITDylib \"" << getName() << "\" (ES: "
-       << format("0x%016" PRIx64, reinterpret_cast<uintptr_t>(&ES)) << "):\n"
-       << "Link order: " << LinkOrder << "\n"
+       << format("0x%016" PRIx64, reinterpret_cast<uintptr_t>(&ES))
+       << ", State = ";
+    switch (State) {
+    case Open:
+      OS << "Open";
+      break;
+    case Closing:
+      OS << "Closing";
+      break;
+    case Closed:
+      OS << "Closed";
+      break;
+    }
+    OS << ")\n";
+    if (State == Closed)
+      return;
+    OS << "Link order: " << LinkOrder << "\n"
        << "Symbol table:\n";
 
     for (auto &KV : Symbols) {
@@ -1453,6 +1498,7 @@ std::pair<JITDylib::AsynchronousSymbolQuerySet,
           std::shared_ptr<SymbolDependenceMap>>
 JITDylib::removeTracker(ResourceTracker &RT) {
   // Note: Should be called under the session lock.
+  assert(State != Closed && "JD is defunct");
 
   SymbolNameVector SymbolsToRemove;
   std::vector<std::pair<JITDylib *, SymbolStringPtr>> SymbolsToFail;
@@ -1513,6 +1559,7 @@ JITDylib::removeTracker(ResourceTracker &RT) {
 }
 
 void JITDylib::transferTracker(ResourceTracker &DstRT, ResourceTracker &SrcRT) {
+  assert(State != Closed && "JD is defunct");
   assert(&DstRT != &SrcRT && "No-op transfers shouldn't call transferTracker");
   assert(&DstRT.getJITDylib() == this && "DstRT is not for this JITDylib");
   assert(&SrcRT.getJITDylib() == this && "SrcRT is not for this JITDylib");
@@ -1873,6 +1920,40 @@ Expected<JITDylib &> ExecutionSession::createJITDylib(std::string Name) {
   return JD;
 }
 
+Error ExecutionSession::removeJITDylib(JITDylib &JD) {
+  // Keep JD alive throughout this routine, even if all other references
+  // have been dropped.
+  JITDylibSP JDKeepAlive = &JD;
+
+  // Set JD to 'Closing' state and remove JD from the ExecutionSession.
+  runSessionLocked([&] {
+    assert(JD.State == JITDylib::Open && "JD already closed");
+    JD.State = JITDylib::Closing;
+    auto I = llvm::find(JDs, &JD);
+    assert(I != JDs.end() && "JD does not appear in session JDs");
+    JDs.erase(I);
+  });
+
+  // Clear the JITDylib.
+  auto Err = JD.clear();
+
+  // Set JD to closed state. Clear remaining data structures.
+  runSessionLocked([&] {
+    assert(JD.State == JITDylib::Closing && "JD should be closing");
+    JD.State = JITDylib::Closed;
+    assert(JD.Symbols.empty() && "JD.Symbols is not empty after clear");
+    assert(JD.UnmaterializedInfos.empty() &&
+           "JD.UnmaterializedInfos is not empty after clear");
+    assert(JD.MaterializingInfos.empty() &&
+           "JD.MaterializingInfos is not empty after clear");
+    assert(JD.TrackerSymbols.empty() &&
+           "TrackerSymbols is not empty after clear");
+    JD.DefGenerators.clear();
+    JD.LinkOrder.clear();
+  });
+  return Err;
+}
+
 std::vector<JITDylibSP> JITDylib::getDFSLinkOrder(ArrayRef<JITDylibSP> JDs) {
   if (JDs.empty())
     return {};
@@ -1883,6 +1964,8 @@ std::vector<JITDylibSP> JITDylib::getDFSLinkOrder(ArrayRef<JITDylibSP> JDs) {
     std::vector<JITDylibSP> Result;
 
     for (auto &JD : JDs) {
+
+      assert(JD->State == Open && "JD is defunct");
 
       if (Visited.count(JD.get()))
         continue;
