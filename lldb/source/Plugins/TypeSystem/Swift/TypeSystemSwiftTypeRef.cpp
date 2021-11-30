@@ -760,9 +760,12 @@ Desugar(swift::Demangle::Demangler &dem, swift::Demangle::NodePointer node,
     type->addChild(concrete, dem);
   }
   NodePointer type_list = dem.createNode(Node::Kind::TypeList);
-  {
+
+  assert(node->getNumChildren() >= 1 && node->getNumChildren() <= 2 &&
+    "Sugared types should only have 1 or 2 children");
+  for (NodePointer child : *node) {
     NodePointer type = dem.createNode(Node::Kind::Type);
-    type->addChild(node->getFirstChild(), dem);
+    type->addChild(child, dem);
     type_list->addChild(type, dem);
   }
   desugared->addChild(type, dem);
@@ -969,7 +972,7 @@ swift::Demangle::NodePointer TypeSystemSwiftTypeRef::GetNodeForPrintingImpl(
       }
       return node;
     case Node::Kind::SugaredDictionary:
-      if (node->getNumChildren() == 1) {
+      if (node->getNumChildren() == 2) {
         return Desugar(dem, node, Node::Kind::BoundGenericStructure,
                        Node::Kind::Structure, "Dictionary");
       }
@@ -2006,8 +2009,7 @@ bool TypeSystemSwiftTypeRef::IsPossibleDynamicType(opaque_compiler_type_t type,
         NodePointer type_list = node->getLastChild();
         if (type_list->getKind() != Node::Kind::TypeList)
           return false;
-        for (size_t i = 0; i < type_list->getNumChildren(); ++i) {
-          NodePointer child = type_list->getChild(i);
+        for (NodePointer child : *type_list) {
           if (child->getKind() == Node::Kind::Type) {
             child = child->getFirstChild();
             if (is_possible_dynamic(child))
