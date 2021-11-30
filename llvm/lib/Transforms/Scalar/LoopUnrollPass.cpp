@@ -806,8 +806,9 @@ static Optional<unsigned> shouldFullUnroll(
     ScalarEvolution &SE, const SmallPtrSetImpl<const Value *> &EphValues,
     const unsigned FullUnrollTripCount, const UnrollCostEstimator UCE,
     const TargetTransformInfo::UnrollingPreferences &UP) {
+  assert(FullUnrollTripCount && "should be non-zero!");
 
-  if (!FullUnrollTripCount || FullUnrollTripCount >= UP.FullUnrollMaxCount)
+  if (FullUnrollTripCount >= UP.FullUnrollMaxCount)
     return None;
 
   // When computing the unrolled size, note that BEInsns are not replicated
@@ -835,51 +836,48 @@ shouldPartialUnroll(const unsigned LoopSize, const unsigned TripCount,
                     const UnrollCostEstimator UCE,
                     const TargetTransformInfo::UnrollingPreferences &UP) {
 
+  if (!TripCount)
+    return None;
+
+  if (!UP.Partial) {
+    LLVM_DEBUG(dbgs() << "  will not try to unroll partially because "
+               << "-unroll-allow-partial not given\n");
+    return 0;
+  }
   unsigned count = UP.Count;
-  if (TripCount) {
-    if (!UP.Partial) {
-      LLVM_DEBUG(dbgs() << "  will not try to unroll partially because "
-                        << "-unroll-allow-partial not given\n");
-      count = 0;
-      return count;
-    }
-    if (count == 0)
-      count = TripCount;
-    if (UP.PartialThreshold != NoThreshold) {
-      // Reduce unroll count to be modulo of TripCount for partial unrolling.
-      if (UCE.getUnrolledLoopSize(UP, count) > UP.PartialThreshold)
-        count = (std::max(UP.PartialThreshold, UP.BEInsns + 1) - UP.BEInsns) /
-                (LoopSize - UP.BEInsns);
-      if (count > UP.MaxCount)
-        count = UP.MaxCount;
-      while (count != 0 && TripCount % count != 0)
-        count--;
-      if (UP.AllowRemainder && count <= 1) {
-        // If there is no Count that is modulo of TripCount, set Count to
-        // largest power-of-two factor that satisfies the threshold limit.
-        // As we'll create fixup loop, do the type of unrolling only if
-        // remainder loop is allowed.
-        count = UP.DefaultUnrollRuntimeCount;
-        while (count != 0 &&
-               UCE.getUnrolledLoopSize(UP, count) > UP.PartialThreshold)
-          count >>= 1;
-      }
-      if (count < 2) {
-        count = 0;
-      }
-    } else {
-      count = TripCount;
-    }
+  if (count == 0)
+    count = TripCount;
+  if (UP.PartialThreshold != NoThreshold) {
+    // Reduce unroll count to be modulo of TripCount for partial unrolling.
+    if (UCE.getUnrolledLoopSize(UP, count) > UP.PartialThreshold)
+      count = (std::max(UP.PartialThreshold, UP.BEInsns + 1) - UP.BEInsns) /
+        (LoopSize - UP.BEInsns);
     if (count > UP.MaxCount)
       count = UP.MaxCount;
-
-    LLVM_DEBUG(dbgs() << "  partially unrolling with count: " << count << "\n");
-
-    return count;
+    while (count != 0 && TripCount % count != 0)
+      count--;
+    if (UP.AllowRemainder && count <= 1) {
+      // If there is no Count that is modulo of TripCount, set Count to
+      // largest power-of-two factor that satisfies the threshold limit.
+      // As we'll create fixup loop, do the type of unrolling only if
+      // remainder loop is allowed.
+      count = UP.DefaultUnrollRuntimeCount;
+      while (count != 0 &&
+             UCE.getUnrolledLoopSize(UP, count) > UP.PartialThreshold)
+        count >>= 1;
+    }
+    if (count < 2) {
+      count = 0;
+    }
+  } else {
+    count = TripCount;
   }
+  if (count > UP.MaxCount)
+    count = UP.MaxCount;
 
-  // if didn't return until here, should continue to other priorties
-  return None;
+  LLVM_DEBUG(dbgs() << "  partially unrolling with count: " << count << "\n");
+
+  return count;
 }
 // Returns true if unroll count was set explicitly.
 // Calculates unroll count and writes it to UP.Count.
@@ -898,7 +896,6 @@ bool llvm::computeUnrollCount(
     TargetTransformInfo::PeelingPreferences &PP, bool &UseUpperBound) {
 
   UnrollCostEstimator UCE(*L, LoopSize);
-  Optional<unsigned> UnrollFactor;
 
   const bool UserUnrollCount = UnrollCount.getNumOccurrences() > 0;
   const bool PragmaFullUnroll = hasUnrollFullPragma(L);
@@ -924,9 +921,8 @@ bool llvm::computeUnrollCount(
   // Check for explicit Count.
   // 1st priority is unroll count set by "unroll-count" option.
   // 2nd priority is unroll count set by pragma.
-  UnrollFactor = shouldPragmaUnroll(L, PInfo, TripMultiple, TripCount, UCE, UP);
-
-  if (UnrollFactor) {
+  if (auto UnrollFactor = shouldPragmaUnroll(L, PInfo, TripMultiple, TripCount,
+                                             UCE, UP)) {
     UP.Count = *UnrollFactor;
 
     if (UserUnrollCount || (PragmaCount > 0)) {
@@ -946,11 +942,20 @@ bool llvm::computeUnrollCount(
     }
   }
 
-  // 3rd priority is full unroll count.
-  // Full unroll makes sense only when TripCount or its upper bound could be
-  // statically calculated.
-  // Also we need to check if we exceed FullUnrollMaxCount.
+  // 3rd priority is exact full unrolling.  This will eliminate all copies
+  // of some exit test.
+  UP.Count = 0;
+  if (TripCount) {
+    UP.Count = TripCount;
+    if (auto UnrollFactor = shouldFullUnroll(L, TTI, DT, SE, EphValues,
+                                             TripCount, UCE, UP)) {
+      UP.Count = *UnrollFactor;
+      UseUpperBound = false;
+      return ExplicitUnroll;
+    }
+  }
 
+  // 4th priority is bounded unrolling.
   // We can unroll by the upper bound amount if it's generally allowed or if
   // we know that the loop is executed either the upper bound or zero times.
   // (MaxOrZero unrolling keeps only the first loop test, so the number of
@@ -959,35 +964,21 @@ bool llvm::computeUnrollCount(
   // number of loop tests goes up which may end up being worse on targets with
   // constrained branch predictor resources so is controlled by an option.)
   // In addition we only unroll small upper bounds.
-  unsigned FullUnrollMaxTripCount = MaxTripCount;
-  if (!(UP.UpperBound || MaxOrZero) ||
-      FullUnrollMaxTripCount > UnrollMaxUpperBound)
-    FullUnrollMaxTripCount = 0;
-
-  // UnrollByMaxCount and ExactTripCount cannot both be non zero since we only
-  // compute the former when the latter is zero.
-  unsigned ExactTripCount = TripCount;
-  assert((ExactTripCount == 0 || FullUnrollMaxTripCount == 0) &&
-         "ExtractTripCount and UnrollByMaxCount cannot both be non zero.");
-
-  unsigned FullUnrollTripCount =
-      ExactTripCount ? ExactTripCount : FullUnrollMaxTripCount;
-  UP.Count = FullUnrollTripCount;
-
-  UnrollFactor =
-      shouldFullUnroll(L, TTI, DT, SE, EphValues, FullUnrollTripCount, UCE, UP);
-
-  // if shouldFullUnroll can do the unrolling, some side parameteres should be
-  // set
-  if (UnrollFactor) {
-    UP.Count = *UnrollFactor;
-    UseUpperBound = (FullUnrollMaxTripCount == FullUnrollTripCount);
-    return ExplicitUnroll;
-  } else {
-    UP.Count = FullUnrollTripCount;
+  // Note that the cost of bounded unrolling is always strictly greater than
+  // cost of exact full unrolling.  As such, if we have an exact count and
+  // found it unprofitable, we'll never chose to bounded unroll.
+  if (!TripCount && MaxTripCount && (UP.UpperBound || MaxOrZero) &&
+      MaxTripCount <= UnrollMaxUpperBound) {
+    UP.Count = MaxTripCount;
+    if (auto UnrollFactor = shouldFullUnroll(L, TTI, DT, SE, EphValues,
+                                             MaxTripCount, UCE, UP)) {
+      UP.Count = *UnrollFactor;
+      UseUpperBound = true;
+      return ExplicitUnroll;
+    }
   }
 
-  // 4th priority is loop peeling.
+  // 5th priority is loop peeling.
   computePeelCount(L, LoopSize, PP, TripCount, DT, SE, UP.Threshold);
   if (PP.PeelCount) {
     UP.Runtime = false;
@@ -1000,11 +991,9 @@ bool llvm::computeUnrollCount(
   if (TripCount)
     UP.Partial |= ExplicitUnroll;
 
-  // 5th priority is partial unrolling.
+  // 6th priority is partial unrolling.
   // Try partial unroll only when TripCount could be statically calculated.
-  UnrollFactor = shouldPartialUnroll(LoopSize, TripCount, UCE, UP);
-
-  if (UnrollFactor) {
+  if (auto UnrollFactor = shouldPartialUnroll(LoopSize, TripCount, UCE, UP)) {
     UP.Count = *UnrollFactor;
 
     if ((PragmaFullUnroll || PragmaEnableUnroll) && TripCount &&
@@ -1045,7 +1034,7 @@ bool llvm::computeUnrollCount(
                 "because loop has a runtime trip count.";
     });
 
-  // 6th priority is runtime unrolling.
+  // 7th priority is runtime unrolling.
   // Don't unroll a runtime trip count loop when it is disabled.
   if (hasRuntimeUnrollDisablePragma(L)) {
     UP.Count = 0;

@@ -4071,7 +4071,9 @@ InstructionCost X86TTIImpl::getAddressComputationCost(Type *Ty,
   // Even in the case of (loop invariant) stride whose value is not known at
   // compile time, the address computation will not incur more than one extra
   // ADD instruction.
-  if (Ty->isVectorTy() && SE) {
+  if (Ty->isVectorTy() && SE && !ST->hasAVX2()) {
+    // TODO: AVX2 is the current cut-off because we don't have correct
+    //       interleaving costs for prior ISA's.
     if (!BaseT::isStridedAccess(Ptr))
       return NumVectorInstToHideOverhead;
     if (!BaseT::getConstantStrideStep(SE, Ptr))
@@ -5275,7 +5277,8 @@ InstructionCost X86TTIImpl::getInterleavedMemoryOpCostAVX512(
   auto *SingleMemOpTy = FixedVectorType::get(VecTy->getElementType(),
                                              LegalVT.getVectorNumElements());
   InstructionCost MemOpCost;
-  if (UseMaskForCond || UseMaskForGaps)
+  bool UseMaskedMemOp = UseMaskForCond || UseMaskForGaps;
+  if (UseMaskedMemOp)
     MemOpCost = getMaskedMemoryOpCost(Opcode, SingleMemOpTy, Alignment,
                                       AddressSpace, CostKind);
   else
@@ -5285,9 +5288,8 @@ InstructionCost X86TTIImpl::getInterleavedMemoryOpCostAVX512(
   unsigned VF = VecTy->getNumElements() / Factor;
   MVT VT = MVT::getVectorVT(MVT::getVT(VecTy->getScalarType()), VF);
 
-  // FIXME: this is the most conservative estimate for the mask cost.
   InstructionCost MaskCost;
-  if (UseMaskForCond || UseMaskForGaps) {
+  if (UseMaskedMemOp) {
     APInt DemandedLoadStoreElts = APInt::getZero(VecTy->getNumElements());
     for (unsigned Index : Indices) {
       assert(Index < Factor && "Invalid index for interleaved memory op");
@@ -5295,10 +5297,10 @@ InstructionCost X86TTIImpl::getInterleavedMemoryOpCostAVX512(
         DemandedLoadStoreElts.setBit(Index + Elm * Factor);
     }
 
-    Type *I8Type = Type::getInt8Ty(VecTy->getContext());
+    Type *I1Type = Type::getInt1Ty(VecTy->getContext());
 
     MaskCost = getReplicationShuffleCost(
-        I8Type, Factor, VF,
+        I1Type, Factor, VF,
         UseMaskForGaps ? DemandedLoadStoreElts
                        : APInt::getAllOnes(VecTy->getNumElements()),
         CostKind);
@@ -5309,7 +5311,7 @@ InstructionCost X86TTIImpl::getInterleavedMemoryOpCostAVX512(
     // memory access, we need to account for the cost of And-ing the two masks
     // inside the loop.
     if (UseMaskForGaps) {
-      auto *MaskVT = FixedVectorType::get(I8Type, VecTy->getNumElements());
+      auto *MaskVT = FixedVectorType::get(I1Type, VecTy->getNumElements());
       MaskCost += getArithmeticInstrCost(BinaryOperator::And, MaskVT, CostKind);
     }
   }
@@ -5350,9 +5352,10 @@ InstructionCost X86TTIImpl::getInterleavedMemoryOpCostAVX512(
         NumOfLoadsInInterleaveGrp;
 
     // About a half of the loads may be folded in shuffles when we have only
-    // one result. If we have more than one result, we do not fold loads at all.
+    // one result. If we have more than one result, or the loads are masked,
+    // we do not fold loads at all.
     unsigned NumOfUnfoldedLoads =
-        NumOfResults > 1 ? NumOfMemOps : NumOfMemOps / 2;
+        UseMaskedMemOp || NumOfResults > 1 ? NumOfMemOps : NumOfMemOps / 2;
 
     // Get a number of shuffle operations per result.
     unsigned NumOfShufflesPerResult =

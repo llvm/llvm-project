@@ -479,8 +479,8 @@ define <8 x i32> @hadd_v8i32a(<8 x i32> %a) {
 ; SSE3-LABEL: hadd_v8i32a:
 ; SSE3:       # %bb.0:
 ; SSE3-NEXT:    movaps %xmm0, %xmm2
-; SSE3-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,2],xmm1[0,2]
-; SSE3-NEXT:    shufps {{.*#+}} xmm2 = xmm2[1,3],xmm1[1,3]
+; SSE3-NEXT:    shufps {{.*#+}} xmm2 = xmm2[0,2],xmm1[0,2]
+; SSE3-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,3],xmm1[1,3]
 ; SSE3-NEXT:    paddd %xmm0, %xmm2
 ; SSE3-NEXT:    pshufd {{.*#+}} xmm0 = xmm2[0,1,0,1]
 ; SSE3-NEXT:    movdqa %xmm2, %xmm1

@@ -29,13 +29,17 @@ class StackStore {
   static_assert(u64(kBlockCount) * kBlockSizeFrames == 1ull << (sizeof(Id) * 8),
                 "");
 
-  Id Store(const StackTrace &trace);
+  Id Store(const StackTrace &trace,
+           uptr *pack /* number of blocks completed by this call */);
   StackTrace Load(Id id) const;
   uptr Allocated() const;
+
+  void Pack();
 
   void TestOnlyUnmap();
 
  private:
+  friend class StackStoreTest;
   static constexpr uptr GetBlockIdx(uptr frame_idx) {
     return frame_idx / kBlockSizeFrames;
   }
@@ -56,7 +60,7 @@ class StackStore {
     return id + 1;  // Avoid zero as id.
   }
 
-  uptr *Alloc(uptr count, uptr *idx);
+  uptr *Alloc(uptr count, uptr *idx, uptr *pack);
 
   // Total number of allocated frames.
   atomic_uintptr_t total_frames_ = {};
@@ -64,7 +68,10 @@ class StackStore {
   // Each block will hold pointer to exactly kBlockSizeFrames.
   class BlockInfo {
     atomic_uintptr_t data_;
-    StaticSpinMutex mtx_;  // Protects alloc of new blocks.
+    // Counter to track store progress to know when we can Pack() the block.
+    atomic_uint32_t stored_;
+    // Protects alloc of new blocks.
+    StaticSpinMutex mtx_;
 
     uptr *Create();
 
@@ -72,6 +79,7 @@ class StackStore {
     uptr *Get() const;
     uptr *GetOrCreate();
     void TestOnlyUnmap();
+    bool Stored(uptr n);
   };
   BlockInfo blocks_[kBlockCount] = {};
 };

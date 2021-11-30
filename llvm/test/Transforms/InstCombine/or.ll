@@ -1441,3 +1441,93 @@ define <2 x i1> @cmp_overlap_splat(<2 x i5> %x) {
   %r = or <2 x i1> %isneg, %isnotneg
   ret <2 x i1> %r
 }
+
+define i32 @mul_no_common_bits(i32 %p1, i32 %p2) {
+; CHECK-LABEL: @mul_no_common_bits(
+; CHECK-NEXT:    [[X:%.*]] = and i32 [[P1:%.*]], 7
+; CHECK-NEXT:    [[Y:%.*]] = shl i32 [[P2:%.*]], 3
+; CHECK-NEXT:    [[TMP1:%.*]] = or i32 [[Y]], 1
+; CHECK-NEXT:    [[R:%.*]] = mul i32 [[X]], [[TMP1]]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %x = and i32 %p1, 7
+  %y = shl i32 %p2, 3
+  %m = mul i32 %x, %y
+  %r = or i32 %m, %x
+  ret i32 %r
+}
+
+define i32 @mul_no_common_bits_const_op(i32 %p) {
+; CHECK-LABEL: @mul_no_common_bits_const_op(
+; CHECK-NEXT:    [[X:%.*]] = and i32 [[P:%.*]], 7
+; CHECK-NEXT:    [[R:%.*]] = mul nuw nsw i32 [[X]], 25
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %x = and i32 %p, 7
+  %m = mul i32 %x, 24
+  %r = or i32 %m, %x
+  ret i32 %r
+}
+
+define <2 x i12> @mul_no_common_bits_commute(<2 x i12> %p) {
+; CHECK-LABEL: @mul_no_common_bits_commute(
+; CHECK-NEXT:    [[X:%.*]] = and <2 x i12> [[P:%.*]], <i12 1, i12 1>
+; CHECK-NEXT:    [[R:%.*]] = mul nuw nsw <2 x i12> [[X]], <i12 15, i12 17>
+; CHECK-NEXT:    ret <2 x i12> [[R]]
+;
+  %x = and <2 x i12> %p, <i12 1, i12 1>
+  %m = mul <2 x i12> %x, <i12 14, i12 16>
+  %r = or <2 x i12> %x, %m
+  ret <2 x i12> %r
+}
+
+; negative test - extra use requires extra instructions
+
+define i32 @mul_no_common_bits_uses(i32 %p1, i32 %p2) {
+; CHECK-LABEL: @mul_no_common_bits_uses(
+; CHECK-NEXT:    [[X:%.*]] = and i32 [[P1:%.*]], 7
+; CHECK-NEXT:    [[Y:%.*]] = shl i32 [[P2:%.*]], 3
+; CHECK-NEXT:    [[M:%.*]] = mul i32 [[X]], [[Y]]
+; CHECK-NEXT:    call void @use(i32 [[M]])
+; CHECK-NEXT:    [[R:%.*]] = or i32 [[M]], [[X]]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %x = and i32 %p1, 7
+  %y = shl i32 %p2, 3
+  %m = mul i32 %x, %y
+  call void @use(i32 %m)
+  %r = or i32 %m, %x
+  ret i32 %r
+}
+
+; negative test - probably not good to create an extra mul
+
+define i32 @mul_no_common_bits_const_op_uses(i32 %p) {
+; CHECK-LABEL: @mul_no_common_bits_const_op_uses(
+; CHECK-NEXT:    [[X:%.*]] = and i32 [[P:%.*]], 7
+; CHECK-NEXT:    [[M:%.*]] = mul nuw nsw i32 [[X]], 24
+; CHECK-NEXT:    call void @use(i32 [[M]])
+; CHECK-NEXT:    [[R:%.*]] = or i32 [[M]], [[X]]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %x = and i32 %p, 7
+  %m = mul i32 %x, 24
+  call void @use(i32 %m)
+  %r = or i32 %m, %x
+  ret i32 %r
+}
+
+; negative test - %x and %m may have set 3rd bit
+
+define i32 @mul_common_bits(i32 %p) {
+; CHECK-LABEL: @mul_common_bits(
+; CHECK-NEXT:    [[X:%.*]] = and i32 [[P:%.*]], 7
+; CHECK-NEXT:    [[M:%.*]] = mul nuw nsw i32 [[X]], 12
+; CHECK-NEXT:    [[R:%.*]] = or i32 [[M]], [[X]]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %x = and i32 %p, 7
+  %m = mul i32 %x, 12
+  %r = or i32 %m, %x
+  ret i32 %r
+}

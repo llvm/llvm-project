@@ -36,26 +36,26 @@ target triple = "x86_64-unknown-linux-gnu"
 ; AVX1: LV: Found an estimated cost of 448 for VF 32 For instruction:   store i16 %valB, i16* %out, align 2
 ;
 ; AVX2-SLOWGATHER: LV: Found an estimated cost of 1 for VF 1 For instruction:   store i16 %valB, i16* %out, align 2
-; AVX2-SLOWGATHER: LV: Found an estimated cost of 26 for VF 2 For instruction:   store i16 %valB, i16* %out, align 2
-; AVX2-SLOWGATHER: LV: Found an estimated cost of 54 for VF 4 For instruction:   store i16 %valB, i16* %out, align 2
-; AVX2-SLOWGATHER: LV: Found an estimated cost of 108 for VF 8 For instruction:   store i16 %valB, i16* %out, align 2
-; AVX2-SLOWGATHER: LV: Found an estimated cost of 224 for VF 16 For instruction:   store i16 %valB, i16* %out, align 2
-; AVX2-SLOWGATHER: LV: Found an estimated cost of 448 for VF 32 For instruction:   store i16 %valB, i16* %out, align 2
+; AVX2-SLOWGATHER: LV: Found an estimated cost of 6 for VF 2 For instruction:   store i16 %valB, i16* %out, align 2
+; AVX2-SLOWGATHER: LV: Found an estimated cost of 14 for VF 4 For instruction:   store i16 %valB, i16* %out, align 2
+; AVX2-SLOWGATHER: LV: Found an estimated cost of 28 for VF 8 For instruction:   store i16 %valB, i16* %out, align 2
+; AVX2-SLOWGATHER: LV: Found an estimated cost of 64 for VF 16 For instruction:   store i16 %valB, i16* %out, align 2
+; AVX2-SLOWGATHER: LV: Found an estimated cost of 128 for VF 32 For instruction:   store i16 %valB, i16* %out, align 2
 ;
 ; AVX2-FASTGATHER: LV: Found an estimated cost of 1 for VF 1 For instruction:   store i16 %valB, i16* %out, align 2
-; AVX2-FASTGATHER: LV: Found an estimated cost of 26 for VF 2 For instruction:   store i16 %valB, i16* %out, align 2
-; AVX2-FASTGATHER: LV: Found an estimated cost of 54 for VF 4 For instruction:   store i16 %valB, i16* %out, align 2
-; AVX2-FASTGATHER: LV: Found an estimated cost of 108 for VF 8 For instruction:   store i16 %valB, i16* %out, align 2
-; AVX2-FASTGATHER: LV: Found an estimated cost of 224 for VF 16 For instruction:   store i16 %valB, i16* %out, align 2
-; AVX2-FASTGATHER: LV: Found an estimated cost of 448 for VF 32 For instruction:   store i16 %valB, i16* %out, align 2
+; AVX2-FASTGATHER: LV: Found an estimated cost of 6 for VF 2 For instruction:   store i16 %valB, i16* %out, align 2
+; AVX2-FASTGATHER: LV: Found an estimated cost of 14 for VF 4 For instruction:   store i16 %valB, i16* %out, align 2
+; AVX2-FASTGATHER: LV: Found an estimated cost of 28 for VF 8 For instruction:   store i16 %valB, i16* %out, align 2
+; AVX2-FASTGATHER: LV: Found an estimated cost of 64 for VF 16 For instruction:   store i16 %valB, i16* %out, align 2
+; AVX2-FASTGATHER: LV: Found an estimated cost of 128 for VF 32 For instruction:   store i16 %valB, i16* %out, align 2
 ;
 ; AVX512: LV: Found an estimated cost of 1 for VF 1 For instruction:   store i16 %valB, i16* %out, align 2
-; AVX512: LV: Found an estimated cost of 26 for VF 2 For instruction:   store i16 %valB, i16* %out, align 2
-; AVX512: LV: Found an estimated cost of 54 for VF 4 For instruction:   store i16 %valB, i16* %out, align 2
-; AVX512: LV: Found an estimated cost of 110 for VF 8 For instruction:   store i16 %valB, i16* %out, align 2
-; AVX512: LV: Found an estimated cost of 228 for VF 16 For instruction:   store i16 %valB, i16* %out, align 2
-; AVX512: LV: Found an estimated cost of 464 for VF 32 For instruction:   store i16 %valB, i16* %out, align 2
-; AVX512: LV: Found an estimated cost of 928 for VF 64 For instruction:   store i16 %valB, i16* %out, align 2
+; AVX512: LV: Found an estimated cost of 6 for VF 2 For instruction:   store i16 %valB, i16* %out, align 2
+; AVX512: LV: Found an estimated cost of 14 for VF 4 For instruction:   store i16 %valB, i16* %out, align 2
+; AVX512: LV: Found an estimated cost of 30 for VF 8 For instruction:   store i16 %valB, i16* %out, align 2
+; AVX512: LV: Found an estimated cost of 68 for VF 16 For instruction:   store i16 %valB, i16* %out, align 2
+; AVX512: LV: Found an estimated cost of 144 for VF 32 For instruction:   store i16 %valB, i16* %out, align 2
+; AVX512: LV: Found an estimated cost of 288 for VF 64 For instruction:   store i16 %valB, i16* %out, align 2
 ;
 ; CHECK-NOT: LV: Found an estimated cost of {{[0-9]+}} for VF {{[0-9]+}} For instruction:   store i16 %valB, i16* %out, align 2
 define void @test() {

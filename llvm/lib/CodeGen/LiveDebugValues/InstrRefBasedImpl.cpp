@@ -544,8 +544,7 @@ public:
       // Re-state the variable location: if there's no replacement then NewLoc
       // is None and a $noreg DBG_VALUE will be created. Otherwise, a DBG_VALUE
       // identifying the alternative location will be emitted.
-      const DIExpression *Expr = ActiveVLocIt->second.Properties.DIExpr;
-      DbgValueProperties Properties(Expr, false);
+      const DbgValueProperties &Properties = ActiveVLocIt->second.Properties;
       PendingDbgValues.push_back(MTracker->emitLoc(NewLoc, Var, Properties));
 
       // Update machine locations <=> variable locations maps. Defer updating
@@ -1658,9 +1657,10 @@ bool InstrRefBasedLDV::transferRegisterCopy(MachineInstr &MI) {
 /// fragments of that DILocalVariable which overlap. This reduces work during
 /// the data-flow stage from "Find any overlapping fragments" to "Check if the
 /// known-to-overlap fragments are present".
-/// \param MI A previously unprocessed DEBUG_VALUE instruction to analyze for
+/// \param MI A previously unprocessed debug instruction to analyze for
 ///           fragment usage.
 void InstrRefBasedLDV::accumulateFragmentMap(MachineInstr &MI) {
+  assert(MI.isDebugValue() || MI.isDebugRef());
   DebugVariable MIVar(MI.getDebugVariable(), MI.getDebugExpression(),
                       MI.getDebugLoc()->getInlinedAt());
   FragmentInfo ThisFragment = MIVar.getFragmentOrDefault();
@@ -1762,7 +1762,7 @@ void InstrRefBasedLDV::produceMLocTransferFunction(
     for (auto &MI : MBB) {
       process(MI);
       // Also accumulate fragment map.
-      if (MI.isDebugValue())
+      if (MI.isDebugValue() || MI.isDebugRef())
         accumulateFragmentMap(MI);
 
       // Create a map from the instruction number (if present) to the
@@ -2930,7 +2930,7 @@ bool InstrRefBasedLDV::ExtendRanges(MachineFunction &MF,
   ++MaxNumBlocks;
 
   MLocTransfer.resize(MaxNumBlocks);
-  vlocs.resize(MaxNumBlocks);
+  vlocs.resize(MaxNumBlocks, VLocTracker(OverlapFragments, EmptyExpr));
   SavedLiveIns.resize(MaxNumBlocks);
 
   initialSetup(MF);
@@ -3075,6 +3075,8 @@ bool InstrRefBasedLDV::ExtendRanges(MachineFunction &MF,
   BBNumToRPO.clear();
   DebugInstrNumToInstr.clear();
   DebugPHINumToValue.clear();
+  OverlapFragments.clear();
+  SeenFragments.clear();
 
   return Changed;
 }

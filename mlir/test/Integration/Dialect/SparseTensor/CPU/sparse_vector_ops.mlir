@@ -144,7 +144,7 @@ module {
     return %0 : tensor<f64>
   }
 
-  // Dumps just the values array of the sparse vector.
+  // Dumps a sparse vector.
   func @dump(%arg0: tensor<?xf64, #SparseVector>) {
     // Dump the values array to verify only sparse contents are stored.
     %c0 = arith.constant 0 : index

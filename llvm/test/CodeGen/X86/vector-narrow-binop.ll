@@ -153,9 +153,9 @@ define <4 x double> @fmul_v2f64(<2 x  double> %x, <2 x double> %y) {
 ; SSE-NEXT:    unpcklpd {{.*#+}} xmm2 = xmm2[0],xmm0[0]
 ; SSE-NEXT:    mulpd %xmm2, %xmm2
 ; SSE-NEXT:    mulpd %xmm1, %xmm1
-; SSE-NEXT:    addpd %xmm2, %xmm1
-; SSE-NEXT:    unpckhpd {{.*#+}} xmm1 = xmm1[1,1]
-; SSE-NEXT:    movapd %xmm1, %xmm0
+; SSE-NEXT:    addpd %xmm1, %xmm2
+; SSE-NEXT:    unpckhpd {{.*#+}} xmm2 = xmm2[1,1]
+; SSE-NEXT:    movapd %xmm2, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX1-LABEL: fmul_v2f64:

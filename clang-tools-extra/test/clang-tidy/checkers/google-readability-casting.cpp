@@ -143,11 +143,10 @@ void f(int a, double b, const char *cpc, const void *cpv, X *pX) {
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: redundant cast to the same type
   // CHECK-FIXES: {{^}}  kZero;
 
-  int b2 = int(b);
-  int b3 = static_cast<double>(b);
-  int b4 = b;
+  int b2 = static_cast<double>(b);
+  int b3 = b;
   double aa = a;
-  (void)b2;
+  (void)aa;
   return (void)g();
 }
 
@@ -320,4 +319,51 @@ void conversions() {
   auto s6 = (S)cr;
   // CHECK-MESSAGES: :[[@LINE-1]]:13: warning: C-style casts are discouraged; use constructor call syntax [
   // CHECK-FIXES: auto s6 = S(cr);
+}
+
+template <class T>
+T functional_cast_template_used_by_class(float i) {
+  return T(i);
+}
+
+template <class T>
+T functional_cast_template_used_by_int(float i) {
+  return T(i);
+  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: C-style casts are discouraged; use static_cast
+  // CHECK-FIXES: return static_cast<T>(i);
+}
+
+struct S2 {
+  S2(float);
+};
+using T = S2;
+using U = S2 &;
+
+void functional_casts() {
+  float x = 1.5F;
+  auto y = int(x);
+  // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: C-style casts are discouraged; use static_cast
+  // CHECK-FIXES: auto y = static_cast<int>(x);
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wc++11-narrowing"
+  // This if fine, compiler will warn about implicit conversions with brace initialization
+  auto z = int{x};
+#pragma clang diagnostic pop
+
+  // Functional casts are allowed if S is of class type
+  const char *str = "foo";
+  auto s = S(str);
+
+  // Functional casts in template functions
+  functional_cast_template_used_by_class<S2>(x);
+  functional_cast_template_used_by_int<int>(x);
+
+  // New expressions are not functional casts
+  auto w = new int(x);
+
+  // Typedefs
+  S2 t = T(x); // OK, constructor call
+  S2 u = U(x); // NOK, it's a reinterpret_cast in disguise
+  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: C-style casts are discouraged; use static_cast/const_cast/reinterpret_cast
 }

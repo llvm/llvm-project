@@ -69,7 +69,8 @@ STATISTIC(NumSDivSRemsNarrowed,
 STATISTIC(NumSDivs,     "Number of sdiv converted to udiv");
 STATISTIC(NumUDivURemsNarrowed,
           "Number of udivs/urems whose width was decreased");
-STATISTIC(NumAShrs,     "Number of ashr converted to lshr");
+STATISTIC(NumAShrsConverted, "Number of ashr converted to lshr");
+STATISTIC(NumAShrsRemoved, "Number of ashr removed");
 STATISTIC(NumSRems,     "Number of srem converted to urem");
 STATISTIC(NumSExt,      "Number of sext converted to zext");
 STATISTIC(NumSICmps,    "Number of signed icmp preds simplified to unsigned");
@@ -937,10 +938,22 @@ static bool processAShr(BinaryOperator *SDI, LazyValueInfo *LVI) {
   if (SDI->getType()->isVectorTy())
     return false;
 
+  ConstantRange LRange = LVI->getConstantRange(SDI->getOperand(0), SDI);
+  unsigned OrigWidth = SDI->getType()->getIntegerBitWidth();
+  ConstantRange NegOneOrZero =
+      ConstantRange(APInt(OrigWidth, (uint64_t)-1, true), APInt(OrigWidth, 1));
+  if (NegOneOrZero.contains(LRange)) {
+    // ashr of -1 or 0 never changes the value, so drop the whole instruction
+    ++NumAShrsRemoved;
+    SDI->replaceAllUsesWith(SDI->getOperand(0));
+    SDI->eraseFromParent();
+    return true;
+  }
+
   if (!isNonNegative(SDI->getOperand(0), LVI, SDI))
     return false;
 
-  ++NumAShrs;
+  ++NumAShrsConverted;
   auto *BO = BinaryOperator::CreateLShr(SDI->getOperand(0), SDI->getOperand(1),
                                         SDI->getName(), SDI);
   BO->setDebugLoc(SDI->getDebugLoc());

@@ -11,14 +11,13 @@ target triple = "x86_64-unknown-linux-gnu"
 define i32 @PR29058(i8 %x, i32 %y) {
 ; CHECK-LABEL: PR29058:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    movl %esi, %ecx
 ; CHECK-NEXT:    testb %dil, %dil
 ; CHECK-NEXT:    movl $2147483646, %eax # imm = 0x7FFFFFFE
 ; CHECK-NEXT:    cmovnel %esi, %eax
-; CHECK-NEXT:    xorl %edx, %edx
+; CHECK-NEXT:    xorl %ecx, %ecx
 ; CHECK-NEXT:    cmpb $1, %dil
-; CHECK-NEXT:    sbbl %edx, %edx
-; CHECK-NEXT:    orb %dl, %cl
+; CHECK-NEXT:    sbbl %ecx, %ecx
+; CHECK-NEXT:    orb %sil, %cl
 ; CHECK-NEXT:    # kill: def $cl killed $cl killed $ecx
 ; CHECK-NEXT:    shll %cl, %eax
 ; CHECK-NEXT:    movq %rax, structMember(%rip)

@@ -476,29 +476,25 @@ static bool writeCOFF(COFFParser &CP, raw_ostream &OS) {
 
   assert(OS.tell() == CP.SectionTableStart);
   // Output section table.
-  for (std::vector<COFFYAML::Section>::iterator i = CP.Obj.Sections.begin(),
-                                                e = CP.Obj.Sections.end();
-       i != e; ++i) {
-    OS.write(i->Header.Name, COFF::NameSize);
-    OS << binary_le(i->Header.VirtualSize)
-       << binary_le(i->Header.VirtualAddress)
-       << binary_le(i->Header.SizeOfRawData)
-       << binary_le(i->Header.PointerToRawData)
-       << binary_le(i->Header.PointerToRelocations)
-       << binary_le(i->Header.PointerToLineNumbers)
-       << binary_le(i->Header.NumberOfRelocations)
-       << binary_le(i->Header.NumberOfLineNumbers)
-       << binary_le(i->Header.Characteristics);
+  for (const COFFYAML::Section &S : CP.Obj.Sections) {
+    OS.write(S.Header.Name, COFF::NameSize);
+    OS << binary_le(S.Header.VirtualSize)
+       << binary_le(S.Header.VirtualAddress)
+       << binary_le(S.Header.SizeOfRawData)
+       << binary_le(S.Header.PointerToRawData)
+       << binary_le(S.Header.PointerToRelocations)
+       << binary_le(S.Header.PointerToLineNumbers)
+       << binary_le(S.Header.NumberOfRelocations)
+       << binary_le(S.Header.NumberOfLineNumbers)
+       << binary_le(S.Header.Characteristics);
   }
   assert(OS.tell() == CP.SectionTableStart + CP.SectionTableSize);
 
   unsigned CurSymbol = 0;
   StringMap<unsigned> SymbolTableIndexMap;
-  for (std::vector<COFFYAML::Symbol>::iterator I = CP.Obj.Symbols.begin(),
-                                               E = CP.Obj.Symbols.end();
-       I != E; ++I) {
-    SymbolTableIndexMap[I->Name] = CurSymbol;
-    CurSymbol += 1 + I->Header.NumberOfAuxSymbols;
+  for (const COFFYAML::Symbol &Sym : CP.Obj.Symbols) {
+    SymbolTableIndexMap[Sym.Name] = CurSymbol;
+    CurSymbol += 1 + Sym.Header.NumberOfAuxSymbols;
   }
 
   // Output section data.
