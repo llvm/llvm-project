@@ -88,12 +88,9 @@ MachineInstr *AArch64CondBrTuning::convertToFlagSetting(MachineInstr &MI,
   // If this is already the flag setting version of the instruction (e.g., SUBS)
   // just make sure the implicit-def of NZCV isn't marked dead.
   if (IsFlagSetting) {
-    for (unsigned I = MI.getNumExplicitOperands(), E = MI.getNumOperands();
-         I != E; ++I) {
-      MachineOperand &MO = MI.getOperand(I);
+    for (MachineOperand &MO : MI.implicit_operands())
       if (MO.isReg() && MO.isDead() && MO.getReg() == AArch64::NZCV)
         MO.setIsDead(false);
-    }
     return &MI;
   }
   bool Is64Bit;

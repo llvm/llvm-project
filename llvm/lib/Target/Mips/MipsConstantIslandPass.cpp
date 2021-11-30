@@ -1066,9 +1066,9 @@ int MipsConstantIslands::findInRangeCPEntry(CPUser& U, unsigned UserOffset)
       // Point the CPUser node to the replacement
       U.CPEMI = CPEs[i].CPEMI;
       // Change the CPI in the instruction operand to refer to the clone.
-      for (unsigned j = 0, e = UserMI->getNumOperands(); j != e; ++j)
-        if (UserMI->getOperand(j).isCPI()) {
-          UserMI->getOperand(j).setIndex(CPEs[i].CPI);
+      for (MachineOperand &MO : UserMI->operands())
+        if (MO.isCPI()) {
+          MO.setIndex(CPEs[i].CPI);
           break;
         }
       // Adjust the refcount of the clone...
@@ -1122,9 +1122,9 @@ int MipsConstantIslands::findLongFormInRangeCPEntry
       // Point the CPUser node to the replacement
       U.CPEMI = CPEs[i].CPEMI;
       // Change the CPI in the instruction operand to refer to the clone.
-      for (unsigned j = 0, e = UserMI->getNumOperands(); j != e; ++j)
-        if (UserMI->getOperand(j).isCPI()) {
-          UserMI->getOperand(j).setIndex(CPEs[i].CPI);
+      for (MachineOperand &MO : UserMI->operands())
+        if (MO.isCPI()) {
+          MO.setIndex(CPEs[i].CPI);
           break;
         }
       // Adjust the refcount of the clone...
@@ -1392,9 +1392,9 @@ bool MipsConstantIslands::handleConstantPoolUser(unsigned CPUserIndex) {
   adjustBBOffsetsAfter(&*--NewIsland->getIterator());
 
   // Finally, change the CPI in the instruction operand to be ID.
-  for (unsigned i = 0, e = UserMI->getNumOperands(); i != e; ++i)
-    if (UserMI->getOperand(i).isCPI()) {
-      UserMI->getOperand(i).setIndex(ID);
+  for (MachineOperand &MO : UserMI->operands())
+    if (MO.isCPI()) {
+      MO.setIndex(ID);
       break;
     }
 

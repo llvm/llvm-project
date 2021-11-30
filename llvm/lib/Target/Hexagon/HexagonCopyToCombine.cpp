@@ -237,12 +237,9 @@ static bool isEvenReg(unsigned Reg) {
 }
 
 static void removeKillInfo(MachineInstr &MI, unsigned RegNotKilled) {
-  for (unsigned I = 0, E = MI.getNumOperands(); I != E; ++I) {
-    MachineOperand &Op = MI.getOperand(I);
-    if (!Op.isReg() || Op.getReg() != RegNotKilled || !Op.isKill())
-      continue;
-    Op.setIsKill(false);
-  }
+  for (MachineOperand &Op : MI.operands())
+    if (Op.isReg() && Op.getReg() == RegNotKilled && Op.isKill())
+      Op.setIsKill(false);
 }
 
 /// Returns true if it is unsafe to move a copy instruction from \p UseReg to
