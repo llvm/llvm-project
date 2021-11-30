@@ -22,32 +22,8 @@ private:
     bool m_print;
 };
 
-%}
-
-%wrapper %{
-
-// resolve a dotted Python name in the form
-// foo.bar.baz.Foobar to an actual Python object
-// if pmodule is NULL, the __main__ module will be used
-// as the starting point for the search
-
-
-// This function is called by lldb_private::ScriptInterpreterPython::BreakpointCallbackFunction(...)
-// and is used when a script command is attached to a breakpoint for execution.
-
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wreturn-type-c-linkage"
-
-// Disable warning C4190: 'LLDBSwigPythonBreakpointCallbackFunction' has
-// C-linkage specified, but returns UDT 'llvm::Expected<bool>' which is
-// incompatible with C
-#if _MSC_VER
-#pragma warning (push)
-#pragma warning (disable : 4190)
-#endif
-
-SWIGEXPORT llvm::Expected<bool>
-LLDBSwigPythonBreakpointCallbackFunction
+llvm::Expected<bool>
+lldb_private::LLDBSwigPythonBreakpointCallbackFunction
 (
     const char *python_function_name,
     const char *session_dictionary_name,
@@ -93,17 +69,20 @@ LLDBSwigPythonBreakpointCallbackFunction
     return result.get().get() != Py_False;
 }
 
-#if _MSC_VER
-#pragma warning (pop)
-#endif
+// resolve a dotted Python name in the form
+// foo.bar.baz.Foobar to an actual Python object
+// if pmodule is NULL, the __main__ module will be used
+// as the starting point for the search
 
-#pragma clang diagnostic pop
+
+// This function is called by lldb_private::ScriptInterpreterPython::BreakpointCallbackFunction(...)
+// and is used when a script command is attached to a breakpoint for execution.
 
 // This function is called by lldb_private::ScriptInterpreterPython::WatchpointCallbackFunction(...)
 // and is used when a script command is attached to a watchpoint for execution.
 
-SWIGEXPORT bool
-LLDBSwigPythonWatchpointCallbackFunction
+bool
+lldb_private::LLDBSwigPythonWatchpointCallbackFunction
 (
     const char *python_function_name,
     const char *session_dictionary_name,
@@ -134,8 +113,8 @@ LLDBSwigPythonWatchpointCallbackFunction
     return stop_at_watchpoint;
 }
 
-SWIGEXPORT bool
-LLDBSwigPythonCallTypeScript
+bool
+lldb_private::LLDBSwigPythonCallTypeScript
 (
     const char *python_function_name,
     const void *session_dictionary,
@@ -207,8 +186,8 @@ LLDBSwigPythonCallTypeScript
     return true;
 }
 
-SWIGEXPORT void*
-LLDBSwigPythonCreateSyntheticProvider
+void*
+lldb_private::LLDBSwigPythonCreateSyntheticProvider
 (
     const char *python_class_name,
     const char *session_dictionary_name,
@@ -241,8 +220,8 @@ LLDBSwigPythonCreateSyntheticProvider
     Py_RETURN_NONE;
 }
 
-SWIGEXPORT void*
-LLDBSwigPythonCreateCommandObject
+void*
+lldb_private::LLDBSwigPythonCreateCommandObject
 (
     const char *python_class_name,
     const char *session_dictionary_name,
@@ -269,8 +248,8 @@ LLDBSwigPythonCreateCommandObject
     Py_RETURN_NONE;
 }
 
-SWIGEXPORT void*
-LLDBSwigPythonCreateScriptedProcess
+void*
+lldb_private::LLDBSwigPythonCreateScriptedProcess
 (
     const char *python_class_name,
     const char *session_dictionary_name,
@@ -323,8 +302,8 @@ LLDBSwigPythonCreateScriptedProcess
     Py_RETURN_NONE;
 }
 
-SWIGEXPORT void*
-LLDBSwigPythonCreateScriptedThread
+void*
+lldb_private::LLDBSwigPythonCreateScriptedThread
 (
     const char *python_class_name,
     const char *session_dictionary_name,
@@ -375,8 +354,8 @@ LLDBSwigPythonCreateScriptedThread
     Py_RETURN_NONE;
 }
 
-SWIGEXPORT void*
-LLDBSwigPythonCreateScriptedThreadPlan
+void*
+lldb_private::LLDBSwigPythonCreateScriptedThreadPlan
 (
     const char *python_class_name,
     const char *session_dictionary_name,
@@ -439,8 +418,8 @@ LLDBSwigPythonCreateScriptedThreadPlan
     Py_RETURN_NONE;
 }
 
-SWIGEXPORT bool
-LLDBSWIGPythonCallThreadPlan
+bool
+lldb_private::LLDBSWIGPythonCallThreadPlan
 (
     void *implementor,
     const char *method_name,
@@ -486,7 +465,7 @@ LLDBSWIGPythonCallThreadPlan
     return false;
 }
 
-SWIGEXPORT void *LLDBSwigPythonCreateScriptedBreakpointResolver(
+void *lldb_private::LLDBSwigPythonCreateScriptedBreakpointResolver(
     const char *python_class_name, const char *session_dictionary_name,
     lldb_private::StructuredDataImpl *args_impl,
     const lldb::BreakpointSP &breakpoint_sp) {
@@ -522,8 +501,8 @@ SWIGEXPORT void *LLDBSwigPythonCreateScriptedBreakpointResolver(
     Py_RETURN_NONE;
 }
 
-SWIGEXPORT unsigned int
-LLDBSwigPythonCallBreakpointResolver
+unsigned int
+lldb_private::LLDBSwigPythonCallBreakpointResolver
 (
     void *implementor,
     const char *method_name,
@@ -573,8 +552,8 @@ LLDBSwigPythonCallBreakpointResolver
     return ret_val;
 }
 
-SWIGEXPORT void *
-LLDBSwigPythonCreateScriptedStopHook
+void *
+lldb_private::LLDBSwigPythonCreateScriptedStopHook
 (
     lldb::TargetSP target_sp,
     const char *python_class_name,
@@ -644,8 +623,8 @@ LLDBSwigPythonCreateScriptedStopHook
     Py_RETURN_NONE;
 }
 
-SWIGEXPORT bool
-LLDBSwigPythonStopHookCallHandleStop
+bool
+lldb_private::LLDBSwigPythonStopHookCallHandleStop
 (
     void *implementor,
     lldb::ExecutionContextRefSP exc_ctx_sp,
@@ -720,8 +699,8 @@ LLDBSwigPython_CallOptionalMember
     return result.release();
 }
 
-SWIGEXPORT size_t
-LLDBSwigPython_CalculateNumChildren
+size_t
+lldb_private::LLDBSwigPython_CalculateNumChildren
 (
     PyObject *implementor,
     uint32_t max
@@ -758,8 +737,8 @@ LLDBSwigPython_CalculateNumChildren
     return ret_val;
 }
 
-SWIGEXPORT PyObject*
-LLDBSwigPython_GetChildAtIndex
+PyObject*
+lldb_private::LLDBSwigPython_GetChildAtIndex
 (
     PyObject *implementor,
     uint32_t idx
@@ -788,8 +767,8 @@ LLDBSwigPython_GetChildAtIndex
     return result.release();
 }
 
-SWIGEXPORT int
-LLDBSwigPython_GetIndexOfChildWithName
+int
+lldb_private::LLDBSwigPython_GetIndexOfChildWithName
 (
     PyObject *implementor,
     const char* child_name
@@ -818,8 +797,8 @@ LLDBSwigPython_GetIndexOfChildWithName
     return UINT32_MAX;
 }
 
-SWIGEXPORT bool
-LLDBSwigPython_UpdateSynthProviderInstance
+bool
+lldb_private::LLDBSwigPython_UpdateSynthProviderInstance
 (
     PyObject *implementor
 )
@@ -838,8 +817,8 @@ LLDBSwigPython_UpdateSynthProviderInstance
     return ret_val;
 }
 
-SWIGEXPORT bool
-LLDBSwigPython_MightHaveChildrenSynthProviderInstance
+bool
+lldb_private::LLDBSwigPython_MightHaveChildrenSynthProviderInstance
 (
     PyObject *implementor
 )
@@ -858,8 +837,8 @@ LLDBSwigPython_MightHaveChildrenSynthProviderInstance
     return ret_val;
 }
 
-SWIGEXPORT PyObject*
-LLDBSwigPython_GetValueSynthProviderInstance
+PyObject*
+lldb_private::LLDBSwigPython_GetValueSynthProviderInstance
 (
     PyObject *implementor
 )
@@ -886,8 +865,8 @@ LLDBSwigPython_GetValueSynthProviderInstance
     return ret_val;
 }
 
-SWIGEXPORT void*
-LLDBSWIGPython_CastPyObjectToSBData
+void*
+lldb_private::LLDBSWIGPython_CastPyObjectToSBData
 (
     PyObject* data
 )
@@ -903,8 +882,8 @@ LLDBSWIGPython_CastPyObjectToSBData
 }
 
 
-SWIGEXPORT void*
-LLDBSWIGPython_CastPyObjectToSBError
+void*
+lldb_private::LLDBSWIGPython_CastPyObjectToSBError
 (
     PyObject* data
 )
@@ -920,8 +899,8 @@ LLDBSWIGPython_CastPyObjectToSBError
 }
 
 
-SWIGEXPORT void*
-LLDBSWIGPython_CastPyObjectToSBValue
+void*
+lldb_private::LLDBSWIGPython_CastPyObjectToSBValue
 (
     PyObject* data
 )
@@ -936,8 +915,8 @@ LLDBSWIGPython_CastPyObjectToSBValue
     return sb_ptr;
 }
 
-SWIGEXPORT void*
-LLDBSWIGPython_CastPyObjectToSBMemoryRegionInfo
+void*
+lldb_private::LLDBSWIGPython_CastPyObjectToSBMemoryRegionInfo
 (
     PyObject* data
 )
@@ -952,8 +931,8 @@ LLDBSWIGPython_CastPyObjectToSBMemoryRegionInfo
     return sb_ptr;
 }
 
-SWIGEXPORT bool
-LLDBSwigPythonCallCommand
+bool
+lldb_private::LLDBSwigPythonCallCommand
 (
     const char *python_function_name,
     const char *session_dictionary_name,
@@ -991,8 +970,8 @@ LLDBSwigPythonCallCommand
     return true;
 }
 
-SWIGEXPORT bool
-LLDBSwigPythonCallCommandObject
+bool
+lldb_private::LLDBSwigPythonCallCommandObject
 (
     PyObject *implementor,
     lldb::DebuggerSP& debugger,
@@ -1022,8 +1001,8 @@ LLDBSwigPythonCallCommandObject
     return true;
 }
 
-SWIGEXPORT void*
-LLDBSWIGPythonCreateOSPlugin
+void*
+lldb_private::LLDBSWIGPythonCreateOSPlugin
 (
     const char *python_class_name,
     const char *session_dictionary_name,
@@ -1049,8 +1028,8 @@ LLDBSWIGPythonCreateOSPlugin
     Py_RETURN_NONE;
 }
 
-SWIGEXPORT void*
-LLDBSWIGPython_CreateFrameRecognizer
+void*
+lldb_private::LLDBSWIGPython_CreateFrameRecognizer
 (
     const char *python_class_name,
     const char *session_dictionary_name
@@ -1075,8 +1054,8 @@ LLDBSWIGPython_CreateFrameRecognizer
     Py_RETURN_NONE;
 }
 
-SWIGEXPORT PyObject*
-LLDBSwigPython_GetRecognizedArguments
+PyObject*
+lldb_private::LLDBSwigPython_GetRecognizedArguments
 (
     PyObject *implementor,
     const lldb::StackFrameSP& frame_sp
@@ -1093,8 +1072,8 @@ LLDBSwigPython_GetRecognizedArguments
     return result;
 }
 
-SWIGEXPORT void*
-LLDBSWIGPython_GetDynamicSetting (void* module, const char* setting, const lldb::TargetSP& target_sp)
+void*
+lldb_private::LLDBSWIGPython_GetDynamicSetting (void* module, const char* setting, const lldb::TargetSP& target_sp)
 {
     if (!module || !setting)
         Py_RETURN_NONE;
@@ -1111,7 +1090,7 @@ LLDBSWIGPython_GetDynamicSetting (void* module, const char* setting, const lldb:
     return result.release();
 }
 
-SWIGEXPORT bool LLDBSWIGPythonRunScriptKeywordProcess(
+bool lldb_private::LLDBSWIGPythonRunScriptKeywordProcess(
     const char *python_function_name, const char *session_dictionary_name,
     const lldb::ProcessSP &process, std::string &output) {
 
@@ -1133,8 +1112,8 @@ SWIGEXPORT bool LLDBSWIGPythonRunScriptKeywordProcess(
     return true;
 }
 
-SWIGEXPORT bool
-LLDBSWIGPythonRunScriptKeywordThread
+bool
+lldb_private::LLDBSWIGPythonRunScriptKeywordThread
 (const char* python_function_name,
 const char* session_dictionary_name,
 lldb::ThreadSP& thread,
@@ -1161,7 +1140,7 @@ std::string& output)
     return true;
 }
 
-SWIGEXPORT bool LLDBSWIGPythonRunScriptKeywordTarget(
+bool lldb_private::LLDBSWIGPythonRunScriptKeywordTarget(
     const char *python_function_name, const char *session_dictionary_name,
     const lldb::TargetSP &target, std::string &output) {
 
@@ -1183,8 +1162,8 @@ SWIGEXPORT bool LLDBSWIGPythonRunScriptKeywordTarget(
     return true;
 }
 
-SWIGEXPORT bool
-LLDBSWIGPythonRunScriptKeywordFrame
+bool
+lldb_private::LLDBSWIGPythonRunScriptKeywordFrame
 (const char* python_function_name,
 const char* session_dictionary_name,
 lldb::StackFrameSP& frame,
@@ -1211,7 +1190,7 @@ std::string& output)
     return true;
 }
 
-SWIGEXPORT bool LLDBSWIGPythonRunScriptKeywordValue(
+bool lldb_private::LLDBSWIGPythonRunScriptKeywordValue(
     const char *python_function_name, const char *session_dictionary_name,
     const lldb::ValueObjectSP &value, std::string &output) {
 
@@ -1233,8 +1212,8 @@ SWIGEXPORT bool LLDBSWIGPythonRunScriptKeywordValue(
     return true;
 }
 
-SWIGEXPORT bool
-LLDBSwigPythonCallModuleInit
+bool
+lldb_private::LLDBSwigPythonCallModuleInit
 (
     const char *python_module_name,
     const char *session_dictionary_name,
@@ -1261,16 +1240,9 @@ LLDBSwigPythonCallModuleInit
 
     return true;
 }
-%}
 
-
-%runtime %{
-// Forward declaration to be inserted at the start of LLDBWrapPython.h
-#include "lldb/API/SBDebugger.h"
-#include "lldb/API/SBValue.h"
-
-SWIGEXPORT lldb::ValueObjectSP
-LLDBSWIGPython_GetValueObjectSPFromSBValue (void* data)
+lldb::ValueObjectSP
+lldb_private::LLDBSWIGPython_GetValueObjectSPFromSBValue (void* data)
 {
     lldb::ValueObjectSP valobj_sp;
     if (data)
@@ -1281,22 +1253,8 @@ LLDBSWIGPython_GetValueObjectSPFromSBValue (void* data)
     return valobj_sp;
 }
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-void LLDBSwigPythonCallPythonLogOutputCallback(const char *str, void *baton);
-
-#ifdef __cplusplus
-}
-#endif
-%}
-
-%wrapper %{
-
-
 // For the LogOutputCallback functions
-void LLDBSwigPythonCallPythonLogOutputCallback(const char *str, void *baton) {
+static void LLDBSwigPythonCallPythonLogOutputCallback(const char *str, void *baton) {
     if (baton != Py_None) {
       SWIG_PYTHON_THREAD_BEGIN_BLOCK;
       PyObject *result = PyObject_CallFunction(reinterpret_cast<PyObject*>(baton), const_cast<char*>("s"), str);
