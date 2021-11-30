@@ -493,6 +493,13 @@ public:
       return Builder.buildLValue(E->getSubExpr()).getPointer();
     }
 
+    mlir::Value VisitCXXBoolLiteralExpr(const CXXBoolLiteralExpr *E) {
+      mlir::Type Ty = Builder.getCIRType(E->getType());
+      return Builder.builder.create<mlir::cir::ConstantOp>(
+          Builder.getLoc(E->getExprLoc()), Ty,
+          Builder.builder.getBoolAttr(E->getValue()));
+    }
+
     mlir::Value VisitExpr(Expr *E) {
       // Crashing here for "ScalarExprClassName"? Please implement
       // VisitScalarExprClassName(...) to get this working.
@@ -779,8 +786,6 @@ public:
 
   mlir::Value buildToMemory(mlir::Value Value, QualType Ty) {
     // Bool has a different representation in memory than in registers.
-    if (hasBooleanRepresentation(Ty))
-      assert(0 && "not implemented");
     return Value;
   }
 
