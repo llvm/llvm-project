@@ -74,10 +74,6 @@
 #  define _LIBCPP_ABI_FIX_UNORDERED_NODE_POINTER_UB
 #  define _LIBCPP_ABI_FORWARD_LIST_REMOVE_NODE_POINTER_UB
 #  define _LIBCPP_ABI_FIX_UNORDERED_CONTAINER_SIZE_TYPE
-// Don't use a nullptr_t simulation type in C++03 instead using C++11 nullptr
-// provided under the alternate keyword __nullptr, which changes the mangling
-// of nullptr_t. This option is ABI incompatible with GCC in C++03 mode.
-#  define _LIBCPP_ABI_ALWAYS_USE_CXX11_NULLPTR
 // Define a key function for `bad_function_call` in the library, to centralize
 // its vtable and typeinfo to libc++ rather than having all other libraries
 // using that class define their own copies.
@@ -125,6 +121,23 @@
 #  if defined(__FreeBSD__)
 #    define _LIBCPP_DEPRECATED_ABI_DISABLE_PAIR_TRIVIAL_COPY_CTOR
 #  endif
+#endif
+
+// By default, don't use a nullptr_t emulation type in C++03.
+//
+// This is technically an ABI break from previous releases, however it is
+// very unlikely to impact anyone. If a user is impacted by this break,
+// they can return to using the C++03 nullptr emulation by defining
+// _LIBCPP_ABI_USE_CXX03_NULLPTR_EMULATION.
+//
+// This switch will be removed entirely in favour of never providing a
+// C++03 emulation after one release.
+//
+// IMPORTANT: IF YOU ARE READING THIS AND YOU TURN THIS MACRO ON, PLEASE LEAVE
+//            A COMMENT ON https://reviews.llvm.org/D109459 OR YOU WILL BE BROKEN
+//            IN THE FUTURE WHEN WE REMOVE THE ABILITY TO USE THE C++03 EMULATION.
+#ifndef _LIBCPP_ABI_USE_CXX03_NULLPTR_EMULATION
+# define _LIBCPP_ABI_ALWAYS_USE_CXX11_NULLPTR
 #endif
 
 #if defined(_LIBCPP_BUILDING_LIBRARY) || defined(_LIBCPP_ABI_UNSTABLE) || _LIBCPP_ABI_VERSION >= 2
