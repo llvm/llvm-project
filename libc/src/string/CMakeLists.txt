@@ -271,7 +271,7 @@ endfunction()
 
 function(add_bcmp bcmp_name)
   add_implementation(bcmp ${bcmp_name}
-    SRCS ${LIBC_BCMP_SRC}
+    SRCS ${LIBC_SOURCE_DIR}/src/string/bcmp.cpp
     HDRS ${LIBC_SOURCE_DIR}/src/string/bcmp.h
     DEPENDS
       .memory_utils.memory_utils
@@ -284,7 +284,6 @@ function(add_bcmp bcmp_name)
 endfunction()
 
 if(${LIBC_TARGET_ARCHITECTURE_IS_X86})
-  set(LIBC_BCMP_SRC ${LIBC_SOURCE_DIR}/src/string/bcmp.cpp)
   add_bcmp(bcmp_x86_64_opt_sse2   COMPILE_OPTIONS -march=k8             REQUIRE SSE2)
   add_bcmp(bcmp_x86_64_opt_sse4   COMPILE_OPTIONS -march=nehalem        REQUIRE SSE4_2)
   add_bcmp(bcmp_x86_64_opt_avx2   COMPILE_OPTIONS -march=haswell        REQUIRE AVX2)
@@ -292,7 +291,6 @@ if(${LIBC_TARGET_ARCHITECTURE_IS_X86})
   add_bcmp(bcmp_opt_host          COMPILE_OPTIONS ${LIBC_COMPILE_OPTIONS_NATIVE})
   add_bcmp(bcmp)
 else()
-  set(LIBC_BCMP_SRC ${LIBC_SOURCE_DIR}/src/string/bcmp.cpp)
   add_bcmp(bcmp_opt_host          COMPILE_OPTIONS ${LIBC_COMPILE_OPTIONS_NATIVE})
   add_bcmp(bcmp)
 endif()
