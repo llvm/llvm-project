@@ -1200,7 +1200,7 @@ void InnerLoopVectorizer::collectPoisonGeneratingRecipes(
       // load/store. Collect recipe if its underlying instruction has
       // poison-generating flags.
       Instruction *Instr = CurRec->getUnderlyingInstr();
-      if (Instr && cast<Operator>(Instr)->hasPoisonGeneratingFlags())
+      if (Instr && Instr->hasPoisonGeneratingFlags())
         State.MayGeneratePoisonRecipes.insert(CurRec);
 
       // Add new definitions to the worklist.
