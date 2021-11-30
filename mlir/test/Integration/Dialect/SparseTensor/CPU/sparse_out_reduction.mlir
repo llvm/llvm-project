@@ -67,7 +67,6 @@ module {
     %st2 = sparse_tensor.convert %t2
       : tensor<3x3x4xi32> to tensor<?x?x?xi32, #SparseTensor>
 
-
     // Call kernel.
     %0 = call @redsum(%st1, %st2)
       : (tensor<?x?x?xi32, #SparseTensor>,
