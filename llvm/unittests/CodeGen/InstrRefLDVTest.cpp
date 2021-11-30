@@ -195,11 +195,9 @@ public:
   }
 
   bool vlocJoin(MachineBasicBlock &MBB, InstrRefBasedLDV::LiveIdxT &VLOCOutLocs,
-                SmallPtrSet<const MachineBasicBlock *, 8> &InScopeBlocks,
                 SmallPtrSet<const MachineBasicBlock *, 8> &BlocksToExplore,
                 DbgValue &InLoc) {
-    return LDV->vlocJoin(MBB, VLOCOutLocs, InScopeBlocks, BlocksToExplore,
-                         InLoc);
+    return LDV->vlocJoin(MBB, VLOCOutLocs, BlocksToExplore, InLoc);
   }
 
   void buildVLocValueMap(const DILocation *DILoc,
@@ -2184,14 +2182,14 @@ TEST_F(InstrRefLDVTest, vlocJoinDiamond) {
   DbgValue JoinedLoc = DbgValue(3, EmptyProps, DbgValue::NoVal);
   VLiveOuts[1] = DbgValue(LiveInRsp, EmptyProps, DbgValue::Def);
   VLiveOuts[2] = DbgValue(LiveInRsp, EmptyProps, DbgValue::Def);
-  bool Result = vlocJoin(*MBB3, VLiveOutIdx, AllBlocks, AllBlocks, JoinedLoc);
+  bool Result = vlocJoin(*MBB3, VLiveOutIdx, AllBlocks, JoinedLoc);
   EXPECT_TRUE(Result); // Output locs should have changed.
   EXPECT_EQ(JoinedLoc.Kind, DbgValue::Def);
   EXPECT_EQ(JoinedLoc.ID, LiveInRsp);
 
   // And if we did it a second time, leaving the live-ins as it was, then
   // we should report no change.
-  Result = vlocJoin(*MBB3, VLiveOutIdx, AllBlocks, AllBlocks, JoinedLoc);
+  Result = vlocJoin(*MBB3, VLiveOutIdx, AllBlocks, JoinedLoc);
   EXPECT_FALSE(Result);
 
   // If the live-in variable values are different, but there's no PHI placed
@@ -2200,7 +2198,7 @@ TEST_F(InstrRefLDVTest, vlocJoinDiamond) {
   VLiveOuts[1] = DbgValue(LiveInRsp, EmptyProps, DbgValue::Def);
   VLiveOuts[2] = DbgValue(LiveInRax, EmptyProps, DbgValue::Def);
   JoinedLoc = DbgValue(3, EmptyProps, DbgValue::NoVal);
-  Result = vlocJoin(*MBB3, VLiveOutIdx, AllBlocks, AllBlocks, JoinedLoc);
+  Result = vlocJoin(*MBB3, VLiveOutIdx, AllBlocks, JoinedLoc);
   EXPECT_TRUE(Result);
   EXPECT_EQ(JoinedLoc.Kind, DbgValue::Def);
   // RPO is blocks 0 2 1 3, so LiveInRax is picked as the first predecessor
@@ -2216,7 +2214,7 @@ TEST_F(InstrRefLDVTest, vlocJoinDiamond) {
   // Try placing a PHI. With differing input values (LiveInRsp, LiveInRax),
   // this PHI should not be eliminated.
   JoinedLoc = DbgValue(3, EmptyProps, DbgValue::VPHI);
-  Result = vlocJoin(*MBB3, VLiveOutIdx, AllBlocks, AllBlocks, JoinedLoc);
+  Result = vlocJoin(*MBB3, VLiveOutIdx, AllBlocks, JoinedLoc);
   // Expect no change.
   EXPECT_FALSE(Result);
   EXPECT_EQ(JoinedLoc.Kind, DbgValue::VPHI);
@@ -2230,7 +2228,7 @@ TEST_F(InstrRefLDVTest, vlocJoinDiamond) {
   VLiveOuts[1] = DbgValue(LiveInRsp, EmptyProps, DbgValue::Def);
   VLiveOuts[2] = DbgValue(LiveInRsp, EmptyProps, DbgValue::Def);
   JoinedLoc = DbgValue(3, EmptyProps, DbgValue::VPHI);
-  Result = vlocJoin(*MBB3, VLiveOutIdx, AllBlocks, AllBlocks, JoinedLoc);
+  Result = vlocJoin(*MBB3, VLiveOutIdx, AllBlocks, JoinedLoc);
   EXPECT_TRUE(Result);
   EXPECT_EQ(JoinedLoc.Kind, DbgValue::Def);
   EXPECT_EQ(JoinedLoc.ID, LiveInRsp);
@@ -2242,7 +2240,7 @@ TEST_F(InstrRefLDVTest, vlocJoinDiamond) {
   VLiveOuts[1] = DbgValue(LiveInRsp, EmptyProps, DbgValue::Def);
   VLiveOuts[2] = DbgValue(LiveInRax, EmptyProps, DbgValue::Def);
   JoinedLoc = DbgValue(2, EmptyProps, DbgValue::VPHI);
-  Result = vlocJoin(*MBB3, VLiveOutIdx, AllBlocks, AllBlocks, JoinedLoc);
+  Result = vlocJoin(*MBB3, VLiveOutIdx, AllBlocks, JoinedLoc);
   EXPECT_TRUE(Result);
   EXPECT_EQ(JoinedLoc.Kind, DbgValue::Def);
   EXPECT_EQ(JoinedLoc.ID, LiveInRax); // from block 2
@@ -2252,7 +2250,7 @@ TEST_F(InstrRefLDVTest, vlocJoinDiamond) {
   VLiveOuts[1] = DbgValue(LiveInRsp, EmptyProps, DbgValue::Def);
   VLiveOuts[2] = DbgValue(0, EmptyProps, DbgValue::VPHI);
   JoinedLoc = DbgValue(2, EmptyProps, DbgValue::VPHI);
-  Result = vlocJoin(*MBB3, VLiveOutIdx, AllBlocks, AllBlocks, JoinedLoc);
+  Result = vlocJoin(*MBB3, VLiveOutIdx, AllBlocks, JoinedLoc);
   EXPECT_TRUE(Result);
   EXPECT_EQ(JoinedLoc.Kind, DbgValue::VPHI);
   EXPECT_EQ(JoinedLoc.BlockNo, 0);
@@ -2262,7 +2260,7 @@ TEST_F(InstrRefLDVTest, vlocJoinDiamond) {
   VLiveOuts[1] = DbgValue(LiveInRsp, EmptyProps, DbgValue::Def);
   VLiveOuts[2] = DbgValue(LiveInRsp, PropsWithIndirect, DbgValue::Def);
   JoinedLoc = DbgValue(3, EmptyProps, DbgValue::VPHI);
-  Result = vlocJoin(*MBB3, VLiveOutIdx, AllBlocks, AllBlocks, JoinedLoc);
+  Result = vlocJoin(*MBB3, VLiveOutIdx, AllBlocks, JoinedLoc);
   EXPECT_FALSE(Result);
   EXPECT_EQ(JoinedLoc.Kind, DbgValue::VPHI);
   EXPECT_EQ(JoinedLoc.BlockNo, 3);
@@ -2273,7 +2271,7 @@ TEST_F(InstrRefLDVTest, vlocJoinDiamond) {
   VLiveOuts[1] = DbgValue(LiveInRsp, EmptyProps, DbgValue::Def);
   VLiveOuts[2] = DbgValue(LiveInRsp, PropsWithIndirect, DbgValue::Def);
   JoinedLoc = DbgValue(2, EmptyProps, DbgValue::VPHI);
-  Result = vlocJoin(*MBB3, VLiveOutIdx, AllBlocks, AllBlocks, JoinedLoc);
+  Result = vlocJoin(*MBB3, VLiveOutIdx, AllBlocks, JoinedLoc);
   EXPECT_TRUE(Result);
   EXPECT_EQ(JoinedLoc.Kind, DbgValue::Def);
   EXPECT_EQ(JoinedLoc.ID, LiveInRsp);
@@ -2289,7 +2287,7 @@ TEST_F(InstrRefLDVTest, vlocJoinDiamond) {
   VLiveOuts[1] = DbgValue(LiveInRsp, EmptyProps, DbgValue::Def);
   VLiveOuts[2] = DbgValue(LiveInRsp, PropsWithExpr, DbgValue::Def);
   JoinedLoc = DbgValue(3, EmptyProps, DbgValue::VPHI);
-  Result = vlocJoin(*MBB3, VLiveOutIdx, AllBlocks, AllBlocks, JoinedLoc);
+  Result = vlocJoin(*MBB3, VLiveOutIdx, AllBlocks, JoinedLoc);
   EXPECT_FALSE(Result);
 }
 
@@ -2343,7 +2341,7 @@ TEST_F(InstrRefLDVTest, vlocJoinLoops) {
   VLiveOuts[0] = DbgValue(LiveInRsp, EmptyProps, DbgValue::Def);
   VLiveOuts[1] = DbgValue(LiveInRax, EmptyProps, DbgValue::Def);
   DbgValue JoinedLoc = DbgValue(LiveInRax, EmptyProps, DbgValue::Def);
-  bool Result = vlocJoin(*MBB1, VLiveOutIdx, AllBlocks, AllBlocks, JoinedLoc);
+  bool Result = vlocJoin(*MBB1, VLiveOutIdx, AllBlocks, JoinedLoc);
   EXPECT_TRUE(Result);
   EXPECT_EQ(JoinedLoc.Kind, DbgValue::Def);
   EXPECT_EQ(JoinedLoc.ID, LiveInRsp);
@@ -2352,7 +2350,7 @@ TEST_F(InstrRefLDVTest, vlocJoinLoops) {
   VLiveOuts[0] = DbgValue(LiveInRsp, EmptyProps, DbgValue::Def);
   VLiveOuts[1] = DbgValue(LiveInRax, EmptyProps, DbgValue::Def);
   JoinedLoc = DbgValue(1, EmptyProps, DbgValue::VPHI);
-  Result = vlocJoin(*MBB1, VLiveOutIdx, AllBlocks, AllBlocks, JoinedLoc);
+  Result = vlocJoin(*MBB1, VLiveOutIdx, AllBlocks, JoinedLoc);
   EXPECT_FALSE(Result);
   EXPECT_EQ(JoinedLoc.Kind, DbgValue::VPHI);
   EXPECT_EQ(JoinedLoc.BlockNo, 1);
@@ -2361,7 +2359,7 @@ TEST_F(InstrRefLDVTest, vlocJoinLoops) {
   VLiveOuts[0] = DbgValue(LiveInRsp, EmptyProps, DbgValue::Def);
   VLiveOuts[1] = DbgValue(1, EmptyProps, DbgValue::VPHI);
   JoinedLoc = DbgValue(1, EmptyProps, DbgValue::VPHI);
-  Result = vlocJoin(*MBB1, VLiveOutIdx, AllBlocks, AllBlocks, JoinedLoc);
+  Result = vlocJoin(*MBB1, VLiveOutIdx, AllBlocks, JoinedLoc);
   EXPECT_TRUE(Result);
   EXPECT_EQ(JoinedLoc.Kind, DbgValue::Def);
   EXPECT_EQ(JoinedLoc.ID, LiveInRsp);
@@ -2374,7 +2372,7 @@ TEST_F(InstrRefLDVTest, vlocJoinLoops) {
   VLiveOuts[0] = DbgValue(LiveInRsp, EmptyProps, DbgValue::Def);
   VLiveOuts[1] = DbgValue(1, PropsWithExpr, DbgValue::VPHI);
   JoinedLoc = DbgValue(1, EmptyProps, DbgValue::VPHI);
-  Result = vlocJoin(*MBB1, VLiveOutIdx, AllBlocks, AllBlocks, JoinedLoc);
+  Result = vlocJoin(*MBB1, VLiveOutIdx, AllBlocks, JoinedLoc);
   EXPECT_FALSE(Result);
   EXPECT_EQ(JoinedLoc.Kind, DbgValue::VPHI);
   EXPECT_EQ(JoinedLoc.BlockNo, 1);
@@ -2383,7 +2381,7 @@ TEST_F(InstrRefLDVTest, vlocJoinLoops) {
   VLiveOuts[0] = DbgValue(LiveInRsp, EmptyProps, DbgValue::Def);
   VLiveOuts[1] = DbgValue(0, EmptyProps, DbgValue::VPHI);
   JoinedLoc = DbgValue(1, EmptyProps, DbgValue::VPHI);
-  Result = vlocJoin(*MBB1, VLiveOutIdx, AllBlocks, AllBlocks, JoinedLoc);
+  Result = vlocJoin(*MBB1, VLiveOutIdx, AllBlocks, JoinedLoc);
   EXPECT_FALSE(Result);
   EXPECT_EQ(JoinedLoc.Kind, DbgValue::VPHI);
   EXPECT_EQ(JoinedLoc.BlockNo, 1);
@@ -2447,7 +2445,7 @@ TEST_F(InstrRefLDVTest, vlocJoinBadlyNestedLoops) {
   VLiveOuts[1] = DbgValue(LiveInRax, EmptyProps, DbgValue::Def);
   VLiveOuts[2] = DbgValue(LiveInRbx, EmptyProps, DbgValue::Def);
   DbgValue JoinedLoc = DbgValue(1, EmptyProps, DbgValue::VPHI);
-  bool Result = vlocJoin(*MBB1, VLiveOutIdx, AllBlocks, AllBlocks, JoinedLoc);
+  bool Result = vlocJoin(*MBB1, VLiveOutIdx, AllBlocks, JoinedLoc);
   EXPECT_FALSE(Result);
   EXPECT_EQ(JoinedLoc.Kind, DbgValue::VPHI);
   EXPECT_EQ(JoinedLoc.BlockNo, 1);
@@ -2457,7 +2455,7 @@ TEST_F(InstrRefLDVTest, vlocJoinBadlyNestedLoops) {
   VLiveOuts[1] = DbgValue(1, EmptyProps, DbgValue::VPHI);
   VLiveOuts[2] = DbgValue(1, EmptyProps, DbgValue::VPHI);
   JoinedLoc = DbgValue(1, EmptyProps, DbgValue::VPHI);
-  Result = vlocJoin(*MBB1, VLiveOutIdx, AllBlocks, AllBlocks, JoinedLoc);
+  Result = vlocJoin(*MBB1, VLiveOutIdx, AllBlocks, JoinedLoc);
   EXPECT_TRUE(Result);
   EXPECT_EQ(JoinedLoc.Kind, DbgValue::Def);
   EXPECT_EQ(JoinedLoc.ID, LiveInRsp);
@@ -2468,7 +2466,7 @@ TEST_F(InstrRefLDVTest, vlocJoinBadlyNestedLoops) {
   VLiveOuts[1] = DbgValue(1, EmptyProps, DbgValue::VPHI);
   VLiveOuts[2] = DbgValue(1, PropsWithIndirect, DbgValue::VPHI);
   JoinedLoc = DbgValue(1, EmptyProps, DbgValue::VPHI);
-  Result = vlocJoin(*MBB1, VLiveOutIdx, AllBlocks, AllBlocks, JoinedLoc);
+  Result = vlocJoin(*MBB1, VLiveOutIdx, AllBlocks, JoinedLoc);
   EXPECT_FALSE(Result);
   EXPECT_EQ(JoinedLoc.Kind, DbgValue::VPHI);
   EXPECT_EQ(JoinedLoc.BlockNo, 1);
@@ -2478,7 +2476,7 @@ TEST_F(InstrRefLDVTest, vlocJoinBadlyNestedLoops) {
   VLiveOuts[1] = DbgValue(1, EmptyProps, DbgValue::VPHI);
   VLiveOuts[2] = DbgValue(2, EmptyProps, DbgValue::VPHI);
   JoinedLoc = DbgValue(1, EmptyProps, DbgValue::VPHI);
-  Result = vlocJoin(*MBB1, VLiveOutIdx, AllBlocks, AllBlocks, JoinedLoc);
+  Result = vlocJoin(*MBB1, VLiveOutIdx, AllBlocks, JoinedLoc);
   EXPECT_FALSE(Result);
   EXPECT_EQ(JoinedLoc.Kind, DbgValue::VPHI);
   EXPECT_EQ(JoinedLoc.BlockNo, 1);

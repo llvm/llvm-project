@@ -2352,15 +2352,8 @@ Optional<ValueIDNum> InstrRefBasedLDV::pickVPHILoc(
 
 bool InstrRefBasedLDV::vlocJoin(
     MachineBasicBlock &MBB, LiveIdxT &VLOCOutLocs,
-    SmallPtrSet<const MachineBasicBlock *, 8> &InScopeBlocks,
     SmallPtrSet<const MachineBasicBlock *, 8> &BlocksToExplore,
     DbgValue &LiveIn) {
-  // To emulate VarLocBasedImpl, process this block if it's not in scope but
-  // _does_ assign a variable value. No live-ins for this scope are transferred
-  // in though, so we can return immediately.
-  if (InScopeBlocks.count(&MBB) == 0 && !ArtificialBlocks.count(&MBB))
-    return false;
-
   LLVM_DEBUG(dbgs() << "join MBB: " << MBB.getNumber() << "\n");
   bool Changed = false;
 
@@ -2664,7 +2657,7 @@ void InstrRefBasedLDV::buildVLocValueMap(const DILocation *DILoc,
         // Join values from predecessors. Updates LiveInIdx, and writes output
         // into JoinedInLocs.
         bool InLocsChanged =
-            vlocJoin(*MBB, LiveOutIdx, InScopeBlocks, BlocksToExplore, *LiveIn);
+            vlocJoin(*MBB, LiveOutIdx, BlocksToExplore, *LiveIn);
 
         SmallVector<const MachineBasicBlock *, 8> Preds;
         for (const auto *Pred : MBB->predecessors())
@@ -2759,6 +2752,8 @@ void InstrRefBasedLDV::buildVLocValueMap(const DILocation *DILoc,
         continue;
       if (BlockLiveIn->Kind == DbgValue::VPHI)
         BlockLiveIn->Kind = DbgValue::Def;
+      assert(BlockLiveIn->Properties.DIExpr->getFragmentInfo() ==
+             Var.getFragment() && "Fragment info missing during value prop");
       Output[MBB->getNumber()].push_back(std::make_pair(Var, *BlockLiveIn));
     }
   } // Per-variable loop.
