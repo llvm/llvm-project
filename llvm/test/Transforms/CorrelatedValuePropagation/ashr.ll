@@ -103,3 +103,40 @@ loop:
 exit:
   ret void
 }
+
+; check that ashr of -1 or 0 is optimized away
+; CHECK-LABEL: @test6
+define i32 @test6(i32 %f, i32 %g) {
+entry:
+  %0 = add i32 %f, 1
+  %1 = icmp ult i32 %0, 2
+  tail call void @llvm.assume(i1 %1)
+; CHECK: ret i32 %f
+  %shr = ashr i32 %f, %g
+  ret i32 %shr
+}
+
+; same test as above with different numbers
+; CHECK-LABEL: @test7
+define i32 @test7(i32 %f, i32 %g) {
+entry:
+  %0 = and i32 %f, -2
+  %1 = icmp eq i32 %0, 6
+  tail call void @llvm.assume(i1 %1)
+  %sub = add nsw i32 %f, -7
+; CHECK: ret i32 %sub
+  %shr = ashr i32 %sub, %g
+  ret i32 %shr
+}
+
+; check that ashr of -2 or 1 is not optimized away
+; CHECK-LABEL: @test8
+define i32 @test8(i32 %f, i32 %g, i1 %s) {
+entry:
+; CHECK: ashr i32 -2, %f
+  %0 = ashr i32 -2, %f
+; CHECK: lshr i32 1, %g
+  %1 = ashr i32 1, %g
+  %2 = select i1 %s, i32 %0, i32 %1
+  ret i32 %2
+}
