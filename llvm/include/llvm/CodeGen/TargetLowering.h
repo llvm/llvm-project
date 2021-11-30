@@ -2905,6 +2905,12 @@ public:
   /// passed to the fp16 to fp conversion library function.
   virtual bool shouldKeepZExtForFP16Conv() const { return false; }
 
+  /// Should we generate fp_to_si_sat and fp_to_ui_sat from type FPVT to type VT
+  /// from min(max(fptoi)) saturation patterns.
+  virtual bool shouldConvertFpToSat(unsigned Op, EVT FPVT, EVT VT) const {
+    return isOperationLegalOrCustom(Op, VT);
+  }
+
   //===--------------------------------------------------------------------===//
   // Runtime Library hooks
   //
