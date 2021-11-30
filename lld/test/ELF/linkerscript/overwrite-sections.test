@@ -1,5 +1,5 @@
 # REQUIRES: x86
-# RUN: rm -rf %t && split-file %s %t
+# RUN: rm -rf %t && split-file --leading-lines %s %t
 # RUN: llvm-mc -filetype=obj -triple=x86_64 %t/a.s -o %t/a.o
 
 ## There is no main linker script. OVERWRITE_SECTIONS defines output section
