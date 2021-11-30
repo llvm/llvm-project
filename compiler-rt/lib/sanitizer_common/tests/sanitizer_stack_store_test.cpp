@@ -37,6 +37,8 @@ class StackStoreTest : public testing::Test {
       if (!s.size && !s.tag)
         continue;
       fn(s);
+      if (HasFailure())
+        return;
       std::next_permutation(frames.begin(), frames.end());
     };
   }
