@@ -168,6 +168,15 @@ public:
 
   StringRef getStringTable() const { return stringTable; }
 
+  ArrayRef<Symbol *> getLocalSymbols() {
+    if (symbols.empty())
+      return {};
+    return llvm::makeArrayRef(symbols).slice(1, firstGlobal - 1);
+  }
+  ArrayRef<Symbol *> getGlobalSymbols() {
+    return llvm::makeArrayRef(symbols).slice(firstGlobal);
+  }
+
   template <typename ELFT> typename ELFT::SymRange getELFSyms() const {
     return typename ELFT::SymRange(
         reinterpret_cast<const typename ELFT::Sym *>(elfSyms), numELFSyms);
@@ -196,9 +205,6 @@ public:
   llvm::object::ELFFile<ELFT> getObj() const {
     return this->ELFFileBase::getObj<ELFT>();
   }
-
-  ArrayRef<Symbol *> getLocalSymbols();
-  ArrayRef<Symbol *> getGlobalSymbols();
 
   ObjFile(MemoryBufferRef m, StringRef archiveName) : ELFFileBase(ObjKind, m) {
     this->archiveName = std::string(archiveName);
