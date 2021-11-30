@@ -736,8 +736,6 @@ class VectorType;
 
     bool preferIncOfAddToSubOfNot(EVT VT) const override;
 
-    bool shouldConvertFpToSat(unsigned Op, EVT FPVT, EVT VT) const override;
-
   protected:
     std::pair<const TargetRegisterClass *, uint8_t>
     findRepresentativeClass(const TargetRegisterInfo *TRI,
