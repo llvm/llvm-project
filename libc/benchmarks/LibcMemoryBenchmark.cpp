@@ -108,6 +108,9 @@ CopySetup::CopySetup()
     : ParameterBatch(2), SrcBuffer(ParameterBatch::BufferSize),
       DstBuffer(ParameterBatch::BufferSize) {}
 
+MoveSetup::MoveSetup()
+    : ParameterBatch(3), Buffer(ParameterBatch::BufferSize * 3) {}
+
 ComparisonSetup::ComparisonSetup()
     : ParameterBatch(2), LhsBuffer(ParameterBatch::BufferSize),
       RhsBuffer(ParameterBatch::BufferSize) {

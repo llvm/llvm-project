@@ -734,11 +734,12 @@ define i64 @load_fold_sdiv1(i64* %p) {
 ; CHECK-O3-NEXT:    movabsq $-8608480567731124087, %rdx # imm = 0x8888888888888889
 ; CHECK-O3-NEXT:    movq %rcx, %rax
 ; CHECK-O3-NEXT:    imulq %rdx
-; CHECK-O3-NEXT:    addq %rcx, %rdx
-; CHECK-O3-NEXT:    movq %rdx, %rax
+; CHECK-O3-NEXT:    addq %rdx, %rcx
+; CHECK-O3-NEXT:    movq %rcx, %rax
 ; CHECK-O3-NEXT:    shrq $63, %rax
-; CHECK-O3-NEXT:    sarq $3, %rdx
-; CHECK-O3-NEXT:    addq %rdx, %rax
+; CHECK-O3-NEXT:    sarq $3, %rcx
+; CHECK-O3-NEXT:    addq %rax, %rcx
+; CHECK-O3-NEXT:    movq %rcx, %rax
 ; CHECK-O3-NEXT:    retq
   %v = load atomic i64, i64* %p unordered, align 8
   %ret = sdiv i64 %v, 15

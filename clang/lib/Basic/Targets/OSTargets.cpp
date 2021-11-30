@@ -201,6 +201,14 @@ static void addVisualCDefines(const LangOptions &Opts, MacroBuilder &Builder) {
   }
 
   Builder.defineMacro("_INTEGRAL_MAX_BITS", "64");
+
+  // Starting with VS 2022 17.1, MSVC predefines the below macro to inform
+  // users of the execution character set defined at compile time.
+  // The value given is the Windows Code Page Identifier:
+  // https://docs.microsoft.com/en-us/windows/win32/intl/code-page-identifiers
+  //
+  // Clang currently only supports UTF-8, so we'll use 65001
+  Builder.defineMacro("_MSVC_EXECUTION_CHARACTER_SET", "65001");
 }
 
 void addWindowsDefines(const llvm::Triple &Triple, const LangOptions &Opts,

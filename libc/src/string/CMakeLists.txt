@@ -38,17 +38,6 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
-  memmove
-  SRCS
-    memmove.cpp
-  HDRS
-    memmove.h
-  DEPENDS
-    libc.src.__support.integer_operations
-    .memory_utils.memcpy_implementation
-)
-
-add_entrypoint_object(
   memrchr
   SRCS
     memrchr.cpp
@@ -282,7 +271,7 @@ endfunction()
 
 function(add_bcmp bcmp_name)
   add_implementation(bcmp ${bcmp_name}
-    SRCS ${LIBC_BCMP_SRC}
+    SRCS ${LIBC_SOURCE_DIR}/src/string/bcmp.cpp
     HDRS ${LIBC_SOURCE_DIR}/src/string/bcmp.h
     DEPENDS
       .memory_utils.memory_utils
@@ -295,7 +284,6 @@ function(add_bcmp bcmp_name)
 endfunction()
 
 if(${LIBC_TARGET_ARCHITECTURE_IS_X86})
-  set(LIBC_BCMP_SRC ${LIBC_SOURCE_DIR}/src/string/bcmp.cpp)
   add_bcmp(bcmp_x86_64_opt_sse2   COMPILE_OPTIONS -march=k8             REQUIRE SSE2)
   add_bcmp(bcmp_x86_64_opt_sse4   COMPILE_OPTIONS -march=nehalem        REQUIRE SSE4_2)
   add_bcmp(bcmp_x86_64_opt_avx2   COMPILE_OPTIONS -march=haswell        REQUIRE AVX2)
@@ -303,7 +291,6 @@ if(${LIBC_TARGET_ARCHITECTURE_IS_X86})
   add_bcmp(bcmp_opt_host          COMPILE_OPTIONS ${LIBC_COMPILE_OPTIONS_NATIVE})
   add_bcmp(bcmp)
 else()
-  set(LIBC_BCMP_SRC ${LIBC_SOURCE_DIR}/src/string/bcmp.cpp)
   add_bcmp(bcmp_opt_host          COMPILE_OPTIONS ${LIBC_COMPILE_OPTIONS_NATIVE})
   add_bcmp(bcmp)
 endif()
@@ -402,6 +389,42 @@ elseif(${LIBC_TARGET_ARCHITECTURE_IS_AARCH64})
 else()
   add_memcpy(memcpy_opt_host          COMPILE_OPTIONS ${LIBC_COMPILE_OPTIONS_NATIVE})
   add_memcpy(memcpy)
+endif()
+
+# ------------------------------------------------------------------------------
+# memmove
+# ------------------------------------------------------------------------------
+
+function(add_memmove memmove_name)
+  add_implementation(memmove ${memmove_name}
+    SRCS ${LIBC_SOURCE_DIR}/src/string/memmove.cpp
+    HDRS ${LIBC_SOURCE_DIR}/src/string/memmove.h
+    DEPENDS
+      .memory_utils.memory_utils
+      .memory_utils.memcpy_implementation
+      libc.include.string
+    COMPILE_OPTIONS
+      -fno-builtin
+    ${ARGN}
+  )
+endfunction()
+
+if(${LIBC_TARGET_ARCHITECTURE_IS_X86})
+  add_memmove(memmove_x86_64_opt_sse2   COMPILE_OPTIONS -march=k8             REQUIRE SSE2)
+  add_memmove(memmove_x86_64_opt_sse4   COMPILE_OPTIONS -march=nehalem        REQUIRE SSE4_2)
+  add_memmove(memmove_x86_64_opt_avx2   COMPILE_OPTIONS -march=haswell        REQUIRE AVX2)
+  add_memmove(memmove_x86_64_opt_avx512 COMPILE_OPTIONS -march=skylake-avx512 REQUIRE AVX512F)
+  add_memmove(memmove_opt_host          COMPILE_OPTIONS ${LIBC_COMPILE_OPTIONS_NATIVE})
+  add_memmove(memmove)
+elseif(${LIBC_TARGET_ARCHITECTURE_IS_AARCH64})
+  # Disable tail merging as it leads to lower performance.
+  # Note that '-mllvm' needs to be prefixed with 'SHELL:' to prevent CMake flag deduplication.
+  add_memmove(memmove_opt_host          COMPILE_OPTIONS ${LIBC_COMPILE_OPTIONS_NATIVE}
+                                        COMPILE_OPTIONS "SHELL:-mllvm --tail-merge-threshold=0")
+  add_memmove(memmove                   COMPILE_OPTIONS "SHELL:-mllvm --tail-merge-threshold=0")
+else()
+  add_memmove(memmove_opt_host          COMPILE_OPTIONS ${LIBC_COMPILE_OPTIONS_NATIVE})
+  add_memmove(memmove)
 endif()
 
 # ------------------------------------------------------------------------------

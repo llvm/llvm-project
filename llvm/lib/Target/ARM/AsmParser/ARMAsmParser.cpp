@@ -6429,15 +6429,17 @@ StringRef ARMAsmParser::splitMnemonic(StringRef Mnemonic,
       Mnemonic == "vrintp" || Mnemonic == "vrintm" || Mnemonic == "hvc" ||
       Mnemonic.startswith("vsel") || Mnemonic == "vins" || Mnemonic == "vmovx" ||
       Mnemonic == "bxns"  || Mnemonic == "blxns" ||
-      Mnemonic == "vdot"  || Mnemonic == "vmmla"  ||
+      Mnemonic == "vdot"  || Mnemonic == "vmmla" ||
       Mnemonic == "vudot" || Mnemonic == "vsdot" ||
       Mnemonic == "vcmla" || Mnemonic == "vcadd" ||
       Mnemonic == "vfmal" || Mnemonic == "vfmsl" ||
-      Mnemonic == "wls" || Mnemonic == "le" || Mnemonic == "dls" ||
-      Mnemonic == "csel" || Mnemonic == "csinc" ||
+      Mnemonic == "wls"   || Mnemonic == "le"    || Mnemonic == "dls" ||
+      Mnemonic == "csel"  || Mnemonic == "csinc" ||
       Mnemonic == "csinv" || Mnemonic == "csneg" || Mnemonic == "cinc" ||
-      Mnemonic == "cinv" || Mnemonic == "cneg" || Mnemonic == "cset" ||
-      Mnemonic == "csetm")
+      Mnemonic == "cinv"  || Mnemonic == "cneg"  || Mnemonic == "cset" ||
+      Mnemonic == "csetm" ||
+      Mnemonic == "aut"   || Mnemonic == "pac" || Mnemonic == "pacbti" ||
+      Mnemonic == "bti")
     return Mnemonic;
 
   // First, split out any predication code. Ignore mnemonics we know aren't
@@ -6581,9 +6583,11 @@ void ARMAsmParser::getMnemonicAcceptInfo(StringRef Mnemonic,
       Mnemonic == "csinc" || Mnemonic == "csinv" || Mnemonic == "csneg" ||
       Mnemonic == "cinc" || Mnemonic == "cinv" || Mnemonic == "cneg" ||
       Mnemonic == "cset" || Mnemonic == "csetm" ||
-      Mnemonic.startswith("vpt") || Mnemonic.startswith("vpst") ||
       (hasCDE() && MS.isCDEInstr(Mnemonic) &&
        !MS.isITPredicableCDEInstr(Mnemonic)) ||
+      Mnemonic.startswith("vpt") || Mnemonic.startswith("vpst") ||
+      Mnemonic == "pac" || Mnemonic == "pacbti" || Mnemonic == "aut" ||
+      Mnemonic == "bti" ||
       (hasMVE() &&
        (Mnemonic.startswith("vst2") || Mnemonic.startswith("vld2") ||
         Mnemonic.startswith("vst4") || Mnemonic.startswith("vld4") ||
@@ -12272,6 +12276,7 @@ bool ARMAsmParser::enableArchExtFeature(StringRef Name, SMLoc &ExtLoc) {
        {ARM::FeatureFPARMv8, ARM::FeatureFullFP16}},
       {ARM::AEK_RAS, {Feature_HasV8Bit}, {ARM::FeatureRAS}},
       {ARM::AEK_LOB, {Feature_HasV8_1MMainlineBit}, {ARM::FeatureLOB}},
+      {ARM::AEK_PACBTI, {Feature_HasV8_1MMainlineBit}, {ARM::FeaturePACBTI}},
       // FIXME: Unsupported extensions.
       {ARM::AEK_OS, {}, {}},
       {ARM::AEK_IWMMXT, {}, {}},

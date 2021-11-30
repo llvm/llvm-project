@@ -225,15 +225,14 @@ define <16 x i8> @vselect_packss_v16i64(<16 x i64> %a0, <16 x i64> %a1, <16 x i8
 ; SSE2-NEXT:    pand %xmm1, %xmm2
 ; SSE2-NEXT:    pcmpeqd {{[0-9]+}}(%rsp), %xmm0
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,0,3,2]
-; SSE2-NEXT:    pand %xmm0, %xmm1
-; SSE2-NEXT:    packssdw %xmm2, %xmm1
-; SSE2-NEXT:    packssdw %xmm3, %xmm1
-; SSE2-NEXT:    packsswb %xmm5, %xmm1
-; SSE2-NEXT:    movdqa {{[0-9]+}}(%rsp), %xmm0
 ; SSE2-NEXT:    pand %xmm1, %xmm0
-; SSE2-NEXT:    pandn {{[0-9]+}}(%rsp), %xmm1
-; SSE2-NEXT:    por %xmm0, %xmm1
-; SSE2-NEXT:    movdqa %xmm1, %xmm0
+; SSE2-NEXT:    packssdw %xmm2, %xmm0
+; SSE2-NEXT:    packssdw %xmm3, %xmm0
+; SSE2-NEXT:    packsswb %xmm5, %xmm0
+; SSE2-NEXT:    movdqa {{[0-9]+}}(%rsp), %xmm1
+; SSE2-NEXT:    pand %xmm0, %xmm1
+; SSE2-NEXT:    pandn {{[0-9]+}}(%rsp), %xmm0
+; SSE2-NEXT:    por %xmm1, %xmm0
 ; SSE2-NEXT:    retq
 ;
 ; SSE42-LABEL: vselect_packss_v16i64:

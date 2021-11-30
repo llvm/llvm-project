@@ -13,9 +13,9 @@ define float @PR37890_v4f32(<4 x float> %a)  {
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movaps %xmm0, %xmm1
 ; SSE2-NEXT:    unpckhpd {{.*#+}} xmm1 = xmm1[1],xmm0[1]
-; SSE2-NEXT:    addps %xmm0, %xmm1
-; SSE2-NEXT:    movaps %xmm1, %xmm0
-; SSE2-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,1],xmm1[1,1]
+; SSE2-NEXT:    addps %xmm1, %xmm0
+; SSE2-NEXT:    movaps %xmm0, %xmm1
+; SSE2-NEXT:    shufps {{.*#+}} xmm1 = xmm1[1,1],xmm0[1,1]
 ; SSE2-NEXT:    addss %xmm1, %xmm0
 ; SSE2-NEXT:    retq
 ;
@@ -23,8 +23,8 @@ define float @PR37890_v4f32(<4 x float> %a)  {
 ; SSSE3-SLOW:       # %bb.0:
 ; SSSE3-SLOW-NEXT:    movaps %xmm0, %xmm1
 ; SSSE3-SLOW-NEXT:    unpckhpd {{.*#+}} xmm1 = xmm1[1],xmm0[1]
-; SSSE3-SLOW-NEXT:    addps %xmm0, %xmm1
-; SSSE3-SLOW-NEXT:    movshdup {{.*#+}} xmm0 = xmm1[1,1,3,3]
+; SSSE3-SLOW-NEXT:    addps %xmm1, %xmm0
+; SSSE3-SLOW-NEXT:    movshdup {{.*#+}} xmm1 = xmm0[1,1,3,3]
 ; SSSE3-SLOW-NEXT:    addss %xmm1, %xmm0
 ; SSSE3-SLOW-NEXT:    retq
 ;
@@ -127,9 +127,9 @@ define float @PR37890_v8f32(<8 x float> %a)  {
 ; SSE2-NEXT:    addps %xmm1, %xmm0
 ; SSE2-NEXT:    movaps %xmm0, %xmm1
 ; SSE2-NEXT:    unpckhpd {{.*#+}} xmm1 = xmm1[1],xmm0[1]
-; SSE2-NEXT:    addps %xmm0, %xmm1
-; SSE2-NEXT:    movaps %xmm1, %xmm0
-; SSE2-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,1],xmm1[1,1]
+; SSE2-NEXT:    addps %xmm1, %xmm0
+; SSE2-NEXT:    movaps %xmm0, %xmm1
+; SSE2-NEXT:    shufps {{.*#+}} xmm1 = xmm1[1,1],xmm0[1,1]
 ; SSE2-NEXT:    addss %xmm1, %xmm0
 ; SSE2-NEXT:    retq
 ;
@@ -138,8 +138,8 @@ define float @PR37890_v8f32(<8 x float> %a)  {
 ; SSSE3-SLOW-NEXT:    addps %xmm1, %xmm0
 ; SSSE3-SLOW-NEXT:    movaps %xmm0, %xmm1
 ; SSSE3-SLOW-NEXT:    unpckhpd {{.*#+}} xmm1 = xmm1[1],xmm0[1]
-; SSSE3-SLOW-NEXT:    addps %xmm0, %xmm1
-; SSSE3-SLOW-NEXT:    movshdup {{.*#+}} xmm0 = xmm1[1,1,3,3]
+; SSSE3-SLOW-NEXT:    addps %xmm1, %xmm0
+; SSSE3-SLOW-NEXT:    movshdup {{.*#+}} xmm1 = xmm0[1,1,3,3]
 ; SSSE3-SLOW-NEXT:    addss %xmm1, %xmm0
 ; SSSE3-SLOW-NEXT:    retq
 ;
@@ -197,9 +197,9 @@ define double @PR37890_v8f64(<8 x double> %a)  {
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    addpd %xmm3, %xmm1
 ; SSE2-NEXT:    addpd %xmm2, %xmm1
-; SSE2-NEXT:    addpd %xmm0, %xmm1
-; SSE2-NEXT:    movapd %xmm1, %xmm0
-; SSE2-NEXT:    unpckhpd {{.*#+}} xmm0 = xmm0[1],xmm1[1]
+; SSE2-NEXT:    addpd %xmm1, %xmm0
+; SSE2-NEXT:    movapd %xmm0, %xmm1
+; SSE2-NEXT:    unpckhpd {{.*#+}} xmm1 = xmm1[1],xmm0[1]
 ; SSE2-NEXT:    addsd %xmm1, %xmm0
 ; SSE2-NEXT:    retq
 ;
@@ -207,9 +207,9 @@ define double @PR37890_v8f64(<8 x double> %a)  {
 ; SSSE3-SLOW:       # %bb.0:
 ; SSSE3-SLOW-NEXT:    addpd %xmm3, %xmm1
 ; SSSE3-SLOW-NEXT:    addpd %xmm2, %xmm1
-; SSSE3-SLOW-NEXT:    addpd %xmm0, %xmm1
-; SSSE3-SLOW-NEXT:    movapd %xmm1, %xmm0
-; SSSE3-SLOW-NEXT:    unpckhpd {{.*#+}} xmm0 = xmm0[1],xmm1[1]
+; SSSE3-SLOW-NEXT:    addpd %xmm1, %xmm0
+; SSSE3-SLOW-NEXT:    movapd %xmm0, %xmm1
+; SSSE3-SLOW-NEXT:    unpckhpd {{.*#+}} xmm1 = xmm1[1],xmm0[1]
 ; SSSE3-SLOW-NEXT:    addsd %xmm1, %xmm0
 ; SSSE3-SLOW-NEXT:    retq
 ;
@@ -217,9 +217,8 @@ define double @PR37890_v8f64(<8 x double> %a)  {
 ; SSSE3-FAST:       # %bb.0:
 ; SSSE3-FAST-NEXT:    addpd %xmm3, %xmm1
 ; SSSE3-FAST-NEXT:    addpd %xmm2, %xmm1
-; SSSE3-FAST-NEXT:    addpd %xmm0, %xmm1
-; SSSE3-FAST-NEXT:    haddpd %xmm1, %xmm1
-; SSSE3-FAST-NEXT:    movapd %xmm1, %xmm0
+; SSSE3-FAST-NEXT:    addpd %xmm1, %xmm0
+; SSSE3-FAST-NEXT:    haddpd %xmm0, %xmm0
 ; SSSE3-FAST-NEXT:    retq
 ;
 ; AVX1-SLOW-LABEL: PR37890_v8f64:
@@ -267,34 +266,34 @@ define float @PR37890_v16f32(<16 x float> %a)  {
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    addps %xmm3, %xmm1
 ; SSE2-NEXT:    addps %xmm2, %xmm1
-; SSE2-NEXT:    addps %xmm0, %xmm1
-; SSE2-NEXT:    movaps %xmm1, %xmm2
-; SSE2-NEXT:    unpckhpd {{.*#+}} xmm2 = xmm2[1],xmm1[1]
-; SSE2-NEXT:    addps %xmm1, %xmm2
-; SSE2-NEXT:    movaps %xmm2, %xmm0
-; SSE2-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,1],xmm2[1,1]
-; SSE2-NEXT:    addss %xmm2, %xmm0
+; SSE2-NEXT:    addps %xmm1, %xmm0
+; SSE2-NEXT:    movaps %xmm0, %xmm1
+; SSE2-NEXT:    unpckhpd {{.*#+}} xmm1 = xmm1[1],xmm0[1]
+; SSE2-NEXT:    addps %xmm1, %xmm0
+; SSE2-NEXT:    movaps %xmm0, %xmm1
+; SSE2-NEXT:    shufps {{.*#+}} xmm1 = xmm1[1,1],xmm0[1,1]
+; SSE2-NEXT:    addss %xmm1, %xmm0
 ; SSE2-NEXT:    retq
 ;
 ; SSSE3-SLOW-LABEL: PR37890_v16f32:
 ; SSSE3-SLOW:       # %bb.0:
 ; SSSE3-SLOW-NEXT:    addps %xmm3, %xmm1
 ; SSSE3-SLOW-NEXT:    addps %xmm2, %xmm1
-; SSSE3-SLOW-NEXT:    addps %xmm0, %xmm1
-; SSSE3-SLOW-NEXT:    movaps %xmm1, %xmm2
-; SSSE3-SLOW-NEXT:    unpckhpd {{.*#+}} xmm2 = xmm2[1],xmm1[1]
-; SSSE3-SLOW-NEXT:    addps %xmm1, %xmm2
-; SSSE3-SLOW-NEXT:    movshdup {{.*#+}} xmm0 = xmm2[1,1,3,3]
-; SSSE3-SLOW-NEXT:    addss %xmm2, %xmm0
+; SSSE3-SLOW-NEXT:    addps %xmm1, %xmm0
+; SSSE3-SLOW-NEXT:    movaps %xmm0, %xmm1
+; SSSE3-SLOW-NEXT:    unpckhpd {{.*#+}} xmm1 = xmm1[1],xmm0[1]
+; SSSE3-SLOW-NEXT:    addps %xmm1, %xmm0
+; SSSE3-SLOW-NEXT:    movshdup {{.*#+}} xmm1 = xmm0[1,1,3,3]
+; SSSE3-SLOW-NEXT:    addss %xmm1, %xmm0
 ; SSSE3-SLOW-NEXT:    retq
 ;
 ; SSSE3-FAST-LABEL: PR37890_v16f32:
 ; SSSE3-FAST:       # %bb.0:
 ; SSSE3-FAST-NEXT:    addps %xmm3, %xmm1
 ; SSSE3-FAST-NEXT:    addps %xmm2, %xmm1
-; SSSE3-FAST-NEXT:    addps %xmm0, %xmm1
-; SSSE3-FAST-NEXT:    movaps %xmm1, %xmm0
-; SSSE3-FAST-NEXT:    unpckhpd {{.*#+}} xmm0 = xmm0[1],xmm1[1]
+; SSSE3-FAST-NEXT:    addps %xmm1, %xmm0
+; SSSE3-FAST-NEXT:    movaps %xmm0, %xmm1
+; SSSE3-FAST-NEXT:    unpckhpd {{.*#+}} xmm1 = xmm1[1],xmm0[1]
 ; SSSE3-FAST-NEXT:    addps %xmm1, %xmm0
 ; SSSE3-FAST-NEXT:    haddps %xmm0, %xmm0
 ; SSSE3-FAST-NEXT:    retq

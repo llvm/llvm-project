@@ -24,6 +24,7 @@
 namespace __llvm_libc {
 
 extern void *memcpy(void *__restrict, const void *__restrict, size_t);
+extern void *memmove(void *, const void *, size_t);
 extern void *memset(void *, int, size_t);
 extern void bzero(void *, size_t);
 extern int memcmp(const void *, const void *, size_t);
@@ -68,6 +69,9 @@ static cl::opt<uint32_t>
 #if defined(LIBC_BENCHMARK_FUNCTION_MEMCPY)
 #define LIBC_BENCHMARK_FUNCTION LIBC_BENCHMARK_FUNCTION_MEMCPY
 using BenchmarkSetup = CopySetup;
+#elif defined(LIBC_BENCHMARK_FUNCTION_MEMMOVE)
+#define LIBC_BENCHMARK_FUNCTION LIBC_BENCHMARK_FUNCTION_MEMMOVE
+using BenchmarkSetup = MoveSetup;
 #elif defined(LIBC_BENCHMARK_FUNCTION_MEMSET)
 #define LIBC_BENCHMARK_FUNCTION LIBC_BENCHMARK_FUNCTION_MEMSET
 using BenchmarkSetup = SetSetup;

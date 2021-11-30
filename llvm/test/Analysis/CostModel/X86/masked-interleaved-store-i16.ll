@@ -22,17 +22,17 @@ target triple = "x86_64-unknown-linux-gnu"
 ; DISABLED_MASKED_STRIDED: LV: Found an estimated cost of 1 for VF 1 For instruction:   store i16 %0, i16* %arrayidx2, align 2
 ; DISABLED_MASKED_STRIDED: LV: Found an estimated cost of 1 for VF 1 For instruction:   store i16 %2, i16* %arrayidx7, align 2
 ;
-; DISABLED_MASKED_STRIDED: LV: Found an estimated cost of 26 for VF 2 For instruction:   store i16 %0, i16* %arrayidx2, align 2
-; DISABLED_MASKED_STRIDED: LV: Found an estimated cost of 26 for VF 2 For instruction:   store i16 %2, i16* %arrayidx7, align 2
+; DISABLED_MASKED_STRIDED: LV: Found an estimated cost of 6 for VF 2 For instruction:   store i16 %0, i16* %arrayidx2, align 2
+; DISABLED_MASKED_STRIDED: LV: Found an estimated cost of 6 for VF 2 For instruction:   store i16 %2, i16* %arrayidx7, align 2
 ;
-; DISABLED_MASKED_STRIDED: LV: Found an estimated cost of 54 for VF 4 For instruction:   store i16 %0, i16* %arrayidx2, align 2
-; DISABLED_MASKED_STRIDED: LV: Found an estimated cost of 54 for VF 4 For instruction:   store i16 %2, i16* %arrayidx7, align 2
+; DISABLED_MASKED_STRIDED: LV: Found an estimated cost of 14 for VF 4 For instruction:   store i16 %0, i16* %arrayidx2, align 2
+; DISABLED_MASKED_STRIDED: LV: Found an estimated cost of 14 for VF 4 For instruction:   store i16 %2, i16* %arrayidx7, align 2
 ;
-; DISABLED_MASKED_STRIDED: LV: Found an estimated cost of 110 for VF 8 For instruction:   store i16 %0, i16* %arrayidx2, align 2
-; DISABLED_MASKED_STRIDED: LV: Found an estimated cost of 110 for VF 8 For instruction:   store i16 %2, i16* %arrayidx7, align 2
+; DISABLED_MASKED_STRIDED: LV: Found an estimated cost of 30 for VF 8 For instruction:   store i16 %0, i16* %arrayidx2, align 2
+; DISABLED_MASKED_STRIDED: LV: Found an estimated cost of 30 for VF 8 For instruction:   store i16 %2, i16* %arrayidx7, align 2
 ;
-; DISABLED_MASKED_STRIDED: LV: Found an estimated cost of 228 for VF 16 For instruction:   store i16 %0, i16* %arrayidx2, align 2
-; DISABLED_MASKED_STRIDED: LV: Found an estimated cost of 228 for VF 16 For instruction:   store i16 %2, i16* %arrayidx7, align 2
+; DISABLED_MASKED_STRIDED: LV: Found an estimated cost of 68 for VF 16 For instruction:   store i16 %0, i16* %arrayidx2, align 2
+; DISABLED_MASKED_STRIDED: LV: Found an estimated cost of 68 for VF 16 For instruction:   store i16 %2, i16* %arrayidx7, align 2
 
 ; ENABLED_MASKED_STRIDED: LV: Checking a loop in "test1"
 ;
@@ -40,7 +40,7 @@ target triple = "x86_64-unknown-linux-gnu"
 ; ENABLED_MASKED_STRIDED: LV: Found an estimated cost of 1 for VF 1 For instruction:   store i16 %2, i16* %arrayidx7, align 2
 ;
 ; ENABLED_MASKED_STRIDED: LV: Found an estimated cost of 0 for VF 2 For instruction:   store i16 %0, i16* %arrayidx2, align 2
-; ENABLED_MASKED_STRIDED: LV: Found an estimated cost of 13 for VF 2 For instruction:   store i16 %2, i16* %arrayidx7, align 2
+; ENABLED_MASKED_STRIDED: LV: Found an estimated cost of 12 for VF 2 For instruction:   store i16 %2, i16* %arrayidx7, align 2
 ;
 ; ENABLED_MASKED_STRIDED: LV: Found an estimated cost of 0 for VF 4 For instruction:   store i16 %0, i16* %arrayidx2, align 2
 ; ENABLED_MASKED_STRIDED: LV: Found an estimated cost of 14 for VF 4 For instruction:   store i16 %2, i16* %arrayidx7, align 2
@@ -89,16 +89,16 @@ for.end:
 ; DISABLED_MASKED_STRIDED: LV: Found an estimated cost of 1 for VF 1 For instruction:   store i16 %0, i16* %arrayidx2, align 2
 ; DISABLED_MASKED_STRIDED: LV: Found an estimated cost of 1 for VF 1 For instruction:   store i16 %2, i16* %arrayidx7, align 2
 ;
-; DISABLED_MASKED_STRIDED: LV: Found an estimated cost of 15 for VF 2 For instruction:   store i16 %0, i16* %arrayidx2, align 2
+; DISABLED_MASKED_STRIDED: LV: Found an estimated cost of 5 for VF 2 For instruction:   store i16 %0, i16* %arrayidx2, align 2
 ; DISABLED_MASKED_STRIDED: LV: Found an estimated cost of 3000000 for VF 2 For instruction:   store i16 %2, i16* %arrayidx7, align 2
 ;
-; DISABLED_MASKED_STRIDED: LV: Found an estimated cost of 31 for VF 4 For instruction:   store i16 %0, i16* %arrayidx2, align 2
+; DISABLED_MASKED_STRIDED: LV: Found an estimated cost of 11 for VF 4 For instruction:   store i16 %0, i16* %arrayidx2, align 2
 ; DISABLED_MASKED_STRIDED: LV: Found an estimated cost of 3000000 for VF 4 For instruction:   store i16 %2, i16* %arrayidx7, align 2
 ;
-; DISABLED_MASKED_STRIDED: LV: Found an estimated cost of 63 for VF 8 For instruction:   store i16 %0, i16* %arrayidx2, align 2
+; DISABLED_MASKED_STRIDED: LV: Found an estimated cost of 23 for VF 8 For instruction:   store i16 %0, i16* %arrayidx2, align 2
 ; DISABLED_MASKED_STRIDED: LV: Found an estimated cost of 3000000 for VF 8 For instruction:   store i16 %2, i16* %arrayidx7, align 2
 ;
-; DISABLED_MASKED_STRIDED: LV: Found an estimated cost of 130 for VF 16 For instruction:   store i16 %0, i16* %arrayidx2, align 2
+; DISABLED_MASKED_STRIDED: LV: Found an estimated cost of 50 for VF 16 For instruction:   store i16 %0, i16* %arrayidx2, align 2
 ; DISABLED_MASKED_STRIDED: LV: Found an estimated cost of 3000000 for VF 16 For instruction:   store i16 %2, i16* %arrayidx7, align 2
 
 ; ENABLED_MASKED_STRIDED: LV: Checking a loop in "test2"
@@ -107,7 +107,7 @@ for.end:
 ; ENABLED_MASKED_STRIDED: LV: Found an estimated cost of 1 for VF 1 For instruction:   store i16 %2, i16* %arrayidx7, align 2
 ;
 ; ENABLED_MASKED_STRIDED: LV: Found an estimated cost of 0 for VF 2 For instruction:   store i16 %0, i16* %arrayidx2, align 2
-; ENABLED_MASKED_STRIDED: LV: Found an estimated cost of 13 for VF 2 For instruction:   store i16 %2, i16* %arrayidx7, align 2
+; ENABLED_MASKED_STRIDED: LV: Found an estimated cost of 10 for VF 2 For instruction:   store i16 %2, i16* %arrayidx7, align 2
 ;
 ; ENABLED_MASKED_STRIDED: LV: Found an estimated cost of 0 for VF 4 For instruction:   store i16 %0, i16* %arrayidx2, align 2
 ; ENABLED_MASKED_STRIDED: LV: Found an estimated cost of 14 for VF 4 For instruction:   store i16 %2, i16* %arrayidx7, align 2

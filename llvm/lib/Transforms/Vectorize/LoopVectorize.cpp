@@ -477,10 +477,6 @@ public:
   void widenCallInstruction(CallInst &I, VPValue *Def, VPUser &ArgOperands,
                             VPTransformState &State);
 
-  /// Widen a single select instruction within the innermost loop.
-  void widenSelectInstruction(SelectInst &I, VPValue *VPDef, VPUser &Operands,
-                              bool InvariantCond, VPTransformState &State);
-
   /// Fix the vectorized code, taking care of header phi's, live-outs, and more.
   void fixVectorizedLoop(VPTransformState &State);
 
@@ -4935,31 +4931,6 @@ void InnerLoopVectorizer::widenCallInstruction(CallInst &I, VPValue *Def,
   }
 }
 
-void InnerLoopVectorizer::widenSelectInstruction(SelectInst &I, VPValue *VPDef,
-                                                 VPUser &Operands,
-                                                 bool InvariantCond,
-                                                 VPTransformState &State) {
-  setDebugLocFromInst(&I);
-
-  // The condition can be loop invariant  but still defined inside the
-  // loop. This means that we can't just use the original 'cond' value.
-  // We have to take the 'vectorized' value and pick the first lane.
-  // Instcombine will make this a no-op.
-  auto *InvarCond = InvariantCond
-                        ? State.get(Operands.getOperand(0), VPIteration(0, 0))
-                        : nullptr;
-
-  for (unsigned Part = 0; Part < UF; ++Part) {
-    Value *Cond =
-        InvarCond ? InvarCond : State.get(Operands.getOperand(0), Part);
-    Value *Op0 = State.get(Operands.getOperand(1), Part);
-    Value *Op1 = State.get(Operands.getOperand(2), Part);
-    Value *Sel = Builder.CreateSelect(Cond, Op0, Op1);
-    State.set(VPDef, Sel, Part);
-    addMetadata(Sel, &I);
-  }
-}
-
 void LoopVectorizationCostModel::collectLoopScalars(ElementCount VF) {
   // We should not collect Scalars more than once per VF. Right now, this
   // function is called from collectUniformsAndScalars(), which already does
@@ -6960,6 +6931,8 @@ LoopVectorizationCostModel::getMemInstScalarizationCost(Instruction *I,
   unsigned AS = getLoadStoreAddressSpace(I);
   Value *Ptr = getLoadStorePointerOperand(I);
   Type *PtrTy = ToVectorTy(Ptr->getType(), VF);
+  // NOTE: PtrTy is a vector to signal `TTI::getAddressComputationCost`
+  //       that it is being called from this specific place.
 
   // Figure out whether the access is strided and get the stride value
   // if it's known in compile time
@@ -9658,8 +9631,24 @@ void VPWidenCallRecipe::execute(VPTransformState &State) {
 }
 
 void VPWidenSelectRecipe::execute(VPTransformState &State) {
-  State.ILV->widenSelectInstruction(*cast<SelectInst>(getUnderlyingInstr()),
-                                    this, *this, InvariantCond, State);
+  auto &I = *cast<SelectInst>(getUnderlyingInstr());
+  State.ILV->setDebugLocFromInst(&I);
+
+  // The condition can be loop invariant  but still defined inside the
+  // loop. This means that we can't just use the original 'cond' value.
+  // We have to take the 'vectorized' value and pick the first lane.
+  // Instcombine will make this a no-op.
+  auto *InvarCond =
+      InvariantCond ? State.get(getOperand(0), VPIteration(0, 0)) : nullptr;
+
+  for (unsigned Part = 0; Part < State.UF; ++Part) {
+    Value *Cond = InvarCond ? InvarCond : State.get(getOperand(0), Part);
+    Value *Op0 = State.get(getOperand(1), Part);
+    Value *Op1 = State.get(getOperand(2), Part);
+    Value *Sel = State.Builder.CreateSelect(Cond, Op0, Op1);
+    State.set(this, Sel, Part);
+    State.ILV->addMetadata(Sel, &I);
+  }
 }
 
 void VPWidenRecipe::execute(VPTransformState &State) {
