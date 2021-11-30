@@ -23,6 +23,8 @@ set(MEMPROF_UNITTESTS
   rawprofile.cpp
   driver.cpp)
 
+include_directories(../../../include)
+
 set(MEMPROF_UNIT_TEST_HEADERS
   ${MEMPROF_HEADERS})
 
