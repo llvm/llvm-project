@@ -399,24 +399,6 @@ public:
   }
 };
 
-// A bl instruction uses a signed 24 bit offset, with an implicit 4 byte
-// alignment. This gives a possible 26 bits of 'reach'. If the caller and
-// callee do not use toc and the call offset is larger than 26 bits,
-// we need to emit a pc-rel based long-branch thunk. The target address of
-// the callee is computed with a PC-relative offset.
-class PPC64PCRelLongBranchThunk final : public Thunk {
-public:
-  PPC64PCRelLongBranchThunk(Symbol &dest, int64_t addend)
-      : Thunk(dest, addend) {
-    alignment = 16;
-  }
-  uint32_t size() override { return 32; }
-  void writeTo(uint8_t *buf) override;
-  void addSymbols(ThunkSection &isec) override;
-  bool isCompatibleWith(const InputSection &isec,
-                        const Relocation &rel) const override;
-};
-
 } // end anonymous namespace
 
 Defined *Thunk::addSymbol(StringRef name, uint8_t type, uint64_t value,
@@ -1061,42 +1043,6 @@ bool PPC64LongBranchThunk::isCompatibleWith(const InputSection &isec,
   return rel.type == R_PPC64_REL24 || rel.type == R_PPC64_REL14;
 }
 
-void PPC64PCRelLongBranchThunk::writeTo(uint8_t *buf) {
-  int64_t offset = destination.getVA() - getThunkTargetSym()->getVA();
-  if (!isInt<34>(offset))
-    reportRangeError(buf, offset, 34, destination,
-                     "PC-relative long branch stub offset");
-
-  int nextInstOffset;
-  if (!config->power10Stubs) {
-    uint32_t off = destination.getVA(addend) - getThunkTargetSym()->getVA() - 8;
-    write32(buf + 0, 0x7c0802a6);                      // mflr r12
-    write32(buf + 4, 0x429f0005);                      // bcl 20,31,.+4
-    write32(buf + 8, 0x7d6802a6);                      // mflr r11
-    write32(buf + 12, 0x7d8803a6);                     // mtlr r12
-    write32(buf + 16, 0x3d8b0000 | computeHiBits(off)); // addis r12,r11,off@ha
-    write32(buf + 20, 0x398c0000 | (off & 0xffff));    // addi r12,r12,off@l
-    nextInstOffset = 24;
-  } else {
-    uint64_t paddi = PADDI_R12_NO_DISP | (((offset >> 16) & 0x3ffff) << 32) |
-                     (offset & 0xffff);
-    writePrefixedInstruction(buf + 0, paddi); // paddi r12, 0, func@pcrel, 1
-    nextInstOffset = 8;
-  }
-  write32(buf + nextInstOffset, MTCTR_R12); // mtctr r12
-  write32(buf + nextInstOffset + 4, BCTR);  // bctr
-}
-
-void PPC64PCRelLongBranchThunk::addSymbols(ThunkSection &isec) {
-  addSymbol(saver.save("__long_branch_pcrel_" + destination.getName()),
-            STT_FUNC, 0, isec);
-}
-
-bool PPC64PCRelLongBranchThunk::isCompatibleWith(const InputSection &isec,
-                                                 const Relocation &rel) const {
-  return rel.type == R_PPC64_REL24_NOTOC;
-}
-
 Thunk::Thunk(Symbol &d, int64_t a) : destination(d), addend(a), offset(0) {}
 
 Thunk::~Thunk() = default;
@@ -1223,9 +1169,7 @@ static Thunk *addThunkPPC64(RelType type, Symbol &s, int64_t a) {
     return make<PPC64R2SaveStub>(s, a);
 
   if (type == R_PPC64_REL24_NOTOC)
-    return (s.stOther >> 5) > 1
-               ? (Thunk *)make<PPC64R12SetupStub>(s)
-               : (Thunk *)make<PPC64PCRelLongBranchThunk>(s, a);
+    return make<PPC64R12SetupStub>(s);
 
   if (config->picThunk)
     return make<PPC64PILongBranchThunk>(s, a);
