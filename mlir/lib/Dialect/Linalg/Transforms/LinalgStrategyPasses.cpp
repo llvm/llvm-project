@@ -191,16 +191,21 @@ struct LinalgStrategyDecomposePass
 
   LinalgStrategyDecomposePass() = default;
 
+  LinalgStrategyDecomposePass(LinalgTransformationFilter filter)
+      : filter(filter) {}
+
   void runOnFunction() override {
     auto funcOp = getFunction();
     if (!anchorFuncName.empty() && funcOp.getName() != anchorFuncName)
       return;
     RewritePatternSet decompositionPattern(funcOp.getContext());
-    populateDecomposeConvolutionPatterns(decompositionPattern);
+    populateDecomposeConvolutionPatterns(decompositionPattern, filter);
     if (failed(applyPatternsAndFoldGreedily(funcOp,
                                             std::move(decompositionPattern))))
       signalPassFailure();
   }
+
+  LinalgTransformationFilter filter;
 };
 
 /// Configurable pass to apply pattern-based linalg generalization.
@@ -478,12 +483,12 @@ mlir::createLinalgStrategyGeneralizePass(StringRef opName,
                                          LinalgTransformationFilter filter) {
   return std::make_unique<LinalgStrategyGeneralizePass>(opName, filter);
 }
+
 /// Create a LinalgStrategyDecomposePass.
-// TODO: atm this is applied to all supported ops. If/when we need finer control
-// this should be exposed with an opName + filter and a proper pattern.
+// TODO: if/when we need finer control add an `opName` parameter.
 std::unique_ptr<OperationPass<FuncOp>>
-mlir::createLinalgStrategyDecomposePass() {
-  return std::make_unique<LinalgStrategyDecomposePass>();
+mlir::createLinalgStrategyDecomposePass(LinalgTransformationFilter filter) {
+  return std::make_unique<LinalgStrategyDecomposePass>(filter);
 }
 
 /// Create a LinalgStrategyInterchangePass.

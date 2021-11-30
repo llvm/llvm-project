@@ -929,31 +929,36 @@ namespace {
 /// convolution ops.
 struct DownscaleSizeOneWindowed2DConvolution final
     : public OpRewritePattern<Conv2DNhwcHwcfOp> {
-  using OpRewritePattern::OpRewritePattern;
+  DownscaleSizeOneWindowed2DConvolution(
+      MLIRContext *context,
+      LinalgTransformationFilter filter = LinalgTransformationFilter(),
+      PatternBenefit benefit = 1)
+      : OpRewritePattern<Conv2DNhwcHwcfOp>(context, benefit), filter(filter) {}
 
   LogicalResult matchAndRewrite(linalg::Conv2DNhwcHwcfOp convOp,
                                 PatternRewriter &rewriter) const override {
-    auto linalgOp = cast<linalg::LinalgOp>(*convOp);
-    if (linalgOp.hasBufferSemantics())
+    if (failed(filter.checkAndNotify(rewriter, convOp)))
+      return failure();
+    if (convOp.hasBufferSemantics())
       return failure(); // To be implemented
 
     Value input = convOp.inputs().front();
-    Value filter = convOp.inputs().back();
+    Value kernel = convOp.inputs().back();
     Value output = convOp.outputs().front();
 
     auto inputType = input.getType().dyn_cast<RankedTensorType>();
-    auto filterType = filter.getType().dyn_cast<RankedTensorType>();
+    auto kernelType = kernel.getType().dyn_cast<RankedTensorType>();
     auto outputType = output.getType().dyn_cast<RankedTensorType>();
 
-    auto filterShape = filterType.getShape();
+    auto kernelShape = kernelType.getShape();
     auto outputShape = outputType.getShape();
 
     // Only handle the case where at least one of the window dimensions is
     // of size 1. Other cases can rely on tiling to reduce to such cases.
-    int64_t fhSize = filterShape[0], fwSize = filterShape[1];
+    int64_t khSize = kernelShape[0], kwSize = kernelShape[1];
     int64_t ohSize = outputShape[1], owSize = outputShape[2];
-    bool removeH = (fhSize == 1 && ohSize == 1);
-    bool removeW = (fwSize == 1 && owSize == 1);
+    bool removeH = (khSize == 1 && ohSize == 1);
+    bool removeW = (kwSize == 1 && owSize == 1);
     if (!removeH && !removeW)
       return failure();
 
@@ -962,8 +967,8 @@ struct DownscaleSizeOneWindowed2DConvolution final
     using RTTBuilder = RankedTensorType::Builder;
     RankedTensorType newInputType =
         RTTBuilder(inputType).dropDim((removeH ? 1 : 2));
-    RankedTensorType newFilterType =
-        RTTBuilder(filterType).dropDim((removeH ? 0 : 1));
+    RankedTensorType newKernelType =
+        RTTBuilder(kernelType).dropDim((removeH ? 0 : 1));
     RankedTensorType newOutputType =
         RTTBuilder(outputType).dropDim(removeH ? 1 : 2);
 
@@ -971,8 +976,8 @@ struct DownscaleSizeOneWindowed2DConvolution final
     Location loc = convOp.getLoc();
     Value newInput = tensor::createCanonicalRankReducingExtractSliceOp(
         rewriter, loc, input, newInputType);
-    Value newFilter = tensor::createCanonicalRankReducingExtractSliceOp(
-        rewriter, loc, filter, newFilterType);
+    Value newKernel = tensor::createCanonicalRankReducingExtractSliceOp(
+        rewriter, loc, kernel, newKernelType);
     Value newOutput = tensor::createCanonicalRankReducingExtractSliceOp(
         rewriter, loc, output, newOutputType);
 
@@ -988,7 +993,7 @@ struct DownscaleSizeOneWindowed2DConvolution final
     auto dilationsAttr = rewriter.getI64VectorAttr(dilations);
 
     auto conv1DOp = rewriter.create<linalg::Conv1DNwcWcfOp>(
-        loc, newOutputType, ValueRange{newInput, newFilter},
+        loc, newOutputType, ValueRange{newInput, newKernel},
         ValueRange{newOutput}, stridesAttr, dilationsAttr);
 
     // Insert back.
@@ -996,20 +1001,31 @@ struct DownscaleSizeOneWindowed2DConvolution final
         rewriter, loc, conv1DOp.getResult(0), output);
     rewriter.replaceOp(convOp, inserted);
 
+    filter.replaceLinalgTransformationFilter(rewriter, conv1DOp);
     return success();
   };
+
+private:
+  /// LinalgTransformMarker handles special attribute manipulations.
+  LinalgTransformationFilter filter;
 };
 
 /// Rewrites 2-D depthwise convolution ops with size-1 (w, kw) or (h, kh)
 /// dimensions into 1-D depthwise convolution ops.
 struct DownscaleDepthwiseConv2DNhwcHwcOp final
     : public OpRewritePattern<DepthwiseConv2DNhwcHwcOp> {
-  using OpRewritePattern::OpRewritePattern;
+  DownscaleDepthwiseConv2DNhwcHwcOp(
+      MLIRContext *context,
+      LinalgTransformationFilter filter = LinalgTransformationFilter(),
+      PatternBenefit benefit = 1)
+      : OpRewritePattern<DepthwiseConv2DNhwcHwcOp>(context, benefit),
+        filter(filter) {}
 
   LogicalResult matchAndRewrite(DepthwiseConv2DNhwcHwcOp convOp,
                                 PatternRewriter &rewriter) const override {
-    auto linalgOp = cast<linalg::LinalgOp>(*convOp);
-    if (linalgOp.hasBufferSemantics())
+    if (failed(filter.checkAndNotify(rewriter, convOp)))
+      return failure();
+    if (convOp.hasBufferSemantics())
       return failure(); // To be implemented
 
     Value input = convOp.inputs().front();
@@ -1071,15 +1087,21 @@ struct DownscaleDepthwiseConv2DNhwcHwcOp final
         rewriter, loc, conv1DOp.getResult(0), output);
     rewriter.replaceOp(convOp, inserted);
 
+    filter.replaceLinalgTransformationFilter(rewriter, conv1DOp);
     return success();
   };
+
+private:
+  /// LinalgTransformMarker handles special attribute manipulations.
+  LinalgTransformationFilter filter;
 };
 
 } // namespace
 
-void linalg::populateDecomposeConvolutionPatterns(RewritePatternSet &patterns,
-                                                  PatternBenefit benefit) {
+void linalg::populateDecomposeConvolutionPatterns(
+    RewritePatternSet &patterns, LinalgTransformationFilter filter,
+    PatternBenefit benefit) {
   patterns.add<DownscaleSizeOneWindowed2DConvolution,
-               DownscaleDepthwiseConv2DNhwcHwcOp>(patterns.getContext(),
+               DownscaleDepthwiseConv2DNhwcHwcOp>(patterns.getContext(), filter,
                                                   benefit);
 }
