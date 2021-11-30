@@ -66,8 +66,7 @@ mlir::Type CIRGenTypes::ConvertType(QualType T) {
       break;
 
     case BuiltinType::Bool:
-      // Note that we always return bool as i1 for use as a scalar type.
-      ResultType = Builder.getI1Type();
+      ResultType = ::mlir::cir::BoolType::get(Builder.getContext());
       break;
 
     case BuiltinType::Char_S:

@@ -40,4 +40,4 @@ bool t9(bool b) { return b; }
 // CHECK-CPP: func @t6(%arg0: f32) -> f32 {
 // CHECK-CPP: func @t7(%arg0: f64) -> f64 {
 // CHECK-CPP: func @t8() {
-// CHECK-CPP: func @t9(%arg0: i1) -> i1 {
+// CHECK-CPP: func @t9(%arg0: !cir.bool) -> !cir.bool {

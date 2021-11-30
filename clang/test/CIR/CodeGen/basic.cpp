@@ -36,3 +36,16 @@ int *p2() {
 // CHECK:     %4 = cir.cst(42 : i32) : i32
 // CHECK-NEXT:     %5 = cir.load %1 lvalue_to_rvalue : cir.ptr <!cir.ptr<i32>>, !cir.ptr<i32>
 // CHECK-NEXT:     cir.store %4, %5 : i32, cir.ptr <i32>
+
+void b0() { bool x = true, y = false; }
+
+// CHECK: func @b0() {
+// CHECK: %2 = cir.cst(true) : !cir.bool
+// CHECK: %3 = cir.cst(false) : !cir.bool
+
+void b1(int a) { bool b = a; }
+
+// CHECK: func @b1(%arg0: i32) {
+// CHECK: %2 = cir.load %1 lvalue_to_rvalue : cir.ptr <i32>, i32
+// CHECK: %3 = cir.cast(int_to_bool, %2 : i32), !cir.bool
+// CHECK: cir.store %3, %0 : !cir.bool, cir.ptr <!cir.bool>

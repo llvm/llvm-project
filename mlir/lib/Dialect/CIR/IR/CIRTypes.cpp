@@ -63,8 +63,15 @@ void PointerType::print(mlir::AsmPrinter &printer) const {
   printer << '>';
 }
 
+Type BoolType::parse(mlir::AsmParser &parser) {
+  return get(parser.getContext());
+}
+
+void BoolType::print(mlir::AsmPrinter &printer) const {
+}
+
 //===----------------------------------------------------------------------===//
 // CIR Dialect
 //===----------------------------------------------------------------------===//
 
-void CIRDialect::registerTypes() { addTypes<PointerType>(); }
+void CIRDialect::registerTypes() { addTypes<PointerType, BoolType>(); }
