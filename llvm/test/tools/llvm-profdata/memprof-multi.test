@@ -1,3 +1,5 @@
+REQUIRES: x86_64-linux
+
 The input raw profile test has been generated from the following source code:
 
 ```
