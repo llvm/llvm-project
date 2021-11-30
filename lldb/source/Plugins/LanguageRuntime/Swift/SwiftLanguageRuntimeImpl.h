@@ -15,6 +15,7 @@
 
 #include "SwiftLanguageRuntime.h"
 #include "swift/Reflection/TypeLowering.h"
+#include "llvm/Support/Memory.h"
 
 namespace swift {
 namespace reflection {
@@ -24,6 +25,7 @@ class TypeRef;
 
 namespace lldb_private {
 class Process;
+class LLDBTypeInfoProvider;
 
 /// A full LLDB language runtime backed by the Swift runtime library
 /// in the process.
@@ -177,15 +179,6 @@ public:
 
   bool IsABIStable();
 
-protected:
-  using NativeReflectionContext = swift::reflection::ReflectionContext<
-      swift::External<swift::RuntimeTarget<sizeof(uintptr_t)>>>;
-
-  /// Use the reflection context to build a TypeRef object.
-  const swift::reflection::TypeRef *
-  GetTypeRef(CompilerType type, TypeSystemSwiftTypeRef *module_holder,
-             SwiftASTContext *swift_ast_context);
-
   /// Returned by \ref ForEachSuperClassType. Not every user of \p
   /// ForEachSuperClassType needs all of these. By returning this
   /// object we call into the runtime only when needed.
@@ -194,6 +187,62 @@ protected:
     std::function<const swift::reflection::RecordTypeInfo *()> get_record_type_info;
     std::function<const swift::reflection::TypeRef *()> get_typeref;
   };
+
+  /// An abstract interface to swift::reflection::ReflectionContext
+  /// objects of varying pointer sizes.  This class encapsulates all
+  /// traffic to ReflectionContext and abstracts the detail that
+  /// ReflectionContext is a template that needs to be specialized for
+  /// a specific pointer width.
+  class ReflectionContextInterface {
+  public:
+    /// Return a 32-bit reflection context.
+    static std::unique_ptr<ReflectionContextInterface>
+    CreateReflectionContext32(
+        std::shared_ptr<swift::remote::MemoryReader> reader);
+
+    /// Return a 64-bit reflection context.
+    static std::unique_ptr<ReflectionContextInterface>
+    CreateReflectionContext64(
+        std::shared_ptr<swift::remote::MemoryReader> reader);
+
+    virtual ~ReflectionContextInterface();
+
+    virtual bool addImage(
+        llvm::function_ref<std::pair<swift::remote::RemoteRef<void>, uint64_t>(
+            swift::ReflectionSectionKind)>
+            find_section);
+    virtual bool addImage(swift::remote::RemoteAddress image_start) = 0;
+    virtual bool readELF(swift::remote::RemoteAddress ImageStart,
+                         llvm::Optional<llvm::sys::MemoryBlock> FileBuffer) = 0;
+    virtual const swift::reflection::TypeInfo *
+    getTypeInfo(const swift::reflection::TypeRef *type_ref,
+                swift::remote::TypeInfoProvider *provider) = 0;
+    virtual swift::remote::MemoryReader &getReader() = 0;
+    virtual bool
+    ForEachSuperClassType(LLDBTypeInfoProvider *tip, lldb::addr_t pointer,
+                          std::function<bool(SuperClassType)> fn) = 0;
+    virtual llvm::Optional<std::pair<const swift::reflection::TypeRef *,
+                                     swift::remote::RemoteAddress>>
+    projectExistentialAndUnwrapClass(
+        swift::remote::RemoteAddress existential_addess,
+        const swift::reflection::TypeRef &existential_tr) = 0;
+    virtual const swift::reflection::TypeRef *
+    readTypeFromMetadata(lldb::addr_t metadata_address,
+                         bool skip_artificial_subclasses = false) = 0;
+    virtual const swift::reflection::TypeRef *
+    readTypeFromInstance(lldb::addr_t instance_address,
+                         bool skip_artificial_subclasses = false) = 0;
+    virtual swift::reflection::TypeRefBuilder &getBuilder() = 0;
+    virtual llvm::Optional<bool> isValueInlinedInExistentialContainer(
+        swift::remote::RemoteAddress existential_address) = 0;
+  };
+
+protected:
+  /// Use the reflection context to build a TypeRef object.
+  const swift::reflection::TypeRef *
+  GetTypeRef(CompilerType type, TypeSystemSwiftTypeRef *module_holder,
+             SwiftASTContext *swift_ast_context);
+
   /// If \p instance points to a Swift object, retrieve its
   /// RecordTypeInfo and pass it to the callback \p fn. Repeat the
   /// process with all superclasses. If \p fn returns \p true, early
@@ -301,7 +350,7 @@ private:
   llvm::Optional<lldb::addr_t> GetDynamicExclusivityFlagAddr();
 
   /// Lazily initialize the reflection context. Return \p nullptr on failure.
-  NativeReflectionContext *GetReflectionContext();
+  ReflectionContextInterface *GetReflectionContext();
 
   /// Lazily initialize and return \p m_SwiftNativeNSErrorISA.
   llvm::Optional<lldb::addr_t> GetSwiftNativeNSErrorISA();
@@ -321,7 +370,7 @@ private:
 
   /// Reflection context.
   /// \{
-  std::unique_ptr<NativeReflectionContext> m_reflection_ctx;
+  std::unique_ptr<ReflectionContextInterface> m_reflection_ctx;
 
   /// Record modules added through ModulesDidLoad, which are to be
   /// added to the reflection context once it's being initialized.
