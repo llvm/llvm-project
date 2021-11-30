@@ -9,7 +9,7 @@ define i32 @test_01(i32 %A, i64 %Len, i32 *%array) {
 ; CHECK-NEXT:    br i1 [[TRIPCHECK]], label [[LOOP_PREHEADER:%.*]], label [[ZERO:%.*]]
 ; CHECK:       loop.preheader:
 ; CHECK-NEXT:    [[TMP0:%.*]] = zext i32 [[A:%.*]] to i64
-; CHECK-NEXT:    [[TMP1:%.*]] = add nuw nsw i64 [[TMP0]], 1
+; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[TMP0]], 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp slt i64 [[LEN]], 0
 ; CHECK-NEXT:    [[SMIN:%.*]] = select i1 [[TMP2]], i64 [[LEN]], i64 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = sub i64 [[LEN]], [[SMIN]]

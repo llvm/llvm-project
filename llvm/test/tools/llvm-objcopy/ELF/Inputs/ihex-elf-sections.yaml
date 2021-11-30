@@ -33,7 +33,7 @@ Sections:
   - Name:            .data3
 # The last section not only overlaps segment boundary, but
 # also has linear address which doesn't fit 20 bits. The 
-# following records should be craeted:
+# following records should be created:
 # 'SegmentAddr'(02) record with address 0x0
 # 'ExtendedAddr'(04) record with address 0x100000
 # 'Data'(00) record with 8 bytes of section data

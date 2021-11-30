@@ -1,6 +1,6 @@
 ; UNSUPPORTED: system-windows
 ; REQUIRES: x86-registered-target
-; RUN: llc %s -o %t0.o -filetype=obj -experimental-debug-variable-locations=false
+; RUN: llc %s -o %t0.o -filetype=obj -experimental-debug-variable-locations=true
 ; RUN: %llvm-locstats %t0.o | FileCheck %s --check-prefix=LOCSTATS
 ;
 ; Test the llvm-locstats output.
@@ -11,11 +11,11 @@
 ; LOCSTATS: [30%,40%) 0 0%
 ; LOCSTATS: [40%,50%) 0 0%
 ; LOCSTATS: [50%,60%) 0 0%
-; LOCSTATS: [60%,70%) 3 33%
+; LOCSTATS: [60%,70%) 1 11%
 ; LOCSTATS: [70%,80%) 0 0%
 ; LOCSTATS: [80%,90%) 2 22%
 ; LOCSTATS: [90%,100%) 1 11%
-; LOCSTATS: 100% 2 22%
+; LOCSTATS: 100% 4 44%
 ;
 ; The source code of the test case:
 ;extern int fn2 (int);

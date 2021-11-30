@@ -73,6 +73,8 @@ mlir::getReassociationIndicesForReshape(ShapedType sourceType,
     // definition is folding unit-dimensions with the result being scalar type.
     // So only append the `currIndices` if reassociation map is not empty.
     if (targetDim == targetShape.size()) {
+      while (sourceDim < sourceShape.size())
+        currIndices.push_back(sourceDim++);
       if (!reassociationMap.empty() && !currIndices.empty())
         reassociationMap.back().append(currIndices.begin(), currIndices.end());
       // Break out of the loops. We should be done here.

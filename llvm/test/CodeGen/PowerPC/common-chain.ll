@@ -144,8 +144,8 @@ define i64 @not_perfect_chain_all_same_offset_fail(i8* %p, i64 %offset, i64 %bas
 ; CHECK-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
 ; CHECK-NEXT:    blt cr0, .LBB1_4
 ; CHECK-NEXT:  # %bb.1: # %for.body.preheader
-; CHECK-NEXT:    sldi r7, r4, 2
-; CHECK-NEXT:    sldi r9, r4, 1
+; CHECK-NEXT:    sldi r7, r4, 1
+; CHECK-NEXT:    sldi r9, r4, 2
 ; CHECK-NEXT:    add r5, r3, r5
 ; CHECK-NEXT:    li r3, 0
 ; CHECK-NEXT:    add r8, r4, r7
@@ -155,11 +155,11 @@ define i64 @not_perfect_chain_all_same_offset_fail(i8* %p, i64 %offset, i64 %bas
 ; CHECK-NEXT:  .LBB1_2: # %for.body
 ; CHECK-NEXT:    #
 ; CHECK-NEXT:    ldx r6, r5, r4
-; CHECK-NEXT:    ldx r11, r5, r9
-; CHECK-NEXT:    ldx r12, r5, r10
-; CHECK-NEXT:    ldx r0, r5, r7
+; CHECK-NEXT:    ldx r11, r5, r7
+; CHECK-NEXT:    ldx r12, r5, r8
+; CHECK-NEXT:    ldx r0, r5, r9
 ; CHECK-NEXT:    mulld r6, r11, r6
-; CHECK-NEXT:    ldx r30, r5, r8
+; CHECK-NEXT:    ldx r30, r5, r10
 ; CHECK-NEXT:    addi r5, r5, 1
 ; CHECK-NEXT:    mulld r6, r6, r12
 ; CHECK-NEXT:    mulld r6, r6, r0
@@ -336,20 +336,20 @@ define i64 @no_reuseable_offset_fail(i8* %p, i64 %offset, i64 %base1, i64 %n) {
 ; CHECK-NEXT:    cmpdi r6, 1
 ; CHECK-NEXT:    blt cr0, .LBB3_4
 ; CHECK-NEXT:  # %bb.1: # %for.body.preheader
-; CHECK-NEXT:    sldi r7, r4, 3
+; CHECK-NEXT:    sldi r9, r4, 3
 ; CHECK-NEXT:    mtctr r6
 ; CHECK-NEXT:    add r5, r3, r5
 ; CHECK-NEXT:    li r3, 0
+; CHECK-NEXT:    sldi r7, r4, 1
 ; CHECK-NEXT:    sldi r8, r4, 2
-; CHECK-NEXT:    sub r7, r7, r4
-; CHECK-NEXT:    sldi r4, r4, 1
+; CHECK-NEXT:    sub r4, r9, r4
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB3_2: # %for.body
 ; CHECK-NEXT:    #
 ; CHECK-NEXT:    ld r6, 0(r5)
-; CHECK-NEXT:    ldx r9, r5, r4
+; CHECK-NEXT:    ldx r9, r5, r7
 ; CHECK-NEXT:    ldx r10, r5, r8
-; CHECK-NEXT:    ldx r11, r5, r7
+; CHECK-NEXT:    ldx r11, r5, r4
 ; CHECK-NEXT:    addi r5, r5, 1
 ; CHECK-NEXT:    mulld r6, r9, r6
 ; CHECK-NEXT:    mulld r6, r6, r10
@@ -446,25 +446,25 @@ define i64 @not_same_offset_fail(i8* %p, i64 %offset, i64 %base1, i64 %n) {
 ; CHECK-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
 ; CHECK-NEXT:    blt cr0, .LBB4_3
 ; CHECK-NEXT:  # %bb.1: # %for.body.preheader
-; CHECK-NEXT:    mulli r7, r4, 10
+; CHECK-NEXT:    mulli r11, r4, 10
+; CHECK-NEXT:    sldi r8, r4, 2
 ; CHECK-NEXT:    add r5, r3, r5
-; CHECK-NEXT:    sldi r8, r4, 3
-; CHECK-NEXT:    sub r9, r8, r4
-; CHECK-NEXT:    sldi r3, r4, 2
-; CHECK-NEXT:    mtctr r6
-; CHECK-NEXT:    add r10, r4, r3
-; CHECK-NEXT:    sldi r11, r4, 1
 ; CHECK-NEXT:    li r3, 0
+; CHECK-NEXT:    add r8, r4, r8
+; CHECK-NEXT:    sldi r9, r4, 3
+; CHECK-NEXT:    mtctr r6
+; CHECK-NEXT:    sldi r7, r4, 1
+; CHECK-NEXT:    sub r10, r9, r4
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB4_2: # %for.body
 ; CHECK-NEXT:    #
 ; CHECK-NEXT:    ldx r6, r5, r4
-; CHECK-NEXT:    ldx r12, r5, r11
-; CHECK-NEXT:    ldx r0, r5, r10
-; CHECK-NEXT:    ldx r30, r5, r9
+; CHECK-NEXT:    ldx r12, r5, r7
+; CHECK-NEXT:    ldx r0, r5, r8
+; CHECK-NEXT:    ldx r30, r5, r10
 ; CHECK-NEXT:    mulld r6, r12, r6
-; CHECK-NEXT:    ldx r29, r5, r8
-; CHECK-NEXT:    ldx r28, r5, r7
+; CHECK-NEXT:    ldx r29, r5, r9
+; CHECK-NEXT:    ldx r28, r5, r11
 ; CHECK-NEXT:    addi r5, r5, 1
 ; CHECK-NEXT:    mulld r6, r6, r0
 ; CHECK-NEXT:    mulld r6, r6, r30

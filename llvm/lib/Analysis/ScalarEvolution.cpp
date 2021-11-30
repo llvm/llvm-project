@@ -4095,14 +4095,13 @@ void ScalarEvolution::eraseValueFromMap(Value *V) {
 }
 
 void ScalarEvolution::insertValueToMap(Value *V, const SCEV *S) {
+  // A recursive query may have already computed the SCEV. It should be
+  // equivalent, but may not necessarily be exactly the same, e.g. due to lazily
+  // inferred nowrap flags.
   auto It = ValueExprMap.find_as(V);
   if (It == ValueExprMap.end()) {
     ValueExprMap.insert({SCEVCallbackVH(V, this), S});
     ExprValueMap[S].insert({V, nullptr});
-  } else {
-    // A recursive query may have already computed the SCEV. It should have
-    // arrived at the same value.
-    assert(It->second == S);
   }
 }
 

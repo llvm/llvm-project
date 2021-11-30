@@ -1,5 +1,5 @@
 # RUN: llc -run-pass livedebugvalues -march=x86-64 -o - %s \
-# RUN:  -experimental-debug-variable-locations=false | FileCheck %s
+# RUN:  -experimental-debug-variable-locations=true | FileCheck %s
 
 # Generated from the following source with:
 # clang -g -mllvm -stop-before=livedebugvalues -S -O2 test.c -o test.mir
