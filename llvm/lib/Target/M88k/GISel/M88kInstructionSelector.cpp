@@ -74,10 +74,61 @@ M88kInstructionSelector::M88kInstructionSelector(
 {
 }
 
-bool M88kInstructionSelector::select(MachineInstr &I) {
-  // Certain non-generic instructions also need some special handling.
-  if (!isPreISelGenericOpcode(I.getOpcode()))
+static const TargetRegisterClass *guessRegClass(unsigned Reg,
+                                                MachineRegisterInfo &MRI,
+                                                const TargetRegisterInfo &TRI,
+                                                const RegisterBankInfo &RBI) {
+  const RegisterBank *RegBank = RBI.getRegBank(Reg, MRI, TRI);
+  assert(RegBank && "Can't get reg bank for virtual register");
+
+  const unsigned Size = MRI.getType(Reg).getSizeInBits();
+  assert((RegBank->getID() == M88k::GRRegBankID ||
+          RegBank->getID() == M88k::XRRegBankID) &&
+         "Unsupported reg bank");
+
+  if (RegBank->getID() == M88k::XRRegBankID)
+    return &M88k::XRRCRegClass;
+
+  if (Size == 64)
+    return &M88k::GPR64RCRegClass;
+  return &M88k::GPRRCRegClass;
+}
+
+static bool selectCopy(MachineInstr &I, const TargetInstrInfo &TII,
+                       MachineRegisterInfo &MRI, const TargetRegisterInfo &TRI,
+                       const RegisterBankInfo &RBI) {
+  Register DstReg = I.getOperand(0).getReg();
+  if (Register::isPhysicalRegister(DstReg))
     return true;
+
+  const TargetRegisterClass *RC = guessRegClass(DstReg, MRI, TRI, RBI);
+
+  // No need to constrain SrcReg. It will get constrained when
+  // we hit another of its uses or its defs.
+  // Copies do not have constraints.
+  if (!RBI.constrainGenericRegister(DstReg, *RC, MRI)) {
+    LLVM_DEBUG(dbgs() << "Failed to constrain " << TII.getName(I.getOpcode())
+                      << " operand\n");
+    return false;
+  }
+  return true;
+}
+
+bool M88kInstructionSelector::select(MachineInstr &I) {
+  assert(I.getParent() && "Instruction should be in a basic block!");
+  assert(I.getParent()->getParent() && "Instruction should be in a function!");
+
+  auto &MBB = *I.getParent();
+  auto &MF = *MBB.getParent();
+  auto &MRI = MF.getRegInfo();
+
+  // Certain non-generic instructions also need some special handling.
+  if (!isPreISelGenericOpcode(I.getOpcode())) {
+    if (I.isCopy())
+      return selectCopy(I, TII, MRI, TRI, RBI);
+
+    return true;
+  }
 
   if (selectImpl(I, *CoverageInfo))
     return true;
