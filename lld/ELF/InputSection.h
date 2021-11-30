@@ -352,8 +352,6 @@ public:
   // beginning of the output section.
   template <class ELFT> void writeTo(uint8_t *buf);
 
-  uint64_t getOffset(uint64_t offset) const { return outSecOff + offset; }
-
   OutputSection *getParent() const;
 
   // This variable has two usages. Initially, it represents an index in the
