@@ -165,11 +165,12 @@ public:
     Function *extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
                                 ValueSet &Inputs, ValueSet &Outputs, bool KeepOldBlocks = false);
 
-    Function *extractCodeRegionByCopy(const CodeExtractorAnalysisCache &CEAC,
+   void extractCodeRegionByCopy(const CodeExtractorAnalysisCache &CEAC,
         ValueSet &Inputs, ValueSet &Outputs, 
       const   BlockFrequency& EntryFreq,
         const  DenseMap<BasicBlock *, BlockFrequency> &ExitWeights,  const   SmallPtrSet<BasicBlock *, 1> &ExitBlocks,
-       const  ValueSet &SinkingCands,const ValueSet & HoistingCands, BasicBlock *CommonExit,   Function *newFunction, 
+       const  ValueSet &SinkingCands,const ValueSet & HoistingCands, BasicBlock *CommonExit,  
+        Function *oldFunction,   Function *newFunction, 
         BasicBlock *   codeReplacer,
         BasicBlock *  NewEntry,
         BasicBlock *  newRootNode  );
@@ -247,11 +248,6 @@ public:
     void severSplitPHINodesOfExits(const SmallPtrSetImpl<BasicBlock *> &Exits);
     void splitReturnBlocks();
 
-    Function *constructFunction(const ValueSet &inputs,
-                                const ValueSet &outputs,
-                                BasicBlock *header,
-                                BasicBlock *&newRootNode, BasicBlock *newHeader,
-                                Function *oldFunction, Module *M,   bool KeepOldBlocks,    ValueToValueMapTy &VMap);
 
     void handleParams( 
         Function *oldFunction, Function *newFunction,

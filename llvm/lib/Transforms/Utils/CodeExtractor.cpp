@@ -1617,7 +1617,7 @@ void CodeExtractor::analyzeBeforeExtraction(
     BlockFrequency& EntryFreq,  
     DenseMap<BasicBlock *, BlockFrequency> &ExitWeights,     SmallPtrSet<BasicBlock *, 1> &ExitBlocks) {
     BasicBlock *header = *Blocks.begin();
-    Function *oldFunction = header->getParent();
+   // Function *oldFunction = header->getParent();
 
     // Calculate the entry frequency of the new function before we change the root
     //   block.
@@ -1652,8 +1652,8 @@ void CodeExtractor::analyzeBeforeExtraction(
 
 
 void CodeExtractor::prepareForExtraction(const CodeExtractorAnalysisCache &CEAC, ValueSet &inputs, ValueSet &outputs) {
-    BasicBlock *header = *Blocks.begin();
-    Function *oldFunction = header->getParent();
+  //  BasicBlock *header = *Blocks.begin();
+  //  Function *oldFunction = header->getParent();
 
     // If we have any return instructions in the region, split those blocks so
     // that the return is not in the region.
@@ -1761,13 +1761,13 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
 
 
     // Construct new function based on inputs/outputs & add allocas for all defs.
-    Function *newFunction = constructFunction2(inputs, outputs, header,   oldFunction, oldFunction->getParent());
+    Function *newFunction = constructFunction2(inputs, outputs, header, oldFunction, oldFunction->getParent());
 
 
     // The new function needs a root node because other nodes can branch to the
     // head of the region, but the entry node of a function cannot have preds.
     BasicBlock *newFuncRoot = BasicBlock::Create(header->getContext(), "newFuncRoot", newFunction);
-    BasicBlock *   newRootNode=newFuncRoot;
+    BasicBlock *newRootNode=newFuncRoot;
 
 
 
@@ -1828,7 +1828,7 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
 
 
     if (KeepOldBlocks) {
-        extractCodeRegionByCopy(CEAC, inputs, outputs, EntryFreq, ExitWeights, ExitBlocks, SinkingCands, HoistingCands, CommonExit, newFunction, codeReplacer, nullptr, newRootNode);
+        extractCodeRegionByCopy(CEAC, inputs, outputs, EntryFreq, ExitWeights, ExitBlocks, SinkingCands, HoistingCands, CommonExit, oldFunction, newFunction, codeReplacer, nullptr, newRootNode);
     } else {
         // Transforms/HotColdSplit/stale-assume-in-original-func.ll
         // TODO: remove assumes only after moving
@@ -1845,14 +1845,12 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
         }
 
 
-
-
         auto* BranchI = BranchInst::Create(header, newFuncRoot);
         applyFirstDebugLoc(oldFunction, Blocks.getArrayRef(), BranchI);
         // newFuncRoot->getInstList().push_back(BranchI);
 
 
-
+        // TODO: ByCopy
          // Now sink all instructions which only have non-phi uses inside the region.
          // Group the allocas at the start of the block, so that any bitcast uses of
          // the allocas are well-defined.
@@ -1879,15 +1877,13 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
                 cast<Instruction>(II)->moveBefore(TI);
         }
 
+        // TODO: ByCopy
         // Collect objects which are inputs to the extraction region and also
         // referenced by lifetime start markers within it. The effects of these
         // markers must be replicated in the calling function to prevent the stack
         // coloring pass from merging slots which store input objects.
         ValueSet LifetimesStart;
         eraseLifetimeMarkersOnInputs(Blocks, SinkingCands, LifetimesStart);
-
-
-
 
 
 
@@ -1921,20 +1917,24 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
 
 
 
-
         CallInst* TheCall = emitCallAndSwitchStatement(newFunction, codeReplacer, inputs, outputs, false, VMap);
 
 
         moveCodeToFunction(newFunction);
 
+
+        // TODO: ByCopy
         // Replicate the effects of any lifetime start/end markers which referenced
         // input objects in the extraction region by placing markers around the call.
         insertLifetimeMarkersSurroundingCall(
             oldFunction->getParent(), LifetimesStart.getArrayRef(), {}, TheCall);
 
+
+        // TODO: ByCopy
         // Update the branch weights for the exit block.
         if (BFI && NumExitBlocks > 1)
             calculateNewCallTerminatorWeights(codeReplacer, ExitWeights, BPI);
+
 
         // Loop over all of the PHI nodes in the header and exit blocks, and change
         // any references to the old incoming edge to be the new incoming edge.
@@ -1990,15 +1990,16 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
 }
 
 
-Function *CodeExtractor::extractCodeRegionByCopy(const CodeExtractorAnalysisCache &CEAC,  ValueSet &inputs, ValueSet &outputs,const  BlockFrequency& EntryFreq,
+void CodeExtractor::extractCodeRegionByCopy(const CodeExtractorAnalysisCache &CEAC,  ValueSet &inputs, ValueSet &outputs,const  BlockFrequency& EntryFreq,
     const  DenseMap<BasicBlock *, BlockFrequency> &ExitWeights,  
     const   SmallPtrSet<BasicBlock *, 1> &ExitBlocks,
-    const  ValueSet &SinkingCands,const ValueSet & HoistingCands, BasicBlock *CommonExit,Function *newFunction, 
+    const  ValueSet &SinkingCands,const ValueSet & HoistingCands, BasicBlock *CommonExit,
+    Function *oldFunction,  Function *newFunction, 
     BasicBlock *   codeReplacer,
     BasicBlock *  NewEntry,   BasicBlock *  newRootNode ) {
     // Assumption: this is a single-entry code region, and the header is the first block in the region.
     BasicBlock *header = *Blocks.begin();
-    Function *oldFunction = header->getParent();
+
 
 
 
@@ -2395,12 +2396,12 @@ Function *CodeExtractor::extractCodeRegionByCopy(const CodeExtractorAnalysisCach
             // allocas output values are stored in are only in-use in the codeRepl block.
             insertLifetimeMarkersSurroundingCall(M, ReloadOutputs, ReloadOutputs, call);
 
-       auto TheCall =call;
+      // auto TheCall =call;
 #endif
 
         // Function *oldFunc =oldFunction;
-        Function::BasicBlockListType &oldBlocks = oldFunction->getBasicBlockList();
-        Function::BasicBlockListType &newBlocks = newFunction->getBasicBlockList();
+      //  Function::BasicBlockListType &oldBlocks = oldFunction->getBasicBlockList();
+      //  Function::BasicBlockListType &newBlocks = newFunction->getBasicBlockList();
 
 #if 0
         DebugInfoFinder DIFinder;
@@ -2461,10 +2462,8 @@ Function *CodeExtractor::extractCodeRegionByCopy(const CodeExtractorAnalysisCach
         assert(HeaderCopy);
         auto *BranchI2 = BranchInst::Create(header, newRootNode);
         applyFirstDebugLoc(oldFunction, Blocks.getArrayRef(), BranchI2);
-
-
-    return newFunction;
 }
+
 
 
 bool CodeExtractor::verifyAssumptionCache(const Function &OldFunc,
