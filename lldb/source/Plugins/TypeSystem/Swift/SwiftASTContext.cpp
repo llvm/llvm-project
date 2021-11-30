@@ -5409,6 +5409,15 @@ bool SwiftASTContext::IsPossibleDynamicType(opaque_compiler_type_t type,
   if (can_type == GetASTContext()->TheBridgeObjectType)
     return true;
 
+  if (auto *bound_type =
+          llvm::dyn_cast<swift::BoundGenericType>(can_type.getPointer())) {
+    for (auto generic_arg : bound_type->getGenericArgs()) {
+      if (IsPossibleDynamicType(generic_arg.getPointer(), dynamic_pointee_type,
+                                check_cplusplus, check_objc))
+        return true;
+    }
+  }
+
   if (dynamic_pointee_type)
     dynamic_pointee_type->Clear();
   return false;
