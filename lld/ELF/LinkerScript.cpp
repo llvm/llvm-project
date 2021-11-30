@@ -900,22 +900,6 @@ void LinkerScript::diagnoseOrphanHandling() const {
   }
 }
 
-void LinkerScript::switchTo(OutputSection *sec) {
-  ctx->outSec = sec;
-
-  const uint64_t pos = dot;
-  if (sec->addrExpr && script->hasSectionsCommand) {
-    // The alignment is ignored.
-    ctx->outSec->addr = pos;
-  } else {
-    // ctx->outSec->alignment is the max of ALIGN and the maximum of input
-    // section alignments.
-    dot = alignTo(dot, ctx->outSec->alignment);
-    ctx->outSec->addr = dot;
-    expandMemoryRegions(dot - pos);
-  }
-}
-
 // This function searches for a memory region to place the given output
 // section in. If found, a pointer to the appropriate memory region is
 // returned in the first member of the pair. Otherwise, a nullptr is returned.
@@ -1004,7 +988,18 @@ void LinkerScript::assignOffsets(OutputSection *sec) {
                          sec->name);
   }
 
-  switchTo(sec);
+  ctx->outSec = sec;
+  if (sec->addrExpr && script->hasSectionsCommand) {
+    // The alignment is ignored.
+    ctx->outSec->addr = dot;
+  } else {
+    // ctx->outSec->alignment is the max of ALIGN and the maximum of input
+    // section alignments.
+    const uint64_t pos = dot;
+    dot = alignTo(dot, ctx->outSec->alignment);
+    ctx->outSec->addr = dot;
+    expandMemoryRegions(dot - pos);
+  }
 
   // ctx->lmaOffset is LMA minus VMA. If LMA is explicitly specified via AT() or
   // AT>, recompute ctx->lmaOffset; otherwise, if both previous/current LMA
@@ -1316,7 +1311,7 @@ const Defined *LinkerScript::assignAddresses() {
   AddressState state;
   ctx = &state;
   errorOnMissingSection = true;
-  switchTo(aether);
+  ctx->outSec = aether;
 
   SymbolAssignmentMap oldValues = getSymbolAssignmentValues(sectionCommands);
   for (SectionCommand *cmd : sectionCommands) {
