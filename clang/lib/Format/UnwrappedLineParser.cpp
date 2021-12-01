@@ -3388,6 +3388,20 @@ void UnwrappedLineParser::readToken(int LevelDifference) {
   do {
     FormatTok = Tokens->getNextToken();
     assert(FormatTok);
+    while (FormatTok->getType() == TT_ConflictStart ||
+           FormatTok->getType() == TT_ConflictEnd ||
+           FormatTok->getType() == TT_ConflictAlternative) {
+      if (FormatTok->getType() == TT_ConflictStart) {
+        conditionalCompilationStart(/*Unreachable=*/false);
+      } else if (FormatTok->getType() == TT_ConflictAlternative) {
+        conditionalCompilationAlternative();
+      } else if (FormatTok->getType() == TT_ConflictEnd) {
+        conditionalCompilationEnd();
+      }
+      FormatTok = Tokens->getNextToken();
+      FormatTok->MustBreakBefore = true;
+    }
+
     while (!Line->InPPDirective && FormatTok->Tok.is(tok::hash) &&
            (FormatTok->HasUnescapedNewline || FormatTok->IsFirst)) {
       distributeComments(Comments, FormatTok);
@@ -3408,19 +3422,6 @@ void UnwrappedLineParser::readToken(int LevelDifference) {
         Line->Level += PPBranchLevel;
       flushComments(isOnNewLine(*FormatTok));
       parsePPDirective();
-    }
-    while (FormatTok->getType() == TT_ConflictStart ||
-           FormatTok->getType() == TT_ConflictEnd ||
-           FormatTok->getType() == TT_ConflictAlternative) {
-      if (FormatTok->getType() == TT_ConflictStart) {
-        conditionalCompilationStart(/*Unreachable=*/false);
-      } else if (FormatTok->getType() == TT_ConflictAlternative) {
-        conditionalCompilationAlternative();
-      } else if (FormatTok->getType() == TT_ConflictEnd) {
-        conditionalCompilationEnd();
-      }
-      FormatTok = Tokens->getNextToken();
-      FormatTok->MustBreakBefore = true;
     }
 
     if (!PPStack.empty() && (PPStack.back().Kind == PP_Unreachable) &&
