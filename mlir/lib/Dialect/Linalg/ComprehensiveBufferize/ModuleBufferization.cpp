@@ -447,14 +447,6 @@ struct CallOpInterface
     return true;
   }
 
-  bool bufferizesToMemoryWrite(Operation *op, OpOperand &opOperand) const {
-    // CallOpInterface alone doesn't bufferize to a memory write, one of the
-    // uses of the matching bbArg may. It is the responsibility of the caller to
-    // inspect bbArgs. In the absence of a BufferizationAliasInfo, we need to be
-    // conservative.
-    return true;
-  }
-
   SmallVector<OpOperand *> getAliasingOpOperand(Operation *op,
                                                 OpResult opResult) const {
     // TODO: Can we do better?

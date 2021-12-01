@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "ProfileGenerator.h"
+#include "ErrorHandling.h"
 #include "ProfiledBinary.h"
 #include "llvm/ProfileData/ProfileCommon.h"
 #include <float.h>
@@ -93,16 +94,22 @@ int32_t CSProfileGenerator::MaxCompressionSize = -1;
 
 int CSProfileGenerator::MaxContextDepth = -1;
 
+bool ProfileGeneratorBase::UseFSDiscriminator = false;
+
 std::unique_ptr<ProfileGeneratorBase>
 ProfileGeneratorBase::create(ProfiledBinary *Binary,
                              const ContextSampleCounterMap &SampleCounters,
                              bool ProfileIsCS) {
   std::unique_ptr<ProfileGeneratorBase> Generator;
   if (ProfileIsCS) {
+    if (Binary->useFSDiscriminator())
+      exitWithError("FS discriminator is not supported in CS profile.");
     Generator.reset(new CSProfileGenerator(Binary, SampleCounters));
   } else {
     Generator.reset(new ProfileGenerator(Binary, SampleCounters));
   }
+  ProfileGeneratorBase::UseFSDiscriminator = Binary->useFSDiscriminator();
+  FunctionSamples::ProfileIsFS = Binary->useFSDiscriminator();
 
   return Generator;
 }
@@ -835,12 +842,12 @@ void CSProfileGenerator::populateBodySamplesWithProbes(
       FunctionProfile.addHeadSamples(Count);
       // Look up for the caller's function profile
       const auto *InlinerDesc = Binary->getInlinerDescForProbe(Probe);
-      if (InlinerDesc != nullptr) {
+      SampleContextFrames CalleeContextId =
+          FunctionProfile.getContext().getContextFrames();
+      if (InlinerDesc != nullptr && CalleeContextId.size() > 1) {
         // Since the context id will be compressed, we have to use callee's
         // context id to infer caller's context id to ensure they share the
         // same context prefix.
-        SampleContextFrames CalleeContextId =
-            FunctionProfile.getContext().getContextFrames();
         SampleContextFrameVector CallerContextId;
         SampleContextFrame &&CallerLeafFrameLoc =
             getCallerContext(CalleeContextId, CallerContextId);

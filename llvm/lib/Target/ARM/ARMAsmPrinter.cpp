@@ -763,6 +763,32 @@ void ARMAsmPrinter::emitAttributes() {
         int EnumBuildAttr = EnumWidth == 1 ? 1 : 2;
         ATS.emitAttribute(ARMBuildAttrs::ABI_enum_size, EnumBuildAttr);
       }
+
+      auto *PACValue = mdconst::extract_or_null<ConstantInt>(
+          SourceModule->getModuleFlag("sign-return-address"));
+      if (PACValue && PACValue->getZExtValue() == 1) {
+        // If "+pacbti" is used as an architecture extension,
+        // Tag_PAC_extension is emitted in
+        // ARMTargetStreamer::emitTargetAttributes().
+        if (!STI.hasPACBTI()) {
+          ATS.emitAttribute(ARMBuildAttrs::PAC_extension,
+                            ARMBuildAttrs::AllowPACInNOPSpace);
+        }
+        ATS.emitAttribute(ARMBuildAttrs::PACRET_use, ARMBuildAttrs::PACRETUsed);
+      }
+
+      auto *BTIValue = mdconst::extract_or_null<ConstantInt>(
+          SourceModule->getModuleFlag("branch-target-enforcement"));
+      if (BTIValue && BTIValue->getZExtValue() == 1) {
+        // If "+pacbti" is used as an architecture extension,
+        // Tag_BTI_extension is emitted in
+        // ARMTargetStreamer::emitTargetAttributes().
+        if (!STI.hasPACBTI()) {
+          ATS.emitAttribute(ARMBuildAttrs::BTI_extension,
+                            ARMBuildAttrs::AllowBTIInNOPSpace);
+        }
+        ATS.emitAttribute(ARMBuildAttrs::BTI_use, ARMBuildAttrs::BTIUsed);
+      }
     }
   }
 
@@ -1535,17 +1561,17 @@ void ARMAsmPrinter::emitInstruction(const MachineInstr *MI) {
       MCInst.addExpr(BranchTarget);
     }
 
-      if (Opc == ARM::t2BFic) {
-        const MCExpr *ElseLabel = MCSymbolRefExpr::create(
-            getBFLabel(DL.getPrivateGlobalPrefix(), getFunctionNumber(),
-                       MI->getOperand(2).getIndex(), OutContext),
-            OutContext);
-        MCInst.addExpr(ElseLabel);
-        MCInst.addImm(MI->getOperand(3).getImm());
-      } else {
-        MCInst.addImm(MI->getOperand(2).getImm())
-            .addReg(MI->getOperand(3).getReg());
-      }
+    if (Opc == ARM::t2BFic) {
+      const MCExpr *ElseLabel = MCSymbolRefExpr::create(
+          getBFLabel(DL.getPrivateGlobalPrefix(), getFunctionNumber(),
+                     MI->getOperand(2).getIndex(), OutContext),
+          OutContext);
+      MCInst.addExpr(ElseLabel);
+      MCInst.addImm(MI->getOperand(3).getImm());
+    } else {
+      MCInst.addImm(MI->getOperand(2).getImm())
+          .addReg(MI->getOperand(3).getReg());
+    }
 
     EmitToStreamer(*OutStreamer, MCInst);
     return;

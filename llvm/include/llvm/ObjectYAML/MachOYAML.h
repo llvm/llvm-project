@@ -121,6 +121,7 @@ struct LinkEditData {
   MachOYAML::ExportEntry ExportTrie;
   std::vector<NListEntry> NameList;
   std::vector<StringRef> StringTable;
+  std::vector<yaml::Hex32> IndirectSymbols;
 
   bool isEmpty() const;
 };

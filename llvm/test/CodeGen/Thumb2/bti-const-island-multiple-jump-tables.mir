@@ -1,0 +1,311 @@
+# RUN: llc -verify-machineinstrs -run-pass arm-cp-islands %s -o - | FileCheck %s
+--- |
+  target datalayout = "e-m:e-p:32:32-Fi8-i64:64-v128:64:128-a:0:32-n32-S64"
+  target triple = "thumbv8.1m.main-arm-unknown-eabi"
+
+  ; Tests adjustments to jump tables, made by the ARM Constant Islands pass
+  ; int g(int), h(int);
+  ; void g0(int), g1(int), g2(int);
+  ; void h0(int), h1(int), h2(int);
+  ;
+  ; void f(int x) {
+  ;   for (;;) {
+  ;   up:
+  ;     x = g(x);
+  ;     switch (x) {
+  ;     case 0:
+  ;       g0(x);
+  ;       break;
+  ;     case 1:
+  ;       g1(x);
+  ;       break;
+  ;     case 2:
+  ;       g2(x);
+  ;       break;
+  ;     case 3:
+  ;       break;
+  ;     case 4:
+  ;       for (;;) {
+  ;         x = h(x);
+  ;         switch (x) {
+  ;         case 0:
+  ;           h0(x);
+  ;           break;
+  ;         case 1:
+  ;           h1(x);
+  ;           break;
+  ;         case 2:
+  ;           h2(x);
+  ;           break;
+  ;         case 3:
+  ;           goto up;
+  ;         case 4:
+  ;           return;
+  ;         }
+  ;       }
+  ;     }
+  ;   }
+  ; }
+
+  define hidden void @f(i32 %x) local_unnamed_addr #0 {
+  entry:
+    br label %up
+
+  up:                                               ; preds = %up, %sw.bb, %sw.bb1, %sw.bb2, %up.backedge.loopexit, %entry
+    %x.addr.1 = phi i32 [ %x, %entry ], [ %call, %up ], [ %call, %sw.bb2 ], [ %call, %sw.bb1 ], [ %call, %sw.bb ], [ %call5, %up.backedge.loopexit ]
+    %call = tail call i32 @g(i32 %x.addr.1)
+    switch i32 %call, label %up [
+      i32 0, label %sw.bb
+      i32 1, label %sw.bb1
+      i32 2, label %sw.bb2
+      i32 4, label %for.cond4.preheader
+    ]
+
+  for.cond4.preheader:                              ; preds = %up
+    br label %for.cond4
+
+  up.backedge.loopexit:                             ; preds = %for.cond4
+    br label %up
+
+  sw.bb:                                            ; preds = %up
+    tail call void @g0(i32 0)
+    br label %up
+
+  sw.bb1:                                           ; preds = %up
+    tail call void @g1(i32 1)
+    br label %up
+
+  sw.bb2:                                           ; preds = %up
+    tail call void @g2(i32 2)
+    br label %up
+
+  for.cond4:                                        ; preds = %for.cond4, %sw.bb6, %sw.bb7, %sw.bb8, %for.cond4.preheader
+    %x.addr.2 = phi i32 [ %call, %for.cond4.preheader ], [ %call5, %sw.bb8 ], [ %call5, %sw.bb7 ], [ %call5, %sw.bb6 ], [ %call5, %for.cond4 ]
+    %call5 = tail call i32 @h(i32 %x.addr.2)
+    switch i32 %call5, label %for.cond4 [
+      i32 0, label %sw.bb6
+      i32 1, label %sw.bb7
+      i32 2, label %sw.bb8
+      i32 3, label %up.backedge.loopexit
+      i32 4, label %sw.bb10
+    ]
+
+  sw.bb6:                                           ; preds = %for.cond4
+    tail call void @h0(i32 0)
+    br label %for.cond4
+
+  sw.bb7:                                           ; preds = %for.cond4
+    tail call void @h1(i32 1)
+    br label %for.cond4
+
+  sw.bb8:                                           ; preds = %for.cond4
+    tail call void @h2(i32 2)
+    br label %for.cond4
+
+  sw.bb10:                                          ; preds = %for.cond4
+    ret void
+  }
+
+  declare dso_local i32 @g(i32)
+
+  declare dso_local void @g0(i32)
+
+  declare dso_local void @g1(i32)
+
+  declare dso_local void @g2(i32)
+
+  declare dso_local i32 @h(i32)
+
+  declare dso_local void @h0(i32)
+
+  declare dso_local void @h1(i32)
+
+  declare dso_local void @h2(i32)
+
+  attributes #0 = { nounwind "disable-tail-calls"="false" "frame-pointer"="none" "no-jump-tables"="false" "target-cpu"="generic" "target-features"="+armv8.1-m.main,+fp-armv8d16sp,+fp16,+fullfp16,+hwdiv,+lob,+ras,+thumb-mode,+vfp2sp,+vfp3d16sp,+vfp4d16sp" }
+
+  !llvm.module.flags = !{!0}
+
+  !0 = !{i32 1, !"branch-target-enforcement", i32 1}
+
+...
+---
+name:            f
+alignment:       4
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+failedISel:      false
+tracksRegLiveness: true
+hasWinCFI:       false
+registers:       []
+liveins:
+  - { reg: '$r0', virtual-reg: '' }
+frameInfo:
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       8
+  offsetAdjustment: 0
+  maxAlignment:    4
+  adjustsStack:    true
+  hasCalls:        true
+  stackProtector:  ''
+  maxCallFrameSize: 0
+  cvBytesOfCalleeSavedRegisters: 0
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+  localFrameSize:  0
+  savePoint:       ''
+  restorePoint:    ''
+fixedStack:      []
+stack:
+  - { id: 0, name: '', type: spill-slot, offset: -4, size: 4, alignment: 4,
+      stack-id: default, callee-saved-register: '$lr', callee-saved-restored: false,
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 1, name: '', type: spill-slot, offset: -8, size: 4, alignment: 4,
+      stack-id: default, callee-saved-register: '$r4', callee-saved-restored: true,
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+callSites:       []
+debugValueSubstitutions: []
+constants:       []
+machineFunctionInfo: {}
+jumpTable:
+  kind:            inline
+  entries:
+    - id:              0
+      blocks:          [ '%bb.3', '%bb.4', '%bb.5', '%bb.1', '%bb.7' ]
+    - id:              1
+      blocks:          [ '%bb.6', '%bb.9', '%bb.10', '%bb.1', '%bb.11' ]
+
+# %bb.4 and %bb.10 redirect to %bb1, the rest are just renumbered
+# CHECK-LABEL: jumpTable:
+# CHECK-NEXT:  kind:            inline
+# CHECK-NEXT:  entries:
+# CHECK-NEXT:    - id:              0
+# CHECK-NEXT:      blocks:          [ '%bb.6', '%bb.14', '%bb.5', '%bb.4', '%bb.7' ]
+# CHECK-NEXT:    - id:              1
+# CHECK-NEXT:      blocks:          [ '%bb.11', '%bb.12', '%bb.13', '%bb.10', '%bb.15' ]
+
+# %bb.1 loses the BTI
+# CHECK-LABEL: bb.1.up (align 4):
+# CHECK-NOT:   t2BTI
+# CHECK-LABEL: bb.2.up:
+
+# CHECK-LABEL: bb.4.up:
+# CHECK:       t2BTI
+# CHECK:       tB %bb.1
+
+# CHECK-LABEL: bb.10.for.cond4:
+# CHECK:     t2BTI
+# CHECK:     tB %bb.1
+body:             |
+  bb.0.entry:
+    successors: %bb.1(0x80000000)
+    liveins: $r0, $r4, $lr
+
+    t2BTI
+    frame-setup tPUSH 14 /* CC::al */, $noreg, killed $r4, killed $lr, implicit-def $sp, implicit $sp
+    frame-setup CFI_INSTRUCTION def_cfa_offset 8
+    frame-setup CFI_INSTRUCTION offset $lr, -4
+    frame-setup CFI_INSTRUCTION offset $r4, -8
+    $r4 = tMOVr killed $r0, 14 /* CC::al */, $noreg
+    t2B %bb.1, 14 /* CC::al */, $noreg
+
+  bb.5.sw.bb2:
+    successors: %bb.1(0x80000000)
+    liveins: $r4
+
+    t2BTI
+    $r0, dead $cpsr = tMOVi8 2, 14 /* CC::al */, $noreg
+    tBL 14 /* CC::al */, $noreg, @g2, csr_aapcs, implicit-def dead $lr, implicit $sp, implicit killed $r0, implicit-def $sp
+
+  bb.1.up (align 4):
+    successors: %bb.1(0x20000000), %bb.2(0x60000000)
+    liveins: $r4
+
+    t2BTI
+    $r0 = tMOVr killed $r4, 14 /* CC::al */, $noreg
+    tBL 14 /* CC::al */, $noreg, @g, csr_aapcs, implicit-def dead $lr, implicit $sp, implicit killed $r0, implicit-def $sp, implicit-def $r0
+    $r4 = tMOVr $r0, 14 /* CC::al */, $noreg
+    tCMPi8 killed $r0, 4, 14 /* CC::al */, $noreg, implicit-def $cpsr
+    t2Bcc %bb.1, 8 /* CC::hi */, killed $cpsr
+  bb.2.up:
+    successors: %bb.3(0x15555555), %bb.4(0x15555555), %bb.5(0x15555555), %bb.1(0x2aaaaaab), %bb.7(0x15555555)
+    liveins: $r4
+
+    renamable $r0 = t2LEApcrelJT %jump-table.0, 14 /* CC::al */, $noreg
+    renamable $r0 = t2ADDrs killed renamable $r0, renamable $r4, 18, 14 /* CC::al */, $noreg, $noreg
+    t2BR_JT killed renamable $r0, renamable $r4, %jump-table.0
+
+  bb.3.sw.bb:
+    successors: %bb.1(0x80000000)
+    liveins: $r4
+
+    t2BTI
+    $r0, dead $cpsr = tMOVi8 0, 14 /* CC::al */, $noreg
+    tBL 14 /* CC::al */, $noreg, @g0, csr_aapcs, implicit-def dead $lr, implicit $sp, implicit killed $r0, implicit-def $sp
+    t2B %bb.1, 14 /* CC::al */, $noreg
+
+  bb.6.sw.bb6:
+    successors: %bb.7(0x80000000)
+    liveins: $r4
+
+    t2BTI
+    $r0, dead $cpsr = tMOVi8 0, 14 /* CC::al */, $noreg
+    tBL 14 /* CC::al */, $noreg, @h0, csr_aapcs, implicit-def dead $lr, implicit $sp, implicit killed $r0, implicit-def $sp
+
+  bb.7.for.cond4 (align 4):
+    successors: %bb.7(0x3efbefc0), %bb.8(0x41041040)
+    liveins: $r4
+
+    t2BTI
+    $r0 = tMOVr killed $r4, 14 /* CC::al */, $noreg
+    tBL 14 /* CC::al */, $noreg, @h, csr_aapcs, implicit-def dead $lr, implicit $sp, implicit killed $r0, implicit-def $sp, implicit-def $r0
+    $r4 = tMOVr $r0, 14 /* CC::al */, $noreg
+    tCMPi8 killed $r0, 4, 14 /* CC::al */, $noreg, implicit-def $cpsr
+    t2Bcc %bb.7, 8 /* CC::hi */, killed $cpsr
+
+  bb.8.for.cond4:
+    successors: %bb.6(0x29555555), %bb.9(0x29555555), %bb.10(0x29555555), %bb.1(0x02000000), %bb.11(0x02000000)
+    liveins: $r4
+
+    renamable $r0 = t2LEApcrelJT %jump-table.1, 14 /* CC::al */, $noreg
+    renamable $r0 = t2ADDrs killed renamable $r0, renamable $r4, 18, 14 /* CC::al */, $noreg, $noreg
+    t2BR_JT killed renamable $r0, renamable $r4, %jump-table.1
+
+  bb.9.sw.bb7:
+    successors: %bb.7(0x80000000)
+    liveins: $r4
+
+    t2BTI
+    $r0, dead $cpsr = tMOVi8 1, 14 /* CC::al */, $noreg
+    tBL 14 /* CC::al */, $noreg, @h1, csr_aapcs, implicit-def dead $lr, implicit $sp, implicit killed $r0, implicit-def $sp
+    t2B %bb.7, 14 /* CC::al */, $noreg
+
+  bb.10.sw.bb8:
+    successors: %bb.7(0x80000000)
+    liveins: $r4
+
+    t2BTI
+    $r0, dead $cpsr = tMOVi8 2, 14 /* CC::al */, $noreg
+    tBL 14 /* CC::al */, $noreg, @h2, csr_aapcs, implicit-def dead $lr, implicit $sp, implicit killed $r0, implicit-def $sp
+    t2B %bb.7, 14 /* CC::al */, $noreg
+
+  bb.4.sw.bb1:
+    successors: %bb.1(0x80000000)
+    liveins: $r4
+
+    t2BTI
+    $r0, dead $cpsr = tMOVi8 1, 14 /* CC::al */, $noreg
+    tBL 14 /* CC::al */, $noreg, @g1, csr_aapcs, implicit-def dead $lr, implicit $sp, implicit killed $r0, implicit-def $sp
+    t2B %bb.1, 14 /* CC::al */, $noreg
+
+  bb.11.sw.bb10:
+    t2BTI
+    frame-destroy tPOP_RET 14 /* CC::al */, $noreg, def $r4, def $pc
+
+...

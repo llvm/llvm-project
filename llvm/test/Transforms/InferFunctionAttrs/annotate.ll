@@ -643,7 +643,7 @@ declare i8* @memmove(i8*, i8*, i64)
 ; CHECK: declare i8* @memset(i8* writeonly, i32, i64) [[ARGMEMONLY_NOFREE_NOUNWIND_WILLRETURN:#[0-9]+]]
 declare i8* @memset(i8*, i32, i64)
 
-; CHECK: declare i8* @__memset_chk(i8*, i32, i64, i64) [[NOFREE:#[0-9]+]]
+; CHECK: declare i8* @__memset_chk(i8* writeonly, i32, i64, i64) [[ARGMEMONLY_NOFREE_NOUNWIND:#[0-9]+]]
 declare i8* @__memset_chk(i8*, i32, i64, i64)
 
 ; CHECK: declare noundef i32 @mkdir(i8* nocapture noundef readonly, i16 noundef zeroext) [[NOFREE_NOUNWIND]]
@@ -670,7 +670,7 @@ declare float @nearbyintf(float)
 ; CHECK: declare x86_fp80 @nearbyintl(x86_fp80) [[NOFREE_NOUNWIND_WILLRETURN]]
 declare x86_fp80 @nearbyintl(x86_fp80)
 
-; CHECK: declare noundef i32 @open(i8* nocapture noundef readonly, i32 noundef, ...) [[NOFREE]]
+; CHECK: declare noundef i32 @open(i8* nocapture noundef readonly, i32 noundef, ...) [[NOFREE:#[0-9]+]]
 declare i32 @open(i8*, i32, ...)
 
 ; CHECK-LINUX: declare noundef i32 @open64(i8* nocapture noundef readonly, i32 noundef, ...) [[NOFREE]]
@@ -1028,6 +1028,7 @@ declare void @memset_pattern16(i8*, i8*, i64)
 ; CHECK-DAG: attributes [[NOFREE]] = { nofree }
 ; CHECK-DAG: attributes [[WILLRETURN]] = { mustprogress willreturn }
 ; CHECK-DAG: attributes [[INACCESSIBLEMEMORARGONLY_NOFREE_NOUNWIND_WILLRETURN]]  = { inaccessiblemem_or_argmemonly mustprogress nofree nounwind willreturn }
+; CHECK-DAG: attributes [[ARGMEMONLY_NOFREE_NOUNWIND]] = { argmemonly nofree nounwind }
 
 ; CHECK-DARWIN-DAG: attributes [[ARGMEMONLY_NOFREE]] = { argmemonly nofree }
 ; CHECK-NVPTX-DAG: attributes [[NOFREE_NOUNWIND_READNONE]] = { nofree nosync nounwind readnone }

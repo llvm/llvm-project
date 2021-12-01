@@ -361,6 +361,7 @@ struct RuntimeTableEntry<RuntimeTableKey<KT>, RuntimeIdentifier<Cs...>> {
 #undef FirE
 #define FirE(L, I) (I < sizeof(L) / sizeof(*L) ? L[I] : 0)
 #define FirQuoteKey(X) #X
+#define ExpandAndQuoteKey(X) FirQuoteKey(X)
 #define FirMacroExpandKey(X)                                                   \
   FirE(X, 0), FirE(X, 1), FirE(X, 2), FirE(X, 3), FirE(X, 4), FirE(X, 5),      \
       FirE(X, 6), FirE(X, 7), FirE(X, 8), FirE(X, 9), FirE(X, 10),             \

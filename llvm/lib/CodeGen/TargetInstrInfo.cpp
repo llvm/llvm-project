@@ -1400,3 +1400,21 @@ std::string TargetInstrInfo::createMIROperandComment(
 }
 
 TargetInstrInfo::PipelinerLoopInfo::~PipelinerLoopInfo() {}
+
+void TargetInstrInfo::mergeOutliningCandidateAttributes(
+    Function &F, std::vector<outliner::Candidate> &Candidates) const {
+  // Include target features from an arbitrary candidate for the outlined
+  // function. This makes sure the outlined function knows what kinds of
+  // instructions are going into it. This is fine, since all parent functions
+  // must necessarily support the instructions that are in the outlined region.
+  outliner::Candidate &FirstCand = Candidates.front();
+  const Function &ParentFn = FirstCand.getMF()->getFunction();
+  if (ParentFn.hasFnAttribute("target-features"))
+    F.addFnAttr(ParentFn.getFnAttribute("target-features"));
+
+  // Set nounwind, so we don't generate eh_frame.
+  if (llvm::all_of(Candidates, [](const outliner::Candidate &C) {
+        return C.getMF()->getFunction().hasFnAttribute(Attribute::NoUnwind);
+      }))
+    F.addFnAttr(Attribute::NoUnwind);
+}
