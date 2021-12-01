@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sve -fallow-half-arguments-and-returns -fsyntax-only -verify %s
 
-// REQUIRES: aarch64-registered-target || arm-registered-target
+// REQUIRES: aarch64-registered-target
 
 #include <arm_sve.h>
 
