@@ -1,0 +1,38 @@
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS32
+  Data:            ELFDATA2LSB
+  OSABI:           ELFOSABI_FREEBSD
+  Type:            ET_EXEC
+  Machine:         EM_386
+  Entry:           0x8F9000
+Sections:
+  - Name:            .bss
+    Type:            SHT_NOBITS
+    Flags:           [ SHF_WRITE, SHF_ALLOC ]
+    Address:         0x1AB7B00
+    AddressAlign:    0x80
+    Offset:          0x12B7AB0
+    Size:            0x2D48D8
+Symbols:
+  - Name:            kernbase
+    Index:           SHN_ABS
+    Binding:         STB_GLOBAL
+    Value:           0x800000
+  - Name:            dumppcb
+    Type:            STT_OBJECT
+    Section:         .bss
+    Value:           0x1D2D9A0
+    Size:            0xC0
+  - Name:            hz
+    Type:            STT_OBJECT
+    Section:         .bss
+    Binding:         STB_GLOBAL
+    Value:           0x1D4053C
+    Size:            0x4
+  - Name:            IdlePDPT
+    Type:            STT_OBJECT
+    Section:         .bss
+    Binding:         STB_GLOBAL
+    Value:           0x1D8B044
+    Size:            0x4

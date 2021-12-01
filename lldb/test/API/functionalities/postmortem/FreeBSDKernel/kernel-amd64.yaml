@@ -1,0 +1,38 @@
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  OSABI:           ELFOSABI_FREEBSD
+  Type:            ET_EXEC
+  Machine:         EM_X86_64
+  Entry:           0xFFFFFFFF8037C000
+Sections:
+  - Name:            .bss
+    Type:            SHT_NOBITS
+    Flags:           [ SHF_WRITE, SHF_ALLOC ]
+    Address:         0xFFFFFFFF819BA380
+    AddressAlign:    0x80
+    Offset:          0x17BA348
+    Size:            0x445C80
+Symbols:
+  - Name:            kernbase
+    Index:           SHN_ABS
+    Binding:         STB_GLOBAL
+    Value:           0xFFFFFFFF80000000
+  - Name:            KPML4phys
+    Type:            STT_OBJECT
+    Section:         .bss
+    Binding:         STB_GLOBAL
+    Value:           0xFFFFFFFF81D47EB8
+    Size:            0x8
+  - Name:            dumppcb
+    Type:            STT_OBJECT
+    Section:         .bss
+    Value:           0xFFFFFFFF81CA6868
+    Size:            0x140
+  - Name:            hz
+    Type:            STT_OBJECT
+    Section:         .bss
+    Binding:         STB_GLOBAL
+    Value:           0xFFFFFFFF81CD4C0C
+    Size:            0x4
