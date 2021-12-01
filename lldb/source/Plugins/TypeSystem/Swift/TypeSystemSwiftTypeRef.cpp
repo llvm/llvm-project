@@ -3539,9 +3539,11 @@ TypeSystemSwiftTypeRef::GetTypedefedType(opaque_compiler_type_t type) {
 
 CompilerType
 TypeSystemSwiftTypeRef::GetFullyUnqualifiedType(opaque_compiler_type_t type) {
-  if (auto *swift_ast_context = GetSwiftASTContext())
-    return swift_ast_context->GetFullyUnqualifiedType(ReconstructType(type));
-  return {};
+  LLDB_SCOPED_TIMER();
+  auto impl = [&]() -> CompilerType { return {this, type}; };
+
+  VALIDATE_AND_RETURN(impl, GetFullyUnqualifiedType, type,
+                      (ReconstructType(type)), (ReconstructType(type)));
 }
 uint32_t
 TypeSystemSwiftTypeRef::GetNumDirectBaseClasses(opaque_compiler_type_t type) {
