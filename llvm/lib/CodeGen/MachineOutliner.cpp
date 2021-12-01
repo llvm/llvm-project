@@ -617,20 +617,11 @@ MachineFunction *MachineOutliner::createOutlinedFunction(
   F->addFnAttr(Attribute::OptimizeForSize);
   F->addFnAttr(Attribute::MinSize);
 
-  // Include target features from an arbitrary candidate for the outlined
-  // function. This makes sure the outlined function knows what kinds of
-  // instructions are going into it. This is fine, since all parent functions
-  // must necessarily support the instructions that are in the outlined region.
   Candidate &FirstCand = OF.Candidates.front();
-  const Function &ParentFn = FirstCand.getMF()->getFunction();
-  if (ParentFn.hasFnAttribute("target-features"))
-    F->addFnAttr(ParentFn.getFnAttribute("target-features"));
+  const TargetInstrInfo &TII =
+      *FirstCand.getMF()->getSubtarget().getInstrInfo();
 
-  // Set nounwind, so we don't generate eh_frame.
-  if (llvm::all_of(OF.Candidates, [](const outliner::Candidate &C) {
-        return C.getMF()->getFunction().hasFnAttribute(Attribute::NoUnwind);
-      }))
-    F->addFnAttr(Attribute::NoUnwind);
+  TII.mergeOutliningCandidateAttributes(*F, OF.Candidates);
 
   BasicBlock *EntryBB = BasicBlock::Create(C, "entry", F);
   IRBuilder<> Builder(EntryBB);
@@ -639,8 +630,6 @@ MachineFunction *MachineOutliner::createOutlinedFunction(
   MachineModuleInfo &MMI = getAnalysis<MachineModuleInfoWrapperPass>().getMMI();
   MachineFunction &MF = MMI.getOrCreateMachineFunction(*F);
   MachineBasicBlock &MBB = *MF.CreateMachineBasicBlock();
-  const TargetSubtargetInfo &STI = MF.getSubtarget();
-  const TargetInstrInfo &TII = *STI.getInstrInfo();
 
   // Insert the new function into the module.
   MF.insert(MF.begin(), &MBB);

@@ -1913,6 +1913,12 @@ public:
         "Target didn't implement TargetInstrInfo::getOutliningCandidateInfo!");
   }
 
+  /// Optional target hook to create the LLVM IR attributes for the outlined
+  /// function. If overridden, the overriding function must call the default
+  /// implementation.
+  virtual void mergeOutliningCandidateAttributes(
+      Function &F, std::vector<outliner::Candidate> &Candidates) const;
+
   /// Returns how or if \p MI should be outlined.
   virtual outliner::InstrType
   getOutliningType(MachineBasicBlock::iterator &MIT, unsigned Flags) const {
