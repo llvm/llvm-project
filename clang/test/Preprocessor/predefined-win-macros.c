@@ -45,9 +45,9 @@
 // CHECK-MS-NOT: GXX
 
 // RUN: %clang_cc1 %s -x c++ -E -dM -triple i686-pc-win32 -fms-extensions -fms-compatibility \
-// RUN:     -fms-compatibility-version=19.00 -std=c++2a -o - | FileCheck -match-full-lines %s --check-prefix=CHECK-MS-CPP2A
+// RUN:     -fms-compatibility-version=19.00 -std=c++20 -o - | FileCheck -match-full-lines %s --check-prefix=CHECK-MS-CPP2A
 // CHECK-MS-CPP2A: #define _MSC_VER 1900
-// CHECK-MS-CPP2A: #define _MSVC_LANG 201705L
+// CHECK-MS-CPP2A: #define _MSVC_LANG 202002L
 
 // RUN: %clang_cc1 -triple i386-windows %s -E -dM -o - \
 // RUN:   | FileCheck -match-full-lines %s --check-prefix=CHECK-X86-WIN
