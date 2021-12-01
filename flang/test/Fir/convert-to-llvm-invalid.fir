@@ -13,6 +13,99 @@ func @zero_aggregate() {
 
 // -----
 
+// Test that `fir.dispatch` fails to be legalized. Not implemented yet.
+
+func @dispatch(%arg0: !fir.box<!fir.type<derived3{f:f32}>>) {
+  // expected-error@+1{{failed to legalize operation 'fir.dispatch'}}
+  %0 = fir.dispatch "method"(%arg0) : (!fir.box<!fir.type<derived3{f:f32}>>) -> i32
+  return
+}
+
+// -----
+
+// Test that `fir.dispatch_table`/`fir.dt_entry` fails to be legalized.
+// Not implemented yet.
+
+// expected-error@+1{{failed to legalize operation 'fir.dispatch_table'}}
+fir.dispatch_table @dispatch_tbl {
+  fir.dt_entry "method", @method_impl
+}
+
+// -----
+
+// Test `fir.select_case` conversion failure with character type.
+// Not implemented yet.
+
+func @select_case_charachter(%arg0: !fir.char<2, 10>, %arg1: !fir.char<2, 10>, %arg2: !fir.char<2, 10>) {
+  // expected-error@+1{{failed to legalize operation 'fir.select_case'}}
+  fir.select_case %arg0 : !fir.char<2, 10> [#fir.point, %arg1, ^bb1,
+                                            #fir.point, %arg2, ^bb2,
+                                            unit, ^bb3]
+^bb1:
+  %c1_i32 = arith.constant 1 : i32
+  br ^bb3
+^bb2:
+  %c2_i32 = arith.constant 2 : i32
+  br ^bb3
+^bb3:
+  return
+}
+
+// -----
+
+// Test `fir.select_type` conversion failure. Not implemented yet.
+
+func @bar_select_type(%arg : !fir.box<!fir.type<derived3{f:f32}>>) -> i32 {
+  %0 = arith.constant 1 : i32
+  %2 = arith.constant 3 : i32
+
+  // expected-error@+1{{failed to legalize operation 'fir.select_type'}}
+  fir.select_type %arg : !fir.box<!fir.type<derived3{f:f32}>> [
+    #fir.instance<!fir.int<4>>,^bb1(%0:i32),
+    #fir.instance<!fir.int<8>>,^bb2(%2:i32),
+    unit,^bb5 ]
+^bb1(%a : i32) :
+  return %a : i32
+^bb2(%b : i32) :
+  return %b : i32
+^bb5 :
+  %zero = arith.constant 0 : i32
+  return %zero : i32
+}
+
+// -----
+
+// Test `fir.global_len` conversion failure. Not implemented yet.
+
+fir.global @global_derived : !fir.type<minez(f:i32)> {
+  // expected-error@+1{{failed to legalize operation 'fir.global_len'}}
+  fir.global_len f, 1 : i32
+  %0 = fir.undefined !fir.type<minez>
+  fir.has_value %0 : !fir.type<minez>
+}
+
+// -----
+
+// Test `fir.len_param_index` conversion failure. Not implemented yet.
+
+func @lenparamindex() {
+  // expected-error@+1{{failed to legalize operation 'fir.len_param_index'}}
+  %0 = fir.len_param_index l1, !fir.type<twolens(l1:i32, l2:i32){i:i32, f:f32, l:i64}>
+  return
+}
+
+// -----
+
+// Test `fir.gentypedesc` conversion failure. Not implemented yet.
+
+func @gentypedesc() {
+  // expected-error@+1{{failed to legalize operation 'fir.gentypedesc'}}
+  %0 = fir.gentypedesc !fir.type<derived3>
+  return
+}
+
+// -----
+
 // Verify that `fir.dt_entry` requires a parent op
 
 // expected-error@+1{{'fir.dt_entry' op expects parent op 'fir.dispatch_table'}}
@@ -68,23 +161,32 @@ func @shape_shift_not_dead(%arg0: !fir.ref<!fir.array<?x?xf32>>, %i: index, %j: 
 
 // -----
 
-// Test `fir.select_type` conversion to llvm.
-// Should have been converted.
+// Test that the type `fir.boxproc` fails to be legalized.
+// Not implemented yet.
 
-func @bar_select_type(%arg : !fir.box<!fir.ref<f32>>) -> i32 {
-  %0 = arith.constant 1 : i32
-  %2 = arith.constant 3 : i32
-  // expected-error@+2{{fir.select_type should have already been converted}}
-  // expected-error@+1{{failed to legalize operation 'fir.select_type'}}
-  fir.select_type %arg : !fir.box<!fir.ref<f32>> [
-    #fir.instance<!fir.int<4>>,^bb1(%0:i32),
-    #fir.instance<!fir.int<8>>,^bb2(%2:i32),
-    unit,^bb5 ]
-^bb1(%a : i32) :
-  return %a : i32
-^bb2(%b : i32) :
-  return %b : i32
-^bb5 :
-  %zero = arith.constant 0 : i32
-  return %zero : i32
+// expected-error@+1{{failed to legalize operation 'builtin.func'}}
+func private @foo0(%arg0: !fir.boxproc<() -> ()>)
+
+// -----
+
+// Test that `fir.emboxproc` fails to be legalized.
+// Not implemented yet.
+
+func private @method_impl(i32)
+
+func @emboxproc_test() {
+  %host_vars = fir.alloca tuple<i32,f64>
+// expected-error@+1{{failed to legalize operation 'fir.emboxproc'}}
+  %bproc = fir.emboxproc @method_impl, %host_vars : ((i32) -> (), !fir.ref<tuple<i32,f64>>) -> !fir.boxproc<(i32) -> ()>
+  return
 }
+
+// Test that `fir.unboxproc` and `fir.boxproc_host` also fails to be legalized.
+// At the moment these cannot be tested since the `fir.boxproc` type does not have a conversion.
+
+// -----
+
+// Test `fir.end` conversion failure. Not implemented yet.
+
+// expected-error@+1{{failed to legalize operation 'fir.end'}}
+"fir.end"() : () -> ()
