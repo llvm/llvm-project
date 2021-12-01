@@ -1985,37 +1985,59 @@ bool TypeSystemSwiftTypeRef::IsPossibleDynamicType(opaque_compiler_type_t type,
   auto impl = [&]() {
     using namespace swift::Demangle;
     Demangler dem;
-    auto *node = DemangleCanonicalType(dem, type);
-    if (!node)
-      return false;
-
-    if (node->getKind() == Node::Kind::TypeAlias) {
-      auto resolved = ResolveTypeAlias(this, GetSwiftASTContext(), dem, node);
-      if (auto *n = std::get<swift::Demangle::NodePointer>(resolved))
-        node = n;
-    }
-
-    switch (node->getKind()) {
-    case Node::Kind::Class:
-    case Node::Kind::BoundGenericClass:
-    case Node::Kind::Protocol:
-    case Node::Kind::ProtocolList:
-    case Node::Kind::ProtocolListWithClass:
-    case Node::Kind::ProtocolListWithAnyObject:
-    case Node::Kind::ExistentialMetatype:
-    case Node::Kind::DynamicSelf:
-      return true;
-    case Node::Kind::BuiltinTypeName: {
-      if (!node->hasText())
+    std::function<bool(NodePointer)> is_possible_dynamic =
+        [&](NodePointer node) -> bool {
+      if (!node)
         return false;
-      StringRef name = node->getText();
-      return name == swift::BUILTIN_TYPE_NAME_RAWPOINTER ||
-             name == swift::BUILTIN_TYPE_NAME_NATIVEOBJECT ||
-             name == swift::BUILTIN_TYPE_NAME_BRIDGEOBJECT;
-    }
-    default:
-      return ContainsGenericTypeParameter(node);
-    }
+
+      if (node->getKind() == Node::Kind::TypeAlias) {
+        auto resolved = ResolveTypeAlias(this, GetSwiftASTContext(), dem, node);
+        if (auto *n = std::get<swift::Demangle::NodePointer>(resolved))
+          node = n;
+      }
+
+      switch (node->getKind()) {
+      case Node::Kind::Class:
+      case Node::Kind::BoundGenericClass:
+      case Node::Kind::Protocol:
+      case Node::Kind::ProtocolList:
+      case Node::Kind::ProtocolListWithClass:
+      case Node::Kind::ProtocolListWithAnyObject:
+      case Node::Kind::ExistentialMetatype:
+      case Node::Kind::DynamicSelf:
+        return true;
+      case Node::Kind::BoundGenericStructure:
+      case Node::Kind::BoundGenericEnum: {
+        if (node->getNumChildren() < 2)
+          return false;
+        NodePointer type_list = node->getLastChild();
+        if (type_list->getKind() != Node::Kind::TypeList)
+          return false;
+        for (size_t i = 0; i < type_list->getNumChildren(); ++i) {
+          NodePointer child = type_list->getChild(i);
+          if (child->getKind() == Node::Kind::Type) {
+            child = child->getFirstChild();
+            if (is_possible_dynamic(child))
+              return true;
+          }
+        }
+        return false;
+      }
+      case Node::Kind::BuiltinTypeName: {
+        if (!node->hasText())
+          return false;
+        StringRef name = node->getText();
+        return name == swift::BUILTIN_TYPE_NAME_RAWPOINTER ||
+               name == swift::BUILTIN_TYPE_NAME_NATIVEOBJECT ||
+               name == swift::BUILTIN_TYPE_NAME_BRIDGEOBJECT;
+      }
+      default:
+        return ContainsGenericTypeParameter(node);
+      }
+    };
+
+    auto *node = DemangleCanonicalType(dem, type);
+    return is_possible_dynamic(node);
   };
   VALIDATE_AND_RETURN(
       impl, IsPossibleDynamicType, type,
