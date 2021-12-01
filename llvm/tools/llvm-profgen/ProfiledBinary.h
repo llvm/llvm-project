@@ -476,7 +476,13 @@ public:
     SmallVector<MCPseduoProbeFrameLocation, 16> ProbeInlineContext;
     ProbeDecoder.getInlineContextForProbe(Probe, ProbeInlineContext,
                                           IncludeLeaf);
-    for (auto &Callsite : ProbeInlineContext) {
+    for (uint32_t I = 0; I < ProbeInlineContext.size(); I++) {
+      auto &Callsite = ProbeInlineContext[I];
+      // Clear the current context for an unknown probe.
+      if (Callsite.second == 0 && I != ProbeInlineContext.size() - 1) {
+        InlineContextStack.clear();
+        continue;
+      }
       InlineContextStack.emplace_back(Callsite.first,
                                       LineLocation(Callsite.second, 0));
     }
