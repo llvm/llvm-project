@@ -635,13 +635,9 @@ void InstrProfiling::computeNumValueSiteCounts(InstrProfValueProfileInst *Ind) {
   GlobalVariable *Name = Ind->getName();
   uint64_t ValueKind = Ind->getValueKind()->getZExtValue();
   uint64_t Index = Ind->getIndex()->getZExtValue();
-  auto It = ProfileDataMap.find(Name);
-  if (It == ProfileDataMap.end()) {
-    PerFunctionProfileData PD;
-    PD.NumValueSites[ValueKind] = Index + 1;
-    ProfileDataMap[Name] = PD;
-  } else if (It->second.NumValueSites[ValueKind] <= Index)
-    It->second.NumValueSites[ValueKind] = Index + 1;
+  auto &PD = ProfileDataMap[Name];
+  PD.NumValueSites[ValueKind] =
+      std::max(PD.NumValueSites[ValueKind], (uint32_t)(Index + 1));
 }
 
 void InstrProfiling::lowerValueProfileInst(InstrProfValueProfileInst *Ind) {
@@ -850,13 +846,9 @@ static bool needsRuntimeRegistrationOfSectionRange(const Triple &TT) {
 GlobalVariable *
 InstrProfiling::getOrCreateRegionCounters(InstrProfIncrementInst *Inc) {
   GlobalVariable *NamePtr = Inc->getName();
-  auto It = ProfileDataMap.find(NamePtr);
-  PerFunctionProfileData PD;
-  if (It != ProfileDataMap.end()) {
-    if (It->second.RegionCounters)
-      return It->second.RegionCounters;
-    PD = It->second;
-  }
+  auto &PD = ProfileDataMap[NamePtr];
+  if (PD.RegionCounters)
+    return PD.RegionCounters;
 
   // Match the linkage and visibility of the name global.
   Function *Fn = Inc->getParent()->getParent();
@@ -923,6 +915,7 @@ InstrProfiling::getOrCreateRegionCounters(InstrProfIncrementInst *Inc) {
   CounterPtr->setAlignment(Align(8));
   MaybeSetComdat(CounterPtr);
   CounterPtr->setLinkage(Linkage);
+  PD.RegionCounters = CounterPtr;
 
   auto *Int8PtrTy = Type::getInt8PtrTy(Ctx);
   // Allocate statically the array of pointers to value profile nodes for
@@ -1001,9 +994,7 @@ InstrProfiling::getOrCreateRegionCounters(InstrProfIncrementInst *Inc) {
   MaybeSetComdat(Data);
   Data->setLinkage(Linkage);
 
-  PD.RegionCounters = CounterPtr;
   PD.DataVar = Data;
-  ProfileDataMap[NamePtr] = PD;
 
   // Mark the data variable as used so that it isn't stripped out.
   CompilerUsedVars.push_back(Data);
@@ -1014,7 +1005,7 @@ InstrProfiling::getOrCreateRegionCounters(InstrProfIncrementInst *Inc) {
   // Collect the referenced names to be used by emitNameData.
   ReferencedNames.push_back(NamePtr);
 
-  return CounterPtr;
+  return PD.RegionCounters;
 }
 
 void InstrProfiling::emitVNodes() {
