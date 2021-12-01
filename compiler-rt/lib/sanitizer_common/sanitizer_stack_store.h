@@ -23,6 +23,11 @@ class StackStore {
   static constexpr uptr kBlockSizeBytes = kBlockSizeFrames * sizeof(uptr);
 
  public:
+  enum class Compression : u8 {
+    None = 0,
+    Test,
+  };
+
   constexpr StackStore() = default;
 
   using Id = u32;  // Enough for 2^32 * sizeof(uptr) bytes of traces.
@@ -31,10 +36,14 @@ class StackStore {
 
   Id Store(const StackTrace &trace,
            uptr *pack /* number of blocks completed by this call */);
-  StackTrace Load(Id id) const;
+  StackTrace Load(Id id);
   uptr Allocated() const;
 
-  void Pack();
+  // Packs all blocks which don't expect any more writes. A block is going to be
+  // packed once. As soon trace from that block was requested, it will unpack
+  // and stay unpacked after that.
+  // Returns the number of released bytes.
+  uptr Pack(Compression type);
 
   void TestOnlyUnmap();
 
@@ -71,16 +80,28 @@ class StackStore {
     // Counter to track store progress to know when we can Pack() the block.
     atomic_uint32_t stored_;
     // Protects alloc of new blocks.
-    StaticSpinMutex mtx_;
+    mutable StaticSpinMutex mtx_;
+
+    enum class State : u8 {
+      Storing = 0,
+      Packed,
+      Unpacked,
+    };
+    State state GUARDED_BY(mtx_);
 
     uptr *Create();
 
    public:
     uptr *Get() const;
     uptr *GetOrCreate();
+    uptr *GetOrUnpack();
+    uptr Pack(Compression type);
+    uptr Allocated() const;
     void TestOnlyUnmap();
     bool Stored(uptr n);
+    bool IsPacked() const;
   };
+
   BlockInfo blocks_[kBlockCount] = {};
 };
 
