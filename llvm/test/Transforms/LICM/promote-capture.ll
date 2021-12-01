@@ -111,17 +111,19 @@ define void @test_captured_before_loop(i32 %len) {
 ; CHECK-NEXT:    [[COUNT:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    store i32 0, i32* [[COUNT]], align 4
 ; CHECK-NEXT:    call void @capture(i32* [[COUNT]])
+; CHECK-NEXT:    [[COUNT_PROMOTED:%.*]] = load i32, i32* [[COUNT]], align 4
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[I:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[I_NEXT:%.*]], [[LATCH:%.*]] ]
+; CHECK-NEXT:    [[C_INC2:%.*]] = phi i32 [ [[COUNT_PROMOTED]], [[ENTRY:%.*]] ], [ [[C_INC1:%.*]], [[LATCH:%.*]] ]
+; CHECK-NEXT:    [[I:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[I_NEXT:%.*]], [[LATCH]] ]
 ; CHECK-NEXT:    [[COND:%.*]] = call i1 @cond(i32 [[I]])
 ; CHECK-NEXT:    br i1 [[COND]], label [[IF:%.*]], label [[LATCH]]
 ; CHECK:       if:
-; CHECK-NEXT:    [[C:%.*]] = load i32, i32* [[COUNT]], align 4
-; CHECK-NEXT:    [[C_INC:%.*]] = add i32 [[C]], 1
+; CHECK-NEXT:    [[C_INC:%.*]] = add i32 [[C_INC2]], 1
 ; CHECK-NEXT:    store i32 [[C_INC]], i32* [[COUNT]], align 4
 ; CHECK-NEXT:    br label [[LATCH]]
 ; CHECK:       latch:
+; CHECK-NEXT:    [[C_INC1]] = phi i32 [ [[C_INC]], [[IF]] ], [ [[C_INC2]], [[LOOP]] ]
 ; CHECK-NEXT:    [[I_NEXT]] = add nuw i32 [[I]], 1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[I_NEXT]], [[LEN:%.*]]
 ; CHECK-NEXT:    br i1 [[CMP]], label [[EXIT:%.*]], label [[LOOP]]
