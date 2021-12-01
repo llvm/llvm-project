@@ -5229,63 +5229,25 @@ define void @unroll_maxmin(i32* nocapture %0, float* nocapture readonly %1, i32 
 ;
 ; VFP2-LABEL: unroll_maxmin:
 ; VFP2:       @ %bb.0:
-; VFP2-NEXT:    .save {r4, r5, r6, r7, r8, r9, lr}
-; VFP2-NEXT:    push.w {r4, r5, r6, r7, r8, r9, lr}
-; VFP2-NEXT:    .pad #4
-; VFP2-NEXT:    sub sp, #4
-; VFP2-NEXT:    .vsave {d8}
-; VFP2-NEXT:    vpush {d8}
-; VFP2-NEXT:    sub.w r4, r1, #8
-; VFP2-NEXT:    sub.w r5, r0, #8
-; VFP2-NEXT:    vldr s16, .LCPI54_0
-; VFP2-NEXT:    mov.w r8, #-1
-; VFP2-NEXT:    mov.w r9, #-2147483648
-; VFP2-NEXT:    mov.w r6, #1024
-; VFP2-NEXT:    mvn r7, #-2147483648
+; VFP2-NEXT:    subs r1, #8
+; VFP2-NEXT:    subs r0, #8
+; VFP2-NEXT:    vldr s0, .LCPI54_0
+; VFP2-NEXT:    mov.w r2, #1024
 ; VFP2-NEXT:  .LBB54_1: @ =>This Inner Loop Header: Depth=1
-; VFP2-NEXT:    vldr s0, [r4, #8]
-; VFP2-NEXT:    vmul.f32 s0, s0, s16
-; VFP2-NEXT:    vmov r0, s0
-; VFP2-NEXT:    bl __aeabi_f2lz
-; VFP2-NEXT:    subs r2, r0, r7
-; VFP2-NEXT:    sbcs r2, r1, #0
-; VFP2-NEXT:    mov.w r2, #0
-; VFP2-NEXT:    it lt
-; VFP2-NEXT:    movlt r2, #1
-; VFP2-NEXT:    cmp r2, #0
-; VFP2-NEXT:    ite ne
-; VFP2-NEXT:    movne r2, r1
-; VFP2-NEXT:    moveq r0, r7
-; VFP2-NEXT:    subs.w r1, r9, r0
-; VFP2-NEXT:    sbcs.w r1, r8, r2
-; VFP2-NEXT:    it ge
-; VFP2-NEXT:    movge r0, r9
-; VFP2-NEXT:    str r0, [r5, #8]!
-; VFP2-NEXT:    vldr s0, [r4, #12]
-; VFP2-NEXT:    vmul.f32 s0, s0, s16
-; VFP2-NEXT:    vmov r0, s0
-; VFP2-NEXT:    bl __aeabi_f2lz
-; VFP2-NEXT:    subs r2, r0, r7
-; VFP2-NEXT:    add.w r4, r4, #8
-; VFP2-NEXT:    sbcs r2, r1, #0
-; VFP2-NEXT:    mov.w r2, #0
-; VFP2-NEXT:    it lt
-; VFP2-NEXT:    movlt r2, #1
-; VFP2-NEXT:    cmp r2, #0
-; VFP2-NEXT:    ite ne
-; VFP2-NEXT:    movne r2, r1
-; VFP2-NEXT:    moveq r0, r7
-; VFP2-NEXT:    subs.w r1, r9, r0
-; VFP2-NEXT:    sbcs.w r1, r8, r2
-; VFP2-NEXT:    it ge
-; VFP2-NEXT:    movge r0, r9
-; VFP2-NEXT:    subs r6, #2
-; VFP2-NEXT:    str r0, [r5, #4]
+; VFP2-NEXT:    vldr s2, [r1, #8]
+; VFP2-NEXT:    subs r2, #2
+; VFP2-NEXT:    vmul.f32 s2, s2, s0
+; VFP2-NEXT:    vcvt.s32.f32 s2, s2
+; VFP2-NEXT:    vmov r3, s2
+; VFP2-NEXT:    str r3, [r0, #8]!
+; VFP2-NEXT:    vldr s2, [r1, #12]
+; VFP2-NEXT:    add.w r1, r1, #8
+; VFP2-NEXT:    vmul.f32 s2, s2, s0
+; VFP2-NEXT:    vcvt.s32.f32 s2, s2
+; VFP2-NEXT:    vstr s2, [r0, #4]
 ; VFP2-NEXT:    bne .LBB54_1
 ; VFP2-NEXT:  @ %bb.2:
-; VFP2-NEXT:    vpop {d8}
-; VFP2-NEXT:    add sp, #4
-; VFP2-NEXT:    pop.w {r4, r5, r6, r7, r8, r9, pc}
+; VFP2-NEXT:    bx lr
 ; VFP2-NEXT:    .p2align 2
 ; VFP2-NEXT:  @ %bb.3:
 ; VFP2-NEXT:  .LCPI54_0:
@@ -5293,57 +5255,26 @@ define void @unroll_maxmin(i32* nocapture %0, float* nocapture readonly %1, i32 
 ;
 ; FULL-LABEL: unroll_maxmin:
 ; FULL:       @ %bb.0:
-; FULL-NEXT:    .save {r4, r5, r6, r7, r8, r9, lr}
-; FULL-NEXT:    push.w {r4, r5, r6, r7, r8, r9, lr}
-; FULL-NEXT:    .pad #4
-; FULL-NEXT:    sub sp, #4
-; FULL-NEXT:    .vsave {d8}
-; FULL-NEXT:    vpush {d8}
-; FULL-NEXT:    mov.w r2, #512
-; FULL-NEXT:    sub.w r5, r1, #8
-; FULL-NEXT:    sub.w r6, r0, #8
-; FULL-NEXT:    vldr s16, .LCPI54_0
-; FULL-NEXT:    mov r4, r2
-; FULL-NEXT:    mov.w r8, #-1
-; FULL-NEXT:    mov.w r9, #-2147483648
-; FULL-NEXT:    mvn r7, #-2147483648
+; FULL-NEXT:    .save {r7, lr}
+; FULL-NEXT:    push {r7, lr}
+; FULL-NEXT:    mov.w lr, #512
+; FULL-NEXT:    subs r1, #8
+; FULL-NEXT:    subs r0, #8
+; FULL-NEXT:    vldr s0, .LCPI54_0
 ; FULL-NEXT:  .LBB54_1: @ =>This Inner Loop Header: Depth=1
-; FULL-NEXT:    vldr s0, [r5, #8]
-; FULL-NEXT:    vmul.f32 s0, s0, s16
-; FULL-NEXT:    vmov r0, s0
-; FULL-NEXT:    bl __aeabi_f2lz
-; FULL-NEXT:    subs r2, r0, r7
-; FULL-NEXT:    sbcs r2, r1, #0
-; FULL-NEXT:    cset r2, lt
-; FULL-NEXT:    cmp r2, #0
-; FULL-NEXT:    csel r0, r0, r7, ne
-; FULL-NEXT:    csel r1, r1, r2, ne
-; FULL-NEXT:    subs.w r2, r9, r0
-; FULL-NEXT:    sbcs.w r1, r8, r1
-; FULL-NEXT:    csel r0, r0, r9, lt
-; FULL-NEXT:    str r0, [r6, #8]!
-; FULL-NEXT:    vldr s0, [r5, #12]
-; FULL-NEXT:    vmul.f32 s0, s0, s16
-; FULL-NEXT:    vmov r0, s0
-; FULL-NEXT:    bl __aeabi_f2lz
-; FULL-NEXT:    subs r2, r0, r7
-; FULL-NEXT:    add.w r5, r5, #8
-; FULL-NEXT:    sbcs r2, r1, #0
-; FULL-NEXT:    sub.w r4, r4, #1
-; FULL-NEXT:    cset r2, lt
-; FULL-NEXT:    cmp r2, #0
-; FULL-NEXT:    csel r0, r0, r7, ne
-; FULL-NEXT:    csel r1, r1, r2, ne
-; FULL-NEXT:    subs.w r2, r9, r0
-; FULL-NEXT:    sbcs.w r1, r8, r1
-; FULL-NEXT:    csel r0, r0, r9, lt
-; FULL-NEXT:    str r0, [r6, #4]
-; FULL-NEXT:    cbz r4, .LBB54_2
-; FULL-NEXT:    le .LBB54_1
-; FULL-NEXT:  .LBB54_2:
-; FULL-NEXT:    vpop {d8}
-; FULL-NEXT:    add sp, #4
-; FULL-NEXT:    pop.w {r4, r5, r6, r7, r8, r9, pc}
+; FULL-NEXT:    vldr s2, [r1, #8]
+; FULL-NEXT:    vmul.f32 s2, s2, s0
+; FULL-NEXT:    vcvt.s32.f32 s2, s2
+; FULL-NEXT:    vmov r2, s2
+; FULL-NEXT:    str r2, [r0, #8]!
+; FULL-NEXT:    vldr s2, [r1, #12]
+; FULL-NEXT:    adds r1, #8
+; FULL-NEXT:    vmul.f32 s2, s2, s0
+; FULL-NEXT:    vcvt.s32.f32 s2, s2
+; FULL-NEXT:    vstr s2, [r0, #4]
+; FULL-NEXT:    le lr, .LBB54_1
+; FULL-NEXT:  @ %bb.2:
+; FULL-NEXT:    pop {r7, pc}
 ; FULL-NEXT:    .p2align 2
 ; FULL-NEXT:  @ %bb.3:
 ; FULL-NEXT:  .LCPI54_0:
@@ -5494,63 +5425,25 @@ define void @unroll_minmax(i32* nocapture %0, float* nocapture readonly %1, i32 
 ;
 ; VFP2-LABEL: unroll_minmax:
 ; VFP2:       @ %bb.0:
-; VFP2-NEXT:    .save {r4, r5, r6, r7, r8, r9, lr}
-; VFP2-NEXT:    push.w {r4, r5, r6, r7, r8, r9, lr}
-; VFP2-NEXT:    .pad #4
-; VFP2-NEXT:    sub sp, #4
-; VFP2-NEXT:    .vsave {d8}
-; VFP2-NEXT:    vpush {d8}
-; VFP2-NEXT:    sub.w r4, r1, #8
-; VFP2-NEXT:    sub.w r5, r0, #8
-; VFP2-NEXT:    vldr s16, .LCPI55_0
-; VFP2-NEXT:    mov.w r8, #-1
-; VFP2-NEXT:    mov.w r9, #-2147483648
-; VFP2-NEXT:    mov.w r6, #1024
-; VFP2-NEXT:    mvn r7, #-2147483648
+; VFP2-NEXT:    subs r1, #8
+; VFP2-NEXT:    subs r0, #8
+; VFP2-NEXT:    vldr s0, .LCPI55_0
+; VFP2-NEXT:    mov.w r2, #1024
 ; VFP2-NEXT:  .LBB55_1: @ =>This Inner Loop Header: Depth=1
-; VFP2-NEXT:    vldr s0, [r4, #8]
-; VFP2-NEXT:    vmul.f32 s0, s0, s16
-; VFP2-NEXT:    vmov r0, s0
-; VFP2-NEXT:    bl __aeabi_f2lz
-; VFP2-NEXT:    subs.w r2, r9, r0
-; VFP2-NEXT:    sbcs.w r2, r8, r1
-; VFP2-NEXT:    mov.w r2, #0
-; VFP2-NEXT:    it lt
-; VFP2-NEXT:    movlt r2, #1
-; VFP2-NEXT:    cmp r2, #0
-; VFP2-NEXT:    itt eq
-; VFP2-NEXT:    moveq r1, r8
-; VFP2-NEXT:    moveq r0, r9
-; VFP2-NEXT:    subs r2, r0, r7
-; VFP2-NEXT:    sbcs r1, r1, #0
-; VFP2-NEXT:    it ge
-; VFP2-NEXT:    movge r0, r7
-; VFP2-NEXT:    str r0, [r5, #8]!
-; VFP2-NEXT:    vldr s0, [r4, #12]
-; VFP2-NEXT:    vmul.f32 s0, s0, s16
-; VFP2-NEXT:    vmov r0, s0
-; VFP2-NEXT:    bl __aeabi_f2lz
-; VFP2-NEXT:    subs.w r2, r9, r0
-; VFP2-NEXT:    add.w r4, r4, #8
-; VFP2-NEXT:    sbcs.w r2, r8, r1
-; VFP2-NEXT:    mov.w r2, #0
-; VFP2-NEXT:    it lt
-; VFP2-NEXT:    movlt r2, #1
-; VFP2-NEXT:    cmp r2, #0
-; VFP2-NEXT:    itt eq
-; VFP2-NEXT:    moveq r1, r8
-; VFP2-NEXT:    moveq r0, r9
-; VFP2-NEXT:    subs r2, r0, r7
-; VFP2-NEXT:    sbcs r1, r1, #0
-; VFP2-NEXT:    it ge
-; VFP2-NEXT:    movge r0, r7
-; VFP2-NEXT:    subs r6, #2
-; VFP2-NEXT:    str r0, [r5, #4]
+; VFP2-NEXT:    vldr s2, [r1, #8]
+; VFP2-NEXT:    subs r2, #2
+; VFP2-NEXT:    vmul.f32 s2, s2, s0
+; VFP2-NEXT:    vcvt.s32.f32 s2, s2
+; VFP2-NEXT:    vmov r3, s2
+; VFP2-NEXT:    str r3, [r0, #8]!
+; VFP2-NEXT:    vldr s2, [r1, #12]
+; VFP2-NEXT:    add.w r1, r1, #8
+; VFP2-NEXT:    vmul.f32 s2, s2, s0
+; VFP2-NEXT:    vcvt.s32.f32 s2, s2
+; VFP2-NEXT:    vstr s2, [r0, #4]
 ; VFP2-NEXT:    bne .LBB55_1
 ; VFP2-NEXT:  @ %bb.2:
-; VFP2-NEXT:    vpop {d8}
-; VFP2-NEXT:    add sp, #4
-; VFP2-NEXT:    pop.w {r4, r5, r6, r7, r8, r9, pc}
+; VFP2-NEXT:    bx lr
 ; VFP2-NEXT:    .p2align 2
 ; VFP2-NEXT:  @ %bb.3:
 ; VFP2-NEXT:  .LCPI55_0:
@@ -5558,57 +5451,26 @@ define void @unroll_minmax(i32* nocapture %0, float* nocapture readonly %1, i32 
 ;
 ; FULL-LABEL: unroll_minmax:
 ; FULL:       @ %bb.0:
-; FULL-NEXT:    .save {r4, r5, r6, r7, r8, r9, lr}
-; FULL-NEXT:    push.w {r4, r5, r6, r7, r8, r9, lr}
-; FULL-NEXT:    .pad #4
-; FULL-NEXT:    sub sp, #4
-; FULL-NEXT:    .vsave {d8}
-; FULL-NEXT:    vpush {d8}
-; FULL-NEXT:    mov.w r2, #512
-; FULL-NEXT:    sub.w r5, r1, #8
-; FULL-NEXT:    sub.w r6, r0, #8
-; FULL-NEXT:    vldr s16, .LCPI55_0
-; FULL-NEXT:    mov r4, r2
-; FULL-NEXT:    mov.w r8, #-1
-; FULL-NEXT:    mov.w r9, #-2147483648
-; FULL-NEXT:    mvn r7, #-2147483648
+; FULL-NEXT:    .save {r7, lr}
+; FULL-NEXT:    push {r7, lr}
+; FULL-NEXT:    mov.w lr, #512
+; FULL-NEXT:    subs r1, #8
+; FULL-NEXT:    subs r0, #8
+; FULL-NEXT:    vldr s0, .LCPI55_0
 ; FULL-NEXT:  .LBB55_1: @ =>This Inner Loop Header: Depth=1
-; FULL-NEXT:    vldr s0, [r5, #8]
-; FULL-NEXT:    vmul.f32 s0, s0, s16
-; FULL-NEXT:    vmov r0, s0
-; FULL-NEXT:    bl __aeabi_f2lz
-; FULL-NEXT:    subs.w r2, r9, r0
-; FULL-NEXT:    sbcs.w r2, r8, r1
-; FULL-NEXT:    cset r2, lt
-; FULL-NEXT:    cmp r2, #0
-; FULL-NEXT:    csel r0, r0, r9, ne
-; FULL-NEXT:    csel r1, r1, r8, ne
-; FULL-NEXT:    subs r2, r0, r7
-; FULL-NEXT:    sbcs r1, r1, #0
-; FULL-NEXT:    csel r0, r0, r7, lt
-; FULL-NEXT:    str r0, [r6, #8]!
-; FULL-NEXT:    vldr s0, [r5, #12]
-; FULL-NEXT:    vmul.f32 s0, s0, s16
-; FULL-NEXT:    vmov r0, s0
-; FULL-NEXT:    bl __aeabi_f2lz
-; FULL-NEXT:    subs.w r2, r9, r0
-; FULL-NEXT:    add.w r5, r5, #8
-; FULL-NEXT:    sbcs.w r2, r8, r1
-; FULL-NEXT:    sub.w r4, r4, #1
-; FULL-NEXT:    cset r2, lt
-; FULL-NEXT:    cmp r2, #0
-; FULL-NEXT:    csel r0, r0, r9, ne
-; FULL-NEXT:    csel r1, r1, r8, ne
-; FULL-NEXT:    subs r2, r0, r7
-; FULL-NEXT:    sbcs r1, r1, #0
-; FULL-NEXT:    csel r0, r0, r7, lt
-; FULL-NEXT:    str r0, [r6, #4]
-; FULL-NEXT:    cbz r4, .LBB55_2
-; FULL-NEXT:    le .LBB55_1
-; FULL-NEXT:  .LBB55_2:
-; FULL-NEXT:    vpop {d8}
-; FULL-NEXT:    add sp, #4
-; FULL-NEXT:    pop.w {r4, r5, r6, r7, r8, r9, pc}
+; FULL-NEXT:    vldr s2, [r1, #8]
+; FULL-NEXT:    vmul.f32 s2, s2, s0
+; FULL-NEXT:    vcvt.s32.f32 s2, s2
+; FULL-NEXT:    vmov r2, s2
+; FULL-NEXT:    str r2, [r0, #8]!
+; FULL-NEXT:    vldr s2, [r1, #12]
+; FULL-NEXT:    adds r1, #8
+; FULL-NEXT:    vmul.f32 s2, s2, s0
+; FULL-NEXT:    vcvt.s32.f32 s2, s2
+; FULL-NEXT:    vstr s2, [r0, #4]
+; FULL-NEXT:    le lr, .LBB55_1
+; FULL-NEXT:  @ %bb.2:
+; FULL-NEXT:    pop {r7, pc}
 ; FULL-NEXT:    .p2align 2
 ; FULL-NEXT:  @ %bb.3:
 ; FULL-NEXT:  .LCPI55_0:
