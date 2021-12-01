@@ -1860,7 +1860,6 @@ class LoopPromoter : public LoadAndStorePromoter {
   bool UnorderedAtomic;
   AAMDNodes AATags;
   ICFLoopSafetyInfo &SafetyInfo;
-  bool CanInsertStoresInExitBlocks;
 
   // We're about to add a use of V in a loop exit block.  Insert an LCSSA phi
   // (if legal) if doing so would add an out-of-loop use to an instruction
@@ -1887,13 +1886,12 @@ public:
                SmallVectorImpl<MemoryAccess *> &MSSAIP, PredIteratorCache &PIC,
                MemorySSAUpdater *MSSAU, LoopInfo &li, DebugLoc dl,
                Align Alignment, bool UnorderedAtomic, const AAMDNodes &AATags,
-               ICFLoopSafetyInfo &SafetyInfo, bool CanInsertStoresInExitBlocks)
+               ICFLoopSafetyInfo &SafetyInfo)
       : LoadAndStorePromoter(Insts, S), SomePtr(SP), PointerMustAliases(PMA),
         LoopExitBlocks(LEB), LoopInsertPts(LIP), MSSAInsertPts(MSSAIP),
         PredCache(PIC), MSSAU(MSSAU), LI(li), DL(std::move(dl)),
         Alignment(Alignment), UnorderedAtomic(UnorderedAtomic), AATags(AATags),
-        SafetyInfo(SafetyInfo),
-        CanInsertStoresInExitBlocks(CanInsertStoresInExitBlocks) {}
+        SafetyInfo(SafetyInfo) {}
 
   bool isInstInList(Instruction *I,
                     const SmallVectorImpl<Instruction *> &) const override {
@@ -1905,7 +1903,7 @@ public:
     return PointerMustAliases.count(Ptr);
   }
 
-  void insertStoresInLoopExitBlocks() {
+  void doExtraRewritesBeforeFinalDeletion() override {
     // Insert stores after in the loop exit blocks.  Each exit block gets a
     // store of the live-out values that feed them.  Since we've already told
     // the SSA updater about the defs in the loop and the preheader
@@ -1939,20 +1937,9 @@ public:
     }
   }
 
-  void doExtraRewritesBeforeFinalDeletion() override {
-    if (CanInsertStoresInExitBlocks)
-      insertStoresInLoopExitBlocks();
-  }
-
   void instructionDeleted(Instruction *I) const override {
     SafetyInfo.removeInstruction(I);
     MSSAU->removeMemoryAccess(I);
-  }
-
-  bool shouldDelete(Instruction *I) const override {
-    if (isa<StoreInst>(I))
-      return CanInsertStoresInExitBlocks;
-    return true;
   }
 };
 
@@ -2052,7 +2039,6 @@ bool llvm::promoteLoopAccessesToScalars(
 
   bool DereferenceableInPH = false;
   bool SafeToInsertStore = false;
-  bool FoundLoadToPromote = false;
 
   SmallVector<Instruction *, 64> LoopUses;
 
@@ -2100,7 +2086,6 @@ bool llvm::promoteLoopAccessesToScalars(
 
         SawUnorderedAtomic |= Load->isAtomic();
         SawNotAtomic |= !Load->isAtomic();
-        FoundLoadToPromote = true;
 
         Align InstAlignment = Load->getAlign();
 
@@ -2212,20 +2197,13 @@ bool llvm::promoteLoopAccessesToScalars(
     }
   }
 
-  // If we've still failed to prove we can sink the store, hoist the load
-  // only, if possible.
-  if (!SafeToInsertStore && !FoundLoadToPromote)
-    // If we cannot hoist the load either, give up.
+  // If we've still failed to prove we can sink the store, give up.
+  if (!SafeToInsertStore)
     return false;
 
-  // Lets do the promotion!
-  if (SafeToInsertStore)
-    LLVM_DEBUG(dbgs() << "LICM: Promoting load/store of the value: " << *SomePtr
-                      << '\n');
-  else
-    LLVM_DEBUG(dbgs() << "LICM: Promoting load of the value: " << *SomePtr
-                      << '\n');
-
+  // Otherwise, this is safe to promote, lets do it!
+  LLVM_DEBUG(dbgs() << "LICM: Promoting value stored to in loop: " << *SomePtr
+                    << '\n');
   ORE->emit([&]() {
     return OptimizationRemark(DEBUG_TYPE, "PromoteLoopAccessesToScalar",
                               LoopUses[0])
@@ -2244,8 +2222,7 @@ bool llvm::promoteLoopAccessesToScalars(
   SSAUpdater SSA(&NewPHIs);
   LoopPromoter Promoter(SomePtr, LoopUses, SSA, PointerMustAliases, ExitBlocks,
                         InsertPts, MSSAInsertPts, PIC, MSSAU, *LI, DL,
-                        Alignment, SawUnorderedAtomic, AATags, *SafetyInfo,
-                        SafeToInsertStore);
+                        Alignment, SawUnorderedAtomic, AATags, *SafetyInfo);
 
   // Set up the preheader to have a definition of the value.  It is the live-out
   // value from the preheader that uses in the loop will use.
