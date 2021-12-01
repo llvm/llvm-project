@@ -185,6 +185,55 @@ bool operator!=(const A3<T>& x, const A3<U>& y)
     return !(x == y);
 }
 
+template <class T, bool POCCAValue>
+class MaybePOCCAAllocator {
+    int id_ = 0;
+    bool* copy_assigned_into_ = nullptr;
+public:
+    typedef std::integral_constant<bool, POCCAValue> propagate_on_container_copy_assignment;
+    typedef T value_type;
+
+    MaybePOCCAAllocator() = default;
+    MaybePOCCAAllocator(int id, bool* copy_assigned_into)
+        : id_(id), copy_assigned_into_(copy_assigned_into) {}
+
+    MaybePOCCAAllocator(const MaybePOCCAAllocator&) = default;
+    MaybePOCCAAllocator& operator=(const MaybePOCCAAllocator& a)
+    {
+        id_ = a.id();
+        if (copy_assigned_into_)
+            *copy_assigned_into_ = true;
+        return *this;
+    }
+
+    T* allocate(std::size_t n)
+    {
+        return static_cast<T*>(::operator new(n * sizeof(T)));
+    }
+
+    void deallocate(T* ptr, std::size_t)
+    {
+        ::operator delete(ptr);
+    }
+
+    int id() const { return id_; }
+
+    friend bool operator==(const MaybePOCCAAllocator& lhs, const MaybePOCCAAllocator& rhs)
+    {
+        return lhs.id() == rhs.id();
+    }
+
+    friend bool operator!=(const MaybePOCCAAllocator& lhs, const MaybePOCCAAllocator& rhs)
+    {
+        return !(lhs == rhs);
+    }
+};
+
+template <class T>
+using POCCAAllocator = MaybePOCCAAllocator<T, /*POCCAValue = */true>;
+template <class T>
+using NonPOCCAAllocator = MaybePOCCAAllocator<T, /*POCCAValue = */false>;
+
 #endif // TEST_STD_VER >= 11
 
 #endif // ALLOCATORS_H
