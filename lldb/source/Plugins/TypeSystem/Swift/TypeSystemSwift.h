@@ -128,8 +128,6 @@ public:
   static CompilerType GetInstanceType(CompilerType ct);
   virtual CompilerType GetInstanceType(lldb::opaque_compiler_type_t type) = 0;
   enum class TypeAllocationStrategy { eInline, ePointer, eDynamic, eUnknown };
-  virtual TypeAllocationStrategy
-  GetAllocationStrategy(lldb::opaque_compiler_type_t type) = 0;
   struct TupleElement {
     ConstString element_name;
     CompilerType element_type;
