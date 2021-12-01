@@ -5821,8 +5821,11 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   Args.AddLastArg(CmdArgs, options::OPT_fvisibility_inlines_hidden_static_local_var,
                            options::OPT_fno_visibility_inlines_hidden_static_local_var);
   Args.AddLastArg(CmdArgs, options::OPT_fvisibility_global_new_delete_hidden);
-  Args.AddLastArg(CmdArgs, options::OPT_fnew_infallible);
   Args.AddLastArg(CmdArgs, options::OPT_ftlsmodel_EQ);
+
+  if (Args.hasFlag(options::OPT_fnew_infallible,
+                   options::OPT_fno_new_infallible, false))
+    CmdArgs.push_back("-fnew-infallible");
 
   if (Args.hasFlag(options::OPT_fno_operator_names,
                    options::OPT_foperator_names, false))
