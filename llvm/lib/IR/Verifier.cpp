@@ -5269,24 +5269,32 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
       Op0ElemTy =
           cast<VectorType>(Call.getArgOperand(0)->getType())->getElementType();
       break;
-    case Intrinsic::matrix_column_major_load:
+    case Intrinsic::matrix_column_major_load: {
       Stride = dyn_cast<ConstantInt>(Call.getArgOperand(1));
       NumRows = cast<ConstantInt>(Call.getArgOperand(3));
       NumColumns = cast<ConstantInt>(Call.getArgOperand(4));
       ResultTy = cast<VectorType>(Call.getType());
-      Op0ElemTy =
-          cast<PointerType>(Call.getArgOperand(0)->getType())->getElementType();
+
+      PointerType *Op0PtrTy =
+          cast<PointerType>(Call.getArgOperand(0)->getType());
+      if (!Op0PtrTy->isOpaque())
+        Op0ElemTy = Op0PtrTy->getElementType();
       break;
-    case Intrinsic::matrix_column_major_store:
+    }
+    case Intrinsic::matrix_column_major_store: {
       Stride = dyn_cast<ConstantInt>(Call.getArgOperand(2));
       NumRows = cast<ConstantInt>(Call.getArgOperand(4));
       NumColumns = cast<ConstantInt>(Call.getArgOperand(5));
       ResultTy = cast<VectorType>(Call.getArgOperand(0)->getType());
       Op0ElemTy =
           cast<VectorType>(Call.getArgOperand(0)->getType())->getElementType();
-      Op1ElemTy =
-          cast<PointerType>(Call.getArgOperand(1)->getType())->getElementType();
+
+      PointerType *Op1PtrTy =
+          cast<PointerType>(Call.getArgOperand(1)->getType());
+      if (!Op1PtrTy->isOpaque())
+        Op1ElemTy = Op1PtrTy->getElementType();
       break;
+    }
     default:
       llvm_unreachable("unexpected intrinsic");
     }
@@ -5295,9 +5303,10 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
            ResultTy->getElementType()->isFloatingPointTy(),
            "Result type must be an integer or floating-point type!", IF);
 
-    Assert(ResultTy->getElementType() == Op0ElemTy,
-           "Vector element type mismatch of the result and first operand "
-           "vector!", IF);
+    if (Op0ElemTy)
+      Assert(ResultTy->getElementType() == Op0ElemTy,
+             "Vector element type mismatch of the result and first operand "
+             "vector!", IF);
 
     if (Op1ElemTy)
       Assert(ResultTy->getElementType() == Op1ElemTy,
