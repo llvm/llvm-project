@@ -1670,32 +1670,6 @@ public:
     return CreateAlignedLoad(Ty, Ptr, MaybeAlign(), isVolatile, Name);
   }
 
-  // Deprecated [opaque pointer types]
-  LLVM_ATTRIBUTE_DEPRECATED(LoadInst *CreateLoad(Value *Ptr,
-                                                 const char *Name),
-                            "Use the version that explicitly specifies the "
-                            "loaded type instead") {
-    return CreateLoad(Ptr->getType()->getPointerElementType(), Ptr, Name);
-  }
-
-  // Deprecated [opaque pointer types]
-  LLVM_ATTRIBUTE_DEPRECATED(LoadInst *CreateLoad(Value *Ptr,
-                                                 const Twine &Name = ""),
-                            "Use the version that explicitly specifies the "
-                            "loaded type instead") {
-    return CreateLoad(Ptr->getType()->getPointerElementType(), Ptr, Name);
-  }
-
-  // Deprecated [opaque pointer types]
-  LLVM_ATTRIBUTE_DEPRECATED(LoadInst *CreateLoad(Value *Ptr,
-                                                 bool isVolatile,
-                                                 const Twine &Name = ""),
-                            "Use the version that explicitly specifies the "
-                            "loaded type instead") {
-    return CreateLoad(Ptr->getType()->getPointerElementType(), Ptr, isVolatile,
-                      Name);
-  }
-
   StoreInst *CreateStore(Value *Val, Value *Ptr, bool isVolatile = false) {
     return CreateAlignedStore(Val, Ptr, MaybeAlign(), isVolatile);
   }
@@ -1717,35 +1691,6 @@ public:
       Align = DL.getABITypeAlign(Ty);
     }
     return Insert(new LoadInst(Ty, Ptr, Twine(), isVolatile, *Align), Name);
-  }
-
-  // Deprecated [opaque pointer types]
-  LLVM_ATTRIBUTE_DEPRECATED(LoadInst *CreateAlignedLoad(Value *Ptr,
-                                                        MaybeAlign Align,
-                                                        const char *Name),
-                            "Use the version that explicitly specifies the "
-                            "loaded type instead") {
-    return CreateAlignedLoad(Ptr->getType()->getPointerElementType(), Ptr,
-                             Align, Name);
-  }
-  // Deprecated [opaque pointer types]
-  LLVM_ATTRIBUTE_DEPRECATED(LoadInst *CreateAlignedLoad(Value *Ptr,
-                                                        MaybeAlign Align,
-                                                        const Twine &Name = ""),
-                            "Use the version that explicitly specifies the "
-                            "loaded type instead") {
-    return CreateAlignedLoad(Ptr->getType()->getPointerElementType(), Ptr,
-                             Align, Name);
-  }
-  // Deprecated [opaque pointer types]
-  LLVM_ATTRIBUTE_DEPRECATED(LoadInst *CreateAlignedLoad(Value *Ptr,
-                                                        MaybeAlign Align,
-                                                        bool isVolatile,
-                                                        const Twine &Name = ""),
-                            "Use the version that explicitly specifies the "
-                            "loaded type instead") {
-    return CreateAlignedLoad(Ptr->getType()->getPointerElementType(), Ptr,
-                             Align, isVolatile, Name);
   }
 
   StoreInst *CreateAlignedStore(Value *Val, Value *Ptr, MaybeAlign Align,
@@ -1788,14 +1733,6 @@ public:
     return Insert(new AtomicRMWInst(Op, Ptr, Val, *Align, Ordering, SSID));
   }
 
-  LLVM_ATTRIBUTE_DEPRECATED(
-      Value *CreateGEP(Value *Ptr, ArrayRef<Value *> IdxList,
-                       const Twine &Name = ""),
-      "Use the version with explicit element type instead") {
-    return CreateGEP(Ptr->getType()->getScalarType()->getPointerElementType(),
-                     Ptr, IdxList, Name);
-  }
-
   Value *CreateGEP(Type *Ty, Value *Ptr, ArrayRef<Value *> IdxList,
                    const Twine &Name = "") {
     if (auto *PC = dyn_cast<Constant>(Ptr)) {
@@ -1808,15 +1745,6 @@ public:
         return Insert(Folder.CreateGetElementPtr(Ty, PC, IdxList), Name);
     }
     return Insert(GetElementPtrInst::Create(Ty, Ptr, IdxList), Name);
-  }
-
-  LLVM_ATTRIBUTE_DEPRECATED(
-      Value *CreateInBoundsGEP(Value *Ptr, ArrayRef<Value *> IdxList,
-                               const Twine &Name = ""),
-      "Use the version with explicit element type instead") {
-    return CreateInBoundsGEP(
-        Ptr->getType()->getScalarType()->getPointerElementType(), Ptr, IdxList,
-        Name);
   }
 
   Value *CreateInBoundsGEP(Type *Ty, Value *Ptr, ArrayRef<Value *> IdxList,
@@ -1847,15 +1775,6 @@ public:
       if (auto *IC = dyn_cast<Constant>(Idx))
         return Insert(Folder.CreateInBoundsGetElementPtr(Ty, PC, IC), Name);
     return Insert(GetElementPtrInst::CreateInBounds(Ty, Ptr, Idx), Name);
-  }
-
-  LLVM_ATTRIBUTE_DEPRECATED(
-      Value *CreateConstGEP1_32(Value *Ptr, unsigned Idx0,
-                                const Twine &Name = ""),
-      "Use the version with explicit element type instead") {
-    return CreateConstGEP1_32(
-        Ptr->getType()->getScalarType()->getPointerElementType(), Ptr, Idx0,
-        Name);
   }
 
   Value *CreateConstGEP1_32(Type *Ty, Value *Ptr, unsigned Idx0,
@@ -1914,15 +1833,6 @@ public:
     return Insert(GetElementPtrInst::Create(Ty, Ptr, Idx), Name);
   }
 
-  LLVM_ATTRIBUTE_DEPRECATED(
-      Value *CreateConstGEP1_64(Value *Ptr, uint64_t Idx0,
-                                const Twine &Name = ""),
-      "Use the version with explicit element type instead") {
-    return CreateConstGEP1_64(
-        Ptr->getType()->getScalarType()->getPointerElementType(), Ptr, Idx0,
-        Name);
-  }
-
   Value *CreateConstInBoundsGEP1_64(Type *Ty, Value *Ptr, uint64_t Idx0,
                                     const Twine &Name = "") {
     Value *Idx = ConstantInt::get(Type::getInt64Ty(Context), Idx0);
@@ -1931,15 +1841,6 @@ public:
       return Insert(Folder.CreateInBoundsGetElementPtr(Ty, PC, Idx), Name);
 
     return Insert(GetElementPtrInst::CreateInBounds(Ty, Ptr, Idx), Name);
-  }
-
-  LLVM_ATTRIBUTE_DEPRECATED(
-      Value *CreateConstInBoundsGEP1_64(Value *Ptr, uint64_t Idx0,
-                                        const Twine &Name = ""),
-      "Use the version with explicit element type instead") {
-    return CreateConstInBoundsGEP1_64(
-        Ptr->getType()->getScalarType()->getPointerElementType(), Ptr, Idx0,
-        Name);
   }
 
   Value *CreateConstGEP2_64(Type *Ty, Value *Ptr, uint64_t Idx0, uint64_t Idx1,
@@ -1955,15 +1856,6 @@ public:
     return Insert(GetElementPtrInst::Create(Ty, Ptr, Idxs), Name);
   }
 
-  LLVM_ATTRIBUTE_DEPRECATED(
-      Value *CreateConstGEP2_64(Value *Ptr, uint64_t Idx0, uint64_t Idx1,
-                                const Twine &Name = ""),
-      "Use the version with explicit element type instead") {
-    return CreateConstGEP2_64(
-        Ptr->getType()->getScalarType()->getPointerElementType(), Ptr, Idx0,
-        Idx1, Name);
-  }
-
   Value *CreateConstInBoundsGEP2_64(Type *Ty, Value *Ptr, uint64_t Idx0,
                                     uint64_t Idx1, const Twine &Name = "") {
     Value *Idxs[] = {
@@ -1977,26 +1869,9 @@ public:
     return Insert(GetElementPtrInst::CreateInBounds(Ty, Ptr, Idxs), Name);
   }
 
-  LLVM_ATTRIBUTE_DEPRECATED(
-      Value *CreateConstInBoundsGEP2_64(Value *Ptr, uint64_t Idx0,
-                                        uint64_t Idx1, const Twine &Name = ""),
-      "Use the version with explicit element type instead") {
-    return CreateConstInBoundsGEP2_64(
-        Ptr->getType()->getScalarType()->getPointerElementType(), Ptr, Idx0,
-        Idx1, Name);
-  }
-
   Value *CreateStructGEP(Type *Ty, Value *Ptr, unsigned Idx,
                          const Twine &Name = "") {
     return CreateConstInBoundsGEP2_32(Ty, Ptr, 0, Idx, Name);
-  }
-
-  LLVM_ATTRIBUTE_DEPRECATED(
-      Value *CreateStructGEP(Value *Ptr, unsigned Idx, const Twine &Name = ""),
-      "Use the version with explicit element type instead") {
-    return CreateConstInBoundsGEP2_32(
-        Ptr->getType()->getScalarType()->getPointerElementType(), Ptr, 0, Idx,
-        Name);
   }
 
   /// Same as CreateGlobalString, but return a pointer with "i8*" type
