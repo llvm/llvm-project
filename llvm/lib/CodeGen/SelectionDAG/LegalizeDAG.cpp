@@ -3553,9 +3553,10 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
     // Node.
     Tmp1 = Node->getOperand(0);
     Tmp2 = Node->getOperand(1);
-    if (Tmp2.getOpcode() == ISD::SETCC) {
-      Tmp1 = DAG.getNode(ISD::BR_CC, dl, MVT::Other,
-                         Tmp1, Tmp2.getOperand(2),
+    if (Tmp2.getOpcode() == ISD::SETCC &&
+        TLI.isOperationLegalOrCustom(ISD::BR_CC,
+                                     Tmp2.getOperand(0).getValueType())) {
+      Tmp1 = DAG.getNode(ISD::BR_CC, dl, MVT::Other, Tmp1, Tmp2.getOperand(2),
                          Tmp2.getOperand(0), Tmp2.getOperand(1),
                          Node->getOperand(2));
     } else {
