@@ -13,9 +13,6 @@
 // shared_timed_mutex was introduced in macosx10.12
 // UNSUPPORTED: use_system_cxx_lib && target={{.+}}-apple-macosx10.{{9|10|11}}
 
-// TODO(ldionne): This test fails on Ubuntu Focal on our CI nodes (and only there), in 32 bit mode.
-// UNSUPPORTED: linux && 32bits-on-64bits
-
 // <shared_mutex>
 
 // class shared_timed_mutex;

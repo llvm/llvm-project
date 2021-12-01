@@ -12,9 +12,6 @@
 // against already-released libc++'s.
 // XFAIL: use_system_cxx_lib && target={{.+}}-apple-macosx10.15
 
-// TODO(ldionne): This test fails on Ubuntu Focal on our CI nodes (and only there), in 32 bit mode.
-// UNSUPPORTED: linux && 32bits-on-64bits
-
 // <filesystem>
 
 // bool copy_file(const path& from, const path& to);

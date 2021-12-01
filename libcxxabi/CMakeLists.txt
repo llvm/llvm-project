@@ -108,7 +108,11 @@ option(LIBCXXABI_ENABLE_NEW_DELETE_DEFINITIONS
   "Build libc++abi with definitions for operator new/delete. These are normally
    defined in libc++abi, but it is also possible to define them in libc++, in
    which case the definition in libc++abi should be turned off." ON)
-option(LIBCXXABI_BUILD_32_BITS "Build 32 bit libc++abi." ${LLVM_BUILD_32_BITS})
+option(LIBCXXABI_BUILD_32_BITS "Build 32 bit multilib libc++abi. This option is not supported anymore when building the runtimes. Please specify a full triple instead." ${LLVM_BUILD_32_BITS})
+if (LIBCXXABI_BUILD_32_BITS)
+  message(WARNING "LIBCXXABI_BUILD_32_BITS is not supported anymore when building the runtimes, please specify a full triple instead.")
+endif()
+
 option(LIBCXXABI_INCLUDE_TESTS "Generate build targets for the libc++abi unit tests." ${LLVM_INCLUDE_TESTS})
 set(LIBCXXABI_LIBDIR_SUFFIX "${LLVM_LIBDIR_SUFFIX}" CACHE STRING
     "Define suffix of library directory name (32/64)")
@@ -243,15 +247,6 @@ if (NOT LIBCXXABI_LIBCXX_LIBRARY_PATH)
       "The path to libc++ library." FORCE)
 endif()
 
-# Check that we can build with 32 bits if requested.
-if (CMAKE_SIZEOF_VOID_P EQUAL 8 AND NOT WIN32)
-  if (LIBCXXABI_BUILD_32_BITS AND NOT LLVM_BUILD_32_BITS) # Don't duplicate the output from LLVM
-    message(STATUS "Building 32 bits executables and libraries.")
-  endif()
-elseif(LIBCXXABI_BUILD_32_BITS)
-  message(FATAL_ERROR "LIBCXXABI_BUILD_32_BITS=ON is not supported on this platform.")
-endif()
-
 # Declare libc++abi configuration variables.
 # They are intended for use as follows:
 # LIBCXXABI_C_FLAGS: General flags for both the c++ compiler and linker.
@@ -274,8 +269,6 @@ include(HandleLibcxxabiFlags)
 #===============================================================================
 
 # Configure target flags
-add_target_flags_if(LIBCXXABI_BUILD_32_BITS "-m32")
-
 if(LIBCXXABI_TARGET_TRIPLE)
   add_target_flags_if_supported("--target=${LIBCXXABI_TARGET_TRIPLE}")
 endif()
