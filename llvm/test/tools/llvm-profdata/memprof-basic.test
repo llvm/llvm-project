@@ -36,7 +36,7 @@ additional entry from a realloc in glibc/libio/vasprintf.c.
 
 CHECK: MemProf Profile 1
 CHECK:   Version: 1
-CHECK:   TotalSizeBytes: 1012
+CHECK:   TotalSizeBytes: 1016
 CHECK:   NumSegments: 9
 CHECK:   NumMIBInfo: 3
 CHECK:   NumStackOffsets: 3
