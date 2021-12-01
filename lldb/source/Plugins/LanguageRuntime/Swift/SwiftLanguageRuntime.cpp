@@ -412,7 +412,7 @@ static bool HasReflectionInfo(ObjectFile *obj_file) {
   return hasReflectionSection;
 }
 
-SwiftLanguageRuntimeImpl::NativeReflectionContext *
+SwiftLanguageRuntimeImpl::ReflectionContextInterface *
 SwiftLanguageRuntimeImpl::GetReflectionContext() {
   if (!m_initialized_reflection_ctx)
     SetupReflection();
@@ -438,7 +438,21 @@ void SwiftLanguageRuntimeImpl::SetupReflection() {
   if (m_initialized_reflection_ctx)
     return;
 
-  m_reflection_ctx.reset(new NativeReflectionContext(this->GetMemoryReader()));
+  auto &target = m_process.GetTarget();
+  if (auto exe_module = target.GetExecutableModule()) {
+    auto &triple = exe_module->GetArchitecture().GetTriple();
+    if (triple.isArch64Bit())
+      m_reflection_ctx = ReflectionContextInterface::CreateReflectionContext64(
+          this->GetMemoryReader());
+    else if (triple.isArch32Bit())
+      m_reflection_ctx = ReflectionContextInterface::CreateReflectionContext32(
+          this->GetMemoryReader());
+    else {
+      LLDB_LOGF(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES),
+                "Could not initialize reflection context for \"%s\"",
+                triple.str().c_str());
+    }
+  }
   m_initialized_reflection_ctx = true;
 
   // Add all defered modules to reflection context that were added to
