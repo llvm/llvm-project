@@ -24,15 +24,14 @@ void test(int a, int b, int c) {
   if (b != 0)
     return;
   clang_analyzer_printState();
-  // CHECK:      "constraints": [
-  // CHECK-NEXT:   { "symbol": "((reg_$0<int a>) + (reg_$1<int b>)) != (reg_$2<int c>)", "range": "{ [0, 0] }" },
-  // CHECK-NEXT:   { "symbol": "(reg_$0<int a>) != (reg_$2<int c>)", "range": "{ [0, 0] }" },
-  // CHECK-NEXT:   { "symbol": "reg_$1<int b>", "range": "{ [0, 0] }" }
-  // CHECK-NEXT: ],
-  // CHECK-NEXT: "equivalence_classes": [
-  // CHECK-NEXT:   [ "((reg_$0<int a>) + (reg_$1<int b>)) != (reg_$2<int c>)", "(reg_$0<int a>) != (reg_$2<int c>)" ],
-  // CHECK-NEXT:   [ "(reg_$0<int a>) + (reg_$1<int b>)", "reg_$0<int a>", "reg_$2<int c>" ]
-  // CHECK-NEXT: ],
+  // CHECK:        "constraints": [
+  // CHECK-NEXT:     { "symbol": "(reg_$0<int a>) != (reg_$2<int c>)", "range": "{ [0, 0] }" },
+  // CHECK-NEXT:     { "symbol": "reg_$1<int b>", "range": "{ [0, 0] }" }
+  // CHECK-NEXT:   ],
+  // CHECK-NEXT:   "equivalence_classes": [
+  // CHECK-NEXT:     [ "(reg_$0<int a>) != (reg_$2<int c>)" ],
+  // CHECK-NEXT:     [ "reg_$0<int a>", "reg_$2<int c>" ]
+  // CHECK-NEXT:   ],
   // CHECK-NEXT: "disequality_info": null,
 
   // Keep the symbols and the constraints! alive.

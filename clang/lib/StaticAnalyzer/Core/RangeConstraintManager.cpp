@@ -601,6 +601,10 @@ public:
   LLVM_NODISCARD static inline Optional<bool>
   areEqual(ProgramStateRef State, SymbolRef First, SymbolRef Second);
 
+  /// Remove one member from the class.
+  LLVM_NODISCARD ProgramStateRef removeMember(ProgramStateRef State,
+                                              const SymbolRef Old);
+
   /// Iterate over all symbols and try to simplify them.
   LLVM_NODISCARD static inline ProgramStateRef simplify(SValBuilder &SVB,
                                                         RangeSet::Factory &F,
@@ -2132,6 +2136,34 @@ inline Optional<bool> EquivalenceClass::areEqual(ProgramStateRef State,
   return llvm::None;
 }
 
+LLVM_NODISCARD ProgramStateRef
+EquivalenceClass::removeMember(ProgramStateRef State, const SymbolRef Old) {
+
+  SymbolSet ClsMembers = getClassMembers(State);
+  assert(ClsMembers.contains(Old));
+
+  // We don't remove `Old`'s Sym->Class relation for two reasons:
+  // 1) This way constraints for the old symbol can still be found via it's
+  // equivalence class that it used to be the member of.
+  // 2) Performance and resource reasons. We can spare one removal and thus one
+  // additional tree in the forest of `ClassMap`.
+
+  // Remove `Old`'s Class->Sym relation.
+  SymbolSet::Factory &F = getMembersFactory(State);
+  ClassMembersTy::Factory &EMFactory = State->get_context<ClassMembers>();
+  ClsMembers = F.remove(ClsMembers, Old);
+  // Ensure another precondition of the removeMember function (we can check
+  // this only with isEmpty, thus we have to do the remove first).
+  assert(!ClsMembers.isEmpty() &&
+         "Class should have had at least two members before member removal");
+  // Overwrite the existing members assigned to this class.
+  ClassMembersTy ClassMembersMap = State->get<ClassMembers>();
+  ClassMembersMap = EMFactory.add(ClassMembersMap, *this, ClsMembers);
+  State = State->set<ClassMembers>(ClassMembersMap);
+
+  return State;
+}
+
 // Re-evaluate an SVal with top-level `State->assume` logic.
 LLVM_NODISCARD ProgramStateRef reAssume(ProgramStateRef State,
                                         const RangeSet *Constraint,
@@ -2159,6 +2191,42 @@ LLVM_NODISCARD ProgramStateRef reAssume(ProgramStateRef State,
                                      Constraint->getMaxValue(), true);
 }
 
+// Simplify the given symbol with the help of the SValBuilder. In
+// SValBuilder::symplifySval, we traverse the symbol tree and query the
+// constraint values for the sub-trees and if a value is a constant we do the
+// constant folding. Compound symbols might collapse to simpler symbol tree
+// that is still possible to further simplify. Thus, we do the simplification on
+// a new symbol tree until we reach the simplest form, i.e. the fixpoint.
+//
+// Consider the following symbol `(b * b) * b * b` which has this tree:
+//       *
+//      / \
+//     *   b
+//    /  \
+//   /    b
+// (b * b)
+// Now, if the `b * b == 1` new constraint is added then during the first
+// iteration we have the following transformations:
+//       *                  *
+//      / \                / \
+//     *   b     -->      b   b
+//    /  \
+//   /    b
+//  1
+// We need another iteration to reach the final result `1`.
+LLVM_NODISCARD
+static SVal simplifyUntilFixpoint(SValBuilder &SVB, ProgramStateRef State,
+                                  const SymbolRef Sym) {
+  SVal Val = SVB.makeSymbolVal(Sym);
+  SVal SimplifiedVal = SVB.simplifySVal(State, Val);
+  // Do the simplification until we can.
+  while (SimplifiedVal != Val) {
+    Val = SimplifiedVal;
+    SimplifiedVal = SVB.simplifySVal(State, Val);
+  }
+  return SimplifiedVal;
+}
+
 // Iterate over all symbols and try to simplify them. Once a symbol is
 // simplified then we check if we can merge the simplified symbol's equivalence
 // class to this class. This way, we simplify not just the symbols but the
@@ -2170,7 +2238,8 @@ EquivalenceClass::simplify(SValBuilder &SVB, RangeSet::Factory &F,
   SymbolSet ClassMembers = Class.getClassMembers(State);
   for (const SymbolRef &MemberSym : ClassMembers) {
 
-    const SVal SimplifiedMemberVal = simplifyToSVal(State, MemberSym);
+    const SVal SimplifiedMemberVal =
+        simplifyUntilFixpoint(SVB, State, MemberSym);
     const SymbolRef SimplifiedMemberSym = SimplifiedMemberVal.getAsSymbol();
 
     // The symbol is collapsed to a constant, check if the current State is
@@ -2196,6 +2265,8 @@ EquivalenceClass::simplify(SValBuilder &SVB, RangeSet::Factory &F,
         continue;
 
       assert(find(State, MemberSym) == find(State, SimplifiedMemberSym));
+      // Remove the old and more complex symbol.
+      State = find(State, MemberSym).removeMember(State, MemberSym);
 
       // Query the class constraint again b/c that may have changed during the
       // merge above.
@@ -2207,25 +2278,19 @@ EquivalenceClass::simplify(SValBuilder &SVB, RangeSet::Factory &F,
       // About performance and complexity: Let us assume that in a State we
       // have N non-trivial equivalence classes and that all constraints and
       // disequality info is related to non-trivial classes. In the worst case,
-      // we can simplify only one symbol of one class in each iteration.
+      // we can simplify only one symbol of one class in each iteration. The
+      // number of symbols in one class cannot grow b/c we replace the old
+      // symbol with the simplified one. Also, the number of the equivalence
+      // classes can decrease only, b/c the algorithm does a merge operation
+      // optionally. We need N iterations in this case to reach the fixpoint.
+      // Thus, the steps needed to be done in the worst case is proportional to
+      // N*N.
       //
-      // The number of the equivalence classes can decrease only, because the
-      // algorithm does a merge operation optionally.
-      // ASSUMPTION G: Let us assume that the
-      // number of symbols in one class cannot grow because we replace the old
-      // symbol with the simplified one.
-      // If assumption G holds then we need N iterations in this case to reach
-      // the fixpoint. Thus, the steps needed to be done in the worst case is
-      // proportional to N*N.
       // This worst case scenario can be extended to that case when we have
       // trivial classes in the constraints and in the disequality map. This
       // case can be reduced to the case with a State where there are only
       // non-trivial classes. This is because a merge operation on two trivial
       // classes results in one non-trivial class.
-      //
-      // Empirical measurements show that if we relax assumption G (i.e. if we
-      // do not replace the complex symbol just add the simplified one) then
-      // the runtime and memory consumption does not grow noticeably.
       State = reAssume(State, ClassConstraint, SimplifiedMemberVal);
       if (!State)
         return nullptr;
