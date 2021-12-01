@@ -115,29 +115,6 @@ def VectorTransferOpInterface : OpInterface<"VectorTransferOpInterface"> {
       /*defaultImplementation=*/
     >,
     InterfaceMethod<
-      /*desc=*/[{
-        Returns true if op involves a 0-d tensor/memref and a vector
-        of shape {1}. This is temporary until we have 0-d vectors.
-        // TODO: turn this into 0-d vectors + empty permutation_map.
-      }],
-      /*retTy=*/"bool",
-      /*methodName=*/"isZeroD",
-      /*args=*/(ins),
-      /*methodBody=*/"",
-      /*defaultImplementation=*/[{
-        if (getShapedType().getRank() > 0)
-          return false;
-        if (getVectorType().getShape() != ArrayRef<int64_t>{1})
-          return false;
-        AffineMap map = AffineMap::get(
-          /*numDims=*/0, /*numSymbols=*/0,
-          getAffineConstantExpr(0, $_op->getContext()));
-        if ($_op.permutation_map() != map)
-          return false;
-        return true;
-      }]
-    >,
-    InterfaceMethod<
       /*desc=*/[{ Returns true if the specified dimension is a broadcast. }],
       /*retTy=*/"bool",
       /*methodName=*/"isBroadcastDim",
@@ -157,10 +134,7 @@ def VectorTransferOpInterface : OpInterface<"VectorTransferOpInterface"> {
       /*args=*/(ins),
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
-        // 0-d transfers are not considered broadcasts but they need to be 
-        // represented with a vector<1xt> until we have 0-d vectors.
-        if ($_op.isZeroD()) return false;
-        for (unsigned i = 0; i < $_op.permutation_map().getNumResults(); ++i) {
+        for (unsigned i = 0, rank = getTransferRank(); i < rank; ++i) {
           if ($_op.isBroadcastDim(i))
             return true;
         }

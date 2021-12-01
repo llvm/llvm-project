@@ -101,8 +101,7 @@ struct TransferWriteOpInterface
       return failure();
     b.create<vector::TransferWriteOp>(
         writeOp.getLoc(), writeOp.vector(), resultBuffer, writeOp.indices(),
-        writeOp.permutation_map(),
-        writeOp.in_bounds() ? *writeOp.in_bounds() : ArrayAttr());
+        writeOp.permutation_mapAttr(), writeOp.in_boundsAttr());
     state.mapBuffer(op->getResult(0), resultBuffer);
 
     return success();

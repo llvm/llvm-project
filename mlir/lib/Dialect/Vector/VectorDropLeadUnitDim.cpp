@@ -133,6 +133,10 @@ struct CastAwayTransferReadLeadingOneDim
 
   LogicalResult matchAndRewrite(vector::TransferReadOp read,
                                 PatternRewriter &rewriter) const override {
+    // TODO: support 0-d corner case.
+    if (read.getTransferRank() == 0)
+      return failure();
+
     if (read.mask())
       return failure();
 
@@ -153,14 +157,15 @@ struct CastAwayTransferReadLeadingOneDim
         AffineMap::get(oldMap.getNumDims(), oldMap.getNumSymbols(), newResults,
                        rewriter.getContext());
 
-    ArrayAttr inBounds;
+    ArrayAttr inBoundsAttr;
     if (read.in_bounds())
-      inBounds = rewriter.getArrayAttr(
+      inBoundsAttr = rewriter.getArrayAttr(
           read.in_boundsAttr().getValue().take_back(newType.getRank()));
 
     auto newRead = rewriter.create<vector::TransferReadOp>(
-        read.getLoc(), newType, read.source(), read.indices(), newMap,
-        read.padding(), inBounds);
+        read.getLoc(), newType, read.source(), read.indices(),
+        AffineMapAttr::get(newMap), read.padding(), /*mask=*/Value(),
+        inBoundsAttr);
     rewriter.replaceOpWithNewOp<vector::BroadcastOp>(read, oldType, newRead);
 
     return success();
@@ -176,6 +181,10 @@ struct CastAwayTransferWriteLeadingOneDim
 
   LogicalResult matchAndRewrite(vector::TransferWriteOp write,
                                 PatternRewriter &rewriter) const override {
+    // TODO: support 0-d corner case.
+    if (write.getTransferRank() == 0)
+      return failure();
+
     if (write.mask())
       return failure();
 
@@ -196,15 +205,16 @@ struct CastAwayTransferWriteLeadingOneDim
         AffineMap::get(oldMap.getNumDims(), oldMap.getNumSymbols(), newResults,
                        rewriter.getContext());
 
-    ArrayAttr inBounds;
+    ArrayAttr inBoundsAttr;
     if (write.in_bounds())
-      inBounds = rewriter.getArrayAttr(
+      inBoundsAttr = rewriter.getArrayAttr(
           write.in_boundsAttr().getValue().take_back(newType.getRank()));
 
     auto newVector = rewriter.create<vector::ExtractOp>(
         write.getLoc(), write.vector(), splatZero(dropDim));
     rewriter.replaceOpWithNewOp<vector::TransferWriteOp>(
-        write, newVector, write.source(), write.indices(), newMap, inBounds);
+        write, newVector, write.source(), write.indices(),
+        AffineMapAttr::get(newMap), inBoundsAttr);
 
     return success();
   }
