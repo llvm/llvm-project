@@ -4542,10 +4542,25 @@ bool SelectionDAG::isEqualTo(SDValue A, SDValue B) const {
 }
 
 // FIXME: unify with llvm::haveNoCommonBitsSet.
-// FIXME: could also handle masked merge pattern (X & ~M) op (Y & M)
 bool SelectionDAG::haveNoCommonBitsSet(SDValue A, SDValue B) const {
   assert(A.getValueType() == B.getValueType() &&
          "Values must have the same type");
+  // Match masked merge pattern (X & ~M) op (Y & M)
+  if (A->getOpcode() == ISD::AND && B->getOpcode() == ISD::AND) {
+    auto MatchNoCommonBitsPattern = [&](SDValue NotM, SDValue And) {
+      if (isBitwiseNot(NotM, true)) {
+        SDValue NotOperand = NotM->getOperand(0);
+        return NotOperand == And->getOperand(0) ||
+               NotOperand == And->getOperand(1);
+      }
+      return false;
+    };
+    if (MatchNoCommonBitsPattern(A->getOperand(0), B) ||
+        MatchNoCommonBitsPattern(A->getOperand(1), B) ||
+        MatchNoCommonBitsPattern(B->getOperand(0), A) ||
+        MatchNoCommonBitsPattern(B->getOperand(1), A))
+      return true;
+  }
   return KnownBits::haveNoCommonBitsSet(computeKnownBits(A),
                                         computeKnownBits(B));
 }

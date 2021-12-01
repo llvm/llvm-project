@@ -7,12 +7,7 @@
 define <2 x i32> @or_and_and_rhs_neg_vec_i32(<2 x i32> %x, <2 x i32> %y, <2 x i32> %z) {
 ; CHECK-LABEL: or_and_and_rhs_neg_vec_i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    pand %xmm1, %xmm2
-; CHECK-NEXT:    pandn %xmm0, %xmm1
-; CHECK-NEXT:    movdqa %xmm2, %xmm0
-; CHECK-NEXT:    por %xmm1, %xmm0
-; CHECK-NEXT:    paddd %xmm2, %xmm1
-; CHECK-NEXT:    psubd %xmm1, %xmm0
+; CHECK-NEXT:    xorps %xmm0, %xmm0
 ; CHECK-NEXT:    retq
   %and1 = and <2 x i32> %z, %y
   %xor = xor <2 x i32> %y, <i32 -1, i32 -1>
@@ -26,12 +21,7 @@ define <2 x i32> @or_and_and_rhs_neg_vec_i32(<2 x i32> %x, <2 x i32> %y, <2 x i3
 define <2 x i32> @or_and_and_lhs_neg_vec_i32(<2 x i32> %x, <2 x i32> %y, <2 x i32> %z) {
 ; CHECK-LABEL: or_and_and_lhs_neg_vec_i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    pand %xmm1, %xmm2
-; CHECK-NEXT:    pandn %xmm0, %xmm1
-; CHECK-NEXT:    movdqa %xmm2, %xmm0
-; CHECK-NEXT:    por %xmm1, %xmm0
-; CHECK-NEXT:    paddd %xmm2, %xmm1
-; CHECK-NEXT:    psubd %xmm1, %xmm0
+; CHECK-NEXT:    xorps %xmm0, %xmm0
 ; CHECK-NEXT:    retq
   %and1 = and <2 x i32> %z, %y
   %xor = xor <2 x i32> %y, <i32 -1, i32 -1>
@@ -45,13 +35,7 @@ define <2 x i32> @or_and_and_lhs_neg_vec_i32(<2 x i32> %x, <2 x i32> %y, <2 x i3
 define <2 x i32> @or_and_rhs_neg_and_vec_i32(<2 x i32> %x, <2 x i32> %y, <2 x i32> %z) {
 ; CHECK-LABEL: or_and_rhs_neg_and_vec_i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    pand %xmm1, %xmm0
-; CHECK-NEXT:    pandn %xmm2, %xmm1
-; CHECK-NEXT:    movdqa %xmm1, %xmm2
-; CHECK-NEXT:    por %xmm0, %xmm2
-; CHECK-NEXT:    paddd %xmm0, %xmm1
-; CHECK-NEXT:    psubd %xmm1, %xmm2
-; CHECK-NEXT:    movdqa %xmm2, %xmm0
+; CHECK-NEXT:    xorps %xmm0, %xmm0
 ; CHECK-NEXT:    retq
   %xor = xor <2 x i32> %y, <i32 -1, i32 -1>
   %and1 = and <2 x i32> %z, %xor
@@ -65,13 +49,7 @@ define <2 x i32> @or_and_rhs_neg_and_vec_i32(<2 x i32> %x, <2 x i32> %y, <2 x i3
 define <2 x i32> @or_and_lhs_neg_and_vec_i32(<2 x i32> %x, <2 x i32> %y, <2 x i32> %z) {
 ; CHECK-LABEL: or_and_lhs_neg_and_vec_i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    pand %xmm1, %xmm0
-; CHECK-NEXT:    pandn %xmm2, %xmm1
-; CHECK-NEXT:    movdqa %xmm1, %xmm2
-; CHECK-NEXT:    por %xmm0, %xmm2
-; CHECK-NEXT:    paddd %xmm0, %xmm1
-; CHECK-NEXT:    psubd %xmm1, %xmm2
-; CHECK-NEXT:    movdqa %xmm2, %xmm0
+; CHECK-NEXT:    xorps %xmm0, %xmm0
 ; CHECK-NEXT:    retq
   %xor = xor <2 x i32> %y, <i32 -1, i32 -1>
   %and1 = and <2 x i32> %xor, %z
@@ -85,12 +63,7 @@ define <2 x i32> @or_and_lhs_neg_and_vec_i32(<2 x i32> %x, <2 x i32> %y, <2 x i3
 define <2 x i64> @or_and_and_rhs_neg_vec_i64(<2 x i64> %x, <2 x i64> %y, <2 x i64> %z) {
 ; CHECK-LABEL: or_and_and_rhs_neg_vec_i64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    pand %xmm1, %xmm2
-; CHECK-NEXT:    pandn %xmm0, %xmm1
-; CHECK-NEXT:    movdqa %xmm2, %xmm0
-; CHECK-NEXT:    por %xmm1, %xmm0
-; CHECK-NEXT:    paddq %xmm2, %xmm1
-; CHECK-NEXT:    psubq %xmm1, %xmm0
+; CHECK-NEXT:    xorps %xmm0, %xmm0
 ; CHECK-NEXT:    retq
   %and1 = and <2 x i64> %z, %y
   %xor = xor <2 x i64> %y, <i64 -1, i64 -1>
@@ -104,12 +77,7 @@ define <2 x i64> @or_and_and_rhs_neg_vec_i64(<2 x i64> %x, <2 x i64> %y, <2 x i6
 define <2 x i64> @or_and_and_lhs_neg_vec_i64(<2 x i64> %x, <2 x i64> %y, <2 x i64> %z) {
 ; CHECK-LABEL: or_and_and_lhs_neg_vec_i64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    pand %xmm1, %xmm2
-; CHECK-NEXT:    pandn %xmm0, %xmm1
-; CHECK-NEXT:    movdqa %xmm2, %xmm0
-; CHECK-NEXT:    por %xmm1, %xmm0
-; CHECK-NEXT:    paddq %xmm2, %xmm1
-; CHECK-NEXT:    psubq %xmm1, %xmm0
+; CHECK-NEXT:    xorps %xmm0, %xmm0
 ; CHECK-NEXT:    retq
   %and1 = and <2 x i64> %z, %y
   %xor = xor <2 x i64> %y, <i64 -1, i64 -1>
@@ -123,13 +91,7 @@ define <2 x i64> @or_and_and_lhs_neg_vec_i64(<2 x i64> %x, <2 x i64> %y, <2 x i6
 define <2 x i64> @or_and_rhs_neg_and_vec_i64(<2 x i64> %x, <2 x i64> %y, <2 x i64> %z) {
 ; CHECK-LABEL: or_and_rhs_neg_and_vec_i64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    pand %xmm1, %xmm0
-; CHECK-NEXT:    pandn %xmm2, %xmm1
-; CHECK-NEXT:    movdqa %xmm1, %xmm2
-; CHECK-NEXT:    por %xmm0, %xmm2
-; CHECK-NEXT:    paddq %xmm0, %xmm1
-; CHECK-NEXT:    psubq %xmm1, %xmm2
-; CHECK-NEXT:    movdqa %xmm2, %xmm0
+; CHECK-NEXT:    xorps %xmm0, %xmm0
 ; CHECK-NEXT:    retq
   %xor = xor <2 x i64> %y, <i64 -1, i64 -1>
   %and1 = and <2 x i64> %z, %xor
@@ -143,13 +105,7 @@ define <2 x i64> @or_and_rhs_neg_and_vec_i64(<2 x i64> %x, <2 x i64> %y, <2 x i6
 define <2 x i64> @or_and_lhs_neg_and_vec_i64(<2 x i64> %x, <2 x i64> %y, <2 x i64> %z) {
 ; CHECK-LABEL: or_and_lhs_neg_and_vec_i64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    pand %xmm1, %xmm0
-; CHECK-NEXT:    pandn %xmm2, %xmm1
-; CHECK-NEXT:    movdqa %xmm1, %xmm2
-; CHECK-NEXT:    por %xmm0, %xmm2
-; CHECK-NEXT:    paddq %xmm0, %xmm1
-; CHECK-NEXT:    psubq %xmm1, %xmm2
-; CHECK-NEXT:    movdqa %xmm2, %xmm0
+; CHECK-NEXT:    xorps %xmm0, %xmm0
 ; CHECK-NEXT:    retq
   %xor = xor <2 x i64> %y, <i64 -1, i64 -1>
   %and1 = and <2 x i64> %xor, %z
