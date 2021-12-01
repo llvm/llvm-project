@@ -993,6 +993,8 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createSections(
   Value *ST = ConstantInt::get(I32Ty, 1);
   llvm::CanonicalLoopInfo *LoopInfo = createCanonicalLoop(
       Loc, LoopBodyGenCB, LB, UB, ST, true, false, AllocaIP, "section_loop");
+  Builder.SetInsertPoint(AllocaIP.getBlock()->getTerminator());
+  AllocaIP = Builder.saveIP();
   InsertPointTy AfterIP =
       applyStaticWorkshareLoop(Loc.DL, LoopInfo, AllocaIP, true);
   BasicBlock *LoopAfterBB = AfterIP.getBlock();
