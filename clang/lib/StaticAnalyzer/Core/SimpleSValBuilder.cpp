@@ -21,6 +21,35 @@ using namespace ento;
 
 namespace {
 class SimpleSValBuilder : public SValBuilder {
+
+  // With one `simplifySValOnce` call, a compound symbols might collapse to
+  // simpler symbol tree that is still possible to further simplify. Thus, we
+  // do the simplification on a new symbol tree until we reach the simplest
+  // form, i.e. the fixpoint.
+  // Consider the following symbol `(b * b) * b * b` which has this tree:
+  //       *
+  //      / \
+  //     *   b
+  //    /  \
+  //   /    b
+  // (b * b)
+  // Now, if the `b * b == 1` new constraint is added then during the first
+  // iteration we have the following transformations:
+  //       *                  *
+  //      / \                / \
+  //     *   b     -->      b   b
+  //    /  \
+  //   /    b
+  //  1
+  // We need another iteration to reach the final result `1`.
+  SVal simplifyUntilFixpoint(ProgramStateRef State, SVal Val);
+
+  // Recursively descends into symbolic expressions and replaces symbols
+  // with their known values (in the sense of the getKnownValue() method).
+  // We traverse the symbol tree and query the constraint values for the
+  // sub-trees and if a value is a constant we do the constant folding.
+  SVal simplifySValOnce(ProgramStateRef State, SVal V);
+
 public:
   SimpleSValBuilder(llvm::BumpPtrAllocator &alloc, ASTContext &context,
                     ProgramStateManager &stateMgr)
@@ -40,8 +69,6 @@ public:
   ///  (integer) value, that value is returned. Otherwise, returns NULL.
   const llvm::APSInt *getKnownValue(ProgramStateRef state, SVal V) override;
 
-  /// Recursively descends into symbolic expressions and replaces symbols
-  /// with their known values (in the sense of the getKnownValue() method).
   SVal simplifySVal(ProgramStateRef State, SVal V) override;
 
   SVal MakeSymIntVal(const SymExpr *LHS, BinaryOperator::Opcode op,
@@ -1105,7 +1132,20 @@ const llvm::APSInt *SimpleSValBuilder::getKnownValue(ProgramStateRef state,
   return nullptr;
 }
 
+SVal SimpleSValBuilder::simplifyUntilFixpoint(ProgramStateRef State, SVal Val) {
+  SVal SimplifiedVal = simplifySValOnce(State, Val);
+  while (SimplifiedVal != Val) {
+    Val = SimplifiedVal;
+    SimplifiedVal = simplifySValOnce(State, Val);
+  }
+  return SimplifiedVal;
+}
+
 SVal SimpleSValBuilder::simplifySVal(ProgramStateRef State, SVal V) {
+  return simplifyUntilFixpoint(State, V);
+}
+
+SVal SimpleSValBuilder::simplifySValOnce(ProgramStateRef State, SVal V) {
   // For now, this function tries to constant-fold symbols inside a
   // nonloc::SymbolVal, and does nothing else. More simplifications should
   // be possible, such as constant-folding an index in an ElementRegion.

@@ -2191,42 +2191,6 @@ LLVM_NODISCARD ProgramStateRef reAssume(ProgramStateRef State,
                                      Constraint->getMaxValue(), true);
 }
 
-// Simplify the given symbol with the help of the SValBuilder. In
-// SValBuilder::symplifySval, we traverse the symbol tree and query the
-// constraint values for the sub-trees and if a value is a constant we do the
-// constant folding. Compound symbols might collapse to simpler symbol tree
-// that is still possible to further simplify. Thus, we do the simplification on
-// a new symbol tree until we reach the simplest form, i.e. the fixpoint.
-//
-// Consider the following symbol `(b * b) * b * b` which has this tree:
-//       *
-//      / \
-//     *   b
-//    /  \
-//   /    b
-// (b * b)
-// Now, if the `b * b == 1` new constraint is added then during the first
-// iteration we have the following transformations:
-//       *                  *
-//      / \                / \
-//     *   b     -->      b   b
-//    /  \
-//   /    b
-//  1
-// We need another iteration to reach the final result `1`.
-LLVM_NODISCARD
-static SVal simplifyUntilFixpoint(SValBuilder &SVB, ProgramStateRef State,
-                                  const SymbolRef Sym) {
-  SVal Val = SVB.makeSymbolVal(Sym);
-  SVal SimplifiedVal = SVB.simplifySVal(State, Val);
-  // Do the simplification until we can.
-  while (SimplifiedVal != Val) {
-    Val = SimplifiedVal;
-    SimplifiedVal = SVB.simplifySVal(State, Val);
-  }
-  return SimplifiedVal;
-}
-
 // Iterate over all symbols and try to simplify them. Once a symbol is
 // simplified then we check if we can merge the simplified symbol's equivalence
 // class to this class. This way, we simplify not just the symbols but the
@@ -2238,8 +2202,7 @@ EquivalenceClass::simplify(SValBuilder &SVB, RangeSet::Factory &F,
   SymbolSet ClassMembers = Class.getClassMembers(State);
   for (const SymbolRef &MemberSym : ClassMembers) {
 
-    const SVal SimplifiedMemberVal =
-        simplifyUntilFixpoint(SVB, State, MemberSym);
+    const SVal SimplifiedMemberVal = simplifyToSVal(State, MemberSym);
     const SymbolRef SimplifiedMemberSym = SimplifiedMemberVal.getAsSymbol();
 
     // The symbol is collapsed to a constant, check if the current State is
