@@ -1,4 +1,4 @@
-// REQUIRES: aarch64-registered-target || arm-registered-target
+// REQUIRES: aarch64-registered-target
 
 // RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sve2 -fallow-half-arguments-and-returns -fsyntax-only -verify %s
 // RUN: %clang_cc1 -DSVE_OVERLOADED_FORMS -triple aarch64-none-linux-gnu -target-feature +sve2 -fallow-half-arguments-and-returns -fsyntax-only -verify %s

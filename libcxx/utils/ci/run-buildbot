@@ -274,13 +274,6 @@ generic-static)
                    -DLIBUNWIND_TEST_CONFIG="llvm-libunwind-static.cfg.in"
     check-runtimes
 ;;
-generic-32bit)
-    clean
-    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-32bits.cmake" \
-                   -DLIBCXX_TEST_CONFIG="llvm-libc++-shared.cfg.in" \
-                   -DLIBUNWIND_TEST_CONFIG="llvm-libunwind-shared.cfg.in"
-    check-runtimes
-;;
 generic-clang-12)
     export CC=clang-12
     export CXX=clang++-12
