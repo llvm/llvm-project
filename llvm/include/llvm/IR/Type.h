@@ -368,6 +368,8 @@ public:
 
   Type *getPointerElementType() const {
     assert(getTypeID() == PointerTyID);
+    assert(NumContainedTys &&
+           "Attempting to get element type of opaque pointer");
     return ContainedTys[0];
   }
 
