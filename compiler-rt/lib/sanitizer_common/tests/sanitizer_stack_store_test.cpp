@@ -55,9 +55,16 @@ class StackStoreTest : public testing::Test {
     return res;
   }
 
+  uptr CountPackedBlocks() const {
+    uptr res = 0;
+    for (const BlockInfo& b : store_.blocks_) res += b.IsPacked();
+    return res;
+  }
+
   uptr IdToOffset(StackStore::Id id) const { return store_.IdToOffset(id); }
 
   static constexpr uptr kBlockSizeFrames = StackStore::kBlockSizeFrames;
+  static constexpr uptr kBlockSizeBytes = StackStore::kBlockSizeBytes;
 
   StackStore store_ = {};
 };
@@ -119,6 +126,53 @@ TEST_F(StackStoreTest, ReadyToPack) {
       },
       100000);
   EXPECT_EQ(GetTotalFramesCount() / kBlockSizeFrames, total_ready);
+}
+
+struct StackStorePackTest : public StackStoreTest,
+                            public ::testing::WithParamInterface<
+                                std::pair<StackStore::Compression, uptr>> {};
+
+INSTANTIATE_TEST_SUITE_P(
+    PackUnpacks, StackStorePackTest,
+    ::testing::ValuesIn({
+        StackStorePackTest::ParamType(StackStore::Compression::Test, 4),
+    }));
+
+TEST_P(StackStorePackTest, PackUnpack) {
+  std::vector<StackStore::Id> ids;
+  StackStore::Compression type = GetParam().first;
+  uptr expected_ratio = GetParam().second;
+  ForEachTrace([&](const StackTrace& s) {
+    uptr pack = 0;
+    ids.push_back(store_.Store(s, &pack));
+    if (pack) {
+      uptr before = store_.Allocated();
+      uptr diff = store_.Pack(type);
+      uptr after = store_.Allocated();
+      EXPECT_EQ(before - after, diff);
+      EXPECT_LT(after, before);
+      EXPECT_GE(kBlockSizeBytes / (kBlockSizeBytes - (before - after)),
+                expected_ratio);
+    }
+  });
+  uptr packed_blocks = CountPackedBlocks();
+  // Unpack random block.
+  store_.Load(kBlockSizeFrames * 7 + 123);
+  EXPECT_EQ(packed_blocks - 1, CountPackedBlocks());
+
+  // Unpack all blocks.
+  auto id = ids.begin();
+  ForEachTrace([&](const StackTrace& s) {
+    StackTrace trace = store_.Load(*(id++));
+    EXPECT_EQ(s.size, trace.size);
+    EXPECT_EQ(s.tag, trace.tag);
+    EXPECT_EQ(std::vector<uptr>(s.trace, s.trace + s.size),
+              std::vector<uptr>(trace.trace, trace.trace + trace.size));
+  });
+  EXPECT_EQ(0u, CountPackedBlocks());
+
+  EXPECT_EQ(0u, store_.Pack(type));
+  EXPECT_EQ(0u, CountPackedBlocks());
 }
 
 }  // namespace __sanitizer
