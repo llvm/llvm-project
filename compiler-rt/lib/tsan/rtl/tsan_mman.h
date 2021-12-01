@@ -26,8 +26,6 @@ void AllocatorProcFinish(Processor *proc);
 void AllocatorPrintStats();
 void AllocatorLock();
 void AllocatorUnlock();
-void GlobalProcessorLock();
-void GlobalProcessorUnlock();
 
 // For user allocations.
 void *user_alloc_internal(ThreadState *thr, uptr pc, uptr sz,
