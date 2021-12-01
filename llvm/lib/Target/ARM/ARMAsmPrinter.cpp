@@ -1535,17 +1535,17 @@ void ARMAsmPrinter::emitInstruction(const MachineInstr *MI) {
       MCInst.addExpr(BranchTarget);
     }
 
-      if (Opc == ARM::t2BFic) {
-        const MCExpr *ElseLabel = MCSymbolRefExpr::create(
-            getBFLabel(DL.getPrivateGlobalPrefix(), getFunctionNumber(),
-                       MI->getOperand(2).getIndex(), OutContext),
-            OutContext);
-        MCInst.addExpr(ElseLabel);
-        MCInst.addImm(MI->getOperand(3).getImm());
-      } else {
-        MCInst.addImm(MI->getOperand(2).getImm())
-            .addReg(MI->getOperand(3).getReg());
-      }
+    if (Opc == ARM::t2BFic) {
+      const MCExpr *ElseLabel = MCSymbolRefExpr::create(
+          getBFLabel(DL.getPrivateGlobalPrefix(), getFunctionNumber(),
+                     MI->getOperand(2).getIndex(), OutContext),
+          OutContext);
+      MCInst.addExpr(ElseLabel);
+      MCInst.addImm(MI->getOperand(3).getImm());
+    } else {
+      MCInst.addImm(MI->getOperand(2).getImm())
+          .addReg(MI->getOperand(3).getReg());
+    }
 
     EmitToStreamer(*OutStreamer, MCInst);
     return;
