@@ -117,7 +117,6 @@ void HipBin::executeHipBin(string filename, int argc, char* argv[]) {
 
 
 void HipBin::executeHipCC(int argc, char* argv[]) {
-  cout << "HIPCC executable" <<endl;
   vector<HipBinBase*>& platformPtrs = getHipBinPtrs();
   vector<string> argvcc;
   for (int i = 0; i < argc; i++) {
