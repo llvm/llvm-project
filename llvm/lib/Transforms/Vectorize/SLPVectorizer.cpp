@@ -5375,6 +5375,42 @@ InstructionCost BoUpSLP::getSpillCost() const {
   return Cost;
 }
 
+/// Check if two insertelement instructions are from the same buildvector.
+static bool areTwoInsertFromSameBuildVector(InsertElementInst *VU,
+                                            InsertElementInst *V) {
+  // Instructions must be from the same basic blocks.
+  if (VU->getParent() != V->getParent())
+    return false;
+  // Checks if 2 insertelements are from the same buildvector.
+  if (VU->getType() != V->getType())
+    return false;
+  // Multiple used inserts are separate nodes.
+  if (!VU->hasOneUse() && !V->hasOneUse())
+    return false;
+  auto *IE1 = VU;
+  auto *IE2 = V;
+  // Go through the vector operand of insertelement instructions trying to find
+  // either VU as the original vector for IE2 or V as the original vector for
+  // IE1.
+  do {
+    if (IE2 == VU || IE1 == V)
+      return true;
+    if (IE1) {
+      if (IE1 != VU && !IE1->hasOneUse())
+        IE1 = nullptr;
+      else
+        IE1 = dyn_cast<InsertElementInst>(IE1->getOperand(0));
+    }
+    if (IE2) {
+      if (IE2 != V && !IE2->hasOneUse())
+        IE2 = nullptr;
+      else
+        IE2 = dyn_cast<InsertElementInst>(IE2->getOperand(0));
+    }
+  } while (IE1 || IE2);
+  return false;
+}
+
 InstructionCost BoUpSLP::getTreeCost(ArrayRef<Value *> VectorizedVals) {
   InstructionCost Cost = 0;
   LLVM_DEBUG(dbgs() << "SLP: Calculating cost for tree of size "
@@ -5422,29 +5458,14 @@ InstructionCost BoUpSLP::getTreeCost(ArrayRef<Value *> VectorizedVals) {
 
     // If found user is an insertelement, do not calculate extract cost but try
     // to detect it as a final shuffled/identity match.
-    if (isa_and_nonnull<InsertElementInst>(EU.User)) {
-      if (auto *FTy = dyn_cast<FixedVectorType>(EU.User->getType())) {
-        Optional<int> InsertIdx = getInsertIndex(EU.User, 0);
+    if (auto *VU = dyn_cast_or_null<InsertElementInst>(EU.User)) {
+      if (auto *FTy = dyn_cast<FixedVectorType>(VU->getType())) {
+        Optional<int> InsertIdx = getInsertIndex(VU, 0);
         if (!InsertIdx || *InsertIdx == UndefMaskElem)
           continue;
-        Value *VU = EU.User;
         auto *It = find_if(FirstUsers, [VU](Value *V) {
-          // Checks if 2 insertelements are from the same buildvector.
-          if (VU->getType() != V->getType())
-            return false;
-          auto *IE1 = cast<InsertElementInst>(VU);
-          auto *IE2 = cast<InsertElementInst>(V);
-          // Go through of insertelement instructions trying to find either VU
-          // as the original vector for IE2 or V as the original vector for IE1.
-          do {
-            if (IE1 == VU || IE2 == V)
-              return true;
-            if (IE1)
-              IE1 = dyn_cast<InsertElementInst>(IE1->getOperand(0));
-            if (IE2)
-              IE2 = dyn_cast<InsertElementInst>(IE2->getOperand(0));
-          } while (IE1 || IE2);
-          return false;
+          return areTwoInsertFromSameBuildVector(VU,
+                                                 cast<InsertElementInst>(V));
         });
         int VecId = -1;
         if (It == FirstUsers.end()) {
@@ -5455,7 +5476,7 @@ InstructionCost BoUpSLP::getTreeCost(ArrayRef<Value *> VectorizedVals) {
           while (isa<InsertElementInst>(Base)) {
             // Build the mask for the vectorized insertelement instructions.
             if (const TreeEntry *E = getTreeEntry(Base)) {
-              VU = Base;
+              VU = cast<InsertElementInst>(Base);
               do {
                 int Idx = E->findLaneForValue(Base);
                 ShuffleMask.back()[Idx] = Idx;
