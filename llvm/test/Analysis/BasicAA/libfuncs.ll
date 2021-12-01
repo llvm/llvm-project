@@ -127,3 +127,51 @@ entry:
   store i8 3, i8* %b.gep.5
   ret i8* %res
 }
+
+declare i8* @strncpy(i8*, i8*, i64)
+
+define i8* @test_strncpy_const_size(i8* noalias %a, i8* noalias %b) {
+; CHECK-LABEL: Function: test_strncpy_const_size
+; CHECK:       Just Mod:  Ptr: i8* %a	<->  %res = tail call i8* @strncpy(i8* %a, i8* %b, i64 4)
+; CHECK-NEXT:  Just Ref:  Ptr: i8* %b	<->  %res = tail call i8* @strncpy(i8* %a, i8* %b, i64 4)
+; CHECK-NEXT:  Just Mod:  Ptr: i8* %res	<->  %res = tail call i8* @strncpy(i8* %a, i8* %b, i64 4)
+; CHECK-NEXT:  Just Mod:  Ptr: i8* %a.gep.1	<->  %res = tail call i8* @strncpy(i8* %a, i8* %b, i64 4)
+; CHECK-NEXT:  Just Mod:  Ptr: i8* %a.gep.5	<->  %res = tail call i8* @strncpy(i8* %a, i8* %b, i64 4)
+; CHECK-NEXT:  Just Ref:  Ptr: i8* %b.gep.1	<->  %res = tail call i8* @strncpy(i8* %a, i8* %b, i64 4)
+; CHECK-NEXT:  Just Ref:  Ptr: i8* %b.gep.5	<->  %res = tail call i8* @strncpy(i8* %a, i8* %b, i64 4)
+;
+entry:
+  %res = tail call i8* @strncpy(i8* %a, i8* %b, i64 4)
+  %a.gep.1 = getelementptr i8, i8* %a, i32 1
+  store i8 0, i8* %a.gep.1
+  %a.gep.5 = getelementptr i8, i8* %a, i32 5
+  store i8 1, i8* %a.gep.5
+  %b.gep.1 = getelementptr i8, i8* %b, i32 1
+  store i8 2, i8* %b.gep.1
+  %b.gep.5 = getelementptr i8, i8* %b, i32 5
+  store i8 3, i8* %b.gep.5
+  ret i8* %res
+}
+
+define i8* @test_strncpy_variable_size(i8* noalias %a, i8* noalias %b, i64 %n) {
+; CHECK-LABEL: Function: test_strncpy_variable_size
+; CHECK:       Just Mod:  Ptr: i8* %a	<->  %res = tail call i8* @strncpy(i8* %a, i8* %b, i64 %n)
+; CHECK-NEXT:  Just Ref:  Ptr: i8* %b	<->  %res = tail call i8* @strncpy(i8* %a, i8* %b, i64 %n)
+; CHECK-NEXT:  Just Mod:  Ptr: i8* %res	<->  %res = tail call i8* @strncpy(i8* %a, i8* %b, i64 %n)
+; CHECK-NEXT:  Just Mod:  Ptr: i8* %a.gep.1	<->  %res = tail call i8* @strncpy(i8* %a, i8* %b, i64 %n)
+; CHECK-NEXT:  Just Mod:  Ptr: i8* %a.gep.5	<->  %res = tail call i8* @strncpy(i8* %a, i8* %b, i64 %n)
+; CHECK-NEXT:  Just Ref:  Ptr: i8* %b.gep.1	<->  %res = tail call i8* @strncpy(i8* %a, i8* %b, i64 %n)
+; CHECK-NEXT:  Just Ref:  Ptr: i8* %b.gep.5	<->  %res = tail call i8* @strncpy(i8* %a, i8* %b, i64 %n)
+;
+entry:
+  %res = tail call i8* @strncpy(i8* %a, i8* %b, i64 %n)
+  %a.gep.1 = getelementptr i8, i8* %a, i32 1
+  store i8 0, i8* %a.gep.1
+  %a.gep.5 = getelementptr i8, i8* %a, i32 5
+  store i8 1, i8* %a.gep.5
+  %b.gep.1 = getelementptr i8, i8* %b, i32 1
+  store i8 2, i8* %b.gep.1
+  %b.gep.5 = getelementptr i8, i8* %b, i32 5
+  store i8 3, i8* %b.gep.5
+  ret i8* %res
+}
