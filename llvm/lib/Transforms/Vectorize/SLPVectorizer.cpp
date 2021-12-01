@@ -9318,6 +9318,63 @@ bool SLPVectorizerPass::vectorizeSimpleInstructions(
         continue;
       OpsChanged |= tryToVectorize(I, R);
     }
+    // Try to vectorize list of compares.
+    // Sort by type, compare predicate, etc.
+    // TODO: Add analysis on the operand opcodes (profitable to vectorize
+    // instructions with same/alternate opcodes/const values).
+    auto &&CompareSorter = [&R](Value *V, Value *V2) {
+      auto *CI1 = cast<CmpInst>(V);
+      auto *CI2 = cast<CmpInst>(V2);
+      if (R.isDeleted(CI2) || !isValidElementType(CI2->getType()))
+        return false;
+      if (CI1->getOperand(0)->getType()->getTypeID() <
+          CI2->getOperand(0)->getType()->getTypeID())
+        return true;
+      if (CI1->getOperand(0)->getType()->getTypeID() >
+          CI2->getOperand(0)->getType()->getTypeID())
+        return false;
+      return CI1->getPredicate() < CI2->getPredicate() ||
+             (CI1->getPredicate() > CI2->getPredicate() &&
+              CI1->getPredicate() <
+                  CmpInst::getSwappedPredicate(CI2->getPredicate()));
+    };
+
+    auto &&AreCompatibleCompares = [&R](Value *V1, Value *V2) {
+      if (V1 == V2)
+        return true;
+      auto *CI1 = cast<CmpInst>(V1);
+      auto *CI2 = cast<CmpInst>(V2);
+      if (R.isDeleted(CI2) || !isValidElementType(CI2->getType()))
+        return false;
+      if (CI1->getOperand(0)->getType() != CI2->getOperand(0)->getType())
+        return false;
+      return CI1->getPredicate() == CI2->getPredicate() ||
+             CI1->getPredicate() ==
+                 CmpInst::getSwappedPredicate(CI2->getPredicate());
+    };
+    auto Limit = [&R](Value *V) {
+      unsigned EltSize = R.getVectorElementSize(V);
+      return std::max(2U, R.getMaxVecRegSize() / EltSize);
+    };
+
+    SmallVector<Value *> Vals(PostponedCmps.begin(), PostponedCmps.end());
+    OpsChanged |= tryToVectorizeSequence<Value>(
+        Vals, Limit, CompareSorter, AreCompatibleCompares,
+        [this, &R](ArrayRef<Value *> Candidates, bool LimitForRegisterSize) {
+          // Exclude possible reductions from other blocks.
+          bool ArePossiblyReducedInOtherBlock =
+              any_of(Candidates, [](Value *V) {
+                return any_of(V->users(), [V](User *U) {
+                  return isa<SelectInst>(U) &&
+                         cast<SelectInst>(U)->getParent() !=
+                             cast<Instruction>(V)->getParent();
+                });
+              });
+          if (ArePossiblyReducedInOtherBlock)
+            return false;
+          return tryToVectorizeList(Candidates, R, LimitForRegisterSize);
+        },
+        /*LimitForRegisterSize=*/true);
     Instructions.clear();
   } else {
     // Insert in reverse order since the PostponedCmps vector was filled in
