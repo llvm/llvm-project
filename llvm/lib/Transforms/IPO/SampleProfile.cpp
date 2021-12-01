@@ -84,6 +84,7 @@
 #include "llvm/Transforms/Instrumentation.h"
 #include "llvm/Transforms/Utils/CallPromotionUtils.h"
 #include "llvm/Transforms/Utils/Cloning.h"
+#include "llvm/Transforms/Utils/SampleProfileInference.h"
 #include "llvm/Transforms/Utils/SampleProfileLoaderBaseImpl.h"
 #include "llvm/Transforms/Utils/SampleProfileLoaderBaseUtil.h"
 #include <algorithm>
@@ -1651,6 +1652,19 @@ void SampleProfileLoader::generateMDProfMetadata(Function &F) {
     SmallVector<uint32_t, 4> Weights;
     uint32_t MaxWeight = 0;
     Instruction *MaxDestInst;
+    // Since profi treats multiple edges (multiway branches) as a single edge,
+    // we need to distribute the computed weight among the branches. We do
+    // this by evenly splitting the edge weight among destinations.
+    DenseMap<const BasicBlock *, uint64_t> EdgeMultiplicity;
+    std::vector<uint64_t> EdgeIndex;
+    if (SampleProfileUseProfi) {
+      EdgeIndex.resize(TI->getNumSuccessors());
+      for (unsigned I = 0; I < TI->getNumSuccessors(); ++I) {
+        const BasicBlock *Succ = TI->getSuccessor(I);
+        EdgeIndex[I] = EdgeMultiplicity[Succ];
+        EdgeMultiplicity[Succ]++;
+      }
+    }
     for (unsigned I = 0; I < TI->getNumSuccessors(); ++I) {
       BasicBlock *Succ = TI->getSuccessor(I);
       Edge E = std::make_pair(BB, Succ);
@@ -1663,9 +1677,19 @@ void SampleProfileLoader::generateMDProfMetadata(Function &F) {
         LLVM_DEBUG(dbgs() << " (saturated due to uint32_t overflow)");
         Weight = std::numeric_limits<uint32_t>::max();
       }
-      // Weight is added by one to avoid propagation errors introduced by
-      // 0 weights.
-      Weights.push_back(static_cast<uint32_t>(Weight + 1));
+      if (!SampleProfileUseProfi) {
+        // Weight is added by one to avoid propagation errors introduced by
+        // 0 weights.
+        Weights.push_back(static_cast<uint32_t>(Weight + 1));
+      } else {
+        // Profi creates proper weights that do not require "+1" adjustments but
+        // we evenly split the weight among branches with the same destination.
+        uint64_t W = Weight / EdgeMultiplicity[Succ];
+        // Rounding up, if needed, so that first branches are hotter.
+        if (EdgeIndex[I] < Weight % EdgeMultiplicity[Succ])
+          W++;
+        Weights.push_back(static_cast<uint32_t>(W));
+      }
       if (Weight != 0) {
         if (Weight > MaxWeight) {
           MaxWeight = Weight;
