@@ -110,7 +110,7 @@ option(LIBCXXABI_ENABLE_NEW_DELETE_DEFINITIONS
    which case the definition in libc++abi should be turned off." ON)
 option(LIBCXXABI_BUILD_32_BITS "Build 32 bit multilib libc++abi. This option is not supported anymore when building the runtimes. Please specify a full triple instead." ${LLVM_BUILD_32_BITS})
 if (LIBCXXABI_BUILD_32_BITS)
-  message(WARNING "LIBCXXABI_BUILD_32_BITS is not supported anymore when building the runtimes, please specify a full triple instead.")
+  message(FATAL_ERROR "LIBCXXABI_BUILD_32_BITS is not supported anymore when building the runtimes, please specify a full triple instead.")
 endif()
 
 option(LIBCXXABI_INCLUDE_TESTS "Generate build targets for the libc++abi unit tests." ${LLVM_INCLUDE_TESTS})
