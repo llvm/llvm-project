@@ -5737,17 +5737,17 @@ enum MachineOutlinerMBBFlags {
 };
 
 struct OutlinerCosts {
-  const int CallTailCall;
-  const int FrameTailCall;
-  const int CallThunk;
-  const int FrameThunk;
-  const int CallNoLRSave;
-  const int FrameNoLRSave;
-  const int CallRegSave;
-  const int FrameRegSave;
-  const int CallDefault;
-  const int FrameDefault;
-  const int SaveRestoreLROnStack;
+  int CallTailCall;
+  int FrameTailCall;
+  int CallThunk;
+  int FrameThunk;
+  int CallNoLRSave;
+  int FrameNoLRSave;
+  int CallRegSave;
+  int FrameRegSave;
+  int CallDefault;
+  int FrameDefault;
+  int SaveRestoreLROnStack;
 
   OutlinerCosts(const ARMSubtarget &target)
       : CallTailCall(target.isThumb() ? 4 : 4),
@@ -5868,6 +5868,24 @@ outliner::OutlinedFunction ARMBaseInstrInfo::getOutliningCandidateInfo(
       return outliner::OutlinedFunction();
   }
 
+  // Partition the candidates in two sets: one with BTI enabled and one with BTI
+  // disabled. Remove the candidates from the smaller set. We expect the
+  // majority of the candidates to be in consensus with regard to branch target
+  // enforcement with just a few oddballs, but if they are the same number
+  // prefer the non-BTI ones for outlining, since they have less overhead.
+  auto NoBTI =
+      llvm::partition(RepeatedSequenceLocs, [](const outliner::Candidate &C) {
+        const ARMFunctionInfo &AFI = *C.getMF()->getInfo<ARMFunctionInfo>();
+        return AFI.branchTargetEnforcement();
+      });
+  if (std::distance(RepeatedSequenceLocs.begin(), NoBTI) >
+      std::distance(NoBTI, RepeatedSequenceLocs.end()))
+    RepeatedSequenceLocs.erase(NoBTI, RepeatedSequenceLocs.end());
+  else
+    RepeatedSequenceLocs.erase(RepeatedSequenceLocs.begin(), NoBTI);
+  if (RepeatedSequenceLocs.size() < 2)
+    return outliner::OutlinedFunction();
+
   // At this point, we have only "safe" candidates to outline. Figure out
   // frame + call instruction information.
 
@@ -5881,6 +5899,16 @@ outliner::OutlinedFunction ARMBaseInstrInfo::getOutliningCandidateInfo(
       };
 
   OutlinerCosts Costs(Subtarget);
+  const auto &SomeMFI =
+      *RepeatedSequenceLocs.front().getMF()->getInfo<ARMFunctionInfo>();
+  // Adjust costs to account for the BTI instructions.
+  if (SomeMFI.branchTargetEnforcement()) {
+    Costs.FrameDefault += 4;
+    Costs.FrameNoLRSave += 4;
+    Costs.FrameRegSave += 4;
+    Costs.FrameTailCall += 4;
+    Costs.FrameThunk += 4;
+  }
   unsigned FrameID = MachineOutlinerDefault;
   unsigned NumBytesToCreateFrame = Costs.FrameDefault;
 
@@ -6078,7 +6106,18 @@ bool ARMBaseInstrInfo::checkAndUpdateStackOffset(MachineInstr *MI,
   }
 
   return false;
+}
 
+void ARMBaseInstrInfo::mergeOutliningCandidateAttributes(
+    Function &F, std::vector<outliner::Candidate> &Candidates) const {
+  outliner::Candidate &C = Candidates.front();
+  // branch-target-enforcement is guaranteed to be consistent between all
+  // candidates, so we only need to look at one.
+  const Function &CFn = C.getMF()->getFunction();
+  if (CFn.hasFnAttribute("branch-target-enforcement"))
+    F.addFnAttr(CFn.getFnAttribute("branch-target-enforcement"));
+
+  ARMGenInstrInfo::mergeOutliningCandidateAttributes(F, Candidates);
 }
 
 bool ARMBaseInstrInfo::isFunctionSafeToOutlineFrom(
