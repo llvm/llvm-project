@@ -140,6 +140,9 @@ Changes in existing checks
   <clang-tidy/checks/google-readability-casting>` to diagnose and fix functional
   casts, to achieve feature parity with the corresponding ``cpplint.py`` check.
 
+- Fixed a false positive in :doc:`fuchsia-trailing-return
+  <clang-tidy/checks/fuchsia-trailing-return>` for C++17 deduction guides.
+
 Removed checks
 ^^^^^^^^^^^^^^
 
