@@ -295,10 +295,10 @@ public:
 LogicalResult
 TanhApproximation::matchAndRewrite(math::TanhOp op,
                                    PatternRewriter &rewriter) const {
-  if (!getElementTypeOrSelf(op.operand()).isF32())
+  if (!getElementTypeOrSelf(op.getOperand()).isF32())
     return rewriter.notifyMatchFailure(op, "unsupported operand type");
 
-  ArrayRef<int64_t> shape = vectorShape(op.operand());
+  ArrayRef<int64_t> shape = vectorShape(op.getOperand());
 
   ImplicitLocOpBuilder builder(op->getLoc(), rewriter);
   auto bcast = [&](Value value) -> Value {
@@ -308,12 +308,12 @@ TanhApproximation::matchAndRewrite(math::TanhOp op,
   // Clamp operand into [plusClamp, minusClamp] range.
   Value minusClamp = bcast(f32Cst(builder, -7.99881172180175781f));
   Value plusClamp = bcast(f32Cst(builder, 7.99881172180175781f));
-  Value x = clamp(builder, op.operand(), minusClamp, plusClamp);
+  Value x = clamp(builder, op.getOperand(), minusClamp, plusClamp);
 
   // Mask for tiny values that are approximated with `operand`.
   Value tiny = bcast(f32Cst(builder, 0.0004f));
   Value tinyMask = builder.create<arith::CmpFOp>(
-      arith::CmpFPredicate::OLT, builder.create<math::AbsOp>(op.operand()),
+      arith::CmpFPredicate::OLT, builder.create<math::AbsOp>(op.getOperand()),
       tiny);
 
   // The monomial coefficients of the numerator polynomial (odd).
@@ -383,10 +383,10 @@ template <typename Op>
 LogicalResult
 LogApproximationBase<Op>::logMatchAndRewrite(Op op, PatternRewriter &rewriter,
                                              bool base2) const {
-  if (!getElementTypeOrSelf(op.operand()).isF32())
+  if (!getElementTypeOrSelf(op.getOperand()).isF32())
     return rewriter.notifyMatchFailure(op, "unsupported operand type");
 
-  ArrayRef<int64_t> shape = vectorShape(op.operand());
+  ArrayRef<int64_t> shape = vectorShape(op.getOperand());
 
   ImplicitLocOpBuilder builder(op->getLoc(), rewriter);
   auto bcast = [&](Value value) -> Value {
@@ -415,7 +415,7 @@ LogApproximationBase<Op>::logMatchAndRewrite(Op op, PatternRewriter &rewriter,
   Value cstCephesLogP7 = bcast(f32Cst(builder, -2.4999993993E-1f));
   Value cstCephesLogP8 = bcast(f32Cst(builder, +3.3333331174E-1f));
 
-  Value x = op.operand();
+  Value x = op.getOperand();
 
   // Truncate input values to the minimum positive normal.
   x = max(builder, x, cstMinNormPos);
@@ -469,11 +469,11 @@ LogApproximationBase<Op>::logMatchAndRewrite(Op op, PatternRewriter &rewriter,
   }
 
   Value invalidMask = builder.create<arith::CmpFOp>(arith::CmpFPredicate::ULT,
-                                                    op.operand(), cstZero);
+                                                    op.getOperand(), cstZero);
   Value zeroMask = builder.create<arith::CmpFOp>(arith::CmpFPredicate::OEQ,
-                                                 op.operand(), cstZero);
+                                                 op.getOperand(), cstZero);
   Value posInfMask = builder.create<arith::CmpFOp>(arith::CmpFPredicate::OEQ,
-                                                   op.operand(), cstPosInf);
+                                                   op.getOperand(), cstPosInf);
 
   // Filter out invalid values:
   //  • x == 0     -> -INF
@@ -530,10 +530,10 @@ public:
 LogicalResult
 Log1pApproximation::matchAndRewrite(math::Log1pOp op,
                                     PatternRewriter &rewriter) const {
-  if (!getElementTypeOrSelf(op.operand()).isF32())
+  if (!getElementTypeOrSelf(op.getOperand()).isF32())
     return rewriter.notifyMatchFailure(op, "unsupported operand type");
 
-  ArrayRef<int64_t> shape = vectorShape(op.operand());
+  ArrayRef<int64_t> shape = vectorShape(op.getOperand());
 
   ImplicitLocOpBuilder builder(op->getLoc(), rewriter);
   auto bcast = [&](Value value) -> Value {
@@ -547,7 +547,7 @@ Log1pApproximation::matchAndRewrite(math::Log1pOp op,
   //          ^^^^^^^^^^^^^^^^^^^^^^
   //             "logLarge" below.
   Value cstOne = bcast(f32Cst(builder, 1.0f));
-  Value x = op.operand();
+  Value x = op.getOperand();
   Value u = builder.create<arith::AddFOp>(x, cstOne);
   Value uSmall =
       builder.create<arith::CmpFOp>(arith::CmpFPredicate::OEQ, u, cstOne);
@@ -577,10 +577,10 @@ Log1pApproximation::matchAndRewrite(math::Log1pOp op,
 LogicalResult
 ErfPolynomialApproximation::matchAndRewrite(math::ErfOp op,
                                             PatternRewriter &rewriter) const {
-  if (!getElementTypeOrSelf(op.operand()).isF32())
+  if (!getElementTypeOrSelf(op.getOperand()).isF32())
     return rewriter.notifyMatchFailure(op, "unsupported operand type");
 
-  ArrayRef<int64_t> shape = vectorShape(op.operand());
+  ArrayRef<int64_t> shape = vectorShape(op.getOperand());
 
   ImplicitLocOpBuilder builder(op->getLoc(), rewriter);
   auto bcast = [&](Value value) -> Value {
@@ -637,9 +637,9 @@ ErfPolynomialApproximation::matchAndRewrite(math::ErfOp op,
   bounds[2] = bcast(f32Cst(builder, 3.75f));
 
   Value isNegativeArg = builder.create<arith::CmpFOp>(arith::CmpFPredicate::OLT,
-                                                      op.operand(), zero);
-  Value negArg = builder.create<arith::NegFOp>(op.operand());
-  Value x = builder.create<SelectOp>(isNegativeArg, negArg, op.operand());
+                                                      op.getOperand(), zero);
+  Value negArg = builder.create<arith::NegFOp>(op.getOperand());
+  Value x = builder.create<SelectOp>(isNegativeArg, negArg, op.getOperand());
 
   Value offset = offsets[0];
   Value p[polyDegree + 1];
@@ -701,10 +701,10 @@ public:
 LogicalResult
 ExpApproximation::matchAndRewrite(math::ExpOp op,
                                   PatternRewriter &rewriter) const {
-  if (!getElementTypeOrSelf(op.operand()).isF32())
+  if (!getElementTypeOrSelf(op.getOperand()).isF32())
     return rewriter.notifyMatchFailure(op, "unsupported operand type");
 
-  ArrayRef<int64_t> shape = vectorShape(op.operand());
+  ArrayRef<int64_t> shape = vectorShape(op.getOperand());
 
   ImplicitLocOpBuilder builder(op->getLoc(), rewriter);
 
@@ -735,7 +735,7 @@ ExpApproximation::matchAndRewrite(math::ExpOp op,
   Value cstCephesExpP4 = bcast(f32Cst(builder, 0.03668965196652099192f));
   Value cstCephesExpP5 = bcast(f32Cst(builder, 0.01314350012789660196f));
 
-  Value x = op.operand();
+  Value x = op.getOperand();
 
   // Reduced y = x - floor(x / ln(2)) * ln(2) = x - k * ln(2)
   Value xL2Inv = mul(x, cstLog2E);
@@ -823,10 +823,10 @@ public:
 LogicalResult
 ExpM1Approximation::matchAndRewrite(math::ExpM1Op op,
                                     PatternRewriter &rewriter) const {
-  if (!getElementTypeOrSelf(op.operand()).isF32())
+  if (!getElementTypeOrSelf(op.getOperand()).isF32())
     return rewriter.notifyMatchFailure(op, "unsupported operand type");
 
-  ArrayRef<int64_t> shape = vectorShape(op.operand());
+  ArrayRef<int64_t> shape = vectorShape(op.getOperand());
 
   ImplicitLocOpBuilder builder(op->getLoc(), rewriter);
   auto bcast = [&](Value value) -> Value {
@@ -838,7 +838,7 @@ ExpM1Approximation::matchAndRewrite(math::ExpM1Op op,
   // and when the input is ~= -inf, i.e. u - 1 ~= -1.
   Value cstOne = bcast(f32Cst(builder, 1.0f));
   Value cstNegOne = bcast(f32Cst(builder, -1.0f));
-  Value x = op.operand();
+  Value x = op.getOperand();
   Value u = builder.create<math::ExpOp>(x);
   Value uEqOne =
       builder.create<arith::CmpFOp>(arith::CmpFPredicate::OEQ, u, cstOne);
@@ -892,10 +892,10 @@ LogicalResult SinAndCosApproximation<isSine, OpTy>::matchAndRewrite(
       llvm::is_one_of<OpTy, math::SinOp, math::CosOp>::value,
       "SinAndCosApproximation pattern expects math::SinOp or math::CosOp");
 
-  if (!getElementTypeOrSelf(op.operand()).isF32())
+  if (!getElementTypeOrSelf(op.getOperand()).isF32())
     return rewriter.notifyMatchFailure(op, "unsupported operand type");
 
-  ArrayRef<int64_t> shape = vectorShape(op.operand());
+  ArrayRef<int64_t> shape = vectorShape(op.getOperand());
 
   ImplicitLocOpBuilder builder(op->getLoc(), rewriter);
   auto bcast = [&](Value value) -> Value {
@@ -941,7 +941,7 @@ LogicalResult SinAndCosApproximation<isSine, OpTy>::matchAndRewrite(
   Value twoOverPi = bcast(f32Cst(builder, TWO_OVER_PI));
   Value piOverTwo = bcast(f32Cst(builder, PI_OVER_2));
 
-  Value x = op.operand();
+  Value x = op.getOperand();
 
   Value k = floor(mul(x, twoOverPi));
 
@@ -1015,10 +1015,10 @@ struct RsqrtApproximation : public OpRewritePattern<math::RsqrtOp> {
 LogicalResult
 RsqrtApproximation::matchAndRewrite(math::RsqrtOp op,
                                     PatternRewriter &rewriter) const {
-  if (!getElementTypeOrSelf(op.operand()).isF32())
+  if (!getElementTypeOrSelf(op.getOperand()).isF32())
     return rewriter.notifyMatchFailure(op, "unsupported operand type");
 
-  ArrayRef<int64_t> shape = vectorShape(op.operand());
+  ArrayRef<int64_t> shape = vectorShape(op.getOperand());
 
   // Only support already-vectorized rsqrt's.
   if (shape.empty() || shape.back() % 8 != 0)
@@ -1034,14 +1034,14 @@ RsqrtApproximation::matchAndRewrite(math::RsqrtOp op,
   Value cstNegHalf = bcast(f32Cst(builder, -0.5f));
   Value cstMinNormPos = bcast(f32FromBits(builder, 0x00800000u));
 
-  Value negHalf = builder.create<arith::MulFOp>(op.operand(), cstNegHalf);
+  Value negHalf = builder.create<arith::MulFOp>(op.getOperand(), cstNegHalf);
 
   // Select only the inverse sqrt of positive normals (denormals are
   // flushed to zero).
-  Value ltMinMask = builder.create<arith::CmpFOp>(arith::CmpFPredicate::OLT,
-                                                  op.operand(), cstMinNormPos);
+  Value ltMinMask = builder.create<arith::CmpFOp>(
+      arith::CmpFPredicate::OLT, op.getOperand(), cstMinNormPos);
   Value infMask = builder.create<arith::CmpFOp>(arith::CmpFPredicate::OEQ,
-                                                op.operand(), cstPosInf);
+                                                op.getOperand(), cstPosInf);
   Value notNormalFiniteMask = builder.create<arith::OrIOp>(ltMinMask, infMask);
 
   // Compute an approximate result.

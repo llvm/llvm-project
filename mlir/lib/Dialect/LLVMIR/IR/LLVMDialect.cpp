@@ -1666,7 +1666,7 @@ static LogicalResult verify(GlobalOp op) {
 
 LogicalResult
 GlobalCtorsOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
-  for (Attribute ctor : ctors()) {
+  for (Attribute ctor : getCtors()) {
     if (failed(verifySymbolAttrUse(ctor.cast<FlatSymbolRefAttr>(), *this,
                                    symbolTable)))
       return failure();
@@ -1675,7 +1675,7 @@ GlobalCtorsOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
 }
 
 static LogicalResult verify(GlobalCtorsOp op) {
-  if (op.ctors().size() != op.priorities().size())
+  if (op.getCtors().size() != op.getPriorities().size())
     return op.emitError(
         "mismatch between the number of ctors and the number of priorities");
   return success();
@@ -1687,7 +1687,7 @@ static LogicalResult verify(GlobalCtorsOp op) {
 
 LogicalResult
 GlobalDtorsOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
-  for (Attribute dtor : dtors()) {
+  for (Attribute dtor : getDtors()) {
     if (failed(verifySymbolAttrUse(dtor.cast<FlatSymbolRefAttr>(), *this,
                                    symbolTable)))
       return failure();
@@ -1696,7 +1696,7 @@ GlobalDtorsOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
 }
 
 static LogicalResult verify(GlobalDtorsOp op) {
-  if (op.dtors().size() != op.priorities().size())
+  if (op.getDtors().size() != op.getPriorities().size())
     return op.emitError(
         "mismatch between the number of dtors and the number of priorities");
   return success();
