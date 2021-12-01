@@ -17,12 +17,6 @@ namespace clang {
 namespace tidy {
 namespace fuchsia {
 
-namespace {
-AST_MATCHER(FunctionDecl, hasTrailingReturn) {
-  return Node.getType()->castAs<FunctionProtoType>()->hasTrailingReturn();
-}
-} // namespace
-
 void TrailingReturnCheck::registerMatchers(MatchFinder *Finder) {
   // Functions that have trailing returns are disallowed, except for those
   // using decltype specifiers and lambda with otherwise unutterable
@@ -30,15 +24,16 @@ void TrailingReturnCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
       functionDecl(hasTrailingReturn(),
                    unless(anyOf(returns(decltypeType()),
-                                hasParent(cxxRecordDecl(isLambda())))))
+                                hasParent(cxxRecordDecl(isLambda())),
+                                cxxDeductionGuideDecl())))
           .bind("decl"),
       this);
 }
 
 void TrailingReturnCheck::check(const MatchFinder::MatchResult &Result) {
-  if (const auto *D = Result.Nodes.getNodeAs<Decl>("decl"))
+  if (const auto *D = Result.Nodes.getNodeAs<FunctionDecl>("decl"))
     diag(D->getBeginLoc(),
-         "a trailing return type is disallowed for this type of declaration");
+         "a trailing return type is disallowed for this function declaration");
 }
 
 } // namespace fuchsia
