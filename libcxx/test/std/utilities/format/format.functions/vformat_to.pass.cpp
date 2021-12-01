@@ -18,11 +18,9 @@
 // <format>
 
 // template<class Out>
-//   Out vformat_to(Out out, string_view fmt,
-//                  format_args_t<type_identity_t<Out>, char> args);
+//   Out vformat_to(Out out, string_view fmt, format_args args);
 // template<class Out>
-//    Out vformat_to(Out out, wstring_view fmt,
-//                   format_args_t<type_identity_t<Out>, wchar_t> args);
+//    Out vformat_to(Out out, wstring_view fmt, wformat_args_t args);
 
 #include <format>
 #include <algorithm>
@@ -38,28 +36,22 @@ auto test = []<class CharT, class... Args>(std::basic_string<CharT> expected,
                                            const Args&... args) {
   {
     std::basic_string<CharT> out(expected.size(), CharT(' '));
-    auto it = std::vformat_to(
-        out.begin(), fmt,
-        std::make_format_args<std::basic_format_context<
-            typename std::basic_string<CharT>::iterator, CharT>>(args...));
+    auto it = std::vformat_to(out.begin(), fmt,
+                              std::make_format_args<context_t<CharT>>(args...));
     assert(it == out.end());
     assert(out == expected);
   }
   {
     std::list<CharT> out;
-    std::vformat_to(
-        std::back_inserter(out), fmt,
-        std::make_format_args<std::basic_format_context<
-            std::back_insert_iterator<std::list<CharT>>, CharT>>(args...));
+    std::vformat_to(std::back_inserter(out), fmt,
+                    std::make_format_args<context_t<CharT>>(args...));
     assert(
         std::equal(out.begin(), out.end(), expected.begin(), expected.end()));
   }
   {
     std::vector<CharT> out;
-    std::vformat_to(
-        std::back_inserter(out), fmt,
-        std::make_format_args<std::basic_format_context<
-            std::back_insert_iterator<std::vector<CharT>>, CharT>>(args...));
+    std::vformat_to(std::back_inserter(out), fmt,
+                    std::make_format_args<context_t<CharT>>(args...));
     assert(
         std::equal(out.begin(), out.end(), expected.begin(), expected.end()));
   }
@@ -67,9 +59,7 @@ auto test = []<class CharT, class... Args>(std::basic_string<CharT> expected,
     assert(expected.size() < 4096 && "Update the size of the buffer.");
     CharT out[4096];
     CharT* it = std::vformat_to(
-        out, fmt,
-        std::make_format_args<std::basic_format_context<CharT*, CharT>>(
-            args...));
+        out, fmt, std::make_format_args<context_t<CharT>>(args...));
     assert(std::distance(out, it) == int(expected.size()));
     // Convert to std::string since output contains '\0' for boolean tests.
     assert(std::basic_string<CharT>(out, it) == expected);
@@ -81,11 +71,8 @@ auto test_exception = []<class CharT, class... Args>(
 #ifndef TEST_HAS_NO_EXCEPTIONS
   try {
     std::basic_string<CharT> out;
-    std::vformat_to(
-        std::back_inserter(out), fmt,
-        std::make_format_args<std::basic_format_context<
-            std::back_insert_iterator<std::basic_string<CharT>>, CharT>>(
-            args...));
+    std::vformat_to(std::back_inserter(out), fmt,
+                    std::make_format_args<context_t<CharT>>(args...));
     assert(false);
   } catch (std::format_error& e) {
     LIBCPP_ASSERT(e.what() == what);
