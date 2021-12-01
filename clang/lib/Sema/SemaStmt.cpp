@@ -3571,8 +3571,7 @@ StmtResult Sema::ActOnCapScopeReturnStmt(SourceLocation ReturnLoc,
   bool HasDeducedReturnType =
       CurLambda && hasDeducedReturnType(CurLambda->CallOperator);
 
-  if (ExprEvalContexts.back().Context ==
-          ExpressionEvaluationContext::DiscardedStatement &&
+  if (ExprEvalContexts.back().isDiscardedStatementContext() &&
       (HasDeducedReturnType || CurCap->HasImplicitReturnType)) {
     if (RetValExp) {
       ExprResult ER =
@@ -3888,8 +3887,7 @@ Sema::ActOnReturnStmt(SourceLocation ReturnLoc, Expr *RetValExp,
   if (RetVal.isInvalid())
     return StmtError();
   StmtResult R = BuildReturnStmt(ReturnLoc, RetVal.get());
-  if (R.isInvalid() || ExprEvalContexts.back().Context ==
-                           ExpressionEvaluationContext::DiscardedStatement)
+  if (R.isInvalid() || ExprEvalContexts.back().isDiscardedStatementContext())
     return R;
 
   if (VarDecl *VD =
@@ -3974,8 +3972,7 @@ StmtResult Sema::BuildReturnStmt(SourceLocation ReturnLoc, Expr *RetValExp) {
 
   // C++1z: discarded return statements are not considered when deducing a
   // return type.
-  if (ExprEvalContexts.back().Context ==
-          ExpressionEvaluationContext::DiscardedStatement &&
+  if (ExprEvalContexts.back().isDiscardedStatementContext() &&
       FnRetType->getContainedAutoType()) {
     if (RetValExp) {
       ExprResult ER =
