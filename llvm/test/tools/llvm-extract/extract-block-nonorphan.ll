@@ -23,10 +23,7 @@
 ; CHECK-LABEL: define internal void @foo.region_start(i32* %arg) {
 ; CHECK:         br label %region_start
 ;
-; CHECK:       return.exitStub:
-; CHECK-NEXT:    ret void
-; CHECK-EMPTY:
-; CHECK-NEXT:  region_start:
+; CHECK:      region_start:
 ; CHECK-NEXT:    br label %extractonly
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  extractonly:
@@ -45,6 +42,9 @@
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  region_end:
 ; CHECK-NEXT:    br label %return.exitStub
+; CHECK-EMPTY:
+; CHECK-NEXT:  return.exitStub:
+; CHECK-NEXT:    ret void
 ; CHECK-NEXT:  }
 
 

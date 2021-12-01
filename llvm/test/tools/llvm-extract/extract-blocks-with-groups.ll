@@ -4,7 +4,11 @@
 
 
 ; KEEP-LABEL: define i32 @foo(i32 %arg, i32 %arg1) {
-; KEEP:         call @foo.if.split(
+; KEEP:         call void @foo.if.split(
+
+; KEEP-LABEL: define i32 @bar(i32 %arg, i32 %arg1) {
+; KEEP:         %targetBlock = call i1 @bar.bb14(
+
 
 ; The first extracted function is the region composed by the
 ; blocks if, then, and else from foo.
@@ -13,59 +17,56 @@
 ; CHECK: newFuncRoot:
 ; CHECK:   br label %if.split
 ;
-; CHECK: then:                                             ; preds = %if.split
+; CHECK: then:
 ; CHECK:   %tmp12 = shl i32 %arg1, 2
 ; CHECK:   %tmp13 = add nsw i32 %tmp12, %arg
 ; CHECK:   br label %end.split
 ;
-; CHECK: else:                                             ; preds = %if.split
+; CHECK: else:
 ; CHECK:   %tmp22 = mul nsw i32 %arg, 3
 ; CHECK:   %tmp24 = sdiv i32 %arg1, 6
 ; CHECK:   %tmp25 = add nsw i32 %tmp24, %tmp22
 ; CHECK:   br label %end.split
 ;
-; CHECK: if.split:                                         ; preds = %newFuncRoot
+; CHECK: if.split:
 ; CHECK:   %tmp5 = icmp sgt i32 %arg, 0
 ; CHECK:   %tmp8 = icmp sgt i32 %arg1, 0
 ; CHECK:   %or.cond = and i1 %tmp5, %tmp8
 ; CHECK:   br i1 %or.cond, label %then, label %else
 ;
-; CHECK: end.split:                                        ; preds = %then, %else
+; CHECK: end.split:
 ; CHECK:   %tmp.0.ce = phi i32 [ %tmp13, %then ], [ %tmp25, %else ]
 ; CHECK:   store i32 %tmp.0.ce, i32* %tmp.0.ce.out
 ; CHECK:   br label %end.exitStub
 ;
-; CHECK: end.exitStub:                                     ; preds = %end.split
+; CHECK: end.exitStub:
 ; CHECK:   ret void
 ; CHECK: }
 
 
-; KEEP-LABEL: define i32 @bar(i32 %arg, i32 %arg1) {
-; KEEP:         call @bar.bb14(
-
 ; The second extracted function is the region composed by the blocks
 ; bb14 and bb20 from bar.
 ; KILL-LABEL: define dso_local i1 @bar.bb14(i32 %arg1, i32 %arg, i32* %tmp25.out) {
-; KEEP-LABEL: define dso_local i1 @bar.bb14(i32 %arg1, i32 %arg, i32* %tmp25.out) {
+; KEEP-LABEL: define internal i1 @bar.bb14(i32 %arg1, i32 %arg, i32* %tmp25.out) {
 ; CHECK: newFuncRoot:
 ; CHECK:   br label %bb14
 ;
-; CHECK: bb14:                                             ; preds = %newFuncRoot
+; CHECK: bb14:
 ; CHECK:   %tmp0 = and i32 %arg1, %arg
 ; CHECK:   %tmp1 = icmp slt i32 %tmp0, 0
 ; CHECK:   br i1 %tmp1, label %bb20, label %bb26.exitStub
 ;
-; CHECK: bb20:                                             ; preds = %bb14
+; CHECK: bb20:
 ; CHECK:   %tmp22 = mul nsw i32 %arg, 3
 ; CHECK:   %tmp24 = sdiv i32 %arg1, 6
 ; CHECK:   %tmp25 = add nsw i32 %tmp24, %tmp22
 ; CHECK:   store i32 %tmp25, i32* %tmp25.out
 ; CHECK:   br label %bb30.exitStub
 ;
-; CHECK: bb26.exitStub:                                    ; preds = %bb14
+; CHECK: bb26.exitStub:
 ; CHECK:   ret i1 true
 ;
-; CHECK: bb30.exitStub:                                    ; preds = %bb20
+; CHECK: bb30.exitStub:
 ; CHECK:   ret i1 false
 ; CHECK: }
 

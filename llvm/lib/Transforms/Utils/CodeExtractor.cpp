@@ -1816,7 +1816,7 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
     if (!AggregateArgs) {
         AI = newFunction->arg_begin();
         for (unsigned i = 0, e = inputs.size(); i != e; ++i, ++AI)
-            AI->setName(inputs[i]->getName() + ".y");
+            AI->setName(inputs[i]->getName());
         for (unsigned i = 0, e = outputs.size(); i != e; ++i, ++AI)
             AI->setName(outputs[i]->getName()+".out");
     }
@@ -2258,6 +2258,43 @@ void CodeExtractor::extractCodeRegionByCopy(const CodeExtractorAnalysisCache &CE
                 SwitchInst::Create(Constant::getNullValue(Type::getInt16Ty(Context)),
                     codeReplacer, 0, codeReplacer);
 
+
+            auto newFuncIt = newFunction->front().getIterator();
+            for (BasicBlock *Block : Blocks) {
+                BasicBlock* CBB =  CloneBasicBlock(Block, VMap, {}, newFunction /*, nullptr, &DIFinder*/);      
+
+                // Add basic block mapping.
+                VMap[Block] = CBB;
+
+                // It is only legal to clone a function if a block address within that
+                // function is never referenced outside of the function.  Given that, we
+                // want to map block addresses from the old function to block addresses in
+                // the clone. (This is different from the generic ValueMapper
+                // implementation, which generates an invalid blockaddress when
+                // cloning a function.)
+                if (Block->hasAddressTaken()) {
+                    Constant *OldBBAddr = BlockAddress::get(oldFunction,Block);
+                    VMap[OldBBAddr] = BlockAddress::get(newFunction, CBB);
+                }
+
+                // Note return instructions for the caller.
+                //  if (ReturnInst *RI = dyn_cast<ReturnInst>(CBB->getTerminator()))
+                //     Returns.push_back(RI);
+
+
+                for (auto&& P :  CBB->phis()) {
+                    auto NumIncoming = P.getNumIncomingValues();
+                    for (int Idx = NumIncoming - 1; Idx >= 0; --Idx) {
+                        if (Blocks.count(P.getIncomingBlock(Idx)))
+                            continue;
+                        P.removeIncomingValue(Idx, /*DeletePHIIfEmpty=*/ false);
+                    }
+                }
+            }
+
+
+
+
             // Since there may be multiple exits from the original region, make the new
             // function return an unsigned, switch on that number.  This loop iterates
             // over all of the blocks in the extracted region, updating any terminator
@@ -2439,41 +2476,7 @@ void CodeExtractor::extractCodeRegionByCopy(const CodeExtractorAnalysisCache &CE
 #endif
 
 
-        auto newFuncIt = newFunction->front().getIterator();
-        for (BasicBlock *Block : Blocks) {
-            BasicBlock* CBB =  CloneBasicBlock(Block, VMap, {}, newFunction /*, nullptr, &DIFinder*/);      
 
-            // Add basic block mapping.
-            VMap[Block] = CBB;
-
-            // It is only legal to clone a function if a block address within that
-            // function is never referenced outside of the function.  Given that, we
-            // want to map block addresses from the old function to block addresses in
-            // the clone. (This is different from the generic ValueMapper
-            // implementation, which generates an invalid blockaddress when
-            // cloning a function.)
-            if (Block->hasAddressTaken()) {
-                Constant *OldBBAddr = BlockAddress::get(oldFunction,Block);
-                VMap[OldBBAddr] = BlockAddress::get(newFunction, CBB);
-            }
-
-            // Note return instructions for the caller.
-            //  if (ReturnInst *RI = dyn_cast<ReturnInst>(CBB->getTerminator()))
-            //     Returns.push_back(RI);
-
-
-            for (auto&& P :  CBB->phis()) {
-                auto NumIncoming = P.getNumIncomingValues();
-                for (int Idx = NumIncoming - 1; Idx >= 0; --Idx) {
-                    if (Blocks.count(P.getIncomingBlock(Idx)))
-                        continue;
-                    P.removeIncomingValue(Idx, /*DeletePHIIfEmpty=*/ false);
-                }
-            }
-        }
-
-
-  
 
         for (auto Pred : predecessors(header)) {
             if (VMap.count(Pred))
