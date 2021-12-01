@@ -533,6 +533,22 @@ Register RegScavenger::scavengeRegister(const TargetRegisterClass *RC,
         Candidates.reset(*AI);
   }
 
+  // If we have already scavenged some registers, remove them from the
+  // candidates. If we end up recursively calling eliminateFrameIndex, we don't
+  // want to be clobbering previously scavenged registers or their associated
+  // stack slots.
+  for (ScavengedInfo &SI : Scavenged) {
+    if (SI.Reg) {
+      if (isRegUsed(SI.Reg)) {
+        LLVM_DEBUG(
+          dbgs() << "Removing " << printReg(SI.Reg, TRI) <<
+          " from scavenging candidates since it was already scavenged\n");
+        for (MCRegAliasIterator AI(SI.Reg, TRI, true); AI.isValid(); ++AI)
+          Candidates.reset(*AI);
+      }
+    }
+  }
+
   // Try to find a register that's unused if there is one, as then we won't
   // have to spill.
   BitVector Available = getRegsAvailable(RC);
@@ -552,6 +568,12 @@ Register RegScavenger::scavengeRegister(const TargetRegisterClass *RC,
 
   if (!AllowSpill)
     return 0;
+
+#ifndef NDEBUG
+  for (ScavengedInfo &SI : Scavenged) {
+    assert(SI.Reg != SReg && "scavenged a previously scavenged register");
+  }
+#endif
 
   ScavengedInfo &Scavenged = spill(SReg, *RC, SPAdj, I, UseMI);
   Scavenged.Restore = &*std::prev(UseMI);
