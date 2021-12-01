@@ -7,12 +7,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "../lib/Conversion/PDLToPDLInterp/RootOrdering.h"
-#include "mlir/Dialect/StandardOps/IR/Ops.h"
+#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/MLIRContext.h"
 #include "gtest/gtest.h"
 
 using namespace mlir;
+using namespace mlir::arith;
 using namespace mlir::pdl_to_pdl_interp;
 
 namespace {
@@ -23,22 +24,24 @@ namespace {
 
 /// The test fixture for constructing root ordering tests and verifying results.
 /// This fixture constructs the test values v. The test populates the graph
-/// with the desired costs and then calls check(), passing the expeted optimal
+/// with the desired costs and then calls check(), passing the expected optimal
 /// cost and the list of edges in the preorder traversal of the optimal
 /// branching.
 class RootOrderingTest : public ::testing::Test {
 protected:
   RootOrderingTest() {
-    context.loadDialect<StandardOpsDialect>();
+    context.loadDialect<ArithmeticDialect>();
     createValues();
   }
 
-  /// Creates the test values.
+  /// Creates the test values. These values simply act as vertices / vertex IDs
+  /// in the cost graph, rather than being a part of an IR.
   void createValues() {
     OpBuilder builder(&context);
+    builder.setInsertionPointToStart(&block);
     for (int i = 0; i < 4; ++i)
-      v[i] = builder.create<ConstantOp>(builder.getUnknownLoc(),
-                                        builder.getI32IntegerAttr(i));
+      // Ops will be deleted when `block` is destroyed.
+      v[i] = builder.create<ConstantIntOp>(builder.getUnknownLoc(), i, 32);
   }
 
   /// Checks that optimal branching on graph has the given cost and
@@ -54,6 +57,9 @@ protected:
 protected:
   /// The context for creating the values.
   MLIRContext context;
+
+  /// Block holding all the operations.
+  Block block;
 
   /// Values used in the graph definition. We always use leading `n` values.
   Value v[4];
