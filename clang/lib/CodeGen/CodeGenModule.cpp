@@ -710,10 +710,25 @@ void CodeGenModule::Release() {
                               1);
   }
 
-  if (Arch == llvm::Triple::aarch64 || Arch == llvm::Triple::aarch64_32 ||
+  // Add module metadata for return address signing (ignoring
+  // non-leaf/all) and stack tagging. These are actually turned on by function
+  // attributes, but we use module metadata to emit build attributes. This is
+  // needed for LTO, where the function attributes are inside bitcode
+  // serialised into a global variable by the time build attributes are
+  // emitted, so we can't access them.
+  if (Context.getTargetInfo().hasFeature("ptrauth") &&
+      LangOpts.getSignReturnAddressScope() !=
+          LangOptions::SignReturnAddressScopeKind::None)
+    getModule().addModuleFlag(llvm::Module::Override,
+                              "sign-return-address-buildattr", 1);
+  if (LangOpts.Sanitize.has(SanitizerKind::MemTag))
+    getModule().addModuleFlag(llvm::Module::Override,
+                              "tag-stack-memory-buildattr", 1);
+
+  if (Arch == llvm::Triple::thumb || Arch == llvm::Triple::thumbeb ||
+      Arch == llvm::Triple::aarch64 || Arch == llvm::Triple::aarch64_32 ||
       Arch == llvm::Triple::aarch64_be) {
-    getModule().addModuleFlag(llvm::Module::Error,
-                              "branch-target-enforcement",
+    getModule().addModuleFlag(llvm::Module::Error, "branch-target-enforcement",
                               LangOpts.BranchTargetEnforcement);
 
     getModule().addModuleFlag(llvm::Module::Error, "sign-return-address",
@@ -722,9 +737,11 @@ void CodeGenModule::Release() {
     getModule().addModuleFlag(llvm::Module::Error, "sign-return-address-all",
                               LangOpts.isSignReturnAddressScopeAll());
 
-    getModule().addModuleFlag(llvm::Module::Error,
-                              "sign-return-address-with-bkey",
-                              !LangOpts.isSignReturnAddressWithAKey());
+    if (Arch != llvm::Triple::thumb && Arch != llvm::Triple::thumbeb) {
+      getModule().addModuleFlag(llvm::Module::Error,
+                                "sign-return-address-with-bkey",
+                                !LangOpts.isSignReturnAddressWithAKey());
+    }
   }
 
   if (!CodeGenOpts.MemoryProfileOutput.empty()) {

@@ -2979,6 +2979,9 @@ def err_attribute_requires_opencl_version : Error<
   "attribute %0 is supported in the OpenCL version %1%select{| onwards}2">;
 def err_invalid_branch_protection_spec : Error<
   "invalid or misplaced branch protection specification '%0'">;
+def warn_unsupported_branch_protection_spec : Warning<
+  "unsupported branch protection specification '%0'">, InGroup<BranchProtection>;
+
 def warn_unsupported_target_attribute
     : Warning<"%select{unsupported|duplicate|unknown}0%select{| architecture|"
               " tune CPU}1 '%2' in the '%select{target|target_clones}3' "

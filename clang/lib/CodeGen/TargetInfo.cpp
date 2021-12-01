@@ -6364,6 +6364,26 @@ public:
     const FunctionDecl *FD = dyn_cast_or_null<FunctionDecl>(D);
     if (!FD)
       return;
+    auto *Fn = cast<llvm::Function>(GV);
+
+    if (const auto *TA = FD->getAttr<TargetAttr>()) {
+      ParsedTargetAttr Attr = TA->parse();
+      if (!Attr.BranchProtection.empty()) {
+        TargetInfo::BranchProtectionInfo BPI;
+        StringRef DiagMsg;
+        (void)CGM.getTarget().validateBranchProtection(Attr.BranchProtection,
+                                                       BPI, DiagMsg);
+
+        static const char *SignReturnAddrStr[] = {"none", "non-leaf", "all"};
+        assert(static_cast<unsigned>(BPI.SignReturnAddr) <= 2 &&
+               "Unexpected SignReturnAddressScopeKind");
+        Fn->addFnAttr("sign-return-address",
+                      SignReturnAddrStr[static_cast<int>(BPI.SignReturnAddr)]);
+
+        Fn->addFnAttr("branch-target-enforcement",
+                      BPI.BranchTargetEnforcement ? "true" : "false");
+      }
+    }
 
     const ARMInterruptAttr *Attr = FD->getAttr<ARMInterruptAttr>();
     if (!Attr)
@@ -6378,8 +6398,6 @@ public:
     case ARMInterruptAttr::ABORT:   Kind = "ABORT"; break;
     case ARMInterruptAttr::UNDEF:   Kind = "UNDEF"; break;
     }
-
-    llvm::Function *Fn = cast<llvm::Function>(GV);
 
     Fn->addFnAttr("interrupt", Kind);
 

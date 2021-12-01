@@ -1,7 +1,7 @@
 // Check the -msign-return-address= option, which has a required argument to
 // select scope.
 // RUN: %clang -target aarch64--none-eabi -c %s -### -msign-return-address=none                             2>&1 | \
-// RUN: FileCheck %s --check-prefix=RA-OFF      --check-prefix=KEY-A --check-prefix=BTE-OFF
+// RUN: FileCheck %s --check-prefix=RA-OFF --check-prefix=KEY --check-prefix=BTE-OFF
 
 // RUN: %clang -target aarch64--none-eabi -c %s -### -msign-return-address=non-leaf                         2>&1 | \
 // RUN: FileCheck %s --check-prefix=RA-NON-LEAF --check-prefix=KEY-A --check-prefix=BTE-OFF
@@ -32,6 +32,7 @@
 // RA-ALL: "-msign-return-address=all"
 
 // KEY-A: "-msign-return-address-key=a_key"
+// KEY-NOT: "-msign-return-address-key"
 
 // BTE-OFF-NOT: "-mbranch-target-enforce"
 // BTE-ON: "-mbranch-target-enforce"

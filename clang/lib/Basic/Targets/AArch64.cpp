@@ -140,8 +140,8 @@ bool AArch64TargetInfo::setABI(const std::string &Name) {
 bool AArch64TargetInfo::validateBranchProtection(StringRef Spec,
                                                  BranchProtectionInfo &BPI,
                                                  StringRef &Err) const {
-  llvm::AArch64::ParsedBranchProtection PBP;
-  if (!llvm::AArch64::parseBranchProtection(Spec, PBP, Err))
+  llvm::ARM::ParsedBranchProtection PBP;
+  if (!llvm::ARM::parseBranchProtection(Spec, PBP, Err))
     return false;
 
   BPI.SignReturnAddr =
