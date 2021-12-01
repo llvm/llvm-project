@@ -69,7 +69,7 @@ def B_CompoundTypeA : TestType<"CompoundA"> {
 // DECL: static CompoundAType getChecked(::llvm::function_ref<::mlir::InFlightDiagnostic()> emitError, ::mlir::MLIRContext *context, int widthOfSomething, ::test::SimpleTypeA exampleTdType, SomeCppStruct exampleCppType, ::llvm::ArrayRef<int> dims, ::mlir::Type inner);
 // DECL: static ::mlir::LogicalResult verify(::llvm::function_ref<::mlir::InFlightDiagnostic()> emitError, int widthOfSomething, ::test::SimpleTypeA exampleTdType, SomeCppStruct exampleCppType, ::llvm::ArrayRef<int> dims, ::mlir::Type inner);
 // DECL: static constexpr ::llvm::StringLiteral getMnemonic() {
-// DECL:   return "cmpnd_a";
+// DECL:   return {"cmpnd_a"};
 // DECL: }
 // DECL: static ::mlir::Type parse(::mlir::AsmParser &parser);
 // DECL: void print(::mlir::AsmPrinter &printer) const;
@@ -88,7 +88,7 @@ def C_IndexType : TestType<"Index"> {
 
 // DECL-LABEL: class IndexType : public ::mlir::Type
 // DECL: static constexpr ::llvm::StringLiteral getMnemonic() {
-// DECL:   return "index";
+// DECL:   return {"index"};
 // DECL: }
 // DECL: static ::mlir::Type parse(::mlir::AsmParser &parser);
 // DECL: void print(::mlir::AsmPrinter &printer) const;
