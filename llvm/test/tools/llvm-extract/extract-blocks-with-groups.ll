@@ -1,11 +1,15 @@
-; RUN: llvm-extract -bb 'foo:if;then;else' -bb 'bar:bb14;bb20' -S %s               | FileCheck %s
-; RUN: llvm-extract -bb 'foo:if;then;else' -bb 'bar:bb14;bb20' -S %s --keep-blocks | FileCheck %s --check-prefix=KEEP
+; RUN: llvm-extract -bb 'foo:if;then;else' -bb 'bar:bb14;bb20' -S %s                                      | FileCheck %s --check-prefixes=CHECK,KILL
+; RUN: llvm-extract -bb 'foo:if;then;else' -bb 'bar:bb14;bb20' -S %s --bb-keep-functions --bb-keep-blocks | FileCheck %s --check-prefixes=CHECK,KEEP
 ; Extract two groups of basic blocks in two different functions.
 
 
+; KEEP-LABEL: define i32 @foo(i32 %arg, i32 %arg1) {
+; KEEP:         call @foo.if.split(
+
 ; The first extracted function is the region composed by the
 ; blocks if, then, and else from foo.
-; CHECK: define dso_local void @foo.if.split(i32 %arg1, i32 %arg, i32* %tmp.0.ce.out) {
+; KILL-LABEL: define dso_local void @foo.if.split(i32 %arg1, i32 %arg, i32* %tmp.0.ce.out) {
+; KEEP-LABEL: define internal void @foo.if.split(i32 %arg1, i32 %arg, i32* %tmp.0.ce.out) {
 ; CHECK: newFuncRoot:
 ; CHECK:   br label %if.split
 ;
@@ -35,9 +39,14 @@
 ; CHECK:   ret void
 ; CHECK: }
 
+
+; KEEP-LABEL: define i32 @bar(i32 %arg, i32 %arg1) {
+; KEEP:         call @bar.bb14(
+
 ; The second extracted function is the region composed by the blocks
 ; bb14 and bb20 from bar.
-; CHECK: define dso_local i1 @bar.bb14(i32 %arg1, i32 %arg, i32* %tmp25.out) {
+; KILL-LABEL: define dso_local i1 @bar.bb14(i32 %arg1, i32 %arg, i32* %tmp25.out) {
+; KEEP-LABEL: define dso_local i1 @bar.bb14(i32 %arg1, i32 %arg, i32* %tmp25.out) {
 ; CHECK: newFuncRoot:
 ; CHECK:   br label %bb14
 ;

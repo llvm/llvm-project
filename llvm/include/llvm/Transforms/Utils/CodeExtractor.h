@@ -170,7 +170,7 @@ public:
       const   BlockFrequency& EntryFreq,
         const  DenseMap<BasicBlock *, BlockFrequency> &ExitWeights,  const   SmallPtrSet<BasicBlock *, 1> &ExitBlocks,
        const  ValueSet &SinkingCands,const ValueSet & HoistingCands, BasicBlock *CommonExit,  
-        Function *oldFunction,   Function *newFunction, 
+        Function *oldFunction,   Function *newFunction,  BasicBlock *header,
         BasicBlock *   codeReplacer,
         BasicBlock *  NewEntry,
         BasicBlock *  newRootNode  );
