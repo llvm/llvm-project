@@ -14630,28 +14630,18 @@ TreeTransform<Derived>::RebuildCXXOperatorCallExpr(OverloadedOperatorKind Op,
   Expr *Callee = OrigCallee->IgnoreParenCasts();
   bool isPostIncDec = Second && (Op == OO_PlusPlus || Op == OO_MinusMinus);
 
-  if (const BuiltinType *pty = First->getType()->getAsPlaceholderType()) {
-    if (Second && !isPostIncDec) {
-      BinaryOperatorKind Opc = BinaryOperator::getOverloadedOpcode(Op);
-      if (pty->getKind() == BuiltinType::PseudoObject &&
-          BinaryOperator::isAssignmentOp(Opc))
-        return SemaRef.checkPseudoObjectAssignment(/*Scope=*/nullptr, OpLoc,
-                                                   Opc, First, Second);
-    } else {
-      UnaryOperatorKind Opc =
-          UnaryOperator::getOverloadedOpcode(Op, isPostIncDec);
-      if (pty->getKind() == BuiltinType::PseudoObject &&
-          UnaryOperator::isIncrementDecrementOp(Opc))
-        return SemaRef.checkPseudoObjectIncDec(/*Scope=*/nullptr, OpLoc, Opc,
-                                               First);
-    }
+  if (First->getObjectKind() == OK_ObjCProperty) {
+    BinaryOperatorKind Opc = BinaryOperator::getOverloadedOpcode(Op);
+    if (BinaryOperator::isAssignmentOp(Opc))
+      return SemaRef.checkPseudoObjectAssignment(/*Scope=*/nullptr, OpLoc, Opc,
+                                                 First, Second);
     ExprResult Result = SemaRef.CheckPlaceholderExpr(First);
     if (Result.isInvalid())
       return ExprError();
     First = Result.get();
   }
 
-  if (Second && Second->getType()->isPlaceholderType()) {
+  if (Second && Second->getObjectKind() == OK_ObjCProperty) {
     ExprResult Result = SemaRef.CheckPlaceholderExpr(Second);
     if (Result.isInvalid())
       return ExprError();
