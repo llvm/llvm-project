@@ -162,9 +162,6 @@ class VOP3_Real <VOP_Pseudo ps, int EncodingFamily, string asm_name = ps.Mnemoni
   let isCodeGenOnly = 0;
   let UseNamedOperandTable = 1;
 
-  let Constraints     = ps.Constraints;
-  let DisableEncoding = ps.DisableEncoding;
-
   // copy relevant pseudo op flags
   let SubtargetPredicate = ps.SubtargetPredicate;
   let OtherPredicates    = ps.OtherPredicates;
@@ -187,7 +184,11 @@ class VOP3_Real <VOP_Pseudo ps, int EncodingFamily, string asm_name = ps.Mnemoni
 // XXX - Is there any reason to distinguish this from regular VOP3
 // here?
 class VOP3P_Real<VOP_Pseudo ps, int EncodingFamily, string asm_name = ps.Mnemonic> :
-  VOP3_Real<ps, EncodingFamily, asm_name>;
+  VOP3_Real<ps, EncodingFamily, asm_name> {
+
+  // The v_wmma pseudos have extra constraints that we do not want to impose on the real instruction.
+  let Constraints        = !if(!eq(!substr(ps.Mnemonic,0,6), "v_wmma"), "", ps.Constraints);
+}
 
 class VOP3a<VOPProfile P> : Enc64 {
   bits<4> src0_modifiers;

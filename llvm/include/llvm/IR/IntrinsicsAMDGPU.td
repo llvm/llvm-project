@@ -1901,6 +1901,59 @@ def int_amdgcn_ds_bvh_stack_rtn :
     [ImmArg<ArgIndex<3>>, IntrWillReturn]
   >;
 
+// WMMA (Wave Matrix Multiply-Accumulate) intrinsics
+//
+// These operations perform a matrix multiplication and accumulation of
+// the form: D = A * B + C .
+
+class AMDGPUWmmaIntrinsic<LLVMType AB, LLVMType CD> :
+  GCCBuiltin<!subst("int", "__builtin", NAME)>,
+  Intrinsic<
+    [CD],               // %D
+    [
+      AB,               // %A
+      AB,               // %B
+      LLVMMatchType<0>, // %C
+    ],
+    [IntrNoMem, IntrConvergent, IntrWillReturn]
+>;
+
+class AMDGPUWmmaIntrinsicOPSEL<LLVMType AB, LLVMType CD> :
+  GCCBuiltin<!subst("int", "__builtin", NAME)>,
+  Intrinsic<
+    [CD],               // %D
+    [
+      AB,               // %A
+      AB,               // %B
+      LLVMMatchType<0>, // %C
+      llvm_i1_ty,       // %high
+    ],
+    [IntrNoMem, IntrConvergent, IntrWillReturn, ImmArg<ArgIndex<3>>]
+>;
+
+class AMDGPUWmmaIntrinsicIU<LLVMType AB, LLVMType CD> :
+  GCCBuiltin<!subst("int", "__builtin", NAME)>,
+  Intrinsic<
+    [CD],               // %D
+    [
+      llvm_i1_ty,       // %A_sign
+      AB,               // %A
+      llvm_i1_ty,       // %B_sign
+      AB,               // %B
+      LLVMMatchType<0>, // %C
+      llvm_i1_ty,       // %clamp
+    ],
+    [IntrNoMem, IntrConvergent, IntrWillReturn, ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<2>>, ImmArg<ArgIndex<5>>]
+>;
+
+def int_amdgcn_wmma_f32_16x16x16_f16   : AMDGPUWmmaIntrinsic<llvm_v8f32_ty, llvm_anyfloat_ty>;
+def int_amdgcn_wmma_f32_16x16x16_bf16  : AMDGPUWmmaIntrinsic<llvm_v8i32_ty, llvm_anyfloat_ty>;
+def int_amdgcn_wmma_f16_16x16x16_f16   : AMDGPUWmmaIntrinsicOPSEL<llvm_v8f32_ty, llvm_anyfloat_ty>;
+def int_amdgcn_wmma_bf16_16x16x16_bf16 : AMDGPUWmmaIntrinsicOPSEL<llvm_v8i32_ty, llvm_anyint_ty>;
+def int_amdgcn_wmma_i32_16x16x16_iu8   : AMDGPUWmmaIntrinsicIU<llvm_v4i32_ty, llvm_anyint_ty>;
+def int_amdgcn_wmma_i32_16x16x16_iu4   : AMDGPUWmmaIntrinsicIU<llvm_v2i32_ty, llvm_anyint_ty>;
+
+
 //===----------------------------------------------------------------------===//
 // Deep learning intrinsics.
 //===----------------------------------------------------------------------===//

@@ -249,6 +249,10 @@ struct VOPDInfo {
 #define GET_VOPDComponentTable_IMPL
 #define GET_VOPDPairs_DECL
 #define GET_VOPDPairs_IMPL
+#define GET_WMMAOpcode2AddrMappingTable_DECL
+#define GET_WMMAOpcode2AddrMappingTable_IMPL
+#define GET_WMMAOpcode3AddrMappingTable_DECL
+#define GET_WMMAOpcode3AddrMappingTable_IMPL
 #include "AMDGPUGenSearchableTables.inc"
 
 int getMTBUFBaseOpcode(unsigned Opc) {
@@ -347,6 +351,16 @@ CanBeVOPD getCanBeVOPD (unsigned Opc) {
 unsigned getVOPDOpcode(unsigned Opc) {
   const VOPDComponentInfo *Info = getVOPDComponentHelper(Opc);
   return Info ? Info->VOPDOp : ~0u;
+}
+
+unsigned mapWMMA2AddrTo3AddrOpcode(unsigned Opc) {
+  const WMMAOpcodeMappingInfo *Info = getWMMAMappingInfoFrom2AddrOpcode(Opc);
+  return Info ? Info->Opcode3Addr : ~0u;
+}
+
+unsigned mapWMMA3AddrTo2AddrOpcode(unsigned Opc) {
+  const WMMAOpcodeMappingInfo *Info = getWMMAMappingInfoFrom3AddrOpcode(Opc);
+  return Info ? Info->Opcode2Addr : ~0u;
 }
 
 // Wrapper for Tablegen'd function.  enum Subtarget is not defined in any

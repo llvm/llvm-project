@@ -227,6 +227,7 @@ private:
   bool SelectVOP3PMods(SDValue In, SDValue &Src, SDValue &SrcMods) const;
 
   bool SelectDotIUVOP3PMods(SDValue In, SDValue &Src) const;
+  bool SelectWMMAOpSelVOP3PMods(SDValue In, SDValue &Src) const;
 
   bool SelectVOP3OpSel(SDValue In, SDValue &Src, SDValue &SrcMods) const;
 
