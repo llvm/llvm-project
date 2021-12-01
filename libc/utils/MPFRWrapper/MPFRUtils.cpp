@@ -312,11 +312,19 @@ public:
 
     int thisExponent = fputil::FPBits<T>(thisAsT).getExponent();
     int inputExponent = fputil::FPBits<T>(input).getExponent();
+    // Adjust the exponents for denormal numbers.
+    if (fputil::FPBits<T>(thisAsT).getUnbiasedExponent() == 0)
+      ++thisExponent;
+    if (fputil::FPBits<T>(input).getUnbiasedExponent() == 0)
+      ++inputExponent;
+
     if (thisAsT * input < 0 || thisExponent == inputExponent) {
       MPFRNumber inputMPFR(input);
       mpfr_sub(inputMPFR.value, value, inputMPFR.value, MPFR_RNDN);
       mpfr_abs(inputMPFR.value, inputMPFR.value, MPFR_RNDN);
-      mpfr_mul_2si(inputMPFR.value, inputMPFR.value, -thisExponent, MPFR_RNDN);
+      mpfr_mul_2si(inputMPFR.value, inputMPFR.value,
+                   -thisExponent + int(fputil::MantissaWidth<T>::value),
+                   MPFR_RNDN);
       return inputMPFR.as<double>();
     }
 
@@ -329,6 +337,11 @@ public:
     T max = thisAsT > input ? thisAsT : input;
     int minExponent = fputil::FPBits<T>(min).getExponent();
     int maxExponent = fputil::FPBits<T>(max).getExponent();
+    // Adjust the exponents for denormal numbers.
+    if (fputil::FPBits<T>(min).getUnbiasedExponent() == 0)
+      ++minExponent;
+    if (fputil::FPBits<T>(max).getUnbiasedExponent() == 0)
+      ++maxExponent;
 
     MPFRNumber minMPFR(min);
     MPFRNumber maxMPFR(max);
@@ -337,10 +350,14 @@ public:
     mpfr_mul_2si(pivot.value, pivot.value, maxExponent, MPFR_RNDN);
 
     mpfr_sub(minMPFR.value, pivot.value, minMPFR.value, MPFR_RNDN);
-    mpfr_mul_2si(minMPFR.value, minMPFR.value, -minExponent, MPFR_RNDN);
+    mpfr_mul_2si(minMPFR.value, minMPFR.value,
+                 -minExponent + int(fputil::MantissaWidth<T>::value),
+                 MPFR_RNDN);
 
     mpfr_sub(maxMPFR.value, maxMPFR.value, pivot.value, MPFR_RNDN);
-    mpfr_mul_2si(maxMPFR.value, maxMPFR.value, -maxExponent, MPFR_RNDN);
+    mpfr_mul_2si(maxMPFR.value, maxMPFR.value,
+                 -maxExponent + int(fputil::MantissaWidth<T>::value),
+                 MPFR_RNDN);
 
     mpfr_add(minMPFR.value, minMPFR.value, maxMPFR.value, MPFR_RNDN);
     return minMPFR.as<double>();
