@@ -716,7 +716,7 @@ protected:
         if (item_byte_size == read) {
           result.AppendWarningWithFormat(
               "unable to find a NULL terminated string at 0x%" PRIx64
-              ".Consider increasing the maximum read length.\n",
+              ". Consider increasing the maximum read length.\n",
               data_addr);
           --read;
           break_on_no_NULL = true;
