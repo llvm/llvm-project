@@ -66,16 +66,7 @@ void OpenFile::Open(OpenStatus status, std::optional<Action> action,
       (status == OpenStatus::Old || status == OpenStatus::Unknown)) {
     return;
   }
-  if (fd_ >= 0) {
-    if (fd_ <= 2) {
-      // don't actually close a standard file descriptor, we might need it
-    } else {
-      if (::close(fd_) != 0) {
-        handler.SignalErrno();
-      }
-    }
-    fd_ = -1;
-  }
+  CloseFd(handler);
   if (status == OpenStatus::Scratch) {
     if (path_.get()) {
       handler.SignalError("FILE= must not appear with STATUS='SCRATCH'");
@@ -179,12 +170,7 @@ void OpenFile::Close(CloseStatus status, IoErrorHandler &handler) {
     break;
   }
   path_.reset();
-  if (fd_ >= 0) {
-    if (::close(fd_) != 0) {
-      handler.SignalErrno();
-    }
-    fd_ = -1;
-  }
+  CloseFd(handler);
 }
 
 std::size_t OpenFile::Read(FileOffset at, char *buffer, std::size_t minBytes,
@@ -408,6 +394,19 @@ int OpenFile::PendingResult(const Terminator &terminator, int iostat) {
   int id{nextId_++};
   pending_ = New<Pending>{terminator}(id, iostat, std::move(pending_));
   return id;
+}
+
+void OpenFile::CloseFd(IoErrorHandler &handler) {
+  if (fd_ >= 0) {
+    if (fd_ <= 2) {
+      // don't actually close a standard file descriptor, we might need it
+    } else {
+      if (::close(fd_) != 0) {
+        handler.SignalErrno();
+      }
+    }
+    fd_ = -1;
+  }
 }
 
 bool IsATerminal(int fd) { return ::isatty(fd); }

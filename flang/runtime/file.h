@@ -85,6 +85,7 @@ private:
     position_ = pos;
     openPosition_.reset();
   }
+  void CloseFd(IoErrorHandler &);
 
   int fd_{-1};
   OwningPtr<char> path_;
