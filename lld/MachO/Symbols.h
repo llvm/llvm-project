@@ -236,7 +236,12 @@ public:
 
   uint64_t getVA() const override;
   bool isWeakDef() const override { return weakDef; }
-  bool isWeakRef() const override { return refState == RefState::Weak; }
+
+  // Symbols from weak libraries/frameworks are also weakly-referenced.
+  bool isWeakRef() const override {
+    return refState == RefState::Weak ||
+           (file && getFile()->umbrella->forceWeakImport);
+  }
   bool isReferenced() const { return refState != RefState::Unreferenced; }
   bool isTlv() const override { return tlv; }
   bool isDynamicLookup() const { return file == nullptr; }

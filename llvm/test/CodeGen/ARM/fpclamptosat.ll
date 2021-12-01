@@ -5648,6 +5648,79 @@ define void @unroll_minmax(i32* nocapture %0, float* nocapture readonly %1, i32 
   br i1 %29, label %4, label %5
 }
 
+define i32 @stest_f32i32i64(float %x) {
+; SOFT-LABEL: stest_f32i32i64:
+; SOFT:       @ %bb.0: @ %entry
+; SOFT-NEXT:    .save {r4, lr}
+; SOFT-NEXT:    push {r4, lr}
+; SOFT-NEXT:    bl __aeabi_f2lz
+; SOFT-NEXT:    movs r3, #0
+; SOFT-NEXT:    ldr r2, .LCPI56_0
+; SOFT-NEXT:    subs r4, r0, r2
+; SOFT-NEXT:    sbcs r1, r3
+; SOFT-NEXT:    blt .LBB56_2
+; SOFT-NEXT:  @ %bb.1: @ %entry
+; SOFT-NEXT:    mov r0, r2
+; SOFT-NEXT:  .LBB56_2: @ %entry
+; SOFT-NEXT:    ldr r1, .LCPI56_1
+; SOFT-NEXT:    cmp r0, r1
+; SOFT-NEXT:    bgt .LBB56_4
+; SOFT-NEXT:  @ %bb.3: @ %entry
+; SOFT-NEXT:    mov r0, r1
+; SOFT-NEXT:  .LBB56_4: @ %entry
+; SOFT-NEXT:    pop {r4, pc}
+; SOFT-NEXT:    .p2align 2
+; SOFT-NEXT:  @ %bb.5:
+; SOFT-NEXT:  .LCPI56_0:
+; SOFT-NEXT:    .long 32767 @ 0x7fff
+; SOFT-NEXT:  .LCPI56_1:
+; SOFT-NEXT:    .long 4294934528 @ 0xffff8000
+;
+; VFP2-LABEL: stest_f32i32i64:
+; VFP2:       @ %bb.0: @ %entry
+; VFP2-NEXT:    .save {r7, lr}
+; VFP2-NEXT:    push {r7, lr}
+; VFP2-NEXT:    vmov r0, s0
+; VFP2-NEXT:    bl __aeabi_f2lz
+; VFP2-NEXT:    movw r2, #32767
+; VFP2-NEXT:    subs r3, r0, r2
+; VFP2-NEXT:    sbcs r1, r1, #0
+; VFP2-NEXT:    it ge
+; VFP2-NEXT:    movge r0, r2
+; VFP2-NEXT:    movw r1, #32768
+; VFP2-NEXT:    cmn.w r0, #32768
+; VFP2-NEXT:    movt r1, #65535
+; VFP2-NEXT:    it le
+; VFP2-NEXT:    movle r0, r1
+; VFP2-NEXT:    pop {r7, pc}
+;
+; FULL-LABEL: stest_f32i32i64:
+; FULL:       @ %bb.0: @ %entry
+; FULL-NEXT:    .save {r7, lr}
+; FULL-NEXT:    push {r7, lr}
+; FULL-NEXT:    vmov r0, s0
+; FULL-NEXT:    bl __aeabi_f2lz
+; FULL-NEXT:    movw r2, #32767
+; FULL-NEXT:    subs r3, r0, r2
+; FULL-NEXT:    sbcs r1, r1, #0
+; FULL-NEXT:    csel r0, r0, r2, lt
+; FULL-NEXT:    movw r1, #32768
+; FULL-NEXT:    movt r1, #65535
+; FULL-NEXT:    cmn.w r0, #32768
+; FULL-NEXT:    csel r0, r0, r1, gt
+; FULL-NEXT:    pop {r7, pc}
+entry:
+  %conv = fptosi float %x to i64
+  %convt = trunc i64 %conv to i32
+  %0 = icmp slt i64 %conv, 32767
+  %spec.store.select = select i1 %0, i32 %convt, i32 32767
+  %1 = icmp sgt i32 %spec.store.select, -32768
+  %spec.store.select7 = select i1 %1, i32 %spec.store.select, i32 -32768
+  ret i32 %spec.store.select7
+}
+
+
+
 declare i32 @llvm.smin.i32(i32, i32)
 declare i32 @llvm.smax.i32(i32, i32)
 declare i32 @llvm.umin.i32(i32, i32)

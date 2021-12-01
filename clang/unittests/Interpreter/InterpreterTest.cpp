@@ -221,7 +221,7 @@ TEST(IncrementalProcessing, InstantiateTemplate) {
                                "class A {};"
                                "struct B {"
                                "  template<typename T>"
-                               "  int callme(T) { return 42; }"
+                               "  static int callme(T) { return 42; }"
                                "};"));
   auto &PTU = llvm::cantFail(Interp->Parse("auto _t = &B::callme<A*>;"));
   auto PTUDeclRange = PTU.TUPart->decls();

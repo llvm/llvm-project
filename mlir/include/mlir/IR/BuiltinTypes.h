@@ -369,6 +369,25 @@ llvm::Optional<llvm::SmallDenseSet<unsigned>>
 computeRankReductionMask(ArrayRef<int64_t> originalShape,
                          ArrayRef<int64_t> reducedShape);
 
+/// Enum that captures information related to verifier error conditions on
+/// slice insert/extract type of ops.
+enum class SliceVerificationResult {
+  Success,
+  RankTooLarge,
+  SizeMismatch,
+  ElemTypeMismatch,
+  // Error codes to ops with a memory space and a layout annotation.
+  MemSpaceMismatch,
+  LayoutMismatch
+};
+
+/// Check if `originalType` can be rank reduced to `candidateReducedType` type
+/// by dropping some dimensions with static size `1`.
+/// Return `SliceVerificationResult::Success` on success or an appropriate error
+/// code.
+SliceVerificationResult isRankReducedType(ShapedType originalType,
+                                          ShapedType candidateReducedType);
+
 //===----------------------------------------------------------------------===//
 // Deferred Method Definitions
 //===----------------------------------------------------------------------===//

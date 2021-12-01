@@ -1,14 +1,16 @@
 #include "memprof/memprof_rawprofile.h"
 
+#include <cstdint>
+#include <memory>
+
 #include "memprof/memprof_meminfoblock.h"
+#include "profile/MemProfData.inc"
 #include "sanitizer_common/sanitizer_common.h"
 #include "sanitizer_common/sanitizer_procmaps.h"
 #include "sanitizer_common/sanitizer_stackdepot.h"
 #include "sanitizer_common/sanitizer_stacktrace.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
-
-#include <memory>
 
 namespace {
 

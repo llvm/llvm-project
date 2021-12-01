@@ -286,8 +286,7 @@ def LinalgStrategyGeneralizePass
   ];
 }
 
-// TODO: atm this is applied to all supported ops. If/when we need finer control
-// this should be exposed with an opName + filter and a proper pattern.
+// TODO: if/when we need finer control add an anchorOp option.
 def LinalgStrategyDecomposePass
     : FunctionPass<"linalg-strategy-decompose-pass"> {
   let summary = "Configurable pass to apply pattern-based generalization.";

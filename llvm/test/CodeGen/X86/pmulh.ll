@@ -304,6 +304,24 @@ define <8 x i16> @sextinreg_mulhw_v8i16(<8 x i32> %a, <8 x i32> %b) {
   ret <8 x i16> %e
 }
 
+define <8 x i16> @zext_mulhuw_v8i16_v8i33(<8 x i16> %a, <8 x i16> %b) {
+; SSE-LABEL: zext_mulhuw_v8i16_v8i33:
+; SSE:       # %bb.0:
+; SSE-NEXT:    pmulhuw %xmm1, %xmm0
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: zext_mulhuw_v8i16_v8i33:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vpmulhuw %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    retq
+  %a1 = zext <8 x i16> %a to <8 x i33>
+  %b1 = zext <8 x i16> %b to <8 x i33>
+  %c = mul <8 x i33> %a1, %b1
+  %d = lshr <8 x i33> %c, <i33 16, i33 16, i33 16, i33 16, i33 16, i33 16, i33 16, i33 16>
+  %e = trunc <8 x i33> %d to <8 x i16>
+  ret <8 x i16> %e
+}
+
 define <16 x i16> @zext_mulhuw_v16i16(<16 x i16> %a, <16 x i16> %b) {
 ; SSE-LABEL: zext_mulhuw_v16i16:
 ; SSE:       # %bb.0:
@@ -514,6 +532,25 @@ define <16 x i16> @ashr_mulhuw_v16i16(<16 x i32> %a, <16 x i32> %b) {
   %c = mul <16 x i32> %a1, %b1
   %d = lshr <16 x i32> %c, <i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16>
   %e = trunc <16 x i32> %d to <16 x i16>
+  ret <16 x i16> %e
+}
+
+define <16 x i16> @zext_mulhuw_v16i16_v16i48(<16 x i16> %a, <16 x i16> %b) {
+; SSE-LABEL: zext_mulhuw_v16i16_v16i48:
+; SSE:       # %bb.0:
+; SSE-NEXT:    pmulhuw %xmm2, %xmm0
+; SSE-NEXT:    pmulhuw %xmm3, %xmm1
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: zext_mulhuw_v16i16_v16i48:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vpmulhuw %ymm1, %ymm0, %ymm0
+; AVX-NEXT:    retq
+  %a1 = zext <16 x i16> %a to <16 x i48>
+  %b1 = zext <16 x i16> %b to <16 x i48>
+  %c = mul <16 x i48> %a1, %b1
+  %d = lshr <16 x i48> %c, <i48 16, i48 16, i48 16, i48 16, i48 16, i48 16, i48 16, i48 16, i48 16, i48 16, i48 16, i48 16, i48 16, i48 16, i48 16, i48 16>
+  %e = trunc <16 x i48> %d to <16 x i16>
   ret <16 x i16> %e
 }
 

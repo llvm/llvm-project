@@ -70,6 +70,7 @@ add_flang_library(FortranRuntime
   stat.cpp
   stop.cpp
   sum.cpp
+  support.cpp
   terminator.cpp
   time-intrinsic.cpp
   tools.cpp

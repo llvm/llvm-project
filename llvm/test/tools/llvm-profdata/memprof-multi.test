@@ -1,0 +1,50 @@
+REQUIRES: x86_64-linux
+
+The input raw profile test has been generated from the following source code:
+
+```
+#include <sanitizer/memprof_interface.h>
+#include <stdlib.h>
+#include <string.h>
+int main(int argc, char **argv) {
+  char *x = (char *)malloc(10);
+  memset(x, 0, 10);
+  free(x);
+  __memprof_profile_dump();
+  x = (char *)malloc(10);
+  memset(x, 0, 10);
+  free(x);
+  return 0;
+}
+```
+
+The following commands were used to compile the source to a memprof instrumented
+executable and collect a raw binary format profile. Since the profile contains
+virtual addresses for the callstack, we do not expect the raw binary profile to
+be deterministic. The summary should be deterministic apart from changes to
+the shared libraries linked in which could change the number of segments
+recorded.
+
+```
+clang -fmemory-profile -mno-omit-leaf-frame-pointer -fno-omit-frame-pointer -fno-optimize-sibling-calls -gline-tables-only -m64 -Wl,-build-id source.c -o rawprofile.out
+
+env MEMPROF_OPTIONS=log_path=stdout ./rawprofile.out > multi.memprofraw
+```
+
+RUN: llvm-profdata show --memory %p/Inputs/multi.memprofraw -o - | FileCheck %s
+
+We expect 2 MIB entries, 1 each for the malloc calls in the program. Unlike the
+memprof-basic.test we do not see any allocation from glibc.
+
+CHECK: MemProf Profile 1
+CHECK:   Version: 1
+CHECK:   TotalSizeBytes: 864
+CHECK:   NumSegments: 9
+CHECK:   NumMIBInfo: 2
+CHECK:   NumStackOffsets: 2
+CHECK: MemProf Profile 2
+CHECK:   Version: 1
+CHECK:   TotalSizeBytes: 864
+CHECK:   NumSegments: 9
+CHECK:   NumMIBInfo: 2
+CHECK:   NumStackOffsets: 2

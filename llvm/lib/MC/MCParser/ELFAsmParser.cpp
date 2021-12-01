@@ -676,14 +676,14 @@ EndStmt:
       getContext().getELFSection(SectionName, Type, Flags, Size, GroupName,
                                  IsComdat, UniqueID, LinkedToSym);
   getStreamer().SwitchSection(Section, Subsection);
-  if (Section->getType() != Type &&
+  // Check that flags are used consistently. However, the GNU assembler permits
+  // to leave out in subsequent uses of the same sections; for compatibility,
+  // do likewise.
+  if (!TypeName.empty() && Section->getType() != Type &&
       !allowSectionTypeMismatch(getContext().getTargetTriple(), SectionName,
                                 Type))
     Error(loc, "changed section type for " + SectionName + ", expected: 0x" +
                    utohexstr(Section->getType()));
-  // Check that flags are used consistently. However, the GNU assembler permits
-  // to leave out in subsequent uses of the same sections; for compatibility,
-  // do likewise.
   if ((extraFlags || Size || !TypeName.empty()) && Section->getFlags() != Flags)
     Error(loc, "changed section flags for " + SectionName + ", expected: 0x" +
                    utohexstr(Section->getFlags()));

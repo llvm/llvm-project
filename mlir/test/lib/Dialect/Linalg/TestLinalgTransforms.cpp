@@ -128,11 +128,6 @@ struct TestLinalgTransforms
       llvm::cl::desc("Specify the type of loops to generate: for, parallel or "
                      "tiled_loop"),
       llvm::cl::init("for")};
-  Option<bool> testDecomposeConvolutionPattern{
-      *this, "test-decompose-convolution-patterns",
-      llvm::cl::desc("Test a set of patterns to rewrite high-D convolution ops "
-                     "into low-D ones"),
-      llvm::cl::init(false)};
 };
 } // end anonymous namespace
 
@@ -721,13 +716,6 @@ void TestLinalgTransforms::runOnFunction() {
   if (testTileScalarizeDynamicDims)
     return applyTilePattern(getFunction(), loopType, tileSizes,
                             /*peeledLoops=*/{}, /*scalarizeDynamicDims=*/true);
-  if (testDecomposeConvolutionPattern) {
-    // TODO: thread all tests through LinalgStrategy passes.
-    OpPassManager dynamicPM("builtin.func");
-    dynamicPM.addPass(createLinalgStrategyDecomposePass());
-    if (failed(runPipeline(dynamicPM, getFunction())))
-      return signalPassFailure();
-  }
 }
 
 namespace mlir {

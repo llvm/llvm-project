@@ -212,6 +212,12 @@ void X86DynAllocaExpander::lower(MachineInstr *MI, Lowering L) {
   bool Is64BitAlloca = MI->getOpcode() == X86::DYN_ALLOCA_64;
   assert(SlotSize == 4 || SlotSize == 8);
 
+  Optional<MachineFunction::DebugInstrOperandPair> InstrNum = None;
+  if (unsigned Num = MI->peekDebugInstrNum()) {
+    // Operand 2 of DYN_ALLOCAs contains the stack def.
+    InstrNum = {Num, 2};
+  }
+
   switch (L) {
   case TouchAndSub: {
     assert(Amount >= SlotSize);
@@ -251,7 +257,7 @@ void X86DynAllocaExpander::lower(MachineInstr *MI, Lowering L) {
 
       // Do the probe.
       STI->getFrameLowering()->emitStackProbe(*MBB->getParent(), *MBB, MI, DL,
-                                              /*InProlog=*/false);
+                                              /*InProlog=*/false, InstrNum);
     } else {
       // Sub
       BuildMI(*MBB, I, DL,

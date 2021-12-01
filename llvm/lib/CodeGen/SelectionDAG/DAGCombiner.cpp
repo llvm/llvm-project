@@ -4846,7 +4846,7 @@ static SDValue isSaturatingMinMax(SDValue N0, SDValue N1, SDValue N2,
 
   ConstantSDNode *MinCOp = isConstOrConstSplat(Opcode0 == ISD::SMIN ? N1 : N01);
   ConstantSDNode *MaxCOp = isConstOrConstSplat(Opcode0 == ISD::SMIN ? N01 : N1);
-  if (!MinCOp || !MaxCOp)
+  if (!MinCOp || !MaxCOp || MinCOp->getValueType(0) != MaxCOp->getValueType(0))
     return SDValue();
 
   const APInt &MinC = MinCOp->getAPIntValue();

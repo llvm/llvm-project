@@ -102,7 +102,7 @@ module m
 
   ! test MIN and MAX
   real, parameter :: x1 = -35., x2= -35.05, x3=0., x4=35.05, x5=35.
-  real, parameter :: res_max_r = max(x1, x2, x3, x4, x5)
+  real, parameter :: res_max_r = max(a1=x1, a2=x2, a3=x3, a4=x4, a5=x5)
   real, parameter :: res_min_r = min(x1, x2, x3, x4, x5)
   logical, parameter :: test_max_r = res_max_r.EQ.x4
   logical, parameter :: test_min_r = res_min_r.EQ.x2

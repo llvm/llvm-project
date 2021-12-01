@@ -504,21 +504,25 @@ static std::map<int64_t, unsigned> getNumOccurences(ArrayRef<int64_t> vals) {
   return numOccurences;
 }
 
-/// Given the type of the un-rank reduced subview result type and the
-/// rank-reduced result type, computes the dropped dimensions. This accounts for
-/// cases where there are multiple unit-dims, but only a subset of those are
-/// dropped. For MemRefTypes these can be disambiguated using the strides. If a
-/// dimension is dropped the stride must be dropped too.
+/// Given the `originalType` and a `candidateReducedType` whose shape is assumed
+/// to be a subset of `originalType` with some `1` entries erased, return the
+/// set of indices that specifies which of the entries of `originalShape` are
+/// dropped to obtain `reducedShape`.
+/// This accounts for cases where there are multiple unit-dims, but only a
+/// subset of those are dropped. For MemRefTypes these can be disambiguated
+/// using the strides. If a dimension is dropped the stride must be dropped too.
 static llvm::Optional<llvm::SmallDenseSet<unsigned>>
 computeMemRefRankReductionMask(MemRefType originalType, MemRefType reducedType,
-                               ArrayAttr staticSizes) {
+                               ArrayRef<OpFoldResult> sizes) {
   llvm::SmallDenseSet<unsigned> unusedDims;
   if (originalType.getRank() == reducedType.getRank())
     return unusedDims;
 
-  for (auto dim : llvm::enumerate(staticSizes))
-    if (dim.value().cast<IntegerAttr>().getInt() == 1)
-      unusedDims.insert(dim.index());
+  for (auto dim : llvm::enumerate(sizes))
+    if (auto attr = dim.value().dyn_cast<Attribute>())
+      if (attr.cast<IntegerAttr>().getInt() == 1)
+        unusedDims.insert(dim.index());
+
   SmallVector<int64_t> originalStrides, candidateStrides;
   int64_t originalOffset, candidateOffset;
   if (failed(
@@ -574,7 +578,7 @@ llvm::SmallDenseSet<unsigned> SubViewOp::getDroppedDims() {
   MemRefType sourceType = getSourceType();
   MemRefType resultType = getType();
   llvm::Optional<llvm::SmallDenseSet<unsigned>> unusedDims =
-      computeMemRefRankReductionMask(sourceType, resultType, static_sizes());
+      computeMemRefRankReductionMask(sourceType, resultType, getMixedSizes());
   assert(unusedDims && "unable to find unused dims of subview");
   return *unusedDims;
 }
@@ -1546,8 +1550,7 @@ Type SubViewOp::inferResultType(MemRefType sourceMemRefType,
   dispatchIndexOpFoldResults(leadingStaticStrides, dynamicStrides,
                              staticStrides, ShapedType::kDynamicStrideOrOffset);
   return SubViewOp::inferResultType(sourceMemRefType, staticOffsets,
-                                    staticSizes, staticStrides)
-      .cast<MemRefType>();
+                                    staticSizes, staticStrides);
 }
 
 Type SubViewOp::inferRankReducedResultType(
@@ -1704,88 +1707,58 @@ void SubViewOp::build(OpBuilder &b, OperationState &result, Value source,
 /// For ViewLikeOpInterface.
 Value SubViewOp::getViewSource() { return source(); }
 
-enum SubViewVerificationResult {
-  Success,
-  RankTooLarge,
-  SizeMismatch,
-  ElemTypeMismatch,
-  MemSpaceMismatch,
-  AffineMapMismatch
-};
-
 /// Checks if `original` Type type can be rank reduced to `reduced` type.
 /// This function is slight variant of `is subsequence` algorithm where
 /// not matching dimension must be 1.
-static SubViewVerificationResult
-isRankReducedType(Type originalType, Type candidateReducedType,
-                  ArrayAttr staticSizes, std::string *errMsg = nullptr) {
-  if (originalType == candidateReducedType)
-    return SubViewVerificationResult::Success;
-  if (!originalType.isa<MemRefType>())
-    return SubViewVerificationResult::Success;
-  if (originalType.isa<MemRefType>() && !candidateReducedType.isa<MemRefType>())
-    return SubViewVerificationResult::Success;
-
-  ShapedType originalShapedType = originalType.cast<ShapedType>();
-  ShapedType candidateReducedShapedType =
-      candidateReducedType.cast<ShapedType>();
-
-  // Rank and size logic is valid for all ShapedTypes.
-  ArrayRef<int64_t> originalShape = originalShapedType.getShape();
-  ArrayRef<int64_t> candidateReducedShape =
-      candidateReducedShapedType.getShape();
-  unsigned originalRank = originalShape.size(),
-           candidateReducedRank = candidateReducedShape.size();
-  if (candidateReducedRank > originalRank)
-    return SubViewVerificationResult::RankTooLarge;
+static SliceVerificationResult
+isRankReducedMemRefType(MemRefType originalType,
+                        MemRefType candidatecandidateReducedType,
+                        ArrayRef<OpFoldResult> sizes) {
+  auto partialRes =
+      isRankReducedType(originalType, candidatecandidateReducedType);
+  if (partialRes != SliceVerificationResult::Success)
+    return partialRes;
 
   MemRefType original = originalType.cast<MemRefType>();
-  MemRefType candidateReduced = candidateReducedType.cast<MemRefType>();
+  MemRefType candidateReduced =
+      candidatecandidateReducedType.cast<MemRefType>();
 
   auto optionalUnusedDimsMask =
-      computeMemRefRankReductionMask(original, candidateReduced, staticSizes);
+      computeMemRefRankReductionMask(original, candidateReduced, sizes);
 
   // Sizes cannot be matched in case empty vector is returned.
   if (!optionalUnusedDimsMask.hasValue())
-    return SubViewVerificationResult::SizeMismatch;
+    return SliceVerificationResult::LayoutMismatch;
 
-  if (originalShapedType.getElementType() !=
-      candidateReducedShapedType.getElementType())
-    return SubViewVerificationResult::ElemTypeMismatch;
-
-  // Strided layout logic is relevant for MemRefType only.
   if (original.getMemorySpace() != candidateReduced.getMemorySpace())
-    return SubViewVerificationResult::MemSpaceMismatch;
-  return SubViewVerificationResult::Success;
+    return SliceVerificationResult::MemSpaceMismatch;
+
+  return SliceVerificationResult::Success;
 }
 
 template <typename OpTy>
-static LogicalResult produceSubViewErrorMsg(SubViewVerificationResult result,
-                                            OpTy op, Type expectedType,
-                                            StringRef errMsg = "") {
+static LogicalResult produceSubViewErrorMsg(SliceVerificationResult result,
+                                            OpTy op, Type expectedType) {
   auto memrefType = expectedType.cast<ShapedType>();
   switch (result) {
-  case SubViewVerificationResult::Success:
+  case SliceVerificationResult::Success:
     return success();
-  case SubViewVerificationResult::RankTooLarge:
+  case SliceVerificationResult::RankTooLarge:
     return op.emitError("expected result rank to be smaller or equal to ")
-           << "the source rank. " << errMsg;
-  case SubViewVerificationResult::SizeMismatch:
+           << "the source rank. ";
+  case SliceVerificationResult::SizeMismatch:
     return op.emitError("expected result type to be ")
            << expectedType
-           << " or a rank-reduced version. (mismatch of result sizes) "
-           << errMsg;
-  case SubViewVerificationResult::ElemTypeMismatch:
+           << " or a rank-reduced version. (mismatch of result sizes) ";
+  case SliceVerificationResult::ElemTypeMismatch:
     return op.emitError("expected result element type to be ")
-           << memrefType.getElementType() << errMsg;
-  case SubViewVerificationResult::MemSpaceMismatch:
-    return op.emitError("expected result and source memory spaces to match.")
-           << errMsg;
-  case SubViewVerificationResult::AffineMapMismatch:
+           << memrefType.getElementType();
+  case SliceVerificationResult::MemSpaceMismatch:
+    return op.emitError("expected result and source memory spaces to match.");
+  case SliceVerificationResult::LayoutMismatch:
     return op.emitError("expected result type to be ")
            << expectedType
-           << " or a rank-reduced version. (mismatch of result affine map) "
-           << errMsg;
+           << " or a rank-reduced version. (mismatch of result layout) ";
   }
   llvm_unreachable("unexpected subview verification result");
 }
@@ -1811,10 +1784,9 @@ static LogicalResult verify(SubViewOp op) {
       extractFromI64ArrayAttr(op.static_sizes()),
       extractFromI64ArrayAttr(op.static_strides()));
 
-  std::string errMsg;
-  auto result =
-      isRankReducedType(expectedType, subViewType, op.static_sizes(), &errMsg);
-  return produceSubViewErrorMsg(result, op, expectedType, errMsg);
+  auto result = isRankReducedMemRefType(expectedType.cast<MemRefType>(),
+                                        subViewType, op.getMixedSizes());
+  return produceSubViewErrorMsg(result, op, expectedType);
 }
 
 raw_ostream &mlir::operator<<(raw_ostream &os, const Range &range) {
@@ -1854,21 +1826,29 @@ SmallVector<Range, 8> mlir::getOrCreateRanges(OffsetSizeAndStrideOpInterface op,
 /// Infer the canonical type of the result of a subview operation. Returns a
 /// type with rank `resultRank` that is either the rank of the rank-reduced
 /// type, or the non-rank-reduced type.
-static MemRefType
-getCanonicalSubViewResultType(unsigned resultRank, MemRefType sourceType,
-                              ArrayRef<OpFoldResult> mixedOffsets,
-                              ArrayRef<OpFoldResult> mixedSizes,
-                              ArrayRef<OpFoldResult> mixedStrides) {
-  auto resultType =
-      SubViewOp::inferRankReducedResultType(
-          resultRank, sourceType, mixedOffsets, mixedSizes, mixedStrides)
-          .cast<MemRefType>();
-  if (resultType.getRank() != resultRank) {
-    resultType = SubViewOp::inferResultType(sourceType, mixedOffsets,
-                                            mixedSizes, mixedStrides)
-                     .cast<MemRefType>();
+static MemRefType getCanonicalSubViewResultType(
+    MemRefType currentResultType, MemRefType sourceType,
+    ArrayRef<OpFoldResult> mixedOffsets, ArrayRef<OpFoldResult> mixedSizes,
+    ArrayRef<OpFoldResult> mixedStrides) {
+  auto nonRankReducedType = SubViewOp::inferResultType(sourceType, mixedOffsets,
+                                                       mixedSizes, mixedStrides)
+                                .cast<MemRefType>();
+  llvm::Optional<llvm::SmallDenseSet<unsigned>> unusedDims =
+      computeMemRefRankReductionMask(sourceType, currentResultType, mixedSizes);
+  // Return nullptr as failure mode.
+  if (!unusedDims)
+    return nullptr;
+  SmallVector<int64_t> shape;
+  for (auto sizes : llvm::enumerate(nonRankReducedType.getShape())) {
+    if (unusedDims->count(sizes.index()))
+      continue;
+    shape.push_back(sizes.value());
   }
-  return resultType;
+  AffineMap layoutMap = nonRankReducedType.getLayout().getAffineMap();
+  if (!layoutMap.isIdentity())
+    layoutMap = getProjectedMap(layoutMap, unusedDims.getValue());
+  return MemRefType::get(shape, nonRankReducedType.getElementType(), layoutMap,
+                         nonRankReducedType.getMemorySpace());
 }
 
 namespace {
@@ -1911,8 +1891,7 @@ public:
     /// the cast source operand type and the SubViewOp static information. This
     /// is the resulting type if the MemRefCastOp were folded.
     auto resultType = getCanonicalSubViewResultType(
-        subViewOp.getType().getRank(),
-        castOp.source().getType().cast<MemRefType>(),
+        subViewOp.getType(), castOp.source().getType().cast<MemRefType>(),
         subViewOp.getMixedOffsets(), subViewOp.getMixedSizes(),
         subViewOp.getMixedStrides());
     Value newSubView = rewriter.create<SubViewOp>(
@@ -1931,9 +1910,9 @@ struct SubViewReturnTypeCanonicalizer {
   MemRefType operator()(SubViewOp op, ArrayRef<OpFoldResult> mixedOffsets,
                         ArrayRef<OpFoldResult> mixedSizes,
                         ArrayRef<OpFoldResult> mixedStrides) {
-    return getCanonicalSubViewResultType(op.getType().getRank(),
-                                         op.getSourceType(), mixedOffsets,
-                                         mixedSizes, mixedStrides);
+    return getCanonicalSubViewResultType(op.getType(), op.getSourceType(),
+                                         mixedOffsets, mixedSizes,
+                                         mixedStrides);
   }
 };
 

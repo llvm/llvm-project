@@ -699,10 +699,12 @@ bool IsAssumedRank(const ActualArgument &arg) {
 }
 
 bool IsCoarray(const ActualArgument &arg) {
-  if (const auto *expr{arg.UnwrapExpr()}) {
-    return IsCoarray(*expr);
-  }
-  return false;
+  const auto *expr{arg.UnwrapExpr()};
+  return expr && IsCoarray(*expr);
+}
+
+bool IsCoarray(const Symbol &symbol) {
+  return GetAssociationRoot(symbol).Corank() > 0;
 }
 
 bool IsProcedure(const Expr<SomeType> &expr) {
@@ -1193,10 +1195,6 @@ bool IsAutomatic(const Symbol &original) {
   return false;
 }
 
-bool IsCoarray(const Symbol &symbol) {
-  return GetAssociationRoot(symbol).Corank() > 0;
-}
-
 bool IsSaved(const Symbol &original) {
   const Symbol &symbol{GetAssociationRoot(original)};
   const Scope &scope{symbol.owner()};
@@ -1207,14 +1205,12 @@ bool IsSaved(const Symbol &original) {
     return false; // this is a component
   } else if (symbol.attrs().test(Attr::SAVE)) {
     return true; // explicit SAVE attribute
-  } else if (symbol.test(Symbol::Flag::InDataStmt)) {
-    return true;
   } else if (IsDummy(symbol) || IsFunctionResult(symbol) ||
-      IsAutomatic(symbol)) {
+      IsAutomatic(symbol) || IsNamedConstant(symbol)) {
     return false;
   } else if (scopeKind == Scope::Kind::Module ||
       (scopeKind == Scope::Kind::MainProgram &&
-          (symbol.attrs().test(Attr::TARGET) || IsCoarray(symbol)))) {
+          (symbol.attrs().test(Attr::TARGET) || evaluate::IsCoarray(symbol)))) {
     // 8.5.16p4
     // In main programs, implied SAVE matters only for pointer
     // initialization targets and coarrays.
@@ -1228,13 +1224,8 @@ bool IsSaved(const Symbol &original) {
     // -fno-automatic/-save/-Msave option applies to objects in
     // executable subprograms unless they are explicitly RECURSIVE.
     return true;
-  } else if (IsNamedConstant(symbol)) {
-    // TODO: lowering needs named constants in modules to be static,
-    // so this test for a named constant has lower precedence for the
-    // time being; when lowering is corrected, this case should be
-    // moved up above module logic, since named constants don't really
-    // have implied SAVE attributes.
-    return false;
+  } else if (symbol.test(Symbol::Flag::InDataStmt)) {
+    return true;
   } else if (const auto *object{symbol.detailsIf<ObjectEntityDetails>()};
              object && object->init()) {
     return true;

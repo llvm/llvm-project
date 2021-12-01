@@ -4978,7 +4978,7 @@ bool DeclarationVisitor::PassesLocalityChecks(
         "Finalizable variable '%s' not allowed in a locality-spec"_err_en_US);
     return false;
   }
-  if (IsCoarray(symbol)) { // C1128
+  if (evaluate::IsCoarray(symbol)) { // C1128
     SayWithDecl(
         name, symbol, "Coarray '%s' not allowed in a locality-spec"_err_en_US);
     return false;
