@@ -2960,6 +2960,8 @@ def gheterogeneous_dwarf : Flag<["-"], "gheterogeneous-dwarf">,
   Group<g_Group>, Flags<[CC1Option]>,
   HelpText<"Enable DWARF extensions for heterogeneous debugging">,
   MarshallingInfoFlag<CodeGenOpts<"HeterogeneousDwarf">>;
+def gno_heterogeneous_dwarf : Flag<["-"], "gno-heterogeneous-dwarf">,
+  Group<g_Group>, HelpText<"Disable DWARF extensions for heterogeneous debugging">;
 
 def gcodeview : Flag<["-"], "gcodeview">,
   HelpText<"Generate CodeView debug information">,

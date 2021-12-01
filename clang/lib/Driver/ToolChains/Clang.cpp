@@ -4045,15 +4045,8 @@ static void renderDebugOptions(const ToolChain &TC, const Driver &D,
         DebuggerTuning = llvm::DebuggerKind::SCE;
       else if (A->getOption().matches(options::OPT_gdbx))
         DebuggerTuning = llvm::DebuggerKind::DBX;
-      else {
+      else
         DebuggerTuning = llvm::DebuggerKind::GDB;
-        if (T.isAMDGCN()) {
-          CmdArgs.push_back("-mllvm");
-          CmdArgs.push_back("-amdgpu-spill-cfi-saved-regs");
-          CmdArgs.push_back("-mllvm");
-          CmdArgs.push_back("-disable-dwarf-locations");
-        }
-      }
     }
   }
 
@@ -4322,6 +4315,13 @@ static void renderDebugOptions(const ToolChain &TC, const Driver &D,
 
   renderDwarfFormat(D, T, Args, CmdArgs, EffectiveDWARFVersion);
   RenderDebugInfoCompressionArgs(Args, CmdArgs, D, TC);
+
+  bool EmitDwarfForAMDGCN = EmitDwarf && T.isAMDGCN();
+  if (EmitDwarfForAMDGCN)
+    CmdArgs.append({"-mllvm", "-amdgpu-spill-cfi-saved-regs"});
+  if (Args.hasFlag(options::OPT_gheterogeneous_dwarf,
+                   options::OPT_gno_heterogeneous_dwarf, EmitDwarfForAMDGCN))
+    CmdArgs.push_back("-gheterogeneous-dwarf");
 }
 
 void Clang::ConstructJob(Compilation &C, const JobAction &JA,
@@ -7093,9 +7093,6 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
           << Str << TC.getTripleString();
     CmdArgs.push_back(Args.MakeArgString(Str));
   }
-
-  if (Args.hasArg(options::OPT_gheterogeneous_dwarf))
-    CmdArgs.push_back("-gheterogeneous-dwarf");
 
   // Add the "-o out -x type src.c" flags last. This is done primarily to make
   // the -cc1 command easier to edit when reproducing compiler crashes.
