@@ -385,7 +385,15 @@ static AffineMap linearizeCollapsedDims(AffineMap sourceMap,
         makeCanonicalStridedLayoutExpr(sizes, dimExprs, context);
     resultExprs.push_back(linearizedExpr);
   }
-  return AffineMap::inferFromExprList({resultExprs}).front();
+  // The new affine map cannot drop unused dimension but some new symbols may
+  // have been added. Create a map with at least as many dimensions/symbols as
+  // the original affine map.
+  int64_t maxDim = -1;
+  int64_t maxSym = -1;
+  getMaxDimAndSymbol<SmallVector<AffineExpr>>({resultExprs}, maxDim, maxSym);
+  unsigned numDims = std::max(unsigned(maxDim + 1), sourceMap.getNumDims());
+  unsigned numSyms = std::max(unsigned(maxSym + 1), sourceMap.getNumSymbols());
+  return AffineMap::get(numDims, numSyms, resultExprs, context);
 }
 
 // TensorExpandShapeOp is fusable with its consumer (i.e. reshape as a
