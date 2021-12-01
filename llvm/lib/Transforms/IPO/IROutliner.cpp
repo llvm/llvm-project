@@ -60,7 +60,7 @@ static cl::opt<bool> NoCostModel(
 
 static 
 cl::opt<bool>
-KeepOldBlocks("iroutline-copy", cl::init(false),
+KeepOldBlocks("ir-outlining-copy", cl::init(false),
     cl::Hidden,
     cl::desc("Copy instead of moving instructions from original function."));
 
@@ -242,7 +242,7 @@ void OutlinableRegion::splitCandidate() {
   FollowBB = nullptr;
 }
 
-void OutlinableRegion::reattachCandidate() {
+void OutlinableRegion::reattachCandidate() { 
   assert(CandidateSplit && "Candidate is not split!");
 
   // The basic block gets reattached like so:
@@ -270,22 +270,32 @@ void OutlinableRegion::reattachCandidate() {
   assert(PrevBB->getTerminator() && "Terminator removed from PrevBB!");
   PrevBB->getTerminator()->eraseFromParent();
 
-  moveBBContents(*StartBB, *PrevBB);
 
-  BasicBlock *PlacementBB = PrevBB;
-  if (StartBB != EndBB)
-    PlacementBB = EndBB;
-  if (!EndsInBranch && PlacementBB->getUniqueSuccessor() != nullptr) {
-    assert(FollowBB != nullptr && "FollowBB for Candidate is not defined!");
-    assert(PlacementBB->getTerminator() && "Terminator removed from EndBB!");
-    PlacementBB->getTerminator()->eraseFromParent();
-    moveBBContents(*FollowBB, *PlacementBB);
-    PlacementBB->replaceSuccessorsPhiUsesWith(FollowBB, PlacementBB);
-    FollowBB->eraseFromParent();
-  }
+      moveBBContents(*StartBB, *PrevBB);
 
-  PrevBB->replaceSuccessorsPhiUsesWith(StartBB, PrevBB);
-  StartBB->eraseFromParent();
+      BasicBlock* PlacementBB = PrevBB;
+      if (StartBB != EndBB)
+          PlacementBB = EndBB;
+      if (!EndsInBranch && PlacementBB->getUniqueSuccessor() != nullptr) {
+          assert(FollowBB != nullptr && "FollowBB for Candidate is not defined!");
+          assert(PlacementBB->getTerminator() && "Terminator removed from EndBB!");
+          //for (auto Pred : predecessors(FollowBB)) {
+          //    if (Pred == PlacementBB) continue;
+          //    Pred->replaceSuccessorsPhiUsesWith(FollowBB,nullptr);
+          //}
+          PlacementBB->getTerminator()->eraseFromParent();
+          moveBBContents(*FollowBB, *PlacementBB);
+          PlacementBB->replaceSuccessorsPhiUsesWith(FollowBB, PlacementBB);
+          //FollowBB->replaceAllUsesWith(UndefValue::get(FollowBB->getType()));
+          for (auto &&U : make_early_inc_range( FollowBB->uses())) {
+            U.set(UndefValue::get(FollowBB->getType()));
+          }
+          FollowBB->eraseFromParent();
+      }
+
+      PrevBB->replaceSuccessorsPhiUsesWith(StartBB, PrevBB);
+      StartBB->eraseFromParent();
+  
 
   // Make sure to save changes back to the StartBB.
   StartBB = PrevBB;

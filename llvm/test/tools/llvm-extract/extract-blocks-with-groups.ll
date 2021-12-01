@@ -1,4 +1,5 @@
-; RUN: llvm-extract -bb 'foo:if;then;else' -bb 'bar:bb14;bb20' -S %s  | FileCheck %s
+; RUN: llvm-extract -bb 'foo:if;then;else' -bb 'bar:bb14;bb20' -S %s               | FileCheck %s
+; RUN: llvm-extract -bb 'foo:if;then;else' -bb 'bar:bb14;bb20' -S %s --keep-blocks | FileCheck %s --check-prefix=KEEP
 ; Extract two groups of basic blocks in two different functions.
 
 

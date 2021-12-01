@@ -2045,7 +2045,7 @@ void CodeExtractor::extractCodeRegionByCopy(const CodeExtractorAnalysisCache &CE
                 RewriteVal = &*AI++;
 
             if (KeepOldBlocks) {
-                VMap[ inputs[i]] = RewriteVal ; 
+                VMap[inputs[i]] = RewriteVal ; 
             }    else {
                 std::vector<User*> Users(inputs[i]->user_begin(), inputs[i]->user_end());
                 for (User* use : Users)
@@ -2064,17 +2064,20 @@ void CodeExtractor::extractCodeRegionByCopy(const CodeExtractorAnalysisCache &CE
                 AI->setName(outputs[i]->getName()+".out");
         }
 
-        // Rewrite branches to basic blocks outside of the loop to new dummy blocks
-        // within the new function. This must be done before we lose track of which
-        // blocks were originally in the code region.
-        std::vector<User *> Users(header->user_begin(), header->user_end());
-        for (auto &U : Users) // FIXME: KeepOldBlocks?
-                              // The BasicBlock which contains the branch is not in the region
-                              // modify the branch target to a new block
-            if (Instruction *I = dyn_cast<Instruction>(U))
-                if (I->isTerminator() && I->getFunction() == oldFunction &&
-                    !Blocks.count(I->getParent()))
-                    I->replaceUsesOfWith(header, newHeader);
+        header->getParent()->viewCFG();
+        if (!KeepOldBlocks) {
+            // Rewrite branches to basic blocks outside of the loop to new dummy blocks
+            // within the new function. This must be done before we lose track of which
+            // blocks were originally in the code region.
+            std::vector<User*> Users(header->user_begin(), header->user_end());
+            for (auto& U : Users) // FIXME: KeepOldBlocks?
+                                  // The BasicBlock which contains the branch is not in the region
+                                  // modify the branch target to a new block
+                if (Instruction* I = dyn_cast<Instruction>(U))
+                    if (I->isTerminator() && I->getFunction() == oldFunction &&
+                        !Blocks.count(I->getParent()))
+                        I->replaceUsesOfWith(header, newHeader);
+        }
 
         //return newFunction;
 
@@ -2226,11 +2229,14 @@ void CodeExtractor::extractCodeRegionByCopy(const CodeExtractorAnalysisCache &CE
                     outputs[i]->getName() + ".reload",
                     codeReplacer);
                 Reloads.push_back(load);
-                std::vector<User *> Users(outputs[i]->user_begin(), outputs[i]->user_end());
-                for (unsigned u = 0, e = Users.size(); u != e; ++u) {
-                    Instruction *inst = cast<Instruction>(Users[u]);
-                    if (!Blocks.count(inst->getParent()))
-                        inst->replaceUsesOfWith(outputs[i], load);
+
+                if (!KeepOldBlocks) {
+                    std::vector<User *> Users(outputs[i]->user_begin(), outputs[i]->user_end());
+                    for (unsigned u = 0, e = Users.size(); u != e; ++u) {
+                        Instruction* inst = cast<Instruction>(Users[u]);
+                        if (!Blocks.count(inst->getParent()))
+                            inst->replaceUsesOfWith(outputs[i], load);
+                    }
                 }
             }
 
@@ -2394,7 +2400,7 @@ void CodeExtractor::extractCodeRegionByCopy(const CodeExtractorAnalysisCache &CE
 
             // Insert lifetime markers around the reloads of any output values. The
             // allocas output values are stored in are only in-use in the codeRepl block.
-            insertLifetimeMarkersSurroundingCall(M, ReloadOutputs, ReloadOutputs, call);
+         //   insertLifetimeMarkersSurroundingCall(M, ReloadOutputs, ReloadOutputs, call);
 
       // auto TheCall =call;
 #endif
@@ -2434,8 +2440,22 @@ void CodeExtractor::extractCodeRegionByCopy(const CodeExtractorAnalysisCache &CE
             // Note return instructions for the caller.
             //  if (ReturnInst *RI = dyn_cast<ReturnInst>(CBB->getTerminator()))
             //     Returns.push_back(RI);
+
+
+            for (auto&& P :  CBB->phis()) {
+                auto NumIncoming = P.getNumIncomingValues();
+                for (int Idx = NumIncoming - 1; Idx >= 0; --Idx) {
+                    if (Blocks.count(P.getIncomingBlock(Idx)))
+                        continue;
+                    P.removeIncomingValue(Idx, /*DeletePHIIfEmpty=*/ false);
+                }
+            }
         }
 
+
+        for (BasicBlock* Block : Blocks) {
+         
+        }
 
 
         for (auto Pred : predecessors(header)) {
@@ -2458,9 +2478,9 @@ void CodeExtractor::extractCodeRegionByCopy(const CodeExtractorAnalysisCache &CE
         }
 
 
-        auto HeaderCopy  = VMap.lookup(header);
+        BasicBlock* HeaderCopy  =  cast<BasicBlock>( VMap.lookup(header));
         assert(HeaderCopy);
-        auto *BranchI2 = BranchInst::Create(header, newRootNode);
+        auto *BranchI2 = BranchInst::Create(HeaderCopy, newRootNode);
         applyFirstDebugLoc(oldFunction, Blocks.getArrayRef(), BranchI2);
 }
 

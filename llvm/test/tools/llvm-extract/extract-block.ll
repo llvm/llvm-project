@@ -1,4 +1,5 @@
 ; RUN: llvm-extract -S -bb foo:bb4 %s | FileCheck %s
+; RUN: llvm-extract -S -bb foo:bb4 %s --keep-blocks | FileCheck %s --check-prefix=KEEP
 
 ; CHECK: declare void @bar()
 define void @bar() {
