@@ -953,7 +953,7 @@ void PatternEmitter::emit(StringRef rewriteName) {
   // Emit matchAndRewrite() function.
   {
     auto classScope = os.scope();
-    os.reindent(R"(
+    os.printReindented(R"(
     ::mlir::LogicalResult matchAndRewrite(::mlir::Operation *op0,
         ::mlir::PatternRewriter &rewriter) const override {)")
         << '\n';

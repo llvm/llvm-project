@@ -50,8 +50,11 @@ public:
 
   FmtContext() = default;
 
+  // Create a format context with a list of substitutions.
+  FmtContext(ArrayRef<std::pair<StringRef, StringRef>> subs);
+
   // Setter for custom placeholders
-  FmtContext &addSubst(StringRef placeholder, Twine subst);
+  FmtContext &addSubst(StringRef placeholder, const Twine &subst);
 
   // Setters for builtin placeholders
   FmtContext &withBuilder(Twine subst);
