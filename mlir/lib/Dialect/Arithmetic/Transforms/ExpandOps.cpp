@@ -24,8 +24,8 @@ struct CeilDivUIOpConverter : public OpRewritePattern<arith::CeilDivUIOp> {
   LogicalResult matchAndRewrite(arith::CeilDivUIOp op,
                                 PatternRewriter &rewriter) const final {
     Location loc = op.getLoc();
-    Value a = op.lhs();
-    Value b = op.rhs();
+    Value a = op.getLhs();
+    Value b = op.getRhs();
     Value zero = rewriter.create<arith::ConstantOp>(
         loc, rewriter.getIntegerAttr(a.getType(), 0));
     Value compare =

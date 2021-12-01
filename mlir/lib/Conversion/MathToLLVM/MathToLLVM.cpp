@@ -43,7 +43,7 @@ struct ExpM1OpLowering : public ConvertOpToLLVMPattern<math::ExpM1Op> {
   LogicalResult
   matchAndRewrite(math::ExpM1Op op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    auto operandType = adaptor.operand().getType();
+    auto operandType = adaptor.getOperand().getType();
 
     if (!operandType || !LLVM::isCompatibleType(operandType))
       return failure();
@@ -62,7 +62,7 @@ struct ExpM1OpLowering : public ConvertOpToLLVMPattern<math::ExpM1Op> {
       } else {
         one = rewriter.create<LLVM::ConstantOp>(loc, operandType, floatOne);
       }
-      auto exp = rewriter.create<LLVM::ExpOp>(loc, adaptor.operand());
+      auto exp = rewriter.create<LLVM::ExpOp>(loc, adaptor.getOperand());
       rewriter.replaceOpWithNewOp<LLVM::FSubOp>(op, operandType, exp, one);
       return success();
     }
@@ -96,7 +96,7 @@ struct Log1pOpLowering : public ConvertOpToLLVMPattern<math::Log1pOp> {
   LogicalResult
   matchAndRewrite(math::Log1pOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    auto operandType = adaptor.operand().getType();
+    auto operandType = adaptor.getOperand().getType();
 
     if (!operandType || !LLVM::isCompatibleType(operandType))
       return rewriter.notifyMatchFailure(op, "unsupported operand type");
@@ -116,7 +116,7 @@ struct Log1pOpLowering : public ConvertOpToLLVMPattern<math::Log1pOp> {
               : rewriter.create<LLVM::ConstantOp>(loc, operandType, floatOne);
 
       auto add = rewriter.create<LLVM::FAddOp>(loc, operandType, one,
-                                               adaptor.operand());
+                                               adaptor.getOperand());
       rewriter.replaceOpWithNewOp<LLVM::LogOp>(op, operandType, add);
       return success();
     }
@@ -150,7 +150,7 @@ struct RsqrtOpLowering : public ConvertOpToLLVMPattern<math::RsqrtOp> {
   LogicalResult
   matchAndRewrite(math::RsqrtOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    auto operandType = adaptor.operand().getType();
+    auto operandType = adaptor.getOperand().getType();
 
     if (!operandType || !LLVM::isCompatibleType(operandType))
       return failure();
@@ -169,7 +169,7 @@ struct RsqrtOpLowering : public ConvertOpToLLVMPattern<math::RsqrtOp> {
       } else {
         one = rewriter.create<LLVM::ConstantOp>(loc, operandType, floatOne);
       }
-      auto sqrt = rewriter.create<LLVM::SqrtOp>(loc, adaptor.operand());
+      auto sqrt = rewriter.create<LLVM::SqrtOp>(loc, adaptor.getOperand());
       rewriter.replaceOpWithNewOp<LLVM::FDivOp>(op, operandType, one, sqrt);
       return success();
     }

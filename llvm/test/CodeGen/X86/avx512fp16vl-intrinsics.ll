@@ -969,6 +969,18 @@ define <8 x half> @test_sqrt_ph_128_fast(<8 x half> %a0, <8 x half> %a1) {
   ret <8 x half> %2
 }
 
+define <8 x half> @test_sqrt_ph_128_fast2(<8 x half> %a0, <8 x half> %a1) {
+; CHECK-LABEL: test_sqrt_ph_128_fast2:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vpbroadcastw {{.*#+}} xmm1 = [NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN]
+; CHECK-NEXT:    vpand %xmm1, %xmm0, %xmm1
+; CHECK-NEXT:    vcmpgeph {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %xmm1, %k1
+; CHECK-NEXT:    vrsqrtph %xmm0, %xmm0 {%k1} {z}
+; CHECK-NEXT:    retq
+  %1 = call fast <8 x half> @llvm.sqrt.v8f16(<8 x half> %a0)
+  ret <8 x half> %1
+}
+
 define <8 x half> @test_mask_sqrt_ph_128(<8 x half> %a0, <8 x half> %passthru, i8 %mask) {
 ; CHECK-LABEL: test_mask_sqrt_ph_128:
 ; CHECK:       # %bb.0:
