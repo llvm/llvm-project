@@ -896,6 +896,16 @@ void ARMTargetInfo::getTargetDefines(const LangOptions &Opts,
     Builder.defineMacro("__ARM_BF16_FORMAT_ALTERNATIVE", "1");
   }
 
+  if (Opts.BranchTargetEnforcement)
+    Builder.defineMacro("__ARM_FEATURE_BTI_DEFAULT", "1");
+
+  if (Opts.hasSignReturnAddress()) {
+    unsigned Value = Opts.isSignReturnAddressWithAKey() ? 1 : 2;
+    if (Opts.isSignReturnAddressScopeAll())
+      Value |= 1 << 2;
+    Builder.defineMacro("__ARM_FEATURE_PAC_DEFAULT", Twine(Value));
+  }
+
   switch (ArchKind) {
   default:
     break;
