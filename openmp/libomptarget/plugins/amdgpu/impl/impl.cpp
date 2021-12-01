@@ -118,8 +118,6 @@ hsa_status_t impl_memcpy_d2h(hsa_signal_t signal, void *hostDest,
 
   err = locking_async_memcpy(CopyDirection::H2D, signal, hostDest, hostAgent,
                              deviceSrc, deviceAgent, hostDest, size);
-  // err = impl_async_memcpy_d2h(signal, hostDest, hostAgent, deviceSrc,
-  //                             deviceAgent, size);
 
   if (err == HSA_STATUS_SUCCESS)
     return err;
