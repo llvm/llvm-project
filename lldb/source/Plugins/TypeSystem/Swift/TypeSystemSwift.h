@@ -169,6 +169,8 @@ public:
 
   /// \see lldb_private::TypeSystem::Dump
   void Dump(llvm::raw_ostream &output) override;
+  
+  lldb::Format GetFormat(lldb::opaque_compiler_type_t type) override;
 
   /// Unavailable hardcoded functions that don't make sense for Swift.
   /// \{

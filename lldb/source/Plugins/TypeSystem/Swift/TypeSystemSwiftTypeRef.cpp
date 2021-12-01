@@ -2509,13 +2509,6 @@ lldb::Encoding TypeSystemSwiftTypeRef::GetEncoding(opaque_compiler_type_t type,
                       (ReconstructType(type), count));
 }
 
-lldb::Format TypeSystemSwiftTypeRef::GetFormat(opaque_compiler_type_t type) {
-  LLDB_SCOPED_TIMER();
-  if (auto *swift_ast_context = GetSwiftASTContext())
-    return swift_ast_context->GetFormat(ReconstructType(type));
-  return {};
-}
-
 uint32_t
 TypeSystemSwiftTypeRef::GetNumChildren(opaque_compiler_type_t type,
                                        bool omit_empty_base_classes,
