@@ -91,10 +91,11 @@ template <typename A> bool IsAssumedRank(const std::optional<A> &x) {
 
 // Predicate: true when an expression is a coarray (corank > 0)
 bool IsCoarray(const ActualArgument &);
+bool IsCoarray(const Symbol &);
 template <typename A> bool IsCoarray(const A &) { return false; }
 template <typename A> bool IsCoarray(const Designator<A> &designator) {
   if (const auto *symbol{std::get_if<SymbolRef>(&designator.u)}) {
-    return symbol->get().Corank() > 0;
+    return IsCoarray(**symbol);
   }
   return false;
 }
@@ -1051,7 +1052,6 @@ bool IsProcedure(const Symbol &);
 bool IsProcedure(const Scope &);
 bool IsProcedurePointer(const Symbol &);
 bool IsAutomatic(const Symbol &);
-bool IsCoarray(const Symbol &);
 bool IsSaved(const Symbol &); // saved implicitly or explicitly
 bool IsDummy(const Symbol &);
 bool IsFunctionResult(const Symbol &);

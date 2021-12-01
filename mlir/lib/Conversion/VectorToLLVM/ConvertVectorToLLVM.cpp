@@ -84,30 +84,6 @@ LogicalResult getMemRefAlignment(LLVMTypeConverter &typeConverter,
   return success();
 }
 
-// Return the minimal alignment value that satisfies all the AssumeAlignment
-// uses of `value`. If no such uses exist, return 1.
-static unsigned getAssumedAlignment(Value value) {
-  unsigned align = 1;
-  for (auto &u : value.getUses()) {
-    Operation *owner = u.getOwner();
-    if (auto op = dyn_cast<memref::AssumeAlignmentOp>(owner))
-      align = mlir::lcm(align, op.alignment());
-  }
-  return align;
-}
-
-// Helper that returns data layout alignment of a memref associated with a
-// load, store, scatter, or gather op, including additional information from
-// assume_alignment calls on the source of the transfer
-template <class OpAdaptor>
-LogicalResult getMemRefOpAlignment(LLVMTypeConverter &typeConverter,
-                                   OpAdaptor op, unsigned &align) {
-  if (failed(getMemRefAlignment(typeConverter, op.getMemRefType(), align)))
-    return failure();
-  align = std::max(align, getAssumedAlignment(op.base()));
-  return success();
-}
-
 // Add an index vector component to a base pointer. This almost always succeeds
 // unless the last stride is non-unit or the memory space is not zero.
 static LogicalResult getIndexedPtrs(ConversionPatternRewriter &rewriter,
@@ -246,8 +222,7 @@ public:
 
     // Resolve alignment.
     unsigned align;
-    if (failed(getMemRefOpAlignment(*this->getTypeConverter(), loadOrStoreOp,
-                                    align)))
+    if (failed(getMemRefAlignment(*this->getTypeConverter(), memRefTy, align)))
       return failure();
 
     // Resolve address.
@@ -276,7 +251,7 @@ public:
 
     // Resolve alignment.
     unsigned align;
-    if (failed(getMemRefOpAlignment(*getTypeConverter(), gather, align)))
+    if (failed(getMemRefAlignment(*getTypeConverter(), memRefType, align)))
       return failure();
 
     // Resolve address.
@@ -310,7 +285,7 @@ public:
 
     // Resolve alignment.
     unsigned align;
-    if (failed(getMemRefOpAlignment(*getTypeConverter(), scatter, align)))
+    if (failed(getMemRefAlignment(*getTypeConverter(), memRefType, align)))
       return failure();
 
     // Resolve address.
