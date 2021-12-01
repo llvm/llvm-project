@@ -270,7 +270,6 @@ def csh_mask_64 : PatFrag<(ops node:$src0), (and node:$src0, imm),
   }
 
 foreach width = [16, 32, 64] in {
-defvar mask = !sub(width, 1);
 defvar csh_mask = !cast<SDPatternOperator>("csh_mask_"#width);
 
 def cshl_#width : PatFrags<(ops node:$src0, node:$src1),
@@ -722,11 +721,6 @@ class UMad24Pat<Instruction Inst, bit HasClamp = 0> : AMDGPUPat <
 class RcpPat<Instruction RcpInst, ValueType vt> : AMDGPUPat <
   (fdiv FP_ONE, vt:$src),
   (RcpInst $src)
->;
-
-class RsqPat<Instruction RsqInst, ValueType vt> : AMDGPUPat <
-  (AMDGPUrcp (fsqrt vt:$src)),
-  (RsqInst $src)
 >;
 
 // Instructions which select to the same v_min_f*

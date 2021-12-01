@@ -21,7 +21,7 @@ LLVM_LIBC_FUNCTION(char *, strdup, (const char *src)) {
     return nullptr;
   }
   size_t len = internal::string_length(src) + 1;
-  char *dest = reinterpret_cast<char *>(::malloc(len)); // NOLINT
+  char *dest = reinterpret_cast<char *>(::malloc(len));
   if (dest == nullptr) {
     return nullptr;
   }

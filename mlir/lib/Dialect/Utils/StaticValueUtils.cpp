@@ -13,22 +13,24 @@
 
 namespace mlir {
 
-/// Helper function to dispatch an OpFoldResult into either the `dynamicVec` if
-/// it is a Value or into `staticVec` if it is an IntegerAttr.
-/// In the case of a Value, a copy of the `sentinel` value is also pushed to
+/// Helper function to dispatch an OpFoldResult into `staticVec` if:
+///   a) it is an IntegerAttr
+/// In other cases, the OpFoldResult is dispached to the `dynamicVec`.
+/// In such dynamic cases, a copy of the `sentinel` value is also pushed to
 /// `staticVec`. This is useful to extract mixed static and dynamic entries that
 /// come from an AttrSizedOperandSegments trait.
 void dispatchIndexOpFoldResult(OpFoldResult ofr,
                                SmallVectorImpl<Value> &dynamicVec,
                                SmallVectorImpl<int64_t> &staticVec,
                                int64_t sentinel) {
-  if (auto v = ofr.dyn_cast<Value>()) {
-    dynamicVec.push_back(v);
-    staticVec.push_back(sentinel);
+  auto v = ofr.dyn_cast<Value>();
+  if (!v) {
+    APInt apInt = ofr.get<Attribute>().cast<IntegerAttr>().getValue();
+    staticVec.push_back(apInt.getSExtValue());
     return;
   }
-  APInt apInt = ofr.dyn_cast<Attribute>().cast<IntegerAttr>().getValue();
-  staticVec.push_back(apInt.getSExtValue());
+  dynamicVec.push_back(v);
+  staticVec.push_back(sentinel);
 }
 
 void dispatchIndexOpFoldResults(ArrayRef<OpFoldResult> ofrs,

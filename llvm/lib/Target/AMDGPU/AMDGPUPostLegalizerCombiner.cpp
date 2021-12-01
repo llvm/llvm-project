@@ -23,6 +23,7 @@
 #include "llvm/CodeGen/GlobalISel/MIPatternMatch.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
+#include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/Target/TargetMachine.h"
 
 #define DEBUG_TYPE "amdgpu-postlegalizer-combiner"
@@ -57,6 +58,9 @@ public:
 
   bool matchUCharToFloat(MachineInstr &MI);
   void applyUCharToFloat(MachineInstr &MI);
+
+  bool matchRcpSqrtToRsq(MachineInstr &MI,
+                         std::function<void(MachineIRBuilder &)> &MatchInfo);
 
   // FIXME: Should be able to have 2 separate matchdatas rather than custom
   // struct boilerplate.
@@ -201,6 +205,48 @@ void AMDGPUPostLegalizerCombinerHelper::applyUCharToFloat(MachineInstr &MI) {
   }
 
   MI.eraseFromParent();
+}
+
+bool AMDGPUPostLegalizerCombinerHelper::matchRcpSqrtToRsq(
+    MachineInstr &MI, std::function<void(MachineIRBuilder &)> &MatchInfo) {
+
+  auto getRcpSrc = [=](const MachineInstr &MI) {
+    MachineInstr *ResMI = nullptr;
+    if (MI.getOpcode() == TargetOpcode::G_INTRINSIC &&
+        MI.getIntrinsicID() == Intrinsic::amdgcn_rcp)
+      ResMI = MRI.getVRegDef(MI.getOperand(2).getReg());
+
+    return ResMI;
+  };
+
+  auto getSqrtSrc = [=](const MachineInstr &MI) {
+    MachineInstr *SqrtSrcMI = nullptr;
+    mi_match(MI.getOperand(0).getReg(), MRI, m_GFSqrt(m_MInstr(SqrtSrcMI)));
+    return SqrtSrcMI;
+  };
+
+  MachineInstr *RcpSrcMI = nullptr, *SqrtSrcMI = nullptr;
+  // rcp(sqrt(x))
+  if ((RcpSrcMI = getRcpSrc(MI)) && (SqrtSrcMI = getSqrtSrc(*RcpSrcMI))) {
+    MatchInfo = [SqrtSrcMI, &MI](MachineIRBuilder &B) {
+      B.buildIntrinsic(Intrinsic::amdgcn_rsq, {MI.getOperand(0)}, false)
+          .addUse(SqrtSrcMI->getOperand(0).getReg())
+          .setMIFlags(MI.getFlags());
+    };
+    return true;
+  }
+
+  // sqrt(rcp(x))
+  if ((SqrtSrcMI = getSqrtSrc(MI)) && (RcpSrcMI = getRcpSrc(*SqrtSrcMI))) {
+    MatchInfo = [RcpSrcMI, &MI](MachineIRBuilder &B) {
+      B.buildIntrinsic(Intrinsic::amdgcn_rsq, {MI.getOperand(0)}, false)
+          .addUse(RcpSrcMI->getOperand(0).getReg())
+          .setMIFlags(MI.getFlags());
+    };
+    return true;
+  }
+
+  return false;
 }
 
 bool AMDGPUPostLegalizerCombinerHelper::matchCvtF32UByteN(

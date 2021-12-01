@@ -17,6 +17,14 @@
 ;; _Z3fibi inlined into _Z5funcAi.
 ; RUN: opt < %s -passes=sample-profile -use-profiled-call-graph=1 -sample-profile-file=%S/Inputs/profile-context-order.prof -S | FileCheck %s -check-prefix=ICALL-INLINE
 
+;; When a cycle is formed by profiled edges between _Z5funcBi and _Z8funcLeafi,
+;; the function processing order matters. Without considering call edge weights
+;; _Z8funcLeafi can be processed before _Z5funcBi, thus leads to suboptimal
+;; inlining.
+; RUN: opt < %s -passes=sample-profile -use-profiled-call-graph=1 -sort-profiled-scc-member=0 -sample-profile-file=%S/Inputs/profile-context-order-scc.prof -S | FileCheck %s -check-prefix=NOINLINEB
+; RUN: opt < %s -passes=sample-profile -use-profiled-call-graph=1 -sort-profiled-scc-member=1 -sample-profile-file=%S/Inputs/profile-context-order-scc.prof -S | FileCheck %s -check-prefix=INLINEB
+
+
 @factor = dso_local global i32 3, align 4, !dbg !0
 @fp = dso_local global i32 (i32)* null, align 8
 
@@ -47,6 +55,10 @@ for.body:                                         ; preds = %for.body, %entry
 ; NOINLINE: call i32 @_Z8funcLeafi
 ; ICALL-INLINE: define dso_local i32 @_Z5funcAi
 ; ICALL-INLINE: call i32 @_Z3foo
+; INLINEB: define dso_local i32 @_Z5funcBi
+; INLINEB-NOT: call i32 @_Z8funcLeafi
+; NOINLINEB: define dso_local i32 @_Z5funcBi
+; NOINLINEB: call i32 @_Z8funcLeafi
 define dso_local i32 @_Z5funcAi(i32 %x) local_unnamed_addr #0 !dbg !40 {
 entry:
   %add = add nsw i32 %x, 100000, !dbg !44

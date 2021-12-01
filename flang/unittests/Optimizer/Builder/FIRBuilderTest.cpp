@@ -144,8 +144,8 @@ TEST_F(FIRBuilderTest, createRealZeroConstant) {
   auto loc = builder.getUnknownLoc();
   auto realTy = mlir::FloatType::getF64(ctx);
   auto cst = builder.createRealZeroConstant(loc, realTy);
-  EXPECT_TRUE(mlir::isa<mlir::arith::ConstantOp>(cst.getDefiningOp()));
-  auto cstOp = dyn_cast<mlir::arith::ConstantOp>(cst.getDefiningOp());
+  EXPECT_TRUE(mlir::isa<arith::ConstantOp>(cst.getDefiningOp()));
+  auto cstOp = dyn_cast<arith::ConstantOp>(cst.getDefiningOp());
   EXPECT_EQ(realTy, cstOp.getType());
   EXPECT_EQ(0u, cstOp.value().cast<FloatAttr>().getValue().convertToDouble());
 }

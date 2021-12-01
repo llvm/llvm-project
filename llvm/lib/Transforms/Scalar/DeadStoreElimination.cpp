@@ -166,8 +166,8 @@ static cl::opt<unsigned> MemorySSAPathCheckLimit(
 // those cases, the flag can be used to check if DSE's MemorySSA optimizations
 // impact follow-up passes.
 static cl::opt<bool>
-    OptimizeMemorySSA("dse-optimize-memoryssa", cl::init(false), cl::Hidden,
-                      cl::desc("Allow DSE to optimize memory accesses"));
+    OptimizeMemorySSA("dse-optimize-memoryssa", cl::init(true), cl::Hidden,
+                      cl::desc("Allow DSE to optimize memory accesses."));
 
 //===----------------------------------------------------------------------===//
 // Helper functions
@@ -1928,7 +1928,14 @@ struct DSEState {
       if (SkipStores.contains(Def) || MSSA.isLiveOnEntryDef(Def) ||
           !isRemovable(Def->getMemoryInst()))
         continue;
-      auto *UpperDef = dyn_cast<MemoryDef>(Def->getDefiningAccess());
+      MemoryDef *UpperDef;
+      // To conserve compile-time, we avoid walking to the next clobbering def.
+      // Instead, we just try to get the optimized access, if it exists. DSE
+      // will try to optimize defs during the earlier traversal.
+      if (Def->isOptimized())
+        UpperDef = dyn_cast<MemoryDef>(Def->getOptimized());
+      else
+        UpperDef = dyn_cast<MemoryDef>(Def->getDefiningAccess());
       if (!UpperDef || MSSA.isLiveOnEntryDef(UpperDef))
         continue;
 

@@ -25,9 +25,11 @@
 #include "mlir/Dialect/Vector/VectorTransforms.h"
 #include "mlir/IR/AffineExpr.h"
 #include "mlir/IR/AffineMap.h"
+#include "mlir/Pass/PassManager.h"
 #include "mlir/Support/LLVM.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "mlir/Transforms/LoopUtils.h"
+#include "mlir/Transforms/Passes.h"
 #include "mlir/Transforms/Utils.h"
 
 using namespace mlir;
@@ -63,10 +65,10 @@ struct LinalgStrategyTileAndFusePass
           funcOp.getContext(), options, filter);
     }
     // Search the root operation using bottom up traversal.
-    GreedyRewriteConfig grc;
-    grc.useTopDownTraversal = false;
-    (void)applyPatternsAndFoldGreedily(funcOp,
-                                       std::move(tilingAndFusionPattern), grc);
+    GreedyRewriteConfig config;
+    config.useTopDownTraversal = false;
+    (void)applyPatternsAndFoldGreedily(
+        funcOp, std::move(tilingAndFusionPattern), config);
   }
 
   LinalgTilingAndFusionOptions options;
@@ -130,7 +132,18 @@ struct LinalgStrategyPadPass
       paddingPattern.add<LinalgPaddingPattern>(funcOp.getContext(), options,
                                                filter);
     }
-    if (failed(applyPatternsAndFoldGreedily(funcOp, std::move(paddingPattern))))
+    // Traverse the operations top down to pad producers before consumers. The
+    // extract slice operation introduced after every padded operation enables
+    // padding its consumers. Padding an operation whose producers have not been
+    // padded before fails due to the missing extract slice operations. In this
+    // case, the padding pattern increments the transformation marker without
+    // padding the operation. The top down traversal is thus not only a
+    // performance optimization but also needed to pad all operations along the
+    // use-def chains.
+    GreedyRewriteConfig config;
+    config.useTopDownTraversal = true;
+    if (failed(applyPatternsAndFoldGreedily(funcOp, std::move(paddingPattern),
+                                            config)))
       signalPassFailure();
   }
 
@@ -178,16 +191,21 @@ struct LinalgStrategyDecomposePass
 
   LinalgStrategyDecomposePass() = default;
 
+  LinalgStrategyDecomposePass(LinalgTransformationFilter filter)
+      : filter(filter) {}
+
   void runOnFunction() override {
     auto funcOp = getFunction();
     if (!anchorFuncName.empty() && funcOp.getName() != anchorFuncName)
       return;
     RewritePatternSet decompositionPattern(funcOp.getContext());
-    populateDecomposeConvolutionPatterns(decompositionPattern);
+    populateDecomposeConvolutionPatterns(decompositionPattern, filter);
     if (failed(applyPatternsAndFoldGreedily(funcOp,
                                             std::move(decompositionPattern))))
       signalPassFailure();
   }
+
+  LinalgTransformationFilter filter;
 };
 
 /// Configurable pass to apply pattern-based linalg generalization.
@@ -335,6 +353,12 @@ struct LinalgStrategyEnablePass
 
     if (options.hoistRedundantVectorTransfersOnTensor)
       hoistRedundantVectorTransfersOnTensor(funcOp);
+
+    // Run CSE to cleanup after canonicalization.
+    OpPassManager dynamicPM("builtin.func");
+    dynamicPM.addPass(createCSEPass());
+    if (failed(runPipeline(dynamicPM, funcOp)))
+      return signalPassFailure();
   }
 
   LinalgEnablingOptions options;
@@ -459,12 +483,12 @@ mlir::createLinalgStrategyGeneralizePass(StringRef opName,
                                          LinalgTransformationFilter filter) {
   return std::make_unique<LinalgStrategyGeneralizePass>(opName, filter);
 }
+
 /// Create a LinalgStrategyDecomposePass.
-// TODO: atm this is applied to all supported ops. If/when we need finer control
-// this should be exposed with an opName + filter and a proper pattern.
+// TODO: if/when we need finer control add an `opName` parameter.
 std::unique_ptr<OperationPass<FuncOp>>
-mlir::createLinalgStrategyDecomposePass() {
-  return std::make_unique<LinalgStrategyDecomposePass>();
+mlir::createLinalgStrategyDecomposePass(LinalgTransformationFilter filter) {
+  return std::make_unique<LinalgStrategyDecomposePass>(filter);
 }
 
 /// Create a LinalgStrategyInterchangePass.

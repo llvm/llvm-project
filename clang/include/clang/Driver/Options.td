@@ -2789,10 +2789,11 @@ def fvisibility_ms_compat : Flag<["-"], "fvisibility-ms-compat">, Group<f_Group>
 def fvisibility_global_new_delete_hidden : Flag<["-"], "fvisibility-global-new-delete-hidden">, Group<f_Group>,
   HelpText<"Give global C++ operator new and delete declarations hidden visibility">, Flags<[CC1Option]>,
   MarshallingInfoFlag<LangOpts<"GlobalAllocationFunctionVisibilityHidden">>;
-def fnew_infallible : Flag<["-"], "fnew-infallible">, Group<f_Group>,
-  HelpText<"Treats throwing global C++ operator new as always returning valid memory "
-  "(annotates with __attribute__((returns_nonnull)) and throw()). This is detectable in source.">,
-  Flags<[CC1Option]>, MarshallingInfoFlag<LangOpts<"NewInfallible">>;
+defm new_infallible : BoolFOption<"new-infallible",
+  LangOpts<"NewInfallible">, DefaultFalse,
+  PosFlag<SetTrue, [], "Enable">, NegFlag<SetFalse, [], "Disable">,
+  BothFlags<[CC1Option], " treating throwing global C++ operator new as always returning valid memory "
+  "(annotates with __attribute__((returns_nonnull)) and throw()). This is detectable in source.">>;
 defm whole_program_vtables : BoolFOption<"whole-program-vtables",
   CodeGenOpts<"WholeProgramVTables">, DefaultFalse,
   PosFlag<SetTrue, [CC1Option], "Enables whole-program vtable optimization. Requires -flto">,
@@ -5065,9 +5066,10 @@ def msmall_data_limit : Separate<["-"], "msmall-data-limit">,
 def funwind_tables_EQ : Joined<["-"], "funwind-tables=">,
   HelpText<"Generate unwinding tables for all functions">,
   MarshallingInfoInt<CodeGenOpts<"UnwindTables">>;
-def mconstructor_aliases : Flag<["-"], "mconstructor-aliases">,
-  HelpText<"Emit complete constructors and destructors as aliases when possible">,
-  MarshallingInfoFlag<CodeGenOpts<"CXXCtorDtorAliases">>;
+defm constructor_aliases : BoolOption<"m", "constructor-aliases",
+  CodeGenOpts<"CXXCtorDtorAliases">, DefaultFalse,
+  PosFlag<SetTrue, [], "Enable">, NegFlag<SetFalse, [], "Disable">,
+  BothFlags<[CC1Option], " emitting complete constructors and destructors as aliases when possible">>;
 def mlink_bitcode_file : Separate<["-"], "mlink-bitcode-file">,
   HelpText<"Link the given bitcode file before performing optimizations.">;
 def mlink_builtin_bitcode : Separate<["-"], "mlink-builtin-bitcode">,
@@ -5180,10 +5182,6 @@ defm debug_pass_manager : BoolOption<"f", "debug-pass-manager",
   CodeGenOpts<"DebugPassManager">, DefaultFalse,
   PosFlag<SetTrue, [], "Prints debug information for the new pass manager">,
   NegFlag<SetFalse, [], "Disables debug printing for the new pass manager">>;
-def fexperimental_debug_variable_locations : Flag<["-"],
-    "fexperimental-debug-variable-locations">,
-    HelpText<"Use experimental new value-tracking variable locations">,
-    MarshallingInfoFlag<CodeGenOpts<"ValueTrackingVariableLocations">>;
 def fverify_debuginfo_preserve
     : Flag<["-"], "fverify-debuginfo-preserve">,
       HelpText<"Enable Debug Info Metadata preservation testing in "

@@ -26,6 +26,14 @@ def uchar_to_float : GICombineRule<
          [{ return PostLegalizerHelper.matchUCharToFloat(*${itofp}); }]),
   (apply [{ PostLegalizerHelper.applyUCharToFloat(*${itofp}); }])>;
 
+
+def rcp_sqrt_to_rsq : GICombineRule<
+  (defs root:$rcp, build_fn_matchinfo:$matchinfo),
+  (match (wip_match_opcode G_INTRINSIC, G_FSQRT):$rcp,
+         [{ return PostLegalizerHelper.matchRcpSqrtToRsq(*${rcp}, ${matchinfo}); }]),
+  (apply [{ Helper.applyBuildFn(*${rcp}, ${matchinfo}); }])>;
+
+
 def cvt_f32_ubyteN_matchdata : GIDefMatchData<"AMDGPUPostLegalizerCombinerHelper::CvtF32UByteMatchInfo">;
 
 def cvt_f32_ubyteN : GICombineRule<
@@ -86,7 +94,8 @@ def AMDGPUPreLegalizerCombinerHelper: GICombinerHelper<
 def AMDGPUPostLegalizerCombinerHelper: GICombinerHelper<
   "AMDGPUGenPostLegalizerCombinerHelper",
   [all_combines, gfx6gfx7_combines,
-   uchar_to_float, cvt_f32_ubyteN, remove_fcanonicalize, foldable_fneg]> {
+   uchar_to_float, cvt_f32_ubyteN, remove_fcanonicalize, foldable_fneg,
+   rcp_sqrt_to_rsq]> {
   let DisableRuleOption = "amdgpupostlegalizercombiner-disable-rule";
   let StateClass = "AMDGPUPostLegalizerCombinerHelperState";
   let AdditionalArguments = [];

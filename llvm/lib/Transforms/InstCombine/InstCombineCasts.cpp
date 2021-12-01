@@ -2771,7 +2771,7 @@ Instruction *InstCombinerImpl::visitBitCast(BitCastInst &CI) {
     if (match(Src, m_OneUse(m_InsertElt(m_OneUse(m_BitCast(m_Value(X))),
                                         m_Value(Y), m_ConstantInt(IndexC)))) &&
         DestTy->isIntegerTy() && X->getType() == DestTy &&
-        isDesirableIntType(BitWidth)) {
+        Y->getType()->isIntegerTy() && isDesirableIntType(BitWidth)) {
       // Adjust for big endian - the LSBs are at the high index.
       if (DL.isBigEndian())
         IndexC = SrcVTy->getNumElements() - 1 - IndexC;

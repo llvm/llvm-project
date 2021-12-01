@@ -20,6 +20,7 @@
 #include "copy.h"
 #include "terminator.h"
 #include "tools.h"
+#include "flang/Runtime/descriptor.h"
 #include <algorithm>
 
 namespace Fortran::runtime {

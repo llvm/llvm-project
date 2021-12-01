@@ -21,7 +21,9 @@ function(libomp_check_linker_flag flag boolean)
      project(foo C)
      set(CMAKE_SHARED_LINKER_FLAGS \"${flag}\")
      add_library(foo SHARED src_to_link.c)")
-  set(failed_regexes "[Ee]rror;[Uu]nknown;[Ss]kipping;LINK : warning")
+  # Compiling as a part of runtimes introduces ARCH-unknown-linux-gnu as a part
+  # of a working directory.  So adding a guard for unknown.
+  set(failed_regexes "[Ee]rror;[Uu]nknown[^-];[Ss]kipping;LINK : warning")
   set(base_dir ${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/CMakeTmp/link_flag_check_${boolean})
   file(MAKE_DIRECTORY ${base_dir})
   file(MAKE_DIRECTORY ${base_dir}/build)

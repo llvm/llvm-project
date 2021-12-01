@@ -1,6 +1,12 @@
-#include "memprof_rawprofile.h"
+#include <stdint.h>
+#include <stdlib.h>
+#include <string.h>
+
 #include "memprof_meminfoblock.h"
+#include "memprof_rawprofile.h"
+#include "profile/MemProfData.inc"
 #include "sanitizer_common/sanitizer_allocator_internal.h"
+#include "sanitizer_common/sanitizer_common.h"
 #include "sanitizer_common/sanitizer_linux.h"
 #include "sanitizer_common/sanitizer_procmaps.h"
 #include "sanitizer_common/sanitizer_stackdepot.h"
@@ -8,29 +14,12 @@
 #include "sanitizer_common/sanitizer_stacktrace.h"
 #include "sanitizer_common/sanitizer_vector.h"
 
-#include <stdlib.h>
-#include <string.h>
-
 namespace __memprof {
 using ::__sanitizer::Vector;
+using SegmentEntry = ::llvm::memprof::SegmentEntry;
+using Header = ::llvm::memprof::Header;
 
 namespace {
-typedef struct __attribute__((__packed__)) {
-  u64 start;
-  u64 end;
-  u64 offset;
-  u8 buildId[32];
-} SegmentEntry;
-
-typedef struct __attribute__((__packed__)) {
-  u64 magic;
-  u64 version;
-  u64 total_size;
-  u64 segment_offset;
-  u64 mib_offset;
-  u64 stack_offset;
-} Header;
-
 template <class T> char *WriteBytes(T Pod, char *&Buffer) {
   *(T *)Buffer = Pod;
   return Buffer + sizeof(T);
@@ -76,12 +65,12 @@ void SerializeSegmentsToBuffer(MemoryMappingLayoutBase &Layout,
 
   for (Layout.Reset(); Layout.Next(&segment);) {
     if (segment.IsReadable() && segment.IsExecutable()) {
-      SegmentEntry entry{};
-      entry.start = segment.start;
-      entry.end = segment.end;
-      entry.offset = segment.offset;
-      memcpy(entry.buildId, segment.uuid, sizeof(segment.uuid));
-      memcpy(Ptr, &entry, sizeof(SegmentEntry));
+      SegmentEntry Entry{};
+      Entry.Start = segment.start;
+      Entry.End = segment.end;
+      Entry.Offset = segment.offset;
+      memcpy(Entry.BuildId, segment.uuid, sizeof(segment.uuid));
+      memcpy(Ptr, &Entry, sizeof(SegmentEntry));
       Ptr += sizeof(SegmentEntry);
       NumSegmentsRecorded++;
     }
@@ -89,7 +78,7 @@ void SerializeSegmentsToBuffer(MemoryMappingLayoutBase &Layout,
 
   // Store the number of segments we recorded in the space we reserved.
   *((u64 *)Buffer) = NumSegmentsRecorded;
-  CHECK(ExpectedNumBytes == static_cast<u64>(Ptr - Buffer) &&
+  CHECK(ExpectedNumBytes >= static_cast<u64>(Ptr - Buffer) &&
         "Expected num bytes != actual bytes written");
 }
 
@@ -144,7 +133,7 @@ void SerializeStackToBuffer(const Vector<u64> &StackIds,
     *(u64 *)(Ptr - (Count + 1) * sizeof(u64)) = Count;
   }
 
-  CHECK(ExpectedNumBytes == static_cast<u64>(Ptr - Buffer) &&
+  CHECK(ExpectedNumBytes >= static_cast<u64>(Ptr - Buffer) &&
         "Expected num bytes != actual bytes written");
 }
 
@@ -172,7 +161,7 @@ void SerializeMIBInfoToBuffer(MIBMapTy &MIBMap, const Vector<u64> &StackIds,
     Ptr = WriteBytes((*h)->mib, Ptr);
   }
 
-  CHECK(ExpectedNumBytes == static_cast<u64>(Ptr - Buffer) &&
+  CHECK(ExpectedNumBytes >= static_cast<u64>(Ptr - Buffer) &&
         "Expected num bytes != actual bytes written");
 }
 
@@ -193,11 +182,15 @@ void SerializeMIBInfoToBuffer(MIBMapTy &MIBMap, const Vector<u64> &StackIds,
 // BuildID 32B
 // ----------
 // ...
+// ----------
+// Optional Padding Bytes
 // ---------- MIB Info
 // Num Entries
 // ---------- MIB Entry
 // Alloc Count
 // ...
+// ----------
+// Optional Padding Bytes
 // ---------- Stack Info
 // Num Entries
 // ---------- Stack Entry
@@ -206,23 +199,29 @@ void SerializeMIBInfoToBuffer(MIBMapTy &MIBMap, const Vector<u64> &StackIds,
 // PC2
 // ...
 // ----------
+// Optional Padding Bytes
 // ...
 u64 SerializeToRawProfile(MIBMapTy &MIBMap, MemoryMappingLayoutBase &Layout,
                           char *&Buffer) {
-  const u64 NumSegmentBytes = SegmentSizeBytes(Layout);
+  // Each section size is rounded up to 8b since the first entry in each section
+  // is a u64 which holds the number of entries in the section by convention.
+  const u64 NumSegmentBytes = RoundUpTo(SegmentSizeBytes(Layout), 8);
 
   Vector<u64> StackIds;
   MIBMap.ForEach(RecordStackId, reinterpret_cast<void *>(&StackIds));
   // The first 8b are for the total number of MIB records. Each MIB record is
   // preceded by a 8b stack id which is associated with stack frames in the next
   // section.
-  const u64 NumMIBInfoBytes =
-      sizeof(u64) + StackIds.Size() * (sizeof(u64) + sizeof(MemInfoBlock));
+  const u64 NumMIBInfoBytes = RoundUpTo(
+      sizeof(u64) + StackIds.Size() * (sizeof(u64) + sizeof(MemInfoBlock)), 8);
 
-  const u64 NumStackBytes = StackSizeBytes(StackIds);
+  const u64 NumStackBytes = RoundUpTo(StackSizeBytes(StackIds), 8);
 
-  const u64 TotalSizeBytes =
-      sizeof(Header) + NumSegmentBytes + NumStackBytes + NumMIBInfoBytes;
+  // Ensure that the profile is 8b aligned. We allow for some optional padding
+  // at the end so that any subsequent profile serialized to the same file does
+  // not incur unaligned accesses.
+  const u64 TotalSizeBytes = RoundUpTo(
+      sizeof(Header) + NumSegmentBytes + NumStackBytes + NumMIBInfoBytes, 8);
 
   // Allocate the memory for the entire buffer incl. info blocks.
   Buffer = (char *)InternalAlloc(TotalSizeBytes);

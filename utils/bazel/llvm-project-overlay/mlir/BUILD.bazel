@@ -2135,6 +2135,7 @@ cc_library(
         ":ArithmeticToSPIRV",
         ":ArmNeon2dToIntr",
         ":AsyncToLLVM",
+        ":BufferizationToMemRef",
         ":ComplexToLLVM",
         ":ComplexToStandard",
         ":ConversionPassIncGen",
@@ -7708,17 +7709,16 @@ cc_library(
     hdrs = ["include/mlir/Dialect/Bufferization/IR/Bufferization.h"],
     includes = ["include"],
     deps = [
+        ":AllocationOpInterface",
         ":BufferizationBaseIncGen",
         ":BufferizationOpsIncGen",
         ":ControlFlowInterfaces",
         ":CopyOpInterface",
-        ":AllocationOpInterface",
-        #":DialectUtils",
         ":IR",
         ":InferTypeOpInterface",
+        ":MemRefDialect",
         ":StandardOps",
         ":TensorDialect",
-        ":MemRefDialect",
         ":ViewLikeInterface",
         "//llvm:Support",
     ],
@@ -7761,6 +7761,29 @@ cc_library(
         ":Pass",
         ":Transforms",
         "//llvm:Support",
+    ],
+)
+
+cc_library(
+    name = "BufferizationToMemRef",
+    srcs = [
+        "lib/Conversion/BufferizationToMemRef/BufferizationToMemRef.cpp",
+        "lib/Conversion/PassDetail.h",
+    ],
+    hdrs = [
+        "include/mlir/Conversion/BufferizationToMemRef/BufferizationToMemRef.h",
+    ],
+    includes = ["include"],
+    deps = [
+        ":ArithmeticDialect",
+        ":BufferizationDialect",
+        ":ConversionPassIncGen",
+        ":IR",
+        ":MemRefDialect",
+        ":Pass",
+        ":StandardOps",
+        ":Support",
+        ":Transforms",
     ],
 )
 

@@ -80,6 +80,7 @@ public:
     return LangOptions::SSPStrong;
   }
 
+  unsigned GetDefaultDwarfVersion() const override { return 4; }
   llvm::DebuggerKind getDefaultDebuggerTuning() const override {
     return llvm::DebuggerKind::SCE;
   }
