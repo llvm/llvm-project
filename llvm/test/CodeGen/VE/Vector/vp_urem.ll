@@ -1,5 +1,5 @@
 ; REQUIRES: asserts
-; RUN: not --crash llc %s -march=ve -mattr=+vpu -o /dev/null |& FileCheck %s
+; RUN: not --crash llc < %s -march=ve -mattr=+vpu -o /dev/null 2>&1 | FileCheck %s
 
 ; CHECK:  t{{[0-9]+}}: v256i32 = vp_urem [[A:t[0-9]+]], [[B:t[0-9]+]], [[MASK:t[0-9]+]], [[EVL:t[0-9]+]] 
 ; CHECK:  [[A]]: v256i32
