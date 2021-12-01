@@ -251,7 +251,7 @@ void DefGen::emitVerifier() {
 void DefGen::emitParserPrinter() {
   auto *mnemonic = defCls.addStaticMethod<Method::Constexpr>(
       "::llvm::StringLiteral", "getMnemonic");
-  mnemonic->body().indent() << strfmt("return \"{0}\";", *def.getMnemonic());
+  mnemonic->body().indent() << strfmt("return {\"{0}\"};", *def.getMnemonic());
   // Declare the parser and printer, if needed.
   if (!def.needsParserPrinter() && !def.hasGeneratedParser() &&
       !def.hasGeneratedPrinter())
