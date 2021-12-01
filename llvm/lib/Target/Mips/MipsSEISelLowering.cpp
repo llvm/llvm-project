@@ -875,6 +875,10 @@ static SDValue performMULCombine(SDNode *N, SelectionDAG &DAG,
                                  const TargetLowering::DAGCombinerInfo &DCI,
                                  const MipsSETargetLowering *TL,
                                  const MipsSubtarget &Subtarget) {
+  if (Subtarget.hasNanoMips() &&
+      DAG.getMachineFunction().getFunction().hasOptSize())
+    return SDValue();
+
   EVT VT = N->getValueType(0);
 
   if (ConstantSDNode *C = dyn_cast<ConstantSDNode>(N->getOperand(1)))
