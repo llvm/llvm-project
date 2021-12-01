@@ -49,9 +49,17 @@ void PassManager<Loop, LoopAnalysisManager, LoopStandardAnalysisResults &,
                  LPMUpdater &>::printPipeline(raw_ostream &OS,
                                               function_ref<StringRef(StringRef)>
                                                   MapClassName2PassName) {
-  for (unsigned Idx = 0, Size = LoopPasses.size(); Idx != Size; ++Idx) {
-    auto *P = LoopPasses[Idx].get();
-    P->printPipeline(OS, MapClassName2PassName);
+  assert(LoopPasses.size() + LoopNestPasses.size() == IsLoopNestPass.size());
+
+  unsigned IdxLP = 0, IdxLNP = 0;
+  for (unsigned Idx = 0, Size = IsLoopNestPass.size(); Idx != Size; ++Idx) {
+    if (IsLoopNestPass[Idx]) {
+      auto *P = LoopNestPasses[IdxLNP++].get();
+      P->printPipeline(OS, MapClassName2PassName);
+    } else {
+      auto *P = LoopPasses[IdxLP++].get();
+      P->printPipeline(OS, MapClassName2PassName);
+    }
     if (Idx + 1 < Size)
       OS << ",";
   }
