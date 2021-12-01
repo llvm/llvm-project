@@ -155,6 +155,7 @@ set(SANITIZER_IMPL_HEADERS
   sanitizer_linux.h
   sanitizer_list.h
   sanitizer_local_address_space_view.h
+  sanitizer_lzw.h
   sanitizer_mac.h
   sanitizer_malloc_mac.inc
   sanitizer_mutex.h
