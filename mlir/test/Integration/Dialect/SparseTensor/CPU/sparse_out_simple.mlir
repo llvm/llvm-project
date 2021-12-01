@@ -36,7 +36,7 @@
     affine_map<(i,j) -> (i,j)>  // X (out)
   ],
   iterator_types = ["parallel", "parallel"],
-  doc = "X(i,j) += X(i,j) * X(i,j)"
+  doc = "X(i,j) *= X(i,j)"
 }
 
 //
