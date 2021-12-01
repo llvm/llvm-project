@@ -367,6 +367,28 @@ bool ARMTargetInfo::setABI(const std::string &Name) {
   return false;
 }
 
+bool ARMTargetInfo::validateBranchProtection(StringRef Spec,
+                                             BranchProtectionInfo &BPI,
+                                             StringRef &Err) const {
+  llvm::ARM::ParsedBranchProtection PBP;
+  if (!llvm::ARM::parseBranchProtection(Spec, PBP, Err))
+    return false;
+
+  BPI.SignReturnAddr =
+      llvm::StringSwitch<LangOptions::SignReturnAddressScopeKind>(PBP.Scope)
+          .Case("non-leaf", LangOptions::SignReturnAddressScopeKind::NonLeaf)
+          .Case("all", LangOptions::SignReturnAddressScopeKind::All)
+          .Default(LangOptions::SignReturnAddressScopeKind::None);
+
+  // Don't care for the sign key, beyond issuing a warning.
+  if (PBP.Key == "b_key")
+    Err = "b-key";
+  BPI.SignKey = LangOptions::SignReturnAddressKeyKind::AKey;
+
+  BPI.BranchTargetEnforcement = PBP.BranchTargetEnforcement;
+  return true;
+}
+
 // FIXME: This should be based on Arch attributes, not CPU names.
 bool ARMTargetInfo::initFeatureMap(
     llvm::StringMap<bool> &Features, DiagnosticsEngine &Diags, StringRef CPU,
