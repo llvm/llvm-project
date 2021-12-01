@@ -90,9 +90,11 @@
 ///-----------------------------------------------------------------------------
 /// Checking -fintegrated-as
 
-// RUN: %clangxx -### -target ve -x assembler %s 2>&1 | \
+// RUN: %clangxx -### -target ve \
+// RUN:    -x assembler -fuse-ld=ld %s 2>&1 | \
 // RUN:    FileCheck -check-prefix=AS %s
-// RUN: %clangxx -### -target ve -fno-integrated-as -x assembler %s 2>&1 | \
+// RUN: %clangxx -### -target ve \
+// RUN:    -fno-integrated-as -x assembler -fuse-ld=ld %s 2>&1 | \
 // RUN:    FileCheck -check-prefix=NAS %s
 
 // AS: clang{{.*}} "-cc1as"
@@ -110,6 +112,7 @@
 
 // RUN: %clangxx -### -target ve-unknown-linux-gnu \
 // RUN:     --sysroot %S/Inputs/basic_ve_tree \
+// RUN:     -fuse-ld=ld \
 // RUN:     -resource-dir=%S/Inputs/basic_ve_tree/resource_dir \
 // RUN:     --stdlib=c++ %s 2>&1 | FileCheck -check-prefix=DEF %s
 
