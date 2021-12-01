@@ -205,8 +205,15 @@ Changes to LLDB
 
   * ``memory find``
   * ``memory read``
+  * ``memory region`` (see below)
   * ``memory tag read``
   * ``memory tag write``
+
+* The ``memory region`` command and ``GetMemoryRegionInfo`` API method now
+  ignore non-address bits in the address parameter. This also means that on
+  systems with non-address bits the last (usually unmapped) memory region
+  will not extend to 0xF...F. Instead it will end at the end of the mappable
+  range that the virtual address size allows.
 
 * The ``memory read`` command has a new option ``--show-tags``. Use this option
   to show memory tags beside the contents of tagged memory ranges.

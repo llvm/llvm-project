@@ -5853,12 +5853,18 @@ Process::AdvanceAddressToNextBranchInstruction(Address default_stop_addr,
   return retval;
 }
 
-Status
-Process::GetMemoryRegions(lldb_private::MemoryRegionInfos &region_list) {
+Status Process::GetMemoryRegionInfo(lldb::addr_t load_addr,
+                                    MemoryRegionInfo &range_info) {
+  if (const lldb::ABISP &abi = GetABI())
+    load_addr = abi->FixDataAddress(load_addr);
+  return DoGetMemoryRegionInfo(load_addr, range_info);
+}
 
+Status Process::GetMemoryRegions(lldb_private::MemoryRegionInfos &region_list) {
   Status error;
 
   lldb::addr_t range_end = 0;
+  const lldb::ABISP &abi = GetABI();
 
   region_list.clear();
   do {
@@ -5870,11 +5876,22 @@ Process::GetMemoryRegions(lldb_private::MemoryRegionInfos &region_list) {
       break;
     }
 
+    // We only check the end address, not start and end, because we assume that
+    // the start will not have non-address bits until the first unmappable
+    // region. We will have exited the loop by that point because the previous
+    // region, the last mappable region, will have non-address bits in its end
+    // address.
     range_end = region_info.GetRange().GetRangeEnd();
     if (region_info.GetMapped() == MemoryRegionInfo::eYes) {
       region_list.push_back(std::move(region_info));
     }
-  } while (range_end != LLDB_INVALID_ADDRESS);
+  } while (
+      // For a process with no non-address bits, all address bits
+      // set means the end of memory.
+      range_end != LLDB_INVALID_ADDRESS &&
+      // If we have non-address bits and some are set then the end
+      // is at or beyond the end of mappable memory.
+      !(abi && (abi->FixDataAddress(range_end) != range_end)));
 
   return error;
 }
