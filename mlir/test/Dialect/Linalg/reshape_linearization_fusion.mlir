@@ -199,31 +199,3 @@ func @generic_op_reshape_consumer_nofusion(%arg0 : tensor<?x?x?x5xf32>,
 //  CHECK-SAME:     ins(%[[ARG0]], %[[ARG1]]
 //       CHECK:   %[[RESULT:.+]] = linalg.tensor_collapse_shape %[[NOFUSE]]
 //       CHECK:   return %[[RESULT]]
-
-
-// -----
-
-func @generic_op_permultation_reshape_consumer_fusion_unused_dim(%arg0 : tensor<6x1xf32>) -> tensor<6xi32> {
-  %0 = linalg.init_tensor [6, 1] : tensor<6x1xi32>
-  %1 = linalg.generic {indexing_maps = [affine_map<(d0, d1) -> (d0, d1)>,
-                                        affine_map<(d0, d1) -> (d0, d1)>],
-   iterator_types = ["parallel", "parallel"]}
-   ins(%arg0 : tensor<6x1xf32>) outs(%0 : tensor<6x1xi32>) {
-    ^bb0(%arg3: f32, %arg4: i32):  // no predecessors
-      %5 = arith.fptosi %arg3 : f32 to i32
-      linalg.yield %5 : i32
-    } -> tensor<6x1xi32>
-    %6 = linalg.tensor_collapse_shape %1 [[0, 1]] : tensor<6x1xi32> into tensor<6xi32>
-  return %6 : tensor<6xi32>
-}
-//   CHECK-DAG: #[[MAP0:.+]] = affine_map<(d0, d1) -> (d0, d1)>
-//   CHECK-DAG: #[[MAP1:.+]] = affine_map<(d0, d1) -> (d0)>
-//       CHECK: func @generic_op_permultation_reshape_consumer_fusion_unused_dim
-//  CHECK-SAME:   %[[ARG0:.+]]: tensor<6x1xf32>
-//       CHECK:   %[[T0:.+]] = linalg.init_tensor [6, 1]
-//       CHECK:   %[[T1:.+]] = linalg.tensor_collapse_shape %[[T0]]
-//  CHECK-SAME:   [0, 1]
-//       CHECK:   linalg.generic
-//  CHECK-SAME:     indexing_maps = [#[[MAP0]], #[[MAP1]]]
-//  CHECK-SAME:     ins(%[[ARG0]] : tensor<6x1xf32>)
-//  CHECK-SAME:     outs(%[[T1]] : tensor<6xi32>)
