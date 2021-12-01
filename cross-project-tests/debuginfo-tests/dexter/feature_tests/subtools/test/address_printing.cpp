@@ -8,7 +8,7 @@
 //      display the address properly; if it is implemented, this test should be
 //      updated.
 //
-// REQUIRES: system-linux
+// REQUIRES: lldb, system-linux
 //
 // RUN: not %dexter_regression_test -v -- %s | FileCheck %s
 
