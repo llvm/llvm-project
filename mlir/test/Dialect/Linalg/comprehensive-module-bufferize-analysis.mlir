@@ -1470,3 +1470,25 @@ func @scf_if_out_of_place3(%t1: tensor<?xf32> {linalg.inplaceable = true},
   return %r, %v2 : tensor<?xf32>, vector<10xf32>
 }
 
+// -----
+
+// CHECK-LABEL: func @some_use
+func @some_use(%A : tensor<?xf32> {linalg.inplaceable = true},
+               %v : vector<5xf32>) -> (tensor<?xf32>) {
+  %idx = arith.constant 0 : index
+  //      CHECK: vector.transfer_write
+  // CHECK-SAME: {__inplace_results_attr__ = ["true"]
+  %0 = vector.transfer_write %v, %A[%idx] : vector<5xf32>, tensor<?xf32>
+  return %0 : tensor<?xf32>
+}
+
+
+// CHECK-LABEL: func @main_func
+func @main_func(%A : tensor<?xf32> {linalg.inplaceable = true},
+                %v : vector<5xf32>) -> (tensor<?xf32>) {
+  // Function calls always bufferize out-of-place at the moment.
+  //      CHECK: call
+  // CHECK-SAME: {__inplace_results_attr__ = ["false"]
+  %0 = call @some_use(%A, %v) : (tensor<?xf32>, vector<5xf32>) -> (tensor<?xf32>)
+  return %0 : tensor<?xf32>
+}
