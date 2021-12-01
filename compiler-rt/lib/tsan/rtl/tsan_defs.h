@@ -63,13 +63,6 @@ enum class Epoch : u16 {};
 constexpr uptr kEpochBits = 14;
 constexpr Epoch kEpochZero = static_cast<Epoch>(0);
 constexpr Epoch kEpochOver = static_cast<Epoch>(1 << kEpochBits);
-constexpr Epoch kEpochLast = static_cast<Epoch>((1 << kEpochBits) - 1);
-
-inline Epoch EpochInc(Epoch epoch) {
-  return static_cast<Epoch>(static_cast<u16>(epoch) + 1);
-}
-
-inline bool EpochOverflow(Epoch epoch) { return epoch == kEpochOver; }
 
 const int kClkBits = 42;
 const unsigned kMaxTidReuse = (1 << (64 - kClkBits)) - 1;
@@ -114,7 +107,7 @@ const uptr kShadowCnt = 4;
 const uptr kShadowCell = 8;
 
 // Single shadow value.
-enum class RawShadow : u32 {};
+typedef u64 RawShadow;
 const uptr kShadowSize = sizeof(RawShadow);
 
 // Shadow memory is kShadowMultiplier times larger than user memory.
@@ -191,13 +184,10 @@ MD5Hash md5_hash(const void *data, uptr size);
 struct Processor;
 struct ThreadState;
 class ThreadContext;
-struct TidSlot;
 struct Context;
 struct ReportStack;
 class ReportDesc;
 class RegionAlloc;
-struct Trace;
-struct TracePart;
 
 typedef uptr AccessType;
 
@@ -208,8 +198,6 @@ enum : AccessType {
   kAccessVptr = 1 << 2,  // read or write of an object virtual table pointer
   kAccessFree = 1 << 3,  // synthetic memory access during memory freeing
   kAccessExternalPC = 1 << 4,  // access PC can have kExternalPCBit set
-  kAccessCheckOnly = 1 << 5,   // check for races, but don't store
-  kAccessNoRodata = 1 << 6,    // don't check for .rodata marker
 };
 
 // Descriptor of user's memory block.
@@ -231,8 +219,9 @@ enum ExternalTag : uptr {
   // as 16-bit values, see tsan_defs.h.
 };
 
-enum {
-  MutexTypeReport = MutexLastCommon,
+enum MutexType {
+  MutexTypeTrace = MutexLastCommon,
+  MutexTypeReport,
   MutexTypeSyncVar,
   MutexTypeAnnotations,
   MutexTypeAtExit,
@@ -240,10 +229,6 @@ enum {
   MutexTypeRacy,
   MutexTypeGlobalProc,
   MutexTypeInternalAlloc,
-  MutexTypeTrace,
-  MutexTypeSlot,
-  MutexTypeSlots,
-  MutexTypeMultiSlot,
 };
 
 }  // namespace __tsan
