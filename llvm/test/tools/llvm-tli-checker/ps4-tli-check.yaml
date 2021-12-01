@@ -37,7 +37,7 @@
 #
 ## The -COUNT suffix doesn't care if there are too many matches, so check
 ## the exact count first; the two directives should add up to that.
-# AVAIL: TLI knows 466 symbols, 235 available
+# AVAIL: TLI knows 468 symbols, 235 available
 # AVAIL-COUNT-235: {{^}} available
 # UNAVAIL-COUNT-231: not available
 
