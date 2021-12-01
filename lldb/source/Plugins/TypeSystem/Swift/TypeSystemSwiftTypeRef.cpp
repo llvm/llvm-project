@@ -552,6 +552,40 @@ swift::Demangle::NodePointer TypeSystemSwiftTypeRef::Transform(
   return fn(node);
 }
 
+/// Desugar a sugared type.
+static swift::Demangle::NodePointer
+Desugar(swift::Demangle::Demangler &dem, swift::Demangle::NodePointer node,
+        swift::Demangle::Node::Kind bound_kind,
+        swift::Demangle::Node::Kind kind, llvm::StringRef name) {
+  LLDB_SCOPED_TIMER();
+
+  using namespace swift::Demangle;
+  NodePointer desugared = dem.createNode(bound_kind);
+  NodePointer type = dem.createNode(Node::Kind::Type);
+  {
+    NodePointer concrete = dem.createNode(kind);
+    NodePointer swift =
+        dem.createNodeWithAllocatedText(Node::Kind::Module, swift::STDLIB_NAME);
+    concrete->addChild(swift, dem);
+    NodePointer ident =
+        dem.createNodeWithAllocatedText(Node::Kind::Identifier, name);
+    concrete->addChild(ident, dem);
+    type->addChild(concrete, dem);
+  }
+  NodePointer type_list = dem.createNode(Node::Kind::TypeList);
+
+  assert(node->getNumChildren() >= 1 && node->getNumChildren() <= 2 &&
+    "Sugared types should only have 1 or 2 children");
+  for (NodePointer child : *node) {
+    NodePointer type = dem.createNode(Node::Kind::Type);
+    type->addChild(child, dem);
+    type_list->addChild(type, dem);
+  }
+  desugared->addChild(type, dem);
+  desugared->addChild(type_list, dem);
+  return desugared;
+}
+
 /// Iteratively resolve all type aliases in \p node by looking up their
 /// desugared types in the debug info of module \p M.
 static swift::Demangle::NodePointer GetCanonicalNode(
@@ -559,7 +593,6 @@ static swift::Demangle::NodePointer GetCanonicalNode(
     swift::Demangle::Demangler &dem, swift::Demangle::NodePointer node) {
   using namespace swift::Demangle;
   return TypeSystemSwiftTypeRef::Transform(dem, node, [&](NodePointer node) {
-    NodePointer canonical = nullptr;
     auto kind = node->getKind();
     switch (kind) {
     case Node::Kind::SugaredOptional:
@@ -567,89 +600,22 @@ static swift::Demangle::NodePointer GetCanonicalNode(
       assert(node->getNumChildren() == 1);
       if (node->getNumChildren() != 1)
         return node;
-
-      canonical = dem.createNode(Node::Kind::BoundGenericEnum);
-      {
-        NodePointer type = dem.createNode(Node::Kind::Type);
-        NodePointer e = dem.createNode(Node::Kind::Enum);
-        NodePointer module = dem.createNodeWithAllocatedText(
-            Node::Kind::Module, swift::STDLIB_NAME);
-        e->addChild(module, dem);
-        NodePointer optional =
-            dem.createNodeWithAllocatedText(Node::Kind::Identifier, "Optional");
-        e->addChild(optional, dem);
-        type->addChild(e, dem);
-        canonical->addChild(type, dem);
-      }
-      {
-        NodePointer typelist = dem.createNode(Node::Kind::TypeList);
-        NodePointer type = dem.createNode(Node::Kind::Type);
-        type->addChild(node->getFirstChild(), dem);
-        typelist->addChild(type, dem);
-        canonical->addChild(typelist, dem);
-      }
-      return canonical;
+      return Desugar(dem, node, Node::Kind::BoundGenericEnum, Node::Kind::Enum,
+                     "Optional");
     case Node::Kind::SugaredArray: {
       assert(node->getNumChildren() == 1);
       if (node->getNumChildren() != 1)
         return node;
-
-      canonical = dem.createNode(Node::Kind::BoundGenericStructure);
-      {
-        NodePointer type = dem.createNode(Node::Kind::Type);
-        NodePointer structure = dem.createNode(Node::Kind::Structure);
-        NodePointer module = dem.createNodeWithAllocatedText(
-            Node::Kind::Module, swift::STDLIB_NAME);
-        structure->addChild(module, dem);
-        NodePointer array =
-            dem.createNodeWithAllocatedText(Node::Kind::Identifier, "Array");
-        structure->addChild(array, dem);
-        type->addChild(structure, dem);
-        canonical->addChild(type, dem);
-      }
-      {
-        NodePointer typelist = dem.createNode(Node::Kind::TypeList);
-        NodePointer type = dem.createNode(Node::Kind::Type);
-        type->addChild(node->getFirstChild(), dem);
-        typelist->addChild(type, dem);
-        canonical->addChild(typelist, dem);
-      }
-      return canonical;
+      return Desugar(dem, node, Node::Kind::BoundGenericStructure,
+                     Node::Kind::Structure, "Array");
     }
     case Node::Kind::SugaredDictionary:
       // FIXME: This isnt covered by any test.
       assert(node->getNumChildren() == 2);
       if (node->getNumChildren() != 2)
         return node;
-
-      canonical = dem.createNode(Node::Kind::BoundGenericStructure);
-      {
-        NodePointer type = dem.createNode(Node::Kind::Type);
-        NodePointer structure = dem.createNode(Node::Kind::Structure);
-        NodePointer module = dem.createNodeWithAllocatedText(
-            Node::Kind::Module, swift::STDLIB_NAME);
-        structure->addChild(module, dem);
-        NodePointer dict = dem.createNodeWithAllocatedText(
-            Node::Kind::Identifier, "Dictionary");
-        structure->addChild(dict, dem);
-        type->addChild(structure, dem);
-        canonical->addChild(type, dem);
-      }
-      {
-        NodePointer typelist = dem.createNode(Node::Kind::TypeList);
-        {
-          NodePointer type = dem.createNode(Node::Kind::Type);
-          type->addChild(node->getChild(0), dem);
-          typelist->addChild(type, dem);
-        }
-        {
-          NodePointer type = dem.createNode(Node::Kind::Type);
-          type->addChild(node->getChild(1), dem);
-          typelist->addChild(type, dem);
-        }
-        canonical->addChild(typelist, dem);
-      }
-      return canonical;
+      return Desugar(dem, node, Node::Kind::BoundGenericStructure,
+                     Node::Kind::Structure, "Dictionary");
     case Node::Kind::SugaredParen:
       assert(node->getNumChildren() == 1);
       if (node->getNumChildren() != 1)
@@ -737,40 +703,6 @@ clang::api_notes::APINotesManager *TypeSystemSwiftTypeRef::GetAPINotesManager(
       llvm::VersionTuple(swift_version.first, swift_version.second));
   apinotes_manager->loadCurrentModuleAPINotes(module, false, {path});
   return apinotes_manager.get();
-}
-
-/// Desugar a sugared type.
-static swift::Demangle::NodePointer
-Desugar(swift::Demangle::Demangler &dem, swift::Demangle::NodePointer node,
-        swift::Demangle::Node::Kind bound_kind,
-        swift::Demangle::Node::Kind kind, llvm::StringRef name) {
-  LLDB_SCOPED_TIMER();
-
-  using namespace swift::Demangle;
-  NodePointer desugared = dem.createNode(bound_kind);
-  NodePointer type = dem.createNode(Node::Kind::Type);
-  {
-    NodePointer concrete = dem.createNode(kind);
-    NodePointer swift =
-        dem.createNodeWithAllocatedText(Node::Kind::Module, swift::STDLIB_NAME);
-    concrete->addChild(swift, dem);
-    NodePointer ident =
-        dem.createNodeWithAllocatedText(Node::Kind::Identifier, name);
-    concrete->addChild(ident, dem);
-    type->addChild(concrete, dem);
-  }
-  NodePointer type_list = dem.createNode(Node::Kind::TypeList);
-
-  assert(node->getNumChildren() >= 1 && node->getNumChildren() <= 2 &&
-    "Sugared types should only have 1 or 2 children");
-  for (NodePointer child : *node) {
-    NodePointer type = dem.createNode(Node::Kind::Type);
-    type->addChild(child, dem);
-    type_list->addChild(type, dem);
-  }
-  desugared->addChild(type, dem);
-  desugared->addChild(type_list, dem);
-  return desugared;
 }
 
 /// Helper for \p GetSwiftName.
