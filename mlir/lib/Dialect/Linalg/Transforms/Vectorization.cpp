@@ -111,13 +111,6 @@ struct VectorizationResult {
   Operation *newOp;
 };
 
-/// Return a vector type of the same shape and element type as the (assumed)
-/// ShapedType of `v`.
-static VectorType extractVectorTypeFromShapedValue(Value v) {
-  auto st = v.getType().cast<ShapedType>();
-  return VectorType::get(st.getShape(), st.getElementType());
-}
-
 static llvm::Optional<vector::CombiningKind>
 getKindForOp(Operation *reductionOp) {
   if (!reductionOp)
