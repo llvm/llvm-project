@@ -9,6 +9,7 @@
 * [DexLimitSteps](Commands.md#DexLimitSteps)
 * [DexLabel](Commands.md#DexLabel)
 * [DexWatch](Commands.md#DexWatch)
+* [DexDeclareAddress](Commands.md#DexDeclareAddress)
 * [DexDeclareFile](Commands.md#DexDeclareFile)
 * [DexFinishTest](Commands.md#DexFinishTest)
 
@@ -229,6 +230,61 @@ arithmetic operators to get offsets from labels:
     DexExpectWatchValues(..., on_line=ref('my_line_name') + 3)
     DexExpectWatchValues(..., on_line=ref('my_line_name') - 5)
 
+
+### Heuristic
+This command does not contribute to the heuristic score.
+
+----
+## DexDeclareAddress
+    DexDeclareAddress(declared_address, expr, **on_line[, **hit_count])
+
+    Args:
+        declared_address (str): The unique name of an address, which can be used
+                                in DexExpectWatch-commands.
+        expr (str): An expression to evaluate to provide the value of this
+                    address.
+        on_line (int): The line at which the value of the expression will be
+                       assigned to the address.
+        hit_count (int): If provided, reads the value of the source expression
+                         after the line has been stepped onto the given number
+                         of times ('hit_count = 0' gives default behaviour).
+
+### Description
+Declares a variable that can be used in DexExpectWatch- commands as an expected
+value by using the `address(str[, int])` function. This is primarily
+useful for checking the values of pointer variables, which are generally
+determined at run-time (and so cannot be consistently matched by a hard-coded
+expected value), but may be consistent relative to each other. An example use of
+this command is as follows, using a set of pointer variables "foo", "bar", and
+"baz":
+
+    DexDeclareAddress('my_addr', 'bar', on_line=12)
+    DexExpectWatchValue('foo', address('my_addr'), on_line=10)
+    DexExpectWatchValue('bar', address('my_addr'), on_line=12)
+    DexExpectWatchValue('baz', address('my_addr', 16), on_line=14)
+
+On the first line, we declare the name of our variable 'my_addr'. This name must
+be unique (the same name cannot be declared twice), and attempting to reference
+an undeclared variable with `address` will fail. The value of the address
+variable will be assigned as the value of 'bar' when line 12 is first stepped
+on.
+
+On lines 2-4, we use the `address` function to refer to our variable. The first
+usage occurs on line 10, before the line where 'my_addr' is assigned its value;
+this is a valid use, as we assign the address value and check for correctness
+after gathering all debug information for the test. Thus the first test command
+will pass if 'foo' on line 10 has the same value as 'bar' on line 12.
+
+The second command will pass iff 'bar' is available at line 12 - even if the
+variable and lines are identical in DexDeclareAddress and DexExpectWatchValue,
+the latter will still expect a valid value. Similarly, if the variable for a
+DexDeclareAddress command is not available at the given line, any test against
+that address will fail.
+
+The `address` function also accepts an optional integer argument representing an
+offset (which may be negative) to be applied to the address value, so
+`address('my_addr', 16)` resolves to `my_addr + 16`. In the above example, this
+means that we expect `baz == bar + 16`.
 
 ### Heuristic
 This command does not contribute to the heuristic score.
