@@ -349,14 +349,6 @@ struct _LIBCPP_TEMPLATE_VIS allocator_traits
     }
 };
 
-// A version of `allocator_traits` for internal usage that SFINAEs away if the
-// given allocator doesn't have a nested `value_type`. This helps avoid hard
-// errors when forming implicit deduction guides for a container that has an
-// invalid Allocator type. See https://wg21.link/LWGXXXXX.
-// TODO(varconst): use the actual link once available.
-template <class _Alloc, class _ValueType = typename _Alloc::value_type>
-struct _LIBCPP_TEMPLATE_VIS __allocator_traits : allocator_traits<_Alloc> {};
-
 template <class _Traits, class _Tp>
 struct __rebind_alloc_helper {
 #ifndef _LIBCPP_CXX03_LANG
