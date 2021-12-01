@@ -8,6 +8,7 @@
 
 #include "OpFormatGen.h"
 #include "FormatGen.h"
+#include "OpClass.h"
 #include "mlir/Support/LogicalResult.h"
 #include "mlir/TableGen/Class.h"
 #include "mlir/TableGen/Format.h"

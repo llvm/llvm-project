@@ -15,20 +15,31 @@
 
 using namespace mlir;
 
-raw_indented_ostream &mlir::raw_indented_ostream::reindent(StringRef str) {
-  StringRef remaining = str;
-  // Find leading whitespace indent.
-  while (!remaining.empty()) {
-    auto split = remaining.split('\n');
+raw_indented_ostream &
+mlir::raw_indented_ostream::printReindented(StringRef str) {
+  StringRef output = str;
+  // Skip empty lines.
+  while (!output.empty()) {
+    auto split = output.split('\n');
     size_t indent = split.first.find_first_not_of(" \t");
     if (indent != StringRef::npos) {
+      // Set an initial value.
       leadingWs = indent;
       break;
     }
+    output = split.second;
+  }
+  // Determine the maximum indent.
+  StringRef remaining = output;
+  while (!remaining.empty()) {
+    auto split = remaining.split('\n');
+    size_t indent = split.first.find_first_not_of(" \t");
+    if (indent != StringRef::npos)
+      leadingWs = std::min(leadingWs, static_cast<int>(indent));
     remaining = split.second;
   }
   // Print, skipping the empty lines.
-  *this << remaining;
+  *this << output;
   leadingWs = 0;
   return *this;
 }

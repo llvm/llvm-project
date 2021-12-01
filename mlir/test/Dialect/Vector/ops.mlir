@@ -4,15 +4,31 @@
 func @vector_transfer_ops_0d(%arg0: tensor<f32>, %arg1: memref<f32>)
   -> tensor<f32> {
     %f0 = arith.constant 0.0 : f32
-    %0 = vector.transfer_read %arg0[], %f0 {permutation_map = affine_map<()->(0)>} :
-      tensor<f32>, vector<1xf32>
-    %1 = vector.transfer_write %0, %arg0[] {permutation_map = affine_map<()->(0)>} :
-      vector<1xf32>, tensor<f32>
-    %2 = vector.transfer_read %arg1[], %f0 {permutation_map = affine_map<()->(0)>} :
-      memref<f32>, vector<1xf32>
-    vector.transfer_write %2, %arg1[] {permutation_map = affine_map<()->(0)>} :
-      vector<1xf32>, memref<f32>
+    %0 = vector.transfer_read %arg0[], %f0 {permutation_map = affine_map<()->()>} :
+      tensor<f32>, vector<f32>
+    %1 = vector.transfer_write %0, %arg0[] {permutation_map = affine_map<()->()>} :
+      vector<f32>, tensor<f32>
+    %2 = vector.transfer_read %arg1[], %f0 {permutation_map = affine_map<()->()>} :
+      memref<f32>, vector<f32>
+    vector.transfer_write %2, %arg1[] {permutation_map = affine_map<()->()>} :
+      vector<f32>, memref<f32>
     return %1: tensor<f32>
+}
+
+// CHECK-LABEL: func @vector_transfer_ops_0d_from_higher_d(
+func @vector_transfer_ops_0d_from_higher_d(%arg0: tensor<?xf32>, %arg1: memref<?x?xf32>)
+  -> tensor<?xf32> {
+    %c0 = arith.constant 0 : index
+    %f0 = arith.constant 0.0 : f32
+    %0 = vector.transfer_read %arg0[%c0], %f0 {permutation_map = affine_map<(d0)->()>} :
+      tensor<?xf32>, vector<f32>
+    %1 = vector.transfer_write %0, %arg0[%c0] {permutation_map = affine_map<(d0)->()>} :
+      vector<f32>, tensor<?xf32>
+    %2 = vector.transfer_read %arg1[%c0, %c0], %f0 {permutation_map = affine_map<(d0, d1)->()>} :
+      memref<?x?xf32>, vector<f32>
+    vector.transfer_write %2, %arg1[%c0, %c0] {permutation_map = affine_map<(d0, d1)->()>} :
+      vector<f32>, memref<?x?xf32>
+    return %1: tensor<?xf32>
 }
 
 // CHECK-LABEL: func @vector_transfer_ops(
