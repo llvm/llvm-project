@@ -143,9 +143,6 @@ public:
   lldb::addr_t DoAllocateMemory(size_t size, uint32_t permissions,
                                 Status &error) override;
 
-  Status GetMemoryRegionInfo(lldb::addr_t load_addr,
-                             MemoryRegionInfo &region_info) override;
-
   Status DoDeallocateMemory(lldb::addr_t ptr) override;
 
   // Process STDIO
@@ -414,6 +411,9 @@ protected:
 
   Status DoWriteMemoryTags(lldb::addr_t addr, size_t len, int32_t type,
                            const std::vector<uint8_t> &tags) override;
+
+  Status DoGetMemoryRegionInfo(lldb::addr_t load_addr,
+                               MemoryRegionInfo &region_info) override;
 
 private:
   // For ProcessGDBRemote only
