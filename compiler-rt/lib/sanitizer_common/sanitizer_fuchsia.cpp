@@ -274,6 +274,15 @@ void *MmapFixedNoAccess(uptr fixed_addr, uptr size, const char *name) {
   UNIMPLEMENTED();
 }
 
+bool MprotectNoAccess(uptr addr, uptr size) {
+  return _zx_vmar_protect(_zx_vmar_root_self(), 0, Addr, Size) == ZX_OK;
+}
+
+bool MprotectReadOnly(uptr addr, uptr size) {
+  return _zx_vmar_protect(_zx_vmar_root_self(), ZX_VM_PERM_READ, Addr, Size) ==
+         ZX_OK;
+}
+
 void *MmapAlignedOrDieOnFatalError(uptr size, uptr alignment,
                                    const char *mem_type) {
   CHECK_GE(size, GetPageSize());
