@@ -4436,7 +4436,7 @@ SDValue DAGCombiner::visitREM(SDNode *N) {
   if (DAG.isKnownNeverZero(N1) && !TLI.isIntDivCheap(VT, Attr)) {
     SDValue OptimizedDiv =
         isSigned ? visitSDIVLike(N0, N1, N) : visitUDIVLike(N0, N1, N);
-    if (OptimizedDiv.getNode()) {
+    if (OptimizedDiv.getNode() && OptimizedDiv.getNode() != N) {
       // If the equivalent Div node also exists, update its users.
       unsigned DivOpcode = isSigned ? ISD::SDIV : ISD::UDIV;
       if (SDNode *DivNode = DAG.getNodeIfExists(DivOpcode, N->getVTList(),
