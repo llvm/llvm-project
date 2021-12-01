@@ -59,6 +59,10 @@ const ARMAttributeParser::DisplayHandler ARMAttributeParser::displayRoutines[] =
         ATTRIBUTE_HANDLER(DSP_extension),
         ATTRIBUTE_HANDLER(T2EE_use),
         ATTRIBUTE_HANDLER(Virtualization_use),
+        ATTRIBUTE_HANDLER(PAC_extension),
+        ATTRIBUTE_HANDLER(BTI_extension),
+        ATTRIBUTE_HANDLER(PACRET_use),
+        ATTRIBUTE_HANDLER(BTI_use),
         ATTRIBUTE_HANDLER(nodefaults),
 };
 
@@ -348,6 +352,28 @@ Error ARMAttributeParser::Virtualization_use(AttrType tag) {
                                   "Virtualization Extensions",
                                   "TrustZone + Virtualization Extensions"};
   return parseStringAttribute("Virtualization_use", tag, makeArrayRef(strings));
+}
+
+Error ARMAttributeParser::PAC_extension(ARMBuildAttrs::AttrType tag) {
+  static const char *strings[] = {"Not Permitted", "Permitted in NOP space",
+                                  "Permitted"};
+  return parseStringAttribute("PAC_extension", tag, makeArrayRef(strings));
+}
+
+Error ARMAttributeParser::BTI_extension(ARMBuildAttrs::AttrType tag) {
+  static const char *strings[] = {"Not Permitted", "Permitted in NOP space",
+                                  "Permitted"};
+  return parseStringAttribute("BTI_extension", tag, makeArrayRef(strings));
+}
+
+Error ARMAttributeParser::PACRET_use(ARMBuildAttrs::AttrType tag) {
+  static const char *strings[] = {"Not Used", "Used"};
+  return parseStringAttribute("PACRET_use", tag, makeArrayRef(strings));
+}
+
+Error ARMAttributeParser::BTI_use(ARMBuildAttrs::AttrType tag) {
+  static const char *strings[] = {"Not Used", "Used"};
+  return parseStringAttribute("BTI_use", tag, makeArrayRef(strings));
 }
 
 Error ARMAttributeParser::nodefaults(AttrType tag) {

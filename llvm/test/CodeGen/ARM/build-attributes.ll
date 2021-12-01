@@ -233,6 +233,7 @@
 ; RUN: llc < %s -mtriple=thumbv8.1m.main-none-none-eabi | FileCheck %s --check-prefix=ARMv81M-MAIN
 ; RUN: llc < %s -mtriple=thumbv8.1m.main-none-none-eabi -mattr=+mve | FileCheck %s --check-prefix=ARMv81M-MAIN-MVEINT
 ; RUN: llc < %s -mtriple=thumbv8.1m.main-none-none-eabi -mattr=+mve.fp | FileCheck %s --check-prefix=ARMv81M-MAIN-MVEFP
+; RUN: llc < %s -mtriple=thumbv8.1m.main-none-none-eabi -mattr=+pacbti | FileCheck %s --check-prefix=ARMv81M-MAIN-PACBTI
 ; RUN: llc < %s -mtriple=arm-none-none-eabi -mcpu=cortex-m55 | FileCheck %s --check-prefix=CORTEX-M55
 
 ; CPU-SUPPORTED-NOT: is not a recognized processor for this target
@@ -1723,6 +1724,8 @@
 ; ARMv81M-MAIN-MVEINT: .eabi_attribute 48, 1 @ Tag_MVE_arch
 ; ARMv81M-MAIN-MVEFP: .eabi_attribute 6, 21 @ Tag_CPU_arch
 ; ARMv81M-MAIN-MVEFP: .eabi_attribute 48, 2 @ Tag_MVE_arch
+; ARMv81M-MAIN-PACBTI: .eabi_attribute 50, 2 @ Tag_PAC_extension
+; ARMv81M-MAIN-PACBTI: .eabi_attribute 52, 2 @ Tag_BTI_extension
 
 ; CORTEX-M55: .cpu cortex-m55
 ; CORTEX-M55: .eabi_attribute 6, 21
