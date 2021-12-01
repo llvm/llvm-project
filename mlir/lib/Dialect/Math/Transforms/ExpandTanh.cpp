@@ -23,13 +23,13 @@ using namespace mlir;
 ///   1) 1-exp^{-2x} / 1+exp^{-2x}, if x => 0
 ///   2) exp^{2x}-1 / exp^{2x}+1  , if x < 0
 static LogicalResult convertTanhOp(math::TanhOp op, PatternRewriter &rewriter) {
-  auto floatType = op.operand().getType();
+  auto floatType = op.getOperand().getType();
   Location loc = op.getLoc();
   auto floatOne = rewriter.getFloatAttr(floatType, 1.0);
   auto floatTwo = rewriter.getFloatAttr(floatType, 2.0);
   Value one = rewriter.create<arith::ConstantOp>(loc, floatOne);
   Value two = rewriter.create<arith::ConstantOp>(loc, floatTwo);
-  Value doubledX = rewriter.create<arith::MulFOp>(loc, op.operand(), two);
+  Value doubledX = rewriter.create<arith::MulFOp>(loc, op.getOperand(), two);
 
   // Case 1: tanh(x) = 1-exp^{-2x} / 1+exp^{-2x}
   Value negDoubledX = rewriter.create<arith::NegFOp>(loc, doubledX);
@@ -48,7 +48,7 @@ static LogicalResult convertTanhOp(math::TanhOp op, PatternRewriter &rewriter) {
   auto floatZero = rewriter.getFloatAttr(floatType, 0.0);
   Value zero = rewriter.create<arith::ConstantOp>(loc, floatZero);
   Value cmpRes = rewriter.create<arith::CmpFOp>(loc, arith::CmpFPredicate::OGE,
-                                                op.operand(), zero);
+                                                op.getOperand(), zero);
   rewriter.replaceOpWithNewOp<SelectOp>(op, cmpRes, positiveRes, negativeRes);
   return success();
 }
