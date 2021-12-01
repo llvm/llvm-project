@@ -244,6 +244,8 @@ class ProfiledBinary {
 
   bool UsePseudoProbes = false;
 
+  bool UseFSDiscriminator = false;
+
   // Whether we need to symbolize all instructions to get function context size.
   bool TrackFuncContextSize = false;
 
@@ -259,6 +261,10 @@ class ProfiledBinary {
   void setPreferredTextSegmentAddresses(const ELFFile<ELFT> &Obj, StringRef FileName);
 
   void decodePseudoProbe(const ELFObjectFileBase *Obj);
+
+  void
+  checkUseFSDiscriminator(const ELFObjectFileBase *Obj,
+                          std::map<SectionRef, SectionSymbolsTy> &AllSymbols);
 
   // Set up disassembler and related components.
   void setUpDisassembler(const ELFObjectFileBase *Obj);
@@ -358,6 +364,7 @@ public:
   size_t getCodeOffsetsSize() const { return CodeAddrOffsets.size(); }
 
   bool usePseudoProbes() const { return UsePseudoProbes; }
+  bool useFSDiscriminator() const { return UseFSDiscriminator; }
   // Get the index in CodeAddrOffsets for the address
   // As we might get an address which is not the code
   // here it would round to the next valid code address by
