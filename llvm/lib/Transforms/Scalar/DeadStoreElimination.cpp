@@ -166,8 +166,8 @@ static cl::opt<unsigned> MemorySSAPathCheckLimit(
 // those cases, the flag can be used to check if DSE's MemorySSA optimizations
 // impact follow-up passes.
 static cl::opt<bool>
-    OptimizeMemorySSA("dse-optimize-memoryssa", cl::init(false), cl::Hidden,
-                      cl::desc("Allow DSE to optimize memory accesses"));
+    OptimizeMemorySSA("dse-optimize-memoryssa", cl::init(true), cl::Hidden,
+                      cl::desc("Allow DSE to optimize memory accesses."));
 
 //===----------------------------------------------------------------------===//
 // Helper functions
