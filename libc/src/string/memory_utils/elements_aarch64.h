@@ -110,8 +110,10 @@ struct N32 {
 };
 
 using _32 = N32;
+using _64 = Repeated<_32, 2>;
 #else
 using _32 = __llvm_libc::scalar::_32;
+using _64 = __llvm_libc::scalar::_64;
 #endif // __ARM_NEON
 
 } // namespace aarch64
