@@ -62,13 +62,10 @@ void VEInstPrinter::printOperand(const MCInst *MI, int OpNum,
   }
 
   if (MO.isImm()) {
-    switch (MI->getOpcode()) {
-    default:
-      // Expects signed 32bit literals
-      int32_t TruncatedImm = static_cast<int32_t>(MO.getImm());
-      O << TruncatedImm;
-      return;
-    }
+    // Expects signed 32bit literals.
+    int32_t TruncatedImm = static_cast<int32_t>(MO.getImm());
+    O << TruncatedImm;
+    return;
   }
 
   assert(MO.isExpr() && "Unknown operand kind in printOperand");
