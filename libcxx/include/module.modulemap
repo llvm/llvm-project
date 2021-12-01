@@ -662,6 +662,22 @@ module std [system] {
   module numeric {
     header "numeric"
     export *
+
+    module __numeric {
+      module accumulate               { private header "__numeric/accumulate.h" }
+      module adjacent_difference      { private header "__numeric/adjacent_difference.h" }
+      module exclusive_scan           { private header "__numeric/exclusive_scan.h" }
+      module gcd_lcm                  { private header "__numeric/gcd_lcm.h" }
+      module inclusive_scan           { private header "__numeric/inclusive_scan.h" }
+      module inner_product            { private header "__numeric/inner_product.h" }
+      module iota                     { private header "__numeric/iota.h" }
+      module midpoint                 { private header "__numeric/midpoint.h" }
+      module partial_sum              { private header "__numeric/partial_sum.h" }
+      module reduce                   { private header "__numeric/reduce.h" }
+      module transform_exclusive_scan { private header "__numeric/transform_exclusive_scan.h" }
+      module transform_inclusive_scan { private header "__numeric/transform_inclusive_scan.h" }
+      module transform_reduce         { private header "__numeric/transform_reduce.h" }
+    }
   }
   module optional {
     header "optional"
