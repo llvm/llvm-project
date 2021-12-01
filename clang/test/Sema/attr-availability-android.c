@@ -5,7 +5,7 @@ void f0(int) __attribute__((availability(android,introduced=14,deprecated=19)));
 void f1(int) __attribute__((availability(android,introduced=16)));
 void f2(int) __attribute__((availability(android,introduced=14,deprecated=16))); // expected-note {{'f2' has been explicitly marked deprecated here}}
 #ifdef WARN_PARTIAL
-// expected-note-re@+2 {{'f3' has been marked as being introduced in Android 19 here, but the deployment target is Android 16.0.0{{$}}}}
+// expected-note-re@+2 {{'f3' has been marked as being introduced in Android 19 here, but the deployment target is Android 16{{$}}}}
 #endif
 void f3(int) __attribute__((availability(android,introduced=19)));
 void f4(int) __attribute__((availability(android,introduced=9,deprecated=11,obsoleted=16), availability(ios,introduced=2.0,deprecated=3.0))); // expected-note{{explicitly marked unavailable}}

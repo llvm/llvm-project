@@ -472,10 +472,9 @@ public:
       : NetBSDTargetInfo<X86_32TargetInfo>(Triple, Opts) {}
 
   unsigned getFloatEvalMethod() const override {
-    unsigned Major, Minor, Micro;
-    getTriple().getOSVersion(Major, Minor, Micro);
+    VersionTuple OsVersion = getTriple().getOSVersion();
     // New NetBSD uses the default rounding mode.
-    if (Major >= 7 || (Major == 6 && Minor == 99 && Micro >= 26) || Major == 0)
+    if (OsVersion >= VersionTuple(6, 99, 26) || OsVersion.getMajor() == 0)
       return X86_32TargetInfo::getFloatEvalMethod();
     // NetBSD before 6.99.26 defaults to "double" rounding.
     return 1;

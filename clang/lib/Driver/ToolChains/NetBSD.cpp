@@ -270,10 +270,9 @@ void netbsd::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back(Args.MakeArgString(ToolChain.getCompilerRTPath()));
   }
 
-  unsigned Major, Minor, Micro;
-  Triple.getOSVersion(Major, Minor, Micro);
+  VersionTuple OsVersion = Triple.getOSVersion();
   bool useLibgcc = true;
-  if (Major >= 7 || Major == 0) {
+  if (OsVersion >= VersionTuple(7) || OsVersion.getMajor() == 0) {
     switch (ToolChain.getArch()) {
     case llvm::Triple::aarch64:
     case llvm::Triple::aarch64_be:
@@ -409,9 +408,8 @@ Tool *NetBSD::buildAssembler() const {
 Tool *NetBSD::buildLinker() const { return new tools::netbsd::Linker(*this); }
 
 ToolChain::CXXStdlibType NetBSD::GetDefaultCXXStdlibType() const {
-  unsigned Major, Minor, Micro;
-  getTriple().getOSVersion(Major, Minor, Micro);
-  if (Major >= 7 || Major == 0) {
+  VersionTuple OsVersion = getTriple().getOSVersion();
+  if (OsVersion >= VersionTuple(7) || OsVersion.getMajor() == 0) {
     switch (getArch()) {
     case llvm::Triple::aarch64:
     case llvm::Triple::aarch64_be:
@@ -505,14 +503,13 @@ void NetBSD::addClangTargetOptions(const ArgList &DriverArgs,
   if (SanArgs.hasAnySanitizer())
     CC1Args.push_back("-D_REENTRANT");
 
-  unsigned Major, Minor, Micro;
-  getTriple().getOSVersion(Major, Minor, Micro);
+  VersionTuple OsVersion = getTriple().getOSVersion();
   bool UseInitArrayDefault =
-    Major >= 9 || Major == 0 ||
-    getTriple().getArch() == llvm::Triple::aarch64 ||
-    getTriple().getArch() == llvm::Triple::aarch64_be ||
-    getTriple().getArch() == llvm::Triple::arm ||
-    getTriple().getArch() == llvm::Triple::armeb;
+      OsVersion >= VersionTuple(9) || OsVersion.getMajor() == 0 ||
+      getTriple().getArch() == llvm::Triple::aarch64 ||
+      getTriple().getArch() == llvm::Triple::aarch64_be ||
+      getTriple().getArch() == llvm::Triple::arm ||
+      getTriple().getArch() == llvm::Triple::armeb;
 
   if (!DriverArgs.hasFlag(options::OPT_fuse_init_array,
                           options::OPT_fno_use_init_array, UseInitArrayDefault))
