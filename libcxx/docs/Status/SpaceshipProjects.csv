@@ -5,11 +5,14 @@ Section,Description,Dependencies,Assignee,Complete
 | `[expos.only.func] <https://wg21.link/expos.only.func>`_,"| `synth-three-way <https://reviews.llvm.org/D107721>`_
 | `synth-three-way-result <https://reviews.llvm.org/D107721>`_",[cmp.concept],Kent Ross,|Complete|
 | `[comparisons.three.way] <https://wg21.link/comparisons.three.way>`_,| `compare_three_way <https://reviews.llvm.org/D80899>`_,[cmp.concept],Arthur O'Dwyer,|Complete|
-| `[cmp.alg] <https://wg21.link/cmp.alg>`_,"| `strong_order <https://reviews.llvm.org/D107036>`_
-| `weak_order <https://reviews.llvm.org/D107036>`_
-| `partial_order <https://reviews.llvm.org/D107036>`_",None,Arthur O'Dwyer,|In Progress|
+| `[cmp.alg] <https://wg21.link/cmp.alg>`_,"| `strong_order <https://reviews.llvm.org/D110738>`_
+| `weak_order <https://reviews.llvm.org/D110738>`_
+| `partial_order <https://reviews.llvm.org/D110738>`_
+| `strong_order_fallback <https://reviews.llvm.org/D111514>`_
+| `weak_order_fallback <https://reviews.llvm.org/D111514>`_
+| `partial_order_fallback <https://reviews.llvm.org/D111514>`_",None,Arthur O'Dwyer,|In Progress|
 | `[alg.three.way] <https://wg21.link/alg.three.way>`_,| `lexicographical_compare_three_way <https://reviews.llvm.org/D80902>`_,[comparisons.three.way],Christopher Di Bella,|In Progress|
-| `[coroutine.handle.compare] <https://wg21.link/coroutine.handle.compare>`_,| coroutine_handle,[comparisons.three.way],Unassigned,|Complete|
+| `[coroutine.handle.compare] <https://wg21.link/coroutine.handle.compare>`_,| `coroutine_handle <https://reviews.llvm.org/D109433>`_,[comparisons.three.way],Chuanqi Xu,|Complete|
 | `[pairs.spec] <https://wg21.link/pairs.spec>`_,| `pair <https://reviews.llvm.org/D107721>`_,[expos.only.func],Kent Ross,|Complete|
 | `[syserr.errcat.nonvirtuals] <https://wg21.link/syserr.errcat.nonvirtuals>`_,| error_category,[comparisons.three.way],Unassigned,|Not Started|
 | `[syserr.compare] <https://wg21.link/syserr.compare>`_,"| error_code
@@ -42,8 +45,8 @@ Section,Description,Dependencies,Assignee,Complete
 | set",[expos.only.func],Unassigned,|Not Started|
 | `[queue.ops] <https://wg21.link/queue.ops>`_,| queue,None,Unassigned,|Not Started|
 | `[stack.ops] <https://wg21.link/stack.ops>`_,| stack,None,Unassigned,|Not Started|
-| `[reverse.iter.cmp] <https://wg21.link/reverse.iter.cmp>`_,| reverse_iterator,None,Unassigned,|Not Started|
-| `[move.iter.cmp] <https://wg21.link/move.iter.cmp>`_,| move_iterator,None,Unassigned,|Not Started|
+| `[reverse.iter.cmp] <https://wg21.link/reverse.iter.cmp>`_,| reverse_iterator,None,Mikhail Maltsev,|Complete|
+| `[move.iter.op.comp] <https://wg21.link/move.iter.op.comp>`_,| move_iterator,None,Unassigned,|Not Started|
 | `[counted.iter.cmp] <https://wg21.link/counted.iter.cmp>`_,| counted_iterator,None,Unassigned,|Not Started|
 | `[range.iota.iterator] <https://wg21.link/range.iota.iterator>`_,| ranges::iota_view::iterator,[concepts.cmp],Unassigned,|Not Started|
 | `[range.transform.iterator] <https://wg21.link/range.transform.iterator>`_,| ranges::transform_view::iterator,[concepts.cmp],Unassigned,|Not Started|
