@@ -214,7 +214,7 @@ void __tsan_malloc(ThreadState *thr, uptr pc, uptr p, uptr sz) {
 }
 
 void __tsan_free(uptr p, uptr sz) {
-  ctx->metamap.FreeRange(get_cur_proc(), p, sz);
+  ctx->metamap.FreeRange(get_cur_proc(), p, sz, false);
 }
 
 void __tsan_go_start(ThreadState *parent, ThreadState **pthr, void *pc) {
