@@ -1,6 +1,3 @@
-// amdgpu failing this test after Reapply "OpenMP: Start calling setTargetAttributes for generated kernels"
-// XFAIL: *
-
 // RUN: %clang_cc1 -verify -fopenmp -fopenmp-cuda-mode -x c++ \
 // RUN:  -triple powerpc64le-unknown-unknown -DCUDA \
 // RUN:  -fopenmp-targets=nvptx64-nvidia-cuda -emit-llvm-bc %s -o \
