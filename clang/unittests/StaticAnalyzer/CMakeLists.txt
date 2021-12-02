@@ -31,5 +31,6 @@ clang_target_link_libraries(StaticAnalysisTests
   clangSerialization
   clangStaticAnalyzerCore
   clangStaticAnalyzerFrontend
+  clangTesting
   clangTooling
   )
