@@ -113,91 +113,6 @@ struct ScopedWriterLock {
 } // end anonymous namespace.
 
 //===----------------------------------------------------------------------===//
-// AffineMap and IntegerSet hashing
-//===----------------------------------------------------------------------===//
-
-/// A utility function to safely get or create a uniqued instance within the
-/// given set container.
-template <typename ValueT, typename DenseInfoT, typename KeyT,
-          typename ConstructorFn>
-static ValueT safeGetOrCreate(DenseSet<ValueT, DenseInfoT> &container,
-                              KeyT &&key, llvm::sys::SmartRWMutex<true> &mutex,
-                              bool threadingIsEnabled,
-                              ConstructorFn &&constructorFn) {
-  // Check for an existing instance in read-only mode.
-  if (threadingIsEnabled) {
-    llvm::sys::SmartScopedReader<true> instanceLock(mutex);
-    auto it = container.find_as(key);
-    if (it != container.end())
-      return *it;
-  }
-
-  // Acquire a writer-lock so that we can safely create the new instance.
-  ScopedWriterLock instanceLock(mutex, threadingIsEnabled);
-
-  // Check for an existing instance again here, because another writer thread
-  // may have already created one. Otherwise, construct a new instance.
-  auto existing = container.insert_as(ValueT(), key);
-  if (existing.second)
-    return *existing.first = constructorFn();
-  return *existing.first;
-}
-
-namespace {
-struct AffineMapKeyInfo : DenseMapInfo<AffineMap> {
-  // Affine maps are uniqued based on their dim/symbol counts and affine
-  // expressions.
-  using KeyTy = std::tuple<unsigned, unsigned, ArrayRef<AffineExpr>>;
-  using DenseMapInfo<AffineMap>::isEqual;
-
-  static unsigned getHashValue(const AffineMap &key) {
-    return getHashValue(
-        KeyTy(key.getNumDims(), key.getNumSymbols(), key.getResults()));
-  }
-
-  static unsigned getHashValue(KeyTy key) {
-    return hash_combine(
-        std::get<0>(key), std::get<1>(key),
-        hash_combine_range(std::get<2>(key).begin(), std::get<2>(key).end()));
-  }
-
-  static bool isEqual(const KeyTy &lhs, AffineMap rhs) {
-    if (rhs == getEmptyKey() || rhs == getTombstoneKey())
-      return false;
-    return lhs == std::make_tuple(rhs.getNumDims(), rhs.getNumSymbols(),
-                                  rhs.getResults());
-  }
-};
-
-struct IntegerSetKeyInfo : DenseMapInfo<IntegerSet> {
-  // Integer sets are uniqued based on their dim/symbol counts, affine
-  // expressions appearing in the LHS of constraints, and eqFlags.
-  using KeyTy =
-      std::tuple<unsigned, unsigned, ArrayRef<AffineExpr>, ArrayRef<bool>>;
-  using DenseMapInfo<IntegerSet>::isEqual;
-
-  static unsigned getHashValue(const IntegerSet &key) {
-    return getHashValue(KeyTy(key.getNumDims(), key.getNumSymbols(),
-                              key.getConstraints(), key.getEqFlags()));
-  }
-
-  static unsigned getHashValue(KeyTy key) {
-    return hash_combine(
-        std::get<0>(key), std::get<1>(key),
-        hash_combine_range(std::get<2>(key).begin(), std::get<2>(key).end()),
-        hash_combine_range(std::get<3>(key).begin(), std::get<3>(key).end()));
-  }
-
-  static bool isEqual(const KeyTy &lhs, IntegerSet rhs) {
-    if (rhs == getEmptyKey() || rhs == getTombstoneKey())
-      return false;
-    return lhs == std::make_tuple(rhs.getNumDims(), rhs.getNumSymbols(),
-                                  rhs.getConstraints(), rhs.getEqFlags());
-  }
-};
-} // end anonymous namespace.
-
-//===----------------------------------------------------------------------===//
 // MLIRContextImpl
 //===----------------------------------------------------------------------===//
 
@@ -279,19 +194,7 @@ public:
   // Affine uniquing
   //===--------------------------------------------------------------------===//
 
-  // Affine allocator and mutex for thread safety.
-  llvm::BumpPtrAllocator affineAllocator;
-  llvm::sys::SmartRWMutex<true> affineMutex;
-
-  // Affine map uniquing.
-  using AffineMapSet = DenseSet<AffineMap, AffineMapKeyInfo>;
-  AffineMapSet affineMaps;
-
-  // Integer set uniquing.
-  using IntegerSets = DenseSet<IntegerSet, IntegerSetKeyInfo>;
-  IntegerSets integerSets;
-
-  // Affine expression uniquing.
+  // Affine expression, map and integer set uniquing.
   StorageUniquer affineUniquer;
 
   //===--------------------------------------------------------------------===//
@@ -415,6 +318,8 @@ MLIRContext::MLIRContext(const DialectRegistry &registry, Threading setting)
   impl->affineUniquer
       .registerParametricStorageType<AffineConstantExprStorage>();
   impl->affineUniquer.registerParametricStorageType<AffineDimExprStorage>();
+  impl->affineUniquer.registerParametricStorageType<AffineMapStorage>();
+  impl->affineUniquer.registerParametricStorageType<IntegerSetStorage>();
 }
 
 MLIRContext::~MLIRContext() {}
@@ -995,21 +900,10 @@ AffineMap AffineMap::getImpl(unsigned dimCount, unsigned symbolCount,
                              ArrayRef<AffineExpr> results,
                              MLIRContext *context) {
   auto &impl = context->getImpl();
-  auto key = std::make_tuple(dimCount, symbolCount, results);
-
-  // Safely get or create an AffineMap instance.
-  return safeGetOrCreate(
-      impl.affineMaps, key, impl.affineMutex, impl.threadingIsEnabled, [&] {
-        auto *res = impl.affineAllocator.Allocate<detail::AffineMapStorage>();
-
-        // Copy the results into the bump pointer.
-        results = copyArrayRefInto(impl.affineAllocator, results);
-
-        // Initialize the memory using placement new.
-        new (res)
-            detail::AffineMapStorage{dimCount, symbolCount, results, context};
-        return AffineMap(res);
-      });
+  auto *storage = impl.affineUniquer.get<AffineMapStorage>(
+      [&](AffineMapStorage *storage) { storage->context = context; }, dimCount,
+      symbolCount, results);
+  return AffineMap(storage);
 }
 
 /// Check whether the arguments passed to the AffineMap::get() are consistent.
@@ -1069,33 +963,9 @@ IntegerSet IntegerSet::get(unsigned dimCount, unsigned symbolCount,
   assert(constraints.size() == eqFlags.size());
 
   auto &impl = constraints[0].getContext()->getImpl();
-
-  // A utility function to construct a new IntegerSetStorage instance.
-  auto constructorFn = [&] {
-    auto *res = impl.affineAllocator.Allocate<detail::IntegerSetStorage>();
-
-    // Copy the results and equality flags into the bump pointer.
-    constraints = copyArrayRefInto(impl.affineAllocator, constraints);
-    eqFlags = copyArrayRefInto(impl.affineAllocator, eqFlags);
-
-    // Initialize the memory using placement new.
-    new (res)
-        detail::IntegerSetStorage{dimCount, symbolCount, constraints, eqFlags};
-    return IntegerSet(res);
-  };
-
-  // If this instance is uniqued, then we handle it separately so that multiple
-  // threads may simultaneously access existing instances.
-  if (constraints.size() < IntegerSet::kUniquingThreshold) {
-    auto key = std::make_tuple(dimCount, symbolCount, constraints, eqFlags);
-    return safeGetOrCreate(impl.integerSets, key, impl.affineMutex,
-                           impl.threadingIsEnabled, constructorFn);
-  }
-
-  // Otherwise, acquire a writer-lock so that we can safely create the new
-  // instance.
-  ScopedWriterLock affineLock(impl.affineMutex, impl.threadingIsEnabled);
-  return constructorFn();
+  auto *storage = impl.affineUniquer.get<IntegerSetStorage>(
+      [](IntegerSetStorage *) {}, dimCount, symbolCount, constraints, eqFlags);
+  return IntegerSet(storage);
 }
 
 //===----------------------------------------------------------------------===//
