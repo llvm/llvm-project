@@ -100,6 +100,7 @@ TEST(SanitizerCommon, Mprotect) {
 
   MprotectNoAccess(reinterpret_cast<uptr>(mem), PageSize);
   volatile u8 t;
+  (void)t;
   EXPECT_DEATH(t = mem[0], "");
   EXPECT_DEATH(t = mem[PageSize / 2], "");
   EXPECT_DEATH(t = mem[PageSize - 1], "");
