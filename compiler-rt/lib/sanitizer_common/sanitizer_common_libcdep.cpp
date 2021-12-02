@@ -29,6 +29,7 @@ void SetSoftRssLimitExceededCallback(void (*Callback)(bool exceeded)) {
 SANITIZER_WEAK_ATTRIBUTE StackDepotStats StackDepotGetStats() { return {}; }
 
 void *BackgroundThread(void *arg) {
+  VPrintf(1, "%s: Started BackgroundThread\n", SanitizerToolName);
   const uptr hard_rss_limit_mb = common_flags()->hard_rss_limit_mb;
   const uptr soft_rss_limit_mb = common_flags()->soft_rss_limit_mb;
   const bool heap_profile = common_flags()->heap_profile;
@@ -112,8 +113,16 @@ void MaybeStartBackgroudThread() {
   if (!common_flags()->hard_rss_limit_mb &&
       !common_flags()->soft_rss_limit_mb &&
       !common_flags()->heap_profile) return;
-  if (!&real_pthread_create) return;  // Can't spawn the thread anyway.
-  internal_start_thread(BackgroundThread, nullptr);
+  if (!&real_pthread_create) {
+    VPrintf(1, "%s: real_pthread_create undefined\n", SanitizerToolName);
+    return;  // Can't spawn the thread anyway.
+  }
+
+  static bool started = false;
+  if (!started) {
+    started = true;
+    internal_start_thread(BackgroundThread, nullptr);
+  }
 #endif
 }
 
