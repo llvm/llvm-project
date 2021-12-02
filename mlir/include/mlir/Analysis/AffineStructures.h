@@ -825,8 +825,8 @@ public:
   /// constraint systems are updated so that they have the union of all
   /// identifiers, with `this`'s original identifiers appearing first followed
   /// by any of `other`'s identifiers that didn't appear in `this`. Local
-  /// identifiers are also aligned but may not follow ordering as
-  /// dimension/symbol ids do.
+  /// identifiers in `other` that have the same division representation as local
+  /// identifiers in `this` are merged into one.
   //  E.g.: Input: `this`  has (%i, %j) [%M, %N]
   //               `other` has (%k, %j) [%P, %N, %M]
   //        Output: both `this`, `other` have (%i, %j, %k) [%M, %N, %P]

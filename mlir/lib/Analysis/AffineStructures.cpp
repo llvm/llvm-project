@@ -493,8 +493,8 @@ static bool LLVM_ATTRIBUTE_UNUSED areIdsUnique(
 /// dimension-wise and symbol-wise unique; both constraint systems are updated
 /// so that they have the union of all identifiers, with A's original
 /// identifiers appearing first followed by any of B's identifiers that didn't
-/// appear in A. Local identifiers are also aligned but may not follow ordering
-/// as dimension/symbol ids do.
+/// appear in A. Local identifiers in B that have the same division
+/// representation as local identifiers in A are merged into one.
 //  E.g.: Input: A has ((%i, %j) [%M, %N]) and B has (%k, %j) [%P, %N, %M])
 //        Output: both A, B have (%i, %j, %k) [%M, %N, %P]
 static void mergeAndAlignIds(unsigned offset, FlatAffineValueConstraints *a,
@@ -1954,30 +1954,30 @@ void FlatAffineConstraints::mergeLocalIds(FlatAffineConstraints &other) {
   assert(getNumSymbolIds() == other.getNumSymbolIds() &&
          "Number of symbol ids should match");
 
-  FlatAffineConstraints &fac1 = *this;
-  FlatAffineConstraints &fac2 = other;
+  FlatAffineConstraints &facA = *this;
+  FlatAffineConstraints &facB = other;
 
-  // Merge local ids of fac1 and fac2 without using division information,
-  // i.e. append local ids of `fac2` to `fac1` and insert local ids of `fac1`
-  // to `fac2` at start of its local ids.
-  unsigned initLocals = fac1.getNumLocalIds();
-  insertLocalId(fac1.getNumLocalIds(), fac2.getNumLocalIds());
-  fac2.insertLocalId(0, initLocals);
+  // Merge local ids of facA and facB without using division information,
+  // i.e. append local ids of `facB` to `facA` and insert local ids of `facA`
+  // to `facB` at start of its local ids.
+  unsigned initLocals = facA.getNumLocalIds();
+  insertLocalId(facA.getNumLocalIds(), facB.getNumLocalIds());
+  facB.insertLocalId(0, initLocals);
 
   // Get division representations from each FAC.
-  std::vector<SmallVector<int64_t, 8>> divs1, divs2;
-  SmallVector<unsigned, 4> denoms1, denoms2;
-  fac1.getLocalReprs(divs1, denoms1);
-  fac2.getLocalReprs(divs2, denoms2);
+  std::vector<SmallVector<int64_t, 8>> divsA, divsB;
+  SmallVector<unsigned, 4> denomsA, denomsB;
+  facA.getLocalReprs(divsA, denomsA);
+  facB.getLocalReprs(divsB, denomsB);
 
-  // Copy division information for fac2 into `divs1` and `denoms1`, so that
+  // Copy division information for facB into `divsA` and `denomsA`, so that
   // these have the combined division information of both FACs. Since newly
-  // added local variables in fac1 and fac2 have no constraints, they will not
+  // added local variables in facA and facB have no constraints, they will not
   // have any division representation.
-  std::copy(divs2.begin() + initLocals, divs2.end(),
-            divs1.begin() + initLocals);
-  std::copy(denoms2.begin() + initLocals, denoms2.end(),
-            denoms1.begin() + initLocals);
+  std::copy(divsB.begin() + initLocals, divsB.end(),
+            divsA.begin() + initLocals);
+  std::copy(denomsB.begin() + initLocals, denomsB.end(),
+            denomsA.begin() + initLocals);
 
   // Find and merge duplicate divisions.
   // TODO: Add division normalization to support divisions that differ by
@@ -1987,35 +1987,35 @@ void FlatAffineConstraints::mergeLocalIds(FlatAffineConstraints &other) {
   // `i`. This would make sure that all divisions depending on other local
   // variables that can be merged, are merged.
   unsigned localOffset = getIdKindOffset(IdKind::Local);
-  for (unsigned i = 0; i < divs1.size(); ++i) {
+  for (unsigned i = 0; i < divsA.size(); ++i) {
     // Check if a division representation exists for the `i^th` local id.
-    if (denoms1[i] == 0)
+    if (denomsA[i] == 0)
       continue;
     // Check if a division exists which is a duplicate of the division at `i`.
-    for (unsigned j = i + 1; j < divs1.size(); ++j) {
+    for (unsigned j = i + 1; j < divsA.size(); ++j) {
       // Check if a division representation exists for the `j^th` local id.
-      if (denoms1[j] == 0)
+      if (denomsA[j] == 0)
         continue;
       // Check if the denominators match.
-      if (denoms1[i] != denoms1[j])
+      if (denomsA[i] != denomsA[j])
         continue;
       // Check if the representations are equal.
-      if (divs1[i] != divs1[j])
+      if (divsA[i] != divsA[j])
         continue;
 
       // Merge divisions at position `j` into division at position `i`.
-      eliminateRedundantLocalId(fac1, i, j);
-      eliminateRedundantLocalId(fac2, i, j);
-      for (unsigned k = 0, g = divs1.size(); k < g; ++k) {
-        SmallVector<int64_t, 8> &div = divs1[k];
-        if (denoms1[k] != 0) {
+      eliminateRedundantLocalId(facA, i, j);
+      eliminateRedundantLocalId(facB, i, j);
+      for (unsigned k = 0, g = divsA.size(); k < g; ++k) {
+        SmallVector<int64_t, 8> &div = divsA[k];
+        if (denomsA[k] != 0) {
           div[localOffset + i] += div[localOffset + j];
           div.erase(div.begin() + localOffset + j);
         }
       }
 
-      divs1.erase(divs1.begin() + j);
-      denoms1.erase(denoms1.begin() + j);
+      divsA.erase(divsA.begin() + j);
+      denomsA.erase(denomsA.begin() + j);
       // Since `j` can never be zero, we do not need to worry about overflows.
       --j;
     }
