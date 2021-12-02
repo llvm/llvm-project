@@ -956,6 +956,7 @@ bool VEInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
   case VE::VFMKSyvl:
   case VE::VFMKSyvyl:
     expandPseudoVFMK(*this, MI);
+    return true;
   }
   return false;
 }
