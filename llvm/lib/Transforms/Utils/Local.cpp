@@ -529,8 +529,8 @@ bool llvm::RecursivelyDeleteTriviallyDeadInstructionsPermissive(
     std::function<void(Value *)> AboutToDeleteCallback) {
   unsigned S = 0, E = DeadInsts.size(), Alive = 0;
   for (; S != E; ++S) {
-    auto *I = cast<Instruction>(DeadInsts[S]);
-    if (!isInstructionTriviallyDead(I)) {
+    auto *I = dyn_cast<Instruction>(DeadInsts[S]);
+    if (!I || !isInstructionTriviallyDead(I)) {
       DeadInsts[S] = nullptr;
       ++Alive;
     }
