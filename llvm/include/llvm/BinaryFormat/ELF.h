@@ -1602,6 +1602,13 @@ enum {
   NT_FREEBSD_PROCSTAT_AUXV = 16,
 };
 
+// NetBSD core note types.
+enum {
+  NT_NETBSDCORE_PROCINFO = 1,
+  NT_NETBSDCORE_AUXV = 2,
+  NT_NETBSDCORE_LWPSTATUS = 24,
+};
+
 // OpenBSD core note types.
 enum {
   NT_OPENBSD_PROCINFO = 10,
