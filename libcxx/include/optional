@@ -175,7 +175,7 @@ public:
     virtual const char* what() const _NOEXCEPT;
 };
 
-}  // std
+} // namespace std
 
 #if _LIBCPP_STD_VER > 14
 

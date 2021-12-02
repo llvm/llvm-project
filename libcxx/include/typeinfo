@@ -361,7 +361,7 @@ class _LIBCPP_EXCEPTION_ABI bad_typeid
   virtual const char* what() const _NOEXCEPT;
 };
 
-}  // std
+} // namespace std
 
 #endif // defined(_LIBCPP_ABI_VCRUNTIME)
 

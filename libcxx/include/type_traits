@@ -3953,7 +3953,7 @@ struct __nothrow_swappable_with {
 template <class _Tp, class _Up>
 struct __nothrow_swappable_with<_Tp, _Up, false> : false_type {};
 
-}  // __detail
+} // namespace __detail
 
 template <class _Tp>
 struct __is_swappable

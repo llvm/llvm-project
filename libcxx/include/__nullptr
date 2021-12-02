@@ -54,7 +54,7 @@ _LIBCPP_END_NAMESPACE_STD
 namespace std
 {
     typedef decltype(nullptr) nullptr_t;
-}
+} // namespace std
 
 #endif // _LIBCPP_HAS_NO_NULLPTR
 

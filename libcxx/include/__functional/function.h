@@ -946,7 +946,7 @@ public:
 
 #endif // _LIBCPP_HAS_EXTENSION_BLOCKS && !_LIBCPP_HAS_OBJC_ARC
 
-}  // __function
+} // namespace __function
 
 template<class _Rp, class ..._ArgTypes>
 class _LIBCPP_TEMPLATE_VIS function<_Rp(_ArgTypes...)>

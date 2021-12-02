@@ -4571,8 +4571,8 @@ inline namespace literals
     {
         return basic_string<char32_t> (__str, __len);
     }
-  }
-}
+  } // namespace string_literals
+} // namespace literals
 #endif
 
 _LIBCPP_END_NAMESPACE_STD
