@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_COLLECTEDMACROS_H
-#define LLVM_CLANG_TOOLS_EXTRA_CLANGD_COLLECTEDMACROS_H
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_COLLECTMACROS_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANGD_COLLECTMACROS_H
 
 #include "AST.h"
 #include "Protocol.h"
@@ -114,4 +114,4 @@ collectPragmaMarksCallback(const SourceManager &, std::vector<PragmaMark> &Out);
 } // namespace clangd
 } // namespace clang
 
-#endif // LLVM_CLANG_TOOLS_EXTRA_CLANGD_COLLECTEDMACROS_H
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANGD_COLLECTMACROS_H

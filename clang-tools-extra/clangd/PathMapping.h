@@ -5,6 +5,10 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_PATHMAPPING_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANGD_PATHMAPPING_H
+
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"
@@ -65,3 +69,5 @@ createPathMappingTransport(std::unique_ptr<Transport> Transp,
 
 } // namespace clangd
 } // namespace clang
+
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANGD_PATHMAPPING_H

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_INDEX_PROJECT_AWARE_H
-#define LLVM_CLANG_TOOLS_EXTRA_CLANGD_INDEX_PROJECT_AWARE_H
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_INDEX_PROJECTAWARE_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANGD_INDEX_PROJECTAWARE_H
 
 #include "Config.h"
 #include "index/Index.h"

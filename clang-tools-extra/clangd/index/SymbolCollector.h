@@ -5,8 +5,8 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_INDEX_SYMBOL_COLLECTOR_H
-#define LLVM_CLANG_TOOLS_EXTRA_CLANGD_INDEX_SYMBOL_COLLECTOR_H
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_INDEX_SYMBOLCOLLECTOR_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANGD_INDEX_SYMBOLCOLLECTOR_H
 
 #include "CanonicalIncludes.h"
 #include "CollectMacros.h"

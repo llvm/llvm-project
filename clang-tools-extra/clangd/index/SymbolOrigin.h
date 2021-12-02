@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_INDEX_SYMBOL_ORIGIN_H
-#define LLVM_CLANG_TOOLS_EXTRA_CLANGD_INDEX_SYMBOL_ORIGIN_H
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_INDEX_SYMBOLORIGIN_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANGD_INDEX_SYMBOLORIGIN_H
 
 #include "llvm/Support/raw_ostream.h"
 #include <cstdint>
@@ -46,4 +46,4 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &, SymbolOrigin);
 } // namespace clangd
 } // namespace clang
 
-#endif // LLVM_CLANG_TOOLS_EXTRA_CLANGD_INDEX_SYMBOL_ORIGIN_H
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANGD_INDEX_SYMBOLORIGIN_H

@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_UNITTESTS_CLANGD_SUPPORT_TESTTRACER_H
-#define LLVM_CLANG_TOOLS_EXTRA_UNITTESTS_CLANGD_SUPPORT_TESTTRACER_H
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_UNITTESTS_SUPPORT_TESTTRACER_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANGD_UNITTESTS_SUPPORT_TESTTRACER_H
 
 #include "support/Trace.h"
 #include "llvm/ADT/StringMap.h"

@@ -11,8 +11,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_INDEX_BACKGROUND_INDEX_REBUILD_H
-#define LLVM_CLANG_TOOLS_EXTRA_CLANGD_INDEX_BACKGROUND_INDEX_REBUILD_H
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_INDEX_BACKGROUNDREBUILD_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANGD_INDEX_BACKGROUNDREBUILD_H
 
 #include "index/FileIndex.h"
 #include "index/Index.h"

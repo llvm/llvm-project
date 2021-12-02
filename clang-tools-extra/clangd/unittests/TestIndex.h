@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_UNITTESTS_CLANGD_INDEXTESTCOMMON_H
-#define LLVM_CLANG_TOOLS_EXTRA_UNITTESTS_CLANGD_INDEXTESTCOMMON_H
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_UNITTESTS_TESTINDEX_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANGD_UNITTESTS_TESTINDEX_H
 
 #include "index/Index.h"
 #include "index/Merge.h"

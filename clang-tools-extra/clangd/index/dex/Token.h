@@ -19,8 +19,8 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_DEX_TOKEN_H
-#define LLVM_CLANG_TOOLS_EXTRA_CLANGD_DEX_TOKEN_H
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_INDEX_DEX_TOKEN_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANGD_INDEX_DEX_TOKEN_H
 
 #include "index/Index.h"
 #include "llvm/ADT/DenseMap.h"
@@ -136,4 +136,4 @@ template <> struct DenseMapInfo<clang::clangd::dex::Token> {
 
 } // namespace llvm
 
-#endif // LLVM_CLANG_TOOLS_EXTRA_CLANGD_DEX_TOKEN_H
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANGD_INDEX_DEX_TOKEN_H

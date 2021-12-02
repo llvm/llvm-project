@@ -18,8 +18,8 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_INCLUDE_CLEANER_H
-#define LLVM_CLANG_TOOLS_EXTRA_CLANGD_INCLUDE_CLEANER_H
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_INCLUDECLEANER_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANGD_INCLUDECLEANER_H
 
 #include "Headers.h"
 #include "ParsedAST.h"
@@ -75,4 +75,4 @@ std::vector<Diag> issueUnusedIncludesDiagnostics(ParsedAST &AST,
 } // namespace clangd
 } // namespace clang
 
-#endif // LLVM_CLANG_TOOLS_EXTRA_CLANGD_INCLUDE_CLEANER_H
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANGD_INCLUDECLEANER_H
