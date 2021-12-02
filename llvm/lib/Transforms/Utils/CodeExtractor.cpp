@@ -1109,11 +1109,12 @@ CallInst *CodeExtractor::emitCallAndSwitchStatement(Function *newFunction,
                                                     ValueSet &outputs, bool KeepOldBlocks,  ValueToValueMapTy &VMap,
     std::vector<Value *> &params,
     std::vector<Value *>  &StructValues,
-    SmallVectorImpl<unsigned> &SwiftErrorArgs
+    SmallVectorImpl<unsigned> &SwiftErrorArgs,
+    std::vector<Value *>  & ReloadOutputs,std::vector<Value *> & Reloads
     ) {
   // Emit a call to the new function, passing in: *pointer to struct (if
   // aggregating parameters), or plan inputs and allocated memory for outputs
-  std::vector<Value *>   ReloadOutputs, Reloads;
+  //std::vector<Value *>   ReloadOutputs, Reloads;
 
   Module *M = newFunction->getParent();
   LLVMContext &Context = M->getContext();
@@ -1126,23 +1127,6 @@ CallInst *CodeExtractor::emitCallAndSwitchStatement(Function *newFunction,
   
 
 
-
-  // Create allocas for the outputs
-  for (Value *output : outputs) {
-    if (AggregateArgs) {
-      StructValues.push_back(output);
-    } else {
-      AllocaInst *alloca =
-    //      NewAlloca(output->getType(), DL.getAllocaAddrSpace(),  nullptr, output->getName() + ".loc");
-#if 1
-        new AllocaInst(output->getType(), DL.getAllocaAddrSpace(),
-                       nullptr, output->getName() + ".loc",
-                       &AllocaBlock->front());
-#endif
-      ReloadOutputs.push_back(alloca);
-      params.push_back(alloca);
-    }
-  }
 
 
   StructType *StructArgTy = nullptr;
@@ -1821,6 +1805,9 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
             AI->setName(outputs[i]->getName()+".out");
     }
 
+    std::vector<Value *>   ReloadOutputs;
+    std::vector<Value *>  Reloads;
+
 
     // Add inputs as params, or to be filled into the struct
     unsigned ArgNo = 0;
@@ -1836,6 +1823,28 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
                 SwiftErrorArgs.push_back(ArgNo);
         }
         ++ArgNo;
+    }
+
+    // TOOD: Pass AllocaBlock
+    BasicBlock *     AllocaBlock = &codeReplacer->getParent()->front();
+    Module* M = oldFunction->getParent();
+    const DataLayout& DL = M->getDataLayout();
+
+    // Create allocas for the outputs
+    for (Value *output : outputs) {
+        if (AggregateArgs) {
+            StructValues.push_back(output);
+        } else {
+            AllocaInst *alloca =
+                //      NewAlloca(output->getType(), DL.getAllocaAddrSpace(),  nullptr, output->getName() + ".loc");
+#if 1
+                new AllocaInst(output->getType(), DL.getAllocaAddrSpace(),
+                    nullptr, output->getName() + ".loc",
+                    &AllocaBlock->front());
+#endif
+            ReloadOutputs.push_back(alloca);
+            params.push_back(alloca);
+        }
     }
 
 
@@ -1866,7 +1875,8 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
         extractCodeRegionByCopy(CEAC, inputs, outputs, EntryFreq, ExitWeights, ExitBlocks, SinkingCands, HoistingCands, CommonExit, oldFunction, newFunction,header, codeReplacer, nullptr, newRootNode,
            params,
           StructValues,
-       SwiftErrorArgs
+       SwiftErrorArgs,ReloadOutputs,
+            Reloads
         );
     } else {
         // Transforms/HotColdSplit/stale-assume-in-original-func.ll
@@ -1916,6 +1926,7 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
                 cast<Instruction>(II)->moveBefore(TI);
         }
 
+
         // TODO: ByCopy
         // Collect objects which are inputs to the extraction region and also
         // referenced by lifetime start markers within it. The effects of these
@@ -1947,7 +1958,7 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
         CallInst* TheCall = emitCallAndSwitchStatement(newFunction, codeReplacer, inputs, outputs, false, VMap,
         params,
         StructValues,
-        SwiftErrorArgs
+        SwiftErrorArgs,ReloadOutputs,Reloads
         );
 
 
@@ -2030,14 +2041,13 @@ void CodeExtractor::extractCodeRegionByCopy(const CodeExtractorAnalysisCache& CE
     BasicBlock* NewEntry, BasicBlock* newRootNode,       
     std::vector<Value *> &params,
     std::vector<Value *>  &StructValues,
-    SmallVectorImpl<unsigned> &SwiftErrorArgs
+    SmallVectorImpl<unsigned> &SwiftErrorArgs,
+    std::vector<Value *>  & ReloadOutputs,std::vector<Value *> & Reloads
 ) {
     // Assumption: this is a single-entry code region, and the header is the first block in the region.
   //  BasicBlock *header = *Blocks.begin();
 
-
-
-
+   
 
 
 
@@ -2102,7 +2112,9 @@ void CodeExtractor::extractCodeRegionByCopy(const CodeExtractorAnalysisCache& CE
             AI->setName(outputs[i]->getName() + ".out");
     }
 #endif
-    header->getParent()->viewCFG();
+    
+    if (false)     header->getParent()->viewCFG();
+
     if (!KeepOldBlocks) {
         // Rewrite branches to basic blocks outside of the loop to new dummy blocks
         // within the new function. This must be done before we lose track of which
@@ -2139,7 +2151,7 @@ void CodeExtractor::extractCodeRegionByCopy(const CodeExtractorAnalysisCache& CE
 #else
     // Emit a call to the new function, passing in: *pointer to struct (if
     // aggregating parameters), or plan inputs and allocated memory for outputs
-    std::vector<Value*> ReloadOutputs, Reloads;
+  //  std::vector<Value*> ReloadOutputs, Reloads;
 
     // Module *M = newFunction->getParent();
     LLVMContext& Context = M->getContext();
@@ -2166,7 +2178,7 @@ void CodeExtractor::extractCodeRegionByCopy(const CodeExtractorAnalysisCache& CE
 #endif
 
   
-
+#if 0
     // Create allocas for the outputs
     for (Value* output : outputs) {
         if (AggregateArgs) {
@@ -2184,6 +2196,7 @@ void CodeExtractor::extractCodeRegionByCopy(const CodeExtractorAnalysisCache& CE
             params.push_back(alloca);
         }
     }
+#endif
 
     StructType* StructArgTy = nullptr;
     AllocaInst* Struct = nullptr;
@@ -2243,6 +2256,7 @@ void CodeExtractor::extractCodeRegionByCopy(const CodeExtractorAnalysisCache& CE
     DenseMap <Value*, Value*  > ReloadAddress;
     DenseMap <Value*, Value*  > SpillAddress;
 
+#if 0
     // Reload the outputs passed in by reference.
     for (unsigned i = 0, e = outputs.size(); i != e; ++i) {
         Value* Output = nullptr;
@@ -2283,6 +2297,7 @@ void CodeExtractor::extractCodeRegionByCopy(const CodeExtractorAnalysisCache& CE
             }
         }
     }
+#endif
 
     // Now we can emit a switch statement using the call as a value.
     SwitchInst* TheSwitch =

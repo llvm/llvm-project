@@ -270,7 +270,8 @@ public:
         BasicBlock *  newRootNode ,    
        std::vector<Value *> &params,
        std::vector<Value *>  &StructValues,
-       SmallVectorImpl<unsigned> &SwiftErrorArgs
+       SmallVectorImpl<unsigned> &SwiftErrorArgs,
+       std::vector<Value *>  & ReloadOutputs,std::vector<Value *> & Reloads
    );
 
     void moveCodeToFunction(Function *newFunction);
@@ -286,7 +287,8 @@ public:
         ValueToValueMapTy &VMap,
         std::vector<Value *> &params,
         std::vector<Value *>  &StructValues,
-        SmallVectorImpl<unsigned> &SwiftErrorArgs
+        SmallVectorImpl<unsigned> &SwiftErrorArgs,
+        std::vector<Value *>  & ReloadOutputs,std::vector<Value *> & Reloads
         );
   };
 
