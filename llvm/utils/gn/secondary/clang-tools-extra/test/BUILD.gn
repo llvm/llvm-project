@@ -14,7 +14,7 @@ template("write_lit_config") {
           rebase_path(get_label_info("//clang-tools-extra", "target_out_dir")),
       "CLANG_TOOLS_SOURCE_DIR=" + rebase_path("//clang-tools-extra"),
       "LLVM_LIBS_DIR=",  # needed only for shared builds
-      "TARGET_TRIPLE=$llvm_target_triple",
+      "LLVM_TARGET_TRIPLE=$llvm_target_triple",
     ]
     if (host_os == "win") {
       # See comment for Windows solink in llvm/utils/gn/build/toolchain/BUILD.gn

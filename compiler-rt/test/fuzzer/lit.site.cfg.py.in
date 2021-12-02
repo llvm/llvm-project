@@ -12,7 +12,7 @@ config.arm_thumb = "@COMPILER_RT_ARM_THUMB@"
 config.osx_sysroot_flag = "@OSX_SYSROOT_FLAG@"
 config.cmake_binary_dir = "@CMAKE_BINARY_DIR@"
 config.llvm_library_dir = "@LLVM_LIBRARY_DIR@"
-config.target_triple = "@TARGET_TRIPLE@"
+config.target_triple = "@LLVM_TARGET_TRIPLE@"
 config.target_arch = "@LIBFUZZER_TEST_TARGET_ARCH@"
 
 # Load common config for all compiler-rt lit tests.

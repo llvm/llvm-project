@@ -25,7 +25,7 @@ template("write_lit_config") {
       "LLVM_LIBS_DIR=",  # needed only for shared builds
       "LLVM_SOURCE_DIR=" + rebase_path("//llvm", dir),
       "LLVM_TOOLS_DIR=" + rebase_path("$root_out_dir/bin", dir),
-      "TARGET_TRIPLE=$llvm_target_triple",
+      "LLVM_TARGET_TRIPLE=$llvm_target_triple",
     ]
     if (host_os == "win") {
       # See comment for Windows solink in llvm/utils/gn/build/toolchain/BUILD.gn

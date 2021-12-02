@@ -1671,11 +1671,11 @@ function(configure_lit_site_cfg site_in site_out)
     string(CONCAT LIT_SITE_CFG_IN_HEADER "${LIT_SITE_CFG_IN_HEADER}"
       "import os\n"
       "target_env = \"${LLVM_TARGET_TRIPLE_ENV}\"\n"
-      "config.target_triple = config.environment[target_env] = os.environ.get(target_env, \"${TARGET_TRIPLE}\")\n"
+      "config.target_triple = config.environment[target_env] = os.environ.get(target_env, \"${LLVM_TARGET_TRIPLE}\")\n"
       )
 
     # This is expanded to; config.target_triple = ""+config.target_triple+""
-    set(TARGET_TRIPLE "\"+config.target_triple+\"")
+    set(LLVM_TARGET_TRIPLE "\"+config.target_triple+\"")
   endif()
 
   if (ARG_PATHS)

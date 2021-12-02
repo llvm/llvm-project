@@ -426,12 +426,12 @@ macro(construct_compiler_rt_default_triple)
     endif()
     set(COMPILER_RT_DEFAULT_TARGET_TRIPLE ${CMAKE_C_COMPILER_TARGET})
   else()
-    set(COMPILER_RT_DEFAULT_TARGET_TRIPLE ${TARGET_TRIPLE} CACHE STRING
+    set(COMPILER_RT_DEFAULT_TARGET_TRIPLE ${LLVM_TARGET_TRIPLE} CACHE STRING
           "Default triple for which compiler-rt runtimes will be built.")
   endif()
 
-  string(REPLACE "-" ";" TARGET_TRIPLE_LIST ${COMPILER_RT_DEFAULT_TARGET_TRIPLE})
-  list(GET TARGET_TRIPLE_LIST 0 COMPILER_RT_DEFAULT_TARGET_ARCH)
+  string(REPLACE "-" ";" LLVM_TARGET_TRIPLE_LIST ${COMPILER_RT_DEFAULT_TARGET_TRIPLE})
+  list(GET LLVM_TARGET_TRIPLE_LIST 0 COMPILER_RT_DEFAULT_TARGET_ARCH)
 
   # Map various forms of the architecture names to the canonical forms
   # (as they are used by clang, see getArchNameForCompilerRTLib).
@@ -442,7 +442,7 @@ macro(construct_compiler_rt_default_triple)
 
   # Determine if test target triple is specified explicitly, and doesn't match the
   # default.
-  if(NOT COMPILER_RT_DEFAULT_TARGET_TRIPLE STREQUAL TARGET_TRIPLE)
+  if(NOT COMPILER_RT_DEFAULT_TARGET_TRIPLE STREQUAL LLVM_TARGET_TRIPLE)
     set(COMPILER_RT_HAS_EXPLICIT_DEFAULT_TARGET_TRIPLE TRUE)
   else()
     set(COMPILER_RT_HAS_EXPLICIT_DEFAULT_TARGET_TRIPLE FALSE)

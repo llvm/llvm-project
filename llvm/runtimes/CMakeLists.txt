@@ -75,7 +75,7 @@ function(builtin_default_target compiler_rt_path)
 
   set(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR_default ON)
   # AIX should fold 32-bit & 64-bit arch libraries into a single archive.
-  if (TARGET_TRIPLE MATCHES "aix")
+  if (LLVM_TARGET_TRIPLE MATCHES "aix")
     set(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR_default OFF)
   endif()
 
@@ -84,7 +84,7 @@ function(builtin_default_target compiler_rt_path)
                            DEPENDS ${ARG_DEPENDS}
                            CMAKE_ARGS -DLLVM_LIBRARY_OUTPUT_INTDIR=${LLVM_LIBRARY_DIR}
                                       -DLLVM_RUNTIME_OUTPUT_INTDIR=${LLVM_TOOLS_BINARY_DIR}
-                                      -DLLVM_DEFAULT_TARGET_TRIPLE=${TARGET_TRIPLE}
+                                      -DLLVM_DEFAULT_TARGET_TRIPLE=${LLVM_TARGET_TRIPLE}
                                       -DLLVM_ENABLE_PER_TARGET_RUNTIME_DIR=${LLVM_ENABLE_PER_TARGET_RUNTIME_DIR_default}
                                       -DCMAKE_C_COMPILER_WORKS=ON
                                       -DCMAKE_ASM_COMPILER_WORKS=ON
@@ -95,7 +95,7 @@ function(builtin_default_target compiler_rt_path)
                                                 DARWIN
                                                 SANITIZER
                            USE_TOOLCHAIN
-                           TARGET_TRIPLE ${TARGET_TRIPLE}
+                           TARGET_TRIPLE ${LLVM_TARGET_TRIPLE}
                            ${EXTRA_ARGS})
 endfunction()
 
@@ -232,7 +232,7 @@ function(runtime_default_target)
 
   set(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR_default ON)
   # AIX should fold 32-bit & 64-bit arch libraries into a single archive.
-  if (TARGET_TRIPLE MATCHES "aix")
+  if (LLVM_TARGET_TRIPLE MATCHES "aix")
     set(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR_default OFF)
   endif()
 
@@ -242,7 +242,7 @@ function(runtime_default_target)
                            # Builtins were built separately above
                            CMAKE_ARGS -DCOMPILER_RT_BUILD_BUILTINS=Off
                                       -DLLVM_INCLUDE_TESTS=${LLVM_INCLUDE_TESTS}
-                                      -DLLVM_DEFAULT_TARGET_TRIPLE=${TARGET_TRIPLE}
+                                      -DLLVM_DEFAULT_TARGET_TRIPLE=${LLVM_TARGET_TRIPLE}
                                       -DLLVM_ENABLE_PROJECTS_USED=${LLVM_ENABLE_PROJECTS_USED}
                                       -DLLVM_ENABLE_PER_TARGET_RUNTIME_DIR=${LLVM_ENABLE_PER_TARGET_RUNTIME_DIR_default}
                                       -DLLVM_BUILD_TOOLS=${LLVM_BUILD_TOOLS}
@@ -261,7 +261,7 @@ function(runtime_default_target)
                                          ${SUB_CHECK_TARGETS}
                                          ${SUB_INSTALL_TARGETS}
                            USE_TOOLCHAIN
-                           TARGET_TRIPLE ${TARGET_TRIPLE}
+                           TARGET_TRIPLE ${LLVM_TARGET_TRIPLE}
                            ${EXTRA_ARGS})
 endfunction()
 
