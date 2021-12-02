@@ -232,6 +232,7 @@ b9:
 }
 ; CHECK2: - b9: float = {{.*}}, int = {{.*}}, count = 5993
 
+
 declare void @llvm.pseudoprobe(i64, i64, i32, i64) #1
 
 attributes #0 = { noinline nounwind uwtable "use-sample-profile"}
