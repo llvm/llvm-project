@@ -25,13 +25,13 @@ nouses-argworn-funwo_entry:
   ret void
 }
 
-; CHECK: define void @test_store(i8* nocapture %p)
+; CHECK: define void @test_store(i8* nocapture writeonly %p)
 define void @test_store(i8* %p) {
   store i8 0, i8* %p
   ret void
 }
 
-; CHECK: define void @test_addressing(i8* nocapture %p)
+; CHECK: define void @test_addressing(i8* nocapture writeonly %p)
 define void @test_addressing(i8* %p) {
   %gep = getelementptr i8, i8* %p, i64 8
   %bitcast = bitcast i8* %gep to i32*

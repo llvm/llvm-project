@@ -256,7 +256,7 @@ entry:
   unreachable
 }
 
-; CHECK-LABEL: define swiftcc void @my_async_function2(%async.task* %task, %async.actor* %actor, i8* %async.ctxt)
+; CHECK-LABEL: define swiftcc void @my_async_function2(%async.task* %task, %async.actor* %actor, i8* writeonly %async.ctxt)
 ; CHECK-SAME: #[[FRAMEPOINTER:[0-9]+]]
 ; CHECK-SAME: !dbg ![[SP3:[0-9]+]]
 ; CHECK: store i8* %async.ctxt,
@@ -269,7 +269,7 @@ entry:
 ; CHECK: tail call swiftcc void @asyncSuspend(i8* [[CALLEE_CTXT]], %async.task* %task, %async.actor* %actor)
 ; CHECK: ret void
 
-; CHECK-LABEL: define internal swiftcc void @my_async_function2.resume.0(i8* %0, i8* nocapture readnone %1, i8* nocapture readonly %2)
+; CHECK-LABEL: define internal swiftcc void @my_async_function2.resume.0(i8* writeonly %0, i8* nocapture readnone %1, i8* nocapture readonly %2)
 ; CHECK-SAME: #[[FRAMEPOINTER]]
 ; CHECK-SAME: !dbg ![[SP4:[0-9]+]]
 ; CHECK: [[CALLEE_CTXT_ADDR:%.*]] = bitcast i8* %2 to i8**

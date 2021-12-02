@@ -76,6 +76,7 @@ STATISTIC(NumNoCapture, "Number of arguments marked nocapture");
 STATISTIC(NumReturned, "Number of arguments marked returned");
 STATISTIC(NumReadNoneArg, "Number of arguments marked readnone");
 STATISTIC(NumReadOnlyArg, "Number of arguments marked readonly");
+STATISTIC(NumWriteOnlyArg, "Number of arguments marked writeonly");
 STATISTIC(NumNoAlias, "Number of function returns marked noalias");
 STATISTIC(NumNonNullReturn, "Number of function returns marked nonnull");
 STATISTIC(NumNoRecurse, "Number of functions marked as norecurse");
@@ -649,8 +650,8 @@ struct GraphTraits<ArgumentGraph *> : public GraphTraits<ArgumentGraphNode *> {
 
 /// Returns Attribute::None, Attribute::ReadOnly or Attribute::ReadNone.
 static Attribute::AttrKind
-determinePointerReadAttrs(Argument *A,
-                          const SmallPtrSet<Argument *, 8> &SCCNodes) {
+determinePointerAccessAttrs(Argument *A,
+                            const SmallPtrSet<Argument *, 8> &SCCNodes) {
   SmallVector<Use *, 32> Worklist;
   SmallPtrSet<Use *, 32> Visited;
 
@@ -659,7 +660,7 @@ determinePointerReadAttrs(Argument *A,
     return Attribute::None;
 
   bool IsRead = false;
-  // We don't need to track IsWritten. If A is written to, return immediately.
+  bool IsWrite = false;
 
   for (Use &U : A->uses()) {
     Visited.insert(&U);
@@ -667,6 +668,10 @@ determinePointerReadAttrs(Argument *A,
   }
 
   while (!Worklist.empty()) {
+    if (IsWrite && IsRead)
+      // No point in searching further..
+      return Attribute::None;
+
     Use *U = Worklist.pop_back_val();
     Instruction *I = cast<Instruction>(U->getUser());
 
@@ -763,6 +768,15 @@ determinePointerReadAttrs(Argument *A,
       IsRead = true;
       break;
 
+    case Instruction::Store:
+      // A volatile store has side effects beyond what writeonly can be relied
+      // upon.
+      if (cast<StoreInst>(I)->isVolatile())
+        return Attribute::None;
+
+      IsWrite = true;
+      break;
+
     case Instruction::ICmp:
     case Instruction::Ret:
       break;
@@ -772,7 +786,14 @@ determinePointerReadAttrs(Argument *A,
     }
   }
 
-  return IsRead ? Attribute::ReadOnly : Attribute::ReadNone;
+  if (IsWrite && IsRead)
+    return Attribute::None;
+  else if (IsRead)
+    return Attribute::ReadOnly;
+  else if (IsWrite)
+    return Attribute::WriteOnly;
+  else
+    return Attribute::ReadNone;
 }
 
 /// Deduce returned attributes for the SCC.
@@ -865,9 +886,10 @@ static bool addArgumentAttrsFromCallsites(Function &F) {
   return Changed;
 }
 
-static bool addReadAttr(Argument *A, Attribute::AttrKind R) {
-  assert((R == Attribute::ReadOnly || R == Attribute::ReadNone)
-         && "Must be a Read attribute.");
+static bool addAccessAttr(Argument *A, Attribute::AttrKind R) {
+  assert((R == Attribute::ReadOnly || R == Attribute::ReadNone ||
+          R == Attribute::WriteOnly)
+         && "Must be an access attribute.");
   assert(A && "Argument must not be null.");
 
   // If the argument already has the attribute, nothing needs to be done.
@@ -880,7 +902,12 @@ static bool addReadAttr(Argument *A, Attribute::AttrKind R) {
   A->removeAttr(Attribute::ReadOnly);
   A->removeAttr(Attribute::ReadNone);
   A->addAttr(R);
-  R == Attribute::ReadOnly ? ++NumReadOnlyArg : ++NumReadNoneArg;
+  if (R == Attribute::ReadOnly)
+    ++NumReadOnlyArg;
+  else if (R == Attribute::WriteOnly)
+    ++NumWriteOnlyArg;
+  else
+    ++NumReadNoneArg;
   return true;
 }
 
@@ -945,15 +972,15 @@ static void addArgumentAttrs(const SCCNodeSet &SCCNodes,
         // Otherwise, it's captured. Don't bother doing SCC analysis on it.
       }
       if (!HasNonLocalUses && !A->onlyReadsMemory()) {
-        // Can we determine that it's readonly/readnone without doing an SCC?
-        // Note that we don't allow any calls at all here, or else our result
-        // will be dependent on the iteration order through the functions in the
-        // SCC.
+        // Can we determine that it's readonly/readnone/writeonly without doing
+        // an SCC? Note that we don't allow any calls at all here, or else our
+        // result will be dependent on the iteration order through the
+        // functions in the SCC.
         SmallPtrSet<Argument *, 8> Self;
         Self.insert(&*A);
-        Attribute::AttrKind R = determinePointerReadAttrs(&*A, Self);
+        Attribute::AttrKind R = determinePointerAccessAttrs(&*A, Self);
         if (R != Attribute::None)
-          if (addReadAttr(A, R))
+          if (addAccessAttr(A, R))
             Changed.insert(F);
       }
     }
@@ -1023,10 +1050,10 @@ static void addArgumentAttrs(const SCCNodeSet &SCCNodes,
       Changed.insert(A->getParent());
     }
 
-    // We also want to compute readonly/readnone. With a small number of false
-    // negatives, we can assume that any pointer which is captured isn't going
-    // to be provably readonly or readnone, since by definition we can't
-    // analyze all uses of a captured pointer.
+    // We also want to compute readonly/readnone/writeonly. With a small number
+    // of false negatives, we can assume that any pointer which is captured
+    // isn't going to be provably readonly or readnone, since by definition
+    // we can't analyze all uses of a captured pointer.
     //
     // The false negatives happen when the pointer is captured by a function
     // that promises readonly/readnone behaviour on the pointer, then the
@@ -1034,24 +1061,28 @@ static void addArgumentAttrs(const SCCNodeSet &SCCNodes,
     // Also, a readonly/readnone pointer may be returned, but returning a
     // pointer is capturing it.
 
-    Attribute::AttrKind ReadAttr = Attribute::ReadNone;
-    for (unsigned i = 0, e = ArgumentSCC.size(); i != e; ++i) {
+    auto meetAccessAttr = [](Attribute::AttrKind A, Attribute::AttrKind B) {
+      if (A == B)
+        return A;
+      if (A == Attribute::ReadNone)
+        return B;
+      if (B == Attribute::ReadNone)
+        return A;
+      return Attribute::None;
+    };
+
+    Attribute::AttrKind AccessAttr = Attribute::ReadNone;
+    for (unsigned i = 0, e = ArgumentSCC.size();
+         i != e && AccessAttr != Attribute::None; ++i) {
       Argument *A = ArgumentSCC[i]->Definition;
-      Attribute::AttrKind K = determinePointerReadAttrs(A, ArgumentSCCNodes);
-      if (K == Attribute::ReadNone)
-        continue;
-      if (K == Attribute::ReadOnly) {
-        ReadAttr = Attribute::ReadOnly;
-        continue;
-      }
-      ReadAttr = K;
-      break;
+      Attribute::AttrKind K = determinePointerAccessAttrs(A, ArgumentSCCNodes);
+      AccessAttr = meetAccessAttr(AccessAttr, K);
     }
 
-    if (ReadAttr != Attribute::None) {
+    if (AccessAttr != Attribute::None) {
       for (unsigned i = 0, e = ArgumentSCC.size(); i != e; ++i) {
         Argument *A = ArgumentSCC[i]->Definition;
-        if (addReadAttr(A, ReadAttr))
+        if (addAccessAttr(A, AccessAttr))
           Changed.insert(A->getParent());
       }
     }
