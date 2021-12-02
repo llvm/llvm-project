@@ -61,9 +61,9 @@ To understand the status of various developments in Flang please join the respec
 ### LLVM Alias Analysis Technical Call
 
 -   For people working on improvements to LLVM alias analysis.
--   Join [LLVM Alias Analysis Technical Call](https://bluejeans.com/316886064)
+-   Join [LLVM Alias Analysis Technical Call](https://teams.microsoft.com/l/meetup-join/19%3ameeting_MGI1Zjc1MGItZjJjZS00ZmE5LTg0OGYtMmQzNDU5YjQwODA2%40thread.v2/0?context=%7b%22Tid%22%3a%220cfca185-25f7-49e3-8ae7-704d5326e285%22%2c%22Oid%22%3a%220cacfb51-1523-4455-a443-adca936d1af0%22%7d)
 -   Time: Tuesdays 10:00 AM Pacific Time, every 4 weeks.
--   The agenda is in this [Google Doc](https://docs.google.com/document/d/1ybwEKDVtIbhIhK50qYtwKsL50K-NvB6LfuBsfepBZ9Y/).
+-   The agenda is in this [Google Doc](https://docs.google.com/document/d/17U-WvX8qyKc3S36YUKr3xfF-GHunWyYowXbxEdpHscw).
 
 ### OpenMP in Flang Technical Call
 
