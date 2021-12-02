@@ -251,15 +251,10 @@ cc_binary(
     deps = [
         ":COFF",
         ":Common",
-        ":Core",
-        ":Driver",
         ":ELF",
-        ":MachOOld",
         ":MachO",
         ":MinGW",
-        ":ReaderWriter",
         ":Wasm",
-        ":YAML",
         "//llvm:Support",
     ],
 )
@@ -275,13 +270,12 @@ genrule(
     srcs = [":lld"],
     outs = [
         "ld.lld",
-        "ld64.lld.darwinnew",
         "ld64.lld",
         "lld-link",
         "wasm-ld",
     ],
     cmd =
-        "target=$$(basename $<); for n in ld.lld ld64.lld.darwinnew ld64.lld lld-link wasm-ld; do ln -sf $$target $(@D)/$$n; done",
+        "target=$$(basename $<); for n in ld.lld ld64.lld lld-link wasm-ld; do ln -sf $$target $(@D)/$$n; done",
     output_to_bindir = 1,
     tags = [
         "manual",  # External dependency (libxml through WindowsManifest)
