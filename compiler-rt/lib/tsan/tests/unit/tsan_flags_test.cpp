@@ -98,7 +98,7 @@ void VerifyOptions1(Flags *f) {
   EXPECT_EQ(f->memory_limit_mb, 666);
   EXPECT_EQ(f->stop_on_start, 0);
   EXPECT_EQ(f->running_on_valgrind, 0);
-  EXPECT_EQ(f->history_size, 5);
+  EXPECT_EQ(f->history_size, (uptr)5);
   EXPECT_EQ(f->io_sync, 1);
   EXPECT_EQ(f->die_after_fork, true);
 }
@@ -122,7 +122,7 @@ void VerifyOptions2(Flags *f) {
   EXPECT_EQ(f->memory_limit_mb, 456);
   EXPECT_EQ(f->stop_on_start, true);
   EXPECT_EQ(f->running_on_valgrind, true);
-  EXPECT_EQ(f->history_size, 6);
+  EXPECT_EQ(f->history_size, 6ul);
   EXPECT_EQ(f->io_sync, 2);
   EXPECT_EQ(f->die_after_fork, false);
 }
