@@ -29,6 +29,12 @@ namespace tblgen {
 class Constraint;
 class DagLeaf;
 
+// Format into a std::string
+template <typename... Parameters>
+std::string strfmt(const char *fmt, Parameters &&...parameters) {
+  return llvm::formatv(fmt, std::forward<Parameters>(parameters)...).str();
+}
+
 // Simple RAII helper for defining ifdef-undef-endif scopes.
 class IfDefScope {
 public:
@@ -58,7 +64,7 @@ public:
 
   ~NamespaceEmitter() {
     for (StringRef ns : llvm::reverse(namespaces))
-      os << "} // namespace " << ns << "\n";
+      os << "} // end namespace " << ns << "\n";
   }
 
 private:
@@ -228,6 +234,13 @@ template <typename> struct stringifier {
 template <> struct stringifier<Twine> {
   static std::string apply(const Twine &twine) {
     return twine.str();
+  }
+};
+template <typename OptionalT>
+struct stringifier<Optional<OptionalT>> {
+  static std::string apply(Optional<OptionalT> optional) {
+    return optional.hasValue() ? stringifier<OptionalT>::apply(*optional)
+                               : std::string();
   }
 };
 } // end namespace detail

@@ -38,6 +38,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/GenericDomTree.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Transforms/Utils/SampleProfileInference.h"
 #include "llvm/Transforms/Utils/SampleProfileLoaderBaseUtil.h"
 
 namespace llvm {
@@ -73,6 +74,8 @@ template <> struct IRTraits<BasicBlock> {
 };
 
 } // end namespace afdo_detail
+
+extern cl::opt<bool> SampleProfileUseProfi;
 
 template <typename BT> class SampleProfileLoaderBaseImpl {
 public:
@@ -142,6 +145,9 @@ protected:
                            ArrayRef<BasicBlockT *> Descendants,
                            PostDominatorTreeT *DomTree);
   void propagateWeights(FunctionT &F);
+  void applyProfi(FunctionT &F, BlockEdgeMap &Successors,
+                  BlockWeightMap &SampleBlockWeights,
+                  BlockWeightMap &BlockWeights, EdgeWeightMap &EdgeWeights);
   uint64_t visitEdge(Edge E, unsigned *NumUnknownEdges, Edge *UnknownEdge);
   void buildEdges(FunctionT &F);
   bool propagateThroughEdges(FunctionT &F, bool UpdateBlockCount);
@@ -150,6 +156,11 @@ protected:
   bool
   computeAndPropagateWeights(FunctionT &F,
                              const DenseSet<GlobalValue::GUID> &InlinedGUIDs);
+  void initWeightPropagation(FunctionT &F,
+                             const DenseSet<GlobalValue::GUID> &InlinedGUIDs);
+  void
+  finalizeWeightPropagation(FunctionT &F,
+                            const DenseSet<GlobalValue::GUID> &InlinedGUIDs);
   void emitCoverageRemarks(FunctionT &F);
 
   /// Map basic blocks to their computed weights.
@@ -741,50 +752,65 @@ void SampleProfileLoaderBaseImpl<BT>::buildEdges(FunctionT &F) {
 ///   known).
 template <typename BT>
 void SampleProfileLoaderBaseImpl<BT>::propagateWeights(FunctionT &F) {
-  bool Changed = true;
-  unsigned I = 0;
-
-  // If BB weight is larger than its corresponding loop's header BB weight,
-  // use the BB weight to replace the loop header BB weight.
-  for (auto &BI : F) {
-    BasicBlockT *BB = &BI;
-    LoopT *L = LI->getLoopFor(BB);
-    if (!L) {
-      continue;
+  // Flow-based profile inference is only usable with BasicBlock instantiation
+  // of SampleProfileLoaderBaseImpl.
+  if (SampleProfileUseProfi) {
+    // Prepare block sample counts for inference.
+    BlockWeightMap SampleBlockWeights;
+    for (const auto &BI : F) {
+      ErrorOr<uint64_t> Weight = getBlockWeight(&BI);
+      if (Weight)
+        SampleBlockWeights[&BI] = Weight.get();
     }
-    BasicBlockT *Header = L->getHeader();
-    if (Header && BlockWeights[BB] > BlockWeights[Header]) {
-      BlockWeights[Header] = BlockWeights[BB];
+    // Fill in BlockWeights and EdgeWeights using an inference algorithm.
+    applyProfi(F, Successors, SampleBlockWeights, BlockWeights, EdgeWeights);
+  } else {
+    bool Changed = true;
+    unsigned I = 0;
+
+    // If BB weight is larger than its corresponding loop's header BB weight,
+    // use the BB weight to replace the loop header BB weight.
+    for (auto &BI : F) {
+      BasicBlockT *BB = &BI;
+      LoopT *L = LI->getLoopFor(BB);
+      if (!L) {
+        continue;
+      }
+      BasicBlockT *Header = L->getHeader();
+      if (Header && BlockWeights[BB] > BlockWeights[Header]) {
+        BlockWeights[Header] = BlockWeights[BB];
+      }
+    }
+
+    // Propagate until we converge or we go past the iteration limit.
+    while (Changed && I++ < SampleProfileMaxPropagateIterations) {
+      Changed = propagateThroughEdges(F, false);
+    }
+
+    // The first propagation propagates BB counts from annotated BBs to unknown
+    // BBs. The 2nd propagation pass resets edges weights, and use all BB
+    // weights to propagate edge weights.
+    VisitedEdges.clear();
+    Changed = true;
+    while (Changed && I++ < SampleProfileMaxPropagateIterations) {
+      Changed = propagateThroughEdges(F, false);
+    }
+
+    // The 3rd propagation pass allows adjust annotated BB weights that are
+    // obviously wrong.
+    Changed = true;
+    while (Changed && I++ < SampleProfileMaxPropagateIterations) {
+      Changed = propagateThroughEdges(F, true);
     }
   }
+}
 
-  // Before propagation starts, build, for each block, a list of
-  // unique predecessors and successors. This is necessary to handle
-  // identical edges in multiway branches. Since we visit all blocks and all
-  // edges of the CFG, it is cleaner to build these lists once at the start
-  // of the pass.
-  buildEdges(F);
-
-  // Propagate until we converge or we go past the iteration limit.
-  while (Changed && I++ < SampleProfileMaxPropagateIterations) {
-    Changed = propagateThroughEdges(F, false);
-  }
-
-  // The first propagation propagates BB counts from annotated BBs to unknown
-  // BBs. The 2nd propagation pass resets edges weights, and use all BB weights
-  // to propagate edge weights.
-  VisitedEdges.clear();
-  Changed = true;
-  while (Changed && I++ < SampleProfileMaxPropagateIterations) {
-    Changed = propagateThroughEdges(F, false);
-  }
-
-  // The 3rd propagation pass allows adjust annotated BB weights that are
-  // obviously wrong.
-  Changed = true;
-  while (Changed && I++ < SampleProfileMaxPropagateIterations) {
-    Changed = propagateThroughEdges(F, true);
-  }
+template <typename BT>
+void SampleProfileLoaderBaseImpl<BT>::applyProfi(
+    FunctionT &F, BlockEdgeMap &Successors, BlockWeightMap &SampleBlockWeights,
+    BlockWeightMap &BlockWeights, EdgeWeightMap &EdgeWeights) {
+  auto Infer = SampleProfileInference<BT>(F, Successors, SampleBlockWeights);
+  Infer.apply(BlockWeights, EdgeWeights);
 }
 
 /// Generate branch weight metadata for all branches in \p F.
@@ -842,26 +868,64 @@ bool SampleProfileLoaderBaseImpl<BT>::computeAndPropagateWeights(
   Changed |= computeBlockWeights(F);
 
   if (Changed) {
-    // Add an entry count to the function using the samples gathered at the
-    // function entry.
-    // Sets the GUIDs that are inlined in the profiled binary. This is used
-    // for ThinLink to make correct liveness analysis, and also make the IR
-    // match the profiled binary before annotation.
-    getFunction(F).setEntryCount(
-        ProfileCount(Samples->getHeadSamples() + 1, Function::PCT_Real),
-        &InlinedGUIDs);
+    // Initialize propagation.
+    initWeightPropagation(F, InlinedGUIDs);
 
+    // Propagate weights to all edges.
+    propagateWeights(F);
+
+    // Post-process propagated weights.
+    finalizeWeightPropagation(F, InlinedGUIDs);
+  }
+
+  return Changed;
+}
+
+template <typename BT>
+void SampleProfileLoaderBaseImpl<BT>::initWeightPropagation(
+    FunctionT &F, const DenseSet<GlobalValue::GUID> &InlinedGUIDs) {
+  // Add an entry count to the function using the samples gathered at the
+  // function entry.
+  // Sets the GUIDs that are inlined in the profiled binary. This is used
+  // for ThinLink to make correct liveness analysis, and also make the IR
+  // match the profiled binary before annotation.
+  getFunction(F).setEntryCount(
+      ProfileCount(Samples->getHeadSamples() + 1, Function::PCT_Real),
+      &InlinedGUIDs);
+
+  if (!SampleProfileUseProfi) {
     // Compute dominance and loop info needed for propagation.
     computeDominanceAndLoopInfo(F);
 
     // Find equivalence classes.
     findEquivalenceClasses(F);
-
-    // Propagate weights to all edges.
-    propagateWeights(F);
   }
 
-  return Changed;
+  // Before propagation starts, build, for each block, a list of
+  // unique predecessors and successors. This is necessary to handle
+  // identical edges in multiway branches. Since we visit all blocks and all
+  // edges of the CFG, it is cleaner to build these lists once at the start
+  // of the pass.
+  buildEdges(F);
+}
+
+template <typename BT>
+void SampleProfileLoaderBaseImpl<BT>::finalizeWeightPropagation(
+    FunctionT &F, const DenseSet<GlobalValue::GUID> &InlinedGUIDs) {
+  // If we utilize a flow-based count inference, then we trust the computed
+  // counts and set the entry count as computed by the algorithm. This is
+  // primarily done to sync the counts produced by profi and BFI inference,
+  // which uses the entry count for mass propagation.
+  // If profi produces a zero-value for the entry count, we fallback to
+  // Samples->getHeadSamples() + 1 to avoid functions with zero count.
+  if (SampleProfileUseProfi) {
+    const BasicBlockT *EntryBB = getEntryBB(&F);
+    if (BlockWeights[EntryBB] > 0) {
+      getFunction(F).setEntryCount(
+          ProfileCount(BlockWeights[EntryBB], Function::PCT_Real),
+          &InlinedGUIDs);
+    }
+  }
 }
 
 template <typename BT>

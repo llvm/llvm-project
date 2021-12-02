@@ -229,7 +229,9 @@ struct UnrollTransferReadPattern
         options(options) {}
   LogicalResult matchAndRewrite(vector::TransferReadOp readOp,
                                 PatternRewriter &rewriter) const override {
-
+    // TODO: support 0-d corner case.
+    if (readOp.getTransferRank() == 0)
+      return failure();
     if (readOp.mask())
       return failure();
     auto targetShape = getTargetShape(options, readOp);
@@ -254,9 +256,9 @@ struct UnrollTransferReadPattern
           sliceTransferIndices(i, originalSize, *targetShape, originalIndices,
                                readOp.permutation_map(), loc, rewriter);
       auto slicedRead = rewriter.create<vector::TransferReadOp>(
-          loc, targetType, readOp.source(), indices, readOp.permutation_map(),
-          readOp.padding(),
-          readOp.in_bounds() ? *readOp.in_bounds() : ArrayAttr());
+          loc, targetType, readOp.source(), indices,
+          readOp.permutation_mapAttr(), readOp.padding(), readOp.mask(),
+          readOp.in_boundsAttr());
 
       SmallVector<int64_t, 4> elementOffsets =
           getVectorOffset(originalSize, *targetShape, i);
@@ -279,6 +281,10 @@ struct UnrollTransferWritePattern
         options(options) {}
   LogicalResult matchAndRewrite(vector::TransferWriteOp writeOp,
                                 PatternRewriter &rewriter) const override {
+    // TODO: support 0-d corner case.
+    if (writeOp.getTransferRank() == 0)
+      return failure();
+
     if (writeOp.mask())
       return failure();
     auto targetShape = getTargetShape(options, writeOp);
@@ -305,8 +311,7 @@ struct UnrollTransferWritePattern
                                writeOp.permutation_map(), loc, rewriter);
       Operation *slicedWrite = rewriter.create<vector::TransferWriteOp>(
           loc, slicedVector, resultTensor ? resultTensor : writeOp.source(),
-          indices, writeOp.permutation_map(),
-          writeOp.in_bounds() ? *writeOp.in_bounds() : ArrayAttr());
+          indices, writeOp.permutation_mapAttr(), writeOp.in_boundsAttr());
       // For the tensor case update the destination for the next transfer write.
       if (!slicedWrite->getResults().empty())
         resultTensor = slicedWrite->getResult(0);
@@ -2057,6 +2062,10 @@ static Value createInBoundsCond(OpBuilder &b,
 ///  rank-reducing subviews.
 static LogicalResult
 splitFullAndPartialTransferPrecondition(VectorTransferOpInterface xferOp) {
+  // TODO: support 0-d corner case.
+  if (xferOp.getTransferRank() == 0)
+    return failure();
+
   // TODO: expand support to these 2 cases.
   if (!xferOp.permutation_map().isMinorIdentity())
     return failure();
@@ -2682,6 +2691,10 @@ struct TransferReadExtractPattern
       : OpRewritePattern<vector::TransferReadOp>(context) {}
   LogicalResult matchAndRewrite(vector::TransferReadOp read,
                                 PatternRewriter &rewriter) const override {
+    // TODO: support 0-d corner case.
+    if (read.getTransferRank() == 0)
+      return failure();
+
     if (!read.getResult().hasOneUse())
       return failure();
     auto extract =
@@ -2711,8 +2724,8 @@ struct TransferReadExtractPattern
           {indices[indexPos], extract.ids()[idCount++]});
     }
     Value newRead = lb.create<vector::TransferReadOp>(
-        extract.getType(), read.source(), indices, read.permutation_map(),
-        read.padding(), read.in_boundsAttr());
+        extract.getType(), read.source(), indices, read.permutation_mapAttr(),
+        read.padding(), read.mask(), read.in_boundsAttr());
     Value dest = lb.create<arith::ConstantOp>(
         read.getType(), rewriter.getZeroAttr(read.getType()));
     newRead = lb.create<vector::InsertMapOp>(newRead, dest, extract.ids());
@@ -2727,6 +2740,10 @@ struct TransferWriteInsertPattern
       : OpRewritePattern<vector::TransferWriteOp>(context) {}
   LogicalResult matchAndRewrite(vector::TransferWriteOp write,
                                 PatternRewriter &rewriter) const override {
+    // TODO: support 0-d corner case.
+    if (write.getTransferRank() == 0)
+      return failure();
+
     auto insert = write.vector().getDefiningOp<vector::InsertMapOp>();
     if (!insert)
       return failure();
@@ -2754,8 +2771,8 @@ struct TransferWriteInsertPattern
                                   {indices[indexPos], insert.ids()[idCount++]});
     }
     rewriter.create<vector::TransferWriteOp>(
-        loc, insert.vector(), write.source(), indices, write.permutation_map(),
-        write.in_boundsAttr());
+        loc, insert.vector(), write.source(), indices,
+        write.permutation_mapAttr(), write.in_boundsAttr());
     rewriter.eraseOp(write);
     return success();
   }
@@ -2780,15 +2797,19 @@ struct TransferReadToVectorLoadLowering
                                 PatternRewriter &rewriter) const override {
     if (maxTransferRank && read.getVectorType().getRank() > *maxTransferRank)
       return failure();
+
     SmallVector<unsigned, 4> broadcastedDims;
     // Permutations are handled by VectorToSCF or
     // populateVectorTransferPermutationMapLoweringPatterns.
+    // We let the 0-d corner case pass-through as it is supported.
     if (!read.permutation_map().isMinorIdentityWithBroadcasting(
             &broadcastedDims))
       return failure();
+
     auto memRefType = read.getShapedType().dyn_cast<MemRefType>();
     if (!memRefType)
       return failure();
+
     // Non-unit strides are handled by VectorToSCF.
     if (!vector::isLastMemrefDimUnitStride(memRefType))
       return failure();
@@ -2808,6 +2829,7 @@ struct TransferReadToVectorLoadLowering
     auto memrefElTy = memRefType.getElementType();
     if (memrefElTy.isa<VectorType>() && memrefElTy != unbroadcastedVectorType)
       return failure();
+
     // Otherwise, element types of the memref and the vector must match.
     if (!memrefElTy.isa<VectorType>() &&
         memrefElTy != read.getVectorType().getElementType())
@@ -2845,7 +2867,14 @@ struct TransferReadToVectorLoadLowering
   llvm::Optional<unsigned> maxTransferRank;
 };
 
-/// Replace a scalar vector.load with a memref.load.
+/// Replace a 0-d vector.load with a memref.load + vector.broadcast.
+// TODO: we shouldn't cross the vector/scalar domains just for this
+// but atm we lack the infra to avoid it. Possible solutions include:
+// - go directly to LLVM + bitcast
+// - introduce a bitcast op and likely a new pointer dialect
+// - let memref.load/store additionally support the 0-d vector case
+// There are still deeper data layout issues lingering even in this
+// trivial case (for architectures for which this matters).
 struct VectorLoadToMemrefLoadLowering
     : public OpRewritePattern<vector::LoadOp> {
   using OpRewritePattern<vector::LoadOp>::OpRewritePattern;
@@ -2857,13 +2886,13 @@ struct VectorLoadToMemrefLoadLowering
       return failure();
     auto memrefLoad = rewriter.create<memref::LoadOp>(
         loadOp.getLoc(), loadOp.base(), loadOp.indices());
-    rewriter.replaceOpWithNewOp<vector::BroadcastOp>(
-        loadOp, VectorType::get({1}, vecType.getElementType()), memrefLoad);
+    rewriter.replaceOpWithNewOp<vector::BroadcastOp>(loadOp, vecType,
+                                                     memrefLoad);
     return success();
   }
 };
 
-/// Replace a scalar vector.store with a memref.store.
+/// Replace a 0-d vector.store with a vector.extractelement + memref.store.
 struct VectorStoreToMemrefStoreLowering
     : public OpRewritePattern<vector::StoreOp> {
   using OpRewritePattern<vector::StoreOp>::OpRewritePattern;
@@ -2873,9 +2902,17 @@ struct VectorStoreToMemrefStoreLowering
     auto vecType = storeOp.getVectorType();
     if (vecType.getNumElements() != 1)
       return failure();
-    SmallVector<int64_t> indices(vecType.getRank(), 0);
-    Value extracted = rewriter.create<vector::ExtractOp>(
-        storeOp.getLoc(), storeOp.valueToStore(), indices);
+    Value extracted;
+    if (vecType.getRank() == 0) {
+      // TODO: Unifiy once ExtractOp supports 0-d vectors.
+      extracted = rewriter.create<vector::ExtractElementOp>(
+          storeOp.getLoc(), storeOp.valueToStore());
+    } else {
+      SmallVector<int64_t> indices(vecType.getRank(), 0);
+      extracted = rewriter.create<vector::ExtractOp>(
+          storeOp.getLoc(), storeOp.valueToStore(), indices);
+    }
+
     rewriter.replaceOpWithNewOp<memref::StoreOp>(
         storeOp, extracted, storeOp.base(), storeOp.indices());
     return success();
@@ -2901,25 +2938,32 @@ struct TransferWriteToVectorStoreLowering
                                 PatternRewriter &rewriter) const override {
     if (maxTransferRank && write.getVectorType().getRank() > *maxTransferRank)
       return failure();
+
     // Permutations are handled by VectorToSCF or
     // populateVectorTransferPermutationMapLoweringPatterns.
-    if (!write.isZeroD() && !write.permutation_map().isMinorIdentity())
+    if ( // pass-through for the 0-d corner case.
+        !write.permutation_map().isMinorIdentity())
       return failure();
+
     auto memRefType = write.getShapedType().dyn_cast<MemRefType>();
     if (!memRefType)
       return failure();
+
     // Non-unit strides are handled by VectorToSCF.
     if (!vector::isLastMemrefDimUnitStride(memRefType))
       return failure();
+
     // `vector.store` supports vector types as memref's elements only when the
     // type of the vector value being written is the same as the element type.
     auto memrefElTy = memRefType.getElementType();
     if (memrefElTy.isa<VectorType>() && memrefElTy != write.getVectorType())
       return failure();
+
     // Otherwise, element types of the memref and the vector must match.
     if (!memrefElTy.isa<VectorType>() &&
         memrefElTy != write.getVectorType().getElementType())
       return failure();
+
     // Out-of-bounds dims are handled by MaterializeTransferMask.
     if (write.hasOutOfBoundsDim())
       return failure();
@@ -3319,6 +3363,14 @@ class DropInnerMostUnitDims : public OpRewritePattern<vector::TransferReadOp> {
 
   LogicalResult matchAndRewrite(vector::TransferReadOp readOp,
                                 PatternRewriter &rewriter) const override {
+    // TODO: support 0-d corner case.
+    if (readOp.getTransferRank() == 0)
+      return failure();
+
+    // TODO: support mask.
+    if (readOp.mask())
+      return failure();
+
     auto srcType = readOp.source().getType().dyn_cast<MemRefType>();
     if (!srcType || !srcType.hasStaticShape())
       return failure();
@@ -3375,7 +3427,7 @@ class DropInnerMostUnitDims : public OpRewritePattern<vector::TransferReadOp> {
     SmallVector<int64_t> offsets(srcType.getRank(), 0);
     SmallVector<int64_t> strides(srcType.getRank(), 1);
 
-    ArrayAttr inBounds =
+    ArrayAttr inBoundsAttr =
         readOp.in_bounds()
             ? rewriter.getArrayAttr(
                   readOp.in_boundsAttr().getValue().drop_back(dimsToDrop))
@@ -3387,8 +3439,10 @@ class DropInnerMostUnitDims : public OpRewritePattern<vector::TransferReadOp> {
         rankedReducedView.getType().cast<ShapedType>(), resultTargetVecType);
     Value result = rewriter.create<vector::TransferReadOp>(
         loc, resultTargetVecType, rankedReducedView,
-        readOp.indices().drop_back(dimsToDrop), permMap, readOp.padding(),
-        inBounds);
+        readOp.indices().drop_back(dimsToDrop), AffineMapAttr::get(permMap),
+        readOp.padding(),
+        // TODO: support mask.
+        /*mask=*/Value(), inBoundsAttr);
     rewriter.replaceOpWithNewOp<vector::ShapeCastOp>(readOp, targetType,
                                                      result);
     return success();

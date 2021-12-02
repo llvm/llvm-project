@@ -104,6 +104,7 @@ class ScriptedProcesTestCase(TestBase):
     @skipUnlessDarwin
     @skipIfOutOfTreeDebugserver
     @skipIf(archs=no_match(['x86_64']))
+    @skipIfAsan # rdar://85954489
     def test_launch_scripted_process_stack_frames(self):
         """Test that we can launch an lldb scripted process from the command
         line, check its process ID and read string from memory."""

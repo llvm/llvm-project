@@ -879,19 +879,19 @@ inline bool isLegalAddressImm(unsigned Opcode, int Imm,
   unsigned AddrMode = (Desc.TSFlags & ARMII::AddrModeMask);
   switch (AddrMode) {
   case ARMII::AddrModeT2_i7:
-    return std::abs(Imm) < (((1 << 7) * 1) - 1);
+    return std::abs(Imm) < ((1 << 7) * 1);
   case ARMII::AddrModeT2_i7s2:
-    return std::abs(Imm) < (((1 << 7) * 2) - 1) && Imm % 2 == 0;
+    return std::abs(Imm) < ((1 << 7) * 2) && Imm % 2 == 0;
   case ARMII::AddrModeT2_i7s4:
-    return std::abs(Imm) < (((1 << 7) * 4) - 1) && Imm % 4 == 0;
+    return std::abs(Imm) < ((1 << 7) * 4) && Imm % 4 == 0;
   case ARMII::AddrModeT2_i8:
-    return std::abs(Imm) < (((1 << 8) * 1) - 1);
-  case ARMII::AddrMode2:
-    return std::abs(Imm) < (((1 << 12) * 1) - 1);
-  case ARMII::AddrModeT2_i12:
-    return Imm >= 0 && Imm < (((1 << 12) * 1) - 1);
+    return std::abs(Imm) < ((1 << 8) * 1);
   case ARMII::AddrModeT2_i8s4:
-    return std::abs(Imm) < (((1 << 8) * 4) - 1) && Imm % 4 == 0;
+    return std::abs(Imm) < ((1 << 8) * 4) && Imm % 4 == 0;
+  case ARMII::AddrModeT2_i12:
+    return Imm >= 0 && Imm < ((1 << 12) * 1);
+  case ARMII::AddrMode2:
+    return std::abs(Imm) < ((1 << 12) * 1);
   default:
     llvm_unreachable("Unhandled Addressing mode");
   }

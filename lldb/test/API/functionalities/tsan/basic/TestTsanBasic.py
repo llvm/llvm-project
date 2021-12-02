@@ -20,7 +20,6 @@ class TsanBasicTestCase(TestBase):
     @skipIfFreeBSD  # llvm.org/pr21136 runtimes not yet available by default
     @skipIfRemote
     @skipUnlessThreadSanitizer
-    @expectedFailureDarwin # FIXME: https://reviews.llvm.org/D112603
     @no_debug_info_test
     def test(self):
         self.build()

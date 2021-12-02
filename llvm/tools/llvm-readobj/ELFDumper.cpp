@@ -5333,6 +5333,13 @@ const NoteType FreeBSDNoteTypes[] = {
      "NT_FREEBSD_FEATURE_CTL (FreeBSD feature control)"},
 };
 
+const NoteType NetBSDCoreNoteTypes[] = {
+    {ELF::NT_NETBSDCORE_PROCINFO,
+     "NT_NETBSDCORE_PROCINFO (procinfo structure)"},
+    {ELF::NT_NETBSDCORE_AUXV, "NT_NETBSDCORE_AUXV (ELF auxiliary vector data)"},
+    {ELF::NT_NETBSDCORE_LWPSTATUS, "PT_LWPSTATUS (ptrace_lwpstatus structure)"},
+};
+
 const NoteType OpenBSDCoreNoteTypes[] = {
     {ELF::NT_OPENBSD_PROCINFO, "NT_OPENBSD_PROCINFO (procinfo structure)"},
     {ELF::NT_OPENBSD_AUXV, "NT_OPENBSD_AUXV (ELF auxiliary vector data)"},
@@ -5452,6 +5459,12 @@ StringRef getNoteTypeName(const typename ELFT::Note &Note, unsigned ELFType) {
     } else {
       return FindNote(FreeBSDNoteTypes);
     }
+  }
+  if (ELFType == ELF::ET_CORE && Name.startswith("NetBSD-CORE")) {
+    StringRef Result = FindNote(NetBSDCoreNoteTypes);
+    if (!Result.empty())
+      return Result;
+    return FindNote(CoreNoteTypes);
   }
   if (Name.startswith("OpenBSD") && ELFType == ELF::ET_CORE) {
     // OpenBSD also places the generic core notes in the OpenBSD namespace.

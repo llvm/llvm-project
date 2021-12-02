@@ -915,16 +915,16 @@ class __deque_base
     __deque_base(const __deque_base& __c);
     __deque_base& operator=(const __deque_base& __c);
 public:
-    typedef _Allocator                               allocator_type;
-    typedef allocator_traits<allocator_type>         __alloc_traits;
-    typedef typename __alloc_traits::size_type       size_type;
+    typedef _Allocator                                allocator_type;
+    typedef allocator_traits<allocator_type>          __alloc_traits;
+    typedef typename __alloc_traits::size_type        size_type;
 
-    typedef _Tp                                      value_type;
-    typedef value_type&                              reference;
-    typedef const value_type&                        const_reference;
-    typedef typename __alloc_traits::difference_type difference_type;
-    typedef typename __alloc_traits::pointer         pointer;
-    typedef typename __alloc_traits::const_pointer   const_pointer;
+    typedef _Tp                                       value_type;
+    typedef value_type&                               reference;
+    typedef const value_type&                         const_reference;
+    typedef typename __alloc_traits::difference_type  difference_type;
+    typedef typename __alloc_traits::pointer          pointer;
+    typedef typename __alloc_traits::const_pointer    const_pointer;
 
     static const difference_type __block_size;
 
@@ -1259,20 +1259,20 @@ public:
     static_assert((is_same<typename allocator_type::value_type, value_type>::value),
                   "Allocator::value_type must be same type as value_type");
 
-    typedef __deque_base<value_type, allocator_type>                 __base;
+    typedef __deque_base<value_type, allocator_type>      __base;
 
-    typedef typename __base::__alloc_traits                          __alloc_traits;
-    typedef typename __base::reference                               reference;
-    typedef typename __base::const_reference                         const_reference;
-    typedef typename __base::iterator                                iterator;
-    typedef typename __base::const_iterator                          const_iterator;
-    typedef typename __allocator_traits<allocator_type>::size_type   size_type;
-    typedef typename __base::difference_type                         difference_type;
+    typedef typename __base::__alloc_traits               __alloc_traits;
+    typedef typename __base::reference                    reference;
+    typedef typename __base::const_reference              const_reference;
+    typedef typename __base::iterator                     iterator;
+    typedef typename __base::const_iterator               const_iterator;
+    typedef typename __base::size_type                    size_type;
+    typedef typename __base::difference_type              difference_type;
 
-    typedef typename __base::pointer                                 pointer;
-    typedef typename __base::const_pointer                           const_pointer;
-    typedef _VSTD::reverse_iterator<iterator>                        reverse_iterator;
-    typedef _VSTD::reverse_iterator<const_iterator>                  const_reverse_iterator;
+    typedef typename __base::pointer                      pointer;
+    typedef typename __base::const_pointer                const_pointer;
+    typedef _VSTD::reverse_iterator<iterator>             reverse_iterator;
+    typedef _VSTD::reverse_iterator<const_iterator>       const_reverse_iterator;
 
     using typename __base::__deque_range;
     using typename __base::__deque_block_range;
@@ -1289,7 +1289,14 @@ public:
     explicit deque(size_type __n, const _Allocator& __a);
 #endif
     deque(size_type __n, const value_type& __v);
-    deque(size_type __n, const value_type& __v, const allocator_type& __a);
+
+    template <class = __enable_if_t<__is_allocator<_Allocator>::value> >
+    deque(size_type __n, const value_type& __v, const allocator_type& __a) : __base(__a)
+    {
+        if (__n > 0)
+            __append(__n, __v);
+    }
+
     template <class _InputIter>
         deque(_InputIter __f, _InputIter __l,
               typename enable_if<__is_cpp17_input_iterator<_InputIter>::value>::type* = 0);
@@ -1603,14 +1610,6 @@ deque<_Tp, _Allocator>::deque(size_type __n, const _Allocator& __a)
 
 template <class _Tp, class _Allocator>
 deque<_Tp, _Allocator>::deque(size_type __n, const value_type& __v)
-{
-    if (__n > 0)
-        __append(__n, __v);
-}
-
-template <class _Tp, class _Allocator>
-deque<_Tp, _Allocator>::deque(size_type __n, const value_type& __v, const allocator_type& __a)
-    : __base(__a)
 {
     if (__n > 0)
         __append(__n, __v);

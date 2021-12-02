@@ -11,6 +11,7 @@
 
 #include <__config>
 #include <cstddef>
+#include <type_traits>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #pragma GCC system_header
@@ -18,30 +19,54 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
+template <class _UIntType, _UIntType _Xp, size_t _Rp>
+struct __log2_imp;
+
 template <unsigned long long _Xp, size_t _Rp>
-struct __log2_imp
+struct __log2_imp<unsigned long long, _Xp, _Rp>
 {
     static const size_t value = _Xp & ((unsigned long long)(1) << _Rp) ? _Rp
-                                           : __log2_imp<_Xp, _Rp - 1>::value;
+                                           : __log2_imp<unsigned long long, _Xp, _Rp - 1>::value;
 };
 
 template <unsigned long long _Xp>
-struct __log2_imp<_Xp, 0>
+struct __log2_imp<unsigned long long, _Xp, 0>
 {
     static const size_t value = 0;
 };
 
 template <size_t _Rp>
-struct __log2_imp<0, _Rp>
+struct __log2_imp<unsigned long long, 0, _Rp>
 {
     static const size_t value = _Rp + 1;
 };
 
+#ifndef _LIBCPP_HAS_NO_INT128
+
+template <__uint128_t _Xp, size_t _Rp>
+struct __log2_imp<__uint128_t, _Xp, _Rp>
+{
+    static const size_t value = (_Xp >> 64)
+        ? (64 + __log2_imp<unsigned long long, (_Xp >> 64), 63>::value)
+        : __log2_imp<unsigned long long, _Xp, 63>::value;
+};
+
+#endif // _LIBCPP_HAS_NO_INT128
+
 template <class _UIntType, _UIntType _Xp>
 struct __log2
 {
-    static const size_t value = __log2_imp<_Xp,
-                                         sizeof(_UIntType) * __CHAR_BIT__ - 1>::value;
+    static const size_t value = __log2_imp<
+#ifndef _LIBCPP_HAS_NO_INT128
+        typename conditional<
+                sizeof(_UIntType) <= sizeof(unsigned long long),
+                    unsigned long long,
+                    __uint128_t
+            >::type,
+#else
+        unsigned long long,
+#endif // _LIBCPP_HAS_NO_INT128
+        _Xp, sizeof(_UIntType) * __CHAR_BIT__ - 1>::value;
 };
 
 _LIBCPP_END_NAMESPACE_STD

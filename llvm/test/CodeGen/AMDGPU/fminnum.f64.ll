@@ -15,7 +15,7 @@ declare <16 x double> @llvm.minnum.v16f64(<16 x double>, <16 x double>) #0
 ; GCN-DAG: v_max_f64 [[QUIETA:v\[[0-9]+:[0-9]+\]]], [[A]], [[A]]
 ; GCN-DAG: v_max_f64 [[QUIETB:v\[[0-9]+:[0-9]+\]]], [[B]], [[B]]
 
-; GCN: v_min_f64 [[RESULT:v\[[0-9]+:[0-9]+\]]], [[QUIETA]], [[QUIETB]]
+; GCN: v_min_f64 [[RESULT:v\[[0-9]+:[0-9]+\]]], [[QUIETB]], [[QUIETA]]
 define amdgpu_kernel void @test_fmin_f64_ieee_noflush([8 x i32], double %a, [8 x i32], double %b) #1 {
   %val = call double @llvm.minnum.f64(double %a, double %b) #0
   store double %val, double addrspace(1)* undef, align 8
@@ -31,7 +31,7 @@ define amdgpu_kernel void @test_fmin_f64_ieee_noflush([8 x i32], double %a, [8 x
 ; GFX9-DAG: v_max_f64 [[QUIETA:v\[[0-9]+:[0-9]+\]]], [[A]], [[A]]
 ; GFX9-DAG: v_max_f64 [[QUIETB:v\[[0-9]+:[0-9]+\]]], [[B]], [[B]]
 
-; GCN: v_min_f64 [[RESULT:v\[[0-9]+:[0-9]+\]]], [[QUIETA]], [[QUIETB]]
+; GCN: v_min_f64 [[RESULT:v\[[0-9]+:[0-9]+\]]], [[QUIETB]], [[QUIETA]]
 define amdgpu_kernel void @test_fmin_f64_ieee_flush([8 x i32], double %a, [8 x i32], double %b) #2 {
   %val = call double @llvm.minnum.f64(double %a, double %b) #0
   store double %val, double addrspace(1)* undef, align 8

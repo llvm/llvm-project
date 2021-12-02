@@ -94,12 +94,6 @@ CMake docs or execute ``cmake --help-variable VARIABLE_NAME``.
 libunwind specific options
 --------------------------
 
-.. option:: LIBUNWIND_BUILD_32_BITS:BOOL
-
-  **Default**: Same as LLVM_BUILD_32_BITS
-
-  Toggle whether libunwind should be built with -m32.
-
 .. option:: LIBUNWIND_ENABLE_ASSERTIONS:BOOL
 
   **Default**: ``ON``

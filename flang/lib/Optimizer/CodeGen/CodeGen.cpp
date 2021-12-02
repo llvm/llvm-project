@@ -541,8 +541,8 @@ struct BoxProcHostOpConversion : public FIROpConversion<fir::BoxProcHostOp> {
   mlir::LogicalResult
   matchAndRewrite(fir::BoxProcHostOp boxprochost, OpAdaptor adaptor,
                   mlir::ConversionPatternRewriter &rewriter) const override {
-    return rewriter.notifyMatchFailure(
-        boxprochost, "fir.boxproc_host codegen is not implemented yet");
+    TODO(boxprochost.getLoc(), "fir.boxproc_host codegen");
+    return failure();
   }
 };
 
@@ -783,8 +783,8 @@ struct DispatchOpConversion : public FIROpConversion<fir::DispatchOp> {
   mlir::LogicalResult
   matchAndRewrite(fir::DispatchOp dispatch, OpAdaptor adaptor,
                   mlir::ConversionPatternRewriter &rewriter) const override {
-    return rewriter.notifyMatchFailure(
-        dispatch, "fir.dispatch codegen is not implemented yet");
+    TODO(dispatch.getLoc(), "fir.dispatch codegen");
+    return failure();
   }
 };
 
@@ -797,8 +797,8 @@ struct DispatchTableOpConversion
   mlir::LogicalResult
   matchAndRewrite(fir::DispatchTableOp dispTab, OpAdaptor adaptor,
                   mlir::ConversionPatternRewriter &rewriter) const override {
-    return rewriter.notifyMatchFailure(
-        dispTab, "fir.dispatch_table codegen is not implemented yet");
+    TODO(dispTab.getLoc(), "fir.dispatch_table codegen");
+    return failure();
   }
 };
 
@@ -810,8 +810,8 @@ struct DTEntryOpConversion : public FIROpConversion<fir::DTEntryOp> {
   mlir::LogicalResult
   matchAndRewrite(fir::DTEntryOp dtEnt, OpAdaptor adaptor,
                   mlir::ConversionPatternRewriter &rewriter) const override {
-    return rewriter.notifyMatchFailure(
-        dtEnt, "fir.dt_entry codegen is not implemented yet");
+    TODO(dtEnt.getLoc(), "fir.dt_entry codegen");
+    return failure();
   }
 };
 
@@ -822,8 +822,8 @@ struct GlobalLenOpConversion : public FIROpConversion<fir::GlobalLenOp> {
   mlir::LogicalResult
   matchAndRewrite(fir::GlobalLenOp globalLen, OpAdaptor adaptor,
                   mlir::ConversionPatternRewriter &rewriter) const override {
-    return rewriter.notifyMatchFailure(
-        globalLen, "fir.global_len codegen is not implemented yet");
+    TODO(globalLen.getLoc(), "fir.global_len codegen");
+    return failure();
   }
 };
 
@@ -836,8 +836,7 @@ struct LenParamIndexOpConversion
   mlir::LogicalResult
   matchAndRewrite(fir::LenParamIndexOp lenp, OpAdaptor,
                   mlir::ConversionPatternRewriter &rewriter) const override {
-    return rewriter.notifyMatchFailure(
-        lenp, "fir.len_param_index codegen is not implemented yet");
+    TODO(lenp.getLoc(), "fir.len_param_index codegen");
   }
 };
 
@@ -848,8 +847,8 @@ struct GenTypeDescOpConversion : public FIROpConversion<fir::GenTypeDescOp> {
   mlir::LogicalResult
   matchAndRewrite(fir::GenTypeDescOp gentypedesc, OpAdaptor adaptor,
                   mlir::ConversionPatternRewriter &rewriter) const override {
-    return rewriter.notifyMatchFailure(
-        gentypedesc, "fir.fir.gentypedesc codegen is not implemented yet");
+    TODO(gentypedesc.getLoc(), "fir.gentypedesc codegen");
+    return failure();
   }
 };
 
@@ -860,8 +859,8 @@ struct FirEndOpConversion : public FIROpConversion<fir::FirEndOp> {
   mlir::LogicalResult
   matchAndRewrite(fir::FirEndOp firEnd, OpAdaptor,
                   mlir::ConversionPatternRewriter &rewriter) const override {
-    return rewriter.notifyMatchFailure(
-        firEnd, "fir.end codegen is not implemented yet");
+    TODO(firEnd.getLoc(), "fir.end codegen");
+    return failure();
   }
 };
 
@@ -1021,11 +1020,11 @@ struct SelectCaseOpConversion : public FIROpConversion<fir::SelectCaseOp> {
     unsigned conds = caseOp.getNumConditions();
     llvm::ArrayRef<mlir::Attribute> cases = caseOp.getCases().getValue();
     // Type can be CHARACTER, INTEGER, or LOGICAL (C1145)
-    LLVM_ATTRIBUTE_UNUSED auto ty = caseOp.getSelector().getType();
-    if (ty.isa<fir::CharacterType>())
-      return rewriter.notifyMatchFailure(caseOp,
-                                         "conversion of fir.select_case with "
-                                         "character type not implemented yet");
+    auto ty = caseOp.getSelector().getType();
+    if (ty.isa<fir::CharacterType>()) {
+      TODO(caseOp.getLoc(), "fir.select_case codegen with character type");
+      return failure();
+    }
     mlir::Value selector = caseOp.getSelector(adaptor.getOperands());
     auto loc = caseOp.getLoc();
     for (unsigned t = 0; t != conds; ++t) {
@@ -1182,8 +1181,9 @@ struct SelectTypeOpConversion : public FIROpConversion<fir::SelectTypeOp> {
   mlir::LogicalResult
   matchAndRewrite(fir::SelectTypeOp select, OpAdaptor adaptor,
                   mlir::ConversionPatternRewriter &rewriter) const override {
-    return rewriter.notifyMatchFailure(
-        select, "fir.select_type codegen is not implemented yet");
+    mlir::emitError(select.getLoc(),
+                    "fir.select_type should have already been converted");
+    return failure();
   }
 };
 
@@ -1254,7 +1254,7 @@ struct ZeroOpConversion : public FIROpConversion<fir::ZeroOp> {
   mlir::LogicalResult
   matchAndRewrite(fir::ZeroOp zero, OpAdaptor,
                   mlir::ConversionPatternRewriter &rewriter) const override {
-    auto ty = convertType(zero.getType());
+    mlir::Type ty = convertType(zero.getType());
     if (ty.isa<mlir::LLVM::LLVMPointerType>()) {
       rewriter.replaceOpWithNewOp<mlir::LLVM::NullOp>(zero, ty);
     } else if (ty.isa<mlir::IntegerType>()) {
@@ -1575,10 +1575,11 @@ struct EmboxOpConversion : public EmboxCommonConversion<fir::EmboxOp> {
                              /*lenParams=*/adaptor.getOperands().drop_front(1));
     dest = insertBaseAddress(rewriter, embox.getLoc(), dest,
                              adaptor.getOperands()[0]);
-    if (isDerivedTypeWithLenParams(boxTy))
-      return rewriter.notifyMatchFailure(
-          embox, "fir.embox codegen of derived with length parameters not "
-                 "implemented yet");
+    if (isDerivedTypeWithLenParams(boxTy)) {
+      TODO(embox.getLoc(),
+           "fir.embox codegen of derived with length parameters");
+      return failure();
+    }
     auto result = placeInMemoryIfNotGlobalInit(rewriter, embox.getLoc(), dest);
     rewriter.replaceOp(embox, result);
     return success();
@@ -1593,11 +1594,10 @@ struct EmboxProcOpConversion : public FIROpConversion<fir::EmboxProcOp> {
   mlir::LogicalResult
   matchAndRewrite(fir::EmboxProcOp emboxproc, OpAdaptor adaptor,
                   mlir::ConversionPatternRewriter &rewriter) const override {
-    return rewriter.notifyMatchFailure(
-        emboxproc, "fir.emboxproc codegen is not implemented yet");
+    TODO(emboxproc.getLoc(), "fir.emboxproc codegen");
+    return failure();
   }
 };
-
 
 // Code shared between insert_value and extract_value Ops.
 struct ValueOpCommon {
@@ -2110,8 +2110,8 @@ struct UnboxProcOpConversion : public FIROpConversion<fir::UnboxProcOp> {
   mlir::LogicalResult
   matchAndRewrite(fir::UnboxProcOp unboxproc, OpAdaptor adaptor,
                   mlir::ConversionPatternRewriter &rewriter) const override {
-    return rewriter.notifyMatchFailure(
-        unboxproc, "fir.unboxproc codegen is not implemented yet");
+    TODO(unboxproc.getLoc(), "fir.unboxproc codegen");
+    return failure();
   }
 };
 

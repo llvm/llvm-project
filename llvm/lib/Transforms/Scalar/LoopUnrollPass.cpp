@@ -808,7 +808,7 @@ static Optional<unsigned> shouldFullUnroll(
     const TargetTransformInfo::UnrollingPreferences &UP) {
   assert(FullUnrollTripCount && "should be non-zero!");
 
-  if (FullUnrollTripCount >= UP.FullUnrollMaxCount)
+  if (FullUnrollTripCount > UP.FullUnrollMaxCount)
     return None;
 
   // When computing the unrolled size, note that BEInsns are not replicated

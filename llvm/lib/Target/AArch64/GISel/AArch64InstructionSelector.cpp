@@ -2934,8 +2934,8 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
       if (!SrcTy.isVector() && SrcTy.getSizeInBits() == 32 &&
           ShiftTy.getSizeInBits() == 64) {
         assert(!ShiftTy.isVector() && "unexpected vector shift ty");
-        auto *AmtMI = MRI.getVRegDef(ShiftReg);
-        assert(AmtMI && "could not find a vreg definition for shift amount");
+        assert(MRI.getVRegDef(ShiftReg) &&
+               "could not find a vreg definition for shift amount");
         // Insert a subregister copy to implement a 64->32 trunc
         auto Trunc = MIB.buildInstr(TargetOpcode::COPY, {SrcTy}, {})
                          .addReg(ShiftReg, 0, AArch64::sub_32);

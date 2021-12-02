@@ -161,8 +161,8 @@ define amdgpu_kernel void @fmuladd_f16_imm_b(
 ; VI-DENORM-DAG: v_lshrrev_b32_e32 v[[A_F16_1:[0-9]+]], 16, v[[A_V2_F16]]
 ; VI-DENORM-DAG: v_lshrrev_b32_e32 v[[B_F16_1:[0-9]+]], 16, v[[B_V2_F16]]
 ; VI-DENORM-DAG: v_lshrrev_b32_e32 v[[C_F16_1:[0-9]+]], 16, v[[C_V2_F16]]
-; VI-DENORM-DAG: v_fma_f16 v[[RES0:[0-9]+]], v[[A_V2_F16]], v[[B_V2_F16]], v[[C_V2_F16]]
-; VI-DENORM-DAG: v_fma_f16 v[[RES1:[0-9]+]], v[[A_F16_1]], v[[B_F16_1]], v[[C_F16_1]]
+; VI-DENORM-DAG: v_fma_f16 v[[RES0:[0-9]+]], v[[C_V2_F16]], v[[B_V2_F16]], v[[A_V2_F16]]
+; VI-DENORM-DAG: v_fma_f16 v[[RES1:[0-9]+]], v[[C_F16_1]], v[[B_F16_1]], v[[A_F16_1]]
 ; VI-DENORM-DAG: v_lshlrev_b32_e32 v[[R_F16_HI:[0-9]+]], 16, v[[RES1]]
 ; VI-DENORM-NOT: v_and_b32
 ; VI-DENORM: v_or_b32_e32 v[[R_V2_F16:[0-9]+]], v[[RES0]], v[[R_F16_HI]]

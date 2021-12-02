@@ -170,8 +170,9 @@ static Value *EmitNontemporalStore(CodeGenFunction &CGF, const CallExpr *E) {
 
   // Convert the type of the pointer to a pointer to the stored type.
   Val = CGF.EmitToMemory(Val, E->getArg(0)->getType());
+  unsigned SrcAddrSpace = Address->getType()->getPointerAddressSpace();
   Value *BC = CGF.Builder.CreateBitCast(
-      Address, llvm::PointerType::getUnqual(Val->getType()), "cast");
+      Address, llvm::PointerType::get(Val->getType(), SrcAddrSpace), "cast");
   LValue LV = CGF.MakeNaturalAlignAddrLValue(BC, E->getArg(0)->getType());
   LV.setNontemporal(true);
   CGF.EmitStoreOfScalar(Val, LV, false);

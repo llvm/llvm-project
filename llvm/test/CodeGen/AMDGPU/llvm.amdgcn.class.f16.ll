@@ -24,8 +24,8 @@ entry:
 }
 
 ; GCN-LABEL: {{^}}class_f16_fabs:
-; GCN: s_load_dword s[[SA_F16:[0-9]+]]
 ; GCN: s_load_dword s[[SB_I32:[0-9]+]]
+; GCN: s_load_dword s[[SA_F16:[0-9]+]]
 ; GCN: v_mov_b32_e32 [[V_B_I32:v[0-9]+]], s[[SB_I32]]
 ; VI:  v_cmp_class_f16_e64 [[CMP:s\[[0-9]+:[0-9]+\]]], |s[[SA_F16]]|, [[V_B_I32]]
 ; VI:  v_cndmask_b32_e64 v[[VR_I32:[0-9]+]], 0, -1, [[CMP]]
@@ -46,8 +46,8 @@ entry:
 }
 
 ; GCN-LABEL: {{^}}class_f16_fneg:
-; GCN: s_load_dword s[[SA_F16:[0-9]+]]
 ; GCN: s_load_dword s[[SB_I32:[0-9]+]]
+; GCN: s_load_dword s[[SA_F16:[0-9]+]]
 ; GCN: v_mov_b32_e32 [[V_B_I32:v[0-9]+]], s[[SB_I32]]
 ; VI:  v_cmp_class_f16_e64 [[CMP:s\[[0-9]+:[0-9]+\]]], -s[[SA_F16]], [[V_B_I32]]
 ; VI:  v_cndmask_b32_e64 v[[VR_I32:[0-9]+]], 0, -1, [[CMP]]
@@ -68,8 +68,8 @@ entry:
 }
 
 ; GCN-LABEL: {{^}}class_f16_fabs_fneg:
-; GCN: s_load_dword s[[SA_F16:[0-9]+]]
 ; GCN: s_load_dword s[[SB_I32:[0-9]+]]
+; GCN: s_load_dword s[[SA_F16:[0-9]+]]
 ; GCN: v_mov_b32_e32 [[V_B_I32:v[0-9]+]], s[[SB_I32]]
 ; VI: v_cmp_class_f16_e64 [[CMP:s\[[0-9]+:[0-9]+\]]], -|s[[SA_F16]]|, [[V_B_I32]]
 ; VI: v_cndmask_b32_e64 v[[VR_I32:[0-9]+]], 0, -1, [[CMP]]

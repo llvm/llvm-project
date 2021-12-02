@@ -354,12 +354,12 @@ define amdgpu_kernel void @marked_kernel_use_other_sgpr(i64 addrspace(1)* %ptr) 
 ; VARABI:       ; %bb.0:
 ; VARABI-NEXT:    v_mov_b32_e32 v0, s6
 ; VARABI-NEXT:    v_mov_b32_e32 v1, s7
-; VARABI-NEXT:    s_add_u32 s2, s8, 8
+; VARABI-NEXT:    s_add_u32 s0, s8, 8
 ; VARABI-NEXT:    flat_load_ubyte v0, v[0:1] glc
-; VARABI-NEXT:    s_addc_u32 s3, s9, 0
+; VARABI-NEXT:    s_addc_u32 s1, s9, 0
 ; VARABI-NEXT:    s_waitcnt vmcnt(0)
-; VARABI-NEXT:    v_mov_b32_e32 v0, s2
-; VARABI-NEXT:    v_mov_b32_e32 v1, s3
+; VARABI-NEXT:    v_mov_b32_e32 v0, s0
+; VARABI-NEXT:    v_mov_b32_e32 v1, s1
 ; VARABI-NEXT:    flat_load_ubyte v0, v[0:1] glc
 ; VARABI-NEXT:    s_waitcnt vmcnt(0)
 ; VARABI-NEXT:    v_mov_b32_e32 v0, s4
@@ -379,12 +379,12 @@ define amdgpu_kernel void @marked_kernel_use_other_sgpr(i64 addrspace(1)* %ptr) 
 ; FIXEDABI-SDAG:       ; %bb.0:
 ; FIXEDABI-SDAG-NEXT:    v_mov_b32_e32 v0, s6
 ; FIXEDABI-SDAG-NEXT:    v_mov_b32_e32 v1, s7
-; FIXEDABI-SDAG-NEXT:    s_add_u32 s2, s8, 8
+; FIXEDABI-SDAG-NEXT:    s_add_u32 s0, s8, 8
 ; FIXEDABI-SDAG-NEXT:    flat_load_ubyte v0, v[0:1] glc
-; FIXEDABI-SDAG-NEXT:    s_addc_u32 s3, s9, 0
+; FIXEDABI-SDAG-NEXT:    s_addc_u32 s1, s9, 0
 ; FIXEDABI-SDAG-NEXT:    s_waitcnt vmcnt(0)
-; FIXEDABI-SDAG-NEXT:    v_mov_b32_e32 v0, s2
-; FIXEDABI-SDAG-NEXT:    v_mov_b32_e32 v1, s3
+; FIXEDABI-SDAG-NEXT:    v_mov_b32_e32 v0, s0
+; FIXEDABI-SDAG-NEXT:    v_mov_b32_e32 v1, s1
 ; FIXEDABI-SDAG-NEXT:    flat_load_ubyte v0, v[0:1] glc
 ; FIXEDABI-SDAG-NEXT:    s_waitcnt vmcnt(0)
 ; FIXEDABI-SDAG-NEXT:    v_mov_b32_e32 v0, s4
@@ -404,12 +404,12 @@ define amdgpu_kernel void @marked_kernel_use_other_sgpr(i64 addrspace(1)* %ptr) 
 ; FIXEDABI-GISEL:       ; %bb.0:
 ; FIXEDABI-GISEL-NEXT:    v_mov_b32_e32 v0, s6
 ; FIXEDABI-GISEL-NEXT:    v_mov_b32_e32 v1, s7
-; FIXEDABI-GISEL-NEXT:    s_add_u32 s2, s8, 8
+; FIXEDABI-GISEL-NEXT:    s_add_u32 s0, s8, 8
 ; FIXEDABI-GISEL-NEXT:    flat_load_ubyte v0, v[0:1] glc
-; FIXEDABI-GISEL-NEXT:    s_addc_u32 s3, s9, 0
+; FIXEDABI-GISEL-NEXT:    s_addc_u32 s1, s9, 0
 ; FIXEDABI-GISEL-NEXT:    s_waitcnt vmcnt(0)
-; FIXEDABI-GISEL-NEXT:    v_mov_b32_e32 v0, s2
-; FIXEDABI-GISEL-NEXT:    v_mov_b32_e32 v1, s3
+; FIXEDABI-GISEL-NEXT:    v_mov_b32_e32 v0, s0
+; FIXEDABI-GISEL-NEXT:    v_mov_b32_e32 v1, s1
 ; FIXEDABI-GISEL-NEXT:    flat_load_ubyte v0, v[0:1] glc
 ; FIXEDABI-GISEL-NEXT:    s_waitcnt vmcnt(0)
 ; FIXEDABI-GISEL-NEXT:    v_mov_b32_e32 v0, s4
@@ -460,14 +460,14 @@ define void @addrspacecast_requires_queue_ptr(i32 addrspace(5)* %ptr.private, i3
 ; VARABI-LABEL: addrspacecast_requires_queue_ptr:
 ; VARABI:       ; %bb.0:
 ; VARABI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VARABI-NEXT:    s_load_dword s6, s[4:5], 0x40
-; VARABI-NEXT:    s_load_dword s4, s[4:5], 0x44
+; VARABI-NEXT:    s_load_dword s6, s[4:5], 0x44
+; VARABI-NEXT:    s_load_dword s4, s[4:5], 0x40
 ; VARABI-NEXT:    v_cmp_ne_u32_e32 vcc, -1, v0
 ; VARABI-NEXT:    s_waitcnt lgkmcnt(0)
-; VARABI-NEXT:    v_mov_b32_e32 v2, s4
+; VARABI-NEXT:    v_mov_b32_e32 v2, s6
 ; VARABI-NEXT:    v_cndmask_b32_e32 v3, 0, v2, vcc
 ; VARABI-NEXT:    v_cndmask_b32_e32 v2, 0, v0, vcc
-; VARABI-NEXT:    v_mov_b32_e32 v0, s6
+; VARABI-NEXT:    v_mov_b32_e32 v0, s4
 ; VARABI-NEXT:    v_cmp_ne_u32_e32 vcc, -1, v1
 ; VARABI-NEXT:    v_cndmask_b32_e32 v5, 0, v0, vcc
 ; VARABI-NEXT:    v_mov_b32_e32 v0, 1
@@ -482,14 +482,14 @@ define void @addrspacecast_requires_queue_ptr(i32 addrspace(5)* %ptr.private, i3
 ; FIXEDABI-SDAG-LABEL: addrspacecast_requires_queue_ptr:
 ; FIXEDABI-SDAG:       ; %bb.0:
 ; FIXEDABI-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; FIXEDABI-SDAG-NEXT:    s_load_dword s4, s[6:7], 0x40
-; FIXEDABI-SDAG-NEXT:    s_load_dword s5, s[6:7], 0x44
+; FIXEDABI-SDAG-NEXT:    s_load_dword s4, s[6:7], 0x44
+; FIXEDABI-SDAG-NEXT:    s_load_dword s5, s[6:7], 0x40
 ; FIXEDABI-SDAG-NEXT:    v_cmp_ne_u32_e32 vcc, -1, v0
 ; FIXEDABI-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
-; FIXEDABI-SDAG-NEXT:    v_mov_b32_e32 v2, s5
+; FIXEDABI-SDAG-NEXT:    v_mov_b32_e32 v2, s4
 ; FIXEDABI-SDAG-NEXT:    v_cndmask_b32_e32 v3, 0, v2, vcc
 ; FIXEDABI-SDAG-NEXT:    v_cndmask_b32_e32 v2, 0, v0, vcc
-; FIXEDABI-SDAG-NEXT:    v_mov_b32_e32 v0, s4
+; FIXEDABI-SDAG-NEXT:    v_mov_b32_e32 v0, s5
 ; FIXEDABI-SDAG-NEXT:    v_cmp_ne_u32_e32 vcc, -1, v1
 ; FIXEDABI-SDAG-NEXT:    v_cndmask_b32_e32 v5, 0, v0, vcc
 ; FIXEDABI-SDAG-NEXT:    v_mov_b32_e32 v0, 1

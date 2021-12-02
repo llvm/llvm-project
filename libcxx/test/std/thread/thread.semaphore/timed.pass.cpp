@@ -12,9 +12,6 @@
 // This test requires the dylib support introduced in D68480, which shipped in macOS 11.0.
 // XFAIL: use_system_cxx_lib && target={{.+}}-apple-macosx10.{{9|10|11|12|13|14|15}}
 
-// TODO(ldionne): This test fails on Ubuntu Focal on our CI nodes (and only there), in 32 bit mode.
-// UNSUPPORTED: linux && 32bits-on-64bits
-
 // <semaphore>
 
 #include <semaphore>

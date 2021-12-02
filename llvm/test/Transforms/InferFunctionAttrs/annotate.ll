@@ -631,7 +631,7 @@ declare i32 @memcmp(i8*, i8*, i64)
 ; CHECK: declare i8* @memcpy(i8* noalias returned writeonly, i8* noalias nocapture readonly, i64) [[ARGMEMONLY_NOFREE_NOUNWIND_WILLRETURN]]
 declare i8* @memcpy(i8*, i8*, i64)
 
-; CHECK: declare i8* @__memcpy_chk(i8*, i8*, i64, i64) [[NOFREE_NOUNWIND]]
+; CHECK: declare i8* @__memcpy_chk(i8* noalias writeonly, i8* noalias nocapture readonly, i64, i64) [[ARGMEMONLY_NOFREE_NOUNWIND:#[0-9]+]]
 declare i8* @__memcpy_chk(i8*, i8*, i64, i64)
 
 ; CHECK: declare i8* @mempcpy(i8* noalias writeonly, i8* noalias nocapture readonly, i64) [[ARGMEMONLY_NOFREE_NOUNWIND_WILLRETURN]]
@@ -643,7 +643,7 @@ declare i8* @memmove(i8*, i8*, i64)
 ; CHECK: declare i8* @memset(i8* writeonly, i32, i64) [[ARGMEMONLY_NOFREE_NOUNWIND_WILLRETURN:#[0-9]+]]
 declare i8* @memset(i8*, i32, i64)
 
-; CHECK: declare i8* @__memset_chk(i8* writeonly, i32, i64, i64) [[ARGMEMONLY_NOFREE_NOUNWIND:#[0-9]+]]
+; CHECK: declare i8* @__memset_chk(i8* writeonly, i32, i64, i64) [[ARGMEMONLY_NOFREE_NOUNWIND]]
 declare i8* @__memset_chk(i8*, i32, i64, i64)
 
 ; CHECK: declare noundef i32 @mkdir(i8* nocapture noundef readonly, i16 noundef zeroext) [[NOFREE_NOUNWIND]]
@@ -1011,8 +1011,12 @@ declare i32 @vsscanf(i8*, i8*, %opaque*)
 declare i64 @write(i32, i8*, i64)
 
 
-; memset_pattern16 isn't available everywhere.
-; CHECK-DARWIN: declare void @memset_pattern16(i8* nocapture writeonly, i8* nocapture readonly, i64) [[ARGMEMONLY_NOFREE:#[0-9]+]]
+; memset_pattern{4,8,16} aren't available everywhere.
+; CHECK-DARWIN: declare void @memset_pattern4(i8* nocapture writeonly, i8* nocapture readonly, i64) [[ARGMEMONLY_NOFREE:#[0-9]+]]
+declare void @memset_pattern4(i8*, i8*, i64)
+; CHECK-DARWIN: declare void @memset_pattern8(i8* nocapture writeonly, i8* nocapture readonly, i64) [[ARGMEMONLY_NOFREE]]
+declare void @memset_pattern8(i8*, i8*, i64)
+; CHECK-DARWIN: declare void @memset_pattern16(i8* nocapture writeonly, i8* nocapture readonly, i64) [[ARGMEMONLY_NOFREE]]
 declare void @memset_pattern16(i8*, i8*, i64)
 
 
