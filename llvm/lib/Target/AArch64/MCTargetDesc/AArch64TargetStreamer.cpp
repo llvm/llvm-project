@@ -101,8 +101,8 @@ void AArch64TargetStreamer::emitInst(uint32_t Inst) {
   // We can't just use EmitIntValue here, as that will swap the
   // endianness on big-endian systems (instructions are always
   // little-endian).
-  for (unsigned I = 0; I < 4; ++I) {
-    Buffer[I] = uint8_t(Inst);
+  for (char &C : Buffer) {
+    C = uint8_t(Inst);
     Inst >>= 8;
   }
 

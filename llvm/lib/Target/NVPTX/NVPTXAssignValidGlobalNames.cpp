@@ -72,8 +72,7 @@ bool NVPTXAssignValidGlobalNames::runOnModule(Module &M) {
 std::string NVPTXAssignValidGlobalNames::cleanUpName(StringRef Name) {
   std::string ValidName;
   raw_string_ostream ValidNameStream(ValidName);
-  for (unsigned I = 0, E = Name.size(); I != E; ++I) {
-    char C = Name[I];
+  for (char C : Name) {
     if (C == '.' || C == '@') {
       ValidNameStream << "_$_";
     } else {
