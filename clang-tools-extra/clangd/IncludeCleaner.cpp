@@ -33,7 +33,9 @@ namespace {
 class ReferencedLocationCrawler
     : public RecursiveASTVisitor<ReferencedLocationCrawler> {
 public:
-  ReferencedLocationCrawler(ReferencedLocations &Result) : Result(Result) {}
+  ReferencedLocationCrawler(ReferencedLocations &Result,
+                            const SourceManager &SM)
+      : Result(Result), SM(SM) {}
 
   bool VisitDeclRefExpr(DeclRefExpr *DRE) {
     add(DRE->getDecl());
@@ -120,6 +122,17 @@ private:
   void add(const Decl *D) {
     if (!D || !isNew(D->getCanonicalDecl()))
       return;
+    // If we see a declaration in the mainfile, skip all non-definition decls.
+    // We only do this for classes because forward declarations are common and
+    // we don't want to include every header that forward-declares the symbol
+    // because they're often unrelated.
+    if (const auto *RD = llvm::dyn_cast<RecordDecl>(D)) {
+      if (SM.isInMainFile(RD->getMostRecentDecl()->getBeginLoc())) {
+        if (const auto *Definition = RD->getMostRecentDecl()->getDefinition())
+          Result.insert(Definition->getLocation());
+        return;
+      }
+    }
     for (const Decl *Redecl : D->redecls())
       Result.insert(Redecl->getLocation());
   }
@@ -128,6 +141,7 @@ private:
 
   ReferencedLocations &Result;
   llvm::DenseSet<const void *> Visited;
+  const SourceManager &SM;
 };
 
 // Given a set of referenced FileIDs, determines all the potentially-referenced
@@ -253,7 +267,7 @@ FileID headerResponsible(FileID ID, const SourceManager &SM,
 ReferencedLocations findReferencedLocations(ParsedAST &AST) {
   trace::Span Tracer("IncludeCleaner::findReferencedLocations");
   ReferencedLocations Result;
-  ReferencedLocationCrawler Crawler(Result);
+  ReferencedLocationCrawler Crawler(Result, AST.getSourceManager());
   Crawler.TraverseAST(AST.getASTContext());
   findReferencedMacros(AST, Result);
   return Result;

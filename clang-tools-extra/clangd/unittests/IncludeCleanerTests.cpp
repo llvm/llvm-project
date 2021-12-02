@@ -39,6 +39,18 @@ TEST(IncludeCleaner, ReferencedLocations) {
           "class ^X;",
           "X *y;",
       },
+      // FIXME(kirillbobyrev): When definition is available, we don't need to
+      // mark forward declarations as used.
+      {
+          "class ^X {}; class ^X;",
+          "X *y;",
+      },
+      // We already have forward declaration in the main file, the other
+      // non-definition declarations are not needed.
+      {
+          "class ^X {}; class X;",
+          "class X; X *y;",
+      },
       // TypedefType and UsingDecls
       {
           "using ^Integer = int;",
