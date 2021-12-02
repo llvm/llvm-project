@@ -37,6 +37,7 @@ class Loop;
 class Module;
 class Type;
 class Value;
+class StructType;
 
 /// A cache for the CodeExtractor analysis. The operation \ref
 /// CodeExtractor::extractCodeRegion is guaranteed not to invalidate this
@@ -271,7 +272,9 @@ public:
        std::vector<Value *> &params,
        std::vector<Value *>  &StructValues,
        SmallVectorImpl<unsigned> &SwiftErrorArgs,
-       std::vector<Value *>  & ReloadOutputs,std::vector<Value *> & Reloads
+       std::vector<Value *>  & ReloadOutputs,std::vector<Value *> & Reloads,
+       StructType *StructArgTy ,
+       AllocaInst *Struct 
    );
 
     void moveCodeToFunction(Function *newFunction);
@@ -288,7 +291,9 @@ public:
         std::vector<Value *> &params,
         std::vector<Value *>  &StructValues,
         SmallVectorImpl<unsigned> &SwiftErrorArgs,
-        std::vector<Value *>  & ReloadOutputs,std::vector<Value *> & Reloads
+        std::vector<Value *>  & ReloadOutputs,std::vector<Value *> & Reloads,
+        StructType *StructArgTy ,
+    AllocaInst *Struct 
         );
   };
 

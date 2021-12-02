@@ -1110,7 +1110,9 @@ CallInst *CodeExtractor::emitCallAndSwitchStatement(Function *newFunction,
     std::vector<Value *> &params,
     std::vector<Value *>  &StructValues,
     SmallVectorImpl<unsigned> &SwiftErrorArgs,
-    std::vector<Value *>  & ReloadOutputs,std::vector<Value *> & Reloads
+    std::vector<Value *>  & ReloadOutputs,std::vector<Value *> & Reloads,
+    StructType *StructArgTy ,
+    AllocaInst *Struct 
     ) {
   // Emit a call to the new function, passing in: *pointer to struct (if
   // aggregating parameters), or plan inputs and allocated memory for outputs
@@ -1126,35 +1128,6 @@ CallInst *CodeExtractor::emitCallAndSwitchStatement(Function *newFunction,
   BasicBlock *     AllocaBlock = &codeReplacer->getParent()->front();
   
 
-
-
-
-  StructType *StructArgTy = nullptr;
-  AllocaInst *Struct = nullptr;
-  if (AggregateArgs && (inputs.size() + outputs.size() > 0)) {
-    std::vector<Type *> ArgTypes;
-    for (Value *V : StructValues)
-      ArgTypes.push_back(V->getType());
-
-    // Allocate a struct at the beginning of this function
-    StructArgTy = StructType::get(newFunction->getContext(), ArgTypes);
-  //  Struct  =   NewAlloca(StructArgTy, DL.getAllocaAddrSpace(), nullptr,  "structArg");
-#if 1
-    Struct = new AllocaInst(StructArgTy, DL.getAllocaAddrSpace(), nullptr,
-                            "structArg",
-                            &AllocaBlock->front());
-#endif
-    params.push_back(Struct);
-
-    for (unsigned i = 0, e = inputs.size(); i != e; ++i) {
-      Value *Idx[2];
-      Idx[0] = Constant::getNullValue(Type::getInt32Ty(Context));
-      Idx[1] = ConstantInt::get(Type::getInt32Ty(Context), i);
-      GetElementPtrInst *GEP = GetElementPtrInst::Create(StructArgTy, Struct, Idx, "gep_" + StructValues[i]->getName());
-      codeReplacer->getInstList().push_back(GEP);
-      new StoreInst(StructValues[i], GEP, codeReplacer);
-    }
-  }
 
 
   // Emit the call to the function
@@ -1848,6 +1821,37 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
     }
 
 
+    LLVMContext &Context = M->getContext();
+
+
+    StructType *StructArgTy = nullptr;
+    AllocaInst *Struct = nullptr;
+    if (AggregateArgs && (inputs.size() + outputs.size() > 0)) {
+        std::vector<Type *> ArgTypes;
+        for (Value *V : StructValues)
+            ArgTypes.push_back(V->getType());
+
+        // Allocate a struct at the beginning of this function
+        StructArgTy = StructType::get(newFunction->getContext(), ArgTypes);
+        //  Struct  =   NewAlloca(StructArgTy, DL.getAllocaAddrSpace(), nullptr,  "structArg");
+#if 1
+        Struct = new AllocaInst(StructArgTy, DL.getAllocaAddrSpace(), nullptr,
+            "structArg",
+            &AllocaBlock->front());
+#endif
+        params.push_back(Struct);
+
+        for (unsigned i = 0, e = inputs.size(); i != e; ++i) {
+            Value *Idx[2];
+            Idx[0] = Constant::getNullValue(Type::getInt32Ty(Context));
+            Idx[1] = ConstantInt::get(Type::getInt32Ty(Context), i);
+            GetElementPtrInst *GEP = GetElementPtrInst::Create(StructArgTy, Struct, Idx, "gep_" + StructValues[i]->getName());
+            codeReplacer->getInstList().push_back(GEP);
+            new StoreInst(StructValues[i], GEP, codeReplacer);
+        }
+    }
+
+
     // Update the entry count of the function.
     if (BFI) {
         auto Count = BFI->getProfileCountFromFreq(EntryFreq.getFrequency());
@@ -1874,9 +1878,10 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
     if (KeepOldBlocks) {
         extractCodeRegionByCopy(CEAC, inputs, outputs, EntryFreq, ExitWeights, ExitBlocks, SinkingCands, HoistingCands, CommonExit, oldFunction, newFunction,header, codeReplacer, nullptr, newRootNode,
            params,
-          StructValues,
-       SwiftErrorArgs,ReloadOutputs,
-            Reloads
+            StructValues,
+            SwiftErrorArgs,ReloadOutputs,
+            Reloads,
+            StructArgTy, Struct
         );
     } else {
         // Transforms/HotColdSplit/stale-assume-in-original-func.ll
@@ -1958,7 +1963,8 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
         CallInst* TheCall = emitCallAndSwitchStatement(newFunction, codeReplacer, inputs, outputs, false, VMap,
         params,
         StructValues,
-        SwiftErrorArgs,ReloadOutputs,Reloads
+        SwiftErrorArgs,ReloadOutputs,Reloads,
+            StructArgTy, Struct
         );
 
 
@@ -2042,7 +2048,9 @@ void CodeExtractor::extractCodeRegionByCopy(const CodeExtractorAnalysisCache& CE
     std::vector<Value *> &params,
     std::vector<Value *>  &StructValues,
     SmallVectorImpl<unsigned> &SwiftErrorArgs,
-    std::vector<Value *>  & ReloadOutputs,std::vector<Value *> & Reloads
+    std::vector<Value *>  & ReloadOutputs,std::vector<Value *> & Reloads,
+    StructType *StructArgTy ,
+    AllocaInst *Struct 
 ) {
     // Assumption: this is a single-entry code region, and the header is the first block in the region.
   //  BasicBlock *header = *Blocks.begin();
@@ -2198,6 +2206,7 @@ void CodeExtractor::extractCodeRegionByCopy(const CodeExtractorAnalysisCache& CE
     }
 #endif
 
+#if 0
     StructType* StructArgTy = nullptr;
     AllocaInst* Struct = nullptr;
     if (AggregateArgs && (inputs.size() + outputs.size() > 0)) {
@@ -2225,6 +2234,7 @@ void CodeExtractor::extractCodeRegionByCopy(const CodeExtractorAnalysisCache& CE
             new StoreInst(StructValues[i], GEP, codeReplacer);
         }
     }
+#endif
 
     // Emit the call to the function
     call = CallInst::Create(newFunction, params, NumExitBlocks > 1 ? "targetBlock" : "");
