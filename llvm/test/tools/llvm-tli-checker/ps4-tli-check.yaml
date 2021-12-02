@@ -6,17 +6,23 @@
 #
 ## This produces an object that has _ZdaPvj instead of _ZdaPv.
 # RUN: yaml2obj %s -DZDAPV=_ZdaPvj -o=%t2
-# RUN: echo %t2 > %t2.txt
-# RUN: llvm-tli-checker --triple x86_64-scei-ps4 @%t2.txt | \
+# RUN: llvm-tli-checker --triple x86_64-scei-ps4 %t2 | \
 # RUN:     FileCheck %s --check-prefixes=WRONG_SUMMARY,WRONG_DETAIL \
 # RUN:    --implicit-check-not="==" --implicit-check-not="<<" --implicit-check-not=">>"
 #
-# RUN: llvm-tli-checker --triple x86_64-scei-ps4 @%t2.txt --report=summary | \
+## --report=discrepancy is the default, check we get the same output.
+# RUN: llvm-tli-checker --triple x86_64-scei-ps4 %t2 --report=discrepancy | \
+# RUN:     FileCheck %s --check-prefixes=WRONG_SUMMARY,WRONG_DETAIL \
+# RUN:    --implicit-check-not="==" --implicit-check-not="<<" --implicit-check-not=">>"
+#
+## --report=summary should not print the details (checked by the
+## implicit-check-not strings).
+# RUN: llvm-tli-checker --triple x86_64-scei-ps4 %t.dir/bad --report=summary | \
 # RUN:     FileCheck %s --check-prefix=WRONG_SUMMARY \
 # RUN:     --implicit-check-not="==" --implicit-check-not="<<" --implicit-check-not=">>"
+#
 ## --separate implies --report=summary.
-## Also use a response file to show we support that.
-# RUN: llvm-tli-checker --triple x86_64-scei-ps4 @%t2.txt --separate | \
+# RUN: llvm-tli-checker --triple x86_64-scei-ps4 %t2 --separate | \
 # RUN:     FileCheck %s --check-prefix=WRONG_SUMMARY \
 # RUN:     --implicit-check-not="==" --implicit-check-not="<<" --implicit-check-not=">>"
 #
@@ -37,10 +43,14 @@
 #
 ## The -COUNT suffix doesn't care if there are too many matches, so check
 ## the exact count first; the two directives should add up to that.
+## Yes, this means additions to TLI will fail this test, but the argument
+## to -COUNT can't be an expression.
 # AVAIL: TLI knows 468 symbols, 235 available
 # AVAIL-COUNT-235: {{^}} available
-# UNAVAIL-COUNT-231: not available
+# UNAVAIL-COUNT-233: not available
 
+## This is a large file so it's worth telling lit to stop here.
+# END.
 
 --- !ELF
 FileHeader:
