@@ -213,6 +213,16 @@ MemoryLocation MemoryLocation::getForArgument(const CallBase *Call,
   LibFunc F;
   if (TLI && TLI->getLibFunc(*Call, F) && TLI->has(F)) {
     switch (F) {
+    case LibFunc_memset_chk: {
+      assert(ArgIdx == 0 && "Invalid argument index for memset_chk");
+      LocationSize Size = LocationSize::afterPointer();
+      if (const auto *Len = dyn_cast<ConstantInt>(Call->getArgOperand(2))) {
+        // memset_chk writes at most Len bytes. It may write less, if Len
+        // exceeds the specified max size and aborts.
+        Size = LocationSize::upperBound(Len->getZExtValue());
+      }
+      return MemoryLocation(Arg, Size, AATags);
+    }
     case LibFunc_memset_pattern16:
       assert((ArgIdx == 0 || ArgIdx == 1) &&
              "Invalid argument index for memset_pattern16");
