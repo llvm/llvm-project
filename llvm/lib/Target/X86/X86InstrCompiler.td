@@ -260,10 +260,10 @@ let isPseudo = 1, SchedRW = [WriteSystem] in {
 // Pseudo instructions used by address sanitizer.
 //===----------------------------------------------------------------------===//
 let
-  Defs = [R8, EFLAGS] in {
+  Defs = [R10, R11, EFLAGS] in {
 def ASAN_CHECK_MEMACCESS : PseudoI<
-  (outs), (ins GR64NoR8:$addr, i32imm:$accessinfo),
-  [(int_asan_check_memaccess GR64NoR8:$addr, (i32 timm:$accessinfo))]>,
+  (outs), (ins GR64PLTSafe:$addr, i32imm:$accessinfo),
+  [(int_asan_check_memaccess GR64PLTSafe:$addr, (i32 timm:$accessinfo))]>,
   Sched<[]>;
 }
 
