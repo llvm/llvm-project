@@ -77,6 +77,7 @@ public:
     LLVM_DEBUG(dbgs() << "Completed profi after " << AugmentationIters
                       << " iterations with " << TotalFlow << " total flow"
                       << " of " << TotalCost << " cost\n");
+    (void)TotalFlow;
     return TotalCost;
   }
 
