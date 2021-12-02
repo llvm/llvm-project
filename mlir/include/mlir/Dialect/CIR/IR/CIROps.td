@@ -278,10 +278,11 @@ def ReturnOp : CIR_Op<"return", [Pure, HasParent<"FuncOp">, Terminator]> {
 //===----------------------------------------------------------------------===//
 // IfOp
 //===----------------------------------------------------------------------===//
+
 def IfOp : CIR_Op<"if",
       [DeclareOpInterfaceMethods<RegionBranchOpInterface>,
-       SingleBlock, RecursivelySpeculatable, AutomaticAllocationScope,
-       NoRegionArguments]> {
+       SingleBlockImplicitTerminator<"cir::YieldOp">, RecursivelySpeculatable,
+       AutomaticAllocationScope, NoRegionArguments]> {
   let summary = "if-then-else operation";
   let description = [{
     The `scf.if` operation represents an if-then-else construct for
@@ -307,7 +308,13 @@ def IfOp : CIR_Op<"if",
     ```
   }];
   let arguments = (ins CIR_BoolType:$condition);
+
+  // FIXME: for now the "then" region only has one block, that should change
+  // soon as building CIR becomes more complex.
   let regions = (region SizedRegion<1>:$thenRegion, AnyRegion:$elseRegion);
+
+  // FIXME: unify these within CIR_Ops.
+  let hasCustomAssemblyFormat = 1;
 
   let skipDefaultBuilders = 1;
   let builders = [
@@ -335,5 +342,35 @@ def IfOp : CIR_Op<"if",
   // TODO: let hasCanonicalizer = 1;
 }
 
+//===----------------------------------------------------------------------===//
+// YieldOp
+//===----------------------------------------------------------------------===//
+
+def YieldOp : CIR_Op<"yield", [Pure, ReturnLike, Terminator,
+                               ParentOneOf<["IfOp"]>]> {
+  let summary = "termination operation for regions inside if, for, scope, etc";
+  let description = [{
+    "cir.yield" yields an SSA value from a CIR dialect op region and
+    terminates the regions. The semantics of how the values are yielded is
+    defined by the parent operation.
+
+    Currently, there are not parents where "cir.yield" has any operands,
+    but it will be useful to represent lifetime extension in the future. In
+    that case the operands must match the parent operation's results.
+
+    If the parent operation defines no values, then the "cir.yield" may be
+    left out in the custom syntax and the builders will insert one implicitly.
+    Otherwise, it has to be present in the syntax to indicate which values are
+    yielded.
+  }];
+
+  let arguments = (ins Variadic<AnyType>:$results);
+  let builders = [OpBuilder<(ins), [{ /* nothing to do */ }]>];
+
+  let assemblyFormat =
+      [{  attr-dict ($results^ `:` type($results))? }];
+
+  let hasVerifier = 1;
+}
 
 #endif // MLIR_CIR_DIALECT_CIR_OPS
