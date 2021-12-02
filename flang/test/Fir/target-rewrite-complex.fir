@@ -452,3 +452,23 @@ func private @mlircomplexf32(%z1: complex<f32>, %z2: complex<f32>) -> complex<f3
   // PPC: return [[RES]] : tuple<f32, f32>
   return %0 : complex<f32>
 }
+
+// Test that we rewrite the fir.address_of operator.
+// I32-LABEL: func @addrof()
+// X64-LABEL: func @addrof()
+// AARCH64-LABEL: func @addrof()
+// PPC-LABEL: func @addrof()
+func @addrof() {
+  // I32: {{%.*}} = fir.address_of(@returncomplex4) : () -> i64
+  // X64: {{%.*}} = fir.address_of(@returncomplex4) : () -> !fir.vector<2:!fir.real<4>>
+  // AARCH64: {{%.*}} = fir.address_of(@returncomplex4) : () -> tuple<!fir.real<4>, !fir.real<4>>
+  // PPC: {{%.*}} = fir.address_of(@returncomplex4) : () -> tuple<!fir.real<4>, !fir.real<4>>
+  %r = fir.address_of(@returncomplex4) : () -> !fir.complex<4>
+
+  // I32: {{%.*}} = fir.address_of(@paramcomplex4) : (!fir.ref<tuple<!fir.real<4>, !fir.real<4>>>) -> ()
+  // X64: {{%.*}} = fir.address_of(@paramcomplex4) : (!fir.vector<2:!fir.real<4>>) -> ()
+  // AARCH64: {{%.*}} = fir.address_of(@paramcomplex4) : (!fir.array<2x!fir.real<4>>) -> ()
+  // PPC: {{%.*}} = fir.address_of(@paramcomplex4) : (!fir.real<4>, !fir.real<4>) -> ()
+  %p = fir.address_of(@paramcomplex4) : (!fir.complex<4>) -> ()
+  return
+}
