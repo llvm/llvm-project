@@ -110,12 +110,9 @@ public:
     // label, if non-empty, otherwise "extracted".
     std::string Suffix;
 
-   // bool DeleteOldBlocks;
-
-    void analyzeBeforeExtraction(const CodeExtractorAnalysisCache &CEAC, ValueSet &inputs, ValueSet &outputs, BlockFrequency &EntryFreq,DenseMap<BasicBlock *, BlockFrequency> &ExitWeights,     SmallPtrSet<BasicBlock *, 1> &ExitBlocks);
 
 
-    void prepareForExtraction(const CodeExtractorAnalysisCache &CEAC, ValueSet &inputs, ValueSet &outputs);
+
 
   public:
     /// Create a code extractor for a sequence of blocks.
@@ -160,20 +157,13 @@ public:
     /// newly outlined function.
      /// \param Outputs [out] - filled with values marked as outputs to the
     /// newly outlined function.
+    /// \param KeepOldBlocks If true, the original instances of the extracted region remain; instead of moving them to the new function they are copied.
     /// \returns zero when called on a CodeExtractor instance where isEligible
     /// returns false.
     Function *extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
                                 ValueSet &Inputs, ValueSet &Outputs, bool KeepOldBlocks = false);
 
-   void extractCodeRegionByCopy(const CodeExtractorAnalysisCache &CEAC,
-        ValueSet &Inputs, ValueSet &Outputs, 
-      const   BlockFrequency& EntryFreq,
-        const  DenseMap<BasicBlock *, BlockFrequency> &ExitWeights,  const   SmallPtrSet<BasicBlock *, 1> &ExitBlocks,
-       const  ValueSet &SinkingCands,const ValueSet & HoistingCands, BasicBlock *CommonExit,  
-        Function *oldFunction,   Function *newFunction,  BasicBlock *header,
-        BasicBlock *   codeReplacer,
-        BasicBlock *  NewEntry,
-        BasicBlock *  newRootNode  );
+
 
     /// Verify that assumption cache isn't stale after a region is extracted.
     /// Returns true when verifier finds errors. AssumptionCache is passed as
@@ -263,6 +253,26 @@ public:
         //,   bool KeepOldBlocks,    ValueToValueMapTy &VMap
     );
 
+    void analyzeBeforeExtraction(const CodeExtractorAnalysisCache &CEAC, ValueSet &inputs, ValueSet &outputs, BlockFrequency &EntryFreq,DenseMap<BasicBlock *, BlockFrequency> &ExitWeights,     SmallPtrSet<BasicBlock *, 1> &ExitBlocks);
+
+
+    void prepareForExtraction(const CodeExtractorAnalysisCache &CEAC, ValueSet &inputs, ValueSet &outputs);
+
+
+   void extractCodeRegionByCopy(const CodeExtractorAnalysisCache &CEAC,
+        ValueSet &Inputs, ValueSet &Outputs, 
+      const   BlockFrequency& EntryFreq,
+        const  DenseMap<BasicBlock *, BlockFrequency> &ExitWeights,  const   SmallPtrSet<BasicBlock *, 1> &ExitBlocks,
+       const  ValueSet &SinkingCands,const ValueSet & HoistingCands, BasicBlock *CommonExit,  
+        Function *oldFunction,   Function *newFunction,  BasicBlock *header,
+        BasicBlock *   codeReplacer,
+        BasicBlock *  NewEntry,
+        BasicBlock *  newRootNode ,    
+       std::vector<Value *> &params,
+       std::vector<Value *>  &StructValues,
+       SmallVectorImpl<unsigned> &SwiftErrorArgs
+   );
+
     void moveCodeToFunction(Function *newFunction);
 
     void calculateNewCallTerminatorWeights(
@@ -270,11 +280,14 @@ public:
         DenseMap<BasicBlock *, BlockFrequency> &ExitWeights,
         BranchProbabilityInfo *BPI);
 
-
-
     CallInst *emitCallAndSwitchStatement(Function *newFunction,
                                          BasicBlock *newHeader,
-                                         ValueSet &inputs, ValueSet &outputs,bool KeepOldBlocks ,   ValueToValueMapTy &VMap);
+                                         ValueSet &inputs, ValueSet &outputs,bool KeepOldBlocks ,
+        ValueToValueMapTy &VMap,
+        std::vector<Value *> &params,
+        std::vector<Value *>  &StructValues,
+        SmallVectorImpl<unsigned> &SwiftErrorArgs
+        );
   };
 
 } // end namespace llvm

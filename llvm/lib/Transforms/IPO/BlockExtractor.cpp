@@ -43,7 +43,7 @@ static cl::opt<bool>
 namespace {
 class BlockExtractor {
 public:
-  BlockExtractor(bool EraseFunctions, bool KeepOldBlocks) : EraseFunctions(EraseFunctions),KeepOldBlocks(KeepOldBlocks) {}
+  BlockExtractor(bool EraseFunctions, bool KeepOldBlocks=false) : EraseFunctions(EraseFunctions),KeepOldBlocks(KeepOldBlocks) {}
   bool runOnModule(Module &M);
   void init(const SmallVectorImpl<SmallVector<BasicBlock *, 16>>
                 &GroupsOfBlocksToExtract) {
@@ -255,7 +255,7 @@ bool BlockExtractorLegacyPass::runOnModule(Module &M) {
 
 PreservedAnalyses BlockExtractorPass::run(Module &M,
                                           ModuleAnalysisManager &AM) {
-  BlockExtractor BE(false,false);
+  BlockExtractor BE(false);
   BE.init(SmallVector<SmallVector<BasicBlock *, 16>, 0>());
   return BE.runOnModule(M) ? PreservedAnalyses::none()
                            : PreservedAnalyses::all();
