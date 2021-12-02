@@ -82,6 +82,28 @@ void templatetest() {
   (void)i;
 }
 
+template <typename T>
+void aliastest() {
+  using X = Foo;
+  using Y = X;
+  using Z = Y;
+  Z(42);
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: object destroyed immediately after creation; did you mean to name the object?
+  // CHECK-FIXES: Z give_me_a_name(42);
+
+  typedef Z ZT;
+  ZT(42, 13);
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: object destroyed immediately after creation; did you mean to name the object?
+  // CHECK-FIXES: ZT give_me_a_name(42, 13);
+
+  using TT = TCtorDefaultArg<T>;
+  TT(42);
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: object destroyed immediately after creation; did you mean to name the object?
+  // CHECK-FIXES: TT give_me_a_name(42);
+
+  (void)0;
+}
+
 void test() {
   Foo(42);
 // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: object destroyed immediately after creation; did you mean to name the object?
