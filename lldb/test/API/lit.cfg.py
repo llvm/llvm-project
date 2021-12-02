@@ -109,12 +109,12 @@ if is_configured('llvm_use_sanitizer'):
 # lldb using unsanitized llvm, clang, and swift libraries.
     config.environment['ASAN_OPTIONS'] = 'detect_container_overflow=0:detect_stack_use_after_return=1'
 # End Swift mod.
-    if 'Darwin' in config.host_os and 'x86' in config.host_triple:
+    if 'Darwin' in config.host_os:
       config.environment['DYLD_INSERT_LIBRARIES'] = find_sanitizer_runtime(
           'libclang_rt.asan_osx_dynamic.dylib')
 
   if 'Thread' in config.llvm_use_sanitizer:
-    if 'Darwin' in config.host_os and 'x86' in config.host_triple:
+    if 'Darwin' in config.host_os:
       config.environment['DYLD_INSERT_LIBRARIES'] = find_sanitizer_runtime(
           'libclang_rt.tsan_osx_dynamic.dylib')
 
