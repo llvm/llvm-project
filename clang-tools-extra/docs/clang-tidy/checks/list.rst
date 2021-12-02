@@ -92,6 +92,7 @@ Clang-Tidy Checks
    `bugprone-string-constructor <bugprone-string-constructor.html>`_, "Yes"
    `bugprone-string-integer-assignment <bugprone-string-integer-assignment.html>`_, "Yes"
    `bugprone-string-literal-with-embedded-nul <bugprone-string-literal-with-embedded-nul.html>`_,
+   `bugprone-stringview-nullptr <bugprone-stringview-nullptr.html>`_, "Yes"
    `bugprone-suspicious-enum-usage <bugprone-suspicious-enum-usage.html>`_,
    `bugprone-suspicious-include <bugprone-suspicious-include.html>`_,
    `bugprone-suspicious-memory-comparison <bugprone-suspicious-memory-comparison.html>`_,
