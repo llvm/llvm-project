@@ -450,14 +450,17 @@ void AMDGCN::OpenMPLinker::constructLldCommand(
   auto &TC = getToolChain();
   auto &D = TC.getDriver();
   auto TargetID = TC.getTargetID();
-  auto FileName = llvm::sys::path::stem(Output.getFilename());
-  auto OutFileName = Twine(FileName + "-" + TargetID +
-                           llvm::sys::path::extension(Output.getFilename()))
-                         .str();
+  auto FileName =
+      Twine(llvm::sys::path::stem(Output.getFilename()) + "-" + TargetID +
+            llvm::sys::path::extension(Output.getFilename()))
+          .str();
   if (C.getDriver().isSaveTempsEnabled()) {
-    OutFileName.append(".out");
+    FileName.append(".out");
+    LldArgs.push_back(Args.MakeArgString(FileName.c_str()));
+  } else {
+    auto OutputFileName = C.addTempFile(C.getArgs().MakeArgString(FileName));
+    LldArgs.push_back(Args.MakeArgString(OutputFileName));
   }
-  LldArgs.push_back(Args.MakeArgString(OutFileName.c_str()));
 
   LldArgs.push_back(Args.MakeArgString(InputFileName));
   // Get the environment variable ROCM_LLD_ARGS and add to lld.
