@@ -1145,9 +1145,12 @@ template <class ELFT> void ObjFile<ELFT>::initializeSymbols() {
       if ((sym->symbolKind == Symbol::LazyArchiveKind &&
            !cast<ArchiveFile>(sym->file)->parsed) ||
           (sym->symbolKind == Symbol::LazyObjectKind &&
-           cast<LazyObjFile>(sym->file)->extracted))
+           cast<LazyObjFile>(sym->file)->extracted)) {
         sym->replace(und);
-      else
+        // Prevent LTO from internalizing the symbol in case there is a
+        // reference to this symbol from this file.
+        sym->isUsedInRegularObj = true;
+      } else
         sym->resolve(und);
       continue;
     }
