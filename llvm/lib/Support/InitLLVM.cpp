@@ -8,6 +8,7 @@
 
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/HTTPClient.h"
 #include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/PrettyStackTrace.h"
 #include "llvm/Support/Process.h"
@@ -58,6 +59,11 @@ InitLLVM::InitLLVM(int &Argc, const char **&Argv,
   Argc = Args.size() - 1;
   Argv = Args.data();
 #endif
+
+  HTTPClient::initialize();
 }
 
-InitLLVM::~InitLLVM() { llvm_shutdown(); }
+InitLLVM::~InitLLVM() {
+  HTTPClient::cleanup();
+  llvm_shutdown();
+}

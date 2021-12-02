@@ -86,3 +86,9 @@ TEST(BufferedHTTPResponseHandler, MalformedContentLength) {
   EXPECT_THAT_ERROR(Handler.handleBodyChunk("non-empty body content"),
                     Failed<llvm::StringError>());
 }
+
+#ifdef LLVM_ENABLE_CURL
+
+TEST(HTTPClient, isAvailable) { EXPECT_TRUE(HTTPClient::isAvailable()); }
+
+#endif
