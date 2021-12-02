@@ -275,11 +275,11 @@ void *MmapFixedNoAccess(uptr fixed_addr, uptr size, const char *name) {
 }
 
 bool MprotectNoAccess(uptr addr, uptr size) {
-  return _zx_vmar_protect(_zx_vmar_root_self(), 0, Addr, Size) == ZX_OK;
+  return _zx_vmar_protect(_zx_vmar_root_self(), 0, addr, size) == ZX_OK;
 }
 
 bool MprotectReadOnly(uptr addr, uptr size) {
-  return _zx_vmar_protect(_zx_vmar_root_self(), ZX_VM_PERM_READ, Addr, Size) ==
+  return _zx_vmar_protect(_zx_vmar_root_self(), ZX_VM_PERM_READ, addr, size) ==
          ZX_OK;
 }
 
