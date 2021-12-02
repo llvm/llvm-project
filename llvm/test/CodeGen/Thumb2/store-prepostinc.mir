@@ -460,8 +460,7 @@ body:             |
     ; CHECK-LABEL: name: STR_post255
     ; CHECK: liveins: $r0, $r1
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: t2STRi12 killed renamable $r1, renamable $r0, 0, 14 /* CC::al */, $noreg :: (store (s32))
-    ; CHECK-NEXT: renamable $r0 = nuw t2ADDri killed renamable $r0, 255, 14 /* CC::al */, $noreg, $noreg
+    ; CHECK-NEXT: early-clobber $r0 = t2STR_POST killed $r1, $r0, 255, 14 /* CC::al */, $noreg :: (store (s32))
     ; CHECK-NEXT: tBX_RET 14 /* CC::al */, $noreg, implicit $r0
     t2STRi12 killed renamable $r1, renamable $r0, 0, 14 /* CC::al */, $noreg :: (store (s32))
     renamable $r0 = nuw t2ADDri killed renamable $r0, 255, 14 /* CC::al */, $noreg, $noreg
