@@ -1522,7 +1522,7 @@ TEST_F(CoreAPIsStandardTest, RemoveJITDylibs) {
       })));
 
   // Lookup to force materialization of Foo.
-  cantFail(ES.lookup(makeJITDylibSearchOrder(&JD), {Foo}));
+  cantFail(ES.lookup(makeJITDylibSearchOrder(&JD), SymbolLookupSet({Foo})));
 
   // Start a lookup to force materialization of Baz.
   bool BazLookupFailed = false;
