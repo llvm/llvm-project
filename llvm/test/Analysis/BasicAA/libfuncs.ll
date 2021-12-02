@@ -136,9 +136,9 @@ define i8* @test_strncpy_const_size(i8* noalias %a, i8* noalias %b) {
 ; CHECK-NEXT:  Just Ref:  Ptr: i8* %b	<->  %res = tail call i8* @strncpy(i8* %a, i8* %b, i64 4)
 ; CHECK-NEXT:  Just Mod:  Ptr: i8* %res	<->  %res = tail call i8* @strncpy(i8* %a, i8* %b, i64 4)
 ; CHECK-NEXT:  Just Mod:  Ptr: i8* %a.gep.1	<->  %res = tail call i8* @strncpy(i8* %a, i8* %b, i64 4)
-; CHECK-NEXT:  Just Mod:  Ptr: i8* %a.gep.5	<->  %res = tail call i8* @strncpy(i8* %a, i8* %b, i64 4)
+; CHECK-NEXT:  NoModRef:  Ptr: i8* %a.gep.5	<->  %res = tail call i8* @strncpy(i8* %a, i8* %b, i64 4)
 ; CHECK-NEXT:  Just Ref:  Ptr: i8* %b.gep.1	<->  %res = tail call i8* @strncpy(i8* %a, i8* %b, i64 4)
-; CHECK-NEXT:  Just Ref:  Ptr: i8* %b.gep.5	<->  %res = tail call i8* @strncpy(i8* %a, i8* %b, i64 4)
+; CHECK-NEXT:  NoModRef:  Ptr: i8* %b.gep.5	<->  %res = tail call i8* @strncpy(i8* %a, i8* %b, i64 4)
 ;
 entry:
   %res = tail call i8* @strncpy(i8* %a, i8* %b, i64 4)
