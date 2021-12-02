@@ -29,7 +29,6 @@ executable("lld") {
     "//lld/ELF",
     "//lld/MachO:MachO",
     "//lld/MinGW",
-    "//lld/lib/Driver",
     "//lld/wasm",
     "//llvm/lib/Support",
     "//llvm/utils/gn/build/libs/xar",
