@@ -76,6 +76,12 @@ Improvements to clang-tidy
 New checks
 ^^^^^^^^^^
 
+- New :doc:`bugprone-stringview-nullptr
+  <clang-tidy/checks/bugprone-stringview-nullptr>` check.
+
+  Checks for various ways that the ``const CharT*`` constructor of
+  ``std::basic_string_view`` can be passed a null argument.
+
 - New :doc:`abseil-cleanup-ctad
   <clang-tidy/checks/abseil-cleanup-ctad>` check.
 
