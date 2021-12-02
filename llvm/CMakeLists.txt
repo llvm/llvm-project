@@ -328,7 +328,6 @@ set(LLVM_ALL_TARGETS
   RISCV
   Sparc
   SystemZ
-  VE
   WebAssembly
   X86
   XCore
