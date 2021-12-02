@@ -1605,31 +1605,45 @@ public:
     // The else branch of a consteval if statement is always the only branch
     // that can be runtime evaluated.
     assert(!S.isConsteval() && "not implemented");
+    mlir::LogicalResult res = mlir::success();
 
     // C99 6.8.4.1: The first substatement is executed if the expression
     // compares unequal to 0.  The condition must be a scalar type.
-    // TODO: add cir.scope, add a new scoped symbol table as well.
+    auto ifStmtBuilder = [&]() -> mlir::LogicalResult {
+      if (S.getInit())
+        if (buildStmt(S.getInit()).failed())
+          return mlir::failure();
+
+      if (S.getConditionVariable())
+        buildDecl(*S.getConditionVariable());
+
+      // If the condition constant folds and can be elided, try to avoid
+      // emitting the condition and the dead arm of the if/else.
+      // FIXME: should this be done as part of a constant folder pass instead?
+      bool CondConstant;
+      if (ConstantFoldsToSimpleInteger(S.getCond(), CondConstant,
+                                       S.isConstexpr())) {
+        assert(0 && "not implemented");
+      }
+
+      // TODO: PGO and likelihood.
+      buildIfOnBoolExpr(S.getCond(), getLoc(S.getSourceRange().getBegin()),
+                        S.getThen(), S.getElse());
+      return mlir::success();
+    };
+
+    // TODO: Add a new scoped symbol table.
     // LexicalScope ConditionScope(*this, S.getCond()->getSourceRange());
-    if (S.getInit())
-      if (buildStmt(S.getInit()).failed())
-        return mlir::failure();
+    auto locBegin = getLoc(S.getSourceRange().getBegin());
+    auto locEnd = getLoc(S.getSourceRange().getEnd());
+    builder.create<mlir::cir::ScopeOp>(
+        locBegin, mlir::TypeRange(), /*scopeBuilder=*/
+        [&](mlir::OpBuilder &b, mlir::Location loc) {
+          res = ifStmtBuilder();
+          builder.create<YieldOp>(locEnd);
+        });
 
-    if (S.getConditionVariable())
-      buildDecl(*S.getConditionVariable());
-
-    // If the condition constant folds and can be elided, try to avoid emitting
-    // the condition and the dead arm of the if/else.
-    // FIXME: should this be done as part of a constant folder pass instead?
-    bool CondConstant;
-    if (ConstantFoldsToSimpleInteger(S.getCond(), CondConstant,
-                                     S.isConstexpr())) {
-      assert(0 && "not implemented");
-    }
-
-    // TODO: PGO and likelihood.
-    buildIfOnBoolExpr(S.getCond(), getLoc(S.getSourceRange().getBegin()),
-                      S.getThen(), S.getElse());
-    return mlir::success();
+    return res;
   }
 
   mlir::LogicalResult buildStmt(const Stmt *S) {
