@@ -135,8 +135,6 @@ void PrintAddressSpaceLayout() {
 
 static bool UNUSED __local_memprof_dyninit = [] {
   MaybeStartBackgroudThread();
-  SetSoftRssLimitExceededCallback(MemprofSoftRssLimitExceededCallback);
-
   return false;
 }();
 

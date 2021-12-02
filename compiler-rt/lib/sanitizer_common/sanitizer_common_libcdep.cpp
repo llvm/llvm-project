@@ -10,6 +10,7 @@
 // run-time libraries.
 //===----------------------------------------------------------------------===//
 
+#include "sanitizer_allocator.h"
 #include "sanitizer_allocator_interface.h"
 #include "sanitizer_common.h"
 #include "sanitizer_flags.h"
@@ -17,12 +18,6 @@
 
 
 namespace __sanitizer {
-
-static void (*SoftRssLimitExceededCallback)(bool exceeded);
-void SetSoftRssLimitExceededCallback(void (*Callback)(bool exceeded)) {
-  CHECK_EQ(SoftRssLimitExceededCallback, nullptr);
-  SoftRssLimitExceededCallback = Callback;
-}
 
 #if (SANITIZER_LINUX || SANITIZER_NETBSD) && !SANITIZER_GO
 // Weak default implementation for when sanitizer_stackdepot is not linked in.
@@ -67,13 +62,11 @@ void *BackgroundThread(void *arg) {
         reached_soft_rss_limit = true;
         Report("%s: soft rss limit exhausted (%zdMb vs %zdMb)\n",
                SanitizerToolName, soft_rss_limit_mb, current_rss_mb);
-        if (SoftRssLimitExceededCallback)
-          SoftRssLimitExceededCallback(true);
+        SetRssLimitExceeded(true);
       } else if (soft_rss_limit_mb >= current_rss_mb &&
                  reached_soft_rss_limit) {
         reached_soft_rss_limit = false;
-        if (SoftRssLimitExceededCallback)
-          SoftRssLimitExceededCallback(false);
+        SetRssLimitExceeded(false);
       }
     }
     if (heap_profile &&

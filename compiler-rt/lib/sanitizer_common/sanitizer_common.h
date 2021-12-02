@@ -326,12 +326,6 @@ void SetUserDieCallback(DieCallbackType callback);
 
 void SetCheckUnwindCallback(void (*callback)());
 
-// Callback will be called if soft_rss_limit_mb is given and the limit is
-// exceeded (exceeded==true) or if rss went down below the limit
-// (exceeded==false).
-// The callback should be registered once at the tool init time.
-void SetSoftRssLimitExceededCallback(void (*Callback)(bool exceeded));
-
 // Functions related to signal handling.
 typedef void (*SignalHandlerType)(int, void *, void *);
 HandleSignalMode GetHandleSignalMode(int signum);
