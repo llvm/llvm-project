@@ -916,3 +916,15 @@ func @scf_if_inside_scf_for(%t1: tensor<?xf32> {linalg.inplaceable = true},
   }
   return %r : tensor<?xf32>
 }
+
+// -----
+
+// CHECK-LABEL: func @insert_op
+//  CHECK-SAME:     %[[t1:.*]]: memref<?xf32, {{.*}}>, %[[s:.*]]: f32, %[[i:.*]]: index
+func @insert_op(%t1 : tensor<?xf32> {linalg.inplaceable = true},
+                %s : f32, %i : index) -> tensor<?xf32> {
+  // CHECK: memref.store %[[s]], %[[t1]][%[[i]]]
+  %0 = tensor.insert %s into %t1[%i] : tensor<?xf32>
+  // CHECK: return
+  return %0 : tensor<?xf32>
+}
