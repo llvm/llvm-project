@@ -198,13 +198,17 @@ std::shared_ptr<DynamicRegisterInfo> ScriptedThread::GetDynamicRegisterInfo() {
 
   if (!m_register_info_sp) {
     StructuredData::DictionarySP reg_info = GetInterface()->GetRegisterInfo();
+
+    Status error;
     if (!reg_info)
-      return nullptr;
+      return GetInterface()
+          ->ErrorWithMessage<std::shared_ptr<DynamicRegisterInfo>>(
+              LLVM_PRETTY_FUNCTION,
+              "Failed to get scripted thread registers info.", error,
+              LIBLLDB_LOG_THREAD);
 
     m_register_info_sp = std::make_shared<DynamicRegisterInfo>(
         *reg_info, m_scripted_process.GetTarget().GetArchitecture());
-    assert(m_register_info_sp->GetNumRegisters() > 0);
-    assert(m_register_info_sp->GetNumRegisterSets() > 0);
   }
 
   return m_register_info_sp;
