@@ -8804,6 +8804,9 @@ static bool checkOpenMPIterationSpace(
   }
   assert(((For && For->getBody()) || (CXXFor && CXXFor->getBody())) &&
          "No loop body.");
+  // Postpone analysis in dependent contexts for ranged for loops.
+  if (CXXFor && SemaRef.CurContext->isDependentContext())
+    return false;
 
   OpenMPIterationSpaceChecker ISC(SemaRef, SupportsNonRectangular, DSA,
                                   For ? For->getForLoc() : CXXFor->getForLoc());
