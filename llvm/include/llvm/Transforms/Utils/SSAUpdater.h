@@ -169,6 +169,10 @@ public:
 
   /// Called to update debug info associated with the instruction.
   virtual void updateDebugInfo(Instruction *I) const {}
+
+  /// Return false if a sub-class wants to keep one of the loads/stores
+  /// after the SSA construction.
+  virtual bool shouldDelete(Instruction *I) const { return true; }
 };
 
 } // end namespace llvm
