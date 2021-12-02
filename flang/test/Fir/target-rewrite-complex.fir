@@ -106,6 +106,7 @@ func private @paramcomplex4(!fir.complex<4>) -> ()
 // I32-LABEL: func @callcomplex4()
 // X64-LABEL: func @callcomplex4()
 // AARCH64-LABEL: func @callcomplex4()
+// PPC-LABEL: func @callcomplex4()
 func @callcomplex4() {
 
   // I32: [[RES:%[0-9A-Za-z]+]] = fir.call @returncomplex4() : () -> i64
