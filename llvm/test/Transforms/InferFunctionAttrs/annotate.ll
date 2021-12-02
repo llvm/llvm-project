@@ -1012,11 +1012,11 @@ declare i64 @write(i32, i8*, i64)
 
 
 ; memset_pattern{4,8,16} aren't available everywhere.
-; CHECK-DARWIN: declare void @memset_pattern4(i8*, i8*, i64) [[NOFREE]]
+; CHECK-DARWIN: declare void @memset_pattern4(i8* nocapture writeonly, i8* nocapture readonly, i64) [[ARGMEMONLY_NOFREE:#[0-9]+]]
 declare void @memset_pattern4(i8*, i8*, i64)
-; CHECK-DARWIN: declare void @memset_pattern8(i8*, i8*, i64) [[NOFREE]]
+; CHECK-DARWIN: declare void @memset_pattern8(i8* nocapture writeonly, i8* nocapture readonly, i64) [[ARGMEMONLY_NOFREE]]
 declare void @memset_pattern8(i8*, i8*, i64)
-; CHECK-DARWIN: declare void @memset_pattern16(i8* nocapture writeonly, i8* nocapture readonly, i64) [[ARGMEMONLY_NOFREE:#[0-9]+]]
+; CHECK-DARWIN: declare void @memset_pattern16(i8* nocapture writeonly, i8* nocapture readonly, i64) [[ARGMEMONLY_NOFREE]]
 declare void @memset_pattern16(i8*, i8*, i64)
 
 
