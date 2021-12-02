@@ -244,6 +244,6 @@ body:             |
     CALL64r killed renamable $rax, csr_64, implicit $rsp, implicit $ssp, implicit killed $rdi, implicit killed $rsi, implicit killed $r14, implicit-def $rsp, implicit-def $ssp, debug-location !65
     $rsp = frame-destroy ADD64ri8 $rsp, 32, implicit-def dead $eflags, debug-location !65
     $r14 = frame-destroy POP64r implicit-def $rsp, implicit $rsp, debug-location !65
-    RETQ debug-location !65
+    RET64 debug-location !65
 
 ...

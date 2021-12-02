@@ -148,6 +148,21 @@ static cl::opt<bool> EmulateOldLDV("emulate-old-livedebugvalues", cl::Hidden,
                                    cl::desc("Act like old LiveDebugValues did"),
                                    cl::init(false));
 
+static bool isSwiftAsyncContext(const MachineFunction &MF, Register Reg) {
+  const llvm::Function &F = MF.getFunction();
+  if (!MF.getProperties().hasProperty(
+          MachineFunctionProperties::Property::TracksLiveness))
+    return false;
+  unsigned I = 0;
+  for (auto R : MF.getRegInfo().liveins()) {
+    if (R.first == (unsigned)Reg &&
+        F.hasParamAttribute(I, Attribute::SwiftAsync))
+      return true;
+    ++I;
+  }
+  return false;
+}
+
 /// Tracker for converting machine value locations and variable values into
 /// variable locations (the output of LiveDebugValues), recorded as DBG_VALUEs
 /// specifying block live-in locations and transfers within blocks.
@@ -420,18 +435,20 @@ public:
     if (!ShouldEmitDebugEntryValues)
       return false;
 
-    // Is the variable appropriate for entry values (i.e., is a parameter).
-    if (!isEntryValueVariable(Var, Prop.DIExpr))
-      return false;
-
     // Is the value assigned to this variable still the entry value?
     if (!isEntryValueValue(Num))
+      return false;
+
+    Register Reg = MTracker->LocIdxToLocID[Num.getLoc()];
+
+    // Is the variable appropriate for entry values (i.e., is a parameter).
+    if (!isEntryValueVariable(Var, Prop.DIExpr) &&
+        !isSwiftAsyncContext(MF, Reg))
       return false;
 
     // Emit a variable location using an entry value expression.
     DIExpression *NewExpr =
         DIExpression::prepend(Prop.DIExpr, DIExpression::EntryValue);
-    Register Reg = MTracker->LocIdxToLocID[Num.getLoc()];
     MachineOperand MO = MachineOperand::CreateReg(Reg, false);
 
     PendingDbgValues.push_back(emitMOLoc(MO, Var, {NewExpr, Prop.Indirect}));
@@ -958,8 +975,18 @@ bool InstrRefBasedLDV::transferDebugValue(const MachineInstr &MI) {
 
   // MLocTracker needs to know that this register is read, even if it's only
   // read by a debug inst.
-  if (MO.isReg() && MO.getReg() != 0)
+  if (MO.isReg() && MO.getReg() != 0) {
     (void)MTracker->readReg(MO.getReg());
+    auto *Expr = MI.getDebugExpression();
+    const llvm::MachineFunction *MF = MI.getParent()->getParent();
+    if (!(Expr && Expr->isEntryValue()) &&
+        isSwiftAsyncContext(*MF, MO.getReg())) {
+      // In Swift async functions entry values are preferred, since they
+      // can be evaluated in both live frames and virtual backtraces.
+      const_cast<MachineInstr *>(&MI)->getOperand(3).setMetadata(
+          DIExpression::prepend(Expr, DIExpression::EntryValue));
+    }
+  }
 
   // If we're preparing for the second analysis (variables), the machine value
   // locations are already solved, and we report this DBG_VALUE and the value
