@@ -93,7 +93,6 @@ group("test") {
     ":lit_site_cfg",
     ":lit_unit_site_cfg",
     "//lld/tools/lld:symlinks",
-    "//lld/unittests",
     "//llvm/tools/dsymutil",
     "//llvm/tools/llc",
     "//llvm/tools/llvm-ar:symlinks",
