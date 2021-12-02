@@ -1,6 +1,8 @@
 # RUN: llc -march=amdgcn -mcpu=gfx1010 %s -run-pass twoaddressinstruction -verify-machineinstrs -o - | FileCheck -check-prefix=GCN %s
 
 # GCN-LABEL: name: test_fmamk_reg_imm_f32
+# GCN: %2:vgpr_32 = IMPLICIT_DEF
+# GCN-NOT: V_MOV_B32
 # GCN: V_FMAMK_F32 killed %0.sub0, 1078523331, killed %1, implicit $mode, implicit $exec
 ---
 name:            test_fmamk_reg_imm_f32
@@ -20,6 +22,8 @@ body:             |
 ...
 
 # GCN-LABEL: name: test_fmamk_imm_reg_f32
+# GCN: %2:vgpr_32 = IMPLICIT_DEF
+# GCN-NOT: V_MOV_B32
 # GCN: V_FMAMK_F32 killed %0.sub0, 1078523331, killed %1, implicit $mode, implicit $exec
 ---
 name:            test_fmamk_imm_reg_f32
@@ -39,6 +43,8 @@ body:             |
 ...
 
 # GCN-LABEL: name: test_fmaak_f32
+# GCN: %1:vgpr_32 = IMPLICIT_DEF
+# GCN-NOT: V_MOV_B32
 # GCN: V_FMAAK_F32 killed %0.sub0, %0.sub1, 1078523331, implicit $mode, implicit $exec
 ---
 name:            test_fmaak_f32
@@ -56,6 +62,8 @@ body:             |
 ...
 
 # GCN-LABEL: name: test_fmamk_reg_imm_f16
+# GCN: %2:vgpr_32 = IMPLICIT_DEF
+# GCN-NOT: V_MOV_B32
 # GCN: V_FMAMK_F16 killed %0.sub0, 1078523331, killed %1, implicit $mode, implicit $exec
 ---
 name:            test_fmamk_reg_imm_f16
@@ -75,6 +83,8 @@ body:             |
 ...
 
 # GCN-LABEL: name: test_fmamk_imm_reg_f16
+# GCN: %2:vgpr_32 = IMPLICIT_DEF
+# GCN-NOT: V_MOV_B32
 # GCN: V_FMAMK_F16 killed %0.sub0, 1078523331, killed %1, implicit $mode, implicit $exec
 ---
 name:            test_fmamk_imm_reg_f16
@@ -94,6 +104,8 @@ body:             |
 ...
 
 # GCN-LABEL: name: test_fmaak_f16
+# GCN: %1:vgpr_32 = IMPLICIT_DEF
+# GCN-NOT: V_MOV_B32
 # GCN: V_FMAAK_F16 killed %0.sub0, %0.sub1, 1078523331, implicit $mode, implicit $exec
 ---
 name:            test_fmaak_f16
@@ -110,6 +122,8 @@ body:             |
 ...
 
 # GCN-LABEL: name: test_fmaak_sgpr_src0_f32
+# GCN: %1:vgpr_32 = IMPLICIT_DEF
+# GCN-NOT: V_MOV_B32
 # GCN: %2:vgpr_32 = V_FMAMK_F32 killed %0, 1078523331, %3:vgpr_32, implicit $mode, implicit $exec
 
 ---
@@ -129,6 +143,8 @@ body:             |
 ...
 
 # GCN-LABEL: name: test_fmaak_inlineimm_src0_f32
+# GCN: %0:vgpr_32 = IMPLICIT_DEF
+# GCN-NOT: V_MOV_B32
 # GCN: %1:vgpr_32 = V_FMAMK_F32 1073741824, 1078523331, %2:vgpr_32, implicit $mode, implicit $exec
 
 ---
@@ -183,6 +199,8 @@ body:             |
 ...
 
 # GCN-LABEL: name: test_fmaak_inline_literal_f16
+# GCN: %1:vgpr_32 = IMPLICIT_DEF
+# GCN-NOT: V_MOV_B32
 # GCN: %2:vgpr_32 = V_FMAAK_F16 16384, killed %0, 49664, implicit $mode, implicit $exec
 
 ---
@@ -201,3 +219,47 @@ body:             |
 
 ...
 
+# GCN-LABEL: name: test_fmamk_reg_imm_f32_2_folds
+# GCN: %2:vgpr_32 = IMPLICIT_DEF
+# GCN-NOT: V_MOV_B32
+# GCN: V_FMAMK_F32 %0.sub0, 1078523331, %1, implicit $mode, implicit $exec
+# GCN: V_FMAMK_F32 killed %0.sub0, 1078523331, killed %1, implicit $mode, implicit $exec
+---
+name:            test_fmamk_reg_imm_f32_2_folds
+registers:
+  - { id: 0, class: vreg_64 }
+  - { id: 1, class: vgpr_32 }
+  - { id: 2, class: vgpr_32 }
+  - { id: 3, class: vgpr_32 }
+  - { id: 4, class: vgpr_32 }
+body:             |
+  bb.0:
+
+    %0 = IMPLICIT_DEF
+    %1 = COPY %0.sub1
+    %2 = V_MOV_B32_e32 1078523331, implicit $exec
+    %3 = V_FMAC_F32_e32 %0.sub0, %2, %1, implicit $mode, implicit $exec
+    %4 = V_FMAC_F32_e32 killed %0.sub0, %2, killed %1, implicit $mode, implicit $exec
+
+...
+
+# GCN-LABEL: name: test_fmamk_reg_imm_f32_used_imm
+# GCN: %2:vgpr_32 = V_MOV_B32_e32 1078523331, implicit $exec
+# GCN: V_FMAMK_F32 killed %0.sub0, 1078523331, killed %1, implicit $mode, implicit $exec
+---
+name:            test_fmamk_reg_imm_f32_used_imm
+registers:
+  - { id: 0, class: vreg_64 }
+  - { id: 1, class: vgpr_32 }
+  - { id: 2, class: vgpr_32 }
+  - { id: 3, class: vgpr_32 }
+body:             |
+  bb.0:
+
+    %0 = IMPLICIT_DEF
+    %1 = COPY %0.sub1
+    %2 = V_MOV_B32_e32 1078523331, implicit $exec
+    %3 = V_FMAC_F32_e32 killed %0.sub0, %2, killed %1, implicit $mode, implicit $exec
+    S_NOP 0, implicit %2
+
+...
