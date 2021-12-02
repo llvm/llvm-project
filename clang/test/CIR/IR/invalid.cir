@@ -14,3 +14,15 @@ func.func @b0() {
   %1 = cir.cst(true) : i32
   cir.return
 }
+
+// -----
+
+func.func @if0() {
+  %0 = cir.cst(true) : !cir.bool
+  cir.if %0 {
+    %6 = cir.cst(3 : i32) : i32
+    // expected-error@+1 {{'cir.yield' op must not produce results in 'if' operation}}
+    cir.yield %6 : i32
+  }
+  cir.return
+}

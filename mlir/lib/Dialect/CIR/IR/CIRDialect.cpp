@@ -133,6 +133,56 @@ mlir::LogicalResult ReturnOp::verify() {
 // IfOp
 //===----------------------------------------------------------------------===//
 
+ParseResult IfOp::parse(OpAsmParser &parser, OperationState &result) {
+  // Create the regions for 'then'.
+  result.regions.reserve(2);
+  Region *thenRegion = result.addRegion();
+  Region *elseRegion = result.addRegion();
+
+  auto &builder = parser.getBuilder();
+  OpAsmParser::UnresolvedOperand cond;
+  Type boolType = ::mlir::cir::BoolType::get(builder.getContext());
+
+  if (parser.parseOperand(cond) ||
+      parser.resolveOperand(cond, boolType, result.operands))
+    return failure();
+
+  // Parse the 'then' region.
+  if (parser.parseRegion(*thenRegion, /*arguments=*/{}, /*argTypes=*/{}))
+    return failure();
+  IfOp::ensureTerminator(*thenRegion, parser.getBuilder(), result.location);
+
+  // If we find an 'else' keyword then parse the 'else' region.
+  if (!parser.parseOptionalKeyword("else")) {
+    if (parser.parseRegion(*elseRegion, /*arguments=*/{}, /*argTypes=*/{}))
+      return failure();
+    IfOp::ensureTerminator(*elseRegion, parser.getBuilder(), result.location);
+  }
+
+  // Parse the optional attribute list.
+  if (parser.parseOptionalAttrDict(result.attributes))
+    return failure();
+  return success();
+}
+
+void IfOp::print(OpAsmPrinter &p) {
+  p << " " << getCondition() << " ";
+  p.printRegion(getThenRegion(),
+                /*printEntryBlockArgs=*/false,
+                /*printBlockTerminators=*/false);
+
+  // Print the 'else' regions if it exists and has a block.
+  auto &elseRegion = this->getElseRegion();
+  if (!elseRegion.empty()) {
+    p << " else ";
+    p.printRegion(elseRegion,
+                  /*printEntryBlockArgs=*/false,
+                  /*printBlockTerminators=*/false);
+  }
+
+  p.printOptionalAttrDict(getOperation()->getAttrs());
+}
+
 Block *IfOp::thenBlock() { return &getThenRegion().back(); }
 Block *IfOp::elseBlock() {
   Region &r = getElseRegion();
@@ -201,6 +251,20 @@ void IfOp::build(OpBuilder &builder, OperationState &result, Value cond,
 
   builder.createBlock(elseRegion);
   elseBuilder(builder, result.location);
+}
+
+//===----------------------------------------------------------------------===//
+// YieldOp
+//===----------------------------------------------------------------------===//
+
+mlir::LogicalResult YieldOp::verify() {
+  if (!llvm::isa<IfOp>(getOperation()->getParentOp()))
+    return emitOpError() << "expects 'if' as the parent operation'";
+
+  if (!getResults().empty())
+    return emitOpError() << "must not produce results in 'if' operation";
+
+  return mlir::success();
 }
 
 //===----------------------------------------------------------------------===//

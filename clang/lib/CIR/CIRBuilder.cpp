@@ -1590,12 +1590,16 @@ public:
     builder.create<mlir::cir::IfOp>(
         loc, condV,
         /*thenBuilder=*/
-        [&](mlir::OpBuilder &b, mlir::Location loc) { (void)buildStmt(thenS); },
+        [&](mlir::OpBuilder &b, mlir::Location loc) {
+          (void)buildStmt(thenS);
+          builder.create<YieldOp>(getLoc(thenS->getSourceRange().getEnd()));
+        },
         /*elseBuilder=*/
         [&](mlir::OpBuilder &b, mlir::Location loc) {
           if (!elseS)
             return;
           (void)buildStmt(elseS);
+          builder.create<YieldOp>(getLoc(elseS->getSourceRange().getEnd()));
         });
   }
 
