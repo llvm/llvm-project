@@ -19,9 +19,9 @@ func.func @b0() {
 
 func.func @if0() {
   %0 = cir.cst(true) : !cir.bool
+  // expected-error@+1 {{'cir.if' op  region control flow edge from Region #0 to parent results: source has 1 operands, but target successor needs 0}}
   cir.if %0 {
     %6 = cir.cst(3 : i32) : i32
-    // expected-error@+1 {{'cir.yield' op must not produce results in 'if' operation}}
     cir.yield %6 : i32
   }
   cir.return

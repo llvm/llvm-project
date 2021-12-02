@@ -1,6 +1,5 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -emit-cir %s -o %t.cir
 // RUN: FileCheck --input-file=%t.cir %s
-// XFAIL: *
 
 int *p0() {
   int *p = nullptr;
@@ -70,3 +69,41 @@ int if0(int a) {
 // CHECK-NEXT:   %6 = cir.cst(4 : i32) : i32
 // CHECK-NEXT:   cir.store %6, %0 : i32, cir.ptr <i32>
 // CHECK-NEXT: }
+
+int if1(int a, bool b, bool c) {
+  int x = 0;
+  if (a) {
+    x = 3;
+    if (b) {
+      x = 8;
+    }
+  } else {
+    if (c) {
+      x = 14;
+    }
+    x = 4;
+  }
+  return x;
+}
+
+// CHECK: func @if1(%arg0: i32, %arg1: !cir.bool, %arg2: !cir.bool) -> i32 {
+// CHECK:     cir.if %6 {
+// CHECK:       %8 = cir.cst(3 : i32) : i32
+// CHECK:       cir.store %8, %0 : i32, cir.ptr <i32>
+// CHECK:       %9 = cir.load %2 lvalue_to_rvalue : cir.ptr <!cir.bool>, !cir.bool
+// CHECK:       cir.if %9 {
+// CHECK:         %10 = cir.cst(8 : i32) : i32
+// CHECK:         cir.store %10, %0 : i32, cir.ptr <i32>
+// CHECK:       }
+// CHECK:     } else {
+// CHECK:       %8 = cir.load %1 lvalue_to_rvalue : cir.ptr <!cir.bool>, !cir.bool
+// CHECK:       cir.if %8 {
+// CHECK:         %10 = cir.cst(14 : i32) : i32
+// CHECK:         cir.store %10, %0 : i32, cir.ptr <i32>
+// CHECK:       }
+// CHECK:       %9 = cir.cst(4 : i32) : i32
+// CHECK:       cir.store %9, %0 : i32, cir.ptr <i32>
+// CHECK:     }
+// CHECK:     %7 = cir.load %0 lvalue_to_rvalue : cir.ptr <i32>, i32
+// CHECK:     cir.return %7 : i32
+// CHECK:   }
