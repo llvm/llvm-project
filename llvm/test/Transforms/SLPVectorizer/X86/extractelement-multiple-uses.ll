@@ -2,24 +2,25 @@
 ; RUN: opt < %s -slp-vectorizer -S -mtriple=x86_64-unknown-linux -march=core-avx2 -pass-remarks-output=%t | FileCheck %s
 ; RUN: FileCheck %s --input-file=%t --check-prefix=YAML
 
-; YAML: --- !Missed
+; YAML: --- !Passed
 ; YAML: Pass:            slp-vectorizer
-; YAML: Name:            NotBeneficial
+; YAML: Name:            VectorizedList
 ; YAML: Function:        multi_uses
 ; YAML: Args:
-; YAML:  - String:          'List vectorization was possible but not beneficial with cost '
-; YAML:  - Cost:            '0'
-; YAML:  - String:          ' >= '
-; YAML:  - Treshold:        '0'
+; YAML:  - String:          'SLP vectorized with cost '
+; YAML:  - Cost:            '-1'
+; YAML:  - String:          ' and with tree size '
+; YAML:  - TreeSize:        '3'
 
 define float @multi_uses(<2 x float> %x, <2 x float> %y) {
 ; CHECK-LABEL: @multi_uses(
-; CHECK-NEXT:    [[X0:%.*]] = extractelement <2 x float> [[X:%.*]], i32 0
-; CHECK-NEXT:    [[X1:%.*]] = extractelement <2 x float> [[X]], i32 1
 ; CHECK-NEXT:    [[Y1:%.*]] = extractelement <2 x float> [[Y:%.*]], i32 1
-; CHECK-NEXT:    [[X0X0:%.*]] = fmul float [[X0]], [[Y1]]
-; CHECK-NEXT:    [[X1X1:%.*]] = fmul float [[X1]], [[Y1]]
-; CHECK-NEXT:    [[ADD:%.*]] = fadd float [[X0X0]], [[X1X1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x float> poison, float [[Y1]], i32 0
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x float> [[TMP1]], float [[Y1]], i32 1
+; CHECK-NEXT:    [[TMP3:%.*]] = fmul <2 x float> [[X:%.*]], [[TMP2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x float> [[TMP3]], i32 0
+; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x float> [[TMP3]], i32 1
+; CHECK-NEXT:    [[ADD:%.*]] = fadd float [[TMP4]], [[TMP5]]
 ; CHECK-NEXT:    ret float [[ADD]]
 ;
   %x0 = extractelement <2 x float> %x, i32 0
