@@ -150,6 +150,8 @@ public:
                                             DemangleMode mode,
                                             const SymbolContext *sc = nullptr);
 
+  void DumpTyperef(CompilerType type, TypeSystemSwiftTypeRef *module_holder,
+             SwiftASTContext *swift_ast_context, Stream *s);
   class MethodName {
   public:
     enum Type {

@@ -954,7 +954,8 @@ std::unique_ptr<Language::TypeScavenger> SwiftLanguage::GetTypeScavenger() {
 
       bool IsValid() override { return m_result.operator bool(); }
 
-      bool DumpToStream(Stream &stream, bool print_help_if_available) override {
+      bool DumpToStream(Stream &stream, bool print_help_if_available,
+                        ExecutionContextScope *exe_scope = nullptr) override {
         if (IsValid()) {
           auto as_type = m_result.GetAs<CompilerType>();
           auto as_decl = m_result.GetAs<swift::Decl *>();
@@ -963,12 +964,14 @@ std::unique_ptr<Language::TypeScavenger> SwiftLanguage::GetTypeScavenger() {
             TypeSystem *type_system = as_type->GetTypeSystem();
             if (TypeSystemSwift *swift_ast_ctx =
                     llvm::dyn_cast_or_null<TypeSystemSwift>(type_system))
-              swift_ast_ctx->DumpTypeDescription(as_type->GetOpaqueQualType(),
-                                                 &stream,
-                                                 print_help_if_available, true);
+              swift_ast_ctx->DumpTypeDescription(
+                  as_type->GetOpaqueQualType(), &stream,
+                  print_help_if_available, true, eDescriptionLevelFull,
+                  exe_scope);
             else
               as_type->DumpTypeDescription(
-                  &stream); // we should always have a swift type here..
+                  &stream, eDescriptionLevelFull,
+                  exe_scope); // we should always have a swift type here..
           } else if (as_decl.hasValue() && as_decl.getValue()) {
             std::string buffer;
             llvm::raw_string_ostream str_stream(buffer);

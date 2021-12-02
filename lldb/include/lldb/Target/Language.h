@@ -34,8 +34,8 @@ public:
     public:
       virtual bool IsValid() = 0;
 
-      virtual bool DumpToStream(Stream &stream,
-                                bool print_help_if_available) = 0;
+      virtual bool DumpToStream(Stream &stream, bool print_help_if_available,
+                                ExecutionContextScope *exe_scope = nullptr) = 0;
 
       virtual ~Result() = default;
     };
@@ -62,9 +62,11 @@ public:
 
       bool IsValid() override { return m_compiler_type.IsValid(); }
 
-      bool DumpToStream(Stream &stream, bool print_help_if_available) override {
+      bool DumpToStream(Stream &stream, bool print_help_if_available,
+                        ExecutionContextScope *exe_scope = nullptr) override {
         if (IsValid()) {
-          m_compiler_type.DumpTypeDescription(&stream);
+          m_compiler_type.DumpTypeDescription(
+              &stream, lldb::eDescriptionLevelFull, exe_scope);
           stream.EOL();
           return true;
         }

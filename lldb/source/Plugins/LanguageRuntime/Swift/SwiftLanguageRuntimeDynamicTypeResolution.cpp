@@ -27,10 +27,13 @@
 #include "swift/AST/ASTMangler.h"
 #include "swift/AST/ASTWalker.h"
 #include "swift/AST/Decl.h"
+#include "swift/Demangling/Demangle.h"
 #include "swift/Reflection/ReflectionContext.h"
 #include "swift/Reflection/TypeRefBuilder.h"
 #include "swift/Remote/MemoryReader.h"
 #include "swift/RemoteAST/RemoteAST.h"
+
+#include <sstream>
 
 using namespace lldb;
 using namespace lldb_private;
@@ -2521,6 +2524,21 @@ bool SwiftLanguageRuntimeImpl::GetDynamicTypeAndAddress_IndirectEnumCase(
     address.SetLoadAddress(box_value, &m_process.GetTarget());
     return true;
   }
+}
+
+void SwiftLanguageRuntimeImpl::DumpTyperef(
+    CompilerType type, TypeSystemSwiftTypeRef *module_holder,
+    SwiftASTContext *swift_ast_context, Stream *s) {
+  if (!s)
+    return;
+
+  const auto *typeref = GetTypeRef(type, module_holder, swift_ast_context);
+  if (!typeref)
+    return;
+
+  std::ostringstream string_stream;
+  typeref->dump(string_stream);
+  s->PutCString(string_stream.str());
 }
 
 // Dynamic type resolution tends to want to generate scalar data - but there are

@@ -2814,7 +2814,8 @@ public:
             if (search_result && search_result->IsValid()) {
               any_found = true;
               search_result->DumpToStream(result.GetOutputStream(),
-                                          this->m_command_options.m_show_help);
+                                          this->m_command_options.m_show_help,
+                                          best_scope);
             }
           }
         }
