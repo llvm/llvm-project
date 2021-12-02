@@ -189,20 +189,20 @@ std::optional<Expr<SubscriptInteger>> TypeAndShape::MeasureSizeInBytes(
 }
 
 void TypeAndShape::AcquireAttrs(const semantics::Symbol &symbol) {
+  if (IsAssumedShape(symbol)) {
+    attrs_.set(Attr::AssumedShape);
+  }
+  if (IsDeferredShape(symbol)) {
+    attrs_.set(Attr::DeferredShape);
+  }
   if (const auto *object{
           symbol.GetUltimate().detailsIf<semantics::ObjectEntityDetails>()}) {
     corank_ = object->coshape().Rank();
     if (object->IsAssumedRank()) {
       attrs_.set(Attr::AssumedRank);
     }
-    if (object->IsAssumedShape()) {
-      attrs_.set(Attr::AssumedShape);
-    }
     if (object->IsAssumedSize()) {
       attrs_.set(Attr::AssumedSize);
-    }
-    if (object->IsDeferredShape()) {
-      attrs_.set(Attr::DeferredShape);
     }
     if (object->IsCoarray()) {
       attrs_.set(Attr::Coarray);

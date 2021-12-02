@@ -688,6 +688,10 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::FMINNUM, VT, Legal);
       setOperationAction(ISD::FMAXNUM, VT, Legal);
 
+      setOperationAction(ISD::FTRUNC, VT, Custom);
+      setOperationAction(ISD::FCEIL, VT, Custom);
+      setOperationAction(ISD::FFLOOR, VT, Custom);
+
       setOperationAction(ISD::VECREDUCE_FADD, VT, Custom);
       setOperationAction(ISD::VECREDUCE_SEQ_FADD, VT, Custom);
       setOperationAction(ISD::VECREDUCE_FMIN, VT, Custom);
@@ -935,6 +939,10 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
 
         setOperationAction(ISD::FP_ROUND, VT, Custom);
         setOperationAction(ISD::FP_EXTEND, VT, Custom);
+
+        setOperationAction(ISD::FTRUNC, VT, Custom);
+        setOperationAction(ISD::FCEIL, VT, Custom);
+        setOperationAction(ISD::FFLOOR, VT, Custom);
 
         for (auto CC : VFPCCToExpand)
           setCondCodeAction(CC, VT, Expand);
@@ -1645,6 +1653,66 @@ static SDValue lowerFP_TO_INT_SAT(SDValue Op, SelectionDAG &DAG) {
 
   SDValue ZeroInt = DAG.getConstant(0, DL, DstVT);
   return DAG.getSelectCC(DL, Src, Src, ZeroInt, FpToInt, ISD::CondCode::SETUO);
+}
+
+// Expand vector FTRUNC, FCEIL, and FFLOOR by converting to the integer domain
+// and back. Taking care to avoid converting values that are nan or already
+// correct.
+// TODO: Floor and ceil could be shorter by changing rounding mode, but we don't
+// have FRM dependencies modeled yet.
+static SDValue lowerFTRUNC_FCEIL_FFLOOR(SDValue Op, SelectionDAG &DAG) {
+  MVT VT = Op.getSimpleValueType();
+  assert(VT.isVector() && "Unexpected type");
+
+  SDLoc DL(Op);
+
+  // Freeze the source since we are increasing the number of uses.
+  SDValue Src = DAG.getNode(ISD::FREEZE, DL, VT, Op.getOperand(0));
+
+  // Truncate to integer and convert back to FP.
+  MVT IntVT = VT.changeVectorElementTypeToInteger();
+  SDValue Truncated = DAG.getNode(ISD::FP_TO_SINT, DL, IntVT, Src);
+  Truncated = DAG.getNode(ISD::SINT_TO_FP, DL, VT, Truncated);
+
+  MVT SetccVT = MVT::getVectorVT(MVT::i1, VT.getVectorElementCount());
+
+  if (Op.getOpcode() == ISD::FCEIL) {
+    // If the truncated value is the greater than or equal to the original
+    // value, we've computed the ceil. Otherwise, we went the wrong way and
+    // need to increase by 1.
+    // FIXME: This should use a masked operation. Handle here or in isel?
+    SDValue Adjust = DAG.getNode(ISD::FADD, DL, VT, Truncated,
+                                 DAG.getConstantFP(1.0, DL, VT));
+    SDValue NeedAdjust = DAG.getSetCC(DL, SetccVT, Truncated, Src, ISD::SETOLT);
+    Truncated = DAG.getSelect(DL, VT, NeedAdjust, Adjust, Truncated);
+  } else if (Op.getOpcode() == ISD::FFLOOR) {
+    // If the truncated value is the less than or equal to the original value,
+    // we've computed the floor. Otherwise, we went the wrong way and need to
+    // decrease by 1.
+    // FIXME: This should use a masked operation. Handle here or in isel?
+    SDValue Adjust = DAG.getNode(ISD::FSUB, DL, VT, Truncated,
+                                 DAG.getConstantFP(1.0, DL, VT));
+    SDValue NeedAdjust = DAG.getSetCC(DL, SetccVT, Truncated, Src, ISD::SETOGT);
+    Truncated = DAG.getSelect(DL, VT, NeedAdjust, Adjust, Truncated);
+  }
+
+  // Restore the original sign so that -0.0 is preserved.
+  Truncated = DAG.getNode(ISD::FCOPYSIGN, DL, VT, Truncated, Src);
+
+  // Determine the largest integer that can be represented exactly. This and
+  // values larger than it don't have any fractional bits so don't need to
+  // be converted.
+  const fltSemantics &FltSem = DAG.EVTToAPFloatSemantics(VT);
+  unsigned Precision = APFloat::semanticsPrecision(FltSem);
+  APFloat MaxVal = APFloat(FltSem);
+  MaxVal.convertFromAPInt(APInt::getOneBitSet(Precision, Precision - 1),
+                          /*IsSigned*/ false, APFloat::rmNearestTiesToEven);
+  SDValue MaxValNode = DAG.getConstantFP(MaxVal, DL, VT);
+
+  // If abs(Src) was larger than MaxVal or nan, keep it.
+  SDValue Abs = DAG.getNode(ISD::FABS, DL, VT, Src);
+  SDValue Setcc = DAG.getSetCC(DL, SetccVT, Abs, MaxValNode, ISD::SETOLT);
+  return DAG.getSelect(DL, VT, Setcc, Truncated, Src);
 }
 
 static SDValue lowerSPLAT_VECTOR(SDValue Op, SelectionDAG &DAG,
@@ -2888,6 +2956,10 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
   case ISD::FP_TO_SINT_SAT:
   case ISD::FP_TO_UINT_SAT:
     return lowerFP_TO_INT_SAT(Op, DAG);
+  case ISD::FTRUNC:
+  case ISD::FCEIL:
+  case ISD::FFLOOR:
+    return lowerFTRUNC_FCEIL_FFLOOR(Op, DAG);
   case ISD::VECREDUCE_ADD:
   case ISD::VECREDUCE_UMAX:
   case ISD::VECREDUCE_SMAX:

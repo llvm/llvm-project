@@ -56,6 +56,12 @@ AttrOrTypeDef::AttrOrTypeDef(const llvm::Record *def) : def(def) {
       if (traitSet.insert(traitInit).second)
         traits.push_back(Trait::create(traitInit));
   }
+
+  // Populate the parameters.
+  if (auto *parametersDag = def->getValueAsDag("parameters")) {
+    for (unsigned i = 0, e = parametersDag->getNumArgs(); i < e; ++i)
+      parameters.push_back(AttrOrTypeParameter(parametersDag, i));
+  }
 }
 
 Dialect AttrOrTypeDef::getDialect() const {
@@ -105,14 +111,6 @@ bool AttrOrTypeDef::genStorageClass() const {
 
 bool AttrOrTypeDef::hasStorageCustomConstructor() const {
   return def->getValueAsBit("hasStorageCustomConstructor");
-}
-
-void AttrOrTypeDef::getParameters(
-    SmallVectorImpl<AttrOrTypeParameter> &parameters) const {
-  if (auto *parametersDag = def->getValueAsDag("parameters")) {
-    for (unsigned i = 0, e = parametersDag->getNumArgs(); i < e; ++i)
-      parameters.push_back(AttrOrTypeParameter(parametersDag, i));
-  }
 }
 
 unsigned AttrOrTypeDef::getNumParameters() const {

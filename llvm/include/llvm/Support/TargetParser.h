@@ -182,6 +182,18 @@ StringRef resolveTuneCPUAlias(StringRef TuneCPU, bool IsRV64);
 
 } // namespace RISCV
 
+namespace ARM {
+struct ParsedBranchProtection {
+  StringRef Scope;
+  StringRef Key;
+  bool BranchTargetEnforcement;
+};
+
+bool parseBranchProtection(StringRef Spec, ParsedBranchProtection &PBP,
+                           StringRef &Err);
+
+} // namespace ARM
+
 } // namespace llvm
 
 #endif

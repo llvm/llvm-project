@@ -177,14 +177,6 @@ DEFAULT_PARAMETERS = [
               AddFeature('libcxx-no-debug-mode')
             ]),
 
-  Parameter(name='enable_32bit', choices=[True, False], type=bool, default=False,
-            help="Whether to build the test suite in 32 bit mode even on a 64 bit target. This basically controls "
-                 "whether -m32 is used when building the test suite.",
-            actions=lambda enabled: [] if not enabled else [
-              AddFlag('-m32'),
-              AddFeature('32bits-on-64bits')
-            ]),
-
   Parameter(name='additional_features', type=list, default=[],
             help="A comma-delimited list of additional features that will be enabled when running the tests. "
                  "This should be used sparingly since specifying ad-hoc features manually is error-prone and "

@@ -6,9 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// TODO(ldionne): This test fails on Ubuntu Focal on our CI nodes (and only there), in 32 bit mode.
-// UNSUPPORTED: linux && 32bits-on-64bits
-
 #include <algorithm>
 #include <cstdio>
 #include <cstdlib>

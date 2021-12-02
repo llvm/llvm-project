@@ -45,6 +45,7 @@ public:
         TRI(*MF.getSubtarget().getRegisterInfo()), Helper(Helper){};
 
   bool isVgprRegBank(Register Reg);
+  Register getAsVgpr(Register Reg);
 
   struct MinMaxMedOpc {
     unsigned Min, Max, Med;
@@ -67,6 +68,23 @@ public:
 
 bool AMDGPURegBankCombinerHelper::isVgprRegBank(Register Reg) {
   return RBI.getRegBank(Reg, MRI, TRI)->getID() == AMDGPU::VGPRRegBankID;
+}
+
+Register AMDGPURegBankCombinerHelper::getAsVgpr(Register Reg) {
+  if (isVgprRegBank(Reg))
+    return Reg;
+
+  // Search for existing copy of Reg to vgpr.
+  for (MachineInstr &Use : MRI.use_instructions(Reg)) {
+    Register Def = Use.getOperand(0).getReg();
+    if (Use.getOpcode() == AMDGPU::COPY && isVgprRegBank(Def))
+      return Def;
+  }
+
+  // Copy Reg to vgpr.
+  Register VgprReg = B.buildCopy(MRI.getType(Reg), Reg).getReg(0);
+  MRI.setRegBank(VgprReg, RBI.getRegBank(AMDGPU::VGPRRegBankID));
+  return VgprReg;
 }
 
 AMDGPURegBankCombinerHelper::MinMaxMedOpc
@@ -134,7 +152,9 @@ void AMDGPURegBankCombinerHelper::applyMed3(MachineInstr &MI,
                                             Med3MatchInfo &MatchInfo) {
   B.setInstrAndDebugLoc(MI);
   B.buildInstr(MatchInfo.Opc, {MI.getOperand(0)},
-               {MatchInfo.Val0, MatchInfo.Val1, MatchInfo.Val2}, MI.getFlags());
+               {getAsVgpr(MatchInfo.Val0), getAsVgpr(MatchInfo.Val1),
+                getAsVgpr(MatchInfo.Val2)},
+               MI.getFlags());
   MI.eraseFromParent();
 }
 

@@ -42,8 +42,15 @@ def BufferizableOpInterface : OpInterface<"BufferizableOpInterface"> {
       InterfaceMethod<
         /*desc=*/[{
           Return `true` if the given OpOperand bufferizes to a memory write.
+
           This method will never be called on OpOperands that do not have a
           tensor type.
+
+          This method will never be called on OpOperands that do not have an
+          aliasing OpResult. Intuitively, it does not make sense for an
+          OpOperand to bufferize to a memory write without returning an aliasing
+          tensor, because the write would have no visible effect outside of the
+          op.
 
           Note: It is always safe to consider an OpOperand as a memory write,
           even if it does actually not write; however, this can introduce
@@ -57,6 +64,8 @@ def BufferizableOpInterface : OpInterface<"BufferizableOpInterface"> {
         /*methodBody=*/"",
         /*defaultImplementation=*/[{
           // Does not have to be implemented for ops without tensor OpOperands.
+          // Does not have to be implemented for OpOperands that do not have an
+          // aliasing OpResult.
           llvm_unreachable("bufferizesToMemoryWrite not implemented");
          }]
       >,

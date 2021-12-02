@@ -1048,6 +1048,12 @@ TLI_DEFINE_STRING_INTERNAL("memset")
 /// void memset_pattern16(void *b, const void *pattern16, size_t len);
 TLI_DEFINE_ENUM_INTERNAL(memset_pattern16)
 TLI_DEFINE_STRING_INTERNAL("memset_pattern16")
+/// void memset_pattern4(void *b, const void *pattern4, size_t len);
+TLI_DEFINE_ENUM_INTERNAL(memset_pattern4)
+TLI_DEFINE_STRING_INTERNAL("memset_pattern4")
+/// void memset_pattern8(void *b, const void *pattern8, size_t len);
+TLI_DEFINE_ENUM_INTERNAL(memset_pattern8)
+TLI_DEFINE_STRING_INTERNAL("memset_pattern8")
 /// int mkdir(const char *path, mode_t mode);
 TLI_DEFINE_ENUM_INTERNAL(mkdir)
 TLI_DEFINE_STRING_INTERNAL("mkdir")

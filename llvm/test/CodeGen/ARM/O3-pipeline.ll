@@ -179,6 +179,7 @@
 ; CHECK-NEXT:      Live DEBUG_VALUE analysis
 ; CHECK-NEXT:    Machine Outliner
 ; CHECK-NEXT:    FunctionPass Manager
+; CHECK-NEXT:      ARM Branch Targets
 ; CHECK-NEXT:      MachineDominator Tree Construction
 ; CHECK-NEXT:      ARM constant island placement and branch shortening pass
 ; CHECK-NEXT:      MachineDominator Tree Construction

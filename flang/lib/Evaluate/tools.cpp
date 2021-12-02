@@ -1252,6 +1252,20 @@ bool IsDummy(const Symbol &symbol) {
       ResolveAssociations(symbol).details());
 }
 
+bool IsAssumedShape(const Symbol &symbol) {
+  const Symbol &ultimate{ResolveAssociations(symbol)};
+  const auto *object{ultimate.detailsIf<ObjectEntityDetails>()};
+  return object && object->CanBeAssumedShape() &&
+      !evaluate::IsAllocatableOrPointer(ultimate);
+}
+
+bool IsDeferredShape(const Symbol &symbol) {
+  const Symbol &ultimate{ResolveAssociations(symbol)};
+  const auto *object{ultimate.detailsIf<ObjectEntityDetails>()};
+  return object && object->CanBeDeferredShape() &&
+      evaluate::IsAllocatableOrPointer(ultimate);
+}
+
 bool IsFunctionResult(const Symbol &original) {
   const Symbol &symbol{GetAssociationRoot(original)};
   return (symbol.has<ObjectEntityDetails>() &&

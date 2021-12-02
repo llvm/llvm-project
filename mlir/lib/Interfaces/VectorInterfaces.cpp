@@ -20,7 +20,7 @@ VectorType mlir::vector::detail::transferMaskType(VectorType vecType,
       shape.push_back(vecType.getDimSize(i));
     }
   }
-  return shape.empty() ? VectorType() : VectorType::get(shape, i1Type);
+  return VectorType::get(shape, i1Type);
 }
 
 //===----------------------------------------------------------------------===//

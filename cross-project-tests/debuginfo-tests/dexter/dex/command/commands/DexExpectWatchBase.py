@@ -12,12 +12,33 @@
 import abc
 import difflib
 import os
+import math
 from collections import namedtuple
 
 from dex.command.CommandBase import CommandBase, StepExpectInfo
 from dex.command.StepValueInfo import StepValueInfo
 
+class AddressExpression(object):
+    def __init__(self, name, offset=0):
+        self.name = name
+        self.offset = offset
 
+    def is_resolved(self, resolutions):
+        return self.name in resolutions
+
+    # Given the resolved value of the address, resolve the final value of
+    # this expression.
+    def resolved_value(self, resolutions):
+        if not self.name in resolutions or resolutions[self.name] is None:
+            return None
+        # Technically we should fill(8) if we're debugging on a 32bit architecture?
+        return format_address(resolutions[self.name] + self.offset)
+
+def format_address(value, address_width=64):
+    return "0x" + hex(value)[2:].zfill(math.ceil(address_width/4))
+
+def resolved_value(value, resolutions):
+    return value.resolved_value(resolutions) if isinstance(value, AddressExpression) else value
 
 class DexExpectWatchBase(CommandBase):
     def __init__(self, *args, **kwargs):
@@ -25,7 +46,7 @@ class DexExpectWatchBase(CommandBase):
             raise TypeError('expected at least two args')
 
         self.expression = args[0]
-        self.values = [str(arg) for arg in args[1:]]
+        self.values = [arg if isinstance(arg, AddressExpression) else str(arg) for arg in args[1:]]
         try:
             on_line = kwargs.pop('on_line')
             self._from_line = on_line
@@ -66,8 +87,32 @@ class DexExpectWatchBase(CommandBase):
         # unexpected value.
         self.unexpected_watches = []
 
+        # List of StepValueInfos for all observed watches that were not
+        # invalid, irretrievable, or optimized out (combines expected and
+        # unexpected).
+        self.observed_watches = []
+
+        # dict of address names to their final resolved values, None until it
+        # gets assigned externally.
+        self.address_resolutions = None
+
         super(DexExpectWatchBase, self).__init__()
 
+    def resolve_value(self, value):
+        return value.resolved_value(self.address_resolutions) if isinstance(value, AddressExpression) else value
+
+    def describe_value(self, value):
+        if isinstance(value, AddressExpression):
+            offset = ""
+            if value.offset > 0:
+                offset = f"+{value.offset}"
+            elif value.offset < 0:
+                offset = str(value.offset)
+            desc =  f"address '{value.name}'{offset}"
+            if self.resolve_value(value) is not None:
+                desc += f" ({self.resolve_value(value)})"
+            return desc
+        return value
 
     def get_watches(self):
         return [StepExpectInfo(self.expression, self.path, 0, range(self._from_line, self._to_line + 1))]
@@ -78,11 +123,11 @@ class DexExpectWatchBase(CommandBase):
 
     @property
     def missing_values(self):
-        return sorted(list(self._missing_values))
+        return sorted(list(self.describe_value(v) for v in self._missing_values))
 
     @property
     def encountered_values(self):
-        return sorted(list(set(self.values) - self._missing_values))
+        return sorted(list(set(self.describe_value(v) for v in set(self.values) - self._missing_values)))
 
     @abc.abstractmethod
     def _get_expected_field(self, watch):
@@ -104,13 +149,25 @@ class DexExpectWatchBase(CommandBase):
             self.irretrievable_watches.append(step_info)
             return
 
-        if step_info.expected_value not in self.values:
+        # Check to see if this value matches with a resolved address.
+        matching_address = None
+        for v in self.values:
+            if (isinstance(v, AddressExpression) and
+                    v.name in self.address_resolutions and
+                    self.resolve_value(v) == step_info.expected_value):
+                matching_address = v
+                break
+
+        # If this is not an expected value, either a direct value or an address,
+        # then this is an unexpected watch.
+        if step_info.expected_value not in self.values and matching_address is None:
             self.unexpected_watches.append(step_info)
             return
 
         self.expected_watches.append(step_info)
+        value_to_remove = matching_address if matching_address is not None else step_info.expected_value
         try:
-            self._missing_values.remove(step_info.expected_value)
+            self._missing_values.remove(value_to_remove)
         except KeyError:
             pass
 
@@ -177,8 +234,9 @@ class DexExpectWatchBase(CommandBase):
                     value_change_watches.append(watch)
                     prev_value = watch.expected_value
 
+            resolved_values = [self.resolve_value(v) for v in self.values]
             self.misordered_watches = self._check_watch_order(
                 value_change_watches, [
-                    v for v in self.values if v in
+                    v for v in resolved_values if v in
                     [w.expected_value for w in self.expected_watches]
                 ])

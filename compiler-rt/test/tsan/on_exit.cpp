@@ -1,4 +1,8 @@
 // RUN: %clang_tsan -O1 %s -o %t && %deflake %run %t | FileCheck %s
+
+// on_exit() is not available on Darwin.
+// UNSUPPORTED: darwin
+
 #include "test.h"
 
 volatile long global;

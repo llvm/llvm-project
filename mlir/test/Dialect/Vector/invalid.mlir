@@ -1427,15 +1427,3 @@ func @insert_map_id(%v: vector<2x1xf32>, %v1: vector<4x32xf32>, %id : index) {
   %0 = vector.insert_map %v, %v1[%id] : vector<2x1xf32> into vector<4x32xf32>
 }
 
-// -----
-
-func @vector_transfer_ops_0d(%arg0: tensor<f32>)
-  -> tensor<f32> {
-    %f0 = arith.constant 0.0 : f32
-    // expected-error@+1 {{0-d transfer requires vector<1xt> shape and () -> (0) permutation_map}}
-    %0 = vector.transfer_read %arg0[], %f0 {permutation_map = affine_map<(d0)->(d0)>} :
-      tensor<f32>, vector<1xf32>
-    %1 = vector.transfer_write %0, %arg0[] {permutation_map = affine_map<()->(0)>} :
-      vector<1xf32>, tensor<f32>
-    return %1: tensor<f32>
-}

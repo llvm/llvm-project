@@ -10,8 +10,6 @@
 
 #include "sanitizer_atomic.h"
 #include "sanitizer_common.h"
-#include "sanitizer_internal_defs.h"
-#include "sanitizer_leb128.h"
 #include "sanitizer_stacktrace.h"
 
 namespace __sanitizer {
@@ -130,37 +128,6 @@ uptr *StackStore::BlockInfo::GetOrCreate() {
   return Create();
 }
 
-static u8 *CompressDelta(const uptr *from, const uptr *from_end, u8 *to,
-                         u8 *to_end) {
-  uptr prev = 0;
-  for (; from < from_end; ++from) {
-    sptr diff = *from - prev;
-    to = EncodeSLEB128(diff, to, to_end);
-    prev += diff;
-  }
-  return to;
-}
-
-static uptr *UncompressDelta(const u8 *from, const u8 *from_end, uptr *to,
-                             uptr *to_end) {
-  uptr prev = 0;
-  for (; to < to_end; ++to) {
-    sptr diff;
-    from = DecodeSLEB128<sptr>(from, from_end, &diff);
-    prev += diff;
-    *to = prev;
-  }
-  return to;
-}
-
-namespace {
-struct PackedHeader {
-  uptr size;
-  StackStore::Compression type;
-  u8 data[];
-};
-}  // namespace
-
 uptr *StackStore::BlockInfo::GetOrUnpack() {
   SpinMutexLock l(&mtx_);
   switch (state) {
@@ -173,34 +140,10 @@ uptr *StackStore::BlockInfo::GetOrUnpack() {
       break;
   }
 
-  u8 *ptr = reinterpret_cast<u8 *>(Get());
+  uptr *ptr = Get();
   CHECK_NE(nullptr, ptr);
-  const PackedHeader *header = reinterpret_cast<const PackedHeader *>(ptr);
-  CHECK_LE(header->size, kBlockSizeBytes);
-  CHECK_GE(header->size, sizeof(PackedHeader));
-
-  uptr packed_size_aligned = RoundUpTo(header->size, GetPageSizeCached());
-
-  uptr *unpacked = reinterpret_cast<uptr *>(
-      MmapNoReserveOrDie(kBlockSizeBytes, "StackStoreUnpack"));
-
-  uptr *unpacked_end;
-  switch (header->type) {
-    case Compression::Delta:
-      unpacked_end = UncompressDelta(header->data, ptr + header->size, unpacked,
-                                     unpacked + kBlockSizeFrames);
-      break;
-    default:
-      UNREACHABLE("Unexpected type");
-      break;
-  }
-
-  CHECK_EQ(kBlockSizeFrames, unpacked_end - unpacked);
-
-  MprotectReadOnly(reinterpret_cast<uptr>(unpacked), kBlockSizeBytes);
-  atomic_store(&data_, reinterpret_cast<uptr>(unpacked), memory_order_release);
-  UnmapOrDie(ptr, packed_size_aligned);
-
+  // Fake unpacking.
+  for (uptr i = 0; i < kBlockSizeFrames; ++i) ptr[i] = ~ptr[i];
   state = State::Unpacked;
   return Get();
 }
@@ -222,56 +165,17 @@ uptr StackStore::BlockInfo::Pack(Compression type) {
   if (!ptr || !Stored(0))
     return 0;
 
-  u8 *packed = reinterpret_cast<u8 *>(
-      MmapNoReserveOrDie(kBlockSizeBytes, "StackStorePack"));
-  PackedHeader *header = reinterpret_cast<PackedHeader *>(packed);
-  u8 *alloc_end = packed + kBlockSizeBytes;
-
-  u8 *packed_end = nullptr;
-  switch (type) {
-    case Compression::Delta:
-      packed_end =
-          CompressDelta(ptr, ptr + kBlockSizeFrames, header->data, alloc_end);
-      break;
-    default:
-      UNREACHABLE("Unexpected type");
-      break;
-  }
-
-  header->type = type;
-  header->size = packed_end - packed;
-
-  VPrintf(1, "Packed block of %zu KiB to %zu KiB\n", kBlockSizeBytes >> 10,
-          header->size >> 10);
-
-  if (kBlockSizeBytes - header->size < kBlockSizeBytes / 8) {
-    VPrintf(1, "Undo and keep block unpacked\n");
-    MprotectReadOnly(reinterpret_cast<uptr>(ptr), kBlockSizeBytes);
-    UnmapOrDie(packed, kBlockSizeBytes);
-    state = State::Unpacked;
-    return 0;
-  }
-
-  uptr packed_size_aligned = RoundUpTo(header->size, GetPageSizeCached());
-  UnmapOrDie(packed + packed_size_aligned,
-             kBlockSizeBytes - packed_size_aligned);
-  MprotectReadOnly(reinterpret_cast<uptr>(packed), packed_size_aligned);
-
-  atomic_store(&data_, reinterpret_cast<uptr>(packed), memory_order_release);
-  UnmapOrDie(ptr, kBlockSizeBytes);
-
+  // Fake packing.
+  for (uptr i = 0; i < kBlockSizeFrames; ++i) ptr[i] = ~ptr[i];
   state = State::Packed;
-  return kBlockSizeBytes - packed_size_aligned;
+  return kBlockSizeBytes - kBlockSizeBytes / 10;
 }
 
 uptr StackStore::BlockInfo::Allocated() const {
   SpinMutexLock l(&mtx_);
   switch (state) {
-    case State::Packed: {
-      const PackedHeader *ptr = reinterpret_cast<const PackedHeader *>(Get());
-      CHECK_NE(nullptr, ptr);
-      return RoundUpTo(ptr->size, GetPageSizeCached());
-    }
+    case State::Packed:
+      return kBlockSizeBytes / 10;
     case State::Unpacked:
     case State::Storing:
       return kBlockSizeBytes;
@@ -280,7 +184,7 @@ uptr StackStore::BlockInfo::Allocated() const {
 
 void StackStore::BlockInfo::TestOnlyUnmap() {
   if (uptr *ptr = Get())
-    UnmapOrDie(ptr, kBlockSizeBytes);
+    UnmapOrDie(ptr, StackStore::kBlockSizeBytes);
 }
 
 bool StackStore::BlockInfo::Stored(uptr n) {

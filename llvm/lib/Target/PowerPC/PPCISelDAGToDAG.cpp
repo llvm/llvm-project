@@ -510,14 +510,12 @@ static bool hasTocDataAttr(SDValue Val, unsigned PointerSize) {
     return false;
 
   // TODO: These asserts should be updated as more support for the toc data
-  // transformation is added (64 bit, struct support, etc.).
+  // transformation is added (struct support, etc.).
 
-  assert(PointerSize == 4 && "Only 32 Bit Codegen is currently supported by "
-                             "the toc data transformation.");
-
-  assert(PointerSize >= GV->getAlign().valueOrOne().value() &&
-         "GlobalVariables with an alignment requirement stricter then 4-bytes "
-         "not supported by the toc data transformation.");
+  assert(
+      PointerSize >= GV->getAlign().valueOrOne().value() &&
+      "GlobalVariables with an alignment requirement stricter than TOC entry "
+      "size not supported by the toc data transformation.");
 
   Type *GVType = GV->getValueType();
 
@@ -537,7 +535,7 @@ static bool hasTocDataAttr(SDValue Val, unsigned PointerSize) {
                        "supported by the toc data transformation.");
 
   assert(GVType->getPrimitiveSizeInBits() <= PointerSize * 8 &&
-         "A GlobalVariable with size larger than 32 bits is not currently "
+         "A GlobalVariable with size larger than a TOC entry is not currently "
          "supported by the toc data transformation.");
 
   if (GV->hasLocalLinkage() || GV->hasPrivateLinkage())
@@ -5791,41 +5789,57 @@ void PPCDAGToDAGISel::Select(SDNode *N) {
     if (isAIXABI && CModel == CodeModel::Medium)
       report_fatal_error("Medium code model is not supported on AIX.");
 
-    // For 64-bit small code model, we allow SelectCodeCommon to handle this,
-    // selecting one of LDtoc, LDtocJTI, LDtocCPT, and LDtocBA.
-    if (isPPC64 && CModel == CodeModel::Small)
+    // For 64-bit ELF small code model, we allow SelectCodeCommon to handle
+    // this, selecting one of LDtoc, LDtocJTI, LDtocCPT, and LDtocBA. For AIX
+    // small code model, we need to check for a toc-data attribute.
+    if (isPPC64 && !isAIXABI && CModel == CodeModel::Small)
       break;
 
+    auto replaceWith = [this, &dl](unsigned OpCode, SDNode *TocEntry,
+                                   EVT OperandTy) {
+      SDValue GA = TocEntry->getOperand(0);
+      SDValue TocBase = TocEntry->getOperand(1);
+      SDNode *MN = CurDAG->getMachineNode(OpCode, dl, OperandTy, GA, TocBase);
+      transferMemOperands(TocEntry, MN);
+      ReplaceNode(TocEntry, MN);
+    };
+
     // Handle 32-bit small code model.
-    if (!isPPC64) {
+    if (!isPPC64 && CModel == CodeModel::Small) {
       // Transforms the ISD::TOC_ENTRY node to passed in Opcode, either
       // PPC::ADDItoc, or PPC::LWZtoc
-      auto replaceWith = [this, &dl](unsigned OpCode, SDNode *TocEntry) {
-        SDValue GA = TocEntry->getOperand(0);
-        SDValue TocBase = TocEntry->getOperand(1);
-        SDNode *MN = CurDAG->getMachineNode(OpCode, dl, MVT::i32, GA, TocBase);
-        transferMemOperands(TocEntry, MN);
-        ReplaceNode(TocEntry, MN);
-      };
-
       if (isELFABI) {
         assert(TM.isPositionIndependent() &&
                "32-bit ELF can only have TOC entries in position independent"
                " code.");
         // 32-bit ELF always uses a small code model toc access.
-        replaceWith(PPC::LWZtoc, N);
+        replaceWith(PPC::LWZtoc, N, MVT::i32);
         return;
       }
 
-      if (isAIXABI && CModel == CodeModel::Small) {
-        if (hasTocDataAttr(N->getOperand(0),
-                           CurDAG->getDataLayout().getPointerSize()))
-          replaceWith(PPC::ADDItoc, N);
-        else
-          replaceWith(PPC::LWZtoc, N);
+      assert(isAIXABI && "ELF ABI already handled");
 
+      if (hasTocDataAttr(N->getOperand(0),
+                         CurDAG->getDataLayout().getPointerSize())) {
+        replaceWith(PPC::ADDItoc, N, MVT::i32);
         return;
       }
+
+      replaceWith(PPC::LWZtoc, N, MVT::i32);
+      return;
+    }
+
+    if (isPPC64 && CModel == CodeModel::Small) {
+      assert(isAIXABI && "ELF ABI handled in common SelectCode");
+
+      if (hasTocDataAttr(N->getOperand(0),
+                         CurDAG->getDataLayout().getPointerSize())) {
+        replaceWith(PPC::ADDItoc8, N, MVT::i64);
+        return;
+      }
+      // Break if it doesn't have toc data attribute. Proceed with common
+      // SelectCode.
+      break;
     }
 
     assert(CModel != CodeModel::Small && "All small code models handled.");

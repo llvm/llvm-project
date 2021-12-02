@@ -3487,6 +3487,37 @@ TEST_F(OpenMPIRBuilderTest, CreateTwoReductions) {
   EXPECT_TRUE(isSimpleBinaryReduction(Bitcast, FnReductionBB, &Opcode));
 }
 
+TEST_F(OpenMPIRBuilderTest, CreateSectionsSimple) {
+  using InsertPointTy = OpenMPIRBuilder::InsertPointTy;
+  using BodyGenCallbackTy = llvm::OpenMPIRBuilder::StorableBodyGenCallbackTy;
+  OpenMPIRBuilder OMPBuilder(*M);
+  OMPBuilder.initialize();
+  F->setName("func");
+  IRBuilder<> Builder(BB);
+  OpenMPIRBuilder::LocationDescription Loc({Builder.saveIP(), DL});
+  llvm::SmallVector<BodyGenCallbackTy, 4> SectionCBVector;
+  llvm::SmallVector<BasicBlock *, 4> CaseBBs;
+
+  auto FiniCB = [&](InsertPointTy IP) {};
+  auto SectionCB = [&](InsertPointTy AllocaIP, InsertPointTy CodeGenIP,
+                       BasicBlock &FiniBB) {
+    Builder.restoreIP(CodeGenIP);
+    Builder.CreateBr(&FiniBB);
+  };
+  SectionCBVector.push_back(SectionCB);
+
+  auto PrivCB = [](InsertPointTy AllocaIP, InsertPointTy CodeGenIP,
+                   llvm::Value &, llvm::Value &Val,
+                   llvm::Value *&ReplVal) { return CodeGenIP; };
+  IRBuilder<>::InsertPoint AllocaIP(&F->getEntryBlock(),
+                                    F->getEntryBlock().getFirstInsertionPt());
+  Builder.restoreIP(OMPBuilder.createSections(Loc, AllocaIP, SectionCBVector,
+                                              PrivCB, FiniCB, false, false));
+  Builder.CreateRetVoid(); // Required at the end of the function
+  EXPECT_NE(F->getEntryBlock().getTerminator(), nullptr);
+  EXPECT_FALSE(verifyModule(*M, &errs()));
+}
+
 TEST_F(OpenMPIRBuilderTest, CreateSections) {
   using InsertPointTy = OpenMPIRBuilder::InsertPointTy;
   using BodyGenCallbackTy = llvm::OpenMPIRBuilder::StorableBodyGenCallbackTy;
@@ -3607,6 +3638,7 @@ TEST_F(OpenMPIRBuilderTest, CreateSections) {
 
   ASSERT_EQ(NumBodiesGenerated, 2U);
   ASSERT_EQ(NumFiniCBCalls, 1U);
+  EXPECT_FALSE(verifyModule(*M, &errs()));
 }
 
 TEST_F(OpenMPIRBuilderTest, CreateOffloadMaptypes) {

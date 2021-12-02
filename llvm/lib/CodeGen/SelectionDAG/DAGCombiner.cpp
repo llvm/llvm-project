@@ -4436,7 +4436,7 @@ SDValue DAGCombiner::visitREM(SDNode *N) {
   if (DAG.isKnownNeverZero(N1) && !TLI.isIntDivCheap(VT, Attr)) {
     SDValue OptimizedDiv =
         isSigned ? visitSDIVLike(N0, N1, N) : visitUDIVLike(N0, N1, N);
-    if (OptimizedDiv.getNode()) {
+    if (OptimizedDiv.getNode() && OptimizedDiv.getNode() != N) {
       // If the equivalent Div node also exists, update its users.
       unsigned DivOpcode = isSigned ? ISD::SDIV : ISD::UDIV;
       if (SDNode *DivNode = DAG.getNodeIfExists(DivOpcode, N->getVTList(),
@@ -4464,6 +4464,9 @@ SDValue DAGCombiner::visitMULHS(SDNode *N) {
   SDLoc DL(N);
 
   if (VT.isVector()) {
+    if (SDValue FoldedVOp = SimplifyVBinOp(N, DL))
+      return FoldedVOp;
+
     // fold (mulhs x, 0) -> 0
     // do not return N0/N1, because undef node may exist.
     if (ISD::isConstantSplatVectorAllZeros(N0.getNode()) ||
@@ -4521,6 +4524,9 @@ SDValue DAGCombiner::visitMULHU(SDNode *N) {
   SDLoc DL(N);
 
   if (VT.isVector()) {
+    if (SDValue FoldedVOp = SimplifyVBinOp(N, DL))
+      return FoldedVOp;
+
     // fold (mulhu x, 0) -> 0
     // do not return N0/N1, because undef node may exist.
     if (ISD::isConstantSplatVectorAllZeros(N0.getNode()) ||
@@ -10045,9 +10051,8 @@ SDValue DAGCombiner::visitMSTORE(SDNode *N) {
 
   // If this is a masked load with an all ones mask, we can use a unmasked load.
   // FIXME: Can we do this for indexed, compressing, or truncating stores?
-  if (ISD::isConstantSplatVectorAllOnes(Mask.getNode()) &&
-      MST->isUnindexed() && !MST->isCompressingStore() &&
-      !MST->isTruncatingStore())
+  if (ISD::isConstantSplatVectorAllOnes(Mask.getNode()) && MST->isUnindexed() &&
+      !MST->isCompressingStore() && !MST->isTruncatingStore())
     return DAG.getStore(MST->getChain(), SDLoc(N), MST->getValue(),
                         MST->getBasePtr(), MST->getMemOperand());
 
@@ -10102,9 +10107,8 @@ SDValue DAGCombiner::visitMLOAD(SDNode *N) {
 
   // If this is a masked load with an all ones mask, we can use a unmasked load.
   // FIXME: Can we do this for indexed, expanding, or extending loads?
-  if (ISD::isConstantSplatVectorAllOnes(Mask.getNode()) &&
-      MLD->isUnindexed() && !MLD->isExpandingLoad() &&
-      MLD->getExtensionType() == ISD::NON_EXTLOAD) {
+  if (ISD::isConstantSplatVectorAllOnes(Mask.getNode()) && MLD->isUnindexed() &&
+      !MLD->isExpandingLoad() && MLD->getExtensionType() == ISD::NON_EXTLOAD) {
     SDValue NewLd = DAG.getLoad(N->getValueType(0), SDLoc(N), MLD->getChain(),
                                 MLD->getBasePtr(), MLD->getMemOperand());
     return CombineTo(N, NewLd, NewLd.getValue(1));

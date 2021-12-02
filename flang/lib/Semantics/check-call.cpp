@@ -161,9 +161,13 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
                    characteristics::TypeAndShape::Attr::AssumedRank)) {
     } else if (!dummy.type.attrs().test(
                    characteristics::TypeAndShape::Attr::AssumedShape) &&
+        !dummy.type.attrs().test(
+            characteristics::TypeAndShape::Attr::DeferredShape) &&
         (actualType.Rank() > 0 || IsArrayElement(actual))) {
       // Sequence association (15.5.2.11) applies -- rank need not match
-      // if the actual argument is an array or array element designator.
+      // if the actual argument is an array or array element designator,
+      // and the dummy is not assumed-shape or an INTENT(IN) pointer
+      // that's standing in for an assumed-shape dummy.
     } else {
       // Let CheckConformance accept scalars; storage association
       // cases are checked here below.
@@ -322,7 +326,7 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
           "Scalar POINTER target may not be associated with a %s array"_err_en_US,
           dummyName);
     }
-    if (actualLastObject && actualLastObject->IsAssumedShape()) {
+    if (actualLastSymbol && IsAssumedShape(*actualLastSymbol)) {
       messages.Say(
           "Element of assumed-shape array may not be associated with a %s array"_err_en_US,
           dummyName);
@@ -362,13 +366,13 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
   }
 
   // Cases when temporaries might be needed but must not be permitted.
+  bool actualIsContiguous{IsSimplyContiguous(actual, context)};
+  bool dummyIsAssumedShape{dummy.type.attrs().test(
+      characteristics::TypeAndShape::Attr::AssumedShape)};
   bool dummyIsPointer{
       dummy.attrs.test(characteristics::DummyDataObject::Attr::Pointer)};
   bool dummyIsContiguous{
       dummy.attrs.test(characteristics::DummyDataObject::Attr::Contiguous)};
-  bool actualIsContiguous{IsSimplyContiguous(actual, context)};
-  bool dummyIsAssumedShape{dummy.type.attrs().test(
-      characteristics::TypeAndShape::Attr::AssumedShape)};
   if ((actualIsAsynchronous || actualIsVolatile) &&
       (dummyIsAsynchronous || dummyIsVolatile) && !dummyIsValue) {
     if (actualIsCoindexed) { // C1538
@@ -675,9 +679,10 @@ static void CheckExplicitInterfaceArg(evaluate::ActualArgument &arg,
                 messages.Say(
                     "Assumed-type '%s' may be associated only with an assumed-type %s"_err_en_US,
                     assumed.name(), dummyName);
-              } else if (const auto *details{
-                             assumed.detailsIf<ObjectEntityDetails>()}) {
-                if (!(details->IsAssumedShape() || details->IsAssumedRank())) {
+              } else {
+                const auto *details{assumed.detailsIf<ObjectEntityDetails>()};
+                if (!(IsAssumedShape(assumed) ||
+                        (details && details->IsAssumedRank()))) {
                   messages.Say( // C711
                       "Assumed-type '%s' must be either assumed shape or assumed rank to be associated with assumed-type %s"_err_en_US,
                       assumed.name(), dummyName);

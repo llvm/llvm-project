@@ -752,6 +752,8 @@ bool FormatTokenLexer::tryMerge_TMacro() {
   Tokens.pop_back();
   Tokens.pop_back();
   Tokens.back() = String;
+  if (FirstInLineIndex >= Tokens.size())
+    FirstInLineIndex = Tokens.size() - 1;
   return true;
 }
 

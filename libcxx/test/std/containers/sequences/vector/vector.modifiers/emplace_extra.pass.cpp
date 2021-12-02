@@ -57,6 +57,19 @@ int main(int, char**)
         assert(v[0] == 3);
         assert(is_contiguous_container_asan_correct(v));
     }
+    {
+        std::vector<int> v;
+        v.reserve(8);
+        size_t old_capacity = v.capacity();
+        assert(old_capacity >= 8);
 
+        v.resize(4); // keep the existing capacity
+        assert(v.capacity() == old_capacity);
+
+        v.emplace(v.cend(), 42);
+        assert(v.size() == 5);
+        assert(v.capacity() == old_capacity);
+        assert(v[4] == 42);
+    }
   return 0;
 }

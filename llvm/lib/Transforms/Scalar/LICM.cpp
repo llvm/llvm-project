@@ -2067,16 +2067,11 @@ bool llvm::promoteLoopAccessesToScalars(
     IsKnownThreadLocalObject = !isa<AllocaInst>(Object);
   }
 
-  // Check that all of the pointers in the alias set have the same type.  We
-  // cannot (yet) promote a memory location that is loaded and stored in
+  // Check that all accesses to pointers in the aliass set use the same type.
+  // We cannot (yet) promote a memory location that is loaded and stored in
   // different sizes.  While we are at it, collect alignment and AA info.
+  Type *AccessTy = nullptr;
   for (Value *ASIV : PointerMustAliases) {
-    // Check that all of the pointers in the alias set have the same type.  We
-    // cannot (yet) promote a memory location that is loaded and stored in
-    // different sizes.
-    if (SomePtr->getType() != ASIV->getType())
-      return false;
-
     for (User *U : ASIV->users()) {
       // Ignore instructions that are outside the loop.
       Instruction *UI = dyn_cast<Instruction>(U);
@@ -2153,6 +2148,11 @@ bool llvm::promoteLoopAccessesToScalars(
       } else
         return false; // Not a load or store.
 
+      if (!AccessTy)
+        AccessTy = getLoadStoreType(UI);
+      else if (AccessTy != getLoadStoreType(UI))
+        return false;
+
       // Merge the AA tags.
       if (LoopUses.empty()) {
         // On the first load/store, just take its AA tags.
@@ -2175,9 +2175,7 @@ bool llvm::promoteLoopAccessesToScalars(
   // If we're inserting an atomic load in the preheader, we must be able to
   // lower it.  We're only guaranteed to be able to lower naturally aligned
   // atomics.
-  auto *SomePtrElemType = SomePtr->getType()->getPointerElementType();
-  if (SawUnorderedAtomic &&
-      Alignment < MDL.getTypeStoreSize(SomePtrElemType))
+  if (SawUnorderedAtomic && Alignment < MDL.getTypeStoreSize(AccessTy))
     return false;
 
   // If we couldn't prove we can hoist the load, bail.
@@ -2229,8 +2227,8 @@ bool llvm::promoteLoopAccessesToScalars(
   // Set up the preheader to have a definition of the value.  It is the live-out
   // value from the preheader that uses in the loop will use.
   LoadInst *PreheaderLoad = new LoadInst(
-      SomePtr->getType()->getPointerElementType(), SomePtr,
-      SomePtr->getName() + ".promoted", Preheader->getTerminator());
+      AccessTy, SomePtr, SomePtr->getName() + ".promoted",
+      Preheader->getTerminator());
   if (SawUnorderedAtomic)
     PreheaderLoad->setOrdering(AtomicOrdering::Unordered);
   PreheaderLoad->setAlignment(Alignment);

@@ -12879,6 +12879,12 @@ TEST_F(FormatTest, BreaksStringLiteralsWithin_TMacro) {
             format("f(\n"
                    "\n"
                    "_T(\"XXXXXXXXXXXXXXXXXXXXXXXXXXXXXn\"));"));
+  // Regression test for accessing tokens past the end of a vector in the
+  // TokenLexer.
+  verifyNoCrash(R"(_T(
+"
+)
+)");
 }
 
 TEST_F(FormatTest, BreaksStringLiteralOperands) {
@@ -21117,6 +21123,14 @@ TEST_F(FormatTest, HandleConflictMarkers) {
                    ">>>>>>>\n"
                    "  End\n"
                    "int i;\n"));
+
+  verifyFormat(R"(====
+#ifdef A
+a
+#else
+b
+#endif
+)");
 }
 
 TEST_F(FormatTest, DisableRegions) {

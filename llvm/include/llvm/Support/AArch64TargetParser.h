@@ -137,15 +137,6 @@ void fillValidCPUArchList(SmallVectorImpl<StringRef> &Values);
 
 bool isX18ReservedByDefault(const Triple &TT);
 
-struct ParsedBranchProtection {
-  StringRef Scope;
-  StringRef Key;
-  bool BranchTargetEnforcement;
-};
-
-bool parseBranchProtection(StringRef Spec, ParsedBranchProtection &PBP,
-                           StringRef &Err);
-
 } // namespace AArch64
 } // namespace llvm
 

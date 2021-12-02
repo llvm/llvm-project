@@ -436,8 +436,8 @@ private:
     for (auto &ss : details.shape()) {
       auto lb = ss.lbound();
       auto ub = ss.ubound();
-      if (lb.isAssumed() && ub.isAssumed() && size == 1)
-        return {};
+      if (lb.isStar() && ub.isStar() && size == 1)
+        return {}; // assumed rank
       if (lb.isExplicit() && ub.isExplicit()) {
         auto &lbv = lb.GetExplicit();
         auto &ubv = ub.GetExplicit();
