@@ -1581,24 +1581,29 @@ public:
   /// times we expect the condition to evaluate to true based on PGO data. We
   /// might decide to leave this as a separate pass (see EmitBranchOnBoolExpr
   /// for extra ideas).
-  void buildIfOnBoolExpr(const Expr *cond, mlir::Location loc,
-                         const Stmt *thenS, const Stmt *elseS) {
+  mlir::LogicalResult buildIfOnBoolExpr(const Expr *cond, mlir::Location loc,
+                                        const Stmt *thenS, const Stmt *elseS) {
     // TODO: scoped ApplyDebugLocation DL(*this, Cond);
     // TODO: __builtin_unpredictable and profile counts?
     cond = cond->IgnoreParens();
     mlir::Value condV = evaluateExprAsBool(cond);
+    mlir::LogicalResult resThen = mlir::success(), resElse = mlir::success();
+
     builder.create<mlir::cir::IfOp>(
         loc, condV, elseS,
         /*thenBuilder=*/
         [&](mlir::OpBuilder &b, mlir::Location loc) {
-          (void)buildStmt(thenS);
+          resThen = buildStmt(thenS);
           builder.create<YieldOp>(getLoc(thenS->getSourceRange().getEnd()));
         },
         /*elseBuilder=*/
         [&](mlir::OpBuilder &b, mlir::Location loc) {
-          (void)buildStmt(elseS);
+          resElse = buildStmt(elseS);
           builder.create<YieldOp>(getLoc(elseS->getSourceRange().getEnd()));
         });
+
+    return mlir::LogicalResult::success(resThen.succeeded() &&
+                                        resElse.succeeded());
   }
 
   mlir::LogicalResult buildIfStmt(const IfStmt &S) {
@@ -1627,9 +1632,9 @@ public:
       }
 
       // TODO: PGO and likelihood.
-      buildIfOnBoolExpr(S.getCond(), getLoc(S.getSourceRange().getBegin()),
-                        S.getThen(), S.getElse());
-      return mlir::success();
+      return buildIfOnBoolExpr(S.getCond(),
+                               getLoc(S.getSourceRange().getBegin()),
+                               S.getThen(), S.getElse());
     };
 
     // TODO: Add a new scoped symbol table.
