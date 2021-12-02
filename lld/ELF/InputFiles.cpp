@@ -1025,12 +1025,11 @@ InputSectionBase *ObjFile<ELFT>::createInputSection(uint32_t idx,
       name == ".gnu.linkonce.t.__i686.get_pc_thunk.bx")
     return &InputSection::discarded;
 
-  // If we are creating a new .build-id section, strip existing .build-id
-  // sections so that the output won't have more than one .build-id.
-  // This is not usually a problem because input object files normally don't
-  // have .build-id sections, but you can create such files by
-  // "ld.{bfd,gold,lld} -r --build-id", and we want to guard against it.
-  if (name == ".note.gnu.build-id" && config->buildId != BuildIdKind::None)
+  // Strip existing .note.gnu.build-id sections so that the output won't have
+  // more than one build-id. This is not usually a problem because input object
+  // files normally don't have .build-id sections, but you can create such files
+  // by "ld.{bfd,gold,lld} -r --build-id", and we want to guard against it.
+  if (name == ".note.gnu.build-id")
     return &InputSection::discarded;
 
   // The linker merges EH (exception handling) frames and creates a
