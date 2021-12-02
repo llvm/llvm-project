@@ -1,5 +1,4 @@
 // Test the CIR operations can parse and print correctly (roundtrip)
-// XFAIL: *
 
 // RUN: cir-tool %s | cir-tool | FileCheck %s
 module  {

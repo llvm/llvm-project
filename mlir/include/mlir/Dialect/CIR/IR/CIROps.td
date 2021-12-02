@@ -315,11 +315,11 @@ def IfOp : CIR_Op<"if",
 
   // FIXME: unify these within CIR_Ops.
   let hasCustomAssemblyFormat = 1;
+  let hasVerifier = 1;
 
   let skipDefaultBuilders = 1;
   let builders = [
-    OpBuilder<(ins "Value":$cond, "bool":$withElseRegion)>,
-    OpBuilder<(ins "Value":$cond,
+    OpBuilder<(ins "Value":$cond, "bool":$withElseRegion,
       CArg<"function_ref<void(OpBuilder &, Location)>",
            "buildTerminatedBody">:$thenBuilder,
       CArg<"function_ref<void(OpBuilder &, Location)>",
