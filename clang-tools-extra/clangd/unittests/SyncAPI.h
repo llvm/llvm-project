@@ -12,8 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_UNITTESTS_CLANGD_SYNCAPI_H
-#define LLVM_CLANG_TOOLS_EXTRA_UNITTESTS_CLANGD_SYNCAPI_H
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_UNITTESTS_SYNCAPI_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANGD_UNITTESTS_SYNCAPI_H
 
 #include "ClangdServer.h"
 #include "index/Index.h"
@@ -69,4 +69,4 @@ llvm::Error runCustomAction(ClangdServer &Server, PathRef File,
 } // namespace clangd
 } // namespace clang
 
-#endif // LLVM_CLANG_TOOLS_EXTRA_UNITTESTS_CLANGD_SYNCAPI_H
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANGD_UNITTESTS_SYNCAPI_H

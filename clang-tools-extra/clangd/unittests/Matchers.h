@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_UNITTESTS_CLANGD_MATCHERS_H
-#define LLVM_CLANG_TOOLS_EXTRA_UNITTESTS_CLANGD_MATCHERS_H
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_UNITTESTS_MATCHERS_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANGD_UNITTESTS_MATCHERS_H
 #include "Protocol.h"
 #include "gmock/gmock.h"
 

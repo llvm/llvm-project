@@ -19,8 +19,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_UNITTESTS_CLANGD_FINDTARGET_H
-#define LLVM_CLANG_TOOLS_EXTRA_UNITTESTS_CLANGD_FINDTARGET_H
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_FINDTARGET_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANGD_FINDTARGET_H
 
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/ASTTypeTraits.h"
@@ -220,4 +220,4 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &, DeclRelationSet);
 } // namespace clangd
 } // namespace clang
 
-#endif // LLVM_CLANG_TOOLS_EXTRA_UNITTESTS_CLANGD_FINDTARGET_H
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANGD_FINDTARGET_H

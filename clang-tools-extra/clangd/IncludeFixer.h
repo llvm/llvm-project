@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_INCLUDE_FIXER_H
-#define LLVM_CLANG_TOOLS_EXTRA_CLANGD_INCLUDE_FIXER_H
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_INCLUDEFIXER_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANGD_INCLUDEFIXER_H
 
 #include "Diagnostics.h"
 #include "Headers.h"
@@ -95,4 +95,4 @@ private:
 } // namespace clangd
 } // namespace clang
 
-#endif // LLVM_CLANG_TOOLS_EXTRA_CLANGD_INCLUDE_FIXER_H
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANGD_INCLUDEFIXER_H
