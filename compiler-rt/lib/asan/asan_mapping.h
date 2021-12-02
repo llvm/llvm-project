@@ -158,15 +158,15 @@ static const u64 kDefaultShadowScale = 3;
 #endif
 static const u64 kDefaultShadowSentinel = ~(uptr)0;
 static const u64 kDefaultShadowOffset32 = 1ULL << 29;  // 0x20000000
-static const u64 kDefaultShadowOffset64 = 1ULL << 44;
+static const u64 kDefaultShadowOffset64 = 1ULL << 44;  // 0x100000000000
 static const u64 kDefaultShort64bitShadowOffset =
     0x7FFFFFFF & (~0xFFFULL << kDefaultShadowScale);  // < 2G.
-static const u64 kAArch64_ShadowOffset64 = 1ULL << 36;
+static const u64 kAArch64_ShadowOffset64 = 1ULL << 36;  // 0x1000000000
 static const u64 kRiscv64_ShadowOffset64 = 0xd55550000;
 static const u64 kMIPS32_ShadowOffset32 = 0x0aaa0000;
-static const u64 kMIPS64_ShadowOffset64 = 1ULL << 37;
-static const u64 kPPC64_ShadowOffset64 = 1ULL << 44;
-static const u64 kSystemZ_ShadowOffset64 = 1ULL << 52;
+static const u64 kMIPS64_ShadowOffset64 = 1ULL << 37;   // 0x2000000000
+static const u64 kPPC64_ShadowOffset64 = 1ULL << 44;    // 0x100000000000
+static const u64 kSystemZ_ShadowOffset64 = 1ULL << 52;  // 0x10000000000000
 static const u64 kSPARC64_ShadowOffset64 = 1ULL << 43;  // 0x80000000000
 static const u64 kFreeBSD_ShadowOffset32 = 1ULL << 30;  // 0x40000000
 static const u64 kFreeBSD_ShadowOffset64 = 1ULL << 46;  // 0x400000000000
@@ -199,8 +199,8 @@ static const u64 kWindowsShadowOffset32 = 3ULL << 28;  // 0x30000000
 #    define SHADOW_OFFSET __asan_shadow_memory_dynamic_address
 #  elif SANITIZER_MAC && defined(__aarch64__)
 #    define SHADOW_OFFSET __asan_shadow_memory_dynamic_address
-#elif SANITIZER_RISCV64
-#define SHADOW_OFFSET kRiscv64_ShadowOffset64
+#  elif SANITIZER_RISCV64
+#    define SHADOW_OFFSET kRiscv64_ShadowOffset64
 #  elif defined(__aarch64__)
 #    define SHADOW_OFFSET kAArch64_ShadowOffset64
 #  elif defined(__powerpc64__)
@@ -212,15 +212,15 @@ static const u64 kWindowsShadowOffset32 = 3ULL << 28;  // 0x30000000
 #  elif SANITIZER_NETBSD
 #    define SHADOW_OFFSET kNetBSD_ShadowOffset64
 #  elif SANITIZER_MAC
-#   define SHADOW_OFFSET kDefaultShadowOffset64
+#    define SHADOW_OFFSET kDefaultShadowOffset64
 #  elif defined(__mips64)
-#   define SHADOW_OFFSET kMIPS64_ShadowOffset64
-#elif defined(__sparc__)
-#define SHADOW_OFFSET kSPARC64_ShadowOffset64
+#    define SHADOW_OFFSET kMIPS64_ShadowOffset64
+#  elif defined(__sparc__)
+#    define SHADOW_OFFSET kSPARC64_ShadowOffset64
 #  elif SANITIZER_WINDOWS64
-#   define SHADOW_OFFSET __asan_shadow_memory_dynamic_address
+#    define SHADOW_OFFSET __asan_shadow_memory_dynamic_address
 #  else
-#   define SHADOW_OFFSET kDefaultShort64bitShadowOffset
+#    define SHADOW_OFFSET kDefaultShort64bitShadowOffset
 #  endif
 #endif
 
