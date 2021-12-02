@@ -452,17 +452,16 @@ bool llvm::inferLibFuncAttributes(Function &F, const TargetLibraryInfo &TLI) {
     return Changed;
   case LibFunc_mempcpy:
   case LibFunc_memccpy:
+    Changed |= setWillReturn(F);
+    LLVM_FALLTHROUGH;
+  case LibFunc_memcpy_chk:
     Changed |= setDoesNotThrow(F);
     Changed |= setOnlyAccessesArgMemory(F);
-    Changed |= setWillReturn(F);
     Changed |= setDoesNotAlias(F, 0);
     Changed |= setOnlyWritesMemory(F, 0);
     Changed |= setDoesNotAlias(F, 1);
     Changed |= setDoesNotCapture(F, 1);
     Changed |= setOnlyReadsMemory(F, 1);
-    return Changed;
-  case LibFunc_memcpy_chk:
-    Changed |= setDoesNotThrow(F);
     return Changed;
   case LibFunc_memalign:
     Changed |= setOnlyAccessesInaccessibleMemory(F);
