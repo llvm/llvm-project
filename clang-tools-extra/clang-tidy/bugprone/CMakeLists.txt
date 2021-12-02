@@ -83,4 +83,5 @@ clang_target_link_libraries(clangTidyBugproneModule
   clangBasic
   clangLex
   clangTooling
+  clangTransformer
   )
