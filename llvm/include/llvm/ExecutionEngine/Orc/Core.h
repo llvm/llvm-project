@@ -519,6 +519,7 @@ private:
 /// symbols of an error.
 class MaterializationResponsibility {
   friend class ExecutionSession;
+  friend class JITDylib;
 
 public:
   MaterializationResponsibility(MaterializationResponsibility &&) = delete;
@@ -535,10 +536,10 @@ public:
 
   /// Returns the target JITDylib that these symbols are being materialized
   ///        into.
-  JITDylib &getTargetJITDylib() const { return *JD; }
+  JITDylib &getTargetJITDylib() const { return JD; }
 
   /// Returns the ExecutionSession for this instance.
-  ExecutionSession &getExecutionSession();
+  ExecutionSession &getExecutionSession() const;
 
   /// Returns the symbol flags map for this responsibility instance.
   /// Note: The returned flags may have transient flags (Lazy, Materializing)
@@ -640,15 +641,16 @@ public:
 private:
   /// Create a MaterializationResponsibility for the given JITDylib and
   ///        initial symbols.
-  MaterializationResponsibility(JITDylibSP JD, SymbolFlagsMap SymbolFlags,
+  MaterializationResponsibility(ResourceTrackerSP RT,
+                                SymbolFlagsMap SymbolFlags,
                                 SymbolStringPtr InitSymbol)
-      : JD(std::move(JD)), SymbolFlags(std::move(SymbolFlags)),
-        InitSymbol(std::move(InitSymbol)) {
-    assert(this->JD && "Cannot initialize with null JITDylib");
+      : JD(RT->getJITDylib()), RT(std::move(RT)),
+        SymbolFlags(std::move(SymbolFlags)), InitSymbol(std::move(InitSymbol)) {
     assert(!this->SymbolFlags.empty() && "Materializing nothing?");
   }
 
-  JITDylibSP JD;
+  JITDylib &JD;
+  ResourceTrackerSP RT;
   SymbolFlagsMap SymbolFlags;
   SymbolStringPtr InitSymbol;
 };
@@ -1151,7 +1153,6 @@ private:
 
   JITDylib(ExecutionSession &ES, std::string Name);
 
-  ResourceTrackerSP getTracker(MaterializationResponsibility &MR);
   std::pair<AsynchronousSymbolQuerySet, std::shared_ptr<SymbolDependenceMap>>
   removeTracker(ResourceTracker &RT);
 
@@ -1208,7 +1209,8 @@ private:
 
   // Map trackers to sets of symbols tracked.
   DenseMap<ResourceTracker *, SymbolNameVector> TrackerSymbols;
-  DenseMap<MaterializationResponsibility *, ResourceTracker *> MRTrackers;
+  DenseMap<ResourceTracker *, DenseSet<MaterializationResponsibility *>>
+      TrackerMRs;
 };
 
 /// Platforms set up standard symbols and mediate interactions between dynamic
@@ -1574,9 +1576,9 @@ private:
                                       SymbolStringPtr InitSymbol) {
     auto &JD = RT.getJITDylib();
     std::unique_ptr<MaterializationResponsibility> MR(
-        new MaterializationResponsibility(&JD, std::move(Symbols),
+        new MaterializationResponsibility(&RT, std::move(Symbols),
                                           std::move(InitSymbol)));
-    JD.MRTrackers[MR.get()] = &RT;
+    JD.TrackerMRs[&RT].insert(MR.get());
     return MR;
   }
 
@@ -1660,18 +1662,17 @@ private:
       JITDispatchHandlers;
 };
 
-inline ExecutionSession &MaterializationResponsibility::getExecutionSession() {
-  return JD->getExecutionSession();
+inline ExecutionSession &
+MaterializationResponsibility::getExecutionSession() const {
+  return JD.getExecutionSession();
 }
 
 template <typename Func>
 Error MaterializationResponsibility::withResourceKeyDo(Func &&F) const {
-  return JD->getExecutionSession().runSessionLocked([&]() -> Error {
-    auto I = JD->MRTrackers.find(this);
-    assert(I != JD->MRTrackers.end() && "No tracker for this MR");
-    if (I->second->isDefunct())
-      return make_error<ResourceTrackerDefunct>(I->second);
-    F(I->second->getKeyUnsafe());
+  return JD.getExecutionSession().runSessionLocked([&]() -> Error {
+    if (RT->isDefunct())
+      return make_error<ResourceTrackerDefunct>(RT);
+    F(RT->getKeyUnsafe());
     return Error::success();
   });
 }
@@ -1800,50 +1801,50 @@ private:
 // ---------------------------------------------
 
 inline MaterializationResponsibility::~MaterializationResponsibility() {
-  JD->getExecutionSession().OL_destroyMaterializationResponsibility(*this);
+  getExecutionSession().OL_destroyMaterializationResponsibility(*this);
 }
 
 inline SymbolNameSet MaterializationResponsibility::getRequestedSymbols() const {
-  return JD->getExecutionSession().OL_getRequestedSymbols(*this);
+  return getExecutionSession().OL_getRequestedSymbols(*this);
 }
 
 inline Error MaterializationResponsibility::notifyResolved(
     const SymbolMap &Symbols) {
-  return JD->getExecutionSession().OL_notifyResolved(*this, Symbols);
+  return getExecutionSession().OL_notifyResolved(*this, Symbols);
 }
 
 inline Error MaterializationResponsibility::notifyEmitted() {
-  return JD->getExecutionSession().OL_notifyEmitted(*this);
+  return getExecutionSession().OL_notifyEmitted(*this);
 }
 
 inline Error MaterializationResponsibility::defineMaterializing(
     SymbolFlagsMap SymbolFlags) {
-  return JD->getExecutionSession().OL_defineMaterializing(
-      *this, std::move(SymbolFlags));
+  return getExecutionSession().OL_defineMaterializing(*this,
+                                                      std::move(SymbolFlags));
 }
 
 inline void MaterializationResponsibility::failMaterialization() {
-  JD->getExecutionSession().OL_notifyFailed(*this);
+  getExecutionSession().OL_notifyFailed(*this);
 }
 
 inline Error MaterializationResponsibility::replace(
     std::unique_ptr<MaterializationUnit> MU) {
-  return JD->getExecutionSession().OL_replace(*this, std::move(MU));
+  return getExecutionSession().OL_replace(*this, std::move(MU));
 }
 
 inline Expected<std::unique_ptr<MaterializationResponsibility>>
 MaterializationResponsibility::delegate(const SymbolNameSet &Symbols) {
-  return JD->getExecutionSession().OL_delegate(*this, Symbols);
+  return getExecutionSession().OL_delegate(*this, Symbols);
 }
 
 inline void MaterializationResponsibility::addDependencies(
     const SymbolStringPtr &Name, const SymbolDependenceMap &Dependencies) {
-  JD->getExecutionSession().OL_addDependencies(*this, Name, Dependencies);
+  getExecutionSession().OL_addDependencies(*this, Name, Dependencies);
 }
 
 inline void MaterializationResponsibility::addDependenciesForAll(
     const SymbolDependenceMap &Dependencies) {
-  JD->getExecutionSession().OL_addDependenciesForAll(*this, Dependencies);
+  getExecutionSession().OL_addDependenciesForAll(*this, Dependencies);
 }
 
 } // End namespace orc
