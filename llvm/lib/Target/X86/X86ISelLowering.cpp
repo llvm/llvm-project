@@ -23190,6 +23190,10 @@ static SDValue EmitCmp(SDValue Op0, SDValue Op1, unsigned X86CC,
 bool X86TargetLowering::isFsqrtCheap(SDValue Op, SelectionDAG &DAG) const {
   EVT VT = Op.getValueType();
 
+  // We don't need to replace SQRT with RSQRT for half type.
+  if (VT.getScalarType() == MVT::f16)
+    return true;
+
   // We never want to use both SQRT and RSQRT instructions for the same input.
   if (DAG.getNodeIfExists(X86ISD::FRSQRT, DAG.getVTList(VT), Op))
     return false;
@@ -23236,6 +23240,7 @@ SDValue X86TargetLowering::getSqrtEstimate(SDValue Op,
 
   if (VT.getScalarType() == MVT::f16 && isTypeLegal(VT) &&
       Subtarget.hasFP16()) {
+    assert(Reciprocal && "Don't replace SQRT with RSQRT for half type");
     if (RefinementSteps == ReciprocalEstimate::Unspecified)
       RefinementSteps = 0;
 
