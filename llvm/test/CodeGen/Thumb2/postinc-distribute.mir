@@ -610,11 +610,12 @@ body:             |
     ; CHECK: liveins: $r0
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gprnopc = COPY $r0
-    ; CHECK-NEXT: [[t2LDRH_POST:%[0-9]+]]:rgpr, [[t2LDRH_POST1:%[0-9]+]]:rgpr = t2LDRH_POST [[COPY]], -32, 14 /* CC::al */, $noreg :: (load (s32))
-    ; CHECK-NEXT: [[t2LDRHi12_:%[0-9]+]]:rgpr = t2LDRHi12 [[t2LDRH_POST1]], 36, 14 /* CC::al */, $noreg :: (load (s32))
-    ; CHECK-NEXT: [[t2LDRHi8_:%[0-9]+]]:rgpr = t2LDRHi8 [[t2LDRH_POST1]], 24, 14 /* CC::al */, $noreg :: (load (s32))
-    ; CHECK-NEXT: [[t2LDRSHi12_:%[0-9]+]]:rgpr = t2LDRSHi12 [[t2LDRH_POST1]], 44, 14 /* CC::al */, $noreg :: (load (s32))
-    ; CHECK-NEXT: $r0 = COPY [[t2LDRH_POST1]]
+    ; CHECK-NEXT: [[t2LDRHi12_:%[0-9]+]]:rgpr = t2LDRHi12 [[COPY]], 0, 14 /* CC::al */, $noreg :: (load (s32))
+    ; CHECK-NEXT: [[t2SUBri:%[0-9]+]]:rgpr = nuw t2SUBri [[COPY]], 32, 14 /* CC::al */, $noreg, $noreg
+    ; CHECK-NEXT: [[t2LDRHi12_1:%[0-9]+]]:rgpr = t2LDRHi12 [[COPY]], 4, 14 /* CC::al */, $noreg :: (load (s32))
+    ; CHECK-NEXT: [[t2LDRHi8_:%[0-9]+]]:rgpr = t2LDRHi8 [[COPY]], -8, 14 /* CC::al */, $noreg :: (load (s32))
+    ; CHECK-NEXT: [[t2LDRSHi12_:%[0-9]+]]:rgpr = t2LDRSHi12 [[COPY]], 12, 14 /* CC::al */, $noreg :: (load (s32))
+    ; CHECK-NEXT: $r0 = COPY [[t2SUBri]]
     ; CHECK-NEXT: tBX_RET 14 /* CC::al */, $noreg, implicit $r0
     %0:gprnopc = COPY $r0
     %1:rgpr = t2LDRHi12 %0, 0, 14, $noreg :: (load (s32), align 4)
@@ -646,11 +647,12 @@ body:             |
     ; CHECK: liveins: $r0
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gprnopc = COPY $r0
-    ; CHECK-NEXT: [[t2LDRB_POST:%[0-9]+]]:rgpr, [[t2LDRB_POST1:%[0-9]+]]:rgpr = t2LDRB_POST [[COPY]], -32, 14 /* CC::al */, $noreg :: (load (s32))
-    ; CHECK-NEXT: [[t2LDRBi12_:%[0-9]+]]:rgpr = t2LDRBi12 [[t2LDRB_POST1]], 36, 14 /* CC::al */, $noreg :: (load (s32))
-    ; CHECK-NEXT: [[t2LDRBi8_:%[0-9]+]]:rgpr = t2LDRBi8 [[t2LDRB_POST1]], 24, 14 /* CC::al */, $noreg :: (load (s32))
-    ; CHECK-NEXT: [[t2LDRSBi12_:%[0-9]+]]:rgpr = t2LDRSBi12 [[t2LDRB_POST1]], 44, 14 /* CC::al */, $noreg :: (load (s32))
-    ; CHECK-NEXT: $r0 = COPY [[t2LDRB_POST1]]
+    ; CHECK-NEXT: [[t2LDRBi12_:%[0-9]+]]:rgpr = t2LDRBi12 [[COPY]], 0, 14 /* CC::al */, $noreg :: (load (s32))
+    ; CHECK-NEXT: [[t2SUBri:%[0-9]+]]:rgpr = nuw t2SUBri [[COPY]], 32, 14 /* CC::al */, $noreg, $noreg
+    ; CHECK-NEXT: [[t2LDRBi12_1:%[0-9]+]]:rgpr = t2LDRBi12 [[COPY]], 4, 14 /* CC::al */, $noreg :: (load (s32))
+    ; CHECK-NEXT: [[t2LDRBi8_:%[0-9]+]]:rgpr = t2LDRBi8 [[COPY]], -8, 14 /* CC::al */, $noreg :: (load (s32))
+    ; CHECK-NEXT: [[t2LDRSBi12_:%[0-9]+]]:rgpr = t2LDRSBi12 [[COPY]], 12, 14 /* CC::al */, $noreg :: (load (s32))
+    ; CHECK-NEXT: $r0 = COPY [[t2SUBri]]
     ; CHECK-NEXT: tBX_RET 14 /* CC::al */, $noreg, implicit $r0
     %0:gprnopc = COPY $r0
     %1:rgpr = t2LDRBi12 %0, 0, 14, $noreg :: (load (s32), align 4)
@@ -716,10 +718,11 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gprnopc = COPY $r0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:rgpr = COPY $r1
-    ; CHECK-NEXT: early-clobber %2:rgpr = t2STRH_POST [[COPY1]], [[COPY]], -32, 14 /* CC::al */, $noreg :: (store (s32))
-    ; CHECK-NEXT: t2STRHi12 [[COPY1]], %2, 36, 14 /* CC::al */, $noreg :: (store (s32))
-    ; CHECK-NEXT: t2STRHi8 [[COPY1]], %2, 24, 14 /* CC::al */, $noreg :: (store (s32))
-    ; CHECK-NEXT: $r0 = COPY %2
+    ; CHECK-NEXT: t2STRHi12 [[COPY1]], [[COPY]], 0, 14 /* CC::al */, $noreg :: (store (s32))
+    ; CHECK-NEXT: [[t2SUBri:%[0-9]+]]:rgpr = nuw t2SUBri [[COPY]], 32, 14 /* CC::al */, $noreg, $noreg
+    ; CHECK-NEXT: t2STRHi12 [[COPY1]], [[COPY]], 4, 14 /* CC::al */, $noreg :: (store (s32))
+    ; CHECK-NEXT: t2STRHi8 [[COPY1]], [[COPY]], -8, 14 /* CC::al */, $noreg :: (store (s32))
+    ; CHECK-NEXT: $r0 = COPY [[t2SUBri]]
     ; CHECK-NEXT: tBX_RET 14 /* CC::al */, $noreg, implicit $r0
     %0:gprnopc = COPY $r0
     %1:rgpr = COPY $r1
@@ -750,10 +753,11 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gprnopc = COPY $r0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:rgpr = COPY $r1
-    ; CHECK-NEXT: early-clobber %2:rgpr = t2STRB_POST [[COPY1]], [[COPY]], -32, 14 /* CC::al */, $noreg :: (store (s32))
-    ; CHECK-NEXT: t2STRBi12 [[COPY1]], %2, 36, 14 /* CC::al */, $noreg :: (store (s32))
-    ; CHECK-NEXT: t2STRBi8 [[COPY1]], %2, 24, 14 /* CC::al */, $noreg :: (store (s32))
-    ; CHECK-NEXT: $r0 = COPY %2
+    ; CHECK-NEXT: t2STRBi12 [[COPY1]], [[COPY]], 0, 14 /* CC::al */, $noreg :: (store (s32))
+    ; CHECK-NEXT: [[t2SUBri:%[0-9]+]]:rgpr = nuw t2SUBri [[COPY]], 32, 14 /* CC::al */, $noreg, $noreg
+    ; CHECK-NEXT: t2STRBi12 [[COPY1]], [[COPY]], 4, 14 /* CC::al */, $noreg :: (store (s32))
+    ; CHECK-NEXT: t2STRBi8 [[COPY1]], [[COPY]], -8, 14 /* CC::al */, $noreg :: (store (s32))
+    ; CHECK-NEXT: $r0 = COPY [[t2SUBri]]
     ; CHECK-NEXT: tBX_RET 14 /* CC::al */, $noreg, implicit $r0
     %0:gprnopc = COPY $r0
     %1:rgpr = COPY $r1
