@@ -212,7 +212,7 @@ a Fortran input.}]>;
 
 def flang_rt_Group : OptionGroup<"Flang runtime library Group">;
 def pgi_fortran_Group : OptionGroup<"PGI Fortran compatibility Group">,
-  Flags<[HelpHidden]>;
+  Flags<[FlangOption, FlangOnlyOption]>;
 
 def Link_Group : OptionGroup<"<T/e/s/t/u group>">, DocName<"Linker flags">,
                  DocBrief<[{Flags that are passed on to the linker}]>;
@@ -4617,25 +4617,26 @@ multiclass BooleanMFlag<string name> {
 
 // for amdflang
 def fixed_form_off : Flag<["-"], "fno-fixed-form">, Group<fortran_format_Group>,
-  HelpText<"Disable fixed-form format for Fortran">;
+  HelpText<"Disable fixed-form format for Fortran">,
+  Flags<[FlangOption,FlangOnlyOption]>;
 def free_form_off : Flag<["-"], "fno-free-form">, Group<fortran_format_Group>,
-  HelpText<"Disable free-form format for Fortran">;
-
+  HelpText<"Disable free-form format for Fortran">,
+  Flags<[FlangOption,FlangOnlyOption]>;
 def Mfixed : Flag<["-"], "Mfixed">, Group<fortran_format_Group>,
   HelpText<"Force fixed-form format Fortran">,
-  Flags<[HelpHidden]>;
+  Flags<[FlangOption, FlangOnlyOption]>;
 def Mfree_on: Flag<["-"], "Mfree">, Group<fortran_format_Group>,
   HelpText<"Enable free-form format for Fortran">,
-  Flags<[HelpHidden]>;
+  Flags<[FlangOption, FlangOnlyOption]>;
 def Mfree_off: Flag<["-"], "Mnofree">, Group<fortran_format_Group>,
   HelpText<"Disable free-form format for Fortran">,
-  Flags<[HelpHidden]>;
+  Flags<[FlangOption, FlangOnlyOption]>;
 def Mfreeform_on: Flag<["-"], "Mfreeform">, Group<fortran_format_Group>,
   HelpText<"Enable free-form format for Fortran">,
-  Flags<[HelpHidden]>;
+  Flags<[FlangOption, FlangOnlyOption]>;
 def Mfreeform_off: Flag<["-"], "Mnofreeform">, Group<fortran_format_Group>,
   HelpText<"Disable free-form format for Fortran">,
-  Flags<[HelpHidden]>;
+  Flags<[FlangOption, FlangOnlyOption]>;
 
 def Mipa: Joined<["-"], "Mipa">, Group<pgi_fortran_Group>;
 def Mstackarrays: Joined<["-"], "Mstack_arrays">, Group<pgi_fortran_Group>;
@@ -4743,7 +4744,7 @@ def Xflang : Separate<["-"], "Xflang">,
 //===----------------------------------------------------------------------===//
 // FlangOption and FC1 Options
 //===----------------------------------------------------------------------===//
-let Flags = [FC1Option, FlangOption, FlangOnlyOption] in {
+let Flags = [FC1Option, FlangOption, FlangOnlyOption, HelpHidden] in {
 
 def ffixed_form : Flag<["-"], "ffixed-form">, Group<f_Group>,
   HelpText<"Process source files in fixed form">;
@@ -4754,6 +4755,10 @@ def ffixed_line_length_EQ : Joined<["-"], "ffixed-line-length=">, Group<f_Group>
   DocBrief<[{Set column after which characters are ignored in typical fixed-form lines in the source
 file}]>;
 def ffixed_line_length_VALUE : Joined<["-"], "ffixed-line-length-">, Group<f_Group>, Alias<ffixed_line_length_EQ>;
+}
+
+let Flags = [FC1Option, FlangOption, FlangOnlyOption] in {
+
 def fopenacc : Flag<["-"], "fopenacc">, Group<f_Group>,
   HelpText<"Enable OpenACC">;
 defm default_double_8 : OptInCC1FFlag<"default-double-8", "", "",
