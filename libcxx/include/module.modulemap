@@ -764,6 +764,7 @@ module std [system] {
       module geometric_distribution          { private header "__random/geometric_distribution.h" }
       module independent_bits_engine         { private header "__random/independent_bits_engine.h" }
       module is_seed_sequence                { private header "__random/is_seed_sequence.h" }
+      module is_valid                        { private header "__random/is_valid.h" }
       module knuth_b                         { private header "__random/knuth_b.h" }
       module linear_congruential_engine      { private header "__random/linear_congruential_engine.h" }
       module log2                            { private header "__random/log2.h" }

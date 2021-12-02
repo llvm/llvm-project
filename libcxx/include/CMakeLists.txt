@@ -313,6 +313,7 @@ set(files
   __random/geometric_distribution.h
   __random/independent_bits_engine.h
   __random/is_seed_sequence.h
+  __random/is_valid.h
   __random/knuth_b.h
   __random/linear_congruential_engine.h
   __random/log2.h

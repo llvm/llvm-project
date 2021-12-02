@@ -12,6 +12,7 @@
 #include <__config>
 #include <__random/bernoulli_distribution.h>
 #include <__random/gamma_distribution.h>
+#include <__random/is_valid.h>
 #include <__random/poisson_distribution.h>
 #include <iosfwd>
 #include <limits>
@@ -29,6 +30,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 template<class _IntType = int>
 class _LIBCPP_TEMPLATE_VIS negative_binomial_distribution
 {
+    static_assert(__libcpp_random_is_valid_inttype<_IntType>::value, "IntType must be an integer type larger than char");
 public:
     // types
     typedef _IntType result_type;
