@@ -70,7 +70,9 @@ def Sparsification : Pass<"sparsification", "ModuleOp"> {
     Option<"vectorLength", "vl", "int32_t", "1",
            "Set the vector length">,
     Option<"enableSIMDIndex32", "enable-simd-index32", "bool", "false",
-           "Enable i32 indexing into vectors (for efficiency)">
+           "Enable i32 indexing into vectors (for efficiency)">,
+    Option<"enableVLAVectorization", "enable-vla-vectorization", "bool",
+           "false", "Enable vector length agnostic vectorization">
   ];
 }
 
