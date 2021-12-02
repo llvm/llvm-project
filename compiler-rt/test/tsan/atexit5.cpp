@@ -1,4 +1,4 @@
-// RUN: %clangxx_tsan -O1 %s -o %t && %deflake %run %t | FileCheck %s
+// RUN: %clangxx_tsan -O1 -fno-inline-functions %s -o %t && %deflake %run %t | FileCheck %s
 #include "test.h"
 #include <memory>
 

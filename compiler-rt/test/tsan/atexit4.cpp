@@ -17,6 +17,7 @@ static void race() {
 }
 
 struct X {
+  __attribute__((noinline))
   X() { atexit(race); }
 } x;
 
