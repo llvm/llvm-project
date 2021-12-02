@@ -1029,10 +1029,12 @@ bool llvm::inferLibFuncAttributes(Function &F, const TargetLibraryInfo &TLI) {
     Changed |= setOnlyReadsMemory(F, 1);
     return Changed;
   case LibFunc_memset:
-    Changed |= setOnlyAccessesArgMemory(F);
     Changed |= setWillReturn(F);
-    Changed |= setDoesNotThrow(F);
+    LLVM_FALLTHROUGH;
+  case LibFunc_memset_chk:
+    Changed |= setOnlyAccessesArgMemory(F);
     Changed |= setOnlyWritesMemory(F, 0);
+    Changed |= setDoesNotThrow(F);
     return Changed;
   // int __nvvm_reflect(const char *)
   case LibFunc_nvvm_reflect:

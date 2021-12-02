@@ -299,4 +299,9 @@ void ARMTargetStreamer::emitTargetAttributes(const MCSubtargetInfo &STI) {
   else if (STI.hasFeature(ARM::FeatureVirtualization))
     emitAttribute(ARMBuildAttrs::Virtualization_use,
                   ARMBuildAttrs::AllowVirtualization);
+
+  if (STI.hasFeature(ARM::FeaturePACBTI)) {
+    emitAttribute(ARMBuildAttrs::PAC_extension, ARMBuildAttrs::AllowPAC);
+    emitAttribute(ARMBuildAttrs::BTI_extension, ARMBuildAttrs::AllowBTI);
+  }
 }

@@ -188,21 +188,19 @@ struct OffloadTargetInfo {
   }
 };
 
-static StringRef getDeviceFileExtension(StringRef Device) {
+static StringRef getDeviceFileExtension(StringRef Device,
+                                        StringRef BundleFileName) {
   if (Device.contains("gfx"))
     return ".bc";
   if (Device.contains("sm_"))
     return ".cubin";
-
-  WithColor::warning() << "Could not determine extension for archive"
-                          "members, using \".o\"\n";
-  return ".o";
+  return sys::path::extension(BundleFileName);
 }
 
 static std::string getDeviceLibraryFileName(StringRef BundleFileName,
                                             StringRef Device) {
   StringRef LibName = sys::path::stem(BundleFileName);
-  StringRef Extension = getDeviceFileExtension(Device);
+  StringRef Extension = getDeviceFileExtension(Device, BundleFileName);
 
   std::string Result;
   Result += LibName;

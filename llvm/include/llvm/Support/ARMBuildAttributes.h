@@ -70,9 +70,13 @@ enum AttrType : unsigned {
   DIV_use = 44,
   DSP_extension = 46,
   MVE_arch = 48,
+  PAC_extension = 50,
+  BTI_extension = 52,
   also_compatible_with = 65,
   conformance = 67,
   Virtualization_use = 68,
+  BTI_use = 74,
+  PACRET_use = 76,
 
   /// Legacy Tags
   Section = 2,               // deprecated (ABI r2.09)
@@ -237,7 +241,25 @@ enum {
   // Tag_Virtualization_use, (=68), uleb128
   AllowTZ = 1,
   AllowVirtualization = 2,
-  AllowTZVirtualization = 3
+  AllowTZVirtualization = 3,
+
+  // Tag_PAC_extension, (=50), uleb128
+  DisallowPAC = 0,
+  AllowPACInNOPSpace = 1,
+  AllowPAC = 2,
+
+  // Tag_BTI_extension, (=52), uleb128
+  DisallowBTI = 0,
+  AllowBTIInNOPSpace = 1,
+  AllowBTI = 2,
+
+  // Tag_BTI_use, (=74), uleb128
+  BTINotUsed = 0,
+  BTIUsed = 1,
+
+  // Tag_PACRET_use, (=76), uleb128
+  PACRETNotUsed = 0,
+  PACRETUsed = 1
 };
 
 } // namespace ARMBuildAttrs

@@ -239,11 +239,15 @@ static std::string printValueInfo(Value value, bool prefix) {
 /// Return true if opOperand has been decided to bufferize in-place.
 static bool isInplaceMemoryWrite(OpOperand &opOperand,
                                  const BufferizationAliasInfo &aliasInfo) {
-  // Ops that do not bufferize to a memory write, cannot be write in-place.
+  // OpOperands without an aliasing OpResult do not write.
+  OpResult opResult = getAliasingOpResult(opOperand);
+  if (!opResult)
+    return false;
+  // OpOperands that do not bufferize to a memory write do not write in-place.
   if (!bufferizesToMemoryWrite(opOperand))
     return false;
-  OpResult opResult = getAliasingOpResult(opOperand);
-  return opResult && aliasInfo.isInPlace(opResult);
+  // Check current bufferization decisions.
+  return aliasInfo.isInPlace(opResult);
 }
 
 /// Return true if, under current bufferization decisions, the buffer of `value`

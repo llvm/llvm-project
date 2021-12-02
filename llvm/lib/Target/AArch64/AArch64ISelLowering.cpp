@@ -929,6 +929,8 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
   setTargetDAGCombine(ISD::VECREDUCE_ADD);
   setTargetDAGCombine(ISD::STEP_VECTOR);
 
+  setTargetDAGCombine(ISD::FP_EXTEND);
+
   setTargetDAGCombine(ISD::GlobalAddress);
 
   // In case of strict alignment, avoid an excessive number of byte wide stores.
@@ -15967,6 +15969,22 @@ static SDValue performSTORECombine(SDNode *N,
                                    TargetLowering::DAGCombinerInfo &DCI,
                                    SelectionDAG &DAG,
                                    const AArch64Subtarget *Subtarget) {
+  StoreSDNode *ST = cast<StoreSDNode>(N);
+  SDValue Chain = ST->getChain();
+  SDValue Value = ST->getValue();
+  SDValue Ptr = ST->getBasePtr();
+
+  // If this is an FP_ROUND followed by a store, fold this into a truncating
+  // store. We can do this even if this is already a truncstore.
+  // We purposefully don't care about legality of the nodes here as we know
+  // they can be split down into something legal.
+  if (DCI.isBeforeLegalizeOps() && Value.getOpcode() == ISD::FP_ROUND &&
+      Value.getNode()->hasOneUse() && ST->isUnindexed() &&
+      Subtarget->useSVEForFixedLengthVectors() &&
+      Value.getValueType().isFixedLengthVector())
+    return DAG.getTruncStore(Chain, SDLoc(N), Value.getOperand(0), Ptr,
+                             ST->getMemoryVT(), ST->getMemOperand());
+
   if (SDValue Split = splitStores(N, DCI, DAG, Subtarget))
     return Split;
 
@@ -17309,6 +17327,37 @@ SDValue performSVESpliceCombine(SDNode *N, SelectionDAG &DAG) {
   return DAG.getBitcast(Ty, Trunc);
 }
 
+SDValue performFPExtendCombine(SDNode *N, SelectionDAG &DAG,
+                               TargetLowering::DAGCombinerInfo &DCI,
+                               const AArch64Subtarget *Subtarget) {
+  SDValue N0 = N->getOperand(0);
+  EVT VT = N->getValueType(0);
+
+  // If this is fp_round(fpextend), don't fold it, allow ourselves to be folded.
+  if (N->hasOneUse() && N->use_begin()->getOpcode() == ISD::FP_ROUND)
+    return SDValue();
+
+  // fold (fpext (load x)) -> (fpext (fptrunc (extload x)))
+  // We purposefully don't care about legality of the nodes here as we know
+  // they can be split down into something legal.
+  if (DCI.isBeforeLegalizeOps() && ISD::isNormalLoad(N0.getNode()) &&
+      N0.hasOneUse() && Subtarget->useSVEForFixedLengthVectors() &&
+      VT.isFixedLengthVector()) {
+    LoadSDNode *LN0 = cast<LoadSDNode>(N0);
+    SDValue ExtLoad = DAG.getExtLoad(ISD::EXTLOAD, SDLoc(N), VT,
+                                     LN0->getChain(), LN0->getBasePtr(),
+                                     N0.getValueType(), LN0->getMemOperand());
+    DCI.CombineTo(N, ExtLoad);
+    DCI.CombineTo(N0.getNode(),
+                  DAG.getNode(ISD::FP_ROUND, SDLoc(N0), N0.getValueType(),
+                              ExtLoad, DAG.getIntPtrConstant(1, SDLoc(N0))),
+                  ExtLoad.getValue(1));
+    return SDValue(N, 0); // Return N so it doesn't get rechecked!
+  }
+
+  return SDValue();
+}
+
 SDValue AArch64TargetLowering::PerformDAGCombine(SDNode *N,
                                                  DAGCombinerInfo &DCI) const {
   SelectionDAG &DAG = DCI.DAG;
@@ -17365,6 +17414,8 @@ SDValue AArch64TargetLowering::PerformDAGCombine(SDNode *N,
     return performSTORECombine(N, DCI, DAG, Subtarget);
   case ISD::VECTOR_SPLICE:
     return performSVESpliceCombine(N, DAG);
+  case ISD::FP_EXTEND:
+    return performFPExtendCombine(N, DAG, DCI, Subtarget);
   case AArch64ISD::BRCOND:
     return performBRCONDCombine(N, DCI, DAG);
   case AArch64ISD::TBNZ:

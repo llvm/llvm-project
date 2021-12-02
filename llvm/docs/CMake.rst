@@ -366,6 +366,12 @@ enabled sub-projects. Nearly all of these variable names begin with
   $CMAKE_INSTALL_PREFIX/Toolchains containing an xctoolchain directory which can
   be used to override the default system tools.
 
+**LLVM_DEFAULT_TARGET_TRIPLE**:STRING
+  LLVM target to use for code generation when no target is explicitly specified.
+  It defaults to "host", meaning that it shall pick the architecture
+  of the machine where LLVM is being built. If you are building a cross-compiler,
+  set it to the target triple of your desired architecture.
+
 **LLVM_DOXYGEN_QCH_FILENAME**:STRING
   The filename of the Qt Compressed Help file that will be generated when
   ``-DLLVM_ENABLE_DOXYGEN=ON`` and

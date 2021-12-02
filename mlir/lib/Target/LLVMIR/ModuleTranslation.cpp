@@ -610,8 +610,8 @@ LogicalResult ModuleTranslation::convertGlobals() {
     auto dtorOp = dyn_cast<GlobalDtorsOp>(op);
     if (!ctorOp && !dtorOp)
       continue;
-    auto range = ctorOp ? llvm::zip(ctorOp.ctors(), ctorOp.priorities())
-                        : llvm::zip(dtorOp.dtors(), dtorOp.priorities());
+    auto range = ctorOp ? llvm::zip(ctorOp.getCtors(), ctorOp.getPriorities())
+                        : llvm::zip(dtorOp.getDtors(), dtorOp.getPriorities());
     auto appendGlobalFn =
         ctorOp ? llvm::appendToGlobalCtors : llvm::appendToGlobalDtors;
     for (auto symbolAndPriority : range) {

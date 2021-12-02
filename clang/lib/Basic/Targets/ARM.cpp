@@ -367,6 +367,28 @@ bool ARMTargetInfo::setABI(const std::string &Name) {
   return false;
 }
 
+bool ARMTargetInfo::validateBranchProtection(StringRef Spec,
+                                             BranchProtectionInfo &BPI,
+                                             StringRef &Err) const {
+  llvm::ARM::ParsedBranchProtection PBP;
+  if (!llvm::ARM::parseBranchProtection(Spec, PBP, Err))
+    return false;
+
+  BPI.SignReturnAddr =
+      llvm::StringSwitch<LangOptions::SignReturnAddressScopeKind>(PBP.Scope)
+          .Case("non-leaf", LangOptions::SignReturnAddressScopeKind::NonLeaf)
+          .Case("all", LangOptions::SignReturnAddressScopeKind::All)
+          .Default(LangOptions::SignReturnAddressScopeKind::None);
+
+  // Don't care for the sign key, beyond issuing a warning.
+  if (PBP.Key == "b_key")
+    Err = "b-key";
+  BPI.SignKey = LangOptions::SignReturnAddressKeyKind::AKey;
+
+  BPI.BranchTargetEnforcement = PBP.BranchTargetEnforcement;
+  return true;
+}
+
 // FIXME: This should be based on Arch attributes, not CPU names.
 bool ARMTargetInfo::initFeatureMap(
     llvm::StringMap<bool> &Features, DiagnosticsEngine &Diags, StringRef CPU,
@@ -872,6 +894,16 @@ void ARMTargetInfo::getTargetDefines(const LangOptions &Opts,
     Builder.defineMacro("__ARM_FEATURE_BF16", "1");
     Builder.defineMacro("__ARM_FEATURE_BF16_VECTOR_ARITHMETIC", "1");
     Builder.defineMacro("__ARM_BF16_FORMAT_ALTERNATIVE", "1");
+  }
+
+  if (Opts.BranchTargetEnforcement)
+    Builder.defineMacro("__ARM_FEATURE_BTI_DEFAULT", "1");
+
+  if (Opts.hasSignReturnAddress()) {
+    unsigned Value = Opts.isSignReturnAddressWithAKey() ? 1 : 2;
+    if (Opts.isSignReturnAddressScopeAll())
+      Value |= 1 << 2;
+    Builder.defineMacro("__ARM_FEATURE_PAC_DEFAULT", Twine(Value));
   }
 
   switch (ArchKind) {

@@ -1984,11 +1984,17 @@ ContinuationIndenter::createBreakableToken(const FormatToken &Current,
   } else if (Current.is(TT_LineComment) &&
              (Current.Previous == nullptr ||
               Current.Previous->isNot(TT_ImplicitStringLiteral))) {
+    bool RegularComments = [&]() {
+      for (const FormatToken *T = &Current; T && T->is(TT_LineComment);
+           T = T->Next) {
+        if (!(T->TokenText.startswith("//") || T->TokenText.startswith("#")))
+          return false;
+      }
+      return true;
+    }();
     if (!Style.ReflowComments ||
         CommentPragmasRegex.match(Current.TokenText.substr(2)) ||
-        switchesFormatting(Current) ||
-        !(Current.TokenText.startswith("//") ||
-          Current.TokenText.startswith("#")))
+        switchesFormatting(Current) || !RegularComments)
       return nullptr;
     return std::make_unique<BreakableLineCommentSection>(
         Current, StartColumn, /*InPPDirective=*/false, Encoding, Style);

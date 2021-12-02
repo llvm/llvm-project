@@ -3978,6 +3978,18 @@ TEST_F(FormatTestComments, SpaceAtLineCommentBegin) {
             format(Code, Style));
 }
 
+TEST_F(FormatTestComments, SplitCommentIntroducers) {
+  EXPECT_EQ(R"(//
+/\
+/
+)",
+            format(R"(//
+/\
+/ 
+  )",
+                   getLLVMStyleWithColumns(10)));
+}
+
 } // end namespace
 } // end namespace format
 } // end namespace clang

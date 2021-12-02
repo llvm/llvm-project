@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include <cstdint>
+#include <type_traits>
 
 #include "llvm/ProfileData/InstrProf.h"
 #include "llvm/ProfileData/MemProfData.inc"
@@ -28,15 +29,22 @@ struct Summary {
   uint64_t NumStackOffsets;
 };
 
+template <class T = uint64_t> inline T alignedRead(const char *Ptr) {
+  static_assert(std::is_pod<T>::value, "Not a pod type.");
+  assert(reinterpret_cast<size_t>(Ptr) % sizeof(T) == 0 && "Unaligned Read");
+  return *reinterpret_cast<const T *>(Ptr);
+}
+
 Summary computeSummary(const char *Start) {
   auto *H = reinterpret_cast<const Header *>(Start);
 
+  // Check alignment while reading the number of items in each section.
   return Summary{
       H->Version,
       H->TotalSize,
-      *reinterpret_cast<const uint64_t *>(Start + H->SegmentOffset),
-      *reinterpret_cast<const uint64_t *>(Start + H->MIBOffset),
-      *reinterpret_cast<const uint64_t *>(Start + H->StackOffset),
+      alignedRead(Start + H->SegmentOffset),
+      alignedRead(Start + H->MIBOffset),
+      alignedRead(Start + H->StackOffset),
   };
 }
 
@@ -84,7 +92,9 @@ RawMemProfReader::create(const Twine &Path) {
 bool RawMemProfReader::hasFormat(const MemoryBuffer &Buffer) {
   if (Buffer.getBufferSize() < sizeof(uint64_t))
     return false;
-  uint64_t Magic = *reinterpret_cast<const uint64_t *>(Buffer.getBufferStart());
+  // Aligned read to sanity check that the buffer was allocated with at least 8b
+  // alignment.
+  const uint64_t Magic = alignedRead(Buffer.getBufferStart());
   return Magic == MEMPROF_RAW_MAGIC_64;
 }
 

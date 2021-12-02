@@ -45,7 +45,7 @@ public:
     assert(adaptor.getOperands().size() == 1);
     Location loc = operation.getLoc();
     auto type =
-        this->getTypeConverter()->convertType(operation.operand().getType());
+        this->getTypeConverter()->convertType(operation.getOperand().getType());
     auto one = spirv::ConstantOp::getOne(type, operation.getLoc(), rewriter);
     auto onePlus =
         rewriter.create<spirv::FAddOp>(loc, one, adaptor.getOperands()[0]);

@@ -660,6 +660,12 @@ def Linalg_TiledLoopOp : Linalg_Op<"tiled_loop", [
         setOperand(pos, steps[i]);
     }
 
+    /// Operand that corresponds to the `bbArg` block argument.
+    OpOperand& getTiedOperand(BlockArgument& bbArg) {
+      return getOperation()->getOpOperand(getNumControlOperands() +
+                                          bbArg.getArgNumber() - getNumLoops());
+    }
+
     /// Block argument that corresponds to the `input` or `output` operand.
     BlockArgument getTiedBlockArgument(OpOperand& operand) {
       auto operandIndex = operand.getOperandNumber();
