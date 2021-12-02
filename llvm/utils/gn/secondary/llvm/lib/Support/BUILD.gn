@@ -82,6 +82,7 @@ static_library("Support") {
     "FormattedStream.cpp",
     "GlobPattern.cpp",
     "GraphWriter.cpp",
+    "HTTPClient.cpp",
     "Hashing.cpp",
     "InitLLVM.cpp",
     "InstructionCost.cpp",
