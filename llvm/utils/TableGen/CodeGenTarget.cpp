@@ -576,7 +576,7 @@ bool CodeGenTarget::guessInstructionProperties() const {
 // ComplexPattern implementation
 //
 ComplexPattern::ComplexPattern(Record *R) {
-  Ty          = ::getValueType(R->getValueAsDef("Ty"));
+  Ty          = R->getValueAsDef("Ty");
   NumOperands = R->getValueAsInt("NumOperands");
   SelectFunc = std::string(R->getValueAsString("SelectFunc"));
   RootNodes   = R->getValueAsListOfDefs("RootNodes");

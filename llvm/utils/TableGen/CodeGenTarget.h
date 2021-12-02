@@ -202,7 +202,7 @@ private:
 /// ComplexPattern - ComplexPattern info, corresponding to the ComplexPattern
 /// tablegen class in TargetSelectionDAG.td
 class ComplexPattern {
-  MVT::SimpleValueType Ty;
+  Record *Ty;
   unsigned NumOperands;
   std::string SelectFunc;
   std::vector<Record*> RootNodes;
@@ -211,7 +211,7 @@ class ComplexPattern {
 public:
   ComplexPattern(Record *R);
 
-  MVT::SimpleValueType getValueType() const { return Ty; }
+  Record *getValueType() const { return Ty; }
   unsigned getNumOperands() const { return NumOperands; }
   const std::string &getSelectFunc() const { return SelectFunc; }
   const std::vector<Record*> &getRootNodes() const {
