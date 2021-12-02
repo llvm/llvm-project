@@ -47,7 +47,9 @@
 ## to -COUNT can't be an expression.
 # AVAIL: TLI knows 468 symbols, 235 available
 # AVAIL-COUNT-235: {{^}} available
+# AVAIL-NOT:       {{^}} available
 # UNAVAIL-COUNT-233: not available
+# UNAVAIL-NOT:       not available
 
 ## This is a large file so it's worth telling lit to stop here.
 # END.
