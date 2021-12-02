@@ -2399,6 +2399,8 @@ void UnwrappedLineParser::parseForOrWhileLoop() {
   if (Style.Language == FormatStyle::LK_JavaScript &&
       FormatTok->is(Keywords.kw_await))
     nextToken();
+  if (Style.isCpp() && FormatTok->is(tok::kw_co_await))
+    nextToken();
   if (FormatTok->Tok.is(tok::l_paren))
     parseParens();
   if (FormatTok->Tok.is(tok::l_brace)) {

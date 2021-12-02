@@ -22724,6 +22724,65 @@ TEST_F(FormatTest, Cpp20ModulesSupport) {
   verifyFormat("export", Style);
 }
 
+TEST_F(FormatTest, CoroutineForCoawait) {
+  FormatStyle Style = getLLVMStyle();
+  verifyFormat("for co_await (auto x : range())\n  ;");
+  verifyFormat("for (auto i : arr) {\n"
+               "}",
+               Style);
+  verifyFormat("for co_await (auto i : arr) {\n"
+               "}",
+               Style);
+  verifyFormat("for co_await (auto i : foo(T{})) {\n"
+               "}",
+               Style);
+}
+
+TEST_F(FormatTest, CoroutineCoAwait) {
+  verifyFormat("int x = co_await foo();");
+  verifyFormat("int x = (co_await foo());");
+  verifyFormat("co_await (42);");
+  verifyFormat("void operator co_await(int);");
+  verifyFormat("void operator co_await(a);");
+  verifyFormat("co_await a;");
+  verifyFormat("co_await missing_await_resume{};");
+  verifyFormat("co_await a; // comment");
+  verifyFormat("void test0() { co_await a; }");
+  verifyFormat("co_await co_await co_await foo();");
+  verifyFormat("co_await foo().bar();");
+  verifyFormat("co_await [this]() -> Task { co_return x; }");
+  verifyFormat("co_await [this](int a, int b) -> Task { co_return co_await "
+               "foo(); }(x, y);");
+
+  FormatStyle Style = getLLVMStyle();
+  Style.ColumnLimit = 40;
+  verifyFormat("co_await [this](int a, int b) -> Task {\n"
+               "  co_return co_await foo();\n"
+               "}(x, y);",
+               Style);
+  verifyFormat("co_await;");
+}
+
+TEST_F(FormatTest, CoroutineCoYield) {
+  verifyFormat("int x = co_yield foo();");
+  verifyFormat("int x = (co_yield foo());");
+  verifyFormat("co_yield (42);");
+  verifyFormat("co_yield {42};");
+  verifyFormat("co_yield 42;");
+  verifyFormat("co_yield n++;");
+  verifyFormat("co_yield ++n;");
+  verifyFormat("co_yield;");
+}
+
+TEST_F(FormatTest, CoroutineCoReturn) {
+  verifyFormat("co_return (42);");
+  verifyFormat("co_return;");
+  verifyFormat("co_return {};");
+  verifyFormat("co_return x;");
+  verifyFormat("co_return co_await foo();");
+  verifyFormat("co_return co_yield foo();");
+}
+
 } // namespace
 } // namespace format
 } // namespace clang
