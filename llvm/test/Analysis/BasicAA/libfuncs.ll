@@ -183,7 +183,7 @@ define i8* @test_memset_chk_const_size(i8* noalias %a, i64 %n) {
 ; CHECK:       Just Mod (MustAlias):  Ptr: i8* %a	<->  %res = tail call i8* @__memset_chk(i8* %a, i32 0, i64 4, i64 %n)
 ; CHECK-NEXT:  Just Mod:  Ptr: i8* %res	<->  %res = tail call i8* @__memset_chk(i8* %a, i32 0, i64 4, i64 %n)
 ; CHECK-NEXT:  Just Mod:  Ptr: i8* %a.gep.1	<->  %res = tail call i8* @__memset_chk(i8* %a, i32 0, i64 4, i64 %n)
-; CHECK-NEXT:  Just Mod:  Ptr: i8* %a.gep.5	<->  %res = tail call i8* @__memset_chk(i8* %a, i32 0, i64 4, i64 %n)
+; CHECK-NEXT:  NoModRef:  Ptr: i8* %a.gep.5	<->  %res = tail call i8* @__memset_chk(i8* %a, i32 0, i64 4, i64 %n)
 ;
 entry:
   %res = tail call i8* @__memset_chk(i8* %a, i32 0, i64 4, i64 %n)
