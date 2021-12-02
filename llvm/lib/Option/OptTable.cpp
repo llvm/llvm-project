@@ -150,10 +150,9 @@ OptTable::OptTable(ArrayRef<Info> OptionInfos, bool IgnoreCase)
   for (StringSet<>::const_iterator I = PrefixesUnion.begin(),
                                    E = PrefixesUnion.end(); I != E; ++I) {
     StringRef Prefix = I->getKey();
-    for (StringRef::const_iterator C = Prefix.begin(), CE = Prefix.end();
-                                   C != CE; ++C)
-      if (!is_contained(PrefixChars, *C))
-        PrefixChars.push_back(*C);
+    for (char C : Prefix)
+      if (!is_contained(PrefixChars, C))
+        PrefixChars.push_back(C);
   }
 }
 

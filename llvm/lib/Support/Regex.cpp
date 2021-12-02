@@ -218,10 +218,10 @@ bool Regex::isLiteralERE(StringRef Str) {
 
 std::string Regex::escape(StringRef String) {
   std::string RegexStr;
-  for (unsigned i = 0, e = String.size(); i != e; ++i) {
-    if (strchr(RegexMetachars, String[i]))
+  for (char C : String) {
+    if (strchr(RegexMetachars, C))
       RegexStr += '\\';
-    RegexStr += String[i];
+    RegexStr += C;
   }
 
   return RegexStr;

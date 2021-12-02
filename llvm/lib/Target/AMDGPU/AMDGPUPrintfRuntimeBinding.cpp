@@ -280,10 +280,10 @@ bool AMDGPUPrintfRuntimeBindingImpl::lowerPrintfForGpu(Module &M) {
       }
       LLVM_DEBUG(dbgs() << "Printf format string in source = " << Str.str()
                         << '\n');
-      for (size_t I = 0; I < Str.size(); ++I) {
+      for (char C : Str) {
         // Rest of the C escape sequences (e.g. \') are handled correctly
         // by the MDParser
-        switch (Str[I]) {
+        switch (C) {
         case '\a':
           Sizes << "\\a";
           break;
@@ -308,7 +308,7 @@ bool AMDGPUPrintfRuntimeBindingImpl::lowerPrintfForGpu(Module &M) {
           Sizes << "\\72";
           break;
         default:
-          Sizes << Str[I];
+          Sizes << C;
           break;
         }
       }
