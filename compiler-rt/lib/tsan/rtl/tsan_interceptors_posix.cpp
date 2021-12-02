@@ -2377,6 +2377,15 @@ static void HandleRecvmsg(ThreadState *thr, uptr pc,
     if (fd >= 0) FdClose(thr, pc, fd);           \
   }
 
+#define COMMON_INTERCEPTOR_DLOPEN(filename, flag) \
+  ({                                              \
+    CheckNoDeepBind(filename, flag);              \
+    ThreadIgnoreBegin(thr, 0);                    \
+    void *res = REAL(dlopen)(filename, flag);     \
+    ThreadIgnoreEnd(thr);                         \
+    res;                                          \
+  })
+
 #define COMMON_INTERCEPTOR_LIBRARY_LOADED(filename, handle) \
   libignore()->OnLibraryLoaded(filename)
 
