@@ -6,6 +6,8 @@ config.orc_lit_source_dir = "@ORC_LIT_SOURCE_DIR@"
 config.target_cflags = "@ORC_TEST_TARGET_CFLAGS@"
 config.target_arch = "@ORC_TEST_TARGET_ARCH@"
 config.built_with_llvm = ("@COMPILER_RT_STANDALONE_BUILD@" != "TRUE")
+config.libunwind_shared = "@LIBUNWIND_ENABLE_SHARED@"
+config.libunwind_install_dir = "@LLVM_BINARY_DIR@/@LIBUNWIND_INSTALL_LIBRARY_DIR@"
 
 # Load common config for all compiler-rt lit tests
 lit_config.load_config(config, "@COMPILER_RT_BINARY_DIR@/test/lit.common.configured")
