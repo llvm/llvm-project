@@ -3424,11 +3424,11 @@ define amdgpu_ps float @image_load_mmo(<8 x i32> inreg %rsrc, float addrspace(3)
 ; VERDE-LABEL: image_load_mmo:
 ; VERDE:       ; %bb.0:
 ; VERDE-NEXT:    image_load v1, v[1:2], s[0:7] dmask:0x1 unorm
-; VERDE-NEXT:    v_mov_b32_e32 v3, 0
+; VERDE-NEXT:    v_mov_b32_e32 v2, 0
 ; VERDE-NEXT:    s_mov_b32 m0, -1
-; VERDE-NEXT:    ds_write_b32 v0, v3
+; VERDE-NEXT:    ds_write_b32 v0, v2
 ; VERDE-NEXT:    v_add_i32_e32 v0, vcc, 16, v0
-; VERDE-NEXT:    ds_write_b32 v0, v3
+; VERDE-NEXT:    ds_write_b32 v0, v2
 ; VERDE-NEXT:    s_waitcnt vmcnt(0)
 ; VERDE-NEXT:    v_mov_b32_e32 v0, v1
 ; VERDE-NEXT:    s_waitcnt lgkmcnt(0)
@@ -3437,9 +3437,9 @@ define amdgpu_ps float @image_load_mmo(<8 x i32> inreg %rsrc, float addrspace(3)
 ; FIJI-LABEL: image_load_mmo:
 ; FIJI:       ; %bb.0:
 ; FIJI-NEXT:    image_load v1, v[1:2], s[0:7] dmask:0x1 unorm
-; FIJI-NEXT:    v_mov_b32_e32 v3, 0
+; FIJI-NEXT:    v_mov_b32_e32 v2, 0
 ; FIJI-NEXT:    s_mov_b32 m0, -1
-; FIJI-NEXT:    ds_write2_b32 v0, v3, v3 offset1:4
+; FIJI-NEXT:    ds_write2_b32 v0, v2, v2 offset1:4
 ; FIJI-NEXT:    s_waitcnt vmcnt(0)
 ; FIJI-NEXT:    v_mov_b32_e32 v0, v1
 ; FIJI-NEXT:    s_waitcnt lgkmcnt(0)
@@ -3448,8 +3448,8 @@ define amdgpu_ps float @image_load_mmo(<8 x i32> inreg %rsrc, float addrspace(3)
 ; GFX6789-LABEL: image_load_mmo:
 ; GFX6789:       ; %bb.0:
 ; GFX6789-NEXT:    image_load v1, v[1:2], s[0:7] dmask:0x1 unorm
-; GFX6789-NEXT:    v_mov_b32_e32 v3, 0
-; GFX6789-NEXT:    ds_write2_b32 v0, v3, v3 offset1:4
+; GFX6789-NEXT:    v_mov_b32_e32 v2, 0
+; GFX6789-NEXT:    ds_write2_b32 v0, v2, v2 offset1:4
 ; GFX6789-NEXT:    s_waitcnt vmcnt(0)
 ; GFX6789-NEXT:    v_mov_b32_e32 v0, v1
 ; GFX6789-NEXT:    s_waitcnt lgkmcnt(0)
@@ -3458,8 +3458,8 @@ define amdgpu_ps float @image_load_mmo(<8 x i32> inreg %rsrc, float addrspace(3)
 ; NOPRT-LABEL: image_load_mmo:
 ; NOPRT:       ; %bb.0:
 ; NOPRT-NEXT:    image_load v1, v[1:2], s[0:7] dmask:0x1 unorm
-; NOPRT-NEXT:    v_mov_b32_e32 v3, 0
-; NOPRT-NEXT:    ds_write2_b32 v0, v3, v3 offset1:4
+; NOPRT-NEXT:    v_mov_b32_e32 v2, 0
+; NOPRT-NEXT:    ds_write2_b32 v0, v2, v2 offset1:4
 ; NOPRT-NEXT:    s_waitcnt vmcnt(0)
 ; NOPRT-NEXT:    v_mov_b32_e32 v0, v1
 ; NOPRT-NEXT:    s_waitcnt lgkmcnt(0)
