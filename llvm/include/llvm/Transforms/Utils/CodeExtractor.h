@@ -284,17 +284,7 @@ public:
         DenseMap<BasicBlock *, BlockFrequency> &ExitWeights,
         BranchProbabilityInfo *BPI);
 
-    CallInst *emitCallAndSwitchStatement(Function *newFunction,
-                                         BasicBlock *newHeader,
-                                         ValueSet &inputs, ValueSet &outputs,bool KeepOldBlocks ,
-        ValueToValueMapTy &VMap,
-        std::vector<Value *> &params,
-        std::vector<Value *>  &StructValues,
-        SmallVectorImpl<unsigned> &SwiftErrorArgs,
-        std::vector<Value *>  & ReloadOutputs,std::vector<Value *> & Reloads,
-        StructType *StructArgTy ,
-    AllocaInst *Struct 
-        );
+
   };
 
 } // end namespace llvm
