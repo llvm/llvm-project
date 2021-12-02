@@ -345,7 +345,7 @@ struct Allocator {
                                        : kMaxAllowedMallocSize;
   }
 
-  bool RssLimitExceeded() {
+  bool IsRssLimitExceeded() {
     return atomic_load(&rss_limit_exceeded, memory_order_relaxed);
   }
 
@@ -484,7 +484,7 @@ struct Allocator {
                  AllocType alloc_type, bool can_fill) {
     if (UNLIKELY(!asan_inited))
       AsanInitFromRtl();
-    if (RssLimitExceeded()) {
+    if (UNLIKELY(IsRssLimitExceeded())) {
       if (AllocatorMayReturnNull())
         return nullptr;
       ReportRssLimitExceeded(stack);
