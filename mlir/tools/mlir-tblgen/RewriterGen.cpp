@@ -793,6 +793,18 @@ void PatternEmitter::emitAttributeMatch(DagNode tree, StringRef opName,
     // If a constraint is specified, we need to generate function call to its
     // static verifier.
     StringRef verifier = staticMatcherHelper.getVerifierName(matcher);
+    if (attr.isOptional()) {
+      // Avoid dereferencing null attribute. This is using a simple heuristic to
+      // avoid common cases of attempting to dereference null attribute. This
+      // will return where there is no check if attribute is null unless the
+      // attribute's value is not used.
+      // FIXME: This could be improved as some null dereferences could slip
+      // through.
+      if (!StringRef(matcher.getConditionTemplate()).contains("!$_self") &&
+          StringRef(matcher.getConditionTemplate()).contains("$_self")) {
+        os << "if (!tblgen_attr) return failure();\n";
+      }
+    }
     emitStaticVerifierCall(
         verifier, opName, "tblgen_attr",
         formatv("\"op '{0}' attribute '{1}' failed to satisfy constraint: "
