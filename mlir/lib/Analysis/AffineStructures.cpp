@@ -1918,6 +1918,48 @@ void FlatAffineConstraints::removeRedundantConstraints() {
   equalities.resizeVertically(pos);
 }
 
+void FlatAffineConstraints::getLocalIdsReprs(
+    std::vector<SmallVector<int64_t, 8>> &reprs,
+    SmallVector<unsigned, 8> &denominators) {
+
+  assert(reprs.size() == getNumLocalIds() &&
+         "Size of reprs must be equal to number of local ids");
+  assert(denominators.size() == getNumLocalIds() &&
+         "Size of denominators must be equal to number of local ids");
+
+  // Get upper-lower bound inequality pairs for division representation.
+  std::vector<Optional<std::pair<unsigned, unsigned>>> divIneqPairs(
+      getNumLocalIds());
+  getLocalReprLbUbPairs(divIneqPairs);
+
+  for (unsigned i = 0, e = getNumLocalIds(); i < e; ++i) {
+    if (!divIneqPairs[i].hasValue()) {
+      denominators[i] = 0;
+      continue;
+    }
+
+    std::pair<unsigned, unsigned> divPair = divIneqPairs[i].getValue();
+    LogicalResult divExtracted =
+        getDivRepr(*this, i + getIdKindOffset(IdKind::Local), divPair.first,
+                   divPair.second, reprs[i], denominators[i]);
+    assert(succeeded(divExtracted) &&
+           "Div should have been found since ub-lb pair exists");
+  }
+}
+
+/// Merge local identifer at `pos2` into local identifer at `pos1` in `fac`.
+static void mergeDivision(FlatAffineConstraints &fac, unsigned pos1,
+                          unsigned pos2) {
+  unsigned localOffset = fac.getNumDimAndSymbolIds();
+  pos1 += localOffset;
+  pos2 += localOffset;
+  for (unsigned i = 0, e = fac.getNumInequalities(); i < e; ++i)
+    fac.atIneq(i, pos1) += fac.atIneq(i, pos2);
+  for (unsigned i = 0, e = fac.getNumEqualities(); i < e; ++i)
+    fac.atEq(i, pos1) += fac.atEq(i, pos2);
+  fac.removeId(pos2);
+}
+
 /// Merge local ids of `this` and `other`. This is done by appending local ids
 /// of `other` to `this` and inserting local ids of `this` to `other` at start
 /// of its local ids. Number of dimension and symbol ids should match in
@@ -1927,9 +1969,67 @@ void FlatAffineConstraints::mergeLocalIds(FlatAffineConstraints &other) {
          "Number of dimension ids should match");
   assert(getNumSymbolIds() == other.getNumSymbolIds() &&
          "Number of symbol ids should match");
-  unsigned initLocals = getNumLocalIds();
-  insertLocalId(getNumLocalIds(), other.getNumLocalIds());
-  other.insertLocalId(0, initLocals);
+
+  FlatAffineConstraints &fac1 = *this;
+  FlatAffineConstraints &fac2 = other;
+
+  // Get divisions inequality pairs from each FAC.
+  std::vector<SmallVector<int64_t, 8>> divs1(fac1.getNumLocalIds()),
+      divs2(fac2.getNumLocalIds());
+  SmallVector<unsigned, 8> denoms1(fac1.getNumLocalIds()),
+      denoms2(fac2.getNumLocalIds());
+  fac1.getLocalIdsReprs(divs1, denoms1);
+  fac2.getLocalIdsReprs(divs2, denoms2);
+
+  // Merge local ids of fac1 and fac2 without using division information,
+  // i.e. append local ids of `fac2` to `fac1` and insert local ids of `fac1`
+  // to `fac2` at start of its local ids.
+  unsigned initLocals = fac1.getNumLocalIds();
+  insertLocalId(fac1.getNumLocalIds(), fac2.getNumLocalIds());
+  fac2.insertLocalId(0, initLocals);
+
+  // Merge division representation extracted from fac1 and fac2.
+  divs1.insert(divs1.end(), divs2.begin(), divs2.end());
+  denoms1.insert(denoms1.end(), denoms2.begin(), denoms2.end());
+
+  auto dependsOnExist = [&](unsigned offset, SmallVector<int64_t, 8> &div) {
+    for (unsigned i = offset, e = div.size(); i < e; ++i)
+      if (div[i] != 0)
+        return true;
+    return false;
+  };
+
+  // Find duplicate divisions and merge them.
+  // TODO: Add division normalization to support divisions that differ by
+  // a constant
+  for (unsigned i = 0; i < divs1.size(); ++i) {
+    // Check if a division exists which is duplicate of division at `i`.
+    for (unsigned j = i + 1; j < divs1.size(); ++j) {
+      // Check if division representation exists for both local ids.
+      if (denoms1[i] == 0 || denoms1[j] == 0)
+        continue;
+      // Check if denominators match.
+      if (denoms1[i] != denoms1[j])
+        continue;
+      // Check if representation is equal.
+      if (!std::equal(divs1[i].begin(), divs1[i].end(), divs1[j].begin()))
+        continue;
+      // If division representation contains a local variable, do not match.
+      // TODO: Support divisions that depend on other local ids. This can
+      // be done by ordering divisions such that a division representation
+      // for local identifier at position `i` only depends on local identifiers
+      // at position < `i`.
+      if (dependsOnExist(fac1.getIdKindOffset(IdKind::Local), divs1[j]))
+        continue;
+
+      // Merge divisions at position `j` into division at position `i`.
+      mergeDivision(fac1, i, j);
+      mergeDivision(fac2, i, j);
+      divs1.erase(divs1.begin() + j);
+      denoms1.erase(denoms1.begin() + j);
+      --j;
+    }
+  }
 }
 
 /// Removes local variables using equalities. Each equality is checked if it
