@@ -47,6 +47,12 @@ INTERCEPTOR(int, pthread_create, void *th, void *attr, void *(*callback)(void*),
   return res;
 }
 
+INTERCEPTOR(int, pthread_join, void *t, void **arg) {
+  return REAL(pthread_join)(t, arg);
+}
+
+DEFINE_REAL_PTHREAD_FUNCTIONS
+
 DEFINE_REAL(int, vfork)
 DECLARE_EXTERN_INTERCEPTOR_AND_WRAPPER(int, vfork)
 
@@ -189,7 +195,8 @@ void InitializeInterceptors() {
   INTERCEPT_FUNCTION(vfork);
 #endif  // __linux__
   INTERCEPT_FUNCTION(pthread_create);
-#endif
+  INTERCEPT_FUNCTION(pthread_join);
+#  endif
 
   inited = 1;
 }
