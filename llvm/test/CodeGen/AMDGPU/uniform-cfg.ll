@@ -201,7 +201,7 @@ if.end:                                           ; preds = %if.else, %if.then
 ; GCN: s_branch [[ENDIF_LABEL:.L[0-9_A-Za-z]+]]
 
 ; GCN: [[IF_LABEL]]:
-; GCN-NEXT: v_mov_b32_e32 [[IMM_REG]], 1
+; GCN: v_mov_b32_e32 [[IMM_REG]], 1
 
 ; GCN-NEXT: [[ENDIF_LABEL]]:
 ; GCN: buffer_store_dword [[IMM_REG]]

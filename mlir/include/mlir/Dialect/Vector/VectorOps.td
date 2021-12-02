@@ -1133,26 +1133,28 @@ def Vector_TransferReadOp :
       DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
       AttrSizedOperandSegments
     ]>,
-    Arguments<(ins AnyShaped:$source, Variadic<Index>:$indices,
-               AffineMapAttr:$permutation_map, AnyType:$padding,
-               Optional<VectorOf<[I1]>>:$mask,
-               OptionalAttr<BoolArrayAttr>:$in_bounds)>,
-    Results<(outs AnyVector:$vector)> {
+    Arguments<(ins AnyShaped:$source,
+                   Variadic<Index>:$indices,
+                   AffineMapAttr:$permutation_map,
+                   AnyType:$padding,
+                   Optional<VectorOf<[I1]>>:$mask,
+                   OptionalAttr<BoolArrayAttr>:$in_bounds)>,
+    Results<(outs AnyVectorOfAnyRank:$vector)> {
 
   let summary = "Reads a supervector from memory into an SSA vector value.";
 
   let description = [{
     The `vector.transfer_read` op performs a read from a slice within a
     [MemRef](../LangRef.md#memref-type) or a Ranked
-    [Tensor](../LangRef.md#tensor-type) supplied as its first operand into a
-    [vector](../LangRef.md#vector-type) of the same base elemental type.
+    [Tensor](../LangRef.md#tensor-type) supplied as its first operand
+    into a [vector](../LangRef.md#vector-type) of the same base elemental type.
 
     A memref/tensor operand with vector element type, must have its vector
     element type match a suffix (shape and element type) of the vector (e.g.
     memref<3x2x6x4x3xf32>, vector<1x1x4x3xf32>).
 
     The slice is further defined by a full-rank index within the MemRef/Tensor,
-    supplied as the operands `2 .. 1 + rank(memref/tensor)`.
+    supplied as the operands `[1 .. 1 + rank(memref/tensor))`.
 
     The permutation_map [attribute](../LangRef.md#attributes) is an
     [affine-map](Affine.md#affine-maps) which specifies the transposition on the
@@ -1301,39 +1303,31 @@ def Vector_TransferReadOp :
   }];
 
   let builders = [
-    // Builder that sets padding to zero.
-    OpBuilder<(ins "VectorType":$vector, "Value":$source,
-      "ValueRange":$indices, "AffineMap":$permutationMap,
-      CArg<"ArrayRef<bool>", "{}">:$inBounds)>,
-    // Builder that sets permutation map to 'getMinorIdentityMap'.
-    OpBuilder<(ins "VectorType":$vector, "Value":$source,
-      "ValueRange":$indices, "Value":$padding,
-      CArg<"ArrayRef<bool>", "{}">:$inBounds)>,
-    // Builder that sets permutation map (resp. padding) to
-    // 'getMinorIdentityMap' (resp. zero).
-    OpBuilder<(ins "VectorType":$vector, "Value":$source,
-      "ValueRange":$indices, CArg<"ArrayRef<bool>", "{}">:$inBounds)>,
-    // Builder that does not set mask.
-    OpBuilder<(ins "Type":$vector, "Value":$source,
-      "ValueRange":$indices, "AffineMapAttr":$permutationMap, "Value":$padding,
-      "ArrayAttr":$inBounds)>,
-    // Builder that does not set mask.
-    OpBuilder<(ins "Type":$vector, "Value":$source,
-      "ValueRange":$indices, "AffineMap":$permutationMap, "Value":$padding,
-      "ArrayAttr":$inBounds)>
+    /// 1. Builder that sets padding to zero and an empty mask (variant with attrs).
+    OpBuilder<(ins "VectorType":$vectorType,
+                   "Value":$source,
+                   "ValueRange":$indices,
+                   "AffineMapAttr":$permutationMapAttr,
+                   "ArrayAttr":$inBoundsAttr)>,
+    /// 2. Builder that sets padding to zero and an empty mask (variant without attrs).
+    OpBuilder<(ins "VectorType":$vectorType,
+                   "Value":$source,
+                   "ValueRange":$indices,
+                   "AffineMap":$permutationMap,
+                   CArg<"Optional<ArrayRef<bool>>", "::llvm::None">:$inBounds)>,
+    /// 3. Builder that sets permutation map to 'getMinorIdentityMap'.
+    OpBuilder<(ins "VectorType":$vectorType,
+                   "Value":$source,
+                   "ValueRange":$indices,
+                   "Value":$padding,
+                   CArg<"Optional<ArrayRef<bool>>", "::llvm::None">:$inBounds)>,
+    /// 4. Builder that sets padding to zero and permutation map to
+    /// 'getMinorIdentityMap'.
+    OpBuilder<(ins "VectorType":$vectorType,
+                   "Value":$source,
+                   "ValueRange":$indices,
+                   CArg<"Optional<ArrayRef<bool>>", "::llvm::None">:$inBounds)>,
   ];
-
-  let extraClassDeclaration = [{
-    /// Temporary convenience builders to account for the fact that we do not
-    /// have 0-d vectors atm. These create a constant `vector<1xt>` and
-    /// insert/extract into it.
-    // Builder that sets permutation map (resp. padding) to
-    // 'getMinorIdentityMap' (resp. zero).
-    static Value createScalarOp(OpBuilder &builder, Location loc, Value source,
-                                ValueRange indices,
-                                ArrayRef<bool> inBounds = ArrayRef<bool>{});
-  }];
-
   let hasCanonicalizer = 1;
   let hasFolder = 1;
 }
@@ -1345,11 +1339,12 @@ def Vector_TransferWriteOp :
       DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
       AttrSizedOperandSegments
   ]>,
-    Arguments<(ins AnyVector:$vector, AnyShaped:$source,
-               Variadic<Index>:$indices,
-               AffineMapAttr:$permutation_map,
-               Optional<VectorOf<[I1]>>:$mask,
-               OptionalAttr<BoolArrayAttr>:$in_bounds)>,
+    Arguments<(ins AnyVectorOfAnyRank:$vector,
+                   AnyShaped:$source,
+                   Variadic<Index>:$indices,
+                   AffineMapAttr:$permutation_map,
+                   Optional<VectorOf<[I1]>>:$mask,
+                   OptionalAttr<BoolArrayAttr>:$in_bounds)>,
     Results<(outs Optional<AnyRankedTensor>:$result)> {
 
   let summary = "The vector.transfer_write op writes a supervector to memory.";
@@ -1367,7 +1362,7 @@ def Vector_TransferWriteOp :
     new tensor of the same type.
 
     The slice is further defined by a full-rank index within the MemRef/Tensor,
-    supplied as the operands `3 .. 2 + rank(memref/tensor)`.
+    supplied as the operands `[2 .. 2 + rank(memref/tensor))`.
 
     The permutation_map [attribute](../LangRef.md#attributes) is an
     [affine-map](Affine.md#affine-maps) which specifies the transposition on the
@@ -1444,32 +1439,32 @@ def Vector_TransferWriteOp :
   }];
 
   let builders = [
-    // Builder that sets an empty mask.
-    OpBuilder<(ins "Value":$vector, "Value":$source, "ValueRange":$indices,
-      "AffineMap":$permutationMap, CArg<"ArrayRef<bool>", "{}">:$inBounds)>,
-    // Builder that sets permutation map to 'getMinorIdentityMap'.
-    OpBuilder<(ins "Value":$vector, "Value":$source, "ValueRange":$indices,
-      CArg<"ArrayRef<bool>", "{}">:$inBounds)>,
-    OpBuilder<(ins "Value":$vector, "Value":$source, "ValueRange":$indices,
-      "AffineMapAttr":$permutationMap, "ArrayAttr":$inBounds)>,
-    OpBuilder<(ins "Value":$vector, "Value":$source, "ValueRange":$indices,
-      "AffineMap":$permutationMap, "Value":$mask, "ArrayAttr":$inBounds)>,
-    OpBuilder<(ins "Value":$vector, "Value":$source, "ValueRange":$indices,
-      "AffineMap":$permutationMap, "ArrayAttr":$inBounds)>,
+    /// 1. Builder with type inference.
+    OpBuilder<(ins "Value":$vector,
+                   "Value":$dest,
+                   "ValueRange":$indices,
+                   "AffineMapAttr":$permutationMapAttr,
+                   "Value":$mask,
+                   "ArrayAttr":$inBoundsAttr)>,
+    /// 2. Builder with type inference that sets an empty mask (variant with attrs).
+    OpBuilder<(ins "Value":$vector,
+                   "Value":$dest,
+                   "ValueRange":$indices,
+                   "AffineMapAttr":$permutationMapAttr,
+                   "ArrayAttr":$inBoundsAttr)>,
+    /// 3. Builder with type inference that sets an empty mask (variant without attrs).
+    OpBuilder<(ins "Value":$vector,
+                   "Value":$dest,
+                   "ValueRange":$indices,
+                   "AffineMap":$permutationMap,
+                   CArg<"Optional<ArrayRef<bool>>", "::llvm::None">:$inBounds)>,
+    /// 4. Builder with type inference that sets an empty mask and sets permutation
+    /// map to 'getMinorIdentityMap'.
+    OpBuilder<(ins "Value":$vector,
+                   "Value":$dest,
+                   "ValueRange":$indices,
+                   CArg<"Optional<ArrayRef<bool>>", "::llvm::None">:$inBounds)>,
   ];
-
-  let extraClassDeclaration = [{
-    /// Temporary convenience builders to account for the fact that we do not
-    /// have 0-d vectors atm. These create a constant `vector<1xt>` and
-    /// insert/extract into it.
-    // Builder that sets permutation map (resp. padding) to
-    // 'getMinorIdentityMap' (resp. zero).
-    static Operation *createScalarOp(
-      OpBuilder &builder, Location loc, Value value,
-      Value dest, ValueRange indices,
-      ArrayRef<bool> inBounds = ArrayRef<bool>{});
-  }];
-
   let hasFolder = 1;
   let hasCanonicalizer = 1;
 }

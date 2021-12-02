@@ -35,6 +35,10 @@ config.substitutions.append(('%pluginext', config.llvm_plugin_ext))
 
 llvm_config.use_default_substitutions()
 
+# ask llvm-config about asserts
+llvm_config.feature_config(
+    [('--assertion-mode', {'ON': 'asserts'})])
+
 # excludes: A list of directories to exclude from the testsuite. The 'Inputs'
 # subdirectories contain auxiliary inputs for various tests in their parent
 # directories.
@@ -72,6 +76,15 @@ tools = [
     ToolSubst('%flang_fc1', command=FindTool('flang-new'), extra_args=['-fc1'],
         unresolved='fatal')]
 
+# Flang has several unimplemented features. TODO messages are used to mark and fail if these
+# features are exercised. TODOs exit with an error in non-assert builds but in assert builds
+# it aborts. To catch aborts, the `--crash` option for the `not` command has to be used.
+if 'asserts' in config.available_features:
+    tools.append(ToolSubst('%not_todo_cmd', command=FindTool('not'), extra_args=['--crash'],
+        unresolved='fatal'))
+else:
+    tools.append(ToolSubst('%not_todo_cmd', command=FindTool('not'), unresolved='fatal'))
+
 # Define some variables to help us test that the flang runtime doesn't depend on
 # the C++ runtime libraries. For this we need a C compiler. If for some reason
 # we don't have one, we can just disable the test.
@@ -90,8 +103,10 @@ if config.cc:
         tools.append(ToolSubst('%include', command=include,
             unresolved='fatal'))
 
+# Add all the tools and their substitutions (if applicable). Use the search paths provided for
+# finding the tools.
 if config.flang_standalone_build:
-    llvm_config.add_tool_substitutions(tools, [config.flang_llvm_tools_dir])
+    llvm_config.add_tool_substitutions(tools, [config.flang_llvm_tools_dir, config.llvm_tools_dir])
 else:
     llvm_config.add_tool_substitutions(tools, config.llvm_tools_dir)
 

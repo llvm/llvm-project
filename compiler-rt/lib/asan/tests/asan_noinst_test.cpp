@@ -11,19 +11,20 @@
 // This test file should be compiled w/o asan instrumentation.
 //===----------------------------------------------------------------------===//
 
+#include <assert.h>
+#include <sanitizer/allocator_interface.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>  // for memset()
+
+#include <algorithm>
+#include <limits>
+#include <vector>
+
 #include "asan_allocator.h"
 #include "asan_internal.h"
 #include "asan_mapping.h"
 #include "asan_test_utils.h"
-#include <sanitizer/allocator_interface.h>
-
-#include <assert.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>  // for memset()
-#include <algorithm>
-#include <vector>
-#include <limits>
 
 using namespace __sanitizer;
 

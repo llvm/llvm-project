@@ -27,7 +27,7 @@ bool IsImpliedShape(const Symbol &original) {
   const Symbol &symbol{ResolveAssociations(original)};
   const auto *details{symbol.detailsIf<semantics::ObjectEntityDetails>()};
   return details && symbol.attrs().test(semantics::Attr::PARAMETER) &&
-      details->shape().IsImpliedShape();
+      details->shape().CanBeImpliedShape();
 }
 
 bool IsExplicitShape(const Symbol &original) {

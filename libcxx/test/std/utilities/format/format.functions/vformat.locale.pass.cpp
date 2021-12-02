@@ -28,10 +28,7 @@ auto test = []<class CharT, class... Args>(std::basic_string<CharT> expected,
                                            std::basic_string<CharT> fmt,
                                            const Args&... args) {
   std::basic_string<CharT> out = std::vformat(
-      std::locale(), fmt,
-      std::make_format_args<std::basic_format_context<
-          std::back_insert_iterator<std::basic_string<CharT>>, CharT>>(
-          args...));
+      std::locale(), fmt, std::make_format_args<context_t<CharT>>(args...));
   assert(out == expected);
 };
 
@@ -39,11 +36,8 @@ auto test_exception = []<class CharT, class... Args>(
     std::string_view what, std::basic_string<CharT> fmt, const Args&... args) {
 #ifndef TEST_HAS_NO_EXCEPTIONS
   try {
-    std::vformat(
-        std::locale(), fmt,
-        std::make_format_args<std::basic_format_context<
-            std::back_insert_iterator<std::basic_string<CharT>>, CharT>>(
-            args...));
+    std::vformat(std::locale(), fmt,
+                 std::make_format_args<context_t<CharT>>(args...));
     assert(false);
   } catch (std::format_error& e) {
     LIBCPP_ASSERT(e.what() == what);

@@ -16,9 +16,6 @@
 // libraries.
 // XFAIL: use_system_cxx_lib && target={{.+}}-apple-macosx10.{{9|10|11}}
 
-// TODO(ldionne): This test fails on Ubuntu Focal on our CI nodes (and only there), in 32 bit mode.
-// UNSUPPORTED: linux && 32bits-on-64bits
-
 // <thread>
 
 // template <class Rep, class Period>

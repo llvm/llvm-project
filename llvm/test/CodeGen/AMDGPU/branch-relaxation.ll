@@ -391,7 +391,6 @@ bb3:
 ; GCN-NEXT: s_setpc_b64 s{{\[}}[[PC_LO]]:[[PC_HI]]{{\]}}
 
 ; GCN-NEXT: [[IF]]: ; %if
-; GCN: buffer_store_dword
 ; GCN: s_cmp_lg_u32
 ; GCN: s_cbranch_scc1 [[ENDIF:.LBB[0-9]+_[0-9]+]]
 

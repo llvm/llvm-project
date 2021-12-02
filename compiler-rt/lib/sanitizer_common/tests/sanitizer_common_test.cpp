@@ -87,6 +87,25 @@ TEST(SanitizerCommon, MmapAlignedOrDieOnFatalError) {
   }
 }
 
+TEST(SanitizerCommon, Mprotect) {
+  uptr PageSize = GetPageSizeCached();
+  u8 *mem = reinterpret_cast<u8 *>(MmapOrDie(PageSize, "MprotectTest"));
+  for (u8 *p = mem; p < mem + PageSize; ++p) ++(*p);
+
+  MprotectReadOnly(reinterpret_cast<uptr>(mem), PageSize);
+  for (u8 *p = mem; p < mem + PageSize; ++p) EXPECT_EQ(1u, *p);
+  EXPECT_DEATH(++mem[0], "");
+  EXPECT_DEATH(++mem[PageSize / 2], "");
+  EXPECT_DEATH(++mem[PageSize - 1], "");
+
+  MprotectNoAccess(reinterpret_cast<uptr>(mem), PageSize);
+  volatile u8 t;
+  (void)t;
+  EXPECT_DEATH(t = mem[0], "");
+  EXPECT_DEATH(t = mem[PageSize / 2], "");
+  EXPECT_DEATH(t = mem[PageSize - 1], "");
+}
+
 TEST(SanitizerCommon, InternalMmapVectorRoundUpCapacity) {
   InternalMmapVector<uptr> v;
   v.reserve(1);

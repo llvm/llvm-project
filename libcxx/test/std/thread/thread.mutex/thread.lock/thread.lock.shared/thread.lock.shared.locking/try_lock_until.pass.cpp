@@ -9,9 +9,6 @@
 // UNSUPPORTED: libcpp-has-no-threads
 // UNSUPPORTED: c++03, c++11
 
-// TODO(ldionne): This test fails on Ubuntu Focal on our CI nodes (and only there), in 32 bit mode.
-// UNSUPPORTED: linux && 32bits-on-64bits
-
 // <shared_mutex>
 
 // template <class Mutex> class shared_lock;

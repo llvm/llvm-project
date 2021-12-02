@@ -72,25 +72,12 @@ uptr StackDepotNode::allocated() {
   return stackStore.Allocated() + useCounts.MemoryUsage();
 }
 
-static void CompressStackStore() {
-  u64 start = MonotonicNanoTime();
-  uptr diff = stackStore.Pack(static_cast<StackStore::Compression>(
-      common_flags()->compress_stack_depot));
-  if (!diff)
-    return;
-  u64 finish = MonotonicNanoTime();
-  uptr total = stackStore.Allocated();
-  VPrintf(1, "%s: StackDepot released %zu KiB out of %zu KiB in %llu ms\n",
-          SanitizerToolName, diff >> 10, total >> 10,
-          (finish - start) / 1000000);
-}
-
 void StackDepotNode::store(u32 id, const args_type &args, hash_type hash) {
   stack_hash = hash;
   uptr pack = 0;
   store_id = stackStore.Store(args, &pack);
-  if (pack && common_flags()->compress_stack_depot)
-    CompressStackStore();
+  if (pack)
+    stackStore.Pack(StackStore::Compression::None);
 }
 
 StackDepotNode::args_type StackDepotNode::load(u32 id) const {

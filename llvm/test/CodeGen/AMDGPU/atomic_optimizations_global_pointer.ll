@@ -1009,22 +1009,22 @@ define amdgpu_kernel void @add_i64_varying(i64 addrspace(1)* %out, i64 addrspace
 ;
 ; GFX89-LABEL: add_i64_varying:
 ; GFX89:       ; %bb.0: ; %entry
-; GFX89-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x24
-; GFX89-NEXT:    s_mov_b32 s3, 0xf000
-; GFX89-NEXT:    s_mov_b32 s2, -1
-; GFX89-NEXT:    v_mov_b32_e32 v1, 0
+; GFX89-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
+; GFX89-NEXT:    s_mov_b32 s7, 0xf000
+; GFX89-NEXT:    s_mov_b32 s6, -1
+; GFX89-NEXT:    s_mov_b32 s10, s6
+; GFX89-NEXT:    s_mov_b32 s11, s7
 ; GFX89-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX89-NEXT:    s_mov_b32 s0, s4
-; GFX89-NEXT:    s_mov_b32 s1, s5
-; GFX89-NEXT:    s_mov_b32 s4, s6
-; GFX89-NEXT:    s_mov_b32 s5, s7
-; GFX89-NEXT:    s_mov_b32 s6, s2
-; GFX89-NEXT:    s_mov_b32 s7, s3
+; GFX89-NEXT:    s_mov_b32 s8, s2
+; GFX89-NEXT:    s_mov_b32 s9, s3
+; GFX89-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX89-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX89-NEXT:    buffer_atomic_add_x2 v[0:1], off, s[4:7], 0 glc
+; GFX89-NEXT:    buffer_atomic_add_x2 v[0:1], off, s[8:11], 0 glc
 ; GFX89-NEXT:    s_waitcnt vmcnt(0)
 ; GFX89-NEXT:    buffer_wbinvl1_vol
-; GFX89-NEXT:    buffer_store_dwordx2 v[0:1], off, s[0:3], 0
+; GFX89-NEXT:    s_mov_b32 s4, s0
+; GFX89-NEXT:    s_mov_b32 s5, s1
+; GFX89-NEXT:    buffer_store_dwordx2 v[0:1], off, s[4:7], 0
 ; GFX89-NEXT:    s_endpgm
 ;
 ; GFX10-LABEL: add_i64_varying:
@@ -2140,22 +2140,22 @@ define amdgpu_kernel void @sub_i64_varying(i64 addrspace(1)* %out, i64 addrspace
 ;
 ; GFX89-LABEL: sub_i64_varying:
 ; GFX89:       ; %bb.0: ; %entry
-; GFX89-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x24
-; GFX89-NEXT:    s_mov_b32 s3, 0xf000
-; GFX89-NEXT:    s_mov_b32 s2, -1
-; GFX89-NEXT:    v_mov_b32_e32 v1, 0
+; GFX89-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
+; GFX89-NEXT:    s_mov_b32 s7, 0xf000
+; GFX89-NEXT:    s_mov_b32 s6, -1
+; GFX89-NEXT:    s_mov_b32 s10, s6
+; GFX89-NEXT:    s_mov_b32 s11, s7
 ; GFX89-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX89-NEXT:    s_mov_b32 s0, s4
-; GFX89-NEXT:    s_mov_b32 s1, s5
-; GFX89-NEXT:    s_mov_b32 s4, s6
-; GFX89-NEXT:    s_mov_b32 s5, s7
-; GFX89-NEXT:    s_mov_b32 s6, s2
-; GFX89-NEXT:    s_mov_b32 s7, s3
+; GFX89-NEXT:    s_mov_b32 s8, s2
+; GFX89-NEXT:    s_mov_b32 s9, s3
+; GFX89-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX89-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX89-NEXT:    buffer_atomic_sub_x2 v[0:1], off, s[4:7], 0 glc
+; GFX89-NEXT:    buffer_atomic_sub_x2 v[0:1], off, s[8:11], 0 glc
 ; GFX89-NEXT:    s_waitcnt vmcnt(0)
 ; GFX89-NEXT:    buffer_wbinvl1_vol
-; GFX89-NEXT:    buffer_store_dwordx2 v[0:1], off, s[0:3], 0
+; GFX89-NEXT:    s_mov_b32 s4, s0
+; GFX89-NEXT:    s_mov_b32 s5, s1
+; GFX89-NEXT:    buffer_store_dwordx2 v[0:1], off, s[4:7], 0
 ; GFX89-NEXT:    s_endpgm
 ;
 ; GFX10-LABEL: sub_i64_varying:
