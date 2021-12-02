@@ -175,4 +175,5 @@ document soon.
    Partitions
    ReleaseNotes
    ELF/linker_script
+   ELF/start-stop-gc
    ELF/warn_backrefs
