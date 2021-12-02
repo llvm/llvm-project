@@ -23,14 +23,6 @@ using namespace llvm;
 
 #define DEBUG_TYPE "ve-asmprinter"
 
-// The generated AsmMatcher VEGenAsmWriter uses "VE" as the target
-// namespace.
-namespace llvm {
-namespace VE {
-using namespace VE;
-}
-} // namespace llvm
-
 #define GET_INSTRUCTION_NAME
 #define PRINT_ALIAS_INSTR
 #include "VEGenAsmWriter.inc"
