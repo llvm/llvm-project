@@ -1765,6 +1765,8 @@ ModulePassManager PassBuilder::buildO0DefaultPipeline(OptimizationLevel Level,
   if (LTOPreLink)
     addRequiredLTOPreLinkPasses(MPM);
 
+  MPM.addPass(createModuleToFunctionPassAdaptor(AnnotationRemarksPass()));
+
   return MPM;
 }
 
