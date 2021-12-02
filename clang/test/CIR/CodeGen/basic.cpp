@@ -61,14 +61,17 @@ int if0(int a) {
 }
 
 // CHECK: func @if0(%arg0: i32) -> i32 {
-// CHECK: %4 = cir.cast(int_to_bool, %3 : i32), !cir.bool
-// CHECK-NEXT: cir.if %4 {
-// CHECK-NEXT:   %6 = cir.cst(3 : i32) : i32
-// CHECK-NEXT:   cir.store %6, %0 : i32, cir.ptr <i32>
-// CHECK-NEXT: } else {
-// CHECK-NEXT:   %6 = cir.cst(4 : i32) : i32
-// CHECK-NEXT:   cir.store %6, %0 : i32, cir.ptr <i32>
-// CHECK-NEXT: }
+// CHECK: cir.scope {
+// CHECK:   %4 = cir.load %1 lvalue_to_rvalue : cir.ptr <i32>, i32
+// CHECK:   %5 = cir.cast(int_to_bool, %4 : i32), !cir.bool
+// CHECK:   cir.if %5 {
+// CHECK:     %6 = cir.cst(3 : i32) : i32
+// CHECK:     cir.store %6, %0 : i32, cir.ptr <i32>
+// CHECK:   } else {
+// CHECK:     %6 = cir.cst(4 : i32) : i32
+// CHECK:     cir.store %6, %0 : i32, cir.ptr <i32>
+// CHECK:   }
+// CHECK: }
 
 int if1(int a, bool b, bool c) {
   int x = 0;
@@ -87,23 +90,28 @@ int if1(int a, bool b, bool c) {
 }
 
 // CHECK: func @if1(%arg0: i32, %arg1: !cir.bool, %arg2: !cir.bool) -> i32 {
-// CHECK:     cir.if %6 {
-// CHECK:       %8 = cir.cst(3 : i32) : i32
-// CHECK:       cir.store %8, %0 : i32, cir.ptr <i32>
+// CHECK: cir.scope {
+// CHECK:   %6 = cir.load %3 lvalue_to_rvalue : cir.ptr <i32>, i32
+// CHECK:   %7 = cir.cast(int_to_bool, %6 : i32), !cir.bool
+// CHECK:   cir.if %7 {
+// CHECK:     %8 = cir.cst(3 : i32) : i32
+// CHECK:     cir.store %8, %0 : i32, cir.ptr <i32>
+// CHECK:     cir.scope {
 // CHECK:       %9 = cir.load %2 lvalue_to_rvalue : cir.ptr <!cir.bool>, !cir.bool
 // CHECK:       cir.if %9 {
 // CHECK:         %10 = cir.cst(8 : i32) : i32
 // CHECK:         cir.store %10, %0 : i32, cir.ptr <i32>
 // CHECK:       }
-// CHECK:     } else {
-// CHECK:       %8 = cir.load %1 lvalue_to_rvalue : cir.ptr <!cir.bool>, !cir.bool
-// CHECK:       cir.if %8 {
+// CHECK:     }
+// CHECK:   } else {
+// CHECK:     cir.scope {
+// CHECK:       %9 = cir.load %1 lvalue_to_rvalue : cir.ptr <!cir.bool>, !cir.bool
+// CHECK:       cir.if %9 {
 // CHECK:         %10 = cir.cst(14 : i32) : i32
 // CHECK:         cir.store %10, %0 : i32, cir.ptr <i32>
 // CHECK:       }
-// CHECK:       %9 = cir.cst(4 : i32) : i32
-// CHECK:       cir.store %9, %0 : i32, cir.ptr <i32>
 // CHECK:     }
-// CHECK:     %7 = cir.load %0 lvalue_to_rvalue : cir.ptr <i32>, i32
-// CHECK:     cir.return %7 : i32
+// CHECK:     %8 = cir.cst(4 : i32) : i32
+// CHECK:     cir.store %8, %0 : i32, cir.ptr <i32>
 // CHECK:   }
+// CHECK: }
