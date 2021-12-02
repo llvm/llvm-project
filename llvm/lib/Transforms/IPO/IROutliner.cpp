@@ -38,8 +38,6 @@ using namespace IRSimilarity;
 // matching and outlining.
 extern cl::opt<bool> DisableBranches;
 
-
-
 // Set to true if the user wants the ir outliner to run on linkonceodr linkage
 // functions. This is false by default because the linker can dedupe linkonceodr
 // functions. Since the outliner is confined to a single module (modulo LTO),
@@ -270,32 +268,30 @@ void OutlinableRegion::reattachCandidate() {
   assert(PrevBB->getTerminator() && "Terminator removed from PrevBB!");
   PrevBB->getTerminator()->eraseFromParent();
 
+  moveBBContents(*StartBB, *PrevBB);
 
-      moveBBContents(*StartBB, *PrevBB);
-
-      BasicBlock* PlacementBB = PrevBB;
-      if (StartBB != EndBB)
-          PlacementBB = EndBB;
-      if (!EndsInBranch && PlacementBB->getUniqueSuccessor() != nullptr) {
-          assert(FollowBB != nullptr && "FollowBB for Candidate is not defined!");
-          assert(PlacementBB->getTerminator() && "Terminator removed from EndBB!");
+  BasicBlock *PlacementBB = PrevBB;
+  if (StartBB != EndBB)
+    PlacementBB = EndBB;
+  if (!EndsInBranch && PlacementBB->getUniqueSuccessor() != nullptr && FollowBB->getSinglePredecessor()) {
+    assert(FollowBB != nullptr && "FollowBB for Candidate is not defined!");
+    assert(PlacementBB->getTerminator() && "Terminator removed from EndBB!");
           //for (auto Pred : predecessors(FollowBB)) {
           //    if (Pred == PlacementBB) continue;
           //    Pred->replaceSuccessorsPhiUsesWith(FollowBB,nullptr);
           //}
-          PlacementBB->getTerminator()->eraseFromParent();
-          moveBBContents(*FollowBB, *PlacementBB);
-          PlacementBB->replaceSuccessorsPhiUsesWith(FollowBB, PlacementBB);
-          //FollowBB->replaceAllUsesWith(UndefValue::get(FollowBB->getType()));
-          for (auto &&U : make_early_inc_range( FollowBB->uses())) {
-            U.set(UndefValue::get(FollowBB->getType()));
-          }
-          FollowBB->eraseFromParent();
-      }
+    PlacementBB->getTerminator()->eraseFromParent();
+    moveBBContents(*FollowBB, *PlacementBB);
+    PlacementBB->replaceSuccessorsPhiUsesWith(FollowBB, PlacementBB);
+    //FollowBB->replaceAllUsesWith(UndefValue::get(FollowBB->getType()));
+//          for (auto &&U : make_early_inc_range( FollowBB->uses())) {
+//            U.set(UndefValue::get(FollowBB->getType()));
+//          }
+    FollowBB->eraseFromParent();
+  }
 
-      PrevBB->replaceSuccessorsPhiUsesWith(StartBB, PrevBB);
-      StartBB->eraseFromParent();
-  
+  PrevBB->replaceSuccessorsPhiUsesWith(StartBB, PrevBB);
+  StartBB->eraseFromParent();
 
   // Make sure to save changes back to the StartBB.
   StartBB = PrevBB;

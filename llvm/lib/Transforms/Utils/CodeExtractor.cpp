@@ -1830,6 +1830,18 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
         BFI->setBlockFreq(codeReplacer, EntryFreq.getFrequency());
     }
 
+    // Rewrite branches to basic blocks outside of the loop to new dummy blocks
+    // within the new function. This must be done before we lose track of which
+    // blocks were originally in the code region.
+    std::vector<User*> Users(header->user_begin(), header->user_end());
+    for (auto& U : Users) // FIXME: KeepOldBlocks?
+                          // The BasicBlock which contains the branch is not in the region
+                          // modify the branch target to a new block
+        if (Instruction* I = dyn_cast<Instruction>(U))
+            if (I->isTerminator() && I->getFunction() == oldFunction &&
+                !Blocks.count(I->getParent()))
+                I->replaceUsesOfWith(header, newHeader);
+
 
 
     if (KeepOldBlocks) {
@@ -1905,18 +1917,6 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
 
 
 
-
-        // Rewrite branches to basic blocks outside of the loop to new dummy blocks
-        // within the new function. This must be done before we lose track of which
-        // blocks were originally in the code region.
-        std::vector<User*> Users(header->user_begin(), header->user_end());
-        for (auto& U : Users) // FIXME: KeepOldBlocks?
-                              // The BasicBlock which contains the branch is not in the region
-                              // modify the branch target to a new block
-            if (Instruction* I = dyn_cast<Instruction>(U))
-                if (I->isTerminator() && I->getFunction() == oldFunction &&
-                    !Blocks.count(I->getParent()))
-                    I->replaceUsesOfWith(header, newHeader);
 
 
 

@@ -15,9 +15,8 @@ define void @function1() {
 ; CHECK-NEXT:    [[B:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    [[C:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    call void @outlined_ir_func_0(i32* [[A]], i32* [[B]], i32* [[C]])
+; KEEP:        entry_after_outline:
 ; CHECK-NEXT:    ret void
-; KEEP: entry_to_outline: ; No predecessors!
-; KEEP:   br label undef
 ;
 entry:
   %a = alloca i32, align 4
@@ -40,9 +39,8 @@ define void @function2() {
 ; CHECK-NEXT:    [[B:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    [[C:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    call void @outlined_ir_func_0(i32* [[A]], i32* [[B]], i32* [[C]])
+; KEEP:        entry_after_outline:
 ; CHECK-NEXT:    ret void
-; KEEP: entry_to_outline: ; No predecessors!
-; KEEP:   br label undef
 ;
 entry:
   %a = alloca i32, align 4
@@ -72,8 +70,6 @@ define void @function3() {
 ; CHECK-NEXT:    [[BL:%.*]] = load i32, i32* [[B]], align 4
 ; CHECK-NEXT:    [[CL:%.*]] = load i32, i32* [[C]], align 4
 ; CHECK-NEXT:    ret void
-; KEEP: entry_to_outline: ; No predecessors!
-; KEEP:   br label undef
 ;
 entry:
   %a = alloca i32, align 4
@@ -98,5 +94,3 @@ entry:
 ; CHECK-NEXT:    [[AL:%.*]] = load i32, i32* [[ARG0]], align 4
 ; CHECK-NEXT:    [[BL:%.*]] = load i32, i32* [[ARG1]], align 4
 ; CHECK-NEXT:    [[CL:%.*]] = load i32, i32* [[ARG2]], align 4
-; KEEP: entry_to_outline: ; No predecessors!
-; KEEP:   br label undef
