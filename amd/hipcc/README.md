@@ -35,12 +35,32 @@ Other environment variable controls:
 
 ### <a name="usage"></a> hipcc: usage
 
-- WIP
+The built executables can be used the same way as the hipcc/hipconfig perl scripts. 
+To use the newly built executables from the build folder use ./ in front of the executable name -
+Example:
+```shell
+./hipconfig --help
+./hipcc --help
+./hipcc --version
+./hipconfig --full
+```
+
+when the excutables are copied to /opt/rocm/hip/bin or <anyfolder>hip/bin. 
+The ./ is not required as the HIP path is added to the envirnoment variables list.
 
 ### <a name="building"></a> hipcc: building
 
-- WIP
+```bash
+mkdir build
+cd build
+
+cmake ..
+
+make -j
+```
+
+The hipcc and hipconfig executables are created in the current build folder. These executables need to be copied to /opt/rocm/hip/bin folder location. Packaging and installing will be handled in future releases.
 
 ### <a name="testing"></a> hipcc: testing
 
-- WIP
+Currently hipcc/hipconfig executables are tested by building and executing HIP tests. Seperate tests for hipcc/hipconfig is currently not planned.   
