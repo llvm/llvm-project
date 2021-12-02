@@ -371,11 +371,6 @@ void PrintAddressSpaceLayout() {
           kHighShadowBeg > kMidMemEnd);
 }
 
-static bool UNUSED __local_asan_dyninit = [] {
-  MaybeStartBackgroudThread();
-  return false;
-}();
-
 static void AsanInitInternal() {
   if (LIKELY(asan_inited)) return;
   SanitizerToolName = "AddressSanitizer";
