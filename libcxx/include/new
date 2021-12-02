@@ -177,7 +177,7 @@ struct destroying_delete_t {
 inline constexpr destroying_delete_t destroying_delete{};
 #endif // _LIBCPP_STD_VER > 17
 
-}  // std
+} // namespace std
 
 #if defined(_LIBCPP_CXX03_LANG)
 #define _THROW_BAD_ALLOC throw(std::bad_alloc)
