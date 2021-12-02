@@ -265,7 +265,7 @@ clang-format
   space before parentheses. The custom options can be set using
   ``SpaceBeforeParensOptions``.
 
-- Improved Cpp20 Modules support.
+- Improved C++20 Modules and Coroutines support.
 
 libclang
 --------
