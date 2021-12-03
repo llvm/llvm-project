@@ -432,8 +432,9 @@ func @shape_cast(%arg0 : vector<5x1x3x2xf32>,
 func @bitcast(%arg0 : vector<5x1x3x2xf32>,
                  %arg1 : vector<8x1xi32>,
                  %arg2 : vector<16x1x8xi8>,
-                 %arg3 : vector<8x2x1xindex>)
-  -> (vector<5x1x3x4xf16>, vector<5x1x3x8xi8>, vector<8x4xi8>, vector<8x1xf32>, vector<16x1x2xi32>, vector<16x1x4xi16>, vector<16x1x1xindex>, vector<8x2x2xf32>) {
+                 %arg3 : vector<8x2x1xindex>,
+                 %arg4 : vector<f32>)
+  -> (vector<5x1x3x4xf16>, vector<5x1x3x8xi8>, vector<8x4xi8>, vector<8x1xf32>, vector<16x1x2xi32>, vector<16x1x4xi16>, vector<16x1x1xindex>, vector<8x2x2xf32>, vector<i32>) {
 
   // CHECK: vector.bitcast %{{.*}} : vector<5x1x3x2xf32> to vector<5x1x3x4xf16>
   %0 = vector.bitcast %arg0 : vector<5x1x3x2xf32> to vector<5x1x3x4xf16>
@@ -459,7 +460,10 @@ func @bitcast(%arg0 : vector<5x1x3x2xf32>,
   // CHECK-NEXT: vector.bitcast %{{.*}} : vector<8x2x1xindex> to vector<8x2x2xf32>
   %7 = vector.bitcast %arg3 : vector<8x2x1xindex> to vector<8x2x2xf32>
 
-  return %0, %1, %2, %3, %4, %5, %6, %7 : vector<5x1x3x4xf16>, vector<5x1x3x8xi8>, vector<8x4xi8>, vector<8x1xf32>, vector<16x1x2xi32>, vector<16x1x4xi16>, vector<16x1x1xindex>, vector<8x2x2xf32>
+  // CHECK: vector.bitcast %{{.*}} : vector<f32> to vector<i32>
+  %8 = vector.bitcast %arg4 : vector<f32> to vector<i32>
+
+  return %0, %1, %2, %3, %4, %5, %6, %7, %8 : vector<5x1x3x4xf16>, vector<5x1x3x8xi8>, vector<8x4xi8>, vector<8x1xf32>, vector<16x1x2xi32>, vector<16x1x4xi16>, vector<16x1x1xindex>, vector<8x2x2xf32>, vector<i32>
 }
 
 // CHECK-LABEL: @vector_fma
