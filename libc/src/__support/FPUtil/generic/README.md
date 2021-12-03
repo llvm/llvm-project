@@ -3,9 +3,9 @@ operations. The implementations are nested in the namespace
 `__llvm_libc::fputil::generic`. This is to facilitate calling these generic
 implementations from machine dependent implementations. Consider the example of
 the fuse-multiply-add operation (FMA). The C standard library requires three
-different flavors, `fma` which operates double precsion numbers, `fmaf` which
+different flavors, `fma` which operates double precision numbers, `fmaf` which
 operates on single precision numbers, and `fmal` which operates on `long double`
-numbers. On Aarch64, there are hardware instructions which implement the single
+numbers. On aarch64, there are hardware instructions which implement the single
 and double precision flavors but not the `long double` flavor. For such targets,
 we want to be able to call the generic `long double` implementation from the
 `long double` flavor. By putting the generic implementations in a separate
