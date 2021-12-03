@@ -1492,3 +1492,44 @@ func @main_func(%A : tensor<?xf32> {linalg.inplaceable = true},
   %0 = call @some_use(%A, %v) : (tensor<?xf32>, vector<5xf32>) -> (tensor<?xf32>)
   return %0 : tensor<?xf32>
 }
+
+// -----
+
+// CHECK-LABEL: func @to_tensor_op_not_writable
+func @to_tensor_op_not_writable(%m: memref<?xf32>, %v:  vector<5xf32>,
+                                %idx1: index, %idx2: index)
+    -> vector<10xf32> {
+  %0 = bufferization.to_tensor %m : memref<?xf32>
+
+  // Write to the tensor. Cannot be inplace due to tensor_load.
+  //      CHECK: vector.transfer_write
+  // CHECK-SAME: {__inplace_results_attr__ = ["false"]
+  %w = vector.transfer_write %v, %0[%idx1] : vector<5xf32>, tensor<?xf32>
+
+  // Read from the tensor and return result.
+  %cst = arith.constant 0.0 : f32
+  %r = vector.transfer_read %w[%idx2], %cst : tensor<?xf32>, vector<10xf32>
+  return %r : vector<10xf32>
+}
+
+// -----
+
+// CHECK-LABEL: func @to_memref_op_is_reading
+func @to_memref_op_is_reading(%t1: tensor<?xf32> {linalg.inplaceable = true},
+                              %idx1: index, %idx2: index, %idx3: index,
+                              %v1: vector<5xf32>)
+    -> (vector<5xf32>, vector<5xf32>) {
+  // Write + read to/from tensor.
+  //      CHECK: vector.transfer_write
+  // CHECK-SAME: {__inplace_results_attr__ = ["false"]
+  %1 = vector.transfer_write %v1, %t1[%idx2] : vector<5xf32>, tensor<?xf32>
+  %cst = arith.constant 0.0 : f32
+  %r1 = vector.transfer_read %1[%idx3], %cst : tensor<?xf32>, vector<5xf32>
+
+  // Write + read to/from same memref.
+  %0 = bufferization.to_memref %t1 : memref<?xf32>
+  vector.transfer_write %v1, %0[%idx1] : vector<5xf32>, memref<?xf32>
+  %r2 = vector.transfer_read %0[%idx3], %cst : memref<?xf32>, vector<5xf32>
+
+  return %r1, %r2 : vector<5xf32>, vector<5xf32>
+}
