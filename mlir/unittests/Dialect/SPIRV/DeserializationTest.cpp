@@ -39,7 +39,7 @@ protected:
     // Register a diagnostic handler to capture the diagnostic so that we can
     // check it later.
     context.getDiagEngine().registerHandler([&](Diagnostic &diag) {
-      diagnostic.reset(new Diagnostic(std::move(diag)));
+      diagnostic = std::make_unique<Diagnostic>(std::move(diag));
     });
   }
 
