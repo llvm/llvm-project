@@ -3711,30 +3711,37 @@ void llvm::UpgradeIntrinsicCall(CallInst *CI, Function *NewFn) {
       std::vector<Type *> Tys;
       unsigned ID = CI->getIntrinsicID();
       Type *V2I1Ty = FixedVectorType::get(Builder.getInt1Ty(), 2);
-      if (ID == Intrinsic::arm_mve_mull_int_predicated ||
-          ID == Intrinsic::arm_mve_vqdmull_predicated ||
-          ID == Intrinsic::arm_mve_vldr_gather_base_predicated)
+      switch (ID) {
+      case Intrinsic::arm_mve_mull_int_predicated:
+      case Intrinsic::arm_mve_vqdmull_predicated:
+      case Intrinsic::arm_mve_vldr_gather_base_predicated:
         Tys = {CI->getType(), CI->getOperand(0)->getType(), V2I1Ty};
-      else if (ID == Intrinsic::arm_mve_vldr_gather_base_wb_predicated ||
-               ID == Intrinsic::arm_mve_vstr_scatter_base_predicated ||
-               ID == Intrinsic::arm_mve_vstr_scatter_base_wb_predicated)
+        break;
+      case Intrinsic::arm_mve_vldr_gather_base_wb_predicated:
+      case Intrinsic::arm_mve_vstr_scatter_base_predicated:
+      case Intrinsic::arm_mve_vstr_scatter_base_wb_predicated:
         Tys = {CI->getOperand(0)->getType(), CI->getOperand(0)->getType(),
                V2I1Ty};
-      else if (ID == Intrinsic::arm_mve_vldr_gather_offset_predicated)
+        break;
+      case Intrinsic::arm_mve_vldr_gather_offset_predicated:
         Tys = {CI->getType(), CI->getOperand(0)->getType(),
                CI->getOperand(1)->getType(), V2I1Ty};
-      else if (ID == Intrinsic::arm_mve_vstr_scatter_offset_predicated)
+        break;
+      case Intrinsic::arm_mve_vstr_scatter_offset_predicated:
         Tys = {CI->getOperand(0)->getType(), CI->getOperand(1)->getType(),
                CI->getOperand(2)->getType(), V2I1Ty};
-      else if (ID == Intrinsic::arm_cde_vcx1q_predicated ||
-               ID == Intrinsic::arm_cde_vcx1qa_predicated ||
-               ID == Intrinsic::arm_cde_vcx2q_predicated ||
-               ID == Intrinsic::arm_cde_vcx2qa_predicated ||
-               ID == Intrinsic::arm_cde_vcx3q_predicated ||
-               ID == Intrinsic::arm_cde_vcx3qa_predicated)
+        break;
+      case Intrinsic::arm_cde_vcx1q_predicated:
+      case Intrinsic::arm_cde_vcx1qa_predicated:
+      case Intrinsic::arm_cde_vcx2q_predicated:
+      case Intrinsic::arm_cde_vcx2qa_predicated:
+      case Intrinsic::arm_cde_vcx3q_predicated:
+      case Intrinsic::arm_cde_vcx3qa_predicated:
         Tys = {CI->getOperand(1)->getType(), V2I1Ty};
-      else
+        break;
+      default:
         llvm_unreachable("Unhandled Intrinsic!");
+      }
 
       std::vector<Value *> Ops;
       for (Value *Op : CI->args()) {
