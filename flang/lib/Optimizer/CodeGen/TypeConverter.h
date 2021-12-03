@@ -33,6 +33,10 @@ static constexpr unsigned kF18AddendumPosInBox = 6;
 static constexpr unsigned kDimsPosInBox = 7;
 static constexpr unsigned kOptTypePtrPosInBox = 8;
 static constexpr unsigned kOptRowTypePosInBox = 9;
+// Position of the different values in [dims]
+static constexpr unsigned kDimLowerBoundPos = 0;
+static constexpr unsigned kDimExtentPos = 1;
+static constexpr unsigned kDimStridePos = 2;
 
 namespace fir {
 

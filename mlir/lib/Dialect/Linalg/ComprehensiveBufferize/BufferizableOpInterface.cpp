@@ -36,6 +36,45 @@ using namespace mlir;
 using namespace linalg::comprehensive_bufferize;
 
 //===----------------------------------------------------------------------===//
+// BufferizationOptions
+//===----------------------------------------------------------------------===//
+
+/// Default allocation function that is used by the comprehensive bufferization
+/// pass. The default currently creates a ranked memref using `memref.alloc`.
+static Optional<Value> defaultAllocationFn(OpBuilder &b, Location loc,
+                                           MemRefType type,
+                                           ArrayRef<Value> dynShape) {
+  Value allocated = b.create<memref::AllocOp>(
+      loc, type, dynShape, b.getI64IntegerAttr(kBufferAlignments));
+  return allocated;
+}
+
+/// Default deallocation function that is used by the comprehensive
+/// bufferization pass. It expects to recieve back the value called from the
+/// `defaultAllocationFn`.
+static void defaultDeallocationFn(OpBuilder &b, Location loc,
+                                  Value allocatedBuffer) {
+  b.create<memref::DeallocOp>(loc, allocatedBuffer);
+}
+
+/// Default memory copy function that is used by the comprehensive bufferization
+/// pass. Creates a `memref.copy` op.
+static void defaultMemCpyFn(OpBuilder &b, Location loc, Value from, Value to) {
+  b.create<memref::CopyOp>(loc, from, to);
+}
+
+std::unique_ptr<AllocationCallbacks>
+mlir::linalg::comprehensive_bufferize::defaultAllocationCallbacks() {
+  return std::make_unique<AllocationCallbacks>(
+      defaultAllocationFn, defaultDeallocationFn, defaultMemCpyFn);
+}
+
+// Default constructor for BufferizationOptions that sets all allocation
+// callbacks to their default functions.
+BufferizationOptions::BufferizationOptions()
+    : allocationFns(defaultAllocationCallbacks()) {}
+
+//===----------------------------------------------------------------------===//
 // BufferizationAliasInfo
 //===----------------------------------------------------------------------===//
 
@@ -175,6 +214,14 @@ BufferizationAliasInfo::getAliases(Value v) const {
 //===----------------------------------------------------------------------===//
 // Helper functions for BufferizableOpInterface
 //===----------------------------------------------------------------------===//
+
+static void setInsertionPointAfter(OpBuilder &b, Value value) {
+  if (auto bbArg = value.dyn_cast<BlockArgument>()) {
+    b.setInsertionPointToStart(bbArg.getOwner());
+  } else {
+    b.setInsertionPointAfter(value.getDefiningOp());
+  }
+}
 
 /// Determine which OpOperand* will alias with `result` if the op is bufferized
 /// in place. Return an empty vector if the op is not bufferizable.
@@ -339,7 +386,8 @@ Value mlir::linalg::comprehensive_bufferize::getResultBuffer(
   // TODO: Should be looking for checking for "equivalent buffers" instead of
   // operator== here, but equivalent buffers for scf.if yield values are not
   // set up yet.
-  if (!llvm::all_of(aliasingOperands, [&](OpOperand *o) {
+  if (aliasingOperands.size() > 1 &&
+      !llvm::all_of(aliasingOperands, [&](OpOperand *o) {
         return state.lookupBuffer(o->get()) == operandBuffer;
       })) {
     op->emitError("result buffer is ambiguous");
@@ -356,11 +404,7 @@ Value mlir::linalg::comprehensive_bufferize::getResultBuffer(
     Location loc = op->getLoc();
     // Move insertion point right after `operandBuffer`. That is where the
     // allocation should be inserted (in the absence of allocation hoisting).
-    if (auto bbArg = operandBuffer.dyn_cast<BlockArgument>()) {
-      b.setInsertionPointToStart(bbArg.getOwner());
-    } else {
-      b.setInsertionPointAfter(operandBuffer.getDefiningOp());
-    }
+    setInsertionPointAfter(b, operandBuffer);
     // Allocate the result buffer.
     Value resultBuffer = state.createAllocDeallocFn(b, loc, operandBuffer);
     bool skipCopy = false;
@@ -384,7 +428,8 @@ Value mlir::linalg::comprehensive_bufferize::getResultBuffer(
     if (!skipCopy) {
       // The copy happens right before the op that is bufferized.
       b.setInsertionPoint(op);
-      state.allocationFns.memCpyFn(b, loc, operandBuffer, resultBuffer);
+      state.options.allocationFns->memCpyFn(b, loc, operandBuffer,
+                                            resultBuffer);
     }
     return resultBuffer;
   }
@@ -431,12 +476,31 @@ mlir::linalg::comprehensive_bufferize::bufferize(Operation *op,
 
   // Bufferize using `BufferizableOpInterface`. Interface implementations are
   // responsible for bufferizing nested ops.
-  b.setInsertionPoint(op);
-  if (auto bufferizableOp = dyn_cast<BufferizableOpInterface>(op))
+  if (auto bufferizableOp = dyn_cast<BufferizableOpInterface>(op)) {
+    b.setInsertionPoint(op);
     return bufferizableOp.bufferize(b, state);
+  }
 
-  // Emit error if tensor op is not bufferizable.
-  return op->emitError() << "unsupported op with tensors";
+  // `op` is an unbufferizable tensor op.
+  if (!state.options.allowUnknownOps)
+    return op->emitError() << "unsupported op with tensors";
+
+  // Replace all OpOperands with "to-tensor casted" bufferized values.
+  for (OpOperand &operand : op->getOpOperands()) {
+    if (operand.get().getType().isa<TensorType>() &&
+        state.isMapped(operand.get())) {
+      b.setInsertionPoint(op);
+      Value toTensorOp = b.create<bufferization::ToTensorOp>(
+          op->getLoc(), state.lookupBuffer(operand.get()));
+      operand.set(toTensorOp);
+    }
+  }
+
+  for (Region &region : op->getRegions())
+    if (failed(bufferize(&region, state)))
+      return failure();
+
+  return success();
 }
 
 //===----------------------------------------------------------------------===//
@@ -537,7 +601,7 @@ Value mlir::linalg::comprehensive_bufferize::BufferizationState::
   MemRefType allocMemRefType =
       getAllocationTypeAndShape(b, loc, shapedValue, dynShape);
   Optional<Value> allocated =
-      allocationFns.allocationFn(b, loc, allocMemRefType, dynShape);
+      options.allocationFns->allocationFn(b, loc, allocMemRefType, dynShape);
   // TODO: For now just assert the value is returned. Eventually need to
   // error-propagate.
   assert(allocated && "allocation failed");
@@ -549,7 +613,7 @@ Value mlir::linalg::comprehensive_bufferize::BufferizationState::
 
   // 2. Create memory deallocation.
   b.setInsertionPoint(allocated.getValue().getParentBlock()->getTerminator());
-  allocationFns.deallocationFn(b, loc, allocated.getValue());
+  options.allocationFns->deallocationFn(b, loc, allocated.getValue());
   return casted;
 }
 
@@ -596,22 +660,36 @@ void mlir::linalg::comprehensive_bufferize::BufferizationState::mapValue(
 
 /// Wrapper for better debugging.
 Value mlir::linalg::comprehensive_bufferize::BufferizationState::lookupBuffer(
-    Value tensor) const {
+    Value tensor) {
   // TODO: if key comes from bbArg, forward.
   assert(tensor.getType().isa<TensorType>() && "unexpected non-tensor type");
-  Value v = mapping.lookupOrNull(tensor);
+  Value buffer = mapping.lookupOrNull(tensor);
 
-  if (!v) {
+  if (!buffer) {
+    if (options.allowUnknownOps) {
+      // `tensor` was not bufferized yet. This should never happen with
+      // bufferizable ops.
+      assert(!tensor.getDefiningOp<BufferizableOpInterface>() &&
+             "tensor is not mapped");
+      // Insert to_memref op.
+      OpBuilder b(tensor.getContext());
+      setInsertionPointAfter(b, tensor);
+      return b.create<bufferization::ToMemrefOp>(
+          tensor.getLoc(),
+          getDynamicMemRefType(tensor.getType().cast<RankedTensorType>()),
+          tensor);
+    }
+
     // Dump tensor for easier debugging.
     tensor.dump();
     llvm_unreachable("tensor is not mapped");
     return Value();
   }
 
-  assert((v.getType().isa<MemRefType>() ||
-          v.getType().isa<UnrankedMemRefType>()) &&
+  assert((buffer.getType().isa<MemRefType>() ||
+          buffer.getType().isa<UnrankedMemRefType>()) &&
          "expected that tensor is mapped to memref");
-  return v;
+  return buffer;
 }
 
 Value mlir::linalg::comprehensive_bufferize::BufferizationState::lookupValue(
