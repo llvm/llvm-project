@@ -1108,22 +1108,22 @@ private:
   /// Applies the best formatting by reconstructing the path in the
   /// solution space that leads to \c Best.
   void reconstructPath(LineState &State, StateNode *Best) {
-    std::deque<StateNode *> Path;
+    llvm::SmallVector<StateNode *> Path;
     // We do not need a break before the initial token.
     while (Best->Previous) {
-      Path.push_front(Best);
+      Path.push_back(Best);
       Best = Best->Previous;
     }
-    for (auto I = Path.begin(), E = Path.end(); I != E; ++I) {
+    for (const auto &Node : llvm::reverse(Path)) {
       unsigned Penalty = 0;
-      formatChildren(State, (*I)->NewLine, /*DryRun=*/false, Penalty);
-      Penalty += Indenter->addTokenToState(State, (*I)->NewLine, false);
+      formatChildren(State, Node->NewLine, /*DryRun=*/false, Penalty);
+      Penalty += Indenter->addTokenToState(State, Node->NewLine, false);
 
       LLVM_DEBUG({
-        printLineState((*I)->Previous->State);
-        if ((*I)->NewLine) {
+        printLineState(Node->Previous->State);
+        if (Node->NewLine) {
           llvm::dbgs() << "Penalty for placing "
-                       << (*I)->Previous->State.NextToken->Tok.getName()
+                       << Node->Previous->State.NextToken->Tok.getName()
                        << " on a new line: " << Penalty << "\n";
         }
       });
