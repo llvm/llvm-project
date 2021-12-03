@@ -1351,10 +1351,7 @@ void ContinuationIndenter::moveStatePastFakeLParens(LineState &State,
                     (Previous->getPrecedence() == prec::Assignment &&
                      Style.AlignOperands != FormatStyle::OAS_DontAlign) ||
                     Previous->is(TT_ObjCMethodExpr)));
-  for (SmallVectorImpl<prec::Level>::const_reverse_iterator
-           I = Current.FakeLParens.rbegin(),
-           E = Current.FakeLParens.rend();
-       I != E; ++I) {
+  for (const auto &PrecedenceLevel : llvm::reverse(Current.FakeLParens)) {
     ParenState NewParenState = State.Stack.back();
     NewParenState.Tok = nullptr;
     NewParenState.ContainsLineBreak = false;
@@ -1366,7 +1363,7 @@ void ContinuationIndenter::moveStatePastFakeLParens(LineState &State,
         NewParenState.NoLineBreak || State.Stack.back().NoLineBreakInOperand;
 
     // Don't propagate AvoidBinPacking into subexpressions of arg/param lists.
-    if (*I > prec::Comma)
+    if (PrecedenceLevel > prec::Comma)
       NewParenState.AvoidBinPacking = false;
 
     // Indent from 'LastSpace' unless these are fake parentheses encapsulating
@@ -1374,11 +1371,11 @@ void ContinuationIndenter::moveStatePastFakeLParens(LineState &State,
     // brackets is disabled.
     if (!Current.isTrailingComment() &&
         (Style.AlignOperands != FormatStyle::OAS_DontAlign ||
-         *I < prec::Assignment) &&
+         PrecedenceLevel < prec::Assignment) &&
         (!Previous || Previous->isNot(tok::kw_return) ||
-         (Style.Language != FormatStyle::LK_Java && *I > 0)) &&
+         (Style.Language != FormatStyle::LK_Java && PrecedenceLevel > 0)) &&
         (Style.AlignAfterOpenBracket != FormatStyle::BAS_DontAlign ||
-         *I != prec::Comma || Current.NestingLevel == 0)) {
+         PrecedenceLevel != prec::Comma || Current.NestingLevel == 0)) {
       NewParenState.Indent =
           std::max(std::max(State.Column, NewParenState.Indent),
                    State.Stack.back().LastSpace);
@@ -1387,7 +1384,7 @@ void ContinuationIndenter::moveStatePastFakeLParens(LineState &State,
     if (Previous &&
         (Previous->getPrecedence() == prec::Assignment ||
          Previous->is(tok::kw_return) ||
-         (*I == prec::Conditional && Previous->is(tok::question) &&
+         (PrecedenceLevel == prec::Conditional && Previous->is(tok::question) &&
           Previous->is(TT_ConditionalExpr))) &&
         !Newline) {
       // If BreakBeforeBinaryOperators is set, un-indent a bit to account for
@@ -1405,9 +1402,9 @@ void ContinuationIndenter::moveStatePastFakeLParens(LineState &State,
     //       ParameterToInnerFunction));
     //   OuterFunction(SomeObject.InnerFunctionCall( // break
     //       ParameterToInnerFunction));
-    if (*I > prec::Unknown)
+    if (PrecedenceLevel > prec::Unknown)
       NewParenState.LastSpace = std::max(NewParenState.LastSpace, State.Column);
-    if (*I != prec::Conditional && !Current.is(TT_UnaryOperator) &&
+    if (PrecedenceLevel != prec::Conditional && !Current.is(TT_UnaryOperator) &&
         Style.AlignAfterOpenBracket != FormatStyle::BAS_DontAlign)
       NewParenState.StartOfFunctionCall = State.Column;
 
@@ -1416,17 +1413,18 @@ void ContinuationIndenter::moveStatePastFakeLParens(LineState &State,
     // an assignment (i.e. *I <= prec::Assignment) as those have different
     // indentation rules. Indent other expression, unless the indentation needs
     // to be skipped.
-    if (*I == prec::Conditional && Previous && Previous->is(tok::colon) &&
-        Previous->is(TT_ConditionalExpr) && I == Current.FakeLParens.rbegin() &&
+    if (PrecedenceLevel == prec::Conditional && Previous &&
+        Previous->is(tok::colon) && Previous->is(TT_ConditionalExpr) &&
+        &PrecedenceLevel == &Current.FakeLParens.back() &&
         !State.Stack.back().IsWrappedConditional) {
       NewParenState.IsChainedConditional = true;
       NewParenState.UnindentOperator = State.Stack.back().UnindentOperator;
-    } else if (*I == prec::Conditional ||
-               (!SkipFirstExtraIndent && *I > prec::Assignment &&
+    } else if (PrecedenceLevel == prec::Conditional ||
+               (!SkipFirstExtraIndent && PrecedenceLevel > prec::Assignment &&
                 !Current.isTrailingComment())) {
       NewParenState.Indent += Style.ContinuationIndentWidth;
     }
-    if ((Previous && !Previous->opensScope()) || *I != prec::Comma)
+    if ((Previous && !Previous->opensScope()) || PrecedenceLevel != prec::Comma)
       NewParenState.BreakBeforeParameter = false;
     State.Stack.push_back(NewParenState);
     SkipFirstExtraIndent = false;
