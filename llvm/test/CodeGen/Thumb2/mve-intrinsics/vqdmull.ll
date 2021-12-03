@@ -2,11 +2,12 @@
 ; RUN: llc -mtriple=thumbv8.1m.main -mattr=+mve -verify-machineinstrs -o - %s | FileCheck %s
 
 declare <4 x i1> @llvm.arm.mve.pred.i2v.v4i1(i32)
+declare <2 x i1> @llvm.arm.mve.pred.i2v.v2i1(i32)
 
 declare <4 x i32> @llvm.arm.mve.vqdmull.v4i32.v8i16(<8 x i16>, <8 x i16>, i32)
 declare <2 x i64> @llvm.arm.mve.vqdmull.v2i64.v4i32(<4 x i32>, <4 x i32>, i32)
 declare <4 x i32> @llvm.arm.mve.vqdmull.predicated.v4i32.v8i16.v4i1(<8 x i16>, <8 x i16>, i32, <4 x i1>, <4 x i32>)
-declare <2 x i64> @llvm.arm.mve.vqdmull.predicated.v2i64.v4i32.v4i1(<4 x i32>, <4 x i32>, i32, <4 x i1>, <2 x i64>)
+declare <2 x i64> @llvm.arm.mve.vqdmull.predicated.v2i64.v4i32.v2i1(<4 x i32>, <4 x i32>, i32, <2 x i1>, <2 x i64>)
 
 define arm_aapcs_vfpcc <4 x i32> @test_vqdmullbq_s16(<8 x i16> %a, <8 x i16> %b) {
 ; CHECK-LABEL: test_vqdmullbq_s16:
@@ -52,8 +53,8 @@ define arm_aapcs_vfpcc <2 x i64> @test_vqdmullbq_m_s32(<2 x i64> %inactive, <4 x
 ; CHECK-NEXT:    bx lr
 entry:
   %0 = zext i16 %p to i32
-  %1 = call <4 x i1> @llvm.arm.mve.pred.i2v.v4i1(i32 %0)
-  %2 = call <2 x i64> @llvm.arm.mve.vqdmull.predicated.v2i64.v4i32.v4i1(<4 x i32> %a, <4 x i32> %b, i32 0, <4 x i1> %1, <2 x i64> %inactive)
+  %1 = call <2 x i1> @llvm.arm.mve.pred.i2v.v2i1(i32 %0)
+  %2 = call <2 x i64> @llvm.arm.mve.vqdmull.predicated.v2i64.v4i32.v2i1(<4 x i32> %a, <4 x i32> %b, i32 0, <2 x i1> %1, <2 x i64> %inactive)
   ret <2 x i64> %2
 }
 
@@ -109,8 +110,8 @@ entry:
   %.splatinsert = insertelement <4 x i32> undef, i32 %b, i32 0
   %.splat = shufflevector <4 x i32> %.splatinsert, <4 x i32> undef, <4 x i32> zeroinitializer
   %0 = zext i16 %p to i32
-  %1 = call <4 x i1> @llvm.arm.mve.pred.i2v.v4i1(i32 %0)
-  %2 = call <2 x i64> @llvm.arm.mve.vqdmull.predicated.v2i64.v4i32.v4i1(<4 x i32> %a, <4 x i32> %.splat, i32 0, <4 x i1> %1, <2 x i64> %inactive)
+  %1 = call <2 x i1> @llvm.arm.mve.pred.i2v.v2i1(i32 %0)
+  %2 = call <2 x i64> @llvm.arm.mve.vqdmull.predicated.v2i64.v4i32.v2i1(<4 x i32> %a, <4 x i32> %.splat, i32 0, <2 x i1> %1, <2 x i64> %inactive)
   ret <2 x i64> %2
 }
 
@@ -158,8 +159,8 @@ define arm_aapcs_vfpcc <2 x i64> @test_vqdmulltq_m_s32(<2 x i64> %inactive, <4 x
 ; CHECK-NEXT:    bx lr
 entry:
   %0 = zext i16 %p to i32
-  %1 = call <4 x i1> @llvm.arm.mve.pred.i2v.v4i1(i32 %0)
-  %2 = call <2 x i64> @llvm.arm.mve.vqdmull.predicated.v2i64.v4i32.v4i1(<4 x i32> %a, <4 x i32> %b, i32 1, <4 x i1> %1, <2 x i64> %inactive)
+  %1 = call <2 x i1> @llvm.arm.mve.pred.i2v.v2i1(i32 %0)
+  %2 = call <2 x i64> @llvm.arm.mve.vqdmull.predicated.v2i64.v4i32.v2i1(<4 x i32> %a, <4 x i32> %b, i32 1, <2 x i1> %1, <2 x i64> %inactive)
   ret <2 x i64> %2
 }
 
@@ -215,7 +216,7 @@ entry:
   %.splatinsert = insertelement <4 x i32> undef, i32 %b, i32 0
   %.splat = shufflevector <4 x i32> %.splatinsert, <4 x i32> undef, <4 x i32> zeroinitializer
   %0 = zext i16 %p to i32
-  %1 = call <4 x i1> @llvm.arm.mve.pred.i2v.v4i1(i32 %0)
-  %2 = call <2 x i64> @llvm.arm.mve.vqdmull.predicated.v2i64.v4i32.v4i1(<4 x i32> %a, <4 x i32> %.splat, i32 1, <4 x i1> %1, <2 x i64> %inactive)
+  %1 = call <2 x i1> @llvm.arm.mve.pred.i2v.v2i1(i32 %0)
+  %2 = call <2 x i64> @llvm.arm.mve.vqdmull.predicated.v2i64.v4i32.v2i1(<4 x i32> %a, <4 x i32> %.splat, i32 1, <2 x i1> %1, <2 x i64> %inactive)
   ret <2 x i64> %2
 }

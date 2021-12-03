@@ -9,7 +9,6 @@
 #ifndef LLVM_LIBC_SRC_SUPPORT_FPUTIL_FMA_H
 #define LLVM_LIBC_SRC_SUPPORT_FPUTIL_FMA_H
 
-#include "src/__support/CPP/TypeTraits.h"
 #include "src/__support/architectures.h"
 
 #if defined(LLVM_LIBC_ARCH_X86_64)
@@ -18,6 +17,7 @@
 #include "aarch64/FMA.h"
 #else
 #include "generic/FMA.h"
+#include "src/__support/CPP/TypeTraits.h"
 
 namespace __llvm_libc {
 namespace fputil {

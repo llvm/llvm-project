@@ -4,7 +4,7 @@
 declare <16 x i1> @llvm.arm.mve.vctp8(i32)
 declare <8 x i1> @llvm.arm.mve.vctp16(i32)
 declare <4 x i1> @llvm.arm.mve.vctp32(i32)
-declare <4 x i1> @llvm.arm.mve.vctp64(i32)
+declare <2 x i1> @llvm.arm.mve.vctp64(i32)
 
 declare i32 @llvm.arm.mve.pred.v2i.v2i1(<2 x i1>)
 declare i32 @llvm.arm.mve.pred.v2i.v4i1(<4 x i1>)
@@ -116,8 +116,8 @@ define arm_aapcs_vfpcc zeroext i16 @test_vctp64q(i32 %a) {
 ; CHECK-NEXT:    vmrs r0, p0
 ; CHECK-NEXT:    bx lr
 entry:
-  %0 = call <4 x i1> @llvm.arm.mve.vctp64(i32 %a)
-  %1 = call i32 @llvm.arm.mve.pred.v2i.v4i1(<4 x i1> %0)
+  %0 = call <2 x i1> @llvm.arm.mve.vctp64(i32 %a)
+  %1 = call i32 @llvm.arm.mve.pred.v2i.v2i1(<2 x i1> %0)
   %2 = trunc i32 %1 to i16
   ret i16 %2
 }
@@ -125,17 +125,23 @@ entry:
 define arm_aapcs_vfpcc zeroext i16 @test_vctp64q_m(i32 %a, i16 zeroext %p) {
 ; CHECK-LABEL: test_vctp64q_m:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vmsr p0, r1
-; CHECK-NEXT:    vpst
-; CHECK-NEXT:    vctpt.64 r0
+; CHECK-NEXT:    vctp.64 r0
 ; CHECK-NEXT:    vmrs r0, p0
+; CHECK-NEXT:    ands r1, r0
+; CHECK-NEXT:    and r0, r1, #1
+; CHECK-NEXT:    ubfx r1, r1, #8, #1
+; CHECK-NEXT:    rsbs r2, r0, #0
+; CHECK-NEXT:    movs r0, #0
+; CHECK-NEXT:    rsbs r1, r1, #0
+; CHECK-NEXT:    bfi r0, r2, #0, #8
+; CHECK-NEXT:    bfi r0, r1, #8, #8
 ; CHECK-NEXT:    bx lr
 entry:
   %0 = zext i16 %p to i32
-  %1 = call <4 x i1> @llvm.arm.mve.pred.i2v.v4i1(i32 %0)
-  %2 = call <4 x i1> @llvm.arm.mve.vctp64(i32 %a)
-  %3 = and <4 x i1> %1, %2
-  %4 = call i32 @llvm.arm.mve.pred.v2i.v4i1(<4 x i1> %3)
+  %1 = call <2 x i1> @llvm.arm.mve.pred.i2v.v2i1(i32 %0)
+  %2 = call <2 x i1> @llvm.arm.mve.vctp64(i32 %a)
+  %3 = and <2 x i1> %1, %2
+  %4 = call i32 @llvm.arm.mve.pred.v2i.v2i1(<2 x i1> %3)
   %5 = trunc i32 %4 to i16
   ret i16 %5
 }

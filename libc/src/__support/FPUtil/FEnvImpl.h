@@ -1,4 +1,4 @@
-//===-- Dummy floating point environment manipulation functins --*- C++ -*-===//
+//===-- Floating point environment manipulation functions -------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -9,6 +9,13 @@
 #ifndef LLVM_LIBC_SRC_SUPPORT_FPUTIL_DUMMY_FENVIMPL_H
 #define LLVM_LIBC_SRC_SUPPORT_FPUTIL_DUMMY_FENVIMPL_H
 
+#include "src/__support/architectures.h"
+
+#if defined(LLVM_LIBC_ARCH_AARCH64)
+#include "aarch64/FEnvImpl.h"
+#elif defined(LLVM_LIBC_ARCH_X86)
+#include "x86_64/FEnvImpl.h"
+#else
 #include <fenv.h>
 #include <math.h>
 
@@ -35,5 +42,6 @@ static inline int setEnv(const fenv_t *) { return 0; }
 
 } // namespace fputil
 } // namespace __llvm_libc
+#endif
 
 #endif // LLVM_LIBC_SRC_SUPPORT_FPUTIL_DUMMY_FENVIMPL_H

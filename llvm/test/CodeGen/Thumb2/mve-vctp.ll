@@ -52,6 +52,22 @@ define void @vctp32(i32 %arg, <4 x i32> *%in, <4 x i32>* %out) {
   ret void
 }
 
+define void @vctp64(i32 %arg, <2 x i64> *%in, <2 x i64>* %out) {
+; CHECK-LABEL: vctp64:
+; CHECK:       @ %bb.0:
+; CHECK-NEXT:    vldrw.u32 q1, [r1]
+; CHECK-NEXT:    vctp.64 r0
+; CHECK-NEXT:    vmov.i32 q0, #0x0
+; CHECK-NEXT:    vpst
+; CHECK-NEXT:    vmovt q0, q1
+; CHECK-NEXT:    vstrw.32 q0, [r2]
+; CHECK-NEXT:    bx lr
+  %pred = call <2 x i1> @llvm.arm.mve.vctp64(i32 %arg)
+  %ld = load <2 x i64>, <2 x i64>* %in
+  %res = select <2 x i1> %pred, <2 x i64> %ld, <2 x i64> zeroinitializer
+  store <2 x i64> %res, <2 x i64>* %out
+  ret void
+}
 
 define arm_aapcs_vfpcc <4 x i32> @vcmp_ult_v4i32(i32 %n, <4 x i32> %a, <4 x i32> %b) {
 ; CHECK-LABEL: vcmp_ult_v4i32:
@@ -208,3 +224,4 @@ entry:
 declare <16 x i1> @llvm.arm.mve.vctp8(i32)
 declare <8 x i1> @llvm.arm.mve.vctp16(i32)
 declare <4 x i1> @llvm.arm.mve.vctp32(i32)
+declare <2 x i1> @llvm.arm.mve.vctp64(i32)

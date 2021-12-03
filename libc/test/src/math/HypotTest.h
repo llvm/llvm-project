@@ -47,28 +47,47 @@ public:
 
   void testSubnormalRange(Func func) {
     constexpr UIntType count = 1000001;
-    constexpr UIntType step =
-        (FPBits::maxSubnormal - FPBits::minSubnormal) / count;
-    for (UIntType v = FPBits::minSubnormal, w = FPBits::maxSubnormal;
-         v <= FPBits::maxSubnormal && w >= FPBits::minSubnormal;
-         v += step, w -= step) {
-      T x = T(FPBits(v)), y = T(FPBits(w));
-      T result = func(x, y);
-      mpfr::BinaryInput<T> input{x, y};
-      ASSERT_MPFR_MATCH(mpfr::Operation::Hypot, input, result, 0.5);
+    for (unsigned scale = 0; scale < 4; ++scale) {
+      UIntType maxValue = FPBits::maxSubnormal << scale;
+      UIntType step = (maxValue - FPBits::minSubnormal) / count;
+      for (int signs = 0; signs < 4; ++signs) {
+        for (UIntType v = FPBits::minSubnormal, w = maxValue;
+             v <= maxValue && w >= FPBits::minSubnormal; v += step, w -= step) {
+          T x = T(FPBits(v)), y = T(FPBits(w));
+          if (signs % 2 == 1) {
+            x = -x;
+          }
+          if (signs >= 2) {
+            y = -y;
+          }
+
+          T result = func(x, y);
+          mpfr::BinaryInput<T> input{x, y};
+          ASSERT_MPFR_MATCH(mpfr::Operation::Hypot, input, result, 0.5);
+        }
+      }
     }
   }
 
   void testNormalRange(Func func) {
     constexpr UIntType count = 1000001;
     constexpr UIntType step = (FPBits::maxNormal - FPBits::minNormal) / count;
-    for (UIntType v = FPBits::minNormal, w = FPBits::maxNormal;
-         v <= FPBits::maxNormal && w >= FPBits::minNormal;
-         v += step, w -= step) {
-      T x = T(FPBits(v)), y = T(FPBits(w));
-      T result = func(x, y);
-      mpfr::BinaryInput<T> input{x, y};
-      ASSERT_MPFR_MATCH(mpfr::Operation::Hypot, input, result, 0.5);
+    for (int signs = 0; signs < 4; ++signs) {
+      for (UIntType v = FPBits::minNormal, w = FPBits::maxNormal;
+           v <= FPBits::maxNormal && w >= FPBits::minNormal;
+           v += step, w -= step) {
+        T x = T(FPBits(v)), y = T(FPBits(w));
+        if (signs % 2 == 1) {
+          x = -x;
+        }
+        if (signs >= 2) {
+          y = -y;
+        }
+
+        T result = func(x, y);
+        mpfr::BinaryInput<T> input{x, y};
+        ASSERT_MPFR_MATCH(mpfr::Operation::Hypot, input, result, 0.5);
+      }
     }
   }
 };

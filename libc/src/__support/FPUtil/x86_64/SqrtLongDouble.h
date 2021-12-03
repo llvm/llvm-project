@@ -6,13 +6,18 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_SUPPORT_FPUTIL_SQRT_LONG_DOUBLE_X86_H
-#define LLVM_LIBC_SRC_SUPPORT_FPUTIL_SQRT_LONG_DOUBLE_X86_H
+#ifndef LLVM_LIBC_SRC_SUPPORT_FPUTIL_X86_64_SQRT_LONG_DOUBLE_H
+#define LLVM_LIBC_SRC_SUPPORT_FPUTIL_X86_64_SQRT_LONG_DOUBLE_H
 
-#include "FPBits.h"
-#include "Sqrt.h"
+#include "src/__support/architectures.h"
+
+#if !defined(LLVM_LIBC_ARCH_X86)
+#error "Invalid include"
+#endif
 
 #include "src/__support/CPP/TypeTraits.h"
+#include "src/__support/FPUtil/FPBits.h"
+#include "src/__support/FPUtil/Sqrt.h"
 
 namespace __llvm_libc {
 namespace fputil {
@@ -139,4 +144,4 @@ template <> inline long double sqrt<long double, 0>(long double x) {
 } // namespace fputil
 } // namespace __llvm_libc
 
-#endif // LLVM_LIBC_SRC_SUPPORT_FPUTIL_SQRT_LONG_DOUBLE_X86_H
+#endif // LLVM_LIBC_SRC_SUPPORT_FPUTIL_X86_64_SQRT_LONG_DOUBLE_H
