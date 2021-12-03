@@ -1014,6 +1014,20 @@ func @bitcast_not_vector(%arg0 : vector<5x1x3x2xf32>) {
 
 // -----
 
+func @bitcast_rank_mismatch_to_0d(%arg0 : vector<1xf32>) {
+  // expected-error@+1 {{op failed to verify that all of {source, result} have same rank}}
+  %0 = vector.bitcast %arg0 : vector<1xf32> to vector<f32>
+}
+
+// -----
+
+func @bitcast_rank_mismatch_from_0d(%arg0 : vector<f32>) {
+  // expected-error@+1 {{op failed to verify that all of {source, result} have same rank}}
+  %0 = vector.bitcast %arg0 : vector<f32> to vector<1xf32>
+}
+
+// -----
+
 func @bitcast_rank_mismatch(%arg0 : vector<5x1x3x2xf32>) {
   // expected-error@+1 {{op failed to verify that all of {source, result} have same rank}}
   %0 = vector.bitcast %arg0 : vector<5x1x3x2xf32> to vector<5x3x2xf32>

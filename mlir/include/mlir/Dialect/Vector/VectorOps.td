@@ -675,7 +675,7 @@ def Vector_InsertElementOp :
     position and inserts the source into the destination at the proper position.
 
     Note that this instruction resembles vector.insert, but is restricted to 0-D
-    and 1-D vectors and relaxed to dynamic indices. 
+    and 1-D vectors and relaxed to dynamic indices.
 
     It is meant to be closer to LLVM's version:
     https://llvm.org/docs/LangRef.html#insertelement-instruction
@@ -2025,13 +2025,14 @@ def Vector_ShapeCastOp :
 
 def Vector_BitCastOp :
   Vector_Op<"bitcast", [NoSideEffect, AllRanksMatch<["source", "result"]>]>,
-    Arguments<(ins AnyVector:$source)>,
-    Results<(outs AnyVector:$result)>{
+    Arguments<(ins AnyVectorOfAnyRank:$source)>,
+    Results<(outs AnyVectorOfAnyRank:$result)>{
   let summary = "bitcast casts between vectors";
   let description = [{
     The bitcast operation casts between vectors of the same rank, the minor 1-D
     vector size is casted to a vector with a different element type but same
-    bitwidth.
+    bitwidth. In case of 0-D vectors, the bitwidth of element types must be
+    equal.
 
     Example:
 
@@ -2044,6 +2045,9 @@ def Vector_BitCastOp :
 
     // Example casting to an element type of the same size.
     %5 = vector.bitcast %4 : vector<5x1x4x3xf32> to vector<5x1x4x3xi32>
+
+    // Example casting of 0-D vectors.
+    %7 = vector.bitcast %6 : vector<f32> to vector<i32>
     ```
   }];
   let extraClassDeclaration = [{
