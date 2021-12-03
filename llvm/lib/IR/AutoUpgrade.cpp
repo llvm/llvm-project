@@ -2407,14 +2407,12 @@ void llvm::UpgradeIntrinsicCall(CallInst *CI, Function *NewFn) {
       if (CI->arg_size() >= 3)
         Rep = EmitX86Select(Builder, CI->getArgOperand(2), Rep,
                             CI->getArgOperand(1));
-    } else if (IsX86 && (Name.startswith("avx512.mask.loadu."))) {
-      Rep = UpgradeMaskedLoad(Builder, CI->getArgOperand(0),
-                              CI->getArgOperand(1), CI->getArgOperand(2),
-                              /*Aligned*/false);
-    } else if (IsX86 && (Name.startswith("avx512.mask.load."))) {
-      Rep = UpgradeMaskedLoad(Builder, CI->getArgOperand(0),
-                              CI->getArgOperand(1),CI->getArgOperand(2),
-                              /*Aligned*/true);
+    } else if (IsX86 && Name.startswith("avx512.mask.load")) {
+      // "avx512.mask.loadu." or "avx512.mask.load."
+      bool Aligned = Name[16] != 'u'; // "avx512.mask.loadu".
+      Rep =
+          UpgradeMaskedLoad(Builder, CI->getArgOperand(0), CI->getArgOperand(1),
+                            CI->getArgOperand(2), Aligned);
     } else if (IsX86 && Name.startswith("avx512.mask.expand.load.")) {
       auto *ResultTy = cast<FixedVectorType>(CI->getType());
       Type *PtrTy = ResultTy->getElementType();
