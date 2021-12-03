@@ -6673,10 +6673,12 @@ cc_library(
 cc_library(
     name = "ComprehensiveBufferize",
     srcs = [
+        "lib/Dialect/Linalg/ComprehensiveBufferize/BufferizationInterfaceImpl.cpp",
         "lib/Dialect/Linalg/ComprehensiveBufferize/ComprehensiveBufferize.cpp",
         "lib/Dialect/Linalg/ComprehensiveBufferize/ModuleBufferization.cpp",
     ],
     hdrs = [
+        "include/mlir/Dialect/Linalg/ComprehensiveBufferize/BufferizationInterfaceImpl.h",
         "include/mlir/Dialect/Linalg/ComprehensiveBufferize/ComprehensiveBufferize.h",
         "include/mlir/Dialect/Linalg/ComprehensiveBufferize/ModuleBufferization.h",
     ],

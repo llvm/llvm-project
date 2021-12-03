@@ -239,6 +239,12 @@ static std::string printValueInfo(Value value, bool prefix) {
 /// Return true if opOperand has been decided to bufferize in-place.
 static bool isInplaceMemoryWrite(OpOperand &opOperand,
                                  const BufferizationAliasInfo &aliasInfo) {
+  // The analysis does not know what happens to the result of a ToMemrefOp, so
+  // we assume that it is written to.
+  // TODO: This is a conservative implementation. This rule will have to be
+  // relaxed for partial bufferization.
+  if (isa<bufferization::ToMemrefOp>(opOperand.getOwner()))
+    return true;
   // OpOperands without an aliasing OpResult do not write.
   OpResult opResult = getAliasingOpResult(opOperand);
   if (!opResult)
@@ -453,14 +459,23 @@ hasReadAfterWriteInterference(const DenseSet<OpOperand *> &usesRead,
 /// If `checkConsistencyOnly` is true, this function checks if there is a
 /// read-after-write conflict without bufferizing `operand` inplace. This would
 /// indicate a problem with the current inplace bufferization decisions.
+///
+/// Note: If `checkConsistencyOnly`, this function may be called with a null
+/// OpResult. In that case, only the consistency of bufferization decisions
+/// involving aliases of the given OpOperand are checked.
 bool wouldCreateReadAfterWriteInterference(
     OpOperand &operand, OpResult result, const DominanceInfo &domInfo,
     const BufferizationAliasInfo &aliasInfo,
     bool checkConsistencyOnly = false) {
 #ifndef NDEBUG
-  SmallVector<OpOperand *> opOperands = getAliasingOpOperand(result);
-  assert(llvm::find(opOperands, &operand) != opOperands.end() &&
-         "operand and result do not match");
+  if (result) {
+    SmallVector<OpOperand *> opOperands = getAliasingOpOperand(result);
+    assert(llvm::find(opOperands, &operand) != opOperands.end() &&
+           "operand and result do not match");
+  } else {
+    assert(checkConsistencyOnly &&
+           "result not provided, can only check consistency");
+  }
 #endif // NDEBUG
 
   // Helper function to iterate on aliases of `root` and capture the reads.
@@ -486,9 +501,11 @@ bool wouldCreateReadAfterWriteInterference(
   // Collect reads and writes of all aliases of OpOperand and OpResult.
   DenseSet<OpOperand *> usesRead, usesWrite;
   getAliasingReads(usesRead, operand.get());
-  getAliasingReads(usesRead, result);
+  if (result)
+    getAliasingReads(usesRead, result);
   getAliasingInplaceWrites(usesWrite, operand.get());
-  getAliasingInplaceWrites(usesWrite, result);
+  if (result)
+    getAliasingInplaceWrites(usesWrite, result);
   if (!checkConsistencyOnly && bufferizesToMemoryWrite(operand))
     usesWrite.insert(&operand);
 
@@ -673,25 +690,38 @@ inPlaceAnalysisFuncOpBody(FuncOp funcOp, BufferizationAliasInfo &aliasInfo,
   return res;
 }
 
-#ifndef NDEBUG
 /// Assert that the current bufferization decisions are consistent.
-static void checkAliasInfoConsistency(FuncOp funcOp,
-                                      const DominanceInfo &domInfo,
-                                      const BufferizationAliasInfo &aliasInfo) {
-  funcOp.walk([&](Operation *op) {
+static LogicalResult
+checkAliasInfoConsistency(FuncOp funcOp, const DominanceInfo &domInfo,
+                          const BufferizationAliasInfo &aliasInfo) {
+  Operation *inconsistentOp = nullptr;
+  WalkResult walkResult = funcOp.walk([&](Operation *op) {
     if (auto bufferizableOp = dyn_cast<BufferizableOpInterface>(op))
       for (OpOperand &opOperand : op->getOpOperands())
-        if (opOperand.get().getType().isa<TensorType>())
-          if (OpResult opResult = bufferizableOp.getAliasingOpResult(opOperand))
-            // If this assertion fails, there is probably an inconsistent
-            // combination of "mustBufferizeInPlace" decisions.
-            assert(!wouldCreateReadAfterWriteInterference(
-                       opOperand, opResult, domInfo, aliasInfo,
-                       /*checkConsistencyOnly=*/true) &&
-                   "found read after write conflict before running analysis");
+        if (opOperand.get().getType().isa<TensorType>()) {
+          OpResult opResult = bufferizableOp.getAliasingOpResult(opOperand);
+          if (wouldCreateReadAfterWriteInterference(
+                  opOperand, opResult, domInfo, aliasInfo,
+                  /*checkConsistencyOnly=*/true)) {
+            // This error can happen for two reasons. Either the input IR
+            // already has a read-after-write conflict. Or certain
+            // "mustBufferizeInPlace" interface methods are implemented
+            // incorrectly.
+            inconsistentOp = op;
+            return WalkResult::interrupt();
+          }
+        }
+    return WalkResult::advance();
   });
+
+  if (walkResult.wasInterrupted())
+    // This can currently happen in one situation: When a tensor is passed into
+    // a ToMemrefOp and read by another op consecutively. ToMemrefOps are
+    // currently handled conservatively. Once a tensor is passed into a
+    // ToMemrefOp, it may longer be read.
+    return inconsistentOp->emitError("input IR has RaW conflict");
+  return success();
 }
-#endif
 
 /// Annotate the IR with the result of the analysis. For testing/debugging only.
 static void
@@ -720,9 +750,8 @@ LogicalResult mlir::linalg::comprehensive_bufferize::runComprehensiveBufferize(
   if (funcOp.body().empty())
     return success();
 
-#ifndef NDEBUG
-  checkAliasInfoConsistency(funcOp, domInfo, aliasInfo);
-#endif // NDEBUG
+  if (failed(checkAliasInfoConsistency(funcOp, domInfo, aliasInfo)))
+    return failure();
 
   // If the analysis fails, just return.
   if (failed(inPlaceAnalysisFuncOpBody(funcOp, aliasInfo, domInfo,

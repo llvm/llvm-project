@@ -416,10 +416,6 @@ mlir::linalg::comprehensive_bufferize::bufferize(Operation *op,
                                                  BufferizationState &state) {
   OpBuilder b(op->getContext());
 
-  // Skip ToMemrefOp and ToTensorOp.
-  if (isa<bufferization::ToMemrefOp, bufferization::ToTensorOp>(op))
-    return success();
-
   // Check if op has tensor results or operands.
   auto isaTensor = [](Type t) { return t.isa<TensorType>(); };
   bool hasTensorResult = any_of(op->getResultTypes(), isaTensor);

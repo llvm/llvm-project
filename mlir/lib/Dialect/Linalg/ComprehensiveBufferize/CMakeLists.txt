@@ -2,6 +2,7 @@ set(LLVM_OPTIONAL_SOURCES
   AffineInterfaceImpl.cpp
   ArithInterfaceImpl.cpp
   BufferizableOpInterface.cpp
+  BufferizationInterfaceImpl.cpp
   ComprehensiveBufferize.cpp
   LinalgInterfaceImpl.cpp
   ModuleBufferization.cpp
@@ -80,6 +81,7 @@ add_mlir_dialect_library(MLIRVectorBufferizableOpInterfaceImpl
 )
 
 add_mlir_dialect_library(MLIRComprehensiveBufferize
+  BufferizationInterfaceImpl.cpp
   ComprehensiveBufferize.cpp
   ModuleBufferization.cpp
 
