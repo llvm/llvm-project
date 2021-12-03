@@ -39,10 +39,10 @@ TEST(IncludeCleaner, ReferencedLocations) {
           "class ^X;",
           "X *y;",
       },
-      // FIXME(kirillbobyrev): When definition is available, we don't need to
-      // mark forward declarations as used.
+      // When definition is available, we don't need to mark forward
+      // declarations as used.
       {
-          "class ^X {}; class ^X;",
+          "class ^X {}; class X;",
           "X *y;",
       },
       // We already have forward declaration in the main file, the other
@@ -51,17 +51,24 @@ TEST(IncludeCleaner, ReferencedLocations) {
           "class ^X {}; class X;",
           "class X; X *y;",
       },
+      // Nested class definition can occur outside of the parent class
+      // definition. Bar declaration should be visible to its definition but
+      // it will always be because we will mark Foo definition as used.
+      {
+          "class ^Foo { class Bar; };",
+          "class Foo::Bar {};",
+      },
       // TypedefType and UsingDecls
       {
           "using ^Integer = int;",
           "Integer x;",
       },
       {
-          "namespace ns { struct ^X; struct ^X {}; }",
-          "using ns::X;",
+          "namespace ns { void ^foo(); void ^foo() {} }",
+          "using ns::foo;",
       },
       {
-          "namespace ns { struct X; struct X {}; }",
+          "namespace ns { void foo(); void foo() {}; }",
           "using namespace ns;",
       },
       {
@@ -88,8 +95,8 @@ TEST(IncludeCleaner, ReferencedLocations) {
       },
       // Redecls
       {
-          "class ^X; class ^X{}; class ^X;",
-          "X *y;",
+          "void ^foo(); void ^foo() {} void ^foo();",
+          "void bar() { foo(); }",
       },
       // Constructor
       {
