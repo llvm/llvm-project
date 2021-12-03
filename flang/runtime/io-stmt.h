@@ -192,17 +192,20 @@ public:
         return next;
       }
       const ConnectionState &connection{GetConnectionState()};
-      if (!connection.IsAtEOF() && connection.recordLength &&
-          connection.positionInRecord >= *connection.recordLength) {
-        IoErrorHandler &handler{GetIoErrorHandler()};
-        if (mutableModes().nonAdvancing) {
-          handler.SignalEor();
-        } else if (connection.isFixedRecordLength && !connection.modes.pad) {
-          handler.SignalError(IostatRecordReadOverrun);
-        }
-        if (connection.modes.pad) { // PAD='YES'
-          --*remaining;
-          return std::optional<char32_t>{' '};
+      if (!connection.IsAtEOF()) {
+        if (auto length{connection.EffectiveRecordLength()}) {
+          if (connection.positionInRecord >= *length) {
+            IoErrorHandler &handler{GetIoErrorHandler()};
+            if (mutableModes().nonAdvancing) {
+              handler.SignalEor();
+            } else if (connection.openRecl && !connection.modes.pad) {
+              handler.SignalError(IostatRecordReadOverrun);
+            }
+            if (connection.modes.pad) { // PAD='YES'
+              --*remaining;
+              return std::optional<char32_t>{' '};
+            }
+          }
         }
       }
     }

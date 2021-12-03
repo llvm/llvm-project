@@ -351,3 +351,12 @@ end
   the parent, allocatable or not;
   all finalization takes place before any deallocation;
   and no object or subobject will be finalized more than once.
+
+* When `RECL=` is set via the `OPEN` statement for a sequential formatted input
+  file, it functions as an effective maximum record length.
+  Longer records, if any, will appear as if they had been truncated to
+  the value of `RECL=`.
+  (Other compilers ignore `RECL=`, signal an error, or apply effective truncation
+  to some forms of input in this situation.)
+  For sequential formatted output, RECL= serves as a limit on record lengths
+  that raises an error when it is exceeded.
