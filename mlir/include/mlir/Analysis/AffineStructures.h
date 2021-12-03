@@ -441,9 +441,13 @@ public:
   /// variables.
   void convertDimToLocal(unsigned dimStart, unsigned dimLimit);
 
-  /// Merges and aligns local ids of `this` and `other`. Local ids with
-  /// identical division representations are merged. The number of dimensions
-  /// and symbol ids in `this` and `other` should match.
+  ///  Adds additional local ids to the sets such that they both have the union
+  ///  of the local ids in each set, without changing the set of points that
+  ///  lie in `this` and `other`. The ordering of the local ids in the
+  ///  sets may also be changed but is the same in both sets.
+  ///
+  /// The number of dimensions and symbol ids in `this` and `other` should
+  /// match.
   void mergeLocalIds(FlatAffineConstraints &other);
 
   /// Removes all equalities and inequalities.
@@ -818,8 +822,8 @@ public:
   /// constraint systems are updated so that they have the union of all
   /// identifiers, with `this`'s original identifiers appearing first followed
   /// by any of `other`'s identifiers that didn't appear in `this`. Local
-  /// identifiers of each system are by design separate/local and are placed
-  /// one after other (`this`'s followed by `other`'s).
+  /// identifiers are also aligned but may not follow ordering as
+  /// dimension/symbol ids do.
   //  E.g.: Input: `this`  has (%i, %j) [%M, %N]
   //               `other` has (%k, %j) [%P, %N, %M]
   //        Output: both `this`, `other` have (%i, %j, %k) [%M, %N, %P]

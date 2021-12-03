@@ -493,8 +493,8 @@ static bool LLVM_ATTRIBUTE_UNUSED areIdsUnique(
 /// dimension-wise and symbol-wise unique; both constraint systems are updated
 /// so that they have the union of all identifiers, with A's original
 /// identifiers appearing first followed by any of B's identifiers that didn't
-/// appear in A. Local identifiers of each system are by design separate/local
-/// and are placed one after other (A's followed by B's).
+/// appear in A. Local identifiers are also aligned but may not follow ordering
+/// as dimension/symbol ids do.
 //  E.g.: Input: A has ((%i, %j) [%M, %N]) and B has (%k, %j) [%P, %N, %M])
 //        Output: both A, B have (%i, %j, %k) [%M, %N, %P]
 static void mergeAndAlignIds(unsigned offset, FlatAffineValueConstraints *a,
@@ -1938,6 +1938,16 @@ static void eliminateRedundantLocalId(FlatAffineConstraints &fac, unsigned pos1,
   fac.removeId(pos2);
 }
 
+/// Adds additional local ids to the sets such that they both have the union
+/// of the local ids in each set, without changing the set of points that
+/// lie in `this` and `other`.
+///
+/// To detect local ids that always take the same in both sets, each local id is
+/// represented as a floordiv with constant denominator in terms of other ids.
+/// After extracting these divisions, local ids with the same division
+/// representation are considered duplicate and are merged. It is possible that
+/// division representation for some local id cannot be obtained, and thus these
+/// local ids are not considered for detecting duplicates.
 void FlatAffineConstraints::mergeLocalIds(FlatAffineConstraints &other) {
   assert(getNumDimIds() == other.getNumDimIds() &&
          "Number of dimension ids should match");
@@ -1947,32 +1957,26 @@ void FlatAffineConstraints::mergeLocalIds(FlatAffineConstraints &other) {
   FlatAffineConstraints &fac1 = *this;
   FlatAffineConstraints &fac2 = other;
 
+  // Merge local ids of fac1 and fac2 without using division information,
+  // i.e. append local ids of `fac2` to `fac1` and insert local ids of `fac1`
+  // to `fac2` at start of its local ids.
+  unsigned initLocals = fac1.getNumLocalIds();
+  insertLocalId(fac1.getNumLocalIds(), fac2.getNumLocalIds());
+  fac2.insertLocalId(0, initLocals);
+
   // Get division representations from each FAC.
   std::vector<SmallVector<int64_t, 8>> divs1, divs2;
   SmallVector<unsigned, 4> denoms1, denoms2;
   fac1.getLocalReprs(divs1, denoms1);
   fac2.getLocalReprs(divs2, denoms2);
 
-  // Merge local ids of fac1 and fac2 without using division information,
-  // i.e. append local ids of `fac2` to `fac1` and insert local ids of `fac1`
-  // to `fac2` at start of its local ids. Also, insert these local ids in
+  // Copy division information from fac2 to fac1. Since newly added local
+  // variables in fac1 and fac2 have no constraints, they will not have any
   // division representation.
-  unsigned initLocals = fac1.getNumLocalIds();
-  for (unsigned i = 0, e = divs1.size(); i < e; ++i)
-    if (denoms1[i] != 0)
-      divs1[i].insert(divs1[i].begin() + fac1.getNumIds(),
-                      fac2.getNumLocalIds(), 0);
-  insertLocalId(fac1.getNumLocalIds(), fac2.getNumLocalIds());
-
-  for (unsigned i = 0, e = divs2.size(); i < e; ++i)
-    if (denoms2[i] != 0)
-      divs2[i].insert(divs2[i].begin() + fac2.getIdKindOffset(IdKind::Local),
-                      initLocals, 0);
-  fac2.insertLocalId(0, initLocals);
-
-  // Merge division representations extracted from fac1 and fac2.
-  divs1.insert(divs1.end(), divs2.begin(), divs2.end());
-  denoms1.insert(denoms1.end(), denoms2.begin(), denoms2.end());
+  std::copy(divs2.begin() + initLocals, divs2.end(),
+            divs1.begin() + initLocals);
+  std::copy(denoms2.begin() + initLocals, denoms2.end(),
+            denoms1.begin() + initLocals);
 
   // Find and merge duplicate divisions.
   // TODO: Add division normalization to support divisions that differ by
