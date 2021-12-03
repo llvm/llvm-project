@@ -1151,6 +1151,10 @@ defm coroutines_ts : BoolFOption<"coroutines-ts",
   PosFlag<SetTrue, [CC1Option], "Enable support for the C++ Coroutines TS">,
   NegFlag<SetFalse>>;
 
+def fembed_offload_object_EQ : Joined<["-"], "fembed-offload-object=">,
+  Group<f_Group>, Flags<[NoXarchOption, CC1Option]>,
+  HelpText<"Embed Offloading device-side binary into host object file as a section.">,
+  MarshallingInfoStringVector<CodeGenOpts<"OffloadObjects">>;
 def fembed_bitcode_EQ : Joined<["-"], "fembed-bitcode=">,
     Group<f_Group>, Flags<[NoXarchOption, CC1Option, CC1AsOption]>, MetaVarName<"<option>">,
     HelpText<"Embed LLVM bitcode (option: off, all, bitcode, marker)">,
