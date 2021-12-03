@@ -62,3 +62,10 @@ func @constant_complex_f64() -> complex<f64> {
   %result = constant [0.1 : f64, -1.0 : f64] : complex<f64>
   return %result : complex<f64>
 }
+
+// CHECK-LABEL: func @vector_splat_0d(
+func @vector_splat_0d(%a: f32) -> vector<f32> {
+  // CHECK: splat %{{.*}} : vector<f32>
+  %0 = splat %a : vector<f32>
+  return %0 : vector<f32>
+}
