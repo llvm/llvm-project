@@ -24,6 +24,7 @@
 #include "llvm/CodeGen/Analysis.h"
 #include "llvm/CodeGen/FunctionLoweringInfo.h"
 #include "llvm/CodeGen/GlobalISel/GISelKnownBits.h"
+#include "llvm/CodeGen/GlobalISel/MIPatternMatch.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
 #include "llvm/IR/DiagnosticInfo.h"
@@ -9837,11 +9838,13 @@ bool SITargetLowering::isCanonicalized(Register Reg, MachineFunction &MF,
   if (Opcode == AMDGPU::G_FCANONICALIZE)
     return true;
 
-  if (Opcode == AMDGPU::G_FCONSTANT) {
-    auto F = MI->getOperand(1).getFPImm()->getValueAPF();
-    if (F.isNaN() && F.isSignaling())
+  Optional<FPValueAndVReg> FCR;
+  // Constant splat (can be padded with undef) or scalar constant.
+  if (mi_match(Reg, MRI, MIPatternMatch::m_GFCstOrSplat(FCR))) {
+    if (FCR->Value.isSignaling())
       return false;
-    return !F.isDenormal() || denormalsEnabledForType(MRI.getType(Reg), MF);
+    return !FCR->Value.isDenormal() ||
+           denormalsEnabledForType(MRI.getType(FCR->VReg), MF);
   }
 
   if (MaxDepth == 0)

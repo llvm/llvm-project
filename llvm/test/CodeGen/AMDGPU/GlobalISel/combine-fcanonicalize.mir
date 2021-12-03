@@ -11,9 +11,10 @@ body: |
 
     ; CHECK-LABEL: name: test_fcanonicalize
     ; CHECK: liveins: $vgpr0
-    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
-    ; CHECK: [[FCANONICALIZE:%[0-9]+]]:_(s32) = G_FCANONICALIZE [[COPY]]
-    ; CHECK: $vgpr0 = COPY [[FCANONICALIZE]](s32)
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; CHECK-NEXT: [[FCANONICALIZE:%[0-9]+]]:_(s32) = G_FCANONICALIZE [[COPY]]
+    ; CHECK-NEXT: $vgpr0 = COPY [[FCANONICALIZE]](s32)
     %0:_(s32) = COPY $vgpr0
     %1:_(s32) = G_FCANONICALIZE %0
     %2:_(s32) = G_FCANONICALIZE %1
@@ -29,7 +30,7 @@ body: |
 
     ; CHECK-LABEL: name: test_fconstant
     ; CHECK: [[C:%[0-9]+]]:_(s32) = G_FCONSTANT float 1.000000e+10
-    ; CHECK: $vgpr0 = COPY [[C]](s32)
+    ; CHECK-NEXT: $vgpr0 = COPY [[C]](s32)
     %0:_(s32) = G_FCONSTANT float 1.0e10
     %1:_(s32) = G_FCANONICALIZE %0
     $vgpr0 = COPY %1(s32)
@@ -48,8 +49,8 @@ body: |
 
     ; CHECK-LABEL: name: test_denormal_fconstant
     ; CHECK: [[C:%[0-9]+]]:_(s64) = G_FCONSTANT double 1.618950e-319
-    ; CHECK: [[FCANONICALIZE:%[0-9]+]]:_(s64) = G_FCANONICALIZE [[C]]
-    ; CHECK: $vgpr0_vgpr1 = COPY [[FCANONICALIZE]](s64)
+    ; CHECK-NEXT: [[FCANONICALIZE:%[0-9]+]]:_(s64) = G_FCANONICALIZE [[C]]
+    ; CHECK-NEXT: $vgpr0_vgpr1 = COPY [[FCANONICALIZE]](s64)
     %0:_(s64) = G_FCONSTANT double 0x0000000000008000
     %1:_(s64) = G_FCANONICALIZE %0
     $vgpr0_vgpr1 = COPY %1(s64)
@@ -68,15 +69,16 @@ body: |
 
     ; CHECK-LABEL: name: test_fminnum_with_fminnum_argument_s32_ieee_mode_on
     ; CHECK: liveins: $vgpr0, $vgpr1, $vgpr2
-    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
-    ; CHECK: [[FCANONICALIZE:%[0-9]+]]:_(s32) = G_FCANONICALIZE [[COPY]]
-    ; CHECK: [[FCANONICALIZE1:%[0-9]+]]:_(s32) = G_FCANONICALIZE [[COPY1]]
-    ; CHECK: [[FMINNUM_IEEE:%[0-9]+]]:_(s32) = G_FMINNUM_IEEE [[FCANONICALIZE]], [[FCANONICALIZE1]]
-    ; CHECK: [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr2
-    ; CHECK: [[FCANONICALIZE2:%[0-9]+]]:_(s32) = G_FCANONICALIZE [[COPY2]]
-    ; CHECK: [[FMINNUM_IEEE1:%[0-9]+]]:_(s32) = G_FMINNUM_IEEE [[FMINNUM_IEEE]], [[FCANONICALIZE2]]
-    ; CHECK: $vgpr0 = COPY [[FMINNUM_IEEE1]](s32)
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
+    ; CHECK-NEXT: [[FCANONICALIZE:%[0-9]+]]:_(s32) = G_FCANONICALIZE [[COPY]]
+    ; CHECK-NEXT: [[FCANONICALIZE1:%[0-9]+]]:_(s32) = G_FCANONICALIZE [[COPY1]]
+    ; CHECK-NEXT: [[FMINNUM_IEEE:%[0-9]+]]:_(s32) = G_FMINNUM_IEEE [[FCANONICALIZE]], [[FCANONICALIZE1]]
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr2
+    ; CHECK-NEXT: [[FCANONICALIZE2:%[0-9]+]]:_(s32) = G_FCANONICALIZE [[COPY2]]
+    ; CHECK-NEXT: [[FMINNUM_IEEE1:%[0-9]+]]:_(s32) = G_FMINNUM_IEEE [[FMINNUM_IEEE]], [[FCANONICALIZE2]]
+    ; CHECK-NEXT: $vgpr0 = COPY [[FMINNUM_IEEE1]](s32)
     %0:_(s32) = COPY $vgpr0
     %1:_(s32) = COPY $vgpr1
     %7:_(s32) = G_FCANONICALIZE %0
@@ -102,15 +104,16 @@ body: |
 
     ; CHECK-LABEL: name: test_fminnum_with_fmaxnum_argument_s32_ieee_mode_on
     ; CHECK: liveins: $vgpr0, $vgpr1, $vgpr2
-    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
-    ; CHECK: [[FCANONICALIZE:%[0-9]+]]:_(s32) = G_FCANONICALIZE [[COPY]]
-    ; CHECK: [[FCANONICALIZE1:%[0-9]+]]:_(s32) = G_FCANONICALIZE [[COPY1]]
-    ; CHECK: [[FMAXNUM_IEEE:%[0-9]+]]:_(s32) = G_FMAXNUM_IEEE [[FCANONICALIZE]], [[FCANONICALIZE1]]
-    ; CHECK: [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr2
-    ; CHECK: [[FCANONICALIZE2:%[0-9]+]]:_(s32) = G_FCANONICALIZE [[COPY2]]
-    ; CHECK: [[FMINNUM_IEEE:%[0-9]+]]:_(s32) = G_FMINNUM_IEEE [[FMAXNUM_IEEE]], [[FCANONICALIZE2]]
-    ; CHECK: $vgpr0 = COPY [[FMINNUM_IEEE]](s32)
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
+    ; CHECK-NEXT: [[FCANONICALIZE:%[0-9]+]]:_(s32) = G_FCANONICALIZE [[COPY]]
+    ; CHECK-NEXT: [[FCANONICALIZE1:%[0-9]+]]:_(s32) = G_FCANONICALIZE [[COPY1]]
+    ; CHECK-NEXT: [[FMAXNUM_IEEE:%[0-9]+]]:_(s32) = G_FMAXNUM_IEEE [[FCANONICALIZE]], [[FCANONICALIZE1]]
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr2
+    ; CHECK-NEXT: [[FCANONICALIZE2:%[0-9]+]]:_(s32) = G_FCANONICALIZE [[COPY2]]
+    ; CHECK-NEXT: [[FMINNUM_IEEE:%[0-9]+]]:_(s32) = G_FMINNUM_IEEE [[FMAXNUM_IEEE]], [[FCANONICALIZE2]]
+    ; CHECK-NEXT: $vgpr0 = COPY [[FMINNUM_IEEE]](s32)
     %0:_(s32) = COPY $vgpr0
     %1:_(s32) = COPY $vgpr1
     %7:_(s32) = G_FCANONICALIZE %0
@@ -136,15 +139,16 @@ body: |
 
     ; CHECK-LABEL: name: test_fmaxnum_with_fmaxnum_argument_s32_ieee_mode_on
     ; CHECK: liveins: $vgpr0, $vgpr1, $vgpr2
-    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
-    ; CHECK: [[FCANONICALIZE:%[0-9]+]]:_(s32) = G_FCANONICALIZE [[COPY]]
-    ; CHECK: [[FCANONICALIZE1:%[0-9]+]]:_(s32) = G_FCANONICALIZE [[COPY1]]
-    ; CHECK: [[FMAXNUM_IEEE:%[0-9]+]]:_(s32) = G_FMAXNUM_IEEE [[FCANONICALIZE]], [[FCANONICALIZE1]]
-    ; CHECK: [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr2
-    ; CHECK: [[FCANONICALIZE2:%[0-9]+]]:_(s32) = G_FCANONICALIZE [[COPY2]]
-    ; CHECK: [[FMAXNUM_IEEE1:%[0-9]+]]:_(s32) = G_FMAXNUM_IEEE [[FMAXNUM_IEEE]], [[FCANONICALIZE2]]
-    ; CHECK: $vgpr0 = COPY [[FMAXNUM_IEEE1]](s32)
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
+    ; CHECK-NEXT: [[FCANONICALIZE:%[0-9]+]]:_(s32) = G_FCANONICALIZE [[COPY]]
+    ; CHECK-NEXT: [[FCANONICALIZE1:%[0-9]+]]:_(s32) = G_FCANONICALIZE [[COPY1]]
+    ; CHECK-NEXT: [[FMAXNUM_IEEE:%[0-9]+]]:_(s32) = G_FMAXNUM_IEEE [[FCANONICALIZE]], [[FCANONICALIZE1]]
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr2
+    ; CHECK-NEXT: [[FCANONICALIZE2:%[0-9]+]]:_(s32) = G_FCANONICALIZE [[COPY2]]
+    ; CHECK-NEXT: [[FMAXNUM_IEEE1:%[0-9]+]]:_(s32) = G_FMAXNUM_IEEE [[FMAXNUM_IEEE]], [[FCANONICALIZE2]]
+    ; CHECK-NEXT: $vgpr0 = COPY [[FMAXNUM_IEEE1]](s32)
     %0:_(s32) = COPY $vgpr0
     %1:_(s32) = COPY $vgpr1
     %7:_(s32) = G_FCANONICALIZE %0
@@ -170,15 +174,16 @@ body: |
 
     ; CHECK-LABEL: name: test_fmaxnum_with_fminnum_argument_s32_ieee_mode_on
     ; CHECK: liveins: $vgpr0, $vgpr1, $vgpr2
-    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
-    ; CHECK: [[FCANONICALIZE:%[0-9]+]]:_(s32) = G_FCANONICALIZE [[COPY]]
-    ; CHECK: [[FCANONICALIZE1:%[0-9]+]]:_(s32) = G_FCANONICALIZE [[COPY1]]
-    ; CHECK: [[FMINNUM_IEEE:%[0-9]+]]:_(s32) = G_FMINNUM_IEEE [[FCANONICALIZE]], [[FCANONICALIZE1]]
-    ; CHECK: [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr2
-    ; CHECK: [[FCANONICALIZE2:%[0-9]+]]:_(s32) = G_FCANONICALIZE [[COPY2]]
-    ; CHECK: [[FMAXNUM_IEEE:%[0-9]+]]:_(s32) = G_FMAXNUM_IEEE [[FMINNUM_IEEE]], [[FCANONICALIZE2]]
-    ; CHECK: $vgpr0 = COPY [[FMAXNUM_IEEE]](s32)
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
+    ; CHECK-NEXT: [[FCANONICALIZE:%[0-9]+]]:_(s32) = G_FCANONICALIZE [[COPY]]
+    ; CHECK-NEXT: [[FCANONICALIZE1:%[0-9]+]]:_(s32) = G_FCANONICALIZE [[COPY1]]
+    ; CHECK-NEXT: [[FMINNUM_IEEE:%[0-9]+]]:_(s32) = G_FMINNUM_IEEE [[FCANONICALIZE]], [[FCANONICALIZE1]]
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr2
+    ; CHECK-NEXT: [[FCANONICALIZE2:%[0-9]+]]:_(s32) = G_FCANONICALIZE [[COPY2]]
+    ; CHECK-NEXT: [[FMAXNUM_IEEE:%[0-9]+]]:_(s32) = G_FMAXNUM_IEEE [[FMINNUM_IEEE]], [[FCANONICALIZE2]]
+    ; CHECK-NEXT: $vgpr0 = COPY [[FMAXNUM_IEEE]](s32)
     %0:_(s32) = COPY $vgpr0
     %1:_(s32) = COPY $vgpr1
     %7:_(s32) = G_FCANONICALIZE %0
@@ -204,13 +209,14 @@ body: |
 
     ; CHECK-LABEL: name: test_multiple_uses
     ; CHECK: liveins: $vgpr0, $vgpr1
-    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
-    ; CHECK: [[FCANONICALIZE:%[0-9]+]]:_(s32) = G_FCANONICALIZE [[COPY]]
-    ; CHECK: [[FCANONICALIZE1:%[0-9]+]]:_(s32) = G_FCANONICALIZE [[COPY1]]
-    ; CHECK: [[FMINNUM_IEEE:%[0-9]+]]:_(s32) = G_FMINNUM_IEEE [[FCANONICALIZE]], [[FCANONICALIZE1]]
-    ; CHECK: [[FMAXNUM_IEEE:%[0-9]+]]:_(s32) = G_FMAXNUM_IEEE [[FMINNUM_IEEE]], [[FMINNUM_IEEE]]
-    ; CHECK: $vgpr0 = COPY [[FMAXNUM_IEEE]](s32)
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
+    ; CHECK-NEXT: [[FCANONICALIZE:%[0-9]+]]:_(s32) = G_FCANONICALIZE [[COPY]]
+    ; CHECK-NEXT: [[FCANONICALIZE1:%[0-9]+]]:_(s32) = G_FCANONICALIZE [[COPY1]]
+    ; CHECK-NEXT: [[FMINNUM_IEEE:%[0-9]+]]:_(s32) = G_FMINNUM_IEEE [[FCANONICALIZE]], [[FCANONICALIZE1]]
+    ; CHECK-NEXT: [[FMAXNUM_IEEE:%[0-9]+]]:_(s32) = G_FMAXNUM_IEEE [[FMINNUM_IEEE]], [[FMINNUM_IEEE]]
+    ; CHECK-NEXT: $vgpr0 = COPY [[FMAXNUM_IEEE]](s32)
     %0:_(s32) = COPY $vgpr0
     %1:_(s32) = COPY $vgpr1
     %6:_(s32) = G_FCANONICALIZE %0
@@ -220,4 +226,107 @@ body: |
     %5:_(s32) = G_FCANONICALIZE %2
     %3:_(s32) = G_FMAXNUM_IEEE %4, %5
     $vgpr0 = COPY %3(s32)
+...
+
+---
+name: test_splat_padded_with_undef
+tracksRegLiveness: true
+legalized: true
+machineFunctionInfo:
+  mode:
+    ieee: true
+body: |
+  bb.0 :
+    liveins: $vgpr0
+
+    ; CHECK-LABEL: name: test_splat_padded_with_undef
+    ; CHECK: liveins: $vgpr0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr0
+    ; CHECK-NEXT: %two:_(s16) = G_FCONSTANT half 0xH4000
+    ; CHECK-NEXT: %two_s32:_(s32) = G_ANYEXT %two(s16)
+    ; CHECK-NEXT: %two_splat:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC %two_s32(s32), %two_s32(s32)
+    ; CHECK-NEXT: %zero:_(s16) = G_FCONSTANT half 0xH0000
+    ; CHECK-NEXT: %zero_s32:_(s32) = G_ANYEXT %zero(s16)
+    ; CHECK-NEXT: %undef:_(s32) = G_IMPLICIT_DEF
+    ; CHECK-NEXT: %zero_undef:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC %zero_s32(s32), %undef(s32)
+    ; CHECK-NEXT: %one:_(s16) = G_FCONSTANT half 0xH3C00
+    ; CHECK-NEXT: %one_s32:_(s32) = G_ANYEXT %one(s16)
+    ; CHECK-NEXT: %one_undef:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC %one_s32(s32), %undef(s32)
+    ; CHECK-NEXT: [[FMUL:%[0-9]+]]:_(<2 x s16>) = G_FMUL [[COPY]], %two_splat
+    ; CHECK-NEXT: [[FCANONICALIZE:%[0-9]+]]:_(<2 x s16>) = G_FCANONICALIZE [[FMUL]]
+    ; CHECK-NEXT: [[FMAXNUM_IEEE:%[0-9]+]]:_(<2 x s16>) = G_FMAXNUM_IEEE %zero_undef, [[FCANONICALIZE]]
+    ; CHECK-NEXT: [[FMINNUM_IEEE:%[0-9]+]]:_(<2 x s16>) = G_FMINNUM_IEEE %one_undef, [[FMAXNUM_IEEE]]
+    ; CHECK-NEXT: $vgpr0 = COPY [[FMINNUM_IEEE]](<2 x s16>)
+    %0:_(<2 x s16>) = COPY $vgpr0
+    %two:_(s16) = G_FCONSTANT half 0xH4000
+    %two_s32:_(s32) = G_ANYEXT %two(s16)
+    %two_splat:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC %two_s32(s32), %two_s32(s32)
+    %zero:_(s16) = G_FCONSTANT half 0xH0000
+    %zero_s32:_(s32) = G_ANYEXT %zero(s16)
+    %undef:_(s32) = G_IMPLICIT_DEF
+    %zero_undef:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC %zero_s32(s32), %undef(s32)
+    %one:_(s16) = G_FCONSTANT half 0xH3C00
+    %one_s32:_(s32) = G_ANYEXT %one(s16)
+    %one_undef:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC %one_s32(s32), %undef(s32)
+    %4:_(<2 x s16>) = G_FMUL %0, %two_splat
+    %zero_undef_fcan:_(<2 x s16>) = G_FCANONICALIZE %zero_undef
+    %16:_(<2 x s16>) = G_FCANONICALIZE %4
+    %8:_(<2 x s16>) = G_FMAXNUM_IEEE %zero_undef_fcan, %16
+    %one_undef_fcan:_(<2 x s16>) = G_FCANONICALIZE %one_undef
+    %14:_(<2 x s16>) = G_FCANONICALIZE %8
+    %11:_(<2 x s16>) = G_FMINNUM_IEEE %one_undef_fcan, %14
+    $vgpr0 = COPY %11(<2 x s16>)
+...
+
+---
+name: test_splat_SNaN_and_QNaN_padded_with_undef
+tracksRegLiveness: true
+legalized: true
+machineFunctionInfo:
+  mode:
+    ieee: true
+body: |
+  bb.0 :
+    liveins: $vgpr0
+
+    ; CHECK-LABEL: name: test_splat_SNaN_and_QNaN_padded_with_undef
+    ; CHECK: liveins: $vgpr0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr0
+    ; CHECK-NEXT: %two:_(s16) = G_FCONSTANT half 0xH4000
+    ; CHECK-NEXT: %two_s32:_(s32) = G_ANYEXT %two(s16)
+    ; CHECK-NEXT: %two_splat:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC %two_s32(s32), %two_s32(s32)
+    ; CHECK-NEXT: %snan:_(s16) = G_FCONSTANT half 0xH7C01
+    ; CHECK-NEXT: %snan_s32:_(s32) = G_ANYEXT %snan(s16)
+    ; CHECK-NEXT: %undef:_(s32) = G_IMPLICIT_DEF
+    ; CHECK-NEXT: %snan_undef:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC %snan_s32(s32), %undef(s32)
+    ; CHECK-NEXT: %qnan:_(s16) = G_FCONSTANT half 0xH7E01
+    ; CHECK-NEXT: %qnan_s32:_(s32) = G_ANYEXT %qnan(s16)
+    ; CHECK-NEXT: %qnan_undef:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC %qnan_s32(s32), %undef(s32)
+    ; CHECK-NEXT: [[FMUL:%[0-9]+]]:_(<2 x s16>) = G_FMUL [[COPY]], %two_splat
+    ; CHECK-NEXT: %snan_undef_fcan:_(<2 x s16>) = G_FCANONICALIZE %snan_undef
+    ; CHECK-NEXT: [[FCANONICALIZE:%[0-9]+]]:_(<2 x s16>) = G_FCANONICALIZE [[FMUL]]
+    ; CHECK-NEXT: [[FMAXNUM_IEEE:%[0-9]+]]:_(<2 x s16>) = G_FMAXNUM_IEEE %snan_undef_fcan, [[FCANONICALIZE]]
+    ; CHECK-NEXT: [[FMINNUM_IEEE:%[0-9]+]]:_(<2 x s16>) = G_FMINNUM_IEEE %qnan_undef, [[FMAXNUM_IEEE]]
+    ; CHECK-NEXT: $vgpr0 = COPY [[FMINNUM_IEEE]](<2 x s16>)
+    %0:_(<2 x s16>) = COPY $vgpr0
+    %two:_(s16) = G_FCONSTANT half 0xH4000
+    %two_s32:_(s32) = G_ANYEXT %two(s16)
+    %two_splat:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC %two_s32(s32), %two_s32(s32)
+    %snan:_(s16) = G_FCONSTANT half 0xH7C01
+    %snan_s32:_(s32) = G_ANYEXT %snan(s16)
+    %undef:_(s32) = G_IMPLICIT_DEF
+    %snan_undef:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC %snan_s32(s32), %undef(s32)
+    %qnan:_(s16) = G_FCONSTANT half 0xH7E01
+    %qnan_s32:_(s32) = G_ANYEXT %qnan(s16)
+    %qnan_undef:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC %qnan_s32(s32), %undef(s32)
+    %4:_(<2 x s16>) = G_FMUL %0, %two_splat
+    %snan_undef_fcan:_(<2 x s16>) = G_FCANONICALIZE %snan_undef
+    %16:_(<2 x s16>) = G_FCANONICALIZE %4
+    %8:_(<2 x s16>) = G_FMAXNUM_IEEE %snan_undef_fcan, %16
+    %qnan_undef_fcan:_(<2 x s16>) = G_FCANONICALIZE %qnan_undef
+    %14:_(<2 x s16>) = G_FCANONICALIZE %8
+    %11:_(<2 x s16>) = G_FMINNUM_IEEE %qnan_undef_fcan, %14
+    $vgpr0 = COPY %11(<2 x s16>)
 ...
