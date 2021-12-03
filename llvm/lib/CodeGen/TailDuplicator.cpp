@@ -213,29 +213,30 @@ bool TailDuplicator::tailDuplicateAndUpdate(
         SSAUpdate.AddAvailableValue(SrcBB, SrcReg);
       }
 
+      SmallVector<MachineOperand *> DebugUses;
       // Rewrite uses that are outside of the original def's block.
       MachineRegisterInfo::use_iterator UI = MRI->use_begin(VReg);
-      // Only remove instructions after loop, as DBG_VALUE_LISTs with multiple
-      // uses of VReg may invalidate the use iterator when erased.
-      SmallPtrSet<MachineInstr *, 4> InstrsToRemove;
       while (UI != MRI->use_end()) {
         MachineOperand &UseMO = *UI;
         MachineInstr *UseMI = UseMO.getParent();
         ++UI;
+        // Rewrite debug uses last so that they can take advantage of any
+        // register mappings introduced by other users in its BB, since we
+        // cannot create new register definitions specifically for the debug
+        // instruction (as debug instructions should not affect CodeGen).
         if (UseMI->isDebugValue()) {
-          // SSAUpdate can replace the use with an undef. That creates
-          // a debug instruction that is a kill.
-          // FIXME: Should it SSAUpdate job to delete debug instructions
-          // instead of replacing the use with undef?
-          InstrsToRemove.insert(UseMI);
+          DebugUses.push_back(&UseMO);
           continue;
         }
         if (UseMI->getParent() == DefBB && !UseMI->isPHI())
           continue;
         SSAUpdate.RewriteUse(UseMO);
       }
-      for (auto *MI : InstrsToRemove)
-        MI->eraseFromParent();
+      for (auto *UseMO : DebugUses) {
+        MachineInstr *UseMI = UseMO->getParent();
+        UseMO->setReg(
+            SSAUpdate.GetValueInMiddleOfBlock(UseMI->getParent(), true));
+      }
     }
 
     SSAUpdateVRs.clear();
