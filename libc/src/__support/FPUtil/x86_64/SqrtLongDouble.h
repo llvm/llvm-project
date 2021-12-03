@@ -15,10 +15,9 @@
 #error "Invalid include"
 #endif
 
-#include "FPBits.h"
-#include "Sqrt.h"
-
 #include "src/__support/CPP/TypeTraits.h"
+#include "src/__support/FPUtil/FPBits.h"
+#include "src/__support/FPUtil/Sqrt.h"
 
 namespace __llvm_libc {
 namespace fputil {
