@@ -1828,6 +1828,96 @@ void llvm::UpgradeInlineAsmString(std::string *AsmStr) {
   }
 }
 
+static Value *UpgradeARMIntrinsicCall(StringRef Name, CallInst *CI, Function *F,
+                                      IRBuilder<> &Builder) {
+  if (Name == "mve.vctp64.old") {
+    // Replace the old v4i1 vctp64 with a v2i1 vctp and predicate-casts to the
+    // correct type.
+    Value *VCTP = Builder.CreateCall(
+        Intrinsic::getDeclaration(F->getParent(), Intrinsic::arm_mve_vctp64),
+        CI->getArgOperand(0), CI->getName());
+    Value *C1 = Builder.CreateCall(
+        Intrinsic::getDeclaration(
+            F->getParent(), Intrinsic::arm_mve_pred_v2i,
+            {VectorType::get(Builder.getInt1Ty(), 2, false)}),
+        VCTP);
+    return Builder.CreateCall(
+        Intrinsic::getDeclaration(
+            F->getParent(), Intrinsic::arm_mve_pred_i2v,
+            {VectorType::get(Builder.getInt1Ty(), 4, false)}),
+        C1);
+  } else if (Name == "mve.mull.int.predicated.v2i64.v4i32.v4i1" ||
+             Name == "mve.vqdmull.predicated.v2i64.v4i32.v4i1" ||
+             Name == "mve.vldr.gather.base.predicated.v2i64.v2i64.v4i1" ||
+             Name == "mve.vldr.gather.base.wb.predicated.v2i64.v2i64.v4i1" ||
+             Name == "mve.vldr.gather.offset.predicated.v2i64.p0i64.v2i64.v4i1" ||
+             Name == "mve.vstr.scatter.base.predicated.v2i64.v2i64.v4i1" ||
+             Name == "mve.vstr.scatter.base.wb.predicated.v2i64.v2i64.v4i1" ||
+             Name == "mve.vstr.scatter.offset.predicated.p0i64.v2i64.v2i64.v4i1" ||
+             Name == "cde.vcx1q.predicated.v2i64.v4i1" ||
+             Name == "cde.vcx1qa.predicated.v2i64.v4i1" ||
+             Name == "cde.vcx2q.predicated.v2i64.v4i1" ||
+             Name == "cde.vcx2qa.predicated.v2i64.v4i1" ||
+             Name == "cde.vcx3q.predicated.v2i64.v4i1" ||
+             Name == "cde.vcx3qa.predicated.v2i64.v4i1") {
+    std::vector<Type *> Tys;
+    unsigned ID = CI->getIntrinsicID();
+    Type *V2I1Ty = FixedVectorType::get(Builder.getInt1Ty(), 2);
+    switch (ID) {
+    case Intrinsic::arm_mve_mull_int_predicated:
+    case Intrinsic::arm_mve_vqdmull_predicated:
+    case Intrinsic::arm_mve_vldr_gather_base_predicated:
+      Tys = {CI->getType(), CI->getOperand(0)->getType(), V2I1Ty};
+      break;
+    case Intrinsic::arm_mve_vldr_gather_base_wb_predicated:
+    case Intrinsic::arm_mve_vstr_scatter_base_predicated:
+    case Intrinsic::arm_mve_vstr_scatter_base_wb_predicated:
+      Tys = {CI->getOperand(0)->getType(), CI->getOperand(0)->getType(),
+             V2I1Ty};
+      break;
+    case Intrinsic::arm_mve_vldr_gather_offset_predicated:
+      Tys = {CI->getType(), CI->getOperand(0)->getType(),
+             CI->getOperand(1)->getType(), V2I1Ty};
+      break;
+    case Intrinsic::arm_mve_vstr_scatter_offset_predicated:
+      Tys = {CI->getOperand(0)->getType(), CI->getOperand(1)->getType(),
+             CI->getOperand(2)->getType(), V2I1Ty};
+      break;
+    case Intrinsic::arm_cde_vcx1q_predicated:
+    case Intrinsic::arm_cde_vcx1qa_predicated:
+    case Intrinsic::arm_cde_vcx2q_predicated:
+    case Intrinsic::arm_cde_vcx2qa_predicated:
+    case Intrinsic::arm_cde_vcx3q_predicated:
+    case Intrinsic::arm_cde_vcx3qa_predicated:
+      Tys = {CI->getOperand(1)->getType(), V2I1Ty};
+      break;
+    default:
+      llvm_unreachable("Unhandled Intrinsic!");
+    }
+
+    std::vector<Value *> Ops;
+    for (Value *Op : CI->args()) {
+      Type *Ty = Op->getType();
+      if (Ty->getScalarSizeInBits() == 1) {
+        Value *C1 = Builder.CreateCall(
+            Intrinsic::getDeclaration(
+                F->getParent(), Intrinsic::arm_mve_pred_v2i,
+                {VectorType::get(Builder.getInt1Ty(), 4, false)}),
+            Op);
+        Op = Builder.CreateCall(
+            Intrinsic::getDeclaration(F->getParent(),
+                                      Intrinsic::arm_mve_pred_i2v, {V2I1Ty}),
+            C1);
+      }
+      Ops.push_back(Op);
+    }
+
+    Function *Fn = Intrinsic::getDeclaration(F->getParent(), ID, Tys);
+    return Builder.CreateCall(Fn, Ops, CI->getName());
+  }
+  llvm_unreachable("Unknown function for ARM CallInst upgrade.");
+}
+
 /// Upgrade a call to an old intrinsic. All argument and return casting must be
 /// provided to seamlessly integrate with existing context.
 void llvm::UpgradeIntrinsicCall(CallInst *CI, Function *NewFn) {
@@ -3677,91 +3767,8 @@ void llvm::UpgradeIntrinsicCall(CallInst *CI, Function *NewFn) {
                                    F->getParent(), Intrinsic::convert_from_fp16,
                                    {Builder.getFloatTy()}),
                                CI->getArgOperand(0), "h2f");
-    } else if (IsARM && Name == "mve.vctp64.old") {
-      // Replace the old v4i1 vctp64 with a v2i1 vctp and predicate-casts to the
-      // correct type.
-      Value *VCTP = Builder.CreateCall(
-          Intrinsic::getDeclaration(F->getParent(), Intrinsic::arm_mve_vctp64),
-          CI->getArgOperand(0), CI->getName());
-      Value *C1 = Builder.CreateCall(
-          Intrinsic::getDeclaration(
-              F->getParent(), Intrinsic::arm_mve_pred_v2i,
-              {VectorType::get(Builder.getInt1Ty(), 2, false)}),
-          VCTP);
-      Rep = Builder.CreateCall(
-          Intrinsic::getDeclaration(
-              F->getParent(), Intrinsic::arm_mve_pred_i2v,
-              {VectorType::get(Builder.getInt1Ty(), 4, false)}),
-          C1);
-    } else if (IsARM &&
-        (Name == "mve.mull.int.predicated.v2i64.v4i32.v4i1" ||
-         Name == "mve.vqdmull.predicated.v2i64.v4i32.v4i1" ||
-         Name == "mve.vldr.gather.base.predicated.v2i64.v2i64.v4i1" ||
-         Name == "mve.vldr.gather.base.wb.predicated.v2i64.v2i64.v4i1" ||
-         Name == "mve.vldr.gather.offset.predicated.v2i64.p0i64.v2i64.v4i1" ||
-         Name == "mve.vstr.scatter.base.predicated.v2i64.v2i64.v4i1" ||
-         Name == "mve.vstr.scatter.base.wb.predicated.v2i64.v2i64.v4i1" ||
-         Name == "mve.vstr.scatter.offset.predicated.p0i64.v2i64.v2i64.v4i1" ||
-         Name == "cde.vcx1q.predicated.v2i64.v4i1" ||
-         Name == "cde.vcx1qa.predicated.v2i64.v4i1" ||
-         Name == "cde.vcx2q.predicated.v2i64.v4i1" ||
-         Name == "cde.vcx2qa.predicated.v2i64.v4i1" ||
-         Name == "cde.vcx3q.predicated.v2i64.v4i1" ||
-         Name == "cde.vcx3qa.predicated.v2i64.v4i1")) {
-      std::vector<Type *> Tys;
-      unsigned ID = CI->getIntrinsicID();
-      Type *V2I1Ty = FixedVectorType::get(Builder.getInt1Ty(), 2);
-      switch (ID) {
-      case Intrinsic::arm_mve_mull_int_predicated:
-      case Intrinsic::arm_mve_vqdmull_predicated:
-      case Intrinsic::arm_mve_vldr_gather_base_predicated:
-        Tys = {CI->getType(), CI->getOperand(0)->getType(), V2I1Ty};
-        break;
-      case Intrinsic::arm_mve_vldr_gather_base_wb_predicated:
-      case Intrinsic::arm_mve_vstr_scatter_base_predicated:
-      case Intrinsic::arm_mve_vstr_scatter_base_wb_predicated:
-        Tys = {CI->getOperand(0)->getType(), CI->getOperand(0)->getType(),
-               V2I1Ty};
-        break;
-      case Intrinsic::arm_mve_vldr_gather_offset_predicated:
-        Tys = {CI->getType(), CI->getOperand(0)->getType(),
-               CI->getOperand(1)->getType(), V2I1Ty};
-        break;
-      case Intrinsic::arm_mve_vstr_scatter_offset_predicated:
-        Tys = {CI->getOperand(0)->getType(), CI->getOperand(1)->getType(),
-               CI->getOperand(2)->getType(), V2I1Ty};
-        break;
-      case Intrinsic::arm_cde_vcx1q_predicated:
-      case Intrinsic::arm_cde_vcx1qa_predicated:
-      case Intrinsic::arm_cde_vcx2q_predicated:
-      case Intrinsic::arm_cde_vcx2qa_predicated:
-      case Intrinsic::arm_cde_vcx3q_predicated:
-      case Intrinsic::arm_cde_vcx3qa_predicated:
-        Tys = {CI->getOperand(1)->getType(), V2I1Ty};
-        break;
-      default:
-        llvm_unreachable("Unhandled Intrinsic!");
-      }
-
-      std::vector<Value *> Ops;
-      for (Value *Op : CI->args()) {
-        Type *Ty = Op->getType();
-        if (Ty->getScalarSizeInBits() == 1) {
-          Value *C1 = Builder.CreateCall(
-              Intrinsic::getDeclaration(
-                  F->getParent(), Intrinsic::arm_mve_pred_v2i,
-                  {VectorType::get(Builder.getInt1Ty(), 4, false)}),
-              Op);
-          Op = Builder.CreateCall(
-              Intrinsic::getDeclaration(F->getParent(),
-                                        Intrinsic::arm_mve_pred_i2v, {V2I1Ty}),
-              C1);
-        }
-        Ops.push_back(Op);
-      }
-
-      Function *Fn = Intrinsic::getDeclaration(F->getParent(), ID, Tys);
-      Rep = Builder.CreateCall(Fn, Ops, CI->getName());
+    } else if (IsARM) {
+      Rep = UpgradeARMIntrinsicCall(Name, CI, F, Builder);
     } else {
       llvm_unreachable("Unknown function for CallInst upgrade.");
     }
