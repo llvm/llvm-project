@@ -3106,23 +3106,26 @@ bool SIInstrInfo::areMemAccessesTriviallyDisjoint(const MachineInstr &MIa,
 }
 
 static bool getFoldableImm(Register Reg, const MachineRegisterInfo &MRI,
-                           int64_t &Imm) {
+                           int64_t &Imm, MachineInstr **DefMI = nullptr) {
   if (Reg.isPhysical())
     return false;
   auto *Def = MRI.getUniqueVRegDef(Reg);
   if (Def && SIInstrInfo::isFoldableCopy(*Def) && Def->getOperand(1).isImm()) {
     Imm = Def->getOperand(1).getImm();
+    if (DefMI)
+      *DefMI = Def;
     return true;
   }
   return false;
 }
 
-static bool getFoldableImm(const MachineOperand *MO, int64_t &Imm) {
+static bool getFoldableImm(const MachineOperand *MO, int64_t &Imm,
+                           MachineInstr **DefMI = nullptr) {
   if (!MO->isReg())
     return false;
   const MachineFunction *MF = MO->getParent()->getParent()->getParent();
   const MachineRegisterInfo &MRI = MF->getRegInfo();
-  return getFoldableImm(MO->getReg(), MRI, Imm);
+  return getFoldableImm(MO->getReg(), MRI, Imm, DefMI);
 }
 
 static void updateLiveVariables(LiveVariables *LV, MachineInstr &MI,
@@ -3195,8 +3198,20 @@ MachineInstr *SIInstrInfo::convertToThreeAddress(MachineInstr &MI,
       // If we have an SGPR input, we will violate the constant bus restriction.
       (ST.getConstantBusLimit(Opc) > 1 || !Src0->isReg() ||
        !RI.isSGPRReg(MBB.getParent()->getRegInfo(), Src0->getReg()))) {
+    MachineInstr *DefMI;
+    const auto killDef = [&DefMI, &MBB, this]() -> void {
+      const MachineRegisterInfo &MRI = MBB.getParent()->getRegInfo();
+      // The only user is the instruction which will be killed.
+      if (!MRI.hasOneNonDBGUse(DefMI->getOperand(0).getReg()))
+        return;
+      // We cannot just remove the DefMI here, calling pass will crash.
+      DefMI->setDesc(get(AMDGPU::IMPLICIT_DEF));
+      for (unsigned I = DefMI->getNumOperands() - 1; I != 0; --I)
+        DefMI->RemoveOperand(I);
+    };
+
     int64_t Imm;
-    if (getFoldableImm(Src2, Imm)) {
+    if (getFoldableImm(Src2, Imm, &DefMI)) {
       unsigned NewOpc =
           IsFMA ? (IsF16 ? AMDGPU::V_FMAAK_F16 : AMDGPU::V_FMAAK_F32)
                 : (IsF16 ? AMDGPU::V_MADAK_F16 : AMDGPU::V_MADAK_F32);
@@ -3209,13 +3224,14 @@ MachineInstr *SIInstrInfo::convertToThreeAddress(MachineInstr &MI,
         updateLiveVariables(LV, MI, *MIB);
         if (LIS)
           LIS->ReplaceMachineInstrInMaps(MI, *MIB);
+        killDef();
         return MIB;
       }
     }
     unsigned NewOpc = IsFMA
                           ? (IsF16 ? AMDGPU::V_FMAMK_F16 : AMDGPU::V_FMAMK_F32)
                           : (IsF16 ? AMDGPU::V_MADMK_F16 : AMDGPU::V_MADMK_F32);
-    if (getFoldableImm(Src1, Imm)) {
+    if (getFoldableImm(Src1, Imm, &DefMI)) {
       if (pseudoToMCOpcode(NewOpc) != -1) {
         MIB = BuildMI(MBB, MI, MI.getDebugLoc(), get(NewOpc))
                   .add(*Dst)
@@ -3225,10 +3241,11 @@ MachineInstr *SIInstrInfo::convertToThreeAddress(MachineInstr &MI,
         updateLiveVariables(LV, MI, *MIB);
         if (LIS)
           LIS->ReplaceMachineInstrInMaps(MI, *MIB);
+        killDef();
         return MIB;
       }
     }
-    if (getFoldableImm(Src0, Imm)) {
+    if (getFoldableImm(Src0, Imm, &DefMI)) {
       if (pseudoToMCOpcode(NewOpc) != -1 &&
           isOperandLegal(
               MI, AMDGPU::getNamedOperandIdx(NewOpc, AMDGPU::OpName::src0),
@@ -3241,6 +3258,7 @@ MachineInstr *SIInstrInfo::convertToThreeAddress(MachineInstr &MI,
         updateLiveVariables(LV, MI, *MIB);
         if (LIS)
           LIS->ReplaceMachineInstrInMaps(MI, *MIB);
+        killDef();
         return MIB;
       }
     }
