@@ -120,3 +120,27 @@ uint32_t TypeSystemSwift::GetIndexOfChildWithName(
       type, name, exe_ctx, omit_empty_base_classes, child_indexes);
   return num_child_indexes == 1 ? child_indexes.front() : UINT32_MAX;
 }
+
+lldb::Format TypeSystemSwift::GetFormat(opaque_compiler_type_t type) {
+  auto swift_flags = GetTypeInfo(type, nullptr);
+
+  if (swift_flags & eTypeIsInteger)
+    return eFormatDecimal;
+
+  if (swift_flags & eTypeIsFloat)
+    return eFormatFloat;
+
+  if (swift_flags & eTypeIsPointer || swift_flags & eTypeIsClass)
+    return eFormatAddressInfo;
+
+  if (swift_flags & eTypeIsClass)
+    return eFormatHex;
+
+  if (swift_flags & eTypeIsGeneric)
+    return eFormatUnsigned;
+
+  if (swift_flags & eTypeIsFuncPrototype || swift_flags & eTypeIsBlock)
+    return eFormatAddressInfo;
+
+  return eFormatBytes;
+}

@@ -614,8 +614,6 @@ public:
   lldb::Encoding GetEncoding(lldb::opaque_compiler_type_t type,
                              uint64_t &count) override;
 
-  lldb::Format GetFormat(lldb::opaque_compiler_type_t type) override;
-
   uint32_t GetNumChildren(lldb::opaque_compiler_type_t type,
                           bool omit_empty_base_classes,
                           const ExecutionContext *exe_ctx) override;
