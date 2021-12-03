@@ -5083,13 +5083,16 @@ CharUnits PPC64_SVR4_ABIInfo::getParamTypeAlignment(QualType Ty) const {
   if (const ComplexType *CTy = Ty->getAs<ComplexType>())
     Ty = CTy->getElementType();
 
+  auto FloatUsesVector = [this](QualType Ty){
+    return Ty->isRealFloatingType() && &getContext().getFloatTypeSemantics(
+                                           Ty) == &llvm::APFloat::IEEEquad();
+  };
+
   // Only vector types of size 16 bytes need alignment (larger types are
   // passed via reference, smaller types are not aligned).
   if (Ty->isVectorType()) {
     return CharUnits::fromQuantity(getContext().getTypeSize(Ty) == 128 ? 16 : 8);
-  } else if (Ty->isRealFloatingType() &&
-             &getContext().getFloatTypeSemantics(Ty) ==
-                 &llvm::APFloat::IEEEquad()) {
+  } else if (FloatUsesVector(Ty)) {
     // According to ABI document section 'Optional Save Areas': If extended
     // precision floating-point values in IEEE BINARY 128 QUADRUPLE PRECISION
     // format are supported, map them to a single quadword, quadword aligned.
@@ -5116,7 +5119,9 @@ CharUnits PPC64_SVR4_ABIInfo::getParamTypeAlignment(QualType Ty) const {
 
   // With special case aggregates, only vector base types need alignment.
   if (AlignAsType) {
-    return CharUnits::fromQuantity(AlignAsType->isVectorType() ? 16 : 8);
+    bool UsesVector = AlignAsType->isVectorType() ||
+                      FloatUsesVector(QualType(AlignAsType, 0));
+    return CharUnits::fromQuantity(UsesVector ? 16 : 8);
   }
 
   // Otherwise, we only need alignment for any aggregate type that
