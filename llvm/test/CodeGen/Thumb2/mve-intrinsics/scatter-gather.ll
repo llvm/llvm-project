@@ -245,15 +245,16 @@ define arm_aapcs_vfpcc <2 x i64> @test_vldrdq_gather_base_wb_z_s64(<2 x i64>* %a
 entry:
   %0 = load <2 x i64>, <2 x i64>* %addr, align 8
   %1 = zext i16 %p to i32
-  %2 = call <4 x i1> @llvm.arm.mve.pred.i2v.v4i1(i32 %1)
-  %3 = call { <2 x i64>, <2 x i64> } @llvm.arm.mve.vldr.gather.base.wb.predicated.v2i64.v2i64.v4i1(<2 x i64> %0, i32 664, <4 x i1> %2)
+  %2 = call <2 x i1> @llvm.arm.mve.pred.i2v.v2i1(i32 %1)
+  %3 = call { <2 x i64>, <2 x i64> } @llvm.arm.mve.vldr.gather.base.wb.predicated.v2i64.v2i64.v2i1(<2 x i64> %0, i32 664, <2 x i1> %2)
   %4 = extractvalue { <2 x i64>, <2 x i64> } %3, 1
   store <2 x i64> %4, <2 x i64>* %addr, align 8
   %5 = extractvalue { <2 x i64>, <2 x i64> } %3, 0
   ret <2 x i64> %5
 }
 
-declare { <2 x i64>, <2 x i64> } @llvm.arm.mve.vldr.gather.base.wb.predicated.v2i64.v2i64.v4i1(<2 x i64>, i32, <4 x i1>)
+declare <2 x i1> @llvm.arm.mve.pred.i2v.v2i1(i32)
+declare { <2 x i64>, <2 x i64> } @llvm.arm.mve.vldr.gather.base.wb.predicated.v2i64.v2i64.v2i1(<2 x i64>, i32, <2 x i1>)
 
 define arm_aapcs_vfpcc <2 x i64> @test_vldrdq_gather_base_wb_z_u64(<2 x i64>* %addr, i16 zeroext %p) {
 ; CHECK-LABEL: test_vldrdq_gather_base_wb_z_u64:
@@ -267,8 +268,8 @@ define arm_aapcs_vfpcc <2 x i64> @test_vldrdq_gather_base_wb_z_u64(<2 x i64>* %a
 entry:
   %0 = load <2 x i64>, <2 x i64>* %addr, align 8
   %1 = zext i16 %p to i32
-  %2 = call <4 x i1> @llvm.arm.mve.pred.i2v.v4i1(i32 %1)
-  %3 = call { <2 x i64>, <2 x i64> } @llvm.arm.mve.vldr.gather.base.wb.predicated.v2i64.v2i64.v4i1(<2 x i64> %0, i32 656, <4 x i1> %2)
+  %2 = call <2 x i1> @llvm.arm.mve.pred.i2v.v2i1(i32 %1)
+  %3 = call { <2 x i64>, <2 x i64> } @llvm.arm.mve.vldr.gather.base.wb.predicated.v2i64.v2i64.v2i1(<2 x i64> %0, i32 656, <2 x i1> %2)
   %4 = extractvalue { <2 x i64>, <2 x i64> } %3, 1
   store <2 x i64> %4, <2 x i64>* %addr, align 8
   %5 = extractvalue { <2 x i64>, <2 x i64> } %3, 0
@@ -285,12 +286,12 @@ define arm_aapcs_vfpcc <2 x i64> @test_vldrdq_gather_base_z_s64(<2 x i64> %addr,
 ; CHECK-NEXT:    bx lr
 entry:
   %0 = zext i16 %p to i32
-  %1 = call <4 x i1> @llvm.arm.mve.pred.i2v.v4i1(i32 %0)
-  %2 = call <2 x i64> @llvm.arm.mve.vldr.gather.base.predicated.v2i64.v2i64.v4i1(<2 x i64> %addr, i32 888, <4 x i1> %1)
+  %1 = call <2 x i1> @llvm.arm.mve.pred.i2v.v2i1(i32 %0)
+  %2 = call <2 x i64> @llvm.arm.mve.vldr.gather.base.predicated.v2i64.v2i64.v2i1(<2 x i64> %addr, i32 888, <2 x i1> %1)
   ret <2 x i64> %2
 }
 
-declare <2 x i64> @llvm.arm.mve.vldr.gather.base.predicated.v2i64.v2i64.v4i1(<2 x i64>, i32, <4 x i1>)
+declare <2 x i64> @llvm.arm.mve.vldr.gather.base.predicated.v2i64.v2i64.v2i1(<2 x i64>, i32, <2 x i1>)
 
 define arm_aapcs_vfpcc <2 x i64> @test_vldrdq_gather_base_z_u64(<2 x i64> %addr, i16 zeroext %p) {
 ; CHECK-LABEL: test_vldrdq_gather_base_z_u64:
@@ -302,8 +303,8 @@ define arm_aapcs_vfpcc <2 x i64> @test_vldrdq_gather_base_z_u64(<2 x i64> %addr,
 ; CHECK-NEXT:    bx lr
 entry:
   %0 = zext i16 %p to i32
-  %1 = call <4 x i1> @llvm.arm.mve.pred.i2v.v4i1(i32 %0)
-  %2 = call <2 x i64> @llvm.arm.mve.vldr.gather.base.predicated.v2i64.v2i64.v4i1(<2 x i64> %addr, i32 -1000, <4 x i1> %1)
+  %1 = call <2 x i1> @llvm.arm.mve.pred.i2v.v2i1(i32 %0)
+  %2 = call <2 x i64> @llvm.arm.mve.vldr.gather.base.predicated.v2i64.v2i64.v2i1(<2 x i64> %addr, i32 -1000, <2 x i1> %1)
   ret <2 x i64> %2
 }
 
@@ -341,12 +342,12 @@ define arm_aapcs_vfpcc <2 x i64> @test_vldrdq_gather_offset_z_s64(i64* %base, <2
 ; CHECK-NEXT:    bx lr
 entry:
   %0 = zext i16 %p to i32
-  %1 = call <4 x i1> @llvm.arm.mve.pred.i2v.v4i1(i32 %0)
-  %2 = call <2 x i64> @llvm.arm.mve.vldr.gather.offset.predicated.v2i64.p0i64.v2i64.v4i1(i64* %base, <2 x i64> %offset, i32 64, i32 0, i32 0, <4 x i1> %1)
+  %1 = call <2 x i1> @llvm.arm.mve.pred.i2v.v2i1(i32 %0)
+  %2 = call <2 x i64> @llvm.arm.mve.vldr.gather.offset.predicated.v2i64.p0i64.v2i64.v2i1(i64* %base, <2 x i64> %offset, i32 64, i32 0, i32 0, <2 x i1> %1)
   ret <2 x i64> %2
 }
 
-declare <2 x i64> @llvm.arm.mve.vldr.gather.offset.predicated.v2i64.p0i64.v2i64.v4i1(i64*, <2 x i64>, i32, i32, i32, <4 x i1>)
+declare <2 x i64> @llvm.arm.mve.vldr.gather.offset.predicated.v2i64.p0i64.v2i64.v2i1(i64*, <2 x i64>, i32, i32, i32, <2 x i1>)
 
 define arm_aapcs_vfpcc <2 x i64> @test_vldrdq_gather_offset_z_u64(i64* %base, <2 x i64> %offset, i16 zeroext %p) {
 ; CHECK-LABEL: test_vldrdq_gather_offset_z_u64:
@@ -358,8 +359,8 @@ define arm_aapcs_vfpcc <2 x i64> @test_vldrdq_gather_offset_z_u64(i64* %base, <2
 ; CHECK-NEXT:    bx lr
 entry:
   %0 = zext i16 %p to i32
-  %1 = call <4 x i1> @llvm.arm.mve.pred.i2v.v4i1(i32 %0)
-  %2 = call <2 x i64> @llvm.arm.mve.vldr.gather.offset.predicated.v2i64.p0i64.v2i64.v4i1(i64* %base, <2 x i64> %offset, i32 64, i32 0, i32 1, <4 x i1> %1)
+  %1 = call <2 x i1> @llvm.arm.mve.pred.i2v.v2i1(i32 %0)
+  %2 = call <2 x i64> @llvm.arm.mve.vldr.gather.offset.predicated.v2i64.p0i64.v2i64.v2i1(i64* %base, <2 x i64> %offset, i32 64, i32 0, i32 1, <2 x i1> %1)
   ret <2 x i64> %2
 }
 
@@ -395,8 +396,8 @@ define arm_aapcs_vfpcc <2 x i64> @test_vldrdq_gather_shifted_offset_z_s64(i64* %
 ; CHECK-NEXT:    bx lr
 entry:
   %0 = zext i16 %p to i32
-  %1 = call <4 x i1> @llvm.arm.mve.pred.i2v.v4i1(i32 %0)
-  %2 = call <2 x i64> @llvm.arm.mve.vldr.gather.offset.predicated.v2i64.p0i64.v2i64.v4i1(i64* %base, <2 x i64> %offset, i32 64, i32 3, i32 0, <4 x i1> %1)
+  %1 = call <2 x i1> @llvm.arm.mve.pred.i2v.v2i1(i32 %0)
+  %2 = call <2 x i64> @llvm.arm.mve.vldr.gather.offset.predicated.v2i64.p0i64.v2i64.v2i1(i64* %base, <2 x i64> %offset, i32 64, i32 3, i32 0, <2 x i1> %1)
   ret <2 x i64> %2
 }
 
@@ -410,8 +411,8 @@ define arm_aapcs_vfpcc <2 x i64> @test_vldrdq_gather_shifted_offset_z_u64(i64* %
 ; CHECK-NEXT:    bx lr
 entry:
   %0 = zext i16 %p to i32
-  %1 = call <4 x i1> @llvm.arm.mve.pred.i2v.v4i1(i32 %0)
-  %2 = call <2 x i64> @llvm.arm.mve.vldr.gather.offset.predicated.v2i64.p0i64.v2i64.v4i1(i64* %base, <2 x i64> %offset, i32 64, i32 3, i32 1, <4 x i1> %1)
+  %1 = call <2 x i1> @llvm.arm.mve.pred.i2v.v2i1(i32 %0)
+  %2 = call <2 x i64> @llvm.arm.mve.vldr.gather.offset.predicated.v2i64.p0i64.v2i64.v2i1(i64* %base, <2 x i64> %offset, i32 64, i32 3, i32 1, <2 x i1> %1)
   ret <2 x i64> %2
 }
 
@@ -1218,12 +1219,12 @@ define arm_aapcs_vfpcc void @test_vstrdq_scatter_base_p_s64(<2 x i64> %addr, <2 
 ; CHECK-NEXT:    bx lr
 entry:
   %0 = zext i16 %p to i32
-  %1 = call <4 x i1> @llvm.arm.mve.pred.i2v.v4i1(i32 %0)
-  call void @llvm.arm.mve.vstr.scatter.base.predicated.v2i64.v2i64.v4i1(<2 x i64> %addr, i32 888, <2 x i64> %value, <4 x i1> %1)
+  %1 = call <2 x i1> @llvm.arm.mve.pred.i2v.v2i1(i32 %0)
+  call void @llvm.arm.mve.vstr.scatter.base.predicated.v2i64.v2i64.v2i1(<2 x i64> %addr, i32 888, <2 x i64> %value, <2 x i1> %1)
   ret void
 }
 
-declare void @llvm.arm.mve.vstr.scatter.base.predicated.v2i64.v2i64.v4i1(<2 x i64>, i32, <2 x i64>, <4 x i1>)
+declare void @llvm.arm.mve.vstr.scatter.base.predicated.v2i64.v2i64.v2i1(<2 x i64>, i32, <2 x i64>, <2 x i1>)
 
 define arm_aapcs_vfpcc void @test_vstrdq_scatter_base_p_u64(<2 x i64> %addr, <2 x i64> %value, i16 zeroext %p) {
 ; CHECK-LABEL: test_vstrdq_scatter_base_p_u64:
@@ -1234,8 +1235,8 @@ define arm_aapcs_vfpcc void @test_vstrdq_scatter_base_p_u64(<2 x i64> %addr, <2 
 ; CHECK-NEXT:    bx lr
 entry:
   %0 = zext i16 %p to i32
-  %1 = call <4 x i1> @llvm.arm.mve.pred.i2v.v4i1(i32 %0)
-  call void @llvm.arm.mve.vstr.scatter.base.predicated.v2i64.v2i64.v4i1(<2 x i64> %addr, i32 264, <2 x i64> %value, <4 x i1> %1)
+  %1 = call <2 x i1> @llvm.arm.mve.pred.i2v.v2i1(i32 %0)
+  call void @llvm.arm.mve.vstr.scatter.base.predicated.v2i64.v2i64.v2i1(<2 x i64> %addr, i32 264, <2 x i64> %value, <2 x i1> %1)
   ret void
 }
 
@@ -1273,13 +1274,13 @@ define arm_aapcs_vfpcc void @test_vstrdq_scatter_base_wb_p_s64(<2 x i64>* %addr,
 entry:
   %0 = load <2 x i64>, <2 x i64>* %addr, align 8
   %1 = zext i16 %p to i32
-  %2 = call <4 x i1> @llvm.arm.mve.pred.i2v.v4i1(i32 %1)
-  %3 = call <2 x i64> @llvm.arm.mve.vstr.scatter.base.wb.predicated.v2i64.v2i64.v4i1(<2 x i64> %0, i32 248, <2 x i64> %value, <4 x i1> %2)
+  %2 = call <2 x i1> @llvm.arm.mve.pred.i2v.v2i1(i32 %1)
+  %3 = call <2 x i64> @llvm.arm.mve.vstr.scatter.base.wb.predicated.v2i64.v2i64.v2i1(<2 x i64> %0, i32 248, <2 x i64> %value, <2 x i1> %2)
   store <2 x i64> %3, <2 x i64>* %addr, align 8
   ret void
 }
 
-declare <2 x i64> @llvm.arm.mve.vstr.scatter.base.wb.predicated.v2i64.v2i64.v4i1(<2 x i64>, i32, <2 x i64>, <4 x i1>)
+declare <2 x i64> @llvm.arm.mve.vstr.scatter.base.wb.predicated.v2i64.v2i64.v2i1(<2 x i64>, i32, <2 x i64>, <2 x i1>)
 
 define arm_aapcs_vfpcc void @test_vstrdq_scatter_base_wb_p_u64(<2 x i64>* %addr, <2 x i64> %value, i16 zeroext %p) {
 ; CHECK-LABEL: test_vstrdq_scatter_base_wb_p_u64:
@@ -1293,8 +1294,8 @@ define arm_aapcs_vfpcc void @test_vstrdq_scatter_base_wb_p_u64(<2 x i64>* %addr,
 entry:
   %0 = load <2 x i64>, <2 x i64>* %addr, align 8
   %1 = zext i16 %p to i32
-  %2 = call <4 x i1> @llvm.arm.mve.pred.i2v.v4i1(i32 %1)
-  %3 = call <2 x i64> @llvm.arm.mve.vstr.scatter.base.wb.predicated.v2i64.v2i64.v4i1(<2 x i64> %0, i32 136, <2 x i64> %value, <4 x i1> %2)
+  %2 = call <2 x i1> @llvm.arm.mve.pred.i2v.v2i1(i32 %1)
+  %3 = call <2 x i64> @llvm.arm.mve.vstr.scatter.base.wb.predicated.v2i64.v2i64.v2i1(<2 x i64> %0, i32 136, <2 x i64> %value, <2 x i1> %2)
   store <2 x i64> %3, <2 x i64>* %addr, align 8
   ret void
 }
@@ -1338,12 +1339,12 @@ define arm_aapcs_vfpcc void @test_vstrdq_scatter_offset_p_s64(i64* %base, <2 x i
 ; CHECK-NEXT:    bx lr
 entry:
   %0 = zext i16 %p to i32
-  %1 = call <4 x i1> @llvm.arm.mve.pred.i2v.v4i1(i32 %0)
-  call void @llvm.arm.mve.vstr.scatter.offset.predicated.p0i64.v2i64.v2i64.v4i1(i64* %base, <2 x i64> %offset, <2 x i64> %value, i32 64, i32 0, <4 x i1> %1)
+  %1 = call <2 x i1> @llvm.arm.mve.pred.i2v.v2i1(i32 %0)
+  call void @llvm.arm.mve.vstr.scatter.offset.predicated.p0i64.v2i64.v2i64.v2i1(i64* %base, <2 x i64> %offset, <2 x i64> %value, i32 64, i32 0, <2 x i1> %1)
   ret void
 }
 
-declare void @llvm.arm.mve.vstr.scatter.offset.predicated.p0i64.v2i64.v2i64.v4i1(i64*, <2 x i64>, <2 x i64>, i32, i32, <4 x i1>)
+declare void @llvm.arm.mve.vstr.scatter.offset.predicated.p0i64.v2i64.v2i64.v2i1(i64*, <2 x i64>, <2 x i64>, i32, i32, <2 x i1>)
 
 define arm_aapcs_vfpcc void @test_vstrdq_scatter_offset_p_u64(i64* %base, <2 x i64> %offset, <2 x i64> %value, i16 zeroext %p) {
 ; CHECK-LABEL: test_vstrdq_scatter_offset_p_u64:
@@ -1354,8 +1355,8 @@ define arm_aapcs_vfpcc void @test_vstrdq_scatter_offset_p_u64(i64* %base, <2 x i
 ; CHECK-NEXT:    bx lr
 entry:
   %0 = zext i16 %p to i32
-  %1 = call <4 x i1> @llvm.arm.mve.pred.i2v.v4i1(i32 %0)
-  call void @llvm.arm.mve.vstr.scatter.offset.predicated.p0i64.v2i64.v2i64.v4i1(i64* %base, <2 x i64> %offset, <2 x i64> %value, i32 64, i32 0, <4 x i1> %1)
+  %1 = call <2 x i1> @llvm.arm.mve.pred.i2v.v2i1(i32 %0)
+  call void @llvm.arm.mve.vstr.scatter.offset.predicated.p0i64.v2i64.v2i64.v2i1(i64* %base, <2 x i64> %offset, <2 x i64> %value, i32 64, i32 0, <2 x i1> %1)
   ret void
 }
 
@@ -1390,8 +1391,8 @@ define arm_aapcs_vfpcc void @test_vstrdq_scatter_shifted_offset_p_s64(i64* %base
 ; CHECK-NEXT:    bx lr
 entry:
   %0 = zext i16 %p to i32
-  %1 = call <4 x i1> @llvm.arm.mve.pred.i2v.v4i1(i32 %0)
-  call void @llvm.arm.mve.vstr.scatter.offset.predicated.p0i64.v2i64.v2i64.v4i1(i64* %base, <2 x i64> %offset, <2 x i64> %value, i32 64, i32 3, <4 x i1> %1)
+  %1 = call <2 x i1> @llvm.arm.mve.pred.i2v.v2i1(i32 %0)
+  call void @llvm.arm.mve.vstr.scatter.offset.predicated.p0i64.v2i64.v2i64.v2i1(i64* %base, <2 x i64> %offset, <2 x i64> %value, i32 64, i32 3, <2 x i1> %1)
   ret void
 }
 
@@ -1404,8 +1405,8 @@ define arm_aapcs_vfpcc void @test_vstrdq_scatter_shifted_offset_p_u64(i64* %base
 ; CHECK-NEXT:    bx lr
 entry:
   %0 = zext i16 %p to i32
-  %1 = call <4 x i1> @llvm.arm.mve.pred.i2v.v4i1(i32 %0)
-  call void @llvm.arm.mve.vstr.scatter.offset.predicated.p0i64.v2i64.v2i64.v4i1(i64* %base, <2 x i64> %offset, <2 x i64> %value, i32 64, i32 3, <4 x i1> %1)
+  %1 = call <2 x i1> @llvm.arm.mve.pred.i2v.v2i1(i32 %0)
+  call void @llvm.arm.mve.vstr.scatter.offset.predicated.p0i64.v2i64.v2i64.v2i1(i64* %base, <2 x i64> %offset, <2 x i64> %value, i32 64, i32 3, <2 x i1> %1)
   ret void
 }
 

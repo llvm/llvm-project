@@ -238,8 +238,8 @@ uint64x2_t test_vldrdq_gather_base_wb_u64(uint64x2_t *addr)
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = load <2 x i64>, <2 x i64>* [[ADDR:%.*]], align 8
 // CHECK-NEXT:    [[TMP1:%.*]] = zext i16 [[P:%.*]] to i32
-// CHECK-NEXT:    [[TMP2:%.*]] = call <4 x i1> @llvm.arm.mve.pred.i2v.v4i1(i32 [[TMP1]])
-// CHECK-NEXT:    [[TMP3:%.*]] = call { <2 x i64>, <2 x i64> } @llvm.arm.mve.vldr.gather.base.wb.predicated.v2i64.v2i64.v4i1(<2 x i64> [[TMP0]], i32 664, <4 x i1> [[TMP2]])
+// CHECK-NEXT:    [[TMP2:%.*]] = call <2 x i1> @llvm.arm.mve.pred.i2v.v2i1(i32 [[TMP1]])
+// CHECK-NEXT:    [[TMP3:%.*]] = call { <2 x i64>, <2 x i64> } @llvm.arm.mve.vldr.gather.base.wb.predicated.v2i64.v2i64.v2i1(<2 x i64> [[TMP0]], i32 664, <2 x i1> [[TMP2]])
 // CHECK-NEXT:    [[TMP4:%.*]] = extractvalue { <2 x i64>, <2 x i64> } [[TMP3]], 1
 // CHECK-NEXT:    store <2 x i64> [[TMP4]], <2 x i64>* [[ADDR]], align 8
 // CHECK-NEXT:    [[TMP5:%.*]] = extractvalue { <2 x i64>, <2 x i64> } [[TMP3]], 0
@@ -254,8 +254,8 @@ int64x2_t test_vldrdq_gather_base_wb_z_s64(uint64x2_t *addr, mve_pred16_t p)
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = load <2 x i64>, <2 x i64>* [[ADDR:%.*]], align 8
 // CHECK-NEXT:    [[TMP1:%.*]] = zext i16 [[P:%.*]] to i32
-// CHECK-NEXT:    [[TMP2:%.*]] = call <4 x i1> @llvm.arm.mve.pred.i2v.v4i1(i32 [[TMP1]])
-// CHECK-NEXT:    [[TMP3:%.*]] = call { <2 x i64>, <2 x i64> } @llvm.arm.mve.vldr.gather.base.wb.predicated.v2i64.v2i64.v4i1(<2 x i64> [[TMP0]], i32 656, <4 x i1> [[TMP2]])
+// CHECK-NEXT:    [[TMP2:%.*]] = call <2 x i1> @llvm.arm.mve.pred.i2v.v2i1(i32 [[TMP1]])
+// CHECK-NEXT:    [[TMP3:%.*]] = call { <2 x i64>, <2 x i64> } @llvm.arm.mve.vldr.gather.base.wb.predicated.v2i64.v2i64.v2i1(<2 x i64> [[TMP0]], i32 656, <2 x i1> [[TMP2]])
 // CHECK-NEXT:    [[TMP4:%.*]] = extractvalue { <2 x i64>, <2 x i64> } [[TMP3]], 1
 // CHECK-NEXT:    store <2 x i64> [[TMP4]], <2 x i64>* [[ADDR]], align 8
 // CHECK-NEXT:    [[TMP5:%.*]] = extractvalue { <2 x i64>, <2 x i64> } [[TMP3]], 0
@@ -269,8 +269,8 @@ uint64x2_t test_vldrdq_gather_base_wb_z_u64(uint64x2_t *addr, mve_pred16_t p)
 // CHECK-LABEL: @test_vldrdq_gather_base_z_s64(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = zext i16 [[P:%.*]] to i32
-// CHECK-NEXT:    [[TMP1:%.*]] = call <4 x i1> @llvm.arm.mve.pred.i2v.v4i1(i32 [[TMP0]])
-// CHECK-NEXT:    [[TMP2:%.*]] = call <2 x i64> @llvm.arm.mve.vldr.gather.base.predicated.v2i64.v2i64.v4i1(<2 x i64> [[ADDR:%.*]], i32 888, <4 x i1> [[TMP1]])
+// CHECK-NEXT:    [[TMP1:%.*]] = call <2 x i1> @llvm.arm.mve.pred.i2v.v2i1(i32 [[TMP0]])
+// CHECK-NEXT:    [[TMP2:%.*]] = call <2 x i64> @llvm.arm.mve.vldr.gather.base.predicated.v2i64.v2i64.v2i1(<2 x i64> [[ADDR:%.*]], i32 888, <2 x i1> [[TMP1]])
 // CHECK-NEXT:    ret <2 x i64> [[TMP2]]
 //
 int64x2_t test_vldrdq_gather_base_z_s64(uint64x2_t addr, mve_pred16_t p)
@@ -281,8 +281,8 @@ int64x2_t test_vldrdq_gather_base_z_s64(uint64x2_t addr, mve_pred16_t p)
 // CHECK-LABEL: @test_vldrdq_gather_base_z_u64(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = zext i16 [[P:%.*]] to i32
-// CHECK-NEXT:    [[TMP1:%.*]] = call <4 x i1> @llvm.arm.mve.pred.i2v.v4i1(i32 [[TMP0]])
-// CHECK-NEXT:    [[TMP2:%.*]] = call <2 x i64> @llvm.arm.mve.vldr.gather.base.predicated.v2i64.v2i64.v4i1(<2 x i64> [[ADDR:%.*]], i32 -1000, <4 x i1> [[TMP1]])
+// CHECK-NEXT:    [[TMP1:%.*]] = call <2 x i1> @llvm.arm.mve.pred.i2v.v2i1(i32 [[TMP0]])
+// CHECK-NEXT:    [[TMP2:%.*]] = call <2 x i64> @llvm.arm.mve.vldr.gather.base.predicated.v2i64.v2i64.v2i1(<2 x i64> [[ADDR:%.*]], i32 -1000, <2 x i1> [[TMP1]])
 // CHECK-NEXT:    ret <2 x i64> [[TMP2]]
 //
 uint64x2_t test_vldrdq_gather_base_z_u64(uint64x2_t addr, mve_pred16_t p)
@@ -321,8 +321,8 @@ uint64x2_t test_vldrdq_gather_offset_u64(const uint64_t *base, uint64x2_t offset
 // CHECK-LABEL: @test_vldrdq_gather_offset_z_s64(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = zext i16 [[P:%.*]] to i32
-// CHECK-NEXT:    [[TMP1:%.*]] = call <4 x i1> @llvm.arm.mve.pred.i2v.v4i1(i32 [[TMP0]])
-// CHECK-NEXT:    [[TMP2:%.*]] = call <2 x i64> @llvm.arm.mve.vldr.gather.offset.predicated.v2i64.p0i64.v2i64.v4i1(i64* [[BASE:%.*]], <2 x i64> [[OFFSET:%.*]], i32 64, i32 0, i32 0, <4 x i1> [[TMP1]])
+// CHECK-NEXT:    [[TMP1:%.*]] = call <2 x i1> @llvm.arm.mve.pred.i2v.v2i1(i32 [[TMP0]])
+// CHECK-NEXT:    [[TMP2:%.*]] = call <2 x i64> @llvm.arm.mve.vldr.gather.offset.predicated.v2i64.p0i64.v2i64.v2i1(i64* [[BASE:%.*]], <2 x i64> [[OFFSET:%.*]], i32 64, i32 0, i32 0, <2 x i1> [[TMP1]])
 // CHECK-NEXT:    ret <2 x i64> [[TMP2]]
 //
 int64x2_t test_vldrdq_gather_offset_z_s64(const int64_t *base, uint64x2_t offset, mve_pred16_t p)
@@ -337,8 +337,8 @@ int64x2_t test_vldrdq_gather_offset_z_s64(const int64_t *base, uint64x2_t offset
 // CHECK-LABEL: @test_vldrdq_gather_offset_z_u64(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = zext i16 [[P:%.*]] to i32
-// CHECK-NEXT:    [[TMP1:%.*]] = call <4 x i1> @llvm.arm.mve.pred.i2v.v4i1(i32 [[TMP0]])
-// CHECK-NEXT:    [[TMP2:%.*]] = call <2 x i64> @llvm.arm.mve.vldr.gather.offset.predicated.v2i64.p0i64.v2i64.v4i1(i64* [[BASE:%.*]], <2 x i64> [[OFFSET:%.*]], i32 64, i32 0, i32 1, <4 x i1> [[TMP1]])
+// CHECK-NEXT:    [[TMP1:%.*]] = call <2 x i1> @llvm.arm.mve.pred.i2v.v2i1(i32 [[TMP0]])
+// CHECK-NEXT:    [[TMP2:%.*]] = call <2 x i64> @llvm.arm.mve.vldr.gather.offset.predicated.v2i64.p0i64.v2i64.v2i1(i64* [[BASE:%.*]], <2 x i64> [[OFFSET:%.*]], i32 64, i32 0, i32 1, <2 x i1> [[TMP1]])
 // CHECK-NEXT:    ret <2 x i64> [[TMP2]]
 //
 uint64x2_t test_vldrdq_gather_offset_z_u64(const uint64_t *base, uint64x2_t offset, mve_pred16_t p)
@@ -381,8 +381,8 @@ uint64x2_t test_vldrdq_gather_shifted_offset_u64(const uint64_t *base, uint64x2_
 // CHECK-LABEL: @test_vldrdq_gather_shifted_offset_z_s64(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = zext i16 [[P:%.*]] to i32
-// CHECK-NEXT:    [[TMP1:%.*]] = call <4 x i1> @llvm.arm.mve.pred.i2v.v4i1(i32 [[TMP0]])
-// CHECK-NEXT:    [[TMP2:%.*]] = call <2 x i64> @llvm.arm.mve.vldr.gather.offset.predicated.v2i64.p0i64.v2i64.v4i1(i64* [[BASE:%.*]], <2 x i64> [[OFFSET:%.*]], i32 64, i32 3, i32 0, <4 x i1> [[TMP1]])
+// CHECK-NEXT:    [[TMP1:%.*]] = call <2 x i1> @llvm.arm.mve.pred.i2v.v2i1(i32 [[TMP0]])
+// CHECK-NEXT:    [[TMP2:%.*]] = call <2 x i64> @llvm.arm.mve.vldr.gather.offset.predicated.v2i64.p0i64.v2i64.v2i1(i64* [[BASE:%.*]], <2 x i64> [[OFFSET:%.*]], i32 64, i32 3, i32 0, <2 x i1> [[TMP1]])
 // CHECK-NEXT:    ret <2 x i64> [[TMP2]]
 //
 int64x2_t test_vldrdq_gather_shifted_offset_z_s64(const int64_t *base, uint64x2_t offset, mve_pred16_t p)
@@ -397,8 +397,8 @@ int64x2_t test_vldrdq_gather_shifted_offset_z_s64(const int64_t *base, uint64x2_
 // CHECK-LABEL: @test_vldrdq_gather_shifted_offset_z_u64(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = zext i16 [[P:%.*]] to i32
-// CHECK-NEXT:    [[TMP1:%.*]] = call <4 x i1> @llvm.arm.mve.pred.i2v.v4i1(i32 [[TMP0]])
-// CHECK-NEXT:    [[TMP2:%.*]] = call <2 x i64> @llvm.arm.mve.vldr.gather.offset.predicated.v2i64.p0i64.v2i64.v4i1(i64* [[BASE:%.*]], <2 x i64> [[OFFSET:%.*]], i32 64, i32 3, i32 1, <4 x i1> [[TMP1]])
+// CHECK-NEXT:    [[TMP1:%.*]] = call <2 x i1> @llvm.arm.mve.pred.i2v.v2i1(i32 [[TMP0]])
+// CHECK-NEXT:    [[TMP2:%.*]] = call <2 x i64> @llvm.arm.mve.vldr.gather.offset.predicated.v2i64.p0i64.v2i64.v2i1(i64* [[BASE:%.*]], <2 x i64> [[OFFSET:%.*]], i32 64, i32 3, i32 1, <2 x i1> [[TMP1]])
 // CHECK-NEXT:    ret <2 x i64> [[TMP2]]
 //
 uint64x2_t test_vldrdq_gather_shifted_offset_z_u64(const uint64_t *base, uint64x2_t offset, mve_pred16_t p)
@@ -1229,8 +1229,8 @@ void test_vstrbq_scatter_offset_u8(uint8_t *base, uint8x16_t offset, uint8x16_t 
 // CHECK-LABEL: @test_vstrdq_scatter_base_p_s64(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = zext i16 [[P:%.*]] to i32
-// CHECK-NEXT:    [[TMP1:%.*]] = call <4 x i1> @llvm.arm.mve.pred.i2v.v4i1(i32 [[TMP0]])
-// CHECK-NEXT:    call void @llvm.arm.mve.vstr.scatter.base.predicated.v2i64.v2i64.v4i1(<2 x i64> [[ADDR:%.*]], i32 888, <2 x i64> [[VALUE:%.*]], <4 x i1> [[TMP1]])
+// CHECK-NEXT:    [[TMP1:%.*]] = call <2 x i1> @llvm.arm.mve.pred.i2v.v2i1(i32 [[TMP0]])
+// CHECK-NEXT:    call void @llvm.arm.mve.vstr.scatter.base.predicated.v2i64.v2i64.v2i1(<2 x i64> [[ADDR:%.*]], i32 888, <2 x i64> [[VALUE:%.*]], <2 x i1> [[TMP1]])
 // CHECK-NEXT:    ret void
 //
 void test_vstrdq_scatter_base_p_s64(uint64x2_t addr, int64x2_t value, mve_pred16_t p)
@@ -1245,8 +1245,8 @@ void test_vstrdq_scatter_base_p_s64(uint64x2_t addr, int64x2_t value, mve_pred16
 // CHECK-LABEL: @test_vstrdq_scatter_base_p_u64(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = zext i16 [[P:%.*]] to i32
-// CHECK-NEXT:    [[TMP1:%.*]] = call <4 x i1> @llvm.arm.mve.pred.i2v.v4i1(i32 [[TMP0]])
-// CHECK-NEXT:    call void @llvm.arm.mve.vstr.scatter.base.predicated.v2i64.v2i64.v4i1(<2 x i64> [[ADDR:%.*]], i32 264, <2 x i64> [[VALUE:%.*]], <4 x i1> [[TMP1]])
+// CHECK-NEXT:    [[TMP1:%.*]] = call <2 x i1> @llvm.arm.mve.pred.i2v.v2i1(i32 [[TMP0]])
+// CHECK-NEXT:    call void @llvm.arm.mve.vstr.scatter.base.predicated.v2i64.v2i64.v2i1(<2 x i64> [[ADDR:%.*]], i32 264, <2 x i64> [[VALUE:%.*]], <2 x i1> [[TMP1]])
 // CHECK-NEXT:    ret void
 //
 void test_vstrdq_scatter_base_p_u64(uint64x2_t addr, uint64x2_t value, mve_pred16_t p)
@@ -1290,8 +1290,8 @@ void test_vstrdq_scatter_base_u64(uint64x2_t addr, uint64x2_t value)
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = load <2 x i64>, <2 x i64>* [[ADDR:%.*]], align 8
 // CHECK-NEXT:    [[TMP1:%.*]] = zext i16 [[P:%.*]] to i32
-// CHECK-NEXT:    [[TMP2:%.*]] = call <4 x i1> @llvm.arm.mve.pred.i2v.v4i1(i32 [[TMP1]])
-// CHECK-NEXT:    [[TMP3:%.*]] = call <2 x i64> @llvm.arm.mve.vstr.scatter.base.wb.predicated.v2i64.v2i64.v4i1(<2 x i64> [[TMP0]], i32 248, <2 x i64> [[VALUE:%.*]], <4 x i1> [[TMP2]])
+// CHECK-NEXT:    [[TMP2:%.*]] = call <2 x i1> @llvm.arm.mve.pred.i2v.v2i1(i32 [[TMP1]])
+// CHECK-NEXT:    [[TMP3:%.*]] = call <2 x i64> @llvm.arm.mve.vstr.scatter.base.wb.predicated.v2i64.v2i64.v2i1(<2 x i64> [[TMP0]], i32 248, <2 x i64> [[VALUE:%.*]], <2 x i1> [[TMP2]])
 // CHECK-NEXT:    store <2 x i64> [[TMP3]], <2 x i64>* [[ADDR]], align 8
 // CHECK-NEXT:    ret void
 //
@@ -1308,8 +1308,8 @@ void test_vstrdq_scatter_base_wb_p_s64(uint64x2_t *addr, int64x2_t value, mve_pr
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = load <2 x i64>, <2 x i64>* [[ADDR:%.*]], align 8
 // CHECK-NEXT:    [[TMP1:%.*]] = zext i16 [[P:%.*]] to i32
-// CHECK-NEXT:    [[TMP2:%.*]] = call <4 x i1> @llvm.arm.mve.pred.i2v.v4i1(i32 [[TMP1]])
-// CHECK-NEXT:    [[TMP3:%.*]] = call <2 x i64> @llvm.arm.mve.vstr.scatter.base.wb.predicated.v2i64.v2i64.v4i1(<2 x i64> [[TMP0]], i32 136, <2 x i64> [[VALUE:%.*]], <4 x i1> [[TMP2]])
+// CHECK-NEXT:    [[TMP2:%.*]] = call <2 x i1> @llvm.arm.mve.pred.i2v.v2i1(i32 [[TMP1]])
+// CHECK-NEXT:    [[TMP3:%.*]] = call <2 x i64> @llvm.arm.mve.vstr.scatter.base.wb.predicated.v2i64.v2i64.v2i1(<2 x i64> [[TMP0]], i32 136, <2 x i64> [[VALUE:%.*]], <2 x i1> [[TMP2]])
 // CHECK-NEXT:    store <2 x i64> [[TMP3]], <2 x i64>* [[ADDR]], align 8
 // CHECK-NEXT:    ret void
 //
@@ -1357,8 +1357,8 @@ void test_vstrdq_scatter_base_wb_u64(uint64x2_t *addr, uint64x2_t value)
 // CHECK-LABEL: @test_vstrdq_scatter_offset_p_s64(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = zext i16 [[P:%.*]] to i32
-// CHECK-NEXT:    [[TMP1:%.*]] = call <4 x i1> @llvm.arm.mve.pred.i2v.v4i1(i32 [[TMP0]])
-// CHECK-NEXT:    call void @llvm.arm.mve.vstr.scatter.offset.predicated.p0i64.v2i64.v2i64.v4i1(i64* [[BASE:%.*]], <2 x i64> [[OFFSET:%.*]], <2 x i64> [[VALUE:%.*]], i32 64, i32 0, <4 x i1> [[TMP1]])
+// CHECK-NEXT:    [[TMP1:%.*]] = call <2 x i1> @llvm.arm.mve.pred.i2v.v2i1(i32 [[TMP0]])
+// CHECK-NEXT:    call void @llvm.arm.mve.vstr.scatter.offset.predicated.p0i64.v2i64.v2i64.v2i1(i64* [[BASE:%.*]], <2 x i64> [[OFFSET:%.*]], <2 x i64> [[VALUE:%.*]], i32 64, i32 0, <2 x i1> [[TMP1]])
 // CHECK-NEXT:    ret void
 //
 void test_vstrdq_scatter_offset_p_s64(int64_t *base, uint64x2_t offset, int64x2_t value, mve_pred16_t p)
@@ -1373,8 +1373,8 @@ void test_vstrdq_scatter_offset_p_s64(int64_t *base, uint64x2_t offset, int64x2_
 // CHECK-LABEL: @test_vstrdq_scatter_offset_p_u64(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = zext i16 [[P:%.*]] to i32
-// CHECK-NEXT:    [[TMP1:%.*]] = call <4 x i1> @llvm.arm.mve.pred.i2v.v4i1(i32 [[TMP0]])
-// CHECK-NEXT:    call void @llvm.arm.mve.vstr.scatter.offset.predicated.p0i64.v2i64.v2i64.v4i1(i64* [[BASE:%.*]], <2 x i64> [[OFFSET:%.*]], <2 x i64> [[VALUE:%.*]], i32 64, i32 0, <4 x i1> [[TMP1]])
+// CHECK-NEXT:    [[TMP1:%.*]] = call <2 x i1> @llvm.arm.mve.pred.i2v.v2i1(i32 [[TMP0]])
+// CHECK-NEXT:    call void @llvm.arm.mve.vstr.scatter.offset.predicated.p0i64.v2i64.v2i64.v2i1(i64* [[BASE:%.*]], <2 x i64> [[OFFSET:%.*]], <2 x i64> [[VALUE:%.*]], i32 64, i32 0, <2 x i1> [[TMP1]])
 // CHECK-NEXT:    ret void
 //
 void test_vstrdq_scatter_offset_p_u64(uint64_t *base, uint64x2_t offset, uint64x2_t value, mve_pred16_t p)
@@ -1417,8 +1417,8 @@ void test_vstrdq_scatter_offset_u64(uint64_t *base, uint64x2_t offset, uint64x2_
 // CHECK-LABEL: @test_vstrdq_scatter_shifted_offset_p_s64(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = zext i16 [[P:%.*]] to i32
-// CHECK-NEXT:    [[TMP1:%.*]] = call <4 x i1> @llvm.arm.mve.pred.i2v.v4i1(i32 [[TMP0]])
-// CHECK-NEXT:    call void @llvm.arm.mve.vstr.scatter.offset.predicated.p0i64.v2i64.v2i64.v4i1(i64* [[BASE:%.*]], <2 x i64> [[OFFSET:%.*]], <2 x i64> [[VALUE:%.*]], i32 64, i32 3, <4 x i1> [[TMP1]])
+// CHECK-NEXT:    [[TMP1:%.*]] = call <2 x i1> @llvm.arm.mve.pred.i2v.v2i1(i32 [[TMP0]])
+// CHECK-NEXT:    call void @llvm.arm.mve.vstr.scatter.offset.predicated.p0i64.v2i64.v2i64.v2i1(i64* [[BASE:%.*]], <2 x i64> [[OFFSET:%.*]], <2 x i64> [[VALUE:%.*]], i32 64, i32 3, <2 x i1> [[TMP1]])
 // CHECK-NEXT:    ret void
 //
 void test_vstrdq_scatter_shifted_offset_p_s64(int64_t *base, uint64x2_t offset, int64x2_t value, mve_pred16_t p)
@@ -1433,8 +1433,8 @@ void test_vstrdq_scatter_shifted_offset_p_s64(int64_t *base, uint64x2_t offset, 
 // CHECK-LABEL: @test_vstrdq_scatter_shifted_offset_p_u64(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = zext i16 [[P:%.*]] to i32
-// CHECK-NEXT:    [[TMP1:%.*]] = call <4 x i1> @llvm.arm.mve.pred.i2v.v4i1(i32 [[TMP0]])
-// CHECK-NEXT:    call void @llvm.arm.mve.vstr.scatter.offset.predicated.p0i64.v2i64.v2i64.v4i1(i64* [[BASE:%.*]], <2 x i64> [[OFFSET:%.*]], <2 x i64> [[VALUE:%.*]], i32 64, i32 3, <4 x i1> [[TMP1]])
+// CHECK-NEXT:    [[TMP1:%.*]] = call <2 x i1> @llvm.arm.mve.pred.i2v.v2i1(i32 [[TMP0]])
+// CHECK-NEXT:    call void @llvm.arm.mve.vstr.scatter.offset.predicated.p0i64.v2i64.v2i64.v2i1(i64* [[BASE:%.*]], <2 x i64> [[OFFSET:%.*]], <2 x i64> [[VALUE:%.*]], i32 64, i32 3, <2 x i1> [[TMP1]])
 // CHECK-NEXT:    ret void
 //
 void test_vstrdq_scatter_shifted_offset_p_u64(uint64_t *base, uint64x2_t offset, uint64x2_t value, mve_pred16_t p)

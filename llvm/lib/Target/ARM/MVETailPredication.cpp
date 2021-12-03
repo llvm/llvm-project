@@ -213,7 +213,8 @@ bool MVETailPredication::IsSafeActiveMask(IntrinsicInst *ActiveLaneMask,
   auto *TC = SE->getSCEV(TripCount);
   int VectorWidth =
       cast<FixedVectorType>(ActiveLaneMask->getType())->getNumElements();
-  if (VectorWidth != 4 && VectorWidth != 8 && VectorWidth != 16)
+  if (VectorWidth != 2 && VectorWidth != 4 && VectorWidth != 8 &&
+      VectorWidth != 16)
     return false;
   ConstantInt *ConstElemCount = nullptr;
 
@@ -371,15 +372,10 @@ void MVETailPredication::InsertVCTPIntrinsic(IntrinsicInst *ActiveLaneMask,
   switch (VectorWidth) {
   default:
     llvm_unreachable("unexpected number of lanes");
+  case 2:  VCTPID = Intrinsic::arm_mve_vctp64; break;
   case 4:  VCTPID = Intrinsic::arm_mve_vctp32; break;
   case 8:  VCTPID = Intrinsic::arm_mve_vctp16; break;
   case 16: VCTPID = Intrinsic::arm_mve_vctp8; break;
-
-    // FIXME: vctp64 currently not supported because the predicate
-    // vector wants to be <2 x i1>, but v2i1 is not a legal MVE
-    // type, so problems happen at isel time.
-    // Intrinsic::arm_mve_vctp64 exists for ACLE intrinsics
-    // purposes, but takes a v4i1 instead of a v2i1.
   }
   Function *VCTP = Intrinsic::getDeclaration(M, VCTPID);
   Value *VCTPCall = Builder.CreateCall(VCTP, Processed);

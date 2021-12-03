@@ -197,22 +197,24 @@ define float @vctpi64(float* %0, i32 %1) {
 ; CHECK-NEXT:    [[TMP10:%.*]] = add <4 x i32> [[TMP4]], [[TMP9]]
 ; CHECK-NEXT:    br label [[TMP11:%.*]]
 ; CHECK:       11:
-; CHECK-NEXT:    [[TMP12:%.*]] = phi i32 [ [[TMP5]], [[TMP2:%.*]] ], [ [[TMP21:%.*]], [[TMP11]] ]
-; CHECK-NEXT:    [[TMP13:%.*]] = phi <4 x float> [ zeroinitializer, [[TMP2]] ], [ [[TMP19:%.*]], [[TMP11]] ]
-; CHECK-NEXT:    [[TMP14:%.*]] = phi <4 x i32> [ [[TMP10]], [[TMP2]] ], [ [[TMP17:%.*]], [[TMP11]] ]
-; CHECK-NEXT:    [[TMP15:%.*]] = tail call <4 x i1> @llvm.arm.mve.vctp64(i32 [[TMP12]])
-; CHECK-NEXT:    [[TMP16:%.*]] = tail call { <4 x float>, <4 x i32> } @llvm.arm.mve.vldr.gather.base.wb.predicated.v4f32.v4i32.v4i1(<4 x i32> [[TMP14]], i32 32, <4 x i1> [[TMP15]])
-; CHECK-NEXT:    [[TMP17]] = extractvalue { <4 x float>, <4 x i32> } [[TMP16]], 1
-; CHECK-NEXT:    [[TMP18:%.*]] = extractvalue { <4 x float>, <4 x i32> } [[TMP16]], 0
-; CHECK-NEXT:    [[TMP19]] = tail call <4 x float> @llvm.arm.mve.add.predicated.v4f32.v4i1(<4 x float> [[TMP13]], <4 x float> [[TMP18]], <4 x i1> [[TMP15]], <4 x float> [[TMP13]])
-; CHECK-NEXT:    [[TMP20:%.*]] = icmp sgt i32 [[TMP12]], 4
-; CHECK-NEXT:    [[TMP21]] = add i32 [[TMP12]], -4
-; CHECK-NEXT:    br i1 [[TMP20]], label [[TMP11]], label [[TMP22:%.*]]
-; CHECK:       22:
-; CHECK-NEXT:    [[TMP23:%.*]] = tail call i32 bitcast (i32 (...)* @vecAddAcrossF32Mve to i32 (<4 x float>)*)(<4 x float> [[TMP19]])
-; CHECK-NEXT:    [[TMP24:%.*]] = sitofp i32 [[TMP23]] to float
-; CHECK-NEXT:    [[TMP25:%.*]] = tail call float @llvm.fabs.f32(float [[TMP24]])
-; CHECK-NEXT:    ret float [[TMP25]]
+; CHECK-NEXT:    [[TMP12:%.*]] = phi i32 [ [[TMP5]], [[TMP2:%.*]] ], [ [[TMP23:%.*]], [[TMP11]] ]
+; CHECK-NEXT:    [[TMP13:%.*]] = phi <4 x float> [ zeroinitializer, [[TMP2]] ], [ [[TMP21:%.*]], [[TMP11]] ]
+; CHECK-NEXT:    [[TMP14:%.*]] = phi <4 x i32> [ [[TMP10]], [[TMP2]] ], [ [[TMP19:%.*]], [[TMP11]] ]
+; CHECK-NEXT:    [[TMP15:%.*]] = call <2 x i1> @llvm.arm.mve.vctp64(i32 [[TMP12]])
+; CHECK-NEXT:    [[TMP16:%.*]] = call i32 @llvm.arm.mve.pred.v2i.v2i1(<2 x i1> [[TMP15]])
+; CHECK-NEXT:    [[TMP17:%.*]] = call <4 x i1> @llvm.arm.mve.pred.i2v.v4i1(i32 [[TMP16]])
+; CHECK-NEXT:    [[TMP18:%.*]] = tail call { <4 x float>, <4 x i32> } @llvm.arm.mve.vldr.gather.base.wb.predicated.v4f32.v4i32.v4i1(<4 x i32> [[TMP14]], i32 32, <4 x i1> [[TMP17]])
+; CHECK-NEXT:    [[TMP19]] = extractvalue { <4 x float>, <4 x i32> } [[TMP18]], 1
+; CHECK-NEXT:    [[TMP20:%.*]] = extractvalue { <4 x float>, <4 x i32> } [[TMP18]], 0
+; CHECK-NEXT:    [[TMP21]] = tail call <4 x float> @llvm.arm.mve.add.predicated.v4f32.v4i1(<4 x float> [[TMP13]], <4 x float> [[TMP20]], <4 x i1> [[TMP17]], <4 x float> [[TMP13]])
+; CHECK-NEXT:    [[TMP22:%.*]] = icmp sgt i32 [[TMP12]], 4
+; CHECK-NEXT:    [[TMP23]] = add i32 [[TMP12]], -4
+; CHECK-NEXT:    br i1 [[TMP22]], label [[TMP11]], label [[TMP24:%.*]]
+; CHECK:       24:
+; CHECK-NEXT:    [[TMP25:%.*]] = tail call i32 bitcast (i32 (...)* @vecAddAcrossF32Mve to i32 (<4 x float>)*)(<4 x float> [[TMP21]])
+; CHECK-NEXT:    [[TMP26:%.*]] = sitofp i32 [[TMP25]] to float
+; CHECK-NEXT:    [[TMP27:%.*]] = tail call float @llvm.fabs.f32(float [[TMP26]])
+; CHECK-NEXT:    ret float [[TMP27]]
 ;
   %3 = tail call { <4 x i32>, i32 } @llvm.arm.mve.vidup.v4i32(i32 0, i32 8)
   %4 = extractvalue { <4 x i32>, i32 } %3, 0

@@ -50,8 +50,8 @@ int32x4_t test_vqdmulltq_m_s16(int32x4_t inactive, int16x8_t a, int16x8_t b, mve
 // CHECK-LABEL: @test_vqdmulltq_m_s32(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = zext i16 [[P:%.*]] to i32
-// CHECK-NEXT:    [[TMP1:%.*]] = call <4 x i1> @llvm.arm.mve.pred.i2v.v4i1(i32 [[TMP0]])
-// CHECK-NEXT:    [[TMP2:%.*]] = call <2 x i64> @llvm.arm.mve.vqdmull.predicated.v2i64.v4i32.v4i1(<4 x i32> [[A:%.*]], <4 x i32> [[B:%.*]], i32 1, <4 x i1> [[TMP1]], <2 x i64> [[INACTIVE:%.*]])
+// CHECK-NEXT:    [[TMP1:%.*]] = call <2 x i1> @llvm.arm.mve.pred.i2v.v2i1(i32 [[TMP0]])
+// CHECK-NEXT:    [[TMP2:%.*]] = call <2 x i64> @llvm.arm.mve.vqdmull.predicated.v2i64.v4i32.v2i1(<4 x i32> [[A:%.*]], <4 x i32> [[B:%.*]], i32 1, <2 x i1> [[TMP1]], <2 x i64> [[INACTIVE:%.*]])
 // CHECK-NEXT:    ret <2 x i64> [[TMP2]]
 //
 int64x2_t test_vqdmulltq_m_s32(int64x2_t inactive, int32x4_t a, int32x4_t b, mve_pred16_t p) {
@@ -114,8 +114,8 @@ int32x4_t test_vqdmulltq_m_n_s16(int32x4_t inactive, int16x8_t a, int16_t b, mve
 // CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[B:%.*]], i32 0
 // CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <4 x i32> [[DOTSPLATINSERT]], <4 x i32> poison, <4 x i32> zeroinitializer
 // CHECK-NEXT:    [[TMP0:%.*]] = zext i16 [[P:%.*]] to i32
-// CHECK-NEXT:    [[TMP1:%.*]] = call <4 x i1> @llvm.arm.mve.pred.i2v.v4i1(i32 [[TMP0]])
-// CHECK-NEXT:    [[TMP2:%.*]] = call <2 x i64> @llvm.arm.mve.vqdmull.predicated.v2i64.v4i32.v4i1(<4 x i32> [[A:%.*]], <4 x i32> [[DOTSPLAT]], i32 1, <4 x i1> [[TMP1]], <2 x i64> [[INACTIVE:%.*]])
+// CHECK-NEXT:    [[TMP1:%.*]] = call <2 x i1> @llvm.arm.mve.pred.i2v.v2i1(i32 [[TMP0]])
+// CHECK-NEXT:    [[TMP2:%.*]] = call <2 x i64> @llvm.arm.mve.vqdmull.predicated.v2i64.v4i32.v2i1(<4 x i32> [[A:%.*]], <4 x i32> [[DOTSPLAT]], i32 1, <2 x i1> [[TMP1]], <2 x i64> [[INACTIVE:%.*]])
 // CHECK-NEXT:    ret <2 x i64> [[TMP2]]
 //
 int64x2_t test_vqdmulltq_m_n_s32(int64x2_t inactive, int32x4_t a, int32_t b, mve_pred16_t p) {

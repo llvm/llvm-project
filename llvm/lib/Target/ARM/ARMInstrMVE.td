@@ -254,13 +254,6 @@ class MVEVectorVTInfo<ValueType vec, ValueType dblvec,
   // An LLVM ValueType representing a corresponding vector of
   // predicate bits, for use in ISel patterns that handle an IR
   // intrinsic describing the predicated form of the instruction.
-  //
-  // Usually, for a vector of N things, this will be vNi1. But for
-  // vectors of 2 values, we make an exception, and use v4i1 instead
-  // of v2i1. Rationale: MVE codegen doesn't support doing all the
-  // auxiliary operations on v2i1 (vector shuffles etc), and also,
-  // there's no MVE compare instruction that will _generate_ v2i1
-  // directly.
   ValueType Pred = pred;
 
   // Same as Pred but for DblVec rather than Vec.
@@ -294,25 +287,25 @@ class MVEVectorVTInfo<ValueType vec, ValueType dblvec,
 // Integer vector types that don't treat signed and unsigned differently.
 def MVE_v16i8 : MVEVectorVTInfo<v16i8, v8i16, v16i1, v8i1, 0b00, "i", ?>;
 def MVE_v8i16 : MVEVectorVTInfo<v8i16, v4i32, v8i1,  v4i1, 0b01, "i", ?>;
-def MVE_v4i32 : MVEVectorVTInfo<v4i32, v2i64, v4i1,  v4i1, 0b10, "i", ?>;
-def MVE_v2i64 : MVEVectorVTInfo<v2i64, ?,     v4i1,  ?,    0b11, "i", ?>;
+def MVE_v4i32 : MVEVectorVTInfo<v4i32, v2i64, v4i1,  v2i1, 0b10, "i", ?>;
+def MVE_v2i64 : MVEVectorVTInfo<v2i64, ?,     v2i1,  ?,    0b11, "i", ?>;
 
 // Explicitly signed and unsigned integer vectors. They map to the
 // same set of LLVM ValueTypes as above, but are represented
 // differently in assembly and instruction encodings.
 def MVE_v16s8 : MVEVectorVTInfo<v16i8, v8i16, v16i1, v8i1, 0b00, "s", 0b0>;
 def MVE_v8s16 : MVEVectorVTInfo<v8i16, v4i32, v8i1,  v4i1, 0b01, "s", 0b0>;
-def MVE_v4s32 : MVEVectorVTInfo<v4i32, v2i64, v4i1,  v4i1, 0b10, "s", 0b0>;
-def MVE_v2s64 : MVEVectorVTInfo<v2i64, ?,     v4i1,  ?,    0b11, "s", 0b0>;
+def MVE_v4s32 : MVEVectorVTInfo<v4i32, v2i64, v4i1,  v2i1, 0b10, "s", 0b0>;
+def MVE_v2s64 : MVEVectorVTInfo<v2i64, ?,     v2i1,  ?,    0b11, "s", 0b0>;
 def MVE_v16u8 : MVEVectorVTInfo<v16i8, v8i16, v16i1, v8i1, 0b00, "u", 0b1>;
 def MVE_v8u16 : MVEVectorVTInfo<v8i16, v4i32, v8i1,  v4i1, 0b01, "u", 0b1>;
-def MVE_v4u32 : MVEVectorVTInfo<v4i32, v2i64, v4i1,  v4i1, 0b10, "u", 0b1>;
-def MVE_v2u64 : MVEVectorVTInfo<v2i64, ?,     v4i1,  ?,    0b11, "u", 0b1>;
+def MVE_v4u32 : MVEVectorVTInfo<v4i32, v2i64, v4i1,  v2i1, 0b10, "u", 0b1>;
+def MVE_v2u64 : MVEVectorVTInfo<v2i64, ?,     v2i1,  ?,    0b11, "u", 0b1>;
 
 // FP vector types.
 def MVE_v8f16 : MVEVectorVTInfo<v8f16, v4f32, v8i1,  v4i1, 0b01, "f", ?>;
-def MVE_v4f32 : MVEVectorVTInfo<v4f32, v2f64, v4i1,  v4i1, 0b10, "f", ?>;
-def MVE_v2f64 : MVEVectorVTInfo<v2f64, ?,     v4i1,  ?,    0b11, "f", ?>;
+def MVE_v4f32 : MVEVectorVTInfo<v4f32, v2f64, v4i1,  v2i1, 0b10, "f", ?>;
+def MVE_v2f64 : MVEVectorVTInfo<v2f64, ?,     v2i1,  ?,    0b11, "f", ?>;
 
 // Polynomial vector types.
 def MVE_v16p8 : MVEVectorVTInfo<v16i8, v8i16, v16i1, v8i1, 0b11, "p", 0b0>;

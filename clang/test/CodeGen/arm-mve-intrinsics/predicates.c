@@ -62,8 +62,8 @@ mve_pred16_t test_vctp32q_m(uint32_t a, mve_pred16_t p)
 
 // CHECK-LABEL: @test_vctp64q(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = call <4 x i1> @llvm.arm.mve.vctp64(i32 [[A:%.*]])
-// CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.arm.mve.pred.v2i.v4i1(<4 x i1> [[TMP0]])
+// CHECK-NEXT:    [[TMP0:%.*]] = call <2 x i1> @llvm.arm.mve.vctp64(i32 [[A:%.*]])
+// CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.arm.mve.pred.v2i.v2i1(<2 x i1> [[TMP0]])
 // CHECK-NEXT:    [[TMP2:%.*]] = trunc i32 [[TMP1]] to i16
 // CHECK-NEXT:    ret i16 [[TMP2]]
 //
@@ -75,10 +75,10 @@ mve_pred16_t test_vctp64q(uint32_t a)
 // CHECK-LABEL: @test_vctp64q_m(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = zext i16 [[P:%.*]] to i32
-// CHECK-NEXT:    [[TMP1:%.*]] = call <4 x i1> @llvm.arm.mve.pred.i2v.v4i1(i32 [[TMP0]])
-// CHECK-NEXT:    [[TMP2:%.*]] = call <4 x i1> @llvm.arm.mve.vctp64(i32 [[A:%.*]])
-// CHECK-NEXT:    [[TMP3:%.*]] = and <4 x i1> [[TMP1]], [[TMP2]]
-// CHECK-NEXT:    [[TMP4:%.*]] = call i32 @llvm.arm.mve.pred.v2i.v4i1(<4 x i1> [[TMP3]])
+// CHECK-NEXT:    [[TMP1:%.*]] = call <2 x i1> @llvm.arm.mve.pred.i2v.v2i1(i32 [[TMP0]])
+// CHECK-NEXT:    [[TMP2:%.*]] = call <2 x i1> @llvm.arm.mve.vctp64(i32 [[A:%.*]])
+// CHECK-NEXT:    [[TMP3:%.*]] = and <2 x i1> [[TMP1]], [[TMP2]]
+// CHECK-NEXT:    [[TMP4:%.*]] = call i32 @llvm.arm.mve.pred.v2i.v2i1(<2 x i1> [[TMP3]])
 // CHECK-NEXT:    [[TMP5:%.*]] = trunc i32 [[TMP4]] to i16
 // CHECK-NEXT:    ret i16 [[TMP5]]
 //
