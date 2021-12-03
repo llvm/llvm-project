@@ -189,8 +189,8 @@ struct ExtractSliceOpInterface
     if (!inplace) {
       // Do not copy if the copied data is never read.
       if (isValueRead(extractSliceOp.result()))
-        state.allocationFns.memCpyFn(b, extractSliceOp.getLoc(), subView,
-                                     alloc);
+        state.options.allocationFns->memCpyFn(b, extractSliceOp.getLoc(),
+                                              subView, alloc);
       subView = alloc;
     }
 
@@ -464,8 +464,8 @@ struct InsertSliceOpInterface
       state.aliasInfo.insertNewBufferAlias(subView, dstMemref);
       // Copy tensor.
       Value srcMemref = state.lookupBuffer(insertSliceOp.source());
-      state.allocationFns.memCpyFn(b, insertSliceOp.getLoc(), srcMemref,
-                                   subView);
+      state.options.allocationFns->memCpyFn(b, insertSliceOp.getLoc(),
+                                            srcMemref, subView);
     }
 
     state.mapBuffer(insertSliceOp.result(), dstMemref);
