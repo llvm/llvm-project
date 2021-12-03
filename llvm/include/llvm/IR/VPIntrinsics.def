@@ -345,10 +345,9 @@ HELPER_REGISTER_REDUCTION_SEQ_VP(vp_reduce_fmul, VP_REDUCE_FMUL,
 ///// Shuffles {
 
 // llvm.vp.select(mask,on_true,on_false,vlen)
-BEGIN_REGISTER_VP_INTRINSIC(vp_select, 0, 3)
-// BEGIN_REGISTER_VP_SDNODE(VP_SELECT, -1, vp_select, 0, 4)
-// END_REGISTER_CASES(vp_select, VP_SELECT)
-END_REGISTER_VP_INTRINSIC(vp_select)
+BEGIN_REGISTER_VP(vp_select, 0, 3, VP_SELECT, -1)
+VP_PROPERTY_FUNCTIONAL_OPC(Select)
+END_REGISTER_VP(vp_select, VP_SELECT)
 
 BEGIN_REGISTER_VP(experimental_vp_splice, 3, 5, EXPERIMENTAL_VP_SPLICE, -1)
 END_REGISTER_VP(experimental_vp_splice, EXPERIMENTAL_VP_SPLICE)
