@@ -55,6 +55,12 @@ LLVMTypeConverter::LLVMTypeConverter(MLIRContext *ctx,
   });
   addConversion([&](LLVM::LLVMStructType type, SmallVectorImpl<Type> &results,
                     ArrayRef<Type> callStack) -> llvm::Optional<LogicalResult> {
+    // Fastpath for types that won't be converted by this callback anyway.
+    if (LLVM::isCompatibleType(type)) {
+      results.push_back(type);
+      return success();
+    }
+
     if (type.isIdentified()) {
       auto convertedType = LLVM::LLVMStructType::getIdentified(
           type.getContext(), ("_Converted_" + type.getName()).str());
