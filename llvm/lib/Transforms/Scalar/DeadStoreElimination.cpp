@@ -1032,15 +1032,6 @@ struct DSEState {
           !CB->onlyAccessesInaccessibleMemOrArgMem())
         return None;
 
-      switch (CB->getIntrinsicID()) {
-      case Intrinsic::init_trampoline:
-        return {MemoryLocation::getAfter(CB->getArgOperand(0))};
-      case Intrinsic::masked_store:
-        return {MemoryLocation::getForArgument(CB, 1, TLI)};
-      default:
-        break;
-      }
-
       return MemoryLocation::getForDest(CB, TLI);
     }
 
