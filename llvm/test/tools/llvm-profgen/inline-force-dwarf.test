@@ -1,15 +1,17 @@
 ; RUN: llvm-profgen --format=text --ignore-stack-samples --use-dwarf-correlation --perfscript=%S/Inputs/inline-cs-pseudoprobe.perfscript --binary=%S/Inputs/inline-cs-pseudoprobe.perfbin --output=%t --profile-summary-cold-count=0
 ; RUN: FileCheck %s --input-file %t
 
-; CHECK:     main:43:0
+; CHECK:     main:1109:0
 ; CHECK-NEXT: 0: 0
 ; CHECK-NEXT: 2: 0
-; CHECK-NEXT: 1: foo:43
+; CHECK-NEXT: 1: foo:1109
 ; CHECK-NEXT:  2: 14
 ; CHECK-NEXT:  3: 15
 ; CHECK-NEXT:  4: 0
-; CHECK-NEXT:  3: bar:14
+; CHECK-NEXT:  65526: 14
+; CHECK-NEXT:  3: bar:224
 ; CHECK-NEXT:   1: 14
+; CHECK-NEXT:   65533: 14
 
 
 ; clang -O3 -fexperimental-new-pass-manager -fuse-ld=lld -fpseudo-probe-for-profiling

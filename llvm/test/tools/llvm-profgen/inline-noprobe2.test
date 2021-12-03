@@ -27,76 +27,74 @@
 ;CHECK-RAW-PROFILE-NOT: 7f7448e889e4
 ;CHECK-RAW-PROFILE-NOT: 7f7448e88826
 
-;CHECK:       partition_pivot_first:367:5
-;CHECK-NEXT:  0: 5
-;CHECK-NEXT:  1: 5
-;CHECK-NEXT:  2: 5
-;CHECK-NEXT:  3: 5
-;CHECK-NEXT:  3.1: 83
-;CHECK-NEXT:  4: 82
-;CHECK-NEXT:  4.1: 26
-;CHECK-NEXT:  4.2: 25
-;CHECK-NEXT:  4.3: 26
-;CHECK-NEXT:  5: 6
-;CHECK-NEXT:  6: 6
-;CHECK-NEXT:  4.2: swap:75
-;CHECK-NEXT:   1: 25
-;CHECK-NEXT:   2: 25
-;CHECK-NEXT:   3: 25
-;CHECK-NEXT:  5: swap:18
-;CHECK-NEXT:   1: 6
-;CHECK-NEXT:   2: 6
-;CHECK-NEXT:   3: 6
-;CHECK-NEXT: partition_pivot_last:225:7
-;CHECK-NEXT:  1: 6
-;CHECK-NEXT:  2: 6
-;CHECK-NEXT:  3: 6
+;CHECK: partition_pivot_first:3022:5
+;CHECK:  0: 5
+;CHECK:  1: 5
+;CHECK:  2: 5
+;CHECK:  3: 5
+;CHECK:  3.1: 83
+;CHECK:  4: 82
+;CHECK:  4.1: 26
+;CHECK:  4.2: 25
+;CHECK:  4.3: 26
+;CHECK:  5: 6
+;CHECK:  6: 6
+;CHECK:  65516: 5
+;CHECK:  4.2: swap:300
+;CHECK:   1: 25
+;CHECK:   2: 25
+;CHECK:   3: 25
+;CHECK:  5: swap:102
+;CHECK:   1: 6
+;CHECK:   2: 6
+;CHECK:   3: 6
+;CHECK: partition_pivot_last:1210:7
+;CHECK:  1: 6
+;CHECK:  2: 6
+;CHECK:  3: 6
 
 ;w/o duplication factor :  3.1: 18
 ;w/o duplication factor :  3.3: 18
 ;w/o duplication factor :  4: 19
 ;w/o duplication factor :  5: 9
-;CHECK-NEXT:  3.1: 36
-;CHECK-NEXT:  3.3: 36
-;CHECK-NEXT:  4: 38
-;CHECK-NEXT:  5: 18
 
-;CHECK-NEXT:  6: 5
-;CHECK-NEXT:  7: 5
-;CHECK-NEXT:  5: swap:54
+;CHECK:  3.1: 36
+;CHECK:  3.3: 36
+;CHECK:  4: 38
+;CHECK:  5: 18
+;CHECK:  6: 5
+;CHECK:  7: 5
+;CHECK:  65526: 2
+;CHECK:  5: swap:247
 
 ;w/o duplication factor :  1: 9
 ;w/o duplication factor :  2: 9
 ;w/o duplication factor :  3: 9
-;CHECK-NEXT:   1: 18
-;CHECK-NEXT:   2: 18
-;CHECK-NEXT:   3: 18
 
-;CHECK-NEXT:  6: swap:15
-;CHECK-NEXT:   1: 5
-;CHECK-NEXT:   2: 5
-;CHECK-NEXT:   3: 5
-;CHECK-NEXT: quick_sort:83:25
-;CHECK-NEXT:  1: 24
-;CHECK-NEXT:  2: 12 partition_pivot_last:7 partition_pivot_first:5
-;CHECK-NEXT:  3: 11 quick_sort:12
-;CHECK-NEXT:  4: 12 quick_sort:12
-;CHECK-NEXT:  6: 24
-;CHECK-NEXT: main:52:0
-;CHECK-NEXT:  0: 0
-;CHECK-NEXT:  3: 0
-;CHECK-NEXT:  4.1: 0
-;CHECK-NEXT:  4.3: 0
-;CHECK-NEXT:  5.1: 10
-;CHECK-NEXT:  5.3: 10
-;CHECK-NEXT:  6: 10
-;CHECK-NEXT:  6.1: 12
-;CHECK-NEXT:  6.3: 10
-;CHECK-NEXT:  7: 0
-;CHECK-NEXT:  8: 0 quick_sort:1
-;CHECK-NEXT:  9: 0
-;CHECK-NEXT:  11: 0
-;CHECK-NEXT:  14: 0
+;CHECK:   1: 18
+;CHECK:   2: 18
+;CHECK:   3: 18
+;CHECK:  6: swap:85
+;CHECK:   1: 5
+;CHECK:   2: 5
+;CHECK:   3: 5
+;CHECK: main:820:0
+;CHECK:  0: 0
+;CHECK:  3: 0
+;CHECK:  4.1: 0
+;CHECK:  4.3: 0
+;CHECK:  5.1: 10
+;CHECK:  5.3: 10
+;CHECK:  6: 10
+;CHECK:  6.1: 12
+;CHECK:  6.3: 10
+;CHECK:  7: 0
+;CHECK:  8: 0 quick_sort:1
+;CHECK:  9: 0
+;CHECK:  11: 0
+;CHECK:  14: 0
+;CHECK:  65499: 0
+
 
 ; original code:
 ; clang -O3 -g -fno-optimize-sibling-calls -fdebug-info-for-profiling qsort.c -o a.out

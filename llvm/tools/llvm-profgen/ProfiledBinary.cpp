@@ -694,15 +694,11 @@ SampleContextFrameVector ProfiledBinary::symbolize(const InstructionPointer &IP,
       FunctionName = FunctionSamples::getCanonicalFnName(FunctionName);
 
     uint32_t Discriminator = CallerFrame.Discriminator;
-    uint32_t LineOffset = CallerFrame.Line - CallerFrame.StartLine;
+    uint32_t LineOffset = (CallerFrame.Line - CallerFrame.StartLine) & 0xffff;
     if (UseProbeDiscriminator) {
       LineOffset =
           PseudoProbeDwarfDiscriminator::extractProbeIndex(Discriminator);
       Discriminator = 0;
-    } else {
-      // Filter out invalid negative(int type) lineOffset
-      if (LineOffset & 0xffff0000)
-        return SampleContextFrameVector();
     }
 
     LineLocation Line(LineOffset, Discriminator);

@@ -332,6 +332,13 @@ public:
     return TextSegmentOffsets;
   }
 
+  uint64_t getInstSize(uint64_t Offset) const {
+    auto I = Offset2InstSizeMap.find(Offset);
+    if (I == Offset2InstSizeMap.end())
+      return 0;
+    return I->second;
+  }
+
   bool offsetIsCode(uint64_t Offset) const {
     return Offset2InstSizeMap.find(Offset) != Offset2InstSizeMap.end();
   }
