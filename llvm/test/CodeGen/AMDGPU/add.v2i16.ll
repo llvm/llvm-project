@@ -25,7 +25,7 @@ define amdgpu_kernel void @v_test_add_v2i16(<2 x i16> addrspace(1)* %out, <2 x i
 ; GFX9: s_load_dword [[VAL0:s[0-9]+]]
 ; GFX9: s_load_dword [[VAL1:s[0-9]+]]
 ; GFX9: v_mov_b32_e32 [[VVAL1:v[0-9]+]]
-; GFX9: v_pk_add_u16 v{{[0-9]+}}, [[VAL0]], [[VVAL1]]
+; GFX9: v_pk_add_u16 v{{[0-9]+}}, [[VAL1]], [[VVAL1]]
 
 ; VI: s_add_i32
 ; VI: s_add_i32

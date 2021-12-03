@@ -979,6 +979,6 @@ operator!=(const hash_multimap<_Key, _Tp, _Hash, _Pred, _Alloc>& __x,
     return !(__x == __y);
 }
 
-} // __gnu_cxx
+} // namespace __gnu_cxx
 
 #endif // _LIBCPP_HASH_MAP

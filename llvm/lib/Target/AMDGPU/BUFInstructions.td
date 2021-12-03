@@ -6,11 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-def MUBUFAddr64 : ComplexPattern<i64, 4, "SelectMUBUFAddr64">;
-def MUBUFOffset : ComplexPattern<i64, 3, "SelectMUBUFOffset">;
+def MUBUFAddr64 : ComplexPattern<iPTR, 4, "SelectMUBUFAddr64">;
+def MUBUFOffset : ComplexPattern<iPTR, 3, "SelectMUBUFOffset">;
 
-def MUBUFScratchOffen : ComplexPattern<i64, 4, "SelectMUBUFScratchOffen", [], [SDNPWantParent]>;
-def MUBUFScratchOffset : ComplexPattern<i64, 3, "SelectMUBUFScratchOffset", [], [SDNPWantParent], 20>;
+def MUBUFScratchOffen : ComplexPattern<iPTR, 4, "SelectMUBUFScratchOffen", [], [SDNPWantParent]>;
+def MUBUFScratchOffset : ComplexPattern<iPTR, 3, "SelectMUBUFScratchOffset", [], [SDNPWantParent], 20>;
 
 def BUFAddrKind {
   int Offset = 0;

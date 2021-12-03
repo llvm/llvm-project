@@ -134,7 +134,7 @@ entry:
 ; SI: v_cmp_eq_f32_e32 vcc, 1.0, v{{[0-9]+}}
 ; SI: v_cndmask_b32_e64 v{{[0-9]+}}, 0, 1, vcc
 ; VI: v_cmp_eq_f16_e64 s{{\[[0-9]+:[0-9]+\]}}, 1.0, s{{[0-9]+}}
-; VI: v_cndmask_b32_e64 v{{[0-9]+}}, 0, 1, s[0:1]
+; VI: v_cndmask_b32_e64 v{{[0-9]+}}, 0, 1, s[4:5]
 define amdgpu_kernel void @fptoui_f16_to_i1(i1 addrspace(1)* %out, half %in) {
 entry:
   %conv = fptoui half %in to i1

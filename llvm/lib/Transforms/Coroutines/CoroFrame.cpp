@@ -2572,9 +2572,13 @@ void coro::salvageDebugInfo(
   DVI->setExpression(Expr);
   /// It makes no sense to move the dbg.value intrinsic.
   if (!isa<DbgValueInst>(DVI)) {
-    if (auto *InsertPt = dyn_cast<Instruction>(Storage))
+    if (auto *II = dyn_cast<InvokeInst>(Storage))
+      DVI->moveBefore(II->getNormalDest()->getFirstNonPHI());
+    else if (auto *InsertPt = dyn_cast<Instruction>(Storage)) {
+      assert(!InsertPt->isTerminator() &&
+             "Unimaged terminator that could return a storage.");
       DVI->moveAfter(InsertPt);
-    else if (isa<Argument>(Storage))
+    } else if (isa<Argument>(Storage))
       DVI->moveAfter(F->getEntryBlock().getFirstNonPHI());
   }
 }

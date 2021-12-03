@@ -77,6 +77,11 @@ public:
 
 /// A reusable client that can perform HTTPRequests through a network socket.
 class HTTPClient {
+#ifdef LLVM_ENABLE_CURL
+  void *Curl = nullptr;
+  static bool IsInitialized;
+#endif
+
 public:
   HTTPClient();
   ~HTTPClient();

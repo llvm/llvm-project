@@ -39,8 +39,8 @@ main_body:
 }
 
 ; GCN-LABEL: {{^}}tbuffer_load_immoffs_large
-; PREGFX10: tbuffer_load_format_xyzw {{v\[[0-9]+:[0-9]+\]}}, off, {{s\[[0-9]+:[0-9]+\]}}, {{s[0-9]+}} format:[BUF_DATA_FORMAT_32_32_32_32,BUF_NUM_FORMAT_SSCALED] offset:73
 ; PREGFX10: tbuffer_load_format_xyzw {{v\[[0-9]+:[0-9]+\]}}, off, {{s\[[0-9]+:[0-9]+\]}}, 61 format:[BUF_DATA_FORMAT_RESERVED_15,BUF_NUM_FORMAT_USCALED] offset:4095
+; PREGFX10: tbuffer_load_format_xyzw {{v\[[0-9]+:[0-9]+\]}}, off, {{s\[[0-9]+:[0-9]+\]}}, {{s[0-9]+}} format:[BUF_DATA_FORMAT_32_32_32_32,BUF_NUM_FORMAT_SSCALED] offset:73
 ; PREGFX10: tbuffer_load_format_xyzw {{v\[[0-9]+:[0-9]+\]}}, off, {{s\[[0-9]+:[0-9]+\]}}, {{s[0-9]+}} format:[BUF_DATA_FORMAT_32_32_32,BUF_NUM_FORMAT_UINT] offset:1
 ; GFX10-DAG: tbuffer_load_format_xyzw {{v\[[0-9]+:[0-9]+\]}}, off, {{s\[[0-9]+:[0-9]+\]}}, 61 format:[BUF_FMT_10_10_10_2_SSCALED] offset:4095
 ; GFX10-DAG: tbuffer_load_format_xyzw {{v\[[0-9]+:[0-9]+\]}}, off, {{s\[[0-9]+:[0-9]+\]}}, {{s[0-9]+}} format:[BUF_FMT_32_32_UINT] offset:73

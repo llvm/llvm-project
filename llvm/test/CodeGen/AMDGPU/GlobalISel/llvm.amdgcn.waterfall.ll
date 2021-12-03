@@ -2317,10 +2317,10 @@ define amdgpu_ps <4 x float> @test_waterfall_multi_begin_uniform_idx_1(<8 x i32>
 ; VI-NEXT:    v_addc_u32_e32 v1, vcc, v3, v1, vcc
 ; VI-NEXT:    flat_load_dwordx4 v[5:8], v[0:1]
 ; VI-NEXT:    s_mov_b32 s4, s5
-; VI-NEXT:    s_bfe_i64 s[4:5], s[4:5], 0x200000
-; VI-NEXT:    s_lshl_b64 s[4:5], s[4:5], 5
-; VI-NEXT:    s_add_u32 s0, s0, s4
-; VI-NEXT:    s_addc_u32 s1, s1, s5
+; VI-NEXT:    s_bfe_i64 s[2:3], s[4:5], 0x200000
+; VI-NEXT:    s_lshl_b64 s[2:3], s[2:3], 5
+; VI-NEXT:    s_add_u32 s0, s0, s2
+; VI-NEXT:    s_addc_u32 s1, s1, s3
 ; VI-NEXT:    s_load_dwordx8 s[0:7], s[0:1], 0x0
 ; VI-NEXT:    s_mov_b32 s10, 0
 ; VI-NEXT:    v_mov_b32_e32 v0, 0
@@ -2368,10 +2368,10 @@ define amdgpu_ps <4 x float> @test_waterfall_multi_begin_uniform_idx_1(<8 x i32>
 ; GFX9-NEXT:    v_addc_co_u32_e32 v1, vcc, v3, v1, vcc
 ; GFX9-NEXT:    global_load_dwordx4 v[5:8], v[0:1], off
 ; GFX9-NEXT:    s_mov_b32 s4, s5
-; GFX9-NEXT:    s_bfe_i64 s[4:5], s[4:5], 0x200000
-; GFX9-NEXT:    s_lshl_b64 s[4:5], s[4:5], 5
-; GFX9-NEXT:    s_add_u32 s0, s0, s4
-; GFX9-NEXT:    s_addc_u32 s1, s1, s5
+; GFX9-NEXT:    s_bfe_i64 s[2:3], s[4:5], 0x200000
+; GFX9-NEXT:    s_lshl_b64 s[2:3], s[2:3], 5
+; GFX9-NEXT:    s_add_u32 s0, s0, s2
+; GFX9-NEXT:    s_addc_u32 s1, s1, s3
 ; GFX9-NEXT:    s_load_dwordx8 s[0:7], s[0:1], 0x0
 ; GFX9-NEXT:    s_mov_b32 s10, 0
 ; GFX9-NEXT:    v_mov_b32_e32 v0, 0

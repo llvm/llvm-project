@@ -133,9 +133,13 @@ class SIRegisterClass <string n, list<ValueType> rTypes, int Align, dag rList>
   field bit HasVGPR = 0;
   field bit HasAGPR = 0;
 
+  // For scalar register classes.
+  field bit HasSGPR = 0;
+
   // These need to be kept in sync with the enum SIRCFlags.
   let TSFlags{0} = HasVGPR;
   let TSFlags{1} = HasAGPR;
+  let TSFlags{2} = HasSGPR;
 }
 
 multiclass SIRegLoHi16 <string n, bits<16> regIdx, bit ArtificialHigh = 1,
@@ -307,45 +311,51 @@ foreach Index = 0...255 in {
 //  Groupings using register classes and tuples
 //===----------------------------------------------------------------------===//
 
-def SCC_CLASS : RegisterClass<"AMDGPU", [i1], 1, (add SCC)> {
+def SCC_CLASS : SIRegisterClass<"AMDGPU", [i1], 1, (add SCC)> {
   let CopyCost = -1;
   let isAllocatable = 0;
+  let HasSGPR = 1;
 }
 
-def M0_CLASS : RegisterClass<"AMDGPU", [i32], 32, (add M0)> {
+def M0_CLASS : SIRegisterClass<"AMDGPU", [i32], 32, (add M0)> {
   let CopyCost = 1;
   let isAllocatable = 0;
+  let HasSGPR = 1;
 }
 
-def M0_CLASS_LO16 : RegisterClass<"AMDGPU", [i16, f16], 16, (add M0_LO16)> {
+def M0_CLASS_LO16 : SIRegisterClass<"AMDGPU", [i16, f16], 16, (add M0_LO16)> {
   let CopyCost = 1;
   let Size = 16;
   let isAllocatable = 0;
+  let HasSGPR = 1;
 }
 
 // TODO: Do we need to set DwarfRegAlias on register tuples?
 
-def SGPR_LO16 : RegisterClass<"AMDGPU", [i16, f16], 16,
+def SGPR_LO16 : SIRegisterClass<"AMDGPU", [i16, f16], 16,
                               (add (sequence "SGPR%u_LO16", 0, 105))> {
   let AllocationPriority = 9;
   let Size = 16;
   let GeneratePressureSet = 0;
+  let HasSGPR = 1;
 }
 
-def SGPR_HI16 : RegisterClass<"AMDGPU", [i16, f16], 16,
+def SGPR_HI16 : SIRegisterClass<"AMDGPU", [i16, f16], 16,
                               (add (sequence "SGPR%u_HI16", 0, 105))> {
   let isAllocatable = 0;
   let Size = 16;
   let GeneratePressureSet = 0;
+  let HasSGPR = 1;
 }
 
 // SGPR 32-bit registers
-def SGPR_32 : RegisterClass<"AMDGPU", [i32, f32, i16, f16, v2i16, v2f16], 32,
+def SGPR_32 : SIRegisterClass<"AMDGPU", [i32, f32, i16, f16, v2i16, v2f16], 32,
                             (add (sequence "SGPR%u", 0, 105))> {
   // Give all SGPR classes higher priority than VGPR classes, because
   // we want to spill SGPRs to VGPRs.
   let AllocationPriority = 9;
   let GeneratePressureSet = 0;
+  let HasSGPR = 1;
 }
 
 // SGPR 64-bit registers
@@ -376,16 +386,18 @@ def SGPR_512Regs : SIRegisterTuples<getSubRegs<16>.ret, SGPR_32, 105, 4, 16, "s"
 def SGPR_1024Regs : SIRegisterTuples<getSubRegs<32>.ret, SGPR_32, 105, 4, 32, "s">;
 
 // Trap handler TMP 32-bit registers
-def TTMP_32 : RegisterClass<"AMDGPU", [i32, f32, v2i16, v2f16], 32,
+def TTMP_32 : SIRegisterClass<"AMDGPU", [i32, f32, v2i16, v2f16], 32,
                             (add (sequence "TTMP%u", 0, 15))> {
   let isAllocatable = 0;
+  let HasSGPR = 1;
 }
 
 // Trap handler TMP 16-bit registers
-def TTMP_LO16 : RegisterClass<"AMDGPU", [i16, f16], 16,
+def TTMP_LO16 : SIRegisterClass<"AMDGPU", [i16, f16], 16,
                               (add (sequence "TTMP%u_LO16", 0, 15))> {
   let Size = 16;
   let isAllocatable = 0;
+  let HasSGPR = 1;
 }
 
 // Trap handler TMP 64-bit registers
@@ -598,16 +610,18 @@ def AGPR_1024 : SIRegisterTuples<getSubRegs<32>.ret, AGPR_32, 255, 1, 32, "a">;
 //  Register classes used as source and destination
 //===----------------------------------------------------------------------===//
 
-def Pseudo_SReg_32 : RegisterClass<"AMDGPU", [i32, f32, i16, f16, v2i16, v2f16], 32,
+def Pseudo_SReg_32 : SIRegisterClass<"AMDGPU", [i32, f32, i16, f16, v2i16, v2f16], 32,
   (add FP_REG, SP_REG)> {
   let isAllocatable = 0;
   let CopyCost = -1;
+  let HasSGPR = 1;
 }
 
-def Pseudo_SReg_128 : RegisterClass<"AMDGPU", [v4i32, v2i64, v2f64], 32,
+def Pseudo_SReg_128 : SIRegisterClass<"AMDGPU", [v4i32, v2i64, v2f64], 32,
   (add PRIVATE_RSRC_REG)> {
   let isAllocatable = 0;
   let CopyCost = -1;
+  let HasSGPR = 1;
 }
 
 def LDS_DIRECT_CLASS : RegisterClass<"AMDGPU", [i32], 32,
@@ -616,10 +630,10 @@ def LDS_DIRECT_CLASS : RegisterClass<"AMDGPU", [i32], 32,
   let CopyCost = -1;
 }
 
-let GeneratePressureSet = 0 in {
+let GeneratePressureSet = 0, HasSGPR = 1 in {
 // Subset of SReg_32 without M0 for SMRD instructions and alike.
 // See comments in SIInstructions.td for more info.
-def SReg_32_XM0_XEXEC : RegisterClass<"AMDGPU", [i32, f32, i16, f16, v2i16, v2f16, i1], 32,
+def SReg_32_XM0_XEXEC : SIRegisterClass<"AMDGPU", [i32, f32, i16, f16, v2i16, v2f16, i1], 32,
   (add SGPR_32, VCC_LO, VCC_HI, FLAT_SCR_LO, FLAT_SCR_HI, XNACK_MASK_LO, XNACK_MASK_HI,
    SGPR_NULL, TTMP_32, TMA_LO, TMA_HI, TBA_LO, TBA_HI, SRC_SHARED_BASE, SRC_SHARED_LIMIT,
    SRC_PRIVATE_BASE, SRC_PRIVATE_LIMIT, SRC_POPS_EXITING_WAVE_ID,
@@ -627,7 +641,7 @@ def SReg_32_XM0_XEXEC : RegisterClass<"AMDGPU", [i32, f32, i16, f16, v2i16, v2f1
   let AllocationPriority = 10;
 }
 
-def SReg_LO16_XM0_XEXEC : RegisterClass<"AMDGPU", [i16, f16], 16,
+def SReg_LO16_XM0_XEXEC : SIRegisterClass<"AMDGPU", [i16, f16], 16,
   (add SGPR_LO16, VCC_LO_LO16, VCC_HI_LO16, FLAT_SCR_LO_LO16, FLAT_SCR_HI_LO16,
    XNACK_MASK_LO_LO16, XNACK_MASK_HI_LO16, SGPR_NULL_LO16, TTMP_LO16, TMA_LO_LO16,
    TMA_HI_LO16, TBA_LO_LO16, TBA_HI_LO16, SRC_SHARED_BASE_LO16,
@@ -637,29 +651,29 @@ def SReg_LO16_XM0_XEXEC : RegisterClass<"AMDGPU", [i16, f16], 16,
   let AllocationPriority = 10;
 }
 
-def SReg_32_XEXEC_HI : RegisterClass<"AMDGPU", [i32, f32, i16, f16, v2i16, v2f16, i1], 32,
+def SReg_32_XEXEC_HI : SIRegisterClass<"AMDGPU", [i32, f32, i16, f16, v2i16, v2f16, i1], 32,
   (add SReg_32_XM0_XEXEC, EXEC_LO, M0_CLASS)> {
   let AllocationPriority = 10;
 }
 
-def SReg_LO16_XEXEC_HI : RegisterClass<"AMDGPU", [i16, f16], 16,
+def SReg_LO16_XEXEC_HI : SIRegisterClass<"AMDGPU", [i16, f16], 16,
   (add SReg_LO16_XM0_XEXEC, EXEC_LO_LO16, M0_CLASS_LO16)> {
   let Size = 16;
   let AllocationPriority = 10;
 }
 
-def SReg_32_XM0 : RegisterClass<"AMDGPU", [i32, f32, i16, f16, v2i16, v2f16, i1], 32,
+def SReg_32_XM0 : SIRegisterClass<"AMDGPU", [i32, f32, i16, f16, v2i16, v2f16, i1], 32,
   (add SReg_32_XM0_XEXEC, EXEC_LO, EXEC_HI)> {
   let AllocationPriority = 10;
 }
 
-def SReg_LO16_XM0 : RegisterClass<"AMDGPU", [i16, f16], 16,
+def SReg_LO16_XM0 : SIRegisterClass<"AMDGPU", [i16, f16], 16,
   (add SReg_LO16_XM0_XEXEC, EXEC_LO_LO16, EXEC_HI_LO16)> {
   let Size = 16;
   let AllocationPriority = 10;
 }
 
-def SReg_LO16 : RegisterClass<"AMDGPU", [i16, f16], 16,
+def SReg_LO16 : SIRegisterClass<"AMDGPU", [i16, f16], 16,
   (add SGPR_LO16, SReg_LO16_XM0, M0_CLASS_LO16, EXEC_LO_LO16, EXEC_HI_LO16, SReg_LO16_XEXEC_HI)> {
   let Size = 16;
   let AllocationPriority = 10;
@@ -667,65 +681,75 @@ def SReg_LO16 : RegisterClass<"AMDGPU", [i16, f16], 16,
 } // End GeneratePressureSet = 0
 
 // Register class for all scalar registers (SGPRs + Special Registers)
-def SReg_32 : RegisterClass<"AMDGPU", [i32, f32, i16, f16, v2i16, v2f16, i1], 32,
+def SReg_32 : SIRegisterClass<"AMDGPU", [i32, f32, i16, f16, v2i16, v2f16, i1], 32,
   (add SReg_32_XM0, M0_CLASS, EXEC_LO, EXEC_HI, SReg_32_XEXEC_HI)> {
   let AllocationPriority = 10;
+  let HasSGPR = 1;
 }
 
 let GeneratePressureSet = 0 in {
-def SRegOrLds_32 : RegisterClass<"AMDGPU", [i32, f32, i16, f16, v2i16, v2f16], 32,
+def SRegOrLds_32 : SIRegisterClass<"AMDGPU", [i32, f32, i16, f16, v2i16, v2f16], 32,
   (add SReg_32, LDS_DIRECT_CLASS)> {
   let isAllocatable = 0;
+  let HasSGPR = 1;
 }
 
-def SGPR_64 : RegisterClass<"AMDGPU", [v2i32, i64, v2f32, f64, v4i16, v4f16], 32,
+def SGPR_64 : SIRegisterClass<"AMDGPU", [v2i32, i64, v2f32, f64, v4i16, v4f16], 32,
                             (add SGPR_64Regs)> {
   let CopyCost = 1;
   let AllocationPriority = 11;
+  let HasSGPR = 1;
 }
 
 // CCR (call clobbered registers) SGPR 64-bit registers
-def CCR_SGPR_64 : RegisterClass<"AMDGPU", SGPR_64.RegTypes, 32,
+def CCR_SGPR_64 : SIRegisterClass<"AMDGPU", SGPR_64.RegTypes, 32,
                                 (add (trunc SGPR_64, 16))> {
   let CopyCost = SGPR_64.CopyCost;
   let AllocationPriority = SGPR_64.AllocationPriority;
+  let HasSGPR = 1;
 }
 
 // Call clobbered 64-bit SGPRs for AMDGPU_Gfx CC
-def Gfx_CCR_SGPR_64 : RegisterClass<"AMDGPU", SGPR_64.RegTypes, 32,
+def Gfx_CCR_SGPR_64 : SIRegisterClass<"AMDGPU", SGPR_64.RegTypes, 32,
                                 (add (trunc (shl SGPR_64, 15), 1), // s[30:31]
                                      (trunc (shl SGPR_64, 18), 14))> { // s[36:37]-s[s62:63]
   let CopyCost = SGPR_64.CopyCost;
   let AllocationPriority = SGPR_64.AllocationPriority;
+  let HasSGPR = 1;
 }
 
-def TTMP_64 : RegisterClass<"AMDGPU", [v2i32, i64, f64, v4i16, v4f16], 32,
+def TTMP_64 : SIRegisterClass<"AMDGPU", [v2i32, i64, f64, v4i16, v4f16], 32,
                             (add TTMP_64Regs)> {
   let isAllocatable = 0;
+  let HasSGPR = 1;
 }
 
-def SReg_64_XEXEC : RegisterClass<"AMDGPU", [v2i32, i64, v2f32, f64, i1, v4i16, v4f16], 32,
+def SReg_64_XEXEC : SIRegisterClass<"AMDGPU", [v2i32, i64, v2f32, f64, i1, v4i16, v4f16], 32,
   (add SGPR_64, VCC, FLAT_SCR, XNACK_MASK, TTMP_64, TBA, TMA)> {
   let CopyCost = 1;
   let AllocationPriority = 13;
+  let HasSGPR = 1;
 }
 
-def SReg_64 : RegisterClass<"AMDGPU", [v2i32, i64, v2f32, f64, i1, v4i16, v4f16], 32,
+def SReg_64 : SIRegisterClass<"AMDGPU", [v2i32, i64, v2f32, f64, i1, v4i16, v4f16], 32,
   (add SReg_64_XEXEC, EXEC)> {
   let CopyCost = 1;
   let AllocationPriority = 13;
+  let HasSGPR = 1;
 }
 
-def SReg_1_XEXEC : RegisterClass<"AMDGPU", [i1], 32,
+def SReg_1_XEXEC : SIRegisterClass<"AMDGPU", [i1], 32,
   (add SReg_64_XEXEC, SReg_32_XM0_XEXEC)> {
   let CopyCost = 1;
   let isAllocatable = 0;
+  let HasSGPR = 1;
 }
 
-def SReg_1 : RegisterClass<"AMDGPU", [i1], 32,
+def SReg_1 : SIRegisterClass<"AMDGPU", [i1], 32,
   (add SReg_1_XEXEC, EXEC, EXEC_LO)> {
   let CopyCost = 1;
   let isAllocatable = 0;
+  let HasSGPR = 1;
 }
 
 multiclass SRegClass<int numRegs, int priority,
@@ -738,18 +762,18 @@ multiclass SRegClass<int numRegs, int priority,
   defvar sgprName = !strconcat("SGPR_", suffix);
   defvar ttmpName = !strconcat("TTMP_", suffix);
 
-  let AllocationPriority = priority, CopyCost = copyCost in {
-    def "" # sgprName : RegisterClass<"AMDGPU", regTypes, 32, (add regList)> {
+  let AllocationPriority = priority, CopyCost = copyCost, HasSGPR = 1 in {
+    def "" # sgprName : SIRegisterClass<"AMDGPU", regTypes, 32, (add regList)> {
     }
 
     if hasTTMP then {
-      def "" # ttmpName : RegisterClass<"AMDGPU", regTypes, 32, (add ttmpList)> {
+      def "" # ttmpName : SIRegisterClass<"AMDGPU", regTypes, 32, (add ttmpList)> {
         let isAllocatable = 0;
       }
     }
 
     def SReg_ # suffix :
-      RegisterClass<"AMDGPU", regTypes, 32,
+      SIRegisterClass<"AMDGPU", regTypes, 32,
                     !con(!dag(add, [!cast<RegisterClass>(sgprName)], ["sgpr"]),
                     !if(hasTTMP,
                         !dag(add, [!cast<RegisterClass>(ttmpName)], ["ttmp"]),
@@ -855,11 +879,13 @@ def VS_32 : SIRegisterClass<"AMDGPU", [i32, f32, i16, f16, v2i16, v2f16], 32,
                           (add VGPR_32, SReg_32, LDS_DIRECT_CLASS)> {
   let isAllocatable = 0;
   let HasVGPR = 1;
+  let HasSGPR = 1;
 }
 
 def VS_64 : SIRegisterClass<"AMDGPU", [i64, f64, v2f32], 32, (add VReg_64, SReg_64)> {
   let isAllocatable = 0;
   let HasVGPR = 1;
+  let HasSGPR = 1;
 }
 
 def AV_32 : SIRegisterClass<"AMDGPU", VGPR_32.RegTypes, 32, (add VGPR_32, AGPR_32)> {

@@ -77,6 +77,7 @@ public:
     LLVM_DEBUG(dbgs() << "Completed profi after " << AugmentationIters
                       << " iterations with " << TotalFlow << " total flow"
                       << " of " << TotalCost << " cost\n");
+    (void)TotalFlow;
     return TotalCost;
   }
 
@@ -219,7 +220,7 @@ private:
       Now = Pred;
     }
 
-    assert(PathCapacity > 0 && "found incorrect augmenting path");
+    assert(PathCapacity > 0 && "found an incorrect augmenting path");
 
     // Update the flow along the path
     Now = Target;
@@ -268,6 +269,352 @@ private:
   uint64_t Source;
   /// Target (sink) node of the flow.
   uint64_t Target;
+};
+
+/// A post-processing adjustment of control flow. It applies two steps by
+/// rerouting some flow and making it more realistic:
+///
+/// - First, it removes all isolated components ("islands") with a positive flow
+///   that are unreachable from the entry block. For every such component, we
+///   find the shortest from the entry to an exit passing through the component,
+///   and increase the flow by one unit along the path.
+///
+/// - Second, it identifies all "unknown subgraphs" consisting of basic blocks
+///   with no sampled counts. Then it rebalnces the flow that goes through such
+///   a subgraph so that each branch is taken with probability 50%.
+///   An unknown subgraph is such that for every two nodes u and v:
+///     - u dominates v and u is not unknown;
+///     - v post-dominates u; and
+///     - all inner-nodes of all (u,v)-paths are unknown.
+///
+class FlowAdjuster {
+public:
+  FlowAdjuster(FlowFunction &Func) : Func(Func) {
+    assert(Func.Blocks[Func.Entry].isEntry() &&
+           "incorrect index of the entry block");
+  }
+
+  // Run the post-processing
+  void run() {
+    /// Adjust the flow to get rid of isolated components.
+    joinIsolatedComponents();
+
+    /// Rebalance the flow inside unknown subgraphs.
+    rebalanceUnknownSubgraphs();
+  }
+
+  /// The probability for the first successor of a unknown subgraph
+  static constexpr double UnknownFirstSuccProbability = 0.5;
+
+private:
+  void joinIsolatedComponents() {
+    // Find blocks that are reachable from the source
+    auto Visited = std::vector<bool>(NumBlocks(), false);
+    findReachable(Func.Entry, Visited);
+
+    // Iterate over all non-reachable blocks and adjust their weights
+    for (uint64_t I = 0; I < NumBlocks(); I++) {
+      auto &Block = Func.Blocks[I];
+      if (Block.Flow > 0 && !Visited[I]) {
+        // Find a path from the entry to an exit passing through the block I
+        auto Path = findShortestPath(I);
+        // Increase the flow along the path
+        assert(Path.size() > 0 && Path[0]->Source == Func.Entry &&
+               "incorrectly computed path adjusting control flow");
+        Func.Blocks[Func.Entry].Flow += 1;
+        for (auto &Jump : Path) {
+          Jump->Flow += 1;
+          Func.Blocks[Jump->Target].Flow += 1;
+          // Update reachability
+          findReachable(Jump->Target, Visited);
+        }
+      }
+    }
+  }
+
+  /// Run BFS from a given block along the jumps with a positive flow and mark
+  /// all reachable blocks.
+  void findReachable(uint64_t Src, std::vector<bool> &Visited) {
+    if (Visited[Src])
+      return;
+    std::queue<uint64_t> Queue;
+    Queue.push(Src);
+    Visited[Src] = true;
+    while (!Queue.empty()) {
+      Src = Queue.front();
+      Queue.pop();
+      for (auto Jump : Func.Blocks[Src].SuccJumps) {
+        uint64_t Dst = Jump->Target;
+        if (Jump->Flow > 0 && !Visited[Dst]) {
+          Queue.push(Dst);
+          Visited[Dst] = true;
+        }
+      }
+    }
+  }
+
+  /// Find the shortest path from the entry block to an exit block passing
+  /// through a given block.
+  std::vector<FlowJump *> findShortestPath(uint64_t BlockIdx) {
+    // A path from the entry block to BlockIdx
+    auto ForwardPath = findShortestPath(Func.Entry, BlockIdx);
+    // A path from BlockIdx to an exit block
+    auto BackwardPath = findShortestPath(BlockIdx, AnyExitBlock);
+
+    // Concatenate the two paths
+    std::vector<FlowJump *> Result;
+    Result.insert(Result.end(), ForwardPath.begin(), ForwardPath.end());
+    Result.insert(Result.end(), BackwardPath.begin(), BackwardPath.end());
+    return Result;
+  }
+
+  /// Apply the Dijkstra algorithm to find the shortest path from a given
+  /// Source to a given Target block.
+  /// If Target == -1, then the path ends at an exit block.
+  std::vector<FlowJump *> findShortestPath(uint64_t Source, uint64_t Target) {
+    // Quit early, if possible
+    if (Source == Target)
+      return std::vector<FlowJump *>();
+    if (Func.Blocks[Source].isExit() && Target == AnyExitBlock)
+      return std::vector<FlowJump *>();
+
+    // Initialize data structures
+    auto Distance = std::vector<int64_t>(NumBlocks(), INF);
+    auto Parent = std::vector<FlowJump *>(NumBlocks(), nullptr);
+    Distance[Source] = 0;
+    std::set<std::pair<uint64_t, uint64_t>> Queue;
+    Queue.insert(std::make_pair(Distance[Source], Source));
+
+    // Run the Dijkstra algorithm
+    while (!Queue.empty()) {
+      uint64_t Src = Queue.begin()->second;
+      Queue.erase(Queue.begin());
+      // If we found a solution, quit early
+      if (Src == Target ||
+          (Func.Blocks[Src].isExit() && Target == AnyExitBlock))
+        break;
+
+      for (auto Jump : Func.Blocks[Src].SuccJumps) {
+        uint64_t Dst = Jump->Target;
+        int64_t JumpDist = jumpDistance(Jump);
+        if (Distance[Dst] > Distance[Src] + JumpDist) {
+          Queue.erase(std::make_pair(Distance[Dst], Dst));
+
+          Distance[Dst] = Distance[Src] + JumpDist;
+          Parent[Dst] = Jump;
+
+          Queue.insert(std::make_pair(Distance[Dst], Dst));
+        }
+      }
+    }
+    // If Target is not provided, find the closest exit block
+    if (Target == AnyExitBlock) {
+      for (uint64_t I = 0; I < NumBlocks(); I++) {
+        if (Func.Blocks[I].isExit() && Parent[I] != nullptr) {
+          if (Target == AnyExitBlock || Distance[Target] > Distance[I]) {
+            Target = I;
+          }
+        }
+      }
+    }
+    assert(Parent[Target] != nullptr && "a path does not exist");
+
+    // Extract the constructed path
+    std::vector<FlowJump *> Result;
+    uint64_t Now = Target;
+    while (Now != Source) {
+      assert(Now == Parent[Now]->Target && "incorrect parent jump");
+      Result.push_back(Parent[Now]);
+      Now = Parent[Now]->Source;
+    }
+    // Reverse the path, since it is extracted from Target to Source
+    std::reverse(Result.begin(), Result.end());
+    return Result;
+  }
+
+  /// A distance of a path for a given jump.
+  /// In order to incite the path to use blocks/jumps with large positive flow,
+  /// and avoid changing branch probability of outgoing edges drastically,
+  /// set the distance as follows:
+  ///   if Jump.Flow > 0, then distance = max(100 - Jump->Flow, 0)
+  ///   if Block.Weight > 0, then distance = 1
+  ///   otherwise distance >> 1
+  int64_t jumpDistance(FlowJump *Jump) const {
+    int64_t BaseDistance = 100;
+    if (Jump->IsUnlikely)
+      return MinCostMaxFlow::AuxCostUnlikely;
+    if (Jump->Flow > 0)
+      return std::max(BaseDistance - (int64_t)Jump->Flow, (int64_t)0);
+    if (Func.Blocks[Jump->Target].Weight > 0)
+      return BaseDistance;
+    return BaseDistance * (NumBlocks() + 1);
+  };
+
+  uint64_t NumBlocks() const { return Func.Blocks.size(); }
+
+  /// Rebalance unknown subgraphs so as each branch splits with probabilities
+  /// UnknownFirstSuccProbability and 1 - UnknownFirstSuccProbability
+  void rebalanceUnknownSubgraphs() {
+    assert(UnknownFirstSuccProbability >= 0.0 &&
+           UnknownFirstSuccProbability <= 1.0 &&
+           "the share of the unknown successor should be between 0 and 1");
+    // Try to find unknown subgraphs from each non-unknown block
+    for (uint64_t I = 0; I < Func.Blocks.size(); I++) {
+      auto SrcBlock = &Func.Blocks[I];
+      // Do not attempt to find unknown successors from a unknown or a
+      // zero-flow block
+      if (SrcBlock->UnknownWeight || SrcBlock->Flow == 0)
+        continue;
+
+      std::vector<FlowBlock *> UnknownSuccs;
+      FlowBlock *DstBlock = nullptr;
+      // Find a unknown subgraphs starting at block SrcBlock
+      if (!findUnknownSubgraph(SrcBlock, DstBlock, UnknownSuccs))
+        continue;
+      // At the moment, we do not rebalance subgraphs containing cycles among
+      // unknown blocks
+      if (!isAcyclicSubgraph(SrcBlock, DstBlock, UnknownSuccs))
+        continue;
+
+      // Rebalance the flow
+      rebalanceUnknownSubgraph(SrcBlock, DstBlock, UnknownSuccs);
+    }
+  }
+
+  /// Find a unknown subgraph starting at block SrcBlock.
+  /// If the search is successful, the method sets DstBlock and UnknownSuccs.
+  bool findUnknownSubgraph(FlowBlock *SrcBlock, FlowBlock *&DstBlock,
+                           std::vector<FlowBlock *> &UnknownSuccs) {
+    // Run BFS from SrcBlock and make sure all paths are going through unknown
+    // blocks and end at a non-unknown DstBlock
+    auto Visited = std::vector<bool>(NumBlocks(), false);
+    std::queue<uint64_t> Queue;
+    DstBlock = nullptr;
+
+    Queue.push(SrcBlock->Index);
+    Visited[SrcBlock->Index] = true;
+    while (!Queue.empty()) {
+      auto &Block = Func.Blocks[Queue.front()];
+      Queue.pop();
+      // Process blocks reachable from Block
+      for (auto Jump : Block.SuccJumps) {
+        uint64_t Dst = Jump->Target;
+        if (Visited[Dst])
+          continue;
+        Visited[Dst] = true;
+        if (!Func.Blocks[Dst].UnknownWeight) {
+          // If we see non-unique non-unknown block reachable from SrcBlock,
+          // stop processing and skip rebalancing
+          FlowBlock *CandidateDstBlock = &Func.Blocks[Dst];
+          if (DstBlock != nullptr && DstBlock != CandidateDstBlock)
+            return false;
+          DstBlock = CandidateDstBlock;
+        } else {
+          Queue.push(Dst);
+          UnknownSuccs.push_back(&Func.Blocks[Dst]);
+        }
+      }
+    }
+
+    // If the list of unknown blocks is empty, we don't need rebalancing
+    if (UnknownSuccs.empty())
+      return false;
+    // If all reachable nodes from SrcBlock are unknown, skip rebalancing
+    if (DstBlock == nullptr)
+      return false;
+    // If any of the unknown blocks is an exit block, skip rebalancing
+    for (auto Block : UnknownSuccs) {
+      if (Block->isExit())
+        return false;
+    }
+
+    return true;
+  }
+
+  /// Verify if the given unknown subgraph is acyclic, and if yes, reorder
+  /// UnknownSuccs in the topological order (so that all jumps are "forward").
+  bool isAcyclicSubgraph(FlowBlock *SrcBlock, FlowBlock *DstBlock,
+                         std::vector<FlowBlock *> &UnknownSuccs) {
+    // Extract local in-degrees in the considered subgraph
+    auto LocalInDegree = std::vector<uint64_t>(NumBlocks(), 0);
+    for (auto Jump : SrcBlock->SuccJumps) {
+      LocalInDegree[Jump->Target]++;
+    }
+    for (uint64_t I = 0; I < UnknownSuccs.size(); I++) {
+      for (auto Jump : UnknownSuccs[I]->SuccJumps) {
+        LocalInDegree[Jump->Target]++;
+      }
+    }
+    // A loop containing SrcBlock
+    if (LocalInDegree[SrcBlock->Index] > 0)
+      return false;
+
+    std::vector<FlowBlock *> AcyclicOrder;
+    std::queue<uint64_t> Queue;
+    Queue.push(SrcBlock->Index);
+    while (!Queue.empty()) {
+      auto &Block = Func.Blocks[Queue.front()];
+      Queue.pop();
+      // Stop propagation once we reach DstBlock
+      if (Block.Index == DstBlock->Index)
+        break;
+
+      AcyclicOrder.push_back(&Block);
+      // Add to the queue all successors with zero local in-degree
+      for (auto Jump : Block.SuccJumps) {
+        uint64_t Dst = Jump->Target;
+        LocalInDegree[Dst]--;
+        if (LocalInDegree[Dst] == 0) {
+          Queue.push(Dst);
+        }
+      }
+    }
+
+    // If there is a cycle in the subgraph, AcyclicOrder contains only a subset
+    // of all blocks
+    if (UnknownSuccs.size() + 1 != AcyclicOrder.size())
+      return false;
+    UnknownSuccs = AcyclicOrder;
+    return true;
+  }
+
+  /// Rebalance a given subgraph.
+  void rebalanceUnknownSubgraph(FlowBlock *SrcBlock, FlowBlock *DstBlock,
+                                std::vector<FlowBlock *> &UnknownSuccs) {
+    assert(SrcBlock->Flow > 0 && "zero-flow block in unknown subgraph");
+    assert(UnknownSuccs.front() == SrcBlock && "incorrect order of unknowns");
+
+    for (auto Block : UnknownSuccs) {
+      // Block's flow is the sum of incoming flows
+      uint64_t TotalFlow = 0;
+      if (Block == SrcBlock) {
+        TotalFlow = Block->Flow;
+      } else {
+        for (auto Jump : Block->PredJumps) {
+          TotalFlow += Jump->Flow;
+        }
+        Block->Flow = TotalFlow;
+      }
+
+      // Process all successor jumps and update corresponding flow values
+      for (uint64_t I = 0; I < Block->SuccJumps.size(); I++) {
+        auto Jump = Block->SuccJumps[I];
+        if (I + 1 == Block->SuccJumps.size()) {
+          Jump->Flow = TotalFlow;
+          continue;
+        }
+        uint64_t Flow = uint64_t(TotalFlow * UnknownFirstSuccProbability);
+        Jump->Flow = Flow;
+        TotalFlow -= Flow;
+      }
+    }
+  }
+
+  /// A constant indicating an arbitrary exit block of a function.
+  static constexpr uint64_t AnyExitBlock = uint64_t(-1);
+
+  /// The function.
+  FlowFunction &Func;
 };
 
 /// Initializing flow network for a given function.
@@ -439,6 +786,39 @@ void verifyWeights(const FlowFunction &Func) {
     }
   }
   assert(TotalInFlow == TotalOutFlow && "incorrectly computed control flow");
+
+  // Verify that there are no isolated flow components
+  // One could modify FlowFunction to hold edges indexed by the sources, which
+  // will avoid a creation of the object
+  auto PositiveFlowEdges = std::vector<std::vector<uint64_t>>(NumBlocks);
+  for (auto &Jump : Func.Jumps) {
+    if (Jump.Flow > 0) {
+      PositiveFlowEdges[Jump.Source].push_back(Jump.Target);
+    }
+  }
+
+  // Run BFS from the source along edges with positive flow
+  std::queue<uint64_t> Queue;
+  auto Visited = std::vector<bool>(NumBlocks, false);
+  Queue.push(Func.Entry);
+  Visited[Func.Entry] = true;
+  while (!Queue.empty()) {
+    uint64_t Src = Queue.front();
+    Queue.pop();
+    for (uint64_t Dst : PositiveFlowEdges[Src]) {
+      if (!Visited[Dst]) {
+        Queue.push(Dst);
+        Visited[Dst] = true;
+      }
+    }
+  }
+
+  // Verify that every block that has a positive flow is reached from the source
+  // along edges with a positive flow
+  for (uint64_t I = 0; I < NumBlocks; I++) {
+    auto &Block = Func.Blocks[I];
+    assert((Visited[I] || Block.Flow == 0) && "an isolated flow component");
+  }
 }
 #endif
 
@@ -453,6 +833,10 @@ void llvm::applyFlowInference(FlowFunction &Func) {
 
   // Extract flow values for every block and every edge
   extractWeights(InferenceNetwork, Func);
+
+  // Post-processing adjustments to the flow
+  auto Adjuster = FlowAdjuster(Func);
+  Adjuster.run();
 
 #ifndef NDEBUG
   // Verify the result

@@ -11,33 +11,19 @@
 #include "flang/Runtime/descriptor.h"
 #include <algorithm>
 #include <cstring>
+#include <optional>
 
 namespace Fortran::runtime {
-extern "C" {
 
-void RTNAME(Transfer)(Descriptor &result, const Descriptor &source,
-    const Descriptor &mold, const char *sourceFile, int line) {
-  if (mold.rank() > 0) {
-    std::size_t moldElementBytes{mold.ElementBytes()};
-    std::size_t elements{
-        (source.Elements() * source.ElementBytes() + moldElementBytes - 1) /
-        moldElementBytes};
-    return RTNAME(TransferSize)(result, source, mold, sourceFile, line,
-        static_cast<std::int64_t>(elements));
-  } else {
-    return RTNAME(TransferSize)(result, source, mold, sourceFile, line, 1);
-  }
-}
-
-void RTNAME(TransferSize)(Descriptor &result, const Descriptor &source,
+static void TransferImpl(Descriptor &result, const Descriptor &source,
     const Descriptor &mold, const char *sourceFile, int line,
-    std::int64_t size) {
-  int rank{mold.rank() > 0 ? 1 : 0};
+    std::optional<std::int64_t> resultExtent) {
+  int rank{resultExtent.has_value() ? 1 : 0};
   std::size_t elementBytes{mold.ElementBytes()};
   result.Establish(mold.type(), elementBytes, nullptr, rank, nullptr,
       CFI_attribute_allocatable, mold.Addendum() != nullptr);
-  if (rank > 0) {
-    result.GetDimension(0).SetBounds(1, size);
+  if (resultExtent) {
+    result.GetDimension(0).SetBounds(1, *resultExtent);
   }
   if (const DescriptorAddendum * addendum{mold.Addendum()}) {
     *result.Addendum() = *addendum;
@@ -47,7 +33,7 @@ void RTNAME(TransferSize)(Descriptor &result, const Descriptor &source,
         "TRANSFER: could not allocate memory for result; STAT=%d", stat);
   }
   char *to{result.OffsetElement<char>()};
-  std::size_t resultBytes{size * elementBytes};
+  std::size_t resultBytes{result.Elements() * result.ElementBytes()};
   const std::size_t sourceElementBytes{source.ElementBytes()};
   std::size_t sourceElements{source.Elements()};
   SubscriptValue sourceAt[maxRank];
@@ -63,6 +49,28 @@ void RTNAME(TransferSize)(Descriptor &result, const Descriptor &source,
   if (resultBytes > 0) {
     std::memset(to, 0, resultBytes);
   }
+}
+
+extern "C" {
+
+void RTNAME(Transfer)(Descriptor &result, const Descriptor &source,
+    const Descriptor &mold, const char *sourceFile, int line) {
+  if (mold.rank() > 0) {
+    std::size_t moldElementBytes{mold.ElementBytes()};
+    std::size_t elements{
+        (source.Elements() * source.ElementBytes() + moldElementBytes - 1) /
+        moldElementBytes};
+    return TransferImpl(result, source, mold, sourceFile, line,
+        static_cast<std::int64_t>(elements));
+  } else {
+    return TransferImpl(result, source, mold, sourceFile, line, {});
+  }
+}
+
+void RTNAME(TransferSize)(Descriptor &result, const Descriptor &source,
+    const Descriptor &mold, const char *sourceFile, int line,
+    std::int64_t size) {
+  return TransferImpl(result, source, mold, sourceFile, line, size);
 }
 
 } // extern "C"

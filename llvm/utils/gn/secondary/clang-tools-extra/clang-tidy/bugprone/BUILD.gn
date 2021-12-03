@@ -55,6 +55,7 @@ static_library("bugprone") {
     "StringConstructorCheck.cpp",
     "StringIntegerAssignmentCheck.cpp",
     "StringLiteralWithEmbeddedNulCheck.cpp",
+    "StringviewNullptrCheck.cpp",
     "SuspiciousEnumUsageCheck.cpp",
     "SuspiciousIncludeCheck.cpp",
     "SuspiciousMemoryComparisonCheck.cpp",

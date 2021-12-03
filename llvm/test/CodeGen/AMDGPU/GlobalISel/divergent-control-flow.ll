@@ -141,16 +141,16 @@ define void @constrained_if_register_class() {
 ; CHECK-NEXT:    s_cmp_lg_u32 s4, 0
 ; CHECK-NEXT:    s_cbranch_scc1 .LBB4_4
 ; CHECK-NEXT:  ; %bb.1: ; %bb2
-; CHECK-NEXT:    s_getpc_b64 s[6:7]
-; CHECK-NEXT:    s_add_u32 s6, s6, const.ptr@gotpcrel32@lo+4
-; CHECK-NEXT:    s_addc_u32 s7, s7, const.ptr@gotpcrel32@hi+12
-; CHECK-NEXT:    s_load_dwordx2 s[6:7], s[6:7], 0x0
+; CHECK-NEXT:    s_getpc_b64 s[4:5]
+; CHECK-NEXT:    s_add_u32 s4, s4, const.ptr@gotpcrel32@lo+4
+; CHECK-NEXT:    s_addc_u32 s5, s5, const.ptr@gotpcrel32@hi+12
+; CHECK-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0x0
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 0
+; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
+; CHECK-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0x0
+; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
+; CHECK-NEXT:    global_load_dword v0, v0, s[4:5]
 ; CHECK-NEXT:    s_mov_b32 s4, -1
-; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    s_load_dwordx2 s[6:7], s[6:7], 0x0
-; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    global_load_dword v0, v0, s[6:7]
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    v_cmp_gt_f32_e32 vcc, 1.0, v0
 ; CHECK-NEXT:    s_cbranch_vccnz .LBB4_3

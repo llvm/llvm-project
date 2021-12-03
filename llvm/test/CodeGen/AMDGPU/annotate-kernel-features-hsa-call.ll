@@ -688,7 +688,7 @@ define void @func_call_asm() #3 {
 ;
 ; ATTRIBUTOR_HSA-LABEL: define {{[^@]+}}@func_call_asm
 ; ATTRIBUTOR_HSA-SAME: () #[[ATTR16]] {
-; ATTRIBUTOR_HSA-NEXT:    call void asm sideeffect "", ""() #[[ATTR17:[0-9]+]]
+; ATTRIBUTOR_HSA-NEXT:    call void asm sideeffect "", ""() #[[ATTR20:[0-9]+]]
 ; ATTRIBUTOR_HSA-NEXT:    ret void
 ;
   call void asm sideeffect "", ""() #3
@@ -837,10 +837,95 @@ define float @func_other_intrinsic_call(float %arg) #3 {
   ret float %fadd
 }
 
+; Implicit arguments need to be enabled for sanitizers
+define amdgpu_kernel void @kern_sanitize_address() #4 {
+; AKF_HSA-LABEL: define {{[^@]+}}@kern_sanitize_address
+; AKF_HSA-SAME: () #[[ATTR5:[0-9]+]] {
+; AKF_HSA-NEXT:    store volatile i32 0, i32 addrspace(1)* null, align 4
+; AKF_HSA-NEXT:    ret void
+;
+; ATTRIBUTOR_HSA-LABEL: define {{[^@]+}}@kern_sanitize_address
+; ATTRIBUTOR_HSA-SAME: () #[[ATTR17:[0-9]+]] {
+; ATTRIBUTOR_HSA-NEXT:    store volatile i32 0, i32 addrspace(1)* null, align 4
+; ATTRIBUTOR_HSA-NEXT:    ret void
+;
+  store volatile i32 0, i32 addrspace(1)* null
+  ret void
+}
+
+; Implicit arguments need to be enabled for sanitizers
+define void @func_sanitize_address() #4 {
+; AKF_HSA-LABEL: define {{[^@]+}}@func_sanitize_address
+; AKF_HSA-SAME: () #[[ATTR5]] {
+; AKF_HSA-NEXT:    store volatile i32 0, i32 addrspace(1)* null, align 4
+; AKF_HSA-NEXT:    ret void
+;
+; ATTRIBUTOR_HSA-LABEL: define {{[^@]+}}@func_sanitize_address
+; ATTRIBUTOR_HSA-SAME: () #[[ATTR17]] {
+; ATTRIBUTOR_HSA-NEXT:    store volatile i32 0, i32 addrspace(1)* null, align 4
+; ATTRIBUTOR_HSA-NEXT:    ret void
+;
+  store volatile i32 0, i32 addrspace(1)* null
+  ret void
+}
+
+; Implicit arguments need to be enabled for sanitizers
+define void @func_indirect_sanitize_address() #3 {
+; AKF_HSA-LABEL: define {{[^@]+}}@func_indirect_sanitize_address
+; AKF_HSA-SAME: () #[[ATTR3]] {
+; AKF_HSA-NEXT:    call void @func_sanitize_address()
+; AKF_HSA-NEXT:    ret void
+;
+; ATTRIBUTOR_HSA-LABEL: define {{[^@]+}}@func_indirect_sanitize_address
+; ATTRIBUTOR_HSA-SAME: () #[[ATTR18:[0-9]+]] {
+; ATTRIBUTOR_HSA-NEXT:    call void @func_sanitize_address()
+; ATTRIBUTOR_HSA-NEXT:    ret void
+;
+  call void @func_sanitize_address()
+  ret void
+}
+
+; Implicit arguments need to be enabled for sanitizers
+define amdgpu_kernel void @kern_indirect_sanitize_address() #3 {
+; AKF_HSA-LABEL: define {{[^@]+}}@kern_indirect_sanitize_address
+; AKF_HSA-SAME: () #[[ATTR4]] {
+; AKF_HSA-NEXT:    call void @func_sanitize_address()
+; AKF_HSA-NEXT:    ret void
+;
+; ATTRIBUTOR_HSA-LABEL: define {{[^@]+}}@kern_indirect_sanitize_address
+; ATTRIBUTOR_HSA-SAME: () #[[ATTR18]] {
+; ATTRIBUTOR_HSA-NEXT:    call void @func_sanitize_address()
+; ATTRIBUTOR_HSA-NEXT:    ret void
+;
+  call void @func_sanitize_address()
+  ret void
+}
+
+; Marked with amdgpu-no-implicitarg-ptr, and
+; sanitize_address. sanitize_address wins and requires the pointer.
+declare void @extern_func_sanitize_address() #5
+
+define amdgpu_kernel void @kern_decl_sanitize_address() #3 {
+; AKF_HSA-LABEL: define {{[^@]+}}@kern_decl_sanitize_address
+; AKF_HSA-SAME: () #[[ATTR4]] {
+; AKF_HSA-NEXT:    call void @extern_func_sanitize_address()
+; AKF_HSA-NEXT:    ret void
+;
+; ATTRIBUTOR_HSA-LABEL: define {{[^@]+}}@kern_decl_sanitize_address
+; ATTRIBUTOR_HSA-SAME: () #[[ATTR15]] {
+; ATTRIBUTOR_HSA-NEXT:    call void @extern_func_sanitize_address()
+; ATTRIBUTOR_HSA-NEXT:    ret void
+;
+  call void @extern_func_sanitize_address()
+  ret void
+}
+
 attributes #0 = { nounwind readnone speculatable }
 attributes #1 = { nounwind "target-cpu"="fiji" }
 attributes #2 = { nounwind "target-cpu"="gfx900" }
 attributes #3 = { nounwind }
+attributes #4 = { nounwind sanitize_address }
+attributes #5 = { nounwind sanitize_address "amdgpu-no-implicitarg-ptr" }
 
 ;.
 ; AKF_HSA: attributes #[[ATTR0:[0-9]+]] = { nounwind readnone speculatable willreturn }
@@ -848,6 +933,8 @@ attributes #3 = { nounwind }
 ; AKF_HSA: attributes #[[ATTR2]] = { nounwind "target-cpu"="gfx900" }
 ; AKF_HSA: attributes #[[ATTR3]] = { nounwind }
 ; AKF_HSA: attributes #[[ATTR4]] = { nounwind "amdgpu-calls" }
+; AKF_HSA: attributes #[[ATTR5]] = { nounwind sanitize_address }
+; AKF_HSA: attributes #[[ATTR6:[0-9]+]] = { nounwind sanitize_address "amdgpu-no-implicitarg-ptr" }
 ;.
 ; ATTRIBUTOR_HSA: attributes #[[ATTR0:[0-9]+]] = { nounwind readnone speculatable willreturn }
 ; ATTRIBUTOR_HSA: attributes #[[ATTR1]] = { nounwind "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" "target-cpu"="fiji" "uniform-work-group-size"="false" }
@@ -866,5 +953,8 @@ attributes #3 = { nounwind }
 ; ATTRIBUTOR_HSA: attributes #[[ATTR14]] = { nounwind "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" "target-cpu"="fiji" "uniform-work-group-size"="false" }
 ; ATTRIBUTOR_HSA: attributes #[[ATTR15]] = { nounwind "uniform-work-group-size"="false" }
 ; ATTRIBUTOR_HSA: attributes #[[ATTR16]] = { nounwind "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" "uniform-work-group-size"="false" }
-; ATTRIBUTOR_HSA: attributes #[[ATTR17]] = { nounwind }
+; ATTRIBUTOR_HSA: attributes #[[ATTR17]] = { nounwind sanitize_address "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" "uniform-work-group-size"="false" }
+; ATTRIBUTOR_HSA: attributes #[[ATTR18]] = { nounwind "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" "uniform-work-group-size"="false" }
+; ATTRIBUTOR_HSA: attributes #[[ATTR19:[0-9]+]] = { nounwind sanitize_address "amdgpu-no-implicitarg-ptr" "uniform-work-group-size"="false" }
+; ATTRIBUTOR_HSA: attributes #[[ATTR20]] = { nounwind }
 ;.

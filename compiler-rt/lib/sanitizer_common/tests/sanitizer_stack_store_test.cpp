@@ -26,7 +26,7 @@ class StackStoreTest : public testing::Test {
   template <typename Fn>
   void ForEachTrace(Fn fn, uptr n = 1000000) {
     std::vector<uptr> frames(kStackTraceMax);
-    std::iota(frames.begin(), frames.end(), 1);
+    std::iota(frames.begin(), frames.end(), 0x100000);
     MurMur2HashBuilder h(0);
     for (uptr i = 0; i < n; ++i) {
       h.add(i);
@@ -135,7 +135,8 @@ struct StackStorePackTest : public StackStoreTest,
 INSTANTIATE_TEST_SUITE_P(
     PackUnpacks, StackStorePackTest,
     ::testing::ValuesIn({
-        StackStorePackTest::ParamType(StackStore::Compression::Test, 4),
+        StackStorePackTest::ParamType(StackStore::Compression::Delta,
+                                      FIRST_32_SECOND_64(2, 6)),
     }));
 
 TEST_P(StackStorePackTest, PackUnpack) {
@@ -172,6 +173,25 @@ TEST_P(StackStorePackTest, PackUnpack) {
   EXPECT_EQ(0u, CountPackedBlocks());
 
   EXPECT_EQ(0u, store_.Pack(type));
+  EXPECT_EQ(0u, CountPackedBlocks());
+}
+
+TEST_P(StackStorePackTest, Failed) {
+  MurMur2Hash64Builder h(0);
+  StackStore::Compression type = GetParam().first;
+  std::vector<uptr> frames(200);
+  for (uptr i = 0; i < kBlockSizeFrames * 4 / frames.size(); ++i) {
+    for (uptr& f : frames) {
+      h.add(1);
+      // Make it difficult to pack.
+      f = h.get();
+    }
+    uptr pack = 0;
+    store_.Store(StackTrace(frames.data(), frames.size()), &pack);
+    if (pack)
+      EXPECT_EQ(0u, store_.Pack(type));
+  }
+
   EXPECT_EQ(0u, CountPackedBlocks());
 }
 

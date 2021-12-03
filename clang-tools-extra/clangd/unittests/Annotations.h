@@ -9,8 +9,8 @@
 // offsets and offset-based ranges with types from the LSP protocol.
 //===---------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_UNITTESTS_CLANGD_ANNOTATIONS_H
-#define LLVM_CLANG_TOOLS_EXTRA_UNITTESTS_CLANGD_ANNOTATIONS_H
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_UNITTESTS_ANNOTATIONS_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANGD_UNITTESTS_ANNOTATIONS_H
 
 #include "Protocol.h"
 #include "llvm/Testing/Support/Annotations.h"
@@ -36,4 +36,4 @@ public:
 } // namespace clangd
 } // namespace clang
 
-#endif // LLVM_CLANG_TOOLS_EXTRA_UNITTESTS_CLANGD_ANNOTATIONS_H
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANGD_UNITTESTS_ANNOTATIONS_H

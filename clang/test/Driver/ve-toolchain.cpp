@@ -1,5 +1,6 @@
 /// Check the behavior of toolchain for NEC Aurora VE
 /// REQUIRES: ve-registered-target
+/// UNSUPPORTED: system-windows
 
 ///-----------------------------------------------------------------------------
 /// Checking dwarf-version

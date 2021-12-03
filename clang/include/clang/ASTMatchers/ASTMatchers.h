@@ -4227,8 +4227,8 @@ AST_MATCHER(VarDecl, isInitCapture) { return Node.isInitCapture(); }
 /// lambdaExpr(forEachLambdaCapture(
 ///     lambdaCapture(capturesVar(varDecl(hasType(isInteger()))))))
 /// will trigger two matches, binding for 'x' and 'y' respectively.
-AST_MATCHER_P(LambdaExpr, forEachLambdaCapture, LambdaCaptureMatcher,
-              InnerMatcher) {
+AST_MATCHER_P(LambdaExpr, forEachLambdaCapture,
+              internal::Matcher<LambdaCapture>, InnerMatcher) {
   BoundNodesTreeBuilder Result;
   bool Matched = false;
   for (const auto &Capture : Node.captures()) {
@@ -4655,7 +4655,8 @@ extern const internal::VariadicAllOfMatcher<LambdaCapture> lambdaCapture;
 /// lambdaExpr(hasAnyCapture(lambdaCapture())) and
 /// lambdaExpr(hasAnyCapture(lambdaCapture(refersToVarDecl(hasName("t")))))
 ///   both match `[=](){ return t; }`.
-AST_MATCHER_P(LambdaExpr, hasAnyCapture, LambdaCaptureMatcher, InnerMatcher) {
+AST_MATCHER_P(LambdaExpr, hasAnyCapture, internal::Matcher<LambdaCapture>,
+              InnerMatcher) {
   for (const LambdaCapture &Capture : Node.captures()) {
     clang::ast_matchers::internal::BoundNodesTreeBuilder Result(*Builder);
     if (InnerMatcher.matches(Capture, Finder, &Result)) {

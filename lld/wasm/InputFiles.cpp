@@ -197,6 +197,9 @@ uint64_t ObjFile::calcNewValue(const WasmRelocation &reloc, uint64_t tombstone,
     return getTagSymbol(reloc.Index)->getTagIndex();
   case R_WASM_FUNCTION_OFFSET_I32:
   case R_WASM_FUNCTION_OFFSET_I64: {
+    if (isa<UndefinedFunction>(sym)) {
+      return tombstone ? tombstone : reloc.Addend;
+    }
     auto *f = cast<DefinedFunction>(sym);
     return f->function->getOffset(f->function->getFunctionCodeOffset() +
                                   reloc.Addend);

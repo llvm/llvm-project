@@ -42,11 +42,6 @@ bool link(llvm::ArrayRef<const char *> args, bool canExitEarly,
           llvm::raw_ostream &stdoutOS, llvm::raw_ostream &stderrOS);
 }
 
-namespace mach_o {
-bool link(llvm::ArrayRef<const char *> args, bool canExitEarly,
-          llvm::raw_ostream &stdoutOS, llvm::raw_ostream &stderrOS);
-}
-
 namespace macho {
 bool link(llvm::ArrayRef<const char *> args, bool canExitEarly,
           llvm::raw_ostream &stdoutOS, llvm::raw_ostream &stderrOS);

@@ -18,6 +18,8 @@
 
 ; REQUIRES: default_triple
 
+target triple = "x86_64-unknown-linux-gnu"
+
 ; CHECK: main
 define i32 @main() {
   ret i32 0

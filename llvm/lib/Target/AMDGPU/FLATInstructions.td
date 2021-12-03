@@ -6,12 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-def FlatOffset : ComplexPattern<i64, 2, "SelectFlatOffset", [], [SDNPWantRoot], -10>;
-def GlobalOffset : ComplexPattern<i64, 2, "SelectGlobalOffset", [], [SDNPWantRoot], -10>;
-def ScratchOffset : ComplexPattern<i32, 2, "SelectScratchOffset", [], [SDNPWantRoot], -10>;
+def FlatOffset : ComplexPattern<iPTR, 2, "SelectFlatOffset", [], [SDNPWantRoot], -10>;
+def GlobalOffset : ComplexPattern<iPTR, 2, "SelectGlobalOffset", [], [SDNPWantRoot], -10>;
+def ScratchOffset : ComplexPattern<iPTR, 2, "SelectScratchOffset", [], [SDNPWantRoot], -10>;
 
-def GlobalSAddr : ComplexPattern<i64, 3, "SelectGlobalSAddr", [], [SDNPWantRoot], -10>;
-def ScratchSAddr : ComplexPattern<i32, 2, "SelectScratchSAddr", [], [SDNPWantRoot], -10>;
+def GlobalSAddr : ComplexPattern<iPTR, 3, "SelectGlobalSAddr", [], [SDNPWantRoot], -10>;
+def ScratchSAddr : ComplexPattern<iPTR, 2, "SelectScratchSAddr", [], [SDNPWantRoot], -10>;
 
 //===----------------------------------------------------------------------===//
 // FLAT classes

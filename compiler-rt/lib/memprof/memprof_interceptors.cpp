@@ -93,10 +93,6 @@ DECLARE_REAL_AND_INTERCEPTOR(void, free, void *)
   do {                                                                         \
   } while (false)
 #define COMMON_INTERCEPTOR_BLOCK_REAL(name) REAL(name)
-#define COMMON_INTERCEPTOR_ON_DLOPEN(filename, flag)                           \
-  do {                                                                         \
-    CheckNoDeepBind(filename, flag);                                           \
-  } while (false)
 #define COMMON_INTERCEPTOR_ON_EXIT(ctx) OnExit()
 #define COMMON_INTERCEPTOR_LIBRARY_LOADED(filename, handle)
 #define COMMON_INTERCEPTOR_LIBRARY_UNLOADED()

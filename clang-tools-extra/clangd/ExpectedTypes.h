@@ -15,8 +15,8 @@
 // the index. Similar types (such as `int` and `long`) are folded together,
 // forming equivalence classes with the same encoding.
 //===----------------------------------------------------------------------===//
-#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_EXPECTED_TYPES_H
-#define LLVM_CLANG_TOOLS_EXTRA_CLANGD_EXPECTED_TYPES_H
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_EXPECTEDTYPES_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANGD_EXPECTEDTYPES_H
 
 #include "clang/AST/Type.h"
 #include "llvm/ADT/StringRef.h"

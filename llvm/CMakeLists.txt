@@ -328,6 +328,7 @@ set(LLVM_ALL_TARGETS
   RISCV
   Sparc
   SystemZ
+  VE
   WebAssembly
   X86
   XCore
@@ -390,6 +391,8 @@ else()
 endif()
 
 set(LLVM_ENABLE_ZLIB "ON" CACHE STRING "Use zlib for compression/decompression if available. Can be ON, OFF, or FORCE_ON")
+
+set(LLVM_ENABLE_CURL "ON" CACHE STRING "Use libcurl for the HTTP client if available. Can be ON, OFF, or FORCE_ON")
 
 set(LLVM_Z3_INSTALL_DIR "" CACHE STRING "Install directory of the Z3 solver.")
 

@@ -1359,7 +1359,8 @@ void X86AsmPrinter::emitAsanMemaccessPartial(Module &M, unsigned Reg,
                                              MCSubtargetInfo &STI) {
   assert(AccessInfo.AccessSizeIndex == 0 || AccessInfo.AccessSizeIndex == 1 ||
          AccessInfo.AccessSizeIndex == 2);
-  assert(Reg != X86::R8);
+  assert(Reg != X86::R10);
+  assert(Reg != X86::R11);
 
   uint64_t ShadowBase;
   int MappingScale;
@@ -1368,41 +1369,42 @@ void X86AsmPrinter::emitAsanMemaccessPartial(Module &M, unsigned Reg,
       Triple(M.getTargetTriple()), M.getDataLayout().getPointerSizeInBits(),
       AccessInfo.CompileKernel, &ShadowBase, &MappingScale, &OrShadowOffset);
 
-  OutStreamer->emitInstruction(
-      MCInstBuilder(X86::MOV64rr).addReg(X86::R8).addReg(X86::NoRegister + Reg),
-      STI);
+  OutStreamer->emitInstruction(MCInstBuilder(X86::MOV64rr)
+                                   .addReg(X86::R10)
+                                   .addReg(X86::NoRegister + Reg),
+                               STI);
   OutStreamer->emitInstruction(MCInstBuilder(X86::SHR64ri)
-                                   .addReg(X86::R8)
-                                   .addReg(X86::R8)
+                                   .addReg(X86::R10)
+                                   .addReg(X86::R10)
                                    .addImm(MappingScale),
                                STI);
   if (OrShadowOffset) {
     OutStreamer->emitInstruction(MCInstBuilder(X86::OR64ri32)
-                                     .addReg(X86::R8)
-                                     .addReg(X86::R8)
+                                     .addReg(X86::R10)
+                                     .addReg(X86::R10)
                                      .addImm(ShadowBase),
                                  STI);
     OutStreamer->emitInstruction(MCInstBuilder(X86::MOV8rm)
-                                     .addReg(X86::R8B)
-                                     .addReg(X86::R8)
+                                     .addReg(X86::R10B)
+                                     .addReg(X86::R10)
                                      .addImm(1)
                                      .addReg(X86::NoRegister)
                                      .addImm(0)
                                      .addReg(X86::NoRegister),
                                  STI);
     OutStreamer->emitInstruction(
-        MCInstBuilder(X86::TEST8rr).addReg(X86::R8B).addReg(X86::R8B), STI);
+        MCInstBuilder(X86::TEST8rr).addReg(X86::R10B).addReg(X86::R10B), STI);
   } else {
     OutStreamer->emitInstruction(MCInstBuilder(X86::MOVSX32rm8)
-                                     .addReg(X86::R8D)
-                                     .addReg(X86::R8)
+                                     .addReg(X86::R10D)
+                                     .addReg(X86::R10)
                                      .addImm(1)
                                      .addReg(X86::NoRegister)
                                      .addImm(ShadowBase)
                                      .addReg(X86::NoRegister),
                                  STI);
     OutStreamer->emitInstruction(
-        MCInstBuilder(X86::TEST32rr).addReg(X86::R8D).addReg(X86::R8D), STI);
+        MCInstBuilder(X86::TEST32rr).addReg(X86::R10D).addReg(X86::R10D), STI);
   }
   MCSymbol *AdditionalCheck = OutContext.createTempSymbol();
   OutStreamer->emitInstruction(
@@ -1416,37 +1418,33 @@ void X86AsmPrinter::emitAsanMemaccessPartial(Module &M, unsigned Reg,
 
   // Shadow byte is non-zero so we need to perform additional checks.
   OutStreamer->emitLabel(AdditionalCheck);
-  OutStreamer->emitInstruction(MCInstBuilder(X86::PUSH64r).addReg(X86::RCX),
-                               STI);
   OutStreamer->emitInstruction(MCInstBuilder(X86::MOV64rr)
-                                   .addReg(X86::RCX)
+                                   .addReg(X86::R11)
                                    .addReg(X86::NoRegister + Reg),
                                STI);
   const size_t Granularity = 1ULL << MappingScale;
   OutStreamer->emitInstruction(MCInstBuilder(X86::AND32ri8)
                                    .addReg(X86::NoRegister)
-                                   .addReg(X86::ECX)
+                                   .addReg(X86::R11D)
                                    .addImm(Granularity - 1),
                                STI);
   if (AccessInfo.AccessSizeIndex == 1) {
     OutStreamer->emitInstruction(MCInstBuilder(X86::ADD32ri8)
                                      .addReg(X86::NoRegister)
-                                     .addReg(X86::ECX)
+                                     .addReg(X86::R11D)
                                      .addImm(1),
                                  STI);
   } else if (AccessInfo.AccessSizeIndex == 2) {
     OutStreamer->emitInstruction(MCInstBuilder(X86::ADD32ri8)
                                      .addReg(X86::NoRegister)
-                                     .addReg(X86::ECX)
+                                     .addReg(X86::R11D)
                                      .addImm(3),
                                  STI);
   }
 
   OutStreamer->emitInstruction(
-      MCInstBuilder(X86::CMP32rr).addReg(X86::ECX).addReg(X86::R8D).addImm(1),
+      MCInstBuilder(X86::CMP32rr).addReg(X86::R11D).addReg(X86::R10D).addImm(1),
       STI);
-  OutStreamer->emitInstruction(MCInstBuilder(X86::POP64r).addReg(X86::RCX),
-                               STI);
   OutStreamer->emitInstruction(
       MCInstBuilder(X86::JCC_1)
           .addExpr(MCSymbolRefExpr::create(ReturnSym, OutContext))
@@ -1460,7 +1458,8 @@ void X86AsmPrinter::emitAsanMemaccessFull(Module &M, unsigned Reg,
                                           const ASanAccessInfo &AccessInfo,
                                           MCSubtargetInfo &STI) {
   assert(AccessInfo.AccessSizeIndex == 3 || AccessInfo.AccessSizeIndex == 4);
-  assert(Reg != X86::R8);
+  assert(Reg != X86::R10);
+  assert(Reg != X86::R11);
 
   uint64_t ShadowBase;
   int MappingScale;
@@ -1469,23 +1468,24 @@ void X86AsmPrinter::emitAsanMemaccessFull(Module &M, unsigned Reg,
       Triple(M.getTargetTriple()), M.getDataLayout().getPointerSizeInBits(),
       AccessInfo.CompileKernel, &ShadowBase, &MappingScale, &OrShadowOffset);
 
-  OutStreamer->emitInstruction(
-      MCInstBuilder(X86::MOV64rr).addReg(X86::R8).addReg(X86::NoRegister + Reg),
-      STI);
+  OutStreamer->emitInstruction(MCInstBuilder(X86::MOV64rr)
+                                   .addReg(X86::R10)
+                                   .addReg(X86::NoRegister + Reg),
+                               STI);
   OutStreamer->emitInstruction(MCInstBuilder(X86::SHR64ri)
-                                   .addReg(X86::R8)
-                                   .addReg(X86::R8)
+                                   .addReg(X86::R10)
+                                   .addReg(X86::R10)
                                    .addImm(MappingScale),
                                STI);
   if (OrShadowOffset) {
     OutStreamer->emitInstruction(MCInstBuilder(X86::OR64ri32)
-                                     .addReg(X86::R8)
-                                     .addReg(X86::R8)
+                                     .addReg(X86::R10)
+                                     .addReg(X86::R10)
                                      .addImm(ShadowBase),
                                  STI);
     auto OpCode = AccessInfo.AccessSizeIndex == 3 ? X86::CMP8mi : X86::CMP16mi8;
     OutStreamer->emitInstruction(MCInstBuilder(OpCode)
-                                     .addReg(X86::R8)
+                                     .addReg(X86::R10)
                                      .addImm(1)
                                      .addReg(X86::NoRegister)
                                      .addImm(0)
@@ -1495,7 +1495,7 @@ void X86AsmPrinter::emitAsanMemaccessFull(Module &M, unsigned Reg,
   } else {
     auto OpCode = AccessInfo.AccessSizeIndex == 3 ? X86::CMP8mi : X86::CMP16mi8;
     OutStreamer->emitInstruction(MCInstBuilder(OpCode)
-                                     .addReg(X86::R8)
+                                     .addReg(X86::R10)
                                      .addImm(1)
                                      .addReg(X86::NoRegister)
                                      .addImm(ShadowBase)

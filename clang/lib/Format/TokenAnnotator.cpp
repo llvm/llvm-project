@@ -1004,6 +1004,8 @@ private:
         if (CurrentToken && CurrentToken->is(Keywords.kw_await))
           next();
       }
+      if (Style.isCpp() && CurrentToken && CurrentToken->is(tok::kw_co_await))
+        next();
       Contexts.back().ColonIsForRangeExpr = true;
       next();
       if (!parseParens())
@@ -2952,6 +2954,14 @@ bool TokenAnnotator::spaceRequiredBetween(const AnnotatedLine &Line,
   if (Left.is(tok::kw_auto) && Right.isOneOf(tok::l_paren, tok::l_brace))
     return false;
 
+  // operator co_await(x)
+  if (Right.is(tok::l_paren) && Left.is(tok::kw_co_await) && Left.Previous &&
+      Left.Previous->is(tok::kw_operator))
+    return false;
+  // co_await (x), co_yield (x), co_return (x)
+  if (Left.isOneOf(tok::kw_co_await, tok::kw_co_yield, tok::kw_co_return) &&
+      Right.isNot(tok::semi))
+    return true;
   // requires clause Concept1<T> && Concept2<T>
   if (Left.is(TT_ConstraintJunctions) && Right.is(tok::identifier))
     return true;

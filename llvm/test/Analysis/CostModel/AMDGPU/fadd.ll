@@ -14,6 +14,8 @@ define amdgpu_kernel void @fadd_f32() #0 {
 ; GFX90A-FASTF64-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v3f32 = fadd <3 x float> undef, undef
 ; GFX90A-FASTF64-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v4f32 = fadd <4 x float> undef, undef
 ; GFX90A-FASTF64-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v5f32 = fadd <5 x float> undef, undef
+; GFX90A-FASTF64-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v8f32 = fadd <8 x float> undef, undef
+; GFX90A-FASTF64-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %v9f32 = fadd <9 x float> undef, undef
 ; GFX90A-FASTF64-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
 ;
 ; NOPACKEDF32-LABEL: 'fadd_f32'
@@ -22,6 +24,8 @@ define amdgpu_kernel void @fadd_f32() #0 {
 ; NOPACKEDF32-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v3f32 = fadd <3 x float> undef, undef
 ; NOPACKEDF32-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v4f32 = fadd <4 x float> undef, undef
 ; NOPACKEDF32-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %v5f32 = fadd <5 x float> undef, undef
+; NOPACKEDF32-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v8f32 = fadd <8 x float> undef, undef
+; NOPACKEDF32-NEXT:  Cost Model: Found an estimated cost of 48 for instruction: %v9f32 = fadd <9 x float> undef, undef
 ; NOPACKEDF32-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
 ;
 ; GFX90A-FASTF64-SIZE-LABEL: 'fadd_f32'
@@ -30,6 +34,8 @@ define amdgpu_kernel void @fadd_f32() #0 {
 ; GFX90A-FASTF64-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v3f32 = fadd <3 x float> undef, undef
 ; GFX90A-FASTF64-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v4f32 = fadd <4 x float> undef, undef
 ; GFX90A-FASTF64-SIZE-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v5f32 = fadd <5 x float> undef, undef
+; GFX90A-FASTF64-SIZE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v8f32 = fadd <8 x float> undef, undef
+; GFX90A-FASTF64-SIZE-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %v9f32 = fadd <9 x float> undef, undef
 ; GFX90A-FASTF64-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 ; NOPACKEDF32-SIZE-LABEL: 'fadd_f32'
@@ -38,6 +44,8 @@ define amdgpu_kernel void @fadd_f32() #0 {
 ; NOPACKEDF32-SIZE-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v3f32 = fadd <3 x float> undef, undef
 ; NOPACKEDF32-SIZE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v4f32 = fadd <4 x float> undef, undef
 ; NOPACKEDF32-SIZE-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %v5f32 = fadd <5 x float> undef, undef
+; NOPACKEDF32-SIZE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v8f32 = fadd <8 x float> undef, undef
+; NOPACKEDF32-SIZE-NEXT:  Cost Model: Found an estimated cost of 48 for instruction: %v9f32 = fadd <9 x float> undef, undef
 ; NOPACKEDF32-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
   %f32 = fadd float undef, undef
@@ -45,6 +53,8 @@ define amdgpu_kernel void @fadd_f32() #0 {
   %v3f32 = fadd <3 x float> undef, undef
   %v4f32 = fadd <4 x float> undef, undef
   %v5f32 = fadd <5 x float> undef, undef
+  %v8f32 = fadd <8 x float> undef, undef
+  %v9f32 = fadd <9 x float> undef, undef
   ret void
 }
 
@@ -54,7 +64,7 @@ define amdgpu_kernel void @fadd_f64() #0 {
 ; GFX90A-FASTF64-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v2f64 = fadd <2 x double> undef, undef
 ; GFX90A-FASTF64-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v3f64 = fadd <3 x double> undef, undef
 ; GFX90A-FASTF64-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v4f64 = fadd <4 x double> undef, undef
-; GFX90A-FASTF64-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %v5f64 = fadd <5 x double> undef, undef
+; GFX90A-FASTF64-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %v5f64 = fadd <5 x double> undef, undef
 ; GFX90A-FASTF64-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
 ;
 ; FASTF64-LABEL: 'fadd_f64'
@@ -62,7 +72,7 @@ define amdgpu_kernel void @fadd_f64() #0 {
 ; FASTF64-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v2f64 = fadd <2 x double> undef, undef
 ; FASTF64-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %v3f64 = fadd <3 x double> undef, undef
 ; FASTF64-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v4f64 = fadd <4 x double> undef, undef
-; FASTF64-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %v5f64 = fadd <5 x double> undef, undef
+; FASTF64-NEXT:  Cost Model: Found an estimated cost of 48 for instruction: %v5f64 = fadd <5 x double> undef, undef
 ; FASTF64-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
 ;
 ; SLOWF64-LABEL: 'fadd_f64'
@@ -70,7 +80,7 @@ define amdgpu_kernel void @fadd_f64() #0 {
 ; SLOWF64-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v2f64 = fadd <2 x double> undef, undef
 ; SLOWF64-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %v3f64 = fadd <3 x double> undef, undef
 ; SLOWF64-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v4f64 = fadd <4 x double> undef, undef
-; SLOWF64-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %v5f64 = fadd <5 x double> undef, undef
+; SLOWF64-NEXT:  Cost Model: Found an estimated cost of 96 for instruction: %v5f64 = fadd <5 x double> undef, undef
 ; SLOWF64-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
 ;
 ; GFX90A-FASTF64-SIZE-LABEL: 'fadd_f64'
@@ -78,7 +88,7 @@ define amdgpu_kernel void @fadd_f64() #0 {
 ; GFX90A-FASTF64-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v2f64 = fadd <2 x double> undef, undef
 ; GFX90A-FASTF64-SIZE-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v3f64 = fadd <3 x double> undef, undef
 ; GFX90A-FASTF64-SIZE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v4f64 = fadd <4 x double> undef, undef
-; GFX90A-FASTF64-SIZE-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %v5f64 = fadd <5 x double> undef, undef
+; GFX90A-FASTF64-SIZE-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %v5f64 = fadd <5 x double> undef, undef
 ; GFX90A-FASTF64-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 ; NOPACKEDF32-SIZE-LABEL: 'fadd_f64'
@@ -86,7 +96,7 @@ define amdgpu_kernel void @fadd_f64() #0 {
 ; NOPACKEDF32-SIZE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v2f64 = fadd <2 x double> undef, undef
 ; NOPACKEDF32-SIZE-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %v3f64 = fadd <3 x double> undef, undef
 ; NOPACKEDF32-SIZE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v4f64 = fadd <4 x double> undef, undef
-; NOPACKEDF32-SIZE-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %v5f64 = fadd <5 x double> undef, undef
+; NOPACKEDF32-SIZE-NEXT:  Cost Model: Found an estimated cost of 48 for instruction: %v5f64 = fadd <5 x double> undef, undef
 ; NOPACKEDF32-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
   %f64 = fadd double undef, undef
@@ -103,7 +113,9 @@ define amdgpu_kernel void @fadd_f16() #0 {
 ; FASTF16-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2f16 = fadd <2 x half> undef, undef
 ; FASTF16-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v3f16 = fadd <3 x half> undef, undef
 ; FASTF16-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v4f16 = fadd <4 x half> undef, undef
-; FASTF16-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v5f16 = fadd <5 x half> undef, undef
+; FASTF16-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v5f16 = fadd <5 x half> undef, undef
+; FASTF16-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v16f16 = fadd <16 x half> undef, undef
+; FASTF16-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %v17f16 = fadd <17 x half> undef, undef
 ; FASTF16-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
 ;
 ; SLOWF64-LABEL: 'fadd_f16'
@@ -111,7 +123,9 @@ define amdgpu_kernel void @fadd_f16() #0 {
 ; SLOWF64-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v2f16 = fadd <2 x half> undef, undef
 ; SLOWF64-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v3f16 = fadd <3 x half> undef, undef
 ; SLOWF64-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v4f16 = fadd <4 x half> undef, undef
-; SLOWF64-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v5f16 = fadd <5 x half> undef, undef
+; SLOWF64-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v5f16 = fadd <5 x half> undef, undef
+; SLOWF64-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v16f16 = fadd <16 x half> undef, undef
+; SLOWF64-NEXT:  Cost Model: Found an estimated cost of 34 for instruction: %v17f16 = fadd <17 x half> undef, undef
 ; SLOWF64-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
 ;
 ; FASTF16-SIZE-LABEL: 'fadd_f16'
@@ -119,7 +133,9 @@ define amdgpu_kernel void @fadd_f16() #0 {
 ; FASTF16-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2f16 = fadd <2 x half> undef, undef
 ; FASTF16-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v3f16 = fadd <3 x half> undef, undef
 ; FASTF16-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v4f16 = fadd <4 x half> undef, undef
-; FASTF16-SIZE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v5f16 = fadd <5 x half> undef, undef
+; FASTF16-SIZE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v5f16 = fadd <5 x half> undef, undef
+; FASTF16-SIZE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v16f16 = fadd <16 x half> undef, undef
+; FASTF16-SIZE-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %v17f16 = fadd <17 x half> undef, undef
 ; FASTF16-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 ; SLOWF64-SIZE-LABEL: 'fadd_f16'
@@ -127,7 +143,9 @@ define amdgpu_kernel void @fadd_f16() #0 {
 ; SLOWF64-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v2f16 = fadd <2 x half> undef, undef
 ; SLOWF64-SIZE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v3f16 = fadd <3 x half> undef, undef
 ; SLOWF64-SIZE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v4f16 = fadd <4 x half> undef, undef
-; SLOWF64-SIZE-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v5f16 = fadd <5 x half> undef, undef
+; SLOWF64-SIZE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v5f16 = fadd <5 x half> undef, undef
+; SLOWF64-SIZE-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v16f16 = fadd <16 x half> undef, undef
+; SLOWF64-SIZE-NEXT:  Cost Model: Found an estimated cost of 34 for instruction: %v17f16 = fadd <17 x half> undef, undef
 ; SLOWF64-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
   %f16 = fadd half undef, undef
@@ -135,6 +153,8 @@ define amdgpu_kernel void @fadd_f16() #0 {
   %v3f16 = fadd <3 x half> undef, undef
   %v4f16 = fadd <4 x half> undef, undef
   %v5f16 = fadd <5 x half> undef, undef
+  %v16f16 = fadd <16 x half> undef, undef
+  %v17f16 = fadd <17 x half> undef, undef
   ret void
 }
 
