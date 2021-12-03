@@ -629,6 +629,40 @@ struct ReturnOpInterface
   }
 };
 
+struct FuncOpInterface
+    : public BufferizableOpInterface::ExternalModel<FuncOpInterface, FuncOp> {
+  LogicalResult bufferize(Operation *op, OpBuilder &b,
+                          BufferizationState &state) const {
+    auto funcOp = cast<FuncOp>(op);
+
+    // Take a guard before anything else.
+    OpBuilder::InsertionGuard g(b);
+    b.setInsertionPointToStart(&funcOp.body().front());
+
+    // Create BufferCastOps for function args.
+    for (auto bbArg : funcOp.getArguments()) {
+      auto tensorType = bbArg.getType().dyn_cast<TensorType>();
+      if (!tensorType)
+        continue;
+      auto rankedTensorType = tensorType.dyn_cast<RankedTensorType>();
+      // Cast the tensor to the most dynamic buffer possible. Further
+      // canonicalizations will clean up.
+      Type memRefType = rankedTensorType
+                            ? getDynamicMemRefType(rankedTensorType)
+                            : getContiguousOrUnrankedMemRefType(tensorType);
+      Value bufferCast = b.create<bufferization::ToMemrefOp>(funcOp.getLoc(),
+                                                             memRefType, bbArg);
+      state.aliasInfo.insertNewBufferEquivalence(bufferCast, bbArg);
+      state.mapBuffer(bbArg, bufferCast);
+    }
+
+    // Bufferize function body.
+    return comprehensive_bufferize::bufferize(&funcOp.body(), state);
+  }
+
+  bool isAllocationHoistingBarrier(Operation *op) const { return true; }
+};
+
 } // namespace std_ext
 } // namespace comprehensive_bufferize
 } // namespace linalg
@@ -638,7 +672,7 @@ void mlir::linalg::comprehensive_bufferize::std_ext::
     registerBufferizableOpInterfaceExternalModels(DialectRegistry &registry) {
   registry.addOpInterface<CallOp, std_ext::CallOpInterface>();
   registry.addOpInterface<ReturnOp, std_ext::ReturnOpInterface>();
-  registry.addOpInterface<FuncOp, AllocationHoistingBarrierOnly<FuncOp>>();
+  registry.addOpInterface<FuncOp, std_ext::FuncOpInterface>();
 }
 
 LogicalResult mlir::linalg::comprehensive_bufferize::runComprehensiveBufferize(
@@ -670,6 +704,15 @@ LogicalResult mlir::linalg::comprehensive_bufferize::runComprehensiveBufferize(
       for (BlockArgument bbArg : funcOp.getArguments())
         if (bbArg.getType().isa<TensorType>())
           aliasInfo.setBufferizesToWritableMemory(bbArg);
+
+    // Set the function arguments marked with inplaceable to be known as
+    // bufferizing to a writeable memory.
+    for (BlockArgument bbArg : funcOp.getArguments()) {
+      BoolAttr inplaceAttr = funcOp.getArgAttrOfType<BoolAttr>(
+          bbArg.getArgNumber(), BufferizableOpInterface::kInplaceableAttrName);
+      if (inplaceAttr && inplaceAttr.getValue())
+        aliasInfo.setBufferizesToWritableMemory(bbArg);
+    }
 
     // Analyze and bufferize funcOp.
     if (failed(runComprehensiveBufferize(funcOp, options, state)))
