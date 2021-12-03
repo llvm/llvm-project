@@ -111,6 +111,7 @@ private:
     /// corresponding future.
     auto R = createTaskAndFuture(Task);
 
+    int requestedThreads;
     {
       // Lock the queue and push the new task
       std::unique_lock<std::mutex> LockGuard(QueueLock);
@@ -118,9 +119,10 @@ private:
       // Don't allow enqueueing after disabling the pool
       assert(EnableFlag && "Queuing a thread during ThreadPool destruction");
       Tasks.push(std::move(R.first));
-      grow();
+      requestedThreads = ActiveThreads + Tasks.size();
     }
     QueueCondition.notify_one();
+    grow(requestedThreads);
     return R.second.share();
 
 #else // LLVM_ENABLE_THREADS Disabled
@@ -135,28 +137,21 @@ private:
   }
 
 #if LLVM_ENABLE_THREADS
-  // Maybe create a new thread and add it to Threads.
-  //
-  // Requirements:
-  //   * this->QueueLock should be owned by the calling thread prior to
-  //     calling this function. It will neither lock it nor unlock it.
-  //     Calling this function without owning QueueLock would result in data
-  //     races as this function reads Tasks and ActiveThreads.
-  //   * this->Tasks should be populated with any pending tasks. This function
-  //     uses Tasks.size() to determine whether it needs to create a new thread.
-  //   * this->ActiveThreads should be up to date as it is also used to
-  //     determine whether to create a new thread.
-  void grow();
+  // Grow to ensure that we have at least `requested` Threads, but do not go
+  // over MaxThreadCount.
+  void grow(int requested);
 #endif
 
   /// Threads in flight
   std::vector<llvm::thread> Threads;
+  /// Lock protecting access to the Threads vector.
+  mutable std::mutex ThreadsLock;
 
   /// Tasks waiting for execution in the pool.
   std::queue<std::function<void()>> Tasks;
 
   /// Locking and signaling for accessing the Tasks queue.
-  mutable std::mutex QueueLock;
+  std::mutex QueueLock;
   std::condition_variable QueueCondition;
 
   /// Signaling for job completion
