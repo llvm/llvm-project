@@ -2683,6 +2683,32 @@ protected: int method())",
       },
       {
           [](HoverInfo &HI) {
+            HI.Definition = "cls(int a, int b = 5)";
+            HI.AccessSpecifier = "public";
+            HI.Kind = index::SymbolKind::Constructor;
+            HI.NamespaceScope = "";
+            HI.LocalScope = "cls";
+            HI.Name = "cls";
+            HI.Parameters.emplace();
+            HI.Parameters->emplace_back();
+            HI.Parameters->back().Type = "int";
+            HI.Parameters->back().Name = "a";
+            HI.Parameters->emplace_back();
+            HI.Parameters->back().Type = "int";
+            HI.Parameters->back().Name = "b";
+            HI.Parameters->back().Default = "5";
+          },
+          R"(constructor cls
+
+Parameters:
+- int a
+- int b = 5
+
+// In cls
+public: cls(int a, int b = 5))",
+      },
+      {
+          [](HoverInfo &HI) {
             HI.Kind = index::SymbolKind::Union;
             HI.AccessSpecifier = "private";
             HI.Name = "foo";
