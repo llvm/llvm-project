@@ -7,7 +7,7 @@ define i32* @a(i32** %p) {
 	ret i32* %tmp
 }
 
-; CHECK: define i32* @b(i32* writeonly %q)
+; CHECK: define i32* @b(i32* %q)
 define i32* @b(i32 *%q) {
 	%mem = alloca i32*
 	store i32* %q, i32** %mem

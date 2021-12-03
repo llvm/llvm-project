@@ -769,6 +769,10 @@ determinePointerAccessAttrs(Argument *A,
       break;
 
     case Instruction::Store:
+      if (cast<StoreInst>(I)->getValueOperand() == *U)
+        // untrackable capture
+        return Attribute::None;
+
       // A volatile store has side effects beyond what writeonly can be relied
       // upon.
       if (cast<StoreInst>(I)->isVolatile())

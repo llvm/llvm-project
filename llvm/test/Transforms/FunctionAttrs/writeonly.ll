@@ -31,6 +31,15 @@ define void @test_store(i8* %p) {
   ret void
 }
 
+@G = external global i8*
+; CHECK: define i8 @test_store_capture(i8* %p)
+define i8 @test_store_capture(i8* %p) {
+  store i8* %p, i8** @G
+  %p2 = load i8*, i8** @G
+  %v = load i8, i8* %p2
+  ret i8 %v
+}
+
 ; CHECK: define void @test_addressing(i8* nocapture writeonly %p)
 define void @test_addressing(i8* %p) {
   %gep = getelementptr i8, i8* %p, i64 8
