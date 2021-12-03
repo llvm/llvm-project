@@ -648,7 +648,7 @@ LogicalResult mlir::linalg::comprehensive_bufferize::runComprehensiveBufferize(
   if (failed(getFuncOpsOrderedByCalls(moduleOp, orderedFuncOps, callerMap)))
     return failure();
 
-  BufferizationState state(moduleOp, *options.allocationFns);
+  BufferizationState state(moduleOp, options);
   BufferizationAliasInfo &aliasInfo = state.aliasInfo;
 
   // Interestingly, all function args that are not visible outside of a module

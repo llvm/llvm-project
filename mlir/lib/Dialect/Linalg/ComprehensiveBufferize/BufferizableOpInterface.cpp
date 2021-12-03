@@ -36,6 +36,45 @@ using namespace mlir;
 using namespace linalg::comprehensive_bufferize;
 
 //===----------------------------------------------------------------------===//
+// BufferizationOptions
+//===----------------------------------------------------------------------===//
+
+/// Default allocation function that is used by the comprehensive bufferization
+/// pass. The default currently creates a ranked memref using `memref.alloc`.
+static Optional<Value> defaultAllocationFn(OpBuilder &b, Location loc,
+                                           MemRefType type,
+                                           ArrayRef<Value> dynShape) {
+  Value allocated = b.create<memref::AllocOp>(
+      loc, type, dynShape, b.getI64IntegerAttr(kBufferAlignments));
+  return allocated;
+}
+
+/// Default deallocation function that is used by the comprehensive
+/// bufferization pass. It expects to recieve back the value called from the
+/// `defaultAllocationFn`.
+static void defaultDeallocationFn(OpBuilder &b, Location loc,
+                                  Value allocatedBuffer) {
+  b.create<memref::DeallocOp>(loc, allocatedBuffer);
+}
+
+/// Default memory copy function that is used by the comprehensive bufferization
+/// pass. Creates a `memref.copy` op.
+static void defaultMemCpyFn(OpBuilder &b, Location loc, Value from, Value to) {
+  b.create<memref::CopyOp>(loc, from, to);
+}
+
+std::unique_ptr<AllocationCallbacks>
+mlir::linalg::comprehensive_bufferize::defaultAllocationCallbacks() {
+  return std::make_unique<AllocationCallbacks>(
+      defaultAllocationFn, defaultDeallocationFn, defaultMemCpyFn);
+}
+
+// Default constructor for BufferizationOptions that sets all allocation
+// callbacks to their default functions.
+BufferizationOptions::BufferizationOptions()
+    : allocationFns(defaultAllocationCallbacks()) {}
+
+//===----------------------------------------------------------------------===//
 // BufferizationAliasInfo
 //===----------------------------------------------------------------------===//
 
@@ -384,7 +423,8 @@ Value mlir::linalg::comprehensive_bufferize::getResultBuffer(
     if (!skipCopy) {
       // The copy happens right before the op that is bufferized.
       b.setInsertionPoint(op);
-      state.allocationFns.memCpyFn(b, loc, operandBuffer, resultBuffer);
+      state.options.allocationFns->memCpyFn(b, loc, operandBuffer,
+                                            resultBuffer);
     }
     return resultBuffer;
   }
@@ -537,7 +577,7 @@ Value mlir::linalg::comprehensive_bufferize::BufferizationState::
   MemRefType allocMemRefType =
       getAllocationTypeAndShape(b, loc, shapedValue, dynShape);
   Optional<Value> allocated =
-      allocationFns.allocationFn(b, loc, allocMemRefType, dynShape);
+      options.allocationFns->allocationFn(b, loc, allocMemRefType, dynShape);
   // TODO: For now just assert the value is returned. Eventually need to
   // error-propagate.
   assert(allocated && "allocation failed");
@@ -549,7 +589,7 @@ Value mlir::linalg::comprehensive_bufferize::BufferizationState::
 
   // 2. Create memory deallocation.
   b.setInsertionPoint(allocated.getValue().getParentBlock()->getTerminator());
-  allocationFns.deallocationFn(b, loc, allocated.getValue());
+  options.allocationFns->deallocationFn(b, loc, allocated.getValue());
   return casted;
 }
 
