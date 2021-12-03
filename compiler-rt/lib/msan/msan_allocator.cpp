@@ -160,6 +160,11 @@ static void *MsanAllocate(StackTrace *stack, uptr size, uptr alignment,
     }
     ReportAllocationSizeTooBig(size, max_malloc_size, stack);
   }
+  if (UNLIKELY(IsRssLimitExceeded())) {
+    if (AllocatorMayReturnNull())
+      return nullptr;
+    ReportRssLimitExceeded(stack);
+  }
   MsanThread *t = GetCurrentThread();
   void *allocated;
   if (t) {
