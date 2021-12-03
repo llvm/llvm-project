@@ -2872,6 +2872,12 @@ def G_AMDGPU_FMED3 : AMDGPUGenericInstruction {
   let hasSideEffects = 0;
 }
 
+def G_AMDGPU_CLAMP : AMDGPUGenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src);
+  let hasSideEffects = 0;
+}
+
 // Atomic cmpxchg. $cmpval ad $newval are packed in a single vector
 // operand Expects a MachineMemOperand in addition to explicit
 // operands.
