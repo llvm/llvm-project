@@ -1925,8 +1925,8 @@ void FlatAffineConstraints::removeRedundantConstraints() {
 static void eleminateRedundantLocalId(FlatAffineConstraints &fac, unsigned pos1,
                                       unsigned pos2) {
 
-  assert(pos1 <= fac.getNumLocalIds() && "Invalid local id position");
-  assert(pos2 <= fac.getNumLocalIds() && "Invalid local id position");
+  assert(pos1 < fac.getNumLocalIds() && "Invalid local id position");
+  assert(pos2 < fac.getNumLocalIds() && "Invalid local id position");
 
   unsigned localOffset = fac.getNumDimAndSymbolIds();
   pos1 += localOffset;
