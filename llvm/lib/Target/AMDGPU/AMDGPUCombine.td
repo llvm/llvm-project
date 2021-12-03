@@ -64,6 +64,15 @@ def int_minmax_to_med3 : GICombineRule<
          [{ return RegBankHelper.matchIntMinMaxToMed3(*${min_or_max}, ${matchinfo}); }]),
   (apply [{ RegBankHelper.applyMed3(*${min_or_max}, ${matchinfo}); }])>;
 
+def fp_minmax_to_med3 : GICombineRule<
+  (defs root:$min_or_max, med3_matchdata:$matchinfo),
+  (match (wip_match_opcode G_FMAXNUM,
+                           G_FMINNUM,
+                           G_FMAXNUM_IEEE,
+                           G_FMINNUM_IEEE):$min_or_max,
+         [{ return RegBankHelper.matchFPMinMaxToMed3(*${min_or_max}, ${matchinfo}); }]),
+  (apply [{ RegBankHelper.applyMed3(*${min_or_max}, ${matchinfo}); }])>;
+
 def remove_fcanonicalize_matchinfo : GIDefMatchData<"Register">;
 
 def remove_fcanonicalize : GICombineRule<
@@ -102,7 +111,9 @@ def AMDGPUPostLegalizerCombinerHelper: GICombinerHelper<
 }
 
 def AMDGPURegBankCombinerHelper : GICombinerHelper<
-  "AMDGPUGenRegBankCombinerHelper", [zext_trunc_fold, int_minmax_to_med3, ptr_add_immed_chain]> {
+  "AMDGPUGenRegBankCombinerHelper",
+  [zext_trunc_fold, int_minmax_to_med3, ptr_add_immed_chain,
+   fp_minmax_to_med3]> {
   let DisableRuleOption = "amdgpuregbankcombiner-disable-rule";
   let StateClass = "AMDGPURegBankCombinerHelperState";
   let AdditionalArguments = [];

@@ -16,6 +16,7 @@
 #include "AMDGPURegisterBankInfo.h"
 #include "GCNSubtarget.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
+#include "SIMachineFunctionInfo.h"
 #include "llvm/CodeGen/GlobalISel/Combiner.h"
 #include "llvm/CodeGen/GlobalISel/CombinerHelper.h"
 #include "llvm/CodeGen/GlobalISel/CombinerInfo.h"
@@ -36,13 +37,15 @@ protected:
   MachineRegisterInfo &MRI;
   const RegisterBankInfo &RBI;
   const TargetRegisterInfo &TRI;
+  const SIInstrInfo &TII;
   CombinerHelper &Helper;
 
 public:
   AMDGPURegBankCombinerHelper(MachineIRBuilder &B, CombinerHelper &Helper)
       : B(B), MF(B.getMF()), MRI(*B.getMRI()),
         RBI(*MF.getSubtarget().getRegBankInfo()),
-        TRI(*MF.getSubtarget().getRegisterInfo()), Helper(Helper){};
+        TRI(*MF.getSubtarget().getRegisterInfo()),
+        TII(*MF.getSubtarget<GCNSubtarget>().getInstrInfo()), Helper(Helper){};
 
   bool isVgprRegBank(Register Reg);
   Register getAsVgpr(Register Reg);
@@ -63,7 +66,13 @@ public:
                 Register &Val, CstTy &K0, CstTy &K1);
 
   bool matchIntMinMaxToMed3(MachineInstr &MI, Med3MatchInfo &MatchInfo);
+  bool matchFPMinMaxToMed3(MachineInstr &MI, Med3MatchInfo &MatchInfo);
   void applyMed3(MachineInstr &MI, Med3MatchInfo &MatchInfo);
+
+private:
+  AMDGPU::SIModeRegisterDefaults getMode();
+  bool getIEEE();
+  bool isFminnumIeee(const MachineInstr &MI);
 };
 
 bool AMDGPURegBankCombinerHelper::isVgprRegBank(Register Reg) {
@@ -98,6 +107,13 @@ AMDGPURegBankCombinerHelper::getMinMaxPair(unsigned Opc) {
   case AMDGPU::G_UMAX:
   case AMDGPU::G_UMIN:
     return {AMDGPU::G_UMIN, AMDGPU::G_UMAX, AMDGPU::G_AMDGPU_UMED3};
+  case AMDGPU::G_FMAXNUM:
+  case AMDGPU::G_FMINNUM:
+    return {AMDGPU::G_FMINNUM, AMDGPU::G_FMAXNUM, AMDGPU::G_AMDGPU_FMED3};
+  case AMDGPU::G_FMAXNUM_IEEE:
+  case AMDGPU::G_FMINNUM_IEEE:
+    return {AMDGPU::G_FMINNUM_IEEE, AMDGPU::G_FMAXNUM_IEEE,
+            AMDGPU::G_AMDGPU_FMED3};
   }
 }
 
@@ -148,6 +164,59 @@ bool AMDGPURegBankCombinerHelper::matchIntMinMaxToMed3(
   return true;
 }
 
+// fmed3(NaN, K0, K1) = min(min(NaN, K0), K1)
+// ieee = true  : min/max(SNaN, K) = QNaN, min/max(QNaN, K) = K
+// ieee = false : min/max(NaN, K) = K
+// Consider values of min(max(Val, K0), K1) and max(min(Val, K1), K0) as input.
+// Other operand commutes (see matchMed) give same result since min and max are
+// commutative.
+
+// Try to replace fp min(max(Val, K0), K1) or max(min(Val, K1), K0), KO<=K1
+// with fmed3(Val, K0, K1).
+// Val = SNaN only for ieee = true
+// fmed3(SNaN, K0, K1) = min(min(SNaN, K0), K1) = min(QNaN, K1) = K1
+// min(max(SNaN, K0), K1) = min(QNaN, K1) = K1
+// max(min(SNaN, K1), K0) = max(K1, K0) = K1
+// Val = NaN,ieee = false or Val = QNaN,ieee = true
+// fmed3(NaN, K0, K1) = min(min(NaN, K0), K1) = min(K0, K1) = K0
+// min(max(NaN, K0), K1) = min(K0, K1) = K0
+// max(min(NaN, K1), K0) = max(K1, K0) = K1 != K0
+bool AMDGPURegBankCombinerHelper::matchFPMinMaxToMed3(
+    MachineInstr &MI, Med3MatchInfo &MatchInfo) {
+  Register Dst = MI.getOperand(0).getReg();
+  LLT Ty = MRI.getType(Dst);
+  if (Ty != LLT::scalar(16) && Ty != LLT::scalar(32))
+    return false;
+
+  auto OpcodeTriple = getMinMaxPair(MI.getOpcode());
+
+  Register Val;
+  Optional<FPValueAndVReg> K0, K1;
+  // Match min(max(Val, K0), K1) or max(min(Val, K1), K0). Then see if K0 <= K1.
+  if (!matchMed<GFCstAndRegMatch>(MI, MRI, OpcodeTriple, Val, K0, K1))
+    return false;
+
+  if (K0->Value > K1->Value)
+    return false;
+
+  // For IEEE=false perform combine only when it's safe to assume that there are
+  // no NaN inputs. Most often MI is marked with nnan fast math flag.
+  // For IEEE=true consider NaN inputs. fmed3(NaN, K0, K1) is equivalent to
+  // min(min(NaN, K0), K1). Safe to fold for min(max(Val, K0), K1) since inner
+  // nodes(max/min) have same behavior when one input is NaN and other isn't.
+  // Don't consider max(min(SNaN, K1), K0) since there is no isKnownNeverQNaN,
+  // also post-legalizer inputs to min/max are fcanonicalized (never SNaN).
+  if ((getIEEE() && isFminnumIeee(MI)) || isKnownNeverNaN(Dst, MRI)) {
+    // Don't fold single use constant that can't be inlined.
+    if ((!MRI.hasOneNonDBGUse(K0->VReg) || TII.isInlineConstant(K0->Value)) &&
+        (!MRI.hasOneNonDBGUse(K1->VReg) || TII.isInlineConstant(K1->Value))) {
+      MatchInfo = {OpcodeTriple.Med, Val, K0->VReg, K1->VReg};
+      return true;
+    }
+  }
+
+  return false;
+}
 void AMDGPURegBankCombinerHelper::applyMed3(MachineInstr &MI,
                                             Med3MatchInfo &MatchInfo) {
   B.setInstrAndDebugLoc(MI);
@@ -156,6 +225,16 @@ void AMDGPURegBankCombinerHelper::applyMed3(MachineInstr &MI,
                 getAsVgpr(MatchInfo.Val2)},
                MI.getFlags());
   MI.eraseFromParent();
+}
+
+AMDGPU::SIModeRegisterDefaults AMDGPURegBankCombinerHelper::getMode() {
+  return MF.getInfo<SIMachineFunctionInfo>()->getMode();
+}
+
+bool AMDGPURegBankCombinerHelper::getIEEE() { return getMode().IEEE; }
+
+bool AMDGPURegBankCombinerHelper::isFminnumIeee(const MachineInstr &MI) {
+  return MI.getOpcode() == AMDGPU::G_FMINNUM_IEEE;
 }
 
 class AMDGPURegBankCombinerHelperState {
