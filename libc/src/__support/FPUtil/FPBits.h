@@ -153,7 +153,7 @@ template <typename T> union FPBits {
 } // namespace __llvm_libc
 
 #ifdef SPECIAL_X86_LONG_DOUBLE
-#include "src/__support/FPUtil/LongDoubleBitsX86.h"
+#include "x86_64/LongDoubleBits.h"
 #endif
 
 #endif // LLVM_LIBC_SRC_SUPPORT_FPUTIL_FP_BITS_H

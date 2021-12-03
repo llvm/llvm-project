@@ -6,10 +6,16 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_SUPPORT_FPUTIL_LONG_DOUBLE_BITS_X86_H
-#define LLVM_LIBC_SRC_SUPPORT_FPUTIL_LONG_DOUBLE_BITS_X86_H
+#ifndef LLVM_LIBC_SRC_SUPPORT_FPUTIL_X86_64_LONG_DOUBLE_BITS_H
+#define LLVM_LIBC_SRC_SUPPORT_FPUTIL_X86_64_LONG_DOUBLE_BITS_H
 
-#include "FPBits.h"
+#include "src/__support/architectures.h"
+
+#if !defined(LLVM_LIBC_ARCH_X86)
+#error "Invalid include"
+#endif
+
+#include "src/__support/FPUtil/FPBits.h"
 
 #include <stdint.h>
 
@@ -181,4 +187,4 @@ static_assert(
 } // namespace fputil
 } // namespace __llvm_libc
 
-#endif // LLVM_LIBC_SRC_SUPPORT_FPUTIL_LONG_DOUBLE_BITS_X86_H
+#endif // LLVM_LIBC_SRC_SUPPORT_FPUTIL_X86_64_LONG_DOUBLE_BITS_H

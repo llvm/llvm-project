@@ -9,6 +9,12 @@
 #ifndef LLVM_LIBC_SRC_SUPPORT_FPUTIL_AARCH64_FMA_H
 #define LLVM_LIBC_SRC_SUPPORT_FPUTIL_AARCH64_FMA_H
 
+#include "src/__support/architectures.h"
+
+#if !defined(LLVM_LIBC_ARCH_AARCH64)
+#error "Invalid include"
+#endif
+
 #include "src/__support/CPP/TypeTraits.h"
 
 namespace __llvm_libc {
