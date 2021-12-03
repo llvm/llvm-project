@@ -305,7 +305,6 @@ struct Allocator {
   QuarantineCache fallback_quarantine_cache;
 
   uptr max_user_defined_malloc_size;
-  atomic_uint8_t rss_limit_exceeded;
 
   // ------------------- Options --------------------------
   atomic_uint16_t min_redzone;
@@ -347,14 +346,6 @@ struct Allocator {
                                        ? common_flags()->max_allocation_size_mb
                                              << 20
                                        : kMaxAllowedMallocSize;
-  }
-
-  bool RssLimitExceeded() {
-    return atomic_load(&rss_limit_exceeded, memory_order_relaxed);
-  }
-
-  void SetRssLimitExceeded(bool limit_exceeded) {
-    atomic_store(&rss_limit_exceeded, limit_exceeded, memory_order_relaxed);
   }
 
   void RePoisonChunk(uptr chunk) {
@@ -489,7 +480,7 @@ struct Allocator {
                  DeviceAllocationInfo *da_info = nullptr) {
     if (UNLIKELY(!asan_inited))
       AsanInitFromRtl();
-    if (RssLimitExceeded()) {
+    if (UNLIKELY(IsRssLimitExceeded())) {
       if (AllocatorMayReturnNull())
         return nullptr;
       ReportRssLimitExceeded(stack);
@@ -1074,10 +1065,6 @@ void asan_mz_force_lock() NO_THREAD_SAFETY_ANALYSIS { instance.ForceLock(); }
 
 void asan_mz_force_unlock() NO_THREAD_SAFETY_ANALYSIS {
   instance.ForceUnlock();
-}
-
-void AsanSoftRssLimitExceededCallback(bool limit_exceeded) {
-  instance.SetRssLimitExceeded(limit_exceeded);
 }
 
 }  // namespace __asan

@@ -76,6 +76,9 @@ inline void RandomShuffle(T *a, u32 n, u32 *rand_state) {
 #include "sanitizer_allocator_device.h"
 #include "sanitizer_allocator_combined.h"
 
+bool IsRssLimitExceeded();
+void SetRssLimitExceeded(bool limit_exceeded);
+
 } // namespace __sanitizer
 
 #endif // SANITIZER_ALLOCATOR_H

@@ -209,7 +209,7 @@ public:
 #endif
 };
 
-}  // std
+} // namespace std
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 

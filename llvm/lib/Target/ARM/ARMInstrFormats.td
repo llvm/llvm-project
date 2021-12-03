@@ -103,15 +103,17 @@ def AddrModeT1_4    : AddrMode<9>;
 def AddrModeT1_s    : AddrMode<10>;
 def AddrModeT2_i12  : AddrMode<11>;
 def AddrModeT2_i8   : AddrMode<12>;
-def AddrModeT2_so   : AddrMode<13>;
-def AddrModeT2_pc   : AddrMode<14>;
-def AddrModeT2_i8s4 : AddrMode<15>;
-def AddrMode_i12    : AddrMode<16>;
-def AddrMode5FP16   : AddrMode<17>;
-def AddrModeT2_ldrex : AddrMode<18>;
-def AddrModeT2_i7s4 : AddrMode<19>;
-def AddrModeT2_i7s2 : AddrMode<20>;
-def AddrModeT2_i7   : AddrMode<21>;
+def AddrModeT2_i8pos : AddrMode<13>;
+def AddrModeT2_i8neg : AddrMode<14>;
+def AddrModeT2_so   : AddrMode<15>;
+def AddrModeT2_pc   : AddrMode<16>;
+def AddrModeT2_i8s4 : AddrMode<17>;
+def AddrMode_i12    : AddrMode<18>;
+def AddrMode5FP16   : AddrMode<19>;
+def AddrModeT2_ldrex : AddrMode<20>;
+def AddrModeT2_i7s4 : AddrMode<21>;
+def AddrModeT2_i7s2 : AddrMode<22>;
+def AddrModeT2_i7   : AddrMode<23>;
 
 // Load / store index mode.
 class IndexMode<bits<2> val> {
@@ -1392,9 +1394,12 @@ class T2I<dag oops, dag iops, InstrItinClass itin,
 class T2Ii12<dag oops, dag iops, InstrItinClass itin,
              string opc, string asm, list<dag> pattern>
   : Thumb2I<oops, iops, AddrModeT2_i12, 4, itin, opc, asm, "",pattern>;
-class T2Ii8<dag oops, dag iops, InstrItinClass itin,
-            string opc, string asm, list<dag> pattern>
-  : Thumb2I<oops, iops, AddrModeT2_i8, 4, itin, opc, asm, "", pattern>;
+class T2Ii8p<dag oops, dag iops, InstrItinClass itin,
+             string opc, string asm, list<dag> pattern>
+  : Thumb2I<oops, iops, AddrModeT2_i8pos, 4, itin, opc, asm, "", pattern>;
+class T2Ii8n<dag oops, dag iops, InstrItinClass itin,
+             string opc, string asm, list<dag> pattern>
+  : Thumb2I<oops, iops, AddrModeT2_i8neg, 4, itin, opc, asm, "", pattern>;
 class T2Iso<dag oops, dag iops, InstrItinClass itin,
             string opc, string asm, list<dag> pattern>
   : Thumb2I<oops, iops, AddrModeT2_so, 4, itin, opc, asm, "", pattern>;

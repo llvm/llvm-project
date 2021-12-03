@@ -314,17 +314,19 @@ define i32 @test7bad() {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[LOCAL:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    call void @capture(ptr [[LOCAL]])
+; CHECK-NEXT:    [[LOCAL_PROMOTED:%.*]] = load i32, ptr [[LOCAL]], align 4
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[J:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[NEXT:%.*]], [[ELSE:%.*]] ]
-; CHECK-NEXT:    [[X:%.*]] = load i32, ptr [[LOCAL]], align 4
-; CHECK-NEXT:    [[X2:%.*]] = call i32 @opaque(i32 [[X]])
+; CHECK-NEXT:    [[X22:%.*]] = phi i32 [ [[LOCAL_PROMOTED]], [[ENTRY:%.*]] ], [ [[X21:%.*]], [[ELSE:%.*]] ]
+; CHECK-NEXT:    [[J:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[NEXT:%.*]], [[ELSE]] ]
+; CHECK-NEXT:    [[X2:%.*]] = call i32 @opaque(i32 [[X22]])
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[X2]], 0
 ; CHECK-NEXT:    br i1 [[CMP]], label [[IF:%.*]], label [[ELSE]]
 ; CHECK:       if:
 ; CHECK-NEXT:    store i32 [[X2]], ptr [[LOCAL]], align 4
 ; CHECK-NEXT:    br label [[ELSE]]
 ; CHECK:       else:
+; CHECK-NEXT:    [[X21]] = phi i32 [ [[X2]], [[IF]] ], [ [[X22]], [[LOOP]] ]
 ; CHECK-NEXT:    [[NEXT]] = add i32 [[J]], 1
 ; CHECK-NEXT:    [[COND:%.*]] = icmp eq i32 [[NEXT]], 0
 ; CHECK-NEXT:    br i1 [[COND]], label [[EXIT:%.*]], label [[LOOP]]

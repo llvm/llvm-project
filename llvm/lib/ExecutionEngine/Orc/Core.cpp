@@ -2716,8 +2716,8 @@ void ExecutionSession::OL_completeLookup(
 
       LLVM_DEBUG(dbgs() << "Adding MUs to dispatch:\n");
       for (auto &KV : CollectedUMIs) {
-        auto &JD = *KV.first;
         LLVM_DEBUG({
+          auto &JD = *KV.first;
           dbgs() << "  For " << JD.getName() << ": Adding " << KV.second.size()
                  << " MUs.\n";
         });

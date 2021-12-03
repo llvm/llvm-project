@@ -978,7 +978,7 @@ enum error_type
     __re_err_parse
 };
 
-}  // regex_constants
+} // namespace regex_constants
 
 class _LIBCPP_EXCEPTION_ABI regex_error
     : public runtime_error

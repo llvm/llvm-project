@@ -210,12 +210,10 @@ int main() {
 // CHECK1-NEXT:    [[TMP20:%.*]] = icmp ne i32 [[TMP19]], 0
 // CHECK1-NEXT:    br i1 [[TMP20]], label [[DOTOMP_LINEAR_PU:%.*]], label [[DOTOMP_LINEAR_PU_DONE:%.*]]
 // CHECK1:       .omp.linear.pu:
-// CHECK1-NEXT:    [[TMP21:%.*]] = load float*, float** [[DOTLINEAR_START]], align 8
-// CHECK1-NEXT:    [[ADD_PTR11:%.*]] = getelementptr inbounds float, float* [[TMP21]], i64 6
-// CHECK1-NEXT:    store float* [[ADD_PTR11]], float** [[TMP0]], align 8
-// CHECK1-NEXT:    [[TMP22:%.*]] = load i64, i64* [[DOTLINEAR_START1]], align 8
-// CHECK1-NEXT:    [[ADD12:%.*]] = add nsw i64 [[TMP22]], 6
-// CHECK1-NEXT:    store i64 [[ADD12]], i64* [[TMP1]], align 8
+// CHECK1-NEXT:    [[TMP21:%.*]] = load float*, float** [[PVAR2]], align 8
+// CHECK1-NEXT:    store float* [[TMP21]], float** [[TMP0]], align 8
+// CHECK1-NEXT:    [[TMP22:%.*]] = load i64, i64* [[LVAR3]], align 8
+// CHECK1-NEXT:    store i64 [[TMP22]], i64* [[TMP1]], align 8
 // CHECK1-NEXT:    br label [[DOTOMP_LINEAR_PU_DONE]]
 // CHECK1:       .omp.linear.pu.done:
 // CHECK1-NEXT:    ret void
@@ -360,12 +358,10 @@ int main() {
 // CHECK1-NEXT:    [[TMP20:%.*]] = icmp ne i32 [[TMP19]], 0
 // CHECK1-NEXT:    br i1 [[TMP20]], label [[DOTOMP_LINEAR_PU:%.*]], label [[DOTOMP_LINEAR_PU_DONE:%.*]]
 // CHECK1:       .omp.linear.pu:
-// CHECK1-NEXT:    [[TMP21:%.*]] = load i32*, i32** [[DOTLINEAR_START]], align 8
-// CHECK1-NEXT:    [[ADD_PTR9:%.*]] = getelementptr inbounds i32, i32* [[TMP21]], i64 2
-// CHECK1-NEXT:    store i32* [[ADD_PTR9]], i32** [[TMP0]], align 8
-// CHECK1-NEXT:    [[TMP22:%.*]] = load i32, i32* [[DOTLINEAR_START1]], align 4
-// CHECK1-NEXT:    [[ADD10:%.*]] = add nsw i32 [[TMP22]], 2
-// CHECK1-NEXT:    store i32 [[ADD10]], i32* [[TMP1]], align 4
+// CHECK1-NEXT:    [[TMP21:%.*]] = load i32*, i32** [[PVAR2]], align 8
+// CHECK1-NEXT:    store i32* [[TMP21]], i32** [[TMP0]], align 8
+// CHECK1-NEXT:    [[TMP22:%.*]] = load i32, i32* [[LVAR3]], align 4
+// CHECK1-NEXT:    store i32 [[TMP22]], i32* [[TMP1]], align 4
 // CHECK1-NEXT:    br label [[DOTOMP_LINEAR_PU_DONE]]
 // CHECK1:       .omp.linear.pu.done:
 // CHECK1-NEXT:    ret void
@@ -534,12 +530,10 @@ int main() {
 // CHECK2-NEXT:    [[TMP20:%.*]] = icmp ne i32 [[TMP19]], 0
 // CHECK2-NEXT:    br i1 [[TMP20]], label [[DOTOMP_LINEAR_PU:%.*]], label [[DOTOMP_LINEAR_PU_DONE:%.*]]
 // CHECK2:       .omp.linear.pu:
-// CHECK2-NEXT:    [[TMP21:%.*]] = load float*, float** [[DOTLINEAR_START]], align 8
-// CHECK2-NEXT:    [[ADD_PTR11:%.*]] = getelementptr inbounds float, float* [[TMP21]], i64 6
-// CHECK2-NEXT:    store float* [[ADD_PTR11]], float** [[TMP0]], align 8
-// CHECK2-NEXT:    [[TMP22:%.*]] = load i64, i64* [[DOTLINEAR_START1]], align 8
-// CHECK2-NEXT:    [[ADD12:%.*]] = add nsw i64 [[TMP22]], 6
-// CHECK2-NEXT:    store i64 [[ADD12]], i64* [[TMP1]], align 8
+// CHECK2-NEXT:    [[TMP21:%.*]] = load float*, float** [[PVAR2]], align 8
+// CHECK2-NEXT:    store float* [[TMP21]], float** [[TMP0]], align 8
+// CHECK2-NEXT:    [[TMP22:%.*]] = load i64, i64* [[LVAR3]], align 8
+// CHECK2-NEXT:    store i64 [[TMP22]], i64* [[TMP1]], align 8
 // CHECK2-NEXT:    br label [[DOTOMP_LINEAR_PU_DONE]]
 // CHECK2:       .omp.linear.pu.done:
 // CHECK2-NEXT:    ret void
@@ -684,12 +678,10 @@ int main() {
 // CHECK2-NEXT:    [[TMP20:%.*]] = icmp ne i32 [[TMP19]], 0
 // CHECK2-NEXT:    br i1 [[TMP20]], label [[DOTOMP_LINEAR_PU:%.*]], label [[DOTOMP_LINEAR_PU_DONE:%.*]]
 // CHECK2:       .omp.linear.pu:
-// CHECK2-NEXT:    [[TMP21:%.*]] = load i32*, i32** [[DOTLINEAR_START]], align 8
-// CHECK2-NEXT:    [[ADD_PTR9:%.*]] = getelementptr inbounds i32, i32* [[TMP21]], i64 2
-// CHECK2-NEXT:    store i32* [[ADD_PTR9]], i32** [[TMP0]], align 8
-// CHECK2-NEXT:    [[TMP22:%.*]] = load i32, i32* [[DOTLINEAR_START1]], align 4
-// CHECK2-NEXT:    [[ADD10:%.*]] = add nsw i32 [[TMP22]], 2
-// CHECK2-NEXT:    store i32 [[ADD10]], i32* [[TMP1]], align 4
+// CHECK2-NEXT:    [[TMP21:%.*]] = load i32*, i32** [[PVAR2]], align 8
+// CHECK2-NEXT:    store i32* [[TMP21]], i32** [[TMP0]], align 8
+// CHECK2-NEXT:    [[TMP22:%.*]] = load i32, i32* [[LVAR3]], align 4
+// CHECK2-NEXT:    store i32 [[TMP22]], i32* [[TMP1]], align 4
 // CHECK2-NEXT:    br label [[DOTOMP_LINEAR_PU_DONE]]
 // CHECK2:       .omp.linear.pu.done:
 // CHECK2-NEXT:    ret void
@@ -825,9 +817,8 @@ int main() {
 // CHECK3-NEXT:    [[TMP16:%.*]] = icmp ne i32 [[TMP15]], 0
 // CHECK3-NEXT:    br i1 [[TMP16]], label [[DOTOMP_LINEAR_PU:%.*]], label [[DOTOMP_LINEAR_PU_DONE:%.*]]
 // CHECK3:       .omp.linear.pu:
-// CHECK3-NEXT:    [[TMP17:%.*]] = load i32, i32* [[DOTLINEAR_START]], align 4
-// CHECK3-NEXT:    [[ADD7:%.*]] = add nsw i32 [[TMP17]], 10
-// CHECK3-NEXT:    store i32 [[ADD7]], i32* [[TMP0]], align 4
+// CHECK3-NEXT:    [[TMP17:%.*]] = load i32, i32* [[G1]], align 4
+// CHECK3-NEXT:    store i32 [[TMP17]], i32* [[TMP0]], align 4
 // CHECK3-NEXT:    br label [[DOTOMP_LINEAR_PU_DONE]]
 // CHECK3:       .omp.linear.pu.done:
 // CHECK3-NEXT:    ret void
@@ -955,9 +946,8 @@ int main() {
 // CHECK4-NEXT:    [[TMP21:%.*]] = icmp ne i32 [[TMP20]], 0
 // CHECK4-NEXT:    br i1 [[TMP21]], label [[DOTOMP_LINEAR_PU:%.*]], label [[DOTOMP_LINEAR_PU_DONE:%.*]]
 // CHECK4:       .omp.linear.pu:
-// CHECK4-NEXT:    [[TMP22:%.*]] = load i32, i32* [[DOTLINEAR_START]], align 4
-// CHECK4-NEXT:    [[ADD7:%.*]] = add nsw i32 [[TMP22]], 10
-// CHECK4-NEXT:    store i32 [[ADD7]], i32* [[TMP0]], align 4
+// CHECK4-NEXT:    [[TMP22:%.*]] = load i32, i32* [[G1]], align 4
+// CHECK4-NEXT:    store i32 [[TMP22]], i32* [[TMP0]], align 4
 // CHECK4-NEXT:    br label [[DOTOMP_LINEAR_PU_DONE]]
 // CHECK4:       .omp.linear.pu.done:
 // CHECK4-NEXT:    ret void
@@ -974,5 +964,4 @@ int main() {
 // CHECK4-NEXT:    [[BLOCK_CAPTURE_ADDR:%.*]] = getelementptr inbounds <{ i8*, i32, i32, i8*, %struct.__block_descriptor*, i32 }>, <{ i8*, i32, i32, i8*, %struct.__block_descriptor*, i32 }>* [[BLOCK]], i32 0, i32 5
 // CHECK4-NEXT:    store i32 2, i32* [[BLOCK_CAPTURE_ADDR]], align 8
 // CHECK4-NEXT:    ret void
-//
 //

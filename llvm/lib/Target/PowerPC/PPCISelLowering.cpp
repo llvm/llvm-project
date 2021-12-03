@@ -17548,14 +17548,14 @@ unsigned PPCTargetLowering::computeMOFlags(const SDNode *Parent, SDValue N,
   if (Subtarget.isISA3_1() && ((ParentOp == ISD::INTRINSIC_W_CHAIN) ||
                                (ParentOp == ISD::INTRINSIC_VOID))) {
     unsigned ID = cast<ConstantSDNode>(Parent->getOperand(1))->getZExtValue();
-    assert(
-        ((ID == Intrinsic::ppc_vsx_lxvp) || (ID == Intrinsic::ppc_vsx_stxvp)) &&
-        "Only the paired load and store (lxvp/stxvp) intrinsics are valid.");
-    SDValue IntrinOp = (ID == Intrinsic::ppc_vsx_lxvp) ? Parent->getOperand(2)
-                                                       : Parent->getOperand(3);
-    computeFlagsForAddressComputation(IntrinOp, FlagSet, DAG);
-    FlagSet |= PPC::MOF_Vector;
-    return FlagSet;
+    if ((ID == Intrinsic::ppc_vsx_lxvp) || (ID == Intrinsic::ppc_vsx_stxvp)) {
+      SDValue IntrinOp = (ID == Intrinsic::ppc_vsx_lxvp)
+                             ? Parent->getOperand(2)
+                             : Parent->getOperand(3);
+      computeFlagsForAddressComputation(IntrinOp, FlagSet, DAG);
+      FlagSet |= PPC::MOF_Vector;
+      return FlagSet;
+    }
   }
 
   // Mark this as something we don't want to handle here if it is atomic

@@ -117,8 +117,6 @@ public:
 
 private:
   ImplType *set;
-  /// Sets with constraints fewer than kUniquingThreshold are uniqued.
-  constexpr static unsigned kUniquingThreshold = 4;
 };
 
 // Make AffineExpr hashable.

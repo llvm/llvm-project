@@ -4550,35 +4550,6 @@ implicit default/copy constructors).
 </pre></td></tr>
 
 
-<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1LambdaExpr.html">LambdaExpr</a>&gt;</td><td class="name" onclick="toggle('forEachLambdaCapture0')"><a name="forEachLambdaCapture0Anchor">forEachLambdaCapture</a></td><td>LambdaCaptureMatcher InnerMatcher</td></tr>
-<tr><td colspan="4" class="doc" id="forEachLambdaCapture0"><pre>Matches each lambda capture in a lambda expression.
-
-Given
-  int main() {
-    int x, y;
-    float z;
-    auto f = [=]() { return x + y + z; };
-  }
-lambdaExpr(forEachLambdaCapture(
-    lambdaCapture(capturesVar(varDecl(hasType(isInteger()))))))
-will trigger two matches, binding for 'x' and 'y' respectively.
-</pre></td></tr>
-
-
-<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1LambdaExpr.html">LambdaExpr</a>&gt;</td><td class="name" onclick="toggle('hasAnyCapture0')"><a name="hasAnyCapture0Anchor">hasAnyCapture</a></td><td>LambdaCaptureMatcher InnerMatcher</td></tr>
-<tr><td colspan="4" class="doc" id="hasAnyCapture0"><pre>Matches any capture in a lambda expression.
-
-Given
-  void foo() {
-    int t = 5;
-    auto f = [=](){ return t; };
-  }
-lambdaExpr(hasAnyCapture(lambdaCapture())) and
-lambdaExpr(hasAnyCapture(lambdaCapture(refersToVarDecl(hasName("t")))))
-  both match `[=](){ return t; }`.
-</pre></td></tr>
-
-
 <tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1MemberExpr.html">MemberExpr</a>&gt;</td><td class="name" onclick="toggle('isArrow0')"><a name="isArrow0Anchor">isArrow</a></td><td></td></tr>
 <tr><td colspan="4" class="doc" id="isArrow0"><pre>Matches member expressions that are called with '-&gt;' as opposed
 to '.'.
@@ -8402,6 +8373,35 @@ Given
 In the matcher
 lambdaExpr(hasAnyCapture(lambdaCapture(capturesVar(hasName("x")))),
 capturesVar(hasName("x")) matches `x` and `x = 1`.
+</pre></td></tr>
+
+
+<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1LambdaExpr.html">LambdaExpr</a>&gt;</td><td class="name" onclick="toggle('forEachLambdaCapture0')"><a name="forEachLambdaCapture0Anchor">forEachLambdaCapture</a></td><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1LambdaCapture.html">LambdaCapture</a>&gt; InnerMatcher</td></tr>
+<tr><td colspan="4" class="doc" id="forEachLambdaCapture0"><pre>Matches each lambda capture in a lambda expression.
+
+Given
+  int main() {
+    int x, y;
+    float z;
+    auto f = [=]() { return x + y + z; };
+  }
+lambdaExpr(forEachLambdaCapture(
+    lambdaCapture(capturesVar(varDecl(hasType(isInteger()))))))
+will trigger two matches, binding for 'x' and 'y' respectively.
+</pre></td></tr>
+
+
+<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1LambdaExpr.html">LambdaExpr</a>&gt;</td><td class="name" onclick="toggle('hasAnyCapture0')"><a name="hasAnyCapture0Anchor">hasAnyCapture</a></td><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1LambdaCapture.html">LambdaCapture</a>&gt; InnerMatcher</td></tr>
+<tr><td colspan="4" class="doc" id="hasAnyCapture0"><pre>Matches any capture in a lambda expression.
+
+Given
+  void foo() {
+    int t = 5;
+    auto f = [=](){ return t; };
+  }
+lambdaExpr(hasAnyCapture(lambdaCapture())) and
+lambdaExpr(hasAnyCapture(lambdaCapture(refersToVarDecl(hasName("t")))))
+  both match `[=](){ return t; }`.
 </pre></td></tr>
 
 

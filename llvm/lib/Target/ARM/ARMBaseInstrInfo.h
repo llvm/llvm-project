@@ -886,6 +886,10 @@ inline bool isLegalAddressImm(unsigned Opcode, int Imm,
     return std::abs(Imm) < ((1 << 7) * 4) && Imm % 4 == 0;
   case ARMII::AddrModeT2_i8:
     return std::abs(Imm) < ((1 << 8) * 1);
+  case ARMII::AddrModeT2_i8pos:
+    return Imm >= 0 && Imm < ((1 << 8) * 1);
+  case ARMII::AddrModeT2_i8neg:
+    return Imm < 0 && -Imm < ((1 << 8) * 1);
   case ARMII::AddrModeT2_i8s4:
     return std::abs(Imm) < ((1 << 8) * 4) && Imm % 4 == 0;
   case ARMII::AddrModeT2_i12:

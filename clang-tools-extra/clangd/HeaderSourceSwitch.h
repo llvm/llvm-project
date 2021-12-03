@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_UNITTESTS_CLANGD_HEADERSOURCESWITCH_H
-#define LLVM_CLANG_TOOLS_EXTRA_UNITTESTS_CLANGD_HEADERSOURCESWITCH_H
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_HEADERSOURCESWITCH_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANGD_HEADERSOURCESWITCH_H
 
 #include "ParsedAST.h"
 #include "llvm/ADT/Optional.h"
@@ -33,4 +33,4 @@ std::vector<const Decl *> getIndexableLocalDecls(ParsedAST &AST);
 } // namespace clangd
 } // namespace clang
 
-#endif // LLVM_CLANG_TOOLS_EXTRA_UNITTESTS_CLANGD_HEADERSOURCESWITCH_H
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANGD_HEADERSOURCESWITCH_H

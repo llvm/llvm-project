@@ -1065,6 +1065,8 @@ INTERCEPTOR(int, pthread_join, void *th, void **retval) {
   return res;
 }
 
+DEFINE_REAL_PTHREAD_FUNCTIONS
+
 extern char *tzname[2];
 
 INTERCEPTOR(void, tzset, int fake) {
@@ -1705,6 +1707,7 @@ void InitializeInterceptors() {
 #else
   INTERCEPT_FUNCTION(pthread_create);
 #endif
+  INTERCEPT_FUNCTION(pthread_join);
   INTERCEPT_FUNCTION(pthread_key_create);
 
 #if SANITIZER_NETBSD

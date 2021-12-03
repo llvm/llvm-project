@@ -21,6 +21,7 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/SVals.h"
 #include "clang/StaticAnalyzer/Frontend/AnalysisConsumer.h"
 #include "clang/StaticAnalyzer/Frontend/CheckerRegistry.h"
+#include "clang/Testing/TestClangConfig.h"
 #include "clang/Tooling/Tooling.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
@@ -91,6 +92,21 @@ private:
   mutable SVals CollectedSVals;
 };
 
+// Fixture class for parameterized SValTest
+class SValTest : public testing::TestWithParam<TestClangConfig> {
+protected:
+  // FIXME: The tests "GetConstType" and "GetLocAsIntType" infer the type of
+  // integrals based on their bitwidth. This is not a reliable method on
+  // platforms where different integrals have the same width.
+  bool skipTest(StringRef TestName) {
+    std::string target = GetParam().Target;
+    return (target == "powerpc-ibm-aix" || target == "i686-apple-darwin9" ||
+            target == "wasm32-unknown-unknown" ||
+            target == "wasm64-unknown-unknown") &&
+           (TestName == "GetConstType" || TestName == "GetLocAsIntType");
+  }
+};
+
 // SVAL_TEST is a combined way of providing a short code snippet and
 // to test some programmatic predicates on symbolic values produced by the
 // engine for the actual code.
@@ -135,7 +151,16 @@ private:
     });                                                                        \
   }                                                                            \
                                                                                \
-  TEST(SValTest, NAME) { runCheckerOnCode<add##NAME##SValCollector>(CODE); }   \
+  TEST_P(SValTest, NAME) {                                                     \
+    if (skipTest(#NAME)) {                                                     \
+      std::string target = GetParam().Target;                                  \
+      GTEST_SKIP() << "certain integrals have the same bitwidth on "           \
+                   << target;                                                  \
+      return;                                                                  \
+    }                                                                          \
+    runCheckerOnCodeWithArgs<add##NAME##SValCollector>(                        \
+        CODE, GetParam().getCommandLineArgs());                                \
+  }                                                                            \
   void NAME##SValCollector::test(ExprEngine &Engine,                           \
                                  const ASTContext &Context) const
 
@@ -360,6 +385,31 @@ void foo() {
   // TODO: Change to CharTy when we support symbolic casts
   EXPECT_EQ(Context.VoidPtrTy, B.getType(Context));
 }
+
+std::vector<TestClangConfig> allTestClangConfigs() {
+  std::vector<TestClangConfig> all_configs;
+  TestClangConfig config;
+  config.Language = Lang_CXX14;
+  for (std::string target :
+       {"i686-pc-windows-msvc",   "i686-apple-darwin9",
+        "x86_64-apple-darwin9",   "x86_64-scei-ps4",
+        "x86_64-windows-msvc",    "x86_64-unknown-linux",
+        "x86_64-apple-macosx",    "x86_64-apple-ios14.0",
+        "wasm32-unknown-unknown", "wasm64-unknown-unknown",
+        "thumb-pc-win32",         "sparc64-none-openbsd",
+        "sparc-none-none",        "riscv64-unknown-linux",
+        "ppc64-windows-msvc",     "powerpc-ibm-aix",
+        "powerpc64-ibm-aix",      "s390x-ibm-zos",
+        "armv7-pc-windows-msvc",  "aarch64-pc-windows-msvc",
+        "xcore-xmos-elf"}) {
+    config.Target = target;
+    all_configs.push_back(config);
+  }
+  return all_configs;
+}
+
+INSTANTIATE_TEST_SUITE_P(SValTests, SValTest,
+                         testing::ValuesIn(allTestClangConfigs()));
 
 } // namespace
 } // namespace ento

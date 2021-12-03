@@ -1069,16 +1069,14 @@ void MCAsmStreamer::PrintQuotedString(StringRef Data, raw_ostream &OS) const {
   OS << '"';
 
   if (MAI->hasPairedDoubleQuoteStringConstants()) {
-    for (unsigned i = 0, e = Data.size(); i != e; ++i) {
-      unsigned char C = Data[i];
+    for (unsigned char C : Data) {
       if (C == '"')
         OS << "\"\"";
       else
         OS << (char)C;
     }
   } else {
-    for (unsigned i = 0, e = Data.size(); i != e; ++i) {
-      unsigned char C = Data[i];
+    for (unsigned char C : Data) {
       if (C == '"' || C == '\\') {
         OS << '\\' << (char)C;
         continue;

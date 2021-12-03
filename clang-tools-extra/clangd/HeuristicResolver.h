@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_HEURISTIC_RESOLVER_H
-#define LLVM_CLANG_TOOLS_EXTRA_CLANGD_HEURISTIC_RESOLVER_H
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_HEURISTICRESOLVER_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANGD_HEURISTICRESOLVER_H
 
 #include "clang/AST/Decl.h"
 #include "llvm/ADT/STLExtras.h"

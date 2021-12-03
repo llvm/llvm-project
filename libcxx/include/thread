@@ -403,7 +403,7 @@ sleep_until(const chrono::time_point<chrono::steady_clock, _Duration>& __t)
 inline _LIBCPP_INLINE_VISIBILITY
 void yield() _NOEXCEPT {__libcpp_thread_yield();}
 
-}  // this_thread
+} // namespace this_thread
 
 _LIBCPP_END_NAMESPACE_STD
 

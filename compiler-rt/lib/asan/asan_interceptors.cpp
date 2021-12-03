@@ -130,23 +130,24 @@ DECLARE_REAL_AND_INTERCEPTOR(void, free, void *)
 #define COMMON_INTERCEPTOR_BLOCK_REAL(name) REAL(name)
 // Strict init-order checking is dlopen-hostile:
 // https://github.com/google/sanitizers/issues/178
-#define COMMON_INTERCEPTOR_ON_DLOPEN(filename, flag)                           \
-  do {                                                                         \
-    if (flags()->strict_init_order)                                            \
-      StopInitOrderChecking();                                                 \
-    CheckNoDeepBind(filename, flag);                                           \
-  } while (false)
-#define COMMON_INTERCEPTOR_ON_EXIT(ctx) OnExit()
-#define COMMON_INTERCEPTOR_LIBRARY_LOADED(filename, handle)
-#define COMMON_INTERCEPTOR_LIBRARY_UNLOADED()
-#define COMMON_INTERCEPTOR_NOTHING_IS_INITIALIZED (!asan_inited)
-#define COMMON_INTERCEPTOR_GET_TLS_RANGE(begin, end)                           \
-  if (AsanThread *t = GetCurrentThread()) {                                    \
-    *begin = t->tls_begin();                                                   \
-    *end = t->tls_end();                                                       \
-  } else {                                                                     \
-    *begin = *end = 0;                                                         \
-  }
+#  define COMMON_INTERCEPTOR_DLOPEN(filename, flag) \
+    ({                                              \
+      if (flags()->strict_init_order)               \
+        StopInitOrderChecking();                    \
+      CheckNoDeepBind(filename, flag);              \
+      REAL(dlopen)(filename, flag);                 \
+    })
+#  define COMMON_INTERCEPTOR_ON_EXIT(ctx) OnExit()
+#  define COMMON_INTERCEPTOR_LIBRARY_LOADED(filename, handle)
+#  define COMMON_INTERCEPTOR_LIBRARY_UNLOADED()
+#  define COMMON_INTERCEPTOR_NOTHING_IS_INITIALIZED (!asan_inited)
+#  define COMMON_INTERCEPTOR_GET_TLS_RANGE(begin, end) \
+    if (AsanThread *t = GetCurrentThread()) {          \
+      *begin = t->tls_begin();                         \
+      *end = t->tls_end();                             \
+    } else {                                           \
+      *begin = *end = 0;                               \
+    }
 
 #define COMMON_INTERCEPTOR_MEMMOVE_IMPL(ctx, to, from, size) \
   do {                                                       \

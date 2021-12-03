@@ -2681,9 +2681,8 @@ void loop() {
 // CHECK6-NEXT:    [[TMP38:%.*]] = icmp ne i32 [[TMP37]], 0
 // CHECK6-NEXT:    br i1 [[TMP38]], label [[DOTOMP_LINEAR_PU_I:%.*]], label [[DOTOMP_OUTLINED__1_EXIT:%.*]]
 // CHECK6:       .omp.linear.pu.i:
-// CHECK6-NEXT:    [[TMP39:%.*]] = load i32, i32* [[DOTLINEAR_START1_I]], align 4, !noalias !14
-// CHECK6-NEXT:    [[ADD7_I:%.*]] = add nsw i32 [[TMP39]], 10
-// CHECK6-NEXT:    store i32 [[ADD7_I]], i32* [[J_I]], align 4, !noalias !14
+// CHECK6-NEXT:    [[TMP39:%.*]] = load i32, i32* [[J_I]], align 4, !noalias !14
+// CHECK6-NEXT:    store i32 [[TMP39]], i32* [[J_I]], align 4, !noalias !14
 // CHECK6-NEXT:    br label [[DOTOMP_OUTLINED__1_EXIT]]
 // CHECK6:       .omp_outlined..1.exit:
 // CHECK6-NEXT:    ret i32 0
@@ -3701,8 +3700,7 @@ void loop() {
 // CHECK12-NEXT:    br label [[OMP_INNER_FOR_COND]], !llvm.loop [[LOOP3:![0-9]+]]
 // CHECK12:       omp.inner.for.end:
 // CHECK12-NEXT:    store i32 10, i32* [[I]], align 4
-// CHECK12-NEXT:    [[TMP10:%.*]] = load i32, i32* [[DOTLINEAR_START1]], align 4
-// CHECK12-NEXT:    [[ADD9:%.*]] = add nsw i32 [[TMP10]], 10
-// CHECK12-NEXT:    store i32 [[ADD9]], i32* [[J]], align 4
+// CHECK12-NEXT:    [[TMP10:%.*]] = load i32, i32* [[J4]], align 4
+// CHECK12-NEXT:    store i32 [[TMP10]], i32* [[J]], align 4
 // CHECK12-NEXT:    ret void
 //

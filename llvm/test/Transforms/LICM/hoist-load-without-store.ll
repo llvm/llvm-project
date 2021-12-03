@@ -18,10 +18,11 @@ define dso_local void @f(i32* nocapture %ptr, i32 %n) {
 ; CHECK-NEXT:    [[CMP7:%.*]] = icmp slt i32 0, [[N:%.*]]
 ; CHECK-NEXT:    br i1 [[CMP7]], label [[FOR_BODY_LR_PH:%.*]], label [[CLEANUP1:%.*]]
 ; CHECK:       for.body.lr.ph:
+; CHECK-NEXT:    [[PTR_PROMOTED:%.*]] = load i32, i32* [[PTR:%.*]], align 4
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
-; CHECK-NEXT:    [[I_08:%.*]] = phi i32 [ 0, [[FOR_BODY_LR_PH]] ], [ [[INC:%.*]], [[IF_END:%.*]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = load i32, i32* [[PTR:%.*]], align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = phi i32 [ [[PTR_PROMOTED]], [[FOR_BODY_LR_PH]] ], [ 1, [[IF_END:%.*]] ]
+; CHECK-NEXT:    [[I_08:%.*]] = phi i32 [ 0, [[FOR_BODY_LR_PH]] ], [ [[INC:%.*]], [[IF_END]] ]
 ; CHECK-NEXT:    [[TOBOOL_NOT:%.*]] = icmp eq i32 [[TMP0]], 0
 ; CHECK-NEXT:    br i1 [[TOBOOL_NOT]], label [[IF_END]], label [[FOR_BODY_CLEANUP1_CRIT_EDGE:%.*]]
 ; CHECK:       if.end:

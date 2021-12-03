@@ -55,7 +55,7 @@ operator>=(const _Tp& __x, const _Tp& __y)
     return !(__x < __y);
 }
 
-}  // rel_ops
+} // namespace rel_ops
 
 _LIBCPP_END_NAMESPACE_STD
 
