@@ -72,6 +72,32 @@ config("compiler_defaults") {
       if (host_os != "mac" && use_lld) {
         cflags += [ "-ggnu-pubnames" ]  # PR34820
         ldflags += [ "-Wl,--gdb-index" ]
+
+        # Use debug fission. In this mode, detailed debug information is
+        # written to a .dwo file next to each .o file instead of into the .o
+        # file directly. The linker then only links the .o files, which contain
+        # a pointer to each .dwo file. The debugger then reads debug info out
+        # of all the .dwo files instead of from the binary.
+        #
+        # (The dwp tool can link all the debug info together into a single
+        # "debug info binary", but that's not done as part of the build.)
+        #
+        # This requires `-Wl,--gdb-index` (above) to work well.
+        #
+        # With lld, this reduces link time:
+        # - in release + symbol_level=2 builds: From 2.3s to 1.3s
+        # - in debug builds: From 5.2s to 4.6s
+        #
+        # Time needed for gdb startup and setting a breakpoint is comparable,
+        # the time from from `r` to hititng a breakpoint on main goes from 4s
+        # to 2s.
+        #
+        # (macOS's linker always keeps debug info out of its output executables
+        # and debuggers there also know to load debug info from the .o files.
+        # macOS also has a debug info linker like dwp, it's called dsymutil.
+        # This happens by default, so there's no need to pass a flag there.)
+        cflags += [ "-gsplit-dwarf" ]
+        ldflags += [ "-gsplit-dwarf" ]  # Needed for ThinLTO builds.
       }
     } else if (symbol_level == 1) {
       cflags += [ "-g1" ]
@@ -80,6 +106,8 @@ config("compiler_defaults") {
       # On the other hand, gdb startup is well below 1s with and without the
       # index, and people using -g1 likely don't use a debugger. So don't use
       # the flag here.
+      # Linetables always go in the .o file, even with -gsplit-dwarf, so there's
+      # no point in passing -gsplit-dwarf here.
     }
     if (is_optimized) {
       cflags += [ "-O3" ]
