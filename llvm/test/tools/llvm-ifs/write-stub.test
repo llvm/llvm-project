@@ -1,35 +1,40 @@
 ## Test writing stub elf with minimal sections.
 
-# RUN: llvm-ifs --output-format=ELF --output=%t.elf32l --arch=x86_64 --bitwidth=32 --endianness=little %s
+# RUN: llvm-ifs --output-elf=%t.elf32l --arch=x86_64 --bitwidth=32 --endianness=little %s
 # RUN: llvm-readobj -h -S --string-dump .dynstr --string-dump .shstrtab --dyn-symbols --dynamic-table %t.elf32l | FileCheck %s -DCLASS="32-bit (0x1)" -DDE="LittleEndian (0x1)" -DHS=52 -DPHES=32 -DSHES=40 -DDYNSYMAL=4 -DDYNSYMES=16 -DDYNAMICAL=4 -DDYNAMICES=8 -DDYNTABZ=0
 
-# RUN: llvm-ifs --output-format=ELF --output=%t.elf32b --arch=x86_64 --bitwidth=32 --endianness=big %s
+# RUN: llvm-ifs --output-elf=%t.elf32b --arch=x86_64 --bitwidth=32 --endianness=big %s
 # RUN: llvm-readobj -h -S --string-dump .dynstr --string-dump .shstrtab --dyn-symbols --dynamic-table %t.elf32b | FileCheck %s -DCLASS="32-bit (0x1)" -DDE="BigEndian (0x2)" -DHS=52 -DPHES=32 -DSHES=40 -DDYNSYMAL=4 -DDYNSYMES=16 -DDYNAMICAL=4 -DDYNAMICES=8 -DDYNTABZ=0
 
-# RUN: llvm-ifs --output-format=ELF --output=%t.elf64l --arch=x86_64 --bitwidth=64 --endianness=little %s
+# RUN: llvm-ifs --output-elf=%t.elf64l --arch=x86_64 --bitwidth=64 --endianness=little %s
 # RUN: llvm-readobj -h -S --string-dump .dynstr --string-dump .shstrtab --dyn-symbols --dynamic-table %t.elf64l | FileCheck %s -DCLASS="64-bit (0x2)" -DDE="LittleEndian (0x1)" -DHS=64 -DPHES=56 -DSHES=64 -DDYNSYMAL=8 -DDYNSYMES=24 -DDYNAMICAL=8 -DDYNAMICES=16 -DDYNTABZ=000000000
 
-# RUN: llvm-ifs --output-format=ELF --output=%t.elf64l --target=x86_64-linux-gnu %s
+# RUN: llvm-ifs --output-elf=%t.elf64l --target=x86_64-linux-gnu %s
 # RUN: llvm-readobj -h -S --string-dump .dynstr --string-dump .shstrtab --dyn-symbols --dynamic-table %t.elf64l | FileCheck %s -DCLASS="64-bit (0x2)" -DDE="LittleEndian (0x1)" -DHS=64 -DPHES=56 -DSHES=64 -DDYNSYMAL=8 -DDYNSYMES=24 -DDYNAMICAL=8 -DDYNAMICES=16 -DDYNTABZ=000000000
 
-# RUN: llvm-ifs --output-format=ELF --output=%t.elf64b --arch=x86_64 --bitwidth=64 --endianness=big %s
+# RUN: llvm-ifs --output-elf=%t.elf64b --arch=x86_64 --bitwidth=64 --endianness=big %s
 # RUN: llvm-readobj -h -S --string-dump .dynstr --string-dump .shstrtab --dyn-symbols --dynamic-table %t.elf64b | FileCheck %s -DCLASS="64-bit (0x2)" -DDE="BigEndian (0x2)" -DHS=64 -DPHES=56 -DSHES=64 -DDYNSYMAL=8 -DDYNSYMES=24 -DDYNAMICAL=8 -DDYNAMICES=16 -DDYNTABZ=000000000
 
-# RUN: not llvm-ifs --output-format=ELF --output=%t --arch=x86_64 --bitwidth=64 --endianness=big --target=x86_64-linux-gnu %s 2>&1 | FileCheck %s --check-prefix=TRIPLEERR
+# RUN: not llvm-ifs --output-elf=%t --arch=x86_64 --bitwidth=64 --endianness=big --target=x86_64-linux-gnu %s 2>&1 | FileCheck %s --check-prefix=TRIPLEERR
 
-# RUN: not llvm-ifs --output-format=ELF --output=%t --bitwidth=64 --endianness=big %s 2>&1 | FileCheck %s -DMSG="Arch" --check-prefix=TARGETERR
+# RUN: not llvm-ifs --output-elf=%t --bitwidth=64 --endianness=big %s 2>&1 | FileCheck %s -DMSG="Arch" --check-prefix=TARGETERR
 
-# RUN: not llvm-ifs --output-format=ELF --output=%t --arch=x86_64 --endianness=big %s 2>&1 | FileCheck %s -DMSG="BitWidth" --check-prefix=TARGETERR
+# RUN: not llvm-ifs --output-elf=%t --arch=x86_64 --endianness=big %s 2>&1 | FileCheck %s -DMSG="BitWidth" --check-prefix=TARGETERR
 
-# RUN: not llvm-ifs --output-format=ELF --output=%t --arch=x86_64 --bitwidth=64 %s 2>&1 | FileCheck %s -DMSG="Endianness" --check-prefix=TARGETERR
+# RUN: not llvm-ifs --output-elf=%t --arch=x86_64 --bitwidth=64 %s 2>&1 | FileCheck %s -DMSG="Endianness" --check-prefix=TARGETERR
 
-# RUN: llvm-ifs --output-format=IFS --output=%t.target --target=x86_64-linux-gnu %s
-# RUN: not llvm-ifs --output-format=ELF --output=%t --target=aarch64-linux-gnu %t.target 2>&1 | FileCheck %s -DMSG="Triple" --check-prefix=CONFLICTERR
+# RUN: llvm-ifs --output-ifs=%t.target --target=x86_64-linux-gnu %s
+# RUN: not llvm-ifs --output-elf=%t --target=aarch64-linux-gnu %t.target 2>&1 | FileCheck %s -DMSG="Triple" --check-prefix=CONFLICTERR
 
-# RUN: llvm-ifs --output-format=IFS --output=%t.target --arch=x86_64 --endianness=little --bitwidth=64 %s
-# RUN: not llvm-ifs --output-format=ELF --output=%t --arch=AArch64 %t.target 2>&1 | FileCheck %s -DMSG=Arch --check-prefix=CONFLICTERR
-# RUN: not llvm-ifs --output-format=ELF --output=%t --endianness=big %t.target 2>&1 | FileCheck %s -DMSG=Endianness --check-prefix=CONFLICTERR
-# RUN: not llvm-ifs --output-format=ELF --output=%t --bitwidth=32 %t.target 2>&1 | FileCheck %s -DMSG=BitWidth --check-prefix=CONFLICTERR
+# RUN: llvm-ifs --output-ifs=%t.target --arch=x86_64 --endianness=little --bitwidth=64 %s
+# RUN: not llvm-ifs --output-elf=%t --arch=AArch64 %t.target 2>&1 | FileCheck %s -DMSG=Arch --check-prefix=CONFLICTERR
+# RUN: not llvm-ifs --output-elf=%t --endianness=big %t.target 2>&1 | FileCheck %s -DMSG=Endianness --check-prefix=CONFLICTERR
+# RUN: not llvm-ifs --output-elf=%t --bitwidth=32 %t.target 2>&1 | FileCheck %s -DMSG=BitWidth --check-prefix=CONFLICTERR
+
+# RUN: llvm-ifs --output-ifs=%t.ifs --output-elf=%t.elf --target=x86_64-linux-gnu %s
+# RUN: llvm-ifs --output-elf=%t.elf2 --target=x86_64-linux-gnu %t.ifs
+# RUN: llvm-readobj -h -S --string-dump .dynstr --string-dump .shstrtab --dyn-symbols --dynamic-table %t.elf | FileCheck %s -DCLASS="64-bit (0x2)" -DDE="LittleEndian (0x1)" -DHS=64 -DPHES=56 -DSHES=64 -DDYNSYMAL=8 -DDYNSYMES=24 -DDYNAMICAL=8 -DDYNAMICES=16 -DDYNTABZ=000000000
+# RUN: llvm-readobj -h -S --string-dump .dynstr --string-dump .shstrtab --dyn-symbols --dynamic-table %t.elf2 | FileCheck %s -DCLASS="64-bit (0x2)" -DDE="LittleEndian (0x1)" -DHS=64 -DPHES=56 -DSHES=64 -DDYNSYMAL=8 -DDYNSYMES=24 -DDYNAMICAL=8 -DDYNAMICES=16 -DDYNTABZ=000000000
 
 --- !ifs-v1
 IfsVersion: 3.0

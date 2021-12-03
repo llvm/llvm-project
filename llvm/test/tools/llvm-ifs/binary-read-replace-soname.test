@@ -1,6 +1,6 @@
 # RUN: yaml2obj %s -o %t
-# RUN: llvm-ifs --input-format=ELF --output-format=IFS --output=- %t | FileCheck %s --check-prefix=ORIGINAL
-# RUN: llvm-ifs --input-format=ELF --output-format=IFS --soname=libbest.so --output=- %t | FileCheck %s --check-prefix=REPLACED
+# RUN: llvm-ifs --input-format=ELF --output-ifs=- %t | FileCheck %s --check-prefix=ORIGINAL
+# RUN: llvm-ifs --input-format=ELF --output-ifs=- --soname=libbest.so %t | FileCheck %s --check-prefix=REPLACED
 
 !ELF
 FileHeader:

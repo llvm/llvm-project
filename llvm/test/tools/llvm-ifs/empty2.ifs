@@ -1,4 +1,4 @@
-# RUN: llvm-ifs --input-format=IFS --output-format=IFS -o - %s | FileCheck %s
+# RUN: llvm-ifs --input-format=IFS --output-ifs - %s | FileCheck %s
 
 # CHECK: --- !ifs-v1
 # CHECK-NEXT: IfsVersion: 3.0

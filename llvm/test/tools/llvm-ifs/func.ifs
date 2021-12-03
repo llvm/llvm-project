@@ -1,14 +1,14 @@
-# RUN: llvm-ifs --input-format=IFS --output-format=IFS -o - %s %S/object.ifs | \
+# RUN: llvm-ifs --input-format=IFS --output-ifs - %s %S/object.ifs | \
 # RUN: FileCheck %s --check-prefixes=CHECK-IFS
 
-# RUN: llvm-ifs --input-format=IFS --output-format=ELF -o - %s %S/object.ifs | \
+# RUN: llvm-ifs --input-format=IFS --output-elf - %s %S/object.ifs | \
 # RUN: llvm-readelf --all - | FileCheck %s --check-prefixes=CHECK-ELF
 
-# RUN: llvm-ifs --input-format=IFS --output-format=IFS --strip-ifs-target -o %t.tbd %s %S/object.ifs
-# RUN: llvm-ifs --input-format=IFS --output-format=TBD --target=x86_64-apple-darwin -o - %t.tbd | \
+# RUN: llvm-ifs --input-format=IFS --strip-ifs-target --output-ifs %t.tbd %s %S/object.ifs
+# RUN: llvm-ifs --input-format=IFS --target=x86_64-apple-darwin --output-tbd - %t.tbd | \
 # RUN: FileCheck %s --check-prefixes=CHECK-DARWIN-TBD3
 
-# RUN: llvm-ifs --input-format=IFS --output-format=IFS -o - %s %s | \
+# RUN: llvm-ifs --input-format=IFS --output-ifs - %s %s | \
 # RUN: FileCheck %s --check-prefixes=CHECK-MERGE-IFS
 
 # CHECK-IFS: --- !ifs-v1

@@ -1,5 +1,5 @@
-# RUN: not llvm-ifs --input-format=IFS --output-format=IFS -o - %s %S/Inputs/strong-mismatch-size.ifs 2>&1 | FileCheck %s --check-prefixes=CHECK-SIZE
-# RUN: not llvm-ifs --input-format=IFS --output-format=IFS -o - %s %S/Inputs/strong-mismatch-type.ifs 2>&1 | FileCheck %s --check-prefixes=CHECK-TYPE
+# RUN: not llvm-ifs --input-format=IFS --output-ifs - %s %S/Inputs/strong-mismatch-size.ifs 2>&1 | FileCheck %s --check-prefixes=CHECK-SIZE
+# RUN: not llvm-ifs --input-format=IFS --output-ifs - %s %S/Inputs/strong-mismatch-type.ifs 2>&1 | FileCheck %s --check-prefixes=CHECK-TYPE
 
 # CHECK-SIZE: error: Interface Stub: Size Mismatch for foobar.
 # CHECK-SIZE-NEXT: Filename:

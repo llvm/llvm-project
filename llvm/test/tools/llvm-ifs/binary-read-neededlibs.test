@@ -1,5 +1,5 @@
 # RUN: yaml2obj %s -o %t
-# RUN: llvm-ifs --input-format=ELF --output-format=IFS --output=- %t | FileCheck %s
+# RUN: llvm-ifs --input-format=ELF --output-ifs=- %t | FileCheck %s
 
 !ELF
 FileHeader:

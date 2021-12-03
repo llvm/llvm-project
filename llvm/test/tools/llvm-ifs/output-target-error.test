@@ -10,6 +10,6 @@ Target: { ObjectFormat: ELF, Arch: x86_64, Endianness: little, BitWidth: 64 }
 Symbols: []
 ...
 
-# MISSING: {{llvm-ifs(\.exe)?}}: for the --output-format option: must be specified at least once!
+# MISSING: error: at least one output should be specified.
 
 # INVALID: {{llvm-ifs(\.exe)?}}: for the --output-format option: Cannot find option named 'nope'!

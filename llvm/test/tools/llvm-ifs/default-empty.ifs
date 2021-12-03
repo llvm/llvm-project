@@ -1,5 +1,5 @@
-# RUN: llvm-ifs --input-format=IFS --output-format=IFS -o - %s | FileCheck --check-prefixes=CHECK-DEFAULT %s
-# RUN: llvm-ifs --input-format=IFS --output-format=IFS -o - %S/weak.ifs %s | FileCheck --check-prefixes=CHECK-MERGE %s
+# RUN: llvm-ifs --input-format=IFS --output-ifs - %s | FileCheck --check-prefixes=CHECK-DEFAULT %s
+# RUN: llvm-ifs --input-format=IFS --output-ifs - %S/weak.ifs %s | FileCheck --check-prefixes=CHECK-MERGE %s
 
 # CHECK-DEFAULT: --- !ifs-v1
 # CHECK-DEFAULT-NEXT: IfsVersion: 3.0
