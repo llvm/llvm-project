@@ -2173,8 +2173,8 @@ public:
 
       int CurrentPrecedence = getCurrentPrecedence();
 
-      if (Current && Current->is(TT_SelectorName) &&
-          Precedence == CurrentPrecedence) {
+      if (Precedence == CurrentPrecedence && Current &&
+          Current->is(TT_SelectorName)) {
         if (LatestOperator)
           addFakeParenthesis(Start, prec::Level(Precedence));
         Start = Current;
