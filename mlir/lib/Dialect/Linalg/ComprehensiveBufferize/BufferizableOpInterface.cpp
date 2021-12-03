@@ -556,14 +556,14 @@ static MemRefType getAllocationTypeAndShape(OpBuilder &b, Location loc,
       reifiedShapes = true;
       OpResult resultValue = shapedValue.dyn_cast<OpResult>();
       auto &shape = resultDims[resultValue.getResultNumber()];
-      for (auto dim : enumerate(allocMemRefType.getShape()))
+      for (const auto &dim : enumerate(allocMemRefType.getShape()))
         if (ShapedType::isDynamic(dim.value()))
           dynShape.push_back(shape[dim.index()]);
     }
   }
 
   if (!reifiedShapes) {
-    for (auto dim : enumerate(allocMemRefType.getShape()))
+    for (const auto &dim : enumerate(allocMemRefType.getShape()))
       if (ShapedType::isDynamic(dim.value())) {
         assert((shapedValue.getType().isa<UnrankedMemRefType>() ||
                 shapedValue.getType().isa<MemRefType>()) &&
