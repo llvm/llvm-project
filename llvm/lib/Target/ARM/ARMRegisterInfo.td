@@ -395,7 +395,7 @@ def CCR : RegisterClass<"ARM", [i32], 32, (add CPSR)> {
 }
 
 // MVE Condition code register.
-def VCCR : RegisterClass<"ARM", [i32, v16i1, v8i1, v4i1], 32, (add VPR)> {
+def VCCR : RegisterClass<"ARM", [i32, v16i1, v8i1, v4i1, v2i1], 32, (add VPR)> {
 //  let CopyCost = -1;  // Don't allow copying of status registers.
 }
 
