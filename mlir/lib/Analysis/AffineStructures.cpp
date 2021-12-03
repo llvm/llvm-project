@@ -1922,7 +1922,7 @@ void FlatAffineConstraints::removeRedundantConstraints() {
 /// `pos1^th` local identifier. This function is intended to be used to remove
 /// redundancy when local variables at position `pos1` and `pos2` are restricted
 /// to have the same value.
-static void eleminateRedundantLocalId(FlatAffineConstraints &fac, unsigned pos1,
+static void eliminateRedundantLocalId(FlatAffineConstraints &fac, unsigned pos1,
                                       unsigned pos2) {
 
   assert(pos1 < fac.getNumLocalIds() && "Invalid local id position");
@@ -1983,24 +1983,24 @@ void FlatAffineConstraints::mergeLocalIds(FlatAffineConstraints &other) {
   // that can be merged, are merged.
   unsigned localOffset = getIdKindOffset(IdKind::Local);
   for (unsigned i = 0; i < divs1.size(); ++i) {
-    // Check if division representations exists `i^th` local id.
+    // Check if a division representation exists for the `i^th` local id.
     if (denoms1[i] == 0)
       continue;
     // Check if a division exists which is a duplicate of the division at `i`.
     for (unsigned j = i + 1; j < divs1.size(); ++j) {
-      // Check if division representations exists for `j^th` local id.
+      // Check if a division representation exists for the `j^th` local id.
       if (denoms1[j] == 0)
         continue;
       // Check if the denominators match.
       if (denoms1[i] != denoms1[j])
         continue;
       // Check if the representations are equal.
-      if (!std::equal(divs1[i].begin(), divs1[i].end(), divs1[j].begin()))
+      if (divs1[i] != divs1[j])
         continue;
 
       // Merge divisions at position `j` into division at position `i`.
-      eleminateRedundantLocalId(fac1, i, j);
-      eleminateRedundantLocalId(fac2, i, j);
+      eliminateRedundantLocalId(fac1, i, j);
+      eliminateRedundantLocalId(fac2, i, j);
       for (unsigned k = 0, g = divs1.size(); k < g; ++k) {
         SmallVector<int64_t, 8> &div = divs1[k];
         if (denoms1[k] != 0) {
@@ -2011,6 +2011,7 @@ void FlatAffineConstraints::mergeLocalIds(FlatAffineConstraints &other) {
 
       divs1.erase(divs1.begin() + j);
       denoms1.erase(denoms1.begin() + j);
+      // Since `j` can never be zero, we do not need to worry about overflows.
       --j;
     }
   }
