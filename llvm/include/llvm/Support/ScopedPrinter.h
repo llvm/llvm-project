@@ -67,6 +67,14 @@ template <class T> std::string to_string(const T &Value) {
   return stream.str();
 }
 
+template <typename T, typename TEnum>
+std::string enumToString(T Value, ArrayRef<EnumEntry<TEnum>> EnumValues) {
+  for (const EnumEntry<TEnum> &EnumItem : EnumValues)
+    if (EnumItem.Value == Value)
+      return std::string(EnumItem.AltName);
+  return to_hexString(Value, false);
+}
+
 class ScopedPrinter {
 public:
   ScopedPrinter(raw_ostream &OS) : OS(OS), IndentLevel(0) {}
