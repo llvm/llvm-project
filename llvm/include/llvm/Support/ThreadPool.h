@@ -40,7 +40,8 @@ public:
   /// execution resources (threads, cores, CPUs)
   /// Defaults to using the maximum execution resources in the system, but
   /// accounting for the affinity mask.
-  ThreadPool(ThreadPoolStrategy S = hardware_concurrency());
+  ThreadPool(ThreadPoolStrategy S = hardware_concurrency())
+      : Strategy(S), MaxThreadCount(S.compute_thread_count()) {}
 
   /// Blocking destructor: the pool will wait for all the threads to complete.
   ~ThreadPool();
@@ -65,7 +66,10 @@ public:
   /// It is an error to try to add new tasks while blocking on this call.
   void wait();
 
-  unsigned getThreadCount() const { return ThreadCount; }
+  // TODO: misleading legacy name warning!
+  // Returns the maximum number of worker threads in the pool, not the current
+  // number of threads!
+  unsigned getThreadCount() const { return MaxThreadCount; }
 
   /// Returns true if the current thread is a worker thread of this thread pool.
   bool isWorkerThread() const;
@@ -115,6 +119,7 @@ private:
       // Don't allow enqueueing after disabling the pool
       assert(EnableFlag && "Queuing a thread during ThreadPool destruction");
       Tasks.push(std::move(R.first));
+      grow();
     }
     QueueCondition.notify_one();
     return R.second.share();
@@ -130,6 +135,21 @@ private:
 #endif
   }
 
+#if LLVM_ENABLE_THREADS
+  // Maybe create a new thread and add it to Threads.
+  //
+  // Requirements:
+  //   * this->QueueLock should be owned by the calling thread prior to
+  //     calling this function. It will neither lock it nor unlock it.
+  //     Calling this function without owning QueueLock would result in data
+  //     races as this function reads Tasks and ActiveThreads.
+  //   * this->Tasks should be populated with any pending tasks. This function
+  //     uses Tasks.size() to determine whether it needs to create a new thread.
+  //   * this->ActiveThreads should be up to date as it is also used to
+  //     determine whether to create a new thread.
+  void grow();
+#endif
+
   /// Threads in flight
   std::vector<llvm::thread> Threads;
 
@@ -137,7 +157,7 @@ private:
   std::queue<std::function<void()>> Tasks;
 
   /// Locking and signaling for accessing the Tasks queue.
-  std::mutex QueueLock;
+  mutable std::mutex QueueLock;
   std::condition_variable QueueCondition;
 
   /// Signaling for job completion
@@ -151,7 +171,10 @@ private:
   bool EnableFlag = true;
 #endif
 
-  unsigned ThreadCount;
+  const ThreadPoolStrategy Strategy;
+
+  /// Maximum number of threads to potentially grow this pool to.
+  const unsigned MaxThreadCount;
 };
 }
 
