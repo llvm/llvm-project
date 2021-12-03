@@ -195,4 +195,14 @@ void PrintHintAllocatorCannotReturnNull() {
          "allocator_may_return_null=1\n");
 }
 
+static atomic_uint8_t rss_limit_exceeded;
+
+bool IsRssLimitExceeded() {
+  return atomic_load(&rss_limit_exceeded, memory_order_relaxed);
+}
+
+void SetRssLimitExceeded(bool limit_exceeded) {
+  atomic_store(&rss_limit_exceeded, limit_exceeded, memory_order_relaxed);
+}
+
 } // namespace __sanitizer

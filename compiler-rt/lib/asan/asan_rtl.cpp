@@ -450,8 +450,6 @@ static void AsanInitInternal() {
   allocator_options.SetFrom(flags(), common_flags());
   InitializeAllocator(allocator_options);
 
-  SetSoftRssLimitExceededCallback(AsanSoftRssLimitExceededCallback);
-
   // On Linux AsanThread::ThreadStart() calls malloc() that's why asan_inited
   // should be set to 1 prior to initializing the threads.
   asan_inited = 1;
