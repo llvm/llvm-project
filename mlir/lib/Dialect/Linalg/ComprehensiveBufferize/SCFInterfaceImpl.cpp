@@ -167,12 +167,6 @@ struct ForOpInterface
     return true;
   }
 
-  SmallVector<OpOperand *> getAliasingOpOperand(Operation *op,
-                                                OpResult opResult) const {
-    auto forOp = cast<scf::ForOp>(op);
-    return {&forOp.getIterOpOperands()[opResult.getResultNumber()]};
-  }
-
   OpResult getAliasingOpResult(Operation *op, OpOperand &opOperand) const {
     auto forOp = cast<scf::ForOp>(op);
     if (!opOperand.get().getType().isa<RankedTensorType>())

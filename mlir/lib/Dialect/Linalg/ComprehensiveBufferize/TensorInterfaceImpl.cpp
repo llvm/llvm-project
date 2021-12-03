@@ -48,11 +48,6 @@ struct CastOpInterface
     return false;
   }
 
-  SmallVector<OpOperand *> getAliasingOpOperand(Operation *op,
-                                                OpResult opResult) const {
-    return {&op->getOpOperand(0)};
-  }
-
   OpResult getAliasingOpResult(Operation *op, OpOperand &opOperand) const {
     return op->getResult(0);
   }
@@ -135,11 +130,6 @@ struct ExtractSliceOpInterface
 
   bool bufferizesToMemoryWrite(Operation *op, OpOperand &opOperand) const {
     return false;
-  }
-
-  SmallVector<OpOperand *> getAliasingOpOperand(Operation *op,
-                                                OpResult opResult) const {
-    return {&op->getOpOperand(0) /*source*/};
   }
 
   OpResult getAliasingOpResult(Operation *op, OpOperand &opOperand) const {
@@ -333,11 +323,6 @@ struct InsertSliceOpInterface
 
   bool bufferizesToMemoryWrite(Operation *op, OpOperand &opOperand) const {
     return &opOperand == &op->getOpOperand(1) /*dest*/;
-  }
-
-  SmallVector<OpOperand *> getAliasingOpOperand(Operation *op,
-                                                OpResult opResult) const {
-    return {&op->getOpOperand(1) /*dest*/};
   }
 
   OpResult getAliasingOpResult(Operation *op, OpOperand &opOperand) const {
