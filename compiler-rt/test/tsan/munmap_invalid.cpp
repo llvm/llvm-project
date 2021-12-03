@@ -1,5 +1,14 @@
 // RUN: %clang_tsan -O1 %s -o %t && %run %t 2>&1 | FileCheck %s
 
+// Fails on Darwin bots:
+// https://green.lab.llvm.org/green//job/clang-stage1-RA/25954/consoleFull
+// and on clang-s390x-linux-lnt:
+// https://lab.llvm.org/buildbot#builders/45/builds/5224
+// Presumably the test is not 100% legal and kernel is allowed
+// to unmap part of the range (e.g. .text) and then fail.
+// So let's be conservative:
+// REQUIRES: linux, x86_64-target-arch
+
 #include "test.h"
 #include <sys/mman.h>
 

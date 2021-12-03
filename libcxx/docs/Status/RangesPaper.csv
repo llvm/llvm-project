@@ -17,7 +17,7 @@ Section,Description,Dependencies,Assignee,Complete
 | *no-throw-input-range*
 | *no-throw-forward-iterator*
 | *no-throw-forward-range*","| [iterator.concepts]
-| [range.refinements]",Konstantin Varlamov,Not started
+| [range.refinements]",Konstantin Varlamov,✅
 `[specialized.algorithms] <http://wg21.link/specialized.algorithms>`_,"| ranges::uninitialized_default_construct
 | ranges::uninitialized_default_construct_n
 | ranges::uninitialized_value_construct

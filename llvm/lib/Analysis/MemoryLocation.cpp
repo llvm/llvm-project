@@ -128,6 +128,27 @@ MemoryLocation MemoryLocation::getForDest(const AnyMemIntrinsic *MI) {
   return MemoryLocation(MI->getRawDest(), Size, MI->getAAMetadata());
 }
 
+Optional<MemoryLocation>
+MemoryLocation::getForDest(const CallBase *CB, const TargetLibraryInfo &TLI) {
+  if (auto *MemInst = dyn_cast<AnyMemIntrinsic>(CB))
+    return getForDest(MemInst);
+
+  LibFunc LF;
+  if (TLI.getLibFunc(*CB, LF) && TLI.has(LF)) {
+    switch (LF) {
+    case LibFunc_strncpy:
+    case LibFunc_strcpy:
+    case LibFunc_strcat:
+    case LibFunc_strncat:
+      return getForArgument(CB, 0, &TLI);
+    default:
+      break;
+    }
+  }
+
+  return {};
+}
+
 MemoryLocation MemoryLocation::getForArgument(const CallBase *Call,
                                               unsigned ArgIdx,
                                               const TargetLibraryInfo *TLI) {
@@ -213,6 +234,12 @@ MemoryLocation MemoryLocation::getForArgument(const CallBase *Call,
   LibFunc F;
   if (TLI && TLI->getLibFunc(*Call, F) && TLI->has(F)) {
     switch (F) {
+    case LibFunc_strcpy:
+    case LibFunc_strcat:
+    case LibFunc_strncat:
+      assert((ArgIdx == 0 || ArgIdx == 1) && "Invalid argument index for str function");
+      return MemoryLocation::getAfter(Arg, AATags);
+
     case LibFunc_memset_chk: {
       assert(ArgIdx == 0 && "Invalid argument index for memset_chk");
       LocationSize Size = LocationSize::afterPointer();

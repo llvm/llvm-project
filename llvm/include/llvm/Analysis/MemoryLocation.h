@@ -253,6 +253,8 @@ public:
   static MemoryLocation getForDest(const MemIntrinsic *MI);
   static MemoryLocation getForDest(const AtomicMemIntrinsic *MI);
   static MemoryLocation getForDest(const AnyMemIntrinsic *MI);
+  static Optional<MemoryLocation> getForDest(const CallBase *CI,
+                                             const TargetLibraryInfo &TLI);
 
   /// Return a location representing a particular argument of a call.
   static MemoryLocation getForArgument(const CallBase *Call, unsigned ArgIdx,

@@ -132,8 +132,8 @@ declare i8* @strcat(i8*, i8*)
 
 define i8* @test_strcat_read_write_after(i8* noalias %a, i8* noalias %b) {
 ; CHECK-LABEL: Function: test_strcat_read_write_after
-; CHECK:       Both ModRef:  Ptr: i8* %a	<->  %res = tail call i8* @strcat(i8* %a.gep.1, i8* %b.gep.1)
-; CHECK-NEXT:  Just Ref:  Ptr: i8* %b	<->  %res = tail call i8* @strcat(i8* %a.gep.1, i8* %b.gep.1)
+; CHECK:       NoModRef:  Ptr: i8* %a	<->  %res = tail call i8* @strcat(i8* %a.gep.1, i8* %b.gep.1)
+; CHECK-NEXT:  NoModRef:  Ptr: i8* %b	<->  %res = tail call i8* @strcat(i8* %a.gep.1, i8* %b.gep.1)
 ; CHECK-NEXT:  Both ModRef:  Ptr: i8* %a.gep.1	<->  %res = tail call i8* @strcat(i8* %a.gep.1, i8* %b.gep.1)
 ; CHECK-NEXT:  Just Ref:  Ptr: i8* %b.gep.1	<->  %res = tail call i8* @strcat(i8* %a.gep.1, i8* %b.gep.1)
 ; CHECK-NEXT:  Both ModRef:  Ptr: i8* %res	<->  %res = tail call i8* @strcat(i8* %a.gep.1, i8* %b.gep.1)
@@ -157,8 +157,8 @@ declare i8* @strncat(i8*, i8*, i64)
 
 define i8* @test_strncat_read_write_after(i8* noalias %a, i8* noalias %b, i64 %n) {
 ; CHECK-LABEL: Function: test_strncat_read_write_after
-; CHECK:       Both ModRef:  Ptr: i8* %a	<->  %res = tail call i8* @strncat(i8* %a.gep.1, i8* %b.gep.1, i64 %n)
-; CHECK-NEXT:  Just Ref:  Ptr: i8* %b	<->  %res = tail call i8* @strncat(i8* %a.gep.1, i8* %b.gep.1, i64 %n)
+; CHECK:       NoModRef:  Ptr: i8* %a	<->  %res = tail call i8* @strncat(i8* %a.gep.1, i8* %b.gep.1, i64 %n)
+; CHECK-NEXT:  NoModRef:  Ptr: i8* %b	<->  %res = tail call i8* @strncat(i8* %a.gep.1, i8* %b.gep.1, i64 %n)
 ; CHECK-NEXT:  Both ModRef:  Ptr: i8* %a.gep.1	<->  %res = tail call i8* @strncat(i8* %a.gep.1, i8* %b.gep.1, i64 %n)
 ; CHECK-NEXT:  Just Ref:  Ptr: i8* %b.gep.1	<->  %res = tail call i8* @strncat(i8* %a.gep.1, i8* %b.gep.1, i64 %n)
 ; CHECK-NEXT:  Both ModRef:  Ptr: i8* %res	<->  %res = tail call i8* @strncat(i8* %a.gep.1, i8* %b.gep.1, i64 %n)
@@ -182,8 +182,8 @@ declare i8* @strcpy(i8*, i8*)
 
 define i8* @test_strcpy_read_write_after(i8* noalias %a, i8* noalias %b) {
 ; CHECK-LABEL: Function: test_strcpy_read_write_after
-; CHECK:       Just Mod:  Ptr: i8* %a	<->  %res = tail call i8* @strcpy(i8* %a.gep.1, i8* %b.gep.1)
-; CHECK-NEXT:  Just Ref:  Ptr: i8* %b	<->  %res = tail call i8* @strcpy(i8* %a.gep.1, i8* %b.gep.1)
+; CHECK:       NoModRef:  Ptr: i8* %a	<->  %res = tail call i8* @strcpy(i8* %a.gep.1, i8* %b.gep.1)
+; CHECK-NEXT:  NoModRef:  Ptr: i8* %b	<->  %res = tail call i8* @strcpy(i8* %a.gep.1, i8* %b.gep.1)
 ; CHECK-NEXT:  Just Mod:  Ptr: i8* %a.gep.1	<->  %res = tail call i8* @strcpy(i8* %a.gep.1, i8* %b.gep.1)
 ; CHECK-NEXT:  Just Ref:  Ptr: i8* %b.gep.1	<->  %res = tail call i8* @strcpy(i8* %a.gep.1, i8* %b.gep.1)
 ; CHECK-NEXT:  Just Mod:  Ptr: i8* %res	<->  %res = tail call i8* @strcpy(i8* %a.gep.1, i8* %b.gep.1)
