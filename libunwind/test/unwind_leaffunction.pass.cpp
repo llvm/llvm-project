@@ -39,11 +39,17 @@ void signal_handler(int signum) {
 }
 
 __attribute__((noinline)) void crashing_leaf_func(void) {
-  raise(SIGSEGV);
+  // libunwind searches for the address before the return address which points
+  // to the trap instruction. NOP guarantees the trap instruction is not the
+  // first instruction of the function.
+  // We should keep this here for other unwinders that also decrement pc.
+  __asm__ __volatile__("nop");
+  __builtin_trap();
 }
 
 int main(int, char**) {
-  signal(SIGSEGV, signal_handler);
+  signal(SIGTRAP, signal_handler);
+  signal(SIGILL, signal_handler);
   crashing_leaf_func();
   return -2;
 }
