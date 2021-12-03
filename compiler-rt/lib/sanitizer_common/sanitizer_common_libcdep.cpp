@@ -86,26 +86,6 @@ void *BackgroundThread(void *arg) {
 }
 #endif
 
-void WriteToSyslog(const char *msg) {
-  InternalScopedString msg_copy;
-  msg_copy.append("%s", msg);
-  const char *p = msg_copy.data();
-
-  // Print one line at a time.
-  // syslog, at least on Android, has an implicit message length limit.
-  while (char* q = internal_strchr(p, '\n')) {
-    *q = '\0';
-    WriteOneLineToSyslog(p);
-    p = q + 1;
-  }
-  // Print remaining characters, if there are any.
-  // Note that this will add an extra newline at the end.
-  // FIXME: buffer extra output. This would need a thread-local buffer, which
-  // on Android requires plugging into the tools (ex. ASan's) Thread class.
-  if (*p)
-    WriteOneLineToSyslog(p);
-}
-
 void MaybeStartBackgroudThread() {
 #if (SANITIZER_LINUX || SANITIZER_NETBSD) && \
     !SANITIZER_GO  // Need to implement/test on other platforms.
@@ -124,6 +104,26 @@ void MaybeStartBackgroudThread() {
     internal_start_thread(BackgroundThread, nullptr);
   }
 #endif
+}
+
+void WriteToSyslog(const char *msg) {
+  InternalScopedString msg_copy;
+  msg_copy.append("%s", msg);
+  const char *p = msg_copy.data();
+
+  // Print one line at a time.
+  // syslog, at least on Android, has an implicit message length limit.
+  while (char* q = internal_strchr(p, '\n')) {
+    *q = '\0';
+    WriteOneLineToSyslog(p);
+    p = q + 1;
+  }
+  // Print remaining characters, if there are any.
+  // Note that this will add an extra newline at the end.
+  // FIXME: buffer extra output. This would need a thread-local buffer, which
+  // on Android requires plugging into the tools (ex. ASan's) Thread class.
+  if (*p)
+    WriteOneLineToSyslog(p);
 }
 
 static void (*sandboxing_callback)();
