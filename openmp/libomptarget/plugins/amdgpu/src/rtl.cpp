@@ -471,18 +471,16 @@ public:
   static const int Default_WG_Size = getGridValue<64>().GV_Default_WG_Size;
 
   using MemcpyFunc = hsa_status_t (*)(hsa_signal_t, void *, void *, size_t size,
-                                      hsa_agent_t, hsa_agent_t,
-                                      hsa_amd_memory_pool_t);
+                                      hsa_agent_t, hsa_amd_memory_pool_t);
   hsa_status_t freesignalpool_memcpy(void *dest, void *src, size_t size,
                                      MemcpyFunc Func, int32_t deviceId) {
     hsa_agent_t device_agent = HSAAgents[deviceId];
-    hsa_agent_t host_agent = CPUAgents[deviceId];
     hsa_signal_t s = FreeSignalPool.pop();
     if (s.handle == 0) {
       return HSA_STATUS_ERROR;
     }
-    hsa_status_t r = Func(s, dest, src, size, device_agent, host_agent,
-                          HostFineGrainedMemoryPool);
+    hsa_status_t r =
+        Func(s, dest, src, size, device_agent, HostFineGrainedMemoryPool);
     FreeSignalPool.push(s);
     return r;
   }
@@ -880,7 +878,7 @@ namespace {
 
 int32_t dataRetrieve(int32_t DeviceId, void *HstPtr, void *TgtPtr, int64_t Size,
                      __tgt_async_info *AsyncInfo) {
-  assert(AsyncInfo && "AsyncInfo is nullptr");
+  assert(AsyncInfo && "AsynrcInfo is nullptr");
   assert(DeviceId < DeviceInfo.NumberOfDevices && "Device ID too large");
   // Return success if we are not copying back to host from target.
   if (!HstPtr)
@@ -2414,15 +2412,12 @@ hsa_status_t impl_memcpy_no_signal(void *dest, void *src, size_t size,
 
   const int deviceId = 0;
   hsa_agent_t device_agent = DeviceInfo.HSAAgents[deviceId];
-  hsa_agent_t host_agent = DeviceInfo.CPUAgents[deviceId];
   auto MemoryPool = DeviceInfo.HostFineGrainedMemoryPool;
   hsa_status_t r;
   if (host2Device)
-    r = impl_memcpy_h2d(sig, dest, src, size, device_agent, host_agent,
-                        MemoryPool);
+    r = impl_memcpy_h2d(sig, dest, src, size, device_agent, MemoryPool);
   else
-    r = impl_memcpy_d2h(sig, dest, src, size, device_agent, host_agent,
-                        MemoryPool);
+    r = impl_memcpy_d2h(sig, dest, src, size, device_agent, MemoryPool);
 
   hsa_status_t rc = hsa_signal_destroy(sig);
 
