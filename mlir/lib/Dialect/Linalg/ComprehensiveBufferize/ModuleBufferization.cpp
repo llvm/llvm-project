@@ -370,7 +370,7 @@ static void layoutPostProcessing(ModuleOp moduleOp) {
     SmallVector<Type> argumentTypes;
     // Iterate on each function argument and check it it was marked with a
     // desired layout.
-    for (auto it : llvm::enumerate(funcOp.getType().getInputs())) {
+    for (const auto &it : llvm::enumerate(funcOp.getType().getInputs())) {
       int argNumber = it.index();
       Type inputType = it.value();
       auto memrefType = inputType.dyn_cast<MemRefType>();
