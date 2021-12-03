@@ -441,10 +441,13 @@ public:
   /// variables.
   void convertDimToLocal(unsigned dimStart, unsigned dimLimit);
 
-  ///  Adds additional local ids to the sets such that they both have the union
-  ///  of the local ids in each set, without changing the set of points that
-  ///  lie in `this` and `other`. The ordering of the local ids in the
-  ///  sets may also be changed but is the same in both sets.
+  /// Adds additional local ids to the sets such that they both have the union
+  /// of the local ids in each set, without changing the set of points that
+  /// lie in `this` and `other`. The ordering of the local ids in the
+  /// sets may also be changed. After merging, if the `i^th` local variable in
+  /// one set has a known division representation, then the `i^th` local
+  /// variable in the other set either has the same division representation or
+  /// no known division representation.
   ///
   /// The number of dimensions and symbol ids in `this` and `other` should
   /// match.
