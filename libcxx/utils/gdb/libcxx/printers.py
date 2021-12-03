@@ -234,9 +234,7 @@ class StdStringPrinter(object):
         else:
             data = short_field["__data_"]
             size = self._get_short_size(short_field, short_size)
-        if hasattr(data, "lazy_string"):
-            return data.lazy_string(length=size)
-        return data.string(length=size)
+        return data.lazy_string(length=size)
 
     def display_hint(self):
         return "string"
