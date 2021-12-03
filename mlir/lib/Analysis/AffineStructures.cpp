@@ -1918,35 +1918,6 @@ void FlatAffineConstraints::removeRedundantConstraints() {
   equalities.resizeVertically(pos);
 }
 
-void FlatAffineConstraints::getLocalIdsReprs(
-    std::vector<SmallVector<int64_t, 8>> &reprs,
-    SmallVector<unsigned, 8> &denominators) {
-
-  assert(reprs.size() == getNumLocalIds() &&
-         "Size of reprs must be equal to number of local ids");
-  assert(denominators.size() == getNumLocalIds() &&
-         "Size of denominators must be equal to number of local ids");
-
-  // Get upper-lower bound inequality pairs for division representation.
-  std::vector<Optional<std::pair<unsigned, unsigned>>> divIneqPairs(
-      getNumLocalIds());
-  getLocalReprLbUbPairs(divIneqPairs);
-
-  for (unsigned i = 0, e = getNumLocalIds(); i < e; ++i) {
-    if (!divIneqPairs[i].hasValue()) {
-      denominators[i] = 0;
-      continue;
-    }
-
-    std::pair<unsigned, unsigned> divPair = divIneqPairs[i].getValue();
-    LogicalResult divExtracted =
-        getDivRepr(*this, i + getIdKindOffset(IdKind::Local), divPair.first,
-                   divPair.second, reprs[i], denominators[i]);
-    assert(succeeded(divExtracted) &&
-           "Div should have been found since ub-lb pair exists");
-  }
-}
-
 /// Merge local identifer at `pos2` into local identifer at `pos1` in `fac`.
 static void mergeDivision(FlatAffineConstraints &fac, unsigned pos1,
                           unsigned pos2) {
@@ -1972,10 +1943,10 @@ void FlatAffineConstraints::mergeLocalIds(FlatAffineConstraints &other) {
   // Get divisions inequality pairs from each FAC.
   std::vector<SmallVector<int64_t, 8>> divs1(fac1.getNumLocalIds()),
       divs2(fac2.getNumLocalIds());
-  SmallVector<unsigned, 8> denoms1(fac1.getNumLocalIds()),
+  SmallVector<unsigned, 4> denoms1(fac1.getNumLocalIds()),
       denoms2(fac2.getNumLocalIds());
-  fac1.getLocalIdsReprs(divs1, denoms1);
-  fac2.getLocalIdsReprs(divs2, denoms2);
+  fac1.getLocalReprs(divs1, denoms1);
+  fac2.getLocalReprs(divs2, denoms2);
 
   // Merge local ids of fac1 and fac2 without using division information,
   // i.e. append local ids of `fac2` to `fac1` and insert local ids of `fac1`
