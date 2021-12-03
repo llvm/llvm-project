@@ -8,6 +8,7 @@ add_flang_library(FIRBuilder
   FIRBuilder.cpp
   MutableBox.cpp
   Runtime/Assign.cpp
+  Runtime/Character.cpp
   Runtime/Derived.cpp
   Runtime/Numeric.cpp
   Runtime/Reduction.cpp
