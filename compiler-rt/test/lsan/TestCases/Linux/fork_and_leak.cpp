@@ -18,7 +18,8 @@ int main() {
     assert(WIFEXITED(status));
     return WEXITSTATUS(status);
   } else {
-    malloc(1337);
+    for (int i = 0; i < 10; ++i)
+      malloc(1337);
     // CHECK: LeakSanitizer: detected memory leaks
   }
   return 0;
