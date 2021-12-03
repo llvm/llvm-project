@@ -50,6 +50,7 @@ public:
     c16Ty = fir::ComplexType::get(firBuilder->getContext(), 16);
 
     seqTy10 = fir::SequenceType::get(fir::SequenceType::Shape(1, 10), i32Ty);
+    boxTy = fir::BoxType::get(mlir::NoneType::get(firBuilder->getContext()));
   }
 
   mlir::MLIRContext context;
@@ -71,6 +72,7 @@ public:
   mlir::Type c10Ty;
   mlir::Type c16Ty;
   mlir::Type seqTy10;
+  mlir::Type boxTy;
 };
 
 /// Check that the \p op is a `fir::CallOp` operation and its name matches
