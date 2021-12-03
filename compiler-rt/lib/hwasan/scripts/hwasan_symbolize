@@ -84,6 +84,11 @@ class Symbolizer:
       full_path = os.path.join(p, name)
       if os.path.exists(full_path):
         return full_path
+      apex_prefix = "apex/com.android."
+      if name.startswith(apex_prefix):
+        full_path = os.path.join(p, "apex/com.google.android." + name[len(apex_prefix):])
+        if os.path.exists(full_path):
+          return full_path
     # Try stripping extra path components as the last resort.
     for p in self.__binary_prefixes:
       full_path = os.path.join(p, os.path.basename(name))
