@@ -68,11 +68,6 @@ struct TransferWriteOpInterface
     return true;
   }
 
-  SmallVector<OpOperand *> getAliasingOpOperand(Operation *op,
-                                                OpResult opResult) const {
-    return {&op->getOpOperand(1)};
-  }
-
   OpResult getAliasingOpResult(Operation *op, OpOperand &opOperand) const {
     assert(opOperand.get().getType().isa<TensorType>() &&
            "only tensor types expected");

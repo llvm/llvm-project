@@ -159,19 +159,12 @@ define arm_aapcs_vfpcc <2 x i64> @build_var0_v2i1(i32 %s, i32 %t, <2 x i64> %a, 
 ; CHECK-LABEL: build_var0_v2i1:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    cmp r0, r1
-; CHECK-NEXT:    vldr s10, .LCPI9_0
+; CHECK-NEXT:    mov.w r1, #0
 ; CHECK-NEXT:    csetm r0, lo
-; CHECK-NEXT:    vmov s8, r0
-; CHECK-NEXT:    vmov.f32 s11, s10
-; CHECK-NEXT:    vmov.f32 s9, s8
-; CHECK-NEXT:    vbic q1, q1, q2
-; CHECK-NEXT:    vand q0, q0, q2
-; CHECK-NEXT:    vorr q0, q0, q1
+; CHECK-NEXT:    bfi r1, r0, #0, #8
+; CHECK-NEXT:    vmsr p0, r1
+; CHECK-NEXT:    vpsel q0, q0, q1
 ; CHECK-NEXT:    bx lr
-; CHECK-NEXT:    .p2align 2
-; CHECK-NEXT:  @ %bb.1:
-; CHECK-NEXT:  .LCPI9_0:
-; CHECK-NEXT:    .long 0x00000000 @ float 0
 entry:
   %c = icmp ult i32 %s, %t
   %vc = insertelement <2 x i1> zeroinitializer, i1 %c, i64 0
@@ -183,19 +176,12 @@ define arm_aapcs_vfpcc <2 x i64> @build_var1_v2i1(i32 %s, i32 %t, <2 x i64> %a, 
 ; CHECK-LABEL: build_var1_v2i1:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    cmp r0, r1
-; CHECK-NEXT:    vldr s8, .LCPI10_0
+; CHECK-NEXT:    mov.w r1, #0
 ; CHECK-NEXT:    csetm r0, lo
-; CHECK-NEXT:    vmov s10, r0
-; CHECK-NEXT:    vmov.f32 s9, s8
-; CHECK-NEXT:    vmov.f32 s11, s10
-; CHECK-NEXT:    vbic q1, q1, q2
-; CHECK-NEXT:    vand q0, q0, q2
-; CHECK-NEXT:    vorr q0, q0, q1
+; CHECK-NEXT:    bfi r1, r0, #8, #8
+; CHECK-NEXT:    vmsr p0, r1
+; CHECK-NEXT:    vpsel q0, q0, q1
 ; CHECK-NEXT:    bx lr
-; CHECK-NEXT:    .p2align 2
-; CHECK-NEXT:  @ %bb.1:
-; CHECK-NEXT:  .LCPI10_0:
-; CHECK-NEXT:    .long 0x00000000 @ float 0
 entry:
   %c = icmp ult i32 %s, %t
   %vc = insertelement <2 x i1> zeroinitializer, i1 %c, i64 1
@@ -208,10 +194,8 @@ define arm_aapcs_vfpcc <2 x i64> @build_varN_v2i1(i32 %s, i32 %t, <2 x i64> %a, 
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    cmp r0, r1
 ; CHECK-NEXT:    csetm r0, lo
-; CHECK-NEXT:    vdup.32 q2, r0
-; CHECK-NEXT:    vbic q1, q1, q2
-; CHECK-NEXT:    vand q0, q0, q2
-; CHECK-NEXT:    vorr q0, q0, q1
+; CHECK-NEXT:    vmsr p0, r0
+; CHECK-NEXT:    vpsel q0, q0, q1
 ; CHECK-NEXT:    bx lr
 entry:
   %c = icmp ult i32 %s, %t

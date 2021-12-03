@@ -146,7 +146,7 @@ MemoryLocation::getForDest(const CallBase *CB, const TargetLibraryInfo &TLI) {
     }
   }
 
-  return {};
+  return None;
 }
 
 MemoryLocation MemoryLocation::getForArgument(const CallBase *Call,

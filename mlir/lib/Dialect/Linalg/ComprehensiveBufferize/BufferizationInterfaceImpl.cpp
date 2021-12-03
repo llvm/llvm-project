@@ -41,11 +41,6 @@ struct ToMemrefOpInterface
     return true;
   }
 
-  SmallVector<OpOperand *> getAliasingOpOperand(Operation *op,
-                                                OpResult opResult) const {
-    return {};
-  }
-
   OpResult getAliasingOpResult(Operation *op, OpOperand &opOperand) const {
     return OpResult();
   }
@@ -69,11 +64,6 @@ struct ToMemrefOpInterface
 struct ToTensorOpInterface
     : public BufferizableOpInterface::ExternalModel<ToTensorOpInterface,
                                                     bufferization::ToTensorOp> {
-  SmallVector<OpOperand *> getAliasingOpOperand(Operation *op,
-                                                OpResult opResult) const {
-    return {};
-  }
-
   LogicalResult bufferize(Operation *op, OpBuilder &b,
                           BufferizationState &state) const {
     auto tensorLoadOp = cast<bufferization::ToTensorOp>(op);
