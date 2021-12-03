@@ -18062,13 +18062,12 @@ static bool FinishOpenMPLinearClause(OMPLinearClause &Clause, DeclRefExpr *IV,
     Update = SemaRef.ActOnFinishFullExpr(Update.get(), DE->getBeginLoc(),
                                          /*DiscardedValue*/ false);
 
-    // Build final: Var = InitExpr + NumIterations * Step
+    // Build final: Var = PrivCopy;
     ExprResult Final;
     if (!Info.first)
-      Final =
-          buildCounterUpdate(SemaRef, S, RefExpr->getExprLoc(), CapturedRef,
-                             InitExpr, NumIterations, Step, /*Subtract=*/false,
-                             /*IsNonRectangularLB=*/false);
+      Final = SemaRef.BuildBinOp(
+          S, RefExpr->getExprLoc(), BO_Assign, CapturedRef,
+          SemaRef.DefaultLvalueConversion(*CurPrivate).get());
     else
       Final = *CurPrivate;
     Final = SemaRef.ActOnFinishFullExpr(Final.get(), DE->getBeginLoc(),
