@@ -122,16 +122,20 @@ private:
   void add(const Decl *D) {
     if (!D || !isNew(D->getCanonicalDecl()))
       return;
-    // If we see a declaration in the mainfile, skip all non-definition decls.
-    // We only do this for classes because forward declarations are common and
-    // we don't want to include every header that forward-declares the symbol
-    // because they're often unrelated.
+    // Special case RecordDecls, as it is common for them to be forward
+    // declared multiple times. The most common cases are:
+    // - Definition available in TU, only mark that one as usage. The rest is
+    //   likely to be unnecessary. This might result in false positives when an
+    //   internal definition is visible.
+    // - There's a forward declaration in the main file, no need for other
+    //   redecls.
     if (const auto *RD = llvm::dyn_cast<RecordDecl>(D)) {
-      if (SM.isInMainFile(RD->getMostRecentDecl()->getBeginLoc())) {
-        if (const auto *Definition = RD->getMostRecentDecl()->getDefinition())
-          Result.insert(Definition->getLocation());
+      if (const auto *Definition = RD->getDefinition()) {
+        Result.insert(Definition->getLocation());
         return;
       }
+      if (SM.isInMainFile(RD->getMostRecentDecl()->getLocation()))
+        return;
     }
     for (const Decl *Redecl : D->redecls())
       Result.insert(Redecl->getLocation());
