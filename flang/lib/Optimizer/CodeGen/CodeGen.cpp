@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Optimizer/CodeGen/CodeGen.h"
+#include "CGOps.h"
 #include "PassDetail.h"
 #include "flang/ISO_Fortran_binding.h"
 #include "flang/Optimizer/Dialect/FIRAttr.h"
@@ -1454,7 +1455,29 @@ struct EmboxCommonConversion : public FIROpConversion<OP> {
   insertBaseAddress(mlir::ConversionPatternRewriter &rewriter,
                     mlir::Location loc, mlir::Value dest,
                     mlir::Value base) const {
-    return insertField(rewriter, loc, dest, {0}, base, /*bitCast=*/true);
+    return insertField(rewriter, loc, dest, {kAddrPosInBox}, base,
+                       /*bitCast=*/true);
+  }
+
+  inline mlir::Value insertLowerBound(mlir::ConversionPatternRewriter &rewriter,
+                                      mlir::Location loc, mlir::Value dest,
+                                      unsigned dim, mlir::Value lb) const {
+    return insertField(rewriter, loc, dest,
+                       {kDimsPosInBox, dim, kDimLowerBoundPos}, lb);
+  }
+
+  inline mlir::Value insertExtent(mlir::ConversionPatternRewriter &rewriter,
+                                  mlir::Location loc, mlir::Value dest,
+                                  unsigned dim, mlir::Value extent) const {
+    return insertField(rewriter, loc, dest, {kDimsPosInBox, dim, kDimExtentPos},
+                       extent);
+  }
+
+  inline mlir::Value insertStride(mlir::ConversionPatternRewriter &rewriter,
+                                  mlir::Location loc, mlir::Value dest,
+                                  unsigned dim, mlir::Value stride) const {
+    return insertField(rewriter, loc, dest, {kDimsPosInBox, dim, kDimStridePos},
+                       stride);
   }
 
   /// Get the address of the type descriptor global variable that was created by
@@ -1545,6 +1568,23 @@ struct EmboxCommonConversion : public FIROpConversion<OP> {
     return {boxTy, descriptor, eleSize};
   }
 
+  /// Compute the base address of a substring given the base address of a scalar
+  /// string and the zero based string lower bound.
+  mlir::Value shiftSubstringBase(mlir::ConversionPatternRewriter &rewriter,
+                                 mlir::Location loc, mlir::Value base,
+                                 mlir::Value lowerBound) const {
+    llvm::SmallVector<mlir::Value> gepOperands;
+    auto baseType =
+        base.getType().cast<mlir::LLVM::LLVMPointerType>().getElementType();
+    if (baseType.isa<mlir::LLVM::LLVMArrayType>()) {
+      auto idxTy = this->lowerTy().indexType();
+      mlir::Value zero = genConstantIndex(loc, idxTy, rewriter, 0);
+      gepOperands.push_back(zero);
+    }
+    gepOperands.push_back(lowerBound);
+    return this->genGEP(loc, base.getType(), rewriter, base, gepOperands);
+  }
+
   /// If the embox is not in a globalOp body, allocate storage for the box;
   /// store the value inside and return the generated alloca. Return the input
   /// value otherwise.
@@ -1560,6 +1600,33 @@ struct EmboxCommonConversion : public FIROpConversion<OP> {
     return alloca;
   }
 };
+
+/// Compute the extent of a triplet slice (lb:ub:step).
+static mlir::Value
+computeTripletExtent(mlir::ConversionPatternRewriter &rewriter,
+                     mlir::Location loc, mlir::Value lb, mlir::Value ub,
+                     mlir::Value step, mlir::Value zero, mlir::Type type) {
+  mlir::Value extent = rewriter.create<mlir::LLVM::SubOp>(loc, type, ub, lb);
+  extent = rewriter.create<mlir::LLVM::AddOp>(loc, type, extent, step);
+  extent = rewriter.create<mlir::LLVM::SDivOp>(loc, type, extent, step);
+  // If the resulting extent is negative (`ub-lb` and `step` have different
+  // signs), zero must be returned instead.
+  auto cmp = rewriter.create<mlir::LLVM::ICmpOp>(
+      loc, mlir::LLVM::ICmpPredicate::sgt, extent, zero);
+  return rewriter.create<mlir::LLVM::SelectOp>(loc, cmp, extent, zero);
+}
+
+/// Helper function for generating the LLVM IR that computes the size
+/// in bytes for a derived type.
+static mlir::Value
+computeDerivedTypeSize(mlir::Location loc, mlir::Type ptrTy, mlir::Type idxTy,
+                       mlir::ConversionPatternRewriter &rewriter) {
+  auto nullPtr = rewriter.create<mlir::LLVM::NullOp>(loc, ptrTy);
+  mlir::Value one = genConstantIndex(loc, idxTy, rewriter, 1);
+  llvm::SmallVector<mlir::Value> args{nullPtr, one};
+  auto gep = rewriter.create<mlir::LLVM::GEPOp>(loc, ptrTy, args);
+  return rewriter.create<mlir::LLVM::PtrToIntOp>(loc, idxTy, gep);
+}
 
 /// Create a generic box on a memory reference. This conversions lowers the
 /// abstract box to the appropriate, initialized descriptor.
@@ -1596,6 +1663,172 @@ struct EmboxProcOpConversion : public FIROpConversion<fir::EmboxProcOp> {
                   mlir::ConversionPatternRewriter &rewriter) const override {
     TODO(emboxproc.getLoc(), "fir.emboxproc codegen");
     return failure();
+  }
+};
+
+/// Create a generic box on a memory reference.
+struct XEmboxOpConversion : public EmboxCommonConversion<fir::cg::XEmboxOp> {
+  using EmboxCommonConversion::EmboxCommonConversion;
+
+  mlir::LogicalResult
+  matchAndRewrite(fir::cg::XEmboxOp xbox, OpAdaptor adaptor,
+                  mlir::ConversionPatternRewriter &rewriter) const override {
+    auto [boxTy, dest, eleSize] = consDescriptorPrefix(
+        xbox, rewriter, xbox.getOutRank(),
+        adaptor.getOperands().drop_front(xbox.lenParamOffset()));
+    // Generate the triples in the dims field of the descriptor
+    mlir::ValueRange operands = adaptor.getOperands();
+    auto i64Ty = mlir::IntegerType::get(xbox.getContext(), 64);
+    mlir::Value base = operands[0];
+    assert(!xbox.shape().empty() && "must have a shape");
+    unsigned shapeOffset = xbox.shapeOffset();
+    bool hasShift = !xbox.shift().empty();
+    unsigned shiftOffset = xbox.shiftOffset();
+    bool hasSlice = !xbox.slice().empty();
+    unsigned sliceOffset = xbox.sliceOffset();
+    mlir::Location loc = xbox.getLoc();
+    mlir::Value zero = genConstantIndex(loc, i64Ty, rewriter, 0);
+    mlir::Value one = genConstantIndex(loc, i64Ty, rewriter, 1);
+    mlir::Value prevDim = integerCast(loc, rewriter, i64Ty, eleSize);
+    mlir::Value prevPtrOff = one;
+    mlir::Type eleTy = boxTy.getEleTy();
+    const unsigned rank = xbox.getRank();
+    llvm::SmallVector<mlir::Value> gepArgs;
+    unsigned constRows = 0;
+    mlir::Value ptrOffset = zero;
+    if (auto memEleTy = fir::dyn_cast_ptrEleTy(xbox.memref().getType()))
+      if (auto seqTy = memEleTy.dyn_cast<fir::SequenceType>()) {
+        mlir::Type seqEleTy = seqTy.getEleTy();
+        // Adjust the element scaling factor if the element is a dependent type.
+        if (fir::hasDynamicSize(seqEleTy)) {
+          if (fir::isa_char(seqEleTy)) {
+            assert(xbox.lenParams().size() == 1);
+            prevPtrOff = integerCast(loc, rewriter, i64Ty,
+                                     operands[xbox.lenParamOffset()]);
+          } else if (seqEleTy.isa<fir::RecordType>()) {
+            TODO(loc, "generate call to calculate size of PDT");
+          } else {
+            return rewriter.notifyMatchFailure(xbox, "unexpected dynamic type");
+          }
+        } else {
+          constRows = seqTy.getConstantRows();
+        }
+      }
+
+    bool hasSubcomp = !xbox.subcomponent().empty();
+    mlir::Value stepExpr;
+    if (hasSubcomp) {
+      // We have a subcomponent. The step value needs to be the number of
+      // bytes per element (which is a derived type).
+      mlir::Type ty0 = base.getType();
+      [[maybe_unused]] auto ptrTy = ty0.dyn_cast<mlir::LLVM::LLVMPointerType>();
+      assert(ptrTy && "expected pointer type");
+      mlir::Type memEleTy = fir::dyn_cast_ptrEleTy(xbox.memref().getType());
+      assert(memEleTy && "expected fir pointer type");
+      auto seqTy = memEleTy.dyn_cast<fir::SequenceType>();
+      assert(seqTy && "expected sequence type");
+      mlir::Type seqEleTy = seqTy.getEleTy();
+      auto eleTy = mlir::LLVM::LLVMPointerType::get(convertType(seqEleTy));
+      stepExpr = computeDerivedTypeSize(loc, eleTy, i64Ty, rewriter);
+    }
+
+    // Process the array subspace arguments (shape, shift, etc.), if any,
+    // translating everything to values in the descriptor wherever the entity
+    // has a dynamic array dimension.
+    for (unsigned di = 0, descIdx = 0; di < rank; ++di) {
+      mlir::Value extent = operands[shapeOffset];
+      mlir::Value outerExtent = extent;
+      bool skipNext = false;
+      if (hasSlice) {
+        mlir::Value off = operands[sliceOffset];
+        mlir::Value adj = one;
+        if (hasShift)
+          adj = operands[shiftOffset];
+        auto ao = rewriter.create<mlir::LLVM::SubOp>(loc, i64Ty, off, adj);
+        if (constRows > 0) {
+          gepArgs.push_back(ao);
+          --constRows;
+        } else {
+          auto dimOff =
+              rewriter.create<mlir::LLVM::MulOp>(loc, i64Ty, ao, prevPtrOff);
+          ptrOffset =
+              rewriter.create<mlir::LLVM::AddOp>(loc, i64Ty, dimOff, ptrOffset);
+        }
+        if (mlir::isa_and_nonnull<fir::UndefOp>(
+                xbox.slice()[3 * di + 1].getDefiningOp())) {
+          // This dimension contains a scalar expression in the array slice op.
+          // The dimension is loop invariant, will be dropped, and will not
+          // appear in the descriptor.
+          skipNext = true;
+        }
+      }
+      if (!skipNext) {
+        // store lower bound (normally 0)
+        mlir::Value lb = zero;
+        if (eleTy.isa<fir::PointerType>() || eleTy.isa<fir::HeapType>()) {
+          lb = one;
+          if (hasShift)
+            lb = operands[shiftOffset];
+        }
+        dest = insertLowerBound(rewriter, loc, dest, descIdx, lb);
+
+        // store extent
+        if (hasSlice)
+          extent = computeTripletExtent(rewriter, loc, operands[sliceOffset],
+                                        operands[sliceOffset + 1],
+                                        operands[sliceOffset + 2], zero, i64Ty);
+        dest = insertExtent(rewriter, loc, dest, descIdx, extent);
+
+        // store step (scaled by shaped extent)
+
+        mlir::Value step = hasSubcomp ? stepExpr : prevDim;
+        if (hasSlice)
+          step = rewriter.create<mlir::LLVM::MulOp>(loc, i64Ty, step,
+                                                    operands[sliceOffset + 2]);
+        dest = insertStride(rewriter, loc, dest, descIdx, step);
+        ++descIdx;
+      }
+
+      // compute the stride and offset for the next natural dimension
+      prevDim =
+          rewriter.create<mlir::LLVM::MulOp>(loc, i64Ty, prevDim, outerExtent);
+      if (constRows == 0)
+        prevPtrOff = rewriter.create<mlir::LLVM::MulOp>(loc, i64Ty, prevPtrOff,
+                                                        outerExtent);
+
+      // increment iterators
+      ++shapeOffset;
+      if (hasShift)
+        ++shiftOffset;
+      if (hasSlice)
+        sliceOffset += 3;
+    }
+    if (hasSlice || hasSubcomp || !xbox.substr().empty()) {
+      llvm::SmallVector<mlir::Value> args = {base, ptrOffset};
+      args.append(gepArgs.rbegin(), gepArgs.rend());
+      if (hasSubcomp) {
+        // For each field in the path add the offset to base via the args list.
+        // In the most general case, some offsets must be computed since
+        // they are not be known until runtime.
+        if (fir::hasDynamicSize(fir::unwrapSequenceType(
+                fir::unwrapPassByRefType(xbox.memref().getType()))))
+          TODO(loc, "fir.embox codegen dynamic size component in derived type");
+        args.append(operands.begin() + xbox.subcomponentOffset(),
+                    operands.begin() + xbox.subcomponentOffset() +
+                        xbox.subcomponent().size());
+      }
+      base = rewriter.create<mlir::LLVM::GEPOp>(loc, base.getType(), args);
+      if (!xbox.substr().empty())
+        base = shiftSubstringBase(rewriter, loc, base,
+                                  operands[xbox.substrOffset()]);
+    }
+    dest = insertBaseAddress(rewriter, loc, dest, base);
+    if (isDerivedTypeWithLenParams(boxTy))
+      TODO(loc, "fir.embox codegen of derived with length parameters");
+
+    mlir::Value result = placeInMemoryIfNotGlobalInit(rewriter, loc, dest);
+    rewriter.replaceOp(xbox, result);
+    return success();
   }
 };
 
@@ -2198,8 +2431,8 @@ public:
         ShapeOpConversion, ShapeShiftOpConversion, ShiftOpConversion,
         SliceOpConversion, StoreOpConversion, StringLitOpConversion,
         SubcOpConversion, UnboxCharOpConversion, UnboxProcOpConversion,
-        UndefOpConversion, UnreachableOpConversion, ZeroOpConversion>(
-        typeConverter);
+        UndefOpConversion, UnreachableOpConversion, XEmboxOpConversion,
+        ZeroOpConversion>(typeConverter);
     mlir::populateStdToLLVMConversionPatterns(typeConverter, pattern);
     mlir::arith::populateArithmeticToLLVMConversionPatterns(typeConverter,
                                                             pattern);
