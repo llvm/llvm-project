@@ -145,11 +145,6 @@ struct LinalgOpInterface
 struct InitTensorOpInterface
     : public BufferizableOpInterface::ExternalModel<InitTensorOpInterface,
                                                     linalg::InitTensorOp> {
-  SmallVector<OpOperand *> getAliasingOpOperand(Operation *op,
-                                                OpResult opResult) const {
-    return {};
-  }
-
   bool isMemoryWrite(Operation *op, OpResult opResult) const {
     // InitTensorOps allocate but do not write.
     return false;
@@ -189,15 +184,6 @@ struct TiledLoopOpInterface
     // its matching bbArg may.
     auto bufferizableOp = cast<BufferizableOpInterface>(op);
     return static_cast<bool>(bufferizableOp.getAliasingOpResult(opOperand));
-  }
-
-  SmallVector<OpOperand *> getAliasingOpOperand(Operation *op,
-                                                OpResult opResult) const {
-    // TODO: TiledLoopOp helper method to avoid leaking impl details.
-    auto tiledLoopOp = cast<linalg::TiledLoopOp>(op);
-    return {&op->getOpOperand(tiledLoopOp.getNumControlOperands() +
-                              tiledLoopOp.getNumInputs() +
-                              opResult.getResultNumber())};
   }
 
   OpResult getAliasingOpResult(Operation *op, OpOperand &opOperand) const {

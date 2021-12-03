@@ -447,12 +447,6 @@ struct CallOpInterface
     return true;
   }
 
-  SmallVector<OpOperand *> getAliasingOpOperand(Operation *op,
-                                                OpResult opResult) const {
-    // TODO: Can we do better?
-    return {};
-  }
-
   OpResult getAliasingOpResult(Operation *op, OpOperand &opOperand) const {
     // CallOpInterface is special, it needs to wait for the callee to be
     // bufferized and needs to inspect the BufferAliasInfo object. It can't
