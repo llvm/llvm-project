@@ -1970,9 +1970,10 @@ void FlatAffineConstraints::mergeLocalIds(FlatAffineConstraints &other) {
   fac1.getLocalReprs(divs1, denoms1);
   fac2.getLocalReprs(divs2, denoms2);
 
-  // Copy division information from fac2 to fac1. Since newly added local
-  // variables in fac1 and fac2 have no constraints, they will not have any
-  // division representation.
+  // Copy division information for fac2 into `divs1` and `denoms1`, so that
+  // these have the combined division information of both FACs. Since newly
+  // added local variables in fac1 and fac2 have no constraints, they will not
+  // have any division representation.
   std::copy(divs2.begin() + initLocals, divs2.end(),
             divs1.begin() + initLocals);
   std::copy(denoms2.begin() + initLocals, denoms2.end(),
@@ -1983,8 +1984,8 @@ void FlatAffineConstraints::mergeLocalIds(FlatAffineConstraints &other) {
   // a constant.
   // TODO: Add division ordering such that a division representation for local
   // identifier at position `i` only depends on local identifiers at position <
-  // `i`. This makes sure that all divisions depending on other local variables
-  // that can be merged, are merged.
+  // `i`. This would make sure that all divisions depending on other local
+  // variables that can be merged, are merged.
   unsigned localOffset = getIdKindOffset(IdKind::Local);
   for (unsigned i = 0; i < divs1.size(); ++i) {
     // Check if a division representation exists for the `i^th` local id.
