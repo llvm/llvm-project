@@ -422,14 +422,14 @@ in the IR:
 ### Parameter Parsing and Printing
 
 For many basic parameter types, no additional work is needed to define how
-these parameters are parsed or printerd.
+these parameters are parsed or printed.
 
 * The default printer for any parameter is `$_printer << $_self`,
-  where `$_self` is the C++ value of the parameter and `$_printer` is a
-  `DialectAsmPrinter`.
+  where `$_self` is the C++ value of the parameter and `$_printer` is an
+  `AsmPrinter`.
 * The default parser for a parameter is
   `FieldParser<$cppClass>::parse($_parser)`, where `$cppClass` is the C++ type
-  of the parameter and `$_parser` is a `DialectAsmParser`.
+  of the parameter and `$_parser` is an `AsmParser`.
 
 Printing and parsing behaviour can be added to additional C++ types by
 overloading these functions or by defining a `parser` and `printer` in an ODS
@@ -440,12 +440,12 @@ Example of overloading:
 ```c++
 using MyParameter = std::pair<int, int>;
 
-DialectAsmPrinter &operator<<(DialectAsmPrinter &printer, MyParameter param) {
+AsmPrinter &operator<<(AsmPrinter &printer, MyParameter param) {
   printer << param.first << " * " << param.second;
 }
 
 template <> struct FieldParser<MyParameter> {
-  static FailureOr<MyParameter> parse(DialectAsmParser &parser) {
+  static FailureOr<MyParameter> parse(AsmParser &parser) {
     int a, b;
     if (parser.parseInteger(a) || parser.parseStar() ||
         parser.parseInteger(b))
