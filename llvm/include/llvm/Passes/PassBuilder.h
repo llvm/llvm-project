@@ -199,7 +199,7 @@ public:
 
   /// Construct the module pipeline that performs inlining with
   /// module inliner pass.
-  ModuleInlinerPass buildModuleInlinerPipeline(OptimizationLevel Level,
+  ModulePassManager buildModuleInlinerPipeline(OptimizationLevel Level,
                                                ThinOrFullLTOPhase Phase);
 
   /// Construct the core LLVM module optimization pipeline.
