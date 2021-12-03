@@ -657,16 +657,15 @@ class stddeque_SynthProvider:
         #    static const difference_type __block_size = sizeof(value_type) < 256 ? 4096 / sizeof(value_type) : 16;
         # }
         if self.element_size < 256:
-            self.block_size = 4096 / self.element_size
+            self.block_size = 4096 // self.element_size
         else:
             self.block_size = 16
 
     def num_children(self):
-        global _deque_capping_size
         logger = lldb.formatters.Logger.Logger()
         if self.count is None:
             return 0
-        return min(self.count, _deque_capping_size)
+        return self.count
 
     def has_children(self):
         return True
@@ -687,9 +686,10 @@ class stddeque_SynthProvider:
             return None
         try:
             i, j = divmod(self.start + index, self.block_size)
+
             return self.first.CreateValueFromExpression(
                 '[' + str(index) + ']', '*(*(%s + %d) + %d)' %
-                (self.first.get_expr_path(), i, j))
+                (self.map_begin.get_expr_path(), i, j))
         except:
             return None
 
@@ -727,12 +727,14 @@ class stddeque_SynthProvider:
                 '__start_').GetValueAsUnsigned(0)
             first = map_.GetChildMemberWithName('__first_')
             map_first = first.GetValueAsUnsigned(0)
-            map_begin = map_.GetChildMemberWithName(
-                '__begin_').GetValueAsUnsigned(0)
+            self.map_begin = map_.GetChildMemberWithName(
+                '__begin_')
+            map_begin = self.map_begin.GetValueAsUnsigned(0)
             map_end = map_.GetChildMemberWithName(
                 '__end_').GetValueAsUnsigned(0)
             map_endcap = self._get_value_of_compressed_pair(
                     map_.GetChildMemberWithName( '__end_cap_'))
+
             # check consistency
             if not map_first <= map_begin <= map_end <= map_endcap:
                 logger.write("map pointers are not monotonic")
@@ -750,18 +752,7 @@ class stddeque_SynthProvider:
             if junk:
                 logger.write("begin-first doesnt align correctly")
                 return
-            if not start_row * \
-                    self.block_size <= start < (start_row + 1) * self.block_size:
-                logger.write("0th element must be in the 'begin' row")
-                return
-            end_row = start_row + active_rows
-            if not count:
-                if active_rows:
-                    logger.write("empty deque but begin!=end")
-                    return
-            elif not (end_row - 1) * self.block_size <= start + count < end_row * self.block_size:
-                logger.write("nth element must be before the 'end' row")
-                return
+
             logger.write(
                 "update success: count=%r, start=%r, first=%r" %
                 (count, start, first))
@@ -774,6 +765,7 @@ class stddeque_SynthProvider:
             self.start = None
             self.map_first = None
             self.map_begin = None
+        return False
 
 
 class stdsharedptr_SynthProvider:
@@ -873,4 +865,3 @@ def __lldb_init_module(debugger, dict):
 _map_capping_size = 255
 _list_capping_size = 255
 _list_uses_loop_detector = True
-_deque_capping_size = 255
