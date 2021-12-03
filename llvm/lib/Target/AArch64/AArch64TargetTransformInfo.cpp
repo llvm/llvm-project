@@ -725,6 +725,22 @@ static Optional<Instruction *> instCombineSVEVectorFMLA(InstCombiner &IC,
   return IC.replaceInstUsesWith(II, FMLA);
 }
 
+static bool isAllActivePredicate(Value *Pred) {
+  // Look through convert.from.svbool(convert.to.svbool(...) chain.
+  Value *UncastedPred;
+  if (match(Pred, m_Intrinsic<Intrinsic::aarch64_sve_convert_from_svbool>(
+                      m_Intrinsic<Intrinsic::aarch64_sve_convert_to_svbool>(
+                          m_Value(UncastedPred)))))
+    // If the predicate has the same or less lanes than the uncasted
+    // predicate then we know the casting has no effect.
+    if (cast<ScalableVectorType>(Pred->getType())->getMinNumElements() <=
+        cast<ScalableVectorType>(UncastedPred->getType())->getMinNumElements())
+      Pred = UncastedPred;
+
+  return match(Pred, m_Intrinsic<Intrinsic::aarch64_sve_ptrue>(
+                         m_ConstantInt<AArch64SVEPredPattern::all>()));
+}
+
 static Optional<Instruction *>
 instCombineSVELD1(InstCombiner &IC, IntrinsicInst &II, const DataLayout &DL) {
   IRBuilder<> Builder(II.getContext());
@@ -735,8 +751,7 @@ instCombineSVELD1(InstCombiner &IC, IntrinsicInst &II, const DataLayout &DL) {
   Type *VecTy = II.getType();
   Value *VecPtr = Builder.CreateBitCast(PtrOp, VecTy->getPointerTo());
 
-  if (match(Pred, m_Intrinsic<Intrinsic::aarch64_sve_ptrue>(
-                      m_ConstantInt<AArch64SVEPredPattern::all>()))) {
+  if (isAllActivePredicate(Pred)) {
     LoadInst *Load = Builder.CreateLoad(VecTy, VecPtr);
     return IC.replaceInstUsesWith(II, Load);
   }
@@ -758,8 +773,7 @@ instCombineSVEST1(InstCombiner &IC, IntrinsicInst &II, const DataLayout &DL) {
   Value *VecPtr =
       Builder.CreateBitCast(PtrOp, VecOp->getType()->getPointerTo());
 
-  if (match(Pred, m_Intrinsic<Intrinsic::aarch64_sve_ptrue>(
-                      m_ConstantInt<AArch64SVEPredPattern::all>()))) {
+  if (isAllActivePredicate(Pred)) {
     Builder.CreateStore(VecOp, VecPtr);
     return IC.eraseInstFromFunction(II);
   }
