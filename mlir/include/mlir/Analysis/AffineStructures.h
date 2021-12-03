@@ -443,7 +443,7 @@ public:
 
   /// Merges and aligns local ids of `this` and `other`. Local ids with
   /// identical division representations are merged. The number of dimensions
-  /// and symbol ids should match in `this` and `other`.
+  /// and symbol ids in `this` and `other` should match.
   void mergeLocalIds(FlatAffineConstraints &other);
 
   /// Removes all equalities and inequalities.
