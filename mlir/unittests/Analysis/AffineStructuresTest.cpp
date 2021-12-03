@@ -828,7 +828,7 @@ TEST(FlatAffineConstraintsTest, mergeDivisionsSimple) {
     // Local space should be same.
     EXPECT_EQ(fac1.getNumLocalIds(), fac2.getNumLocalIds());
 
-    // 1 division matched + 2 unmatched local variables.
+    // 1 division should be matched + 2 unmatched local ids.
     EXPECT_EQ(fac1.getNumLocalIds(), 3u);
     EXPECT_EQ(fac2.getNumLocalIds(), 3u);
   }
@@ -851,7 +851,7 @@ TEST(FlatAffineConstraintsTest, mergeDivisionsSimple) {
     // Local space should be same.
     EXPECT_EQ(fac1.getNumLocalIds(), fac2.getNumLocalIds());
 
-    // 2 divisions matched.
+    // 2 divisions should be matched.
     EXPECT_EQ(fac1.getNumLocalIds(), 2u);
     EXPECT_EQ(fac2.getNumLocalIds(), 2u);
   }
@@ -861,22 +861,22 @@ TEST(FlatAffineConstraintsTest, mergeDivisionsNestedDivsions) {
   {
     // (x) : (exists y = [x / 2], z = [x + y / 3]: y + z >= x).
     FlatAffineConstraints fac1(1);
-    fac1.addLocalFloorDiv({1, 0}, 2);    // y = [x / 2]
-    fac1.addLocalFloorDiv({1, 1, 0}, 3); // z = [x + y / 3]
-    fac1.addInequality({-1, 1, 1, 0});   // y + z >= x
+    fac1.addLocalFloorDiv({1, 0}, 2);    // y = [x / 2].
+    fac1.addLocalFloorDiv({1, 1, 0}, 3); // z = [x + y / 3].
+    fac1.addInequality({-1, 1, 1, 0});   // y + z >= x.
 
     // (x) : (exists y = [x / 2], z = [x + y / 3]: y + z <= x).
     FlatAffineConstraints fac2(1);
-    fac2.addLocalFloorDiv({1, 0}, 2);    // y = [x / 2]
-    fac2.addLocalFloorDiv({1, 1, 0}, 3); // z = [x + y / 3]
-    fac2.addInequality({1, -1, -1, 0});  // y + z <= x
+    fac2.addLocalFloorDiv({1, 0}, 2);    // y = [x / 2].
+    fac2.addLocalFloorDiv({1, 1, 0}, 3); // z = [x + y / 3].
+    fac2.addInequality({1, -1, -1, 0});  // y + z <= x.
 
     fac1.mergeLocalIds(fac2);
 
     // Local space should be same.
     EXPECT_EQ(fac1.getNumLocalIds(), fac2.getNumLocalIds());
 
-    // 2 divisions matched.
+    // 2 divisions should be matched.
     EXPECT_EQ(fac1.getNumLocalIds(), 2u);
     EXPECT_EQ(fac2.getNumLocalIds(), 2u);
   }
@@ -901,7 +901,7 @@ TEST(FlatAffineConstraintsTest, mergeDivisionsNestedDivsions) {
     // Local space should be same.
     EXPECT_EQ(fac1.getNumLocalIds(), fac2.getNumLocalIds());
 
-    // 3 divisions matched.
+    // 3 divisions should be matched.
     EXPECT_EQ(fac1.getNumLocalIds(), 3u);
     EXPECT_EQ(fac2.getNumLocalIds(), 3u);
   }
@@ -926,7 +926,7 @@ TEST(FlatAffineConstraintsTest, mergeDivisionsConstants) {
     // Local space should be same.
     EXPECT_EQ(fac1.getNumLocalIds(), fac2.getNumLocalIds());
 
-    // 2 divisions matched.
+    // 2 divisions should be matched.
     EXPECT_EQ(fac1.getNumLocalIds(), 2u);
     EXPECT_EQ(fac2.getNumLocalIds(), 2u);
   }
