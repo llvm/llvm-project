@@ -124,7 +124,7 @@ body:             |
 # GCN-LABEL: name: test_fmaak_sgpr_src0_f32
 # GCN: %1:vgpr_32 = IMPLICIT_DEF
 # GCN-NOT: V_MOV_B32
-# GCN: %2:vgpr_32 = V_FMAMK_F32 killed %0, 1078523331, %3:vgpr_32, implicit $mode, implicit $exec
+# GCN: %3:vgpr_32 = V_FMAMK_F32 killed %0, 1078523331, %2, implicit $mode, implicit $exec
 
 ---
 name:            test_fmaak_sgpr_src0_f32
@@ -138,14 +138,15 @@ body:             |
 
     %0 = IMPLICIT_DEF
     %1 = V_MOV_B32_e32 1078523331, implicit $exec
-    %2 = V_FMAC_F32_e32 killed %0, %1, %3, implicit $mode, implicit $exec
+    %2 = IMPLICIT_DEF
+    %3 = V_FMAC_F32_e32 killed %0, %1, %2, implicit $mode, implicit $exec
 
 ...
 
 # GCN-LABEL: name: test_fmaak_inlineimm_src0_f32
 # GCN: %0:vgpr_32 = IMPLICIT_DEF
 # GCN-NOT: V_MOV_B32
-# GCN: %1:vgpr_32 = V_FMAMK_F32 1073741824, 1078523331, %2:vgpr_32, implicit $mode, implicit $exec
+# GCN: %2:vgpr_32 = V_FMAMK_F32 1073741824, 1078523331, %1, implicit $mode, implicit $exec
 
 ---
 name:            test_fmaak_inlineimm_src0_f32
@@ -157,12 +158,13 @@ body:             |
   bb.0:
 
     %0 = V_MOV_B32_e32 1078523331, implicit $exec
-    %1 = V_FMAC_F32_e32 1073741824, %0, %2, implicit $mode, implicit $exec
+    %1 = IMPLICIT_DEF
+    %2 = V_FMAC_F32_e32 1073741824, %0, %1, implicit $mode, implicit $exec
 
 ...
 
 # GCN-LABEL: name: test_fmaak_otherimm_src0_f32
-# GCN: %1:vgpr_32 = V_FMAC_F32_e32 1120403456, %0, %1, implicit $mode, implicit $exec
+# GCN: %2:vgpr_32 = V_FMAC_F32_e32 1120403456, %0, %2, implicit $mode, implicit $exec
 
 ---
 name:            test_fmaak_otherimm_src0_f32
@@ -174,18 +176,23 @@ body:             |
   bb.0:
 
     %0 = V_MOV_B32_e32 1078523331, implicit $exec
-    %1 = V_FMAC_F32_e32 1120403456, %0, %2, implicit $mode, implicit $exec
+    %1 = IMPLICIT_DEF
+    %2 = V_FMAC_F32_e32 1120403456, %0, %1, implicit $mode, implicit $exec
 
 ...
 
 # GCN-LABEL: name: test_fmaak_other_constantlike_src0_f32
-# GCN: %1:vgpr_32 = V_FMAC_F32_e32 %stack.0, %0, %1, implicit $mode, implicit $exec
+# GCN: %2:vgpr_32 = COPY %1
+# GCN: %2:vgpr_32 = V_FMAC_F32_e32 %stack.0, %0, %2, implicit $mode, implicit $exec
 ---
 name:            test_fmaak_other_constantlike_src0_f32
+tracksRegLiveness: true
 registers:
-  - { id: 0, class: vgpr_32}
+  - { id: 0, class: vgpr_32 }
   - { id: 1, class: vgpr_32 }
   - { id: 2, class: vgpr_32 }
+machineFunctionInfo:
+  stackPtrOffsetReg: $sgpr32
 stack:
   - { id: 0, name: "", type: default, offset: 0, size: 128, alignment: 8,
       callee-saved-register: '', local-offset: 0, debug-info-variable: '',
@@ -194,7 +201,8 @@ body:             |
   bb.0:
 
     %0 = V_MOV_B32_e32 1078523331, implicit $exec
-    %1 = V_FMAC_F32_e32 %stack.0, %0, %2, implicit $mode, implicit $exec
+    %1 = IMPLICIT_DEF
+    %2 = V_FMAC_F32_e32 %stack.0, %0, %1, implicit $mode, implicit $exec
 
 ...
 
@@ -205,16 +213,17 @@ body:             |
 
 ---
 name:            test_fmaak_inline_literal_f16
+tracksRegLiveness: true
 liveins:
-  - { reg: '$vgpr0', virtual-reg: '%3' }
+  - { reg: '$vgpr0', virtual-reg: '%0' }
 body:             |
   bb.0:
     liveins: $vgpr0
 
-    %3:vgpr_32 = COPY killed $vgpr0
+    %0:vgpr_32 = COPY killed $vgpr0
 
-    %26:vgpr_32 = V_MOV_B32_e32 49664, implicit $exec
-    %28:vgpr_32 = V_FMAC_F16_e32 16384, killed %3, %26, implicit $mode, implicit $exec
+    %1:vgpr_32 = V_MOV_B32_e32 49664, implicit $exec
+    %2:vgpr_32 = V_FMAC_F16_e32 16384, killed %0, %1, implicit $mode, implicit $exec
     S_ENDPGM 0
 
 ...
