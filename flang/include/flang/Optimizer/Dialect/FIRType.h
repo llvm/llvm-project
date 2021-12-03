@@ -168,6 +168,14 @@ inline mlir::Type unwrapRefType(mlir::Type t) {
   return t;
 }
 
+/// If `t` conforms with a pass-by-reference type (box, ref, ptr, etc.) then
+/// return the element type of `t`. Otherwise, return `t`.
+inline mlir::Type unwrapPassByRefType(mlir::Type t) {
+  if (auto eleTy = dyn_cast_ptrOrBoxEleTy(t))
+    return eleTy;
+  return t;
+}
+
 #ifndef NDEBUG
 // !fir.ptr<X> and !fir.heap<X> where X is !fir.ptr, !fir.heap, or !fir.ref
 // is undefined and disallowed.
