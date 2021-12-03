@@ -6,10 +6,12 @@ declare <8 x i1> @llvm.arm.mve.vctp16(i32)
 declare <4 x i1> @llvm.arm.mve.vctp32(i32)
 declare <4 x i1> @llvm.arm.mve.vctp64(i32)
 
+declare i32 @llvm.arm.mve.pred.v2i.v2i1(<2 x i1>)
 declare i32 @llvm.arm.mve.pred.v2i.v4i1(<4 x i1>)
 declare i32 @llvm.arm.mve.pred.v2i.v8i1(<8 x i1>)
 declare i32 @llvm.arm.mve.pred.v2i.v16i1(<16 x i1>)
 
+declare <2 x i1> @llvm.arm.mve.pred.i2v.v2i1(i32)
 declare <4 x i1> @llvm.arm.mve.pred.i2v.v4i1(i32)
 declare <8 x i1> @llvm.arm.mve.pred.i2v.v8i1(i32)
 declare <16 x i1> @llvm.arm.mve.pred.i2v.v16i1(i32)
@@ -205,6 +207,32 @@ entry:
 
 define arm_aapcs_vfpcc <2 x i64> @test_vpselq_i64(<2 x i64> %a, <2 x i64> %b, i16 zeroext %p) #2 {
 ; CHECK-LABEL: test_vpselq_i64:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vmsr p0, r0
+; CHECK-NEXT:    vpsel q0, q0, q1
+; CHECK-NEXT:    bx lr
+entry:
+  %0 = zext i16 %p to i32
+  %1 = call <2 x i1> @llvm.arm.mve.pred.i2v.v2i1(i32 %0)
+  %2 = select <2 x i1> %1, <2 x i64> %a, <2 x i64> %b
+  ret <2 x i64> %2
+}
+
+define arm_aapcs_vfpcc <2 x double> @test_vpselq_f64(<2 x double> %a, <2 x double> %b, i16 zeroext %p) #2 {
+; CHECK-LABEL: test_vpselq_f64:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vmsr p0, r0
+; CHECK-NEXT:    vpsel q0, q0, q1
+; CHECK-NEXT:    bx lr
+entry:
+  %0 = zext i16 %p to i32
+  %1 = call <2 x i1> @llvm.arm.mve.pred.i2v.v2i1(i32 %0)
+  %2 = select <2 x i1> %1, <2 x double> %a, <2 x double> %b
+  ret <2 x double> %2
+}
+
+define arm_aapcs_vfpcc <2 x i64> @test_vpselq_i64_2(<2 x i64> %a, <2 x i64> %b, i16 zeroext %p) #2 {
+; CHECK-LABEL: test_vpselq_i64_2:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vmsr p0, r0
 ; CHECK-NEXT:    vpsel q0, q0, q1

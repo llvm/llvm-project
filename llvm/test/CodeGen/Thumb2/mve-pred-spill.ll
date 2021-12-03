@@ -12,48 +12,67 @@ define arm_aapcs_vfpcc <2 x i64> @shuffle1_v2i64(<2 x i64> %src, <2 x i64> %a) {
 ; CHECK-LE:       @ %bb.0: @ %entry
 ; CHECK-LE-NEXT:    .save {r7, lr}
 ; CHECK-LE-NEXT:    push {r7, lr}
-; CHECK-LE-NEXT:    .vsave {d8, d9, d10, d11}
-; CHECK-LE-NEXT:    vpush {d8, d9, d10, d11}
-; CHECK-LE-NEXT:    vmov r0, r1, d1
+; CHECK-LE-NEXT:    .vsave {d8, d9}
+; CHECK-LE-NEXT:    vpush {d8, d9}
+; CHECK-LE-NEXT:    .pad #8
+; CHECK-LE-NEXT:    sub sp, #8
+; CHECK-LE-NEXT:    vmov r0, r1, d0
+; CHECK-LE-NEXT:    vmov q4, q1
 ; CHECK-LE-NEXT:    orrs r0, r1
-; CHECK-LE-NEXT:    vmov r1, r2, d0
-; CHECK-LE-NEXT:    csetm r0, eq
-; CHECK-LE-NEXT:    orrs r1, r2
-; CHECK-LE-NEXT:    csetm r1, eq
-; CHECK-LE-NEXT:    vmov q5[2], q5[0], r1, r0
-; CHECK-LE-NEXT:    vmov q5[3], q5[1], r1, r0
-; CHECK-LE-NEXT:    vand q4, q1, q5
-; CHECK-LE-NEXT:    vmov q0, q4
+; CHECK-LE-NEXT:    mov.w r1, #0
+; CHECK-LE-NEXT:    cset r0, eq
+; CHECK-LE-NEXT:    cmp r0, #0
+; CHECK-LE-NEXT:    csetm r0, ne
+; CHECK-LE-NEXT:    bfi r1, r0, #0, #8
+; CHECK-LE-NEXT:    vmov r0, r2, d1
+; CHECK-LE-NEXT:    vmov.i32 q0, #0x0
+; CHECK-LE-NEXT:    orrs r0, r2
+; CHECK-LE-NEXT:    cset r0, eq
+; CHECK-LE-NEXT:    cmp r0, #0
+; CHECK-LE-NEXT:    csetm r0, ne
+; CHECK-LE-NEXT:    bfi r1, r0, #8, #8
+; CHECK-LE-NEXT:    vmsr p0, r1
+; CHECK-LE-NEXT:    vpsel q0, q1, q0
+; CHECK-LE-NEXT:    vstr p0, [sp, #4] @ 4-byte Spill
 ; CHECK-LE-NEXT:    bl ext_i64
-; CHECK-LE-NEXT:    vbic q0, q0, q5
-; CHECK-LE-NEXT:    vorr q0, q4, q0
-; CHECK-LE-NEXT:    vpop {d8, d9, d10, d11}
+; CHECK-LE-NEXT:    vldr p0, [sp, #4] @ 4-byte Reload
+; CHECK-LE-NEXT:    vpsel q0, q4, q0
+; CHECK-LE-NEXT:    add sp, #8
+; CHECK-LE-NEXT:    vpop {d8, d9}
 ; CHECK-LE-NEXT:    pop {r7, pc}
 ;
 ; CHECK-BE-LABEL: shuffle1_v2i64:
 ; CHECK-BE:       @ %bb.0: @ %entry
 ; CHECK-BE-NEXT:    .save {r7, lr}
 ; CHECK-BE-NEXT:    push {r7, lr}
-; CHECK-BE-NEXT:    .vsave {d8, d9, d10, d11}
-; CHECK-BE-NEXT:    vpush {d8, d9, d10, d11}
-; CHECK-BE-NEXT:    vrev64.32 q2, q0
-; CHECK-BE-NEXT:    vmov r0, r1, d5
+; CHECK-BE-NEXT:    .vsave {d8, d9}
+; CHECK-BE-NEXT:    vpush {d8, d9}
+; CHECK-BE-NEXT:    .pad #8
+; CHECK-BE-NEXT:    sub sp, #8
+; CHECK-BE-NEXT:    vmov q4, q1
+; CHECK-BE-NEXT:    vrev64.32 q1, q0
+; CHECK-BE-NEXT:    vmov r0, r1, d2
+; CHECK-BE-NEXT:    vmov.i32 q0, #0x0
 ; CHECK-BE-NEXT:    orrs r0, r1
-; CHECK-BE-NEXT:    vmov r1, r2, d4
-; CHECK-BE-NEXT:    csetm r0, eq
-; CHECK-BE-NEXT:    orrs r1, r2
-; CHECK-BE-NEXT:    csetm r1, eq
-; CHECK-BE-NEXT:    vmov q0[2], q0[0], r1, r0
-; CHECK-BE-NEXT:    vmov q0[3], q0[1], r1, r0
-; CHECK-BE-NEXT:    vrev64.32 q2, q0
-; CHECK-BE-NEXT:    vmov.i8 q0, #0xff
-; CHECK-BE-NEXT:    vand q4, q1, q2
-; CHECK-BE-NEXT:    veor q5, q2, q0
-; CHECK-BE-NEXT:    vmov q0, q4
+; CHECK-BE-NEXT:    mov.w r1, #0
+; CHECK-BE-NEXT:    cset r0, eq
+; CHECK-BE-NEXT:    cmp r0, #0
+; CHECK-BE-NEXT:    csetm r0, ne
+; CHECK-BE-NEXT:    bfi r1, r0, #0, #8
+; CHECK-BE-NEXT:    vmov r0, r2, d3
+; CHECK-BE-NEXT:    orrs r0, r2
+; CHECK-BE-NEXT:    cset r0, eq
+; CHECK-BE-NEXT:    cmp r0, #0
+; CHECK-BE-NEXT:    csetm r0, ne
+; CHECK-BE-NEXT:    bfi r1, r0, #8, #8
+; CHECK-BE-NEXT:    vmsr p0, r1
+; CHECK-BE-NEXT:    vpsel q0, q4, q0
+; CHECK-BE-NEXT:    vstr p0, [sp, #4] @ 4-byte Spill
 ; CHECK-BE-NEXT:    bl ext_i64
-; CHECK-BE-NEXT:    vand q0, q0, q5
-; CHECK-BE-NEXT:    vorr q0, q4, q0
-; CHECK-BE-NEXT:    vpop {d8, d9, d10, d11}
+; CHECK-BE-NEXT:    vldr p0, [sp, #4] @ 4-byte Reload
+; CHECK-BE-NEXT:    vpsel q0, q4, q0
+; CHECK-BE-NEXT:    add sp, #8
+; CHECK-BE-NEXT:    vpop {d8, d9}
 ; CHECK-BE-NEXT:    pop {r7, pc}
 entry:
   %c = icmp eq <2 x i64> %src, zeroinitializer

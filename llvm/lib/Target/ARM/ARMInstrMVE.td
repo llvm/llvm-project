@@ -4450,6 +4450,11 @@ multiclass two_predops<SDPatternOperator opnode, Instruction insn> {
                           (insn (i32 (COPY_TO_REGCLASS (v4i1 VCCR:$p1), rGPR)),
                                 (i32 (COPY_TO_REGCLASS (v4i1 VCCR:$p2), rGPR))),
                           VCCR))>;
+  def v2i1  : Pat<(v2i1 (opnode (v2i1 VCCR:$p1), (v2i1 VCCR:$p2))),
+                  (v2i1 (COPY_TO_REGCLASS
+                          (insn (i32 (COPY_TO_REGCLASS (v2i1 VCCR:$p1), rGPR)),
+                                (i32 (COPY_TO_REGCLASS (v2i1 VCCR:$p2), rGPR))),
+                          VCCR))>;
 }
 
 let Predicates = [HasMVEInt] in {
@@ -4469,20 +4474,20 @@ def load_align4 : PatFrag<(ops node:$ptr), (load node:$ptr), [{
 }]>;
 
 let Predicates = [HasMVEInt] in {
-  foreach VT = [ v4i1, v8i1, v16i1 ] in {
+  foreach VT = [ v2i1, v4i1, v8i1, v16i1 ] in {
     def : Pat<(i32 (predicate_cast (VT VCCR:$src))),
               (i32 (COPY_TO_REGCLASS (VT VCCR:$src), VCCR))>;
     def : Pat<(VT  (predicate_cast (i32 VCCR:$src))),
               (VT  (COPY_TO_REGCLASS (i32 VCCR:$src), VCCR))>;
 
-    foreach VT2 = [ v4i1, v8i1, v16i1 ] in
+    foreach VT2 = [ v2i1, v4i1, v8i1, v16i1 ] in
       def : Pat<(VT  (predicate_cast (VT2 VCCR:$src))),
                 (VT  (COPY_TO_REGCLASS (VT2 VCCR:$src), VCCR))>;
   }
 
   // If we happen to be casting from a load we can convert that straight
   // into a predicate load, so long as the load is of the correct type.
-  foreach VT = [ v4i1, v8i1, v16i1 ] in {
+  foreach VT = [ v2i1, v4i1, v8i1, v16i1 ] in {
     def : Pat<(VT (predicate_cast (i32 (load_align4 taddrmode_imm7<2>:$addr)))),
               (VT (VLDR_P0_off taddrmode_imm7<2>:$addr))>;
   }
@@ -6778,11 +6783,15 @@ let Predicates = [HasMVEInt] in {
             (v8i16 (MVE_VPSEL MQPR:$v1, MQPR:$v2, ARMVCCNone, VCCR:$pred, zero_reg))>;
   def : Pat<(v4i32 (vselect (v4i1 VCCR:$pred), (v4i32 MQPR:$v1), (v4i32 MQPR:$v2))),
             (v4i32 (MVE_VPSEL MQPR:$v1, MQPR:$v2, ARMVCCNone, VCCR:$pred, zero_reg))>;
+  def : Pat<(v2i64 (vselect (v2i1 VCCR:$pred), (v2i64 MQPR:$v1), (v2i64 MQPR:$v2))),
+            (v2i64 (MVE_VPSEL MQPR:$v1, MQPR:$v2, ARMVCCNone, VCCR:$pred, zero_reg))>;
 
   def : Pat<(v8f16 (vselect (v8i1 VCCR:$pred), (v8f16 MQPR:$v1), (v8f16 MQPR:$v2))),
             (v8f16 (MVE_VPSEL MQPR:$v1, MQPR:$v2, ARMVCCNone, VCCR:$pred, zero_reg))>;
   def : Pat<(v4f32 (vselect (v4i1 VCCR:$pred), (v4f32 MQPR:$v1), (v4f32 MQPR:$v2))),
             (v4f32 (MVE_VPSEL MQPR:$v1, MQPR:$v2, ARMVCCNone, VCCR:$pred, zero_reg))>;
+  def : Pat<(v2f64 (vselect (v2i1 VCCR:$pred), (v2f64 MQPR:$v1), (v2f64 MQPR:$v2))),
+            (v2f64 (MVE_VPSEL MQPR:$v1, MQPR:$v2, ARMVCCNone, VCCR:$pred, zero_reg))>;
 
   def : Pat<(v16i8 (vselect (v16i8 MQPR:$pred), (v16i8 MQPR:$v1), (v16i8 MQPR:$v2))),
             (v16i8 (MVE_VPSEL MQPR:$v1, MQPR:$v2, ARMVCCNone,
@@ -6808,6 +6817,8 @@ let Predicates = [HasMVEInt] in {
             (v8i16 (MVE_VPSEL (MVE_VMOVimmi16 1), (MVE_VMOVimmi16 0), ARMVCCNone, VCCR:$pred, zero_reg))>;
   def : Pat<(v4i32 (zext  (v4i1  VCCR:$pred))),
             (v4i32 (MVE_VPSEL (MVE_VMOVimmi32 1), (MVE_VMOVimmi32 0), ARMVCCNone, VCCR:$pred, zero_reg))>;
+  def : Pat<(v2i64 (zext  (v2i1  VCCR:$pred))),
+            (v2i64 (MVE_VPSEL (MVE_VMOVimmi64 1), (MVE_VMOVimmi32 0), ARMVCCNone, VCCR:$pred, zero_reg))>;
 
   def : Pat<(v16i8 (sext  (v16i1 VCCR:$pred))),
             (v16i8 (MVE_VPSEL (MVE_VMOVimmi8 255), (MVE_VMOVimmi8 0), ARMVCCNone, VCCR:$pred, zero_reg))>;
@@ -6815,6 +6826,8 @@ let Predicates = [HasMVEInt] in {
             (v8i16 (MVE_VPSEL (MVE_VMOVimmi8 255), (MVE_VMOVimmi16 0), ARMVCCNone, VCCR:$pred, zero_reg))>;
   def : Pat<(v4i32 (sext  (v4i1  VCCR:$pred))),
             (v4i32 (MVE_VPSEL (MVE_VMOVimmi8 255), (MVE_VMOVimmi32 0), ARMVCCNone, VCCR:$pred, zero_reg))>;
+  def : Pat<(v2i64 (sext  (v2i1  VCCR:$pred))),
+            (v2i64 (MVE_VPSEL (MVE_VMOVimmi8 255), (MVE_VMOVimmi32 0), ARMVCCNone, VCCR:$pred, zero_reg))>;
 
   def : Pat<(v16i8 (anyext  (v16i1 VCCR:$pred))),
             (v16i8 (MVE_VPSEL (MVE_VMOVimmi8 1), (MVE_VMOVimmi8 0), ARMVCCNone, VCCR:$pred, zero_reg))>;
@@ -6822,6 +6835,8 @@ let Predicates = [HasMVEInt] in {
             (v8i16 (MVE_VPSEL (MVE_VMOVimmi16 1), (MVE_VMOVimmi16 0), ARMVCCNone, VCCR:$pred, zero_reg))>;
   def : Pat<(v4i32 (anyext  (v4i1  VCCR:$pred))),
             (v4i32 (MVE_VPSEL (MVE_VMOVimmi32 1), (MVE_VMOVimmi32 0), ARMVCCNone, VCCR:$pred, zero_reg))>;
+  def : Pat<(v2i64 (anyext  (v2i1  VCCR:$pred))),
+            (v2i64 (MVE_VPSEL (MVE_VMOVimmi64 1), (MVE_VMOVimmi32 0), ARMVCCNone, VCCR:$pred, zero_reg))>;
 }
 
 let Predicates = [HasMVEFloat] in {
@@ -6862,6 +6877,8 @@ def MVE_VPNOT : MVE_p<(outs VCCR:$P0), (ins VCCR:$P0_in), NoItinerary,
 }
 
 let Predicates = [HasMVEInt] in {
+  def : Pat<(v2i1 (xor (v2i1 VCCR:$pred), (v2i1 (predicate_cast (i32 65535))))),
+            (v2i1 (MVE_VPNOT (v2i1 VCCR:$pred)))>;
   def : Pat<(v4i1 (xor (v4i1 VCCR:$pred), (v4i1 (predicate_cast (i32 65535))))),
             (v4i1 (MVE_VPNOT (v4i1 VCCR:$pred)))>;
   def : Pat<(v8i1 (xor (v8i1 VCCR:$pred), (v8i1 (predicate_cast (i32 65535))))),
