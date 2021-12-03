@@ -93,6 +93,11 @@ struct BufferizationOptions {
   /// Otherwise, a pass failure is triggered.
   bool allowReturnMemref = false;
 
+  /// Specifies whether not bufferizable ops are allowed in the input. If so,
+  /// bufferization.to_memref and bufferization.to_tensor ops are inserted at
+  /// the boundaries.
+  bool allowUnknownOps = false;
+
   /// Seed for the analysis fuzzer. If set to `0`, the fuzzer is deactivated.
   /// Should be used only with `testAnalysisOnly = true`.
   unsigned analysisFuzzerSeed = 0;
@@ -314,7 +319,7 @@ struct BufferizationState {
 
   /// Lookup the memref buffer that is associated to the given tensor value.
   /// Asserts if no buffer is associated.
-  Value lookupBuffer(Value tensor) const;
+  Value lookupBuffer(Value tensor);
 
   /// Lookup the value that is associated to the given value. Asserts if no
   /// value is associated.
@@ -436,7 +441,13 @@ struct AllocationHoistingBarrierOnly
     auto isaTensor = [](Type t) { return t.isa<TensorType>(); };
     if (any_of(op->getOperandTypes(), isaTensor) ||
         any_of(op->getResultTypes(), isaTensor))
-      return op->emitError() << "unsupported op with tensors";
+      if (!state.options.allowUnknownOps)
+        return op->emitError() << "unsupported op with tensors";
+
+    for (Region &region : op->getRegions())
+      if (failed(comprehensive_bufferize::bufferize(&region, state)))
+        return failure();
+
     return success();
   }
 
