@@ -1026,32 +1026,12 @@ struct DSEState {
     if (!I->mayWriteToMemory())
       return None;
 
-    if (auto *MTI = dyn_cast<AnyMemIntrinsic>(I))
-      return {MemoryLocation::getForDest(MTI)};
-
     if (auto *CB = dyn_cast<CallBase>(I)) {
       // If the functions may write to memory we do not know about, bail out.
       if (!CB->onlyAccessesArgMemory() &&
           !CB->onlyAccessesInaccessibleMemOrArgMem())
         return None;
 
-      LibFunc LF;
-      if (TLI.getLibFunc(*CB, LF) && TLI.has(LF)) {
-        switch (LF) {
-        case LibFunc_strncpy:
-          if (const auto *Len = dyn_cast<ConstantInt>(CB->getArgOperand(2)))
-            return MemoryLocation(CB->getArgOperand(0),
-                                  LocationSize::precise(Len->getZExtValue()),
-                                  CB->getAAMetadata());
-          LLVM_FALLTHROUGH;
-        case LibFunc_strcpy:
-        case LibFunc_strcat:
-        case LibFunc_strncat:
-          return {MemoryLocation::getAfter(CB->getArgOperand(0))};
-        default:
-          break;
-        }
-      }
       switch (CB->getIntrinsicID()) {
       case Intrinsic::init_trampoline:
         return {MemoryLocation::getAfter(CB->getArgOperand(0))};
@@ -1060,7 +1040,8 @@ struct DSEState {
       default:
         break;
       }
-      return None;
+
+      return MemoryLocation::getForDest(CB, TLI);
     }
 
     return MemoryLocation::getOrNone(I);
