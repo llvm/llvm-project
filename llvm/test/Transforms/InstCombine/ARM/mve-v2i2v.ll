@@ -3,16 +3,29 @@
 
 target datalayout = "e-m:e-p:32:32-Fi8-i64:64-v128:64:128-a:0:32-n32-S64"
 
+declare i32 @llvm.arm.mve.pred.v2i.v2i1(<2 x i1>)
 declare i32 @llvm.arm.mve.pred.v2i.v4i1(<4 x i1>)
 declare i32 @llvm.arm.mve.pred.v2i.v8i1(<8 x i1>)
 declare i32 @llvm.arm.mve.pred.v2i.v16i1(<16 x i1>)
 
+declare <2 x i1> @llvm.arm.mve.pred.i2v.v2i1(i32)
 declare <4 x i1> @llvm.arm.mve.pred.i2v.v4i1(i32)
 declare <8 x i1> @llvm.arm.mve.pred.i2v.v8i1(i32)
 declare <16 x i1> @llvm.arm.mve.pred.i2v.v16i1(i32)
 
 ; Round-trip conversions from predicate vector to i32 back to the same
 ; size of vector should be eliminated.
+
+define <2 x i1> @v2i2v_2(<2 x i1> %vin) {
+; CHECK-LABEL: @v2i2v_2(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret <2 x i1> [[VIN:%.*]]
+;
+entry:
+  %int = call i32 @llvm.arm.mve.pred.v2i.v2i1(<2 x i1> %vin)
+  %vout = call <2 x i1> @llvm.arm.mve.pred.i2v.v2i1(i32 %int)
+  ret <2 x i1> %vout
+}
 
 define <4 x i1> @v2i2v_4(<4 x i1> %vin) {
 ; CHECK-LABEL: @v2i2v_4(
@@ -50,10 +63,23 @@ entry:
 ; Conversions from a predicate vector to i32 and then to a _different_
 ; size of predicate vector should be left alone.
 
+define <16 x i1> @v2i2v_2_16(<2 x i1> %vin) {
+; CHECK-LABEL: @v2i2v_2_16(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[INT:%.*]] = call i32 @llvm.arm.mve.pred.v2i.v2i1(<2 x i1> [[VIN:%.*]]), !range [[RNG0:![0-9]+]]
+; CHECK-NEXT:    [[VOUT:%.*]] = call <16 x i1> @llvm.arm.mve.pred.i2v.v16i1(i32 [[INT]])
+; CHECK-NEXT:    ret <16 x i1> [[VOUT]]
+;
+entry:
+  %int = call i32 @llvm.arm.mve.pred.v2i.v2i1(<2 x i1> %vin)
+  %vout = call <16 x i1> @llvm.arm.mve.pred.i2v.v16i1(i32 %int)
+  ret <16 x i1> %vout
+}
+
 define <16 x i1> @v2i2v_4_16(<4 x i1> %vin) {
 ; CHECK-LABEL: @v2i2v_4_16(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[INT:%.*]] = call i32 @llvm.arm.mve.pred.v2i.v4i1(<4 x i1> [[VIN:%.*]]), !range [[RNG0:![0-9]+]]
+; CHECK-NEXT:    [[INT:%.*]] = call i32 @llvm.arm.mve.pred.v2i.v4i1(<4 x i1> [[VIN:%.*]]), !range [[RNG0]]
 ; CHECK-NEXT:    [[VOUT:%.*]] = call <16 x i1> @llvm.arm.mve.pred.i2v.v16i1(i32 [[INT]])
 ; CHECK-NEXT:    ret <16 x i1> [[VOUT]]
 ;
@@ -91,6 +117,17 @@ entry:
 
 ; Round-trip conversions from i32 to predicate vector back to i32
 ; should be eliminated.
+
+define i32 @i2v2i_2(i32 %iin) {
+; CHECK-LABEL: @i2v2i_2(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret i32 [[IIN:%.*]]
+;
+entry:
+  %vec = call <2 x i1> @llvm.arm.mve.pred.i2v.v2i1(i32 %iin)
+  %iout = call i32 @llvm.arm.mve.pred.v2i.v2i1(<2 x i1> %vec)
+  ret i32 %iout
+}
 
 define i32 @i2v2i_4(i32 %iin) {
 ; CHECK-LABEL: @i2v2i_4(
@@ -242,6 +279,19 @@ entry:
 ; a complement of the vector itself. (Rationale: this is likely to
 ; allow it to be code-generated as MVE VPNOT.)
 
+define <2 x i1> @vpnot_2(<2 x i1> %vin) {
+; CHECK-LABEL: @vpnot_2(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[VOUT:%.*]] = xor <2 x i1> [[VIN:%.*]], <i1 true, i1 true>
+; CHECK-NEXT:    ret <2 x i1> [[VOUT]]
+;
+entry:
+  %int = call i32 @llvm.arm.mve.pred.v2i.v2i1(<2 x i1> %vin)
+  %flipped = xor i32 %int, 65535
+  %vout = call <2 x i1> @llvm.arm.mve.pred.i2v.v2i1(i32 %flipped)
+  ret <2 x i1> %vout
+}
+
 define <4 x i1> @vpnot_4(<4 x i1> %vin) {
 ; CHECK-LABEL: @vpnot_4(
 ; CHECK-NEXT:  entry:
@@ -283,6 +333,21 @@ entry:
 
 ; And this still works even if the i32 is narrowed to i16 and back on
 ; opposite sides of the xor.
+
+define <2 x i1> @vpnot_narrow_2(<2 x i1> %vin) {
+; CHECK-LABEL: @vpnot_narrow_2(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[VOUT:%.*]] = xor <2 x i1> [[VIN:%.*]], <i1 true, i1 true>
+; CHECK-NEXT:    ret <2 x i1> [[VOUT]]
+;
+entry:
+  %int = call i32 @llvm.arm.mve.pred.v2i.v2i1(<2 x i1> %vin)
+  %narrow = trunc i32 %int to i16
+  %flipped_narrow = xor i16 %narrow, -1
+  %flipped = zext i16 %flipped_narrow to i32
+  %vout = call <2 x i1> @llvm.arm.mve.pred.i2v.v2i1(i32 %flipped)
+  ret <2 x i1> %vout
+}
 
 define <4 x i1> @vpnot_narrow_4(<4 x i1> %vin) {
 ; CHECK-LABEL: @vpnot_narrow_4(

@@ -94,8 +94,8 @@ define arm_aapcs_vfpcc void @test_vstrdq_scatter_base_p_s64(<2 x i64> %addr, <2 
 ; CHECK: MVE_VSTRD64_qi %1, %0, 888, 1, killed %3, $noreg :: (store (s128), align 1)
 entry:
   %0 = zext i16 %p to i32
-  %1 = call <4 x i1> @llvm.arm.mve.pred.i2v.v4i1(i32 %0)
-  call void @llvm.arm.mve.vstr.scatter.base.predicated.v2i64.v2i64.v4i1(<2 x i64> %addr, i32 888, <2 x i64> %value, <4 x i1> %1)
+  %1 = call <2 x i1> @llvm.arm.mve.pred.i2v.v2i1(i32 %0)
+  call void @llvm.arm.mve.vstr.scatter.base.predicated.v2i64.v2i64.v2i1(<2 x i64> %addr, i32 888, <2 x i64> %value, <2 x i1> %1)
   ret void
 }
 
@@ -115,14 +115,15 @@ define arm_aapcs_vfpcc void @test_vstrdq_scatter_base_wb_p_s64(<2 x i64>* %addr,
 entry:
   %0 = load <2 x i64>, <2 x i64>* %addr, align 8
   %1 = zext i16 %p to i32
-  %2 = call <4 x i1> @llvm.arm.mve.pred.i2v.v4i1(i32 %1)
-  %3 = call <2 x i64> @llvm.arm.mve.vstr.scatter.base.wb.predicated.v2i64.v2i64.v4i1(<2 x i64> %0, i32 248, <2 x i64> %value, <4 x i1> %2)
+  %2 = call <2 x i1> @llvm.arm.mve.pred.i2v.v2i1(i32 %1)
+  %3 = call <2 x i64> @llvm.arm.mve.vstr.scatter.base.wb.predicated.v2i64.v2i64.v2i1(<2 x i64> %0, i32 248, <2 x i64> %value, <2 x i1> %2)
   store <2 x i64> %3, <2 x i64>* %addr, align 8
   ret void
 }
 
 declare <16 x i1> @llvm.arm.mve.pred.i2v.v16i1(i32)
 declare <4 x i1> @llvm.arm.mve.pred.i2v.v4i1(i32)
+declare <2 x i1> @llvm.arm.mve.pred.i2v.v2i1(i32)
 declare <8 x i16> @llvm.arm.mve.vldr.gather.offset.v8i16.p0i8.v8i16(i8*, <8 x i16>, i32, i32, i32)
 declare <4 x i32> @llvm.arm.mve.vldr.gather.offset.predicated.v4i32.p0i8.v4i32.v4i1(i8*, <4 x i32>, i32, i32, i32, <4 x i1>)
 declare <2 x i64> @llvm.arm.mve.vldr.gather.base.v2i64.v2i64(<2 x i64>, i32)
@@ -132,6 +133,6 @@ declare { <4 x float>, <4 x i32> } @llvm.arm.mve.vldr.gather.base.wb.predicated.
 declare void @llvm.arm.mve.vstr.scatter.offset.p0i8.v4i32.v4i32(i8*, <4 x i32>, <4 x i32>, i32, i32)
 declare void @llvm.arm.mve.vstr.scatter.offset.predicated.p0i8.v16i8.v16i8.v16i1(i8*, <16 x i8>, <16 x i8>, i32, i32, <16 x i1>)
 declare void @llvm.arm.mve.vstr.scatter.base.v2i64.v2i64(<2 x i64>, i32, <2 x i64>)
-declare void @llvm.arm.mve.vstr.scatter.base.predicated.v2i64.v2i64.v4i1(<2 x i64>, i32, <2 x i64>, <4 x i1>)
+declare void @llvm.arm.mve.vstr.scatter.base.predicated.v2i64.v2i64.v2i1(<2 x i64>, i32, <2 x i64>, <2 x i1>)
 declare <2 x i64> @llvm.arm.mve.vstr.scatter.base.wb.v2i64.v2i64(<2 x i64>, i32, <2 x i64>)
-declare <2 x i64> @llvm.arm.mve.vstr.scatter.base.wb.predicated.v2i64.v2i64.v4i1(<2 x i64>, i32, <2 x i64>, <4 x i1>)
+declare <2 x i64> @llvm.arm.mve.vstr.scatter.base.wb.predicated.v2i64.v2i64.v2i1(<2 x i64>, i32, <2 x i64>, <2 x i1>)

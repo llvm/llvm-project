@@ -349,13 +349,8 @@ public:
   bool requiresFloat() const override { return false; };
   bool requiresMVE() const override { return true; }
   std::string llvmName() const override {
-    // Use <4 x i1> instead of <2 x i1> for two-lane vector types. See
-    // the comment in llvm/lib/Target/ARM/ARMInstrMVE.td for further
-    // explanation.
-    unsigned ModifiedLanes = (Lanes == 2 ? 4 : Lanes);
-
-    return "llvm::FixedVectorType::get(Builder.getInt1Ty(), " +
-           utostr(ModifiedLanes) + ")";
+    return "llvm::FixedVectorType::get(Builder.getInt1Ty(), " + utostr(Lanes) +
+           ")";
   }
 
   static bool classof(const Type *T) {
