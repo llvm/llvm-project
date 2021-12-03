@@ -10,6 +10,8 @@ define amdgpu_kernel void @fabs_f32() #0 {
 ; ALL-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v3f32 = call <3 x float> @llvm.fabs.v3f32(<3 x float> undef) #2
 ; ALL-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v4f32 = call <4 x float> @llvm.fabs.v4f32(<4 x float> undef) #2
 ; ALL-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v5f32 = call <5 x float> @llvm.fabs.v5f32(<5 x float> undef) #2
+; ALL-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v8f32 = call <8 x float> @llvm.fabs.v8f32(<8 x float> undef) #2
+; ALL-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v9f32 = call <9 x float> @llvm.fabs.v9f32(<9 x float> undef) #2
 ; ALL-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
 ;
 ; ALL-SIZE-LABEL: 'fabs_f32'
@@ -18,6 +20,8 @@ define amdgpu_kernel void @fabs_f32() #0 {
 ; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v3f32 = call <3 x float> @llvm.fabs.v3f32(<3 x float> undef) #2
 ; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v4f32 = call <4 x float> @llvm.fabs.v4f32(<4 x float> undef) #2
 ; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v5f32 = call <5 x float> @llvm.fabs.v5f32(<5 x float> undef) #2
+; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v8f32 = call <8 x float> @llvm.fabs.v8f32(<8 x float> undef) #2
+; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v9f32 = call <9 x float> @llvm.fabs.v9f32(<9 x float> undef) #2
 ; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
   %f32 = call float @llvm.fabs.f32(float undef) #1
@@ -25,6 +29,8 @@ define amdgpu_kernel void @fabs_f32() #0 {
   %v3f32 = call <3 x float> @llvm.fabs.v3f32(<3 x float> undef) #1
   %v4f32 = call <4 x float> @llvm.fabs.v4f32(<4 x float> undef) #1
   %v5f32 = call <5 x float> @llvm.fabs.v5f32(<5 x float> undef) #1
+  %v8f32 = call <8 x float> @llvm.fabs.v8f32(<8 x float> undef) #1
+  %v9f32 = call <9 x float> @llvm.fabs.v9f32(<9 x float> undef) #1
   ret void
 }
 
@@ -34,6 +40,7 @@ define amdgpu_kernel void @fabs_f64() #0 {
 ; ALL-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v2f64 = call <2 x double> @llvm.fabs.v2f64(<2 x double> undef) #2
 ; ALL-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v3f64 = call <3 x double> @llvm.fabs.v3f64(<3 x double> undef) #2
 ; ALL-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v4f64 = call <4 x double> @llvm.fabs.v4f64(<4 x double> undef) #2
+; ALL-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v5f64 = call <5 x double> @llvm.fabs.v5f64(<5 x double> undef) #2
 ; ALL-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
 ;
 ; ALL-SIZE-LABEL: 'fabs_f64'
@@ -41,12 +48,14 @@ define amdgpu_kernel void @fabs_f64() #0 {
 ; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v2f64 = call <2 x double> @llvm.fabs.v2f64(<2 x double> undef) #2
 ; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v3f64 = call <3 x double> @llvm.fabs.v3f64(<3 x double> undef) #2
 ; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v4f64 = call <4 x double> @llvm.fabs.v4f64(<4 x double> undef) #2
+; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v5f64 = call <5 x double> @llvm.fabs.v5f64(<5 x double> undef) #2
 ; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
   %f64 = call double @llvm.fabs.f64(double undef) #1
   %v2f64 = call <2 x double> @llvm.fabs.v2f64(<2 x double> undef) #1
   %v3f64 = call <3 x double> @llvm.fabs.v3f64(<3 x double> undef) #1
   %v4f64 = call <4 x double> @llvm.fabs.v4f64(<4 x double> undef) #1
+  %v5f64 = call <5 x double> @llvm.fabs.v5f64(<5 x double> undef) #1
   ret void
 }
 
@@ -57,6 +66,8 @@ define amdgpu_kernel void @fabs_f16() #0 {
 ; ALL-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v3f16 = call <3 x half> @llvm.fabs.v3f16(<3 x half> undef) #2
 ; ALL-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v4f16 = call <4 x half> @llvm.fabs.v4f16(<4 x half> undef) #2
 ; ALL-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v5f16 = call <5 x half> @llvm.fabs.v5f16(<5 x half> undef) #2
+; ALL-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v16f16 = call <16 x half> @llvm.fabs.v16f16(<16 x half> undef) #2
+; ALL-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v17f16 = call <17 x half> @llvm.fabs.v17f16(<17 x half> undef) #2
 ; ALL-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
 ;
 ; ALL-SIZE-LABEL: 'fabs_f16'
@@ -65,6 +76,8 @@ define amdgpu_kernel void @fabs_f16() #0 {
 ; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v3f16 = call <3 x half> @llvm.fabs.v3f16(<3 x half> undef) #2
 ; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v4f16 = call <4 x half> @llvm.fabs.v4f16(<4 x half> undef) #2
 ; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v5f16 = call <5 x half> @llvm.fabs.v5f16(<5 x half> undef) #2
+; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v16f16 = call <16 x half> @llvm.fabs.v16f16(<16 x half> undef) #2
+; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v17f16 = call <17 x half> @llvm.fabs.v17f16(<17 x half> undef) #2
 ; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
   %f16 = call half @llvm.fabs.f16(half undef) #1
@@ -72,6 +85,8 @@ define amdgpu_kernel void @fabs_f16() #0 {
   %v3f16 = call <3 x half> @llvm.fabs.v3f16(<3 x half> undef) #1
   %v4f16 = call <4 x half> @llvm.fabs.v4f16(<4 x half> undef) #1
   %v5f16 = call <5 x half> @llvm.fabs.v5f16(<5 x half> undef) #1
+  %v16f16 = call <16 x half> @llvm.fabs.v16f16(<16 x half> undef) #1
+  %v17f16 = call <17 x half> @llvm.fabs.v17f16(<17 x half> undef) #1
   ret void
 }
 
@@ -80,17 +95,22 @@ declare <2 x float> @llvm.fabs.v2f32(<2 x float>) #1
 declare <3 x float> @llvm.fabs.v3f32(<3 x float>) #1
 declare <4 x float> @llvm.fabs.v4f32(<4 x float>) #1
 declare <5 x float> @llvm.fabs.v5f32(<5 x float>) #1
+declare <8 x float> @llvm.fabs.v8f32(<8 x float>) #1
+declare <9 x float> @llvm.fabs.v9f32(<9 x float>) #1
 
 declare double @llvm.fabs.f64(double) #1
 declare <2 x double> @llvm.fabs.v2f64(<2 x double>) #1
 declare <3 x double> @llvm.fabs.v3f64(<3 x double>) #1
 declare <4 x double> @llvm.fabs.v4f64(<4 x double>) #1
+declare <5 x double> @llvm.fabs.v5f64(<5 x double>) #1
 
 declare half @llvm.fabs.f16(half) #1
 declare <2 x half> @llvm.fabs.v2f16(<2 x half>) #1
 declare <3 x half> @llvm.fabs.v3f16(<3 x half>) #1
 declare <4 x half> @llvm.fabs.v4f16(<4 x half>) #1
 declare <5 x half> @llvm.fabs.v5f16(<5 x half>) #1
+declare <16 x half> @llvm.fabs.v16f16(<16 x half>) #1
+declare <17 x half> @llvm.fabs.v17f16(<17 x half>) #1
 
 attributes #0 = { nounwind }
 attributes #1 = { nounwind readnone }
