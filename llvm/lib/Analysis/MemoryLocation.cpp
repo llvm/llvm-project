@@ -213,6 +213,12 @@ MemoryLocation MemoryLocation::getForArgument(const CallBase *Call,
   LibFunc F;
   if (TLI && TLI->getLibFunc(*Call, F) && TLI->has(F)) {
     switch (F) {
+    case LibFunc_strcpy:
+    case LibFunc_strcat:
+    case LibFunc_strncat:
+      assert((ArgIdx == 0 || ArgIdx == 1) && "Invalid argument index for str function");
+      return MemoryLocation::getAfter(Arg, AATags);
+
     case LibFunc_memset_chk: {
       assert(ArgIdx == 0 && "Invalid argument index for memset_chk");
       LocationSize Size = LocationSize::afterPointer();

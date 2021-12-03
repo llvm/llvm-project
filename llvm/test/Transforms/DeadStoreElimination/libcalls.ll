@@ -18,7 +18,6 @@ define void @test1(i8* %src) {
 define void @strcpy_reads_after(i8* noalias %dest, i8* %src) {
 ; CHECK-LABEL: @strcpy_reads_after(
 ; CHECK-NEXT:    [[SRC_2:%.*]] = getelementptr inbounds i8, i8* [[SRC:%.*]], i64 1
-; CHECK-NEXT:    store i8 1, i8* [[SRC]], align 1
 ; CHECK-NEXT:    store i8 99, i8* [[SRC_2]], align 1
 ; CHECK-NEXT:    [[SRC_1:%.*]] = getelementptr inbounds i8, i8* [[SRC]], i64 1
 ; CHECK-NEXT:    [[CALL:%.*]] = call i8* @strcpy(i8* [[DEST:%.*]], i8* [[SRC_1]])
