@@ -43,9 +43,15 @@ std::string mlir::tblgen::getParameterAccessorName(StringRef name) {
 static void collectAllDefs(StringRef selectedDialect,
                            std::vector<llvm::Record *> records,
                            SmallVectorImpl<AttrOrTypeDef> &resultDefs) {
+  // Nothing to do if no defs were found.
+  if (records.empty())
+    return;
+
   auto defs = llvm::map_range(
       records, [&](const llvm::Record *rec) { return AttrOrTypeDef(rec); });
   if (selectedDialect.empty()) {
+    // If a dialect was not specified, ensure that all found defs belong to the
+    // same dialect.
     if (!llvm::is_splat(
             llvm::map_range(defs, [](auto def) { return def.getDialect(); }))) {
       llvm::PrintFatalError("defs belonging to more than one dialect. Must "
@@ -53,6 +59,7 @@ static void collectAllDefs(StringRef selectedDialect,
     }
     resultDefs.assign(defs.begin(), defs.end());
   } else {
+    // Otherwise, generate the defs that belong to the selected dialect.
     auto dialectDefs = llvm::make_filter_range(defs, [&](auto def) {
       return def.getDialect().getName().equals(selectedDialect);
     });

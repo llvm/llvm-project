@@ -123,12 +123,7 @@ define half @test_sqrt_sh2(half %a0, half %a1) {
 define half @test_sqrt_sh3(half %a0, half %a1) {
 ; CHECK-LABEL: test_sqrt_sh3:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpbroadcastw {{.*#+}} xmm1 = [NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN]
-; CHECK-NEXT:    vpand %xmm1, %xmm0, %xmm1
-; CHECK-NEXT:    vcmpltsh {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %k1
-; CHECK-NEXT:    vrsqrtsh %xmm0, %xmm0, %xmm0
-; CHECK-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; CHECK-NEXT:    vmovsh %xmm1, %xmm0, %xmm0 {%k1}
+; CHECK-NEXT:    vsqrtsh %xmm0, %xmm0, %xmm0
 ; CHECK-NEXT:    retq
   %1 = call fast half @llvm.sqrt.f16(half %a0)
   ret half %1

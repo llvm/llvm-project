@@ -2408,11 +2408,10 @@ static Value *SimplifyXorInst(Value *Op0, Value *Op1, const SimplifyQuery &Q,
     // The 'not' op must contain a complete -1 operand (no undef elements for
     // vector) for the transform to be safe.
     Value *NotA;
-    const APInt *C;
-    if (match(X, m_c_Or(m_CombineAnd(m_Xor(m_Value(A), m_APIntForbidUndef(C)),
-                                     m_Value(NotA)),
-                        m_Value(B))) &&
-        match(Y, m_c_And(m_Specific(A), m_Specific(B))) && C->isAllOnes())
+    if (match(X,
+              m_c_Or(m_CombineAnd(m_NotForbidUndef(m_Value(A)), m_Value(NotA)),
+                     m_Value(B))) &&
+        match(Y, m_c_And(m_Specific(A), m_Specific(B))))
       return NotA;
 
     return nullptr;

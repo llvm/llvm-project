@@ -1191,9 +1191,9 @@ multiclass T2I_ld<bit signed, bits<2> opcod, string opc,
 
     let DecoderMethod = "DecodeT2LoadImm12";
   }
-  def i8  : T2Ii8 <(outs target:$Rt), (ins t2addrmode_negimm8:$addr), iii,
-                   opc, "\t$Rt, $addr",
-                   [(set target:$Rt, (opnode t2addrmode_negimm8:$addr))]>,
+  def i8  : T2Ii8n <(outs target:$Rt), (ins t2addrmode_negimm8:$addr), iii,
+                    opc, "\t$Rt, $addr",
+                    [(set target:$Rt, (opnode t2addrmode_negimm8:$addr))]>,
             Sched<[WriteLd]> {
     bits<4> Rt;
     bits<13> addr;
@@ -1284,9 +1284,9 @@ multiclass T2I_st<bits<2> opcod, string opc,
     let Inst{23}    = addr{12};    // U
     let Inst{11-0}  = addr{11-0};  // imm
   }
-  def i8  : T2Ii8 <(outs), (ins target:$Rt, t2addrmode_negimm8:$addr), iii,
-                   opc, "\t$Rt, $addr",
-                   [(opnode target:$Rt, t2addrmode_negimm8:$addr)]>,
+  def i8  : T2Ii8n <(outs), (ins target:$Rt, t2addrmode_negimm8:$addr), iii,
+                    opc, "\t$Rt, $addr",
+                    [(opnode target:$Rt, t2addrmode_negimm8:$addr)]>,
             Sched<[WriteST]> {
     let Inst{31-27} = 0b11111;
     let Inst{26-23} = 0b0000;
@@ -1580,8 +1580,8 @@ def t2LDR_POST_imm : t2AsmPseudo<"ldr${p}.w $Rt, $Rn, $imm",
 // LDRT, LDRBT, LDRHT, LDRSBT, LDRSHT all have offset mode (PUW=0b110).
 // Ref: A8.6.57 LDR (immediate, Thumb) Encoding T4
 class T2IldT<bit signed, bits<2> type, string opc, InstrItinClass ii>
-  : T2Ii8<(outs rGPR:$Rt), (ins t2addrmode_posimm8:$addr), ii, opc,
-          "\t$Rt, $addr", []>, Sched<[WriteLd]> {
+  : T2Ii8p<(outs rGPR:$Rt), (ins t2addrmode_posimm8:$addr), ii, opc,
+           "\t$Rt, $addr", []>, Sched<[WriteLd]> {
   bits<4> Rt;
   bits<13> addr;
   let Inst{31-27} = 0b11111;
@@ -1747,8 +1747,8 @@ def t2STR_POST_imm : t2AsmPseudo<"str${p}.w $Rt, $Rn, $imm",
 // only.
 // Ref: A8.6.193 STR (immediate, Thumb) Encoding T4
 class T2IstT<bits<2> type, string opc, InstrItinClass ii>
-  : T2Ii8<(outs), (ins rGPR:$Rt, t2addrmode_imm8:$addr), ii, opc,
-          "\t$Rt, $addr", []>, Sched<[WriteST]> {
+  : T2Ii8p<(outs), (ins rGPR:$Rt, t2addrmode_posimm8:$addr), ii, opc,
+           "\t$Rt, $addr", []>, Sched<[WriteST]> {
   let Inst{31-27} = 0b11111;
   let Inst{26-25} = 0b00;
   let Inst{24} = 0; // not signed
@@ -1851,8 +1851,8 @@ multiclass T2Ipl<bits<1> write, bits<1> instr, string opc> {
     let DecoderMethod = "DecodeT2LoadImm12";
   }
 
-  def i8 : T2Ii8<(outs), (ins t2addrmode_negimm8:$addr), IIC_Preload, opc,
-                "\t$addr",
+  def i8 : T2Ii8n<(outs), (ins t2addrmode_negimm8:$addr), IIC_Preload, opc,
+                 "\t$addr",
             [(ARMPreload t2addrmode_negimm8:$addr, (i32 write), (i32 instr))]>,
             Sched<[WritePreLd]> {
     let Inst{31-25} = 0b1111100;

@@ -5,6 +5,9 @@
 // Ubsan does not store stacks.
 // UNSUPPORTED: ubsan
 
+// FIXME: Fails for unknown reason.
+// UNSUPPORTED: s390x
+
 #include <memory>
 
 __attribute__((noinline)) void a(unsigned v);

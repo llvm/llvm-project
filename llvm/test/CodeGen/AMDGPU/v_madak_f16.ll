@@ -9,22 +9,22 @@ define amdgpu_kernel void @madak_f16(
 ; SI-NEXT:    s_load_dwordx2 s[8:9], s[0:1], 0xd
 ; SI-NEXT:    s_mov_b32 s3, 0xf000
 ; SI-NEXT:    s_mov_b32 s2, -1
-; SI-NEXT:    s_mov_b32 s10, s2
-; SI-NEXT:    s_mov_b32 s11, s3
+; SI-NEXT:    s_mov_b32 s14, s2
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
 ; SI-NEXT:    s_mov_b32 s12, s6
 ; SI-NEXT:    s_mov_b32 s13, s7
-; SI-NEXT:    s_mov_b32 s14, s2
 ; SI-NEXT:    s_mov_b32 s15, s3
-; SI-NEXT:    buffer_load_ushort v0, off, s[8:11], 0
-; SI-NEXT:    buffer_load_ushort v1, off, s[12:15], 0
+; SI-NEXT:    s_mov_b32 s10, s2
+; SI-NEXT:    s_mov_b32 s11, s3
+; SI-NEXT:    buffer_load_ushort v0, off, s[12:15], 0
+; SI-NEXT:    buffer_load_ushort v1, off, s[8:11], 0
 ; SI-NEXT:    s_mov_b32 s0, s4
 ; SI-NEXT:    s_mov_b32 s1, s5
 ; SI-NEXT:    s_waitcnt vmcnt(1)
 ; SI-NEXT:    v_cvt_f32_f16_e32 v0, v0
 ; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    v_cvt_f32_f16_e32 v1, v1
-; SI-NEXT:    v_madak_f32 v0, v1, v0, 0x41200000
+; SI-NEXT:    v_madak_f32 v0, v0, v1, 0x41200000
 ; SI-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; SI-NEXT:    buffer_store_short v0, off, s[0:3], 0
 ; SI-NEXT:    s_endpgm
@@ -35,17 +35,17 @@ define amdgpu_kernel void @madak_f16(
 ; VI-NEXT:    s_load_dwordx2 s[8:9], s[0:1], 0x34
 ; VI-NEXT:    s_mov_b32 s3, 0xf000
 ; VI-NEXT:    s_mov_b32 s2, -1
-; VI-NEXT:    s_mov_b32 s10, s2
+; VI-NEXT:    s_mov_b32 s14, s2
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
+; VI-NEXT:    s_mov_b32 s12, s6
+; VI-NEXT:    s_mov_b32 s13, s7
+; VI-NEXT:    s_mov_b32 s15, s3
+; VI-NEXT:    s_mov_b32 s10, s2
+; VI-NEXT:    s_mov_b32 s11, s3
+; VI-NEXT:    buffer_load_ushort v0, off, s[12:15], 0
+; VI-NEXT:    buffer_load_ushort v1, off, s[8:11], 0
 ; VI-NEXT:    s_mov_b32 s0, s4
 ; VI-NEXT:    s_mov_b32 s1, s5
-; VI-NEXT:    s_mov_b32 s4, s6
-; VI-NEXT:    s_mov_b32 s5, s7
-; VI-NEXT:    s_mov_b32 s6, s2
-; VI-NEXT:    s_mov_b32 s7, s3
-; VI-NEXT:    s_mov_b32 s11, s3
-; VI-NEXT:    buffer_load_ushort v0, off, s[4:7], 0
-; VI-NEXT:    buffer_load_ushort v1, off, s[8:11], 0
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_madak_f16 v0, v0, v1, 0x4900
 ; VI-NEXT:    buffer_store_short v0, off, s[0:3], 0

@@ -2708,13 +2708,13 @@ static bool isLegalOrConvertableAddressImm(unsigned Opcode, int Imm,
   if (isLegalAddressImm(Opcode, Imm, TII))
     return true;
 
-  // We can convert AddrModeT2_i12 to AddrModeT2_i8.
+  // We can convert AddrModeT2_i12 to AddrModeT2_i8neg.
   const MCInstrDesc &Desc = TII->get(Opcode);
   unsigned AddrMode = (Desc.TSFlags & ARMII::AddrModeMask);
   switch (AddrMode) {
   case ARMII::AddrModeT2_i12:
     CodesizeEstimate += 1;
-    return std::abs(Imm) < (((1 << 8) * 1) - 1);
+    return Imm < 0 && -Imm < ((1 << 8) * 1);
   }
   return false;
 }

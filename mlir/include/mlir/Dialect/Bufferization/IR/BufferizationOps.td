@@ -137,7 +137,7 @@ def Bufferization_ToMemrefOp : Bufferization_Op<"to_memref",
     %12 = bufferization.to_memref %10 : memref<4x?xf32, #map0, 42>
     ```
 
-    Note, that mutating the result of the to_buffer operation leads to
+    Note, that mutating the result of the to_memref operation leads to
     undefined behavior.
 
     This operation is a specialized variant of the built-in

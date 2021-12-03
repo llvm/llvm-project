@@ -152,6 +152,8 @@ enum VmemType {
   VMEM_NOSAMPLER,
   // MIMG instructions with a sampler.
   VMEM_SAMPLER,
+  // BVH instructions
+  VMEM_BVH
 };
 
 VmemType getVmemType(const MachineInstr &Inst) {
@@ -159,9 +161,10 @@ VmemType getVmemType(const MachineInstr &Inst) {
   if (!SIInstrInfo::isMIMG(Inst))
     return VMEM_NOSAMPLER;
   const AMDGPU::MIMGInfo *Info = AMDGPU::getMIMGInfo(Inst.getOpcode());
-  return AMDGPU::getMIMGBaseOpcodeInfo(Info->BaseOpcode)->Sampler
-             ? VMEM_SAMPLER
-             : VMEM_NOSAMPLER;
+  const AMDGPU::MIMGBaseOpcodeInfo *BaseInfo =
+      AMDGPU::getMIMGBaseOpcodeInfo(Info->BaseOpcode);
+  return BaseInfo->BVH ? VMEM_BVH
+                       : BaseInfo->Sampler ? VMEM_SAMPLER : VMEM_NOSAMPLER;
 }
 
 void addWait(AMDGPU::Waitcnt &Wait, InstCounterType T, unsigned Count) {

@@ -59,7 +59,7 @@ typedef int8_t vec_int8 __attribute__((vector_size(N / 8)));
 // CHECK128-NEXT:    ret <16 x i8> [[CASTFIXEDSVE]]
 
 // CHECK-LABEL: define{{.*}} void @f2(
-// CHECK-SAME:   <[[#div(VBITS,8)]] x i8>* noalias nocapture sret(<[[#div(VBITS,8)]] x i8>) align 16 %agg.result, <[[#div(VBITS,8)]] x i8>* nocapture readonly %0)
+// CHECK-SAME:   <[[#div(VBITS,8)]] x i8>* noalias nocapture writeonly sret(<[[#div(VBITS,8)]] x i8>) align 16 %agg.result, <[[#div(VBITS,8)]] x i8>* nocapture readonly %0)
 // CHECK-NEXT: entry:
 // CHECK-NEXT:   [[X:%.*]] = load <[[#div(VBITS,8)]] x i8>, <[[#div(VBITS,8)]] x i8>* [[TMP0:%.*]], align 16, [[TBAA6:!tbaa !.*]]
 // CHECK-NEXT:   [[TMP1:%.*]] = call <vscale x 16 x i1> @llvm.aarch64.sve.ptrue.nxv16i1(i32 31)

@@ -612,9 +612,14 @@ void LookupState::continueLookup(Error Err) {
 
 DefinitionGenerator::~DefinitionGenerator() {}
 
+JITDylib::~JITDylib() {
+  LLVM_DEBUG(dbgs() << "Destroying JITDylib " << getName() << "\n");
+}
+
 Error JITDylib::clear() {
   std::vector<ResourceTrackerSP> TrackersToRemove;
   ES.runSessionLocked([&]() {
+    assert(State != Closed && "JD is defunct");
     for (auto &KV : TrackerSymbols)
       TrackersToRemove.push_back(KV.first);
     TrackersToRemove.push_back(getDefaultResourceTracker());
@@ -628,6 +633,7 @@ Error JITDylib::clear() {
 
 ResourceTrackerSP JITDylib::getDefaultResourceTracker() {
   return ES.runSessionLocked([this] {
+    assert(State != Closed && "JD is defunct");
     if (!DefaultTracker)
       DefaultTracker = new ResourceTracker(this);
     return DefaultTracker;
@@ -636,19 +642,22 @@ ResourceTrackerSP JITDylib::getDefaultResourceTracker() {
 
 ResourceTrackerSP JITDylib::createResourceTracker() {
   return ES.runSessionLocked([this] {
+    assert(State == Open && "JD is defunct");
     ResourceTrackerSP RT = new ResourceTracker(this);
     return RT;
   });
 }
 
 void JITDylib::removeGenerator(DefinitionGenerator &G) {
-  std::lock_guard<std::mutex> Lock(GeneratorsMutex);
-  auto I = llvm::find_if(DefGenerators,
-                         [&](const std::shared_ptr<DefinitionGenerator> &H) {
-                           return H.get() == &G;
-                         });
-  assert(I != DefGenerators.end() && "Generator not found");
-  DefGenerators.erase(I);
+  ES.runSessionLocked([&] {
+    assert(State == Open && "JD is defunct");
+    auto I = llvm::find_if(DefGenerators,
+                           [&](const std::shared_ptr<DefinitionGenerator> &H) {
+                             return H.get() == &G;
+                           });
+    assert(I != DefGenerators.end() && "Generator not found");
+    DefGenerators.erase(I);
+  });
 }
 
 Expected<SymbolFlagsMap>
@@ -708,10 +717,8 @@ Error JITDylib::replace(MaterializationResponsibility &FromMR,
 
   auto Err =
       ES.runSessionLocked([&, this]() -> Error {
-        auto RT = getTracker(FromMR);
-
-        if (RT->isDefunct())
-          return make_error<ResourceTrackerDefunct>(std::move(RT));
+        if (FromMR.RT->isDefunct())
+          return make_error<ResourceTrackerDefunct>(std::move(FromMR.RT));
 
 #ifndef NDEBUG
         for (auto &KV : MU->getSymbols()) {
@@ -735,7 +742,8 @@ Error JITDylib::replace(MaterializationResponsibility &FromMR,
           if (MII != MaterializingInfos.end()) {
             if (MII->second.hasQueriesPending()) {
               MustRunMR = ES.createMaterializationResponsibility(
-                  *RT, std::move(MU->SymbolFlags), std::move(MU->InitSymbol));
+                  *FromMR.RT, std::move(MU->SymbolFlags),
+                  std::move(MU->InitSymbol));
               MustRunMU = std::move(MU);
               return Error::success();
             }
@@ -743,10 +751,8 @@ Error JITDylib::replace(MaterializationResponsibility &FromMR,
         }
 
         // Otherwise, make MU responsible for all the symbols.
-        auto RTI = MRTrackers.find(&FromMR);
-        assert(RTI != MRTrackers.end() && "No tracker for FromMR");
-        auto UMI =
-            std::make_shared<UnmaterializedInfo>(std::move(MU), RTI->second);
+        auto UMI = std::make_shared<UnmaterializedInfo>(std::move(MU),
+                                                        FromMR.RT.get());
         for (auto &KV : UMI->MU->getSymbols()) {
           auto SymI = Symbols.find(KV.first);
           assert(SymI->second.getState() == SymbolState::Materializing &&
@@ -787,13 +793,11 @@ JITDylib::delegate(MaterializationResponsibility &FromMR,
 
   return ES.runSessionLocked(
       [&]() -> Expected<std::unique_ptr<MaterializationResponsibility>> {
-        auto RT = getTracker(FromMR);
-
-        if (RT->isDefunct())
-          return make_error<ResourceTrackerDefunct>(std::move(RT));
+        if (FromMR.RT->isDefunct())
+          return make_error<ResourceTrackerDefunct>(std::move(FromMR.RT));
 
         return ES.createMaterializationResponsibility(
-            *RT, std::move(SymbolFlags), std::move(InitSymbol));
+            *FromMR.RT, std::move(SymbolFlags), std::move(InitSymbol));
       });
 }
 
@@ -903,10 +907,13 @@ Error JITDylib::resolve(MaterializationResponsibility &MR,
   AsynchronousSymbolQuerySet CompletedQueries;
 
   if (auto Err = ES.runSessionLocked([&, this]() -> Error {
-        auto RTI = MRTrackers.find(&MR);
-        assert(RTI != MRTrackers.end() && "No resource tracker for MR?");
-        if (RTI->second->isDefunct())
-          return make_error<ResourceTrackerDefunct>(RTI->second);
+        if (MR.RT->isDefunct())
+          return make_error<ResourceTrackerDefunct>(MR.RT);
+
+        if (State != Open)
+          return make_error<StringError>("JITDylib " + getName() +
+                                             " is defunct",
+                                         inconvertibleErrorCode());
 
         struct WorklistEntry {
           SymbolTable::iterator SymI;
@@ -1001,10 +1008,13 @@ Error JITDylib::emit(MaterializationResponsibility &MR,
   DenseMap<JITDylib *, SymbolNameVector> ReadySymbols;
 
   if (auto Err = ES.runSessionLocked([&, this]() -> Error {
-        auto RTI = MRTrackers.find(&MR);
-        assert(RTI != MRTrackers.end() && "No resource tracker for MR?");
-        if (RTI->second->isDefunct())
-          return make_error<ResourceTrackerDefunct>(RTI->second);
+        if (MR.RT->isDefunct())
+          return make_error<ResourceTrackerDefunct>(MR.RT);
+
+        if (State != Open)
+          return make_error<StringError>("JITDylib " + getName() +
+                                             " is defunct",
+                                         inconvertibleErrorCode());
 
         SymbolNameSet SymbolsInErrorState;
         std::vector<SymbolTable::iterator> Worklist;
@@ -1149,9 +1159,12 @@ Error JITDylib::emit(MaterializationResponsibility &MR,
 void JITDylib::unlinkMaterializationResponsibility(
     MaterializationResponsibility &MR) {
   ES.runSessionLocked([&]() {
-    auto I = MRTrackers.find(&MR);
-    assert(I != MRTrackers.end() && "MaterializationResponsibility not linked");
-    MRTrackers.erase(I);
+    auto I = TrackerMRs.find(MR.RT.get());
+    assert(I != TrackerMRs.end() && "No MRs in TrackerMRs list for RT");
+    assert(I->second.count(&MR) && "MR not in TrackerMRs list for RT");
+    I->second.erase(&MR);
+    if (I->second.empty())
+      TrackerMRs.erase(MR.RT.get());
   });
 }
 
@@ -1169,8 +1182,16 @@ JITDylib::failSymbols(FailedSymbolsWorklist Worklist) {
 
     (*FailedSymbolsMap)[&JD].insert(Name);
 
-    assert(JD.Symbols.count(Name) && "No symbol table entry for Name");
-    auto &Sym = JD.Symbols[Name];
+    // Look up the symbol to fail.
+    auto SymI = JD.Symbols.find(Name);
+
+    // It's possible that this symbol has already been removed, e.g. if a
+    // materialization failure happens concurrently with a ResourceTracker or
+    // JITDylib removal. In that case we can safely skip this symbol and
+    // continue.
+    if (SymI == JD.Symbols.end())
+      continue;
+    auto &Sym = SymI->second;
 
     // Move the symbol into the error state.
     // Note that this may be redundant: The symbol might already have been
@@ -1267,6 +1288,7 @@ JITDylib::failSymbols(FailedSymbolsWorklist Worklist) {
 void JITDylib::setLinkOrder(JITDylibSearchOrder NewLinkOrder,
                             bool LinkAgainstThisJITDylibFirst) {
   ES.runSessionLocked([&]() {
+    assert(State == Open && "JD is defunct");
     if (LinkAgainstThisJITDylibFirst) {
       LinkOrder.clear();
       if (NewLinkOrder.empty() || NewLinkOrder.front().first != this)
@@ -1285,6 +1307,7 @@ void JITDylib::addToLinkOrder(JITDylib &JD, JITDylibLookupFlags JDLookupFlags) {
 void JITDylib::replaceInLinkOrder(JITDylib &OldJD, JITDylib &NewJD,
                                   JITDylibLookupFlags JDLookupFlags) {
   ES.runSessionLocked([&]() {
+    assert(State == Open && "JD is defunct");
     for (auto &KV : LinkOrder)
       if (KV.first == &OldJD) {
         KV = {&NewJD, JDLookupFlags};
@@ -1295,6 +1318,7 @@ void JITDylib::replaceInLinkOrder(JITDylib &OldJD, JITDylib &NewJD,
 
 void JITDylib::removeFromLinkOrder(JITDylib &JD) {
   ES.runSessionLocked([&]() {
+    assert(State == Open && "JD is defunct");
     auto I = llvm::find_if(LinkOrder,
                            [&](const JITDylibSearchOrder::value_type &KV) {
                              return KV.first == &JD;
@@ -1306,6 +1330,7 @@ void JITDylib::removeFromLinkOrder(JITDylib &JD) {
 
 Error JITDylib::remove(const SymbolNameSet &Names) {
   return ES.runSessionLocked([&]() -> Error {
+    assert(State == Open && "JD is defunct");
     using SymbolMaterializerItrPair =
         std::pair<SymbolTable::iterator, UnmaterializedInfosMap::iterator>;
     std::vector<SymbolMaterializerItrPair> SymbolsToRemove;
@@ -1365,8 +1390,23 @@ Error JITDylib::remove(const SymbolNameSet &Names) {
 void JITDylib::dump(raw_ostream &OS) {
   ES.runSessionLocked([&, this]() {
     OS << "JITDylib \"" << getName() << "\" (ES: "
-       << format("0x%016" PRIx64, reinterpret_cast<uintptr_t>(&ES)) << "):\n"
-       << "Link order: " << LinkOrder << "\n"
+       << format("0x%016" PRIx64, reinterpret_cast<uintptr_t>(&ES))
+       << ", State = ";
+    switch (State) {
+    case Open:
+      OS << "Open";
+      break;
+    case Closing:
+      OS << "Closing";
+      break;
+    case Closed:
+      OS << "Closed";
+      break;
+    }
+    OS << ")\n";
+    if (State == Closed)
+      return;
+    OS << "Link order: " << LinkOrder << "\n"
        << "Symbol table:\n";
 
     for (auto &KV : Symbols) {
@@ -1454,17 +1494,11 @@ JITDylib::JITDylib(ExecutionSession &ES, std::string Name)
   LinkOrder.push_back({this, JITDylibLookupFlags::MatchAllSymbols});
 }
 
-ResourceTrackerSP JITDylib::getTracker(MaterializationResponsibility &MR) {
-  auto I = MRTrackers.find(&MR);
-  assert(I != MRTrackers.end() && "MR is not linked");
-  assert(I->second && "Linked tracker is null");
-  return I->second;
-}
-
 std::pair<JITDylib::AsynchronousSymbolQuerySet,
           std::shared_ptr<SymbolDependenceMap>>
 JITDylib::removeTracker(ResourceTracker &RT) {
   // Note: Should be called under the session lock.
+  assert(State != Closed && "JD is defunct");
 
   SymbolNameVector SymbolsToRemove;
   std::vector<std::pair<JITDylib *, SymbolStringPtr>> SymbolsToFail;
@@ -1525,6 +1559,7 @@ JITDylib::removeTracker(ResourceTracker &RT) {
 }
 
 void JITDylib::transferTracker(ResourceTracker &DstRT, ResourceTracker &SrcRT) {
+  assert(State != Closed && "JD is defunct");
   assert(&DstRT != &SrcRT && "No-op transfers shouldn't call transferTracker");
   assert(&DstRT.getJITDylib() == this && "DstRT is not for this JITDylib");
   assert(&SrcRT.getJITDylib() == this && "SrcRT is not for this JITDylib");
@@ -1536,9 +1571,22 @@ void JITDylib::transferTracker(ResourceTracker &DstRT, ResourceTracker &SrcRT) {
   }
 
   // Update trackers for any active materialization responsibilities.
-  for (auto &KV : MRTrackers) {
-    if (KV.second == &SrcRT)
-      KV.second = &DstRT;
+  {
+    auto I = TrackerMRs.find(&SrcRT);
+    if (I != TrackerMRs.end()) {
+      auto &SrcMRs = I->second;
+      auto &DstMRs = TrackerMRs[&DstRT];
+      for (auto *MR : SrcMRs)
+        MR->RT = &DstRT;
+      if (DstMRs.empty())
+        DstMRs = std::move(SrcMRs);
+      else
+        for (auto *MR : SrcMRs)
+          DstMRs.insert(MR);
+      // Erase SrcRT entry in TrackerMRs. Use &SrcRT key rather than iterator I
+      // for this, since I may have been invalidated by 'TrackerMRs[&DstRT]'.
+      TrackerMRs.erase(&SrcRT);
+    }
   }
 
   // If we're transfering to the default tracker we just need to delete the
@@ -1872,6 +1920,40 @@ Expected<JITDylib &> ExecutionSession::createJITDylib(std::string Name) {
   return JD;
 }
 
+Error ExecutionSession::removeJITDylib(JITDylib &JD) {
+  // Keep JD alive throughout this routine, even if all other references
+  // have been dropped.
+  JITDylibSP JDKeepAlive = &JD;
+
+  // Set JD to 'Closing' state and remove JD from the ExecutionSession.
+  runSessionLocked([&] {
+    assert(JD.State == JITDylib::Open && "JD already closed");
+    JD.State = JITDylib::Closing;
+    auto I = llvm::find(JDs, &JD);
+    assert(I != JDs.end() && "JD does not appear in session JDs");
+    JDs.erase(I);
+  });
+
+  // Clear the JITDylib.
+  auto Err = JD.clear();
+
+  // Set JD to closed state. Clear remaining data structures.
+  runSessionLocked([&] {
+    assert(JD.State == JITDylib::Closing && "JD should be closing");
+    JD.State = JITDylib::Closed;
+    assert(JD.Symbols.empty() && "JD.Symbols is not empty after clear");
+    assert(JD.UnmaterializedInfos.empty() &&
+           "JD.UnmaterializedInfos is not empty after clear");
+    assert(JD.MaterializingInfos.empty() &&
+           "JD.MaterializingInfos is not empty after clear");
+    assert(JD.TrackerSymbols.empty() &&
+           "TrackerSymbols is not empty after clear");
+    JD.DefGenerators.clear();
+    JD.LinkOrder.clear();
+  });
+  return Err;
+}
+
 std::vector<JITDylibSP> JITDylib::getDFSLinkOrder(ArrayRef<JITDylibSP> JDs) {
   if (JDs.empty())
     return {};
@@ -1882,6 +1964,8 @@ std::vector<JITDylibSP> JITDylib::getDFSLinkOrder(ArrayRef<JITDylibSP> JDs) {
     std::vector<JITDylibSP> Result;
 
     for (auto &JD : JDs) {
+
+      assert(JD->State == Open && "JD is defunct");
 
       if (Visited.count(JD.get()))
         continue;
@@ -2311,8 +2395,11 @@ void ExecutionSession::OL_applyQueryPhase1(
       });
 
       // Build the definition generator stack for this JITDylib.
-      for (auto &DG : reverse(JD.DefGenerators))
-        IPLS->CurDefGeneratorStack.push_back(DG);
+      runSessionLocked([&] {
+        IPLS->CurDefGeneratorStack.reserve(JD.DefGenerators.size());
+        for (auto &DG : reverse(JD.DefGenerators))
+          IPLS->CurDefGeneratorStack.push_back(DG);
+      });
 
       // Flag that we've done our initialization.
       IPLS->NewJITDylib = false;
@@ -2629,17 +2716,15 @@ void ExecutionSession::OL_completeLookup(
 
       LLVM_DEBUG(dbgs() << "Adding MUs to dispatch:\n");
       for (auto &KV : CollectedUMIs) {
-        auto &JD = *KV.first;
         LLVM_DEBUG({
+          auto &JD = *KV.first;
           dbgs() << "  For " << JD.getName() << ": Adding " << KV.second.size()
                  << " MUs.\n";
         });
         for (auto &UMI : KV.second) {
-          std::unique_ptr<MaterializationResponsibility> MR(
-              new MaterializationResponsibility(
-                  &JD, std::move(UMI->MU->SymbolFlags),
-                  std::move(UMI->MU->InitSymbol)));
-          JD.MRTrackers[MR.get()] = UMI->RT;
+          auto MR = createMaterializationResponsibility(
+              *UMI->RT, std::move(UMI->MU->SymbolFlags),
+              std::move(UMI->MU->InitSymbol));
           OutstandingMUs.push_back(
               std::make_pair(std::move(UMI->MU), std::move(MR)));
         }
@@ -2757,18 +2842,18 @@ void ExecutionSession::OL_destroyMaterializationResponsibility(
 
   assert(MR.SymbolFlags.empty() &&
          "All symbols should have been explicitly materialized or failed");
-  MR.JD->unlinkMaterializationResponsibility(MR);
+  MR.JD.unlinkMaterializationResponsibility(MR);
 }
 
 SymbolNameSet ExecutionSession::OL_getRequestedSymbols(
     const MaterializationResponsibility &MR) {
-  return MR.JD->getRequestedSymbols(MR.SymbolFlags);
+  return MR.JD.getRequestedSymbols(MR.SymbolFlags);
 }
 
 Error ExecutionSession::OL_notifyResolved(MaterializationResponsibility &MR,
                                           const SymbolMap &Symbols) {
   LLVM_DEBUG({
-    dbgs() << "In " << MR.JD->getName() << " resolving " << Symbols << "\n";
+    dbgs() << "In " << MR.JD.getName() << " resolving " << Symbols << "\n";
   });
 #ifndef NDEBUG
   for (auto &KV : Symbols) {
@@ -2783,15 +2868,16 @@ Error ExecutionSession::OL_notifyResolved(MaterializationResponsibility &MR,
   }
 #endif
 
-  return MR.JD->resolve(MR, Symbols);
+  return MR.JD.resolve(MR, Symbols);
 }
 
 Error ExecutionSession::OL_notifyEmitted(MaterializationResponsibility &MR) {
   LLVM_DEBUG({
-    dbgs() << "In " << MR.JD->getName() << " emitting " << MR.SymbolFlags << "\n";
+    dbgs() << "In " << MR.JD.getName() << " emitting " << MR.SymbolFlags
+           << "\n";
   });
 
-  if (auto Err = MR.JD->emit(MR, MR.SymbolFlags))
+  if (auto Err = MR.JD.emit(MR, MR.SymbolFlags))
     return Err;
 
   MR.SymbolFlags.clear();
@@ -2802,10 +2888,11 @@ Error ExecutionSession::OL_defineMaterializing(
     MaterializationResponsibility &MR, SymbolFlagsMap NewSymbolFlags) {
 
   LLVM_DEBUG({
-    dbgs() << "In " << MR.JD->getName() << " defining materializing symbols "
+    dbgs() << "In " << MR.JD.getName() << " defining materializing symbols "
            << NewSymbolFlags << "\n";
   });
-  if (auto AcceptedDefs = MR.JD->defineMaterializing(std::move(NewSymbolFlags))) {
+  if (auto AcceptedDefs =
+          MR.JD.defineMaterializing(std::move(NewSymbolFlags))) {
     // Add all newly accepted symbols to this responsibility object.
     for (auto &KV : *AcceptedDefs)
       MR.SymbolFlags.insert(KV);
@@ -2817,14 +2904,14 @@ Error ExecutionSession::OL_defineMaterializing(
 void ExecutionSession::OL_notifyFailed(MaterializationResponsibility &MR) {
 
   LLVM_DEBUG({
-    dbgs() << "In " << MR.JD->getName() << " failing materialization for "
+    dbgs() << "In " << MR.JD.getName() << " failing materialization for "
            << MR.SymbolFlags << "\n";
   });
 
   JITDylib::FailedSymbolsWorklist Worklist;
 
   for (auto &KV : MR.SymbolFlags)
-    Worklist.push_back(std::make_pair(MR.JD.get(), KV.first));
+    Worklist.push_back(std::make_pair(&MR.JD, KV.first));
   MR.SymbolFlags.clear();
 
   if (Worklist.empty())
@@ -2834,9 +2921,8 @@ void ExecutionSession::OL_notifyFailed(MaterializationResponsibility &MR) {
   std::shared_ptr<SymbolDependenceMap> FailedSymbols;
 
   runSessionLocked([&]() {
-    auto RTI = MR.JD->MRTrackers.find(&MR);
-    assert(RTI != MR.JD->MRTrackers.end() && "No tracker for this");
-    if (RTI->second->isDefunct())
+    // If the tracker is defunct then there's nothing to do here.
+    if (MR.RT->isDefunct())
       return;
 
     std::tie(FailedQueries, FailedSymbols) =
@@ -2858,12 +2944,12 @@ Error ExecutionSession::OL_replace(MaterializationResponsibility &MR,
   if (MU->getInitializerSymbol() == MR.InitSymbol)
     MR.InitSymbol = nullptr;
 
-  LLVM_DEBUG(MR.JD->getExecutionSession().runSessionLocked([&]() {
-    dbgs() << "In " << MR.JD->getName() << " replacing symbols with " << *MU
+  LLVM_DEBUG(MR.JD.getExecutionSession().runSessionLocked([&]() {
+    dbgs() << "In " << MR.JD.getName() << " replacing symbols with " << *MU
            << "\n";
   }););
 
-  return MR.JD->replace(MR, std::move(MU));
+  return MR.JD.replace(MR, std::move(MU));
 }
 
 Expected<std::unique_ptr<MaterializationResponsibility>>
@@ -2886,8 +2972,8 @@ ExecutionSession::OL_delegate(MaterializationResponsibility &MR,
     MR.SymbolFlags.erase(I);
   }
 
-  return MR.JD->delegate(MR, std::move(DelegatedFlags),
-                         std::move(DelegatedInitSymbol));
+  return MR.JD.delegate(MR, std::move(DelegatedFlags),
+                        std::move(DelegatedInitSymbol));
 }
 
 void ExecutionSession::OL_addDependencies(
@@ -2899,7 +2985,7 @@ void ExecutionSession::OL_addDependencies(
   });
   assert(MR.SymbolFlags.count(Name) &&
          "Symbol not covered by this MaterializationResponsibility instance");
-  MR.JD->addDependencies(Name, Dependencies);
+  MR.JD.addDependencies(Name, Dependencies);
 }
 
 void ExecutionSession::OL_addDependenciesForAll(
@@ -2910,7 +2996,7 @@ void ExecutionSession::OL_addDependenciesForAll(
            << Dependencies << "\n";
   });
   for (auto &KV : MR.SymbolFlags)
-    MR.JD->addDependencies(KV.first, Dependencies);
+    MR.JD.addDependencies(KV.first, Dependencies);
 }
 
 #ifndef NDEBUG

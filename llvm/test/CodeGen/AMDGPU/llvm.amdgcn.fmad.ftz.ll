@@ -49,8 +49,8 @@ define amdgpu_kernel void @mad_f32_imm_b(
 
 ; GCN-LABEL: {{^}}mad_f32_imm_c:
 ; GCN: v_mov_b32_e32 [[C:v[0-9]+]], 0x41000000
-; GCN: s_load_dword [[A:s[0-9]+]]
 ; GCN: s_load_dword [[B:s[0-9]+]]
+; GCN: s_load_dword [[A:s[0-9]+]]
 ; GCN: v_mov_b32_e32 [[VB:v[0-9]+]], [[B]]
 ; GCN: v_mac_f32_e32 [[C]], {{s[0-9]+}}, [[VB]]{{$}}
 define amdgpu_kernel void @mad_f32_imm_c(

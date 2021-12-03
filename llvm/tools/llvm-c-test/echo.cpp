@@ -1056,9 +1056,11 @@ AliasDecl:
     const char *Name = LLVMGetValueName2(Cur, &NameLen);
     if (LLVMGetNamedGlobalAlias(M, Name, NameLen))
       report_fatal_error("Global alias already cloned");
-    LLVMTypeRef CurType = TypeCloner(M).Clone(Cur);
+    LLVMTypeRef PtrType = TypeCloner(M).Clone(Cur);
+    LLVMTypeRef ValType = TypeCloner(M).Clone(LLVMGlobalGetValueType(Cur));
+    unsigned AddrSpace = LLVMGetPointerAddressSpace(PtrType);
     // FIXME: Allow NULL aliasee.
-    LLVMAddAlias(M, CurType, LLVMGetUndef(CurType), Name);
+    LLVMAddAlias2(M, ValType, AddrSpace, LLVMGetUndef(PtrType), Name);
 
     Next = LLVMGetNextGlobalAlias(Cur);
     if (Next == nullptr) {

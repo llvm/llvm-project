@@ -738,7 +738,7 @@ struct __is_duration<volatile duration<_Rep, _Period> > : true_type  {};
 template <class _Rep, class _Period>
 struct __is_duration<const volatile duration<_Rep, _Period> > : true_type  {};
 
-} // chrono
+} // namespace chrono
 
 template <class _Rep1, class _Period1, class _Rep2, class _Period2>
 struct _LIBCPP_TEMPLATE_VIS common_type<chrono::duration<_Rep1, _Period1>,
@@ -1265,7 +1265,7 @@ public:
     _LIBCPP_INLINE_VISIBILITY static _LIBCPP_CONSTEXPR time_point max() _NOEXCEPT {return time_point(duration::max());}
 };
 
-} // chrono
+} // namespace chrono
 
 template <class _Clock, class _Duration1, class _Duration2>
 struct _LIBCPP_TEMPLATE_VIS common_type<chrono::time_point<_Clock, _Duration1>,
@@ -2701,7 +2701,7 @@ constexpr hours make24(const hours& __h, bool __is_pm) noexcept
 }
 
 #endif // _LIBCPP_STD_VER > 17
-} // chrono
+} // namespace chrono
 
 #if _LIBCPP_STD_VER > 11
 // Suffixes for duration literals [time.duration.literals]
@@ -2786,11 +2786,12 @@ inline namespace literals
         return chrono::year(static_cast<int>(__y));
     }
 #endif
-}}
+} // namespace chrono_literals
+} // namespace literals
 
 namespace chrono { // hoist the literals into namespace std::chrono
    using namespace literals::chrono_literals;
-}
+} // namespace chrono
 
 #endif
 

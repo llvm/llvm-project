@@ -634,7 +634,8 @@ bool llvm::rewriteT2FrameIndex(MachineInstr &MI, unsigned FrameRegIdx,
 
     unsigned NumBits = 0;
     unsigned Scale = 1;
-    if (AddrMode == ARMII::AddrModeT2_i8 || AddrMode == ARMII::AddrModeT2_i12) {
+    if (AddrMode == ARMII::AddrModeT2_i8neg ||
+        AddrMode == ARMII::AddrModeT2_i12) {
       // i8 supports only negative, and i12 supports only positive, so
       // based on Offset sign convert Opcode to the appropriate
       // instruction

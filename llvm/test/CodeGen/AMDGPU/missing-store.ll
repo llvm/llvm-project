@@ -6,15 +6,14 @@
 ; resulting in losing the store to gptr
 
 ; FUNC-LABEL: {{^}}missing_store_reduced:
-; SI: s_load_dwordx4
-; SI: ds_read_b64
-; SI-DAG: buffer_store_dword
+; SI:     s_load_dwordx4
+; SI-DAG: ds_read_b64
 ; SI-DAG: v_readfirstlane_b32 s[[PTR_LO:[0-9]+]], v{{[0-9]+}}
-; SI: v_readfirstlane_b32 s[[PTR_HI:[0-9]+]], v{{[0-9]+}}
-; SI: s_nop 3
-; SI: s_load_dword s{{[0-9]+}}, s{{\[}}[[PTR_LO]]:[[PTR_HI]]{{\]}}
-; SI: buffer_store_dword
-; SI: s_endpgm
+; SI-DAG: v_readfirstlane_b32 s[[PTR_HI:[0-9]+]], v{{[0-9]+}}
+; SI-DAG: s_load_dword s{{[0-9]+}}, s{{\[}}[[PTR_LO]]:[[PTR_HI]]{{\]}}
+; SI-DAG: buffer_store_dword
+; SI-DAG: buffer_store_dword
+; SI:     s_endpgm
 define amdgpu_kernel void @missing_store_reduced(i32 addrspace(1)* %out, i32 addrspace(1)* %gptr) #0 {
   %ptr0 = load i32 addrspace(4)*, i32 addrspace(4)* addrspace(3)* @ptr_load, align 8
   %ptr2 = getelementptr inbounds i32, i32 addrspace(4)* %ptr0, i64 2

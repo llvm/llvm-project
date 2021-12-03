@@ -1200,7 +1200,7 @@ struct __find_exactly_one_checked<_T1> {
     static_assert(!is_same<_T1, _T1>::value, "type not in empty type list");
 };
 
-} // namespace __find_detail;
+} // namespace __find_detail
 
 template <typename _T1, typename... _Args>
 struct __find_exactly_one_t
@@ -1257,7 +1257,7 @@ struct __ignore_t
 
 namespace {
   constexpr __ignore_t<unsigned char> ignore = __ignore_t<unsigned char>();
-}
+} // namespace
 
 template <class... _Tp>
 inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX11

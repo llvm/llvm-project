@@ -1693,7 +1693,7 @@ static unsigned estimateRSStackSizeLimit(MachineFunction &MF,
           // Default 12 bit limit.
           break;
         case ARMII::AddrMode3:
-        case ARMII::AddrModeT2_i8:
+        case ARMII::AddrModeT2_i8neg:
           Limit = std::min(Limit, (1U << 8) - 1);
           break;
         case ARMII::AddrMode5FP16:

@@ -9,8 +9,8 @@
 // Allows setting up fake filesystem environments for tests.
 //
 //===----------------------------------------------------------------------===//
-#ifndef LLVM_CLANG_TOOLS_EXTRA_UNITTESTS_CLANGD_TESTFS_H
-#define LLVM_CLANG_TOOLS_EXTRA_UNITTESTS_CLANGD_TESTFS_H
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_UNITTESTS_TESTFS_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANGD_UNITTESTS_TESTFS_H
 #include "ClangdServer.h"
 #include "GlobalCompilationDatabase.h"
 #include "support/Path.h"

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_INDEX_SYMBOL_LOCATION_H
-#define LLVM_CLANG_TOOLS_EXTRA_CLANGD_INDEX_SYMBOL_LOCATION_H
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_INDEX_SYMBOLLOCATION_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANGD_INDEX_SYMBOLLOCATION_H
 
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/raw_ostream.h"
@@ -92,4 +92,4 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &, const SymbolLocation &);
 } // namespace clangd
 } // namespace clang
 
-#endif // LLVM_CLANG_TOOLS_EXTRA_CLANGD_INDEX_SYMBOL_LOCATION_H
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANGD_INDEX_SYMBOLLOCATION_H

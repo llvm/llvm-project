@@ -765,11 +765,11 @@ def smrd_load : PatFrag <(ops node:$ptr), (load node:$ptr), [{ return isUniformL
   }];
 }
 
-def SMRDImm         : ComplexPattern<i64, 2, "SelectSMRDImm">;
-def SMRDImm32       : ComplexPattern<i64, 2, "SelectSMRDImm32">;
-def SMRDSgpr        : ComplexPattern<i64, 2, "SelectSMRDSgpr">;
-def SMRDBufferImm   : ComplexPattern<i32, 1, "SelectSMRDBufferImm">;
-def SMRDBufferImm32 : ComplexPattern<i32, 1, "SelectSMRDBufferImm32">;
+def SMRDImm         : ComplexPattern<iPTR, 2, "SelectSMRDImm">;
+def SMRDImm32       : ComplexPattern<iPTR, 2, "SelectSMRDImm32">;
+def SMRDSgpr        : ComplexPattern<iPTR, 2, "SelectSMRDSgpr">;
+def SMRDBufferImm   : ComplexPattern<iPTR, 1, "SelectSMRDBufferImm">;
+def SMRDBufferImm32 : ComplexPattern<iPTR, 1, "SelectSMRDBufferImm32">;
 
 multiclass SMRD_Pattern <string Instr, ValueType vt> {
 

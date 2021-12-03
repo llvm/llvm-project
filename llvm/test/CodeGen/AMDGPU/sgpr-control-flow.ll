@@ -11,8 +11,8 @@
 define amdgpu_kernel void @sgpr_if_else_salu_br(i32 addrspace(1)* %out, i32 %a, i32 %b, i32 %c, i32 %d, i32 %e) {
 ; SI-LABEL: sgpr_if_else_salu_br:
 ; SI:       ; %bb.0: ; %entry
-; SI-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x9
 ; SI-NEXT:    s_load_dwordx4 s[8:11], s[0:1], 0xb
+; SI-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x9
 ; SI-NEXT:    s_load_dword s0, s[0:1], 0xf
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
 ; SI-NEXT:    s_cmp_lg_u32 s8, 0
@@ -106,9 +106,9 @@ endif:
 define amdgpu_kernel void @sgpr_if_else_valu_br(i32 addrspace(1)* %out, float %a, i32 %b, i32 %c, i32 %d, i32 %e) {
 ; SI-LABEL: sgpr_if_else_valu_br:
 ; SI:       ; %bb.0: ; %entry
-; SI-NEXT:    v_cvt_f32_u32_e32 v0, v0
 ; SI-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x9
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0xc
+; SI-NEXT:    v_cvt_f32_u32_e32 v0, v0
 ; SI-NEXT:    ; implicit-def: $sgpr8
 ; SI-NEXT:    v_cmp_lg_f32_e32 vcc, 0, v0
 ; SI-NEXT:    s_and_saveexec_b64 s[6:7], vcc

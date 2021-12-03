@@ -155,6 +155,10 @@ void ScalarEnumerationTraits<ELFYAML::ELF_NT>::enumeration(
   ECase(NT_FREEBSD_PROCSTAT_OSREL);
   ECase(NT_FREEBSD_PROCSTAT_PSSTRINGS);
   ECase(NT_FREEBSD_PROCSTAT_AUXV);
+  // NetBSD core note types.
+  ECase(NT_NETBSDCORE_PROCINFO);
+  ECase(NT_NETBSDCORE_AUXV);
+  ECase(NT_NETBSDCORE_LWPSTATUS);
   // OpenBSD core note types.
   ECase(NT_OPENBSD_PROCINFO);
   ECase(NT_OPENBSD_AUXV);

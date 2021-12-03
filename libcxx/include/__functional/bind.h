@@ -70,7 +70,7 @@ _LIBCPP_FUNC_VIS extern const __ph<10> _10;
 /* inline */ constexpr __ph<10> _10{};
 #endif // defined(_LIBCPP_CXX03_LANG) || defined(_LIBCPP_BUILDING_LIBRARY)
 
-}  // placeholders
+} // namespace placeholders
 
 template<int _Np>
 struct __is_placeholder<placeholders::__ph<_Np> >

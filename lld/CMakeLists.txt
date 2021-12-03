@@ -195,12 +195,10 @@ if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY)
 endif()
 
 add_subdirectory(Common)
-add_subdirectory(lib)
 add_subdirectory(tools/lld)
 
 if (LLVM_INCLUDE_TESTS)
   add_subdirectory(test)
-  add_subdirectory(unittests)
 endif()
 
 add_subdirectory(docs)

@@ -6021,16 +6021,18 @@ bool ARMBaseInstrInfo::checkAndUpdateStackOffset(MachineInstr *MI,
 
   // Stack might be involved but addressing mode doesn't handle any offset.
   // Rq: AddrModeT1_[1|2|4] don't operate on SP
-  if (AddrMode == ARMII::AddrMode1        // Arithmetic instructions
-      || AddrMode == ARMII::AddrMode4     // Load/Store Multiple
-      || AddrMode == ARMII::AddrMode6     // Neon Load/Store Multiple
-      || AddrMode == ARMII::AddrModeT2_so // SP can't be used as based register
-      || AddrMode == ARMII::AddrModeT2_pc // PCrel access
-      || AddrMode == ARMII::AddrMode2     // Used by PRE and POST indexed LD/ST
-      || AddrMode == ARMII::AddrModeT2_i7 // v8.1-M MVE
-      || AddrMode == ARMII::AddrModeT2_i7s2 // v8.1-M MVE
-      || AddrMode == ARMII::AddrModeT2_i7s4 // v8.1-M sys regs VLDR/VSTR
-      || AddrMode == ARMII::AddrModeNone)
+  if (AddrMode == ARMII::AddrMode1 ||       // Arithmetic instructions
+      AddrMode == ARMII::AddrMode4 ||       // Load/Store Multiple
+      AddrMode == ARMII::AddrMode6 ||       // Neon Load/Store Multiple
+      AddrMode == ARMII::AddrModeT2_so ||   // SP can't be used as based register
+      AddrMode == ARMII::AddrModeT2_pc ||   // PCrel access
+      AddrMode == ARMII::AddrMode2 ||       // Used by PRE and POST indexed LD/ST
+      AddrMode == ARMII::AddrModeT2_i7 ||   // v8.1-M MVE
+      AddrMode == ARMII::AddrModeT2_i7s2 || // v8.1-M MVE
+      AddrMode == ARMII::AddrModeT2_i7s4 || // v8.1-M sys regs VLDR/VSTR
+      AddrMode == ARMII::AddrModeNone ||
+      AddrMode == ARMII::AddrModeT2_i8 ||   // Pre/Post inc instructions
+      AddrMode == ARMII::AddrModeT2_i8neg)  // Always negative imm
     return false;
 
   unsigned NumOps = MI->getDesc().getNumOperands();
@@ -6068,7 +6070,7 @@ bool ARMBaseInstrInfo::checkAndUpdateStackOffset(MachineInstr *MI,
     NumBits = 8;
     Scale = 2;
     break;
-  case ARMII::AddrModeT2_i8:
+  case ARMII::AddrModeT2_i8pos:
     NumBits = 8;
     break;
   case ARMII::AddrModeT2_i8s4:

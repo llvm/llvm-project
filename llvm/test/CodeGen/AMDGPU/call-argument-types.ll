@@ -654,11 +654,11 @@ define amdgpu_kernel void @test_call_external_void_func_struct_i8_i32() #0 {
 ; HSA-DAG: buffer_store_byte [[VAL0]], off, s[0:3], 0 offset:8
 ; HSA-DAG: buffer_store_dword [[VAL1]], off, s[0:3], 0 offset:12
 
-; HSA: buffer_load_dword [[RELOAD_VAL0:v[0-9]+]], off, s[0:3], 0 offset:8
 ; HSA: buffer_load_dword [[RELOAD_VAL1:v[0-9]+]], off, s[0:3], 0 offset:12
+; HSA: buffer_load_dword [[RELOAD_VAL0:v[0-9]+]], off, s[0:3], 0 offset:8
 
-; MESA: buffer_load_dword [[RELOAD_VAL0:v[0-9]+]], off, s[36:39], 0 offset:8
 ; MESA: buffer_load_dword [[RELOAD_VAL1:v[0-9]+]], off, s[36:39], 0 offset:12
+; MESA: buffer_load_dword [[RELOAD_VAL0:v[0-9]+]], off, s[36:39], 0 offset:8
 
 ; GCN-DAG: s_movk_i32 [[SP:s[0-9]+]], 0x400{{$}}
 
@@ -757,11 +757,11 @@ entry:
 
 ; GCN-LABEL: {{^}}tail_call_stack_passed_arg_alignment_v32i32_f64:
 ; GCN-NOT: s32
-; GCN: buffer_load_dword v32, off, s[0:3], s32 offset:4
-; GCN: buffer_load_dword v33, off, s[0:3], s32{{$}}
+; GCN: buffer_load_dword v32, off, s[0:3], s32{{$}}
+; GCN: buffer_load_dword v33, off, s[0:3], s32 offset:4
 ; GCN: s_getpc_b64
-; GCN: buffer_store_dword v33, off, s[0:3], s32{{$}}
-; GCN: buffer_store_dword v32, off, s[0:3], s32 offset:4
+; GCN: buffer_store_dword v32, off, s[0:3], s32{{$}}
+; GCN: buffer_store_dword v33, off, s[0:3], s32 offset:4
 ; GCN-NOT: s32
 ; GCN: s_setpc_b64
 define void @tail_call_stack_passed_arg_alignment_v32i32_f64(<32 x i32> %val, double %tmp) #0 {

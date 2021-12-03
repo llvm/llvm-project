@@ -218,7 +218,6 @@ struct Allocator {
   AllocatorCache fallback_allocator_cache;
 
   uptr max_user_defined_malloc_size;
-  atomic_uint8_t rss_limit_exceeded;
 
   // Holds the mapping of stack ids to MemInfoBlocks.
   MIBMapTy MIBMap;
@@ -301,20 +300,12 @@ struct Allocator {
                                        : kMaxAllowedMallocSize;
   }
 
-  bool RssLimitExceeded() {
-    return atomic_load(&rss_limit_exceeded, memory_order_relaxed);
-  }
-
-  void SetRssLimitExceeded(bool limit_exceeded) {
-    atomic_store(&rss_limit_exceeded, limit_exceeded, memory_order_relaxed);
-  }
-
   // -------------------- Allocation/Deallocation routines ---------------
   void *Allocate(uptr size, uptr alignment, BufferedStackTrace *stack,
                  AllocType alloc_type) {
     if (UNLIKELY(!memprof_inited))
       MemprofInitFromRtl();
-    if (RssLimitExceeded()) {
+    if (UNLIKELY(IsRssLimitExceeded())) {
       if (AllocatorMayReturnNull())
         return nullptr;
       ReportRssLimitExceeded(stack);
@@ -660,10 +651,6 @@ uptr memprof_malloc_usable_size(const void *ptr, uptr pc, uptr bp) {
     return 0;
   uptr usable_size = instance.AllocationSize(reinterpret_cast<uptr>(ptr));
   return usable_size;
-}
-
-void MemprofSoftRssLimitExceededCallback(bool limit_exceeded) {
-  instance.SetRssLimitExceeded(limit_exceeded);
 }
 
 } // namespace __memprof

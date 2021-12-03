@@ -566,7 +566,7 @@ define void @too_many_args_call_too_many_args_use_workitem_id_x(
 ; FIXEDABI: v_and_b32_e32 v31, 0x3ff, v31
 ; FIXEDABI-NEXT: {{flat|global}}_store_dword v{{\[[0-9]+:[0-9]+\]}}, v31
 
-; FIXEDABI: buffer_load_dword v0, off, s[0:3], s32{{$}}
+; FIXEDABI: buffer_load_dword v31, off, s[0:3], s32{{$}}
 ; FIXEDABI: {{flat|global}}_store_dword v{{\[[0-9]+:[0-9]+\]}}, v0
 ; FIXEDABI: buffer_load_dword v0, off, s[0:3], s32 offset:4 glc{{$}}
 ; FIXEDABI: s_setpc_b64
