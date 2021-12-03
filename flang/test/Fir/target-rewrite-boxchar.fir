@@ -93,3 +93,13 @@ fir.global @name constant : !fir.char<1,9> {
   //constant 1
   fir.has_value %str : !fir.char<1,9>
 }
+
+// Test that we rewrite the fir.address_of operator
+// INT32-LABEL: @addrof
+// INT64-LABEL: @addrof
+func @addrof() {
+  // INT32: {{.*}} = fir.address_of(@boxcharcallee) : (!fir.ref<!fir.char<1,?>>, i32) -> ()
+  // INT64: {{.*}} = fir.address_of(@boxcharcallee) : (!fir.ref<!fir.char<1,?>>, i64) -> ()
+  %f = fir.address_of(@boxcharcallee) : (!fir.boxchar<1>) -> ()
+  return
+}
