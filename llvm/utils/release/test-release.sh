@@ -307,7 +307,7 @@ function check_program_exists() {
   fi
 }
 
-if [ "$System" != "Darwin" -a "$System" != "SunOS" ]; then
+if [ "$System" != "Darwin" ] && [ "$System" != "SunOS" ] && [ "$System" != "AIX" ]; then
   check_program_exists 'chrpath'
 fi
 
@@ -457,7 +457,7 @@ function test_llvmCore() {
 # Clean RPATH. Libtool adds the build directory to the search path, which is
 # not necessary --- and even harmful --- for the binary packages we release.
 function clean_RPATH() {
-  if [ "$System" = "Darwin" -o "$System" = "SunOS" ]; then
+  if [ "$System" = "Darwin" ] || [ "$System" = "SunOS" ] || [ "$System" = "AIX" ]; then
     return
   fi
   local InstallPath="$1"

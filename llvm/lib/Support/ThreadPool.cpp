@@ -20,50 +20,49 @@ using namespace llvm;
 
 #if LLVM_ENABLE_THREADS
 
-ThreadPool::ThreadPool(ThreadPoolStrategy S)
-    : ThreadCount(S.compute_thread_count()) {
-  // Create ThreadCount threads that will loop forever, wait on QueueCondition
-  // for tasks to be queued or the Pool to be destroyed.
-  Threads.reserve(ThreadCount);
-  for (unsigned ThreadID = 0; ThreadID < ThreadCount; ++ThreadID) {
-    Threads.emplace_back([S, ThreadID, this] {
-      S.apply_thread_strategy(ThreadID);
-      while (true) {
-        std::function<void()> Task;
-        {
-          std::unique_lock<std::mutex> LockGuard(QueueLock);
-          // Wait for tasks to be pushed in the queue
-          QueueCondition.wait(LockGuard,
-                              [&] { return !EnableFlag || !Tasks.empty(); });
-          // Exit condition
-          if (!EnableFlag && Tasks.empty())
-            return;
-          // Yeah, we have a task, grab it and release the lock on the queue
+void ThreadPool::grow() {
+  if (Threads.size() >= MaxThreadCount)
+    return; // Already hit the max thread pool size.
+  if (ActiveThreads + Tasks.size() <= Threads.size())
+    return; // We have enough threads for now.
+  int ThreadID = Threads.size();
+  Threads.emplace_back([this, ThreadID] {
+    Strategy.apply_thread_strategy(ThreadID);
+    while (true) {
+      std::function<void()> Task;
+      {
+        std::unique_lock<std::mutex> LockGuard(QueueLock);
+        // Wait for tasks to be pushed in the queue
+        QueueCondition.wait(LockGuard,
+                            [&] { return !EnableFlag || !Tasks.empty(); });
+        // Exit condition
+        if (!EnableFlag && Tasks.empty())
+          return;
+        // Yeah, we have a task, grab it and release the lock on the queue
 
-          // We first need to signal that we are active before popping the queue
-          // in order for wait() to properly detect that even if the queue is
-          // empty, there is still a task in flight.
-          ++ActiveThreads;
-          Task = std::move(Tasks.front());
-          Tasks.pop();
-        }
-        // Run the task we just grabbed
-        Task();
-
-        bool Notify;
-        {
-          // Adjust `ActiveThreads`, in case someone waits on ThreadPool::wait()
-          std::lock_guard<std::mutex> LockGuard(QueueLock);
-          --ActiveThreads;
-          Notify = workCompletedUnlocked();
-        }
-        // Notify task completion if this is the last active thread, in case
-        // someone waits on ThreadPool::wait().
-        if (Notify)
-          CompletionCondition.notify_all();
+        // We first need to signal that we are active before popping the queue
+        // in order for wait() to properly detect that even if the queue is
+        // empty, there is still a task in flight.
+        ++ActiveThreads;
+        Task = std::move(Tasks.front());
+        Tasks.pop();
       }
-    });
-  }
+      // Run the task we just grabbed
+      Task();
+
+      bool Notify;
+      {
+        // Adjust `ActiveThreads`, in case someone waits on ThreadPool::wait()
+        std::lock_guard<std::mutex> LockGuard(QueueLock);
+        --ActiveThreads;
+        Notify = workCompletedUnlocked();
+      }
+      // Notify task completion if this is the last active thread, in case
+      // someone waits on ThreadPool::wait().
+      if (Notify)
+        CompletionCondition.notify_all();
+    }
+  });
 }
 
 void ThreadPool::wait() {
@@ -73,6 +72,7 @@ void ThreadPool::wait() {
 }
 
 bool ThreadPool::isWorkerThread() const {
+  std::unique_lock<std::mutex> LockGuard(QueueLock);
   llvm::thread::id CurrentThreadId = llvm::this_thread::get_id();
   for (const llvm::thread &Thread : Threads)
     if (CurrentThreadId == Thread.get_id())

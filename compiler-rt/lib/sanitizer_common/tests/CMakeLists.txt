@@ -27,6 +27,7 @@ set(SANITIZER_UNITTESTS
   sanitizer_libc_test.cpp
   sanitizer_linux_test.cpp
   sanitizer_list_test.cpp
+  sanitizer_lzw_test.cpp
   sanitizer_mac_test.cpp
   sanitizer_mutex_test.cpp
   sanitizer_nolibc_test.cpp
