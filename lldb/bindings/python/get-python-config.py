@@ -30,7 +30,17 @@ def main():
         # lldb's python lib will be put in the correct place for python to find it.
         # If not, you'll have to use lldb -P or lldb -print-script-interpreter-info
         # to figure out where it is.
-        print(relpath_nodots(sysconfig.get_path("platlib"), sys.prefix))
+        try:
+            print(relpath_nodots(sysconfig.get_path("platlib"), sys.prefix))
+        except ValueError:
+            # Try to fall back to something reasonable if sysconfig's platlib
+            # is outside of sys.prefix
+            if os.name == 'posix':
+                print('lib/python%d.%d/site-packages' % sys.version_info[:2])
+            elif os.name == 'nt':
+                print('Lib\\site-packages')
+            else:
+                raise
     elif args.variable_name == "LLDB_PYTHON_EXE_RELATIVE_PATH":
         tried = list()
         exe = sys.executable
