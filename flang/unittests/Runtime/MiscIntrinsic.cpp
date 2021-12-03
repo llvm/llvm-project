@@ -68,3 +68,21 @@ TEST(MiscIntrinsic, TransferSize) {
   EXPECT_EQ(result.OffsetElement<float>()[1], 2.2F);
   result.Destroy();
 }
+TEST(MiscIntrinsic, TransferSizeScalarMold) {
+  StaticDescriptor<2, true, 2> staticDesc[2];
+  auto &result{staticDesc[0].descriptor()};
+  std::complex<float> sourecStorage{1.1F, -2.2F};
+  auto source{Descriptor::Create(TypeCategory::Complex, 4,
+      reinterpret_cast<void *>(&sourecStorage), 0, nullptr,
+      CFI_attribute_pointer)};
+  auto &mold{staticDesc[1].descriptor()};
+  mold.Establish(TypeCategory::Real, 4, nullptr, 0, nullptr);
+  RTNAME(TransferSize)(result, *source, mold, __FILE__, __LINE__, 2);
+  EXPECT_EQ(result.rank(), 1);
+  EXPECT_EQ(result.GetDimension(0).LowerBound(), 1);
+  EXPECT_EQ(result.GetDimension(0).Extent(), 2);
+  EXPECT_EQ(result.type().raw(), (TypeCode{TypeCategory::Real, 4}.raw()));
+  EXPECT_EQ(result.OffsetElement<float>()[0], 1.1F);
+  EXPECT_EQ(result.OffsetElement<float>()[1], -2.2F);
+  result.Destroy();
+}
