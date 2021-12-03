@@ -7331,20 +7331,12 @@ void SelectionDAGBuilder::visitVPLoadGather(const VPIntrinsic &VPIntrin, EVT VT,
   if (!IsGather) {
     // Do not serialize variable-length loads of constant memory with
     // anything.
-    MemoryLocation ML;
-    if (VT.isScalableVector())
-      ML = MemoryLocation::getAfter(PtrOperand);
-    else
-      ML = MemoryLocation(
-          PtrOperand,
-          LocationSize::precise(
-              DAG.getDataLayout().getTypeStoreSize(VPIntrin.getType())),
-          AAInfo);
+    MemoryLocation ML = MemoryLocation::getAfter(PtrOperand, AAInfo);
     AddToChain = !AA || !AA->pointsToConstantMemory(ML);
     SDValue InChain = AddToChain ? DAG.getRoot() : DAG.getEntryNode();
     MachineMemOperand *MMO = DAG.getMachineFunction().getMachineMemOperand(
         MachinePointerInfo(PtrOperand), MachineMemOperand::MOLoad,
-        VT.getStoreSize().getKnownMinSize(), *Alignment, AAInfo, Ranges);
+        MemoryLocation::UnknownSize, *Alignment, AAInfo, Ranges);
     LD = DAG.getLoadVP(VT, DL, InChain, OpValues[0], OpValues[1], OpValues[2],
                        MMO, false /*IsExpanding */);
   } else {
@@ -7395,7 +7387,7 @@ void SelectionDAGBuilder::visitVPStoreScatter(const VPIntrinsic &VPIntrin,
   if (!IsScatter) {
     MachineMemOperand *MMO = DAG.getMachineFunction().getMachineMemOperand(
         MachinePointerInfo(PtrOperand), MachineMemOperand::MOStore,
-        VT.getStoreSize().getKnownMinSize(), *Alignment, AAInfo);
+        MemoryLocation::UnknownSize, *Alignment, AAInfo);
     ST =
         DAG.getStoreVP(getMemoryRoot(), DL, OpValues[0], OpValues[1],
                        OpValues[2], OpValues[3], MMO, false /* IsTruncating */);
