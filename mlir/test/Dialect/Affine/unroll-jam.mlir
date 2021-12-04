@@ -3,7 +3,6 @@
 
 // CHECK-DAG: [[$MAP_PLUS_1:#map[0-9]+]] = affine_map<(d0) -> (d0 + 1)>
 // CHECK-DAG: [[$MAP_DIV_OFFSET:#map[0-9]+]] = affine_map<()[s0] -> (((s0 - 1) floordiv 2) * 2 + 1)>
-// CHECK-DAG: [[$MAP_MULTI_RES:#map[0-9]+]] = affine_map<()[s0, s1] -> ((s0 floordiv 2) * 2, (s1 floordiv 2) * 2, 1024)>
 // CHECK-DAG: [[$MAP_SYM_UB:#map[0-9]+]] = affine_map<()[s0, s1] -> (s0, s1, 1024)>
 
 // UJAM-FOUR-DAG: [[$UBMAP:#map[0-9]+]] = affine_map<()[s0] -> (s0 + 8)>
@@ -104,21 +103,16 @@ func @loop_nest_unknown_count_2(%N : index) {
 func @loop_nest_symbolic_and_min_upper_bound(%M : index, %N : index, %K : index) {
   affine.for %i = 0 to min affine_map<()[s0, s1] -> (s0, s1, 1024)>()[%M, %N] {
     affine.for %j = 0 to %K {
-      "foo"(%i, %j) : (index, index) -> ()
+      "test.foo"(%i, %j) : (index, index) -> ()
     }
   }
   return
 }
-// CHECK-NEXT:  affine.for [[IV0:%arg[0-9]+]] = 0 to min [[$MAP_MULTI_RES]]()[%[[M]], %[[N]]] step 2 {
+// No unroll-and-jam possible here as the lower bound for the cleanup loop won't
+// be representable.
+// CHECK-NEXT:  affine.for [[IV0:%arg[0-9]+]] = 0 to min #map{{.*}}()[%[[M]], %[[N]]] {
 // CHECK-NEXT:    affine.for [[IV1:%arg[0-9]+]] = 0 to %[[K]] {
-// CHECK-NEXT:      "foo"([[IV0]], [[IV1]])
-// CHECK-NEXT:      [[RES:%[0-9]+]] = affine.apply [[$MAP_PLUS_1]]([[IV0]])
-// CHECK-NEXT:      "foo"([[RES]], [[IV1]])
-// CHECK-NEXT:    }
-// CHECK-NEXT:  }
-// CHECK-NEXT:  affine.for [[IV0]] = max [[$MAP_MULTI_RES]]()[%[[M]], %[[N]]] to min [[$MAP_SYM_UB]]()[%[[M]], %[[N]]] {
-// CHECK-NEXT:    affine.for [[IV1]] = 0 to %[[K]] {
-// CHECK-NEXT:      "foo"([[IV0]], [[IV1]])
+// CHECK-NEXT:      "test.foo"([[IV0]], [[IV1]])
 // CHECK-NEXT:    }
 // CHECK-NEXT:  }
 // CHECK-NEXT:  return

@@ -21,7 +21,6 @@
 // UNROLL-BY-4-DAG: [[$MAP5:#map[0-9]+]] = affine_map<(d0)[s0] -> (d0 + s0 + 1)>
 // UNROLL-BY-4-DAG: [[$MAP6:#map[0-9]+]] = affine_map<(d0, d1) -> (d0 * 16 + d1)>
 // UNROLL-BY-4-DAG: [[$MAP11:#map[0-9]+]] = affine_map<(d0) -> (d0)>
-// UNROLL-BY-4-DAG: [[$MAP_TRIP_COUNT_MULTIPLE_FOUR:#map[0-9]+]] = affine_map<()[s0, s1, s2] -> (s0 + ((-s0 + s1) floordiv 4) * 4, s0 + ((-s0 + s2) floordiv 4) * 4, s0 + ((-s0) floordiv 4) * 4 + 1024)>
 
 // UNROLL-FULL-LABEL: func @loop_nest_simplest() {
 func @loop_nest_simplest() {
@@ -558,20 +557,15 @@ func @loop_nest_symbolic_bound_with_step(%N : index) {
 // UNROLL-BY-4-LABEL: func @loop_nest_symbolic_and_min_upper_bound
 func @loop_nest_symbolic_and_min_upper_bound(%M : index, %N : index, %K : index) {
   affine.for %i = %M to min affine_map<()[s0, s1] -> (s0, s1, 1024)>()[%N, %K] {
-    "foo"() : () -> ()
+    "test.foo"() : () -> ()
   }
   return
 }
-// CHECK-NEXT:  affine.for %arg0 = %arg0 to min [[$MAP_TRIP_COUNT_MULTIPLE_FOUR]]()[%arg0, %arg1, %arg2] step 4 {
-// CHECK-NEXT:    "foo"() : () -> ()
-// CHECK-NEXT:    "foo"() : () -> ()
-// CHECK-NEXT:    "foo"() : () -> ()
-// CHECK-NEXT:    "foo"() : () -> ()
-// CHECK-NEXT:  }
-// CHECK-NEXT:  affine.for %arg1 = max [[$MAP_TRIP_COUNT_MULTIPLE_FOUR]]()[%arg0, %arg1, %arg2] to min #map28()[%arg1, %arg2] {
-// CHECK-NEXT:    "foo"() : () -> ()
-// CHECK-NEXT:  }
-// CHECK-NEXT:  return
+// No unrolling here.
+// UNROLL-BY-4:      affine.for %{{.*}} = %{{.*}} to min #map{{.*}}()[%{{.*}}, %{{.*}}] {
+// UNROLL-BY-4-NEXT:   "test.foo"() : () -> ()
+// UNROLL-BY-4-NEXT: }
+// UNROLL-BY-4-NEXT: return
 
 // The trip count here is a multiple of four, but this can be inferred only
 // through composition. Check for no cleanup scf.
@@ -587,6 +581,28 @@ func @loop_nest_non_trivial_multiple_upper_bound(%M : index, %N : index) {
 // UNROLL-BY-4: affine.for %arg2 = 0 to min
 // UNROLL-BY-4-NOT: for
 // UNROLL-BY-4: return
+
+// UNROLL-BY-4-LABEL: func @multi_upper_bound
+func @multi_upper_bound(%arg0: index) {
+  affine.for %i = 0 to min affine_map<()[s0] -> (8 * s0, 12 * s0)>()[%arg0] {
+    "test.foo"() : () -> ()
+  }
+  // No unrolling possible here.
+  // UNROLL-BY-4: affine.for %{{.*}} = 0 to min #map{{.*}}()[%{{.*}}]
+  return
+}
+
+// UNROLL-BY-4-LABEL: func @multi_lower_bound
+func @multi_lower_bound(%arg0: index) {
+  affine.for %i = max affine_map<()[s0] -> (8 * s0, 12 * s0)>()[%arg0] to 100 {
+    "test.foo"() : () -> ()
+  }
+  // TODO: Extend getTripCountMapAndOperands to handle multi-result lower bound
+  // maps.
+  // UNROLL-BY-4: affine.for %{{.*}} = max #map{{.*}}()[%{{.*}}] to 100
+  // UNROLL-BY-4-NOT: affine.for
+  return
+}
 
 // UNROLL-BY-4-LABEL: func @loop_nest_non_trivial_multiple_upper_bound_alt
 func @loop_nest_non_trivial_multiple_upper_bound_alt(%M : index, %N : index) {
