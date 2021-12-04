@@ -184,10 +184,18 @@ Symbol *SymbolTable::addLazy(StringRef name, ArchiveFile *file,
   bool wasInserted;
   std::tie(s, wasInserted) = insert(name, file);
 
-  if (wasInserted)
+  if (wasInserted) {
     replaceSymbol<LazySymbol>(s, file, sym);
-  else if (isa<Undefined>(s) || (isa<DylibSymbol>(s) && s->isWeakDef()))
+  } else if (isa<Undefined>(s)) {
     file->fetch(sym);
+  } else if (auto *dysym = dyn_cast<DylibSymbol>(s)) {
+    if (dysym->isWeakDef()) {
+      if (dysym->getRefState() != RefState::Unreferenced)
+        file->fetch(sym);
+      else
+        replaceSymbol<LazySymbol>(s, file, sym);
+    }
+  }
   return s;
 }
 
