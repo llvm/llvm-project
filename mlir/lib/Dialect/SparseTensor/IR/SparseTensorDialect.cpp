@@ -305,6 +305,18 @@ static LogicalResult verify(LexInsertOp op) {
   return success();
 }
 
+static LogicalResult verify(ExpandOp op) {
+  if (!getSparseTensorEncoding(op.tensor().getType()))
+    return op.emitError("expected a sparse tensor for expansion");
+  return success();
+}
+
+static LogicalResult verify(CompressOp op) {
+  if (!getSparseTensorEncoding(op.tensor().getType()))
+    return op.emitError("expected a sparse tensor for compression");
+  return success();
+}
+
 static LogicalResult verify(LoadOp op) {
   if (!getSparseTensorEncoding(op.tensor().getType()))
     return op.emitError("expected a sparse tensor to materialize");

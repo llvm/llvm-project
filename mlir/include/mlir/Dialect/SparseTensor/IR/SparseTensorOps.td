@@ -219,6 +219,81 @@ def SparseTensor_LexInsertOp : SparseTensor_Op<"lex_insert", []>,
                        " type($tensor) `,` type($indices) `,` type($value)";
 }
 
+def SparseTensor_ExpandOp : SparseTensor_Op<"expand", []>,
+    Arguments<(ins AnyTensor:$tensor)>,
+    Results<(outs AnyStridedMemRefOfRank<1>:$values,
+                  StridedMemRefRankOf<[I1],[1]>:$filled,
+                  StridedMemRefRankOf<[Index],[1]>:$added,
+                  Index:$count)> {
+  string summary = "Expands an access pattern for insertion";
+  string description = [{
+    Performs an access pattern expansion for the innermost dimensions of the
+    given tensor. This operation is useful to implement kernels in which a
+    sparse tensor appears as output. This technique is known under several
+    different names and using several alternative implementations,
+    for example, phase counter [Gustavson71], expanded or switch array
+    [Pissanetzky84], in phase scan [Duff90], access pattern expansion [Bik96],
+    and workspaces [Kjolstad2018].
+
+    The values and filled array have a size the suffices for a *dense* innermost
+    dimension (e.g. a full row for matrices). The added array and count are used
+    to store new indices when a false value is encountered in the filled array.
+    All arrays should be allocated before the loop (possibly even shared between
+    loops in a future optimization) so that their *dense* intitialization can be
+    amortized over many iterations. Setting and resetting the dense arrays in
+    the loop nest itself is kept *sparse* by only iterating over set elements
+    through an indirection using the added array, so that the operations are
+    kept proportional to the number of nonzeros.
+
+    Note that this operation is "impure" in the sense that its behavior
+    is solely defined by side-effects and not SSA values. The semantics
+    may be refined over time as our sparse abstractions evolve.
+
+    Example:
+
+    ```mlir
+    %values, %filled, %added, %count = sparse_tensor.expand %0
+      : tensor<4x4xf64, #CSR> to memref<?xf64>, memref<?xi1>, memref<?xindex>, index
+    ```
+  }];
+  let assemblyFormat = "$tensor attr-dict `:` type($tensor) `to` type($values)"
+                       " `,` type($filled) `,` type($added) `,` type($count)";
+}
+
+def SparseTensor_CompressOp : SparseTensor_Op<"compress", []>,
+    Arguments<(ins AnyTensor:$tensor,
+                   StridedMemRefRankOf<[Index],[1]>:$indices,
+                   AnyStridedMemRefOfRank<1>:$values,
+                   StridedMemRefRankOf<[I1],[1]>:$filled,
+                   StridedMemRefRankOf<[Index],[1]>:$added,
+                   Index:$count)> {
+  string summary = "Compressed an access pattern for insertion";
+  string description = [{
+    Finishes a single access pattern by moving the inserted elements
+    into the sparse storage scheme. The values and filled array are reset
+    in a *sparse* fashion by only iterating over set elements through an
+    indirection using the added array, so that the operations are kept
+    proportional to the number of nonzeros. See the 'expand' operation
+    for more details.
+
+    Note that this operation is "impure" in the sense that its behavior
+    is solely defined by side-effects and not SSA values. The semantics
+    may be refined over time as our sparse abstractions evolve.
+
+    Example:
+
+    ```mlir
+    sparse_tensor.compress %0, %1, %values, %filled, %added, %2
+        : tensor<4x4xf64, #CSR>, memref<?xindex>, memref<?xf64>,
+	  memref<?xi1>, memref<?xindex>, index
+    ```
+  }];
+  let assemblyFormat = "$tensor `,` $indices `,` $values `,` $filled `,`"
+                        " $added `,` $count attr-dict `:` type($tensor) `,`"
+			" type($indices) `,` type($values) `,` type($filled) `,`"
+			" type($added) `,` type($count)";
+}
+
 def SparseTensor_LoadOp : SparseTensor_Op<"load", [SameOperandsAndResultType]>,
     Arguments<(ins AnyTensor:$tensor, UnitAttr:$hasInserts)>,
     Results<(outs AnyTensor:$result)> {

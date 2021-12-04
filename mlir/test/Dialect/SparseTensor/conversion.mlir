@@ -441,3 +441,30 @@ func @sparse_insert(%arg0: tensor<128xf32, #SparseVector>,
   return
 }
 
+// CHECK-LABEL: func @sparse_expansion()
+//    %[[S:.*]] = call @sparseDimSize
+//    %[[V:.*]] = memref.alloca(%[[S]]) : memref<?xf64>
+//    %[[F:.*]] = memref.alloca(%[[S]]) : memref<?xi1>
+//    %[[A:.*]] = memref.alloca(%[[S]]) : memref<?xindex>
+//    linalg.fill(%{{.*}}, %[[V]]) : f64, memref<?xf64>
+//    linalg.fill(%{{.*}}, %[[F]]) : i1, memref<?xi1>
+//       CHECK: return
+func @sparse_expansion() {
+  %c = arith.constant 8 : index
+  %0 = sparse_tensor.init [%c, %c] : tensor<8x8xf64, #SparseMatrix>
+  %values, %filled, %added, %count = sparse_tensor.expand %0
+    : tensor<8x8xf64, #SparseMatrix> to memref<?xf64>, memref<?xi1>, memref<?xindex>, index
+  return
+}
+
+// CHECK-LABEL: func @sparse_compression(
+//  CHECK-SAME: %[[A:.*]]: !llvm.ptr<i8>,
+//       CHECK: call @expInsertF64(%[[A]],
+//       CHECK: return
+func @sparse_compression(%arg0: tensor<8x8xf64, #SparseMatrix>,
+                         %arg1: memref<?xindex>, %arg2: memref<?xf64>, %arg3: memref<?xi1>,
+                         %arg4: memref<?xindex>, %arg5: index) {
+  sparse_tensor.compress %arg0, %arg1, %arg2, %arg3, %arg4, %arg5
+    : tensor<8x8xf64, #SparseMatrix>, memref<?xindex>, memref<?xf64>, memref<?xi1>, memref<?xindex>, index
+  return
+}
