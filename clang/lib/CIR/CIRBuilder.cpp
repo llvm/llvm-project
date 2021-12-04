@@ -1188,14 +1188,16 @@ public:
     return mlir::success();
   }
 
-  mlir::LogicalResult buildSimpleStmt(const Stmt *S) {
+  mlir::LogicalResult buildSimpleStmt(const Stmt *S, bool useCurrentScope) {
     switch (S->getStmtClass()) {
     default:
       return mlir::failure();
     case Stmt::DeclStmtClass:
       return buildDeclStmt(cast<DeclStmt>(*S));
     case Stmt::CompoundStmtClass:
-      return buildCompoundStmt(cast<CompoundStmt>(*S));
+      return useCurrentScope
+                 ? buildCompoundStmtWithoutScope(cast<CompoundStmt>(*S))
+                 : buildCompoundStmt(cast<CompoundStmt>(*S));
     case Stmt::ReturnStmtClass:
       return buildReturnStmt(cast<ReturnStmt>(*S));
     case Stmt::NullStmtClass:
@@ -1593,12 +1595,12 @@ public:
         loc, condV, elseS,
         /*thenBuilder=*/
         [&](mlir::OpBuilder &b, mlir::Location loc) {
-          resThen = buildStmt(thenS);
+          resThen = buildStmt(thenS, /*useCurrentScope=*/true);
           builder.create<YieldOp>(getLoc(thenS->getSourceRange().getEnd()));
         },
         /*elseBuilder=*/
         [&](mlir::OpBuilder &b, mlir::Location loc) {
-          resElse = buildStmt(elseS);
+          resElse = buildStmt(elseS, /*useCurrentScope=*/true);
           builder.create<YieldOp>(getLoc(elseS->getSourceRange().getEnd()));
         });
 
@@ -1616,7 +1618,7 @@ public:
     // compares unequal to 0.  The condition must be a scalar type.
     auto ifStmtBuilder = [&]() -> mlir::LogicalResult {
       if (S.getInit())
-        if (buildStmt(S.getInit()).failed())
+        if (buildStmt(S.getInit(), /*useCurrentScope=*/true).failed())
           return mlir::failure();
 
       if (S.getConditionVariable())
@@ -1651,8 +1653,10 @@ public:
     return res;
   }
 
-  mlir::LogicalResult buildStmt(const Stmt *S) {
-    if (mlir::succeeded(buildSimpleStmt(S)))
+  // Build CIR for a statement. useCurrentScope should be true if no
+  // new scopes need be created when finding a compound statement.
+  mlir::LogicalResult buildStmt(const Stmt *S, bool useCurrentScope) {
+    if (mlir::succeeded(buildSimpleStmt(S, useCurrentScope)))
       return mlir::success();
 
     if (astCtx.getLangOpts().OpenMP && astCtx.getLangOpts().OpenMPSimd)
@@ -1860,7 +1864,7 @@ public:
 
   mlir::LogicalResult buildCompoundStmtWithoutScope(const CompoundStmt &S) {
     for (auto *CurStmt : S.body())
-      if (buildStmt(CurStmt).failed())
+      if (buildStmt(CurStmt, /*useCurrentScope=*/false).failed())
         return mlir::failure();
 
     return mlir::success();
@@ -1969,6 +1973,7 @@ void CIRContext::verifyModule() { builder->verifyModule(); }
 bool CIRContext::EmitFunction(const FunctionDecl *FD) {
   CIRCodeGenFunction CCGF{};
   auto func = builder->buildCIR(&CCGF, FD);
+  func->dump();
   assert(func && "should emit function");
   return true;
 }
