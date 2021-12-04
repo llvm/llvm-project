@@ -138,7 +138,7 @@ struct IfOpInterface
       assert(opResult.getType().isa<RankedTensorType>() &&
              "unsupported unranked tensor");
 
-      Value resultBuffer = getResultBuffer(b, opResult, state);
+      Value resultBuffer = state.getResultBuffer(opResult);
       if (!resultBuffer)
         return failure();
 
@@ -204,7 +204,7 @@ struct ForOpInterface
              "unsupported unranked tensor");
 
       // TODO: More general: Matching bbArg does not bufferize to a read.
-      Value resultBuffer = getResultBuffer(b, opResult, state);
+      Value resultBuffer = state.getResultBuffer(opResult);
       if (!resultBuffer)
         return failure();
 
