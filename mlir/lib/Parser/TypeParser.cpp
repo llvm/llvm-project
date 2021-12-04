@@ -504,8 +504,8 @@ Parser::parseDimensionListRanked(SmallVectorImpl<int64_t> &dimensions,
         consumeToken();
       } else {
         // Make sure this integer value is in bound and valid.
-        auto dimension = getToken().getUnsignedIntegerValue();
-        if (!dimension.hasValue())
+        Optional<uint64_t> dimension = getToken().getUInt64IntegerValue();
+        if (!dimension || *dimension > std::numeric_limits<int64_t>::max())
           return emitError("invalid dimension");
         dimensions.push_back((int64_t)dimension.getValue());
         consumeToken(Token::integer);

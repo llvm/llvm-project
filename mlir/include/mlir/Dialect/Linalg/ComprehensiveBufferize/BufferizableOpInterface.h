@@ -245,10 +245,6 @@ bool bufferizesToAliasOnly(OpOperand &opOperand);
 /// themselves (e.g., ExtractSliceOp).
 bool isValueRead(Value value);
 
-/// Return the relationship between the operand and the its corresponding
-/// OpResult that it may alias with. Return None if the op is not bufferizable.
-BufferRelation bufferRelation(OpOperand &opOperand);
-
 /// Starting from `value`, follow the use-def chain in reverse, always selecting
 /// the aliasing OpOperands. Find and return Values for which `condition`
 /// evaluates to true. OpOperands of such matching Values are not traversed any
@@ -297,7 +293,8 @@ struct DialectBufferizationState {
 /// the results of the analysis.
 struct BufferizationState {
   BufferizationState(ModuleOp moduleOp, const BufferizationOptions &options)
-      : aliasInfo(moduleOp), options(options) {}
+      : aliasInfo(moduleOp), options(options),
+        builder(moduleOp->getContext()) {}
 
   // BufferizationState should be passed as a reference.
   BufferizationState(const BufferizationState &) = delete;
@@ -320,6 +317,11 @@ struct BufferizationState {
 
   /// Return `true` if the given value is mapped.
   bool isMapped(Value value) const;
+
+  /// Return the result buffer (memref) for a given OpResult (tensor). Allocate
+  /// a new buffer and copy over data from the existing buffer if out-of-place
+  /// bufferization is necessary.
+  Value getResultBuffer(OpResult result);
 
   /// Mark `op` as obsolete, so that it is deleted after bufferization.
   void markOpObsolete(Operation *op);
@@ -349,12 +351,10 @@ struct BufferizationState {
 
   /// A reference to current bufferization options.
   const BufferizationOptions &options;
-};
 
-/// Return the result buffer (memref) for a given OpResult (tensor). Allocate
-/// a new buffer and copy over data from the existing buffer if out-of-place
-/// bufferization is necessary.
-Value getResultBuffer(OpBuilder &b, OpResult result, BufferizationState &state);
+  /// The OpBuilder used during bufferization.
+  OpBuilder builder;
+};
 
 /// Bufferize all ops in the given region.
 LogicalResult bufferize(Region *region, BufferizationState &state);
@@ -422,7 +422,8 @@ struct AllocationHoistingBarrierOnly
     return OpResult();
   }
 
-  BufferRelation bufferRelation(Operation *op, OpOperand &opOperand) const {
+  BufferRelation bufferRelation(Operation *op, OpResult opResult,
+                                const BufferizationAliasInfo &aliasInfo) const {
     return BufferRelation::None;
   }
 

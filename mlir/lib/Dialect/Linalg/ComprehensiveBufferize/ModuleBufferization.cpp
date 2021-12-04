@@ -454,10 +454,6 @@ struct CallOpInterface
     return OpResult();
   }
 
-  BufferRelation bufferRelation(Operation *op, OpOperand &opOperand) const {
-    return BufferRelation::Equivalent;
-  }
-
   /// In a first approximation, all the function arguments of a FuncOp are
   /// marked inplaceable. For now, it is the responsibility of the `callOp`
   /// bufferization to allow FuncOp that are inplaceable to write inPlace.
@@ -468,10 +464,6 @@ struct CallOpInterface
     assert(isa<CallOp>(callOp.getOperation()) && funcOp &&
            "expected Callop to a FuncOp");
     ModuleBufferizationState &moduleState = getModuleBufferizationState(state);
-
-    // Take a guard before anything else.
-    OpBuilder::InsertionGuard g(b);
-    b.setInsertionPoint(callOp);
 
     // 1. Filter return types:
     //    - if the callee is bodiless / external, we cannot inspect it and we
@@ -600,14 +592,9 @@ struct ReturnOpInterface
   LogicalResult bufferize(Operation *op, OpBuilder &b,
                           BufferizationState &state) const {
     auto returnOp = cast<ReturnOp>(op);
-
-    // Take a guard before anything else.
-    OpBuilder::InsertionGuard g(b);
-    // Cannot insert after returnOp.
-    b.setInsertionPoint(returnOp);
-
     assert(isa<FuncOp>(returnOp->getParentOp()) &&
            "only support FuncOp parent for ReturnOp");
+
     for (OpOperand &operand : returnOp->getOpOperands()) {
       auto tensorType = operand.get().getType().dyn_cast<TensorType>();
       if (!tensorType)
@@ -628,9 +615,6 @@ struct FuncOpInterface
   LogicalResult bufferize(Operation *op, OpBuilder &b,
                           BufferizationState &state) const {
     auto funcOp = cast<FuncOp>(op);
-
-    // Take a guard before anything else.
-    OpBuilder::InsertionGuard g(b);
     b.setInsertionPointToStart(&funcOp.body().front());
 
     // Create BufferCastOps for function args.

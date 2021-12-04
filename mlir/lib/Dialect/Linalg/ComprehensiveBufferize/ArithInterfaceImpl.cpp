@@ -26,21 +26,14 @@ struct ConstantOpInterface
   LogicalResult bufferize(Operation *op, OpBuilder &b,
                           BufferizationState &state) const {
     auto constantOp = cast<arith::ConstantOp>(op);
-    if (!constantOp.getResult().getType().isa<TensorType>())
-      return success();
     assert(constantOp.getType().dyn_cast<RankedTensorType>() &&
            "not a constant ranked tensor");
     auto moduleOp = constantOp->getParentOfType<ModuleOp>();
-    if (!moduleOp) {
+    if (!moduleOp)
       return constantOp.emitError(
           "cannot bufferize constants not within builtin.module op");
-    }
+
     GlobalCreator globalCreator(moduleOp);
-
-    // Take a guard before anything else.
-    OpBuilder::InsertionGuard g(b);
-    b.setInsertionPoint(constantOp);
-
     auto globalMemref = globalCreator.getGlobalFor(constantOp);
     Value memref = b.create<memref::GetGlobalOp>(
         constantOp.getLoc(), globalMemref.type(), globalMemref.getName());
