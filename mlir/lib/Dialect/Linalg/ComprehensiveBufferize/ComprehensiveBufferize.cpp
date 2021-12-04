@@ -622,6 +622,24 @@ static LogicalResult inPlaceAnalysis(SmallVector<Operation *> &ops,
   return success();
 }
 
+/// Analyze all ops that are contained in `op`.
+static LogicalResult inPlaceAnalysis(Operation *op,
+                                     BufferizationAliasInfo &aliasInfo,
+                                     const DominanceInfo &domInfo,
+                                     unsigned analysisFuzzerSeed = 0) {
+  // Collect ops so we can build our own reverse traversal.
+  SmallVector<Operation *> ops;
+  op->walk([&](Operation *op) {
+    // No tensors => no buffers.
+    if (none_of(op->getOperandTypes(), isaTensor) &&
+        none_of(op->getResultTypes(), isaTensor))
+      return;
+    ops.push_back(op);
+  });
+
+  return inPlaceAnalysis(ops, aliasInfo, domInfo, analysisFuzzerSeed);
+}
+
 /// Assert that the current bufferization decisions are consistent.
 static LogicalResult
 checkAliasInfoConsistency(FuncOp funcOp, const DominanceInfo &domInfo,
@@ -685,19 +703,10 @@ LogicalResult mlir::linalg::comprehensive_bufferize::runComprehensiveBufferize(
   if (failed(checkAliasInfoConsistency(funcOp, domInfo, aliasInfo)))
     return failure();
 
-  // Collect ops so we can build our own reverse traversal.
-  SmallVector<Operation *> ops;
-  funcOp.walk([&](Operation *op) {
-    // No tensors => no buffers.
-    if (none_of(op->getOperandTypes(), isaTensor) &&
-        none_of(op->getResultTypes(), isaTensor))
-      return;
-    ops.push_back(op);
-  });
-
   // If the analysis fails, just return.
+  Operation *op = funcOp.getOperation();
   if (failed(
-          inPlaceAnalysis(ops, aliasInfo, domInfo, options.analysisFuzzerSeed)))
+          inPlaceAnalysis(op, aliasInfo, domInfo, options.analysisFuzzerSeed)))
     return failure();
 
   for (const std::unique_ptr<PostAnalysisStep> &step :
