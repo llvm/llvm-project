@@ -1404,10 +1404,10 @@ MachineConstantPool::~MachineConstantPool() {
   // A constant may be a member of both Constants and MachineCPVsSharingEntries,
   // so keep track of which we've deleted to avoid double deletions.
   DenseSet<MachineConstantPoolValue*> Deleted;
-  for (unsigned i = 0, e = Constants.size(); i != e; ++i)
-    if (Constants[i].isMachineConstantPoolEntry()) {
-      Deleted.insert(Constants[i].Val.MachineCPVal);
-      delete Constants[i].Val.MachineCPVal;
+  for (const MachineConstantPoolEntry &C : Constants)
+    if (C.isMachineConstantPoolEntry()) {
+      Deleted.insert(C.Val.MachineCPVal);
+      delete C.Val.MachineCPVal;
     }
   for (MachineConstantPoolValue *CPV : MachineCPVsSharingEntries) {
     if (Deleted.count(CPV) == 0)
