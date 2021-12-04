@@ -40,8 +40,7 @@ public:
   /// execution resources (threads, cores, CPUs)
   /// Defaults to using the maximum execution resources in the system, but
   /// accounting for the affinity mask.
-  ThreadPool(ThreadPoolStrategy S = hardware_concurrency())
-      : Strategy(S), MaxThreadCount(S.compute_thread_count()) {}
+  ThreadPool(ThreadPoolStrategy S = hardware_concurrency());
 
   /// Blocking destructor: the pool will wait for all the threads to complete.
   ~ThreadPool();
