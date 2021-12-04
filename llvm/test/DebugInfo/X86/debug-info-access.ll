@@ -33,10 +33,6 @@
 ;   A a;
 ;   B b;
 ;   U u;
-;
-; CHECK: DW_TAG_subprogram
-; CHECK:     DW_AT_name {{.*}}"free")
-; CHECK-NOT: DW_AT_accessibility
 
 ; CHECK: DW_TAG_member
 ; CHECK:     DW_AT_name {{.*}}"pub_default_static")
@@ -80,6 +76,12 @@
 ; CHECK: DW_TAG_subprogram
 ; CHECK:     DW_AT_name {{.*}}"union_pub_default")
 ; CHECK-NOT: DW_AT_accessibility
+; CHECK: DW_TAG
+;
+; CHECK: DW_TAG_subprogram
+; CHECK:     DW_AT_name {{.*}}"free")
+; CHECK-NOT: DW_AT_accessibility
+; CHECK-NOT: DW_TAG
 ;
 ; ModuleID = '/llvm/tools/clang/test/CodeGenCXX/debug-info-access.cpp'
 source_filename = "test/DebugInfo/X86/debug-info-access.ll"

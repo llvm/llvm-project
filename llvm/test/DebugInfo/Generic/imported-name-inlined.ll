@@ -13,17 +13,21 @@
 ; Ensure that top level imported declarations don't produce an extra degenerate
 ; concrete subprogram definition.
 
+; FIXME: imported entities should only be emitted to the abstract origin if one is present
+
 ; CHECK: DW_TAG_compile_unit
 ; CHECK:   DW_TAG_subprogram
 ; CHECK:     DW_AT_name ("f1")
 ; CHECK:     DW_TAG_imported_declaration
 ; CHECK:     NULL
+; CHECK:   DW_TAG_namespace
+; CHECK:     DW_TAG_subprogram
+; CHECK:     NULL
 ; CHECK:   DW_TAG_subprogram
 ; CHECK:     DW_AT_name ("f2")
 ; CHECK:     DW_TAG_inlined_subroutine
-; CHECK:     NULL
-; CHECK:   DW_TAG_namespace
-; CHECK:     DW_TAG_subprogram
+; CHECK:       DW_TAG_imported_declaration
+; CHECK:       NULL
 ; CHECK:     NULL
 ; CHECK:   NULL
 

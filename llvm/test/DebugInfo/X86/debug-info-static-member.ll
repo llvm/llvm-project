@@ -106,8 +106,6 @@ attributes #1 = { nounwind readnone }
 ; (for variables) or DW_AT_const_value (for constants).
 ;
 ; PRESENT:      .debug_info contents:
-; PRESENT:      DW_TAG_subprogram
-; PRESENT:      DW_TAG_variable
 ; PRESENT:      DW_TAG_variable
 ; PRESENT-NEXT: DW_AT_specification {{.*}} "a"
 ; PRESENT-NEXT: DW_AT_location
@@ -158,8 +156,6 @@ attributes #1 = { nounwind readnone }
 
 ; For Darwin gdb:
 ; DARWINP:      .debug_info contents:
-; DARWINP:      DW_TAG_subprogram
-; DARWINP:      DW_TAG_variable
 ; DARWINP:      DW_TAG_variable
 ; DARWINP-NEXT: DW_AT_specification {{.*}} "a"
 ; DARWINP-NEXT: DW_AT_location

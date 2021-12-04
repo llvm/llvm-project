@@ -4,11 +4,10 @@
 ; RUN: llc -O0 -mtriple=x86_64-unknown-linux-gnu %s -filetype=obj -o %t.o
 ; RUN: llvm-dwarfdump %t.o | FileCheck %s
 ;
-; CHECK: [[ITEM2:0x.+]]:       DW_TAG_variable
-; CHECK:                          DW_AT_name  ("b")
-; CHECK:                       DW_TAG_variable
 ; CHECK: [[ITEM1:0x.+]]:       DW_TAG_variable
 ; CHECK:                          DW_AT_name  ("a")
+; CHECK: [[ITEM2:0x.+]]:       DW_TAG_variable
+; CHECK:                          DW_AT_name  ("b")
 ; CHECK: DW_TAG_namelist
 ; CHECK:    DW_AT_name  ("nml")
 ; CHECK: DW_TAG_namelist_item

@@ -62,6 +62,11 @@ class DwarfCompileUnit final : public DwarfUnit {
   /// The start of the unit macro info within macro section.
   MCSymbol *MacroLabelBegin;
 
+  using ImportedEntityList = SmallVector<const MDNode *, 8>;
+  using ImportedEntityMap = DenseMap<const MDNode *, ImportedEntityList>;
+
+  ImportedEntityMap ImportedEntities;
+
   /// GlobalNames - A map of globally visible named entities for this unit.
   StringMap<const DIE *> GlobalNames;
 
@@ -75,13 +80,8 @@ class DwarfCompileUnit final : public DwarfUnit {
   // ranges/locs.
   const MCSymbol *BaseAddress = nullptr;
 
-  DenseMap<const DILocalScope *, DIE *> LocalScopeDIEs;
-  DenseMap<const DILocalScope *, DIE *> AbstractLocalScopeDIEs;
+  DenseMap<const MDNode *, DIE *> AbstractSPDies;
   DenseMap<const DINode *, std::unique_ptr<DbgEntity>> AbstractEntities;
-
-  /// LocalScopesWithLocalDecls - A list of non-empty local scopes
-  /// (with declaraions of static locals, function-local types, or imports).
-  SmallPtrSet<const DILocalScope *, 8> LocalScopesWithLocalDecls;
 
   /// DWO ID for correlating skeleton and split units.
   uint64_t DWOId = 0;
@@ -92,10 +92,10 @@ class DwarfCompileUnit final : public DwarfUnit {
 
   bool isDwoUnit() const override;
 
-  DenseMap<const DILocalScope *, DIE *> &getAbstractScopeDIEs() {
+  DenseMap<const MDNode *, DIE *> &getAbstractSPDies() {
     if (isDwoUnit() && !DD->shareAcrossDWOCUs())
-      return AbstractLocalScopeDIEs;
-    return DU->getAbstractScopeDIEs();
+      return AbstractSPDies;
+    return DU->getAbstractSPDies();
   }
 
   DenseMap<const DINode *, std::unique_ptr<DbgEntity>> &getAbstractEntities() {
@@ -169,6 +169,17 @@ public:
 
   unsigned getOrCreateSourceID(const DIFile *File) override;
 
+  void addImportedEntity(const DIImportedEntity* IE) {
+    DIScope *Scope = IE->getScope();
+    assert(Scope && "Invalid Scope encoding!");
+    if (!isa<DILocalScope>(Scope))
+      // No need to add imported enities that are not local declaration.
+      return;
+
+    auto *LocalScope = cast<DILocalScope>(Scope)->getNonLexicalBlockFileScope();
+    ImportedEntities[LocalScope].push_back(IE);
+  }
+
   /// addRange - Add an address range to the list of ranges for this unit.
   void addRange(RangeSpan Range);
 
@@ -210,9 +221,6 @@ public:
 
   void createBaseTypeDIEs();
 
-  DIE *findLocalScopeDIE(const DIScope *S);
-  DIE *getOrCreateContextDIE(const DIScope *Ty) override;
-
   /// Construct a DIE for this subprogram scope.
   DIE &constructSubprogramScopeDIE(const DISubprogram *Sub,
                                    LexicalScope *Scope);
@@ -251,9 +259,8 @@ public:
   void constructCallSiteParmEntryDIEs(DIE &CallSiteDIE,
                                       SmallVector<DbgCallSiteParam, 4> &Params);
 
-  /// Construct DIE for an imported entity.
-  DIE *createImportedEntityDIE(const DIImportedEntity *IE);
-  void createAndAddImportedEntityDIE(const DIImportedEntity *IE);
+  /// Construct import_module DIE.
+  DIE *constructImportedEntityDIE(const DIImportedEntity *Module);
 
   void finishSubprogramDefinition(const DISubprogram *SP);
   void finishEntityDefinition(const DbgEntity *Entity);
@@ -350,10 +357,6 @@ public:
   bool hasDwarfPubSections() const;
 
   void addBaseTypeRef(DIEValueList &Die, int64_t Idx);
-
-  void recordLocalScopeWithDecls(const DILocalScope *S) {
-    LocalScopesWithLocalDecls.insert(S);
-  }
 };
 
 } // end namespace llvm

@@ -1,7 +1,4 @@
 ; RUN: llc -mtriple=x86_64-apple-darwin %s -o - -filetype=obj | llvm-dwarfdump - | FileCheck %s
-; CHECK: DW_TAG_subprogram
-; CHECK: DW_TAG_variable
-; CHECK: DW_TAG_variable
 ; CHECK: 0x00000[[G:.*]]:     DW_TAG_variable
 ; CHECK-NEXT:                DW_AT_name	("g")
 ; CHECK: DW_TAG_array_type
