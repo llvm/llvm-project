@@ -53,7 +53,7 @@ class TestSwiftPlaygrounds(TestBase):
                 version = '7.0'
             triple = '{}-{}-{}{}'.format(arch, vendor, os, version)
         else:
-            triple = 'x86_64-apple-macosx10.10'
+            triple = '{}-apple-macosx10.10'.format(platform.machine())
         return triple
 
     def get_run_triple(self):
