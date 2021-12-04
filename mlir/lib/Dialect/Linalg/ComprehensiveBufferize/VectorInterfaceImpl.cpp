@@ -70,7 +70,8 @@ struct TransferWriteOpInterface
     return op->getOpResult(0);
   }
 
-  BufferRelation bufferRelation(Operation *op, OpOperand &opOperand) const {
+  BufferRelation bufferRelation(Operation *op, OpResult opResult,
+                                const BufferizationAliasInfo &aliasInfo) const {
     return BufferRelation::Equivalent;
   }
 

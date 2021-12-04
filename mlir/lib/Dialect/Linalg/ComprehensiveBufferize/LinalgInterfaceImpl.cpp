@@ -132,7 +132,8 @@ struct LinalgOpInterface
     return genericOp->getResult(outputOperandIndex - numOutputBuffers);
   }
 
-  BufferRelation bufferRelation(Operation *op, OpOperand &opOperand) const {
+  BufferRelation bufferRelation(Operation *op, OpResult opResult,
+                                const BufferizationAliasInfo &aliasInfo) const {
     return BufferRelation::Equivalent;
   }
 
@@ -187,7 +188,8 @@ struct TiledLoopOpInterface
     return tiledLoopOp.getTiedOpResult(opOperand);
   }
 
-  BufferRelation bufferRelation(Operation *op, OpOperand &opOperand) const {
+  BufferRelation bufferRelation(Operation *op, OpResult opResult,
+                                const BufferizationAliasInfo &aliasInfo) const {
     return BufferRelation::Equivalent;
   }
 
@@ -409,8 +411,9 @@ LogicalResult mlir::linalg::comprehensive_bufferize::linalg_ext::
             // TODO: Support cases such as extract_slice(init_tensor).
             SmallVector<OpOperand *> opOperands =
                 getAliasingOpOperand(opResult);
-            if (!llvm::all_of(opOperands, [](OpOperand *operand) {
-                  return bufferRelation(*operand) == BufferRelation::Equivalent;
+            if (!llvm::all_of(opOperands, [&](OpOperand *operand) {
+                  return aliasInfo.areEquivalentBufferizedValues(operand->get(),
+                                                                 opResult);
                 }))
               return true;
             return false;

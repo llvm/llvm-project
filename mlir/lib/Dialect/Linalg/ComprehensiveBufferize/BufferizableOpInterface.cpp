@@ -167,8 +167,6 @@ void BufferizationAliasInfo::bufferizeInPlace(OpResult result,
 
   markInPlace(result);
   aliasInfo.unionSets(result, operand.get());
-  if (bufferRelation(operand) == BufferRelation::Equivalent)
-    equivalentInfo.unionSets(result, operand.get());
 }
 
 /// Set the inPlace bufferization spec to false.
@@ -301,19 +299,6 @@ bool mlir::linalg::comprehensive_bufferize::isValueRead(Value value) {
   }
 
   return false;
-}
-
-/// Return the relationship between the operand and the its corresponding
-/// OpResult that it may alias with. Return None if the op is not bufferizable.
-BufferRelation
-mlir::linalg::comprehensive_bufferize::bufferRelation(OpOperand &opOperand) {
-  if (auto bufferizableOp =
-          dyn_cast<BufferizableOpInterface>(opOperand.getOwner()))
-    return bufferizableOp.bufferRelation(opOperand);
-
-  // Unknown op that returns a tensor. The inplace analysis does not support it.
-  // Conservatively return None.
-  return BufferRelation::None;
 }
 
 // Starting from `value`, follow the use-def chain in reverse, always selecting

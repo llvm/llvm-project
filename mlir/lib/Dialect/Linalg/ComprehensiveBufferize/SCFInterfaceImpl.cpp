@@ -67,6 +67,11 @@ struct ExecuteRegionOpInterface
           "scf.execute_region with tensor result not supported");
     return comprehensive_bufferize::bufferize(&executeRegionOp.region(), state);
   }
+
+  BufferRelation bufferRelation(Operation *op, OpResult opResult,
+                                const BufferizationAliasInfo &aliasInfo) const {
+    return BufferRelation::Equivalent;
+  }
 };
 
 struct IfOpInterface
@@ -148,6 +153,19 @@ struct IfOpInterface
 
     return success();
   }
+
+  BufferRelation bufferRelation(Operation *op, OpResult opResult,
+                                const BufferizationAliasInfo &aliasInfo) const {
+    // IfOp results are equivalent to their corresponding yield values if both
+    // yield values are equivalent to each other.
+    auto bufferizableOp = cast<BufferizableOpInterface>(op);
+    SmallVector<OpOperand *> yieldValues =
+        bufferizableOp.getAliasingOpOperand(opResult);
+    assert(yieldValues.size() == 2 && "expected 2 yield values");
+    bool equivalentYields = aliasInfo.areEquivalentBufferizedValues(
+        yieldValues[0]->get(), yieldValues[1]->get());
+    return equivalentYields ? BufferRelation::Equivalent : BufferRelation::None;
+  }
 };
 
 struct ForOpInterface
@@ -174,8 +192,17 @@ struct ForOpInterface
     return forOp.getResultForOpOperand(opOperand);
   }
 
-  BufferRelation bufferRelation(Operation *op, OpOperand &opOperand) const {
-    return BufferRelation::Equivalent;
+  BufferRelation bufferRelation(Operation *op, OpResult opResult,
+                                const BufferizationAliasInfo &aliasInfo) const {
+    // ForOp results are equivalent to their corresponding init_args if the
+    // corresponding iter_args and yield values are equivalent.
+    auto forOp = cast<scf::ForOp>(op);
+    OpOperand &forOperand = forOp.getOpOperandForResult(opResult);
+    auto bbArg = forOp.getRegionIterArgForOpOperand(forOperand);
+    auto yieldOp = cast<scf::YieldOp>(&forOp.getLoopBody().front().back());
+    bool equivalentYield = aliasInfo.areEquivalentBufferizedValues(
+        bbArg, yieldOp->getOperand(opResult.getResultNumber()));
+    return equivalentYield ? BufferRelation::Equivalent : BufferRelation::None;
   }
 
   bool isWritable(Operation *op, Value value) const {
@@ -230,10 +257,8 @@ struct ForOpInterface
       OpOperand &forOperand = forOp.getOpOperandForResult(
           forOp->getResult(operand.getOperandNumber()));
       auto bbArg = forOp.getRegionIterArgForOpOperand(forOperand);
-      Value yieldedBuffer = state.lookupBuffer(operand.get());
-      Value bbArgBuffer = state.lookupBuffer(bbArg);
-      if (!state.aliasInfo.areEquivalentBufferizedValues(yieldedBuffer,
-                                                         bbArgBuffer)) {
+      if (!state.aliasInfo.areEquivalentBufferizedValues(operand.get(),
+                                                         bbArg)) {
         // TODO: this could get resolved with copies but it can also turn into
         // swaps so we need to be careful about order of copies.
         return yieldOp->emitError()
@@ -263,10 +288,6 @@ struct YieldOpInterface
 
   OpResult getAliasingOpResult(Operation *op, OpOperand &opOperand) const {
     return OpResult();
-  }
-
-  BufferRelation bufferRelation(Operation *op, OpOperand &opOperand) const {
-    return BufferRelation::Equivalent;
   }
 
   LogicalResult bufferize(Operation *op, OpBuilder &b,

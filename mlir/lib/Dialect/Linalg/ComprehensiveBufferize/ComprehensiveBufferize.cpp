@@ -640,6 +640,40 @@ static LogicalResult inPlaceAnalysis(Operation *op,
   return inPlaceAnalysis(ops, aliasInfo, domInfo, analysisFuzzerSeed);
 }
 
+/// Analyze equivalence of tied OpResult/OpOperand pairs of the given ops.
+static void equivalenceAnalysis(SmallVector<Operation *> &ops,
+                                BufferizationAliasInfo &aliasInfo) {
+  for (Operation *op : ops)
+    if (auto bufferizableOp = dyn_cast<BufferizableOpInterface>(op))
+      for (OpResult opResult : op->getOpResults())
+        if (opResult.getType().isa<TensorType>())
+          if (aliasInfo.isInPlace(opResult)) {
+            SmallVector<OpOperand *> opOperands =
+                bufferizableOp.getAliasingOpOperand(opResult);
+            if (!opOperands.empty())
+              if (bufferizableOp.bufferRelation(opResult, aliasInfo) ==
+                  BufferRelation::Equivalent)
+                for (OpOperand *opOperand : opOperands)
+                  aliasInfo.unionEquivalenceClasses(opResult, opOperand->get());
+          }
+}
+
+/// Analyze equivalence of tied OpResult/OpOperand pairs of all ops contained
+/// in `op`.
+static void equivalenceAnalysis(Operation *op,
+                                BufferizationAliasInfo &aliasInfo) {
+  // Traverse ops in PostOrder: Nested ops first, then enclosing ops.
+  SmallVector<Operation *> ops;
+  op->walk<WalkOrder::PostOrder>([&](Operation *op) {
+    // No tensors => no buffers.
+    if (none_of(op->getResultTypes(), isaTensor))
+      return;
+    ops.push_back(op);
+  });
+
+  equivalenceAnalysis(ops, aliasInfo);
+}
+
 /// Assert that the current bufferization decisions are consistent.
 static LogicalResult
 checkAliasInfoConsistency(FuncOp funcOp, const DominanceInfo &domInfo,
@@ -708,6 +742,7 @@ LogicalResult mlir::linalg::comprehensive_bufferize::runComprehensiveBufferize(
   if (failed(
           inPlaceAnalysis(op, aliasInfo, domInfo, options.analysisFuzzerSeed)))
     return failure();
+  equivalenceAnalysis(op, aliasInfo);
 
   for (const std::unique_ptr<PostAnalysisStep> &step :
        options.postAnalysisSteps) {
@@ -717,6 +752,7 @@ LogicalResult mlir::linalg::comprehensive_bufferize::runComprehensiveBufferize(
     // Analyze ops that were created by the PostAnalysisStep.
     if (failed(inPlaceAnalysis(newOps, aliasInfo, domInfo)))
       return failure();
+    equivalenceAnalysis(newOps, aliasInfo);
   }
 
   // Annotate operations if we only want to report the analysis.
