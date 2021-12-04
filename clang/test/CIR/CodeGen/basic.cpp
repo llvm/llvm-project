@@ -23,19 +23,34 @@ int *p1() {
 
 int *p2() {
   int *p = nullptr;
-  int x = 0;
-  p = &x;
+  {
+    int x = 0;
+    p = &x;
+    *p = 42;
+  }
   *p = 42;
   return p;
 }
 
 // CHECK: func @p2() -> !cir.ptr<i32> {
-// CHECK:     %0 = cir.alloca i32, cir.ptr <i32>, [cinit]
-// CHECK:     %1 = cir.alloca !cir.ptr<i32>, cir.ptr <!cir.ptr<i32>>, [cinit]
-// CHECK:     cir.store %0, %1 : !cir.ptr<i32>, cir.ptr <!cir.ptr<i32>>
-// CHECK:     %4 = cir.cst(42 : i32) : i32
-// CHECK-NEXT:     %5 = cir.load %1 lvalue_to_rvalue : cir.ptr <!cir.ptr<i32>>, !cir.ptr<i32>
-// CHECK-NEXT:     cir.store %4, %5 : i32, cir.ptr <i32>
+// CHECK-NEXT:    %0 = cir.alloca !cir.ptr<i32>, cir.ptr <!cir.ptr<i32>>, [cinit] {alignment = 8 : i64}
+// CHECK-NEXT:    %1 = cir.cst(#cir.null : !cir.ptr<i32>) : !cir.ptr<i32>
+// CHECK-NEXT:    cir.store %1, %0 : !cir.ptr<i32>, cir.ptr <!cir.ptr<i32>>
+// CHECK-NEXT:    cir.scope {
+// CHECK-NEXT:      %5 = cir.alloca i32, cir.ptr <i32>, [cinit] {alignment = 4 : i64}
+// CHECK-NEXT:      %6 = cir.cst(0 : i32) : i32
+// CHECK-NEXT:      cir.store %6, %5 : i32, cir.ptr <i32>
+// CHECK-NEXT:      cir.store %5, %0 : !cir.ptr<i32>, cir.ptr <!cir.ptr<i32>>
+// CHECK-NEXT:      %7 = cir.cst(42 : i32) : i32
+// CHECK-NEXT:      %8 = cir.load %0 lvalue_to_rvalue : cir.ptr <!cir.ptr<i32>>, !cir.ptr<i32>
+// CHECK-NEXT:      cir.store %7, %8 : i32, cir.ptr <i32>
+// CHECK-NEXT:    }
+// CHECK-NEXT:    %2 = cir.cst(42 : i32) : i32
+// CHECK-NEXT:    %3 = cir.load %0 lvalue_to_rvalue : cir.ptr <!cir.ptr<i32>>, !cir.ptr<i32>
+// CHECK-NEXT:    cir.store %2, %3 : i32, cir.ptr <i32>
+// CHECK-NEXT:    %4 = cir.load %0 lvalue_to_rvalue : cir.ptr <!cir.ptr<i32>>, !cir.ptr<i32>
+// CHECK-NEXT:    cir.return %4 : !cir.ptr<i32>
+// CHECK-NEXT:  }
 
 void b0() { bool x = true, y = false; }
 
