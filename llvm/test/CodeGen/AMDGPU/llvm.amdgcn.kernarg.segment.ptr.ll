@@ -75,14 +75,10 @@ define amdgpu_kernel void @opencl_test_implicit_alignment(i32 addrspace(1)* %out
   ret void
 }
 
-; Mesa implies 16-bytes are always allocated, hsa requires the
-; attribute for the additional space.
 ; ALL-LABEL: {{^}}test_no_kernargs:
-; HSA: enable_sgpr_kernarg_segment_ptr = 0
-; HSA: kernarg_segment_byte_size = 0
+; CO-V2: enable_sgpr_kernarg_segment_ptr = 0
+; CO-V2: kernarg_segment_byte_size = 0
 
-; OS-MESA3D: enable_sgpr_kernarg_segment_ptr = 1
-; OS-MESA3D: kernarg_segment_byte_size = 16
 ; CO-V2: kernarg_segment_alignment = 4
 
 ; HSA: s_mov_b64 [[NULL:s\[[0-9]+:[0-9]+\]]], 0{{$}}

@@ -39,7 +39,7 @@ define amdgpu_kernel void @test_kernel(i8 %a) #0
 ; CHECK-NEXT: - 1
 ; CHECK-NEXT: - 0
 
-attributes #0 = { "amdgpu-implicitarg-num-bytes"="48" }
+attributes #0 = { optnone noinline "amdgpu-implicitarg-num-bytes"="48" }
 
 !1 = !{i32 0}
 !2 = !{!"none"}
