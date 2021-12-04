@@ -516,7 +516,7 @@ void DwarfDebug::addSubprogramNames(const DICompileUnit &CU,
   // well into the name table. Only do that if we are going to actually emit
   // that name.
   if (SP->getLinkageName() != "" && SP->getName() != SP->getLinkageName() &&
-      (useAllLinkageNames() || InfoHolder.getAbstractSPDies().lookup(SP)))
+      (useAllLinkageNames() || InfoHolder.getAbstractScopeDIEs().lookup(SP)))
     addAccelName(CU, SP->getLinkageName(), Die);
 
   // If this is an Objective-C selector name add it to the ObjC accelerator
@@ -1067,6 +1067,45 @@ void DwarfDebug::finishUnitAttributes(const DICompileUnit *DIUnit,
     }
   }
 }
+
+// Collect local scopes that contain any local declarations
+// (excluding local variables) to be sure they will be emitted
+// (see DwarfCompileUnit::createAndAddScopeChildren() for details).
+static void collectLocalScopesWithDeclsFromCU(const DICompileUnit *CUNode,
+                                              DwarfCompileUnit &CU) {
+  auto getLocalScope = [](const DIScope *S) -> const DILocalScope * {
+    if (!S)
+      return nullptr;
+    if (isa<DICommonBlock>(S))
+      S = S->getScope();
+    if (const auto *LScope = dyn_cast_or_null<DILocalScope>(S))
+      return LScope->getNonLexicalBlockFileScope();
+    return nullptr;
+  };
+
+  for (auto *GVE : CUNode->getGlobalVariables())
+    if (auto *LScope = getLocalScope(GVE->getVariable()->getScope()))
+      CU.recordLocalScopeWithDecls(LScope);
+
+  for (auto *Ty : CUNode->getEnumTypes())
+    if (auto *LScope = getLocalScope(Ty->getScope()))
+      CU.recordLocalScopeWithDecls(LScope);
+
+  for (auto *Ty : CUNode->getRetainedTypes())
+    if (DIType *RT = dyn_cast<DIType>(Ty))
+      if (auto *LScope = getLocalScope(RT->getScope()))
+        CU.recordLocalScopeWithDecls(LScope);
+
+  for (auto *IE : CUNode->getImportedEntities())
+    if (auto *LScope = getLocalScope(IE->getScope()))
+      CU.recordLocalScopeWithDecls(LScope);
+
+  // FIXME: We know nothing about local records and typedefs here.
+  // since nothing but local variables (and members of local records)
+  // references them. So that they will be emitted in a first available
+  // parent scope DIE.
+}
+
 // Create new DwarfCompileUnit for the given metadata node with tag
 // DW_TAG_compile_unit.
 DwarfCompileUnit &
@@ -1080,9 +1119,6 @@ DwarfDebug::getOrCreateDwarfCompileUnit(const DICompileUnit *DIUnit) {
       InfoHolder.getUnits().size(), DIUnit, Asm, this, &InfoHolder);
   DwarfCompileUnit &NewCU = *OwnedUnit;
   InfoHolder.addUnit(std::move(OwnedUnit));
-
-  for (auto *IE : DIUnit->getImportedEntities())
-    NewCU.addImportedEntity(IE);
 
   // LTO with assembly output shares a single line table amongst multiple CUs.
   // To avoid the compilation directory being ambiguous, let the line table
@@ -1103,15 +1139,12 @@ DwarfDebug::getOrCreateDwarfCompileUnit(const DICompileUnit *DIUnit) {
 
   CUMap.insert({DIUnit, &NewCU});
   CUDieMap.insert({&NewCU.getUnitDie(), &NewCU});
-  return NewCU;
-}
 
-void DwarfDebug::constructAndAddImportedEntityDIE(DwarfCompileUnit &TheCU,
-                                                  const DIImportedEntity *N) {
-  if (isa<DILocalScope>(N->getScope()))
-    return;
-  if (DIE *D = TheCU.getOrCreateContextDIE(N->getScope()))
-    D->addChild(TheCU.constructImportedEntityDIE(N));
+  // Record local scopes, that have some globals (static locals),
+  // imports or types declared within.
+  collectLocalScopesWithDeclsFromCU(DIUnit, NewCU);
+
+  return NewCU;
 }
 
 // Emit all Dwarf sections that should come prior to the content. Create
@@ -1354,6 +1387,7 @@ void DwarfDebug::endModule() {
   assert(CurFn == nullptr);
   assert(CurMI == nullptr);
 
+  // Collect global variables info.
   DenseMap<DIGlobalVariable *, SmallVector<DwarfCompileUnit::GlobalExpr, 1>>
       GVMap;
   for (const GlobalVariable &Global : MMI->getModule()->globals()) {
@@ -1413,7 +1447,7 @@ void DwarfDebug::endModule() {
     // Emit imported entities last so that the relevant context
     // is already available.
     for (auto *IE : CUNode->getImportedEntities())
-      constructAndAddImportedEntityDIE(*CU, IE);
+      CU->createAndAddImportedEntityDIE(IE);
 
     CU->createBaseTypeDIEs();
   }
