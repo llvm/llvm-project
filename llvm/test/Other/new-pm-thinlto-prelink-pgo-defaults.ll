@@ -121,7 +121,6 @@
 ; CHECK-O23SZ-NEXT: Running pass: CorrelatedValuePropagationPass
 ; CHECK-O23SZ-NEXT: Invalidating analysis: LazyValueAnalysis
 ; CHECK-O-NEXT: Running pass: SimplifyCFGPass
-; CHECK-O3-NEXT: Running pass: AggressiveInstCombinePass
 ; CHECK-O-NEXT: Running pass: InstCombinePass
 ; CHECK-O-NEXT: Running analysis: BlockFrequencyAnalysis on foo
 ; These next two can appear in any order since they are accessed as parameters
@@ -129,6 +128,7 @@
 ; CHECK-O-DAG: Running analysis: LoopAnalysis on foo
 ; CHECK-O-DAG: Running analysis: BranchProbabilityAnalysis on foo
 ; CHECK-O-DAG: Running analysis: PostDominatorTreeAnalysis on foo
+; CHECK-O3-NEXT: Running pass: AggressiveInstCombinePass
 ; CHECK-O1-NEXT: Running pass: LibCallsShrinkWrapPass
 ; CHECK-O2-NEXT: Running pass: LibCallsShrinkWrapPass
 ; CHECK-O3-NEXT: Running pass: LibCallsShrinkWrapPass
