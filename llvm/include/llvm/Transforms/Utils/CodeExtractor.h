@@ -107,6 +107,7 @@ public:
     // the function.
     SmallVector<BasicBlock *, 4> OldTargets;
    // SmallVector<std::pair<BasicBlock*,BasicBlock*> > OldExitingEdges;
+    SmallPtrSet<BasicBlock *, 1> ExitBlocks;
 
     // Suffix to use when creating extracted function (appended to the original
     // function name + "."). If empty, the default is to use the entry block
@@ -114,6 +115,7 @@ public:
     std::string Suffix;
 
 
+   void recomputeExitBlocks();
 
 
 

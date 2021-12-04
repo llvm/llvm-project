@@ -1368,6 +1368,23 @@ static void applyFirstDebugLoc(Function *oldFunction, ArrayRef<BasicBlock*> Bloc
     }
 }
 
+
+void CodeExtractor::recomputeExitBlocks() {
+    OldTargets.clear();
+    ExitBlocks.clear();
+
+
+    for (BasicBlock* Block : Blocks) {
+        for (BasicBlock* Succ :  successors(Block)) {
+            if (Blocks.count(Succ)) continue;
+
+            ExitBlocks.insert(Succ);
+            OldTargets.push_back(Succ);
+        }
+    }
+    NumExitBlocks = ExitBlocks.size();
+}
+
 Function *
 CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
                                  ValueSet &inputs, ValueSet &outputs, bool KeepOldBlocks ) {
@@ -1383,7 +1400,7 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
 
     BlockFrequency EntryFreq;
     DenseMap<BasicBlock *, BlockFrequency> ExitWeights;
-    SmallPtrSet<BasicBlock *, 1> ExitBlocks;
+   // SmallPtrSet<BasicBlock *, 1> ExitBlocks;
 
    // analyzeBeforeExtraction(CEAC,inputs, outputs, EntryFreq,ExitWeights,ExitBlocks);
 
@@ -1404,6 +1421,9 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
 
 
     // analysis, after ret splitting
+  
+
+
     for (BasicBlock *Block : Blocks) {
         for (BasicBlock *Succ : successors(Block)) {
             if (!Blocks.count(Succ)) {
@@ -1412,13 +1432,14 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
                     BlockFrequency &BF = ExitWeights[Succ];
                     BF += BFI->getBlockFreq(Block) * BPI->getEdgeProbability(Block, Succ);
                 }
-                ExitBlocks.insert(Succ);
+               // ExitBlocks.insert(Succ);
             }
         }
     }
-    NumExitBlocks = ExitBlocks.size();
+   // NumExitBlocks = ExitBlocks.size();
 
     
+    recomputeExitBlocks();
 
 
     // canonicalization
@@ -1452,15 +1473,7 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
 
 
 
-        ExitBlocks.clear();
-        for (BasicBlock* Block : Blocks) {
-            for (BasicBlock* Succ :  successors(Block)) {
-                if (Blocks.count(Succ)) continue;
-
-                ExitBlocks.insert(Succ);
-            }
-        }
-        NumExitBlocks = ExitBlocks.size();
+        recomputeExitBlocks();
     }
 
 
