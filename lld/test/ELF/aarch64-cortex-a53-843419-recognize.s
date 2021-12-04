@@ -608,7 +608,7 @@ _start:
 // CHECK-FIX-NEXT:    2440d4:    01 08 40 f9     ldr     x1, [x0, #16]
 // CHECK-FIX-NEXT:    2440d8:    cb ff ff 17     b       0x244004
         .data
-        .globl dat
+        .globl dat1
         .globl dat2
         .globl dat3
 dat1:   .quad 1
