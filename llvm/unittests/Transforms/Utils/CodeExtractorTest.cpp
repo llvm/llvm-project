@@ -181,13 +181,13 @@ TEST(CodeExtractor, ExitBlockOrderingPhis) {
   ReturnInst *FirstReturn = dyn_cast<ReturnInst>(FirstTerm);
   EXPECT_TRUE(FirstReturn);
   ConstantInt *CIFirst = dyn_cast<ConstantInt>(FirstReturn->getReturnValue());
-  EXPECT_TRUE(CIFirst->getLimitedValue() == 1u);
+  EXPECT_TRUE(CIFirst->getLimitedValue() == 0u);
 
   Instruction *NextTerm = NextExitStub->getTerminator();
   ReturnInst *NextReturn = dyn_cast<ReturnInst>(NextTerm);
   EXPECT_TRUE(NextReturn);
   ConstantInt *CINext = dyn_cast<ConstantInt>(NextReturn->getReturnValue());
-  EXPECT_TRUE(CINext->getLimitedValue() == 0u);
+  EXPECT_TRUE(CINext->getLimitedValue() == 1u);
   
   EXPECT_FALSE(verifyFunction(*Outlined));
   EXPECT_FALSE(verifyFunction(*Func));
