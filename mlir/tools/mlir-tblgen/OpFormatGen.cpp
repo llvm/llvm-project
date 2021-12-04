@@ -2724,9 +2724,12 @@ LogicalResult FormatParser::parseLiteral(std::unique_ptr<Element> &element,
   }
 
   // Check that the parsed literal is valid.
-  if (!isValidLiteral(value))
-    return emitError(literalTok.getLoc(), "expected valid literal");
-
+  if (!isValidLiteral(value, [&](Twine diag) {
+        (void)emitError(literalTok.getLoc(),
+                        "expected valid literal but got '" + value +
+                            "': " + diag);
+      }))
+    return failure();
   element = std::make_unique<LiteralElement>(value);
   return ::mlir::success();
 }

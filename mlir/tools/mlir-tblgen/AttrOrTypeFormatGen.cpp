@@ -606,8 +606,11 @@ FormatParser::parseLiteral(ParserContext ctx) {
 
   /// Get the literal spelling without the surrounding "`".
   auto value = curToken.getSpelling().drop_front().drop_back();
-  if (!isValidLiteral(value))
-    return emitError("literal '" + value + "' is not valid");
+  if (!isValidLiteral(value, [&](Twine diag) {
+        (void)emitError("expected valid literal but got '" + value +
+                        "': " + diag);
+      }))
+    return failure();
 
   consumeToken();
   return {std::make_unique<LiteralElement>(value)};
