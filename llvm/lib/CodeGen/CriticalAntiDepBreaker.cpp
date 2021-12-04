@@ -405,8 +405,7 @@ findSuitableFreeRegister(RegRefIter RegRefBegin,
                          const TargetRegisterClass *RC,
                          SmallVectorImpl<unsigned> &Forbid) {
   ArrayRef<MCPhysReg> Order = RegClassInfo.getOrder(RC);
-  for (unsigned i = 0; i != Order.size(); ++i) {
-    unsigned NewReg = Order[i];
+  for (unsigned NewReg : Order) {
     // Don't replace a register with itself.
     if (NewReg == AntiDepReg) continue;
     // Don't replace a register with one that was recently used to repair

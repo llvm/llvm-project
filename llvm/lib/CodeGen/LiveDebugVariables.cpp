@@ -1341,8 +1341,8 @@ UserValue::splitLocation(unsigned OldLocNo, ArrayRef<Register> NewRegs,
   bool DidChange = false;
   LocMap::iterator LocMapI;
   LocMapI.setMap(locInts);
-  for (unsigned i = 0; i != NewRegs.size(); ++i) {
-    LiveInterval *LI = &LIS.getInterval(NewRegs[i]);
+  for (Register NewReg : NewRegs) {
+    LiveInterval *LI = &LIS.getInterval(NewReg);
     if (LI->empty())
       continue;
 
@@ -1500,8 +1500,8 @@ void LDVImpl::splitRegister(Register OldReg, ArrayRef<Register> NewRegs) {
 
   // Map all of the new virtual registers.
   UserValue *UV = lookupVirtReg(OldReg);
-  for (unsigned i = 0; i != NewRegs.size(); ++i)
-    mapVirtReg(NewRegs[i], UV);
+  for (Register NewReg : NewRegs)
+    mapVirtReg(NewReg, UV);
 }
 
 void LiveDebugVariables::

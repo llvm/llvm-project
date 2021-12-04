@@ -554,12 +554,11 @@ bool LoadStoreOpt::mergeBlockStores(MachineBasicBlock &MBB) {
   bool Changed = false;
   // Walk through the block bottom-up, looking for merging candidates.
   StoreMergeCandidate Candidate;
-  for (auto II = MBB.rbegin(), IE = MBB.rend(); II != IE; ++II) {
-    MachineInstr &MI = *II;
+  for (MachineInstr &MI : llvm::reverse(MBB)) {
     if (InstsToErase.contains(&MI))
       continue;
 
-    if (auto StoreMI = dyn_cast<GStore>(&*II)) {
+    if (auto *StoreMI = dyn_cast<GStore>(&MI)) {
       // We have a G_STORE. Add it to the candidate if it writes to an adjacent
       // address.
       if (!addStoreToCandidate(*StoreMI, Candidate)) {

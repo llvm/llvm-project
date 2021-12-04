@@ -80,9 +80,9 @@ bool MachineTraceMetrics::runOnMachineFunction(MachineFunction &Func) {
 void MachineTraceMetrics::releaseMemory() {
   MF = nullptr;
   BlockInfo.clear();
-  for (unsigned i = 0; i != TS_NumStrategies; ++i) {
-    delete Ensembles[i];
-    Ensembles[i] = nullptr;
+  for (Ensemble *&E : Ensembles) {
+    delete E;
+    E = nullptr;
   }
 }
 
@@ -398,9 +398,9 @@ void MachineTraceMetrics::invalidate(const MachineBasicBlock *MBB) {
   LLVM_DEBUG(dbgs() << "Invalidate traces through " << printMBBReference(*MBB)
                     << '\n');
   BlockInfo[MBB->getNumber()].invalidate();
-  for (unsigned i = 0; i != TS_NumStrategies; ++i)
-    if (Ensembles[i])
-      Ensembles[i]->invalidate(MBB);
+  for (Ensemble *E : Ensembles)
+    if (E)
+      E->invalidate(MBB);
 }
 
 void MachineTraceMetrics::verifyAnalysis() const {
@@ -408,9 +408,9 @@ void MachineTraceMetrics::verifyAnalysis() const {
     return;
 #ifndef NDEBUG
   assert(BlockInfo.size() == MF->getNumBlockIDs() && "Outdated BlockInfo size");
-  for (unsigned i = 0; i != TS_NumStrategies; ++i)
-    if (Ensembles[i])
-      Ensembles[i]->verify();
+  for (Ensemble *E : Ensembles)
+    if (E)
+      E->verify();
 #endif
 }
 
@@ -1204,8 +1204,8 @@ unsigned MachineTraceMetrics::Trace::getResourceDepth(bool Bottom) const {
     for (unsigned K = 0; K != PRDepths.size(); ++K)
       PRMax = std::max(PRMax, PRDepths[K] + PRCycles[K]);
   } else {
-    for (unsigned K = 0; K != PRDepths.size(); ++K)
-      PRMax = std::max(PRMax, PRDepths[K]);
+    for (unsigned PRD : PRDepths)
+      PRMax = std::max(PRMax, PRD);
   }
   // Convert to cycle count.
   PRMax = TE.MTM.getCycles(PRMax);

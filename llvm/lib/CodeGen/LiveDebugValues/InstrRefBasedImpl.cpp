@@ -1249,8 +1249,8 @@ bool InstrRefBasedLDV::transferDebugPHI(MachineInstr &MI) {
     std::array<unsigned, 4> CandidateSizes = {64, 32, 16, 8};
     Optional<ValueIDNum> Result = None;
     Optional<LocIdx> SpillLoc = None;
-    for (unsigned int I = 0; I < CandidateSizes.size(); ++I) {
-      unsigned SpillID = MTracker->getLocID(SpillNo, {CandidateSizes[I], 0});
+    for (unsigned CS : CandidateSizes) {
+      unsigned SpillID = MTracker->getLocID(SpillNo, {CS, 0});
       SpillLoc = MTracker->getSpillMLoc(SpillID);
       ValueIDNum Val = MTracker->readMLoc(*SpillLoc);
       // If this value was defined in it's own position, then it was probably
