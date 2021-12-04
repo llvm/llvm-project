@@ -245,10 +245,6 @@ bool bufferizesToAliasOnly(OpOperand &opOperand);
 /// themselves (e.g., ExtractSliceOp).
 bool isValueRead(Value value);
 
-/// Return the relationship between the operand and the its corresponding
-/// OpResult that it may alias with. Return None if the op is not bufferizable.
-BufferRelation bufferRelation(OpOperand &opOperand);
-
 /// Starting from `value`, follow the use-def chain in reverse, always selecting
 /// the aliasing OpOperands. Find and return Values for which `condition`
 /// evaluates to true. OpOperands of such matching Values are not traversed any
@@ -426,7 +422,8 @@ struct AllocationHoistingBarrierOnly
     return OpResult();
   }
 
-  BufferRelation bufferRelation(Operation *op, OpOperand &opOperand) const {
+  BufferRelation bufferRelation(Operation *op, OpResult opResult,
+                                const BufferizationAliasInfo &aliasInfo) const {
     return BufferRelation::None;
   }
 

@@ -167,19 +167,23 @@ def BufferizableOpInterface : OpInterface<"BufferizableOpInterface"> {
       >,
       InterfaceMethod<
         /*desc=*/[{
-          Return the buffer relation between the given OpOperand and its
-          aliasing OpResult when bufferized in-place. Most OpOperands have an
-          "equivalence" relation.
+          Return the buffer relation between the given OpResult and its aliasing
+          OpOperands when bufferized in-place. Most OpOperands have an
+          "equivalence" relation. This method will never be called on OpResults
+          that do not have a tensor type. It will also never be called on
+          OpResults that do not have at least one aliasing OpOperand.
 
           TODO: Support other relations such as "OpOperand is included in
           OpResult".
         }],
         /*retType=*/"BufferRelation",
         /*methodName=*/"bufferRelation",
-        /*args=*/(ins "OpOperand &":$opOperand),
+        /*args=*/(ins "OpResult":$opResult,
+                      "const BufferizationAliasInfo &":$aliasInfo),
         /*methodBody=*/"",
         /*defaultImplementation=*/[{
-          // Does not have to be implemented for ops without tensor OpOperands.
+          // Does not have to be implemented for ops without tensor OpResults
+          // that have an aliasing OpOperand.
           llvm_unreachable("bufferRelation not implemented");
         }]
       >,
