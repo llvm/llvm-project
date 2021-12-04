@@ -54,7 +54,12 @@
 ; FISSION-LABEL: .debug_info.dwo contents:
 ; CHECK: Compile Unit: length = [[CU_SIZE:[0-9a-f]+]]
 
-; CHECK: DW_TAG_structure_type
+; CHECK: [[BAR:^0x........]]: DW_TAG_structure_type
+; CHECK-NEXT: DW_AT_declaration
+; CHECK-NEXT: DW_AT_signature {{.*}} (0x1d02f3be30cc5688)
+; CHECK: [[FLUFFY:^0x........]]: DW_TAG_class_type
+; CHECK-NEXT: DW_AT_declaration
+; CHECK-NEXT: DW_AT_signature {{.*}} (0xb04af47397402e77)
 
 ; Ensure the CU-local type 'walrus' is not placed in a type unit.
 ; CHECK: [[WALRUS:^0x........]]: DW_TAG_structure_type
@@ -62,13 +67,6 @@
 ; CHECK-NEXT: DW_AT_byte_size
 ; CHECK-NEXT: DW_AT_decl_file
 ; CHECK-NEXT: DW_AT_decl_line
-
-; CHECK: [[BAR:^0x........]]: DW_TAG_structure_type
-; CHECK-NEXT: DW_AT_declaration
-; CHECK-NEXT: DW_AT_signature {{.*}} (0x1d02f3be30cc5688)
-; CHECK: [[FLUFFY:^0x........]]: DW_TAG_class_type
-; CHECK-NEXT: DW_AT_declaration
-; CHECK-NEXT: DW_AT_signature {{.*}} (0xb04af47397402e77)
 
 ; CHECK: [[WOMBAT:^0x........]]: DW_TAG_structure_type
 ; CHECK-NEXT: DW_AT_declaration
@@ -123,10 +121,10 @@
 ; CHECK-LABEL: .debug_line contents:
 ; CHECK: Line table prologue
 ; CHECK-NOT: file_names[
-; CHECK: file_names[
-; CHECK-NEXT: name: "bar.cpp"
 ; SINGLE: file_names[
 ; SINGLE-NEXT: name: "bar.h"
+; CHECK: file_names[
+; CHECK-NEXT: name: "bar.cpp"
 ; CHECK-NOT: file_names[
 
 ; FISSION: .debug_line.dwo contents:

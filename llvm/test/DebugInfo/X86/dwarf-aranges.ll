@@ -8,21 +8,21 @@
 ; -- alignment --
 ; CHECK-NEXT: .zero 4,255
 
-; <text section> - it should have made one span covering all functions in this CU.
-; CHECK-NEXT: .quad .Lfunc_begin0
-; CHECK-NEXT: .quad .Lsec_end0-.Lfunc_begin0
-
 ; <data section> - it should have made one span covering all vars in this CU.
 ; CHECK-NEXT: .quad some_data
-; CHECK-NEXT: .quad .Lsec_end1-some_data
+; CHECK-NEXT: .quad .Lsec_end0-some_data
 
 ; <other sections> - it should have made one span covering all vars in this CU.
 ; CHECK-NEXT: .quad some_other
-; CHECK-NEXT: .quad .Lsec_end2-some_other
+; CHECK-NEXT: .quad .Lsec_end1-some_other
 
 ; <common symbols> - it should have made one span for each symbol.
 ; CHECK-NEXT: .quad some_bss
 ; CHECK-NEXT: .quad 4
+
+; <text section> - it should have made one span covering all functions in this CU.
+; CHECK-NEXT: .quad .Lfunc_begin0
+; CHECK-NEXT: .quad .Lsec_end2-.Lfunc_begin0
 
 ; -- finish --
 ; CHECK-NEXT: # ARange terminator

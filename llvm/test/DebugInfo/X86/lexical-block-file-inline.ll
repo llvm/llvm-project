@@ -32,6 +32,8 @@
 ; CHECK:      DW_TAG_lexical_block
 ; CHECK-NOT: {{DW_TAG|NULL}}
 ; CHECK:        DW_TAG_variable
+; CHECK-NOT: {{DW_TAG|NULL}}
+; CHECK:        DW_TAG_imported_module
 
 ;; Abstract "bar" function
 ; CHECK:    [[Offset_bar]]: DW_TAG_subprogram
@@ -58,6 +60,9 @@
 ; CHECK:        DW_TAG_lexical_block
 ; CHECK-NOT: {{DW_TAG|NULL}}
 ; CHECK:          DW_TAG_variable
+; CHECK-NOT: {{DW_TAG|NULL}}
+; CHECK:          DW_TAG_imported_module
+
 
 ; Function Attrs: alwaysinline nounwind
 define i32 @_Z3barv() #0 !dbg !4 {

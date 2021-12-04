@@ -1,11 +1,11 @@
 ; RUN: llc -arm-global-merge -global-merge-group-by-use=false -filetype=obj < %s | llvm-dwarfdump -debug-info -v - | FileCheck %s
 
-; CHECK: DW_TAG_variable [6]
+; CHECK: DW_TAG_variable
 ; CHECK-NOT: DW_TAG
 ; CHECK:    DW_AT_name {{.*}} "x1"
 ; CHECK-NOT: {{DW_TAG|NULL}}
 ; CHECK:    DW_AT_location [DW_FORM_exprloc]        (DW_OP_addr [[ADDR:0x[0-9a-fA-F]+]])
-; CHECK: DW_TAG_variable [6]
+; CHECK: DW_TAG_variable
 ; CHECK-NOT: DW_TAG
 ; CHECK:    DW_AT_name {{.*}} "x2"
 ; CHECK-NOT: {{DW_TAG|NULL}}

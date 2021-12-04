@@ -27,15 +27,13 @@
 ; The DISubprogram should show up in compile unit a.
 ; CHECK: DW_TAG_compile_unit
 ; CHECK-NOT: DW_TAG
-; CHECK:     DW_AT_name ("a.cpp")
-; CHECK: DW_TAG_subprogram
-; CHECK-NOT: DW_TAG
-; CHECK:     DW_AT_name ("func")
+; CHECK:    DW_AT_name ("b.cpp")
+; CHECK-NOT: DW_TAG_subprogram
 
 ; CHECK: DW_TAG_compile_unit
 ; CHECK-NOT: DW_TAG
-; CHECK:    DW_AT_name ("b.cpp")
-; CHECK-NOT: DW_TAG_subprogram
+; CHECK:     DW_AT_name ("a.cpp")
+; CHECK:     DW_AT_name ("func")
 
 source_filename = "test/DebugInfo/Generic/cross-cu-linkonce-distinct.ll"
 
