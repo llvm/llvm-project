@@ -1828,17 +1828,34 @@ public:
   mlir::LogicalResult buildFunctionBody(const Stmt *Body) {
     const CompoundStmt *S = dyn_cast<CompoundStmt>(Body);
     assert(S && "expected compound stmt");
-    return buildCompoundStmt(*S);
+
+    // We start with function level scope for variables.
+    SymTableScopeTy varScope(symbolTable);
+    return buildCompoundStmtWithoutScope(*S);
   }
 
   mlir::LogicalResult buildCompoundStmt(const CompoundStmt &S) {
-    // Create a scope in the symbol table to hold variable declarations local
-    // to this compound statement.
-    SymTableScopeTy varScope(symbolTable);
-    if (buildCompoundStmtWithoutScope(S).failed())
-      return mlir::failure();
+    mlir::LogicalResult res = mlir::success();
 
-    return mlir::success();
+    auto compoundStmtBuilder = [&]() -> mlir::LogicalResult {
+      if (buildCompoundStmtWithoutScope(S).failed())
+        return mlir::failure();
+
+      return mlir::success();
+    };
+
+    // Add local scope to track new declared variables.
+    SymTableScopeTy varScope(symbolTable);
+    auto locBegin = getLoc(S.getSourceRange().getBegin());
+    auto locEnd = getLoc(S.getSourceRange().getEnd());
+    builder.create<mlir::cir::ScopeOp>(
+        locBegin, mlir::TypeRange(), /*scopeBuilder=*/
+        [&](mlir::OpBuilder &b, mlir::Location loc) {
+          res = compoundStmtBuilder();
+          builder.create<YieldOp>(locEnd);
+        });
+
+    return res;
   }
 
   mlir::LogicalResult buildCompoundStmtWithoutScope(const CompoundStmt &S) {
