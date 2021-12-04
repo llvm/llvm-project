@@ -79,13 +79,13 @@ int if0(int a) {
 // CHECK: cir.scope {
 // CHECK:   %4 = cir.load %1 lvalue_to_rvalue : cir.ptr <i32>, i32
 // CHECK:   %5 = cir.cast(int_to_bool, %4 : i32), !cir.bool
-// CHECK:   cir.if %5 {
-// CHECK:     %6 = cir.cst(3 : i32) : i32
-// CHECK:     cir.store %6, %0 : i32, cir.ptr <i32>
-// CHECK:   } else {
-// CHECK:     %6 = cir.cst(4 : i32) : i32
-// CHECK:     cir.store %6, %0 : i32, cir.ptr <i32>
-// CHECK:   }
+// CHECK-NEXT:   cir.if %5 {
+// CHECK-NEXT:     %6 = cir.cst(3 : i32) : i32
+// CHECK-NEXT:     cir.store %6, %0 : i32, cir.ptr <i32>
+// CHECK-NEXT:   } else {
+// CHECK-NEXT:     %6 = cir.cst(4 : i32) : i32
+// CHECK-NEXT:     cir.store %6, %0 : i32, cir.ptr <i32>
+// CHECK-NEXT:   }
 // CHECK: }
 
 int if1(int a, bool b, bool c) {
@@ -113,18 +113,18 @@ int if1(int a, bool b, bool c) {
 // CHECK:     cir.store %8, %0 : i32, cir.ptr <i32>
 // CHECK:     cir.scope {
 // CHECK:       %9 = cir.load %2 lvalue_to_rvalue : cir.ptr <!cir.bool>, !cir.bool
-// CHECK:       cir.if %9 {
-// CHECK:         %10 = cir.cst(8 : i32) : i32
-// CHECK:         cir.store %10, %0 : i32, cir.ptr <i32>
-// CHECK:       }
+// CHECK-NEXT:       cir.if %9 {
+// CHECK-NEXT:         %10 = cir.cst(8 : i32) : i32
+// CHECK-NEXT:         cir.store %10, %0 : i32, cir.ptr <i32>
+// CHECK-NEXT:       }
 // CHECK:     }
 // CHECK:   } else {
 // CHECK:     cir.scope {
 // CHECK:       %9 = cir.load %1 lvalue_to_rvalue : cir.ptr <!cir.bool>, !cir.bool
-// CHECK:       cir.if %9 {
-// CHECK:         %10 = cir.cst(14 : i32) : i32
-// CHECK:         cir.store %10, %0 : i32, cir.ptr <i32>
-// CHECK:       }
+// CHECK-NEXT:       cir.if %9 {
+// CHECK-NEXT:         %10 = cir.cst(14 : i32) : i32
+// CHECK-NEXT:         cir.store %10, %0 : i32, cir.ptr <i32>
+// CHECK-NEXT:       }
 // CHECK:     }
 // CHECK:     %8 = cir.cst(4 : i32) : i32
 // CHECK:     cir.store %8, %0 : i32, cir.ptr <i32>
