@@ -1973,7 +1973,6 @@ void CIRContext::verifyModule() { builder->verifyModule(); }
 bool CIRContext::EmitFunction(const FunctionDecl *FD) {
   CIRCodeGenFunction CCGF{};
   auto func = builder->buildCIR(&CCGF, FD);
-  func->dump();
   assert(func && "should emit function");
   return true;
 }
