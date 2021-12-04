@@ -29,7 +29,13 @@ define i32 @f3(i32 %a) {
   ret i32 %a
 }
 
+; CHECK-LABLE: name: f4
 define i32 @f4(i32 %a, i32 %b) {
-  %sum = add i32 %a, %b
-  ret i32 %sum
+  %res = and i32 %a, %b
+  ret i32 %res
+}
+
+define i16 @f5(i16 %a, i16 %b) {
+  %res = and i16 %a, %b
+  ret i16 %res
 }
