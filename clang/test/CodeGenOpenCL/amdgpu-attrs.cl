@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -target-cpu tahiti -O0 -emit-llvm -o - %s | FileCheck %s
-// RUN: %clang_cc1 -triple amdgcn-- -target-cpu tahiti -O0 -emit-llvm -o - %s | FileCheck %s -check-prefix=NONAMDHSA
+// RUN: %clang_cc1 -triple amdgcn-- -target-cpu tahiti -O0 -emit-llvm -o - %s | FileCheck %s
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -O0 -emit-llvm -verify -o - %s | FileCheck -check-prefix=X86 %s
 
 __attribute__((amdgpu_flat_work_group_size(0, 0))) // expected-no-diagnostics
@@ -153,8 +153,7 @@ kernel void default_kernel() {
 // X86-NOT: "amdgpu-waves-per-eu"
 // X86-NOT: "amdgpu-num-vgpr"
 // X86-NOT: "amdgpu-num-sgpr"
-// X86-NOT: "amdgpu-implicitarg-num-bytes"
-// NONAMDHSA-NOT: "amdgpu-implicitarg-num-bytes"
+// CHECK-NOT: "amdgpu-implicitarg-num-bytes"
 
 // CHECK-NOT: "amdgpu-flat-work-group-size"="0,0"
 // CHECK-NOT: "amdgpu-waves-per-eu"="0"
@@ -162,33 +161,33 @@ kernel void default_kernel() {
 // CHECK-NOT: "amdgpu-num-sgpr"="0"
 // CHECK-NOT: "amdgpu-num-vgpr"="0"
 
-// CHECK-DAG: attributes [[FLAT_WORK_GROUP_SIZE_32_64]] = {{.*}} "amdgpu-flat-work-group-size"="32,64" "amdgpu-implicitarg-num-bytes"="56"
-// CHECK-DAG: attributes [[FLAT_WORK_GROUP_SIZE_64_64]] = {{.*}} "amdgpu-flat-work-group-size"="64,64" "amdgpu-implicitarg-num-bytes"="56"
-// CHECK-DAG: attributes [[FLAT_WORK_GROUP_SIZE_16_128]] = {{.*}} "amdgpu-flat-work-group-size"="16,128" "amdgpu-implicitarg-num-bytes"="56"
+// CHECK-DAG: attributes [[FLAT_WORK_GROUP_SIZE_32_64]] = {{.*}} "amdgpu-flat-work-group-size"="32,64"
+// CHECK-DAG: attributes [[FLAT_WORK_GROUP_SIZE_64_64]] = {{.*}} "amdgpu-flat-work-group-size"="64,64"
+// CHECK-DAG: attributes [[FLAT_WORK_GROUP_SIZE_16_128]] = {{.*}} "amdgpu-flat-work-group-size"="16,128"
 
-// CHECK-DAG: attributes [[WAVES_PER_EU_2]] = {{.*}} "amdgpu-flat-work-group-size"="1,256"  "amdgpu-implicitarg-num-bytes"="56" "amdgpu-waves-per-eu"="2"
+// CHECK-DAG: attributes [[WAVES_PER_EU_2]] = {{.*}} "amdgpu-flat-work-group-size"="1,256"  "amdgpu-waves-per-eu"="2"
 
-// CHECK-DAG: attributes [[WAVES_PER_EU_2_4]] = {{.*}} "amdgpu-flat-work-group-size"="1,256" "amdgpu-implicitarg-num-bytes"="56" "amdgpu-waves-per-eu"="2,4"
-// CHECK-DAG: attributes [[NUM_SGPR_32]] = {{.*}} "amdgpu-flat-work-group-size"="1,256" "amdgpu-implicitarg-num-bytes"="56" "amdgpu-num-sgpr"="32"
-// CHECK-DAG: attributes [[NUM_VGPR_64]] = {{.*}} "amdgpu-flat-work-group-size"="1,256" "amdgpu-implicitarg-num-bytes"="56" "amdgpu-num-vgpr"="64"
+// CHECK-DAG: attributes [[WAVES_PER_EU_2_4]] = {{.*}} "amdgpu-flat-work-group-size"="1,256" "amdgpu-waves-per-eu"="2,4"
+// CHECK-DAG: attributes [[NUM_SGPR_32]] = {{.*}} "amdgpu-flat-work-group-size"="1,256" "amdgpu-num-sgpr"="32"
+// CHECK-DAG: attributes [[NUM_VGPR_64]] = {{.*}} "amdgpu-flat-work-group-size"="1,256" "amdgpu-num-vgpr"="64"
 
-// CHECK-DAG: attributes [[FLAT_WORK_GROUP_SIZE_32_64_WAVES_PER_EU_2]] = {{.*}} "amdgpu-flat-work-group-size"="32,64" "amdgpu-implicitarg-num-bytes"="56" "amdgpu-waves-per-eu"="2"
-// CHECK-DAG: attributes [[FLAT_WORK_GROUP_SIZE_32_64_WAVES_PER_EU_2_4]] = {{.*}} "amdgpu-flat-work-group-size"="32,64" "amdgpu-implicitarg-num-bytes"="56" "amdgpu-waves-per-eu"="2,4"
-// CHECK-DAG: attributes [[FLAT_WORK_GROUP_SIZE_32_64_NUM_SGPR_32]] = {{.*}} "amdgpu-flat-work-group-size"="32,64" "amdgpu-implicitarg-num-bytes"="56" "amdgpu-num-sgpr"="32"
-// CHECK-DAG: attributes [[FLAT_WORK_GROUP_SIZE_32_64_NUM_VGPR_64]] = {{.*}} "amdgpu-flat-work-group-size"="32,64" "amdgpu-implicitarg-num-bytes"="56" "amdgpu-num-vgpr"="64"
-// CHECK-DAG: attributes [[WAVES_PER_EU_2_NUM_SGPR_32]] = {{.*}} "amdgpu-flat-work-group-size"="1,256" "amdgpu-implicitarg-num-bytes"="56" "amdgpu-num-sgpr"="32" "amdgpu-waves-per-eu"="2"
-// CHECK-DAG: attributes [[WAVES_PER_EU_2_NUM_VGPR_64]] = {{.*}} "amdgpu-flat-work-group-size"="1,256" "amdgpu-implicitarg-num-bytes"="56" "amdgpu-num-vgpr"="64" "amdgpu-waves-per-eu"="2"
-// CHECK-DAG: attributes [[WAVES_PER_EU_2_4_NUM_SGPR_32]] = {{.*}} "amdgpu-flat-work-group-size"="1,256" "amdgpu-implicitarg-num-bytes"="56" "amdgpu-num-sgpr"="32" "amdgpu-waves-per-eu"="2,4"
-// CHECK-DAG: attributes [[WAVES_PER_EU_2_4_NUM_VGPR_64]] = {{.*}} "amdgpu-flat-work-group-size"="1,256" "amdgpu-implicitarg-num-bytes"="56" "amdgpu-num-vgpr"="64" "amdgpu-waves-per-eu"="2,4"
-// CHECK-DAG: attributes [[NUM_SGPR_32_NUM_VGPR_64]] = {{.*}} "amdgpu-flat-work-group-size"="1,256" "amdgpu-implicitarg-num-bytes"="56" "amdgpu-num-sgpr"="32" "amdgpu-num-vgpr"="64"
+// CHECK-DAG: attributes [[FLAT_WORK_GROUP_SIZE_32_64_WAVES_PER_EU_2]] = {{.*}} "amdgpu-flat-work-group-size"="32,64" "amdgpu-waves-per-eu"="2"
+// CHECK-DAG: attributes [[FLAT_WORK_GROUP_SIZE_32_64_WAVES_PER_EU_2_4]] = {{.*}} "amdgpu-flat-work-group-size"="32,64" "amdgpu-waves-per-eu"="2,4"
+// CHECK-DAG: attributes [[FLAT_WORK_GROUP_SIZE_32_64_NUM_SGPR_32]] = {{.*}} "amdgpu-flat-work-group-size"="32,64" "amdgpu-num-sgpr"="32"
+// CHECK-DAG: attributes [[FLAT_WORK_GROUP_SIZE_32_64_NUM_VGPR_64]] = {{.*}} "amdgpu-flat-work-group-size"="32,64" "amdgpu-num-vgpr"="64"
+// CHECK-DAG: attributes [[WAVES_PER_EU_2_NUM_SGPR_32]] = {{.*}} "amdgpu-flat-work-group-size"="1,256" "amdgpu-num-sgpr"="32" "amdgpu-waves-per-eu"="2"
+// CHECK-DAG: attributes [[WAVES_PER_EU_2_NUM_VGPR_64]] = {{.*}} "amdgpu-flat-work-group-size"="1,256" "amdgpu-num-vgpr"="64" "amdgpu-waves-per-eu"="2"
+// CHECK-DAG: attributes [[WAVES_PER_EU_2_4_NUM_SGPR_32]] = {{.*}} "amdgpu-flat-work-group-size"="1,256" "amdgpu-num-sgpr"="32" "amdgpu-waves-per-eu"="2,4"
+// CHECK-DAG: attributes [[WAVES_PER_EU_2_4_NUM_VGPR_64]] = {{.*}} "amdgpu-flat-work-group-size"="1,256" "amdgpu-num-vgpr"="64" "amdgpu-waves-per-eu"="2,4"
+// CHECK-DAG: attributes [[NUM_SGPR_32_NUM_VGPR_64]] = {{.*}} "amdgpu-flat-work-group-size"="1,256" "amdgpu-num-sgpr"="32" "amdgpu-num-vgpr"="64"
 
-// CHECK-DAG: attributes [[FLAT_WORK_GROUP_SIZE_32_64_WAVES_PER_EU_2_NUM_SGPR_32]] = {{.*}} "amdgpu-flat-work-group-size"="32,64" "amdgpu-implicitarg-num-bytes"="56" "amdgpu-num-sgpr"="32" "amdgpu-waves-per-eu"="2"
-// CHECK-DAG: attributes [[FLAT_WORK_GROUP_SIZE_32_64_WAVES_PER_EU_2_NUM_VGPR_64]] = {{.*}} "amdgpu-flat-work-group-size"="32,64" "amdgpu-implicitarg-num-bytes"="56" "amdgpu-num-vgpr"="64" "amdgpu-waves-per-eu"="2"
-// CHECK-DAG: attributes [[FLAT_WORK_GROUP_SIZE_32_64_WAVES_PER_EU_2_4_NUM_SGPR_32]] = {{.*}} "amdgpu-flat-work-group-size"="32,64" "amdgpu-implicitarg-num-bytes"="56" "amdgpu-num-sgpr"="32" "amdgpu-waves-per-eu"="2,4"
-// CHECK-DAG: attributes [[FLAT_WORK_GROUP_SIZE_32_64_WAVES_PER_EU_2_4_NUM_VGPR_64]] = {{.*}} "amdgpu-flat-work-group-size"="32,64" "amdgpu-implicitarg-num-bytes"="56" "amdgpu-num-vgpr"="64" "amdgpu-waves-per-eu"="2,4"
+// CHECK-DAG: attributes [[FLAT_WORK_GROUP_SIZE_32_64_WAVES_PER_EU_2_NUM_SGPR_32]] = {{.*}} "amdgpu-flat-work-group-size"="32,64" "amdgpu-num-sgpr"="32" "amdgpu-waves-per-eu"="2"
+// CHECK-DAG: attributes [[FLAT_WORK_GROUP_SIZE_32_64_WAVES_PER_EU_2_NUM_VGPR_64]] = {{.*}} "amdgpu-flat-work-group-size"="32,64" "amdgpu-num-vgpr"="64" "amdgpu-waves-per-eu"="2"
+// CHECK-DAG: attributes [[FLAT_WORK_GROUP_SIZE_32_64_WAVES_PER_EU_2_4_NUM_SGPR_32]] = {{.*}} "amdgpu-flat-work-group-size"="32,64" "amdgpu-num-sgpr"="32" "amdgpu-waves-per-eu"="2,4"
+// CHECK-DAG: attributes [[FLAT_WORK_GROUP_SIZE_32_64_WAVES_PER_EU_2_4_NUM_VGPR_64]] = {{.*}} "amdgpu-flat-work-group-size"="32,64" "amdgpu-num-vgpr"="64" "amdgpu-waves-per-eu"="2,4"
 
-// CHECK-DAG: attributes [[FLAT_WORK_GROUP_SIZE_32_64_WAVES_PER_EU_2_NUM_SGPR_32_NUM_VGPR_64]] = {{.*}} "amdgpu-flat-work-group-size"="32,64" "amdgpu-implicitarg-num-bytes"="56" "amdgpu-num-sgpr"="32" "amdgpu-num-vgpr"="64" "amdgpu-waves-per-eu"="2"
-// CHECK-DAG: attributes [[FLAT_WORK_GROUP_SIZE_32_64_WAVES_PER_EU_2_4_NUM_SGPR_32_NUM_VGPR_64]] = {{.*}} "amdgpu-flat-work-group-size"="32,64" "amdgpu-implicitarg-num-bytes"="56" "amdgpu-num-sgpr"="32" "amdgpu-num-vgpr"="64" "amdgpu-waves-per-eu"="2,4"
+// CHECK-DAG: attributes [[FLAT_WORK_GROUP_SIZE_32_64_WAVES_PER_EU_2_NUM_SGPR_32_NUM_VGPR_64]] = {{.*}} "amdgpu-flat-work-group-size"="32,64" "amdgpu-num-sgpr"="32" "amdgpu-num-vgpr"="64" "amdgpu-waves-per-eu"="2"
+// CHECK-DAG: attributes [[FLAT_WORK_GROUP_SIZE_32_64_WAVES_PER_EU_2_4_NUM_SGPR_32_NUM_VGPR_64]] = {{.*}} "amdgpu-flat-work-group-size"="32,64" "amdgpu-num-sgpr"="32" "amdgpu-num-vgpr"="64" "amdgpu-waves-per-eu"="2,4"
 
 // CHECK-DAG: attributes [[A_FUNCTION]] = {{.*}}
-// CHECK-DAG: attributes [[DEFAULT_KERNEL_ATTRS]] = {{.*}} "amdgpu-flat-work-group-size"="1,256" "amdgpu-implicitarg-num-bytes"="56"
+// CHECK-DAG: attributes [[DEFAULT_KERNEL_ATTRS]] = {{.*}} "amdgpu-flat-work-group-size"="1,256"
