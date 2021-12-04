@@ -20,6 +20,9 @@ using namespace llvm;
 
 #if LLVM_ENABLE_THREADS
 
+ThreadPool::ThreadPool(ThreadPoolStrategy S)
+    : Strategy(S), MaxThreadCount(S.compute_thread_count()) {}
+
 void ThreadPool::grow() {
   if (Threads.size() >= MaxThreadCount)
     return; // Already hit the max thread pool size.
@@ -94,8 +97,8 @@ ThreadPool::~ThreadPool() {
 #else // LLVM_ENABLE_THREADS Disabled
 
 // No threads are launched, issue a warning if ThreadCount is not 0
-ThreadPool::ThreadPool(ThreadPoolStrategy S)
-    : ThreadCount(S.compute_thread_count()) {
+ThreadPool::ThreadPool(ThreadPoolStrategy S) : MaxThreadCount(1) {
+  int ThreadCount = S.compute_thread_count();
   if (ThreadCount != 1) {
     errs() << "Warning: request a ThreadPool with " << ThreadCount
            << " threads, but LLVM_ENABLE_THREADS has been turned off\n";

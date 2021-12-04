@@ -39,14 +39,10 @@ struct TransferReadOpInterface
   LogicalResult bufferize(Operation *op, OpBuilder &b,
                           BufferizationState &state) const {
     auto transferReadOp = cast<vector::TransferReadOp>(op);
-
-    // Take a guard before anything else.
-    OpBuilder::InsertionGuard g(b);
-    b.setInsertionPoint(op);
-
-    // TransferReadOp always reads from the bufferized op.source().
     assert(transferReadOp.getShapedType().isa<TensorType>() &&
            "only tensor types expected");
+
+    // TransferReadOp always reads from the bufferized op.source().
     Value v = state.lookupBuffer(transferReadOp.source());
     transferReadOp.sourceMutable().assign(v);
     return success();
@@ -81,17 +77,13 @@ struct TransferWriteOpInterface
   LogicalResult bufferize(Operation *op, OpBuilder &b,
                           BufferizationState &state) const {
     auto writeOp = cast<vector::TransferWriteOp>(op);
-
-    // Take a guard before anything else.
-    OpBuilder::InsertionGuard g(b);
-    b.setInsertionPoint(op);
+    assert(writeOp.getShapedType().isa<TensorType>() &&
+           "only tensor types expected");
 
     // Create a new transfer_write on buffer that doesn't have a return value.
     // Leave the previous transfer_write to dead code as it still has uses at
     // this point.
-    assert(writeOp.getShapedType().isa<TensorType>() &&
-           "only tensor types expected");
-    Value resultBuffer = getResultBuffer(b, op->getResult(0), state);
+    Value resultBuffer = state.getResultBuffer(op->getResult(0));
     if (!resultBuffer)
       return failure();
     b.create<vector::TransferWriteOp>(

@@ -372,15 +372,15 @@ Value mlir::linalg::comprehensive_bufferize::findLastPrecedingWrite(
 /// Return the result buffer (memref) for a given OpResult (tensor). Allocate
 /// a new buffer and copy over data from the existing buffer if out-of-place
 /// bufferization is necessary.
-Value mlir::linalg::comprehensive_bufferize::getResultBuffer(
-    OpBuilder &b, OpResult result, BufferizationState &state) {
-  OpBuilder::InsertionGuard guard(b);
+Value mlir::linalg::comprehensive_bufferize::BufferizationState::
+    getResultBuffer(OpResult result) {
+  OpBuilder::InsertionGuard guard(builder);
   Operation *op = result.getOwner();
   SmallVector<OpOperand *> aliasingOperands = getAliasingOpOperand(result);
   assert(!aliasingOperands.empty() && "could not get aliasing OpOperand");
   OpOperand *opOperand = aliasingOperands.front();
   Value operand = opOperand->get();
-  Value operandBuffer = state.lookupBuffer(operand);
+  Value operandBuffer = lookupBuffer(operand);
   // Make sure that all OpOperands are the same buffer. If this is not the case,
   // we would have to materialize a memref value.
   // TODO: Should be looking for checking for "equivalent buffers" instead of
@@ -388,14 +388,14 @@ Value mlir::linalg::comprehensive_bufferize::getResultBuffer(
   // set up yet.
   if (aliasingOperands.size() > 1 &&
       !llvm::all_of(aliasingOperands, [&](OpOperand *o) {
-        return state.lookupBuffer(o->get()) == operandBuffer;
+        return lookupBuffer(o->get()) == operandBuffer;
       })) {
     op->emitError("result buffer is ambiguous");
     return Value();
   }
 
   // If bufferizing out-of-place, allocate a new buffer.
-  if (!state.aliasInfo.isInPlace(result)) {
+  if (!aliasInfo.isInPlace(result)) {
     // Ops with multiple aliasing operands can currently not bufferize
     // out-of-place.
     assert(
@@ -404,9 +404,9 @@ Value mlir::linalg::comprehensive_bufferize::getResultBuffer(
     Location loc = op->getLoc();
     // Move insertion point right after `operandBuffer`. That is where the
     // allocation should be inserted (in the absence of allocation hoisting).
-    setInsertionPointAfter(b, operandBuffer);
+    setInsertionPointAfter(builder, operandBuffer);
     // Allocate the result buffer.
-    Value resultBuffer = state.createAllocDeallocFn(b, loc, operandBuffer);
+    Value resultBuffer = createAllocDeallocFn(builder, loc, operandBuffer);
     bool skipCopy = false;
     // Do not copy if the last preceding write of `operand` is an op that does
     // not write (skipping ops that merely create aliases). E.g., InitTensorOp.
@@ -427,9 +427,9 @@ Value mlir::linalg::comprehensive_bufferize::getResultBuffer(
       skipCopy = true;
     if (!skipCopy) {
       // The copy happens right before the op that is bufferized.
-      b.setInsertionPoint(op);
-      state.options.allocationFns->memCpyFn(b, loc, operandBuffer,
-                                            resultBuffer);
+      builder.setInsertionPoint(op);
+      options.allocationFns->memCpyFn(builder, loc, operandBuffer,
+                                      resultBuffer);
     }
     return resultBuffer;
   }
@@ -459,7 +459,7 @@ mlir::linalg::comprehensive_bufferize::bufferize(Block *block,
 LogicalResult
 mlir::linalg::comprehensive_bufferize::bufferize(Operation *op,
                                                  BufferizationState &state) {
-  OpBuilder b(op->getContext());
+  OpBuilder &b = state.builder;
 
   // Check if op has tensor results or operands.
   auto isaTensor = [](Type t) { return t.isa<TensorType>(); };
