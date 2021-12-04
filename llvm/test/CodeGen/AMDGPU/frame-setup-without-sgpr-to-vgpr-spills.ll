@@ -42,7 +42,7 @@ define void @callee_with_stack_and_call() #0 {
 ; NO-SPILL-TO-VGPR-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:12 ; 4-byte Folded Spill
 ; NO-SPILL-TO-VGPR-NEXT:    s_mov_b32 s33, s32
 ; NO-SPILL-TO-VGPR-NEXT:    s_addk_i32 s32, 0x800
-; NO-SPILL-TO-VGPR-NEXT:    s_mov_b64 s[6:7], exec
+; NO-SPILL-TO-VGPR-NEXT:    s_mov_b64 s[8:9], exec
 ; NO-SPILL-TO-VGPR-NEXT:    s_mov_b64 exec, 3
 ; NO-SPILL-TO-VGPR-NEXT:    buffer_store_dword v1, off, s[0:3], s33 offset:16
 ; NO-SPILL-TO-VGPR-NEXT:    v_writelane_b32 v1, s30, 0
@@ -50,7 +50,7 @@ define void @callee_with_stack_and_call() #0 {
 ; NO-SPILL-TO-VGPR-NEXT:    buffer_store_dword v1, off, s[0:3], s33 offset:4 ; 4-byte Folded Spill
 ; NO-SPILL-TO-VGPR-NEXT:    buffer_load_dword v1, off, s[0:3], s33 offset:16
 ; NO-SPILL-TO-VGPR-NEXT:    s_waitcnt vmcnt(0)
-; NO-SPILL-TO-VGPR-NEXT:    s_mov_b64 exec, s[6:7]
+; NO-SPILL-TO-VGPR-NEXT:    s_mov_b64 exec, s[8:9]
 ; NO-SPILL-TO-VGPR-NEXT:    v_mov_b32_e32 v0, 0
 ; NO-SPILL-TO-VGPR-NEXT:    buffer_store_dword v0, off, s[0:3], s33
 ; NO-SPILL-TO-VGPR-NEXT:    s_waitcnt vmcnt(0)
@@ -79,4 +79,4 @@ define void @callee_with_stack_and_call() #0 {
   ret void
 }
 
-attributes #0 = { nounwind }
+attributes #0 = { nounwind "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" }

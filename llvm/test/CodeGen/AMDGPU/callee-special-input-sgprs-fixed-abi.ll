@@ -256,7 +256,7 @@ define hidden void @use_every_sgpr_input() #1 {
 ; GCN: .amdhsa_system_sgpr_workgroup_id_y 1
 ; GCN: .amdhsa_system_sgpr_workgroup_id_z 1
 ; GCN: .amdhsa_system_sgpr_workgroup_info 0
-; GCN: .amdhsa_system_vgpr_workitem_id 2
+; GCN: .amdhsa_system_vgpr_workitem_id 0
 define amdgpu_kernel void @kern_indirect_use_every_sgpr_input(i8) #1 {
   call void @use_every_sgpr_input()
   ret void
@@ -282,7 +282,7 @@ define amdgpu_kernel void @kern_indirect_use_every_sgpr_input(i8) #1 {
 ; GCN: .amdhsa_system_sgpr_workgroup_id_y 1
 ; GCN: .amdhsa_system_sgpr_workgroup_id_z 1
 ; GCN: .amdhsa_system_sgpr_workgroup_info 0
-; GCN: .amdhsa_system_vgpr_workitem_id 2
+; GCN: .amdhsa_system_vgpr_workitem_id 0
 define amdgpu_kernel void @kern_indirect_use_every_sgpr_input_no_kernargs() #2 {
   call void @use_every_sgpr_input()
   ret void

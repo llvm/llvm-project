@@ -65,8 +65,8 @@ define amdgpu_kernel void @test_bitcast_argument_and_return_types() #0 {
 
 ; GCN-LABEL: {{^}}use_workitem_id_x:
 ; GCN: s_waitcnt
-; GCN-NEXT: v_and_b32_e32 v1, 0x3ff, v1
-; GCN-NEXT: v_add_i32_e32 v0, vcc, v1, v0
+; GCN-NEXT: v_and_b32_e32 [[TMP:v[0-9]+]], 0x3ff, v31
+; GCN-NEXT: v_add_i32_e32 v0, vcc, [[TMP]], v0
 ; GCN-NEXT: s_setpc_b64
 define hidden i32 @use_workitem_id_x(i32 %arg0) #0 {
   %id = call i32 @llvm.amdgcn.workitem.id.x()
@@ -75,7 +75,7 @@ define hidden i32 @use_workitem_id_x(i32 %arg0) #0 {
 }
 
 ; GCN-LABEL: {{^}}test_bitcast_use_workitem_id_x:
-; GCN: v_mov_b32_e32 v1, v0
+; GCN: v_mov_b32_e32 v31, v0
 ; GCN: s_getpc_b64
 ; GCN: s_add_u32 s{{[0-9]+}}, s{{[0-9]+}}, use_workitem_id_x@rel32@lo+4
 ; GCN: s_addc_u32 s{{[0-9]+}}, s{{[0-9]+}}, use_workitem_id_x@rel32@hi+12

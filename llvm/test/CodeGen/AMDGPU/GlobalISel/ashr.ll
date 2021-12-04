@@ -481,6 +481,7 @@ define <16 x i32> @v_ashr_v16i32(<16 x i32> %value, <16 x i32> %amount) {
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    v_ashrrev_i32_e32 v0, v16, v0
+; GCN-NEXT:    buffer_load_dword v16, off, s[0:3], s32
 ; GCN-NEXT:    v_ashrrev_i32_e32 v1, v17, v1
 ; GCN-NEXT:    v_ashrrev_i32_e32 v2, v18, v2
 ; GCN-NEXT:    v_ashrrev_i32_e32 v3, v19, v3
@@ -495,13 +496,15 @@ define <16 x i32> @v_ashr_v16i32(<16 x i32> %value, <16 x i32> %amount) {
 ; GCN-NEXT:    v_ashrrev_i32_e32 v12, v28, v12
 ; GCN-NEXT:    v_ashrrev_i32_e32 v13, v29, v13
 ; GCN-NEXT:    v_ashrrev_i32_e32 v14, v30, v14
-; GCN-NEXT:    v_ashrrev_i32_e32 v15, v31, v15
+; GCN-NEXT:    s_waitcnt vmcnt(0)
+; GCN-NEXT:    v_ashrrev_i32_e32 v15, v16, v15
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-LABEL: v_ashr_v16i32:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX10-NEXT:    buffer_load_dword v31, off, s[0:3], s32
 ; GFX10-NEXT:    v_ashrrev_i32_e32 v0, v16, v0
 ; GFX10-NEXT:    v_ashrrev_i32_e32 v1, v17, v1
 ; GFX10-NEXT:    v_ashrrev_i32_e32 v2, v18, v2
@@ -517,6 +520,7 @@ define <16 x i32> @v_ashr_v16i32(<16 x i32> %value, <16 x i32> %amount) {
 ; GFX10-NEXT:    v_ashrrev_i32_e32 v12, v28, v12
 ; GFX10-NEXT:    v_ashrrev_i32_e32 v13, v29, v13
 ; GFX10-NEXT:    v_ashrrev_i32_e32 v14, v30, v14
+; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    v_ashrrev_i32_e32 v15, v31, v15
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
   %result = ashr <16 x i32> %value, %amount
