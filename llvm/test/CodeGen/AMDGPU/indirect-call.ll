@@ -58,7 +58,7 @@ define amdgpu_kernel void @test_indirect_call_sgpr_ptr(i8) {
 ; GCN-NEXT:     workitem_private_segment_byte_size = 16384
 ; GCN-NEXT:     workgroup_group_segment_byte_size = 0
 ; GCN-NEXT:     gds_segment_byte_size = 0
-; GCN-NEXT:     kernarg_segment_byte_size = 4
+; GCN-NEXT:     kernarg_segment_byte_size = 64
 ; GCN-NEXT:     workgroup_fbarrier_count = 0
 ; GCN-NEXT:     wavefront_sgpr_count = 37
 ; GCN-NEXT:     workitem_vgpr_count = 32
@@ -151,7 +151,7 @@ define amdgpu_kernel void @test_indirect_call_sgpr_ptr(i8) {
 ; GISEL-NEXT:     workitem_private_segment_byte_size = 16384
 ; GISEL-NEXT:     workgroup_group_segment_byte_size = 0
 ; GISEL-NEXT:     gds_segment_byte_size = 0
-; GISEL-NEXT:     kernarg_segment_byte_size = 4
+; GISEL-NEXT:     kernarg_segment_byte_size = 64
 ; GISEL-NEXT:     workgroup_fbarrier_count = 0
 ; GISEL-NEXT:     wavefront_sgpr_count = 37
 ; GISEL-NEXT:     workitem_vgpr_count = 32
@@ -249,7 +249,7 @@ define amdgpu_kernel void @test_indirect_call_sgpr_ptr_arg(i8) {
 ; GCN-NEXT:     workitem_private_segment_byte_size = 16384
 ; GCN-NEXT:     workgroup_group_segment_byte_size = 0
 ; GCN-NEXT:     gds_segment_byte_size = 0
-; GCN-NEXT:     kernarg_segment_byte_size = 4
+; GCN-NEXT:     kernarg_segment_byte_size = 64
 ; GCN-NEXT:     workgroup_fbarrier_count = 0
 ; GCN-NEXT:     wavefront_sgpr_count = 37
 ; GCN-NEXT:     workitem_vgpr_count = 32
@@ -343,7 +343,7 @@ define amdgpu_kernel void @test_indirect_call_sgpr_ptr_arg(i8) {
 ; GISEL-NEXT:     workitem_private_segment_byte_size = 16384
 ; GISEL-NEXT:     workgroup_group_segment_byte_size = 0
 ; GISEL-NEXT:     gds_segment_byte_size = 0
-; GISEL-NEXT:     kernarg_segment_byte_size = 4
+; GISEL-NEXT:     kernarg_segment_byte_size = 64
 ; GISEL-NEXT:     workgroup_fbarrier_count = 0
 ; GISEL-NEXT:     wavefront_sgpr_count = 37
 ; GISEL-NEXT:     workitem_vgpr_count = 32

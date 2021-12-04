@@ -126,6 +126,6 @@ declare i8 addrspace(4)* @llvm.amdgcn.kernarg.segment.ptr() #0
 declare i8 addrspace(4)* @llvm.amdgcn.implicitarg.ptr() #0
 
 attributes #0 = { nounwind readnone }
-attributes #1 = { nounwind }
+attributes #1 = { nounwind "amdgpu-implicitarg-num-bytes"="0" }
 attributes #2 = { nounwind "amdgpu-implicitarg-num-bytes"="48" }
 attributes #3 = { nounwind "amdgpu-implicitarg-num-bytes"="38" }
