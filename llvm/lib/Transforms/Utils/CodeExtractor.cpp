@@ -1404,8 +1404,14 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
 
    // analyzeBeforeExtraction(CEAC,inputs, outputs, EntryFreq,ExitWeights,ExitBlocks);
 
-   // Calculate the entry frequency of the new function before we change the root
-   //   block.
+
+
+    // canonicalization
+    prepareForExtraction(KeepOldBlocks);
+
+
+    // Calculate the entry frequency of the new function before we change the root
+    //   block.
     if (BFI) {
         assert(BPI && "Both BPI and BFI are required to preserve profile info");
         for (BasicBlock *Pred : predecessors(header)) {
@@ -1414,10 +1420,6 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
             EntryFreq += BFI->getBlockFreq(Pred) * BPI->getEdgeProbability(Pred, header);
         }
     }
-
-
-    // canonicalization
-    prepareForExtraction(KeepOldBlocks);
 
 
     // analysis, after ret splitting
