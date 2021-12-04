@@ -1351,28 +1351,6 @@ void CodeExtractor::prepareForExtraction(bool KeepOldBlocks) {
     splitReturnBlocks();
 
 
-    if (KeepOldBlocks) {
-        //SmallPtrSet<BasicBlock *, 1> ExitBlocks;
-        for (BasicBlock *Block : Blocks) {
-            SmallVector<BasicBlock*> Succs;
-            llvm::append_range(Succs, successors(Block) );
-
-            for (BasicBlock *&Succ : Succs) {
-                if (Blocks.count(Succ)) continue;
-
-                if (!Succ->getSinglePredecessor()) {                 
-                 Succ=   SplitEdge(Block, Succ, DT);
-                }
-
-                // Ensure no PHI node in exit block (still possible with single predecessor, e.g. LCSSA)
-                while (auto P = dyn_cast<PHINode>(&Succ->front())) {
-                    assert(P->getNumIncomingValues()==1);
-                    P->replaceAllUsesWith(P->getIncomingValue(0));
-                    P->eraseFromParent();
-                }
-            }
-        }
-    }
 
 }
 
@@ -1442,20 +1420,6 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
 
     
 
-    // analyzis, after ret splitting
-   // DenseMap<BasicBlock*,BasicBlock*> ExitingBlocks;
-    for (BasicBlock *Block : Blocks) {
-        Instruction *TI = Block->getTerminator();
-        for (unsigned i = 0, e = TI->getNumSuccessors(); i != e; ++i) {
-            if (Blocks.count(TI->getSuccessor(i)))
-                continue;
-            BasicBlock *OldTarget = TI->getSuccessor(i);
-            OldTargets.push_back(OldTarget);
-           // ExitingBlocks[Block] = OldTarget;
-        }
-    }
-
-
 
     // canonicalization
     // If we have to split PHI nodes of the entry or exit blocks, do so now.
@@ -1463,6 +1427,59 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
 
     // canonicalization, after ret splitting
     severSplitPHINodesOfExits(ExitBlocks);
+
+
+    if (KeepOldBlocks) {
+        for (BasicBlock *Block : Blocks) {
+            SmallVector<BasicBlock*> Succs;
+            llvm::append_range(Succs, successors(Block) );
+
+            for (BasicBlock *Succ : Succs) {
+                if (Blocks.count(Succ)) continue;
+
+                if (!Succ->getSinglePredecessor()) {                 
+                    Succ=   SplitEdge(Block, Succ, DT);
+                }
+
+                // Ensure no PHI node in exit block (still possible with single predecessor, e.g. LCSSA)
+                while (auto P = dyn_cast<PHINode>(&Succ->front())) {
+                    assert(P->getNumIncomingValues()==1);
+                    P->replaceAllUsesWith(P->getIncomingValue(0));
+                    P->eraseFromParent();
+                }
+            }
+        }
+
+
+
+        ExitBlocks.clear();
+        for (BasicBlock* Block : Blocks) {
+            for (BasicBlock* Succ :  successors(Block)) {
+                if (Blocks.count(Succ)) continue;
+
+                ExitBlocks.insert(Succ);
+            }
+        }
+        NumExitBlocks = ExitBlocks.size();
+    }
+
+
+
+    // analyzis, after ret splitting
+    // DenseMap<BasicBlock*,BasicBlock*> ExitingBlocks;
+    for (BasicBlock *Block : Blocks) {
+        Instruction *TI = Block->getTerminator();
+        for (unsigned i = 0, e = TI->getNumSuccessors(); i != e; ++i) {
+            if (Blocks.count(TI->getSuccessor(i)))
+                continue;
+            BasicBlock *OldTarget = TI->getSuccessor(i);
+            OldTargets.push_back(OldTarget);
+            // ExitingBlocks[Block] = OldTarget;
+        }
+    }
+
+
+
 
 
     // analysis
