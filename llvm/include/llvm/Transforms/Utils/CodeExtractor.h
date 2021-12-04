@@ -38,6 +38,7 @@ class Module;
 class Type;
 class Value;
 class StructType;
+class LoadInst;
 
 /// A cache for the CodeExtractor analysis. The operation \ref
 /// CodeExtractor::extractCodeRegion is guaranteed not to invalidate this
@@ -105,6 +106,7 @@ public:
     // Mapping from the original exit blocks, to the new blocks inside
     // the function.
     SmallVector<BasicBlock *, 4> OldTargets;
+   // SmallVector<std::pair<BasicBlock*,BasicBlock*> > OldExitingEdges;
 
     // Suffix to use when creating extracted function (appended to the original
     // function name + "."). If empty, the default is to use the entry block
@@ -257,7 +259,7 @@ public:
     void analyzeBeforeExtraction(const CodeExtractorAnalysisCache &CEAC, ValueSet &inputs, ValueSet &outputs, BlockFrequency &EntryFreq,DenseMap<BasicBlock *, BlockFrequency> &ExitWeights,     SmallPtrSet<BasicBlock *, 1> &ExitBlocks);
 
 
-    void prepareForExtraction(const CodeExtractorAnalysisCache &CEAC, ValueSet &inputs, ValueSet &outputs);
+    void prepareForExtraction(bool KeepOldBlocks);
 
 
    void extractCodeRegionByCopy(const CodeExtractorAnalysisCache &CEAC,
@@ -274,7 +276,8 @@ public:
        SmallVectorImpl<unsigned> &SwiftErrorArgs,
        std::vector<Value *>  & ReloadOutputs,std::vector<Value *> & Reloads,
        StructType *StructArgTy ,
-       AllocaInst *Struct 
+       AllocaInst *Struct ,
+       function_ref<Value*(int i)> MakeReloadAddress
    );
 
     void moveCodeToFunction(Function *newFunction);
@@ -283,8 +286,6 @@ public:
         BasicBlock *CodeReplacer,
         DenseMap<BasicBlock *, BlockFrequency> &ExitWeights,
         BranchProbabilityInfo *BPI);
-
-
   };
 
 } // end namespace llvm

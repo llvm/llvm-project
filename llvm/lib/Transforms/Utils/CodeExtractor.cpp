@@ -52,6 +52,7 @@
 #include "llvm/IR/User.h"
 #include "llvm/IR/Value.h"
 #include "llvm/IR/Verifier.h"
+#include "llvm/IR/IRBuilder.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/BlockFrequency.h"
 #include "llvm/Support/BranchProbability.h"
@@ -63,6 +64,7 @@
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/Cloning.h"
+#include "llvm/Transforms/Utils/SSAUpdater.h"
 #include <cassert>
 #include <cstdint>
 #include <iterator>
@@ -1340,7 +1342,7 @@ void CodeExtractor::analyzeBeforeExtraction(
 
 
 
-void CodeExtractor::prepareForExtraction(const CodeExtractorAnalysisCache &CEAC, ValueSet &inputs, ValueSet &outputs) {
+void CodeExtractor::prepareForExtraction(bool KeepOldBlocks) {
   //  BasicBlock *header = *Blocks.begin();
   //  Function *oldFunction = header->getParent();
 
@@ -1348,6 +1350,29 @@ void CodeExtractor::prepareForExtraction(const CodeExtractorAnalysisCache &CEAC,
     // that the return is not in the region.
     splitReturnBlocks();
 
+
+    if (KeepOldBlocks) {
+        //SmallPtrSet<BasicBlock *, 1> ExitBlocks;
+        for (BasicBlock *Block : Blocks) {
+            SmallVector<BasicBlock*> Succs;
+            llvm::append_range(Succs, successors(Block) );
+
+            for (BasicBlock *&Succ : Succs) {
+                if (Blocks.count(Succ)) continue;
+
+                if (!Succ->getSinglePredecessor()) {                 
+                 Succ=   SplitEdge(Block, Succ, DT);
+                }
+
+                // Ensure no PHI node in exit block (still possible with single predecessor, e.g. LCSSA)
+                while (auto P = dyn_cast<PHINode>(&Succ->front())) {
+                    assert(P->getNumIncomingValues()==1);
+                    P->replaceAllUsesWith(P->getIncomingValue(0));
+                    P->eraseFromParent();
+                }
+            }
+        }
+    }
 
 }
 
@@ -1391,14 +1416,13 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
         for (BasicBlock *Pred : predecessors(header)) {
             if (Blocks.count(Pred))
                 continue;
-            EntryFreq +=
-                BFI->getBlockFreq(Pred) * BPI->getEdgeProbability(Pred, header);
+            EntryFreq += BFI->getBlockFreq(Pred) * BPI->getEdgeProbability(Pred, header);
         }
     }
 
 
     // canonicalization
-    prepareForExtraction(CEAC,inputs, outputs);
+    prepareForExtraction(KeepOldBlocks);
 
 
     // analysis, after ret splitting
@@ -1453,6 +1477,9 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
     // Find inputs to, outputs from the code region.
     findInputsOutputs(inputs, outputs, SinkingCands);
 
+
+ 
+
 #if 0
     DenseMap<BasicBlock*, SmallVector<Instruction*,1>> ExitValues;
     for (auto&& O : outputs) {
@@ -1484,6 +1511,9 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
     // This takes place of the original loop
     BasicBlock *codeReplacer = BasicBlock::Create(header->getContext(),        "codeRepl", oldFunction,        header);
     auto newHeader = codeReplacer;
+
+    IRBuilder<> CodeReplacerBuilder(codeReplacer);
+
 
       ValueToValueMapTy VMap;
 
@@ -1517,6 +1547,7 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
         NewValues.push_back(RewriteVal);
     }
 
+
     // Set names for input and output arguments.
     if (!AggregateArgs) {
         AI = newFunction->arg_begin();
@@ -1526,8 +1557,8 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
             AI->setName(outputs[i]->getName()+".out");
     }
 
-    std::vector<Value *>   ReloadOutputs;
-    std::vector<Value *>  Reloads;
+    std::vector<Value *> ReloadOutputs;
+    std::vector<Value *> Reloads;
 
 
     // Add inputs as params, or to be filled into the struct
@@ -1546,7 +1577,7 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
         ++ArgNo;
     }
 
-    // TOOD: Pass AllocaBlock
+   
     BasicBlock *     AllocaBlock = &codeReplacer->getParent()->front();
     Module* M = oldFunction->getParent();
     const DataLayout& DL = M->getDataLayout();
@@ -1599,6 +1630,46 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
         }
     }
 
+    Function::arg_iterator OutputArgBegin = newFunction->arg_begin();
+    unsigned FirstOut = inputs.size();
+    if (!AggregateArgs)
+        std::advance(OutputArgBegin, inputs.size());
+
+    using InsertPointTy = IRBuilder<>::InsertPoint;
+    IRBuilder<> Builder(Context);
+    auto MakeReloadAddress = [&](int i) {
+        Value *Output = nullptr;
+        if (AggregateArgs) {
+            Value *Idx[2];
+            Idx[0] = Constant::getNullValue(Type::getInt32Ty(Context));
+            Idx[1] = ConstantInt::get(Type::getInt32Ty(Context), FirstOut + i);
+            Value *GEP = Builder.CreateGEP(StructArgTy, Struct, Idx, Twine("gep_reload_") + outputs[i]->getName());
+            //GetElementPtrInst *GEP = GetElementPtrInst::Create(StructArgTy, Struct, Idx, "gep_reload_" + outputs[i]->getName());
+            //codeReplacer->getInstList().push_back(GEP);
+            Output = GEP;
+        } else {
+            Output = ReloadOutputs[i];
+        }
+        return Output;
+    };
+
+
+#if 0
+    // Undo SSA for output values after the extracted region before dominator analysis is invalidated.
+    if (KeepOldBlocks) {
+        for (auto P : enumerate(outputs)) {
+        auto Idx = P.index();
+        auto OutVal = P.value();
+
+            for (auto &&E : ExitBlocks) {
+                Builder.SetInsertPoint(E->getTerminator());
+                auto Attr = MakeReloadAddress(Idx);
+                Builder.CreateStore(OutVal, );
+            }
+        }
+    }
+#endif
+
 
     // Update the entry count of the function.
     if (BFI) {
@@ -1629,7 +1700,8 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
             StructValues,
             SwiftErrorArgs,ReloadOutputs,
             Reloads,
-            StructArgTy, Struct
+            StructArgTy, Struct,
+            MakeReloadAddress
         );
     } else {
         // Transforms/HotColdSplit/stale-assume-in-original-func.ll
@@ -1718,17 +1790,15 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
         Module *M = newFunction->getParent();
         LLVMContext &Context = M->getContext();
         const DataLayout &DL = M->getDataLayout();
-        CallInst *call = nullptr;
 
 
         // TOOD: Pass AllocaBlock
         BasicBlock *     AllocaBlock = &codeReplacer->getParent()->front();
 
 
-
-
+    
         // Emit the call to the function
-        call = CallInst::Create(newFunction, params,   NumExitBlocks > 1 ? "targetBlock" : "");
+        CallInst *  call = CallInst::Create(newFunction, params,   NumExitBlocks > 1 ? "targetBlock" : "",codeReplacer);
 
 
 
@@ -1740,7 +1810,9 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
             if (auto DL = newFunction->getEntryBlock().getTerminator()->getDebugLoc())
                 call->setDebugLoc(DL);
         }
-        codeReplacer->getInstList().push_back(call);
+       // codeReplacer->getInstList().push_back(call);
+
+
 
         // Set swifterror parameter attributes.
         for (unsigned SwiftErrArgNo : SwiftErrorArgs) {  // TOOD: Move to constructFunction
@@ -1748,27 +1820,19 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
             newFunction->addParamAttr(SwiftErrArgNo, Attribute::SwiftError);
         }
 
-        Function::arg_iterator OutputArgBegin = newFunction->arg_begin();
-        unsigned FirstOut = inputs.size();
-        if (!AggregateArgs)
-            std::advance(OutputArgBegin, inputs.size());
+       // SmallVector<Instruction*> AfterCall;
+
+
+
+
 
         // Reload the outputs passed in by reference.
+        Builder.SetInsertPoint(codeReplacer);
         for (unsigned i = 0, e = outputs.size(); i != e; ++i) {
-            Value *Output = nullptr;
-            if (AggregateArgs) {
-                Value *Idx[2];
-                Idx[0] = Constant::getNullValue(Type::getInt32Ty(Context));
-                Idx[1] = ConstantInt::get(Type::getInt32Ty(Context), FirstOut + i);
-                GetElementPtrInst *GEP = GetElementPtrInst::Create(StructArgTy, Struct, Idx, "gep_reload_" + outputs[i]->getName());
-                codeReplacer->getInstList().push_back(GEP);
-                Output = GEP;
-            } else {
-                Output = ReloadOutputs[i];
-            }
-            LoadInst *load = new LoadInst(outputs[i]->getType(), Output,
-                outputs[i]->getName() + ".reload",
-                codeReplacer);
+           // LoadInst *load = new LoadInst(outputs[i]->getType(), Output, outputs[i]->getName() + ".reload",codeReplacer);
+          auto Output =  MakeReloadAddress(i);
+            LoadInst *load =  Builder.CreateLoad(outputs[i]->getType(), Output, outputs[i]->getName() + ".reload");
+
             Reloads.push_back(load);
             std::vector<User *> Users(outputs[i]->user_begin(), outputs[i]->user_end());
             for (unsigned u = 0, e = Users.size(); u != e; ++u) {
@@ -2031,7 +2095,8 @@ void CodeExtractor::extractCodeRegionByCopy(const CodeExtractorAnalysisCache& CE
     SmallVectorImpl<unsigned> &SwiftErrorArgs,
     std::vector<Value *>  & ReloadOutputs,std::vector<Value *> & Reloads,
     StructType *StructArgTy ,
-    AllocaInst *Struct 
+    AllocaInst *Struct ,
+    function_ref<Value*(int i)> MakeReloadAddress
 ) {
     // Assumption: this is a single-entry code region, and the header is the first block in the region.
   //  BasicBlock *header = *Blocks.begin();
@@ -2244,10 +2309,11 @@ void CodeExtractor::extractCodeRegionByCopy(const CodeExtractorAnalysisCache& CE
         std::advance(OutputArgBegin, inputs.size());
 
     DenseMap <Value*, LoadInst*  > ReloadReplacements;
+    SmallVector<LoadInst*> ReloadRepls;
     DenseMap <Value*, Value*  > ReloadAddress;
-    DenseMap <Value*, Value*  > SpillAddress;
+   // DenseMap <Value*, Value*  > SpillAddress;
 
-#if 0
+#if 1
     // Reload the outputs passed in by reference.
     for (unsigned i = 0, e = outputs.size(); i != e; ++i) {
         Value* Output = nullptr;
@@ -2267,18 +2333,20 @@ void CodeExtractor::extractCodeRegionByCopy(const CodeExtractorAnalysisCache& CE
 
         // new StoreInst(outputs[i]->getType(),  Output,  );
 
-        SpillAddress[outputs[i]] =  new AllocaInst (outputs[i]->getType(), 0, outputs[i]->getName() + ".addr",&codeReplacer->getParent()->front().front());
+      //  SpillAddress[outputs[i]] =  new AllocaInst (outputs[i]->getType(), 0, outputs[i]->getName() + ".addr",&codeReplacer->getParent()->front().front());
 
-        continue;
-        LoadInst* load = new LoadInst(outputs[i]->getType(), Output,
-            outputs[i]->getName() + ".reload",
-            codeReplacer);
+    
+        LoadInst* load = new LoadInst(outputs[i]->getType(), Output,       outputs[i]->getName() + ".reload",  codeReplacer);
         Reloads.push_back(load);
+        //ReloadReplacements[outputs[i]]
 
         if (KeepOldBlocks) {
             auto OrigOut = outputs[i];
             //VMap[Out] = load;
             ReloadReplacements[OrigOut] = load;
+            ReloadRepls.push_back(load);
+
+            // Remove all PHIs; will need to be recreated by SSAUpdater;
         } else {
             std::vector<User*> Users(outputs[i]->user_begin(), outputs[i]->user_end());
             for (unsigned u = 0, e = Users.size(); u != e; ++u) {
@@ -2346,7 +2414,10 @@ void CodeExtractor::extractCodeRegionByCopy(const CodeExtractorAnalysisCache& CE
         if (Blocks.count(OldTarget))
             continue;
         BasicBlock*& NewTarget = ExitBlockMap[OldTarget];
-        if (NewTarget) continue;
+        if (NewTarget) {
+           // llvm_unreachable("Happens if e.g. switch has multiple edges to target");
+            continue;
+        }
 
         // If we don't already have an exit stub for this non-extracted
         // destination, create one now!
@@ -2373,12 +2444,25 @@ void CodeExtractor::extractCodeRegionByCopy(const CodeExtractorAnalysisCache& CE
 
         // auto OldPredecessor  = OldTarget->getUniquePredecessor();
 
+#if 0
+        if (KeepOldBlocks) {
+            for (auto&& P : OldTarget->phis()) {
+               auto Val = P.getIncomingValueForBlock(OldTarget);
+               Value *PHINewVal = Val;
+               if (auto X = ReloadReplacements.lookup(Val)) 
+                   PHINewVal = X;
+               P.addIncoming(PHINewVal, codeReplacer);
+            }
+        }
+#endif
 
          // Update the switch instruction.
         TheSwitch->addCase(ConstantInt::get(Type::getInt16Ty(Context),
             SuccNum),
             OldTarget);
 
+
+  
 
 
 #if 0
@@ -2451,6 +2535,7 @@ void CodeExtractor::extractCodeRegionByCopy(const CodeExtractorAnalysisCache& CE
 
 
     for (auto&& O : outputs) {    }
+
 
 
 
@@ -2562,6 +2647,39 @@ void CodeExtractor::extractCodeRegionByCopy(const CodeExtractorAnalysisCache& CE
             for (Instruction& II : Y)
                 RemapInstruction(&II, VMap, RF_NoModuleLevelChanges);
         }
+
+
+
+
+        // Must be done after remap
+        SSAUpdater SSA;
+        for (auto P : enumerate(outputs)) {
+            auto OutIdx = P.index();
+            auto OldVal = cast<Instruction>( P.value());
+            auto NewVal = Reloads[OutIdx];
+
+            SSA.Initialize(OldVal->getType(), (OldVal->getName() + ".merge_with_extracted").str());
+            SSA.AddAvailableValue(codeReplacer, NewVal);
+
+            // Could help SSAUpdater by determining in advance which output values are available in which exit blocks (from DT).
+            SSA.AddAvailableValue(OldVal->getParent(), OldVal);
+
+            for (auto &&U : make_early_inc_range(OldVal->uses())) {
+                auto User = dyn_cast<Instruction>(U.getUser());
+                if (!User) continue;
+                auto EffectiveUser = User->getParent();
+                if (auto &&P = dyn_cast<PHINode>(User)) {
+                    EffectiveUser=  P->getIncomingBlock(U);
+                }        
+         
+                    if (EffectiveUser == codeReplacer || Blocks.count(EffectiveUser)) continue;
+                
+
+                SSA.RewriteUseAfterInsertions(U);
+            }
+        }
+
+
 
 
 
