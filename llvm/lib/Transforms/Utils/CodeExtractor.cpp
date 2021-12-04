@@ -1398,8 +1398,7 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
     Function *oldFunction = header->getParent();
 
 
-    BlockFrequency EntryFreq;
-    DenseMap<BasicBlock *, BlockFrequency> ExitWeights;
+
    // SmallPtrSet<BasicBlock *, 1> ExitBlocks;
 
    // analyzeBeforeExtraction(CEAC,inputs, outputs, EntryFreq,ExitWeights,ExitBlocks);
@@ -1410,8 +1409,12 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
     prepareForExtraction(KeepOldBlocks);
 
 
+    recomputeExitBlocks();
+
     // Calculate the entry frequency of the new function before we change the root
     //   block.
+    BlockFrequency EntryFreq;
+    DenseMap<BasicBlock *, BlockFrequency> ExitWeights;
     if (BFI) {
         assert(BPI && "Both BPI and BFI are required to preserve profile info");
         for (BasicBlock *Pred : predecessors(header)) {
@@ -1419,6 +1422,24 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
                 continue;
             EntryFreq += BFI->getBlockFreq(Pred) * BPI->getEdgeProbability(Pred, header);
         }
+
+        for (BasicBlock *Succ : ExitBlocks) {
+            for (BasicBlock *Block : predecessors(Succ)) {
+                if (!Blocks.count(Block)) continue;
+
+       // for (BasicBlock *Block : Blocks) {
+       //     for (BasicBlock *Succ : successors(Block)) {
+            //    if (!Blocks.count(Succ)) {
+                    // Update the branch weight for this successor.
+                 //   if (BFI) {
+                        BlockFrequency &BF = ExitWeights[Succ];
+                        BF += BFI->getBlockFreq(Block) * BPI->getEdgeProbability(Block, Succ);
+                 //   }
+                    // ExitBlocks.insert(Succ);
+             //   }
+            }
+        }
+        // NumExitBlocks = ExitBlocks.size();
     }
 
 
@@ -1426,19 +1447,7 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
   
 
 
-    for (BasicBlock *Block : Blocks) {
-        for (BasicBlock *Succ : successors(Block)) {
-            if (!Blocks.count(Succ)) {
-                // Update the branch weight for this successor.
-                if (BFI) {
-                    BlockFrequency &BF = ExitWeights[Succ];
-                    BF += BFI->getBlockFreq(Block) * BPI->getEdgeProbability(Block, Succ);
-                }
-               // ExitBlocks.insert(Succ);
-            }
-        }
-    }
-   // NumExitBlocks = ExitBlocks.size();
+
 
     
     recomputeExitBlocks();
@@ -1667,7 +1676,7 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
     if (!AggregateArgs)
         std::advance(OutputArgBegin, inputs.size());
 
-    using InsertPointTy = IRBuilder<>::InsertPoint;
+    //using InsertPointTy = IRBuilder<>::InsertPoint;
     IRBuilder<> Builder(Context);
     auto MakeReloadAddress = [&](int i) {
         Value *Output = nullptr;
