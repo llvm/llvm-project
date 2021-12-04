@@ -297,7 +297,8 @@ struct DialectBufferizationState {
 /// the results of the analysis.
 struct BufferizationState {
   BufferizationState(ModuleOp moduleOp, const BufferizationOptions &options)
-      : aliasInfo(moduleOp), options(options) {}
+      : aliasInfo(moduleOp), options(options),
+        builder(moduleOp->getContext()) {}
 
   // BufferizationState should be passed as a reference.
   BufferizationState(const BufferizationState &) = delete;
@@ -320,6 +321,11 @@ struct BufferizationState {
 
   /// Return `true` if the given value is mapped.
   bool isMapped(Value value) const;
+
+  /// Return the result buffer (memref) for a given OpResult (tensor). Allocate
+  /// a new buffer and copy over data from the existing buffer if out-of-place
+  /// bufferization is necessary.
+  Value getResultBuffer(OpResult result);
 
   /// Mark `op` as obsolete, so that it is deleted after bufferization.
   void markOpObsolete(Operation *op);
@@ -349,12 +355,10 @@ struct BufferizationState {
 
   /// A reference to current bufferization options.
   const BufferizationOptions &options;
-};
 
-/// Return the result buffer (memref) for a given OpResult (tensor). Allocate
-/// a new buffer and copy over data from the existing buffer if out-of-place
-/// bufferization is necessary.
-Value getResultBuffer(OpBuilder &b, OpResult result, BufferizationState &state);
+  /// The OpBuilder used during bufferization.
+  OpBuilder builder;
+};
 
 /// Bufferize all ops in the given region.
 LogicalResult bufferize(Region *region, BufferizationState &state);

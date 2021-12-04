@@ -469,10 +469,6 @@ struct CallOpInterface
            "expected Callop to a FuncOp");
     ModuleBufferizationState &moduleState = getModuleBufferizationState(state);
 
-    // Take a guard before anything else.
-    OpBuilder::InsertionGuard g(b);
-    b.setInsertionPoint(callOp);
-
     // 1. Filter return types:
     //    - if the callee is bodiless / external, we cannot inspect it and we
     //      cannot assume anything. We can just assert that it does not return a
@@ -600,14 +596,9 @@ struct ReturnOpInterface
   LogicalResult bufferize(Operation *op, OpBuilder &b,
                           BufferizationState &state) const {
     auto returnOp = cast<ReturnOp>(op);
-
-    // Take a guard before anything else.
-    OpBuilder::InsertionGuard g(b);
-    // Cannot insert after returnOp.
-    b.setInsertionPoint(returnOp);
-
     assert(isa<FuncOp>(returnOp->getParentOp()) &&
            "only support FuncOp parent for ReturnOp");
+
     for (OpOperand &operand : returnOp->getOpOperands()) {
       auto tensorType = operand.get().getType().dyn_cast<TensorType>();
       if (!tensorType)
@@ -628,9 +619,6 @@ struct FuncOpInterface
   LogicalResult bufferize(Operation *op, OpBuilder &b,
                           BufferizationState &state) const {
     auto funcOp = cast<FuncOp>(op);
-
-    // Take a guard before anything else.
-    OpBuilder::InsertionGuard g(b);
     b.setInsertionPointToStart(&funcOp.body().front());
 
     // Create BufferCastOps for function args.

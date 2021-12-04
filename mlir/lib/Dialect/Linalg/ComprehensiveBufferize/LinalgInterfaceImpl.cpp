@@ -38,7 +38,7 @@ allocateBuffersForResults(OpBuilder &b, Location loc, LinalgOp op,
     OpResult opResult = cast<BufferizableOpInterface>(op.getOperation())
                             .getAliasingOpResult(*opOperand);
     assert(opResult && "could not find correspond OpResult");
-    Value resultBuffer = getResultBuffer(b, opResult, state);
+    Value resultBuffer = state.getResultBuffer(opResult);
     if (!resultBuffer)
       return failure();
     resultBuffers.push_back(resultBuffer);
@@ -158,10 +158,6 @@ struct InitTensorOpInterface
     if (initTensorOp->getUses().empty())
       return success();
 
-    // Take a guard before anything else.
-    OpBuilder::InsertionGuard g(b);
-    b.setInsertionPoint(initTensorOp);
-
     Value alloc = state.createAllocDeallocFn(b, initTensorOp->getLoc(),
                                              initTensorOp.result());
     state.mapBuffer(initTensorOp.result(), alloc);
@@ -250,7 +246,7 @@ struct TiledLoopOpInterface
 
       const OpResult &opResult = tiledLoopOp->getResult(resultIndex);
       OpOperand &yieldOperand = yieldOp->getOpOperand(resultIndex);
-      Value resultBuffer = getResultBuffer(b, opResult, state);
+      Value resultBuffer = state.getResultBuffer(opResult);
       if (!resultBuffer)
         return failure();
 
@@ -349,11 +345,6 @@ struct YieldOpInterface
   LogicalResult bufferize(Operation *op, OpBuilder &b,
                           BufferizationState &state) const {
     auto yieldOp = cast<linalg::YieldOp>(op);
-
-    // Take a guard before anything else.
-    OpBuilder::InsertionGuard g(b);
-    // Cannot create IR past a yieldOp.
-    b.setInsertionPoint(yieldOp);
 
     // No tensors -> success.
     if (!llvm::any_of(yieldOp.getOperandTypes(),
