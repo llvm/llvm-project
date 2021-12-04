@@ -417,7 +417,7 @@ const Value *stripAndAccumulateMinimalOffsets(
                                                 AttributorAnalysis);
 }
 
-static const Value *getMinimalBaseOfAccsesPointerOperand(
+static const Value *getMinimalBaseOfAccessPointerOperand(
     Attributor &A, const AbstractAttribute &QueryingAA, const Instruction *I,
     int64_t &BytesOffset, const DataLayout &DL, bool AllowNonInbounds = false) {
   const Value *Ptr = getPointerOperand(I, /* AllowVolatile */ false);
@@ -2129,7 +2129,7 @@ static int64_t getKnownNonNullAndDerefBytesForUse(
 
   int64_t Offset;
   const Value *Base =
-      getMinimalBaseOfAccsesPointerOperand(A, QueryingAA, I, Offset, DL);
+      getMinimalBaseOfAccessPointerOperand(A, QueryingAA, I, Offset, DL);
   if (Base) {
     if (Base == &AssociatedValue &&
         getPointerOperand(I, /* AllowVolatile */ false) == UseV) {
