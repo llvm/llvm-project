@@ -18,20 +18,15 @@
 #include "mlir/Analysis/Utils.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Affine/IR/AffineValueMap.h"
-#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/SCF/SCF.h"
-#include "mlir/IR/AffineMap.h"
 #include "mlir/IR/BlockAndValueMapping.h"
-#include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/IntegerSet.h"
 #include "mlir/Support/MathExtras.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "mlir/Transforms/RegionUtils.h"
 #include "mlir/Transforms/Utils.h"
-#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/MapVector.h"
-#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
@@ -56,28 +51,21 @@ struct LoopParams {
 /// part of the unrolled loop. Computes the bound as an AffineMap with its
 /// operands or a null map when the trip count can't be expressed as an affine
 /// expression.
-static void getCleanupLoopLowerBound(AffineForOp forOp, unsigned unrollFactor,
-                                     AffineMap &map,
-                                     SmallVectorImpl<Value> &operands) {
-  auto lbMap = forOp.getLowerBoundMap();
-
-  // Single result lower bound map only.
-  if (lbMap.getNumResults() != 1) {
-    map = AffineMap();
-    return;
-  }
-
+static void
+getCleanupLoopLowerBound(AffineForOp forOp, unsigned unrollFactor,
+                         AffineMap &cleanupLbMap,
+                         SmallVectorImpl<Value> &cleanupLbOperands) {
   AffineMap tripCountMap;
   SmallVector<Value, 4> tripCountOperands;
   getTripCountMapAndOperands(forOp, &tripCountMap, &tripCountOperands);
-
-  // Sometimes the trip count cannot be expressed as an affine expression.
+  // Trip count can't be computed.
   if (!tripCountMap) {
-    map = AffineMap();
+    cleanupLbMap = AffineMap();
     return;
   }
 
   OpBuilder b(forOp);
+  auto lbMap = forOp.getLowerBoundMap();
   auto lb = b.create<AffineApplyOp>(forOp.getLoc(), lbMap,
                                     forOp.getLowerBoundOperands());
 
@@ -102,15 +90,15 @@ static void getCleanupLoopLowerBound(AffineForOp forOp, unsigned unrollFactor,
   for (unsigned i = 0, e = bumpExprs.size(); i < e; i++)
     newUbExprs[i] = b.getAffineDimExpr(0) + b.getAffineDimExpr(i + 1);
 
-  operands.clear();
-  operands.push_back(lb);
-  operands.append(bumpValues.begin(), bumpValues.end());
-  map = AffineMap::get(1 + tripCountMap.getNumResults(), 0, newUbExprs,
-                       b.getContext());
-  // Simplify the map + operands.
-  fullyComposeAffineMapAndOperands(&map, &operands);
-  map = simplifyAffineMap(map);
-  canonicalizeMapAndOperands(&map, &operands);
+  cleanupLbOperands.clear();
+  cleanupLbOperands.push_back(lb);
+  cleanupLbOperands.append(bumpValues.begin(), bumpValues.end());
+  cleanupLbMap = AffineMap::get(1 + tripCountMap.getNumResults(), 0, newUbExprs,
+                                b.getContext());
+  // Simplify the cleanupLbMap + cleanupLbOperands.
+  fullyComposeAffineMapAndOperands(&cleanupLbMap, &cleanupLbOperands);
+  cleanupLbMap = simplifyAffineMap(cleanupLbMap);
+  canonicalizeMapAndOperands(&cleanupLbMap, &cleanupLbOperands);
   // Remove any affine.apply's that became dead from the simplification above.
   for (auto v : bumpValues)
     if (v.use_empty())
@@ -192,7 +180,7 @@ LogicalResult mlir::promoteIfSingleIteration(AffineForOp forOp) {
     } else {
       auto lbOperands = forOp.getLowerBoundOperands();
       auto lbMap = forOp.getLowerBoundMap();
-      OpBuilder builder(parentBlock, Block::iterator(forOp));
+      OpBuilder builder(forOp);
       if (lbMap == builder.getDimIdentityMap()) {
         // No need of generating an affine.apply.
         iv.replaceAllUsesWith(lbOperands[0]);
@@ -1132,8 +1120,8 @@ static void generateUnrolledLoop(
 
 /// Helper to generate cleanup loop for unroll or unroll-and-jam when the trip
 /// count is not a multiple of `unrollFactor`.
-static void generateCleanupLoopForUnroll(AffineForOp forOp,
-                                         uint64_t unrollFactor) {
+static LogicalResult generateCleanupLoopForUnroll(AffineForOp forOp,
+                                                  uint64_t unrollFactor) {
   // Insert the cleanup loop right after 'forOp'.
   OpBuilder builder(forOp->getBlock(), std::next(Block::iterator(forOp)));
   auto cleanupForOp = cast<AffineForOp>(builder.clone(*forOp));
@@ -1152,9 +1140,9 @@ static void generateCleanupLoopForUnroll(AffineForOp forOp,
   AffineMap cleanupMap;
   SmallVector<Value, 4> cleanupOperands;
   getCleanupLoopLowerBound(forOp, unrollFactor, cleanupMap, cleanupOperands);
-  assert(cleanupMap &&
-         "cleanup loop lower bound map for single result lower bound maps "
-         "can always be determined");
+  if (!cleanupMap)
+    return failure();
+
   cleanupForOp.setLowerBound(cleanupOperands, cleanupMap);
   // Promote the loop body up if this has turned into a single iteration loop.
   (void)promoteIfSingleIteration(cleanupForOp);
@@ -1162,6 +1150,7 @@ static void generateCleanupLoopForUnroll(AffineForOp forOp,
   // Adjust upper bound of the original loop; this is the same as the lower
   // bound of the cleanup loop.
   forOp.setUpperBound(cleanupOperands, cleanupMap);
+  return success();
 }
 
 /// Unrolls this loop by the specified factor. Returns success if the loop
@@ -1178,14 +1167,6 @@ LogicalResult mlir::loopUnrollByFactor(
   if (llvm::hasSingleElement(forOp.getBody()->getOperations()))
     return success();
 
-  // Loops where the lower bound is a max expression isn't supported for
-  // unrolling since the trip count can be expressed as an affine function when
-  // both the lower bound and the upper bound are multi-result maps. However,
-  // one meaningful way to do such unrolling would be to specialize the loop for
-  // the 'hotspot' case and unroll that hotspot.
-  if (forOp.getLowerBoundMap().getNumResults() != 1)
-    return failure();
-
   // If the trip count is lower than the unroll factor, no unrolled body.
   // TODO: option to specify cleanup loop unrolling.
   Optional<uint64_t> mayBeConstantTripCount = getConstantTripCount(forOp);
@@ -1194,8 +1175,18 @@ LogicalResult mlir::loopUnrollByFactor(
     return failure();
 
   // Generate the cleanup loop if trip count isn't a multiple of unrollFactor.
-  if (getLargestDivisorOfTripCount(forOp) % unrollFactor != 0)
-    generateCleanupLoopForUnroll(forOp, unrollFactor);
+  if (getLargestDivisorOfTripCount(forOp) % unrollFactor != 0) {
+    // Loops where the lower bound is a max expression or the upper bound is
+    // a min expression and the trip count doesn't divide the unroll factor
+    // can't be unrolled since the lower bound of the cleanup loop in such cases
+    // cannot be expressed as an affine function or a max over affine functions.
+    if (forOp.getLowerBoundMap().getNumResults() != 1 ||
+        forOp.getUpperBoundMap().getNumResults() != 1)
+      return failure();
+    if (failed(generateCleanupLoopForUnroll(forOp, unrollFactor)))
+      assert(false && "cleanup loop lower bound map for single result lower "
+                      "and upper bound maps can always be determined");
+  }
 
   ValueRange iterArgs(forOp.getRegionIterArgs());
   auto yieldedValues = forOp.getBody()->getTerminator()->getOperands();
@@ -1399,15 +1390,6 @@ LogicalResult mlir::loopUnrollJamByFactor(AffineForOp forOp,
   if (llvm::hasSingleElement(forOp.getBody()->getOperations()))
     return success();
 
-  // Loops where both lower and upper bounds are multi-result maps won't be
-  // unrolled (since the trip can't be expressed as an affine function in
-  // general).
-  // TODO: this may not be common, but we could support the case
-  // where the lower bound is a multi-result map and the ub is a single result
-  // one.
-  if (forOp.getLowerBoundMap().getNumResults() != 1)
-    return failure();
-
   Optional<uint64_t> mayBeConstantTripCount = getConstantTripCount(forOp);
   // If the trip count is lower than the unroll jam factor, no unroll jam.
   if (mayBeConstantTripCount.hasValue() &&
@@ -1440,8 +1422,18 @@ LogicalResult mlir::loopUnrollJamByFactor(AffineForOp forOp,
 
   // Generate the cleanup loop if trip count isn't a multiple of
   // unrollJamFactor.
-  if (getLargestDivisorOfTripCount(forOp) % unrollJamFactor != 0)
-    generateCleanupLoopForUnroll(forOp, unrollJamFactor);
+  if (getLargestDivisorOfTripCount(forOp) % unrollJamFactor != 0) {
+    // Loops where the lower bound is a max expression or the upper bound is
+    // a min expression and the trip count doesn't divide the unroll factor
+    // can't be unrolled since the lower bound of the cleanup loop in such cases
+    // cannot be expressed as an affine function or a max over affine functions.
+    if (forOp.getLowerBoundMap().getNumResults() != 1 ||
+        forOp.getUpperBoundMap().getNumResults() != 1)
+      return failure();
+    if (failed(generateCleanupLoopForUnroll(forOp, unrollJamFactor)))
+      assert(false && "cleanup loop lower bound map for single result lower "
+                      "and upper bound maps can always be determined");
+  }
 
   // `operandMaps[i - 1]` carries old->new operand mapping for the ith unrolled
   // iteration. There are (`unrollJamFactor` - 1) iterations.
