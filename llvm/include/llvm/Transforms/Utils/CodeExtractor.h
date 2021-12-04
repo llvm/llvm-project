@@ -250,7 +250,7 @@ public:
         const ValueSet &outputs) ;
 
 
-    Function *constructFunction2(const ValueSet &inputs,
+    Function *constructFunction(const ValueSet &inputs,
         const ValueSet &outputs,
         BasicBlock *header,
     //    BasicBlock *&newRootNode, BasicBlock *newHeader,

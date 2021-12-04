@@ -823,7 +823,7 @@ void CodeExtractor::splitReturnBlocks() {
 }
 
 
-Function *CodeExtractor::constructFunction2(const ValueSet &inputs,
+Function *CodeExtractor::constructFunction(const ValueSet &inputs,
     const ValueSet &outputs,
     BasicBlock *header,
    // BasicBlock *&newRootNode, BasicBlock *newHeader,
@@ -1528,7 +1528,7 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
 #endif
 
     // Construct new function based on inputs/outputs & add allocas for all defs.
-    Function *newFunction = constructFunction2(inputs, outputs, header, oldFunction, oldFunction->getParent());
+    Function *newFunction = constructFunction(inputs, outputs, header, oldFunction, oldFunction->getParent());
 
 
     // The new function needs a root node because other nodes can branch to the
@@ -1819,11 +1819,11 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
 #else
         Module *M = newFunction->getParent();
         LLVMContext &Context = M->getContext();
-        const DataLayout &DL = M->getDataLayout();
+     //   const DataLayout &DL = M->getDataLayout();
 
 
         // TOOD: Pass AllocaBlock
-        BasicBlock *     AllocaBlock = &codeReplacer->getParent()->front();
+      //  BasicBlock *     AllocaBlock = &codeReplacer->getParent()->front();
 
 
     
@@ -2239,7 +2239,7 @@ void CodeExtractor::extractCodeRegionByCopy(const CodeExtractorAnalysisCache& CE
 
     // Module *M = newFunction->getParent();
     LLVMContext& Context = M->getContext();
-    const DataLayout& DL = M->getDataLayout();
+ //   const DataLayout& DL = M->getDataLayout();
     CallInst* call = nullptr;
 
 #if 0
@@ -2394,7 +2394,7 @@ void CodeExtractor::extractCodeRegionByCopy(const CodeExtractorAnalysisCache& CE
             codeReplacer, 0, codeReplacer);
 
 
-    auto newFuncIt = newFunction->front().getIterator();
+   // auto newFuncIt = newFunction->front().getIterator();
     for (BasicBlock* Block : Blocks) {
         BasicBlock* CBB = CloneBasicBlock(Block, VMap, {}, newFunction /*, nullptr, &DIFinder*/);
 
@@ -2564,7 +2564,7 @@ void CodeExtractor::extractCodeRegionByCopy(const CodeExtractorAnalysisCache& CE
     }
 
 
-    for (auto&& O : outputs) {    }
+  //  for (auto&& O : outputs) {    }
 
 
 
