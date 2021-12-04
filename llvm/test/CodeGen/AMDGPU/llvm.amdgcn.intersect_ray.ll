@@ -3,15 +3,15 @@
 ; RUN: llc -march=amdgcn -mcpu=gfx1030 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GFX1030 %s
 ; RUN: not --crash llc -march=amdgcn -mcpu=gfx1012 -verify-machineinstrs < %s 2>&1 | FileCheck -check-prefix=ERR %s
 
-; uint4 llvm.amdgcn.image.bvh.intersect.ray.i32.v4f32(uint node_ptr, float ray_extent, float4 ray_origin, float4 ray_dir, float4 ray_inv_dir, uint4 texture_descr)
-; uint4 llvm.amdgcn.image.bvh.intersect.ray.i32.v4f16(uint node_ptr, float ray_extent, float4 ray_origin, half4 ray_dir, half4 ray_inv_dir, uint4 texture_descr)
-; uint4 llvm.amdgcn.image.bvh.intersect.ray.i64.v4f32(ulong node_ptr, float ray_extent, float4 ray_origin, float4 ray_dir, float4 ray_inv_dir, uint4 texture_descr)
-; uint4 llvm.amdgcn.image.bvh.intersect.ray.i64.v4f16(ulong node_ptr, float ray_extent, float4 ray_origin, half4 ray_dir, half4 ray_inv_dir, uint4 texture_descr)
+; uint4 llvm.amdgcn.image.bvh.intersect.ray.i32.v4f32(uint node_ptr, float ray_extent, float3 ray_origin, float3 ray_dir, float3 ray_inv_dir, uint4 texture_descr)
+; uint4 llvm.amdgcn.image.bvh.intersect.ray.i32.v4f16(uint node_ptr, float ray_extent, float3 ray_origin, half3 ray_dir, half3 ray_inv_dir, uint4 texture_descr)
+; uint4 llvm.amdgcn.image.bvh.intersect.ray.i64.v4f32(ulong node_ptr, float ray_extent, float3 ray_origin, float3 ray_dir, float3 ray_inv_dir, uint4 texture_descr)
+; uint4 llvm.amdgcn.image.bvh.intersect.ray.i64.v4f16(ulong node_ptr, float ray_extent, float3 ray_origin, half3 ray_dir, half3 ray_inv_dir, uint4 texture_descr)
 
-declare <4 x i32> @llvm.amdgcn.image.bvh.intersect.ray.i32.v4f32(i32, float, <4 x float>, <4 x float>, <4 x float>, <4 x i32>)
-declare <4 x i32> @llvm.amdgcn.image.bvh.intersect.ray.i32.v4f16(i32, float, <4 x float>, <4 x half>, <4 x half>, <4 x i32>)
-declare <4 x i32> @llvm.amdgcn.image.bvh.intersect.ray.i64.v4f32(i64, float, <4 x float>, <4 x float>, <4 x float>, <4 x i32>)
-declare <4 x i32> @llvm.amdgcn.image.bvh.intersect.ray.i64.v4f16(i64, float, <4 x float>, <4 x half>, <4 x half>, <4 x i32>)
+declare <4 x i32> @llvm.amdgcn.image.bvh.intersect.ray.i32.v4f32(i32, float, <3 x float>, <3 x float>, <3 x float>, <4 x i32>)
+declare <4 x i32> @llvm.amdgcn.image.bvh.intersect.ray.i32.v4f16(i32, float, <3 x float>, <3 x half>, <3 x half>, <4 x i32>)
+declare <4 x i32> @llvm.amdgcn.image.bvh.intersect.ray.i64.v4f32(i64, float, <3 x float>, <3 x float>, <3 x float>, <4 x i32>)
+declare <4 x i32> @llvm.amdgcn.image.bvh.intersect.ray.i64.v4f16(i64, float, <3 x float>, <3 x half>, <3 x half>, <4 x i32>)
 
 ; ERR: in function image_bvh_intersect_ray{{.*}}intrinsic not supported on subtarget
 ; Arguments are flattened to represent the actual VGPR_A layout, so we have no
@@ -23,43 +23,43 @@ define amdgpu_ps <4 x float> @image_bvh_intersect_ray(i32 %node_ptr, float %ray_
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    ; return to shader part epilog
 main_body:
-  %ray_origin0 = insertelement <4 x float> undef, float %ray_origin_x, i32 0
-  %ray_origin1 = insertelement <4 x float> %ray_origin0, float %ray_origin_y, i32 1
-  %ray_origin = insertelement <4 x float> %ray_origin1, float %ray_origin_z, i32 2
-  %ray_dir0 = insertelement <4 x float> undef, float %ray_dir_x, i32 0
-  %ray_dir1 = insertelement <4 x float> %ray_dir0, float %ray_dir_y, i32 1
-  %ray_dir = insertelement <4 x float> %ray_dir1, float %ray_dir_z, i32 2
-  %ray_inv_dir0 = insertelement <4 x float> undef, float %ray_inv_dir_x, i32 0
-  %ray_inv_dir1 = insertelement <4 x float> %ray_inv_dir0, float %ray_inv_dir_y, i32 1
-  %ray_inv_dir = insertelement <4 x float> %ray_inv_dir1, float %ray_inv_dir_z, i32 2
-  %v = call <4 x i32> @llvm.amdgcn.image.bvh.intersect.ray.i32.v4f32(i32 %node_ptr, float %ray_extent, <4 x float> %ray_origin, <4 x float> %ray_dir, <4 x float> %ray_inv_dir, <4 x i32> %tdescr)
+  %ray_origin0 = insertelement <3 x float> undef, float %ray_origin_x, i32 0
+  %ray_origin1 = insertelement <3 x float> %ray_origin0, float %ray_origin_y, i32 1
+  %ray_origin = insertelement <3 x float> %ray_origin1, float %ray_origin_z, i32 2
+  %ray_dir0 = insertelement <3 x float> undef, float %ray_dir_x, i32 0
+  %ray_dir1 = insertelement <3 x float> %ray_dir0, float %ray_dir_y, i32 1
+  %ray_dir = insertelement <3 x float> %ray_dir1, float %ray_dir_z, i32 2
+  %ray_inv_dir0 = insertelement <3 x float> undef, float %ray_inv_dir_x, i32 0
+  %ray_inv_dir1 = insertelement <3 x float> %ray_inv_dir0, float %ray_inv_dir_y, i32 1
+  %ray_inv_dir = insertelement <3 x float> %ray_inv_dir1, float %ray_inv_dir_z, i32 2
+  %v = call <4 x i32> @llvm.amdgcn.image.bvh.intersect.ray.i32.v4f32(i32 %node_ptr, float %ray_extent, <3 x float> %ray_origin, <3 x float> %ray_dir, <3 x float> %ray_inv_dir, <4 x i32> %tdescr)
  %r = bitcast <4 x i32> %v to <4 x float>
  ret <4 x float> %r
 }
 
-define amdgpu_ps <4 x float> @image_bvh_intersect_ray_a16(i32 inreg %node_ptr, float inreg %ray_extent, <4 x float> inreg %ray_origin, <4 x half> inreg %ray_dir, <4 x half> inreg %ray_inv_dir, <4 x i32> inreg %tdescr) {
+define amdgpu_ps <4 x float> @image_bvh_intersect_ray_a16(i32 inreg %node_ptr, float inreg %ray_extent, <3 x float> inreg %ray_origin, <3 x half> inreg %ray_dir, <3 x half> inreg %ray_inv_dir, <4 x i32> inreg %tdescr) {
 ; GCN-LABEL: image_bvh_intersect_ray_a16:
 ; GCN:       ; %bb.0: ; %main_body
-; GCN-NEXT:    s_lshr_b32 s5, s8, 16
-; GCN-NEXT:    s_pack_ll_b32_b16 s7, s7, s8
-; GCN-NEXT:    s_pack_ll_b32_b16 s5, s5, s9
+; GCN-NEXT:    s_mov_b32 s15, s12
+; GCN-NEXT:    s_mov_b32 s12, s9
+; GCN-NEXT:    s_lshr_b32 s9, s7, 16
+; GCN-NEXT:    s_pack_ll_b32_b16 s6, s6, s7
+; GCN-NEXT:    s_pack_ll_b32_b16 s7, s9, s8
 ; GCN-NEXT:    v_mov_b32_e32 v0, s0
 ; GCN-NEXT:    v_mov_b32_e32 v1, s1
 ; GCN-NEXT:    v_mov_b32_e32 v2, s2
 ; GCN-NEXT:    v_mov_b32_e32 v3, s3
 ; GCN-NEXT:    v_mov_b32_e32 v4, s4
-; GCN-NEXT:    v_mov_b32_e32 v5, s6
-; GCN-NEXT:    v_mov_b32_e32 v6, s7
-; GCN-NEXT:    v_mov_b32_e32 v7, s5
-; GCN-NEXT:    s_mov_b32 s15, s13
-; GCN-NEXT:    s_mov_b32 s14, s12
-; GCN-NEXT:    s_mov_b32 s13, s11
-; GCN-NEXT:    s_mov_b32 s12, s10
+; GCN-NEXT:    v_mov_b32_e32 v5, s5
+; GCN-NEXT:    v_mov_b32_e32 v6, s6
+; GCN-NEXT:    v_mov_b32_e32 v7, s7
+; GCN-NEXT:    s_mov_b32 s14, s11
+; GCN-NEXT:    s_mov_b32 s13, s10
 ; GCN-NEXT:    image_bvh_intersect_ray v[0:3], v[0:7], s[12:15] a16
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    ; return to shader part epilog
 main_body:
-  %v = call <4 x i32> @llvm.amdgcn.image.bvh.intersect.ray.i32.v4f16(i32 %node_ptr, float %ray_extent, <4 x float> %ray_origin, <4 x half> %ray_dir, <4 x half> %ray_inv_dir, <4 x i32> %tdescr)
+  %v = call <4 x i32> @llvm.amdgcn.image.bvh.intersect.ray.i32.v4f16(i32 %node_ptr, float %ray_extent, <3 x float> %ray_origin, <3 x half> %ray_dir, <3 x half> %ray_inv_dir, <4 x i32> %tdescr)
   %r = bitcast <4 x i32> %v to <4 x float>
   ret <4 x float> %r
 }
@@ -74,44 +74,44 @@ define amdgpu_ps <4 x float> @image_bvh64_intersect_ray(<2 x i32> %node_ptr_vec,
 ; GCN-NEXT:    ; return to shader part epilog
 main_body:
   %node_ptr = bitcast <2 x i32> %node_ptr_vec to i64
-  %ray_origin0 = insertelement <4 x float> undef, float %ray_origin_x, i32 0
-  %ray_origin1 = insertelement <4 x float> %ray_origin0, float %ray_origin_y, i32 1
-  %ray_origin = insertelement <4 x float> %ray_origin1, float %ray_origin_z, i32 2
-  %ray_dir0 = insertelement <4 x float> undef, float %ray_dir_x, i32 0
-  %ray_dir1 = insertelement <4 x float> %ray_dir0, float %ray_dir_y, i32 1
-  %ray_dir = insertelement <4 x float> %ray_dir1, float %ray_dir_z, i32 2
-  %ray_inv_dir0 = insertelement <4 x float> undef, float %ray_inv_dir_x, i32 0
-  %ray_inv_dir1 = insertelement <4 x float> %ray_inv_dir0, float %ray_inv_dir_y, i32 1
-  %ray_inv_dir = insertelement <4 x float> %ray_inv_dir1, float %ray_inv_dir_z, i32 2
-  %v = call <4 x i32> @llvm.amdgcn.image.bvh.intersect.ray.i64.v4f32(i64 %node_ptr, float %ray_extent, <4 x float> %ray_origin, <4 x float> %ray_dir, <4 x float> %ray_inv_dir, <4 x i32> %tdescr)
+  %ray_origin0 = insertelement <3 x float> undef, float %ray_origin_x, i32 0
+  %ray_origin1 = insertelement <3 x float> %ray_origin0, float %ray_origin_y, i32 1
+  %ray_origin = insertelement <3 x float> %ray_origin1, float %ray_origin_z, i32 2
+  %ray_dir0 = insertelement <3 x float> undef, float %ray_dir_x, i32 0
+  %ray_dir1 = insertelement <3 x float> %ray_dir0, float %ray_dir_y, i32 1
+  %ray_dir = insertelement <3 x float> %ray_dir1, float %ray_dir_z, i32 2
+  %ray_inv_dir0 = insertelement <3 x float> undef, float %ray_inv_dir_x, i32 0
+  %ray_inv_dir1 = insertelement <3 x float> %ray_inv_dir0, float %ray_inv_dir_y, i32 1
+  %ray_inv_dir = insertelement <3 x float> %ray_inv_dir1, float %ray_inv_dir_z, i32 2
+  %v = call <4 x i32> @llvm.amdgcn.image.bvh.intersect.ray.i64.v4f32(i64 %node_ptr, float %ray_extent, <3 x float> %ray_origin, <3 x float> %ray_dir, <3 x float> %ray_inv_dir, <4 x i32> %tdescr)
  %r = bitcast <4 x i32> %v to <4 x float>
  ret <4 x float> %r
 }
 
-define amdgpu_ps <4 x float> @image_bvh64_intersect_ray_a16(i64 inreg %node_ptr, float inreg %ray_extent, <4 x float> inreg %ray_origin, <4 x half> inreg %ray_dir, <4 x half> inreg %ray_inv_dir, <4 x i32> inreg %tdescr) {
+define amdgpu_ps <4 x float> @image_bvh64_intersect_ray_a16(i64 inreg %node_ptr, float inreg %ray_extent, <3 x float> inreg %ray_origin, <3 x half> inreg %ray_dir, <3 x half> inreg %ray_inv_dir, <4 x i32> inreg %tdescr) {
 ; GCN-LABEL: image_bvh64_intersect_ray_a16:
 ; GCN:       ; %bb.0: ; %main_body
-; GCN-NEXT:    s_lshr_b32 s6, s9, 16
-; GCN-NEXT:    s_pack_ll_b32_b16 s8, s8, s9
-; GCN-NEXT:    s_pack_ll_b32_b16 s6, s6, s10
+; GCN-NEXT:    s_mov_b32 s14, s12
+; GCN-NEXT:    s_mov_b32 s12, s10
+; GCN-NEXT:    s_lshr_b32 s10, s8, 16
+; GCN-NEXT:    s_pack_ll_b32_b16 s7, s7, s8
+; GCN-NEXT:    s_pack_ll_b32_b16 s8, s10, s9
 ; GCN-NEXT:    v_mov_b32_e32 v0, s0
 ; GCN-NEXT:    v_mov_b32_e32 v1, s1
 ; GCN-NEXT:    v_mov_b32_e32 v2, s2
 ; GCN-NEXT:    v_mov_b32_e32 v3, s3
 ; GCN-NEXT:    v_mov_b32_e32 v4, s4
 ; GCN-NEXT:    v_mov_b32_e32 v5, s5
-; GCN-NEXT:    v_mov_b32_e32 v6, s7
-; GCN-NEXT:    v_mov_b32_e32 v7, s8
-; GCN-NEXT:    v_mov_b32_e32 v8, s6
-; GCN-NEXT:    s_mov_b32 s15, s14
-; GCN-NEXT:    s_mov_b32 s14, s13
-; GCN-NEXT:    s_mov_b32 s13, s12
-; GCN-NEXT:    s_mov_b32 s12, s11
+; GCN-NEXT:    v_mov_b32_e32 v6, s6
+; GCN-NEXT:    v_mov_b32_e32 v7, s7
+; GCN-NEXT:    v_mov_b32_e32 v8, s8
+; GCN-NEXT:    s_mov_b32 s15, s13
+; GCN-NEXT:    s_mov_b32 s13, s11
 ; GCN-NEXT:    image_bvh64_intersect_ray v[0:3], v[0:15], s[12:15] a16
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    ; return to shader part epilog
 main_body:
-  %v = call <4 x i32> @llvm.amdgcn.image.bvh.intersect.ray.i64.v4f16(i64 %node_ptr, float %ray_extent, <4 x float> %ray_origin, <4 x half> %ray_dir, <4 x half> %ray_inv_dir, <4 x i32> %tdescr)
+  %v = call <4 x i32> @llvm.amdgcn.image.bvh.intersect.ray.i64.v4f16(i64 %node_ptr, float %ray_extent, <3 x float> %ray_origin, <3 x half> %ray_dir, <3 x half> %ray_inv_dir, <4 x i32> %tdescr)
   %r = bitcast <4 x i32> %v to <4 x float>
   ret <4 x float> %r
 }
@@ -178,16 +178,16 @@ main_body:
   %node_ptr = load i32, i32* %gep_node_ptr, align 4
   %gep_ray = getelementptr inbounds float, float* %p_ray, i32 %lid
   %ray_extent = load float, float* %gep_ray, align 4
-  %ray_origin0 = insertelement <4 x float> undef, float 0.0, i32 0
-  %ray_origin1 = insertelement <4 x float> %ray_origin0, float 1.0, i32 1
-  %ray_origin = insertelement <4 x float> %ray_origin1, float 2.0, i32 2
-  %ray_dir0 = insertelement <4 x float> undef, float 3.0, i32 0
-  %ray_dir1 = insertelement <4 x float> %ray_dir0, float 4.0, i32 1
-  %ray_dir = insertelement <4 x float> %ray_dir1, float 5.0, i32 2
-  %ray_inv_dir0 = insertelement <4 x float> undef, float 6.0, i32 0
-  %ray_inv_dir1 = insertelement <4 x float> %ray_inv_dir0, float 7.0, i32 1
-  %ray_inv_dir = insertelement <4 x float> %ray_inv_dir1, float 8.0, i32 2
-  %v = call <4 x i32> @llvm.amdgcn.image.bvh.intersect.ray.i32.v4f32(i32 %node_ptr, float %ray_extent, <4 x float> %ray_origin, <4 x float> %ray_dir, <4 x float> %ray_inv_dir, <4 x i32> %tdescr)
+  %ray_origin0 = insertelement <3 x float> undef, float 0.0, i32 0
+  %ray_origin1 = insertelement <3 x float> %ray_origin0, float 1.0, i32 1
+  %ray_origin = insertelement <3 x float> %ray_origin1, float 2.0, i32 2
+  %ray_dir0 = insertelement <3 x float> undef, float 3.0, i32 0
+  %ray_dir1 = insertelement <3 x float> %ray_dir0, float 4.0, i32 1
+  %ray_dir = insertelement <3 x float> %ray_dir1, float 5.0, i32 2
+  %ray_inv_dir0 = insertelement <3 x float> undef, float 6.0, i32 0
+  %ray_inv_dir1 = insertelement <3 x float> %ray_inv_dir0, float 7.0, i32 1
+  %ray_inv_dir = insertelement <3 x float> %ray_inv_dir1, float 8.0, i32 2
+  %v = call <4 x i32> @llvm.amdgcn.image.bvh.intersect.ray.i32.v4f32(i32 %node_ptr, float %ray_extent, <3 x float> %ray_origin, <3 x float> %ray_dir, <3 x float> %ray_inv_dir, <4 x i32> %tdescr)
   store <4 x i32> %v, <4 x i32>* undef
   ret void
 }
@@ -246,16 +246,16 @@ main_body:
   %node_ptr = load i32, i32* %gep_node_ptr, align 4
   %gep_ray = getelementptr inbounds float, float* %p_ray, i32 %lid
   %ray_extent = load float, float* %gep_ray, align 4
-  %ray_origin0 = insertelement <4 x float> undef, float 0.0, i32 0
-  %ray_origin1 = insertelement <4 x float> %ray_origin0, float 1.0, i32 1
-  %ray_origin = insertelement <4 x float> %ray_origin1, float 2.0, i32 2
-  %ray_dir0 = insertelement <4 x half> undef, half 3.0, i32 0
-  %ray_dir1 = insertelement <4 x half> %ray_dir0, half 4.0, i32 1
-  %ray_dir = insertelement <4 x half> %ray_dir1, half 5.0, i32 2
-  %ray_inv_dir0 = insertelement <4 x half> undef, half 6.0, i32 0
-  %ray_inv_dir1 = insertelement <4 x half> %ray_inv_dir0, half 7.0, i32 1
-  %ray_inv_dir = insertelement <4 x half> %ray_inv_dir1, half 8.0, i32 2
-  %v = call <4 x i32> @llvm.amdgcn.image.bvh.intersect.ray.i32.v4f16(i32 %node_ptr, float %ray_extent, <4 x float> %ray_origin, <4 x half> %ray_dir, <4 x half> %ray_inv_dir, <4 x i32> %tdescr)
+  %ray_origin0 = insertelement <3 x float> undef, float 0.0, i32 0
+  %ray_origin1 = insertelement <3 x float> %ray_origin0, float 1.0, i32 1
+  %ray_origin = insertelement <3 x float> %ray_origin1, float 2.0, i32 2
+  %ray_dir0 = insertelement <3 x half> undef, half 3.0, i32 0
+  %ray_dir1 = insertelement <3 x half> %ray_dir0, half 4.0, i32 1
+  %ray_dir = insertelement <3 x half> %ray_dir1, half 5.0, i32 2
+  %ray_inv_dir0 = insertelement <3 x half> undef, half 6.0, i32 0
+  %ray_inv_dir1 = insertelement <3 x half> %ray_inv_dir0, half 7.0, i32 1
+  %ray_inv_dir = insertelement <3 x half> %ray_inv_dir1, half 8.0, i32 2
+  %v = call <4 x i32> @llvm.amdgcn.image.bvh.intersect.ray.i32.v4f16(i32 %node_ptr, float %ray_extent, <3 x float> %ray_origin, <3 x half> %ray_dir, <3 x half> %ray_inv_dir, <4 x i32> %tdescr)
   store <4 x i32> %v, <4 x i32>* undef
   ret void
 }
@@ -316,16 +316,16 @@ main_body:
   %lid = tail call i32 @llvm.amdgcn.workitem.id.x()
   %gep_ray = getelementptr inbounds float, float* %p_ray, i32 %lid
   %ray_extent = load float, float* %gep_ray, align 4
-  %ray_origin0 = insertelement <4 x float> undef, float 0.0, i32 0
-  %ray_origin1 = insertelement <4 x float> %ray_origin0, float 1.0, i32 1
-  %ray_origin = insertelement <4 x float> %ray_origin1, float 2.0, i32 2
-  %ray_dir0 = insertelement <4 x float> undef, float 3.0, i32 0
-  %ray_dir1 = insertelement <4 x float> %ray_dir0, float 4.0, i32 1
-  %ray_dir = insertelement <4 x float> %ray_dir1, float 5.0, i32 2
-  %ray_inv_dir0 = insertelement <4 x float> undef, float 6.0, i32 0
-  %ray_inv_dir1 = insertelement <4 x float> %ray_inv_dir0, float 7.0, i32 1
-  %ray_inv_dir = insertelement <4 x float> %ray_inv_dir1, float 8.0, i32 2
-  %v = call <4 x i32> @llvm.amdgcn.image.bvh.intersect.ray.i64.v4f32(i64 1111111111111, float %ray_extent, <4 x float> %ray_origin, <4 x float> %ray_dir, <4 x float> %ray_inv_dir, <4 x i32> %tdescr)
+  %ray_origin0 = insertelement <3 x float> undef, float 0.0, i32 0
+  %ray_origin1 = insertelement <3 x float> %ray_origin0, float 1.0, i32 1
+  %ray_origin = insertelement <3 x float> %ray_origin1, float 2.0, i32 2
+  %ray_dir0 = insertelement <3 x float> undef, float 3.0, i32 0
+  %ray_dir1 = insertelement <3 x float> %ray_dir0, float 4.0, i32 1
+  %ray_dir = insertelement <3 x float> %ray_dir1, float 5.0, i32 2
+  %ray_inv_dir0 = insertelement <3 x float> undef, float 6.0, i32 0
+  %ray_inv_dir1 = insertelement <3 x float> %ray_inv_dir0, float 7.0, i32 1
+  %ray_inv_dir = insertelement <3 x float> %ray_inv_dir1, float 8.0, i32 2
+  %v = call <4 x i32> @llvm.amdgcn.image.bvh.intersect.ray.i64.v4f32(i64 1111111111111, float %ray_extent, <3 x float> %ray_origin, <3 x float> %ray_dir, <3 x float> %ray_inv_dir, <4 x i32> %tdescr)
   store <4 x i32> %v, <4 x i32>* undef
   ret void
 }
@@ -380,16 +380,16 @@ main_body:
   %lid = tail call i32 @llvm.amdgcn.workitem.id.x()
   %gep_ray = getelementptr inbounds float, float* %p_ray, i32 %lid
   %ray_extent = load float, float* %gep_ray, align 4
-  %ray_origin0 = insertelement <4 x float> undef, float 0.0, i32 0
-  %ray_origin1 = insertelement <4 x float> %ray_origin0, float 1.0, i32 1
-  %ray_origin = insertelement <4 x float> %ray_origin1, float 2.0, i32 2
-  %ray_dir0 = insertelement <4 x half> undef, half 3.0, i32 0
-  %ray_dir1 = insertelement <4 x half> %ray_dir0, half 4.0, i32 1
-  %ray_dir = insertelement <4 x half> %ray_dir1, half 5.0, i32 2
-  %ray_inv_dir0 = insertelement <4 x half> undef, half 6.0, i32 0
-  %ray_inv_dir1 = insertelement <4 x half> %ray_inv_dir0, half 7.0, i32 1
-  %ray_inv_dir = insertelement <4 x half> %ray_inv_dir1, half 8.0, i32 2
-  %v = call <4 x i32> @llvm.amdgcn.image.bvh.intersect.ray.i64.v4f16(i64 1111111111110, float %ray_extent, <4 x float> %ray_origin, <4 x half> %ray_dir, <4 x half> %ray_inv_dir, <4 x i32> %tdescr)
+  %ray_origin0 = insertelement <3 x float> undef, float 0.0, i32 0
+  %ray_origin1 = insertelement <3 x float> %ray_origin0, float 1.0, i32 1
+  %ray_origin = insertelement <3 x float> %ray_origin1, float 2.0, i32 2
+  %ray_dir0 = insertelement <3 x half> undef, half 3.0, i32 0
+  %ray_dir1 = insertelement <3 x half> %ray_dir0, half 4.0, i32 1
+  %ray_dir = insertelement <3 x half> %ray_dir1, half 5.0, i32 2
+  %ray_inv_dir0 = insertelement <3 x half> undef, half 6.0, i32 0
+  %ray_inv_dir1 = insertelement <3 x half> %ray_inv_dir0, half 7.0, i32 1
+  %ray_inv_dir = insertelement <3 x half> %ray_inv_dir1, half 8.0, i32 2
+  %v = call <4 x i32> @llvm.amdgcn.image.bvh.intersect.ray.i64.v4f16(i64 1111111111110, float %ray_extent, <3 x float> %ray_origin, <3 x half> %ray_dir, <3 x half> %ray_inv_dir, <4 x i32> %tdescr)
   store <4 x i32> %v, <4 x i32>* undef
   ret void
 }
