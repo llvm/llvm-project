@@ -29,6 +29,7 @@ class CompilationDatabase;
 } // namespace tooling
 
 namespace tidy {
+class CachedGlobList;
 
 /// A detected error complete with information to display diagnostic and
 /// automatic fix.
@@ -191,7 +192,7 @@ private:
 
   std::string CurrentFile;
   ClangTidyOptions CurrentOptions;
-  class CachedGlobList;
+
   std::unique_ptr<CachedGlobList> CheckFilter;
   std::unique_ptr<CachedGlobList> WarningAsErrorFilter;
 
