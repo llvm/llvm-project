@@ -88,6 +88,11 @@ void *Allocate(const StackTrace &stack, uptr size, uptr alignment,
     size = 1;
   if (size > max_malloc_size)
     return ReportAllocationSizeTooBig(size, stack);
+  if (UNLIKELY(IsRssLimitExceeded())) {
+    if (AllocatorMayReturnNull())
+      return nullptr;
+    ReportRssLimitExceeded(&stack);
+  }
   void *p = allocator.Allocate(GetAllocatorCache(), size, alignment);
   if (UNLIKELY(!p)) {
     SetAllocatorOutOfMemory();

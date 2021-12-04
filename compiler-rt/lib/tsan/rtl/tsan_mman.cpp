@@ -192,6 +192,12 @@ void *user_alloc_internal(ThreadState *thr, uptr pc, uptr sz, uptr align,
     GET_STACK_TRACE_FATAL(thr, pc);
     ReportAllocationSizeTooBig(sz, malloc_limit, &stack);
   }
+  if (UNLIKELY(IsRssLimitExceeded())) {
+    if (AllocatorMayReturnNull())
+      return nullptr;
+    GET_STACK_TRACE_FATAL(thr, pc);
+    ReportRssLimitExceeded(&stack);
+  }
   void *p = allocator()->Allocate(&thr->proc()->alloc_cache, sz, align);
   if (UNLIKELY(!p)) {
     SetAllocatorOutOfMemory();

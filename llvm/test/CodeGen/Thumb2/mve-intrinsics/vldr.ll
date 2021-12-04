@@ -49,8 +49,8 @@ define arm_aapcs_vfpcc <2 x i64> @test_vldrdq_gather_base_wb_z_u64(<2 x i64>* %a
 entry:
   %0 = load <2 x i64>, <2 x i64>* %addr, align 8
   %1 = zext i16 %p to i32
-  %2 = tail call <4 x i1> @llvm.arm.mve.pred.i2v.v4i1(i32 %1)
-  %3 = tail call { <2 x i64>, <2 x i64> } @llvm.arm.mve.vldr.gather.base.wb.predicated.v2i64.v2i64.v4i1(<2 x i64> %0, i32 656, <4 x i1> %2)
+  %2 = tail call <2 x i1> @llvm.arm.mve.pred.i2v.v2i1(i32 %1)
+  %3 = tail call { <2 x i64>, <2 x i64> } @llvm.arm.mve.vldr.gather.base.wb.predicated.v2i64.v2i64.v2i1(<2 x i64> %0, i32 656, <2 x i1> %2)
   %4 = extractvalue { <2 x i64>, <2 x i64> } %3, 1
   store <2 x i64> %4, <2 x i64>* %addr, align 8
   %5 = extractvalue { <2 x i64>, <2 x i64> } %3, 0
@@ -58,5 +58,6 @@ entry:
 }
 
 declare <4 x i1> @llvm.arm.mve.pred.i2v.v4i1(i32)
+declare <2 x i1> @llvm.arm.mve.pred.i2v.v2i1(i32)
 
-declare { <2 x i64>, <2 x i64> } @llvm.arm.mve.vldr.gather.base.wb.predicated.v2i64.v2i64.v4i1(<2 x i64>, i32, <4 x i1>)
+declare { <2 x i64>, <2 x i64> } @llvm.arm.mve.vldr.gather.base.wb.predicated.v2i64.v2i64.v2i1(<2 x i64>, i32, <2 x i1>)

@@ -52,6 +52,22 @@ define void @vctp32(i32 %arg, <4 x i32> *%in, <4 x i32>* %out) {
   ret void
 }
 
+define void @vctp64(i32 %arg, <2 x i64> *%in, <2 x i64>* %out) {
+; CHECK-LABEL: vctp64:
+; CHECK:       @ %bb.0:
+; CHECK-NEXT:    vldrw.u32 q1, [r1]
+; CHECK-NEXT:    vctp.64 r0
+; CHECK-NEXT:    vmov.i32 q0, #0x0
+; CHECK-NEXT:    vpst
+; CHECK-NEXT:    vmovt q0, q1
+; CHECK-NEXT:    vstrw.32 q0, [r2]
+; CHECK-NEXT:    bx lr
+  %pred = call <2 x i1> @llvm.arm.mve.vctp64(i32 %arg)
+  %ld = load <2 x i64>, <2 x i64>* %in
+  %res = select <2 x i1> %pred, <2 x i64> %ld, <2 x i64> zeroinitializer
+  store <2 x i64> %res, <2 x i64>* %out
+  ret void
+}
 
 define arm_aapcs_vfpcc <4 x i32> @vcmp_ult_v4i32(i32 %n, <4 x i32> %a, <4 x i32> %b) {
 ; CHECK-LABEL: vcmp_ult_v4i32:
@@ -175,22 +191,10 @@ entry:
 define arm_aapcs_vfpcc <2 x i64> @vcmp_ult_v2i64(i64 %n, <2 x i64> %a, <2 x i64> %b) {
 ; CHECK-LABEL: vcmp_ult_v2i64:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    rsbs.w r3, r0, #1
-; CHECK-NEXT:    mov.w r2, #0
-; CHECK-NEXT:    sbcs.w r3, r2, r1
-; CHECK-NEXT:    cset r3, lo
-; CHECK-NEXT:    cmp r3, #0
-; CHECK-NEXT:    csetm r3, ne
-; CHECK-NEXT:    rsbs r0, r0, #0
-; CHECK-NEXT:    sbcs.w r0, r2, r1
-; CHECK-NEXT:    cset r0, lo
-; CHECK-NEXT:    cmp r0, #0
-; CHECK-NEXT:    csetm r0, ne
-; CHECK-NEXT:    vmov q2[2], q2[0], r0, r3
-; CHECK-NEXT:    vmov q2[3], q2[1], r0, r3
-; CHECK-NEXT:    vbic q1, q1, q2
-; CHECK-NEXT:    vand q0, q0, q2
-; CHECK-NEXT:    vorr q0, q0, q1
+; CHECK-NEXT:    vctp.64 r0
+; CHECK-NEXT:    vpst
+; CHECK-NEXT:    vmovt q1, q0
+; CHECK-NEXT:    vmov q0, q1
 ; CHECK-NEXT:    bx lr
 entry:
   %i = insertelement <2 x i64> undef, i64 %n, i32 0
@@ -203,23 +207,11 @@ entry:
 define arm_aapcs_vfpcc <2 x i64> @vcmp_uge_v2i64(i64 %n, <2 x i64> %a, <2 x i64> %b) {
 ; CHECK-LABEL: vcmp_uge_v2i64:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    subs r0, #1
-; CHECK-NEXT:    vldr s8, .LCPI11_0
-; CHECK-NEXT:    sbcs r0, r1, #0
-; CHECK-NEXT:    cset r0, hs
-; CHECK-NEXT:    vmov.f32 s9, s8
-; CHECK-NEXT:    cmp r0, #0
-; CHECK-NEXT:    csetm r0, ne
-; CHECK-NEXT:    vmov s10, r0
-; CHECK-NEXT:    vmov.f32 s11, s10
-; CHECK-NEXT:    vbic q1, q1, q2
-; CHECK-NEXT:    vand q0, q0, q2
-; CHECK-NEXT:    vorr q0, q0, q1
+; CHECK-NEXT:    vctp.64 r0
+; CHECK-NEXT:    vpst
+; CHECK-NEXT:    vmovt q1, q0
+; CHECK-NEXT:    vmov q0, q1
 ; CHECK-NEXT:    bx lr
-; CHECK-NEXT:    .p2align 2
-; CHECK-NEXT:  @ %bb.1:
-; CHECK-NEXT:  .LCPI11_0:
-; CHECK-NEXT:    .long 0xffffffff @ float NaN
 entry:
   %i = insertelement <2 x i64> undef, i64 %n, i32 0
   %ns = shufflevector <2 x i64> %i, <2 x i64> undef, <2 x i32> zeroinitializer
@@ -232,3 +224,4 @@ entry:
 declare <16 x i1> @llvm.arm.mve.vctp8(i32)
 declare <8 x i1> @llvm.arm.mve.vctp16(i32)
 declare <4 x i1> @llvm.arm.mve.vctp32(i32)
+declare <2 x i1> @llvm.arm.mve.vctp64(i32)

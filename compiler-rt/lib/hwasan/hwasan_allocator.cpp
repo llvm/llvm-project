@@ -132,6 +132,11 @@ static void *HwasanAllocate(StackTrace *stack, uptr orig_size, uptr alignment,
     }
     ReportAllocationSizeTooBig(orig_size, kMaxAllowedMallocSize, stack);
   }
+  if (UNLIKELY(IsRssLimitExceeded())) {
+    if (AllocatorMayReturnNull())
+      return nullptr;
+    ReportRssLimitExceeded(stack);
+  }
 
   alignment = Max(alignment, kShadowAlignment);
   uptr size = TaggedSize(orig_size);

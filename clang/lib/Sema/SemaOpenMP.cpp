@@ -3501,7 +3501,8 @@ public:
       return;
     if (auto *VD = dyn_cast<VarDecl>(E->getDecl())) {
       // Check the datasharing rules for the expressions in the clauses.
-      if (!CS) {
+      if (!CS || (isa<OMPCapturedExprDecl>(VD) && !CS->capturesVariable(VD) &&
+                  !Stack->getTopDSA(VD, /*FromParent=*/false).RefExpr)) {
         if (auto *CED = dyn_cast<OMPCapturedExprDecl>(VD))
           if (!CED->hasAttr<OMPCaptureNoInitAttr>()) {
             Visit(CED->getInit());
@@ -3820,6 +3821,10 @@ public:
   }
   void VisitOMPExecutableDirective(OMPExecutableDirective *S) {
     for (OMPClause *C : S->clauses()) {
+      // Skip analysis of arguments of private clauses for task|target
+      // directives.
+      if (isa_and_nonnull<OMPPrivateClause>(C))
+        continue;
       // Skip analysis of arguments of implicitly defined firstprivate clause
       // for task|target directives.
       // Skip analysis of arguments of implicitly defined map clause for target
@@ -3842,6 +3847,15 @@ public:
     VisitStmt(S);
   }
 
+  void VisitCallExpr(CallExpr *S) {
+    for (Stmt *C : S->arguments()) {
+      if (C) {
+        // Check implicitly captured variables in the task-based directives to
+        // check if they must be firstprivatized.
+        Visit(C);
+      }
+    }
+  }
   void VisitStmt(Stmt *S) {
     for (Stmt *C : S->children()) {
       if (C) {

@@ -311,19 +311,12 @@ struct BufferizationState {
   /// Map tensor values to memref buffers.
   void mapBuffer(ValueRange tensors, ValueRange buffers);
 
-  /// Map a value to another value.
-  void mapValue(Value from, Value to);
-
   /// Map a tensor value to a memref buffer.
   void mapBuffer(Value tensor, Value buffer);
 
   /// Lookup the memref buffer that is associated to the given tensor value.
   /// Asserts if no buffer is associated.
   Value lookupBuffer(Value tensor);
-
-  /// Lookup the value that is associated to the given value. Asserts if no
-  /// value is associated.
-  Value lookupValue(Value value) const;
 
   /// Return `true` if the given value is mapped.
   bool isMapped(Value value) const;
@@ -345,8 +338,7 @@ struct BufferizationState {
   /// `aliasInfo` keeps track of aliasing and equivalent values.
   BufferizationAliasInfo aliasInfo;
 
-  /// The mapping of tensors to buffers. May also contain mappings of non-tensor
-  /// values.
+  /// The mapping of tensors to buffers.
   BlockAndValueMapping mapping;
 
   /// Obsolete ops that should be deleted after bufferization.

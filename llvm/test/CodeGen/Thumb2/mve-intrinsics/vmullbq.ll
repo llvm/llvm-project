@@ -95,12 +95,13 @@ define arm_aapcs_vfpcc <2 x i64> @test_vmullbq_int_m_s32(<2 x i64> %inactive, <4
 ; CHECK-NEXT:    bx lr
 entry:
   %0 = zext i16 %p to i32
-  %1 = tail call <4 x i1> @llvm.arm.mve.pred.i2v.v4i1(i32 %0)
-  %2 = tail call <2 x i64> @llvm.arm.mve.mull.int.predicated.v2i64.v4i32.v4i1(<4 x i32> %a, <4 x i32> %b, i32 0, i32 0, <4 x i1> %1, <2 x i64> %inactive)
+  %1 = tail call <2 x i1> @llvm.arm.mve.pred.i2v.v2i1(i32 %0)
+  %2 = tail call <2 x i64> @llvm.arm.mve.mull.int.predicated.v2i64.v4i32.v2i1(<4 x i32> %a, <4 x i32> %b, i32 0, i32 0, <2 x i1> %1, <2 x i64> %inactive)
   ret <2 x i64> %2
 }
 
-declare <2 x i64> @llvm.arm.mve.mull.int.predicated.v2i64.v4i32.v4i1(<4 x i32>, <4 x i32>, i32, i32, <4 x i1>, <2 x i64>) #1
+declare <2 x i1> @llvm.arm.mve.pred.i2v.v2i1(i32)
+declare <2 x i64> @llvm.arm.mve.mull.int.predicated.v2i64.v4i32.v2i1(<4 x i32>, <4 x i32>, i32, i32, <2 x i1>, <2 x i64>) #1
 
 define arm_aapcs_vfpcc <8 x i16> @test_vmullbq_poly_m_p8(<8 x i16> %inactive, <16 x i8> %a, <16 x i8> %b, i16 zeroext %p) local_unnamed_addr #0 {
 ; CHECK-LABEL: test_vmullbq_poly_m_p8:
@@ -156,8 +157,8 @@ define arm_aapcs_vfpcc <2 x i64> @test_vmullbq_int_x_u32(<4 x i32> %a, <4 x i32>
 ; CHECK-NEXT:    bx lr
 entry:
   %0 = zext i16 %p to i32
-  %1 = tail call <4 x i1> @llvm.arm.mve.pred.i2v.v4i1(i32 %0)
-  %2 = tail call <2 x i64> @llvm.arm.mve.mull.int.predicated.v2i64.v4i32.v4i1(<4 x i32> %a, <4 x i32> %b, i32 1, i32 0, <4 x i1> %1, <2 x i64> undef)
+  %1 = tail call <2 x i1> @llvm.arm.mve.pred.i2v.v2i1(i32 %0)
+  %2 = tail call <2 x i64> @llvm.arm.mve.mull.int.predicated.v2i64.v4i32.v2i1(<4 x i32> %a, <4 x i32> %b, i32 1, i32 0, <2 x i1> %1, <2 x i64> undef)
   ret <2 x i64> %2
 }
 

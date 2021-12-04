@@ -69,7 +69,7 @@ define i32 @sadd(i32 %arg) {
 ;
 ; MVE-RECIP-LABEL: 'sadd'
 ; MVE-RECIP-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %I64 = call { i64, i1 } @llvm.sadd.with.overflow.i64(i64 undef, i64 undef)
-; MVE-RECIP-NEXT:  Cost Model: Found an estimated cost of 110 for instruction: %V2I64 = call { <2 x i64>, <2 x i1> } @llvm.sadd.with.overflow.v2i64(<2 x i64> undef, <2 x i64> undef)
+; MVE-RECIP-NEXT:  Cost Model: Found an estimated cost of 126 for instruction: %V2I64 = call { <2 x i64>, <2 x i1> } @llvm.sadd.with.overflow.v2i64(<2 x i64> undef, <2 x i64> undef)
 ; MVE-RECIP-NEXT:  Cost Model: Found an estimated cost of 218 for instruction: %V4I64 = call { <4 x i64>, <4 x i1> } @llvm.sadd.with.overflow.v4i64(<4 x i64> undef, <4 x i64> undef)
 ; MVE-RECIP-NEXT:  Cost Model: Found an estimated cost of 434 for instruction: %V8I64 = call { <8 x i64>, <8 x i1> } @llvm.sadd.with.overflow.v8i64(<8 x i64> undef, <8 x i64> undef)
 ; MVE-RECIP-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %I32 = call { i32, i1 } @llvm.sadd.with.overflow.i32(i32 undef, i32 undef)
@@ -126,7 +126,7 @@ define i32 @sadd(i32 %arg) {
 ;
 ; MVE-SIZE-LABEL: 'sadd'
 ; MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %I64 = call { i64, i1 } @llvm.sadd.with.overflow.i64(i64 undef, i64 undef)
-; MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 39 for instruction: %V2I64 = call { <2 x i64>, <2 x i1> } @llvm.sadd.with.overflow.v2i64(<2 x i64> undef, <2 x i64> undef)
+; MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 58 for instruction: %V2I64 = call { <2 x i64>, <2 x i1> } @llvm.sadd.with.overflow.v2i64(<2 x i64> undef, <2 x i64> undef)
 ; MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 75 for instruction: %V4I64 = call { <4 x i64>, <4 x i1> } @llvm.sadd.with.overflow.v4i64(<4 x i64> undef, <4 x i64> undef)
 ; MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 147 for instruction: %V8I64 = call { <8 x i64>, <8 x i1> } @llvm.sadd.with.overflow.v8i64(<8 x i64> undef, <8 x i64> undef)
 ; MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %I32 = call { i32, i1 } @llvm.sadd.with.overflow.i32(i32 undef, i32 undef)
@@ -385,7 +385,7 @@ define i32 @ssub(i32 %arg) {
 ;
 ; MVE-RECIP-LABEL: 'ssub'
 ; MVE-RECIP-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %I64 = call { i64, i1 } @llvm.ssub.with.overflow.i64(i64 undef, i64 undef)
-; MVE-RECIP-NEXT:  Cost Model: Found an estimated cost of 110 for instruction: %V2I64 = call { <2 x i64>, <2 x i1> } @llvm.ssub.with.overflow.v2i64(<2 x i64> undef, <2 x i64> undef)
+; MVE-RECIP-NEXT:  Cost Model: Found an estimated cost of 126 for instruction: %V2I64 = call { <2 x i64>, <2 x i1> } @llvm.ssub.with.overflow.v2i64(<2 x i64> undef, <2 x i64> undef)
 ; MVE-RECIP-NEXT:  Cost Model: Found an estimated cost of 218 for instruction: %V4I64 = call { <4 x i64>, <4 x i1> } @llvm.ssub.with.overflow.v4i64(<4 x i64> undef, <4 x i64> undef)
 ; MVE-RECIP-NEXT:  Cost Model: Found an estimated cost of 434 for instruction: %V8I64 = call { <8 x i64>, <8 x i1> } @llvm.ssub.with.overflow.v8i64(<8 x i64> undef, <8 x i64> undef)
 ; MVE-RECIP-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %I32 = call { i32, i1 } @llvm.ssub.with.overflow.i32(i32 undef, i32 undef)
@@ -442,7 +442,7 @@ define i32 @ssub(i32 %arg) {
 ;
 ; MVE-SIZE-LABEL: 'ssub'
 ; MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %I64 = call { i64, i1 } @llvm.ssub.with.overflow.i64(i64 undef, i64 undef)
-; MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 39 for instruction: %V2I64 = call { <2 x i64>, <2 x i1> } @llvm.ssub.with.overflow.v2i64(<2 x i64> undef, <2 x i64> undef)
+; MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 58 for instruction: %V2I64 = call { <2 x i64>, <2 x i1> } @llvm.ssub.with.overflow.v2i64(<2 x i64> undef, <2 x i64> undef)
 ; MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 75 for instruction: %V4I64 = call { <4 x i64>, <4 x i1> } @llvm.ssub.with.overflow.v4i64(<4 x i64> undef, <4 x i64> undef)
 ; MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 147 for instruction: %V8I64 = call { <8 x i64>, <8 x i1> } @llvm.ssub.with.overflow.v8i64(<8 x i64> undef, <8 x i64> undef)
 ; MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %I32 = call { i32, i1 } @llvm.ssub.with.overflow.i32(i32 undef, i32 undef)

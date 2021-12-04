@@ -809,8 +809,7 @@ def int_arm_cls64: Intrinsic<[llvm_i32_ty], [llvm_i64_ty], [IntrNoMem]>;
 def int_arm_mve_vctp8  : Intrinsic<[llvm_v16i1_ty], [llvm_i32_ty], [IntrNoMem]>;
 def int_arm_mve_vctp16 : Intrinsic<[llvm_v8i1_ty], [llvm_i32_ty], [IntrNoMem]>;
 def int_arm_mve_vctp32 : Intrinsic<[llvm_v4i1_ty], [llvm_i32_ty], [IntrNoMem]>;
-// vctp64 takes v4i1, to work around v2i1 not being a legal MVE type
-def int_arm_mve_vctp64 : Intrinsic<[llvm_v4i1_ty], [llvm_i32_ty], [IntrNoMem]>;
+def int_arm_mve_vctp64 : Intrinsic<[llvm_v2i1_ty], [llvm_i32_ty], [IntrNoMem]>;
 
 // v8.3-A Floating-point complex add
 def int_arm_neon_vcadd_rot90  : Neon_2Arg_Intrinsic;

@@ -77,7 +77,9 @@ public:
   Register GetValueAtEndOfBlock(MachineBasicBlock *BB);
 
   /// GetValueInMiddleOfBlock - Construct SSA form, materializing a value that
-  /// is live in the middle of the specified block.
+  /// is live in the middle of the specified block. If ExistingValueOnly is
+  /// true then this will only return an existing value or $noreg; otherwise new
+  /// instructions may be inserted to materialize a value.
   ///
   /// GetValueInMiddleOfBlock is the same as GetValueAtEndOfBlock except in one
   /// important case: if there is a definition of the rewritten value after the
@@ -94,7 +96,8 @@ public:
   /// their respective blocks.  However, the use of X happens in the *middle* of
   /// a block.  Because of this, we need to insert a new PHI node in SomeBB to
   /// merge the appropriate values, and this value isn't live out of the block.
-  Register GetValueInMiddleOfBlock(MachineBasicBlock *BB);
+  Register GetValueInMiddleOfBlock(MachineBasicBlock *BB,
+                                   bool ExistingValueOnly = false);
 
   /// RewriteUse - Rewrite a use of the symbolic value.  This handles PHI nodes,
   /// which use their value in the corresponding predecessor.  Note that this
@@ -104,7 +107,10 @@ public:
   void RewriteUse(MachineOperand &U);
 
 private:
-  Register GetValueAtEndOfBlockInternal(MachineBasicBlock *BB);
+  // If ExistingValueOnly is true, will not create any new instructions. Used
+  // for debug values, which cannot modify Codegen.
+  Register GetValueAtEndOfBlockInternal(MachineBasicBlock *BB,
+                                        bool ExistingValueOnly = false);
 };
 
 } // end namespace llvm

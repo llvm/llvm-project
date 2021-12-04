@@ -370,7 +370,7 @@ static void layoutPostProcessing(ModuleOp moduleOp) {
     SmallVector<Type> argumentTypes;
     // Iterate on each function argument and check it it was marked with a
     // desired layout.
-    for (auto it : llvm::enumerate(funcOp.getType().getInputs())) {
+    for (const auto &it : llvm::enumerate(funcOp.getType().getInputs())) {
       int argNumber = it.index();
       Type inputType = it.value();
       auto memrefType = inputType.dyn_cast<MemRefType>();
@@ -445,12 +445,6 @@ struct CallOpInterface
     // inspect bbArgs. In the absence of a BufferizationAliasInfo, we need to be
     // conservative.
     return true;
-  }
-
-  SmallVector<OpOperand *> getAliasingOpOperand(Operation *op,
-                                                OpResult opResult) const {
-    // TODO: Can we do better?
-    return {};
   }
 
   OpResult getAliasingOpResult(Operation *op, OpOperand &opOperand) const {

@@ -7,8 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/IR/DebugInfo.h"
-#include "llvm/IR/DIBuilder.h"
+#include "llvm/ADT/APSInt.h"
 #include "llvm/AsmParser/Parser.h"
+#include "llvm/IR/DIBuilder.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/LLVMContext.h"
@@ -244,28 +245,21 @@ TEST(DIBuilder, CreateSetType) {
   EXPECT_TRUE(isa_and_nonnull<DIDerivedType>(SetType));
 }
 
-TEST(IsHeterogeneousDebugTest, EmptyModule) {
-  LLVMContext C;
-  std::unique_ptr<Module> M = parseIR(C, "");
-  EXPECT_FALSE(isHeterogeneousDebug(*M));
-}
+TEST(DIBuilder, DIEnumerator) {
+  LLVMContext Ctx;
+  std::unique_ptr<Module> M(new Module("MyModule", Ctx));
+  DIBuilder DIB(*M);
+  APSInt I1(APInt(32, 1));
+  APSInt I2(APInt(33, 1));
 
-TEST(IsHeterogeneousDebugTest, V3Module) {
-  LLVMContext C;
-  std::unique_ptr<Module> M = parseIR(C, R"(
-    !llvm.module.flags = !{!0}
-    !0 = !{i32 2, !"Debug Info Version", i32 3}
-)");
-  EXPECT_FALSE(isHeterogeneousDebug(*M));
-}
+  auto *E = DIEnumerator::get(Ctx, I1, I1.isSigned(), "name");
+  EXPECT_TRUE(E);
 
-TEST(IsHeterogeneousDebugTest, V4Module) {
-  LLVMContext C;
-  std::unique_ptr<Module> M = parseIR(C, R"(
-    !llvm.module.flags = !{!0}
-    !0 = !{i32 2, !"Debug Info Version", i32 4}
-)");
-  EXPECT_TRUE(isHeterogeneousDebug(*M));
+  auto *E1 = DIEnumerator::getIfExists(Ctx, I1, I1.isSigned(), "name");
+  EXPECT_TRUE(E1);
+
+  auto *E2 = DIEnumerator::getIfExists(Ctx, I2, I1.isSigned(), "name");
+  EXPECT_FALSE(E2);
 }
 
 } // end namespace

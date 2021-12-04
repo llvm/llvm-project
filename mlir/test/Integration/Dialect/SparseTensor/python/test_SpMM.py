@@ -1,4 +1,5 @@
-# RUN: SUPPORT_LIB=%mlir_runner_utils_dir/libmlir_c_runner_utils%shlibext %PYTHON %s | FileCheck %s
+# RUN: SUPPORT_LIB=%mlir_runner_utils_dir/libmlir_c_runner_utils%shlibext \
+# RUN:   %PYTHON %s | FileCheck %s
 
 import ctypes
 import numpy as np
@@ -14,12 +15,6 @@ from mlir import passmanager
 from mlir.dialects import sparse_tensor as st
 from mlir.dialects import builtin
 from mlir.dialects.linalg.opdsl import lang as dsl
-
-
-def run(f):
-  print('\nTEST:', f.__name__)
-  f()
-  return f
 
 
 @dsl.linalg_structured_op
@@ -135,14 +130,14 @@ class SparseCompiler:
     passmanager.PassManager.parse(self.pipeline).run(module)
 
 
-# CHECK-LABEL: TEST: testSpMM
-# CHECK: Passed 8 tests
-@run
-def testSpMM():
-  # Obtain path to runtime support library.
+def main():
   support_lib = os.getenv('SUPPORT_LIB')
-  assert os.path.exists(support_lib), f'{support_lib} does not exist'
+  assert support_lib is not None, 'SUPPORT_LIB is undefined'
+  if not os.path.exists(support_lib):
+    raise FileNotFoundError(errno.ENOENT, os.strerror(errno.ENOENT), support_lib)
 
+  # CHECK-LABEL: TEST: testSpMM
+  print('\nTEST: testSpMM')
   with ir.Context() as ctx, ir.Location.unknown():
     count = 0
     # Loop over various ways to compile and annotate the SpMM kernel with
@@ -173,4 +168,8 @@ def testSpMM():
             compiler = SparseCompiler(options=opt)
             build_compile_and_run_SpMM(attr, support_lib, compiler)
             count = count + 1
+    # CHECK: Passed 8 tests
     print('Passed ', count, 'tests')
+
+if __name__ == '__main__':
+  main()

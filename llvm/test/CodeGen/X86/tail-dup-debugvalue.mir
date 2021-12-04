@@ -1,10 +1,18 @@
 # RUN: llc -run-pass=early-tailduplication -mtriple=x86_64-unknown-linux-gnu %s -o - | FileCheck %s
 
 # Tail Duplication may update SSA values and invalidate any DBG_VALUEs that
-# use those values; those DBG_VALUEs should be deleted. This behaviour is tested
+# use those values; those DBG_VALUEs should be set undef. This is tested
 # for DBG_VALUE users, and DBG_VALUE_LISTs that use the value multiple times.
 
-# CHECK-NOT: DBG_VALUE
+# CHECK: ![[VAR_J:[0-9]+]] = !DILocalVariable(name: "j"
+# CHECK: ![[VAR_K:[0-9]+]] = !DILocalVariable(name: "k"
+# CHECK-LABEL: bb.1.L:
+# CHECK: %[[REGISTER:[0-9]+]]:gr32 = PHI
+# CHECK-LABEL: bb.2.if.end4:
+# CHECK: DBG_VALUE_LIST ![[VAR_J]],
+# CHECK-SAME: %[[REGISTER]], 1, %[[REGISTER]]
+# CHECK: DBG_VALUE %[[REGISTER]], $noreg, ![[VAR_K]]
+
 --- |
   target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
   target triple = "x86_64-unknown-linux-gnu"
