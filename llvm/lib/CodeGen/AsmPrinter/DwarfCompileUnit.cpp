@@ -1081,7 +1081,7 @@ void DwarfCompileUnit::constructAbstractSubprogramScopeDIE(
     LexicalScope *Scope) {
 
   auto *SP = cast<DISubprogram>(Scope->getScopeNode());
-  if (auto *SPDie = getAbstractScopeDIEs().lookup(SP))
+  if (getAbstractScopeDIEs().count(SP))
     return;
 
   DIE *ContextDIE;
