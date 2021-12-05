@@ -1492,7 +1492,7 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
 
 
     StructType *StructTy = nullptr;
-    if (AggregateArgs &&  newFunction->arg_size() > 0) 
+    if (AggregateArgs &&  (inputs.size() + outputs.size() > 0)) 
         StructTy = cast<StructType>(newFunction->getArg(0)->getType());
     
 
@@ -1528,17 +1528,39 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
     BasicBlock *codeReplacer = BasicBlock::Create(header->getContext(),        "codeRepl", oldFunction,        header);
     BasicBlock *AllocaBlock = &oldFunction->front();
 
+
+
     // Add inputs as params, or to be filled into the struct
     unsigned ArgNo = 0;
-    std::vector<Value *>  StructValues;
-    if (AggregateArgs) {
+    std::vector<Value *> params;
+
+    AllocaInst *Struct = nullptr;
+    if (AggregateArgs  && StructTy) {
+        std::vector<Value *>  StructValues;
         for (Value* input : inputs) {
                 StructValues.push_back(input);
             ++ArgNo;
         }
+
+
+
+        Struct = new AllocaInst(StructTy, DL.getAllocaAddrSpace(), nullptr,
+            "structArg",
+            &AllocaBlock->front());
+
+        params.push_back(Struct);
+
+        for (unsigned i = 0, e = inputs.size(); i != e; ++i) {
+            Value *Idx[2];
+            Idx[0] = Constant::getNullValue(Type::getInt32Ty(Context));
+            Idx[1] = ConstantInt::get(Type::getInt32Ty(Context), i);
+            GetElementPtrInst *GEP = GetElementPtrInst::Create(StructTy, Struct, Idx, "gep_" + StructValues[i]->getName());
+            codeReplacer->getInstList().push_back(GEP);
+            new StoreInst(StructValues[i], GEP, codeReplacer);
+        }
     }
 
-    std::vector<Value *> params;
+   
     SmallVector<unsigned, 1> SwiftErrorArgs;
     if (!AggregateArgs) {
         for (Value* input : inputs) {
@@ -1550,15 +1572,13 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
     }
 
 
+
+
+
     std::vector<Value *> ReloadOutputs;
     std::vector<Value *> Reloads;
 
     // Create allocas for the outputs
-    if (AggregateArgs) {
-        for (Value* output : outputs) {
-            StructValues.push_back(output);
-        }
-    }
     if (!AggregateArgs) {
         for (Value* output : outputs) {
             AllocaInst* alloca =
@@ -1570,31 +1590,14 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
         }
     }
 
-    StructType *StructArgTy = StructTy;
-    AllocaInst *Struct = nullptr;
-    if (AggregateArgs && (inputs.size() + outputs.size() > 0)) {
-        std::vector<Type *> ArgTypes;
-        for (Value *V : StructValues)
-            ArgTypes.push_back(V->getType());
 
 
-        Struct = new AllocaInst(StructArgTy, DL.getAllocaAddrSpace(), nullptr,
-            "structArg",
-            &AllocaBlock->front());
-
-        params.push_back(Struct);
-
-        for (unsigned i = 0, e = inputs.size(); i != e; ++i) {
-            Value *Idx[2];
-            Idx[0] = Constant::getNullValue(Type::getInt32Ty(Context));
-            Idx[1] = ConstantInt::get(Type::getInt32Ty(Context), i);
-            GetElementPtrInst *GEP = GetElementPtrInst::Create(StructArgTy, Struct, Idx, "gep_" + StructValues[i]->getName());
-            codeReplacer->getInstList().push_back(GEP);
-            new StoreInst(StructValues[i], GEP, codeReplacer);
-        }
-    }
 
 
+    Function::arg_iterator OutputArgBegin = newFunction->arg_begin();
+    unsigned FirstOut = inputs.size();
+    if (!AggregateArgs)
+        std::advance(OutputArgBegin, inputs.size());
 
     ////////////////////////////////////////////////////////////////////////////
 
@@ -1605,48 +1608,6 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
 
 
 
-
-
-    Function::arg_iterator OutputArgBegin = newFunction->arg_begin();
-    unsigned FirstOut = inputs.size();
-    if (!AggregateArgs)
-        std::advance(OutputArgBegin, inputs.size());
-
-#if 0
-    //using InsertPointTy = IRBuilder<>::InsertPoint;
-  //  IRBuilder<> Builder(Context);
-    auto MakeReloadAddress = [&](int i) {
-        Value *Output = nullptr;
-        if (AggregateArgs) {
-            Value *Idx[2];
-            Idx[0] = Constant::getNullValue(Type::getInt32Ty(Context));
-            Idx[1] = ConstantInt::get(Type::getInt32Ty(Context), FirstOut + i);
-            //Value *GEP = Builder.CreateGEP(StructArgTy, Struct, Idx, Twine("gep_reload_") + outputs[i]->getName());
-            GetElementPtrInst *GEP = GetElementPtrInst::Create(StructArgTy, Struct, Idx, "gep_reload_" + outputs[i]->getName());
-            codeReplacer->getInstList().push_back(GEP);
-            Output = GEP;
-        } else {
-            Output = ReloadOutputs[i];
-        }
-        return Output;
-    };
-#endif
-
-#if 0
-    // Undo SSA for output values after the extracted region before dominator analysis is invalidated.
-    if (KeepOldBlocks) {
-        for (auto P : enumerate(outputs)) {
-        auto Idx = P.index();
-        auto OutVal = P.value();
-
-            for (auto &&E : ExitBlocks) {
-                Builder.SetInsertPoint(E->getTerminator());
-                auto Attr = MakeReloadAddress(Idx);
-                Builder.CreateStore(OutVal, );
-            }
-        }
-    }
-#endif
 
 
     // Update the entry count of the function.
@@ -1890,7 +1851,7 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
                 Idx[0] = Constant::getNullValue(Type::getInt32Ty(Context));
                 Idx[1] = ConstantInt::get(Type::getInt32Ty(Context), FirstOut + i);
                 GetElementPtrInst* GEP = GetElementPtrInst::Create(
-                    StructArgTy, Struct, Idx, "gep_reload_" + outputs[i]->getName());
+                    StructTy, Struct, Idx, "gep_reload_" + outputs[i]->getName());
                 codeReplacer->getInstList().push_back(GEP);
                 Output = GEP;
             }
@@ -2102,7 +2063,7 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
         }
 
 
-        //  for (auto&& O : outputs) {    }
+      
 
 
 
@@ -2284,7 +2245,7 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
                 Idx[0] = Constant::getNullValue(Type::getInt32Ty(Context));
                 Idx[1] = ConstantInt::get(Type::getInt32Ty(Context), FirstOut + i);
                 GetElementPtrInst *GEP = GetElementPtrInst::Create(
-                    StructArgTy, &*OAI, Idx, "gep_" + outputs[i]->getName(),
+                    StructTy, &*OAI, Idx, "gep_" + outputs[i]->getName(),
                     InsertBefore);
                 new StoreInst(OutI, GEP, InsertBefore);
                 // Since there should be only one struct argument aggregating
@@ -2430,7 +2391,7 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
                 Idx[0] = Constant::getNullValue(Type::getInt32Ty(Context));
                 Idx[1] = ConstantInt::get(Type::getInt32Ty(Context), FirstOut + i);
                 //Value *GEP = Builder.CreateGEP(StructArgTy, Struct, Idx, Twine("gep_reload_") + outputs[i]->getName());
-                GetElementPtrInst *GEP = GetElementPtrInst::Create(StructArgTy, Struct, Idx, "gep_reload_" + outputs[i]->getName());
+                GetElementPtrInst *GEP = GetElementPtrInst::Create(StructTy, Struct, Idx, "gep_reload_" + outputs[i]->getName());
                 codeReplacer->getInstList().push_back(GEP);
                 Output = GEP;
             } else {
@@ -2557,7 +2518,7 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
                 Idx[0] = Constant::getNullValue(Type::getInt32Ty(Context));
                 Idx[1] = ConstantInt::get(Type::getInt32Ty(Context), FirstOut + i);
                 GetElementPtrInst *GEP = GetElementPtrInst::Create(
-                    StructArgTy, &*OAI, Idx, "gep_" + outputs[i]->getName(),
+                    StructTy, &*OAI, Idx, "gep_" + outputs[i]->getName(),
                     InsertBefore);
                 new StoreInst(outputs[i], GEP, InsertBefore);
                 // Since there should be only one struct argument aggregating
