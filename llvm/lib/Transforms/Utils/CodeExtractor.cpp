@@ -1491,13 +1491,6 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
     BasicBlock *newFuncRoot = BasicBlock::Create(header->getContext(), "newFuncRoot", newFunction);
 
 
-
-
- 
-
-
-
-
     StructType *StructTy = nullptr;
     if (AggregateArgs &&  newFunction->arg_size() > 0) 
         StructTy = cast<StructType>(newFunction->getArg(0)->getType());
@@ -1533,7 +1526,7 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
 
     // This takes place of the original loop
     BasicBlock *codeReplacer = BasicBlock::Create(header->getContext(),        "codeRepl", oldFunction,        header);
-    BasicBlock *     AllocaBlock = &oldFunction->front();
+    BasicBlock *AllocaBlock = &oldFunction->front();
 
     // Add inputs as params, or to be filled into the struct
     unsigned ArgNo = 0;
@@ -1577,34 +1570,18 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
         }
     }
 
-
-    ////////////////////////////////////////////////////////////////////////////
-
-
-
-
-
-
-
-
-
-
-
-    StructType *StructArgTy = nullptr;
+    StructType *StructArgTy = StructTy;
     AllocaInst *Struct = nullptr;
     if (AggregateArgs && (inputs.size() + outputs.size() > 0)) {
         std::vector<Type *> ArgTypes;
         for (Value *V : StructValues)
             ArgTypes.push_back(V->getType());
 
-        // Allocate a struct at the beginning of this function
-        StructArgTy = StructType::get(newFunction->getContext(), ArgTypes);
-        //  Struct  =   NewAlloca(StructArgTy, DL.getAllocaAddrSpace(), nullptr,  "structArg");
-#if 1
+
         Struct = new AllocaInst(StructArgTy, DL.getAllocaAddrSpace(), nullptr,
             "structArg",
             &AllocaBlock->front());
-#endif
+
         params.push_back(Struct);
 
         for (unsigned i = 0, e = inputs.size(); i != e; ++i) {
@@ -1616,6 +1593,19 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
             new StoreInst(StructValues[i], GEP, codeReplacer);
         }
     }
+
+
+
+    ////////////////////////////////////////////////////////////////////////////
+
+
+
+
+
+
+
+
+
 
     Function::arg_iterator OutputArgBegin = newFunction->arg_begin();
     unsigned FirstOut = inputs.size();
