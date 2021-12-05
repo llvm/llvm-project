@@ -41,17 +41,9 @@ enum class BlockType : unsigned {
   Multivalue = 0xffff,
 };
 
-/// Used as immediate MachineOperands for heap types, e.g. for ref.null.
-enum class HeapType : unsigned {
-  Invalid = 0x00,
-  Externref = unsigned(wasm::ValType::EXTERNREF),
-  Funcref = unsigned(wasm::ValType::FUNCREF),
-};
-
 // Convert StringRef to ValType / HealType / BlockType
 
 Optional<wasm::ValType> parseType(StringRef Type);
-HeapType parseHeapType(StringRef Type);
 BlockType parseBlockType(StringRef Type);
 MVT parseMVT(StringRef Type);
 

@@ -41,13 +41,6 @@ Optional<wasm::ValType> WebAssembly::parseType(StringRef Type) {
   return Optional<wasm::ValType>();
 }
 
-WebAssembly::HeapType WebAssembly::parseHeapType(StringRef Type) {
-  return StringSwitch<WebAssembly::HeapType>(Type)
-      .Case("extern", WebAssembly::HeapType::Externref)
-      .Case("func", WebAssembly::HeapType::Funcref)
-      .Default(WebAssembly::HeapType::Invalid);
-}
-
 WebAssembly::BlockType WebAssembly::parseBlockType(StringRef Type) {
   // Multivalue block types are handled separately in parseSignature
   return StringSwitch<WebAssembly::BlockType>(Type)
