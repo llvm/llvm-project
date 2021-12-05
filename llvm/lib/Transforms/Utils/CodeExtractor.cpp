@@ -2067,14 +2067,7 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
 
 
 
-#if 0
-        CallInst* TheCall = emitCallAndSwitchStatement(newFunction, codeReplacer, inputs, outputs, false, VMap,
-        params,
-        StructValues,
-        SwiftErrorArgs,ReloadOutputs,Reloads,
-            StructArgTy, Struct
-        );
-#else
+
         Module *M = newFunction->getParent();
         LLVMContext &Context = M->getContext();
      //   const DataLayout &DL = M->getDataLayout();
@@ -2307,8 +2300,8 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
         // allocas output values are stored in are only in-use in the codeRepl block.
         insertLifetimeMarkersSurroundingCall(M, ReloadOutputs, ReloadOutputs, call);
 
-        CallInst* TheCall =call;
-#endif
+       // CallInst* TheCall =call;
+
 
         moveCodeToFunction(newFunction);
 
@@ -2317,7 +2310,7 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
         // Replicate the effects of any lifetime start/end markers which referenced
         // input objects in the extraction region by placing markers around the call.
         insertLifetimeMarkersSurroundingCall(
-            oldFunction->getParent(), LifetimesStart.getArrayRef(), {}, TheCall);
+            oldFunction->getParent(), LifetimesStart.getArrayRef(), {}, call);
 
 
         // TODO: ByCopy
@@ -2354,7 +2347,7 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
                 }
             }
 
-        fixupDebugInfoPostExtraction(*oldFunction, *newFunction, *TheCall);
+        fixupDebugInfoPostExtraction(*oldFunction, *newFunction, *call);
     }
 
       // Mark the new function `noreturn` if applicable. Terminators which resume
