@@ -8628,7 +8628,7 @@ VPWidenIntOrFpInductionRecipe *VPRecipeBuilder::tryToOptimizeInductionTruncate(
         Legal->getInductionVars().lookup(cast<PHINode>(I->getOperand(0)));
     VPValue *Start = Plan.getOrAddVPValue(II.getStartValue());
     return new VPWidenIntOrFpInductionRecipe(cast<PHINode>(I->getOperand(0)),
-                                             Start, nullptr, I);
+                                             Start, I);
   }
   return nullptr;
 }
