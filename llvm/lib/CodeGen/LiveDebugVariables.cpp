@@ -822,9 +822,6 @@ bool LDVImpl::handleDebugValue(MachineInstr &MI, SlotIndex Idx) {
   // register that hasn't been defined yet. If we do not remove those here, then
   // the re-insertion of the DBG_VALUE instruction after register allocation
   // will be incorrect.
-  // TODO: If earlier passes are corrected to generate sane debug information
-  // (and if the machine verifier is improved to catch this), then these checks
-  // could be removed or replaced by asserts.
   bool Discard = false;
   for (const MachineOperand &Op : MI.debug_operands()) {
     if (Op.isReg() && Register::isVirtualRegister(Op.getReg())) {

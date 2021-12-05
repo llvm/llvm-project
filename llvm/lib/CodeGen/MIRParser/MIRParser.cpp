@@ -457,6 +457,9 @@ MIRParserImpl::initializeMachineFunction(const yaml::MachineFunction &YamlMF,
   if (YamlMF.FailsVerification)
     MF.getProperties().set(
         MachineFunctionProperties::Property::FailsVerification);
+  if (YamlMF.TracksDebugUserValues)
+    MF.getProperties().set(
+        MachineFunctionProperties::Property::TracksDebugUserValues);
 
   PerFunctionMIParsingState PFS(MF, SM, IRSlots, *Target);
   if (parseRegisterInfo(PFS, YamlMF))

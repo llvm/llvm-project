@@ -14,7 +14,7 @@ body:             |
 
 # GCN-LABEL: name: fold-imm-readfirstlane-dbgvalue{{$}}
 # GCN: %1:sreg_32_xm0 = S_MOV_B32 123
-# GCN: DBG_VALUE $noreg, 0, 0
+# GCN: DBG_VALUE %0:vgpr_32, 0, 0
 ---
 name: fold-imm-readfirstlane-dbgvalue
 tracksRegLiveness: true

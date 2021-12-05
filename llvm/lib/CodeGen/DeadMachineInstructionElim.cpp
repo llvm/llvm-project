@@ -142,9 +142,9 @@ bool DeadMachineInstructionElim::eliminateDeadMI(MachineFunction &MF) {
       if (isDead(&MI)) {
         LLVM_DEBUG(dbgs() << "DeadMachineInstructionElim: DELETING: " << MI);
         // It is possible that some DBG_VALUE instructions refer to this
-        // instruction.  They get marked as undef and will be deleted
-        // in the live debug variable analysis.
-        MI.eraseFromParentAndMarkDBGValuesForRemoval();
+        // instruction. They will be deleted in the live debug variable
+        // analysis.
+        MI.eraseFromParent();
         AnyChanges = true;
         ++NumDeletes;
         continue;
