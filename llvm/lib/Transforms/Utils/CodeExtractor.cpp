@@ -1634,107 +1634,13 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
     if (KeepOldBlocks) {
         ValueToValueMapTy VMap;
 
+
         for (auto&& P : enumerate(inputs)) {
             VMap[P.value()] = NewValues[P.index()];
         }
 
 
-
-  
-
-
-       // BasicBlock* AllocaBlock = BasicBlock::Create(header->getContext(), "entry", newFunction, newFuncRoot);
-        //auto  BranchI = BranchInst::Create(newFuncRoot, AllocaBlock);
-       // applyFirstDebugLoc(oldFunction, Blocks.getArrayRef(), BranchI);
-
-        // Recursive calls to oldFunction still call the old Function from extracted function.
-
-        VMap[oldFunction] = oldFunction;
-
-
-
-
-        // Emit a call to the new function, passing in: *pointer to struct (if
-        // aggregating parameters), or plan inputs and allocated memory for outputs
-        //  std::vector<Value*> ReloadOutputs, Reloads;
-
-        // Module *M = newFunction->getParent();
-        LLVMContext& Context = M->getContext();
-        //   const DataLayout& DL = M->getDataLayout();
-        CallInst* call = nullptr;
-
-#if 0
-        BasicBlock* AllocaBlock;
-        if (KeepOldBlocks) {
-            AllocaBlock = &newFunction->front();
-        }
-        else {
-            AllocaBlock = &codeReplacer->getParent()->front();
-        }
-#endif
-
-#if 0
-        auto NewAlloca = [&](Type* Ty, unsigned AddrSpace, Value* ArraySize,
-            const Twine& Name) {
-                if (!KeepOldBlocks)
-                    return  new AllocaInst(Ty, AddrSpace, ArraySize, Name, &codeReplacer->getParent()->front().front());
-                return  new AllocaInst(Ty, AddrSpace, ArraySize, Name, &newFunction->front().front());
-        };
-#endif
-
-
-#if 0
-        // Create allocas for the outputs
-        for (Value* output : outputs) {
-            if (AggregateArgs) {
-                StructValues.push_back(output);
-            }
-            else {
-                AllocaInst* alloca =
-                    //      NewAlloca(output->getType(), DL.getAllocaAddrSpace(),  nullptr, output->getName() + ".loc");
-#if 1
-                    new AllocaInst(output->getType(), DL.getAllocaAddrSpace(),
-                        nullptr, output->getName() + ".loc",
-                        &codeReplacer->getParent()->front().front());
-#endif
-                ReloadOutputs.push_back(alloca);
-                params.push_back(alloca);
-            }
-        }
-#endif
-
-#if 0
-        StructType* StructArgTy = nullptr;
-        AllocaInst* Struct = nullptr;
-        if (AggregateArgs && (inputs.size() + outputs.size() > 0)) {
-            std::vector<Type*> ArgTypes;
-            for (Value* V : StructValues)
-                ArgTypes.push_back(V->getType());
-
-            // Allocate a struct at the beginning of this function
-            StructArgTy = StructType::get(newFunction->getContext(), ArgTypes);
-            //  Struct  =   NewAlloca(StructArgTy, DL.getAllocaAddrSpace(), nullptr,  "structArg");
-#if 1
-            Struct = new AllocaInst(StructArgTy, DL.getAllocaAddrSpace(), nullptr,
-                "structArg",
-                &codeReplacer->getParent()->front().front());
-#endif
-            params.push_back(Struct);
-
-            for (unsigned i = 0, e = inputs.size(); i != e; ++i) {
-                Value* Idx[2];
-                Idx[0] = Constant::getNullValue(Type::getInt32Ty(Context));
-                Idx[1] = ConstantInt::get(Type::getInt32Ty(Context), i);
-                GetElementPtrInst* GEP = GetElementPtrInst::Create(
-                    StructArgTy, Struct, Idx, "gep_" + StructValues[i]->getName());
-                codeReplacer->getInstList().push_back(GEP);
-                new StoreInst(StructValues[i], GEP, codeReplacer);
-            }
-        }
-#endif
-
-        // Emit the call to the function
-        call = CallInst::Create(newFunction, params, NumExitBlocks > 1 ? "targetBlock" : "");
+        CallInst*  call = CallInst::Create(newFunction, params, NumExitBlocks > 1 ? "targetBlock" : "");
 
 
 
@@ -1782,14 +1688,10 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
             }
             ReloadAddress[outputs[i]] = Output;
 
-            // new StoreInst(outputs[i]->getType(),  Output,  );
-
-            //  SpillAddress[outputs[i]] =  new AllocaInst (outputs[i]->getType(), 0, outputs[i]->getName() + ".addr",&codeReplacer->getParent()->front().front());
-
-
+      
             LoadInst* load = new LoadInst(outputs[i]->getType(), Output,       outputs[i]->getName() + ".reload",  codeReplacer);
             Reloads.push_back(load);
-            //ReloadReplacements[outputs[i]]
+
 
             if (KeepOldBlocks) {
                 auto OrigOut = outputs[i];
@@ -1895,17 +1797,7 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
 
             // auto OldPredecessor  = OldTarget->getUniquePredecessor();
 
-#if 0
-            if (KeepOldBlocks) {
-                for (auto&& P : OldTarget->phis()) {
-                    auto Val = P.getIncomingValueForBlock(OldTarget);
-                    Value *PHINewVal = Val;
-                    if (auto X = ReloadReplacements.lookup(Val)) 
-                        PHINewVal = X;
-                    P.addIncoming(PHINewVal, codeReplacer);
-                }
-            }
-#endif
+
 
             // Update the switch instruction.
             TheSwitch->addCase(ConstantInt::get(Type::getInt16Ty(Context),
@@ -1916,72 +1808,7 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
 
 
 
-#if 0
-            if (KeepOldBlocks) {
-                // for (auto T : OldTargets) {
-                DenseMap<Value*, PHINode*> OutRepl;
-                for (auto&& P : OldTarget->phis()) {
-                    int NumIncoming = P.getNumIncomingValues();
-                    for (int i = 0; i < NumIncoming; ++i) {
-                        auto OldVal = P.getIncomingValue(i);
-                        auto ReplVal = ReloadReplacements.lookup(OldVal);
-                        if (ReplVal) {
-                            P.addIncoming(ReplVal, codeReplacer);
-                            OutRepl[OldVal] = &P;
-                            break;
-                        }
-                    }
-                }
 
-
-                SmallPtrSet<BasicBlock*, 2> OriginalPreds;
-                for (auto Pred : predecessors(OldTarget)) {
-                    if (Blocks.count(Pred)) continue;
-                    if (Pred == codeReplacer)continue;
-                    OriginalPreds.insert(Pred);
-                }
-
-                if (OriginalPreds.size() == 1) {
-                    auto OldPredecessor = *OriginalPreds.begin();
-                    for (auto&& O : outputs) {
-                        auto& PHI = OutRepl[O];
-                        if (!PHI) {
-                            auto ReplVal = ReloadReplacements.lookup(O);
-                            PHI = PHINode::Create(O->getType(), 2, O->getName() + ".merge_new_and_old", OldTarget->getFirstNonPHI());
-                            PHI->addIncoming(O, OldPredecessor);
-                            PHI->addIncoming(ReplVal, codeReplacer);
-                        }
-
-
-
-#if 0
-                        for (auto&& U : make_early_inc_range(O->uses())) {
-                            auto* User = dyn_cast<Instruction>(U.getUser());
-                            if (!User) continue;
-                            //if (!DT->dominates(OldTarget, User->getParent())) continue;
-                            if (VMap.lookup(User)) continue;
-                            if (Blocks.count(User->getParent())) continue;
-                            if (User->getParent()->getParent() != oldFunction) continue;
-                            // if (User->getParent() == OldTarget && isa<PHINode>(User)) continue;
-                            if (auto P = dyn_cast<PHINode>(User)) {
-                                auto Incoming = P->getIncomingBlock(U.getOperandNo());
-                                if (Incoming == codeReplacer || Blocks.count(Incoming)) continue;
-                            }
-
-                            if (!PHI) {
-                                auto ReplVal = ReloadReplacements.lookup(O);
-                                PHI = PHINode::Create(O->getType(), 2, O->getName() + ".merge_new_and_old", OldTarget->getFirstNonPHI());
-                                PHI->addIncoming(O, OldPredecessor);
-                                PHI->addIncoming(ReplVal, codeReplacer);
-                            }
-
-                            U.set(PHI);
-                        }
-#endif
-                    }
-                }
-            }
-#endif
         }
 
 
@@ -1990,8 +1817,7 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
 
 
 
-        //if (!KeepOldBlocks)
-#if 1
+
         for (BasicBlock *Block : Blocks) {
             Instruction *TI = Block->getTerminator();
             for (unsigned i = 0, e = TI->getNumSuccessors(); i != e; ++i) {
@@ -2007,7 +1833,7 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
                 VMap[OldTarget] = NewTarget;
             }
         }
-#endif
+
 
 
 
@@ -2055,25 +1881,6 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
             break;
         }
 
-        // Insert lifetime markers around the reloads of any output values. The
-        // allocas output values are stored in are only in-use in the codeRepl block.
-        //   insertLifetimeMarkersSurroundingCall(M, ReloadOutputs, ReloadOutputs, call);
-
-        // auto TheCall =call;
-
-
-        // Function *oldFunc =oldFunction;
-        //  Function::BasicBlockListType &oldBlocks = oldFunction->getBasicBlockList();
-        //  Function::BasicBlockListType &newBlocks = newFunction->getBasicBlockList();
-
-#if 0
-        DebugInfoFinder DIFinder;
-        assert((newFunction->getParent() == nullptr ||
-            newFunction->getParent() == oldFunc->getParent()) &&
-            "Expected NewFunc to have the same parent, or no parent");
-        if (DISubprogram *  SPClonedWithinModule = oldFunc->getSubprogram())
-            DIFinder.processSubprogram(SPClonedWithinModule);
-#endif
 
 
 
