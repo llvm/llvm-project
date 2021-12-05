@@ -460,11 +460,14 @@ bootstrapping-build)
     #       because that provides coverage for some specific Clang failures
     #       we've been seeing recently, however it would be better to instead
     #       run all CI configurations against a Clang that has assertions enabled.
+    #
+    # The generation of debug information is disabled since that causes an ICE.
+    # llvm.org/PR52584
     ${CMAKE} \
           -S "${MONOREPO_ROOT}/llvm" \
           -B "${BUILD_DIR}" \
           -GNinja -DCMAKE_MAKE_PROGRAM="${NINJA}" \
-          -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+          -DCMAKE_BUILD_TYPE=Release \
           -DCMAKE_INSTALL_PREFIX="${INSTALL_DIR}" \
           -DLLVM_ENABLE_PROJECTS="clang" \
           -DLLVM_ENABLE_RUNTIMES="libcxx;libcxxabi" \
