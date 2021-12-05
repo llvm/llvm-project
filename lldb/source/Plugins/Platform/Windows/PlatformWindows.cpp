@@ -383,7 +383,7 @@ uint32_t PlatformWindows::DoLoadImage(Process *process,
     return LLDB_INVALID_IMAGE_TOKEN;
   }
 
-  if (token == NULL) {
+  if (!token) {
     // XXX(compnerd) should we use the compiler to get the sizeof(unsigned)?
     uint64_t error_code =
         process->ReadUnsignedIntegerFromMemory(injected_result + 2 * word_size + sizeof(unsigned),
