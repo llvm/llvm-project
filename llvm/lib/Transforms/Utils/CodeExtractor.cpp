@@ -1412,7 +1412,9 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
     BasicBlock *header = *Blocks.begin();
     Function *oldFunction = header->getParent();
     Module* M = oldFunction->getParent();
+    LLVMContext &Context = M->getContext();
     const DataLayout& DL = M->getDataLayout();
+
 
 
 
@@ -1529,25 +1531,51 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
 
     //// Codegen newFunction call replacement ////////////////////////////////////////////// 
 
+    // This takes place of the original loop
+    BasicBlock *codeReplacer = BasicBlock::Create(header->getContext(),        "codeRepl", oldFunction,        header);
+    BasicBlock *     AllocaBlock = &oldFunction->front();
+
     // Add inputs as params, or to be filled into the struct
     unsigned ArgNo = 0;
-    std::vector<Value *> params;
     std::vector<Value *>  StructValues;
-    SmallVector<unsigned, 1> SwiftErrorArgs;
-    for (Value *input : inputs) {
-        if (AggregateArgs)
-            StructValues.push_back(input);
-        else {
-            params.push_back(input);
-            if (input->isSwiftError())
-                SwiftErrorArgs.push_back(ArgNo);
+    if (AggregateArgs) {
+        for (Value* input : inputs) {
+                StructValues.push_back(input);
+            ++ArgNo;
         }
-        ++ArgNo;
+    }
+
+    std::vector<Value *> params;
+    SmallVector<unsigned, 1> SwiftErrorArgs;
+    if (!AggregateArgs) {
+        for (Value* input : inputs) {
+                params.push_back(input);
+                if (input->isSwiftError())
+                    SwiftErrorArgs.push_back(ArgNo);
+            ++ArgNo;
+        }
     }
 
 
-    // This takes place of the original loop
-    BasicBlock *codeReplacer = BasicBlock::Create(header->getContext(),        "codeRepl", oldFunction,        header);
+    std::vector<Value *> ReloadOutputs;
+    std::vector<Value *> Reloads;
+
+    // Create allocas for the outputs
+    if (AggregateArgs) {
+        for (Value* output : outputs) {
+            StructValues.push_back(output);
+        }
+    }
+    if (!AggregateArgs) {
+        for (Value* output : outputs) {
+            AllocaInst* alloca =
+                new AllocaInst(output->getType(), DL.getAllocaAddrSpace(),
+                    nullptr, output->getName() + ".loc",
+                    &AllocaBlock->front());
+            ReloadOutputs.push_back(alloca);
+            params.push_back(alloca);
+        }
+    }
 
 
     ////////////////////////////////////////////////////////////////////////////
@@ -1556,32 +1584,10 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
 
 
 
-    // BasicBlock *     AllocaBlock = &codeReplacer->getParent()->front();
-    BasicBlock *     AllocaBlock = &oldFunction->front();
 
 
-    std::vector<Value *> ReloadOutputs;
-    std::vector<Value *> Reloads;
-
-    // Create allocas for the outputs
-    for (Value *output : outputs) {
-        if (AggregateArgs) {
-            StructValues.push_back(output);
-        } else {
-            AllocaInst *alloca =
-                //      NewAlloca(output->getType(), DL.getAllocaAddrSpace(),  nullptr, output->getName() + ".loc");
-#if 1
-                new AllocaInst(output->getType(), DL.getAllocaAddrSpace(),
-                    nullptr, output->getName() + ".loc",
-                    &AllocaBlock->front());
-#endif
-            ReloadOutputs.push_back(alloca);
-            params.push_back(alloca);
-        }
-    }
 
 
-    LLVMContext &Context = M->getContext();
 
 
     StructType *StructArgTy = nullptr;
