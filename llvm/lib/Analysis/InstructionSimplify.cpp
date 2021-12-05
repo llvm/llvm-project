@@ -2198,6 +2198,18 @@ static Value *simplifyOrLogic(Value *X, Value *Y) {
 
   Value *A, *B;
 
+  // (A ^ B) | (A | B) --> A | B
+  // (A ^ B) | (B | A) --> B | A
+  if (match(X, m_Xor(m_Value(A), m_Value(B))) &&
+      match(Y, m_c_Or(m_Specific(A), m_Specific(B))))
+    return Y;
+
+  // ~(A ^ B) | (A | B) --> -1
+  // ~(A ^ B) | (B | A) --> -1
+  if (match(X, m_Not(m_Xor(m_Value(A), m_Value(B)))) &&
+      match(Y, m_c_Or(m_Specific(A), m_Specific(B))))
+    return ConstantInt::getAllOnesValue(Ty);
+
   // (A & ~B) | (A ^ B) --> A ^ B
   // (~B & A) | (A ^ B) --> A ^ B
   // (A & ~B) | (B ^ A) --> B ^ A
@@ -2214,18 +2226,6 @@ static Value *simplifyOrLogic(Value *X, Value *Y) {
       match(Y, m_c_And(m_Specific(A), m_Specific(B))))
     return X;
 
-  // (A ^ B) | (A | B) --> A | B
-  // (A ^ B) | (B | A) --> B | A
-  if (match(X, m_Xor(m_Value(A), m_Value(B))) &&
-      match(Y, m_c_Or(m_Specific(A), m_Specific(B))))
-    return Y;
-
-  // ~(A ^ B) | (A | B) --> -1
-  // ~(A ^ B) | (B | A) --> -1
-  if (match(X, m_Not(m_Xor(m_Value(A), m_Value(B)))) &&
-      match(Y, m_c_Or(m_Specific(A), m_Specific(B))))
-    return ConstantInt::getAllOnesValue(Ty);
-
   // (~A | B) | (A ^ B) --> -1
   // (~A | B) | (B ^ A) --> -1
   // (B | ~A) | (A ^ B) --> -1
@@ -2233,6 +2233,17 @@ static Value *simplifyOrLogic(Value *X, Value *Y) {
   if (match(X, m_c_Or(m_Not(m_Value(A)), m_Value(B))) &&
       match(Y, m_c_Xor(m_Specific(A), m_Specific(B))))
     return ConstantInt::getAllOnesValue(Ty);
+
+  // (~A & B) | ~(A | B) --> ~A
+  // (~A & B) | ~(B | A) --> ~A
+  // (B & ~A) | ~(A | B) --> ~A
+  // (B & ~A) | ~(B | A) --> ~A
+  Value *NotA;
+  if (match(X,
+            m_c_And(m_CombineAnd(m_Value(NotA), m_NotForbidUndef(m_Value(A))),
+                    m_Value(B))) &&
+      match(Y, m_Not(m_c_Or(m_Specific(A), m_Specific(B)))))
+    return NotA;
 
   return nullptr;
 }
@@ -2266,27 +2277,6 @@ static Value *SimplifyOrInst(Value *Op0, Value *Op1, const SimplifyQuery &Q,
 
   if (Value *V = simplifyLogicOfAddSub(Op0, Op1, Instruction::Or))
     return V;
-
-  Value *A, *B, *NotA;
-
-  // (~A & B) | ~(A | B) --> ~A
-  // (~A & B) | ~(B | A) --> ~A
-  // (B & ~A) | ~(A | B) --> ~A
-  // (B & ~A) | ~(B | A) --> ~A
-  if (match(Op0, m_c_And(m_CombineAnd(m_Value(NotA), m_Not(m_Value(A))),
-                         m_Value(B))) &&
-      match(Op1, m_Not(m_c_Or(m_Specific(A), m_Specific(B)))))
-    return NotA;
-
-  // Commute the 'or' operands.
-  // ~(A | B) | (~A & B) --> ~A
-  // ~(B | A) | (~A & B) --> ~A
-  // ~(A | B) | (B & ~A) --> ~A
-  // ~(B | A) | (B & ~A) --> ~A
-  if (match(Op1, m_c_And(m_CombineAnd(m_Value(NotA), m_Not(m_Value(A))),
-                         m_Value(B))) &&
-      match(Op0, m_Not(m_c_Or(m_Specific(A), m_Specific(B)))))
-    return NotA;
 
   // Rotated -1 is still -1:
   // (-1 << X) | (-1 >> (C - X)) --> -1
@@ -2343,6 +2333,7 @@ static Value *SimplifyOrInst(Value *Op0, Value *Op1, const SimplifyQuery &Q,
   }
 
   // (A & C1)|(B & C2)
+  Value *A, *B;
   const APInt *C1, *C2;
   if (match(Op0, m_And(m_Value(A), m_APInt(C1))) &&
       match(Op1, m_And(m_Value(B), m_APInt(C2)))) {

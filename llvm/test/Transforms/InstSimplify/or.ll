@@ -454,12 +454,16 @@ define <2 x i4> @and_or_not_or_commute7(<2 x i4> %A, <2 x i4> %B) {
   ret <2 x i4> %r
 }
 
-; FIXME: It is not safe to propagate an undef element from the 'not' op.
+; negative test - It is not safe to propagate an undef element from the 'not' op.
 
 define <2 x i4> @and_or_not_or_commute7_undef_elt(<2 x i4> %A, <2 x i4> %B) {
 ; CHECK-LABEL: @and_or_not_or_commute7_undef_elt(
 ; CHECK-NEXT:    [[NOTA:%.*]] = xor <2 x i4> [[A:%.*]], <i4 undef, i4 -1>
-; CHECK-NEXT:    ret <2 x i4> [[NOTA]]
+; CHECK-NEXT:    [[AND:%.*]] = and <2 x i4> [[B:%.*]], [[NOTA]]
+; CHECK-NEXT:    [[OR:%.*]] = or <2 x i4> [[B]], [[A]]
+; CHECK-NEXT:    [[NOTAB:%.*]] = xor <2 x i4> [[OR]], <i4 -1, i4 -1>
+; CHECK-NEXT:    [[R:%.*]] = or <2 x i4> [[NOTAB]], [[AND]]
+; CHECK-NEXT:    ret <2 x i4> [[R]]
 ;
   %nota = xor <2 x i4> %A, <i4 undef, i4 -1>
   %and = and <2 x i4> %B, %nota
