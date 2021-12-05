@@ -1330,6 +1330,34 @@ void CodeExtractor::prepareForExtraction(BasicBlock *&Header,bool KeepOldBlocks)
     severSplitPHINodesOfExits();
    // recomputeExitBlocks();
 
+
+    if (KeepOldBlocks) {
+        // TODO: preserve BPI/BFI
+        for (BasicBlock *Block : Blocks) {
+            SmallVector<BasicBlock*> Succs;
+            llvm::append_range(Succs, successors(Block) );
+
+            for (BasicBlock *Succ : Succs) {
+                if (Blocks.count(Succ)) continue;
+
+                if (!Succ->getSinglePredecessor()) {                 
+                    Succ=   SplitEdge(Block, Succ, DT);
+                }
+
+                // Ensure no PHI node in exit block (still possible with single predecessor, e.g. LCSSA)
+                while (auto P = dyn_cast<PHINode>(&Succ->front())) {
+                    assert(P->getNumIncomingValues()==1);
+                    P->replaceAllUsesWith(P->getIncomingValue(0));
+                    P->eraseFromParent();
+                }
+            }
+        }
+
+
+
+        recomputeExitBlocks();
+    }
+
 }
 
 
@@ -1443,34 +1471,9 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
 
 
 
-    if (KeepOldBlocks) {
-        for (BasicBlock *Block : Blocks) {
-            SmallVector<BasicBlock*> Succs;
-            llvm::append_range(Succs, successors(Block) );
-
-            for (BasicBlock *Succ : Succs) {
-                if (Blocks.count(Succ)) continue;
-
-                if (!Succ->getSinglePredecessor()) {                 
-                    Succ=   SplitEdge(Block, Succ, DT);
-                }
-
-                // Ensure no PHI node in exit block (still possible with single predecessor, e.g. LCSSA)
-                while (auto P = dyn_cast<PHINode>(&Succ->front())) {
-                    assert(P->getNumIncomingValues()==1);
-                    P->replaceAllUsesWith(P->getIncomingValue(0));
-                    P->eraseFromParent();
-                }
-            }
-        }
 
 
-
-        recomputeExitBlocks();
-    }
-
-
-
+#if 0
     // analyzis, after ret splitting
     // DenseMap<BasicBlock*,BasicBlock*> ExitingBlocks;
     for (BasicBlock *Block : Blocks) {
@@ -1483,7 +1486,7 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
             // ExitingBlocks[Block] = OldTarget;
         }
     }
-
+#endif
 
 
 
