@@ -1527,7 +1527,7 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
     
 
 
-    //// Codegen newFunction call ////////////////////////////////////////////// 
+    //// Codegen newFunction call replacement ////////////////////////////////////////////// 
 
     // Add inputs as params, or to be filled into the struct
     unsigned ArgNo = 0;
@@ -1546,10 +1546,12 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
     }
 
 
-    ////////////////////////////////////////////////////////////////////////////
-
     // This takes place of the original loop
     BasicBlock *codeReplacer = BasicBlock::Create(header->getContext(),        "codeRepl", oldFunction,        header);
+
+
+    ////////////////////////////////////////////////////////////////////////////
+
 
 
 
