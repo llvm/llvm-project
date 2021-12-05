@@ -527,8 +527,14 @@ template <typename T> static LogicalResult verifyConvOp(T op) {
   auto weightType = op.weight().getType().template dyn_cast<RankedTensorType>();
 
   // Must be ranked tensor types
-  if (!inputType || !weightType)
+  if (!inputType) {
+    op.emitOpError("expect a ranked tensor for input, got ") << op.input();
     return failure();
+  }
+  if (!weightType) {
+    op.emitOpError("expect a ranked tensor for weight, got ") << op.weight();
+    return failure();
+  }
 
   auto inputEType = inputType.getElementType();
   auto weightEType = weightType.getElementType();
@@ -537,14 +543,21 @@ template <typename T> static LogicalResult verifyConvOp(T op) {
   bool weightIsQuant = !weightEType.template isa<FloatType>();
 
   // Either both must be quantized or both unquantized.
-  if (inputIsQuant != weightIsQuant)
+  if (inputIsQuant != weightIsQuant) {
+    op.emitOpError(
+        "expect both input and weight to be float or not together, got ")
+        << inputEType << " and " << weightEType;
     return failure();
+  }
 
   // Quantized type must have constructed the quantizationattr, and unquantized
   // types should not have a quantizationattr.
   if ((inputIsQuant && !op.quantization_info()) ||
-      (!inputIsQuant && op.quantization_info()))
+      (!inputIsQuant && op.quantization_info())) {
+    op.emitOpError("quantizationattr is required for quantized type, and not "
+                   "allowed for float type");
     return failure();
+  }
 
   return success();
 }
