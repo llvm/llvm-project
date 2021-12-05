@@ -11517,7 +11517,7 @@ void SITargetLowering::AdjustInstrPostInstrSelection(MachineInstr &MI,
     // Prefer VGPRs over AGPRs in mAI instructions where possible.
     // This saves a chain-copy of registers and better ballance register
     // use between vgpr and agpr as agpr tuples tend to be big.
-    if (const MCOperandInfo *OpInfo = MI.getDesc().OpInfo) {
+    if (MI.getDesc().OpInfo) {
       unsigned Opc = MI.getOpcode();
       const SIRegisterInfo *TRI = Subtarget->getRegisterInfo();
       for (auto I : { AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::src0),
