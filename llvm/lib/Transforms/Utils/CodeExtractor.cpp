@@ -1411,18 +1411,14 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
     // block in the region.
     BasicBlock *header = *Blocks.begin();
     Function *oldFunction = header->getParent();
+    Module* M = oldFunction->getParent();
+    const DataLayout& DL = M->getDataLayout();
 
 
 
 
-   // SmallPtrSet<BasicBlock *, 1> ExitBlocks;
-
-   // analyzeBeforeExtraction(CEAC,inputs, outputs, EntryFreq,ExitWeights,ExitBlocks);
 
 
-
-
-    // canonicalization
     canonicalizeForExtraction(header, KeepOldBlocks);
 
 
@@ -1485,18 +1481,17 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
 
 
 
+
+    //// CodeGen newFunction implementation ///////////////////////////////////////////////////
+
     // The new function needs a root node because other nodes can branch to the
     // head of the region, but the entry node of a function cannot have preds.
     BasicBlock *newFuncRoot = BasicBlock::Create(header->getContext(), "newFuncRoot", newFunction);
-    BasicBlock *newRootNode=newFuncRoot;
 
 
 
-    // This takes place of the original loop
-    BasicBlock *codeReplacer = BasicBlock::Create(header->getContext(),        "codeRepl", oldFunction,        header);
-    //auto newHeader = codeReplacer;
 
-
+ 
 
 
 
@@ -1507,43 +1502,32 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
     
 
    
-
+    
     // Create an iterator to name all of the arguments we inserted.
     Function::arg_iterator AI = newFunction->arg_begin();
 
     // Rewrite all users of the inputs in the extracted region to use the
     // arguments (or appropriate addressing into struct) instead.
     SmallVector<Value*> NewValues;
-
     for (unsigned i = 0, e = inputs.size(); i != e; ++i) {
-        Value *RewriteVal;
+        Value* RewriteVal;
         if (AggregateArgs) {
-            Value *Idx[2];
+            Value* Idx[2];
             Idx[0] = Constant::getNullValue(Type::getInt32Ty(header->getContext()));
             Idx[1] = ConstantInt::get(Type::getInt32Ty(header->getContext()), i);
-            Instruction *TI = newFunction->begin()->getTerminator();
-            GetElementPtrInst *GEP = GetElementPtrInst::Create(StructTy, &*AI, Idx, "gep_" + inputs[i]->getName(), TI);
+            Instruction* TI = newFunction->begin()->getTerminator();
+            GetElementPtrInst* GEP = GetElementPtrInst::Create(StructTy, &*AI, Idx, "gep_" + inputs[i]->getName(), TI);
             RewriteVal = new LoadInst(StructTy->getElementType(i), GEP, "loadgep_" + inputs[i]->getName(), TI);
-        } else
+        }
+        else
             RewriteVal = &*AI++;
 
         NewValues.push_back(RewriteVal);
     }
+    
 
-#if 0
-    // Set names for input and output arguments.
-    if (!AggregateArgs) {
-        AI = newFunction->arg_begin();
-        for (unsigned i = 0, e = inputs.size(); i != e; ++i, ++AI)
-            AI->setName(inputs[i]->getName());
-        for (unsigned i = 0, e = outputs.size(); i != e; ++i, ++AI)
-            AI->setName(outputs[i]->getName()+".out");
-    }
-#endif 
 
-    std::vector<Value *> ReloadOutputs;
-    std::vector<Value *> Reloads;
-
+    //// Codegen newFunction call ////////////////////////////////////////////// 
 
     // Add inputs as params, or to be filled into the struct
     unsigned ArgNo = 0;
@@ -1561,10 +1545,21 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
         ++ArgNo;
     }
 
-   
-    BasicBlock *     AllocaBlock = &codeReplacer->getParent()->front();
-    Module* M = oldFunction->getParent();
-    const DataLayout& DL = M->getDataLayout();
+
+    ////////////////////////////////////////////////////////////////////////////
+
+    // This takes place of the original loop
+    BasicBlock *codeReplacer = BasicBlock::Create(header->getContext(),        "codeRepl", oldFunction,        header);
+
+
+
+
+    // BasicBlock *     AllocaBlock = &codeReplacer->getParent()->front();
+    BasicBlock *     AllocaBlock = &oldFunction->front();
+
+
+    std::vector<Value *> ReloadOutputs;
+    std::vector<Value *> Reloads;
 
     // Create allocas for the outputs
     for (Value *output : outputs) {
@@ -1680,13 +1675,10 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
 
 
     if (KeepOldBlocks) {
-
-
-
-        auto newHeader = codeReplacer;
+       // auto newHeader = codeReplacer;
         ValueToValueMapTy VMap;
-        Module* M = oldFunction->getParent();
-        auto KeepOldBlocks = true;
+     //   Module* M = oldFunction->getParent();
+     //   auto KeepOldBlocks = true;
 
 
 
@@ -1758,13 +1750,13 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
                 if (Instruction* I = dyn_cast<Instruction>(U))
                     if (I->isTerminator() && I->getFunction() == oldFunction &&
                         !Blocks.count(I->getParent()))
-                        I->replaceUsesOfWith(header, newHeader);
+                        I->replaceUsesOfWith(header, codeReplacer);
         }
 
         //return newFunction;
 
-        BasicBlock* AllocaBlock = BasicBlock::Create(header->getContext(), "entry", newFunction, newRootNode);
-        auto  BranchI = BranchInst::Create(newRootNode, AllocaBlock);
+        BasicBlock* AllocaBlock = BasicBlock::Create(header->getContext(), "entry", newFunction, newFuncRoot);
+        auto  BranchI = BranchInst::Create(newFuncRoot, AllocaBlock);
         applyFirstDebugLoc(oldFunction, Blocks.getArrayRef(), BranchI);
 
         // Recursive calls to oldFunction still call the old Function from extracted function.
@@ -2208,7 +2200,7 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
         for (auto Pred : predecessors(header)) {
             if (VMap.count(Pred))
                 continue;
-            VMap[Pred] = newRootNode;
+            VMap[Pred] = newFuncRoot;
         }
 
 
@@ -2309,7 +2301,7 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
 
         BasicBlock* HeaderCopy  =  cast<BasicBlock>( VMap.lookup(header));
         assert(HeaderCopy);
-        auto *BranchI2 = BranchInst::Create(HeaderCopy, newRootNode);
+        auto *BranchI2 = BranchInst::Create(HeaderCopy, newFuncRoot);
         applyFirstDebugLoc(oldFunction, Blocks.getArrayRef(), BranchI2);
     } else {
         // Transforms/HotColdSplit/stale-assume-in-original-func.ll
