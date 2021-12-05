@@ -261,23 +261,6 @@ public:
     void canonicalizeForExtraction(BasicBlock *&Header, bool NoExitBlockPHIs);
 
 
-   void extractCodeRegionByCopy(const CodeExtractorAnalysisCache &CEAC,
-        ValueSet &Inputs, ValueSet &Outputs, 
-      const   BlockFrequency& EntryFreq,
-        const  DenseMap<BasicBlock *, BlockFrequency> &ExitWeights,  const   SmallPtrSet<BasicBlock *, 1> &ExitBlocks,
-       const  ValueSet &SinkingCands,const ValueSet & HoistingCands, BasicBlock *CommonExit,  
-        Function *oldFunction,   Function *newFunction,  BasicBlock *header,
-        BasicBlock *   codeReplacer,
-        BasicBlock *  NewEntry,
-        BasicBlock *  newRootNode ,    
-       std::vector<Value *> &params,
-       std::vector<Value *>  &StructValues,
-       SmallVectorImpl<unsigned> &SwiftErrorArgs,
-       std::vector<Value *>  & ReloadOutputs,std::vector<Value *> & Reloads,
-       StructType *StructArgTy ,
-       AllocaInst *Struct ,
-       function_ref<Value*(int i)> MakeReloadAddress
-   );
 
     void moveCodeToFunction(Function *newFunction);
 
