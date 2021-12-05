@@ -1320,7 +1320,7 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC, bool Ke
 
 
 
-void CodeExtractor::canonicalizeForExtraction(BasicBlock *&Header,bool NoExitBlockPHIs) {
+void CodeExtractor::canonicalizeCFGForExtraction(BasicBlock *&Header,bool NoExitBlockPHIs) {
   //  BasicBlock *header = *Blocks.begin();
   //  Function *oldFunction = header->getParent();
 
@@ -1364,6 +1364,8 @@ void CodeExtractor::canonicalizeForExtraction(BasicBlock *&Header,bool NoExitBlo
 
         recomputeExitBlocks();
     }
+
+
 
 }
 
@@ -1421,7 +1423,8 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
 
 
 
-    canonicalizeForExtraction(header, KeepOldBlocks);
+    canonicalizeCFGForExtraction(header, KeepOldBlocks);
+
 
 
 
@@ -1473,11 +1476,6 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
 
 
 
-
-
-
-
-
     // Construct new function based on inputs/outputs & add allocas for all defs.
     Function *newFunction = constructFunctionDeclaration(inputs, outputs, header);
 
@@ -1489,6 +1487,42 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
     // The new function needs a root node because other nodes can branch to the
     // head of the region, but the entry node of a function cannot have preds.
     BasicBlock *newFuncRoot = BasicBlock::Create(header->getContext(), "newFuncRoot", newFunction);
+
+
+
+  
+
+    // Now sink all instructions which only have non-phi uses inside the region.
+    // Group the allocas at the start of the block, so that any bitcast uses of
+    // the allocas are well-defined.
+    AllocaInst* FirstSunkAlloca = nullptr;
+    for (auto* II : SinkingCands) {
+        if (auto* AI = dyn_cast<AllocaInst>(II)) {
+            AI->moveBefore(*newFuncRoot, newFuncRoot->getFirstInsertionPt());
+            if (!FirstSunkAlloca)
+                FirstSunkAlloca = AI;
+        }
+    }
+    assert((SinkingCands.empty() || FirstSunkAlloca) && "Did not expect a sink candidate without any allocas");
+    for (auto* II : SinkingCands) {
+        if (!isa<AllocaInst>(II)) {
+            cast<Instruction>(II)->moveAfter(FirstSunkAlloca);
+        }
+    }
+
+
+
+    if (!HoistingCands.empty()) {
+        auto* HoistToBlock = findOrCreateBlockForHoisting(CommonExit);
+        Instruction* TI = HoistToBlock->getTerminator();
+        for (auto* II : HoistingCands)
+            cast<Instruction>(II)->moveBefore(TI);
+    }
+
+
+
+
+
 
 
     StructType *StructTy = nullptr;
@@ -1573,6 +1607,8 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
         }
     }
 
+
+
    
     SmallVector<unsigned, 1> SwiftErrorArgs;
     std::vector<Value *> ReloadOutputs;
@@ -1634,9 +1670,12 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
     if (KeepOldBlocks) {
         ValueToValueMapTy VMap;
 
-
         for (auto&& P : enumerate(inputs)) {
             VMap[P.value()] = NewValues[P.index()];
+        }
+
+        for (auto &&S : SinkingCands) {
+            VMap[S] = S;
         }
 
 
@@ -1670,7 +1709,7 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
         DenseMap <Value*, Value*  > ReloadAddress;
         // DenseMap <Value*, Value*  > SpillAddress;
 
-#if 1
+
         // Reload the outputs passed in by reference.
         for (unsigned i = 0, e = outputs.size(); i != e; ++i) {
             Value* Output = nullptr;
@@ -1709,7 +1748,7 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
                 }
             }
         }
-#endif
+
 
         // Now we can emit a switch statement using the call as a value.
         SwitchInst* TheSwitch =
@@ -2007,37 +2046,15 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
         }
 
 
+ 
+
+
+       
+
         auto* BranchI = BranchInst::Create(header, newFuncRoot);
         applyFirstDebugLoc(oldFunction, Blocks.getArrayRef(), BranchI);
-        // newFuncRoot->getInstList().push_back(BranchI);
 
 
-        // TODO: ByCopy
-         // Now sink all instructions which only have non-phi uses inside the region.
-         // Group the allocas at the start of the block, so that any bitcast uses of
-         // the allocas are well-defined.
-        AllocaInst* FirstSunkAlloca = nullptr;
-        for (auto* II : SinkingCands) {
-            if (auto* AI = dyn_cast<AllocaInst>(II)) {
-                AI->moveBefore(*newFuncRoot, newFuncRoot->getFirstInsertionPt());
-                if (!FirstSunkAlloca)
-                    FirstSunkAlloca = AI;
-            }
-        }
-        assert((SinkingCands.empty() || FirstSunkAlloca) && "Did not expect a sink candidate without any allocas");
-        for (auto* II : SinkingCands) {
-            if (!isa<AllocaInst>(II)) {
-                cast<Instruction>(II)->moveAfter(FirstSunkAlloca);
-            }
-        }
-
-
-        if (!HoistingCands.empty()) {
-            auto* HoistToBlock = findOrCreateBlockForHoisting(CommonExit);
-            Instruction* TI = HoistToBlock->getTerminator();
-            for (auto* II : HoistingCands)
-                cast<Instruction>(II)->moveBefore(TI);
-        }
 
 
         // TODO: ByCopy

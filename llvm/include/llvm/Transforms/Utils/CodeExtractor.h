@@ -258,7 +258,7 @@ public:
     
 
 
-    void canonicalizeForExtraction(BasicBlock *&Header, bool NoExitBlockPHIs);
+    void canonicalizeCFGForExtraction(BasicBlock *&Header, bool NoExitBlockPHIs);
 
 
 
