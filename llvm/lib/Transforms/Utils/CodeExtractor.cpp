@@ -831,15 +831,14 @@ void CodeExtractor::splitReturnBlocks() {
     }
 }
 
-
-Function *CodeExtractor::constructFunction(const ValueSet &inputs,
-    const ValueSet &outputs,
-    BasicBlock *header,
-   // BasicBlock *&newRootNode, BasicBlock *newHeader,
-    Function *oldFunction, Module *M//,   bool KeepOldBlocks,    ValueToValueMapTy &VMap
-){
+/// constructFunction - make a function based on inputs and outputs, as follows:
+/// f(in0, ..., inN, out0, ..., outN)
+Function *CodeExtractor::constructFunctionDeclaration(const ValueSet &inputs, const ValueSet &outputs, BasicBlock *header){
     LLVM_DEBUG(dbgs() << "inputs: " << inputs.size() << "\n");
     LLVM_DEBUG(dbgs() << "outputs: " << outputs.size() << "\n");
+
+    Function *oldFunction = header->getParent();
+    Module *M = oldFunction->getParent();
 
     // This function returns unsigned, outputs will go back by reference.
     switch (NumExitBlocks) {
@@ -1011,6 +1010,14 @@ Function *CodeExtractor::constructFunction(const ValueSet &inputs,
     }
 
 
+  // Set names for input and output arguments.
+  if (!AggregateArgs) {
+      Function::arg_iterator AI = newFunction->arg_begin();
+    for (unsigned i = 0, e = inputs.size(); i != e; ++i, ++AI)
+      AI->setName(inputs[i]->getName());
+    for (unsigned i = 0, e = outputs.size(); i != e; ++i, ++AI)
+      AI->setName(outputs[i]->getName()+".out");
+  }
 
     return newFunction;
 }
@@ -1313,7 +1320,7 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC, bool Ke
 
 
 
-void CodeExtractor::prepareForExtraction(BasicBlock *&Header,bool KeepOldBlocks) {
+void CodeExtractor::canonicalizeForExtraction(BasicBlock *&Header,bool NoExitBlockPHIs) {
   //  BasicBlock *header = *Blocks.begin();
   //  Function *oldFunction = header->getParent();
 
@@ -1331,7 +1338,7 @@ void CodeExtractor::prepareForExtraction(BasicBlock *&Header,bool KeepOldBlocks)
    // recomputeExitBlocks();
 
 
-    if (KeepOldBlocks) {
+    if (NoExitBlockPHIs) {
         // TODO: preserve BPI/BFI
         for (BasicBlock *Block : Blocks) {
             SmallVector<BasicBlock*> Succs;
@@ -1416,7 +1423,7 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
 
 
     // canonicalization
-    prepareForExtraction(header, KeepOldBlocks);
+    canonicalizeForExtraction(header, KeepOldBlocks);
 
 
 
@@ -1437,61 +1444,18 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
             for (BasicBlock *Block : predecessors(Succ)) {
                 if (!Blocks.count(Block)) continue;
 
-                // for (BasicBlock *Block : Blocks) {
-                //     for (BasicBlock *Succ : successors(Block)) {
-                //    if (!Blocks.count(Succ)) {
-                // Update the branch weight for this successor.
-                //   if (BFI) {
                 BlockFrequency &BF = ExitWeights[Succ];
                 BF += BFI->getBlockFreq(Block) * BPI->getEdgeProbability(Block, Succ);
-                //   }
-                // ExitBlocks.insert(Succ);
-                //   }
             }
         }
-        // NumExitBlocks = ExitBlocks.size();
     }
 
 
 
 
-    // analysis, after ret splitting
-  
 
 
 
-
-    
-   // recomputeExitBlocks();
-
-
-
-
-    // canonicalization, after ret splitting
-
-
-
-
-
-#if 0
-    // analyzis, after ret splitting
-    // DenseMap<BasicBlock*,BasicBlock*> ExitingBlocks;
-    for (BasicBlock *Block : Blocks) {
-        Instruction *TI = Block->getTerminator();
-        for (unsigned i = 0, e = TI->getNumSuccessors(); i != e; ++i) {
-            if (Blocks.count(TI->getSuccessor(i)))
-                continue;
-            BasicBlock *OldTarget = TI->getSuccessor(i);
-            OldTargets.push_back(OldTarget);
-            // ExitingBlocks[Block] = OldTarget;
-        }
-    }
-#endif
-
-
-
-
-    // analysis
     ValueSet SinkingCands, HoistingCands;
     BasicBlock *CommonExit = nullptr;
     findAllocas(CEAC, SinkingCands, HoistingCands, CommonExit);
@@ -1504,27 +1468,10 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
     findInputsOutputs(inputs, outputs, SinkingCands);
 
 
- 
-
-#if 0
-    DenseMap<BasicBlock*, SmallVector<Instruction*,1>> ExitValues;
-    for (auto&& O : outputs) {
-        auto &&I = cast<Instruction>(O);
-        for (auto &&U : I->uses()) {
-            auto User = dyn_cast<Instruction>(U.getUser());
-            if (!User) continue;
-            if (Blocks.count(User->getParent())) continue;
-
-            for (auto &&E : ExitBlocks) {
-                if (DT->dominates(E, User->getParent())
-                    ExitValues[E].push_back(cast<Inst> O);
-            }
-        }
-    }
-#endif
 
     // Construct new function based on inputs/outputs & add allocas for all defs.
-    Function *newFunction = constructFunction(inputs, outputs, header, oldFunction, oldFunction->getParent());
+    Function *newFunction = constructFunctionDeclaration(inputs, outputs, header);
+
 
 
     // The new function needs a root node because other nodes can branch to the
@@ -1538,18 +1485,17 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
     BasicBlock *codeReplacer = BasicBlock::Create(header->getContext(),        "codeRepl", oldFunction,        header);
     auto newHeader = codeReplacer;
 
-  //  IRBuilder<> CodeReplacerBuilder(codeReplacer);
 
 
-      ValueToValueMapTy VMap;
+
+
 
     StructType *StructTy = nullptr;
-    if (AggregateArgs && (inputs.size() + outputs.size() > 0)) {
-        //StructTy = StructType::get(M->getContext(), paramTy);
-        StructTy =  cast<StructType>(newFunction->getArg(0)->getType());
-    }
+    if (AggregateArgs &&  newFunction->arg_size() > 0) 
+        StructTy = cast<StructType>(newFunction->getArg(0)->getType());
+    
 
-
+   
 
     // Create an iterator to name all of the arguments we inserted.
     Function::arg_iterator AI = newFunction->arg_begin();
@@ -1573,7 +1519,7 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
         NewValues.push_back(RewriteVal);
     }
 
-
+#if 0
     // Set names for input and output arguments.
     if (!AggregateArgs) {
         AI = newFunction->arg_begin();
@@ -1582,6 +1528,7 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
         for (unsigned i = 0, e = outputs.size(); i != e; ++i, ++AI)
             AI->setName(outputs[i]->getName()+".out");
     }
+#endif 
 
     std::vector<Value *> ReloadOutputs;
     std::vector<Value *> Reloads;
@@ -1819,10 +1766,7 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
      //   const DataLayout &DL = M->getDataLayout();
 
 
-        // TOOD: Pass AllocaBlock
-      //  BasicBlock *     AllocaBlock = &codeReplacer->getParent()->front();
-
-
+ 
     
         // Emit the call to the function
         CallInst *  call = CallInst::Create(newFunction, params,   NumExitBlocks > 1 ? "targetBlock" : "",codeReplacer);
@@ -1850,7 +1794,7 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
        // SmallVector<Instruction*> AfterCall;
 
 
-
+        ValueToValueMapTy VMap;
 
 
         // Reload the outputs passed in by reference.

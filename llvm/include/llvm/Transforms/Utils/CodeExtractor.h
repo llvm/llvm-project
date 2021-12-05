@@ -250,17 +250,15 @@ public:
         const ValueSet &outputs) ;
 
 
-    Function *constructFunction(const ValueSet &inputs,
-        const ValueSet &outputs,
-        BasicBlock *header,
-    //    BasicBlock *&newRootNode, BasicBlock *newHeader,
-        Function *oldFunction, Module *M
-        //,   bool KeepOldBlocks,    ValueToValueMapTy &VMap
+    Function *constructFunctionDeclaration(const ValueSet &inputs, const ValueSet &outputs,
+        BasicBlock *header
     );
 
 
+    
 
-    void prepareForExtraction(BasicBlock *&Header, bool KeepOldBlocks);
+
+    void canonicalizeForExtraction(BasicBlock *&Header, bool NoExitBlockPHIs);
 
 
    void extractCodeRegionByCopy(const CodeExtractorAnalysisCache &CEAC,
