@@ -829,9 +829,12 @@ bool AMDGPUCallLowering::passSpecialInputs(MachineIRBuilder &MIRBuilder,
 
     if (IncomingArg) {
       LI->loadInputValue(InputReg, MIRBuilder, IncomingArg, ArgRC, ArgTy);
-    } else {
-      assert(InputID == AMDGPUFunctionArgInfo::IMPLICIT_ARG_PTR);
+    } else if (InputID == AMDGPUFunctionArgInfo::IMPLICIT_ARG_PTR) {
       LI->getImplicitArgPtr(InputReg, MRI, MIRBuilder);
+    } else {
+      // We may have proven the input wasn't needed, although the ABI is
+      // requiring it. We just need to allocate the register appropriately.
+      MIRBuilder.buildUndef(InputReg);
     }
 
     if (OutgoingArg->isRegister()) {

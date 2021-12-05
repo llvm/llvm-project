@@ -847,31 +847,27 @@ void MachineCopyPropagation::BackwardCopyPropagateBlock(
   LLVM_DEBUG(dbgs() << "MCP: BackwardCopyPropagateBlock " << MBB.getName()
                     << "\n");
 
-  for (MachineBasicBlock::reverse_iterator I = MBB.rbegin(), E = MBB.rend();
-       I != E;) {
-    MachineInstr *MI = &*I;
-    ++I;
-
+  for (MachineInstr &MI : llvm::make_early_inc_range(llvm::reverse(MBB))) {
     // Ignore non-trivial COPYs.
-    if (MI->isCopy() && MI->getNumOperands() == 2 &&
-        !TRI->regsOverlap(MI->getOperand(0).getReg(),
-                          MI->getOperand(1).getReg())) {
+    if (MI.isCopy() && MI.getNumOperands() == 2 &&
+        !TRI->regsOverlap(MI.getOperand(0).getReg(),
+                          MI.getOperand(1).getReg())) {
 
-      MCRegister Def = MI->getOperand(0).getReg().asMCReg();
-      MCRegister Src = MI->getOperand(1).getReg().asMCReg();
+      MCRegister Def = MI.getOperand(0).getReg().asMCReg();
+      MCRegister Src = MI.getOperand(1).getReg().asMCReg();
 
       // Unlike forward cp, we don't invoke propagateDefs here,
       // just let forward cp do COPY-to-COPY propagation.
-      if (isBackwardPropagatableCopy(*MI, *MRI)) {
+      if (isBackwardPropagatableCopy(MI, *MRI)) {
         Tracker.invalidateRegister(Src, *TRI);
         Tracker.invalidateRegister(Def, *TRI);
-        Tracker.trackCopy(MI, *TRI);
+        Tracker.trackCopy(&MI, *TRI);
         continue;
       }
     }
 
     // Invalidate any earlyclobber regs first.
-    for (const MachineOperand &MO : MI->operands())
+    for (const MachineOperand &MO : MI.operands())
       if (MO.isReg() && MO.isEarlyClobber()) {
         MCRegister Reg = MO.getReg().asMCReg();
         if (!Reg)
@@ -879,8 +875,8 @@ void MachineCopyPropagation::BackwardCopyPropagateBlock(
         Tracker.invalidateRegister(Reg, *TRI);
       }
 
-    propagateDefs(*MI);
-    for (const MachineOperand &MO : MI->operands()) {
+    propagateDefs(MI);
+    for (const MachineOperand &MO : MI.operands()) {
       if (!MO.isReg())
         continue;
 
@@ -898,7 +894,7 @@ void MachineCopyPropagation::BackwardCopyPropagateBlock(
           for (MCRegUnitIterator RUI(MO.getReg().asMCReg(), TRI); RUI.isValid();
                ++RUI) {
             if (auto *Copy = Tracker.findCopyDefViaUnit(*RUI, *TRI)) {
-              CopyDbgUsers[Copy].insert(MI);
+              CopyDbgUsers[Copy].insert(&MI);
             }
           }
         } else {

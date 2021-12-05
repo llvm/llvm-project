@@ -108,6 +108,7 @@ define void @i1_arg_i1_use(i1 %arg) #0 {
   ; CHECK: bb.2.bb1:
   ; CHECK:   successors: %bb.3(0x80000000)
   ; CHECK:   G_STORE [[C1]](s32), [[DEF]](p1) :: (volatile store (s32) into `i32 addrspace(1)* undef`, addrspace 1)
+  ; CHECK:   G_BR %bb.3
   ; CHECK: bb.3.bb2:
   ; CHECK:   G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.end.cf), [[INT1]](s64)
   ; CHECK:   [[COPY2:%[0-9]+]]:ccr_sgpr_64 = COPY [[COPY1]]
@@ -817,7 +818,7 @@ define void @void_func_v16i32(<16 x i32> %arg0) #0 {
 define void @void_func_v32i32(<32 x i32> %arg0) #0 {
   ; CHECK-LABEL: name: void_func_v32i32
   ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK:   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15, $vgpr16, $vgpr17, $vgpr18, $vgpr19, $vgpr20, $vgpr21, $vgpr22, $vgpr23, $vgpr24, $vgpr25, $vgpr26, $vgpr27, $vgpr28, $vgpr29, $vgpr30, $vgpr31, $sgpr30_sgpr31
+  ; CHECK:   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15, $vgpr16, $vgpr17, $vgpr18, $vgpr19, $vgpr20, $vgpr21, $vgpr22, $vgpr23, $vgpr24, $vgpr25, $vgpr26, $vgpr27, $vgpr28, $vgpr29, $vgpr30, $sgpr30_sgpr31
   ; CHECK:   [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
   ; CHECK:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
   ; CHECK:   [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr2
@@ -849,13 +850,14 @@ define void @void_func_v32i32(<32 x i32> %arg0) #0 {
   ; CHECK:   [[COPY28:%[0-9]+]]:_(s32) = COPY $vgpr28
   ; CHECK:   [[COPY29:%[0-9]+]]:_(s32) = COPY $vgpr29
   ; CHECK:   [[COPY30:%[0-9]+]]:_(s32) = COPY $vgpr30
-  ; CHECK:   [[COPY31:%[0-9]+]]:_(s32) = COPY $vgpr31
-  ; CHECK:   [[BUILD_VECTOR:%[0-9]+]]:_(<32 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32), [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32), [[COPY12]](s32), [[COPY13]](s32), [[COPY14]](s32), [[COPY15]](s32), [[COPY16]](s32), [[COPY17]](s32), [[COPY18]](s32), [[COPY19]](s32), [[COPY20]](s32), [[COPY21]](s32), [[COPY22]](s32), [[COPY23]](s32), [[COPY24]](s32), [[COPY25]](s32), [[COPY26]](s32), [[COPY27]](s32), [[COPY28]](s32), [[COPY29]](s32), [[COPY30]](s32), [[COPY31]](s32)
-  ; CHECK:   [[COPY32:%[0-9]+]]:sgpr_64 = COPY $sgpr30_sgpr31
+  ; CHECK:   [[FRAME_INDEX:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.0
+  ; CHECK:   [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX]](p5) :: (invariant load (s32) from %fixed-stack.0, align 16, addrspace 5)
+  ; CHECK:   [[BUILD_VECTOR:%[0-9]+]]:_(<32 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32), [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32), [[COPY12]](s32), [[COPY13]](s32), [[COPY14]](s32), [[COPY15]](s32), [[COPY16]](s32), [[COPY17]](s32), [[COPY18]](s32), [[COPY19]](s32), [[COPY20]](s32), [[COPY21]](s32), [[COPY22]](s32), [[COPY23]](s32), [[COPY24]](s32), [[COPY25]](s32), [[COPY26]](s32), [[COPY27]](s32), [[COPY28]](s32), [[COPY29]](s32), [[COPY30]](s32), [[LOAD]](s32)
+  ; CHECK:   [[COPY31:%[0-9]+]]:sgpr_64 = COPY $sgpr30_sgpr31
   ; CHECK:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
   ; CHECK:   G_STORE [[BUILD_VECTOR]](<32 x s32>), [[DEF]](p1) :: (store (<32 x s32>) into `<32 x i32> addrspace(1)* undef`, addrspace 1)
-  ; CHECK:   [[COPY33:%[0-9]+]]:ccr_sgpr_64 = COPY [[COPY32]]
-  ; CHECK:   S_SETPC_B64_return [[COPY33]]
+  ; CHECK:   [[COPY32:%[0-9]+]]:ccr_sgpr_64 = COPY [[COPY31]]
+  ; CHECK:   S_SETPC_B64_return [[COPY32]]
   store <32 x i32> %arg0, <32 x i32> addrspace(1)* undef
   ret void
 }
@@ -864,7 +866,7 @@ define void @void_func_v32i32(<32 x i32> %arg0) #0 {
 define void @void_func_v33i32(<33 x i32> %arg0) #0 {
   ; CHECK-LABEL: name: void_func_v33i32
   ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK:   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15, $vgpr16, $vgpr17, $vgpr18, $vgpr19, $vgpr20, $vgpr21, $vgpr22, $vgpr23, $vgpr24, $vgpr25, $vgpr26, $vgpr27, $vgpr28, $vgpr29, $vgpr30, $vgpr31, $sgpr30_sgpr31
+  ; CHECK:   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15, $vgpr16, $vgpr17, $vgpr18, $vgpr19, $vgpr20, $vgpr21, $vgpr22, $vgpr23, $vgpr24, $vgpr25, $vgpr26, $vgpr27, $vgpr28, $vgpr29, $vgpr30, $sgpr30_sgpr31
   ; CHECK:   [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
   ; CHECK:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
   ; CHECK:   [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr2
@@ -896,15 +898,16 @@ define void @void_func_v33i32(<33 x i32> %arg0) #0 {
   ; CHECK:   [[COPY28:%[0-9]+]]:_(s32) = COPY $vgpr28
   ; CHECK:   [[COPY29:%[0-9]+]]:_(s32) = COPY $vgpr29
   ; CHECK:   [[COPY30:%[0-9]+]]:_(s32) = COPY $vgpr30
-  ; CHECK:   [[COPY31:%[0-9]+]]:_(s32) = COPY $vgpr31
-  ; CHECK:   [[FRAME_INDEX:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.0
-  ; CHECK:   [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX]](p5) :: (invariant load (s32) from %fixed-stack.0, align 16, addrspace 5)
-  ; CHECK:   [[BUILD_VECTOR:%[0-9]+]]:_(<33 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32), [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32), [[COPY12]](s32), [[COPY13]](s32), [[COPY14]](s32), [[COPY15]](s32), [[COPY16]](s32), [[COPY17]](s32), [[COPY18]](s32), [[COPY19]](s32), [[COPY20]](s32), [[COPY21]](s32), [[COPY22]](s32), [[COPY23]](s32), [[COPY24]](s32), [[COPY25]](s32), [[COPY26]](s32), [[COPY27]](s32), [[COPY28]](s32), [[COPY29]](s32), [[COPY30]](s32), [[COPY31]](s32), [[LOAD]](s32)
-  ; CHECK:   [[COPY32:%[0-9]+]]:sgpr_64 = COPY $sgpr30_sgpr31
+  ; CHECK:   [[FRAME_INDEX:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.1
+  ; CHECK:   [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX]](p5) :: (invariant load (s32) from %fixed-stack.1, align 16, addrspace 5)
+  ; CHECK:   [[FRAME_INDEX1:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.0
+  ; CHECK:   [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX1]](p5) :: (invariant load (s32) from %fixed-stack.0, addrspace 5)
+  ; CHECK:   [[BUILD_VECTOR:%[0-9]+]]:_(<33 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32), [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32), [[COPY12]](s32), [[COPY13]](s32), [[COPY14]](s32), [[COPY15]](s32), [[COPY16]](s32), [[COPY17]](s32), [[COPY18]](s32), [[COPY19]](s32), [[COPY20]](s32), [[COPY21]](s32), [[COPY22]](s32), [[COPY23]](s32), [[COPY24]](s32), [[COPY25]](s32), [[COPY26]](s32), [[COPY27]](s32), [[COPY28]](s32), [[COPY29]](s32), [[COPY30]](s32), [[LOAD]](s32), [[LOAD1]](s32)
+  ; CHECK:   [[COPY31:%[0-9]+]]:sgpr_64 = COPY $sgpr30_sgpr31
   ; CHECK:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
   ; CHECK:   G_STORE [[BUILD_VECTOR]](<33 x s32>), [[DEF]](p1) :: (store (<33 x s32>) into `<33 x i32> addrspace(1)* undef`, align 256, addrspace 1)
-  ; CHECK:   [[COPY33:%[0-9]+]]:ccr_sgpr_64 = COPY [[COPY32]]
-  ; CHECK:   S_SETPC_B64_return [[COPY33]]
+  ; CHECK:   [[COPY32:%[0-9]+]]:ccr_sgpr_64 = COPY [[COPY31]]
+  ; CHECK:   S_SETPC_B64_return [[COPY32]]
   store <33 x i32> %arg0, <33 x i32> addrspace(1)* undef
   ret void
 }
@@ -1088,7 +1091,7 @@ define void @void_func_v8i64(<8 x i64> %arg0) #0 {
 define void @void_func_v16i64(<16 x i64> %arg0) #0 {
   ; CHECK-LABEL: name: void_func_v16i64
   ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK:   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15, $vgpr16, $vgpr17, $vgpr18, $vgpr19, $vgpr20, $vgpr21, $vgpr22, $vgpr23, $vgpr24, $vgpr25, $vgpr26, $vgpr27, $vgpr28, $vgpr29, $vgpr30, $vgpr31, $sgpr30_sgpr31
+  ; CHECK:   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15, $vgpr16, $vgpr17, $vgpr18, $vgpr19, $vgpr20, $vgpr21, $vgpr22, $vgpr23, $vgpr24, $vgpr25, $vgpr26, $vgpr27, $vgpr28, $vgpr29, $vgpr30, $sgpr30_sgpr31
   ; CHECK:   [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
   ; CHECK:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
   ; CHECK:   [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr2
@@ -1120,7 +1123,8 @@ define void @void_func_v16i64(<16 x i64> %arg0) #0 {
   ; CHECK:   [[COPY28:%[0-9]+]]:_(s32) = COPY $vgpr28
   ; CHECK:   [[COPY29:%[0-9]+]]:_(s32) = COPY $vgpr29
   ; CHECK:   [[COPY30:%[0-9]+]]:_(s32) = COPY $vgpr30
-  ; CHECK:   [[COPY31:%[0-9]+]]:_(s32) = COPY $vgpr31
+  ; CHECK:   [[FRAME_INDEX:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.0
+  ; CHECK:   [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX]](p5) :: (invariant load (s32) from %fixed-stack.0, align 16, addrspace 5)
   ; CHECK:   [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[COPY]](s32), [[COPY1]](s32)
   ; CHECK:   [[MV1:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[COPY2]](s32), [[COPY3]](s32)
   ; CHECK:   [[MV2:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[COPY4]](s32), [[COPY5]](s32)
@@ -1136,13 +1140,13 @@ define void @void_func_v16i64(<16 x i64> %arg0) #0 {
   ; CHECK:   [[MV12:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[COPY24]](s32), [[COPY25]](s32)
   ; CHECK:   [[MV13:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[COPY26]](s32), [[COPY27]](s32)
   ; CHECK:   [[MV14:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[COPY28]](s32), [[COPY29]](s32)
-  ; CHECK:   [[MV15:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[COPY30]](s32), [[COPY31]](s32)
+  ; CHECK:   [[MV15:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[COPY30]](s32), [[LOAD]](s32)
   ; CHECK:   [[BUILD_VECTOR:%[0-9]+]]:_(<16 x s64>) = G_BUILD_VECTOR [[MV]](s64), [[MV1]](s64), [[MV2]](s64), [[MV3]](s64), [[MV4]](s64), [[MV5]](s64), [[MV6]](s64), [[MV7]](s64), [[MV8]](s64), [[MV9]](s64), [[MV10]](s64), [[MV11]](s64), [[MV12]](s64), [[MV13]](s64), [[MV14]](s64), [[MV15]](s64)
-  ; CHECK:   [[COPY32:%[0-9]+]]:sgpr_64 = COPY $sgpr30_sgpr31
+  ; CHECK:   [[COPY31:%[0-9]+]]:sgpr_64 = COPY $sgpr30_sgpr31
   ; CHECK:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
   ; CHECK:   G_STORE [[BUILD_VECTOR]](<16 x s64>), [[DEF]](p1) :: (store (<16 x s64>) into `<16 x i64> addrspace(1)* undef`, addrspace 1)
-  ; CHECK:   [[COPY33:%[0-9]+]]:ccr_sgpr_64 = COPY [[COPY32]]
-  ; CHECK:   S_SETPC_B64_return [[COPY33]]
+  ; CHECK:   [[COPY32:%[0-9]+]]:ccr_sgpr_64 = COPY [[COPY31]]
+  ; CHECK:   S_SETPC_B64_return [[COPY32]]
   store <16 x i64> %arg0, <16 x i64> addrspace(1)* undef
   ret void
 }
@@ -1259,7 +1263,7 @@ define void @void_func_v16i16(<16 x i16> %arg0) #0 {
 define void @void_func_v65i16(<65 x i16> %arg0) #0 {
   ; CHECK-LABEL: name: void_func_v65i16
   ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK:   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15, $vgpr16, $vgpr17, $vgpr18, $vgpr19, $vgpr20, $vgpr21, $vgpr22, $vgpr23, $vgpr24, $vgpr25, $vgpr26, $vgpr27, $vgpr28, $vgpr29, $vgpr30, $vgpr31, $sgpr30_sgpr31
+  ; CHECK:   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15, $vgpr16, $vgpr17, $vgpr18, $vgpr19, $vgpr20, $vgpr21, $vgpr22, $vgpr23, $vgpr24, $vgpr25, $vgpr26, $vgpr27, $vgpr28, $vgpr29, $vgpr30, $sgpr30_sgpr31
   ; CHECK:   [[COPY:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr0
   ; CHECK:   [[COPY1:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr1
   ; CHECK:   [[COPY2:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr2
@@ -1291,17 +1295,18 @@ define void @void_func_v65i16(<65 x i16> %arg0) #0 {
   ; CHECK:   [[COPY28:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr28
   ; CHECK:   [[COPY29:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr29
   ; CHECK:   [[COPY30:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr30
-  ; CHECK:   [[COPY31:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr31
-  ; CHECK:   [[FRAME_INDEX:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.0
-  ; CHECK:   [[LOAD:%[0-9]+]]:_(<2 x s16>) = G_LOAD [[FRAME_INDEX]](p5) :: (invariant load (<2 x s16>) from %fixed-stack.0, align 16, addrspace 5)
+  ; CHECK:   [[FRAME_INDEX:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.1
+  ; CHECK:   [[LOAD:%[0-9]+]]:_(<2 x s16>) = G_LOAD [[FRAME_INDEX]](p5) :: (invariant load (<2 x s16>) from %fixed-stack.1, align 16, addrspace 5)
+  ; CHECK:   [[FRAME_INDEX1:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.0
+  ; CHECK:   [[LOAD1:%[0-9]+]]:_(<2 x s16>) = G_LOAD [[FRAME_INDEX1]](p5) :: (invariant load (<2 x s16>) from %fixed-stack.0, addrspace 5)
   ; CHECK:   [[DEF:%[0-9]+]]:_(<2 x s16>) = G_IMPLICIT_DEF
-  ; CHECK:   [[CONCAT_VECTORS:%[0-9]+]]:_(<130 x s16>) = G_CONCAT_VECTORS [[COPY]](<2 x s16>), [[COPY1]](<2 x s16>), [[COPY2]](<2 x s16>), [[COPY3]](<2 x s16>), [[COPY4]](<2 x s16>), [[COPY5]](<2 x s16>), [[COPY6]](<2 x s16>), [[COPY7]](<2 x s16>), [[COPY8]](<2 x s16>), [[COPY9]](<2 x s16>), [[COPY10]](<2 x s16>), [[COPY11]](<2 x s16>), [[COPY12]](<2 x s16>), [[COPY13]](<2 x s16>), [[COPY14]](<2 x s16>), [[COPY15]](<2 x s16>), [[COPY16]](<2 x s16>), [[COPY17]](<2 x s16>), [[COPY18]](<2 x s16>), [[COPY19]](<2 x s16>), [[COPY20]](<2 x s16>), [[COPY21]](<2 x s16>), [[COPY22]](<2 x s16>), [[COPY23]](<2 x s16>), [[COPY24]](<2 x s16>), [[COPY25]](<2 x s16>), [[COPY26]](<2 x s16>), [[COPY27]](<2 x s16>), [[COPY28]](<2 x s16>), [[COPY29]](<2 x s16>), [[COPY30]](<2 x s16>), [[COPY31]](<2 x s16>), [[LOAD]](<2 x s16>), [[DEF]](<2 x s16>), [[DEF]](<2 x s16>), [[DEF]](<2 x s16>), [[DEF]](<2 x s16>), [[DEF]](<2 x s16>), [[DEF]](<2 x s16>), [[DEF]](<2 x s16>), [[DEF]](<2 x s16>), [[DEF]](<2 x s16>), [[DEF]](<2 x s16>), [[DEF]](<2 x s16>), [[DEF]](<2 x s16>), [[DEF]](<2 x s16>), [[DEF]](<2 x s16>), [[DEF]](<2 x s16>), [[DEF]](<2 x s16>), [[DEF]](<2 x s16>), [[DEF]](<2 x s16>), [[DEF]](<2 x s16>), [[DEF]](<2 x s16>), [[DEF]](<2 x s16>), [[DEF]](<2 x s16>), [[DEF]](<2 x s16>), [[DEF]](<2 x s16>), [[DEF]](<2 x s16>), [[DEF]](<2 x s16>), [[DEF]](<2 x s16>), [[DEF]](<2 x s16>), [[DEF]](<2 x s16>), [[DEF]](<2 x s16>), [[DEF]](<2 x s16>), [[DEF]](<2 x s16>)
+  ; CHECK:   [[CONCAT_VECTORS:%[0-9]+]]:_(<130 x s16>) = G_CONCAT_VECTORS [[COPY]](<2 x s16>), [[COPY1]](<2 x s16>), [[COPY2]](<2 x s16>), [[COPY3]](<2 x s16>), [[COPY4]](<2 x s16>), [[COPY5]](<2 x s16>), [[COPY6]](<2 x s16>), [[COPY7]](<2 x s16>), [[COPY8]](<2 x s16>), [[COPY9]](<2 x s16>), [[COPY10]](<2 x s16>), [[COPY11]](<2 x s16>), [[COPY12]](<2 x s16>), [[COPY13]](<2 x s16>), [[COPY14]](<2 x s16>), [[COPY15]](<2 x s16>), [[COPY16]](<2 x s16>), [[COPY17]](<2 x s16>), [[COPY18]](<2 x s16>), [[COPY19]](<2 x s16>), [[COPY20]](<2 x s16>), [[COPY21]](<2 x s16>), [[COPY22]](<2 x s16>), [[COPY23]](<2 x s16>), [[COPY24]](<2 x s16>), [[COPY25]](<2 x s16>), [[COPY26]](<2 x s16>), [[COPY27]](<2 x s16>), [[COPY28]](<2 x s16>), [[COPY29]](<2 x s16>), [[COPY30]](<2 x s16>), [[LOAD]](<2 x s16>), [[LOAD1]](<2 x s16>), [[DEF]](<2 x s16>), [[DEF]](<2 x s16>), [[DEF]](<2 x s16>), [[DEF]](<2 x s16>), [[DEF]](<2 x s16>), [[DEF]](<2 x s16>), [[DEF]](<2 x s16>), [[DEF]](<2 x s16>), [[DEF]](<2 x s16>), [[DEF]](<2 x s16>), [[DEF]](<2 x s16>), [[DEF]](<2 x s16>), [[DEF]](<2 x s16>), [[DEF]](<2 x s16>), [[DEF]](<2 x s16>), [[DEF]](<2 x s16>), [[DEF]](<2 x s16>), [[DEF]](<2 x s16>), [[DEF]](<2 x s16>), [[DEF]](<2 x s16>), [[DEF]](<2 x s16>), [[DEF]](<2 x s16>), [[DEF]](<2 x s16>), [[DEF]](<2 x s16>), [[DEF]](<2 x s16>), [[DEF]](<2 x s16>), [[DEF]](<2 x s16>), [[DEF]](<2 x s16>), [[DEF]](<2 x s16>), [[DEF]](<2 x s16>), [[DEF]](<2 x s16>), [[DEF]](<2 x s16>)
   ; CHECK:   [[UV:%[0-9]+]]:_(<65 x s16>), [[UV1:%[0-9]+]]:_(<65 x s16>) = G_UNMERGE_VALUES [[CONCAT_VECTORS]](<130 x s16>)
-  ; CHECK:   [[COPY32:%[0-9]+]]:sgpr_64 = COPY $sgpr30_sgpr31
+  ; CHECK:   [[COPY31:%[0-9]+]]:sgpr_64 = COPY $sgpr30_sgpr31
   ; CHECK:   [[DEF1:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
   ; CHECK:   G_STORE [[UV]](<65 x s16>), [[DEF1]](p1) :: (store (<65 x s16>) into `<65 x i16> addrspace(1)* undef`, align 256, addrspace 1)
-  ; CHECK:   [[COPY33:%[0-9]+]]:ccr_sgpr_64 = COPY [[COPY32]]
-  ; CHECK:   S_SETPC_B64_return [[COPY33]]
+  ; CHECK:   [[COPY32:%[0-9]+]]:ccr_sgpr_64 = COPY [[COPY31]]
+  ; CHECK:   S_SETPC_B64_return [[COPY32]]
   store <65 x i16> %arg0, <65 x i16> addrspace(1)* undef
   ret void
 }
@@ -1519,7 +1524,7 @@ define void @void_func_v8f64(<8 x double> %arg0) #0 {
 define void @void_func_v16f64(<16 x double> %arg0) #0 {
   ; CHECK-LABEL: name: void_func_v16f64
   ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK:   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15, $vgpr16, $vgpr17, $vgpr18, $vgpr19, $vgpr20, $vgpr21, $vgpr22, $vgpr23, $vgpr24, $vgpr25, $vgpr26, $vgpr27, $vgpr28, $vgpr29, $vgpr30, $vgpr31, $sgpr30_sgpr31
+  ; CHECK:   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15, $vgpr16, $vgpr17, $vgpr18, $vgpr19, $vgpr20, $vgpr21, $vgpr22, $vgpr23, $vgpr24, $vgpr25, $vgpr26, $vgpr27, $vgpr28, $vgpr29, $vgpr30, $sgpr30_sgpr31
   ; CHECK:   [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
   ; CHECK:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
   ; CHECK:   [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr2
@@ -1551,7 +1556,8 @@ define void @void_func_v16f64(<16 x double> %arg0) #0 {
   ; CHECK:   [[COPY28:%[0-9]+]]:_(s32) = COPY $vgpr28
   ; CHECK:   [[COPY29:%[0-9]+]]:_(s32) = COPY $vgpr29
   ; CHECK:   [[COPY30:%[0-9]+]]:_(s32) = COPY $vgpr30
-  ; CHECK:   [[COPY31:%[0-9]+]]:_(s32) = COPY $vgpr31
+  ; CHECK:   [[FRAME_INDEX:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.0
+  ; CHECK:   [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX]](p5) :: (invariant load (s32) from %fixed-stack.0, align 16, addrspace 5)
   ; CHECK:   [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[COPY]](s32), [[COPY1]](s32)
   ; CHECK:   [[MV1:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[COPY2]](s32), [[COPY3]](s32)
   ; CHECK:   [[MV2:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[COPY4]](s32), [[COPY5]](s32)
@@ -1567,13 +1573,13 @@ define void @void_func_v16f64(<16 x double> %arg0) #0 {
   ; CHECK:   [[MV12:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[COPY24]](s32), [[COPY25]](s32)
   ; CHECK:   [[MV13:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[COPY26]](s32), [[COPY27]](s32)
   ; CHECK:   [[MV14:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[COPY28]](s32), [[COPY29]](s32)
-  ; CHECK:   [[MV15:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[COPY30]](s32), [[COPY31]](s32)
+  ; CHECK:   [[MV15:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[COPY30]](s32), [[LOAD]](s32)
   ; CHECK:   [[BUILD_VECTOR:%[0-9]+]]:_(<16 x s64>) = G_BUILD_VECTOR [[MV]](s64), [[MV1]](s64), [[MV2]](s64), [[MV3]](s64), [[MV4]](s64), [[MV5]](s64), [[MV6]](s64), [[MV7]](s64), [[MV8]](s64), [[MV9]](s64), [[MV10]](s64), [[MV11]](s64), [[MV12]](s64), [[MV13]](s64), [[MV14]](s64), [[MV15]](s64)
-  ; CHECK:   [[COPY32:%[0-9]+]]:sgpr_64 = COPY $sgpr30_sgpr31
+  ; CHECK:   [[COPY31:%[0-9]+]]:sgpr_64 = COPY $sgpr30_sgpr31
   ; CHECK:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
   ; CHECK:   G_STORE [[BUILD_VECTOR]](<16 x s64>), [[DEF]](p1) :: (store (<16 x s64>) into `<16 x double> addrspace(1)* undef`, addrspace 1)
-  ; CHECK:   [[COPY33:%[0-9]+]]:ccr_sgpr_64 = COPY [[COPY32]]
-  ; CHECK:   S_SETPC_B64_return [[COPY33]]
+  ; CHECK:   [[COPY32:%[0-9]+]]:ccr_sgpr_64 = COPY [[COPY31]]
+  ; CHECK:   S_SETPC_B64_return [[COPY32]]
   store <16 x double> %arg0, <16 x double> addrspace(1)* undef
   ret void
 }
@@ -1873,7 +1879,7 @@ define void @byval_a3i32_align128_byval_i16_align64([3 x i32] addrspace(5)* byva
 define void @void_func_v32i32_i32_byval_i8(<32 x i32> %arg0, i32 %arg1, i8 addrspace(5)* byval(i8) align 8 %arg2) #0 {
   ; CHECK-LABEL: name: void_func_v32i32_i32_byval_i8
   ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK:   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15, $vgpr16, $vgpr17, $vgpr18, $vgpr19, $vgpr20, $vgpr21, $vgpr22, $vgpr23, $vgpr24, $vgpr25, $vgpr26, $vgpr27, $vgpr28, $vgpr29, $vgpr30, $vgpr31, $sgpr30_sgpr31
+  ; CHECK:   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15, $vgpr16, $vgpr17, $vgpr18, $vgpr19, $vgpr20, $vgpr21, $vgpr22, $vgpr23, $vgpr24, $vgpr25, $vgpr26, $vgpr27, $vgpr28, $vgpr29, $vgpr30, $sgpr30_sgpr31
   ; CHECK:   [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
   ; CHECK:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
   ; CHECK:   [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr2
@@ -1905,20 +1911,21 @@ define void @void_func_v32i32_i32_byval_i8(<32 x i32> %arg0, i32 %arg1, i8 addrs
   ; CHECK:   [[COPY28:%[0-9]+]]:_(s32) = COPY $vgpr28
   ; CHECK:   [[COPY29:%[0-9]+]]:_(s32) = COPY $vgpr29
   ; CHECK:   [[COPY30:%[0-9]+]]:_(s32) = COPY $vgpr30
-  ; CHECK:   [[COPY31:%[0-9]+]]:_(s32) = COPY $vgpr31
-  ; CHECK:   [[BUILD_VECTOR:%[0-9]+]]:_(<32 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32), [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32), [[COPY12]](s32), [[COPY13]](s32), [[COPY14]](s32), [[COPY15]](s32), [[COPY16]](s32), [[COPY17]](s32), [[COPY18]](s32), [[COPY19]](s32), [[COPY20]](s32), [[COPY21]](s32), [[COPY22]](s32), [[COPY23]](s32), [[COPY24]](s32), [[COPY25]](s32), [[COPY26]](s32), [[COPY27]](s32), [[COPY28]](s32), [[COPY29]](s32), [[COPY30]](s32), [[COPY31]](s32)
-  ; CHECK:   [[FRAME_INDEX:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.1
-  ; CHECK:   [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX]](p5) :: (invariant load (s32) from %fixed-stack.1, align 16, addrspace 5)
-  ; CHECK:   [[FRAME_INDEX1:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.0
-  ; CHECK:   [[COPY32:%[0-9]+]]:_(p5) = COPY [[FRAME_INDEX1]](p5)
-  ; CHECK:   [[COPY33:%[0-9]+]]:sgpr_64 = COPY $sgpr30_sgpr31
+  ; CHECK:   [[FRAME_INDEX:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.2
+  ; CHECK:   [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX]](p5) :: (invariant load (s32) from %fixed-stack.2, align 16, addrspace 5)
+  ; CHECK:   [[BUILD_VECTOR:%[0-9]+]]:_(<32 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32), [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32), [[COPY12]](s32), [[COPY13]](s32), [[COPY14]](s32), [[COPY15]](s32), [[COPY16]](s32), [[COPY17]](s32), [[COPY18]](s32), [[COPY19]](s32), [[COPY20]](s32), [[COPY21]](s32), [[COPY22]](s32), [[COPY23]](s32), [[COPY24]](s32), [[COPY25]](s32), [[COPY26]](s32), [[COPY27]](s32), [[COPY28]](s32), [[COPY29]](s32), [[COPY30]](s32), [[LOAD]](s32)
+  ; CHECK:   [[FRAME_INDEX1:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.1
+  ; CHECK:   [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX1]](p5) :: (invariant load (s32) from %fixed-stack.1, addrspace 5)
+  ; CHECK:   [[FRAME_INDEX2:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.0
+  ; CHECK:   [[COPY31:%[0-9]+]]:_(p5) = COPY [[FRAME_INDEX2]](p5)
+  ; CHECK:   [[COPY32:%[0-9]+]]:sgpr_64 = COPY $sgpr30_sgpr31
   ; CHECK:   [[C:%[0-9]+]]:_(p1) = G_CONSTANT i64 0
-  ; CHECK:   [[COPY34:%[0-9]+]]:_(p1) = COPY [[C]](p1)
-  ; CHECK:   G_STORE [[LOAD]](s32), [[C]](p1) :: (store (s32) into `i32 addrspace(1)* null`, addrspace 1)
-  ; CHECK:   [[LOAD1:%[0-9]+]]:_(s8) = G_LOAD [[COPY32]](p5) :: (dereferenceable load (s8) from %ir.arg2, addrspace 5)
-  ; CHECK:   G_STORE [[LOAD1]](s8), [[COPY34]](p1) :: (store (s8) into `i8 addrspace(1)* null`, addrspace 1)
-  ; CHECK:   [[COPY35:%[0-9]+]]:ccr_sgpr_64 = COPY [[COPY33]]
-  ; CHECK:   S_SETPC_B64_return [[COPY35]]
+  ; CHECK:   [[COPY33:%[0-9]+]]:_(p1) = COPY [[C]](p1)
+  ; CHECK:   G_STORE [[LOAD1]](s32), [[C]](p1) :: (store (s32) into `i32 addrspace(1)* null`, addrspace 1)
+  ; CHECK:   [[LOAD2:%[0-9]+]]:_(s8) = G_LOAD [[COPY31]](p5) :: (dereferenceable load (s8) from %ir.arg2, addrspace 5)
+  ; CHECK:   G_STORE [[LOAD2]](s8), [[COPY33]](p1) :: (store (s8) into `i8 addrspace(1)* null`, addrspace 1)
+  ; CHECK:   [[COPY34:%[0-9]+]]:ccr_sgpr_64 = COPY [[COPY32]]
+  ; CHECK:   S_SETPC_B64_return [[COPY34]]
   store i32 %arg1, i32 addrspace(1)* null
   %arg2.load = load i8, i8 addrspace(5)* %arg2
   store i8 %arg2.load, i8 addrspace(1)* null
@@ -1929,7 +1936,7 @@ define void @void_func_v32i32_i32_byval_i8(<32 x i32> %arg0, i32 %arg1, i8 addrs
 define void @void_func_v32i32_byval_i8_i32(<32 x i32> %arg0, i8 addrspace(5)* byval(i8) %arg1, i32 %arg2) #0 {
   ; CHECK-LABEL: name: void_func_v32i32_byval_i8_i32
   ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK:   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15, $vgpr16, $vgpr17, $vgpr18, $vgpr19, $vgpr20, $vgpr21, $vgpr22, $vgpr23, $vgpr24, $vgpr25, $vgpr26, $vgpr27, $vgpr28, $vgpr29, $vgpr30, $vgpr31, $sgpr30_sgpr31
+  ; CHECK:   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15, $vgpr16, $vgpr17, $vgpr18, $vgpr19, $vgpr20, $vgpr21, $vgpr22, $vgpr23, $vgpr24, $vgpr25, $vgpr26, $vgpr27, $vgpr28, $vgpr29, $vgpr30, $sgpr30_sgpr31
   ; CHECK:   [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
   ; CHECK:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
   ; CHECK:   [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr2
@@ -1961,20 +1968,21 @@ define void @void_func_v32i32_byval_i8_i32(<32 x i32> %arg0, i8 addrspace(5)* by
   ; CHECK:   [[COPY28:%[0-9]+]]:_(s32) = COPY $vgpr28
   ; CHECK:   [[COPY29:%[0-9]+]]:_(s32) = COPY $vgpr29
   ; CHECK:   [[COPY30:%[0-9]+]]:_(s32) = COPY $vgpr30
-  ; CHECK:   [[COPY31:%[0-9]+]]:_(s32) = COPY $vgpr31
-  ; CHECK:   [[BUILD_VECTOR:%[0-9]+]]:_(<32 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32), [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32), [[COPY12]](s32), [[COPY13]](s32), [[COPY14]](s32), [[COPY15]](s32), [[COPY16]](s32), [[COPY17]](s32), [[COPY18]](s32), [[COPY19]](s32), [[COPY20]](s32), [[COPY21]](s32), [[COPY22]](s32), [[COPY23]](s32), [[COPY24]](s32), [[COPY25]](s32), [[COPY26]](s32), [[COPY27]](s32), [[COPY28]](s32), [[COPY29]](s32), [[COPY30]](s32), [[COPY31]](s32)
-  ; CHECK:   [[FRAME_INDEX:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.1
-  ; CHECK:   [[COPY32:%[0-9]+]]:_(p5) = COPY [[FRAME_INDEX]](p5)
-  ; CHECK:   [[FRAME_INDEX1:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.0
-  ; CHECK:   [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX1]](p5) :: (invariant load (s32) from %fixed-stack.0, addrspace 5)
-  ; CHECK:   [[COPY33:%[0-9]+]]:sgpr_64 = COPY $sgpr30_sgpr31
+  ; CHECK:   [[FRAME_INDEX:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.2
+  ; CHECK:   [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX]](p5) :: (invariant load (s32) from %fixed-stack.2, align 16, addrspace 5)
+  ; CHECK:   [[BUILD_VECTOR:%[0-9]+]]:_(<32 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32), [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32), [[COPY12]](s32), [[COPY13]](s32), [[COPY14]](s32), [[COPY15]](s32), [[COPY16]](s32), [[COPY17]](s32), [[COPY18]](s32), [[COPY19]](s32), [[COPY20]](s32), [[COPY21]](s32), [[COPY22]](s32), [[COPY23]](s32), [[COPY24]](s32), [[COPY25]](s32), [[COPY26]](s32), [[COPY27]](s32), [[COPY28]](s32), [[COPY29]](s32), [[COPY30]](s32), [[LOAD]](s32)
+  ; CHECK:   [[FRAME_INDEX1:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.1
+  ; CHECK:   [[COPY31:%[0-9]+]]:_(p5) = COPY [[FRAME_INDEX1]](p5)
+  ; CHECK:   [[FRAME_INDEX2:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.0
+  ; CHECK:   [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX2]](p5) :: (invariant load (s32) from %fixed-stack.0, align 8, addrspace 5)
+  ; CHECK:   [[COPY32:%[0-9]+]]:sgpr_64 = COPY $sgpr30_sgpr31
   ; CHECK:   [[C:%[0-9]+]]:_(p1) = G_CONSTANT i64 0
-  ; CHECK:   [[COPY34:%[0-9]+]]:_(p1) = COPY [[C]](p1)
-  ; CHECK:   G_STORE [[LOAD]](s32), [[C]](p1) :: (store (s32) into `i32 addrspace(1)* null`, addrspace 1)
-  ; CHECK:   [[LOAD1:%[0-9]+]]:_(s8) = G_LOAD [[COPY32]](p5) :: (dereferenceable load (s8) from %ir.arg1, addrspace 5)
-  ; CHECK:   G_STORE [[LOAD1]](s8), [[COPY34]](p1) :: (store (s8) into `i8 addrspace(1)* null`, addrspace 1)
-  ; CHECK:   [[COPY35:%[0-9]+]]:ccr_sgpr_64 = COPY [[COPY33]]
-  ; CHECK:   S_SETPC_B64_return [[COPY35]]
+  ; CHECK:   [[COPY33:%[0-9]+]]:_(p1) = COPY [[C]](p1)
+  ; CHECK:   G_STORE [[LOAD1]](s32), [[C]](p1) :: (store (s32) into `i32 addrspace(1)* null`, addrspace 1)
+  ; CHECK:   [[LOAD2:%[0-9]+]]:_(s8) = G_LOAD [[COPY31]](p5) :: (dereferenceable load (s8) from %ir.arg1, addrspace 5)
+  ; CHECK:   G_STORE [[LOAD2]](s8), [[COPY33]](p1) :: (store (s8) into `i8 addrspace(1)* null`, addrspace 1)
+  ; CHECK:   [[COPY34:%[0-9]+]]:ccr_sgpr_64 = COPY [[COPY32]]
+  ; CHECK:   S_SETPC_B64_return [[COPY34]]
   store i32 %arg2, i32 addrspace(1)* null
   %arg1.load = load i8, i8 addrspace(5)* %arg1
   store i8 %arg1.load, i8 addrspace(1)* null
@@ -1984,7 +1992,7 @@ define void @void_func_v32i32_byval_i8_i32(<32 x i32> %arg0, i8 addrspace(5)* by
 define void @void_func_v32i32_i32_i64(<32 x i32> %arg0, i32 %arg1, i64 %arg2) #0 {
   ; CHECK-LABEL: name: void_func_v32i32_i32_i64
   ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK:   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15, $vgpr16, $vgpr17, $vgpr18, $vgpr19, $vgpr20, $vgpr21, $vgpr22, $vgpr23, $vgpr24, $vgpr25, $vgpr26, $vgpr27, $vgpr28, $vgpr29, $vgpr30, $vgpr31, $sgpr30_sgpr31
+  ; CHECK:   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15, $vgpr16, $vgpr17, $vgpr18, $vgpr19, $vgpr20, $vgpr21, $vgpr22, $vgpr23, $vgpr24, $vgpr25, $vgpr26, $vgpr27, $vgpr28, $vgpr29, $vgpr30, $sgpr30_sgpr31
   ; CHECK:   [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
   ; CHECK:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
   ; CHECK:   [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr2
@@ -2016,24 +2024,25 @@ define void @void_func_v32i32_i32_i64(<32 x i32> %arg0, i32 %arg1, i64 %arg2) #0
   ; CHECK:   [[COPY28:%[0-9]+]]:_(s32) = COPY $vgpr28
   ; CHECK:   [[COPY29:%[0-9]+]]:_(s32) = COPY $vgpr29
   ; CHECK:   [[COPY30:%[0-9]+]]:_(s32) = COPY $vgpr30
-  ; CHECK:   [[COPY31:%[0-9]+]]:_(s32) = COPY $vgpr31
-  ; CHECK:   [[BUILD_VECTOR:%[0-9]+]]:_(<32 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32), [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32), [[COPY12]](s32), [[COPY13]](s32), [[COPY14]](s32), [[COPY15]](s32), [[COPY16]](s32), [[COPY17]](s32), [[COPY18]](s32), [[COPY19]](s32), [[COPY20]](s32), [[COPY21]](s32), [[COPY22]](s32), [[COPY23]](s32), [[COPY24]](s32), [[COPY25]](s32), [[COPY26]](s32), [[COPY27]](s32), [[COPY28]](s32), [[COPY29]](s32), [[COPY30]](s32), [[COPY31]](s32)
-  ; CHECK:   [[FRAME_INDEX:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.2
-  ; CHECK:   [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX]](p5) :: (invariant load (s32) from %fixed-stack.2, align 16, addrspace 5)
-  ; CHECK:   [[FRAME_INDEX1:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.1
-  ; CHECK:   [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX1]](p5) :: (invariant load (s32) from %fixed-stack.1, addrspace 5)
-  ; CHECK:   [[FRAME_INDEX2:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.0
-  ; CHECK:   [[LOAD2:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX2]](p5) :: (invariant load (s32) from %fixed-stack.0, align 8, addrspace 5)
-  ; CHECK:   [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[LOAD1]](s32), [[LOAD2]](s32)
-  ; CHECK:   [[COPY32:%[0-9]+]]:sgpr_64 = COPY $sgpr30_sgpr31
+  ; CHECK:   [[FRAME_INDEX:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.3
+  ; CHECK:   [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX]](p5) :: (invariant load (s32) from %fixed-stack.3, align 16, addrspace 5)
+  ; CHECK:   [[BUILD_VECTOR:%[0-9]+]]:_(<32 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32), [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32), [[COPY12]](s32), [[COPY13]](s32), [[COPY14]](s32), [[COPY15]](s32), [[COPY16]](s32), [[COPY17]](s32), [[COPY18]](s32), [[COPY19]](s32), [[COPY20]](s32), [[COPY21]](s32), [[COPY22]](s32), [[COPY23]](s32), [[COPY24]](s32), [[COPY25]](s32), [[COPY26]](s32), [[COPY27]](s32), [[COPY28]](s32), [[COPY29]](s32), [[COPY30]](s32), [[LOAD]](s32)
+  ; CHECK:   [[FRAME_INDEX1:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.2
+  ; CHECK:   [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX1]](p5) :: (invariant load (s32) from %fixed-stack.2, addrspace 5)
+  ; CHECK:   [[FRAME_INDEX2:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.1
+  ; CHECK:   [[LOAD2:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX2]](p5) :: (invariant load (s32) from %fixed-stack.1, align 8, addrspace 5)
+  ; CHECK:   [[FRAME_INDEX3:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.0
+  ; CHECK:   [[LOAD3:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX3]](p5) :: (invariant load (s32) from %fixed-stack.0, addrspace 5)
+  ; CHECK:   [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[LOAD2]](s32), [[LOAD3]](s32)
+  ; CHECK:   [[COPY31:%[0-9]+]]:sgpr_64 = COPY $sgpr30_sgpr31
   ; CHECK:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; CHECK:   [[COPY32:%[0-9]+]]:_(p1) = COPY [[DEF]](p1)
   ; CHECK:   [[COPY33:%[0-9]+]]:_(p1) = COPY [[DEF]](p1)
-  ; CHECK:   [[COPY34:%[0-9]+]]:_(p1) = COPY [[DEF]](p1)
   ; CHECK:   G_STORE [[BUILD_VECTOR]](<32 x s32>), [[DEF]](p1) :: (volatile store (<32 x s32>) into `<32 x i32> addrspace(1)* undef`, addrspace 1)
-  ; CHECK:   G_STORE [[LOAD]](s32), [[COPY33]](p1) :: (volatile store (s32) into `i32 addrspace(1)* undef`, addrspace 1)
-  ; CHECK:   G_STORE [[MV]](s64), [[COPY34]](p1) :: (volatile store (s64) into `i64 addrspace(1)* undef`, addrspace 1)
-  ; CHECK:   [[COPY35:%[0-9]+]]:ccr_sgpr_64 = COPY [[COPY32]]
-  ; CHECK:   S_SETPC_B64_return [[COPY35]]
+  ; CHECK:   G_STORE [[LOAD1]](s32), [[COPY32]](p1) :: (volatile store (s32) into `i32 addrspace(1)* undef`, addrspace 1)
+  ; CHECK:   G_STORE [[MV]](s64), [[COPY33]](p1) :: (volatile store (s64) into `i64 addrspace(1)* undef`, addrspace 1)
+  ; CHECK:   [[COPY34:%[0-9]+]]:ccr_sgpr_64 = COPY [[COPY31]]
+  ; CHECK:   S_SETPC_B64_return [[COPY34]]
   store volatile <32 x i32> %arg0, <32 x i32> addrspace(1)* undef
   store volatile i32 %arg1, i32 addrspace(1)* undef
   store volatile i64 %arg2, i64 addrspace(1)* undef
@@ -2044,7 +2053,7 @@ define void @void_func_v32i32_i32_i64(<32 x i32> %arg0, i32 %arg1, i64 %arg2) #0
 define void @void_func_v32i32_i1_i8_i16(<32 x i32> %arg0, i1 %arg1, i8 %arg2, i16 %arg3, half %arg4) #0 {
   ; CHECK-LABEL: name: void_func_v32i32_i1_i8_i16
   ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK:   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15, $vgpr16, $vgpr17, $vgpr18, $vgpr19, $vgpr20, $vgpr21, $vgpr22, $vgpr23, $vgpr24, $vgpr25, $vgpr26, $vgpr27, $vgpr28, $vgpr29, $vgpr30, $vgpr31, $sgpr30_sgpr31
+  ; CHECK:   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15, $vgpr16, $vgpr17, $vgpr18, $vgpr19, $vgpr20, $vgpr21, $vgpr22, $vgpr23, $vgpr24, $vgpr25, $vgpr26, $vgpr27, $vgpr28, $vgpr29, $vgpr30, $sgpr30_sgpr31
   ; CHECK:   [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
   ; CHECK:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
   ; CHECK:   [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr2
@@ -2076,31 +2085,32 @@ define void @void_func_v32i32_i1_i8_i16(<32 x i32> %arg0, i1 %arg1, i8 %arg2, i1
   ; CHECK:   [[COPY28:%[0-9]+]]:_(s32) = COPY $vgpr28
   ; CHECK:   [[COPY29:%[0-9]+]]:_(s32) = COPY $vgpr29
   ; CHECK:   [[COPY30:%[0-9]+]]:_(s32) = COPY $vgpr30
-  ; CHECK:   [[COPY31:%[0-9]+]]:_(s32) = COPY $vgpr31
-  ; CHECK:   [[BUILD_VECTOR:%[0-9]+]]:_(<32 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32), [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32), [[COPY12]](s32), [[COPY13]](s32), [[COPY14]](s32), [[COPY15]](s32), [[COPY16]](s32), [[COPY17]](s32), [[COPY18]](s32), [[COPY19]](s32), [[COPY20]](s32), [[COPY21]](s32), [[COPY22]](s32), [[COPY23]](s32), [[COPY24]](s32), [[COPY25]](s32), [[COPY26]](s32), [[COPY27]](s32), [[COPY28]](s32), [[COPY29]](s32), [[COPY30]](s32), [[COPY31]](s32)
-  ; CHECK:   [[FRAME_INDEX:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.3
-  ; CHECK:   [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX]](p5) :: (invariant load (s1) from %fixed-stack.3, align 16, addrspace 5)
-  ; CHECK:   [[TRUNC:%[0-9]+]]:_(s1) = G_TRUNC [[LOAD]](s32)
-  ; CHECK:   [[FRAME_INDEX1:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.2
-  ; CHECK:   [[LOAD1:%[0-9]+]]:_(s16) = G_LOAD [[FRAME_INDEX1]](p5) :: (invariant load (s16) from %fixed-stack.2, align 4, addrspace 5)
-  ; CHECK:   [[TRUNC1:%[0-9]+]]:_(s8) = G_TRUNC [[LOAD1]](s16)
-  ; CHECK:   [[FRAME_INDEX2:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.1
-  ; CHECK:   [[LOAD2:%[0-9]+]]:_(s16) = G_LOAD [[FRAME_INDEX2]](p5) :: (invariant load (s16) from %fixed-stack.1, align 8, addrspace 5)
-  ; CHECK:   [[FRAME_INDEX3:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.0
-  ; CHECK:   [[LOAD3:%[0-9]+]]:_(s16) = G_LOAD [[FRAME_INDEX3]](p5) :: (invariant load (s16) from %fixed-stack.0, align 4, addrspace 5)
-  ; CHECK:   [[COPY32:%[0-9]+]]:sgpr_64 = COPY $sgpr30_sgpr31
+  ; CHECK:   [[FRAME_INDEX:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.4
+  ; CHECK:   [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX]](p5) :: (invariant load (s32) from %fixed-stack.4, align 16, addrspace 5)
+  ; CHECK:   [[BUILD_VECTOR:%[0-9]+]]:_(<32 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32), [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32), [[COPY12]](s32), [[COPY13]](s32), [[COPY14]](s32), [[COPY15]](s32), [[COPY16]](s32), [[COPY17]](s32), [[COPY18]](s32), [[COPY19]](s32), [[COPY20]](s32), [[COPY21]](s32), [[COPY22]](s32), [[COPY23]](s32), [[COPY24]](s32), [[COPY25]](s32), [[COPY26]](s32), [[COPY27]](s32), [[COPY28]](s32), [[COPY29]](s32), [[COPY30]](s32), [[LOAD]](s32)
+  ; CHECK:   [[FRAME_INDEX1:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.3
+  ; CHECK:   [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX1]](p5) :: (invariant load (s1) from %fixed-stack.3, align 4, addrspace 5)
+  ; CHECK:   [[TRUNC:%[0-9]+]]:_(s1) = G_TRUNC [[LOAD1]](s32)
+  ; CHECK:   [[FRAME_INDEX2:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.2
+  ; CHECK:   [[LOAD2:%[0-9]+]]:_(s16) = G_LOAD [[FRAME_INDEX2]](p5) :: (invariant load (s16) from %fixed-stack.2, align 8, addrspace 5)
+  ; CHECK:   [[TRUNC1:%[0-9]+]]:_(s8) = G_TRUNC [[LOAD2]](s16)
+  ; CHECK:   [[FRAME_INDEX3:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.1
+  ; CHECK:   [[LOAD3:%[0-9]+]]:_(s16) = G_LOAD [[FRAME_INDEX3]](p5) :: (invariant load (s16) from %fixed-stack.1, align 4, addrspace 5)
+  ; CHECK:   [[FRAME_INDEX4:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.0
+  ; CHECK:   [[LOAD4:%[0-9]+]]:_(s16) = G_LOAD [[FRAME_INDEX4]](p5) :: (invariant load (s16) from %fixed-stack.0, align 16, addrspace 5)
+  ; CHECK:   [[COPY31:%[0-9]+]]:sgpr_64 = COPY $sgpr30_sgpr31
   ; CHECK:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; CHECK:   [[COPY32:%[0-9]+]]:_(p1) = COPY [[DEF]](p1)
   ; CHECK:   [[COPY33:%[0-9]+]]:_(p1) = COPY [[DEF]](p1)
   ; CHECK:   [[COPY34:%[0-9]+]]:_(p1) = COPY [[DEF]](p1)
   ; CHECK:   [[COPY35:%[0-9]+]]:_(p1) = COPY [[DEF]](p1)
-  ; CHECK:   [[COPY36:%[0-9]+]]:_(p1) = COPY [[DEF]](p1)
   ; CHECK:   G_STORE [[BUILD_VECTOR]](<32 x s32>), [[DEF]](p1) :: (volatile store (<32 x s32>) into `<32 x i32> addrspace(1)* undef`, addrspace 1)
-  ; CHECK:   G_STORE [[TRUNC]](s1), [[COPY33]](p1) :: (volatile store (s1) into `i1 addrspace(1)* undef`, addrspace 1)
-  ; CHECK:   G_STORE [[TRUNC1]](s8), [[COPY34]](p1) :: (volatile store (s8) into `i8 addrspace(1)* undef`, addrspace 1)
-  ; CHECK:   G_STORE [[LOAD2]](s16), [[COPY35]](p1) :: (volatile store (s16) into `i16 addrspace(1)* undef`, addrspace 1)
-  ; CHECK:   G_STORE [[LOAD3]](s16), [[COPY36]](p1) :: (volatile store (s16) into `half addrspace(1)* undef`, addrspace 1)
-  ; CHECK:   [[COPY37:%[0-9]+]]:ccr_sgpr_64 = COPY [[COPY32]]
-  ; CHECK:   S_SETPC_B64_return [[COPY37]]
+  ; CHECK:   G_STORE [[TRUNC]](s1), [[COPY32]](p1) :: (volatile store (s1) into `i1 addrspace(1)* undef`, addrspace 1)
+  ; CHECK:   G_STORE [[TRUNC1]](s8), [[COPY33]](p1) :: (volatile store (s8) into `i8 addrspace(1)* undef`, addrspace 1)
+  ; CHECK:   G_STORE [[LOAD3]](s16), [[COPY34]](p1) :: (volatile store (s16) into `i16 addrspace(1)* undef`, addrspace 1)
+  ; CHECK:   G_STORE [[LOAD4]](s16), [[COPY35]](p1) :: (volatile store (s16) into `half addrspace(1)* undef`, addrspace 1)
+  ; CHECK:   [[COPY36:%[0-9]+]]:ccr_sgpr_64 = COPY [[COPY31]]
+  ; CHECK:   S_SETPC_B64_return [[COPY36]]
   store volatile <32 x i32> %arg0, <32 x i32> addrspace(1)* undef
   store volatile i1 %arg1, i1 addrspace(1)* undef
   store volatile i8 %arg2, i8 addrspace(1)* undef
@@ -2112,7 +2122,7 @@ define void @void_func_v32i32_i1_i8_i16(<32 x i32> %arg0, i1 %arg1, i8 %arg2, i1
 define void @void_func_v32i32_p3_p5_i16(<32 x i32> %arg0, i8 addrspace(3)* %arg1, i8 addrspace(5)* %arg2) #0 {
   ; CHECK-LABEL: name: void_func_v32i32_p3_p5_i16
   ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK:   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15, $vgpr16, $vgpr17, $vgpr18, $vgpr19, $vgpr20, $vgpr21, $vgpr22, $vgpr23, $vgpr24, $vgpr25, $vgpr26, $vgpr27, $vgpr28, $vgpr29, $vgpr30, $vgpr31, $sgpr30_sgpr31
+  ; CHECK:   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15, $vgpr16, $vgpr17, $vgpr18, $vgpr19, $vgpr20, $vgpr21, $vgpr22, $vgpr23, $vgpr24, $vgpr25, $vgpr26, $vgpr27, $vgpr28, $vgpr29, $vgpr30, $sgpr30_sgpr31
   ; CHECK:   [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
   ; CHECK:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
   ; CHECK:   [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr2
@@ -2144,21 +2154,22 @@ define void @void_func_v32i32_p3_p5_i16(<32 x i32> %arg0, i8 addrspace(3)* %arg1
   ; CHECK:   [[COPY28:%[0-9]+]]:_(s32) = COPY $vgpr28
   ; CHECK:   [[COPY29:%[0-9]+]]:_(s32) = COPY $vgpr29
   ; CHECK:   [[COPY30:%[0-9]+]]:_(s32) = COPY $vgpr30
-  ; CHECK:   [[COPY31:%[0-9]+]]:_(s32) = COPY $vgpr31
-  ; CHECK:   [[BUILD_VECTOR:%[0-9]+]]:_(<32 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32), [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32), [[COPY12]](s32), [[COPY13]](s32), [[COPY14]](s32), [[COPY15]](s32), [[COPY16]](s32), [[COPY17]](s32), [[COPY18]](s32), [[COPY19]](s32), [[COPY20]](s32), [[COPY21]](s32), [[COPY22]](s32), [[COPY23]](s32), [[COPY24]](s32), [[COPY25]](s32), [[COPY26]](s32), [[COPY27]](s32), [[COPY28]](s32), [[COPY29]](s32), [[COPY30]](s32), [[COPY31]](s32)
-  ; CHECK:   [[FRAME_INDEX:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.1
-  ; CHECK:   [[LOAD:%[0-9]+]]:_(p3) = G_LOAD [[FRAME_INDEX]](p5) :: (invariant load (p3) from %fixed-stack.1, align 16, addrspace 5)
-  ; CHECK:   [[FRAME_INDEX1:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.0
-  ; CHECK:   [[LOAD1:%[0-9]+]]:_(p5) = G_LOAD [[FRAME_INDEX1]](p5) :: (invariant load (p5) from %fixed-stack.0, addrspace 5)
-  ; CHECK:   [[COPY32:%[0-9]+]]:sgpr_64 = COPY $sgpr30_sgpr31
+  ; CHECK:   [[FRAME_INDEX:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.2
+  ; CHECK:   [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX]](p5) :: (invariant load (s32) from %fixed-stack.2, align 16, addrspace 5)
+  ; CHECK:   [[BUILD_VECTOR:%[0-9]+]]:_(<32 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32), [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32), [[COPY12]](s32), [[COPY13]](s32), [[COPY14]](s32), [[COPY15]](s32), [[COPY16]](s32), [[COPY17]](s32), [[COPY18]](s32), [[COPY19]](s32), [[COPY20]](s32), [[COPY21]](s32), [[COPY22]](s32), [[COPY23]](s32), [[COPY24]](s32), [[COPY25]](s32), [[COPY26]](s32), [[COPY27]](s32), [[COPY28]](s32), [[COPY29]](s32), [[COPY30]](s32), [[LOAD]](s32)
+  ; CHECK:   [[FRAME_INDEX1:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.1
+  ; CHECK:   [[LOAD1:%[0-9]+]]:_(p3) = G_LOAD [[FRAME_INDEX1]](p5) :: (invariant load (p3) from %fixed-stack.1, addrspace 5)
+  ; CHECK:   [[FRAME_INDEX2:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.0
+  ; CHECK:   [[LOAD2:%[0-9]+]]:_(p5) = G_LOAD [[FRAME_INDEX2]](p5) :: (invariant load (p5) from %fixed-stack.0, align 8, addrspace 5)
+  ; CHECK:   [[COPY31:%[0-9]+]]:sgpr_64 = COPY $sgpr30_sgpr31
   ; CHECK:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; CHECK:   [[COPY32:%[0-9]+]]:_(p1) = COPY [[DEF]](p1)
   ; CHECK:   [[COPY33:%[0-9]+]]:_(p1) = COPY [[DEF]](p1)
-  ; CHECK:   [[COPY34:%[0-9]+]]:_(p1) = COPY [[DEF]](p1)
   ; CHECK:   G_STORE [[BUILD_VECTOR]](<32 x s32>), [[DEF]](p1) :: (volatile store (<32 x s32>) into `<32 x i32> addrspace(1)* undef`, addrspace 1)
-  ; CHECK:   G_STORE [[LOAD]](p3), [[COPY33]](p1) :: (volatile store (p3) into `i8 addrspace(3)* addrspace(1)* undef`, addrspace 1)
-  ; CHECK:   G_STORE [[LOAD1]](p5), [[COPY34]](p1) :: (volatile store (p5) into `i8 addrspace(5)* addrspace(1)* undef`, addrspace 1)
-  ; CHECK:   [[COPY35:%[0-9]+]]:ccr_sgpr_64 = COPY [[COPY32]]
-  ; CHECK:   S_SETPC_B64_return [[COPY35]]
+  ; CHECK:   G_STORE [[LOAD1]](p3), [[COPY32]](p1) :: (volatile store (p3) into `i8 addrspace(3)* addrspace(1)* undef`, addrspace 1)
+  ; CHECK:   G_STORE [[LOAD2]](p5), [[COPY33]](p1) :: (volatile store (p5) into `i8 addrspace(5)* addrspace(1)* undef`, addrspace 1)
+  ; CHECK:   [[COPY34:%[0-9]+]]:ccr_sgpr_64 = COPY [[COPY31]]
+  ; CHECK:   S_SETPC_B64_return [[COPY34]]
   store volatile <32 x i32> %arg0, <32 x i32> addrspace(1)* undef
   store volatile i8 addrspace(3)* %arg1, i8 addrspace(3)* addrspace(1)* undef
   store volatile i8 addrspace(5)* %arg2, i8 addrspace(5)* addrspace(1)* undef
@@ -2168,7 +2179,7 @@ define void @void_func_v32i32_p3_p5_i16(<32 x i32> %arg0, i8 addrspace(3)* %arg1
 define void @void_func_v32i32_v2i32_v2f32(<32 x i32> %arg0, <2 x i32> %arg1, <2 x float> %arg2) #0 {
   ; CHECK-LABEL: name: void_func_v32i32_v2i32_v2f32
   ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK:   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15, $vgpr16, $vgpr17, $vgpr18, $vgpr19, $vgpr20, $vgpr21, $vgpr22, $vgpr23, $vgpr24, $vgpr25, $vgpr26, $vgpr27, $vgpr28, $vgpr29, $vgpr30, $vgpr31, $sgpr30_sgpr31
+  ; CHECK:   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15, $vgpr16, $vgpr17, $vgpr18, $vgpr19, $vgpr20, $vgpr21, $vgpr22, $vgpr23, $vgpr24, $vgpr25, $vgpr26, $vgpr27, $vgpr28, $vgpr29, $vgpr30, $sgpr30_sgpr31
   ; CHECK:   [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
   ; CHECK:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
   ; CHECK:   [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr2
@@ -2200,27 +2211,28 @@ define void @void_func_v32i32_v2i32_v2f32(<32 x i32> %arg0, <2 x i32> %arg1, <2 
   ; CHECK:   [[COPY28:%[0-9]+]]:_(s32) = COPY $vgpr28
   ; CHECK:   [[COPY29:%[0-9]+]]:_(s32) = COPY $vgpr29
   ; CHECK:   [[COPY30:%[0-9]+]]:_(s32) = COPY $vgpr30
-  ; CHECK:   [[COPY31:%[0-9]+]]:_(s32) = COPY $vgpr31
-  ; CHECK:   [[BUILD_VECTOR:%[0-9]+]]:_(<32 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32), [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32), [[COPY12]](s32), [[COPY13]](s32), [[COPY14]](s32), [[COPY15]](s32), [[COPY16]](s32), [[COPY17]](s32), [[COPY18]](s32), [[COPY19]](s32), [[COPY20]](s32), [[COPY21]](s32), [[COPY22]](s32), [[COPY23]](s32), [[COPY24]](s32), [[COPY25]](s32), [[COPY26]](s32), [[COPY27]](s32), [[COPY28]](s32), [[COPY29]](s32), [[COPY30]](s32), [[COPY31]](s32)
-  ; CHECK:   [[FRAME_INDEX:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.3
-  ; CHECK:   [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX]](p5) :: (invariant load (s32) from %fixed-stack.3, align 16, addrspace 5)
-  ; CHECK:   [[FRAME_INDEX1:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.2
-  ; CHECK:   [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX1]](p5) :: (invariant load (s32) from %fixed-stack.2, addrspace 5)
-  ; CHECK:   [[BUILD_VECTOR1:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[LOAD]](s32), [[LOAD1]](s32)
-  ; CHECK:   [[FRAME_INDEX2:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.1
-  ; CHECK:   [[LOAD2:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX2]](p5) :: (invariant load (s32) from %fixed-stack.1, align 8, addrspace 5)
-  ; CHECK:   [[FRAME_INDEX3:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.0
-  ; CHECK:   [[LOAD3:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX3]](p5) :: (invariant load (s32) from %fixed-stack.0, addrspace 5)
-  ; CHECK:   [[BUILD_VECTOR2:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[LOAD2]](s32), [[LOAD3]](s32)
-  ; CHECK:   [[COPY32:%[0-9]+]]:sgpr_64 = COPY $sgpr30_sgpr31
+  ; CHECK:   [[FRAME_INDEX:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.4
+  ; CHECK:   [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX]](p5) :: (invariant load (s32) from %fixed-stack.4, align 16, addrspace 5)
+  ; CHECK:   [[BUILD_VECTOR:%[0-9]+]]:_(<32 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32), [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32), [[COPY12]](s32), [[COPY13]](s32), [[COPY14]](s32), [[COPY15]](s32), [[COPY16]](s32), [[COPY17]](s32), [[COPY18]](s32), [[COPY19]](s32), [[COPY20]](s32), [[COPY21]](s32), [[COPY22]](s32), [[COPY23]](s32), [[COPY24]](s32), [[COPY25]](s32), [[COPY26]](s32), [[COPY27]](s32), [[COPY28]](s32), [[COPY29]](s32), [[COPY30]](s32), [[LOAD]](s32)
+  ; CHECK:   [[FRAME_INDEX1:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.3
+  ; CHECK:   [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX1]](p5) :: (invariant load (s32) from %fixed-stack.3, addrspace 5)
+  ; CHECK:   [[FRAME_INDEX2:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.2
+  ; CHECK:   [[LOAD2:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX2]](p5) :: (invariant load (s32) from %fixed-stack.2, align 8, addrspace 5)
+  ; CHECK:   [[BUILD_VECTOR1:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[LOAD1]](s32), [[LOAD2]](s32)
+  ; CHECK:   [[FRAME_INDEX3:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.1
+  ; CHECK:   [[LOAD3:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX3]](p5) :: (invariant load (s32) from %fixed-stack.1, addrspace 5)
+  ; CHECK:   [[FRAME_INDEX4:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.0
+  ; CHECK:   [[LOAD4:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX4]](p5) :: (invariant load (s32) from %fixed-stack.0, align 16, addrspace 5)
+  ; CHECK:   [[BUILD_VECTOR2:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[LOAD3]](s32), [[LOAD4]](s32)
+  ; CHECK:   [[COPY31:%[0-9]+]]:sgpr_64 = COPY $sgpr30_sgpr31
   ; CHECK:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; CHECK:   [[COPY32:%[0-9]+]]:_(p1) = COPY [[DEF]](p1)
   ; CHECK:   [[COPY33:%[0-9]+]]:_(p1) = COPY [[DEF]](p1)
-  ; CHECK:   [[COPY34:%[0-9]+]]:_(p1) = COPY [[DEF]](p1)
   ; CHECK:   G_STORE [[BUILD_VECTOR]](<32 x s32>), [[DEF]](p1) :: (volatile store (<32 x s32>) into `<32 x i32> addrspace(1)* undef`, addrspace 1)
-  ; CHECK:   G_STORE [[BUILD_VECTOR1]](<2 x s32>), [[COPY33]](p1) :: (volatile store (<2 x s32>) into `<2 x i32> addrspace(1)* undef`, addrspace 1)
-  ; CHECK:   G_STORE [[BUILD_VECTOR2]](<2 x s32>), [[COPY34]](p1) :: (volatile store (<2 x s32>) into `<2 x float> addrspace(1)* undef`, addrspace 1)
-  ; CHECK:   [[COPY35:%[0-9]+]]:ccr_sgpr_64 = COPY [[COPY32]]
-  ; CHECK:   S_SETPC_B64_return [[COPY35]]
+  ; CHECK:   G_STORE [[BUILD_VECTOR1]](<2 x s32>), [[COPY32]](p1) :: (volatile store (<2 x s32>) into `<2 x i32> addrspace(1)* undef`, addrspace 1)
+  ; CHECK:   G_STORE [[BUILD_VECTOR2]](<2 x s32>), [[COPY33]](p1) :: (volatile store (<2 x s32>) into `<2 x float> addrspace(1)* undef`, addrspace 1)
+  ; CHECK:   [[COPY34:%[0-9]+]]:ccr_sgpr_64 = COPY [[COPY31]]
+  ; CHECK:   S_SETPC_B64_return [[COPY34]]
   store volatile <32 x i32> %arg0, <32 x i32> addrspace(1)* undef
   store volatile <2 x i32> %arg1, <2 x i32> addrspace(1)* undef
   store volatile <2 x float> %arg2, <2 x float> addrspace(1)* undef
@@ -2230,7 +2242,7 @@ define void @void_func_v32i32_v2i32_v2f32(<32 x i32> %arg0, <2 x i32> %arg1, <2 
 define void @void_func_v32i32_v2i16_v2f16(<32 x i32> %arg0, <2 x i16> %arg1, <2 x half> %arg2) #0 {
   ; CHECK-LABEL: name: void_func_v32i32_v2i16_v2f16
   ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK:   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15, $vgpr16, $vgpr17, $vgpr18, $vgpr19, $vgpr20, $vgpr21, $vgpr22, $vgpr23, $vgpr24, $vgpr25, $vgpr26, $vgpr27, $vgpr28, $vgpr29, $vgpr30, $vgpr31, $sgpr30_sgpr31
+  ; CHECK:   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15, $vgpr16, $vgpr17, $vgpr18, $vgpr19, $vgpr20, $vgpr21, $vgpr22, $vgpr23, $vgpr24, $vgpr25, $vgpr26, $vgpr27, $vgpr28, $vgpr29, $vgpr30, $sgpr30_sgpr31
   ; CHECK:   [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
   ; CHECK:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
   ; CHECK:   [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr2
@@ -2262,21 +2274,22 @@ define void @void_func_v32i32_v2i16_v2f16(<32 x i32> %arg0, <2 x i16> %arg1, <2 
   ; CHECK:   [[COPY28:%[0-9]+]]:_(s32) = COPY $vgpr28
   ; CHECK:   [[COPY29:%[0-9]+]]:_(s32) = COPY $vgpr29
   ; CHECK:   [[COPY30:%[0-9]+]]:_(s32) = COPY $vgpr30
-  ; CHECK:   [[COPY31:%[0-9]+]]:_(s32) = COPY $vgpr31
-  ; CHECK:   [[BUILD_VECTOR:%[0-9]+]]:_(<32 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32), [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32), [[COPY12]](s32), [[COPY13]](s32), [[COPY14]](s32), [[COPY15]](s32), [[COPY16]](s32), [[COPY17]](s32), [[COPY18]](s32), [[COPY19]](s32), [[COPY20]](s32), [[COPY21]](s32), [[COPY22]](s32), [[COPY23]](s32), [[COPY24]](s32), [[COPY25]](s32), [[COPY26]](s32), [[COPY27]](s32), [[COPY28]](s32), [[COPY29]](s32), [[COPY30]](s32), [[COPY31]](s32)
-  ; CHECK:   [[FRAME_INDEX:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.1
-  ; CHECK:   [[LOAD:%[0-9]+]]:_(<2 x s16>) = G_LOAD [[FRAME_INDEX]](p5) :: (invariant load (<2 x s16>) from %fixed-stack.1, align 16, addrspace 5)
-  ; CHECK:   [[FRAME_INDEX1:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.0
-  ; CHECK:   [[LOAD1:%[0-9]+]]:_(<2 x s16>) = G_LOAD [[FRAME_INDEX1]](p5) :: (invariant load (<2 x s16>) from %fixed-stack.0, addrspace 5)
-  ; CHECK:   [[COPY32:%[0-9]+]]:sgpr_64 = COPY $sgpr30_sgpr31
+  ; CHECK:   [[FRAME_INDEX:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.2
+  ; CHECK:   [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX]](p5) :: (invariant load (s32) from %fixed-stack.2, align 16, addrspace 5)
+  ; CHECK:   [[BUILD_VECTOR:%[0-9]+]]:_(<32 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32), [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32), [[COPY12]](s32), [[COPY13]](s32), [[COPY14]](s32), [[COPY15]](s32), [[COPY16]](s32), [[COPY17]](s32), [[COPY18]](s32), [[COPY19]](s32), [[COPY20]](s32), [[COPY21]](s32), [[COPY22]](s32), [[COPY23]](s32), [[COPY24]](s32), [[COPY25]](s32), [[COPY26]](s32), [[COPY27]](s32), [[COPY28]](s32), [[COPY29]](s32), [[COPY30]](s32), [[LOAD]](s32)
+  ; CHECK:   [[FRAME_INDEX1:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.1
+  ; CHECK:   [[LOAD1:%[0-9]+]]:_(<2 x s16>) = G_LOAD [[FRAME_INDEX1]](p5) :: (invariant load (<2 x s16>) from %fixed-stack.1, addrspace 5)
+  ; CHECK:   [[FRAME_INDEX2:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.0
+  ; CHECK:   [[LOAD2:%[0-9]+]]:_(<2 x s16>) = G_LOAD [[FRAME_INDEX2]](p5) :: (invariant load (<2 x s16>) from %fixed-stack.0, align 8, addrspace 5)
+  ; CHECK:   [[COPY31:%[0-9]+]]:sgpr_64 = COPY $sgpr30_sgpr31
   ; CHECK:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; CHECK:   [[COPY32:%[0-9]+]]:_(p1) = COPY [[DEF]](p1)
   ; CHECK:   [[COPY33:%[0-9]+]]:_(p1) = COPY [[DEF]](p1)
-  ; CHECK:   [[COPY34:%[0-9]+]]:_(p1) = COPY [[DEF]](p1)
   ; CHECK:   G_STORE [[BUILD_VECTOR]](<32 x s32>), [[DEF]](p1) :: (volatile store (<32 x s32>) into `<32 x i32> addrspace(1)* undef`, addrspace 1)
-  ; CHECK:   G_STORE [[LOAD]](<2 x s16>), [[COPY33]](p1) :: (volatile store (<2 x s16>) into `<2 x i16> addrspace(1)* undef`, addrspace 1)
-  ; CHECK:   G_STORE [[LOAD1]](<2 x s16>), [[COPY34]](p1) :: (volatile store (<2 x s16>) into `<2 x half> addrspace(1)* undef`, addrspace 1)
-  ; CHECK:   [[COPY35:%[0-9]+]]:ccr_sgpr_64 = COPY [[COPY32]]
-  ; CHECK:   S_SETPC_B64_return [[COPY35]]
+  ; CHECK:   G_STORE [[LOAD1]](<2 x s16>), [[COPY32]](p1) :: (volatile store (<2 x s16>) into `<2 x i16> addrspace(1)* undef`, addrspace 1)
+  ; CHECK:   G_STORE [[LOAD2]](<2 x s16>), [[COPY33]](p1) :: (volatile store (<2 x s16>) into `<2 x half> addrspace(1)* undef`, addrspace 1)
+  ; CHECK:   [[COPY34:%[0-9]+]]:ccr_sgpr_64 = COPY [[COPY31]]
+  ; CHECK:   S_SETPC_B64_return [[COPY34]]
   store volatile <32 x i32> %arg0, <32 x i32> addrspace(1)* undef
   store volatile <2 x i16> %arg1, <2 x i16> addrspace(1)* undef
   store volatile <2 x half> %arg2, <2 x half> addrspace(1)* undef
@@ -2286,7 +2299,7 @@ define void @void_func_v32i32_v2i16_v2f16(<32 x i32> %arg0, <2 x i16> %arg1, <2 
 define void @void_func_v32i32_v2i64_v2f64(<32 x i32> %arg0, <2 x i64> %arg1, <2 x double> %arg2) #0 {
   ; CHECK-LABEL: name: void_func_v32i32_v2i64_v2f64
   ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK:   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15, $vgpr16, $vgpr17, $vgpr18, $vgpr19, $vgpr20, $vgpr21, $vgpr22, $vgpr23, $vgpr24, $vgpr25, $vgpr26, $vgpr27, $vgpr28, $vgpr29, $vgpr30, $vgpr31, $sgpr30_sgpr31
+  ; CHECK:   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15, $vgpr16, $vgpr17, $vgpr18, $vgpr19, $vgpr20, $vgpr21, $vgpr22, $vgpr23, $vgpr24, $vgpr25, $vgpr26, $vgpr27, $vgpr28, $vgpr29, $vgpr30, $sgpr30_sgpr31
   ; CHECK:   [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
   ; CHECK:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
   ; CHECK:   [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr2
@@ -2318,39 +2331,40 @@ define void @void_func_v32i32_v2i64_v2f64(<32 x i32> %arg0, <2 x i64> %arg1, <2 
   ; CHECK:   [[COPY28:%[0-9]+]]:_(s32) = COPY $vgpr28
   ; CHECK:   [[COPY29:%[0-9]+]]:_(s32) = COPY $vgpr29
   ; CHECK:   [[COPY30:%[0-9]+]]:_(s32) = COPY $vgpr30
-  ; CHECK:   [[COPY31:%[0-9]+]]:_(s32) = COPY $vgpr31
-  ; CHECK:   [[BUILD_VECTOR:%[0-9]+]]:_(<32 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32), [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32), [[COPY12]](s32), [[COPY13]](s32), [[COPY14]](s32), [[COPY15]](s32), [[COPY16]](s32), [[COPY17]](s32), [[COPY18]](s32), [[COPY19]](s32), [[COPY20]](s32), [[COPY21]](s32), [[COPY22]](s32), [[COPY23]](s32), [[COPY24]](s32), [[COPY25]](s32), [[COPY26]](s32), [[COPY27]](s32), [[COPY28]](s32), [[COPY29]](s32), [[COPY30]](s32), [[COPY31]](s32)
-  ; CHECK:   [[FRAME_INDEX:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.7
-  ; CHECK:   [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX]](p5) :: (invariant load (s32) from %fixed-stack.7, align 16, addrspace 5)
-  ; CHECK:   [[FRAME_INDEX1:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.6
-  ; CHECK:   [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX1]](p5) :: (invariant load (s32) from %fixed-stack.6, addrspace 5)
-  ; CHECK:   [[FRAME_INDEX2:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.5
-  ; CHECK:   [[LOAD2:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX2]](p5) :: (invariant load (s32) from %fixed-stack.5, align 8, addrspace 5)
-  ; CHECK:   [[FRAME_INDEX3:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.4
-  ; CHECK:   [[LOAD3:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX3]](p5) :: (invariant load (s32) from %fixed-stack.4, addrspace 5)
-  ; CHECK:   [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[LOAD]](s32), [[LOAD1]](s32)
-  ; CHECK:   [[MV1:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[LOAD2]](s32), [[LOAD3]](s32)
+  ; CHECK:   [[FRAME_INDEX:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.8
+  ; CHECK:   [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX]](p5) :: (invariant load (s32) from %fixed-stack.8, align 16, addrspace 5)
+  ; CHECK:   [[BUILD_VECTOR:%[0-9]+]]:_(<32 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32), [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32), [[COPY12]](s32), [[COPY13]](s32), [[COPY14]](s32), [[COPY15]](s32), [[COPY16]](s32), [[COPY17]](s32), [[COPY18]](s32), [[COPY19]](s32), [[COPY20]](s32), [[COPY21]](s32), [[COPY22]](s32), [[COPY23]](s32), [[COPY24]](s32), [[COPY25]](s32), [[COPY26]](s32), [[COPY27]](s32), [[COPY28]](s32), [[COPY29]](s32), [[COPY30]](s32), [[LOAD]](s32)
+  ; CHECK:   [[FRAME_INDEX1:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.7
+  ; CHECK:   [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX1]](p5) :: (invariant load (s32) from %fixed-stack.7, addrspace 5)
+  ; CHECK:   [[FRAME_INDEX2:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.6
+  ; CHECK:   [[LOAD2:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX2]](p5) :: (invariant load (s32) from %fixed-stack.6, align 8, addrspace 5)
+  ; CHECK:   [[FRAME_INDEX3:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.5
+  ; CHECK:   [[LOAD3:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX3]](p5) :: (invariant load (s32) from %fixed-stack.5, addrspace 5)
+  ; CHECK:   [[FRAME_INDEX4:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.4
+  ; CHECK:   [[LOAD4:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX4]](p5) :: (invariant load (s32) from %fixed-stack.4, align 16, addrspace 5)
+  ; CHECK:   [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[LOAD1]](s32), [[LOAD2]](s32)
+  ; CHECK:   [[MV1:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[LOAD3]](s32), [[LOAD4]](s32)
   ; CHECK:   [[BUILD_VECTOR1:%[0-9]+]]:_(<2 x s64>) = G_BUILD_VECTOR [[MV]](s64), [[MV1]](s64)
-  ; CHECK:   [[FRAME_INDEX4:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.3
-  ; CHECK:   [[LOAD4:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX4]](p5) :: (invariant load (s32) from %fixed-stack.3, align 16, addrspace 5)
-  ; CHECK:   [[FRAME_INDEX5:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.2
-  ; CHECK:   [[LOAD5:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX5]](p5) :: (invariant load (s32) from %fixed-stack.2, addrspace 5)
-  ; CHECK:   [[FRAME_INDEX6:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.1
-  ; CHECK:   [[LOAD6:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX6]](p5) :: (invariant load (s32) from %fixed-stack.1, align 8, addrspace 5)
-  ; CHECK:   [[FRAME_INDEX7:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.0
-  ; CHECK:   [[LOAD7:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX7]](p5) :: (invariant load (s32) from %fixed-stack.0, addrspace 5)
-  ; CHECK:   [[MV2:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[LOAD4]](s32), [[LOAD5]](s32)
-  ; CHECK:   [[MV3:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[LOAD6]](s32), [[LOAD7]](s32)
+  ; CHECK:   [[FRAME_INDEX5:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.3
+  ; CHECK:   [[LOAD5:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX5]](p5) :: (invariant load (s32) from %fixed-stack.3, addrspace 5)
+  ; CHECK:   [[FRAME_INDEX6:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.2
+  ; CHECK:   [[LOAD6:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX6]](p5) :: (invariant load (s32) from %fixed-stack.2, align 8, addrspace 5)
+  ; CHECK:   [[FRAME_INDEX7:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.1
+  ; CHECK:   [[LOAD7:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX7]](p5) :: (invariant load (s32) from %fixed-stack.1, addrspace 5)
+  ; CHECK:   [[FRAME_INDEX8:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.0
+  ; CHECK:   [[LOAD8:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX8]](p5) :: (invariant load (s32) from %fixed-stack.0, align 16, addrspace 5)
+  ; CHECK:   [[MV2:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[LOAD5]](s32), [[LOAD6]](s32)
+  ; CHECK:   [[MV3:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[LOAD7]](s32), [[LOAD8]](s32)
   ; CHECK:   [[BUILD_VECTOR2:%[0-9]+]]:_(<2 x s64>) = G_BUILD_VECTOR [[MV2]](s64), [[MV3]](s64)
-  ; CHECK:   [[COPY32:%[0-9]+]]:sgpr_64 = COPY $sgpr30_sgpr31
+  ; CHECK:   [[COPY31:%[0-9]+]]:sgpr_64 = COPY $sgpr30_sgpr31
   ; CHECK:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; CHECK:   [[COPY32:%[0-9]+]]:_(p1) = COPY [[DEF]](p1)
   ; CHECK:   [[COPY33:%[0-9]+]]:_(p1) = COPY [[DEF]](p1)
-  ; CHECK:   [[COPY34:%[0-9]+]]:_(p1) = COPY [[DEF]](p1)
   ; CHECK:   G_STORE [[BUILD_VECTOR]](<32 x s32>), [[DEF]](p1) :: (volatile store (<32 x s32>) into `<32 x i32> addrspace(1)* undef`, addrspace 1)
-  ; CHECK:   G_STORE [[BUILD_VECTOR1]](<2 x s64>), [[COPY33]](p1) :: (volatile store (<2 x s64>) into `<2 x i64> addrspace(1)* undef`, addrspace 1)
-  ; CHECK:   G_STORE [[BUILD_VECTOR2]](<2 x s64>), [[COPY34]](p1) :: (volatile store (<2 x s64>) into `<2 x double> addrspace(1)* undef`, addrspace 1)
-  ; CHECK:   [[COPY35:%[0-9]+]]:ccr_sgpr_64 = COPY [[COPY32]]
-  ; CHECK:   S_SETPC_B64_return [[COPY35]]
+  ; CHECK:   G_STORE [[BUILD_VECTOR1]](<2 x s64>), [[COPY32]](p1) :: (volatile store (<2 x s64>) into `<2 x i64> addrspace(1)* undef`, addrspace 1)
+  ; CHECK:   G_STORE [[BUILD_VECTOR2]](<2 x s64>), [[COPY33]](p1) :: (volatile store (<2 x s64>) into `<2 x double> addrspace(1)* undef`, addrspace 1)
+  ; CHECK:   [[COPY34:%[0-9]+]]:ccr_sgpr_64 = COPY [[COPY31]]
+  ; CHECK:   S_SETPC_B64_return [[COPY34]]
   store volatile <32 x i32> %arg0, <32 x i32> addrspace(1)* undef
   store volatile <2 x i64> %arg1, <2 x i64> addrspace(1)* undef
   store volatile <2 x double> %arg2, <2 x double> addrspace(1)* undef
@@ -2360,7 +2374,7 @@ define void @void_func_v32i32_v2i64_v2f64(<32 x i32> %arg0, <2 x i64> %arg1, <2 
 define void @void_func_v32i32_v4i32_v4f32(<32 x i32> %arg0, <4 x i32> %arg1, <4 x float> %arg2) #0 {
   ; CHECK-LABEL: name: void_func_v32i32_v4i32_v4f32
   ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK:   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15, $vgpr16, $vgpr17, $vgpr18, $vgpr19, $vgpr20, $vgpr21, $vgpr22, $vgpr23, $vgpr24, $vgpr25, $vgpr26, $vgpr27, $vgpr28, $vgpr29, $vgpr30, $vgpr31, $sgpr30_sgpr31
+  ; CHECK:   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15, $vgpr16, $vgpr17, $vgpr18, $vgpr19, $vgpr20, $vgpr21, $vgpr22, $vgpr23, $vgpr24, $vgpr25, $vgpr26, $vgpr27, $vgpr28, $vgpr29, $vgpr30, $sgpr30_sgpr31
   ; CHECK:   [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
   ; CHECK:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
   ; CHECK:   [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr2
@@ -2392,35 +2406,36 @@ define void @void_func_v32i32_v4i32_v4f32(<32 x i32> %arg0, <4 x i32> %arg1, <4 
   ; CHECK:   [[COPY28:%[0-9]+]]:_(s32) = COPY $vgpr28
   ; CHECK:   [[COPY29:%[0-9]+]]:_(s32) = COPY $vgpr29
   ; CHECK:   [[COPY30:%[0-9]+]]:_(s32) = COPY $vgpr30
-  ; CHECK:   [[COPY31:%[0-9]+]]:_(s32) = COPY $vgpr31
-  ; CHECK:   [[BUILD_VECTOR:%[0-9]+]]:_(<32 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32), [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32), [[COPY12]](s32), [[COPY13]](s32), [[COPY14]](s32), [[COPY15]](s32), [[COPY16]](s32), [[COPY17]](s32), [[COPY18]](s32), [[COPY19]](s32), [[COPY20]](s32), [[COPY21]](s32), [[COPY22]](s32), [[COPY23]](s32), [[COPY24]](s32), [[COPY25]](s32), [[COPY26]](s32), [[COPY27]](s32), [[COPY28]](s32), [[COPY29]](s32), [[COPY30]](s32), [[COPY31]](s32)
-  ; CHECK:   [[FRAME_INDEX:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.7
-  ; CHECK:   [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX]](p5) :: (invariant load (s32) from %fixed-stack.7, align 16, addrspace 5)
-  ; CHECK:   [[FRAME_INDEX1:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.6
-  ; CHECK:   [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX1]](p5) :: (invariant load (s32) from %fixed-stack.6, addrspace 5)
-  ; CHECK:   [[FRAME_INDEX2:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.5
-  ; CHECK:   [[LOAD2:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX2]](p5) :: (invariant load (s32) from %fixed-stack.5, align 8, addrspace 5)
-  ; CHECK:   [[FRAME_INDEX3:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.4
-  ; CHECK:   [[LOAD3:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX3]](p5) :: (invariant load (s32) from %fixed-stack.4, addrspace 5)
-  ; CHECK:   [[BUILD_VECTOR1:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[LOAD]](s32), [[LOAD1]](s32), [[LOAD2]](s32), [[LOAD3]](s32)
-  ; CHECK:   [[FRAME_INDEX4:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.3
-  ; CHECK:   [[LOAD4:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX4]](p5) :: (invariant load (s32) from %fixed-stack.3, align 16, addrspace 5)
-  ; CHECK:   [[FRAME_INDEX5:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.2
-  ; CHECK:   [[LOAD5:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX5]](p5) :: (invariant load (s32) from %fixed-stack.2, addrspace 5)
-  ; CHECK:   [[FRAME_INDEX6:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.1
-  ; CHECK:   [[LOAD6:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX6]](p5) :: (invariant load (s32) from %fixed-stack.1, align 8, addrspace 5)
-  ; CHECK:   [[FRAME_INDEX7:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.0
-  ; CHECK:   [[LOAD7:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX7]](p5) :: (invariant load (s32) from %fixed-stack.0, addrspace 5)
-  ; CHECK:   [[BUILD_VECTOR2:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[LOAD4]](s32), [[LOAD5]](s32), [[LOAD6]](s32), [[LOAD7]](s32)
-  ; CHECK:   [[COPY32:%[0-9]+]]:sgpr_64 = COPY $sgpr30_sgpr31
+  ; CHECK:   [[FRAME_INDEX:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.8
+  ; CHECK:   [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX]](p5) :: (invariant load (s32) from %fixed-stack.8, align 16, addrspace 5)
+  ; CHECK:   [[BUILD_VECTOR:%[0-9]+]]:_(<32 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32), [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32), [[COPY12]](s32), [[COPY13]](s32), [[COPY14]](s32), [[COPY15]](s32), [[COPY16]](s32), [[COPY17]](s32), [[COPY18]](s32), [[COPY19]](s32), [[COPY20]](s32), [[COPY21]](s32), [[COPY22]](s32), [[COPY23]](s32), [[COPY24]](s32), [[COPY25]](s32), [[COPY26]](s32), [[COPY27]](s32), [[COPY28]](s32), [[COPY29]](s32), [[COPY30]](s32), [[LOAD]](s32)
+  ; CHECK:   [[FRAME_INDEX1:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.7
+  ; CHECK:   [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX1]](p5) :: (invariant load (s32) from %fixed-stack.7, addrspace 5)
+  ; CHECK:   [[FRAME_INDEX2:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.6
+  ; CHECK:   [[LOAD2:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX2]](p5) :: (invariant load (s32) from %fixed-stack.6, align 8, addrspace 5)
+  ; CHECK:   [[FRAME_INDEX3:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.5
+  ; CHECK:   [[LOAD3:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX3]](p5) :: (invariant load (s32) from %fixed-stack.5, addrspace 5)
+  ; CHECK:   [[FRAME_INDEX4:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.4
+  ; CHECK:   [[LOAD4:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX4]](p5) :: (invariant load (s32) from %fixed-stack.4, align 16, addrspace 5)
+  ; CHECK:   [[BUILD_VECTOR1:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[LOAD1]](s32), [[LOAD2]](s32), [[LOAD3]](s32), [[LOAD4]](s32)
+  ; CHECK:   [[FRAME_INDEX5:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.3
+  ; CHECK:   [[LOAD5:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX5]](p5) :: (invariant load (s32) from %fixed-stack.3, addrspace 5)
+  ; CHECK:   [[FRAME_INDEX6:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.2
+  ; CHECK:   [[LOAD6:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX6]](p5) :: (invariant load (s32) from %fixed-stack.2, align 8, addrspace 5)
+  ; CHECK:   [[FRAME_INDEX7:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.1
+  ; CHECK:   [[LOAD7:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX7]](p5) :: (invariant load (s32) from %fixed-stack.1, addrspace 5)
+  ; CHECK:   [[FRAME_INDEX8:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.0
+  ; CHECK:   [[LOAD8:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX8]](p5) :: (invariant load (s32) from %fixed-stack.0, align 16, addrspace 5)
+  ; CHECK:   [[BUILD_VECTOR2:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[LOAD5]](s32), [[LOAD6]](s32), [[LOAD7]](s32), [[LOAD8]](s32)
+  ; CHECK:   [[COPY31:%[0-9]+]]:sgpr_64 = COPY $sgpr30_sgpr31
   ; CHECK:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; CHECK:   [[COPY32:%[0-9]+]]:_(p1) = COPY [[DEF]](p1)
   ; CHECK:   [[COPY33:%[0-9]+]]:_(p1) = COPY [[DEF]](p1)
-  ; CHECK:   [[COPY34:%[0-9]+]]:_(p1) = COPY [[DEF]](p1)
   ; CHECK:   G_STORE [[BUILD_VECTOR]](<32 x s32>), [[DEF]](p1) :: (volatile store (<32 x s32>) into `<32 x i32> addrspace(1)* undef`, addrspace 1)
-  ; CHECK:   G_STORE [[BUILD_VECTOR1]](<4 x s32>), [[COPY33]](p1) :: (volatile store (<4 x s32>) into `<4 x i32> addrspace(1)* undef`, addrspace 1)
-  ; CHECK:   G_STORE [[BUILD_VECTOR2]](<4 x s32>), [[COPY34]](p1) :: (volatile store (<4 x s32>) into `<4 x float> addrspace(1)* undef`, addrspace 1)
-  ; CHECK:   [[COPY35:%[0-9]+]]:ccr_sgpr_64 = COPY [[COPY32]]
-  ; CHECK:   S_SETPC_B64_return [[COPY35]]
+  ; CHECK:   G_STORE [[BUILD_VECTOR1]](<4 x s32>), [[COPY32]](p1) :: (volatile store (<4 x s32>) into `<4 x i32> addrspace(1)* undef`, addrspace 1)
+  ; CHECK:   G_STORE [[BUILD_VECTOR2]](<4 x s32>), [[COPY33]](p1) :: (volatile store (<4 x s32>) into `<4 x float> addrspace(1)* undef`, addrspace 1)
+  ; CHECK:   [[COPY34:%[0-9]+]]:ccr_sgpr_64 = COPY [[COPY31]]
+  ; CHECK:   S_SETPC_B64_return [[COPY34]]
   store volatile <32 x i32> %arg0, <32 x i32> addrspace(1)* undef
   store volatile <4 x i32> %arg1, <4 x i32> addrspace(1)* undef
   store volatile <4 x float> %arg2, <4 x float> addrspace(1)* undef
@@ -2430,7 +2445,7 @@ define void @void_func_v32i32_v4i32_v4f32(<32 x i32> %arg0, <4 x i32> %arg1, <4 
 define void @void_func_v32i32_v8i32_v8f32(<32 x i32> %arg0, <8 x i32> %arg1, <8 x float> %arg2) #0 {
   ; CHECK-LABEL: name: void_func_v32i32_v8i32_v8f32
   ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK:   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15, $vgpr16, $vgpr17, $vgpr18, $vgpr19, $vgpr20, $vgpr21, $vgpr22, $vgpr23, $vgpr24, $vgpr25, $vgpr26, $vgpr27, $vgpr28, $vgpr29, $vgpr30, $vgpr31, $sgpr30_sgpr31
+  ; CHECK:   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15, $vgpr16, $vgpr17, $vgpr18, $vgpr19, $vgpr20, $vgpr21, $vgpr22, $vgpr23, $vgpr24, $vgpr25, $vgpr26, $vgpr27, $vgpr28, $vgpr29, $vgpr30, $sgpr30_sgpr31
   ; CHECK:   [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
   ; CHECK:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
   ; CHECK:   [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr2
@@ -2462,51 +2477,52 @@ define void @void_func_v32i32_v8i32_v8f32(<32 x i32> %arg0, <8 x i32> %arg1, <8 
   ; CHECK:   [[COPY28:%[0-9]+]]:_(s32) = COPY $vgpr28
   ; CHECK:   [[COPY29:%[0-9]+]]:_(s32) = COPY $vgpr29
   ; CHECK:   [[COPY30:%[0-9]+]]:_(s32) = COPY $vgpr30
-  ; CHECK:   [[COPY31:%[0-9]+]]:_(s32) = COPY $vgpr31
-  ; CHECK:   [[BUILD_VECTOR:%[0-9]+]]:_(<32 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32), [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32), [[COPY12]](s32), [[COPY13]](s32), [[COPY14]](s32), [[COPY15]](s32), [[COPY16]](s32), [[COPY17]](s32), [[COPY18]](s32), [[COPY19]](s32), [[COPY20]](s32), [[COPY21]](s32), [[COPY22]](s32), [[COPY23]](s32), [[COPY24]](s32), [[COPY25]](s32), [[COPY26]](s32), [[COPY27]](s32), [[COPY28]](s32), [[COPY29]](s32), [[COPY30]](s32), [[COPY31]](s32)
-  ; CHECK:   [[FRAME_INDEX:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.15
-  ; CHECK:   [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX]](p5) :: (invariant load (s32) from %fixed-stack.15, align 16, addrspace 5)
-  ; CHECK:   [[FRAME_INDEX1:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.14
-  ; CHECK:   [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX1]](p5) :: (invariant load (s32) from %fixed-stack.14, addrspace 5)
-  ; CHECK:   [[FRAME_INDEX2:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.13
-  ; CHECK:   [[LOAD2:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX2]](p5) :: (invariant load (s32) from %fixed-stack.13, align 8, addrspace 5)
-  ; CHECK:   [[FRAME_INDEX3:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.12
-  ; CHECK:   [[LOAD3:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX3]](p5) :: (invariant load (s32) from %fixed-stack.12, addrspace 5)
-  ; CHECK:   [[FRAME_INDEX4:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.11
-  ; CHECK:   [[LOAD4:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX4]](p5) :: (invariant load (s32) from %fixed-stack.11, align 16, addrspace 5)
-  ; CHECK:   [[FRAME_INDEX5:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.10
-  ; CHECK:   [[LOAD5:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX5]](p5) :: (invariant load (s32) from %fixed-stack.10, addrspace 5)
-  ; CHECK:   [[FRAME_INDEX6:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.9
-  ; CHECK:   [[LOAD6:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX6]](p5) :: (invariant load (s32) from %fixed-stack.9, align 8, addrspace 5)
-  ; CHECK:   [[FRAME_INDEX7:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.8
-  ; CHECK:   [[LOAD7:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX7]](p5) :: (invariant load (s32) from %fixed-stack.8, addrspace 5)
-  ; CHECK:   [[BUILD_VECTOR1:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[LOAD]](s32), [[LOAD1]](s32), [[LOAD2]](s32), [[LOAD3]](s32), [[LOAD4]](s32), [[LOAD5]](s32), [[LOAD6]](s32), [[LOAD7]](s32)
-  ; CHECK:   [[FRAME_INDEX8:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.7
-  ; CHECK:   [[LOAD8:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX8]](p5) :: (invariant load (s32) from %fixed-stack.7, align 16, addrspace 5)
-  ; CHECK:   [[FRAME_INDEX9:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.6
-  ; CHECK:   [[LOAD9:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX9]](p5) :: (invariant load (s32) from %fixed-stack.6, addrspace 5)
-  ; CHECK:   [[FRAME_INDEX10:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.5
-  ; CHECK:   [[LOAD10:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX10]](p5) :: (invariant load (s32) from %fixed-stack.5, align 8, addrspace 5)
-  ; CHECK:   [[FRAME_INDEX11:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.4
-  ; CHECK:   [[LOAD11:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX11]](p5) :: (invariant load (s32) from %fixed-stack.4, addrspace 5)
-  ; CHECK:   [[FRAME_INDEX12:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.3
-  ; CHECK:   [[LOAD12:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX12]](p5) :: (invariant load (s32) from %fixed-stack.3, align 16, addrspace 5)
-  ; CHECK:   [[FRAME_INDEX13:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.2
-  ; CHECK:   [[LOAD13:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX13]](p5) :: (invariant load (s32) from %fixed-stack.2, addrspace 5)
-  ; CHECK:   [[FRAME_INDEX14:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.1
-  ; CHECK:   [[LOAD14:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX14]](p5) :: (invariant load (s32) from %fixed-stack.1, align 8, addrspace 5)
-  ; CHECK:   [[FRAME_INDEX15:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.0
-  ; CHECK:   [[LOAD15:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX15]](p5) :: (invariant load (s32) from %fixed-stack.0, addrspace 5)
-  ; CHECK:   [[BUILD_VECTOR2:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[LOAD8]](s32), [[LOAD9]](s32), [[LOAD10]](s32), [[LOAD11]](s32), [[LOAD12]](s32), [[LOAD13]](s32), [[LOAD14]](s32), [[LOAD15]](s32)
-  ; CHECK:   [[COPY32:%[0-9]+]]:sgpr_64 = COPY $sgpr30_sgpr31
+  ; CHECK:   [[FRAME_INDEX:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.16
+  ; CHECK:   [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX]](p5) :: (invariant load (s32) from %fixed-stack.16, align 16, addrspace 5)
+  ; CHECK:   [[BUILD_VECTOR:%[0-9]+]]:_(<32 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32), [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32), [[COPY12]](s32), [[COPY13]](s32), [[COPY14]](s32), [[COPY15]](s32), [[COPY16]](s32), [[COPY17]](s32), [[COPY18]](s32), [[COPY19]](s32), [[COPY20]](s32), [[COPY21]](s32), [[COPY22]](s32), [[COPY23]](s32), [[COPY24]](s32), [[COPY25]](s32), [[COPY26]](s32), [[COPY27]](s32), [[COPY28]](s32), [[COPY29]](s32), [[COPY30]](s32), [[LOAD]](s32)
+  ; CHECK:   [[FRAME_INDEX1:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.15
+  ; CHECK:   [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX1]](p5) :: (invariant load (s32) from %fixed-stack.15, addrspace 5)
+  ; CHECK:   [[FRAME_INDEX2:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.14
+  ; CHECK:   [[LOAD2:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX2]](p5) :: (invariant load (s32) from %fixed-stack.14, align 8, addrspace 5)
+  ; CHECK:   [[FRAME_INDEX3:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.13
+  ; CHECK:   [[LOAD3:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX3]](p5) :: (invariant load (s32) from %fixed-stack.13, addrspace 5)
+  ; CHECK:   [[FRAME_INDEX4:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.12
+  ; CHECK:   [[LOAD4:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX4]](p5) :: (invariant load (s32) from %fixed-stack.12, align 16, addrspace 5)
+  ; CHECK:   [[FRAME_INDEX5:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.11
+  ; CHECK:   [[LOAD5:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX5]](p5) :: (invariant load (s32) from %fixed-stack.11, addrspace 5)
+  ; CHECK:   [[FRAME_INDEX6:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.10
+  ; CHECK:   [[LOAD6:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX6]](p5) :: (invariant load (s32) from %fixed-stack.10, align 8, addrspace 5)
+  ; CHECK:   [[FRAME_INDEX7:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.9
+  ; CHECK:   [[LOAD7:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX7]](p5) :: (invariant load (s32) from %fixed-stack.9, addrspace 5)
+  ; CHECK:   [[FRAME_INDEX8:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.8
+  ; CHECK:   [[LOAD8:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX8]](p5) :: (invariant load (s32) from %fixed-stack.8, align 16, addrspace 5)
+  ; CHECK:   [[BUILD_VECTOR1:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[LOAD1]](s32), [[LOAD2]](s32), [[LOAD3]](s32), [[LOAD4]](s32), [[LOAD5]](s32), [[LOAD6]](s32), [[LOAD7]](s32), [[LOAD8]](s32)
+  ; CHECK:   [[FRAME_INDEX9:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.7
+  ; CHECK:   [[LOAD9:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX9]](p5) :: (invariant load (s32) from %fixed-stack.7, addrspace 5)
+  ; CHECK:   [[FRAME_INDEX10:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.6
+  ; CHECK:   [[LOAD10:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX10]](p5) :: (invariant load (s32) from %fixed-stack.6, align 8, addrspace 5)
+  ; CHECK:   [[FRAME_INDEX11:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.5
+  ; CHECK:   [[LOAD11:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX11]](p5) :: (invariant load (s32) from %fixed-stack.5, addrspace 5)
+  ; CHECK:   [[FRAME_INDEX12:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.4
+  ; CHECK:   [[LOAD12:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX12]](p5) :: (invariant load (s32) from %fixed-stack.4, align 16, addrspace 5)
+  ; CHECK:   [[FRAME_INDEX13:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.3
+  ; CHECK:   [[LOAD13:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX13]](p5) :: (invariant load (s32) from %fixed-stack.3, addrspace 5)
+  ; CHECK:   [[FRAME_INDEX14:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.2
+  ; CHECK:   [[LOAD14:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX14]](p5) :: (invariant load (s32) from %fixed-stack.2, align 8, addrspace 5)
+  ; CHECK:   [[FRAME_INDEX15:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.1
+  ; CHECK:   [[LOAD15:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX15]](p5) :: (invariant load (s32) from %fixed-stack.1, addrspace 5)
+  ; CHECK:   [[FRAME_INDEX16:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.0
+  ; CHECK:   [[LOAD16:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX16]](p5) :: (invariant load (s32) from %fixed-stack.0, align 16, addrspace 5)
+  ; CHECK:   [[BUILD_VECTOR2:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[LOAD9]](s32), [[LOAD10]](s32), [[LOAD11]](s32), [[LOAD12]](s32), [[LOAD13]](s32), [[LOAD14]](s32), [[LOAD15]](s32), [[LOAD16]](s32)
+  ; CHECK:   [[COPY31:%[0-9]+]]:sgpr_64 = COPY $sgpr30_sgpr31
   ; CHECK:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; CHECK:   [[COPY32:%[0-9]+]]:_(p1) = COPY [[DEF]](p1)
   ; CHECK:   [[COPY33:%[0-9]+]]:_(p1) = COPY [[DEF]](p1)
-  ; CHECK:   [[COPY34:%[0-9]+]]:_(p1) = COPY [[DEF]](p1)
   ; CHECK:   G_STORE [[BUILD_VECTOR]](<32 x s32>), [[DEF]](p1) :: (volatile store (<32 x s32>) into `<32 x i32> addrspace(1)* undef`, addrspace 1)
-  ; CHECK:   G_STORE [[BUILD_VECTOR1]](<8 x s32>), [[COPY33]](p1) :: (volatile store (<8 x s32>) into `<8 x i32> addrspace(1)* undef`, addrspace 1)
-  ; CHECK:   G_STORE [[BUILD_VECTOR2]](<8 x s32>), [[COPY34]](p1) :: (volatile store (<8 x s32>) into `<8 x float> addrspace(1)* undef`, addrspace 1)
-  ; CHECK:   [[COPY35:%[0-9]+]]:ccr_sgpr_64 = COPY [[COPY32]]
-  ; CHECK:   S_SETPC_B64_return [[COPY35]]
+  ; CHECK:   G_STORE [[BUILD_VECTOR1]](<8 x s32>), [[COPY32]](p1) :: (volatile store (<8 x s32>) into `<8 x i32> addrspace(1)* undef`, addrspace 1)
+  ; CHECK:   G_STORE [[BUILD_VECTOR2]](<8 x s32>), [[COPY33]](p1) :: (volatile store (<8 x s32>) into `<8 x float> addrspace(1)* undef`, addrspace 1)
+  ; CHECK:   [[COPY34:%[0-9]+]]:ccr_sgpr_64 = COPY [[COPY31]]
+  ; CHECK:   S_SETPC_B64_return [[COPY34]]
   store volatile <32 x i32> %arg0, <32 x i32> addrspace(1)* undef
   store volatile <8 x i32> %arg1, <8 x i32> addrspace(1)* undef
   store volatile <8 x float> %arg2, <8 x float> addrspace(1)* undef
@@ -2516,7 +2532,7 @@ define void @void_func_v32i32_v8i32_v8f32(<32 x i32> %arg0, <8 x i32> %arg1, <8 
 define void @void_func_v32i32_v16i32_v16f32(<32 x i32> %arg0, <16 x i32> %arg1, <16 x float> %arg2) #0 {
   ; CHECK-LABEL: name: void_func_v32i32_v16i32_v16f32
   ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK:   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15, $vgpr16, $vgpr17, $vgpr18, $vgpr19, $vgpr20, $vgpr21, $vgpr22, $vgpr23, $vgpr24, $vgpr25, $vgpr26, $vgpr27, $vgpr28, $vgpr29, $vgpr30, $vgpr31, $sgpr30_sgpr31
+  ; CHECK:   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15, $vgpr16, $vgpr17, $vgpr18, $vgpr19, $vgpr20, $vgpr21, $vgpr22, $vgpr23, $vgpr24, $vgpr25, $vgpr26, $vgpr27, $vgpr28, $vgpr29, $vgpr30, $sgpr30_sgpr31
   ; CHECK:   [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
   ; CHECK:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
   ; CHECK:   [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr2
@@ -2548,83 +2564,84 @@ define void @void_func_v32i32_v16i32_v16f32(<32 x i32> %arg0, <16 x i32> %arg1, 
   ; CHECK:   [[COPY28:%[0-9]+]]:_(s32) = COPY $vgpr28
   ; CHECK:   [[COPY29:%[0-9]+]]:_(s32) = COPY $vgpr29
   ; CHECK:   [[COPY30:%[0-9]+]]:_(s32) = COPY $vgpr30
-  ; CHECK:   [[COPY31:%[0-9]+]]:_(s32) = COPY $vgpr31
-  ; CHECK:   [[BUILD_VECTOR:%[0-9]+]]:_(<32 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32), [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32), [[COPY12]](s32), [[COPY13]](s32), [[COPY14]](s32), [[COPY15]](s32), [[COPY16]](s32), [[COPY17]](s32), [[COPY18]](s32), [[COPY19]](s32), [[COPY20]](s32), [[COPY21]](s32), [[COPY22]](s32), [[COPY23]](s32), [[COPY24]](s32), [[COPY25]](s32), [[COPY26]](s32), [[COPY27]](s32), [[COPY28]](s32), [[COPY29]](s32), [[COPY30]](s32), [[COPY31]](s32)
-  ; CHECK:   [[FRAME_INDEX:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.31
-  ; CHECK:   [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX]](p5) :: (invariant load (s32) from %fixed-stack.31, align 16, addrspace 5)
-  ; CHECK:   [[FRAME_INDEX1:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.30
-  ; CHECK:   [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX1]](p5) :: (invariant load (s32) from %fixed-stack.30, addrspace 5)
-  ; CHECK:   [[FRAME_INDEX2:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.29
-  ; CHECK:   [[LOAD2:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX2]](p5) :: (invariant load (s32) from %fixed-stack.29, align 8, addrspace 5)
-  ; CHECK:   [[FRAME_INDEX3:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.28
-  ; CHECK:   [[LOAD3:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX3]](p5) :: (invariant load (s32) from %fixed-stack.28, addrspace 5)
-  ; CHECK:   [[FRAME_INDEX4:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.27
-  ; CHECK:   [[LOAD4:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX4]](p5) :: (invariant load (s32) from %fixed-stack.27, align 16, addrspace 5)
-  ; CHECK:   [[FRAME_INDEX5:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.26
-  ; CHECK:   [[LOAD5:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX5]](p5) :: (invariant load (s32) from %fixed-stack.26, addrspace 5)
-  ; CHECK:   [[FRAME_INDEX6:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.25
-  ; CHECK:   [[LOAD6:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX6]](p5) :: (invariant load (s32) from %fixed-stack.25, align 8, addrspace 5)
-  ; CHECK:   [[FRAME_INDEX7:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.24
-  ; CHECK:   [[LOAD7:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX7]](p5) :: (invariant load (s32) from %fixed-stack.24, addrspace 5)
-  ; CHECK:   [[FRAME_INDEX8:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.23
-  ; CHECK:   [[LOAD8:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX8]](p5) :: (invariant load (s32) from %fixed-stack.23, align 16, addrspace 5)
-  ; CHECK:   [[FRAME_INDEX9:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.22
-  ; CHECK:   [[LOAD9:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX9]](p5) :: (invariant load (s32) from %fixed-stack.22, addrspace 5)
-  ; CHECK:   [[FRAME_INDEX10:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.21
-  ; CHECK:   [[LOAD10:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX10]](p5) :: (invariant load (s32) from %fixed-stack.21, align 8, addrspace 5)
-  ; CHECK:   [[FRAME_INDEX11:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.20
-  ; CHECK:   [[LOAD11:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX11]](p5) :: (invariant load (s32) from %fixed-stack.20, addrspace 5)
-  ; CHECK:   [[FRAME_INDEX12:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.19
-  ; CHECK:   [[LOAD12:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX12]](p5) :: (invariant load (s32) from %fixed-stack.19, align 16, addrspace 5)
-  ; CHECK:   [[FRAME_INDEX13:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.18
-  ; CHECK:   [[LOAD13:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX13]](p5) :: (invariant load (s32) from %fixed-stack.18, addrspace 5)
-  ; CHECK:   [[FRAME_INDEX14:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.17
-  ; CHECK:   [[LOAD14:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX14]](p5) :: (invariant load (s32) from %fixed-stack.17, align 8, addrspace 5)
-  ; CHECK:   [[FRAME_INDEX15:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.16
-  ; CHECK:   [[LOAD15:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX15]](p5) :: (invariant load (s32) from %fixed-stack.16, addrspace 5)
-  ; CHECK:   [[BUILD_VECTOR1:%[0-9]+]]:_(<16 x s32>) = G_BUILD_VECTOR [[LOAD]](s32), [[LOAD1]](s32), [[LOAD2]](s32), [[LOAD3]](s32), [[LOAD4]](s32), [[LOAD5]](s32), [[LOAD6]](s32), [[LOAD7]](s32), [[LOAD8]](s32), [[LOAD9]](s32), [[LOAD10]](s32), [[LOAD11]](s32), [[LOAD12]](s32), [[LOAD13]](s32), [[LOAD14]](s32), [[LOAD15]](s32)
-  ; CHECK:   [[FRAME_INDEX16:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.15
-  ; CHECK:   [[LOAD16:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX16]](p5) :: (invariant load (s32) from %fixed-stack.15, align 16, addrspace 5)
-  ; CHECK:   [[FRAME_INDEX17:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.14
-  ; CHECK:   [[LOAD17:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX17]](p5) :: (invariant load (s32) from %fixed-stack.14, addrspace 5)
-  ; CHECK:   [[FRAME_INDEX18:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.13
-  ; CHECK:   [[LOAD18:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX18]](p5) :: (invariant load (s32) from %fixed-stack.13, align 8, addrspace 5)
-  ; CHECK:   [[FRAME_INDEX19:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.12
-  ; CHECK:   [[LOAD19:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX19]](p5) :: (invariant load (s32) from %fixed-stack.12, addrspace 5)
-  ; CHECK:   [[FRAME_INDEX20:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.11
-  ; CHECK:   [[LOAD20:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX20]](p5) :: (invariant load (s32) from %fixed-stack.11, align 16, addrspace 5)
-  ; CHECK:   [[FRAME_INDEX21:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.10
-  ; CHECK:   [[LOAD21:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX21]](p5) :: (invariant load (s32) from %fixed-stack.10, addrspace 5)
-  ; CHECK:   [[FRAME_INDEX22:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.9
-  ; CHECK:   [[LOAD22:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX22]](p5) :: (invariant load (s32) from %fixed-stack.9, align 8, addrspace 5)
-  ; CHECK:   [[FRAME_INDEX23:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.8
-  ; CHECK:   [[LOAD23:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX23]](p5) :: (invariant load (s32) from %fixed-stack.8, addrspace 5)
-  ; CHECK:   [[FRAME_INDEX24:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.7
-  ; CHECK:   [[LOAD24:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX24]](p5) :: (invariant load (s32) from %fixed-stack.7, align 16, addrspace 5)
-  ; CHECK:   [[FRAME_INDEX25:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.6
-  ; CHECK:   [[LOAD25:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX25]](p5) :: (invariant load (s32) from %fixed-stack.6, addrspace 5)
-  ; CHECK:   [[FRAME_INDEX26:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.5
-  ; CHECK:   [[LOAD26:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX26]](p5) :: (invariant load (s32) from %fixed-stack.5, align 8, addrspace 5)
-  ; CHECK:   [[FRAME_INDEX27:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.4
-  ; CHECK:   [[LOAD27:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX27]](p5) :: (invariant load (s32) from %fixed-stack.4, addrspace 5)
-  ; CHECK:   [[FRAME_INDEX28:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.3
-  ; CHECK:   [[LOAD28:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX28]](p5) :: (invariant load (s32) from %fixed-stack.3, align 16, addrspace 5)
-  ; CHECK:   [[FRAME_INDEX29:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.2
-  ; CHECK:   [[LOAD29:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX29]](p5) :: (invariant load (s32) from %fixed-stack.2, addrspace 5)
-  ; CHECK:   [[FRAME_INDEX30:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.1
-  ; CHECK:   [[LOAD30:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX30]](p5) :: (invariant load (s32) from %fixed-stack.1, align 8, addrspace 5)
-  ; CHECK:   [[FRAME_INDEX31:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.0
-  ; CHECK:   [[LOAD31:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX31]](p5) :: (invariant load (s32) from %fixed-stack.0, addrspace 5)
-  ; CHECK:   [[BUILD_VECTOR2:%[0-9]+]]:_(<16 x s32>) = G_BUILD_VECTOR [[LOAD16]](s32), [[LOAD17]](s32), [[LOAD18]](s32), [[LOAD19]](s32), [[LOAD20]](s32), [[LOAD21]](s32), [[LOAD22]](s32), [[LOAD23]](s32), [[LOAD24]](s32), [[LOAD25]](s32), [[LOAD26]](s32), [[LOAD27]](s32), [[LOAD28]](s32), [[LOAD29]](s32), [[LOAD30]](s32), [[LOAD31]](s32)
-  ; CHECK:   [[COPY32:%[0-9]+]]:sgpr_64 = COPY $sgpr30_sgpr31
+  ; CHECK:   [[FRAME_INDEX:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.32
+  ; CHECK:   [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX]](p5) :: (invariant load (s32) from %fixed-stack.32, align 16, addrspace 5)
+  ; CHECK:   [[BUILD_VECTOR:%[0-9]+]]:_(<32 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32), [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32), [[COPY12]](s32), [[COPY13]](s32), [[COPY14]](s32), [[COPY15]](s32), [[COPY16]](s32), [[COPY17]](s32), [[COPY18]](s32), [[COPY19]](s32), [[COPY20]](s32), [[COPY21]](s32), [[COPY22]](s32), [[COPY23]](s32), [[COPY24]](s32), [[COPY25]](s32), [[COPY26]](s32), [[COPY27]](s32), [[COPY28]](s32), [[COPY29]](s32), [[COPY30]](s32), [[LOAD]](s32)
+  ; CHECK:   [[FRAME_INDEX1:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.31
+  ; CHECK:   [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX1]](p5) :: (invariant load (s32) from %fixed-stack.31, addrspace 5)
+  ; CHECK:   [[FRAME_INDEX2:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.30
+  ; CHECK:   [[LOAD2:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX2]](p5) :: (invariant load (s32) from %fixed-stack.30, align 8, addrspace 5)
+  ; CHECK:   [[FRAME_INDEX3:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.29
+  ; CHECK:   [[LOAD3:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX3]](p5) :: (invariant load (s32) from %fixed-stack.29, addrspace 5)
+  ; CHECK:   [[FRAME_INDEX4:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.28
+  ; CHECK:   [[LOAD4:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX4]](p5) :: (invariant load (s32) from %fixed-stack.28, align 16, addrspace 5)
+  ; CHECK:   [[FRAME_INDEX5:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.27
+  ; CHECK:   [[LOAD5:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX5]](p5) :: (invariant load (s32) from %fixed-stack.27, addrspace 5)
+  ; CHECK:   [[FRAME_INDEX6:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.26
+  ; CHECK:   [[LOAD6:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX6]](p5) :: (invariant load (s32) from %fixed-stack.26, align 8, addrspace 5)
+  ; CHECK:   [[FRAME_INDEX7:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.25
+  ; CHECK:   [[LOAD7:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX7]](p5) :: (invariant load (s32) from %fixed-stack.25, addrspace 5)
+  ; CHECK:   [[FRAME_INDEX8:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.24
+  ; CHECK:   [[LOAD8:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX8]](p5) :: (invariant load (s32) from %fixed-stack.24, align 16, addrspace 5)
+  ; CHECK:   [[FRAME_INDEX9:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.23
+  ; CHECK:   [[LOAD9:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX9]](p5) :: (invariant load (s32) from %fixed-stack.23, addrspace 5)
+  ; CHECK:   [[FRAME_INDEX10:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.22
+  ; CHECK:   [[LOAD10:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX10]](p5) :: (invariant load (s32) from %fixed-stack.22, align 8, addrspace 5)
+  ; CHECK:   [[FRAME_INDEX11:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.21
+  ; CHECK:   [[LOAD11:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX11]](p5) :: (invariant load (s32) from %fixed-stack.21, addrspace 5)
+  ; CHECK:   [[FRAME_INDEX12:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.20
+  ; CHECK:   [[LOAD12:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX12]](p5) :: (invariant load (s32) from %fixed-stack.20, align 16, addrspace 5)
+  ; CHECK:   [[FRAME_INDEX13:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.19
+  ; CHECK:   [[LOAD13:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX13]](p5) :: (invariant load (s32) from %fixed-stack.19, addrspace 5)
+  ; CHECK:   [[FRAME_INDEX14:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.18
+  ; CHECK:   [[LOAD14:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX14]](p5) :: (invariant load (s32) from %fixed-stack.18, align 8, addrspace 5)
+  ; CHECK:   [[FRAME_INDEX15:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.17
+  ; CHECK:   [[LOAD15:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX15]](p5) :: (invariant load (s32) from %fixed-stack.17, addrspace 5)
+  ; CHECK:   [[FRAME_INDEX16:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.16
+  ; CHECK:   [[LOAD16:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX16]](p5) :: (invariant load (s32) from %fixed-stack.16, align 16, addrspace 5)
+  ; CHECK:   [[BUILD_VECTOR1:%[0-9]+]]:_(<16 x s32>) = G_BUILD_VECTOR [[LOAD1]](s32), [[LOAD2]](s32), [[LOAD3]](s32), [[LOAD4]](s32), [[LOAD5]](s32), [[LOAD6]](s32), [[LOAD7]](s32), [[LOAD8]](s32), [[LOAD9]](s32), [[LOAD10]](s32), [[LOAD11]](s32), [[LOAD12]](s32), [[LOAD13]](s32), [[LOAD14]](s32), [[LOAD15]](s32), [[LOAD16]](s32)
+  ; CHECK:   [[FRAME_INDEX17:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.15
+  ; CHECK:   [[LOAD17:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX17]](p5) :: (invariant load (s32) from %fixed-stack.15, addrspace 5)
+  ; CHECK:   [[FRAME_INDEX18:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.14
+  ; CHECK:   [[LOAD18:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX18]](p5) :: (invariant load (s32) from %fixed-stack.14, align 8, addrspace 5)
+  ; CHECK:   [[FRAME_INDEX19:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.13
+  ; CHECK:   [[LOAD19:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX19]](p5) :: (invariant load (s32) from %fixed-stack.13, addrspace 5)
+  ; CHECK:   [[FRAME_INDEX20:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.12
+  ; CHECK:   [[LOAD20:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX20]](p5) :: (invariant load (s32) from %fixed-stack.12, align 16, addrspace 5)
+  ; CHECK:   [[FRAME_INDEX21:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.11
+  ; CHECK:   [[LOAD21:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX21]](p5) :: (invariant load (s32) from %fixed-stack.11, addrspace 5)
+  ; CHECK:   [[FRAME_INDEX22:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.10
+  ; CHECK:   [[LOAD22:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX22]](p5) :: (invariant load (s32) from %fixed-stack.10, align 8, addrspace 5)
+  ; CHECK:   [[FRAME_INDEX23:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.9
+  ; CHECK:   [[LOAD23:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX23]](p5) :: (invariant load (s32) from %fixed-stack.9, addrspace 5)
+  ; CHECK:   [[FRAME_INDEX24:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.8
+  ; CHECK:   [[LOAD24:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX24]](p5) :: (invariant load (s32) from %fixed-stack.8, align 16, addrspace 5)
+  ; CHECK:   [[FRAME_INDEX25:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.7
+  ; CHECK:   [[LOAD25:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX25]](p5) :: (invariant load (s32) from %fixed-stack.7, addrspace 5)
+  ; CHECK:   [[FRAME_INDEX26:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.6
+  ; CHECK:   [[LOAD26:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX26]](p5) :: (invariant load (s32) from %fixed-stack.6, align 8, addrspace 5)
+  ; CHECK:   [[FRAME_INDEX27:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.5
+  ; CHECK:   [[LOAD27:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX27]](p5) :: (invariant load (s32) from %fixed-stack.5, addrspace 5)
+  ; CHECK:   [[FRAME_INDEX28:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.4
+  ; CHECK:   [[LOAD28:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX28]](p5) :: (invariant load (s32) from %fixed-stack.4, align 16, addrspace 5)
+  ; CHECK:   [[FRAME_INDEX29:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.3
+  ; CHECK:   [[LOAD29:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX29]](p5) :: (invariant load (s32) from %fixed-stack.3, addrspace 5)
+  ; CHECK:   [[FRAME_INDEX30:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.2
+  ; CHECK:   [[LOAD30:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX30]](p5) :: (invariant load (s32) from %fixed-stack.2, align 8, addrspace 5)
+  ; CHECK:   [[FRAME_INDEX31:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.1
+  ; CHECK:   [[LOAD31:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX31]](p5) :: (invariant load (s32) from %fixed-stack.1, addrspace 5)
+  ; CHECK:   [[FRAME_INDEX32:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.0
+  ; CHECK:   [[LOAD32:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX32]](p5) :: (invariant load (s32) from %fixed-stack.0, align 16, addrspace 5)
+  ; CHECK:   [[BUILD_VECTOR2:%[0-9]+]]:_(<16 x s32>) = G_BUILD_VECTOR [[LOAD17]](s32), [[LOAD18]](s32), [[LOAD19]](s32), [[LOAD20]](s32), [[LOAD21]](s32), [[LOAD22]](s32), [[LOAD23]](s32), [[LOAD24]](s32), [[LOAD25]](s32), [[LOAD26]](s32), [[LOAD27]](s32), [[LOAD28]](s32), [[LOAD29]](s32), [[LOAD30]](s32), [[LOAD31]](s32), [[LOAD32]](s32)
+  ; CHECK:   [[COPY31:%[0-9]+]]:sgpr_64 = COPY $sgpr30_sgpr31
   ; CHECK:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; CHECK:   [[COPY32:%[0-9]+]]:_(p1) = COPY [[DEF]](p1)
   ; CHECK:   [[COPY33:%[0-9]+]]:_(p1) = COPY [[DEF]](p1)
-  ; CHECK:   [[COPY34:%[0-9]+]]:_(p1) = COPY [[DEF]](p1)
   ; CHECK:   G_STORE [[BUILD_VECTOR]](<32 x s32>), [[DEF]](p1) :: (volatile store (<32 x s32>) into `<32 x i32> addrspace(1)* undef`, addrspace 1)
-  ; CHECK:   G_STORE [[BUILD_VECTOR1]](<16 x s32>), [[COPY33]](p1) :: (volatile store (<16 x s32>) into `<16 x i32> addrspace(1)* undef`, addrspace 1)
-  ; CHECK:   G_STORE [[BUILD_VECTOR2]](<16 x s32>), [[COPY34]](p1) :: (volatile store (<16 x s32>) into `<16 x float> addrspace(1)* undef`, addrspace 1)
-  ; CHECK:   [[COPY35:%[0-9]+]]:ccr_sgpr_64 = COPY [[COPY32]]
-  ; CHECK:   S_SETPC_B64_return [[COPY35]]
+  ; CHECK:   G_STORE [[BUILD_VECTOR1]](<16 x s32>), [[COPY32]](p1) :: (volatile store (<16 x s32>) into `<16 x i32> addrspace(1)* undef`, addrspace 1)
+  ; CHECK:   G_STORE [[BUILD_VECTOR2]](<16 x s32>), [[COPY33]](p1) :: (volatile store (<16 x s32>) into `<16 x float> addrspace(1)* undef`, addrspace 1)
+  ; CHECK:   [[COPY34:%[0-9]+]]:ccr_sgpr_64 = COPY [[COPY31]]
+  ; CHECK:   S_SETPC_B64_return [[COPY34]]
   store volatile <32 x i32> %arg0, <32 x i32> addrspace(1)* undef
   store volatile <16 x i32> %arg1, <16 x i32> addrspace(1)* undef
   store volatile <16 x float> %arg2, <16 x float> addrspace(1)* undef
@@ -2751,7 +2768,7 @@ define void @void_func_v16i8(<16 x i8> %arg0) #0 {
 define void @void_func_v32i32_v16i8(<32 x i32> %arg0, <16 x i8> %arg1) #0 {
   ; CHECK-LABEL: name: void_func_v32i32_v16i8
   ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK:   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15, $vgpr16, $vgpr17, $vgpr18, $vgpr19, $vgpr20, $vgpr21, $vgpr22, $vgpr23, $vgpr24, $vgpr25, $vgpr26, $vgpr27, $vgpr28, $vgpr29, $vgpr30, $vgpr31, $sgpr30_sgpr31
+  ; CHECK:   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15, $vgpr16, $vgpr17, $vgpr18, $vgpr19, $vgpr20, $vgpr21, $vgpr22, $vgpr23, $vgpr24, $vgpr25, $vgpr26, $vgpr27, $vgpr28, $vgpr29, $vgpr30, $sgpr30_sgpr31
   ; CHECK:   [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
   ; CHECK:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
   ; CHECK:   [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr2
@@ -2783,49 +2800,50 @@ define void @void_func_v32i32_v16i8(<32 x i32> %arg0, <16 x i8> %arg1) #0 {
   ; CHECK:   [[COPY28:%[0-9]+]]:_(s32) = COPY $vgpr28
   ; CHECK:   [[COPY29:%[0-9]+]]:_(s32) = COPY $vgpr29
   ; CHECK:   [[COPY30:%[0-9]+]]:_(s32) = COPY $vgpr30
-  ; CHECK:   [[COPY31:%[0-9]+]]:_(s32) = COPY $vgpr31
-  ; CHECK:   [[BUILD_VECTOR:%[0-9]+]]:_(<32 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32), [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32), [[COPY12]](s32), [[COPY13]](s32), [[COPY14]](s32), [[COPY15]](s32), [[COPY16]](s32), [[COPY17]](s32), [[COPY18]](s32), [[COPY19]](s32), [[COPY20]](s32), [[COPY21]](s32), [[COPY22]](s32), [[COPY23]](s32), [[COPY24]](s32), [[COPY25]](s32), [[COPY26]](s32), [[COPY27]](s32), [[COPY28]](s32), [[COPY29]](s32), [[COPY30]](s32), [[COPY31]](s32)
-  ; CHECK:   [[FRAME_INDEX:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.15
-  ; CHECK:   [[LOAD:%[0-9]+]]:_(s16) = G_LOAD [[FRAME_INDEX]](p5) :: (invariant load (s16) from %fixed-stack.15, align 16, addrspace 5)
-  ; CHECK:   [[FRAME_INDEX1:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.14
-  ; CHECK:   [[LOAD1:%[0-9]+]]:_(s16) = G_LOAD [[FRAME_INDEX1]](p5) :: (invariant load (s16) from %fixed-stack.14, align 4, addrspace 5)
-  ; CHECK:   [[FRAME_INDEX2:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.13
-  ; CHECK:   [[LOAD2:%[0-9]+]]:_(s16) = G_LOAD [[FRAME_INDEX2]](p5) :: (invariant load (s16) from %fixed-stack.13, align 8, addrspace 5)
-  ; CHECK:   [[FRAME_INDEX3:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.12
-  ; CHECK:   [[LOAD3:%[0-9]+]]:_(s16) = G_LOAD [[FRAME_INDEX3]](p5) :: (invariant load (s16) from %fixed-stack.12, align 4, addrspace 5)
-  ; CHECK:   [[FRAME_INDEX4:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.11
-  ; CHECK:   [[LOAD4:%[0-9]+]]:_(s16) = G_LOAD [[FRAME_INDEX4]](p5) :: (invariant load (s16) from %fixed-stack.11, align 16, addrspace 5)
-  ; CHECK:   [[FRAME_INDEX5:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.10
-  ; CHECK:   [[LOAD5:%[0-9]+]]:_(s16) = G_LOAD [[FRAME_INDEX5]](p5) :: (invariant load (s16) from %fixed-stack.10, align 4, addrspace 5)
-  ; CHECK:   [[FRAME_INDEX6:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.9
-  ; CHECK:   [[LOAD6:%[0-9]+]]:_(s16) = G_LOAD [[FRAME_INDEX6]](p5) :: (invariant load (s16) from %fixed-stack.9, align 8, addrspace 5)
-  ; CHECK:   [[FRAME_INDEX7:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.8
-  ; CHECK:   [[LOAD7:%[0-9]+]]:_(s16) = G_LOAD [[FRAME_INDEX7]](p5) :: (invariant load (s16) from %fixed-stack.8, align 4, addrspace 5)
-  ; CHECK:   [[FRAME_INDEX8:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.7
-  ; CHECK:   [[LOAD8:%[0-9]+]]:_(s16) = G_LOAD [[FRAME_INDEX8]](p5) :: (invariant load (s16) from %fixed-stack.7, align 16, addrspace 5)
-  ; CHECK:   [[FRAME_INDEX9:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.6
-  ; CHECK:   [[LOAD9:%[0-9]+]]:_(s16) = G_LOAD [[FRAME_INDEX9]](p5) :: (invariant load (s16) from %fixed-stack.6, align 4, addrspace 5)
-  ; CHECK:   [[FRAME_INDEX10:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.5
-  ; CHECK:   [[LOAD10:%[0-9]+]]:_(s16) = G_LOAD [[FRAME_INDEX10]](p5) :: (invariant load (s16) from %fixed-stack.5, align 8, addrspace 5)
-  ; CHECK:   [[FRAME_INDEX11:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.4
-  ; CHECK:   [[LOAD11:%[0-9]+]]:_(s16) = G_LOAD [[FRAME_INDEX11]](p5) :: (invariant load (s16) from %fixed-stack.4, align 4, addrspace 5)
-  ; CHECK:   [[FRAME_INDEX12:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.3
-  ; CHECK:   [[LOAD12:%[0-9]+]]:_(s16) = G_LOAD [[FRAME_INDEX12]](p5) :: (invariant load (s16) from %fixed-stack.3, align 16, addrspace 5)
-  ; CHECK:   [[FRAME_INDEX13:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.2
-  ; CHECK:   [[LOAD13:%[0-9]+]]:_(s16) = G_LOAD [[FRAME_INDEX13]](p5) :: (invariant load (s16) from %fixed-stack.2, align 4, addrspace 5)
-  ; CHECK:   [[FRAME_INDEX14:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.1
-  ; CHECK:   [[LOAD14:%[0-9]+]]:_(s16) = G_LOAD [[FRAME_INDEX14]](p5) :: (invariant load (s16) from %fixed-stack.1, align 8, addrspace 5)
-  ; CHECK:   [[FRAME_INDEX15:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.0
-  ; CHECK:   [[LOAD15:%[0-9]+]]:_(s16) = G_LOAD [[FRAME_INDEX15]](p5) :: (invariant load (s16) from %fixed-stack.0, align 4, addrspace 5)
-  ; CHECK:   [[BUILD_VECTOR1:%[0-9]+]]:_(<16 x s16>) = G_BUILD_VECTOR [[LOAD]](s16), [[LOAD1]](s16), [[LOAD2]](s16), [[LOAD3]](s16), [[LOAD4]](s16), [[LOAD5]](s16), [[LOAD6]](s16), [[LOAD7]](s16), [[LOAD8]](s16), [[LOAD9]](s16), [[LOAD10]](s16), [[LOAD11]](s16), [[LOAD12]](s16), [[LOAD13]](s16), [[LOAD14]](s16), [[LOAD15]](s16)
+  ; CHECK:   [[FRAME_INDEX:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.16
+  ; CHECK:   [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX]](p5) :: (invariant load (s32) from %fixed-stack.16, align 16, addrspace 5)
+  ; CHECK:   [[BUILD_VECTOR:%[0-9]+]]:_(<32 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32), [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32), [[COPY12]](s32), [[COPY13]](s32), [[COPY14]](s32), [[COPY15]](s32), [[COPY16]](s32), [[COPY17]](s32), [[COPY18]](s32), [[COPY19]](s32), [[COPY20]](s32), [[COPY21]](s32), [[COPY22]](s32), [[COPY23]](s32), [[COPY24]](s32), [[COPY25]](s32), [[COPY26]](s32), [[COPY27]](s32), [[COPY28]](s32), [[COPY29]](s32), [[COPY30]](s32), [[LOAD]](s32)
+  ; CHECK:   [[FRAME_INDEX1:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.15
+  ; CHECK:   [[LOAD1:%[0-9]+]]:_(s16) = G_LOAD [[FRAME_INDEX1]](p5) :: (invariant load (s16) from %fixed-stack.15, align 4, addrspace 5)
+  ; CHECK:   [[FRAME_INDEX2:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.14
+  ; CHECK:   [[LOAD2:%[0-9]+]]:_(s16) = G_LOAD [[FRAME_INDEX2]](p5) :: (invariant load (s16) from %fixed-stack.14, align 8, addrspace 5)
+  ; CHECK:   [[FRAME_INDEX3:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.13
+  ; CHECK:   [[LOAD3:%[0-9]+]]:_(s16) = G_LOAD [[FRAME_INDEX3]](p5) :: (invariant load (s16) from %fixed-stack.13, align 4, addrspace 5)
+  ; CHECK:   [[FRAME_INDEX4:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.12
+  ; CHECK:   [[LOAD4:%[0-9]+]]:_(s16) = G_LOAD [[FRAME_INDEX4]](p5) :: (invariant load (s16) from %fixed-stack.12, align 16, addrspace 5)
+  ; CHECK:   [[FRAME_INDEX5:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.11
+  ; CHECK:   [[LOAD5:%[0-9]+]]:_(s16) = G_LOAD [[FRAME_INDEX5]](p5) :: (invariant load (s16) from %fixed-stack.11, align 4, addrspace 5)
+  ; CHECK:   [[FRAME_INDEX6:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.10
+  ; CHECK:   [[LOAD6:%[0-9]+]]:_(s16) = G_LOAD [[FRAME_INDEX6]](p5) :: (invariant load (s16) from %fixed-stack.10, align 8, addrspace 5)
+  ; CHECK:   [[FRAME_INDEX7:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.9
+  ; CHECK:   [[LOAD7:%[0-9]+]]:_(s16) = G_LOAD [[FRAME_INDEX7]](p5) :: (invariant load (s16) from %fixed-stack.9, align 4, addrspace 5)
+  ; CHECK:   [[FRAME_INDEX8:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.8
+  ; CHECK:   [[LOAD8:%[0-9]+]]:_(s16) = G_LOAD [[FRAME_INDEX8]](p5) :: (invariant load (s16) from %fixed-stack.8, align 16, addrspace 5)
+  ; CHECK:   [[FRAME_INDEX9:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.7
+  ; CHECK:   [[LOAD9:%[0-9]+]]:_(s16) = G_LOAD [[FRAME_INDEX9]](p5) :: (invariant load (s16) from %fixed-stack.7, align 4, addrspace 5)
+  ; CHECK:   [[FRAME_INDEX10:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.6
+  ; CHECK:   [[LOAD10:%[0-9]+]]:_(s16) = G_LOAD [[FRAME_INDEX10]](p5) :: (invariant load (s16) from %fixed-stack.6, align 8, addrspace 5)
+  ; CHECK:   [[FRAME_INDEX11:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.5
+  ; CHECK:   [[LOAD11:%[0-9]+]]:_(s16) = G_LOAD [[FRAME_INDEX11]](p5) :: (invariant load (s16) from %fixed-stack.5, align 4, addrspace 5)
+  ; CHECK:   [[FRAME_INDEX12:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.4
+  ; CHECK:   [[LOAD12:%[0-9]+]]:_(s16) = G_LOAD [[FRAME_INDEX12]](p5) :: (invariant load (s16) from %fixed-stack.4, align 16, addrspace 5)
+  ; CHECK:   [[FRAME_INDEX13:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.3
+  ; CHECK:   [[LOAD13:%[0-9]+]]:_(s16) = G_LOAD [[FRAME_INDEX13]](p5) :: (invariant load (s16) from %fixed-stack.3, align 4, addrspace 5)
+  ; CHECK:   [[FRAME_INDEX14:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.2
+  ; CHECK:   [[LOAD14:%[0-9]+]]:_(s16) = G_LOAD [[FRAME_INDEX14]](p5) :: (invariant load (s16) from %fixed-stack.2, align 8, addrspace 5)
+  ; CHECK:   [[FRAME_INDEX15:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.1
+  ; CHECK:   [[LOAD15:%[0-9]+]]:_(s16) = G_LOAD [[FRAME_INDEX15]](p5) :: (invariant load (s16) from %fixed-stack.1, align 4, addrspace 5)
+  ; CHECK:   [[FRAME_INDEX16:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.0
+  ; CHECK:   [[LOAD16:%[0-9]+]]:_(s16) = G_LOAD [[FRAME_INDEX16]](p5) :: (invariant load (s16) from %fixed-stack.0, align 16, addrspace 5)
+  ; CHECK:   [[BUILD_VECTOR1:%[0-9]+]]:_(<16 x s16>) = G_BUILD_VECTOR [[LOAD1]](s16), [[LOAD2]](s16), [[LOAD3]](s16), [[LOAD4]](s16), [[LOAD5]](s16), [[LOAD6]](s16), [[LOAD7]](s16), [[LOAD8]](s16), [[LOAD9]](s16), [[LOAD10]](s16), [[LOAD11]](s16), [[LOAD12]](s16), [[LOAD13]](s16), [[LOAD14]](s16), [[LOAD15]](s16), [[LOAD16]](s16)
   ; CHECK:   [[TRUNC:%[0-9]+]]:_(<16 x s8>) = G_TRUNC [[BUILD_VECTOR1]](<16 x s16>)
-  ; CHECK:   [[COPY32:%[0-9]+]]:sgpr_64 = COPY $sgpr30_sgpr31
+  ; CHECK:   [[COPY31:%[0-9]+]]:sgpr_64 = COPY $sgpr30_sgpr31
   ; CHECK:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
-  ; CHECK:   [[COPY33:%[0-9]+]]:_(p1) = COPY [[DEF]](p1)
+  ; CHECK:   [[COPY32:%[0-9]+]]:_(p1) = COPY [[DEF]](p1)
   ; CHECK:   G_STORE [[BUILD_VECTOR]](<32 x s32>), [[DEF]](p1) :: (volatile store (<32 x s32>) into `<32 x i32> addrspace(1)* undef`, addrspace 1)
-  ; CHECK:   G_STORE [[TRUNC]](<16 x s8>), [[COPY33]](p1) :: (volatile store (<16 x s8>) into `<16 x i8> addrspace(1)* undef`, addrspace 1)
-  ; CHECK:   [[COPY34:%[0-9]+]]:ccr_sgpr_64 = COPY [[COPY32]]
-  ; CHECK:   S_SETPC_B64_return [[COPY34]]
+  ; CHECK:   G_STORE [[TRUNC]](<16 x s8>), [[COPY32]](p1) :: (volatile store (<16 x s8>) into `<16 x i8> addrspace(1)* undef`, addrspace 1)
+  ; CHECK:   [[COPY33:%[0-9]+]]:ccr_sgpr_64 = COPY [[COPY31]]
+  ; CHECK:   S_SETPC_B64_return [[COPY33]]
   store volatile <32 x i32> %arg0, <32 x i32> addrspace(1)* undef
   store volatile <16 x i8> %arg1, <16 x i8> addrspace(1)* undef
   ret void

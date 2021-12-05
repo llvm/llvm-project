@@ -561,11 +561,10 @@ void MachineSchedulerBase::scheduleRegions(ScheduleDAGInstrs &Scheduler,
 
     MBBRegionsVector MBBRegions;
     getSchedRegions(&*MBB, MBBRegions, Scheduler.doMBBSchedRegionsTopDown());
-    for (MBBRegionsVector::iterator R = MBBRegions.begin();
-         R != MBBRegions.end(); ++R) {
-      MachineBasicBlock::iterator I = R->RegionBegin;
-      MachineBasicBlock::iterator RegionEnd = R->RegionEnd;
-      unsigned NumRegionInstrs = R->NumRegionInstrs;
+    for (const SchedRegion &R : MBBRegions) {
+      MachineBasicBlock::iterator I = R.RegionBegin;
+      MachineBasicBlock::iterator RegionEnd = R.RegionEnd;
+      unsigned NumRegionInstrs = R.NumRegionInstrs;
 
       // Notify the scheduler of the region, even if we may skip scheduling
       // it. Perhaps it still needs to be bundled.

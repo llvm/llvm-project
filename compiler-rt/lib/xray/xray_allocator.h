@@ -65,9 +65,9 @@ template <class T> T *allocate() XRAY_NEVER_INSTRUMENT {
   int ErrNo = 0;
   if (UNLIKELY(internal_iserror(B, &ErrNo))) {
     if (Verbosity())
-      Report(
-          "XRay Profiling: Failed to allocate memory of size %d; Error = %d.\n",
-          RoundedSize, B);
+      Report("XRay Profiling: Failed to allocate memory of size %zu; Error = "
+             "%zu\n",
+             RoundedSize, B);
     return nullptr;
   }
 #endif
@@ -114,9 +114,9 @@ T *allocateBuffer(size_t S) XRAY_NEVER_INSTRUMENT {
   int ErrNo = 0;
   if (UNLIKELY(internal_iserror(B, &ErrNo))) {
     if (Verbosity())
-      Report(
-          "XRay Profiling: Failed to allocate memory of size %d; Error = %d.\n",
-          RoundedSize, B);
+      Report("XRay Profiling: Failed to allocate memory of size %zu; Error = "
+             "%zu\n",
+             RoundedSize, B);
     return nullptr;
   }
 #endif
@@ -183,7 +183,7 @@ private:
       BackingStore = allocateBuffer(MaxMemory);
       if (BackingStore == nullptr) {
         if (Verbosity())
-          Report("XRay Profiling: Failed to allocate memory for allocator.\n");
+          Report("XRay Profiling: Failed to allocate memory for allocator\n");
         return nullptr;
       }
 
@@ -198,7 +198,7 @@ private:
         AlignedNextBlock = BackingStore = nullptr;
         if (Verbosity())
           Report("XRay Profiling: Cannot obtain enough memory from "
-                 "preallocated region.\n");
+                 "preallocated region\n");
         return nullptr;
       }
 

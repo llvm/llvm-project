@@ -220,7 +220,8 @@ define void @void_func_v32i32(<32 x i32> %arg0) #0 {
 ; GCN-DAG: buffer_store_dwordx4 v[4:7], off
 ; GCN-DAG: buffer_store_dwordx4 v[8:11], off
 ; GCN-DAG: buffer_store_dwordx4 v[12:15], off
-; GCN-DAG: buffer_load_dword [[STACKLOAD:v[0-9]+]], off, s[0:3], s32
+; GCN-DAG: buffer_load_dword v31, off, s[0:3], s32{{$}}
+; GCN-DAG: buffer_load_dword [[STACKLOAD:v[0-9]+]], off, s[0:3], s32 offset:4
 ; GCN-DAG: buffer_store_dwordx4 v[16:19], off
 ; GCN-DAG: buffer_store_dwordx4 v[20:23], off
 ; GCN-DAG: buffer_store_dwordx4 v[24:27], off
@@ -576,9 +577,10 @@ define void @void_func_byval_i32_byval_i64(i32 addrspace(5)* byval(i32) %arg0, i
 ; GCN-DAG: buffer_store_dwordx4 v[20:23], off
 ; GCN-DAG: buffer_store_dwordx4 v[24:27], off
 ; GCN-DAG: buffer_store_dwordx4 v[28:31], off
-; GCN-DAG: buffer_load_dword v[[LOAD_ARG1:[0-9]+]], off, s[0:3], s32{{$}}
-; GCN-DAG: buffer_load_dword v[[LOAD_ARG2_0:[0-9]+]], off, s[0:3], s32 offset:4
-; GCN-DAG: buffer_load_dword v[[LOAD_ARG2_1:[0-9]+]], off, s[0:3], s32 offset:8
+; GCN-DAG: buffer_load_dword v[[LOAD_ARG0_31:[0-9]+]], off, s[0:3], s32{{$}}
+; GCN-DAG: buffer_load_dword v[[LOAD_ARG1:[0-9]+]], off, s[0:3], s32 offset:4{{$}}
+; GCN-DAG: buffer_load_dword v[[LOAD_ARG2_0:[0-9]+]], off, s[0:3], s32 offset:8
+; GCN-DAG: buffer_load_dword v[[LOAD_ARG2_1:[0-9]+]], off, s[0:3], s32 offset:12
 
 ; GCN: buffer_store_dword v[[LOAD_ARG1]]
 ; GCN: buffer_store_dwordx2 v{{\[}}[[LOAD_ARG2_0]]:[[LOAD_ARG2_1]]{{\]}}, off
@@ -591,14 +593,14 @@ define void @void_func_v32i32_i32_i64(<32 x i32> %arg0, i32 %arg1, i64 %arg2) #0
 
 ; FIXME: Different ext load types on CI vs. VI
 ; GCN-LABEL: {{^}}void_func_v32i32_i1_i8_i16:
-; GCN-DAG: buffer_load_ubyte [[LOAD_ARG1:v[0-9]+]], off, s[0:3], s32{{$}}
-; VI-DAG: buffer_load_ushort [[LOAD_ARG2:v[0-9]+]], off, s[0:3], s32 offset:4{{$}}
-; VI-DAG: buffer_load_ushort [[LOAD_ARG3:v[0-9]+]], off, s[0:3], s32 offset:8{{$}}
-; VI-DAG: buffer_load_ushort [[LOAD_ARG4:v[0-9]+]], off, s[0:3], s32 offset:12{{$}}
+; GCN-DAG: buffer_load_ubyte [[LOAD_ARG1:v[0-9]+]], off, s[0:3], s32 offset:4{{$}}
+; VI-DAG: buffer_load_ushort [[LOAD_ARG2:v[0-9]+]], off, s[0:3], s32 offset:8{{$}}
+; VI-DAG: buffer_load_ushort [[LOAD_ARG3:v[0-9]+]], off, s[0:3], s32 offset:12{{$}}
+; VI-DAG: buffer_load_ushort [[LOAD_ARG4:v[0-9]+]], off, s[0:3], s32 offset:16{{$}}
 
-; CI-DAG: buffer_load_dword [[LOAD_ARG2:v[0-9]+]], off, s[0:3], s32 offset:4{{$}}
-; CI-DAG: buffer_load_dword [[LOAD_ARG3:v[0-9]+]], off, s[0:3], s32 offset:8{{$}}
-; CI-DAG: buffer_load_dword [[LOAD_ARG4:v[0-9]+]], off, s[0:3], s32 offset:12{{$}}
+; CI-DAG: buffer_load_dword [[LOAD_ARG2:v[0-9]+]], off, s[0:3], s32 offset:8{{$}}
+; CI-DAG: buffer_load_dword [[LOAD_ARG3:v[0-9]+]], off, s[0:3], s32 offset:12{{$}}
+; CI-DAG: buffer_load_dword [[LOAD_ARG4:v[0-9]+]], off, s[0:3], s32 offset:16{{$}}
 
 ; GCN-DAG: v_and_b32_e32 [[TRUNC_ARG1_I1:v[0-9]+]], 1, [[LOAD_ARG1]]
 ; CI-DAG: v_cvt_f16_f32_e32 [[CVT_ARG4:v[0-9]+]], [[LOAD_ARG4]]
@@ -619,10 +621,10 @@ define void @void_func_v32i32_i1_i8_i16(<32 x i32> %arg0, i1 %arg1, i8 %arg2, i1
 }
 
 ; GCN-LABEL: {{^}}void_func_v32i32_v2i32_v2f32:
-; GCN-DAG: buffer_load_dword v[[LOAD_ARG1_0:[0-9]+]], off, s[0:3], s32{{$}}
-; GCN-DAG: buffer_load_dword v[[LOAD_ARG1_1:[0-9]+]], off, s[0:3], s32 offset:4{{$}}
-; GCN-DAG: buffer_load_dword v[[LOAD_ARG2_0:[0-9]+]], off, s[0:3], s32 offset:8{{$}}
-; GCN-DAG: buffer_load_dword v[[LOAD_ARG2_1:[0-9]+]], off, s[0:3], s32 offset:12{{$}}
+; GCN-DAG: buffer_load_dword v[[LOAD_ARG1_0:[0-9]+]], off, s[0:3], s32 offset:4{{$}}
+; GCN-DAG: buffer_load_dword v[[LOAD_ARG1_1:[0-9]+]], off, s[0:3], s32 offset:8{{$}}
+; GCN-DAG: buffer_load_dword v[[LOAD_ARG2_0:[0-9]+]], off, s[0:3], s32 offset:12{{$}}
+; GCN-DAG: buffer_load_dword v[[LOAD_ARG2_1:[0-9]+]], off, s[0:3], s32 offset:16{{$}}
 
 ; GCN: buffer_store_dwordx2 v{{\[}}[[LOAD_ARG1_0]]:[[LOAD_ARG1_1]]{{\]}}, off
 ; GCN: buffer_store_dwordx2 v{{\[}}[[LOAD_ARG2_0]]:[[LOAD_ARG2_1]]{{\]}}, off
@@ -646,15 +648,15 @@ define void @void_func_v32i32_v2i16_v2f16(<32 x i32> %arg0, <2 x i16> %arg1, <2 
 }
 
 ; GCN-LABEL: {{^}}void_func_v32i32_v2i64_v2f64:
-; GCN-DAG: buffer_load_dword v[[LOAD_ARG1_0:[0-9]+]], off, s[0:3], s32{{$}}
-; GCN-DAG: buffer_load_dword v[[LOAD_ARG1_1:[0-9]+]], off, s[0:3], s32 offset:4{{$}}
-; GCN-DAG: buffer_load_dword v[[LOAD_ARG1_2:[0-9]+]], off, s[0:3], s32 offset:8{{$}}
-; GCN-DAG: buffer_load_dword v[[LOAD_ARG1_3:[0-9]+]], off, s[0:3], s32 offset:12{{$}}
+; GCN-DAG: buffer_load_dword v[[LOAD_ARG1_0:[0-9]+]], off, s[0:3], s32 offset:4{{$}}
+; GCN-DAG: buffer_load_dword v[[LOAD_ARG1_1:[0-9]+]], off, s[0:3], s32 offset:8{{$}}
+; GCN-DAG: buffer_load_dword v[[LOAD_ARG1_2:[0-9]+]], off, s[0:3], s32 offset:12{{$}}
+; GCN-DAG: buffer_load_dword v[[LOAD_ARG1_3:[0-9]+]], off, s[0:3], s32 offset:16{{$}}
 
-; GCN-DAG: buffer_load_dword v[[LOAD_ARG2_0:[0-9]+]], off, s[0:3], s32 offset:16{{$}}
-; GCN-DAG: buffer_load_dword v[[LOAD_ARG2_1:[0-9]+]], off, s[0:3], s32 offset:20{{$}}
-; GCN-DAG: buffer_load_dword v[[LOAD_ARG2_2:[0-9]+]], off, s[0:3], s32 offset:24{{$}}
-; GCN-DAG: buffer_load_dword v[[LOAD_ARG2_3:[0-9]+]], off, s[0:3], s32 offset:28{{$}}
+; GCN-DAG: buffer_load_dword v[[LOAD_ARG2_0:[0-9]+]], off, s[0:3], s32 offset:20{{$}}
+; GCN-DAG: buffer_load_dword v[[LOAD_ARG2_1:[0-9]+]], off, s[0:3], s32 offset:24{{$}}
+; GCN-DAG: buffer_load_dword v[[LOAD_ARG2_2:[0-9]+]], off, s[0:3], s32 offset:28{{$}}
+; GCN-DAG: buffer_load_dword v[[LOAD_ARG2_3:[0-9]+]], off, s[0:3], s32 offset:32{{$}}
 
 ; GCN: buffer_store_dwordx4 v{{\[}}[[LOAD_ARG1_0]]:[[LOAD_ARG1_3]]{{\]}}, off
 ; GCN: buffer_store_dwordx4 v{{\[}}[[LOAD_ARG2_0]]:[[LOAD_ARG2_3]]{{\]}}, off
@@ -666,15 +668,15 @@ define void @void_func_v32i32_v2i64_v2f64(<32 x i32> %arg0, <2 x i64> %arg1, <2 
 }
 
 ; GCN-LABEL: {{^}}void_func_v32i32_v4i32_v4f32:
-; GCN-DAG: buffer_load_dword v[[LOAD_ARG1_0:[0-9]+]], off, s[0:3], s32{{$}}
-; GCN-DAG: buffer_load_dword v[[LOAD_ARG1_1:[0-9]+]], off, s[0:3], s32 offset:4{{$}}
-; GCN-DAG: buffer_load_dword v[[LOAD_ARG1_2:[0-9]+]], off, s[0:3], s32 offset:8{{$}}
-; GCN-DAG: buffer_load_dword v[[LOAD_ARG1_3:[0-9]+]], off, s[0:3], s32 offset:12{{$}}
+; GCN-DAG: buffer_load_dword v[[LOAD_ARG1_0:[0-9]+]], off, s[0:3], s32 offset:4{{$}}
+; GCN-DAG: buffer_load_dword v[[LOAD_ARG1_1:[0-9]+]], off, s[0:3], s32 offset:8{{$}}
+; GCN-DAG: buffer_load_dword v[[LOAD_ARG1_2:[0-9]+]], off, s[0:3], s32 offset:12{{$}}
+; GCN-DAG: buffer_load_dword v[[LOAD_ARG1_3:[0-9]+]], off, s[0:3], s32 offset:16{{$}}
 
-; GCN-DAG: buffer_load_dword v[[LOAD_ARG2_0:[0-9]+]], off, s[0:3], s32 offset:16{{$}}
-; GCN-DAG: buffer_load_dword v[[LOAD_ARG2_1:[0-9]+]], off, s[0:3], s32 offset:20{{$}}
-; GCN-DAG: buffer_load_dword v[[LOAD_ARG2_2:[0-9]+]], off, s[0:3], s32 offset:24{{$}}
-; GCN-DAG: buffer_load_dword v[[LOAD_ARG2_3:[0-9]+]], off, s[0:3], s32 offset:28{{$}}
+; GCN-DAG: buffer_load_dword v[[LOAD_ARG2_0:[0-9]+]], off, s[0:3], s32 offset:20{{$}}
+; GCN-DAG: buffer_load_dword v[[LOAD_ARG2_1:[0-9]+]], off, s[0:3], s32 offset:24{{$}}
+; GCN-DAG: buffer_load_dword v[[LOAD_ARG2_2:[0-9]+]], off, s[0:3], s32 offset:28{{$}}
+; GCN-DAG: buffer_load_dword v[[LOAD_ARG2_3:[0-9]+]], off, s[0:3], s32 offset:32{{$}}
 
 ; GCN: buffer_store_dwordx4 v{{\[}}[[LOAD_ARG1_0]]:[[LOAD_ARG1_3]]{{\]}}, off
 ; GCN: buffer_store_dwordx4 v{{\[}}[[LOAD_ARG2_0]]:[[LOAD_ARG2_3]]{{\]}}, off
@@ -686,23 +688,23 @@ define void @void_func_v32i32_v4i32_v4f32(<32 x i32> %arg0, <4 x i32> %arg1, <4 
 }
 
 ; GCN-LABEL: {{^}}void_func_v32i32_v8i32_v8f32:
-; GCN-DAG: buffer_load_dword v[[LOAD_ARG1_0:[0-9]+]], off, s[0:3], s32{{$}}
-; GCN-DAG: buffer_load_dword v[[LOAD_ARG1_1:[0-9]+]], off, s[0:3], s32 offset:4{{$}}
-; GCN-DAG: buffer_load_dword v[[LOAD_ARG1_2:[0-9]+]], off, s[0:3], s32 offset:8{{$}}
-; GCN-DAG: buffer_load_dword v[[LOAD_ARG1_3:[0-9]+]], off, s[0:3], s32 offset:12{{$}}
-; GCN-DAG: buffer_load_dword v[[LOAD_ARG1_4:[0-9]+]], off, s[0:3], s32 offset:16{{$}}
-; GCN-DAG: buffer_load_dword v[[LOAD_ARG1_5:[0-9]+]], off, s[0:3], s32 offset:20{{$}}
-; GCN-DAG: buffer_load_dword v[[LOAD_ARG1_6:[0-9]+]], off, s[0:3], s32 offset:24{{$}}
-; GCN-DAG: buffer_load_dword v[[LOAD_ARG1_7:[0-9]+]], off, s[0:3], s32 offset:28{{$}}
+; GCN-DAG: buffer_load_dword v[[LOAD_ARG1_0:[0-9]+]], off, s[0:3], s32 offset:4{{$}}
+; GCN-DAG: buffer_load_dword v[[LOAD_ARG1_1:[0-9]+]], off, s[0:3], s32 offset:8{{$}}
+; GCN-DAG: buffer_load_dword v[[LOAD_ARG1_2:[0-9]+]], off, s[0:3], s32 offset:12{{$}}
+; GCN-DAG: buffer_load_dword v[[LOAD_ARG1_3:[0-9]+]], off, s[0:3], s32 offset:16{{$}}
+; GCN-DAG: buffer_load_dword v[[LOAD_ARG1_4:[0-9]+]], off, s[0:3], s32 offset:20{{$}}
+; GCN-DAG: buffer_load_dword v[[LOAD_ARG1_5:[0-9]+]], off, s[0:3], s32 offset:24{{$}}
+; GCN-DAG: buffer_load_dword v[[LOAD_ARG1_6:[0-9]+]], off, s[0:3], s32 offset:28{{$}}
+; GCN-DAG: buffer_load_dword v[[LOAD_ARG1_7:[0-9]+]], off, s[0:3], s32 offset:32{{$}}
 
-; GCN-DAG: buffer_load_dword v[[LOAD_ARG2_0:[0-9]+]], off, s[0:3], s32 offset:32{{$}}
-; GCN-DAG: buffer_load_dword v[[LOAD_ARG2_1:[0-9]+]], off, s[0:3], s32 offset:36{{$}}
-; GCN-DAG: buffer_load_dword v[[LOAD_ARG2_2:[0-9]+]], off, s[0:3], s32 offset:40{{$}}
-; GCN-DAG: buffer_load_dword v[[LOAD_ARG2_3:[0-9]+]], off, s[0:3], s32 offset:44{{$}}
-; GCN-DAG: buffer_load_dword v[[LOAD_ARG2_4:[0-9]+]], off, s[0:3], s32 offset:48{{$}}
-; GCN-DAG: buffer_load_dword v[[LOAD_ARG2_5:[0-9]+]], off, s[0:3], s32 offset:52{{$}}
-; GCN-DAG: buffer_load_dword v[[LOAD_ARG2_6:[0-9]+]], off, s[0:3], s32 offset:56{{$}}
-; GCN-DAG: buffer_load_dword v[[LOAD_ARG2_7:[0-9]+]], off, s[0:3], s32 offset:60{{$}}
+; GCN-DAG: buffer_load_dword v[[LOAD_ARG2_0:[0-9]+]], off, s[0:3], s32 offset:36{{$}}
+; GCN-DAG: buffer_load_dword v[[LOAD_ARG2_1:[0-9]+]], off, s[0:3], s32 offset:40{{$}}
+; GCN-DAG: buffer_load_dword v[[LOAD_ARG2_2:[0-9]+]], off, s[0:3], s32 offset:44{{$}}
+; GCN-DAG: buffer_load_dword v[[LOAD_ARG2_3:[0-9]+]], off, s[0:3], s32 offset:48{{$}}
+; GCN-DAG: buffer_load_dword v[[LOAD_ARG2_4:[0-9]+]], off, s[0:3], s32 offset:52{{$}}
+; GCN-DAG: buffer_load_dword v[[LOAD_ARG2_5:[0-9]+]], off, s[0:3], s32 offset:56{{$}}
+; GCN-DAG: buffer_load_dword v[[LOAD_ARG2_6:[0-9]+]], off, s[0:3], s32 offset:60{{$}}
+; GCN-DAG: buffer_load_dword v[[LOAD_ARG2_7:[0-9]+]], off, s[0:3], s32 offset:64{{$}}
 
 ; GCN: buffer_store_dwordx4 v{{\[}}[[LOAD_ARG1_4]]:[[LOAD_ARG1_7]]{{\]}}, off
 ; GCN: buffer_store_dwordx4 v{{\[}}[[LOAD_ARG1_0]]:[[LOAD_ARG1_3]]{{\]}}, off

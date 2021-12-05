@@ -73,23 +73,43 @@ define amdgpu_kernel void @kernel_calls_no_stack() {
 ; FLAT_SCR_OPT-NEXT:    s_addc_u32 s9, s9, 0
 ; FLAT_SCR_OPT-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_LO), s8
 ; FLAT_SCR_OPT-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_HI), s9
-; FLAT_SCR_OPT-NEXT:    s_getpc_b64 s[0:1]
-; FLAT_SCR_OPT-NEXT:    s_add_u32 s0, s0, extern_func@gotpcrel32@lo+4
-; FLAT_SCR_OPT-NEXT:    s_addc_u32 s1, s1, extern_func@gotpcrel32@hi+12
-; FLAT_SCR_OPT-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x0
+; FLAT_SCR_OPT-NEXT:    s_mov_b64 s[8:9], s[4:5]
+; FLAT_SCR_OPT-NEXT:    s_getpc_b64 s[4:5]
+; FLAT_SCR_OPT-NEXT:    s_add_u32 s4, s4, extern_func@gotpcrel32@lo+4
+; FLAT_SCR_OPT-NEXT:    s_addc_u32 s5, s5, extern_func@gotpcrel32@hi+12
+; FLAT_SCR_OPT-NEXT:    v_lshlrev_b32_e32 v2, 20, v2
+; FLAT_SCR_OPT-NEXT:    s_load_dwordx2 s[16:17], s[4:5], 0x0
+; FLAT_SCR_OPT-NEXT:    v_lshlrev_b32_e32 v1, 10, v1
+; FLAT_SCR_OPT-NEXT:    s_mov_b32 s14, s12
+; FLAT_SCR_OPT-NEXT:    s_mov_b32 s13, s11
+; FLAT_SCR_OPT-NEXT:    s_mov_b32 s12, s10
+; FLAT_SCR_OPT-NEXT:    s_mov_b64 s[10:11], s[6:7]
+; FLAT_SCR_OPT-NEXT:    v_or3_b32 v31, v0, v1, v2
+; FLAT_SCR_OPT-NEXT:    s_mov_b64 s[4:5], s[0:1]
+; FLAT_SCR_OPT-NEXT:    s_mov_b64 s[6:7], s[2:3]
 ; FLAT_SCR_OPT-NEXT:    s_waitcnt lgkmcnt(0)
-; FLAT_SCR_OPT-NEXT:    s_swappc_b64 s[30:31], s[0:1]
+; FLAT_SCR_OPT-NEXT:    s_swappc_b64 s[30:31], s[16:17]
 ; FLAT_SCR_OPT-NEXT:    s_endpgm
 ;
 ; FLAT_SCR_ARCH-LABEL: kernel_calls_no_stack:
 ; FLAT_SCR_ARCH:       ; %bb.0:
-; FLAT_SCR_ARCH-NEXT:    s_getpc_b64 s[0:1]
-; FLAT_SCR_ARCH-NEXT:    s_add_u32 s0, s0, extern_func@gotpcrel32@lo+4
-; FLAT_SCR_ARCH-NEXT:    s_addc_u32 s1, s1, extern_func@gotpcrel32@hi+12
+; FLAT_SCR_ARCH-NEXT:    s_mov_b32 s13, s9
+; FLAT_SCR_ARCH-NEXT:    s_mov_b32 s12, s8
+; FLAT_SCR_ARCH-NEXT:    s_mov_b64 s[8:9], s[4:5]
+; FLAT_SCR_ARCH-NEXT:    s_getpc_b64 s[4:5]
+; FLAT_SCR_ARCH-NEXT:    s_add_u32 s4, s4, extern_func@gotpcrel32@lo+4
+; FLAT_SCR_ARCH-NEXT:    s_addc_u32 s5, s5, extern_func@gotpcrel32@hi+12
+; FLAT_SCR_ARCH-NEXT:    v_lshlrev_b32_e32 v2, 20, v2
+; FLAT_SCR_ARCH-NEXT:    s_load_dwordx2 s[16:17], s[4:5], 0x0
+; FLAT_SCR_ARCH-NEXT:    v_lshlrev_b32_e32 v1, 10, v1
+; FLAT_SCR_ARCH-NEXT:    s_mov_b32 s14, s10
+; FLAT_SCR_ARCH-NEXT:    s_mov_b64 s[10:11], s[6:7]
+; FLAT_SCR_ARCH-NEXT:    s_mov_b64 s[4:5], s[0:1]
+; FLAT_SCR_ARCH-NEXT:    s_mov_b64 s[6:7], s[2:3]
+; FLAT_SCR_ARCH-NEXT:    v_or3_b32 v31, v0, v1, v2
 ; FLAT_SCR_ARCH-NEXT:    s_mov_b32 s32, 0
-; FLAT_SCR_ARCH-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x0
 ; FLAT_SCR_ARCH-NEXT:    s_waitcnt lgkmcnt(0)
-; FLAT_SCR_ARCH-NEXT:    s_swappc_b64 s[30:31], s[0:1]
+; FLAT_SCR_ARCH-NEXT:    s_swappc_b64 s[30:31], s[16:17]
 ; FLAT_SCR_ARCH-NEXT:    s_endpgm
   call void @extern_func()
   ret void

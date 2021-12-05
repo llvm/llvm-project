@@ -2034,9 +2034,8 @@ private:
                            tok::comma, tok::semi, tok::kw_return, tok::colon,
                            tok::kw_co_return, tok::kw_co_await,
                            tok::kw_co_yield, tok::equal, tok::kw_delete,
-                           tok::kw_sizeof, tok::kw_throw) ||
-        PrevToken->isOneOf(TT_BinaryOperator, TT_ConditionalExpr,
-                           TT_UnaryOperator, TT_CastRParen))
+                           tok::kw_sizeof, tok::kw_throw, TT_BinaryOperator,
+                           TT_ConditionalExpr, TT_UnaryOperator, TT_CastRParen))
       return TT_UnaryOperator;
 
     if (NextToken->is(tok::l_square) && NextToken->isNot(TT_LambdaLSquare))
@@ -2174,8 +2173,8 @@ public:
 
       int CurrentPrecedence = getCurrentPrecedence();
 
-      if (Current && Current->is(TT_SelectorName) &&
-          Precedence == CurrentPrecedence) {
+      if (Precedence == CurrentPrecedence && Current &&
+          Current->is(TT_SelectorName)) {
         if (LatestOperator)
           addFakeParenthesis(Start, prec::Level(Precedence));
         Start = Current;
@@ -2374,11 +2373,9 @@ static unsigned maxNestingDepth(const AnnotatedLine &Line) {
 }
 
 void TokenAnnotator::annotate(AnnotatedLine &Line) {
-  for (SmallVectorImpl<AnnotatedLine *>::iterator I = Line.Children.begin(),
-                                                  E = Line.Children.end();
-       I != E; ++I) {
-    annotate(**I);
-  }
+  for (auto &Child : Line.Children)
+    annotate(*Child);
+
   AnnotatingParser Parser(Style, Line, Keywords);
   Line.Type = Parser.parseLine();
 

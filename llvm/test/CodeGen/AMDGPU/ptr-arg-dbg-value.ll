@@ -40,7 +40,7 @@ define hidden void @ptr_arg_split_subregs(%struct.A* %arg1) #0 !dbg !9 {
 ; are totally misleading. The former represent part of the incoming argument in register
 ; while the latter was emitted for the parameter copy to a virtual register inserted
 ; at the function entry by DAGBuilder.
-define hidden void @ptr_arg_split_reg_mem(<31 x i32>, %struct.A* %arg2) #0 !dbg !25 {
+define hidden void @ptr_arg_split_reg_mem(<30 x i32>, %struct.A* %arg2) #0 !dbg !25 {
 ; CHECK-LABEL: ptr_arg_split_reg_mem:
 ; CHECK:       .Lfunc_begin1:
 ; CHECK-NEXT:    .loc 1 10 0 ; example.cpp:10:0
@@ -49,17 +49,15 @@ define hidden void @ptr_arg_split_reg_mem(<31 x i32>, %struct.A* %arg2) #0 !dbg 
 ; CHECK-NEXT:    .cfi_llvm_def_aspace_cfa 64, 0, 6
 ; CHECK-NEXT:    .cfi_escape 0x10, 0x10, 0x08, 0x90, 0x3e, 0x93, 0x04, 0x90, 0x3f, 0x93, 0x04 ;
 ; CHECK-NEXT:    .cfi_undefined 2560
-; CHECK-NEXT:    .cfi_undefined 2592
-;; NOTE: One dbg_value (DEBUG_VALUE: ptr_arg_split_reg_mem:b <- [$vgpr31+0]) will be considered as
-;; redundant after the virtregrewrite, so it will be removed.
-; CHECK-NEXT:    ;DEBUG_VALUE: ptr_arg_split_reg_mem:b <- [$vgpr31+0]
+; CHECK-NEXT:    .cfi_undefined 2591
+; CHECK-NEXT:    ;DEBUG_VALUE: ptr_arg_split_reg_mem:b <- [$vgpr30+0]
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    buffer_load_dword v32, off, s[0:3], s32
+; CHECK-NEXT:    buffer_load_dword v31, off, s[0:3], s32
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 1
 ; CHECK-NEXT:  .Ltmp2:
 ; CHECK-NEXT:    .loc 1 12 13 prologue_end ; example.cpp:12:13
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    flat_store_dword v[31:32], v0 offset:396
+; CHECK-NEXT:    flat_store_dword v[30:31], v0 offset:396
 ; CHECK-NEXT:    .loc 1 13 5 ; example.cpp:13:5
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
@@ -84,8 +82,8 @@ define hidden void @ptr_arg_in_memory(<32 x i32>, %struct.A* %arg3) #0 !dbg !31 
 ; CHECK-NEXT:    .cfi_undefined 2561
 ; CHECK-NEXT:    .cfi_undefined 2562
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    buffer_load_dword v1, off, s[0:3], s32 offset:4
-; CHECK-NEXT:    buffer_load_dword v0, off, s[0:3], s32
+; CHECK-NEXT:    buffer_load_dword v1, off, s[0:3], s32 offset:8
+; CHECK-NEXT:    buffer_load_dword v0, off, s[0:3], s32 offset:4
 ; CHECK-NEXT:    v_mov_b32_e32 v2, 1
 ; CHECK-NEXT:  .Ltmp4:
 ; CHECK-NEXT:    .loc 1 17 13 prologue_end ; example.cpp:17:13

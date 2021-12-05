@@ -2226,6 +2226,14 @@ static Value *simplifyOrLogic(Value *X, Value *Y) {
       match(Y, m_c_Or(m_Specific(A), m_Specific(B))))
     return ConstantInt::getAllOnesValue(Ty);
 
+  // (~A | B) | (A ^ B) --> -1
+  // (~A | B) | (B ^ A) --> -1
+  // (B | ~A) | (A ^ B) --> -1
+  // (B | ~A) | (B ^ A) --> -1
+  if (match(X, m_c_Or(m_Not(m_Value(A)), m_Value(B))) &&
+      match(Y, m_c_Xor(m_Specific(A), m_Specific(B))))
+    return ConstantInt::getAllOnesValue(Ty);
+
   return nullptr;
 }
 

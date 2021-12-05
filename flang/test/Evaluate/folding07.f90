@@ -197,6 +197,14 @@ module m
   logical, parameter :: test_tiny10 = tiny10 == ztiny10
   logical, parameter :: test_tiny16 = tiny16 == ztiny16
 
+  logical, parameter :: test_exponent_0 = exponent(0.0) == 0
+  logical, parameter :: test_exponent_r8 = exponent(0.125) == -2
+  logical, parameter :: test_exponent_r4 = exponent(0.25) == -1
+  logical, parameter :: test_exponent_r2 = exponent(0.5) == 0
+  logical, parameter :: test_exponent_1 = exponent(1.0) == 1
+  logical, parameter :: test_exponent_4 = exponent(4.1) == 3
+  logical, parameter :: test_exponent_12 = exponent(12.9) == 4
+
   integer, parameter :: &
     max2 = maxexponent(0._2), &
     max3 = maxexponent(0._3), &

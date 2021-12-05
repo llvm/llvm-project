@@ -62,7 +62,7 @@ public:
       Indent = Line.Level * IndentWidth + AdditionalIndent;
     } else {
       IndentForLevel.resize(Line.Level + 1);
-      Indent = getIndent(IndentForLevel, Line.Level);
+      Indent = getIndent(Line.Level);
     }
     if (static_cast<int>(Indent) + Offset >= 0)
       Indent += Offset;
@@ -118,12 +118,12 @@ private:
   /// \p IndentForLevel must contain the indent for the level \c l
   /// at \p IndentForLevel[l], or a value < 0 if the indent for
   /// that level is unknown.
-  unsigned getIndent(ArrayRef<int> IndentForLevel, unsigned Level) {
+  unsigned getIndent(unsigned Level) const {
     if (IndentForLevel[Level] != -1)
       return IndentForLevel[Level];
     if (Level == 0)
       return 0;
-    return getIndent(IndentForLevel, Level - 1) + Style.IndentWidth;
+    return getIndent(Level - 1) + Style.IndentWidth;
   }
 
   const FormatStyle &Style;
@@ -1015,9 +1015,9 @@ private:
     QueueType Queue;
 
     // Insert start element into queue.
-    StateNode *Node =
+    StateNode *RootNode =
         new (Allocator.Allocate()) StateNode(InitialState, false, nullptr);
-    Queue.push(QueueItem(OrderedPenalty(0, Count), Node));
+    Queue.push(QueueItem(OrderedPenalty(0, Count), RootNode));
     ++Count;
 
     unsigned Penalty = 0;
@@ -1044,9 +1044,9 @@ private:
 
       FormatDecision LastFormat = Node->State.NextToken->getDecision();
       if (LastFormat == FD_Unformatted || LastFormat == FD_Continue)
-        addNextStateToQueue(Penalty, Node, /*NewLine=*/false, &Count, &Queue);
+        addNextStateToQueue(Penalty, Node, /*NewLine=*/false, Count, Queue);
       if (LastFormat == FD_Unformatted || LastFormat == FD_Break)
-        addNextStateToQueue(Penalty, Node, /*NewLine=*/true, &Count, &Queue);
+        addNextStateToQueue(Penalty, Node, /*NewLine=*/true, Count, Queue);
     }
 
     if (Queue.empty()) {
@@ -1072,7 +1072,7 @@ private:
   /// Assume the current state is \p PreviousNode and has been reached with a
   /// penalty of \p Penalty. Insert a line break if \p NewLine is \c true.
   void addNextStateToQueue(unsigned Penalty, StateNode *PreviousNode,
-                           bool NewLine, unsigned *Count, QueueType *Queue) {
+                           bool NewLine, unsigned &Count, QueueType &Queue) {
     if (NewLine && !Indenter->canBreak(PreviousNode->State))
       return;
     if (!NewLine && Indenter->mustBreak(PreviousNode->State))
@@ -1085,8 +1085,8 @@ private:
 
     Penalty += Indenter->addTokenToState(Node->State, NewLine, true);
 
-    Queue->push(QueueItem(OrderedPenalty(Penalty, *Count), Node));
-    ++(*Count);
+    Queue.push(QueueItem(OrderedPenalty(Penalty, Count), Node));
+    ++Count;
   }
 
   /// Applies the best formatting by reconstructing the path in the

@@ -543,7 +543,7 @@ bool IONAME(SetRec)(Cookie cookie, std::int64_t rec) {
         "REC= may not appear unless ACCESS='DIRECT'");
     return false;
   }
-  if (!connection.isFixedRecordLength || !connection.recordLength) {
+  if (!connection.openRecl) {
     io.GetIoErrorHandler().SignalError("RECL= was not specified");
     return false;
   }
@@ -554,7 +554,7 @@ bool IONAME(SetRec)(Cookie cookie, std::int64_t rec) {
   }
   connection.currentRecordNumber = rec;
   if (auto *unit{io.GetExternalFileUnit()}) {
-    unit->SetPosition((rec - 1) * *connection.recordLength);
+    unit->SetPosition((rec - 1) * *connection.openRecl);
   }
   return true;
 }
@@ -827,12 +827,11 @@ bool IONAME(SetRecl)(Cookie cookie, std::size_t n) {
   if (n <= 0) {
     io.GetIoErrorHandler().SignalError("RECL= must be greater than zero");
   }
-  if (open->wasExtant() && open->unit().isFixedRecordLength &&
-      open->unit().recordLength.value_or(n) != static_cast<std::int64_t>(n)) {
+  if (open->wasExtant() &&
+      open->unit().openRecl.value_or(n) != static_cast<std::int64_t>(n)) {
     open->SignalError("RECL= may not be changed for an open unit");
   }
-  open->unit().isFixedRecordLength = true;
-  open->unit().recordLength = n;
+  open->unit().openRecl = n;
   return true;
 }
 
