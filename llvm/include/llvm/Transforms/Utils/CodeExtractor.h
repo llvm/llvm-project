@@ -240,7 +240,7 @@ public:
                        Instruction *Addr, BasicBlock *ExitBlock) const;
 
     void severSplitPHINodesOfEntry(BasicBlock *&Header);
-    void severSplitPHINodesOfExits(const SmallPtrSetImpl<BasicBlock *> &Exits);
+    void severSplitPHINodesOfExits();
     void splitReturnBlocks();
 
 

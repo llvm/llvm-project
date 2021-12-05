@@ -756,9 +756,8 @@ void CodeExtractor::severSplitPHINodesOfEntry(BasicBlock *&Header) {
 /// outlined region, we split these PHIs on two: one with inputs from region
 /// and other with remaining incoming blocks; then first PHIs are placed in
 /// outlined region.
-void CodeExtractor::severSplitPHINodesOfExits(
-    const SmallPtrSetImpl<BasicBlock *> &Exits) {
-  for (BasicBlock *ExitBB : Exits) {
+void CodeExtractor::severSplitPHINodesOfExits() {
+  for (BasicBlock *ExitBB : ExitBlocks) {
     BasicBlock *NewBB = nullptr;
 
     for (PHINode &PN : ExitBB->phis()) {
@@ -1328,6 +1327,8 @@ void CodeExtractor::prepareForExtraction(BasicBlock *&Header,bool KeepOldBlocks)
 
     recomputeExitBlocks();
 
+    severSplitPHINodesOfExits();
+   // recomputeExitBlocks();
 
 }
 
@@ -1361,6 +1362,8 @@ void CodeExtractor::recomputeExitBlocks() {
     }
     NumExitBlocks = ExitBlocks.size();
 }
+
+
 
 Function *
 CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
@@ -1437,7 +1440,7 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
 
 
     // canonicalization, after ret splitting
-    severSplitPHINodesOfExits(ExitBlocks);
+
 
 
     if (KeepOldBlocks) {
