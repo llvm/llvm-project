@@ -99,7 +99,7 @@ Expected<FileCache> llvm::localCache(Twine CacheNameRef,
         // Open the file first to avoid racing with a cache pruner.
         ErrorOr<std::unique_ptr<MemoryBuffer>> MBOrErr =
             MemoryBuffer::getOpenFile(
-                sys::fs::convertFDToNativeFile(TempFile.FD), TempFile.TmpName,
+                sys::fs::convertFDToNativeFile(TempFile.FD), EntryPath,
                 /*FileSize=*/-1, /*RequiresNullTerminator=*/false);
         if (!MBOrErr)
           report_fatal_error(Twine("Failed to open new cache file ") +
