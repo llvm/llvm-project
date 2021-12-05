@@ -47,22 +47,30 @@ foreach I = 0-31 in {
 
 // Register pairs.
 // TODO Check let isArtificial = 1
-let AsmName = "", SubRegIndices = [sub_hi, sub_lo], CoveredBySubRegs = true in {
-  foreach I = 0-15 in {
-    defvar Rx = "R" # !mul(2,I);
-    defvar Ry = "R" # !add(!mul(2,I),1);
-    def Rx#_#Ry : M88kRegWithSubregs<Rx#_#Ry,
-                                    [!cast<Register>(Rx), !cast<Register>(Ry)]>;
-  }
-}
+//let AsmName = "", SubRegIndices = [sub_hi, sub_lo], CoveredBySubRegs = true in {
+//  foreach I = 0-15 in {
+//    defvar Rx = "R" # !mul(2,I);
+//    defvar Ry = "R" # !add(!mul(2,I),1);
+//    def Rx#_#Ry : M88kRegWithSubregs<Rx#_#Ry,
+//                                    [!cast<Register>(Rx), !cast<Register>(Ry)]>;
+//  }
+//}
 
 defm GPR : M88kRegisterClass<[i32, f32], 32, 32,
                              (add (sequence "R%u", 0, 31))>;
-defm GPR64 : M88kRegisterClass<[i64, f64], 64, 32,
-                               (add R0_R1, R2_R3, R4_R5, R6_R7, R8_R9,
-                                    R10_R11, R12_R13, R14_R15, R16_R17, R18_R19,
-                                    R20_R21, R22_R23, R24_R25, R26_R27, R28_R29,
-                                    R30_R31)>;
+
+// Register class representing a pair of even-odd GRs.
+def GRPair : RegisterTuples<[sub_hi, sub_lo],
+                            [(add (sequence "R%u", 0, 30, 2)),
+                             (add (sequence "R%u", 1, 31, 2))]>;
+
+defm GPR64 : M88kRegisterClass<[i64, f64], 64, 32, (add GRPair)>;
+
+//defm GPR64 : M88kRegisterClass<[i64, f64], 64, 32,
+//                               (add R0_R1, R2_R3, R4_R5, R6_R7, R8_R9,
+//                                    R10_R11, R12_R13, R14_R15, R16_R17, R18_R19,
+//                                    R20_R21, R22_R23, R24_R25, R26_R27, R28_R29,
+//                                    R30_R31)>;
 
 // Extended (floating point) registers.
 foreach I = 0-31 in {
