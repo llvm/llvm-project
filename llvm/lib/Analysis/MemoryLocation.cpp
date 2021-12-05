@@ -101,13 +101,8 @@ MemoryLocation MemoryLocation::getForSource(const AtomicMemTransferInst *MTI) {
 }
 
 MemoryLocation MemoryLocation::getForSource(const AnyMemTransferInst *MTI) {
-  auto Size = LocationSize::afterPointer();
-  if (ConstantInt *C = dyn_cast<ConstantInt>(MTI->getLength()))
-    Size = LocationSize::precise(C->getValue().getZExtValue());
-
-  // memcpy/memmove can have AA tags. For memcpy, they apply
-  // to both the source and the destination.
-  return MemoryLocation(MTI->getRawSource(), Size, MTI->getAAMetadata());
+  assert(MTI->getRawSource() == MTI->getArgOperand(1));
+  return getForArgument(MTI, 1, nullptr);
 }
 
 MemoryLocation MemoryLocation::getForDest(const MemIntrinsic *MI) {
@@ -119,13 +114,8 @@ MemoryLocation MemoryLocation::getForDest(const AtomicMemIntrinsic *MI) {
 }
 
 MemoryLocation MemoryLocation::getForDest(const AnyMemIntrinsic *MI) {
-  auto Size = LocationSize::afterPointer();
-  if (ConstantInt *C = dyn_cast<ConstantInt>(MI->getLength()))
-    Size = LocationSize::precise(C->getValue().getZExtValue());
-
-  // memcpy/memmove can have AA tags. For memcpy, they apply
-  // to both the source and the destination.
-  return MemoryLocation(MI->getRawDest(), Size, MI->getAAMetadata());
+  assert(MI->getRawDest() == MI->getArgOperand(0));
+  return getForArgument(MI, 0, nullptr);
 }
 
 Optional<MemoryLocation>
