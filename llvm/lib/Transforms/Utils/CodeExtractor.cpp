@@ -1501,6 +1501,7 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
     // Create an iterator to name all of the arguments we inserted.
     Function::arg_iterator AI = newFunction->arg_begin();
 
+
     // Rewrite all users of the inputs in the extracted region to use the
     // arguments (or appropriate addressing into struct) instead.
     SmallVector<Value*> NewValues;
@@ -1527,6 +1528,18 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
     // This takes place of the original loop
     BasicBlock *codeReplacer = BasicBlock::Create(header->getContext(),        "codeRepl", oldFunction,        header);
     BasicBlock *AllocaBlock = &oldFunction->front();
+
+
+    // Update the entry count of the function.
+    if (BFI) {
+        auto Count = BFI->getProfileCountFromFreq(EntryFreq.getFrequency());
+        if (Count.hasValue())
+            newFunction->setEntryCount(ProfileCount(Count.getValue(), Function::PCT_Real)); // FIXME
+        BFI->setBlockFreq(codeReplacer, EntryFreq.getFrequency());
+    }
+
+
+
 
 
 
@@ -1562,6 +1575,8 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
 
    
     SmallVector<unsigned, 1> SwiftErrorArgs;
+    std::vector<Value *> ReloadOutputs;
+    std::vector<Value *> Reloads;
     if (!AggregateArgs) {
         for (Value* input : inputs) {
                 params.push_back(input);
@@ -1569,17 +1584,11 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
                     SwiftErrorArgs.push_back(ArgNo);
             ++ArgNo;
         }
-    }
+    
 
 
-
-
-
-    std::vector<Value *> ReloadOutputs;
-    std::vector<Value *> Reloads;
 
     // Create allocas for the outputs
-    if (!AggregateArgs) {
         for (Value* output : outputs) {
             AllocaInst* alloca =
                 new AllocaInst(output->getType(), DL.getAllocaAddrSpace(),
@@ -1592,32 +1601,19 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
 
 
 
-
-
     Function::arg_iterator OutputArgBegin = newFunction->arg_begin();
     unsigned FirstOut = inputs.size();
     if (!AggregateArgs)
         std::advance(OutputArgBegin, inputs.size());
 
+
+
+
+
     ////////////////////////////////////////////////////////////////////////////
 
 
 
-
-
-
-
-
-
-
-    // Update the entry count of the function.
-    if (BFI) {
-        auto Count = BFI->getProfileCountFromFreq(EntryFreq.getFrequency());
-        if (Count.hasValue())
-            newFunction->setEntryCount(
-                ProfileCount(Count.getValue(), Function::PCT_Real)); // FIXME
-        BFI->setBlockFreq(codeReplacer, EntryFreq.getFrequency());
-    }
 
     // Rewrite branches to basic blocks outside of the loop to new dummy blocks
     // within the new function. This must be done before we lose track of which
@@ -1633,22 +1629,13 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
 
 
 
+
+
     if (KeepOldBlocks) {
-       // auto newHeader = codeReplacer;
         ValueToValueMapTy VMap;
-     //   Module* M = oldFunction->getParent();
-     //   auto KeepOldBlocks = true;
 
-
-
-
-
-
-        // TODO: Make StructTy a field
-        StructType* StructTy = nullptr;
-        if (AggregateArgs && (inputs.size() + outputs.size() > 0)) {
-            //StructTy = StructType::get(M->getContext(), paramTy);
-            StructTy = cast<StructType>(newFunction->getArg(0)->getType());
+        for (auto&& P : enumerate(inputs)) {
+            VMap[P.value()] = NewValues[P.index()];
         }
 
 
@@ -1656,6 +1643,7 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
         // Create an iterator to name all of the arguments we inserted.
         Function::arg_iterator AI = newFunction->arg_begin();
 
+#if 0
         // Rewrite all users of the inputs in the extracted region to use the
         // arguments (or appropriate addressing into struct) instead.
         for (unsigned i = 0, e = inputs.size(); i != e; ++i) {
@@ -1685,34 +1673,10 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
                             inst->replaceUsesOfWith(inputs[i], RewriteVal);
             }
         }
-#if 0
-        // Set names for input and output arguments.
-        if (!AggregateArgs) {
-            AI = newFunction->arg_begin();
-            for (unsigned i = 0, e = inputs.size(); i != e; ++i, ++AI)
-                AI->setName(inputs[i]->getName());
-            for (unsigned i = 0, e = outputs.size(); i != e; ++i, ++AI)
-                AI->setName(outputs[i]->getName() + ".out");
-        }
 #endif
 
-        if (false)     header->getParent()->viewCFG();
+    
 
-        if (!KeepOldBlocks) {
-            // Rewrite branches to basic blocks outside of the loop to new dummy blocks
-            // within the new function. This must be done before we lose track of which
-            // blocks were originally in the code region.
-            std::vector<User*> Users(header->user_begin(), header->user_end());
-            for (auto& U : Users) // FIXME: KeepOldBlocks?
-                                  // The BasicBlock which contains the branch is not in the region
-                                  // modify the branch target to a new block
-                if (Instruction* I = dyn_cast<Instruction>(U))
-                    if (I->isTerminator() && I->getFunction() == oldFunction &&
-                        !Blocks.count(I->getParent()))
-                        I->replaceUsesOfWith(header, codeReplacer);
-        }
-
-        //return newFunction;
 
         BasicBlock* AllocaBlock = BasicBlock::Create(header->getContext(), "entry", newFunction, newFuncRoot);
         auto  BranchI = BranchInst::Create(newFuncRoot, AllocaBlock);
@@ -1723,15 +1687,8 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
         VMap[oldFunction] = oldFunction;
 
 
-#if 0
-        CallInst* TheCall = emitCallAndSwitchStatement(newFunction, newRootNode, inputs, outputs, true, VMap);
-        /*
-        CallInst *CodeExtractor::emitCallAndSwitchStatement(Function *newFunction,
-        BasicBlock *codeReplacer,
-        ValueSet &inputs,
-        ValueSet &outputs, bool KeepOldBlocks,   ValueToValueMapTy &VMap) {
-        */
-#else
+
+
         // Emit a call to the new function, passing in: *pointer to struct (if
         // aggregating parameters), or plan inputs and allocated memory for outputs
         //  std::vector<Value*> ReloadOutputs, Reloads;
@@ -2138,7 +2095,7 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
         //   insertLifetimeMarkersSurroundingCall(M, ReloadOutputs, ReloadOutputs, call);
 
         // auto TheCall =call;
-#endif
+
 
         // Function *oldFunc =oldFunction;
         //  Function::BasicBlockListType &oldBlocks = oldFunction->getBasicBlockList();
