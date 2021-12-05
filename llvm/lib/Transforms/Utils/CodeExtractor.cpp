@@ -1452,8 +1452,20 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
     }
 
 
-
-
+    if (!KeepOldBlocks) {
+        // Transforms/HotColdSplit/stale-assume-in-original-func.ll
+        // Remove @llvm.assume calls that will be moved to the new function from the
+        // old function's assumption cache.
+        for (BasicBlock* Block : Blocks) {
+            for (Instruction& I : llvm::make_early_inc_range(*Block)) {
+                if (auto* AI = dyn_cast<AssumeInst>(&I)) {
+                    if (AC)
+                        AC->unregisterAssumption(AI);
+                    AI->eraseFromParent();
+                }
+            }
+        }
+    }
 
 
 
@@ -1488,35 +1500,55 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
     // head of the region, but the entry node of a function cannot have preds.
     BasicBlock *newFuncRoot = BasicBlock::Create(header->getContext(), "newFuncRoot", newFunction);
 
-
+    ValueToValueMapTy VMap;
 
   
+    SmallVector<Instruction* > AdditionalRemap;
+    auto MoveOrCopyInst = [KeepOldBlocks](Instruction *I, BasicBlock *IB, BasicBlock:: iterator IP) -> Instruction * {
+        if (KeepOldBlocks) {
+            auto AI=    I->clone(); 
+            AI->setName(I->getName());
+            IB->getInstList().insert( IP, AI);
+            return AI;
+        } 
+        I->moveBefore(*IB, IP);
+        return I;
+    };
+
 
     // Now sink all instructions which only have non-phi uses inside the region.
     // Group the allocas at the start of the block, so that any bitcast uses of
     // the allocas are well-defined.
-    AllocaInst* FirstSunkAlloca = nullptr;
-    for (auto* II : SinkingCands) {
-        if (auto* AI = dyn_cast<AllocaInst>(II)) {
-            AI->moveBefore(*newFuncRoot, newFuncRoot->getFirstInsertionPt());
-            if (!FirstSunkAlloca)
-                FirstSunkAlloca = AI;
-        }
-    }
-    assert((SinkingCands.empty() || FirstSunkAlloca) && "Did not expect a sink candidate without any allocas");
+
     for (auto* II : SinkingCands) {
         if (!isa<AllocaInst>(II)) {
-            cast<Instruction>(II)->moveAfter(FirstSunkAlloca);
+            auto New = MoveOrCopyInst(cast<Instruction>(II),newFuncRoot, newFuncRoot->getFirstInsertionPt());
+            if (KeepOldBlocks) {
+                AdditionalRemap.push_back(New);
+                VMap[II] = New;
+            }
         }
     }
+    for (auto* II : SinkingCands) {
+        if (auto* AI = dyn_cast<AllocaInst>(II)) { 
+            AI = cast<AllocaInst>( MoveOrCopyInst(AI,newFuncRoot, newFuncRoot->getFirstInsertionPt()));
+            if (KeepOldBlocks) {
+                AdditionalRemap.push_back(AI);
+                VMap[II] = AI;
+            }
+        }
+    }
+   // assert((SinkingCands.empty() || FirstSunkAlloca) && "Did not expect a sink candidate without any allocas");
 
 
 
     if (!HoistingCands.empty()) {
         auto* HoistToBlock = findOrCreateBlockForHoisting(CommonExit);
         Instruction* TI = HoistToBlock->getTerminator();
-        for (auto* II : HoistingCands)
+        for (auto* II : HoistingCands) {
+         //   MoveOrCopyInst(cast<Instruction>(II), HoistToBlock, TI->getIterator());
             cast<Instruction>(II)->moveBefore(TI);
+        }
     }
 
 
@@ -1668,18 +1700,18 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
 
 
     if (KeepOldBlocks) {
-        ValueToValueMapTy VMap;
+
 
         for (auto&& P : enumerate(inputs)) {
             VMap[P.value()] = NewValues[P.index()];
         }
-
-        for (auto &&S : SinkingCands) {
+#if 0
+        for (auto&& S : SinkingCands) {
             VMap[S] = S;
         }
+#endif
 
-
-        CallInst*  call = CallInst::Create(newFunction, params, NumExitBlocks > 1 ? "targetBlock" : "");
+        CallInst* call = CallInst::Create(newFunction, params, NumExitBlocks > 1 ? "targetBlock" : "");
 
 
 
@@ -1727,8 +1759,8 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
             }
             ReloadAddress[outputs[i]] = Output;
 
-      
-            LoadInst* load = new LoadInst(outputs[i]->getType(), Output,       outputs[i]->getName() + ".reload",  codeReplacer);
+
+            LoadInst* load = new LoadInst(outputs[i]->getType(), Output, outputs[i]->getName() + ".reload", codeReplacer);
             Reloads.push_back(load);
 
 
@@ -1739,7 +1771,8 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
                 ReloadRepls.push_back(load);
 
                 // Remove all PHIs; will need to be recreated by SSAUpdater;
-            } else {
+            }
+            else {
                 std::vector<User*> Users(outputs[i]->user_begin(), outputs[i]->user_end());
                 for (unsigned u = 0, e = Users.size(); u != e; ++u) {
                     Instruction* inst = cast<Instruction>(Users[u]);
@@ -1842,29 +1875,23 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
             TheSwitch->addCase(ConstantInt::get(Type::getInt16Ty(Context),
                 SuccNum),
                 OldTarget);
-
-
-
-
-
-
         }
 
 
-      
 
 
 
 
 
-        for (BasicBlock *Block : Blocks) {
-            Instruction *TI = Block->getTerminator();
+
+        for (BasicBlock* Block : Blocks) {
+            Instruction* TI = Block->getTerminator();
             for (unsigned i = 0, e = TI->getNumSuccessors(); i != e; ++i) {
                 if (Blocks.count(TI->getSuccessor(i)))
                     continue;
-                BasicBlock *OldTarget = TI->getSuccessor(i);
+                BasicBlock* OldTarget = TI->getSuccessor(i);
                 // add a new basic block which returns the appropriate value
-                BasicBlock *NewTarget = ExitBlockMap[OldTarget];
+                BasicBlock* NewTarget = ExitBlockMap[OldTarget];
                 assert(NewTarget && "Unknown target block!");
 
                 // rewrite the original branch instruction with this new target
@@ -1877,7 +1904,7 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
 
 
         // Now that we've done the deed, simplify the switch instruction.
-        Type *OldFnRetTy = TheSwitch->getParent()->getParent()->getReturnType();
+        Type* OldFnRetTy = TheSwitch->getParent()->getParent()->getReturnType();
         switch (NumExitBlocks) {
         case 0:
             // There are no successors (the block containing the switch itself), which
@@ -1887,10 +1914,12 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
             // Check if the function should return a value
             if (OldFnRetTy->isVoidTy()) {
                 ReturnInst::Create(Context, nullptr, TheSwitch);  // Return void
-            } else if (OldFnRetTy == TheSwitch->getCondition()->getType()) {
+            }
+            else if (OldFnRetTy == TheSwitch->getCondition()->getType()) {
                 // return what we have
                 ReturnInst::Create(Context, TheSwitch->getCondition(), TheSwitch);
-            } else {
+            }
+            else {
                 // Otherwise we must have code extracted an unwind or something, just
                 // return whatever we want.
                 ReturnInst::Create(Context,
@@ -1916,7 +1945,7 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
             TheSwitch->setCondition(call);
             TheSwitch->setDefaultDest(TheSwitch->getSuccessor(NumExitBlocks));
             // Remove redundant case
-            TheSwitch->removeCase(SwitchInst::CaseIt(TheSwitch, NumExitBlocks-1));
+            TheSwitch->removeCase(SwitchInst::CaseIt(TheSwitch, NumExitBlocks - 1));
             break;
         }
 
@@ -1931,6 +1960,9 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
         }
 
 
+        for (Instruction* II : AdditionalRemap)
+            RemapInstruction(II, VMap, RF_NoModuleLevelChanges);
+
         // Loop over all of the instructions in the new function, fixing up operand
         // references as we go. This uses VMap to do all the hard work.
         for (BasicBlock* Block : Blocks) {
@@ -1938,9 +1970,10 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
             if (!NewBlock) {
                 continue;
             }
-            BasicBlock &Y  = cast<BasicBlock>  (*NewBlock);
+            BasicBlock& Y = cast<BasicBlock>(*NewBlock);
 
             // Loop over all instructions, fixing each one as we find it...
+
             for (Instruction& II : Y)
                 RemapInstruction(&II, VMap, RF_NoModuleLevelChanges);
         }
@@ -1952,7 +1985,7 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
         SSAUpdater SSA;
         for (auto P : enumerate(outputs)) {
             auto OutIdx = P.index();
-            auto OldVal = cast<Instruction>( P.value());
+            auto OldVal = cast<Instruction>(P.value());
             auto NewVal = Reloads[OutIdx];
 
             SSA.Initialize(OldVal->getType(), (OldVal->getName() + ".merge_with_extracted").str());
@@ -1961,13 +1994,13 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
             // Could help SSAUpdater by determining in advance which output values are available in which exit blocks (from DT).
             SSA.AddAvailableValue(OldVal->getParent(), OldVal);
 
-            for (auto &&U : make_early_inc_range(OldVal->uses())) {
+            for (auto&& U : make_early_inc_range(OldVal->uses())) {
                 auto User = dyn_cast<Instruction>(U.getUser());
                 if (!User) continue;
                 auto EffectiveUser = User->getParent();
-                if (auto &&P = dyn_cast<PHINode>(User)) {
-                    EffectiveUser=  P->getIncomingBlock(U);
-                }        
+                if (auto&& P = dyn_cast<PHINode>(User)) {
+                    EffectiveUser = P->getIncomingBlock(U);
+                }
 
                 if (EffectiveUser == codeReplacer || Blocks.count(EffectiveUser)) continue;
 
@@ -1985,7 +2018,7 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
         // result restore will be placed in the outlined function.
         Function::arg_iterator OAI = OutputArgBegin;
         for (unsigned i = 0, e = outputs.size(); i != e; ++i) {
-            auto *OutI = dyn_cast<Instruction>(outputs[i]);
+            auto* OutI = dyn_cast<Instruction>(outputs[i]);
             if (!OutI)
                 continue;
             OutI = cast<Instruction>(VMap.lookup(OutI));
@@ -1994,14 +2027,14 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
             BasicBlock::iterator InsertPt;
             // In case OutI is an invoke, we insert the store at the beginning in the
             // 'normal destination' BB. Otherwise we insert the store right after OutI.
-            if (auto *InvokeI = dyn_cast<InvokeInst>(OutI))
+            if (auto* InvokeI = dyn_cast<InvokeInst>(OutI))
                 InsertPt = InvokeI->getNormalDest()->getFirstInsertionPt();
-            else if (auto *Phi = dyn_cast<PHINode>(OutI))
+            else if (auto* Phi = dyn_cast<PHINode>(OutI))
                 InsertPt = Phi->getParent()->getFirstInsertionPt();
             else
                 InsertPt = std::next(OutI->getIterator());
 
-            Instruction *InsertBefore = &*InsertPt;
+            Instruction* InsertBefore = &*InsertPt;
             assert((InsertBefore->getFunction() == newFunction ||
                 Blocks.count(InsertBefore->getParent())) &&
                 "InsertPt should be in new function");
@@ -2009,41 +2042,35 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
                 "Number of output arguments should match "
                 "the amount of defined values");
             if (AggregateArgs) {
-                Value *Idx[2];
+                Value* Idx[2];
                 Idx[0] = Constant::getNullValue(Type::getInt32Ty(Context));
                 Idx[1] = ConstantInt::get(Type::getInt32Ty(Context), FirstOut + i);
-                GetElementPtrInst *GEP = GetElementPtrInst::Create(
+                GetElementPtrInst* GEP = GetElementPtrInst::Create(
                     StructTy, &*OAI, Idx, "gep_" + outputs[i]->getName(),
                     InsertBefore);
                 new StoreInst(OutI, GEP, InsertBefore);
                 // Since there should be only one struct argument aggregating
                 // all the output values, we shouldn't increment OAI, which always
                 // points to the struct argument, in this case.
-            } else {
+            }
+            else {
                 new StoreInst(OutI, &*OAI, InsertBefore);
                 ++OAI;
             }
         }
 
 
-        BasicBlock* HeaderCopy  =  cast<BasicBlock>( VMap.lookup(header));
+        BasicBlock* HeaderCopy = cast<BasicBlock>(VMap.lookup(header));
         assert(HeaderCopy);
-        auto *BranchI2 = BranchInst::Create(HeaderCopy, newFuncRoot);
+        auto* BranchI2 = BranchInst::Create(HeaderCopy, newFuncRoot);
         applyFirstDebugLoc(oldFunction, Blocks.getArrayRef(), BranchI2);
-    } else {
-        // Transforms/HotColdSplit/stale-assume-in-original-func.ll
-        // TODO: remove assumes only after moving
-            // Remove @llvm.assume calls that will be moved to the new function from the
-            // old function's assumption cache.
-        for (BasicBlock* Block : Blocks) {
-            for (Instruction& I : llvm::make_early_inc_range(*Block)) {
-                if (auto* AI = dyn_cast<AssumeInst>(&I)) {
-                    if (AC)
-                        AC->unregisterAssumption(AI);
-                    AI->eraseFromParent();
-                }
-            }
+
+        if (!oldFunction) {
+         newFunction->viewCFG();
         }
+
+    } else {
+
 
 
  
@@ -2057,7 +2084,7 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
 
 
 
-        // TODO: ByCopy
+
         // Collect objects which are inputs to the extraction region and also
         // referenced by lifetime start markers within it. The effects of these
         // markers must be replicated in the calling function to prevent the stack
