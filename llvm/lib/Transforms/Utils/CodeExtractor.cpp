@@ -52,7 +52,6 @@
 #include "llvm/IR/User.h"
 #include "llvm/IR/Value.h"
 #include "llvm/IR/Verifier.h"
-#include "llvm/IR/IRBuilder.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/BlockFrequency.h"
 #include "llvm/Support/BranchProbability.h"
@@ -804,9 +803,12 @@ void CodeExtractor::severSplitPHINodesOfExits(
 
 void CodeExtractor::splitReturnBlocks() {
   for (BasicBlock *Block : Blocks)
-    if (ReturnInst *RI = dyn_cast<ReturnInst>(Block->getTerminator())) {
-      BasicBlock *New =
-          Block->splitBasicBlock(RI->getIterator(), Block->getName() + ".ret");
+      if (ReturnInst* RI = dyn_cast<ReturnInst>(Block->getTerminator())) {
+          BasicBlock* New =
+              Block->splitBasicBlock(RI->getIterator(), Block->getName() + ".ret");
+
+
+
       if (DT) {
         // Old dominates New. New node dominates all other nodes dominated
         // by Old.
@@ -818,6 +820,14 @@ void CodeExtractor::splitReturnBlocks() {
 
         for (DomTreeNode *I : Children)
           DT->changeImmediateDominator(I, NewNode);
+      }
+
+      if (BFI) {
+          BFI->setBlockFreq(New, BFI->getBlockFreq(Block).getFrequency());
+      }
+      if (BPI) {
+        //  BPI->getEdgeProbability()
+        // BPI->setEdgeProbability();
       }
     }
 }
@@ -1303,46 +1313,8 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC, bool Ke
 
 
 
-void CodeExtractor::analyzeBeforeExtraction(
-    const CodeExtractorAnalysisCache& CEAC, ValueSet& inputs, ValueSet& outputs, 
-    BlockFrequency& EntryFreq,  
-    DenseMap<BasicBlock *, BlockFrequency> &ExitWeights,     SmallPtrSet<BasicBlock *, 1> &ExitBlocks) {
-    BasicBlock *header = *Blocks.begin();
-   // Function *oldFunction = header->getParent();
 
-    // Calculate the entry frequency of the new function before we change the root
-    //   block.
-    if (BFI) {
-        assert(BPI && "Both BPI and BFI are required to preserve profile info");
-        for (BasicBlock *Pred : predecessors(header)) {
-            if (Blocks.count(Pred))
-                continue;
-            EntryFreq +=
-                BFI->getBlockFreq(Pred) * BPI->getEdgeProbability(Pred, header);
-        }
-    }
-
-    // Calculate the exit blocks for the extracted region and the total exit
-    // weights for each of those blocks.
-
-    for (BasicBlock *Block : Blocks) {
-        for (BasicBlock *Succ : successors(Block)) {
-            if (!Blocks.count(Succ)) {
-                // Update the branch weight for this successor.
-                if (BFI) {
-                    BlockFrequency &BF = ExitWeights[Succ];
-                    BF += BFI->getBlockFreq(Block) * BPI->getEdgeProbability(Block, Succ);
-                }
-                ExitBlocks.insert(Succ);
-            }
-        }
-    }
-    NumExitBlocks = ExitBlocks.size();
-}
-
-
-
-void CodeExtractor::prepareForExtraction(bool KeepOldBlocks) {
+void CodeExtractor::prepareForExtraction(BasicBlock *&Header,bool KeepOldBlocks) {
   //  BasicBlock *header = *Blocks.begin();
   //  Function *oldFunction = header->getParent();
 
@@ -1350,6 +1322,11 @@ void CodeExtractor::prepareForExtraction(bool KeepOldBlocks) {
     // that the return is not in the region.
     splitReturnBlocks();
 
+    // canonicalization
+    // If we have to split PHI nodes of the entry or exit blocks, do so now.
+    severSplitPHINodesOfEntry(Header);
+
+    recomputeExitBlocks();
 
 
 }
@@ -1399,17 +1376,19 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
 
 
 
+
    // SmallPtrSet<BasicBlock *, 1> ExitBlocks;
 
    // analyzeBeforeExtraction(CEAC,inputs, outputs, EntryFreq,ExitWeights,ExitBlocks);
 
 
 
+
     // canonicalization
-    prepareForExtraction(KeepOldBlocks);
+    prepareForExtraction(header, KeepOldBlocks);
 
 
-    recomputeExitBlocks();
+
 
     // Calculate the entry frequency of the new function before we change the root
     //   block.
@@ -1427,20 +1406,22 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
             for (BasicBlock *Block : predecessors(Succ)) {
                 if (!Blocks.count(Block)) continue;
 
-       // for (BasicBlock *Block : Blocks) {
-       //     for (BasicBlock *Succ : successors(Block)) {
-            //    if (!Blocks.count(Succ)) {
-                    // Update the branch weight for this successor.
-                 //   if (BFI) {
-                        BlockFrequency &BF = ExitWeights[Succ];
-                        BF += BFI->getBlockFreq(Block) * BPI->getEdgeProbability(Block, Succ);
-                 //   }
-                    // ExitBlocks.insert(Succ);
-             //   }
+                // for (BasicBlock *Block : Blocks) {
+                //     for (BasicBlock *Succ : successors(Block)) {
+                //    if (!Blocks.count(Succ)) {
+                // Update the branch weight for this successor.
+                //   if (BFI) {
+                BlockFrequency &BF = ExitWeights[Succ];
+                BF += BFI->getBlockFreq(Block) * BPI->getEdgeProbability(Block, Succ);
+                //   }
+                // ExitBlocks.insert(Succ);
+                //   }
             }
         }
         // NumExitBlocks = ExitBlocks.size();
     }
+
+
 
 
     // analysis, after ret splitting
@@ -1450,12 +1431,10 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
 
 
     
-    recomputeExitBlocks();
+   // recomputeExitBlocks();
 
 
-    // canonicalization
-    // If we have to split PHI nodes of the entry or exit blocks, do so now.
-    severSplitPHINodesOfEntry(header);
+
 
     // canonicalization, after ret splitting
     severSplitPHINodesOfExits(ExitBlocks);
@@ -1553,7 +1532,7 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
     BasicBlock *codeReplacer = BasicBlock::Create(header->getContext(),        "codeRepl", oldFunction,        header);
     auto newHeader = codeReplacer;
 
-    IRBuilder<> CodeReplacerBuilder(codeReplacer);
+  //  IRBuilder<> CodeReplacerBuilder(codeReplacer);
 
 
       ValueToValueMapTy VMap;
@@ -1676,24 +1655,25 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
     if (!AggregateArgs)
         std::advance(OutputArgBegin, inputs.size());
 
+#if 0
     //using InsertPointTy = IRBuilder<>::InsertPoint;
-    IRBuilder<> Builder(Context);
+  //  IRBuilder<> Builder(Context);
     auto MakeReloadAddress = [&](int i) {
         Value *Output = nullptr;
         if (AggregateArgs) {
             Value *Idx[2];
             Idx[0] = Constant::getNullValue(Type::getInt32Ty(Context));
             Idx[1] = ConstantInt::get(Type::getInt32Ty(Context), FirstOut + i);
-            Value *GEP = Builder.CreateGEP(StructArgTy, Struct, Idx, Twine("gep_reload_") + outputs[i]->getName());
-            //GetElementPtrInst *GEP = GetElementPtrInst::Create(StructArgTy, Struct, Idx, "gep_reload_" + outputs[i]->getName());
-            //codeReplacer->getInstList().push_back(GEP);
+            //Value *GEP = Builder.CreateGEP(StructArgTy, Struct, Idx, Twine("gep_reload_") + outputs[i]->getName());
+            GetElementPtrInst *GEP = GetElementPtrInst::Create(StructArgTy, Struct, Idx, "gep_reload_" + outputs[i]->getName());
+            codeReplacer->getInstList().push_back(GEP);
             Output = GEP;
         } else {
             Output = ReloadOutputs[i];
         }
         return Output;
     };
-
+#endif
 
 #if 0
     // Undo SSA for output values after the extracted region before dominator analysis is invalidated.
@@ -1742,7 +1722,7 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
             SwiftErrorArgs,ReloadOutputs,
             Reloads,
             StructArgTy, Struct,
-            MakeReloadAddress
+            {}
         );
     } else {
         // Transforms/HotColdSplit/stale-assume-in-original-func.ll
@@ -1868,11 +1848,23 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
 
 
         // Reload the outputs passed in by reference.
-        Builder.SetInsertPoint(codeReplacer);
+       // Builder.SetInsertPoint(codeReplacer);
         for (unsigned i = 0, e = outputs.size(); i != e; ++i) {
-           // LoadInst *load = new LoadInst(outputs[i]->getType(), Output, outputs[i]->getName() + ".reload",codeReplacer);
-          auto Output =  MakeReloadAddress(i);
-            LoadInst *load =  Builder.CreateLoad(outputs[i]->getType(), Output, outputs[i]->getName() + ".reload");
+            Value *Output = nullptr;
+            if (AggregateArgs) {
+                Value *Idx[2];
+                Idx[0] = Constant::getNullValue(Type::getInt32Ty(Context));
+                Idx[1] = ConstantInt::get(Type::getInt32Ty(Context), FirstOut + i);
+                //Value *GEP = Builder.CreateGEP(StructArgTy, Struct, Idx, Twine("gep_reload_") + outputs[i]->getName());
+                GetElementPtrInst *GEP = GetElementPtrInst::Create(StructArgTy, Struct, Idx, "gep_reload_" + outputs[i]->getName());
+                codeReplacer->getInstList().push_back(GEP);
+                Output = GEP;
+            } else {
+                Output = ReloadOutputs[i];
+            }
+            LoadInst *load = new LoadInst(outputs[i]->getType(), Output, outputs[i]->getName() + ".reload",codeReplacer);
+        //  auto Output =  MakeReloadAddress(i);
+        //    LoadInst *load =  Builder.CreateLoad(outputs[i]->getType(), Output, outputs[i]->getName() + ".reload");
 
             Reloads.push_back(load);
             std::vector<User *> Users(outputs[i]->user_begin(), outputs[i]->user_end());

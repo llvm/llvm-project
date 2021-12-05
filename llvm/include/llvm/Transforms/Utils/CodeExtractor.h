@@ -258,10 +258,9 @@ public:
         //,   bool KeepOldBlocks,    ValueToValueMapTy &VMap
     );
 
-    void analyzeBeforeExtraction(const CodeExtractorAnalysisCache &CEAC, ValueSet &inputs, ValueSet &outputs, BlockFrequency &EntryFreq,DenseMap<BasicBlock *, BlockFrequency> &ExitWeights,     SmallPtrSet<BasicBlock *, 1> &ExitBlocks);
 
 
-    void prepareForExtraction(bool KeepOldBlocks);
+    void prepareForExtraction(BasicBlock *&Header, bool KeepOldBlocks);
 
 
    void extractCodeRegionByCopy(const CodeExtractorAnalysisCache &CEAC,
