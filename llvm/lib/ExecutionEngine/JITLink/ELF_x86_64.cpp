@@ -252,7 +252,7 @@ private:
     Edge GE(Kind, Offset, *GraphSymbol, Addend);
     LLVM_DEBUG({
       dbgs() << "    ";
-      printEdge(dbgs(), *BlockToFix, GE, getELFX86RelocationKindName(Kind));
+      printEdge(dbgs(), *BlockToFix, GE, x86_64::getEdgeKindName(Kind));
       dbgs() << "\n";
     });
 
