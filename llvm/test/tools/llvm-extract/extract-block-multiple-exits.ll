@@ -88,9 +88,6 @@
 
 
 ; CHECK-LABEL: define internal i16 @func.region_start(i1 %c1, i1 %c2, i8 %dest, i32* %a.out, i32* %b.out, i32* %c.out, i32* %B.ce.out) {
-; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br label %newFuncRoot
-; CHECK-EMPTY:
 ; CHECK-NEXT:  newFuncRoot:                                    
 ; CHECK-NEXT:    br label %region_start
 ; CHECK-EMPTY:

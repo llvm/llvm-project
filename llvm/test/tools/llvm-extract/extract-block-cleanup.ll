@@ -48,9 +48,6 @@
 
 
 ; CHECK-LABEL: define internal i1 @foo.region_start(i32* %arg) {
-; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br label %newFuncRoot
-; CHECK-EMPTY:
 ; CHECK-NEXT:  newFuncRoot:
 ; CHECK-NEXT:    br label %region_start
 ; CHECK-EMPTY:

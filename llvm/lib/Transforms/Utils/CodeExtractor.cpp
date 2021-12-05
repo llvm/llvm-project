@@ -1610,7 +1610,7 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
 
 
 
-    ////////////////////////////////////////////////////////////////////////////
+    //// Connect call replacement to CFG ////////////////////////////////////////////////////////////////////////
 
 
 
@@ -1640,47 +1640,12 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
 
 
 
-        // Create an iterator to name all of the arguments we inserted.
-        Function::arg_iterator AI = newFunction->arg_begin();
-
-#if 0
-        // Rewrite all users of the inputs in the extracted region to use the
-        // arguments (or appropriate addressing into struct) instead.
-        for (unsigned i = 0, e = inputs.size(); i != e; ++i) {
-            Value* RewriteVal;
-            if (AggregateArgs) {
-                Value* Idx[2];
-                Idx[0] = Constant::getNullValue(Type::getInt32Ty(header->getContext()));
-                Idx[1] = ConstantInt::get(Type::getInt32Ty(header->getContext()), i);
-                Instruction* TI = newFunction->begin()->getTerminator();
-                GetElementPtrInst* GEP = GetElementPtrInst::Create(
-                    StructTy, &*AI, Idx, "gep_" + inputs[i]->getName(), TI);
-                RewriteVal = new LoadInst(StructTy->getElementType(i), GEP,
-                    "loadgep_" + inputs[i]->getName(), TI);
-            }
-            else
-                RewriteVal = &*AI++;
-
-            if (KeepOldBlocks) {
-                auto In = inputs[i];
-                VMap[In] = RewriteVal;
-            }
-            else {
-                std::vector<User*> Users(inputs[i]->user_begin(), inputs[i]->user_end());
-                for (User* use : Users)
-                    if (Instruction* inst = dyn_cast<Instruction>(use))
-                        if (Blocks.count(inst->getParent()))
-                            inst->replaceUsesOfWith(inputs[i], RewriteVal);
-            }
-        }
-#endif
-
-    
+  
 
 
-        BasicBlock* AllocaBlock = BasicBlock::Create(header->getContext(), "entry", newFunction, newFuncRoot);
-        auto  BranchI = BranchInst::Create(newFuncRoot, AllocaBlock);
-        applyFirstDebugLoc(oldFunction, Blocks.getArrayRef(), BranchI);
+       // BasicBlock* AllocaBlock = BasicBlock::Create(header->getContext(), "entry", newFunction, newFuncRoot);
+        //auto  BranchI = BranchInst::Create(newFuncRoot, AllocaBlock);
+       // applyFirstDebugLoc(oldFunction, Blocks.getArrayRef(), BranchI);
 
         // Recursive calls to oldFunction still call the old Function from extracted function.
 
