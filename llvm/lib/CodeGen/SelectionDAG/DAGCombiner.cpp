@@ -4786,12 +4786,14 @@ SDValue DAGCombiner::visitMULO(SDNode *N) {
 }
 
 // Function to calculate whether the Min/Max pair of SDNodes (potentially
-// swapped around) make a signed saturate pattern, clamping to between -2^(BW-1)
-// and 2^(BW-1)-1. Returns the node being clamped and the bitwidth of the clamp
-// in BW. Should work with both SMIN/SMAX nodes and setcc/select combo. The
-// operands are the same as SimplifySelectCC. N0<N1 ? N2 : N3
+// swapped around) make a signed saturate pattern, clamping to between a signed
+// saturate of -2^(BW-1) and 2^(BW-1)-1, or an unsigned saturate of 0 and 2^BW.
+// Returns the node being clamped and the bitwidth of the clamp in BW. Should
+// work with both SMIN/SMAX nodes and setcc/select combo. The operands are the
+// same as SimplifySelectCC. N0<N1 ? N2 : N3.
 static SDValue isSaturatingMinMax(SDValue N0, SDValue N1, SDValue N2,
-                                  SDValue N3, ISD::CondCode CC, unsigned &BW) {
+                                  SDValue N3, ISD::CondCode CC, unsigned &BW,
+                                  bool &Unsigned) {
   auto isSignedMinMax = [&](SDValue N0, SDValue N1, SDValue N2, SDValue N3,
                             ISD::CondCode CC) {
     // The compare and select operand should be the same or the select operands
@@ -4858,17 +4860,27 @@ static SDValue isSaturatingMinMax(SDValue N0, SDValue N1, SDValue N2,
   const APInt &MinC = MinCOp->getAPIntValue();
   const APInt &MaxC = MaxCOp->getAPIntValue();
   APInt MinCPlus1 = MinC + 1;
-  if (-MaxC != MinCPlus1 || !MinCPlus1.isPowerOf2())
-    return SDValue();
-  BW = MinCPlus1.exactLogBase2() + 1;
-  return N02;
+  if (-MaxC == MinCPlus1 && MinCPlus1.isPowerOf2()) {
+    BW = MinCPlus1.exactLogBase2() + 1;
+    Unsigned = false;
+    return N02;
+  }
+
+  if (MaxC == 0 && MinCPlus1.isPowerOf2()) {
+    BW = MinCPlus1.exactLogBase2();
+    Unsigned = true;
+    return N02;
+  }
+
+  return SDValue();
 }
 
 static SDValue PerformMinMaxFpToSatCombine(SDValue N0, SDValue N1, SDValue N2,
                                            SDValue N3, ISD::CondCode CC,
                                            SelectionDAG &DAG) {
   unsigned BW;
-  SDValue Fp = isSaturatingMinMax(N0, N1, N2, N3, CC, BW);
+  bool Unsigned;
+  SDValue Fp = isSaturatingMinMax(N0, N1, N2, N3, CC, BW, Unsigned);
   if (!Fp || Fp.getOpcode() != ISD::FP_TO_SINT)
     return SDValue();
   EVT FPVT = Fp.getOperand(0).getValueType();
@@ -4876,13 +4888,14 @@ static SDValue PerformMinMaxFpToSatCombine(SDValue N0, SDValue N1, SDValue N2,
   if (FPVT.isVector())
     NewVT = EVT::getVectorVT(*DAG.getContext(), NewVT,
                              FPVT.getVectorElementCount());
-  if (!DAG.getTargetLoweringInfo().shouldConvertFpToSat(
-          ISD::FP_TO_SINT_SAT, Fp.getOperand(0).getValueType(), NewVT))
+  unsigned NewOpc = Unsigned ? ISD::FP_TO_UINT_SAT : ISD::FP_TO_SINT_SAT;
+  if (!DAG.getTargetLoweringInfo().shouldConvertFpToSat(NewOpc, FPVT, NewVT))
     return SDValue();
   SDLoc DL(Fp);
-  SDValue Sat = DAG.getNode(ISD::FP_TO_SINT_SAT, DL, NewVT, Fp.getOperand(0),
+  SDValue Sat = DAG.getNode(NewOpc, DL, NewVT, Fp.getOperand(0),
                             DAG.getValueType(NewVT.getScalarType()));
-  return DAG.getSExtOrTrunc(Sat, DL, N2->getValueType(0));
+  return Unsigned ? DAG.getZExtOrTrunc(Sat, DL, N2->getValueType(0))
+                  : DAG.getSExtOrTrunc(Sat, DL, N2->getValueType(0));
 }
 
 SDValue DAGCombiner::visitIMINMAX(SDNode *N) {
