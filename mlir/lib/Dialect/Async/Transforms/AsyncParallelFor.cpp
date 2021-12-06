@@ -252,6 +252,7 @@ createParallelComputeFunction(scf::ParallelOp op, PatternRewriter &rewriter) {
   Value blockFirstIndex = b.create<arith::MulIOp>(blockIndex, blockSize);
 
   // The last one-dimensional index in the block defined by the `blockIndex`:
+  //   blockLastIndex = min(blockFirstIndex + blockSize, tripCount) - 1
   Value blockEnd0 = b.create<arith::AddIOp>(blockFirstIndex, blockSize);
   Value blockEnd1 = b.create<arith::MinSIOp>(blockEnd0, tripCount);
   Value blockLastIndex = b.create<arith::SubIOp>(blockEnd1, c1);
@@ -279,7 +280,7 @@ createParallelComputeFunction(scf::ParallelOp op, PatternRewriter &rewriter) {
   // iteration coordinate using parallel operation bounds and step:
   //
   //   computeBlockInductionVars[loopIdx] =
-  //       lowerBound[loopIdx] + blockCoord[loopIdx] * step[loopDdx]
+  //       lowerBound[loopIdx] + blockCoord[loopIdx] * step[loopIdx]
   SmallVector<Value> computeBlockInductionVars(op.getNumLoops());
 
   // We need to know if we are in the first or last iteration of the
@@ -329,7 +330,7 @@ createParallelComputeFunction(scf::ParallelOp op, PatternRewriter &rewriter) {
 
       // Keep building loop nest.
       if (loopIdx < op.getNumLoops() - 1) {
-        // Select nested loop lower/upper bounds depending on out position in
+        // Select nested loop lower/upper bounds depending on our position in
         // the multi-dimensional iteration space.
         auto lb = nb.create<SelectOp>(isBlockFirstCoord[loopIdx],
                                       blockFirstCoord[loopIdx + 1], c0);
