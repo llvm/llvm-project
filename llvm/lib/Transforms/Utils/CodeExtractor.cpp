@@ -1950,6 +1950,52 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
 
 
 
+        // Now that we've done the deed, simplify the switch instruction.
+        Type *OldFnRetTy = TheSwitch->getParent()->getParent()->getReturnType();
+        switch (NumExitBlocks) {
+        case 0:
+            // There are no successors (the block containing the switch itself), which
+            // means that previously this was the last part of the function, and hence
+            // this should be rewritten as a `ret'
+
+            // Check if the function should return a value
+            if (OldFnRetTy->isVoidTy()) {
+                ReturnInst::Create(Context, nullptr, TheSwitch);  // Return void
+            } else if (OldFnRetTy == TheSwitch->getCondition()->getType()) {
+                // return what we have
+                ReturnInst::Create(Context, TheSwitch->getCondition(), TheSwitch);
+            } else {
+                // Otherwise we must have code extracted an unwind or something, just
+                // return whatever we want.
+                ReturnInst::Create(Context,
+                    Constant::getNullValue(OldFnRetTy), TheSwitch);
+            }
+
+            TheSwitch->eraseFromParent();
+            break;
+        case 1:
+            // Only a single destination, change the switch into an unconditional
+            // branch.
+            BranchInst::Create(TheSwitch->getSuccessor(1), TheSwitch);
+            TheSwitch->eraseFromParent();
+            break;
+        case 2:
+            BranchInst::Create(TheSwitch->getSuccessor(1), TheSwitch->getSuccessor(2),
+                call, TheSwitch);
+            TheSwitch->eraseFromParent();
+            break;
+        default:
+            // Otherwise, make the default destination of the switch instruction be one
+            // of the other successors.
+            TheSwitch->setCondition(call);
+            TheSwitch->setDefaultDest(TheSwitch->getSuccessor(NumExitBlocks));
+            // Remove redundant case
+            TheSwitch->removeCase(SwitchInst::CaseIt(TheSwitch, NumExitBlocks-1));
+            break;
+        }
+
+
+
 
     //// Connect call replacement to CFG ////////////////////////////////////////////////////////////////////////
 
@@ -1977,8 +2023,7 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
 
             std::vector<User*> Users(outputs[i]->user_begin(), outputs[i]->user_end());
             for (unsigned u = 0, e = Users.size(); u != e; ++u) {
-                Instruction* inst = cast<Instruction>(Users[u]);
-  
+                Instruction* inst = cast<Instruction>(Users[u]);  
                     if (inst->getParent()->getParent() == oldFunction)
                         inst->replaceUsesOfWith(outputs[i], load);
             }
@@ -1988,56 +2033,7 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
 
 
     if (KeepOldBlocks) {
-
-
-
-
-        // Now that we've done the deed, simplify the switch instruction.
-        Type* OldFnRetTy = TheSwitch->getParent()->getParent()->getReturnType();
-        switch (NumExitBlocks) {
-        case 0:
-            // There are no successors (the block containing the switch itself), which
-            // means that previously this was the last part of the function, and hence
-            // this should be rewritten as a `ret'
-
-            // Check if the function should return a value
-            if (OldFnRetTy->isVoidTy()) {
-                ReturnInst::Create(Context, nullptr, TheSwitch);  // Return void
-            }
-            else if (OldFnRetTy == TheSwitch->getCondition()->getType()) {
-                // return what we have
-                ReturnInst::Create(Context, TheSwitch->getCondition(), TheSwitch);
-            }
-            else {
-                // Otherwise we must have code extracted an unwind or something, just
-                // return whatever we want.
-                ReturnInst::Create(Context,
-                    Constant::getNullValue(OldFnRetTy), TheSwitch);
-            }
-
-            TheSwitch->eraseFromParent();
-            break;
-        case 1:
-            // Only a single destination, change the switch into an unconditional
-            // branch.
-            BranchInst::Create(TheSwitch->getSuccessor(1), TheSwitch);
-            TheSwitch->eraseFromParent();
-            break;
-        case 2:
-            BranchInst::Create(TheSwitch->getSuccessor(1), TheSwitch->getSuccessor(2),
-                call, TheSwitch);
-            TheSwitch->eraseFromParent();
-            break;
-        default:
-            // Otherwise, make the default destination of the switch instruction be one
-            // of the other successors.
-            TheSwitch->setCondition(call);
-            TheSwitch->setDefaultDest(TheSwitch->getSuccessor(NumExitBlocks));
-            // Remove redundant case
-            TheSwitch->removeCase(SwitchInst::CaseIt(TheSwitch, NumExitBlocks - 1));
-            break;
-        }
-
+   
 
 
 
@@ -2178,50 +2174,6 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
 
 
 
-
-        // Now that we've done the deed, simplify the switch instruction.
-        Type *OldFnRetTy = TheSwitch->getParent()->getParent()->getReturnType();
-        switch (NumExitBlocks) {
-        case 0:
-            // There are no successors (the block containing the switch itself), which
-            // means that previously this was the last part of the function, and hence
-            // this should be rewritten as a `ret'
-
-            // Check if the function should return a value
-            if (OldFnRetTy->isVoidTy()) {
-                ReturnInst::Create(Context, nullptr, TheSwitch);  // Return void
-            } else if (OldFnRetTy == TheSwitch->getCondition()->getType()) {
-                // return what we have
-                ReturnInst::Create(Context, TheSwitch->getCondition(), TheSwitch);
-            } else {
-                // Otherwise we must have code extracted an unwind or something, just
-                // return whatever we want.
-                ReturnInst::Create(Context,
-                    Constant::getNullValue(OldFnRetTy), TheSwitch);
-            }
-
-            TheSwitch->eraseFromParent();
-            break;
-        case 1:
-            // Only a single destination, change the switch into an unconditional
-            // branch.
-            BranchInst::Create(TheSwitch->getSuccessor(1), TheSwitch);
-            TheSwitch->eraseFromParent();
-            break;
-        case 2:
-            BranchInst::Create(TheSwitch->getSuccessor(1), TheSwitch->getSuccessor(2),
-                call, TheSwitch);
-            TheSwitch->eraseFromParent();
-            break;
-        default:
-            // Otherwise, make the default destination of the switch instruction be one
-            // of the other successors.
-            TheSwitch->setCondition(call);
-            TheSwitch->setDefaultDest(TheSwitch->getSuccessor(NumExitBlocks));
-            // Remove redundant case
-            TheSwitch->removeCase(SwitchInst::CaseIt(TheSwitch, NumExitBlocks-1));
-            break;
-        }
 
 
      
