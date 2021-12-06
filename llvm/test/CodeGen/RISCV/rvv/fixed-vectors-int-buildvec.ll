@@ -638,3 +638,28 @@ define void @buildvec_vid_stepn1o4_addn5_v8i8(<8 x i8>* %z0) {
   store <8 x i8> <i8 -5, i8 -5, i8 -5, i8 -5, i8 -6, i8 -6, i8 -6, i8 -6>, <8 x i8>* %z0
   ret void
 }
+
+define void @buildvec_vid_mpy_imm_v8i16(<8 x i16>* %x) {
+; CHECK-LABEL: buildvec_vid_mpy_imm_v8i16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, mu
+; CHECK-NEXT:    vid.v v8
+; CHECK-NEXT:    li a1, 17
+; CHECK-NEXT:    vmul.vx v8, v8, a1
+; CHECK-NEXT:    vse16.v v8, (a0)
+; CHECK-NEXT:    ret
+  store <8 x i16> <i16 0, i16 17, i16 34, i16 51, i16 68, i16 85, i16 102, i16 119>, <8 x i16>* %x
+  ret void
+}
+
+define void @buildvec_vid_shl_imm_v8i16(<8 x i16>* %x) {
+; CHECK-LABEL: buildvec_vid_shl_imm_v8i16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, mu
+; CHECK-NEXT:    vid.v v8
+; CHECK-NEXT:    vsll.vi v8, v8, 9
+; CHECK-NEXT:    vse16.v v8, (a0)
+; CHECK-NEXT:    ret
+  store <8 x i16> <i16 0, i16 512, i16 1024, i16 1536, i16 2048, i16 2560, i16 3072, i16 3584>, <8 x i16>* %x
+  ret void
+}
