@@ -1380,29 +1380,7 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
 
 
 
-  // Calculate the entry frequency of the new function before we change the root
-  //   block.
-  BlockFrequency EntryFreq;
-  DenseMap<BasicBlock *, BlockFrequency> ExitWeights;
-  if (BFI) {
-    assert(BPI && "Both BPI and BFI are required to preserve profile info");
-    for (BasicBlock *Pred : predecessors(header)) {
-      if (Blocks.count(Pred))
-        continue;
-      EntryFreq +=
-          BFI->getBlockFreq(Pred) * BPI->getEdgeProbability(Pred, header);
-    }
 
-    for (BasicBlock *Succ : ExitBlocks) {
-      for (BasicBlock *Block : predecessors(Succ)) {
-        if (!Blocks.count(Block))
-          continue;
-
-        BlockFrequency &BF = ExitWeights[Succ];
-        BF += BFI->getBlockFreq(Block) * BPI->getEdgeProbability(Block, Succ);
-      }
-    }
-  }
 
   if (!KeepOldBlocks) {
     // Transforms/HotColdSplit/stale-assume-in-original-func.ll
@@ -1436,6 +1414,48 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
   ValueSet LifetimesStart;
   eraseLifetimeMarkersOnInputs(Blocks, SinkingCands, LifetimesStart);
 
+
+
+  if (!HoistingCands.empty()) {
+      auto *HoistToBlock = findOrCreateBlockForHoisting(CommonExit);
+      Instruction *TI = HoistToBlock->getTerminator();
+      for (auto *II : HoistingCands) 
+          cast<Instruction>(II)->moveBefore(TI);
+      recomputeExitBlocks();
+  }
+
+
+  // Calculate the entry frequency of the new function before we change the root
+  //   block.
+  BlockFrequency EntryFreq;
+  DenseMap<BasicBlock *, BlockFrequency> ExitWeights;
+  if (BFI) {
+      assert(BPI && "Both BPI and BFI are required to preserve profile info");
+      for (BasicBlock *Pred : predecessors(header)) {
+          if (Blocks.count(Pred))
+              continue;
+          EntryFreq +=
+              BFI->getBlockFreq(Pred) * BPI->getEdgeProbability(Pred, header);
+      }
+
+      for (BasicBlock *Succ : ExitBlocks) {
+          for (BasicBlock *Block : predecessors(Succ)) {
+              if (!Blocks.count(Block))
+                  continue;
+
+              BlockFrequency &BF = ExitWeights[Succ];
+              BF += BFI->getBlockFreq(Block) * BPI->getEdgeProbability(Block, Succ);
+          }
+      }
+  }
+
+  // Determine position for the replacement code. Do so before header is moved to the new function.
+  BasicBlock* ReplIP = header;
+  if (!KeepOldBlocks) {
+      while (ReplIP && Blocks.count(ReplIP)) {
+          ReplIP = ReplIP->getNextNode();
+      }
+  }
 
 
 
@@ -1491,25 +1511,6 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
     }
   }
 
-  if (!HoistingCands.empty()) {
-    auto *HoistToBlock = findOrCreateBlockForHoisting(CommonExit);
-    Instruction *TI = HoistToBlock->getTerminator();
-    for (auto *II : HoistingCands) {
-      //   MoveOrCopyInst(cast<Instruction>(II), HoistToBlock,
-      //   TI->getIterator());
-      cast<Instruction>(II)->moveBefore(TI);
-    }
-    recomputeExitBlocks();
-  }
-
-
-  // Determine position for the replacement code. Do so before header is moved to the new function.
-  BasicBlock* ReplIP = header;
-  if (!KeepOldBlocks) {
-      while (ReplIP && Blocks.count(ReplIP)) {
-          ReplIP = ReplIP->getNextNode();
-      }
-  }
 
   SmallDenseMap<BasicBlock *, unsigned> ExitBlockSwitchIdx;
   SmallVector<BasicBlock *> Orlder;
