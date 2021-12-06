@@ -18,7 +18,6 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
-#include "llvm/Transforms/Utils/ValueMapper.h"
 #include <limits>
 
 namespace llvm {
@@ -38,7 +37,6 @@ class Module;
 class Type;
 class Value;
 class StructType;
-class LoadInst;
 
 /// A cache for the CodeExtractor analysis. The operation \ref
 /// CodeExtractor::extractCodeRegion is guaranteed not to invalidate this

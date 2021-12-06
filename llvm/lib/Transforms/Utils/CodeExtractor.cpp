@@ -1925,8 +1925,8 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
   BasicBlock *header = *Blocks.begin();
   Function *oldFunction = header->getParent();
   Module *M = oldFunction->getParent();
-  LLVMContext &Context = M->getContext();
-  const DataLayout &DL = M->getDataLayout();
+
+
 
   canonicalizeCFGForExtraction(header, KeepOldBlocks);
 
@@ -2019,10 +2019,8 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
   // Construct new function based on inputs/outputs & add allocas for all defs.
   Function *newFunction = constructFunctionDeclaration(inputs, outputs, header);
 
-  Function::arg_iterator OutputArgBegin = newFunction->arg_begin();
-  unsigned FirstOut = inputs.size();
-  if (!AggregateArgs)
-    std::advance(OutputArgBegin, inputs.size());
+
+
 
   StructType *StructArgTy = nullptr;
   if (AggregateArgs && (inputs.size() + outputs.size() > 0))
