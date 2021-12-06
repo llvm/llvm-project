@@ -115,8 +115,6 @@ public:
     // label, if non-empty, otherwise "extracted".
     std::string Suffix;
 
-   
-
   public:
     /// Create a code extractor for a sequence of blocks.
     ///
@@ -131,9 +129,9 @@ public:
     CodeExtractor(ArrayRef<BasicBlock *> BBs, DominatorTree *DT = nullptr,
                   bool AggregateArgs = false, BlockFrequencyInfo *BFI = nullptr,
                   BranchProbabilityInfo *BPI = nullptr,
-                  AssumptionCache *AC = nullptr,
-                  bool AllowVarArgs = false, bool AllowAlloca = false, 
-                  std::string Suffix = "", bool KeepOldBlocks= false);
+                  AssumptionCache *AC = nullptr, bool AllowVarArgs = false,
+                  bool AllowAlloca = false, std::string Suffix = "",
+                  bool KeepOldBlocks = false);
 
     /// Create a code extractor for a loop body.
     ///
@@ -236,16 +234,11 @@ public:
     getLifetimeMarkers(const CodeExtractorAnalysisCache &CEAC,
                        Instruction *Addr, BasicBlock *ExitBlock) const;
 
-
-
-
- void recomputeExitBlocks();
+    void recomputeExitBlocks();
 
     void severSplitPHINodesOfEntry(BasicBlock *&Header);
     void severSplitPHINodesOfExits();
     void splitReturnBlocks();
-
-
 
     void canonicalizeCFGForExtraction(BasicBlock *&Header,
                                       bool NoExitBlockPHIs);
@@ -254,42 +247,30 @@ public:
                                            const ValueSet &outputs,
                                            BasicBlock *header);
 
-   void emitFunction(
-       Function *newFunction,
-       const ValueSet &inputs,       const ValueSet &outputs,
-       BasicBlock *header,
-       const ValueSet &SinkingCands
-       ,StructType *StructArgTy
-       ,ArrayRef<BasicBlock*> Orlder
-       ) ;
+    void emitFunction(Function *newFunction, const ValueSet &inputs,
+                      const ValueSet &outputs, BasicBlock *header,
+                      const ValueSet &SinkingCands, StructType *StructArgTy,
+                      ArrayRef<BasicBlock *> Orlder);
 
-   CallInst * emitReplacerCall(
-       Function *oldFunction,
-       BasicBlock *header
-       , BasicBlock *ReplIP
-       , Function *newFunction
-     ,  const ValueSet &inputs,       const ValueSet &outputs
-     ,  BlockFrequency EntryFreq
-       , StructType *StructArgTy 
-       ,ArrayRef<BasicBlock*> Orlder
-   ,    const  SetVector<Value *> &LifetimesStart
-   ,    std::vector<Value *> &Reloads
-   );
+    CallInst *emitReplacerCall(Function *oldFunction, BasicBlock *header,
+                               BasicBlock *ReplIP, Function *newFunction,
+                               const ValueSet &inputs, const ValueSet &outputs,
+                               BlockFrequency EntryFreq,
+                               StructType *StructArgTy,
+                               ArrayRef<BasicBlock *> Orlder,
+                               const SetVector<Value *> &LifetimesStart,
+                               std::vector<Value *> &Reloads);
 
-   void insertReplacerCall(
-       Function *oldFunction,
-       BasicBlock *header,
-       BasicBlock *codeReplacer
-       ,  const ValueSet &outputs
-       ,  ArrayRef<Value*>Reloads
-       , const     DenseMap<BasicBlock *, BlockFrequency> &ExitWeights
-   );
+    void insertReplacerCall(
+        Function *oldFunction, BasicBlock *header, BasicBlock *codeReplacer,
+        const ValueSet &outputs, ArrayRef<Value *> Reloads,
+        const DenseMap<BasicBlock *, BlockFrequency> &ExitWeights);
 
     void moveCodeToFunction(Function *newFunction);
 
     void calculateNewCallTerminatorWeights(
         BasicBlock *CodeReplacer,
-      const   DenseMap<BasicBlock *, BlockFrequency> &ExitWeights,
+        const DenseMap<BasicBlock *, BlockFrequency> &ExitWeights,
         BranchProbabilityInfo *BPI);
   };
 
