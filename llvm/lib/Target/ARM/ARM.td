@@ -446,6 +446,11 @@ def FeaturePACBTI         : SubtargetFeature<"pacbti", "HasPACBTI", "true",
                                              "Enable Pointer Authentication and Branch "
                                              "Target Identification">;
 
+def FeatureNoBTIAtReturnTwice : SubtargetFeature<"no-bti-at-return-twice",
+                                                 "NoBTIAtReturnTwice", "true",
+                                                 "Don't place a BTI instruction "
+                                                 "after a return-twice">;
+
 //===----------------------------------------------------------------------===//
 // ARM architecture class
 //

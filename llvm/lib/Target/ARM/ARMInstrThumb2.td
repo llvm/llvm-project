@@ -5736,3 +5736,10 @@ def t2BTI    : PACBTIHintSpaceNoOpsInst<"bti", 0b00001111>;
 def t2AUT    : PACBTIHintSpaceUseInst<"aut", 0b00101101> {
   let hasSideEffects = 1;
 }
+
+def ARMt2CallBTI : SDNode<"ARMISD::t2CALL_BTI", SDT_ARMcall,
+                   [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue, SDNPVariadic]>;
+
+def t2CALL_BTI : PseudoInst<(outs), (ins pred:$p, thumb_bl_target:$func),
+                 IIC_Br, [(ARMt2CallBTI tglobaladdr:$func)]>,
+                 Requires<[IsThumb2]>, Sched<[WriteBrL]>;

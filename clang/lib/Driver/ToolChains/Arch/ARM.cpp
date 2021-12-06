@@ -875,6 +875,8 @@ fp16_fml_fallthrough:
     }
   }
 
+  if (Args.getLastArg(options::OPT_mno_bti_at_return_twice))
+    Features.push_back("+no-bti-at-return-twice");
 }
 
 std::string arm::getARMArch(StringRef Arch, const llvm::Triple &Triple) {
