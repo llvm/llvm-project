@@ -60,7 +60,7 @@ void test_builtin_elementwise_max(int i, short s, double d, float4 v, int3 iv, i
   enum f { three };
   enum f x = __builtin_elementwise_max(one, three);
 
-  _BitInt(32) ext;
+  _BitInt(32) ext; // expected-warning {{'_BitInt' in C17 and earlier is a Clang extension}}
   ext = __builtin_elementwise_max(ext, ext);
 
   const int ci;
@@ -112,7 +112,7 @@ void test_builtin_elementwise_min(int i, short s, double d, float4 v, int3 iv, i
   enum f { three };
   enum f x = __builtin_elementwise_min(one, three);
 
-  _BitInt(32) ext;
+  _BitInt(32) ext; // expected-warning {{'_BitInt' in C17 and earlier is a Clang extension}}
   ext = __builtin_elementwise_min(ext, ext);
 
   const int ci;
