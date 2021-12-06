@@ -2102,8 +2102,7 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache& CEAC,
                     if (!IncomingCodeReplacerVal) {
                         PN.setIncomingBlock(i, codeReplacer);
                         IncomingCodeReplacerVal = PN.getIncomingValue(i);
-                    }
-                    else
+                    }  else
                         assert(IncomingCodeReplacerVal == PN.getIncomingValue(i) &&
                             "PHI has two incompatbile incoming values from codeRepl");
                 }
@@ -2140,7 +2139,6 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache& CEAC,
                 SSA.RewriteUseAfterInsertions(U);
             }
         }
-
     }    else {
         for (unsigned i = 0, e = outputs.size(); i != e; ++i) {
             auto load = Reloads[i];
