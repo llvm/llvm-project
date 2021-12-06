@@ -223,7 +223,6 @@ static LogicalResult bufferizeFuncOpBoundary(FuncOp funcOp,
                                              BufferizationState &state) {
   LLVM_DEBUG(DBGS() << "Begin bufferizeFuncOpBoundary:\n" << funcOp << "\n");
   ModuleBufferizationState &moduleState = getModuleBufferizationState(state);
-  BufferizationAliasInfo &aliasInfo = state.aliasInfo;
 
   // If nothing to do then we are done.
   if (!llvm::any_of(funcOp.getType().getInputs(), isaTensor) &&
@@ -321,15 +320,12 @@ static LogicalResult bufferizeFuncOpBoundary(FuncOp funcOp,
         auto castOp = b.create<memref::CastOp>(
             funcOp.getLoc(), toMemrefOp.memref().getType(), memref);
         toMemrefOp.memref().replaceAllUsesWith(castOp);
-        aliasInfo.insertNewBufferEquivalence(castOp.dest(),
-                                             toMemrefOp.memref());
       }
     }
     // Replace all remaining uses by a to_tensor.
     if (!bbArg.use_empty()) {
       auto toTensorOp =
           b.create<bufferization::ToTensorOp>(funcOp.getLoc(), memref);
-      aliasInfo.insertNewBufferEquivalence(toTensorOp, bbArg);
       bbArg.replaceAllUsesWith(toTensorOp);
     }
     frontBlock.eraseArgument(0);
@@ -562,7 +558,6 @@ struct CallOpInterface
           Value buffer = state.lookupBuffer(callOp->getOperand(idx));
           // Add CallOp operand/result equivalence: this is interprocedural
           // info.
-          state.aliasInfo.insertNewBufferEquivalence(oldRes, buffer);
           state.mapBuffer(oldRes, buffer);
           // Add a ToTensorOp to kill all uses of the CallOp return.
           // Replace all uses of the CallOp results so we can erase the CallOp.
@@ -572,7 +567,6 @@ struct CallOpInterface
               b.create<bufferization::ToTensorOp>(callOp.getLoc(), buffer);
           oldRes.replaceAllUsesWith(toTensorOp);
           // Add new op equivalence info.
-          state.aliasInfo.insertNewBufferEquivalence(toTensorOp, buffer);
           state.mapBuffer(toTensorOp, buffer);
           continue;
         }
@@ -615,7 +609,6 @@ struct CallOpInterface
         Value castBuffer =
             b.create<memref::CastOp>(callOp.getLoc(), memRefType, buffer);
         // Add new op equivalence info.
-        state.aliasInfo.insertNewBufferEquivalence(castBuffer, buffer);
         state.mapBuffer(tensorOperand, castBuffer);
         buffer = castBuffer;
       }
@@ -663,7 +656,6 @@ struct ReturnOpInterface
       Value returnTensor = b.create<bufferization::ToTensorOp>(
           returnOp.getLoc(), v);
       operand.set(returnTensor);
-      state.aliasInfo.insertNewBufferEquivalence(returnTensor, v);
       state.mapBuffer(returnTensor, v);
     }
     return success();
@@ -690,7 +682,6 @@ struct FuncOpInterface
                             : getContiguousOrUnrankedMemRefType(tensorType);
       Value bufferCast = b.create<bufferization::ToMemrefOp>(funcOp.getLoc(),
                                                              memRefType, bbArg);
-      state.aliasInfo.insertNewBufferEquivalence(bufferCast, bbArg);
       state.mapBuffer(bbArg, bufferCast);
     }
 

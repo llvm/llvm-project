@@ -37,7 +37,6 @@ struct ConstantOpInterface
     auto globalMemref = globalCreator.getGlobalFor(constantOp);
     Value memref = b.create<memref::GetGlobalOp>(
         constantOp.getLoc(), globalMemref.type(), globalMemref.getName());
-    state.aliasInfo.insertNewBufferEquivalence(memref, constantOp.getResult());
     state.mapBuffer(constantOp, memref);
 
     return success();

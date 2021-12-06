@@ -1113,7 +1113,7 @@ func @reading_scf_for(%t1: tensor<?xf32> {linalg.inplaceable = true},
 
     // Read from %t1 via alias %e.
     %v2 = vector.transfer_read %e[%s], %cst : tensor<?xf32>, vector<5xf32>
-    scf.yield %e, %v2 : tensor<?xf32>, vector<5xf32>
+    scf.yield %t2, %v2 : tensor<?xf32>, vector<5xf32>
   }
   // CHECK: __inplace_results_attr__ = ["true", "false"]
 
@@ -1154,14 +1154,10 @@ func @non_reading_scf_for(%t1: tensor<?xf32> {linalg.inplaceable = true},
   // This loop does not read from %t1. It only writes to it.
   // CHECK:      scf.for
   %r, %v3 = scf.for %i = %c0 to %s step %c1 iter_args(%t2 = %t1, %v0 = %v) -> (tensor<?xf32>, vector<5xf32>) {
-    // CHECK:      tensor.extract_slice
-    // CHECK-SAME: __inplace_results_attr__ = ["true"]
-    %e = tensor.extract_slice %t2[%s][%s][1] : tensor<?xf32> to tensor<?xf32>
-
-    // Write to %t1 via alias. (Overwrite %t3.)
+    // Write to %t1 via %t2. (Overwrite %t3.)
     // CHECK:      linalg.generic
     // CHECK-SAME: __inplace_results_attr__ = ["true"]
-    %o2 = linalg.generic #trait outs (%e : tensor<?xf32>) {
+    %o2 = linalg.generic #trait outs (%t2 : tensor<?xf32>) {
         ^bb(%0: f32) :
           linalg.yield %cst : f32
       } -> (tensor<?xf32>)
@@ -1172,8 +1168,8 @@ func @non_reading_scf_for(%t1: tensor<?xf32> {linalg.inplaceable = true},
   }
 
   // Use %t3 in some way without reading it, so that it does not get DCE'd.
-    // CHECK:      linalg.generic
-    // CHECK-SAME: __inplace_results_attr__ = ["true"]
+  // CHECK:      linalg.generic
+  // CHECK-SAME: __inplace_results_attr__ = ["true"]
   %o = linalg.generic #trait outs (%t3 : tensor<?xf32>) {
       ^bb(%0: f32) :
         linalg.yield %cst : f32

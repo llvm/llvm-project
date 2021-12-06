@@ -80,7 +80,6 @@ struct CastOpInterface
         castOp.getResult().getType(), layout, memorySpace);
     Value res =
         b.create<memref::CastOp>(castOp.getLoc(), memRefType, resultBuffer);
-    state.aliasInfo.insertNewBufferEquivalence(res, castOp.getResult());
     state.mapBuffer(castOp.getResult(), res);
     return success();
   }
@@ -233,7 +232,6 @@ struct InsertOpInterface
     b.create<memref::StoreOp>(loc, insertOp.scalar(), destMemref,
                               insertOp.indices());
     state.mapBuffer(insertOp, destMemref);
-    state.aliasInfo.insertNewBufferAlias(insertOp, destMemref);
     return success();
   }
 
@@ -421,8 +419,6 @@ struct InsertSliceOpInterface
       Value subView = b.create<memref::SubViewOp>(
           loc, subviewMemRefType, dstMemref, insertSliceOp.getMixedOffsets(),
           insertSliceOp.getMixedSizes(), insertSliceOp.getMixedStrides());
-      // Insert new alias.
-      state.aliasInfo.insertNewBufferAlias(subView, dstMemref);
       // Copy tensor.
       Value srcMemref = state.lookupBuffer(insertSliceOp.source());
       state.options.allocationFns->memCpyFn(b, insertSliceOp.getLoc(),

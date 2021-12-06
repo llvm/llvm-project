@@ -96,6 +96,7 @@ void LinalgComprehensiveModuleBufferize::runOnOperation() {
   // TODO: Find a way to enable this step automatically when bufferizing tensor
   // dialect ops.
   options.addPostAnalysisStep<tensor_ext::InplaceInsertSliceOpAnalysis>();
+  options.addPostAnalysisStep<scf_ext::AssertDestinationPassingStyle>();
 
   ModuleOp moduleOp = getOperation();
   applyEnablingTransformations(moduleOp);
