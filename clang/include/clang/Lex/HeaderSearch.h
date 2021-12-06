@@ -286,6 +286,12 @@ public:
   /// Add an additional search path.
   void AddSearchPath(const DirectoryLookup &dir, bool isAngled);
 
+  /// Add an additional system search path.
+  void AddSystemSearchPath(const DirectoryLookup &dir) {
+    SearchDirs.push_back(dir);
+    SearchDirsUsage.push_back(false);
+  }
+
   /// Set the list of system header prefixes.
   void SetSystemHeaderPrefixes(ArrayRef<std::pair<std::string, bool>> P) {
     SystemHeaderPrefixes.assign(P.begin(), P.end());
