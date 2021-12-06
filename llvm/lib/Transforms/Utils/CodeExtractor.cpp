@@ -1547,8 +1547,7 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
             }
         }
     }
-   // assert((SinkingCands.empty() || FirstSunkAlloca) && "Did not expect a sink candidate without any allocas");
-
+ 
 
 
     if (!HoistingCands.empty()) {
@@ -1606,6 +1605,10 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
         NewValues.push_back(RewriteVal);
     }
     
+    for (auto&& P : enumerate(inputs)) {
+        VMap[P.value()] = NewValues[P.index()];
+    }
+
 
 
 
@@ -1622,6 +1625,38 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
 
 
     if (KeepOldBlocks) {
+
+        for (BasicBlock* Block : Blocks) {
+            BasicBlock* CBB = CloneBasicBlock(Block, VMap, {}, newFunction /*, nullptr, &DIFinder*/);
+
+            // Add basic block mapping.
+            VMap[Block] = CBB;
+
+            // It is only legal to clone a function if a block address within that
+            // function is never referenced outside of the function.  Given that, we
+            // want to map block addresses from the old function to block addresses in
+            // the clone. (This is different from the generic ValueMapper
+            // implementation, which generates an invalid blockaddress when
+            // cloning a function.)
+            if (Block->hasAddressTaken()) {
+                Constant* OldBBAddr = BlockAddress::get(oldFunction, Block);
+                VMap[OldBBAddr] = BlockAddress::get(newFunction, CBB);
+            }
+
+            // Note return instructions for the caller.
+            //  if (ReturnInst *RI = dyn_cast<ReturnInst>(CBB->getTerminator()))
+            //     Returns.push_back(RI);
+
+
+            for (auto&& P : CBB->phis()) {
+                auto NumIncoming = P.getNumIncomingValues();
+                for (int Idx = NumIncoming - 1; Idx >= 0; --Idx) {
+                    if (Blocks.count(P.getIncomingBlock(Idx)))
+                        continue;
+                    P.removeIncomingValue(Idx, /*DeletePHIIfEmpty=*/ false);
+                }
+            }
+        }
 
     } else {
         moveCodeToFunction(newFunction);
@@ -1752,32 +1787,15 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
 
 
     if (KeepOldBlocks) {
-        for (auto&& P : enumerate(inputs)) {
-            VMap[P.value()] = NewValues[P.index()];
-        }
-
-
-        // Add debug location to the new call, if the original function has debug
-        // info. In that case, the terminator of the entry block of the extracted
-        // function contains the first debug location of the extracted function,
-        // set in extractCodeRegion.
-        if (codeReplacer->getParent()->getSubprogram()) {
-            if (auto DL = newFunction->getEntryBlock().getTerminator()->getDebugLoc())
-                call->setDebugLoc(DL);
-        }
-        //codeReplacer->getInstList().push_back(call);
+ 
 
 
 
-        Function::arg_iterator OutputArgBegin = newFunction->arg_begin();
-        unsigned FirstOut = inputs.size();
-        if (!AggregateArgs)
-            std::advance(OutputArgBegin, inputs.size());
 
         DenseMap <Value*, LoadInst*  > ReloadReplacements;
         SmallVector<LoadInst*> ReloadRepls;
         DenseMap <Value*, Value*  > ReloadAddress;
-        // DenseMap <Value*, Value*  > SpillAddress;
+
 
 
         // Reload the outputs passed in by reference.
@@ -1803,7 +1821,6 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
 
             if (KeepOldBlocks) {
                 auto OrigOut = outputs[i];
-                //VMap[Out] = load;
                 ReloadReplacements[OrigOut] = load;
                 ReloadRepls.push_back(load);
 
@@ -1825,38 +1842,6 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
                 codeReplacer, 0, codeReplacer);
 
 
-        // auto newFuncIt = newFunction->front().getIterator();
-        for (BasicBlock* Block : Blocks) {
-            BasicBlock* CBB = CloneBasicBlock(Block, VMap, {}, newFunction /*, nullptr, &DIFinder*/);
-
-            // Add basic block mapping.
-            VMap[Block] = CBB;
-
-            // It is only legal to clone a function if a block address within that
-            // function is never referenced outside of the function.  Given that, we
-            // want to map block addresses from the old function to block addresses in
-            // the clone. (This is different from the generic ValueMapper
-            // implementation, which generates an invalid blockaddress when
-            // cloning a function.)
-            if (Block->hasAddressTaken()) {
-                Constant* OldBBAddr = BlockAddress::get(oldFunction, Block);
-                VMap[OldBBAddr] = BlockAddress::get(newFunction, CBB);
-            }
-
-            // Note return instructions for the caller.
-            //  if (ReturnInst *RI = dyn_cast<ReturnInst>(CBB->getTerminator()))
-            //     Returns.push_back(RI);
-
-
-            for (auto&& P : CBB->phis()) {
-                auto NumIncoming = P.getNumIncomingValues();
-                for (int Idx = NumIncoming - 1; Idx >= 0; --Idx) {
-                    if (Blocks.count(P.getIncomingBlock(Idx)))
-                        continue;
-                    P.removeIncomingValue(Idx, /*DeletePHIIfEmpty=*/ false);
-                }
-            }
-        }
 
 
 
