@@ -18,11 +18,11 @@
 
 #include "llvm/Debuginfod/Debuginfod.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Debuginfod/HTTPClient.h"
 #include "llvm/Support/CachePruning.h"
 #include "llvm/Support/Caching.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileUtilities.h"
-#include "llvm/Support/HTTPClient.h"
 #include "llvm/Support/xxhash.h"
 
 namespace llvm {
