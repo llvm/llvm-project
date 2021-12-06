@@ -1015,6 +1015,318 @@ Function *CodeExtractor::constructFunctionDeclaration(const ValueSet &inputs,
   return newFunction;
 }
 
+static void applyFirstDebugLoc(Function *oldFunction,
+    ArrayRef<BasicBlock *> Blocks,
+    Instruction *BranchI) {
+    if (oldFunction->getSubprogram()) {
+        any_of(Blocks, [&BranchI](const BasicBlock *BB) {
+            return any_of(*BB, [&BranchI](const Instruction &I) {
+                if (!I.getDebugLoc())
+                    return false;
+                BranchI->setDebugLoc(I.getDebugLoc());
+                return true;
+                });
+            });
+    }
+}
+
+
+void CodeExtractor:: constructFunctionImplementation(
+    Function *newFunction,
+    const ValueSet &inputs,       const ValueSet &outputs,
+    BasicBlock *header
+    ,       const ValueSet &SinkingCands
+    ,StructType *StructArgTy
+    ,ArrayRef<BasicBlock*> Orlder
+)  {
+    Function*oldFunction = header->getParent();
+    LLVMContext & Context = oldFunction->getContext();
+
+    // The new function needs a root node because other nodes can branch to the
+    // head of the region, but the entry node of a function cannot have preds.
+    BasicBlock *newFuncRoot =
+        BasicBlock::Create(header->getContext(), "newFuncRoot", newFunction);
+
+    ValueToValueMapTy VMap;
+
+    SmallVector<Instruction *> AdditionalRemap;
+    auto MoveOrCopyInst =
+        [this](Instruction *I, BasicBlock *IB,
+            BasicBlock::iterator IP) -> Instruction * {
+                if (KeepOldBlocks) {
+                    auto AI = I->clone();
+                    AI->setName(I->getName());
+                    IB->getInstList().insert(IP, AI);
+                    return AI;
+                }
+                I->moveBefore(*IB, IP);
+                return I;
+    };
+
+    // Now sink all instructions which only have non-phi uses inside the region.
+    // Group the allocas at the start of the block, so that any bitcast uses of
+    // the allocas are well-defined.
+
+    for (auto *II : SinkingCands) {
+        if (!isa<AllocaInst>(II)) {
+            auto New = MoveOrCopyInst(cast<Instruction>(II), newFuncRoot,
+                newFuncRoot->getFirstInsertionPt());
+            if (KeepOldBlocks) {
+                AdditionalRemap.push_back(New);
+                VMap[II] = New;
+            }
+        }
+    }
+    for (auto *II : SinkingCands) {
+        if (auto *AI = dyn_cast<AllocaInst>(II)) {
+            AI = cast<AllocaInst>(
+                MoveOrCopyInst(AI, newFuncRoot, newFuncRoot->getFirstInsertionPt()));
+            if (KeepOldBlocks) {
+                AdditionalRemap.push_back(AI);
+                VMap[II] = AI;
+            }
+        }
+    }
+
+
+
+
+
+
+
+    // Create an iterator to name all of the arguments we inserted.
+    Function::arg_iterator AI = newFunction->arg_begin();
+
+    // Rewrite all users of the inputs in the extracted region to use the
+    // arguments (or appropriate addressing into struct) instead.
+    SmallVector<Value *> NewValues;
+    for (unsigned i = 0, e = inputs.size(); i != e; ++i) {
+        Value *RewriteVal;
+        if (AggregateArgs) {
+            Value *Idx[2];
+            Idx[0] = Constant::getNullValue(Type::getInt32Ty(header->getContext()));
+            Idx[1] = ConstantInt::get(Type::getInt32Ty(header->getContext()), i);
+            Instruction *TI = newFunction->begin()->getTerminator();
+            GetElementPtrInst *GEP = GetElementPtrInst::Create(
+                StructArgTy, &*AI, Idx, "gep_" + inputs[i]->getName(), TI);
+            RewriteVal = new LoadInst(StructArgTy->getElementType(i), GEP,
+                "loadgep_" + inputs[i]->getName(), TI);
+        } else
+            RewriteVal = &*AI++;
+
+        NewValues.push_back(RewriteVal);
+    }
+
+    for (auto &&P : enumerate(inputs)) {
+        VMap[P.value()] = NewValues[P.index()];
+    }
+
+    //// Copy/Move  code
+    ///////////////////////////////////////////////////////////////////////////////
+
+
+
+    if (KeepOldBlocks) {
+        for (BasicBlock *Block : Blocks) {
+            BasicBlock *CBB = CloneBasicBlock(Block, VMap, {},
+                newFunction ,/* CodeInfo */ nullptr, /* DIFinder */ nullptr,
+                [](const Instruction*I)->bool {
+                    return !isa<AssumeInst>(I);
+                }
+            );
+
+            // Add basic block mapping.
+            VMap[Block] = CBB;
+
+            // It is only legal to clone a function if a block address within that
+            // function is never referenced outside of the function.  Given that, we
+            // want to map block addresses from the old function to block addresses in
+            // the clone. (This is different from the generic ValueMapper
+            // implementation, which generates an invalid blockaddress when
+            // cloning a function.)
+            if (Block->hasAddressTaken()) {
+                Constant *OldBBAddr = BlockAddress::get(oldFunction, Block);
+                VMap[OldBBAddr] = BlockAddress::get(newFunction, CBB);
+            }
+
+            // Note return instructions for the caller.
+            //  if (ReturnInst *RI = dyn_cast<ReturnInst>(CBB->getTerminator()))
+            //     Returns.push_back(RI);
+
+            for (auto &&P : CBB->phis()) {
+                auto NumIncoming = P.getNumIncomingValues();
+                for (int Idx = NumIncoming - 1; Idx >= 0; --Idx) {
+                    if (Blocks.count(P.getIncomingBlock(Idx)))
+                        continue;
+                    P.removeIncomingValue(Idx, /*DeletePHIIfEmpty=*/false);
+                }
+            }
+        }
+
+        for (auto Pred : predecessors(header)) {
+            if (VMap.count(Pred))
+                continue;
+            VMap[Pred] = newFuncRoot;
+        }
+
+    } else {
+        moveCodeToFunction(newFunction);
+
+        if (!KeepOldBlocks) {
+            for (unsigned i = 0, e = inputs.size(); i != e; ++i) {
+                Value *RewriteVal = NewValues[i];
+
+                std::vector<User *> Users(inputs[i]->user_begin(),
+                    inputs[i]->user_end());
+                for (User *use : Users)
+                    if (Instruction *inst = dyn_cast<Instruction>(use))
+                        if (Blocks.count(inst->getParent()))
+                            inst->replaceUsesOfWith(inputs[i], RewriteVal);
+            }
+        }
+    }
+
+
+    std::map<BasicBlock *, BasicBlock *> ExitBlockMap;
+    // for (auto OldTarget : OldTargets) {
+    // for (auto OldTarget : Orlder) {
+    for (auto &&P : enumerate( Orlder)) {
+        auto OldTarget = P.value();
+        auto SuccNum = P.index();
+
+        BasicBlock *&NewTarget = ExitBlockMap[OldTarget];
+        //if (NewTarget)
+        //  continue;
+
+        // If we don't already have an exit stub for this non-extracted
+        // destination, create one now!
+        NewTarget = BasicBlock::Create(Context, OldTarget->getName() + ".exitStub", newFunction);
+        VMap[OldTarget] = NewTarget;
+
+        //  auto SuccNum = ExitBlockSwitchIdx[OldTarget];
+
+        auto &Context = Blocks.front()->getContext();
+        Value *brVal = nullptr;
+        assert(NumExitBlocks < 0xffff && "too many exit blocks for switch");
+        switch (NumExitBlocks) {
+        case 0:
+        case 1:
+            break; // No value needed.
+        case 2:  // Conditional branch, return a bool
+            brVal = ConstantInt::get(Type::getInt1Ty(Context), !SuccNum);
+            break;
+        default:
+            brVal = ConstantInt::get(Type::getInt16Ty(Context), SuccNum);
+            break;
+        }
+
+        ReturnInst::Create(Context, brVal, NewTarget);
+    }
+
+    for (BasicBlock *Block : Blocks) {
+        Instruction *TI = Block->getTerminator();
+        for (unsigned i = 0, e = TI->getNumSuccessors(); i != e; ++i) {
+            if (Blocks.count(TI->getSuccessor(i)))
+                continue;
+            BasicBlock *OldTarget = TI->getSuccessor(i);
+            // add a new basic block which returns the appropriate value
+            BasicBlock *NewTarget = ExitBlockMap[OldTarget];
+            assert(NewTarget && "Unknown target block!");
+
+            if (!KeepOldBlocks) {
+                // rewrite the original branch instruction with this new target
+                TI->setSuccessor(i, NewTarget);
+            } else {
+                VMap[OldTarget] = NewTarget;
+            }
+        }
+    }
+
+    if (KeepOldBlocks) {
+        for (Instruction *II : AdditionalRemap)
+            RemapInstruction(II, VMap, RF_NoModuleLevelChanges);
+
+        // Loop over all of the instructions in the new function, fixing up operand
+        // references as we go. This uses VMap to do all the hard work.
+        for (BasicBlock *Block : Blocks) {
+            WeakTrackingVH NewBlock = VMap.lookup(Block);
+            if (!NewBlock) {
+                continue;
+            }
+            BasicBlock &Y = cast<BasicBlock>(*NewBlock);
+
+            // Loop over all instructions, fixing each one as we find it...
+
+            for (Instruction &II : Y)
+                RemapInstruction(&II, VMap, RF_NoModuleLevelChanges);
+        }
+    } else {
+        // Loop over all of the PHI nodes in the header and exit blocks, and change
+        // any references to the old incoming edge to be the new incoming edge.
+        for (BasicBlock::iterator I = header->begin(); isa<PHINode>(I); ++I) {
+            PHINode *PN = cast<PHINode>(I);
+            for (unsigned i = 0, e = PN->getNumIncomingValues(); i != e; ++i)
+                if (!Blocks.count(PN->getIncomingBlock(i)))
+                    PN->setIncomingBlock(i, newFuncRoot);
+        }
+    }
+
+    auto NewHeader = header;
+    if (KeepOldBlocks)
+        NewHeader = cast<BasicBlock>(VMap.lookup(NewHeader));
+    assert(NewHeader);
+    auto *BranchI2 = BranchInst::Create(NewHeader, newFuncRoot);
+    applyFirstDebugLoc(oldFunction, Blocks.getArrayRef(), BranchI2);
+
+
+    // Store the arguments right after the definition of output value.
+    // This should be proceeded after creating exit stubs to be ensure that invoke
+    // result restore will be placed in the outlined function.
+    Function::arg_iterator OAI = newFunction->arg_begin() + inputs.size();
+    for (unsigned i = 0, e = outputs.size(); i != e; ++i) {
+        auto *OutI = dyn_cast<Instruction>(outputs[i]);
+        if (!OutI)
+            continue;
+
+        if (KeepOldBlocks)
+            OutI = cast<Instruction>(VMap.lookup(OutI));
+
+        // Find proper insertion point.
+        BasicBlock::iterator InsertPt;
+        // In case OutI is an invoke, we insert the store at the beginning in the
+        // 'normal destination' BB. Otherwise we insert the store right after OutI.
+        if (auto *InvokeI = dyn_cast<InvokeInst>(OutI))
+            InsertPt = InvokeI->getNormalDest()->getFirstInsertionPt();
+        else if (auto *Phi = dyn_cast<PHINode>(OutI))
+            InsertPt = Phi->getParent()->getFirstInsertionPt();
+        else
+            InsertPt = std::next(OutI->getIterator());
+
+        Instruction *InsertBefore = &*InsertPt;
+        assert((InsertBefore->getFunction() == newFunction ||
+            Blocks.count(InsertBefore->getParent())) &&
+            "InsertPt should be in new function");
+        assert(OAI != newFunction->arg_end() &&
+            "Number of output arguments should match "
+            "the amount of defined values");
+        if (AggregateArgs) {
+            Value *Idx[2];
+            Idx[0] = Constant::getNullValue(Type::getInt32Ty(Context));
+            Idx[1] = ConstantInt::get(Type::getInt32Ty(Context), inputs.size() + i);
+            GetElementPtrInst *GEP = GetElementPtrInst::Create(
+                StructArgTy, &*OAI, Idx, "gep_" + outputs[i]->getName(), InsertBefore);
+            new StoreInst(OutI, GEP, InsertBefore);
+            // Since there should be only one struct argument aggregating
+            // all the output values, we shouldn't increment OAI, which always
+            // points to the struct argument, in this case.
+        } else {
+            new StoreInst(OutI, &*OAI, InsertBefore);
+            ++OAI;
+        }
+    }
+}
+
+
 /// Erase lifetime.start markers which reference inputs to the extraction
 /// region, and insert the referenced memory into \p LifetimesStart.
 ///
@@ -1291,20 +1603,7 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC) {
   return extractCodeRegion(CEAC, Inputs, Outputs);
 }
 
-static void applyFirstDebugLoc(Function *oldFunction,
-                               ArrayRef<BasicBlock *> Blocks,
-                               Instruction *BranchI) {
-  if (oldFunction->getSubprogram()) {
-    any_of(Blocks, [&BranchI](const BasicBlock *BB) {
-      return any_of(*BB, [&BranchI](const Instruction &I) {
-        if (!I.getDebugLoc())
-          return false;
-        BranchI->setDebugLoc(I.getDebugLoc());
-        return true;
-      });
-    });
-  }
-}
+
 
 void CodeExtractor::recomputeExitBlocks() {
   OldTargets.clear();
@@ -1493,288 +1792,7 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
   //// CodeGen newFunction implementation
   //////////////////////////////////////////////////////
 
-  // The new function needs a root node because other nodes can branch to the
-  // head of the region, but the entry node of a function cannot have preds.
-  BasicBlock *newFuncRoot =
-      BasicBlock::Create(header->getContext(), "newFuncRoot", newFunction);
-
-  ValueToValueMapTy VMap;
-
-  SmallVector<Instruction *> AdditionalRemap;
-  auto MoveOrCopyInst =
-      [this](Instruction *I, BasicBlock *IB,
-                      BasicBlock::iterator IP) -> Instruction * {
-    if (KeepOldBlocks) {
-      auto AI = I->clone();
-      AI->setName(I->getName());
-      IB->getInstList().insert(IP, AI);
-      return AI;
-    }
-    I->moveBefore(*IB, IP);
-    return I;
-  };
-
-  // Now sink all instructions which only have non-phi uses inside the region.
-  // Group the allocas at the start of the block, so that any bitcast uses of
-  // the allocas are well-defined.
-
-  for (auto *II : SinkingCands) {
-    if (!isa<AllocaInst>(II)) {
-      auto New = MoveOrCopyInst(cast<Instruction>(II), newFuncRoot,
-                                newFuncRoot->getFirstInsertionPt());
-      if (KeepOldBlocks) {
-        AdditionalRemap.push_back(New);
-        VMap[II] = New;
-      }
-    }
-  }
-  for (auto *II : SinkingCands) {
-    if (auto *AI = dyn_cast<AllocaInst>(II)) {
-      AI = cast<AllocaInst>(
-          MoveOrCopyInst(AI, newFuncRoot, newFuncRoot->getFirstInsertionPt()));
-      if (KeepOldBlocks) {
-        AdditionalRemap.push_back(AI);
-        VMap[II] = AI;
-      }
-    }
-  }
-
-
-
-
-
-
-
-  // Create an iterator to name all of the arguments we inserted.
-  Function::arg_iterator AI = newFunction->arg_begin();
-
-  // Rewrite all users of the inputs in the extracted region to use the
-  // arguments (or appropriate addressing into struct) instead.
-  SmallVector<Value *> NewValues;
-  for (unsigned i = 0, e = inputs.size(); i != e; ++i) {
-    Value *RewriteVal;
-    if (AggregateArgs) {
-      Value *Idx[2];
-      Idx[0] = Constant::getNullValue(Type::getInt32Ty(header->getContext()));
-      Idx[1] = ConstantInt::get(Type::getInt32Ty(header->getContext()), i);
-      Instruction *TI = newFunction->begin()->getTerminator();
-      GetElementPtrInst *GEP = GetElementPtrInst::Create(
-          StructArgTy, &*AI, Idx, "gep_" + inputs[i]->getName(), TI);
-      RewriteVal = new LoadInst(StructArgTy->getElementType(i), GEP,
-                                "loadgep_" + inputs[i]->getName(), TI);
-    } else
-      RewriteVal = &*AI++;
-
-    NewValues.push_back(RewriteVal);
-  }
-
-  for (auto &&P : enumerate(inputs)) {
-    VMap[P.value()] = NewValues[P.index()];
-  }
-
-  //// Copy/Move  code
-  ///////////////////////////////////////////////////////////////////////////////
-
-
-
-  if (KeepOldBlocks) {
-    for (BasicBlock *Block : Blocks) {
-      BasicBlock *CBB = CloneBasicBlock(Block, VMap, {},
-                                        newFunction ,/* CodeInfo */ nullptr, /* DIFinder */ nullptr,
-          [](const Instruction*I)->bool {
-          return !isa<AssumeInst>(I);
-          }
-          );
-
-      // Add basic block mapping.
-      VMap[Block] = CBB;
-
-      // It is only legal to clone a function if a block address within that
-      // function is never referenced outside of the function.  Given that, we
-      // want to map block addresses from the old function to block addresses in
-      // the clone. (This is different from the generic ValueMapper
-      // implementation, which generates an invalid blockaddress when
-      // cloning a function.)
-      if (Block->hasAddressTaken()) {
-        Constant *OldBBAddr = BlockAddress::get(oldFunction, Block);
-        VMap[OldBBAddr] = BlockAddress::get(newFunction, CBB);
-      }
-
-      // Note return instructions for the caller.
-      //  if (ReturnInst *RI = dyn_cast<ReturnInst>(CBB->getTerminator()))
-      //     Returns.push_back(RI);
-
-      for (auto &&P : CBB->phis()) {
-        auto NumIncoming = P.getNumIncomingValues();
-        for (int Idx = NumIncoming - 1; Idx >= 0; --Idx) {
-          if (Blocks.count(P.getIncomingBlock(Idx)))
-            continue;
-          P.removeIncomingValue(Idx, /*DeletePHIIfEmpty=*/false);
-        }
-      }
-    }
-
-    for (auto Pred : predecessors(header)) {
-      if (VMap.count(Pred))
-        continue;
-      VMap[Pred] = newFuncRoot;
-    }
-
-  } else {
-    moveCodeToFunction(newFunction);
-
-    if (!KeepOldBlocks) {
-      for (unsigned i = 0, e = inputs.size(); i != e; ++i) {
-        Value *RewriteVal = NewValues[i];
-
-        std::vector<User *> Users(inputs[i]->user_begin(),
-                                  inputs[i]->user_end());
-        for (User *use : Users)
-          if (Instruction *inst = dyn_cast<Instruction>(use))
-            if (Blocks.count(inst->getParent()))
-              inst->replaceUsesOfWith(inputs[i], RewriteVal);
-      }
-    }
-  }
-
-
-  std::map<BasicBlock *, BasicBlock *> ExitBlockMap;
- // for (auto OldTarget : OldTargets) {
- // for (auto OldTarget : Orlder) {
-  for (auto &&P : enumerate( Orlder)) {
-      auto OldTarget = P.value();
-      auto SuccNum = P.index();
-
-    BasicBlock *&NewTarget = ExitBlockMap[OldTarget];
-    //if (NewTarget)
-    //  continue;
-
-    // If we don't already have an exit stub for this non-extracted
-    // destination, create one now!
-    NewTarget = BasicBlock::Create(Context, OldTarget->getName() + ".exitStub", newFunction);
-    VMap[OldTarget] = NewTarget;
-
-  //  auto SuccNum = ExitBlockSwitchIdx[OldTarget];
-
-    auto &Context = Blocks.front()->getContext();
-    Value *brVal = nullptr;
-    assert(NumExitBlocks < 0xffff && "too many exit blocks for switch");
-    switch (NumExitBlocks) {
-    case 0:
-    case 1:
-      break; // No value needed.
-    case 2:  // Conditional branch, return a bool
-      brVal = ConstantInt::get(Type::getInt1Ty(Context), !SuccNum);
-      break;
-    default:
-      brVal = ConstantInt::get(Type::getInt16Ty(Context), SuccNum);
-      break;
-    }
-
-    ReturnInst::Create(Context, brVal, NewTarget);
-  }
-
-  for (BasicBlock *Block : Blocks) {
-    Instruction *TI = Block->getTerminator();
-    for (unsigned i = 0, e = TI->getNumSuccessors(); i != e; ++i) {
-      if (Blocks.count(TI->getSuccessor(i)))
-        continue;
-      BasicBlock *OldTarget = TI->getSuccessor(i);
-      // add a new basic block which returns the appropriate value
-      BasicBlock *NewTarget = ExitBlockMap[OldTarget];
-      assert(NewTarget && "Unknown target block!");
-
-      if (!KeepOldBlocks) {
-        // rewrite the original branch instruction with this new target
-        TI->setSuccessor(i, NewTarget);
-      } else {
-        VMap[OldTarget] = NewTarget;
-      }
-    }
-  }
-
-  if (KeepOldBlocks) {
-    for (Instruction *II : AdditionalRemap)
-      RemapInstruction(II, VMap, RF_NoModuleLevelChanges);
-
-    // Loop over all of the instructions in the new function, fixing up operand
-    // references as we go. This uses VMap to do all the hard work.
-    for (BasicBlock *Block : Blocks) {
-      WeakTrackingVH NewBlock = VMap.lookup(Block);
-      if (!NewBlock) {
-        continue;
-      }
-      BasicBlock &Y = cast<BasicBlock>(*NewBlock);
-
-      // Loop over all instructions, fixing each one as we find it...
-
-      for (Instruction &II : Y)
-        RemapInstruction(&II, VMap, RF_NoModuleLevelChanges);
-    }
-  } else {
-    // Loop over all of the PHI nodes in the header and exit blocks, and change
-    // any references to the old incoming edge to be the new incoming edge.
-    for (BasicBlock::iterator I = header->begin(); isa<PHINode>(I); ++I) {
-      PHINode *PN = cast<PHINode>(I);
-      for (unsigned i = 0, e = PN->getNumIncomingValues(); i != e; ++i)
-        if (!Blocks.count(PN->getIncomingBlock(i)))
-          PN->setIncomingBlock(i, newFuncRoot);
-    }
-  }
-
-  auto NewHeader = header;
-  if (KeepOldBlocks)
-    NewHeader = cast<BasicBlock>(VMap.lookup(NewHeader));
-  assert(NewHeader);
-  auto *BranchI2 = BranchInst::Create(NewHeader, newFuncRoot);
-  applyFirstDebugLoc(oldFunction, Blocks.getArrayRef(), BranchI2);
-
-
-  // Store the arguments right after the definition of output value.
-  // This should be proceeded after creating exit stubs to be ensure that invoke
-  // result restore will be placed in the outlined function.
-  Function::arg_iterator OAI = OutputArgBegin;
-  for (unsigned i = 0, e = outputs.size(); i != e; ++i) {
-    auto *OutI = dyn_cast<Instruction>(outputs[i]);
-    if (!OutI)
-      continue;
-
-    if (KeepOldBlocks)
-      OutI = cast<Instruction>(VMap.lookup(OutI));
-
-    // Find proper insertion point.
-    BasicBlock::iterator InsertPt;
-    // In case OutI is an invoke, we insert the store at the beginning in the
-    // 'normal destination' BB. Otherwise we insert the store right after OutI.
-    if (auto *InvokeI = dyn_cast<InvokeInst>(OutI))
-      InsertPt = InvokeI->getNormalDest()->getFirstInsertionPt();
-    else if (auto *Phi = dyn_cast<PHINode>(OutI))
-      InsertPt = Phi->getParent()->getFirstInsertionPt();
-    else
-      InsertPt = std::next(OutI->getIterator());
-
-    Instruction *InsertBefore = &*InsertPt;
-    assert((InsertBefore->getFunction() == newFunction ||
-            Blocks.count(InsertBefore->getParent())) &&
-           "InsertPt should be in new function");
-    assert(OAI != newFunction->arg_end() &&
-           "Number of output arguments should match "
-           "the amount of defined values");
-    if (AggregateArgs) {
-      Value *Idx[2];
-      Idx[0] = Constant::getNullValue(Type::getInt32Ty(Context));
-      Idx[1] = ConstantInt::get(Type::getInt32Ty(Context), FirstOut + i);
-      GetElementPtrInst *GEP = GetElementPtrInst::Create(
-          StructArgTy, &*OAI, Idx, "gep_" + outputs[i]->getName(), InsertBefore);
-      new StoreInst(OutI, GEP, InsertBefore);
-      // Since there should be only one struct argument aggregating
-      // all the output values, we shouldn't increment OAI, which always
-      // points to the struct argument, in this case.
-    } else {
-      new StoreInst(OutI, &*OAI, InsertBefore);
-      ++OAI;
-    }
-  }
+  constructFunctionImplementation( newFunction, inputs, outputs, header, SinkingCands, StructArgTy, Orlder );
 
   //// Codegen newFunction call replacement
   /////////////////////////////////////////////////

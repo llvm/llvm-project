@@ -254,7 +254,14 @@ public:
                                            const ValueSet &outputs,
                                            BasicBlock *header);
 
-
+   void constructFunctionImplementation(
+       Function *newFunction,
+       const ValueSet &inputs,       const ValueSet &outputs,
+       BasicBlock *header,
+       const ValueSet &SinkingCands
+       ,StructType *StructArgTy
+       ,ArrayRef<BasicBlock*> Orlder
+       ) ;
 
     void moveCodeToFunction(Function *newFunction);
 
