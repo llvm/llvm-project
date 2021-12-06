@@ -1498,7 +1498,7 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
     recomputeExitBlocks();
   }
 
-  std::map<BasicBlock *, BasicBlock *> ExitBlockMap;
+
   SmallDenseMap<BasicBlock *, unsigned> ExitBlockSwitchIdx;
   SmallVector<BasicBlock *> Orlder;
 
@@ -1613,6 +1613,8 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
     }
   }
 
+
+  std::map<BasicBlock *, BasicBlock *> ExitBlockMap;
   for (auto OldTarget : OldTargets) {
     BasicBlock *&NewTarget = ExitBlockMap[OldTarget];
     if (NewTarget)
