@@ -229,8 +229,8 @@ bool BlockExtractor::runOnModule(Module &M) {
       Changed = true;
     }
     CodeExtractorAnalysisCache CEAC(*BBs[0]->getParent());
-    Function *F = CodeExtractor(BlocksToExtractVec)
-                      .extractCodeRegion(CEAC, KeepOldBlocks);
+    Function *F = CodeExtractor(BlocksToExtractVec,/* DT */ nullptr,/* AggregateArgs*/ false, /* BFI */ nullptr,/* BPI */ nullptr, /* AC */nullptr,/* AllowVarArgs */ false,/* AllowAlloca */ false, /* Suffix */ "", KeepOldBlocks)
+                      .extractCodeRegion(CEAC);
     if (F)
       LLVM_DEBUG(dbgs() << "Extracted group '" << (*BBs.begin())->getName()
                         << "' in: " << F->getName() << '\n');

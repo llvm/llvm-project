@@ -98,6 +98,8 @@ public:
     // If true, varargs functions can be extracted.
     bool AllowVarArgs;
 
+    bool KeepOldBlocks;
+
     // Bits of intermediate state computed at various phases of extraction.
     SetVector<BasicBlock *> Blocks;
     unsigned NumExitBlocks = std::numeric_limits<unsigned>::max();
@@ -113,7 +115,7 @@ public:
     // label, if non-empty, otherwise "extracted".
     std::string Suffix;
 
-    void recomputeExitBlocks();
+   
 
   public:
     /// Create a code extractor for a sequence of blocks.
@@ -130,8 +132,8 @@ public:
                   bool AggregateArgs = false, BlockFrequencyInfo *BFI = nullptr,
                   BranchProbabilityInfo *BPI = nullptr,
                   AssumptionCache *AC = nullptr,
-                  bool AllowVarArgs = false, bool AllowAlloca = false,
-                  std::string Suffix = "");
+                  bool AllowVarArgs = false, bool AllowAlloca = false, 
+                  std::string Suffix = "", bool KeepOldBlocks= false);
 
     /// Create a code extractor for a loop body.
     ///
@@ -147,8 +149,7 @@ public:
     ///
     /// Returns zero when called on a CodeExtractor instance where isEligible
     /// returns false.
-    Function *extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
-                                bool KeepOldBlocks = false);
+    Function *extractCodeRegion(const CodeExtractorAnalysisCache &CEAC);
 
     /// Perform the extraction, returning the new function and providing an
     /// interface to see what was categorized as inputs and outputs.
@@ -164,8 +165,7 @@ public:
     /// copied. \returns zero when called on a CodeExtractor instance where
     /// isEligible returns false.
     Function *extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
-                                ValueSet &Inputs, ValueSet &Outputs,
-                                bool KeepOldBlocks = false);
+                                ValueSet &Inputs, ValueSet &Outputs);
 
     /// Verify that assumption cache isn't stale after a region is extracted.
     /// Returns true when verifier finds errors. AssumptionCache is passed as
@@ -236,19 +236,25 @@ public:
     getLifetimeMarkers(const CodeExtractorAnalysisCache &CEAC,
                        Instruction *Addr, BasicBlock *ExitBlock) const;
 
+
+
+
+ void recomputeExitBlocks();
+
     void severSplitPHINodesOfEntry(BasicBlock *&Header);
     void severSplitPHINodesOfExits();
     void splitReturnBlocks();
 
-    void handleParams(Function *oldFunction, Function *newFunction,
-                      const ValueSet &inputs, const ValueSet &outputs);
+
+
+    void canonicalizeCFGForExtraction(BasicBlock *&Header,
+                                      bool NoExitBlockPHIs);
 
     Function *constructFunctionDeclaration(const ValueSet &inputs,
                                            const ValueSet &outputs,
                                            BasicBlock *header);
 
-    void canonicalizeCFGForExtraction(BasicBlock *&Header,
-                                      bool NoExitBlockPHIs);
+
 
     void moveCodeToFunction(Function *newFunction);
 

@@ -199,7 +199,7 @@ static bool isBlockValidForExtraction(const BasicBlock &BB,
 /// Build a set of blocks to extract if the input blocks are viable.
 static SetVector<BasicBlock *>
 buildExtractionBlockSet(ArrayRef<BasicBlock *> BBs, DominatorTree *DT,
-                        bool AllowVarArgs, bool AllowAlloca) {
+                        bool AllowVarArgs, bool AllowAlloca, bool KeepOldBlocks) {
   assert(!BBs.empty() && "The set of blocks to extract must be non-empty");
   SetVector<BasicBlock *> Result;
 
@@ -230,11 +230,12 @@ buildExtractionBlockSet(ArrayRef<BasicBlock *> BBs, DominatorTree *DT,
       continue;
     }
 
-#if 0
+
+if (!KeepOldBlocks) {
     // All blocks other than the first must not have predecessors outside of
     // the subgraph which is being extracted.
     for (auto *PBB : predecessors(BB))
-      if (!Result.count(PBB) && DT->isReachableFromEntry(PBB) {
+      if (!Result.count(PBB)) {
         LLVM_DEBUG(dbgs() << "No blocks in this region may have entries from "
                              "outside the region except for the first block!\n"
                           << "Problematic source BB: " << BB->getName() << "\n"
@@ -242,7 +243,7 @@ buildExtractionBlockSet(ArrayRef<BasicBlock *> BBs, DominatorTree *DT,
                           << "\n");
         return {};
       }
-#endif
+}
   }
 
   return Result;
@@ -252,10 +253,10 @@ CodeExtractor::CodeExtractor(ArrayRef<BasicBlock *> BBs, DominatorTree *DT,
                              bool AggregateArgs, BlockFrequencyInfo *BFI,
                              BranchProbabilityInfo *BPI, AssumptionCache *AC,
                              bool AllowVarArgs, bool AllowAlloca,
-                             std::string Suffix)
+                             std::string Suffix, bool KeepOldBlocks)
     : DT(DT), AggregateArgs(AggregateArgs || AggregateArgsOpt), BFI(BFI),
-      BPI(BPI), AC(AC), AllowVarArgs(AllowVarArgs),
-      Blocks(buildExtractionBlockSet(BBs, DT, AllowVarArgs, AllowAlloca)),
+      BPI(BPI), AC(AC), AllowVarArgs(AllowVarArgs), KeepOldBlocks(KeepOldBlocks),
+      Blocks(buildExtractionBlockSet(BBs, DT, AllowVarArgs, AllowAlloca, KeepOldBlocks)),
       Suffix(Suffix) {}
 
 CodeExtractor::CodeExtractor(DominatorTree &DT, Loop &L, bool AggregateArgs,
@@ -263,10 +264,10 @@ CodeExtractor::CodeExtractor(DominatorTree &DT, Loop &L, bool AggregateArgs,
                              BranchProbabilityInfo *BPI, AssumptionCache *AC,
                              std::string Suffix)
     : DT(&DT), AggregateArgs(AggregateArgs || AggregateArgsOpt), BFI(BFI),
-      BPI(BPI), AC(AC), AllowVarArgs(false),
+      BPI(BPI), AC(AC), AllowVarArgs(false),KeepOldBlocks(false),
       Blocks(buildExtractionBlockSet(L.getBlocks(), &DT,
                                      /* AllowVarArgs */ false,
-                                     /* AllowAlloca */ false)),
+                                     /* AllowAlloca */ false,  /* KeepOldBlocks */ false)),
       Suffix(Suffix) {}
 
 /// definedInRegion - Return true if the specified value is defined in the
@@ -1038,9 +1039,7 @@ Function *CodeExtractor::constructFunctionDeclaration(const ValueSet &inputs,
   return newFunction;
 }
 
-void CodeExtractor::handleParams(Function *oldFunction, Function *newFunction,
-                                 const ValueSet &inputs,
-                                 const ValueSet &outputs) {}
+
 
 /// Erase lifetime.start markers which reference inputs to the extraction
 /// region, and insert the referenced memory into \p LifetimesStart.
@@ -1313,10 +1312,9 @@ static void fixupDebugInfoPostExtraction(Function &OldFunc, Function &NewFunc,
 }
 
 Function *
-CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
-                                 bool KeepOldBlocks) {
+CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC) {
   ValueSet Inputs, Outputs;
-  return extractCodeRegion(CEAC, Inputs, Outputs, KeepOldBlocks);
+  return extractCodeRegion(CEAC, Inputs, Outputs);
 }
 
 void CodeExtractor::canonicalizeCFGForExtraction(BasicBlock *&Header,
@@ -1335,7 +1333,7 @@ void CodeExtractor::canonicalizeCFGForExtraction(BasicBlock *&Header,
   recomputeExitBlocks();
 
   severSplitPHINodesOfExits();
-  // recomputeExitBlocks();
+
 
   if (NoExitBlockPHIs) {
     // TODO: preserve BPI/BFI
@@ -1398,8 +1396,7 @@ void CodeExtractor::recomputeExitBlocks() {
 
 Function *
 CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
-                                 ValueSet &inputs, ValueSet &outputs,
-                                 bool KeepOldBlocks) {
+                                 ValueSet &inputs, ValueSet &outputs) {
   if (!isEligible())
     return nullptr;
 
@@ -1476,7 +1473,7 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
 
   SmallVector<Instruction *> AdditionalRemap;
   auto MoveOrCopyInst =
-      [KeepOldBlocks](Instruction *I, BasicBlock *IB,
+      [this](Instruction *I, BasicBlock *IB,
                       BasicBlock::iterator IP) -> Instruction * {
     if (KeepOldBlocks) {
       auto AI = I->clone();
