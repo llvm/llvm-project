@@ -28,8 +28,14 @@ public:
     case msf_error_code::insufficient_buffer:
       return "The buffer is not large enough to read the requested number of "
              "bytes.";
-    case msf_error_code::size_overflow:
+    case msf_error_code::size_overflow_4096:
       return "Output data is larger than 4 GiB.";
+    case msf_error_code::size_overflow_8192:
+      return "Output data is larger than 8 GiB.";
+    case msf_error_code::size_overflow_16384:
+      return "Output data is larger than 16 GiB.";
+    case msf_error_code::size_overflow_32768:
+      return "Output data is larger than 32 GiB.";
     case msf_error_code::not_writable:
       return "The specified stream is not writable.";
     case msf_error_code::no_stream:
