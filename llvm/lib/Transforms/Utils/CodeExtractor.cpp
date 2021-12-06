@@ -2132,7 +2132,7 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
 
 
 
-        ValueToValueMapTy VMap;
+     
 
 
         // Reload the outputs passed in by reference.
@@ -2143,17 +2143,14 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
                 Value *Idx[2];
                 Idx[0] = Constant::getNullValue(Type::getInt32Ty(Context));
                 Idx[1] = ConstantInt::get(Type::getInt32Ty(Context), FirstOut + i);
-                //Value *GEP = Builder.CreateGEP(StructArgTy, Struct, Idx, Twine("gep_reload_") + outputs[i]->getName());
-                GetElementPtrInst *GEP = GetElementPtrInst::Create(StructTy, Struct, Idx, "gep_reload_" + outputs[i]->getName());
+                 GetElementPtrInst *GEP = GetElementPtrInst::Create(StructTy, Struct, Idx, "gep_reload_" + outputs[i]->getName());
                 codeReplacer->getInstList().push_back(GEP);
                 Output = GEP;
             } else {
                 Output = ReloadOutputs[i];
             }
             LoadInst *load = new LoadInst(outputs[i]->getType(), Output, outputs[i]->getName() + ".reload",codeReplacer);
-        //  auto Output =  MakeReloadAddress(i);
-        //    LoadInst *load =  Builder.CreateLoad(outputs[i]->getType(), Output, outputs[i]->getName() + ".reload");
-
+  
             Reloads.push_back(load);
             std::vector<User *> Users(outputs[i]->user_begin(), outputs[i]->user_end());
             for (unsigned u = 0, e = Users.size(); u != e; ++u) {
@@ -2344,10 +2341,7 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
             oldFunction->getParent(), LifetimesStart.getArrayRef(), {}, call);
 
 
-        // TODO: ByCopy
-        // Update the branch weights for the exit block.
-        if (BFI && NumExitBlocks > 1)
-            calculateNewCallTerminatorWeights(codeReplacer, ExitWeights, BPI);
+   
 
 
         // Loop over all of the PHI nodes in the header and exit blocks, and change
@@ -2378,8 +2372,16 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
                 }
             }
 
-        fixupDebugInfoPostExtraction(*oldFunction, *newFunction, *call);
+      
     }
+
+    // Update the branch weights for the exit block.
+    if (BFI && NumExitBlocks > 1)
+        calculateNewCallTerminatorWeights(codeReplacer, ExitWeights, BPI);
+
+
+
+    fixupDebugInfoPostExtraction(*oldFunction, *newFunction, *call);
 
       // Mark the new function `noreturn` if applicable. Terminators which resume
       // exception propagation are treated as returning instructions. This is to
