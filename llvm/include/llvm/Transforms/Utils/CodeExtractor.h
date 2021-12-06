@@ -106,7 +106,6 @@ public:
     // Mapping from the original exit blocks, to the new blocks inside
     // the function.
     SmallVector<BasicBlock *, 4> OldTargets;
-   // SmallVector<std::pair<BasicBlock*,BasicBlock*> > OldExitingEdges;
     SmallPtrSet<BasicBlock *, 1> ExitBlocks;
 
     // Suffix to use when creating extracted function (appended to the original
@@ -116,6 +115,7 @@ public:
 
 
    void recomputeExitBlocks();
+
 
 
 

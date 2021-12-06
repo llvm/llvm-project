@@ -1411,6 +1411,7 @@ void CodeExtractor::recomputeExitBlocks() {
 
 
 
+
 Function *
 CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
                                  ValueSet &inputs, ValueSet &outputs, bool KeepOldBlocks ) {
@@ -2139,7 +2140,6 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
 
 
         // Reload the outputs passed in by reference.
-       // Builder.SetInsertPoint(codeReplacer);
         for (unsigned i = 0, e = outputs.size(); i != e; ++i) {
             Value *Output = nullptr;
             if (AggregateArgs) {
@@ -2165,36 +2165,45 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
             }
         }
 
-        // Now we can emit a switch statement using the call as a value.
-        SwitchInst *TheSwitch =
-            SwitchInst::Create(Constant::getNullValue(Type::getInt16Ty(Context)),
-                codeReplacer, 0, codeReplacer);
 
-        // Since there may be multiple exits from the original region, make the new
-        // function return an unsigned, switch on that number.  This loop iterates
-        // over all of the blocks in the extracted region, updating any terminator
-        // instructions in the to-be-extracted region that branch to blocks that are
-        // not in the region to be extracted.
+
+
+
         std::map<BasicBlock *, BasicBlock *> ExitBlockMap;
+        //SmallVector<BasicBlock *> ExitBlockSwitchIdx;
+        SmallDenseMap<BasicBlock*,unsigned> ExitBlockSwitchIdx;
+        SmallVector<BasicBlock*> Orlder;
 
-        // Iterate over the previously collected targets, and create new blocks inside
-        // the function to branch to.
-        unsigned switchVal = 0;
-        for (BasicBlock *OldTarget : OldTargets) {
+        for (BasicBlock* OldTarget : OldTargets) {
             if (Blocks.count(OldTarget))
                 continue;
-            BasicBlock *&NewTarget = ExitBlockMap[OldTarget];
-            if (NewTarget)
-                continue;
 
-            // If we don't already have an exit stub for this non-extracted
-            // destination, create one now!
-            NewTarget = BasicBlock::Create(Context,
-                OldTarget->getName() + ".exitStub",
-                newFunction);
+          auto Added = ExitBlockSwitchIdx.insert({ OldTarget, ExitBlockSwitchIdx.size() });
+          if (Added.second)
+              Orlder.push_back(OldTarget);
+        }
+
+        for (auto OldTarget : OldTargets) {
+            BasicBlock*& NewTarget = ExitBlockMap[OldTarget];
+            if (!NewTarget) {
+                // If we don't already have an exit stub for this non-extracted
+                // destination, create one now!
+                NewTarget = BasicBlock::Create(Context,
+                    OldTarget->getName() + ".exitStub",
+                    newFunction);
+            }
             VMap[OldTarget] = NewTarget;
-            unsigned SuccNum = switchVal++;
+        }
 
+
+ 
+        for (auto &&P:ExitBlockMap){
+            auto OldTarget = P.first;
+            auto NewTarget = P.second;
+            auto SuccNum = ExitBlockSwitchIdx[OldTarget];
+
+
+            auto &Context = Blocks.front()->getContext();
             Value *brVal = nullptr;
             assert(NumExitBlocks < 0xffff && "too many exit blocks for switch");
             switch (NumExitBlocks) {
@@ -2208,13 +2217,28 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
                 break;
             }
 
-            ReturnInst::Create(Context, brVal, NewTarget);
 
-            // Update the switch instruction.
+            ReturnInst::Create(Context, brVal, NewTarget);
+        }
+
+
+        // Now we can emit a switch statement using the call as a value.
+        SwitchInst *TheSwitch =
+            SwitchInst::Create(Constant::getNullValue(Type::getInt16Ty(Context)),
+                codeReplacer, 0, codeReplacer);
+
+
+        for (auto &&P: Orlder) {
+            auto OldTarget = P;
+            auto SuccNum =ExitBlockSwitchIdx[OldTarget];
+
             TheSwitch->addCase(ConstantInt::get(Type::getInt16Ty(Context),
                 SuccNum),
                 OldTarget);
         }
+
+
+
 
 
 
