@@ -205,11 +205,58 @@ class GenericListDataFormatterTestCase(TestBase):
         self.assertTrue(
             self.frame().FindVariable("text_list").MightHaveChildren(),
             "text_list.MightHaveChildren() says False for non empty!")
+
+    def do_test_ptr_and_ref(self, stdlib_type):
+        """Test that ref and ptr to std::list is displayed correctly"""
+        self.build(dictionary={stdlib_type: "1"})
+
+        (_, process, _, bkpt) = lldbutil.run_to_source_breakpoint(self,
+                'Check ref and ptr',
+                lldb.SBFileSpec("main.cpp", False))
+
+        self.expect("frame variable ref",
+                    substrs=['size=4',
+                             '[0] = ', '1',
+                             '[1] = ', '2',
+                             '[2] = ', '3',
+                             '[3] = ', '4'])
+
+
+        self.expect("frame variable *ptr",
+                    substrs=['size=4',
+                             '[0] = ', '1',
+                             '[1] = ', '2',
+                             '[2] = ', '3',
+                             '[3] = ', '4'])
+
+        lldbutil.continue_to_breakpoint(process, bkpt)
+
+        self.expect("frame variable ref",
+                    substrs=['size=4',
+                             '[0]', 'goofy',
+                             '[1]', 'is',
+                             '[2]', 'smart',
+                             '[3]', '!!!'])
+
+        self.expect("frame variable *ptr",
+                    substrs=['size=4',
+                             '[0]', 'goofy',
+                             '[1]', 'is',
+                             '[2]', 'smart',
+                             '[3]', '!!!'])
     
     @add_test_categories(["libstdcxx"])
     def test_with_run_command_libstdcpp(self):
         self.do_test_with_run_command(USE_LIBSTDCPP)
 
+    @add_test_categories(["libstdcxx"])
+    def test_ptr_and_ref_libstdcpp(self):
+        self.do_test_ptr_and_ref(USE_LIBSTDCPP)
+
     @add_test_categories(["libc++"])
     def test_with_run_command_libcpp(self):
         self.do_test_with_run_command(USE_LIBCPP)
+
+    @add_test_categories(["libc++"])
+    def test_ptr_and_ref_libcpp(self):
+        self.do_test_ptr_and_ref(USE_LIBCPP)
