@@ -1679,6 +1679,11 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
 
 
 
+        for (auto Pred : predecessors(header)) {
+            if (VMap.count(Pred))
+                continue;
+            VMap[Pred] = newFuncRoot;
+        }
 
 
     } else {
@@ -1697,8 +1702,6 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
             }
         }
     }
-
-
 
         for (auto OldTarget : OldTargets) {
             BasicBlock*& NewTarget = ExitBlockMap[OldTarget];
@@ -1737,6 +1740,7 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
     
 
 
+
         for (BasicBlock* Block : Blocks) {
             Instruction* TI = Block->getTerminator();
             for (unsigned i = 0, e = TI->getNumSuccessors(); i != e; ++i) {
@@ -1753,6 +1757,30 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
                 } else {
                     VMap[OldTarget] = NewTarget; 
                 }
+            }
+        }
+
+
+     
+
+
+        if (KeepOldBlocks) {
+            for (Instruction* II : AdditionalRemap)
+                RemapInstruction(II, VMap, RF_NoModuleLevelChanges);
+
+            // Loop over all of the instructions in the new function, fixing up operand
+            // references as we go. This uses VMap to do all the hard work.
+            for (BasicBlock* Block : Blocks) {
+                WeakTrackingVH NewBlock = VMap.lookup(Block);
+                if (!NewBlock) {
+                    continue;
+                }
+                BasicBlock& Y = cast<BasicBlock>(*NewBlock);
+
+                // Loop over all instructions, fixing each one as we find it...
+
+                for (Instruction& II : Y)
+                    RemapInstruction(&II, VMap, RF_NoModuleLevelChanges);
             }
         }
 
@@ -2038,31 +2066,10 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
 
 
 
-        for (auto Pred : predecessors(header)) {
-            if (VMap.count(Pred))
-                continue;
-            VMap[Pred] = newFuncRoot;
-        }
 
 
-        for (Instruction* II : AdditionalRemap)
-            RemapInstruction(II, VMap, RF_NoModuleLevelChanges);
 
-        // Loop over all of the instructions in the new function, fixing up operand
-        // references as we go. This uses VMap to do all the hard work.
-        for (BasicBlock* Block : Blocks) {
-            WeakTrackingVH NewBlock = VMap.lookup(Block);
-            if (!NewBlock) {
-                continue;
-            }
-            BasicBlock& Y = cast<BasicBlock>(*NewBlock);
-
-            // Loop over all instructions, fixing each one as we find it...
-
-            for (Instruction& II : Y)
-                RemapInstruction(&II, VMap, RF_NoModuleLevelChanges);
-        }
-
+ 
 
 
 
