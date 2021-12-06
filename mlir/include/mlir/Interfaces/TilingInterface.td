@@ -48,7 +48,10 @@ def TilingInterface : OpInterface<"TilingInterface"> {
           from MLIR Structured Op Utils.
         }],
         /*retType=*/"SmallVector<StringRef>",
-        /*methodName=*/"getLoopIteratorTypes"
+        /*methodName=*/"getLoopIteratorTypes",
+        /*args=*/(ins),
+        /*methodBody=*/"",
+        /*defaultImplementation=*/"return {};"
       >,
       InterfaceMethod<
         /*desc=*/[{
@@ -57,7 +60,9 @@ def TilingInterface : OpInterface<"TilingInterface"> {
         }],
         /*retTy=*/"SmallVector<Range>",
         /*methodName=*/"getLoopBounds",
-        /*args=*/(ins "OpBuilder &":$b)
+        /*args=*/(ins "OpBuilder &":$b),
+        /*methodBody=*/"",
+        /*defaultImplementation=*/"return {};"
       >,
       InterfaceMethod<
         /*desc=*/[{
