@@ -1973,8 +1973,7 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache& CEAC,
             GetElementPtrInst* GEP = GetElementPtrInst::Create(StructTy, Struct, Idx, "gep_reload_" + outputs[i]->getName());
             codeReplacer->getInstList().push_back(GEP);
             Output = GEP;
-        }
-        else {
+        } else {
             Output = ReloadOutputs[i];
         }
         LoadInst* load = new LoadInst(outputs[i]->getType(), Output, outputs[i]->getName() + ".reload", codeReplacer);
@@ -2046,6 +2045,23 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache& CEAC,
         TheSwitch->removeCase(SwitchInst::CaseIt(TheSwitch, NumExitBlocks - 1));
         break;
     }
+
+
+    // Insert lifetime markers around the reloads of any output values. The
+    // allocas output values are stored in are only in-use in the codeRepl block.
+    insertLifetimeMarkersSurroundingCall(M, ReloadOutputs, ReloadOutputs, call);
+
+
+
+
+
+
+
+
+    // Replicate the effects of any lifetime start/end markers which referenced
+    // input objects in the extraction region by placing markers around the call.
+    insertLifetimeMarkersSurroundingCall(M, LifetimesStart.getArrayRef(), {}, call);
+
 
 
 
@@ -2120,32 +2136,6 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache& CEAC,
 
 
 
-
-
-
-
-
-
-
-     
-
-        // Insert lifetime markers around the reloads of any output values. The
-        // allocas output values are stored in are only in-use in the codeRepl block.
-        insertLifetimeMarkersSurroundingCall(M, ReloadOutputs, ReloadOutputs, call);
-
-
-
-
-
-
-
-        // TODO: ByCopy
-        // Replicate the effects of any lifetime start/end markers which referenced
-        // input objects in the extraction region by placing markers around the call.
-        insertLifetimeMarkersSurroundingCall(oldFunction->getParent(), LifetimesStart.getArrayRef(), {}, call);
-
-
-   
 
 
         // Loop over all of the PHI nodes in the header and exit blocks, and change

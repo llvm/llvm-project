@@ -10,11 +10,23 @@
 ; CHECK-NEXT:    br i1 %c0, label %codeRepl, label %exit
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  codeRepl:                                        
+; CHECK-NEXT:    %lt.cast = bitcast i32* %a.loc to i8*
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0i8(i64 -1, i8* %lt.cast)
+; CHECK-NEXT:    %lt.cast1 = bitcast i32* %b.loc to i8*
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0i8(i64 -1, i8* %lt.cast1)
+; CHECK-NEXT:    %lt.cast2 = bitcast i32* %c.loc to i8*
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0i8(i64 -1, i8* %lt.cast2)
+; CHECK-NEXT:    %lt.cast3 = bitcast i32* %B.ce.loc to i8*
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0i8(i64 -1, i8* %lt.cast3)
 ; CHECK-NEXT:    %targetBlock = call i16 @func.region_start(i1 %c1, i1 %c2, i8 %dest, i32* %a.loc, i32* %b.loc, i32* %c.loc, i32* %B.ce.loc)
 ; CHECK-NEXT:    %a.reload = load i32, i32* %a.loc, align 4
 ; CHECK-NEXT:    %b.reload = load i32, i32* %b.loc, align 4
 ; CHECK-NEXT:    %c.reload = load i32, i32* %c.loc, align 4
 ; CHECK-NEXT:    %B.ce.reload = load i32, i32* %B.ce.loc, align 4
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0i8(i64 -1, i8* %lt.cast)
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0i8(i64 -1, i8* %lt.cast1)
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0i8(i64 -1, i8* %lt.cast2)
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0i8(i64 -1, i8* %lt.cast3)
 ; CHECK-NEXT:    switch i16 %targetBlock, label %exit0 [
 ; CHECK-NEXT:      i16 0, label %exiting0.exit_crit_edge
 ; CHECK-NEXT:      i16 1, label %fallback
@@ -31,7 +43,7 @@
 ; CHECK-NEXT:    br i1 %c2, label %exiting0.exit_crit_edge, label %exit0.split
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  exiting0.exit_crit_edge:                         
-; CHECK-NEXT:    %b.merge_with_extracted4 = phi i32 [ %b.reload, %codeRepl ], [ %b, %exiting0 ]
+; CHECK-NEXT:    %b.merge_with_extracted7 = phi i32 [ %b.reload, %codeRepl ], [ %b, %exiting0 ]
 ; CHECK-NEXT:    br label %exit
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  exiting1:                                        
@@ -47,26 +59,26 @@
 ; CHECK-NEXT:    unreachable
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  exit:                                          
-; CHECK-NEXT:    %A = phi i32 [ 42, %entry ], [ %b.merge_with_extracted4, %exiting0.exit_crit_edge ]
+; CHECK-NEXT:    %A = phi i32 [ 42, %entry ], [ %b.merge_with_extracted7, %exiting0.exit_crit_edge ]
 ; CHECK-NEXT:    store i32 %A, i32* %arg, align 4
 ; CHECK-NEXT:    br label %return
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  exit0.split:                                     
-; CHECK-NEXT:    %b.merge_with_extracted3 = phi i32 [ %b, %exiting0 ], [ undef, %exiting1 ], [ undef, %exiting1 ]
+; CHECK-NEXT:    %b.merge_with_extracted6 = phi i32 [ %b, %exiting0 ], [ undef, %exiting1 ], [ undef, %exiting1 ]
 ; CHECK-NEXT:    %B.ce = phi i32 [ %b, %exiting0 ], [ %a, %exiting1 ], [ %a, %exiting1 ]
 ; CHECK-NEXT:    br label %exit0
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  exit0:                                         
 ; CHECK-NEXT:    %B.ce.merge_with_extracted = phi i32 [ %B.ce.reload, %codeRepl ], [ %B.ce, %exit0.split ]
-; CHECK-NEXT:    %b.merge_with_extracted = phi i32 [ %b.reload, %codeRepl ], [ %b.merge_with_extracted3, %exit0.split ]
-; CHECK-NEXT:    %a.merge_with_extracted2 = phi i32 [ %a.reload, %codeRepl ], [ %a, %exit0.split ]
-; CHECK-NEXT:    store i32 %a.merge_with_extracted2, i32* %arg, align 4
+; CHECK-NEXT:    %b.merge_with_extracted = phi i32 [ %b.reload, %codeRepl ], [ %b.merge_with_extracted6, %exit0.split ]
+; CHECK-NEXT:    %a.merge_with_extracted5 = phi i32 [ %a.reload, %codeRepl ], [ %a, %exit0.split ]
+; CHECK-NEXT:    store i32 %a.merge_with_extracted5, i32* %arg, align 4
 ; CHECK-NEXT:    store i32 %B.ce.merge_with_extracted, i32* %arg, align 4
 ; CHECK-NEXT:    br label %after
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  exit1:                                         
-; CHECK-NEXT:    %c.merge_with_extracted5 = phi i32 [ %c.reload, %codeRepl ], [ %c, %exiting1 ]
-; CHECK-NEXT:    %a.merge_with_extracted1 = phi i32 [ %a.reload, %codeRepl ], [ %a, %exiting1 ]
+; CHECK-NEXT:    %c.merge_with_extracted8 = phi i32 [ %c.reload, %codeRepl ], [ %c, %exiting1 ]
+; CHECK-NEXT:    %a.merge_with_extracted4 = phi i32 [ %a.reload, %codeRepl ], [ %a, %exiting1 ]
 ; CHECK-NEXT:    br label %after
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  exit2:                                         
@@ -76,8 +88,8 @@
 ; CHECK-NEXT:    br label %return
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  after:                                         
-; CHECK-NEXT:    %a.merge_with_extracted = phi i32 [ %a.merge_with_extracted2, %exit0 ], [ %a.merge_with_extracted1, %exit1 ]
-; CHECK-NEXT:    %D = phi i32 [ %b.merge_with_extracted, %exit0 ], [ %c.merge_with_extracted5, %exit1 ]
+; CHECK-NEXT:    %a.merge_with_extracted = phi i32 [ %a.merge_with_extracted5, %exit0 ], [ %a.merge_with_extracted4, %exit1 ]
+; CHECK-NEXT:    %D = phi i32 [ %b.merge_with_extracted, %exit0 ], [ %c.merge_with_extracted8, %exit1 ]
 ; CHECK-NEXT:    store i32 %a.merge_with_extracted, i32* %arg, align 4
 ; CHECK-NEXT:    store i32 %D, i32* %arg, align 4
 ; CHECK-NEXT:    br label %return
