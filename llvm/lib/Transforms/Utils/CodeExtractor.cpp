@@ -2185,21 +2185,19 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
 
         for (auto OldTarget : OldTargets) {
             BasicBlock*& NewTarget = ExitBlockMap[OldTarget];
-            if (!NewTarget) {
+            if (NewTarget) 
+                continue;
+
                 // If we don't already have an exit stub for this non-extracted
                 // destination, create one now!
-                NewTarget = BasicBlock::Create(Context,
+            NewTarget = BasicBlock::Create(Context,
                     OldTarget->getName() + ".exitStub",
                     newFunction);
-            }
+            
             VMap[OldTarget] = NewTarget;
-        }
 
-
- 
-        for (auto &&P:ExitBlockMap){
-            auto OldTarget = P.first;
-            auto NewTarget = P.second;
+           // auto OldTarget = P.first;
+           // auto NewTarget = P.second;
             auto SuccNum = ExitBlockSwitchIdx[OldTarget];
 
 
