@@ -29844,9 +29844,9 @@ static SDValue LowerRotate(SDValue Op, const X86Subtarget &Subtarget,
     return splitVectorIntBinary(Op, DAG);
 
   assert((VT == MVT::v4i32 || VT == MVT::v8i16 || VT == MVT::v16i8 ||
-          ((VT == MVT::v8i32 || VT == MVT::v16i16 || VT == MVT::v32i8 ||
-            VT == MVT::v32i16) &&
-           Subtarget.hasAVX2())) &&
+          ((VT == MVT::v8i32 || VT == MVT::v16i16 || VT == MVT::v32i8) &&
+           Subtarget.hasAVX2()) ||
+          (VT == MVT::v32i16 && !Subtarget.useBWIRegs())) &&
          "Only vXi32/vXi16/vXi8 vector rotates supported");
 
   // Rotate by an uniform constant - expand back to shifts.
