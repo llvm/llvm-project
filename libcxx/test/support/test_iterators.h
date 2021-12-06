@@ -657,6 +657,8 @@ struct cpp20_input_iterator {
 
     constexpr I base() && { return std::move(base_); }
 
+    friend constexpr I base(const cpp20_input_iterator& i) { return i.base_; }
+
     template <class T>
     void operator,(T const &) = delete;
 
