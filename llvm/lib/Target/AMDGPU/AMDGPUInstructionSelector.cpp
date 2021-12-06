@@ -1804,7 +1804,8 @@ bool AMDGPUInstructionSelector::selectDSBvhStackIntrinsic(MachineInstr &MI) cons
     .addUse(Addr)
     .addUse(Data0)
     .addUse(Data1)
-    .addImm(Offset);
+    .addImm(Offset)
+    .cloneMemRefs(MI);
 
   MI.eraseFromParent();
   return constrainSelectedInstRegOperands(*MIB, TII, TRI, RBI);

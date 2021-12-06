@@ -2396,13 +2396,14 @@ void AMDGPUDAGToDAGISel::SelectDSAppendConsume(SDNode *N, unsigned IntrID) {
 // We need to handle this here because tablegen doesn't support matching
 // instructions with multiple outputs.
 void AMDGPUDAGToDAGISel::SelectDSBvhStackIntrinsic(SDNode *N) {
-  SDLoc SL(N);
-
   unsigned Opc = AMDGPU::DS_BVH_STACK_RTN_B32;
   SDValue Ops[] = {N->getOperand(2), N->getOperand(3), N->getOperand(4),
                    N->getOperand(5), N->getOperand(0)};
 
-  CurDAG->SelectNodeTo(N, Opc, N->getVTList(), Ops);
+  MemIntrinsicSDNode *M = cast<MemIntrinsicSDNode>(N);
+  MachineMemOperand *MMO = M->getMemOperand();
+  SDNode *Selected = CurDAG->SelectNodeTo(N, Opc, N->getVTList(), Ops);
+  CurDAG->setNodeMemRefs(cast<MachineSDNode>(Selected), {MMO});
 }
 
 static unsigned gwsIntrinToOpcode(unsigned IntrID) {

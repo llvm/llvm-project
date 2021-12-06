@@ -1258,6 +1258,21 @@ bool SITargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
       Info.flags = MachineMemOperand::MOLoad;
     return true;
   }
+  case Intrinsic::amdgcn_ds_bvh_stack_rtn: {
+    Info.opc = ISD::INTRINSIC_W_CHAIN;
+
+    SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
+    Info.ptrVal =
+        MFI->getGWSPSV(*MF.getSubtarget<GCNSubtarget>().getInstrInfo());
+
+    // This is an abstract access, but we need to specify a type and size.
+    Info.memVT = MVT::i32;
+    Info.size = 4;
+    Info.align = Align(4);
+
+    Info.flags = MachineMemOperand::MOLoad | MachineMemOperand::MOStore;
+    return true;
+  }
   default:
     return false;
   }
