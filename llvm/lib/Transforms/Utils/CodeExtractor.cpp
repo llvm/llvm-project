@@ -1378,6 +1378,8 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
 
   canonicalizeCFGForExtraction(header, KeepOldBlocks);
 
+
+
   // Calculate the entry frequency of the new function before we change the root
   //   block.
   BlockFrequency EntryFreq;
@@ -1433,6 +1435,8 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
   // coloring pass from merging slots which store input objects.
   ValueSet LifetimesStart;
   eraseLifetimeMarkersOnInputs(Blocks, SinkingCands, LifetimesStart);
+
+
 
 
   // Construct new function based on inputs/outputs & add allocas for all defs.
@@ -1499,9 +1503,16 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
   }
 
 
+  // Determine position for the replacement code. Do so before header is moved to the new function.
+  BasicBlock* ReplIP = header;
+  if (!KeepOldBlocks) {
+      while (ReplIP && Blocks.count(ReplIP)) {
+          ReplIP = ReplIP->getNextNode();
+      }
+  }
+
   SmallDenseMap<BasicBlock *, unsigned> ExitBlockSwitchIdx;
   SmallVector<BasicBlock *> Orlder;
-
   for (BasicBlock *OldTarget : OldTargets) {
     if (Blocks.count(OldTarget))
       continue;
@@ -1548,13 +1559,7 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
   //// Copy/Move  code
   ///////////////////////////////////////////////////////////////////////////////
 
-  // Determine position for the replacement code. Do so before header is moved to the new function.
-  BasicBlock* ReplIP = header;
-  if (!KeepOldBlocks) {
-    while (ReplIP && Blocks.count(ReplIP)) {
-      ReplIP = ReplIP->getNextNode();
-    }
-  }
+
 
   if (KeepOldBlocks) {
     for (BasicBlock *Block : Blocks) {
