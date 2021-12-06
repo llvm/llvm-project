@@ -2574,6 +2574,8 @@ void coro::salvageDebugInfo(
   if (!isa<DbgValueInst>(DVI)) {
     if (auto *II = dyn_cast<InvokeInst>(Storage))
       DVI->moveBefore(II->getNormalDest()->getFirstNonPHI());
+    else if (auto *CBI = dyn_cast<CallBrInst>(Storage))
+      DVI->moveBefore(CBI->getDefaultDest()->getFirstNonPHI());
     else if (auto *InsertPt = dyn_cast<Instruction>(Storage)) {
       assert(!InsertPt->isTerminator() &&
              "Unimaged terminator that could return a storage.");
