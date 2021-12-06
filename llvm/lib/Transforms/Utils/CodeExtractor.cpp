@@ -1677,6 +1677,10 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
             }
         }
 
+
+
+
+
     } else {
         moveCodeToFunction(newFunction);
 
@@ -1731,6 +1735,31 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
             ReturnInst::Create(Context, brVal, NewTarget);
         }
     
+
+
+        for (BasicBlock* Block : Blocks) {
+            Instruction* TI = Block->getTerminator();
+            for (unsigned i = 0, e = TI->getNumSuccessors(); i != e; ++i) {
+                if (Blocks.count(TI->getSuccessor(i)))
+                    continue;
+                BasicBlock* OldTarget = TI->getSuccessor(i);
+                // add a new basic block which returns the appropriate value
+                BasicBlock* NewTarget = ExitBlockMap[OldTarget];
+                assert(NewTarget && "Unknown target block!");
+
+                if (!KeepOldBlocks) {
+                    // rewrite the original branch instruction with this new target
+                    TI->setSuccessor(i, NewTarget);
+                } else {
+                    VMap[OldTarget] = NewTarget; 
+                }
+            }
+        }
+
+
+
+
+
 
 
 
@@ -1913,25 +1942,6 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
 
 
     if (KeepOldBlocks) {
-
-
-
-
-        for (BasicBlock* Block : Blocks) {
-            Instruction* TI = Block->getTerminator();
-            for (unsigned i = 0, e = TI->getNumSuccessors(); i != e; ++i) {
-                if (Blocks.count(TI->getSuccessor(i)))
-                    continue;
-                BasicBlock* OldTarget = TI->getSuccessor(i);
-                // add a new basic block which returns the appropriate value
-                BasicBlock* NewTarget = ExitBlockMap[OldTarget];
-                assert(NewTarget && "Unknown target block!");
-
-                // rewrite the original branch instruction with this new target
-                //  TI->setSuccessor(i, NewTarget); 
-                VMap[OldTarget] = NewTarget;
-            }
-        }
 
 
 
@@ -2122,30 +2132,6 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
 
 
 
-
-
-        for (BasicBlock* Block : Blocks) {
-            Instruction* TI = Block->getTerminator();
-            for (unsigned i = 0, e = TI->getNumSuccessors(); i != e; ++i) {
-                if (Blocks.count(TI->getSuccessor(i)))
-                    continue;
-                BasicBlock* OldTarget = TI->getSuccessor(i);
-                // add a new basic block which returns the appropriate value
-                BasicBlock* NewTarget = ExitBlockMap[OldTarget];
-                assert(NewTarget && "Unknown target block!");
-
-                if (!KeepOldBlocks) {
-                    // rewrite the original branch instruction with this new target
-                    TI->setSuccessor(i, NewTarget);
-                } else {
-                    VMap[OldTarget] = NewTarget; 
-                }
-            }
-        }
-
-
-
-       
 
 
 
