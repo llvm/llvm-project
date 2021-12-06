@@ -176,6 +176,16 @@ def fircg_XArrayCoorOp : fircg_Op<"ext_array_coor", [AttrSizedOperandSegments]> 
 
   let extraClassDeclaration = [{
     unsigned getRank();
+
+    // Shape is optional, but if it exists, it will be at offset 1.
+    unsigned shapeOffset() { return 1; }
+    unsigned shiftOffset() { return shapeOffset() + shape().size(); }
+    unsigned sliceOffset() { return shiftOffset() + shift().size(); }
+    unsigned subcomponentOffset() { return sliceOffset() + slice().size(); }
+    unsigned indicesOffset() {
+      return subcomponentOffset() + subcomponent().size();
+    }
+    unsigned lenParamsOffset() { return indicesOffset() + indices().size(); }
   }];
 }
 

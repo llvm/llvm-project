@@ -1828,3 +1828,128 @@ func private @_QPtest_dt_callee(%arg0: !fir.box<!fir.array<?xi32>>)
 // CHECK:         %[[BOX10:.*]] = llvm.insertvalue %[[ADDR_BITCAST]], %[[BOX9]][0 : i32] : !llvm.struct<(ptr<i32>, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, array<1 x array<3 x i64>>)>
 // CHECK:         llvm.store %[[BOX10]], %[[ALLOCA]] : !llvm.ptr<struct<(ptr<i32>, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, array<1 x array<3 x i64>>)>>
 // CHECK:         llvm.call @_QPtest_dt_callee(%1) : (!llvm.ptr<struct<(ptr<i32>, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, array<1 x array<3 x i64>>)>>) -> ()
+
+// -----
+
+// Test `fircg.ext_array_coor` conversion.
+
+// Conversion with only shape and indice.
+
+func @ext_array_coor0(%arg0: !fir.ref<!fir.array<?xi32>>) {
+  %c0 = arith.constant 0 : i64
+  %1 = fircg.ext_array_coor %arg0(%c0) <%c0> : (!fir.ref<!fir.array<?xi32>>, i64, i64) -> !fir.ref<i32>
+  return
+}
+
+// CHECK-LABEL: llvm.func @ext_array_coor0(
+// CHECK-SAME:                             %[[ARG0:.*]]: !llvm.ptr<i32>)
+// CHECK:         %[[C0:.*]] = llvm.mlir.constant(0 : i64) : i64
+// CHECK:         %[[C1:.*]] = llvm.mlir.constant(1 : i64) : i64
+// CHECK:         %[[C0_1:.*]] = llvm.mlir.constant(0 : i64) : i64
+// CHECK:         %[[IDX:.*]] = llvm.sub %[[C0]], %[[C1]] : i64
+// CHECK:         %[[DIFF0:.*]] = llvm.mul %[[IDX]], %[[C1]] : i64
+// CHECK:         %[[SC:.*]] = llvm.mul %[[DIFF0]], %[[C1]]  : i64
+// CHECK:         %[[OFFSET:.*]] = llvm.add %[[SC]], %[[C0_1]]  : i64
+// CHECK:         %[[BITCAST:.*]] = llvm.bitcast %[[ARG0]] : !llvm.ptr<i32> to !llvm.ptr<i32>
+// CHECK:         %{{.*}} = llvm.getelementptr %[[BITCAST]][%[[OFFSET]]] : (!llvm.ptr<i32>, i64) -> !llvm.ptr<i32>
+
+// Conversion with shift and slice.
+
+func @ext_array_coor1(%arg0: !fir.ref<!fir.array<?xi32>>) {
+  %c0 = arith.constant 0 : i64
+  %1 = fircg.ext_array_coor %arg0(%c0) origin %c0[%c0, %c0, %c0]<%c0> : (!fir.ref<!fir.array<?xi32>>, i64, i64, i64, i64, i64, i64) -> !fir.ref<i32>
+  return
+}
+
+// CHECK-LABEL: llvm.func @ext_array_coor1(
+// CHECK-SAME:                             %[[ARG0:.*]]: !llvm.ptr<i32>)
+// CHECK:         %[[C0:.*]] = llvm.mlir.constant(0 : i64) : i64
+// CHECK:         %[[C1:.*]] = llvm.mlir.constant(1 : i64) : i64
+// CHECK:         %[[C0_1:.*]] = llvm.mlir.constant(0 : i64) : i64
+// CHECK:         %[[IDX:.*]] = llvm.sub %[[C0]], %[[C0]] : i64
+// CHECK:         %[[DIFF0:.*]] = llvm.mul %[[IDX]], %[[C0]] : i64
+// CHECK:         %[[ADJ:.*]] = llvm.sub %[[C0]], %[[C0]]  : i64
+// CHECK:         %[[DIFF1:.*]] = llvm.add %[[DIFF0]], %[[ADJ]]  : i64
+// CHECK:         %[[STRIDE:.*]] = llvm.mul %[[DIFF1]], %[[C1]]  : i64
+// CHECK:         %[[OFFSET:.*]] = llvm.add %[[STRIDE]], %[[C0_1]]  : i64
+// CHECK:         %[[BITCAST:.*]] = llvm.bitcast %[[ARG0]] : !llvm.ptr<i32> to !llvm.ptr<i32>
+// CHECK:         %{{.*}} = llvm.getelementptr %[[BITCAST]][%[[OFFSET]]] : (!llvm.ptr<i32>, i64) -> !llvm.ptr<i32>
+
+// Conversion for a dynamic length char.
+
+func @ext_array_coor2(%arg0: !fir.ref<!fir.array<?x!fir.char<1,?>>>) {
+  %c0 = arith.constant 0 : i64
+  %1 = fircg.ext_array_coor %arg0(%c0) <%c0> : (!fir.ref<!fir.array<?x!fir.char<1,?>>>, i64, i64) -> !fir.ref<i32>
+  return
+}
+
+// CHECK-LABEL: llvm.func @ext_array_coor2(
+// CHECK-SAME:                             %[[ARG0:.*]]: !llvm.ptr<i8>)
+// CHECK:         %[[C0:.*]] = llvm.mlir.constant(0 : i64) : i64
+// CHECK:         %[[C1:.*]] = llvm.mlir.constant(1 : i64) : i64
+// CHECK:         %[[C0_1:.*]] = llvm.mlir.constant(0 : i64) : i64
+// CHECK:         %[[IDX:.*]] = llvm.sub %[[C0]], %[[C1]] : i64
+// CHECK:         %[[DIFF0:.*]] = llvm.mul %[[IDX]], %[[C1]] : i64
+// CHECK:         %[[SC:.*]] = llvm.mul %[[DIFF0]], %[[C1]]  : i64
+// CHECK:         %[[OFFSET:.*]] = llvm.add %[[SC]], %[[C0_1]]  : i64
+// CHECK:         %[[BITCAST:.*]] = llvm.bitcast %[[ARG0]] : !llvm.ptr<i8> to !llvm.ptr<i32>
+// CHECK:         %{{.*}} = llvm.getelementptr %[[BITCAST]][%[[OFFSET]]] : (!llvm.ptr<i32>, i64) -> !llvm.ptr<i32>
+
+// Conversion for a `fir.box`.
+
+func @ext_array_coor3(%arg0: !fir.box<!fir.array<?xi32>>) {
+  %c0 = arith.constant 0 : i64
+  %1 = fircg.ext_array_coor %arg0(%c0) <%c0> : (!fir.box<!fir.array<?xi32>>, i64, i64) -> !fir.ref<i32>
+  return
+}
+
+// CHECK-LABEL: llvm.func @ext_array_coor3(
+// CHECK-SAME:                             %[[ARG0:.*]]: !llvm.ptr<struct<(ptr<i32>, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, array<1 x array<3 x i64>>)>>) {
+// CHECK:         %[[C0:.*]] = llvm.mlir.constant(0 : i64) : i64
+// CHECK:         %[[C1:.*]] = llvm.mlir.constant(1 : i64) : i64
+// CHECK:         %[[C0_1:.*]] = llvm.mlir.constant(0 : i64) : i64
+// CHECK:         %[[IDX:.*]] = llvm.sub %[[C0]], %[[C1]] : i64
+// CHECK:         %[[DIFF0:.*]] = llvm.mul %[[IDX]], %[[C1]] : i64
+// CHECK:         %[[C0_2:.*]] = llvm.mlir.constant(0 : i32) : i32
+// CHECK:         %[[DIMPOSINBOX:.*]] = llvm.mlir.constant(7 : i32) : i32
+// CHECK:         %[[DIMOFFSET:.*]] = llvm.mlir.constant(0 : i64) : i64
+// CHECK:         %[[STRIDPOS:.*]] = llvm.mlir.constant(2 : i32) : i32
+// CHECK:         %[[GEPSTRIDE:.*]] = llvm.getelementptr %[[ARG0]][%[[C0_2]], %[[DIMPOSINBOX]], %[[DIMOFFSET]], %[[STRIDPOS]]] : (!llvm.ptr<struct<(ptr<i32>, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, array<1 x array<3 x i64>>)>>, i32, i32, i64, i32) -> !llvm.ptr<i64>
+// CHECK:         %[[LOADEDSTRIDE:.*]] = llvm.load %[[GEPSTRIDE]] : !llvm.ptr<i64>
+// CHECK:         %[[SC:.*]] = llvm.mul %[[DIFF0]], %[[LOADEDSTRIDE]]  : i64
+// CHECK:         %[[OFFSET:.*]] = llvm.add %[[SC]], %[[C0_1]]  : i64
+// CHECK:         %[[C0_3:.*]] = llvm.mlir.constant(0 : i32) : i32
+// CHECK:         %[[ADDRPOSINBOX:.*]] = llvm.mlir.constant(0 : i32) : i32
+// CHECK:         %[[GEPADDR:.*]] = llvm.getelementptr %[[ARG0]][%[[C0_3]], %[[ADDRPOSINBOX]]] : (!llvm.ptr<struct<(ptr<i32>, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, array<1 x array<3 x i64>>)>>, i32, i32) -> !llvm.ptr<ptr<i32>>
+// CHECK:         %[[LOADEDADDR:.*]] = llvm.load %[[GEPADDR]] : !llvm.ptr<ptr<i32>>
+// CHECK:         %[[LOADEDADDRBITCAST:.*]] = llvm.bitcast %[[LOADEDADDR]] : !llvm.ptr<i32> to !llvm.ptr<i8>
+// CHECK:         %[[GEPADDROFFSET:.*]] = llvm.getelementptr %[[LOADEDADDRBITCAST]][%[[OFFSET]]] : (!llvm.ptr<i8>, i64) -> !llvm.ptr<i8>
+// CHECK:         %{{.*}} = llvm.bitcast %[[GEPADDROFFSET]] : !llvm.ptr<i8> to !llvm.ptr<i32>
+
+// Conversion with non zero shift and slice.
+
+func @ext_array_coor4(%arg0: !fir.ref<!fir.array<100xi32>>) {
+  %c0 = arith.constant 0 : i64
+  %c10 = arith.constant 10 : i64
+  %c20 = arith.constant 20 : i64
+  %c1 = arith.constant 1 : i64
+  %1 = fircg.ext_array_coor %arg0(%c0) origin %c0[%c10, %c20, %c1]<%c1> : (!fir.ref<!fir.array<100xi32>>, i64, i64, i64, i64, i64, i64) -> !fir.ref<i32>
+  return
+}
+
+// CHECK-LABEL: llvm.func @ext_array_coor4(
+// CHECK:                                  %[[ARG0:.*]]: !llvm.ptr<array<100 x i32>>) {
+// CHECK:         %[[C0:.*]] = llvm.mlir.constant(0 : i64) : i64
+// CHECK:         %[[C10:.*]] = llvm.mlir.constant(10 : i64) : i64
+// CHECK:         %[[C20:.*]] = llvm.mlir.constant(20 : i64) : i64
+// CHECK:         %[[C1:.*]] = llvm.mlir.constant(1 : i64) : i64
+// CHECK:         %[[C1_1:.*]] = llvm.mlir.constant(1 : i64) : i64
+// CHECK:         %[[C0_1:.*]] = llvm.mlir.constant(0 : i64) : i64
+// CHECK:         %[[IDX:.*]] = llvm.sub %[[C1]], %[[C0]]  : i64
+// CHECK:         %[[DIFF0:.*]] = llvm.mul %[[IDX]], %[[C1]]  : i64
+// CHECK:         %[[ADJ:.*]] = llvm.sub %[[C10]], %[[C0]]  : i64
+// CHECK:         %[[DIFF1:.*]] = llvm.add %[[DIFF0]], %[[ADJ]]  : i64
+// CHECK:         %[[STRIDE:.*]] = llvm.mul %[[DIFF1]], %[[C1_1]] : i64
+// CHECK:         %[[OFFSET:.*]] = llvm.add %[[STRIDE]], %[[C0_1]]  : i64
+// CHECK:         %[[BITCAST:.*]] = llvm.bitcast %[[ARG0]] : !llvm.ptr<array<100 x i32>> to !llvm.ptr<i32>
+// CHECK:         %{{.*}} = llvm.getelementptr %[[BITCAST]][%[[OFFSET]]] : (!llvm.ptr<i32>, i64) -> !llvm.ptr<i32>
