@@ -20,7 +20,7 @@ def WebAssemblyTableGet : SDNode<"WebAssemblyISD::TABLE_GET", WebAssemblyTableGe
                                  [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
 
 
-multiclass TABLE<WebAssemblyRegClass rc> {
+multiclass TABLE<WebAssemblyRegClass rc, string suffix> {
   let mayLoad = 1 in
   defm TABLE_GET_#rc : I<(outs rc:$res), (ins table32_op:$table, I32:$i),
                          (outs), (ins table32_op:$table),
@@ -39,14 +39,14 @@ multiclass TABLE<WebAssemblyRegClass rc> {
 
   defm TABLE_GROW_#rc : I<(outs I32:$sz), (ins table32_op:$table, rc:$val, I32:$n),
                           (outs), (ins table32_op:$table),
-                          [],
+                          [(set I32:$sz, (!cast<Intrinsic>("int_wasm_table_grow_" # suffix) (WebAssemblyWrapper tglobaladdr:$table), rc:$val, I32:$n))],
                           "table.grow\t$sz, $table, $val, $n",
                           "table.grow\t$table",
                           0xfc0f>;
 
   defm TABLE_FILL_#rc : I<(outs), (ins table32_op:$table, I32:$i, rc:$val, I32:$n),
                           (outs), (ins table32_op:$table),
-                          [],
+                          [(!cast<Intrinsic>("int_wasm_table_fill_" # suffix) (WebAssemblyWrapper tglobaladdr:$table), I32:$i, rc:$val, I32:$n)],
                           "table.fill\t$table, $i, $val, $n",
                           "table.fill\t$table",
                           0xfc11>;
@@ -62,8 +62,8 @@ multiclass TABLE<WebAssemblyRegClass rc> {
   }
 }
 
-defm "" : TABLE<FUNCREF>, Requires<[HasReferenceTypes]>;
-defm "" : TABLE<EXTERNREF>, Requires<[HasReferenceTypes]>;
+defm "" : TABLE<FUNCREF, "funcref">, Requires<[HasReferenceTypes]>;
+defm "" : TABLE<EXTERNREF, "externref">, Requires<[HasReferenceTypes]>;
 
 def : Pat<(WebAssemblyTableSet mcsym:$table, i32:$idx, funcref:$r),
           (TABLE_SET_FUNCREF mcsym:$table, i32:$idx, funcref:$r)>,
@@ -71,7 +71,7 @@ def : Pat<(WebAssemblyTableSet mcsym:$table, i32:$idx, funcref:$r),
 
 defm TABLE_SIZE : I<(outs I32:$sz), (ins table32_op:$table),
                     (outs), (ins table32_op:$table),
-                    [],
+                    [(set I32:$sz, (int_wasm_table_size (WebAssemblyWrapper tglobaladdr:$table)))],
                     "table.size\t$sz, $table",
                     "table.size\t$table",
                     0xfc10>,
@@ -80,7 +80,9 @@ defm TABLE_SIZE : I<(outs I32:$sz), (ins table32_op:$table),
 
 defm TABLE_COPY : I<(outs), (ins table32_op:$table1, table32_op:$table2, I32:$d, I32:$s, I32:$n),
                     (outs), (ins table32_op:$table1, table32_op:$table2),
-                    [],
+                    [(int_wasm_table_copy (WebAssemblyWrapper tglobaladdr:$table1),
+                                          (WebAssemblyWrapper tglobaladdr:$table2),
+                                          I32:$d, I32:$s, I32:$n)],
                     "table.copy\t$table1, $table2, $d, $s, $n",
                     "table.copy\t$table1, $table2",
                     0xfc0e>,
