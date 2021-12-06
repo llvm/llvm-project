@@ -113,11 +113,7 @@ public:
     // label, if non-empty, otherwise "extracted".
     std::string Suffix;
 
-
-   void recomputeExitBlocks();
-
-
-
+    void recomputeExitBlocks();
 
   public:
     /// Create a code extractor for a sequence of blocks.
@@ -151,7 +147,8 @@ public:
     ///
     /// Returns zero when called on a CodeExtractor instance where isEligible
     /// returns false.
-    Function *extractCodeRegion(const CodeExtractorAnalysisCache &CEAC, bool KeepOldBlocks = false);
+    Function *extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
+                                bool KeepOldBlocks = false);
 
     /// Perform the extraction, returning the new function and providing an
     /// interface to see what was categorized as inputs and outputs.
@@ -162,13 +159,13 @@ public:
     /// newly outlined function.
      /// \param Outputs [out] - filled with values marked as outputs to the
     /// newly outlined function.
-    /// \param KeepOldBlocks If true, the original instances of the extracted region remain; instead of moving them to the new function they are copied.
-    /// \returns zero when called on a CodeExtractor instance where isEligible
-    /// returns false.
+    /// \param KeepOldBlocks If true, the original instances of the extracted
+    /// region remain; instead of moving them to the new function they are
+    /// copied. \returns zero when called on a CodeExtractor instance where
+    /// isEligible returns false.
     Function *extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
-                                ValueSet &Inputs, ValueSet &Outputs, bool KeepOldBlocks = false);
-
-
+                                ValueSet &Inputs, ValueSet &Outputs,
+                                bool KeepOldBlocks = false);
 
     /// Verify that assumption cache isn't stale after a region is extracted.
     /// Returns true when verifier finds errors. AssumptionCache is passed as
@@ -243,24 +240,15 @@ public:
     void severSplitPHINodesOfExits();
     void splitReturnBlocks();
 
+    void handleParams(Function *oldFunction, Function *newFunction,
+                      const ValueSet &inputs, const ValueSet &outputs);
 
-    void handleParams( 
-        Function *oldFunction, Function *newFunction,
-        const ValueSet &inputs,
-        const ValueSet &outputs) ;
+    Function *constructFunctionDeclaration(const ValueSet &inputs,
+                                           const ValueSet &outputs,
+                                           BasicBlock *header);
 
-
-    Function *constructFunctionDeclaration(const ValueSet &inputs, const ValueSet &outputs,
-        BasicBlock *header
-    );
-
-
-    
-
-
-    void canonicalizeCFGForExtraction(BasicBlock *&Header, bool NoExitBlockPHIs);
-
-
+    void canonicalizeCFGForExtraction(BasicBlock *&Header,
+                                      bool NoExitBlockPHIs);
 
     void moveCodeToFunction(Function *newFunction);
 

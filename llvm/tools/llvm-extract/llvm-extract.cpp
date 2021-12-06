@@ -84,7 +84,8 @@ static cl::list<std::string> ExtractBlocks(
         "Specify <function, basic block1[;basic block2...]> pairs to extract.\n"
         "Each pair will create a function.\n"
         "If multiple basic blocks are specified in one pair,\n"
-        "the first block in the sequence should dominate the rest (unless using --bb-keep-blocks)."
+        "the first block in the sequence should dominate the rest (unless "
+        "using --bb-keep-blocks)."
         "eg:\n"
         "  --bb=f:bb1;bb2 will extract one function with both bb1 and bb2;\n"
         "  --bb=f:bb1 --bb=f:bb2 will extract two functions, one with bb1, one "
@@ -92,16 +93,18 @@ static cl::list<std::string> ExtractBlocks(
     cl::ZeroOrMore, cl::value_desc("function:bb1[;bb2...]"),
     cl::cat(ExtractCat));
 
-static cl::opt <bool> KeepFunctions("bb-keep-functions",
-    cl::desc("When extracting blocks from functions, keep the original functions; extracted code is replaced by function call to new function"),
-    cl::cat(ExtractCat)
-    );
+static cl::opt<bool> KeepFunctions(
+    "bb-keep-functions",
+    cl::desc(
+        "When extracting blocks from functions, keep the original functions; "
+        "extracted code is replaced by function call to new function"),
+    cl::cat(ExtractCat));
 
-static cl::opt <bool> KeepBlocks("bb-keep-blocks",
-    cl::desc("Keep extracted blocks in original function after outlining, likely orphaned."),
-    cl::cat(ExtractCat)
-    );
-
+static cl::opt<bool>
+    KeepBlocks("bb-keep-blocks",
+               cl::desc("Keep extracted blocks in original function after "
+                        "outlining, likely orphaned."),
+               cl::cat(ExtractCat));
 
 // ExtractAlias - The alias to extract from the module.
 static cl::list<std::string>
