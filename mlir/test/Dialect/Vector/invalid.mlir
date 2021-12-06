@@ -884,6 +884,20 @@ func @create_mask() {
 
 // -----
 
+func @constant_mask_0d_no_attr() {
+  // expected-error@+1 {{array attr must have length 1 for 0-D vectors}}
+  %0 = vector.constant_mask [] : vector<i1>
+}
+
+// -----
+
+func @constant_mask_0d_bad_attr() {
+  // expected-error@+1 {{mask dim size must be either 0 or 1 for 0-D vectors}}
+  %0 = vector.constant_mask [2] : vector<i1>
+}
+
+// -----
+
 func @constant_mask() {
   // expected-error@+1 {{must specify array attr of size equal vector result rank}}
   %0 = vector.constant_mask [3, 2, 7] : vector<4x3xi1>
