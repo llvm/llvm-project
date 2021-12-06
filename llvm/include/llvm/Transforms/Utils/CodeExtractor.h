@@ -254,7 +254,7 @@ public:
                                            const ValueSet &outputs,
                                            BasicBlock *header);
 
-   void constructFunctionImplementation(
+   void emitFunction(
        Function *newFunction,
        const ValueSet &inputs,       const ValueSet &outputs,
        BasicBlock *header,
@@ -262,6 +262,19 @@ public:
        ,StructType *StructArgTy
        ,ArrayRef<BasicBlock*> Orlder
        ) ;
+
+   CallInst * emitReplacerCall(
+       Function *oldFunction,
+       BasicBlock *header
+       , BasicBlock *ReplIP
+       , Function *newFunction
+     ,  const ValueSet &inputs,       const ValueSet &outputs
+     ,  BlockFrequency EntryFreq
+       , StructType *StructArgTy 
+       ,ArrayRef<BasicBlock*> Orlder
+   ,    const  SetVector<Value *> &LifetimesStart
+   ,    std::vector<Value *> &Reloads
+   );
 
     void moveCodeToFunction(Function *newFunction);
 
