@@ -1794,6 +1794,7 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache& CEAC,
     applyFirstDebugLoc(oldFunction, Blocks.getArrayRef(), BranchI2);
 
 
+
     Function::arg_iterator OutputArgBegin = newFunction->arg_begin();
     unsigned FirstOut = inputs.size();
     if (!AggregateArgs)
@@ -1950,6 +1951,18 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache& CEAC,
 
 
 
+    // Add debug location to the new call, if the original function has debug
+    // info. In that case, the terminator of the entry block of the extracted
+    // function contains the first debug location of the extracted function,
+    // set in extractCodeRegion.
+    if (oldFunction->getSubprogram()) {
+        if (auto DL = newFunction->getEntryBlock().getTerminator()->getDebugLoc())
+            call->setDebugLoc(DL);
+    }
+
+
+
+
     // Reload the outputs passed in by reference.
     for (unsigned i = 0, e = outputs.size(); i != e; ++i) {
         Value* Output = nullptr;
@@ -2102,30 +2115,11 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache& CEAC,
 
 
     if (KeepOldBlocks) {
-   
-
-
- 
-
-
-
-        if (!oldFunction) {
-         newFunction->viewCFG();
-        }
-
     } else {
 
 
 
-        // Add debug location to the new call, if the original function has debug
-        // info. In that case, the terminator of the entry block of the extracted
-        // function contains the first debug location of the extracted function,
-        // set in extractCodeRegion.
-        if (oldFunction->getSubprogram()) {
-            if (auto DL = newFunction->getEntryBlock().getTerminator()->getDebugLoc())
-                call->setDebugLoc(DL);
-        }
-    
+
 
 
 
