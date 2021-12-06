@@ -1679,6 +1679,19 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
 
     } else {
         moveCodeToFunction(newFunction);
+
+
+        if (!KeepOldBlocks) {
+            for (unsigned i = 0, e = inputs.size(); i != e; ++i) {
+                Value* RewriteVal = NewValues[i];
+
+                std::vector<User*> Users(inputs[i]->user_begin(), inputs[i]->user_end());
+                for (User* use : Users)
+                    if (Instruction* inst = dyn_cast<Instruction>(use))
+                        if (Blocks.count(inst->getParent()))
+                            inst->replaceUsesOfWith(inputs[i], RewriteVal);
+            }
+        }
     }
 
 
@@ -1858,6 +1871,7 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
             if (I->isTerminator() && I->getFunction() == oldFunction &&
                 !Blocks.count(I->getParent()))
                 I->replaceUsesOfWith(header, codeReplacer);
+
 
 
 
@@ -2094,15 +2108,6 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
         }
 
     } else {
-        for (unsigned i = 0, e = inputs.size(); i != e; ++i) {
-            Value* RewriteVal = NewValues[i];
-
-            std::vector<User*> Users(inputs[i]->user_begin(), inputs[i]->user_end());
-            for (User* use : Users)
-                if (Instruction* inst = dyn_cast<Instruction>(use))
-                    if (Blocks.count(inst->getParent()))
-                        inst->replaceUsesOfWith(inputs[i], RewriteVal);
-        }
 
 
 
