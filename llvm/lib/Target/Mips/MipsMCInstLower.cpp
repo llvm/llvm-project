@@ -116,6 +116,9 @@ MCOperand MipsMCInstLower::LowerSymbolOperand(const MachineOperand &MO,
   case MipsII::MO_CALL_LO16:
     TargetKind = MipsMCExpr::MEK_CALL_LO16;
     break;
+  case MipsII::MO_PCREL_HI:
+    TargetKind = MipsMCExpr::MEK_PCREL_HI;
+    break;
   case MipsII::MO_JALR:
     return MCOperand();
   }

@@ -722,6 +722,9 @@ getExprOpValue(const MCExpr *Expr, SmallVectorImpl<MCFixup> &Fixups,
       FixupKind =
           isMicroMips(STI) ? Mips::fixup_MICROMIPS_SUB : Mips::fixup_Mips_SUB;
       break;
+    case MipsMCExpr::MEK_PCREL_HI:
+      llvm_unreachable("nanoMIPS: NYI");
+      break;
     }
     Fixups.push_back(MCFixup::create(0, MipsExpr, MCFixupKind(FixupKind)));
     return 0;

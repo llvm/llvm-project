@@ -119,6 +119,9 @@ void MipsMCExpr::printImpl(raw_ostream &OS, const MCAsmInfo *MAI) const {
   case MEK_TPREL_LO:
     OS << "%tprel_lo";
     break;
+  case MEK_PCREL_HI:
+    OS << "%pcrel_hi";
+    break;
   }
 
   OS << '(';
@@ -158,6 +161,8 @@ MipsMCExpr::evaluateAsRelocatableImpl(MCValue &Res,
   if (Res.isAbsolute() && Fixup == nullptr) {
     int64_t AbsVal = Res.getConstant();
     switch (Kind) {
+    case MEK_PCREL_HI:
+      llvm_unreachable("nanoMIPS: NYI");
     case MEK_None:
     case MEK_Special:
       llvm_unreachable("MEK_None and MEK_Special are invalid");
@@ -249,6 +254,9 @@ static void fixELFSymbolsInTLSFixupsImpl(const MCExpr *Expr, MCAssembler &Asm) {
 
 void MipsMCExpr::fixELFSymbolsInTLSFixups(MCAssembler &Asm) const {
   switch (getKind()) {
+  case MEK_PCREL_HI:
+    llvm_unreachable("nanoMIPS: NYI");
+    break;
   case MEK_None:
   case MEK_Special:
     llvm_unreachable("MEK_None and MEK_Special are invalid");

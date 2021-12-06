@@ -45,6 +45,7 @@ public:
     MEK_TPREL_HI,
     MEK_TPREL_LO,
     MEK_Special,
+    MEK_PCREL_HI,
   };
 
 private:

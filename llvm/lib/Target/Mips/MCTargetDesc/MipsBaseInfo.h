@@ -92,7 +92,11 @@ namespace MipsII {
     MO_CALL_LO16,
 
     /// Helper operand used to generate R_MIPS_JALR
-    MO_JALR
+    MO_JALR,
+
+    /// MO_PCREL_HI - Represents the high 20 bits of offset from the current pc
+    /// value to be used for the relocatable object file being produced.
+    MO_PCREL_HI
   };
 
   enum {

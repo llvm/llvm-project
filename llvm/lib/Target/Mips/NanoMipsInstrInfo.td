@@ -394,6 +394,8 @@ def Li_NM : RegImmNM<"li", simm32_relaxed, GPR32NMOpnd>, InstSize48;
 def LA_NM : RegImmNM<"la", simm32_relaxed, GPR32NMOpnd>, InstSize48;
 } // isReMaterializable = 1
 
+def ALUIPC_NM : RegImmNM<"aluipc", simm32_relaxed, GPR32NMOpnd>, InstSize32;
+
 def LEA_ADDiu_NM : EffectiveAddressNM<"addiu", GPR32NMOpnd>, InstSize32;
 
 def RDHWR_NM : ReadHardwareNM<GPR32NMOpnd, HWRegsOpnd>;

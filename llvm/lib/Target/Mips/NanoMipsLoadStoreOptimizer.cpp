@@ -561,16 +561,34 @@ bool NMLoadStoreOpt::generateLoadStoreMultiple(MachineBasicBlock &MBB,
 }
 
 // Check if the instruction is lw, sw or addiu with Reg as second operand.
-static bool isLoadStoreOrAddiuWithReg(MachineInstr *MI, Register Reg) {
+static bool isValidUse(MachineInstr *MI, Register Reg) {
   switch (MI->getOpcode()) {
+  case Mips::SB_NM:
+  case Mips::LB_NM:
+  case Mips::LBU_NM:
+  case Mips::SH_NM:
+  case Mips::LH_NM:
+  case Mips::LHU_NM:
   case Mips::SW_NM:
   case Mips::SWs9_NM:
   case Mips::LW_NM:
   case Mips::LWs9_NM:
   case Mips::ADDiu_NM:
-    if (MI->getOperand(1).getReg() == Reg)
-      return true;
-    [[clang::fallthrough]];
+    return MI->getOperand(1).getReg() == Reg;
+  default:
+    return false;
+  }
+}
+
+static bool isLoadStoreShortChar(MachineInstr *MI) {
+  switch (MI->getOpcode()) {
+  case Mips::SB_NM:
+  case Mips::LB_NM:
+  case Mips::LBU_NM:
+  case Mips::SH_NM:
+  case Mips::LH_NM:
+  case Mips::LHU_NM:
+    return true;
   default:
     return false;
   }
@@ -593,13 +611,17 @@ static bool isLoadStoreOrAddiuWithReg(MachineInstr *MI, Register Reg) {
 // la $a0, symbol       -> la $a1, symbol+8
 // addiu $a1, $a0, 8
 //
+// or:
+//
+// la $a0, symbol       -> aluipc $a0, %pcrel_hi(symbol+2)
+// lh $a1, 2($a0)       -> lh     $a1, lo(symbol+2)($a0)
+//
 bool NMLoadStoreOpt::generatePCRelative(MachineBasicBlock &MBB) {
-  bool Modified = false;
   SmallVector<std::pair<MachineInstr *, MachineInstr *>> Candidates;
   for (auto &MI : MBB) {
     if (MI.getOpcode() == Mips::LA_NM) {
-      int UsedCount = 0;
       bool IsRedefined = false;
+      bool IsUsedByMultipleMIs = false;
       MachineInstr *FirstUse = nullptr;
       Register Dst = MI.getOperand(0).getReg();
 
@@ -608,27 +630,26 @@ bool NMLoadStoreOpt::generatePCRelative(MachineBasicBlock &MBB) {
       // used more than once, then it doesn't pay off to replace it. This loop
       // also checks if the register used by LA has been reused, this stops the
       // search.
-      for (MBBIter MII = std::next(MBBIter(MI)); MII != MBB.end(); MII++) {
-        for (auto Use : MII->uses())
-          if (Use.isReg() && Use.getReg() == Dst) {
-            UsedCount++;
-            if (UsedCount > 1)
+      for (auto &MI2 : make_range(std::next(MBBIter(MI)), MBB.end())) {
+        for (auto &Opnd : MI2.operands()) {
+          if (Opnd.isReg() && Opnd.isUse() && Opnd.getReg() == Dst) {
+            if (FirstUse == nullptr) {
+              FirstUse = &MI2;
+              continue;
+            } else {
+              IsUsedByMultipleMIs = true;
               break;
-            FirstUse = &(*MII);
+            }
           }
-        if (UsedCount > 1)
-          break;
-        for (auto Def : MII->defs())
-          if (Def.isReg() && Def.getReg() == Dst) {
+          if (Opnd.isReg() && Opnd.isDef() && Opnd.getReg() == Dst)
             IsRedefined = true;
-            break;
-          }
-        if (IsRedefined)
+        }
+        if (IsUsedByMultipleMIs || IsRedefined)
           break;
       }
 
       // Used by multiple instructions, too expensive for replacement.
-      if (UsedCount > 1)
+      if (IsUsedByMultipleMIs)
         continue;
 
       // Check if the register used by LA is live-in for the successor basic
@@ -649,9 +670,9 @@ bool NMLoadStoreOpt::generatePCRelative(MachineBasicBlock &MBB) {
       if (IsUsedInOtherBBs)
         continue;
 
-      assert(UsedCount == 1 && FirstUse != nullptr);
+      assert(!IsUsedByMultipleMIs && FirstUse != nullptr);
 
-      if (!isLoadStoreOrAddiuWithReg(FirstUse, Dst))
+      if (!isValidUse(FirstUse, Dst))
         continue;
 
       Candidates.push_back({&MI, FirstUse});
@@ -671,6 +692,14 @@ bool NMLoadStoreOpt::generatePCRelative(MachineBasicBlock &MBB) {
       Address.setOffset(Offset);
       LA->getOperand(0).setReg(Dst);
       MBB.erase(Use);
+    } else if (isLoadStoreShortChar(Use)) {
+      auto InsertBefore = std::next(MBBIter(LA));
+      BuildMI(MBB, InsertBefore, Use->getDebugLoc(), TII->get(Mips::ALUIPC_NM))
+          .addReg(LA->getOperand(0).getReg(), RegState::Define)
+          .addGlobalAddress(Address.getGlobal(), Offset, MipsII::MO_PCREL_HI);
+
+      Use->getOperand(2).ChangeToGA(Address.getGlobal(), Offset, MipsII::MO_ABS_LO);
+      MBB.erase(LA);
     } else {
       auto InsertBefore = std::next(MBBIter(Use));
       bool IsLoad = Use->mayLoad();
@@ -683,7 +712,8 @@ bool NMLoadStoreOpt::generatePCRelative(MachineBasicBlock &MBB) {
       MBB.erase(Use);
     }
   }
-  return Modified;
+
+  return Candidates.size() > 0;
 }
 
 namespace llvm {
