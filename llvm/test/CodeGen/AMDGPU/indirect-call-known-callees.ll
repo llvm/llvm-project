@@ -10,7 +10,6 @@
 
 ; CHECK-DAG: s_cselect_b64 [[CALL_TARGET:s\[[0-9]+:[0-9]+\]]]
 ; CHECK-DAG: s_mov_b64 s[8:9], 0
-; CHECK-DAG: s_mov_b32 s12, s6
 ; CHECK-DAG: v_mov_b32_e32 v31, v0
 ; CHECK: s_swappc_b64 s[30:31], [[CALL_TARGET]]
 

@@ -17,6 +17,9 @@ enum Fixups {
   /// fixup_ve_reflong - 32-bit fixup corresponding to foo
   fixup_ve_reflong = FirstTargetFixupKind,
 
+  /// fixup_ve_srel32 - 32-bit fixup corresponding to foo for relative branch
+  fixup_ve_srel32,
+
   /// fixup_ve_hi32 - 32-bit fixup corresponding to foo@hi
   fixup_ve_hi32,
 

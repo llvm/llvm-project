@@ -3321,8 +3321,7 @@ void Target::FinalizeFileActions(ProcessLaunchInfo &info) {
                  err_file_spec);
       }
 
-      if (default_to_use_pty &&
-          (!in_file_spec || !out_file_spec || !err_file_spec)) {
+      if (default_to_use_pty) {
         llvm::Error Err = info.SetUpPtyRedirection();
         LLDB_LOG_ERROR(log, std::move(Err), "SetUpPtyRedirection failed: {0}");
       }

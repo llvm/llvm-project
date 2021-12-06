@@ -256,7 +256,7 @@ define hidden void @use_every_sgpr_input() #1 {
 ; GCN: .amdhsa_system_sgpr_workgroup_id_y 1
 ; GCN: .amdhsa_system_sgpr_workgroup_id_z 1
 ; GCN: .amdhsa_system_sgpr_workgroup_info 0
-; GCN: .amdhsa_system_vgpr_workitem_id 2
+; GCN: .amdhsa_system_vgpr_workitem_id 0
 define amdgpu_kernel void @kern_indirect_use_every_sgpr_input(i8) #1 {
   call void @use_every_sgpr_input()
   ret void
@@ -282,8 +282,8 @@ define amdgpu_kernel void @kern_indirect_use_every_sgpr_input(i8) #1 {
 ; GCN: .amdhsa_system_sgpr_workgroup_id_y 1
 ; GCN: .amdhsa_system_sgpr_workgroup_id_z 1
 ; GCN: .amdhsa_system_sgpr_workgroup_info 0
-; GCN: .amdhsa_system_vgpr_workitem_id 2
-define amdgpu_kernel void @kern_indirect_use_every_sgpr_input_no_kernargs() #1 {
+; GCN: .amdhsa_system_vgpr_workitem_id 0
+define amdgpu_kernel void @kern_indirect_use_every_sgpr_input_no_kernargs() #2 {
   call void @use_every_sgpr_input()
   ret void
 }
@@ -361,3 +361,4 @@ declare noalias i8 addrspace(4)* @llvm.amdgcn.dispatch.ptr() #0
 
 attributes #0 = { nounwind readnone speculatable }
 attributes #1 = { nounwind noinline }
+attributes #2 = { nounwind noinline "amdgpu-implicitarg-num-bytes"="0" }

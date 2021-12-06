@@ -153,5 +153,7 @@ FUSION_FEATURE(ZeroMoveLR, hasZeroMoveFusion, -1,
                FUSION_OP_SET(MTLR8, MTLR, MTSPR8, MTSPR),
                FUSION_OP_SET(BCLR, BCLRn, gBCLR, BCLRL, BCLRLn, gBCLRL))
 
+#include "PPCBack2BackFusion.def"
+
 #undef FUSION_FEATURE
 #undef FUSION_OP_SET

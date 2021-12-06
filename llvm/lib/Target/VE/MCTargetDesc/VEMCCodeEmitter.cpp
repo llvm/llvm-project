@@ -131,7 +131,7 @@ VEMCCodeEmitter::getBranchTargetOpValue(const MCInst &MI, unsigned OpNo,
     return getMachineOpValue(MI, MO, Fixups, STI);
 
   Fixups.push_back(
-      MCFixup::create(0, MO.getExpr(), (MCFixupKind)VE::fixup_ve_pc_lo32));
+      MCFixup::create(0, MO.getExpr(), (MCFixupKind)VE::fixup_ve_srel32));
   return 0;
 }
 

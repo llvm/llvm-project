@@ -128,7 +128,17 @@ cxx_sources = [
   "include/atomic_support.h",
   "include/config_elast.h",
   "include/refstring.h",
+  "include/ryu/common.h",
+  "include/ryu/d2fixed.h",
+  "include/ryu/d2fixed_full_table.h",
+  "include/ryu/d2s.h",
+  "include/ryu/d2s_full_table.h",
+  "include/ryu/d2s_intrinsics.h",
+  "include/ryu/digit_table.h",
+  "include/ryu/f2s.h",
+  "include/ryu/ryu.h",
   "include/sso_allocator.h",
+  "include/to_chars_floating_point.h",
   "ios.cpp",
   "ios.instantiations.cpp",
   "iostream.cpp",
@@ -142,6 +152,9 @@ cxx_sources = [
   "random.cpp",
   "random_shuffle.cpp",
   "regex.cpp",
+  "ryu/d2fixed.cpp",
+  "ryu/d2s.cpp",
+  "ryu/f2s.cpp",
   "shared_mutex.cpp",
   "stdexcept.cpp",
   "string.cpp",
@@ -214,6 +227,7 @@ if (libcxx_enable_shared) {
       ]
     }
     sources = cxx_sources
+    include_dirs = [ "." ]
     deps = [
       "//compiler-rt/lib/builtins",
       "//libcxx/include",
@@ -257,6 +271,7 @@ if (libcxx_enable_static) {
     complete_static_lib = true
     configs -= [ "//llvm/utils/gn/build:thin_archive" ]
     sources = cxx_sources
+    include_dirs = [ "." ]
     if (libcxx_hermetic_static_library) {
       cflags = [ "-fvisibility=hidden" ]
       if (libcxx_enable_new_delete_definitions) {

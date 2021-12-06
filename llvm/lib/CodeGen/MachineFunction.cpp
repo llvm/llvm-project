@@ -89,6 +89,7 @@ static cl::opt<unsigned> AlignAllFunctions(
 static const char *getPropertyName(MachineFunctionProperties::Property Prop) {
   using P = MachineFunctionProperties::Property;
 
+  // clang-format off
   switch(Prop) {
   case P::FailedISel: return "FailedISel";
   case P::IsSSA: return "IsSSA";
@@ -100,7 +101,9 @@ static const char *getPropertyName(MachineFunctionProperties::Property Prop) {
   case P::TracksLiveness: return "TracksLiveness";
   case P::TiedOpsRewritten: return "TiedOpsRewritten";
   case P::FailsVerification: return "FailsVerification";
+  case P::TracksDebugUserValues: return "TracksDebugUserValues";
   }
+  // clang-format on
   llvm_unreachable("Invalid machine function property");
 }
 
@@ -1404,10 +1407,10 @@ MachineConstantPool::~MachineConstantPool() {
   // A constant may be a member of both Constants and MachineCPVsSharingEntries,
   // so keep track of which we've deleted to avoid double deletions.
   DenseSet<MachineConstantPoolValue*> Deleted;
-  for (unsigned i = 0, e = Constants.size(); i != e; ++i)
-    if (Constants[i].isMachineConstantPoolEntry()) {
-      Deleted.insert(Constants[i].Val.MachineCPVal);
-      delete Constants[i].Val.MachineCPVal;
+  for (const MachineConstantPoolEntry &C : Constants)
+    if (C.isMachineConstantPoolEntry()) {
+      Deleted.insert(C.Val.MachineCPVal);
+      delete C.Val.MachineCPVal;
     }
   for (MachineConstantPoolValue *CPV : MachineCPVsSharingEntries) {
     if (Deleted.count(CPV) == 0)

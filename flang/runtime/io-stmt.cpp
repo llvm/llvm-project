@@ -888,7 +888,7 @@ bool InquireUnitState::Inquire(
   case HashInquiryKeyword("DIRECT"):
     str = !unit().IsConnected() ? "UNKNOWN"
         : unit().access == Access::Direct ||
-            (unit().mayPosition() && unit().isFixedRecordLength)
+            (unit().mayPosition() && unit().openRecl)
         ? "YES"
         : "NO";
     break;
@@ -1056,8 +1056,8 @@ bool InquireUnitState::Inquire(
       result = -1;
     } else if (unit().access == Access::Stream) {
       result = -2;
-    } else if (unit().isFixedRecordLength && unit().recordLength) {
-      result = *unit().recordLength;
+    } else if (unit().openRecl) {
+      result = *unit().openRecl;
     } else {
       result = std::numeric_limits<std::uint32_t>::max();
     }

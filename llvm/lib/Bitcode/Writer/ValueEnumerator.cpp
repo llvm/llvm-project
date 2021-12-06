@@ -541,9 +541,8 @@ void ValueEnumerator::print(raw_ostream &OS, const ValueMapType &Map,
                             const char *Name) const {
   OS << "Map Name: " << Name << "\n";
   OS << "Size: " << Map.size() << "\n";
-  for (ValueMapType::const_iterator I = Map.begin(),
-         E = Map.end(); I != E; ++I) {
-    const Value *V = I->first;
+  for (const auto &I : Map) {
+    const Value *V = I.first;
     if (V->hasName())
       OS << "Value: " << V->getName();
     else
@@ -569,10 +568,10 @@ void ValueEnumerator::print(raw_ostream &OS, const MetadataMapType &Map,
                             const char *Name) const {
   OS << "Map Name: " << Name << "\n";
   OS << "Size: " << Map.size() << "\n";
-  for (auto I = Map.begin(), E = Map.end(); I != E; ++I) {
-    const Metadata *MD = I->first;
-    OS << "Metadata: slot = " << I->second.ID << "\n";
-    OS << "Metadata: function = " << I->second.F << "\n";
+  for (const auto &I : Map) {
+    const Metadata *MD = I.first;
+    OS << "Metadata: slot = " << I.second.ID << "\n";
+    OS << "Metadata: function = " << I.second.F << "\n";
     MD->print(OS);
     OS << "\n";
   }

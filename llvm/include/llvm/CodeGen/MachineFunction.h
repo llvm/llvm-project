@@ -152,6 +152,12 @@ public:
   // FailsVerification: Means that the function is not expected to pass machine
   //  verification. This can be set by passes that introduce known problems that
   //  have not been fixed yet.
+  // TracksDebugUserValues: Without this property enabled, debug instructions
+  // such as DBG_VALUE are allowed to reference virtual registers even if those
+  // registers do not have a definition. With the property enabled virtual
+  // registers must only be used if they have a definition. This property
+  // allows earlier passes in the pipeline to skip updates of `DBG_VALUE`
+  // instructions to save compile time.
   enum class Property : unsigned {
     IsSSA,
     NoPHIs,
@@ -163,7 +169,8 @@ public:
     Selected,
     TiedOpsRewritten,
     FailsVerification,
-    LastProperty = FailsVerification,
+    TracksDebugUserValues,
+    LastProperty = TracksDebugUserValues,
   };
 
   bool hasProperty(Property P) const {

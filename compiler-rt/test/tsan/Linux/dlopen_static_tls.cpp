@@ -21,6 +21,11 @@
 //   Previous write of size 8 at 0x7f1fa9bfcdd0 by thread T1:
 //     #0 __tsan_tls_initialization
 
+// Failing on bots:
+// https://lab.llvm.org/buildbot#builders/184/builds/1580
+// https://lab.llvm.org/buildbot#builders/18/builds/3167
+// UNSUPPORTED: aarch64, powerpc64, powerpc64le
+
 #ifdef BUILD_SO
 
 __attribute__((tls_model("initial-exec"))) __thread char x = 42;

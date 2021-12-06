@@ -27,18 +27,18 @@ define float @call_split_type_used_outside_block_v2f32() #0 {
 ; GCN-LABEL: call_split_type_used_outside_block_v2f32:
 ; GCN:       ; %bb.0: ; %bb0
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-NEXT:    s_or_saveexec_b64 s[4:5], -1
+; GCN-NEXT:    s_or_saveexec_b64 s[16:17], -1
 ; GCN-NEXT:    buffer_store_dword v40, off, s[0:3], s32 ; 4-byte Folded Spill
-; GCN-NEXT:    s_mov_b64 exec, s[4:5]
+; GCN-NEXT:    s_mov_b64 exec, s[16:17]
 ; GCN-NEXT:    v_writelane_b32 v40, s33, 2
 ; GCN-NEXT:    s_mov_b32 s33, s32
 ; GCN-NEXT:    s_addk_i32 s32, 0x400
 ; GCN-NEXT:    v_writelane_b32 v40, s30, 0
 ; GCN-NEXT:    v_writelane_b32 v40, s31, 1
-; GCN-NEXT:    s_getpc_b64 s[4:5]
-; GCN-NEXT:    s_add_u32 s4, s4, func_v2f32@rel32@lo+4
-; GCN-NEXT:    s_addc_u32 s5, s5, func_v2f32@rel32@hi+12
-; GCN-NEXT:    s_swappc_b64 s[30:31], s[4:5]
+; GCN-NEXT:    s_getpc_b64 s[16:17]
+; GCN-NEXT:    s_add_u32 s16, s16, func_v2f32@rel32@lo+4
+; GCN-NEXT:    s_addc_u32 s17, s17, func_v2f32@rel32@hi+12
+; GCN-NEXT:    s_swappc_b64 s[30:31], s[16:17]
 ; GCN-NEXT:    v_readlane_b32 s4, v40, 0
 ; GCN-NEXT:    v_readlane_b32 s5, v40, 1
 ; GCN-NEXT:    s_addk_i32 s32, 0xfc00
@@ -61,18 +61,18 @@ define float @call_split_type_used_outside_block_v3f32() #0 {
 ; GCN-LABEL: call_split_type_used_outside_block_v3f32:
 ; GCN:       ; %bb.0: ; %bb0
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-NEXT:    s_or_saveexec_b64 s[4:5], -1
+; GCN-NEXT:    s_or_saveexec_b64 s[16:17], -1
 ; GCN-NEXT:    buffer_store_dword v40, off, s[0:3], s32 ; 4-byte Folded Spill
-; GCN-NEXT:    s_mov_b64 exec, s[4:5]
+; GCN-NEXT:    s_mov_b64 exec, s[16:17]
 ; GCN-NEXT:    v_writelane_b32 v40, s33, 2
 ; GCN-NEXT:    s_mov_b32 s33, s32
 ; GCN-NEXT:    s_addk_i32 s32, 0x400
 ; GCN-NEXT:    v_writelane_b32 v40, s30, 0
 ; GCN-NEXT:    v_writelane_b32 v40, s31, 1
-; GCN-NEXT:    s_getpc_b64 s[4:5]
-; GCN-NEXT:    s_add_u32 s4, s4, func_v3f32@rel32@lo+4
-; GCN-NEXT:    s_addc_u32 s5, s5, func_v3f32@rel32@hi+12
-; GCN-NEXT:    s_swappc_b64 s[30:31], s[4:5]
+; GCN-NEXT:    s_getpc_b64 s[16:17]
+; GCN-NEXT:    s_add_u32 s16, s16, func_v3f32@rel32@lo+4
+; GCN-NEXT:    s_addc_u32 s17, s17, func_v3f32@rel32@hi+12
+; GCN-NEXT:    s_swappc_b64 s[30:31], s[16:17]
 ; GCN-NEXT:    v_readlane_b32 s4, v40, 0
 ; GCN-NEXT:    v_readlane_b32 s5, v40, 1
 ; GCN-NEXT:    s_addk_i32 s32, 0xfc00
@@ -95,18 +95,18 @@ define half @call_split_type_used_outside_block_v4f16() #0 {
 ; GCN-LABEL: call_split_type_used_outside_block_v4f16:
 ; GCN:       ; %bb.0: ; %bb0
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-NEXT:    s_or_saveexec_b64 s[4:5], -1
+; GCN-NEXT:    s_or_saveexec_b64 s[16:17], -1
 ; GCN-NEXT:    buffer_store_dword v40, off, s[0:3], s32 ; 4-byte Folded Spill
-; GCN-NEXT:    s_mov_b64 exec, s[4:5]
+; GCN-NEXT:    s_mov_b64 exec, s[16:17]
 ; GCN-NEXT:    v_writelane_b32 v40, s33, 2
 ; GCN-NEXT:    s_mov_b32 s33, s32
 ; GCN-NEXT:    s_addk_i32 s32, 0x400
 ; GCN-NEXT:    v_writelane_b32 v40, s30, 0
 ; GCN-NEXT:    v_writelane_b32 v40, s31, 1
-; GCN-NEXT:    s_getpc_b64 s[4:5]
-; GCN-NEXT:    s_add_u32 s4, s4, func_v4f16@rel32@lo+4
-; GCN-NEXT:    s_addc_u32 s5, s5, func_v4f16@rel32@hi+12
-; GCN-NEXT:    s_swappc_b64 s[30:31], s[4:5]
+; GCN-NEXT:    s_getpc_b64 s[16:17]
+; GCN-NEXT:    s_add_u32 s16, s16, func_v4f16@rel32@lo+4
+; GCN-NEXT:    s_addc_u32 s17, s17, func_v4f16@rel32@hi+12
+; GCN-NEXT:    s_swappc_b64 s[30:31], s[16:17]
 ; GCN-NEXT:    v_readlane_b32 s4, v40, 0
 ; GCN-NEXT:    v_readlane_b32 s5, v40, 1
 ; GCN-NEXT:    s_addk_i32 s32, 0xfc00
@@ -129,18 +129,18 @@ define { i32, half } @call_split_type_used_outside_block_struct() #0 {
 ; GCN-LABEL: call_split_type_used_outside_block_struct:
 ; GCN:       ; %bb.0: ; %bb0
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-NEXT:    s_or_saveexec_b64 s[4:5], -1
+; GCN-NEXT:    s_or_saveexec_b64 s[16:17], -1
 ; GCN-NEXT:    buffer_store_dword v40, off, s[0:3], s32 ; 4-byte Folded Spill
-; GCN-NEXT:    s_mov_b64 exec, s[4:5]
+; GCN-NEXT:    s_mov_b64 exec, s[16:17]
 ; GCN-NEXT:    v_writelane_b32 v40, s33, 2
 ; GCN-NEXT:    s_mov_b32 s33, s32
 ; GCN-NEXT:    s_addk_i32 s32, 0x400
 ; GCN-NEXT:    v_writelane_b32 v40, s30, 0
 ; GCN-NEXT:    v_writelane_b32 v40, s31, 1
-; GCN-NEXT:    s_getpc_b64 s[4:5]
-; GCN-NEXT:    s_add_u32 s4, s4, func_struct@rel32@lo+4
-; GCN-NEXT:    s_addc_u32 s5, s5, func_struct@rel32@hi+12
-; GCN-NEXT:    s_swappc_b64 s[30:31], s[4:5]
+; GCN-NEXT:    s_getpc_b64 s[16:17]
+; GCN-NEXT:    s_add_u32 s16, s16, func_struct@rel32@lo+4
+; GCN-NEXT:    s_addc_u32 s17, s17, func_struct@rel32@hi+12
+; GCN-NEXT:    s_swappc_b64 s[30:31], s[16:17]
 ; GCN-NEXT:    v_readlane_b32 s4, v40, 0
 ; GCN-NEXT:    v_mov_b32_e32 v1, v4
 ; GCN-NEXT:    v_readlane_b32 s5, v40, 1
@@ -168,22 +168,30 @@ bb1:
 define amdgpu_kernel void @v3i16_registers(i1 %cond) #0 {
 ; GCN-LABEL: v3i16_registers:
 ; GCN:       ; %bb.0: ; %entry
-; GCN-NEXT:    s_load_dword s4, s[8:9], 0x0
 ; GCN-NEXT:    s_add_u32 flat_scratch_lo, s12, s17
+; GCN-NEXT:    s_load_dword s12, s[8:9], 0x0
 ; GCN-NEXT:    s_addc_u32 flat_scratch_hi, s13, 0
 ; GCN-NEXT:    s_add_u32 s0, s0, s17
 ; GCN-NEXT:    s_addc_u32 s1, s1, 0
-; GCN-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-NEXT:    s_bitcmp1_b32 s4, 0
-; GCN-NEXT:    s_cselect_b64 s[4:5], -1, 0
-; GCN-NEXT:    s_and_b64 vcc, exec, s[4:5]
 ; GCN-NEXT:    s_mov_b32 s32, 0
+; GCN-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN-NEXT:    s_bitcmp1_b32 s12, 0
+; GCN-NEXT:    s_cselect_b64 s[12:13], -1, 0
+; GCN-NEXT:    s_and_b64 vcc, exec, s[12:13]
 ; GCN-NEXT:    s_cbranch_vccnz .LBB4_2
 ; GCN-NEXT:  ; %bb.1: ; %if.else
-; GCN-NEXT:    s_getpc_b64 s[4:5]
-; GCN-NEXT:    s_add_u32 s4, s4, func_v3i16@rel32@lo+4
-; GCN-NEXT:    s_addc_u32 s5, s5, func_v3i16@rel32@hi+12
-; GCN-NEXT:    s_swappc_b64 s[30:31], s[4:5]
+; GCN-NEXT:    s_add_u32 s8, s8, 8
+; GCN-NEXT:    v_lshlrev_b32_e32 v2, 20, v2
+; GCN-NEXT:    v_lshlrev_b32_e32 v1, 10, v1
+; GCN-NEXT:    s_addc_u32 s9, s9, 0
+; GCN-NEXT:    v_or3_b32 v31, v0, v1, v2
+; GCN-NEXT:    s_mov_b32 s12, s14
+; GCN-NEXT:    s_mov_b32 s13, s15
+; GCN-NEXT:    s_mov_b32 s14, s16
+; GCN-NEXT:    s_getpc_b64 s[18:19]
+; GCN-NEXT:    s_add_u32 s18, s18, func_v3i16@rel32@lo+4
+; GCN-NEXT:    s_addc_u32 s19, s19, func_v3i16@rel32@hi+12
+; GCN-NEXT:    s_swappc_b64 s[30:31], s[18:19]
 ; GCN-NEXT:    s_branch .LBB4_3
 ; GCN-NEXT:  .LBB4_2:
 ; GCN-NEXT:    s_mov_b32 s4, 0
@@ -213,22 +221,30 @@ if.end:                                           ; preds = %if.else, %if.then
 define amdgpu_kernel void @v3f16_registers(i1 %cond) #0 {
 ; GCN-LABEL: v3f16_registers:
 ; GCN:       ; %bb.0: ; %entry
-; GCN-NEXT:    s_load_dword s4, s[8:9], 0x0
 ; GCN-NEXT:    s_add_u32 flat_scratch_lo, s12, s17
+; GCN-NEXT:    s_load_dword s12, s[8:9], 0x0
 ; GCN-NEXT:    s_addc_u32 flat_scratch_hi, s13, 0
 ; GCN-NEXT:    s_add_u32 s0, s0, s17
 ; GCN-NEXT:    s_addc_u32 s1, s1, 0
-; GCN-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-NEXT:    s_bitcmp1_b32 s4, 0
-; GCN-NEXT:    s_cselect_b64 s[4:5], -1, 0
-; GCN-NEXT:    s_and_b64 vcc, exec, s[4:5]
 ; GCN-NEXT:    s_mov_b32 s32, 0
+; GCN-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN-NEXT:    s_bitcmp1_b32 s12, 0
+; GCN-NEXT:    s_cselect_b64 s[12:13], -1, 0
+; GCN-NEXT:    s_and_b64 vcc, exec, s[12:13]
 ; GCN-NEXT:    s_cbranch_vccnz .LBB5_2
 ; GCN-NEXT:  ; %bb.1: ; %if.else
-; GCN-NEXT:    s_getpc_b64 s[4:5]
-; GCN-NEXT:    s_add_u32 s4, s4, func_v3f16@rel32@lo+4
-; GCN-NEXT:    s_addc_u32 s5, s5, func_v3f16@rel32@hi+12
-; GCN-NEXT:    s_swappc_b64 s[30:31], s[4:5]
+; GCN-NEXT:    s_add_u32 s8, s8, 8
+; GCN-NEXT:    v_lshlrev_b32_e32 v2, 20, v2
+; GCN-NEXT:    v_lshlrev_b32_e32 v1, 10, v1
+; GCN-NEXT:    s_addc_u32 s9, s9, 0
+; GCN-NEXT:    v_or3_b32 v31, v0, v1, v2
+; GCN-NEXT:    s_mov_b32 s12, s14
+; GCN-NEXT:    s_mov_b32 s13, s15
+; GCN-NEXT:    s_mov_b32 s14, s16
+; GCN-NEXT:    s_getpc_b64 s[18:19]
+; GCN-NEXT:    s_add_u32 s18, s18, func_v3f16@rel32@lo+4
+; GCN-NEXT:    s_addc_u32 s19, s19, func_v3f16@rel32@hi+12
+; GCN-NEXT:    s_swappc_b64 s[30:31], s[18:19]
 ; GCN-NEXT:    s_branch .LBB5_3
 ; GCN-NEXT:  .LBB5_2:
 ; GCN-NEXT:    s_mov_b32 s4, 0

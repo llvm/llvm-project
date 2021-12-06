@@ -130,33 +130,9 @@ void BufferizationAliasInfo::insertNewBufferEquivalence(Value newValue,
   equivalentInfo.unionSets(newValue, alias);
 }
 
-bool BufferizationAliasInfo::bufferizesToWritableMemory(Value v) const {
-  return bufferizeToWritableMemory.count(v) > 0;
-}
-
-/// Specify that the value is known to bufferize to writable memory.
-void BufferizationAliasInfo::setBufferizesToWritableMemory(Value v) {
-  bufferizeToWritableMemory.insert(v);
-}
-
 /// Return `true` if a value was marked as in-place bufferized.
 bool BufferizationAliasInfo::isInPlace(OpResult opResult) const {
-  bool inplace = inplaceBufferized.contains(opResult);
-#ifndef NDEBUG
-  if (inplace) {
-    auto bufferizableOp =
-        dyn_cast<BufferizableOpInterface>(opResult.getDefiningOp());
-    assert(bufferizableOp &&
-           "expected that in-place bufferized op is bufferizable");
-    SmallVector<OpOperand *> operands =
-        bufferizableOp.getAliasingOpOperand(opResult);
-    for (OpOperand *operand : operands)
-      assert(areAliasingBufferizedValues(operand->get(), opResult) &&
-             "expected that in-place bufferized OpResult aliases with "
-             "aliasing OpOperand");
-  }
-#endif // NDEBUG
-  return inplace;
+  return inplaceBufferized.contains(opResult);
 }
 
 /// Set the inPlace bufferization spec to true.
@@ -593,7 +569,6 @@ Value mlir::linalg::comprehensive_bufferize::BufferizationState::
   Value casted = allocated.getValue();
   if (memRefType && memRefType != allocMemRefType) {
     casted = b.create<memref::CastOp>(loc, memRefType, allocated.getValue());
-    aliasInfo.insertNewBufferEquivalence(casted, allocated.getValue());
   }
 
   // 2. Create memory deallocation.

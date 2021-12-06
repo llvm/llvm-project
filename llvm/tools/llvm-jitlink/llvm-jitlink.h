@@ -50,7 +50,7 @@ struct Session {
   orc::ExecutionSession ES;
   orc::JITDylib *MainJD = nullptr;
   LLVMJITLinkObjectLinkingLayer ObjLayer;
-  std::vector<orc::JITDylib *> JDSearchOrder;
+  orc::JITDylibSearchOrder JDSearchOrder;
 
   ~Session();
 

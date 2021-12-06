@@ -928,3 +928,54 @@ func @insert_op(%t1 : tensor<?xf32> {linalg.inplaceable = true},
   // CHECK: return
   return %0 : tensor<?xf32>
 }
+
+// -----
+
+// CHECK-LABEL: func @inner_func(
+//  CHECK-SAME:     %[[arg0:.*]]: memref<?xf32
+func @inner_func(%t: tensor<?xf32>) -> tensor<?xf32> {
+  %f = arith.constant 1.0 : f32
+  %c0 = arith.constant 0 : index
+  // CHECK: memref.store %{{.*}}, %[[arg0]]
+  %0 = tensor.insert %f into %t[%c0] : tensor<?xf32>
+  return %0 : tensor<?xf32>
+}
+
+// CHECK-LABEL: func @equivalent_func_arg(
+//  CHECK-SAME:     %[[arg0:.*]]: memref<?xf32
+func @equivalent_func_arg(%t0: tensor<?xf32> {linalg.inplaceable = true},
+                          %c0: index, %c10: index, %c1: index) -> tensor<?xf32> {
+  // CHECK-NOT: copy
+  %1 = scf.for %iv = %c0 to %c10 step %c1 iter_args(%t1 = %t0) -> (tensor<?xf32>) {
+    // CHECK: call @inner_func(%[[arg0]])
+    %3 = call @inner_func(%t1) : (tensor<?xf32>) -> tensor<?xf32>
+    scf.yield %3 : tensor<?xf32>
+  }
+  return %1: tensor<?xf32>
+}
+
+// -----
+
+// CHECK-LABEL: func @inner_func_2(
+//  CHECK-SAME:     %[[arg0:.*]]: memref<?xf32
+func @inner_func_2(%t: tensor<?xf32>) -> tensor<?xf32> {
+  %f = arith.constant 1.0 : f32
+  %c0 = arith.constant 0 : index
+  // CHECK: memref.store %{{.*}}, %[[arg0]]
+  %0 = tensor.insert %f into %t[%c0] : tensor<?xf32>
+  return %0 : tensor<?xf32>
+}
+
+// CHECK-LABEL: func @equivalent_func_arg_2(
+//  CHECK-SAME:     %[[arg0:.*]]: memref<?xf32
+func @equivalent_func_arg_2(%t0: tensor<?xf32> {linalg.inplaceable = true},
+                            %c0: index, %c10: index, %c1: index) -> tensor<?xf32> {
+  %1 = scf.for %iv = %c0 to %c10 step %c1 iter_args(%t1 = %t0) -> (tensor<?xf32>) {
+    // TODO: There should be a memory copy here. This is a bug in CallOp
+    // bufferization.
+    // CHECK: call @inner_func_2(%[[arg0]])
+    %3 = call @inner_func_2(%t1) : (tensor<?xf32>) -> tensor<?xf32>
+    scf.yield %t1 : tensor<?xf32>
+  }
+  return %1: tensor<?xf32>
+}

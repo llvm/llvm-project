@@ -78,8 +78,6 @@ enum OperandType {
   OPERAND_BRLIST,
   /// 32-bit unsigned table number.
   OPERAND_TABLE,
-  /// heap type immediate for ref.null.
-  OPERAND_HEAPTYPE,
 };
 } // end namespace WebAssembly
 

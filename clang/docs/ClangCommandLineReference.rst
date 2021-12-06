@@ -3260,6 +3260,11 @@ Thread pointer access method (AArch32/AArch64 only)
 
 Allow memory accesses to be unaligned (AArch32/AArch64 only)
 
+.. option:: -mno-bti-at-return-twice
+
+Do not add a BTI instruction after a setjmp or other return-twice construct (Arm
+only)
+
 Hexagon
 -------
 .. option:: -mieee-rnd-near

@@ -71,6 +71,18 @@
 ; RUN:     -passes='default<O3>' -enable-matrix -S  %s 2>&1 \
 ; RUN:     | FileCheck %s --check-prefixes=CHECK-O,CHECK-DEFAULT,CHECK-O3,CHECK-O23SZ,%llvmcheckext,CHECK-MATRIX
 
+; RUN: opt -disable-verify -verify-cfg-preserved=1 -eagerly-invalidate-analyses=0 -debug-pass-manager \
+; RUN:     -passes='default<O3>' -enable-merge-functions -S  %s 2>&1 \
+; RUN:     | FileCheck %s --check-prefixes=CHECK-O,CHECK-DEFAULT,CHECK-O3,CHECK-O23SZ,%llvmcheckext,CHECK-MERGE-FUNCS
+
+; RUN: opt -disable-verify -verify-cfg-preserved=1 -eagerly-invalidate-analyses=0 -debug-pass-manager \
+; RUN:     -passes='default<O3>' -ir-outliner -S  %s 2>&1 \
+; RUN:     | FileCheck %s --check-prefixes=CHECK-O,CHECK-DEFAULT,CHECK-O3,CHECK-O23SZ,%llvmcheckext,CHECK-IR-OUTLINER
+
+; RUN: opt -disable-verify -verify-cfg-preserved=1 -eagerly-invalidate-analyses=0 -debug-pass-manager \
+; RUN:     -passes='default<O3>' -hot-cold-split -S  %s 2>&1 \
+; RUN:     | FileCheck %s --check-prefixes=CHECK-O,CHECK-DEFAULT,CHECK-O3,CHECK-O23SZ,%llvmcheckext,CHECK-HOT-COLD-SPLIT
+
 ; Suppress FileCheck --allow-unused-prefixes=false diagnostics.
 ; CHECK-Oz: {{^}}
 
@@ -138,8 +150,8 @@
 ; CHECK-O23SZ-NEXT: Running pass: CorrelatedValuePropagationPass
 ; CHECK-O23SZ-NEXT: Invalidating analysis: LazyValueAnalysis
 ; CHECK-O-NEXT: Running pass: SimplifyCFGPass
-; CHECK-O3-NEXT: AggressiveInstCombinePass
 ; CHECK-O-NEXT: Running pass: InstCombinePass
+; CHECK-O3-NEXT: AggressiveInstCombinePass
 ; CHECK-O1-NEXT: Running pass: LibCallsShrinkWrapPass
 ; CHECK-O2-NEXT: Running pass: LibCallsShrinkWrapPass
 ; CHECK-O3-NEXT: Running pass: LibCallsShrinkWrapPass
@@ -245,6 +257,10 @@
 ; CHECK-O-NEXT: Running pass: SimplifyCFGPass
 ; CHECK-O-NEXT: Running pass: CoroCleanupPass
 ; CHECK-EP-OPTIMIZER-LAST: Running pass: NoOpFunctionPass
+; CHECK-HOT-COLD-SPLIT-NEXT: Running pass: HotColdSplittingPass
+; CHECK-IR-OUTLINER-NEXT: Running pass: IROutlinerPass
+; CHECK-IR-OUTLINER-NEXT: Running analysis: IRSimilarityAnalysis
+; CHECK-MERGE-FUNCS-NEXT: Running pass: MergeFunctionsPass
 ; CHECK-O-NEXT: Running pass: CGProfilePass
 ; CHECK-O-NEXT: Running pass: GlobalDCEPass
 ; CHECK-O-NEXT: Running pass: ConstantMergePass

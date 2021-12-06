@@ -366,26 +366,3 @@ void WebAssemblyInstPrinter::printWebAssemblySignatureOperand(const MCInst *MI,
     }
   }
 }
-
-void WebAssemblyInstPrinter::printWebAssemblyHeapTypeOperand(const MCInst *MI,
-                                                             unsigned OpNo,
-                                                             raw_ostream &O) {
-  const MCOperand &Op = MI->getOperand(OpNo);
-  if (Op.isImm()) {
-    switch (Op.getImm()) {
-    case long(wasm::ValType::EXTERNREF):
-      O << "extern";
-      break;
-    case long(wasm::ValType::FUNCREF):
-      O << "func";
-      break;
-    default:
-      O << "unsupported_heap_type_value";
-      break;
-    }
-  } else {
-    // Typed function references and other subtypes of funcref and externref
-    // currently unimplemented.
-    O << "unsupported_heap_type_operand";
-  }
-}
