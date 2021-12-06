@@ -1164,8 +1164,9 @@ PassBuilder::buildModuleOptimizationPipeline(OptimizationLevel Level,
   // Disable header duplication at -Oz.
   LPM.addPass(LoopRotatePass(Level != OptimizationLevel::Oz, LTOPreLink));
   // Some loops may have become dead by now. Try to delete them.
-  // FIXME: see disscussion in https://reviews.llvm.org/D112851
-  //        this may need to be revisited once GVN is more powerful.
+  // FIXME: see discussion in https://reviews.llvm.org/D112851,
+  //        this may need to be revisited once we run GVN before loop deletion
+  //        in the simplification pipeline.
   LPM.addPass(LoopDeletionPass());
   OptimizePM.addPass(createFunctionToLoopPassAdaptor(
       std::move(LPM), /*UseMemorySSA=*/false, /*UseBlockFrequencyInfo=*/false));
