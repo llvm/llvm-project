@@ -1963,8 +1963,7 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
                           // The BasicBlock which contains the branch is not in the region
                           // modify the branch target to a new block
         if (Instruction* I = dyn_cast<Instruction>(U))
-            if (I->isTerminator() && I->getFunction() == oldFunction &&
-                !Blocks.count(I->getParent()))
+            if (I->isTerminator() && I->getFunction() == oldFunction)
                 I->replaceUsesOfWith(header, codeReplacer);
 
 
@@ -1979,10 +1978,9 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
             std::vector<User*> Users(outputs[i]->user_begin(), outputs[i]->user_end());
             for (unsigned u = 0, e = Users.size(); u != e; ++u) {
                 Instruction* inst = cast<Instruction>(Users[u]);
-                if (!KeepOldBlocks) {
-                    if (!Blocks.count(inst->getParent()) && inst->getParent()->getParent() == oldFunction)
+  
+                    if (inst->getParent()->getParent() == oldFunction)
                         inst->replaceUsesOfWith(outputs[i], load);
-                }
             }
         }
     }
