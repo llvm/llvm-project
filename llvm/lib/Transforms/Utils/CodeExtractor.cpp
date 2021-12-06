@@ -1837,23 +1837,9 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
                 Output = ReloadOutputs[i];
             }
             LoadInst* load = new LoadInst(outputs[i]->getType(), Output, outputs[i]->getName() + ".reload", codeReplacer);
-
             Reloads.push_back(load);
-
-            if (!KeepOldBlocks) {
-                std::vector<User*> Users(outputs[i]->user_begin(), outputs[i]->user_end());
-                for (unsigned u = 0, e = Users.size(); u != e; ++u) {
-                    Instruction* inst = cast<Instruction>(Users[u]);
-                    if (!KeepOldBlocks) {
-                        if (!Blocks.count(inst->getParent()))
-                            inst->replaceUsesOfWith(outputs[i], load);
-                    }
-                }
-            }
         }
     
-
-
 
 
 
@@ -1877,11 +1863,24 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
 
 
 
+    if (!KeepOldBlocks) {
+        for (unsigned i = 0, e = outputs.size(); i != e; ++i) {
+            auto load = Reloads[i];
+
+            std::vector<User*> Users(outputs[i]->user_begin(), outputs[i]->user_end());
+            for (unsigned u = 0, e = Users.size(); u != e; ++u) {
+                Instruction* inst = cast<Instruction>(Users[u]);
+                if (!KeepOldBlocks) {
+                    if (!Blocks.count(inst->getParent()))
+                        inst->replaceUsesOfWith(outputs[i], load);
+                }
+            }
+        }
+    }
+
+
+
     if (KeepOldBlocks) {
-
-
-
-
         // Now we can emit a switch statement using the call as a value.
         SwitchInst* TheSwitch =
             SwitchInst::Create(Constant::getNullValue(Type::getInt16Ty(Context)),
