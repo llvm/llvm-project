@@ -42,13 +42,13 @@ namespace __weak_order {
         _LIBCPP_HIDE_FROM_ABI static constexpr weak_ordering
         __go(_Tp&& __t, _Up&& __u, __priority_tag<2>) noexcept
         {
-            std::partial_ordering __po = (__t <=> __u);
-            if (__po == std::partial_ordering::less) {
-                return std::weak_ordering::less;
-            } else if (__po == std::partial_ordering::equivalent) {
-                return std::weak_ordering::equivalent;
-            } else if (__po == std::partial_ordering::greater) {
-                return std::weak_ordering::greater;
+            partial_ordering __po = (__t <=> __u);
+            if (__po == partial_ordering::less) {
+                return weak_ordering::less;
+            } else if (__po == partial_ordering::equivalent) {
+                return weak_ordering::equivalent;
+            } else if (__po == partial_ordering::greater) {
+                return weak_ordering::greater;
             } else {
                 // Otherwise, at least one of them is a NaN.
                 bool __t_is_nan = _VSTD::isnan(__t);

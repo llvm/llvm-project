@@ -86,11 +86,11 @@ namespace __strong_order {
                 bool __u_is_nan = _VSTD::isnan(__u);
                 bool __t_is_negative = _VSTD::signbit(__t);
                 bool __u_is_negative = _VSTD::signbit(__u);
-                using _IntType = std::conditional_t<
-                    sizeof(__t) == sizeof(int32_t), int32_t, std::conditional_t<
+                using _IntType = conditional_t<
+                    sizeof(__t) == sizeof(int32_t), int32_t, conditional_t<
                     sizeof(__t) == sizeof(int64_t), int64_t, void>
                 >;
-                if constexpr (std::is_same_v<_IntType, void>) {
+                if constexpr (is_same_v<_IntType, void>) {
                     static_assert(sizeof(_Dp) == 0, "std::strong_order is unimplemented for this floating-point type");
                 } else if (__t_is_nan && __u_is_nan) {
                     // Order by sign bit, then by "payload bits" (we'll just use bit_cast).
