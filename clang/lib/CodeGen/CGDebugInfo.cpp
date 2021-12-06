@@ -227,20 +227,6 @@ llvm::DIScope *CGDebugInfo::getContextDescriptor(const Decl *Context,
   return Default;
 }
 
-void CGDebugInfo::recordDeclarationLexicalScope(const Decl &D) {
-  assert(LexicalBlockMap.find(&D) == LexicalBlockMap.end() &&
-         "D is already mapped to a lexical block scope");
-  if (!LexicalBlockStack.empty())
-    LexicalBlockMap.insert({&D, LexicalBlockStack.back()});
-}
-
-llvm::DIScope *CGDebugInfo::getDeclarationLexicalScope(const Decl *D) {
-  auto I = LexicalBlockMap.find(D);
-  if (I != LexicalBlockMap.end())
-    return I->second;
-  return getDeclContextDescriptor(cast<Decl>(D));
-}
-
 PrintingPolicy CGDebugInfo::getPrintingPolicy() const {
   PrintingPolicy PP = CGM.getContext().getPrintingPolicy();
 
@@ -1360,13 +1346,13 @@ llvm::DIType *CGDebugInfo::CreateType(const TypedefType *Ty,
   // declared.
   SourceLocation Loc = Ty->getDecl()->getLocation();
 
-  llvm::DIScope *TDContext = getDeclarationLexicalScope(Ty->getDecl());
   uint32_t Align = getDeclAlignIfRequired(Ty->getDecl(), CGM.getContext());
   // Typedefs are derived from some other type.
   llvm::DINodeArray Annotations = CollectBTFDeclTagAnnotations(Ty->getDecl());
   return DBuilder.createTypedef(Underlying, Ty->getDecl()->getName(),
                                 getOrCreateFile(Loc), getLineNumber(Loc),
-                                TDContext, Align, Annotations);
+                                getDeclContextDescriptor(Ty->getDecl()), Align,
+                                Annotations);
 }
 
 static unsigned getDwarfCC(CallingConv CC) {
@@ -3265,7 +3251,7 @@ llvm::DIType *CGDebugInfo::CreateEnumType(const EnumType *Ty) {
     // entered into the ReplaceMap: finalize() will replace the first
     // FwdDecl with the second and then replace the second with
     // complete type.
-    llvm::DIScope *EDContext = getDeclarationLexicalScope(ED);
+    llvm::DIScope *EDContext = getDeclContextDescriptor(ED);
     llvm::DIFile *DefUnit = getOrCreateFile(ED->getLocation());
     llvm::TempDIScope TmpContext(DBuilder.createReplaceableCompositeType(
         llvm::dwarf::DW_TAG_enumeration_type, "", TheCU, DefUnit, 0));
@@ -3308,7 +3294,7 @@ llvm::DIType *CGDebugInfo::CreateTypeDefinition(const EnumType *Ty) {
 
   llvm::DIFile *DefUnit = getOrCreateFile(ED->getLocation());
   unsigned Line = getLineNumber(ED->getLocation());
-  llvm::DIScope *EnumContext = getDeclarationLexicalScope(ED);
+  llvm::DIScope *EnumContext = getDeclContextDescriptor(ED);
   llvm::DIType *ClassTy = getOrCreateType(ED->getIntegerType(), DefUnit);
   return DBuilder.createEnumerationType(EnumContext, ED->getName(), DefUnit,
                                         Line, Size, Align, EltArray, ClassTy,
@@ -3611,7 +3597,7 @@ llvm::DICompositeType *CGDebugInfo::CreateLimitedType(const RecordType *Ty) {
     Line = getLineNumber(Loc);
   }
 
-  llvm::DIScope *RDContext = getDeclarationLexicalScope(RD);
+  llvm::DIScope *RDContext = getDeclContextDescriptor(RD);
 
   // If we ended up creating the type during the context chain construction,
   // just return that.
@@ -3802,14 +3788,6 @@ void CGDebugInfo::collectVarDeclProps(const VarDecl *VD, llvm::DIFile *&Unit,
     TemplateParameters = parameterNodes.get();
   } else {
     TemplateParameters = nullptr;
-  }
-
-  // Get context for static locals (that are technically globals) the same way
-  // we do for "local" locals -- by using current lexical block.
-  if (VD->isStaticLocal()) {
-    assert(!LexicalBlockStack.empty() && "Region stack mismatch, stack empty!");
-    VDContext = LexicalBlockStack.back();
-    return;
   }
 
   // Since we emit declarations (DW_AT_members) for static members, place the

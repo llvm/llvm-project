@@ -103,21 +103,17 @@ void CodeGenFunction::EmitDecl(const Decl &D) {
     llvm_unreachable("Declaration should not be in declstmts!");
   case Decl::Record:    // struct/union/class X;
   case Decl::CXXRecord: // struct/union/class X; [C++]
-    if (CGDebugInfo *DI = getDebugInfo()) {
-      DI->recordDeclarationLexicalScope(D);
+    if (CGDebugInfo *DI = getDebugInfo())
       if (cast<RecordDecl>(D).getDefinition())
         DI->EmitAndRetainType(getContext().getRecordType(cast<RecordDecl>(&D)));
-    }
     return;
   case Decl::Enum:      // enum X;
-    if (CGDebugInfo *DI = getDebugInfo()) {
-      DI->recordDeclarationLexicalScope(D);
+    if (CGDebugInfo *DI = getDebugInfo())
       if (cast<EnumDecl>(D).getDefinition())
         DI->EmitAndRetainType(getContext().getEnumType(cast<EnumDecl>(&D)));
-    }
     return;
-  case Decl::EnumConstant: // enum ? { X = ? }
   case Decl::Function:     // void X();
+  case Decl::EnumConstant: // enum ? { X = ? }
   case Decl::StaticAssert: // static_assert(X, ""); [C++0x]
   case Decl::Label:        // __label__ x;
   case Decl::Import:
@@ -136,11 +132,11 @@ void CodeGenFunction::EmitDecl(const Decl &D) {
 
   case Decl::NamespaceAlias:
     if (CGDebugInfo *DI = getDebugInfo())
-      DI->EmitNamespaceAlias(cast<NamespaceAliasDecl>(D));
+        DI->EmitNamespaceAlias(cast<NamespaceAliasDecl>(D));
     return;
   case Decl::Using:          // using X; [C++]
     if (CGDebugInfo *DI = getDebugInfo())
-      DI->EmitUsingDecl(cast<UsingDecl>(D));
+        DI->EmitUsingDecl(cast<UsingDecl>(D));
     return;
   case Decl::UsingEnum: // using enum X; [C++]
     if (CGDebugInfo *DI = getDebugInfo())
@@ -176,10 +172,8 @@ void CodeGenFunction::EmitDecl(const Decl &D) {
   case Decl::Typedef:      // typedef int X;
   case Decl::TypeAlias: {  // using X = int; [C++0x]
     QualType Ty = cast<TypedefNameDecl>(D).getUnderlyingType();
-    if (CGDebugInfo *DI = getDebugInfo()) {
-      DI->recordDeclarationLexicalScope(D);
+    if (CGDebugInfo *DI = getDebugInfo())
       DI->EmitAndRetainType(Ty);
-    }
     if (Ty->isVariablyModifiedType())
       EmitVariablyModifiedType(Ty);
     return;
