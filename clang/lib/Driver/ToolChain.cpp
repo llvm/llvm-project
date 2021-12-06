@@ -541,6 +541,12 @@ std::string ToolChain::GetProgramPath(const char *Name) const {
   return D.GetProgramPath(Name, *this);
 }
 
+const char *ToolChain::getDefaultLinker() const {
+  if (CLANG_DEFAULT_LINKER[0] == '\0')
+    return "ld";
+  return CLANG_DEFAULT_LINKER;
+}
+
 std::string ToolChain::GetLinkerPath(bool *LinkerIsLLD) const {
   if (LinkerIsLLD)
     *LinkerIsLLD = false;
@@ -548,7 +554,7 @@ std::string ToolChain::GetLinkerPath(bool *LinkerIsLLD) const {
   // Get -fuse-ld= first to prevent -Wunused-command-line-argument. -fuse-ld= is
   // considered as the linker flavor, e.g. "bfd", "gold", or "lld".
   const Arg* A = Args.getLastArg(options::OPT_fuse_ld_EQ);
-  StringRef UseLinker = A ? A->getValue() : CLANG_DEFAULT_LINKER;
+  StringRef UseLinker = A ? A->getValue() : "";
 
   // --ld-path= takes precedence over -fuse-ld= and specifies the executable
   // name. -B, COMPILER_PATH and PATH and consulted if the value does not
