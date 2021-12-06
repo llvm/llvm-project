@@ -3014,6 +3014,10 @@ void LLVMSetIsInBounds(LLVMValueRef GEP, LLVMBool InBounds) {
   return unwrap<GetElementPtrInst>(GEP)->setIsInBounds(InBounds);
 }
 
+LLVMTypeRef LLVMGetGEPSourceElementType(LLVMValueRef GEP) {
+  return wrap(unwrap<GetElementPtrInst>(GEP)->getSourceElementType());
+}
+
 /*--.. Operations on phi nodes .............................................--*/
 
 void LLVMAddIncoming(LLVMValueRef PhiNode, LLVMValueRef *IncomingValues,
