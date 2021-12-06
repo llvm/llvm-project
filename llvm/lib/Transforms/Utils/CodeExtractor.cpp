@@ -1426,6 +1426,15 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
   // Find inputs to, outputs from the code region.
   findInputsOutputs(inputs, outputs, SinkingCands);
 
+
+  // Collect objects which are inputs to the extraction region and also
+  // referenced by lifetime start markers within it. The effects of these
+  // markers must be replicated in the calling function to prevent the stack
+  // coloring pass from merging slots which store input objects.
+  ValueSet LifetimesStart;
+  eraseLifetimeMarkersOnInputs(Blocks, SinkingCands, LifetimesStart);
+
+
   // Construct new function based on inputs/outputs & add allocas for all defs.
   Function *newFunction = constructFunctionDeclaration(inputs, outputs, header);
 
@@ -1503,12 +1512,7 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
       Orlder.push_back(OldTarget);
   }
 
-  // Collect objects which are inputs to the extraction region and also
-  // referenced by lifetime start markers within it. The effects of these
-  // markers must be replicated in the calling function to prevent the stack
-  // coloring pass from merging slots which store input objects.
-  ValueSet LifetimesStart;
-  eraseLifetimeMarkersOnInputs(Blocks, SinkingCands, LifetimesStart);
+
 
   StructType *StructTy = nullptr;
   if (AggregateArgs && (inputs.size() + outputs.size() > 0))
@@ -1554,6 +1558,7 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
 
   if (KeepOldBlocks) {
     for (BasicBlock *Block : Blocks) {
+        // TODO: Don't copy assumptions
       BasicBlock *CBB = CloneBasicBlock(Block, VMap, {},
                                         newFunction /*, nullptr, &DIFinder*/);
 
