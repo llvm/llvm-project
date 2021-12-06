@@ -1202,7 +1202,10 @@ bool InquireUnconnectedFileState::Inquire(
     break;
   case HashInquiryKeyword("NAME"):
     str = path_.get();
-    return true;
+    if (!str) {
+      return true; // result is undefined
+    }
+    break;
   }
   if (str) {
     ToFortranDefaultCharacter(result, length, str);
