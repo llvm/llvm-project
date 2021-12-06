@@ -157,7 +157,6 @@ void OpenFile::Predefine(int fd) {
 }
 
 void OpenFile::Close(CloseStatus status, IoErrorHandler &handler) {
-  CheckOpen(handler);
   pending_.reset();
   knownSize_.reset();
   switch (status) {
