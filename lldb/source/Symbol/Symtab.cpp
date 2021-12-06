@@ -663,7 +663,6 @@ uint32_t Symtab::AppendSymbolIndexesWithName(ConstString symbol_name,
                                              std::vector<uint32_t> &indexes) {
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
 
-  LLDB_SCOPED_TIMER();
   if (symbol_name) {
     if (!m_name_indexes_computed)
       InitNameIndexes();
@@ -808,7 +807,6 @@ Symtab::FindAllSymbolsWithNameAndType(ConstString name,
                                       std::vector<uint32_t> &symbol_indexes) {
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
 
-  LLDB_SCOPED_TIMER();
   // Initialize all of the lookup by name indexes before converting NAME to a
   // uniqued string NAME_STR below.
   if (!m_name_indexes_computed)
