@@ -1855,6 +1855,24 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
     
 
 
+        // Now we can emit a switch statement using the call as a value.
+        SwitchInst *TheSwitch =
+            SwitchInst::Create(Constant::getNullValue(Type::getInt16Ty(Context)),
+                codeReplacer, 0, codeReplacer);
+
+
+        for (auto &&P: Orlder) {
+            auto OldTarget = P;
+            auto SuccNum =ExitBlockSwitchIdx[OldTarget];
+
+            TheSwitch->addCase(ConstantInt::get(Type::getInt16Ty(Context),
+                SuccNum),
+                OldTarget);
+        }
+
+
+
+
 
     //// Connect call replacement to CFG ////////////////////////////////////////////////////////////////////////
 
@@ -1895,29 +1913,6 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
 
 
     if (KeepOldBlocks) {
-        // Now we can emit a switch statement using the call as a value.
-        SwitchInst* TheSwitch =
-            SwitchInst::Create(Constant::getNullValue(Type::getInt16Ty(Context)),
-                codeReplacer, 0, codeReplacer);
-
-
-
-
-
-        for (auto &&P: Orlder) {
-            auto OldTarget = P;
-            auto SuccNum =ExitBlockSwitchIdx[OldTarget];
-
-            TheSwitch->addCase(ConstantInt::get(Type::getInt16Ty(Context),
-                SuccNum),
-                OldTarget);
-        }
-
-
-
-
-
-
 
 
 
@@ -2109,9 +2104,6 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
 
     } else {
 
-
-
-
         auto* BranchI = BranchInst::Create(header, newFuncRoot);
         applyFirstDebugLoc(oldFunction, Blocks.getArrayRef(), BranchI);
 
@@ -2126,58 +2118,6 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
         }
     
 
-
-
-
-
-   
-#if 0
-        // Reload the outputs passed in by reference.
-        for (unsigned i = 0, e = outputs.size(); i != e; ++i) {
-            Value *Output = nullptr;
-            if (AggregateArgs) {
-                Value *Idx[2];
-                Idx[0] = Constant::getNullValue(Type::getInt32Ty(Context));
-                Idx[1] = ConstantInt::get(Type::getInt32Ty(Context), FirstOut + i);
-                 GetElementPtrInst *GEP = GetElementPtrInst::Create(StructTy, Struct, Idx, "gep_reload_" + outputs[i]->getName());
-                codeReplacer->getInstList().push_back(GEP);
-                Output = GEP;
-            } else {
-                Output = ReloadOutputs[i];
-            }
-            LoadInst *load = new LoadInst(outputs[i]->getType(), Output, outputs[i]->getName() + ".reload",codeReplacer);
-  
-            Reloads.push_back(load);
-            std::vector<User *> Users(outputs[i]->user_begin(), outputs[i]->user_end());
-            for (unsigned u = 0, e = Users.size(); u != e; ++u) {
-                Instruction *inst = cast<Instruction>(Users[u]);
-                if (!KeepOldBlocks) {
-                    if (!Blocks.count(inst->getParent()))
-                        inst->replaceUsesOfWith(outputs[i], load);
-                }
-            }
-        }
-#endif
-
-
-
-
-
-
-        // Now we can emit a switch statement using the call as a value.
-        SwitchInst *TheSwitch =
-            SwitchInst::Create(Constant::getNullValue(Type::getInt16Ty(Context)),
-                codeReplacer, 0, codeReplacer);
-
-
-        for (auto &&P: Orlder) {
-            auto OldTarget = P;
-            auto SuccNum =ExitBlockSwitchIdx[OldTarget];
-
-            TheSwitch->addCase(ConstantInt::get(Type::getInt16Ty(Context),
-                SuccNum),
-                OldTarget);
-        }
 
 
 
