@@ -1595,6 +1595,96 @@ CallInst *  CodeExtractor:: emitReplacerCall(
 }
 
 
+void  CodeExtractor:: insertReplacerCall(
+    Function *oldFunction,
+    BasicBlock *header,
+    BasicBlock *codeReplacer
+    ,  const ValueSet &outputs
+    ,  ArrayRef<Value*>Reloads
+    , const     DenseMap<BasicBlock *, BlockFrequency> &ExitWeights
+){
+    // Rewrite branches to basic blocks outside of the loop to new dummy blocks
+    // within the new function. This must be done before we lose track of which
+    // blocks were originally in the code region.
+    std::vector<User *> Users(header->user_begin(), header->user_end());
+    for (auto &U : Users) // FIXME: KeepOldBlocks?
+                          // The BasicBlock which contains the branch is not in
+                          // the region modify the branch target to a new block
+        if (Instruction *I = dyn_cast<Instruction>(U))
+            if (I->isTerminator() && I->getFunction() == oldFunction)
+                I->replaceUsesOfWith(header, codeReplacer);
+
+
+    if (KeepOldBlocks) {
+        // Must be done after remap
+        SSAUpdater SSA;
+        for (auto P : enumerate(outputs)) {
+            auto OutIdx = P.index();
+            auto OldVal = cast<Instruction>(P.value());
+            auto NewVal = Reloads[OutIdx];
+
+            SSA.Initialize(OldVal->getType(),
+                (OldVal->getName() + ".merge_with_extracted").str());
+            SSA.AddAvailableValue(codeReplacer, NewVal);
+
+            // Could help SSAUpdater by determining in advance which output values are
+            // available in which exit blocks (from DT).
+            SSA.AddAvailableValue(OldVal->getParent(), OldVal);
+
+            for (auto &&U : make_early_inc_range(OldVal->uses())) {
+                auto User = dyn_cast<Instruction>(U.getUser());
+                if (!User)
+                    continue;
+                auto EffectiveUser = User->getParent();
+                if (auto &&P = dyn_cast<PHINode>(User)) {
+                    EffectiveUser = P->getIncomingBlock(U);
+                }
+
+                if (EffectiveUser == codeReplacer || Blocks.count(EffectiveUser))
+                    continue;
+
+                SSA.RewriteUseAfterInsertions(U);
+            }
+        }
+    } else {
+        for (BasicBlock *ExitBB : ExitBlocks)
+            for (PHINode &PN : ExitBB->phis()) {
+                Value *IncomingCodeReplacerVal = nullptr;
+                for (unsigned i = 0, e = PN.getNumIncomingValues(); i != e; ++i) {
+                    // Ignore incoming values from outside of the extracted region.
+                    if (!Blocks.count(PN.getIncomingBlock(i)))
+                        continue;
+
+                    // Ensure that there is only one incoming value from codeReplacer.
+                    if (!IncomingCodeReplacerVal) {
+                        PN.setIncomingBlock(i, codeReplacer);
+                        IncomingCodeReplacerVal = PN.getIncomingValue(i);
+                    } else
+                        assert(IncomingCodeReplacerVal == PN.getIncomingValue(i) &&
+                            "PHI has two incompatbile incoming values from codeRepl");
+                }
+            }
+
+        for (unsigned i = 0, e = outputs.size(); i != e; ++i) {
+            auto load = Reloads[i];
+
+            std::vector<User *> Users(outputs[i]->user_begin(),
+                outputs[i]->user_end());
+            for (unsigned u = 0, e = Users.size(); u != e; ++u) {
+                Instruction *inst = cast<Instruction>(Users[u]);
+                if (inst->getParent()->getParent() == oldFunction)
+                    inst->replaceUsesOfWith(outputs[i], load);
+            }
+        }
+    }
+
+    // Update the branch weights for the exit block.
+    if (BFI && NumExitBlocks > 1)
+        calculateNewCallTerminatorWeights(codeReplacer, ExitWeights, BPI);
+
+
+}
+
 
 void CodeExtractor::moveCodeToFunction(Function *newFunction) {
   Function *oldFunc = (*Blocks.begin())->getParent();
@@ -1617,7 +1707,7 @@ void CodeExtractor::moveCodeToFunction(Function *newFunction) {
 
 void CodeExtractor::calculateNewCallTerminatorWeights(
     BasicBlock *CodeReplacer,
-    DenseMap<BasicBlock *, BlockFrequency> &ExitWeights,
+   const  DenseMap<BasicBlock *, BlockFrequency> &ExitWeights,
     BranchProbabilityInfo *BPI) {
   using Distribution = BlockFrequencyInfoImplBase::Distribution;
   using BlockNode = BlockFrequencyInfoImplBase::BlockNode;
@@ -1635,7 +1725,7 @@ void CodeExtractor::calculateNewCallTerminatorWeights(
   // Add each of the frequencies of the successors.
   for (unsigned i = 0, e = TI->getNumSuccessors(); i < e; ++i) {
     BlockNode ExitNode(i);
-    uint64_t ExitFreq = ExitWeights[TI->getSuccessor(i)].getFrequency();
+    uint64_t ExitFreq = ExitWeights .lookup(TI->getSuccessor(i)).getFrequency();
     if (ExitFreq != 0)
       BranchDist.addExit(ExitNode, ExitFreq);
     else
@@ -1992,84 +2082,8 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
   //// Connect call replacement to CFG
   ///////////////////////////////////////////////////////////////////////////
 
-  // Rewrite branches to basic blocks outside of the loop to new dummy blocks
-  // within the new function. This must be done before we lose track of which
-  // blocks were originally in the code region.
-  std::vector<User *> Users(header->user_begin(), header->user_end());
-  for (auto &U : Users) // FIXME: KeepOldBlocks?
-                        // The BasicBlock which contains the branch is not in
-                        // the region modify the branch target to a new block
-    if (Instruction *I = dyn_cast<Instruction>(U))
-      if (I->isTerminator() && I->getFunction() == oldFunction)
-        I->replaceUsesOfWith(header, codeReplacer);
+  insertReplacerCall(oldFunction, header, codeReplacer, outputs, Reloads, ExitWeights);
 
-
-  if (KeepOldBlocks) {
-    // Must be done after remap
-    SSAUpdater SSA;
-    for (auto P : enumerate(outputs)) {
-      auto OutIdx = P.index();
-      auto OldVal = cast<Instruction>(P.value());
-      auto NewVal = Reloads[OutIdx];
-
-      SSA.Initialize(OldVal->getType(),
-                     (OldVal->getName() + ".merge_with_extracted").str());
-      SSA.AddAvailableValue(codeReplacer, NewVal);
-
-      // Could help SSAUpdater by determining in advance which output values are
-      // available in which exit blocks (from DT).
-      SSA.AddAvailableValue(OldVal->getParent(), OldVal);
-
-      for (auto &&U : make_early_inc_range(OldVal->uses())) {
-        auto User = dyn_cast<Instruction>(U.getUser());
-        if (!User)
-          continue;
-        auto EffectiveUser = User->getParent();
-        if (auto &&P = dyn_cast<PHINode>(User)) {
-          EffectiveUser = P->getIncomingBlock(U);
-        }
-
-        if (EffectiveUser == codeReplacer || Blocks.count(EffectiveUser))
-          continue;
-
-        SSA.RewriteUseAfterInsertions(U);
-      }
-    }
-  } else {
-      for (BasicBlock *ExitBB : ExitBlocks)
-          for (PHINode &PN : ExitBB->phis()) {
-              Value *IncomingCodeReplacerVal = nullptr;
-              for (unsigned i = 0, e = PN.getNumIncomingValues(); i != e; ++i) {
-                  // Ignore incoming values from outside of the extracted region.
-                  if (!Blocks.count(PN.getIncomingBlock(i)))
-                      continue;
-
-                  // Ensure that there is only one incoming value from codeReplacer.
-                  if (!IncomingCodeReplacerVal) {
-                      PN.setIncomingBlock(i, codeReplacer);
-                      IncomingCodeReplacerVal = PN.getIncomingValue(i);
-                  } else
-                      assert(IncomingCodeReplacerVal == PN.getIncomingValue(i) &&
-                          "PHI has two incompatbile incoming values from codeRepl");
-              }
-          }
-
-    for (unsigned i = 0, e = outputs.size(); i != e; ++i) {
-      auto load = Reloads[i];
-
-      std::vector<User *> Users(outputs[i]->user_begin(),
-                                outputs[i]->user_end());
-      for (unsigned u = 0, e = Users.size(); u != e; ++u) {
-        Instruction *inst = cast<Instruction>(Users[u]);
-        if (inst->getParent()->getParent() == oldFunction)
-          inst->replaceUsesOfWith(outputs[i], load);
-      }
-    }
-  }
-
-  // Update the branch weights for the exit block.
-  if (BFI && NumExitBlocks > 1)
-    calculateNewCallTerminatorWeights(codeReplacer, ExitWeights, BPI);
 
   fixupDebugInfoPostExtraction(*oldFunction, *newFunction, *call);
 

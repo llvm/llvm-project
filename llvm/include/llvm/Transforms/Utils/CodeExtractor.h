@@ -276,11 +276,20 @@ public:
    ,    std::vector<Value *> &Reloads
    );
 
+   void insertReplacerCall(
+       Function *oldFunction,
+       BasicBlock *header,
+       BasicBlock *codeReplacer
+       ,  const ValueSet &outputs
+       ,  ArrayRef<Value*>Reloads
+       , const     DenseMap<BasicBlock *, BlockFrequency> &ExitWeights
+   );
+
     void moveCodeToFunction(Function *newFunction);
 
     void calculateNewCallTerminatorWeights(
         BasicBlock *CodeReplacer,
-        DenseMap<BasicBlock *, BlockFrequency> &ExitWeights,
+      const   DenseMap<BasicBlock *, BlockFrequency> &ExitWeights,
         BranchProbabilityInfo *BPI);
   };
 
