@@ -345,17 +345,18 @@ Expected<FileBufferByteStream> MSFBuilder::commit(StringRef Path,
   uint64_t FileSize = uint64_t(Layout.SB->BlockSize) * Layout.SB->NumBlocks;
   // Ensure that the file size is under the limit for the specified block size.
   if (FileSize > getMaxFileSizeFromBlockSize(Layout.SB->BlockSize)) {
-    msf_error_code error_code;
-    switch (Layout.SB->BlockSize) {
-    case 8192:
-      error_code = msf_error_code::size_overflow_8192;
-    case 16384:
-      error_code = msf_error_code::size_overflow_16384;
-    case 32768:
-      error_code = msf_error_code::size_overflow_32768;
-    default:
-      error_code = msf_error_code::size_overflow_4096;
-    }
+    msf_error_code error_code = [](uint32_t BlockSize) {
+      switch (BlockSize) {
+      case 8192:
+        return msf_error_code::size_overflow_8192;
+      case 16384:
+        return msf_error_code::size_overflow_16384;
+      case 32768:
+        return msf_error_code::size_overflow_32768;
+      default:
+        return msf_error_code::size_overflow_4096;
+      }
+    }(Layout.SB->BlockSize);
 
     return make_error<MSFError>(
         error_code,
