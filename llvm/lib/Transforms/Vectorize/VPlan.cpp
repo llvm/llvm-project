@@ -680,7 +680,7 @@ void VPInstruction::generateInstruction(VPTransformState &State,
     Value *ScalarTC = State.get(getOperand(1), Part);
 
     auto *Int1Ty = Type::getInt1Ty(Builder.getContext());
-    auto *PredTy = FixedVectorType::get(Int1Ty, State.VF.getKnownMinValue());
+    auto *PredTy = VectorType::get(Int1Ty, State.VF);
     Instruction *Call = Builder.CreateIntrinsic(
         Intrinsic::get_active_lane_mask, {PredTy, ScalarTC->getType()},
         {VIVElem0, ScalarTC}, nullptr, "active.lane.mask");

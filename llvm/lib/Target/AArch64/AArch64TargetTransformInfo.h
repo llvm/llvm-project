@@ -313,6 +313,10 @@ public:
     return 2;
   }
 
+  bool emitGetActiveLaneMask() const {
+    return ST->hasSVE();
+  }
+
   bool supportsScalableVectors() const { return ST->hasSVE(); }
 
   bool enableScalableVectorization() const { return ST->hasSVE(); }
