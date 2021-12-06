@@ -141,6 +141,16 @@ C Language Changes in Clang
   ``__attribute__((warning("")))`` function attributes have been added.
 - The maximum allowed alignment has been increased from 2^29 to 2^32.
 
+- Clang now supports the ``_BitInt(N)`` family of bit-precise integer types
+  from C23. This type was previously exposed as ``_ExtInt(N)``, which is now a
+  deprecated alias for ``_BitInt(N)`` (so diagnostics will mention ``_BitInt``
+  even if source uses ``_ExtInt``). ``_BitInt(N)`` and ``_ExtInt(N)`` are the
+  same types in all respects beyond spelling and the deprecation warning.
+  ``_BitInt(N)`` is supported as an extension in older C modes and in all C++
+  modes. Note: the ABI for ``_BitInt(N)`` is still in the process of being
+  stabilized, so this type should not yet be used in interfaces that require
+  ABI stability.
+
 C++ Language Changes in Clang
 -----------------------------
 
@@ -172,6 +182,13 @@ OpenCL C Language Changes in Clang
 
 ABI Changes in Clang
 --------------------
+
+- The ``_ExtInt(N)`` extension has been standardized in C23 as ``_BitInt(N)``.
+The mangling of this type in C++ has accordingly changed: under the Microsoft
+ABI it is now mangled using the ``_BitInt`` spelling, and under the Itanium ABI
+it is now mangled using a dedicated production. Note: the ABI for ``_BitInt(N)``
+is still in the process of being stabilized, so this type should not yet be
+used in interfaces that require ABI stability.
 
 OpenMP Support in Clang
 -----------------------

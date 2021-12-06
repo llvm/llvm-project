@@ -162,7 +162,7 @@ public:
     supportAllOpenCLOpts();
   }
 
-  bool hasExtIntType() const override { return true; }
+  bool hasBitIntType() const override { return true; }
 
   bool hasInt128Type() const override { return false; }
 };

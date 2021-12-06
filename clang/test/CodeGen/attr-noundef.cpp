@@ -131,12 +131,12 @@ nullptr_t ret_npt() {
 }
 void pass_npt(nullptr_t t) {
 }
-_ExtInt(3) ret_extint() {
+_BitInt(3) ret_BitInt() {
   return 0;
 }
-void pass_extint(_ExtInt(3) e) {
+void pass_BitInt(_BitInt(3) e) {
 }
-void pass_large_extint(_ExtInt(127) e) {
+void pass_large_BitInt(_BitInt(127) e) {
 }
 
 // Pointers to arrays/functions are always noundef
@@ -153,10 +153,10 @@ void pass_large_extint(_ExtInt(127) e) {
 // CHECK: [[DEFINE]] void @{{.*}}pass_npt{{.*}}(i8* %
 
 // TODO: for now, ExtInt is only noundef if it is sign/zero-extended
-// CHECK-INTEL: [[DEFINE]] noundef signext i3 @{{.*}}ret_extint{{.*}}()
-// CHECK-AARCH: [[DEFINE]] i3 @{{.*}}ret_extint{{.*}}()
-// CHECK-INTEL: [[DEFINE]] void @{{.*}}pass_extint{{.*}}(i3 noundef signext %
-// CHECK-AARCH: [[DEFINE]] void @{{.*}}pass_extint{{.*}}(i3 %
-// CHECK-INTEL: [[DEFINE]] void @{{.*}}pass_large_extint{{.*}}(i64 %{{.*}}, i64 %
-// CHECK-AARCH: [[DEFINE]] void @{{.*}}pass_large_extint{{.*}}(i127 %
+// CHECK-INTEL: [[DEFINE]] noundef signext i3 @{{.*}}ret_BitInt{{.*}}()
+// CHECK-AARCH: [[DEFINE]] i3 @{{.*}}ret_BitInt{{.*}}()
+// CHECK-INTEL: [[DEFINE]] void @{{.*}}pass_BitInt{{.*}}(i3 noundef signext %
+// CHECK-AARCH: [[DEFINE]] void @{{.*}}pass_BitInt{{.*}}(i3 %
+// CHECK-INTEL: [[DEFINE]] void @{{.*}}pass_large_BitInt{{.*}}(i64 %{{.*}}, i64 %
+// CHECK-AARCH: [[DEFINE]] void @{{.*}}pass_large_BitInt{{.*}}(i127 %
 } // namespace check_exotic

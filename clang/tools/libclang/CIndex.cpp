@@ -1815,8 +1815,8 @@ DEFAULT_TYPELOC_IMPL(Enum, TagType)
 DEFAULT_TYPELOC_IMPL(SubstTemplateTypeParm, Type)
 DEFAULT_TYPELOC_IMPL(SubstTemplateTypeParmPack, Type)
 DEFAULT_TYPELOC_IMPL(Auto, Type)
-DEFAULT_TYPELOC_IMPL(ExtInt, Type)
-DEFAULT_TYPELOC_IMPL(DependentExtInt, Type)
+DEFAULT_TYPELOC_IMPL(BitInt, Type)
+DEFAULT_TYPELOC_IMPL(DependentBitInt, Type)
 
 bool CursorVisitor::VisitCXXRecordDecl(CXXRecordDecl *D) {
   // Visit the nested-name-specifier, if present.

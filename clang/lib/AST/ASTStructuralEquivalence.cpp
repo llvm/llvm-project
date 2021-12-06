@@ -1205,18 +1205,18 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
                                   cast<PipeType>(T2)->getElementType()))
       return false;
     break;
-  case Type::ExtInt: {
-    const auto *Int1 = cast<ExtIntType>(T1);
-    const auto *Int2 = cast<ExtIntType>(T2);
+  case Type::BitInt: {
+    const auto *Int1 = cast<BitIntType>(T1);
+    const auto *Int2 = cast<BitIntType>(T2);
 
     if (Int1->isUnsigned() != Int2->isUnsigned() ||
         Int1->getNumBits() != Int2->getNumBits())
       return false;
     break;
   }
-  case Type::DependentExtInt: {
-    const auto *Int1 = cast<DependentExtIntType>(T1);
-    const auto *Int2 = cast<DependentExtIntType>(T2);
+  case Type::DependentBitInt: {
+    const auto *Int1 = cast<DependentBitIntType>(T1);
+    const auto *Int2 = cast<DependentBitIntType>(T2);
 
     if (Int1->isUnsigned() != Int2->isUnsigned() ||
         !IsStructurallyEquivalent(Context, Int1->getNumBitsExpr(),
