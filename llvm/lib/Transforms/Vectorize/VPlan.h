@@ -1007,17 +1007,20 @@ class VPWidenIntOrFpInductionRecipe : public VPRecipeBase {
   PHINode *IV;
 
 public:
-  VPWidenIntOrFpInductionRecipe(PHINode *IV, VPValue *Start, Instruction *Cast,
-                                TruncInst *Trunc = nullptr)
+  VPWidenIntOrFpInductionRecipe(PHINode *IV, VPValue *Start,
+                                Instruction *Cast = nullptr)
       : VPRecipeBase(VPWidenIntOrFpInductionSC, {Start}), IV(IV) {
-    if (Trunc)
-      new VPValue(Trunc, this);
-    else
-      new VPValue(IV, this);
+    new VPValue(IV, this);
 
     if (Cast)
       new VPValue(Cast, this);
   }
+
+  VPWidenIntOrFpInductionRecipe(PHINode *IV, VPValue *Start, TruncInst *Trunc)
+      : VPRecipeBase(VPWidenIntOrFpInductionSC, {Start}), IV(IV) {
+    new VPValue(Trunc, this);
+  }
+
   ~VPWidenIntOrFpInductionRecipe() override = default;
 
   /// Method to support type inquiry through isa, cast, and dyn_cast.
