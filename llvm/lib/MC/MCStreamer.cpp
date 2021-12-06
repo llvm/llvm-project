@@ -1316,36 +1316,37 @@ void MCStreamer::emitVersionForTarget(const Triple &Target,
   if (Target.getOSMajorVersion() == 0)
     return;
 
-  VersionTuple Version;
+  unsigned Major = 0;
+  unsigned Minor = 0;
+  unsigned Update = 0;
   switch (Target.getOS()) {
   case Triple::MacOSX:
   case Triple::Darwin:
-    Target.getMacOSXVersion(Version);
+    Target.getMacOSXVersion(Major, Minor, Update);
     break;
   case Triple::IOS:
   case Triple::TvOS:
-    Version = Target.getiOSVersion();
+    Target.getiOSVersion(Major, Minor, Update);
     break;
   case Triple::WatchOS:
-    Version = Target.getWatchOSVersion();
+    Target.getWatchOSVersion(Major, Minor, Update);
     break;
   default:
     llvm_unreachable("unexpected OS type");
   }
-  assert(Version.getMajor() != 0 && "A non-zero major version is expected");
-  auto LinkedTargetVersion =
-      targetVersionOrMinimumSupportedOSVersion(Target, Version);
+  assert(Major != 0 && "A non-zero major version is expected");
+  auto LinkedTargetVersion = targetVersionOrMinimumSupportedOSVersion(
+      Target, VersionTuple(Major, Minor, Update));
   auto BuildVersionOSVersion = getMachoBuildVersionSupportedOS(Target);
   if (BuildVersionOSVersion.empty() ||
       LinkedTargetVersion >= BuildVersionOSVersion)
     return emitBuildVersion(getMachoBuildVersionPlatformType(Target),
                             LinkedTargetVersion.getMajor(),
-                            LinkedTargetVersion.getMinor().getValueOr(0),
-                            LinkedTargetVersion.getSubminor().getValueOr(0),
-                            SDKVersion);
+                            *LinkedTargetVersion.getMinor(),
+                            *LinkedTargetVersion.getSubminor(), SDKVersion);
 
   emitVersionMin(getMachoVersionMinLoadCommandType(Target),
                  LinkedTargetVersion.getMajor(),
-                 LinkedTargetVersion.getMinor().getValueOr(0),
-                 LinkedTargetVersion.getSubminor().getValueOr(0), SDKVersion);
+                 *LinkedTargetVersion.getMinor(),
+                 *LinkedTargetVersion.getSubminor(), SDKVersion);
 }

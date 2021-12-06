@@ -366,6 +366,7 @@ TEST(getLinuxHostCPUName, s390x) {
   }
 }
 
+#if defined(__APPLE__) || defined(_AIX)
 static bool runAndGetCommandOutput(
     const char *ExePath, ArrayRef<llvm::StringRef> argv,
     std::unique_ptr<char[]> &Buffer, off_t &Size) {
@@ -405,9 +406,12 @@ TEST_F(HostTest, DummyRunAndGetCommandOutputUse) {
   // disabled.
   (void) runAndGetCommandOutput;
 }
+#endif
 
+#if defined(__APPLE__)
 TEST_F(HostTest, getMacOSHostVersion) {
-  llvm::Triple HostTriple(llvm::sys::getProcessTriple());
+  using namespace llvm::sys;
+  llvm::Triple HostTriple(getProcessTriple());
   if (!HostTriple.isMacOSX())
     return;
 
@@ -416,32 +420,34 @@ TEST_F(HostTest, getMacOSHostVersion) {
   std::unique_ptr<char[]> Buffer;
   off_t Size;
   ASSERT_EQ(runAndGetCommandOutput(SwVersPath, argv, Buffer, Size), true);
-  StringRef SystemVersionStr(Buffer.get(), Size);
+  StringRef SystemVersion(Buffer.get(), Size);
 
   // Ensure that the two versions match.
-  VersionTuple SystemVersion;
-  ASSERT_EQ(llvm::Triple((Twine("x86_64-apple-macos") + SystemVersionStr))
-                .getMacOSXVersion(SystemVersion),
+  unsigned SystemMajor, SystemMinor, SystemMicro;
+  ASSERT_EQ(llvm::Triple((Twine("x86_64-apple-macos") + SystemVersion))
+                .getMacOSXVersion(SystemMajor, SystemMinor, SystemMicro),
             true);
-  VersionTuple HostVersion;
-  ASSERT_EQ(HostTriple.getMacOSXVersion(HostVersion), true);
+  unsigned HostMajor, HostMinor, HostMicro;
+  ASSERT_EQ(HostTriple.getMacOSXVersion(HostMajor, HostMinor, HostMicro), true);
 
-  if (SystemVersion.getMajor() > 10) {
+  if (SystemMajor > 10) {
     // Don't compare the 'Minor' and 'Micro' versions, as they're always '0' for
     // the 'Darwin' triples on 11.x.
-    ASSERT_EQ(SystemVersion.getMajor(), HostVersion.getMajor());
+    ASSERT_EQ(SystemMajor, HostMajor);
   } else {
     // Don't compare the 'Micro' version, as it's always '0' for the 'Darwin'
     // triples.
-    ASSERT_EQ(SystemVersion.getMajor(), HostVersion.getMajor());
-    ASSERT_EQ(SystemVersion.getMinor(), HostVersion.getMinor());
+    ASSERT_EQ(std::tie(SystemMajor, SystemMinor), std::tie(HostMajor, HostMinor));
   }
 }
+#endif
 
+#if defined(_AIX)
 TEST_F(HostTest, AIXVersionDetect) {
-  llvm::Triple HostTriple(llvm::sys::getProcessTriple());
-  if (HostTriple.getOS() != Triple::AIX)
-    return;
+  using namespace llvm::sys;
+
+  llvm::Triple HostTriple(getProcessTriple());
+  ASSERT_EQ(HostTriple.getOS(), Triple::AIX);
 
   llvm::Triple ConfiguredHostTriple(LLVM_HOST_TRIPLE);
   ASSERT_EQ(ConfiguredHostTriple.getOS(), Triple::AIX);
@@ -451,21 +457,22 @@ TEST_F(HostTest, AIXVersionDetect) {
   std::unique_ptr<char[]> Buffer;
   off_t Size;
   ASSERT_EQ(runAndGetCommandOutput(ExePath, argv, Buffer, Size), true);
-  StringRef SystemVersionStr(Buffer.get(), Size);
+  StringRef SystemVersion(Buffer.get(), Size);
 
-  VersionTuple SystemVersion =
-      llvm::Triple((Twine("powerpc-ibm-aix") + SystemVersionStr))
-          .getOSVersion();
+  unsigned SystemMajor, SystemMinor, SystemMicro;
+  llvm::Triple((Twine("powerpc-ibm-aix") + SystemVersion))
+      .getOSVersion(SystemMajor, SystemMinor, SystemMicro);
 
   // Ensure that the host triple version (major) and release (minor) numbers,
   // unless explicitly configured, match with those of the current system.
   if (!ConfiguredHostTriple.getOSMajorVersion()) {
-    VersionTuple HostVersion = HostTriple.getOSVersion();
-    ASSERT_EQ(SystemVersion.getMajor(), HostVersion.getMajor());
-    ASSERT_EQ(SystemVersion.getMinor(), HostVersion.getMinor());
+    unsigned HostMajor, HostMinor, HostMicro;
+    HostTriple.getOSVersion(HostMajor, HostMinor, HostMicro);
+    ASSERT_EQ(std::tie(SystemMajor, SystemMinor),
+              std::tie(HostMajor, HostMinor));
   }
 
-  llvm::Triple TargetTriple(llvm::sys::getDefaultTargetTriple());
+  llvm::Triple TargetTriple(getDefaultTargetTriple());
   if (TargetTriple.getOS() != Triple::AIX)
     return;
 
@@ -475,16 +482,13 @@ TEST_F(HostTest, AIXVersionDetect) {
   if (ConfiguredTargetTriple.getOSMajorVersion())
     return; // The version was configured explicitly; skip.
 
-  VersionTuple TargetVersion = TargetTriple.getOSVersion();
-  ASSERT_EQ(SystemVersion.getMajor(), TargetVersion.getMajor());
-  ASSERT_EQ(SystemVersion.getMinor(), TargetVersion.getMinor());
+  unsigned TargetMajor, TargetMinor, TargetMicro;
+  TargetTriple.getOSVersion(TargetMajor, TargetMinor, TargetMicro);
+  ASSERT_EQ(std::tie(SystemMajor, SystemMinor),
+            std::tie(TargetMajor, TargetMinor));
 }
 
 TEST_F(HostTest, AIXHostCPUDetect) {
-  llvm::Triple HostTriple(llvm::sys::getProcessTriple());
-  if (HostTriple.getOS() != Triple::AIX)
-    return;
-
   // Return a value based on the current processor implementation mode.
   const char *ExePath = "/usr/sbin/getsystype";
   StringRef argv[] = {ExePath, "-i"};
@@ -512,3 +516,4 @@ TEST_F(HostTest, AIXHostCPUDetect) {
 
   EXPECT_EQ(HostCPU, MCPU);
 }
+#endif
