@@ -1625,19 +1625,22 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
 
   std::map<BasicBlock *, BasicBlock *> ExitBlockMap;
  // for (auto OldTarget : OldTargets) {
-  for (auto OldTarget : Orlder) {
+ // for (auto OldTarget : Orlder) {
+  for (auto &&P : enumerate( Orlder)) {
+      auto OldTarget = P.value();
+      auto SuccNum = P.index();
+
     BasicBlock *&NewTarget = ExitBlockMap[OldTarget];
-    if (NewTarget)
-      continue;
+    //if (NewTarget)
+    //  continue;
 
     // If we don't already have an exit stub for this non-extracted
     // destination, create one now!
     NewTarget = BasicBlock::Create(Context, OldTarget->getName() + ".exitStub",
                                    newFunction);
-
     VMap[OldTarget] = NewTarget;
 
-    auto SuccNum = ExitBlockSwitchIdx[OldTarget];
+  //  auto SuccNum = ExitBlockSwitchIdx[OldTarget];
 
     auto &Context = Blocks.front()->getContext();
     Value *brVal = nullptr;
