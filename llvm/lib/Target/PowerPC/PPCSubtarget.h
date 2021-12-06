@@ -155,6 +155,7 @@ protected:
   bool HasCompareFusion;
   bool HasWideImmFusion;
   bool HasZeroMoveFusion;
+  bool HasBack2BackFusion;
   bool IsISA2_06;
   bool IsISA2_07;
   bool IsISA3_0;
@@ -348,6 +349,7 @@ public:
   bool hasWideImmFusion() const { return HasWideImmFusion; }
   bool hasSha3Fusion() const { return HasSha3Fusion; }
   bool hasZeroMoveFusion() const { return HasZeroMoveFusion; }
+  bool hasBack2BackFusion() const { return HasBack2BackFusion; }
   bool needsSwapsForVSXMemOps() const {
     return hasVSX() && isLittleEndian() && !hasP9Vector();
   }

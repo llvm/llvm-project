@@ -1,7 +1,7 @@
 # REQUIRES: asserts
 # RUN: llc -mtriple=powerpc64le-unknown-linux-gnu -mcpu=pwr10 -x=mir < %s \
 # RUN:   -debug-only=machine-scheduler -start-before=postmisched 2>&1 \
-# RUN:   -mattr=+fuse-zeromove,+fuse-cmp,+fuse-wideimm \
+# RUN:   -mattr=+fuse-zeromove,+fuse-cmp,+fuse-wideimm,+fuse-back2back \
 # RUN:   | FileCheck %s
 
 # CHECK: add_mulld:%bb.0
@@ -146,3 +146,39 @@ body:             |
     renamable $cr0 = CMPDI killed renamable $x3, 0
     renamable $x3 = ISEL8 killed renamable $x5, killed renamable $x4, renamable $cr0lt, implicit killed $cr0
     BLR8 implicit $lr8, implicit $rm, implicit $x3
+
+# CHECK: back2back_1:%bb.0
+# CHECK: Macro fuse: SU(0) - SU(1) /  VADDUBM - VSUBUBM
+---
+name: back2back_1
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    liveins: $v2, $v3, $v4
+    renamable $v2 = VADDUBM $v3, $v2
+    renamable $v2 = VSUBUBM killed renamable $v2, $v4
+    BLR8 implicit $lr8, implicit $rm
+
+# CHECK: back2back_2:%bb.0
+# CHECK: Macro fuse: SU(0) - SU(1) /  XSABSDP - XSNEGDP
+---
+name: back2back_2
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    liveins: $f1, $f2
+    renamable $f2 = XSABSDP $f1, implicit $rm
+    renamable $f1 = XSNEGDP killed renamable $f2, implicit $rm
+    BLR8 implicit $lr8, implicit $rm, implicit $f1
+
+# CHECK: back2back_3:%bb.0
+# CHECK: Macro fuse: SU(0) - SU(1) /  VMAXFP - XVMINSP
+---
+name: back2back_3
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    liveins: $v2, $v3, $v4
+    renamable $v3 = VMAXFP $v2, $v3
+    renamable $v2 = XVMINSP killed renamable $v3, $v4, implicit $rm
+    BLR8 implicit $lr8, implicit $rm, implicit $v2
