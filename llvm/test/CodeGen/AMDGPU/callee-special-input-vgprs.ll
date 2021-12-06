@@ -1,5 +1,5 @@
-; RUN: llc -amdgpu-fixed-function-abi=0 -mtriple=amdgcn-amd-amdhsa -mcpu=kaveri --amdhsa-code-object-version=2 -enable-ipra=0 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,VARABI %s
-; RUN: llc -amdgpu-fixed-function-abi=1 -mtriple=amdgcn-amd-amdhsa -mcpu=kaveri --amdhsa-code-object-version=2 -enable-ipra=0 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,FIXEDABI %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=kaveri --amdhsa-code-object-version=2 -enable-ipra=0 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,VARABI %s
+; RUN: llc -amdgpu-fixed-function-abi -mtriple=amdgcn-amd-amdhsa -mcpu=kaveri --amdhsa-code-object-version=2 -enable-ipra=0 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,FIXEDABI %s
 
 ; GCN-LABEL: {{^}}use_workitem_id_x:
 ; GCN: s_waitcnt
@@ -128,7 +128,8 @@ define void @use_workitem_id_yz() #1 {
 }
 
 ; GCN-LABEL: {{^}}kern_indirect_use_workitem_id_x:
-; GCN: enable_vgpr_workitem_id = 0
+; VARABI: enable_vgpr_workitem_id = 0
+; FIXEDABI: enable_vgpr_workitem_id = 2
 
 ; FIXEDABI-NOT: v0
 ; FIXEDABI-NOT: v31
@@ -145,7 +146,9 @@ define amdgpu_kernel void @kern_indirect_use_workitem_id_x() #1 {
 }
 
 ; GCN-LABEL: {{^}}kern_indirect_use_workitem_id_y:
-; GCN: enable_vgpr_workitem_id = 1
+; VARABI: enable_vgpr_workitem_id = 1
+; FIXEDABI: enable_vgpr_workitem_id = 2
+
 
 ; VARABI-NOT: v31
 ; VARABI: v_lshlrev_b32_e32 v0, 10, v1
@@ -351,7 +354,8 @@ define void @other_arg_use_workitem_id_z(i32 %arg0) #1 {
 
 
 ; GCN-LABEL: {{^}}kern_indirect_other_arg_use_workitem_id_x:
-; GCN: enable_vgpr_workitem_id = 0
+; VARABI: enable_vgpr_workitem_id = 0
+; FIXEDABI: enable_vgpr_workitem_id = 2
 
 ; VARABI: v_mov_b32_e32 v1, v0
 ; VARABI: v_mov_b32_e32 v0, 0x22b
@@ -368,7 +372,7 @@ define amdgpu_kernel void @kern_indirect_other_arg_use_workitem_id_x() #1 {
 
 
 ; GCN-LABEL: {{^}}kern_indirect_other_arg_use_workitem_id_y:
-; GCN: enable_vgpr_workitem_id = 1
+; VARABI: enable_vgpr_workitem_id = 1
 
 ; VARABI: v_lshlrev_b32_e32 v1, 10, v1
 ; VARABI-NOT: v1
@@ -376,6 +380,8 @@ define amdgpu_kernel void @kern_indirect_other_arg_use_workitem_id_x() #1 {
 ; VARABI-NOT: v1
 ; VARABI: s_swappc_b64
 ; VARABI-NOT: v0
+
+; FIXEDABI: enable_vgpr_workitem_id = 2
 
 ; FIXEDABI-NOT: v0
 ; FIXEDABI-NOT: v1
@@ -461,13 +467,14 @@ define void @too_many_args_use_workitem_id_x(
 }
 
 ; GCN-LABEL: {{^}}kern_call_too_many_args_use_workitem_id_x:
-; GCN: enable_vgpr_workitem_id = 0
+; VARABI: enable_vgpr_workitem_id = 0
 
 ; VARABI: s_mov_b32 s32, 0
 ; VARABI: buffer_store_dword v0, off, s[0:3], s32{{$}}
 ; VARABI: s_swappc_b64
 
 
+; FIXEDABI: enable_vgpr_workitem_id = 2
 ; FIXEDABI-NOT: v0
 ; FIXEDABI-NOT: v1
 ; FIXEDABI-NOT: v2
