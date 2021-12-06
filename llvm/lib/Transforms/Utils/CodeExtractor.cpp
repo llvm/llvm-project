@@ -1786,6 +1786,13 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache& CEAC,
         }
     }
 
+    auto NewHeader=header;
+    if (KeepOldBlocks)
+        NewHeader = cast<BasicBlock>(VMap.lookup(NewHeader));
+    assert(NewHeader);
+    auto* BranchI2 = BranchInst::Create(NewHeader, newFuncRoot);
+    applyFirstDebugLoc(oldFunction, Blocks.getArrayRef(), BranchI2);
+
 
     Function::arg_iterator OutputArgBegin = newFunction->arg_begin();
     unsigned FirstOut = inputs.size();
@@ -2100,10 +2107,7 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache& CEAC,
 
  
 
-        BasicBlock* HeaderCopy = cast<BasicBlock>(VMap.lookup(header));
-        assert(HeaderCopy);
-        auto* BranchI2 = BranchInst::Create(HeaderCopy, newFuncRoot);
-        applyFirstDebugLoc(oldFunction, Blocks.getArrayRef(), BranchI2);
+
 
         if (!oldFunction) {
          newFunction->viewCFG();
@@ -2111,8 +2115,6 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache& CEAC,
 
     } else {
 
-        auto* BranchI = BranchInst::Create(header, newFuncRoot);
-        applyFirstDebugLoc(oldFunction, Blocks.getArrayRef(), BranchI);
 
 
         // Add debug location to the new call, if the original function has debug
