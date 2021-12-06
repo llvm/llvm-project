@@ -439,7 +439,6 @@ CodeExtractor::findOrCreateBlockForHoisting(BasicBlock *CommonExitBlock) {
   }
   // Now add the old exit block to the outline region.
   Blocks.insert(CommonExitBlock);
-  // OldTargets.push_back(NewExitBlock);
   return CommonExitBlock;
 }
 
@@ -500,11 +499,6 @@ CodeExtractor::getLifetimeMarkers(const CodeExtractorAnalysisCache &CEAC,
 void CodeExtractor::findAllocas(const CodeExtractorAnalysisCache &CEAC,
                                 ValueSet &SinkCands, ValueSet &HoistCands,
                                 BasicBlock *&ExitBlock) const {
-  if (Blocks.empty()) {
-    // ??
-    return;
-  }
-
   Function *Func = (*Blocks.begin())->getParent();
   ExitBlock = getCommonExitBlock(Blocks);
 
@@ -660,8 +654,7 @@ void CodeExtractor::findInputsOutputs(ValueSet &Inputs, ValueSet &Outputs,
     // If a used value is defined outside the region, it's an input.  If an
     // instruction is used outside the region, it's an output.
     for (Instruction &II : *BB) {
-      // Assume should not be the reason to introduce a parameter for the
-      // extracted function.
+      // Ignore assumptions if not been removed yet.
       if (isa<AssumeInst>(II))
         continue;
 
@@ -808,7 +801,6 @@ void CodeExtractor::splitReturnBlocks() {
     if (ReturnInst *RI = dyn_cast<ReturnInst>(Block->getTerminator())) {
       BasicBlock *New =
           Block->splitBasicBlock(RI->getIterator(), Block->getName() + ".ret");
-
       if (DT) {
         // Old dominates New. New node dominates all other nodes dominated
         // by Old.
@@ -820,14 +812,6 @@ void CodeExtractor::splitReturnBlocks() {
 
         for (DomTreeNode *I : Children)
           DT->changeImmediateDominator(I, NewNode);
-      }
-
-      if (BFI) {
-        BFI->setBlockFreq(New, BFI->getBlockFreq(Block).getFrequency());
-      }
-      if (BPI) {
-        //  BPI->getEdgeProbability()
-        // BPI->setEdgeProbability();
       }
     }
 }
@@ -846,24 +830,17 @@ Function *CodeExtractor::constructFunctionDeclaration(const ValueSet &inputs,
   // This function returns unsigned, outputs will go back by reference.
   switch (NumExitBlocks) {
   case 0:
-  case 1:
-    RetTy = Type::getVoidTy(header->getContext());
-    break;
-  case 2:
-    RetTy = Type::getInt1Ty(header->getContext());
-    break;
-  default:
-    RetTy = Type::getInt16Ty(header->getContext());
-    break;
+  case 1: RetTy = Type::getVoidTy(header->getContext()); break;
+  case 2: RetTy = Type::getInt1Ty(header->getContext()); break;
+  default: RetTy = Type::getInt16Ty(header->getContext()); break;
   }
 
   std::vector<Type *> paramTy;
-  SmallVector<Value *> VMapArg;
+
   // Add the types of the input values to the function's argument list
   for (Value *value : inputs) {
     LLVM_DEBUG(dbgs() << "value used in func: " << *value << "\n");
     paramTy.push_back(value->getType());
-    VMapArg.push_back(value);
   }
 
   // Add the types of the output values to the function's argument list.
@@ -888,8 +865,9 @@ Function *CodeExtractor::constructFunctionDeclaration(const ValueSet &inputs,
     paramTy.clear();
     paramTy.push_back(PointerType::getUnqual(StructTy));
   }
-  FunctionType *funcType = FunctionType::get(
-      RetTy, paramTy, AllowVarArgs && oldFunction->isVarArg());
+  FunctionType *funcType =
+                  FunctionType::get(RetTy, paramTy,
+                                    AllowVarArgs && oldFunction->isVarArg());
 
   std::string SuffixToUse =
       Suffix.empty()
@@ -899,7 +877,6 @@ Function *CodeExtractor::constructFunctionDeclaration(const ValueSet &inputs,
   Function *newFunction = Function::Create(
       funcType, GlobalValue::InternalLinkage, oldFunction->getAddressSpace(),
       oldFunction->getName() + "." + SuffixToUse, M);
-
   // If the old function is no-throw, so is the new one.
   if (oldFunction->doesNotThrow())
     newFunction->setDoesNotThrow();
@@ -925,9 +902,9 @@ Function *CodeExtractor::constructFunctionDeclaration(const ValueSet &inputs,
         continue;
     } else
       switch (Attr.getKindAsEnum()) {
-        // Those attributes cannot be propagated safely. Explicitly list them
-        // here so we get a warning if new attributes are added. This list also
-        // includes non-function attributes.
+      // Those attributes cannot be propagated safely. Explicitly list them
+      // here so we get a warning if new attributes are added. This list also
+      // includes non-function attributes.
       case Attribute::Alignment:
       case Attribute::AllocSize:
       case Attribute::ArgMemOnly:
@@ -974,8 +951,7 @@ Function *CodeExtractor::constructFunctionDeclaration(const ValueSet &inputs,
       case Attribute::EmptyKey:
       case Attribute::TombstoneKey:
         continue;
-        // Those attributes should be safe to propagate to the extracted
-        // function.
+      // Those attributes should be safe to propagate to the extracted function.
       case Attribute::AlwaysInline:
       case Attribute::Cold:
       case Attribute::DisableSanitizerInstrumentation:
@@ -1020,12 +996,12 @@ Function *CodeExtractor::constructFunctionDeclaration(const ValueSet &inputs,
   }
 
   // Set swifterror parameter attributes.
-  if (!AggregateArgs) {
-    for (auto &&P : enumerate(inputs)) {
+  if (!AggregateArgs) 
+    for (auto P : enumerate(inputs)) {
       if (P.value()->isSwiftError())
         newFunction->addParamAttr(P.index(), Attribute::SwiftError);
     }
-  }
+  
 
   // Set names for input and output arguments.
   if (!AggregateArgs) {
@@ -1038,8 +1014,6 @@ Function *CodeExtractor::constructFunctionDeclaration(const ValueSet &inputs,
 
   return newFunction;
 }
-
-
 
 /// Erase lifetime.start markers which reference inputs to the extraction
 /// region, and insert the referenced memory into \p LifetimesStart.
@@ -1317,52 +1291,6 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC) {
   return extractCodeRegion(CEAC, Inputs, Outputs);
 }
 
-void CodeExtractor::canonicalizeCFGForExtraction(BasicBlock *&Header,
-                                                 bool NoExitBlockPHIs) {
-  //  BasicBlock *header = *Blocks.begin();
-  //  Function *oldFunction = header->getParent();
-
-  // If we have any return instructions in the region, split those blocks so
-  // that the return is not in the region.
-  splitReturnBlocks();
-
-  // canonicalization
-  // If we have to split PHI nodes of the entry or exit blocks, do so now.
-  severSplitPHINodesOfEntry(Header);
-
-  recomputeExitBlocks();
-
-  severSplitPHINodesOfExits();
-
-
-  if (NoExitBlockPHIs) {
-    // TODO: preserve BPI/BFI
-    for (BasicBlock *Block : Blocks) {
-      SmallVector<BasicBlock *> Succs;
-      llvm::append_range(Succs, successors(Block));
-
-      for (BasicBlock *Succ : Succs) {
-        if (Blocks.count(Succ))
-          continue;
-
-        if (!Succ->getSinglePredecessor()) {
-          Succ = SplitEdge(Block, Succ, DT);
-        }
-
-        // Ensure no PHI node in exit block (still possible with single
-        // predecessor, e.g. LCSSA)
-        while (auto P = dyn_cast<PHINode>(&Succ->front())) {
-          assert(P->getNumIncomingValues() == 1);
-          P->replaceAllUsesWith(P->getIncomingValue(0));
-          P->eraseFromParent();
-        }
-      }
-    }
-
-    recomputeExitBlocks();
-  }
-}
-
 static void applyFirstDebugLoc(Function *oldFunction,
                                ArrayRef<BasicBlock *> Blocks,
                                Instruction *BranchI) {
@@ -1392,6 +1320,46 @@ void CodeExtractor::recomputeExitBlocks() {
     }
   }
   NumExitBlocks = ExitBlocks.size();
+}
+
+
+void CodeExtractor::canonicalizeCFGForExtraction(BasicBlock *&Header, bool NoExitBlockPHIs) {
+    // If we have any return instructions in the region, split those blocks so
+    // that the return is not in the region.
+    splitReturnBlocks();
+
+    // If we have to split PHI nodes of the entry or exit blocks, do so now.
+    severSplitPHINodesOfEntry(Header);
+
+    // If a PHI in an exit block has multiple invoming values from the outlined region, create a new PHI for those values within the region such that only PHI itself becomes an output value, not each of its incoming values individually.
+    recomputeExitBlocks();
+    severSplitPHINodesOfExits();
+
+    // If the option was given, ensure there are no PHI nodes at all in the exit nodes themselves.
+    if (NoExitBlockPHIs) {
+        for (BasicBlock *Block : Blocks) {
+            for (BasicBlock *Succ : make_early_inc_range( successors(Block))) {
+                if (Blocks.count(Succ))
+                    continue;
+
+                if (!Succ->getSinglePredecessor()) 
+                    Succ = SplitEdge(Block, Succ, DT);
+                
+
+                // Ensure no PHI node in exit block (still possible with single
+                // predecessor, e.g. LCSSA)
+                while (auto *P = dyn_cast<PHINode>(&Succ->front())) {
+                    assert(P->getNumIncomingValues() == 1);
+                    P->replaceAllUsesWith(P->getIncomingValue(0));
+                    P->eraseFromParent();
+                }
+            }
+        }
+
+		// Exit nodes may have changed by SplitEdge.
+// TODO: Preserve BPI/BFI for ExitBlocks (so should splitReturnBlocks())
+        recomputeExitBlocks();
+    }
 }
 
 Function *
