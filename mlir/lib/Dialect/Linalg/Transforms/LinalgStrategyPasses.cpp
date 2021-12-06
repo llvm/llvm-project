@@ -132,19 +132,7 @@ struct LinalgStrategyPadPass
       paddingPattern.add<LinalgPaddingPattern>(funcOp.getContext(), options,
                                                filter);
     }
-    // Traverse the operations top down to pad producers before consumers. The
-    // extract slice operation introduced after every padded operation enables
-    // padding its consumers. Padding an operation whose producers have not been
-    // padded before fails due to the missing extract slice operations. In this
-    // case, the padding pattern increments the transformation marker without
-    // padding the operation. The top down traversal is thus not only a
-    // performance optimization but also needed to pad all operations along the
-    // use-def chains.
-    GreedyRewriteConfig config;
-    config.useTopDownTraversal = true;
-    if (failed(applyPatternsAndFoldGreedily(funcOp, std::move(paddingPattern),
-                                            config)))
-      signalPassFailure();
+    (void)applyPatternsAndFoldGreedily(funcOp, std::move(paddingPattern));
   }
 
   LinalgPaddingOptions options;
