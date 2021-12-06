@@ -1682,7 +1682,7 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
     }
 
 
-    if (!KeepOldBlocks) {
+
         for (auto OldTarget : OldTargets) {
             BasicBlock*& NewTarget = ExitBlockMap[OldTarget];
             if (NewTarget)
@@ -1717,7 +1717,7 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
 
             ReturnInst::Create(Context, brVal, NewTarget);
         }
-    }
+    
 
 
 
@@ -1844,11 +1844,6 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
 
 
     if (KeepOldBlocks) {
- 
-
-
-
-
         DenseMap <Value*, LoadInst*  > ReloadReplacements;
         SmallVector<LoadInst*> ReloadRepls;
         DenseMap <Value*, Value*  > ReloadAddress;
@@ -1902,7 +1897,7 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
 
 
 
-
+#if 0
         // Since there may be multiple exits from the original region, make the new
         // function return an unsigned, switch on that number.  This loop iterates
         // over all of the blocks in the extracted region, updating any terminator
@@ -1954,6 +1949,18 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
                 SuccNum),
                 OldTarget);
         }
+#endif
+
+        for (auto &&P: Orlder) {
+            auto OldTarget = P;
+            auto SuccNum =ExitBlockSwitchIdx[OldTarget];
+
+            TheSwitch->addCase(ConstantInt::get(Type::getInt16Ty(Context),
+                SuccNum),
+                OldTarget);
+        }
+
+
 
 
 
@@ -2148,15 +2155,6 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
         }
 
     } else {
-
-
-
- 
-
-
-       
-    
-
         for (unsigned i = 0, e = inputs.size(); i != e; ++i) {
             Value* RewriteVal = NewValues[i];
 
@@ -2166,7 +2164,6 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
                     if (Blocks.count(inst->getParent()))
                         inst->replaceUsesOfWith(inputs[i], RewriteVal);
         }
-
 
 
 
@@ -2190,10 +2187,6 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
 
 
    
-
-
-     
-
 
         // Reload the outputs passed in by reference.
         for (unsigned i = 0, e = outputs.size(); i != e; ++i) {
