@@ -209,6 +209,7 @@ static_library("CodeGen") {
     "TwoAddressInstructionPass.cpp",
     "TypePromotion.cpp",
     "UnreachableBlockElim.cpp",
+    "VLIWMachineScheduler.cpp",
     "ValueTypes.cpp",
     "VirtRegMap.cpp",
     "WasmEHPrepare.cpp",
