@@ -5,17 +5,17 @@ target datalayout = "e-m:o-i64:64-i128:128-n32:64-S128"
 target triple = "arm64-apple-ios5.0.0"
 
 define void @selects_1(i32* nocapture %dst, i32 %A, i32 %B, i32 %C, i32 %N) {
-; CHECK: LV: Found an estimated cost of 5 for VF 2 For instruction:   %cond = select i1 %cmp1, i32 10, i32 %and
-; CHECK: LV: Found an estimated cost of 5 for VF 2 For instruction:   %cond6 = select i1 %cmp2, i32 30, i32 %and
-; CHECK: LV: Found an estimated cost of 5 for VF 2 For instruction:   %cond11 = select i1 %cmp7, i32 %cond, i32 %cond6
+; CHECK: LV: Found an estimated cost of 1 for VF 2 For instruction:   %cond = select i1 %cmp1, i32 10, i32 %and
+; CHECK: LV: Found an estimated cost of 1 for VF 2 For instruction:   %cond6 = select i1 %cmp2, i32 30, i32 %and
+; CHECK: LV: Found an estimated cost of 1 for VF 2 For instruction:   %cond11 = select i1 %cmp7, i32 %cond, i32 %cond6
 
-; CHECK: LV: Found an estimated cost of 13 for VF 4 For instruction:   %cond = select i1 %cmp1, i32 10, i32 %and
-; CHECK: LV: Found an estimated cost of 13 for VF 4 For instruction:   %cond6 = select i1 %cmp2, i32 30, i32 %and
-; CHECK: LV: Found an estimated cost of 13 for VF 4 For instruction:   %cond11 = select i1 %cmp7, i32 %cond, i32 %cond6
+; CHECK: LV: Found an estimated cost of 1 for VF 4 For instruction:   %cond = select i1 %cmp1, i32 10, i32 %and
+; CHECK: LV: Found an estimated cost of 1 for VF 4 For instruction:   %cond6 = select i1 %cmp2, i32 30, i32 %and
+; CHECK: LV: Found an estimated cost of 1 for VF 4 For instruction:   %cond11 = select i1 %cmp7, i32 %cond, i32 %cond6
 
 ; CHECK-LABEL: define void @selects_1(
 ; CHECK:       vector.body:
-; CHECK:         select <2 x i1>
+; CHECK:         select <4 x i1>
 
 entry:
   %cmp26 = icmp sgt i32 %N, 0
