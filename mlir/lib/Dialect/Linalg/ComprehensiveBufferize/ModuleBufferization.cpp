@@ -36,6 +36,10 @@ struct ModuleBufferizationState : public DialectBufferizationState {
   /// A mapping of ReturnOp OpOperand indices to equivalent FuncOp BBArg
   /// indices.
   DenseMap<FuncOp, DenseMap<int64_t, int64_t>> equivalentFuncArgs;
+
+  SmallVector<FuncOp> orderedFuncOps;
+
+  DenseMap<FuncOp, DenseSet<Operation *>> callerMap;
 };
 } // namespace
 
@@ -689,6 +693,32 @@ struct FuncOpInterface
     return comprehensive_bufferize::bufferize(&funcOp.body(), state);
   }
 
+  /// Return `true` if the given function argument is writable.
+  bool isWritable(Operation *op, Value value, BufferizationState &state) const {
+    auto funcOp = cast<FuncOp>(op);
+    BlockArgument bbArg = value.dyn_cast<BlockArgument>();
+    assert(bbArg && "expected BlockArgument");
+    ModuleBufferizationState &moduleState = getModuleBufferizationState(state);
+
+    // In a first approximation:
+    // =========================
+    // If the function is called, we can allocate on the caller side which lets
+    // us force inplace arguments at function boundaries.
+    // TODO: do not rely on this behavior.
+    if (moduleState.callerMap.find(funcOp) != moduleState.callerMap.end())
+      return true;
+
+    // Set the function arguments marked with inplaceable to be known as
+    // bufferizing to a writeable memory.
+    BoolAttr inplaceAttr = funcOp.getArgAttrOfType<BoolAttr>(
+        bbArg.getArgNumber(), BufferizableOpInterface::kInplaceableAttrName);
+    if (inplaceAttr && inplaceAttr.getValue())
+      return true;
+
+    // All other function arguments are not writable.
+    return false;
+  }
+
   bool isAllocationHoistingBarrier(Operation *op) const { return true; }
 };
 
@@ -704,45 +734,43 @@ void mlir::linalg::comprehensive_bufferize::std_ext::
   registry.addOpInterface<FuncOp, std_ext::FuncOpInterface>();
 }
 
+/// Set the attribute that triggers inplace bufferization on a FuncOp argument
+/// `bbArg`.
+static void setInPlaceFuncArgument(BlockArgument bbArg, bool inPlace) {
+  auto funcOp = cast<FuncOp>(bbArg.getOwner()->getParentOp());
+  funcOp.setArgAttr(bbArg.getArgNumber(),
+                    BufferizableOpInterface::kInplaceableAttrName,
+                    BoolAttr::get(bbArg.getContext(), inPlace));
+}
+
+/// Annotate the IR with the result of the analysis. For testing/debugging only.
+static void annotateOpsWithBufferizationMarkers(FuncOp funcOp,
+                                                BufferizationState &state) {
+  auto bufferizableOp = cast<BufferizableOpInterface>(funcOp.getOperation());
+  for (BlockArgument bbArg : funcOp.getArguments())
+    if (bbArg.getType().isa<TensorType>())
+      setInPlaceFuncArgument(bbArg, bufferizableOp.isWritable(bbArg, state));
+}
+
 LogicalResult mlir::linalg::comprehensive_bufferize::runComprehensiveBufferize(
     ModuleOp moduleOp, const BufferizationOptions &options) {
-  SmallVector<FuncOp> orderedFuncOps;
-  DenseMap<FuncOp, DenseSet<Operation *>> callerMap;
-  if (failed(getFuncOpsOrderedByCalls(moduleOp, orderedFuncOps, callerMap)))
-    return failure();
-
   BufferizationState state(moduleOp, options);
   ModuleBufferizationState &moduleState = getModuleBufferizationState(state);
   BufferizationAliasInfo &aliasInfo = state.aliasInfo;
+
+  if (failed(getFuncOpsOrderedByCalls(moduleOp, moduleState.orderedFuncOps,
+                                      moduleState.callerMap)))
+    return failure();
 
   // Interestingly, all function args that are not visible outside of a module
   // can be fully bufferized inplace by guaranteeing the CallOp is bufferized
   // inplace. Therefore, we just bufferize funcOp as if none of its results were
   // inplaceable, detect which operands are cloned internally and decide what to
   // do at call sites.
-  for (FuncOp funcOp : orderedFuncOps) {
+  for (FuncOp funcOp : moduleState.orderedFuncOps) {
     // No body => no analysis.
     if (funcOp.body().empty())
       continue;
-
-    // In a first approximation:
-    // =========================
-    // If the function is called, we can allocate on the caller side which lets
-    // us force inplace arguments at function boundaries.
-    // TODO: do not rely on this behavior.
-    if (callerMap.find(funcOp) != callerMap.end())
-      for (BlockArgument bbArg : funcOp.getArguments())
-        if (bbArg.getType().isa<TensorType>())
-          aliasInfo.setBufferizesToWritableMemory(bbArg);
-
-    // Set the function arguments marked with inplaceable to be known as
-    // bufferizing to a writeable memory.
-    for (BlockArgument bbArg : funcOp.getArguments()) {
-      BoolAttr inplaceAttr = funcOp.getArgAttrOfType<BoolAttr>(
-          bbArg.getArgNumber(), BufferizableOpInterface::kInplaceableAttrName);
-      if (inplaceAttr && inplaceAttr.getValue())
-        aliasInfo.setBufferizesToWritableMemory(bbArg);
-    }
 
     // Register extra post analysis steps. These cannot be stored in `options`
     // because `options` is immutable.
@@ -755,12 +783,16 @@ LogicalResult mlir::linalg::comprehensive_bufferize::runComprehensiveBufferize(
     // Analyze and bufferize funcOp.
     if (failed(runComprehensiveBufferize(funcOp, options, state, extraSteps)))
       return failure();
+
+    // Add annotations to function arguments.
+    if (options.testAnalysisOnly)
+      annotateOpsWithBufferizationMarkers(funcOp, state);
   }
 
   if (options.testAnalysisOnly)
     return success();
 
-  for (FuncOp funcOp : orderedFuncOps) {
+  for (FuncOp funcOp : moduleState.orderedFuncOps) {
     // Note: It would be good to apply cleanups here but we cannot as aliasInfo
     // would be invalidated.
     if (failed(bufferizeFuncOpBoundary(funcOp, state)))

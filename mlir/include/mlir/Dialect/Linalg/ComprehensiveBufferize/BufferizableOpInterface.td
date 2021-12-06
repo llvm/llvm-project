@@ -226,7 +226,8 @@ def BufferizableOpInterface : OpInterface<"BufferizableOpInterface"> {
         }],
         /*retType=*/"bool",
         /*methodName=*/"isWritable",
-        /*args=*/(ins "Value":$value),
+        /*args=*/(ins "Value":$value,
+                      "BufferizationState &":$state),
         /*methodBody=*/"",
         /*defaultImplementation=*/[{
           return value.isa<OpResult>();
