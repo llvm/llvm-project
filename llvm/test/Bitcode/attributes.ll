@@ -510,6 +510,12 @@ define void @f82(i32* %0)
         ret void;
 }
 
+; CHECK-TYPED: define void @f83(<4 x i8*> align 32 %0, <vscale x 1 x double*> align 64 %1)
+; CHECK-OPQUE: define void @f83(<4 x ptr> align 32 %0, <vscale x 1 x ptr> align 64 %1)
+define void @f83(<4 x i8*> align 32 %0, <vscale x 1 x double*> align 64 %1) {
+  ret void
+}
+
 ; CHECK: attributes #0 = { noreturn }
 ; CHECK: attributes #1 = { nounwind }
 ; CHECK: attributes #2 = { readnone }

@@ -1839,12 +1839,12 @@ AttrBuilder AttributeFuncs::typeIncompatible(Type *Ty) {
   AttrBuilder Incompatible;
 
   if (!Ty->isIntegerTy())
-    // Attribute that only apply to integers.
+    // Attributes that only apply to integers.
     Incompatible.addAttribute(Attribute::SExt)
       .addAttribute(Attribute::ZExt);
 
   if (!Ty->isPointerTy())
-    // Attribute that only apply to pointers.
+    // Attributes that only apply to pointers.
     Incompatible.addAttribute(Attribute::Nest)
         .addAttribute(Attribute::NoAlias)
         .addAttribute(Attribute::NoCapture)
@@ -1852,7 +1852,6 @@ AttrBuilder AttributeFuncs::typeIncompatible(Type *Ty) {
         .addAttribute(Attribute::ReadNone)
         .addAttribute(Attribute::ReadOnly)
         .addAttribute(Attribute::SwiftError)
-        .addAlignmentAttr(1)             // the int here is ignored
         .addDereferenceableAttr(1)       // the int here is ignored
         .addDereferenceableOrNullAttr(1) // the int here is ignored
         .addPreallocatedAttr(Ty)
@@ -1861,6 +1860,10 @@ AttrBuilder AttributeFuncs::typeIncompatible(Type *Ty) {
         .addStructRetAttr(Ty)
         .addByRefAttr(Ty)
         .addTypeAttr(Attribute::ElementType, Ty);
+
+  if (!Ty->isPtrOrPtrVectorTy())
+    // Attributes that only apply to pointers or vectors of pointers.
+    Incompatible.addAlignmentAttr(1); // the int here is ignored
 
   // Some attributes can apply to all "values" but there are no `void` values.
   if (Ty->isVoidTy())
