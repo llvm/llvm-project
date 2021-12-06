@@ -30,6 +30,12 @@ using namespace llvm::PatternMatch;
 static cl::opt<bool> EnableFalkorHWPFUnrollFix("enable-falkor-hwpf-unroll-fix",
                                                cl::init(true), cl::Hidden);
 
+static cl::opt<unsigned> SVEGatherOverhead("sve-gather-overhead", cl::init(10),
+                                           cl::Hidden);
+
+static cl::opt<unsigned> SVEScatterOverhead("sve-scatter-overhead",
+                                            cl::init(10), cl::Hidden);
+
 bool AArch64TTIImpl::areInlineCompatible(const Function *Caller,
                                          const Function *Callee) const {
   const TargetMachine &TM = getTLI()->getTargetMachine();
@@ -1777,6 +1783,10 @@ AArch64TTIImpl::getMaskedMemoryOpCost(unsigned Opcode, Type *Src,
   return LT.first * 2;
 }
 
+static unsigned getSVEGatherScatterOverhead(unsigned Opcode) {
+  return Opcode == Instruction::Load ? SVEGatherOverhead : SVEScatterOverhead;
+}
+
 InstructionCost AArch64TTIImpl::getGatherScatterOpCost(
     unsigned Opcode, Type *DataTy, const Value *Ptr, bool VariableMask,
     Align Alignment, TTI::TargetCostKind CostKind, const Instruction *I) {
@@ -1799,6 +1809,10 @@ InstructionCost AArch64TTIImpl::getGatherScatterOpCost(
   ElementCount LegalVF = LT.second.getVectorElementCount();
   InstructionCost MemOpCost =
       getMemoryOpCost(Opcode, VT->getElementType(), Alignment, 0, CostKind, I);
+  // Add on an overhead cost for using gathers/scatters.
+  // TODO: At the moment this is applied unilaterally for all CPUs, but at some
+  // point we may want a per-CPU overhead.
+  MemOpCost *= getSVEGatherScatterOverhead(Opcode);
   return LT.first * MemOpCost * getMaxNumElements(LegalVF);
 }
 
