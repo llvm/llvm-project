@@ -1009,6 +1009,15 @@ Function *CodeExtractor::constructFunctionDeclaration(const ValueSet &inputs, co
         newFunction->addFnAttr(Attr);
     }
 
+    // Set swifterror parameter attributes.
+    if (!AggregateArgs) {
+        for (auto&& P : enumerate(inputs)) {
+            if (P.value()->isSwiftError())
+                newFunction->addParamAttr(P.index(), Attribute::SwiftError);
+        }
+    }
+
+
 
   // Set names for input and output arguments.
   if (!AggregateArgs) {
@@ -1553,6 +1562,16 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
 
 
 
+    // Collect objects which are inputs to the extraction region and also
+    // referenced by lifetime start markers within it. The effects of these
+    // markers must be replicated in the calling function to prevent the stack
+    // coloring pass from merging slots which store input objects.
+    ValueSet LifetimesStart;
+    eraseLifetimeMarkersOnInputs(Blocks, SinkingCands, LifetimesStart);
+
+
+
+
 
 
 
@@ -1642,15 +1661,15 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
 
 
    
-    SmallVector<unsigned, 1> SwiftErrorArgs;
+   // SmallVector<unsigned, 1> SwiftErrorArgs;
     std::vector<Value *> ReloadOutputs;
     std::vector<Value *> Reloads;
     if (!AggregateArgs) {
         for (Value* input : inputs) {
                 params.push_back(input);
-                if (input->isSwiftError())
-                    SwiftErrorArgs.push_back(ArgNo);
-            ++ArgNo;
+           //     if (input->isSwiftError())
+             //       SwiftErrorArgs.push_back(ArgNo);
+         //   ++ArgNo;
         }
     
 
@@ -1674,6 +1693,19 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
     if (!AggregateArgs)
         std::advance(OutputArgBegin, inputs.size());
 
+
+
+    // Emit the call to the function
+    CallInst *call = CallInst::Create(newFunction, params,   NumExitBlocks > 1 ? "targetBlock" : "",codeReplacer);
+
+
+    // Set swifterror parameter attributes.
+    if (!AggregateArgs) {
+        for (auto&& P : enumerate(inputs)) {
+            if (P.value()->isSwiftError())
+                call->addParamAttr(P.index(), Attribute::SwiftError);
+        }
+    }
 
 
 
@@ -1700,19 +1732,9 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
 
 
     if (KeepOldBlocks) {
-
-
         for (auto&& P : enumerate(inputs)) {
             VMap[P.value()] = NewValues[P.index()];
         }
-#if 0
-        for (auto&& S : SinkingCands) {
-            VMap[S] = S;
-        }
-#endif
-
-        CallInst* call = CallInst::Create(newFunction, params, NumExitBlocks > 1 ? "targetBlock" : "");
-
 
 
         // Add debug location to the new call, if the original function has debug
@@ -1723,13 +1745,9 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
             if (auto DL = newFunction->getEntryBlock().getTerminator()->getDebugLoc())
                 call->setDebugLoc(DL);
         }
-        codeReplacer->getInstList().push_back(call);
+        //codeReplacer->getInstList().push_back(call);
 
-        // Set swifterror parameter attributes.
-        for (unsigned SwiftErrArgNo : SwiftErrorArgs) {
-            call->addParamAttr(SwiftErrArgNo, Attribute::SwiftError);
-            newFunction->addParamAttr(SwiftErrArgNo, Attribute::SwiftError);
-        }
+
 
         Function::arg_iterator OutputArgBegin = newFunction->arg_begin();
         unsigned FirstOut = inputs.size();
@@ -1753,8 +1771,7 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
                     StructTy, Struct, Idx, "gep_reload_" + outputs[i]->getName());
                 codeReplacer->getInstList().push_back(GEP);
                 Output = GEP;
-            }
-            else {
+            } else {
                 Output = ReloadOutputs[i];
             }
             ReloadAddress[outputs[i]] = Output;
@@ -1771,8 +1788,7 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
                 ReloadRepls.push_back(load);
 
                 // Remove all PHIs; will need to be recreated by SSAUpdater;
-            }
-            else {
+            } else {
                 std::vector<User*> Users(outputs[i]->user_begin(), outputs[i]->user_end());
                 for (unsigned u = 0, e = Users.size(); u != e; ++u) {
                     Instruction* inst = cast<Instruction>(Users[u]);
@@ -2078,20 +2094,6 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
 
        
 
-        auto* BranchI = BranchInst::Create(header, newFuncRoot);
-        applyFirstDebugLoc(oldFunction, Blocks.getArrayRef(), BranchI);
-
-
-
-
-
-        // Collect objects which are inputs to the extraction region and also
-        // referenced by lifetime start markers within it. The effects of these
-        // markers must be replicated in the calling function to prevent the stack
-        // coloring pass from merging slots which store input objects.
-        ValueSet LifetimesStart;
-        eraseLifetimeMarkersOnInputs(Blocks, SinkingCands, LifetimesStart);
-
 
 
 
@@ -2109,40 +2111,25 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
 
 
 
-
-
-
-        Module *M = newFunction->getParent();
-        LLVMContext &Context = M->getContext();
-     //   const DataLayout &DL = M->getDataLayout();
-
-
- 
-    
-        // Emit the call to the function
-        CallInst *  call = CallInst::Create(newFunction, params,   NumExitBlocks > 1 ? "targetBlock" : "",codeReplacer);
-
+        auto* BranchI = BranchInst::Create(header, newFuncRoot);
+        applyFirstDebugLoc(oldFunction, Blocks.getArrayRef(), BranchI);
 
 
         // Add debug location to the new call, if the original function has debug
         // info. In that case, the terminator of the entry block of the extracted
         // function contains the first debug location of the extracted function,
         // set in extractCodeRegion.
-        if (codeReplacer->getParent()->getSubprogram()) {
+        if (oldFunction->getSubprogram()) {
             if (auto DL = newFunction->getEntryBlock().getTerminator()->getDebugLoc())
                 call->setDebugLoc(DL);
         }
-       // codeReplacer->getInstList().push_back(call);
+    
 
 
 
-        // Set swifterror parameter attributes.
-        for (unsigned SwiftErrArgNo : SwiftErrorArgs) {  // TOOD: Move to constructFunction
-            call->addParamAttr(SwiftErrArgNo, Attribute::SwiftError);
-            newFunction->addParamAttr(SwiftErrArgNo, Attribute::SwiftError);
-        }
 
-       // SmallVector<Instruction*> AfterCall;
+
+
 
 
         ValueToValueMapTy VMap;
