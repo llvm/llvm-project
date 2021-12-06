@@ -1682,6 +1682,44 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
     }
 
 
+    if (!KeepOldBlocks) {
+        for (auto OldTarget : OldTargets) {
+            BasicBlock*& NewTarget = ExitBlockMap[OldTarget];
+            if (NewTarget)
+                continue;
+
+            // If we don't already have an exit stub for this non-extracted
+            // destination, create one now!
+            NewTarget = BasicBlock::Create(Context,
+                OldTarget->getName() + ".exitStub",
+                newFunction);
+
+            VMap[OldTarget] = NewTarget;
+
+
+            auto SuccNum = ExitBlockSwitchIdx[OldTarget];
+
+
+            auto& Context = Blocks.front()->getContext();
+            Value* brVal = nullptr;
+            assert(NumExitBlocks < 0xffff && "too many exit blocks for switch");
+            switch (NumExitBlocks) {
+            case 0:
+            case 1: break;  // No value needed.
+            case 2:         // Conditional branch, return a bool
+                brVal = ConstantInt::get(Type::getInt1Ty(Context), !SuccNum);
+                break;
+            default:
+                brVal = ConstantInt::get(Type::getInt16Ty(Context), SuccNum);
+                break;
+            }
+
+
+            ReturnInst::Create(Context, brVal, NewTarget);
+        }
+    }
+
+
 
     //// Codegen newFunction call replacement ////////////////////////////////////////////// 
 
@@ -2187,40 +2225,6 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
 
 
 
-        for (auto OldTarget : OldTargets) {
-            BasicBlock*& NewTarget = ExitBlockMap[OldTarget];
-            if (NewTarget) 
-                continue;
-
-                // If we don't already have an exit stub for this non-extracted
-                // destination, create one now!
-            NewTarget = BasicBlock::Create(Context,
-                    OldTarget->getName() + ".exitStub",
-                    newFunction);
-            
-            VMap[OldTarget] = NewTarget;
-
-
-            auto SuccNum = ExitBlockSwitchIdx[OldTarget];
-
-
-            auto &Context = Blocks.front()->getContext();
-            Value *brVal = nullptr;
-            assert(NumExitBlocks < 0xffff && "too many exit blocks for switch");
-            switch (NumExitBlocks) {
-            case 0:
-            case 1: break;  // No value needed.
-            case 2:         // Conditional branch, return a bool
-                brVal = ConstantInt::get(Type::getInt1Ty(Context), !SuccNum);
-                break;
-            default:
-                brVal = ConstantInt::get(Type::getInt16Ty(Context), SuccNum);
-                break;
-            }
-
-
-            ReturnInst::Create(Context, brVal, NewTarget);
-        }
 
 
         // Now we can emit a switch statement using the call as a value.
