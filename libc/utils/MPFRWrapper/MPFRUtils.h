@@ -30,6 +30,7 @@ enum class Operation : int {
   Exp2,
   Expm1,
   Floor,
+  Log,
   Mod2PI,
   ModPIOver2,
   ModPIOver4,

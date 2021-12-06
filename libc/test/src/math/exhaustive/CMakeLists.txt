@@ -51,3 +51,16 @@ add_fp_unittest(
     libc.src.math.expm1f
     libc.src.__support.FPUtil.fputil
 )
+
+add_fp_unittest(
+  logf_test
+  NEED_MPFR
+  SUITE
+    libc_math_exhaustive_tests
+  SRCS
+    logf_test.cpp
+  DEPENDS
+    libc.include.math
+    libc.src.math.logf
+    libc.src.__support.FPUtil.fputil
+)
