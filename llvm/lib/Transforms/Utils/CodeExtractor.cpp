@@ -1821,6 +1821,37 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
     }
 
 
+    if (!KeepOldBlocks) {
+        // Reload the outputs passed in by reference.
+        for (unsigned i = 0, e = outputs.size(); i != e; ++i) {
+            Value* Output = nullptr;
+            if (AggregateArgs) {
+                Value* Idx[2];
+                Idx[0] = Constant::getNullValue(Type::getInt32Ty(Context));
+                Idx[1] = ConstantInt::get(Type::getInt32Ty(Context), FirstOut + i);
+                GetElementPtrInst* GEP = GetElementPtrInst::Create(StructTy, Struct, Idx, "gep_reload_" + outputs[i]->getName());
+                codeReplacer->getInstList().push_back(GEP);
+                Output = GEP;
+            }
+            else {
+                Output = ReloadOutputs[i];
+            }
+            LoadInst* load = new LoadInst(outputs[i]->getType(), Output, outputs[i]->getName() + ".reload", codeReplacer);
+
+            Reloads.push_back(load);
+            std::vector<User*> Users(outputs[i]->user_begin(), outputs[i]->user_end());
+            for (unsigned u = 0, e = Users.size(); u != e; ++u) {
+                Instruction* inst = cast<Instruction>(Users[u]);
+                if (!KeepOldBlocks) {
+                    if (!Blocks.count(inst->getParent()))
+                        inst->replaceUsesOfWith(outputs[i], load);
+                }
+            }
+        }
+    }
+
+
+
 
 
     //// Connect call replacement to CFG ////////////////////////////////////////////////////////////////////////
@@ -1888,6 +1919,8 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
         }
 
 
+
+
         // Now we can emit a switch statement using the call as a value.
         SwitchInst* TheSwitch =
             SwitchInst::Create(Constant::getNullValue(Type::getInt16Ty(Context)),
@@ -1896,60 +1929,6 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
 
 
 
-
-#if 0
-        // Since there may be multiple exits from the original region, make the new
-        // function return an unsigned, switch on that number.  This loop iterates
-        // over all of the blocks in the extracted region, updating any terminator
-        // instructions in the to-be-extracted region that branch to blocks that are
-        // not in the region to be extracted.
-        std::map<BasicBlock*, BasicBlock*> ExitBlockMap;
-
-        // Iterate over the previously collected targets, and create new blocks inside
-        // the function to branch to.
-        unsigned switchVal = 0;
-        for (BasicBlock* OldTarget : OldTargets) {
-            if (Blocks.count(OldTarget))
-                continue;
-            BasicBlock*& NewTarget = ExitBlockMap[OldTarget];
-            if (NewTarget) {
-                // llvm_unreachable("Happens if e.g. switch has multiple edges to target");
-                continue;
-            }
-
-            // If we don't already have an exit stub for this non-extracted
-            // destination, create one now!
-            NewTarget = BasicBlock::Create(Context,
-                OldTarget->getName() + ".exitStub",
-                newFunction);
-            VMap[OldTarget] = NewTarget;
-            unsigned SuccNum = switchVal++;
-
-            Value* brVal = nullptr;
-            assert(NumExitBlocks < 0xffff && "too many exit blocks for switch");
-            switch (NumExitBlocks) {
-            case 0:
-            case 1: break;  // No value needed.
-            case 2:         // Conditional branch, return a bool
-                brVal = ConstantInt::get(Type::getInt1Ty(Context), !SuccNum);
-                break;
-            default:
-                brVal = ConstantInt::get(Type::getInt16Ty(Context), SuccNum);
-                break;
-            }
-
-            ReturnInst::Create(Context, brVal, NewTarget);
-
-            // auto OldPredecessor  = OldTarget->getUniquePredecessor();
-
-
-
-            // Update the switch instruction.
-            TheSwitch->addCase(ConstantInt::get(Type::getInt16Ty(Context),
-                SuccNum),
-                OldTarget);
-        }
-#endif
 
         for (auto &&P: Orlder) {
             auto OldTarget = P;
@@ -2187,7 +2166,7 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
 
 
    
-
+#if 0
         // Reload the outputs passed in by reference.
         for (unsigned i = 0, e = outputs.size(); i != e; ++i) {
             Value *Output = nullptr;
@@ -2213,7 +2192,7 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
                 }
             }
         }
-
+#endif
 
 
 
