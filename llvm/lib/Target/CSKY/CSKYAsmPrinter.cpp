@@ -30,6 +30,9 @@ using namespace llvm;
 
 #define DEBUG_TYPE "csky-asm-printer"
 
+STATISTIC(CSKYNumInstrsCompressed,
+          "Number of C-SKY Compressed instructions emitted");
+
 CSKYAsmPrinter::CSKYAsmPrinter(llvm::TargetMachine &TM,
                                std::unique_ptr<llvm::MCStreamer> Streamer)
     : AsmPrinter(TM, std::move(Streamer)), MCInstLowering(OutContext, *this) {}
@@ -37,6 +40,16 @@ CSKYAsmPrinter::CSKYAsmPrinter(llvm::TargetMachine &TM,
 bool CSKYAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
   Subtarget = &MF.getSubtarget<CSKYSubtarget>();
   return AsmPrinter::runOnMachineFunction(MF);
+}
+
+#define GEN_COMPRESS_INSTR
+#include "CSKYGenCompressInstEmitter.inc"
+void CSKYAsmPrinter::EmitToStreamer(MCStreamer &S, const MCInst &Inst) {
+  MCInst CInst;
+  bool Res = compressInst(CInst, Inst, *Subtarget, OutStreamer->getContext());
+  if (Res)
+    ++CSKYNumInstrsCompressed;
+  AsmPrinter::EmitToStreamer(*OutStreamer, Res ? CInst : Inst);
 }
 
 // Simple pseudo-instructions have their lowering (with expansion to real
