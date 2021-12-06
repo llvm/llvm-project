@@ -1608,11 +1608,35 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
     
 
 
+
+
+    //// Copy/Move  code ////////////////////////////////////////////////////////////////////////////
+
+    // Determine position for the replacement code
+    auto ReplIP = header;
+    if (!KeepOldBlocks) {
+        while (ReplIP && Blocks.count(ReplIP)) {
+            ReplIP = ReplIP->getNextNode();
+        }
+    }
+
+
+    if (KeepOldBlocks) {
+
+    } else {
+        moveCodeToFunction(newFunction);
+    }
+
+
+
     //// Codegen newFunction call replacement ////////////////////////////////////////////// 
 
     // This takes place of the original loop
-    BasicBlock *codeReplacer = BasicBlock::Create(header->getContext(),        "codeRepl", oldFunction,        header);
+    BasicBlock *codeReplacer = BasicBlock::Create(header->getContext(),        "codeRepl", oldFunction,        ReplIP);
     BasicBlock *AllocaBlock = &oldFunction->front();
+
+
+
 
 
     // Update the entry count of the function.
@@ -1622,7 +1646,6 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
             newFunction->setEntryCount(ProfileCount(Count.getValue(), Function::PCT_Real)); // FIXME
         BFI->setBlockFreq(codeReplacer, EntryFreq.getFrequency());
     }
-
 
 
 
@@ -1659,17 +1682,15 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
     }
 
 
+  
 
    
-   // SmallVector<unsigned, 1> SwiftErrorArgs;
+ 
     std::vector<Value *> ReloadOutputs;
     std::vector<Value *> Reloads;
     if (!AggregateArgs) {
         for (Value* input : inputs) {
                 params.push_back(input);
-           //     if (input->isSwiftError())
-             //       SwiftErrorArgs.push_back(ArgNo);
-         //   ++ArgNo;
         }
     
 
@@ -1711,7 +1732,6 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
 
 
     //// Connect call replacement to CFG ////////////////////////////////////////////////////////////////////////
-
 
 
 
@@ -2093,9 +2113,7 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
 
 
        
-
-
-
+    
 
         for (unsigned i = 0, e = inputs.size(); i != e; ++i) {
             Value* RewriteVal = NewValues[i];
@@ -2129,7 +2147,7 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
 
 
 
-
+   
 
 
      
@@ -2236,6 +2254,10 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
 
 
 
+       
+
+
+
         // Store the arguments right after the definition of output value.
         // This should be proceeded after creating exit stubs to be ensure that invoke
         // result restore will be placed in the outlined function.
@@ -2324,21 +2346,23 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
             break;
         }
 
+
+     
+
         // Insert lifetime markers around the reloads of any output values. The
         // allocas output values are stored in are only in-use in the codeRepl block.
         insertLifetimeMarkersSurroundingCall(M, ReloadOutputs, ReloadOutputs, call);
 
-       // CallInst* TheCall =call;
 
 
-        moveCodeToFunction(newFunction);
+
+
 
 
         // TODO: ByCopy
         // Replicate the effects of any lifetime start/end markers which referenced
         // input objects in the extraction region by placing markers around the call.
-        insertLifetimeMarkersSurroundingCall(
-            oldFunction->getParent(), LifetimesStart.getArrayRef(), {}, call);
+        insertLifetimeMarkersSurroundingCall(oldFunction->getParent(), LifetimesStart.getArrayRef(), {}, call);
 
 
    
