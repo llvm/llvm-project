@@ -7329,6 +7329,143 @@ TEST_P(ASTImporterOptionSpecificTestBase, ImportUsingShadowList) {
   EXPECT_EQ(*ShadowI, ToUsingShadowF2);
 }
 
+AST_MATCHER_P(FunctionTemplateDecl, templateParameterCountIs, unsigned, Cnt) {
+  return Node.getTemplateParameters()->size() == Cnt;
+}
+
+TEST_P(ASTImporterOptionSpecificTestBase, ImportDeductionGuide) {
+  TranslationUnitDecl *FromTU = getTuDecl(
+      R"(
+      template<class> class A { };
+      template<class T> class B {
+          template<class T1, typename = A<T>> B(T1);
+      };
+      template<class T>
+      B(T, T) -> B<int>;
+      )",
+      Lang_CXX17);
+
+  // Get the implicit deduction guide for (non-default) constructor of 'B'.
+  auto *FromDGCtor = FirstDeclMatcher<FunctionTemplateDecl>().match(
+      FromTU, functionTemplateDecl(templateParameterCountIs(3)));
+  // Implicit deduction guide for copy constructor of 'B'.
+  auto *FromDGCopyCtor = FirstDeclMatcher<FunctionTemplateDecl>().match(
+      FromTU, functionTemplateDecl(templateParameterCountIs(1), isImplicit()));
+  // User defined deduction guide.
+  auto *FromDGOther = FirstDeclMatcher<CXXDeductionGuideDecl>().match(
+      FromTU, cxxDeductionGuideDecl(unless(isImplicit())));
+
+  TemplateParameterList *FromDGCtorTP = FromDGCtor->getTemplateParameters();
+  // Don't know why exactly but this is the DeclContext here.
+  EXPECT_EQ(FromDGCtorTP->getParam(0)->getDeclContext(),
+            FromDGCopyCtor->getTemplatedDecl());
+  EXPECT_EQ(FromDGCtorTP->getParam(1)->getDeclContext(),
+            FromDGCtor->getTemplatedDecl());
+  EXPECT_EQ(FromDGCtorTP->getParam(2)->getDeclContext(),
+            FromDGCtor->getTemplatedDecl());
+  EXPECT_EQ(
+      FromDGCopyCtor->getTemplateParameters()->getParam(0)->getDeclContext(),
+      FromDGCopyCtor->getTemplatedDecl());
+  EXPECT_EQ(FromDGOther->getDescribedTemplate()
+                ->getTemplateParameters()
+                ->getParam(0)
+                ->getDeclContext(),
+            FromDGOther);
+
+  auto *ToDGCtor = Import(FromDGCtor, Lang_CXX17);
+  auto *ToDGCopyCtor = Import(FromDGCopyCtor, Lang_CXX17);
+  auto *ToDGOther = Import(FromDGOther, Lang_CXX17);
+  ASSERT_TRUE(ToDGCtor);
+  ASSERT_TRUE(ToDGCopyCtor);
+  ASSERT_TRUE(ToDGOther);
+
+  TemplateParameterList *ToDGCtorTP = ToDGCtor->getTemplateParameters();
+  EXPECT_EQ(ToDGCtorTP->getParam(0)->getDeclContext(),
+            ToDGCopyCtor->getTemplatedDecl());
+  EXPECT_EQ(ToDGCtorTP->getParam(1)->getDeclContext(),
+            ToDGCtor->getTemplatedDecl());
+  EXPECT_EQ(ToDGCtorTP->getParam(2)->getDeclContext(),
+            ToDGCtor->getTemplatedDecl());
+  EXPECT_EQ(
+      ToDGCopyCtor->getTemplateParameters()->getParam(0)->getDeclContext(),
+      ToDGCopyCtor->getTemplatedDecl());
+  EXPECT_EQ(ToDGOther->getDescribedTemplate()
+                ->getTemplateParameters()
+                ->getParam(0)
+                ->getDeclContext(),
+            ToDGOther);
+}
+
+TEST_P(ASTImporterOptionSpecificTestBase, ImportDeductionGuideDifferentOrder) {
+  // This test demonstrates that the DeclContext of the imported object is
+  // dependent on the order of import. The test is an exact copy of the previous
+  // one except at the indicated locations.
+  TranslationUnitDecl *FromTU = getTuDecl(
+      R"(
+      template<class> class A { };
+      template<class T> class B {
+          template<class T1, typename = A<T>> B(T1);
+      };
+      template<class T>
+      B(T, T) -> B<int>;
+      )",
+      Lang_CXX17);
+
+  // Get the implicit deduction guide for (non-default) constructor of 'B'.
+  auto *FromDGCtor = FirstDeclMatcher<FunctionTemplateDecl>().match(
+      FromTU, functionTemplateDecl(templateParameterCountIs(3)));
+  // Implicit deduction guide for copy constructor of 'B'.
+  auto *FromDGCopyCtor = FirstDeclMatcher<FunctionTemplateDecl>().match(
+      FromTU, functionTemplateDecl(templateParameterCountIs(1), isImplicit()));
+  // User defined deduction guide.
+  auto *FromDGOther = FirstDeclMatcher<CXXDeductionGuideDecl>().match(
+      FromTU, cxxDeductionGuideDecl(unless(isImplicit())));
+
+  TemplateParameterList *FromDGCtorTP = FromDGCtor->getTemplateParameters();
+  // Don't know why exactly but this is the DeclContext here.
+  EXPECT_EQ(FromDGCtorTP->getParam(0)->getDeclContext(),
+            FromDGCopyCtor->getTemplatedDecl());
+  EXPECT_EQ(FromDGCtorTP->getParam(1)->getDeclContext(),
+            FromDGCtor->getTemplatedDecl());
+  EXPECT_EQ(FromDGCtorTP->getParam(2)->getDeclContext(),
+            FromDGCtor->getTemplatedDecl());
+  EXPECT_EQ(
+      FromDGCopyCtor->getTemplateParameters()->getParam(0)->getDeclContext(),
+      FromDGCopyCtor->getTemplatedDecl());
+  EXPECT_EQ(FromDGOther->getDescribedTemplate()
+                ->getTemplateParameters()
+                ->getParam(0)
+                ->getDeclContext(),
+            FromDGOther);
+
+  // Here the import of 'ToDGCopyCtor' and 'ToDGCtor' is reversed relative to
+  // the previous test.
+  auto *ToDGCopyCtor = Import(FromDGCopyCtor, Lang_CXX17);
+  auto *ToDGCtor = Import(FromDGCtor, Lang_CXX17);
+  auto *ToDGOther = Import(FromDGOther, Lang_CXX17);
+  ASSERT_TRUE(ToDGCtor);
+  ASSERT_TRUE(ToDGCopyCtor);
+  ASSERT_TRUE(ToDGOther);
+
+  TemplateParameterList *ToDGCtorTP = ToDGCtor->getTemplateParameters();
+  // Next line: DeclContext is different relative to the previous test.
+  EXPECT_EQ(ToDGCtorTP->getParam(0)->getDeclContext(),
+            ToDGCtor->getTemplatedDecl());
+  EXPECT_EQ(ToDGCtorTP->getParam(1)->getDeclContext(),
+            ToDGCtor->getTemplatedDecl());
+  EXPECT_EQ(ToDGCtorTP->getParam(2)->getDeclContext(),
+            ToDGCtor->getTemplatedDecl());
+  // Next line: DeclContext is different relative to the previous test.
+  EXPECT_EQ(
+      ToDGCopyCtor->getTemplateParameters()->getParam(0)->getDeclContext(),
+      ToDGCtor->getTemplatedDecl());
+  EXPECT_EQ(ToDGOther->getDescribedTemplate()
+                ->getTemplateParameters()
+                ->getParam(0)
+                ->getDeclContext(),
+            ToDGOther);
+}
+
 INSTANTIATE_TEST_SUITE_P(ParameterizedTests, ASTImporterLookupTableTest,
                          DefaultTestValuesForRunOptions);
 
