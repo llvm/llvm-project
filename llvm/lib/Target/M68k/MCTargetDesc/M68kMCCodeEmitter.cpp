@@ -39,6 +39,14 @@ class M68kMCCodeEmitter : public MCCodeEmitter {
   const MCInstrInfo &MCII;
   MCContext &Ctx;
 
+  void getBinaryCodeForInstr(const MCInst &MI, SmallVectorImpl<MCFixup> &Fixups,
+                             APInt &Inst, APInt &Scratch,
+                             const MCSubtargetInfo &STI) const;
+
+  void getMachineOpValue(const MCInst &MI, const MCOperand &Op, APInt &Value,
+                         SmallVectorImpl<MCFixup> &Fixups,
+                         const MCSubtargetInfo &STI) const;
+
 public:
   M68kMCCodeEmitter(const MCInstrInfo &mcii, MCContext &ctx)
       : MCII(mcii), Ctx(ctx) {}
@@ -71,6 +79,28 @@ public:
 };
 
 } // end anonymous namespace
+
+#include "M68kGenMCCodeEmitter.inc"
+
+void M68kMCCodeEmitter::getMachineOpValue(const MCInst &MI, const MCOperand &Op,
+                                          APInt &Value,
+                                          SmallVectorImpl<MCFixup> &Fixups,
+                                          const MCSubtargetInfo &STI) const {
+  // Register
+  if (Op.isReg()) {
+    unsigned RegNum = Op.getReg();
+    const auto *RI = Ctx.getRegisterInfo();
+    Value |= RI->getEncodingValue(RegNum);
+    // Setup the D/A bit
+    if (M68kII::isAddressRegister(RegNum))
+      Value |= 0b1000;
+  } else if (Op.isImm()) {
+    // Immediate
+    Value |= static_cast<uint64_t>(Op.getImm());
+  } else {
+    llvm_unreachable("Unsupported operand type");
+  }
+}
 
 unsigned M68kMCCodeEmitter::encodeBits(unsigned ThisByte, uint8_t Bead,
                                        const MCInst &MI,
@@ -320,6 +350,26 @@ void M68kMCCodeEmitter::encodeInstruction(const MCInst &MI, raw_ostream &OS,
 
   LLVM_DEBUG(dbgs() << "EncodeInstruction: " << MCII.getName(Opcode) << "("
                     << Opcode << ")\n");
+
+  // Try using the new method first.
+  APInt EncodedInst(16, 0U);
+  APInt Scratch(16, 0U);
+  getBinaryCodeForInstr(MI, Fixups, EncodedInst, Scratch, STI);
+  if (EncodedInst.getBitWidth()) {
+    LLVM_DEBUG(dbgs() << "Instruction " << MCII.getName(Opcode) << "(" << Opcode
+                      << ") is using the new code emitter\n");
+    ArrayRef<uint64_t> Data(EncodedInst.getRawData(),
+                            EncodedInst.getNumWords());
+    int64_t InstSize = EncodedInst.getBitWidth();
+    for (uint64_t Word : Data) {
+      for (int i = 0; i < 4 && InstSize > 0; ++i, InstSize -= 16) {
+        support::endian::write<uint16_t>(OS, static_cast<uint16_t>(Word),
+                                         support::big);
+        Word >>= 16;
+      }
+    }
+    return;
+  }
 
   const uint8_t *Beads = getGenInstrBeads(MI);
   if (!Beads || !*Beads) {
