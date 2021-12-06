@@ -168,10 +168,9 @@ void ResourcePriorityQueue::initNodes(std::vector<SUnit> &sunits) {
   SUnits = &sunits;
   NumNodesSolelyBlocking.resize(SUnits->size(), 0);
 
-  for (unsigned i = 0, e = SUnits->size(); i != e; ++i) {
-    SUnit *SU = &(*SUnits)[i];
-    initNumRegDefsLeft(SU);
-    SU->NodeQueueId = 0;
+  for (SUnit &SU : *SUnits) {
+    initNumRegDefsLeft(&SU);
+    SU.NodeQueueId = 0;
   }
 }
 

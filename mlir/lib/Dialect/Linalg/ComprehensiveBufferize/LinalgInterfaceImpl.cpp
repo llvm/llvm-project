@@ -193,7 +193,7 @@ struct TiledLoopOpInterface
     return BufferRelation::Equivalent;
   }
 
-  bool isWritable(Operation *op, Value value) const {
+  bool isWritable(Operation *op, Value value, BufferizationState &state) const {
     // Interestingly, linalg::TiledLoopOp's bbArg can **always** be viewed
     // inplace from the perspective of ops nested under:
     //   1. Either the matching iter operand is not bufferized inplace and an
@@ -253,8 +253,6 @@ struct TiledLoopOpInterface
         return failure();
 
       // Insert mapping and aliasing info.
-      state.aliasInfo.createAliasInfoEntry(resultBuffer);
-      state.aliasInfo.insertNewBufferEquivalence(opResult, resultBuffer);
       state.mapBuffer(opResult, resultBuffer);
 
       // Insert new operand and bbArg.
@@ -263,9 +261,6 @@ struct TiledLoopOpInterface
           body->insertArgument(nextOutputBBArgIndex, resultBuffer.getType());
       BlockArgument oldTensorBBArg = body->getArgument(oldOutputBBArgIndex);
       // Insert mapping and aliasing info.
-      state.aliasInfo.createAliasInfoEntry(newBufferBBArg);
-      state.aliasInfo.insertNewBufferEquivalence(oldTensorBBArg,
-                                                 newBufferBBArg);
       state.mapBuffer(oldTensorBBArg, newBufferBBArg);
 
       // Set operand of `linalg.yield` to the bbArg so it just canonicalizes
@@ -303,9 +298,6 @@ struct TiledLoopOpInterface
       BlockArgument oldTensorBBArg = body->getArgument(oldInputBBArgIndex);
 
       // Insert mapping and aliasing info.
-      state.aliasInfo.createAliasInfoEntry(newBufferBBArg);
-      state.aliasInfo.insertNewBufferEquivalence(oldTensorBBArg,
-                                                 newBufferBBArg);
       state.mapBuffer(oldTensorBBArg, newBufferBBArg);
 
       // Increment indices.

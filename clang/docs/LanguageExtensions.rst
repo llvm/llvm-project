@@ -4089,55 +4089,13 @@ Examples are:
 Extended Integer Types
 ======================
 
-Clang supports a set of extended integer types under the syntax ``_ExtInt(N)``
-where ``N`` is an integer that specifies the number of bits that are used to represent
-the type, including the sign bit. The keyword ``_ExtInt`` is a type specifier, thus
-it can be used in any place a type can, including as a non-type-template-parameter,
-as the type of a bitfield, and as the underlying type of an enumeration.
+Clang supports the C23 ``_BitInt(N)`` feature as an extension in older C modes
+and in C++. This type was previously implemented in Clang with the same
+semantics, but spelled ``_ExtInt(N)``. This spelling has been deprecated in
+favor of the standard type.
 
-An extended integer can be declared either signed, or unsigned by using the
-``signed``/``unsigned`` keywords. If no sign specifier is used or if the ``signed``
-keyword is used, the extended integer type is a signed integer and can represent
-negative values.
-
-The ``N`` expression is an integer constant expression, which specifies the number
-of bits used to represent the type, following normal integer representations for
-both signed and unsigned types. Both a signed and unsigned extended integer of the
-same ``N`` value will have the same number of bits in its representation. Many
-architectures don't have a way of representing non power-of-2 integers, so these
-architectures emulate these types using larger integers. In these cases, they are
-expected to follow the 'as-if' rule and do math 'as-if' they were done at the
-specified number of bits.
-
-In order to be consistent with the C language specification, and make the extended
-integer types useful for their intended purpose, extended integers follow the C
-standard integer conversion ranks. An extended integer type has a greater rank than
-any integer type with less precision.  However, they have lower rank than any
-of the built in or other integer types (such as __int128). Usual arithmetic conversions
-also work the same, where the smaller ranked integer is converted to the larger.
-
-The one exception to the C rules for integers for these types is Integer Promotion.
-Unary +, -, and ~ operators typically will promote operands to ``int``. Doing these
-promotions would inflate the size of required hardware on some platforms, so extended
-integer types aren't subject to the integer promotion rules in these cases.
-
-In languages (such as OpenCL) that define shift by-out-of-range behavior as a mask,
-non-power-of-two versions of these types use an unsigned remainder operation to constrain
-the value to the proper range, preventing undefined behavior.
-
-Extended integer types are aligned to the next greatest power-of-2 up to 64 bits.
-The size of these types for the purposes of layout and ``sizeof`` are the number of
-bits aligned to this calculated alignment. This permits the use of these types in
-allocated arrays using common ``sizeof(Array)/sizeof(ElementType)`` pattern.
-
-Extended integer types work with the C _Atomic type modifier, however only precisions
-that are powers-of-2 greater than 8 bit are accepted.
-
-Extended integer types align with existing calling conventions. They have the same size
-and alignment as the smallest basic type that can contain them. Types that are larger
-than 64 bits are handled in the same way as _int128 is handled; they are conceptually
-treated as struct of register size chunks. They number of chunks are the smallest
-number that can contain the types which does not necessarily mean a power-of-2 size.
+Note: the ABI for ``_BitInt(N)`` is still in the process of being stabilized,
+so this type should not yet be used in interfaces that require ABI stability.
 
 Intrinsics Support within Constant Expressions
 ==============================================

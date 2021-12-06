@@ -1076,6 +1076,9 @@ multiclass vrint_inst_anpm<string opc, bits<2> rm,
     }
   }
 
+  def : InstAlias<!strconcat("vrint", opc, ".f16.f16\t$Sd, $Sm"),
+                  (!cast<Instruction>(NAME#"H") HPR:$Sd, HPR:$Sm), 0>,
+        Requires<[HasFullFP16]>;
   def : InstAlias<!strconcat("vrint", opc, ".f32.f32\t$Sd, $Sm"),
                   (!cast<Instruction>(NAME#"S") SPR:$Sd, SPR:$Sm), 0>,
         Requires<[HasFPARMv8]>;

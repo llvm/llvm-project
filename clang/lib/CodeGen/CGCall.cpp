@@ -1972,7 +1972,7 @@ static bool DetermineNoUndef(QualType QTy, CodeGenTypes &Types,
       // there's no internal padding (typeSizeEqualsStoreSize).
       return false;
   }
-  if (QTy->isExtIntType())
+  if (QTy->isBitIntType())
     return true;
   if (QTy->isReferenceType())
     return true;

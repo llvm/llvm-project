@@ -4502,7 +4502,7 @@ void Sema::AddModeAttr(Decl *D, const AttributeCommonInfo &CI,
     return;
   }
   bool IntegralOrAnyEnumType = (OldElemTy->isIntegralOrEnumerationType() &&
-                                !OldElemTy->isExtIntType()) ||
+                                !OldElemTy->isBitIntType()) ||
                                OldElemTy->getAs<EnumType>();
 
   if (!OldElemTy->getAs<BuiltinType>() && !OldElemTy->isComplexType() &&

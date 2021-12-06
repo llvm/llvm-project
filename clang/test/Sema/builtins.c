@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 %s -fsyntax-only -verify -pedantic -Wstrlcpy-strlcat-size -Wno-string-plus-int -triple=i686-apple-darwin9
+// RUN: %clang_cc1 %s -fsyntax-only -verify -pedantic -Wstrlcpy-strlcat-size -Wno-string-plus-int -Wno-bit-int-extension -triple=i686-apple-darwin9
 // This test needs to set the target because it uses __builtin_ia32_vec_ext_v4si
 
 int test1(float a, int b) {
@@ -281,41 +281,41 @@ void test21(const int *ptr) {
   __atomic_fetch_add(ptr, 1, 0);  // expected-error {{address argument to atomic operation must be a pointer to non-const type ('const int *' invalid)}}
 }
 
-void test_ei_i42i(_ExtInt(42) *ptr, int value) {
+void test_ei_i42i(_BitInt(42) *ptr, int value) {
   __sync_fetch_and_add(ptr, value); // expected-error {{Atomic memory operand must have a power-of-two size}}
   // expected-warning@+1 {{the semantics of this intrinsic changed with GCC version 4.4 - the newer semantics are provided here}}
   __sync_nand_and_fetch(ptr, value); // expected-error {{Atomic memory operand must have a power-of-two size}}
 
-  __atomic_fetch_add(ptr, 1, 0); // expected-error {{argument to atomic builtin of type '_ExtInt' is not supported}}
+  __atomic_fetch_add(ptr, 1, 0); // expected-error {{argument to atomic builtin of type '_BitInt' is not supported}}
 }
 
-void test_ei_i64i(_ExtInt(64) *ptr, int value) {
+void test_ei_i64i(_BitInt(64) *ptr, int value) {
   __sync_fetch_and_add(ptr, value); // expect success
   // expected-warning@+1 {{the semantics of this intrinsic changed with GCC version 4.4 - the newer semantics are provided here}}
   __sync_nand_and_fetch(ptr, value); // expect success
 
-  __atomic_fetch_add(ptr, 1, 0); // expected-error {{argument to atomic builtin of type '_ExtInt' is not supported}}
+  __atomic_fetch_add(ptr, 1, 0); // expected-error {{argument to atomic builtin of type '_BitInt' is not supported}}
 }
 
-void test_ei_ii42(int *ptr, _ExtInt(42) value) {
-  __sync_fetch_and_add(ptr, value); // expect success
-  // expected-warning@+1 {{the semantics of this intrinsic changed with GCC version 4.4 - the newer semantics are provided here}}
-  __sync_nand_and_fetch(ptr, value); // expect success
-}
-
-void test_ei_ii64(int *ptr, _ExtInt(64) value) {
+void test_ei_ii42(int *ptr, _BitInt(42) value) {
   __sync_fetch_and_add(ptr, value); // expect success
   // expected-warning@+1 {{the semantics of this intrinsic changed with GCC version 4.4 - the newer semantics are provided here}}
   __sync_nand_and_fetch(ptr, value); // expect success
 }
 
-void test_ei_i42i42(_ExtInt(42) *ptr, _ExtInt(42) value) {
+void test_ei_ii64(int *ptr, _BitInt(64) value) {
+  __sync_fetch_and_add(ptr, value); // expect success
+  // expected-warning@+1 {{the semantics of this intrinsic changed with GCC version 4.4 - the newer semantics are provided here}}
+  __sync_nand_and_fetch(ptr, value); // expect success
+}
+
+void test_ei_i42i42(_BitInt(42) *ptr, _BitInt(42) value) {
   __sync_fetch_and_add(ptr, value); // expected-error {{Atomic memory operand must have a power-of-two size}}
   // expected-warning@+1 {{the semantics of this intrinsic changed with GCC version 4.4 - the newer semantics are provided here}}
   __sync_nand_and_fetch(ptr, value); // expected-error {{Atomic memory operand must have a power-of-two size}}
 }
 
-void test_ei_i64i64(_ExtInt(64) *ptr, _ExtInt(64) value) {
+void test_ei_i64i64(_BitInt(64) *ptr, _BitInt(64) value) {
   __sync_fetch_and_add(ptr, value); // expect success
   // expected-warning@+1 {{the semantics of this intrinsic changed with GCC version 4.4 - the newer semantics are provided here}}
   __sync_nand_and_fetch(ptr, value); // expect success

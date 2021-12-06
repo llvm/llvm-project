@@ -2255,6 +2255,12 @@ public:
     return map_range(Operands, Fn);
   }
 
+  /// Returns true if \p VPV is uniform after vectorization.
+  bool isUniformAfterVectorization(VPValue *VPV) const {
+    auto RepR = dyn_cast_or_null<VPReplicateRecipe>(VPV->getDef());
+    return !VPV->getDef() || (RepR && RepR->isUniform());
+  }
+
 private:
   /// Add to the given dominator tree the header block and every new basic block
   /// that was created between it and the latch block, inclusive.

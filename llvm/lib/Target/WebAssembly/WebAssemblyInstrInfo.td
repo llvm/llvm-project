@@ -202,11 +202,6 @@ def Signature : Operand<i32> {
   let PrintMethod = "printWebAssemblySignatureOperand";
 }
 
-let OperandType = "OPERAND_HEAPTYPE" in
-def HeapType : Operand<i32> {
-  let PrintMethod = "printWebAssemblyHeapTypeOperand";
-}
-
 let OperandType = "OPERAND_TYPEINDEX" in
 def TypeIndex : Operand<i32>;
 

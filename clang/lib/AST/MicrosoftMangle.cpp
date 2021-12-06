@@ -3365,26 +3365,26 @@ void MicrosoftMangleContextImpl::mangleCXXName(GlobalDecl GD,
   return Mangler.mangle(GD);
 }
 
-void MicrosoftCXXNameMangler::mangleType(const ExtIntType *T, Qualifiers,
+void MicrosoftCXXNameMangler::mangleType(const BitIntType *T, Qualifiers,
                                          SourceRange Range) {
   llvm::SmallString<64> TemplateMangling;
   llvm::raw_svector_ostream Stream(TemplateMangling);
   MicrosoftCXXNameMangler Extra(Context, Stream);
   Stream << "?$";
   if (T->isUnsigned())
-    Extra.mangleSourceName("_UExtInt");
+    Extra.mangleSourceName("_UBitInt");
   else
-    Extra.mangleSourceName("_ExtInt");
+    Extra.mangleSourceName("_BitInt");
   Extra.mangleIntegerLiteral(llvm::APSInt::getUnsigned(T->getNumBits()));
 
   mangleArtificialTagType(TTK_Struct, TemplateMangling, {"__clang"});
 }
 
-void MicrosoftCXXNameMangler::mangleType(const DependentExtIntType *T,
+void MicrosoftCXXNameMangler::mangleType(const DependentBitIntType *T,
                                          Qualifiers, SourceRange Range) {
   DiagnosticsEngine &Diags = Context.getDiags();
   unsigned DiagID = Diags.getCustomDiagID(
-      DiagnosticsEngine::Error, "cannot mangle this DependentExtInt type yet");
+      DiagnosticsEngine::Error, "cannot mangle this DependentBitInt type yet");
   Diags.Report(Range.getBegin(), DiagID) << Range;
 }
 

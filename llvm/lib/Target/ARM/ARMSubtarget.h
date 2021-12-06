@@ -534,6 +534,10 @@ protected:
   /// Selected instruction itineraries (one entry per itinerary class.)
   InstrItineraryData InstrItins;
 
+  /// NoBTIAtReturnTwice - Don't place a BTI instruction after
+  /// return-twice constructs (setjmp)
+  bool NoBTIAtReturnTwice = false;
+
   /// Options passed via command line that could influence the target
   const TargetOptions &Options;
 
@@ -948,6 +952,8 @@ public:
   bool hardenSlsRetBr() const { return HardenSlsRetBr; }
   bool hardenSlsBlr() const { return HardenSlsBlr; }
   bool hardenSlsNoComdat() const { return HardenSlsNoComdat; }
+
+  bool getNoBTIAtReturnTwice() const { return NoBTIAtReturnTwice; }
 };
 
 } // end namespace llvm

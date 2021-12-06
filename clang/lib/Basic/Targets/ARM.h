@@ -191,8 +191,8 @@ public:
 
   bool hasSjLjLowering() const override;
 
-  bool hasExtIntType() const override { return true; }
-  
+  bool hasBitIntType() const override { return true; }
+
   const char *getBFloat16Mangling() const override { return "u6__bf16"; };
 };
 

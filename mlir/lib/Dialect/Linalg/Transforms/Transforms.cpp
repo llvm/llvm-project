@@ -503,10 +503,8 @@ LogicalResult mlir::linalg::LinalgPaddingPattern::matchAndRewrite(
   FailureOr<SmallVector<Value>> newResults = rewriteAsPaddedOp(
       rewriter, linalgOp, options.paddingValueComputationFunction,
       options.paddingNoFoldComputationFunction, paddedOp);
-  if (failed(newResults)) {
-    filter.replaceLinalgTransformationFilter(rewriter, linalgOp);
+  if (failed(newResults))
     return failure();
-  }
 
   // Compute the desired hoisting depths.
   SmallVector<int64_t> depths;

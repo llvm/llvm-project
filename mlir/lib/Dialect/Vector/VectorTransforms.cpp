@@ -960,7 +960,20 @@ public:
     auto dstType = op.getType();
     auto eltType = dstType.getElementType();
     auto dimSizes = op.mask_dim_sizes();
-    int64_t rank = dimSizes.size();
+    int64_t rank = dstType.getRank();
+
+    if (rank == 0) {
+      assert(dimSizes.size() == 1 &&
+             "Expected exactly one dim size for a 0-D vector");
+      bool value = dimSizes[0].cast<IntegerAttr>().getInt() == 1;
+      rewriter.replaceOpWithNewOp<arith::ConstantOp>(
+          op, dstType,
+          DenseIntElementsAttr::get(
+              VectorType::get(ArrayRef<int64_t>{}, rewriter.getI1Type()),
+              ArrayRef<bool>{value}));
+      return success();
+    }
+
     int64_t trueDim = std::min(dstType.getDimSize(0),
                                dimSizes[0].cast<IntegerAttr>().getInt());
 

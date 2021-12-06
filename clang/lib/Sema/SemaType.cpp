@@ -1435,12 +1435,11 @@ static QualType ConvertDeclSpecToType(TypeProcessingState &state) {
     }
     break;
   }
-  case DeclSpec::TST_extint: {
-    if (!S.Context.getTargetInfo().hasExtIntType())
-      S.Diag(DS.getTypeSpecTypeLoc(), diag::err_type_unsupported)
-        << "_ExtInt";
+  case DeclSpec::TST_bitint: {
+    if (!S.Context.getTargetInfo().hasBitIntType())
+      S.Diag(DS.getTypeSpecTypeLoc(), diag::err_type_unsupported) << "_BitInt";
     Result =
-        S.BuildExtIntType(DS.getTypeSpecSign() == TypeSpecifierSign::Unsigned,
+        S.BuildBitIntType(DS.getTypeSpecSign() == TypeSpecifierSign::Unsigned,
                           DS.getRepAsExpr(), DS.getBeginLoc());
     if (Result.isNull()) {
       Result = Context.IntTy;
@@ -2237,7 +2236,7 @@ QualType Sema::BuildWritePipeType(QualType T, SourceLocation Loc) {
   return Context.getWritePipeType(T);
 }
 
-/// Build a extended int type.
+/// Build a bit-precise integer type.
 ///
 /// \param IsUnsigned Boolean representing the signedness of the type.
 ///
@@ -2245,10 +2244,10 @@ QualType Sema::BuildWritePipeType(QualType T, SourceLocation Loc) {
 /// that.
 ///
 /// \param Loc Location of the keyword.
-QualType Sema::BuildExtIntType(bool IsUnsigned, Expr *BitWidth,
+QualType Sema::BuildBitIntType(bool IsUnsigned, Expr *BitWidth,
                                SourceLocation Loc) {
   if (BitWidth->isInstantiationDependent())
-    return Context.getDependentExtIntType(IsUnsigned, BitWidth);
+    return Context.getDependentBitIntType(IsUnsigned, BitWidth);
 
   llvm::APSInt Bits(32);
   ExprResult ICE =
@@ -2259,22 +2258,22 @@ QualType Sema::BuildExtIntType(bool IsUnsigned, Expr *BitWidth,
 
   int64_t NumBits = Bits.getSExtValue();
   if (!IsUnsigned && NumBits < 2) {
-    Diag(Loc, diag::err_ext_int_bad_size) << 0;
+    Diag(Loc, diag::err_bit_int_bad_size) << 0;
     return QualType();
   }
 
   if (IsUnsigned && NumBits < 1) {
-    Diag(Loc, diag::err_ext_int_bad_size) << 1;
+    Diag(Loc, diag::err_bit_int_bad_size) << 1;
     return QualType();
   }
 
   if (NumBits > llvm::IntegerType::MAX_INT_BITS) {
-    Diag(Loc, diag::err_ext_int_max_size) << IsUnsigned
-                                          << llvm::IntegerType::MAX_INT_BITS;
+    Diag(Loc, diag::err_bit_int_max_size)
+        << IsUnsigned << llvm::IntegerType::MAX_INT_BITS;
     return QualType();
   }
 
-  return Context.getExtIntType(IsUnsigned, NumBits);
+  return Context.getBitIntType(IsUnsigned, NumBits);
 }
 
 /// Check whether the specified array bound can be evaluated using the relevant
@@ -6077,11 +6076,11 @@ namespace {
       TL.getValueLoc().initializeFullCopy(TInfo->getTypeLoc());
     }
 
-    void VisitExtIntTypeLoc(ExtIntTypeLoc TL) {
+    void VisitExtIntTypeLoc(BitIntTypeLoc TL) {
       TL.setNameLoc(DS.getTypeSpecTypeLoc());
     }
 
-    void VisitDependentExtIntTypeLoc(DependentExtIntTypeLoc TL) {
+    void VisitDependentExtIntTypeLoc(DependentBitIntTypeLoc TL) {
       TL.setNameLoc(DS.getTypeSpecTypeLoc());
     }
 
@@ -6211,7 +6210,7 @@ namespace {
       assert(Chunk.Kind == DeclaratorChunk::Pipe);
       TL.setKWLoc(Chunk.Loc);
     }
-    void VisitExtIntTypeLoc(ExtIntTypeLoc TL) {
+    void VisitBitIntTypeLoc(BitIntTypeLoc TL) {
       TL.setNameLoc(Chunk.Loc);
     }
     void VisitMacroQualifiedTypeLoc(MacroQualifiedTypeLoc TL) {
@@ -9079,9 +9078,8 @@ QualType Sema::BuildAtomicType(QualType T, SourceLocation Loc) {
     else if (!T.isTriviallyCopyableType(Context))
       // Some other non-trivially-copyable type (probably a C++ class)
       DisallowedKind = 7;
-    else if (T->isExtIntType()) {
-        DisallowedKind = 8;
-    }
+    else if (T->isBitIntType())
+      DisallowedKind = 8;
 
     if (DisallowedKind != -1) {
       Diag(Loc, diag::err_atomic_specifier_bad_type) << DisallowedKind << T;
