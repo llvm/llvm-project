@@ -1821,7 +1821,7 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
     }
 
 
-    if (!KeepOldBlocks) {
+   
         // Reload the outputs passed in by reference.
         for (unsigned i = 0, e = outputs.size(); i != e; ++i) {
             Value* Output = nullptr;
@@ -1839,16 +1839,19 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
             LoadInst* load = new LoadInst(outputs[i]->getType(), Output, outputs[i]->getName() + ".reload", codeReplacer);
 
             Reloads.push_back(load);
-            std::vector<User*> Users(outputs[i]->user_begin(), outputs[i]->user_end());
-            for (unsigned u = 0, e = Users.size(); u != e; ++u) {
-                Instruction* inst = cast<Instruction>(Users[u]);
-                if (!KeepOldBlocks) {
-                    if (!Blocks.count(inst->getParent()))
-                        inst->replaceUsesOfWith(outputs[i], load);
+
+            if (!KeepOldBlocks) {
+                std::vector<User*> Users(outputs[i]->user_begin(), outputs[i]->user_end());
+                for (unsigned u = 0, e = Users.size(); u != e; ++u) {
+                    Instruction* inst = cast<Instruction>(Users[u]);
+                    if (!KeepOldBlocks) {
+                        if (!Blocks.count(inst->getParent()))
+                            inst->replaceUsesOfWith(outputs[i], load);
+                    }
                 }
             }
         }
-    }
+    
 
 
 
@@ -1875,48 +1878,6 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
 
 
     if (KeepOldBlocks) {
-        DenseMap <Value*, LoadInst*  > ReloadReplacements;
-        SmallVector<LoadInst*> ReloadRepls;
-        DenseMap <Value*, Value*  > ReloadAddress;
-
-
-
-        // Reload the outputs passed in by reference.
-        for (unsigned i = 0, e = outputs.size(); i != e; ++i) {
-            Value* Output = nullptr;
-            if (AggregateArgs) {
-                Value* Idx[2];
-                Idx[0] = Constant::getNullValue(Type::getInt32Ty(Context));
-                Idx[1] = ConstantInt::get(Type::getInt32Ty(Context), FirstOut + i);
-                GetElementPtrInst* GEP = GetElementPtrInst::Create(
-                    StructTy, Struct, Idx, "gep_reload_" + outputs[i]->getName());
-                codeReplacer->getInstList().push_back(GEP);
-                Output = GEP;
-            } else {
-                Output = ReloadOutputs[i];
-            }
-            ReloadAddress[outputs[i]] = Output;
-
-
-            LoadInst* load = new LoadInst(outputs[i]->getType(), Output, outputs[i]->getName() + ".reload", codeReplacer);
-            Reloads.push_back(load);
-
-
-            if (KeepOldBlocks) {
-                auto OrigOut = outputs[i];
-                ReloadReplacements[OrigOut] = load;
-                ReloadRepls.push_back(load);
-
-                // Remove all PHIs; will need to be recreated by SSAUpdater;
-            } else {
-                std::vector<User*> Users(outputs[i]->user_begin(), outputs[i]->user_end());
-                for (unsigned u = 0, e = Users.size(); u != e; ++u) {
-                    Instruction* inst = cast<Instruction>(Users[u]);
-                    if (!Blocks.count(inst->getParent()))
-                        inst->replaceUsesOfWith(outputs[i], load);
-                }
-            }
-        }
 
 
 
