@@ -1568,11 +1568,12 @@ MemoryDepChecker::isDependent(const MemAccessInfo &A, unsigned AIdx,
 
   auto &DL = InnermostLoop->getHeader()->getModule()->getDataLayout();
   uint64_t TypeByteSize = DL.getTypeAllocSize(ATy);
+  bool HasSameSize =
+      DL.getTypeStoreSizeInBits(ATy) == DL.getTypeStoreSizeInBits(BTy);
   uint64_t Stride = std::abs(StrideAPtr);
   const SCEVConstant *C = dyn_cast<SCEVConstant>(Dist);
   if (!C) {
-    if (!isa<SCEVCouldNotCompute>(Dist) &&
-        TypeByteSize == DL.getTypeAllocSize(BTy) &&
+    if (!isa<SCEVCouldNotCompute>(Dist) && HasSameSize &&
         isSafeDependenceDistance(DL, *(PSE.getSE()),
                                  *(PSE.getBackedgeTakenCount()), *Dist, Stride,
                                  TypeByteSize))
@@ -1587,7 +1588,7 @@ MemoryDepChecker::isDependent(const MemAccessInfo &A, unsigned AIdx,
   int64_t Distance = Val.getSExtValue();
 
   // Attempt to prove strided accesses independent.
-  if (std::abs(Distance) > 0 && Stride > 1 && ATy == BTy &&
+  if (std::abs(Distance) > 0 && Stride > 1 && HasSameSize &&
       areStridedAccessesIndependent(std::abs(Distance), Stride, TypeByteSize)) {
     LLVM_DEBUG(dbgs() << "LAA: Strided accesses are independent\n");
     return Dependence::NoDep;
@@ -1598,7 +1599,7 @@ MemoryDepChecker::isDependent(const MemAccessInfo &A, unsigned AIdx,
     bool IsTrueDataDependence = (AIsWrite && !BIsWrite);
     if (IsTrueDataDependence && EnableForwardingConflictDetection &&
         (couldPreventStoreLoadForward(Val.abs().getZExtValue(), TypeByteSize) ||
-         ATy != BTy)) {
+         !HasSameSize)) {
       LLVM_DEBUG(dbgs() << "LAA: Forward but may prevent st->ld forwarding\n");
       return Dependence::ForwardButPreventsForwarding;
     }
@@ -1608,21 +1609,19 @@ MemoryDepChecker::isDependent(const MemAccessInfo &A, unsigned AIdx,
   }
 
   // Write to the same location with the same size.
-  // Could be improved to assert type sizes are the same (i32 == float, etc).
   if (Val == 0) {
-    if (ATy == BTy)
+    if (HasSameSize)
       return Dependence::Forward;
     LLVM_DEBUG(
-        dbgs() << "LAA: Zero dependence difference but different types\n");
+        dbgs() << "LAA: Zero dependence difference but different type sizes\n");
     return Dependence::Unknown;
   }
 
   assert(Val.isStrictlyPositive() && "Expect a positive value");
 
-  if (ATy != BTy) {
-    LLVM_DEBUG(
-        dbgs()
-        << "LAA: ReadWrite-Write positive dependency with different types\n");
+  if (!HasSameSize) {
+    LLVM_DEBUG(dbgs() << "LAA: ReadWrite-Write positive dependency with "
+                         "different type sizes\n");
     return Dependence::Unknown;
   }
 
