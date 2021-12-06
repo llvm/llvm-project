@@ -159,8 +159,8 @@ struct InitTensorOpInterface
     if (initTensorOp->getUses().empty())
       return success();
 
-    Value alloc = state.createAllocDeallocFn(b, initTensorOp->getLoc(),
-                                             initTensorOp.result());
+    Value alloc = state.createAllocDeallocPair(b, initTensorOp->getLoc(),
+                                               initTensorOp.result());
     state.mapBuffer(initTensorOp.result(), alloc);
     return success();
   }
@@ -379,11 +379,11 @@ struct LinalgOpInterfaceHelper<> {
 LogicalResult mlir::linalg::comprehensive_bufferize::linalg_ext::
     InitTensorEliminationStep::eliminateInitTensors(
         FuncOp funcOp, BufferizationState &state,
+        BufferizationAliasInfo &aliasInfo,
         std::function<bool(OpOperand &)> anchorMatchFunc,
         std::function<Value(OpBuilder &, Location, OpOperand &)> rewriteFunc,
         SmallVector<Operation *> &newOps) {
   OpBuilder b(funcOp->getContext());
-  BufferizationAliasInfo &aliasInfo = state.aliasInfo;
 
   WalkResult status = funcOp->walk([&](Operation *op) {
     for (OpOperand &operand : op->getOpOperands()) {
@@ -474,16 +474,16 @@ LogicalResult mlir::linalg::comprehensive_bufferize::linalg_ext::
 LogicalResult mlir::linalg::comprehensive_bufferize::linalg_ext::
     InsertSliceAnchoredInitTensorEliminationStep::run(
         FuncOp funcOp, BufferizationState &state,
-        SmallVector<Operation *> &newOps) {
+        BufferizationAliasInfo &aliasInfo, SmallVector<Operation *> &newOps) {
   return eliminateInitTensors(
-      funcOp, state,
+      funcOp, state, aliasInfo,
       [&](OpOperand &operand) {
         auto insertSliceOp =
             dyn_cast<tensor::InsertSliceOp>(operand.getOwner());
         if (!insertSliceOp)
           return false;
         // Only inplace bufferized InsertSliceOps are eligible.
-        if (!state.aliasInfo.isInPlace(insertSliceOp->getOpResult(0)))
+        if (!aliasInfo.isInPlace(insertSliceOp->getOpResult(0)))
           return false;
         return &operand == &insertSliceOp->getOpOperand(0) /*source*/;
       },

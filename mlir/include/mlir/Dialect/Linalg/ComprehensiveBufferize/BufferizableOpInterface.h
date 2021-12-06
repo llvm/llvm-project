@@ -29,7 +29,10 @@ namespace comprehensive_bufferize {
 // TODO: from some HW description.
 static constexpr int64_t kBufferAlignments = 128;
 
-struct BufferizationState;
+class BufferizationAliasInfo;
+struct BufferizationOptions;
+class BufferizationState;
+struct PostAnalysisStep;
 
 /// Callback functions that are used to allocate/deallocate/copy memory buffers.
 /// Comprehensive Bufferize provides default implementations of these functions.
@@ -68,6 +71,7 @@ struct PostAnalysisStep {
   /// `aliasInfo` (inside `state`) consistent. Newly created operations and
   /// operations that should be re-analyzed must be stored in `newOps`.
   virtual LogicalResult run(FuncOp funcOp, BufferizationState &state,
+                            BufferizationAliasInfo &aliasInfo,
                             SmallVector<Operation *> &newOps) = 0;
 };
 
@@ -281,9 +285,20 @@ struct DialectBufferizationState {
   virtual ~DialectBufferizationState() = default;
 };
 
-/// BufferizationState keeps track of bufferization state and provides access to
-/// the results of the analysis.
-struct BufferizationState {
+/// BufferizationState keeps track of memory buffers and provides a variety of
+/// helper functions for dealing with them. In particular,
+/// `BufferizableOpInterface::bufferize` implementation should utilize the
+/// following helper functions.
+///
+/// * `createAlloc` / `createDealloc` / `createAllocDeallocPair` creates ops
+///   that allocate and/or deallocate memref buffers.
+/// * `mapBuffer` maps a tensor value to a memref buffer during bufferization.
+/// * `lookupBuffer` returns the mapped memref buffer of a given tensor value.
+/// * `getResultBuffer` returns the memref buffer for a given tensor OpResult.
+///   Based on inplace bufferization decisions of the analysis, it may either
+///   directly return a mapped buffer or allocate a new brand new buffer.
+class BufferizationState {
+public:
   BufferizationState(ModuleOp moduleOp, const BufferizationOptions &options)
       : aliasInfo(moduleOp), options(options),
         builder(moduleOp->getContext()) {}
@@ -291,11 +306,21 @@ struct BufferizationState {
   // BufferizationState should be passed as a reference.
   BufferizationState(const BufferizationState &) = delete;
 
-  /// A function that creates an alloc-dealloc pair. This function may perform
-  /// additional optimizations such as buffer allocation hoisting. This function
-  /// calls `allocationFn` and `deallocationFn` to create (de)allocations.
-  Value createAllocDeallocFn(OpBuilder &builder, Location loc,
-                             Value shapedValue);
+  /// Creates a memref allocation.
+  Optional<Value> createAlloc(OpBuilder &b, Location loc, MemRefType type,
+                              ArrayRef<Value> dynShape);
+
+  /// Creates an alloc-dealloc pair. This function may perform additional
+  /// optimizations such as buffer allocation hoisting.
+  Value createAllocDeallocPair(OpBuilder &builder, Location loc,
+                               Value shapedValue);
+
+  /// Creates a memref deallocation. The given memref buffer must have been
+  /// allocated using `createAlloc`.
+  void createDealloc(OpBuilder &b, Location loc, Value allocatedBuffer);
+
+  /// Creates a memcpy between two given buffers.
+  void createMemCpy(OpBuilder &b, Location loc, Value from, Value to);
 
   /// Map tensor values to memref buffers.
   void mapBuffer(ValueRange tensors, ValueRange buffers);
@@ -306,6 +331,9 @@ struct BufferizationState {
   /// Lookup the memref buffer that is associated to the given tensor value.
   /// Asserts if no buffer is associated.
   Value lookupBuffer(Value tensor);
+
+  /// Return `true` if the given OpResult has been decided to bufferize inplace.
+  bool isInPlace(OpResult opResult) const;
 
   /// Return `true` if the given value is mapped.
   bool isMapped(Value value) const;
@@ -329,7 +357,24 @@ struct BufferizationState {
     return static_cast<StateT &>(*dialectState[name]);
   }
 
-  /// `aliasInfo` keeps track of aliasing and equivalent values.
+  /// Return a reference to the BufferizationOptions.
+  const BufferizationOptions &getOptions() const { return options; }
+
+  /// Return a reference to the OpBuilder.
+  OpBuilder &getBuilder() { return builder; }
+
+private:
+  friend LogicalResult
+  runComprehensiveBufferize(FuncOp funcOp, const BufferizationOptions &options,
+                            BufferizationState &state,
+                            const PostAnalysisStepList &extraSteps);
+
+  friend LogicalResult
+  runComprehensiveBufferize(ModuleOp moduleOp,
+                            const BufferizationOptions &options);
+
+  /// `aliasInfo` keeps track of aliasing and equivalent values. Only internal
+  /// functions and `runComprehensiveBufferize` may access this object.
   BufferizationAliasInfo aliasInfo;
 
   /// The mapping of tensors to buffers.
@@ -428,7 +473,7 @@ struct AllocationHoistingBarrierOnly
     auto isaTensor = [](Type t) { return t.isa<TensorType>(); };
     if (any_of(op->getOperandTypes(), isaTensor) ||
         any_of(op->getResultTypes(), isaTensor))
-      if (!state.options.allowUnknownOps)
+      if (!state.getOptions().allowUnknownOps)
         return op->emitError() << "unsupported op with tensors";
 
     for (Region &region : op->getRegions())

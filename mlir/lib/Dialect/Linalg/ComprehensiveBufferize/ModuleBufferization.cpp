@@ -88,6 +88,7 @@ struct EquivalentFuncOpBBArgsAnalysis : public PostAnalysisStep {
   }
 
   LogicalResult run(FuncOp funcOp, BufferizationState &state,
+                    BufferizationAliasInfo &aliasInfo,
                     SmallVector<Operation *> &newOps) override {
     ModuleBufferizationState &moduleState = getModuleBufferizationState(state);
 
@@ -99,12 +100,12 @@ struct EquivalentFuncOpBBArgsAnalysis : public PostAnalysisStep {
       if (returnVal.get().getType().isa<RankedTensorType>())
         for (BlockArgument bbArg : funcOp.getArguments())
           if (bbArg.getType().isa<RankedTensorType>())
-            if (state.aliasInfo.areEquivalentBufferizedValues(returnVal.get(),
-                                                              bbArg)) {
+            if (aliasInfo.areEquivalentBufferizedValues(returnVal.get(),
+                                                        bbArg)) {
               moduleState
                   .equivalentFuncArgs[funcOp][returnVal.getOperandNumber()] =
                   bbArg.getArgNumber();
-              if (state.options.testAnalysisOnly)
+              if (state.getOptions().testAnalysisOnly)
                 annotateReturnOp(returnVal, bbArg);
             }
 

@@ -35,6 +35,7 @@ struct InitTensorEliminationStep : public PostAnalysisStep {
   ///   This analysis can be skipped with `skipAnalysis`.
   LogicalResult eliminateInitTensors(
       FuncOp funcOp, BufferizationState &state,
+      BufferizationAliasInfo &aliasInfo,
       std::function<bool(OpOperand &)> anchorMatchFunc,
       std::function<Value(OpBuilder &, Location, OpOperand &)> rewriteFunc,
       SmallVector<Operation *> &newOps);
@@ -46,6 +47,7 @@ struct InitTensorEliminationStep : public PostAnalysisStep {
 struct InsertSliceAnchoredInitTensorEliminationStep
     : public InitTensorEliminationStep {
   LogicalResult run(FuncOp funcOp, BufferizationState &state,
+                    BufferizationAliasInfo &aliasInfo,
                     SmallVector<Operation *> &newOps) override;
 };
 
