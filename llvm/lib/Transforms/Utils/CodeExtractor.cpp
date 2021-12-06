@@ -438,7 +438,7 @@ CodeExtractor::findOrCreateBlockForHoisting(BasicBlock *CommonExitBlock) {
   }
   // Now add the old exit block to the outline region.
   Blocks.insert(CommonExitBlock);
-  OldTargets.push_back(NewExitBlock);
+  //OldTargets.push_back(NewExitBlock);
   return CommonExitBlock;
 }
 
@@ -1558,7 +1558,25 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
          //   MoveOrCopyInst(cast<Instruction>(II), HoistToBlock, TI->getIterator());
             cast<Instruction>(II)->moveBefore(TI);
         }
+        recomputeExitBlocks();
     }
+
+
+    std::map<BasicBlock *, BasicBlock *> ExitBlockMap;
+    SmallDenseMap<BasicBlock*,unsigned> ExitBlockSwitchIdx;
+    SmallVector<BasicBlock*> Orlder;
+
+    for (BasicBlock* OldTarget : OldTargets) {
+        if (Blocks.count(OldTarget))
+            continue;
+
+        auto Added = ExitBlockSwitchIdx.insert({ OldTarget, ExitBlockSwitchIdx.size() });
+        if (Added.second)
+            Orlder.push_back(OldTarget);
+    }
+
+
+
 
 
 
@@ -2169,20 +2187,6 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
 
 
 
-        std::map<BasicBlock *, BasicBlock *> ExitBlockMap;
-        //SmallVector<BasicBlock *> ExitBlockSwitchIdx;
-        SmallDenseMap<BasicBlock*,unsigned> ExitBlockSwitchIdx;
-        SmallVector<BasicBlock*> Orlder;
-
-        for (BasicBlock* OldTarget : OldTargets) {
-            if (Blocks.count(OldTarget))
-                continue;
-
-          auto Added = ExitBlockSwitchIdx.insert({ OldTarget, ExitBlockSwitchIdx.size() });
-          if (Added.second)
-              Orlder.push_back(OldTarget);
-        }
-
         for (auto OldTarget : OldTargets) {
             BasicBlock*& NewTarget = ExitBlockMap[OldTarget];
             if (NewTarget) 
@@ -2196,8 +2200,7 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
             
             VMap[OldTarget] = NewTarget;
 
-           // auto OldTarget = P.first;
-           // auto NewTarget = P.second;
+
             auto SuccNum = ExitBlockSwitchIdx[OldTarget];
 
 
