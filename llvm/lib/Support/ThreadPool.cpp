@@ -21,13 +21,17 @@ using namespace llvm;
 #if LLVM_ENABLE_THREADS
 
 ThreadPool::ThreadPool(ThreadPoolStrategy S)
-    : ThreadCount(S.compute_thread_count()) {
-  // Create ThreadCount threads that will loop forever, wait on QueueCondition
-  // for tasks to be queued or the Pool to be destroyed.
-  Threads.reserve(ThreadCount);
-  for (unsigned ThreadID = 0; ThreadID < ThreadCount; ++ThreadID) {
-    Threads.emplace_back([S, ThreadID, this] {
-      S.apply_thread_strategy(ThreadID);
+    : Strategy(S), MaxThreadCount(S.compute_thread_count()) {}
+
+void ThreadPool::grow(int requested) {
+  std::unique_lock<std::mutex> LockGuard(ThreadsLock);
+  if (Threads.size() >= MaxThreadCount)
+    return; // Already hit the max thread pool size.
+  int newThreadCount = std::min<int>(requested, MaxThreadCount);
+  while (static_cast<int>(Threads.size()) < newThreadCount) {
+    int ThreadID = Threads.size();
+    Threads.emplace_back([this, ThreadID] {
+      Strategy.apply_thread_strategy(ThreadID);
       while (true) {
         std::function<void()> Task;
         {
@@ -73,6 +77,7 @@ void ThreadPool::wait() {
 }
 
 bool ThreadPool::isWorkerThread() const {
+  std::unique_lock<std::mutex> LockGuard(ThreadsLock);
   llvm::thread::id CurrentThreadId = llvm::this_thread::get_id();
   for (const llvm::thread &Thread : Threads)
     if (CurrentThreadId == Thread.get_id())
@@ -87,6 +92,7 @@ ThreadPool::~ThreadPool() {
     EnableFlag = false;
   }
   QueueCondition.notify_all();
+  std::unique_lock<std::mutex> LockGuard(ThreadsLock);
   for (auto &Worker : Threads)
     Worker.join();
 }
@@ -94,8 +100,8 @@ ThreadPool::~ThreadPool() {
 #else // LLVM_ENABLE_THREADS Disabled
 
 // No threads are launched, issue a warning if ThreadCount is not 0
-ThreadPool::ThreadPool(ThreadPoolStrategy S)
-    : ThreadCount(S.compute_thread_count()) {
+ThreadPool::ThreadPool(ThreadPoolStrategy S) : MaxThreadCount(1) {
+  int ThreadCount = S.compute_thread_count();
   if (ThreadCount != 1) {
     errs() << "Warning: request a ThreadPool with " << ThreadCount
            << " threads, but LLVM_ENABLE_THREADS has been turned off\n";

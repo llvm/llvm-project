@@ -65,7 +65,10 @@ public:
   /// It is an error to try to add new tasks while blocking on this call.
   void wait();
 
-  unsigned getThreadCount() const { return ThreadCount; }
+  // TODO: misleading legacy name warning!
+  // Returns the maximum number of worker threads in the pool, not the current
+  // number of threads!
+  unsigned getThreadCount() const { return MaxThreadCount; }
 
   /// Returns true if the current thread is a worker thread of this thread pool.
   bool isWorkerThread() const;
@@ -108,6 +111,7 @@ private:
     /// corresponding future.
     auto R = createTaskAndFuture(Task);
 
+    int requestedThreads;
     {
       // Lock the queue and push the new task
       std::unique_lock<std::mutex> LockGuard(QueueLock);
@@ -115,8 +119,10 @@ private:
       // Don't allow enqueueing after disabling the pool
       assert(EnableFlag && "Queuing a thread during ThreadPool destruction");
       Tasks.push(std::move(R.first));
+      requestedThreads = ActiveThreads + Tasks.size();
     }
     QueueCondition.notify_one();
+    grow(requestedThreads);
     return R.second.share();
 
 #else // LLVM_ENABLE_THREADS Disabled
@@ -130,8 +136,16 @@ private:
 #endif
   }
 
+#if LLVM_ENABLE_THREADS
+  // Grow to ensure that we have at least `requested` Threads, but do not go
+  // over MaxThreadCount.
+  void grow(int requested);
+#endif
+
   /// Threads in flight
   std::vector<llvm::thread> Threads;
+  /// Lock protecting access to the Threads vector.
+  mutable std::mutex ThreadsLock;
 
   /// Tasks waiting for execution in the pool.
   std::queue<std::function<void()>> Tasks;
@@ -151,7 +165,10 @@ private:
   bool EnableFlag = true;
 #endif
 
-  unsigned ThreadCount;
+  const ThreadPoolStrategy Strategy;
+
+  /// Maximum number of threads to potentially grow this pool to.
+  const unsigned MaxThreadCount;
 };
 }
 

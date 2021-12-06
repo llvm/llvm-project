@@ -87,6 +87,12 @@ static void *DFsanAllocate(uptr size, uptr alignment, bool zeroise) {
     BufferedStackTrace stack;
     ReportAllocationSizeTooBig(size, max_malloc_size, &stack);
   }
+  if (UNLIKELY(IsRssLimitExceeded())) {
+    if (AllocatorMayReturnNull())
+      return nullptr;
+    BufferedStackTrace stack;
+    ReportRssLimitExceeded(&stack);
+  }
   DFsanThread *t = GetCurrentThread();
   void *allocated;
   if (t) {

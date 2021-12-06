@@ -672,6 +672,8 @@ struct DWARFTypePrinter {
       return;
     if (D.getTag() == DW_TAG_subprogram)
       return;
+    if (D.getTag() == DW_TAG_lexical_block)
+      return;
     D = D.resolveTypeUnitReference();
     if (DWARFDie P = D.getParent())
       appendScopes(P);

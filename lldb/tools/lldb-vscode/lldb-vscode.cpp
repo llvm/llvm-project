@@ -1505,7 +1505,7 @@ void request_initialize(const llvm::json::Object &request) {
   // is the behavior of LLDB CLI, that expects a TAB.
   body.try_emplace("supportsCompletionsRequest", false);
   // The debug adapter supports the modules request.
-  body.try_emplace("supportsModulesRequest", false);
+  body.try_emplace("supportsModulesRequest", true);
   // The set of additional module information exposed by the debug adapter.
   //   body.try_emplace("additionalModuleColumns"] = ColumnDescriptor
   // Checksum algorithms supported by the debug adapter.

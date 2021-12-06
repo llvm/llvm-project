@@ -139,3 +139,7 @@
 # CHECK: error: invalid modifier 'got' (no symbols present)
          addi 4, 3, 123@got
 # CHECK-NEXT: addi 4, 3, 123@got
+
+# CHECK: error: invalid operand for instruction
+# CHECK-NEXT: lwarx 1, 2, 3, a
+              lwarx 1, 2, 3, a

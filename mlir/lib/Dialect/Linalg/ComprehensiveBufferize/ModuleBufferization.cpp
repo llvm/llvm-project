@@ -370,7 +370,7 @@ static void layoutPostProcessing(ModuleOp moduleOp) {
     SmallVector<Type> argumentTypes;
     // Iterate on each function argument and check it it was marked with a
     // desired layout.
-    for (auto it : llvm::enumerate(funcOp.getType().getInputs())) {
+    for (const auto &it : llvm::enumerate(funcOp.getType().getInputs())) {
       int argNumber = it.index();
       Type inputType = it.value();
       auto memrefType = inputType.dyn_cast<MemRefType>();
@@ -447,21 +447,11 @@ struct CallOpInterface
     return true;
   }
 
-  SmallVector<OpOperand *> getAliasingOpOperand(Operation *op,
-                                                OpResult opResult) const {
-    // TODO: Can we do better?
-    return {};
-  }
-
   OpResult getAliasingOpResult(Operation *op, OpOperand &opOperand) const {
     // CallOpInterface is special, it needs to wait for the callee to be
     // bufferized and needs to inspect the BufferAliasInfo object. It can't
     // make a proper determination by itself and needs to be conservative.
     return OpResult();
-  }
-
-  BufferRelation bufferRelation(Operation *op, OpOperand &opOperand) const {
-    return BufferRelation::Equivalent;
   }
 
   /// In a first approximation, all the function arguments of a FuncOp are
@@ -474,10 +464,6 @@ struct CallOpInterface
     assert(isa<CallOp>(callOp.getOperation()) && funcOp &&
            "expected Callop to a FuncOp");
     ModuleBufferizationState &moduleState = getModuleBufferizationState(state);
-
-    // Take a guard before anything else.
-    OpBuilder::InsertionGuard g(b);
-    b.setInsertionPoint(callOp);
 
     // 1. Filter return types:
     //    - if the callee is bodiless / external, we cannot inspect it and we
@@ -606,14 +592,9 @@ struct ReturnOpInterface
   LogicalResult bufferize(Operation *op, OpBuilder &b,
                           BufferizationState &state) const {
     auto returnOp = cast<ReturnOp>(op);
-
-    // Take a guard before anything else.
-    OpBuilder::InsertionGuard g(b);
-    // Cannot insert after returnOp.
-    b.setInsertionPoint(returnOp);
-
     assert(isa<FuncOp>(returnOp->getParentOp()) &&
            "only support FuncOp parent for ReturnOp");
+
     for (OpOperand &operand : returnOp->getOpOperands()) {
       auto tensorType = operand.get().getType().dyn_cast<TensorType>();
       if (!tensorType)
@@ -629,6 +610,37 @@ struct ReturnOpInterface
   }
 };
 
+struct FuncOpInterface
+    : public BufferizableOpInterface::ExternalModel<FuncOpInterface, FuncOp> {
+  LogicalResult bufferize(Operation *op, OpBuilder &b,
+                          BufferizationState &state) const {
+    auto funcOp = cast<FuncOp>(op);
+    b.setInsertionPointToStart(&funcOp.body().front());
+
+    // Create BufferCastOps for function args.
+    for (auto bbArg : funcOp.getArguments()) {
+      auto tensorType = bbArg.getType().dyn_cast<TensorType>();
+      if (!tensorType)
+        continue;
+      auto rankedTensorType = tensorType.dyn_cast<RankedTensorType>();
+      // Cast the tensor to the most dynamic buffer possible. Further
+      // canonicalizations will clean up.
+      Type memRefType = rankedTensorType
+                            ? getDynamicMemRefType(rankedTensorType)
+                            : getContiguousOrUnrankedMemRefType(tensorType);
+      Value bufferCast = b.create<bufferization::ToMemrefOp>(funcOp.getLoc(),
+                                                             memRefType, bbArg);
+      state.aliasInfo.insertNewBufferEquivalence(bufferCast, bbArg);
+      state.mapBuffer(bbArg, bufferCast);
+    }
+
+    // Bufferize function body.
+    return comprehensive_bufferize::bufferize(&funcOp.body(), state);
+  }
+
+  bool isAllocationHoistingBarrier(Operation *op) const { return true; }
+};
+
 } // namespace std_ext
 } // namespace comprehensive_bufferize
 } // namespace linalg
@@ -638,7 +650,7 @@ void mlir::linalg::comprehensive_bufferize::std_ext::
     registerBufferizableOpInterfaceExternalModels(DialectRegistry &registry) {
   registry.addOpInterface<CallOp, std_ext::CallOpInterface>();
   registry.addOpInterface<ReturnOp, std_ext::ReturnOpInterface>();
-  registry.addOpInterface<FuncOp, AllocationHoistingBarrierOnly<FuncOp>>();
+  registry.addOpInterface<FuncOp, std_ext::FuncOpInterface>();
 }
 
 LogicalResult mlir::linalg::comprehensive_bufferize::runComprehensiveBufferize(
@@ -648,7 +660,7 @@ LogicalResult mlir::linalg::comprehensive_bufferize::runComprehensiveBufferize(
   if (failed(getFuncOpsOrderedByCalls(moduleOp, orderedFuncOps, callerMap)))
     return failure();
 
-  BufferizationState state(moduleOp, *options.allocationFns);
+  BufferizationState state(moduleOp, options);
   BufferizationAliasInfo &aliasInfo = state.aliasInfo;
 
   // Interestingly, all function args that are not visible outside of a module
@@ -670,6 +682,15 @@ LogicalResult mlir::linalg::comprehensive_bufferize::runComprehensiveBufferize(
       for (BlockArgument bbArg : funcOp.getArguments())
         if (bbArg.getType().isa<TensorType>())
           aliasInfo.setBufferizesToWritableMemory(bbArg);
+
+    // Set the function arguments marked with inplaceable to be known as
+    // bufferizing to a writeable memory.
+    for (BlockArgument bbArg : funcOp.getArguments()) {
+      BoolAttr inplaceAttr = funcOp.getArgAttrOfType<BoolAttr>(
+          bbArg.getArgNumber(), BufferizableOpInterface::kInplaceableAttrName);
+      if (inplaceAttr && inplaceAttr.getValue())
+        aliasInfo.setBufferizesToWritableMemory(bbArg);
+    }
 
     // Analyze and bufferize funcOp.
     if (failed(runComprehensiveBufferize(funcOp, options, state)))

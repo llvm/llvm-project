@@ -8,7 +8,7 @@ define i32* @c1(i32* %q) {
 	ret i32* %q
 }
 
-; FNATTR: define void @c2(i32* writeonly %q)
+; FNATTR: define void @c2(i32* %q)
 ; It would also be acceptable to mark %q as readnone. Update @c3 too.
 define void @c2(i32* %q) {
 	store i32* %q, i32** @g
@@ -268,7 +268,7 @@ entry:
 }
 
 @g3 = global i8* null
-; FNATTR: define void @captureStrip(i8* writeonly %p)
+; FNATTR: define void @captureStrip(i8* %p)
 define void @captureStrip(i8* %p) {
   %b = call i8* @llvm.strip.invariant.group.p0i8(i8* %p)
   store i8* %b, i8** @g3

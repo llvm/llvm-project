@@ -132,15 +132,15 @@ public:
 
   void SetError(const Status &error, const char *fallback_error_cstr = nullptr);
 
-  lldb::ReturnStatus GetStatus();
+  lldb::ReturnStatus GetStatus() const;
 
   void SetStatus(lldb::ReturnStatus status);
 
-  bool Succeeded();
+  bool Succeeded() const;
 
-  bool HasResult();
+  bool HasResult() const;
 
-  bool GetDidChangeProcessState();
+  bool GetDidChangeProcessState() const;
 
   void SetDidChangeProcessState(bool b);
 

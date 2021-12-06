@@ -509,35 +509,15 @@ entry:
 }
 
 define arm_aapcs_vfpcc <2 x i64> @v2i1and_vmov(<2 x i64> %a, <2 x i64> %b, i32 %c) {
-; CHECKBE-LABEL: v2i1and_vmov:
-; CHECKBE:       @ %bb.0: @ %entry
-; CHECKBE-NEXT:    .vsave {d8, d9}
-; CHECKBE-NEXT:    vpush {d8, d9}
-; CHECKBE-NEXT:    cmp r0, #0
-; CHECKBE-NEXT:    adr r1, .LCPI37_0
-; CHECKBE-NEXT:    cset r0, eq
-; CHECKBE-NEXT:    vldrw.u32 q3, [r1]
-; CHECKBE-NEXT:    vmov.32 q4[3], r0
-; CHECKBE-NEXT:    rsbs r0, r0, #0
-; CHECKBE-NEXT:    vand q3, q4, q3
-; CHECKBE-NEXT:    vmov.i8 q2, #0xff
-; CHECKBE-NEXT:    vmov r1, s15
-; CHECKBE-NEXT:    vmov q3[2], q3[0], r0, r1
-; CHECKBE-NEXT:    vmov q3[3], q3[1], r0, r1
-; CHECKBE-NEXT:    vrev64.32 q4, q3
-; CHECKBE-NEXT:    veor q2, q4, q2
-; CHECKBE-NEXT:    vand q0, q0, q4
-; CHECKBE-NEXT:    vand q1, q1, q2
-; CHECKBE-NEXT:    vorr q0, q0, q1
-; CHECKBE-NEXT:    vpop {d8, d9}
-; CHECKBE-NEXT:    bx lr
-; CHECKBE-NEXT:    .p2align 4
-; CHECKBE-NEXT:  @ %bb.1:
-; CHECKBE-NEXT:  .LCPI37_0:
-; CHECKBE-NEXT:    .zero 4
-; CHECKBE-NEXT:    .long 1 @ 0x1
-; CHECKBE-NEXT:    .zero 4
-; CHECKBE-NEXT:    .long 0 @ 0x0
+; CHECK-LABEL: v2i1and_vmov:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    mov.w r1, #0
+; CHECK-NEXT:    csetm r0, eq
+; CHECK-NEXT:    bfi r1, r0, #0, #8
+; CHECK-NEXT:    vmsr p0, r1
+; CHECK-NEXT:    vpsel q0, q0, q1
+; CHECK-NEXT:    bx lr
 entry:
   %c1 = icmp eq i32 %c, zeroinitializer
   %broadcast.splatinsert1967 = insertelement <2 x i1> undef, i1 %c1, i32 0
@@ -548,45 +528,15 @@ entry:
 }
 
 define arm_aapcs_vfpcc <2 x i64> @v2i1or_vmov(<2 x i64> %a, <2 x i64> %b, i32 %c) {
-; CHECKLE-LABEL: v2i1or_vmov:
-; CHECKLE:       @ %bb.0: @ %entry
-; CHECKLE-NEXT:    cmp r0, #0
-; CHECKLE-NEXT:    vldr s8, .LCPI38_0
-; CHECKLE-NEXT:    csetm r0, eq
-; CHECKLE-NEXT:    vmov s10, r0
-; CHECKLE-NEXT:    vmov.f32 s9, s8
-; CHECKLE-NEXT:    vmov.f32 s11, s10
-; CHECKLE-NEXT:    vbic q1, q1, q2
-; CHECKLE-NEXT:    vand q0, q0, q2
-; CHECKLE-NEXT:    vorr q0, q0, q1
-; CHECKLE-NEXT:    bx lr
-; CHECKLE-NEXT:    .p2align 2
-; CHECKLE-NEXT:  @ %bb.1:
-; CHECKLE-NEXT:  .LCPI38_0:
-; CHECKLE-NEXT:    .long 0xffffffff @ float NaN
-;
-; CHECKBE-LABEL: v2i1or_vmov:
-; CHECKBE:       @ %bb.0: @ %entry
-; CHECKBE-NEXT:    .vsave {d8, d9}
-; CHECKBE-NEXT:    vpush {d8, d9}
-; CHECKBE-NEXT:    cmp r0, #0
-; CHECKBE-NEXT:    vldr s8, .LCPI38_0
-; CHECKBE-NEXT:    csetm r0, eq
-; CHECKBE-NEXT:    vmov.i8 q3, #0xff
-; CHECKBE-NEXT:    vmov s10, r0
-; CHECKBE-NEXT:    vmov.f32 s9, s8
-; CHECKBE-NEXT:    vmov.f32 s11, s10
-; CHECKBE-NEXT:    vrev64.32 q4, q2
-; CHECKBE-NEXT:    veor q2, q4, q3
-; CHECKBE-NEXT:    vand q0, q0, q4
-; CHECKBE-NEXT:    vand q1, q1, q2
-; CHECKBE-NEXT:    vorr q0, q0, q1
-; CHECKBE-NEXT:    vpop {d8, d9}
-; CHECKBE-NEXT:    bx lr
-; CHECKBE-NEXT:    .p2align 2
-; CHECKBE-NEXT:  @ %bb.1:
-; CHECKBE-NEXT:  .LCPI38_0:
-; CHECKBE-NEXT:    .long 0xffffffff @ float NaN
+; CHECK-LABEL: v2i1or_vmov:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    mov.w r1, #255
+; CHECK-NEXT:    csetm r0, eq
+; CHECK-NEXT:    bfi r1, r0, #8, #8
+; CHECK-NEXT:    vmsr p0, r1
+; CHECK-NEXT:    vpsel q0, q0, q1
+; CHECK-NEXT:    bx lr
 entry:
   %c1 = icmp eq i32 %c, zeroinitializer
   %broadcast.splatinsert1967 = insertelement <2 x i1> undef, i1 %c1, i32 0

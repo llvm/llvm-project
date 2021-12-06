@@ -82,6 +82,7 @@ source_set("sources") {
     "sanitizer_linux_s390.cpp",
     "sanitizer_list.h",
     "sanitizer_local_address_space_view.h",
+    "sanitizer_lzw.h",
     "sanitizer_mac.cpp",
     "sanitizer_mac.h",
     "sanitizer_mac_libcdep.cpp",

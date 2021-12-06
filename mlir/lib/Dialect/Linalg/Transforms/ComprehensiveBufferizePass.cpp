@@ -86,6 +86,7 @@ void LinalgComprehensiveModuleBufferize::runOnOperation() {
   };
 
   options.allowReturnMemref = allowReturnMemref;
+  options.allowUnknownOps = allowUnknownOps;
   options.analysisFuzzerSeed = analysisFuzzerSeed;
   options.testAnalysisOnly = testAnalysisOnly;
 

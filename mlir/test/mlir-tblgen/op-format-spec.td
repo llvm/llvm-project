@@ -320,13 +320,22 @@ def DirectiveTypeZOperandInvalidI : TestFormat_Op<[{
 //===----------------------------------------------------------------------===//
 
 // Test all of the valid literals.
-// CHECK: error: expected valid literal
+// CHECK: error: expected valid literal but got 'a:': keywords should contain only alphanum, '_', '$', or '.' characters
 def LiteralInvalidA : TestFormat_Op<[{
+  `a:`
+}]>;
+// CHECK: error: expected valid literal but got '1': single character literal must be a letter or one of '_:,=<>()[]{}?+*'
+def LiteralInvalidB : TestFormat_Op<[{
   `1`
 }]>;
+// CHECK: error: expected valid literal but got ':abc': valid keyword starts with a letter or '_'
+def LiteralInvalidC : TestFormat_Op<[{
+  `:abc`
+}]>;
+
 // CHECK: error: unexpected end of file in literal
 // CHECK: error: expected directive, literal, variable, or optional group
-def LiteralInvalidB : TestFormat_Op<[{
+def LiteralInvalidD : TestFormat_Op<[{
   `
 }]>;
 // CHECK-NOT: error

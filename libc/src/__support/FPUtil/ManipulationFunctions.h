@@ -179,7 +179,7 @@ static inline T nextafter(T from, T to) {
 } // namespace __llvm_libc
 
 #ifdef SPECIAL_X86_LONG_DOUBLE
-#include "NextAfterLongDoubleX86.h"
+#include "x86_64/NextAfterLongDouble.h"
 #endif // SPECIAL_X86_LONG_DOUBLE
 
 #endif // LLVM_LIBC_SRC_SUPPORT_FPUTIL_MANIPULATION_FUNCTIONS_H
