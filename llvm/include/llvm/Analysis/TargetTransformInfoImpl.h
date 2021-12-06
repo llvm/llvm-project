@@ -564,6 +564,13 @@ public:
     return 1;
   }
 
+  InstructionCost getVPMemoryOpCost(unsigned Opcode, Type *Src, Align Alignment,
+                                    unsigned AddressSpace,
+                                    TTI::TargetCostKind CostKind,
+                                    const Instruction *I) const {
+    return 1;
+  }
+
   InstructionCost getMaskedMemoryOpCost(unsigned Opcode, Type *Src,
                                         Align Alignment, unsigned AddressSpace,
                                         TTI::TargetCostKind CostKind) const {
@@ -772,7 +779,10 @@ public:
 
   bool supportsScalableVectors() const { return false; }
 
-  bool hasActiveVectorLength() const { return false; }
+  bool hasActiveVectorLength(unsigned Opcode, Type *DataType,
+                             Align Alignment) const {
+    return false;
+  }
 
   TargetTransformInfo::VPLegalization
   getVPLegalizationStrategy(const VPIntrinsic &PI) const {
