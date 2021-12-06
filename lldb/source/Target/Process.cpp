@@ -5903,14 +5903,21 @@ void Process::PrintWarningToolchainMismatch(const SymbolContext &sc) {
     return;
   if (sc.GetLanguage() != eLanguageTypeSwift)
     return;
-  if (SymbolFile *sym_file = sc.module_sp->GetSymbolFile())
-    if (sym_file->GetProducerVersion(*sc.comp_unit) !=
-        swift::version::Version::getCurrentCompilerVersion())
-      PrintWarning(Process::Warnings::eWarningsToolchainMismatch,
-                   sc.module_sp.get(),
-                   "%s was compiled with a Swift compiler from a different "
-                   "toolchain. Swift expression evaluation may not work.\n",
-                   sc.module_sp->GetFileSpec().GetFilename().GetCString());
+  if (SymbolFile *sym_file = sc.module_sp->GetSymbolFile()) {
+    llvm::VersionTuple sym_file_version =
+        sym_file->GetProducerVersion(*sc.comp_unit);
+    llvm::VersionTuple swift_version =
+        swift::version::Version::getCurrentCompilerVersion();
+    if (sym_file_version != swift_version)
+      PrintWarning(
+          Process::Warnings::eWarningsToolchainMismatch, sc.module_sp.get(),
+          "%s was compiled with a Swift compiler from a different toolchain "
+          "(version '%s') than the Swift compiler integrated into LLDB "
+          "(version '%s'). Swift expression evaluation may not work.\n",
+          sc.module_sp->GetFileSpec().GetFilename().GetCString(),
+          sym_file_version.getAsString().c_str(),
+          swift_version.getAsString().c_str());
+  }
 }
 #endif
 
