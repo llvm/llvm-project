@@ -1784,7 +1784,20 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache& CEAC,
             for (Instruction& II : Y)
                 RemapInstruction(&II, VMap, RF_NoModuleLevelChanges);
         }
+    }else{
+        // Loop over all of the PHI nodes in the header and exit blocks, and change
+        // any references to the old incoming edge to be the new incoming edge.
+        for (BasicBlock::iterator I = header->begin(); isa<PHINode>(I); ++I) {
+            PHINode* PN = cast<PHINode>(I);
+            for (unsigned i = 0, e = PN->getNumIncomingValues(); i != e; ++i)
+                if (!Blocks.count(PN->getIncomingBlock(i)))
+                    PN->setIncomingBlock(i, newFuncRoot);
+        }
+
+
     }
+
+
 
     auto NewHeader=header;
     if (KeepOldBlocks)
@@ -2053,11 +2066,6 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache& CEAC,
 
 
 
-
-
-
-
-
     // Replicate the effects of any lifetime start/end markers which referenced
     // input objects in the extraction region by placing markers around the call.
     insertLifetimeMarkersSurroundingCall(M, LifetimesStart.getArrayRef(), {}, call);
@@ -2081,8 +2089,26 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache& CEAC,
             if (I->isTerminator() && I->getFunction() == oldFunction)
                 I->replaceUsesOfWith(header, codeReplacer);
 
+    if (!KeepOldBlocks) {
+        for (BasicBlock* ExitBB : ExitBlocks)
+            for (PHINode& PN : ExitBB->phis()) {
+                Value* IncomingCodeReplacerVal = nullptr;
+                for (unsigned i = 0, e = PN.getNumIncomingValues(); i != e; ++i) {
+                    // Ignore incoming values from outside of the extracted region.
+                    if (!Blocks.count(PN.getIncomingBlock(i)))
+                        continue;
 
-
+                    // Ensure that there is only one incoming value from codeReplacer.
+                    if (!IncomingCodeReplacerVal) {
+                        PN.setIncomingBlock(i, codeReplacer);
+                        IncomingCodeReplacerVal = PN.getIncomingValue(i);
+                    }
+                    else
+                        assert(IncomingCodeReplacerVal == PN.getIncomingValue(i) &&
+                            "PHI has two incompatbile incoming values from codeRepl");
+                }
+            }
+    }
 
 
 
@@ -2130,44 +2156,6 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache& CEAC,
 
 
 
-    if (KeepOldBlocks) {
-    } else {
-
-
-
-
-
-
-        // Loop over all of the PHI nodes in the header and exit blocks, and change
-        // any references to the old incoming edge to be the new incoming edge.
-        for (BasicBlock::iterator I = header->begin(); isa<PHINode>(I); ++I) {
-            PHINode* PN = cast<PHINode>(I);
-            for (unsigned i = 0, e = PN->getNumIncomingValues(); i != e; ++i)
-                if (!Blocks.count(PN->getIncomingBlock(i)))
-                    PN->setIncomingBlock(i, newFuncRoot);
-        }
-
-        for (BasicBlock* ExitBB : ExitBlocks)
-            for (PHINode& PN : ExitBB->phis()) {
-                Value* IncomingCodeReplacerVal = nullptr;
-                for (unsigned i = 0, e = PN.getNumIncomingValues(); i != e; ++i) {
-                    // Ignore incoming values from outside of the extracted region.
-                    if (!Blocks.count(PN.getIncomingBlock(i)))
-                        continue;
-
-                    // Ensure that there is only one incoming value from codeReplacer.
-                    if (!IncomingCodeReplacerVal) {
-                        PN.setIncomingBlock(i, codeReplacer);
-                        IncomingCodeReplacerVal = PN.getIncomingValue(i);
-                    }
-                    else
-                        assert(IncomingCodeReplacerVal == PN.getIncomingValue(i) &&
-                            "PHI has two incompatbile incoming values from codeRepl");
-                }
-            }
-
-      
-    }
 
     // Update the branch weights for the exit block.
     if (BFI && NumExitBlocks > 1)
