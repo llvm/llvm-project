@@ -477,6 +477,63 @@ define void @dse_strncpy_memset_chk_test1(i8* noalias %out, i8* noalias %in, i64
   ret void
 }
 
+declare void @use(i8*)
+
+define void @dse_memset_chk_cannot_eliminates_store(i8* %out, i64 %n) {
+; CHECK-LABEL: @dse_memset_chk_cannot_eliminates_store(
+; CHECK-NEXT:    store i8 10, i8* [[OUT:%.*]], align 1
+; CHECK-NEXT:    [[CALL_2:%.*]] = tail call i8* @__memset_chk(i8* [[OUT]], i32 42, i64 100, i64 [[N:%.*]])
+; CHECK-NEXT:    ret void
+;
+  store i8 10, i8* %out
+  %call.2 = tail call i8* @__memset_chk(i8* %out, i32 42, i64 100, i64 %n)
+  ret void
+}
+
+define void @dse_memset_chk_eliminates_store_local_object_escapes_after(i64 %n) {
+; CHECK-LABEL: @dse_memset_chk_eliminates_store_local_object_escapes_after(
+; CHECK-NEXT:    [[A:%.*]] = alloca [200 x i8], align 1
+; CHECK-NEXT:    [[OUT:%.*]] = bitcast [200 x i8]* [[A]] to i8*
+; CHECK-NEXT:    store i8 10, i8* [[OUT]], align 1
+; CHECK-NEXT:    [[OUT_100:%.*]] = getelementptr i8, i8* [[OUT]], i64 100
+; CHECK-NEXT:    store i8 10, i8* [[OUT_100]], align 1
+; CHECK-NEXT:    [[CALL_2:%.*]] = tail call i8* @__memset_chk(i8* [[OUT]], i32 42, i64 100, i64 [[N:%.*]])
+; CHECK-NEXT:    call void @use(i8* [[OUT]])
+; CHECK-NEXT:    ret void
+;
+  %a = alloca [200 x i8]
+  %out = bitcast [200 x i8]* %a to i8*
+  store i8 10, i8* %out
+  %out.100 = getelementptr i8, i8* %out, i64 100
+  store i8 10, i8* %out.100
+  %call.2 = tail call i8* @__memset_chk(i8* %out, i32 42, i64 100, i64 %n)
+  call void @use(i8* %out)
+  ret void
+}
+
+define void @dse_memset_chk_eliminates_store_local_object_escapes_before(i64 %n) {
+; CHECK-LABEL: @dse_memset_chk_eliminates_store_local_object_escapes_before(
+; CHECK-NEXT:    [[A:%.*]] = alloca [200 x i8], align 1
+; CHECK-NEXT:    [[OUT:%.*]] = bitcast [200 x i8]* [[A]] to i8*
+; CHECK-NEXT:    call void @use(i8* [[OUT]])
+; CHECK-NEXT:    store i8 10, i8* [[OUT]], align 1
+; CHECK-NEXT:    [[OUT_100:%.*]] = getelementptr i8, i8* [[OUT]], i64 100
+; CHECK-NEXT:    store i8 0, i8* [[OUT_100]], align 1
+; CHECK-NEXT:    [[CALL_2:%.*]] = tail call i8* @__memset_chk(i8* [[OUT]], i32 42, i64 100, i64 [[N:%.*]])
+; CHECK-NEXT:    call void @use(i8* [[OUT]])
+; CHECK-NEXT:    ret void
+;
+  %a = alloca [200 x i8]
+  %out = bitcast [200 x i8]* %a to i8*
+  call void @use(i8* %out)
+  store i8 10, i8* %out
+  %out.100 = getelementptr i8, i8* %out, i64 100
+  store i8 0, i8* %out.100
+  %call.2 = tail call i8* @__memset_chk(i8* %out, i32 42, i64 100, i64 %n)
+  call void @use(i8* %out)
+  ret void
+}
+
 ; strncpy -> memset, partial overwrite
 define void @dse_strncpy_test2(i8* noalias %out, i8* noalias %in) {
 ; CHECK-LABEL: @dse_strncpy_test2(
