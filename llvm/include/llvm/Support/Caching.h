@@ -63,10 +63,9 @@ using AddBufferFn =
 /// the cache directory if it does not already exist. The cache name appears in
 /// error messages for errors during caching. The temporary file prefix is used
 /// in the temporary file naming scheme used when writing files atomically.
-Expected<FileCache> localCache(
-    Twine CacheNameRef, Twine TempFilePrefixRef, Twine CacheDirectoryPathRef,
-    AddBufferFn AddBuffer = [](size_t Task, std::unique_ptr<MemoryBuffer> MB) {
-    });
+Expected<FileCache> localCache(Twine CacheNameRef, Twine TempFilePrefixRef,
+                               Twine CacheDirectoryPathRef,
+                               AddBufferFn AddBuffer);
 } // namespace llvm
 
 #endif
