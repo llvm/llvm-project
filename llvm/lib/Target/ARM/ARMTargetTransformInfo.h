@@ -189,6 +189,18 @@ public:
     return isLegalMaskedLoad(DataTy, Alignment);
   }
 
+  bool forceScalarizeMaskedGather(VectorType *VTy, Align Alignment) {
+    // For MVE, we have a custom lowering pass that will already have custom
+    // legalised any gathers that we can lower to MVE intrinsics, and want to
+    // expand all the rest. The pass runs before the masked intrinsic lowering
+    // pass.
+    return true;
+  }
+
+  bool forceScalarizeMaskedScatter(VectorType *VTy, Align Alignment) {
+    return forceScalarizeMaskedGather(VTy, Alignment);
+  }
+
   bool isLegalMaskedGather(Type *Ty, Align Alignment);
 
   bool isLegalMaskedScatter(Type *Ty, Align Alignment) {

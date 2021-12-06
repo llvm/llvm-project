@@ -408,6 +408,16 @@ bool TargetTransformInfo::isLegalMaskedScatter(Type *DataType,
   return TTIImpl->isLegalMaskedScatter(DataType, Alignment);
 }
 
+bool TargetTransformInfo::forceScalarizeMaskedGather(VectorType *DataType,
+                                                     Align Alignment) const {
+  return TTIImpl->forceScalarizeMaskedGather(DataType, Alignment);
+}
+
+bool TargetTransformInfo::forceScalarizeMaskedScatter(VectorType *DataType,
+                                                      Align Alignment) const {
+  return TTIImpl->forceScalarizeMaskedScatter(DataType, Alignment);
+}
+
 bool TargetTransformInfo::isLegalMaskedCompressStore(Type *DataType) const {
   return TTIImpl->isLegalMaskedCompressStore(DataType);
 }
