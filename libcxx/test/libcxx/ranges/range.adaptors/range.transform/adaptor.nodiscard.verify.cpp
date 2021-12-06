@@ -10,8 +10,7 @@
 // UNSUPPORTED: libcpp-no-concepts
 // UNSUPPORTED: libcpp-has-no-incomplete-ranges
 
-// Test the libc++ extension that std::views::transform is marked as [[nodiscard]] to avoid
-// the potential for user mistakenly thinking they're calling an algorithm.
+// Test the libc++ extension that std::views::transform is marked as [[nodiscard]].
 
 #include <ranges>
 
@@ -22,5 +21,5 @@ void test() {
   std::views::transform(f); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
   std::views::transform(range, f); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
   range | std::views::transform(f); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
-  std::views::transform(f) | std::views::transform(f); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::views::all | std::views::transform(f); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
 }
