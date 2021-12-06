@@ -18,6 +18,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/Transforms/Utils/ValueMapper.h"
 #include <limits>
 
 namespace llvm {
@@ -36,6 +37,8 @@ class Loop;
 class Module;
 class Type;
 class Value;
+class StructType;
+class LoadInst;
 
 /// A cache for the CodeExtractor analysis. The operation \ref
 /// CodeExtractor::extractCodeRegion is guaranteed not to invalidate this
@@ -95,6 +98,8 @@ public:
     // If true, varargs functions can be extracted.
     bool AllowVarArgs;
 
+    bool KeepOldBlocks;
+
     // Bits of intermediate state computed at various phases of extraction.
     SetVector<BasicBlock *> Blocks;
     unsigned NumExitBlocks = std::numeric_limits<unsigned>::max();
@@ -103,11 +108,14 @@ public:
     // Mapping from the original exit blocks, to the new blocks inside
     // the function.
     SmallVector<BasicBlock *, 4> OldTargets;
+    SmallPtrSet<BasicBlock *, 1> ExitBlocks;
 
     // Suffix to use when creating extracted function (appended to the original
     // function name + "."). If empty, the default is to use the entry block
     // label, if non-empty, otherwise "extracted".
     std::string Suffix;
+
+   
 
   public:
     /// Create a code extractor for a sequence of blocks.
@@ -124,8 +132,8 @@ public:
                   bool AggregateArgs = false, BlockFrequencyInfo *BFI = nullptr,
                   BranchProbabilityInfo *BPI = nullptr,
                   AssumptionCache *AC = nullptr,
-                  bool AllowVarArgs = false, bool AllowAlloca = false,
-                  std::string Suffix = "");
+                  bool AllowVarArgs = false, bool AllowAlloca = false, 
+                  std::string Suffix = "", bool KeepOldBlocks= false);
 
     /// Create a code extractor for a loop body.
     ///
@@ -152,8 +160,10 @@ public:
     /// newly outlined function.
      /// \param Outputs [out] - filled with values marked as outputs to the
     /// newly outlined function.
-    /// \returns zero when called on a CodeExtractor instance where isEligible
-    /// returns false.
+    /// \param KeepOldBlocks If true, the original instances of the extracted
+    /// region remain; instead of moving them to the new function they are
+    /// copied. \returns zero when called on a CodeExtractor instance where
+    /// isEligible returns false.
     Function *extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
                                 ValueSet &Inputs, ValueSet &Outputs);
 
@@ -226,15 +236,25 @@ public:
     getLifetimeMarkers(const CodeExtractorAnalysisCache &CEAC,
                        Instruction *Addr, BasicBlock *ExitBlock) const;
 
+
+
+
+ void recomputeExitBlocks();
+
     void severSplitPHINodesOfEntry(BasicBlock *&Header);
-    void severSplitPHINodesOfExits(const SmallPtrSetImpl<BasicBlock *> &Exits);
+    void severSplitPHINodesOfExits();
     void splitReturnBlocks();
 
-    Function *constructFunction(const ValueSet &inputs,
-                                const ValueSet &outputs,
-                                BasicBlock *header,
-                                BasicBlock *newRootNode, BasicBlock *newHeader,
-                                Function *oldFunction, Module *M);
+
+
+    void canonicalizeCFGForExtraction(BasicBlock *&Header,
+                                      bool NoExitBlockPHIs);
+
+    Function *constructFunctionDeclaration(const ValueSet &inputs,
+                                           const ValueSet &outputs,
+                                           BasicBlock *header);
+
+
 
     void moveCodeToFunction(Function *newFunction);
 
@@ -242,10 +262,6 @@ public:
         BasicBlock *CodeReplacer,
         DenseMap<BasicBlock *, BlockFrequency> &ExitWeights,
         BranchProbabilityInfo *BPI);
-
-    CallInst *emitCallAndSwitchStatement(Function *newFunction,
-                                         BasicBlock *newHeader,
-                                         ValueSet &inputs, ValueSet &outputs);
   };
 
 } // end namespace llvm
