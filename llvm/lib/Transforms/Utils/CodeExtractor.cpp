@@ -1425,6 +1425,7 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
   }
 
 
+
   // Calculate the entry frequency of the new function before we change the root
   //   block.
   BlockFrequency EntryFreq;
@@ -1456,6 +1457,19 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
           ReplIP = ReplIP->getNextNode();
       }
   }
+
+  SmallDenseMap<BasicBlock *, unsigned> ExitBlockSwitchIdx;
+  SmallVector<BasicBlock *> Orlder;
+  for (BasicBlock *OldTarget : OldTargets) {
+      if (Blocks.count(OldTarget))
+          continue;
+
+      auto Added =
+          ExitBlockSwitchIdx.insert({OldTarget, ExitBlockSwitchIdx.size()});
+      if (Added.second)
+          Orlder.push_back(OldTarget);
+  }
+
 
 
 
@@ -1512,17 +1526,6 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
   }
 
 
-  SmallDenseMap<BasicBlock *, unsigned> ExitBlockSwitchIdx;
-  SmallVector<BasicBlock *> Orlder;
-  for (BasicBlock *OldTarget : OldTargets) {
-    if (Blocks.count(OldTarget))
-      continue;
-
-    auto Added =
-        ExitBlockSwitchIdx.insert({OldTarget, ExitBlockSwitchIdx.size()});
-    if (Added.second)
-      Orlder.push_back(OldTarget);
-  }
 
 
 
@@ -1621,7 +1624,8 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
 
 
   std::map<BasicBlock *, BasicBlock *> ExitBlockMap;
-  for (auto OldTarget : OldTargets) {
+ // for (auto OldTarget : OldTargets) {
+  for (auto OldTarget : Orlder) {
     BasicBlock *&NewTarget = ExitBlockMap[OldTarget];
     if (NewTarget)
       continue;
