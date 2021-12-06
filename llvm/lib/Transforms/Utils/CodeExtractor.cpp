@@ -1425,6 +1425,8 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
   }
 
 
+  // CFG/ExitBlocks fixed after here
+
 
   // Calculate the entry frequency of the new function before we change the root
   //   block.
@@ -1475,6 +1477,18 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
 
   // Construct new function based on inputs/outputs & add allocas for all defs.
   Function *newFunction = constructFunctionDeclaration(inputs, outputs, header);
+
+
+  Function::arg_iterator OutputArgBegin = newFunction->arg_begin();
+  unsigned FirstOut = inputs.size();
+  if (!AggregateArgs)
+      std::advance(OutputArgBegin, inputs.size());
+
+  StructType *StructArgTy = nullptr;
+  if (AggregateArgs && (inputs.size() + outputs.size() > 0))
+      StructArgTy = cast<StructType>(newFunction->getArg(0)->getType());
+
+
 
   //// CodeGen newFunction implementation
   //////////////////////////////////////////////////////
@@ -1529,9 +1543,7 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
 
 
 
-  StructType *StructTy = nullptr;
-  if (AggregateArgs && (inputs.size() + outputs.size() > 0))
-    StructTy = cast<StructType>(newFunction->getArg(0)->getType());
+
 
   // Create an iterator to name all of the arguments we inserted.
   Function::arg_iterator AI = newFunction->arg_begin();
@@ -1547,8 +1559,8 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
       Idx[1] = ConstantInt::get(Type::getInt32Ty(header->getContext()), i);
       Instruction *TI = newFunction->begin()->getTerminator();
       GetElementPtrInst *GEP = GetElementPtrInst::Create(
-          StructTy, &*AI, Idx, "gep_" + inputs[i]->getName(), TI);
-      RewriteVal = new LoadInst(StructTy->getElementType(i), GEP,
+          StructArgTy, &*AI, Idx, "gep_" + inputs[i]->getName(), TI);
+      RewriteVal = new LoadInst(StructArgTy->getElementType(i), GEP,
                                 "loadgep_" + inputs[i]->getName(), TI);
     } else
       RewriteVal = &*AI++;
@@ -1567,9 +1579,12 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
 
   if (KeepOldBlocks) {
     for (BasicBlock *Block : Blocks) {
-        // TODO: Don't copy assumptions
       BasicBlock *CBB = CloneBasicBlock(Block, VMap, {},
-                                        newFunction /*, nullptr, &DIFinder*/);
+                                        newFunction ,/* CodeInfo */ nullptr, /* DIFinder */ nullptr,
+          [](const Instruction*I)->bool {
+          return !isa<AssumeInst>(I);
+          }
+          );
 
       // Add basic block mapping.
       VMap[Block] = CBB;
@@ -1636,8 +1651,7 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
 
     // If we don't already have an exit stub for this non-extracted
     // destination, create one now!
-    NewTarget = BasicBlock::Create(Context, OldTarget->getName() + ".exitStub",
-                                   newFunction);
+    NewTarget = BasicBlock::Create(Context, OldTarget->getName() + ".exitStub", newFunction);
     VMap[OldTarget] = NewTarget;
 
   //  auto SuccNum = ExitBlockSwitchIdx[OldTarget];
@@ -1715,10 +1729,6 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
   auto *BranchI2 = BranchInst::Create(NewHeader, newFuncRoot);
   applyFirstDebugLoc(oldFunction, Blocks.getArrayRef(), BranchI2);
 
-  Function::arg_iterator OutputArgBegin = newFunction->arg_begin();
-  unsigned FirstOut = inputs.size();
-  if (!AggregateArgs)
-    std::advance(OutputArgBegin, inputs.size());
 
   // Store the arguments right after the definition of output value.
   // This should be proceeded after creating exit stubs to be ensure that invoke
@@ -1755,7 +1765,7 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
       Idx[0] = Constant::getNullValue(Type::getInt32Ty(Context));
       Idx[1] = ConstantInt::get(Type::getInt32Ty(Context), FirstOut + i);
       GetElementPtrInst *GEP = GetElementPtrInst::Create(
-          StructTy, &*OAI, Idx, "gep_" + outputs[i]->getName(), InsertBefore);
+          StructArgTy, &*OAI, Idx, "gep_" + outputs[i]->getName(), InsertBefore);
       new StoreInst(OutI, GEP, InsertBefore);
       // Since there should be only one struct argument aggregating
       // all the output values, we shouldn't increment OAI, which always
@@ -1788,14 +1798,14 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
   std::vector<Value *> params;
 
   AllocaInst *Struct = nullptr;
-  if (AggregateArgs && StructTy) {
+  if (AggregateArgs && StructArgTy) {
     std::vector<Value *> StructValues;
     for (Value *input : inputs) {
       StructValues.push_back(input);
       ++ArgNo;
     }
 
-    Struct = new AllocaInst(StructTy, DL.getAllocaAddrSpace(), nullptr,
+    Struct = new AllocaInst(StructArgTy, DL.getAllocaAddrSpace(), nullptr,
                             "structArg", &AllocaBlock->front());
 
     params.push_back(Struct);
@@ -1805,7 +1815,7 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
       Idx[0] = Constant::getNullValue(Type::getInt32Ty(Context));
       Idx[1] = ConstantInt::get(Type::getInt32Ty(Context), i);
       GetElementPtrInst *GEP = GetElementPtrInst::Create(
-          StructTy, Struct, Idx, "gep_" + StructValues[i]->getName());
+          StructArgTy, Struct, Idx, "gep_" + StructValues[i]->getName());
       codeReplacer->getInstList().push_back(GEP);
       new StoreInst(StructValues[i], GEP, codeReplacer);
     }
@@ -1858,7 +1868,7 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
       Idx[0] = Constant::getNullValue(Type::getInt32Ty(Context));
       Idx[1] = ConstantInt::get(Type::getInt32Ty(Context), FirstOut + i);
       GetElementPtrInst *GEP = GetElementPtrInst::Create(
-          StructTy, Struct, Idx, "gep_reload_" + outputs[i]->getName());
+          StructArgTy, Struct, Idx, "gep_reload_" + outputs[i]->getName());
       codeReplacer->getInstList().push_back(GEP);
       Output = GEP;
     } else {

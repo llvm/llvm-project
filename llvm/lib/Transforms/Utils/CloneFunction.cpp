@@ -43,7 +43,7 @@ using namespace llvm;
 BasicBlock *llvm::CloneBasicBlock(const BasicBlock *BB, ValueToValueMapTy &VMap,
                                   const Twine &NameSuffix, Function *F,
                                   ClonedCodeInfo *CodeInfo,
-                                  DebugInfoFinder *DIFinder) {
+                                  DebugInfoFinder *DIFinder,    function_ref<bool(const Instruction*)>InstSelect ) {
   BasicBlock *NewBB = BasicBlock::Create(BB->getContext(), "", F);
   if (BB->hasName())
     NewBB->setName(BB->getName() + NameSuffix);
@@ -53,6 +53,8 @@ BasicBlock *llvm::CloneBasicBlock(const BasicBlock *BB, ValueToValueMapTy &VMap,
 
   // Loop over all instructions, and copy them over.
   for (const Instruction &I : *BB) {
+      if (InstSelect && !InstSelect(&I)) continue;
+
     if (DIFinder && TheModule)
       DIFinder->processInstruction(*TheModule, I);
 

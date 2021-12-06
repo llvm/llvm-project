@@ -117,7 +117,9 @@ struct ClonedCodeInfo {
 BasicBlock *CloneBasicBlock(const BasicBlock *BB, ValueToValueMapTy &VMap,
                             const Twine &NameSuffix = "", Function *F = nullptr,
                             ClonedCodeInfo *CodeInfo = nullptr,
-                            DebugInfoFinder *DIFinder = nullptr);
+                            DebugInfoFinder *DIFinder = nullptr,
+    function_ref<bool(const Instruction*)> InstSelect = {}
+    );
 
 /// Return a copy of the specified function and add it to that
 /// function's module.  Also, any references specified in the VMap are changed
