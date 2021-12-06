@@ -849,10 +849,11 @@ SDValue DPUTargetLowering::LowerFormalArguments(
             << std::to_string(VA.getLocVT().getSizeInBits())
             << " << - locmemoffset=" << VA.getLocMemOffset() << "\n");
         // Create the frame index object for this incoming parameter...
-        int FI = MFI.CreateFixedObject(VA.getLocVT().getSizeInBits() / 8,
-                                       -VA.getLocMemOffset() -
-                                           VA.getLocVT().getSizeInBits() / 8,
-                                       IMMUTABLE);
+        int FI = MFI.CreateFixedObject(
+            VA.getLocVT().getSizeInBits() / 8,
+            -(int64_t)VA.getLocMemOffset() -
+                (int64_t)VA.getLocVT().getSizeInBits() / 8,
+            IMMUTABLE);
 
         // Create the SelectionDAG nodes corresponding to a load
         // from this parameter
@@ -1045,7 +1046,7 @@ SDValue DPUTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
       SDValue PtrOff = DAG.getNode(
           ISD::ADD, dl, getPointerTy(DAG.getDataLayout()), StackPtr,
           DAG.getIntPtrConstant(-VA.getLocMemOffset() -
-                                    VA.getLocVT().getSizeInBits() / 8 -
+                                    (int64_t)VA.getLocVT().getSizeInBits() / 8 -
                                     STACK_SIZE_FOR_D22,
                                 dl));
 
