@@ -11794,6 +11794,9 @@ bool AArch64TargetLowering::shouldReduceLoadWidth(SDNode *Load,
       Base.getOperand(1).getOpcode() == ISD::SHL &&
       Base.getOperand(1).hasOneUse() &&
       Base.getOperand(1).getOperand(1).getOpcode() == ISD::Constant) {
+    // It's unknown whether a scalable vector has a power-of-2 bitwidth.
+    if (Mem->getMemoryVT().isScalableVector())
+      return false;
     // The shift can be combined if it matches the size of the value being
     // loaded (and so reducing the width would make it not match).
     uint64_t ShiftAmount = Base.getOperand(1).getConstantOperandVal(1);
