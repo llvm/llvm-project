@@ -3940,6 +3940,20 @@ static CallingConv getCCForDeclaratorChunk(
         break;
       }
     }
+  } else if (S.getLangOpts().CUDA) {
+    // If we're compiling CUDA/HIP code and targeting SPIR-V we need to make
+    // sure the kernels will be marked with the right calling convention so that
+    // they will be visible by the APIs that ingest SPIR-V.
+    llvm::Triple Triple = S.Context.getTargetInfo().getTriple();
+    if (Triple.getArch() == llvm::Triple::spirv32 ||
+        Triple.getArch() == llvm::Triple::spirv64) {
+      for (const ParsedAttr &AL : D.getDeclSpec().getAttributes()) {
+        if (AL.getKind() == ParsedAttr::AT_CUDAGlobal) {
+          CC = CC_OpenCLKernel;
+          break;
+        }
+      }
+    }
   }
 
   return CC;
