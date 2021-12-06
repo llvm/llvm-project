@@ -1544,8 +1544,8 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
   //// Copy/Move  code
   ///////////////////////////////////////////////////////////////////////////////
 
-  // Determine position for the replacement code
-  auto ReplIP = header;
+  // Determine position for the replacement code. Do so before header is moved to the new function.
+  BasicBlock* ReplIP = header;
   if (!KeepOldBlocks) {
     while (ReplIP && Blocks.count(ReplIP)) {
       ReplIP = ReplIP->getNextNode();
@@ -1553,7 +1553,6 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
   }
 
   if (KeepOldBlocks) {
-
     for (BasicBlock *Block : Blocks) {
       BasicBlock *CBB = CloneBasicBlock(Block, VMap, {},
                                         newFunction /*, nullptr, &DIFinder*/);
