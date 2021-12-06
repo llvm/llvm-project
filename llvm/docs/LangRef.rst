@@ -300,9 +300,9 @@ added in the future:
     code for the target, without having to conform to an externally
     specified ABI (Application Binary Interface). `Tail calls can only
     be optimized when this, the tailcc, the GHC or the HiPE convention is
-    used. <CodeGenerator.html#id80>`_ This calling convention does not
-    support varargs and requires the prototype of all callees to exactly
-    match the prototype of the function definition.
+    used. <CodeGenerator.html#tail-call-optimization>`_ This calling
+    convention does not support varargs and requires the prototype of all
+    callees to exactly match the prototype of the function definition.
 "``coldcc``" - The cold calling convention
     This calling convention attempts to make code in the caller as
     efficient as possible under the assumption that the call is not
@@ -329,8 +329,8 @@ added in the future:
        floating-point parameters.
 
     This calling convention supports `tail call
-    optimization <CodeGenerator.html#id80>`_ but requires both the
-    caller and callee are using it.
+    optimization <CodeGenerator.html#tail-call-optimization>`_ but requires
+    both the caller and callee are using it.
 "``cc 11``" - The HiPE calling convention
     This calling convention has been implemented specifically for use by
     the `High-Performance Erlang
@@ -340,8 +340,8 @@ added in the future:
     registers for argument passing than the ordinary C calling
     convention and defines no callee-saved registers. The calling
     convention properly supports `tail call
-    optimization <CodeGenerator.html#id80>`_ but requires that both the
-    caller and the callee use it. It uses a *register pinning*
+    optimization <CodeGenerator.html#tail-call-optimization>`_ but requires
+    that both the caller and the callee use it. It uses a *register pinning*
     mechanism, similar to GHC's convention, for keeping frequently
     accessed runtime components pinned to specific hardware registers.
     At the moment only X86 supports this convention (both 32 and 64
@@ -437,8 +437,8 @@ added in the future:
     tail call optimized. This calling convention is equivalent to fastcc,
     except for an additional guarantee that tail calls will be produced
     whenever possible. `Tail calls can only be optimized when this, the fastcc,
-    the GHC or the HiPE convention is used. <CodeGenerator.html#id80>`_ This
-    calling convention does not support varargs and requires the prototype of
+    the GHC or the HiPE convention is used. <CodeGenerator.html#tail-call-optimization>`_
+    This calling convention does not support varargs and requires the prototype of
     all callees to exactly match the prototype of the function definition.
 "``swiftcc``" - This calling convention is used for Swift language.
     - On X86-64 RCX and R8 are available for additional integer returns, and
