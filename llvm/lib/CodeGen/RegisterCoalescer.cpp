@@ -4067,13 +4067,13 @@ void RegisterCoalescer::joinAllIntervals() {
 
   // Coalesce intervals in MBB priority order.
   unsigned CurrDepth = std::numeric_limits<unsigned>::max();
-  for (unsigned i = 0, e = MBBs.size(); i != e; ++i) {
+  for (MBBPriorityInfo &MBB : MBBs) {
     // Try coalescing the collected local copies for deeper loops.
-    if (JoinGlobalCopies && MBBs[i].Depth < CurrDepth) {
+    if (JoinGlobalCopies && MBB.Depth < CurrDepth) {
       coalesceLocals();
-      CurrDepth = MBBs[i].Depth;
+      CurrDepth = MBB.Depth;
     }
-    copyCoalesceInMBB(MBBs[i].MBB);
+    copyCoalesceInMBB(MBB.MBB);
   }
   lateLiveIntervalUpdate();
   coalesceLocals();

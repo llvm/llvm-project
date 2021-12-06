@@ -1101,17 +1101,15 @@ unsigned SwingSchedulerDAG::calculateResMII() {
   // Sort the instructions by the number of available choices for scheduling,
   // least to most. Use the number of critical resources as the tie breaker.
   FuncUnitSorter FUS = FuncUnitSorter(MF.getSubtarget());
-  for (MachineBasicBlock::iterator I = MBB->getFirstNonPHI(),
-                                   E = MBB->getFirstTerminator();
-       I != E; ++I)
-    FUS.calcCriticalResources(*I);
+  for (MachineInstr &MI :
+       llvm::make_range(MBB->getFirstNonPHI(), MBB->getFirstTerminator()))
+    FUS.calcCriticalResources(MI);
   PriorityQueue<MachineInstr *, std::vector<MachineInstr *>, FuncUnitSorter>
       FuncUnitOrder(FUS);
 
-  for (MachineBasicBlock::iterator I = MBB->getFirstNonPHI(),
-                                   E = MBB->getFirstTerminator();
-       I != E; ++I)
-    FuncUnitOrder.push(&*I);
+  for (MachineInstr &MI :
+       llvm::make_range(MBB->getFirstNonPHI(), MBB->getFirstTerminator()))
+    FuncUnitOrder.push(&MI);
 
   while (!FuncUnitOrder.empty()) {
     MachineInstr *MI = FuncUnitOrder.top();
