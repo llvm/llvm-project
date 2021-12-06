@@ -74,6 +74,26 @@ func @sine(%arg0 : f32) {
 
 // -----
 
+// CHECK-LABEL: func @ctpop(
+// CHECK-SAME: i32
+func @ctpop(%arg0 : i32) {
+  // CHECK: "llvm.intr.ctpop"(%arg0) : (i32) -> i32
+  %0 = math.ctpop %arg0 : i32
+  std.return
+}
+
+// -----
+
+// CHECK-LABEL: func @ctpop_vector(
+// CHECK-SAME: vector<3xi32>
+func @ctpop_vector(%arg0 : vector<3xi32>) {
+  // CHECK: "llvm.intr.ctpop"(%arg0) : (vector<3xi32>) -> vector<3xi32>
+  %0 = math.ctpop %arg0 : vector<3xi32>
+  std.return
+}
+
+// -----
+
 // CHECK-LABEL: func @rsqrt_double(
 // CHECK-SAME: f64
 func @rsqrt_double(%arg0 : f64) {
