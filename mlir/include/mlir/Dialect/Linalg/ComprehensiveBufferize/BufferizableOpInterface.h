@@ -70,7 +70,7 @@ struct PostAnalysisStep {
   /// Run the post analysis step. This function may modify the IR, but must keep
   /// `aliasInfo` (inside `state`) consistent. Newly created operations and
   /// operations that should be re-analyzed must be stored in `newOps`.
-  virtual LogicalResult run(FuncOp funcOp, BufferizationState &state,
+  virtual LogicalResult run(Operation *op, BufferizationState &state,
                             BufferizationAliasInfo &aliasInfo,
                             SmallVector<Operation *> &newOps) = 0;
 };
@@ -299,9 +299,8 @@ struct DialectBufferizationState {
 ///   directly return a mapped buffer or allocate a new brand new buffer.
 class BufferizationState {
 public:
-  BufferizationState(ModuleOp moduleOp, const BufferizationOptions &options)
-      : aliasInfo(moduleOp), options(options),
-        builder(moduleOp->getContext()) {}
+  BufferizationState(Operation *op, const BufferizationOptions &options)
+      : aliasInfo(op), options(options), builder(op->getContext()) {}
 
   // BufferizationState should be passed as a reference.
   BufferizationState(const BufferizationState &) = delete;
@@ -365,7 +364,7 @@ public:
 
 private:
   friend LogicalResult
-  runComprehensiveBufferize(FuncOp funcOp, const BufferizationOptions &options,
+  runComprehensiveBufferize(Operation *op, const BufferizationOptions &options,
                             BufferizationState &state,
                             const PostAnalysisStepList &extraSteps);
 

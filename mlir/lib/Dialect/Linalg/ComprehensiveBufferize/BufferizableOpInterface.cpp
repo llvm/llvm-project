@@ -425,14 +425,11 @@ mlir::linalg::comprehensive_bufferize::bufferize(Operation *op,
   auto isaTensor = [](Type t) { return t.isa<TensorType>(); };
   bool hasTensorResult = any_of(op->getResultTypes(), isaTensor);
   bool hasTensorOperand = any_of(op->getOperandTypes(), isaTensor);
+  bool hasRegions = !op->getRegions().empty();
 
-  // No tensor results or operands: Simply bufferize all nested ops.
-  if (!hasTensorResult && !hasTensorOperand) {
-    for (Region &region : op->getRegions())
-      if (failed(bufferize(&region, state)))
-        return failure();
+  // No tensor results/operands or regions. We are done.
+  if (!hasTensorResult && !hasTensorOperand && !hasRegions)
     return success();
-  }
 
   // Bufferize using `BufferizableOpInterface`. Interface implementations are
   // responsible for bufferizing nested ops.
@@ -449,6 +446,8 @@ mlir::linalg::comprehensive_bufferize::bufferize(Operation *op,
   for (OpOperand &operand : op->getOpOperands()) {
     if (operand.get().getType().isa<TensorType>() &&
         state.isMapped(operand.get())) {
+      assert(state.getOptions().allowUnknownOps &&
+             "unsupported op error should have been emitted earlier");
       b.setInsertionPoint(op);
       Value toTensorOp = b.create<bufferization::ToTensorOp>(
           op->getLoc(), state.lookupBuffer(operand.get()));
@@ -456,6 +455,7 @@ mlir::linalg::comprehensive_bufferize::bufferize(Operation *op,
     }
   }
 
+  // Bufferize all regions.
   for (Region &region : op->getRegions())
     if (failed(bufferize(&region, state)))
       return failure();

@@ -264,11 +264,11 @@ struct ForOpInterface
 };
 
 LogicalResult mlir::linalg::comprehensive_bufferize::scf_ext::
-    AssertDestinationPassingStyle::run(FuncOp funcOp, BufferizationState &state,
+    AssertDestinationPassingStyle::run(Operation *op, BufferizationState &state,
                                        BufferizationAliasInfo &aliasInfo,
                                        SmallVector<Operation *> &newOps) {
   LogicalResult status = success();
-  funcOp->walk([&](scf::YieldOp yieldOp) {
+  op->walk([&](scf::YieldOp yieldOp) {
     auto forOp = dyn_cast<scf::ForOp>(yieldOp->getParentOp());
     if (!forOp)
       return WalkResult::advance();

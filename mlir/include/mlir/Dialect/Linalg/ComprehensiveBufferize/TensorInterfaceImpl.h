@@ -20,7 +20,7 @@ namespace comprehensive_bufferize {
 namespace tensor_ext {
 
 struct InplaceInsertSliceOpAnalysis : public PostAnalysisStep {
-  LogicalResult run(FuncOp funcOp, BufferizationState &state,
+  LogicalResult run(Operation *op, BufferizationState &state,
                     BufferizationAliasInfo &aliasInfo,
                     SmallVector<Operation *> &newOps) override;
 };

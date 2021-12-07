@@ -2055,13 +2055,12 @@ void Verifier::verifyFunctionAttrs(FunctionType *FT, AttributeList Attrs,
   }
 
   if (Attrs.hasFnAttr(Attribute::VScaleRange)) {
-    std::pair<unsigned, unsigned> Args =
-        Attrs.getFnAttrs().getVScaleRangeArgs();
-
-    if (Args.first == 0)
+    unsigned VScaleMin = Attrs.getFnAttrs().getVScaleRangeMin();
+    if (VScaleMin == 0)
       CheckFailed("'vscale_range' minimum must be greater than 0", V);
 
-    if (Args.first > Args.second && Args.second != 0)
+    Optional<unsigned> VScaleMax = Attrs.getFnAttrs().getVScaleRangeMax();
+    if (VScaleMax && VScaleMin > VScaleMax)
       CheckFailed("'vscale_range' minimum cannot be greater than maximum", V);
   }
 

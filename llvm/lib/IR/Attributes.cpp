@@ -78,15 +78,18 @@ unpackAllocSizeArgs(uint64_t Num) {
   return std::make_pair(ElemSizeArg, NumElemsArg);
 }
 
-static uint64_t packVScaleRangeArgs(unsigned MinValue, unsigned MaxValue) {
-  return uint64_t(MinValue) << 32 | MaxValue;
+static uint64_t packVScaleRangeArgs(unsigned MinValue,
+                                    Optional<unsigned> MaxValue) {
+  return uint64_t(MinValue) << 32 | MaxValue.getValueOr(0);
 }
 
-static std::pair<unsigned, unsigned> unpackVScaleRangeArgs(uint64_t Value) {
+static std::pair<unsigned, Optional<unsigned>>
+unpackVScaleRangeArgs(uint64_t Value) {
   unsigned MaxValue = Value & std::numeric_limits<unsigned>::max();
   unsigned MinValue = Value >> 32;
 
-  return std::make_pair(MinValue, MaxValue);
+  return std::make_pair(MinValue,
+                        MaxValue > 0 ? MaxValue : Optional<unsigned>());
 }
 
 Attribute Attribute::get(LLVMContext &Context, Attribute::AttrKind Kind,
@@ -354,10 +357,16 @@ std::pair<unsigned, Optional<unsigned>> Attribute::getAllocSizeArgs() const {
   return unpackAllocSizeArgs(pImpl->getValueAsInt());
 }
 
-std::pair<unsigned, unsigned> Attribute::getVScaleRangeArgs() const {
+unsigned Attribute::getVScaleRangeMin() const {
   assert(hasAttribute(Attribute::VScaleRange) &&
          "Trying to get vscale args from non-vscale attribute");
-  return unpackVScaleRangeArgs(pImpl->getValueAsInt());
+  return unpackVScaleRangeArgs(pImpl->getValueAsInt()).first;
+}
+
+Optional<unsigned> Attribute::getVScaleRangeMax() const {
+  assert(hasAttribute(Attribute::VScaleRange) &&
+         "Trying to get vscale args from non-vscale attribute");
+  return unpackVScaleRangeArgs(pImpl->getValueAsInt()).second;
 }
 
 std::string Attribute::getAsString(bool InAttrGrp) const {
@@ -428,13 +437,13 @@ std::string Attribute::getAsString(bool InAttrGrp) const {
   }
 
   if (hasAttribute(Attribute::VScaleRange)) {
-    unsigned MinValue, MaxValue;
-    std::tie(MinValue, MaxValue) = getVScaleRangeArgs();
+    unsigned MinValue = getVScaleRangeMin();
+    Optional<unsigned> MaxValue = getVScaleRangeMax();
 
     std::string Result = "vscale_range(";
     Result += utostr(MinValue);
     Result += ',';
-    Result += utostr(MaxValue);
+    Result += utostr(MaxValue.getValueOr(0));
     Result += ')';
     return Result;
   }
@@ -717,9 +726,12 @@ std::pair<unsigned, Optional<unsigned>> AttributeSet::getAllocSizeArgs() const {
                  : std::pair<unsigned, Optional<unsigned>>(0, 0);
 }
 
-std::pair<unsigned, unsigned> AttributeSet::getVScaleRangeArgs() const {
-  return SetNode ? SetNode->getVScaleRangeArgs()
-                 : std::pair<unsigned, unsigned>(1, 0);
+unsigned AttributeSet::getVScaleRangeMin() const {
+  return SetNode ? SetNode->getVScaleRangeMin() : 1;
+}
+
+Optional<unsigned> AttributeSet::getVScaleRangeMax() const {
+  return SetNode ? SetNode->getVScaleRangeMax() : None;
 }
 
 std::string AttributeSet::getAsString(bool InAttrGrp) const {
@@ -897,10 +909,16 @@ AttributeSetNode::getAllocSizeArgs() const {
   return std::make_pair(0, 0);
 }
 
-std::pair<unsigned, unsigned> AttributeSetNode::getVScaleRangeArgs() const {
+unsigned AttributeSetNode::getVScaleRangeMin() const {
   if (auto A = findEnumAttribute(Attribute::VScaleRange))
-    return A->getVScaleRangeArgs();
-  return std::make_pair(1, 0);
+    return A->getVScaleRangeMin();
+  return 1;
+}
+
+Optional<unsigned> AttributeSetNode::getVScaleRangeMax() const {
+  if (auto A = findEnumAttribute(Attribute::VScaleRange))
+    return A->getVScaleRangeMax();
+  return None;
 }
 
 std::string AttributeSetNode::getAsString(bool InAttrGrp) const {
@@ -1623,8 +1641,12 @@ std::pair<unsigned, Optional<unsigned>> AttrBuilder::getAllocSizeArgs() const {
   return unpackAllocSizeArgs(getRawIntAttr(Attribute::AllocSize));
 }
 
-std::pair<unsigned, unsigned> AttrBuilder::getVScaleRangeArgs() const {
-  return unpackVScaleRangeArgs(getRawIntAttr(Attribute::VScaleRange));
+unsigned AttrBuilder::getVScaleRangeMin() const {
+  return unpackVScaleRangeArgs(getRawIntAttr(Attribute::VScaleRange)).first;
+}
+
+Optional<unsigned> AttrBuilder::getVScaleRangeMax() const {
+  return unpackVScaleRangeArgs(getRawIntAttr(Attribute::VScaleRange)).second;
 }
 
 AttrBuilder &AttrBuilder::addAlignmentAttr(MaybeAlign Align) {
@@ -1669,7 +1691,7 @@ AttrBuilder &AttrBuilder::addAllocSizeAttrFromRawRepr(uint64_t RawArgs) {
 }
 
 AttrBuilder &AttrBuilder::addVScaleRangeAttr(unsigned MinValue,
-                                             unsigned MaxValue) {
+                                             Optional<unsigned> MaxValue) {
   return addVScaleRangeAttrFromRawRepr(packVScaleRangeArgs(MinValue, MaxValue));
 }
 
