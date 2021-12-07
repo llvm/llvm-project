@@ -758,7 +758,7 @@ void CodeExtractor::severSplitPHINodesOfEntry(BasicBlock *&Header) {
 /// and other with remaining incoming blocks; then first PHIs are placed in
 /// outlined region.
 void CodeExtractor::severSplitPHINodesOfExits() {
-  for (BasicBlock *ExitBB : ExitBlocks) {
+  for (BasicBlock *ExitBB : SwitchCases) {
     BasicBlock *NewBB = nullptr;
 
     for (PHINode &PN : ExitBB->phis()) {
@@ -1388,7 +1388,7 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
           BFI->getBlockFreq(Pred) * BPI->getEdgeProbability(Pred, header);
     }
 
-    for (BasicBlock *Succ : ExitBlocks) {
+    for (BasicBlock *Succ : SwitchCases) {
       for (BasicBlock *Block : predecessors(Succ)) {
         if (!Blocks.count(Block))
           continue;
@@ -1510,18 +1510,14 @@ void CodeExtractor::normalizeCFGForExtraction(BasicBlock *&Header,
 }
 
 void CodeExtractor::recomputeExitBlocks() {
-  OldTargets.clear();
-  ExitBlocks.clear();
   SwitchCases.clear();
-
-
+  SmallPtrSet<BasicBlock *, 4> ExitBlocks;
 
   for (BasicBlock *Block : Blocks) {
     for (BasicBlock *Succ : successors(Block)) {
       if (Blocks.count(Succ))
         continue;
 
-      OldTargets.push_back(Succ);
       bool IsNew = ExitBlocks.insert(Succ).second;
         if (IsNew)
             SwitchCases.push_back(Succ);
@@ -2025,7 +2021,7 @@ void CodeExtractor::insertReplacerCall(
   } else {
       // When moving the code region it is sufficient to replace all uses to the extracted function values. Since the original definition's block dominated its use, it will also be dominated by codeReplacer's switch which joined multiple exit blocks.
 
-    for (BasicBlock *ExitBB : ExitBlocks)
+    for (BasicBlock *ExitBB : SwitchCases)
       for (PHINode &PN : ExitBB->phis()) {
         Value *IncomingCodeReplacerVal = nullptr;
         for (unsigned i = 0, e = PN.getNumIncomingValues(); i != e; ++i) {

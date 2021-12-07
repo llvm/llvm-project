@@ -108,17 +108,9 @@ public:
 
     Type *RetTy;
 
-    /// Lists of blocks that are branched from the code region to be extracted.
-    /// 
-    /// ExitBlocks contains each block at most once.  OldTargets is used to
-    /// determine the extracted function's return code (so its order must be
-    /// deterministic) but may contain the same block multiple times if branched
-    /// to from multiple blocks.
-    /// @{
-    SmallVector<BasicBlock *, 4> OldTargets;
-    SmallPtrSet<BasicBlock *, 1> ExitBlocks;
+    /// Lists of blocks that are branched from the code region to be extracted. Each block is contained at most once. Its order defines the return value of the extracted function, when leaving the extracted function via the first block it returns 0. When leaving via the second entry it returns 1, etc.
     SmallVector<BasicBlock *> SwitchCases;
-    /// @}
+
 
     // Suffix to use when creating extracted function (appended to the original
     // function name + "."). If empty, the default is to use the entry block
