@@ -1,6 +1,7 @@
 // RUN: %libomp-compile && env OMP_CANCELLATION=true %libomp-run
 // Clang had a bug until version 4.0.1 which resulted in a hang.
 // UNSUPPORTED: clang-3, clang-4.0.0
+// XFAIL: irbuilder
 
 // Regression test for a bug in cancellation to cover effect of `#pragma omp cancel`
 // in a loop construct, on sections construct.

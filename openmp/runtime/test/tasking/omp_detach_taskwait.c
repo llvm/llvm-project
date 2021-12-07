@@ -1,5 +1,6 @@
 // RUN: %libomp-compile && env OMP_NUM_THREADS='3' %libomp-run
 // RUN: %libomp-compile && env OMP_NUM_THREADS='1' %libomp-run
+// XFAIL: irbuilder
 
 // Checked gcc 10.1 still does not support detach clause on task construct.
 // UNSUPPORTED: gcc-4, gcc-5, gcc-6, gcc-7, gcc-8, gcc-9, gcc-10

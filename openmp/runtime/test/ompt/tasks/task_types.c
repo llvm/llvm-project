@@ -1,5 +1,7 @@
 // RUN: %libomp-compile-and-run | FileCheck %s
 // REQUIRES: ompt
+// XFAIL: irbuilder
+
 #include "callback.h"
 #include <omp.h>
 #include <math.h>

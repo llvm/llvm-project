@@ -1,7 +1,7 @@
 // RUN: %libomp-compile-and-run | FileCheck %s
 // REQUIRES: ompt
 // GCC generates code that does not call the runtime for the master construct
-// XFAIL: gcc
+// XFAIL: gcc,irbuilder
 
 #include "callback.h"
 #include <omp.h>

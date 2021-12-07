@@ -1,5 +1,6 @@
 // RUN: %libomp-compile && env OMP_NUM_THREADS='3' %libomp-run
 // RUN: %libomp-compile && env OMP_NUM_THREADS='1' %libomp-run
+// XFAIL: irbuilder
 
 #include <stdio.h>
 #include <omp.h>

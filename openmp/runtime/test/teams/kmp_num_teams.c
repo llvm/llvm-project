@@ -1,5 +1,6 @@
 // RUN: %libomp-compile-and-run
 // UNSUPPORTED: gcc
+// XFAIL: irbuilder
 // Linking fails for icc 18/19
 // UNSUPPORTED: icc-18, icc-19
 

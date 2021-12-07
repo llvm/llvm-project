@@ -1,5 +1,6 @@
 // RUN: %libomp-compile && %libomp-run
 // RUN: %libomp-run 1 && %libomp-run 2
+// XFAIL: irbuilder
 
 // The test checks schedule(simd:runtime)
 // in combination with OMP_SCHEDULE=static[,chunk]

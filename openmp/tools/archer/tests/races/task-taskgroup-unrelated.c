@@ -13,6 +13,8 @@
 // RUN: %libarcher-compile-and-run-race | FileCheck %s
 // RUN: %libarcher-compile-and-run-race-noserial | FileCheck %s
 // REQUIRES: tsan
+// XFAIL: irbuilder
+
 #include "ompt/ompt-signal.h"
 #include <omp.h>
 #include <stdio.h>

@@ -3,6 +3,7 @@
 // REQUIRES: ompt
 // GCC doesn't call runtime for static schedule
 // XFAIL: gcc
+// XFAIL: irbuilder
 
 #define SCHEDULE static
 #include "base_split.h"

@@ -1,6 +1,7 @@
 // RUN: %libomp-compile-and-run
 // RUN: %libomp-cxx-compile-and-run
 // UNSUPPORTED: gcc
+// XFAIL: irbuilder
 
 // Tests OMP 5.0 task dependences "mutexinoutset" and 5.1 "inoutset",
 // emulates compiler codegen for new dep kinds

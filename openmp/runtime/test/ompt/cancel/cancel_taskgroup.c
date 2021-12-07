@@ -2,7 +2,7 @@
 // REQUIRES: ompt
 // UNSUPPORTED: clang-3, clang-4.0.0
 // Current GOMP interface implementation does not support cancellation; icc 16 has a bug
-// XFAIL: gcc, icc-16
+// XFAIL: gcc, icc-16, irbuilder
 
 #include "callback.h"
 #include <unistd.h>  

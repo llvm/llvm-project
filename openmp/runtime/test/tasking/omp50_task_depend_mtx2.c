@@ -1,4 +1,5 @@
 // RUN: %libomp-compile-and-run
+// XFAIL: irbuilder
 
 // Tests OMP 5.0 task dependences "mutexinoutset", emulates compiler codegen
 // Mutually exclusive tasks get input dependency info array sorted differently

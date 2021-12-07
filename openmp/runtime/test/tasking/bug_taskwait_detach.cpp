@@ -1,4 +1,5 @@
 // RUN: %libomp-cxx-compile-and-run
+// XFAIL: irbuilder
 
 #include <omp.h>
 

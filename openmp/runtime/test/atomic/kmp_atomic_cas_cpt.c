@@ -1,4 +1,5 @@
 // RUN: %libomp-compile-and-run
+// XFAIL: irbuilder
 
 #include <stdio.h>
 #include <stdbool.h>

@@ -1,6 +1,8 @@
 // RUN: %libomp-compile-and-run
 // RUN: env KMP_LOCK_KIND=tas KMP_SPIN_BACKOFF_PARAMS=2048,200 %libomp-run
 // RUN: env KMP_LOCK_KIND=futex %libomp-run
+// UNSUPPORTED: irbuilder
+
 #include <stdio.h>
 #include "omp_testsuite.h"
 

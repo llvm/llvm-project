@@ -1,6 +1,8 @@
 // RUN: %libomp-compile-and-run
 // RUN: env KMP_LOCK_KIND=tas %libomp-run
 // RUN: env KMP_LOCK_KIND=futex %libomp-run
+// XFAIL: irbuilder
+
 #include <stdio.h>
 #include "omp_testsuite.h"
 

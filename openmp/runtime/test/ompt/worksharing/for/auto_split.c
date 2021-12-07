@@ -3,6 +3,7 @@
 // REQUIRES: ompt
 // GCC doesn't call runtime for auto = static schedule
 // XFAIL: gcc
+// XFAIL: irbuilder
 
 #define SCHEDULE auto
 #include "base_split.h"

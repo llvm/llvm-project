@@ -4,6 +4,7 @@
 // support for taskwait with depend clause introduced in clang-14
 // UNSUPPORTED: clang-5, clang-6, clang-6, clang-8, clang-9, clang-10, clang-11,
 // clang-12, clang-13
+// XFAIL: irbuilder
 
 // icc does not yet support taskwait with depend clause
 // XFAIL: icc

@@ -14,6 +14,8 @@
 
 // RUN: %libarcher-compile-and-run| FileCheck %s
 // REQUIRES: tsan
+// XFAIL: irbuilder
+
 #include <omp.h>
 #include <stdio.h>
 

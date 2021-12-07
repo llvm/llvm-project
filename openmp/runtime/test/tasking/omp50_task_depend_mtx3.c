@@ -2,7 +2,7 @@
 // UNSUPPORTED: gcc-4, gcc-5, gcc-6, gcc-7, gcc-8
 // UNSUPPORTED: clang-3, clang-4, clang-5, clang-6, clang-7, clang-8
 // TODO: update expected result when icc supports mutexinoutset
-// XFAIL: icc
+// XFAIL: icc,irbuilder
 
 // Tests OMP 5.0 task dependences "mutexinoutset", emulates compiler codegen
 // Mutually exclusive tasks get same input dependency info array

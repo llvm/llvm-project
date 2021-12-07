@@ -2,6 +2,7 @@
 // RUN: %libomp-compile-and-run | %sort-threads | FileCheck --check-prefix=CHECK-LOOP %S/base_split.h
 // REQUIRES: ompt
 // UNSUPPORTED: gcc-4, gcc-5, gcc-6, gcc-7
+// XFAIL: irbuilder
 
 #define SCHEDULE runtime
 #include "base_split.h"

@@ -1,6 +1,7 @@
 // RUN: %libomp-compile-and-run
 // The runtime currently does not get dependency information from GCC.
 // UNSUPPORTED: gcc
+// XFAIL: irbuilder
 
 // Tests OMP 5.x task dependence "omp_all_memory",
 // emulates compiler codegen versions for new dep kind

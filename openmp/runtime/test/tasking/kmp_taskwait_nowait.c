@@ -1,4 +1,5 @@
 // RUN: %libomp-compile-and-run
+// XFAIL: irbuilder
 
 // test checks IN dep kind in depend clause on taskwait nowait
 // uses codegen emulation

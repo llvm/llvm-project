@@ -2,6 +2,8 @@
 // RUN: %libomp-compile-and-run | %sort-threads | FileCheck --check-prefix=THREADS %s
 // REQUIRES: ompt
 // UNSUPPORTED: gcc-4, gcc-5, gcc-6, gcc-7
+// XFAIL: irbuilder
+
 #define TEST_NEED_PRINT_FRAME_FROM_OUTLINED_FN
 #include "callback.h"
 #include <omp.h>

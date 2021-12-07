@@ -1,4 +1,6 @@
 // RUN: %libomp-compile-and-run
+// UNSUPPORTED: irbuilder
+
 #include <stdio.h>
 #include "omp_testsuite.h"
 

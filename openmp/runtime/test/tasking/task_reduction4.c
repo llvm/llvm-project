@@ -1,6 +1,6 @@
 // RUN: %libomp-compile-and-run
 
-// XFAIL: icc
+// XFAIL: icc, irbuilder
 // UNSUPPORTED: clang-4, clang-5, clang-6, clang-7, clang-8, clang-9, clang-10
 // UNSUPPORTED: gcc-4, gcc-5, gcc-6, gcc-7, gcc-8
 

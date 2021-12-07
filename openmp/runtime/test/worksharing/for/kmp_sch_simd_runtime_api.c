@@ -1,4 +1,5 @@
 // RUN: %libomp-compile-and-run
+// XFAIL: irbuilder
 
 // The test checks schedule(simd:runtime)
 // in combination with omp_set_schedule()

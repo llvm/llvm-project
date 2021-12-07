@@ -1,7 +1,7 @@
 // RUN: %libomp-compile && env OMP_CANCELLATION=true %libomp-run | %sort-threads | FileCheck %s
 // REQUIRES: ompt
 // Current GOMP interface implementation does not support cancellation
-// XFAIL: gcc
+// XFAIL: gcc, irbuilder
 
 #include "callback.h"
 #include "omp.h"

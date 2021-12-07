@@ -1,5 +1,6 @@
 // RUN: %libomp-compile-and-run | %sort-threads | FileCheck %s
 // REQUIRES: ompt
+// XFAIL: irbuilder
 
 // GCC 9 introduced codegen for mutexinoutset
 // UNSUPPORTED: gcc-4, gcc-5, gcc-6, gcc-7, gcc-8

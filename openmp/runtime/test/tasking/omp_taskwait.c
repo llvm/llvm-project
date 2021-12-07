@@ -1,4 +1,5 @@
 // RUN: %libomp-compile-and-run
+// XFAIL: irbuilder
 
 // This test is known to be fragile on NetBSD kernel at the moment,
 // https://bugs.llvm.org/show_bug.cgi?id=42020.
