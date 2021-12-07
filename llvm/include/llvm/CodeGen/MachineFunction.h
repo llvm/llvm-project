@@ -890,7 +890,7 @@ public:
 
   /// CreateMachineInstr - Allocate a new MachineInstr. Use this instead
   /// of `new MachineInstr'.
-  MachineInstr *CreateMachineInstr(const MCInstrDesc &MCID, const DebugLoc &DL,
+  MachineInstr *CreateMachineInstr(const MCInstrDesc &MCID, DebugLoc DL,
                                    bool NoImplicit = false);
 
   /// Create a new MachineInstr which is a copy of \p Orig, identical in all
