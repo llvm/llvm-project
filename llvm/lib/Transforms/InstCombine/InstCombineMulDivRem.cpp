@@ -1461,6 +1461,15 @@ Instruction *InstCombinerImpl::commonIRemTransforms(BinaryOperator &I) {
   if (simplifyDivRemOfSelectWithZeroOp(I))
     return &I;
 
+  // If the divisor is a select-of-constants, try to constant fold all rem ops:
+  // C % (select Cond, TrueC, FalseC) --> select Cond, (C % TrueC), (C % FalseC)
+  // TODO: Adapt simplifyDivRemOfSelectWithZeroOp to allow this and other folds.
+  if (match(Op0, m_ImmConstant()) &&
+      match(Op1, m_Select(m_Value(), m_ImmConstant(), m_ImmConstant()))) {
+    if (Instruction *R = FoldOpIntoSelect(I, cast<SelectInst>(Op1)))
+      return R;
+  }
+
   if (isa<Constant>(Op1)) {
     if (Instruction *Op0I = dyn_cast<Instruction>(Op0)) {
       if (SelectInst *SI = dyn_cast<SelectInst>(Op0I)) {
