@@ -1121,49 +1121,45 @@ void CodeExtractor::emitFunctionBody(const ValueSet &inputs, const ValueSet &out
   
 
   if (KeepOldBlocks) {
-      for (auto &&P : enumerate(inputs)) 
-          VMap[P.value()] = NewValues[P.index()];
+      // Copy blocks and instrutions to newFunction.
+      for (BasicBlock *Block : Blocks) {
+          BasicBlock *CBB = CloneBasicBlock(
+              Block, VMap, {}, newFunction, /* CodeInfo */ nullptr,
+              /* DIFinder */ nullptr,
+              [](const Instruction *I) -> bool { return !isa<AssumeInst>(I); });
 
-      // Clone the blocks and instructions code region.
-    for (BasicBlock *Block : Blocks) {
-      BasicBlock *CBB = CloneBasicBlock(
-          Block, VMap, {}, newFunction, /* CodeInfo */ nullptr,
-          /* DIFinder */ nullptr,
-          [](const Instruction *I) -> bool { return !isa<AssumeInst>(I); });
+          // Add basic block mapping.
+          VMap[Block] = CBB;
 
-      // Add basic block mapping.
-      VMap[Block] = CBB;
+          // It is only legal to clone a function if a block address within that
+          // function is never referenced outside of the function.  Given that, we
+          // want to map block addresses from the old function to block addresses in
+          // the clone. (This is different from the generic ValueMapper
+          // implementation, which generates an invalid blockaddress when
+          // cloning a function.)
+          if (Block->hasAddressTaken()) {
+              Constant *OldBBAddr = BlockAddress::get(oldFunction, Block);
+              VMap[OldBBAddr] = BlockAddress::get(newFunction, CBB);
+          }
 
-      // It is only legal to clone a function if a block address within that
-      // function is never referenced outside of the function.  Given that, we
-      // want to map block addresses from the old function to block addresses in
-      // the clone. (This is different from the generic ValueMapper
-      // implementation, which generates an invalid blockaddress when
-      // cloning a function.)
-      if (Block->hasAddressTaken()) {
-        Constant *OldBBAddr = BlockAddress::get(oldFunction, Block);
-        VMap[OldBBAddr] = BlockAddress::get(newFunction, CBB);
+
+          // Non-header block may have branches from outside the region. These continue to branch to the original blocks, hence remove their PHI entries. 
+          if (Block != header)
+              for (auto &&P : CBB->phis()) {
+                  unsigned NumIncoming = P.getNumIncomingValues();
+                  for (int Idx = NumIncoming - 1; Idx >= 0; --Idx) {
+                      BasicBlock *IncomingBlock = P.getIncomingBlock(Idx);
+                      if (Blocks.count(IncomingBlock) )
+                          continue;
+                      P.removeIncomingValue(Idx, /*DeletePHIIfEmpty=*/false);
+                  }
+              }
       }
 
 
-      // Non-header block may have branches from outside the region. These continue to branch to the original blocks, hence remove their PHI entries. 
-      if (Block != header)
-      for (auto &&P : CBB->phis()) {
-        unsigned NumIncoming = P.getNumIncomingValues();
-        for (int Idx = NumIncoming - 1; Idx >= 0; --Idx) {
-            BasicBlock *IncomingBlock = P.getIncomingBlock(Idx);
-          if (Blocks.count(IncomingBlock) )
-            continue;
-          P.removeIncomingValue(Idx, /*DeletePHIIfEmpty=*/false);
-        }
-      }
-    }
+for (auto P : enumerate(inputs)) 
+VMap[P.value()] = NewValues[P.index()];
 
-    for (auto Pred : predecessors(header)) {
-      if (VMap.count(Pred))
-        continue;
-      VMap[Pred] = newFuncRoot;
-    }
 
   } else {
     moveCodeToFunction(newFunction);
@@ -1180,24 +1176,26 @@ void CodeExtractor::emitFunctionBody(const ValueSet &inputs, const ValueSet &out
       }
   }
 
+  // Create stubs for the original exit blocks.
   std::map<BasicBlock *, BasicBlock *> ExitBlockMap;
-  for (auto &&P : enumerate(SwitchCases)) {
-    auto OldTarget = P.value();
-    auto SuccNum = P.index();
+  for (auto P : enumerate(SwitchCases)) {
+    BasicBlock* OldTarget = P.value();
+    size_t SuccNum = P.index();
 
     BasicBlock *&NewTarget = ExitBlockMap[OldTarget];
-    // if (NewTarget)
-    //   continue;
+    assert(!NewTarget && "Switch cases muast be unique");
+
 
     // If we don't already have an exit stub for this non-extracted
     // destination, create one now!
     NewTarget = BasicBlock::Create(Context, OldTarget->getName() + ".exitStub",
                                    newFunction);
+    if (KeepOldBlocks)
     VMap[OldTarget] = NewTarget;
 
-    //  auto SuccNum = ExitBlockSwitchIdx[OldTarget];
 
-    auto &Context = Blocks.front()->getContext();
+
+
     Value *brVal = nullptr;
     assert(NumExitBlocks < 0xffff && "too many exit blocks for switch");
     switch (NumExitBlocks) {
@@ -1214,6 +1212,7 @@ void CodeExtractor::emitFunctionBody(const ValueSet &inputs, const ValueSet &out
 
     ReturnInst::Create(Context, brVal, NewTarget);
   }
+
 
   for (BasicBlock *Block : Blocks) {
     Instruction *TI = Block->getTerminator();
@@ -1234,7 +1233,15 @@ void CodeExtractor::emitFunctionBody(const ValueSet &inputs, const ValueSet &out
     }
   }
 
+
+  // Update values references to point to the new function.
   if (KeepOldBlocks) {
+      for (BasicBlock* Pred : predecessors(header)) {
+          if (VMap.count(Pred))
+              continue;
+          VMap[Pred] = newFuncRoot;
+      }
+
     for (Instruction *II : AdditionalRemap)
       RemapInstruction(II, VMap, RF_NoModuleLevelChanges);
 
@@ -1242,14 +1249,12 @@ void CodeExtractor::emitFunctionBody(const ValueSet &inputs, const ValueSet &out
     // references as we go. This uses VMap to do all the hard work.
     for (BasicBlock *Block : Blocks) {
       WeakTrackingVH NewBlock = VMap.lookup(Block);
-      if (!NewBlock) {
+      if (!NewBlock) 
         continue;
-      }
-      BasicBlock &Y = cast<BasicBlock>(*NewBlock);
+
 
       // Loop over all instructions, fixing each one as we find it...
-
-      for (Instruction &II : Y)
+      for (Instruction &II : cast<BasicBlock>(*NewBlock))
         RemapInstruction(&II, VMap, RF_NoModuleLevelChanges);
     }
   } else {
@@ -1263,11 +1268,11 @@ void CodeExtractor::emitFunctionBody(const ValueSet &inputs, const ValueSet &out
     }
   }
 
-  auto NewHeader = header;
-  if (KeepOldBlocks)
-    NewHeader = cast<BasicBlock>(VMap.lookup(NewHeader));
-  assert(NewHeader);
-  auto *BranchI2 = BranchInst::Create(NewHeader, newFuncRoot);
+  BasicBlock * NewHeader = KeepOldBlocks ? cast<BasicBlock>(VMap.lookup(NewHeader)) : header;
+  assert(NewHeader && "Header must have been cloned/moved to newFunction");
+
+  // Connect newFunction entry block to new header.
+  BranchInst *BranchI2 = BranchInst::Create(NewHeader, newFuncRoot);
   applyFirstDebugLoc(oldFunction, Blocks.getArrayRef(), BranchI2);
 
   // Store the arguments right after the definition of output value.
@@ -1676,6 +1681,9 @@ void CodeExtractor::moveCodeToFunction(Function *newFunction) {
     newFuncIt = newBlocks.insertAfter(newFuncIt, Block);
   }
 }
+
+
+
 
 void CodeExtractor::calculateNewCallTerminatorWeights(
     BasicBlock *CodeReplacer,

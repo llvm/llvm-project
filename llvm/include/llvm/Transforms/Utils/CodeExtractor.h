@@ -252,6 +252,7 @@ public:
 
     void moveCodeToFunction(Function *newFunction);
 
+
     void calculateNewCallTerminatorWeights(
         BasicBlock *CodeReplacer,
         const DenseMap<BasicBlock *, BlockFrequency> &ExitWeights,
