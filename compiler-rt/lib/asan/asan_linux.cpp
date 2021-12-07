@@ -107,7 +107,7 @@ uptr FindDynamicShadowStart() {
     return FindPremappedShadowStart(shadow_size_bytes);
 #endif
 
-  return MapDynamicShadow(shadow_size_bytes, SHADOW_SCALE,
+  return MapDynamicShadow(shadow_size_bytes, ASAN_SHADOW_SCALE,
                           /*min_shadow_base_alignment*/ 0, kHighMemEnd);
 }
 

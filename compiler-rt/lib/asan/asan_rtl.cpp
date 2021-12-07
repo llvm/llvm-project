@@ -146,11 +146,11 @@ ASAN_REPORT_ERROR_N(store, true)
 
 #define ASAN_MEMORY_ACCESS_CALLBACK_BODY(type, is_write, size, exp_arg, fatal) \
   uptr sp = MEM_TO_SHADOW(addr);                                               \
-  uptr s = size <= SHADOW_GRANULARITY ? *reinterpret_cast<u8 *>(sp)            \
-                                      : *reinterpret_cast<u16 *>(sp);          \
+  uptr s = size <= ASAN_SHADOW_GRANULARITY ? *reinterpret_cast<u8 *>(sp)       \
+                                           : *reinterpret_cast<u16 *>(sp);     \
   if (UNLIKELY(s)) {                                                           \
-    if (UNLIKELY(size >= SHADOW_GRANULARITY ||                                 \
-                 ((s8)((addr & (SHADOW_GRANULARITY - 1)) + size - 1)) >=       \
+    if (UNLIKELY(size >= ASAN_SHADOW_GRANULARITY ||                            \
+                 ((s8)((addr & (ASAN_SHADOW_GRANULARITY - 1)) + size - 1)) >=  \
                      (s8)s)) {                                                 \
       ReportGenericErrorWrapper(addr, is_write, size, exp_arg, fatal);         \
     }                                                                          \
@@ -309,7 +309,7 @@ static void InitializeHighMemEnd() {
   kHighMemEnd = GetMaxUserVirtualAddress();
   // Increase kHighMemEnd to make sure it's properly
   // aligned together with kHighMemBeg:
-  kHighMemEnd |= (GetMmapGranularity() << SHADOW_SCALE) - 1;
+  kHighMemEnd |= (GetMmapGranularity() << ASAN_SHADOW_SCALE) - 1;
 #endif  // !ASAN_FIXED_MAPPING
   CHECK_EQ((kHighMemBeg % GetMmapGranularity()), 0);
 }
@@ -361,10 +361,10 @@ void PrintAddressSpaceLayout() {
   Printf("malloc_context_size=%zu\n",
          (uptr)common_flags()->malloc_context_size);
 
-  Printf("SHADOW_SCALE: %d\n", (int)SHADOW_SCALE);
-  Printf("SHADOW_GRANULARITY: %d\n", (int)SHADOW_GRANULARITY);
-  Printf("SHADOW_OFFSET: 0x%zx\n", (uptr)SHADOW_OFFSET);
-  CHECK(SHADOW_SCALE >= 3 && SHADOW_SCALE <= 7);
+  Printf("SHADOW_SCALE: %d\n", (int)ASAN_SHADOW_SCALE);
+  Printf("SHADOW_GRANULARITY: %d\n", (int)ASAN_SHADOW_GRANULARITY);
+  Printf("SHADOW_OFFSET: 0x%zx\n", (uptr)ASAN_SHADOW_OFFSET);
+  CHECK(ASAN_SHADOW_SCALE >= 3 && ASAN_SHADOW_SCALE <= 7);
   if (kMidMemBeg)
     CHECK(kMidShadowBeg > kLowShadowEnd &&
           kMidMemBeg > kMidShadowEnd &&
@@ -421,7 +421,7 @@ static void AsanInitInternal() {
   MaybeReexec();
 
   // Setup internal allocator callback.
-  SetLowLevelAllocateMinAlignment(SHADOW_GRANULARITY);
+  SetLowLevelAllocateMinAlignment(ASAN_SHADOW_GRANULARITY);
   SetLowLevelAllocateCallback(OnLowLevelAllocate);
 
   InitializeAsanInterceptors();
@@ -539,7 +539,7 @@ void UnpoisonStack(uptr bottom, uptr top, const char *type) {
         top - bottom);
     return;
   }
-  PoisonShadow(bottom, RoundUpTo(top - bottom, SHADOW_GRANULARITY), 0);
+  PoisonShadow(bottom, RoundUpTo(top - bottom, ASAN_SHADOW_GRANULARITY), 0);
 }
 
 static void UnpoisonDefaultStack() {
