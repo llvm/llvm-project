@@ -1443,7 +1443,7 @@ struct __cxx_atomic_impl : public _Base {
     static_assert(is_trivially_copyable<_Tp>::value,
       "std::atomic<T> requires that 'T' be a trivially copyable type");
 
-  _LIBCPP_INLINE_VISIBILITY __cxx_atomic_impl() _NOEXCEPT _LIBCPP_DEFAULT
+  _LIBCPP_INLINE_VISIBILITY __cxx_atomic_impl() _NOEXCEPT = default;
   _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR explicit __cxx_atomic_impl(_Tp value) _NOEXCEPT
     : _Base(value) {}
 };
@@ -1644,7 +1644,7 @@ struct __atomic_base  // false
     __atomic_base() noexcept(is_nothrow_default_constructible_v<_Tp>) : __a_(_Tp()) {}
 #else
     _LIBCPP_INLINE_VISIBILITY
-    __atomic_base() _NOEXCEPT _LIBCPP_DEFAULT
+    __atomic_base() _NOEXCEPT = default;
 #endif
 
     _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR
@@ -1673,7 +1673,7 @@ struct __atomic_base<_Tp, true>
     typedef __atomic_base<_Tp, false> __base;
 
     _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17
-    __atomic_base() _NOEXCEPT _LIBCPP_DEFAULT
+    __atomic_base() _NOEXCEPT = default;
 
     _LIBCPP_INLINE_VISIBILITY
     _LIBCPP_CONSTEXPR __atomic_base(_Tp __d) _NOEXCEPT : __base(__d) {}
@@ -1762,7 +1762,7 @@ struct atomic
     atomic() = default;
 #else
     _LIBCPP_INLINE_VISIBILITY
-    atomic() _NOEXCEPT _LIBCPP_DEFAULT
+    atomic() _NOEXCEPT = default;
 #endif
 
     _LIBCPP_INLINE_VISIBILITY
@@ -1790,7 +1790,7 @@ struct atomic<_Tp*>
     typedef ptrdiff_t difference_type;
 
     _LIBCPP_INLINE_VISIBILITY
-    atomic() _NOEXCEPT _LIBCPP_DEFAULT
+    atomic() _NOEXCEPT = default;
 
     _LIBCPP_INLINE_VISIBILITY
     _LIBCPP_CONSTEXPR atomic(_Tp* __d) _NOEXCEPT : __base(__d) {}
@@ -2432,7 +2432,7 @@ typedef struct atomic_flag
     atomic_flag() _NOEXCEPT : __a_(false) {}
 #else
     _LIBCPP_INLINE_VISIBILITY
-    atomic_flag() _NOEXCEPT _LIBCPP_DEFAULT
+    atomic_flag() _NOEXCEPT = default;
 #endif
 
     _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR
