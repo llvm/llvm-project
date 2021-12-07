@@ -85,12 +85,14 @@ def build_compile_and_run_SpMM(attr: st.EncodingAttr, support_lib: str,
       np.float64)
   b = np.array([[1.0, 2.0], [4.0, 3.0], [5.0, 6.0], [8.0, 7.0]], np.float64)
   c = np.zeros((3, 2), np.float64)
-  out = np.zeros((3, 2), np.float64)
 
   mem_a = ctypes.pointer(ctypes.pointer(rt.get_ranked_memref_descriptor(a)))
   mem_b = ctypes.pointer(ctypes.pointer(rt.get_ranked_memref_descriptor(b)))
   mem_c = ctypes.pointer(ctypes.pointer(rt.get_ranked_memref_descriptor(c)))
-  mem_out = ctypes.pointer(ctypes.pointer(rt.get_ranked_memref_descriptor(out)))
+  # Allocate a MemRefDescriptor to receive the output tensor.
+  # The buffer itself is allocated inside the MLIR code generation.
+  ref_out = rt.make_nd_memref_descriptor(2, ctypes.c_double)()
+  mem_out = ctypes.pointer(ctypes.pointer(ref_out))
 
   # Invoke the kernel and get numpy output.
   # Built-in bufferization uses in-out buffers.
