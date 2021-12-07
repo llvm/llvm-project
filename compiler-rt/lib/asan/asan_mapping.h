@@ -177,51 +177,57 @@ static const u64 kWindowsShadowOffset32 = 3ULL << 28;   // 0x30000000
 #define SHADOW_SCALE kDefaultShadowScale
 
 #if SANITIZER_FUCHSIA
-#  define SHADOW_OFFSET (0)
+#  define SHADOW_OFFSET_CONST (0)
 #elif SANITIZER_WORDSIZE == 32
 #  if SANITIZER_ANDROID
-#    define SHADOW_OFFSET __asan_shadow_memory_dynamic_address
+#    define SHADOW_OFFSET_DYNAMIC
 #  elif defined(__mips__)
-#    define SHADOW_OFFSET kMIPS32_ShadowOffset32
+#    define SHADOW_OFFSET_CONST kMIPS32_ShadowOffset32
 #  elif SANITIZER_FREEBSD
-#    define SHADOW_OFFSET kFreeBSD_ShadowOffset32
+#    define SHADOW_OFFSET_CONST kFreeBSD_ShadowOffset32
 #  elif SANITIZER_NETBSD
-#    define SHADOW_OFFSET kNetBSD_ShadowOffset32
+#    define SHADOW_OFFSET_CONST kNetBSD_ShadowOffset32
 #  elif SANITIZER_WINDOWS
-#    define SHADOW_OFFSET kWindowsShadowOffset32
+#    define SHADOW_OFFSET_CONST kWindowsShadowOffset32
 #  elif SANITIZER_IOS
-#    define SHADOW_OFFSET __asan_shadow_memory_dynamic_address
+#    define SHADOW_OFFSET_DYNAMIC
 #  else
-#    define SHADOW_OFFSET kDefaultShadowOffset32
+#    define SHADOW_OFFSET_CONST kDefaultShadowOffset32
 #  endif
 #else
 #  if SANITIZER_IOS
-#    define SHADOW_OFFSET __asan_shadow_memory_dynamic_address
+#    define SHADOW_OFFSET_DYNAMIC
 #  elif SANITIZER_MAC && defined(__aarch64__)
-#    define SHADOW_OFFSET __asan_shadow_memory_dynamic_address
+#    define SHADOW_OFFSET_DYNAMIC
 #  elif SANITIZER_RISCV64
-#    define SHADOW_OFFSET kRiscv64_ShadowOffset64
+#    define SHADOW_OFFSET_CONST kRiscv64_ShadowOffset64
 #  elif defined(__aarch64__)
-#    define SHADOW_OFFSET kAArch64_ShadowOffset64
+#    define SHADOW_OFFSET_CONST kAArch64_ShadowOffset64
 #  elif defined(__powerpc64__)
-#    define SHADOW_OFFSET kPPC64_ShadowOffset64
+#    define SHADOW_OFFSET_CONST kPPC64_ShadowOffset64
 #  elif defined(__s390x__)
-#    define SHADOW_OFFSET kSystemZ_ShadowOffset64
+#    define SHADOW_OFFSET_CONST kSystemZ_ShadowOffset64
 #  elif SANITIZER_FREEBSD
-#    define SHADOW_OFFSET kFreeBSD_ShadowOffset64
+#    define SHADOW_OFFSET_CONST kFreeBSD_ShadowOffset64
 #  elif SANITIZER_NETBSD
-#    define SHADOW_OFFSET kNetBSD_ShadowOffset64
+#    define SHADOW_OFFSET_CONST kNetBSD_ShadowOffset64
 #  elif SANITIZER_MAC
-#    define SHADOW_OFFSET kDefaultShadowOffset64
+#    define SHADOW_OFFSET_CONST kDefaultShadowOffset64
 #  elif defined(__mips64)
-#    define SHADOW_OFFSET kMIPS64_ShadowOffset64
+#    define SHADOW_OFFSET_CONST kMIPS64_ShadowOffset64
 #  elif defined(__sparc__)
-#    define SHADOW_OFFSET kSPARC64_ShadowOffset64
+#    define SHADOW_OFFSET_CONST kSPARC64_ShadowOffset64
 #  elif SANITIZER_WINDOWS64
-#    define SHADOW_OFFSET __asan_shadow_memory_dynamic_address
+#    define SHADOW_OFFSET_DYNAMIC
 #  else
-#    define SHADOW_OFFSET kDefaultShort64bitShadowOffset
+#    define SHADOW_OFFSET_CONST kDefaultShort64bitShadowOffset
 #  endif
+#endif
+
+#if defined(SHADOW_OFFSET_CONST)
+#  define SHADOW_OFFSET SHADOW_OFFSET_CONST
+#elif defined(SHADOW_OFFSET_DYNAMIC)
+#  define SHADOW_OFFSET __asan_shadow_memory_dynamic_address
 #endif
 
 #if SANITIZER_ANDROID && defined(__arm__)
