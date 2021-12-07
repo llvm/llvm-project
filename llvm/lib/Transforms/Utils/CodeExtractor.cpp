@@ -1422,14 +1422,14 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
   //// CodeGen newFunction implementation
   //////////////////////////////////////////////////////
 
-  emitFunctionBody(inputs, outputs, newFunction, StructArgTy, SwitchCases,
-                   header, SinkingCands);
+  emitFunctionBody(inputs, outputs, newFunction, StructArgTy, header,
+                   SinkingCands);
 
   //// Codegen newFunction call replacement
   /////////////////////////////////////////////////
   std::vector<Value *> Reloads;
   CallInst *call = emitReplacerCall(inputs, outputs, newFunction, StructArgTy,
-                                    SwitchCases, oldFunction, ReplIP, EntryFreq,
+                                    oldFunction, ReplIP, EntryFreq,
                                     LifetimesStart.getArrayRef(), Reloads);
   BasicBlock *codeReplacer = call->getParent();
 
@@ -1507,8 +1507,8 @@ void CodeExtractor::normalizeCFGForExtraction(BasicBlock *&Header,
 
 void CodeExtractor::recomputeExitBlocks() {
   SwitchCases.clear();
-  SmallPtrSet<BasicBlock *, 4> ExitBlocks;
 
+  SmallPtrSet<BasicBlock *, 4> ExitBlocks;
   for (BasicBlock *Block : Blocks) {
     for (BasicBlock *Succ : successors(Block)) {
       if (Blocks.count(Succ))
@@ -1524,8 +1524,7 @@ void CodeExtractor::recomputeExitBlocks() {
 
 void CodeExtractor::emitFunctionBody(
     const ValueSet &inputs, const ValueSet &outputs, Function *newFunction,
-    StructType *StructArgTy, ArrayRef<BasicBlock *> SwitchCases,
-    BasicBlock *header, const ValueSet &SinkingCands) {
+    StructType *StructArgTy, BasicBlock *header, const ValueSet &SinkingCands) {
   Function *oldFunction = header->getParent();
   LLVMContext &Context = oldFunction->getContext();
 
@@ -1799,9 +1798,9 @@ void CodeExtractor::emitFunctionBody(
 
 CallInst *CodeExtractor::emitReplacerCall(
     const ValueSet &inputs, const ValueSet &outputs, Function *newFunction,
-    StructType *StructArgTy, ArrayRef<BasicBlock *> SwtichCases,
-    Function *oldFunction, BasicBlock *ReplIP, BlockFrequency EntryFreq,
-    ArrayRef<Value *> LifetimesStart, std::vector<Value *> &Reloads) {
+    StructType *StructArgTy, Function *oldFunction, BasicBlock *ReplIP,
+    BlockFrequency EntryFreq, ArrayRef<Value *> LifetimesStart,
+    std::vector<Value *> &Reloads) {
   LLVMContext &Context = oldFunction->getContext();
   Module *M = oldFunction->getParent();
   const DataLayout &DL = M->getDataLayout();
@@ -1901,8 +1900,7 @@ CallInst *CodeExtractor::emitReplacerCall(
   SwitchInst *TheSwitch =
       SwitchInst::Create(Constant::getNullValue(Type::getInt16Ty(Context)),
                          codeReplacer, 0, codeReplacer);
-
-  for (auto P : enumerate(SwtichCases)) {
+  for (auto P : enumerate(SwitchCases)) {
     BasicBlock *OldTarget = P.value();
     size_t SuccNum = P.index();
 

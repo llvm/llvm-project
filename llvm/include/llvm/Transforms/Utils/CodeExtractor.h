@@ -273,13 +273,11 @@ public:
     /// exit.
     void emitFunctionBody(const ValueSet &inputs, const ValueSet &outputs,
                           Function *newFunction, StructType *StructArgTy,
-                          ArrayRef<BasicBlock *> SwitchCases,
                           BasicBlock *header, const ValueSet &SinkingCands);
 
     /// Generates a Basic Block that calls the extracted function.
     CallInst *emitReplacerCall(const ValueSet &inputs, const ValueSet &outputs,
                                Function *newFunction, StructType *StructArgTy,
-                               ArrayRef<BasicBlock *> SwitchCases,
                                Function *oldFunction, BasicBlock *ReplIP,
                                BlockFrequency EntryFreq,
                                ArrayRef<Value *> LifetimesStart,
