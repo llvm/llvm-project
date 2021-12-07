@@ -216,9 +216,12 @@ public:
   /// if not known).
   std::pair<unsigned, Optional<unsigned>> getAllocSizeArgs() const;
 
-  /// Returns the argument numbers for the vscale_range attribute (or pair(1, 0)
-  /// if not known).
-  std::pair<unsigned, unsigned> getVScaleRangeArgs() const;
+  /// Returns the minimum value for the vscale_range attribute.
+  unsigned getVScaleRangeMin() const;
+
+  /// Returns the maximum value for the vscale_range attribute or None when
+  /// unknown.
+  Optional<unsigned> getVScaleRangeMax() const;
 
   /// The Attribute is converted to a string of equivalent mnemonic. This
   /// is, presumably, for writing out the mnemonics for the assembly writer.
@@ -348,7 +351,8 @@ public:
   Type *getInAllocaType() const;
   Type *getElementType() const;
   std::pair<unsigned, Optional<unsigned>> getAllocSizeArgs() const;
-  std::pair<unsigned, unsigned> getVScaleRangeArgs() const;
+  unsigned getVScaleRangeMin() const;
+  Optional<unsigned> getVScaleRangeMax() const;
   std::string getAsString(bool InAttrGrp = false) const;
 
   /// Return true if this attribute set belongs to the LLVMContext.
@@ -1053,9 +1057,11 @@ public:
   /// doesn't exist, pair(0, 0) is returned.
   std::pair<unsigned, Optional<unsigned>> getAllocSizeArgs() const;
 
-  /// Retrieve the vscale_range args, if the vscale_range attribute exists.  If
-  /// it doesn't exist, pair(1, 0) is returned.
-  std::pair<unsigned, unsigned> getVScaleRangeArgs() const;
+  /// Retrieve the minimum value of 'vscale_range'.
+  unsigned getVScaleRangeMin() const;
+
+  /// Retrieve the maximum value of 'vscale_range' or None when unknown.
+  Optional<unsigned> getVScaleRangeMax() const;
 
   /// Add integer attribute with raw value (packed/encoded if necessary).
   AttrBuilder &addRawIntAttr(Attribute::AttrKind Kind, uint64_t Value);
@@ -1097,7 +1103,8 @@ public:
                                 const Optional<unsigned> &NumElemsArg);
 
   /// This turns two ints into the form used internally in Attribute.
-  AttrBuilder &addVScaleRangeAttr(unsigned MinValue, unsigned MaxValue);
+  AttrBuilder &addVScaleRangeAttr(unsigned MinValue,
+                                  Optional<unsigned> MaxValue);
 
   /// Add a type attribute with the given type.
   AttrBuilder &addTypeAttr(Attribute::AttrKind Kind, Type *Ty);

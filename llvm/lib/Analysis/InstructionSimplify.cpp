@@ -5886,9 +5886,9 @@ static Value *simplifyIntrinsic(CallBase *Call, const SimplifyQuery &Q) {
       auto Attr = Call->getFunction()->getFnAttribute(Attribute::VScaleRange);
       if (!Attr.isValid())
         return nullptr;
-      unsigned VScaleMin, VScaleMax;
-      std::tie(VScaleMin, VScaleMax) = Attr.getVScaleRangeArgs();
-      if (VScaleMin == VScaleMax && VScaleMax != 0)
+      unsigned VScaleMin = Attr.getVScaleRangeMin();
+      Optional<unsigned> VScaleMax = Attr.getVScaleRangeMax();
+      if (VScaleMax && VScaleMin == VScaleMax)
         return ConstantInt::get(F->getReturnType(), VScaleMin);
       return nullptr;
     }
