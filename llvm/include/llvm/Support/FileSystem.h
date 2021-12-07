@@ -1014,6 +1014,25 @@ file_t getStderrHandle();
 /// @returns The number of bytes read, or error.
 Expected<size_t> readNativeFile(file_t FileHandle, MutableArrayRef<char> Buf);
 
+/// Default chunk size for \a readNativeFileToEOF().
+enum : size_t { DefaultReadChunkSize = 4 * 4096 };
+
+/// Reads from \p FileHandle until EOF, appending to \p Buffer in chunks of
+/// size \p ChunkSize.
+///
+/// This calls \a readNativeFile() in a loop. On Error, previous chunks that
+/// were read successfully are left in \p Buffer and returned.
+///
+/// Note: For reading the final chunk at EOF, \p Buffer's capacity needs extra
+/// storage of \p ChunkSize.
+///
+/// \param FileHandle File to read from.
+/// \param Buffer Where to put the file content.
+/// \param ChunkSize Size of chunks.
+/// \returns The error if EOF was not found.
+Error readNativeFileToEOF(file_t FileHandle, SmallVectorImpl<char> &Buffer,
+                          ssize_t ChunkSize = DefaultReadChunkSize);
+
 /// Reads \p Buf.size() bytes from \p FileHandle at offset \p Offset into \p
 /// Buf. If 'pread' is available, this will use that, otherwise it will use
 /// 'lseek'. Returns the number of bytes actually read. Returns 0 when reaching
