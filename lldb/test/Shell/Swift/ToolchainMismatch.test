@@ -32,7 +32,7 @@ run
 quit
 
 # The {{ }} avoids accidentally matching the input script!
-# CHECK: {{a\.out}} was compiled with a Swift compiler from a different toolchain.
+# CHECK: {{a\.out}} was compiled with a Swift compiler from a different toolchain
 # CHECK: stop reason{{ = }}breakpoint
-# SANITY-NOT: {{a\.out}} was compiled with a Swift compiler from a different toolchain.
+# SANITY-NOT: {{a\.out}} was compiled with a Swift compiler from a different toolchain
 # SANITY: stop reason{{ = }}breakpoint
