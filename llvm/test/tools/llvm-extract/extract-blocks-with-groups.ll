@@ -1,19 +1,10 @@
-; RUN: llvm-extract -bb 'foo:if;then;else' -bb 'bar:bb14;bb20' -S %s                                      | FileCheck %s --check-prefixes=CHECK,KILL
-; RUN: llvm-extract -bb 'foo:if;then;else' -bb 'bar:bb14;bb20' -S %s --bb-keep-functions --bb-keep-blocks | FileCheck %s --check-prefixes=CHECK,KEEP
+; RUN: llvm-extract -bb 'foo:if;then;else' -bb 'bar:bb14;bb20' -S %s  | FileCheck %s
 ; Extract two groups of basic blocks in two different functions.
-
-
-; KEEP-LABEL: define i32 @foo(i32 %arg, i32 %arg1) {
-; KEEP:         call void @foo.if.split(
-
-; KEEP-LABEL: define i32 @bar(i32 %arg, i32 %arg1) {
-; KEEP:         %targetBlock = call i1 @bar.bb14(
 
 
 ; The first extracted function is the region composed by the
 ; blocks if, then, and else from foo.
-; KILL-LABEL: define dso_local void @foo.if.split(i32 %arg1, i32 %arg, i32* %tmp.0.ce.out) {
-; KEEP-LABEL: define internal void @foo.if.split(i32 %arg1, i32 %arg, i32* %tmp.0.ce.out) {
+; CHECK: define dso_local void @foo.if.split(i32 %arg1, i32 %arg, i32* %tmp.0.ce.out) {
 ; CHECK: newFuncRoot:
 ; CHECK:   br label %if.split
 ;
@@ -34,7 +25,7 @@
 ; CHECK:   %or.cond = and i1 %tmp5, %tmp8
 ; CHECK:   br i1 %or.cond, label %then, label %else
 ;
-; CHECK: end.split:
+; CHECK: end.split:                                        ; preds = %then, %else
 ; CHECK:   %tmp.0.ce = phi i32 [ %tmp13, %then ], [ %tmp25, %else ]
 ; CHECK:   store i32 %tmp.0.ce, i32* %tmp.0.ce.out
 ; CHECK:   br label %end.exitStub
@@ -45,8 +36,7 @@
 
 ; The second extracted function is the region composed by the blocks
 ; bb14 and bb20 from bar.
-; KILL-LABEL: define dso_local i1 @bar.bb14(i32 %arg1, i32 %arg, i32* %tmp25.out) {
-; KEEP-LABEL: define internal i1 @bar.bb14(i32 %arg1, i32 %arg, i32* %tmp25.out) {
+; CHECK: define dso_local i1 @bar.bb14(i32 %arg1, i32 %arg, i32* %tmp25.out) {
 ; CHECK: newFuncRoot:
 ; CHECK:   br label %bb14
 ;
@@ -60,14 +50,12 @@
 ; CHECK:   %tmp24 = sdiv i32 %arg1, 6
 ; CHECK:   %tmp25 = add nsw i32 %tmp24, %tmp22
 ; CHECK:   store i32 %tmp25, i32* %tmp25.out
-; KILL:    br label %bb30.exitStub
-; KEEP:    br label %bb20.split.exitStub
+; CHECK:   br label %bb30.exitStub
 ;
 ; CHECK: bb26.exitStub:                                    ; preds = %bb14
 ; CHECK:   ret i1 true
 ;
-; KILL:  bb30.exitStub:                                    ; preds = %bb20
-; KEEP:  bb20.split.exitStub:
+; CHECK: bb30.exitStub:                                    ; preds = %bb20
 ; CHECK:   ret i1 false
 ; CHECK: }
 

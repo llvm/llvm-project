@@ -1,6 +1,4 @@
-; RUN: llvm-extract -S -bb foo:bb4 %s                                      | FileCheck %s --check-prefixes=CHECK,KILL
-; RUN: llvm-extract -S -bb foo:bb4 %s --bb-keep-functions --bb-keep-blocks | FileCheck %s --check-prefixes=CHECK,KEEP
-
+; RUN: llvm-extract -S -bb foo:bb4 %s | FileCheck %s
 
 ; CHECK: declare void @bar()
 define void @bar() {
@@ -14,11 +12,7 @@ bb:
   ret void
 }
 
-; KEEP-LABEL: define i32 @foo(i32 %arg) {
-; KEEP:       call void @foo.bb4
-
-; KILL-LABEL: define dso_local void @foo.bb4(
-; KEEP-LABEL: define internal void @foo.bb4(
+; CHECK: @foo.bb4
 ; CHECK: call void @bar()
 ; CHECK: %tmp5
 define i32 @foo(i32 %arg) {

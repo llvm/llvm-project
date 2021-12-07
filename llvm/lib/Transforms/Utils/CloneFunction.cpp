@@ -40,11 +40,10 @@ using namespace llvm;
 #define DEBUG_TYPE "clone-function"
 
 /// See comments in Cloning.h.
-BasicBlock *
-llvm::CloneBasicBlock(const BasicBlock *BB, ValueToValueMapTy &VMap,
-                      const Twine &NameSuffix, Function *F,
-                      ClonedCodeInfo *CodeInfo, DebugInfoFinder *DIFinder,
-                      function_ref<bool(const Instruction *)> InstSelect) {
+BasicBlock *llvm::CloneBasicBlock(const BasicBlock *BB, ValueToValueMapTy &VMap,
+                                  const Twine &NameSuffix, Function *F,
+                                  ClonedCodeInfo *CodeInfo,
+                                  DebugInfoFinder *DIFinder) {
   BasicBlock *NewBB = BasicBlock::Create(BB->getContext(), "", F);
   if (BB->hasName())
     NewBB->setName(BB->getName() + NameSuffix);
@@ -54,9 +53,6 @@ llvm::CloneBasicBlock(const BasicBlock *BB, ValueToValueMapTy &VMap,
 
   // Loop over all instructions, and copy them over.
   for (const Instruction &I : *BB) {
-    if (InstSelect && !InstSelect(&I))
-      continue;
-
     if (DIFinder && TheModule)
       DIFinder->processInstruction(*TheModule, I);
 
