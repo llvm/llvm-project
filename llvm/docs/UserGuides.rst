@@ -27,6 +27,7 @@ intermediate LLVM representation.
    CommandLine
    CompileCudaWithLLVM
    CoverageMappingFormat
+   CycleTerminology
    DebuggingJITedCode
    Docker
    ExtendingLLVM
@@ -136,6 +137,9 @@ Optimizations
 
 :doc:`LoopTerminology`
   A document describing Loops and associated terms as used in LLVM.
+
+:doc:`CycleTerminology`
+  A document describing cycles as a generalization of loops.
 
 :doc:`Vectorizers`
    This document describes the current status of vectorization in LLVM.
