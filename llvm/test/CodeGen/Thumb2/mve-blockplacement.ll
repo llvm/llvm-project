@@ -366,23 +366,23 @@ define i32 @d(i64 %e, i32 %f, i64 %g, i32 %h) {
 ; CHECK-NEXT:    @ implicit-def: $r8
 ; CHECK-NEXT:    @ implicit-def: $r5
 ; CHECK-NEXT:    @ implicit-def: $r10
-; CHECK-NEXT:    strd r3, r0, [sp] @ 8-byte Folded Spill
+; CHECK-NEXT:    strd r3, r0, [sp, #16] @ 8-byte Folded Spill
 ; CHECK-NEXT:    add.w r6, r7, r2, lsr #1
 ; CHECK-NEXT:    add.w r1, r1, r2, lsr #1
 ; CHECK-NEXT:    movw r2, #65532
 ; CHECK-NEXT:    vdup.32 q6, r6
 ; CHECK-NEXT:    movt r2, #32767
 ; CHECK-NEXT:    ands r1, r2
-; CHECK-NEXT:    str r1, [sp, #8] @ 4-byte Spill
+; CHECK-NEXT:    str r1, [sp, #24] @ 4-byte Spill
 ; CHECK-NEXT:    subs r1, #4
 ; CHECK-NEXT:    add.w r1, r7, r1, lsr #2
-; CHECK-NEXT:    str r1, [sp, #12] @ 4-byte Spill
+; CHECK-NEXT:    str r1, [sp, #28] @ 4-byte Spill
 ; CHECK-NEXT:    adr r1, .LCPI1_0
 ; CHECK-NEXT:    vldrw.u32 q0, [r1]
 ; CHECK-NEXT:    adr r1, .LCPI1_1
 ; CHECK-NEXT:    vldrw.u32 q5, [r1]
-; CHECK-NEXT:    vadd.i32 q0, q0, r12
-; CHECK-NEXT:    vstrw.32 q0, [sp, #16] @ 16-byte Spill
+; CHECK-NEXT:    vadd.i32 q3, q0, r12
+; CHECK-NEXT:    vstrw.32 q3, [sp] @ 16-byte Spill
 ; CHECK-NEXT:    b .LBB1_4
 ; CHECK-NEXT:  .LBB1_2: @ %for.body6.preheader
 ; CHECK-NEXT:    @ in Loop: Header=BB1_4 Depth=1
@@ -404,7 +404,7 @@ define i32 @d(i64 %e, i32 %f, i64 %g, i32 %h) {
 ; CHECK-NEXT:    subs r1, r2, r1
 ; CHECK-NEXT:    add r0, r1
 ; CHECK-NEXT:    add.w r10, r0, #7
-; CHECK-NEXT:    ldrd r3, r0, [sp] @ 8-byte Folded Reload
+; CHECK-NEXT:    ldrd r3, r0, [sp, #16] @ 8-byte Folded Reload
 ; CHECK-NEXT:  .LBB1_3: @ %for.cond.cleanup5
 ; CHECK-NEXT:    @ in Loop: Header=BB1_4 Depth=1
 ; CHECK-NEXT:    adds r5, #2
@@ -431,7 +431,8 @@ define i32 @d(i64 %e, i32 %f, i64 %g, i32 %h) {
 ; CHECK-NEXT:    movs r1, #0
 ; CHECK-NEXT:    mov r7, r12
 ; CHECK-NEXT:    bl __aeabi_ldivmod
-; CHECK-NEXT:    ldrd r3, r0, [sp] @ 8-byte Folded Reload
+; CHECK-NEXT:    ldrd r3, r0, [sp, #16] @ 8-byte Folded Reload
+; CHECK-NEXT:    vldrw.u32 q3, [sp] @ 16-byte Reload
 ; CHECK-NEXT:    mov r12, r7
 ; CHECK-NEXT:    vdup.32 q0, r2
 ; CHECK-NEXT:    mov r7, r10
@@ -454,13 +455,13 @@ define i32 @d(i64 %e, i32 %f, i64 %g, i32 %h) {
 ; CHECK-NEXT:  @ %bb.9: @ %for.body13.us51.preheader
 ; CHECK-NEXT:    @ in Loop: Header=BB1_8 Depth=2
 ; CHECK-NEXT:    movw r2, :lower16:a
-; CHECK-NEXT:    vldrw.u32 q1, [sp, #16] @ 16-byte Reload
+; CHECK-NEXT:    vmov q1, q3
 ; CHECK-NEXT:    movt r2, :upper16:a
 ; CHECK-NEXT:    str r1, [r2]
 ; CHECK-NEXT:    movw r2, :lower16:b
 ; CHECK-NEXT:    movt r2, :upper16:b
 ; CHECK-NEXT:    str r1, [r2]
-; CHECK-NEXT:    ldr r2, [sp, #12] @ 4-byte Reload
+; CHECK-NEXT:    ldr r2, [sp, #28] @ 4-byte Reload
 ; CHECK-NEXT:    dlstp.32 lr, r6
 ; CHECK-NEXT:  .LBB1_10: @ %vector.body111
 ; CHECK-NEXT:    @ Parent Loop BB1_4 Depth=1
@@ -474,21 +475,17 @@ define i32 @d(i64 %e, i32 %f, i64 %g, i32 %h) {
 ; CHECK-NEXT:    b .LBB1_13
 ; CHECK-NEXT:  .LBB1_11: @ %vector.body.preheader
 ; CHECK-NEXT:    @ in Loop: Header=BB1_8 Depth=2
-; CHECK-NEXT:    ldr r2, [sp, #8] @ 4-byte Reload
-; CHECK-NEXT:    vldrw.u32 q1, [sp, #16] @ 16-byte Reload
+; CHECK-NEXT:    ldr r2, [sp, #24] @ 4-byte Reload
+; CHECK-NEXT:    vmov q1, q3
 ; CHECK-NEXT:  .LBB1_12: @ %vector.body
 ; CHECK-NEXT:    @ Parent Loop BB1_4 Depth=1
 ; CHECK-NEXT:    @ Parent Loop BB1_8 Depth=2
 ; CHECK-NEXT:    @ => This Inner Loop Header: Depth=3
-; CHECK-NEXT:    vadd.i32 q2, q5, r1
-; CHECK-NEXT:    vdup.32 q3, r1
-; CHECK-NEXT:    vcmp.u32 hi, q3, q2
+; CHECK-NEXT:    vqadd.u32 q2, q5, r1
 ; CHECK-NEXT:    subs r2, #4
-; CHECK-NEXT:    vpnot
-; CHECK-NEXT:    add.w r1, r1, #4
-; CHECK-NEXT:    vpst
-; CHECK-NEXT:    vcmpt.u32 hi, q6, q2
+; CHECK-NEXT:    vcmp.u32 hi, q6, q2
 ; CHECK-NEXT:    vshl.i32 q2, q1, #2
+; CHECK-NEXT:    add.w r1, r1, #4
 ; CHECK-NEXT:    vadd.i32 q2, q2, r11
 ; CHECK-NEXT:    vadd.i32 q1, q1, q7
 ; CHECK-NEXT:    vpst
@@ -509,7 +506,7 @@ define i32 @d(i64 %e, i32 %f, i64 %g, i32 %h) {
 ; CHECK-NEXT:    cmp r4, #0
 ; CHECK-NEXT:    beq.w .LBB1_2
 ; CHECK-NEXT:  @ %bb.16: @ in Loop: Header=BB1_4 Depth=1
-; CHECK-NEXT:    ldrd r3, r0, [sp] @ 8-byte Folded Reload
+; CHECK-NEXT:    ldrd r3, r0, [sp, #16] @ 8-byte Folded Reload
 ; CHECK-NEXT:    mov r2, r10
 ; CHECK-NEXT:  .LBB1_17: @ %for.body6.us60
 ; CHECK-NEXT:    @ Parent Loop BB1_4 Depth=1
