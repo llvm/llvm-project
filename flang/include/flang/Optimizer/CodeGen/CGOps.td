@@ -127,6 +127,14 @@ def fircg_XReboxOp : fircg_Op<"ext_rebox", [AttrSizedOperandSegments]> {
     unsigned getRank();
     // The rank of the result box
     unsigned getOutRank();
+
+    unsigned shapeOffset() { return 1; }
+    unsigned shiftOffset() { return shapeOffset() + shape().size(); }
+    unsigned sliceOffset() { return shiftOffset() + shift().size(); }
+    unsigned subcomponentOffset() { return sliceOffset() + slice().size(); }
+    unsigned substrOffset() {
+      return subcomponentOffset() + subcomponent().size();
+    }
   }];
 }
 

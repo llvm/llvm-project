@@ -837,12 +837,6 @@ typedef unsigned int   char32_t;
 #define _LIBCPP_HAS_NO_RANGES
 #endif
 
-#ifdef _LIBCPP_CXX03_LANG
-#  define _LIBCPP_DEFAULT {}
-#else
-#  define _LIBCPP_DEFAULT = default;
-#endif
-
 #ifdef __GNUC__
 #  define _LIBCPP_NOALIAS __attribute__((__malloc__))
 #else
