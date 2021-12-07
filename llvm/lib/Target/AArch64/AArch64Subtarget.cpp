@@ -157,13 +157,19 @@ void AArch64Subtarget::initializeProperties() {
     break;
   case NeoverseN1:
     PrefFunctionLogAlignment = 4;
+    PrefLoopLogAlignment = 5;
+    MaxBytesForLoopAlignment = 16;
     break;
   case NeoverseN2:
     PrefFunctionLogAlignment = 4;
+    PrefLoopLogAlignment = 5;
+    MaxBytesForLoopAlignment = 16;
     VScaleForTuning = 1;
     break;
   case NeoverseV1:
     PrefFunctionLogAlignment = 4;
+    PrefLoopLogAlignment = 5;
+    MaxBytesForLoopAlignment = 16;
     VScaleForTuning = 2;
     break;
   case Neoverse512TVB:
