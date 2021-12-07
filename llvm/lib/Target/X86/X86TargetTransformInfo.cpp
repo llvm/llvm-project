@@ -660,6 +660,7 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
     { ISD::MUL,     MVT::v8i32,      1 }, // pmulld (Skylake from agner.org)
     { ISD::MUL,     MVT::v4i32,      1 }, // pmulld (Skylake from agner.org)
     { ISD::MUL,     MVT::v8i64,      6 }, // 3*pmuludq/3*shift/2*add
+    { ISD::MUL,     MVT::i64,        1 }, // Skylake from http://www.agner.org/
 
     { ISD::FNEG,    MVT::v8f64,      1 }, // Skylake from http://www.agner.org/
     { ISD::FADD,    MVT::v8f64,      1 }, // Skylake from http://www.agner.org/
