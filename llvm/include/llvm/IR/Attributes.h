@@ -216,7 +216,7 @@ public:
   /// if not known).
   std::pair<unsigned, Optional<unsigned>> getAllocSizeArgs() const;
 
-  /// Returns the argument numbers for the vscale_range attribute (or pair(0, 0)
+  /// Returns the argument numbers for the vscale_range attribute (or pair(1, 0)
   /// if not known).
   std::pair<unsigned, unsigned> getVScaleRangeArgs() const;
 
@@ -1054,7 +1054,7 @@ public:
   std::pair<unsigned, Optional<unsigned>> getAllocSizeArgs() const;
 
   /// Retrieve the vscale_range args, if the vscale_range attribute exists.  If
-  /// it doesn't exist, pair(0, 0) is returned.
+  /// it doesn't exist, pair(1, 0) is returned.
   std::pair<unsigned, unsigned> getVScaleRangeArgs() const;
 
   /// Add integer attribute with raw value (packed/encoded if necessary).

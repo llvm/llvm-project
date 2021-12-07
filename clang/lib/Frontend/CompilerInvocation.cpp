@@ -4123,6 +4123,13 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
         {std::string(Split.first), std::string(Split.second)});
   }
 
+  // Error if -mvscale-min is unbounded.
+  if (Arg *A = Args.getLastArg(options::OPT_mvscale_min_EQ)) {
+    unsigned VScaleMin;
+    if (StringRef(A->getValue()).getAsInteger(10, VScaleMin) || VScaleMin == 0)
+      Diags.Report(diag::err_cc1_unbounded_vscale_min);
+  }
+
   return Diags.getNumErrors() == NumErrorsBefore;
 }
 
