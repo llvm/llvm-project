@@ -325,8 +325,7 @@ bool StackSlotColoring::ColorSlots(MachineFunction &MF) {
 
   LLVM_DEBUG(dbgs() << "Color spill slot intervals:\n");
   bool Changed = false;
-  for (unsigned i = 0, e = SSIntervals.size(); i != e; ++i) {
-    LiveInterval *li = SSIntervals[i];
+  for (LiveInterval *li : SSIntervals) {
     int SS = Register::stackSlot2Index(li->reg());
     int NewSS = ColorSlot(li);
     assert(NewSS >= 0 && "Stack coloring failed?");
@@ -338,8 +337,7 @@ bool StackSlotColoring::ColorSlots(MachineFunction &MF) {
   }
 
   LLVM_DEBUG(dbgs() << "\nSpill slots after coloring:\n");
-  for (unsigned i = 0, e = SSIntervals.size(); i != e; ++i) {
-    LiveInterval *li = SSIntervals[i];
+  for (LiveInterval *li : SSIntervals) {
     int SS = Register::stackSlot2Index(li->reg());
     li->setWeight(SlotWeights[SS]);
   }
@@ -347,8 +345,8 @@ bool StackSlotColoring::ColorSlots(MachineFunction &MF) {
   llvm::stable_sort(SSIntervals, IntervalSorter());
 
 #ifndef NDEBUG
-  for (unsigned i = 0, e = SSIntervals.size(); i != e; ++i)
-    LLVM_DEBUG(SSIntervals[i]->dump());
+  for (LiveInterval *li : SSIntervals)
+    LLVM_DEBUG(li->dump());
   LLVM_DEBUG(dbgs() << '\n');
 #endif
 
