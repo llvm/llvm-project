@@ -102,10 +102,7 @@ public:
 
     // Bits of intermediate state computed at various phases of extraction.
     SetVector<BasicBlock *> Blocks;
-
-    /// Same as ExitBlocks.size().
     unsigned NumExitBlocks = std::numeric_limits<unsigned>::max();
-
     Type *RetTy;
 
     /// Lists of blocks that are branched from the code region to be extracted.
