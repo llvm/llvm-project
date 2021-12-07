@@ -2467,6 +2467,10 @@ bool QualType::isTriviallyCopyableType(const ASTContext &Context) const {
   if (hasNonTrivialObjCLifetime())
     return false;
 
+  PrimitiveCopyKind PCK = isNonTrivialToPrimitiveCopy();
+  if (PCK != PCK_Trivial && PCK != PCK_VolatileTrivial)
+    return false;
+
   // C++11 [basic.types]p9 - See Core 2094
   //   Scalar types, trivially copyable class types, arrays of such types, and
   //   cv-qualified versions of these types are collectively

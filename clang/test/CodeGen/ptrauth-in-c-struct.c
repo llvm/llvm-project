@@ -27,6 +27,8 @@ typedef struct {
 SA getSA(void);
 void calleeSA(SA);
 
+int g0;
+
 // CHECK: define void @test_copy_constructor_SA(%[[STRUCT_SA]]* noundef %{{.*}})
 // CHECK: call void @__copy_constructor_8_8_t0w4_pa1_50_8(
 
@@ -161,4 +163,22 @@ void test_copy_constructor_SI(SI *s) {
 // CHECK: ret void
 
 void test_parameter_SI(SI a) {
+}
+
+// CHECK-LABEL: define void @test_array(
+// CHECK: %[[F1:.*]] = getelementptr inbounds %[[STRUCT_SA]], %[[STRUCT_SA]]* %{{.*}}, i32 0, i32 1
+// CHECK: %[[V0:.*]] = ptrtoint i32** %[[F1]] to i64
+// CHECK: %[[V1:.*]] = call i64 @llvm.ptrauth.blend(i64 %[[V0]], i64 50)
+// CHECK: %[[V2:.*]] = call i64 @llvm.ptrauth.sign(i64 ptrtoint (i32* @g0 to i64), i32 1, i64 %[[V1]])
+// CHECK: %[[V3:.*]] = inttoptr i64 %[[V2]] to i32*
+// CHECK: store i32* %[[V3]], i32** %[[F1]], align 8
+// CHECK: %[[F12:.*]] = getelementptr inbounds %[[STRUCT_SA]], %[[STRUCT_SA]]* %{{.*}}, i32 0, i32 1
+// CHECK: %[[V4:.*]] = ptrtoint i32** %[[F12]] to i64
+// CHECK: %[[V5:.*]] = call i64 @llvm.ptrauth.blend(i64 %[[V4]], i64 50)
+// CHECK: %[[V6:.*]] = call i64 @llvm.ptrauth.sign(i64 ptrtoint (i32* @g0 to i64), i32 1, i64 %[[V5]])
+// CHECK: %[[V7:.*]] = inttoptr i64 %[[V6]] to i32*
+// CHECK: store i32* %[[V7]], i32** %[[F12]], align 8
+
+void test_array(void) {
+  const SA a[] = {{0, &g0}, {1, &g0}};
 }
