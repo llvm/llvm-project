@@ -47,6 +47,13 @@ public:
     return m_collection_sp->GetPropertyAtIndexAsFileSpec(nullptr,
                                                          ePropertyEmulatorPath);
   }
+
+  Args GetEmulatorArgs() {
+    Args result;
+    m_collection_sp->GetPropertyAtIndexAsArgs(nullptr, ePropertyEmulatorArgs,
+                                              result);
+    return result;
+  }
 };
 
 static PluginProperties &GetGlobalProperties() {
@@ -112,8 +119,10 @@ lldb::ProcessSP PlatformQemuUser::DebugProcess(ProcessLaunchInfo &launch_info,
     llvm::sys::fs::createUniquePath(socket_model, socket_path, false);
   } while (FileSystem::Instance().Exists(socket_path));
 
-  Args args(
-      {qemu, "-g", socket_path, launch_info.GetExecutableFile().GetPath()});
+  Args args({qemu, "-g", socket_path});
+  args.AppendArguments(GetGlobalProperties().GetEmulatorArgs());
+  args.AppendArgument("--");
+  args.AppendArgument(launch_info.GetExecutableFile().GetPath());
   for (size_t i = 1; i < launch_info.GetArguments().size(); ++i)
     args.AppendArgument(launch_info.GetArguments()[i].ref());
 

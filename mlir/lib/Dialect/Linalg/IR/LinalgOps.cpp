@@ -1233,7 +1233,7 @@ SmallVector<StringRef> PadTensorOp::getLoopIteratorTypes() {
   return iteratorTypes;
 }
 
-SmallVector<Range> PadTensorOp::getLoopBounds(OpBuilder &b) {
+SmallVector<Range> PadTensorOp::getIterationDomain(OpBuilder &b) {
   ReifiedRankedShapedTypeDims reifiedShapes;
   (void)reifyResultShapes(b, reifiedShapes);
   Value zero = b.create<arith::ConstantIndexOp>(getLoc(), 0);
@@ -1246,13 +1246,13 @@ SmallVector<Range> PadTensorOp::getLoopBounds(OpBuilder &b) {
   return loopRanges;
 }
 
-Operation *PadTensorOp::getTiledImplementation(OpBuilder &b, ValueRange dest,
-                                               ArrayRef<OpFoldResult> offsets,
-                                               ArrayRef<OpFoldResult> sizes) {
+SmallVector<Operation *> PadTensorOp::getTiledImplementation(
+    OpBuilder &b, ValueRange dest, ArrayRef<OpFoldResult> offsets,
+    ArrayRef<OpFoldResult> sizes, bool /*tileDestOperands*/) {
   // Only constant padding value supported.
   Value padValue = getConstantPaddingValue();
   if (!padValue)
-    return nullptr;
+    return {};
 
   // Helper variables and functions for various arithmetic operations. These are
   // used extensively for computing new offset/length and padding values.
@@ -1431,7 +1431,7 @@ Operation *PadTensorOp::getTiledImplementation(OpBuilder &b, ValueRange dest,
   // Rewrite subtensor(pad_tensor(x)) into a GenerateOp it is statically known
   // that the original data source x is not used.
   if (hasZeroLen) {
-    return createGenerateOp();
+    return {createGenerateOp()};
   }
 
   // If there are dynamic dimensions: Generate an scf.if check to avoid creating
@@ -1448,9 +1448,9 @@ Operation *PadTensorOp::getTiledImplementation(OpBuilder &b, ValueRange dest,
           b.create<scf::YieldOp>(loc,
                                  createPadTensorOfSubTensor()->getResult(0));
         });
-    return result;
+    return {result};
   }
-  return createPadTensorOfSubTensor();
+  return {createPadTensorOfSubTensor()};
 }
 
 namespace {
