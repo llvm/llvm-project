@@ -10958,15 +10958,14 @@ SDValue AArch64TargetLowering::LowerINSERT_SUBVECTOR(SDValue Op,
   EVT InVT = Op.getOperand(1).getValueType();
   unsigned Idx = cast<ConstantSDNode>(Op.getOperand(2))->getZExtValue();
 
-  if (InVT.isScalableVector()) {
-    SDLoc DL(Op);
-    EVT VT = Op.getValueType();
+  SDValue Vec0 = Op.getOperand(0);
+  SDValue Vec1 = Op.getOperand(1);
+  SDLoc DL(Op);
+  EVT VT = Op.getValueType();
 
+  if (InVT.isScalableVector()) {
     if (!isTypeLegal(VT))
       return SDValue();
-
-    SDValue Vec0 = Op.getOperand(0);
-    SDValue Vec1 = Op.getOperand(1);
 
     // Ensure the subvector is half the size of the main vector.
     if (VT.getVectorElementCount() != (InVT.getVectorElementCount() * 2))
@@ -10997,9 +10996,18 @@ SDValue AArch64TargetLowering::LowerINSERT_SUBVECTOR(SDValue Op,
     return SDValue();
   }
 
-  // This will be matched by custom code during ISelDAGToDAG.
-  if (Idx == 0 && isPackedVectorType(InVT, DAG) && Op.getOperand(0).isUndef())
-    return Op;
+  if (Idx == 0 && isPackedVectorType(VT, DAG)) {
+    // This will be matched by custom code during ISelDAGToDAG.
+    if (Vec0.isUndef())
+      return Op;
+
+    unsigned int PredPattern =
+        getSVEPredPatternFromNumElements(InVT.getVectorNumElements());
+    auto PredTy = VT.changeVectorElementType(MVT::i1);
+    SDValue PTrue = getPTrue(DAG, DL, PredTy, PredPattern);
+    SDValue ScalableVec1 = convertToScalableVector(DAG, VT, Vec1);
+    return DAG.getNode(ISD::VSELECT, DL, VT, PTrue, ScalableVec1, Vec0);
+  }
 
   return SDValue();
 }
