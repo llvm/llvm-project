@@ -15,15 +15,15 @@ namespace mlir {
 
 namespace bufferization {
 class BufferizationDialect;
-} // end namespace bufferization
+} // namespace bufferization
 
 namespace memref {
 class MemRefDialect;
-} // end namespace memref
+} // namespace memref
 
 #define GEN_PASS_CLASSES
 #include "mlir/Dialect/Shape/Transforms/Passes.h.inc"
 
-} // end namespace mlir
+} // namespace mlir
 
 #endif // DIALECT_SHAPE_TRANSFORMS_PASSDETAIL_H_

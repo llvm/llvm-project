@@ -20,7 +20,7 @@
 namespace llvm {
 class Init;
 class Record;
-} // end namespace llvm
+} // namespace llvm
 
 namespace mlir {
 namespace tblgen {
@@ -110,7 +110,7 @@ public:
   std::vector<StringRef> getAlwaysDeclaredMethods() const;
 };
 
-} // end namespace tblgen
-} // end namespace mlir
+} // namespace tblgen
+} // namespace mlir
 
 #endif // MLIR_TABLEGEN_TRAIT_H_

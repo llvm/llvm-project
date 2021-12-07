@@ -136,7 +136,7 @@ struct BufferResultsToOutParamsPass
       return signalPassFailure();
   }
 };
-} // end anonymous namespace
+} // namespace
 
 std::unique_ptr<Pass> mlir::createBufferResultsToOutParamsPass() {
   return std::make_unique<BufferResultsToOutParamsPass>();

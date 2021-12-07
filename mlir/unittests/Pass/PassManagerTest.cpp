@@ -87,7 +87,7 @@ struct InvalidPass : Pass {
         *static_cast<const InvalidPass *>(this));
   }
 };
-} // anonymous namespace
+} // namespace
 
 TEST(PassManagerTest, InvalidPass) {
   MLIRContext context;
@@ -127,4 +127,4 @@ TEST(PassManagerTest, InvalidPass) {
   ASSERT_DEATH(pm.addPass(std::make_unique<InvalidPass>()), "");
 }
 
-} // end namespace
+} // namespace

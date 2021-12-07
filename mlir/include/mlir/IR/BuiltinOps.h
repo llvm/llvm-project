@@ -46,7 +46,7 @@ public:
   OwningModuleRef(OwningOpRef<ModuleOp> &&other)
       : OwningOpRef<ModuleOp>(std::move(other)) {}
 };
-} // end namespace mlir
+} // namespace mlir
 
 namespace llvm {
 /// Allow stealing the low bits of FuncOp.
@@ -73,6 +73,6 @@ public:
   }
   static constexpr int NumLowBitsAvailable = 3;
 };
-} // end namespace llvm
+} // namespace llvm
 
 #endif // MLIR_IR_BUILTINOPS_H_

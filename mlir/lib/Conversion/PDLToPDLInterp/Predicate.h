@@ -71,7 +71,7 @@ enum Kind : unsigned {
   TypeAnswer,
   UnsignedAnswer,
 };
-} // end namespace Predicates
+} // namespace Predicates
 
 /// Base class for all predicates, used to allow efficient pointer comparison.
 template <typename ConcreteT, typename BaseT, typename Key,
@@ -639,7 +639,7 @@ private:
   MLIRContext *ctx;
 };
 
-} // end namespace pdl_to_pdl_interp
-} // end namespace mlir
+} // namespace pdl_to_pdl_interp
+} // namespace mlir
 
 #endif // MLIR_CONVERSION_PDLTOPDLINTERP_PREDICATE_H_

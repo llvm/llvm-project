@@ -104,7 +104,7 @@ private:
 
   std::string getRocmPath();
 };
-} // end namespace
+} // namespace
 
 SerializeToHsacoPass::SerializeToHsacoPass(const SerializeToHsacoPass &other)
     : PassWrapper<SerializeToHsacoPass, gpu::SerializeToBlobPass>(other) {}

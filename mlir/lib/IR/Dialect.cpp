@@ -178,7 +178,7 @@ Dialect::getOperationPrinter(Operation *op) const {
 }
 
 /// Utility function that returns if the given string is a valid dialect
-/// namespace.
+/// namespace
 bool Dialect::isValidNamespace(StringRef str) {
   llvm::Regex dialectNameRegex("^[a-zA-Z_][a-zA-Z_0-9\\$]*$");
   return dialectNameRegex.match(str);

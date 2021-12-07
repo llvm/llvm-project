@@ -66,7 +66,7 @@ private:
   }
 };
 
-} // end anonymous namespace
+} // namespace
 
 // Flattens the expressions in map. Returns failure if 'expr' was unable to be
 // flattened (i.e., semi-affine expressions not handled yet).

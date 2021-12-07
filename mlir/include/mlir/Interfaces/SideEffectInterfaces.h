@@ -257,7 +257,7 @@ bool isOpTriviallyDead(Operation *op);
 /// `isOpTriviallyDead` if `op` was unused.
 bool wouldOpBeTriviallyDead(Operation *op);
 
-} // end namespace mlir
+} // namespace mlir
 
 //===----------------------------------------------------------------------===//
 // SideEffect Interfaces

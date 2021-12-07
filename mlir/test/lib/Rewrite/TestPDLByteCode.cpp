@@ -109,7 +109,7 @@ struct TestPDLByteCodePass
                                        std::move(patternList));
   }
 };
-} // end anonymous namespace
+} // namespace
 
 namespace mlir {
 namespace test {

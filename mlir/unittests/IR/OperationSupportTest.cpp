@@ -271,4 +271,4 @@ TEST(NamedAttrListTest, TestAppendAssign) {
   attrs.assign({});
   ASSERT_TRUE(attrs.empty());
 }
-} // end namespace
+} // namespace

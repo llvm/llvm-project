@@ -63,7 +63,7 @@ static Attribute OpMTest(PatternRewriter &rewriter, Value val) {
 
 namespace {
 #include "TestPatterns.inc"
-} // end anonymous namespace
+} // namespace
 
 //===----------------------------------------------------------------------===//
 // Test Reduce Pattern Interface
@@ -139,7 +139,7 @@ struct TestPatternDriver : public PassWrapper<TestPatternDriver, FunctionPass> {
     (void)applyPatternsAndFoldGreedily(getFunction(), std::move(patterns));
   }
 };
-} // end anonymous namespace
+} // namespace
 
 //===----------------------------------------------------------------------===//
 // ReturnType Driver.
@@ -225,7 +225,7 @@ struct TestReturnTypeDriver
     }
   }
 };
-} // end anonymous namespace
+} // namespace
 
 namespace {
 struct TestDerivedAttributeDriver
@@ -236,7 +236,7 @@ struct TestDerivedAttributeDriver
   }
   void runOnFunction() override;
 };
-} // end anonymous namespace
+} // namespace
 
 void TestDerivedAttributeDriver::runOnFunction() {
   getFunction().walk([](DerivedAttributeOpInterface dOp) {
@@ -743,7 +743,7 @@ struct TestLegalizePatternDriver
   /// The mode of conversion to use.
   ConversionMode mode;
 };
-} // end anonymous namespace
+} // namespace
 
 static llvm::cl::opt<TestLegalizePatternDriver::ConversionMode>
     legalizerConversionMode(
@@ -871,7 +871,7 @@ struct TestRemappedValue
     }
   }
 };
-} // end anonymous namespace
+} // namespace
 
 //===----------------------------------------------------------------------===//
 // Test patterns without a specific root operation kind
@@ -911,7 +911,7 @@ struct TestUnknownRootOpDriver
       signalPassFailure();
   }
 };
-} // end anonymous namespace
+} // namespace
 
 //===----------------------------------------------------------------------===//
 // Test type conversions
@@ -1127,7 +1127,7 @@ struct TestTypeConversionDriver
       signalPassFailure();
   }
 };
-} // end anonymous namespace
+} // namespace
 
 //===----------------------------------------------------------------------===//
 // Test Block Merging

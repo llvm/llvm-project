@@ -270,7 +270,7 @@ private:
   SmallVector<std::pair<TypeID, void *>> interfaces;
 };
 
-} // end namespace detail
-} // end namespace mlir
+} // namespace detail
+} // namespace mlir
 
 #endif

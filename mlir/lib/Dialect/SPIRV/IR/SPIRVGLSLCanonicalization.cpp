@@ -18,7 +18,7 @@ using namespace mlir;
 
 namespace {
 #include "SPIRVCanonicalization.inc"
-} // end anonymous namespace
+} // namespace
 
 namespace mlir {
 namespace spirv {

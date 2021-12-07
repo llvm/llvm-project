@@ -138,7 +138,7 @@ TypeID TypeID::get() {
   return detail::TypeIDExported::get<Trait>();
 }
 
-} // end namespace mlir
+} // namespace mlir
 
 // Declare/define an explicit specialization for TypeID: this forces the
 // compiler to emit a strong definition for a class and controls which
@@ -193,6 +193,6 @@ template <> struct PointerLikeTypeTraits<mlir::TypeID> {
   static constexpr int NumLowBitsAvailable = 3;
 };
 
-} // end namespace llvm
+} // namespace llvm
 
 #endif // MLIR_SUPPORT_TYPEID_H

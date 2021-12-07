@@ -1502,7 +1502,7 @@ struct EnumTraits {};
 
 REGISTER_ENUM_TYPE(Linkage);
 REGISTER_ENUM_TYPE(UnnamedAddr);
-} // end namespace
+} // namespace
 
 /// Parse an enum from the keyword, or default to the provided default value.
 /// The return type is the enum type by default, unless overriden with the

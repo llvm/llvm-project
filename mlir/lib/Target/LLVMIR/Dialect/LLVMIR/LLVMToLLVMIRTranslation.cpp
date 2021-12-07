@@ -471,7 +471,7 @@ public:
     return convertOperationImpl(*op, builder, moduleTranslation);
   }
 };
-} // end namespace
+} // namespace
 
 void mlir::registerLLVMDialectTranslation(DialectRegistry &registry) {
   registry.insert<LLVM::LLVMDialect>();

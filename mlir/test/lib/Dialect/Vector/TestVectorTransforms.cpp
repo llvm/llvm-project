@@ -583,7 +583,7 @@ struct TestVectorReduceToContractPatternsPatterns
   }
 };
 
-} // end anonymous namespace
+} // namespace
 
 namespace mlir {
 namespace test {

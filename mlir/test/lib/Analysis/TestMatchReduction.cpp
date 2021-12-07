@@ -75,7 +75,7 @@ struct TestMatchReductionPass
   }
 };
 
-} // end anonymous namespace
+} // namespace
 
 namespace mlir {
 namespace test {

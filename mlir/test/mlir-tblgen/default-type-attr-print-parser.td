@@ -45,7 +45,7 @@ def AttrA : TestAttr<"AttrA"> {
 // ATTR:     return;
 // ATTR: }
 
-// ATTR: } // end namespace test
+// ATTR: } // namespace test
 
 def TypeA : TestType<"TypeA"> {
   let mnemonic = "type_a";
@@ -73,4 +73,4 @@ def TypeA : TestType<"TypeA"> {
 // TYPE:     return;
 // TYPE: }
 
-// TYPE: } // end namespace test
+// TYPE: } // namespace test

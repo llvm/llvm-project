@@ -63,7 +63,7 @@ struct TestPrintDefUsePass
     });
   }
 };
-} // end anonymous namespace
+} // namespace
 
 namespace mlir {
 void registerTestPrintDefUsePass() { PassRegistration<TestPrintDefUsePass>(); }

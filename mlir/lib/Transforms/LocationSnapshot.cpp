@@ -140,7 +140,7 @@ struct LocationSnapshotPass
   /// The printing flags to use when creating the snapshot.
   OpPrintingFlags flags;
 };
-} // end anonymous namespace
+} // namespace
 
 std::unique_ptr<Pass> mlir::createLocationSnapshotPass(OpPrintingFlags flags,
                                                        StringRef fileName,

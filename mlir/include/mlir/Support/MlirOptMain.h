@@ -22,7 +22,7 @@
 namespace llvm {
 class raw_ostream;
 class MemoryBuffer;
-} // end namespace llvm
+} // namespace llvm
 
 namespace mlir {
 class DialectRegistry;
@@ -93,6 +93,6 @@ inline int asMainReturnCode(LogicalResult r) {
   return r.succeeded() ? EXIT_SUCCESS : EXIT_FAILURE;
 }
 
-} // end namespace mlir
+} // namespace mlir
 
 #endif // MLIR_SUPPORT_MLIROPTMAIN_H

@@ -32,7 +32,7 @@ namespace llvm {
 class DefInit;
 class Record;
 class StringInit;
-} // end namespace llvm
+} // namespace llvm
 
 namespace mlir {
 namespace tblgen {
@@ -370,7 +370,7 @@ private:
   bool allResultsHaveKnownTypes;
 };
 
-} // end namespace tblgen
-} // end namespace mlir
+} // namespace tblgen
+} // namespace mlir
 
 #endif // MLIR_TABLEGEN_OPERATOR_H_

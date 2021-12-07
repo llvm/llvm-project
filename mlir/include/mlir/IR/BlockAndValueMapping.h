@@ -94,6 +94,6 @@ private:
   DenseMap<Block *, Block *> blockMap;
 };
 
-} // end namespace mlir
+} // namespace mlir
 
 #endif // MLIR_IR_BLOCKANDVALUEMAPPING_H

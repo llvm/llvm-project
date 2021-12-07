@@ -173,7 +173,7 @@ private:
   /// The prefix/suffix of the TableGen def name, either "Attr" or "Type".
   StringRef defType;
 };
-} // end anonymous namespace
+} // namespace
 
 DefGen::DefGen(const AttrOrTypeDef &def)
     : def(def), params(def.getParameters()), defCls(def.getCppClassName()),
@@ -651,7 +651,7 @@ struct TypeDefGenerator : public DefGenerator {
       : DefGenerator(records.getAllDerivedDefinitions("TypeDef"), os, "Type",
                      "Type", /*isAttrGenerator=*/false) {}
 };
-} // end anonymous namespace
+} // namespace
 
 //===----------------------------------------------------------------------===//
 // GEN: Declarations
@@ -663,7 +663,7 @@ static const char *const typeDefDeclHeader = R"(
 namespace mlir {
 class AsmParser;
 class AsmPrinter;
-} // end namespace mlir
+} // namespace mlir
 )";
 
 bool DefGenerator::emitDecls(StringRef selectedDialect) {

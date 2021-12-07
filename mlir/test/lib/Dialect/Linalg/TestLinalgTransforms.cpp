@@ -129,7 +129,7 @@ struct TestLinalgTransforms
                      "tiled_loop"),
       llvm::cl::init("for")};
 };
-} // end anonymous namespace
+} // namespace
 
 static void applyPatterns(FuncOp funcOp) {
   MLIRContext *ctx = funcOp.getContext();

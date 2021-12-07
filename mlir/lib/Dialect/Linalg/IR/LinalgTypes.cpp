@@ -53,7 +53,7 @@ struct LinalgInlinerInterface : public DialectInlinerInterface {
                         ArrayRef<Value> valuesToRepl) const final {}
 };
 
-} // end anonymous namespace
+} // namespace
 
 //===----------------------------------------------------------------------===//
 // LinalgDialect

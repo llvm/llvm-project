@@ -40,7 +40,7 @@ struct PointerLikeModel
     return pointer.cast<T>().getElementType();
   }
 };
-} // end namespace
+} // namespace
 
 void OpenMPDialect::initialize() {
   addOperations<

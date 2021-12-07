@@ -142,6 +142,6 @@ private:
   friend class Liveness;
 };
 
-} // end namespace mlir
+} // namespace mlir
 
 #endif // MLIR_ANALYSIS_LIVENESS_H

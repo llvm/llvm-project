@@ -20,7 +20,7 @@ class Pass;
 
 namespace toy {
 std::unique_ptr<Pass> createShapeInferencePass();
-} // end namespace toy
-} // end namespace mlir
+} // namespace toy
+} // namespace mlir
 
 #endif // MLIR_TUTORIAL_TOY_PASSES_H

@@ -94,7 +94,7 @@ struct StdInlinerInterface : public DialectInlinerInterface {
       valuesToRepl[it.index()].replaceAllUsesWith(it.value());
   }
 };
-} // end anonymous namespace
+} // namespace
 
 //===----------------------------------------------------------------------===//
 // StandardOpsDialect
@@ -749,7 +749,7 @@ struct CondBranchTruthPropagation : public OpRewritePattern<CondBranchOp> {
     return success(replaced);
   }
 };
-} // end anonymous namespace
+} // namespace
 
 void CondBranchOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                                MLIRContext *context) {

@@ -127,6 +127,6 @@ struct FieldParser<
   }
 };
 
-} // end namespace mlir
+} // namespace mlir
 
 #endif // MLIR_IR_DIALECTIMPLEMENTATION_H

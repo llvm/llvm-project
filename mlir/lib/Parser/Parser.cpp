@@ -487,7 +487,7 @@ private:
   /// The top level operation that holds all of the parsed operations.
   Operation *topLevelOp;
 };
-} // end anonymous namespace
+} // namespace
 
 OperationParser::OperationParser(ParserState &state, ModuleOp topLevelOp)
     : Parser(state), opBuilder(topLevelOp.getRegion()), topLevelOp(topLevelOp) {
@@ -1588,7 +1588,7 @@ private:
   /// The backing operation parser.
   OperationParser &parser;
 };
-} // end anonymous namespace.
+} // namespace
 
 FailureOr<OperationName> OperationParser::parseCustomOperationName() {
   std::string opName = getTokenSpelling().str();
@@ -2025,7 +2025,7 @@ private:
   /// Parse an attribute alias declaration.
   ParseResult parseTypeAliasDef();
 };
-} // end anonymous namespace
+} // namespace
 
 /// Parses an attribute alias declaration.
 ///

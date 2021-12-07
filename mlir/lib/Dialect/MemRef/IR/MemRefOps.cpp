@@ -191,7 +191,7 @@ struct SimplifyDeadAlloc : public OpRewritePattern<T> {
     return success();
   }
 };
-} // end anonymous namespace.
+} // namespace
 
 void AllocOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                           MLIRContext *context) {
@@ -676,7 +676,7 @@ struct DimOfMemRefReshape : public OpRewritePattern<DimOp> {
   }
 };
 
-} // end anonymous namespace.
+} // namespace
 
 void DimOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                         MLIRContext *context) {
@@ -1473,8 +1473,8 @@ Wrapper operator*(Wrapper a, int64_t b) {
     return Wrapper(ShapedType::kDynamicStrideOrOffset);
   return Wrapper(a.v * b);
 }
-} // end namespace saturated_arith
-} // end namespace
+} // namespace saturated_arith
+} // namespace
 
 /// A subview result type can be fully inferred from the source type and the
 /// static representation of offsets, sizes and strides. Special sentinels
@@ -2190,7 +2190,7 @@ struct ViewOpMemrefCastFolder : public OpRewritePattern<ViewOp> {
   }
 };
 
-} // end anonymous namespace
+} // namespace
 
 void ViewOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                          MLIRContext *context) {

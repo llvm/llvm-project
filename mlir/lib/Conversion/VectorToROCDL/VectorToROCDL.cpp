@@ -145,7 +145,7 @@ public:
         vecTy, dwordConfig, int32Zero, int32Zero, int1False, int1False);
   }
 };
-} // end anonymous namespace
+} // namespace
 
 void mlir::populateVectorToROCDLConversionPatterns(
     LLVMTypeConverter &converter, RewritePatternSet &patterns) {

@@ -26,7 +26,7 @@ std::unique_ptr<FunctionPass> createFinalizingBufferizePass();
 #define GEN_PASS_REGISTRATION
 #include "mlir/Dialect/Bufferization/Transforms/Passes.h.inc"
 
-} // end namespace bufferization
-} // end namespace mlir
+} // namespace bufferization
+} // namespace mlir
 
 #endif // MLIR_DIALECT_BUFFERIZATION_TRANSFORMS_PASSES_H

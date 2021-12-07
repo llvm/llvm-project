@@ -92,7 +92,7 @@ private:
   /// configuration asked for change detection.
   DenseMap<Pass *, OperationFingerPrint> beforePassFingerPrints;
 };
-} // end anonymous namespace
+} // namespace
 
 static void printIR(Operation *op, bool printModuleScope, raw_ostream &out,
                     OpPrintingFlags flags) {
@@ -248,7 +248,7 @@ struct BasicIRPrinterConfig : public PassManager::IRPrinterConfig {
   /// The stream to output to.
   raw_ostream &out;
 };
-} // end anonymous namespace
+} // namespace
 
 /// Add an instrumentation to print the IR before and after pass execution,
 /// using the provided configuration.

@@ -28,7 +28,7 @@ struct PrintOpAvailability
     return "Test SPIR-V op availability";
   }
 };
-} // end anonymous namespace
+} // namespace
 
 void PrintOpAvailability::runOnFunction() {
   auto f = getFunction();
@@ -140,7 +140,7 @@ struct ConvertToSubgroupBallot : public RewritePattern {
   LogicalResult matchAndRewrite(Operation *op,
                                 PatternRewriter &rewriter) const override;
 };
-} // end anonymous namespace
+} // namespace
 
 void ConvertToTargetEnv::runOnFunction() {
   MLIRContext *context = &getContext();

@@ -49,7 +49,7 @@ struct LoopTiling : public AffineLoopTilingBase<LoopTiling> {
   bool avoidMaxMinBounds = true;
 };
 
-} // end anonymous namespace
+} // namespace
 
 /// Creates a pass to perform loop tiling on all suitable loop nests of a
 /// Function.

@@ -30,7 +30,7 @@ struct TensorInlinerInterface : public DialectInlinerInterface {
     return true;
   }
 };
-} // end anonymous namespace
+} // namespace
 
 //===----------------------------------------------------------------------===//
 // TensorDialect Methods

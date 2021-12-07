@@ -24,7 +24,7 @@ namespace mlir {
 
 namespace detail {
 struct AffineMapStorage;
-} // end namespace detail
+} // namespace detail
 
 class Attribute;
 struct LogicalResult;
@@ -567,7 +567,7 @@ inline raw_ostream &operator<<(raw_ostream &os, AffineMap map) {
   map.print(os);
   return os;
 }
-} // end namespace mlir
+} // namespace mlir
 
 namespace llvm {
 

@@ -53,7 +53,7 @@ private:
       llvm::cl::init(false)};
 };
 
-} // end anonymous namespace
+} // namespace
 
 void TestAffineDataCopy::runOnFunction() {
   // Gather all AffineForOps by loop depth.

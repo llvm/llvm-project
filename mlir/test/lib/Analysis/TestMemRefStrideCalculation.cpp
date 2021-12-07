@@ -23,7 +23,7 @@ struct TestMemRefStrideCalculation
   }
   void runOnFunction() override;
 };
-} // end anonymous namespace
+} // namespace
 
 /// Traverse AllocOp and compute strides of each MemRefType independently.
 void TestMemRefStrideCalculation::runOnFunction() {

@@ -190,7 +190,7 @@ public:
                   ConversionPatternRewriter &rewriter) const override;
 };
 
-} // end anonymous namespace
+} // namespace
 
 //===----------------------------------------------------------------------===//
 // Conversion Helpers
@@ -845,7 +845,7 @@ struct ConvertArithmeticToSPIRVPass
       signalPassFailure();
   }
 };
-} // end anonymous namespace
+} // namespace
 
 std::unique_ptr<Pass> mlir::arith::createConvertArithmeticToSPIRVPass() {
   return std::make_unique<ConvertArithmeticToSPIRVPass>();

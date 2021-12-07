@@ -81,8 +81,8 @@ private:
   T vector[Dim];
   char padding[nextPowerOf2(sizeof(T[Dim])) - sizeof(T[Dim])];
 };
-} // end namespace detail
-} // end namespace mlir
+} // namespace detail
+} // namespace mlir
 
 // N-D vectors recurse down to 1-D.
 template <typename T, int Dim, int... Dims>

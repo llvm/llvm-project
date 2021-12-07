@@ -147,7 +147,7 @@ private:
   /// Current value mappings.
   BlockAndValueMapping mapping;
 };
-} // end anonymous namespace
+} // namespace
 
 Value ConversionValueMapping::lookupOrDefault(Value from,
                                               Type desiredType) const {
@@ -408,7 +408,7 @@ private:
   /// The original output type. This is only used for argument conversions.
   Type origOutputType;
 };
-} // end anonymous namespace
+} // namespace
 
 /// Build an unresolved materialization operation given an output type and set
 /// of input operands.
@@ -593,7 +593,7 @@ struct ArgConverter {
   /// An ordered set of unresolved materializations during conversion.
   SmallVectorImpl<UnresolvedMaterialization> &unresolvedMaterializations;
 };
-} // end anonymous namespace
+} // namespace
 
 //===----------------------------------------------------------------------===//
 // Rewrite Application
@@ -1018,8 +1018,8 @@ struct ConversionPatternRewriterImpl {
   llvm::ScopedPrinter logger{llvm::dbgs()};
 #endif
 };
-} // end namespace detail
-} // end namespace mlir
+} // namespace detail
+} // namespace mlir
 
 /// Detach any operations nested in the given operation from their parent
 /// blocks, and erase the given operation. This can be used when the nested
@@ -2396,7 +2396,7 @@ private:
   /// *not* to be legalizable to the target.
   DenseSet<Operation *> *trackedOps;
 };
-} // end anonymous namespace
+} // namespace
 
 LogicalResult OperationConverter::convert(ConversionPatternRewriter &rewriter,
                                           Operation *op) {
@@ -3086,7 +3086,7 @@ struct FunctionLikeSignatureConversion : public ConversionPattern {
     return success();
   }
 };
-} // end anonymous namespace
+} // namespace
 
 void mlir::populateFunctionLikeTypeConversionPattern(
     StringRef functionLikeOpName, RewritePatternSet &patterns,

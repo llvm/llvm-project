@@ -29,7 +29,7 @@ namespace scf {
 class IfOp;
 class ForOp;
 class ParallelOp;
-} // end namespace scf
+} // namespace scf
 
 /// Create a clone of `loop` with `newIterOperands` added as new initialization
 /// values and `newYieldedValues` added as new yielded values. The returned
@@ -77,5 +77,5 @@ getSCFMinMaxExpr(Value value, SmallVectorImpl<Value> &dims,
                  SmallVectorImpl<Value> &symbols,
                  llvm::function_ref<bool(Operation *)> loopFilter = nullptr);
 
-} // end namespace mlir
+} // namespace mlir
 #endif // MLIR_DIALECT_SCF_UTILS_H_

@@ -71,7 +71,7 @@ struct MLIRContextOptions {
       llvm::cl::desc("When a diagnostic is emitted, also print the stack trace "
                      "as an attached note")};
 };
-} // end anonymous namespace
+} // namespace
 
 static llvm::ManagedStatic<MLIRContextOptions> clOptions;
 
@@ -110,7 +110,7 @@ struct ScopedWriterLock {
   }
   llvm::sys::SmartRWMutex<true> *mutex;
 };
-} // end anonymous namespace.
+} // namespace
 
 //===----------------------------------------------------------------------===//
 // MLIRContextImpl
@@ -250,7 +250,7 @@ public:
       attrMapping.second->~AbstractAttribute();
   }
 };
-} // end namespace mlir
+} // namespace mlir
 
 MLIRContext::MLIRContext(Threading setting)
     : MLIRContext(DialectRegistry(), setting) {}

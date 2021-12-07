@@ -192,6 +192,6 @@ class ReductionNode::iterator<SinglePath>
   ArrayRef<ReductionNode *> getNeighbors(ReductionNode *node);
 };
 
-} // end namespace mlir
+} // namespace mlir
 
 #endif // MLIR_REDUCER_REDUCTIONNODE_H

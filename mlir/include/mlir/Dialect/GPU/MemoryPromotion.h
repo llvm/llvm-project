@@ -24,6 +24,6 @@ class GPUFuncOp;
 /// copies will be inserted in the beginning and in the end of the function.
 void promoteToWorkgroupMemory(gpu::GPUFuncOp op, unsigned arg);
 
-} // end namespace mlir
+} // namespace mlir
 
 #endif // MLIR_DIALECT_GPU_MEMORYPROMOTION_H

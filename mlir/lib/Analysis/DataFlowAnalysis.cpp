@@ -211,7 +211,7 @@ private:
   /// A symbol table used for O(1) symbol lookups during simplification.
   SymbolTableCollection symbolTable;
 };
-} // end anonymous namespace
+} // namespace
 
 ForwardDataFlowSolver::ForwardDataFlowSolver(
     ForwardDataFlowAnalysisBase &analysis, Operation *op)

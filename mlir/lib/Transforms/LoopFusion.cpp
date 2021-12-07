@@ -59,7 +59,7 @@ struct LoopFusion : public AffineLoopFusionBase<LoopFusion> {
   void runOnFunction() override;
 };
 
-} // end anonymous namespace
+} // namespace
 
 std::unique_ptr<OperationPass<FuncOp>>
 mlir::createLoopFusionPass(unsigned fastMemorySpace,
@@ -726,7 +726,7 @@ void gatherEscapingMemrefs(unsigned id, MemRefDependenceGraph *mdg,
   }
 }
 
-} // end anonymous namespace
+} // namespace
 
 // Initializes the data dependence graph by walking operations in 'f'.
 // Assigns each node in the graph a node id based on program order in 'f'.
@@ -1972,7 +1972,7 @@ public:
   }
 };
 
-} // end anonymous namespace
+} // namespace
 
 void LoopFusion::runOnFunction() {
   MemRefDependenceGraph g;

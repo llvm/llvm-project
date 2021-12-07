@@ -103,6 +103,6 @@ private:
   OpBuilder &b;
   Location loc;
 };
-} // end namespace mlir
+} // namespace mlir
 
 #endif // MLIR_DIALECT_STANDARDOPS_UTILS_UTILS_H

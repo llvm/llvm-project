@@ -17,6 +17,6 @@ class Operation;
 /// compiler bugs, on this operation and any nested operations. On error, this
 /// reports the error through the MLIRContext and returns failure.
 LogicalResult verify(Operation *op);
-} //  end namespace mlir
+} // namespace mlir
 
 #endif

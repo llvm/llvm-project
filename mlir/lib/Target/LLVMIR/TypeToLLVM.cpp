@@ -170,9 +170,9 @@ private:
   /// type instead of creating a new type.
   llvm::DenseMap<Type, llvm::Type *> knownTranslations;
 };
-} // end namespace detail
-} // end namespace LLVM
-} // end namespace mlir
+} // namespace detail
+} // namespace LLVM
+} // namespace mlir
 
 LLVM::TypeToLLVMIRTranslator::TypeToLLVMIRTranslator(llvm::LLVMContext &context)
     : impl(new detail::TypeToLLVMIRTranslatorImpl(context)) {}

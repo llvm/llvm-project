@@ -1087,6 +1087,6 @@ private:
   PDLPatternModule pdlPatterns;
 };
 
-} // end namespace mlir
+} // namespace mlir
 
 #endif // MLIR_PATTERN_MATCH_H

@@ -260,7 +260,7 @@ public:
   using AttrOrTypeDef::AttrOrTypeDef;
 };
 
-} // end namespace tblgen
-} // end namespace mlir
+} // namespace tblgen
+} // namespace mlir
 
 #endif // MLIR_TABLEGEN_ATTRORTYPEDEF_H

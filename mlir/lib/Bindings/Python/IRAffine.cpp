@@ -397,7 +397,7 @@ public:
 private:
   PyAffineMap affineMap;
 };
-} // end namespace
+} // namespace
 
 bool PyAffineMap::operator==(const PyAffineMap &other) {
   return mlirAffineMapEqual(affineMap, other.affineMap);

@@ -99,7 +99,7 @@ private:
   unsigned numSymbolOperands;
   SmallVector<std::pair<StringRef, AffineExpr>, 4> dimsAndSymbols;
 };
-} // end anonymous namespace
+} // namespace
 
 /// Create an affine binary high precedence op expression (mul's, div's, mod).
 /// opLoc is the location of the op token to be used to report errors

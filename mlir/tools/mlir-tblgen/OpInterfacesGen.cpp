@@ -148,7 +148,7 @@ struct TypeInterfaceGenerator : public InterfaceGenerator {
                             "(*static_cast<const ConcreteType *>(this))");
   }
 };
-} // end anonymous namespace
+} // namespace
 
 //===----------------------------------------------------------------------===//
 // GEN: Interface definitions
@@ -443,7 +443,7 @@ void InterfaceGenerator::emitInterfaceDecl(Interface interface) {
   os << "template <typename " << valueTemplate << ">\n";
   os << "struct " << interface.getName() << "Trait;\n";
 
-  os << "\n} // end namespace detail\n";
+  os << "\n} // namespace detail\n";
 
   // Emit the main interface class declaration.
   os << llvm::formatv("class {0} : public ::mlir::{3}<{1}, detail::{2}> {\n"
@@ -570,7 +570,7 @@ struct InterfaceGenRegistration {
   std::string genDeclDesc, genDefDesc, genDocDesc;
   mlir::GenRegistration genDecls, genDefs, genDocs;
 };
-} // end anonymous namespace
+} // namespace
 
 static InterfaceGenRegistration<AttrInterfaceGenerator> attrGen("attr",
                                                                 "attribute");

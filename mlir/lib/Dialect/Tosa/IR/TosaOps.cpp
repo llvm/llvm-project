@@ -60,7 +60,7 @@ struct TosaInlinerInterface : public DialectInlinerInterface {
             isa<tosa::WhileOp>(dest->getParentOp()));
   }
 };
-} // end anonymous namespace
+} // namespace
 
 //===----------------------------------------------------------------------===//
 // TOSA control flow support.

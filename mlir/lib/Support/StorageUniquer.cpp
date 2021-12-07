@@ -257,7 +257,7 @@ private:
   function_ref<void(BaseStorage *)> destructorFn;
 #endif
 };
-} // end anonymous namespace
+} // namespace
 
 namespace mlir {
 namespace detail {
@@ -328,7 +328,7 @@ struct StorageUniquerImpl {
   /// Flag specifying if multi-threading is enabled within the uniquer.
   bool threadingIsEnabled = true;
 };
-} // end namespace detail
+} // namespace detail
 } // namespace mlir
 
 StorageUniquer::StorageUniquer() : impl(new StorageUniquerImpl()) {}

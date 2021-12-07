@@ -18,7 +18,7 @@ namespace {
 struct StripDebugInfo : public StripDebugInfoBase<StripDebugInfo> {
   void runOnOperation() override;
 };
-} // end anonymous namespace
+} // namespace
 
 void StripDebugInfo::runOnOperation() {
   auto unknownLoc = UnknownLoc::get(&getContext());

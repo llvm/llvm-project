@@ -108,7 +108,7 @@ struct CombineChainedAccessChain
     return success();
   }
 };
-} // end anonymous namespace
+} // namespace
 
 void spirv::AccessChainOp::getCanonicalizationPatterns(
     RewritePatternSet &results, MLIRContext *context) {
@@ -414,7 +414,7 @@ LogicalResult ConvertSelectionOpToSelect::canCanonicalizeSelection(
 
   return success();
 }
-} // end anonymous namespace
+} // namespace
 
 void spirv::SelectionOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                                      MLIRContext *context) {

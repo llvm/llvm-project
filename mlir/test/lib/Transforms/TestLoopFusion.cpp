@@ -49,7 +49,7 @@ struct TestLoopFusion : public PassWrapper<TestLoopFusion, FunctionPass> {
   void runOnFunction() override;
 };
 
-} // end anonymous namespace
+} // namespace
 
 // Run fusion dependence check on 'loops[i]' and 'loops[j]' at loop depths
 // in range ['loopDepth' + 1, 'maxLoopDepth'].

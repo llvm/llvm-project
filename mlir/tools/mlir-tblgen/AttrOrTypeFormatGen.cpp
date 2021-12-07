@@ -152,7 +152,7 @@ public:
   using Base::Base;
 };
 
-} // end anonymous namespace
+} // namespace
 
 //===----------------------------------------------------------------------===//
 // Format Strings
@@ -268,7 +268,7 @@ private:
   bool shouldEmitSpace;
   bool lastWasPunctuation;
 };
-} // end anonymous namespace
+} // namespace
 
 //===----------------------------------------------------------------------===//
 // ParserGen
@@ -559,7 +559,7 @@ private:
   /// Seen attribute or type parameters.
   llvm::BitVector seenParams;
 };
-} // end anonymous namespace
+} // namespace
 
 FailureOr<AttrOrTypeFormat> FormatParser::parse() {
   std::vector<std::unique_ptr<Element>> elements;

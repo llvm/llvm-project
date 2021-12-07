@@ -417,7 +417,7 @@ struct BlockEquivalenceData {
   /// produced within the block before this operation.
   DenseMap<Operation *, unsigned> opOrderIndex;
 };
-} // end anonymous namespace
+} // namespace
 
 BlockEquivalenceData::BlockEquivalenceData(Block *block)
     : block(block), hash(0) {
@@ -477,7 +477,7 @@ private:
   /// replaced by arguments when the cluster gets merged.
   std::set<std::pair<int, int>> operandsToMerge;
 };
-} // end anonymous namespace
+} // namespace
 
 LogicalResult BlockMergeCluster::addToCluster(BlockEquivalenceData &blockData) {
   if (leaderData.hash != blockData.hash)

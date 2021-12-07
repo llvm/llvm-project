@@ -98,7 +98,7 @@ struct TestStatisticPass
     getOperation()->walk([&](Operation *) { ++opCount; });
   }
 };
-} // end anonymous namespace
+} // namespace
 
 static void testNestedPipeline(OpPassManager &pm) {
   // Nest a module pipeline that contains:

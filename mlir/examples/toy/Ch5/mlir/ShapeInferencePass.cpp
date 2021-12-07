@@ -105,7 +105,7 @@ public:
     });
   }
 };
-} // end anonymous namespace
+} // namespace
 
 /// Create a Shape Inference pass.
 std::unique_ptr<mlir::Pass> mlir::toy::createShapeInferencePass() {

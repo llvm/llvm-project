@@ -48,7 +48,7 @@ struct TestMathPolynomialApproximationPass
                      "X86Vector dialect"),
       llvm::cl::init(false)};
 };
-} // end anonymous namespace
+} // namespace
 
 void TestMathPolynomialApproximationPass::runOnFunction() {
   RewritePatternSet patterns(&getContext());

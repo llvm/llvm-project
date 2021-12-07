@@ -326,6 +326,6 @@ private:
     return DenseMapInfo<DerivedKey>::getHashValue(derivedKey);
   }
 };
-} // end namespace mlir
+} // namespace mlir
 
 #endif

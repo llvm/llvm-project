@@ -38,7 +38,7 @@ struct NamedSuccessor {
   Successor constraint;
 };
 
-} // end namespace tblgen
-} // end namespace mlir
+} // namespace tblgen
+} // namespace mlir
 
 #endif // MLIR_TABLEGEN_SUCCESSOR_H_

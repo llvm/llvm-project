@@ -518,7 +518,7 @@ void populateFuncOpTypeConversionPattern(RewritePatternSet &patterns,
 
 namespace detail {
 struct ConversionPatternRewriterImpl;
-} // end namespace detail
+} // namespace detail
 
 /// This class implements a pattern rewriter for use with ConversionPatterns. It
 /// extends the base PatternRewriter and provides special conversion specific
@@ -946,6 +946,6 @@ LogicalResult applyAnalysisConversion(
     const FrozenRewritePatternSet &patterns,
     DenseSet<Operation *> &convertedOps,
     function_ref<void(Diagnostic &)> notifyCallback = nullptr);
-} // end namespace mlir
+} // namespace mlir
 
 #endif // MLIR_TRANSFORMS_DIALECTCONVERSION_H_

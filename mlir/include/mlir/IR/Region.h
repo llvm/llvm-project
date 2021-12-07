@@ -344,6 +344,6 @@ private:
   friend RangeBaseT;
 };
 
-} // end namespace mlir
+} // namespace mlir
 
 #endif // MLIR_IR_REGION_H

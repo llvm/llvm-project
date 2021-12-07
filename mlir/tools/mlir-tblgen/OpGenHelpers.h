@@ -24,7 +24,7 @@ namespace tblgen {
 std::vector<llvm::Record *>
 getRequestedOpDefinitions(const llvm::RecordKeeper &recordKeeper);
 
-} // end namespace tblgen
-} // end namespace mlir
+} // namespace tblgen
+} // namespace mlir
 
 #endif //  MLIR_TOOLS_MLIRTBLGEN_OPGENHELPERS_H_

@@ -206,7 +206,7 @@ void TestLinalgCodegenStrategy::runStrategy(
   if (failed(runPipeline(dynamicPM, funcOp)))
     return signalPassFailure();
 }
-} // end anonymous namespace
+} // namespace
 
 // For now, just assume it is the zero of type.
 // In the future, it should be the zero of type + op.

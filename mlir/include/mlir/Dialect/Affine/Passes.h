@@ -91,6 +91,6 @@ std::unique_ptr<OperationPass<FuncOp>> createSuperVectorizePass();
 #define GEN_PASS_REGISTRATION
 #include "mlir/Dialect/Affine/Passes.h.inc"
 
-} // end namespace mlir
+} // namespace mlir
 
 #endif // MLIR_DIALECT_AFFINE_RANSFORMS_PASSES_H

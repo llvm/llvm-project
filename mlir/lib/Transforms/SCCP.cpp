@@ -239,7 +239,7 @@ namespace {
 struct SCCP : public SCCPBase<SCCP> {
   void runOnOperation() override;
 };
-} // end anonymous namespace
+} // namespace
 
 void SCCP::runOnOperation() {
   Operation *op = getOperation();

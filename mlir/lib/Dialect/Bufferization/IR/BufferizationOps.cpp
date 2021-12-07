@@ -100,7 +100,7 @@ struct SimplifyClones : public OpRewritePattern<CloneOp> {
   }
 };
 
-} // namespace.
+} // namespace
 
 void CloneOp::getCanonicalizationPatterns(OwningRewritePatternList &results,
                                           MLIRContext *context) {

@@ -30,7 +30,7 @@ struct MemRefInlinerInterface : public DialectInlinerInterface {
     return true;
   }
 };
-} // end anonymous namespace
+} // namespace
 
 void mlir::memref::MemRefDialect::initialize() {
   addOperations<

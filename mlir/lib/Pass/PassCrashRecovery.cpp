@@ -362,7 +362,7 @@ private:
   /// The generator used to create crash reproducers.
   PassCrashReproducerGenerator &generator;
 };
-} // end anonymous namespace
+} // namespace
 
 //===----------------------------------------------------------------------===//
 // FileReproducerStream
@@ -386,7 +386,7 @@ private:
   /// ToolOutputFile corresponding to opened `filename`.
   std::unique_ptr<llvm::ToolOutputFile> outputFile = nullptr;
 };
-} // end anonymous namespace
+} // namespace
 
 //===----------------------------------------------------------------------===//
 // PassManager

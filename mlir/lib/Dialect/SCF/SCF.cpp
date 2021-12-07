@@ -54,7 +54,7 @@ struct SCFInlinerInterface : public DialectInlinerInterface {
     }
   }
 };
-} // end anonymous namespace
+} // namespace
 
 //===----------------------------------------------------------------------===//
 // SCFDialect

@@ -96,6 +96,6 @@ LoopNest buildLoopNest(OpBuilder &builder, Location loc, ValueRange lbs,
                        function_ref<void(OpBuilder &, Location, ValueRange)>
                            bodyBuilder = nullptr);
 
-} // end namespace scf
-} // end namespace mlir
+} // namespace scf
+} // namespace mlir
 #endif // MLIR_DIALECT_SCF_H_

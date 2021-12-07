@@ -67,6 +67,6 @@ Value getIdentityValue(AtomicRMWKind op, Type resultType, OpBuilder &builder,
 Value getReductionOp(AtomicRMWKind op, OpBuilder &builder, Location loc,
                      Value lhs, Value rhs);
 
-} // end namespace mlir
+} // namespace mlir
 
 #endif // MLIR_DIALECT_IR_STANDARDOPS_IR_OPS_H

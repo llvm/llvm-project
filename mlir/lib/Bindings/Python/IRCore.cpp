@@ -2012,7 +2012,7 @@ private:
   PyOperationRef operation;
 };
 
-} // end namespace
+} // namespace
 
 //------------------------------------------------------------------------------
 // Populates the core exports of the 'ir' submodule.

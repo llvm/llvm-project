@@ -135,7 +135,7 @@ private:
   /// generated operations.
   SetVector<Value> locOps;
 };
-} // end anonymous namespace
+} // namespace
 
 PatternLowering::PatternLowering(FuncOp matcherFunc, ModuleOp rewriterModule)
     : builder(matcherFunc.getContext()), matcherFunc(matcherFunc),

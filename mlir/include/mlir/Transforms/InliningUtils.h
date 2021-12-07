@@ -244,6 +244,6 @@ LogicalResult inlineCall(InlinerInterface &interface, CallOpInterface call,
                          CallableOpInterface callable, Region *src,
                          bool shouldCloneInlinedRegion = true);
 
-} // end namespace mlir
+} // namespace mlir
 
 #endif // MLIR_TRANSFORMS_INLINING_UTILS_H

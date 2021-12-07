@@ -41,7 +41,7 @@ uint32_t getPrefixedOpcode(uint32_t wordCount, spirv::Opcode opcode);
 /// Encodes an SPIR-V `literal` string into the given `binary` vector.
 LogicalResult encodeStringLiteralInto(SmallVectorImpl<uint32_t> &binary,
                                       StringRef literal);
-} // end namespace spirv
-} // end namespace mlir
+} // namespace spirv
+} // namespace mlir
 
 #endif // MLIR_TARGET_SPIRV_BINARY_UTILS_H_

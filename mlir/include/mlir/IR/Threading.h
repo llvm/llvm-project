@@ -148,6 +148,6 @@ void parallelForEachN(MLIRContext *context, size_t begin, size_t end,
   parallelForEach(context, llvm::seq(begin, end), std::forward<FuncT>(func));
 }
 
-} // end namespace mlir
+} // namespace mlir
 
 #endif // MLIR_IR_THREADING_H

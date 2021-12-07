@@ -19,7 +19,7 @@ class Pass;
 
 namespace detail {
 struct PassInstrumentorImpl;
-} // end namespace detail
+} // namespace detail
 
 /// PassInstrumentation provides several entry points into the pass manager
 /// infrastructure. Instrumentations should be added directly to a PassManager
@@ -120,7 +120,7 @@ private:
   std::unique_ptr<detail::PassInstrumentorImpl> impl;
 };
 
-} // end namespace mlir
+} // namespace mlir
 
 namespace llvm {
 template <> struct DenseMapInfo<mlir::PassInstrumentation::PipelineParentInfo> {
@@ -143,6 +143,6 @@ template <> struct DenseMapInfo<mlir::PassInstrumentation::PipelineParentInfo> {
            lhs.parentPass == rhs.parentPass;
   }
 };
-} // end namespace llvm
+} // namespace llvm
 
 #endif // MLIR_PASS_PASSINSTRUMENTATION_H_

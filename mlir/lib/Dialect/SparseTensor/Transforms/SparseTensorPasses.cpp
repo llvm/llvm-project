@@ -134,7 +134,7 @@ struct SparseTensorConversionPass
   }
 };
 
-} // end anonymous namespace
+} // namespace
 
 std::unique_ptr<Pass> mlir::createSparsificationPass() {
   return std::make_unique<SparsificationPass>();

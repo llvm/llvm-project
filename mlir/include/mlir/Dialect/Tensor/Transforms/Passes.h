@@ -14,7 +14,7 @@
 namespace mlir {
 namespace bufferization {
 class BufferizeTypeConverter;
-} // end namespace bufferization
+} // namespace bufferization
 
 class RewritePatternSet;
 using OwningRewritePatternList = RewritePatternSet;
@@ -36,6 +36,6 @@ namespace tensor {
 #include "mlir/Dialect/Tensor/Transforms/Passes.h.inc"
 } // namespace tensor
 
-} // end namespace mlir
+} // namespace mlir
 
 #endif // MLIR_DIALECT_TENSOR_TRANSFORMS_PASSES_H_

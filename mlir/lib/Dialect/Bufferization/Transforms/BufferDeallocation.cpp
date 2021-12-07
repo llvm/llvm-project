@@ -665,7 +665,7 @@ struct BufferDeallocationPass : BufferDeallocationBase<BufferDeallocationPass> {
   }
 };
 
-} // end anonymous namespace
+} // namespace
 
 //===----------------------------------------------------------------------===//
 // BufferDeallocationPass construction

@@ -44,7 +44,7 @@ private:
                                 llvm::cl::OneOrMore, llvm::cl::CommaSeparated};
 };
 
-} // end anonymous namespace
+} // namespace
 
 void TestLoopPermutation::runOnFunction() {
 

@@ -451,7 +451,7 @@ struct SCFToOpenMPPass : public ConvertSCFToOpenMPBase<SCFToOpenMPPass> {
   }
 };
 
-} // end namespace
+} // namespace
 
 std::unique_ptr<OperationPass<ModuleOp>> mlir::createConvertSCFToOpenMPPass() {
   return std::make_unique<SCFToOpenMPPass>();

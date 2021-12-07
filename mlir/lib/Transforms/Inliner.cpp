@@ -123,7 +123,7 @@ private:
   /// A symbol table to use when resolving call lookups.
   SymbolTableCollection &symbolTable;
 };
-} // end anonymous namespace
+} // namespace
 
 CGUseList::CGUseList(Operation *op, CallGraph &cg,
                      SymbolTableCollection &symbolTable)
@@ -279,7 +279,7 @@ private:
   std::vector<CallGraphNode *> nodes;
   llvm::scc_iterator<const CallGraph *> &parentIterator;
 };
-} // end anonymous namespace
+} // namespace
 
 /// Run a given transformation over the SCCs of the callgraph in a bottom up
 /// traversal.
@@ -311,7 +311,7 @@ struct ResolvedCall {
   CallOpInterface call;
   CallGraphNode *sourceNode, *targetNode;
 };
-} // end anonymous namespace
+} // namespace
 
 /// Collect all of the callable operations within the given range of blocks. If
 /// `traverseNestedCGNodes` is true, this will also collect call operations
@@ -559,7 +559,7 @@ private:
   /// during optimization.
   SmallVector<llvm::StringMap<OpPassManager>, 8> opPipelines;
 };
-} // end anonymous namespace
+} // namespace
 
 InlinerPass::InlinerPass() : InlinerPass(defaultInlinerOptPipeline) {}
 InlinerPass::InlinerPass(std::function<void(OpPassManager &)> defaultPipeline)

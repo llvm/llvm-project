@@ -28,7 +28,7 @@ class ModuleOp;
 LogicalResult serialize(ModuleOp module, SmallVectorImpl<uint32_t> &binary,
                         bool emitDebugInfo = false);
 
-} // end namespace spirv
-} // end namespace mlir
+} // namespace spirv
+} // namespace mlir
 
 #endif // MLIR_TARGET_SPIRV_SERIALIZATION_H

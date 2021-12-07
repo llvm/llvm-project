@@ -160,7 +160,7 @@ enum OpCode : ByteCodeField {
   /// Compare a range of types with a set of constants.
   SwitchTypes,
 };
-} // end anonymous namespace
+} // namespace
 
 //===----------------------------------------------------------------------===//
 // ByteCode Generation
@@ -479,7 +479,7 @@ struct ByteCodeLiveRange {
   /// The value range storage index for this range.
   Optional<unsigned> valueRangeIndex;
 };
-} // end anonymous namespace
+} // namespace
 
 void Generator::generate(ModuleOp module) {
   FuncOp matcherFunc = module.lookupSymbol<FuncOp>(
@@ -1313,7 +1313,7 @@ public:
     return allocatedValueRanges;
   }
 };
-} // end anonymous namespace
+} // namespace
 
 void ByteCodeExecutor::executeApplyConstraint(PatternRewriter &rewriter) {
   LLVM_DEBUG(llvm::dbgs() << "Executing ApplyConstraint:\n");

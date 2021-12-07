@@ -197,6 +197,6 @@ private:
   llvm::JITEventListener *perfListener;
 };
 
-} // end namespace mlir
+} // namespace mlir
 
 #endif // MLIR_EXECUTIONENGINE_EXECUTIONENGINE_H_

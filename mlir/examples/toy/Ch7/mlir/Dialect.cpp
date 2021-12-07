@@ -461,9 +461,9 @@ struct StructTypeStorage : public mlir::TypeStorage {
   /// The following field contains the element types of the struct.
   llvm::ArrayRef<mlir::Type> elementTypes;
 };
-} // end namespace detail
-} // end namespace toy
-} // end namespace mlir
+} // namespace detail
+} // namespace toy
+} // namespace mlir
 
 /// Create an instance of a `StructType` with the given element types. There
 /// *must* be at least one element type.

@@ -207,8 +207,8 @@ raw_ostream &operator<<(raw_ostream &os, Visibility visibility) {
   }
   return os;
 }
-} // end namespace tblgen
-} // end namespace mlir
+} // namespace tblgen
+} // namespace mlir
 
 //===----------------------------------------------------------------------===//
 // ParentClass definitions

@@ -516,6 +516,6 @@ protected:
   bool emittedError = false;
 };
 } // namespace detail
-} // end namespace mlir
+} // namespace mlir
 
 #endif // MLIR_LIB_PARSER_ASMPARSERIMPL_H

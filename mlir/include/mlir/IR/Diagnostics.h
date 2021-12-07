@@ -20,7 +20,7 @@ namespace llvm {
 class MemoryBuffer;
 class SMLoc;
 class SourceMgr;
-} // end namespace llvm
+} // namespace llvm
 
 namespace mlir {
 class DiagnosticEngine;
@@ -34,7 +34,7 @@ class Value;
 
 namespace detail {
 struct DiagnosticEngineImpl;
-} // end namespace detail
+} // namespace detail
 
 /// Defines the different supported severity of a diagnostic.
 enum class DiagnosticSeverity {
@@ -516,7 +516,7 @@ private:
 
 namespace detail {
 struct SourceMgrDiagnosticHandlerImpl;
-} // end namespace detail
+} // namespace detail
 
 /// This class is a utility diagnostic handler for use with llvm::SourceMgr.
 class SourceMgrDiagnosticHandler : public ScopedDiagnosticHandler {
@@ -580,7 +580,7 @@ private:
 
 namespace detail {
 struct SourceMgrDiagnosticVerifierHandlerImpl;
-} // end namespace detail
+} // namespace detail
 
 /// This class is a utility diagnostic handler for use with llvm::SourceMgr that
 /// verifies that emitted diagnostics match 'expected-*' lines on the
@@ -613,7 +613,7 @@ private:
 
 namespace detail {
 struct ParallelDiagnosticHandlerImpl;
-} // end namespace detail
+} // namespace detail
 
 /// This class is a utility diagnostic handler for use when multi-threading some
 /// part of the compiler where diagnostics may be emitted. This handler ensures
