@@ -823,7 +823,7 @@ void CodeExtractor::splitReturnBlocks() {
 /// constructFunction - make a function based on inputs and outputs, as follows:
 /// f(in0, ..., inN, out0, ..., outN)
 Function *CodeExtractor::constructFunctionDeclaration(const ValueSet &inputs,
-                                                      const ValueSet &outputs,const  Twine &Name) {
+                                                      const ValueSet &outputs,             BlockFrequency EntryFreq,const  Twine &Name) {
   LLVM_DEBUG(dbgs() << "inputs: " << inputs.size() << "\n");
   LLVM_DEBUG(dbgs() << "outputs: " << outputs.size() << "\n");
 
@@ -1012,6 +1012,14 @@ Function *CodeExtractor::constructFunctionDeclaration(const ValueSet &inputs,
       AI->setName(outputs[i]->getName()+".out");
   }
 
+  // Update the entry count of the function.
+  if (BFI) {
+      auto Count = BFI->getProfileCountFromFreq(EntryFreq.getFrequency());
+      if (Count.hasValue())
+          newFunction->setEntryCount(
+              ProfileCount(Count.getValue(), Function::PCT_Real)); // FIXME
+  }
+
   return newFunction;
 }
 
@@ -1031,52 +1039,54 @@ static void applyFirstDebugLoc(Function *oldFunction,
   }
 }
 
-void CodeExtractor::emitFunction(Function *newFunction, const ValueSet &inputs,
-                                 const ValueSet &outputs, BasicBlock *header,
-                                 const ValueSet &SinkingCands,
-                                 StructType *StructArgTy,
-                                 ArrayRef<BasicBlock *> SwichCases) {
+void CodeExtractor::emitFunctionBody(const ValueSet &inputs, const ValueSet &outputs,
+                                 Function *newFunction, StructType *StructArgTy,
+                                 ArrayRef<BasicBlock *> SwitchCases,
+                                 BasicBlock *header,
+                                 const ValueSet &SinkingCands) {
   Function *oldFunction = header->getParent();
   LLVMContext &Context = oldFunction->getContext();
 
   // The new function needs a root node because other nodes can branch to the
   // head of the region, but the entry node of a function cannot have preds.
   BasicBlock *newFuncRoot =
-      BasicBlock::Create(header->getContext(), "newFuncRoot", newFunction);
+      BasicBlock::Create(Context, "newFuncRoot", newFunction);
 
+  // The map of values from the original function to the corresponding values in the extracted function; only used with KeepOldBlocks.
   ValueToValueMapTy VMap;
 
+  // Additional instructions not in a extracted block whose operands need to be remapped.
   SmallVector<Instruction *> AdditionalRemap;
-  auto MoveOrCopyInst = [this](Instruction *I, BasicBlock *IB,
-                               BasicBlock::iterator IP) -> Instruction * {
+
+
+  // Copy or move (depending on KeepOldBlocks) an instruction to the new function.
+  auto MoveOrCopyInst = [this,newFuncRoot](Instruction *I) -> Instruction * {
+      BasicBlock::iterator IP =   newFuncRoot->getFirstInsertionPt();
     if (KeepOldBlocks) {
-      auto AI = I->clone();
-      AI->setName(I->getName());
-      IB->getInstList().insert(IP, AI);
-      return AI;
+      Instruction* CloneI = I->clone();
+      CloneI->setName(I->getName());
+      newFuncRoot->getInstList().insert(IP, CloneI);
+      return CloneI;
     }
-    I->moveBefore(*IB, IP);
+    I->moveBefore(*newFuncRoot, IP);
     return I;
   };
 
   // Now sink all instructions which only have non-phi uses inside the region.
   // Group the allocas at the start of the block, so that any bitcast uses of
   // the allocas are well-defined.
-
-  for (auto *II : SinkingCands) {
+  for (Value *II : SinkingCands) {
     if (!isa<AllocaInst>(II)) {
-      auto New = MoveOrCopyInst(cast<Instruction>(II), newFuncRoot,
-                                newFuncRoot->getFirstInsertionPt());
+      Instruction* New = MoveOrCopyInst(cast<Instruction>(II));
       if (KeepOldBlocks) {
         AdditionalRemap.push_back(New);
         VMap[II] = New;
       }
     }
   }
-  for (auto *II : SinkingCands) {
+  for (Value *II : SinkingCands) {
     if (auto *AI = dyn_cast<AllocaInst>(II)) {
-      AI = cast<AllocaInst>(
-          MoveOrCopyInst(AI, newFuncRoot, newFuncRoot->getFirstInsertionPt()));
+      AI = cast<AllocaInst>( MoveOrCopyInst(AI));
       if (KeepOldBlocks) {
         AdditionalRemap.push_back(AI);
         VMap[II] = AI;
@@ -1094,8 +1104,8 @@ void CodeExtractor::emitFunction(Function *newFunction, const ValueSet &inputs,
     Value *RewriteVal;
     if (AggregateArgs) {
       Value *Idx[2];
-      Idx[0] = Constant::getNullValue(Type::getInt32Ty(header->getContext()));
-      Idx[1] = ConstantInt::get(Type::getInt32Ty(header->getContext()), i);
+      Idx[0] = Constant::getNullValue(Type::getInt32Ty(Context));
+      Idx[1] = ConstantInt::get(Type::getInt32Ty(Context), i);
       Instruction *TI = newFunction->begin()->getTerminator();
       GetElementPtrInst *GEP = GetElementPtrInst::Create(
           StructArgTy, &*AI, Idx, "gep_" + inputs[i]->getName(), TI);
@@ -1107,14 +1117,14 @@ void CodeExtractor::emitFunction(Function *newFunction, const ValueSet &inputs,
     NewValues.push_back(RewriteVal);
   }
 
-  for (auto &&P : enumerate(inputs)) {
-    VMap[P.value()] = NewValues[P.index()];
-  }
 
-  //// Copy/Move  code
-  ///////////////////////////////////////////////////////////////////////////////
+  
 
   if (KeepOldBlocks) {
+      for (auto &&P : enumerate(inputs)) 
+          VMap[P.value()] = NewValues[P.index()];
+
+      // Clone the blocks and instructions code region.
     for (BasicBlock *Block : Blocks) {
       BasicBlock *CBB = CloneBasicBlock(
           Block, VMap, {}, newFunction, /* CodeInfo */ nullptr,
@@ -1135,14 +1145,14 @@ void CodeExtractor::emitFunction(Function *newFunction, const ValueSet &inputs,
         VMap[OldBBAddr] = BlockAddress::get(newFunction, CBB);
       }
 
-      // Note return instructions for the caller.
-      //  if (ReturnInst *RI = dyn_cast<ReturnInst>(CBB->getTerminator()))
-      //     Returns.push_back(RI);
 
+      // Non-header block may have branches from outside the region. These continue to branch to the original blocks, hence remove their PHI entries. 
+      if (Block != header)
       for (auto &&P : CBB->phis()) {
-        auto NumIncoming = P.getNumIncomingValues();
+        unsigned NumIncoming = P.getNumIncomingValues();
         for (int Idx = NumIncoming - 1; Idx >= 0; --Idx) {
-          if (Blocks.count(P.getIncomingBlock(Idx)))
+            BasicBlock *IncomingBlock = P.getIncomingBlock(Idx);
+          if (Blocks.count(IncomingBlock) )
             continue;
           P.removeIncomingValue(Idx, /*DeletePHIIfEmpty=*/false);
         }
@@ -1158,7 +1168,6 @@ void CodeExtractor::emitFunction(Function *newFunction, const ValueSet &inputs,
   } else {
     moveCodeToFunction(newFunction);
 
-    if (!KeepOldBlocks) {
       for (unsigned i = 0, e = inputs.size(); i != e; ++i) {
         Value *RewriteVal = NewValues[i];
 
@@ -1169,11 +1178,10 @@ void CodeExtractor::emitFunction(Function *newFunction, const ValueSet &inputs,
             if (Blocks.count(inst->getParent()))
               inst->replaceUsesOfWith(inputs[i], RewriteVal);
       }
-    }
   }
 
   std::map<BasicBlock *, BasicBlock *> ExitBlockMap;
-  for (auto &&P : enumerate(SwichCases)) {
+  for (auto &&P : enumerate(SwitchCases)) {
     auto OldTarget = P.value();
     auto SuccNum = P.index();
 
@@ -1392,12 +1400,10 @@ static void insertLifetimeMarkersSurroundingCall(
 }
 
 CallInst *CodeExtractor::emitReplacerCall(
-    Function *oldFunction,
-    BasicBlock *header // NewHeader
-    ,
-    BasicBlock *ReplIP, Function *newFunction, const ValueSet &inputs,
-    const ValueSet &outputs, BlockFrequency EntryFreq, StructType *StructArgTy,
-    ArrayRef<BasicBlock *> SwichCases, const SetVector<Value *> &LifetimesStart,
+    const ValueSet &inputs, const ValueSet &outputs, Function *newFunction,
+    StructType *StructArgTy, ArrayRef<BasicBlock *> SwtichCases ,  Function *oldFunction , BasicBlock *ReplIP,
+    BlockFrequency EntryFreq,
+  const SetVector<Value *> &LifetimesStart,
     std::vector<Value *> &Reloads) {
   LLVMContext &Context = oldFunction->getContext();
   Module *M = oldFunction->getParent();
@@ -1405,15 +1411,11 @@ CallInst *CodeExtractor::emitReplacerCall(
 
   // This takes place of the original loop
   BasicBlock *codeReplacer =
-      BasicBlock::Create(header->getContext(), "codeRepl", oldFunction, ReplIP);
+      BasicBlock::Create(Context, "codeRepl", oldFunction, ReplIP);
   BasicBlock *AllocaBlock = &oldFunction->front();
 
   // Update the entry count of the function.
   if (BFI) {
-    auto Count = BFI->getProfileCountFromFreq(EntryFreq.getFrequency());
-    if (Count.hasValue())
-      newFunction->setEntryCount(
-          ProfileCount(Count.getValue(), Function::PCT_Real)); // FIXME
     BFI->setBlockFreq(codeReplacer, EntryFreq.getFrequency());
   }
 
@@ -1509,7 +1511,7 @@ CallInst *CodeExtractor::emitReplacerCall(
       SwitchInst::Create(Constant::getNullValue(Type::getInt16Ty(Context)),
                          codeReplacer, 0, codeReplacer);
 
-  for (auto &&P : enumerate(SwichCases)) {
+  for (auto &&P : enumerate(SwtichCases)) {
     auto OldTarget = P.value();
     auto SuccNum = P.index(); // ExitBlockSwitchIdx[OldTarget];
 
@@ -2017,7 +2019,7 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
       Suffix.empty()
       ? (header->getName().empty() ? "extracted" : header->getName().str())
       : Suffix;
-  Function *newFunction = constructFunctionDeclaration(inputs, outputs,     oldFunction->getName() + "." + SuffixToUse );
+  Function *newFunction = constructFunctionDeclaration(inputs, outputs,   EntryFreq,  oldFunction->getName() + "." + SuffixToUse );
 
 
 
@@ -2029,15 +2031,15 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
   //// CodeGen newFunction implementation
   //////////////////////////////////////////////////////
 
-  emitFunction(newFunction, inputs, outputs, header, SinkingCands, StructArgTy,
-               SwichCases);
+  emitFunctionBody(inputs, outputs, newFunction, StructArgTy, SwichCases, header,
+               SinkingCands);
 
   //// Codegen newFunction call replacement
   /////////////////////////////////////////////////
   std::vector<Value *> Reloads;
-  CallInst *call = emitReplacerCall(oldFunction, header, ReplIP, newFunction,
-                                    inputs, outputs, EntryFreq, StructArgTy,
-                                    SwichCases, LifetimesStart, Reloads);
+  CallInst *call = emitReplacerCall( inputs, outputs,
+                                    newFunction, StructArgTy, SwichCases, oldFunction, ReplIP,
+                                    EntryFreq, LifetimesStart, Reloads);
   BasicBlock *codeReplacer = call->getParent();
 
   //// Connect call replacement to CFG

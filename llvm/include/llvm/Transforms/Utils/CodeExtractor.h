@@ -263,21 +263,21 @@ public:
 
 /// Generates the function declaration for the function containing the extracted code.
     Function *constructFunctionDeclaration(const ValueSet &inputs,
-                                           const ValueSet &outputs, const  Twine &Name);
+                                           const ValueSet &outputs,              BlockFrequency EntryFreq, const  Twine &Name);
 
-/// Generates the extracted function's code.
-    void emitFunction(Function *newFunction, const ValueSet &inputs,
-                      const ValueSet &outputs, BasicBlock *header,
-                      const ValueSet &SinkingCands, StructType *StructArgTy,
-                      ArrayRef<BasicBlock *> SwichCases);
+/// Generates the code for the extracted function. That is: a prolog, the moved or copied code from the original function, and epilogs for each exit.
+    void emitFunctionBody(const ValueSet &inputs, const ValueSet &outputs,
+                      Function *newFunction, StructType *StructArgTy,
+                      ArrayRef<BasicBlock *> SwitchCases, BasicBlock *header,
+                      const ValueSet &SinkingCands);
 
 /// Generates a Basic Block that calls the extracted function.
-    CallInst *emitReplacerCall(Function *oldFunction, BasicBlock *header,
-                               BasicBlock *ReplIP, Function *newFunction,
-                               const ValueSet &inputs, const ValueSet &outputs,
+    CallInst *emitReplacerCall( const ValueSet &inputs, const ValueSet &outputs,
+                               Function *newFunction, StructType *StructArgTy,
+                               ArrayRef<BasicBlock *> SwitchCases,
+        Function *oldFunction ,
+                               BasicBlock *ReplIP,
                                BlockFrequency EntryFreq,
-                               StructType *StructArgTy,
-                               ArrayRef<BasicBlock *> SwichCases,
                                const SetVector<Value *> &LifetimesStart,
                                std::vector<Value *> &Reloads);
 
