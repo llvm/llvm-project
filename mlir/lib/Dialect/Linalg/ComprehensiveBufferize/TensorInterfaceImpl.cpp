@@ -144,10 +144,10 @@ struct ExtractSliceOpInterface
         extractSliceOp.result().getType().cast<RankedTensorType>();
 
     // If not inplaceable, alloc.
-    bool inplace = state.aliasInfo.isInPlace(extractSliceOp->getResult(0));
+    bool inplace = state.isInPlace(extractSliceOp->getResult(0));
     Value alloc;
     if (!inplace)
-      alloc = state.createAllocDeallocFn(b, loc, extractSliceOp.result());
+      alloc = state.createAllocDeallocPair(b, loc, extractSliceOp.result());
 
     // Bufferize to subview.
     auto subviewMemRefType =
@@ -159,15 +159,12 @@ struct ExtractSliceOpInterface
     Value subView = b.create<memref::SubViewOp>(
         loc, subviewMemRefType, srcMemref, extractSliceOp.getMixedOffsets(),
         extractSliceOp.getMixedSizes(), extractSliceOp.getMixedStrides());
-    // Insert new alias.
-    state.aliasInfo.insertNewBufferAlias(subView, srcMemref);
 
     /// If not inplaceable, copy.
     if (!inplace) {
       // Do not copy if the copied data is never read.
       if (isValueRead(extractSliceOp.result()))
-        state.options.allocationFns->memCpyFn(b, extractSliceOp.getLoc(),
-                                              subView, alloc);
+        state.createMemCpy(b, extractSliceOp.getLoc(), subView, alloc);
       subView = alloc;
     }
 
@@ -421,8 +418,7 @@ struct InsertSliceOpInterface
           insertSliceOp.getMixedSizes(), insertSliceOp.getMixedStrides());
       // Copy tensor.
       Value srcMemref = state.lookupBuffer(insertSliceOp.source());
-      state.options.allocationFns->memCpyFn(b, insertSliceOp.getLoc(),
-                                            srcMemref, subView);
+      state.createMemCpy(b, insertSliceOp.getLoc(), srcMemref, subView);
     }
 
     state.mapBuffer(insertSliceOp.result(), dstMemref);
@@ -436,18 +432,19 @@ struct InsertSliceOpInterface
 } // namespace mlir
 
 LogicalResult mlir::linalg::comprehensive_bufferize::tensor_ext::
-    InplaceInsertSliceOpAnalysis::run(FuncOp funcOp, BufferizationState &state,
+    InplaceInsertSliceOpAnalysis::run(Operation *op, BufferizationState &state,
+                                      BufferizationAliasInfo &aliasInfo,
                                       SmallVector<Operation *> &newOps) {
   auto &tensorState = getTensorBufferizationState(state);
-  funcOp.walk([&](InsertSliceOp insertSliceOp) {
+  op->walk([&](InsertSliceOp insertSliceOp) {
     // A copy of the source buffer is needed if either:
     //   - The producer of `source` is not inplace. This is the case where a
     //     slice is computed out of place into the inplace full tensor.
     //   - The result is not inplace. This is the case where the whole tensor is
     //     cloned and the clone needs to be updated.
-    if (isSourceEquivalentToAMatchingInplaceExtractSliceOp(state.aliasInfo,
+    if (isSourceEquivalentToAMatchingInplaceExtractSliceOp(aliasInfo,
                                                            insertSliceOp) &&
-        state.aliasInfo.isInPlace(insertSliceOp->getResult(0)))
+        state.isInPlace(insertSliceOp->getResult(0)))
       tensorState.insertSliceOpsWithoutCopy.insert(insertSliceOp);
   });
   return success();

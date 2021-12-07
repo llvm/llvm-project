@@ -242,11 +242,77 @@ const char *Demangler::parseIdentifier(OutputBuffer *Demangled,
 
   // TODO: Parse template instances with a length prefix.
 
+  // There can be multiple different declarations in the same function that
+  // have the same mangled name.  To make the mangled names unique, a fake
+  // parent in the form `__Sddd' is added to the symbol.
+  if (Len >= 4 && Mangled[0] == '_' && Mangled[1] == '_' && Mangled[2] == 'S') {
+    const char *NumPtr = Mangled + 3;
+    while (NumPtr < (Mangled + Len) && std::isdigit(*NumPtr))
+      ++NumPtr;
+
+    if (Mangled + Len == NumPtr) {
+      // Skip over the fake parent.
+      Mangled += Len;
+      return parseIdentifier(Demangled, Mangled);
+    }
+
+    // Else demangle it as a plain identifier.
+  }
+
   return parseLName(Demangled, Mangled, Len);
 }
 
 const char *Demangler::parseLName(OutputBuffer *Demangled, const char *Mangled,
                                   unsigned long Len) {
+  switch (Len) {
+  case 6:
+    if (strncmp(Mangled, "__initZ", Len + 1) == 0) {
+      // The static initializer for a given symbol.
+      Demangled->prepend("initializer for ");
+      Demangled->setCurrentPosition(Demangled->getCurrentPosition() - 1);
+      Mangled += Len;
+      return Mangled;
+    }
+    if (strncmp(Mangled, "__vtblZ", Len + 1) == 0) {
+      // The vtable symbol for a given class.
+      Demangled->prepend("vtable for ");
+      Demangled->setCurrentPosition(Demangled->getCurrentPosition() - 1);
+      Mangled += Len;
+      return Mangled;
+    }
+    break;
+
+  case 7:
+    if (strncmp(Mangled, "__ClassZ", Len + 1) == 0) {
+      // The classinfo symbol for a given class.
+      Demangled->prepend("ClassInfo for ");
+      Demangled->setCurrentPosition(Demangled->getCurrentPosition() - 1);
+      Mangled += Len;
+      return Mangled;
+    }
+    break;
+
+  case 11:
+    if (strncmp(Mangled, "__InterfaceZ", Len + 1) == 0) {
+      // The interface symbol for a given class.
+      Demangled->prepend("Interface for ");
+      Demangled->setCurrentPosition(Demangled->getCurrentPosition() - 1);
+      Mangled += Len;
+      return Mangled;
+    }
+    break;
+
+  case 12:
+    if (strncmp(Mangled, "__ModuleInfoZ", Len + 1) == 0) {
+      // The ModuleInfo symbol for a given module.
+      Demangled->prepend("ModuleInfo for ");
+      Demangled->setCurrentPosition(Demangled->getCurrentPosition() - 1);
+      Mangled += Len;
+      return Mangled;
+    }
+    break;
+  }
+
   *Demangled << StringView(Mangled, Len);
   Mangled += Len;
 

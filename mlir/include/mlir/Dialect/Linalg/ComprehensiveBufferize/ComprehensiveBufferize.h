@@ -17,17 +17,18 @@ namespace linalg {
 namespace comprehensive_bufferize {
 
 struct BufferizationOptions;
-struct BufferizationState;
+class BufferizationState;
 struct PostAnalysisStep;
 
-/// Bufferize the given function. Does not bufferize the function boundary.
-/// Reuses an existing BufferizationState object.
-// TODO: This function is meant to be called from ModuleBufferize and not can
-// not yet be called standalone.
+/// Bufferize the given operation. Reuses an existing BufferizationState object.
 LogicalResult runComprehensiveBufferize(
-    FuncOp funcOp, const BufferizationOptions &options,
+    Operation *op, const BufferizationOptions &options,
     BufferizationState &state,
     const std::vector<std::unique_ptr<PostAnalysisStep>> &extraSteps);
+
+/// Bufferize the given operation.
+LogicalResult runComprehensiveBufferize(Operation *op,
+                                        const BufferizationOptions &options);
 
 } // namespace comprehensive_bufferize
 } // namespace linalg

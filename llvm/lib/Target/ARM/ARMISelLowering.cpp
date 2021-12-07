@@ -2952,9 +2952,17 @@ bool ARMTargetLowering::IsEligibleForTailCallOptimization(
   // Indirect tail calls cannot be optimized for Thumb1 if the args
   // to the call take up r0-r3. The reason is that there are no legal registers
   // left to hold the pointer to the function to be called.
-  if (Subtarget->isThumb1Only() && Outs.size() >= 4 &&
-      (!isa<GlobalAddressSDNode>(Callee.getNode()) || isIndirect))
-    return false;
+  // Similarly, if the function uses return address sign and authentication,
+  // r12 is needed to hold the PAC and is not available to hold the callee
+  // address.
+  if (Outs.size() >= 4 &&
+      (!isa<GlobalAddressSDNode>(Callee.getNode()) || isIndirect)) {
+    if (Subtarget->isThumb1Only())
+      return false;
+    // Conservatively assume the function spills LR.
+    if (MF.getInfo<ARMFunctionInfo>()->shouldSignReturnAddress(true))
+      return false;
+  }
 
   // Look for obvious safe cases to perform tail call optimization that do not
   // require ABI changes. This is what gcc calls sibcall.

@@ -264,10 +264,11 @@ struct ForOpInterface
 };
 
 LogicalResult mlir::linalg::comprehensive_bufferize::scf_ext::
-    AssertDestinationPassingStyle::run(FuncOp funcOp, BufferizationState &state,
+    AssertDestinationPassingStyle::run(Operation *op, BufferizationState &state,
+                                       BufferizationAliasInfo &aliasInfo,
                                        SmallVector<Operation *> &newOps) {
   LogicalResult status = success();
-  funcOp->walk([&](scf::YieldOp yieldOp) {
+  op->walk([&](scf::YieldOp yieldOp) {
     auto forOp = dyn_cast<scf::ForOp>(yieldOp->getParentOp());
     if (!forOp)
       return WalkResult::advance();
@@ -280,8 +281,7 @@ LogicalResult mlir::linalg::comprehensive_bufferize::scf_ext::
       OpOperand &forOperand = forOp.getOpOperandForResult(
           forOp->getResult(operand.getOperandNumber()));
       auto bbArg = forOp.getRegionIterArgForOpOperand(forOperand);
-      if (!state.aliasInfo.areEquivalentBufferizedValues(operand.get(),
-                                                         bbArg)) {
+      if (!aliasInfo.areEquivalentBufferizedValues(operand.get(), bbArg)) {
         // TODO: this could get resolved with copies but it can also turn into
         // swaps so we need to be careful about order of copies.
         status =

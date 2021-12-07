@@ -1309,7 +1309,8 @@ bool LLParser::parseEnumAttribute(Attribute::AttrKind Attr, AttrBuilder &B,
     unsigned MinValue, MaxValue;
     if (parseVScaleRangeArguments(MinValue, MaxValue))
       return true;
-    B.addVScaleRangeAttr(MinValue, MaxValue);
+    B.addVScaleRangeAttr(MinValue,
+                         MaxValue > 0 ? MaxValue : Optional<unsigned>());
     return false;
   }
   case Attribute::Dereferenceable: {

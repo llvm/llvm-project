@@ -311,6 +311,11 @@ bool ScriptedProcess::DoUpdateThreadList(ThreadList &old_thread_list,
     return GetInterface().ErrorWithMessage<bool>(LLVM_PRETTY_FUNCTION,
                                                  error.AsCString(), error);
 
+  RegisterContextSP reg_ctx_sp = thread_sp->GetRegisterContext();
+  if (!reg_ctx_sp)
+    return GetInterface().ErrorWithMessage<bool>(
+        LLVM_PRETTY_FUNCTION, "Invalid Register Context", error);
+
   new_thread_list.AddThread(thread_sp);
 
   return new_thread_list.GetSize(false) > 0;

@@ -21,6 +21,17 @@ class Math_Op<string mnemonic, list<OpTrait> traits = []> :
     DeclareOpInterfaceMethods<VectorUnrollOpInterface>] #
     ElementwiseMappable.traits>;
 
+// Base class for unary math operations on integer types. Require a operand and
+// result of the same type. This type can be an integer type, or vector or tensor
+// thereof.
+class Math_IntegerUnaryOp<string mnemonic, list<OpTrait> traits = []> :
+    Math_Op<mnemonic, traits # [SameOperandsAndResultType]> {
+  let arguments = (ins SignlessIntegerLike:$operand);
+  let results = (outs SignlessIntegerLike:$result);
+
+  let assemblyFormat = "$operand attr-dict `:` type($result)";
+}
+
 // Base class for unary math operations on floating point types. Require a
 // operand and result of the same type. This type can be a floating point type,
 // or vector or tensor thereof.
@@ -282,6 +293,30 @@ def Math_SinOp : Math_FloatUnaryOp<"sin"> {
 
     // Tensor element-wise sine value.
     %x = math.sin %y : tensor<4x?xf8>
+    ```
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// CtPopOp
+//===----------------------------------------------------------------------===//
+
+def Math_CtPopOp : Math_IntegerUnaryOp<"ctpop"> {
+  let summary = "counts the number of set bits of an integer value";
+  let description = [{
+    The `ctpop` operation computes the number of set bits of an integer value.
+
+    Example:
+
+    ```mlir
+    // Scalar ctpop function value.
+    %a = math.ctpop %b : i32
+
+    // SIMD vector element-wise ctpop function value.
+    %f = math.ctpop %g : vector<4xi16>
+
+    // Tensor element-wise ctpop function value.
+    %x = math.ctpop %y : tensor<4x?xi8>
     ```
   }];
 }

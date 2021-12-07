@@ -537,3 +537,65 @@ CHECK: %5:vgpr_32 = FLAT_LOAD_DWORD killed %4, 0, 0, implicit $exec, implicit $f
 )";
   EXPECT_TRUE(checkOutput(CheckString, Output));
 }
+
+TEST_F(MachineMetadataTest, TiedOpsRewritten) {
+  auto TM = createTargetMachine(Triple::normalize("powerpc64--"), "", "");
+  if (!TM)
+    GTEST_SKIP();
+  StringRef MIRString = R"MIR(
+---
+name:            foo
+alignment:       16
+tracksRegLiveness: true
+frameInfo:
+  maxAlignment:    16
+machineFunctionInfo: {}
+body:             |
+  bb.0:
+    liveins: $r3
+    %0:gprc = COPY $r3
+    %0 = RLWIMI killed %0, $r3, 1, 0, 30
+    $r3 = COPY %0
+    BLR8 implicit $r3, implicit $lr8, implicit $rm
+
+...
+)MIR";
+  MachineModuleInfo MMI(TM.get());
+  M = parseMIR(*TM, MIRString, "foo", MMI);
+  ASSERT_TRUE(M);
+  auto *MF = MMI.getMachineFunction(*M->getFunction("foo"));
+  MachineFunctionProperties &Properties = MF->getProperties();
+  ASSERT_TRUE(Properties.hasProperty(
+      MachineFunctionProperties::Property::TiedOpsRewritten));
+}
+
+TEST_F(MachineMetadataTest, NoTiedOpsRewritten) {
+  auto TM = createTargetMachine(Triple::normalize("powerpc64--"), "", "");
+  if (!TM)
+    GTEST_SKIP();
+  StringRef MIRString = R"MIR(
+---
+name:            foo
+alignment:       16
+tracksRegLiveness: true
+frameInfo:
+  maxAlignment:    16
+machineFunctionInfo: {}
+body:             |
+  bb.0:
+    liveins: $r3
+    %0:gprc = COPY $r3
+    %1:gprc = RLWIMI killed %0, $r3, 1, 0, 30
+    $r3 = COPY %1
+    BLR8 implicit $r3, implicit $lr8, implicit $rm
+
+...
+)MIR";
+  MachineModuleInfo MMI(TM.get());
+  M = parseMIR(*TM, MIRString, "foo", MMI);
+  ASSERT_TRUE(M);
+  auto *MF = MMI.getMachineFunction(*M->getFunction("foo"));
+  MachineFunctionProperties &Properties = MF->getProperties();
+  ASSERT_FALSE(Properties.hasProperty(
+      MachineFunctionProperties::Property::TiedOpsRewritten));
+}

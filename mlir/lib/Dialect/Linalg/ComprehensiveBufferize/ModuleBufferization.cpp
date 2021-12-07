@@ -87,11 +87,13 @@ struct EquivalentFuncOpBBArgsAnalysis : public PostAnalysisStep {
     op->setAttr(kEquivalentArgsAttr, b.getI64ArrayAttr(equivBbArgs));
   }
 
-  LogicalResult run(FuncOp funcOp, BufferizationState &state,
+  LogicalResult run(Operation *op, BufferizationState &state,
+                    BufferizationAliasInfo &aliasInfo,
                     SmallVector<Operation *> &newOps) override {
     ModuleBufferizationState &moduleState = getModuleBufferizationState(state);
 
     // Support only single return-terminated block in the function.
+    auto funcOp = cast<FuncOp>(op);
     ReturnOp returnOp = getAssumedUniqueReturnOp(funcOp);
     assert(returnOp && "expected func with single return op");
 
@@ -99,12 +101,12 @@ struct EquivalentFuncOpBBArgsAnalysis : public PostAnalysisStep {
       if (returnVal.get().getType().isa<RankedTensorType>())
         for (BlockArgument bbArg : funcOp.getArguments())
           if (bbArg.getType().isa<RankedTensorType>())
-            if (state.aliasInfo.areEquivalentBufferizedValues(returnVal.get(),
-                                                              bbArg)) {
+            if (aliasInfo.areEquivalentBufferizedValues(returnVal.get(),
+                                                        bbArg)) {
               moduleState
                   .equivalentFuncArgs[funcOp][returnVal.getOperandNumber()] =
                   bbArg.getArgNumber();
-              if (state.options.testAnalysisOnly)
+              if (state.getOptions().testAnalysisOnly)
                 annotateReturnOp(returnVal, bbArg);
             }
 

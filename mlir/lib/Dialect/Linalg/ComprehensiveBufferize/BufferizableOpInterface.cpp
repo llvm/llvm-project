@@ -367,7 +367,7 @@ Value mlir::linalg::comprehensive_bufferize::BufferizationState::
     // allocation should be inserted (in the absence of allocation hoisting).
     setInsertionPointAfter(builder, operandBuffer);
     // Allocate the result buffer.
-    Value resultBuffer = createAllocDeallocFn(builder, loc, operandBuffer);
+    Value resultBuffer = createAllocDeallocPair(builder, loc, operandBuffer);
     bool skipCopy = false;
     // Do not copy if the last preceding write of `operand` is an op that does
     // not write (skipping ops that merely create aliases). E.g., InitTensorOp.
@@ -389,8 +389,7 @@ Value mlir::linalg::comprehensive_bufferize::BufferizationState::
     if (!skipCopy) {
       // The copy happens right before the op that is bufferized.
       builder.setInsertionPoint(op);
-      options.allocationFns->memCpyFn(builder, loc, operandBuffer,
-                                      resultBuffer);
+      createMemCpy(builder, loc, operandBuffer, resultBuffer);
     }
     return resultBuffer;
   }
@@ -420,20 +419,17 @@ mlir::linalg::comprehensive_bufferize::bufferize(Block *block,
 LogicalResult
 mlir::linalg::comprehensive_bufferize::bufferize(Operation *op,
                                                  BufferizationState &state) {
-  OpBuilder &b = state.builder;
+  OpBuilder &b = state.getBuilder();
 
   // Check if op has tensor results or operands.
   auto isaTensor = [](Type t) { return t.isa<TensorType>(); };
   bool hasTensorResult = any_of(op->getResultTypes(), isaTensor);
   bool hasTensorOperand = any_of(op->getOperandTypes(), isaTensor);
+  bool hasRegions = !op->getRegions().empty();
 
-  // No tensor results or operands: Simply bufferize all nested ops.
-  if (!hasTensorResult && !hasTensorOperand) {
-    for (Region &region : op->getRegions())
-      if (failed(bufferize(&region, state)))
-        return failure();
+  // No tensor results/operands or regions. We are done.
+  if (!hasTensorResult && !hasTensorOperand && !hasRegions)
     return success();
-  }
 
   // Bufferize using `BufferizableOpInterface`. Interface implementations are
   // responsible for bufferizing nested ops.
@@ -443,13 +439,15 @@ mlir::linalg::comprehensive_bufferize::bufferize(Operation *op,
   }
 
   // `op` is an unbufferizable tensor op.
-  if (!state.options.allowUnknownOps)
+  if (!state.getOptions().allowUnknownOps)
     return op->emitError() << "unsupported op with tensors";
 
   // Replace all OpOperands with "to-tensor casted" bufferized values.
   for (OpOperand &operand : op->getOpOperands()) {
     if (operand.get().getType().isa<TensorType>() &&
         state.isMapped(operand.get())) {
+      assert(state.getOptions().allowUnknownOps &&
+             "unsupported op error should have been emitted earlier");
       b.setInsertionPoint(op);
       Value toTensorOp = b.create<bufferization::ToTensorOp>(
           op->getLoc(), state.lookupBuffer(operand.get()));
@@ -457,6 +455,7 @@ mlir::linalg::comprehensive_bufferize::bufferize(Operation *op,
     }
   }
 
+  // Bufferize all regions.
   for (Region &region : op->getRegions())
     if (failed(bufferize(&region, state)))
       return failure();
@@ -550,7 +549,7 @@ static MemRefType getAllocationTypeAndShape(OpBuilder &b, Location loc,
 /// `shapedValue.getDefiningOp` (or at the top of the block in case of a
 /// bbArg) and the DeallocOp is at the end of the block.
 Value mlir::linalg::comprehensive_bufferize::BufferizationState::
-    createAllocDeallocFn(OpBuilder &b, Location loc, Value shapedValue) {
+    createAllocDeallocPair(OpBuilder &b, Location loc, Value shapedValue) {
   // Take a guard before anything else.
   OpBuilder::InsertionGuard g(b);
 
@@ -561,8 +560,7 @@ Value mlir::linalg::comprehensive_bufferize::BufferizationState::
   // Note: getAllocationTypeAndShape also sets the insertion point.
   MemRefType allocMemRefType =
       getAllocationTypeAndShape(b, loc, shapedValue, dynShape);
-  Optional<Value> allocated =
-      options.allocationFns->allocationFn(b, loc, allocMemRefType, dynShape);
+  Optional<Value> allocated = createAlloc(b, loc, allocMemRefType, dynShape);
   // TODO: For now just assert the value is returned. Eventually need to
   // error-propagate.
   assert(allocated && "allocation failed");
@@ -573,8 +571,27 @@ Value mlir::linalg::comprehensive_bufferize::BufferizationState::
 
   // 2. Create memory deallocation.
   b.setInsertionPoint(allocated.getValue().getParentBlock()->getTerminator());
-  options.allocationFns->deallocationFn(b, loc, allocated.getValue());
+  createDealloc(b, loc, allocated.getValue());
   return casted;
+}
+
+/// Create a memref allocation.
+Optional<Value>
+mlir::linalg::comprehensive_bufferize::BufferizationState::createAlloc(
+    OpBuilder &b, Location loc, MemRefType type, ArrayRef<Value> dynShape) {
+  return options.allocationFns->allocationFn(b, loc, type, dynShape);
+}
+
+/// Create a memref deallocation.
+void mlir::linalg::comprehensive_bufferize::BufferizationState::createDealloc(
+    OpBuilder &b, Location loc, Value allocatedBuffer) {
+  return options.allocationFns->deallocationFn(b, loc, allocatedBuffer);
+}
+
+/// Create a memory copy between two memref buffers.
+void mlir::linalg::comprehensive_bufferize::BufferizationState::createMemCpy(
+    OpBuilder &b, Location loc, Value from, Value to) {
+  return options.allocationFns->memCpyFn(b, loc, from, to);
 }
 
 //===----------------------------------------------------------------------===//
@@ -648,7 +665,13 @@ Value mlir::linalg::comprehensive_bufferize::BufferizationState::lookupBuffer(
 
 bool mlir::linalg::comprehensive_bufferize::BufferizationState::isMapped(
     Value value) const {
+  assert(value.getType().isa<TensorType>() && "unexpected non-tensor type");
   return mapping.contains(value);
+}
+
+bool mlir::linalg::comprehensive_bufferize::BufferizationState::isInPlace(
+    OpResult opResult) const {
+  return aliasInfo.isInPlace(opResult);
 }
 
 void mlir::linalg::comprehensive_bufferize::BufferizationState::markOpObsolete(

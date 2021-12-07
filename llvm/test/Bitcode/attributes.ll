@@ -440,13 +440,6 @@ define void @f74() vscale_range(1,0)
   ret void
 }
 
-; CHECK: define void @f75()
-; CHECK-NOT: define void @f75() #
-define void @f75() vscale_range(0,0)
-{
-  ret void
-}
-
 ; CHECK: define void @f76(i8* swiftasync %0)
 define void @f76(i8* swiftasync %0)
 {

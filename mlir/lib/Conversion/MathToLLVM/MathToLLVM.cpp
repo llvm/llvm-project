@@ -23,6 +23,8 @@ using CeilOpLowering = VectorConvertToLLVMPattern<math::CeilOp, LLVM::FCeilOp>;
 using CopySignOpLowering =
     VectorConvertToLLVMPattern<math::CopySignOp, LLVM::CopySignOp>;
 using CosOpLowering = VectorConvertToLLVMPattern<math::CosOp, LLVM::CosOp>;
+using CtPopFOpLowering =
+    VectorConvertToLLVMPattern<math::CtPopOp, LLVM::CtPopOp>;
 using ExpOpLowering = VectorConvertToLLVMPattern<math::ExpOp, LLVM::ExpOp>;
 using Exp2OpLowering = VectorConvertToLLVMPattern<math::Exp2Op, LLVM::Exp2Op>;
 using FloorOpLowering =
@@ -220,6 +222,7 @@ void mlir::populateMathToLLVMConversionPatterns(LLVMTypeConverter &converter,
     CeilOpLowering,
     CopySignOpLowering,
     CosOpLowering,
+    CtPopFOpLowering,
     ExpOpLowering,
     Exp2OpLowering,
     ExpM1OpLowering,

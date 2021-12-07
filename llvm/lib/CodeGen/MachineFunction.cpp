@@ -350,10 +350,10 @@ void MachineFunction::assignBeginEndSections() {
 
 /// Allocate a new MachineInstr. Use this instead of `new MachineInstr'.
 MachineInstr *MachineFunction::CreateMachineInstr(const MCInstrDesc &MCID,
-                                                  const DebugLoc &DL,
+                                                  DebugLoc DL,
                                                   bool NoImplicit) {
   return new (InstructionRecycler.Allocate<MachineInstr>(Allocator))
-      MachineInstr(*this, MCID, DL, NoImplicit);
+      MachineInstr(*this, MCID, std::move(DL), NoImplicit);
 }
 
 /// Create a new MachineInstr which is a copy of the 'Orig' instruction,

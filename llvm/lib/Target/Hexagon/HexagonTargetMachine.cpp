@@ -21,6 +21,7 @@
 #include "TargetInfo/HexagonTargetInfo.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
+#include "llvm/CodeGen/VLIWMachineScheduler.h"
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/IR/Module.h"
 #include "llvm/MC/TargetRegistry.h"
@@ -120,8 +121,8 @@ extern "C" int HexagonTargetMachineModule;
 int HexagonTargetMachineModule = 0;
 
 static ScheduleDAGInstrs *createVLIWMachineSched(MachineSchedContext *C) {
-  ScheduleDAGMILive *DAG =
-    new VLIWMachineScheduler(C, std::make_unique<ConvergingVLIWScheduler>());
+  ScheduleDAGMILive *DAG = new VLIWMachineScheduler(
+      C, std::make_unique<HexagonConvergingVLIWScheduler>());
   DAG->addMutation(std::make_unique<HexagonSubtarget::UsrOverflowMutation>());
   DAG->addMutation(std::make_unique<HexagonSubtarget::HVXMemLatencyMutation>());
   DAG->addMutation(std::make_unique<HexagonSubtarget::CallMutation>());

@@ -552,7 +552,7 @@ for.end:
 
 declare float @llvm.fmuladd.f32(float, float, float)
 
-attributes #0 = { vscale_range(0, 16) }
+attributes #0 = { vscale_range(1, 16) }
 !0 = distinct !{!0, !3, !6, !8}
 !1 = distinct !{!1, !3, !7, !8}
 !2 = distinct !{!2, !4, !6, !8}
