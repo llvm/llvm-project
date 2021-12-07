@@ -12,9 +12,8 @@
 // disable them for now until their behavior can be designed better later.
 // See https://reviews.llvm.org/D84049 for details.
 
-// TODO(ldionne): Re-enable the test on clang-14 once 6c75ab5f66b4 lands in the CI.
 // UNSUPPORTED: apple-clang-12, apple-clang-13
-// UNSUPPORTED: clang-12, clang-13, clang-14
+// UNSUPPORTED: clang-12, clang-13
 
 // UNSUPPORTED: c++03
 
