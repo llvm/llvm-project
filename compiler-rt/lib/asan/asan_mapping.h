@@ -151,9 +151,14 @@
 // || `[0x30000000, 0x35ffffff]` || LowShadow  ||
 // || `[0x00000000, 0x2fffffff]` || LowMem     ||
 
-#define SHADOW_SCALE 3
-
+#if defined(ASAN_SHADOW_SCALE)
+static const u64 kDefaultShadowScale = ASAN_SHADOW_SCALE;
+#else
+static const u64 kDefaultShadowScale = 3;
+#endif
 static const u64 kDefaultShadowSentinel = ~(uptr)0;
+
+#define SHADOW_SCALE kDefaultShadowScale
 
 #if SANITIZER_FUCHSIA
 #  define SHADOW_OFFSET_CONST (0)
