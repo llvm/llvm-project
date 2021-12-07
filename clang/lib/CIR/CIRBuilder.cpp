@@ -500,6 +500,118 @@ public:
           Builder.builder.getBoolAttr(E->getValue()));
     }
 
+    struct BinOpInfo {
+      mlir::Value LHS;
+      mlir::Value RHS;
+      SourceRange Loc;
+      QualType Ty;                   // Computation Type.
+      BinaryOperator::Opcode Opcode; // Opcode of BinOp to perform
+      FPOptions FPFeatures;
+      const Expr *E; // Entire expr, for error unsupported.  May not be binop.
+
+      /// Check if the binop computes a division or a remainder.
+      bool isDivremOp() const {
+        return Opcode == BO_Div || Opcode == BO_Rem || Opcode == BO_DivAssign ||
+               Opcode == BO_RemAssign;
+      }
+
+      /// Check if at least one operand is a fixed point type. In such cases,
+      /// this operation did not follow usual arithmetic conversion and both
+      /// operands might not be of the same type.
+      bool isFixedPointOp() const {
+        // We cannot simply check the result type since comparison operations
+        // return an int.
+        if (const auto *BinOp = dyn_cast<BinaryOperator>(E)) {
+          QualType LHSType = BinOp->getLHS()->getType();
+          QualType RHSType = BinOp->getRHS()->getType();
+          return LHSType->isFixedPointType() || RHSType->isFixedPointType();
+        }
+        if (const auto *UnOp = dyn_cast<UnaryOperator>(E))
+          return UnOp->getSubExpr()->getType()->isFixedPointType();
+        return false;
+      }
+    };
+
+    BinOpInfo buildBinOps(const BinaryOperator *E) {
+      BinOpInfo Result;
+      Result.LHS = Visit(E->getLHS());
+      Result.RHS = Visit(E->getRHS());
+      Result.Ty = E->getType();
+      Result.Opcode = E->getOpcode();
+      Result.Loc = E->getSourceRange();
+      // TODO: Result.FPFeatures
+      Result.E = E;
+      return Result;
+    }
+
+    mlir::Value buildMul(const BinOpInfo &Ops) {
+      return Builder.builder.create<mlir::cir::BinOp>(
+          Builder.getLoc(Ops.Loc.getBegin()), Builder.getCIRType(Ops.Ty),
+          mlir::cir::BinOpKind::Mul, Ops.LHS, Ops.RHS);
+    }
+    mlir::Value buildDiv(const BinOpInfo &Ops) {
+      return Builder.builder.create<mlir::cir::BinOp>(
+          Builder.getLoc(Ops.Loc.getBegin()), Builder.getCIRType(Ops.Ty),
+          mlir::cir::BinOpKind::Div, Ops.LHS, Ops.RHS);
+    }
+    mlir::Value buildRem(const BinOpInfo &Ops) {
+      return Builder.builder.create<mlir::cir::BinOp>(
+          Builder.getLoc(Ops.Loc.getBegin()), Builder.getCIRType(Ops.Ty),
+          mlir::cir::BinOpKind::Rem, Ops.LHS, Ops.RHS);
+    }
+    mlir::Value buildAdd(const BinOpInfo &Ops) {
+      return Builder.builder.create<mlir::cir::BinOp>(
+          Builder.getLoc(Ops.Loc.getBegin()), Builder.getCIRType(Ops.Ty),
+          mlir::cir::BinOpKind::Add, Ops.LHS, Ops.RHS);
+    }
+    mlir::Value buildSub(const BinOpInfo &Ops) {
+      return Builder.builder.create<mlir::cir::BinOp>(
+          Builder.getLoc(Ops.Loc.getBegin()), Builder.getCIRType(Ops.Ty),
+          mlir::cir::BinOpKind::Sub, Ops.LHS, Ops.RHS);
+    }
+    mlir::Value buildShl(const BinOpInfo &Ops) {
+      return Builder.builder.create<mlir::cir::BinOp>(
+          Builder.getLoc(Ops.Loc.getBegin()), Builder.getCIRType(Ops.Ty),
+          mlir::cir::BinOpKind::Shl, Ops.LHS, Ops.RHS);
+    }
+    mlir::Value buildShr(const BinOpInfo &Ops) {
+      return Builder.builder.create<mlir::cir::BinOp>(
+          Builder.getLoc(Ops.Loc.getBegin()), Builder.getCIRType(Ops.Ty),
+          mlir::cir::BinOpKind::Shr, Ops.LHS, Ops.RHS);
+    }
+    mlir::Value buildAnd(const BinOpInfo &Ops) {
+      return Builder.builder.create<mlir::cir::BinOp>(
+          Builder.getLoc(Ops.Loc.getBegin()), Builder.getCIRType(Ops.Ty),
+          mlir::cir::BinOpKind::And, Ops.LHS, Ops.RHS);
+    }
+    mlir::Value buildXor(const BinOpInfo &Ops) {
+      return Builder.builder.create<mlir::cir::BinOp>(
+          Builder.getLoc(Ops.Loc.getBegin()), Builder.getCIRType(Ops.Ty),
+          mlir::cir::BinOpKind::Xor, Ops.LHS, Ops.RHS);
+    }
+    mlir::Value buildOr(const BinOpInfo &Ops) {
+      return Builder.builder.create<mlir::cir::BinOp>(
+          Builder.getLoc(Ops.Loc.getBegin()), Builder.getCIRType(Ops.Ty),
+          mlir::cir::BinOpKind::Or, Ops.LHS, Ops.RHS);
+    }
+
+    // Binary operators and binary compound assignment operators.
+#define HANDLEBINOP(OP)                                                        \
+  mlir::Value VisitBin##OP(const BinaryOperator *E) {                          \
+    return build##OP(buildBinOps(E));                                          \
+  }
+    HANDLEBINOP(Mul)
+    HANDLEBINOP(Div)
+    HANDLEBINOP(Rem)
+    HANDLEBINOP(Add)
+    HANDLEBINOP(Sub)
+    HANDLEBINOP(Shl)
+    HANDLEBINOP(Shr)
+    HANDLEBINOP(And)
+    HANDLEBINOP(Xor)
+    HANDLEBINOP(Or)
+#undef HANDLEBINOP
+
     mlir::Value VisitExpr(Expr *E) {
       // Crashing here for "ScalarExprClassName"? Please implement
       // VisitScalarExprClassName(...) to get this working.

@@ -22,6 +22,7 @@ include "mlir/IR/EnumAttr.td"
 include "mlir/IR/SymbolInterfaces.td"
 include "mlir/IR/BuiltinAttributeInterfaces.td"
 include "mlir/Interfaces/ControlFlowInterfaces.td"
+include "mlir/Interfaces/InferTypeOpInterface.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 
 //===----------------------------------------------------------------------===//
@@ -406,6 +407,47 @@ def ScopeOp : CIR_Op<"scope", [DeclareOpInterfaceMethods<RegionBranchOpInterface
   let extraClassDeclaration = [{
     Block* scopeBlock();
   }];
+}
+
+//===----------------------------------------------------------------------===//
+// BinOp
+//===----------------------------------------------------------------------===//
+
+// FIXME: represent Commutative, Idempotent traits for appropriate binops
+def BinOpKind_Mul : I32EnumAttrCase<"Mul", 1>;
+def BinOpKind_Div : I32EnumAttrCase<"Div", 2>;
+def BinOpKind_Rem : I32EnumAttrCase<"Rem", 3>;
+def BinOpKind_Add : I32EnumAttrCase<"Add", 4>;
+def BinOpKind_Sub : I32EnumAttrCase<"Sub", 5>;
+def BinOpKind_Shl : I32EnumAttrCase<"Shl", 6>;
+def BinOpKind_Shr : I32EnumAttrCase<"Shr", 7>;
+def BinOpKind_And : I32EnumAttrCase<"And", 8>;
+def BinOpKind_Xor : I32EnumAttrCase<"Xor", 9>;
+def BinOpKind_Or  : I32EnumAttrCase<"Or", 10>;
+
+def BinOpKind : I32EnumAttr<
+    "BinOpKind",
+    "binary operation (arith and logic) kind",
+    [BinOpKind_Mul, BinOpKind_Div, BinOpKind_Rem,
+     BinOpKind_Add, BinOpKind_Sub, BinOpKind_Shl,
+     BinOpKind_Shr, BinOpKind_And, BinOpKind_Xor,
+     BinOpKind_Or]> {
+  let cppNamespace = "::mlir::cir";
+}
+
+def BinOp : CIR_Op<"binop", [Pure,
+  SameTypeOperands, SameOperandsAndResultType]> {
+  // TODO: get more accurate than AnyType
+  let results = (outs AnyType:$result);
+  let arguments = (ins Arg<BinOpKind, "binop kind">:$kind,
+                       AnyType:$lhs, AnyType:$rhs);
+
+  let assemblyFormat = [{
+    `(` $kind `,` $lhs `,` $rhs  `)` `:` type($lhs) attr-dict
+  }];
+
+  // Already covered by the traits
+  let hasVerifier = 0;
 }
 
 #endif // MLIR_CIR_DIALECT_CIR_OPS
