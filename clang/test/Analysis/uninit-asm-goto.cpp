@@ -57,3 +57,15 @@ fallthrough:
 indirect:
   return -2;
 }
+
+// test6: Expect no diagnostics.
+int test6(unsigned int *x) {
+  unsigned int val;
+
+  // See through casts and unary operators.
+  asm goto("nop" : "=r" (*(unsigned int *)(&val)) ::: indirect);
+  *x = val;
+  return 0;
+indirect:
+  return -1;
+}
