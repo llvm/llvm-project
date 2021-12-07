@@ -26,10 +26,10 @@ int main() {
     Destructible dtor2{result[tid], 1};
   }
 
-  if (common == 1 && result[0] == 1 && result[1] == 1) {
+  if (common == 0 && result[0] == 1 && result[1] == 1) {
     printf("SUCCESS\n");
     return EXIT_SUCCESS;
   }
-  printf("FAILED\n");
+  printf("FAILED (%d, %d, %d)\n", common, result[0], result[1]);
   return EXIT_FAILURE;
 }
