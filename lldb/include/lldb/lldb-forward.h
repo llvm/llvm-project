@@ -65,6 +65,7 @@ class DWARFCallFrameInfo;
 class DWARFDataExtractor;
 class DWARFExpression;
 class DataBuffer;
+class DataBufferHeap;
 class DataEncoder;
 class DataExtractor;
 class Debugger;
