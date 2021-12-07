@@ -49,7 +49,7 @@ struct IndexFileIn {
   llvm::Optional<tooling::CompileCommand> Cmd;
 };
 // Parse an index file. The input must be a RIFF or YAML file.
-llvm::Expected<IndexFileIn> readIndexFile(llvm::StringRef);
+llvm::Expected<IndexFileIn> readIndexFile(llvm::StringRef, SymbolOrigin);
 
 // Specifies the contents of an index file to be written.
 struct IndexFileOut {
@@ -79,16 +79,10 @@ std::string toYAML(const std::pair<SymbolID, ArrayRef<Ref>> &);
 std::string toYAML(const Relation &);
 std::string toYAML(const Ref &);
 
-// Deserialize a single symbol from YAML.
-llvm::Expected<clangd::Symbol> symbolFromYAML(StringRef YAML,
-                                              llvm::UniqueStringSaver *Strings);
-llvm::Expected<clangd::Ref> refFromYAML(StringRef YAML,
-                                        llvm::UniqueStringSaver *Strings);
-
 // Build an in-memory static index from an index file.
 // The size should be relatively small, so data can be managed in memory.
 std::unique_ptr<SymbolIndex> loadIndex(llvm::StringRef Filename,
-                                       bool UseDex = true);
+                                       SymbolOrigin Origin, bool UseDex = true);
 
 } // namespace clangd
 } // namespace clang

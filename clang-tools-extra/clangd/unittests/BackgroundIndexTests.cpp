@@ -73,7 +73,8 @@ public:
     if (Storage.find(ShardIdentifier) == Storage.end()) {
       return nullptr;
     }
-    auto IndexFile = readIndexFile(Storage[ShardIdentifier]);
+    auto IndexFile =
+        readIndexFile(Storage[ShardIdentifier], SymbolOrigin::Background);
     if (!IndexFile) {
       ADD_FAILURE() << "Error while reading " << ShardIdentifier << ':'
                     << IndexFile.takeError();

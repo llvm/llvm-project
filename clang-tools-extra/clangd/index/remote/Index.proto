@@ -66,7 +66,7 @@ message Symbol {
   optional string scope = 5;
   optional SymbolLocation canonical_declaration = 6;
   optional int32 references = 7;
-  optional uint32 origin = 8;
+  reserved 8;
   optional string signature = 9;
   optional string template_specialization_args = 10;
   optional string completion_snippet_suffix = 11;

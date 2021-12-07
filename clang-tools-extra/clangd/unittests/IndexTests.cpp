@@ -392,7 +392,7 @@ TEST(MergeTest, Merge) {
   L.Signature = "()";                   // present in left only
   R.CompletionSnippetSuffix = "{$1:0}"; // present in right only
   R.Documentation = "--doc--";
-  L.Origin = SymbolOrigin::Dynamic;
+  L.Origin = SymbolOrigin::Preamble;
   R.Origin = SymbolOrigin::Static;
   R.Type = "expectedType";
 
@@ -404,8 +404,8 @@ TEST(MergeTest, Merge) {
   EXPECT_EQ(M.CompletionSnippetSuffix, "{$1:0}");
   EXPECT_EQ(M.Documentation, "--doc--");
   EXPECT_EQ(M.Type, "expectedType");
-  EXPECT_EQ(M.Origin,
-            SymbolOrigin::Dynamic | SymbolOrigin::Static | SymbolOrigin::Merge);
+  EXPECT_EQ(M.Origin, SymbolOrigin::Preamble | SymbolOrigin::Static |
+                          SymbolOrigin::Merge);
 }
 
 TEST(MergeTest, PreferSymbolWithDefn) {
