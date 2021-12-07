@@ -804,15 +804,15 @@ void VectorLegalizer::Expand(SDNode *Node, SmallVectorImpl<SDValue> &Results) {
     break;
   case ISD::FSHL:
   case ISD::FSHR:
-    if (TLI.expandFunnelShift(Node, Tmp, DAG)) {
-      Results.push_back(Tmp);
+    if (SDValue Expanded = TLI.expandFunnelShift(Node, DAG)) {
+      Results.push_back(Expanded);
       return;
     }
     break;
   case ISD::ROTL:
   case ISD::ROTR:
-    if (TLI.expandROT(Node, false /*AllowVectorOps*/, Tmp, DAG)) {
-      Results.push_back(Tmp);
+    if (SDValue Expanded = TLI.expandROT(Node, false /*AllowVectorOps*/, DAG)) {
+      Results.push_back(Expanded);
       return;
     }
     break;

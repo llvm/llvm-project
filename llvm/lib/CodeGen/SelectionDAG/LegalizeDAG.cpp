@@ -3367,13 +3367,13 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
   }
   case ISD::FSHL:
   case ISD::FSHR:
-    if (TLI.expandFunnelShift(Node, Tmp1, DAG))
-      Results.push_back(Tmp1);
+    if (SDValue Expanded = TLI.expandFunnelShift(Node, DAG))
+      Results.push_back(Expanded);
     break;
   case ISD::ROTL:
   case ISD::ROTR:
-    if (TLI.expandROT(Node, true /*AllowVectorOps*/, Tmp1, DAG))
-      Results.push_back(Tmp1);
+    if (SDValue Expanded = TLI.expandROT(Node, true /*AllowVectorOps*/, DAG))
+      Results.push_back(Expanded);
     break;
   case ISD::SADDSAT:
   case ISD::UADDSAT:

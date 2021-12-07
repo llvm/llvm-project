@@ -1277,8 +1277,7 @@ SDValue DAGTypeLegalizer::PromoteIntRes_SRL(SDNode *N, bool IsVP) {
 
 SDValue DAGTypeLegalizer::PromoteIntRes_Rotate(SDNode *N) {
   // Lower the rotate to shifts and ORs which can be promoted.
-  SDValue Res;
-  TLI.expandROT(N, true /*AllowVectorOps*/, Res, DAG);
+  SDValue Res = TLI.expandROT(N, true /*AllowVectorOps*/, DAG);
   ReplaceValueWith(SDValue(N, 0), Res);
   return SDValue();
 }
