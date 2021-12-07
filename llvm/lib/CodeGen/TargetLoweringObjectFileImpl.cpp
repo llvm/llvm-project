@@ -763,6 +763,8 @@ static MCSection *selectExplicitSectionGlobal(
   StringRef Group = "";
   bool IsComdat = false;
   unsigned Flags = getELFSectionFlags(Kind);
+  if (SectionName == ".swift1_autolink_entries")
+    Flags |= ELF::SHF_EXCLUDE;
   if (const Comdat *C = getELFComdat(GO)) {
     Group = C->getName();
     IsComdat = C->getSelectionKind() == Comdat::Any;

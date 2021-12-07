@@ -215,6 +215,9 @@ SectionKind TargetLoweringObjectFile::getKindForGlobal(const GlobalObject *GO,
   // Global variables require more detailed analysis.
   const auto *GVar = cast<GlobalVariable>(GO);
 
+  if (GVar->getSection() == ".swift1_autolink_entries")
+    return SectionKind::getMetadata();
+
   // Handle thread-local data first.
   if (GVar->isThreadLocal()) {
     if (isSuitableForBSS(GVar) && !TM.Options.NoZerosInBSS) {
