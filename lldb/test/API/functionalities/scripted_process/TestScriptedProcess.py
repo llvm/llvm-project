@@ -47,6 +47,9 @@ class ScriptedProcesTestCase(TestBase):
         self.build()
         target = self.dbg.CreateTarget(self.getBuildArtifact("a.out"))
         self.assertTrue(target, VALID_TARGET)
+        log_file = self.getBuildArtifact('thread.log')
+        self.runCmd("log enable lldb thread -f " + log_file)
+        self.assertTrue(os.path.isfile(log_file))
 
         os.environ['SKIP_SCRIPTED_PROCESS_LAUNCH'] = '1'
         def cleanup():
@@ -61,17 +64,18 @@ class ScriptedProcesTestCase(TestBase):
         launch_info.SetProcessPluginName("ScriptedProcess")
         launch_info.SetScriptedProcessClassName("invalid_scripted_process.InvalidScriptedProcess")
         error = lldb.SBError()
-        with tempfile.NamedTemporaryFile() as log_file:
-            self.runCmd("log enable lldb thread -f " + log_file.name)
-            process = target.Launch(launch_info, error)
 
-            self.assertTrue(error.Success(), error.GetCString())
-            self.assertTrue(process, PROCESS_IS_VALID)
-            self.assertEqual(process.GetProcessID(), 666)
-            self.assertEqual(process.GetNumThreads(), 0)
+        process = target.Launch(launch_info, error)
 
-            self.assertIn("Failed to get scripted thread registers data.".encode(),
-                          log_file.read())
+        self.assertTrue(error.Success(), error.GetCString())
+        self.assertTrue(process, PROCESS_IS_VALID)
+        self.assertEqual(process.GetProcessID(), 666)
+        self.assertEqual(process.GetNumThreads(), 0)
+
+        with open(log_file, 'r') as f:
+            log = f.read()
+
+        self.assertIn("Failed to get scripted thread registers data.", log)
 
     @skipIf(archs=no_match(['x86_64']))
     def test_scripted_process_and_scripted_thread(self):
