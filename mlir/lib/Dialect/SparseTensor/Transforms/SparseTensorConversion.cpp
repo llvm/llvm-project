@@ -983,9 +983,8 @@ public:
     else
       return failure();
     TypeRange noTp;
-    auto fn =
-        getFunc(op, name, noTp, adaptor.getOperands(), /*emitCInterface=*/true);
-    rewriter.replaceOpWithNewOp<CallOp>(op, noTp, fn, adaptor.getOperands());
+    replaceOpWithFuncCall(rewriter, op, name, noTp, adaptor.getOperands(),
+                          EmitCInterface::On);
     return success();
   }
 };
