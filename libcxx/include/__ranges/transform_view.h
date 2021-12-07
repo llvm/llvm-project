@@ -46,11 +46,15 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 namespace ranges {
 
+template<class _Fn, class _View>
+concept __regular_invocable_with_range_ref =
+  regular_invocable<_Fn, range_reference_t<_View>>;
+
 template<class _View, class _Fn>
 concept __transform_view_constraints =
-           view<_View> && is_object_v<_Fn> &&
-           regular_invocable<_Fn&, range_reference_t<_View>> &&
-           __referenceable<invoke_result_t<_Fn&, range_reference_t<_View>>>;
+  view<_View> && is_object_v<_Fn> &&
+  regular_invocable<_Fn&, range_reference_t<_View>> &&
+  __referenceable<invoke_result_t<_Fn&, range_reference_t<_View>>>;
 
 template<input_range _View, copy_constructible _Fn>
   requires __transform_view_constraints<_View, _Fn>
@@ -82,7 +86,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI
   constexpr __iterator<true> begin() const
     requires range<const _View> &&
-             regular_invocable<const _Fn&, range_reference_t<const _View>>
+             __regular_invocable_with_range_ref<const _Fn&, const _View>
   {
     return __iterator<true>(*this, ranges::begin(__base_));
   }
@@ -100,14 +104,14 @@ public:
   _LIBCPP_HIDE_FROM_ABI
   constexpr __sentinel<true> end() const
     requires range<const _View> &&
-             regular_invocable<const _Fn&, range_reference_t<const _View>>
+             __regular_invocable_with_range_ref<const _Fn&, const _View>
   {
     return __sentinel<true>(ranges::end(__base_));
   }
   _LIBCPP_HIDE_FROM_ABI
   constexpr __iterator<true> end() const
     requires common_range<const _View> &&
-             regular_invocable<const _Fn&, range_reference_t<const _View>>
+             __regular_invocable_with_range_ref<const _Fn&, const _View>
   {
     return __iterator<true>(*this, ranges::end(__base_));
   }

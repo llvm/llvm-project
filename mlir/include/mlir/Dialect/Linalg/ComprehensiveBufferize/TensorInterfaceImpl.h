@@ -21,6 +21,7 @@ namespace tensor_ext {
 
 struct InplaceInsertSliceOpAnalysis : public PostAnalysisStep {
   LogicalResult run(FuncOp funcOp, BufferizationState &state,
+                    BufferizationAliasInfo &aliasInfo,
                     SmallVector<Operation *> &newOps) override;
 };
 

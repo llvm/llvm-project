@@ -41,7 +41,6 @@ add_llvm_unittest(SupportTests
   GlobPatternTest.cpp
   HashBuilderTest.cpp
   Host.cpp
-  HTTPClient.cpp
   IndexedAccessorTest.cpp
   InstructionCostTest.cpp
   ItaniumManglingCanonicalizerTest.cpp

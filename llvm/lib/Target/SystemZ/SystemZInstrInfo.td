@@ -510,6 +510,12 @@ let mayLoad = 1, mayStore = 1, Defs = [CC] in {
   def MVCLU : SideEffectTernaryMemMemRSY<"mvclu", 0xEB8E, GR128, GR128>;
 }
 
+// Memset[Length][Byte] pseudos.
+def MemsetImmImm : MemsetPseudo<imm64, imm32zx8trunc>;
+def MemsetImmReg : MemsetPseudo<imm64, GR32>;
+def MemsetRegImm : MemsetPseudo<ADDR64, imm32zx8trunc>;
+def MemsetRegReg : MemsetPseudo<ADDR64, GR32>;
+
 // Move right.
 let Predicates = [FeatureMiscellaneousExtensions3],
     mayLoad = 1, mayStore = 1, Uses = [R0L] in

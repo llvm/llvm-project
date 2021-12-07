@@ -160,7 +160,7 @@ static const u64 kDefaultShadowSentinel = ~(uptr)0;
 static const u64 kDefaultShadowOffset32 = 1ULL << 29;  // 0x20000000
 static const u64 kDefaultShadowOffset64 = 1ULL << 44;  // 0x100000000000
 static const u64 kDefaultShort64bitShadowOffset =
-    0x7FFFFFFF & (~0xFFFULL << kDefaultShadowScale);  // < 2G.
+    0x7FFFFFFF & (~0xFFFULL << kDefaultShadowScale);    // < 2G.
 static const u64 kAArch64_ShadowOffset64 = 1ULL << 36;  // 0x1000000000
 static const u64 kRiscv64_ShadowOffset64 = 0xd55550000;
 static const u64 kMIPS32_ShadowOffset32 = 0x0aaa0000;
@@ -170,9 +170,9 @@ static const u64 kSystemZ_ShadowOffset64 = 1ULL << 52;  // 0x10000000000000
 static const u64 kSPARC64_ShadowOffset64 = 1ULL << 43;  // 0x80000000000
 static const u64 kFreeBSD_ShadowOffset32 = 1ULL << 30;  // 0x40000000
 static const u64 kFreeBSD_ShadowOffset64 = 1ULL << 46;  // 0x400000000000
-static const u64 kNetBSD_ShadowOffset32 = 1ULL << 30;  // 0x40000000
-static const u64 kNetBSD_ShadowOffset64 = 1ULL << 46;  // 0x400000000000
-static const u64 kWindowsShadowOffset32 = 3ULL << 28;  // 0x30000000
+static const u64 kNetBSD_ShadowOffset32 = 1ULL << 30;   // 0x40000000
+static const u64 kNetBSD_ShadowOffset64 = 1ULL << 46;   // 0x400000000000
+static const u64 kWindowsShadowOffset32 = 3ULL << 28;   // 0x30000000
 
 #define SHADOW_SCALE kDefaultShadowScale
 

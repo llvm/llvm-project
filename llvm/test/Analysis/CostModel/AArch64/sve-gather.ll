@@ -104,8 +104,8 @@ define void @masked_gathers_no_vscale_range() #2 {
   ret void
 }
 
-attributes #0 = { "target-features"="+sve" vscale_range(0, 8) }
-attributes #1 = { "target-features"="+sve" vscale_range(0, 16) "tune-cpu"="generic" }
+attributes #0 = { "target-features"="+sve" vscale_range(1, 8) }
+attributes #1 = { "target-features"="+sve" vscale_range(1, 16) "tune-cpu"="generic" }
 attributes #2 = { "target-features"="+sve" }
 
 declare <vscale x 4 x i32> @llvm.masked.gather.nxv4i32(<vscale x 4 x i32*>, i32, <vscale x 4 x i1>, <vscale x 4 x i32>)

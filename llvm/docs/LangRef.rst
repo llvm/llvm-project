@@ -2134,9 +2134,10 @@ example:
     duplicate definitions are linked together with differing values.
 ``vscale_range(<min>[, <max>])``
     This attribute indicates the minimum and maximum vscale value for the given
-    function. A value of 0 means unbounded. If the optional max value is omitted
-    then max is set to the value of min. If the attribute is not present, no
-    assumptions are made about the range of vscale.
+    function. The min must be greater than 0. A maximum value of 0 means
+    unbounded. If the optional max value is omitted then max is set to the
+    value of min. If the attribute is not present, no assumptions are made
+    about the range of vscale.
 
 Call Site Attributes
 ----------------------

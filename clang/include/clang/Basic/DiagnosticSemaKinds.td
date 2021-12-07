@@ -8337,8 +8337,8 @@ def err_atomic_exclusive_builtin_pointer_size : Error<
   " 1,2,4 or 8 byte type (%0 invalid)">;
 def err_atomic_builtin_ext_int_size : Error<
   "Atomic memory operand must have a power-of-two size">;
-def err_atomic_builtin_ext_int_prohibit : Error<
-  "argument to atomic builtin of type '_ExtInt' is not supported">;
+def err_atomic_builtin_bit_int_prohibit : Error<
+  "argument to atomic builtin of type '_BitInt' is not supported">;
 def err_atomic_op_needs_atomic : Error<
   "address argument to atomic operation must be a pointer to _Atomic "
   "type (%0 invalid)">;
@@ -8374,8 +8374,8 @@ def err_overflow_builtin_must_be_int : Error<
 def err_overflow_builtin_must_be_ptr_int : Error<
   "result argument to overflow builtin must be a pointer "
   "to a non-const integer (%0 invalid)">;
-def err_overflow_builtin_ext_int_max_size : Error<
-  "__builtin_mul_overflow does not support signed _ExtInt operands of more "
+def err_overflow_builtin_bit_int_max_size : Error<
+  "__builtin_mul_overflow does not support 'signed _BitInt' operands of more "
   "than %0 bits">;
 
 def err_atomic_load_store_uses_lib : Error<
@@ -11423,9 +11423,9 @@ def warn_sycl_kernel_return_type : Warning<
   "function template with 'sycl_kernel' attribute must have a 'void' return type">,
   InGroup<IgnoredAttributes>;
 
-def err_ext_int_bad_size : Error<"%select{signed|unsigned}0 _ExtInt must "
+def err_bit_int_bad_size : Error<"%select{signed|unsigned}0 _BitInt must "
                                  "have a bit size of at least %select{2|1}0">;
-def err_ext_int_max_size : Error<"%select{signed|unsigned}0 _ExtInt of bit "
+def err_bit_int_max_size : Error<"%select{signed|unsigned}0 _BitInt of bit "
                                  "sizes greater than %1 not supported">;
 
 // errors of expect.with.probability

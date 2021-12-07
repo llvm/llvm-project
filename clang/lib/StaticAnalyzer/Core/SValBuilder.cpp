@@ -459,13 +459,23 @@ SVal SValBuilder::evalBinOp(ProgramStateRef state, BinaryOperator::Opcode op,
     return evalBinOpLN(state, op, *LV, rhs.castAs<NonLoc>(), type);
   }
 
-  if (Optional<Loc> RV = rhs.getAs<Loc>()) {
-    // Support pointer arithmetic where the addend is on the left
-    // and the pointer on the right.
-    assert(op == BO_Add);
+  if (const Optional<Loc> RV = rhs.getAs<Loc>()) {
+    const auto IsCommutative = [](BinaryOperatorKind Op) {
+      return Op == BO_Mul || Op == BO_Add || Op == BO_And || Op == BO_Xor ||
+             Op == BO_Or;
+    };
 
-    // Commute the operands.
-    return evalBinOpLN(state, op, *RV, lhs.castAs<NonLoc>(), type);
+    if (IsCommutative(op)) {
+      // Swap operands.
+      return evalBinOpLN(state, op, *RV, lhs.castAs<NonLoc>(), type);
+    }
+
+    // If the right operand is a concrete int location then we have nothing
+    // better but to treat it as a simple nonloc.
+    if (auto RV = rhs.getAs<loc::ConcreteInt>()) {
+      const nonloc::ConcreteInt RhsAsLoc = makeIntVal(RV->getValue());
+      return evalBinOpNN(state, op, lhs.castAs<NonLoc>(), RhsAsLoc, type);
+    }
   }
 
   return evalBinOpNN(state, op, lhs.castAs<NonLoc>(), rhs.castAs<NonLoc>(),
