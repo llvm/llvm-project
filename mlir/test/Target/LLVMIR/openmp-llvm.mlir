@@ -706,3 +706,33 @@ llvm.func @omp_ordered(%arg0 : i32, %arg1 : i32, %arg2 : i32, %arg3 : i64,
 
   llvm.return
 }
+
+// -----
+
+// CHECK-LABEL: @omp_atomic_read
+// CHECK-SAME: (i32* %[[ARG0:.*]])
+llvm.func @omp_atomic_read(%arg0 : !llvm.ptr<i32>) -> () {
+  // CHECK: %{{.*}} = alloca i32, align 4
+  // CHECK: %{{.*}} = alloca i32, align 4
+  // CHECK: %{{.*}} = alloca i32, align 4
+  // CHECK: %{{.*}} = alloca i32, align 4
+
+  // CHECK: %[[X1:.*]] = load atomic i32, i32* %[[ARG0]] monotonic, align 4
+  // CHECK: store i32 %[[X1]], i32* %{{.*}}, align 4
+  %x1 = omp.atomic.read %arg0 : !llvm.ptr<i32> -> i32
+
+  // CHECK: %[[X2:.*]] = load atomic i32, i32* %[[ARG0]] seq_cst, align 4
+  // CHECK: call void @__kmpc_flush(%{{.*}})
+  // CHECK: store i32 %[[X2]], i32* %{{.*}}, align 4
+  %x2 = omp.atomic.read %arg0 memory_order(seq_cst) : !llvm.ptr<i32> -> i32
+
+  // CHECK: %[[X3:.*]] = load atomic i32, i32* %[[ARG0]] acquire, align 4
+  // CHECK: call void @__kmpc_flush(%{{.*}})
+  // CHECK: store i32 %[[X3]], i32* %{{.*}}, align 4
+  %x3 = omp.atomic.read %arg0 memory_order(acquire) : !llvm.ptr<i32> -> i32
+
+  // CHECK: %[[X4:.*]] = load atomic i32, i32* %[[ARG0]] monotonic, align 4
+  // CHECK: store i32 %[[X4]], i32* %{{.*}}, align 4
+  %x4 = omp.atomic.read %arg0 memory_order(relaxed) : !llvm.ptr<i32> -> i32
+  llvm.return
+}
