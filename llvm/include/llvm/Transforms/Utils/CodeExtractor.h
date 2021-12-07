@@ -108,9 +108,12 @@ public:
 
     Type *RetTy;
 
-    /// Lists of blocks that are branched from the code region to be extracted. Each block is contained at most once. Its order defines the return value of the extracted function, when leaving the extracted function via the first block it returns 0. When leaving via the second entry it returns 1, etc.
+    /// Lists of blocks that are branched from the code region to be extracted.
+    /// Each block is contained at most once. Its order defines the return value
+    /// of the extracted function, when leaving the extracted function via the
+    /// first block it returns 0. When leaving via the second entry it returns
+    /// 1, etc.
     SmallVector<BasicBlock *> SwitchCases;
-
 
     // Suffix to use when creating extracted function (appended to the original
     // function name + "."). If empty, the default is to use the entry block

@@ -1403,13 +1403,9 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
   // to the new function.
   BasicBlock *ReplIP = header;
   if (!KeepOldBlocks) {
-    while (ReplIP && Blocks.count(ReplIP)) 
+    while (ReplIP && Blocks.count(ReplIP))
       ReplIP = ReplIP->getNextNode();
   }
-
-
-
-
 
   // Construct new function based on inputs/outputs & add allocas for all defs.
   std::string SuffixToUse =
@@ -1460,7 +1456,7 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
     report_fatal_error("verification of newFunction failed!");
   });
   LLVM_DEBUG(if (verifyFunction(*oldFunction))
-             report_fatal_error("verification of oldFunction failed!"));
+                 report_fatal_error("verification of oldFunction failed!"));
   LLVM_DEBUG(if (AC && verifyAssumptionCache(*oldFunction, *newFunction, AC))
                  report_fatal_error("Stale Asumption cache for old Function!"));
   return newFunction;
@@ -1519,13 +1515,12 @@ void CodeExtractor::recomputeExitBlocks() {
         continue;
 
       bool IsNew = ExitBlocks.insert(Succ).second;
-        if (IsNew)
-            SwitchCases.push_back(Succ);
+      if (IsNew)
+        SwitchCases.push_back(Succ);
     }
   }
   NumExitBlocks = ExitBlocks.size();
 }
-
 
 void CodeExtractor::emitFunctionBody(
     const ValueSet &inputs, const ValueSet &outputs, Function *newFunction,
@@ -1987,13 +1982,15 @@ void CodeExtractor::insertReplacerCall(
         I->replaceUsesOfWith(header, codeReplacer);
 
   if (KeepOldBlocks) {
-      // Change references to output values after the call to use either the value written by the extracted function or the original value if we skipped the call. Use SSAUpdater to propagate the new PHI since the CFG has changed.
+    // Change references to output values after the call to use either the value
+    // written by the extracted function or the original value if we skipped the
+    // call. Use SSAUpdater to propagate the new PHI since the CFG has changed.
 
     SSAUpdater SSA;
     for (auto P : enumerate(outputs)) {
       size_t OutIdx = P.index();
-      Instruction* OldVal = cast<Instruction>(P.value());
-      Value* NewVal = Reloads[OutIdx];
+      Instruction *OldVal = cast<Instruction>(P.value());
+      Value *NewVal = Reloads[OutIdx];
 
       SSA.Initialize(OldVal->getType(),
                      (OldVal->getName() + ".merge_with_extracted").str());
@@ -2004,13 +2001,12 @@ void CodeExtractor::insertReplacerCall(
       SSA.AddAvailableValue(OldVal->getParent(), OldVal);
 
       for (Use &U : make_early_inc_range(OldVal->uses())) {
-        auto* User = dyn_cast<Instruction>(U.getUser());
+        auto *User = dyn_cast<Instruction>(U.getUser());
         if (!User)
           continue;
-        BasicBlock* EffectiveUser = User->getParent();
-        if (auto *PHI = dyn_cast<PHINode>(User)) 
+        BasicBlock *EffectiveUser = User->getParent();
+        if (auto *PHI = dyn_cast<PHINode>(User))
           EffectiveUser = PHI->getIncomingBlock(U);
-        
 
         if (EffectiveUser == codeReplacer || Blocks.count(EffectiveUser))
           continue;
@@ -2019,7 +2015,10 @@ void CodeExtractor::insertReplacerCall(
       }
     }
   } else {
-      // When moving the code region it is sufficient to replace all uses to the extracted function values. Since the original definition's block dominated its use, it will also be dominated by codeReplacer's switch which joined multiple exit blocks.
+    // When moving the code region it is sufficient to replace all uses to the
+    // extracted function values. Since the original definition's block
+    // dominated its use, it will also be dominated by codeReplacer's switch
+    // which joined multiple exit blocks.
 
     for (BasicBlock *ExitBB : SwitchCases)
       for (PHINode &PN : ExitBB->phis()) {
@@ -2040,7 +2039,7 @@ void CodeExtractor::insertReplacerCall(
       }
 
     for (unsigned i = 0, e = outputs.size(); i != e; ++i) {
-      Value* load = Reloads[i];
+      Value *load = Reloads[i];
       std::vector<User *> Users(outputs[i]->user_begin(),
                                 outputs[i]->user_end());
       for (unsigned u = 0, e = Users.size(); u != e; ++u) {
