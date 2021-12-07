@@ -1401,18 +1401,14 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
   if (AggregateArgs && (inputs.size() + outputs.size() > 0))
     StructArgTy = cast<StructType>(newFunction->getArg(0)->getType());
 
-
-
   emitFunctionBody(inputs, outputs, newFunction, StructArgTy, header,
                    SinkingCands);
-
 
   std::vector<Value *> Reloads;
   CallInst *call = emitReplacerCall(inputs, outputs, newFunction, StructArgTy,
                                     oldFunction, ReplIP, EntryFreq,
                                     LifetimesStart.getArrayRef(), Reloads);
   BasicBlock *codeReplacer = call->getParent();
-
 
   insertReplacerCall(oldFunction, header, codeReplacer, outputs, Reloads,
                      ExitWeights);
@@ -1484,18 +1480,18 @@ void CodeExtractor::emitFunctionBody(
   BasicBlock *newFuncRoot =
       BasicBlock::Create(Context, "newFuncRoot", newFunction);
 
-
   // Now sink all instructions which only have non-phi uses inside the region.
   // Group the allocas at the start of the block, so that any bitcast uses of
   // the allocas are well-defined.
   for (auto *II : SinkingCands) {
     if (!isa<AllocaInst>(II)) {
-        cast<Instruction>(II)->moveBefore(*newFuncRoot, newFuncRoot->getFirstInsertionPt());
+      cast<Instruction>(II)->moveBefore(*newFuncRoot,
+                                        newFuncRoot->getFirstInsertionPt());
     }
   }
   for (auto *II : SinkingCands) {
     if (auto *AI = dyn_cast<AllocaInst>(II)) {
-        AI->moveBefore(*newFuncRoot, newFuncRoot->getFirstInsertionPt());
+      AI->moveBefore(*newFuncRoot, newFuncRoot->getFirstInsertionPt());
     }
   }
 
