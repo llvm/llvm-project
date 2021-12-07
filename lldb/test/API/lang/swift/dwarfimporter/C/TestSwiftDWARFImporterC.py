@@ -103,7 +103,6 @@ class TestSwiftDWARFImporterC(lldbtest.TestBase):
     @swiftTest
     def test_negative(self):
         lldb.SBDebugger.MemoryPressureDetected()
-        self.runCmd("log enable lldb types")
         self.runCmd("settings set symbols.use-swift-dwarfimporter false")
         self.build()
         log = self.getBuildArtifact("types.log")
