@@ -231,9 +231,9 @@ buildExtractionBlockSet(ArrayRef<BasicBlock *> BBs, DominatorTree *DT,
       continue;
     }
 
-    if (!KeepOldBlocks) {
       // All blocks other than the first must not have predecessors outside of
-      // the subgraph which is being extracted.
+      // the subgraph which is being extracted. KeepOldBlocks relaxes this requirement.
+    if (!KeepOldBlocks) {
       for (auto *PBB : predecessors(BB))
         if (!Result.count(PBB)) {
           LLVM_DEBUG(dbgs()
@@ -823,20 +823,20 @@ void CodeExtractor::splitReturnBlocks() {
 /// constructFunction - make a function based on inputs and outputs, as follows:
 /// f(in0, ..., inN, out0, ..., outN)
 Function *CodeExtractor::constructFunctionDeclaration(const ValueSet &inputs,
-                                                      const ValueSet &outputs,
-                                                      BasicBlock *header) {
+                                                      const ValueSet &outputs,const  Twine &Name) {
   LLVM_DEBUG(dbgs() << "inputs: " << inputs.size() << "\n");
   LLVM_DEBUG(dbgs() << "outputs: " << outputs.size() << "\n");
 
-  Function *oldFunction = header->getParent();
-  Module *M = oldFunction->getParent();
+  Function *oldFunction =  Blocks.front() ->getParent();
+  LLVMContext &Context =  oldFunction ->getContext();
+  Module *M =  Blocks.front() ->getModule();
 
   // This function returns unsigned, outputs will go back by reference.
   switch (NumExitBlocks) {
   case 0:
-  case 1: RetTy = Type::getVoidTy(header->getContext()); break;
-  case 2: RetTy = Type::getInt1Ty(header->getContext()); break;
-  default: RetTy = Type::getInt16Ty(header->getContext()); break;
+  case 1: RetTy = Type::getVoidTy(Context); break;
+  case 2: RetTy = Type::getInt1Ty(Context); break;
+  default: RetTy = Type::getInt16Ty(Context); break;
   }
 
   std::vector<Type *> paramTy;
@@ -873,14 +873,11 @@ Function *CodeExtractor::constructFunctionDeclaration(const ValueSet &inputs,
                   FunctionType::get(RetTy, paramTy,
                                     AllowVarArgs && oldFunction->isVarArg());
 
-  std::string SuffixToUse =
-      Suffix.empty()
-          ? (header->getName().empty() ? "extracted" : header->getName().str())
-          : Suffix;
+
   // Create the new function
   Function *newFunction = Function::Create(
       funcType, GlobalValue::InternalLinkage, oldFunction->getAddressSpace(),
-      oldFunction->getName() + "." + SuffixToUse, M);
+ Name, M);
   // If the old function is no-throw, so is the new one.
   if (oldFunction->doesNotThrow())
     newFunction->setDoesNotThrow();
@@ -999,15 +996,15 @@ Function *CodeExtractor::constructFunctionDeclaration(const ValueSet &inputs,
     newFunction->addFnAttr(Attr);
   }
 
-  // Set swifterror parameter attributes.
-  if (!AggregateArgs)
-    for (auto P : enumerate(inputs)) {
+ // Set parameter attributes.
+  if (!AggregateArgs) {
+      // Set swifterror parameter attributes.
+    for (auto P : enumerate(inputs)) 
       if (P.value()->isSwiftError())
         newFunction->addParamAttr(P.index(), Attribute::SwiftError);
-    }
+    
 
   // Set names for input and output arguments.
-  if (!AggregateArgs) {
     Function::arg_iterator AI = newFunction->arg_begin();
     for (unsigned i = 0, e = inputs.size(); i != e; ++i, ++AI)
       AI->setName(inputs[i]->getName());
@@ -1017,6 +1014,7 @@ Function *CodeExtractor::constructFunctionDeclaration(const ValueSet &inputs,
 
   return newFunction;
 }
+
 
 static void applyFirstDebugLoc(Function *oldFunction,
                                ArrayRef<BasicBlock *> Blocks,
@@ -1037,7 +1035,7 @@ void CodeExtractor::emitFunction(Function *newFunction, const ValueSet &inputs,
                                  const ValueSet &outputs, BasicBlock *header,
                                  const ValueSet &SinkingCands,
                                  StructType *StructArgTy,
-                                 ArrayRef<BasicBlock *> Orlder) {
+                                 ArrayRef<BasicBlock *> SwichCases) {
   Function *oldFunction = header->getParent();
   LLVMContext &Context = oldFunction->getContext();
 
@@ -1175,9 +1173,7 @@ void CodeExtractor::emitFunction(Function *newFunction, const ValueSet &inputs,
   }
 
   std::map<BasicBlock *, BasicBlock *> ExitBlockMap;
-  // for (auto OldTarget : OldTargets) {
-  // for (auto OldTarget : Orlder) {
-  for (auto &&P : enumerate(Orlder)) {
+  for (auto &&P : enumerate(SwichCases)) {
     auto OldTarget = P.value();
     auto SuccNum = P.index();
 
@@ -1401,7 +1397,7 @@ CallInst *CodeExtractor::emitReplacerCall(
     ,
     BasicBlock *ReplIP, Function *newFunction, const ValueSet &inputs,
     const ValueSet &outputs, BlockFrequency EntryFreq, StructType *StructArgTy,
-    ArrayRef<BasicBlock *> Orlder, const SetVector<Value *> &LifetimesStart,
+    ArrayRef<BasicBlock *> SwichCases, const SetVector<Value *> &LifetimesStart,
     std::vector<Value *> &Reloads) {
   LLVMContext &Context = oldFunction->getContext();
   Module *M = oldFunction->getParent();
@@ -1513,7 +1509,7 @@ CallInst *CodeExtractor::emitReplacerCall(
       SwitchInst::Create(Constant::getNullValue(Type::getInt16Ty(Context)),
                          codeReplacer, 0, codeReplacer);
 
-  for (auto &&P : enumerate(Orlder)) {
+  for (auto &&P : enumerate(SwichCases)) {
     auto OldTarget = P.value();
     auto SuccNum = P.index(); // ExitBlockSwitchIdx[OldTarget];
 
@@ -1871,7 +1867,7 @@ void CodeExtractor::recomputeExitBlocks() {
   NumExitBlocks = ExitBlocks.size();
 }
 
-void CodeExtractor::canonicalizeCFGForExtraction(BasicBlock *&Header,
+void CodeExtractor::normalizeCFGForExtraction(BasicBlock *&Header,
                                                  bool NoExitBlockPHIs) {
   // If we have any return instructions in the region, split those blocks so
   // that the return is not in the region.
@@ -1924,11 +1920,11 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
   // block in the region.
   BasicBlock *header = *Blocks.begin();
   Function *oldFunction = header->getParent();
-  Module *M = oldFunction->getParent();
 
 
 
-  canonicalizeCFGForExtraction(header, KeepOldBlocks);
+
+  normalizeCFGForExtraction(header, KeepOldBlocks);
 
   if (!KeepOldBlocks) {
     // Transforms/HotColdSplit/stale-assume-in-original-func.ll
@@ -2005,7 +2001,7 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
   }
 
   SmallDenseMap<BasicBlock *, unsigned> ExitBlockSwitchIdx;
-  SmallVector<BasicBlock *> Orlder;
+  SmallVector<BasicBlock *> SwichCases;
   for (BasicBlock *OldTarget : OldTargets) {
     if (Blocks.count(OldTarget))
       continue;
@@ -2013,11 +2009,15 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
     auto Added =
         ExitBlockSwitchIdx.insert({OldTarget, ExitBlockSwitchIdx.size()});
     if (Added.second)
-      Orlder.push_back(OldTarget);
+      SwichCases.push_back(OldTarget);
   }
 
   // Construct new function based on inputs/outputs & add allocas for all defs.
-  Function *newFunction = constructFunctionDeclaration(inputs, outputs, header);
+  std::string SuffixToUse =
+      Suffix.empty()
+      ? (header->getName().empty() ? "extracted" : header->getName().str())
+      : Suffix;
+  Function *newFunction = constructFunctionDeclaration(inputs, outputs,     oldFunction->getName() + "." + SuffixToUse );
 
 
 
@@ -2030,14 +2030,14 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
   //////////////////////////////////////////////////////
 
   emitFunction(newFunction, inputs, outputs, header, SinkingCands, StructArgTy,
-               Orlder);
+               SwichCases);
 
   //// Codegen newFunction call replacement
   /////////////////////////////////////////////////
   std::vector<Value *> Reloads;
   CallInst *call = emitReplacerCall(oldFunction, header, ReplIP, newFunction,
                                     inputs, outputs, EntryFreq, StructArgTy,
-                                    Orlder, LifetimesStart, Reloads);
+                                    SwichCases, LifetimesStart, Reloads);
   BasicBlock *codeReplacer = call->getParent();
 
   //// Connect call replacement to CFG
