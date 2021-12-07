@@ -235,7 +235,7 @@ def SparseTensor_ExpandOp : SparseTensor_Op<"expand", []>,
     [Pissanetzky84], in phase scan [Duff90], access pattern expansion [Bik96],
     and workspaces [Kjolstad2018].
 
-    The values and filled array have a size the suffices for a *dense* innermost
+    The values and filled array have sizes that suffice for a *dense* innermost
     dimension (e.g. a full row for matrices). The added array and count are used
     to store new indices when a false value is encountered in the filled array.
     All arrays should be allocated before the loop (possibly even shared between
@@ -269,7 +269,7 @@ def SparseTensor_CompressOp : SparseTensor_Op<"compress", []>,
                    Index:$count)> {
   string summary = "Compressed an access pattern for insertion";
   string description = [{
-    Finishes a single access pattern by moving the inserted elements
+    Finishes a single access pattern expansion by moving inserted elements
     into the sparse storage scheme. The values and filled array are reset
     in a *sparse* fashion by only iterating over set elements through an
     indirection using the added array, so that the operations are kept
