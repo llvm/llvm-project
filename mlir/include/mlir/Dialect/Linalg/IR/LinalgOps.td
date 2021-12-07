@@ -133,7 +133,7 @@ def Linalg_PadTensorOp : Linalg_Op<"pad_tensor",
     [AttrSizedOperandSegments, NoSideEffect,
      DeclareOpInterfaceMethods<ReifyRankedShapedTypeOpInterface>,
      DeclareOpInterfaceMethods<TilingInterface,
-         ["getDestinationOperands", "getLoopIteratorTypes", "getLoopBounds",
+         ["getDestinationOperands", "getLoopIteratorTypes", "getIterationDomain",
           "getTiledImplementation"]>]> {
   let summary = "tensor pad operation";
   let description = [{

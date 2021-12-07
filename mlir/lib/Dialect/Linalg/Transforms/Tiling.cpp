@@ -351,7 +351,7 @@ static LogicalResult tilePadTensorOp(OpBuilder &builder, PadTensorOp op,
       options.tileSizeComputationFunction(builder, op);
   assert(static_cast<int64_t>(tileSizes.size()) == rank);
   // Compute lower and upper bounds of the loop nest.
-  SmallVector<Range> ranges = op.getLoopBounds(builder);
+  SmallVector<Range> ranges = op.getIterationDomain(builder);
   SmallVector<Value> lbs, dims, allDims, steps;
   for (int64_t i = 0; i < rank; ++i) {
     allDims.push_back(ranges[i].size);
