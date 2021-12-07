@@ -133,6 +133,22 @@ bool LiveRangeEdit::allUsesAvailableAt(const MachineInstr *OrigMI,
 
     if (OVNI != li.getVNInfoAt(UseIdx))
       return false;
+
+    // Check that subrange is live at UseIdx.
+    if (MO.getSubReg()) {
+      const TargetRegisterInfo *TRI = MRI.getTargetRegisterInfo();
+      LaneBitmask LM = TRI->getSubRegIndexLaneMask(MO.getSubReg());
+      for (LiveInterval::SubRange &SR : li.subranges()) {
+        if ((SR.LaneMask & LM).none())
+          continue;
+        if (!SR.liveAt(UseIdx))
+          return false;
+        // Early exit if all used lanes are checked. No need to continue.
+        LM &= ~SR.LaneMask;
+        if (LM.none())
+          break;
+      }
+    }
   }
   return true;
 }
