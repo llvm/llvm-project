@@ -35,12 +35,10 @@ public:
   ReleaseModeModelRunner(LLVMContext &Ctx);
   virtual ~ReleaseModeModelRunner() = default;
 
-  bool run() override;
-
-  void setFeature(FeatureIndex Index, int64_t Value) override;
-  int64_t getFeature(int Index) const override;
-
 private:
+  void *evaluateUntyped() override;
+  void *getTensorUntyped(size_t Index) override;
+
   std::vector<int32_t> FeatureIndices;
   int32_t ResultIndex = -1;
   std::unique_ptr<llvm::InlinerSizeModel> CompiledModel;
@@ -66,20 +64,14 @@ ReleaseModeModelRunner::ReleaseModeModelRunner(LLVMContext &Ctx)
   assert(ResultIndex >= 0 && "Cannot find DecisionName in inlining model");
 }
 
-int64_t ReleaseModeModelRunner::getFeature(int Index) const {
-  return *static_cast<int64_t *>(
+void *ReleaseModeModelRunner::getTensorUntyped(size_t Index) {
+  return reinterpret_cast<char *>(
       CompiledModel->arg_data(FeatureIndices[Index]));
 }
 
-void ReleaseModeModelRunner::setFeature(FeatureIndex Index, int64_t Value) {
-  *static_cast<int64_t *>(CompiledModel->arg_data(
-      FeatureIndices[static_cast<size_t>(Index)])) = Value;
-}
-
-bool ReleaseModeModelRunner::run() {
+void *ReleaseModeModelRunner::evaluateUntyped() {
   CompiledModel->Run();
-  return static_cast<bool>(
-      *static_cast<int64_t *>(CompiledModel->result_data(ResultIndex)));
+  return CompiledModel->result_data(ResultIndex);
 }
 
 std::unique_ptr<InlineAdvisor>

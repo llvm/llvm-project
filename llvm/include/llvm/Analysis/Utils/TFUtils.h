@@ -246,8 +246,10 @@ public:
   /// otherwise.
   bool isValid() const { return !!Impl; }
 
-private:
+  /// Untyped access to input.
   void *getUntypedInput(size_t Index);
+
+private:
   std::unique_ptr<TFModelEvaluatorImpl> Impl;
 };
 

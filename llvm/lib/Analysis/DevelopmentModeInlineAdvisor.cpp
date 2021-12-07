@@ -16,6 +16,7 @@
 #include "llvm/Analysis/CallGraph.h"
 #include "llvm/Analysis/InlineSizeEstimatorAnalysis.h"
 #include "llvm/Analysis/MLInlineAdvisor.h"
+#include "llvm/Analysis/NoInferenceModelRunner.h"
 #include "llvm/Analysis/Utils/TFUtils.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/Support/CommandLine.h"
@@ -261,25 +262,6 @@ private:
   const int64_t Mandatory;
 };
 
-/// A pseudo model runner. We use it to store feature values when collecting
-/// logs for the default policy, but never ask it to 'run'.
-class NoInferenceModelRunner : public MLModelRunner {
-public:
-  NoInferenceModelRunner(LLVMContext &Ctx)
-      : MLModelRunner(Ctx), Features(NumberOfFeatures) {}
-  void setFeature(FeatureIndex Index, int64_t Value) override {
-    Features[static_cast<int>(Index)] = Value;
-  }
-
-  int64_t getFeature(int Index) const override { return Features[Index]; }
-  bool run() override {
-    llvm_unreachable("We shouldn't call run on this model runner.");
-  }
-
-private:
-  InlineFeatures Features;
-};
-
 /// ModelUnderTrainingRunner - training mode implementation. It uses TF C APIs
 /// to dynamically load and evaluate a TF SavedModel
 /// (https://www.tensorflow.org/guide/saved_model). Runtime performance is
@@ -288,15 +270,11 @@ class ModelUnderTrainingRunner final : public MLModelRunner {
 public:
   ModelUnderTrainingRunner(LLVMContext &Ctx, const std::string &ModelPath);
 
-  bool run() override;
-
   // Disallows copy and assign.
   ModelUnderTrainingRunner(const ModelUnderTrainingRunner &) = delete;
   ModelUnderTrainingRunner &
   operator=(const ModelUnderTrainingRunner &) = delete;
 
-  void setFeature(FeatureIndex Index, int64_t Value) override;
-  int64_t getFeature(int Index) const override;
   bool isValid() const { return !!Evaluator; }
 
   const std::vector<LoggedFeatureSpec> &outputLoggedFeatureSpecs() const {
@@ -308,18 +286,31 @@ public:
     return LastEvaluationResult;
   }
 
+  static const std::vector<TensorSpec> getInputFeatures() {
+    std::vector<TensorSpec> InputSpecs;
+    for (size_t I = 0; I < NumberOfFeatures; ++I)
+      InputSpecs.push_back(TensorSpec::createSpec<int64_t>(
+          TFFeedPrefix + FeatureNameMap[I], {1}));
+    append_range(InputSpecs, TrainingOnlyFeatures);
+    return InputSpecs;
+  }
+
 private:
   std::unique_ptr<TFModelEvaluator> Evaluator;
   std::vector<LoggedFeatureSpec> OutputSpecs;
   Optional<TFModelEvaluator::EvaluationResult> LastEvaluationResult;
+  void *evaluateUntyped() override;
+  void *getTensorUntyped(size_t Index) override;
 
   // The training framework needs some additional features.
-  const std::vector<TensorSpec> TrainingOnlyFeatures{
-      TensorSpec::createSpec<int64_t>(TFFeedPrefix + "inlining_default", {1}),
-      TensorSpec::createSpec<float>(TFFeedPrefix + "discount", {1}),
-      TensorSpec::createSpec<float>(TFFeedPrefix + "reward", {1}),
-      TensorSpec::createSpec<int32_t>(TFFeedPrefix + "step_type", {1})};
+  const static std::vector<TensorSpec> TrainingOnlyFeatures;
 };
+
+const std::vector<TensorSpec> ModelUnderTrainingRunner::TrainingOnlyFeatures{
+    TensorSpec::createSpec<int64_t>(TFFeedPrefix + "inlining_default", {1}),
+    TensorSpec::createSpec<float>(TFFeedPrefix + "discount", {1}),
+    TensorSpec::createSpec<float>(TFFeedPrefix + "reward", {1}),
+    TensorSpec::createSpec<int32_t>(TFFeedPrefix + "step_type", {1})};
 } // namespace
 
 TrainingLogger::TrainingLogger(StringRef LogFileName,
@@ -353,7 +344,7 @@ void TrainingLogger::logInlineEvent(const InlineEvent &Event,
                                     const MLModelRunner &ModelRunner) {
   size_t CurrentFeature = 0;
   for (; CurrentFeature < NumberOfFeatures; ++CurrentFeature) {
-    int64_t F = ModelRunner.getFeature(CurrentFeature);
+    int64_t F = *ModelRunner.getTensor<int64_t>(CurrentFeature);
     L->logInt64Value(CurrentFeature, &F);
   }
 
@@ -433,7 +424,9 @@ DevelopmentModeMLInlineAdvisor::getAdviceFromModel(
     return MLInlineAdvisor::getAdviceFromModel(CB, ORE);
 
   bool DefaultAdvice = GetDefaultAdvice(CB);
-  auto Recommendation = IsDoingInference ? ModelRunner->run() : DefaultAdvice;
+  auto Recommendation =
+      IsDoingInference ? static_cast<bool>(ModelRunner->evaluate<int64_t>())
+                       : DefaultAdvice;
   return std::make_unique<LoggingMLInlineAdvice>(
       /*Advisor=*/this,
       /*CB=*/CB, /*ORE=*/ORE, /*Recommendation=*/Recommendation,
@@ -461,11 +454,8 @@ size_t DevelopmentModeMLInlineAdvisor::getTotalSizeEstimate() {
 ModelUnderTrainingRunner::ModelUnderTrainingRunner(LLVMContext &Ctx,
                                                    const std::string &ModelPath)
     : MLModelRunner(Ctx) {
-  std::vector<TensorSpec> InputSpecs;
-  for (size_t I = 0; I < NumberOfFeatures; ++I)
-    InputSpecs.push_back(
-        TensorSpec::createSpec<int64_t>(TFFeedPrefix + FeatureNameMap[I], {1}));
-  append_range(InputSpecs, TrainingOnlyFeatures);
+  std::vector<TensorSpec> InputSpecs =
+      ModelUnderTrainingRunner::getInputFeatures();
   if (auto MaybeOutSpecs =
           loadOutputSpecs(Ctx, DecisionName, ModelPath, TFOutputSpecOverride))
     OutputSpecs = std::move(*MaybeOutSpecs);
@@ -482,23 +472,17 @@ ModelUnderTrainingRunner::ModelUnderTrainingRunner(LLVMContext &Ctx,
   }
 }
 
-bool ModelUnderTrainingRunner::run() {
+void *ModelUnderTrainingRunner::evaluateUntyped() {
   LastEvaluationResult = Evaluator->evaluate();
   if (!LastEvaluationResult.hasValue()) {
     Ctx.emitError("Error evaluating model.");
-    return false;
+    return nullptr;
   }
-  int64_t Decision = *LastEvaluationResult->getTensorValue<int64_t>(0);
-  return static_cast<bool>(Decision);
+  return LastEvaluationResult->getTensorValue<int64_t>(0);
 }
 
-int64_t ModelUnderTrainingRunner::getFeature(int Index) const {
-  return *Evaluator->getInput<int64_t>(Index);
-}
-
-void ModelUnderTrainingRunner::setFeature(FeatureIndex Index, int64_t Value) {
-  size_t NumericIndex = static_cast<size_t>(Index);
-  *(Evaluator->getInput<int64_t>(NumericIndex)) = Value;
+void *ModelUnderTrainingRunner::getTensorUntyped(size_t Index) {
+  return Evaluator->getUntypedInput(Index);
 }
 
 std::unique_ptr<InlineAdvisor> llvm::getDevelopmentModeAdvisor(
@@ -509,7 +493,8 @@ std::unique_ptr<InlineAdvisor> llvm::getDevelopmentModeAdvisor(
   ModelUnderTrainingRunner *MUTRPtr = nullptr;
   bool IsDoingInference = false;
   if (TFModelUnderTrainingPath.empty())
-    Runner.reset(new NoInferenceModelRunner(Ctx));
+    Runner.reset(new NoInferenceModelRunner(
+        Ctx, ModelUnderTrainingRunner::getInputFeatures()));
   else {
     auto MUTR = std::make_unique<ModelUnderTrainingRunner>(
         Ctx, TFModelUnderTrainingPath);
