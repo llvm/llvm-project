@@ -20,9 +20,9 @@ define void @move.balc1(i32 %a) {
 
 declare i32 @func2(i32, i32)
 
-define void @move.balc2(i32 %a) {
-; CHECK: move.balc $a1, $a0, func2
+define void @move.balc2(i32 %a, i32 %b, i32 %c) {
+; CHECK: move.balc $a1, $a2, func2
   %add1 = add i32 %a, 1
-  call i32 @func2(i32 %add1, i32 %a)
+  call i32 @func2(i32 %add1, i32 %c)
   ret void
 }
