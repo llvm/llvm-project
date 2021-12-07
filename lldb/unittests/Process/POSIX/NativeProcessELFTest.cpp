@@ -39,7 +39,7 @@ std::unique_ptr<llvm::MemoryBuffer> CreateAuxvData(
     encoder.AppendAddress(pair.second);
   }
   return llvm::MemoryBuffer::getMemBufferCopy(
-      llvm::toStringRef(buffer_sp->GetData()), "");
+      llvm::toStringRef(encoder.GetData()), "");
 }
 
 } // namespace

@@ -10,14 +10,12 @@
 // UNSUPPORTED: libcpp-no-concepts
 // UNSUPPORTED: libcpp-has-no-incomplete-ranges
 
-// Test the libc++ extension that std::views::common is marked as [[nodiscard]].
+// Test the libc++ extension that std::views::counted is marked as [[nodiscard]].
 
 #include <ranges>
 
 void test() {
   int range[] = {1, 2, 3};
 
-  std::views::common(range); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
-  range | std::views::common; // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
-  std::views::all | std::views::common; // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::views::counted(range, 1); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
 }

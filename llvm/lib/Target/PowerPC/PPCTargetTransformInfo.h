@@ -137,6 +137,17 @@ public:
   bool areFunctionArgsABICompatible(const Function *Caller,
                                     const Function *Callee,
                                     SmallPtrSetImpl<Argument *> &Args) const;
+  bool hasActiveVectorLength(unsigned Opcode, Type *DataType,
+                             Align Alignment) const;
+  InstructionCost getVPMemoryOpCost(unsigned Opcode, Type *Src, Align Alignment,
+                                    unsigned AddressSpace,
+                                    TTI::TargetCostKind CostKind,
+                                    const Instruction *I = nullptr);
+
+private:
+  // The following constant is used for estimating costs on power9.
+  static const InstructionCost::CostType P9PipelineFlushEstimate = 80;
+
   /// @}
 };
 

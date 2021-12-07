@@ -91,14 +91,14 @@ namespace ranges {
     _LIBCPP_HIDE_FROM_ABI
     constexpr subrange(__convertible_to_non_slicing<_Iter> auto __iter, _Sent __sent)
       requires _MustProvideSizeAtConstruction
-      : __begin_(_VSTD::move(__iter)), __end_(std::move(__sent))
+      : __begin_(_VSTD::move(__iter)), __end_(_VSTD::move(__sent))
     { }
 
     _LIBCPP_HIDE_FROM_ABI
     constexpr subrange(__convertible_to_non_slicing<_Iter> auto __iter, _Sent __sent,
                        make_unsigned_t<iter_difference_t<_Iter>> __n)
       requires (_Kind == subrange_kind::sized)
-      : __begin_(_VSTD::move(__iter)), __end_(std::move(__sent)), __size_(__n)
+      : __begin_(_VSTD::move(__iter)), __end_(_VSTD::move(__sent)), __size_(__n)
     {
       if constexpr (sized_sentinel_for<_Sent, _Iter>)
         _LIBCPP_ASSERT((__end_ - __begin_) == static_cast<iter_difference_t<_Iter>>(__n),
