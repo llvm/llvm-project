@@ -150,6 +150,10 @@ M88kRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   case TargetOpcode::G_FMUL:
   case TargetOpcode::G_FDIV:
     return getSameKindOfOperandsMapping(MI);
+  case TargetOpcode::G_CONSTANT:
+    return getInstructionMapping(DefaultMappingID, /*Cost=*/1,
+            getOperandsMapping({getValueMapping(PMI_GPR32), nullptr}),
+                                 /*NumOperands*/ MI.getNumOperands());
   case TargetOpcode::COPY: {
     Register DstReg = MI.getOperand(0).getReg();
     Register SrcReg = MI.getOperand(1).getReg();
