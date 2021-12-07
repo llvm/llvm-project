@@ -96,6 +96,10 @@ public:
     // If true, varargs functions can be extracted.
     bool AllowVarArgs;
 
+    /// If true, copies the code into the extracted function instead of moving
+    /// it.
+    bool KeepOldBlocks;
+
     // Bits of intermediate state computed at various phases of extraction.
     SetVector<BasicBlock *> Blocks;
     unsigned NumExitBlocks = std::numeric_limits<unsigned>::max();
@@ -124,12 +128,17 @@ public:
     /// code is extracted, including vastart. If AllowAlloca is true, then
     /// extraction of blocks containing alloca instructions would be possible,
     /// however code extractor won't validate whether extraction is legal.
+    ///
+    /// If KeepOldBlocks is true, the original instances of the extracted region
+    /// remains in the original function so they can still be branched to from
+    /// non-extracted blocks. However, only branches to the first block will
+    /// call the extracted function.
     CodeExtractor(ArrayRef<BasicBlock *> BBs, DominatorTree *DT = nullptr,
                   bool AggregateArgs = false, BlockFrequencyInfo *BFI = nullptr,
                   BranchProbabilityInfo *BPI = nullptr,
-                  AssumptionCache *AC = nullptr,
-                  bool AllowVarArgs = false, bool AllowAlloca = false,
-                  std::string Suffix = "");
+                  AssumptionCache *AC = nullptr, bool AllowVarArgs = false,
+                  bool AllowAlloca = false, std::string Suffix = "",
+                  bool KeepOldBlocks = false);
 
     /// Create a code extractor for a loop body.
     ///
