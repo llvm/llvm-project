@@ -242,6 +242,23 @@ const char *Demangler::parseIdentifier(OutputBuffer *Demangled,
 
   // TODO: Parse template instances with a length prefix.
 
+  // There can be multiple different declarations in the same function that
+  // have the same mangled name.  To make the mangled names unique, a fake
+  // parent in the form `__Sddd' is added to the symbol.
+  if (Len >= 4 && Mangled[0] == '_' && Mangled[1] == '_' && Mangled[2] == 'S') {
+    const char *NumPtr = Mangled + 3;
+    while (NumPtr < (Mangled + Len) && std::isdigit(*NumPtr))
+      ++NumPtr;
+
+    if (Mangled + Len == NumPtr) {
+      // Skip over the fake parent.
+      Mangled += Len;
+      return parseIdentifier(Demangled, Mangled);
+    }
+
+    // Else demangle it as a plain identifier.
+  }
+
   return parseLName(Demangled, Mangled, Len);
 }
 
