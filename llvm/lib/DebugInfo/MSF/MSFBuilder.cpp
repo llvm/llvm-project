@@ -360,8 +360,7 @@ Expected<FileBufferByteStream> MSFBuilder::commit(StringRef Path,
 
     return make_error<MSFError>(
         error_code,
-        formatv("File size would have been {0,1:N} which exceeds the maximum \
-                 file size for the current page size {1}",
+        formatv("File size {0,1:N} too large for current PDB page size {1}",
                 FileSize, Layout.SB->BlockSize));
   }
 
