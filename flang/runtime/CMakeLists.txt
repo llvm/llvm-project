@@ -63,6 +63,7 @@ add_flang_library(FortranRuntime
   misc-intrinsic.cpp
   namelist.cpp
   numeric.cpp
+  ragged.cpp
   random.cpp
   reduction.cpp
   pointer.cpp
