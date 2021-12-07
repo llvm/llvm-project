@@ -568,9 +568,58 @@ bool MipsInstrInfo::SafeInForbiddenSlot(const MachineInstr &MI) const {
   return (MI.getDesc().TSFlags & MipsII::IsCTI) == 0;
 }
 
+bool MipsInstrInfo::SafeInFPUDelaySlot(const MachineInstr &MIInSlot,
+                                       const MachineInstr &FPUMI) const {
+  if (MIInSlot.isInlineAsm())
+    return false;
+
+  if (HasFPUDelaySlot(MIInSlot))
+    return false;
+
+  switch (MIInSlot.getOpcode()) {
+  case Mips::BC1F:
+  case Mips::BC1FL:
+  case Mips::BC1T:
+  case Mips::BC1TL:
+    return false;
+  }
+
+  for (const MachineOperand &Op : FPUMI.defs()) {
+    if (!Op.isReg())
+      continue;
+
+    bool Reads, Writes;
+    std::tie(Reads, Writes) = MIInSlot.readsWritesVirtualRegister(Op.getReg());
+
+    if (Reads || Writes)
+      return false;
+  }
+
+  return true;
+}
+
 /// Predicate for distingushing instructions that have forbidden slots.
 bool MipsInstrInfo::HasForbiddenSlot(const MachineInstr &MI) const {
   return (MI.getDesc().TSFlags & MipsII::HasForbiddenSlot) != 0;
+}
+
+/// Predicate for distingushing instructions that have FPU delay slots.
+bool MipsInstrInfo::HasFPUDelaySlot(const MachineInstr &MI) const {
+  switch (MI.getOpcode()) {
+  case Mips::MTC1:
+  case Mips::MFC1:
+  case Mips::MTC1_D64:
+  case Mips::MFC1_D64:
+  case Mips::DMTC1:
+  case Mips::DMFC1:
+  case Mips::FCMP_S32:
+  case Mips::FCMP_D32:
+  case Mips::FCMP_D64:
+    return true;
+
+  default:
+    return false;
+  }
 }
 
 /// Return the number of bytes of code the specified instruction may be.
