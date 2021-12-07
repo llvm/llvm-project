@@ -870,7 +870,7 @@ def S_GETREG_B32 : SOPK_Pseudo <
 }
 } // End mayLoad = 1
 
-let mayLoad = 0, mayStore = 0, Defs = [MODE], Uses = [MODE] in {
+let Defs = [MODE], Uses = [MODE] in {
 
 // FIXME: Need to truncate immediate to 16-bits.
 class S_SETREG_B32_Pseudo <list<dag> pattern=[]> : SOPK_Pseudo <
@@ -914,7 +914,7 @@ def S_SETREG_IMM32_B32_mode : S_SETREG_IMM32_B32_Pseudo {
   let hasSideEffects = 0;
 }
 
-} // End mayLoad = 0, mayStore = 0, Defs = [MODE], Uses = [MODE]
+} // End Defs = [MODE], Uses = [MODE]
 
 class SOPK_WAITCNT<string opName, list<dag> pat=[]> :
     SOPK_Pseudo<
@@ -1264,7 +1264,7 @@ def S_WAKEUP : SOPP_Pseudo <"s_wakeup", (ins) > {
   let mayStore = 1;
 }
 
-let mayLoad = 0, mayStore = 0, hasSideEffects = 1 in
+let hasSideEffects = 1 in
 def S_WAITCNT : SOPP_Pseudo <"s_waitcnt" , (ins WAIT_FLAG:$simm16), "$simm16",
     [(int_amdgcn_s_waitcnt timm:$simm16)]>;
 def S_SETHALT : SOPP_Pseudo <"s_sethalt" , (ins i32imm:$simm16), "$simm16",
@@ -1278,8 +1278,6 @@ def S_SETKILL : SOPP_Pseudo <"s_setkill" , (ins i16imm:$simm16), "$simm16">;
 def S_SLEEP : SOPP_Pseudo <"s_sleep", (ins i32imm:$simm16),
   "$simm16", [(int_amdgcn_s_sleep timm:$simm16)]> {
   let hasSideEffects = 1;
-  let mayLoad = 0;
-  let mayStore = 0;
 }
 
 def S_SETPRIO : SOPP_Pseudo <"s_setprio" , (ins i16imm:$simm16), "$simm16">;
@@ -1305,14 +1303,10 @@ def S_ICACHE_INV : SOPP_Pseudo <"s_icache_inv", (ins)> {
 def S_INCPERFLEVEL : SOPP_Pseudo <"s_incperflevel", (ins i32imm:$simm16), "$simm16",
   [(int_amdgcn_s_incperflevel timm:$simm16)]> {
   let hasSideEffects = 1;
-  let mayLoad = 0;
-  let mayStore = 0;
 }
 def S_DECPERFLEVEL : SOPP_Pseudo <"s_decperflevel", (ins i32imm:$simm16), "$simm16",
   [(int_amdgcn_s_decperflevel timm:$simm16)]> {
   let hasSideEffects = 1;
-  let mayLoad = 0;
-  let mayStore = 0;
 }
 def S_TTRACEDATA : SOPP_Pseudo <"s_ttracedata", (ins)> {
   let simm16 = 0;
