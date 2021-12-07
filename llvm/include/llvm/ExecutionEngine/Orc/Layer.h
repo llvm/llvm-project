@@ -43,8 +43,7 @@ public:
   /// entries for each definition in M.
   /// This constructor is useful for delegating work from one
   /// IRMaterializationUnit to another.
-  IRMaterializationUnit(ThreadSafeModule TSM, SymbolFlagsMap SymbolFlags,
-                        SymbolStringPtr InitSymbol,
+  IRMaterializationUnit(ThreadSafeModule TSM, Interface I,
                         SymbolNameToDefinitionMap SymbolToDefinition);
 
   /// Return the ModuleIdentifier as the name for this MaterializationUnit.
@@ -166,8 +165,7 @@ public:
 
   BasicObjectLayerMaterializationUnit(ObjectLayer &L,
                                       std::unique_ptr<MemoryBuffer> O,
-                                      SymbolFlagsMap SymbolFlags,
-                                      SymbolStringPtr InitSymbol);
+                                      Interface I);
 
   /// Return the buffer's identifier as the name for this MaterializationUnit.
   StringRef getName() const override;

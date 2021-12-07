@@ -31,8 +31,8 @@ public:
 
   CompileCallbackMaterializationUnit(SymbolStringPtr Name,
                                      CompileFunction Compile)
-      : MaterializationUnit(SymbolFlagsMap({{Name, JITSymbolFlags::Exported}}),
-                            nullptr),
+      : MaterializationUnit(Interface(
+            SymbolFlagsMap({{Name, JITSymbolFlags::Exported}}), nullptr)),
         Name(std::move(Name)), Compile(std::move(Compile)) {}
 
   StringRef getName() const override { return "<Compile Callbacks>"; }

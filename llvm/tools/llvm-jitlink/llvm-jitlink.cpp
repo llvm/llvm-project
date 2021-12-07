@@ -649,24 +649,23 @@ Error LLVMJITLinkObjectLinkingLayer::add(ResourceTrackerSP RT,
 
   // Use getObjectSymbolInfo to compute the init symbol, but ignore
   // the symbols field. We'll handle that manually to include promotion.
-  auto ObjSymInfo =
-      getObjectSymbolInfo(getExecutionSession(), O->getMemBufferRef());
+  auto ObjInterface =
+      getObjectInterface(getExecutionSession(), O->getMemBufferRef());
 
-  if (!ObjSymInfo)
-    return ObjSymInfo.takeError();
-
-  auto &InitSymbol = ObjSymInfo->second;
+  if (!ObjInterface)
+    return ObjInterface.takeError();
 
   // If creating an object file was going to fail it would have happened above,
   // so we can 'cantFail' this.
   auto Obj =
       cantFail(object::ObjectFile::createObjectFile(O->getMemBufferRef()));
 
-  SymbolFlagsMap SymbolFlags;
+  ObjInterface->SymbolFlags.clear();
 
   // The init symbol must be included in the SymbolFlags map if present.
-  if (InitSymbol)
-    SymbolFlags[InitSymbol] = JITSymbolFlags::MaterializationSideEffectsOnly;
+  if (ObjInterface->InitSymbol)
+    ObjInterface->SymbolFlags[ObjInterface->InitSymbol] =
+        JITSymbolFlags::MaterializationSideEffectsOnly;
 
   for (auto &Sym : Obj->symbols()) {
     Expected<uint32_t> SymFlagsOrErr = Sym.getFlags();
@@ -710,11 +709,11 @@ Error LLVMJITLinkObjectLinkingLayer::add(ResourceTrackerSP RT,
       continue;
 
     auto InternedName = S.ES.intern(*Name);
-    SymbolFlags[InternedName] = std::move(*SymFlags);
+    ObjInterface->SymbolFlags[InternedName] = std::move(*SymFlags);
   }
 
   auto MU = std::make_unique<BasicObjectLayerMaterializationUnit>(
-      *this, std::move(O), std::move(SymbolFlags), std::move(InitSymbol));
+      *this, std::move(O), std::move(*ObjInterface));
 
   auto &JD = RT->getJITDylib();
   return JD.define(std::move(MU), std::move(RT));
@@ -1034,10 +1033,10 @@ Session::Session(std::unique_ptr<ExecutorProcessControl> EPC, Error &Err)
     auto ObjBuffer =
         ExitOnErr(errorOrToExpected(MemoryBuffer::getFile(HarnessFile)));
 
-    auto ObjSymbolInfo =
-        ExitOnErr(getObjectSymbolInfo(ES, ObjBuffer->getMemBufferRef()));
+    auto ObjInterface =
+        ExitOnErr(getObjectInterface(ES, ObjBuffer->getMemBufferRef()));
 
-    for (auto &KV : ObjSymbolInfo.first)
+    for (auto &KV : ObjInterface.SymbolFlags)
       HarnessDefinitions.insert(*KV.first);
 
     auto Obj = ExitOnErr(
