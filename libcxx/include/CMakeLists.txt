@@ -257,6 +257,7 @@ set(files
   __random/binomial_distribution.h
   __random/cauchy_distribution.h
   __random/chi_squared_distribution.h
+  __random/clamp_to_integral.h
   __random/default_random_engine.h
   __random/discard_block_engine.h
   __random/discrete_distribution.h

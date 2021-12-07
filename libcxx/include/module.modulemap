@@ -704,6 +704,7 @@ module std [system] {
       module binomial_distribution           { private header "__random/binomial_distribution.h" }
       module cauchy_distribution             { private header "__random/cauchy_distribution.h" }
       module chi_squared_distribution        { private header "__random/chi_squared_distribution.h" }
+      module clamp_to_integral               { private header "__random/clamp_to_integral.h" }
       module default_random_engine           { private header "__random/default_random_engine.h" }
       module discard_block_engine            { private header "__random/discard_block_engine.h" }
       module discrete_distribution           { private header "__random/discrete_distribution.h" }
