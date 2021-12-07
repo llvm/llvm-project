@@ -36,8 +36,8 @@ namespace __llvm_libc {
 //  is wasteful near 65 but efficient toward 128.
 //  - SetAlignedBlocks<32> would consume between 3 and 4 conditionals and write
 //  96 or 128 Bytes.
-//  - Another approach could be to use an hybrid approach Copy<64>+Overlap<32>
-//  for 65-96 and Copy<96>+Overlap<32> for 97-128
+//  - Another approach could be to use an hybrid approach copy<64>+Overlap<32>
+//  for 65-96 and copy<96>+Overlap<32> for 97-128
 //
 // Benchmarks showed that redundant writes were cheap (for Intel X86) but
 // conditional were expensive, even on processor that do not support writing 64B
@@ -57,22 +57,22 @@ inline static void inline_memset(char *dst, unsigned char value, size_t count) {
   if (count == 0)
     return;
   if (count == 1)
-    return SplatSet<_1>(dst, value);
+    return splat_set<_1>(dst, value);
   if (count == 2)
-    return SplatSet<_2>(dst, value);
+    return splat_set<_2>(dst, value);
   if (count == 3)
-    return SplatSet<_3>(dst, value);
+    return splat_set<_3>(dst, value);
   if (count <= 8)
-    return SplatSet<HeadTail<_4>>(dst, value, count);
+    return splat_set<HeadTail<_4>>(dst, value, count);
   if (count <= 16)
-    return SplatSet<HeadTail<_8>>(dst, value, count);
+    return splat_set<HeadTail<_8>>(dst, value, count);
   if (count <= 32)
-    return SplatSet<HeadTail<_16>>(dst, value, count);
+    return splat_set<HeadTail<_16>>(dst, value, count);
   if (count <= 64)
-    return SplatSet<HeadTail<_32>>(dst, value, count);
+    return splat_set<HeadTail<_32>>(dst, value, count);
   if (count <= 128)
-    return SplatSet<HeadTail<_64>>(dst, value, count);
-  return SplatSet<Align<_32, Arg::Dst>::Then<Loop<_32>>>(dst, value, count);
+    return splat_set<HeadTail<_64>>(dst, value, count);
+  return splat_set<Align<_32, Arg::Dst>::Then<Loop<_32>>>(dst, value, count);
 #elif defined(LLVM_LIBC_ARCH_AARCH64)
   /////////////////////////////////////////////////////////////////////////////
   // LLVM_LIBC_ARCH_AARCH64
@@ -81,27 +81,27 @@ inline static void inline_memset(char *dst, unsigned char value, size_t count) {
   if (count == 0)
     return;
   if (count <= 3) {
-    SplatSet<_1>(dst, value);
+    splat_set<_1>(dst, value);
     if (count > 1)
-      SplatSet<Tail<_2>>(dst, value, count);
+      splat_set<Tail<_2>>(dst, value, count);
     return;
   }
   if (count <= 8)
-    return SplatSet<HeadTail<_4>>(dst, value, count);
+    return splat_set<HeadTail<_4>>(dst, value, count);
   if (count <= 16)
-    return SplatSet<HeadTail<_8>>(dst, value, count);
+    return splat_set<HeadTail<_8>>(dst, value, count);
   if (count <= 32)
-    return SplatSet<HeadTail<_16>>(dst, value, count);
+    return splat_set<HeadTail<_16>>(dst, value, count);
   if (count <= 96) {
-    SplatSet<_32>(dst, value);
+    splat_set<_32>(dst, value);
     if (count <= 64)
-      return SplatSet<Tail<_32>>(dst, value, count);
-    SplatSet<Skip<32>::Then<_32>>(dst, value);
-    SplatSet<Tail<_32>>(dst, value, count);
+      return splat_set<Tail<_32>>(dst, value, count);
+    splat_set<Skip<32>::Then<_32>>(dst, value);
+    splat_set<Tail<_32>>(dst, value, count);
     return;
   }
   if (count < 448 || value != 0 || !AArch64ZVA(dst, count))
-    return SplatSet<Align<_16, Arg::_1>::Then<Loop<_64>>>(dst, value, count);
+    return splat_set<Align<_16, Arg::_1>::Then<Loop<_64>>>(dst, value, count);
 #else
   /////////////////////////////////////////////////////////////////////////////
   // Default
@@ -111,22 +111,22 @@ inline static void inline_memset(char *dst, unsigned char value, size_t count) {
   if (count == 0)
     return;
   if (count == 1)
-    return SplatSet<_1>(dst, value);
+    return splat_set<_1>(dst, value);
   if (count == 2)
-    return SplatSet<_2>(dst, value);
+    return splat_set<_2>(dst, value);
   if (count == 3)
-    return SplatSet<_3>(dst, value);
+    return splat_set<_3>(dst, value);
   if (count <= 8)
-    return SplatSet<HeadTail<_4>>(dst, value, count);
+    return splat_set<HeadTail<_4>>(dst, value, count);
   if (count <= 16)
-    return SplatSet<HeadTail<_8>>(dst, value, count);
+    return splat_set<HeadTail<_8>>(dst, value, count);
   if (count <= 32)
-    return SplatSet<HeadTail<_16>>(dst, value, count);
+    return splat_set<HeadTail<_16>>(dst, value, count);
   if (count <= 64)
-    return SplatSet<HeadTail<_32>>(dst, value, count);
+    return splat_set<HeadTail<_32>>(dst, value, count);
   if (count <= 128)
-    return SplatSet<HeadTail<_64>>(dst, value, count);
-  return SplatSet<Align<_32, Arg::Dst>::Then<Loop<_32>>>(dst, value, count);
+    return splat_set<HeadTail<_64>>(dst, value, count);
+  return splat_set<Align<_32, Arg::Dst>::Then<Loop<_32>>>(dst, value, count);
 #endif
 }
 

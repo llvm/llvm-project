@@ -167,6 +167,7 @@ static_library("CodeGen") {
     "RegAllocFast.cpp",
     "RegAllocGreedy.cpp",
     "RegAllocPBQP.cpp",
+    "RegAllocScore.cpp",
     "RegUsageInfoCollector.cpp",
     "RegUsageInfoPropagate.cpp",
     "RegisterClassInfo.cpp",

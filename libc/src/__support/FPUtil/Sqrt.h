@@ -97,32 +97,32 @@ template <typename T,
           cpp::EnableIfType<cpp::IsFloatingPointType<T>::Value, int> = 0>
 static inline T sqrt(T x) {
   using UIntType = typename FPBits<T>::UIntType;
-  constexpr UIntType One = UIntType(1) << MantissaWidth<T>::value;
+  constexpr UIntType One = UIntType(1) << MantissaWidth<T>::VALUE;
 
   FPBits<T> bits(x);
 
-  if (bits.isInfOrNaN()) {
-    if (bits.getSign() && (bits.getMantissa() == 0)) {
+  if (bits.is_inf_or_nan()) {
+    if (bits.get_sign() && (bits.get_mantissa() == 0)) {
       // sqrt(-Inf) = NaN
-      return FPBits<T>::buildNaN(One >> 1);
+      return FPBits<T>::build_nan(One >> 1);
     } else {
       // sqrt(NaN) = NaN
       // sqrt(+Inf) = +Inf
       return x;
     }
-  } else if (bits.isZero()) {
+  } else if (bits.is_zero()) {
     // sqrt(+0) = +0
     // sqrt(-0) = -0
     return x;
-  } else if (bits.getSign()) {
+  } else if (bits.get_sign()) {
     // sqrt( negative numbers ) = NaN
-    return FPBits<T>::buildNaN(One >> 1);
+    return FPBits<T>::build_nan(One >> 1);
   } else {
-    int xExp = bits.getExponent();
-    UIntType xMant = bits.getMantissa();
+    int xExp = bits.get_exponent();
+    UIntType xMant = bits.get_mantissa();
 
     // Step 1a: Normalize denormal input and append hidden bit to the mantissa
-    if (bits.getUnbiasedExponent() == 0) {
+    if (bits.get_unbiased_exponent() == 0) {
       ++xExp; // let xExp be the correct exponent of One bit.
       internal::normalize<T>(xExp, xMant);
     } else {
@@ -170,9 +170,9 @@ static inline T sqrt(T x) {
     }
 
     // Remove hidden bit and append the exponent field.
-    xExp = ((xExp >> 1) + FPBits<T>::exponentBias);
+    xExp = ((xExp >> 1) + FPBits<T>::EXPONENT_BIAS);
 
-    y = (y - One) | (static_cast<UIntType>(xExp) << MantissaWidth<T>::value);
+    y = (y - One) | (static_cast<UIntType>(xExp) << MantissaWidth<T>::VALUE);
     // Round to nearest, ties to even
     if (rb && (lsb || (r != 0))) {
       ++y;

@@ -13,7 +13,7 @@
 namespace __llvm_libc {
 
 LLVM_LIBC_FUNCTION(long, lroundl, (long double x)) {
-  return fputil::roundToSignedInteger<long double, long>(x);
+  return fputil::round_to_signed_integer<long double, long>(x);
 }
 
 } // namespace __llvm_libc
