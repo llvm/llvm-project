@@ -56,6 +56,10 @@ static LogicalResult bufferizeLinalgOp(OpBuilder &b, LinalgOp op,
   // Take a guard before anything else.
   OpBuilder::InsertionGuard g(b);
 
+  // Nothing to do. This op is already bufferized.
+  if (op.hasBufferSemantics())
+    return success();
+
   // Ensure op has only tensors. Allow mixed tensor-buffer mode on a per-need
   // basis.
   if (!op.hasTensorSemantics())
@@ -371,21 +375,21 @@ struct LinalgOpInterfaceHelper<> {
 
 } // namespace
 
-/// Try to eliminate InitTensorOps inside funcOp. An InitTensorOp is replaced
+/// Try to eliminate InitTensorOps inside `op`. An InitTensorOp is replaced
 /// with the the result of `rewriteFunc` if it is anchored on a matching
 /// OpOperand. "Anchored" means that there is a path on the reverse SSA use-def
 /// chain, starting from the OpOperand and always following the aliasing
 /// OpOperand, that eventually ends at a single InitTensorOp.
 LogicalResult mlir::linalg::comprehensive_bufferize::linalg_ext::
     InitTensorEliminationStep::eliminateInitTensors(
-        FuncOp funcOp, BufferizationState &state,
+        Operation *op, BufferizationState &state,
         BufferizationAliasInfo &aliasInfo,
         std::function<bool(OpOperand &)> anchorMatchFunc,
         std::function<Value(OpBuilder &, Location, OpOperand &)> rewriteFunc,
         SmallVector<Operation *> &newOps) {
-  OpBuilder b(funcOp->getContext());
+  OpBuilder b(op->getContext());
 
-  WalkResult status = funcOp->walk([&](Operation *op) {
+  WalkResult status = op->walk([&](Operation *op) {
     for (OpOperand &operand : op->getOpOperands()) {
       // Is this a matching OpOperand?
       if (!anchorMatchFunc(operand))
@@ -443,7 +447,7 @@ LogicalResult mlir::linalg::comprehensive_bufferize::linalg_ext::
   return failure(status.wasInterrupted());
 }
 
-/// Try to eliminate InitTensorOps inside funcOp. An InitTensorOp can be
+/// Try to eliminate InitTensorOps inside `op`. An InitTensorOp can be
 /// eliminated if it is eventually inserted into another tensor (and some other
 /// conditions are met).
 ///
@@ -473,10 +477,10 @@ LogicalResult mlir::linalg::comprehensive_bufferize::linalg_ext::
 /// out-of-place due to RaW conflicts.
 LogicalResult mlir::linalg::comprehensive_bufferize::linalg_ext::
     InsertSliceAnchoredInitTensorEliminationStep::run(
-        FuncOp funcOp, BufferizationState &state,
+        Operation *op, BufferizationState &state,
         BufferizationAliasInfo &aliasInfo, SmallVector<Operation *> &newOps) {
   return eliminateInitTensors(
-      funcOp, state, aliasInfo,
+      op, state, aliasInfo,
       [&](OpOperand &operand) {
         auto insertSliceOp =
             dyn_cast<tensor::InsertSliceOp>(operand.getOwner());

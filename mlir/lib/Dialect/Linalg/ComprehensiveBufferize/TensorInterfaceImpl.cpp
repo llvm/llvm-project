@@ -432,11 +432,11 @@ struct InsertSliceOpInterface
 } // namespace mlir
 
 LogicalResult mlir::linalg::comprehensive_bufferize::tensor_ext::
-    InplaceInsertSliceOpAnalysis::run(FuncOp funcOp, BufferizationState &state,
+    InplaceInsertSliceOpAnalysis::run(Operation *op, BufferizationState &state,
                                       BufferizationAliasInfo &aliasInfo,
                                       SmallVector<Operation *> &newOps) {
   auto &tensorState = getTensorBufferizationState(state);
-  funcOp.walk([&](InsertSliceOp insertSliceOp) {
+  op->walk([&](InsertSliceOp insertSliceOp) {
     // A copy of the source buffer is needed if either:
     //   - The producer of `source` is not inplace. This is the case where a
     //     slice is computed out of place into the inplace full tensor.

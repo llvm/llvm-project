@@ -667,10 +667,10 @@ static void equivalenceAnalysis(Operation *op,
 
 /// Assert that the current bufferization decisions are consistent.
 static LogicalResult
-checkAliasInfoConsistency(FuncOp funcOp, const DominanceInfo &domInfo,
+checkAliasInfoConsistency(Operation *op, const DominanceInfo &domInfo,
                           const BufferizationAliasInfo &aliasInfo) {
   Operation *inconsistentOp = nullptr;
-  WalkResult walkResult = funcOp.walk([&](Operation *op) {
+  WalkResult walkResult = op->walk([&](Operation *op) {
     if (auto bufferizableOp = dyn_cast<BufferizableOpInterface>(op))
       for (OpOperand &opOperand : op->getOpOperands())
         if (opOperand.get().getType().isa<TensorType>()) {
@@ -710,20 +710,23 @@ annotateOpsWithBufferizationMarkers(Operation *op,
 }
 
 LogicalResult mlir::linalg::comprehensive_bufferize::runComprehensiveBufferize(
-    FuncOp funcOp, const BufferizationOptions &options,
+    Operation *op, const BufferizationOptions &options) {
+  BufferizationState state(op, options);
+  PostAnalysisStepList extraSteps;
+  return runComprehensiveBufferize(op, options, state, extraSteps);
+}
+
+LogicalResult mlir::linalg::comprehensive_bufferize::runComprehensiveBufferize(
+    Operation *op, const BufferizationOptions &options,
     BufferizationState &state, const PostAnalysisStepList &extraSteps) {
 
-  DominanceInfo domInfo(funcOp);
+  DominanceInfo domInfo(op);
   BufferizationAliasInfo &aliasInfo = state.aliasInfo;
 
-  if (funcOp.body().empty())
-    return success();
-
-  if (failed(checkAliasInfoConsistency(funcOp, domInfo, aliasInfo)))
+  if (failed(checkAliasInfoConsistency(op, domInfo, aliasInfo)))
     return failure();
 
   // If the analysis fails, just return.
-  Operation *op = funcOp.getOperation();
   if (failed(inPlaceAnalysis(op, aliasInfo, state, domInfo,
                              options.analysisFuzzerSeed)))
     return failure();
@@ -732,7 +735,7 @@ LogicalResult mlir::linalg::comprehensive_bufferize::runComprehensiveBufferize(
   auto runPostAnalysisSteps = [&](const PostAnalysisStepList &steps) {
     for (const std::unique_ptr<PostAnalysisStep> &step : steps) {
       SmallVector<Operation *> newOps;
-      if (failed(step->run(funcOp, state, aliasInfo, newOps)))
+      if (failed(step->run(op, state, aliasInfo, newOps)))
         return failure();
       // Analyze ops that were created by the PostAnalysisStep.
       if (failed(inPlaceAnalysis(newOps, aliasInfo, state, domInfo)))
@@ -749,16 +752,12 @@ LogicalResult mlir::linalg::comprehensive_bufferize::runComprehensiveBufferize(
 
   // Annotate operations if we only want to report the analysis.
   if (options.testAnalysisOnly) {
-    annotateOpsWithBufferizationMarkers(funcOp, aliasInfo);
+    annotateOpsWithBufferizationMarkers(op, aliasInfo);
     return success();
   }
 
-  // Bufferize all ops in funcOp.
-  OpBuilder b(funcOp.getContext());
-  auto bufferizableOp =
-      dyn_cast<BufferizableOpInterface>(funcOp.getOperation());
-  assert(bufferizableOp && "must use ModuleBufferization");
-  if (failed(bufferizableOp.bufferize(b, state)))
+  // Bufferize the op and its nested ops.
+  if (failed(bufferize(op, state)))
     return failure();
 
   // Erase all obsolete ops.
