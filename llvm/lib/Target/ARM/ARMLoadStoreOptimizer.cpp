@@ -2121,7 +2121,7 @@ bool ARMLoadStoreOpt::runOnMachineFunction(MachineFunction &Fn) {
   bool Modified = false;
   for (MachineBasicBlock &MBB : Fn) {
     Modified |= LoadStoreMultipleOpti(MBB);
-    if (STI->hasV5TOps())
+    if (STI->hasV5TOps() && !AFI->shouldSignReturnAddress())
       Modified |= MergeReturnIntoLDM(MBB);
     if (isThumb1)
       Modified |= CombineMovBx(MBB);

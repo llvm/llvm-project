@@ -211,6 +211,8 @@ def FPCXTS  : ARMReg<15, "fpcxts">;
 
 def ZR  : ARMReg<15, "zr">,  DwarfRegNum<[15]>;
 
+def RA_AUTH_CODE : ARMReg<12, "ra_auth_code">, DwarfRegNum<[143]>;
+
 // Register classes.
 //
 // pc  == Program Counter

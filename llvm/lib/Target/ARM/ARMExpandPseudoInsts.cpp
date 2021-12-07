@@ -2160,6 +2160,11 @@ bool ARMExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
       return true;
     }
     case ARM::tBXNS_RET: {
+      // For v8.0-M.Main we need to authenticate LR before clearing FPRs, which
+      // uses R12 as a scratch register.
+      if (!STI->hasV8_1MMainlineOps() && AFI->shouldSignReturnAddress())
+        BuildMI(MBB, MBBI, DebugLoc(), TII->get(ARM::t2AUT));
+
       MachineBasicBlock &AfterBB = CMSEClearFPRegs(MBB, MBBI);
 
       if (STI->hasV8_1MMainlineOps()) {
@@ -2169,6 +2174,9 @@ bool ARMExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
             .addReg(ARM::SP)
             .addImm(4)
             .add(predOps(ARMCC::AL));
+
+        if (AFI->shouldSignReturnAddress())
+          BuildMI(AfterBB, AfterBB.end(), DebugLoc(), TII->get(ARM::t2AUT));
       }
 
       // Clear all GPR that are not a use of the return instruction.
