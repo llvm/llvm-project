@@ -17,7 +17,6 @@ namespace Fortran::runtime::io {
 template <Direction DIR>
 InternalDescriptorUnit<DIR>::InternalDescriptorUnit(
     Scalar scalar, std::size_t length) {
-  isFixedRecordLength = true;
   recordLength = length;
   endfileRecordNumber = 2;
   void *pointer{reinterpret_cast<void *>(const_cast<char *>(scalar))};
@@ -34,7 +33,6 @@ InternalDescriptorUnit<DIR>::InternalDescriptorUnit(
       terminator, that.SizeInBytes() <= d.SizeInBytes(maxRank, true, 0));
   new (&d) Descriptor{that};
   d.Check();
-  isFixedRecordLength = true;
   recordLength = d.ElementBytes();
   endfileRecordNumber = d.Elements() + 1;
 }
