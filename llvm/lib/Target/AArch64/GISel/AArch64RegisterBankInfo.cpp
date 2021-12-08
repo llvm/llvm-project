@@ -430,6 +430,8 @@ static bool isPreISelGenericFloatingPointOpcode(unsigned Opc) {
   case TargetOpcode::G_INTRINSIC_ROUND:
   case TargetOpcode::G_FMAXNUM:
   case TargetOpcode::G_FMINNUM:
+  case TargetOpcode::G_FMAXIMUM:
+  case TargetOpcode::G_FMINIMUM:
     return true;
   }
   return false;
@@ -600,6 +602,8 @@ AArch64RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   case TargetOpcode::G_FSUB:
   case TargetOpcode::G_FMUL:
   case TargetOpcode::G_FDIV:
+  case TargetOpcode::G_FMAXIMUM:
+  case TargetOpcode::G_FMINIMUM:
     return getSameKindOfOperandsMapping(MI);
   case TargetOpcode::G_FPEXT: {
     LLT DstTy = MRI.getType(MI.getOperand(0).getReg());
