@@ -832,12 +832,16 @@ std::pair<Module *, bool> ModuleMap::findOrCreateModule(StringRef Name,
   return std::make_pair(Result, true);
 }
 
-Module *ModuleMap::createGlobalModuleFragmentForModuleUnit(SourceLocation Loc) {
-  PendingSubmodules.emplace_back(
-      new Module("<global>", Loc, nullptr, /*IsFramework*/ false,
-                 /*IsExplicit*/ true, NumCreatedModules++));
-  PendingSubmodules.back()->Kind = Module::GlobalModuleFragment;
-  return PendingSubmodules.back().get();
+Module *ModuleMap::createGlobalModuleFragmentForModuleUnit(SourceLocation Loc,
+                                                           Module *Parent) {
+  auto *Result = new Module("<global>", Loc, Parent, /*IsFramework*/ false,
+                            /*IsExplicit*/ true, NumCreatedModules++);
+  Result->Kind = Module::GlobalModuleFragment;
+  // If the created module isn't owned by a parent, send it to PendingSubmodules
+  // to wait for its parent.
+  if (!Result->Parent)
+    PendingSubmodules.emplace_back(Result);
+  return Result;
 }
 
 Module *

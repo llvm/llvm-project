@@ -68,15 +68,8 @@ Sema::ActOnGlobalModuleFragmentDecl(SourceLocation ModuleLoc) {
 
   // We start in the global module; all those declarations are implicitly
   // module-private (though they do not have module linkage).
-  auto &Map = PP.getHeaderSearchInfo().getModuleMap();
-  auto *GlobalModule = Map.createGlobalModuleFragmentForModuleUnit(ModuleLoc);
-  assert(GlobalModule && "module creation should not fail");
-
-  // Enter the scope of the global module.
-  ModuleScopes.push_back({});
-  ModuleScopes.back().BeginLoc = ModuleLoc;
-  ModuleScopes.back().Module = GlobalModule;
-  VisibleModules.setVisible(GlobalModule, ModuleLoc);
+  Module *GlobalModule =
+      PushGlobalModuleFragment(ModuleLoc, /*IsImplicit=*/false);
 
   // All declarations created from now on are owned by the global module.
   auto *TU = Context.getTranslationUnitDecl();
@@ -707,4 +700,26 @@ Decl *Sema::ActOnFinishExportDecl(Scope *S, Decl *D, SourceLocation RBraceLoc) {
   }
 
   return D;
+}
+
+Module *Sema::PushGlobalModuleFragment(SourceLocation BeginLoc,
+                                       bool IsImplicit) {
+  ModuleMap &Map = PP.getHeaderSearchInfo().getModuleMap();
+  Module *GlobalModule =
+      Map.createGlobalModuleFragmentForModuleUnit(BeginLoc, getCurrentModule());
+  assert(GlobalModule && "module creation should not fail");
+
+  // Enter the scope of the global module.
+  ModuleScopes.push_back({BeginLoc, GlobalModule,
+                          /*ModuleInterface=*/false,
+                          /*ImplicitGlobalModuleFragment=*/IsImplicit});
+  VisibleModules.setVisible(GlobalModule, BeginLoc);
+
+  return GlobalModule;
+}
+
+void Sema::PopGlobalModuleFragment() {
+  assert(!ModuleScopes.empty() && getCurrentModule()->isGlobalModule() &&
+         "left the wrong module scope, which is not global module fragment");
+  ModuleScopes.pop_back();
 }
