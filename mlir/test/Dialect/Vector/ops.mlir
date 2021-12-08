@@ -376,6 +376,15 @@ func @create_vector_mask() {
   return
 }
 
+// CHECK-LABEL: @constant_vector_mask_0d
+func @constant_vector_mask_0d() {
+  // CHECK: vector.constant_mask [0] : vector<i1>
+  %0 = vector.constant_mask [0] : vector<i1>
+  // CHECK: vector.constant_mask [1] : vector<i1>
+  %1 = vector.constant_mask [1] : vector<i1>
+  return
+}
+
 // CHECK-LABEL: @constant_vector_mask
 func @constant_vector_mask() {
   // CHECK: vector.constant_mask [3, 2] : vector<4x3xi1>

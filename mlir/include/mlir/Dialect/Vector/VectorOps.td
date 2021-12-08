@@ -2111,7 +2111,7 @@ def Vector_TypeCastOp :
 def Vector_ConstantMaskOp :
   Vector_Op<"constant_mask", [NoSideEffect]>,
     Arguments<(ins I64ArrayAttr:$mask_dim_sizes)>,
-    Results<(outs VectorOf<[I1]>)> {
+    Results<(outs VectorOfAnyRankOf<[I1]>)> {
   let summary = "creates a constant vector mask";
   let description = [{
     Creates and returns a vector mask where elements of the result vector
