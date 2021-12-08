@@ -19,8 +19,8 @@ ValuesEqual(T x1, T x2) {
   __llvm_libc::fputil::FPBits<T> bits1(x1);
   __llvm_libc::fputil::FPBits<T> bits2(x2);
   // If either is NaN, we want both to be NaN.
-  if (bits1.isNaN() || bits2.isNaN())
-    return bits2.isNaN() && bits2.isNaN();
+  if (bits1.is_nan() || bits2.is_nan())
+    return bits2.is_nan() && bits2.is_nan();
 
   // For all other values, we want the values to be bitwise equal.
   return bits1.uintval() == bits2.uintval();

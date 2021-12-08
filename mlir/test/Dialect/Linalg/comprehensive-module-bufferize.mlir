@@ -979,3 +979,32 @@ func @equivalent_func_arg_2(%t0: tensor<?xf32> {linalg.inplaceable = true},
   }
   return %1: tensor<?xf32>
 }
+
+// -----
+
+// CHECK-LABEL: func @func_without_tensor_args
+func @func_without_tensor_args(%v : vector<10xf32>) -> () {
+  // CHECK: %[[alloc:.*]] = memref.alloc()
+  %0 = linalg.init_tensor[10] : tensor<10xf32>
+
+  %c0 = arith.constant 0 : index
+  // CHECK: vector.transfer_write %{{.*}}, %[[alloc]]
+  %1 = vector.transfer_write %v, %0[%c0] : vector<10xf32>, tensor<10xf32>
+
+  %cst = arith.constant 0.0 : f32
+  // CHECK: vector.transfer_read %[[alloc]]
+  %r = vector.transfer_read %1[%c0], %cst : tensor<10xf32>, vector<11xf32>
+
+  vector.print %r : vector<11xf32>
+  return
+}
+
+// -----
+
+// CHECK-LABEL: func private @private_func
+func private @private_func(tensor<?xf32>) -> ()
+
+// CHECK-LABEL: func @empty_func()
+func @empty_func() -> () {
+  return
+}

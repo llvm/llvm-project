@@ -108,6 +108,14 @@ uptr StackStore::Pack(Compression type) {
   return res;
 }
 
+void StackStore::LockAll() {
+  for (BlockInfo &b : blocks_) b.Lock();
+}
+
+void StackStore::UnlockAll() {
+  for (BlockInfo &b : blocks_) b.Unlock();
+}
+
 void StackStore::TestOnlyUnmap() {
   for (BlockInfo &b : blocks_) b.TestOnlyUnmap(this);
   internal_memset(this, 0, sizeof(*this));

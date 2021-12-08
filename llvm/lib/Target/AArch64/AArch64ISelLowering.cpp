@@ -15985,7 +15985,9 @@ static SDValue performSTORECombine(SDNode *N,
   if (DCI.isBeforeLegalizeOps() && Value.getOpcode() == ISD::FP_ROUND &&
       Value.getNode()->hasOneUse() && ST->isUnindexed() &&
       Subtarget->useSVEForFixedLengthVectors() &&
-      Value.getValueType().isFixedLengthVector())
+      Value.getValueType().isFixedLengthVector() &&
+      Value.getValueType().getFixedSizeInBits() >=
+          Subtarget->getMinSVEVectorSizeInBits())
     return DAG.getTruncStore(Chain, SDLoc(N), Value.getOperand(0), Ptr,
                              ST->getMemoryVT(), ST->getMemOperand());
 
@@ -17346,7 +17348,8 @@ SDValue performFPExtendCombine(SDNode *N, SelectionDAG &DAG,
   // they can be split down into something legal.
   if (DCI.isBeforeLegalizeOps() && ISD::isNormalLoad(N0.getNode()) &&
       N0.hasOneUse() && Subtarget->useSVEForFixedLengthVectors() &&
-      VT.isFixedLengthVector()) {
+      VT.isFixedLengthVector() &&
+      VT.getFixedSizeInBits() >= Subtarget->getMinSVEVectorSizeInBits()) {
     LoadSDNode *LN0 = cast<LoadSDNode>(N0);
     SDValue ExtLoad = DAG.getExtLoad(ISD::EXTLOAD, SDLoc(N), VT,
                                      LN0->getChain(), LN0->getBasePtr(),

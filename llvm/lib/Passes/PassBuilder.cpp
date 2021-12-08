@@ -28,7 +28,6 @@
 #include "llvm/Analysis/CGSCCPassManager.h"
 #include "llvm/Analysis/CallGraph.h"
 #include "llvm/Analysis/CostModel.h"
-#include "llvm/Analysis/CycleAnalysis.h"
 #include "llvm/Analysis/DDG.h"
 #include "llvm/Analysis/DDGPrinter.h"
 #include "llvm/Analysis/Delinearization.h"

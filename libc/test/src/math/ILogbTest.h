@@ -23,13 +23,13 @@ public:
   template <typename T>
   void testSpecialNumbers(typename ILogbFunc<T>::Func func) {
     EXPECT_EQ(FP_ILOGB0, func(T(__llvm_libc::fputil::FPBits<T>::zero())));
-    EXPECT_EQ(FP_ILOGB0, func(T(__llvm_libc::fputil::FPBits<T>::negZero())));
+    EXPECT_EQ(FP_ILOGB0, func(T(__llvm_libc::fputil::FPBits<T>::neg_zero())));
 
     EXPECT_EQ(FP_ILOGBNAN,
-              func(T(__llvm_libc::fputil::FPBits<T>::buildNaN(1))));
+              func(T(__llvm_libc::fputil::FPBits<T>::build_nan(1))));
 
     EXPECT_EQ(INT_MAX, func(T(__llvm_libc::fputil::FPBits<T>::inf())));
-    EXPECT_EQ(INT_MAX, func(T(__llvm_libc::fputil::FPBits<T>::negInf())));
+    EXPECT_EQ(INT_MAX, func(T(__llvm_libc::fputil::FPBits<T>::neg_inf())));
   }
 
   template <typename T> void testPowersOfTwo(typename ILogbFunc<T>::Func func) {
@@ -76,8 +76,8 @@ public:
     using UIntType = typename FPBits::UIntType;
     constexpr UIntType count = 1000001;
     constexpr UIntType step =
-        (FPBits::maxSubnormal - FPBits::minSubnormal) / count;
-    for (UIntType v = FPBits::minSubnormal; v <= FPBits::maxSubnormal;
+        (FPBits::MAX_SUBNORMAL - FPBits::MIN_SUBNORMAL) / count;
+    for (UIntType v = FPBits::MIN_SUBNORMAL; v <= FPBits::MAX_SUBNORMAL;
          v += step) {
       T x = T(FPBits(v));
       if (isnan(x) || isinf(x) || x == 0.0)
@@ -93,8 +93,8 @@ public:
     using FPBits = __llvm_libc::fputil::FPBits<T>;
     using UIntType = typename FPBits::UIntType;
     constexpr UIntType count = 1000001;
-    constexpr UIntType step = (FPBits::maxNormal - FPBits::minNormal) / count;
-    for (UIntType v = FPBits::minNormal; v <= FPBits::maxNormal; v += step) {
+    constexpr UIntType step = (FPBits::MAX_NORMAL - FPBits::MIN_NORMAL) / count;
+    for (UIntType v = FPBits::MIN_NORMAL; v <= FPBits::MAX_NORMAL; v += step) {
       T x = T(FPBits(v));
       if (isnan(x) || isinf(x) || x == 0.0)
         continue;

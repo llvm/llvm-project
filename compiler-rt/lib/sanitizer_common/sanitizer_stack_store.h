@@ -46,6 +46,9 @@ class StackStore {
   // Returns the number of released bytes.
   uptr Pack(Compression type);
 
+  void LockAll();
+  void UnlockAll();
+
   void TestOnlyUnmap();
 
  private:
@@ -106,6 +109,8 @@ class StackStore {
     void TestOnlyUnmap(StackStore *store);
     bool Stored(uptr n);
     bool IsPacked() const;
+    void Lock() NO_THREAD_SAFETY_ANALYSIS { mtx_.Lock(); }
+    void Unlock() NO_THREAD_SAFETY_ANALYSIS { mtx_.Unlock(); }
   };
 
   BlockInfo blocks_[kBlockCount] = {};
