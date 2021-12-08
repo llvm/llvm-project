@@ -1091,22 +1091,53 @@ StringRef Triple::getOSAndEnvironmentName() const {
   return Tmp.split('-').second;                      // Strip second component
 }
 
-static VersionTuple parseVersionFromName(StringRef Name) {
-  VersionTuple Version;
-  Version.tryParse(Name);
-  return Version.withoutBuild();
+static unsigned EatNumber(StringRef &Str) {
+  assert(!Str.empty() && isDigit(Str[0]) && "Not a number");
+  unsigned Result = 0;
+
+  do {
+    // Consume the leading digit.
+    Result = Result*10 + (Str[0] - '0');
+
+    // Eat the digit.
+    Str = Str.substr(1);
+  } while (!Str.empty() && isDigit(Str[0]));
+
+  return Result;
 }
 
-VersionTuple Triple::getEnvironmentVersion() const {
+static void parseVersionFromName(StringRef Name, unsigned &Major,
+                                 unsigned &Minor, unsigned &Micro) {
+  // Any unset version defaults to 0.
+  Major = Minor = Micro = 0;
+
+  // Parse up to three components.
+  unsigned *Components[3] = {&Major, &Minor, &Micro};
+  for (unsigned i = 0; i != 3; ++i) {
+    if (Name.empty() || Name[0] < '0' || Name[0] > '9')
+      break;
+
+    // Consume the leading number.
+    *Components[i] = EatNumber(Name);
+
+    // Consume the separator, if present.
+    if (Name.startswith("."))
+      Name = Name.substr(1);
+  }
+}
+
+void Triple::getEnvironmentVersion(unsigned &Major, unsigned &Minor,
+                                   unsigned &Micro) const {
   StringRef EnvironmentName = getEnvironmentName();
   StringRef EnvironmentTypeName = getEnvironmentTypeName(getEnvironment());
   if (EnvironmentName.startswith(EnvironmentTypeName))
     EnvironmentName = EnvironmentName.substr(EnvironmentTypeName.size());
 
-  return parseVersionFromName(EnvironmentName);
+  parseVersionFromName(EnvironmentName, Major, Minor, Micro);
 }
 
-VersionTuple Triple::getOSVersion() const {
+void Triple::getOSVersion(unsigned &Major, unsigned &Minor,
+                          unsigned &Micro) const {
   StringRef OSName = getOSName();
   // Assume that the OS portion of the triple starts with the canonical name.
   StringRef OSTypeName = getOSTypeName(getOS());
@@ -1115,36 +1146,40 @@ VersionTuple Triple::getOSVersion() const {
   else if (getOS() == MacOSX)
     OSName.consume_front("macos");
 
-  return parseVersionFromName(OSName);
+  parseVersionFromName(OSName, Major, Minor, Micro);
 }
 
-bool Triple::getMacOSXVersion(VersionTuple &Version) const {
-  Version = getOSVersion();
+bool Triple::getMacOSXVersion(unsigned &Major, unsigned &Minor,
+                              unsigned &Micro) const {
+  getOSVersion(Major, Minor, Micro);
 
   switch (getOS()) {
   default: llvm_unreachable("unexpected OS for Darwin triple");
   case Darwin:
     // Default to darwin8, i.e., MacOSX 10.4.
-    if (Version.getMajor() == 0)
-      Version = VersionTuple(8);
+    if (Major == 0)
+      Major = 8;
     // Darwin version numbers are skewed from OS X versions.
-    if (Version.getMajor() < 4) {
+    if (Major < 4)
       return false;
-    }
-    if (Version.getMajor() <= 19) {
-      Version = VersionTuple(10, Version.getMajor() - 4);
+    if (Major <= 19) {
+      Micro = 0;
+      Minor = Major - 4;
+      Major = 10;
     } else {
+      Micro = 0;
+      Minor = 0;
       // darwin20+ corresponds to macOS 11+.
-      Version = VersionTuple(11 + Version.getMajor() - 20);
+      Major = 11 + Major - 20;
     }
     break;
   case MacOSX:
     // Default to 10.4.
-    if (Version.getMajor() == 0) {
-      Version = VersionTuple(10, 4);
-    } else if (Version.getMajor() < 10) {
+    if (Major == 0) {
+      Major = 10;
+      Minor = 4;
+    } else if (Major < 10)
       return false;
-    }
     break;
   case IOS:
   case TvOS:
@@ -1153,13 +1188,16 @@ bool Triple::getMacOSXVersion(VersionTuple &Version) const {
     // the clang driver combines OS X and IOS support into a common Darwin
     // toolchain that wants to know the OS X version number even when targeting
     // IOS.
-    Version = VersionTuple(10, 4);
+    Major = 10;
+    Minor = 4;
+    Micro = 0;
     break;
   }
   return true;
 }
 
-VersionTuple Triple::getiOSVersion() const {
+void Triple::getiOSVersion(unsigned &Major, unsigned &Minor,
+                           unsigned &Micro) const {
   switch (getOS()) {
   default: llvm_unreachable("unexpected OS for Darwin triple");
   case Darwin:
@@ -1168,21 +1206,24 @@ VersionTuple Triple::getiOSVersion() const {
     // the clang driver combines OS X and IOS support into a common Darwin
     // toolchain that wants to know the iOS version number even when targeting
     // OS X.
-    return VersionTuple(5);
+    Major = 5;
+    Minor = 0;
+    Micro = 0;
+    break;
   case IOS:
-  case TvOS: {
-    VersionTuple Version = getOSVersion();
+  case TvOS:
+    getOSVersion(Major, Minor, Micro);
     // Default to 5.0 (or 7.0 for arm64).
-    if (Version.getMajor() == 0)
-      return (getArch() == aarch64) ? VersionTuple(7) : VersionTuple(5);
-    return Version;
-  }
+    if (Major == 0)
+      Major = (getArch() == aarch64) ? 7 : 5;
+    break;
   case WatchOS:
     llvm_unreachable("conflicting triple info");
   }
 }
 
-VersionTuple Triple::getWatchOSVersion() const {
+void Triple::getWatchOSVersion(unsigned &Major, unsigned &Minor,
+                               unsigned &Micro) const {
   switch (getOS()) {
   default: llvm_unreachable("unexpected OS for Darwin triple");
   case Darwin:
@@ -1191,13 +1232,15 @@ VersionTuple Triple::getWatchOSVersion() const {
     // the clang driver combines OS X and IOS support into a common Darwin
     // toolchain that wants to know the iOS version number even when targeting
     // OS X.
-    return VersionTuple(2);
-  case WatchOS: {
-    VersionTuple Version = getOSVersion();
-    if (Version.getMajor() == 0)
-      return VersionTuple(2);
-    return Version;
-  }
+    Major = 2;
+    Minor = 0;
+    Micro = 0;
+    break;
+  case WatchOS:
+    getOSVersion(Major, Minor, Micro);
+    if (Major == 0)
+      Major = 2;
+    break;
   case IOS:
     llvm_unreachable("conflicting triple info");
   }

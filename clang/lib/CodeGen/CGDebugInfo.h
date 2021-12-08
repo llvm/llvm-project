@@ -139,11 +139,6 @@ class CGDebugInfo {
 
   /// Keep track of our current nested lexical block.
   std::vector<llvm::TypedTrackingMDRef<llvm::DIScope>> LexicalBlockStack;
-
-  /// Map of AST declaration to its lexical block scope.
-  llvm::DenseMap<const Decl *, llvm::TypedTrackingMDRef<llvm::DIScope>>
-      LexicalBlockMap;
-
   llvm::DenseMap<const Decl *, llvm::TrackingMDRef> RegionMap;
   /// Keep track of LexicalBlockStack counter at the beginning of a
   /// function. This is used to pop unbalanced regions at the end of a
@@ -182,7 +177,7 @@ class CGDebugInfo {
   llvm::DIType *CreateType(const BuiltinType *Ty);
   llvm::DIType *CreateType(const ComplexType *Ty);
   llvm::DIType *CreateType(const AutoType *Ty);
-  llvm::DIType *CreateType(const ExtIntType *Ty);
+  llvm::DIType *CreateType(const BitIntType *Ty);
   llvm::DIType *CreateQualifiedType(QualType Ty, llvm::DIFile *Fg,
                                     TypeLoc TL = TypeLoc());
   llvm::DIType *CreateQualifiedType(const FunctionProtoType *Ty,
@@ -547,12 +542,6 @@ public:
 
   /// Emit an Objective-C interface type standalone debug info.
   llvm::DIType *getOrCreateInterfaceType(QualType Ty, SourceLocation Loc);
-
-  /// Map AST declaration to its lexical block scope if available.
-  void recordDeclarationLexicalScope(const Decl &D);
-
-  /// Get lexical scope of AST declaration.
-  llvm::DIScope *getDeclarationLexicalScope(const Decl *D);
 
   /// Emit standalone debug info for a type.
   llvm::DIType *getOrCreateStandaloneType(QualType Ty, SourceLocation Loc);
