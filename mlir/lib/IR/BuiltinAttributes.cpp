@@ -374,6 +374,7 @@ BoolAttr IntegerAttr::getBoolAttrUnchecked(IntegerType type, bool value) {
 
 //===----------------------------------------------------------------------===//
 // BoolAttr
+//===----------------------------------------------------------------------===//
 
 bool BoolAttr::getValue() const {
   auto *storage = reinterpret_cast<IntegerAttrStorage *>(impl);
