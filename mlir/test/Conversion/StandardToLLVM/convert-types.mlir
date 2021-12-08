@@ -16,6 +16,10 @@ func private @struct_ptr() -> !llvm.struct<(ptr<!test.smpla>)>
 // CHECK: !llvm.struct<"_Converted_named", (ptr<i42>)>
 func private @named_struct_ptr() -> !llvm.struct<"named", (ptr<!test.smpla>)>
 
+// CHECK-LABEL: @named_no_convert
+// CHECK: !llvm.struct<"no_convert", (ptr<struct<"no_convert">>)>
+func private @named_no_convert() -> !llvm.struct<"no_convert", (ptr<struct<"no_convert">>)>
+
 // CHECK-LABEL: @array_ptr()
 // CHECK: !llvm.array<10 x ptr<i42>> 
 func private @array_ptr() -> !llvm.array<10 x ptr<!test.smpla>>
