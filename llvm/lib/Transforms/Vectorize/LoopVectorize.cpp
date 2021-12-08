@@ -3030,14 +3030,12 @@ void InnerLoopVectorizer::scalarizeInstruction(Instruction *Instr,
                                Builder.GetInsertPoint());
   // Replace the operands of the cloned instructions with their scalar
   // equivalents in the new loop.
-  for (unsigned op = 0, e = RepRecipe->getNumOperands(); op != e; ++op) {
-    auto *Operand = dyn_cast<Instruction>(Instr->getOperand(op));
+  for (auto &I : enumerate(RepRecipe->operands())) {
     auto InputInstance = Instance;
-    if (!Operand || !OrigLoop->contains(Operand) ||
-        (Cost->isUniformAfterVectorization(Operand, State.VF)))
+    VPValue *Operand = I.value();
+    if (State.Plan->isUniformAfterVectorization(Operand))
       InputInstance.Lane = VPLane::getFirstLane();
-    auto *NewOp = State.get(RepRecipe->getOperand(op), InputInstance);
-    Cloned->setOperand(op, NewOp);
+    Cloned->setOperand(I.index(), State.get(Operand, InputInstance));
   }
   addNewMetadata(Cloned, Instr);
 
