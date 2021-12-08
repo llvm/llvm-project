@@ -135,7 +135,7 @@ bool Combiner::combineMachineInstrs(MachineFunction &MF,
         // Erase dead insts before even adding to the list.
         if (isTriviallyDead(CurMI, *MRI)) {
           LLVM_DEBUG(dbgs() << CurMI << "Is dead; erasing.\n");
-          CurMI.eraseFromParentAndMarkDBGValuesForRemoval();
+          CurMI.eraseFromParent();
           continue;
         }
         WorkList.deferred_insert(&CurMI);

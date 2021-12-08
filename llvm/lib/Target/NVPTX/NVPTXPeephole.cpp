@@ -126,9 +126,9 @@ static void CombineCVTAToLocal(MachineInstr &Root) {
 
   // Check if MRI has only one non dbg use, which is Root
   if (MRI.hasOneNonDBGUse(Prev.getOperand(0).getReg())) {
-    Prev.eraseFromParentAndMarkDBGValuesForRemoval();
+    Prev.eraseFromParent();
   }
-  Root.eraseFromParentAndMarkDBGValuesForRemoval();
+  Root.eraseFromParent();
 }
 
 bool NVPTXPeephole::runOnMachineFunction(MachineFunction &MF) {
@@ -157,7 +157,7 @@ bool NVPTXPeephole::runOnMachineFunction(MachineFunction &MF) {
   const auto &MRI = MF.getRegInfo();
   if (MRI.use_empty(NRI->getFrameRegister(MF))) {
     if (auto MI = MRI.getUniqueVRegDef(NRI->getFrameRegister(MF))) {
-      MI->eraseFromParentAndMarkDBGValuesForRemoval();
+      MI->eraseFromParent();
     }
   }
 
