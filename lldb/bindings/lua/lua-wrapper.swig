@@ -4,26 +4,9 @@ template <typename T>
 void
 PushSBClass(lua_State* L, T* obj);
 
-%}
-
-%runtime %{
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-void LLDBSwigLuaCallLuaLogOutputCallback(const char *str, void *baton);
-int LLDBSwigLuaCloseFileHandle(lua_State *L);
-
-#ifdef __cplusplus
-}
-#endif
-%}
-
-%wrapper %{
-
 // This function is called from Lua::CallBreakpointCallback
-SWIGEXPORT llvm::Expected<bool>
-LLDBSwigLuaBreakpointCallbackFunction
+llvm::Expected<bool>
+lldb_private::LLDBSwigLuaBreakpointCallbackFunction
 (
    lua_State *L,
    lldb::StackFrameSP stop_frame_sp,
@@ -67,8 +50,8 @@ LLDBSwigLuaBreakpointCallbackFunction
 }
 
 // This function is called from Lua::CallWatchpointCallback
-SWIGEXPORT llvm::Expected<bool>
-LLDBSwigLuaWatchpointCallbackFunction
+llvm::Expected<bool>
+lldb_private::LLDBSwigLuaWatchpointCallbackFunction
 (
    lua_State *L,
    lldb::StackFrameSP stop_frame_sp,
@@ -101,7 +84,7 @@ LLDBSwigLuaWatchpointCallbackFunction
    return stop;
 }
 
-SWIGEXPORT void
+static void
 LLDBSwigLuaCallLuaLogOutputCallback(const char *str, void *baton) {
    lua_State *L = (lua_State *)baton;
 
@@ -113,7 +96,7 @@ LLDBSwigLuaCallLuaLogOutputCallback(const char *str, void *baton) {
    lua_pcall(L, 1, 0, 0);
 }
 
-int LLDBSwigLuaCloseFileHandle(lua_State *L) {
+static int LLDBSwigLuaCloseFileHandle(lua_State *L) {
    return luaL_error(L, "You cannot close a file handle used by lldb.");
 }
 
