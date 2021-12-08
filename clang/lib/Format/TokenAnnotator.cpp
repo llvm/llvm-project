@@ -2034,9 +2034,8 @@ private:
                            tok::comma, tok::semi, tok::kw_return, tok::colon,
                            tok::kw_co_return, tok::kw_co_await,
                            tok::kw_co_yield, tok::equal, tok::kw_delete,
-                           tok::kw_sizeof, tok::kw_throw) ||
-        PrevToken->isOneOf(TT_BinaryOperator, TT_ConditionalExpr,
-                           TT_UnaryOperator, TT_CastRParen))
+                           tok::kw_sizeof, tok::kw_throw, TT_BinaryOperator,
+                           TT_ConditionalExpr, TT_UnaryOperator, TT_CastRParen))
       return TT_UnaryOperator;
 
     if (NextToken->is(tok::l_square) && NextToken->isNot(TT_LambdaLSquare))
