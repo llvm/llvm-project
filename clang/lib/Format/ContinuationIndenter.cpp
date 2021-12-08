@@ -493,14 +493,14 @@ bool ContinuationIndenter::mustBreak(const LineState &State) {
       return true;
   }
 
-  // Break after the closing parenthesis of TypeScript decorators before
-  // functions, getters and setters.
-  static const llvm::StringSet<> BreakBeforeDecoratedTokens = {"get", "set",
-                                                               "function"};
   if (Style.Language == FormatStyle::LK_JavaScript &&
-      BreakBeforeDecoratedTokens.contains(Current.TokenText) &&
       Previous.is(tok::r_paren) && Previous.is(TT_JavaAnnotation)) {
-    return true;
+    // Break after the closing parenthesis of TypeScript decorators before
+    // functions, getters and setters.
+    static const llvm::StringSet<> BreakBeforeDecoratedTokens = {"get", "set",
+                                                                 "function"};
+    if (BreakBeforeDecoratedTokens.contains(Current.TokenText))
+      return true;
   }
 
   // If the return type spans multiple lines, wrap before the function name.
