@@ -108,6 +108,6 @@ TEST(LlvmLibcExpm1fTest, InFloatRange) {
     // wider precision.
     if (isnan(result) || isinf(result) || errno != 0)
       continue;
-    ASSERT_MPFR_MATCH(mpfr::Operation::Expm1, x, __llvm_libc::expm1f(x), 1.5);
+    ASSERT_MPFR_MATCH(mpfr::Operation::Expm1, x, __llvm_libc::expm1f(x), 2.2);
   }
 }
