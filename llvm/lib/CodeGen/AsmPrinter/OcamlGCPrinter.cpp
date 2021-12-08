@@ -112,16 +112,12 @@ void OcamlGCMetadataPrinter::finishAssembly(Module &M, GCModuleInfo &Info,
   EmitCamlGlobal(M, AP, "frametable");
 
   int NumDescriptors = 0;
-  for (GCModuleInfo::FuncInfoVec::iterator I = Info.funcinfo_begin(),
-                                           IE = Info.funcinfo_end();
-       I != IE; ++I) {
-    GCFunctionInfo &FI = **I;
-    if (FI.getStrategy().getName() != getStrategy().getName())
+  for (std::unique_ptr<GCFunctionInfo> &FI :
+       llvm::make_range(Info.funcinfo_begin(), Info.funcinfo_end())) {
+    if (FI->getStrategy().getName() != getStrategy().getName())
       // this function is managed by some other GC
       continue;
-    for (GCFunctionInfo::iterator J = FI.begin(), JE = FI.end(); J != JE; ++J) {
-      NumDescriptors++;
-    }
+    NumDescriptors += FI->size();
   }
 
   if (NumDescriptors >= 1 << 16) {
@@ -131,35 +127,34 @@ void OcamlGCMetadataPrinter::finishAssembly(Module &M, GCModuleInfo &Info,
   AP.emitInt16(NumDescriptors);
   AP.emitAlignment(IntPtrSize == 4 ? Align(4) : Align(8));
 
-  for (GCModuleInfo::FuncInfoVec::iterator I = Info.funcinfo_begin(),
-                                           IE = Info.funcinfo_end();
-       I != IE; ++I) {
-    GCFunctionInfo &FI = **I;
-    if (FI.getStrategy().getName() != getStrategy().getName())
+  for (std::unique_ptr<GCFunctionInfo> &FI :
+       llvm::make_range(Info.funcinfo_begin(), Info.funcinfo_end())) {
+    if (FI->getStrategy().getName() != getStrategy().getName())
       // this function is managed by some other GC
       continue;
 
-    uint64_t FrameSize = FI.getFrameSize();
+    uint64_t FrameSize = FI->getFrameSize();
     if (FrameSize >= 1 << 16) {
       // Very rude!
-      report_fatal_error("Function '" + FI.getFunction().getName() +
+      report_fatal_error("Function '" + FI->getFunction().getName() +
                          "' is too large for the ocaml GC! "
                          "Frame size " +
                          Twine(FrameSize) +
                          ">= 65536.\n"
                          "(" +
-                         Twine(reinterpret_cast<uintptr_t>(&FI)) + ")");
+                         Twine(reinterpret_cast<uintptr_t>(FI.get())) + ")");
     }
 
     AP.OutStreamer->AddComment("live roots for " +
-                               Twine(FI.getFunction().getName()));
+                               Twine(FI->getFunction().getName()));
     AP.OutStreamer->AddBlankLine();
 
-    for (GCFunctionInfo::iterator J = FI.begin(), JE = FI.end(); J != JE; ++J) {
-      size_t LiveCount = FI.live_size(J);
+    for (GCFunctionInfo::iterator J = FI->begin(), JE = FI->end(); J != JE;
+         ++J) {
+      size_t LiveCount = FI->live_size(J);
       if (LiveCount >= 1 << 16) {
         // Very rude!
-        report_fatal_error("Function '" + FI.getFunction().getName() +
+        report_fatal_error("Function '" + FI->getFunction().getName() +
                            "' is too large for the ocaml GC! "
                            "Live root count " +
                            Twine(LiveCount) + " >= 65536.");
@@ -169,8 +164,8 @@ void OcamlGCMetadataPrinter::finishAssembly(Module &M, GCModuleInfo &Info,
       AP.emitInt16(FrameSize);
       AP.emitInt16(LiveCount);
 
-      for (GCFunctionInfo::live_iterator K = FI.live_begin(J),
-                                         KE = FI.live_end(J);
+      for (GCFunctionInfo::live_iterator K = FI->live_begin(J),
+                                         KE = FI->live_end(J);
            K != KE; ++K) {
         if (K->StackOffset >= 1 << 16) {
           // Very rude!

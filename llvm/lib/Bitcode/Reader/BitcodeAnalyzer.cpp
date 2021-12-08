@@ -107,9 +107,9 @@ static Optional<const char *> GetCodeName(unsigned CodeID, unsigned BlockID,
   // Check to see if we have a blockinfo record for this record, with a name.
   if (const BitstreamBlockInfo::BlockInfo *Info =
           BlockInfo.getBlockInfo(BlockID)) {
-    for (unsigned i = 0, e = Info->RecordNames.size(); i != e; ++i)
-      if (Info->RecordNames[i].first == CodeID)
-        return Info->RecordNames[i].second.c_str();
+    for (const std::pair<unsigned, std::string> &RN : Info->RecordNames)
+      if (RN.first == CodeID)
+        return RN.second.c_str();
   }
 
   if (CurStreamType != LLVMIRBitstream)
@@ -646,16 +646,14 @@ void BitcodeAnalyzer::printStats(BCDumpOptions O,
 
   // Emit per-block stats.
   O.OS << "Per-block Summary:\n";
-  for (std::map<unsigned, PerBlockIDStats>::iterator I = BlockIDStats.begin(),
-                                                     E = BlockIDStats.end();
-       I != E; ++I) {
-    O.OS << "  Block ID #" << I->first;
+  for (const auto &Stat : BlockIDStats) {
+    O.OS << "  Block ID #" << Stat.first;
     if (Optional<const char *> BlockName =
-            GetBlockName(I->first, BlockInfo, CurStreamType))
+            GetBlockName(Stat.first, BlockInfo, CurStreamType))
       O.OS << " (" << *BlockName << ")";
     O.OS << ":\n";
 
-    const PerBlockIDStats &Stats = I->second;
+    const PerBlockIDStats &Stats = Stat.second;
     O.OS << "      Num Instances: " << Stats.NumInstances << "\n";
     O.OS << "         Total Size: ";
     printSize(O.OS, Stats.NumBits);
@@ -694,8 +692,8 @@ void BitcodeAnalyzer::printStats(BCDumpOptions O,
 
       O.OS << "\tRecord Histogram:\n";
       O.OS << "\t\t  Count    # Bits     b/Rec   % Abv  Record Kind\n";
-      for (unsigned i = 0, e = FreqPairs.size(); i != e; ++i) {
-        const PerRecordStats &RecStats = Stats.CodeFreq[FreqPairs[i].second];
+      for (const auto &FreqPair : FreqPairs) {
+        const PerRecordStats &RecStats = Stats.CodeFreq[FreqPair.second];
 
         O.OS << format("\t\t%7d %9lu", RecStats.NumInstances,
                        (unsigned long)RecStats.TotalBits);
@@ -714,10 +712,10 @@ void BitcodeAnalyzer::printStats(BCDumpOptions O,
 
         O.OS << "  ";
         if (Optional<const char *> CodeName = GetCodeName(
-                FreqPairs[i].second, I->first, BlockInfo, CurStreamType))
+                FreqPair.second, Stat.first, BlockInfo, CurStreamType))
           O.OS << *CodeName << "\n";
         else
-          O.OS << "UnknownCode" << FreqPairs[i].second << "\n";
+          O.OS << "UnknownCode" << FreqPair.second << "\n";
       }
       O.OS << "\n";
     }
