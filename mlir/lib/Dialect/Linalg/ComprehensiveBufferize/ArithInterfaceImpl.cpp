@@ -42,7 +42,7 @@ struct ConstantOpInterface
     return success();
   }
 
-  bool isWritable(Operation *op, Value value) const {
+  bool isWritable(Operation *op, Value value, BufferizationState &state) const {
     // Memory locations returned by memref::GetGlobalOp may not be written to.
     assert(value.isa<OpResult>());
     return false;

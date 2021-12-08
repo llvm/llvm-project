@@ -172,13 +172,6 @@ public:
   /// Apply `fun` to all aliases of `v`.
   void applyOnAliases(Value v, function_ref<void(Value)> fun) const;
 
-  // TODO: Move these out of BufferizationAliasInfo.
-  /// Return true if the value is known to bufferize to writable memory.
-  bool bufferizesToWritableMemory(Value v) const;
-
-  /// Specify that the value is known to bufferize to writable memory.
-  void setBufferizesToWritableMemory(Value v);
-
   /// Mark a value as in-place bufferized.
   void markInPlace(OpResult v) { inplaceBufferized.insert(v); }
 
@@ -199,9 +192,6 @@ private:
       llvm::EquivalenceClasses<Value, ValueComparator>::member_iterator>;
   /// Check that aliasInfo for `v` exists and return a reference to it.
   EquivalenceClassRangeType getAliases(Value v) const;
-
-  /// Set of tensors that are known to bufferize to writable memory.
-  llvm::DenseSet<Value> bufferizeToWritableMemory;
 
   /// Set of all OpResults that were decided to bufferize in-place.
   llvm::DenseSet<OpResult> inplaceBufferized;
@@ -429,7 +419,9 @@ struct AllocationHoistingBarrierOnly
     return BufferRelation::None;
   }
 
-  bool isWritable(Operation *op, Value value) const { return false; }
+  bool isWritable(Operation *op, Value value, BufferizationState &state) const {
+    return false;
+  }
 
   LogicalResult bufferize(Operation *op, OpBuilder &b,
                           BufferizationState &state) const {

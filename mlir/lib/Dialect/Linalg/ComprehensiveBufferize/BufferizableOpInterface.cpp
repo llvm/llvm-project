@@ -130,15 +130,6 @@ void BufferizationAliasInfo::insertNewBufferEquivalence(Value newValue,
   equivalentInfo.unionSets(newValue, alias);
 }
 
-bool BufferizationAliasInfo::bufferizesToWritableMemory(Value v) const {
-  return bufferizeToWritableMemory.count(v) > 0;
-}
-
-/// Specify that the value is known to bufferize to writable memory.
-void BufferizationAliasInfo::setBufferizesToWritableMemory(Value v) {
-  bufferizeToWritableMemory.insert(v);
-}
-
 /// Return `true` if a value was marked as in-place bufferized.
 bool BufferizationAliasInfo::isInPlace(OpResult opResult) const {
   return inplaceBufferized.contains(opResult);

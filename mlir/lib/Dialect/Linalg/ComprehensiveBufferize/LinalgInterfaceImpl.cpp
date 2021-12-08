@@ -193,7 +193,7 @@ struct TiledLoopOpInterface
     return BufferRelation::Equivalent;
   }
 
-  bool isWritable(Operation *op, Value value) const {
+  bool isWritable(Operation *op, Value value, BufferizationState &state) const {
     // Interestingly, linalg::TiledLoopOp's bbArg can **always** be viewed
     // inplace from the perspective of ops nested under:
     //   1. Either the matching iter operand is not bufferized inplace and an

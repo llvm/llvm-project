@@ -71,7 +71,7 @@ struct ToTensorOpInterface
     return success();
   }
 
-  bool isWritable(Operation *op, Value value) const {
+  bool isWritable(Operation *op, Value value, BufferizationState &state) const {
     // It is unknown whether the MemRef operand is writable or not.
     return false;
   }
