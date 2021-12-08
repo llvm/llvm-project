@@ -21,7 +21,7 @@
 
 ; CHECK: DW_TAG_subprogram
 ; CHECK-NOT: DW_TAG_subprogram
-; CHECK:   DW_AT_name {{.*}} "g")
+; CHECK:   DW_AT_name {{.*}}"g"
 ;
 ; CHECK: DW_TAG_subprogram
 ; CHECK-NOT: DW_TAG_subprogram

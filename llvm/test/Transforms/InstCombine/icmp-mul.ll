@@ -684,11 +684,7 @@ define i1 @oss_fuzz_39934(i32 %arg) {
 
 define i1 @mul_of_bool(i32 %x, i8 %y) {
 ; CHECK-LABEL: @mul_of_bool(
-; CHECK-NEXT:    [[B:%.*]] = and i32 [[X:%.*]], 1
-; CHECK-NEXT:    [[Z:%.*]] = zext i8 [[Y:%.*]] to i32
-; CHECK-NEXT:    [[M:%.*]] = mul nuw nsw i32 [[B]], [[Z]]
-; CHECK-NEXT:    [[R:%.*]] = icmp ugt i32 [[M]], 255
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 false
 ;
   %b = and i32 %x, 1
   %z = zext i8 %y to i32
@@ -699,11 +695,7 @@ define i1 @mul_of_bool(i32 %x, i8 %y) {
 
 define i1 @mul_of_bool_commute(i32 %x, i32 %y) {
 ; CHECK-LABEL: @mul_of_bool_commute(
-; CHECK-NEXT:    [[X1:%.*]] = and i32 [[X:%.*]], 1
-; CHECK-NEXT:    [[Y8:%.*]] = and i32 [[Y:%.*]], 255
-; CHECK-NEXT:    [[M:%.*]] = mul nuw nsw i32 [[Y8]], [[X1]]
-; CHECK-NEXT:    [[R:%.*]] = icmp ugt i32 [[M]], 255
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 false
 ;
   %x1 = and i32 %x, 1
   %y8 = and i32 %y, 255
@@ -714,11 +706,7 @@ define i1 @mul_of_bool_commute(i32 %x, i32 %y) {
 
 define i1 @mul_of_bools(i32 %x, i32 %y) {
 ; CHECK-LABEL: @mul_of_bools(
-; CHECK-NEXT:    [[X1:%.*]] = and i32 [[X:%.*]], 1
-; CHECK-NEXT:    [[Y1:%.*]] = and i32 [[Y:%.*]], 1
-; CHECK-NEXT:    [[M:%.*]] = mul nuw nsw i32 [[X1]], [[Y1]]
-; CHECK-NEXT:    [[R:%.*]] = icmp ult i32 [[M]], 2
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 true
 ;
   %x1 = and i32 %x, 1
   %y1 = and i32 %y, 1
@@ -726,6 +714,8 @@ define i1 @mul_of_bools(i32 %x, i32 %y) {
   %r = icmp ult i32 %m, 2
   ret i1 %r
 }
+
+; negative test - not a mask of low bit
 
 define i1 @not_mul_of_bool(i32 %x, i8 %y) {
 ; CHECK-LABEL: @not_mul_of_bool(
@@ -742,6 +732,8 @@ define i1 @not_mul_of_bool(i32 %x, i8 %y) {
   ret i1 %r
 }
 
+; negative test - not a single low bit
+
 define i1 @not_mul_of_bool_commute(i32 %x, i32 %y) {
 ; CHECK-LABEL: @not_mul_of_bool_commute(
 ; CHECK-NEXT:    [[X30:%.*]] = lshr i32 [[X:%.*]], 30
@@ -756,6 +748,9 @@ define i1 @not_mul_of_bool_commute(i32 %x, i32 %y) {
   %r = icmp ugt i32 %m, 255
   ret i1 %r
 }
+
+; negative test - no leading zeros for 's'
+; TODO: If analysis was generalized for sign bits, we could reduce this to false.
 
 define i1 @mul_of_bool_no_lz_other_op(i32 %x, i8 %y) {
 ; CHECK-LABEL: @mul_of_bool_no_lz_other_op(
@@ -772,13 +767,11 @@ define i1 @mul_of_bool_no_lz_other_op(i32 %x, i8 %y) {
   ret i1 %r
 }
 
+; high and low bits are known 0
+
 define i1 @mul_of_pow2(i32 %x, i8 %y) {
 ; CHECK-LABEL: @mul_of_pow2(
-; CHECK-NEXT:    [[B:%.*]] = and i32 [[X:%.*]], 2
-; CHECK-NEXT:    [[Z:%.*]] = zext i8 [[Y:%.*]] to i32
-; CHECK-NEXT:    [[M:%.*]] = mul nuw nsw i32 [[B]], [[Z]]
-; CHECK-NEXT:    [[R:%.*]] = icmp ugt i32 [[M]], 510
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 false
 ;
   %b = and i32 %x, 2
   %z = zext i8 %y to i32
@@ -787,13 +780,11 @@ define i1 @mul_of_pow2(i32 %x, i8 %y) {
   ret i1 %r
 }
 
+; high and low bits are known 0
+
 define i1 @mul_of_pow2_commute(i32 %x, i32 %y) {
 ; CHECK-LABEL: @mul_of_pow2_commute(
-; CHECK-NEXT:    [[X4:%.*]] = and i32 [[X:%.*]], 4
-; CHECK-NEXT:    [[Y8:%.*]] = and i32 [[Y:%.*]], 255
-; CHECK-NEXT:    [[M:%.*]] = mul nuw nsw i32 [[Y8]], [[X4]]
-; CHECK-NEXT:    [[R:%.*]] = icmp ugt i32 [[M]], 1020
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 false
 ;
   %x4 = and i32 %x, 4
   %y8 = and i32 %y, 255
@@ -802,13 +793,11 @@ define i1 @mul_of_pow2_commute(i32 %x, i32 %y) {
   ret i1 %r
 }
 
+; only bit 7 can be set by the multiply
+
 define i32 @mul_of_pow2s(i32 %x, i32 %y) {
 ; CHECK-LABEL: @mul_of_pow2s(
-; CHECK-NEXT:    [[X8:%.*]] = and i32 [[X:%.*]], 8
-; CHECK-NEXT:    [[Y16:%.*]] = and i32 [[Y:%.*]], 16
-; CHECK-NEXT:    [[M:%.*]] = mul nuw nsw i32 [[X8]], [[Y16]]
-; CHECK-NEXT:    [[BIT7:%.*]] = or i32 [[M]], 128
-; CHECK-NEXT:    ret i32 [[BIT7]]
+; CHECK-NEXT:    ret i32 128
 ;
   %x8 = and i32 %x, 8
   %y16 = and i32 %y, 16
@@ -816,6 +805,8 @@ define i32 @mul_of_pow2s(i32 %x, i32 %y) {
   %bit7 = or i32 %m, 128
   ret i32 %bit7
 }
+
+; negative test - 6 * 255 = 1530 (but constant range analysis can get this)
 
 define i1 @not_mul_of_pow2(i32 %x, i8 %y) {
 ; CHECK-LABEL: @not_mul_of_pow2(
@@ -832,6 +823,8 @@ define i1 @not_mul_of_pow2(i32 %x, i8 %y) {
   ret i1 %r
 }
 
+; negative test - 12 * 255 = 3060 (but constant range analysis can get this)
+
 define i1 @not_mul_of_pow2_commute(i32 %x, i32 %y) {
 ; CHECK-LABEL: @not_mul_of_pow2_commute(
 ; CHECK-NEXT:    [[X30:%.*]] = and i32 [[X:%.*]], 12
@@ -846,6 +839,9 @@ define i1 @not_mul_of_pow2_commute(i32 %x, i32 %y) {
   %r = icmp ugt i32 %m, 3060
   ret i1 %r
 }
+
+; negative test - no leading zeros for 's'
+; TODO: If analysis was generalized for sign bits, we could reduce this to false.
 
 define i1 @mul_of_pow2_no_lz_other_op(i32 %x, i8 %y) {
 ; CHECK-LABEL: @mul_of_pow2_no_lz_other_op(

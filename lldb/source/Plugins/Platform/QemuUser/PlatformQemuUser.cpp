@@ -126,6 +126,7 @@ static Environment ComputeLaunchEnvironment(Environment target,
     if (host_it == host.end() || host_it->second != KV.second)
       set_env.push_back(Environment::compose(KV));
   }
+  llvm::sort(set_env);
 
   std::vector<llvm::StringRef> unset_env;
   for (const auto &KV : host) {
@@ -134,6 +135,7 @@ static Environment ComputeLaunchEnvironment(Environment target,
     if (target.count(KV.first()) == 0)
       unset_env.push_back(KV.first());
   }
+  llvm::sort(unset_env);
 
   // The actual QEMU_(UN)SET_ENV variables should not be forwarded to the
   // target.
