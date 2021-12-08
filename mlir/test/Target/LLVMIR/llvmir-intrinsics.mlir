@@ -135,6 +135,26 @@ llvm.func @bitreverse_test(%arg0: i32, %arg1: vector<8xi32>) {
   llvm.return
 }
 
+// CHECK-LABEL: @ctlz_test
+llvm.func @ctlz_test(%arg0: i32, %arg1: vector<8xi32>) {
+  %i1 = llvm.mlir.constant(false) : i1
+  // CHECK: call i32 @llvm.ctlz.i32
+  "llvm.intr.ctlz"(%arg0, %i1) : (i32, i1) -> i32
+  // CHECK: call <8 x i32> @llvm.ctlz.v8i32
+  "llvm.intr.ctlz"(%arg1, %i1) : (vector<8xi32>, i1) -> vector<8xi32>
+  llvm.return
+}
+
+// CHECK-LABEL: @cttz_test
+llvm.func @cttz_test(%arg0: i32, %arg1: vector<8xi32>) {
+  %i1 = llvm.mlir.constant(false) : i1
+  // CHECK: call i32 @llvm.cttz.i32
+  "llvm.intr.cttz"(%arg0, %i1) : (i32, i1) -> i32
+  // CHECK: call <8 x i32> @llvm.cttz.v8i32
+  "llvm.intr.cttz"(%arg1, %i1) : (vector<8xi32>, i1) -> vector<8xi32>
+  llvm.return
+}
+
 // CHECK-LABEL: @ctpop_test
 llvm.func @ctpop_test(%arg0: i32, %arg1: vector<8xi32>) {
   // CHECK: call i32 @llvm.ctpop.i32

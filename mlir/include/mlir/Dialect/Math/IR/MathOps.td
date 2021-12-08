@@ -298,6 +298,54 @@ def Math_SinOp : Math_FloatUnaryOp<"sin"> {
 }
 
 //===----------------------------------------------------------------------===//
+// CountLeadingZerosOp
+//===----------------------------------------------------------------------===//
+
+def Math_CountLeadingZerosOp : Math_IntegerUnaryOp<"ctlz"> {
+  let summary = "counts the leading zeros an integer value";
+  let description = [{
+    The `ctlz` operation computes the number of leading zeros of an integer value.
+
+    Example:
+
+    ```mlir
+    // Scalar ctlz function value.
+    %a = math.ctlz %b : i32
+
+    // SIMD vector element-wise ctlz function value.
+    %f = math.ctlz %g : vector<4xi16>
+
+    // Tensor element-wise ctlz function value.
+    %x = math.ctlz %y : tensor<4x?xi8>
+    ```
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// CountTrailingZerosOp
+//===----------------------------------------------------------------------===//
+
+def Math_CountTrailingZerosOp : Math_IntegerUnaryOp<"cttz"> {
+  let summary = "counts the trailing zeros an integer value";
+  let description = [{
+    The `cttz` operation computes the number of trailing zeros of an integer value.
+
+    Example:
+
+    ```mlir
+    // Scalar cttz function value.
+    %a = math.cttz %b : i32
+
+    // SIMD vector element-wise cttz function value.
+    %f = math.cttz %g : vector<4xi16>
+
+    // Tensor element-wise cttz function value.
+    %x = math.cttz %y : tensor<4x?xi8>
+    ```
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // CtPopOp
 //===----------------------------------------------------------------------===//
 
