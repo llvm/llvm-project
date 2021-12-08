@@ -88,6 +88,19 @@ class R16_XZ_UNOP<bits<4> op, bits<2> sop, string opstr> : CSKY16Inst<
   let Inst{1, 0} = sop;
 }
 
+class R16_Z_UNOP<bits<4> op, bits<2> sop, string opstr> : CSKY16Inst<
+  AddrModeNone, (outs sGPR:$rz), (ins sGPR:$rx), !strconcat(opstr, "\t$rz"),
+  []> {
+  bits<4> rz;
+  bits<4> rx;
+  let Inst{15, 14} = 0b01;
+  let Inst{13 - 10} = op;
+  let Inst{9 - 6} = rz;
+  let Inst{5 - 2} = rx;
+  let Inst{1, 0} = sop;
+  let Constraints = "$rz = $rx";
+}
+
 class R16_XY_CMP<bits<2> sop, string opstr> : CSKY16Inst<
   AddrModeNone, (outs CARRY:$ca), (ins sGPR:$rx, sGPR:$ry), !strconcat(opstr, "\t$rx, $ry"),
   []> {
@@ -146,7 +159,7 @@ class I16_X_CMP<bits<3> sop, string opstr, Operand Immoperand> : CSKY16Inst<
 }
 
 class I16_SP_IMM7<bits<3> sop, string opstr> : CSKY16Inst<
-  AddrModeNone, (outs SPOp:$sp2), (ins SPOp:$sp1, uimm7_2:$imm7),
+  AddrModeNone, (outs GPRSP:$sp2), (ins GPRSP:$sp1, uimm7_2:$imm7),
   !strconcat(opstr, "\t$sp2, $sp1, $imm7"), []> {
   bits<7> imm7;
   let Inst{15, 14} = 0b00;

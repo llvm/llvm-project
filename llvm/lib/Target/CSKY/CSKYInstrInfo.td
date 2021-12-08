@@ -166,9 +166,23 @@ def bare_symbol : Operand<iPTR> {
   let OperandType = "OPERAND_PCREL";
 }
 
-def oimm3 : oimm<3>;
+def oimm3 : oimm<3> {
+  let MCOperandPredicate = [{
+    int64_t Imm;
+    if (MCOp.evaluateAsConstantImm(Imm))
+      return isUInt<3>(Imm - 1);
+    return MCOp.isBareSymbolRef();
+  }];
+}
 def oimm4 : oimm<4>;
-def oimm5 : oimm<5>;
+def oimm5 : oimm<5> {
+  let MCOperandPredicate = [{
+    int64_t Imm;
+    if (MCOp.evaluateAsConstantImm(Imm))
+      return isUInt<5>(Imm - 1);
+    return MCOp.isBareSymbolRef();
+  }];
+}
 def oimm6 : oimm<6>;
 
 def imm5_idly : Operand<i32>, ImmLeaf<i32,
@@ -177,9 +191,30 @@ def imm5_idly : Operand<i32>, ImmLeaf<i32,
   let DecoderMethod = "decodeOImmOperand<5>";
 }
 
-def oimm8 : oimm<8>;
-def oimm12 : oimm<12>;
-def oimm16 : oimm<16>;
+def oimm8 : oimm<8> {
+  let MCOperandPredicate = [{
+    int64_t Imm;
+    if (MCOp.evaluateAsConstantImm(Imm))
+      return isUInt<8>(Imm - 1);
+    return MCOp.isBareSymbolRef();
+  }];
+}
+def oimm12 : oimm<12> {
+  let MCOperandPredicate = [{
+    int64_t Imm;
+    if (MCOp.evaluateAsConstantImm(Imm))
+      return isUInt<12>(Imm - 1);
+    return MCOp.isBareSymbolRef();
+  }];
+}
+def oimm16 : oimm<16> {
+  let MCOperandPredicate = [{
+    int64_t Imm;
+    if (MCOp.evaluateAsConstantImm(Imm))
+      return isUInt<16>(Imm - 1);
+    return MCOp.isBareSymbolRef();
+  }];
+}
 
 def nimm12 : nimm<12>;
 
@@ -195,28 +230,98 @@ def uimm2_jmpix : Operand<i32>,
 
 def uimm3 : uimm<3>;
 def uimm4 : uimm<4>;
-def uimm5 : uimm<5>;
+def uimm5 : uimm<5> {
+  let MCOperandPredicate = [{
+    int64_t Imm;
+    if (MCOp.evaluateAsConstantImm(Imm))
+      return isShiftedUInt<5, 0>(Imm);
+    return MCOp.isBareSymbolRef();
+  }];
+}
 def uimm5_msb_size : uimm<5> {
   let EncoderMethod = "getImmOpValueMSBSize";
 }
 
-def uimm5_1 : uimm<5, 1>;
-def uimm5_2 : uimm<5, 2>;
+def uimm5_1 : uimm<5, 1> {
+  let MCOperandPredicate = [{
+    int64_t Imm;
+    if (MCOp.evaluateAsConstantImm(Imm))
+      return isShiftedUInt<5, 1>(Imm);
+    return MCOp.isBareSymbolRef();
+  }];
+}
+def uimm5_2 : uimm<5, 2> {
+  let MCOperandPredicate = [{
+    int64_t Imm;
+    if (MCOp.evaluateAsConstantImm(Imm))
+      return isShiftedUInt<5, 2>(Imm);
+    return MCOp.isBareSymbolRef();
+  }];
+}
 def uimm6 : uimm<6>;
 def uimm7 : uimm<7>;
 def uimm7_1 : uimm<7, 1>;
-def uimm7_2 : uimm<7, 2>;
+def uimm7_2 : uimm<7, 2>{
+  let MCOperandPredicate = [{
+    int64_t Imm;
+    if (MCOp.evaluateAsConstantImm(Imm))
+      return isShiftedUInt<7, 2>(Imm);
+    return MCOp.isBareSymbolRef();
+  }];
+}
 def uimm7_3 : uimm<7, 3>;
-def uimm8 : uimm<8>;
-def uimm8_2 : uimm<8, 2>;
+def uimm8 : uimm<8> {
+  let MCOperandPredicate = [{
+    int64_t Imm;
+    if (MCOp.evaluateAsConstantImm(Imm))
+      return isShiftedUInt<8, 0>(Imm);
+    return MCOp.isBareSymbolRef();
+  }];
+}
+def uimm8_2 : uimm<8, 2> {
+  let MCOperandPredicate = [{
+    int64_t Imm;
+    if (MCOp.evaluateAsConstantImm(Imm))
+      return isShiftedUInt<8, 2>(Imm);
+    return MCOp.isBareSymbolRef();
+  }];
+}
 def uimm8_3 : uimm<8, 3>;
 def uimm8_8 : uimm<8, 8>;
 def uimm8_16 : uimm<8, 16>;
 def uimm8_24 : uimm<8, 24>;
-def uimm12 : uimm<12>;
-def uimm12_1 : uimm<12, 1>;
-def uimm12_2 : uimm<12, 2>;
-def uimm16 : uimm<16>;
+def uimm12 : uimm<12>  {
+  let MCOperandPredicate = [{
+    int64_t Imm;
+    if (MCOp.evaluateAsConstantImm(Imm))
+      return isShiftedUInt<12, 0>(Imm);
+    return MCOp.isBareSymbolRef();
+  }];
+}
+def uimm12_1 : uimm<12, 1> {
+  let MCOperandPredicate = [{
+    int64_t Imm;
+    if (MCOp.evaluateAsConstantImm(Imm))
+      return isShiftedUInt<12, 1>(Imm);
+    return MCOp.isBareSymbolRef();
+  }];
+}
+def uimm12_2 : uimm<12, 2> {
+  let MCOperandPredicate = [{
+    int64_t Imm;
+    if (MCOp.evaluateAsConstantImm(Imm))
+      return isShiftedUInt<12, 2>(Imm);
+    return MCOp.isBareSymbolRef();
+  }];
+}
+def uimm16 : uimm<16> {
+  let MCOperandPredicate = [{
+    int64_t Imm;
+    if (MCOp.evaluateAsConstantImm(Imm))
+      return isShiftedUInt<16, 0>(Imm);
+    return MCOp.isBareSymbolRef();
+  }];
+}
 def uimm16_8 : uimm<16, 8>;
 def uimm16_16 : uimm<16, 16>;
 def uimm20 : uimm<20>;
@@ -641,11 +746,6 @@ def BSR32_BR : J<0x38, (outs), (ins call_symbol:$offset), "bsr32", []>{
   let isPredicable = 1;
   let Defs = [ R15 ];
 }
-
-let Predicates = [iHasE2], isCodeGenOnly = 1 in {
-  def RTS32 : I_16_RET<0x6, 0xF, "rts32", [(CSKY_RET)]>;
-}
-
 
 //===----------------------------------------------------------------------===//
 // Symbol address instructions.
