@@ -1,12 +1,3 @@
-template <>
-PyObject*
-SBTypeToSWIGWrapper (lldb::LanguageType* lang_type)
-{
-    if (!lang_type)
-        return NULL;
-    return PyInt_FromLong((long)(*lang_type));
-}
-
 namespace lldb_private {
 namespace python {
 
