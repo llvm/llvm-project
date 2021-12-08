@@ -188,6 +188,9 @@ bool AllocatorMayReturnNull() {
 void SetAllocatorMayReturnNull(bool may_return_null) {
   atomic_store(&allocator_may_return_null, may_return_null,
                memory_order_relaxed);
+#ifdef START_BACKGROUND_THREAD_EARLY
+  MaybeStartBackgroudThread();
+#endif
 }
 
 void PrintHintAllocatorCannotReturnNull() {
