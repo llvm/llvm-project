@@ -12,7 +12,7 @@
 func @multidimreduction_contract(
   %arg0: vector<8x32x16xf32>,%arg1: vector<8x32x16xf32>) -> vector<8x16xf32> {
   %0 = arith.mulf %arg0, %arg1 : vector<8x32x16xf32>
-  %1 = vector.multi_reduction #vector.kind<add>, %0 [1] : vector<8x32x16xf32> to vector<8x16xf32>
+  %1 = vector.multi_reduction <add>, %0 [1] : vector<8x32x16xf32> to vector<8x16xf32>
   return %1 : vector<8x16xf32>
 }
 
@@ -30,7 +30,7 @@ func @multidimreduction_contract(
 func @multidimreduction_contract_int(
   %arg0: vector<8x32x16xi32>,%arg1: vector<8x32x16xi32>) -> vector<8x16xi32> {
   %0 = arith.muli %arg0, %arg1 : vector<8x32x16xi32>
-  %1 = vector.multi_reduction #vector.kind<add>, %0 [1] : vector<8x32x16xi32> to vector<8x16xi32>
+  %1 = vector.multi_reduction <add>, %0 [1] : vector<8x32x16xi32> to vector<8x16xi32>
   return %1 : vector<8x16xi32>
 }
 

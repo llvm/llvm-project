@@ -1,7 +1,7 @@
 // RUN: mlir-opt %s -test-vector-multi-reduction-lowering-patterns="use-outer-reductions" | FileCheck %s
 
 func @vector_multi_reduction(%arg0: vector<2x4xf32>) -> vector<2xf32> {
-    %0 = vector.multi_reduction #vector.kind<mul>, %arg0 [1] : vector<2x4xf32> to vector<2xf32>
+    %0 = vector.multi_reduction <mul>, %arg0 [1] : vector<2x4xf32> to vector<2xf32>
     return %0 : vector<2xf32>
 }
 
@@ -18,7 +18,7 @@ func @vector_multi_reduction(%arg0: vector<2x4xf32>) -> vector<2xf32> {
 //       CHECK:   return %[[RESULT_VEC]] : vector<2xf32>
 
 func @vector_multi_reduction_min(%arg0: vector<2x4xf32>) -> vector<2xf32> {
-    %0 = vector.multi_reduction #vector.kind<minf>, %arg0 [1] : vector<2x4xf32> to vector<2xf32>
+    %0 = vector.multi_reduction <minf>, %arg0 [1] : vector<2x4xf32> to vector<2xf32>
     return %0 : vector<2xf32>
 }
 
@@ -35,7 +35,7 @@ func @vector_multi_reduction_min(%arg0: vector<2x4xf32>) -> vector<2xf32> {
 //       CHECK:   return %[[RESULT_VEC]] : vector<2xf32>
 
 func @vector_multi_reduction_max(%arg0: vector<2x4xf32>) -> vector<2xf32> {
-    %0 = vector.multi_reduction #vector.kind<maxf>, %arg0 [1] : vector<2x4xf32> to vector<2xf32>
+    %0 = vector.multi_reduction <maxf>, %arg0 [1] : vector<2x4xf32> to vector<2xf32>
     return %0 : vector<2xf32>
 }
 
@@ -52,7 +52,7 @@ func @vector_multi_reduction_max(%arg0: vector<2x4xf32>) -> vector<2xf32> {
 //       CHECK:   return %[[RESULT_VEC]] : vector<2xf32>
 
 func @vector_multi_reduction_and(%arg0: vector<2x4xi32>) -> vector<2xi32> {
-    %0 = vector.multi_reduction #vector.kind<and>, %arg0 [1] : vector<2x4xi32> to vector<2xi32>
+    %0 = vector.multi_reduction <and>, %arg0 [1] : vector<2x4xi32> to vector<2xi32>
     return %0 : vector<2xi32>
 }
 
@@ -69,7 +69,7 @@ func @vector_multi_reduction_and(%arg0: vector<2x4xi32>) -> vector<2xi32> {
 //       CHECK:   return %[[RESULT_VEC]] : vector<2xi32>
 
 func @vector_multi_reduction_or(%arg0: vector<2x4xi32>) -> vector<2xi32> {
-    %0 = vector.multi_reduction #vector.kind<or>, %arg0 [1] : vector<2x4xi32> to vector<2xi32>
+    %0 = vector.multi_reduction <or>, %arg0 [1] : vector<2x4xi32> to vector<2xi32>
     return %0 : vector<2xi32>
 }
 
@@ -86,7 +86,7 @@ func @vector_multi_reduction_or(%arg0: vector<2x4xi32>) -> vector<2xi32> {
 //       CHECK:   return %[[RESULT_VEC]] : vector<2xi32>
 
 func @vector_multi_reduction_xor(%arg0: vector<2x4xi32>) -> vector<2xi32> {
-    %0 = vector.multi_reduction #vector.kind<xor>, %arg0 [1] : vector<2x4xi32> to vector<2xi32>
+    %0 = vector.multi_reduction <xor>, %arg0 [1] : vector<2x4xi32> to vector<2xi32>
     return %0 : vector<2xi32>
 }
 
@@ -104,7 +104,7 @@ func @vector_multi_reduction_xor(%arg0: vector<2x4xi32>) -> vector<2xi32> {
 
 
 func @vector_reduction_outer(%arg0: vector<2x3x4x5xi32>) -> vector<2x3xi32> {
-    %0 = vector.multi_reduction #vector.kind<add>, %arg0 [2, 3] : vector<2x3x4x5xi32> to vector<2x3xi32>
+    %0 = vector.multi_reduction <add>, %arg0 [2, 3] : vector<2x3x4x5xi32> to vector<2x3xi32>
     return %0 : vector<2x3xi32>
 }
 

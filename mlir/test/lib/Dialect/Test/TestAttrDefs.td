@@ -14,7 +14,7 @@
 #define TEST_ATTRDEFS
 
 // To get the test dialect definition.
-include "TestOps.td"
+include "TestDialect.td"
 include "mlir/IR/BuiltinAttributeInterfaces.td"
 include "mlir/IR/SubElementInterfaces.td"
 
@@ -119,6 +119,29 @@ def TestSubElementsAccessAttr : Test_Attr<"TestSubElementsAccess", [
     "::mlir::Attribute":$second,
     "::mlir::Attribute":$third
   );
+}
+
+// A more complex parameterized attribute with multiple level of nesting.
+def CompoundNestedInner : Test_Attr<"CompoundNestedInner"> {
+  let mnemonic = "cmpnd_nested_inner";
+  // List of type parameters.
+  let parameters = (
+    ins
+    "int":$some_int,
+    CompoundAttrA:$cmpdA
+  );
+  let assemblyFormat = "`<` $some_int $cmpdA `>`";
+}
+
+def CompoundNestedOuter : Test_Attr<"CompoundNestedOuter"> {
+  let mnemonic = "cmpnd_nested_outer";
+
+  // List of type parameters.
+  let parameters = (
+    ins
+    CompoundNestedInner:$inner
+  );
+  let assemblyFormat = "`<` `i`  $inner `>`";
 }
 
 def TestParamOne : AttrParameter<"int64_t", ""> {}

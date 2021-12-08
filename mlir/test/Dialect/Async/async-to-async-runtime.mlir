@@ -245,7 +245,7 @@ func @execute_and_return_f32() -> f32 {
   }
 
   // CHECK: async.runtime.await %[[RET]]#1 : !async.value<f32>
-  // CHECK: %[[VALUE:.*]] = async.runtime.load %[[RET]]#1 : !async.value<f32>
+  // CHECK: %[[VALUE:.*]] = async.runtime.load %[[RET]]#1 : <f32>
   %0 = async.await %result : !async.value<f32>
 
   // CHECK: return %[[VALUE]]
@@ -323,7 +323,7 @@ func @async_value_operands() {
 
 // // Load from the async.value argument after error checking.
 // CHECK: ^[[CONTINUATION:.*]]:
-// CHECK:   %[[LOADED:.*]] = async.runtime.load %[[ARG]] : !async.value<f32
+// CHECK:   %[[LOADED:.*]] = async.runtime.load %[[ARG]] : <f32
 // CHECK:   arith.addf %[[LOADED]], %[[LOADED]] : f32
 // CHECK:   async.runtime.set_available %[[TOKEN]]
 

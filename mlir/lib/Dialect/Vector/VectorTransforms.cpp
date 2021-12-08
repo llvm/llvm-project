@@ -1188,7 +1188,7 @@ private:
 /// Ex:
 /// ```
 ///   %0 = arith.mulf %arg0, %arg1 : vector<8x32x16xf32>
-///   %1 = vector.multi_reduction #vector.kind<add>, %0 [1]
+///   %1 = vector.multi_reduction add, %0 [1]
 ///     : vector<8x32x16xf32> to vector<8x16xf32>
 /// ```
 /// Gets converted to:
@@ -1198,7 +1198,7 @@ private:
 ///         affine_map<(d0, d1, d2) -> (d0, d1, d2)>,
 ///         affine_map<(d0, d1, d2) -> (d0, d1)>],
 ///    iterator_types = ["parallel", "parallel", "reduction"],
-///    kind = #vector.kind<add>} %0, %arg1, %cst_f0
+///    kind = add} %0, %arg1, %cst_f0
 ///    : vector<8x32x16xf32>, vector<8x32x16xf32> into vector<8x32xf32>
 ///  ```
 struct MultiReduceToContract
@@ -1247,7 +1247,7 @@ struct MultiReduceToContract
 ///         affine_map<(d0, d1, d2) -> (d0, d1, d2)>,
 ///         affine_map<(d0, d1, d2) -> (d0, d1)>],
 ///    iterator_types = ["parallel", "parallel", "reduction"],
-///    kind = #vector.kind<add>} %0, %arg1, %cst_f0
+///    kind = add} %0, %arg1, %cst_f0
 ///    : vector<8x32x16xf32>, vector<8x32x16xf32> into vector<8x32xf32>
 /// ```
 /// Gets converted to:
@@ -1257,7 +1257,7 @@ struct MultiReduceToContract
 ///         affine_map<(d0, d1, d2) -> (d0, d1, d2)>,
 ///         affine_map<(d0, d1, d2) -> (d0, d1)>],
 ///    iterator_types = ["parallel", "parallel", "reduction"],
-///    kind = #vector.kind<add>} %arg0, %arg1, %cst_f0
+///    kind = add} %arg0, %arg1, %cst_f0
 ///    : vector<8x32x16xf32>, vector<8x32x16xf32> into vector<8x32xf32>
 ///  ```
 struct CombineContractTranspose
@@ -1304,7 +1304,7 @@ struct CombineContractTranspose
 ///         affine_map<(d0, d1, d2) -> (d0, d1, d2)>,
 ///         affine_map<(d0, d1, d2) -> (d0, d1)>],
 ///    iterator_types = ["parallel", "parallel", "reduction"],
-///    kind = #vector.kind<add>} %0, %arg1, %cst_f0
+///    kind = add} %0, %arg1, %cst_f0
 ///    : vector<8x32x16xf32>, vector<8x32x16xf32> into vector<8x32xf32>
 /// ```
 /// Gets converted to:
@@ -1314,7 +1314,7 @@ struct CombineContractTranspose
 ///         affine_map<(d0, d1, d2) -> (d0, d1, d2)>,
 ///         affine_map<(d0, d1, d2) -> (d0, d1)>],
 ///    iterator_types = ["parallel", "parallel", "reduction"],
-///    kind = #vector.kind<add>} %arg0, %arg1, %cst_f0
+///    kind = add} %arg0, %arg1, %cst_f0
 ///    : vector<32x16xf32>, vector<8x32x16xf32> into vector<8x32xf32>
 ///  ```
 struct CombineContractBroadcast

@@ -61,7 +61,7 @@ def TypeParamB : TypeParameter<"TestParamD", "a type param D"> {
 // ATTR:   printer << ' ' << "hello";
 // ATTR:   printer << ' ' << "=";
 // ATTR:   printer << ' ';
-// ATTR:   printer << getValue();
+// ATTR:   printer.printStrippedAttrOrType(getValue());
 // ATTR:   printer << ",";
 // ATTR:   printer << ' ';
 // ATTR:   ::printAttrParamA(printer, getComplex());
@@ -154,10 +154,10 @@ def AttrB : TestAttr<"TestB"> {
 
 // ATTR: void TestFAttr::print(::mlir::AsmPrinter &printer) const {
 // ATTR:   printer << ' ';
-// ATTR:   printer << getV0();
+// ATTR:   printer.printStrippedAttrOrType(getV0());
 // ATTR:   printer << ",";
 // ATTR:   printer << ' ';
-// ATTR:   printer << getV1();
+// ATTR:   printer.printStrippedAttrOrType(getV1());
 // ATTR: }
 
 def AttrC : TestAttr<"TestF"> {
@@ -213,7 +213,7 @@ def AttrC : TestAttr<"TestF"> {
 // TYPE:   printer << ' ' << "bob";
 // TYPE:   printer << ' ' << "bar";
 // TYPE:   printer << ' ';
-// TYPE:   printer << getValue();
+// TYPE:   printer.printStrippedAttrOrType(getValue());
 // TYPE:   printer << ' ' << "complex";
 // TYPE:   printer << ' ' << "=";
 // TYPE:   printer << ' ';
@@ -361,21 +361,21 @@ def TypeB : TestType<"TestD"> {
 // TYPE:   printer << "v0";
 // TYPE:   printer << ' ' << "=";
 // TYPE:   printer << ' ';
-// TYPE:   printer << getV0();
+// TYPE:   printer.printStrippedAttrOrType(getV0());
 // TYPE:   printer << ",";
 // TYPE:   printer << ' ' << "v2";
 // TYPE:   printer << ' ' << "=";
 // TYPE:   printer << ' ';
-// TYPE:   printer << getV2();
+// TYPE:   printer.printStrippedAttrOrType(getV2());
 // TYPE:   printer << "v1";
 // TYPE:   printer << ' ' << "=";
 // TYPE:   printer << ' ';
-// TYPE:   printer << getV1();
+// TYPE:   printer.printStrippedAttrOrType(getV1());
 // TYPE:   printer << ",";
 // TYPE:   printer << ' ' << "v3";
 // TYPE:   printer << ' ' << "=";
 // TYPE:   printer << ' ';
-// TYPE:   printer << getV3();
+// TYPE:   printer.printStrippedAttrOrType(getV3());
 // TYPE: }
 
 def TypeC : TestType<"TestE"> {

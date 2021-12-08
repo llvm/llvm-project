@@ -256,16 +256,50 @@ test.format_optional_else else
 // Format a custom attribute
 //===----------------------------------------------------------------------===//
 
-// CHECK: test.format_compound_attr #test.cmpnd_a<1, !test.smpla, [5, 6]>
-test.format_compound_attr #test.cmpnd_a<1, !test.smpla, [5, 6]>
+// CHECK: test.format_compound_attr <1, !test.smpla, [5, 6]>
+test.format_compound_attr <1, !test.smpla, [5, 6]>
 
-// CHECK:  module attributes {test.nested = #test.cmpnd_nested<nested = #test.cmpnd_a<1, !test.smpla, [5, 6]>>} {
+//-----
+
+
+// CHECK:   module attributes {test.nested = #test.cmpnd_nested<nested = <1, !test.smpla, [5, 6]>>} {
+module attributes {test.nested = #test.cmpnd_nested<nested = <1, !test.smpla, [5, 6]>>} {
+}
+
+//-----
+
+// Same as above, but fully spelling the inner attribute prefix `#test.cmpnd_a`.
+// CHECK:   module attributes {test.nested = #test.cmpnd_nested<nested = <1, !test.smpla, [5, 6]>>} {
 module attributes {test.nested = #test.cmpnd_nested<nested = #test.cmpnd_a<1, !test.smpla, [5, 6]>>} {
 }
 
-// CHECK: test.format_nested_attr #test.cmpnd_nested<nested = #test.cmpnd_a<1, !test.smpla, [5, 6]>>
+// CHECK: test.format_nested_attr <nested = <1, !test.smpla, [5, 6]>>
+test.format_nested_attr #test.cmpnd_nested<nested = <1, !test.smpla, [5, 6]>>
+
+//-----
+
+// Same as above, but fully spelling the inner attribute prefix `#test.cmpnd_a`.
+// CHECK: test.format_nested_attr <nested = <1, !test.smpla, [5, 6]>>
 test.format_nested_attr #test.cmpnd_nested<nested = #test.cmpnd_a<1, !test.smpla, [5, 6]>>
 
+//-----
+
+// CHECK: module attributes {test.someAttr = #test.cmpnd_nested_inner<42 <1, !test.smpla, [5, 6]>>}
+module attributes {test.someAttr = #test.cmpnd_nested_inner<42 <1, !test.smpla, [5, 6]>>}
+{
+}
+
+//-----
+
+// CHECK: module attributes {test.someAttr = #test.cmpnd_nested_outer<i <42 <1, !test.smpla, [5, 6]>>>}
+module attributes {test.someAttr = #test.cmpnd_nested_outer<i <42 <1, !test.smpla, [5, 6]>>>}
+{
+}
+
+//-----
+
+// CHECK: test.format_cpmd_nested_attr nested <i <42 <1, !test.smpla, [5, 6]>>>
+test.format_cpmd_nested_attr nested <i <42 <1, !test.smpla, [5, 6]>>>
 
 //===----------------------------------------------------------------------===//
 // Format custom directives
