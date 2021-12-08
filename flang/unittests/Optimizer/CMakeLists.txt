@@ -17,6 +17,7 @@ add_flang_unittest(FlangOptimizerTests
   Builder/Runtime/CharacterTest.cpp
   Builder/Runtime/DerivedTest.cpp
   Builder/Runtime/NumericTest.cpp
+  Builder/Runtime/RaggedTest.cpp
   Builder/Runtime/ReductionTest.cpp
   Builder/Runtime/TransformationalTest.cpp
   FIRContextTest.cpp

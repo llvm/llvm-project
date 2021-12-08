@@ -405,6 +405,11 @@ mlir::Value locationToFilename(fir::FirOpBuilder &, mlir::Location);
 /// Generate a constant of the given type with the location line number
 mlir::Value locationToLineNo(fir::FirOpBuilder &, mlir::Location, mlir::Type);
 
+/// Builds and returns the type of a ragged array header used to cache mask
+/// evaluations. RaggedArrayHeader is defined in
+/// flang/include/flang/Runtime/ragged.h.
+mlir::TupleType getRaggedArrayHeaderType(fir::FirOpBuilder &builder);
+
 } // namespace fir::factory
 
 #endif // FORTRAN_OPTIMIZER_BUILDER_FIRBUILDER_H

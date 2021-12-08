@@ -11,6 +11,7 @@ add_flang_library(FIRBuilder
   Runtime/Character.cpp
   Runtime/Derived.cpp
   Runtime/Numeric.cpp
+  Runtime/Ragged.cpp
   Runtime/Reduction.cpp
   Runtime/Transformational.cpp
 
