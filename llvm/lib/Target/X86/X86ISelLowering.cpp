@@ -29824,6 +29824,10 @@ static SDValue LowerRotate(SDValue Op, const X86Subtarget &Subtarget,
   if (VT.is256BitVector() && (Subtarget.hasXOP() || !Subtarget.hasAVX2()))
     return splitVectorIntBinary(Op, DAG);
 
+  // Split 512-bit integers on non 512-bit BWI targets.
+  if (VT.is512BitVector() && !Subtarget.useBWIRegs())
+    return splitVectorIntBinary(Op, DAG);
+
   // XOP has 128-bit vector variable + immediate rotates.
   // +ve/-ve Amt = rotate left/right - just need to handle ISD::ROTL.
   // XOP implicitly uses modulo rotation amounts.
