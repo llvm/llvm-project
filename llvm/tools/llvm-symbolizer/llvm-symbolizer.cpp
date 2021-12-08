@@ -19,7 +19,6 @@
 #include "llvm/Config/config.h"
 #include "llvm/DebugInfo/Symbolize/DIPrinter.h"
 #include "llvm/DebugInfo/Symbolize/Symbolize.h"
-#include "llvm/Debuginfod/HTTPClient.h"
 #include "llvm/Option/Arg.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Option/Option.h"
@@ -262,8 +261,6 @@ static FunctionNameKind decideHowToPrintFunctions(const opt::InputArgList &Args,
 
 int main(int argc, char **argv) {
   InitLLVM X(argc, argv);
-  // The HTTPClient must be initialized for use by the debuginfod client.
-  HTTPClient::initialize();
   sys::InitializeCOMRAII COM(sys::COMThreadingMode::MultiThreaded);
 
   bool IsAddr2Line = sys::path::stem(argv[0]).contains("addr2line");
@@ -360,6 +357,5 @@ int main(int argc, char **argv) {
     Printer->listEnd();
   }
 
-  HTTPClient::cleanup();
   return 0;
 }
