@@ -309,7 +309,8 @@ exit:
   ret i32 %ret
 }
 
-; Make sure we don't promote if the store is really control-flow dependent.
+; Hoist the load even if we cannot sink the store, since the store is really
+; control-flow dependent.
 define i32 @test7bad() {
 ; CHECK-LABEL: @test7bad(
 ; CHECK-NEXT:  entry:
