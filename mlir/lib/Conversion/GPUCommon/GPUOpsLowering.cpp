@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "GPUOpsLowering.h"
+#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/IR/Builders.h"
 #include "llvm/Support/FormatVariadic.h"
@@ -142,5 +143,202 @@ GPUFuncOpLowering::matchAndRewrite(gpu::GPUFuncOp gpuFuncOp, OpAdaptor adaptor,
     return failure();
 
   rewriter.eraseOp(gpuFuncOp);
+  return success();
+}
+
+static const char formatStringPrefix[] = "printfFormat_";
+
+template <typename T>
+static LLVM::LLVMFuncOp getOrDefineFunction(T &moduleOp, const Location loc,
+                                            ConversionPatternRewriter &rewriter,
+                                            StringRef name,
+                                            LLVM::LLVMFunctionType type) {
+  LLVM::LLVMFuncOp ret;
+  if (!(ret = moduleOp.template lookupSymbol<LLVM::LLVMFuncOp>(name))) {
+    ConversionPatternRewriter::InsertionGuard guard(rewriter);
+    rewriter.setInsertionPointToStart(moduleOp.getBody());
+    ret = rewriter.create<LLVM::LLVMFuncOp>(loc, name, type,
+                                            LLVM::Linkage::External);
+  }
+  return ret;
+}
+
+LogicalResult GPUPrintfOpToHIPLowering::matchAndRewrite(
+    gpu::PrintfOp gpuPrintfOp, gpu::PrintfOpAdaptor adaptor,
+    ConversionPatternRewriter &rewriter) const {
+  Location loc = gpuPrintfOp->getLoc();
+
+  mlir::Type llvmI8 = typeConverter->convertType(rewriter.getI8Type());
+  mlir::Type i8Ptr = LLVM::LLVMPointerType::get(llvmI8);
+  mlir::Type llvmIndex = typeConverter->convertType(rewriter.getIndexType());
+  mlir::Type llvmI32 = typeConverter->convertType(rewriter.getI32Type());
+  mlir::Type llvmI64 = typeConverter->convertType(rewriter.getI64Type());
+  // Note: this is the GPUModule op, not the ModuleOp that surrounds it
+  // This ensures that global constants and declarations are placed within
+  // the device code, not the host code
+  auto moduleOp = gpuPrintfOp->getParentOfType<gpu::GPUModuleOp>();
+
+  auto ocklBegin =
+      getOrDefineFunction(moduleOp, loc, rewriter, "__ockl_printf_begin",
+                          LLVM::LLVMFunctionType::get(llvmI64, {llvmI64}));
+  LLVM::LLVMFuncOp ocklAppendArgs;
+  if (!adaptor.args().empty()) {
+    ocklAppendArgs = getOrDefineFunction(
+        moduleOp, loc, rewriter, "__ockl_printf_append_args",
+        LLVM::LLVMFunctionType::get(
+            llvmI64, {llvmI64, /*numArgs*/ llvmI32, llvmI64, llvmI64, llvmI64,
+                      llvmI64, llvmI64, llvmI64, llvmI64, /*isLast*/ llvmI32}));
+  }
+  auto ocklAppendStringN = getOrDefineFunction(
+      moduleOp, loc, rewriter, "__ockl_printf_append_string_n",
+      LLVM::LLVMFunctionType::get(
+          llvmI64,
+          {llvmI64, i8Ptr, /*length (bytes)*/ llvmI64, /*isLast*/ llvmI32}));
+
+  /// Start the printf hostcall
+  Value zeroI64 = rewriter.create<LLVM::ConstantOp>(
+      loc, llvmI64, rewriter.getI64IntegerAttr(0));
+  auto printfBeginCall = rewriter.create<LLVM::CallOp>(loc, ocklBegin, zeroI64);
+  Value printfDesc = printfBeginCall.getResult(0);
+
+  // Create a global constant for the format string
+  unsigned stringNumber = 0;
+  SmallString<16> stringConstName;
+  do {
+    stringConstName.clear();
+    (formatStringPrefix + Twine(stringNumber++)).toStringRef(stringConstName);
+  } while (moduleOp.lookupSymbol(stringConstName));
+
+  llvm::SmallString<20> formatString(adaptor.format().getValue());
+  formatString.push_back('\0'); // Null terminate for C
+  size_t formatStringSize = formatString.size_in_bytes();
+
+  auto globalType = LLVM::LLVMArrayType::get(llvmI8, formatStringSize);
+  LLVM::GlobalOp global;
+  {
+    ConversionPatternRewriter::InsertionGuard guard(rewriter);
+    rewriter.setInsertionPointToStart(moduleOp.getBody());
+    global = rewriter.create<LLVM::GlobalOp>(
+        loc, globalType,
+        /*isConstant=*/true, LLVM::Linkage::Internal, stringConstName,
+        rewriter.getStringAttr(formatString));
+  }
+
+  // Get a pointer to the format string's first element and pass it to printf()
+  Value globalPtr = rewriter.create<LLVM::AddressOfOp>(loc, global);
+  Value zero = rewriter.create<LLVM::ConstantOp>(
+      loc, llvmIndex, rewriter.getIntegerAttr(llvmIndex, 0));
+  Value stringStart = rewriter.create<LLVM::GEPOp>(
+      loc, i8Ptr, globalPtr, mlir::ValueRange({zero, zero}));
+  Value stringLen = rewriter.create<LLVM::ConstantOp>(
+      loc, llvmI64, rewriter.getI64IntegerAttr(formatStringSize));
+
+  Value oneI32 = rewriter.create<LLVM::ConstantOp>(
+      loc, llvmI32, rewriter.getI32IntegerAttr(1));
+  Value zeroI32 = rewriter.create<LLVM::ConstantOp>(
+      loc, llvmI32, rewriter.getI32IntegerAttr(0));
+
+  mlir::ValueRange appendFormatArgs = {printfDesc, stringStart, stringLen,
+                                       adaptor.args().empty() ? oneI32
+                                                              : zeroI32};
+  auto appendFormatCall =
+      rewriter.create<LLVM::CallOp>(loc, ocklAppendStringN, appendFormatArgs);
+  printfDesc = appendFormatCall.getResult(0);
+
+  // __ockl_printf_append_args takes 7 values per append call
+  constexpr size_t argsPerAppend = 7;
+  size_t nArgs = adaptor.args().size();
+  for (size_t group = 0; group < nArgs; group += argsPerAppend) {
+    size_t bound = std::min(group + argsPerAppend, nArgs);
+    size_t numArgsThisCall = bound - group;
+
+    SmallVector<mlir::Value, 2 + argsPerAppend + 1> arguments;
+    arguments.push_back(printfDesc);
+    arguments.push_back(rewriter.create<LLVM::ConstantOp>(
+        loc, llvmI32, rewriter.getI32IntegerAttr(numArgsThisCall)));
+    for (size_t i = group; i < bound; ++i) {
+      Value arg = adaptor.args()[i];
+      if (auto floatType = arg.getType().dyn_cast<FloatType>()) {
+        if (!floatType.isF64())
+          arg = rewriter.create<LLVM::FPExtOp>(
+              loc, typeConverter->convertType(rewriter.getF64Type()), arg);
+        arg = rewriter.create<LLVM::BitcastOp>(loc, llvmI64, arg);
+      }
+      if (arg.getType().getIntOrFloatBitWidth() != 64)
+        arg = rewriter.create<LLVM::ZExtOp>(loc, llvmI64, arg);
+
+      arguments.push_back(arg);
+    }
+    // Pad out to 7 arguments since the hostcall always needs 7
+    for (size_t extra = numArgsThisCall; extra < argsPerAppend; ++extra) {
+      arguments.push_back(zeroI64);
+    }
+
+    auto isLast = (bound == nArgs) ? oneI32 : zeroI32;
+    arguments.push_back(isLast);
+    auto call = rewriter.create<LLVM::CallOp>(loc, ocklAppendArgs, arguments);
+    printfDesc = call.getResult(0);
+  }
+  rewriter.eraseOp(gpuPrintfOp);
+  return success();
+}
+
+LogicalResult GPUPrintfOpToLLVMCallLowering::matchAndRewrite(
+    gpu::PrintfOp gpuPrintfOp, gpu::PrintfOpAdaptor adaptor,
+    ConversionPatternRewriter &rewriter) const {
+  Location loc = gpuPrintfOp->getLoc();
+
+  mlir::Type llvmI8 = typeConverter->convertType(rewriter.getIntegerType(8));
+  mlir::Type i8Ptr = LLVM::LLVMPointerType::get(llvmI8, addressSpace);
+  mlir::Type llvmIndex = typeConverter->convertType(rewriter.getIndexType());
+
+  // Note: this is the GPUModule op, not the ModuleOp that surrounds it
+  // This ensures that global constants and declarations are placed within
+  // the device code, not the host code
+  auto moduleOp = gpuPrintfOp->getParentOfType<gpu::GPUModuleOp>();
+
+  auto printfType = LLVM::LLVMFunctionType::get(rewriter.getI32Type(), {i8Ptr},
+                                                /*isVarArg=*/true);
+  LLVM::LLVMFuncOp printfDecl =
+      getOrDefineFunction(moduleOp, loc, rewriter, "printf", printfType);
+
+  // Create a global constant for the format string
+  unsigned stringNumber = 0;
+  SmallString<16> stringConstName;
+  do {
+    stringConstName.clear();
+    (formatStringPrefix + Twine(stringNumber++)).toStringRef(stringConstName);
+  } while (moduleOp.lookupSymbol(stringConstName));
+
+  llvm::SmallString<20> formatString(adaptor.format().getValue());
+  formatString.push_back('\0'); // Null terminate for C
+  auto globalType =
+      LLVM::LLVMArrayType::get(llvmI8, formatString.size_in_bytes());
+  LLVM::GlobalOp global;
+  {
+    ConversionPatternRewriter::InsertionGuard guard(rewriter);
+    rewriter.setInsertionPointToStart(moduleOp.getBody());
+    global = rewriter.create<LLVM::GlobalOp>(
+        loc, globalType,
+        /*isConstant=*/true, LLVM::Linkage::Internal, stringConstName,
+        rewriter.getStringAttr(formatString), /*allignment=*/0, addressSpace);
+  }
+
+  // Get a pointer to the format string's first element
+  Value globalPtr = rewriter.create<LLVM::AddressOfOp>(loc, global);
+  Value zero = rewriter.create<LLVM::ConstantOp>(
+      loc, llvmIndex, rewriter.getIntegerAttr(llvmIndex, 0));
+  Value stringStart = rewriter.create<LLVM::GEPOp>(
+      loc, i8Ptr, globalPtr, mlir::ValueRange({zero, zero}));
+
+  // Construct arguments and function call
+  auto argsRange = adaptor.args();
+  SmallVector<Value, 4> printfArgs;
+  printfArgs.reserve(argsRange.size() + 1);
+  printfArgs.push_back(stringStart);
+  printfArgs.append(argsRange.begin(), argsRange.end());
+
+  rewriter.create<LLVM::CallOp>(loc, printfDecl, printfArgs);
+  rewriter.eraseOp(gpuPrintfOp);
   return success();
 }

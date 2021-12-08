@@ -547,6 +547,22 @@ def GPU_LaunchOp : GPU_Op<"launch">,
   let hasCanonicalizer = 1;
 }
 
+def GPU_PrintfOp : GPU_Op<"printf", [MemoryEffects<[MemWrite]>]>,
+  Arguments<(ins StrAttr:$format,
+                Variadic<AnyTypeOf<[AnyInteger, Index, AnyFloat]>>:$args)> {
+  let summary = "Device-side printf, as in CUDA or OpenCL, for debugging";
+  let description = [{
+    `gpu.printf` takes a literal format string `format` and an arbitrary number of
+    scalar arguments that should be printed.
+
+    The format string is a C-style printf string, subject to any restrictions
+    imposed by one's target platform.
+  }];
+  let assemblyFormat = [{
+    $format attr-dict ($args^ `:` type($args))?
+  }];
+}
+
 def GPU_ReturnOp : GPU_Op<"return", [HasParent<"GPUFuncOp">, NoSideEffect,
                                      Terminator]>,
     Arguments<(ins Variadic<AnyType>:$operands)>, Results<(outs)> {
