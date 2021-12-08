@@ -1226,3 +1226,11 @@ func @bitcast(%arg0: vector<2x3xf32>) {
   llvm.bitcast %arg0 : vector<2x3xf32> to vector<2x3xi32>
   return
 }
+
+// -----
+
+func @cp_async(%arg0: !llvm.ptr<i8, 3>, %arg1: !llvm.ptr<i8, 1>) {
+  // expected-error @below {{expected byte size to be either 4, 8 or 16.}}
+  nvvm.cp.async.shared.global %arg0, %arg1, 32
+  return
+}

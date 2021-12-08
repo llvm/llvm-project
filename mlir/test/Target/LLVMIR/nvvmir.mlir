@@ -162,6 +162,20 @@ llvm.func @nvvm_wmma_mma(%0 : i32, %1 : i32, %2 : i32, %3 : i32, %4 : i32, %5 : 
   llvm.return
 }
 
+llvm.func @cp_async(%arg0: !llvm.ptr<i8, 3>, %arg1: !llvm.ptr<i8, 1>) {
+// CHECK: call void @llvm.nvvm.cp.async.ca.shared.global.4(i8 addrspace(3)* %{{.*}}, i8 addrspace(1)* %{{.*}})
+  nvvm.cp.async.shared.global %arg0, %arg1, 4
+// CHECK: call void @llvm.nvvm.cp.async.ca.shared.global.8(i8 addrspace(3)* %{{.*}}, i8 addrspace(1)* %{{.*}})
+  nvvm.cp.async.shared.global %arg0, %arg1, 8
+// CHECK: call void @llvm.nvvm.cp.async.ca.shared.global.16(i8 addrspace(3)* %{{.*}}, i8 addrspace(1)* %{{.*}})
+  nvvm.cp.async.shared.global %arg0, %arg1, 16
+// CHECK: call void @llvm.nvvm.cp.async.commit.group()
+  nvvm.cp.async.commit.group
+// CHECK: call void @llvm.nvvm.cp.async.wait.group(i32 0)
+  nvvm.cp.async.wait.group 0
+  llvm.return
+}
+
 // This function has the "kernel" attribute attached and should appear in the
 // NVVM annotations after conversion.
 llvm.func @kernel_func() attributes {nvvm.kernel} {
