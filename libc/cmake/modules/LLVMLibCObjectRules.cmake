@@ -232,6 +232,7 @@ function(add_entrypoint_object target_name)
       # these.
       COMMAND $<TARGET_FILE:clang-tidy>
               "--extra-arg=-fno-caret-diagnostics" --quiet
+              "--export-fixes=${CMAKE_CURRENT_BINARY_DIR}/${target_name}.yaml"
               # Path to directory containing compile_commands.json
               -p ${PROJECT_BINARY_DIR}
               ${ADD_ENTRYPOINT_OBJ_SRCS}

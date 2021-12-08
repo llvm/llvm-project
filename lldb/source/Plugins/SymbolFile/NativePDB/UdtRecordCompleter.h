@@ -54,11 +54,17 @@ class UdtRecordCompleter : public llvm::codeview::TypeVisitorCallbacks {
   PdbIndex &m_index;
   std::vector<IndexedBase> m_bases;
   ClangASTImporter::LayoutInfo m_layout;
+  llvm::DenseMap<lldb::opaque_compiler_type_t,
+                 llvm::SmallSet<std::pair<llvm::StringRef, CompilerType>, 8>>
+      &m_cxx_record_map;
 
 public:
-  UdtRecordCompleter(PdbTypeSymId id, CompilerType &derived_ct,
-                     clang::TagDecl &tag_decl, PdbAstBuilder &ast_builder,
-                     PdbIndex &index);
+  UdtRecordCompleter(
+      PdbTypeSymId id, CompilerType &derived_ct, clang::TagDecl &tag_decl,
+      PdbAstBuilder &ast_builder, PdbIndex &index,
+      llvm::DenseMap<lldb::opaque_compiler_type_t,
+                     llvm::SmallSet<std::pair<llvm::StringRef, CompilerType>,
+                                    8>> &cxx_record_map);
 
 #define MEMBER_RECORD(EnumName, EnumVal, Name)                                 \
   llvm::Error visitKnownMember(llvm::codeview::CVMemberRecord &CVR,            \

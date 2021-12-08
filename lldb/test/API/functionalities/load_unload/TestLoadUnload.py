@@ -240,6 +240,15 @@ class LoadUnloadTestCase(TestBase):
         else:
             remoteDylibPath = localDylibPath
 
+        # First make sure that we get some kind of error if process load fails.
+        # We print some error even if the load fails, which isn't formalized.
+        # The only plugin at present (Posix) that supports this says "unknown reasons".
+        # If another plugin shows up, let's require it uses "unknown error" as well.
+        non_existant_shlib = "/NoSuchDir/NoSuchSubdir/ReallyNo/NotAFile"
+        self.expect("process load %s"%(non_existant_shlib), error=True, matching=False,
+                    patterns=["unknown reasons"])
+        
+
         # Make sure that a_function does not exist at this point.
         self.expect(
             "image lookup -n a_function",

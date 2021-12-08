@@ -181,15 +181,8 @@ class SM_Time_Pseudo<string opName, SDPatternOperator node = null_frag> : SM_Pse
   " $sdst", [(set i64:$sdst, (node))]> {
   let hasSideEffects = 1;
 
-  // FIXME: This should be definitively mayStore = 0. TableGen
-  // brokenly tries to infer these based on the intrinsic properties
-  // corresponding to the IR attributes. The target intrinsics are
-  // considered as writing to memory for IR dependency purposes, but
-  // those can be modeled with hasSideEffects here. These also end up
-  // inferring differently for llvm.readcyclecounter and the amdgcn
-  // intrinsics.
-  let mayStore = ?;
-  let mayLoad = 1;
+  let mayStore = 0;
+  let mayLoad = 0;
   let has_sbase = 0;
   let has_offset = 0;
 }

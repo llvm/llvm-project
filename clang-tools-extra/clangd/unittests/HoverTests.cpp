@@ -901,6 +901,35 @@ class Foo {})cpp";
          HI.Kind = index::SymbolKind::Unknown;
          HI.Type = "int[10]";
          HI.Value = "{1}";
+       }},
+      {// Var template decl
+       R"cpp(
+          using m_int = int;
+
+          template <int Size> m_int ^[[arr]][Size];
+         )cpp",
+       [](HoverInfo &HI) {
+         HI.Name = "arr";
+         HI.Kind = index::SymbolKind::Variable;
+         HI.Type = "m_int[Size]";
+         HI.NamespaceScope = "";
+         HI.Definition = "template <int Size> m_int arr[Size]";
+         HI.TemplateParameters = {{{"int"}, {"Size"}, llvm::None}};
+       }},
+      {// Var template decl specialization
+       R"cpp(
+          using m_int = int;
+
+          template <int Size> m_int arr[Size];
+
+          template <> m_int ^[[arr]]<4>[4];
+         )cpp",
+       [](HoverInfo &HI) {
+         HI.Name = "arr<4>";
+         HI.Kind = index::SymbolKind::Variable;
+         HI.Type = "m_int[4]";
+         HI.NamespaceScope = "";
+         HI.Definition = "m_int arr[4]";
        }}};
   for (const auto &Case : Cases) {
     SCOPED_TRACE(Case.Code);
