@@ -147,7 +147,6 @@ struct IfOpInterface
       if (!resultBuffer)
         return failure();
 
-      state.aliasInfo.createAliasInfoEntry(resultBuffer);
       state.mapBuffer(opResult, resultBuffer);
     }
 
@@ -237,8 +236,6 @@ struct ForOpInterface
 
       OpOperand &opOperand = forOp.getOpOperandForResult(opResult);
       BlockArgument bbArg = forOp.getRegionIterArgForOpOperand(opOperand);
-      state.aliasInfo.createAliasInfoEntry(resultBuffer);
-      state.aliasInfo.insertNewBufferEquivalence(bbArg, resultBuffer);
       state.mapBuffer(bbArg, resultBuffer);
       state.mapBuffer(opResult, resultBuffer);
     }
@@ -257,15 +254,6 @@ struct ForOpInterface
       OpOperand &forOperand = forOp.getOpOperandForResult(
           forOp->getResult(operand.getOperandNumber()));
       auto bbArg = forOp.getRegionIterArgForOpOperand(forOperand);
-      if (!state.aliasInfo.areEquivalentBufferizedValues(operand.get(),
-                                                         bbArg)) {
-        // TODO: this could get resolved with copies but it can also turn into
-        // swaps so we need to be careful about order of copies.
-        return yieldOp->emitError()
-               << "Yield operand #" << operand.getOperandNumber()
-               << " does not bufferize to an equivalent buffer to the matching"
-               << " enclosing scf::for operand";
-      }
 
       // Buffers are equivalent so the work is already done and we just yield
       // the bbArg so that it later canonicalizes away.
@@ -274,6 +262,41 @@ struct ForOpInterface
     return success();
   }
 };
+
+LogicalResult mlir::linalg::comprehensive_bufferize::scf_ext::
+    AssertDestinationPassingStyle::run(FuncOp funcOp, BufferizationState &state,
+                                       SmallVector<Operation *> &newOps) {
+  LogicalResult status = success();
+  funcOp->walk([&](scf::YieldOp yieldOp) {
+    auto forOp = dyn_cast<scf::ForOp>(yieldOp->getParentOp());
+    if (!forOp)
+      return WalkResult::advance();
+
+    for (OpOperand &operand : yieldOp->getOpOperands()) {
+      auto tensorType = operand.get().getType().dyn_cast<TensorType>();
+      if (!tensorType)
+        continue;
+
+      OpOperand &forOperand = forOp.getOpOperandForResult(
+          forOp->getResult(operand.getOperandNumber()));
+      auto bbArg = forOp.getRegionIterArgForOpOperand(forOperand);
+      if (!state.aliasInfo.areEquivalentBufferizedValues(operand.get(),
+                                                         bbArg)) {
+        // TODO: this could get resolved with copies but it can also turn into
+        // swaps so we need to be careful about order of copies.
+        status =
+            yieldOp->emitError()
+            << "Yield operand #" << operand.getOperandNumber()
+            << " does not bufferize to an equivalent buffer to the matching"
+            << " enclosing scf::for operand";
+        return WalkResult::interrupt();
+      }
+    }
+
+    return WalkResult::advance();
+  });
+  return status;
+}
 
 struct YieldOpInterface
     : public BufferizableOpInterface::ExternalModel<YieldOpInterface,
