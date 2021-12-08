@@ -394,7 +394,7 @@ uint32_t PlatformWindows::DoLoadImage(Process *process,
       return LLDB_INVALID_IMAGE_TOKEN;
     }
 
-    error.SetErrorStringWithFormat("LoadLibrary Error: %lu", error_code);
+    error.SetErrorStringWithFormat("LoadLibrary Error: %" PRIu64, error_code);
     return LLDB_INVALID_IMAGE_TOKEN;
   }
 

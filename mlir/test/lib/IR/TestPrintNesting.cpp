@@ -88,7 +88,7 @@ struct TestPrintNestingPass
     return llvm::outs();
   }
 };
-} // end anonymous namespace
+} // namespace
 
 namespace mlir {
 void registerTestPrintNestingPass() {

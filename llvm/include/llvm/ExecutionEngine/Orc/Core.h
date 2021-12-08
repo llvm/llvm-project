@@ -670,14 +670,22 @@ class MaterializationUnit {
 public:
   static char ID;
 
-  MaterializationUnit(SymbolFlagsMap InitalSymbolFlags,
-                      SymbolStringPtr InitSymbol)
-      : SymbolFlags(std::move(InitalSymbolFlags)),
-        InitSymbol(std::move(InitSymbol)) {
-    assert((!this->InitSymbol || this->SymbolFlags.count(this->InitSymbol)) &&
-           "If set, InitSymbol should appear in InitialSymbolFlags map");
-  }
+  struct Interface {
+    Interface() = default;
+    Interface(SymbolFlagsMap InitalSymbolFlags, SymbolStringPtr InitSymbol)
+        : SymbolFlags(std::move(InitalSymbolFlags)),
+          InitSymbol(std::move(InitSymbol)) {
+      assert((!this->InitSymbol || this->SymbolFlags.count(this->InitSymbol)) &&
+             "If set, InitSymbol should appear in InitialSymbolFlags map");
+    }
 
+    SymbolFlagsMap SymbolFlags;
+    SymbolStringPtr InitSymbol;
+  };
+
+  MaterializationUnit(Interface I)
+      : SymbolFlags(std::move(I.SymbolFlags)),
+        InitSymbol(std::move(I.InitSymbol)) {}
   virtual ~MaterializationUnit() {}
 
   /// Return the name of this materialization unit. Useful for debugging
@@ -730,7 +738,7 @@ public:
 private:
   void materialize(std::unique_ptr<MaterializationResponsibility> R) override;
   void discard(const JITDylib &JD, const SymbolStringPtr &Name) override;
-  static SymbolFlagsMap extractFlags(const SymbolMap &Symbols);
+  static MaterializationUnit::Interface extractFlags(const SymbolMap &Symbols);
 
   SymbolMap Symbols;
 };
@@ -772,7 +780,8 @@ public:
 private:
   void materialize(std::unique_ptr<MaterializationResponsibility> R) override;
   void discard(const JITDylib &JD, const SymbolStringPtr &Name) override;
-  static SymbolFlagsMap extractFlags(const SymbolAliasMap &Aliases);
+  static MaterializationUnit::Interface
+  extractFlags(const SymbolAliasMap &Aliases);
 
   JITDylib *SourceJD = nullptr;
   JITDylibLookupFlags SourceJDLookupFlags;

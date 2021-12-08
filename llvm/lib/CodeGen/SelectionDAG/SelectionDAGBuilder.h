@@ -190,7 +190,6 @@ public:
   static const unsigned LowestSDNodeOrder = 1;
 
   SelectionDAG &DAG;
-  const DataLayout *DL = nullptr;
   AAResults *AA = nullptr;
   const TargetLibraryInfo *LibInfo;
 

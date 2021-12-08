@@ -48,7 +48,7 @@ private:
   MlirPassManager passManager;
 };
 
-} // anonymous namespace
+} // namespace
 
 /// Create the `mlir.passmanager` here.
 void mlir::python::populatePassManagerSubmodule(py::module &m) {

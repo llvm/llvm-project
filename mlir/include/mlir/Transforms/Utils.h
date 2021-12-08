@@ -30,7 +30,7 @@ class OpBuilder;
 
 namespace memref {
 class AllocOp;
-} // end namespace memref
+} // namespace memref
 
 /// Replaces all "dereferencing" uses of `oldMemRef` with `newMemRef` while
 /// optionally remapping the old memref's indices using the supplied affine map,
@@ -147,6 +147,6 @@ Operation *createComposedAffineApplyOp(OpBuilder &builder, Location loc,
 void createAffineComputationSlice(Operation *opInst,
                                   SmallVectorImpl<AffineApplyOp> *sliceOps);
 
-} // end namespace mlir
+} // namespace mlir
 
 #endif // MLIR_TRANSFORMS_UTILS_H

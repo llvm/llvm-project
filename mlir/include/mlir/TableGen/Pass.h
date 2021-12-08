@@ -14,7 +14,7 @@
 
 namespace llvm {
 class Record;
-} // end namespace llvm
+} // namespace llvm
 
 namespace mlir {
 namespace tblgen {
@@ -112,7 +112,7 @@ private:
   std::vector<PassStatistic> statistics;
 };
 
-} // end namespace tblgen
-} // end namespace mlir
+} // namespace tblgen
+} // namespace mlir
 
 #endif // MLIR_TABLEGEN_PASS_H_

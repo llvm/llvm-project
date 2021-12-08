@@ -21,7 +21,7 @@ namespace llvm {
 class SourceMgr;
 class SMDiagnostic;
 class StringRef;
-} // end namespace llvm
+} // namespace llvm
 
 namespace mlir {
 class AsmParserState;
@@ -71,7 +71,7 @@ inline OwningOpRef<ContainerOpT> constructContainerOpForParserIfNecessary(
     return OwningOpRef<ContainerOpT>();
   return opRef;
 }
-} // end namespace detail
+} // namespace detail
 
 /// This parses the file specified by the indicated SourceMgr and appends parsed
 /// operations to the given block. If the block is non-empty, the operations are
@@ -266,6 +266,6 @@ Type parseType(llvm::StringRef typeStr, MLIRContext *context, size_t &numRead);
 IntegerSet parseIntegerSet(llvm::StringRef str, MLIRContext *context,
                            bool printDiagnosticInfo = true);
 
-} // end namespace mlir
+} // namespace mlir
 
 #endif // MLIR_PARSER_H

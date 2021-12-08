@@ -26,7 +26,7 @@ struct MathInlinerInterface : public DialectInlinerInterface {
     return true;
   }
 };
-} // end anonymous namespace
+} // namespace
 
 void mlir::math::MathDialect::initialize() {
   addOperations<

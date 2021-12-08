@@ -14,6 +14,7 @@
 #include "mlir/IR/BuiltinDialect.h"
 #include "mlir/IR/Diagnostics.h"
 #include "mlir/IR/Dialect.h"
+#include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/TensorEncoding.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/BitVector.h"
@@ -633,7 +634,7 @@ bool mlir::detail::isSupportedMemorySpace(Attribute memorySpace) {
     return true;
 
   // Allow custom dialect attributes.
-  if (!::mlir::isa<BuiltinDialect>(memorySpace.getDialect()))
+  if (!isa<BuiltinDialect>(memorySpace.getDialect()))
     return true;
 
   return false;

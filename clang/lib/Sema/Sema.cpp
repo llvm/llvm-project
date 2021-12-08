@@ -1957,15 +1957,7 @@ void Sema::checkTypeSupport(QualType Ty, SourceLocation Loc, ValueDecl *D) {
     bool IsDouble = UnqualTy == Context.DoubleTy;
     bool IsFloat = UnqualTy == Context.FloatTy;
     if (IsRetTy && !TI.hasFPReturn() && (IsDouble || IsFloat)) {
-      PartialDiagnostic PD = PDiag(diag::err_target_unsupported_type);
-      if (D)
-        PD << D;
-      else
-        PD << "expression";
-
-      if (Diag(Loc, PD, FD)
-          << false /*show bit size*/ << 0 << Ty << true /*return*/
-          << Context.getTargetInfo().getTriple().str()) {
+      if (Diag(Loc, diag::err_target_unsupported_type_without_sse)) {
         if (D)
           D->setInvalidDecl();
       }

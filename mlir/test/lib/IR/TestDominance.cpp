@@ -120,7 +120,7 @@ struct TestDominancePass : public PassWrapper<TestDominancePass, FunctionPass> {
   }
 };
 
-} // end anonymous namespace
+} // namespace
 
 namespace mlir {
 namespace test {

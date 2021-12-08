@@ -115,7 +115,7 @@ private:
 
 namespace detail {
 struct TypeUniquer;
-} // end namespace detail
+} // namespace detail
 
 /// Base storage class appearing in a Type.
 class TypeStorage : public StorageUniquer::BaseStorage {
@@ -229,6 +229,6 @@ struct TypeUniquer {
 };
 } // namespace detail
 
-} // end namespace mlir
+} // namespace mlir
 
 #endif

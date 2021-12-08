@@ -10722,6 +10722,8 @@ def err_omp_wrong_dependency_iterator_type : Error<
 def err_target_unsupported_type
     : Error<"%0 requires %select{|%2 bit size}1 %3 %select{|return }4type support,"
             " but target '%5' does not support it">;
+def err_target_unsupported_type_without_sse : Error<
+  "SSE register return with SSE disabled">;
 def err_omp_lambda_capture_in_declare_target_not_to : Error<
   "variable captured in declare target region must appear in a to clause">;
 def err_omp_device_type_mismatch : Error<
@@ -11346,8 +11348,9 @@ def err_builtin_launder_invalid_arg : Error<
 def err_builtin_invalid_arg_type: Error <
   "%ordinal0 argument must be a "
   "%select{vector, integer or floating point type|matrix|"
-   "pointer to a valid matrix element type|"
-   "signed integer or floating point type|vector type}1 (was %2)">;
+  "pointer to a valid matrix element type|"
+  "signed integer or floating point type|vector type|"
+  "floating point type}1 (was %2)">;
 
 def err_builtin_matrix_disabled: Error<
   "matrix types extension is disabled. Pass -fenable-matrix to enable it">;

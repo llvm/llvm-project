@@ -52,7 +52,7 @@ ArrayRef<Capability> getDirectImpliedCapabilities(Capability cap);
 /// third one will also be returned.
 SmallVector<Capability, 0> getRecursiveImpliedCapabilities(Capability cap);
 
-} // end namespace spirv
-} // end namespace mlir
+} // namespace spirv
+} // namespace mlir
 
 #endif // MLIR_DIALECT_SPIRV_IR_SPIRVENUMS_H_

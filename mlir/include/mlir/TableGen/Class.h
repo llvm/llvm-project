@@ -424,8 +424,8 @@ private:
   SmallVector<MemberInitializer> initializers;
 };
 
-} // end namespace tblgen
-} // end namespace mlir
+} // namespace tblgen
+} // namespace mlir
 
 /// The OR of two method properties should return method properties. Ensure that
 /// this function is visible to `Class`.

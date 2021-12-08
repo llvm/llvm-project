@@ -35,7 +35,7 @@ public:
 protected:
   DialectInterfaceBase(Dialect *dialect) : BaseT(dialect, getInterfaceID()) {}
 };
-} // end namespace detail
+} // namespace detail
 
 /// This class represents an interface overridden for a single dialect.
 class DialectInterface {

@@ -4464,9 +4464,10 @@ bool PPCDAGToDAGISel::trySETCC(SDNode *N) {
 bool PPCDAGToDAGISel::isOffsetMultipleOf(SDNode *N, unsigned Val) const {
   LoadSDNode *LDN = dyn_cast<LoadSDNode>(N);
   StoreSDNode *STN = dyn_cast<StoreSDNode>(N);
+  MemIntrinsicSDNode *MIN = dyn_cast<MemIntrinsicSDNode>(N);
   SDValue AddrOp;
-  if (LDN)
-    AddrOp = LDN->getOperand(1);
+  if (LDN || (MIN && MIN->getOpcode() == PPCISD::LD_SPLAT))
+    AddrOp = N->getOperand(1);
   else if (STN)
     AddrOp = STN->getOperand(2);
 
@@ -5971,6 +5972,15 @@ void PPCDAGToDAGISel::Select(SDNode *N) {
 
     EVT Type = N->getValueType(0);
     if (Type != MVT::v16i8 && Type != MVT::v8i16)
+      break;
+
+    // If the alignment for the load is 16 or bigger, we don't need the
+    // permutated mask to get the required value. The value must be the 0
+    // element in big endian target or 7/15 in little endian target in the
+    // result vsx register of lvx instruction.
+    // Select the instruction in the .td file.
+    if (cast<MemIntrinsicSDNode>(N)->getAlign() >= Align(16) &&
+        isOffsetMultipleOf(N, 16))
       break;
 
     SDValue ZeroReg =

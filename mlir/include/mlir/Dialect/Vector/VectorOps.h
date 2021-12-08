@@ -144,8 +144,8 @@ namespace impl {
 AffineMap getTransferMinorIdentityMap(ShapedType shapedType,
                                       VectorType vectorType);
 } // namespace impl
-} // end namespace vector
-} // end namespace mlir
+} // namespace vector
+} // namespace mlir
 
 #define GET_OP_CLASSES
 #include "mlir/Dialect/Vector/VectorOps.h.inc"

@@ -40,7 +40,7 @@ public:
     return failure();
   }
 };
-} // end namespace
+} // namespace
 
 void mlir::registerArmSVEDialectTranslation(DialectRegistry &registry) {
   registry.insert<arm_sve::ArmSVEDialect>();

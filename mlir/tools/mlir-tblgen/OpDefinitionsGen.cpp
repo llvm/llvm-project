@@ -260,7 +260,7 @@ private:
   // True if code is being generate for an op. False for an adaptor.
   const bool emitForOp;
 };
-} // end anonymous namespace
+} // namespace
 
 //===----------------------------------------------------------------------===//
 // Op emitter
@@ -446,7 +446,7 @@ private:
   const StaticVerifierFunctionEmitter &staticVerifierEmitter;
 };
 
-} // end anonymous namespace
+} // namespace
 
 // Populate the format context `ctx` with substitutions of attributes, operands
 // and results.
@@ -2539,7 +2539,7 @@ private:
   Class adaptor;
   StaticVerifierFunctionEmitter &staticVerifierEmitter;
 };
-} // end anonymous namespace
+} // namespace
 
 OpOperandAdaptorEmitter::OpOperandAdaptorEmitter(
     const Operator &op, StaticVerifierFunctionEmitter &staticVerifierEmitter)

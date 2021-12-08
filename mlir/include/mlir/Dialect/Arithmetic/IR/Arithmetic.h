@@ -89,8 +89,8 @@ public:
   static bool classof(Operation *op);
 };
 
-} // end namespace arith
-} // end namespace mlir
+} // namespace arith
+} // namespace mlir
 
 //===----------------------------------------------------------------------===//
 // Utility Functions
@@ -109,7 +109,7 @@ bool applyCmpPredicate(arith::CmpIPredicate predicate, const APInt &lhs,
 bool applyCmpPredicate(arith::CmpFPredicate predicate, const APFloat &lhs,
                        const APFloat &rhs);
 
-} // end namespace arith
-} // end namespace mlir
+} // namespace arith
+} // namespace mlir
 
 #endif // MLIR_DIALECT_ARITHMETIC_IR_ARITHMETIC_H_

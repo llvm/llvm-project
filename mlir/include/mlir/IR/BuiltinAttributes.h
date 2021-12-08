@@ -940,7 +940,7 @@ inline bool operator!=(StringRef lhs, StringAttr rhs) { return !(lhs == rhs); }
 
 inline Type StringAttr::getType() const { return Attribute::getType(); }
 
-} // end namespace mlir
+} // namespace mlir
 
 //===----------------------------------------------------------------------===//
 // Attribute Utilities

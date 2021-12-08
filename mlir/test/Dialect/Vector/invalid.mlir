@@ -3,7 +3,7 @@
 // -----
 
 func @broadcast_to_scalar(%arg0: f32) -> f32 {
-  // expected-error@+1 {{'vector.broadcast' op result #0 must be vector of any type values, but got 'f32'}}
+  // expected-error@+1 {{custom op 'vector.broadcast' invalid kind of type specified}}
   %0 = vector.broadcast %arg0 : f32 to f32
 }
 
@@ -1022,7 +1022,7 @@ func @shape_cast_invalid_rank_expansion(%arg0 : vector<15x2xf32>) {
 // -----
 
 func @bitcast_not_vector(%arg0 : vector<5x1x3x2xf32>) {
-  // expected-error@+1 {{must be vector of any type values}}
+  // expected-error@+1 {{'vector.bitcast' invalid kind of type specified}}
   %0 = vector.bitcast %arg0 : vector<5x1x3x2xf32> to f32
 }
 

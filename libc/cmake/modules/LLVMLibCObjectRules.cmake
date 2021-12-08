@@ -249,6 +249,7 @@ function(add_entrypoint_object target_name)
       COMMENT "Linting... ${target_name}"
       DEPENDS clang-tidy ${internal_target_name} ${ADD_ENTRYPOINT_OBJ_SRCS}
       WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+      BYPRODUCTS ${CMAKE_CURRENT_BINARY_DIR}/${target_name}.yaml
     )
 
     add_custom_target(${fq_target_name}.__lint__

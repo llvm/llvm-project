@@ -31,7 +31,7 @@ public:
   void runOnOperation() override;
 };
 
-} // end anonymous namespace
+} // namespace
 
 /// Runs the pass instance in the pass pipeline.
 void OptReductionPass::runOnOperation() {

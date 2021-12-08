@@ -765,6 +765,18 @@ void StoreDiags::HandleDiagnostic(DiagnosticsEngine::Level DiagLevel,
     if (LastDiag->Severity == DiagnosticsEngine::Ignored)
       return;
 
+    // Give include-fixer a chance to replace a note with a fix.
+    if (Fixer) {
+      auto ReplacementFixes = Fixer(LastDiag->Severity, Info);
+      if (!ReplacementFixes.empty()) {
+        assert(Info.getNumFixItHints() == 0 &&
+               "Include-fixer replaced a note with clang fix-its attached!");
+        LastDiag->Fixes.insert(LastDiag->Fixes.end(), ReplacementFixes.begin(),
+                               ReplacementFixes.end());
+        return;
+      }
+    }
+
     if (!Info.getFixItHints().empty()) {
       // A clang note with fix-it is not a separate diagnostic in clangd. We
       // attach it as a Fix to the main diagnostic instead.

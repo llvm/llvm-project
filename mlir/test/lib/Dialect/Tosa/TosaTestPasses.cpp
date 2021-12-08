@@ -197,7 +197,7 @@ void TosaTestQuantUtilAPI::runOnFunction() {
   (void)applyPatternsAndFoldGreedily(func, std::move(patterns));
 }
 
-} // anonymous namespace
+} // namespace
 
 namespace mlir {
 void registerTosaTestQuantUtilAPIPass() {

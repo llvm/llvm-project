@@ -50,8 +50,8 @@ class LLVMContext;
 namespace sys {
 template <bool mt_only>
 class SmartMutex;
-} // end namespace sys
-} // end namespace llvm
+} // namespace sys
+} // namespace llvm
 
 namespace mlir {
 namespace LLVM {
@@ -131,7 +131,7 @@ private:
   SmallVector<LoopOptionsAttr::OptionValuePair> options;
 };
 
-} // end namespace LLVM
-} // end namespace mlir
+} // namespace LLVM
+} // namespace mlir
 
 #endif // MLIR_DIALECT_LLVMIR_LLVMDIALECT_H_

@@ -56,7 +56,7 @@ struct LinalgComprehensiveModuleBufferize
     vector_ext::registerBufferizableOpInterfaceExternalModels(registry);
   }
 };
-} // end namespace
+} // namespace
 
 static void applyEnablingTransformations(ModuleOp moduleOp) {
   RewritePatternSet patterns(moduleOp.getContext());

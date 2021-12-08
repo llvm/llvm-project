@@ -16138,6 +16138,20 @@ Decl *Sema::ActOnStartLinkageSpecification(Scope *S, SourceLocation ExternLoc,
   LinkageSpecDecl *D = LinkageSpecDecl::Create(Context, CurContext, ExternLoc,
                                                LangStr->getExprLoc(), Language,
                                                LBraceLoc.isValid());
+
+  /// C++ [module.unit]p7.2.3
+  /// - Otherwise, if the declaration
+  ///   - ...
+  ///   - ...
+  ///   - appears within a linkage-specification,
+  ///   it is attached to the global module.
+  if (getLangOpts().CPlusPlusModules && getCurrentModule()) {
+    Module *GlobalModule =
+        PushGlobalModuleFragment(ExternLoc, /*IsImplicit=*/true);
+    D->setModuleOwnershipKind(Decl::ModuleOwnershipKind::ModulePrivate);
+    D->setLocalOwningModule(GlobalModule);
+  }
+
   CurContext->addDecl(D);
   PushDeclContext(S, D);
   return D;
@@ -16154,6 +16168,10 @@ Decl *Sema::ActOnFinishLinkageSpecification(Scope *S,
     LinkageSpecDecl* LSDecl = cast<LinkageSpecDecl>(LinkageSpec);
     LSDecl->setRBraceLoc(RBraceLoc);
   }
+
+  if (getLangOpts().CPlusPlusModules && getCurrentModule())
+    PopGlobalModuleFragment();
+
   PopDeclContext();
   return LinkageSpec;
 }

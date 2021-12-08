@@ -79,7 +79,7 @@ struct TestAliasAnalysisPass
     llvm::errs() << ": " << result << "\n";
   }
 };
-} // end anonymous namespace
+} // namespace
 
 //===----------------------------------------------------------------------===//
 // Testing ModRefResult
@@ -125,7 +125,7 @@ struct TestAliasAnalysisModRefPass
     llvm::errs() << ": " << result << "\n";
   }
 };
-} // end anonymous namespace
+} // namespace
 
 //===----------------------------------------------------------------------===//
 // Pass Registration

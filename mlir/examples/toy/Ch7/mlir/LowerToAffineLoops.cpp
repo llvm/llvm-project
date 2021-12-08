@@ -266,7 +266,7 @@ struct TransposeOpLowering : public ConversionPattern {
   }
 };
 
-} // end anonymous namespace.
+} // namespace
 
 //===----------------------------------------------------------------------===//
 // ToyToAffineLoweringPass
@@ -283,7 +283,7 @@ struct ToyToAffineLoweringPass
   }
   void runOnFunction() final;
 };
-} // end anonymous namespace.
+} // namespace
 
 void ToyToAffineLoweringPass::runOnFunction() {
   auto function = getFunction();

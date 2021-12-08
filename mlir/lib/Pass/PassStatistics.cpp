@@ -23,7 +23,7 @@ struct Statistic {
   const char *name, *desc;
   unsigned value;
 };
-} // end anonymous namespace
+} // namespace
 
 /// Utility to print a pass entry in the statistics output.
 static void printPassEntry(raw_ostream &os, unsigned indent, StringRef pass,

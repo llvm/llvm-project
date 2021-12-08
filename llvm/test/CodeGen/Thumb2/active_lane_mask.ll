@@ -4,57 +4,53 @@
 define <2 x i64> @v2i64(i32 %index, i32 %TC, <2 x i64> %V1, <2 x i64> %V2) {
 ; CHECK-LABEL: v2i64:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    push {r4, r5, r6, lr}
+; CHECK-NEXT:    push {r4, r5, r7, lr}
 ; CHECK-NEXT:    vmov q0[2], q0[0], r0, r0
 ; CHECK-NEXT:    vmov.i64 q1, #0xffffffff
 ; CHECK-NEXT:    vand q0, q0, q1
 ; CHECK-NEXT:    vmov q2[2], q2[0], r1, r1
 ; CHECK-NEXT:    vmov r0, r12, d1
+; CHECK-NEXT:    vmov lr, s0
 ; CHECK-NEXT:    adds r0, #1
-; CHECK-NEXT:    adc lr, r12, #0
-; CHECK-NEXT:    vmov r12, s0
-; CHECK-NEXT:    vmov q0[2], q0[0], r12, r0
+; CHECK-NEXT:    vmov q0[2], q0[0], lr, r0
+; CHECK-NEXT:    adc r12, r12, #0
 ; CHECK-NEXT:    vand q0, q0, q1
 ; CHECK-NEXT:    vand q1, q2, q1
 ; CHECK-NEXT:    vmov r4, r5, d1
 ; CHECK-NEXT:    vldr d1, [sp, #16]
-; CHECK-NEXT:    vmov r1, r6, d3
 ; CHECK-NEXT:    eors r0, r4
+; CHECK-NEXT:    orrs.w r0, r0, r12
+; CHECK-NEXT:    vmov r1, r0, d3
+; CHECK-NEXT:    cset r12, eq
 ; CHECK-NEXT:    subs r1, r4, r1
-; CHECK-NEXT:    sbcs.w r1, r5, r6
-; CHECK-NEXT:    vmov r5, r4, d2
-; CHECK-NEXT:    cset r1, lo
-; CHECK-NEXT:    cmp r1, #0
-; CHECK-NEXT:    cset r1, ne
-; CHECK-NEXT:    orrs.w r0, r0, lr
-; CHECK-NEXT:    cset r0, eq
+; CHECK-NEXT:    sbcs.w r0, r5, r0
+; CHECK-NEXT:    vmov r1, r5, d0
+; CHECK-NEXT:    cset r0, lo
+; CHECK-NEXT:    vmov d0, r2, r3
 ; CHECK-NEXT:    cmp r0, #0
 ; CHECK-NEXT:    cset r0, ne
-; CHECK-NEXT:    ands r0, r1
-; CHECK-NEXT:    vmov r1, r6, d0
-; CHECK-NEXT:    rsbs r0, r0, #0
-; CHECK-NEXT:    vmov d0, r2, r3
-; CHECK-NEXT:    subs r5, r1, r5
-; CHECK-NEXT:    sbcs r6, r4
-; CHECK-NEXT:    cset r6, lo
-; CHECK-NEXT:    cmp r6, #0
-; CHECK-NEXT:    cset r6, ne
-; CHECK-NEXT:    teq.w r1, r12
+; CHECK-NEXT:    and.w r0, r0, r12
+; CHECK-NEXT:    rsb.w r12, r0, #0
+; CHECK-NEXT:    vmov r4, r0, d2
+; CHECK-NEXT:    subs r4, r1, r4
+; CHECK-NEXT:    sbcs.w r0, r5, r0
+; CHECK-NEXT:    cset r0, lo
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    cset r0, ne
+; CHECK-NEXT:    teq.w r1, lr
 ; CHECK-NEXT:    cset r1, eq
-; CHECK-NEXT:    cmp r1, #0
-; CHECK-NEXT:    cset r1, ne
-; CHECK-NEXT:    ands r1, r6
-; CHECK-NEXT:    movs r6, #0
-; CHECK-NEXT:    rsbs r1, r1, #0
-; CHECK-NEXT:    bfi r6, r1, #0, #8
-; CHECK-NEXT:    bfi r6, r0, #8, #8
+; CHECK-NEXT:    ands r0, r1
+; CHECK-NEXT:    movs r1, #0
+; CHECK-NEXT:    rsbs r0, r0, #0
+; CHECK-NEXT:    bfi r1, r0, #0, #8
 ; CHECK-NEXT:    add r0, sp, #24
+; CHECK-NEXT:    bfi r1, r12, #8, #8
 ; CHECK-NEXT:    vldrw.u32 q1, [r0]
-; CHECK-NEXT:    vmsr p0, r6
+; CHECK-NEXT:    vmsr p0, r1
 ; CHECK-NEXT:    vpsel q0, q0, q1
 ; CHECK-NEXT:    vmov r0, r1, d0
 ; CHECK-NEXT:    vmov r2, r3, d1
-; CHECK-NEXT:    pop {r4, r5, r6, pc}
+; CHECK-NEXT:    pop {r4, r5, r7, pc}
   %active.lane.mask = call <2 x i1> @llvm.get.active.lane.mask.v2i1.i32(i32 %index, i32 %TC)
   %select = select <2 x i1> %active.lane.mask, <2 x i64> %V1, <2 x i64> %V2
   ret <2 x i64> %select

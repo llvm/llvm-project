@@ -223,7 +223,7 @@ struct ArithmeticExpandOpsPass
   }
 };
 
-} // end anonymous namespace
+} // namespace
 
 void mlir::arith::populateArithmeticExpandOpsPatterns(
     RewritePatternSet &patterns) {

@@ -64,19 +64,19 @@ struct FieldParser<
                                  AttributeT>> {
   static FailureOr<AttributeT> parse(AsmParser &parser) {
     AttributeT value;
-    if (parser.parseAttribute(value))
+    if (parser.parseCustomAttributeWithFallback(value))
       return failure();
     return value;
   }
 };
 
-/// Parse a type.
+/// Parse an attribute.
 template <typename TypeT>
 struct FieldParser<
     TypeT, std::enable_if_t<std::is_base_of<Type, TypeT>::value, TypeT>> {
   static FailureOr<TypeT> parse(AsmParser &parser) {
     TypeT value;
-    if (parser.parseType(value))
+    if (parser.parseCustomTypeWithFallback(value))
       return failure();
     return value;
   }
@@ -127,6 +127,6 @@ struct FieldParser<
   }
 };
 
-} // end namespace mlir
+} // namespace mlir
 
 #endif // MLIR_IR_DIALECTIMPLEMENTATION_H

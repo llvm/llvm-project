@@ -195,7 +195,7 @@ bool isParallelLoop(Operation &op);
 bool isReductionLoop(Operation &op);
 bool isLoadOrStore(Operation &op);
 
-} // end namespace matcher
-} // end namespace mlir
+} // namespace matcher
+} // namespace mlir
 
 #endif // MLIR_ANALYSIS_MLFUNCTIONMATCHER_H_

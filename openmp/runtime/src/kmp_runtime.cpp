@@ -7713,6 +7713,11 @@ static void __kmp_push_thread_limit(kmp_info_t *thr, int num_teams,
       num_threads = 1;
     }
   } else {
+    if (num_threads < 0) {
+      __kmp_msg(kmp_ms_warning, KMP_MSG(CantFormThrTeam, num_threads, 1),
+                __kmp_msg_null);
+      num_threads = 1;
+    }
     // This thread will be the primary thread of the league primary threads
     // Store new thread limit; old limit is saved in th_cg_roots list
     thr->th.th_current_task->td_icvs.thread_limit = num_threads;
@@ -7744,9 +7749,13 @@ static void __kmp_push_thread_limit(kmp_info_t *thr, int num_teams,
 void __kmp_push_num_teams(ident_t *id, int gtid, int num_teams,
                           int num_threads) {
   kmp_info_t *thr = __kmp_threads[gtid];
-  KMP_DEBUG_ASSERT(num_teams >= 0);
-  KMP_DEBUG_ASSERT(num_threads >= 0);
-
+  if (num_teams < 0) {
+    // OpenMP specification requires requested values to be positive,
+    // but people can send us any value, so we'd better check
+    __kmp_msg(kmp_ms_warning, KMP_MSG(NumTeamsNotPositive, num_teams, 1),
+              __kmp_msg_null);
+    num_teams = 1;
+  }
   if (num_teams == 0) {
     if (__kmp_nteams > 0) {
       num_teams = __kmp_nteams;
@@ -7803,7 +7812,7 @@ void __kmp_push_num_teams_51(ident_t *id, int gtid, int num_teams_lb,
   } else if (num_teams_lb == num_teams_ub) { // requires exact number of teams
     num_teams = num_teams_ub;
   } else { // num_teams_lb <= num_teams <= num_teams_ub
-    if (num_threads == 0) {
+    if (num_threads <= 0) {
       if (num_teams_ub > __kmp_teams_max_nth) {
         num_teams = num_teams_lb;
       } else {

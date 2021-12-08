@@ -31,8 +31,8 @@ namespace tosa {
 
 #include "mlir/Dialect/Tosa/IR/TosaInterfaces.h.inc"
 
-} // end namespace tosa
-} // end namespace mlir
+} // namespace tosa
+} // namespace mlir
 
 #define GET_OP_CLASSES
 #include "mlir/Dialect/Tosa/IR/TosaOps.h.inc"

@@ -30,12 +30,6 @@ class SmallVectorMemoryBuffer : public MemoryBuffer {
 public:
   /// Construct an SmallVectorMemoryBuffer from the given SmallVector
   /// r-value.
-  ///
-  /// FIXME: It'd be nice for this to be a non-templated constructor taking a
-  /// SmallVectorImpl here instead of a templated one taking a SmallVector<N>,
-  /// but SmallVector's move-construction/assignment currently only take
-  /// SmallVectors. If/when that is fixed we can simplify this constructor and
-  /// the following one.
   SmallVectorMemoryBuffer(SmallVectorImpl<char> &&SV)
       : SV(std::move(SV)), BufferName("<in-memory object>") {
     init(this->SV.begin(), this->SV.end(), false);

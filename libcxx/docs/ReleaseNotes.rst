@@ -157,3 +157,9 @@ Build System Changes
   .. code-block:: bash
 
       -DLLVM_RUNTIME_TARGETS=i386-unknown-linux
+
+- Libc++, libc++abi and libunwind will not be built with ``-fPIC`` by default anymore.
+  If you want to build those runtimes with position independent code, please specify
+  ``-DCMAKE_POSITION_INDEPENDENT_CODE=ON`` explicitly when configuring the build, or
+  ``-DRUNTIMES_<target-name>_CMAKE_POSITION_INDEPENDENT_CODE=ON`` if using the
+  bootstrapping build.
