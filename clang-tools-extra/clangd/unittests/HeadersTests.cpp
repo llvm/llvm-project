@@ -80,7 +80,7 @@ protected:
     EXPECT_TRUE(
         Action.BeginSourceFile(*Clang, Clang->getFrontendOpts().Inputs[0]));
     IncludeStructure Includes;
-    Clang->getPreprocessor().addPPCallbacks(Includes.collect(*Clang));
+    Includes.collect(*Clang);
     EXPECT_FALSE(Action.Execute());
     Action.EndSourceFile();
     return Includes;
@@ -142,6 +142,7 @@ MATCHER_P(Written, Name, "") { return arg.Written == Name; }
 MATCHER_P(Resolved, Name, "") { return arg.Resolved == Name; }
 MATCHER_P(IncludeLine, N, "") { return arg.HashLine == N; }
 MATCHER_P(Directive, D, "") { return arg.Directive == D; }
+MATCHER_P(HasPragmaKeep, H, "") { return arg.BehindPragmaKeep == H; }
 
 MATCHER_P2(Distance, File, D, "") {
   if (arg.getFirst() != File)
@@ -255,6 +256,18 @@ TEST_F(HeadersTest, IncludeDirective) {
               UnorderedElementsAre(Directive(tok::pp_include),
                                    Directive(tok::pp_import),
                                    Directive(tok::pp_include_next)));
+}
+
+TEST_F(HeadersTest, IWYUPragmaKeep) {
+  FS.Files[MainFile] = R"cpp(
+#include "bar.h" // IWYU pragma: keep
+#include "foo.h"
+)cpp";
+
+  EXPECT_THAT(
+      collectIncludes().MainFileIncludes,
+      UnorderedElementsAre(AllOf(Written("\"foo.h\""), HasPragmaKeep(false)),
+                           AllOf(Written("\"bar.h\""), HasPragmaKeep(true))));
 }
 
 TEST_F(HeadersTest, InsertInclude) {

@@ -99,7 +99,7 @@ public:
     CanonIncludes.addSystemHeadersMapping(CI.getLangOpts());
     LangOpts = &CI.getLangOpts();
     SourceMgr = &CI.getSourceManager();
-    Compiler = &CI;
+    Includes.collect(CI);
   }
 
   std::unique_ptr<PPCallbacks> createPPCallbacks() override {
@@ -107,10 +107,8 @@ public:
            "SourceMgr and LangOpts must be set at this point");
 
     return std::make_unique<PPChainedCallbacks>(
-        Includes.collect(*Compiler),
-        std::make_unique<PPChainedCallbacks>(
-            std::make_unique<CollectMainFileMacros>(*SourceMgr, Macros),
-            collectPragmaMarksCallback(*SourceMgr, Marks)));
+        std::make_unique<CollectMainFileMacros>(*SourceMgr, Macros),
+        collectPragmaMarksCallback(*SourceMgr, Marks));
   }
 
   CommentHandler *getCommentHandler() override {
@@ -142,7 +140,6 @@ private:
   std::unique_ptr<CommentHandler> IWYUHandler = nullptr;
   const clang::LangOptions *LangOpts = nullptr;
   const SourceManager *SourceMgr = nullptr;
-  const CompilerInstance *Compiler = nullptr;
 };
 
 // Represents directives other than includes, where basic textual information is
@@ -288,7 +285,7 @@ scanPreamble(llvm::StringRef Contents, const tooling::CompileCommand &Cmd) {
     return error("failed BeginSourceFile");
   Preprocessor &PP = Clang->getPreprocessor();
   IncludeStructure Includes;
-  PP.addPPCallbacks(Includes.collect(*Clang));
+  Includes.collect(*Clang);
   ScannedPreamble SP;
   SP.Bounds = Bounds;
   PP.addPPCallbacks(
