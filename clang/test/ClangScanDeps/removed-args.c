@@ -1,6 +1,8 @@
 // Some command-line arguments used for compiling translation units are not
-// compatible with the semantics of modules and should be removed. In this test
-// case, the command-lines for modules should drop the '-include' argument.
+// compatible with the semantics of modules or are likely to differ between
+// identical modules discovered from different translation units. This test
+// checks such arguments are removed from the command-lines: '-include',
+// '-dwarf-debug-flag' and '-main-file-name'.
 
 // RUN: rm -rf %t && mkdir %t
 // RUN: cp %S/Inputs/removed-args/* %t
@@ -18,6 +20,8 @@
 // CHECK-NEXT:       "clang-modulemap-file": "[[PREFIX]]/module.modulemap",
 // CHECK-NEXT:       "command-line": [
 // CHECK-NEXT:         "-cc1"
+// CHECK-NOT:          "-dwarf-debug-flags"
+// CHECK-NOT:          "-main-file-name"
 // CHECK-NOT:          "-include"
 // CHECK:            ],
 // CHECK-NEXT:       "context-hash": "[[HASH_MOD_HEADER:.*]]",
