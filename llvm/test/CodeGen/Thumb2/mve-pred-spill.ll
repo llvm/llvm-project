@@ -20,16 +20,12 @@ define arm_aapcs_vfpcc <2 x i64> @shuffle1_v2i64(<2 x i64> %src, <2 x i64> %a) {
 ; CHECK-LE-NEXT:    vmov q4, q1
 ; CHECK-LE-NEXT:    orrs r0, r1
 ; CHECK-LE-NEXT:    mov.w r1, #0
-; CHECK-LE-NEXT:    cset r0, eq
-; CHECK-LE-NEXT:    cmp r0, #0
-; CHECK-LE-NEXT:    csetm r0, ne
+; CHECK-LE-NEXT:    csetm r0, eq
 ; CHECK-LE-NEXT:    bfi r1, r0, #0, #8
 ; CHECK-LE-NEXT:    vmov r0, r2, d1
 ; CHECK-LE-NEXT:    vmov.i32 q0, #0x0
 ; CHECK-LE-NEXT:    orrs r0, r2
-; CHECK-LE-NEXT:    cset r0, eq
-; CHECK-LE-NEXT:    cmp r0, #0
-; CHECK-LE-NEXT:    csetm r0, ne
+; CHECK-LE-NEXT:    csetm r0, eq
 ; CHECK-LE-NEXT:    bfi r1, r0, #8, #8
 ; CHECK-LE-NEXT:    vmsr p0, r1
 ; CHECK-LE-NEXT:    vpsel q0, q1, q0
@@ -55,15 +51,11 @@ define arm_aapcs_vfpcc <2 x i64> @shuffle1_v2i64(<2 x i64> %src, <2 x i64> %a) {
 ; CHECK-BE-NEXT:    vmov.i32 q0, #0x0
 ; CHECK-BE-NEXT:    orrs r0, r1
 ; CHECK-BE-NEXT:    mov.w r1, #0
-; CHECK-BE-NEXT:    cset r0, eq
-; CHECK-BE-NEXT:    cmp r0, #0
-; CHECK-BE-NEXT:    csetm r0, ne
+; CHECK-BE-NEXT:    csetm r0, eq
 ; CHECK-BE-NEXT:    bfi r1, r0, #0, #8
 ; CHECK-BE-NEXT:    vmov r0, r2, d3
 ; CHECK-BE-NEXT:    orrs r0, r2
-; CHECK-BE-NEXT:    cset r0, eq
-; CHECK-BE-NEXT:    cmp r0, #0
-; CHECK-BE-NEXT:    csetm r0, ne
+; CHECK-BE-NEXT:    csetm r0, eq
 ; CHECK-BE-NEXT:    bfi r1, r0, #8, #8
 ; CHECK-BE-NEXT:    vmsr p0, r1
 ; CHECK-BE-NEXT:    vpsel q0, q4, q0

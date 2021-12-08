@@ -330,15 +330,11 @@ define arm_aapcs_vfpcc void @store_v2i1(<2 x i1> *%dst, <2 x i64> %a) {
 ; CHECK-LE-NEXT:    vmov r1, r2, d0
 ; CHECK-LE-NEXT:    orrs r1, r2
 ; CHECK-LE-NEXT:    mov.w r2, #0
-; CHECK-LE-NEXT:    cset r1, eq
-; CHECK-LE-NEXT:    cmp r1, #0
-; CHECK-LE-NEXT:    csetm r1, ne
+; CHECK-LE-NEXT:    csetm r1, eq
 ; CHECK-LE-NEXT:    bfi r2, r1, #0, #1
 ; CHECK-LE-NEXT:    vmov r1, r3, d1
 ; CHECK-LE-NEXT:    orrs r1, r3
-; CHECK-LE-NEXT:    cset r1, eq
-; CHECK-LE-NEXT:    cmp r1, #0
-; CHECK-LE-NEXT:    csetm r1, ne
+; CHECK-LE-NEXT:    csetm r1, eq
 ; CHECK-LE-NEXT:    bfi r2, r1, #1, #1
 ; CHECK-LE-NEXT:    strb r2, [r0]
 ; CHECK-LE-NEXT:    bx lr
@@ -349,15 +345,11 @@ define arm_aapcs_vfpcc void @store_v2i1(<2 x i1> *%dst, <2 x i64> %a) {
 ; CHECK-BE-NEXT:    vmov r1, r2, d3
 ; CHECK-BE-NEXT:    orrs r1, r2
 ; CHECK-BE-NEXT:    mov.w r2, #0
-; CHECK-BE-NEXT:    cset r1, eq
-; CHECK-BE-NEXT:    cmp r1, #0
-; CHECK-BE-NEXT:    csetm r1, ne
+; CHECK-BE-NEXT:    csetm r1, eq
 ; CHECK-BE-NEXT:    bfi r2, r1, #0, #1
 ; CHECK-BE-NEXT:    vmov r1, r3, d2
 ; CHECK-BE-NEXT:    orrs r1, r3
-; CHECK-BE-NEXT:    cset r1, eq
-; CHECK-BE-NEXT:    cmp r1, #0
-; CHECK-BE-NEXT:    csetm r1, ne
+; CHECK-BE-NEXT:    csetm r1, eq
 ; CHECK-BE-NEXT:    bfi r2, r1, #1, #1
 ; CHECK-BE-NEXT:    strb r2, [r0]
 ; CHECK-BE-NEXT:    bx lr
