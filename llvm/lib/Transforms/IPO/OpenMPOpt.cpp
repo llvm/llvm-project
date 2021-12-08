@@ -4010,6 +4010,7 @@ struct AAKernelInfoCallSite : AAKernelInfo {
       break;
     case OMPRTL___kmpc_omp_task:
       // We do not look into tasks right now, just give up.
+      SPMDCompatibilityTracker.indicatePessimisticFixpoint();
       SPMDCompatibilityTracker.insert(&CB);
       ReachedUnknownParallelRegions.insert(&CB);
       break;
@@ -4020,6 +4021,7 @@ struct AAKernelInfoCallSite : AAKernelInfo {
     default:
       // Unknown OpenMP runtime calls cannot be executed in SPMD-mode,
       // generally. However, they do not hide parallel regions.
+      SPMDCompatibilityTracker.indicatePessimisticFixpoint();
       SPMDCompatibilityTracker.insert(&CB);
       break;
     }
@@ -4079,6 +4081,7 @@ struct AAKernelInfoCallSite : AAKernelInfo {
         SPMDCompatibilityTracker.insert(&CB);
       break;
     default:
+      SPMDCompatibilityTracker.indicatePessimisticFixpoint();
       SPMDCompatibilityTracker.insert(&CB);
     }
 
