@@ -63,10 +63,8 @@ public:
         void param(_OutputIterator __dest) const
             {_VSTD::copy(__v_.begin(), __v_.end(), __dest);}
 
-private:
-    // no copy functions
-    seed_seq(const seed_seq&); // = delete;
-    void operator=(const seed_seq&); // = delete;
+    seed_seq(const seed_seq&) = delete;
+    void operator=(const seed_seq&) = delete;
 
     _LIBCPP_INLINE_VISIBILITY
     static result_type _Tp(result_type __x) {return __x ^ (__x >> 27);}
