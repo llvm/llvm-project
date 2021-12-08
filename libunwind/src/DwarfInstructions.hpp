@@ -242,6 +242,20 @@ int DwarfInstructions<A, R>::stepWithDwarf(A &addressSpace, pint_t pc,
       }
 #endif
 
+#if defined(_LIBUNWIND_IS_NATIVE_ONLY) && defined(_LIBUNWIND_TARGET_ARM) &&    \
+    defined(__ARM_FEATURE_PAUTH)
+      if ((R::getArch() == REGISTERS_ARM) &&
+          prolog.savedRegisters[UNW_ARM_RA_AUTH_CODE].value) {
+        pint_t pac =
+            getSavedRegister(addressSpace, registers, cfa,
+                             prolog.savedRegisters[UNW_ARM_RA_AUTH_CODE]);
+        __asm__ __volatile__("autg %0, %1, %2"
+                             :
+                             : "r"(pac), "r"(returnAddress), "r"(cfa)
+                             :);
+      }
+#endif
+
 #if defined(_LIBUNWIND_TARGET_SPARC)
       if (R::getArch() == REGISTERS_SPARC) {
         // Skip call site instruction and delay slot

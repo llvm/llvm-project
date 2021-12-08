@@ -81,7 +81,7 @@
 #define PPC64_OPD2
 #endif
 
-#if defined(__ARM_FEATURE_BTI_DEFAULT)
+#if defined(__aarch64__) && defined(__ARM_FEATURE_BTI_DEFAULT)
   .pushsection ".note.gnu.property", "a" SEPARATOR                             \
   .balign 8 SEPARATOR                                                          \
   .long 4 SEPARATOR                                                            \
@@ -97,6 +97,17 @@
 #define AARCH64_BTI  bti c
 #else
 #define AARCH64_BTI
+#endif
+
+#if !defined(__aarch64__)
+#ifdef __ARM_FEATURE_PAC_DEFAULT
+  .eabi_attribute Tag_PAC_extension, 2
+  .eabi_attribute Tag_PACRET_use, 1
+#endif
+#ifdef __ARM_FEATURE_BTI_DEFAULT
+  .eabi_attribute Tag_BTI_extension, 1
+  .eabi_attribute Tag_BTI_use, 1
+#endif
 #endif
 
 #define GLUE2(a, b) a ## b
