@@ -219,6 +219,10 @@ def FeatureZeroMoveFusion:
   SubtargetFeature<"fuse-zeromove", "HasZeroMoveFusion", "true",
                    "Target supports move to SPR with branch fusion",
                    [FeatureFusion]>;
+def FeatureBack2BackFusion:
+  SubtargetFeature<"fuse-back2back", "HasBack2BackFusion", "true",
+                   "Target supports general back to back fusion",
+                   [FeatureFusion]>;
 def FeatureUnalignedFloats :
   SubtargetFeature<"allow-unaligned-fp-access", "AllowsUnalignedFPAccess",
                    "true", "CPU does not trap on unaligned FP access">;
