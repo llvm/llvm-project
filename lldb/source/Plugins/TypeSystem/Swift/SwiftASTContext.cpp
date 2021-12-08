@@ -3294,6 +3294,8 @@ public:
       for (size_t i = 0; i != images.GetSize(); ++i) {
         auto module_sp = images.GetModuleAtIndex(i);
         auto *swift_ast_ctx = GetModuleSwiftASTContext(*module_sp);
+        if (!swift_ast_ctx)
+          continue;
         auto *dwarf_imp = static_cast<SwiftDWARFImporterDelegate *>(
             swift_ast_ctx->GetDWARFImporterDelegate());
         if (!dwarf_imp || dwarf_imp == this)
