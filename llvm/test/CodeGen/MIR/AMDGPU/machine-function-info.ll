@@ -92,6 +92,16 @@ define amdgpu_ps void @ps_shader(i32 %arg0, i32 inreg %arg1) {
 ; CHECK-NEXT: stackPtrOffsetReg: '$sgpr32'
 ; CHECK-NEXT: argumentInfo:
 ; CHECK-NEXT: privateSegmentBuffer: { reg: '$sgpr0_sgpr1_sgpr2_sgpr3' }
+; CHECK-NEXT: dispatchPtr:     { reg: '$sgpr4_sgpr5' }
+; CHECK-NEXT: queuePtr:        { reg: '$sgpr6_sgpr7' }
+; CHECK-NEXT: dispatchID:      { reg: '$sgpr10_sgpr11' }
+; CHECK-NEXT: workGroupIDX:    { reg: '$sgpr12' }
+; CHECK-NEXT: workGroupIDY:    { reg: '$sgpr13' }
+; CHECK-NEXT: workGroupIDZ:    { reg: '$sgpr14' }
+; CHECK-NEXT: implicitArgPtr:  { reg: '$sgpr8_sgpr9' }
+; CHECK-NEXT: workItemIDX:     { reg: '$vgpr31', mask: 1023 }
+; CHECK-NEXT: workItemIDY:     { reg: '$vgpr31', mask: 1047552 }
+; CHECK-NEXT: workItemIDZ:     { reg: '$vgpr31', mask: 1072693248 }
 ; CHECK-NEXT: mode:
 ; CHECK-NEXT: ieee: true
 ; CHECK-NEXT: dx10-clamp: true
@@ -123,6 +133,16 @@ define void @function() {
 ; CHECK-NEXT: stackPtrOffsetReg: '$sgpr32'
 ; CHECK-NEXT: argumentInfo:
 ; CHECK-NEXT: privateSegmentBuffer: { reg: '$sgpr0_sgpr1_sgpr2_sgpr3' }
+; CHECK-NEXT: dispatchPtr:     { reg: '$sgpr4_sgpr5' }
+; CHECK-NEXT: queuePtr:        { reg: '$sgpr6_sgpr7' }
+; CHECK-NEXT: dispatchID:      { reg: '$sgpr10_sgpr11' }
+; CHECK-NEXT: workGroupIDX:    { reg: '$sgpr12' }
+; CHECK-NEXT: workGroupIDY:    { reg: '$sgpr13' }
+; CHECK-NEXT: workGroupIDZ:    { reg: '$sgpr14' }
+; CHECK-NEXT: implicitArgPtr:  { reg: '$sgpr8_sgpr9' }
+; CHECK-NEXT: workItemIDX:     { reg: '$vgpr31', mask: 1023 }
+; CHECK-NEXT: workItemIDY:     { reg: '$vgpr31', mask: 1047552 }
+; CHECK-NEXT: workItemIDZ:     { reg: '$vgpr31', mask: 1072693248 }
 ; CHECK-NEXT: mode:
 ; CHECK-NEXT: ieee: true
 ; CHECK-NEXT: dx10-clamp: true
