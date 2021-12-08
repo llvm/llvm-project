@@ -271,10 +271,18 @@ MemoryLocation MemoryLocation::getForArgument(const CallBase *Call,
       return MemoryLocation(Arg, Size, AATags);
     }
     case LibFunc_memset_pattern16:
+    case LibFunc_memset_pattern4:
+    case LibFunc_memset_pattern8:
       assert((ArgIdx == 0 || ArgIdx == 1) &&
              "Invalid argument index for memset_pattern16");
-      if (ArgIdx == 1)
-        return MemoryLocation(Arg, LocationSize::precise(16), AATags);
+      if (ArgIdx == 1) {
+        unsigned Size = 16;
+        if (F == LibFunc_memset_pattern4)
+          Size = 4;
+        else if (F == LibFunc_memset_pattern8)
+          Size = 8;
+        return MemoryLocation(Arg, LocationSize::precise(Size), AATags);
+      }
       if (const ConstantInt *LenCI =
               dyn_cast<ConstantInt>(Call->getArgOperand(2)))
         return MemoryLocation(Arg, LocationSize::precise(LenCI->getZExtValue()),
@@ -309,7 +317,6 @@ MemoryLocation MemoryLocation::getForArgument(const CallBase *Call,
       break;
     };
   }
-  // FIXME: Handle memset_pattern4 and memset_pattern8 also.
 
   return MemoryLocation::getBeforeOrAfter(Call->getArgOperand(ArgIdx), AATags);
 }

@@ -9,9 +9,9 @@ define void @test_memset_pattern4_const_size(i8* noalias %a, i8* noalias %patter
 ; CHECK:       Just Mod:  Ptr: i8* %a	<->  call void @memset_pattern4(i8* %a, i8* %pattern, i64 17)
 ; CHECK-NEXT:  Just Ref:  Ptr: i8* %pattern	<->  call void @memset_pattern4(i8* %a, i8* %pattern, i64 17)
 ; CHECK-NEXT:  Just Mod:  Ptr: i8* %a.gep.1	<->  call void @memset_pattern4(i8* %a, i8* %pattern, i64 17)
-; CHECK-NEXT:  Just Mod:  Ptr: i8* %a.gep.17	<->  call void @memset_pattern4(i8* %a, i8* %pattern, i64 17)
+; CHECK-NEXT:  NoModRef:  Ptr: i8* %a.gep.17	<->  call void @memset_pattern4(i8* %a, i8* %pattern, i64 17)
 ; CHECK-NEXT:  Just Ref:  Ptr: i8* %pattern.gep.3	<->  call void @memset_pattern4(i8* %a, i8* %pattern, i64 17)
-; CHECK-NEXT:  Just Ref:  Ptr: i8* %pattern.gep.4	<->  call void @memset_pattern4(i8* %a, i8* %pattern, i64 17)
+; CHECK-NEXT:  NoModRef:  Ptr: i8* %pattern.gep.4	<->  call void @memset_pattern4(i8* %a, i8* %pattern, i64 17)
 ;
 entry:
   call void @memset_pattern4(i8* %a, i8* %pattern, i64 17)
@@ -48,9 +48,9 @@ define void @test_memset_pattern8_const_size(i8* noalias %a, i8* noalias %patter
 ; CHECK:       Just Mod:  Ptr: i8* %a	<->  call void @memset_pattern8(i8* %a, i8* %pattern, i64 17)
 ; CHECK-NEXT:  Just Ref:  Ptr: i8* %pattern	<->  call void @memset_pattern8(i8* %a, i8* %pattern, i64 17)
 ; CHECK-NEXT:  Just Mod:  Ptr: i8* %a.gep.1	<->  call void @memset_pattern8(i8* %a, i8* %pattern, i64 17)
-; CHECK-NEXT:  Just Mod:  Ptr: i8* %a.gep.17	<->  call void @memset_pattern8(i8* %a, i8* %pattern, i64 17)
+; CHECK-NEXT:  NoModRef:  Ptr: i8* %a.gep.17	<->  call void @memset_pattern8(i8* %a, i8* %pattern, i64 17)
 ; CHECK-NEXT:  Just Ref:  Ptr: i8* %pattern.gep.7	<->  call void @memset_pattern8(i8* %a, i8* %pattern, i64 17)
-; CHECK-NEXT:  Just Ref:  Ptr: i8* %pattern.gep.8	<->  call void @memset_pattern8(i8* %a, i8* %pattern, i64 17)
+; CHECK-NEXT:  NoModRef:  Ptr: i8* %pattern.gep.8	<->  call void @memset_pattern8(i8* %a, i8* %pattern, i64 17)
 ;
 entry:
   call void @memset_pattern8(i8* %a, i8* %pattern, i64 17)
