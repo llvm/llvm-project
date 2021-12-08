@@ -56,6 +56,8 @@ unsigned VEELFObjectWriter::getRelocType(MCContext &Ctx, const MCValue &Target,
       return ELF::R_VE_REFLONG;
     case FK_PCRel_8:
       return ELF::R_VE_REFQUAD;
+    case VE::fixup_ve_srel32:
+      return ELF::R_VE_SREL32;
     case VE::fixup_ve_pc_hi32:
       return ELF::R_VE_PC_HI32;
     case VE::fixup_ve_pc_lo32:
@@ -76,6 +78,8 @@ unsigned VEELFObjectWriter::getRelocType(MCContext &Ctx, const MCValue &Target,
     return ELF::R_VE_REFQUAD;
   case VE::fixup_ve_reflong:
     return ELF::R_VE_REFLONG;
+  case VE::fixup_ve_srel32:
+    llvm_unreachable("Unimplemented fixup pc_hi32 -> relocation");
   case VE::fixup_ve_hi32:
     return ELF::R_VE_HI32;
   case VE::fixup_ve_lo32:
