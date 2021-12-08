@@ -25,13 +25,14 @@
 // The idea is to chop the high bits before doing the scaling, so the two
 // parts become contiguous again and the usual scheme can be applied.
 
-#define MEM_TO_SHADOW(mem) \
-  ((((mem) << HIGH_BITS) >> (HIGH_BITS + (SHADOW_SCALE))) + (SHADOW_OFFSET))
+#define MEM_TO_SHADOW(mem)                                       \
+  ((((mem) << HIGH_BITS) >> (HIGH_BITS + (ASAN_SHADOW_SCALE))) + \
+   (ASAN_SHADOW_OFFSET))
 
 #define kLowMemBeg 0
-#define kLowMemEnd (SHADOW_OFFSET - 1)
+#define kLowMemEnd (ASAN_SHADOW_OFFSET - 1)
 
-#define kLowShadowBeg SHADOW_OFFSET
+#define kLowShadowBeg ASAN_SHADOW_OFFSET
 #define kLowShadowEnd MEM_TO_SHADOW(kLowMemEnd)
 
 // But of course there is the huge hole between the high shadow memory,
