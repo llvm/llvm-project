@@ -636,15 +636,13 @@ static void ResetTagsCb(uptr chunk, void *arg) {
 // a LeakReport.
 static void CollectLeaksCb(uptr chunk, void *arg) {
   CHECK(arg);
-  LeakReport *leak_report = reinterpret_cast<LeakReport *>(arg);
+  LeakedChunks *leaks = reinterpret_cast<LeakedChunks *>(arg);
   chunk = GetUserBegin(chunk);
   LsanMetadata m(chunk);
   if (!m.allocated())
     return;
-  if (m.tag() == kDirectlyLeaked || m.tag() == kIndirectlyLeaked) {
-    leak_report->AddLeakedChunk(chunk, m.stack_trace_id(), m.requested_size(),
-                                m.tag());
-  }
+  if (m.tag() == kDirectlyLeaked || m.tag() == kIndirectlyLeaked)
+    leaks->push_back({chunk, m.stack_trace_id(), m.requested_size(), m.tag()});
 }
 
 void LeakSuppressionContext::PrintMatchedSuppressions() {
@@ -705,7 +703,7 @@ static void CheckForLeaksCallback(const SuspendedThreadsList &suspended_threads,
   CHECK(!param->success);
   ReportUnsuspendedThreads(suspended_threads);
   ClassifyAllChunks(suspended_threads, &param->frontier);
-  ForEachChunk(CollectLeaksCb, &param->leak_report);
+  ForEachChunk(CollectLeaksCb, &param->leaks);
   // Clean up for subsequent leak checks. This assumes we did not overwrite any
   // kIgnored tags.
   ForEachChunk(ResetTagsCb, nullptr);
@@ -754,17 +752,20 @@ static bool CheckForLeaks() {
           "etc)\n");
       Die();
     }
+    LeakReport leak_report;
+    leak_report.AddLeakedChunks(param.leaks);
+
     // No new suppressions stacks, so rerun will not help and we can report.
-    if (!param.leak_report.ApplySuppressions())
-      return PrintResults(param.leak_report);
+    if (!leak_report.ApplySuppressions())
+      return PrintResults(leak_report);
 
     // No indirect leaks to report, so we are done here.
-    if (!param.leak_report.IndirectUnsuppressedLeakCount())
-      return PrintResults(param.leak_report);
+    if (!leak_report.IndirectUnsuppressedLeakCount())
+      return PrintResults(leak_report);
 
     if (i >= 8) {
       Report("WARNING: LeakSanitizer gave up on indirect leaks suppression.\n");
-      return PrintResults(param.leak_report);
+      return PrintResults(leak_report);
     }
 
     // We found a new previously unseen suppressed call stack. Rerun to make
@@ -801,40 +802,45 @@ void DoRecoverableLeakCheckVoid() { DoRecoverableLeakCheck(); }
 // A hard limit on the number of distinct leaks, to avoid quadratic complexity
 // in LeakReport::AddLeakedChunk(). We don't expect to ever see this many leaks
 // in real-world applications.
-// FIXME: Get rid of this limit by changing the implementation of LeakReport to
-// use a hash table.
+// FIXME: Get rid of this limit by moving logic into DedupLeaks.
 const uptr kMaxLeaksConsidered = 5000;
 
-void LeakReport::AddLeakedChunk(uptr chunk, u32 stack_trace_id,
-                                uptr leaked_size, ChunkTag tag) {
-  CHECK(tag == kDirectlyLeaked || tag == kIndirectlyLeaked);
+void LeakReport::AddLeakedChunks(const LeakedChunks &chunks) {
+  for (const LeakedChunk &leak : chunks) {
+    uptr chunk = leak.chunk;
+    u32 stack_trace_id = leak.stack_trace_id;
+    uptr leaked_size = leak.leaked_size;
+    ChunkTag tag = leak.tag;
+    CHECK(tag == kDirectlyLeaked || tag == kIndirectlyLeaked);
 
-  if (u32 resolution = flags()->resolution) {
-    StackTrace stack = StackDepotGet(stack_trace_id);
-    stack.size = Min(stack.size, resolution);
-    stack_trace_id = StackDepotPut(stack);
-  }
-
-  bool is_directly_leaked = (tag == kDirectlyLeaked);
-  uptr i;
-  for (i = 0; i < leaks_.size(); i++) {
-    if (leaks_[i].stack_trace_id == stack_trace_id &&
-        leaks_[i].is_directly_leaked == is_directly_leaked) {
-      leaks_[i].hit_count++;
-      leaks_[i].total_size += leaked_size;
-      break;
+    if (u32 resolution = flags()->resolution) {
+      StackTrace stack = StackDepotGet(stack_trace_id);
+      stack.size = Min(stack.size, resolution);
+      stack_trace_id = StackDepotPut(stack);
     }
-  }
-  if (i == leaks_.size()) {
-    if (leaks_.size() == kMaxLeaksConsidered)
-      return;
-    Leak leak = {next_id_++,     /* hit_count */ 1,  leaked_size,
-                 stack_trace_id, is_directly_leaked, /* is_suppressed */ false};
-    leaks_.push_back(leak);
-  }
-  if (flags()->report_objects) {
-    LeakedObject obj = {leaks_[i].id, chunk, leaked_size};
-    leaked_objects_.push_back(obj);
+
+    bool is_directly_leaked = (tag == kDirectlyLeaked);
+    uptr i;
+    for (i = 0; i < leaks_.size(); i++) {
+      if (leaks_[i].stack_trace_id == stack_trace_id &&
+          leaks_[i].is_directly_leaked == is_directly_leaked) {
+        leaks_[i].hit_count++;
+        leaks_[i].total_size += leaked_size;
+        break;
+      }
+    }
+    if (i == leaks_.size()) {
+      if (leaks_.size() == kMaxLeaksConsidered)
+        return;
+      Leak leak = {next_id_++,         /* hit_count */ 1,
+                   leaked_size,        stack_trace_id,
+                   is_directly_leaked, /* is_suppressed */ false};
+      leaks_.push_back(leak);
+    }
+    if (flags()->report_objects) {
+      LeakedObject obj = {leaks_[i].id, chunk, leaked_size};
+      leaked_objects_.push_back(obj);
+    }
   }
 }
 
