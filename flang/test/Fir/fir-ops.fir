@@ -121,7 +121,7 @@ func @instructions() {
   %31 = fir.no_reassoc %29 : i64
 
 // CHECK: fir.call @user_i64([[VAL_35]]) : (i64) -> ()
-// CHECK: fir.freemem [[VAL_5]] : !fir.heap<!fir.array<100xf32>>
+// CHECK: fir.freemem [[VAL_5]] : <!fir.array<100xf32>>
 // CHECK: [[VAL_36:%.*]] = fir.call @get_func() : () -> (() -> ())
 // CHECK: fir.call [[VAL_36]]() : () -> ()
 // CHECK: [[VAL_37:%.*]] = fir.address_of(@it1) : !fir.ref<() -> !fir.int<4>>

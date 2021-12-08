@@ -130,7 +130,7 @@ func @conversion_with_temporary(%arr0 : !fir.ref<!fir.array<10xi32>>) {
 // CHECK:           fir.store %[[LOAD0]] to %[[COOR1]] : !fir.ref<i32>
 // CHECK:         }
 // Free temporary array.
-// CHECK:         fir.freemem %[[TEMP]] : !fir.heap<!fir.array<10xi32>>
+// CHECK:         fir.freemem %[[TEMP]] : <!fir.array<10xi32>>
 
 // -----
 
@@ -211,7 +211,7 @@ func @conversion_with_temporary_multidim(%0: !fir.ref<!fir.array<10x5xi32>>) {
 // CHECK:             %[[LOAD0:.*]] = fir.load %[[COOR0]] : !fir.ref<i32>
 // CHECK:             %[[COOR1:.*]] = fir.array_coor %[[ARR0]](%{{.*}}) %{{.*}}, %{{.*}} : (!fir.ref<!fir.array<10x5xi32>>, !fir.shape<2>, index, index) -> !fir.ref<i32>
 // CHECK:             fir.store %[[LOAD0]] to %[[COOR1]] : !fir.ref<i32>
-// CHECK:         fir.freemem %[[TEMP]] : !fir.heap<!fir.array<10x5xi32>>
+// CHECK:         fir.freemem %[[TEMP]] : <!fir.array<10x5xi32>>
 
 // -----
 
@@ -309,7 +309,7 @@ func private @user_defined_assignment(!fir.ref<f32>, !fir.ref<f32>)
 // CHECK:             fir.store %[[LOAD0]] to %[[COOR1]] : !fir.ref<f32>
 // CHECK:           }
 // Free the temporary array.
-// CHECK:           fir.freemem %[[TEMP]] : !fir.heap<!fir.array<100xf32>>
+// CHECK:           fir.freemem %[[TEMP]] : <!fir.array<100xf32>>
 // CHECK:           return
 // CHECK:         }
 
@@ -424,7 +424,7 @@ func @conversion_with_temporary_boxed_array(%arr0 : !fir.box<!fir.array<10xi32>>
 // CHECK:           fir.store %[[LOAD0]] to %[[COOR1]] : !fir.ref<i32>
 // CHECK:         }
 // Free temporary array.
-// CHECK:         fir.freemem %[[TEMP]] : !fir.heap<!fir.array<10xi32>>
+// CHECK:         fir.freemem %[[TEMP]] : <!fir.array<10xi32>>
 
 // -----
 
