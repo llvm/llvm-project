@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -std=c++20 -emit-llvm -triple %itanium_abi_triple -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -std=c++20 -emit-llvm -triple %itanium_abi_triple -o - %s | FileCheck %s
 
 module;
 
@@ -6,21 +6,21 @@ module;
 
 export module x;
 
-// CHECK: define dso_local void @foo()
+// CHECK: void @foo()
 extern "C" void foo() {
   return;
 }
 
 extern "C" {
-// CHECK: define dso_local void @bar()
+// CHECK: void @bar()
 void bar() {
   return;
 }
-// CHECK: define dso_local i32 @baz()
+// CHECK: i32 @baz()
 int baz() {
   return 3;
 }
-// CHECK: define dso_local double @double_func()
+// CHECK: double @double_func()
 double double_func() {
   return 5.0;
 }
