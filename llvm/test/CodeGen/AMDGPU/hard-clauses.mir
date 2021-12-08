@@ -476,11 +476,8 @@ body: |
     ; GFX11-LABEL: name: flat_load_atomic
     ; GFX11: liveins: $vgpr0_vgpr1, $vgpr2
     ; GFX11-NEXT: {{  $}}
-    ; GFX11-NEXT: BUNDLE implicit-def $vgpr3, implicit-def $vgpr3_lo16, implicit-def $vgpr3_hi16, implicit-def $vgpr4, implicit-def $vgpr4_lo16, implicit-def $vgpr4_hi16, implicit $vgpr0_vgpr1, implicit $exec, implicit $flat_scr, implicit $vgpr2 {
-    ; GFX11-NEXT:   S_CLAUSE 1
-    ; GFX11-NEXT:   $vgpr3 = FLAT_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec, implicit $flat_scr
-    ; GFX11-NEXT:   $vgpr4 = FLAT_ATOMIC_ADD_RTN $vgpr0_vgpr1, $vgpr2, 4, 0, implicit $exec, implicit $flat_scr
-    ; GFX11-NEXT: }
+    ; GFX11-NEXT: $vgpr3 = FLAT_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec, implicit $flat_scr
+    ; GFX11-NEXT: $vgpr4 = FLAT_ATOMIC_ADD_RTN $vgpr0_vgpr1, $vgpr2, 4, 0, implicit $exec, implicit $flat_scr
     $vgpr3 = FLAT_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec, implicit $flat_scr
     $vgpr4 = FLAT_ATOMIC_ADD_RTN $vgpr0_vgpr1, $vgpr2, 4, 0, implicit $exec, implicit $flat_scr
 ...
@@ -502,11 +499,8 @@ body: |
     ; GFX11-LABEL: name: global_load_atomic
     ; GFX11: liveins: $vgpr0_vgpr1, $vgpr2
     ; GFX11-NEXT: {{  $}}
-    ; GFX11-NEXT: BUNDLE implicit-def $vgpr3, implicit-def $vgpr3_lo16, implicit-def $vgpr3_hi16, implicit-def $vgpr4, implicit-def $vgpr4_lo16, implicit-def $vgpr4_hi16, implicit $vgpr0_vgpr1, implicit $exec, implicit $vgpr2 {
-    ; GFX11-NEXT:   S_CLAUSE 1
-    ; GFX11-NEXT:   $vgpr3 = GLOBAL_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec
-    ; GFX11-NEXT:   $vgpr4 = GLOBAL_ATOMIC_ADD_RTN $vgpr0_vgpr1, $vgpr2, 4, 0, implicit $exec
-    ; GFX11-NEXT: }
+    ; GFX11-NEXT: $vgpr3 = GLOBAL_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec
+    ; GFX11-NEXT: $vgpr4 = GLOBAL_ATOMIC_ADD_RTN $vgpr0_vgpr1, $vgpr2, 4, 0, implicit $exec
     $vgpr3 = GLOBAL_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec
     $vgpr4 = GLOBAL_ATOMIC_ADD_RTN $vgpr0_vgpr1, $vgpr2, 4, 0, implicit $exec
 ...
@@ -548,11 +542,8 @@ body: |
     ; GFX11-LABEL: name: buffer_load_atomic
     ; GFX11: liveins: $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4, $vgpr0
     ; GFX11-NEXT: {{  $}}
-    ; GFX11-NEXT: BUNDLE implicit-def $vgpr1, implicit-def $vgpr1_lo16, implicit-def $vgpr1_hi16, implicit-def $vgpr0, implicit-def $vgpr0_lo16, implicit-def $vgpr0_hi16, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr4, implicit $exec, implicit $vgpr0 {
-    ; GFX11-NEXT:   S_CLAUSE 1
-    ; GFX11-NEXT:   $vgpr1 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4, 0, 0, 0, 0, implicit $exec
-    ; GFX11-NEXT:   $vgpr0 = BUFFER_ATOMIC_ADD_OFFSET_RTN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 4, 0, 0, implicit $exec
-    ; GFX11-NEXT: }
+    ; GFX11-NEXT: $vgpr1 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4, 0, 0, 0, 0, implicit $exec
+    ; GFX11-NEXT: $vgpr0 = BUFFER_ATOMIC_ADD_OFFSET_RTN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 4, 0, 0, implicit $exec
     $vgpr1 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4, 0, 0, 0, 0, implicit $exec
     $vgpr0 = BUFFER_ATOMIC_ADD_OFFSET_RTN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 4, 0, 0, implicit $exec
 ...
@@ -571,11 +562,8 @@ body: |
     ; GFX11-LABEL: name: flat_load_store
     ; GFX11: liveins: $vgpr0_vgpr1, $vgpr2
     ; GFX11-NEXT: {{  $}}
-    ; GFX11-NEXT: BUNDLE implicit-def $vgpr3, implicit-def $vgpr3_lo16, implicit-def $vgpr3_hi16, implicit $vgpr0_vgpr1, implicit $exec, implicit $flat_scr, implicit $vgpr2 {
-    ; GFX11-NEXT:   S_CLAUSE 1
-    ; GFX11-NEXT:   $vgpr3 = FLAT_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec, implicit $flat_scr
-    ; GFX11-NEXT:   FLAT_STORE_DWORD $vgpr0_vgpr1, $vgpr2, 4, 0, implicit $exec, implicit $flat_scr
-    ; GFX11-NEXT: }
+    ; GFX11-NEXT: $vgpr3 = FLAT_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec, implicit $flat_scr
+    ; GFX11-NEXT: FLAT_STORE_DWORD $vgpr0_vgpr1, $vgpr2, 4, 0, implicit $exec, implicit $flat_scr
     $vgpr3 = FLAT_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec, implicit $flat_scr
     FLAT_STORE_DWORD $vgpr0_vgpr1, $vgpr2, 4, 0, implicit $exec, implicit $flat_scr
 ...
@@ -594,11 +582,8 @@ body: |
     ; GFX11-LABEL: name: global_load_store
     ; GFX11: liveins: $vgpr0_vgpr1, $vgpr2
     ; GFX11-NEXT: {{  $}}
-    ; GFX11-NEXT: BUNDLE implicit-def $vgpr3, implicit-def $vgpr3_lo16, implicit-def $vgpr3_hi16, implicit $vgpr0_vgpr1, implicit $exec, implicit $vgpr2 {
-    ; GFX11-NEXT:   S_CLAUSE 1
-    ; GFX11-NEXT:   $vgpr3 = GLOBAL_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec
-    ; GFX11-NEXT:   GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr2, 4, 0, implicit $exec
-    ; GFX11-NEXT: }
+    ; GFX11-NEXT: $vgpr3 = GLOBAL_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec
+    ; GFX11-NEXT: GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr2, 4, 0, implicit $exec
     $vgpr3 = GLOBAL_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec
     GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr2, 4, 0, implicit $exec
 ...
@@ -617,11 +602,8 @@ body: |
     ; GFX11-LABEL: name: buffer_load_store
     ; GFX11: liveins: $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4, $vgpr0
     ; GFX11-NEXT: {{  $}}
-    ; GFX11-NEXT: BUNDLE implicit-def $vgpr1, implicit-def $vgpr1_lo16, implicit-def $vgpr1_hi16, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr4, implicit $exec, implicit $vgpr0 {
-    ; GFX11-NEXT:   S_CLAUSE 1
-    ; GFX11-NEXT:   $vgpr1 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4, 0, 0, 0, 0, implicit $exec
-    ; GFX11-NEXT:   BUFFER_STORE_DWORD_OFFSET $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4, 4, 0, 0, 0, implicit $exec
-    ; GFX11-NEXT: }
+    ; GFX11-NEXT: $vgpr1 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4, 0, 0, 0, 0, implicit $exec
+    ; GFX11-NEXT: BUFFER_STORE_DWORD_OFFSET $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4, 4, 0, 0, 0, implicit $exec
     $vgpr1 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4, 0, 0, 0, 0, implicit $exec
     BUFFER_STORE_DWORD_OFFSET $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4, 4, 0, 0, 0, implicit $exec
 ...

@@ -118,12 +118,13 @@ define amdgpu_kernel void @v_insert_v64i32_37(<64 x i32> addrspace(1)* %ptr.in, 
 ; GFX11-NEXT:    global_load_b128 v[60:63], v64, s[0:1] offset:112
 ; GFX11-NEXT:    s_waitcnt vmcnt(9)
 ; GFX11-NEXT:    v_mov_b32_e32 v5, 0x3e7
-; GFX11-NEXT:    s_clause 0x6
+; GFX11-NEXT:    s_clause 0x4
 ; GFX11-NEXT:    global_load_b128 v[12:15], v64, s[0:1] offset:176
 ; GFX11-NEXT:    global_load_b128 v[16:19], v64, s[0:1] offset:192
 ; GFX11-NEXT:    global_load_b128 v[20:23], v64, s[0:1] offset:208
 ; GFX11-NEXT:    global_load_b128 v[24:27], v64, s[0:1] offset:224
 ; GFX11-NEXT:    global_load_b128 v[28:31], v64, s[0:1] offset:240
+; GFX11-NEXT:    s_clause 0x1
 ; GFX11-NEXT:    global_store_b128 v64, v[0:3], s[2:3] offset:128
 ; GFX11-NEXT:    global_store_b128 v64, v[4:7], s[2:3] offset:144
 ; GFX11-NEXT:    s_waitcnt vmcnt(13)
