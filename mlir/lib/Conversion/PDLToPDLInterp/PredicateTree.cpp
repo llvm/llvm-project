@@ -690,7 +690,7 @@ struct OrderedPredicateList {
   Value root;
   DenseSet<OrderedPredicate *> predicates;
 };
-} // end anonymous namespace
+} // namespace
 
 /// Returns true if the given matcher refers to the same predicate as the given
 /// ordered predicate. This means that the position and questions of the two

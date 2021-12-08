@@ -2302,7 +2302,7 @@ public:
   }
 };
 
-} // end anonymous namespace
+} // namespace
 
 void ExtractStridedSliceOp::getCanonicalizationPatterns(
     RewritePatternSet &results, MLIRContext *context) {
@@ -3910,7 +3910,7 @@ public:
   }
 };
 
-} // end anonymous namespace
+} // namespace
 
 void vector::TransposeOp::getCanonicalizationPatterns(
     RewritePatternSet &results, MLIRContext *context) {
@@ -4005,7 +4005,7 @@ public:
   }
 };
 
-} // end anonymous namespace
+} // namespace
 
 void CreateMaskOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                                MLIRContext *context) {

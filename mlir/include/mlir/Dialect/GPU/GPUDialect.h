@@ -164,8 +164,8 @@ public:
 // Adds a `gpu.async.token` to the front of the argument list.
 void addAsyncDependency(Operation *op, Value token);
 
-} // end namespace gpu
-} // end namespace mlir
+} // namespace gpu
+} // namespace mlir
 
 #include "mlir/Dialect/GPU/GPUOpsEnums.h.inc"
 

@@ -25,9 +25,9 @@ namespace mlir {
 namespace toy {
 namespace detail {
 struct StructTypeStorage;
-} // end namespace detail
-} // end namespace toy
-} // end namespace mlir
+} // namespace detail
+} // namespace toy
+} // namespace mlir
 
 /// Include the auto-generated header file containing the declaration of the toy
 /// dialect.
@@ -70,7 +70,7 @@ public:
   /// Returns the number of element type held by this struct.
   size_t getNumElementTypes() { return getElementTypes().size(); }
 };
-} // end namespace toy
-} // end namespace mlir
+} // namespace toy
+} // namespace mlir
 
 #endif // MLIR_TUTORIAL_TOY_DIALECT_H_

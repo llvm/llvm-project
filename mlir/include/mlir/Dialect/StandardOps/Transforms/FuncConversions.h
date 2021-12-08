@@ -69,6 +69,6 @@ bool isLegalForReturnOpTypeConversionPattern(Operation *op,
 /// `isLegalForBranchOpInterfaceTypeConversionPattern` and
 /// `isLegalForReturnOpTypeConversionPattern`.
 bool isNotBranchOpInterfaceOrReturnLikeOp(Operation *op);
-} // end namespace mlir
+} // namespace mlir
 
 #endif // MLIR_DIALECT_STANDARDOPS_TRANSFORMS_FUNCCONVERSIONS_H_

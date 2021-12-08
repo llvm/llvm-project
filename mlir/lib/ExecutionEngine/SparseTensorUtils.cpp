@@ -681,7 +681,7 @@ static SparseTensorCOO<V> *openSparseTensorCOO(char *filename, uint64_t rank,
   return tensor;
 }
 
-} // anonymous namespace
+} // namespace
 
 extern "C" {
 

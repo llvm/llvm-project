@@ -1177,7 +1177,7 @@ struct SimplifyDimOfAllocOp : public OpRewritePattern<memref::DimOp> {
   }
 };
 
-} // end anonymous namespace.
+} // namespace
 
 void AllocOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                           MLIRContext *context) {

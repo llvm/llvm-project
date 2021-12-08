@@ -15,19 +15,19 @@ namespace mlir {
 
 namespace bufferization {
 class BufferizationDialect;
-} // end namespace bufferization
+} // namespace bufferization
 
 namespace memref {
 class MemRefDialect;
-} // end namespace memref
+} // namespace memref
 
 namespace scf {
 class SCFDialect;
-} // end namespace scf
+} // namespace scf
 
 #define GEN_PASS_CLASSES
 #include "mlir/Dialect/Tensor/Transforms/Passes.h.inc"
 
-} // end namespace mlir
+} // namespace mlir
 
 #endif // DIALECT_TENSOR_TRANSFORMS_PASSDETAIL_H_

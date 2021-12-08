@@ -796,8 +796,8 @@ Attribute FunctionLike<ConcreteType>::removeResultAttr(unsigned index,
   return removedAttr;
 }
 
-} // end namespace OpTrait
+} // namespace OpTrait
 
-} // end namespace mlir
+} // namespace mlir
 
 #endif // MLIR_IR_FUNCTIONSUPPORT_H

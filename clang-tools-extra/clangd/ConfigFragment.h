@@ -266,6 +266,13 @@ struct Fragment {
     llvm::Optional<Located<bool>> AllScopes;
   };
   CompletionBlock Completion;
+
+  /// Describes hover preferences.
+  struct HoverBlock {
+    /// Whether hover show a.k.a type.
+    llvm::Optional<Located<bool>> ShowAKA;
+  };
+  HoverBlock Hover;
 };
 
 } // namespace config

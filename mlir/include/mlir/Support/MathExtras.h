@@ -53,6 +53,6 @@ inline int64_t lcm(int64_t a, int64_t b) {
   assert((lcm >= a && lcm >= b) && "LCM overflow");
   return lcm;
 }
-} // end namespace mlir
+} // namespace mlir
 
 #endif // MLIR_SUPPORT_MATHEXTRAS_H_

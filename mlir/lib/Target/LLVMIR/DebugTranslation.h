@@ -67,8 +67,8 @@ private:
   llvm::DICompileUnit *compileUnit;
 };
 
-} // end namespace detail
-} // end namespace LLVM
-} // end namespace mlir
+} // namespace detail
+} // namespace LLVM
+} // namespace mlir
 
 #endif // MLIR_LIB_TARGET_LLVMIR_DEBUGTRANSLATION_H_

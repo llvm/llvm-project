@@ -134,7 +134,7 @@ using ResultVariable =
 /// This class represents a variable that refers to a successor.
 using SuccessorVariable =
     VariableElement<NamedSuccessor, Element::Kind::SuccessorVariable>;
-} // end anonymous namespace
+} // namespace
 
 //===----------------------------------------------------------------------===//
 // DirectiveElement
@@ -263,7 +263,7 @@ private:
   /// The spelling of the literal for this element.
   StringRef literal;
 };
-} // end anonymous namespace
+} // namespace
 
 //===----------------------------------------------------------------------===//
 // WhitespaceElement
@@ -306,7 +306,7 @@ public:
 private:
   bool value;
 };
-} // end anonymous namespace
+} // namespace
 
 //===----------------------------------------------------------------------===//
 // OptionalElement
@@ -354,7 +354,7 @@ private:
   /// WhitespaceElement).
   unsigned parseStart;
 };
-} // end anonymous namespace
+} // namespace
 
 //===----------------------------------------------------------------------===//
 // OperationFormat
@@ -468,7 +468,7 @@ struct OperationFormat {
   SmallVector<const NamedAttribute *, 8> usedAttributes;
   llvm::StringSet<> inferredAttributes;
 };
-} // end anonymous namespace
+} // namespace
 
 //===----------------------------------------------------------------------===//
 // Parser Gen
@@ -795,7 +795,7 @@ enum class ArgumentLengthKind {
   /// The argument is a single element, i.e. always represents 1 element.
   Single
 };
-} // end anonymous namespace
+} // namespace
 
 /// Get the length kind for the given constraint.
 static ArgumentLengthKind
@@ -2305,7 +2305,7 @@ private:
   llvm::DenseSet<const NamedRegion *> seenRegions;
   llvm::DenseSet<const NamedSuccessor *> seenSuccessors;
 };
-} // end anonymous namespace
+} // namespace
 
 LogicalResult FormatParser::parse() {
   llvm::SMLoc loc = curToken.getLoc();

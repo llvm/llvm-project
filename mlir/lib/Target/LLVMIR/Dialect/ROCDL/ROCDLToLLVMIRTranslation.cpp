@@ -80,7 +80,7 @@ public:
     return success();
   }
 };
-} // end namespace
+} // namespace
 
 void mlir::registerROCDLDialectTranslation(DialectRegistry &registry) {
   registry.insert<ROCDL::ROCDLDialect>();

@@ -418,7 +418,7 @@ private:
   std::function<bool(Value)> isSmallAlloc;
 };
 
-} // end anonymous namespace
+} // namespace
 
 std::unique_ptr<Pass> mlir::createBufferHoistingPass() {
   return std::make_unique<BufferHoistingPass>();

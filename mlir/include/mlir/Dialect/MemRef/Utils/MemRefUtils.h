@@ -24,6 +24,6 @@ namespace mlir {
 /// are > 1 deallocates for `allocValue`, returns None, else returns the single
 /// deallocate if it exists or nullptr.
 llvm::Optional<Operation *> findDealloc(Value allocValue);
-} // end namespace mlir
+} // namespace mlir
 
 #endif // MLIR_DIALECT_MEMREF_UTILS_MEMREFUTILS_H

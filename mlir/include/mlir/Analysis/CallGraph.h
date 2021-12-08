@@ -216,7 +216,7 @@ private:
   CallGraphNode externalNode;
 };
 
-} // end namespace mlir
+} // namespace mlir
 
 namespace llvm {
 // Provide graph traits for traversing call graphs using standard graph
@@ -253,6 +253,6 @@ struct GraphTraits<const mlir::CallGraph *>
   static nodes_iterator nodes_begin(mlir::CallGraph *cg) { return cg->begin(); }
   static nodes_iterator nodes_end(mlir::CallGraph *cg) { return cg->end(); }
 };
-} // end namespace llvm
+} // namespace llvm
 
 #endif // MLIR_ANALYSIS_CALLGRAPH_H

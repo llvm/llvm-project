@@ -70,7 +70,7 @@ class APFloat;
 template <typename Fn> class function_ref;
 template <typename IteratorT> class iterator_range;
 class raw_ostream;
-} // end namespace llvm
+} // namespace llvm
 
 namespace mlir {
 // Casting operators.

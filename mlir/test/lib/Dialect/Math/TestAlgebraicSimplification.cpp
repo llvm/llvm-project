@@ -32,7 +32,7 @@ struct TestMathAlgebraicSimplificationPass
     return "Test math algebraic simplification";
   }
 };
-} // end anonymous namespace
+} // namespace
 
 void TestMathAlgebraicSimplificationPass::runOnFunction() {
   RewritePatternSet patterns(&getContext());

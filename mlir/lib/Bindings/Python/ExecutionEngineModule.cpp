@@ -62,7 +62,7 @@ private:
   std::vector<py::object> referencedObjects;
 };
 
-} // anonymous namespace
+} // namespace
 
 /// Create the `mlir.execution_engine` module here.
 PYBIND11_MODULE(_mlirExecutionEngine, m) {

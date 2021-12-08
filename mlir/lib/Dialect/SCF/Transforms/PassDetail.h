@@ -20,23 +20,23 @@ class AffineDialect;
 
 namespace arith {
 class ArithmeticDialect;
-} // end namespace arith
+} // namespace arith
 
 namespace bufferization {
 class BufferizationDialect;
-} // end namespace bufferization
+} // namespace bufferization
 
 namespace memref {
 class MemRefDialect;
-} // end namespace memref
+} // namespace memref
 
 namespace tensor {
 class TensorDialect;
-} // end namespace tensor
+} // namespace tensor
 
 #define GEN_PASS_CLASSES
 #include "mlir/Dialect/SCF/Passes.h.inc"
 
-} // end namespace mlir
+} // namespace mlir
 
 #endif // DIALECT_LOOPOPS_TRANSFORMS_PASSDETAIL_H_

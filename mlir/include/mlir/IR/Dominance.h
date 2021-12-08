@@ -109,7 +109,7 @@ protected:
   mutable DenseMap<Region *, llvm::PointerIntPair<DomTree *, 1, bool>>
       dominanceInfos;
 };
-} // end namespace detail
+} // namespace detail
 
 /// A class for computing basic dominance information. Note that this
 /// class is aware of different types of regions and returns a
@@ -196,7 +196,7 @@ public:
   }
 };
 
-} //  end namespace mlir
+} // namespace mlir
 
 namespace llvm {
 
@@ -222,5 +222,5 @@ struct GraphTraits<const mlir::DominanceInfoNode *> {
   static inline ChildIteratorType child_end(NodeRef N) { return N->end(); }
 };
 
-} // end namespace llvm
+} // namespace llvm
 #endif

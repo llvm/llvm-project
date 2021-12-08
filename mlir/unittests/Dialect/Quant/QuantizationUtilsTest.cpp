@@ -169,4 +169,4 @@ TEST(QuantizationUtilsTest, convertRankedSparseAttrUniform) {
   EXPECT_EQ(firstValue.cast<IntegerAttr>().getInt(), 5);
 }
 
-} // end namespace
+} // namespace

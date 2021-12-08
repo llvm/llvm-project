@@ -215,6 +215,19 @@ Completion:
   ASSERT_EQ(Results.size(), 1u);
   EXPECT_THAT(Results[0].Completion.AllScopes, testing::Eq(llvm::None));
 }
+
+TEST(ParseYAML, ShowAKA) {
+  CapturedDiags Diags;
+  Annotations YAML(R"yaml(
+Hover:
+  ShowAKA: True
+  )yaml");
+  auto Results =
+      Fragment::parseYAML(YAML.code(), "config.yaml", Diags.callback());
+  ASSERT_THAT(Diags.Diagnostics, IsEmpty());
+  ASSERT_EQ(Results.size(), 1u);
+  EXPECT_THAT(Results[0].Hover.ShowAKA, llvm::ValueIs(Val(true)));
+}
 } // namespace
 } // namespace config
 } // namespace clangd

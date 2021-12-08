@@ -538,8 +538,11 @@ public:
   ///
   /// We model the global module fragment as a submodule of the module
   /// interface unit. Unfortunately, we can't create the module interface
-  /// unit's Module until later, because we don't know what it will be called.
-  Module *createGlobalModuleFragmentForModuleUnit(SourceLocation Loc);
+  /// unit's Module until later, because we don't know what it will be called
+  /// usually. See C++20 [module.unit]/7.2 for the case we could know its
+  /// parent.
+  Module *createGlobalModuleFragmentForModuleUnit(SourceLocation Loc,
+                                                  Module *Parent = nullptr);
 
   /// Create a global module fragment for a C++ module interface unit.
   Module *createPrivateModuleFragmentForInterfaceUnit(Module *Parent,

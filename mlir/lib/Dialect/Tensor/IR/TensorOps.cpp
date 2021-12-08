@@ -313,7 +313,7 @@ struct DimOfCastOp : public OpRewritePattern<DimOp> {
     return success();
   }
 };
-} // end anonymous namespace.
+} // namespace
 
 void DimOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                         MLIRContext *context) {

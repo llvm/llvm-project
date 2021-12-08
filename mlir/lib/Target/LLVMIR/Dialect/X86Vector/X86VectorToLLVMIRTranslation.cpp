@@ -41,7 +41,7 @@ public:
     return failure();
   }
 };
-} // end namespace
+} // namespace
 
 void mlir::registerX86VectorDialectTranslation(DialectRegistry &registry) {
   registry.insert<x86vector::X86VectorDialect>();
