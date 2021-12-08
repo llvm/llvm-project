@@ -464,10 +464,9 @@ public:
                 "");
   static const int Default_WG_Size = getGridValue<64>().GV_Default_WG_Size;
 
-  using MemcpyFunc = hsa_status_t (*)(hsa_signal_t, void *, const void *,
-                                      size_t size, hsa_agent_t,
-                                      hsa_amd_memory_pool_t);
-  hsa_status_t freesignalpool_memcpy(void *dest, const void *src, size_t size,
+  using MemcpyFunc = hsa_status_t (*)(hsa_signal_t, void *, void *, size_t size,
+                                      hsa_agent_t, hsa_amd_memory_pool_t);
+  hsa_status_t freesignalpool_memcpy(void *dest, void *src, size_t size,
                                      MemcpyFunc Func, int32_t deviceId) {
     hsa_agent_t agent = HSAAgents[deviceId];
     hsa_signal_t s = FreeSignalPool.pop();
@@ -479,13 +478,13 @@ public:
     return r;
   }
 
-  hsa_status_t freesignalpool_memcpy_d2h(void *dest, const void *src,
-                                         size_t size, int32_t deviceId) {
+  hsa_status_t freesignalpool_memcpy_d2h(void *dest, void *src, size_t size,
+                                         int32_t deviceId) {
     return freesignalpool_memcpy(dest, src, size, impl_memcpy_d2h, deviceId);
   }
 
-  hsa_status_t freesignalpool_memcpy_h2d(void *dest, const void *src,
-                                         size_t size, int32_t deviceId) {
+  hsa_status_t freesignalpool_memcpy_h2d(void *dest, void *src, size_t size,
+                                         int32_t deviceId) {
     return freesignalpool_memcpy(dest, src, size, impl_memcpy_h2d, deviceId);
   }
 
