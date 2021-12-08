@@ -187,6 +187,10 @@ primary use is for COFF object files which explicitly specify what interfaces
 are imported from external modules. See the dllimport_ documentation on MSDN
 for more information.
 
+Note that a dllimport function may still be inlined, if its definition is
+available and it doesn't reference any non-dllimport functions or global
+variables.
+
 .. _dllimport: https://msdn.microsoft.com/en-us/library/3y1sfaz2.aspx
   }];
 }
