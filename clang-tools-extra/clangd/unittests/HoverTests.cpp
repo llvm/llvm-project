@@ -8,6 +8,7 @@
 
 #include "AST.h"
 #include "Annotations.h"
+#include "Config.h"
 #include "Hover.h"
 #include "TestIndex.h"
 #include "TestTU.h"
@@ -1008,6 +1009,9 @@ class Foo {})cpp";
     // fixed one to make sure tests passes on different platform.
     TU.ExtraArgs.push_back("--target=x86_64-pc-linux-gnu");
     auto AST = TU.build();
+    Config Cfg;
+    Cfg.Hover.ShowAKA = true;
+    WithContextValue WithCfg(Config::Key, std::move(Cfg));
 
     auto H = getHover(AST, T.point(), format::getLLVMStyle(), nullptr);
     ASSERT_TRUE(H);
@@ -2539,7 +2543,9 @@ TEST(Hover, All) {
     // fixed one to make sure tests passes on different platform.
     TU.ExtraArgs.push_back("--target=x86_64-pc-linux-gnu");
     auto AST = TU.build();
-
+    Config Cfg;
+    Cfg.Hover.ShowAKA = true;
+    WithContextValue WithCfg(Config::Key, std::move(Cfg));
     auto H = getHover(AST, T.point(), format::getLLVMStyle(), Index.get());
     ASSERT_TRUE(H);
     HoverInfo Expected;
@@ -2928,6 +2934,9 @@ int foo = 3)",
   for (const auto &C : Cases) {
     HoverInfo HI;
     C.Builder(HI);
+    Config Cfg;
+    Cfg.Hover.ShowAKA = true;
+    WithContextValue WithCfg(Config::Key, std::move(Cfg));
     EXPECT_EQ(HI.present().asPlainText(), C.ExpectedRender);
   }
 }
@@ -3096,6 +3105,25 @@ TEST(Hover, ForwardStructNoCrash) {
   auto HI = getHover(AST, T.point(), format::getLLVMStyle(), nullptr);
   ASSERT_TRUE(HI);
   EXPECT_EQ(*HI->Value, "&bar");
+}
+
+TEST(Hover, DisableShowAKA) {
+  Annotations T(R"cpp(
+    using m_int = int;
+    m_int ^[[a]];
+  )cpp");
+
+  Config Cfg;
+  Cfg.Hover.ShowAKA = false;
+  WithContextValue WithCfg(Config::Key, std::move(Cfg));
+
+  TestTU TU = TestTU::withCode(T.code());
+  TU.ExtraArgs.push_back("-std=c++17");
+  auto AST = TU.build();
+  auto H = getHover(AST, T.point(), format::getLLVMStyle(), nullptr);
+
+  ASSERT_TRUE(H);
+  EXPECT_EQ(H->Type, HoverInfo::PrintedType("m_int"));
 }
 
 } // namespace
