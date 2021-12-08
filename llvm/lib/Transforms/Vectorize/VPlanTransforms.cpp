@@ -48,7 +48,7 @@ void VPlanTransforms::VPInstructionsToVPRecipes(
         if (II.getKind() == InductionDescriptor::IK_IntInduction ||
             II.getKind() == InductionDescriptor::IK_FpInduction) {
           VPValue *Start = Plan->getOrAddVPValue(II.getStartValue());
-          NewRecipe = new VPWidenIntOrFpInductionRecipe(Phi, Start, nullptr);
+          NewRecipe = new VPWidenIntOrFpInductionRecipe(Phi, Start);
         } else {
           Plan->addVPValue(Phi, VPPhi);
           continue;
