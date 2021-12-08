@@ -52,6 +52,7 @@ set(MSAN_UNITTEST_INSTRUMENTED_CFLAGS
   -mllvm -msan-keep-going=1
 )
 set(MSAN_UNITTEST_LINK_FLAGS
+  -nostdlib++
   ${COMPILER_RT_UNITTEST_LINK_FLAGS}
   -fsanitize=memory
   # Don't need -stdlib=libc++ because we explicitly list libc++.a in the linker

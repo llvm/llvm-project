@@ -1,13 +1,17 @@
-; RUN: llvm-profgen --format=text --unsymbolized-profile=%S/Inputs/profile-density.raw.prof --binary=%S/Inputs/inline-noprobe2.perfbin --output=%t1 --use-offset=0 --show-density -hot-function-density-threshold=10  --trim-cold-profile=0 &> %t2
-; RUN: FileCheck %s --input-file %t2 --check-prefix=CHECK-DENSITY
+; RUN: llvm-profgen --format=text --unsymbolized-profile=%S/Inputs/cold-profile-trimming.raw.prof --binary=%S/Inputs/inline-noprobe2.perfbin --output=%t1 --use-offset=0 --trim-cold-profile=0
+; RUN: FileCheck %s --input-file %t1 --check-prefix=CHECK-NOTRIM
+; RUN: llvm-profgen --format=text --unsymbolized-profile=%S/Inputs/cold-profile-trimming.raw.prof --binary=%S/Inputs/inline-noprobe2.perfbin --output=%t1 --use-offset=0 --trim-cold-profile=1 --profile-summary-cold-count=1000
+; RUN: FileCheck %s --input-file %t1 --check-prefix=CHECK-TRIM
 
-; RUN: llvm-profgen --format=text --unsymbolized-profile=%S/Inputs/profile-density-cs.raw.prof --binary=%S/Inputs/inline-noprobe2.perfbin --output=%t3 --show-density -hot-function-density-threshold=1 &> %t4
-; RUN: FileCheck %s --input-file %t4 --check-prefix=CHECK-DENSITY-CS
+;CHECK-NOTRIM: partition_pivot_last:5187:7
+;CHECK-NOTRIM: partition_pivot_first:3010:5
+;CHECK-NOTRIM: quick_sort:903:25
+;CHECK-NOTRIM: main:820:0
 
-;CHECK-DENSITY: AutoFDO is estimated to optimize better with 3.1x more samples. Please consider increasing sampling rate or profiling for longer duration to get more samples.
-;CHECK-DENSITY: Minimum profile density for hot functions with top 99.00% total samples: 3.2
-
-;CHECK-DENSITY-CS: Minimum profile density for hot functions with top 99.00% total samples: 128.3
+;CHECK-TRIM: partition_pivot_last:5187:7
+;CHECK-TRIM: partition_pivot_first:3010:5
+;CHECK-TRIM-NOT: quick_sort:903:25
+;CHECK-TRIM-NOT: main:820:0
 
 ; original code:
 ; clang -O3 -g -fno-optimize-sibling-calls -fdebug-info-for-profiling qsort.c -o a.out
