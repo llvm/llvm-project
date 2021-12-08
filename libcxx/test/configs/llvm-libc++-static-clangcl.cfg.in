@@ -1,0 +1,32 @@
+# This testing configuration handles running the test suite against LLVM's libc++
+# using a static library, with Clang-cl on Windows.
+
+lit_config.load_config(config, '@CMAKE_CURRENT_BINARY_DIR@/cmake-bridge.cfg')
+
+config.substitutions.append(('%{flags}', '--driver-mode=g++'))
+config.substitutions.append(('%{compile_flags}',
+    '-nostdinc++ -isystem %{include} -isystem %{target-include} -I %{libcxx}/test/support -D_CRT_SECURE_NO_WARNINGS -D_CRT_NONSTDC_NO_WARNINGS -D_CRT_STDIO_ISO_WIDE_SPECIFIERS -DNOMINMAX'
+))
+config.substitutions.append(('%{link_flags}',
+    '-nostdlib -L %{lib} -llibc++ -lmsvcrt -lmsvcprt -loldnames'
+))
+config.substitutions.append(('%{exec}',
+    '%{executor} --execdir %T --env PATH=%{lib} -- '
+))
+
+# LIBCXX-WINDOWS-FIXME is the feature name used to XFAIL the
+# initial Windows failures until they can be properly diagnosed
+# and fixed. This allows easier detection of new test failures
+# and regressions. Note: New failures should not be suppressed
+# using this feature. (Also see llvm.org/PR32730)
+config.available_features.add('LIBCXX-WINDOWS-FIXME')
+
+import os, site
+site.addsitedir(os.path.join('@LIBCXX_SOURCE_DIR@', 'utils'))
+import libcxx.test.params, libcxx.test.newconfig
+libcxx.test.newconfig.configure(
+    libcxx.test.params.DEFAULT_PARAMETERS,
+    libcxx.test.features.DEFAULT_FEATURES,
+    config,
+    lit_config
+)
