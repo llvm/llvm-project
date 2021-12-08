@@ -72,11 +72,9 @@
 ; CHECK:     NULL
 ; CHECK:   NULL
 
-$_ZZ7removedvE1A = comdat any
-
 @_ZZ11not_removedvE1B = internal global i32 0, align 4, !dbg !0
 @_ZZ3foovE1C = internal global i32 0, align 4, !dbg !10
-@_ZZ7removedvE1A = linkonce_odr dso_local global i32 0, comdat, align 4, !dbg !15
+@_ZZ7removedvE1A = linkonce_odr dso_local global i32 0, align 4, !dbg !15
 
 define dso_local i32 @_Z11not_removedv() !dbg !4 {
 entry:
