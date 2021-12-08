@@ -435,15 +435,31 @@ def BinOpKind : I32EnumAttr<
   let cppNamespace = "::mlir::cir";
 }
 
+// FIXME: Pure won't work when we add overloading.
 def BinOp : CIR_Op<"binop", [Pure,
   SameTypeOperands, SameOperandsAndResultType]> {
+
+  let summary = "binary operations (arith and logic)";
+  let description = [{
+    "cir.binop performs the binary operation according to
+     the specified kind/opcode: [mul, div, rem, add, sub, shl,
+     shr, and, xor, or]. It accepts to input operands and the
+     result type must match both types.
+
+     Example
+     ```
+     %7 = binop(add, %1, %2)
+     %7 = binop(mul, %1, %2)
+     ```
+  }];
+
   // TODO: get more accurate than AnyType
   let results = (outs AnyType:$result);
   let arguments = (ins Arg<BinOpKind, "binop kind">:$kind,
                        AnyType:$lhs, AnyType:$rhs);
 
   let assemblyFormat = [{
-    `(` $kind `,` $lhs `,` $rhs  `)` `:` type($lhs) attr-dict
+    `(` custom<BinOpKind>($kind) `,` $lhs `,` $rhs  `)` `:` type($lhs) attr-dict
   }];
 
   // Already covered by the traits

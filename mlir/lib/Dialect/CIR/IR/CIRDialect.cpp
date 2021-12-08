@@ -329,6 +329,60 @@ mlir::LogicalResult YieldOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
+// BinOp
+//===----------------------------------------------------------------------===//
+
+ParseResult parseBinOpKind(OpAsmParser &parser, BinOpKindAttr &kindAttr) {
+  ::llvm::StringRef attrStr;
+  ::mlir::NamedAttrList attrStorage;
+  auto loc = parser.getCurrentLocation();
+
+  // FIXME: since a few names can't be used as enum (and, or, xor) we declared
+  // them in CIROps.td capitalized, but we really wanna use lower case on
+  // clang IR asm form.
+  if (parser.parseOptionalKeyword(&attrStr,
+                                  {"mul", "div", "rem", "add", "sub", "shl",
+                                   "shr", "and", "xor", "or"})) {
+    ::mlir::StringAttr attrVal;
+    ::mlir::OptionalParseResult parseResult = parser.parseOptionalAttribute(
+        attrVal, parser.getBuilder().getNoneType(), "kind", attrStorage);
+    if (parseResult.has_value()) {
+      if (failed(*parseResult))
+        return ::mlir::failure();
+      attrStr = attrVal.getValue();
+    } else {
+      return parser.emitError(
+          loc, "expected string or keyword containing one of the following "
+               "enum values for attribute 'kind' [mul, div, rem, add, sub, "
+               "shl, shr, and, xor, or]");
+    }
+  }
+  if (!attrStr.empty()) {
+    std::string attrString = attrStr.str();
+    attrString[0] = attrString[0] + 'A' - 'a';
+    attrStr = attrString;
+    auto attrOptional = ::mlir::cir::symbolizeBinOpKind(attrStr);
+    if (!attrOptional)
+      return parser.emitError(loc, "invalid ")
+             << "kind attribute specification: \"" << attrStr << '"';
+    ;
+
+    kindAttr = ::mlir::cir::BinOpKindAttr::get(parser.getBuilder().getContext(),
+                                               attrOptional.value());
+  }
+
+  return ::mlir::success();
+}
+
+void printBinOpKind(OpAsmPrinter &p, BinOp binOp, BinOpKindAttr kindAttr) {
+  auto caseValueStr = stringifyBinOpKind(kindAttr.getValue());
+  std::string attrString = caseValueStr.str();
+  attrString[0] = attrString[0] + 'a' - 'A';
+  caseValueStr = attrString;
+  p << caseValueStr;
+}
+
+//===----------------------------------------------------------------------===//
 // TableGen'd op method definitions
 //===----------------------------------------------------------------------===//
 
