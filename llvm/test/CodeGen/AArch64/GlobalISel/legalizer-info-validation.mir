@@ -497,11 +497,12 @@
 # DEBUG: .. type index coverage check SKIPPED: no rules defined
 # DEBUG-NEXT: .. imm index coverage check SKIPPED: no rules defined
 # DEBUG-NEXT: G_FMINIMUM (opcode {{[0-9]+}}): 1 type index
-# DEBUG: .. type index coverage check SKIPPED: no rules defined
-# DEBUG-NEXT: .. imm index coverage check SKIPPED: no rules defined
+# DEBUG-NEXT: .. opcode {{[0-9]+}} is aliased to {{[0-9]+}}
+# DEBUG-NEXT: .. the first uncovered type index: 1, OK
+# DEBUG-NEXT: .. the first uncovered imm index: 0, OK
 # DEBUG-NEXT: G_FMAXIMUM (opcode {{[0-9]+}}): 1 type index
-# DEBUG: .. type index coverage check SKIPPED: no rules defined
-# DEBUG-NEXT: .. imm index coverage check SKIPPED: no rules defined
+# DEBUG-NEXT: .. the first uncovered type index: 1, OK
+# DEBUG-NEXT: .. the first uncovered imm index: 0, OK
 # DEBUG-NEXT: G_PTR_ADD (opcode {{[0-9]+}}): 2 type indices, 0 imm indices
 # DEBUG-NEXT: .. the first uncovered type index: 2, OK
 # DEBUG-NEXT: .. the first uncovered imm index: 0, OK
