@@ -1,8 +1,6 @@
 # This testing configuration handles running the test suite against LLVM's libc++
 # using a static library.
 
-import sys
-
 lit_config.load_config(config, '@CMAKE_CURRENT_BINARY_DIR@/cmake-bridge.cfg')
 
 config.substitutions.append(('%{flags}',
@@ -15,7 +13,7 @@ config.substitutions.append(('%{link_flags}',
     '-nostdlib++ -L %{lib} -lc++ -lc++abi -pthread'
 ))
 config.substitutions.append(('%{exec}',
-    '{} %{{libcxx}}/utils/run.py --execdir %T -- '.format(sys.executable)
+    '%{executor} --execdir %T -- '
 ))
 
 import os, site
