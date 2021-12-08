@@ -827,6 +827,7 @@ public:
     Op->SysReg.Length = Str.size();
     Op->SysReg.Encoding = Encoding;
     Op->StartLoc = S;
+    Op->EndLoc = S;
     Op->IsRV64 = IsRV64;
     return Op;
   }
@@ -836,6 +837,7 @@ public:
     auto Op = std::make_unique<RISCVOperand>(KindTy::VType);
     Op->VType.Val = VTypeI;
     Op->StartLoc = S;
+    Op->EndLoc = S;
     Op->IsRV64 = IsRV64;
     return Op;
   }
@@ -1291,7 +1293,7 @@ OperandMatchResultTy RISCVAsmParser::parseRegister(OperandVector &Operands,
     if (HadParens)
       Operands.push_back(RISCVOperand::createToken("(", FirstS, isRV64()));
     SMLoc S = getLoc();
-    SMLoc E = SMLoc::getFromPointer(S.getPointer() - 1);
+    SMLoc E = SMLoc::getFromPointer(S.getPointer() + Name.size());
     getLexer().Lex();
     Operands.push_back(RISCVOperand::createReg(RegNo, S, E, isRV64()));
   }
@@ -1381,7 +1383,7 @@ RISCVAsmParser::parseCSRSystemRegister(OperandVector &Operands) {
 
 OperandMatchResultTy RISCVAsmParser::parseImmediate(OperandVector &Operands) {
   SMLoc S = getLoc();
-  SMLoc E = SMLoc::getFromPointer(S.getPointer() - 1);
+  SMLoc E;
   const MCExpr *Res;
 
   switch (getLexer().getKind()) {
@@ -1396,7 +1398,7 @@ OperandMatchResultTy RISCVAsmParser::parseImmediate(OperandVector &Operands) {
   case AsmToken::Integer:
   case AsmToken::String:
   case AsmToken::Identifier:
-    if (getParser().parseExpression(Res))
+    if (getParser().parseExpression(Res, E))
       return MatchOperand_ParseFail;
     break;
   case AsmToken::Percent:
@@ -1410,7 +1412,7 @@ OperandMatchResultTy RISCVAsmParser::parseImmediate(OperandVector &Operands) {
 OperandMatchResultTy
 RISCVAsmParser::parseOperandWithModifier(OperandVector &Operands) {
   SMLoc S = getLoc();
-  SMLoc E = SMLoc::getFromPointer(S.getPointer() - 1);
+  SMLoc E;
 
   if (getLexer().getKind() != AsmToken::Percent) {
     Error(getLoc(), "expected '%' for operand modifier");
@@ -1449,7 +1451,6 @@ RISCVAsmParser::parseOperandWithModifier(OperandVector &Operands) {
 
 OperandMatchResultTy RISCVAsmParser::parseBareSymbol(OperandVector &Operands) {
   SMLoc S = getLoc();
-  SMLoc E = SMLoc::getFromPointer(S.getPointer() - 1);
   const MCExpr *Res;
 
   if (getLexer().getKind() != AsmToken::Identifier)
@@ -1460,6 +1461,8 @@ OperandMatchResultTy RISCVAsmParser::parseBareSymbol(OperandVector &Operands) {
 
   if (getParser().parseIdentifier(Identifier))
     return MatchOperand_ParseFail;
+
+  SMLoc E = SMLoc::getFromPointer(S.getPointer() + Identifier.size());
 
   if (Identifier.consume_back("@plt")) {
     Error(getLoc(), "'@plt' operand not valid for instruction");
@@ -1492,7 +1495,7 @@ OperandMatchResultTy RISCVAsmParser::parseBareSymbol(OperandVector &Operands) {
   }
 
   const MCExpr *Expr;
-  if (getParser().parseExpression(Expr))
+  if (getParser().parseExpression(Expr, E))
     return MatchOperand_ParseFail;
   Res = MCBinaryExpr::create(Opcode, Res, Expr, getContext());
   Operands.push_back(RISCVOperand::createImm(Res, S, E, isRV64()));
@@ -1501,7 +1504,6 @@ OperandMatchResultTy RISCVAsmParser::parseBareSymbol(OperandVector &Operands) {
 
 OperandMatchResultTy RISCVAsmParser::parseCallSymbol(OperandVector &Operands) {
   SMLoc S = getLoc();
-  SMLoc E = SMLoc::getFromPointer(S.getPointer() - 1);
   const MCExpr *Res;
 
   if (getLexer().getKind() != AsmToken::Identifier)
@@ -1514,6 +1516,8 @@ OperandMatchResultTy RISCVAsmParser::parseCallSymbol(OperandVector &Operands) {
   StringRef Identifier;
   if (getParser().parseIdentifier(Identifier))
     return MatchOperand_ParseFail;
+
+  SMLoc E = SMLoc::getFromPointer(S.getPointer() + Identifier.size());
 
   RISCVMCExpr::VariantKind Kind = RISCVMCExpr::VK_RISCV_CALL;
   if (Identifier.consume_back("@plt"))
@@ -1529,10 +1533,10 @@ OperandMatchResultTy RISCVAsmParser::parseCallSymbol(OperandVector &Operands) {
 OperandMatchResultTy
 RISCVAsmParser::parsePseudoJumpSymbol(OperandVector &Operands) {
   SMLoc S = getLoc();
-  SMLoc E = SMLoc::getFromPointer(S.getPointer() - 1);
+  SMLoc E;
   const MCExpr *Res;
 
-  if (getParser().parseExpression(Res))
+  if (getParser().parseExpression(Res, E))
     return MatchOperand_ParseFail;
 
   if (Res->getKind() != MCExpr::ExprKind::SymbolRef ||
@@ -1662,7 +1666,7 @@ OperandMatchResultTy RISCVAsmParser::parseMaskReg(OperandVector &Operands) {
     if (RegNo != RISCV::V0)
       return MatchOperand_NoMatch;
     SMLoc S = getLoc();
-    SMLoc E = SMLoc::getFromPointer(S.getPointer() - 1);
+    SMLoc E = SMLoc::getFromPointer(S.getPointer() + Name.size());
     getLexer().Lex();
     Operands.push_back(RISCVOperand::createReg(RegNo, S, E, isRV64()));
   }
