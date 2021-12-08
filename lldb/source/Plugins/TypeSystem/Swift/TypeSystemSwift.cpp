@@ -66,10 +66,6 @@ void TypeSystemSwift::Terminate() {
   SwiftLanguageRuntime::Terminate();
 }
 
-ConstString TypeSystemSwift::GetPluginNameStatic() {
-  return ConstString("swift");
-}
-
 /// \}
 
 void TypeSystemSwift::DumpValue(

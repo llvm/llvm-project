@@ -103,11 +103,6 @@ void SwiftLanguage::Terminate() {
   PluginManager::UnregisterPlugin(CreateInstance);
 }
 
-lldb_private::ConstString SwiftLanguage::GetPluginNameStatic() {
-  static ConstString g_name("swift");
-  return g_name;
-}
-
 bool SwiftLanguage::SymbolNameFitsToLanguage(Mangled mangled) const {
   return SwiftLanguageRuntime::IsSwiftMangledName(
       mangled.GetMangledName().GetStringRef());

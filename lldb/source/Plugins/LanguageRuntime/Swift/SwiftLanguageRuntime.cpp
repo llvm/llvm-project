@@ -97,7 +97,7 @@ AppleObjCRuntimeV2 *
 SwiftLanguageRuntime::GetObjCRuntime(lldb_private::Process &process) {
   if (auto objc_runtime = ObjCLanguageRuntime::Get(process)) {
     if (objc_runtime->GetPluginName() ==
-        AppleObjCRuntimeV2::GetPluginNameStatic().GetStringRef())
+        AppleObjCRuntimeV2::GetPluginNameStatic())
       return (AppleObjCRuntimeV2 *)objc_runtime;
   }
   return nullptr;
@@ -2038,11 +2038,6 @@ void SwiftLanguageRuntime::Initialize() {
 
 void SwiftLanguageRuntime::Terminate() {
   PluginManager::UnregisterPlugin(CreateInstance);
-}
-
-lldb_private::ConstString SwiftLanguageRuntime::GetPluginNameStatic() {
-  static ConstString g_name("swift");
-  return g_name;
 }
 
 #define FORWARD(METHOD, ...)                                                   \

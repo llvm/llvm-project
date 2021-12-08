@@ -90,7 +90,7 @@ public:
   static lldb_private::LanguageRuntime *
   CreateInstance(Process *process, lldb::LanguageType language);
 
-  static lldb_private::ConstString GetPluginNameStatic();
+  static llvm::StringRef GetPluginNameStatic() { return "swift"; }
 
   static bool classof(const LanguageRuntime *runtime) {
     return runtime->isA(&ID);
@@ -108,9 +108,7 @@ public:
   /// \}
 
   /// PluginInterface protocol.
-  llvm::StringRef GetPluginName() override {
-    return GetPluginNameStatic().GetStringRef();
-  }
+  llvm::StringRef GetPluginName() override { return GetPluginNameStatic(); }
 
   bool GetObjectDescription(Stream &str, Value &value,
                             ExecutionContextScope *exe_scope) override {
