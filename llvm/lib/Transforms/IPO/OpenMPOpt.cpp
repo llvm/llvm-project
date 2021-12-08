@@ -3964,6 +3964,9 @@ struct AAKernelInfoCallSite : AAKernelInfo {
     case OMPRTL___kmpc_master:
     case OMPRTL___kmpc_end_master:
     case OMPRTL___kmpc_barrier:
+    case OMPRTL___kmpc_nvptx_parallel_reduce_nowait_v2:
+    case OMPRTL___kmpc_nvptx_teams_reduce_nowait_v2:
+    case OMPRTL___kmpc_nvptx_end_reduce_nowait:
       break;
     case OMPRTL___kmpc_distribute_static_init_4:
     case OMPRTL___kmpc_distribute_static_init_4u:
