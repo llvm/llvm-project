@@ -10067,7 +10067,9 @@ SDValue DAGCombiner::visitMSTORE(SDNode *N) {
   if (ISD::isConstantSplatVectorAllOnes(Mask.getNode()) && MST->isUnindexed() &&
       !MST->isCompressingStore() && !MST->isTruncatingStore())
     return DAG.getStore(MST->getChain(), SDLoc(N), MST->getValue(),
-                        MST->getBasePtr(), MST->getMemOperand());
+                        MST->getBasePtr(), MST->getPointerInfo(),
+                        MST->getOriginalAlign(), MachineMemOperand::MOStore,
+                        MST->getAAInfo());
 
   // Try transforming N to an indexed store.
   if (CombineToPreIndexedLoadStore(N) || CombineToPostIndexedLoadStore(N))
@@ -10122,8 +10124,10 @@ SDValue DAGCombiner::visitMLOAD(SDNode *N) {
   // FIXME: Can we do this for indexed, expanding, or extending loads?
   if (ISD::isConstantSplatVectorAllOnes(Mask.getNode()) && MLD->isUnindexed() &&
       !MLD->isExpandingLoad() && MLD->getExtensionType() == ISD::NON_EXTLOAD) {
-    SDValue NewLd = DAG.getLoad(N->getValueType(0), SDLoc(N), MLD->getChain(),
-                                MLD->getBasePtr(), MLD->getMemOperand());
+    SDValue NewLd = DAG.getLoad(
+        N->getValueType(0), SDLoc(N), MLD->getChain(), MLD->getBasePtr(),
+        MLD->getPointerInfo(), MLD->getOriginalAlign(),
+        MachineMemOperand::MOLoad, MLD->getAAInfo(), MLD->getRanges());
     return CombineTo(N, NewLd, NewLd.getValue(1));
   }
 
