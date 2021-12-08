@@ -338,25 +338,25 @@ VectorType::VectorType(TypeClass tc, QualType vecType, unsigned nElements,
   VectorTypeBits.NumElements = nElements;
 }
 
-ExtIntType::ExtIntType(bool IsUnsigned, unsigned NumBits)
-    : Type(ExtInt, QualType{}, TypeDependence::None), IsUnsigned(IsUnsigned),
+BitIntType::BitIntType(bool IsUnsigned, unsigned NumBits)
+    : Type(BitInt, QualType{}, TypeDependence::None), IsUnsigned(IsUnsigned),
       NumBits(NumBits) {}
 
-DependentExtIntType::DependentExtIntType(const ASTContext &Context,
+DependentBitIntType::DependentBitIntType(const ASTContext &Context,
                                          bool IsUnsigned, Expr *NumBitsExpr)
-    : Type(DependentExtInt, QualType{},
+    : Type(DependentBitInt, QualType{},
            toTypeDependence(NumBitsExpr->getDependence())),
       Context(Context), ExprAndUnsigned(NumBitsExpr, IsUnsigned) {}
 
-bool DependentExtIntType::isUnsigned() const {
+bool DependentBitIntType::isUnsigned() const {
   return ExprAndUnsigned.getInt();
 }
 
-clang::Expr *DependentExtIntType::getNumBitsExpr() const {
+clang::Expr *DependentBitIntType::getNumBitsExpr() const {
   return ExprAndUnsigned.getPointer();
 }
 
-void DependentExtIntType::Profile(llvm::FoldingSetNodeID &ID,
+void DependentBitIntType::Profile(llvm::FoldingSetNodeID &ID,
                                   const ASTContext &Context, bool IsUnsigned,
                                   Expr *NumBitsExpr) {
   ID.AddBoolean(IsUnsigned);
@@ -1927,7 +1927,7 @@ bool Type::isIntegralType(const ASTContext &Ctx) const {
     if (const auto *ET = dyn_cast<EnumType>(CanonicalType))
       return ET->getDecl()->isComplete();
 
-  return isExtIntType();
+  return isBitIntType();
 }
 
 bool Type::isIntegralOrUnscopedEnumerationType() const {
@@ -1935,7 +1935,7 @@ bool Type::isIntegralOrUnscopedEnumerationType() const {
     return BT->getKind() >= BuiltinType::Bool &&
            BT->getKind() <= BuiltinType::Int128;
 
-  if (isExtIntType())
+  if (isBitIntType())
     return true;
 
   return isUnscopedEnumerationType();
@@ -2018,7 +2018,9 @@ bool Type::isSignedIntegerType() const {
       return ET->getDecl()->getIntegerType()->isSignedIntegerType();
   }
 
-  if (const ExtIntType *IT = dyn_cast<ExtIntType>(CanonicalType))
+  if (const auto *IT = dyn_cast<BitIntType>(CanonicalType))
+    return IT->isSigned();
+  if (const auto *IT = dyn_cast<DependentBitIntType>(CanonicalType))
     return IT->isSigned();
 
   return false;
@@ -2035,9 +2037,10 @@ bool Type::isSignedIntegerOrEnumerationType() const {
       return ET->getDecl()->getIntegerType()->isSignedIntegerType();
   }
 
-  if (const ExtIntType *IT = dyn_cast<ExtIntType>(CanonicalType))
+  if (const auto *IT = dyn_cast<BitIntType>(CanonicalType))
     return IT->isSigned();
-
+  if (const auto *IT = dyn_cast<DependentBitIntType>(CanonicalType))
+    return IT->isSigned();
 
   return false;
 }
@@ -2065,7 +2068,9 @@ bool Type::isUnsignedIntegerType() const {
       return ET->getDecl()->getIntegerType()->isUnsignedIntegerType();
   }
 
-  if (const ExtIntType *IT = dyn_cast<ExtIntType>(CanonicalType))
+  if (const auto *IT = dyn_cast<BitIntType>(CanonicalType))
+    return IT->isUnsigned();
+  if (const auto *IT = dyn_cast<DependentBitIntType>(CanonicalType))
     return IT->isUnsigned();
 
   return false;
@@ -2082,7 +2087,9 @@ bool Type::isUnsignedIntegerOrEnumerationType() const {
       return ET->getDecl()->getIntegerType()->isUnsignedIntegerType();
   }
 
-  if (const ExtIntType *IT = dyn_cast<ExtIntType>(CanonicalType))
+  if (const auto *IT = dyn_cast<BitIntType>(CanonicalType))
+    return IT->isUnsigned();
+  if (const auto *IT = dyn_cast<DependentBitIntType>(CanonicalType))
     return IT->isUnsigned();
 
   return false;
@@ -2124,7 +2131,7 @@ bool Type::isRealType() const {
            BT->getKind() <= BuiltinType::Ibm128;
   if (const auto *ET = dyn_cast<EnumType>(CanonicalType))
       return ET->getDecl()->isComplete() && !ET->getDecl()->isScoped();
-  return isExtIntType();
+  return isBitIntType();
 }
 
 bool Type::isArithmeticType() const {
@@ -2140,7 +2147,7 @@ bool Type::isArithmeticType() const {
     // false for scoped enumerations since that will disable any
     // unwanted implicit conversions.
     return !ET->getDecl()->isScoped() && ET->getDecl()->isComplete();
-  return isa<ComplexType>(CanonicalType) || isExtIntType();
+  return isa<ComplexType>(CanonicalType) || isBitIntType();
 }
 
 Type::ScalarTypeKind Type::getScalarTypeKind() const {
@@ -2169,7 +2176,7 @@ Type::ScalarTypeKind Type::getScalarTypeKind() const {
     if (CT->getElementType()->isRealFloatingType())
       return STK_FloatingComplex;
     return STK_IntegralComplex;
-  } else if (isExtIntType()) {
+  } else if (isBitIntType()) {
     return STK_Integral;
   }
 
@@ -2376,7 +2383,7 @@ bool QualType::isCXX98PODType(const ASTContext &Context) const {
   case Type::MemberPointer:
   case Type::Vector:
   case Type::ExtVector:
-  case Type::ExtInt:
+  case Type::BitInt:
     return true;
 
   case Type::Enum:
@@ -3846,7 +3853,7 @@ static CachedProperties computeCachedProperties(const Type *T) {
     // here in error recovery.
     return CachedProperties(ExternalLinkage, false);
 
-  case Type::ExtInt:
+  case Type::BitInt:
   case Type::Builtin:
     // C++ [basic.link]p8:
     //   A type is said to have linkage if and only if:
@@ -3946,7 +3953,7 @@ LinkageInfo LinkageComputer::computeTypeLinkageInfo(const Type *T) {
     assert(T->isInstantiationDependentType());
     return LinkageInfo::external();
 
-  case Type::ExtInt:
+  case Type::BitInt:
   case Type::Builtin:
     return LinkageInfo::external();
 
@@ -4166,8 +4173,8 @@ bool Type::canHaveNullability(bool ResultIfUnknown) const {
   case Type::ObjCInterface:
   case Type::Atomic:
   case Type::Pipe:
-  case Type::ExtInt:
-  case Type::DependentExtInt:
+  case Type::BitInt:
+  case Type::DependentBitInt:
     return false;
   }
   llvm_unreachable("bad type kind!");

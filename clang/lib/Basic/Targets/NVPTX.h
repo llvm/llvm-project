@@ -175,7 +175,7 @@ public:
     return CCCR_Warning;
   }
 
-  bool hasExtIntType() const override { return true; }
+  bool hasBitIntType() const override { return true; }
 };
 } // namespace targets
 } // namespace clang
