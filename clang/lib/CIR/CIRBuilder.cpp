@@ -612,6 +612,93 @@ public:
     HANDLEBINOP(Or)
 #undef HANDLEBINOP
 
+    mlir::Value buildCmp(const BinaryOperator *E) {
+      mlir::Value Result;
+      QualType LHSTy = E->getLHS()->getType();
+      QualType RHSTy = E->getRHS()->getType();
+
+      if (const MemberPointerType *MPT = LHSTy->getAs<MemberPointerType>()) {
+        assert(0 && "not implemented");
+      } else if (!LHSTy->isAnyComplexType() && !RHSTy->isAnyComplexType()) {
+        BinOpInfo BOInfo = buildBinOps(E);
+        mlir::Value LHS = BOInfo.LHS;
+        mlir::Value RHS = BOInfo.RHS;
+
+        if (LHSTy->isVectorType()) {
+          // Cannot handle any vector just yet.
+          assert(0 && "not implemented");
+          // If AltiVec, the comparison results in a numeric type, so we use
+          // intrinsics comparing vectors and giving 0 or 1 as a result
+          if (!E->getType()->isVectorType())
+            assert(0 && "not implemented");
+        }
+        if (BOInfo.isFixedPointOp()) {
+          assert(0 && "not implemented");
+        } else {
+          // TODO: when we add proper basic types to CIR we
+          // probably won't need to handle
+          // LHSTy->hasSignedIntegerRepresentation()
+
+          // Unsigned integers and pointers.
+          if (LHS.getType().isa<mlir::cir::PointerType>() ||
+              RHS.getType().isa<mlir::cir::PointerType>()) {
+            // TODO: Handle StrictVTablePointers and
+            // mayBeDynamicClass/invariant group.
+            assert(0 && "not implemented");
+          }
+
+          mlir::cir::CmpOpKind Kind;
+          switch (E->getOpcode()) {
+          case BO_LT:
+            Kind = mlir::cir::CmpOpKind::lt;
+            break;
+          case BO_GT:
+            Kind = mlir::cir::CmpOpKind::gt;
+            break;
+          case BO_LE:
+            Kind = mlir::cir::CmpOpKind::le;
+            break;
+          case BO_GE:
+            Kind = mlir::cir::CmpOpKind::ge;
+            break;
+          case BO_EQ:
+            Kind = mlir::cir::CmpOpKind::eq;
+            break;
+          case BO_NE:
+            Kind = mlir::cir::CmpOpKind::ne;
+            break;
+          default:
+            llvm_unreachable("unsupported");
+          }
+
+          return Builder.builder.create<mlir::cir::CmpOp>(
+              Builder.getLoc(BOInfo.Loc.getBegin()),
+              Builder.getCIRType(BOInfo.Ty), Kind, BOInfo.LHS, BOInfo.RHS);
+        }
+
+        // If this is a vector comparison, sign extend the result to the
+        // appropriate vector integer type and return it (don't convert to
+        // bool).
+        if (LHSTy->isVectorType())
+          assert(0 && "not implemented");
+      } else { // Complex Comparison: can only be an equality comparison.
+        assert(0 && "not implemented");
+      }
+
+      return buildScalarConversion(Result, Builder.astCtx.BoolTy, E->getType(),
+                                   E->getExprLoc());
+    }
+
+#define VISITCOMP(CODE)                                                        \
+  mlir::Value VisitBin##CODE(const BinaryOperator *E) { return buildCmp(E); }
+    VISITCOMP(LT)
+    VISITCOMP(GT)
+    VISITCOMP(LE)
+    VISITCOMP(GE)
+    VISITCOMP(EQ)
+    VISITCOMP(NE)
+#undef VISITCOMP
+
     mlir::Value VisitExpr(Expr *E) {
       // Crashing here for "ScalarExprClassName"? Please implement
       // VisitScalarExprClassName(...) to get this working.
