@@ -189,8 +189,6 @@ bool AllocatorMayReturnNull() {
 void SetAllocatorMayReturnNull(bool may_return_null) {
   atomic_store(&allocator_may_return_null, may_return_null,
                memory_order_relaxed);
-  if (SANITIZER_START_BACKGROUND_THREAD_IN_ASAN_INTERNAL)
-    MaybeStartBackgroudThread();
 }
 
 void PrintHintAllocatorCannotReturnNull() {
