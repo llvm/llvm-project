@@ -2680,7 +2680,10 @@ void coro::buildCoroutineFrame(Function &F, Shape &Shape) {
     }
   }
 
-  sinkLifetimeStartMarkers(F, Shape, Checker);
+  if (Shape.ABI != coro::ABI::Async && Shape.ABI != coro::ABI::Retcon &&
+      Shape.ABI != coro::ABI::RetconOnce)
+    sinkLifetimeStartMarkers(F, Shape, Checker);
+
   if (Shape.ABI != coro::ABI::Async || !Shape.CoroSuspends.empty())
     collectFrameAllocas(F, Shape, Checker, FrameData.Allocas);
   LLVM_DEBUG(dumpAllocas(FrameData.Allocas));
