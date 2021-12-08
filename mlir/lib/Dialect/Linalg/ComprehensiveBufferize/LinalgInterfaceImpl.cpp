@@ -388,6 +388,7 @@ LogicalResult mlir::linalg::comprehensive_bufferize::linalg_ext::
         std::function<Value(OpBuilder &, Location, OpOperand &)> rewriteFunc,
         SmallVector<Operation *> &newOps) {
   OpBuilder b(op->getContext());
+  const BufferizationOptions &options = state.getOptions();
 
   WalkResult status = op->walk([&](Operation *op) {
     for (OpOperand &operand : op->getOpOperands()) {
@@ -396,7 +397,7 @@ LogicalResult mlir::linalg::comprehensive_bufferize::linalg_ext::
         continue;
 
       SetVector<Value> maybeInitTensor =
-          findValueInReverseUseDefChain(operand.get(), [&](Value val) {
+          findValueInReverseUseDefChain(operand.get(), options, [&](Value val) {
             // Continue traversal until this function returns true.
             OpResult opResult = val.dyn_cast<OpResult>();
             if (!opResult)

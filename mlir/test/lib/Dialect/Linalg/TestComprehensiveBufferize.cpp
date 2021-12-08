@@ -85,6 +85,10 @@ struct TestComprehensiveFunctionBufferize
       *this, "analysis-fuzzer-seed",
       llvm::cl::desc("Analyze ops in random order with a given seed (fuzzer)"),
       llvm::cl::init(0)};
+  ListOption<std::string> dialectFilter{
+      *this, "dialect-filter",
+      llvm::cl::desc("Bufferize only ops from the specified dialects"),
+      llvm::cl::ZeroOrMore, llvm::cl::MiscFlags::CommaSeparated};
 };
 } // namespace
 
@@ -103,6 +107,12 @@ void TestComprehensiveFunctionBufferize::runOnFunction() {
   options.allowUnknownOps = allowUnknownOps;
   options.testAnalysisOnly = testAnalysisOnly;
   options.analysisFuzzerSeed = analysisFuzzerSeed;
+
+  if (dialectFilter.hasValue()) {
+    options.dialectFilter.emplace();
+    for (const std::string &dialectNamespace : dialectFilter)
+      options.dialectFilter->insert(dialectNamespace);
+  }
 
   Operation *op = getFunction().getOperation();
   if (failed(runComprehensiveBufferize(op, options)))
