@@ -392,4 +392,12 @@
 #  endif
 #endif
 
+#if defined(__thumb__) && defined(__linux__)
+// Workaround for
+// https://lab.llvm.org/buildbot/#/builders/clang-thumbv7-full-2stage
+#  define SANITIZER_START_BACKGROUND_THREAD_IN_ASAN_INTERNAL 1
+#else
+#  define SANITIZER_START_BACKGROUND_THREAD_IN_ASAN_INTERNAL 0
+#endif
+
 #endif // SANITIZER_PLATFORM_H

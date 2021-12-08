@@ -934,12 +934,6 @@ void *internal_start_thread(void *(*func)(void*), void *arg);
 void internal_join_thread(void *th);
 void MaybeStartBackgroudThread();
 
-#if defined(__thumb__) && defined(__linux__)
-// Workaround for
-// https://lab.llvm.org/buildbot/#/builders/clang-thumbv7-full-2stage
-#  define START_BACKGROUND_THREAD_EARLY
-#endif
-
 // Make the compiler think that something is going on there.
 // Use this inside a loop that looks like memset/memcpy/etc to prevent the
 // compiler from recognising it and turning it into an actual call to
