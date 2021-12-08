@@ -505,7 +505,7 @@ static void MarkInvalidPCCb(uptr chunk, void *arg) {
     // it as reachable, as we can't properly report its allocation stack anyway.
     if (caller_pc == 0 || (param->skip_linker_allocations &&
                            GetLinker()->containsAddress(caller_pc))) {
-      m.set_tag(kReachable);
+      m.set_tag(kIgnored);
       param->frontier->push_back(chunk);
     }
   }
