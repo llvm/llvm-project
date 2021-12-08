@@ -1308,8 +1308,10 @@ getMachoBuildVersionPlatformType(const Triple &Target) {
   llvm_unreachable("unexpected OS type");
 }
 
-void MCStreamer::emitVersionForTarget(const Triple &Target,
-                                      const VersionTuple &SDKVersion) {
+void MCStreamer::emitVersionForTarget(
+    const Triple &Target, const VersionTuple &SDKVersion,
+    const Triple *DarwinTargetVariantTriple,
+    const VersionTuple &DarwinTargetVariantSDKVersion) {
   if (!Target.isOSBinFormatMachO() || !Target.isOSDarwin())
     return;
   // Do we even know the version?
@@ -1336,13 +1338,45 @@ void MCStreamer::emitVersionForTarget(const Triple &Target,
   auto LinkedTargetVersion =
       targetVersionOrMinimumSupportedOSVersion(Target, Version);
   auto BuildVersionOSVersion = getMachoBuildVersionSupportedOS(Target);
+  bool ShouldEmitBuildVersion = false;
   if (BuildVersionOSVersion.empty() ||
-      LinkedTargetVersion >= BuildVersionOSVersion)
-    return emitBuildVersion(getMachoBuildVersionPlatformType(Target),
-                            LinkedTargetVersion.getMajor(),
-                            LinkedTargetVersion.getMinor().getValueOr(0),
-                            LinkedTargetVersion.getSubminor().getValueOr(0),
-                            SDKVersion);
+      LinkedTargetVersion >= BuildVersionOSVersion) {
+    if (Target.isMacCatalystEnvironment() && DarwinTargetVariantTriple &&
+        DarwinTargetVariantTriple->isMacOSX()) {
+      emitVersionForTarget(*DarwinTargetVariantTriple,
+                           DarwinTargetVariantSDKVersion,
+                           /*TargetVariantTriple=*/nullptr,
+                           /*TargetVariantSDKVersion=*/VersionTuple());
+      emitDarwinTargetVariantBuildVersion(
+          getMachoBuildVersionPlatformType(Target),
+          LinkedTargetVersion.getMajor(),
+          LinkedTargetVersion.getMinor().getValueOr(0),
+          LinkedTargetVersion.getSubminor().getValueOr(0), SDKVersion);
+      return;
+    }
+    emitBuildVersion(getMachoBuildVersionPlatformType(Target),
+                     LinkedTargetVersion.getMajor(),
+                     LinkedTargetVersion.getMinor().getValueOr(0),
+                     LinkedTargetVersion.getSubminor().getValueOr(0),
+                     SDKVersion);
+    ShouldEmitBuildVersion = true;
+  }
+
+  if (const Triple *TVT = DarwinTargetVariantTriple) {
+    if (Target.isMacOSX() && TVT->isMacCatalystEnvironment()) {
+      auto TVLinkedTargetVersion =
+          targetVersionOrMinimumSupportedOSVersion(*TVT, TVT->getiOSVersion());
+      emitDarwinTargetVariantBuildVersion(
+          getMachoBuildVersionPlatformType(*TVT),
+          TVLinkedTargetVersion.getMajor(),
+          TVLinkedTargetVersion.getMinor().getValueOr(0),
+          TVLinkedTargetVersion.getSubminor().getValueOr(0),
+          DarwinTargetVariantSDKVersion);
+    }
+  }
+
+  if (ShouldEmitBuildVersion)
+    return;
 
   emitVersionMin(getMachoVersionMinLoadCommandType(Target),
                  LinkedTargetVersion.getMajor(),

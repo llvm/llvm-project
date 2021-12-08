@@ -779,6 +779,17 @@ uint64_t MachObjectWriter::writeObject(MCAssembler &Asm,
       LoadCommandsSize += sizeof(MachO::version_min_command);
   }
 
+  const MCAssembler::VersionInfoType &TargetVariantVersionInfo =
+      Layout.getAssembler().getDarwinTargetVariantVersionInfo();
+
+  // Add the target variant version info load command size, if used.
+  if (TargetVariantVersionInfo.Major != 0) {
+    ++NumLoadCommands;
+    assert(TargetVariantVersionInfo.EmitBuildVersion &&
+           "target variant should use build version");
+    LoadCommandsSize += sizeof(MachO::build_version_command);
+  }
+
   // Add the data-in-code load command size, if used.
   unsigned NumDataRegions = Asm.getDataRegions().size();
   if (NumDataRegions) {
@@ -862,38 +873,43 @@ uint64_t MachObjectWriter::writeObject(MCAssembler &Asm,
   }
 
   // Write out the deployment target information, if it's available.
-  if (VersionInfo.Major != 0) {
-    auto EncodeVersion = [](VersionTuple V) -> uint32_t {
-      assert(!V.empty() && "empty version");
-      unsigned Update = V.getSubminor() ? *V.getSubminor() : 0;
-      unsigned Minor = V.getMinor() ? *V.getMinor() : 0;
-      assert(Update < 256 && "unencodable update target version");
-      assert(Minor < 256 && "unencodable minor target version");
-      assert(V.getMajor() < 65536 && "unencodable major target version");
-      return Update | (Minor << 8) | (V.getMajor() << 16);
-    };
-    uint32_t EncodedVersion = EncodeVersion(
-        VersionTuple(VersionInfo.Major, VersionInfo.Minor, VersionInfo.Update));
-    uint32_t SDKVersion = !VersionInfo.SDKVersion.empty()
-                              ? EncodeVersion(VersionInfo.SDKVersion)
-                              : 0;
-    if (VersionInfo.EmitBuildVersion) {
-      // FIXME: Currently empty tools. Add clang version in the future.
-      W.write<uint32_t>(MachO::LC_BUILD_VERSION);
-      W.write<uint32_t>(sizeof(MachO::build_version_command));
-      W.write<uint32_t>(VersionInfo.TypeOrPlatform.Platform);
-      W.write<uint32_t>(EncodedVersion);
-      W.write<uint32_t>(SDKVersion);
-      W.write<uint32_t>(0);         // Empty tools list.
-    } else {
-      MachO::LoadCommandType LCType
-        = getLCFromMCVM(VersionInfo.TypeOrPlatform.Type);
-      W.write<uint32_t>(LCType);
-      W.write<uint32_t>(sizeof(MachO::version_min_command));
-      W.write<uint32_t>(EncodedVersion);
-      W.write<uint32_t>(SDKVersion);
-    }
-  }
+  auto EmitDeploymentTargetVersion =
+      [&](const MCAssembler::VersionInfoType &VersionInfo) {
+        auto EncodeVersion = [](VersionTuple V) -> uint32_t {
+          assert(!V.empty() && "empty version");
+          unsigned Update = V.getSubminor() ? *V.getSubminor() : 0;
+          unsigned Minor = V.getMinor() ? *V.getMinor() : 0;
+          assert(Update < 256 && "unencodable update target version");
+          assert(Minor < 256 && "unencodable minor target version");
+          assert(V.getMajor() < 65536 && "unencodable major target version");
+          return Update | (Minor << 8) | (V.getMajor() << 16);
+        };
+        uint32_t EncodedVersion = EncodeVersion(VersionTuple(
+            VersionInfo.Major, VersionInfo.Minor, VersionInfo.Update));
+        uint32_t SDKVersion = !VersionInfo.SDKVersion.empty()
+                                  ? EncodeVersion(VersionInfo.SDKVersion)
+                                  : 0;
+        if (VersionInfo.EmitBuildVersion) {
+          // FIXME: Currently empty tools. Add clang version in the future.
+          W.write<uint32_t>(MachO::LC_BUILD_VERSION);
+          W.write<uint32_t>(sizeof(MachO::build_version_command));
+          W.write<uint32_t>(VersionInfo.TypeOrPlatform.Platform);
+          W.write<uint32_t>(EncodedVersion);
+          W.write<uint32_t>(SDKVersion);
+          W.write<uint32_t>(0); // Empty tools list.
+        } else {
+          MachO::LoadCommandType LCType =
+              getLCFromMCVM(VersionInfo.TypeOrPlatform.Type);
+          W.write<uint32_t>(LCType);
+          W.write<uint32_t>(sizeof(MachO::version_min_command));
+          W.write<uint32_t>(EncodedVersion);
+          W.write<uint32_t>(SDKVersion);
+        }
+      };
+  if (VersionInfo.Major != 0)
+    EmitDeploymentTargetVersion(VersionInfo);
+  if (TargetVariantVersionInfo.Major != 0)
+    EmitDeploymentTargetVersion(TargetVariantVersionInfo);
 
   // Write the data-in-code load command, if used.
   uint64_t DataInCodeTableEnd = RelocTableEnd + NumDataRegions * 8;

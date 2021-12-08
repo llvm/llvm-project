@@ -496,8 +496,16 @@ public:
                                 unsigned Minor, unsigned Update,
                                 VersionTuple SDKVersion) {}
 
+  virtual void emitDarwinTargetVariantBuildVersion(unsigned Platform,
+                                                   unsigned Major,
+                                                   unsigned Minor,
+                                                   unsigned Update,
+                                                   VersionTuple SDKVersion) {}
+
   void emitVersionForTarget(const Triple &Target,
-                            const VersionTuple &SDKVersion);
+                            const VersionTuple &SDKVersion,
+                            const Triple *DarwinTargetVariantTriple,
+                            const VersionTuple &DarwinTargetVariantSDKVersion);
 
   /// Note in the output that the specified \p Func is a Thumb mode
   /// function (ARM target only).

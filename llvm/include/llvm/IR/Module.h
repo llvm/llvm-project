@@ -934,6 +934,17 @@ public:
   /// Set the partial sample profile ratio in the profile summary module flag,
   /// if applicable.
   void setPartialSampleProfileRatio(const ModuleSummaryIndex &Index);
+
+  /// Get the target variant triple which is a string describing a variant of
+  /// the target host platform. For example, Mac Catalyst can be a variant
+  /// target triple for a macOS target.
+  /// @returns a string containing the target variant triple.
+  StringRef getDarwinTargetVariantTriple() const;
+
+  /// Get the target variant version build SDK version metadata.
+  ///
+  /// An empty version is returned if no such metadata is attached.
+  VersionTuple getDarwinTargetVariantSDKVersion() const;
 };
 
 /// Given "llvm.used" or "llvm.compiler.used" as a global name, collect the
