@@ -227,6 +227,7 @@ if (libcxx_enable_shared) {
       ]
     }
     sources = cxx_sources
+    include_dirs = [ "." ]
     deps = [
       "//compiler-rt/lib/builtins",
       "//libcxx/include",
@@ -270,6 +271,7 @@ if (libcxx_enable_static) {
     complete_static_lib = true
     configs -= [ "//llvm/utils/gn/build:thin_archive" ]
     sources = cxx_sources
+    include_dirs = [ "." ]
     if (libcxx_hermetic_static_library) {
       cflags = [ "-fvisibility=hidden" ]
       if (libcxx_enable_new_delete_definitions) {
