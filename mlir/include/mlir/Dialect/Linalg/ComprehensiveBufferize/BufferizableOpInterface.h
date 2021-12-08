@@ -71,6 +71,8 @@ struct PostAnalysisStep {
                             SmallVector<Operation *> &newOps) = 0;
 };
 
+using PostAnalysisStepList = std::vector<std::unique_ptr<PostAnalysisStep>>;
+
 /// Options for ComprehensiveBufferize.
 struct BufferizationOptions {
   BufferizationOptions();
@@ -107,7 +109,7 @@ struct BufferizationOptions {
   bool testAnalysisOnly = false;
 
   /// Registered post analysis steps.
-  std::vector<std::unique_ptr<PostAnalysisStep>> postAnalysisSteps;
+  PostAnalysisStepList postAnalysisSteps;
 };
 
 /// Specify fine-grain relationship between buffers to enable more analysis.
