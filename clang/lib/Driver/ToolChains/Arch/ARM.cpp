@@ -159,14 +159,15 @@ bool arm::isHardTPSupported(const llvm::Triple &Triple) {
 
 // Select mode for reading thread pointer (-mtp=soft/cp15).
 arm::ReadTPMode arm::getReadTPMode(const Driver &D, const ArgList &Args,
-                                   const llvm::Triple &Triple) {
+                                   const llvm::Triple &Triple, bool ForAS) {
   if (Arg *A = Args.getLastArg(options::OPT_mtp_mode_EQ)) {
     arm::ReadTPMode ThreadPointer =
         llvm::StringSwitch<arm::ReadTPMode>(A->getValue())
             .Case("cp15", ReadTPMode::Cp15)
             .Case("soft", ReadTPMode::Soft)
             .Default(ReadTPMode::Invalid);
-    if (ThreadPointer == ReadTPMode::Cp15 && !isHardTPSupported(Triple)) {
+    if (ThreadPointer == ReadTPMode::Cp15 && !isHardTPSupported(Triple) &&
+        !ForAS) {
       D.Diag(diag::err_target_unsupported_tp_hard) << Triple.getArchName();
       return ReadTPMode::Invalid;
     }
@@ -488,7 +489,7 @@ void arm::getARMTargetFeatures(const Driver &D, const llvm::Triple &Triple,
     }
   }
 
-  if (getReadTPMode(D, Args, Triple) == ReadTPMode::Cp15)
+  if (getReadTPMode(D, Args, Triple, ForAS) == ReadTPMode::Cp15)
     Features.push_back("+read-tp-hard");
 
   const Arg *ArchArg = Args.getLastArg(options::OPT_march_EQ);
