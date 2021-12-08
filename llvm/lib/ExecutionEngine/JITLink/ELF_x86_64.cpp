@@ -241,7 +241,9 @@ private:
     }
     case Branch32: {
       Kind = x86_64::BranchPCRel32;
-      Addend = 0;
+      // BranchPCRel32 implicitly handles the '-4' PC adjustment, so we have to
+      // adjust the addend by '+4' to compensate.
+      Addend += 4;
       break;
     }
     }

@@ -39,10 +39,12 @@ named_func:
 
         .size   named_func, .-named_func
 
-# Check R_X86_64_PLT32 handling with a call to a local function. This produces a
-# Branch32 edge that is resolved like a regular PCRel32 (no PLT entry created).
+# Check R_X86_64_PLT32 handling with a call to a local function in the text
+# section. This produces a Branch32 edge that is resolved like a regular
+# PCRel32 (no PLT entry created).
 #
-# jitlink-check: decode_operand(test_call_local, 0) = named_func - next_pc(test_call_local)
+# jitlink-check: decode_operand(test_call_local, 0) = \
+# jitlink-check:   named_func - next_pc(test_call_local)
         .globl  test_call_local
         .p2align       4, 0x90
         .type   test_call_local,@function
@@ -50,6 +52,22 @@ test_call_local:
         callq   named_func
 
         .size   test_call_local, .-test_call_local
+
+# Check R_X86_64_PLT32 handling with a call to a local linkage function in a
+# different text section and at a non-zero offset. This produces a Branch32 edge
+# that is resolved like a regular PCRel32 (no PLT entry created). The non-zero
+# offset requires us to handle addends for branch relocations correctly.
+#
+# jitlink-check: decode_operand(test_call_alt_sec_at_offset, 0) = \
+# jitlink-check:   (section_addr(elf_sm_pic_reloc.o, .text.alt) + 16) - \
+# jitlink-check:   next_pc(test_call_alt_sec_at_offset)
+        .globl  test_call_alt_sec_at_offset
+        .p2align       4, 0x90
+        .type   test_call_alt_sec_at_offset,@function
+test_call_alt_sec_at_offset:
+        callq   named_func_alt_sec_at_offset
+
+        .size   test_call_alt_sec_at_offset, .-test_call_alt_sec_at_offset
 
 # Check R_X86_64_PLT32 handling with a call to an external via PLT. This
 # produces a Branch32ToStub edge, because externals are not defined locally.
@@ -135,6 +153,17 @@ named_data:
 bss_variable:
 	.long	0
 	.size	bss_variable, 4
+
+# Named functions in a separate section.
+	.section	.text.alt,"ax",@progbits
+# .byte plus alignment of 16 should put named_func_alt_sec_at_offset at offset
+# 16 within .text.alt.
+	.byte   7
+	.p2align	4, 0x90
+	.type	named_func_alt_sec_at_offset,@function
+named_func_alt_sec_at_offset:
+	retq
+	.size	named_func_alt_sec_at_offset, .-named_func_alt_sec_at_offset
 
 # Constant pool entry with type STT_NOTYPE.
         .section        .rodata.cst8,"aM",@progbits,8
