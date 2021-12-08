@@ -1337,6 +1337,9 @@ unsigned ContinuationIndenter::moveStateToNextToken(LineState &State,
 void ContinuationIndenter::moveStatePastFakeLParens(LineState &State,
                                                     bool Newline) {
   const FormatToken &Current = *State.NextToken;
+  if (Current.FakeLParens.empty())
+    return;
+
   const FormatToken *Previous = Current.getPreviousNonComment();
 
   // Don't add extra indentation for the first fake parenthesis after
