@@ -473,11 +473,9 @@ Instruction *InstCombinerImpl::visitExtractElementInst(ExtractElementInst &EI) {
 
   if (auto *I = dyn_cast<Instruction>(SrcVec)) {
     if (auto *IE = dyn_cast<InsertElementInst>(I)) {
-      // Extracting the inserted element?
-      if (IE->getOperand(2) == Index)
-        return replaceInstUsesWith(EI, IE->getOperand(1));
-      // If the inserted and extracted elements are constants, they must not
-      // be the same value, extract from the pre-inserted value instead.
+      // instsimplify already handled the case where the indices are constants
+      // and equal by value, if both are constants, they must not be the same
+      // value, extract from the pre-inserted value instead.
       if (isa<Constant>(IE->getOperand(2)) && IndexC)
         return replaceOperand(EI, 0, IE->getOperand(0));
     } else if (auto *GEP = dyn_cast<GetElementPtrInst>(I)) {
@@ -497,30 +495,27 @@ Instruction *InstCombinerImpl::visitExtractElementInst(ExtractElementInst &EI) {
             llvm::count_if(GEP->operands(), [](const Value *V) {
               return isa<VectorType>(V->getType());
             });
-        if (VectorOps > 1)
-          return nullptr;
-        assert(VectorOps == 1 && "Expected exactly one vector GEP operand!");
+        if (VectorOps == 1) {
+          Value *NewPtr = GEP->getPointerOperand();
+          if (isa<VectorType>(NewPtr->getType()))
+            NewPtr = Builder.CreateExtractElement(NewPtr, IndexC);
 
-        Value *NewPtr = GEP->getPointerOperand();
-        if (isa<VectorType>(NewPtr->getType()))
-          NewPtr = Builder.CreateExtractElement(NewPtr, IndexC);
+          SmallVector<Value *> NewOps;
+          for (unsigned I = 1; I != GEP->getNumOperands(); ++I) {
+            Value *Op = GEP->getOperand(I);
+            if (isa<VectorType>(Op->getType()))
+              NewOps.push_back(Builder.CreateExtractElement(Op, IndexC));
+            else
+              NewOps.push_back(Op);
+          }
 
-        SmallVector<Value *> NewOps;
-        for (unsigned I = 1; I != GEP->getNumOperands(); ++I) {
-          Value *Op = GEP->getOperand(I);
-          if (isa<VectorType>(Op->getType()))
-            NewOps.push_back(Builder.CreateExtractElement(Op, IndexC));
-          else
-            NewOps.push_back(Op);
+          GetElementPtrInst *NewGEP = GetElementPtrInst::Create(
+              cast<PointerType>(NewPtr->getType())->getElementType(), NewPtr,
+              NewOps);
+          NewGEP->setIsInBounds(GEP->isInBounds());
+          return NewGEP;
         }
-
-        GetElementPtrInst *NewGEP = GetElementPtrInst::Create(
-            cast<PointerType>(NewPtr->getType())->getElementType(), NewPtr,
-            NewOps);
-        NewGEP->setIsInBounds(GEP->isInBounds());
-        return NewGEP;
       }
-      return nullptr;
     } else if (auto *SVI = dyn_cast<ShuffleVectorInst>(I)) {
       // If this is extracting an element from a shufflevector, figure out where
       // it came from and extract from the appropriate input element instead.
