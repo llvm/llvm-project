@@ -506,7 +506,7 @@ template <size_t Size> struct Builtin {
 
   static void copy(char *__restrict dst, const char *__restrict src) {
 #if LLVM_LIBC_HAVE_MEMORY_SANITIZER || LLVM_LIBC_HAVE_ADDRESS_SANITIZER
-    ForLoopCopy(dst, src);
+    for_loop_copy(dst, src);
 #elif __has_builtin(__builtin_memcpy_inline)
     // __builtin_memcpy_inline guarantees to never call external functions.
     // Unfortunately it is not widely available.
@@ -514,7 +514,7 @@ template <size_t Size> struct Builtin {
 #elif __has_builtin(__builtin_memcpy)
     __builtin_memcpy(dst, src, SIZE);
 #else
-    ForLoopCopy(dst, src);
+    for_loop_copy(dst, src);
 #endif
   }
 
