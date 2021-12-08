@@ -1090,14 +1090,15 @@ define <vscale x 2 x i8> @sdiv_by_minSigned_nxv2i8(<vscale x 2 x i8> %x) {
 
 define i32 @sdiv_constant_dividend_select_of_constants_divisor(i1 %b) {
 ; CHECK-LABEL: @sdiv_constant_dividend_select_of_constants_divisor(
-; CHECK-NEXT:    [[S:%.*]] = select i1 [[B:%.*]], i32 12, i32 -3
-; CHECK-NEXT:    [[R:%.*]] = sdiv i32 42, [[S]]
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[B:%.*]], i32 3, i32 -14
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %s = select i1 %b, i32 12, i32 -3
   %r = sdiv i32 42, %s
   ret i32 %r
 }
+
+; TODO: sdiv should still be replaced by select.
 
 define i32 @sdiv_constant_dividend_select_of_constants_divisor_use(i1 %b) {
 ; CHECK-LABEL: @sdiv_constant_dividend_select_of_constants_divisor_use(
@@ -1121,6 +1122,8 @@ define i32 @sdiv_constant_dividend_select_of_constants_divisor_0_arm(i1 %b) {
   ret i32 %r
 }
 
+; negative test - not safe to speculate div with variable divisor
+
 define i32 @sdiv_constant_dividend_select_divisor1(i1 %b, i32 %x) {
 ; CHECK-LABEL: @sdiv_constant_dividend_select_divisor1(
 ; CHECK-NEXT:    [[S:%.*]] = select i1 [[B:%.*]], i32 [[X:%.*]], i32 -3
@@ -1131,6 +1134,8 @@ define i32 @sdiv_constant_dividend_select_divisor1(i1 %b, i32 %x) {
   %r = sdiv i32 42, %s
   ret i32 %r
 }
+
+; negative test - not safe to speculate div with variable divisor
 
 define i32 @sdiv_constant_dividend_select_divisor2(i1 %b, i32 %x) {
 ; CHECK-LABEL: @sdiv_constant_dividend_select_divisor2(
@@ -1145,14 +1150,15 @@ define i32 @sdiv_constant_dividend_select_divisor2(i1 %b, i32 %x) {
 
 define <2 x i8> @sdiv_constant_dividend_select_of_constants_divisor_vec(i1 %b) {
 ; CHECK-LABEL: @sdiv_constant_dividend_select_of_constants_divisor_vec(
-; CHECK-NEXT:    [[S:%.*]] = select i1 [[B:%.*]], <2 x i8> <i8 12, i8 -5>, <2 x i8> <i8 -4, i8 4>
-; CHECK-NEXT:    [[R:%.*]] = sdiv <2 x i8> <i8 42, i8 -42>, [[S]]
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[B:%.*]], <2 x i8> <i8 3, i8 8>, <2 x i8> <i8 -10, i8 -10>
 ; CHECK-NEXT:    ret <2 x i8> [[R]]
 ;
   %s = select i1 %b, <2 x i8> <i8 12, i8 -5>, <2 x i8> <i8 -4, i8 4>
   %r = sdiv <2 x i8> <i8 42, i8 -42>, %s
   ret <2 x i8> %r
 }
+
+; Div-by-0 element is immediate UB, so select is simplified.
 
 define <2 x i8> @sdiv_constant_dividend_select_of_constants_divisor_vec_ub1(i1 %b) {
 ; CHECK-LABEL: @sdiv_constant_dividend_select_of_constants_divisor_vec_ub1(
@@ -1163,16 +1169,19 @@ define <2 x i8> @sdiv_constant_dividend_select_of_constants_divisor_vec_ub1(i1 %
   ret <2 x i8> %r
 }
 
+; SMIN / -1 element is poison.
+
 define <2 x i8> @sdiv_constant_dividend_select_of_constants_divisor_vec_ub2(i1 %b) {
 ; CHECK-LABEL: @sdiv_constant_dividend_select_of_constants_divisor_vec_ub2(
-; CHECK-NEXT:    [[S:%.*]] = select i1 [[B:%.*]], <2 x i8> <i8 12, i8 -5>, <2 x i8> <i8 -4, i8 -1>
-; CHECK-NEXT:    [[R:%.*]] = sdiv <2 x i8> <i8 42, i8 -128>, [[S]]
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[B:%.*]], <2 x i8> <i8 3, i8 25>, <2 x i8> <i8 -10, i8 poison>
 ; CHECK-NEXT:    ret <2 x i8> [[R]]
 ;
   %s = select i1 %b, <2 x i8> <i8 12, i8 -5>, <2 x i8> <i8 -4, i8 -1>
   %r = sdiv <2 x i8> <i8 42, i8 -128>, %s
   ret <2 x i8> %r
 }
+
+; negative test - must have constant dividend
 
 define i32 @sdiv_select_of_constants_divisor(i1 %b, i32 %x) {
 ; CHECK-LABEL: @sdiv_select_of_constants_divisor(
@@ -1187,14 +1196,15 @@ define i32 @sdiv_select_of_constants_divisor(i1 %b, i32 %x) {
 
 define i32 @udiv_constant_dividend_select_of_constants_divisor(i1 %b) {
 ; CHECK-LABEL: @udiv_constant_dividend_select_of_constants_divisor(
-; CHECK-NEXT:    [[S:%.*]] = select i1 [[B:%.*]], i32 12, i32 -3
-; CHECK-NEXT:    [[R:%.*]] = udiv i32 42, [[S]]
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[B:%.*]], i32 3, i32 0
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %s = select i1 %b, i32 12, i32 -3
   %r = udiv i32 42, %s
   ret i32 %r
 }
+
+; TODO: udiv should still be replaced by select.
 
 define i32 @udiv_constant_dividend_select_of_constants_divisor_use(i1 %b) {
 ; CHECK-LABEL: @udiv_constant_dividend_select_of_constants_divisor_use(
@@ -1209,6 +1219,8 @@ define i32 @udiv_constant_dividend_select_of_constants_divisor_use(i1 %b) {
   ret i32 %r
 }
 
+; Div-by-0 is immediate UB, so select is simplified.
+
 define i32 @udiv_constant_dividend_select_of_constants_divisor_0_arm(i1 %b) {
 ; CHECK-LABEL: @udiv_constant_dividend_select_of_constants_divisor_0_arm(
 ; CHECK-NEXT:    ret i32 3
@@ -1217,6 +1229,8 @@ define i32 @udiv_constant_dividend_select_of_constants_divisor_0_arm(i1 %b) {
   %r = udiv i32 42, %s
   ret i32 %r
 }
+
+; negative test - not safe to speculate div with variable divisor
 
 define i32 @udiv_constant_dividend_select_divisor1(i1 %b, i32 %x) {
 ; CHECK-LABEL: @udiv_constant_dividend_select_divisor1(
@@ -1228,6 +1242,8 @@ define i32 @udiv_constant_dividend_select_divisor1(i1 %b, i32 %x) {
   %r = udiv i32 42, %s
   ret i32 %r
 }
+
+; negative test - not safe to speculate div with variable divisor
 
 define i32 @udiv_constant_dividend_select_divisor2(i1 %b, i32 %x) {
 ; CHECK-LABEL: @udiv_constant_dividend_select_divisor2(
@@ -1242,14 +1258,15 @@ define i32 @udiv_constant_dividend_select_divisor2(i1 %b, i32 %x) {
 
 define <2 x i8> @udiv_constant_dividend_select_of_constants_divisor_vec(i1 %b) {
 ; CHECK-LABEL: @udiv_constant_dividend_select_of_constants_divisor_vec(
-; CHECK-NEXT:    [[S:%.*]] = select i1 [[B:%.*]], <2 x i8> <i8 12, i8 -5>, <2 x i8> <i8 -4, i8 4>
-; CHECK-NEXT:    [[R:%.*]] = udiv <2 x i8> <i8 42, i8 -42>, [[S]]
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[B:%.*]], <2 x i8> <i8 3, i8 0>, <2 x i8> <i8 0, i8 53>
 ; CHECK-NEXT:    ret <2 x i8> [[R]]
 ;
   %s = select i1 %b, <2 x i8> <i8 12, i8 -5>, <2 x i8> <i8 -4, i8 4>
   %r = udiv <2 x i8> <i8 42, i8 -42>, %s
   ret <2 x i8> %r
 }
+
+; Div-by-0 element is immediate UB, so select is simplified.
 
 define <2 x i8> @udiv_constant_dividend_select_of_constants_divisor_vec_ub1(i1 %b) {
 ; CHECK-LABEL: @udiv_constant_dividend_select_of_constants_divisor_vec_ub1(
@@ -1260,16 +1277,19 @@ define <2 x i8> @udiv_constant_dividend_select_of_constants_divisor_vec_ub1(i1 %
   ret <2 x i8> %r
 }
 
+; There's no unsigned equivalent to "SMIN / -1", so this is just the usual constant folding.
+
 define <2 x i8> @udiv_constant_dividend_select_of_constants_divisor_vec_ub2(i1 %b) {
 ; CHECK-LABEL: @udiv_constant_dividend_select_of_constants_divisor_vec_ub2(
-; CHECK-NEXT:    [[S:%.*]] = select i1 [[B:%.*]], <2 x i8> <i8 12, i8 -5>, <2 x i8> <i8 -4, i8 -1>
-; CHECK-NEXT:    [[R:%.*]] = udiv <2 x i8> <i8 42, i8 -128>, [[S]]
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[B:%.*]], <2 x i8> <i8 3, i8 0>, <2 x i8> zeroinitializer
 ; CHECK-NEXT:    ret <2 x i8> [[R]]
 ;
   %s = select i1 %b, <2 x i8> <i8 12, i8 -5>, <2 x i8> <i8 -4, i8 -1>
   %r = udiv <2 x i8> <i8 42, i8 -128>, %s
   ret <2 x i8> %r
 }
+
+; negative test - must have constant dividend
 
 define i32 @udiv_select_of_constants_divisor(i1 %b, i32 %x) {
 ; CHECK-LABEL: @udiv_select_of_constants_divisor(
