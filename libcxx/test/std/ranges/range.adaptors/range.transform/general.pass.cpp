@@ -41,13 +41,6 @@ auto toUpper(R range) {
   return std::ranges::transform_view(range, [](char c) { return std::toupper(c); });
 }
 
-unsigned badRandom() { return 42; }
-
-template<std::ranges::range R, class Fn = std::plus<std::iter_value_t<R>>>
-auto withRandom(R&& range, Fn func = Fn()) {
-  return std::ranges::transform_view(range, std::bind_front(func, badRandom()));
-}
-
 template<class E1, class E2, size_t N, class Join = std::plus<E1>>
 auto joinArrays(E1 (&a)[N], E2 (&b)[N], Join join = Join()) {
   return std::ranges::transform_view(a, [&a, &b, join](auto& x) {
@@ -56,12 +49,30 @@ auto joinArrays(E1 (&a)[N], E2 (&b)[N], Join join = Join()) {
   });
 }
 
+struct NonConstView : std::ranges::view_base {
+  explicit NonConstView(int *b, int *e) : b_(b), e_(e) {}
+  const int *begin() { return b_; }  // deliberately non-const
+  const int *end() { return e_; }    // deliberately non-const
+  const int *b_;
+  const int *e_;
+};
+
 int main(int, char**) {
   {
-    std::vector vec = {1, 2, 3, 4};
-    auto sortOfRandom = withRandom(vec);
-    std::vector check = {43, 44, 45, 46};
-    assert(std::equal(sortOfRandom.begin(), sortOfRandom.end(), check.begin(), check.end()));
+    std::vector<int> vec = {1, 2, 3, 4};
+    auto transformed = std::ranges::transform_view(vec, [](int x) { return x + 42; });
+    int expected[] = {43, 44, 45, 46};
+    assert(std::equal(transformed.begin(), transformed.end(), expected, expected + 4));
+    const auto& ct = transformed;
+    assert(std::equal(ct.begin(), ct.end(), expected, expected + 4));
+  }
+
+  {
+    // Test a view type that is not const-iterable.
+    int a[] = {1, 2, 3, 4};
+    auto transformed = NonConstView(a, a + 4) | std::views::transform([](int x) { return x + 42; });
+    int expected[4] = {43, 44, 45, 46};
+    assert(std::equal(transformed.begin(), transformed.end(), expected, expected + 4));
   }
 
   {
@@ -69,7 +80,7 @@ int main(int, char**) {
     int b[4] = {4, 3, 2, 1};
     auto out = joinArrays(a, b);
     int check[4] = {5, 5, 5, 5};
-    assert(std::equal(out.begin(), out.end(), check));
+    assert(std::equal(out.begin(), out.end(), check, check + 4));
   }
 
   {
