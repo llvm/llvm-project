@@ -238,9 +238,8 @@ static void initialize(TargetLibraryInfoImpl &TLI, const Triple &T,
     // e.g., x86_64-pc-windows-msvc18.
     bool hasPartialC99 = true;
     if (T.isKnownWindowsMSVCEnvironment()) {
-      unsigned Major, Minor, Micro;
-      T.getEnvironmentVersion(Major, Minor, Micro);
-      hasPartialC99 = (Major == 0 || Major >= 19);
+      VersionTuple Version = T.getEnvironmentVersion();
+      hasPartialC99 = (Version.getMajor() == 0 || Version.getMajor() >= 19);
     }
 
     // Latest targets support C89 math functions, in part.
