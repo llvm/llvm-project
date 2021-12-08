@@ -321,7 +321,7 @@ SystemZRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
   // See if the offset is in range, or if an equivalent instruction that
   // accepts the offset exists.
   unsigned Opcode = MI->getOpcode();
-  unsigned OpcodeForOffset = TII->getOpcodeForOffset(Opcode, Offset);
+  unsigned OpcodeForOffset = TII->getOpcodeForOffset(Opcode, Offset, &*MI);
   if (OpcodeForOffset) {
     if (OpcodeForOffset == SystemZ::LE &&
         MF.getSubtarget<SystemZSubtarget>().hasVector()) {

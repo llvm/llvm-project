@@ -309,8 +309,10 @@ public:
   // and the caller wants to perform that instruction's operation on an
   // address that has displacement Offset.  Return the opcode of a suitable
   // instruction (which might be Opcode itself) or 0 if no such instruction
-  // exists.
-  unsigned getOpcodeForOffset(unsigned Opcode, int64_t Offset) const;
+  // exists.  MI may be passed in order to allow examination of physical
+  // register operands (i.e. if a VR32/64 reg ended up as an FP or Vector reg).
+  unsigned getOpcodeForOffset(unsigned Opcode, int64_t Offset,
+                              const MachineInstr *MI = nullptr) const;
 
   // Return true if Opcode has a mapping in 12 <-> 20 bit displacements.
   bool hasDisplacementPairInsn(unsigned Opcode) const;
