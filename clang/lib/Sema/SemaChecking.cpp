@@ -2098,10 +2098,47 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
     break;
   }
 
-  case Builtin::BI__builtin_elementwise_abs:
-    if (SemaBuiltinElementwiseMathOneArg(TheCall))
+  // __builtin_elementwise_abs restricts the element type to signed integers or
+  // floating point types only.
+  case Builtin::BI__builtin_elementwise_abs: {
+    if (PrepareBuiltinElementwiseMathOneArgCall(TheCall))
       return ExprError();
+
+    QualType ArgTy = TheCall->getArg(0)->getType();
+    QualType EltTy = ArgTy;
+
+    if (auto *VecTy = EltTy->getAs<VectorType>())
+      EltTy = VecTy->getElementType();
+    if (EltTy->isUnsignedIntegerType()) {
+      Diag(TheCall->getArg(0)->getBeginLoc(),
+           diag::err_builtin_invalid_arg_type)
+          << 1 << /* signed integer or float ty*/ 3 << ArgTy;
+      return ExprError();
+    }
     break;
+  }
+
+  // __builtin_elementwise_ceil restricts the element type to floating point
+  // types only.
+  case Builtin::BI__builtin_elementwise_ceil: {
+    if (PrepareBuiltinElementwiseMathOneArgCall(TheCall))
+      return ExprError();
+
+    QualType ArgTy = TheCall->getArg(0)->getType();
+    QualType EltTy = ArgTy;
+
+    if (auto *VecTy = EltTy->getAs<VectorType>())
+      EltTy = VecTy->getElementType();
+    if (!EltTy->isFloatingType()) {
+      Diag(TheCall->getArg(0)->getBeginLoc(),
+           diag::err_builtin_invalid_arg_type)
+          << 1 << /* float ty*/ 5 << ArgTy;
+
+      return ExprError();
+    }
+    break;
+  }
+
   case Builtin::BI__builtin_elementwise_min:
   case Builtin::BI__builtin_elementwise_max:
     if (SemaBuiltinElementwiseMath(TheCall))
@@ -16697,26 +16734,19 @@ static bool checkMathBuiltinElementType(Sema &S, SourceLocation Loc,
   return false;
 }
 
-bool Sema::SemaBuiltinElementwiseMathOneArg(CallExpr *TheCall) {
+bool Sema::PrepareBuiltinElementwiseMathOneArgCall(CallExpr *TheCall) {
   if (checkArgCount(*this, TheCall, 1))
     return true;
 
   ExprResult A = UsualUnaryConversions(TheCall->getArg(0));
-  SourceLocation ArgLoc = TheCall->getArg(0)->getBeginLoc();
   if (A.isInvalid())
     return true;
 
   TheCall->setArg(0, A.get());
   QualType TyA = A.get()->getType();
-  if (checkMathBuiltinElementType(*this, ArgLoc, TyA))
-    return true;
 
-  QualType EltTy = TyA;
-  if (auto *VecTy = EltTy->getAs<VectorType>())
-    EltTy = VecTy->getElementType();
-  if (EltTy->isUnsignedIntegerType())
-    return Diag(ArgLoc, diag::err_builtin_invalid_arg_type)
-           << 1 << /*signed integer or float ty*/ 3 << TyA;
+  if (checkMathBuiltinElementType(*this, A.get()->getBeginLoc(), TyA))
+    return true;
 
   TheCall->setType(TyA);
   return false;

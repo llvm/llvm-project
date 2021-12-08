@@ -1262,11 +1262,6 @@ void InLineChangePrinter::registerCallbacks(PassInstrumentationCallbacks &PIC) {
 
 namespace {
 
-enum IRChangeDiffType { InBefore, InAfter, IsCommon, NumIRChangeDiffTypes };
-
-// Describe where a given element exists.
-std::string Colours[NumIRChangeDiffTypes];
-
 class DisplayNode;
 class DotCfgDiffDisplayGraph;
 
@@ -1274,19 +1269,19 @@ class DotCfgDiffDisplayGraph;
 class DisplayElement {
 public:
   // Is this in before, after, or both?
-  IRChangeDiffType getType() const { return Type; }
+  StringRef getColour() const { return Colour; }
 
 protected:
-  DisplayElement(IRChangeDiffType T) : Type(T) {}
-  const IRChangeDiffType Type;
+  DisplayElement(StringRef Colour) : Colour(Colour) {}
+  const StringRef Colour;
 };
 
 // An edge representing a transition between basic blocks in the
 // dot-cfg-changes graph.
 class DisplayEdge : public DisplayElement {
 public:
-  DisplayEdge(std::string V, DisplayNode &Node, IRChangeDiffType T)
-      : DisplayElement(T), Value(V), Node(Node) {}
+  DisplayEdge(std::string Value, DisplayNode &Node, StringRef Colour)
+      : DisplayElement(Colour), Value(Value), Node(Node) {}
   // The value on which the transition is made.
   std::string getValue() const { return Value; }
   // The node (representing a basic block) reached by this transition.
@@ -1302,8 +1297,8 @@ class DisplayNode : public DisplayElement {
 public:
   // \p C is the content for the node, \p T indicates the colour for the
   // outline of the node
-  DisplayNode(std::string C, IRChangeDiffType T)
-      : DisplayElement(T), Content(C) {}
+  DisplayNode(std::string Content, StringRef Colour)
+      : DisplayElement(Colour), Content(Content) {}
 
   // Iterator to the child nodes.  Required by GraphWriter.
   using ChildIterator = std::unordered_set<DisplayNode *>::const_iterator;
@@ -1315,13 +1310,13 @@ public:
   EdgeIterator edges_begin() const { return EdgePtrs.cbegin(); }
   EdgeIterator edges_end() const { return EdgePtrs.cend(); }
 
-  // Create an edge to \p Node on value \p V, with type \p T.
-  void createEdge(StringRef V, DisplayNode &Node, IRChangeDiffType T);
+  // Create an edge to \p Node on value \p Value, with colour \p Colour.
+  void createEdge(StringRef Value, DisplayNode &Node, StringRef Colour);
 
   // Return the content of this node.
   std::string getContent() const { return Content; }
 
-  // Return the type of the edge to node \p S.
+  // Return the edge to node \p S.
   const DisplayEdge &getEdge(const DisplayNode &To) const {
     assert(EdgeMap.find(&To) != EdgeMap.end() && "Expected to find edge.");
     return *EdgeMap.find(&To)->second;
@@ -1383,9 +1378,9 @@ public:
   }
 
   // Create a node.
-  void createNode(std::string C, IRChangeDiffType T) {
+  void createNode(std::string C, StringRef Colour) {
     assert(!NodeGenerationComplete && "Unexpected node creation");
-    Nodes.emplace_back(C, T);
+    Nodes.emplace_back(C, Colour);
   }
   // Return the node at index \p N to avoid problems with vectors reallocating.
   DisplayNode &getNode(unsigned N) {
@@ -1408,13 +1403,13 @@ public:
 
   // Return a string with colour information for Dot.  Required by GraphWriter.
   std::string getNodeAttributes(const DisplayNode &Node) const {
-    return attribute(Node.getType());
+    return attribute(Node.getColour());
   }
 
   // Return a string with colour information for Dot.  Required by GraphWriter.
   std::string getEdgeColorAttr(const DisplayNode &From,
                                const DisplayNode &To) const {
-    return attribute(From.getEdge(To).getType());
+    return attribute(From.getEdge(To).getColour());
   }
 
   // Get the starting basic block.  Required by GraphWriter.
@@ -1425,7 +1420,9 @@ public:
 
 protected:
   // Return the string containing the colour to use as a Dot attribute.
-  std::string attribute(IRChangeDiffType T) const;
+  std::string attribute(StringRef Colour) const {
+    return "color=" + Colour.str();
+  }
 
   bool NodeGenerationComplete = false;
   const std::string GraphName;
@@ -1434,10 +1431,10 @@ protected:
   DisplayNode *EntryNode = nullptr;
 };
 
-void DisplayNode::createEdge(StringRef V, DisplayNode &Node,
-                             IRChangeDiffType T) {
+void DisplayNode::createEdge(StringRef Value, DisplayNode &Node,
+                             StringRef Colour) {
   assert(!AllEdgesCreated && "Expected to be able to still create edges.");
-  Edges.emplace_back(V.str(), Node, T);
+  Edges.emplace_back(Value.str(), Node, Colour);
   Children.insert(&Node);
 }
 
@@ -1458,13 +1455,14 @@ public:
   DotCfgDiffNode() = delete;
 
   // Create a node in Dot difference graph \p G representing the basic block
-  // represented by \p BD with type \p T (where it exists).
+  // represented by \p BD with colour \p Colour (where it exists).
   DotCfgDiffNode(DotCfgDiff &G, unsigned N, const BlockDataT<DCData> &BD,
-                 IRChangeDiffType T)
-      : Graph(G), N(N), Data{&BD, nullptr}, Type(T) {}
+                 StringRef Colour)
+      : Graph(G), N(N), Data{&BD, nullptr}, Colour(Colour) {}
   DotCfgDiffNode(const DotCfgDiffNode &DN)
-      : Graph(DN.Graph), N(DN.N), Data{DN.Data[0], DN.Data[1]}, Type(DN.Type),
-        EdgesMap(DN.EdgesMap), Children(DN.Children), Edges(DN.Edges) {}
+      : Graph(DN.Graph), N(DN.N), Data{DN.Data[0], DN.Data[1]},
+        Colour(DN.Colour), EdgesMap(DN.EdgesMap), Children(DN.Children),
+        Edges(DN.Edges) {}
 
   unsigned getIndex() const { return N; }
 
@@ -1473,29 +1471,29 @@ public:
     assert(Data[0] && "Expected Data[0] to be set.");
     return Data[0]->getLabel();
   }
-  // Return where this block exists.
-  IRChangeDiffType getType() const { return Type; }
+  // Return the colour for this block
+  StringRef getColour() const { return Colour; }
   // Change this basic block from being only in before to being common.
   // Save the pointer to \p Other.
   void setCommon(const BlockDataT<DCData> &Other) {
     assert(!Data[1] && "Expected only one block datum");
     Data[1] = &Other;
-    Type = IsCommon;
+    Colour = CommonColour;
   }
-  // Add an edge to \p E of type {\p Value, \p T}.
-  void addEdge(unsigned E, StringRef Value, IRChangeDiffType T) {
+  // Add an edge to \p E of colour {\p Value, \p Colour}.
+  void addEdge(unsigned E, StringRef Value, StringRef Colour) {
     // This is a new edge or it is an edge being made common.
-    assert((EdgesMap.count(E) == 0 || T == IsCommon) &&
-           "Unexpected edge count and type.");
-    EdgesMap[E] = {Value.str(), T};
+    assert((EdgesMap.count(E) == 0 || Colour == CommonColour) &&
+           "Unexpected edge count and color.");
+    EdgesMap[E] = {Value.str(), Colour};
   }
   // Record the children and create edges.
   void finalize(DotCfgDiff &G);
 
-  // Return the type of the edge to node \p S.
-  std::pair<std::string, IRChangeDiffType> getEdge(const unsigned S) const {
+  // Return the colour of the edge to node \p S.
+  StringRef getEdgeColour(const unsigned S) const {
     assert(EdgesMap.count(S) == 1 && "Expected to find edge.");
-    return EdgesMap.at(S);
+    return EdgesMap.at(S).second;
   }
 
   // Return the string representing the basic block.
@@ -1508,8 +1506,8 @@ protected:
   DotCfgDiff &Graph;
   const unsigned N;
   const BlockDataT<DCData> *Data[2];
-  IRChangeDiffType Type;
-  std::map<const unsigned, std::pair<std::string, IRChangeDiffType>> EdgesMap;
+  StringRef Colour;
+  std::map<const unsigned, std::pair<std::string, StringRef>> EdgesMap;
   std::vector<unsigned> Children;
   std::vector<unsigned> Edges;
 };
@@ -1552,12 +1550,11 @@ public:
 
 protected:
   // Return the string surrounded by HTML to make it the appropriate colour.
-  std::string colourize(std::string S, IRChangeDiffType T) const;
+  std::string colourize(std::string S, StringRef Colour) const;
 
-  void createNode(StringRef Label, const BlockDataT<DCData> &BD,
-                  IRChangeDiffType T) {
+  void createNode(StringRef Label, const BlockDataT<DCData> &BD, StringRef C) {
     unsigned Pos = Nodes.size();
-    Nodes.emplace_back(*this, Pos, BD, T);
+    Nodes.emplace_back(*this, Pos, BD, C);
     NodePosition.insert({Label, Pos});
   }
 
@@ -1572,7 +1569,7 @@ protected:
 };
 
 std::string DotCfgDiffNode::getBodyContent() const {
-  if (Type == IsCommon) {
+  if (Colour == CommonColour) {
     assert(Data[1] && "Expected Data[1] to be set.");
 
     StringRef SR[2];
@@ -1586,11 +1583,11 @@ std::string DotCfgDiffNode::getBodyContent() const {
     }
 
     SmallString<80> OldLineFormat = formatv(
-        "<FONT COLOR=\"{0}\">%l</FONT><BR align=\"left\"/>", Colours[InBefore]);
+        "<FONT COLOR=\"{0}\">%l</FONT><BR align=\"left\"/>", BeforeColour);
     SmallString<80> NewLineFormat = formatv(
-        "<FONT COLOR=\"{0}\">%l</FONT><BR align=\"left\"/>", Colours[InAfter]);
+        "<FONT COLOR=\"{0}\">%l</FONT><BR align=\"left\"/>", AfterColour);
     SmallString<80> UnchangedLineFormat = formatv(
-        "<FONT COLOR=\"{0}\">%l</FONT><BR align=\"left\"/>", Colours[IsCommon]);
+        "<FONT COLOR=\"{0}\">%l</FONT><BR align=\"left\"/>", CommonColour);
     std::string Diff = Data[0]->getLabel().str();
     Diff += ":\n<BR align=\"left\"/>" +
             doSystemDiff(makeHTMLReady(SR[0]), makeHTMLReady(SR[1]),
@@ -1625,7 +1622,7 @@ std::string DotCfgDiffNode::getBodyContent() const {
   // drop predecessors as they can be big and are redundant
   BS1 = BS1.drop_until([](char C) { return C == '\n'; }).drop_front();
 
-  std::string S = "<FONT COLOR=\"" + Colours[Type] + "\">" + Label.str() + ":";
+  std::string S = "<FONT COLOR=\"" + Colour.str() + "\">" + Label.str() + ":";
 
   // align each line to the left.
   while (BS1.size()) {
@@ -1638,26 +1635,22 @@ std::string DotCfgDiffNode::getBodyContent() const {
   return S;
 }
 
-std::string DotCfgDiff::colourize(std::string S, IRChangeDiffType T) const {
+std::string DotCfgDiff::colourize(std::string S, StringRef Colour) const {
   if (S.length() == 0)
     return S;
-  return "<FONT COLOR=\"" + Colours[T] + "\">" + S + "</FONT>";
-}
-
-std::string DotCfgDiffDisplayGraph::attribute(IRChangeDiffType T) const {
-  return "color=" + Colours[T];
+  return "<FONT COLOR=\"" + Colour.str() + "\">" + S + "</FONT>";
 }
 
 DotCfgDiff::DotCfgDiff(StringRef Title, const FuncDataT<DCData> &Before,
                        const FuncDataT<DCData> &After)
     : GraphName(Title.str()) {
-  StringMap<IRChangeDiffType> EdgesMap;
+  StringMap<StringRef> EdgesMap;
 
   // Handle each basic block in the before IR.
   for (auto &B : Before.getData()) {
     StringRef Label = B.getKey();
     const BlockDataT<DCData> &BD = B.getValue();
-    createNode(Label, BD, InBefore);
+    createNode(Label, BD, BeforeColour);
 
     // Create transitions with names made up of the from block label, the value
     // on which the transition is made and the to block label.
@@ -1666,7 +1659,7 @@ DotCfgDiff::DotCfgDiff(StringRef Title, const FuncDataT<DCData> &Before,
          Sink != E; ++Sink) {
       std::string Key = (Label + " " + Sink->getKey().str()).str() + " " +
                         BD.getData().getSuccessorLabel(Sink->getKey()).str();
-      EdgesMap.insert({Key, InBefore});
+      EdgesMap.insert({Key, BeforeColour});
     }
   }
 
@@ -1677,7 +1670,7 @@ DotCfgDiff::DotCfgDiff(StringRef Title, const FuncDataT<DCData> &Before,
     unsigned C = NodePosition.count(Label);
     if (C == 0)
       // This only exists in the after IR.  Create the node.
-      createNode(Label, BD, InAfter);
+      createNode(Label, BD, AfterColour);
     else {
       assert(C == 1 && "Unexpected multiple nodes.");
       Nodes[NodePosition[Label]].setCommon(BD);
@@ -1690,9 +1683,9 @@ DotCfgDiff::DotCfgDiff(StringRef Title, const FuncDataT<DCData> &Before,
                         BD.getData().getSuccessorLabel(Sink->getKey()).str();
       unsigned C = EdgesMap.count(Key);
       if (C == 0)
-        EdgesMap.insert({Key, InAfter});
+        EdgesMap.insert({Key, AfterColour});
       else {
-        EdgesMap[Key] = IsCommon;
+        EdgesMap[Key] = CommonColour;
       }
     }
   }
@@ -1712,18 +1705,18 @@ DotCfgDiff::DotCfgDiff(StringRef Title, const FuncDataT<DCData> &Before,
     DotCfgDiffNode &SourceNode = Nodes[NodePosition[Source]];
     assert(NodePosition.count(Sink) == 1 && "Expected to find node.");
     unsigned SinkNode = NodePosition[Sink];
-    IRChangeDiffType T = E.second;
+    StringRef Colour = E.second;
 
     // Look for an edge from Source to Sink
     if (EdgeLabels.count(SourceSink) == 0)
-      EdgeLabels.insert({SourceSink, colourize(Value.str(), T)});
+      EdgeLabels.insert({SourceSink, colourize(Value.str(), Colour)});
     else {
       StringRef V = EdgeLabels.find(SourceSink)->getValue();
-      std::string NV = colourize(V.str() + " " + Value.str(), T);
-      T = IsCommon;
+      std::string NV = colourize(V.str() + " " + Value.str(), Colour);
+      Colour = CommonColour;
       EdgeLabels[SourceSink] = NV;
     }
-    SourceNode.addEdge(SinkNode, Value, T);
+    SourceNode.addEdge(SinkNode, Value, Colour);
   }
   for (auto &I : Nodes)
     I.finalize(*this);
@@ -1744,7 +1737,7 @@ DotCfgDiffDisplayGraph DotCfgDiff::createDisplayGraph(StringRef Title,
   for (auto &I : Nodes) {
     if (I.getIndex() == Entry)
       EntryIndex = Index;
-    G.createNode(I.getBodyContent(), I.getType());
+    G.createNode(I.getBodyContent(), I.getColour());
     NodeMap.insert({I.getIndex(), Index++});
   }
   assert(EntryIndex >= 0 && "Expected entry node index to be set.");
@@ -1766,12 +1759,12 @@ void DotCfgDiffNode::createDisplayEdges(
 
   for (auto I : Edges) {
     unsigned SinkNodeIndex = I;
-    IRChangeDiffType Type = getEdge(SinkNodeIndex).second;
+    StringRef Colour = getEdgeColour(SinkNodeIndex);
     const DotCfgDiffNode *SinkNode = &Graph.getNode(SinkNodeIndex);
 
     StringRef Label = Graph.getEdgeSourceLabel(getIndex(), SinkNodeIndex);
     DisplayNode &SinkDisplayNode = DisplayGraph.getNode(SinkNode->getIndex());
-    SourceDisplayNode.createEdge(Label, SinkDisplayNode, Type);
+    SourceDisplayNode.createEdge(Label, SinkDisplayNode, Colour);
   }
   SourceDisplayNode.createEdgeMap();
 }
@@ -1891,12 +1884,7 @@ DCData::DCData(const BasicBlock &B) {
 }
 
 DotCfgChangeReporter::DotCfgChangeReporter(bool Verbose)
-    : ChangeReporter<IRDataT<DCData>>(Verbose) {
-  // Set up the colours based on the hidden options.
-  Colours[InBefore] = BeforeColour;
-  Colours[InAfter] = AfterColour;
-  Colours[IsCommon] = CommonColour;
-}
+    : ChangeReporter<IRDataT<DCData>>(Verbose) {}
 
 void DotCfgChangeReporter::handleFunctionCompare(
     StringRef Name, StringRef Prefix, StringRef PassID, StringRef Divider,
