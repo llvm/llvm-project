@@ -55,11 +55,6 @@ public:
                   SymbolNameToDefinitionMap *SymbolToDefinition = nullptr);
 };
 
-/// Returns a SymbolFlagsMap for the object file represented by the given
-/// buffer, or an error if the buffer does not contain a valid object file.
-Expected<MaterializationUnit::Interface>
-getObjectInterface(ExecutionSession &ES, MemoryBufferRef ObjBuffer);
-
 } // End namespace orc
 } // End namespace llvm
 

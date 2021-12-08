@@ -10,9 +10,8 @@
 
 #include "llvm/ExecutionEngine/Orc/DebugUtils.h"
 #include "llvm/ExecutionEngine/Orc/ExecutionUtils.h"
+#include "llvm/ExecutionEngine/Orc/ObjectFileInterface.h"
 #include "llvm/IR/Constants.h"
-#include "llvm/Object/MachO.h"
-#include "llvm/Object/ObjectFile.h"
 #include "llvm/Support/Debug.h"
 
 #define DEBUG_TYPE "orc"
@@ -161,20 +160,35 @@ ObjectLayer::ObjectLayer(ExecutionSession &ES) : ES(ES) {}
 
 ObjectLayer::~ObjectLayer() {}
 
-Error ObjectLayer::add(ResourceTrackerSP RT, std::unique_ptr<MemoryBuffer> O) {
+Error ObjectLayer::add(ResourceTrackerSP RT, std::unique_ptr<MemoryBuffer> O,
+                       MaterializationUnit::Interface I) {
   assert(RT && "RT can not be null");
-  auto ObjMU = BasicObjectLayerMaterializationUnit::Create(*this, std::move(O));
-  if (!ObjMU)
-    return ObjMU.takeError();
   auto &JD = RT->getJITDylib();
-  return JD.define(std::move(*ObjMU), std::move(RT));
+  return JD.define(std::make_unique<BasicObjectLayerMaterializationUnit>(
+                       *this, std::move(O), std::move(I)),
+                   std::move(RT));
+}
+
+Error ObjectLayer::add(ResourceTrackerSP RT, std::unique_ptr<MemoryBuffer> O) {
+  auto I = getObjectFileInterface(getExecutionSession(), O->getMemBufferRef());
+  if (!I)
+    return I.takeError();
+  return add(std::move(RT), std::move(O), std::move(*I));
+}
+
+Error ObjectLayer::add(JITDylib &JD, std::unique_ptr<MemoryBuffer> O) {
+  auto I = getObjectFileInterface(getExecutionSession(), O->getMemBufferRef());
+  if (!I)
+    return I.takeError();
+  return add(JD, std::move(O), std::move(*I));
 }
 
 Expected<std::unique_ptr<BasicObjectLayerMaterializationUnit>>
 BasicObjectLayerMaterializationUnit::Create(ObjectLayer &L,
                                             std::unique_ptr<MemoryBuffer> O) {
+
   auto ObjInterface =
-      getObjectInterface(L.getExecutionSession(), O->getMemBufferRef());
+      getObjectFileInterface(L.getExecutionSession(), O->getMemBufferRef());
 
   if (!ObjInterface)
     return ObjInterface.takeError();
