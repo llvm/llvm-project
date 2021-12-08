@@ -1256,7 +1256,6 @@ void IRExecutionUnit::PopulateSymtab(lldb_private::ObjectFile *obj_file,
         symtab.AddSymbol(symbol);
       }
     }
-    symtab.CalculateSymbolSizes();
   }
 }
 
