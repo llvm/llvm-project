@@ -6452,8 +6452,8 @@ TEST_P(ImportSourceLocations, OverwrittenFileBuffer) {
 
     llvm::SmallVector<char, 64> Buffer;
     Buffer.append(Contents.begin(), Contents.end());
-    auto FileContents =
-        std::make_unique<llvm::SmallVectorMemoryBuffer>(std::move(Buffer), Path);
+    auto FileContents = std::make_unique<llvm::SmallVectorMemoryBuffer>(
+        std::move(Buffer), Path, /*RequiresNullTerminator=*/false);
     FromSM.overrideFileContents(&FE, std::move(FileContents));
 
     // Import the VarDecl to trigger the importing of the FileID.

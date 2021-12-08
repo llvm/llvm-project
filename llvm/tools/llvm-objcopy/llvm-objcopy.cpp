@@ -236,7 +236,8 @@ createNewArchiveMembers(const MultiFormatConfig &Config, const Archive &Ar) {
       return createFileError(Ar.getFileName(), Member.takeError());
 
     Member->Buf = std::make_unique<SmallVectorMemoryBuffer>(
-        std::move(Buffer), ChildNameOrErr.get());
+        std::move(Buffer), ChildNameOrErr.get(),
+        /*RequiresNullTerminator=*/false);
     Member->MemberName = Member->Buf->getBufferIdentifier();
     NewArchiveMembers.push_back(std::move(*Member));
   }

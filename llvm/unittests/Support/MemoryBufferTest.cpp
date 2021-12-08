@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/SmallVectorMemoryBuffer.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/FileUtilities.h"
@@ -408,4 +409,27 @@ TEST_F(MemoryBufferTest, mmapVolatileNoNull) {
   EXPECT_EQ(MB->getBufferSize(), std::size_t(FileWrites * 8));
   EXPECT_TRUE(MB->getBuffer().startswith("01234567"));
 }
+
+// Test that SmallVector without a null terminator gets one.
+TEST(SmallVectorMemoryBufferTest, WithoutNullTerminatorRequiresNullTerminator) {
+  SmallString<0> Data("some data");
+
+  SmallVectorMemoryBuffer MB(std::move(Data),
+                             /*RequiresNullTerminator=*/true);
+  EXPECT_EQ(MB.getBufferSize(), 9u);
+  EXPECT_EQ(MB.getBufferEnd()[0], '\0');
 }
+
+// Test that SmallVector with a null terminator keeps it.
+TEST(SmallVectorMemoryBufferTest, WithNullTerminatorRequiresNullTerminator) {
+  SmallString<0> Data("some data");
+  Data.push_back('\0');
+  Data.pop_back();
+
+  SmallVectorMemoryBuffer MB(std::move(Data),
+                             /*RequiresNullTerminator=*/true);
+  EXPECT_EQ(MB.getBufferSize(), 9u);
+  EXPECT_EQ(MB.getBufferEnd()[0], '\0');
+}
+
+} // namespace
