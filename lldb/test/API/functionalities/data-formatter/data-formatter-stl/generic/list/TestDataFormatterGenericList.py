@@ -161,7 +161,9 @@ class GenericListDataFormatterTestCase(TestBase):
 
         self.runCmd("type format delete int")
 
-        self.runCmd("n")
+        lldbutil.run_break_set_by_file_and_line(self, "main.cpp",
+                self.optional_line)
+        self.runCmd("continue")
 
         self.expect("frame variable text_list",
                     substrs=['size=0',

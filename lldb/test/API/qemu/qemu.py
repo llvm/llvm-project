@@ -1,6 +1,7 @@
 import argparse
 import socket
 import json
+import os
 import sys
 
 import use_lldb_suite
@@ -60,7 +61,9 @@ def main():
     parser.add_argument("args", nargs=argparse.REMAINDER)
     args = parser.parse_args()
 
-    emulator = FakeEmulator(args.g, vars(args))
+    state = vars(args)
+    state["environ"] = dict(os.environ)
+    emulator = FakeEmulator(args.g, state)
     emulator.run()
 
 if __name__ == "__main__":

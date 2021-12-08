@@ -54,6 +54,13 @@ public:
                                               result);
     return result;
   }
+
+  Environment GetTargetEnvVars() {
+    Args args;
+    m_collection_sp->GetPropertyAtIndexAsArgs(nullptr, ePropertyTargetEnvVars,
+                                              args);
+    return Environment(args);
+  }
 };
 
 static PluginProperties &GetGlobalProperties() {
@@ -105,6 +112,42 @@ static auto get_arg_range(const Args &args) {
                           args.GetArgumentArrayRef().end());
 }
 
+// Returns the emulator environment which result in the desired environment
+// being presented to the emulated process. We want to be careful about
+// preserving the host environment, as it may contain entries (LD_LIBRARY_PATH,
+// for example) needed for the operation of the emulator itself.
+static Environment ComputeLaunchEnvironment(Environment target,
+                                            Environment host) {
+  std::vector<std::string> set_env;
+  for (const auto &KV : target) {
+    // If the host value differs from the target (or is unset), then set it
+    // through QEMU_SET_ENV. Identical entries will be forwarded automatically.
+    auto host_it = host.find(KV.first());
+    if (host_it == host.end() || host_it->second != KV.second)
+      set_env.push_back(Environment::compose(KV));
+  }
+
+  std::vector<llvm::StringRef> unset_env;
+  for (const auto &KV : host) {
+    // If the target is missing some host entries, then unset them through
+    // QEMU_UNSET_ENV.
+    if (target.count(KV.first()) == 0)
+      unset_env.push_back(KV.first());
+  }
+
+  // The actual QEMU_(UN)SET_ENV variables should not be forwarded to the
+  // target.
+  if (!set_env.empty()) {
+    host["QEMU_SET_ENV"] = llvm::join(set_env, ",");
+    unset_env.push_back("QEMU_SET_ENV");
+  }
+  if (!unset_env.empty()) {
+    unset_env.push_back("QEMU_UNSET_ENV");
+    host["QEMU_UNSET_ENV"] = llvm::join(unset_env, ",");
+  }
+  return host;
+}
+
 lldb::ProcessSP PlatformQemuUser::DebugProcess(ProcessLaunchInfo &launch_info,
                                                Debugger &debugger,
                                                Target &target, Status &error) {
@@ -130,6 +173,8 @@ lldb::ProcessSP PlatformQemuUser::DebugProcess(ProcessLaunchInfo &launch_info,
            get_arg_range(args));
 
   launch_info.SetArguments(args, true);
+  launch_info.GetEnvironment() = ComputeLaunchEnvironment(
+      std::move(launch_info.GetEnvironment()), Host::GetEnvironment());
   launch_info.SetLaunchInSeparateProcessGroup(true);
   launch_info.GetFlags().Clear(eLaunchFlagDebug);
   launch_info.SetMonitorProcessCallback(ProcessLaunchInfo::NoOpMonitorCallback,
@@ -165,4 +210,11 @@ lldb::ProcessSP PlatformQemuUser::DebugProcess(ProcessLaunchInfo &launch_info,
 
   process_sp->WaitForProcessToStop(llvm::None, nullptr, false, listener_sp);
   return process_sp;
+}
+
+Environment PlatformQemuUser::GetEnvironment() {
+  Environment env = Host::GetEnvironment();
+  for (const auto &KV : GetGlobalProperties().GetTargetEnvVars())
+    env[KV.first()] = KV.second;
+  return env;
 }

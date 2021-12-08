@@ -45,7 +45,7 @@ public:
 
   void CalculateTrapHandlerSymbolNames() override {}
 
-  Environment GetEnvironment() override { return Host::GetEnvironment(); }
+  Environment GetEnvironment() override;
 
 private:
   static lldb::PlatformSP CreateInstance(bool force, const ArchSpec *arch);

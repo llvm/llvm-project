@@ -12,36 +12,34 @@ from lldbsuite.test.lldbtest import *
 class MemoryReadTestCase(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
-
-    def setUp(self):
-        # Call super's setUp().
-        TestBase.setUp(self)
-        # Find the line number to break inside main().
-        self.line = line_number('main.cpp', '// Set break point at this line.')
+    NO_DEBUG_INFO_TESTCASE = True
 
     def build_run_stop(self):
         self.build()
-        exe = self.getBuildArtifact("a.out")
-        self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)
+        lldbutil.run_to_source_breakpoint(self, "// break here",
+                lldb.SBFileSpec("main.c"))
 
-        # Break in main() after the variables are assigned values.
-        lldbutil.run_break_set_by_file_and_line(self,
-                                                "main.cpp",
-                                                self.line,
-                                                num_expected_locations=1,
-                                                loc_exact=True)
+    def test_memory_read_c_string(self):
+        """Test that reading memory as a c string respects the size limit given
+           and warns if the null terminator is missing."""
+        self.build_run_stop()
 
-        self.runCmd("run", RUN_SUCCEEDED)
+        # The size here is the size in memory so it includes the null terminator.
+        cmd = "memory read --format \"c-string\" --size {} &my_string"
 
-        # The stop reason of the thread should be breakpoint.
-        self.expect("thread list",
-                    STOPPED_DUE_TO_BREAKPOINT,
-                    substrs=['stopped', 'stop reason = breakpoint'])
+        # Size matches the size of the array.
+        self.expect(cmd.format(8), substrs=['\"abcdefg\"'])
 
-        # The breakpoint should have a hit count of 1.
-        lldbutil.check_breakpoint(self, bpno = 1, expected_hit_count = 1)
+        # If size would take us past the terminator we stop at the terminator.
+        self.expect(cmd.format(10), substrs=['\"abcdefg\"'])
 
-    @no_debug_info_test
+        # Size 3 means 2 chars and a terminator. So we print 2 chars but warn because
+        # the third isn't 0 as expected.
+        self.expect(cmd.format(3), substrs=['\"ab\"'])
+        self.assertRegex(self.res.GetError(),
+            "unable to find a NULL terminated string at 0x[0-9A-fa-f]+."
+            " Consider increasing the maximum read length.")
+
     def test_memory_read(self):
         """Test the 'memory read' command with plain and vector formats."""
         self.build_run_stop()
@@ -137,7 +135,6 @@ class MemoryReadTestCase(TestBase):
               self.assertEqual(len(o), expected_object_length)
           self.assertEquals(len(objects_read), 4)
 
-    @no_debug_info_test
     def test_memory_read_file(self):
         self.build_run_stop()
         res = lldb.SBCommandReturnObject()
