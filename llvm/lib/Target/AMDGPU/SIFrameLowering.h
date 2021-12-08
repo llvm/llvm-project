@@ -94,8 +94,10 @@ public:
                              bool emitSpillsToMem) const;
 
   /// Create a CFI index for CFIInst and build a MachineInstr around it.
-  MachineInstr *buildCFI(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
-                const DebugLoc &DL, const MCCFIInstruction &CFIInst) const;
+  MachineInstr *
+  buildCFI(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
+           const DebugLoc &DL, const MCCFIInstruction &CFIInst,
+           MachineInstr::MIFlag flag = MachineInstr::FrameSetup) const;
   /// Create a CFI index describing a spill of the register \p Reg to another
   /// register \p RegCopy and build a MachineInstr around it.
   MachineInstr *buildCFIForRegToRegSpill(MachineBasicBlock &MBB,

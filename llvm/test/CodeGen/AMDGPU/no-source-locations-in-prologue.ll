@@ -217,13 +217,13 @@ define hidden void @_ZL3barv() #0 !dbg !1644 {
 ; CHECK-NEXT:  .Ltmp1:
 ; CHECK-NEXT:    v_readlane_b32 s30, v40, 0
 ; CHECK-NEXT:    v_readlane_b32 s31, v40, 1
+; CHECK-NEXT:    .loc 0 32 1 ; lane-info.cpp:32:1
 ; CHECK-NEXT:    s_add_i32 s32, s32, 0xfffffc00
 ; CHECK-NEXT:    v_readlane_b32 s33, v40, 2
 ; CHECK-NEXT:    .cfi_def_cfa_register 64
 ; CHECK-NEXT:    s_or_saveexec_b64 s[4:5], -1
 ; CHECK-NEXT:    buffer_load_dword v40, off, s[0:3], s32 ; 4-byte Folded Reload
 ; CHECK-NEXT:    s_mov_b64 exec, s[4:5]
-; CHECK-NEXT:    .loc 0 32 1 ; lane-info.cpp:32:1
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
 ; CHECK-NEXT:  .Ltmp2:

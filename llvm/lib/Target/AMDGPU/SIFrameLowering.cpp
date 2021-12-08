@@ -804,14 +804,13 @@ static Register buildScratchExecCopy(LivePhysRegs &LiveRegs,
                                      MachineFunction &MF,
                                      MachineBasicBlock &MBB,
                                      MachineBasicBlock::iterator MBBI,
-                                     bool IsProlog) {
+                                     DebugLoc DL, bool IsProlog) {
   Register ScratchExecCopy;
   MachineRegisterInfo &MRI = MF.getRegInfo();
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
   const SIInstrInfo *TII = ST.getInstrInfo();
   const SIRegisterInfo &TRI = TII->getRegisterInfo();
   SIMachineFunctionInfo *FuncInfo = MF.getInfo<SIMachineFunctionInfo>();
-  DebugLoc DL;
 
   initLiveRegs(LiveRegs, TRI, FuncInfo, MF, MBB, MBBI, IsProlog);
 
@@ -1002,6 +1001,9 @@ void SIFrameLowering::emitPrologue(MachineFunction &MF,
   LivePhysRegs LiveRegs;
 
   MachineBasicBlock::iterator MBBI = MBB.begin();
+
+  // Debug location must be unknown since the first debug location is used
+  // to determine the end of the prologue.
   DebugLoc DL;
 
   bool HasFP = false;
@@ -1028,7 +1030,7 @@ void SIFrameLowering::emitPrologue(MachineFunction &MF,
       continue;
 
     if (!ScratchExecCopy)
-      ScratchExecCopy = buildScratchExecCopy(LiveRegs, MF, MBB, MBBI,
+      ScratchExecCopy = buildScratchExecCopy(LiveRegs, MF, MBB, MBBI, DL,
                                              /*IsProlog*/ true);
 
     buildPrologSpill(ST, TRI, *FuncInfo, LiveRegs, MF, MBB, MBBI, DL, Reg.VGPR,
@@ -1051,7 +1053,7 @@ void SIFrameLowering::emitPrologue(MachineFunction &MF,
 
     if (!ScratchExecCopy)
       ScratchExecCopy =
-          buildScratchExecCopy(LiveRegs, MF, MBB, MBBI, /*IsProlog*/ true);
+          buildScratchExecCopy(LiveRegs, MF, MBB, MBBI, DL, /*IsProlog*/ true);
 
     buildPrologSpill(ST, TRI, *FuncInfo, LiveRegs, MF, MBB, MBBI, DL, VGPR,
                      *FI);
@@ -1299,7 +1301,9 @@ void SIFrameLowering::emitEpilogue(MachineFunction &MF,
   const SIRegisterInfo &TRI = TII->getRegisterInfo();
   MachineBasicBlock::iterator MBBI = MBB.getFirstTerminator();
   LivePhysRegs LiveRegs;
-  DebugLoc DL;
+  // Copy DebugLoc of the insertion point so that breakpoint on function exit
+  // hits at the beginning of the epilogue.
+  DebugLoc DL = MBBI != MBB.end() ? MBBI->getDebugLoc() : DebugLoc();
 
   const MachineFrameInfo &MFI = MF.getFrameInfo();
   uint32_t NumBytes = MFI.getStackSize();
@@ -1366,7 +1370,8 @@ void SIFrameLowering::emitEpilogue(MachineFunction &MF,
     if (needsFrameMoves)
       buildCFI(MBB, MBBI, DL,
                MCCFIInstruction::createDefCfaRegister(
-                   nullptr, MCRI->getDwarfRegNum(StackPtrReg, false)));
+                   nullptr, MCRI->getDwarfRegNum(StackPtrReg, false)),
+               MachineInstr::FrameDestroy);
   }
 
   if (BPSaveIndex) {
@@ -1403,7 +1408,7 @@ void SIFrameLowering::emitEpilogue(MachineFunction &MF,
 
     if (!ScratchExecCopy)
       ScratchExecCopy =
-          buildScratchExecCopy(LiveRegs, MF, MBB, MBBI, /*IsProlog*/ false);
+          buildScratchExecCopy(LiveRegs, MF, MBB, MBBI, DL, /*IsProlog*/ false);
 
     buildEpilogRestore(ST, TRI, *FuncInfo, LiveRegs, MF, MBB, MBBI, DL,
                        Reg.VGPR, *Reg.FI);
@@ -1417,7 +1422,7 @@ void SIFrameLowering::emitEpilogue(MachineFunction &MF,
 
     if (!ScratchExecCopy)
       ScratchExecCopy =
-          buildScratchExecCopy(LiveRegs, MF, MBB, MBBI, /*IsProlog*/ false);
+          buildScratchExecCopy(LiveRegs, MF, MBB, MBBI, DL, /*IsProlog*/ false);
 
     buildEpilogRestore(ST, TRI, *FuncInfo, LiveRegs, MF, MBB, MBBI, DL, VGPR,
                        *FI);
@@ -1866,14 +1871,15 @@ bool SIFrameLowering::spillCalleeSavedRegisters(
 }
 
 MachineInstr *SIFrameLowering::buildCFI(MachineBasicBlock &MBB,
-                               MachineBasicBlock::iterator MBBI,
-                               const DebugLoc &DL,
-                               const MCCFIInstruction &CFIInst) const {
+                                        MachineBasicBlock::iterator MBBI,
+                                        const DebugLoc &DL,
+                                        const MCCFIInstruction &CFIInst,
+                                        MachineInstr::MIFlag flag) const {
   MachineFunction &MF = *MBB.getParent();
   const SIInstrInfo *TII = MF.getSubtarget<GCNSubtarget>().getInstrInfo();
   return BuildMI(MBB, MBBI, DL, TII->get(TargetOpcode::CFI_INSTRUCTION))
       .addCFIIndex(MF.addFrameInst(CFIInst))
-      .setMIFlag(MachineInstr::FrameSetup);
+      .setMIFlag(flag);
 }
 
 MachineInstr *SIFrameLowering::buildCFIForRegToRegSpill(
