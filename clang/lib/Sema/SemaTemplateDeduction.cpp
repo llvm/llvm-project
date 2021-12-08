@@ -2144,7 +2144,7 @@ static Sema::TemplateDeductionResult DeduceTemplateArgumentsByTypeMatch(
 
       return Sema::TDK_NonDeducedMismatch;
     }
-    case Type::DependentExtInt: {
+    case Type::DependentBitInt: {
       const auto *IP = P->castAs<DependentBitIntType>();
 
       if (const auto *IA = A->getAs<BitIntType>()) {
