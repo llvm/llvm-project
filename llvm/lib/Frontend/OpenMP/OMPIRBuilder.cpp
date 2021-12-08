@@ -1831,7 +1831,7 @@ OpenMPIRBuilder::collapseLoops(DebugLoc DL, ArrayRef<CanonicalLoopInfo *> Loops,
 
   Value *Leftover = Result->getIndVar();
   SmallVector<Value *> NewIndVars;
-  NewIndVars.set_size(NumLoops);
+  NewIndVars.resize(NumLoops);
   for (int i = NumLoops - 1; i >= 1; --i) {
     Value *OrigTripCount = Loops[i]->getTripCount();
 

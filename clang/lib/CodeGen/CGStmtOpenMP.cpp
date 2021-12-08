@@ -1972,7 +1972,7 @@ CodeGenFunction::EmitOMPCollapsedCanonicalLoopNest(const Stmt *S, int Depth) {
 
   // Pop the \p Depth loops requested by the call from that stack and restore
   // the previous context.
-  OMPLoopNestStack.set_size(OMPLoopNestStack.size() - Depth);
+  OMPLoopNestStack.pop_back_n(Depth);
   ExpectedOMPLoopDepth = ParentExpectedOMPLoopDepth;
 
   return Result;
