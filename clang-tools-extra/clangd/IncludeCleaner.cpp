@@ -223,7 +223,7 @@ bool mayConsiderUnused(const Inclusion &Inc, ParsedAST &AST) {
   // headers are likely to be the Standard Library headers. Until we have a
   // good support for umbrella headers and Standard Library headers, don't warn
   // about them.
-  if (Inc.Written.front() == '<')
+  if (Inc.Written.front() == '<' || Inc.BehindPragmaKeep)
     return false;
   // Headers without include guards have side effects and are not
   // self-contained, skip them.

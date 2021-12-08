@@ -9,6 +9,7 @@
 #include "Annotations.h"
 #include "IncludeCleaner.h"
 #include "TestTU.h"
+#include "llvm/Testing/Support/SupportHelpers.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
@@ -17,6 +18,7 @@ namespace clangd {
 namespace {
 
 using ::testing::ElementsAre;
+using ::testing::IsEmpty;
 using ::testing::UnorderedElementsAre;
 
 std::string guard(llvm::StringRef Code) {
@@ -320,7 +322,7 @@ TEST(IncludeCleaner, VirtualBuffers) {
   EXPECT_THAT(ReferencedHeaderNames, ElementsAre(testPath("macros.h")));
 
   // Sanity check.
-  EXPECT_THAT(getUnused(AST, ReferencedHeaders), ::testing::IsEmpty());
+  EXPECT_THAT(getUnused(AST, ReferencedHeaders), IsEmpty());
 }
 
 TEST(IncludeCleaner, DistinctUnguardedInclusions) {
@@ -395,6 +397,21 @@ TEST(IncludeCleaner, NonSelfContainedHeaders) {
   // headers to header-guarded ones.
   EXPECT_THAT(ReferencedFileNames.keys(),
               UnorderedElementsAre(testPath("foo.h")));
+}
+
+TEST(IncludeCleaner, IWYUPragmas) {
+  TestTU TU;
+  TU.Code = R"cpp(
+    #include "behind_keep.h" // IWYU pragma: keep
+    )cpp";
+  TU.AdditionalFiles["behind_keep.h"] = guard("");
+  ParsedAST AST = TU.build();
+
+  auto ReferencedFiles =
+      findReferencedFiles(findReferencedLocations(AST),
+                          AST.getIncludeStructure(), AST.getSourceManager());
+  EXPECT_TRUE(ReferencedFiles.empty());
+  EXPECT_THAT(AST.getDiagnostics(), llvm::ValueIs(IsEmpty()));
 }
 
 } // namespace
