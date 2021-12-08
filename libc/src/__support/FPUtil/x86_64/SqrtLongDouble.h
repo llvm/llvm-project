@@ -75,7 +75,7 @@ template <> inline long double sqrt<long double, 0>(long double x) {
     UIntType xMant = bits.get_mantissa();
 
     // Step 1a: Normalize denormal input
-    if (bits.getImplicitBit()) {
+    if (bits.get_implicit_bit()) {
       xMant |= One;
     } else if (bits.get_unbiased_exponent() == 0) {
       internal::normalize<long double>(xExp, xMant);
@@ -134,7 +134,7 @@ template <> inline long double sqrt<long double, 0>(long double x) {
     // Extract output
     FPBits<long double> out(0.0L);
     out.set_unbiased_exponent(xExp);
-    out.setImplicitBit(1);
+    out.set_implicit_bit(1);
     out.set_mantissa((y & (One - 1)));
 
     return out;
