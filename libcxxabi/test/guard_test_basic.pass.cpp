@@ -119,14 +119,13 @@ int main(int, char**) {
   {
 #if defined(_LIBCXXABI_HAS_NO_THREADS)
     static_assert(CurrentImplementation == Implementation::NoThreads, "");
-    static_assert(std::is_same<SelectedImplementation, GuardObject<InitByteNoThreads>>::value, "");
+    static_assert(std::is_same<SelectedImplementation, NoThreadsGuard>::value, "");
 #else
     static_assert(CurrentImplementation == Implementation::GlobalMutex, "");
-    static_assert(
-        std::is_same<SelectedImplementation,
-                     GuardObject<InitByteGlobalMutex<LibcppMutex, LibcppCondVar, GlobalStatic<LibcppMutex>::instance,
-                                                     GlobalStatic<LibcppCondVar>::instance>>>::value,
-        "");
+    static_assert(std::is_same<SelectedImplementation,
+                               GlobalMutexGuard<LibcppMutex, LibcppCondVar, GlobalStatic<LibcppMutex>::instance,
+                                                GlobalStatic<LibcppCondVar>::instance>>::value,
+                  "");
 #endif
   }
   {
@@ -139,17 +138,16 @@ int main(int, char**) {
     }
   }
   {
-    Tests<uint32_t, GuardObject<InitByteNoThreads>>::test();
-    Tests<uint64_t, GuardObject<InitByteNoThreads>>::test();
+    Tests<uint32_t, NoThreadsGuard>::test();
+    Tests<uint64_t, NoThreadsGuard>::test();
   }
   {
-    using MutexImpl =
-        GuardObject<InitByteGlobalMutex<NopMutex, NopCondVar, global_nop_mutex, global_nop_cond, MockGetThreadID>>;
+    using MutexImpl = GlobalMutexGuard<NopMutex, NopCondVar, global_nop_mutex, global_nop_cond, MockGetThreadID>;
     Tests<uint32_t, MutexImpl>::test();
     Tests<uint64_t, MutexImpl>::test();
   }
   {
-    using FutexImpl = GuardObject<InitByteFutex<&NopFutexWait, &NopFutexWake, &MockGetThreadID>>;
+    using FutexImpl = FutexGuard<&NopFutexWait, &NopFutexWake, &MockGetThreadID>;
     Tests<uint32_t, FutexImpl>::test();
     Tests<uint64_t, FutexImpl>::test();
   }
