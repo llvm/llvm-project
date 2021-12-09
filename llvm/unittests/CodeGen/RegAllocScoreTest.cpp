@@ -145,7 +145,7 @@ TEST(RegAllocScoreTest, Counts) {
       return Freq1;
     if (&MBB == MBB2)
       return Freq2;
-    assert(false && "We only created 2 basic blocks");
+    llvm_unreachable("We only created 2 basic blocks");
   };
   auto Next = MBB1->end();
   Next = MBB1->insertAfter(Next, createMockCopy(*MF));
