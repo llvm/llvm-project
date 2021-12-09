@@ -794,7 +794,7 @@ void ARMFrameLowering::emitPrologue(MachineFunction &MF,
       case ARM::R12:
         if (STI.splitFramePushPop(MF)) {
           unsigned DwarfReg = MRI->getDwarfRegNum(
-              Reg == ARM::R12 ? ARM::RA_AUTH_CODE : Reg, true);
+              Reg == ARM::R12 ? (unsigned)ARM::RA_AUTH_CODE : Reg, true);
           unsigned Offset = MFI.getObjectOffset(FI);
           unsigned CFIIndex = MF.addFrameInst(
               MCCFIInstruction::createOffset(nullptr, DwarfReg, Offset));

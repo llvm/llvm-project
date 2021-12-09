@@ -43,9 +43,7 @@ public:
   ///
   /// The filesystem opens the file even for `stat` calls open to avoid the
   /// issues with stat + open of minimized files that might lead to a
-  /// mismatching size of the file. If file is not minimized, the full file is
-  /// read and copied into memory to ensure that it's not memory mapped to avoid
-  /// running out of file descriptors.
+  /// mismatching size of the file.
   static CachedFileSystemEntry createFileEntry(StringRef Filename,
                                                llvm::vfs::FileSystem &FS,
                                                bool Minimize = true);
@@ -65,7 +63,7 @@ public:
       return MaybeStat.getError();
     assert(!MaybeStat->isDirectory() && "not a file");
     assert(isValid() && "not initialized");
-    return Contents.str();
+    return Contents->getBuffer();
   }
 
   /// \returns The error or the status of the entry.
@@ -94,11 +92,7 @@ public:
 
 private:
   llvm::ErrorOr<llvm::vfs::Status> MaybeStat;
-  // Store the contents in a small string to allow a
-  // move from the small string for the minimized contents.
-  // Note: small size of 1 allows us to store an empty string with an implicit
-  // null terminator without any allocations.
-  llvm::SmallString<1> Contents;
+  std::unique_ptr<llvm::MemoryBuffer> Contents;
   PreprocessorSkippedRangeMapping PPSkippedRangeMapping;
 };
 

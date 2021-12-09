@@ -17,6 +17,7 @@
 #include "sanitizer_allocator_internal.h"
 #include "sanitizer_atomic.h"
 #include "sanitizer_common.h"
+#include "sanitizer_platform.h"
 
 namespace __sanitizer {
 
@@ -188,9 +189,8 @@ bool AllocatorMayReturnNull() {
 void SetAllocatorMayReturnNull(bool may_return_null) {
   atomic_store(&allocator_may_return_null, may_return_null,
                memory_order_relaxed);
-#ifdef START_BACKGROUND_THREAD_EARLY
-  MaybeStartBackgroudThread();
-#endif
+  if (SANITIZER_START_BACKGROUND_THREAD_IN_ASAN_INTERNAL)
+    MaybeStartBackgroudThread();
 }
 
 void PrintHintAllocatorCannotReturnNull() {

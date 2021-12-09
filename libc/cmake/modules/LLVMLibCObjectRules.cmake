@@ -232,7 +232,6 @@ function(add_entrypoint_object target_name)
       # these.
       COMMAND $<TARGET_FILE:clang-tidy>
               "--extra-arg=-fno-caret-diagnostics" --quiet
-              "--export-fixes=${CMAKE_CURRENT_BINARY_DIR}/${target_name}.yaml"
               # Path to directory containing compile_commands.json
               -p ${PROJECT_BINARY_DIR}
               ${ADD_ENTRYPOINT_OBJ_SRCS}
@@ -249,7 +248,6 @@ function(add_entrypoint_object target_name)
       COMMENT "Linting... ${target_name}"
       DEPENDS clang-tidy ${internal_target_name} ${ADD_ENTRYPOINT_OBJ_SRCS}
       WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-      BYPRODUCTS ${CMAKE_CURRENT_BINARY_DIR}/${target_name}.yaml
     )
 
     add_custom_target(${fq_target_name}.__lint__

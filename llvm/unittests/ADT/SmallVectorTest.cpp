@@ -309,6 +309,32 @@ TYPED_TEST(SmallVectorTest, ResizeShrinkTest) {
   EXPECT_EQ(5, Constructable::getNumDestructorCalls());
 }
 
+// Truncate test.
+TYPED_TEST(SmallVectorTest, TruncateTest) {
+  SCOPED_TRACE("TruncateTest");
+
+  this->theVector.reserve(3);
+  this->makeSequence(this->theVector, 1, 3);
+  this->theVector.truncate(1);
+
+  this->assertValuesInOrder(this->theVector, 1u, 1);
+  EXPECT_EQ(6, Constructable::getNumConstructorCalls());
+  EXPECT_EQ(5, Constructable::getNumDestructorCalls());
+
+#if !defined(NDEBUG) && GTEST_HAS_DEATH_TEST
+  EXPECT_DEATH(this->theVector.truncate(2), "Cannot increase size");
+#endif
+  this->theVector.truncate(1);
+  this->assertValuesInOrder(this->theVector, 1u, 1);
+  EXPECT_EQ(6, Constructable::getNumConstructorCalls());
+  EXPECT_EQ(5, Constructable::getNumDestructorCalls());
+
+  this->theVector.truncate(0);
+  this->assertEmpty(this->theVector);
+  EXPECT_EQ(6, Constructable::getNumConstructorCalls());
+  EXPECT_EQ(6, Constructable::getNumDestructorCalls());
+}
+
 // Resize bigger test.
 TYPED_TEST(SmallVectorTest, ResizeGrowTest) {
   SCOPED_TRACE("ResizeGrowTest");

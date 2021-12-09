@@ -128,7 +128,7 @@ void MachineFunctionProperties::print(raw_ostream &OS) const {
 MachineFunctionInfo::~MachineFunctionInfo() = default;
 
 void ilist_alloc_traits<MachineBasicBlock>::deleteNode(MachineBasicBlock *MBB) {
-  MBB->getParent()->DeleteMachineBasicBlock(MBB);
+  MBB->getParent()->deleteMachineBasicBlock(MBB);
 }
 
 static inline unsigned getFnStackAlignment(const TargetSubtargetInfo *STI,
@@ -364,8 +364,9 @@ MachineFunction::CloneMachineInstr(const MachineInstr *Orig) {
              MachineInstr(*this, *Orig);
 }
 
-MachineInstr &MachineFunction::CloneMachineInstrBundle(MachineBasicBlock &MBB,
-    MachineBasicBlock::iterator InsertBefore, const MachineInstr &Orig) {
+MachineInstr &MachineFunction::cloneMachineInstrBundle(
+    MachineBasicBlock &MBB, MachineBasicBlock::iterator InsertBefore,
+    const MachineInstr &Orig) {
   MachineInstr *FirstClone = nullptr;
   MachineBasicBlock::const_instr_iterator I = Orig.getIterator();
   while (true) {
@@ -393,8 +394,7 @@ MachineInstr &MachineFunction::CloneMachineInstrBundle(MachineBasicBlock &MBB,
 ///
 /// This function also serves as the MachineInstr destructor - the real
 /// ~MachineInstr() destructor must be empty.
-void
-MachineFunction::DeleteMachineInstr(MachineInstr *MI) {
+void MachineFunction::deleteMachineInstr(MachineInstr *MI) {
   // Verify that a call site info is at valid state. This assertion should
   // be triggered during the implementation of support for the
   // call site info of a new architecture. If the assertion is triggered,
@@ -421,8 +421,7 @@ MachineFunction::CreateMachineBasicBlock(const BasicBlock *bb) {
 }
 
 /// Delete the given MachineBasicBlock.
-void
-MachineFunction::DeleteMachineBasicBlock(MachineBasicBlock *MBB) {
+void MachineFunction::deleteMachineBasicBlock(MachineBasicBlock *MBB) {
   assert(MBB->getParent() == this && "MBB parent mismatch!");
   // Clean up any references to MBB in jump tables before deleting it.
   if (JumpTableInfo)

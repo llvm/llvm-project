@@ -907,18 +907,20 @@ public:
   ///
   /// Note: Does not perform target specific adjustments; consider using
   /// TargetInstrInfo::duplicate() intead.
-  MachineInstr &CloneMachineInstrBundle(MachineBasicBlock &MBB,
-      MachineBasicBlock::iterator InsertBefore, const MachineInstr &Orig);
+  MachineInstr &
+  cloneMachineInstrBundle(MachineBasicBlock &MBB,
+                          MachineBasicBlock::iterator InsertBefore,
+                          const MachineInstr &Orig);
 
   /// DeleteMachineInstr - Delete the given MachineInstr.
-  void DeleteMachineInstr(MachineInstr *MI);
+  void deleteMachineInstr(MachineInstr *MI);
 
   /// CreateMachineBasicBlock - Allocate a new MachineBasicBlock. Use this
   /// instead of `new MachineBasicBlock'.
   MachineBasicBlock *CreateMachineBasicBlock(const BasicBlock *bb = nullptr);
 
   /// DeleteMachineBasicBlock - Delete the given MachineBasicBlock.
-  void DeleteMachineBasicBlock(MachineBasicBlock *MBB);
+  void deleteMachineBasicBlock(MachineBasicBlock *MBB);
 
   /// getMachineMemOperand - Allocate a new MachineMemOperand.
   /// MachineMemOperands are owned by the MachineFunction and need not be

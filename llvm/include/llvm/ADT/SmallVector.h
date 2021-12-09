@@ -589,17 +589,21 @@ public:
 
 private:
   template <bool ForOverwrite> void resizeImpl(size_type N) {
+    if (N == this->size())
+      return;
+
     if (N < this->size()) {
-      this->pop_back_n(this->size() - N);
-    } else if (N > this->size()) {
-      this->reserve(N);
-      for (auto I = this->end(), E = this->begin() + N; I != E; ++I)
-        if (ForOverwrite)
-          new (&*I) T;
-        else
-          new (&*I) T();
-      this->set_size(N);
+      this->truncate(N);
+      return;
     }
+
+    this->reserve(N);
+    for (auto I = this->end(), E = this->begin() + N; I != E; ++I)
+      if (ForOverwrite)
+        new (&*I) T;
+      else
+        new (&*I) T();
+    this->set_size(N);
   }
 
 public:
@@ -608,12 +612,19 @@ public:
   /// Like resize, but \ref T is POD, the new values won't be initialized.
   void resize_for_overwrite(size_type N) { resizeImpl<true>(N); }
 
+  /// Like resize, but requires that \p N is less than \a size().
+  void truncate(size_type N) {
+    assert(this->size() >= N && "Cannot increase size with truncate");
+    this->destroy_range(this->begin() + N, this->end());
+    this->set_size(N);
+  }
+
   void resize(size_type N, ValueParamT NV) {
     if (N == this->size())
       return;
 
     if (N < this->size()) {
-      this->pop_back_n(this->size() - N);
+      this->truncate(N);
       return;
     }
 
@@ -628,8 +639,7 @@ public:
 
   void pop_back_n(size_type NumItems) {
     assert(this->size() >= NumItems);
-    this->destroy_range(this->end() - NumItems, this->end());
-    this->set_size(this->size() - NumItems);
+    truncate(this->size() - NumItems);
   }
 
   LLVM_NODISCARD T pop_back_val() {

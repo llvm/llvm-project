@@ -141,7 +141,6 @@ static bool isCoroutineIntrinsicName(StringRef Name) {
       "llvm.coro.id.retcon",
       "llvm.coro.id.retcon.once",
       "llvm.coro.noop",
-      "llvm.coro.param",
       "llvm.coro.prepare.async",
       "llvm.coro.prepare.retcon",
       "llvm.coro.promise",

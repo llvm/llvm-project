@@ -474,7 +474,7 @@ StringRef parent_path(StringRef path, Style style) {
 void remove_filename(SmallVectorImpl<char> &path, Style style) {
   size_t end_pos = parent_path_end(StringRef(path.begin(), path.size()), style);
   if (end_pos != StringRef::npos)
-    path.set_size(end_pos);
+    path.truncate(end_pos);
 }
 
 void replace_extension(SmallVectorImpl<char> &path, const Twine &extension,
@@ -486,7 +486,7 @@ void replace_extension(SmallVectorImpl<char> &path, const Twine &extension,
   // Erase existing extension.
   size_t pos = p.find_last_of('.');
   if (pos != StringRef::npos && pos >= filename_pos(p, style))
-    path.set_size(pos);
+    path.truncate(pos);
 
   // Append '.' if needed.
   if (ext.size() > 0 && ext[0] != '.')

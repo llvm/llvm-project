@@ -67,6 +67,9 @@ eh.resume:
 ; CHECK-NEXT:      %lpval = landingpad { i8*, i32 }
 ; CHECK-NEXT:         cleanup
 ; CHECK-NEXT:      call void @print(i32 2)
+; Checks that the coroutine would be marked as done if it exits in unwinding path.
+; CHECK-NEXT:      %[[RESUME_ADDR:.+]] = getelementptr inbounds %[[FRAME_TY:.+]], %[[FRAME_TY]]* %FramePtr, i32 0, i32 0
+; CHECK-NEXT:      store void (%[[FRAME_TY]]*)* null, void (%[[FRAME_TY]]*)** %[[RESUME_ADDR]], align 8
 ; CHECK-NEXT:      resume { i8*, i32 } %lpval
 
 declare i8* @llvm.coro.free(token, i8*)

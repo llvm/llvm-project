@@ -26,7 +26,7 @@ struct VPlanTransforms {
   /// widen recipes.
   static void VPInstructionsToVPRecipes(
       Loop *OrigLoop, VPlanPtr &Plan,
-      LoopVectorizationLegality::InductionList &Inductions,
+      const LoopVectorizationLegality::InductionList &Inductions,
       SmallPtrSetImpl<Instruction *> &DeadInstructions, ScalarEvolution &SE);
 
   static bool sinkScalarOperands(VPlan &Plan);
