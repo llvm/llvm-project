@@ -4655,13 +4655,3 @@ short HexagonInstrInfo::changeAddrMode_rr_ur(short Opc) const {
 short HexagonInstrInfo::changeAddrMode_ur_rr(short Opc) const {
   return Opc >= 0 ? Hexagon::changeAddrMode_ur_rr(Opc) : Opc;
 }
-
-MCInst HexagonInstrInfo::getNop() const {
-  MCInst *Nop = new MCInst();
-  Nop->setOpcode(Hexagon::A2_nop);
-  MCInst NopBundle;
-  NopBundle.setOpcode(Hexagon::BUNDLE);
-  NopBundle.addOperand(MCOperand::createImm(0));
-  NopBundle.addOperand(MCOperand::createInst(Nop));
-  return NopBundle;
-}
