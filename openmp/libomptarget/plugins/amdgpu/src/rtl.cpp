@@ -883,6 +883,366 @@ void finiAsyncInfo(__tgt_async_info *AsyncInfo) {
   AsyncInfo->Queue = 0;
 }
 
+// Determine launch values for kernel.
+struct launchVals {
+  int WorkgroupSize;
+  int GridSize;
+};
+launchVals getLaunchVals(int WarpSize, EnvironmentVariables Env,
+                         int ConstWGSize,
+                         llvm::omp::OMPTgtExecModeFlags ExecutionMode,
+                         int num_teams, int thread_limit,
+                         uint64_t loop_tripcount, int DeviceNumTeams) {
+
+  int threadsPerGroup = RTLDeviceInfoTy::Default_WG_Size;
+  int num_groups = 0;
+
+  int Max_Teams =
+      Env.MaxTeamsDefault > 0 ? Env.MaxTeamsDefault : DeviceNumTeams;
+  if (Max_Teams > RTLDeviceInfoTy::HardTeamLimit)
+    Max_Teams = RTLDeviceInfoTy::HardTeamLimit;
+
+  if (print_kernel_trace & STARTUP_DETAILS) {
+    DP("RTLDeviceInfoTy::Max_Teams: %d\n", RTLDeviceInfoTy::Max_Teams);
+    DP("Max_Teams: %d\n", Max_Teams);
+    DP("RTLDeviceInfoTy::Warp_Size: %d\n", WarpSize);
+    DP("RTLDeviceInfoTy::Max_WG_Size: %d\n", RTLDeviceInfoTy::Max_WG_Size);
+    DP("RTLDeviceInfoTy::Default_WG_Size: %d\n",
+       RTLDeviceInfoTy::Default_WG_Size);
+    DP("thread_limit: %d\n", thread_limit);
+    DP("threadsPerGroup: %d\n", threadsPerGroup);
+    DP("ConstWGSize: %d\n", ConstWGSize);
+  }
+  // check for thread_limit() clause
+  if (thread_limit > 0) {
+    threadsPerGroup = thread_limit;
+    DP("Setting threads per block to requested %d\n", thread_limit);
+    // Add master warp for GENERIC
+    if (ExecutionMode ==
+        llvm::omp::OMPTgtExecModeFlags::OMP_TGT_EXEC_MODE_GENERIC) {
+      threadsPerGroup += WarpSize;
+      DP("Adding master wavefront: +%d threads\n", WarpSize);
+    }
+    if (threadsPerGroup > RTLDeviceInfoTy::Max_WG_Size) { // limit to max
+      threadsPerGroup = RTLDeviceInfoTy::Max_WG_Size;
+      DP("Setting threads per block to maximum %d\n", threadsPerGroup);
+    }
+  }
+  // check flat_max_work_group_size attr here
+  if (threadsPerGroup > ConstWGSize) {
+    threadsPerGroup = ConstWGSize;
+    DP("Reduced threadsPerGroup to flat-attr-group-size limit %d\n",
+       threadsPerGroup);
+  }
+  if (print_kernel_trace & STARTUP_DETAILS)
+    DP("threadsPerGroup: %d\n", threadsPerGroup);
+  DP("Preparing %d threads\n", threadsPerGroup);
+
+  // Set default num_groups (teams)
+  if (Env.TeamLimit > 0)
+    num_groups = (Max_Teams < Env.TeamLimit) ? Max_Teams : Env.TeamLimit;
+  else
+    num_groups = Max_Teams;
+  DP("Set default num of groups %d\n", num_groups);
+
+  if (print_kernel_trace & STARTUP_DETAILS) {
+    DP("num_groups: %d\n", num_groups);
+    DP("num_teams: %d\n", num_teams);
+  }
+
+  // Reduce num_groups if threadsPerGroup exceeds RTLDeviceInfoTy::Max_WG_Size
+  // This reduction is typical for default case (no thread_limit clause).
+  // or when user goes crazy with num_teams clause.
+  // FIXME: We cant distinguish between a constant or variable thread limit.
+  // So we only handle constant thread_limits.
+  if (threadsPerGroup >
+      RTLDeviceInfoTy::Default_WG_Size) //  256 < threadsPerGroup <= 1024
+    // Should we round threadsPerGroup up to nearest WarpSize
+    // here?
+    num_groups = (Max_Teams * RTLDeviceInfoTy::Max_WG_Size) / threadsPerGroup;
+
+  // check for num_teams() clause
+  if (num_teams > 0) {
+    num_groups = (num_teams < num_groups) ? num_teams : num_groups;
+  }
+  if (print_kernel_trace & STARTUP_DETAILS) {
+    DP("num_groups: %d\n", num_groups);
+    DP("Env.NumTeams %d\n", Env.NumTeams);
+    DP("Env.TeamLimit %d\n", Env.TeamLimit);
+  }
+
+  if (Env.NumTeams > 0) {
+    num_groups = (Env.NumTeams < num_groups) ? Env.NumTeams : num_groups;
+    DP("Modifying teams based on Env.NumTeams %d\n", Env.NumTeams);
+  } else if (Env.TeamLimit > 0) {
+    num_groups = (Env.TeamLimit < num_groups) ? Env.TeamLimit : num_groups;
+    DP("Modifying teams based on Env.TeamLimit%d\n", Env.TeamLimit);
+  } else {
+    if (num_teams <= 0) {
+      if (loop_tripcount > 0) {
+        if (ExecutionMode ==
+            llvm::omp::OMPTgtExecModeFlags::OMP_TGT_EXEC_MODE_SPMD) {
+          // round up to the nearest integer
+          num_groups = ((loop_tripcount - 1) / threadsPerGroup) + 1;
+        } else if (ExecutionMode ==
+                   llvm::omp::OMPTgtExecModeFlags::OMP_TGT_EXEC_MODE_GENERIC) {
+          num_groups = loop_tripcount;
+        } else /* OMP_TGT_EXEC_MODE_GENERIC_SPMD */ {
+          // This is a generic kernel that was transformed to use SPMD-mode
+          // execution but uses Generic-mode semantics for scheduling.
+          num_groups = loop_tripcount;
+        }
+        DP("Using %d teams due to loop trip count %" PRIu64 " and number of "
+           "threads per block %d\n",
+           num_groups, loop_tripcount, threadsPerGroup);
+      }
+    } else {
+      num_groups = num_teams;
+    }
+    if (num_groups > Max_Teams) {
+      num_groups = Max_Teams;
+      if (print_kernel_trace & STARTUP_DETAILS)
+        DP("Limiting num_groups %d to Max_Teams %d \n", num_groups, Max_Teams);
+    }
+    if (num_groups > num_teams && num_teams > 0) {
+      num_groups = num_teams;
+      if (print_kernel_trace & STARTUP_DETAILS)
+        DP("Limiting num_groups %d to clause num_teams %d \n", num_groups,
+           num_teams);
+    }
+  }
+
+  // num_teams clause always honored, no matter what, unless DEFAULT is active.
+  if (num_teams > 0) {
+    num_groups = num_teams;
+    // Cap num_groups to EnvMaxTeamsDefault if set.
+    if (Env.MaxTeamsDefault > 0 && num_groups > Env.MaxTeamsDefault)
+      num_groups = Env.MaxTeamsDefault;
+  }
+  if (print_kernel_trace & STARTUP_DETAILS) {
+    DP("threadsPerGroup: %d\n", threadsPerGroup);
+    DP("num_groups: %d\n", num_groups);
+    DP("loop_tripcount: %ld\n", loop_tripcount);
+  }
+  DP("Final %d num_groups and %d threadsPerGroup\n", num_groups,
+     threadsPerGroup);
+
+  launchVals res;
+  res.WorkgroupSize = threadsPerGroup;
+  res.GridSize = threadsPerGroup * num_groups;
+  return res;
+}
+
+static uint64_t acquire_available_packet_id(hsa_queue_t *queue) {
+  uint64_t packet_id = hsa_queue_add_write_index_relaxed(queue, 1);
+  bool full = true;
+  while (full) {
+    full =
+        packet_id >= (queue->size + hsa_queue_load_read_index_scacquire(queue));
+  }
+  return packet_id;
+}
+
+int32_t __tgt_rtl_run_target_team_region_locked(
+    int32_t device_id, void *tgt_entry_ptr, void **tgt_args,
+    ptrdiff_t *tgt_offsets, int32_t arg_num, int32_t num_teams,
+    int32_t thread_limit, uint64_t loop_tripcount) {
+  // Set the context we are using
+  // update thread limit content in gpu memory if un-initialized or specified
+  // from host
+
+  DP("Run target team region thread_limit %d\n", thread_limit);
+
+  // All args are references.
+  std::vector<void *> args(arg_num);
+  std::vector<void *> ptrs(arg_num);
+
+  DP("Arg_num: %d\n", arg_num);
+  for (int32_t i = 0; i < arg_num; ++i) {
+    ptrs[i] = (void *)((intptr_t)tgt_args[i] + tgt_offsets[i]);
+    args[i] = &ptrs[i];
+    DP("Offseted base: arg[%d]:" DPxMOD "\n", i, DPxPTR(ptrs[i]));
+  }
+
+  KernelTy *KernelInfo = (KernelTy *)tgt_entry_ptr;
+
+  std::string kernel_name = std::string(KernelInfo->Name);
+  auto &KernelInfoTable = DeviceInfo.KernelInfoTable;
+  if (KernelInfoTable[device_id].find(kernel_name) ==
+      KernelInfoTable[device_id].end()) {
+    DP("Kernel %s not found\n", kernel_name.c_str());
+    return OFFLOAD_FAIL;
+  }
+
+  const atl_kernel_info_t KernelInfoEntry =
+      KernelInfoTable[device_id][kernel_name];
+  const uint32_t group_segment_size = KernelInfoEntry.group_segment_size;
+  const uint32_t sgpr_count = KernelInfoEntry.sgpr_count;
+  const uint32_t vgpr_count = KernelInfoEntry.vgpr_count;
+  const uint32_t sgpr_spill_count = KernelInfoEntry.sgpr_spill_count;
+  const uint32_t vgpr_spill_count = KernelInfoEntry.vgpr_spill_count;
+
+  assert(arg_num == (int)KernelInfoEntry.explicit_argument_count);
+
+  /*
+   * Set limit based on ThreadsPerGroup and GroupsPerDevice
+   */
+  launchVals LV =
+      getLaunchVals(DeviceInfo.WarpSize[device_id], DeviceInfo.Env,
+                    KernelInfo->ConstWGSize, KernelInfo->ExecutionMode,
+                    num_teams,      // From run_region arg
+                    thread_limit,   // From run_region arg
+                    loop_tripcount, // From run_region arg
+                    DeviceInfo.NumTeams[KernelInfo->device_id]);
+  const int GridSize = LV.GridSize;
+  const int WorkgroupSize = LV.WorkgroupSize;
+
+  if (print_kernel_trace >= LAUNCH) {
+    int num_groups = GridSize / WorkgroupSize;
+    // enum modes are SPMD, GENERIC, NONE 0,1,2
+    // if doing rtl timing, print to stderr, unless stdout requested.
+    bool traceToStdout = print_kernel_trace & (RTL_TO_STDOUT | RTL_TIMING);
+    fprintf(traceToStdout ? stdout : stderr,
+            "DEVID:%2d SGN:%1d ConstWGSize:%-4d args:%2d teamsXthrds:(%4dX%4d) "
+            "reqd:(%4dX%4d) lds_usage:%uB sgpr_count:%u vgpr_count:%u "
+            "sgpr_spill_count:%u vgpr_spill_count:%u tripcount:%lu n:%s\n",
+            device_id, KernelInfo->ExecutionMode, KernelInfo->ConstWGSize,
+            arg_num, num_groups, WorkgroupSize, num_teams, thread_limit,
+            group_segment_size, sgpr_count, vgpr_count, sgpr_spill_count,
+            vgpr_spill_count, loop_tripcount, KernelInfo->Name);
+  }
+
+  // Run on the device.
+  {
+    hsa_queue_t *queue = DeviceInfo.HSAQueues[device_id].get();
+    if (!queue) {
+      return OFFLOAD_FAIL;
+    }
+    uint64_t packet_id = acquire_available_packet_id(queue);
+
+    const uint32_t mask = queue->size - 1; // size is a power of 2
+    hsa_kernel_dispatch_packet_t *packet =
+        (hsa_kernel_dispatch_packet_t *)queue->base_address +
+        (packet_id & mask);
+
+    // packet->header is written last
+    packet->setup = UINT16_C(1) << HSA_KERNEL_DISPATCH_PACKET_SETUP_DIMENSIONS;
+    packet->workgroup_size_x = WorkgroupSize;
+    packet->workgroup_size_y = 1;
+    packet->workgroup_size_z = 1;
+    packet->reserved0 = 0;
+    packet->grid_size_x = GridSize;
+    packet->grid_size_y = 1;
+    packet->grid_size_z = 1;
+    packet->private_segment_size = KernelInfoEntry.private_segment_size;
+    packet->group_segment_size = KernelInfoEntry.group_segment_size;
+    packet->kernel_object = KernelInfoEntry.kernel_object;
+    packet->kernarg_address = 0;     // use the block allocator
+    packet->reserved2 = 0;           // impl writes id_ here
+    packet->completion_signal = {0}; // may want a pool of signals
+
+    KernelArgPool *ArgPool = nullptr;
+    void *kernarg = nullptr;
+    {
+      auto it = KernelArgPoolMap.find(std::string(KernelInfo->Name));
+      if (it != KernelArgPoolMap.end()) {
+        ArgPool = (it->second).get();
+      }
+    }
+    if (!ArgPool) {
+      DP("Warning: No ArgPool for %s on device %d\n", KernelInfo->Name,
+         device_id);
+    }
+    {
+      if (ArgPool) {
+        assert(ArgPool->kernarg_segment_size == (arg_num * sizeof(void *)));
+        kernarg = ArgPool->allocate(arg_num);
+      }
+      if (!kernarg) {
+        DP("Allocate kernarg failed\n");
+        return OFFLOAD_FAIL;
+      }
+
+      // Copy explicit arguments
+      for (int i = 0; i < arg_num; i++) {
+        memcpy((char *)kernarg + sizeof(void *) * i, args[i], sizeof(void *));
+      }
+
+      // Initialize implicit arguments. TODO: Which of these can be dropped
+      impl_implicit_args_t *impl_args =
+          reinterpret_cast<impl_implicit_args_t *>(
+              static_cast<char *>(kernarg) + ArgPool->kernarg_segment_size);
+      memset(impl_args, 0,
+             sizeof(impl_implicit_args_t)); // may not be necessary
+      impl_args->offset_x = 0;
+      impl_args->offset_y = 0;
+      impl_args->offset_z = 0;
+
+      // assign a hostcall buffer for the selected Q
+      if (__atomic_load_n(&DeviceInfo.hostcall_required, __ATOMIC_ACQUIRE)) {
+        // hostrpc_assign_buffer is not thread safe, and this function is
+        // under a multiple reader lock, not a writer lock.
+        static pthread_mutex_t hostcall_init_lock = PTHREAD_MUTEX_INITIALIZER;
+        pthread_mutex_lock(&hostcall_init_lock);
+        unsigned long buffer = hostrpc_assign_buffer(
+            DeviceInfo.HSAAgents[device_id], queue, device_id);
+        pthread_mutex_unlock(&hostcall_init_lock);
+        if (!buffer) {
+          DP("hostrpc_assign_buffer failed, gpu would dereference null and "
+             "error\n");
+          return OFFLOAD_FAIL;
+        }
+
+        if (KernelInfoEntry.implicit_argument_count >= 4) {
+          // Initialise pointer for implicit_argument_count != 0 ABI
+          // Guess that the right implicit argument is at offset 24 after
+          // the explicit arguments. In the future, should be able to read
+          // the offset from msgpack. Clang is not annotating it at present.
+          uint64_t Offset =
+              sizeof(void *) * (KernelInfoEntry.explicit_argument_count + 3);
+          if ((Offset + 8) > (ArgPool->kernarg_segment_size)) {
+            DP("Bad offset of hostcall, exceeds kernarg segment size\n");
+          } else {
+            memcpy(static_cast<char *>(kernarg) + Offset, &buffer, 8);
+          }
+        }
+
+        // initialise pointer for implicit_argument_count == 0 ABI
+        impl_args->hostcall_ptr = buffer;
+      }
+
+      packet->kernarg_address = kernarg;
+    }
+
+    hsa_signal_t s = DeviceInfo.FreeSignalPool.pop();
+    if (s.handle == 0) {
+      DP("Failed to get signal instance\n");
+      return OFFLOAD_FAIL;
+    }
+    packet->completion_signal = s;
+    hsa_signal_store_relaxed(packet->completion_signal, 1);
+
+    // Publish the packet indicating it is ready to be processed
+    core::packet_store_release(reinterpret_cast<uint32_t *>(packet),
+                               core::create_header(), packet->setup);
+
+    // Since the packet is already published, its contents must not be
+    // accessed any more
+    hsa_signal_store_relaxed(queue->doorbell_signal, packet_id);
+
+    while (hsa_signal_wait_scacquire(s, HSA_SIGNAL_CONDITION_EQ, 0, UINT64_MAX,
+                                     HSA_WAIT_STATE_BLOCKED) != 0)
+      ;
+
+    assert(ArgPool);
+    ArgPool->deallocate(kernarg);
+    DeviceInfo.FreeSignalPool.push(s);
+  }
+
+  DP("Kernel completed\n");
+  return OFFLOAD_SUCCESS;
+}
+
 bool elf_machine_id_is_amdgcn(__tgt_device_image *image) {
   const uint16_t amdgcnMachineID = 224; // EM_AMDGPU may not be in system elf.h
   int32_t r = elf_check_machine(image, amdgcnMachineID);
@@ -1851,171 +2211,6 @@ int32_t __tgt_rtl_data_delete(int device_id, void *tgt_ptr) {
   return OFFLOAD_SUCCESS;
 }
 
-// Determine launch values for kernel.
-struct launchVals {
-  int WorkgroupSize;
-  int GridSize;
-};
-launchVals getLaunchVals(int WarpSize, EnvironmentVariables Env,
-                         int ConstWGSize,
-                         llvm::omp::OMPTgtExecModeFlags ExecutionMode,
-                         int num_teams, int thread_limit,
-                         uint64_t loop_tripcount, int DeviceNumTeams) {
-
-  int threadsPerGroup = RTLDeviceInfoTy::Default_WG_Size;
-  int num_groups = 0;
-
-  int Max_Teams =
-      Env.MaxTeamsDefault > 0 ? Env.MaxTeamsDefault : DeviceNumTeams;
-  if (Max_Teams > RTLDeviceInfoTy::HardTeamLimit)
-    Max_Teams = RTLDeviceInfoTy::HardTeamLimit;
-
-  if (print_kernel_trace & STARTUP_DETAILS) {
-    DP("RTLDeviceInfoTy::Max_Teams: %d\n", RTLDeviceInfoTy::Max_Teams);
-    DP("Max_Teams: %d\n", Max_Teams);
-    DP("RTLDeviceInfoTy::Warp_Size: %d\n", WarpSize);
-    DP("RTLDeviceInfoTy::Max_WG_Size: %d\n", RTLDeviceInfoTy::Max_WG_Size);
-    DP("RTLDeviceInfoTy::Default_WG_Size: %d\n",
-       RTLDeviceInfoTy::Default_WG_Size);
-    DP("thread_limit: %d\n", thread_limit);
-    DP("threadsPerGroup: %d\n", threadsPerGroup);
-    DP("ConstWGSize: %d\n", ConstWGSize);
-  }
-  // check for thread_limit() clause
-  if (thread_limit > 0) {
-    threadsPerGroup = thread_limit;
-    DP("Setting threads per block to requested %d\n", thread_limit);
-    // Add master warp for GENERIC
-    if (ExecutionMode ==
-        llvm::omp::OMPTgtExecModeFlags::OMP_TGT_EXEC_MODE_GENERIC) {
-      threadsPerGroup += WarpSize;
-      DP("Adding master wavefront: +%d threads\n", WarpSize);
-    }
-    if (threadsPerGroup > RTLDeviceInfoTy::Max_WG_Size) { // limit to max
-      threadsPerGroup = RTLDeviceInfoTy::Max_WG_Size;
-      DP("Setting threads per block to maximum %d\n", threadsPerGroup);
-    }
-  }
-  // check flat_max_work_group_size attr here
-  if (threadsPerGroup > ConstWGSize) {
-    threadsPerGroup = ConstWGSize;
-    DP("Reduced threadsPerGroup to flat-attr-group-size limit %d\n",
-       threadsPerGroup);
-  }
-  if (print_kernel_trace & STARTUP_DETAILS)
-    DP("threadsPerGroup: %d\n", threadsPerGroup);
-  DP("Preparing %d threads\n", threadsPerGroup);
-
-  // Set default num_groups (teams)
-  if (Env.TeamLimit > 0)
-    num_groups = (Max_Teams < Env.TeamLimit) ? Max_Teams : Env.TeamLimit;
-  else
-    num_groups = Max_Teams;
-  DP("Set default num of groups %d\n", num_groups);
-
-  if (print_kernel_trace & STARTUP_DETAILS) {
-    DP("num_groups: %d\n", num_groups);
-    DP("num_teams: %d\n", num_teams);
-  }
-
-  // Reduce num_groups if threadsPerGroup exceeds RTLDeviceInfoTy::Max_WG_Size
-  // This reduction is typical for default case (no thread_limit clause).
-  // or when user goes crazy with num_teams clause.
-  // FIXME: We cant distinguish between a constant or variable thread limit.
-  // So we only handle constant thread_limits.
-  if (threadsPerGroup >
-      RTLDeviceInfoTy::Default_WG_Size) //  256 < threadsPerGroup <= 1024
-    // Should we round threadsPerGroup up to nearest WarpSize
-    // here?
-    num_groups = (Max_Teams * RTLDeviceInfoTy::Max_WG_Size) / threadsPerGroup;
-
-  // check for num_teams() clause
-  if (num_teams > 0) {
-    num_groups = (num_teams < num_groups) ? num_teams : num_groups;
-  }
-  if (print_kernel_trace & STARTUP_DETAILS) {
-    DP("num_groups: %d\n", num_groups);
-    DP("Env.NumTeams %d\n", Env.NumTeams);
-    DP("Env.TeamLimit %d\n", Env.TeamLimit);
-  }
-
-  if (Env.NumTeams > 0) {
-    num_groups = (Env.NumTeams < num_groups) ? Env.NumTeams : num_groups;
-    DP("Modifying teams based on Env.NumTeams %d\n", Env.NumTeams);
-  } else if (Env.TeamLimit > 0) {
-    num_groups = (Env.TeamLimit < num_groups) ? Env.TeamLimit : num_groups;
-    DP("Modifying teams based on Env.TeamLimit%d\n", Env.TeamLimit);
-  } else {
-    if (num_teams <= 0) {
-      if (loop_tripcount > 0) {
-        if (ExecutionMode ==
-            llvm::omp::OMPTgtExecModeFlags::OMP_TGT_EXEC_MODE_SPMD) {
-          // round up to the nearest integer
-          num_groups = ((loop_tripcount - 1) / threadsPerGroup) + 1;
-        } else if (ExecutionMode ==
-                   llvm::omp::OMPTgtExecModeFlags::OMP_TGT_EXEC_MODE_GENERIC) {
-          num_groups = loop_tripcount;
-        } else /* OMP_TGT_EXEC_MODE_GENERIC_SPMD */ {
-          // This is a generic kernel that was transformed to use SPMD-mode
-          // execution but uses Generic-mode semantics for scheduling.
-          num_groups = loop_tripcount;
-        }
-        DP("Using %d teams due to loop trip count %" PRIu64 " and number of "
-           "threads per block %d\n",
-           num_groups, loop_tripcount, threadsPerGroup);
-      }
-    } else {
-      num_groups = num_teams;
-    }
-    if (num_groups > Max_Teams) {
-      num_groups = Max_Teams;
-      if (print_kernel_trace & STARTUP_DETAILS)
-        DP("Limiting num_groups %d to Max_Teams %d \n", num_groups, Max_Teams);
-    }
-    if (num_groups > num_teams && num_teams > 0) {
-      num_groups = num_teams;
-      if (print_kernel_trace & STARTUP_DETAILS)
-        DP("Limiting num_groups %d to clause num_teams %d \n", num_groups,
-           num_teams);
-    }
-  }
-
-  // num_teams clause always honored, no matter what, unless DEFAULT is active.
-  if (num_teams > 0) {
-    num_groups = num_teams;
-    // Cap num_groups to EnvMaxTeamsDefault if set.
-    if (Env.MaxTeamsDefault > 0 && num_groups > Env.MaxTeamsDefault)
-      num_groups = Env.MaxTeamsDefault;
-  }
-  if (print_kernel_trace & STARTUP_DETAILS) {
-    DP("threadsPerGroup: %d\n", threadsPerGroup);
-    DP("num_groups: %d\n", num_groups);
-    DP("loop_tripcount: %ld\n", loop_tripcount);
-  }
-  DP("Final %d num_groups and %d threadsPerGroup\n", num_groups,
-     threadsPerGroup);
-
-  launchVals res;
-  res.WorkgroupSize = threadsPerGroup;
-  res.GridSize = threadsPerGroup * num_groups;
-  return res;
-}
-
-static uint64_t acquire_available_packet_id(hsa_queue_t *queue) {
-  uint64_t packet_id = hsa_queue_add_write_index_relaxed(queue, 1);
-  bool full = true;
-  while (full) {
-    full =
-        packet_id >= (queue->size + hsa_queue_load_read_index_scacquire(queue));
-  }
-  return packet_id;
-}
-
-static int32_t __tgt_rtl_run_target_team_region_locked(
-    int32_t device_id, void *tgt_entry_ptr, void **tgt_args,
-    ptrdiff_t *tgt_offsets, int32_t arg_num, int32_t num_teams,
-    int32_t thread_limit, uint64_t loop_tripcount);
-
 int32_t __tgt_rtl_run_target_team_region(int32_t device_id, void *tgt_entry_ptr,
                                          void **tgt_args,
                                          ptrdiff_t *tgt_offsets,
@@ -2030,206 +2225,6 @@ int32_t __tgt_rtl_run_target_team_region(int32_t device_id, void *tgt_entry_ptr,
 
   DeviceInfo.load_run_lock.unlock_shared();
   return res;
-}
-
-int32_t __tgt_rtl_run_target_team_region_locked(
-    int32_t device_id, void *tgt_entry_ptr, void **tgt_args,
-    ptrdiff_t *tgt_offsets, int32_t arg_num, int32_t num_teams,
-    int32_t thread_limit, uint64_t loop_tripcount) {
-  // Set the context we are using
-  // update thread limit content in gpu memory if un-initialized or specified
-  // from host
-
-  DP("Run target team region thread_limit %d\n", thread_limit);
-
-  // All args are references.
-  std::vector<void *> args(arg_num);
-  std::vector<void *> ptrs(arg_num);
-
-  DP("Arg_num: %d\n", arg_num);
-  for (int32_t i = 0; i < arg_num; ++i) {
-    ptrs[i] = (void *)((intptr_t)tgt_args[i] + tgt_offsets[i]);
-    args[i] = &ptrs[i];
-    DP("Offseted base: arg[%d]:" DPxMOD "\n", i, DPxPTR(ptrs[i]));
-  }
-
-  KernelTy *KernelInfo = (KernelTy *)tgt_entry_ptr;
-
-  std::string kernel_name = std::string(KernelInfo->Name);
-  auto &KernelInfoTable = DeviceInfo.KernelInfoTable;
-  if (KernelInfoTable[device_id].find(kernel_name) ==
-      KernelInfoTable[device_id].end()) {
-    DP("Kernel %s not found\n", kernel_name.c_str());
-    return OFFLOAD_FAIL;
-  }
-
-  const atl_kernel_info_t KernelInfoEntry =
-      KernelInfoTable[device_id][kernel_name];
-  const uint32_t group_segment_size = KernelInfoEntry.group_segment_size;
-  const uint32_t sgpr_count = KernelInfoEntry.sgpr_count;
-  const uint32_t vgpr_count = KernelInfoEntry.vgpr_count;
-  const uint32_t sgpr_spill_count = KernelInfoEntry.sgpr_spill_count;
-  const uint32_t vgpr_spill_count = KernelInfoEntry.vgpr_spill_count;
-
-  assert(arg_num == (int)KernelInfoEntry.explicit_argument_count);
-
-  /*
-   * Set limit based on ThreadsPerGroup and GroupsPerDevice
-   */
-  launchVals LV =
-      getLaunchVals(DeviceInfo.WarpSize[device_id], DeviceInfo.Env,
-                    KernelInfo->ConstWGSize, KernelInfo->ExecutionMode,
-                    num_teams,      // From run_region arg
-                    thread_limit,   // From run_region arg
-                    loop_tripcount, // From run_region arg
-                    DeviceInfo.NumTeams[KernelInfo->device_id]);
-  const int GridSize = LV.GridSize;
-  const int WorkgroupSize = LV.WorkgroupSize;
-
-  if (print_kernel_trace >= LAUNCH) {
-    int num_groups = GridSize / WorkgroupSize;
-    // enum modes are SPMD, GENERIC, NONE 0,1,2
-    // if doing rtl timing, print to stderr, unless stdout requested.
-    bool traceToStdout = print_kernel_trace & (RTL_TO_STDOUT | RTL_TIMING);
-    fprintf(traceToStdout ? stdout : stderr,
-            "DEVID:%2d SGN:%1d ConstWGSize:%-4d args:%2d teamsXthrds:(%4dX%4d) "
-            "reqd:(%4dX%4d) lds_usage:%uB sgpr_count:%u vgpr_count:%u "
-            "sgpr_spill_count:%u vgpr_spill_count:%u tripcount:%lu n:%s\n",
-            device_id, KernelInfo->ExecutionMode, KernelInfo->ConstWGSize,
-            arg_num, num_groups, WorkgroupSize, num_teams, thread_limit,
-            group_segment_size, sgpr_count, vgpr_count, sgpr_spill_count,
-            vgpr_spill_count, loop_tripcount, KernelInfo->Name);
-  }
-
-  // Run on the device.
-  {
-    hsa_queue_t *queue = DeviceInfo.HSAQueues[device_id].get();
-    if (!queue) {
-      return OFFLOAD_FAIL;
-    }
-    uint64_t packet_id = acquire_available_packet_id(queue);
-
-    const uint32_t mask = queue->size - 1; // size is a power of 2
-    hsa_kernel_dispatch_packet_t *packet =
-        (hsa_kernel_dispatch_packet_t *)queue->base_address +
-        (packet_id & mask);
-
-    // packet->header is written last
-    packet->setup = UINT16_C(1) << HSA_KERNEL_DISPATCH_PACKET_SETUP_DIMENSIONS;
-    packet->workgroup_size_x = WorkgroupSize;
-    packet->workgroup_size_y = 1;
-    packet->workgroup_size_z = 1;
-    packet->reserved0 = 0;
-    packet->grid_size_x = GridSize;
-    packet->grid_size_y = 1;
-    packet->grid_size_z = 1;
-    packet->private_segment_size = KernelInfoEntry.private_segment_size;
-    packet->group_segment_size = KernelInfoEntry.group_segment_size;
-    packet->kernel_object = KernelInfoEntry.kernel_object;
-    packet->kernarg_address = 0;     // use the block allocator
-    packet->reserved2 = 0;           // impl writes id_ here
-    packet->completion_signal = {0}; // may want a pool of signals
-
-    KernelArgPool *ArgPool = nullptr;
-    void *kernarg = nullptr;
-    {
-      auto it = KernelArgPoolMap.find(std::string(KernelInfo->Name));
-      if (it != KernelArgPoolMap.end()) {
-        ArgPool = (it->second).get();
-      }
-    }
-    if (!ArgPool) {
-      DP("Warning: No ArgPool for %s on device %d\n", KernelInfo->Name,
-         device_id);
-    }
-    {
-      if (ArgPool) {
-        assert(ArgPool->kernarg_segment_size == (arg_num * sizeof(void *)));
-        kernarg = ArgPool->allocate(arg_num);
-      }
-      if (!kernarg) {
-        DP("Allocate kernarg failed\n");
-        return OFFLOAD_FAIL;
-      }
-
-      // Copy explicit arguments
-      for (int i = 0; i < arg_num; i++) {
-        memcpy((char *)kernarg + sizeof(void *) * i, args[i], sizeof(void *));
-      }
-
-      // Initialize implicit arguments. TODO: Which of these can be dropped
-      impl_implicit_args_t *impl_args =
-          reinterpret_cast<impl_implicit_args_t *>(
-              static_cast<char *>(kernarg) + ArgPool->kernarg_segment_size);
-      memset(impl_args, 0,
-             sizeof(impl_implicit_args_t)); // may not be necessary
-      impl_args->offset_x = 0;
-      impl_args->offset_y = 0;
-      impl_args->offset_z = 0;
-
-      // assign a hostcall buffer for the selected Q
-      if (__atomic_load_n(&DeviceInfo.hostcall_required, __ATOMIC_ACQUIRE)) {
-        // hostrpc_assign_buffer is not thread safe, and this function is
-        // under a multiple reader lock, not a writer lock.
-        static pthread_mutex_t hostcall_init_lock = PTHREAD_MUTEX_INITIALIZER;
-        pthread_mutex_lock(&hostcall_init_lock);
-        unsigned long buffer = hostrpc_assign_buffer(
-            DeviceInfo.HSAAgents[device_id], queue, device_id);
-        pthread_mutex_unlock(&hostcall_init_lock);
-        if (!buffer) {
-          DP("hostrpc_assign_buffer failed, gpu would dereference null and "
-             "error\n");
-          return OFFLOAD_FAIL;
-        }
-
-        if (KernelInfoEntry.implicit_argument_count >= 4) {
-          // Initialise pointer for implicit_argument_count != 0 ABI
-          // Guess that the right implicit argument is at offset 24 after
-          // the explicit arguments. In the future, should be able to read
-          // the offset from msgpack. Clang is not annotating it at present.
-          uint64_t Offset =
-              sizeof(void *) * (KernelInfoEntry.explicit_argument_count + 3);
-          if ((Offset + 8) > (ArgPool->kernarg_segment_size)) {
-            DP("Bad offset of hostcall, exceeds kernarg segment size\n");
-          } else {
-            memcpy(static_cast<char *>(kernarg) + Offset, &buffer, 8);
-          }
-        }
-
-        // initialise pointer for implicit_argument_count == 0 ABI
-        impl_args->hostcall_ptr = buffer;
-      }
-
-      packet->kernarg_address = kernarg;
-    }
-
-    hsa_signal_t s = DeviceInfo.FreeSignalPool.pop();
-    if (s.handle == 0) {
-      DP("Failed to get signal instance\n");
-      return OFFLOAD_FAIL;
-    }
-    packet->completion_signal = s;
-    hsa_signal_store_relaxed(packet->completion_signal, 1);
-
-    // Publish the packet indicating it is ready to be processed
-    core::packet_store_release(reinterpret_cast<uint32_t *>(packet),
-                               core::create_header(), packet->setup);
-
-    // Since the packet is already published, its contents must not be
-    // accessed any more
-    hsa_signal_store_relaxed(queue->doorbell_signal, packet_id);
-
-    while (hsa_signal_wait_scacquire(s, HSA_SIGNAL_CONDITION_EQ, 0, UINT64_MAX,
-                                     HSA_WAIT_STATE_BLOCKED) != 0)
-      ;
-
-    assert(ArgPool);
-    ArgPool->deallocate(kernarg);
-    DeviceInfo.FreeSignalPool.push(s);
-  }
-
-  DP("Kernel completed\n");
-  return OFFLOAD_SUCCESS;
 }
 
 int32_t __tgt_rtl_run_target_region(int32_t device_id, void *tgt_entry_ptr,
