@@ -474,6 +474,14 @@ private:
   void printAttributeWithoutType(Attribute attr) override {
     printAttribute(attr);
   }
+  LogicalResult printAlias(Attribute attr) override {
+    initializer.visit(attr);
+    return success();
+  }
+  LogicalResult printAlias(Type type) override {
+    initializer.visit(type);
+    return success();
+  }
 
   /// Print the given set of attributes with names not included within
   /// 'elidedAttrs'.
@@ -1252,7 +1260,15 @@ public:
   void printAttribute(Attribute attr,
                       AttrTypeElision typeElision = AttrTypeElision::Never);
 
+  /// Print the alias for the given attribute, return failure if no alias could
+  /// be printed.
+  LogicalResult printAlias(Attribute attr);
+
   void printType(Type type);
+
+  /// Print the alias for the given type, return failure if no alias could
+  /// be printed.
+  LogicalResult printAlias(Type type);
 
   /// Print the given location to the stream. If `allowAlias` is true, this
   /// allows for the internal location to use an attribute alias.
@@ -1594,6 +1610,14 @@ static void printElidedElementsAttr(raw_ostream &os) {
   os << R"(opaque<"_", "0xDEADBEEF">)";
 }
 
+LogicalResult AsmPrinter::Impl::printAlias(Attribute attr) {
+  return success(state && succeeded(state->getAliasState().getAlias(attr, os)));
+}
+
+LogicalResult AsmPrinter::Impl::printAlias(Type type) {
+  return success(state && succeeded(state->getAliasState().getAlias(type, os)));
+}
+
 void AsmPrinter::Impl::printAttribute(Attribute attr,
                                       AttrTypeElision typeElision) {
   if (!attr) {
@@ -1602,7 +1626,7 @@ void AsmPrinter::Impl::printAttribute(Attribute attr,
   }
 
   // Try to print an alias for this attribute.
-  if (state && succeeded(state->getAliasState().getAlias(attr, os)))
+  if (succeeded(printAlias(attr)))
     return;
 
   if (!isa<BuiltinDialect>(attr.getDialect()))
@@ -2102,6 +2126,16 @@ void AsmPrinter::printType(Type type) {
 void AsmPrinter::printAttribute(Attribute attr) {
   assert(impl && "expected AsmPrinter::printAttribute to be overriden");
   impl->printAttribute(attr);
+}
+
+LogicalResult AsmPrinter::printAlias(Attribute attr) {
+  assert(impl && "expected AsmPrinter::printAlias to be overriden");
+  return impl->printAlias(attr);
+}
+
+LogicalResult AsmPrinter::printAlias(Type type) {
+  assert(impl && "expected AsmPrinter::printAlias to be overriden");
+  return impl->printAlias(type);
 }
 
 void AsmPrinter::printAttributeWithoutType(Attribute attr) {

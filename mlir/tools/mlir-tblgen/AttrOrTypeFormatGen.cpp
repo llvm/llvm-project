@@ -163,7 +163,8 @@ static const char *const defaultParameterParser =
     "::mlir::FieldParser<$0>::parse($_parser)";
 
 /// Default printer for attribute or type parameters.
-static const char *const defaultParameterPrinter = "$_printer << $_self";
+static const char *const defaultParameterPrinter =
+    "$_printer.printStrippedAttrOrType($_self)";
 
 /// Print an error when failing to parse an element.
 ///
