@@ -177,7 +177,6 @@ def fir_AllocaOp : fir_Op<"alloca", [AttrSizedOperandSegments,
     unsigned numShapeOperands() { return shape().size(); }
     operand_range getShapeOperands() { return shape(); }
     static mlir::Type getRefTy(mlir::Type ty);
-    mlir::Type getInType() { return in_type(); }
   }];
 }
 
@@ -235,7 +234,6 @@ def fir_AllocMemOp : fir_Op<"allocmem",
     unsigned numShapeOperands() { return shape().size(); }
     operand_range getShapeOperands() { return shape(); }
     static mlir::Type getRefTy(mlir::Type ty);
-    mlir::Type getInType() { return in_type(); }
   }];
 }
 
@@ -484,7 +482,6 @@ class fir_SwitchTerminatorOp<string mnemonic, list<OpTrait> traits = []> :
     }
 
     // The selector is the value being tested to determine the destination
-    mlir::Value getSelector() { return selector(); }
     mlir::Value getSelector(llvm::ArrayRef<mlir::Value> operands) {
       return operands[0];
     }
@@ -893,8 +890,6 @@ def fir_EmboxOp : fir_Op<"embox", [NoSideEffect, AttrSizedOperandSegments]> {
   let verifier = "return ::verify(*this);";
 
   let extraClassDeclaration = [{
-    mlir::Value getShape() { return shape(); }
-    mlir::Value getSlice() { return slice(); }
     bool hasLenParams() { return !typeparams().empty(); }
     unsigned numLenParams() { return typeparams().size(); }
   }];
@@ -1673,11 +1668,6 @@ def fir_CoordinateOp : fir_Op<"coordinate_of", [NoSideEffect]> {
     [{ return build($_builder, $_state, resultType, ref, coor,
            mlir::TypeAttr::get(ref.getType())); }]>,
   ];
-
-  let extraClassDeclaration = [{
-    /// Get the type of the base object.
-    mlir::Type getBaseType() { return baseType(); }
-  }];
 }
 
 def fir_ExtractValueOp : fir_OneResultOp<"extract_value", [NoSideEffect]> {
@@ -1771,12 +1761,6 @@ def fir_ShapeOp : fir_Op<"shape", [NoSideEffect]> {
   }];
 
   let verifier = "return ::verify(*this);";
-
-  let extraClassDeclaration = [{
-    std::vector<mlir::Value> getExtents() {
-      return {extents().begin(), extents().end()};
-    }
-  }];
 }
 
 def fir_ShapeShiftOp : fir_Op<"shape_shift", [NoSideEffect]> {
@@ -1854,12 +1838,6 @@ def fir_ShiftOp : fir_Op<"shift", [NoSideEffect]> {
   }];
 
   let verifier = "return ::verify(*this);";
-
-  let extraClassDeclaration = [{
-    std::vector<mlir::Value> getOrigins() {
-      return {origins().begin(), origins().end()};
-    }
-  }];
 }
 
 def fir_SliceOp : fir_Op<"slice", [NoSideEffect, AttrSizedOperandSegments]> {
@@ -2022,9 +2000,6 @@ def fir_LenParamIndexOp : fir_OneResultOp<"len_param_index", [NoSideEffect]> {
   let extraClassDeclaration = [{
     static constexpr llvm::StringRef fieldAttrName() { return "field_id"; }
     static constexpr llvm::StringRef typeAttrName() { return "on_type"; }
-    mlir::Type getOnType() {
-      return (*this)->getAttrOfType<TypeAttr>(typeAttrName()).getValue();
-    }
   }];
 }
 
@@ -2250,7 +2225,7 @@ def fir_IterWhileOp : region_Op<"iterate_while",
   ];
 
   let extraClassDeclaration = [{
-    static constexpr llvm::StringRef getFinalValueAttrName() {
+    static constexpr llvm::StringRef getFinalValueAttrNameStr() {
       return "finalValue";
     }
     mlir::Block *getBody() { return &region().front(); }
@@ -2336,7 +2311,7 @@ def fir_CallOp : fir_Op<"call", [CallOpInterface]> {
     }]>];
 
   let extraClassDeclaration = [{
-    static constexpr StringRef getCalleeAttrName() { return "callee"; }
+    static constexpr StringRef getCalleeAttrNameStr() { return "callee"; }
 
     mlir::FunctionType getFunctionType();
 
@@ -2396,7 +2371,7 @@ def fir_DispatchOp : fir_Op<"dispatch", []> {
     static constexpr llvm::StringRef passArgAttrName() {
       return "pass_arg_pos";
     }
-    static constexpr llvm::StringRef getMethodAttrName() { return "method"; }
+    static constexpr llvm::StringRef getMethodAttrNameStr() { return "method"; }
     unsigned passArgPos();
   }];
 }
@@ -2646,13 +2621,6 @@ def fir_GenTypeDescOp : fir_OneResultOp<"gentypedesc", [NoSideEffect]> {
   let builders = [OpBuilder<(ins "mlir::TypeAttr":$inty)>];
 
   let verifier = "return ::verify(*this);";
-
-  let extraClassDeclaration = [{
-    mlir::Type getInType() {
-      // get the type that the type descriptor describes
-      return (*this)->getAttrOfType<mlir::TypeAttr>("in_type").getValue();
-    }
-  }];
 }
 
 def fir_NoReassocOp : fir_OneResultOp<"no_reassoc",
@@ -2744,8 +2712,8 @@ def fir_GlobalOp : fir_Op<"global", [IsolatedFromAbove, Symbol]> {
   ];
 
   let extraClassDeclaration = [{
-    static constexpr llvm::StringRef symbolAttrName() { return "symref"; }
-    static constexpr llvm::StringRef getConstantAttrName() {
+    static constexpr llvm::StringRef symbolAttrNameStr() { return "symref"; }
+    static constexpr llvm::StringRef getConstantAttrNameStr() {
       return "constant";
     }
     static constexpr llvm::StringRef linkageAttrName() { return "linkName"; }
@@ -2764,9 +2732,6 @@ def fir_GlobalOp : fir_Op<"global", [IsolatedFromAbove, Symbol]> {
     /// Append the next initializer value to the `GlobalOp` to construct
     /// the variable's initial value.
     void appendInitialValue(mlir::Operation *op);
-
-    /// A GlobalOp has one region.
-    mlir::Region &getRegion() { return (*this)->getRegion(0); }
 
     /// A GlobalOp has one block.
     mlir::Block &getBlock() { return getRegion().front(); }
@@ -2860,10 +2825,6 @@ def fir_DispatchTableOp : fir_Op<"dispatch_table",
     /// Append a dispatch table entry to the table.
     void appendTableEntry(mlir::Operation *op);
 
-    mlir::Region &getRegion() {
-      return (*this)->getRegion(0);
-    }
-
     mlir::Block &getBlock() {
       return getRegion().front();
     }
@@ -2892,8 +2853,8 @@ def fir_DTEntryOp : fir_Op<"dt_entry", [HasParent<"DispatchTableOp">]> {
   let printer = "::print(p, *this);";
 
   let extraClassDeclaration = [{
-    static constexpr llvm::StringRef getMethodAttrName() { return "method"; }
-    static constexpr llvm::StringRef getProcAttrName() { return "proc"; }
+    static constexpr llvm::StringRef getMethodAttrNameStr() { return "method"; }
+    static constexpr llvm::StringRef getProcAttrNameStr() { return "proc"; }
   }];
 }
 

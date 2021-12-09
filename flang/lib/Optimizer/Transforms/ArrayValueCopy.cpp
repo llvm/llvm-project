@@ -333,7 +333,7 @@ ArrayCopyAnalysis::arrayAccesses(ArrayLoadOp load) {
       accesses.push_back(owner);
       appendToQueue(update.getResult(1));
     } else if (auto br = mlir::dyn_cast<mlir::BranchOp>(owner)) {
-      branchOp(br.getDest(), br.destOperands());
+      branchOp(br.getDest(), br.getDestOperands());
     } else if (auto br = mlir::dyn_cast<mlir::CondBranchOp>(owner)) {
       branchOp(br.getTrueDest(), br.getTrueOperands());
       branchOp(br.getFalseDest(), br.getFalseOperands());

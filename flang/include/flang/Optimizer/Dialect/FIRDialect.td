@@ -24,6 +24,7 @@ include "mlir/Interfaces/SideEffectInterfaces.td"
 def fir_Dialect : Dialect {
   let name = "fir";
   let cppNamespace = "::fir";
+  let emitAccessorPrefix = kEmitAccessorPrefix_Both;
 }
 
 #endif // FORTRAN_DIALECT_FIR_DIALECT
