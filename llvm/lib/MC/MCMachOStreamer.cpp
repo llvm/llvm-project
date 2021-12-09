@@ -92,6 +92,9 @@ public:
                       unsigned Update, VersionTuple SDKVersion) override;
   void emitBuildVersion(unsigned Platform, unsigned Major, unsigned Minor,
                         unsigned Update, VersionTuple SDKVersion) override;
+  void emitDarwinTargetVariantBuildVersion(unsigned Platform, unsigned Major,
+                                           unsigned Minor, unsigned Update,
+                                           VersionTuple SDKVersion) override;
   void emitThumbFunc(MCSymbol *Func) override;
   bool emitSymbolAttribute(MCSymbol *Symbol, MCSymbolAttr Attribute) override;
   void emitSymbolDesc(MCSymbol *Symbol, unsigned DescValue) override;
@@ -284,6 +287,13 @@ void MCMachOStreamer::emitBuildVersion(unsigned Platform, unsigned Major,
                                        VersionTuple SDKVersion) {
   getAssembler().setBuildVersion((MachO::PlatformType)Platform, Major, Minor,
                                  Update, SDKVersion);
+}
+
+void MCMachOStreamer::emitDarwinTargetVariantBuildVersion(
+    unsigned Platform, unsigned Major, unsigned Minor, unsigned Update,
+    VersionTuple SDKVersion) {
+  getAssembler().setDarwinTargetVariantBuildVersion(
+      (MachO::PlatformType)Platform, Major, Minor, Update, SDKVersion);
 }
 
 void MCMachOStreamer::emitThumbFunc(MCSymbol *Symbol) {
@@ -519,7 +529,10 @@ MCStreamer *llvm::createMachOStreamer(MCContext &Context,
       new MCMachOStreamer(Context, std::move(MAB), std::move(OW), std::move(CE),
                           DWARFMustBeAtTheEnd, LabelSections);
   const Triple &Target = Context.getTargetTriple();
-  S->emitVersionForTarget(Target, Context.getObjectFileInfo()->getSDKVersion());
+  S->emitVersionForTarget(
+      Target, Context.getObjectFileInfo()->getSDKVersion(),
+      Context.getObjectFileInfo()->getDarwinTargetVariantTriple(),
+      Context.getObjectFileInfo()->getDarwinTargetVariantSDKVersion());
   if (RelaxAll)
     S->getAssembler().setRelaxAll(true);
   return S;

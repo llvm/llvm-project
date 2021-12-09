@@ -168,6 +168,9 @@ public:
                       unsigned Update, VersionTuple SDKVersion) override;
   void emitBuildVersion(unsigned Platform, unsigned Major, unsigned Minor,
                         unsigned Update, VersionTuple SDKVersion) override;
+  void emitDarwinTargetVariantBuildVersion(unsigned Platform, unsigned Major,
+                                           unsigned Minor, unsigned Update,
+                                           VersionTuple SDKVersion) override;
   void emitThumbFunc(MCSymbol *Func) override;
 
   void emitAssignment(MCSymbol *Symbol, const MCExpr *Value) override;
@@ -638,6 +641,12 @@ void MCAsmStreamer::emitBuildVersion(unsigned Platform, unsigned Major,
     OS << ", " << Update;
   EmitSDKVersionSuffix(OS, SDKVersion);
   EmitEOL();
+}
+
+void MCAsmStreamer::emitDarwinTargetVariantBuildVersion(
+    unsigned Platform, unsigned Major, unsigned Minor, unsigned Update,
+    VersionTuple SDKVersion) {
+  emitBuildVersion(Platform, Major, Minor, Update, SDKVersion);
 }
 
 void MCAsmStreamer::emitThumbFunc(MCSymbol *Func) {
