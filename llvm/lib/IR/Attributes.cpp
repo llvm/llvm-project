@@ -719,7 +719,7 @@ std::pair<unsigned, Optional<unsigned>> AttributeSet::getAllocSizeArgs() const {
 
 std::pair<unsigned, unsigned> AttributeSet::getVScaleRangeArgs() const {
   return SetNode ? SetNode->getVScaleRangeArgs()
-                 : std::pair<unsigned, unsigned>(0, 0);
+                 : std::pair<unsigned, unsigned>(1, 0);
 }
 
 std::string AttributeSet::getAsString(bool InAttrGrp) const {
@@ -900,7 +900,7 @@ AttributeSetNode::getAllocSizeArgs() const {
 std::pair<unsigned, unsigned> AttributeSetNode::getVScaleRangeArgs() const {
   if (auto A = findEnumAttribute(Attribute::VScaleRange))
     return A->getVScaleRangeArgs();
-  return std::make_pair(0, 0);
+  return std::make_pair(1, 0);
 }
 
 std::string AttributeSetNode::getAsString(bool InAttrGrp) const {

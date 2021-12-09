@@ -153,7 +153,7 @@ for.cond.cleanup:                                 ; preds = %for.cond.cleanup.lo
   ret void
 }
 
-attributes #0 = { vscale_range(0, 16) }
+attributes #0 = { vscale_range(1, 16) }
 
 !0 = distinct !{!0, !1, !2, !3, !4, !5}
 !1 = !{!"llvm.loop.mustprogress"}
