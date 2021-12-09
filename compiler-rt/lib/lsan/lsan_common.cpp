@@ -127,6 +127,42 @@ void LeakSuppressionContext::LazyInit() {
   }
 }
 
+Suppression *LeakSuppressionContext::GetSuppressionForAddr(uptr addr) {
+  Suppression *s = nullptr;
+
+  // Suppress by module name.
+  if (const char *module_name =
+          Symbolizer::GetOrInit()->GetModuleNameForPc(addr))
+    if (context.Match(module_name, kSuppressionLeak, &s))
+      return s;
+
+  // Suppress by file or function name.
+  SymbolizedStack *frames = Symbolizer::GetOrInit()->SymbolizePC(addr);
+  for (SymbolizedStack *cur = frames; cur; cur = cur->next) {
+    if (context.Match(cur->info.function, kSuppressionLeak, &s) ||
+        context.Match(cur->info.file, kSuppressionLeak, &s)) {
+      break;
+    }
+  }
+  frames->ClearAll();
+  return s;
+}
+
+Suppression *LeakSuppressionContext::GetSuppressionForStack(
+    u32 stack_trace_id, const StackTrace &stack) {
+  LazyInit();
+  for (uptr i = 0; i < stack.size; i++) {
+    Suppression *s = GetSuppressionForAddr(
+        StackTrace::GetPreviousInstructionPc(stack.trace[i]));
+    if (s) {
+      suppressed_stacks_sorted = false;
+      suppressed_stacks.push_back(stack_trace_id);
+      return s;
+    }
+  }
+  return nullptr;
+}
+
 static LeakSuppressionContext *GetSuppressionContext() {
   CHECK(suppression_ctx);
   return suppression_ctx;
@@ -749,42 +785,6 @@ static int DoRecoverableLeakCheck() {
 }
 
 void DoRecoverableLeakCheckVoid() { DoRecoverableLeakCheck(); }
-
-Suppression *LeakSuppressionContext::GetSuppressionForAddr(uptr addr) {
-  Suppression *s = nullptr;
-
-  // Suppress by module name.
-  if (const char *module_name =
-          Symbolizer::GetOrInit()->GetModuleNameForPc(addr))
-    if (context.Match(module_name, kSuppressionLeak, &s))
-      return s;
-
-  // Suppress by file or function name.
-  SymbolizedStack *frames = Symbolizer::GetOrInit()->SymbolizePC(addr);
-  for (SymbolizedStack *cur = frames; cur; cur = cur->next) {
-    if (context.Match(cur->info.function, kSuppressionLeak, &s) ||
-        context.Match(cur->info.file, kSuppressionLeak, &s)) {
-      break;
-    }
-  }
-  frames->ClearAll();
-  return s;
-}
-
-Suppression *LeakSuppressionContext::GetSuppressionForStack(
-    u32 stack_trace_id, const StackTrace &stack) {
-  LazyInit();
-  for (uptr i = 0; i < stack.size; i++) {
-    Suppression *s = GetSuppressionForAddr(
-        StackTrace::GetPreviousInstructionPc(stack.trace[i]));
-    if (s) {
-      suppressed_stacks_sorted = false;
-      suppressed_stacks.push_back(stack_trace_id);
-      return s;
-    }
-  }
-  return nullptr;
-}
 
 ///// LeakReport implementation. /////
 
