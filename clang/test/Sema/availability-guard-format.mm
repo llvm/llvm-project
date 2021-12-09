@@ -3,7 +3,7 @@
 // Testing that even for source code using '_' as a delimiter in availability version tuple '.' is actually used in diagnostic output as a delimiter.
 
 @interface foo
-- (void) method_bar __attribute__((availability(macosx, introduced = 10_12))); // expected-note {{'method_bar' has been marked as being introduced in macOS 10.12 here, but the deployment target is macOS 10.11.0}}
+- (void) method_bar __attribute__((availability(macosx, introduced = 10_12))); // expected-note {{'method_bar' has been marked as being introduced in macOS 10.12 here, but the deployment target is macOS 10.11}}
 @end
 
 int main() {

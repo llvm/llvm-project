@@ -958,8 +958,7 @@ public:
     // extended frames should be flagged as present.
     const Triple &TT = getTargetTriple();
 
-    unsigned Major, Minor, Micro;
-    TT.getOSVersion(Major, Minor, Micro);
+    unsigned Major = TT.getOSVersion().getMajor();
     switch(TT.getOS()) {
     default:
       return false;
