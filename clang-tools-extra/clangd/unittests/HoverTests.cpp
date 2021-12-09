@@ -914,7 +914,7 @@ class Foo {})cpp";
        [](HoverInfo &HI) {
          HI.Name = "arr";
          HI.Kind = index::SymbolKind::Variable;
-         HI.Type = "m_int[Size]";
+         HI.Type = {"m_int[Size]", "int[Size]"};
          HI.NamespaceScope = "";
          HI.Definition = "template <int Size> m_int arr[Size]";
          HI.TemplateParameters = {{{"int"}, {"Size"}, llvm::None}};
@@ -930,7 +930,7 @@ class Foo {})cpp";
        [](HoverInfo &HI) {
          HI.Name = "arr<4>";
          HI.Kind = index::SymbolKind::Variable;
-         HI.Type = "m_int[4]";
+         HI.Type = {"m_int[4]", "int[4]"};
          HI.NamespaceScope = "";
          HI.Definition = "m_int arr[4]";
        }},
@@ -998,6 +998,52 @@ class Foo {})cpp";
          HI.Definition = "template <typename T> using AA = A<T>";
          HI.Type = {"A<T>", "type-parameter-0-0"}; // FIXME: should be 'T'
          HI.TemplateParameters = {{{"typename"}, std::string("T"), llvm::None}};
+       }},
+      {// Constant array
+       R"cpp(
+          using m_int = int;
+
+          m_int ^[[arr]][10];
+         )cpp",
+       [](HoverInfo &HI) {
+         HI.Name = "arr";
+         HI.NamespaceScope = "";
+         HI.LocalScope = "";
+         HI.Kind = index::SymbolKind::Variable;
+         HI.Definition = "m_int arr[10]";
+         HI.Type = {"m_int[10]", "int[10]"};
+       }},
+      {// Incomplete array
+       R"cpp(
+          using m_int = int;
+
+          extern m_int ^[[arr]][];
+         )cpp",
+       [](HoverInfo &HI) {
+         HI.Name = "arr";
+         HI.NamespaceScope = "";
+         HI.LocalScope = "";
+         HI.Kind = index::SymbolKind::Variable;
+         HI.Definition = "extern m_int arr[]";
+         HI.Type = {"m_int[]", "int[]"};
+       }},
+      {// Dependent size array
+       R"cpp(
+          using m_int = int;
+
+          template<int Size>
+          struct Test {
+            m_int ^[[arr]][Size];
+          };
+         )cpp",
+       [](HoverInfo &HI) {
+         HI.Name = "arr";
+         HI.NamespaceScope = "";
+         HI.LocalScope = "Test<Size>::";
+         HI.AccessSpecifier = "public";
+         HI.Kind = index::SymbolKind::Field;
+         HI.Definition = "m_int arr[Size]";
+         HI.Type = {"m_int[Size]", "int[Size]"};
        }}};
   for (const auto &Case : Cases) {
     SCOPED_TRACE(Case.Code);
