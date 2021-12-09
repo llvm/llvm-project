@@ -184,11 +184,11 @@ ABI Changes in Clang
 --------------------
 
 - The ``_ExtInt(N)`` extension has been standardized in C23 as ``_BitInt(N)``.
-The mangling of this type in C++ has accordingly changed: under the Microsoft
-ABI it is now mangled using the ``_BitInt`` spelling, and under the Itanium ABI
-it is now mangled using a dedicated production. Note: the ABI for ``_BitInt(N)``
-is still in the process of being stabilized, so this type should not yet be
-used in interfaces that require ABI stability.
+  The mangling of this type in C++ has accordingly changed: under the Microsoft
+  ABI it is now mangled using the ``_BitInt`` spelling, and under the Itanium ABI
+  it is now mangled using a dedicated production. Note: the ABI for ``_BitInt(N)``
+  is still in the process of being stabilized, so this type should not yet be
+  used in interfaces that require ABI stability.
 
 OpenMP Support in Clang
 -----------------------
