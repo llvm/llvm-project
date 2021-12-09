@@ -89,7 +89,7 @@ public:
     typedef true_type   is_always_equal;
 
     _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17
-    allocator() _NOEXCEPT _LIBCPP_DEFAULT
+    allocator() _NOEXCEPT = default;
 
     template <class _Up>
     _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17
@@ -171,7 +171,7 @@ public:
     typedef true_type   is_always_equal;
 
     _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17
-    allocator() _NOEXCEPT _LIBCPP_DEFAULT
+    allocator() _NOEXCEPT = default;
 
     template <class _Up>
     _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17
