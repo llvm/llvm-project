@@ -228,7 +228,7 @@ define i32 @extelt_binop_binop_insertelt(<4 x i32> %A, <4 x i32> %B, i32 %f) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <4 x i32> [[B:%.*]], i32 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = add i32 [[TMP1]], [[F:%.*]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <4 x i32> [[B]], i32 0
-; CHECK-NEXT:    [[E:%.*]] = mul i32 [[TMP2]], [[TMP3]]
+; CHECK-NEXT:    [[E:%.*]] = mul nsw i32 [[TMP2]], [[TMP3]]
 ; CHECK-NEXT:    ret i32 [[E]]
 ;
   %v = insertelement <4 x i32> %A, i32 %f, i32 0
