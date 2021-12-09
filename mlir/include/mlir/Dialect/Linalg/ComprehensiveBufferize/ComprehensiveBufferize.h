@@ -17,7 +17,7 @@ namespace linalg {
 namespace comprehensive_bufferize {
 
 struct BufferizationOptions;
-struct BufferizationState;
+class BufferizationState;
 struct PostAnalysisStep;
 
 /// Bufferize the given operation. Reuses an existing BufferizationState object.
