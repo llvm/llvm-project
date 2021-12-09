@@ -912,6 +912,8 @@ static unsigned getNumSubRegsForSpillOp(unsigned Op) {
   case AMDGPU::SI_SPILL_V1024_RESTORE:
   case AMDGPU::SI_SPILL_A1024_SAVE:
   case AMDGPU::SI_SPILL_A1024_RESTORE:
+  case AMDGPU::SI_SPILL_AV1024_SAVE:
+  case AMDGPU::SI_SPILL_AV1024_RESTORE:
     return 32;
   case AMDGPU::SI_SPILL_S512_SAVE:
   case AMDGPU::SI_SPILL_S512_RESTORE:
@@ -919,6 +921,8 @@ static unsigned getNumSubRegsForSpillOp(unsigned Op) {
   case AMDGPU::SI_SPILL_V512_RESTORE:
   case AMDGPU::SI_SPILL_A512_SAVE:
   case AMDGPU::SI_SPILL_A512_RESTORE:
+  case AMDGPU::SI_SPILL_AV512_SAVE:
+  case AMDGPU::SI_SPILL_AV512_RESTORE:
     return 16;
   case AMDGPU::SI_SPILL_S256_SAVE:
   case AMDGPU::SI_SPILL_S256_RESTORE:
@@ -926,6 +930,8 @@ static unsigned getNumSubRegsForSpillOp(unsigned Op) {
   case AMDGPU::SI_SPILL_V256_RESTORE:
   case AMDGPU::SI_SPILL_A256_SAVE:
   case AMDGPU::SI_SPILL_A256_RESTORE:
+  case AMDGPU::SI_SPILL_AV256_SAVE:
+  case AMDGPU::SI_SPILL_AV256_RESTORE:
     return 8;
   case AMDGPU::SI_SPILL_S224_SAVE:
   case AMDGPU::SI_SPILL_S224_RESTORE:
@@ -933,6 +939,8 @@ static unsigned getNumSubRegsForSpillOp(unsigned Op) {
   case AMDGPU::SI_SPILL_V224_RESTORE:
   case AMDGPU::SI_SPILL_A224_SAVE:
   case AMDGPU::SI_SPILL_A224_RESTORE:
+  case AMDGPU::SI_SPILL_AV224_SAVE:
+  case AMDGPU::SI_SPILL_AV224_RESTORE:
     return 7;
   case AMDGPU::SI_SPILL_S192_SAVE:
   case AMDGPU::SI_SPILL_S192_RESTORE:
@@ -940,6 +948,8 @@ static unsigned getNumSubRegsForSpillOp(unsigned Op) {
   case AMDGPU::SI_SPILL_V192_RESTORE:
   case AMDGPU::SI_SPILL_A192_SAVE:
   case AMDGPU::SI_SPILL_A192_RESTORE:
+  case AMDGPU::SI_SPILL_AV192_SAVE:
+  case AMDGPU::SI_SPILL_AV192_RESTORE:
     return 6;
   case AMDGPU::SI_SPILL_S160_SAVE:
   case AMDGPU::SI_SPILL_S160_RESTORE:
@@ -947,6 +957,8 @@ static unsigned getNumSubRegsForSpillOp(unsigned Op) {
   case AMDGPU::SI_SPILL_V160_RESTORE:
   case AMDGPU::SI_SPILL_A160_SAVE:
   case AMDGPU::SI_SPILL_A160_RESTORE:
+  case AMDGPU::SI_SPILL_AV160_SAVE:
+  case AMDGPU::SI_SPILL_AV160_RESTORE:
     return 5;
   case AMDGPU::SI_SPILL_S128_SAVE:
   case AMDGPU::SI_SPILL_S128_RESTORE:
@@ -954,6 +966,8 @@ static unsigned getNumSubRegsForSpillOp(unsigned Op) {
   case AMDGPU::SI_SPILL_V128_RESTORE:
   case AMDGPU::SI_SPILL_A128_SAVE:
   case AMDGPU::SI_SPILL_A128_RESTORE:
+  case AMDGPU::SI_SPILL_AV128_SAVE:
+  case AMDGPU::SI_SPILL_AV128_RESTORE:
     return 4;
   case AMDGPU::SI_SPILL_S96_SAVE:
   case AMDGPU::SI_SPILL_S96_RESTORE:
@@ -961,6 +975,8 @@ static unsigned getNumSubRegsForSpillOp(unsigned Op) {
   case AMDGPU::SI_SPILL_V96_RESTORE:
   case AMDGPU::SI_SPILL_A96_SAVE:
   case AMDGPU::SI_SPILL_A96_RESTORE:
+  case AMDGPU::SI_SPILL_AV96_SAVE:
+  case AMDGPU::SI_SPILL_AV96_RESTORE:
     return 3;
   case AMDGPU::SI_SPILL_S64_SAVE:
   case AMDGPU::SI_SPILL_S64_RESTORE:
@@ -968,6 +984,8 @@ static unsigned getNumSubRegsForSpillOp(unsigned Op) {
   case AMDGPU::SI_SPILL_V64_RESTORE:
   case AMDGPU::SI_SPILL_A64_SAVE:
   case AMDGPU::SI_SPILL_A64_RESTORE:
+  case AMDGPU::SI_SPILL_AV64_SAVE:
+  case AMDGPU::SI_SPILL_AV64_RESTORE:
     return 2;
   case AMDGPU::SI_SPILL_S32_SAVE:
   case AMDGPU::SI_SPILL_S32_RESTORE:
@@ -975,6 +993,8 @@ static unsigned getNumSubRegsForSpillOp(unsigned Op) {
   case AMDGPU::SI_SPILL_V32_RESTORE:
   case AMDGPU::SI_SPILL_A32_SAVE:
   case AMDGPU::SI_SPILL_A32_RESTORE:
+  case AMDGPU::SI_SPILL_AV32_SAVE:
+  case AMDGPU::SI_SPILL_AV32_RESTORE:
     return 1;
   default: llvm_unreachable("Invalid spill opcode");
   }
@@ -1815,7 +1835,17 @@ void SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
     case AMDGPU::SI_SPILL_A128_SAVE:
     case AMDGPU::SI_SPILL_A96_SAVE:
     case AMDGPU::SI_SPILL_A64_SAVE:
-    case AMDGPU::SI_SPILL_A32_SAVE: {
+    case AMDGPU::SI_SPILL_A32_SAVE:
+    case AMDGPU::SI_SPILL_AV1024_SAVE:
+    case AMDGPU::SI_SPILL_AV512_SAVE:
+    case AMDGPU::SI_SPILL_AV256_SAVE:
+    case AMDGPU::SI_SPILL_AV224_SAVE:
+    case AMDGPU::SI_SPILL_AV192_SAVE:
+    case AMDGPU::SI_SPILL_AV160_SAVE:
+    case AMDGPU::SI_SPILL_AV128_SAVE:
+    case AMDGPU::SI_SPILL_AV96_SAVE:
+    case AMDGPU::SI_SPILL_AV64_SAVE:
+    case AMDGPU::SI_SPILL_AV32_SAVE: {
       const MachineOperand *VData = TII->getNamedOperand(*MI,
                                                          AMDGPU::OpName::vdata);
       assert(TII->getNamedOperand(*MI, AMDGPU::OpName::soffset)->getReg() ==
@@ -1851,7 +1881,17 @@ void SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
     case AMDGPU::SI_SPILL_A224_RESTORE:
     case AMDGPU::SI_SPILL_A256_RESTORE:
     case AMDGPU::SI_SPILL_A512_RESTORE:
-    case AMDGPU::SI_SPILL_A1024_RESTORE: {
+    case AMDGPU::SI_SPILL_A1024_RESTORE:
+    case AMDGPU::SI_SPILL_AV32_RESTORE:
+    case AMDGPU::SI_SPILL_AV64_RESTORE:
+    case AMDGPU::SI_SPILL_AV96_RESTORE:
+    case AMDGPU::SI_SPILL_AV128_RESTORE:
+    case AMDGPU::SI_SPILL_AV160_RESTORE:
+    case AMDGPU::SI_SPILL_AV192_RESTORE:
+    case AMDGPU::SI_SPILL_AV224_RESTORE:
+    case AMDGPU::SI_SPILL_AV256_RESTORE:
+    case AMDGPU::SI_SPILL_AV512_RESTORE:
+    case AMDGPU::SI_SPILL_AV1024_RESTORE: {
       const MachineOperand *VData = TII->getNamedOperand(*MI,
                                                          AMDGPU::OpName::vdata);
       assert(TII->getNamedOperand(*MI, AMDGPU::OpName::soffset)->getReg() ==
