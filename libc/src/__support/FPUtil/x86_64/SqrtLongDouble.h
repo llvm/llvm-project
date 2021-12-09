@@ -50,34 +50,34 @@ inline void normalize<long double>(int &exponent, __uint128_t &mantissa) {
 template <> inline long double sqrt<long double, 0>(long double x) {
   using UIntType = typename FPBits<long double>::UIntType;
   constexpr UIntType One = UIntType(1)
-                           << int(MantissaWidth<long double>::value);
+                           << int(MantissaWidth<long double>::VALUE);
 
   FPBits<long double> bits(x);
 
-  if (bits.isInfOrNaN()) {
-    if (bits.getSign() && (bits.getMantissa() == 0)) {
+  if (bits.is_inf_or_nan()) {
+    if (bits.get_sign() && (bits.get_mantissa() == 0)) {
       // sqrt(-Inf) = NaN
-      return FPBits<long double>::buildNaN(One >> 1);
+      return FPBits<long double>::build_nan(One >> 1);
     } else {
       // sqrt(NaN) = NaN
       // sqrt(+Inf) = +Inf
       return x;
     }
-  } else if (bits.isZero()) {
+  } else if (bits.is_zero()) {
     // sqrt(+0) = +0
     // sqrt(-0) = -0
     return x;
-  } else if (bits.getSign()) {
+  } else if (bits.get_sign()) {
     // sqrt( negative numbers ) = NaN
-    return FPBits<long double>::buildNaN(One >> 1);
+    return FPBits<long double>::build_nan(One >> 1);
   } else {
-    int xExp = bits.getExponent();
-    UIntType xMant = bits.getMantissa();
+    int xExp = bits.get_exponent();
+    UIntType xMant = bits.get_mantissa();
 
     // Step 1a: Normalize denormal input
     if (bits.getImplicitBit()) {
       xMant |= One;
-    } else if (bits.getUnbiasedExponent() == 0) {
+    } else if (bits.get_unbiased_exponent() == 0) {
       internal::normalize<long double>(xExp, xMant);
     }
 
@@ -122,9 +122,9 @@ template <> inline long double sqrt<long double, 0>(long double x) {
     }
 
     // Append the exponent field.
-    xExp = ((xExp >> 1) + FPBits<long double>::exponentBias);
+    xExp = ((xExp >> 1) + FPBits<long double>::EXPONENT_BIAS);
     y |= (static_cast<UIntType>(xExp)
-          << (MantissaWidth<long double>::value + 1));
+          << (MantissaWidth<long double>::VALUE + 1));
 
     // Round to nearest, ties to even
     if (rb && (lsb || (r != 0))) {
@@ -133,9 +133,9 @@ template <> inline long double sqrt<long double, 0>(long double x) {
 
     // Extract output
     FPBits<long double> out(0.0L);
-    out.setUnbiasedExponent(xExp);
+    out.set_unbiased_exponent(xExp);
     out.setImplicitBit(1);
-    out.setMantissa((y & (One - 1)));
+    out.set_mantissa((y & (One - 1)));
 
     return out;
   }

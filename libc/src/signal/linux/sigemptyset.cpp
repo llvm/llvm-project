@@ -20,7 +20,7 @@ LLVM_LIBC_FUNCTION(int, sigemptyset, (sigset_t * set)) {
     llvmlibc_errno = EINVAL;
     return -1;
   }
-  *set = __llvm_libc::Sigset::emptySet();
+  *set = __llvm_libc::Sigset::empty_set();
   return 0;
 }
 

@@ -15,10 +15,10 @@
 namespace __llvm_libc {
 
 LLVM_LIBC_FUNCTION(int, feupdateenv, (const fenv_t *envp)) {
-  int current_excepts = fputil::testExcept(FE_ALL_EXCEPT);
-  if (fputil::setEnv(envp) != 0)
+  int current_excepts = fputil::test_except(FE_ALL_EXCEPT);
+  if (fputil::set_env(envp) != 0)
     return -1;
-  return fputil::raiseExcept(current_excepts);
+  return fputil::raise_except(current_excepts);
 }
 
 } // namespace __llvm_libc
