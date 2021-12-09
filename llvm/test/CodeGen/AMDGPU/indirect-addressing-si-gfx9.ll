@@ -72,7 +72,6 @@ declare hidden void @foo()
 ; uses on the BUNDLE created when expanding the insert register pseudo.
 ; GCN-LABEL: {{^}}insertelement_with_call:
 ; GCN: s_set_gpr_idx_on s{{[0-9]+}}, gpr_idx(DST)
-; GCN-NEXT: s_waitcnt vmcnt(0)
 ; GCN-NEXT: v_mov_b32_e32 {{v[0-9]+}}, 8
 ; GCN-NEXT: s_set_gpr_idx_off
 ; GCN: s_swappc_b64
