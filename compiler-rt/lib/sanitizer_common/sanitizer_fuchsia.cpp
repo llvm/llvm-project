@@ -484,6 +484,9 @@ u32 GetNumberOfCPUs() { return zx_system_get_num_cpus(); }
 
 uptr GetRSS() { UNIMPLEMENTED(); }
 
+void *internal_start_thread(void *(*func)(void *arg), void *arg) { return 0; }
+void internal_join_thread(void *th) {}
+
 void InitializePlatformCommonFlags(CommonFlags *cf) {}
 
 }  // namespace __sanitizer
