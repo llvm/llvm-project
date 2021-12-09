@@ -436,7 +436,7 @@ MachineInstr &TargetInstrInfo::duplicate(MachineBasicBlock &MBB,
     MachineBasicBlock::iterator InsertBefore, const MachineInstr &Orig) const {
   assert(!Orig.isNotDuplicable() && "Instruction cannot be duplicated");
   MachineFunction &MF = *MBB.getParent();
-  return MF.CloneMachineInstrBundle(MBB, InsertBefore, Orig);
+  return MF.cloneMachineInstrBundle(MBB, InsertBefore, Orig);
 }
 
 // If the COPY instruction in MI can be folded to a stack operation, return

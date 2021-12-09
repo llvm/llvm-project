@@ -364,8 +364,9 @@ MachineFunction::CloneMachineInstr(const MachineInstr *Orig) {
              MachineInstr(*this, *Orig);
 }
 
-MachineInstr &MachineFunction::CloneMachineInstrBundle(MachineBasicBlock &MBB,
-    MachineBasicBlock::iterator InsertBefore, const MachineInstr &Orig) {
+MachineInstr &MachineFunction::cloneMachineInstrBundle(
+    MachineBasicBlock &MBB, MachineBasicBlock::iterator InsertBefore,
+    const MachineInstr &Orig) {
   MachineInstr *FirstClone = nullptr;
   MachineBasicBlock::const_instr_iterator I = Orig.getIterator();
   while (true) {
