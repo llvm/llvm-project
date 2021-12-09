@@ -1112,6 +1112,15 @@ define i32 @sdiv_constant_dividend_select_of_constants_divisor_use(i1 %b) {
   ret i32 %r
 }
 
+define i32 @sdiv_constant_dividend_select_of_constants_divisor_0_arm(i1 %b) {
+; CHECK-LABEL: @sdiv_constant_dividend_select_of_constants_divisor_0_arm(
+; CHECK-NEXT:    ret i32 3
+;
+  %s = select i1 %b, i32 12, i32 0
+  %r = sdiv i32 42, %s
+  ret i32 %r
+}
+
 define i32 @sdiv_constant_dividend_select_divisor1(i1 %b, i32 %x) {
 ; CHECK-LABEL: @sdiv_constant_dividend_select_divisor1(
 ; CHECK-NEXT:    [[S:%.*]] = select i1 [[B:%.*]], i32 [[X:%.*]], i32 -3
@@ -1196,6 +1205,15 @@ define i32 @udiv_constant_dividend_select_of_constants_divisor_use(i1 %b) {
 ;
   %s = select i1 %b, i32 12, i32 -3
   call void @use(i32 %s)
+  %r = udiv i32 42, %s
+  ret i32 %r
+}
+
+define i32 @udiv_constant_dividend_select_of_constants_divisor_0_arm(i1 %b) {
+; CHECK-LABEL: @udiv_constant_dividend_select_of_constants_divisor_0_arm(
+; CHECK-NEXT:    ret i32 3
+;
+  %s = select i1 %b, i32 12, i32 0
   %r = udiv i32 42, %s
   ret i32 %r
 }
