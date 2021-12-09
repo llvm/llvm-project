@@ -10,6 +10,7 @@
 #define _LIBCPP___RANDOM_POISSON_DISTRIBUTION_H
 
 #include <__config>
+#include <__random/clamp_to_integral.h>
 #include <__random/exponential_distribution.h>
 #include <__random/normal_distribution.h>
 #include <__random/uniform_real_distribution.h>
