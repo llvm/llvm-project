@@ -3,7 +3,7 @@ import("//compiler-rt/target.gni")
 source_set("cxx_sources") {
   configs -= [ "//llvm/utils/gn/build:llvm_code" ]
   configs += [ "//llvm/utils/gn/build:crt_code" ]
-  sources = [ "rtl/tsan_new_delete.cpp" ]
+  sources = [ "tsan_new_delete.cpp" ]
 }
 
 if (current_os == "mac") {
@@ -12,7 +12,7 @@ if (current_os == "mac") {
   tsan_target_type = "static_library"
 }
 
-target(tsan_target_type, "tsan") {
+target(tsan_target_type, "rtl") {
   configs -= [ "//llvm/utils/gn/build:llvm_code" ]
   configs += [ "//llvm/utils/gn/build:crt_code" ]
 
@@ -46,88 +46,88 @@ target(tsan_target_type, "tsan") {
   cflags = [ "-fPIE" ]
 
   sources = [
-    "rtl/tsan_clock.cpp",
-    "rtl/tsan_clock.h",
-    "rtl/tsan_debugging.cpp",
-    "rtl/tsan_defs.h",
-    "rtl/tsan_dense_alloc.h",
-    "rtl/tsan_external.cpp",
-    "rtl/tsan_fd.cpp",
-    "rtl/tsan_fd.h",
-    "rtl/tsan_flags.cpp",
-    "rtl/tsan_flags.h",
-    "rtl/tsan_flags.inc",
-    "rtl/tsan_ignoreset.cpp",
-    "rtl/tsan_ignoreset.h",
-    "rtl/tsan_ilist.h",
-    "rtl/tsan_interceptors.h",
-    "rtl/tsan_interceptors_posix.cpp",
-    "rtl/tsan_interface.cpp",
-    "rtl/tsan_interface.h",
-    "rtl/tsan_interface.inc",
-    "rtl/tsan_interface_ann.cpp",
-    "rtl/tsan_interface_ann.h",
-    "rtl/tsan_interface_atomic.cpp",
-    "rtl/tsan_interface_java.cpp",
-    "rtl/tsan_interface_java.h",
-    "rtl/tsan_malloc_mac.cpp",
-    "rtl/tsan_md5.cpp",
-    "rtl/tsan_mman.cpp",
-    "rtl/tsan_mman.h",
-    "rtl/tsan_mutexset.cpp",
-    "rtl/tsan_mutexset.h",
-    "rtl/tsan_platform.h",
-    "rtl/tsan_ppc_regs.h",
-    "rtl/tsan_preinit.cpp",
-    "rtl/tsan_report.cpp",
-    "rtl/tsan_report.h",
-    "rtl/tsan_rtl.cpp",
-    "rtl/tsan_rtl.h",
-    "rtl/tsan_rtl_access.cpp",
-    "rtl/tsan_rtl_mutex.cpp",
-    "rtl/tsan_rtl_proc.cpp",
-    "rtl/tsan_rtl_report.cpp",
-    "rtl/tsan_rtl_thread.cpp",
-    "rtl/tsan_shadow.h",
-    "rtl/tsan_stack_trace.cpp",
-    "rtl/tsan_stack_trace.h",
-    "rtl/tsan_suppressions.cpp",
-    "rtl/tsan_suppressions.h",
-    "rtl/tsan_symbolize.cpp",
-    "rtl/tsan_symbolize.h",
-    "rtl/tsan_sync.cpp",
-    "rtl/tsan_sync.h",
-    "rtl/tsan_trace.h",
-    "rtl/tsan_update_shadow_word.inc",
-    "rtl/tsan_vector_clock.cpp",
-    "rtl/tsan_vector_clock.h",
+    "tsan_clock.cpp",
+    "tsan_clock.h",
+    "tsan_debugging.cpp",
+    "tsan_defs.h",
+    "tsan_dense_alloc.h",
+    "tsan_external.cpp",
+    "tsan_fd.cpp",
+    "tsan_fd.h",
+    "tsan_flags.cpp",
+    "tsan_flags.h",
+    "tsan_flags.inc",
+    "tsan_ignoreset.cpp",
+    "tsan_ignoreset.h",
+    "tsan_ilist.h",
+    "tsan_interceptors.h",
+    "tsan_interceptors_posix.cpp",
+    "tsan_interface.cpp",
+    "tsan_interface.h",
+    "tsan_interface.inc",
+    "tsan_interface_ann.cpp",
+    "tsan_interface_ann.h",
+    "tsan_interface_atomic.cpp",
+    "tsan_interface_java.cpp",
+    "tsan_interface_java.h",
+    "tsan_malloc_mac.cpp",
+    "tsan_md5.cpp",
+    "tsan_mman.cpp",
+    "tsan_mman.h",
+    "tsan_mutexset.cpp",
+    "tsan_mutexset.h",
+    "tsan_platform.h",
+    "tsan_ppc_regs.h",
+    "tsan_preinit.cpp",
+    "tsan_report.cpp",
+    "tsan_report.h",
+    "tsan_rtl.cpp",
+    "tsan_rtl.h",
+    "tsan_rtl_access.cpp",
+    "tsan_rtl_mutex.cpp",
+    "tsan_rtl_proc.cpp",
+    "tsan_rtl_report.cpp",
+    "tsan_rtl_thread.cpp",
+    "tsan_shadow.h",
+    "tsan_stack_trace.cpp",
+    "tsan_stack_trace.h",
+    "tsan_suppressions.cpp",
+    "tsan_suppressions.h",
+    "tsan_symbolize.cpp",
+    "tsan_symbolize.h",
+    "tsan_sync.cpp",
+    "tsan_sync.h",
+    "tsan_trace.h",
+    "tsan_update_shadow_word.inc",
+    "tsan_vector_clock.cpp",
+    "tsan_vector_clock.h",
   ]
   if (target_os == "mac") {
     sources += [
-      "rtl/tsan_interceptors_libdispatch.cpp",
-      "rtl/tsan_interceptors_mac.cpp",
-      "rtl/tsan_interceptors_mach_vm.cpp",
-      "rtl/tsan_platform_mac.cpp",
-      "rtl/tsan_platform_posix.cpp",
+      "tsan_interceptors_libdispatch.cpp",
+      "tsan_interceptors_mac.cpp",
+      "tsan_interceptors_mach_vm.cpp",
+      "tsan_platform_mac.cpp",
+      "tsan_platform_posix.cpp",
     ]
     cflags += [ "-fblocks" ]
   } else {
     # Assume Linux
     sources += [
-      "rtl/tsan_platform_linux.cpp",
-      "rtl/tsan_platform_posix.cpp",
+      "tsan_platform_linux.cpp",
+      "tsan_platform_posix.cpp",
     ]
   }
   if (target_cpu == "x64") {
-    sources += [ "rtl/tsan_rtl_amd64.S" ]
+    sources += [ "tsan_rtl_amd64.S" ]
   } else if (target_cpu == "arm64") {
-    sources += [ "rtl/tsan_rtl_aarch64.S" ]
+    sources += [ "tsan_rtl_aarch64.S" ]
   } else if (target_cpu == "powerpc64") {
-    sources += [ "rtl/tsan_rtl_ppc64.S" ]
+    sources += [ "tsan_rtl_ppc64.S" ]
   } else if (target_cpu == "mips64") {
-    sources += [ "rtl/tsan_rtl_mips64.S" ]
+    sources += [ "tsan_rtl_mips64.S" ]
   } else if (target_cpu == "s390x") {
-    sources += [ "rtl/tsan_rtl_s390x.S" ]
+    sources += [ "tsan_rtl_s390x.S" ]
   }
 
   # To be able to include sanitizer_common.
