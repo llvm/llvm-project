@@ -1709,23 +1709,25 @@ static void computeKnownBitsFromOperator(const Operator *I,
             !II->getFunction()->hasFnAttribute(Attribute::VScaleRange))
           break;
 
-        auto VScaleRange = II->getFunction()
-                               ->getFnAttribute(Attribute::VScaleRange)
-                               .getVScaleRangeArgs();
+        auto Attr = II->getFunction()->getFnAttribute(Attribute::VScaleRange);
+        Optional<unsigned> VScaleMax = Attr.getVScaleRangeMax();
 
-        if (VScaleRange.second == 0)
+        if (!VScaleMax)
           break;
+
+        unsigned VScaleMin = Attr.getVScaleRangeMin();
 
         // If vscale min = max then we know the exact value at compile time
         // and hence we know the exact bits.
-        if (VScaleRange.first == VScaleRange.second) {
-          Known.One = VScaleRange.first;
-          Known.Zero = VScaleRange.first;
+        if (VScaleMin == VScaleMax) {
+          Known.One = VScaleMin;
+          Known.Zero = VScaleMin;
           Known.Zero.flipAllBits();
           break;
         }
 
-        unsigned FirstZeroHighBit = 32 - countLeadingZeros(VScaleRange.second);
+        unsigned FirstZeroHighBit =
+            32 - countLeadingZeros(VScaleMax.getValue());
         if (FirstZeroHighBit < BitWidth)
           Known.Zero.setBitsFrom(FirstZeroHighBit);
 
