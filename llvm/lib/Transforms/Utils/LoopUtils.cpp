@@ -919,8 +919,7 @@ Value *llvm::createMinMaxOp(IRBuilderBase &Builder, RecurKind RK, Value *Left,
 
 // Helper to generate an ordered reduction.
 Value *llvm::getOrderedReduction(IRBuilderBase &Builder, Value *Acc, Value *Src,
-                                 unsigned Op, RecurKind RdxKind,
-                                 ArrayRef<Value *> RedOps) {
+                                 unsigned Op, RecurKind RdxKind) {
   unsigned VF = cast<FixedVectorType>(Src->getType())->getNumElements();
 
   // Extract and apply reduction ops in ascending order:
@@ -938,9 +937,6 @@ Value *llvm::getOrderedReduction(IRBuilderBase &Builder, Value *Acc, Value *Src,
              "Invalid min/max");
       Result = createMinMaxOp(Builder, RdxKind, Result, Ext);
     }
-
-    if (!RedOps.empty())
-      propagateIRFlags(Result, RedOps);
   }
 
   return Result;
@@ -948,8 +944,7 @@ Value *llvm::getOrderedReduction(IRBuilderBase &Builder, Value *Acc, Value *Src,
 
 // Helper to generate a log2 shuffle reduction.
 Value *llvm::getShuffleReduction(IRBuilderBase &Builder, Value *Src,
-                                 unsigned Op, RecurKind RdxKind,
-                                 ArrayRef<Value *> RedOps) {
+                                 unsigned Op, RecurKind RdxKind) {
   unsigned VF = cast<FixedVectorType>(Src->getType())->getNumElements();
   // VF is a power of 2 so we can emit the reduction using log2(VF) shuffles
   // and vector ops, reducing the set of values being computed by half each
@@ -977,8 +972,6 @@ Value *llvm::getShuffleReduction(IRBuilderBase &Builder, Value *Src,
              "Invalid min/max");
       TmpVec = createMinMaxOp(Builder, RdxKind, TmpVec, Shuf);
     }
-    if (!RedOps.empty())
-      propagateIRFlags(TmpVec, RedOps);
 
     // We may compute the reassociated scalar ops in a way that does not
     // preserve nsw/nuw etc. Conservatively, drop those flags.
@@ -1031,8 +1024,7 @@ Value *llvm::createSelectCmpTargetReduction(IRBuilderBase &Builder,
 
 Value *llvm::createSimpleTargetReduction(IRBuilderBase &Builder,
                                          const TargetTransformInfo *TTI,
-                                         Value *Src, RecurKind RdxKind,
-                                         ArrayRef<Value *> RedOps) {
+                                         Value *Src, RecurKind RdxKind) {
   auto *SrcVecEltTy = cast<VectorType>(Src->getType())->getElementType();
   switch (RdxKind) {
   case RecurKind::Add:
