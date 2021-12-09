@@ -3021,8 +3021,14 @@ bool TokenAnnotator::spaceRequiredBetween(const AnnotatedLine &Line,
          Style.SpaceAroundPointerQualifiers == FormatStyle::SAPQ_Both) &&
         (Left.is(TT_AttributeParen) || Left.canBePointerOrReferenceQualifier()))
       return true;
+    if (Left.Tok.isLiteral())
+      return true;
+    // for (auto a = 0, b = 0; const auto & c : {1, 2, 3})
+    if (Left.isTypeOrIdentifier() && Right.Next && Right.Next->Next &&
+        Right.Next->Next->is(TT_RangeBasedForLoopColon))
+      return getTokenPointerOrReferenceAlignment(Right) !=
+             FormatStyle::PAS_Left;
     return (
-        Left.Tok.isLiteral() ||
         (!Left.isOneOf(TT_PointerOrReference, tok::l_paren) &&
          (getTokenPointerOrReferenceAlignment(Right) != FormatStyle::PAS_Left ||
           (Line.IsMultiVariableDeclStmt &&
@@ -3041,18 +3047,32 @@ bool TokenAnnotator::spaceRequiredBetween(const AnnotatedLine &Line,
          Style.SpaceAroundPointerQualifiers == FormatStyle::SAPQ_Both) &&
         Right.canBePointerOrReferenceQualifier())
       return true;
-    return Right.Tok.isLiteral() || Right.is(TT_BlockComment) ||
-           (Right.isOneOf(Keywords.kw_override, Keywords.kw_final) &&
-            !Right.is(TT_StartOfName)) ||
-           (Right.is(tok::l_brace) && Right.is(BK_Block)) ||
-           (!Right.isOneOf(TT_PointerOrReference, TT_ArraySubscriptLSquare,
-                           tok::l_paren) &&
-            (getTokenPointerOrReferenceAlignment(Left) !=
-                 FormatStyle::PAS_Right &&
-             !Line.IsMultiVariableDeclStmt) &&
-            Left.Previous &&
-            !Left.Previous->isOneOf(tok::l_paren, tok::coloncolon,
-                                    tok::l_square));
+    // & 1
+    if (Right.Tok.isLiteral())
+      return true;
+    // & /* comment
+    if (Right.is(TT_BlockComment))
+      return true;
+    // foo() -> const Bar * override/final
+    if (Right.isOneOf(Keywords.kw_override, Keywords.kw_final) &&
+        !Right.is(TT_StartOfName))
+      return true;
+    // & {
+    if (Right.is(tok::l_brace) && Right.is(BK_Block))
+      return true;
+    // for (auto a = 0, b = 0; const auto& c : {1, 2, 3})
+    if (Left.Previous && Left.Previous->isTypeOrIdentifier() && Right.Next &&
+        Right.Next->is(TT_RangeBasedForLoopColon))
+      return getTokenPointerOrReferenceAlignment(Left) !=
+             FormatStyle::PAS_Right;
+    return !Right.isOneOf(TT_PointerOrReference, TT_ArraySubscriptLSquare,
+                          tok::l_paren) &&
+           (getTokenPointerOrReferenceAlignment(Left) !=
+                FormatStyle::PAS_Right &&
+            !Line.IsMultiVariableDeclStmt) &&
+           Left.Previous &&
+           !Left.Previous->isOneOf(tok::l_paren, tok::coloncolon,
+                                   tok::l_square);
   }
   // Ensure right pointer alignment with ellipsis e.g. int *...P
   if (Left.is(tok::ellipsis) && Left.Previous &&
