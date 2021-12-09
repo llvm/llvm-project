@@ -102,11 +102,11 @@ unsigned VEMCCodeEmitter::getMachineOpValue(const MCInst &MI,
                                             const MCSubtargetInfo &STI) const {
   if (MO.isReg())
     return Ctx.getRegisterInfo()->getEncodingValue(MO.getReg());
-
   if (MO.isImm())
-    return MO.getImm();
+    return static_cast<unsigned>(MO.getImm());
 
   assert(MO.isExpr());
+
   const MCExpr *Expr = MO.getExpr();
   if (const VEMCExpr *SExpr = dyn_cast<VEMCExpr>(Expr)) {
     MCFixupKind Kind = (MCFixupKind)SExpr->getFixupKind();
