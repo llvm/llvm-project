@@ -32,11 +32,9 @@ define amdgpu_kernel void @partial_copy(<4 x i32> %arg) #0 {
   ; REGALLOC-GFX90A:  INLINEASM &"; def $0", 1 /* sideeffect attdialect */, 3080202 /* regdef:VReg_64_Align2 */, def [[VREG_64:%[0-9]+]]
   ; REGALLOC-GFX90A:  SI_SPILL_V64_SAVE [[VREG_64]], %stack.0
   ; REGALLOC-GFX90A:  [[V_MFMA_I32_4X4X4I8_A128:%[0-9]+]]:areg_128_align2 = V_MFMA_I32_4X4X4I8_e64
-  ; REGALLOC-GFX90A:  [[SI_SPILL_V64_RESTORE:%[0-9]+]]:vreg_64_align2 = SI_SPILL_V64_RESTORE %stack.0
-  ; REGALLOC-GFX90A:  [[COPY_AV64:%[0-9]+]]:av_64_align2 = COPY [[SI_SPILL_V64_RESTORE]]
-  ; REGALLOC-GFX90A:  GLOBAL_STORE_DWORDX2 undef %15:vreg_64_align2, [[COPY_AV64]]
-  ; REGALLOC-GFX90A-NOT:  %{{[0-9]+}}:vreg_128 = COPY [[V_MFMA_I32_4X4X4I8_A128]]
-  ; REGALLOC-GFX90A:  GLOBAL_STORE_DWORDX4 undef %17:vreg_64_align2, [[V_MFMA_I32_4X4X4I8_A128]]
+  ; REGALLOC-GFX90A:  [[SI_SPILL_AV64_RESTORE:%[0-9]+]]:av_64_align2 = SI_SPILL_AV64_RESTORE %stack.0
+  ; REGALLOC-GFX90A:  GLOBAL_STORE_DWORDX2 undef %{{[0-9]+}}:vreg_64_align2, [[SI_SPILL_AV64_RESTORE]]
+  ; REGALLOC-GFX90A:  GLOBAL_STORE_DWORDX4 undef %{{[0-9]+}}:vreg_64_align2, [[V_MFMA_I32_4X4X4I8_A128]]
   ;
   ; PEI-GFX90A-LABEL: name: partial_copy
   ; PEI-GFX90A: bb.0 (%ir-block.0):
