@@ -9483,6 +9483,59 @@ tryToVectorizeSequence(SmallVectorImpl<T *> &Incoming,
   return Changed;
 }
 
+/// Compare two cmp instructions. If IsCompatibility is true, function returns
+/// true if 2 cmps have same/swapped predicates and mos compatible corresponding
+/// operands. If IsCompatibility is false, function implements strict weak
+/// ordering relation between two cmp instructions, returning true if the first
+/// instruction is "less" than the second, i.e. its predicate is less than the
+/// predicate of the second or the operands IDs are less than the operands IDs
+/// of the second cmp instruction.
+template <bool IsCompatibility>
+static bool compareCmp(Value *V, Value *V2,
+                       function_ref<bool(Instruction *)> IsDeleted) {
+  auto *CI1 = cast<CmpInst>(V);
+  auto *CI2 = cast<CmpInst>(V2);
+  if (IsDeleted(CI2) || !isValidElementType(CI2->getType()))
+    return false;
+  if (CI1->getOperand(0)->getType()->getTypeID() <
+      CI2->getOperand(0)->getType()->getTypeID())
+    return !IsCompatibility;
+  if (CI1->getOperand(0)->getType()->getTypeID() >
+      CI2->getOperand(0)->getType()->getTypeID())
+    return false;
+  CmpInst::Predicate Pred1 = CI1->getPredicate();
+  CmpInst::Predicate Pred2 = CI2->getPredicate();
+  CmpInst::Predicate SwapPred1 = CmpInst::getSwappedPredicate(Pred1);
+  CmpInst::Predicate SwapPred2 = CmpInst::getSwappedPredicate(Pred2);
+  CmpInst::Predicate BasePred1 = std::min(Pred1, SwapPred1);
+  CmpInst::Predicate BasePred2 = std::min(Pred2, SwapPred2);
+  if (BasePred1 < BasePred2)
+    return !IsCompatibility;
+  if (BasePred1 > BasePred2)
+    return false;
+  // Compare operands.
+  bool LEPreds = Pred1 <= Pred2;
+  bool GEPreds = Pred1 >= Pred2;
+  for (int I = 0, E = CI1->getNumOperands(); I < E; ++I) {
+    auto *Op1 = CI1->getOperand(LEPreds ? I : E - I - 1);
+    auto *Op2 = CI2->getOperand(GEPreds ? I : E - I - 1);
+    if (Op1->getValueID() < Op2->getValueID())
+      return !IsCompatibility;
+    if (Op1->getValueID() > Op2->getValueID())
+      return false;
+    if (auto *I1 = dyn_cast<Instruction>(Op1))
+      if (auto *I2 = dyn_cast<Instruction>(Op2)) {
+        if (I1->getParent() != I2->getParent())
+          return false;
+        InstructionsState S = getSameOpcode({I1, I2});
+        if (S.getOpcode())
+          continue;
+        return false;
+      }
+  }
+  return IsCompatibility;
+}
+
 bool SLPVectorizerPass::vectorizeSimpleInstructions(
     SmallVectorImpl<Instruction *> &Instructions, BasicBlock *BB, BoUpSLP &R,
     bool AtTerminator) {
@@ -9514,37 +9567,16 @@ bool SLPVectorizerPass::vectorizeSimpleInstructions(
     }
     // Try to vectorize list of compares.
     // Sort by type, compare predicate, etc.
-    // TODO: Add analysis on the operand opcodes (profitable to vectorize
-    // instructions with same/alternate opcodes/const values).
     auto &&CompareSorter = [&R](Value *V, Value *V2) {
-      auto *CI1 = cast<CmpInst>(V);
-      auto *CI2 = cast<CmpInst>(V2);
-      if (R.isDeleted(CI2) || !isValidElementType(CI2->getType()))
-        return false;
-      if (CI1->getOperand(0)->getType()->getTypeID() <
-          CI2->getOperand(0)->getType()->getTypeID())
-        return true;
-      if (CI1->getOperand(0)->getType()->getTypeID() >
-          CI2->getOperand(0)->getType()->getTypeID())
-        return false;
-      return CI1->getPredicate() < CI2->getPredicate() ||
-             (CI1->getPredicate() > CI2->getPredicate() &&
-              CI1->getPredicate() <
-                  CmpInst::getSwappedPredicate(CI2->getPredicate()));
+      return compareCmp<false>(V, V2,
+                               [&R](Instruction *I) { return R.isDeleted(I); });
     };
 
     auto &&AreCompatibleCompares = [&R](Value *V1, Value *V2) {
       if (V1 == V2)
         return true;
-      auto *CI1 = cast<CmpInst>(V1);
-      auto *CI2 = cast<CmpInst>(V2);
-      if (R.isDeleted(CI2) || !isValidElementType(CI2->getType()))
-        return false;
-      if (CI1->getOperand(0)->getType() != CI2->getOperand(0)->getType())
-        return false;
-      return CI1->getPredicate() == CI2->getPredicate() ||
-             CI1->getPredicate() ==
-                 CmpInst::getSwappedPredicate(CI2->getPredicate());
+      return compareCmp<true>(V1, V2,
+                              [&R](Instruction *I) { return R.isDeleted(I); });
     };
     auto Limit = [&R](Value *V) {
       unsigned EltSize = R.getVectorElementSize(V);
