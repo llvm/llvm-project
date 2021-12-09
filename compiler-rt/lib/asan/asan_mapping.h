@@ -214,9 +214,9 @@ static const u64 kConstShadowOffset = ASAN_SHADOW_OFFSET_CONST;
 #endif
 
 #if SANITIZER_ANDROID && defined(__arm__)
-# define ASAN_PREMAP_SHADOW 1
+#  define ASAN_PREMAP_SHADOW 1
 #else
-# define ASAN_PREMAP_SHADOW 0
+#  define ASAN_PREMAP_SHADOW 0
 #endif
 
 #define ASAN_SHADOW_GRANULARITY (1ULL << ASAN_SHADOW_SCALE)
@@ -224,9 +224,9 @@ static const u64 kConstShadowOffset = ASAN_SHADOW_OFFSET_CONST;
 #define DO_ASAN_MAPPING_PROFILE 0  // Set to 1 to profile the functions below.
 
 #if DO_ASAN_MAPPING_PROFILE
-# define PROFILE_ASAN_MAPPING() AsanMappingProfile[__LINE__]++;
+#  define PROFILE_ASAN_MAPPING() AsanMappingProfile[__LINE__]++;
 #else
-# define PROFILE_ASAN_MAPPING()
+#  define PROFILE_ASAN_MAPPING()
 #endif
 
 // If 1, all shadow boundaries are constants.
@@ -242,8 +242,8 @@ extern uptr AsanMappingProfile[];
 // with non-fixed mapping. As of r175253 (Feb 2013) the performance
 // difference between fixed and non-fixed mapping is below the noise level.
 static uptr kHighMemEnd = 0x7fffffffffffULL;
-static uptr kMidMemBeg =    0x3000000000ULL;
-static uptr kMidMemEnd =    0x4fffffffffULL;
+static uptr kMidMemBeg = 0x3000000000ULL;
+static uptr kMidMemEnd = 0x4fffffffffULL;
 #else
 extern uptr kHighMemEnd, kMidMemBeg, kMidMemEnd;  // Initialized in __asan_init.
 #endif
@@ -345,7 +345,7 @@ static inline uptr MemToShadowSize(uptr size) {
 static inline bool AddrIsInMem(uptr a) {
   PROFILE_ASAN_MAPPING();
   return AddrIsInLowMem(a) || AddrIsInMidMem(a) || AddrIsInHighMem(a) ||
-      (flags()->protect_shadow_gap == 0 && AddrIsInShadowGap(a));
+         (flags()->protect_shadow_gap == 0 && AddrIsInShadowGap(a));
 }
 
 static inline uptr MemToShadow(uptr p) {
@@ -367,7 +367,7 @@ static inline bool AddrIsAlignedByGranularity(uptr a) {
 static inline bool AddressIsPoisoned(uptr a) {
   PROFILE_ASAN_MAPPING();
   const uptr kAccessSize = 1;
-  u8 *shadow_address = (u8*)MEM_TO_SHADOW(a);
+  u8 *shadow_address = (u8 *)MEM_TO_SHADOW(a);
   s8 shadow_value = *shadow_address;
   if (shadow_value) {
     u8 last_accessed_byte =
