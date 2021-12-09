@@ -786,6 +786,55 @@ convertOmpWsLoop(Operation &opInst, llvm::IRBuilderBase &builder,
   return success();
 }
 
+// Convert an Atomic Ordering attribute to llvm::AtomicOrdering.
+llvm::AtomicOrdering convertAtomicOrdering(Optional<StringRef> AOAttr) {
+  if (!AOAttr.hasValue())
+    return llvm::AtomicOrdering::Monotonic; // Default Memory Ordering
+
+  return StringSwitch<llvm::AtomicOrdering>(AOAttr.getValue())
+      .Case("seq_cst", llvm::AtomicOrdering::SequentiallyConsistent)
+      .Case("acq_rel", llvm::AtomicOrdering::AcquireRelease)
+      .Case("acquire", llvm::AtomicOrdering::Acquire)
+      .Case("release", llvm::AtomicOrdering::Release)
+      .Case("relaxed", llvm::AtomicOrdering::Monotonic)
+      .Default(llvm::AtomicOrdering::Monotonic);
+}
+
+// Convert omp.atomic.read operation to LLVM IR.
+static LogicalResult
+convertOmpAtomicRead(Operation &opInst, llvm::IRBuilderBase &builder,
+                     LLVM::ModuleTranslation &moduleTranslation) {
+
+  auto readOp = cast<omp::AtomicReadOp>(opInst);
+  llvm::OpenMPIRBuilder *ompBuilder = moduleTranslation.getOpenMPBuilder();
+
+  // Set up the source location value for OpenMP runtime.
+  llvm::DISubprogram *subprogram =
+      builder.GetInsertBlock()->getParent()->getSubprogram();
+  const llvm::DILocation *diLoc =
+      moduleTranslation.translateLoc(opInst.getLoc(), subprogram);
+  llvm::OpenMPIRBuilder::LocationDescription ompLoc(builder.saveIP(),
+                                                    llvm::DebugLoc(diLoc));
+  llvm::AtomicOrdering AO = convertAtomicOrdering(readOp.memory_order());
+  llvm::Value *address = moduleTranslation.lookupValue(readOp.address());
+  llvm::OpenMPIRBuilder::InsertPointTy currentIP = builder.saveIP();
+
+  // Insert alloca for result.
+  llvm::OpenMPIRBuilder::InsertPointTy allocaIP =
+      findAllocaInsertPoint(builder, moduleTranslation);
+  builder.restoreIP(allocaIP);
+  llvm::Value *v = builder.CreateAlloca(
+      moduleTranslation.convertType(readOp.getResult().getType()));
+  moduleTranslation.mapValue(readOp.getResult(), v);
+
+  // Restore the IP and insert Atomic Read.
+  builder.restoreIP(currentIP);
+  llvm::OpenMPIRBuilder::AtomicOpValue V = {v, false, false};
+  llvm::OpenMPIRBuilder::AtomicOpValue X = {address, false, false};
+  builder.restoreIP(ompBuilder->createAtomicRead(ompLoc, X, V, AO));
+  return success();
+}
+
 /// Converts an OpenMP reduction operation using OpenMPIRBuilder. Expects the
 /// mapping between reduction variables and their private equivalents to have
 /// been stored on the ModuleTranslation stack. Currently only supports
@@ -906,6 +955,9 @@ LogicalResult OpenMPDialectLLVMIRTranslationInterface::convertOperation(
       })
       .Case([&](omp::WsLoopOp) {
         return convertOmpWsLoop(*op, builder, moduleTranslation);
+      })
+      .Case([&](omp::AtomicReadOp) {
+        return convertOmpAtomicRead(*op, builder, moduleTranslation);
       })
       .Case<omp::YieldOp, omp::TerminatorOp, omp::ReductionDeclareOp,
             omp::CriticalDeclareOp>([](auto op) {
