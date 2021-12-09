@@ -951,6 +951,13 @@ Value *llvm::getShuffleReduction(IRBuilderBase &Builder, Value *Src,
   // round.
   assert(isPowerOf2_32(VF) &&
          "Reduction emission only supported for pow2 vectors!");
+  // Note: fast-math-flags flags are controlled by the builder configuration
+  // and are assumed to apply to all generated arithmetic instructions.  Other
+  // poison generating flags (nsw/nuw/inbounds/inrange/exact) are not part
+  // of the builder configuration, and since they're not passed explicitly,
+  // will never be relevant here.  Note that it would be generally unsound to
+  // propagate these from an intrinsic call to the expansion anyways as we/
+  // change the order of operations.
   Value *TmpVec = Src;
   SmallVector<int, 32> ShuffleMask(VF);
   for (unsigned i = VF; i != 1; i >>= 1) {
@@ -964,7 +971,6 @@ Value *llvm::getShuffleReduction(IRBuilderBase &Builder, Value *Src,
     Value *Shuf = Builder.CreateShuffleVector(TmpVec, ShuffleMask, "rdx.shuf");
 
     if (Op != Instruction::ICmp && Op != Instruction::FCmp) {
-      // The builder propagates its fast-math-flags setting.
       TmpVec = Builder.CreateBinOp((Instruction::BinaryOps)Op, TmpVec, Shuf,
                                    "bin.rdx");
     } else {
@@ -972,11 +978,6 @@ Value *llvm::getShuffleReduction(IRBuilderBase &Builder, Value *Src,
              "Invalid min/max");
       TmpVec = createMinMaxOp(Builder, RdxKind, TmpVec, Shuf);
     }
-
-    // We may compute the reassociated scalar ops in a way that does not
-    // preserve nsw/nuw etc. Conservatively, drop those flags.
-    if (auto *ReductionInst = dyn_cast<Instruction>(TmpVec))
-      ReductionInst->dropPoisonGeneratingFlags();
   }
   // The result is in the first element of the vector.
   return Builder.CreateExtractElement(TmpVec, Builder.getInt32(0));
