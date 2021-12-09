@@ -15,7 +15,7 @@ using namespace lldb_private;
 using namespace llvm;
 
 TEST(DataEncoderTest, PutU8) {
-  const ArrayRef<uint8_t> init = {1, 2, 3, 4, 5, 6, 7, 8};
+  const std::vector<uint8_t> init = {1, 2, 3, 4, 5, 6, 7, 8};
   const uint32_t addr_size = 4;
 
   uint32_t offset = 0;
@@ -166,7 +166,7 @@ TEST(DataEncoderTest, AppendCString) {
 }
 
 TEST(DataEncoderTest, PutU16Little) {
-  const ArrayRef<uint8_t> init = {1, 2, 3, 4, 5, 6, 7, 8};
+  const std::vector<uint8_t> init = {1, 2, 3, 4, 5, 6, 7, 8};
   const uint32_t addr_size = 4;
   uint32_t offset = 0;
   DataEncoder encoder(init.data(), init.size(), lldb::eByteOrderLittle,
@@ -190,7 +190,7 @@ TEST(DataEncoderTest, PutU16Little) {
 }
 
 TEST(DataEncoderTest, PutU16Big) {
-  const ArrayRef<uint8_t> init = {1, 2, 3, 4, 5, 6, 7, 8};
+  const std::vector<uint8_t> init = {1, 2, 3, 4, 5, 6, 7, 8};
   const uint32_t addr_size = 4;
   uint32_t offset = 0;
   DataEncoder encoder(init.data(), init.size(), lldb::eByteOrderBig,
@@ -214,7 +214,7 @@ TEST(DataEncoderTest, PutU16Big) {
 }
 
 TEST(DataEncoderTest, PutU32Little) {
-  const ArrayRef<uint8_t> init = {1, 2, 3, 4, 5, 6, 7, 8};
+  const std::vector<uint8_t> init = {1, 2, 3, 4, 5, 6, 7, 8};
   const uint32_t addr_size = 4;
 
   uint32_t offset = 0;
@@ -233,7 +233,7 @@ TEST(DataEncoderTest, PutU32Little) {
 }
 
 TEST(DataEncoderTest, PutU32Big) {
-  const ArrayRef<uint8_t> init = {1, 2, 3, 4, 5, 6, 7, 8};
+  const std::vector<uint8_t> init = {1, 2, 3, 4, 5, 6, 7, 8};
   const uint32_t addr_size = 4;
 
   uint32_t offset = 0;
@@ -252,7 +252,7 @@ TEST(DataEncoderTest, PutU32Big) {
 }
 
 TEST(DataEncoderTest, PutU64Little) {
-  const ArrayRef<uint8_t> init = {1, 2, 3, 4, 5, 6, 7, 8};
+  const std::vector<uint8_t> init = {1, 2, 3, 4, 5, 6, 7, 8};
   const uint32_t addr_size = 4;
   uint32_t offset = 0;
   DataEncoder encoder(init.data(), init.size(), lldb::eByteOrderLittle,
@@ -267,7 +267,7 @@ TEST(DataEncoderTest, PutU64Little) {
 }
 
 TEST(DataEncoderTest, PutU64Big) {
-  const ArrayRef<uint8_t> init = {1, 2, 3, 4, 5, 6, 7, 8};
+  const std::vector<uint8_t> init = {1, 2, 3, 4, 5, 6, 7, 8};
   const uint32_t addr_size = 4;
   uint32_t offset = 0;
   DataEncoder encoder(init.data(), init.size(), lldb::eByteOrderBig,
@@ -282,7 +282,7 @@ TEST(DataEncoderTest, PutU64Big) {
 }
 
 TEST(DataEncoderTest, PutUnsignedLittle) {
-  const ArrayRef<uint8_t> init = {1, 2, 3, 4, 5, 6, 7, 8};
+  const std::vector<uint8_t> init = {1, 2, 3, 4, 5, 6, 7, 8};
   const uint32_t addr_size = 4;
   uint32_t offset = 0;
   DataEncoder encoder(init.data(), init.size(), lldb::eByteOrderLittle,
@@ -312,7 +312,7 @@ TEST(DataEncoderTest, PutUnsignedLittle) {
 }
 
 TEST(DataEncoderTest, PutUnsignedBig) {
-  const ArrayRef<uint8_t> init = {1, 2, 3, 4, 5, 6, 7, 8};
+  const std::vector<uint8_t> init = {1, 2, 3, 4, 5, 6, 7, 8};
   const uint32_t addr_size = 4;
   uint32_t offset = 0;
   DataEncoder encoder(init.data(), init.size(), lldb::eByteOrderBig,
@@ -343,7 +343,7 @@ TEST(DataEncoderTest, PutUnsignedBig) {
 }
 
 TEST(DataEncoderTest, PutData) {
-  const ArrayRef<uint8_t> init = {1, 2, 3, 4, 5, 6, 7, 8};
+  const std::vector<uint8_t> init = {1, 2, 3, 4, 5, 6, 7, 8};
   const uint32_t addr_size = 4;
   char one_byte[] = {11};
   char two_bytes[] = {12, 13};
@@ -354,11 +354,11 @@ TEST(DataEncoderTest, PutData) {
   // Test putting zero bytes from a invalid array (NULL)
   offset = encoder.PutData(offset, nullptr, 0);
   ASSERT_EQ(offset, 0U);
-  ASSERT_EQ(encoder.GetData(), init);
+  ASSERT_EQ(encoder.GetData(), ArrayRef<uint8_t>(init));
   // Test putting zero bytes from a valid array
   offset = encoder.PutData(offset, one_byte, 0);
   ASSERT_EQ(offset, 0U);
-  ASSERT_EQ(encoder.GetData(), init);
+  ASSERT_EQ(encoder.GetData(), ArrayRef<uint8_t>(init));
   // Test putting one byte from a valid array
   offset = encoder.PutData(offset, one_byte, sizeof(one_byte));
   ASSERT_EQ(offset, 1U);
@@ -372,13 +372,13 @@ TEST(DataEncoderTest, PutData) {
 }
 
 TEST(DataEncoderTest, PutCString) {
-  const ArrayRef<uint8_t> init = {1, 2, 3, 4, 5, 6, 7, 8};
+  const std::vector<uint8_t> init = {1, 2, 3, 4, 5, 6, 7, 8};
   const uint32_t addr_size = 4;
   DataEncoder encoder(init.data(), init.size(), lldb::eByteOrderLittle,
                       addr_size);
   // Test putting invalid string pointer
   ASSERT_EQ(encoder.PutCString(0, nullptr), UINT32_MAX);
-  ASSERT_EQ(encoder.GetData(), init);
+  ASSERT_EQ(encoder.GetData(), ArrayRef<uint8_t>(init));
   // Test putting an empty string
   uint32_t offset = 0;
   offset = encoder.PutCString(offset, "");
@@ -398,7 +398,7 @@ TEST(DataEncoderTest, PutCString) {
 }
 
 TEST(DataEncoderTest, PutAddressLittle4) {
-  const ArrayRef<uint8_t> init = {1, 2, 3, 4, 5, 6, 7, 8};
+  const std::vector<uint8_t> init = {1, 2, 3, 4, 5, 6, 7, 8};
   const uint32_t addr_size = 4;
   DataEncoder encoder(init.data(), init.size(), lldb::eByteOrderLittle,
                       addr_size);
@@ -428,7 +428,7 @@ TEST(DataEncoderTest, PutAddressLittle4) {
 }
 
 TEST(DataEncoderTest, PutAddressBig4) {
-  const ArrayRef<uint8_t> init = {1, 2, 3, 4, 5, 6, 7, 8};
+  const std::vector<uint8_t> init = {1, 2, 3, 4, 5, 6, 7, 8};
   const uint32_t addr_size = 4;
   DataEncoder encoder(init.data(), init.size(), lldb::eByteOrderBig,
                       addr_size);
@@ -458,7 +458,7 @@ TEST(DataEncoderTest, PutAddressBig4) {
 }
 
 TEST(DataEncoderTest, PutAddressLittle8) {
-  const ArrayRef<uint8_t> init = {1, 2, 3, 4, 5, 6, 7, 8};
+  const std::vector<uint8_t> init = {1, 2, 3, 4, 5, 6, 7, 8};
   const uint32_t addr_size = 8;
   DataEncoder encoder(init.data(), init.size(), lldb::eByteOrderLittle,
                       addr_size);
@@ -496,7 +496,7 @@ TEST(DataEncoderTest, PutAddressLittle8) {
 }
 
 TEST(DataEncoderTest, PutAddressBig8) {
-  const ArrayRef<uint8_t> init = {1, 2, 3, 4, 5, 6, 7, 8};
+  const std::vector<uint8_t> init = {1, 2, 3, 4, 5, 6, 7, 8};
   const uint32_t addr_size = 8;
   DataEncoder encoder(init.data(), init.size(), lldb::eByteOrderBig,
                       addr_size);
