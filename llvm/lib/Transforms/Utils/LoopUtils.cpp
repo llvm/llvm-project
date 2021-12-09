@@ -773,8 +773,8 @@ void llvm::breakLoopBackedge(Loop *L, DominatorTree &DT, ScalarEvolution &SE,
 }
 
 
-/// Checks if \p L has single exit through latch block except possibly
-/// "deoptimizing" exits. Returns branch instruction terminating the loop
+/// Checks if \p L has an exiting latch branch.  There may also be other
+/// exiting blocks.  Returns branch instruction terminating the loop
 /// latch if above check is successful, nullptr otherwise.
 static BranchInst *getExpectedExitLoopLatchBranch(Loop *L) {
   BasicBlock *Latch = L->getLoopLatch();
@@ -789,21 +789,16 @@ static BranchInst *getExpectedExitLoopLatchBranch(Loop *L) {
           LatchBR->getSuccessor(1) == L->getHeader()) &&
          "At least one edge out of the latch must go to the header");
 
-  SmallVector<BasicBlock *, 4> ExitBlocks;
-  L->getUniqueNonLatchExitBlocks(ExitBlocks);
-  if (any_of(ExitBlocks, [](const BasicBlock *EB) {
-        return !EB->getTerminatingDeoptimizeCall();
-      }))
-    return nullptr;
-
   return LatchBR;
 }
 
 Optional<unsigned>
 llvm::getLoopEstimatedTripCount(Loop *L,
                                 unsigned *EstimatedLoopInvocationWeight) {
-  // Support loops with an exiting latch and other existing exists only
-  // deoptimize.
+  // Currently we take the estimate exit count only from the loop latch,
+  // ignoring other exiting blocks.  This can overestimate the trip count
+  // if we exit through another exit, but can never underestimate it.
+  // TODO: incorporate information from other exits
   BranchInst *LatchBranch = getExpectedExitLoopLatchBranch(L);
   if (!LatchBranch)
     return None;
@@ -834,8 +829,9 @@ llvm::getLoopEstimatedTripCount(Loop *L,
 
 bool llvm::setLoopEstimatedTripCount(Loop *L, unsigned EstimatedTripCount,
                                      unsigned EstimatedloopInvocationWeight) {
-  // Support loops with an exiting latch and other existing exists only
-  // deoptimize.
+  // At the moment, we currently support changing the estimate trip count of
+  // the latch branch only.  We could extend this API to manipulate estimated
+  // trip counts for any exit.
   BranchInst *LatchBranch = getExpectedExitLoopLatchBranch(L);
   if (!LatchBranch)
     return false;
