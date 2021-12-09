@@ -940,7 +940,7 @@ func @linalg_op_same_out_tensors(
     %t2: tensor<?xf32> {linalg.inplaceable = true}) -> (tensor<?xf32>, tensor<?xf32>){
 
   //      CHECK: linalg.generic
-  // CHECK-SAME: {__inplace_results_attr__ = ["true", "false"]
+  // CHECK-SAME: {__inplace_results_attr__ = ["true", "true"]
   %o:2 = linalg.generic #trait ins(%t1 : tensor<?xf32>)
                                outs (%t2, %t2 : tensor<?xf32>, tensor<?xf32>) {
       ^bb(%0: f32, %1: f32, %2 : f32) :
@@ -948,8 +948,41 @@ func @linalg_op_same_out_tensors(
     } -> (tensor<?xf32>, tensor<?xf32>)
 
   //      CHECK: return
-  // CHECK-SAME: {__equivalent_func_args__ = [1, -1]}
+  // CHECK-SAME: {__equivalent_func_args__ = [0, 1]}
   return %o#0, %o#1 : tensor<?xf32>, tensor<?xf32>
+}
+
+// -----
+
+#accesses = [
+  affine_map<(i) -> (i)>,
+  affine_map<(i) -> (i)>,
+  affine_map<(i) -> (i)>,
+  affine_map<(i) -> (i)>
+]
+#trait = {
+  indexing_maps = #accesses,
+  iterator_types = ["parallel"]
+}
+
+// CHECK-LABEL: func @linalg_op_same_out_tensors_2
+func @linalg_op_same_out_tensors_2(
+    %t1: tensor<?xf32> {linalg.inplaceable = true},
+    %t2: tensor<?xf32> {linalg.inplaceable = true})
+        -> (tensor<?xf32>, tensor<?xf32>, tensor<?xf32>){
+
+  //      CHECK: linalg.generic
+  // CHECK-SAME: {__inplace_results_attr__ = ["true", "true", "false"]
+  %o:3 = linalg.generic #trait
+          ins(%t1 : tensor<?xf32>)
+          outs (%t2, %t2, %t2 : tensor<?xf32>, tensor<?xf32>, tensor<?xf32>) {
+      ^bb(%0: f32, %1: f32, %2 : f32, %3 : f32) :
+        linalg.yield %0, %0, %0 : f32, f32, f32
+    } -> (tensor<?xf32>, tensor<?xf32>, tensor<?xf32>)
+
+  //      CHECK: return
+  // CHECK-SAME: {__equivalent_func_args__ = [0, 1, -1]}
+  return %o#0, %o#1, %o#2 : tensor<?xf32>, tensor<?xf32>, tensor<?xf32>
 }
 
 // -----
