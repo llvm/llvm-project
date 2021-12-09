@@ -247,6 +247,55 @@ const char *Demangler::parseIdentifier(OutputBuffer *Demangled,
 
 const char *Demangler::parseLName(OutputBuffer *Demangled, const char *Mangled,
                                   unsigned long Len) {
+  switch (Len) {
+  case 6:
+    if (strncmp(Mangled, "__initZ", Len + 1) == 0) {
+      // The static initializer for a given symbol.
+      Demangled->prepend("initializer for ");
+      Demangled->setCurrentPosition(Demangled->getCurrentPosition() - 1);
+      Mangled += Len;
+      return Mangled;
+    }
+    if (strncmp(Mangled, "__vtblZ", Len + 1) == 0) {
+      // The vtable symbol for a given class.
+      Demangled->prepend("vtable for ");
+      Demangled->setCurrentPosition(Demangled->getCurrentPosition() - 1);
+      Mangled += Len;
+      return Mangled;
+    }
+    break;
+
+  case 7:
+    if (strncmp(Mangled, "__ClassZ", Len + 1) == 0) {
+      // The classinfo symbol for a given class.
+      Demangled->prepend("ClassInfo for ");
+      Demangled->setCurrentPosition(Demangled->getCurrentPosition() - 1);
+      Mangled += Len;
+      return Mangled;
+    }
+    break;
+
+  case 11:
+    if (strncmp(Mangled, "__InterfaceZ", Len + 1) == 0) {
+      // The interface symbol for a given class.
+      Demangled->prepend("Interface for ");
+      Demangled->setCurrentPosition(Demangled->getCurrentPosition() - 1);
+      Mangled += Len;
+      return Mangled;
+    }
+    break;
+
+  case 12:
+    if (strncmp(Mangled, "__ModuleInfoZ", Len + 1) == 0) {
+      // The ModuleInfo symbol for a given module.
+      Demangled->prepend("ModuleInfo for ");
+      Demangled->setCurrentPosition(Demangled->getCurrentPosition() - 1);
+      Mangled += Len;
+      return Mangled;
+    }
+    break;
+  }
+
   *Demangled << StringView(Mangled, Len);
   Mangled += Len;
 
