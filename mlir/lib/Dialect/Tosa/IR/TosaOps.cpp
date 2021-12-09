@@ -526,9 +526,15 @@ struct DepthwiseConv2DMulOptimization
     ShapedType inputType = input.getType().cast<ShapedType>();
     ShapedType weightType = weight.getType().cast<ShapedType>();
     ShapedType resultType = op.output().getType().cast<ShapedType>();
+    Type inputEType = inputType.getElementType();
 
     if (!(inputType.hasStaticShape() && weightType.hasStaticShape() &&
           resultType.hasStaticShape())) {
+      return failure();
+    }
+
+    // Quantization information needs to still be performed.
+    if (op.quantization_info() || !inputEType.isa<FloatType>()) {
       return failure();
     }
 
