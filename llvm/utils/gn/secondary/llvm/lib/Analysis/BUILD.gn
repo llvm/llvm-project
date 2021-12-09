@@ -91,6 +91,7 @@ static_library("Analysis") {
     "ModuleDebugInfoPrinter.cpp",
     "ModuleSummaryAnalysis.cpp",
     "MustExecute.cpp",
+    "NoInferenceModelRunner.cpp",
     "ObjCARCAliasAnalysis.cpp",
     "ObjCARCAnalysisUtils.cpp",
     "ObjCARCInstKind.cpp",
