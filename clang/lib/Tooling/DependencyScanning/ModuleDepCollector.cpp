@@ -37,9 +37,13 @@ CompilerInvocation ModuleDepCollector::makeInvocationForModuleBuildWithoutPaths(
   CI.getLangOpts()->resetNonModularOptions();
   CI.getPreprocessorOpts().resetNonModularOptions();
 
-  // Remove options incompatible with explicit module build.
+  // Remove options incompatible with explicit module build or are likely to
+  // differ between identical modules discovered from different translation
+  // units.
   CI.getFrontendOpts().Inputs.clear();
   CI.getFrontendOpts().OutputFile.clear();
+  CI.getCodeGenOpts().MainFileName.clear();
+  CI.getCodeGenOpts().DwarfDebugFlags.clear();
 
   CI.getFrontendOpts().ProgramAction = frontend::GenerateModule;
   CI.getLangOpts()->ModuleName = Deps.ID.ModuleName;
