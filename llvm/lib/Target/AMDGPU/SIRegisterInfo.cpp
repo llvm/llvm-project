@@ -1240,9 +1240,10 @@ void SIRegisterInfo::buildSpillLoadStore(
     if (ScratchOffsetReg == AMDGPU::NoRegister) {
       BuildMI(MBB, MI, DL, TII->get(AMDGPU::S_MOV_B32), SOffset).addImm(Offset);
     } else {
-      BuildMI(MBB, MI, DL, TII->get(AMDGPU::S_ADD_I32), SOffset)
+      auto Add = BuildMI(MBB, MI, DL, TII->get(AMDGPU::S_ADD_I32), SOffset)
           .addReg(ScratchOffsetReg)
           .addImm(Offset);
+      Add->getOperand(3).setIsDead(); // Mark SCC as dead.
     }
 
     Offset = 0;
