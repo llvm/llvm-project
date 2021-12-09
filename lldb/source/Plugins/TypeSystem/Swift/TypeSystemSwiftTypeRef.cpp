@@ -1506,8 +1506,18 @@ StripPrivateIDs(swift::Demangle::Demangler &dem,
 /// Compare two swift types from different type systems by comparing their
 /// (canonicalized) mangled name.
 template <> bool Equivalent<CompilerType>(CompilerType l, CompilerType r) {
+#ifdef STRICT_VALIDATION
   if (!l || !r)
     return !l && !r;
+#else
+  // We allow the typeref typesystem to return a type where
+  // SwiftASTContext fails.
+  if (!l)
+    return !r;
+  if (!r)
+    return true;
+#endif
+
   // See comments in SwiftASTContext::ReconstructType(). For
   // SILFunctionTypes the mapping isn't bijective.
   auto *ast_ctx = llvm::cast<SwiftASTContext>(r.GetTypeSystem());
@@ -2722,6 +2732,9 @@ CompilerType TypeSystemSwiftTypeRef::GetChildCompilerTypeAtIndex(
   auto defer = llvm::make_scope_exit([&] {
     if (!ModuleList::GetGlobalModuleListProperties()
              .GetSwiftValidateTypeSystem())
+      return;
+    // Ignore if SwiftASTContext got no result.
+    if (ast_child_name.empty())
       return;
     llvm::StringRef suffix(ast_child_name);
     if (suffix.consume_front("__ObjC."))
