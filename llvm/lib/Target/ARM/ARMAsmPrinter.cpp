@@ -1153,8 +1153,12 @@ void ARMAsmPrinter::EmitUnwindingInstruction(const MachineInstr *MI) {
     unsigned StartOp = 2 + 2;
     // Use all the operands.
     unsigned NumOffset = 0;
-    // Amount of SP adjustment folded into a push.
-    unsigned Pad = 0;
+    // Amount of SP adjustment folded into a push, before the
+    // registers are stored (pad at higher addresses).
+    unsigned PadBefore = 0;
+    // Amount of SP adjustment folded into a push, after the
+    // registers are stored (pad at lower addresses).
+    unsigned PadAfter = 0;
 
     switch (Opc) {
     default:
@@ -1185,7 +1189,7 @@ void ARMAsmPrinter::EmitUnwindingInstruction(const MachineInstr *MI) {
                  "Pad registers must come before restored ones");
           unsigned Width =
             TargetRegInfo->getRegSizeInBits(MO.getReg(), MachineRegInfo) / 8;
-          Pad += Width;
+          PadAfter += Width;
           continue;
         }
         // Check for registers that are remapped (for a Thumb1 prologue that
@@ -1201,14 +1205,32 @@ void ARMAsmPrinter::EmitUnwindingInstruction(const MachineInstr *MI) {
     case ARM::t2STR_PRE:
       assert(MI->getOperand(2).getReg() == ARM::SP &&
              "Only stack pointer as a source reg is supported");
+      if (unsigned RemappedReg = AFI->EHPrologueRemappedRegs.lookup(SrcReg))
+        SrcReg = RemappedReg;
+
       RegList.push_back(SrcReg);
+      break;
+    case ARM::t2STRD_PRE:
+      assert(MI->getOperand(3).getReg() == ARM::SP &&
+             "Only stack pointer as a source reg is supported");
+      SrcReg = MI->getOperand(1).getReg();
+      if (unsigned RemappedReg = AFI->EHPrologueRemappedRegs.lookup(SrcReg))
+        SrcReg = RemappedReg;
+      RegList.push_back(SrcReg);
+      SrcReg = MI->getOperand(2).getReg();
+      if (unsigned RemappedReg = AFI->EHPrologueRemappedRegs.lookup(SrcReg))
+        SrcReg = RemappedReg;
+      RegList.push_back(SrcReg);
+      PadBefore = -MI->getOperand(4).getImm() - 8;
       break;
     }
     if (MAI->getExceptionHandlingType() == ExceptionHandling::ARM) {
+      if (PadBefore)
+        ATS.emitPad(PadBefore);
       ATS.emitRegSave(RegList, Opc == ARM::VSTMDDB_UPD);
       // Account for the SP adjustment, folded into the push.
-      if (Pad)
-        ATS.emitPad(Pad);
+      if (PadAfter)
+        ATS.emitPad(PadAfter);
     }
   } else {
     // Changes of stack / frame pointer.
@@ -1299,6 +1321,10 @@ void ARMAsmPrinter::EmitUnwindingInstruction(const MachineInstr *MI) {
       case ARM::t2MOVTi16:
         Offset = MI->getOperand(2).getImm();
         AFI->EHPrologueOffsetInRegs[DstReg] |= (Offset << 16);
+        break;
+      case ARM::t2PAC:
+      case ARM::t2PACBTI:
+        AFI->EHPrologueRemappedRegs[ARM::R12] = ARM::RA_AUTH_CODE;
         break;
       default:
         MI->print(errs());
