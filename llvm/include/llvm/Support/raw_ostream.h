@@ -625,6 +625,9 @@ public:
 
 /// A raw_ostream that writes to an std::string.  This is a simple adaptor
 /// class. This class does not encounter output errors.
+/// raw_string_ostream operates without a buffer, delegating all memory
+/// management to the std::string. Thus the std::string is always up-to-date,
+/// may be used directly and there is no need to call flush().
 class raw_string_ostream : public raw_ostream {
   std::string &OS;
 
@@ -639,14 +642,11 @@ public:
   explicit raw_string_ostream(std::string &O) : OS(O) {
     SetUnbuffered();
   }
-  ~raw_string_ostream() override;
 
-  /// Flushes the stream contents to the target string and returns  the string's
-  /// reference.
-  std::string& str() {
-    flush();
-    return OS;
-  }
+  /// Returns the string's reference. In most cases it is better to simply use
+  /// the underlying std::string directly.
+  /// TODO: Consider removing this API.
+  std::string &str() { return OS; }
 
   void reserveExtraSpace(uint64_t ExtraSize) override {
     OS.reserve(tell() + ExtraSize);
