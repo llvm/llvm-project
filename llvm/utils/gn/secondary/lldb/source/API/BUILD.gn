@@ -9,7 +9,6 @@ static_library("liblldb") {
   configs += [ "//llvm/utils/gn/build:lldb_code" ]
   deps = [
     "//lldb/include/lldb/Host:Config",
-    "//lldb/source:lldbBase",
     "//lldb/source/Breakpoint",
     "//lldb/source/Core",
     "//lldb/source/DataFormatters",
@@ -21,6 +20,7 @@ static_library("liblldb") {
     "//lldb/source/Symbol",
     "//lldb/source/Target",
     "//lldb/source/Utility",
+    "//lldb/source/Version",
     "//lldb/tools/argdumper:lldb-argdumper",
     "//llvm/lib/Support",
   ]

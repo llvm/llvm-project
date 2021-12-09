@@ -10,7 +10,6 @@ static_library("Commands") {
   configs += [ "//llvm/utils/gn/build:lldb_code" ]
   deps = [
     ":CommandOptions",
-    "//lldb/source:lldbBase",
     "//llvm/lib/Support",
 
     #"//lldb/source/Breakpoint", # FIXME: many-hop dependency cycle.
@@ -24,6 +23,7 @@ static_library("Commands") {
     #"//lldb/source/Symbol", # FIXME: many-hop dependency cycle.
     #"//lldb/source/Target", # FIXME: 2-hop dependency cycle.
     "//lldb/source/Utility",
+    "//lldb/source/Version",
   ]
   sources = [
     "CommandCompletions.cpp",
