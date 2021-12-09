@@ -907,8 +907,10 @@ public:
   ///
   /// Note: Does not perform target specific adjustments; consider using
   /// TargetInstrInfo::duplicate() intead.
-  MachineInstr &CloneMachineInstrBundle(MachineBasicBlock &MBB,
-      MachineBasicBlock::iterator InsertBefore, const MachineInstr &Orig);
+  MachineInstr &
+  cloneMachineInstrBundle(MachineBasicBlock &MBB,
+                          MachineBasicBlock::iterator InsertBefore,
+                          const MachineInstr &Orig);
 
   /// DeleteMachineInstr - Delete the given MachineInstr.
   void deleteMachineInstr(MachineInstr *MI);
