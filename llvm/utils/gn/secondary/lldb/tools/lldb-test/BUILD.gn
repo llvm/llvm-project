@@ -4,7 +4,6 @@ executable("lldb-test") {
     "//llvm/utils/gn/build:lldb_code",
   ]
   deps = [
-    "//lldb/source:lldbBase",
     "//lldb/source/Breakpoint",
     "//lldb/source/Core",
     "//lldb/source/DataFormatters",
@@ -16,6 +15,7 @@ executable("lldb-test") {
     "//lldb/source/Symbol",
     "//lldb/source/Target",
     "//lldb/source/Utility",
+    "//lldb/source/Version",
     "//llvm/lib/Support",
   ]
 
