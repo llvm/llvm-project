@@ -712,7 +712,8 @@ Module *Sema::PushGlobalModuleFragment(SourceLocation BeginLoc,
   // Enter the scope of the global module.
   ModuleScopes.push_back({BeginLoc, GlobalModule,
                           /*ModuleInterface=*/false,
-                          /*ImplicitGlobalModuleFragment=*/IsImplicit});
+                          /*ImplicitGlobalModuleFragment=*/IsImplicit,
+                          /*VisibleModuleSet*/{}});
   VisibleModules.setVisible(GlobalModule, BeginLoc);
 
   return GlobalModule;
