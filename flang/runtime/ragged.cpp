@@ -11,6 +11,14 @@
 
 namespace Fortran::runtime {
 
+inline bool isIndirection(const RaggedArrayHeader *const header) {
+  return header->flags & 1;
+}
+
+inline std::size_t rank(const RaggedArrayHeader *const header) {
+  return header->flags >> 1;
+}
+
 RaggedArrayHeader *RaggedArrayAllocate(RaggedArrayHeader *header, bool isHeader,
     std::int64_t rank, std::int64_t elementSize, std::int64_t *extentVector) {
   if (header && rank) {
@@ -21,11 +29,10 @@ RaggedArrayHeader *RaggedArrayAllocate(RaggedArrayHeader *header, bool isHeader,
         return nullptr;
       }
     }
-    header->indirection = isHeader;
-    header->rank = rank;
+    header->flags = (rank << 1) | isHeader;
     header->extentPointer = extentVector;
     if (isHeader) {
-      header->bufferPointer = std::malloc(sizeof(RaggedArrayHeader) * size);
+      header->bufferPointer = std::calloc(sizeof(RaggedArrayHeader), size);
     } else {
       header->bufferPointer =
           static_cast<void *>(std::calloc(elementSize, size));
@@ -39,8 +46,8 @@ RaggedArrayHeader *RaggedArrayAllocate(RaggedArrayHeader *header, bool isHeader,
 // Deallocate a ragged array from the heap.
 void RaggedArrayDeallocate(RaggedArrayHeader *raggedArrayHeader) {
   if (raggedArrayHeader) {
-    if (std::size_t end{raggedArrayHeader->getRank()}) {
-      if (raggedArrayHeader->isIndirection()) {
+    if (std::size_t end{rank(raggedArrayHeader)}) {
+      if (isIndirection(raggedArrayHeader)) {
         std::size_t linearExtent{1u};
         for (std::size_t counter{0u}; counter < end && linearExtent > 0;
              ++counter) {
@@ -53,8 +60,7 @@ void RaggedArrayDeallocate(RaggedArrayHeader *raggedArrayHeader) {
       }
       std::free(raggedArrayHeader->bufferPointer);
       std::free(raggedArrayHeader->extentPointer);
-      raggedArrayHeader->indirection = false;
-      raggedArrayHeader->rank = 0u;
+      raggedArrayHeader->flags = 0u;
     }
   }
 }

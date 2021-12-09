@@ -24,10 +24,9 @@ TEST(Ragged, RaggedArrayAllocateDeallocateTest) {
   EXPECT_EQ(extents, ret->extentPointer);
   EXPECT_EQ(10, ret->extentPointer[0]);
   EXPECT_EQ(100, ret->extentPointer[1]);
-  EXPECT_EQ(rank, ret->getRank());
-  EXPECT_FALSE(ret->isIndirection());
+  EXPECT_EQ(rank, ret->flags >> 1);
+  EXPECT_FALSE(ret->flags & 1);
 
   _FortranARaggedArrayDeallocate(ret);
-  EXPECT_EQ(0u, ret->getRank());
-  EXPECT_FALSE(ret->isIndirection());
+  EXPECT_EQ(0u, ret->flags);
 }
