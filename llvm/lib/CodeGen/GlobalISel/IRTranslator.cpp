@@ -3502,7 +3502,7 @@ bool IRTranslator::runOnMachineFunction(MachineFunction &CurMF) {
   // Get rid of the now empty basic block.
   EntryBB->removeSuccessor(&NewEntryBB);
   MF->remove(EntryBB);
-  MF->DeleteMachineBasicBlock(EntryBB);
+  MF->deleteMachineBasicBlock(EntryBB);
 
   assert(&MF->front() == &NewEntryBB &&
          "New entry wasn't next in the list of basic block!");

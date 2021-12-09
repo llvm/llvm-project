@@ -1741,7 +1741,7 @@ void WebAssemblyCFGStackify::rewriteDepthImmediates(MachineFunction &MF) {
 
 void WebAssemblyCFGStackify::cleanupFunctionData(MachineFunction &MF) {
   if (FakeCallerBB)
-    MF.DeleteMachineBasicBlock(FakeCallerBB);
+    MF.deleteMachineBasicBlock(FakeCallerBB);
   AppendixBB = FakeCallerBB = nullptr;
 }
 

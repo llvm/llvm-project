@@ -128,7 +128,7 @@ void MachineFunctionProperties::print(raw_ostream &OS) const {
 MachineFunctionInfo::~MachineFunctionInfo() = default;
 
 void ilist_alloc_traits<MachineBasicBlock>::deleteNode(MachineBasicBlock *MBB) {
-  MBB->getParent()->DeleteMachineBasicBlock(MBB);
+  MBB->getParent()->deleteMachineBasicBlock(MBB);
 }
 
 static inline unsigned getFnStackAlignment(const TargetSubtargetInfo *STI,
@@ -421,8 +421,7 @@ MachineFunction::CreateMachineBasicBlock(const BasicBlock *bb) {
 }
 
 /// Delete the given MachineBasicBlock.
-void
-MachineFunction::DeleteMachineBasicBlock(MachineBasicBlock *MBB) {
+void MachineFunction::deleteMachineBasicBlock(MachineBasicBlock *MBB) {
   assert(MBB->getParent() == this && "MBB parent mismatch!");
   // Clean up any references to MBB in jump tables before deleting it.
   if (JumpTableInfo)

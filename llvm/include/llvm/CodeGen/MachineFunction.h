@@ -918,7 +918,7 @@ public:
   MachineBasicBlock *CreateMachineBasicBlock(const BasicBlock *bb = nullptr);
 
   /// DeleteMachineBasicBlock - Delete the given MachineBasicBlock.
-  void DeleteMachineBasicBlock(MachineBasicBlock *MBB);
+  void deleteMachineBasicBlock(MachineBasicBlock *MBB);
 
   /// getMachineMemOperand - Allocate a new MachineMemOperand.
   /// MachineMemOperands are owned by the MachineFunction and need not be
