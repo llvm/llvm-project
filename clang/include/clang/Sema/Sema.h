@@ -2222,6 +2222,12 @@ private:
     return ModuleScopes.empty() ? nullptr : ModuleScopes.back().Module;
   }
 
+  /// Helper function to judge if we are in module purview.
+  /// Return false if we are not in a module.
+  bool isCurrentModulePurview() const {
+    return getCurrentModule() ? getCurrentModule()->isModulePurview() : false;
+  }
+
   /// Enter the scope of the global module.
   Module *PushGlobalModuleFragment(SourceLocation BeginLoc, bool IsImplicit);
   /// Leave the scope of the global module.
