@@ -1,3 +1,4 @@
+InheritParentConfig: false
 Checks: '-*,llvmlibc-*'
 HeaderFilterRegex: '.*'
 WarningsAsErrors: 'llvmlibc-*'
