@@ -388,6 +388,7 @@ function configure_llvmCore() {
         -DCMAKE_BUILD_TYPE=$BuildType -DLLVM_ENABLE_ASSERTIONS=$Assertions \
         -DCMAKE_POSITION_INDEPENDENT_CODE=ON \
         -DLLVM_ENABLE_PROJECTS="$project_list" \
+        -DLLVM_LIT_ARGS="-j $NumJobs" \
         $ExtraConfigureFlags $BuildDir/llvm-project/llvm \
         2>&1 | tee $LogDir/llvm.configure-Phase$Phase-$Flavor.log
     env CC="$c_compiler" CXX="$cxx_compiler" \
@@ -395,6 +396,7 @@ function configure_llvmCore() {
         -DCMAKE_BUILD_TYPE=$BuildType -DLLVM_ENABLE_ASSERTIONS=$Assertions \
         -DCMAKE_POSITION_INDEPENDENT_CODE=ON \
         -DLLVM_ENABLE_PROJECTS="$project_list" \
+        -DLLVM_LIT_ARGS="-j $NumJobs" \
         $ExtraConfigureFlags $BuildDir/llvm-project/llvm \
         2>&1 | tee $LogDir/llvm.configure-Phase$Phase-$Flavor.log
 
