@@ -2454,7 +2454,7 @@ std::string OMPTraitInfo::getMangledName() const {
                                                 Property.RawString);
     }
   }
-  return OS.str();
+  return MangledName;
 }
 
 OMPTraitInfo::OMPTraitInfo(StringRef MangledName) {
