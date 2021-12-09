@@ -805,9 +805,9 @@ bool LoopIdiomRecognize::processLoopStores(SmallVectorImpl<StoreInst *> &SL,
     Type *IntIdxTy = DL->getIndexType(StorePtr->getType());
     const SCEV *StoreSizeSCEV = SE->getConstant(IntIdxTy, StoreSize);
     if (processLoopStridedStore(StorePtr, StoreSizeSCEV,
-                                MaybeAlign(HeadStore->getAlignment()),
-                                StoredVal, HeadStore, AdjacentStores, StoreEv,
-                                BECount, IsNegStride)) {
+                                MaybeAlign(HeadStore->getAlign()), StoredVal,
+                                HeadStore, AdjacentStores, StoreEv, BECount,
+                                IsNegStride)) {
       TransformedStores.insert(AdjacentStores.begin(), AdjacentStores.end());
       Changed = true;
     }

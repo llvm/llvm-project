@@ -1410,8 +1410,6 @@ bool AllocaInst::isStaticAlloca() const {
 void LoadInst::AssertOK() {
   assert(getOperand(0)->getType()->isPointerTy() &&
          "Ptr must have pointer type.");
-  assert(!(isAtomic() && getAlignment() == 0) &&
-         "Alignment required for atomic load");
 }
 
 static Align computeLoadStoreDefaultAlign(Type *Ty, BasicBlock *BB) {
@@ -1490,8 +1488,6 @@ void StoreInst::AssertOK() {
   assert(cast<PointerType>(getOperand(1)->getType())
              ->isOpaqueOrPointeeTypeMatches(getOperand(0)->getType()) &&
          "Ptr must be a pointer to Val type!");
-  assert(!(isAtomic() && getAlignment() == 0) &&
-         "Alignment required for atomic store");
 }
 
 StoreInst::StoreInst(Value *val, Value *addr, Instruction *InsertBefore)
