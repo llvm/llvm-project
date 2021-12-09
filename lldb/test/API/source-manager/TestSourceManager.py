@@ -276,7 +276,7 @@ class SourceManagerTestCase(TestBase):
 
         self.expect("run", RUN_SUCCEEDED,
                     substrs=['stop reason = breakpoint', '%s:%d' % (src_file,0),
-                             'Warning: the current PC is an artificial ',
-                             'location in function '
-                             ])
+                             'Note: this address is compiler-generated code in '
+                             'function', 'that has no source code associated '
+                             'with it.'])
 

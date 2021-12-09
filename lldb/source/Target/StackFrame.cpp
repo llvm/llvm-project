@@ -1900,14 +1900,13 @@ bool StackFrame::GetStatus(Stream &strm, bool show_frame_info, bool show_source,
             ConstString fn_name = m_sc.GetFunctionName();
 
             if (!fn_name.IsEmpty())
-              strm.Printf("Warning: the current PC is an artificial location "
-                          "in function %s.",
-                          fn_name.AsCString());
-            else
               strm.Printf(
-                  "Warning: the current PC is an artificial location "
-                  "but lldb couldn't associate it with a function in %s.",
-                  m_sc.line_entry.file.GetFilename().GetCString());
+                  "Note: this address is compiler-generated code in function "
+                  "%s that has no source code associated with it.",
+                  fn_name.AsCString());
+            else
+              strm.Printf("Note: this address is compiler-generated code that "
+                          "has no source code associated with it.");
             strm.EOL();
           }
         }
