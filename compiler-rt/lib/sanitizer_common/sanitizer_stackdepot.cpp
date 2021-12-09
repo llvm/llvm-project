@@ -113,9 +113,11 @@ StackTrace StackDepotGet(u32 id) {
 
 void StackDepotLockAll() {
   theDepot.LockAll();
+  stackStore.LockAll();
 }
 
 void StackDepotUnlockAll() {
+  stackStore.UnlockAll();
   theDepot.UnlockAll();
 }
 
