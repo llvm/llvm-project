@@ -52,6 +52,25 @@ mark_as_advanced(COMPILER_RT_BUILD_ORC)
 option(COMPILER_RT_BUILD_GWP_ASAN "Build GWP-ASan, and link it into SCUDO" ON)
 mark_as_advanced(COMPILER_RT_BUILD_GWP_ASAN)
 
+set(COMPILER_RT_ASAN_SHADOW_SCALE ""
+    CACHE STRING "Override the shadow scale to be used in ASan runtime")
+
+if (NOT COMPILER_RT_ASAN_SHADOW_SCALE STREQUAL "")
+  # Check that the shadow scale value is valid.
+  if (NOT (COMPILER_RT_ASAN_SHADOW_SCALE GREATER -1 AND
+           COMPILER_RT_ASAN_SHADOW_SCALE LESS 8))
+    message(FATAL_ERROR "
+      Invalid ASan Shadow Scale '${COMPILER_RT_ASAN_SHADOW_SCALE}'.")
+  endif()
+
+  set(COMPILER_RT_ASAN_SHADOW_SCALE_LLVM_FLAG
+      -mllvm -asan-mapping-scale=${COMPILER_RT_ASAN_SHADOW_SCALE})
+  set(COMPILER_RT_ASAN_SHADOW_SCALE_DEFINITION
+      ASAN_SHADOW_SCALE=${COMPILER_RT_ASAN_SHADOW_SCALE})
+  set(COMPILER_RT_ASAN_SHADOW_SCALE_FLAG
+      -D${COMPILER_RT_ASAN_SHADOW_SCALE_DEFINITION})
+endif()
+
 if(FUCHSIA)
   set(COMPILER_RT_HWASAN_WITH_INTERCEPTORS_DEFAULT OFF)
 else()
