@@ -203,7 +203,7 @@ protected:
 
     OS << "]";
 
-    return OS.str();
+    return Storage;
   }
 
   std::string dumpNodes(ArrayRef<Node *> Nodes) {
@@ -218,7 +218,7 @@ protected:
 
     OS << "]";
 
-    return OS.str();
+    return Storage;
   }
 };
 
