@@ -773,6 +773,67 @@ void HexagonAsmPrinter::emitInstruction(const MachineInstr *MI) {
   OutStreamer->emitInstruction(MCB, getSubtargetInfo());
 }
 
+void HexagonAsmPrinter::EmitSled(const MachineInstr &MI, SledKind Kind) {
+  static const int8_t NoopsInSledCount = 4;
+  // We want to emit the following pattern:
+  //
+  // .L_xray_sled_N:
+  // <xray_sled_base>:
+  // { 	jump .Ltmp0 }
+  // {  nop
+  //    nop
+  //    nop
+  //    nop }
+  // .Ltmp0:
+  //
+  // We need the 4 nop words because at runtime, we'd be patching over the
+  // full 5 words with the following pattern:
+  //
+  // <xray_sled_n>:
+  // { 	immext(#...) // upper 26-bits of trampoline
+  //    r6 = ##...   // lower  6-bits of trampoline
+  //    immext(#...) // upper 26-bits of func id
+  //    r7 = ##... }  // lower 6 bits of func id
+  // { 	callr r6 }
+  //
+  //
+  auto CurSled = OutContext.createTempSymbol("xray_sled_", true);
+  OutStreamer->emitLabel(CurSled);
+
+  MCInst *SledJump = new (OutContext) MCInst();
+  SledJump->setOpcode(Hexagon::J2_jump);
+  auto PostSled = OutContext.createTempSymbol();
+  SledJump->addOperand(MCOperand::createExpr(HexagonMCExpr::create(
+      MCSymbolRefExpr::create(PostSled, OutContext), OutContext)));
+
+  // Emit "jump PostSled" instruction, which jumps over the nop series.
+  MCInst SledJumpPacket;
+  SledJumpPacket.setOpcode(Hexagon::BUNDLE);
+  SledJumpPacket.addOperand(MCOperand::createImm(0));
+  SledJumpPacket.addOperand(MCOperand::createInst(SledJump));
+
+  EmitToStreamer(*OutStreamer, SledJumpPacket);
+
+  // FIXME: this will emit individual packets, we should
+  // special-case this and combine them into a single packet.
+  emitNops(NoopsInSledCount);
+
+  OutStreamer->emitLabel(PostSled);
+  recordSled(CurSled, MI, Kind, 0);
+}
+
+void HexagonAsmPrinter::LowerPATCHABLE_FUNCTION_ENTER(const MachineInstr &MI) {
+  EmitSled(MI, SledKind::FUNCTION_ENTER);
+}
+
+void HexagonAsmPrinter::LowerPATCHABLE_FUNCTION_EXIT(const MachineInstr &MI) {
+  EmitSled(MI, SledKind::FUNCTION_EXIT);
+}
+
+void HexagonAsmPrinter::LowerPATCHABLE_TAIL_CALL(const MachineInstr &MI) {
+  EmitSled(MI, SledKind::TAIL_CALL);
+}
+
 extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeHexagonAsmPrinter() {
   RegisterAsmPrinter<HexagonAsmPrinter> X(getTheHexagonTarget());
 }
