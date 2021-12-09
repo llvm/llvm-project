@@ -649,7 +649,7 @@ void SwingSchedulerDAG::schedule() {
 /// Clean up after the software pipeliner runs.
 void SwingSchedulerDAG::finishBlock() {
   for (auto &KV : NewMIs)
-    MF.DeleteMachineInstr(KV.second);
+    MF.deleteMachineInstr(KV.second);
   NewMIs.clear();
 
   // Call the superclass.
@@ -2191,7 +2191,7 @@ bool SwingSchedulerDAG::canUseLastOffsetValue(MachineInstr *MI,
   MachineInstr *NewMI = MF.CloneMachineInstr(MI);
   NewMI->getOperand(OffsetPosLd).setImm(LoadOffset + StoreOffset);
   bool Disjoint = TII->areMemAccessesTriviallyDisjoint(*NewMI, *PrevDef);
-  MF.DeleteMachineInstr(NewMI);
+  MF.deleteMachineInstr(NewMI);
   if (!Disjoint)
     return false;
 

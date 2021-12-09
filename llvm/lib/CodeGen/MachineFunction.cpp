@@ -393,8 +393,7 @@ MachineInstr &MachineFunction::CloneMachineInstrBundle(MachineBasicBlock &MBB,
 ///
 /// This function also serves as the MachineInstr destructor - the real
 /// ~MachineInstr() destructor must be empty.
-void
-MachineFunction::DeleteMachineInstr(MachineInstr *MI) {
+void MachineFunction::deleteMachineInstr(MachineInstr *MI) {
   // Verify that a call site info is at valid state. This assertion should
   // be triggered during the implementation of support for the
   // call site info of a new architecture. If the assertion is triggered,

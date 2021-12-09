@@ -294,7 +294,7 @@ bool HexagonPacketizerList::tryAllocateResourcesForConstExt(bool Reserve) {
   bool Avail = ResourceTracker->canReserveResources(*ExtMI);
   if (Reserve && Avail)
     ResourceTracker->reserveResources(*ExtMI);
-  MF.DeleteMachineInstr(ExtMI);
+  MF.deleteMachineInstr(ExtMI);
   return Avail;
 }
 
@@ -890,7 +890,7 @@ bool HexagonPacketizerList::canPromoteToDotNew(const MachineInstr &MI,
   const MCInstrDesc &D = HII->get(NewOpcode);
   MachineInstr *NewMI = MF.CreateMachineInstr(D, DebugLoc());
   bool ResourcesAvailable = ResourceTracker->canReserveResources(*NewMI);
-  MF.DeleteMachineInstr(NewMI);
+  MF.deleteMachineInstr(NewMI);
   if (!ResourcesAvailable)
     return false;
 
