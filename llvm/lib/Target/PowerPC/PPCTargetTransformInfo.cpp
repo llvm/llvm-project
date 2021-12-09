@@ -1398,7 +1398,7 @@ bool PPCTTIImpl::hasActiveVectorLength(unsigned Opcode, Type *DataType,
   // therefore cannot be used in 32-bit mode.
   if ((!ST->hasP9Vector() && !ST->hasP10Vector()) || !ST->isPPC64())
     return false;
-  if (auto *VecTy = dyn_cast<FixedVectorType>(DataType)) {
+  if (isa<FixedVectorType>(DataType)) {
     unsigned VecWidth = DataType->getPrimitiveSizeInBits();
     return VecWidth == 128;
   }

@@ -113,7 +113,7 @@ DependencyScanningFilesystemSharedCache::SingleCache::SingleCache() {
 DependencyScanningFilesystemSharedCache::SharedFileSystemEntry &
 DependencyScanningFilesystemSharedCache::SingleCache::get(StringRef Key) {
   CacheShard &Shard = CacheShards[llvm::hash_value(Key) % NumShards];
-  std::unique_lock<std::mutex> LockGuard(Shard.CacheLock);
+  std::lock_guard<std::mutex> LockGuard(Shard.CacheLock);
   auto It = Shard.Cache.try_emplace(Key);
   return It.first->getValue();
 }
@@ -195,7 +195,7 @@ DependencyScanningWorkerFilesystem::getOrCreateFileSystemEntry(
       &SharedCacheEntry = SharedCache.get(Filename, ShouldMinimize);
   const CachedFileSystemEntry *Result;
   {
-    std::unique_lock<std::mutex> LockGuard(SharedCacheEntry.ValueLock);
+    std::lock_guard<std::mutex> LockGuard(SharedCacheEntry.ValueLock);
     CachedFileSystemEntry &CacheEntry = SharedCacheEntry.Value;
 
     if (!CacheEntry.isValid()) {
