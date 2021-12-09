@@ -2703,15 +2703,30 @@ static Value *simplifyICmpOfBools(CmpInst::Predicate Pred, Value *LHS,
   if (!OpTy->isIntOrIntVectorTy(1))
     return nullptr;
 
-  // A boolean compared to true/false can be simplified in 14 out of the 20
-  // (10 predicates * 2 constants) possible combinations. Cases not handled here
-  // require a 'not' of the LHS, so those must be transformed in InstCombine.
+  // A boolean compared to true/false can be reduced in 14 out of the 20
+  // (10 predicates * 2 constants) possible combinations. The other
+  // 6 cases require a 'not' of the LHS.
+
+  auto ExtractNotLHS = [](Value *V) -> Value * {
+    Value *X;
+    if (match(V, m_Not(m_Value(X))))
+      return X;
+    return nullptr;
+  };
+
   if (match(RHS, m_Zero())) {
     switch (Pred) {
     case CmpInst::ICMP_NE:  // X !=  0 -> X
     case CmpInst::ICMP_UGT: // X >u  0 -> X
     case CmpInst::ICMP_SLT: // X <s  0 -> X
       return LHS;
+
+    case CmpInst::ICMP_EQ:  // not(X) ==  0 -> X != 0 -> X
+    case CmpInst::ICMP_ULE: // not(X) <=u 0 -> X >u 0 -> X
+    case CmpInst::ICMP_SGE: // not(X) >=s 0 -> X <s 0 -> X
+      if (Value *X = ExtractNotLHS(LHS))
+        return X;
+      break;
 
     case CmpInst::ICMP_ULT: // X <u  0 -> false
     case CmpInst::ICMP_SGT: // X >s  0 -> false
@@ -2729,6 +2744,13 @@ static Value *simplifyICmpOfBools(CmpInst::Predicate Pred, Value *LHS,
     case CmpInst::ICMP_UGE: // X >=u  1 -> X
     case CmpInst::ICMP_SLE: // X <=s -1 -> X
       return LHS;
+
+    case CmpInst::ICMP_NE:  // not(X) !=  1 -> X ==   1 -> X
+    case CmpInst::ICMP_ULT: // not(X) <=u 1 -> X >=u  1 -> X
+    case CmpInst::ICMP_SGT: // not(X) >s  1 -> X <=s -1 -> X
+      if (Value *X = ExtractNotLHS(LHS))
+        return X;
+      break;
 
     case CmpInst::ICMP_UGT: // X >u   1 -> false
     case CmpInst::ICMP_SLT: // X <s  -1 -> false
