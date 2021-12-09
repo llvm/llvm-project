@@ -1067,7 +1067,7 @@ bool Thumb1FrameLowering::restoreCalleeSavedRegisters(
   if (NeedsPop)
     MBB.insert(MI, &*MIB);
   else
-    MF.DeleteMachineInstr(MIB);
+    MF.deleteMachineInstr(MIB);
 
   return true;
 }

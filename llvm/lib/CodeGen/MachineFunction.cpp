@@ -364,8 +364,9 @@ MachineFunction::CloneMachineInstr(const MachineInstr *Orig) {
              MachineInstr(*this, *Orig);
 }
 
-MachineInstr &MachineFunction::CloneMachineInstrBundle(MachineBasicBlock &MBB,
-    MachineBasicBlock::iterator InsertBefore, const MachineInstr &Orig) {
+MachineInstr &MachineFunction::cloneMachineInstrBundle(
+    MachineBasicBlock &MBB, MachineBasicBlock::iterator InsertBefore,
+    const MachineInstr &Orig) {
   MachineInstr *FirstClone = nullptr;
   MachineBasicBlock::const_instr_iterator I = Orig.getIterator();
   while (true) {
@@ -393,8 +394,7 @@ MachineInstr &MachineFunction::CloneMachineInstrBundle(MachineBasicBlock &MBB,
 ///
 /// This function also serves as the MachineInstr destructor - the real
 /// ~MachineInstr() destructor must be empty.
-void
-MachineFunction::DeleteMachineInstr(MachineInstr *MI) {
+void MachineFunction::deleteMachineInstr(MachineInstr *MI) {
   // Verify that a call site info is at valid state. This assertion should
   // be triggered during the implementation of support for the
   // call site info of a new architecture. If the assertion is triggered,

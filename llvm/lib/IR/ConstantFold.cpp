@@ -2215,9 +2215,8 @@ Constant *llvm::ConstantFoldGetElementPtr(Type *PointeeTy, Constant *C,
 
   if (C->isNullValue()) {
     bool isNull = true;
-    for (unsigned i = 0, e = Idxs.size(); i != e; ++i)
-      if (!isa<UndefValue>(Idxs[i]) &&
-          !cast<Constant>(Idxs[i])->isNullValue()) {
+    for (Value *Idx : Idxs)
+      if (!isa<UndefValue>(Idx) && !cast<Constant>(Idx)->isNullValue()) {
         isNull = false;
         break;
       }
@@ -2233,8 +2232,8 @@ Constant *llvm::ConstantFoldGetElementPtr(Type *PointeeTy, Constant *C,
 
       // The GEP returns a vector of pointers when one of more of
       // its arguments is a vector.
-      for (unsigned i = 0, e = Idxs.size(); i != e; ++i) {
-        if (auto *VT = dyn_cast<VectorType>(Idxs[i]->getType())) {
+      for (Value *Idx : Idxs) {
+        if (auto *VT = dyn_cast<VectorType>(Idx->getType())) {
           assert((!isa<VectorType>(GEPTy) || isa<ScalableVectorType>(GEPTy) ==
                                                  isa<ScalableVectorType>(VT)) &&
                  "Mismatched GEPTy vector types");

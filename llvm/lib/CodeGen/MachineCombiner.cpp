@@ -693,7 +693,7 @@ bool MachineCombiner::combineInstructions(MachineBasicBlock *MBB) {
         // use for them.
         MachineFunction *MF = MBB->getParent();
         for (auto *InstrPtr : InsInstrs)
-          MF->DeleteMachineInstr(InstrPtr);
+          MF->deleteMachineInstr(InstrPtr);
       }
       InstrIdxForVirtReg.clear();
     }
