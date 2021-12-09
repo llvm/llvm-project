@@ -233,8 +233,8 @@ Module::Module(const ModuleSpec &module_spec)
 Module::Module(const FileSpec &file_spec, const ArchSpec &arch,
                const ConstString *object_name, lldb::offset_t object_offset,
                const llvm::sys::TimePoint<> &object_mod_time)
-    : m_mod_time(FileSystem::Instance().GetModificationTime(file_spec)), m_arch(arch),
-      m_file(file_spec), m_object_offset(object_offset),
+    : m_mod_time(FileSystem::Instance().GetModificationTime(file_spec)),
+      m_arch(arch), m_file(file_spec), m_object_offset(object_offset),
       m_object_mod_time(object_mod_time), m_file_has_changed(false),
       m_first_file_changed_log(false) {
   // Scope for locker below...
@@ -559,9 +559,8 @@ uint32_t Module::ResolveSymbolContextForAddress(
             // that the symbol has been resolved.
             if (so_addr.GetOffset() ==
                     addr_range.GetBaseAddress().GetOffset() ||
-                so_addr.GetOffset() ==
-                    addr_range.GetBaseAddress().GetOffset() +
-                        addr_range.GetByteSize()) {
+                so_addr.GetOffset() == addr_range.GetBaseAddress().GetOffset() +
+                                           addr_range.GetByteSize()) {
               resolved_flags |= flags;
             }
           } else {
@@ -765,8 +764,7 @@ void Module::LookupInfo::Prune(SymbolContextList &sc_list,
       // pull anything out
       ConstString mangled_name(sc.GetFunctionName(Mangled::ePreferMangled));
       ConstString full_name(sc.GetFunctionName());
-      if (mangled_name != m_name && full_name != m_name)
-      {
+      if (mangled_name != m_name && full_name != m_name) {
         CPlusPlusLanguage::MethodName cpp_method(full_name);
         if (cpp_method.IsValid()) {
           if (cpp_method.GetContext().empty()) {
@@ -959,8 +957,8 @@ void Module::FindTypesInNamespace(ConstString type_name,
   }
 }
 
-lldb::TypeSP Module::FindFirstType(const SymbolContext &sc,
-                                   ConstString name, bool exact_match) {
+lldb::TypeSP Module::FindFirstType(const SymbolContext &sc, ConstString name,
+                                   bool exact_match) {
   TypeList type_list;
   llvm::DenseSet<lldb_private::SymbolFile *> searched_symbol_files;
   FindTypes(name, exact_match, 1, searched_symbol_files, type_list);
@@ -1331,9 +1329,8 @@ void Module::SymbolIndicesToSymbolContextList(
   }
 }
 
-void Module::FindFunctionSymbols(ConstString name,
-                                   uint32_t name_type_mask,
-                                   SymbolContextList &sc_list) {
+void Module::FindFunctionSymbols(ConstString name, uint32_t name_type_mask,
+                                 SymbolContextList &sc_list) {
   LLDB_SCOPED_TIMERF("Module::FindSymbolsFunctions (name = %s, mask = 0x%8.8x)",
                      name.AsCString(), name_type_mask);
   if (Symtab *symtab = GetSymtab())
@@ -1341,8 +1338,8 @@ void Module::FindFunctionSymbols(ConstString name,
 }
 
 void Module::FindSymbolsWithNameAndType(ConstString name,
-                                          SymbolType symbol_type,
-                                          SymbolContextList &sc_list) {
+                                        SymbolType symbol_type,
+                                        SymbolContextList &sc_list) {
   // No need to protect this call using m_mutex all other method calls are
   // already thread safe.
   if (Symtab *symtab = GetSymtab()) {
@@ -1604,14 +1601,16 @@ bool Module::FindSourceFile(const FileSpec &orig_spec,
   return false;
 }
 
-llvm::Optional<std::string> Module::RemapSourceFile(llvm::StringRef path) const {
+llvm::Optional<std::string>
+Module::RemapSourceFile(llvm::StringRef path) const {
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
   if (auto remapped = m_source_mappings.RemapPath(path))
     return remapped->GetPath();
   return {};
 }
 
-void Module::RegisterXcodeSDK(llvm::StringRef sdk_name, llvm::StringRef sysroot) {
+void Module::RegisterXcodeSDK(llvm::StringRef sdk_name,
+                              llvm::StringRef sysroot) {
   XcodeSDK sdk(sdk_name.str());
   llvm::StringRef sdk_path(HostInfo::GetXcodeSDKPath(sdk));
   if (sdk_path.empty())

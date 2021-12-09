@@ -147,9 +147,11 @@ void SymbolFile::AssertModuleLock() {
   // We assert that we have to module lock by trying to acquire the lock from a
   // different thread. Note that we must abort if the result is true to
   // guarantee correctness.
-  assert(std::async(std::launch::async,
-                    [this] { return this->GetModuleMutex().try_lock(); })
-                 .get() == false &&
+  assert(std::async(
+             std::launch::async,
+             [this] {
+               return this->GetModuleMutex().try_lock();
+             }).get() == false &&
          "Module is not locked");
 #endif
 }
