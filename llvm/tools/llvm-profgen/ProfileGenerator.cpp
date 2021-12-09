@@ -50,16 +50,16 @@ static cl::opt<int32_t, true> RecursionCompression(
     cl::Hidden,
     cl::location(llvm::sampleprof::CSProfileGenerator::MaxCompressionSize));
 
+static cl::opt<bool>
+    TrimColdProfile("trim-cold-profile", cl::init(false), cl::ZeroOrMore,
+                    cl::desc("If the total count of the profile is smaller "
+                             "than threshold, it will be trimmed."));
+
 static cl::opt<bool> CSProfMergeColdContext(
     "csprof-merge-cold-context", cl::init(true), cl::ZeroOrMore,
     cl::desc("If the total count of context profile is smaller than "
              "the threshold, it will be merged into context-less base "
              "profile."));
-
-static cl::opt<bool> CSProfTrimColdContext(
-    "csprof-trim-cold-context", cl::init(false), cl::ZeroOrMore,
-    cl::desc("If the total count of the profile after all merge is done "
-             "is still smaller than threshold, it will be trimmed."));
 
 static cl::opt<uint32_t> CSProfMaxColdContextDepth(
     "csprof-max-cold-context-depth", cl::init(1), cl::ZeroOrMore,
@@ -378,7 +378,25 @@ void ProfileGenerator::generateProfile() {
 
 void ProfileGenerator::postProcessProfiles() {
   computeSummaryAndThreshold();
+  trimColdProfiles(ProfileMap, ColdCountThreshold);
   calculateAndShowDensity(ProfileMap);
+}
+
+void ProfileGenerator::trimColdProfiles(const SampleProfileMap &Profiles,
+                                        uint64_t ColdCntThreshold) {
+  if (!TrimColdProfile)
+    return;
+
+  // Move cold profiles into a tmp container.
+  std::vector<SampleContext> ColdProfiles;
+  for (const auto &I : ProfileMap) {
+    if (I.second.getTotalSamples() < ColdCntThreshold)
+      ColdProfiles.emplace_back(I.first);
+  }
+
+  // Remove the cold profile from ProfileMap.
+  for (const auto &I : ColdProfiles)
+    ProfileMap.erase(I);
 }
 
 void ProfileGenerator::generateLineNumBasedProfile() {
@@ -732,10 +750,10 @@ void CSProfileGenerator::postProcessProfiles() {
   }
 
   // Trim and merge cold context profile using cold threshold above.
-  if (CSProfTrimColdContext || CSProfMergeColdContext) {
+  if (TrimColdProfile || CSProfMergeColdContext) {
     SampleContextTrimmer(ProfileMap)
         .trimAndMergeColdContextProfiles(
-            HotCountThreshold, CSProfTrimColdContext, CSProfMergeColdContext,
+            HotCountThreshold, TrimColdProfile, CSProfMergeColdContext,
             CSProfMaxColdContextDepth, EnableCSPreInliner);
   }
 

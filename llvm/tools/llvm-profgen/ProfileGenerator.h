@@ -129,6 +129,8 @@ private:
   void
   populateBoundarySamplesForAllFunctions(const BranchSample &BranchCounters);
   void postProcessProfiles();
+  void trimColdProfiles(const SampleProfileMap &Profiles,
+                        uint64_t ColdCntThreshold);
 };
 
 using ProbeCounterMap =
