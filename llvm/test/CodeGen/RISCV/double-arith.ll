@@ -8,9 +8,10 @@
 ; RUN: llc -mtriple=riscv64 -verify-machineinstrs < %s \
 ; RUN:   | FileCheck -check-prefix=RV64I %s
 
-; These tests are each targeted at a particular RISC-V FPU instruction. Most
-; other files in this folder exercise LLVM IR instructions that don't directly
-; match a RISC-V instruction.
+; These tests are each targeted at a particular RISC-V FPU instruction.
+; Compares and conversions can be found in double-fcmp.ll and double-convert.ll
+; respectively. Some other double-*.ll files in this folder exercise LLVM IR
+; instructions that don't directly match a RISC-V instruction.
 
 define double @fadd_d(double %a, double %b) nounwind {
 ; RV32IFD-LABEL: fadd_d:
@@ -566,141 +567,6 @@ define double @fmax_d(double %a, double %b) nounwind {
 ; RV64I-NEXT:    ret
   %1 = call double @llvm.maxnum.f64(double %a, double %b)
   ret double %1
-}
-
-define i32 @feq_d(double %a, double %b) nounwind {
-; RV32IFD-LABEL: feq_d:
-; RV32IFD:       # %bb.0:
-; RV32IFD-NEXT:    addi sp, sp, -16
-; RV32IFD-NEXT:    sw a2, 8(sp)
-; RV32IFD-NEXT:    sw a3, 12(sp)
-; RV32IFD-NEXT:    fld ft0, 8(sp)
-; RV32IFD-NEXT:    sw a0, 8(sp)
-; RV32IFD-NEXT:    sw a1, 12(sp)
-; RV32IFD-NEXT:    fld ft1, 8(sp)
-; RV32IFD-NEXT:    feq.d a0, ft1, ft0
-; RV32IFD-NEXT:    addi sp, sp, 16
-; RV32IFD-NEXT:    ret
-;
-; RV64IFD-LABEL: feq_d:
-; RV64IFD:       # %bb.0:
-; RV64IFD-NEXT:    fmv.d.x ft0, a1
-; RV64IFD-NEXT:    fmv.d.x ft1, a0
-; RV64IFD-NEXT:    feq.d a0, ft1, ft0
-; RV64IFD-NEXT:    ret
-;
-; RV32I-LABEL: feq_d:
-; RV32I:       # %bb.0:
-; RV32I-NEXT:    addi sp, sp, -16
-; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32I-NEXT:    call __eqdf2@plt
-; RV32I-NEXT:    seqz a0, a0
-; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    addi sp, sp, 16
-; RV32I-NEXT:    ret
-;
-; RV64I-LABEL: feq_d:
-; RV64I:       # %bb.0:
-; RV64I-NEXT:    addi sp, sp, -16
-; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    call __eqdf2@plt
-; RV64I-NEXT:    seqz a0, a0
-; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    addi sp, sp, 16
-; RV64I-NEXT:    ret
-  %1 = fcmp oeq double %a, %b
-  %2 = zext i1 %1 to i32
-  ret i32 %2
-}
-
-define i32 @flt_d(double %a, double %b) nounwind {
-; RV32IFD-LABEL: flt_d:
-; RV32IFD:       # %bb.0:
-; RV32IFD-NEXT:    addi sp, sp, -16
-; RV32IFD-NEXT:    sw a2, 8(sp)
-; RV32IFD-NEXT:    sw a3, 12(sp)
-; RV32IFD-NEXT:    fld ft0, 8(sp)
-; RV32IFD-NEXT:    sw a0, 8(sp)
-; RV32IFD-NEXT:    sw a1, 12(sp)
-; RV32IFD-NEXT:    fld ft1, 8(sp)
-; RV32IFD-NEXT:    flt.d a0, ft1, ft0
-; RV32IFD-NEXT:    addi sp, sp, 16
-; RV32IFD-NEXT:    ret
-;
-; RV64IFD-LABEL: flt_d:
-; RV64IFD:       # %bb.0:
-; RV64IFD-NEXT:    fmv.d.x ft0, a1
-; RV64IFD-NEXT:    fmv.d.x ft1, a0
-; RV64IFD-NEXT:    flt.d a0, ft1, ft0
-; RV64IFD-NEXT:    ret
-;
-; RV32I-LABEL: flt_d:
-; RV32I:       # %bb.0:
-; RV32I-NEXT:    addi sp, sp, -16
-; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32I-NEXT:    call __ltdf2@plt
-; RV32I-NEXT:    slti a0, a0, 0
-; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    addi sp, sp, 16
-; RV32I-NEXT:    ret
-;
-; RV64I-LABEL: flt_d:
-; RV64I:       # %bb.0:
-; RV64I-NEXT:    addi sp, sp, -16
-; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    call __ltdf2@plt
-; RV64I-NEXT:    slti a0, a0, 0
-; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    addi sp, sp, 16
-; RV64I-NEXT:    ret
-  %1 = fcmp olt double %a, %b
-  %2 = zext i1 %1 to i32
-  ret i32 %2
-}
-
-define i32 @fle_d(double %a, double %b) nounwind {
-; RV32IFD-LABEL: fle_d:
-; RV32IFD:       # %bb.0:
-; RV32IFD-NEXT:    addi sp, sp, -16
-; RV32IFD-NEXT:    sw a2, 8(sp)
-; RV32IFD-NEXT:    sw a3, 12(sp)
-; RV32IFD-NEXT:    fld ft0, 8(sp)
-; RV32IFD-NEXT:    sw a0, 8(sp)
-; RV32IFD-NEXT:    sw a1, 12(sp)
-; RV32IFD-NEXT:    fld ft1, 8(sp)
-; RV32IFD-NEXT:    fle.d a0, ft1, ft0
-; RV32IFD-NEXT:    addi sp, sp, 16
-; RV32IFD-NEXT:    ret
-;
-; RV64IFD-LABEL: fle_d:
-; RV64IFD:       # %bb.0:
-; RV64IFD-NEXT:    fmv.d.x ft0, a1
-; RV64IFD-NEXT:    fmv.d.x ft1, a0
-; RV64IFD-NEXT:    fle.d a0, ft1, ft0
-; RV64IFD-NEXT:    ret
-;
-; RV32I-LABEL: fle_d:
-; RV32I:       # %bb.0:
-; RV32I-NEXT:    addi sp, sp, -16
-; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32I-NEXT:    call __ledf2@plt
-; RV32I-NEXT:    slti a0, a0, 1
-; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    addi sp, sp, 16
-; RV32I-NEXT:    ret
-;
-; RV64I-LABEL: fle_d:
-; RV64I:       # %bb.0:
-; RV64I-NEXT:    addi sp, sp, -16
-; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    call __ledf2@plt
-; RV64I-NEXT:    slti a0, a0, 1
-; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    addi sp, sp, 16
-; RV64I-NEXT:    ret
-  %1 = fcmp ole double %a, %b
-  %2 = zext i1 %1 to i32
-  ret i32 %2
 }
 
 declare double @llvm.fma.f64(double, double, double)
