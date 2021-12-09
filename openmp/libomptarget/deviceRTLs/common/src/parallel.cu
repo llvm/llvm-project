@@ -73,7 +73,8 @@ INLINE static uint16_t determineNumberOfThreads(uint16_t NumThreadsClause,
 }
 
 // This routine is always called by the team master..
-EXTERN void __kmpc_kernel_prepare_parallel(void *WorkFn) {
+EXTERN void __kmpc_kernel_prepare_parallel(void *WorkFn,
+                                           kmp_int32 NumThreadsClause) {
   PRINT0(LD_IO, "call to __kmpc_kernel_prepare_parallel\n");
 
   omptarget_nvptx_workFn = WorkFn;
@@ -91,9 +92,6 @@ EXTERN void __kmpc_kernel_prepare_parallel(void *WorkFn) {
     PRINT0(LD_PAR, "already in parallel: go seq\n");
     return;
   }
-
-  uint16_t &NumThreadsClause =
-      omptarget_nvptx_threadPrivateContext->NumThreadsForNextParallel(threadId);
 
   uint16_t NumThreads =
       determineNumberOfThreads(NumThreadsClause, nThreads, threadLimit);
@@ -255,16 +253,6 @@ EXTERN int32_t __kmpc_global_thread_num(kmp_Ident *loc) {
 // push params
 ////////////////////////////////////////////////////////////////////////////////
 
-EXTERN void __kmpc_push_num_threads(kmp_Ident *loc, int32_t tid,
-                                    int32_t num_threads) {
-  PRINT(LD_IO, "call kmpc_push_num_threads %d\n", num_threads);
-  ASSERT0(LT_FUSSY, isRuntimeInitialized(),
-          "Runtime must be initialized.");
-  tid = GetLogicalThreadIdInBlock();
-  omptarget_nvptx_threadPrivateContext->NumThreadsForNextParallel(tid) =
-      num_threads;
-}
-
 // Do nothing. The host guarantees we started the requested number of
 // teams and we only need inspection of gridDim.
 
@@ -304,11 +292,7 @@ NOINLINE EXTERN void __kmpc_parallel_51(kmp_Ident *ident, kmp_int32 global_tid,
     return;
   }
 
-  // Handle the num_threads clause.
-  if (num_threads != -1)
-    __kmpc_push_num_threads(ident, global_tid, num_threads);
-
-  __kmpc_kernel_prepare_parallel((void *)wrapper_fn);
+  __kmpc_kernel_prepare_parallel((void *)wrapper_fn, num_threads);
 
   if (nargs) {
     void **GlobalArgs;

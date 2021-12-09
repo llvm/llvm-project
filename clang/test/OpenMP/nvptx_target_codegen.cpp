@@ -165,7 +165,7 @@ void unreachable_call() {
 // CHECK1-NEXT:    [[TMP6:%.*]] = bitcast i32** [[TMP0]] to i8*
 // CHECK1-NEXT:    store i8* [[TMP6]], i8** [[TMP5]], align 8
 // CHECK1-NEXT:    [[TMP7:%.*]] = bitcast [2 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
-// CHECK1-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB2]], i32 [[TMP2]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i32**, i32**)* @__omp_outlined__ to i8*), i8* null, i8** [[TMP7]], i64 2)
+// CHECK1-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB2]], i32 [[TMP2]], i32 1, i32 2, i32 -1, i8* bitcast (void (i32*, i32*, i32**, i32**)* @__omp_outlined__ to i8*), i8* null, i8** [[TMP7]], i64 2)
 // CHECK1-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 2, i1 true)
 // CHECK1-NEXT:    ret void
 // CHECK1:       worker.exit:
@@ -301,7 +301,7 @@ void unreachable_call() {
 // CHECK1-NEXT:    [[ADD20:%.*]] = add nsw i32 [[CONV19]], 1
 // CHECK1-NEXT:    [[CONV21:%.*]] = trunc i32 [[ADD20]] to i8
 // CHECK1-NEXT:    store i8 [[CONV21]], i8* [[Y]], align 8
-// CHECK1-NEXT:    [[CALL:%.*]] = call nonnull align 8 dereferenceable(8) i64* @_ZN2TTIxcEixEi(%struct.TT* nonnull align 8 dereferenceable(16) [[TMP7]], i32 0) #[[ATTR6:[0-9]+]]
+// CHECK1-NEXT:    [[CALL:%.*]] = call nonnull align 8 dereferenceable(8) i64* @_ZN2TTIxcEixEi(%struct.TT* nonnull align 8 dereferenceable(16) [[TMP7]], i32 0) #[[ATTR8:[0-9]+]]
 // CHECK1-NEXT:    [[TMP17:%.*]] = load i64, i64* [[CALL]], align 8
 // CHECK1-NEXT:    [[ADD22:%.*]] = add nsw i64 [[TMP17]], 1
 // CHECK1-NEXT:    store i64 [[ADD22]], i64* [[CALL]], align 8
@@ -312,7 +312,7 @@ void unreachable_call() {
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@_ZN2TTIxcEixEi
-// CHECK1-SAME: (%struct.TT* nonnull align 8 dereferenceable(16) [[THIS:%.*]], i32 [[I:%.*]]) #[[ATTR3:[0-9]+]] comdat align 2 {
+// CHECK1-SAME: (%struct.TT* nonnull align 8 dereferenceable(16) [[THIS:%.*]], i32 [[I:%.*]]) #[[ATTR4:[0-9]+]] comdat align 2 {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[THIS_ADDR:%.*]] = alloca %struct.TT*, align 8
 // CHECK1-NEXT:    [[I_ADDR:%.*]] = alloca i32, align 4
@@ -405,7 +405,7 @@ void unreachable_call() {
 // CHECK1-NEXT:    [[TMP8:%.*]] = load double, double* [[A7]], align 8
 // CHECK1-NEXT:    [[CONV8:%.*]] = fptosi double [[TMP8]] to i32
 // CHECK1-NEXT:    [[A9:%.*]] = getelementptr inbounds [[STRUCT_S1]], %struct.S1* [[TMP0]], i32 0, i32 0
-// CHECK1-NEXT:    [[CALL:%.*]] = call i32 @_Z3baziRd(i32 [[CONV8]], double* nonnull align 8 dereferenceable(8) [[A9]]) #[[ATTR6]]
+// CHECK1-NEXT:    [[CALL:%.*]] = call i32 @_Z3baziRd(i32 [[CONV8]], double* nonnull align 8 dereferenceable(8) [[A9]]) #[[ATTR8]]
 // CHECK1-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 1, i1 true)
 // CHECK1-NEXT:    ret void
 // CHECK1:       worker.exit:
@@ -413,7 +413,7 @@ void unreachable_call() {
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@_Z3baziRd
-// CHECK1-SAME: (i32 [[F1:%.*]], double* nonnull align 8 dereferenceable(8) [[A:%.*]]) #[[ATTR3]] {
+// CHECK1-SAME: (i32 [[F1:%.*]], double* nonnull align 8 dereferenceable(8) [[A:%.*]]) #[[ATTR4]] {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[A_ADDR:%.*]] = alloca double*, align 8
 // CHECK1-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [2 x i8*], align 8
@@ -443,7 +443,7 @@ void unreachable_call() {
 // CHECK1-NEXT:    [[EXEC_USER_CODE:%.*]] = icmp eq i32 [[TMP0]], -1
 // CHECK1-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[WORKER_EXIT:%.*]]
 // CHECK1:       user_code.entry:
-// CHECK1-NEXT:    call void @_Z6asserti(i32 0) #[[ATTR7:[0-9]+]]
+// CHECK1-NEXT:    call void @_Z6asserti(i32 0) #[[ATTR9:[0-9]+]]
 // CHECK1-NEXT:    unreachable
 // CHECK1:       worker.exit:
 // CHECK1-NEXT:    ret void
@@ -510,7 +510,7 @@ void unreachable_call() {
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@__omp_outlined__1_wrapper
-// CHECK1-SAME: (i16 zeroext [[TMP0:%.*]], i32 [[TMP1:%.*]]) #[[ATTR5:[0-9]+]] {
+// CHECK1-SAME: (i16 zeroext [[TMP0:%.*]], i32 [[TMP1:%.*]]) #[[ATTR7:[0-9]+]] {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[DOTADDR:%.*]] = alloca i16, align 2
 // CHECK1-NEXT:    [[DOTADDR1:%.*]] = alloca i32, align 4
@@ -552,7 +552,7 @@ void unreachable_call() {
 // CHECK2-NEXT:    [[TMP6:%.*]] = bitcast i32** [[TMP0]] to i8*
 // CHECK2-NEXT:    store i8* [[TMP6]], i8** [[TMP5]], align 4
 // CHECK2-NEXT:    [[TMP7:%.*]] = bitcast [2 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
-// CHECK2-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB2]], i32 [[TMP2]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i32**, i32**)* @__omp_outlined__ to i8*), i8* null, i8** [[TMP7]], i32 2)
+// CHECK2-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB2]], i32 [[TMP2]], i32 1, i32 2, i32 -1, i8* bitcast (void (i32*, i32*, i32**, i32**)* @__omp_outlined__ to i8*), i8* null, i8** [[TMP7]], i32 2)
 // CHECK2-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 2, i1 true)
 // CHECK2-NEXT:    ret void
 // CHECK2:       worker.exit:
@@ -687,7 +687,7 @@ void unreachable_call() {
 // CHECK2-NEXT:    [[ADD19:%.*]] = add nsw i32 [[CONV18]], 1
 // CHECK2-NEXT:    [[CONV20:%.*]] = trunc i32 [[ADD19]] to i8
 // CHECK2-NEXT:    store i8 [[CONV20]], i8* [[Y]], align 8
-// CHECK2-NEXT:    [[CALL:%.*]] = call nonnull align 8 dereferenceable(8) i64* @_ZN2TTIxcEixEi(%struct.TT* nonnull align 8 dereferenceable(16) [[TMP7]], i32 0) #[[ATTR6:[0-9]+]]
+// CHECK2-NEXT:    [[CALL:%.*]] = call nonnull align 8 dereferenceable(8) i64* @_ZN2TTIxcEixEi(%struct.TT* nonnull align 8 dereferenceable(16) [[TMP7]], i32 0) #[[ATTR8:[0-9]+]]
 // CHECK2-NEXT:    [[TMP17:%.*]] = load i64, i64* [[CALL]], align 8
 // CHECK2-NEXT:    [[ADD21:%.*]] = add nsw i64 [[TMP17]], 1
 // CHECK2-NEXT:    store i64 [[ADD21]], i64* [[CALL]], align 8
@@ -698,7 +698,7 @@ void unreachable_call() {
 //
 //
 // CHECK2-LABEL: define {{[^@]+}}@_ZN2TTIxcEixEi
-// CHECK2-SAME: (%struct.TT* nonnull align 8 dereferenceable(16) [[THIS:%.*]], i32 [[I:%.*]]) #[[ATTR3:[0-9]+]] comdat align 2 {
+// CHECK2-SAME: (%struct.TT* nonnull align 8 dereferenceable(16) [[THIS:%.*]], i32 [[I:%.*]]) #[[ATTR4:[0-9]+]] comdat align 2 {
 // CHECK2-NEXT:  entry:
 // CHECK2-NEXT:    [[THIS_ADDR:%.*]] = alloca %struct.TT*, align 4
 // CHECK2-NEXT:    [[I_ADDR:%.*]] = alloca i32, align 4
@@ -789,7 +789,7 @@ void unreachable_call() {
 // CHECK2-NEXT:    [[TMP8:%.*]] = load double, double* [[A6]], align 8
 // CHECK2-NEXT:    [[CONV7:%.*]] = fptosi double [[TMP8]] to i32
 // CHECK2-NEXT:    [[A8:%.*]] = getelementptr inbounds [[STRUCT_S1]], %struct.S1* [[TMP0]], i32 0, i32 0
-// CHECK2-NEXT:    [[CALL:%.*]] = call i32 @_Z3baziRd(i32 [[CONV7]], double* nonnull align 8 dereferenceable(8) [[A8]]) #[[ATTR6]]
+// CHECK2-NEXT:    [[CALL:%.*]] = call i32 @_Z3baziRd(i32 [[CONV7]], double* nonnull align 8 dereferenceable(8) [[A8]]) #[[ATTR8]]
 // CHECK2-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 1, i1 true)
 // CHECK2-NEXT:    ret void
 // CHECK2:       worker.exit:
@@ -797,7 +797,7 @@ void unreachable_call() {
 //
 //
 // CHECK2-LABEL: define {{[^@]+}}@_Z3baziRd
-// CHECK2-SAME: (i32 [[F1:%.*]], double* nonnull align 8 dereferenceable(8) [[A:%.*]]) #[[ATTR3]] {
+// CHECK2-SAME: (i32 [[F1:%.*]], double* nonnull align 8 dereferenceable(8) [[A:%.*]]) #[[ATTR4]] {
 // CHECK2-NEXT:  entry:
 // CHECK2-NEXT:    [[A_ADDR:%.*]] = alloca double*, align 4
 // CHECK2-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [2 x i8*], align 4
@@ -827,7 +827,7 @@ void unreachable_call() {
 // CHECK2-NEXT:    [[EXEC_USER_CODE:%.*]] = icmp eq i32 [[TMP0]], -1
 // CHECK2-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[WORKER_EXIT:%.*]]
 // CHECK2:       user_code.entry:
-// CHECK2-NEXT:    call void @_Z6asserti(i32 0) #[[ATTR7:[0-9]+]]
+// CHECK2-NEXT:    call void @_Z6asserti(i32 0) #[[ATTR9:[0-9]+]]
 // CHECK2-NEXT:    unreachable
 // CHECK2:       worker.exit:
 // CHECK2-NEXT:    ret void
@@ -893,7 +893,7 @@ void unreachable_call() {
 //
 //
 // CHECK2-LABEL: define {{[^@]+}}@__omp_outlined__1_wrapper
-// CHECK2-SAME: (i16 zeroext [[TMP0:%.*]], i32 [[TMP1:%.*]]) #[[ATTR5:[0-9]+]] {
+// CHECK2-SAME: (i16 zeroext [[TMP0:%.*]], i32 [[TMP1:%.*]]) #[[ATTR7:[0-9]+]] {
 // CHECK2-NEXT:  entry:
 // CHECK2-NEXT:    [[DOTADDR:%.*]] = alloca i16, align 2
 // CHECK2-NEXT:    [[DOTADDR1:%.*]] = alloca i32, align 4
@@ -935,7 +935,7 @@ void unreachable_call() {
 // CHECK3-NEXT:    [[TMP6:%.*]] = bitcast i32** [[TMP0]] to i8*
 // CHECK3-NEXT:    store i8* [[TMP6]], i8** [[TMP5]], align 4
 // CHECK3-NEXT:    [[TMP7:%.*]] = bitcast [2 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
-// CHECK3-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB2]], i32 [[TMP2]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i32**, i32**)* @__omp_outlined__ to i8*), i8* null, i8** [[TMP7]], i32 2)
+// CHECK3-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB2]], i32 [[TMP2]], i32 1, i32 2, i32 -1, i8* bitcast (void (i32*, i32*, i32**, i32**)* @__omp_outlined__ to i8*), i8* null, i8** [[TMP7]], i32 2)
 // CHECK3-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 2, i1 true)
 // CHECK3-NEXT:    ret void
 // CHECK3:       worker.exit:
@@ -1070,7 +1070,7 @@ void unreachable_call() {
 // CHECK3-NEXT:    [[ADD19:%.*]] = add nsw i32 [[CONV18]], 1
 // CHECK3-NEXT:    [[CONV20:%.*]] = trunc i32 [[ADD19]] to i8
 // CHECK3-NEXT:    store i8 [[CONV20]], i8* [[Y]], align 8
-// CHECK3-NEXT:    [[CALL:%.*]] = call nonnull align 8 dereferenceable(8) i64* @_ZN2TTIxcEixEi(%struct.TT* nonnull align 8 dereferenceable(16) [[TMP7]], i32 0) #[[ATTR6:[0-9]+]]
+// CHECK3-NEXT:    [[CALL:%.*]] = call nonnull align 8 dereferenceable(8) i64* @_ZN2TTIxcEixEi(%struct.TT* nonnull align 8 dereferenceable(16) [[TMP7]], i32 0) #[[ATTR8:[0-9]+]]
 // CHECK3-NEXT:    [[TMP17:%.*]] = load i64, i64* [[CALL]], align 8
 // CHECK3-NEXT:    [[ADD21:%.*]] = add nsw i64 [[TMP17]], 1
 // CHECK3-NEXT:    store i64 [[ADD21]], i64* [[CALL]], align 8
@@ -1081,7 +1081,7 @@ void unreachable_call() {
 //
 //
 // CHECK3-LABEL: define {{[^@]+}}@_ZN2TTIxcEixEi
-// CHECK3-SAME: (%struct.TT* nonnull align 8 dereferenceable(16) [[THIS:%.*]], i32 [[I:%.*]]) #[[ATTR3:[0-9]+]] comdat align 2 {
+// CHECK3-SAME: (%struct.TT* nonnull align 8 dereferenceable(16) [[THIS:%.*]], i32 [[I:%.*]]) #[[ATTR4:[0-9]+]] comdat align 2 {
 // CHECK3-NEXT:  entry:
 // CHECK3-NEXT:    [[THIS_ADDR:%.*]] = alloca %struct.TT*, align 4
 // CHECK3-NEXT:    [[I_ADDR:%.*]] = alloca i32, align 4
@@ -1172,7 +1172,7 @@ void unreachable_call() {
 // CHECK3-NEXT:    [[TMP8:%.*]] = load double, double* [[A6]], align 8
 // CHECK3-NEXT:    [[CONV7:%.*]] = fptosi double [[TMP8]] to i32
 // CHECK3-NEXT:    [[A8:%.*]] = getelementptr inbounds [[STRUCT_S1]], %struct.S1* [[TMP0]], i32 0, i32 0
-// CHECK3-NEXT:    [[CALL:%.*]] = call i32 @_Z3baziRd(i32 [[CONV7]], double* nonnull align 8 dereferenceable(8) [[A8]]) #[[ATTR6]]
+// CHECK3-NEXT:    [[CALL:%.*]] = call i32 @_Z3baziRd(i32 [[CONV7]], double* nonnull align 8 dereferenceable(8) [[A8]]) #[[ATTR8]]
 // CHECK3-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 1, i1 true)
 // CHECK3-NEXT:    ret void
 // CHECK3:       worker.exit:
@@ -1180,7 +1180,7 @@ void unreachable_call() {
 //
 //
 // CHECK3-LABEL: define {{[^@]+}}@_Z3baziRd
-// CHECK3-SAME: (i32 [[F1:%.*]], double* nonnull align 8 dereferenceable(8) [[A:%.*]]) #[[ATTR3]] {
+// CHECK3-SAME: (i32 [[F1:%.*]], double* nonnull align 8 dereferenceable(8) [[A:%.*]]) #[[ATTR4]] {
 // CHECK3-NEXT:  entry:
 // CHECK3-NEXT:    [[A_ADDR:%.*]] = alloca double*, align 4
 // CHECK3-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [2 x i8*], align 4
@@ -1210,7 +1210,7 @@ void unreachable_call() {
 // CHECK3-NEXT:    [[EXEC_USER_CODE:%.*]] = icmp eq i32 [[TMP0]], -1
 // CHECK3-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[WORKER_EXIT:%.*]]
 // CHECK3:       user_code.entry:
-// CHECK3-NEXT:    call void @_Z6asserti(i32 0) #[[ATTR7:[0-9]+]]
+// CHECK3-NEXT:    call void @_Z6asserti(i32 0) #[[ATTR9:[0-9]+]]
 // CHECK3-NEXT:    unreachable
 // CHECK3:       worker.exit:
 // CHECK3-NEXT:    ret void
@@ -1276,7 +1276,7 @@ void unreachable_call() {
 //
 //
 // CHECK3-LABEL: define {{[^@]+}}@__omp_outlined__1_wrapper
-// CHECK3-SAME: (i16 zeroext [[TMP0:%.*]], i32 [[TMP1:%.*]]) #[[ATTR5:[0-9]+]] {
+// CHECK3-SAME: (i16 zeroext [[TMP0:%.*]], i32 [[TMP1:%.*]]) #[[ATTR7:[0-9]+]] {
 // CHECK3-NEXT:  entry:
 // CHECK3-NEXT:    [[DOTADDR:%.*]] = alloca i16, align 2
 // CHECK3-NEXT:    [[DOTADDR1:%.*]] = alloca i32, align 4
