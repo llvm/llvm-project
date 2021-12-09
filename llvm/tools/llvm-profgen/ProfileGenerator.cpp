@@ -81,6 +81,12 @@ static cl::opt<bool> ShowDensity("show-density", llvm::cl::init(false),
                                  llvm::cl::desc("show profile density details"),
                                  llvm::cl::Optional);
 
+static cl::opt<bool> UpdateTotalSamples(
+    "update-total-samples", llvm::cl::init(false),
+    llvm::cl::desc(
+        "Update total samples by accumulating all its body samples."),
+    llvm::cl::Optional);
+
 extern cl::opt<int> ProfileSummaryCutoffHot;
 
 using namespace llvm;
@@ -350,6 +356,9 @@ void ProfileGeneratorBase::updateBodySamplesforFunctionProfile(
 }
 
 void ProfileGeneratorBase::updateTotalSamples() {
+  if (!UpdateTotalSamples)
+    return;
+
   for (auto &Item : ProfileMap) {
     FunctionSamples &FunctionProfile = Item.second;
     FunctionProfile.updateTotalSamples();
@@ -411,11 +420,12 @@ void ProfileGenerator::generateLineNumBasedProfile() {
   updateTotalSamples();
 }
 
-FunctionSamples &ProfileGenerator::getLeafFrameProfile(
-    const SampleContextFrameVector &FrameVec) {
+FunctionSamples &ProfileGenerator::getLeafProfileAndAddTotalSamples(
+    const SampleContextFrameVector &FrameVec, uint64_t Count) {
   // Get top level profile
   FunctionSamples *FunctionProfile =
       &getTopLevelFunctionProfile(FrameVec[0].FuncName);
+  FunctionProfile->addTotalSamples(Count);
 
   for (size_t I = 1; I < FrameVec.size(); I++) {
     LineLocation Callsite(
@@ -430,6 +440,7 @@ FunctionSamples &ProfileGenerator::getLeafFrameProfile(
       Ret.first->second.setContext(Context);
     }
     FunctionProfile = &Ret.first->second;
+    FunctionProfile->addTotalSamples(Count);
   }
 
   return *FunctionProfile;
@@ -479,7 +490,12 @@ void ProfileGenerator::populateBodySamplesForAllFunctions(
       const SampleContextFrameVector &FrameVec =
           Binary->getFrameLocationStack(Offset);
       if (!FrameVec.empty()) {
-        FunctionSamples &FunctionProfile = getLeafFrameProfile(FrameVec);
+        // FIXME: As accumulating total count per instruction caused some
+        // regression, we changed to accumulate total count per byte as a
+        // workaround. Tuning hotness threshold on the compiler side might be
+        // necessary in the future.
+        FunctionSamples &FunctionProfile = getLeafProfileAndAddTotalSamples(
+            FrameVec, Count * Binary->getInstSize(Offset));
         updateBodySamplesforFunctionProfile(FunctionProfile, FrameVec.back(),
                                             Count);
       }
@@ -514,7 +530,8 @@ void ProfileGenerator::populateBoundarySamplesForAllFunctions(
     const SampleContextFrameVector &FrameVec =
         Binary->getFrameLocationStack(SourceOffset);
     if (!FrameVec.empty()) {
-      FunctionSamples &FunctionProfile = getLeafFrameProfile(FrameVec);
+      FunctionSamples &FunctionProfile =
+          getLeafProfileAndAddTotalSamples(FrameVec, 0);
       FunctionProfile.addCalledTargetSamples(
           FrameVec.back().Location.LineOffset,
           getBaseDiscriminator(FrameVec.back().Location.Discriminator),
@@ -640,6 +657,7 @@ void CSProfileGenerator::populateBodySamplesForFunction(
       if (LeafLoc.hasValue()) {
         // Recording body sample for this specific context
         updateBodySamplesforFunctionProfile(FunctionProfile, *LeafLoc, Count);
+        FunctionProfile.addTotalSamples(Count);
       }
     } while (IP.advance() && IP.Address <= RangeEnd);
   }
@@ -731,6 +749,7 @@ void CSProfileGenerator::populateInferredFunctionSamples() {
     CallerProfile.addBodySamples(CallerLeafFrameLoc.Location.LineOffset,
                                  CallerLeafFrameLoc.Location.Discriminator,
                                  EstimatedCallCount);
+    CallerProfile.addTotalSamples(EstimatedCallCount);
   }
 }
 
