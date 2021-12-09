@@ -164,60 +164,7 @@ static cl::opt<std::string> DotCfgDir(
     cl::desc("Generate dot files into specified directory for changed IRs"),
     cl::Hidden, cl::init("./"));
 
-// An option for specifying an executable that will be called with the IR
-// everytime it changes in the opt pipeline.  It will also be called on
-// the initial IR as it enters the pipeline.  The executable will be passed
-// the name of a temporary file containing the IR and the PassID.  This may
-// be used, for example, to call llc on the IR and run a test to determine
-// which pass makes a change that changes the functioning of the IR.
-// The usual modifier options work as expected.
-static cl::opt<std::string>
-    TestChanged("test-changed", cl::Hidden, cl::init(""),
-                cl::desc("exe called with module IR after each pass that "
-                         "changes it"));
-
 namespace {
-
-// Ensure temporary files exist, creating or re-using them.  \p FD contains
-// file descriptors (-1 indicates that the file should be created) and
-// \p SR contains the corresponding initial content.  \p FileName will have
-// the filenames filled in when creating files.  Return any error message
-// or "" if none.
-std::string prepareTempFiles(SmallVector<int> &FD, ArrayRef<StringRef> SR,
-                             SmallVector<std::string> &FileName) {
-  assert(FD.size() >= SR.size() && FileName.size() == FD.size() &&
-         "Unexpected array sizes");
-  for (unsigned I = 0; I < FD.size(); ++I) {
-    if (FD[I] == -1) {
-      SmallVector<char, 200> SV;
-      std::error_code EC =
-          sys::fs::createTemporaryFile("tmpdiff", "txt", FD[I], SV);
-      if (EC)
-        return "Unable to create temporary file.";
-      FileName[I] = Twine(SV).str();
-    }
-    // Only the first M files have initial content.
-    if (I < SR.size()) {
-      std::error_code EC = sys::fs::openFileForWrite(FileName[I], FD[I]);
-      if (EC)
-        return "Unable to open temporary file for writing.";
-      raw_fd_ostream OutStream(FD[I], /*shouldClose=*/true);
-      if (FD[I] == -1)
-        return "Error opening file for writing.";
-      OutStream << SR[I];
-    }
-  }
-  return "";
-}
-
-std::string cleanUpTempFiles(ArrayRef<std::string> FileName) {
-  for (unsigned I = 0; I < FileName.size(); ++I) {
-    std::error_code EC = sys::fs::remove(FileName[I]);
-    if (EC)
-      return "Unable to remove temporary file.";
-  }
-  return "";
-}
 
 // Perform a system based diff between \p Before and \p After, using
 // \p OldLineFormat, \p NewLineFormat, and \p UnchangedLineFormat
@@ -226,14 +173,34 @@ std::string cleanUpTempFiles(ArrayRef<std::string> FileName) {
 std::string doSystemDiff(StringRef Before, StringRef After,
                          StringRef OldLineFormat, StringRef NewLineFormat,
                          StringRef UnchangedLineFormat) {
+  StringRef SR[2]{Before, After};
   // Store the 2 bodies into temporary files and call diff on them
   // to get the body of the node.
-  static SmallVector<int> FD{-1, -1, -1};
-  SmallVector<StringRef> SR{Before, After};
-  static SmallVector<std::string> FileName{"", "", ""};
-  std::string Err = prepareTempFiles(FD, SR, FileName);
-  if (Err != "")
-    return Err;
+  const unsigned NumFiles = 3;
+  static std::string FileName[NumFiles];
+  static int FD[NumFiles]{-1, -1, -1};
+  for (unsigned I = 0; I < NumFiles; ++I) {
+    if (FD[I] == -1) {
+      SmallVector<char, 200> SV;
+      std::error_code EC =
+          sys::fs::createTemporaryFile("tmpdiff", "txt", FD[I], SV);
+      if (EC)
+        return "Unable to create temporary file.";
+      FileName[I] = Twine(SV).str();
+    }
+    // The third file is used as the result of the diff.
+    if (I == NumFiles - 1)
+      break;
+
+    std::error_code EC = sys::fs::openFileForWrite(FileName[I], FD[I]);
+    if (EC)
+      return "Unable to open temporary file for writing.";
+
+    raw_fd_ostream OutStream(FD[I], /*shouldClose=*/true);
+    if (FD[I] == -1)
+      return "Error opening file for writing.";
+    OutStream << SR[I];
+  }
 
   static ErrorOr<std::string> DiffExe = sys::findProgramByName(DiffBinary);
   if (!DiffExe)
@@ -257,10 +224,12 @@ std::string doSystemDiff(StringRef Before, StringRef After,
   else
     return "Unable to read result.";
 
-  Err = cleanUpTempFiles(FileName);
-  if (Err != "")
-    return Err;
-
+  // Clean up.
+  for (const std::string &I : FileName) {
+    std::error_code EC = sys::fs::remove(I);
+    if (EC)
+      return "Unable to remove temporary file.";
+  }
   return Diff;
 }
 
@@ -649,59 +618,6 @@ void IRChangedPrinter::handleAfter(StringRef PassID, std::string &Name,
   }
 
   Out << "*** IR Dump After " << PassID << " on " << Name << " ***\n" << After;
-}
-
-IRChangedTester::~IRChangedTester() {}
-
-void IRChangedTester::registerCallbacks(PassInstrumentationCallbacks &PIC) {
-  if (TestChanged != "")
-    TextChangeReporter<std::string>::registerRequiredCallbacks(PIC);
-}
-
-void IRChangedTester::handleIR(const std::string &S, StringRef PassID) {
-  // Store the body into a temporary file
-  static SmallVector<int> FD{-1};
-  SmallVector<StringRef> SR{S};
-  static SmallVector<std::string> FileName{""};
-  std::string Err = prepareTempFiles(FD, SR, FileName);
-  if (Err != "") {
-    dbgs() << Err;
-    return;
-  }
-  static ErrorOr<std::string> Exe = sys::findProgramByName(TestChanged);
-  if (!Exe) {
-    dbgs() << "Unable to find test-changed executable.";
-    return;
-  }
-
-  StringRef Args[] = {TestChanged, FileName[0], PassID};
-  int Result = sys::ExecuteAndWait(*Exe, Args);
-  if (Result < 0) {
-    dbgs() << "Error executing test-changed executable.";
-    return;
-  }
-
-  Err = cleanUpTempFiles(FileName);
-  if (Err != "")
-    dbgs() << Err;
-}
-
-void IRChangedTester::handleInitialIR(Any IR) {
-  // Always test the initial module.
-  // Unwrap and print directly to avoid filtering problems in general routines.
-  std::string S;
-  generateIRRepresentation(IR, "Initial IR", S);
-  handleIR(S, "Initial IR");
-}
-
-void IRChangedTester::omitAfter(StringRef PassID, std::string &Name) {}
-void IRChangedTester::handleInvalidated(StringRef PassID) {}
-void IRChangedTester::handleFiltered(StringRef PassID, std::string &Name) {}
-void IRChangedTester::handleIgnored(StringRef PassID, std::string &Name) {}
-void IRChangedTester::handleAfter(StringRef PassID, std::string &Name,
-                                  const std::string &Before,
-                                  const std::string &After, Any) {
-  handleIR(After, PassID);
 }
 
 template <typename T>
@@ -2216,7 +2132,6 @@ void StandardInstrumentations::registerCallbacks(
     Verify.registerCallbacks(PIC);
   PrintChangedDiff.registerCallbacks(PIC);
   WebsiteChangeReporter.registerCallbacks(PIC);
-  ChangeTester.registerCallbacks(PIC);
 }
 
 template class ChangeReporter<std::string>;
