@@ -38,6 +38,54 @@ using PowFOpLowering = VectorConvertToLLVMPattern<math::PowFOp, LLVM::PowOp>;
 using SinOpLowering = VectorConvertToLLVMPattern<math::SinOp, LLVM::SinOp>;
 using SqrtOpLowering = VectorConvertToLLVMPattern<math::SqrtOp, LLVM::SqrtOp>;
 
+// A `CtLz/CtTz(a)` is converted into `CtLz/CtTz(a, false)`.
+template <typename MathOp, typename LLVMOp>
+struct CountOpLowering : public ConvertOpToLLVMPattern<MathOp> {
+  using ConvertOpToLLVMPattern<MathOp>::ConvertOpToLLVMPattern;
+  using Super = CountOpLowering<MathOp, LLVMOp>;
+
+  LogicalResult
+  matchAndRewrite(MathOp op, typename MathOp::Adaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    auto operandType = adaptor.getOperand().getType();
+
+    if (!operandType || !LLVM::isCompatibleType(operandType))
+      return failure();
+
+    auto loc = op.getLoc();
+    auto resultType = op.getResult().getType();
+    auto boolType = rewriter.getIntegerType(1);
+    auto boolZero = rewriter.getIntegerAttr(boolType, 0);
+
+    if (!operandType.template isa<LLVM::LLVMArrayType>()) {
+      LLVM::ConstantOp zero =
+          rewriter.create<LLVM::ConstantOp>(loc, boolType, boolZero);
+      rewriter.replaceOpWithNewOp<LLVMOp>(op, resultType, adaptor.getOperand(),
+                                          zero);
+      return success();
+    }
+
+    auto vectorType = resultType.template dyn_cast<VectorType>();
+    if (!vectorType)
+      return failure();
+
+    return LLVM::detail::handleMultidimensionalVectors(
+        op.getOperation(), adaptor.getOperands(), *this->getTypeConverter(),
+        [&](Type llvm1DVectorTy, ValueRange operands) {
+          LLVM::ConstantOp zero =
+              rewriter.create<LLVM::ConstantOp>(loc, boolType, boolZero);
+          return rewriter.replaceOpWithNewOp<LLVMOp>(op, llvm1DVectorTy,
+                                                     operands[0], zero);
+        },
+        rewriter);
+  }
+};
+
+using CountLeadingZerosOpLowering =
+    CountOpLowering<math::CountLeadingZerosOp, LLVM::CountLeadingZerosOp>;
+using CountTrailingZerosOpLowering =
+    CountOpLowering<math::CountTrailingZerosOp, LLVM::CountTrailingZerosOp>;
+
 // A `expm1` is converted into `exp - 1`.
 struct ExpM1OpLowering : public ConvertOpToLLVMPattern<math::ExpM1Op> {
   using ConvertOpToLLVMPattern<math::ExpM1Op>::ConvertOpToLLVMPattern;
@@ -222,6 +270,8 @@ void mlir::populateMathToLLVMConversionPatterns(LLVMTypeConverter &converter,
     CeilOpLowering,
     CopySignOpLowering,
     CosOpLowering,
+    CountLeadingZerosOpLowering,
+    CountTrailingZerosOpLowering,
     CtPopFOpLowering,
     ExpOpLowering,
     Exp2OpLowering,
