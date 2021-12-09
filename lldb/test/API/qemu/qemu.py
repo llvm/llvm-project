@@ -35,8 +35,10 @@ class MyResponder(MockGDBServerResponder):
                     json.dump(self._state, f)
             elif action == "stdout":
                 sys.stdout.write(data)
+                sys.stdout.flush()
             elif action == "stderr":
                 sys.stderr.write(data)
+                sys.stderr.flush()
             elif action == "stdin":
                 self._state[data] = sys.stdin.readline()
             else:
