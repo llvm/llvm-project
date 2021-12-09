@@ -28,17 +28,21 @@ namespace llvm {
 /// MemoryBuffer).
 class SmallVectorMemoryBuffer : public MemoryBuffer {
 public:
-  /// Construct an SmallVectorMemoryBuffer from the given SmallVector
-  /// r-value.
-  SmallVectorMemoryBuffer(SmallVectorImpl<char> &&SV)
-      : SV(std::move(SV)), BufferName("<in-memory object>") {
-    init(this->SV.begin(), this->SV.end(), false);
-  }
+  /// Construct a SmallVectorMemoryBuffer from the given SmallVector r-value.
+  SmallVectorMemoryBuffer(SmallVectorImpl<char> &&SV,
+                          bool RequiresNullTerminator = true)
+      : SmallVectorMemoryBuffer(std::move(SV), "<in-memory object>",
+                                RequiresNullTerminator) {}
 
-  /// Construct a named SmallVectorMemoryBuffer from the given
-  /// SmallVector r-value and StringRef.
-  SmallVectorMemoryBuffer(SmallVectorImpl<char> &&SV, StringRef Name)
+  /// Construct a named SmallVectorMemoryBuffer from the given SmallVector
+  /// r-value and StringRef.
+  SmallVectorMemoryBuffer(SmallVectorImpl<char> &&SV, StringRef Name,
+                          bool RequiresNullTerminator = true)
       : SV(std::move(SV)), BufferName(std::string(Name)) {
+    if (RequiresNullTerminator) {
+      this->SV.push_back('\0');
+      this->SV.pop_back();
+    }
     init(this->SV.begin(), this->SV.end(), false);
   }
 
