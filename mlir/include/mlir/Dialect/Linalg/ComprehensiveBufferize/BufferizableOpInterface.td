@@ -196,7 +196,7 @@ def BufferizableOpInterface : OpInterface<"BufferizableOpInterface"> {
           before returning. Otherwise, nested ops will not be bufferized.
 
           This method will never be called on ops that do not have at least one
-          tensor operand or result.
+          tensor operand/result or a region.
         }],
         /*retType=*/"LogicalResult",
         /*methodName=*/"bufferize",
