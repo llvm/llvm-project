@@ -1,4 +1,4 @@
-//===-- llvm/unittest/Support/HTTPClient.cpp - unit tests -------*- C++ -*-===//
+//===-- llvm/unittest/Debuginfod/HTTPClientTests.cpp - unit tests ---------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Support/HTTPClient.h"
+#include "llvm/Debuginfod/HTTPClient.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Testing/Support/Error.h"
 #include "gtest/gtest.h"

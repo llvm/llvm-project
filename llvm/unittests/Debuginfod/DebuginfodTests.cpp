@@ -1,4 +1,4 @@
-//===-- llvm/unittest/Support/DebuginfodTests.cpp - unit tests --*- C++ -*-===//
+//===-- llvm/unittest/Support/DebuginfodTests.cpp - unit tests ------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -7,8 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Debuginfod/Debuginfod.h"
+#include "llvm/Debuginfod/HTTPClient.h"
 #include "llvm/Support/FileSystem.h"
-#include "llvm/Support/HTTPClient.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Testing/Support/Error.h"
 #include "gtest/gtest.h"

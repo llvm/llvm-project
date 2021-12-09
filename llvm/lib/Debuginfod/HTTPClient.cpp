@@ -1,4 +1,4 @@
-//===-- llvm/Support/HTTPClient.cpp - HTTP client library -------*- C++ -*-===//
+//===-- llvm/Debuginfod/HTTPClient.cpp - HTTP client library ----*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -13,7 +13,7 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Support/HTTPClient.h"
+#include "llvm/Debuginfod/HTTPClient.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Errc.h"
