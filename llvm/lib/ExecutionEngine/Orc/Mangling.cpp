@@ -102,7 +102,7 @@ static SymbolStringPtr addInitSymbol(SymbolFlagsMap &SymbolFlags,
   return InitSymbol;
 }
 
-static Expected<std::pair<SymbolFlagsMap, SymbolStringPtr>>
+static Expected<MaterializationUnit::Interface>
 getMachOObjectFileSymbolInfo(ExecutionSession &ES,
                              const object::MachOObjectFile &Obj) {
   SymbolFlagsMap SymbolFlags;
@@ -158,10 +158,11 @@ getMachOObjectFileSymbolInfo(ExecutionSession &ES,
     }
   }
 
-  return std::make_pair(std::move(SymbolFlags), std::move(InitSymbol));
+  return MaterializationUnit::Interface(std::move(SymbolFlags),
+                                        std::move(InitSymbol));
 }
 
-static Expected<std::pair<SymbolFlagsMap, SymbolStringPtr>>
+static Expected<MaterializationUnit::Interface>
 getELFObjectFileSymbolInfo(ExecutionSession &ES,
                            const object::ELFObjectFileBase &Obj) {
   SymbolFlagsMap SymbolFlags;
@@ -211,10 +212,11 @@ getELFObjectFileSymbolInfo(ExecutionSession &ES,
     }
   }
 
-  return std::make_pair(std::move(SymbolFlags), InitSymbol);
+  return MaterializationUnit::Interface(std::move(SymbolFlags),
+                                        std::move(InitSymbol));
 }
 
-Expected<std::pair<SymbolFlagsMap, SymbolStringPtr>>
+Expected<MaterializationUnit::Interface>
 getGenericObjectFileSymbolInfo(ExecutionSession &ES,
                                const object::ObjectFile &Obj) {
   SymbolFlagsMap SymbolFlags;
@@ -250,11 +252,11 @@ getGenericObjectFileSymbolInfo(ExecutionSession &ES,
     SymbolFlags[InternedName] = std::move(*SymFlags);
   }
 
-  return std::make_pair(std::move(SymbolFlags), nullptr);
+  return MaterializationUnit::Interface(std::move(SymbolFlags), nullptr);
 }
 
-Expected<std::pair<SymbolFlagsMap, SymbolStringPtr>>
-getObjectSymbolInfo(ExecutionSession &ES, MemoryBufferRef ObjBuffer) {
+Expected<MaterializationUnit::Interface>
+getObjectInterface(ExecutionSession &ES, MemoryBufferRef ObjBuffer) {
   auto Obj = object::ObjectFile::createObjectFile(ObjBuffer);
 
   if (!Obj)
