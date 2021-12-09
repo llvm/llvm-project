@@ -22,9 +22,11 @@
 #ifdef OMPT_SUPPORT
 #include "ompt_callback.h"
 #define OMPT_IF_ENABLED(stmts)                                                 \
-  if (ompt_enabled) {                                                          \
-    stmts                                                                      \
-  }
+  do {                                                                         \
+    if (ompt_enabled) {                                                        \
+      stmts                                                                    \
+    }                                                                          \
+  } while (0)
 #else
 #define OMPT_IF_ENABLED(stmts)
 #endif
@@ -471,13 +473,13 @@ void *DeviceTy::allocData(int64_t Size, void *HstPtr, int32_t Kind) {
       codeptr = OMPT_GET_RETURN_ADDRESS(0);
       ompt_interface.ompt_state_set(OMPT_GET_FRAME_ADDRESS(0), codeptr);
       ompt_interface.target_data_alloc_begin(RTLDeviceID, HstPtr, Size,
-                                             codeptr);)
+                                             codeptr););
 
   void *tgt_ptr = RTL->data_alloc(RTLDeviceID, Size, HstPtr, Kind);
 
   OMPT_IF_ENABLED(
       ompt_interface.target_data_alloc_end(RTLDeviceID, HstPtr, Size, codeptr);
-      ompt_interface.ompt_state_clear();)
+      ompt_interface.ompt_state_clear(););
   return tgt_ptr;
 }
 
@@ -487,13 +489,13 @@ int32_t DeviceTy::deleteData(void *TgtPtrBegin) {
       codeptr = OMPT_GET_RETURN_ADDRESS(0);
       ompt_interface.ompt_state_set(OMPT_GET_FRAME_ADDRESS(0), codeptr);
       ompt_interface.target_data_delete_begin(RTLDeviceID, TgtPtrBegin,
-                                              codeptr);)
+                                              codeptr););
 
   int32_t status = RTL->data_delete(RTLDeviceID, TgtPtrBegin);
 
   OMPT_IF_ENABLED(
       ompt_interface.target_data_delete_end(RTLDeviceID, TgtPtrBegin, codeptr);
-      ompt_interface.ompt_state_clear();)
+      ompt_interface.ompt_state_clear(););
 
   return status;
 }
@@ -518,7 +520,7 @@ int32_t DeviceTy::submitData(void *TgtPtrBegin, void *HstPtrBegin, int64_t Size,
       codeptr = OMPT_GET_RETURN_ADDRESS(0);
       ompt_interface.ompt_state_set(OMPT_GET_FRAME_ADDRESS(0), codeptr);
       ompt_interface.target_data_submit_begin(RTLDeviceID, TgtPtrBegin,
-                                              HstPtrBegin, Size, codeptr);)
+                                              HstPtrBegin, Size, codeptr););
 
   int32_t status;
   if (!AsyncInfo || !RTL->data_submit_async || !RTL->synchronize)
@@ -529,7 +531,7 @@ int32_t DeviceTy::submitData(void *TgtPtrBegin, void *HstPtrBegin, int64_t Size,
 
   OMPT_IF_ENABLED(ompt_interface.target_data_submit_end(
       RTLDeviceID, TgtPtrBegin, HstPtrBegin, Size, codeptr);
-                  ompt_interface.ompt_state_clear();)
+                  ompt_interface.ompt_state_clear(););
   return status;
 }
 
@@ -552,7 +554,7 @@ int32_t DeviceTy::retrieveData(void *HstPtrBegin, void *TgtPtrBegin,
       codeptr = OMPT_GET_RETURN_ADDRESS(0);
       ompt_interface.ompt_state_set(OMPT_GET_FRAME_ADDRESS(0), codeptr);
       ompt_interface.target_data_retrieve_begin(RTLDeviceID, HstPtrBegin,
-                                                TgtPtrBegin, Size, codeptr);)
+                                                TgtPtrBegin, Size, codeptr););
 
   int32_t status;
   if (!RTL->data_retrieve_async || !RTL->synchronize)
@@ -563,7 +565,7 @@ int32_t DeviceTy::retrieveData(void *HstPtrBegin, void *TgtPtrBegin,
 
   OMPT_IF_ENABLED(ompt_interface.target_data_retrieve_end(
       RTLDeviceID, HstPtrBegin, TgtPtrBegin, Size, codeptr);
-                  ompt_interface.ompt_state_clear();)
+                  ompt_interface.ompt_state_clear(););
 
   return status;
 }

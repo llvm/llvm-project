@@ -69,12 +69,15 @@ public:
     library_connect_routine.append("_ompt_connect");
     is_initialized = false;
   };
+  library_ompt_connector_t() = delete;
 
 private:
   void initialize() {
     if (is_initialized == false) {
       DP("OMPT: library_ompt_connect = %s\n", library_connect_routine.c_str());
       void *vptr = dlsym(NULL, library_connect_routine.c_str());
+      // If dlsym fails, library_ompt_connect will be null. connect() checks
+      // for this condition
       library_ompt_connect = reinterpret_cast<library_ompt_connect_t>(
           reinterpret_cast<long>(vptr));
       DP("OMPT: library_ompt_connect = %p\n", library_ompt_connect);

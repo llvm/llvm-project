@@ -456,7 +456,7 @@ void ompt_pre_init() {
   if (verbose_init && verbose_file != stderr && verbose_file != stdout)
     fclose(verbose_file);
 #if OMPT_DEBUG
-  printf("ompt_pre_init(): ompt_enabled = %d\n", ompt_enabled);
+  printf("ompt_pre_init(): ompt_enabled = %d\n", ompt_enabled.enabled);
 #endif
 }
 
@@ -509,15 +509,13 @@ void ompt_post_init() {
 }
 
 void ompt_fini() {
-  if (ompt_enabled.enabled
-#if OMPD_SUPPORT
-      && ompt_start_tool_result && ompt_start_tool_result->finalize
-#endif
-  ) {
-    if (libomptarget_ompt_result) {
+  if (ompt_enabled.enabled) {
+    if (ompt_start_tool_result && ompt_start_tool_result->finalize) {
+      ompt_start_tool_result->finalize(&(ompt_start_tool_result->tool_data));
+    }
+    if (libomptarget_ompt_result && libomptarget_ompt_result->finalize) {
       libomptarget_ompt_result->finalize(NULL);
     }
-    ompt_start_tool_result->finalize(&(ompt_start_tool_result->tool_data));
   }
 
   if (ompt_tool_module)

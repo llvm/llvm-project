@@ -39,7 +39,7 @@
  * type declarations
  *******************************************************************************/
 
-class libomptarget_rtl_finalizer_t : std::list<ompt_finalize_t> {
+class libomptarget_rtl_finalizer_t {
 public:
   libomptarget_rtl_finalizer_t() : fn(0){};
 
@@ -88,7 +88,6 @@ const char *ompt_device_callbacks_t::documentation = 0;
 
 thread_local OmptInterface ompt_interface;
 
-static thread_local uint64_t ompt_target_region_id = 1;
 static thread_local uint64_t ompt_target_region_opid = 1;
 static thread_local ompt_data_t ompt_target_data = ompt_data_none;
 static thread_local ompt_data_t *ompt_task_data = 0;
@@ -389,15 +388,6 @@ ompt_device_callbacks_t::lookup(const char *interface_function_name) {
     return (ompt_interface_fn_t)LIBOMPTARGET_GET_TARGET_OPID;
 
   return ompt_device_callbacks.lookup_callback(interface_function_name);
-}
-
-typedef void (*libomp_libomptarget_ompt_init_t)(ompt_start_tool_result_t *);
-
-__attribute__((weak)) void
-libomp_libomptarget_ompt_init(ompt_start_tool_result_t *result) {
-  // no initialization of OMPT for libomptarget unless
-  // libomp implements this function
-  DP("in dummy libomp_libomptarget_ompt_init\n");
 }
 
 /*****************************************************************************

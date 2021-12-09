@@ -44,9 +44,11 @@
 #ifdef OMPT_SUPPORT
 #include <ompt_device_callbacks.h>
 #define OMPT_IF_ENABLED(stmts)                                                 \
-  if (ompt_device_callbacks.is_enabled()) {                                    \
-    stmts                                                                      \
-  }
+  do {                                                                         \
+    if (ompt_device_callbacks.is_enabled()) {                                  \
+      stmts                                                                    \
+    }                                                                          \
+  } while (0)
 #else
 #define OMPT_IF_ENABLED(stmts)
 #endif
@@ -868,7 +870,7 @@ public:
 
     OMPT_IF_ENABLED(for (int i = 0; i < NumberOfDevices; i++) {
       ompt_device_callbacks.ompt_callback_device_finalize(i);
-    })
+    });
 
     if (!HSA.success()) {
       // Then none of these can have been set up and they can't be torn down
@@ -1583,7 +1585,7 @@ int32_t __tgt_rtl_init_device(int device_id) {
   OMPT_IF_ENABLED(
       std::string ompt_gpu_type("AMD "); ompt_gpu_type += GetInfoName;
       const char *type = ompt_gpu_type.c_str();
-      ompt_device_callbacks.ompt_callback_device_initialize(device_id, type);)
+      ompt_device_callbacks.ompt_callback_device_initialize(device_id, type););
 
   return OFFLOAD_SUCCESS;
 }
@@ -1978,7 +1980,7 @@ __tgt_target_table *__tgt_rtl_load_binary_locked(int32_t device_id,
                   uint64_t module_id = 0; // FIXME
                   ompt_device_callbacks.ompt_callback_device_load(
                       device_id, filename, offset_in_file, vma_in_file, bytes,
-                      host_addr, device_addr, module_id);)
+                      host_addr, device_addr, module_id););
 
   {
     // the device_State array is either large value in bss or a void* that
