@@ -576,6 +576,23 @@ def TaskwaitOp : OpenMP_Op<"taskwait"> {
 // two-step process.
 
 def AtomicReadOp : OpenMP_Op<"atomic.read"> {
+
+  let summary = "performs an atomic read";
+
+  let description = [{
+    This operation performs an atomic read.
+
+    The operand `address` is the address from where the value is atomically
+    read.
+
+    `hint` is the value of hint (as specified in the hint clause). It is a
+    compile time constant. As the name suggests, this is just a hint for
+    optimization.
+
+    `memory_order` indicates the memory ordering behavior of the construct. It
+    can be one of `seq_cst`, `acq_rel`, `release`, `acquire` or `relaxed`.
+  }];
+
   let arguments = (ins OpenMP_PointerLikeType:$address,
                        DefaultValuedAttr<I64Attr, "0">:$hint,
                        OptionalAttr<MemoryOrderKind>:$memory_order);
@@ -586,6 +603,25 @@ def AtomicReadOp : OpenMP_Op<"atomic.read"> {
 }
 
 def AtomicWriteOp : OpenMP_Op<"atomic.write"> {
+
+  let summary = "performs an atomic write";
+
+  let description = [{
+    This operation performs an atomic write.
+
+    The operand `address` is the address to where the `value` is atomically
+    written w.r.t. multiple threads. The evaluation of `value` need not be
+    atomic w.r.t. the write to address. In general, the type(address) must
+    dereference to type(value).
+
+    `hint` is the value of hint (as specified in the hint clause). It is a
+    compile time constant. As the name suggests, this is just a hint for
+    optimization.
+
+    `memory_order` indicates the memory ordering behavior of the construct. It
+    can be one of `seq_cst`, `acq_rel`, `release`, `acquire` or `relaxed`.
+  }];
+
   let arguments = (ins OpenMP_PointerLikeType:$address,
                        AnyType:$value,
                        DefaultValuedAttr<I64Attr, "0">:$hint,
@@ -623,6 +659,32 @@ def AtomicBinOpKindAttr : I64EnumAttr<
 }
 
 def AtomicUpdateOp : OpenMP_Op<"atomic.update"> {
+
+  let summary = "performs an atomic update";
+
+  let description = [{
+    This operation performs an atomic update.
+
+    The operands `x` and `expr` are exactly the same as the operands `x` and
+    `expr` in the OpenMP Standard. The operand `x` is the address of the
+    variable that is being updated. `x` is atomically read/written. The
+    evaluation of `expr` need not be atomic w.r.t the read or write of the
+    location designated by `x`. In general, type(x) must dereference to
+    type(expr).
+
+    The attribute `isXBinopExpr` is
+      - true when the expression is of the form `x binop expr` on RHS
+      - false when the expression is of the form `expr binop x` on RHS
+
+    The attribute `binop` is the binary operation being performed atomically.
+
+    `hint` is the value of hint (as used in the hint clause). It is a compile
+    time constant. As the name suggests, this is just a hint for optimization.
+
+    `memory_order` indicates the memory ordering behavior of the construct. It
+    can be one of `seq_cst`, `acq_rel`, `release`, `acquire` or `relaxed`.
+  }];
+
   let arguments = (ins OpenMP_PointerLikeType:$x,
                        AnyType:$expr,
                        UnitAttr:$isXBinopExpr,
