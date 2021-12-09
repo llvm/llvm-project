@@ -3007,7 +3007,6 @@ an appropriate value during the emission.
   void  *__builtin_coro_begin(void *memory)
   void   __builtin_coro_end(void *coro_frame, bool unwind)
   char   __builtin_coro_suspend(bool final)
-  bool   __builtin_coro_param(void *original, void *copy)
 
 Note that there is no builtin matching the `llvm.coro.save` intrinsic. LLVM
 automatically will insert one if the first argument to `llvm.coro.suspend` is

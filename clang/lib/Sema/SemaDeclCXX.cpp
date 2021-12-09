@@ -16153,7 +16153,10 @@ Decl *Sema::ActOnStartLinkageSpecification(Scope *S, SourceLocation ExternLoc,
   ///   - ...
   ///   - appears within a linkage-specification,
   ///   it is attached to the global module.
-  if (getLangOpts().CPlusPlusModules && getCurrentModule()) {
+  ///
+  /// If the declaration is already in global module fragment, we don't
+  /// need to attach it again.
+  if (getLangOpts().CPlusPlusModules && isCurrentModulePurview()) {
     Module *GlobalModule =
         PushGlobalModuleFragment(ExternLoc, /*IsImplicit=*/true);
     D->setModuleOwnershipKind(Decl::ModuleOwnershipKind::ModulePrivate);
@@ -16177,7 +16180,11 @@ Decl *Sema::ActOnFinishLinkageSpecification(Scope *S,
     LSDecl->setRBraceLoc(RBraceLoc);
   }
 
-  if (getLangOpts().CPlusPlusModules && getCurrentModule())
+  // If the current module doesn't has Parent, it implies that the
+  // LinkageSpec isn't in the module created by itself. So we don't
+  // need to pop it.
+  if (getLangOpts().CPlusPlusModules && getCurrentModule() &&
+      getCurrentModule()->isGlobalModule() && getCurrentModule()->Parent)
     PopGlobalModuleFragment();
 
   PopDeclContext();
