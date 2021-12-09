@@ -591,58 +591,6 @@ TEST(FlatAffineConstraintsTest, addConstantLowerBound) {
   EXPECT_EQ(fac.atIneq(1, 2), 2);
 }
 
-TEST(FlatAffineConstraintsTest, removeInequality) {
-  FlatAffineConstraints fac =
-      makeFACFromConstraints(1, {{0, 0}, {1, 1}, {2, 2}, {3, 3}, {4, 4}}, {});
-
-  fac.removeInequalityRange(0, 0);
-  EXPECT_EQ(fac.getNumInequalities(), 5u);
-
-  fac.removeInequalityRange(1, 3);
-  EXPECT_EQ(fac.getNumInequalities(), 3u);
-  EXPECT_THAT(fac.getInequality(0), ElementsAre(0, 0));
-  EXPECT_THAT(fac.getInequality(1), ElementsAre(3, 3));
-  EXPECT_THAT(fac.getInequality(2), ElementsAre(4, 4));
-
-  fac.removeInequality(1);
-  EXPECT_EQ(fac.getNumInequalities(), 2u);
-  EXPECT_THAT(fac.getInequality(0), ElementsAre(0, 0));
-  EXPECT_THAT(fac.getInequality(1), ElementsAre(4, 4));
-}
-
-TEST(FlatAffineConstraintsTest, removeEquality) {
-  FlatAffineConstraints fac =
-      makeFACFromConstraints(1, {}, {{0, 0}, {1, 1}, {2, 2}, {3, 3}, {4, 4}});
-
-  fac.removeEqualityRange(0, 0);
-  EXPECT_EQ(fac.getNumEqualities(), 5u);
-
-  fac.removeEqualityRange(1, 3);
-  EXPECT_EQ(fac.getNumEqualities(), 3u);
-  EXPECT_THAT(fac.getEquality(0), ElementsAre(0, 0));
-  EXPECT_THAT(fac.getEquality(1), ElementsAre(3, 3));
-  EXPECT_THAT(fac.getEquality(2), ElementsAre(4, 4));
-
-  fac.removeEquality(1);
-  EXPECT_EQ(fac.getNumEqualities(), 2u);
-  EXPECT_THAT(fac.getEquality(0), ElementsAre(0, 0));
-  EXPECT_THAT(fac.getEquality(1), ElementsAre(4, 4));
-}
-
-TEST(FlatAffineConstraintsTest, clearConstraints) {
-  FlatAffineConstraints fac = makeFACFromConstraints(1, {}, {});
-
-  fac.addInequality({1, 0});
-  EXPECT_EQ(fac.atIneq(0, 0), 1);
-  EXPECT_EQ(fac.atIneq(0, 1), 0);
-
-  fac.clearConstraints();
-
-  fac.addInequality({1, 0});
-  EXPECT_EQ(fac.atIneq(0, 0), 1);
-  EXPECT_EQ(fac.atIneq(0, 1), 0);
-}
-
 /// Check if the expected division representation of local variables matches the
 /// computed representation. The expected division representation is given as
 /// a vector of expressions set in `expectedDividends` and the corressponding
@@ -721,24 +669,6 @@ TEST(FlatAffineConstraintsTest, computeLocalReprRecursive) {
 
   // Check if floordivs which may depend on other floordivs can be computed.
   checkDivisionRepresentation(fac, divisions, denoms);
-}
-
-TEST(FlatAffineConstraintsTest, removeIdRange) {
-  FlatAffineConstraints fac(3, 2, 1);
-
-  fac.addInequality({10, 11, 12, 20, 21, 30, 40});
-  fac.removeId(FlatAffineConstraints::IdKind::Symbol, 1);
-  EXPECT_THAT(fac.getInequality(0),
-              testing::ElementsAre(10, 11, 12, 20, 30, 40));
-
-  fac.removeIdRange(FlatAffineConstraints::IdKind::Dimension, 0, 2);
-  EXPECT_THAT(fac.getInequality(0), testing::ElementsAre(12, 20, 30, 40));
-
-  fac.removeIdRange(FlatAffineConstraints::IdKind::Local, 1, 1);
-  EXPECT_THAT(fac.getInequality(0), testing::ElementsAre(12, 20, 30, 40));
-
-  fac.removeIdRange(FlatAffineConstraints::IdKind::Local, 0, 1);
-  EXPECT_THAT(fac.getInequality(0), testing::ElementsAre(12, 20, 40));
 }
 
 TEST(FlatAffineConstraintsTest, simplifyLocalsTest) {
