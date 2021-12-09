@@ -589,17 +589,21 @@ public:
 
 private:
   template <bool ForOverwrite> void resizeImpl(size_type N) {
+    if (N == this->size())
+      return;
+
     if (N < this->size()) {
       this->pop_back_n(this->size() - N);
-    } else if (N > this->size()) {
-      this->reserve(N);
-      for (auto I = this->end(), E = this->begin() + N; I != E; ++I)
-        if (ForOverwrite)
-          new (&*I) T;
-        else
-          new (&*I) T();
-      this->set_size(N);
+      return;
     }
+
+    this->reserve(N);
+    for (auto I = this->end(), E = this->begin() + N; I != E; ++I)
+      if (ForOverwrite)
+        new (&*I) T;
+      else
+        new (&*I) T();
+    this->set_size(N);
   }
 
 public:
