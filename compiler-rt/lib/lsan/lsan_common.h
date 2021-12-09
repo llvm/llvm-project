@@ -82,6 +82,15 @@ extern Flags lsan_flags;
 inline Flags *flags() { return &lsan_flags; }
 void RegisterLsanFlags(FlagParser *parser, Flags *f);
 
+struct LeakedChunk {
+  uptr chunk;
+  u32 stack_trace_id;
+  uptr leaked_size;
+  ChunkTag tag;
+};
+
+using LeakedChunks = InternalMmapVector<LeakedChunk>;
+
 struct Leak {
   u32 id;
   uptr hit_count;
@@ -101,8 +110,7 @@ struct LeakedObject {
 class LeakReport {
  public:
   LeakReport() {}
-  void AddLeakedChunk(uptr chunk, u32 stack_trace_id, uptr leaked_size,
-                      ChunkTag tag);
+  void AddLeakedChunks(const LeakedChunks &chunks);
   void ReportTopLeaks(uptr max_leaks);
   void PrintSummary();
   uptr ApplySuppressions();
@@ -136,7 +144,7 @@ struct RootRegion {
 // threads and enumerating roots.
 struct CheckForLeaksParam {
   Frontier frontier;
-  LeakReport leak_report;
+  LeakedChunks leaks;
   bool success = false;
 };
 
