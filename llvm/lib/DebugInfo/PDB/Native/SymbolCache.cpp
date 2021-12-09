@@ -518,8 +518,8 @@ SymbolCache::findLineTable(uint16_t Modi) const {
                            const std::vector<LineTableEntry> &RHS) {
     return LHS[0].Addr < RHS[0].Addr;
   });
-  for (size_t I = 0; I < EntryList.size(); ++I)
-    llvm::append_range(ModuleLineTable, EntryList[I]);
+  for (std::vector<LineTableEntry> &I : EntryList)
+    llvm::append_range(ModuleLineTable, I);
 
   return ModuleLineTable;
 }

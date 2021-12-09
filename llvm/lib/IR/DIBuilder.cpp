@@ -671,11 +671,11 @@ DIBuilder::getOrCreateMacroArray(ArrayRef<Metadata *> Elements) {
 
 DITypeRefArray DIBuilder::getOrCreateTypeArray(ArrayRef<Metadata *> Elements) {
   SmallVector<llvm::Metadata *, 16> Elts;
-  for (unsigned i = 0, e = Elements.size(); i != e; ++i) {
-    if (Elements[i] && isa<MDNode>(Elements[i]))
-      Elts.push_back(cast<DIType>(Elements[i]));
+  for (Metadata *E : Elements) {
+    if (isa_and_nonnull<MDNode>(E))
+      Elts.push_back(cast<DIType>(E));
     else
-      Elts.push_back(Elements[i]);
+      Elts.push_back(E);
   }
   return DITypeRefArray(MDNode::get(VMContext, Elts));
 }
