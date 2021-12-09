@@ -4714,6 +4714,12 @@ void SelectionDAGLegalize::PromoteNode(SDNode *Node) {
     Results.push_back(DAG.getNode(ISD::FP_ROUND, dl, OVT,
                                   Tmp3, DAG.getIntPtrConstant(0, dl)));
     break;
+  case ISD::STRICT_FADD:
+  case ISD::STRICT_FSUB:
+  case ISD::STRICT_FMUL:
+  case ISD::STRICT_FDIV:
+  case ISD::STRICT_FMINNUM:
+  case ISD::STRICT_FMAXNUM:
   case ISD::STRICT_FREM:
   case ISD::STRICT_FPOW:
     Tmp1 = DAG.getNode(ISD::STRICT_FP_EXTEND, dl, {NVT, MVT::Other},
@@ -4738,6 +4744,22 @@ void SelectionDAGLegalize::PromoteNode(SDNode *Node) {
                     DAG.getNode(Node->getOpcode(), dl, NVT, Tmp1, Tmp2, Tmp3),
                     DAG.getIntPtrConstant(0, dl)));
     break;
+  case ISD::STRICT_FMA:
+    Tmp1 = DAG.getNode(ISD::STRICT_FP_EXTEND, dl, {NVT, MVT::Other},
+                       {Node->getOperand(0), Node->getOperand(1)});
+    Tmp2 = DAG.getNode(ISD::STRICT_FP_EXTEND, dl, {NVT, MVT::Other},
+                       {Node->getOperand(0), Node->getOperand(2)});
+    Tmp3 = DAG.getNode(ISD::STRICT_FP_EXTEND, dl, {NVT, MVT::Other},
+                       {Node->getOperand(0), Node->getOperand(3)});
+    Tmp4 = DAG.getNode(ISD::TokenFactor, dl, MVT::Other, Tmp1.getValue(1),
+                       Tmp2.getValue(1), Tmp3.getValue(1));
+    Tmp4 = DAG.getNode(Node->getOpcode(), dl, {NVT, MVT::Other},
+                       {Tmp4, Tmp1, Tmp2, Tmp3});
+    Tmp4 = DAG.getNode(ISD::STRICT_FP_ROUND, dl, {OVT, MVT::Other},
+                       {Tmp4.getValue(1), Tmp4, DAG.getIntPtrConstant(0, dl)});
+    Results.push_back(Tmp4);
+    Results.push_back(Tmp4.getValue(1));
+    break;
   case ISD::FCOPYSIGN:
   case ISD::FPOWI: {
     Tmp1 = DAG.getNode(ISD::FP_EXTEND, dl, NVT, Node->getOperand(0));
@@ -4754,6 +4776,16 @@ void SelectionDAGLegalize::PromoteNode(SDNode *Node) {
                                   Tmp3, DAG.getIntPtrConstant(isTrunc, dl)));
     break;
   }
+  case ISD::STRICT_FPOWI:
+    Tmp1 = DAG.getNode(ISD::STRICT_FP_EXTEND, dl, {NVT, MVT::Other},
+                       {Node->getOperand(0), Node->getOperand(1)});
+    Tmp2 = DAG.getNode(Node->getOpcode(), dl, {NVT, MVT::Other},
+                       {Tmp1.getValue(1), Tmp1, Node->getOperand(2)});
+    Tmp3 = DAG.getNode(ISD::STRICT_FP_ROUND, dl, {OVT, MVT::Other},
+                       {Tmp2.getValue(1), Tmp2, DAG.getIntPtrConstant(0, dl)});
+    Results.push_back(Tmp3);
+    Results.push_back(Tmp3.getValue(1));
+    break;
   case ISD::FFLOOR:
   case ISD::FCEIL:
   case ISD::FRINT:
@@ -4778,12 +4810,19 @@ void SelectionDAGLegalize::PromoteNode(SDNode *Node) {
     break;
   case ISD::STRICT_FFLOOR:
   case ISD::STRICT_FCEIL:
+  case ISD::STRICT_FRINT:
+  case ISD::STRICT_FNEARBYINT:
   case ISD::STRICT_FROUND:
+  case ISD::STRICT_FROUNDEVEN:
+  case ISD::STRICT_FTRUNC:
+  case ISD::STRICT_FSQRT:
   case ISD::STRICT_FSIN:
   case ISD::STRICT_FCOS:
   case ISD::STRICT_FLOG:
+  case ISD::STRICT_FLOG2:
   case ISD::STRICT_FLOG10:
   case ISD::STRICT_FEXP:
+  case ISD::STRICT_FEXP2:
     Tmp1 = DAG.getNode(ISD::STRICT_FP_EXTEND, dl, {NVT, MVT::Other},
                        {Node->getOperand(0), Node->getOperand(1)});
     Tmp2 = DAG.getNode(Node->getOpcode(), dl, {NVT, MVT::Other},
