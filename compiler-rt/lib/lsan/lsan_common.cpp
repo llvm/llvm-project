@@ -74,14 +74,14 @@ class LeakSuppressionContext {
 
   Suppression *GetSuppressionForAddr(uptr addr);
   void LazyInit();
+  bool SuppressByRule(const StackTrace &stack, uptr hit_count, uptr total_size);
 
  public:
   LeakSuppressionContext(const char *supprression_types[],
                          int suppression_types_num)
       : context(supprression_types, suppression_types_num) {}
 
-  Suppression *GetSuppressionForStack(u32 stack_trace_id,
-                                      const StackTrace &stack);
+  bool Suppress(u32 stack_trace_id, uptr hit_count, uptr total_size);
 
   const InternalMmapVector<u32> &GetSortedSuppressedStacks() {
     if (!suppressed_stacks_sorted) {
@@ -148,19 +148,29 @@ Suppression *LeakSuppressionContext::GetSuppressionForAddr(uptr addr) {
   return s;
 }
 
-Suppression *LeakSuppressionContext::GetSuppressionForStack(
-    u32 stack_trace_id, const StackTrace &stack) {
-  LazyInit();
+bool LeakSuppressionContext::SuppressByRule(const StackTrace &stack,
+                                            uptr hit_count, uptr total_size) {
   for (uptr i = 0; i < stack.size; i++) {
     Suppression *s = GetSuppressionForAddr(
         StackTrace::GetPreviousInstructionPc(stack.trace[i]));
     if (s) {
-      suppressed_stacks_sorted = false;
-      suppressed_stacks.push_back(stack_trace_id);
-      return s;
+      s->weight += total_size;
+      atomic_fetch_add(&s->hit_count, hit_count, memory_order_relaxed);
+      return true;
     }
   }
-  return nullptr;
+  return false;
+}
+
+bool LeakSuppressionContext::Suppress(u32 stack_trace_id, uptr hit_count,
+                                      uptr total_size) {
+  LazyInit();
+  StackTrace stack = StackDepotGet(stack_trace_id);
+  if (!SuppressByRule(stack, hit_count, total_size))
+    return false;
+  suppressed_stacks_sorted = false;
+  suppressed_stacks.push_back(stack_trace_id);
+  return true;
 }
 
 static LeakSuppressionContext *GetSuppressionContext() {
@@ -909,12 +919,8 @@ uptr LeakReport::ApplySuppressions() {
   LeakSuppressionContext *suppressions = GetSuppressionContext();
   uptr new_suppressions = false;
   for (uptr i = 0; i < leaks_.size(); i++) {
-    Suppression *s = suppressions->GetSuppressionForStack(
-        leaks_[i].stack_trace_id, StackDepotGet(leaks_[i].stack_trace_id));
-    if (s) {
-      s->weight += leaks_[i].total_size;
-      atomic_fetch_add(&s->hit_count, leaks_[i].hit_count,
-                       memory_order_relaxed);
+    if (suppressions->Suppress(leaks_[i].stack_trace_id, leaks_[i].hit_count,
+                               leaks_[i].total_size)) {
       leaks_[i].is_suppressed = true;
       ++new_suppressions;
     }
