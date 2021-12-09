@@ -25,7 +25,7 @@ void generateAttrOrTypeFormat(const AttrOrTypeDef &def, MethodBody &parser,
 /// E.g. 'value' -> 'getValue'.
 std::string getParameterAccessorName(llvm::StringRef name);
 
-} // end namespace tblgen
-} // end namespace mlir
+} // namespace tblgen
+} // namespace mlir
 
 #endif // MLIR_TOOLS_MLIRTBLGEN_ATTRORTYPEFORMATGEN_H_

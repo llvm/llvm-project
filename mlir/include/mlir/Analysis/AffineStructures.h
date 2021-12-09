@@ -1088,6 +1088,6 @@ LogicalResult getRelationFromMap(AffineMap &map, FlatAffineRelation &rel);
 LogicalResult getRelationFromMap(const AffineValueMap &map,
                                  FlatAffineRelation &rel);
 
-} // end namespace mlir.
+} // namespace mlir.
 
 #endif // MLIR_ANALYSIS_AFFINESTRUCTURES_H

@@ -1354,7 +1354,7 @@ public:
   virtual void getAsmBlockArgumentNames(Block *block,
                                         OpAsmSetValueNameFn setNameFn) const {}
 };
-} // end namespace mlir
+} // namespace mlir
 
 //===--------------------------------------------------------------------===//
 // Operation OpAsm interface.

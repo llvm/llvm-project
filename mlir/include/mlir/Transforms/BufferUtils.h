@@ -137,6 +137,6 @@ private:
   // dependence to the memref dialect for this.
   DenseMap<Attribute, Operation *> globals;
 };
-} // end namespace mlir
+} // namespace mlir
 
 #endif // MLIR_TRANSFORMS_BUFFERUTILS_H

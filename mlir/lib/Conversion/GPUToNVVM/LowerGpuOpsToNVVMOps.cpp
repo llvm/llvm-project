@@ -173,7 +173,7 @@ struct LowerGpuOpsToNVVMOpsPass
   }
 };
 
-} // anonymous namespace
+} // namespace
 
 void mlir::configureGpuToNVVMConversionLegality(ConversionTarget &target) {
   target.addIllegalOp<FuncOp>();

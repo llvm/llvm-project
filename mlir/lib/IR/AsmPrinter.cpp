@@ -146,7 +146,7 @@ struct AsmPrinterOptions {
       llvm::cl::desc("Print assuming in local scope by default"),
       llvm::cl::Hidden};
 };
-} // end anonymous namespace
+} // namespace
 
 static llvm::ManagedStatic<AsmPrinterOptions> clOptions;
 
@@ -267,7 +267,7 @@ static raw_ostream &operator<<(raw_ostream &os, NewLineCounter &newLine) {
   ++newLine.curLine;
   return os << '\n';
 }
-} // end anonymous namespace
+} // namespace
 
 //===----------------------------------------------------------------------===//
 // AliasInitializer
@@ -538,7 +538,7 @@ private:
   /// A dummy output stream.
   mutable llvm::raw_null_ostream os;
 };
-} // end anonymous namespace
+} // namespace
 
 /// Sanitize the given name such that it can be used as a valid identifier. If
 /// the string needs to be modified in any way, the provided buffer is used to
@@ -745,7 +745,7 @@ private:
   /// An allocator used for alias names.
   llvm::BumpPtrAllocator aliasAllocator;
 };
-} // end anonymous namespace
+} // namespace
 
 void AliasState::initialize(
     Operation *op, const OpPrintingFlags &printerFlags,
@@ -869,7 +869,7 @@ private:
 
   DialectInterfaceCollection<OpAsmDialectInterface> &interfaces;
 };
-} // end anonymous namespace
+} // namespace
 
 SSANameState::SSANameState(
     Operation *op, const OpPrintingFlags &printerFlags,
@@ -1215,8 +1215,8 @@ private:
   /// An optional location map to be populated.
   AsmState::LocationMap *locationMap;
 };
-} // end namespace detail
-} // end namespace mlir
+} // namespace detail
+} // namespace mlir
 
 AsmState::AsmState(Operation *op, const OpPrintingFlags &printerFlags,
                    LocationMap *locationMap)
@@ -2479,7 +2479,7 @@ private:
   // This is the current indentation level for nested structures.
   unsigned currentIndent = 0;
 };
-} // end anonymous namespace
+} // namespace
 
 void OperationPrinter::printTopLevelOperation(Operation *op) {
   // Output the aliases at the top level that can't be deferred.

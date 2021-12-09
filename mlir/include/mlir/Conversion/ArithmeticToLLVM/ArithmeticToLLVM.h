@@ -22,7 +22,7 @@ void populateArithmeticToLLVMConversionPatterns(LLVMTypeConverter &converter,
                                                 RewritePatternSet &patterns);
 
 std::unique_ptr<Pass> createConvertArithmeticToLLVMPass();
-} // end namespace arith
-} // end namespace mlir
+} // namespace arith
+} // namespace mlir
 
 #endif // MLIR_CONVERSION_ARITHMETICTOLLVM_ARITHMETICTOLLVM_H

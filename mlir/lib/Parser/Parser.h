@@ -301,7 +301,7 @@ protected:
   /// non-trivial state here, add it to the ParserState class.
   ParserState &state;
 };
-} // end namespace detail
-} // end namespace mlir
+} // namespace detail
+} // namespace mlir
 
 #endif // MLIR_LIB_PARSER_PARSER_H

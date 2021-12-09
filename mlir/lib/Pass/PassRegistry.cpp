@@ -302,7 +302,7 @@ private:
   std::vector<PipelineElement> pipeline;
 };
 
-} // end anonymous namespace
+} // namespace
 
 /// Try to initialize this pipeline with the given pipeline text. An option is
 /// given to enable accurate error reporting.
@@ -521,7 +521,7 @@ struct PassArgData {
   /// pipeline.
   TextualPipeline pipeline;
 };
-} // end anonymous namespace
+} // namespace
 
 namespace llvm {
 namespace cl {
@@ -539,8 +539,8 @@ struct OptionValue<PassArgData> final
 
   PassArgData value;
 };
-} // end namespace cl
-} // end namespace llvm
+} // namespace cl
+} // namespace llvm
 
 namespace {
 
@@ -687,8 +687,8 @@ struct PassPipelineCLParserImpl {
   /// The set of passes and pass pipelines to run.
   llvm::cl::list<PassArgData, bool, PassNameParser> passList;
 };
-} // end namespace detail
-} // end namespace mlir
+} // namespace detail
+} // namespace mlir
 
 /// Construct a pass pipeline parser with the given command line description.
 PassPipelineCLParser::PassPipelineCLParser(StringRef arg, StringRef description)

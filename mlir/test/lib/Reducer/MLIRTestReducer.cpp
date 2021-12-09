@@ -29,7 +29,7 @@ struct TestReducer : public PassWrapper<TestReducer, OperationPass<>> {
   void runOnOperation() override;
 };
 
-} // end anonymous namespace
+} // namespace
 
 void TestReducer::runOnOperation() {
   getOperation()->walk([&](Operation *op) {

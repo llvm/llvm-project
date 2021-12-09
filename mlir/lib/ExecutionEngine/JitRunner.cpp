@@ -108,7 +108,7 @@ struct CompileAndExecuteConfig {
       runtimeSymbolMap;
 };
 
-} // end anonymous namespace
+} // namespace
 
 static OwningModuleRef parseMLIRInput(StringRef inputFilename,
                                       MLIRContext *context) {

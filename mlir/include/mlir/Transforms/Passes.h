@@ -137,6 +137,6 @@ std::unique_ptr<OperationPass<ModuleOp>> createNormalizeMemRefsPass();
 #define GEN_PASS_REGISTRATION
 #include "mlir/Transforms/Passes.h.inc"
 
-} // end namespace mlir
+} // namespace mlir
 
 #endif // MLIR_TRANSFORMS_PASSES_H

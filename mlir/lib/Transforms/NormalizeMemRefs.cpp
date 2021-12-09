@@ -41,7 +41,7 @@ struct NormalizeMemRefs : public NormalizeMemRefsBase<NormalizeMemRefs> {
   Operation *createOpResultsNormalized(FuncOp funcOp, Operation *oldOp);
 };
 
-} // end anonymous namespace
+} // namespace
 
 std::unique_ptr<OperationPass<ModuleOp>> mlir::createNormalizeMemRefsPass() {
   return std::make_unique<NormalizeMemRefs>();

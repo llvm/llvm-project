@@ -141,7 +141,7 @@ bool signMatchesDirection(int64_t elem, Direction direction) {
 Direction flippedDirection(Direction direction) {
   return direction == Direction::Up ? Direction::Down : Simplex::Direction::Up;
 }
-} // anonymous namespace
+} // namespace
 
 /// Find a pivot to change the sample value of the row in the specified
 /// direction. The returned pivot row will involve `row` if and only if the

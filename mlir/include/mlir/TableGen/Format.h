@@ -271,7 +271,7 @@ inline FmtStrVecObject tgfmt(StringRef fmt, const FmtContext *ctx,
   return FmtStrVecObject(fmt, ctx, params);
 }
 
-} // end namespace tblgen
-} // end namespace mlir
+} // namespace tblgen
+} // namespace mlir
 
 #endif // MLIR_TABLEGEN_FORMAT_H_

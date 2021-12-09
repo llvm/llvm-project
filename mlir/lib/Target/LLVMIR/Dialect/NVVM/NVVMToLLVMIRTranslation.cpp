@@ -108,7 +108,7 @@ public:
     return success();
   }
 };
-} // end namespace
+} // namespace
 
 void mlir::registerNVVMDialectTranslation(DialectRegistry &registry) {
   registry.insert<NVVM::NVVMDialect>();

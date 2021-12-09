@@ -19,7 +19,7 @@
 
 namespace llvm {
 class Record;
-} // end namespace llvm
+} // namespace llvm
 
 namespace mlir {
 namespace tblgen {
@@ -102,7 +102,7 @@ private:
   const llvm::Record *def;
   std::vector<StringRef> dependentDialects;
 };
-} // end namespace tblgen
-} // end namespace mlir
+} // namespace tblgen
+} // namespace mlir
 
 #endif // MLIR_TABLEGEN_DIALECT_H_

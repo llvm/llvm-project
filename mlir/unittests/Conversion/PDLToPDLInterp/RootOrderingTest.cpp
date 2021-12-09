@@ -109,4 +109,4 @@ TEST_F(RootOrderingTest, contraction) {
   check(10, {{v[0], {}}, {v[2], v[0]}, {v[3], v[2]}, {v[1], v[3]}});
 }
 
-} // end namespace
+} // namespace

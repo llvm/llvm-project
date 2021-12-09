@@ -380,6 +380,6 @@ unsigned getInnermostCommonLoopDepth(
     ArrayRef<Operation *> ops,
     SmallVectorImpl<AffineForOp> *surroundingLoops = nullptr);
 
-} // end namespace mlir
+} // namespace mlir
 
 #endif // MLIR_ANALYSIS_UTILS_H

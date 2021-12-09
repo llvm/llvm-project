@@ -900,7 +900,7 @@ public:
                    LLVM::ModuleTranslation &moduleTranslation) const final;
 };
 
-} // end namespace
+} // namespace
 
 /// Given an OpenMP MLIR operation, create the corresponding LLVM IR
 /// (including OpenMP runtime calls).

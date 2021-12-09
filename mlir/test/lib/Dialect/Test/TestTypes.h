@@ -69,7 +69,7 @@ inline mlir::AsmPrinter &operator<<(mlir::AsmPrinter &printer,
   return printer << param.value;
 }
 
-} // end namespace mlir
+} // namespace mlir
 
 #include "TestTypeInterfaces.h.inc"
 

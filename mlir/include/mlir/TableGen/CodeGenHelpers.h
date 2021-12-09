@@ -64,7 +64,7 @@ public:
 
   ~NamespaceEmitter() {
     for (StringRef ns : llvm::reverse(namespaces))
-      os << "} // end namespace " << ns << "\n";
+      os << "} // namespace " << ns << "\n";
   }
 
 private:
@@ -243,7 +243,7 @@ struct stringifier<Optional<OptionalT>> {
                                : std::string();
   }
 };
-} // end namespace detail
+} // namespace detail
 
 /// Generically convert a value to a std::string.
 template <typename T> std::string stringify(T &&t) {

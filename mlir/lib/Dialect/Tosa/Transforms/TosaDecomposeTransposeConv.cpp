@@ -383,7 +383,7 @@ public:
     (void)applyPatternsAndFoldGreedily(func, std::move(patterns));
   }
 };
-} // end anonymous namespace
+} // namespace
 
 std::unique_ptr<Pass> mlir::tosa::createTosaDecomposeTransposeConvPass() {
   return std::make_unique<TosaDecomposeTransposeConv>();
