@@ -18,6 +18,7 @@
 #include "support/Logger.h"
 #include "support/Markup.h"
 #include "clang/AST/ASTContext.h"
+#include "clang/AST/ASTDiagnostic.h"
 #include "clang/AST/ASTTypeTraits.h"
 #include "clang/AST/Attr.h"
 #include "clang/AST/Decl.h"
@@ -46,6 +47,7 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Format.h"
+#include "llvm/Support/ScopedPrinter.h"
 #include "llvm/Support/raw_ostream.h"
 #include <string>
 
@@ -138,14 +140,15 @@ const char *getMarkdownLanguage(const ASTContext &Ctx) {
   return LangOpts.ObjC ? "objective-c" : "cpp";
 }
 
-std::string printType(QualType QT, const PrintingPolicy &PP) {
+HoverInfo::PrintedType printType(QualType QT, ASTContext &ASTCtx,
+                                 const PrintingPolicy &PP) {
   // TypePrinter doesn't resolve decltypes, so resolve them here.
   // FIXME: This doesn't handle composite types that contain a decltype in them.
   // We should rather have a printing policy for that.
   while (!QT.isNull() && QT->isDecltypeType())
     QT = QT->getAs<DecltypeType>()->getUnderlyingType();
-  std::string Result;
-  llvm::raw_string_ostream OS(Result);
+  HoverInfo::PrintedType Result;
+  llvm::raw_string_ostream OS(Result.Type);
   // Special case: if the outer type is a tag type without qualifiers, then
   // include the tag for extra clarity.
   // This isn't very idiomatic, so don't attempt it for complex cases, including
@@ -154,46 +157,57 @@ std::string printType(QualType QT, const PrintingPolicy &PP) {
     if (auto *TT = llvm::dyn_cast<TagType>(QT.getTypePtr()))
       OS << TT->getDecl()->getKindName() << " ";
   }
-  OS.flush();
   QT.print(OS, PP);
+  OS.flush();
+  if (!QT.isNull()) {
+    bool ShouldAKA = false;
+    QualType DesugaredTy = clang::desugarForDiagnostic(ASTCtx, QT, ShouldAKA);
+    if (ShouldAKA)
+      Result.AKA = DesugaredTy.getAsString(PP);
+  }
   return Result;
 }
 
-std::string printType(const TemplateTypeParmDecl *TTP) {
-  std::string Res = TTP->wasDeclaredWithTypename() ? "typename" : "class";
+HoverInfo::PrintedType printType(const TemplateTypeParmDecl *TTP) {
+  HoverInfo::PrintedType Result;
+  Result.Type = TTP->wasDeclaredWithTypename() ? "typename" : "class";
   if (TTP->isParameterPack())
-    Res += "...";
-  return Res;
+    Result.Type += "...";
+  return Result;
 }
 
-std::string printType(const NonTypeTemplateParmDecl *NTTP,
-                      const PrintingPolicy &PP) {
-  std::string Res = printType(NTTP->getType(), PP);
-  if (NTTP->isParameterPack())
-    Res += "...";
-  return Res;
+HoverInfo::PrintedType printType(const NonTypeTemplateParmDecl *NTTP,
+                                 const PrintingPolicy &PP) {
+  auto PrintedType = printType(NTTP->getType(), NTTP->getASTContext(), PP);
+  if (NTTP->isParameterPack()) {
+    PrintedType.Type += "...";
+    if (PrintedType.AKA)
+      *PrintedType.AKA += "...";
+  }
+  return PrintedType;
 }
 
-std::string printType(const TemplateTemplateParmDecl *TTP,
-                      const PrintingPolicy &PP) {
-  std::string Res;
-  llvm::raw_string_ostream OS(Res);
+HoverInfo::PrintedType printType(const TemplateTemplateParmDecl *TTP,
+                                 const PrintingPolicy &PP) {
+  HoverInfo::PrintedType Result;
+  llvm::raw_string_ostream OS(Result.Type);
   OS << "template <";
   llvm::StringRef Sep = "";
   for (const Decl *Param : *TTP->getTemplateParameters()) {
     OS << Sep;
     Sep = ", ";
     if (const auto *TTP = dyn_cast<TemplateTypeParmDecl>(Param))
-      OS << printType(TTP);
+      OS << printType(TTP).Type;
     else if (const auto *NTTP = dyn_cast<NonTypeTemplateParmDecl>(Param))
-      OS << printType(NTTP, PP);
+      OS << printType(NTTP, PP).Type;
     else if (const auto *TTPD = dyn_cast<TemplateTemplateParmDecl>(Param))
-      OS << printType(TTPD, PP);
+      OS << printType(TTPD, PP).Type;
   }
   // FIXME: TemplateTemplateParameter doesn't store the info on whether this
   // param was a "typename" or "class".
   OS << "> class";
-  return OS.str();
+  OS.flush();
+  return Result;
 }
 
 std::vector<HoverInfo::Param>
@@ -329,7 +343,7 @@ const Expr *getDefaultArg(const ParmVarDecl *PVD) {
 HoverInfo::Param toHoverInfoParam(const ParmVarDecl *PVD,
                                   const PrintingPolicy &PP) {
   HoverInfo::Param Out;
-  Out.Type = printType(PVD->getType(), PP);
+  Out.Type = printType(PVD->getType(), PVD->getASTContext(), PP);
   if (!PVD->getName().empty())
     Out.Name = PVD->getNameAsString();
   if (const Expr *DefArg = getDefaultArg(PVD)) {
@@ -356,11 +370,11 @@ void fillFunctionTypeAndParams(HoverInfo &HI, const Decl *D,
       NK == DeclarationName::CXXConversionFunctionName)
     return;
 
-  HI.ReturnType = printType(FD->getReturnType(), PP);
+  HI.ReturnType = printType(FD->getReturnType(), FD->getASTContext(), PP);
   QualType QT = FD->getType();
   if (const VarDecl *VD = llvm::dyn_cast<VarDecl>(D)) // Lambdas
     QT = VD->getType().getDesugaredType(D->getASTContext());
-  HI.Type = printType(QT, PP);
+  HI.Type = printType(QT, D->getASTContext(), PP);
   // FIXME: handle variadics.
 }
 
@@ -589,13 +603,19 @@ HoverInfo getHoverContents(const NamedDecl *D, const PrintingPolicy &PP,
   if (const FunctionDecl *FD = getUnderlyingFunction(D))
     fillFunctionTypeAndParams(HI, D, FD, PP);
   else if (const auto *VD = dyn_cast<ValueDecl>(D))
-    HI.Type = printType(VD->getType(), PP);
+    HI.Type = printType(VD->getType(), VD->getASTContext(), PP);
   else if (const auto *TTP = dyn_cast<TemplateTypeParmDecl>(D))
     HI.Type = TTP->wasDeclaredWithTypename() ? "typename" : "class";
   else if (const auto *TTP = dyn_cast<TemplateTemplateParmDecl>(D))
     HI.Type = printType(TTP, PP);
   else if (const auto *VT = dyn_cast<VarTemplateDecl>(D))
-    HI.Type = printType(VT->getTemplatedDecl()->getType(), PP);
+    HI.Type =
+        printType(VT->getTemplatedDecl()->getType(), VT->getASTContext(), PP);
+  else if (const auto *TN = dyn_cast<TypedefNameDecl>(D))
+    HI.Type = printType(TN->getUnderlyingType(), TN->getASTContext(), PP);
+  else if (const auto *TAT = dyn_cast<TypeAliasTemplateDecl>(D))
+    HI.Type = printType(TAT->getTemplatedDecl()->getUnderlyingType(),
+                        TAT->getASTContext(), PP);
 
   // Fill in value with evaluated initializer if possible.
   if (const auto *Var = dyn_cast<VarDecl>(D)) {
@@ -646,6 +666,16 @@ HoverInfo getHoverContents(const DefinedMacro &Macro, ParsedAST &AST) {
   return HI;
 }
 
+std::string typeAsDefinition(const HoverInfo::PrintedType &PType) {
+  std::string Result;
+  llvm::raw_string_ostream OS(Result);
+  OS << PType.Type;
+  if (PType.AKA)
+    OS << " // aka: " << *PType.AKA;
+  OS.flush();
+  return Result;
+}
+
 llvm::Optional<HoverInfo> getThisExprHoverContents(const CXXThisExpr *CTE,
                                                    ASTContext &ASTCtx,
                                                    const PrintingPolicy &PP) {
@@ -660,7 +690,7 @@ llvm::Optional<HoverInfo> getThisExprHoverContents(const CXXThisExpr *CTE,
 
   HoverInfo HI;
   HI.Name = "this";
-  HI.Definition = printType(PrettyThisType, PP);
+  HI.Definition = typeAsDefinition(printType(PrettyThisType, ASTCtx, PP));
   return HI;
 }
 
@@ -677,7 +707,7 @@ HoverInfo getDeducedTypeHoverContents(QualType QT, const syntax::Token &Tok,
   if (QT->isUndeducedAutoType()) {
     HI.Definition = "/* not deduced */";
   } else {
-    HI.Definition = printType(QT, PP);
+    HI.Definition = typeAsDefinition(printType(QT, ASTCtx, PP));
 
     if (const auto *D = QT->getAsTagDecl()) {
       const auto *CommentD = getDeclForComment(D);
@@ -728,7 +758,7 @@ llvm::Optional<HoverInfo> getHoverContents(const Expr *E, ParsedAST &AST,
   // For expressions we currently print the type and the value, iff it is
   // evaluatable.
   if (auto Val = printExprValue(E, AST.getASTContext())) {
-    HI.Type = printType(E->getType(), PP);
+    HI.Type = printType(E->getType(), AST.getASTContext(), PP);
     HI.Value = *Val;
     HI.Name = std::string(getNameForExpr(E));
     return HI;
@@ -1059,24 +1089,22 @@ markup::Document HoverInfo::present() const {
     // Parameters:
     // - `bool param1`
     // - `int param2 = 5`
-    Output.addParagraph().appendText("→ ").appendCode(*ReturnType);
+    Output.addParagraph().appendText("→ ").appendCode(
+        llvm::to_string(*ReturnType));
   }
 
   if (Parameters && !Parameters->empty()) {
     Output.addParagraph().appendText("Parameters: ");
     markup::BulletList &L = Output.addBulletList();
-    for (const auto &Param : *Parameters) {
-      std::string Buffer;
-      llvm::raw_string_ostream OS(Buffer);
-      OS << Param;
-      L.addItem().addParagraph().appendCode(std::move(OS.str()));
-    }
+    for (const auto &Param : *Parameters)
+      L.addItem().addParagraph().appendCode(llvm::to_string(Param));
   }
 
   // Don't print Type after Parameters or ReturnType as this will just duplicate
   // the information
   if (Type && !ReturnType && !Parameters)
-    Output.addParagraph().appendText("Type: ").appendCode(*Type);
+    Output.addParagraph().appendText("Type: ").appendCode(
+        llvm::to_string(*Type));
 
   if (Value) {
     markup::Paragraph &P = Output.addParagraph();
@@ -1109,7 +1137,7 @@ markup::Document HoverInfo::present() const {
     if (CalleeArgInfo->Name)
       OS << "as " << CalleeArgInfo->Name;
     if (CallPassType->Converted && CalleeArgInfo->Type)
-      OS << " (converted to " << CalleeArgInfo->Type << ")";
+      OS << " (converted to " << CalleeArgInfo->Type->Type << ")";
     Output.addParagraph().appendText(OS.str());
   }
 
@@ -1218,15 +1246,23 @@ void parseDocumentation(llvm::StringRef Input, markup::Document &Output) {
 }
 
 llvm::raw_ostream &operator<<(llvm::raw_ostream &OS,
+                              const HoverInfo::PrintedType &T) {
+  OS << T.Type;
+  if (T.AKA)
+    OS << " (aka " << *T.AKA << ")";
+  return OS;
+}
+
+llvm::raw_ostream &operator<<(llvm::raw_ostream &OS,
                               const HoverInfo::Param &P) {
-  std::vector<llvm::StringRef> Output;
   if (P.Type)
-    Output.push_back(*P.Type);
+    OS << P.Type->Type;
   if (P.Name)
-    Output.push_back(*P.Name);
-  OS << llvm::join(Output, " ");
+    OS << " " << *P.Name;
   if (P.Default)
     OS << " = " << *P.Default;
+  if (P.Type && P.Type->AKA)
+    OS << " (aka " << *P.Type->AKA << ")";
   return OS;
 }
 

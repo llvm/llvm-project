@@ -22,15 +22,28 @@ namespace clangd {
 /// embedding clients can use the structured information to provide their own
 /// UI.
 struct HoverInfo {
+  /// Contains pretty-printed type and desugared type
+  struct PrintedType {
+    PrintedType() = default;
+    PrintedType(const char *Type) : Type(Type) {}
+    PrintedType(const char *Type, const char *AKAType)
+        : Type(Type), AKA(AKAType) {}
+
+    /// Pretty-printed type
+    std::string Type;
+    /// Desugared type
+    llvm::Optional<std::string> AKA;
+  };
+
   /// Represents parameters of a function, a template or a macro.
   /// For example:
   /// - void foo(ParamType Name = DefaultValue)
   /// - #define FOO(Name)
   /// - template <ParamType Name = DefaultType> class Foo {};
   struct Param {
-    /// The pretty-printed parameter type, e.g. "int", or "typename" (in
+    /// The printable parameter type, e.g. "int", or "typename" (in
     /// TemplateParameters), might be None for macro parameters.
-    llvm::Optional<std::string> Type;
+    llvm::Optional<PrintedType> Type;
     /// None for unnamed parameters.
     llvm::Optional<std::string> Name;
     /// None if no default is provided.
@@ -62,11 +75,11 @@ struct HoverInfo {
   /// Access specifier for declarations inside class/struct/unions, empty for
   /// others.
   std::string AccessSpecifier;
-  /// Pretty-printed variable type.
+  /// Printable variable type.
   /// Set only for variables.
-  llvm::Optional<std::string> Type;
+  llvm::Optional<PrintedType> Type;
   /// Set for functions and lambdas.
-  llvm::Optional<std::string> ReturnType;
+  llvm::Optional<PrintedType> ReturnType;
   /// Set for functions, lambdas and macros with parameters.
   llvm::Optional<std::vector<Param>> Parameters;
   /// Set for all templates(function, class, variable).
@@ -98,6 +111,11 @@ struct HoverInfo {
   markup::Document present() const;
 };
 
+inline bool operator==(const HoverInfo::PrintedType &LHS,
+                       const HoverInfo::PrintedType &RHS) {
+  return std::tie(LHS.Type, LHS.AKA) == std::tie(RHS.Type, RHS.AKA);
+}
+
 inline bool operator==(const HoverInfo::PassType &LHS,
                        const HoverInfo::PassType &RHS) {
   return std::tie(LHS.PassBy, LHS.Converted) ==
@@ -108,6 +126,8 @@ inline bool operator==(const HoverInfo::PassType &LHS,
 // FIXME: move to another file so CodeComplete doesn't depend on Hover.
 void parseDocumentation(llvm::StringRef Input, markup::Document &Output);
 
+llvm::raw_ostream &operator<<(llvm::raw_ostream &,
+                              const HoverInfo::PrintedType &);
 llvm::raw_ostream &operator<<(llvm::raw_ostream &, const HoverInfo::Param &);
 inline bool operator==(const HoverInfo::Param &LHS,
                        const HoverInfo::Param &RHS) {
