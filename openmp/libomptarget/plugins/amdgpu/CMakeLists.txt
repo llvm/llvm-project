@@ -81,6 +81,7 @@ add_library(omptarget.rtl.amdgpu SHARED
 # Install plugin under the lib destination folder.
 # When we build for debug, OPENMP_LIBDIR_SUFFIX get set to -debug
 install(TARGETS omptarget.rtl.amdgpu LIBRARY DESTINATION "lib${OPENMP_LIBDIR_SUFFIX}")
+set_property(TARGET omptarget.rtl.amdgpu PROPERTY INSTALL_RPATH_USE_LINK_PATH ON)
 
 if(CMAKE_SYSTEM_NAME MATCHES "FreeBSD")
   # On FreeBSD, the 'environ' symbol is undefined at link time, but resolved by
@@ -91,7 +92,6 @@ else()
   set(LDFLAGS_UNDEFINED "-Wl,-z,defs")
 endif()
 
-set_property(TARGET omptarget.rtl.amdgpu PROPERTY INSTALL_RPATH "$ORIGIN")
 target_link_libraries(
   omptarget.rtl.amdgpu
   PRIVATE
