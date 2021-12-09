@@ -19,6 +19,16 @@
 #include <cassert>
 #include <vector>
 
+#ifdef OMPT_SUPPORT
+#include "ompt_callback.h"
+#define OMPT_IF_ENABLED(stmts)                                                 \
+  if (ompt_enabled) {                                                          \
+    stmts                                                                      \
+  }
+#else
+#define OMPT_IF_ENABLED(stmts)
+#endif
+
 int AsyncInfoTy::synchronize() {
   int Result = OFFLOAD_SUCCESS;
   if (AsyncInfo.Queue) {
@@ -1460,6 +1470,10 @@ int target(ident_t *loc, DeviceTy &Device, void *HostPtr, int32_t ArgNum,
   DP("Launching target execution %s with pointer " DPxMOD " (index=%d).\n",
      TargetTable->EntriesBegin[TM->Index].name, DPxPTR(TgtEntryPtr), TM->Index);
 
+  OMPT_IF_ENABLED(ompt_interface.ompt_state_set(OMPT_GET_FRAME_ADDRESS(0),
+                                                OMPT_GET_RETURN_ADDRESS(0));
+                  ompt_interface.target_submit_begin(TeamNum);)
+
   {
     TIMESCOPE_WITH_NAME_AND_IDENT(
         IsTeamConstruct ? "runTargetTeamRegion" : "runTargetRegion", loc);
@@ -1476,6 +1490,9 @@ int target(ident_t *loc, DeviceTy &Device, void *HostPtr, int32_t ArgNum,
     REPORT("Executing target region abort target.\n");
     return OFFLOAD_FAIL;
   }
+
+  OMPT_IF_ENABLED(ompt_interface.target_submit_end(TeamNum);
+                  ompt_interface.ompt_state_clear();)
 
   if (ArgNum) {
     // Transfer data back and deallocate target memory for (first-)private

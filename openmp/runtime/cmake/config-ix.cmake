@@ -330,6 +330,8 @@ else()
   endif()
 endif()
 
+set(LIBOMP_HAVE_OMPT_SUPPORT ${LIBOMP_HAVE_OMPT_SUPPORT} PARENT_SCOPE)
+
 # Check if HWLOC support is available
 if(${LIBOMP_USE_HWLOC})
   set(CMAKE_REQUIRED_INCLUDES ${LIBOMP_HWLOC_INSTALL_DIR}/include)

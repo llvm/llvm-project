@@ -13,6 +13,8 @@
 #ifndef __OMPT_INTERNAL_H__
 #define __OMPT_INTERNAL_H__
 
+#include "kmp_platform.h"
+
 #include "ompt-event-specific.h"
 #include "omp-tools.h"
 
@@ -23,6 +25,16 @@
 #define OMPT_INVOKER(x)                                                        \
   ((x == fork_context_gnu) ? ompt_parallel_invoker_program                     \
                            : ompt_parallel_invoker_runtime)
+
+#define OMPT_FRAME_SET(frame, which, ptr_value, flags)                         \
+  {                                                                            \
+    frame->which##_frame.ptr = ptr_value;                                      \
+    frame->which##_frame_flags = flags;                                        \
+  }
+
+#define OMPT_FRAME_CLEAR(frame, which) OMPT_FRAME_SET(frame, which, 0, 0)
+
+#define OMPT_FRAME_SET_P(frame, which) (frame->which##_frame.ptr != NULL)
 
 #define ompt_callback(e) e##_callback
 
@@ -75,6 +87,7 @@ typedef struct {
   ompt_data_t thread_data;
   ompt_data_t task_data; /* stored here from implicit barrier-begin until
                             implicit-task-end */
+  ompt_data_t target_task_data;
   void *return_address; /* stored here on entry of runtime */
   ompt_state_t state;
   ompt_wait_id_t wait_id;
@@ -105,7 +118,7 @@ void ompt_fini(void);
 
 #define OMPT_GET_RETURN_ADDRESS(level) __builtin_return_address(level)
 #define OMPT_GET_FRAME_ADDRESS(level) __builtin_frame_address(level)
-
+  
 int __kmp_control_tool(uint64_t command, uint64_t modifier, void *arg);
 
 extern ompt_callbacks_active_t ompt_enabled;

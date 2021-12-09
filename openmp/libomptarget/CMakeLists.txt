@@ -70,10 +70,24 @@ if (LIBOMPTARGET_OMPD_SUPPORT)
   add_definitions(-DOMPD_SUPPORT=1)
 endif()
 
+# OMPT support for libomptarget
+set(OMPT_TARGET_DEFAULT FALSE)
+if ((LIBOMP_HAVE_OMPT_SUPPORT) AND (NOT WIN32))
+  set (OMPT_TARGET_DEFAULT TRUE)
+endif()
+set(LIBOMPTARGET_OMPT_SUPPORT ${OMPT_TARGET_DEFAULT} CACHE BOOL "OMPT-target-support?")
+if (LIBOMPTARGET_OMPT_SUPPORT)
+  add_definitions(-DOMPT_SUPPORT=1)
+  message(STATUS "OMPT target enabled")
+else()
+  message(STATUS "OMPT target disabled")
+endif()
+
 include_directories(include)
 
 set(LIBOMPTARGET_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/include)
-include_directories(${LIBOMPTARGET_INCLUDE_DIR})
+set(LIBOMP_RUNTIME_SRC_BINARY_DIR ${CMAKE_BINARY_DIR}/runtime/src)
+include_directories(${LIBOMPTARGET_INCLUDE_DIR} ${LIBOMP_RUNTIME_SRC_BINARY_DIR})
 
 # Build target agnostic offloading library.
 set(LIBOMPTARGET_SRC_DIR ${CMAKE_CURRENT_SOURCE_DIR}/src)

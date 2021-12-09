@@ -11,6 +11,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include <omptarget.h>
+
 #include "device.h"
 #include "omptarget.h"
 #include "private.h"
@@ -21,6 +23,16 @@
 #include <cstdio>
 #include <cstdlib>
 #include <mutex>
+
+#ifdef OMPT_SUPPORT
+#include "ompt_callback.h"
+#define OMPT_IF_ENABLED(stmts)                                                 \
+  if (ompt_enabled) {                                                          \
+    stmts                                                                      \
+  }
+#else
+#define OMPT_IF_ENABLED(stmts)
+#endif
 
 ////////////////////////////////////////////////////////////////////////////////
 /// adds requires flags
@@ -164,6 +176,13 @@ EXTERN void __tgt_target_data_begin_mapper(ident_t *loc, int64_t device_id,
   TIMESCOPE_WITH_IDENT(loc);
   DP("Entering data begin region for device %" PRId64 " with %d mappings\n",
      device_id, arg_num);
+
+  void *codeptr = nullptr;
+  OMPT_IF_ENABLED(
+      codeptr = OMPT_GET_RETURN_ADDRESS(0);
+      ompt_interface.ompt_state_set(OMPT_GET_FRAME_ADDRESS(0), codeptr);
+      ompt_interface.target_data_enter_begin(device_id, codeptr);)
+
   if (checkDeviceAndCtors(device_id, loc)) {
     DP("Not offloading to device %" PRId64 "\n", device_id);
     return;
@@ -189,6 +208,9 @@ EXTERN void __tgt_target_data_begin_mapper(ident_t *loc, int64_t device_id,
   if (rc == OFFLOAD_SUCCESS)
     rc = AsyncInfo.synchronize();
   handleTargetOutcome(rc == OFFLOAD_SUCCESS, loc);
+
+  OMPT_IF_ENABLED(ompt_interface.target_data_enter_end(device_id, codeptr);
+                  ompt_interface.ompt_state_clear();)
 }
 
 EXTERN void __tgt_target_data_begin_nowait_mapper(
@@ -296,11 +318,21 @@ EXTERN void __tgt_target_data_end_mapper(ident_t *loc, int64_t device_id,
 #endif
 
   AsyncInfoTy AsyncInfo(Device);
+
+  void *codeptr = nullptr;
+  OMPT_IF_ENABLED(
+      codeptr = OMPT_GET_RETURN_ADDRESS(0);
+      ompt_interface.ompt_state_set(OMPT_GET_FRAME_ADDRESS(0), codeptr);
+      ompt_interface.target_data_exit_begin(device_id, codeptr);)
+
   int rc = targetDataEnd(loc, Device, arg_num, args_base, args, arg_sizes,
                          arg_types, arg_names, arg_mappers, AsyncInfo);
   if (rc == OFFLOAD_SUCCESS)
     rc = AsyncInfo.synchronize();
   handleTargetOutcome(rc == OFFLOAD_SUCCESS, loc);
+
+  OMPT_IF_ENABLED(ompt_interface.target_data_exit_end(device_id, codeptr);
+                  ompt_interface.ompt_state_clear();)
 }
 
 EXTERN void __tgt_target_data_end_nowait_mapper(
@@ -382,6 +414,13 @@ EXTERN void __tgt_target_data_update_mapper(ident_t *loc, int64_t device_id,
                                             void **arg_mappers) {
   TIMESCOPE_WITH_IDENT(loc);
   DP("Entering data update with %d mappings\n", arg_num);
+
+  void *codeptr = nullptr;
+  OMPT_IF_ENABLED(
+      codeptr = OMPT_GET_RETURN_ADDRESS(0);
+      ompt_interface.ompt_state_set(OMPT_GET_FRAME_ADDRESS(0), codeptr);
+      ompt_interface.target_update_begin(device_id, codeptr);)
+
   if (checkDeviceAndCtors(device_id, loc)) {
     DP("Not offloading to device %" PRId64 "\n", device_id);
     return;
@@ -398,6 +437,9 @@ EXTERN void __tgt_target_data_update_mapper(ident_t *loc, int64_t device_id,
   if (rc == OFFLOAD_SUCCESS)
     rc = AsyncInfo.synchronize();
   handleTargetOutcome(rc == OFFLOAD_SUCCESS, loc);
+
+  OMPT_IF_ENABLED(ompt_interface.target_update_end(device_id, codeptr);
+                  ompt_interface.ompt_state_clear();)
 }
 
 EXTERN void __tgt_target_data_update_nowait_mapper(
@@ -500,12 +542,23 @@ EXTERN int __tgt_target_mapper(ident_t *loc, int64_t device_id, void *host_ptr,
 
   DeviceTy &Device = *PM->Devices[device_id];
   AsyncInfoTy AsyncInfo(Device);
+
+  void *codeptr = nullptr;
+  OMPT_IF_ENABLED(
+      codeptr = OMPT_GET_RETURN_ADDRESS(0);
+      ompt_interface.ompt_state_set(OMPT_GET_FRAME_ADDRESS(0), codeptr);
+      ompt_interface.target_begin(device_id, codeptr);)
+
   int rc = target(loc, Device, host_ptr, arg_num, args_base, args, arg_sizes,
                   arg_types, arg_names, arg_mappers, 0, 0, false /*team*/,
                   AsyncInfo);
   if (rc == OFFLOAD_SUCCESS)
     rc = AsyncInfo.synchronize();
   handleTargetOutcome(rc == OFFLOAD_SUCCESS, loc);
+
+  OMPT_IF_ENABLED(ompt_interface.target_end(device_id, codeptr);
+                  ompt_interface.ompt_state_clear();)
+
   assert(rc == OFFLOAD_SUCCESS && "__tgt_target_mapper unexpected failure!");
   return OMP_TGT_SUCCESS;
 }
@@ -574,12 +627,23 @@ EXTERN int __tgt_target_teams_mapper(ident_t *loc, int64_t device_id,
 
   DeviceTy &Device = *PM->Devices[device_id];
   AsyncInfoTy AsyncInfo(Device);
+
+  void *codeptr = nullptr;
+  OMPT_IF_ENABLED(
+      codeptr = OMPT_GET_RETURN_ADDRESS(0);
+      ompt_interface.ompt_state_set(OMPT_GET_FRAME_ADDRESS(0), codeptr);
+      ompt_interface.target_begin(device_id, codeptr);)
+
   int rc = target(loc, Device, host_ptr, arg_num, args_base, args, arg_sizes,
                   arg_types, arg_names, arg_mappers, team_num, thread_limit,
                   true /*team*/, AsyncInfo);
   if (rc == OFFLOAD_SUCCESS)
     rc = AsyncInfo.synchronize();
   handleTargetOutcome(rc == OFFLOAD_SUCCESS, loc);
+
+  OMPT_IF_ENABLED(ompt_interface.target_end(device_id, codeptr);
+                  ompt_interface.ompt_state_clear();)
+
   assert(rc == OFFLOAD_SUCCESS &&
          "__tgt_target_teams_mapper unexpected failure!");
   return OMP_TGT_SUCCESS;
@@ -623,9 +687,9 @@ EXTERN void __tgt_push_mapper_component(void *rt_mapper_handle, void *base,
       MapComponentInfoTy(base, begin, size, type, name));
 }
 
-EXTERN void __kmpc_push_target_tripcount(int64_t device_id,
+EXTERN void __kmpc_push_target_tripcount(ident_t *loc, int64_t device_id,
                                          uint64_t loop_tripcount) {
-  __kmpc_push_target_tripcount_mapper(nullptr, device_id, loop_tripcount);
+  __kmpc_push_target_tripcount_mapper(loc, device_id, loop_tripcount);
 }
 
 EXTERN void __kmpc_push_target_tripcount_mapper(ident_t *loc, int64_t device_id,

@@ -25,7 +25,9 @@ VERSION {
         #
         # OMPT API
         #
+        ompt_control;        # OMPT control interface
         ompt_start_tool;     # OMPT start interface
+        libomp_ompt_connect; # OMPT libomptarget interface
 
         ompc_*;    # omp.h renames some standard functions to ompc_*.
         kmp_*;     # Intel extensions.

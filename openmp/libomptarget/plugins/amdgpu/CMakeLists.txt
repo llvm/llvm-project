@@ -75,6 +75,7 @@ add_library(omptarget.rtl.amdgpu SHARED
       impl/system.cpp
       impl/msgpack.cpp
       src/rtl.cpp
+      src/ompt_callback.cpp
       ${LIBOMPTARGET_EXTRA_SOURCE}
       )
 

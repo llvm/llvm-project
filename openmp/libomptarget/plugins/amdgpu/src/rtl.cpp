@@ -41,6 +41,16 @@
 
 #include "utils.h"
 
+#ifdef OMPT_SUPPORT
+#include <ompt_device_callbacks.h>
+#define OMPT_IF_ENABLED(stmts)                                                 \
+  if (ompt_device_callbacks.is_enabled()) {                                    \
+    stmts                                                                      \
+  }
+#else
+#define OMPT_IF_ENABLED(stmts)
+#endif
+
 // hostrpc interface, FIXME: consider moving to its own include these are
 // statically linked into amdgpu/plugin if present from hostrpc_services.a,
 // linked as --whole-archive to override the weak symbols that are used to
@@ -794,6 +804,13 @@ public:
       return;
     }
 
+#ifdef OMPT_SUPPORT
+    // TODO ompt_device_callbacks.enabled is not yet set since
+    // register_callbacks on the plugin instance is not yet
+    // called. Hence, unconditionally prepare devices.
+    ompt_device_callbacks.prepare_devices(NumberOfDevices);
+#endif
+
     for (int i = 0; i < NumberOfDevices; i++) {
       uint32_t queue_size = 0;
       {
@@ -848,10 +865,16 @@ public:
 
   ~RTLDeviceInfoTy() {
     DP("Finalizing the " GETNAME(TARGET_NAME) " DeviceInfo.\n");
+
+    OMPT_IF_ENABLED(for (int i = 0; i < NumberOfDevices; i++) {
+      ompt_device_callbacks.ompt_callback_device_finalize(i);
+    })
+
     if (!HSA.success()) {
       // Then none of these can have been set up and they can't be torn down
       return;
     }
+
     // Run destructors on types that use HSA before
     // impl_finalize removes access to it
     deviceStateStore.clear();
@@ -1556,6 +1579,12 @@ int32_t __tgt_rtl_init_device(int device_id) {
         AMDGPU_X86_64_SystemConfiguration::max_addressable_byte,
         AMDGPU_X86_64_SystemConfiguration::page_size);
   }
+
+  OMPT_IF_ENABLED(
+      std::string ompt_gpu_type("AMD "); ompt_gpu_type += GetInfoName;
+      const char *type = ompt_gpu_type.c_str();
+      ompt_device_callbacks.ompt_callback_device_initialize(device_id, type);)
+
   return OFFLOAD_SUCCESS;
 }
 
@@ -1935,7 +1964,6 @@ __tgt_target_table *__tgt_rtl_load_binary_locked(int32_t device_id,
 
       return NULL;
     }
-
     err = env.after_loading();
     if (err != HSA_STATUS_SUCCESS) {
       return NULL;
@@ -1943,6 +1971,14 @@ __tgt_target_table *__tgt_rtl_load_binary_locked(int32_t device_id,
   }
 
   DP("AMDGPU module successfully loaded!\n");
+
+  OMPT_IF_ENABLED(const char *filename = nullptr; int64_t offset_in_file = 0;
+                  void *vma_in_file = 0; size_t bytes = img_size;
+                  void *host_addr = image->ImageStart; void *device_addr = 0;
+                  uint64_t module_id = 0; // FIXME
+                  ompt_device_callbacks.ompt_callback_device_load(
+                      device_id, filename, offset_in_file, vma_in_file, bytes,
+                      host_addr, device_addr, module_id);)
 
   {
     // the device_State array is either large value in bss or a void* that
