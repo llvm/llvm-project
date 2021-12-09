@@ -1008,3 +1008,31 @@ func private @private_func(tensor<?xf32>) -> ()
 func @empty_func() -> () {
   return
 }
+
+// -----
+
+func @gather_like(%arg0 : tensor<?x?xf32>, %arg1 : tensor<?xi32>,
+    %arg2 : tensor<?x?xf32> {linalg.inplaceable = true}) -> tensor<?x?xf32> {
+  %0 = linalg.generic {
+      indexing_maps = [affine_map<(d0, d1) -> (d0)>,
+                       affine_map<(d0, d1) -> (d0, d1)>],
+      iterator_types = ["parallel", "parallel"]}
+      ins(%arg1 : tensor<?xi32>) outs(%arg2 : tensor<?x?xf32>) {
+      ^bb0(%arg3: i32, %arg4 : f32):
+        %iv1 = linalg.index 1 : index
+	%1 = arith.index_cast %arg3: i32 to index
+	%2 = tensor.extract %arg0[%1, %iv1] : tensor<?x?xf32>
+	linalg.yield %2 : f32
+      } -> tensor<?x?xf32>
+  return %0 : tensor<?x?xf32>
+}
+// CHECK-LABEL: func @gather_like(
+//  CHECK-SAME:     %[[ARG0:[a-zA-Z0-9]+]]: memref<?x?xf32,
+//  CHECK-SAME:     %[[ARG1:.+]]: memref<?xi32
+//  CHECK-SAME:     %[[ARG2:.+]]: memref<?x?xf32
+//  CHECK-SAME:   ) {
+//       CHECK:   linalg.generic
+//  CHECK-SAME:       ins(%[[ARG1]] :
+//  CHECK-SAME:       outs(%[[ARG2]] :
+//       CHECK:     %[[YIELD:.+]] = memref.load %[[ARG0]]
+//       CHECK:     linalg.yield %[[YIELD]]

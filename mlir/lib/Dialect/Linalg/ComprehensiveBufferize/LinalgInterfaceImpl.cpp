@@ -86,15 +86,15 @@ static LogicalResult bufferizeLinalgOp(OpBuilder &b, LinalgOp op,
 
   // Set insertion point now that potential alloc/dealloc are introduced.
   b.setInsertionPoint(op);
-  op.clone(b, loc, /*resultTypes=*/TypeRange{}, newOperands);
+  auto bufferizedOp = cast<LinalgOp>(
+      op.clone(b, loc, /*resultTypes=*/TypeRange{}, newOperands));
 
   // Replace the results of the old op with the new output buffers.
   if (op->getNumResults())
     state.mapBuffer(op->getResults(), newOutputBuffers);
 
   // The original op will be DCE'd away later.
-
-  return success();
+  return comprehensive_bufferize::bufferize(bufferizedOp.getBlock(), state);
 }
 
 template <typename OpTy>
