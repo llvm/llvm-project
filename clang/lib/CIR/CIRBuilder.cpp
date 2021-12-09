@@ -201,13 +201,27 @@ private:
     ~SourceLocRAIIObject() { restore(); }
   };
 
-  /// Helper conversion from Clang source location to an MLIR location.
+  /// Helpers to convert Clang's SourceLocation to a MLIR Location.
   mlir::Location getLoc(SourceLocation SLoc) {
     const SourceManager &SM = astCtx.getSourceManager();
     PresumedLoc PLoc = SM.getPresumedLoc(SLoc);
     StringRef Filename = PLoc.getFilename();
     return mlir::FileLineColLoc::get(builder.getStringAttr(Filename),
                                      PLoc.getLine(), PLoc.getColumn());
+  }
+
+  mlir::Location getLoc(SourceRange SLoc) {
+    mlir::Location B = getLoc(SLoc.getBegin());
+    mlir::Location E = getLoc(SLoc.getEnd());
+    SmallVector<mlir::Location, 2> locs = {B, E};
+    mlir::Attribute metadata;
+    return mlir::FusedLoc::get(locs, metadata, builder.getContext());
+  }
+
+  mlir::Location getLoc(mlir::Location lhs, mlir::Location rhs) {
+    SmallVector<mlir::Location, 2> locs = {lhs, rhs};
+    mlir::Attribute metadata;
+    return mlir::FusedLoc::get(locs, metadata, builder.getContext());
   }
 
   /// Declare a variable in the current scope, return success if the variable
@@ -476,8 +490,8 @@ public:
             mlir::cir::NullAttr::get(Builder.builder.getContext(), Ty));
       }
       case CK_IntegralToBoolean: {
-        return buildIntToBoolConversion(
-            Visit(E), Builder.getLoc(CE->getSourceRange().getBegin()));
+        return buildIntToBoolConversion(Visit(E),
+                                        Builder.getLoc(CE->getSourceRange()));
       }
       default:
         emitError(Builder.getLoc(CE->getExprLoc()),
@@ -546,52 +560,52 @@ public:
 
     mlir::Value buildMul(const BinOpInfo &Ops) {
       return Builder.builder.create<mlir::cir::BinOp>(
-          Builder.getLoc(Ops.Loc.getBegin()), Builder.getCIRType(Ops.Ty),
+          Builder.getLoc(Ops.Loc), Builder.getCIRType(Ops.Ty),
           mlir::cir::BinOpKind::Mul, Ops.LHS, Ops.RHS);
     }
     mlir::Value buildDiv(const BinOpInfo &Ops) {
       return Builder.builder.create<mlir::cir::BinOp>(
-          Builder.getLoc(Ops.Loc.getBegin()), Builder.getCIRType(Ops.Ty),
+          Builder.getLoc(Ops.Loc), Builder.getCIRType(Ops.Ty),
           mlir::cir::BinOpKind::Div, Ops.LHS, Ops.RHS);
     }
     mlir::Value buildRem(const BinOpInfo &Ops) {
       return Builder.builder.create<mlir::cir::BinOp>(
-          Builder.getLoc(Ops.Loc.getBegin()), Builder.getCIRType(Ops.Ty),
+          Builder.getLoc(Ops.Loc), Builder.getCIRType(Ops.Ty),
           mlir::cir::BinOpKind::Rem, Ops.LHS, Ops.RHS);
     }
     mlir::Value buildAdd(const BinOpInfo &Ops) {
       return Builder.builder.create<mlir::cir::BinOp>(
-          Builder.getLoc(Ops.Loc.getBegin()), Builder.getCIRType(Ops.Ty),
+          Builder.getLoc(Ops.Loc), Builder.getCIRType(Ops.Ty),
           mlir::cir::BinOpKind::Add, Ops.LHS, Ops.RHS);
     }
     mlir::Value buildSub(const BinOpInfo &Ops) {
       return Builder.builder.create<mlir::cir::BinOp>(
-          Builder.getLoc(Ops.Loc.getBegin()), Builder.getCIRType(Ops.Ty),
+          Builder.getLoc(Ops.Loc), Builder.getCIRType(Ops.Ty),
           mlir::cir::BinOpKind::Sub, Ops.LHS, Ops.RHS);
     }
     mlir::Value buildShl(const BinOpInfo &Ops) {
       return Builder.builder.create<mlir::cir::BinOp>(
-          Builder.getLoc(Ops.Loc.getBegin()), Builder.getCIRType(Ops.Ty),
+          Builder.getLoc(Ops.Loc), Builder.getCIRType(Ops.Ty),
           mlir::cir::BinOpKind::Shl, Ops.LHS, Ops.RHS);
     }
     mlir::Value buildShr(const BinOpInfo &Ops) {
       return Builder.builder.create<mlir::cir::BinOp>(
-          Builder.getLoc(Ops.Loc.getBegin()), Builder.getCIRType(Ops.Ty),
+          Builder.getLoc(Ops.Loc), Builder.getCIRType(Ops.Ty),
           mlir::cir::BinOpKind::Shr, Ops.LHS, Ops.RHS);
     }
     mlir::Value buildAnd(const BinOpInfo &Ops) {
       return Builder.builder.create<mlir::cir::BinOp>(
-          Builder.getLoc(Ops.Loc.getBegin()), Builder.getCIRType(Ops.Ty),
+          Builder.getLoc(Ops.Loc), Builder.getCIRType(Ops.Ty),
           mlir::cir::BinOpKind::And, Ops.LHS, Ops.RHS);
     }
     mlir::Value buildXor(const BinOpInfo &Ops) {
       return Builder.builder.create<mlir::cir::BinOp>(
-          Builder.getLoc(Ops.Loc.getBegin()), Builder.getCIRType(Ops.Ty),
+          Builder.getLoc(Ops.Loc), Builder.getCIRType(Ops.Ty),
           mlir::cir::BinOpKind::Xor, Ops.LHS, Ops.RHS);
     }
     mlir::Value buildOr(const BinOpInfo &Ops) {
       return Builder.builder.create<mlir::cir::BinOp>(
-          Builder.getLoc(Ops.Loc.getBegin()), Builder.getCIRType(Ops.Ty),
+          Builder.getLoc(Ops.Loc), Builder.getCIRType(Ops.Ty),
           mlir::cir::BinOpKind::Or, Ops.LHS, Ops.RHS);
     }
 
@@ -672,8 +686,8 @@ public:
           }
 
           return Builder.builder.create<mlir::cir::CmpOp>(
-              Builder.getLoc(BOInfo.Loc.getBegin()),
-              Builder.getCIRType(BOInfo.Ty), Kind, BOInfo.LHS, BOInfo.RHS);
+              Builder.getLoc(BOInfo.Loc), Builder.getCIRType(BOInfo.Ty), Kind,
+              BOInfo.LHS, BOInfo.RHS);
         }
 
         // If this is a vector comparison, sign extend the result to the
@@ -942,8 +956,7 @@ public:
 
     // TODO: track source location range...
     mlir::Value addr;
-    if (failed(declare(&D, Ty, getLoc(D.getSourceRange().getBegin()), alignment,
-                       addr))) {
+    if (failed(declare(&D, Ty, getLoc(D.getSourceRange()), alignment, addr))) {
       theModule.emitError("Cannot declare variable");
       return emission;
     }
@@ -1047,7 +1060,7 @@ public:
   void buildScalarInit(const Expr *init, const ValueDecl *D, LValue lvalue) {
     // TODO: this is where a lot of ObjC lifetime stuff would be done.
     mlir::Value value = buildScalarExpr(init);
-    SourceLocRAIIObject Loc{*this, getLoc(D->getSourceRange().getBegin())};
+    SourceLocRAIIObject Loc{*this, getLoc(D->getSourceRange())};
     buldStoreThroughLValue(RValue::get(value), lvalue, D);
     return;
   }
@@ -1370,7 +1383,7 @@ public:
       // FIXME: evaluate for side effects.
     }
 
-    builder.create<ReturnOp>(getLoc(RV->getExprLoc()),
+    builder.create<ReturnOp>(getLoc(S.getSourceRange()),
                              V ? ArrayRef(V) : ArrayRef<mlir::Value>());
     return mlir::success();
   }
@@ -1485,7 +1498,7 @@ public:
       RValue RV = buildAnyExpr(E->getRHS());
       LValue LV = buildLValue(E->getLHS());
 
-      SourceLocRAIIObject Loc{*this, getLoc(E->getSourceRange().getBegin())};
+      SourceLocRAIIObject Loc{*this, getLoc(E->getSourceRange())};
       buldStoreThroughLValue(RV, LV, nullptr /*InitDecl*/);
       assert(!astCtx.getLangOpts().OpenMP && "last priv cond not implemented");
       return LV;
@@ -1833,20 +1846,24 @@ public:
       }
 
       // TODO: PGO and likelihood.
-      return buildIfOnBoolExpr(S.getCond(),
-                               getLoc(S.getSourceRange().getBegin()),
+      // The mlir::Location for cir.if skips the init/cond part of IfStmt,
+      // and effectively spans from "then-begin" to "else-end||then-end".
+      auto ifLocStart = getLoc(S.getThen()->getSourceRange().getBegin());
+      auto ifLocEnd = getLoc(S.getSourceRange().getEnd());
+      return buildIfOnBoolExpr(S.getCond(), getLoc(ifLocStart, ifLocEnd),
                                S.getThen(), S.getElse());
     };
 
     // TODO: Add a new scoped symbol table.
     // LexicalScope ConditionScope(*this, S.getCond()->getSourceRange());
-    auto locBegin = getLoc(S.getSourceRange().getBegin());
-    auto locEnd = getLoc(S.getSourceRange().getEnd());
+    // The if scope contains the full source range for IfStmt.
+    auto scopeLoc = getLoc(S.getSourceRange());
+    auto scopeLocEnd = getLoc(S.getSourceRange().getEnd());
     builder.create<mlir::cir::ScopeOp>(
-        locBegin, mlir::TypeRange(), /*scopeBuilder=*/
+        scopeLoc, mlir::TypeRange(), /*scopeBuilder=*/
         [&](mlir::OpBuilder &b, mlir::Location loc) {
           res = ifStmtBuilder();
-          builder.create<YieldOp>(locEnd);
+          builder.create<YieldOp>(scopeLocEnd);
         });
 
     return res;
@@ -2078,7 +2095,7 @@ public:
 
     const CXXMethodDecl *MD = dyn_cast<CXXMethodDecl>(FD);
     assert(!MD && "methods not implemented");
-    auto loc = getLoc(FD->getLocation());
+    auto fnLoc = getLoc(FD->getSourceRange());
 
     // Create an MLIR function for the given prototype.
     llvm::SmallVector<mlir::Type, 4> argTypes;
@@ -2091,7 +2108,8 @@ public:
         argTypes, CurCCGF->FnRetQualTy->isVoidType()
                       ? mlir::TypeRange()
                       : getCIRType(CurCCGF->FnRetQualTy));
-    mlir::FuncOp function = mlir::FuncOp::create(loc, FD->getName(), funcType);
+    mlir::FuncOp function =
+        mlir::FuncOp::create(fnLoc, FD->getName(), funcType);
     if (!function)
       return nullptr;
 
@@ -2110,14 +2128,17 @@ public:
       auto *paramVar = std::get<0>(nameValue);
       auto paramVal = std::get<1>(nameValue);
       auto alignment = astCtx.getDeclAlign(paramVar);
+      auto paramLoc = getLoc(paramVar->getSourceRange());
+      paramVal.setLoc(paramLoc);
+
       mlir::Value addr;
-      if (failed(declare(paramVar, paramVar->getType(),
-                         getLoc(paramVar->getSourceRange().getBegin()),
-                         alignment, addr, true /*param*/)))
+      if (failed(declare(paramVar, paramVar->getType(), paramLoc, alignment,
+                         addr, true /*param*/)))
         return nullptr;
-      // Store params in local storage. FIXME: is this really needed
-      // at this level of representation?
-      builder.create<mlir::cir::StoreOp>(loc, paramVal, addr);
+      // Location of the store to the param storage tracked as beginning of
+      // the function body.
+      auto fnBodyBegin = getLoc(FD->getBody()->getBeginLoc());
+      builder.create<mlir::cir::StoreOp>(fnBodyBegin, paramVal, addr);
     }
 
     // Emit the body of the function.
@@ -2130,7 +2151,7 @@ public:
     if (!entryBlock.empty())
       returnOp = dyn_cast<ReturnOp>(entryBlock.back());
     if (!returnOp)
-      builder.create<ReturnOp>(loc);
+      builder.create<ReturnOp>(getLoc(FD->getBody()->getEndLoc()));
 
     if (mlir::failed(function.verifyBody()))
       return nullptr;
