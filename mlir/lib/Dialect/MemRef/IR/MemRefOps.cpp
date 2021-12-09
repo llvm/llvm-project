@@ -1707,31 +1707,41 @@ void SubViewOp::build(OpBuilder &b, OperationState &result, Value source,
 /// For ViewLikeOpInterface.
 Value SubViewOp::getViewSource() { return source(); }
 
+/// Return true if t1 and t2 have equal offsets (both dynamic or of same static
+/// value).
+static bool haveCompatibleOffsets(MemRefType t1, MemRefType t2) {
+  AffineExpr t1Offset, t2Offset;
+  SmallVector<AffineExpr> t1Strides, t2Strides;
+  auto res1 = getStridesAndOffset(t1, t1Strides, t1Offset);
+  auto res2 = getStridesAndOffset(t2, t2Strides, t2Offset);
+  return succeeded(res1) && succeeded(res2) && t1Offset == t2Offset;
+}
+
 /// Checks if `original` Type type can be rank reduced to `reduced` type.
 /// This function is slight variant of `is subsequence` algorithm where
 /// not matching dimension must be 1.
 static SliceVerificationResult
 isRankReducedMemRefType(MemRefType originalType,
-                        MemRefType candidatecandidateReducedType,
+                        MemRefType candidateRankReducedType,
                         ArrayRef<OpFoldResult> sizes) {
-  auto partialRes =
-      isRankReducedType(originalType, candidatecandidateReducedType);
+  auto partialRes = isRankReducedType(originalType, candidateRankReducedType);
   if (partialRes != SliceVerificationResult::Success)
     return partialRes;
 
-  MemRefType original = originalType.cast<MemRefType>();
-  MemRefType candidateReduced =
-      candidatecandidateReducedType.cast<MemRefType>();
-
-  auto optionalUnusedDimsMask =
-      computeMemRefRankReductionMask(original, candidateReduced, sizes);
+  auto optionalUnusedDimsMask = computeMemRefRankReductionMask(
+      originalType, candidateRankReducedType, sizes);
 
   // Sizes cannot be matched in case empty vector is returned.
   if (!optionalUnusedDimsMask.hasValue())
     return SliceVerificationResult::LayoutMismatch;
 
-  if (original.getMemorySpace() != candidateReduced.getMemorySpace())
+  if (originalType.getMemorySpace() !=
+      candidateRankReducedType.getMemorySpace())
     return SliceVerificationResult::MemSpaceMismatch;
+
+  // No amount of stride dropping can reconcile incompatible offsets.
+  if (!haveCompatibleOffsets(originalType, candidateRankReducedType))
+    return SliceVerificationResult::LayoutMismatch;
 
   return SliceVerificationResult::Success;
 }
