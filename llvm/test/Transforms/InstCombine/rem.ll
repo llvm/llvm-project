@@ -777,14 +777,15 @@ define double @PR34870(i1 %cond, double %x, double %y) {
 
 define i32 @srem_constant_dividend_select_of_constants_divisor(i1 %b) {
 ; CHECK-LABEL: @srem_constant_dividend_select_of_constants_divisor(
-; CHECK-NEXT:    [[S:%.*]] = select i1 [[B:%.*]], i32 12, i32 -3
-; CHECK-NEXT:    [[R:%.*]] = srem i32 42, [[S]]
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[B:%.*]], i32 6, i32 0
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %s = select i1 %b, i32 12, i32 -3
   %r = srem i32 42, %s
   ret i32 %r
 }
+
+; TODO: srem should still be replaced by select.
 
 define i32 @srem_constant_dividend_select_of_constants_divisor_use(i1 %b) {
 ; CHECK-LABEL: @srem_constant_dividend_select_of_constants_divisor_use(
@@ -799,6 +800,8 @@ define i32 @srem_constant_dividend_select_of_constants_divisor_use(i1 %b) {
   ret i32 %r
 }
 
+; Rem-by-0 is immediate UB, so select is simplified.
+
 define i32 @srem_constant_dividend_select_of_constants_divisor_0_arm(i1 %b) {
 ; CHECK-LABEL: @srem_constant_dividend_select_of_constants_divisor_0_arm(
 ; CHECK-NEXT:    ret i32 6
@@ -807,6 +810,8 @@ define i32 @srem_constant_dividend_select_of_constants_divisor_0_arm(i1 %b) {
   %r = srem i32 42, %s
   ret i32 %r
 }
+
+; negative test - not safe to speculate rem with variable divisor
 
 define i32 @srem_constant_dividend_select_divisor1(i1 %b, i32 %x) {
 ; CHECK-LABEL: @srem_constant_dividend_select_divisor1(
@@ -818,6 +823,8 @@ define i32 @srem_constant_dividend_select_divisor1(i1 %b, i32 %x) {
   %r = srem i32 42, %s
   ret i32 %r
 }
+
+; negative test - not safe to speculate rem with variable divisor
 
 define i32 @srem_constant_dividend_select_divisor2(i1 %b, i32 %x) {
 ; CHECK-LABEL: @srem_constant_dividend_select_divisor2(
@@ -832,14 +839,15 @@ define i32 @srem_constant_dividend_select_divisor2(i1 %b, i32 %x) {
 
 define <2 x i8> @srem_constant_dividend_select_of_constants_divisor_vec(i1 %b) {
 ; CHECK-LABEL: @srem_constant_dividend_select_of_constants_divisor_vec(
-; CHECK-NEXT:    [[S:%.*]] = select i1 [[B:%.*]], <2 x i8> <i8 12, i8 -5>, <2 x i8> <i8 -4, i8 4>
-; CHECK-NEXT:    [[R:%.*]] = srem <2 x i8> <i8 42, i8 -42>, [[S]]
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[B:%.*]], <2 x i8> <i8 6, i8 -2>, <2 x i8> <i8 2, i8 -2>
 ; CHECK-NEXT:    ret <2 x i8> [[R]]
 ;
   %s = select i1 %b, <2 x i8> <i8 12, i8 -5>, <2 x i8> <i8 -4, i8 4>
   %r = srem <2 x i8> <i8 42, i8 -42>, %s
   ret <2 x i8> %r
 }
+
+; Rem-by-0 element is immediate UB, so select is simplified.
 
 define <2 x i8> @srem_constant_dividend_select_of_constants_divisor_vec_ub1(i1 %b) {
 ; CHECK-LABEL: @srem_constant_dividend_select_of_constants_divisor_vec_ub1(
@@ -850,16 +858,19 @@ define <2 x i8> @srem_constant_dividend_select_of_constants_divisor_vec_ub1(i1 %
   ret <2 x i8> %r
 }
 
+; SMIN % -1 element is poison.
+
 define <2 x i8> @srem_constant_dividend_select_of_constants_divisor_vec_ub2(i1 %b) {
 ; CHECK-LABEL: @srem_constant_dividend_select_of_constants_divisor_vec_ub2(
-; CHECK-NEXT:    [[S:%.*]] = select i1 [[B:%.*]], <2 x i8> <i8 12, i8 -5>, <2 x i8> <i8 -4, i8 -1>
-; CHECK-NEXT:    [[R:%.*]] = srem <2 x i8> <i8 42, i8 -128>, [[S]]
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[B:%.*]], <2 x i8> <i8 6, i8 -3>, <2 x i8> <i8 2, i8 poison>
 ; CHECK-NEXT:    ret <2 x i8> [[R]]
 ;
   %s = select i1 %b, <2 x i8> <i8 12, i8 -5>, <2 x i8> <i8 -4, i8 -1>
   %r = srem <2 x i8> <i8 42, i8 -128>, %s
   ret <2 x i8> %r
 }
+
+; negative test - must have constant dividend
 
 define i32 @srem_select_of_constants_divisor(i1 %b, i32 %x) {
 ; CHECK-LABEL: @srem_select_of_constants_divisor(
@@ -874,14 +885,15 @@ define i32 @srem_select_of_constants_divisor(i1 %b, i32 %x) {
 
 define i32 @urem_constant_dividend_select_of_constants_divisor(i1 %b) {
 ; CHECK-LABEL: @urem_constant_dividend_select_of_constants_divisor(
-; CHECK-NEXT:    [[S:%.*]] = select i1 [[B:%.*]], i32 12, i32 -3
-; CHECK-NEXT:    [[R:%.*]] = urem i32 42, [[S]]
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[B:%.*]], i32 6, i32 42
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %s = select i1 %b, i32 12, i32 -3
   %r = urem i32 42, %s
   ret i32 %r
 }
+
+; TODO: urem should still be replaced by select.
 
 define i32 @urem_constant_dividend_select_of_constants_divisor_use(i1 %b) {
 ; CHECK-LABEL: @urem_constant_dividend_select_of_constants_divisor_use(
@@ -896,6 +908,8 @@ define i32 @urem_constant_dividend_select_of_constants_divisor_use(i1 %b) {
   ret i32 %r
 }
 
+; Rem-by-0 is immediate UB, so select is simplified.
+
 define i32 @urem_constant_dividend_select_of_constants_divisor_0_arm(i1 %b) {
 ; CHECK-LABEL: @urem_constant_dividend_select_of_constants_divisor_0_arm(
 ; CHECK-NEXT:    ret i32 6
@@ -904,6 +918,8 @@ define i32 @urem_constant_dividend_select_of_constants_divisor_0_arm(i1 %b) {
   %r = urem i32 42, %s
   ret i32 %r
 }
+
+; negative test - not safe to speculate rem with variable divisor
 
 define i32 @urem_constant_dividend_select_divisor1(i1 %b, i32 %x) {
 ; CHECK-LABEL: @urem_constant_dividend_select_divisor1(
@@ -915,6 +931,8 @@ define i32 @urem_constant_dividend_select_divisor1(i1 %b, i32 %x) {
   %r = urem i32 42, %s
   ret i32 %r
 }
+
+; negative test - not safe to speculate rem with variable divisor
 
 define i32 @urem_constant_dividend_select_divisor2(i1 %b, i32 %x) {
 ; CHECK-LABEL: @urem_constant_dividend_select_divisor2(
@@ -929,14 +947,15 @@ define i32 @urem_constant_dividend_select_divisor2(i1 %b, i32 %x) {
 
 define <2 x i8> @urem_constant_dividend_select_of_constants_divisor_vec(i1 %b) {
 ; CHECK-LABEL: @urem_constant_dividend_select_of_constants_divisor_vec(
-; CHECK-NEXT:    [[S:%.*]] = select i1 [[B:%.*]], <2 x i8> <i8 12, i8 -5>, <2 x i8> <i8 -4, i8 4>
-; CHECK-NEXT:    [[R:%.*]] = urem <2 x i8> <i8 42, i8 -42>, [[S]]
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[B:%.*]], <2 x i8> <i8 6, i8 -42>, <2 x i8> <i8 42, i8 2>
 ; CHECK-NEXT:    ret <2 x i8> [[R]]
 ;
   %s = select i1 %b, <2 x i8> <i8 12, i8 -5>, <2 x i8> <i8 -4, i8 4>
   %r = urem <2 x i8> <i8 42, i8 -42>, %s
   ret <2 x i8> %r
 }
+
+; Rem-by-0 element is immediate UB, so select is simplified.
 
 define <2 x i8> @urem_constant_dividend_select_of_constants_divisor_vec_ub1(i1 %b) {
 ; CHECK-LABEL: @urem_constant_dividend_select_of_constants_divisor_vec_ub1(
@@ -947,16 +966,19 @@ define <2 x i8> @urem_constant_dividend_select_of_constants_divisor_vec_ub1(i1 %
   ret <2 x i8> %r
 }
 
+; There's no unsigned equivalent to "SMIN % -1", so this is just the usual constant folding.
+
 define <2 x i8> @urem_constant_dividend_select_of_constants_divisor_vec_ub2(i1 %b) {
 ; CHECK-LABEL: @urem_constant_dividend_select_of_constants_divisor_vec_ub2(
-; CHECK-NEXT:    [[S:%.*]] = select i1 [[B:%.*]], <2 x i8> <i8 12, i8 -5>, <2 x i8> <i8 -4, i8 -1>
-; CHECK-NEXT:    [[R:%.*]] = urem <2 x i8> <i8 42, i8 -128>, [[S]]
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[B:%.*]], <2 x i8> <i8 6, i8 -128>, <2 x i8> <i8 42, i8 -128>
 ; CHECK-NEXT:    ret <2 x i8> [[R]]
 ;
   %s = select i1 %b, <2 x i8> <i8 12, i8 -5>, <2 x i8> <i8 -4, i8 -1>
   %r = urem <2 x i8> <i8 42, i8 -128>, %s
   ret <2 x i8> %r
 }
+
+; negative test - must have constant dividend
 
 define i32 @urem_select_of_constants_divisor(i1 %b, i32 %x) {
 ; CHECK-LABEL: @urem_select_of_constants_divisor(
