@@ -94,6 +94,12 @@ public:
   /// any of the FACs in the union are unbounded.
   bool findIntegerSample(SmallVectorImpl<int64_t> &sample);
 
+  /// Simplifies the representation of a PresburgerSet.
+  ///
+  /// In particular, removes all FACs which are subsets of other FACs in the
+  /// union.
+  PresburgerSet coalesce() const;
+
 private:
   /// Construct an empty PresburgerSet.
   PresburgerSet(unsigned nDim = 0, unsigned nSym = 0)

@@ -237,6 +237,16 @@ public:
   void print(raw_ostream &os) const;
   void dump() const;
 
+  /// Check if the specified inequality already holds in the polytope.
+  bool isRedundantInequality(ArrayRef<int64_t> coeffs);
+
+  /// Check if the specified equality already holds in the polytope.
+  bool isRedundantEquality(ArrayRef<int64_t> coeffs);
+
+  /// Returns true if this Simplex's polytope is a rational subset of `fac`.
+  /// Otherwise, returns false.
+  bool isRationalSubsetOf(const FlatAffineConstraints &fac);
+
 private:
   friend class GBRSimplex;
 
