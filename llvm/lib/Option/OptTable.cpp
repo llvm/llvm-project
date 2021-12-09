@@ -591,16 +591,16 @@ static void PrintHelpOptionList(raw_ostream &OS, StringRef Title,
 
   // Find the maximum option length.
   unsigned OptionFieldWidth = 0;
-  for (unsigned i = 0, e = OptionHelp.size(); i != e; ++i) {
+  for (const OptionInfo &Opt : OptionHelp) {
     // Limit the amount of padding we are willing to give up for alignment.
-    unsigned Length = OptionHelp[i].Name.size();
+    unsigned Length = Opt.Name.size();
     if (Length <= 23)
       OptionFieldWidth = std::max(OptionFieldWidth, Length);
   }
 
   const unsigned InitialPad = 2;
-  for (unsigned i = 0, e = OptionHelp.size(); i != e; ++i) {
-    const std::string &Option = OptionHelp[i].Name;
+  for (const OptionInfo &Opt : OptionHelp) {
+    const std::string &Option = Opt.Name;
     int Pad = OptionFieldWidth - int(Option.size());
     OS.indent(InitialPad) << Option;
 
@@ -609,7 +609,7 @@ static void PrintHelpOptionList(raw_ostream &OS, StringRef Title,
       OS << "\n";
       Pad = OptionFieldWidth + InitialPad;
     }
-    OS.indent(Pad + 1) << OptionHelp[i].HelpText << '\n';
+    OS.indent(Pad + 1) << Opt.HelpText << '\n';
   }
 }
 

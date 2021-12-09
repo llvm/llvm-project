@@ -977,11 +977,10 @@ IndexedInstrProfReader::getInstrProfRecord(StringRef FuncName,
   if (Err)
     return std::move(Err);
   // Found it. Look for counters with the right hash.
-  for (unsigned I = 0, E = Data.size(); I < E; ++I) {
+  for (const NamedInstrProfRecord &I : Data) {
     // Check for a match and fill the vector if there is one.
-    if (Data[I].Hash == FuncHash) {
-      return std::move(Data[I]);
-    }
+    if (I.Hash == FuncHash)
+      return std::move(I);
   }
   return error(instrprof_error::hash_mismatch);
 }
