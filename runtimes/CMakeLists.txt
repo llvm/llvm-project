@@ -43,6 +43,8 @@ endfunction()
 find_package(LLVM PATHS "${LLVM_BINARY_DIR}" NO_DEFAULT_PATH NO_CMAKE_FIND_ROOT_PATH)
 find_package(Clang PATHS "${LLVM_BINARY_DIR}" NO_DEFAULT_PATH NO_CMAKE_FIND_ROOT_PATH)
 
+set(LLVM_THIRD_PARTY_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../third-party")
+
 function(get_compiler_rt_path path)
   foreach(entry ${runtimes})
     get_filename_component(projName ${entry} NAME)
