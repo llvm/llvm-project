@@ -13,6 +13,7 @@
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/Parser/Parser.h"
+#include "mlir/IR/OperationSupport.h"
 #include "clang/AST/ASTConsumer.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/DeclCXX.h"
@@ -124,8 +125,12 @@ public:
 
     switch (action) {
     case CIRGenAction::OutputType::EmitCIR:
-      if (outputStream)
-        mlirMod->print(*outputStream);
+      if (outputStream) {
+        mlir::OpPrintingFlags flags;
+        // FIXME: we cannot roundtrip prettyForm=true right now.
+        flags.enableDebugInfo(/*prettyForm=*/false);
+        mlirMod->print(*outputStream, flags);
+      }
       break;
     case CIRGenAction::OutputType::EmitLLVM: {
       llvm::LLVMContext llvmCtx;
