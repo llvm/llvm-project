@@ -911,7 +911,7 @@ public:
       MachineBasicBlock::iterator InsertBefore, const MachineInstr &Orig);
 
   /// DeleteMachineInstr - Delete the given MachineInstr.
-  void DeleteMachineInstr(MachineInstr *MI);
+  void deleteMachineInstr(MachineInstr *MI);
 
   /// CreateMachineBasicBlock - Allocate a new MachineBasicBlock. Use this
   /// instead of `new MachineBasicBlock'.
