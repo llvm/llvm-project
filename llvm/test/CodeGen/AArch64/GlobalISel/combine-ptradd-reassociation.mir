@@ -263,3 +263,44 @@ body:             |
     RET_ReallyLR
 
 ...
+---
+name:            reassoc_cst_inner_lhs_const_lhs
+alignment:       4
+tracksRegLiveness: true
+liveins:
+  - { reg: '$w0' }
+  - { reg: '$x1' }
+  - { reg: '$x2' }
+  - { reg: '$x3' }
+body:             |
+  bb.1:
+    liveins: $w0, $x1, $x2, $x3
+
+    ; CHECK-LABEL: name: reassoc_cst_inner_lhs_const_lhs
+    ; CHECK: liveins: $w0, $x1, $x2, $x3
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x2
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s64) = COPY $x3
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 40
+    ; CHECK-NEXT: [[INTTOPTR:%[0-9]+]]:_(p0) = G_INTTOPTR [[C]](s64)
+    ; CHECK-NEXT: [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[INTTOPTR]], [[COPY]](s64)
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 2
+    ; CHECK-NEXT: [[SHL:%[0-9]+]]:_(s64) = G_SHL [[COPY1]], [[C1]](s64)
+    ; CHECK-NEXT: [[PTR_ADD1:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD]], [[SHL]](s64)
+    ; CHECK-NEXT: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD1]](p0) :: (load (s32))
+    ; CHECK-NEXT: $w0 = COPY [[LOAD]](s32)
+    ; CHECK-NEXT: RET_ReallyLR
+    %1:_(p0) = COPY $x1
+    %2:_(s64) = COPY $x2
+    %3:_(s64) = COPY $x3
+    %8:_(s64) = G_CONSTANT i64 40
+    %9:_(p0) = G_INTTOPTR %8(s64)
+    %10:_(p0) = G_PTR_ADD %9, %2(s64)
+    %11:_(s64) = G_CONSTANT i64 2
+    %12:_(s64) = G_SHL %3, %11
+    %13:_(p0) = G_PTR_ADD %10, %12(s64)
+    %15:_(s32) = G_LOAD %13(p0) :: (load (s32))
+    $w0 = COPY %15
+    RET_ReallyLR
+
+...
