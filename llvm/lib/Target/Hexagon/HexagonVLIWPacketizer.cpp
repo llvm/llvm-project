@@ -1082,11 +1082,6 @@ bool HexagonPacketizerList::isSoloInstruction(const MachineInstr &MI) {
   if (HII->isSolo(MI))
     return true;
 
-  if (MI.getOpcode() == Hexagon::PATCHABLE_FUNCTION_ENTER ||
-      MI.getOpcode() == Hexagon::PATCHABLE_FUNCTION_EXIT ||
-      MI.getOpcode() == Hexagon::PATCHABLE_TAIL_CALL)
-    return true;
-
   if (MI.getOpcode() == Hexagon::A2_nop)
     return true;
 
