@@ -24,7 +24,6 @@ set(ASAN_SOURCES
   asan_premap_shadow.cpp
   asan_report.cpp
   asan_rtl.cpp
-  asan_rtl_x86_64.S
   asan_shadow_setup.cpp
   asan_stack.cpp
   asan_stats.cpp
