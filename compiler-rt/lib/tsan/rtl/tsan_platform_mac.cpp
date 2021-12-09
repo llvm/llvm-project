@@ -126,9 +126,6 @@ void cur_thread_finalize() {
 }
 #endif
 
-void FlushShadowMemory() {
-}
-
 static void RegionMemUsage(uptr start, uptr end, uptr *res, uptr *dirty) {
   vm_address_t address = start;
   vm_address_t end_address = end;
@@ -156,12 +153,10 @@ static void RegionMemUsage(uptr start, uptr end, uptr *res, uptr *dirty) {
 void WriteMemoryProfile(char *buf, uptr buf_size, u64 uptime_ns) {
   uptr shadow_res, shadow_dirty;
   uptr meta_res, meta_dirty;
-  uptr trace_res, trace_dirty;
   RegionMemUsage(ShadowBeg(), ShadowEnd(), &shadow_res, &shadow_dirty);
   RegionMemUsage(MetaShadowBeg(), MetaShadowEnd(), &meta_res, &meta_dirty);
-  RegionMemUsage(TraceMemBeg(), TraceMemEnd(), &trace_res, &trace_dirty);
 
-#if !SANITIZER_GO
+#  if !SANITIZER_GO
   uptr low_res, low_dirty;
   uptr high_res, high_dirty;
   uptr heap_res, heap_dirty;
@@ -180,7 +175,6 @@ void WriteMemoryProfile(char *buf, uptr buf_size, u64 uptime_ns) {
       buf, buf_size,
       "shadow   (0x%016zx-0x%016zx): resident %zd kB, dirty %zd kB\n"
       "meta     (0x%016zx-0x%016zx): resident %zd kB, dirty %zd kB\n"
-      "traces   (0x%016zx-0x%016zx): resident %zd kB, dirty %zd kB\n"
 #  if !SANITIZER_GO
       "low app  (0x%016zx-0x%016zx): resident %zd kB, dirty %zd kB\n"
       "high app (0x%016zx-0x%016zx): resident %zd kB, dirty %zd kB\n"
@@ -193,7 +187,6 @@ void WriteMemoryProfile(char *buf, uptr buf_size, u64 uptime_ns) {
       "------------------------------\n",
       ShadowBeg(), ShadowEnd(), shadow_res / 1024, shadow_dirty / 1024,
       MetaShadowBeg(), MetaShadowEnd(), meta_res / 1024, meta_dirty / 1024,
-      TraceMemBeg(), TraceMemEnd(), trace_res / 1024, trace_dirty / 1024,
 #  if !SANITIZER_GO
       LoAppMemBeg(), LoAppMemEnd(), low_res / 1024, low_dirty / 1024,
       HiAppMemBeg(), HiAppMemEnd(), high_res / 1024, high_dirty / 1024,
