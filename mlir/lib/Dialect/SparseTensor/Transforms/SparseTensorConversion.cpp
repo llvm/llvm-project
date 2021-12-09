@@ -257,10 +257,17 @@ static void sizesFromPtr(ConversionPatternRewriter &rewriter,
 /// type, but returns it as type `memref<? x $tp>` (rather than as type
 /// `memref<$sz x $tp>`).
 static Value genAlloca(ConversionPatternRewriter &rewriter, Location loc,
-                       unsigned sz, Type tp) {
+                       Value sz, Type tp) {
   auto memTp = MemRefType::get({ShapedType::kDynamicSize}, tp);
-  Value a = constantIndex(rewriter, loc, sz);
-  return rewriter.create<memref::AllocaOp>(loc, memTp, ValueRange{a});
+  return rewriter.create<memref::AllocaOp>(loc, memTp, ValueRange{sz});
+}
+
+/// Generates an uninitialized temporary buffer of the given size and
+/// type, but returns it as type `memref<? x $tp>` (rather than as type
+/// `memref<$sz x $tp>`).
+static Value genAlloca(ConversionPatternRewriter &rewriter, Location loc,
+                       unsigned sz, Type tp) {
+  return genAlloca(rewriter, loc, constantIndex(rewriter, loc, sz), tp);
 }
 
 /// Generates an uninitialized temporary buffer with room for one value
@@ -911,6 +918,78 @@ public:
   }
 };
 
+class SparseTensorExpandConverter : public OpConversionPattern<ExpandOp> {
+public:
+  using OpConversionPattern::OpConversionPattern;
+  LogicalResult
+  matchAndRewrite(ExpandOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    Location loc = op->getLoc();
+    ShapedType srcType = op.tensor().getType().cast<ShapedType>();
+    Type eltType = srcType.getElementType();
+    Type boolType = rewriter.getIntegerType(1);
+    Type idxType = rewriter.getIndexType();
+    // All initialization should be done on entry of the loop nest.
+    rewriter.setInsertionPointAfter(op.tensor().getDefiningOp());
+    // Determine the size for access expansion.
+    auto enc = getSparseTensorEncoding(srcType);
+    Value src = adaptor.getOperands()[0];
+    Value sz = genDimSizeCall(rewriter, op, enc, src, srcType.getRank() - 1);
+    // Allocate temporary stack buffers for values, filled-switch, and indices.
+    Value values = genAlloca(rewriter, loc, sz, eltType);
+    Value filled = genAlloca(rewriter, loc, sz, boolType);
+    Value indices = genAlloca(rewriter, loc, sz, idxType);
+    Value zero = constantZero(rewriter, loc, idxType);
+    // Reset the values/filled-switch to all-zero/false. Note that this
+    // introduces an O(N) operation into the computation, but this reset
+    // operation is amortized over the innermost loops for the access
+    // pattern expansion.
+    rewriter.create<linalg::FillOp>(loc, constantZero(rewriter, loc, eltType),
+                                    values);
+    rewriter.create<linalg::FillOp>(loc, constantZero(rewriter, loc, boolType),
+                                    filled);
+    // Replace expansion op with these buffers and initial index.
+    assert(op.getNumResults() == 4);
+    rewriter.replaceOp(op, {values, filled, indices, zero});
+    return success();
+  }
+};
+
+class SparseTensorCompressConverter : public OpConversionPattern<CompressOp> {
+public:
+  using OpConversionPattern::OpConversionPattern;
+  LogicalResult
+  matchAndRewrite(CompressOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    // Note that this method call resets the values/filled-switch back to
+    // all-zero/false by only iterating over the set elements, so the
+    // complexity remains proportional to the sparsity of the expanded
+    // access pattern.
+    Type srcType = op.tensor().getType();
+    Type eltType = srcType.cast<ShapedType>().getElementType();
+    StringRef name;
+    if (eltType.isF64())
+      name = "expInsertF64";
+    else if (eltType.isF32())
+      name = "expInsertF32";
+    else if (eltType.isInteger(64))
+      name = "expInsertI64";
+    else if (eltType.isInteger(32))
+      name = "expInsertI32";
+    else if (eltType.isInteger(16))
+      name = "expInsertI16";
+    else if (eltType.isInteger(8))
+      name = "expInsertI8";
+    else
+      return failure();
+    TypeRange noTp;
+    auto fn =
+        getFunc(op, name, noTp, adaptor.getOperands(), /*emitCInterface=*/true);
+    rewriter.replaceOpWithNewOp<CallOp>(op, noTp, fn, adaptor.getOperands());
+    return success();
+  }
+};
+
 } // namespace
 
 //===----------------------------------------------------------------------===//
@@ -926,6 +1005,7 @@ void mlir::populateSparseTensorConversionPatterns(TypeConverter &typeConverter,
                SparseTensorInitConverter, SparseTensorConvertConverter,
                SparseTensorReleaseConverter, SparseTensorToPointersConverter,
                SparseTensorToIndicesConverter, SparseTensorToValuesConverter,
-               SparseTensorLoadConverter, SparseTensorLexInsertConverter>(
+               SparseTensorLoadConverter, SparseTensorLexInsertConverter,
+               SparseTensorExpandConverter, SparseTensorCompressConverter>(
       typeConverter, patterns.getContext());
 }
