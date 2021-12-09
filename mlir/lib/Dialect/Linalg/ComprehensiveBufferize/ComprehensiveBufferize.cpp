@@ -732,7 +732,7 @@ LogicalResult mlir::linalg::comprehensive_bufferize::runComprehensiveBufferize(
   auto runPostAnalysisSteps = [&](const PostAnalysisStepList &steps) {
     for (const std::unique_ptr<PostAnalysisStep> &step : steps) {
       SmallVector<Operation *> newOps;
-      if (failed(step->run(funcOp, state, newOps)))
+      if (failed(step->run(funcOp, state, aliasInfo, newOps)))
         return failure();
       // Analyze ops that were created by the PostAnalysisStep.
       if (failed(inPlaceAnalysis(newOps, aliasInfo, state, domInfo)))

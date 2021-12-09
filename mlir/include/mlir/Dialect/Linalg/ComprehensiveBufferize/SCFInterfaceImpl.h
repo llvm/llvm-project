@@ -23,6 +23,7 @@ namespace scf_ext {
 /// equivalent to their corresponding loop yield values.
 struct AssertDestinationPassingStyle : public PostAnalysisStep {
   LogicalResult run(FuncOp funcOp, BufferizationState &state,
+                    BufferizationAliasInfo &aliasInfo,
                     SmallVector<Operation *> &newOps) override;
 };
 
