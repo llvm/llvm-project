@@ -696,7 +696,7 @@ writeArchiveToBuffer(ArrayRef<NewArchiveMember> NewMembers, bool WriteSymtab,
     return std::move(E);
 
   return std::make_unique<SmallVectorMemoryBuffer>(
-      std::move(ArchiveBufferVector));
+      std::move(ArchiveBufferVector), /*RequiresNullTerminator=*/false);
 }
 
 } // namespace llvm

@@ -1423,5 +1423,84 @@ static LogicalResult verifyAtomicWriteOp(AtomicWriteOp op) {
   return verifySynchronizationHint(op, op.hint());
 }
 
+//===----------------------------------------------------------------------===//
+// AtomicUpdateOp
+//===----------------------------------------------------------------------===//
+
+/// Parser for AtomicUpdateOp
+///
+/// operation ::= `omp.atomic.update` atomic-clause-list region
+static ParseResult parseAtomicUpdateOp(OpAsmParser &parser,
+                                       OperationState &result) {
+  SmallVector<ClauseType> clauses = {memoryOrderClause, hintClause};
+  SmallVector<int> segments;
+  OpAsmParser::OperandType x, y, z;
+  Type xType, exprType;
+  StringRef binOp;
+
+  // x = y `op` z : xtype, exprtype
+  if (parser.parseOperand(x) || parser.parseEqual() || parser.parseOperand(y) ||
+      parser.parseKeyword(&binOp) || parser.parseOperand(z) ||
+      parseClauses(parser, result, clauses, segments) || parser.parseColon() ||
+      parser.parseType(xType) || parser.parseComma() ||
+      parser.parseType(exprType) ||
+      parser.resolveOperand(x, xType, result.operands)) {
+    return failure();
+  }
+
+  auto binOpEnum = AtomicBinOpKindToEnum(binOp.upper());
+  if (!binOpEnum)
+    return parser.emitError(parser.getNameLoc())
+           << "invalid atomic bin op in atomic update\n";
+  auto attr =
+      parser.getBuilder().getI64IntegerAttr((int64_t)binOpEnum.getValue());
+  result.addAttribute("binop", attr);
+
+  OpAsmParser::OperandType expr;
+  if (x.name == y.name && x.number == y.number) {
+    expr = z;
+    result.addAttribute("isXBinopExpr", parser.getBuilder().getUnitAttr());
+  } else if (x.name == z.name && x.number == z.number) {
+    expr = y;
+  } else {
+    return parser.emitError(parser.getNameLoc())
+           << "atomic update variable " << x.name
+           << " not found in the RHS of the assignment statement in an"
+              " atomic.update operation";
+  }
+  return parser.resolveOperand(expr, exprType, result.operands);
+}
+
+/// Printer for AtomicUpdateOp
+static void printAtomicUpdateOp(OpAsmPrinter &p, AtomicUpdateOp op) {
+  p << " " << op.x() << " = ";
+  Value y, z;
+  if (op.isXBinopExpr()) {
+    y = op.x();
+    z = op.expr();
+  } else {
+    y = op.expr();
+    z = op.x();
+  }
+  p << y << " " << AtomicBinOpKindToString(op.binop()).lower() << " " << z
+    << " ";
+  if (op.memory_order())
+    p << "memory_order(" << op.memory_order() << ") ";
+  if (op.hintAttr())
+    printSynchronizationHint(p, op, op.hintAttr());
+  p << ": " << op.x().getType() << ", " << op.expr().getType();
+}
+
+/// Verifier for AtomicUpdateOp
+static LogicalResult verifyAtomicUpdateOp(AtomicUpdateOp op) {
+  if (op.memory_order()) {
+    StringRef memoryOrder = op.memory_order().getValue();
+    if (memoryOrder.equals("acq_rel") || memoryOrder.equals("acquire"))
+      return op.emitError(
+          "memory-order must not be acq_rel or acquire for atomic updates");
+  }
+  return success();
+}
+
 #define GET_OP_CLASSES
 #include "mlir/Dialect/OpenMP/OpenMPOps.cpp.inc"

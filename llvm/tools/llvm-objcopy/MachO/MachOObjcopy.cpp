@@ -476,9 +476,8 @@ Error objcopy::macho::executeObjcopyOnMachOUniversalBinary(
                                          **ObjOrErr, MemStream))
       return E;
 
-    std::unique_ptr<MemoryBuffer> MB =
-        std::make_unique<SmallVectorMemoryBuffer>(std::move(Buffer),
-                                                  ArchFlagName);
+    auto MB = std::make_unique<SmallVectorMemoryBuffer>(
+        std::move(Buffer), ArchFlagName, /*RequiresNullTerminator=*/false);
     Expected<std::unique_ptr<Binary>> BinaryOrErr = object::createBinary(*MB);
     if (!BinaryOrErr)
       return BinaryOrErr.takeError();
