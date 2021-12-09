@@ -131,6 +131,29 @@ QualType clang::desugarForDiagnostic(ASTContext &Context, QualType QT,
       }
     }
 
+    if (const auto *AT = dyn_cast<ArrayType>(Ty)) {
+      QualType ElementTy =
+          desugarForDiagnostic(Context, AT->getElementType(), ShouldAKA);
+      if (const auto *CAT = dyn_cast<ConstantArrayType>(AT))
+        QT = Context.getConstantArrayType(
+            ElementTy, CAT->getSize(), CAT->getSizeExpr(),
+            CAT->getSizeModifier(), CAT->getIndexTypeCVRQualifiers());
+      else if (const auto *VAT = dyn_cast<VariableArrayType>(AT))
+        QT = Context.getVariableArrayType(
+            ElementTy, VAT->getSizeExpr(), VAT->getSizeModifier(),
+            VAT->getIndexTypeCVRQualifiers(), VAT->getBracketsRange());
+      else if (const auto *DSAT = dyn_cast<DependentSizedArrayType>(AT))
+        QT = Context.getDependentSizedArrayType(
+            ElementTy, DSAT->getSizeExpr(), DSAT->getSizeModifier(),
+            DSAT->getIndexTypeCVRQualifiers(), DSAT->getBracketsRange());
+      else if (const auto *IAT = dyn_cast<IncompleteArrayType>(AT))
+        QT = Context.getIncompleteArrayType(ElementTy, IAT->getSizeModifier(),
+                                            IAT->getIndexTypeCVRQualifiers());
+      else
+        llvm_unreachable("Unhandled array type");
+      break;
+    }
+
     // Don't desugar magic Objective-C types.
     if (QualType(Ty,0) == Context.getObjCIdType() ||
         QualType(Ty,0) == Context.getObjCClassType() ||
