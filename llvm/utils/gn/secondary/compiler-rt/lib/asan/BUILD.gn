@@ -86,6 +86,7 @@ target(asan_target_type, "asan") {
     "asan_report.cpp",
     "asan_report.h",
     "asan_rtl.cpp",
+    "asan_rtl_x86_64.S",
     "asan_scariness_score.h",
     "asan_shadow_setup.cpp",
     "asan_stack.cpp",
