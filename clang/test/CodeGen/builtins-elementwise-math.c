@@ -191,8 +191,7 @@ void test_builtin_elementwise_min(float f1, float f2, double d1, double d2,
 }
 
 void test_builtin_elementwise_ceil(float f1, float f2, double d1, double d2,
-                                   float4 vf1, float4 vf2, si8 vi1, si8 vi2,
-                                   long long int i1, long long int i2, short si) {
+                                   float4 vf1, float4 vf2) {
   // CHECK-LABEL: define void @test_builtin_elementwise_ceil(
   // CHECK:      [[F1:%.+]] = load float, float* %f1.addr, align 4
   // CHECK-NEXT:  call float @llvm.ceil.f32(float [[F1]])
