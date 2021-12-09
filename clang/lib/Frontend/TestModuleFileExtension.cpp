@@ -133,5 +133,5 @@ std::string TestModuleFileExtension::str() const {
   llvm::raw_string_ostream OS(Buffer);
   OS << BlockName << ":" << MajorVersion << ":" << MinorVersion << ":" << Hashed
      << ":" << UserInfo;
-  return OS.str();
+  return Buffer;
 }
