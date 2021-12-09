@@ -28,16 +28,14 @@ RewriteRule CleanupCtadCheckImpl() {
                              "deduction pattern in C++17 and higher");
 
   return makeRule(
-      declStmt(has(varDecl(
+      declStmt(hasSingleDecl(varDecl(
           hasType(autoType()), hasTypeLoc(typeLoc().bind("auto_type_loc")),
-          hasInitializer(traverse(
-              clang::TK_IgnoreUnlessSpelledInSource,
+          hasInitializer(hasDescendant(
               callExpr(callee(functionDecl(hasName("absl::MakeCleanup"))),
-                       argumentCountIs(1),
-                       hasArgument(0, expr().bind("make_cleanup_argument")))
+                       argumentCountIs(1))
                   .bind("make_cleanup_call")))))),
       {changeTo(node("auto_type_loc"), cat("absl::Cleanup")),
-       changeTo(node("make_cleanup_call"), cat(node("make_cleanup_argument")))},
+       changeTo(node("make_cleanup_call"), cat(callArgs("make_cleanup_call")))},
       warning_message);
 }
 
