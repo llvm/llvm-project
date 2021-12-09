@@ -37,6 +37,46 @@ CSKYTargetLowering::CSKYTargetLowering(const TargetMachine &TM,
   // Register Class
   addRegisterClass(MVT::i32, &CSKY::GPRRegClass);
 
+  setOperationAction(ISD::ADDCARRY, MVT::i32, Legal);
+  setOperationAction(ISD::SUBCARRY, MVT::i32, Legal);
+  setOperationAction(ISD::BITREVERSE, MVT::i32, Legal);
+
+  setOperationAction(ISD::SREM, MVT::i32, Expand);
+  setOperationAction(ISD::UREM, MVT::i32, Expand);
+  setOperationAction(ISD::UDIVREM, MVT::i32, Expand);
+  setOperationAction(ISD::SDIVREM, MVT::i32, Expand);
+  setOperationAction(ISD::CTTZ, MVT::i32, Expand);
+  setOperationAction(ISD::CTPOP, MVT::i32, Expand);
+  setOperationAction(ISD::ROTR, MVT::i32, Expand);
+  setOperationAction(ISD::SHL_PARTS, MVT::i32, Expand);
+  setOperationAction(ISD::SRL_PARTS, MVT::i32, Expand);
+  setOperationAction(ISD::SRA_PARTS, MVT::i32, Expand);
+  setOperationAction(ISD::UMUL_LOHI, MVT::i32, Expand);
+  setOperationAction(ISD::SMUL_LOHI, MVT::i32, Expand);
+  setOperationAction(ISD::DYNAMIC_STACKALLOC, MVT::i32, Expand);
+  setOperationAction(ISD::STACKSAVE, MVT::Other, Expand);
+  setOperationAction(ISD::STACKRESTORE, MVT::Other, Expand);
+  setOperationAction(ISD::MULHS, MVT::i32, Expand);
+  setOperationAction(ISD::MULHU, MVT::i32, Expand);
+
+  setLoadExtAction(ISD::EXTLOAD, MVT::i32, MVT::i1, Promote);
+  setLoadExtAction(ISD::SEXTLOAD, MVT::i32, MVT::i1, Promote);
+  setLoadExtAction(ISD::ZEXTLOAD, MVT::i32, MVT::i1, Promote);
+
+  if (!Subtarget.hasE2()) {
+    setLoadExtAction(ISD::SEXTLOAD, MVT::i32, MVT::i8, Expand);
+    setLoadExtAction(ISD::SEXTLOAD, MVT::i32, MVT::i16, Expand);
+    setOperationAction(ISD::CTLZ, MVT::i32, Expand);
+    setOperationAction(ISD::BSWAP, MVT::i32, Expand);
+  }
+
+  if (!Subtarget.has2E3()) {
+    setOperationAction(ISD::ABS, MVT::i32, Expand);
+    setOperationAction(ISD::BITREVERSE, MVT::i32, Expand);
+    setOperationAction(ISD::SDIV, MVT::i32, Expand);
+    setOperationAction(ISD::UDIV, MVT::i32, Expand);
+  }
+
   // Compute derived properties from the register classes.
   computeRegisterProperties(STI.getRegisterInfo());
 
