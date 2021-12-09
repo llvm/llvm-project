@@ -338,9 +338,10 @@ bool IRTranslator::translateCompare(const User &U,
     MIRBuilder.buildCopy(
         Res, getOrCreateVReg(*Constant::getAllOnesValue(U.getType())));
   else {
-    assert(CI && "Instruction should be CmpInst");
-    MIRBuilder.buildFCmp(Pred, Res, Op0, Op1,
-                         MachineInstr::copyFlagsFromInstruction(*CI));
+    uint16_t Flags = 0;
+    if (CI)
+      Flags = MachineInstr::copyFlagsFromInstruction(*CI);
+    MIRBuilder.buildFCmp(Pred, Res, Op0, Op1, Flags);
   }
 
   return true;
