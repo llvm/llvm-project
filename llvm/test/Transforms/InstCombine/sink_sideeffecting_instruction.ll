@@ -40,7 +40,7 @@ define dso_local i32 @test() local_unnamed_addr #2 {
 ; CHECK-LABEL: test
 ; CHECK: bb5:
 ; CHECK: %tmp7 = call i32 @foo(i32* nonnull writeonly %tmp1) 
-; CHECK: br i1 %tmp9, label %bb10, label %bb_crit_edge
+; CHECK-NEXT: br i1 %tmp9, label %bb10, label %bb_crit_edge
 bb:
   %tmp = alloca i32, align 4
   %tmp1 = alloca i32, align 4
@@ -53,9 +53,9 @@ bb:
 bb5:                                              ; preds = %bb
   %tmp6 = bitcast i32* %tmp1 to i8*
   call void @llvm.lifetime.start.p0i8(i64 4, i8* nonnull %tmp6) #4
-  %tmp7 = call i32 @foo(i32* nonnull writeonly %tmp1)
   %tmp8 = load i32, i32* %tmp, align 4, !tbaa !2
   %tmp9 = icmp eq i32 %tmp8, 0
+  %tmp7 = call i32 @foo(i32* nonnull writeonly %tmp1)
   br i1 %tmp9, label %bb10, label %bb_crit_edge
 
 bb10:                                             ; preds = %bb5
@@ -83,7 +83,7 @@ declare void @llvm.lifetime.start.p0i8(i64 immarg, i8* nocapture) #3
 ; Function Attrs: argmemonly nofree nosync nounwind willreturn
 declare void @llvm.lifetime.end.p0i8(i64 immarg, i8* nocapture) #3
 
-attributes #0 = { noinline uwtable argmemonly nounwind willreturn }
+attributes #0 = { noinline uwtable argmemonly nounwind willreturn writeonly }
 attributes #3 = { argmemonly nofree nosync nounwind willreturn }
 !0 = !{i32 1, !"wchar_size", i32 4}
 !1 = !{!"clang version 10.0.0-4ubuntu1 "}
