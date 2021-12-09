@@ -10,6 +10,7 @@
 
 #include "AST.h"
 #include "CodeCompletionStrings.h"
+#include "Config.h"
 #include "FindTarget.h"
 #include "ParsedAST.h"
 #include "Selection.h"
@@ -159,7 +160,9 @@ HoverInfo::PrintedType printType(QualType QT, ASTContext &ASTCtx,
   }
   QT.print(OS, PP);
   OS.flush();
-  if (!QT.isNull()) {
+
+  const Config &Cfg = Config::current();
+  if (!QT.isNull() && Cfg.Hover.ShowAKA) {
     bool ShouldAKA = false;
     QualType DesugaredTy = clang::desugarForDiagnostic(ASTCtx, QT, ShouldAKA);
     if (ShouldAKA)
