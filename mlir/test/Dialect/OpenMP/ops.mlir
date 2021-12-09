@@ -524,6 +524,67 @@ func @omp_atomic_write(%addr : memref<i32>, %val : i32) {
   return
 }
 
+// CHECK-LABEL: omp_atomic_update
+// CHECK-SAME: (%[[X:.*]]: memref<i32>, %[[EXPR:.*]]: i32, %[[XBOOL:.*]]: memref<i1>, %[[EXPRBOOL:.*]]: i1)
+func @omp_atomic_update(%x : memref<i32>, %expr : i32, %xBool : memref<i1>, %exprBool : i1) {
+  // CHECK: omp.atomic.update %[[X]] = %[[X]] add %[[EXPR]] : memref<i32>, i32
+  omp.atomic.update %x = %x add %expr : memref<i32>, i32
+  // CHECK: omp.atomic.update %[[X]] = %[[X]] sub %[[EXPR]] : memref<i32>, i32
+  omp.atomic.update %x = %x sub %expr : memref<i32>, i32
+  // CHECK: omp.atomic.update %[[X]] = %[[X]] mul %[[EXPR]] : memref<i32>, i32
+  omp.atomic.update %x = %x mul %expr : memref<i32>, i32
+  // CHECK: omp.atomic.update %[[X]] = %[[X]] div %[[EXPR]] : memref<i32>, i32
+  omp.atomic.update %x = %x div %expr : memref<i32>, i32
+  // CHECK: omp.atomic.update %[[XBOOL]] = %[[XBOOL]] and %[[EXPRBOOL]] : memref<i1>, i1
+  omp.atomic.update %xBool = %xBool and %exprBool : memref<i1>, i1
+  // CHECK: omp.atomic.update %[[XBOOL]] = %[[XBOOL]] or %[[EXPRBOOL]] : memref<i1>, i1
+  omp.atomic.update %xBool = %xBool or %exprBool : memref<i1>, i1
+  // CHECK: omp.atomic.update %[[XBOOL]] = %[[XBOOL]] xor %[[EXPRBOOL]] : memref<i1>, i1
+  omp.atomic.update %xBool = %xBool xor %exprBool : memref<i1>, i1
+  // CHECK: omp.atomic.update %[[X]] = %[[X]] shiftr %[[EXPR]] : memref<i32>, i32
+  omp.atomic.update %x = %x shiftr %expr : memref<i32>, i32
+  // CHECK: omp.atomic.update %[[X]] = %[[X]] shiftl %[[EXPR]] : memref<i32>, i32
+  omp.atomic.update %x = %x shiftl %expr : memref<i32>, i32
+  // CHECK: omp.atomic.update %[[X]] = %[[X]] max %[[EXPR]] : memref<i32>, i32
+  omp.atomic.update %x = %x max %expr : memref<i32>, i32
+  // CHECK: omp.atomic.update %[[X]] = %[[X]] min %[[EXPR]] : memref<i32>, i32
+  omp.atomic.update %x = %x min %expr : memref<i32>, i32
+  // CHECK: omp.atomic.update %[[XBOOL]] = %[[XBOOL]] eqv %[[EXPRBOOL]] : memref<i1>, i1
+  omp.atomic.update %xBool = %xBool eqv %exprBool : memref<i1>, i1
+  // CHECK: omp.atomic.update %[[XBOOL]] = %[[XBOOL]] neqv %[[EXPRBOOL]] : memref<i1>, i1
+  omp.atomic.update %xBool = %xBool neqv %exprBool : memref<i1>, i1
+
+  // CHECK: omp.atomic.update %[[X]] = %[[EXPR]] add %[[X]] : memref<i32>, i32
+  omp.atomic.update %x = %expr add %x : memref<i32>, i32
+  // CHECK: omp.atomic.update %[[X]] = %[[EXPR]] sub %[[X]] : memref<i32>, i32
+  omp.atomic.update %x = %expr sub %x : memref<i32>, i32
+  // CHECK: omp.atomic.update %[[X]] = %[[EXPR]] mul %[[X]] : memref<i32>, i32
+  omp.atomic.update %x = %expr mul %x : memref<i32>, i32
+  // CHECK: omp.atomic.update %[[X]] = %[[EXPR]] div %[[X]] : memref<i32>, i32
+  omp.atomic.update %x = %expr div %x : memref<i32>, i32
+  // CHECK: omp.atomic.update %[[XBOOL]] = %[[EXPRBOOL]] and %[[XBOOL]] : memref<i1>, i1
+  omp.atomic.update %xBool =  %exprBool and %xBool : memref<i1>, i1
+  // CHECK: omp.atomic.update %[[XBOOL]] = %[[EXPRBOOL]] or %[[XBOOL]] : memref<i1>, i1
+  omp.atomic.update %xBool =  %exprBool or %xBool : memref<i1>, i1
+  // CHECK: omp.atomic.update %[[XBOOL]] = %[[EXPRBOOL]] xor %[[XBOOL]] : memref<i1>, i1
+  omp.atomic.update %xBool =  %exprBool xor %xBool : memref<i1>, i1
+  // CHECK: omp.atomic.update %[[X]] = %[[EXPR]] shiftr %[[X]] : memref<i32>, i32
+  omp.atomic.update %x =  %expr shiftr %x : memref<i32>, i32
+  // CHECK: omp.atomic.update %[[X]] = %[[EXPR]] shiftl %[[X]] : memref<i32>, i32
+  omp.atomic.update %x = %expr shiftl %x : memref<i32>, i32
+  // CHECK: omp.atomic.update %[[X]] = %[[EXPR]] max %[[X]] : memref<i32>, i32
+  omp.atomic.update %x = %expr max %x : memref<i32>, i32
+  // CHECK: omp.atomic.update %[[X]] = %[[EXPR]] min %[[X]] : memref<i32>, i32
+  omp.atomic.update %x = %expr min %x : memref<i32>, i32
+  // CHECK: omp.atomic.update %[[XBOOL]] = %[[EXPRBOOL]] eqv %[[XBOOL]] : memref<i1>, i1
+  omp.atomic.update %xBool =  %exprBool eqv %xBool : memref<i1>, i1
+  // CHECK: omp.atomic.update %[[XBOOL]] = %[[EXPRBOOL]] neqv %[[XBOOL]] : memref<i1>, i1
+  omp.atomic.update %xBool =  %exprBool neqv %xBool : memref<i1>, i1
+  // CHECK: omp.atomic.update %[[X]] = %[[EXPR]] add %[[X]] memory_order(seq_cst) hint(speculative) : memref<i32>, i32
+  omp.atomic.update %x = %expr add %x hint(speculative) memory_order(seq_cst) : memref<i32>, i32
+  return
+}
+
 // CHECK-LABEL: omp_sectionsop
 func @omp_sectionsop(%data_var1 : memref<i32>, %data_var2 : memref<i32>,
                      %data_var3 : memref<i32>, %redn_var : !llvm.ptr<f32>) {

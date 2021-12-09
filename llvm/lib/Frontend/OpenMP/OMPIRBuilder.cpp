@@ -3080,7 +3080,7 @@ OpenMPIRBuilder::createAtomicWrite(const LocationDescription &Loc,
 OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createAtomicUpdate(
     const LocationDescription &Loc, Instruction *AllocIP, AtomicOpValue &X,
     Value *Expr, AtomicOrdering AO, AtomicRMWInst::BinOp RMWOp,
-    AtomicUpdateCallbackTy &UpdateOp, bool IsXLHSInRHSPart) {
+    AtomicUpdateCallbackTy &UpdateOp, bool IsXBinopExpr) {
   if (!updateToLocation(Loc))
     return Loc.IP;
 
@@ -3098,7 +3098,7 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createAtomicUpdate(
   });
 
   emitAtomicUpdate(AllocIP, X.Var, Expr, AO, RMWOp, UpdateOp, X.IsVolatile,
-                   IsXLHSInRHSPart);
+                   IsXBinopExpr);
   checkAndEmitFlushAfterAtomic(Loc, AO, AtomicKind::Update);
   return Builder.saveIP();
 }
@@ -3135,13 +3135,13 @@ std::pair<Value *, Value *>
 OpenMPIRBuilder::emitAtomicUpdate(Instruction *AllocIP, Value *X, Value *Expr,
                                   AtomicOrdering AO, AtomicRMWInst::BinOp RMWOp,
                                   AtomicUpdateCallbackTy &UpdateOp,
-                                  bool VolatileX, bool IsXLHSInRHSPart) {
+                                  bool VolatileX, bool IsXBinopExpr) {
   Type *XElemTy = X->getType()->getPointerElementType();
 
   bool DoCmpExch =
       ((RMWOp == AtomicRMWInst::BAD_BINOP) || (RMWOp == AtomicRMWInst::FAdd)) ||
       (RMWOp == AtomicRMWInst::FSub) ||
-      (RMWOp == AtomicRMWInst::Sub && !IsXLHSInRHSPart);
+      (RMWOp == AtomicRMWInst::Sub && !IsXBinopExpr);
 
   std::pair<Value *, Value *> Res;
   if (XElemTy->isIntegerTy() && !DoCmpExch) {
@@ -3233,7 +3233,7 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createAtomicCapture(
     const LocationDescription &Loc, Instruction *AllocIP, AtomicOpValue &X,
     AtomicOpValue &V, Value *Expr, AtomicOrdering AO,
     AtomicRMWInst::BinOp RMWOp, AtomicUpdateCallbackTy &UpdateOp,
-    bool UpdateExpr, bool IsPostfixUpdate, bool IsXLHSInRHSPart) {
+    bool UpdateExpr, bool IsPostfixUpdate, bool IsXBinopExpr) {
   if (!updateToLocation(Loc))
     return Loc.IP;
 
@@ -3252,9 +3252,8 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createAtomicCapture(
   // If UpdateExpr is 'x' updated with some `expr` not based on 'x',
   // 'x' is simply atomically rewritten with 'expr'.
   AtomicRMWInst::BinOp AtomicOp = (UpdateExpr ? RMWOp : AtomicRMWInst::Xchg);
-  std::pair<Value *, Value *> Result =
-      emitAtomicUpdate(AllocIP, X.Var, Expr, AO, AtomicOp, UpdateOp,
-                       X.IsVolatile, IsXLHSInRHSPart);
+  std::pair<Value *, Value *> Result = emitAtomicUpdate(
+      AllocIP, X.Var, Expr, AO, AtomicOp, UpdateOp, X.IsVolatile, IsXBinopExpr);
 
   Value *CapturedVal = (IsPostfixUpdate ? Result.first : Result.second);
   Builder.CreateStore(CapturedVal, V.Var, V.IsVolatile);
