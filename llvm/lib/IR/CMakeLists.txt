@@ -28,7 +28,6 @@ add_llvm_component_library(LLVMCore
   Globals.cpp
   IRBuilder.cpp
   IRPrintingPasses.cpp
-  SSAContext.cpp
   InlineAsm.cpp
   Instruction.cpp
   Instructions.cpp
