@@ -240,10 +240,9 @@ getParallelComputeFunctionType(scf::ParallelOp op, PatternRewriter &rewriter) {
 }
 
 // Create a parallel compute fuction from the parallel operation.
-static ParallelComputeFunction
-createParallelComputeFunction(scf::ParallelOp op,
-                              ParallelComputeFunctionBounds bounds,
-                              PatternRewriter &rewriter) {
+static ParallelComputeFunction createParallelComputeFunction(
+    scf::ParallelOp op, ParallelComputeFunctionBounds bounds,
+    unsigned numBlockAlignedInnerLoops, PatternRewriter &rewriter) {
   OpBuilder::InsertionGuard guard(rewriter);
   ImplicitLocOpBuilder b(op.getLoc(), rewriter);
 
@@ -384,17 +383,26 @@ createParallelComputeFunction(scf::ParallelOp op,
 
       // Keep building loop nest.
       if (loopIdx < op.getNumLoops() - 1) {
-        // Select nested loop lower/upper bounds depending on our position in
-        // the multi-dimensional iteration space.
-        auto lb = nb.create<SelectOp>(isBlockFirstCoord[loopIdx],
-                                      blockFirstCoord[loopIdx + 1], c0);
+        if (loopIdx + 1 >= op.getNumLoops() - numBlockAlignedInnerLoops) {
+          // For block aligned loops we always iterate starting from 0 up to
+          // the loop trip counts.
+          nb.create<scf::ForOp>(c0, tripCounts[loopIdx + 1], c1, ValueRange(),
+                                workLoopBuilder(loopIdx + 1));
 
-        auto ub = nb.create<SelectOp>(isBlockLastCoord[loopIdx],
-                                      blockEndCoord[loopIdx + 1],
-                                      tripCounts[loopIdx + 1]);
+        } else {
+          // Select nested loop lower/upper bounds depending on our position in
+          // the multi-dimensional iteration space.
+          auto lb = nb.create<SelectOp>(isBlockFirstCoord[loopIdx],
+                                        blockFirstCoord[loopIdx + 1], c0);
 
-        nb.create<scf::ForOp>(lb, ub, c1, ValueRange(),
-                              workLoopBuilder(loopIdx + 1));
+          auto ub = nb.create<SelectOp>(isBlockLastCoord[loopIdx],
+                                        blockEndCoord[loopIdx + 1],
+                                        tripCounts[loopIdx + 1]);
+
+          nb.create<scf::ForOp>(lb, ub, c1, ValueRange(),
+                                workLoopBuilder(loopIdx + 1));
+        }
+
         nb.create<scf::YieldOp>(loc);
         return;
       }
@@ -731,6 +739,46 @@ AsyncParallelForRewrite::matchAndRewrite(scf::ParallelOp op,
   auto dispatch = [&](OpBuilder &nestedBuilder, Location loc) {
     ImplicitLocOpBuilder nb(loc, nestedBuilder);
 
+    // Collect statically known constants defining the loop nest in the parallel
+    // compute function. LLVM can't always push constants across the non-trivial
+    // async dispatch call graph, by providing these values explicitly we can
+    // choose to build more efficient loop nest, and rely on a better constant
+    // folding, loop unrolling and vectorization.
+    ParallelComputeFunctionBounds staticBounds = {
+        integerConstants(tripCounts),
+        integerConstants(op.lowerBound()),
+        integerConstants(op.upperBound()),
+        integerConstants(op.step()),
+    };
+
+    // Find how many inner iteration dimensions are statically known, and their
+    // product is smaller than the `512`. We aling the parallel compute block
+    // size by the product of statically known dimensions, so that we can
+    // guarantee that the inner loops executes from 0 to the loop trip counts
+    // and we can elide dynamic loop boundaries, and give LLVM an opportunity to
+    // unroll the loops. The constant `512` is arbitrary, it should depend on
+    // how many iterations LLVM will typically decide to unroll.
+    static constexpr int64_t maxIterations = 512;
+
+    // The number of inner loops with statically known number of iterations less
+    // than the `maxIterations` value.
+    int numUnrollableLoops = 0;
+
+    auto getInt = [](IntegerAttr attr) { return attr ? attr.getInt() : 0; };
+
+    SmallVector<int64_t> numIterations(op.getNumLoops());
+    numIterations.back() = getInt(staticBounds.tripCounts.back());
+
+    for (int i = op.getNumLoops() - 2; i >= 0; --i) {
+      int64_t tripCount = getInt(staticBounds.tripCounts[i]);
+      int64_t innerIterations = numIterations[i + 1];
+      numIterations[i] = tripCount * innerIterations;
+
+      // Update the number of inner loops that we can potentially unroll.
+      if (innerIterations > 0 && innerIterations <= maxIterations)
+        numUnrollableLoops++;
+    }
+
     // With large number of threads the value of creating many compute blocks
     // is reduced because the problem typically becomes memory bound. For small
     // number of threads it helps with stragglers.
@@ -755,24 +803,28 @@ AsyncParallelForRewrite::matchAndRewrite(scf::ParallelOp op,
     Value bs0 = b.create<arith::CeilDivSIOp>(tripCount, maxComputeBlocks);
     Value bs1 = b.create<arith::MaxSIOp>(bs0, minTaskSizeCst);
     Value blockSize = b.create<arith::MinSIOp>(tripCount, bs1);
+
+    // Align the block size to be a multiple of the statically known number
+    // of iterations in the inner loops.
+    if (numUnrollableLoops > 0 && minTaskSize >= maxIterations) {
+      Value numIters = b.create<arith::ConstantIndexOp>(
+          numIterations[op.getNumLoops() - numUnrollableLoops]);
+      Value bs2 = b.create<arith::MulIOp>(
+          b.create<arith::CeilDivSIOp>(blockSize, numIters), numIters);
+      blockSize = b.create<arith::MinSIOp>(tripCount, bs2);
+    } else {
+      // Reset the number of unrollable loops if we didn't align the block size.
+      numUnrollableLoops = 0;
+    }
+
+    // Compute the number of parallel compute blocks.
     Value blockCount = b.create<arith::CeilDivSIOp>(tripCount, blockSize);
 
-    // Collect statically known constants defining the loop nest in the parallel
-    // compute function. LLVM can't always push constants across the non-trivial
-    // async dispatch call graph, by providing these values explicitly we can
-    // choose to build more efficient loop nest, and rely on a better constant
-    // folding, loop unrolling and vectorization.
-    ParallelComputeFunctionBounds staticBounds = {
-        integerConstants(tripCounts),
-        integerConstants(op.lowerBound()),
-        integerConstants(op.upperBound()),
-        integerConstants(op.step()),
-    };
-
-    // Create a parallel compute function that takes a block id and computes the
-    // parallel operation body for a subset of iteration space.
+    // Create a parallel compute function that takes a block id and computes
+    // the parallel operation body for a subset of iteration space.
     ParallelComputeFunction parallelComputeFunction =
-        createParallelComputeFunction(op, staticBounds, rewriter);
+        createParallelComputeFunction(op, staticBounds, numUnrollableLoops,
+                                      rewriter);
 
     // Dispatch parallel compute function using async recursive work splitting,
     // or by submitting compute task sequentially from a caller thread.
