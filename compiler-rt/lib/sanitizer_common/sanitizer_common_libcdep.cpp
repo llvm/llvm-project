@@ -107,6 +107,8 @@ static struct BackgroudThreadStarted {
 } background_thread_strarter UNUSED;
 #    pragma clang diagnostic pop
 #  endif
+#else
+void MaybeStartBackgroudThread() {}
 #endif
 
 void WriteToSyslog(const char *msg) {
