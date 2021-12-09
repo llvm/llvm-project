@@ -109,7 +109,7 @@ void StackStore::TestOnlyUnmap() {
 
 uptr *StackStore::BlockInfo::Get() const {
   // Idiomatic double-checked locking uses memory_order_acquire here. But
-  // relaxed is find for us, justification is similar to
+  // relaxed is fine for us, justification is similar to
   // TwoLevelMap::GetOrCreate.
   return reinterpret_cast<uptr *>(atomic_load_relaxed(&data_));
 }
