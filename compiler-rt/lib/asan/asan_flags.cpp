@@ -140,9 +140,9 @@ void InitializeFlags() {
            SanitizerToolName);
     Die();
   }
-  // Ensure that redzone is at least SHADOW_GRANULARITY.
-  if (f->redzone < (int)SHADOW_GRANULARITY)
-    f->redzone = SHADOW_GRANULARITY;
+  // Ensure that redzone is at least ASAN_SHADOW_GRANULARITY.
+  if (f->redzone < (int)ASAN_SHADOW_GRANULARITY)
+    f->redzone = ASAN_SHADOW_GRANULARITY;
   // Make "strict_init_order" imply "check_initialization_order".
   // TODO(samsonov): Use a single runtime flag for an init-order checker.
   if (f->strict_init_order) {

@@ -151,65 +151,66 @@
 // || `[0x30000000, 0x35ffffff]` || LowShadow  ||
 // || `[0x00000000, 0x2fffffff]` || LowMem     ||
 
-#define SHADOW_SCALE 3
+#define ASAN_SHADOW_SCALE 3
 
 static const u64 kDefaultShadowSentinel = ~(uptr)0;
 
 #if SANITIZER_FUCHSIA
-#  define SHADOW_OFFSET_CONST (0)
+#  define ASAN_SHADOW_OFFSET_CONST (0)
 #elif SANITIZER_WORDSIZE == 32
 #  if SANITIZER_ANDROID
-#    define SHADOW_OFFSET_DYNAMIC
+#    define ASAN_SHADOW_OFFSET_DYNAMIC
 #  elif defined(__mips__)
-#    define SHADOW_OFFSET_CONST 0x0aaa0000
+#    define ASAN_SHADOW_OFFSET_CONST 0x0aaa0000
 #  elif SANITIZER_FREEBSD
-#    define SHADOW_OFFSET_CONST 0x40000000
+#    define ASAN_SHADOW_OFFSET_CONST 0x40000000
 #  elif SANITIZER_NETBSD
-#    define SHADOW_OFFSET_CONST 0x40000000
+#    define ASAN_SHADOW_OFFSET_CONST 0x40000000
 #  elif SANITIZER_WINDOWS
-#    define SHADOW_OFFSET_CONST 0x30000000
+#    define ASAN_SHADOW_OFFSET_CONST 0x30000000
 #  elif SANITIZER_IOS
-#    define SHADOW_OFFSET_DYNAMIC
+#    define ASAN_SHADOW_OFFSET_DYNAMIC
 #  else
-#    define SHADOW_OFFSET_CONST 0x20000000
+#    define ASAN_SHADOW_OFFSET_CONST 0x20000000
 #  endif
 #else
 #  if SANITIZER_IOS
-#    define SHADOW_OFFSET_DYNAMIC
+#    define ASAN_SHADOW_OFFSET_DYNAMIC
 #  elif SANITIZER_MAC && defined(__aarch64__)
-#    define SHADOW_OFFSET_DYNAMIC
+#    define ASAN_SHADOW_OFFSET_DYNAMIC
 #  elif SANITIZER_RISCV64
-#    define SHADOW_OFFSET_CONST 0x0000000d55550000
+#    define ASAN_SHADOW_OFFSET_CONST 0x0000000d55550000
 #  elif defined(__aarch64__)
-#    define SHADOW_OFFSET_CONST 0x0000001000000000
+#    define ASAN_SHADOW_OFFSET_CONST 0x0000001000000000
 #  elif defined(__powerpc64__)
-#    define SHADOW_OFFSET_CONST 0x0000100000000000
+#    define ASAN_SHADOW_OFFSET_CONST 0x0000100000000000
 #  elif defined(__s390x__)
-#    define SHADOW_OFFSET_CONST 0x0010000000000000
+#    define ASAN_SHADOW_OFFSET_CONST 0x0010000000000000
 #  elif SANITIZER_FREEBSD
-#    define SHADOW_OFFSET_CONST 0x0000400000000000
+#    define ASAN_SHADOW_OFFSET_CONST 0x0000400000000000
 #  elif SANITIZER_NETBSD
-#    define SHADOW_OFFSET_CONST 0x0000400000000000
+#    define ASAN_SHADOW_OFFSET_CONST 0x0000400000000000
 #  elif SANITIZER_MAC
-#    define SHADOW_OFFSET_CONST 0x0000100000000000
+#    define ASAN_SHADOW_OFFSET_CONST 0x0000100000000000
 #  elif defined(__mips64)
-#    define SHADOW_OFFSET_CONST 0x0000002000000000
+#    define ASAN_SHADOW_OFFSET_CONST 0x0000002000000000
 #  elif defined(__sparc__)
-#    define SHADOW_OFFSET_CONST 0x0000080000000000
+#    define ASAN_SHADOW_OFFSET_CONST 0x0000080000000000
 #  elif SANITIZER_WINDOWS64
-#    define SHADOW_OFFSET_DYNAMIC
+#    define ASAN_SHADOW_OFFSET_DYNAMIC
 #  else
-#    define SHADOW_OFFSET_CONST 0x000000007FFFFFFF & (~0xFFFULL << SHADOW_SCALE)
+#    define ASAN_SHADOW_OFFSET_CONST \
+      0x000000007FFFFFFF & (~0xFFFULL << ASAN_SHADOW_SCALE)
 #  endif
 #endif
 
-#if defined(SHADOW_OFFSET_CONST)
-static const u64 kConstShadowOffset = SHADOW_OFFSET_CONST;
-#  define SHADOW_OFFSET kConstShadowOffset
-#elif defined(SHADOW_OFFSET_DYNAMIC)
-#  define SHADOW_OFFSET __asan_shadow_memory_dynamic_address
+#if defined(ASAN_SHADOW_OFFSET_CONST)
+static const u64 kConstShadowOffset = ASAN_SHADOW_OFFSET_CONST;
+#  define ASAN_SHADOW_OFFSET kConstShadowOffset
+#elif defined(ASAN_SHADOW_OFFSET_DYNAMIC)
+#  define ASAN_SHADOW_OFFSET __asan_shadow_memory_dynamic_address
 #else
-#  error "SHADOW_OFFSET can't be determined."
+#  error "ASAN_SHADOW_OFFSET can't be determined."
 #endif
 
 #if SANITIZER_ANDROID && defined(__arm__)
@@ -218,7 +219,7 @@ static const u64 kConstShadowOffset = SHADOW_OFFSET_CONST;
 # define ASAN_PREMAP_SHADOW 0
 #endif
 
-#define SHADOW_GRANULARITY (1ULL << SHADOW_SCALE)
+#define ASAN_SHADOW_GRANULARITY (1ULL << ASAN_SHADOW_SCALE)
 
 #define DO_ASAN_MAPPING_PROFILE 0  // Set to 1 to profile the functions below.
 
@@ -252,36 +253,37 @@ extern uptr kHighMemEnd, kMidMemBeg, kMidMemEnd;  // Initialized in __asan_init.
 #if defined(__sparc__) && SANITIZER_WORDSIZE == 64
 #  include "asan_mapping_sparc64.h"
 #else
-#define MEM_TO_SHADOW(mem) (((mem) >> SHADOW_SCALE) + (SHADOW_OFFSET))
+#  define MEM_TO_SHADOW(mem) \
+    (((mem) >> ASAN_SHADOW_SCALE) + (ASAN_SHADOW_OFFSET))
 
-#define kLowMemBeg      0
-#define kLowMemEnd      (SHADOW_OFFSET ? SHADOW_OFFSET - 1 : 0)
+#  define kLowMemBeg 0
+#  define kLowMemEnd (ASAN_SHADOW_OFFSET ? ASAN_SHADOW_OFFSET - 1 : 0)
 
-#define kLowShadowBeg   SHADOW_OFFSET
-#define kLowShadowEnd   MEM_TO_SHADOW(kLowMemEnd)
+#  define kLowShadowBeg ASAN_SHADOW_OFFSET
+#  define kLowShadowEnd MEM_TO_SHADOW(kLowMemEnd)
 
-#define kHighMemBeg     (MEM_TO_SHADOW(kHighMemEnd) + 1)
+#  define kHighMemBeg (MEM_TO_SHADOW(kHighMemEnd) + 1)
 
-#define kHighShadowBeg  MEM_TO_SHADOW(kHighMemBeg)
-#define kHighShadowEnd  MEM_TO_SHADOW(kHighMemEnd)
+#  define kHighShadowBeg MEM_TO_SHADOW(kHighMemBeg)
+#  define kHighShadowEnd MEM_TO_SHADOW(kHighMemEnd)
 
-# define kMidShadowBeg MEM_TO_SHADOW(kMidMemBeg)
-# define kMidShadowEnd MEM_TO_SHADOW(kMidMemEnd)
+#  define kMidShadowBeg MEM_TO_SHADOW(kMidMemBeg)
+#  define kMidShadowEnd MEM_TO_SHADOW(kMidMemEnd)
 
 // With the zero shadow base we can not actually map pages starting from 0.
 // This constant is somewhat arbitrary.
-#define kZeroBaseShadowStart 0
-#define kZeroBaseMaxShadowStart (1 << 18)
+#  define kZeroBaseShadowStart 0
+#  define kZeroBaseMaxShadowStart (1 << 18)
 
-#define kShadowGapBeg   (kLowShadowEnd ? kLowShadowEnd + 1 \
-                                       : kZeroBaseShadowStart)
-#define kShadowGapEnd   ((kMidMemBeg ? kMidShadowBeg : kHighShadowBeg) - 1)
+#  define kShadowGapBeg \
+    (kLowShadowEnd ? kLowShadowEnd + 1 : kZeroBaseShadowStart)
+#  define kShadowGapEnd ((kMidMemBeg ? kMidShadowBeg : kHighShadowBeg) - 1)
 
-#define kShadowGap2Beg (kMidMemBeg ? kMidShadowEnd + 1 : 0)
-#define kShadowGap2End (kMidMemBeg ? kMidMemBeg - 1 : 0)
+#  define kShadowGap2Beg (kMidMemBeg ? kMidShadowEnd + 1 : 0)
+#  define kShadowGap2End (kMidMemBeg ? kMidMemBeg - 1 : 0)
 
-#define kShadowGap3Beg (kMidMemBeg ? kMidMemEnd + 1 : 0)
-#define kShadowGap3End (kMidMemBeg ? kHighShadowBeg - 1 : 0)
+#  define kShadowGap3Beg (kMidMemBeg ? kMidMemEnd + 1 : 0)
+#  define kShadowGap3End (kMidMemBeg ? kHighShadowBeg - 1 : 0)
 
 namespace __asan {
 
@@ -319,13 +321,13 @@ static inline bool AddrIsInShadowGap(uptr a) {
   PROFILE_ASAN_MAPPING();
   if (kMidMemBeg) {
     if (a <= kShadowGapEnd)
-      return SHADOW_OFFSET == 0 || a >= kShadowGapBeg;
+      return ASAN_SHADOW_OFFSET == 0 || a >= kShadowGapBeg;
     return (a >= kShadowGap2Beg && a <= kShadowGap2End) ||
            (a >= kShadowGap3Beg && a <= kShadowGap3End);
   }
   // In zero-based shadow mode we treat addresses near zero as addresses
   // in shadow gap as well.
-  if (SHADOW_OFFSET == 0)
+  if (ASAN_SHADOW_OFFSET == 0)
     return a <= kShadowGapEnd;
   return a >= kShadowGapBeg && a <= kShadowGapEnd;
 }
@@ -336,7 +338,9 @@ static inline bool AddrIsInShadowGap(uptr a) {
 
 namespace __asan {
 
-static inline uptr MemToShadowSize(uptr size) { return size >> SHADOW_SCALE; }
+static inline uptr MemToShadowSize(uptr size) {
+  return size >> ASAN_SHADOW_SCALE;
+}
 
 static inline bool AddrIsInMem(uptr a) {
   PROFILE_ASAN_MAPPING();
@@ -357,7 +361,7 @@ static inline bool AddrIsInShadow(uptr a) {
 
 static inline bool AddrIsAlignedByGranularity(uptr a) {
   PROFILE_ASAN_MAPPING();
-  return (a & (SHADOW_GRANULARITY - 1)) == 0;
+  return (a & (ASAN_SHADOW_GRANULARITY - 1)) == 0;
 }
 
 static inline bool AddressIsPoisoned(uptr a) {
@@ -366,8 +370,8 @@ static inline bool AddressIsPoisoned(uptr a) {
   u8 *shadow_address = (u8*)MEM_TO_SHADOW(a);
   s8 shadow_value = *shadow_address;
   if (shadow_value) {
-    u8 last_accessed_byte = (a & (SHADOW_GRANULARITY - 1))
-                                 + kAccessSize - 1;
+    u8 last_accessed_byte =
+        (a & (ASAN_SHADOW_GRANULARITY - 1)) + kAccessSize - 1;
     return (last_accessed_byte >= shadow_value);
   }
   return false;
