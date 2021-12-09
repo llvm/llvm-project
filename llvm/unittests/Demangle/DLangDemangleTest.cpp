@@ -45,4 +45,6 @@ INSTANTIATE_TEST_SUITE_P(
         std::make_pair("_D8demangle4test11__InterfaceZ",
                        "Interface for demangle.test"),
         std::make_pair("_D8demangle4test12__ModuleInfoZ",
-                       "ModuleInfo for demangle.test")));
+                       "ModuleInfo for demangle.test"),
+        std::make_pair("_D8demangle4__S14testZ", "demangle.test"),
+        std::make_pair("_D8demangle4__Sd4testZ", "demangle.__Sd.test")));
