@@ -67,8 +67,8 @@ define void @scalarize_phi(i32 * %n, float * %inout) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = phi float [ [[T0]], [[ENTRY:%.*]] ], [ [[TMP1:%.*]], [[FOR_BODY:%.*]] ]
 ; CHECK-NEXT:    [[I_0:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[INC:%.*]], [[FOR_BODY]] ]
 ; CHECK-NEXT:    [[T1:%.*]] = load i32, i32* [[N:%.*]], align 4
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[I_0]], [[T1]]
-; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_END:%.*]], label [[FOR_BODY]]
+; CHECK-NEXT:    [[CMP_NOT:%.*]] = icmp eq i32 [[I_0]], [[T1]]
+; CHECK-NEXT:    br i1 [[CMP_NOT]], label [[FOR_END:%.*]], label [[FOR_BODY]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    store volatile float [[TMP0]], float* [[INOUT]], align 4
 ; CHECK-NEXT:    [[TMP1]] = fmul float [[TMP0]], 0x4002A3D700000000
@@ -221,14 +221,12 @@ define float @extelt_binop_insertelt(<4 x float> %A, <4 x float> %B, float %f) {
 }
 
 ; We recurse to find a scalarizable operand.
-; FIXME: We should propagate the IR flags including wrapping flags.
-
 define i32 @extelt_binop_binop_insertelt(<4 x i32> %A, <4 x i32> %B, i32 %f) {
 ; CHECK-LABEL: @extelt_binop_binop_insertelt(
 ; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <4 x i32> [[B:%.*]], i32 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = add i32 [[TMP1]], [[F:%.*]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <4 x i32> [[B]], i32 0
-; CHECK-NEXT:    [[E:%.*]] = mul i32 [[TMP2]], [[TMP3]]
+; CHECK-NEXT:    [[E:%.*]] = mul nsw i32 [[TMP2]], [[TMP3]]
 ; CHECK-NEXT:    ret i32 [[E]]
 ;
   %v = insertelement <4 x i32> %A, i32 %f, i32 0
