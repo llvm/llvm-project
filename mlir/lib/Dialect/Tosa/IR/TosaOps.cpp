@@ -482,7 +482,7 @@ struct Conv2DFullyConnectedOptimization
         inputShape[0] * inputShape[1] * inputShape[2], weightShape[0]};
     auto fullyConnectedShapeType = RankedTensorType::get(
         fullyConnectedShape,
-        weight.getType().dyn_cast<RankedTensorType>().getElementType());
+        resultType.dyn_cast<ShapedType>().getElementType());
 
     Value fullyConnectedValue;
     if (op.quantization_info()) {
