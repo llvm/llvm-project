@@ -1172,7 +1172,7 @@ struct VPFirstOrderRecurrencePHIRecipe : public VPWidenPHIRecipe {
 /// operand.
 class VPReductionPHIRecipe : public VPWidenPHIRecipe {
   /// Descriptor for the reduction.
-  RecurrenceDescriptor &RdxDesc;
+  const RecurrenceDescriptor &RdxDesc;
 
   /// The phi is part of an in-loop reduction.
   bool IsInLoop;
@@ -1183,7 +1183,7 @@ class VPReductionPHIRecipe : public VPWidenPHIRecipe {
 public:
   /// Create a new VPReductionPHIRecipe for the reduction \p Phi described by \p
   /// RdxDesc.
-  VPReductionPHIRecipe(PHINode *Phi, RecurrenceDescriptor &RdxDesc,
+  VPReductionPHIRecipe(PHINode *Phi, const RecurrenceDescriptor &RdxDesc,
                        VPValue &Start, bool IsInLoop = false,
                        bool IsOrdered = false)
       : VPWidenPHIRecipe(VPVReductionPHISC, VPReductionPHISC, Phi, &Start),
@@ -1213,7 +1213,9 @@ public:
              VPSlotTracker &SlotTracker) const override;
 #endif
 
-  RecurrenceDescriptor &getRecurrenceDescriptor() { return RdxDesc; }
+  const RecurrenceDescriptor &getRecurrenceDescriptor() const {
+    return RdxDesc;
+  }
 
   /// Returns true, if the phi is part of an ordered reduction.
   bool isOrdered() const { return IsOrdered; }
@@ -1343,13 +1345,13 @@ public:
 /// The Operands are {ChainOp, VecOp, [Condition]}.
 class VPReductionRecipe : public VPRecipeBase, public VPValue {
   /// The recurrence decriptor for the reduction in question.
-  RecurrenceDescriptor *RdxDesc;
+  const RecurrenceDescriptor *RdxDesc;
   /// Pointer to the TTI, needed to create the target reduction
   const TargetTransformInfo *TTI;
 
 public:
-  VPReductionRecipe(RecurrenceDescriptor *R, Instruction *I, VPValue *ChainOp,
-                    VPValue *VecOp, VPValue *CondOp,
+  VPReductionRecipe(const RecurrenceDescriptor *R, Instruction *I,
+                    VPValue *ChainOp, VPValue *VecOp, VPValue *CondOp,
                     const TargetTransformInfo *TTI)
       : VPRecipeBase(VPRecipeBase::VPReductionSC, {ChainOp, VecOp}),
         VPValue(VPValue::VPVReductionSC, I, this), RdxDesc(R), TTI(TTI) {

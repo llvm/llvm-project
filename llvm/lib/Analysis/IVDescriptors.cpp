@@ -933,7 +933,7 @@ bool RecurrenceDescriptor::isFirstOrderRecurrence(
 /// This function returns the identity element (or neutral element) for
 /// the operation K.
 Value *RecurrenceDescriptor::getRecurrenceIdentity(RecurKind K, Type *Tp,
-                                                   FastMathFlags FMF) {
+                                                   FastMathFlags FMF) const {
   switch (K) {
   case RecurKind::Xor:
   case RecurKind::Add:
