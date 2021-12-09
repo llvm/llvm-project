@@ -28,6 +28,10 @@ def NMUnalignedSH : SDNode<"MipsISD::UASH", SDTStore, [SDNPHasChain, SDNPMayStor
 def imm32_NM : IntImmLeaf<i32, [{
     return (uint32_t)Imm.getZExtValue() == (uint64_t)Imm.getZExtValue();
 }]>;
+def immFitsAddiu32 : IntImmLeaf<i32, [{
+  int64_t N = Imm.getSExtValue();
+  return (N < -256 && N >= -4095) || (N > 4095 && N <= 65535);
+}]>;
 def imm32ZExt12 : IntImmLeaf<i32, [{ return isUInt<12>(Imm.getZExtValue()); }]>;
 def imm32ZExt12ANDI :
   IntImmLeaf<i32, [{ return isUInt<12>(Imm.getZExtValue()) ||
@@ -683,6 +687,41 @@ def MOVEP_NM : InstNM<(outs GPR32NMOpnd:$dst1, GPR32NMOpnd:$dst2),
                       "movep\t$dst1, $dst2, $src1, $src2", []>, InstSize16;
 
 }
+
+// These patterns help generate better loads/stores when the immediate doesn't
+// fit and ends up being and indexed load/store. For example:
+//
+//  li $a0, -300        ->  addiu $a0, $a2, -300
+//  lbux $a1, $a0($a2)  ->  lbu $a1, 0($a0)
+//
+// On the left is what would be generated without these patterns. This results
+// in two 32-bit instructions. While on the right, we have one 32-bit and one
+// 16-bit instruction. It does require the right register, in order for second
+// instruction to be 16-bit, but it's still better than always having two 32-bit
+// instructions.
+//
+let AddedComplexity = 3 in {
+def : NMPat<(i32 (extloadi8 (add GPR32NM:$rs, immFitsAddiu32:$imm))),
+            (LBU_NM (ADDiu_NM GPR32NM:$rs, imm:$imm), 0)>;
+def : NMPat<(i32 (zextloadi8 (add GPR32NM:$rs, immFitsAddiu32:$imm))),
+            (LBU_NM (ADDiu_NM GPR32NM:$rs, imm:$imm), 0)>;
+def : NMPat<(i32 (sextloadi8 (add GPR32NM:$rs, immFitsAddiu32:$imm))),
+            (LB_NM (ADDiu_NM GPR32NM:$rs, imm:$imm), 0)>;
+def : NMPat<(i32 (extloadi16 (add GPR32NM:$rs, immFitsAddiu32:$imm))),
+            (LHU_NM (ADDiu_NM GPR32NM:$rs, imm:$imm), 0)>;
+def : NMPat<(i32 (zextloadi16 (add GPR32NM:$rs, immFitsAddiu32:$imm))),
+            (LHU_NM (ADDiu_NM GPR32NM:$rs, imm:$imm), 0)>;
+def : NMPat<(i32 (sextloadi16 (add GPR32NM:$rs, immFitsAddiu32:$imm))),
+            (LH_NM (ADDiu_NM GPR32NM:$rs, imm:$imm), 0)>;
+def : NMPat<(i32 (load (add GPR32NM:$rs, immFitsAddiu32:$imm))),
+            (LW_NM (ADDiu_NM GPR32NM:$rs, imm:$imm), 0)>;
+def : NMPat<(truncstorei8 GPR32NM:$rt, (add GPR32NM:$rs, immFitsAddiu32:$imm)),
+            (SB_NM GPR32NM:$rt, (ADDiu_NM GPR32NM:$rs, imm:$imm), 0)>;
+def : NMPat<(truncstorei16 GPR32NM:$rt, (add GPR32NM:$rs, immFitsAddiu32:$imm)),
+            (SH_NM GPR32NM:$rt, (ADDiu_NM GPR32NM:$rs, imm:$imm), 0)>;
+def : NMPat<(store GPR32NM:$rt, (add GPR32NM:$rs, immFitsAddiu32:$imm)),
+            (SW_NM GPR32NM:$rt, (ADDiu_NM GPR32NM:$rs, imm:$imm), 0)>;
+} // AddedComplexity = 3
 
 // Catching out-of-range immediate loads/stores.
 def : NMPat<(i32 (extloadi8 GPR32NM:$rs)), (LBU_NM GPR32NM:$rs, 0)>;

@@ -21,13 +21,6 @@ define void @zeroint2(i32* %num) {
   ret void
 }
 
-define void @zeroint3(i32* %num) {
-  %arrayidx = getelementptr inbounds i32, i32* %num, i32 10000
-; CHECK: swx $zero, $a1($a0)
-  store i32 0, i32* %arrayidx, align 4
-  ret void
-}
-
 define void @zeroshort0(i16* %num) {
 ; CHECK: sh $zero, 0($a0)
   store i16 0, i16* %num, align 2
@@ -48,13 +41,6 @@ define void @zeroshort2(i16* %num) {
   ret void
 }
 
-define void @zeroshort3(i16* %num) {
-  %arrayidx = getelementptr inbounds i16, i16* %num, i32 10000
-; CHECK: shx $zero, $a1($a0)
-  store i16 0, i16* %arrayidx, align 2
-  ret void
-}
-
 define void @zerochar0(i8* %num) {
 ; CHECK: sb $zero, 0($a0)
   store i8 0, i8* %num, align 1
@@ -71,13 +57,6 @@ define void @zerochar1(i8* %num) {
 define void @zerochar2(i8* %num) {
   %arrayidx = getelementptr inbounds i8, i8* %num, i32 -1
 ; CHECK: sb $zero, -1($a0)
-  store i8 0, i8* %arrayidx, align 1
-  ret void
-}
-
-define void @zerochar3(i8* %num) {
-  %arrayidx = getelementptr inbounds i8, i8* %num, i32 10000
-; CHECK: sbx $zero, $a1($a0)
   store i8 0, i8* %arrayidx, align 1
   ret void
 }
