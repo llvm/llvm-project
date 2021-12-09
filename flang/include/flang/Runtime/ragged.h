@@ -16,11 +16,11 @@ namespace Fortran::runtime {
 
 // A ragged array header block.
 // The header block is used to create the "array of arrays" ragged data
-// structure. It contains a pair in `flags` to indicate if the header points to
+// structure. It contains a boolean value to indicate if the header points to
 // an array of headers (isIndirection) or data elements and the rank of the
-// pointed-to array. The rank is the length of the extents vector accessed
-// through `extentPointer`. The `bufferPointer` is overloaded and is null,
-// points to an array of headers (isIndirection), or data.
+// pointed-to array in an integer value. The rank is the length of the extents
+// vector accessed through `extentPointer`. The `bufferPointer` is overloaded
+// and is null, points to an array of headers (isIndirection), or data.
 // By default, a header is set to zero, which is its unused state.
 // The layout of a ragged buffer header is mirrored in the compiler.
 struct RaggedArrayHeader {
