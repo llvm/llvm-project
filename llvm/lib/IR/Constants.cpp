@@ -1296,9 +1296,10 @@ Constant *ConstantArray::getImpl(ArrayType *Ty, ArrayRef<Constant*> V) {
   if (V.empty())
     return ConstantAggregateZero::get(Ty);
 
-  for (unsigned i = 0, e = V.size(); i != e; ++i) {
-    assert(V[i]->getType() == Ty->getElementType() &&
+  for (Constant *C : V) {
+    assert(C->getType() == Ty->getElementType() &&
            "Wrong type in array element initializer");
+    (void)C;
   }
 
   // If this is an all-zero array, return a ConstantAggregateZero object.  If
@@ -1364,12 +1365,12 @@ Constant *ConstantStruct::get(StructType *ST, ArrayRef<Constant*> V) {
     isZero = V[0]->isNullValue();
     // PoisonValue inherits UndefValue, so its check is not necessary.
     if (isUndef || isZero) {
-      for (unsigned i = 0, e = V.size(); i != e; ++i) {
-        if (!V[i]->isNullValue())
+      for (Constant *C : V) {
+        if (!C->isNullValue())
           isZero = false;
-        if (!isa<PoisonValue>(V[i]))
+        if (!isa<PoisonValue>(C))
           isPoison = false;
-        if (isa<PoisonValue>(V[i]) || !isa<UndefValue>(V[i]))
+        if (isa<PoisonValue>(C) || !isa<UndefValue>(C))
           isUndef = false;
       }
     }
