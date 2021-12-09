@@ -1,4 +1,4 @@
-; RUN: llc %s -o - -verify-machineinstrs | FileCheck %s
+; RUN: llc %s -o - -verify-machineinstrs -mtriple=x86_64-unknown-linux-gnu | FileCheck %s
 
 define void @test1() #0 {
 entry:
