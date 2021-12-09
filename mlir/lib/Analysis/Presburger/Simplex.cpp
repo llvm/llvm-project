@@ -1246,4 +1246,38 @@ void Simplex::print(raw_ostream &os) const {
 
 void Simplex::dump() const { print(llvm::errs()); }
 
+bool Simplex::isRationalSubsetOf(const FlatAffineConstraints &fac) {
+  if (isEmpty())
+    return true;
+
+  for (unsigned i = 0, e = fac.getNumInequalities(); i < e; ++i)
+    if (!isRedundantInequality(fac.getInequality(i)))
+      return false;
+
+  for (unsigned i = 0, e = fac.getNumEqualities(); i < e; ++i)
+    if (!isRedundantEquality(fac.getEquality(i)))
+      return false;
+
+  return true;
+}
+
+/// Computes the minimum value `coeffs` can take. If the value is greater than
+/// or equal to zero, the polytope entirely lies in the half-space defined by
+/// `coeffs >= 0`.
+bool Simplex::isRedundantInequality(ArrayRef<int64_t> coeffs) {
+  Optional<Fraction> minimum = computeOptimum(Direction::Down, coeffs);
+  return minimum && *minimum >= Fraction(0, 1);
+}
+
+/// Check whether the equality given by `coeffs == 0` is redundant given
+/// the existing constraints. This is redundant when `coeffs` is already
+/// always zero under the existing constraints. `coeffs` is always zero
+/// when the minimum and maximum value that `coeffs` can take are both zero.
+bool Simplex::isRedundantEquality(ArrayRef<int64_t> coeffs) {
+  Optional<Fraction> minimum = computeOptimum(Direction::Down, coeffs);
+  Optional<Fraction> maximum = computeOptimum(Direction::Up, coeffs);
+  return minimum && maximum && *maximum == Fraction(0, 1) &&
+         *minimum == Fraction(0, 1);
+}
+
 } // namespace mlir

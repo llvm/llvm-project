@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Analysis/Presburger/Simplex.h"
+#include "../AffineStructuresParser.h"
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
@@ -443,6 +444,86 @@ TEST(SimplexTest, appendVariable) {
   simplex.rollback(snapshot1);
   EXPECT_EQ(simplex.getNumVariables(), 1u);
   EXPECT_EQ(simplex.getNumConstraints(), 0u);
+}
+
+TEST(SimplexTest, isRedundantInequality) {
+  Simplex simplex(2);
+  simplex.addInequality({0, -1, 2}); // y <= 2.
+  simplex.addInequality({1, 0, 0});  // x >= 0.
+  simplex.addEquality({-1, 1, 0});   // y = x.
+
+  EXPECT_TRUE(simplex.isRedundantInequality({-1, 0, 2})); // x <= 2.
+  EXPECT_TRUE(simplex.isRedundantInequality({0, 1, 0}));  // y >= 0.
+
+  EXPECT_FALSE(simplex.isRedundantInequality({-1, 0, -1})); // x <= -1.
+  EXPECT_FALSE(simplex.isRedundantInequality({0, 1, -2}));  // y >= 2.
+  EXPECT_FALSE(simplex.isRedundantInequality({0, 1, -1}));  // y >= 1.
+}
+
+TEST(SimplexTest, isRedundantEquality) {
+  Simplex simplex(2);
+  simplex.addInequality({0, -1, 2}); // y <= 2.
+  simplex.addInequality({1, 0, 0});  // x >= 0.
+  simplex.addEquality({-1, 1, 0});   // y = x.
+
+  EXPECT_TRUE(simplex.isRedundantEquality({-1, 1, 0})); // y = x.
+  EXPECT_TRUE(simplex.isRedundantEquality({1, -1, 0})); // x = y.
+
+  EXPECT_FALSE(simplex.isRedundantEquality({0, 1, -1})); // y = 1.
+
+  simplex.addEquality({0, -1, 2}); // y = 2.
+
+  EXPECT_TRUE(simplex.isRedundantEquality({-1, 0, 2})); // x = 2.
+}
+
+static FlatAffineConstraints parseFAC(StringRef str, MLIRContext *context) {
+  FailureOr<FlatAffineConstraints> fac = parseIntegerSetToFAC(str, context);
+
+  EXPECT_TRUE(succeeded(fac));
+
+  return *fac;
+}
+
+TEST(SimplexTest, IsRationalSubsetOf) {
+
+  MLIRContext context;
+
+  FlatAffineConstraints univ = FlatAffineConstraints::getUniverse(1, 0);
+  FlatAffineConstraints empty =
+      parseFAC("(x) : (x + 0 >= 0, -x - 1 >= 0)", &context);
+  FlatAffineConstraints s1 = parseFAC("(x) : ( x >= 0, -x + 4 >= 0)", &context);
+  FlatAffineConstraints s2 =
+      parseFAC("(x) : (x - 1 >= 0, -x + 3 >= 0)", &context);
+
+  Simplex simUniv(univ);
+  Simplex simEmpty(empty);
+  Simplex sim1(s1);
+  Simplex sim2(s2);
+
+  EXPECT_TRUE(simUniv.isRationalSubsetOf(univ));
+  EXPECT_TRUE(simEmpty.isRationalSubsetOf(empty));
+  EXPECT_TRUE(sim1.isRationalSubsetOf(s1));
+  EXPECT_TRUE(sim2.isRationalSubsetOf(s2));
+
+  EXPECT_TRUE(simEmpty.isRationalSubsetOf(univ));
+  EXPECT_TRUE(simEmpty.isRationalSubsetOf(s1));
+  EXPECT_TRUE(simEmpty.isRationalSubsetOf(s2));
+  EXPECT_TRUE(simEmpty.isRationalSubsetOf(empty));
+
+  EXPECT_TRUE(simUniv.isRationalSubsetOf(univ));
+  EXPECT_FALSE(simUniv.isRationalSubsetOf(s1));
+  EXPECT_FALSE(simUniv.isRationalSubsetOf(s2));
+  EXPECT_FALSE(simUniv.isRationalSubsetOf(empty));
+
+  EXPECT_TRUE(sim1.isRationalSubsetOf(univ));
+  EXPECT_TRUE(sim1.isRationalSubsetOf(s1));
+  EXPECT_FALSE(sim1.isRationalSubsetOf(s2));
+  EXPECT_FALSE(sim1.isRationalSubsetOf(empty));
+
+  EXPECT_TRUE(sim2.isRationalSubsetOf(univ));
+  EXPECT_TRUE(sim2.isRationalSubsetOf(s1));
+  EXPECT_TRUE(sim2.isRationalSubsetOf(s2));
+  EXPECT_FALSE(sim2.isRationalSubsetOf(empty));
 }
 
 } // namespace mlir
