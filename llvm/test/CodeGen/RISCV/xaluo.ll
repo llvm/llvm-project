@@ -1201,10 +1201,10 @@ define zeroext i1 @umulo2.i32(i32 %v1, i32* %res) {
 ;
 ; RV64-LABEL: umulo2.i32:
 ; RV64:       # %bb.0: # %entry
-; RV64-NEXT:    slli a0, a0, 32
-; RV64-NEXT:    srli a0, a0, 32
 ; RV64-NEXT:    li a2, 13
-; RV64-NEXT:    mul a2, a0, a2
+; RV64-NEXT:    slli a2, a2, 32
+; RV64-NEXT:    slli a0, a0, 32
+; RV64-NEXT:    mulhu a2, a0, a2
 ; RV64-NEXT:    srli a0, a2, 32
 ; RV64-NEXT:    snez a0, a0
 ; RV64-NEXT:    sw a2, 0(a1)
