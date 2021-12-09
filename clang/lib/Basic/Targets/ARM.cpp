@@ -465,6 +465,8 @@ bool ARMTargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
   HWDiv = 0;
   DotProd = 0;
   HasMatMul = 0;
+  HasPAC = 0;
+  HasBTI = 0;
   HasFloat16 = true;
   ARMCDECoprocMask = 0;
   HasBFloat16 = false;
@@ -547,6 +549,9 @@ bool ARMTargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       HasBFloat16 = true;
     } else if (Feature == "-fpregs") {
       FPRegsDisabled = true;
+    } else if (Feature == "+pacbti") {
+      HasPAC = 1;
+      HasBTI = 1;
     }
   }
 
@@ -889,6 +894,12 @@ void ARMTargetInfo::getTargetDefines(const LangOptions &Opts,
 
   if (HasMatMul)
     Builder.defineMacro("__ARM_FEATURE_MATMUL_INT8", "1");
+
+  if (HasPAC)
+    Builder.defineMacro("__ARM_FEATURE_PAUTH", "1");
+
+  if (HasBTI)
+    Builder.defineMacro("__ARM_FEATURE_BTI", "1");
 
   if (HasBFloat16) {
     Builder.defineMacro("__ARM_FEATURE_BF16", "1");
