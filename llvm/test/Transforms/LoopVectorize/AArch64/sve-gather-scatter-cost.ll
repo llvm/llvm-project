@@ -4,7 +4,7 @@
 target triple="aarch64--linux-gnu"
 
 ; CHECK: LV: Checking a loop in "gather_nxv4i32_loaded_index"
-; CHECK: LV: Found an estimated cost of 9 for VF vscale x 4 For instruction:   %1 = load float, float* %arrayidx3, align 4
+; CHECK: LV: Found an estimated cost of 81 for VF vscale x 4 For instruction:   %1 = load float, float* %arrayidx3, align 4
 define void @gather_nxv4i32_loaded_index(float* noalias nocapture readonly %a, i64* noalias nocapture readonly %b, float* noalias nocapture %c, i64 %n) #0 {
 entry:
   br label %for.body
@@ -26,7 +26,7 @@ for.cond.cleanup:                                 ; preds = %for.cond.cleanup.lo
 }
 
 ; CHECK: LV: Checking a loop in "scatter_nxv4i32_loaded_index"
-; CHECK: LV: Found an estimated cost of 9 for VF vscale x 4 For instruction:   store float %1, float* %arrayidx5, align 4
+; CHECK: LV: Found an estimated cost of 81 for VF vscale x 4 For instruction:   store float %1, float* %arrayidx5, align 4
 define void @scatter_nxv4i32_loaded_index(float* noalias nocapture readonly %a, i64* noalias nocapture readonly %b, float* noalias nocapture %c, i64 %n) #0 {
 entry:
   br label %for.body
@@ -94,7 +94,7 @@ for.cond.cleanup:                                 ; preds = %for.cond.cleanup.lo
 }
 
 ; CHECK: LV: Checking a loop in "gather_nxv4i32_stride2"
-; CHECK: LV: Found an estimated cost of 9 for VF vscale x 4 For instruction:   %0 = load float, float* %arrayidx, align 4
+; CHECK: LV: Found an estimated cost of 81 for VF vscale x 4 For instruction:   %0 = load float, float* %arrayidx, align 4
 define void @gather_nxv4i32_stride2(float* noalias nocapture readonly %a, float* noalias nocapture readonly %b, i64 %n) #0 {
 entry:
   br label %for.body
@@ -115,7 +115,7 @@ for.cond.cleanup:                                 ; preds = %for.cond.cleanup.lo
 }
 
 ; CHECK: LV: Checking a loop in "scatter_nxv4i32_stride2"
-; CHECK: LV: Found an estimated cost of 9 for VF vscale x 4 For instruction:   store float %0, float* %arrayidx2, align 4
+; CHECK: LV: Found an estimated cost of 81 for VF vscale x 4 For instruction:   store float %0, float* %arrayidx2, align 4
 define void @scatter_nxv4i32_stride2(float* noalias nocapture readonly %a, float* noalias nocapture readonly %b, i64 %n) #0 {
 entry:
   br label %for.body
@@ -137,7 +137,7 @@ for.cond.cleanup:                                 ; preds = %for.cond.cleanup.lo
 
 
 ; CHECK: LV: Checking a loop in "gather_nxv4i32_stride64"
-; CHECK: LV: Found an estimated cost of 9 for VF vscale x 4 For instruction:   %0 = load float, float* %arrayidx, align 4
+; CHECK: LV: Found an estimated cost of 81 for VF vscale x 4 For instruction:   %0 = load float, float* %arrayidx, align 4
 define void @gather_nxv4i32_stride64(float* noalias nocapture readonly %a, float* noalias nocapture readonly %b, i64 %n) #0 {
 entry:
   br label %for.body
@@ -158,7 +158,7 @@ for.cond.cleanup:                                 ; preds = %for.cond.cleanup.lo
 }
 
 ; CHECK: LV: Checking a loop in "scatter_nxv4i32_stride64"
-; CHECK: LV: Found an estimated cost of 9 for VF vscale x 4 For instruction:   store float %0, float* %arrayidx2, align 4
+; CHECK: LV: Found an estimated cost of 81 for VF vscale x 4 For instruction:   store float %0, float* %arrayidx2, align 4
 define void @scatter_nxv4i32_stride64(float* noalias nocapture readonly %a, float* noalias nocapture readonly %b, i64 %n) #0 {
 entry:
   br label %for.body
