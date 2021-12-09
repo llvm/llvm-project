@@ -38,8 +38,10 @@ inline std::vector<mlir::Value> getOrigins(mlir::Value shapeVal) {
     if (auto *shapeOp = shapeVal.getDefiningOp()) {
       if (auto shOp = mlir::dyn_cast<fir::ShapeShiftOp>(shapeOp))
         return shOp.getOrigins();
-      if (auto shOp = mlir::dyn_cast<fir::ShiftOp>(shapeOp))
-        return shOp.getOrigins();
+      if (auto shOp = mlir::dyn_cast<fir::ShiftOp>(shapeOp)) {
+        auto operands = shOp.getOrigins();
+        return {operands.begin(), operands.end()};
+      }
     }
   return {};
 }

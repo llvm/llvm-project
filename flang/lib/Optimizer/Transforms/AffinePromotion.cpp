@@ -325,7 +325,7 @@ static mlir::AffineMap createArrayIndexAffineMap(unsigned dimensions,
 
 static Optional<int64_t> constantIntegerLike(const mlir::Value value) {
   if (auto definition = value.getDefiningOp<mlir::arith::ConstantOp>())
-    if (auto stepAttr = definition.value().dyn_cast<IntegerAttr>())
+    if (auto stepAttr = definition.getValue().dyn_cast<IntegerAttr>())
       return stepAttr.getInt();
   return {};
 }
