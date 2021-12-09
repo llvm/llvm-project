@@ -1377,17 +1377,23 @@ The `CoroSplit` pass, if the funclet bundle is present, will insert
 ``cleanupret from %tok unwind to caller`` before
 the `coro.end`_ intrinsic and will remove the rest of the block.
 
+In the unwind path (when the argument is `true`), `coro.end` will mark the coroutine
+as done, making it undefined behavior to resume the coroutine again and causing 
+`llvm.coro.done` to return `true`.  This is not necessary in the normal path because
+the coroutine will already be marked as done by the final suspend.
+
 The following table summarizes the handling of `coro.end`_ intrinsic.
 
-+--------------------------+-------------------+-------------------------------+
-|                          | In Start Function | In Resume/Destroy Functions   |
-+--------------------------+-------------------+-------------------------------+
-|unwind=false              | nothing           |``ret void``                   |
-+------------+-------------+-------------------+-------------------------------+
-|            | WinEH       | nothing           |``cleanupret unwind to caller``|
-|unwind=true +-------------+-------------------+-------------------------------+
-|            | Landingpad  | nothing           | nothing                       |
-+------------+-------------+-------------------+-------------------------------+
++--------------------------+------------------------+-------------------------------+
+|                          | In Start Function      | In Resume/Destroy Functions   |
++--------------------------+------------------------+-------------------------------+
+|unwind=false              | nothing                |``ret void``                   |
++------------+-------------+------------------------+-------------------------------+
+|            | WinEH       | mark coroutine as done |``cleanupret unwind to caller``|
+|            |             |                        |mark coroutine done            |
+|unwind=true +-------------+------------------------+-------------------------------+
+|            | Landingpad  | mark coroutine as done | mark coroutine done           |
++------------+-------------+------------------------+-------------------------------+
 
 
 'llvm.coro.end.async' Intrinsic
