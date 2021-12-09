@@ -1612,7 +1612,6 @@ LANGBUILTIN(__builtin_coro_alloc, "b", "n", COR_LANG)
 LANGBUILTIN(__builtin_coro_begin, "v*v*", "n", COR_LANG)
 LANGBUILTIN(__builtin_coro_end, "bv*Ib", "n", COR_LANG)
 LANGBUILTIN(__builtin_coro_suspend, "cIb", "n", COR_LANG)
-LANGBUILTIN(__builtin_coro_param, "bv*v*", "n", COR_LANG)
 
 // Pointer authentication builtins.
 BUILTIN(__builtin_ptrauth_strip, "v*v*i", "tnc")
