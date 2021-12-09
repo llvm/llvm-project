@@ -16194,7 +16194,7 @@ Decl *Sema::ActOnStartLinkageSpecification(Scope *S, SourceLocation ExternLoc,
   ///   - ...
   ///   - appears within a linkage-specification,
   ///   it is attached to the global module.
-  if (getLangOpts().CPlusPlusModules) {
+  if (getLangOpts().CPlusPlusModules && getCurrentModule()) {
     Module *GlobalModule =
         PushGlobalModuleFragment(ExternLoc, /*IsImplicit=*/true);
     D->setModuleOwnershipKind(Decl::ModuleOwnershipKind::ModulePrivate);
@@ -16218,7 +16218,7 @@ Decl *Sema::ActOnFinishLinkageSpecification(Scope *S,
     LSDecl->setRBraceLoc(RBraceLoc);
   }
 
-  if (getLangOpts().CPlusPlusModules)
+  if (getLangOpts().CPlusPlusModules && getCurrentModule())
     PopGlobalModuleFragment();
 
   PopDeclContext();
