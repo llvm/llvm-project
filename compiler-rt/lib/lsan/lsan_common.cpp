@@ -913,8 +913,8 @@ uptr LeakReport::ApplySuppressions() {
         leaks_[i].stack_trace_id, StackDepotGet(leaks_[i].stack_trace_id));
     if (s) {
       s->weight += leaks_[i].total_size;
-      atomic_store_relaxed(&s->hit_count, atomic_load_relaxed(&s->hit_count) +
-                                              leaks_[i].hit_count);
+      atomic_fetch_add(&s->hit_count, leaks_[i].hit_count,
+                       memory_order_relaxed);
       leaks_[i].is_suppressed = true;
       ++new_suppressions;
     }
