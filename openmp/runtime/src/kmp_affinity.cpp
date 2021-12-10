@@ -189,8 +189,11 @@ void kmp_hw_thread_t::print() const {
   for (int i = 0; i < depth; ++i) {
     printf("%4d ", ids[i]);
   }
-  if (core_type != KMP_HW_CORE_TYPE_UNKNOWN) {
-    printf(" (%s)", __kmp_hw_get_core_type_string(core_type));
+  if (attrs) {
+    if (attrs.is_core_type_valid())
+      printf(" (%s)", __kmp_hw_get_core_type_string(attrs.get_core_type()));
+    if (attrs.is_core_eff_valid())
+      printf(" (eff=%d)", attrs.get_core_eff());
   }
   printf("\n");
 }
@@ -391,12 +394,6 @@ void kmp_topology_t::_gather_enumeration_information() {
     count[i] = 0;
     ratio[i] = 0;
   }
-  if (__kmp_is_hybrid_cpu()) {
-    for (int i = 0; i < KMP_HW_MAX_NUM_CORE_TYPES; ++i) {
-      core_types_count[i] = 0;
-      core_types[i] = KMP_HW_CORE_TYPE_UNKNOWN;
-    }
-  }
   int core_level = get_level(KMP_HW_CORE);
   for (int i = 0; i < num_hw_threads; ++i) {
     kmp_hw_thread_t &hw_thread = hw_threads[i];
@@ -413,9 +410,29 @@ void kmp_topology_t::_gather_enumeration_information() {
             ratio[l] = max[l];
           max[l] = 1;
         }
-        // Figure out the number of each core type for hybrid CPUs
-        if (__kmp_is_hybrid_cpu() && core_level >= 0 && layer <= core_level)
-          _increment_core_type(hw_thread.core_type);
+        // Figure out the number of different core types
+        // and efficiencies for hybrid CPUs
+        if (__kmp_is_hybrid_cpu() && core_level >= 0 && layer <= core_level) {
+          if (hw_thread.attrs.is_core_eff_valid() &&
+              hw_thread.attrs.core_eff >= num_core_efficiencies) {
+            // Because efficiencies can range from 0 to max efficiency - 1,
+            // the number of efficiencies is max efficiency + 1
+            num_core_efficiencies = hw_thread.attrs.core_eff + 1;
+          }
+          if (hw_thread.attrs.is_core_type_valid()) {
+            bool found = false;
+            for (int j = 0; j < num_core_types; ++j) {
+              if (hw_thread.attrs.get_core_type() == core_types[j]) {
+                found = true;
+                break;
+              }
+            }
+            if (!found) {
+              KMP_ASSERT(num_core_types < KMP_HW_MAX_NUM_CORE_TYPES);
+              core_types[num_core_types++] = hw_thread.attrs.get_core_type();
+            }
+          }
+        }
         break;
       }
     }
@@ -427,6 +444,42 @@ void kmp_topology_t::_gather_enumeration_information() {
     if (max[layer] > ratio[layer])
       ratio[layer] = max[layer];
   }
+}
+
+int kmp_topology_t::_get_ncores_with_attr(const kmp_hw_attr_t &attr,
+                                          int above_level,
+                                          bool find_all) const {
+  int current, current_max;
+  int previous_id[KMP_HW_LAST];
+  for (int i = 0; i < depth; ++i)
+    previous_id[i] = kmp_hw_thread_t::UNKNOWN_ID;
+  int core_level = get_level(KMP_HW_CORE);
+  if (find_all)
+    above_level = -1;
+  KMP_ASSERT(above_level < core_level);
+  current_max = 0;
+  current = 0;
+  for (int i = 0; i < num_hw_threads; ++i) {
+    kmp_hw_thread_t &hw_thread = hw_threads[i];
+    if (!find_all && hw_thread.ids[above_level] != previous_id[above_level]) {
+      if (current > current_max)
+        current_max = current;
+      current = hw_thread.attrs.contains(attr);
+    } else {
+      for (int level = above_level + 1; level <= core_level; ++level) {
+        if (hw_thread.ids[level] != previous_id[level]) {
+          if (hw_thread.attrs.contains(attr))
+            current++;
+          break;
+        }
+      }
+    }
+    for (int level = 0; level < depth; ++level)
+      previous_id[level] = hw_thread.ids[level];
+  }
+  if (current > current_max)
+    current_max = current;
+  return current_max;
 }
 
 // Find out if the topology is uniform
@@ -517,6 +570,10 @@ kmp_topology_t *kmp_topology_t::allocate(int nproc, int ndepth,
   retval->types = (kmp_hw_t *)arr;
   retval->ratio = arr + (size_t)KMP_HW_LAST;
   retval->count = arr + 2 * (size_t)KMP_HW_LAST;
+  retval->num_core_efficiencies = 0;
+  retval->num_core_types = 0;
+  for (int i = 0; i < KMP_HW_MAX_NUM_CORE_TYPES; ++i)
+    retval->core_types[i] = KMP_HW_CORE_TYPE_UNKNOWN;
   KMP_FOREACH_HW_TYPE(type) { retval->equivalent[type] = KMP_HW_UNKNOWN; }
   for (int i = 0; i < ndepth; ++i) {
     retval->types[i] = types[i];
@@ -574,18 +631,12 @@ void kmp_topology_t::dump() const {
   }
   printf("\n");
 
-  printf("* core_types:\n");
-  for (int i = 0; i < KMP_HW_MAX_NUM_CORE_TYPES; ++i) {
-    if (core_types[i] != KMP_HW_CORE_TYPE_UNKNOWN) {
-      printf("    %d %s core%c\n", core_types_count[i],
-             __kmp_hw_get_core_type_string(core_types[i]),
-             ((core_types_count[i] > 1) ? 's' : ' '));
-    } else {
-      if (i == 0)
-        printf("No hybrid information available\n");
-      break;
-    }
-  }
+  printf("* num_core_eff: %d\n", num_core_efficiencies);
+  printf("* num_core_types: %d\n", num_core_types);
+  printf("* core_types: ");
+  for (int i = 0; i < num_core_types; ++i)
+    printf("%3d ", core_types[i]);
+  printf("\n");
 
   printf("* equivalent map:\n");
   KMP_FOREACH_HW_TYPE(i) {
@@ -680,12 +731,26 @@ void kmp_topology_t::print(const char *env_var) const {
   }
   KMP_INFORM(TopologyGeneric, env_var, buf.str, ncores);
 
+  // Hybrid topology information
   if (__kmp_is_hybrid_cpu()) {
-    for (int i = 0; i < KMP_HW_MAX_NUM_CORE_TYPES; ++i) {
-      if (core_types[i] == KMP_HW_CORE_TYPE_UNKNOWN)
-        break;
-      KMP_INFORM(TopologyHybrid, env_var, core_types_count[i],
-                 __kmp_hw_get_core_type_string(core_types[i]));
+    for (int i = 0; i < num_core_types; ++i) {
+      kmp_hw_core_type_t core_type = core_types[i];
+      kmp_hw_attr_t attr;
+      attr.clear();
+      attr.set_core_type(core_type);
+      int ncores = get_ncores_with_attr(attr);
+      if (ncores > 0) {
+        KMP_INFORM(TopologyHybrid, env_var, ncores,
+                   __kmp_hw_get_core_type_string(core_type));
+        KMP_ASSERT(num_core_efficiencies <= KMP_HW_MAX_NUM_CORE_EFFS)
+        for (int eff = 0; eff < num_core_efficiencies; ++eff) {
+          attr.set_core_eff(eff);
+          int ncores_with_eff = get_ncores_with_attr(attr);
+          if (ncores_with_eff > 0) {
+            KMP_INFORM(TopologyHybridCoreEff, env_var, ncores_with_eff, eff);
+          }
+        }
+      }
     }
   }
 
@@ -705,7 +770,8 @@ void kmp_topology_t::print(const char *env_var) const {
     }
     if (__kmp_is_hybrid_cpu())
       __kmp_str_buf_print(
-          &buf, "(%s)", __kmp_hw_get_core_type_string(hw_threads[i].core_type));
+          &buf, "(%s)",
+          __kmp_hw_get_core_type_string(hw_threads[i].attrs.get_core_type()));
     KMP_INFORM(OSProcMapToPack, env_var, hw_threads[i].os_id, buf.str);
   }
 
@@ -816,6 +882,56 @@ void kmp_topology_t::canonicalize(int npackages, int ncores_per_pkg,
   _discover_uniformity();
 }
 
+// Represents running sub IDs for a single core attribute where
+// attribute values have SIZE possibilities.
+template <size_t SIZE, typename IndexFunc> struct kmp_sub_ids_t {
+  int last_level; // last level in topology to consider for sub_ids
+  int sub_id[SIZE]; // The sub ID for a given attribute value
+  int prev_sub_id[KMP_HW_LAST];
+  IndexFunc indexer;
+
+public:
+  kmp_sub_ids_t(int last_level) : last_level(last_level) {
+    KMP_ASSERT(last_level < KMP_HW_LAST);
+    for (size_t i = 0; i < SIZE; ++i)
+      sub_id[i] = -1;
+    for (size_t i = 0; i < KMP_HW_LAST; ++i)
+      prev_sub_id[i] = -1;
+  }
+  void update(const kmp_hw_thread_t &hw_thread) {
+    int idx = indexer(hw_thread);
+    KMP_ASSERT(idx < (int)SIZE);
+    for (int level = 0; level <= last_level; ++level) {
+      if (hw_thread.sub_ids[level] != prev_sub_id[level]) {
+        if (level < last_level)
+          sub_id[idx] = -1;
+        sub_id[idx]++;
+        break;
+      }
+    }
+    for (int level = 0; level <= last_level; ++level)
+      prev_sub_id[level] = hw_thread.sub_ids[level];
+  }
+  int get_sub_id(const kmp_hw_thread_t &hw_thread) const {
+    return sub_id[indexer(hw_thread)];
+  }
+};
+
+static kmp_str_buf_t *
+__kmp_hw_get_catalog_core_string(const kmp_hw_attr_t &attr, kmp_str_buf_t *buf,
+                                 bool plural) {
+  __kmp_str_buf_init(buf);
+  if (attr.is_core_type_valid())
+    __kmp_str_buf_print(buf, "%s %s",
+                        __kmp_hw_get_core_type_string(attr.get_core_type()),
+                        __kmp_hw_get_catalog_string(KMP_HW_CORE, plural));
+  else
+    __kmp_str_buf_print(buf, "%s eff=%d",
+                        __kmp_hw_get_catalog_string(KMP_HW_CORE, plural),
+                        attr.get_core_eff());
+  return buf;
+}
+
 // Apply the KMP_HW_SUBSET envirable to the topology
 // Returns true if KMP_HW_SUBSET filtered any processors
 // otherwise, returns false
@@ -828,17 +944,23 @@ bool kmp_topology_t::filter_hw_subset() {
   __kmp_hw_subset->sort();
 
   // Check to see if KMP_HW_SUBSET is a valid subset of the detected topology
+  bool using_core_types = false;
+  bool using_core_effs = false;
   int hw_subset_depth = __kmp_hw_subset->get_depth();
   kmp_hw_t specified[KMP_HW_LAST];
+  int topology_levels[hw_subset_depth];
   KMP_ASSERT(hw_subset_depth > 0);
   KMP_FOREACH_HW_TYPE(i) { specified[i] = KMP_HW_UNKNOWN; }
+  int core_level = get_level(KMP_HW_CORE);
   for (int i = 0; i < hw_subset_depth; ++i) {
     int max_count;
-    int num = __kmp_hw_subset->at(i).num;
-    int offset = __kmp_hw_subset->at(i).offset;
-    kmp_hw_t type = __kmp_hw_subset->at(i).type;
+    const kmp_hw_subset_t::item_t &item = __kmp_hw_subset->at(i);
+    int num = item.num[0];
+    int offset = item.offset[0];
+    kmp_hw_t type = item.type;
     kmp_hw_t equivalent_type = equivalent[type];
     int level = get_level(type);
+    topology_levels[i] = level;
 
     // Check to see if current layer is in detected machine topology
     if (equivalent_type != KMP_HW_UNKNOWN) {
@@ -849,8 +971,8 @@ bool kmp_topology_t::filter_hw_subset() {
       return false;
     }
 
-    // Check to see if current layer has already been specified
-    // either directly or through an equivalent type
+    // Check to see if current layer has already been
+    // specified either directly or through an equivalent type
     if (specified[equivalent_type] != KMP_HW_UNKNOWN) {
       KMP_WARNING(AffHWSubsetEqvLayers, __kmp_hw_get_catalog_string(type),
                   __kmp_hw_get_catalog_string(specified[equivalent_type]));
@@ -866,41 +988,233 @@ bool kmp_topology_t::filter_hw_subset() {
                   __kmp_hw_get_catalog_string(type, plural));
       return false;
     }
-  }
 
-  // Apply the filtered hardware subset
-  int new_index = 0;
-  for (int i = 0; i < num_hw_threads; ++i) {
-    kmp_hw_thread_t &hw_thread = hw_threads[i];
-    // Check to see if this hardware thread should be filtered
-    bool should_be_filtered = false;
-    for (int level = 0, hw_subset_index = 0;
-         level < depth && hw_subset_index < hw_subset_depth; ++level) {
-      kmp_hw_t topology_type = types[level];
-      auto hw_subset_item = __kmp_hw_subset->at(hw_subset_index);
-      kmp_hw_t hw_subset_type = hw_subset_item.type;
-      if (topology_type != hw_subset_type)
-        continue;
-      int num = hw_subset_item.num;
-      int offset = hw_subset_item.offset;
-      hw_subset_index++;
-      if (hw_thread.sub_ids[level] < offset ||
-          hw_thread.sub_ids[level] >= offset + num) {
-        should_be_filtered = true;
-        break;
+    // Check to see if core attributes are consistent
+    if (core_level == level) {
+      // Determine which core attributes are specified
+      for (int j = 0; j < item.num_attrs; ++j) {
+        if (item.attr[j].is_core_type_valid())
+          using_core_types = true;
+        if (item.attr[j].is_core_eff_valid())
+          using_core_effs = true;
+      }
+
+      // Check if using a single core attribute on non-hybrid arch.
+      // Do not ignore all of KMP_HW_SUBSET, just ignore the attribute.
+      //
+      // Check if using multiple core attributes on non-hyrbid arch.
+      // Ignore all of KMP_HW_SUBSET if this is the case.
+      if ((using_core_effs || using_core_types) && !__kmp_is_hybrid_cpu()) {
+        if (item.num_attrs == 1) {
+          if (using_core_effs) {
+            KMP_WARNING(AffHWSubsetIgnoringAttr, "efficiency");
+          } else {
+            KMP_WARNING(AffHWSubsetIgnoringAttr, "core_type");
+          }
+          using_core_effs = false;
+          using_core_types = false;
+        } else {
+          KMP_WARNING(AffHWSubsetAttrsNonHybrid);
+          return false;
+        }
+      }
+
+      // Check if using both core types and core efficiencies together
+      if (using_core_types && using_core_effs) {
+        KMP_WARNING(AffHWSubsetIncompat, "core_type", "efficiency");
+        return false;
+      }
+
+      // Check that core efficiency values are valid
+      if (using_core_effs) {
+        for (int j = 0; j < item.num_attrs; ++j) {
+          if (item.attr[j].is_core_eff_valid()) {
+            int core_eff = item.attr[j].get_core_eff();
+            if (core_eff < 0 || core_eff >= num_core_efficiencies) {
+              kmp_str_buf_t buf;
+              __kmp_str_buf_init(&buf);
+              __kmp_str_buf_print(&buf, "%d", item.attr[j].get_core_eff());
+              __kmp_msg(kmp_ms_warning,
+                        KMP_MSG(AffHWSubsetAttrInvalid, "efficiency", buf.str),
+                        KMP_HNT(ValidValuesRange, 0, num_core_efficiencies - 1),
+                        __kmp_msg_null);
+              __kmp_str_buf_free(&buf);
+              return false;
+            }
+          }
+        }
+      }
+
+      // Check that the number of requested cores with attributes is valid
+      if (using_core_types || using_core_effs) {
+        for (int j = 0; j < item.num_attrs; ++j) {
+          int num = item.num[j];
+          int offset = item.offset[j];
+          int level_above = core_level - 1;
+          if (level_above >= 0) {
+            max_count = get_ncores_with_attr_per(item.attr[j], level_above);
+            if (max_count <= 0 || num + offset > max_count) {
+              kmp_str_buf_t buf;
+              __kmp_hw_get_catalog_core_string(item.attr[j], &buf, num > 0);
+              KMP_WARNING(AffHWSubsetManyGeneric, buf.str);
+              __kmp_str_buf_free(&buf);
+              return false;
+            }
+          }
+        }
+      }
+
+      if ((using_core_types || using_core_effs) && item.num_attrs > 1) {
+        for (int j = 0; j < item.num_attrs; ++j) {
+          // Ambiguous use of specific core attribute + generic core
+          // e.g., 4c & 3c:intel_core or 4c & 3c:eff1
+          if (!item.attr[j]) {
+            kmp_hw_attr_t other_attr;
+            for (int k = 0; k < item.num_attrs; ++k) {
+              if (item.attr[k] != item.attr[j]) {
+                other_attr = item.attr[k];
+                break;
+              }
+            }
+            kmp_str_buf_t buf;
+            __kmp_hw_get_catalog_core_string(other_attr, &buf, item.num[j] > 0);
+            KMP_WARNING(AffHWSubsetIncompat,
+                        __kmp_hw_get_catalog_string(KMP_HW_CORE), buf.str);
+            __kmp_str_buf_free(&buf);
+            return false;
+          }
+          // Allow specifying a specific core type or core eff exactly once
+          for (int k = 0; k < j; ++k) {
+            if (!item.attr[j] || !item.attr[k])
+              continue;
+            if (item.attr[k] == item.attr[j]) {
+              kmp_str_buf_t buf;
+              __kmp_hw_get_catalog_core_string(item.attr[j], &buf,
+                                               item.num[j] > 0);
+              KMP_WARNING(AffHWSubsetAttrRepeat, buf.str);
+              __kmp_str_buf_free(&buf);
+              return false;
+            }
+          }
+        }
       }
     }
-    if (!should_be_filtered) {
+  }
+
+  struct core_type_indexer {
+    int operator()(const kmp_hw_thread_t &t) const {
+      switch (t.attrs.get_core_type()) {
+      case KMP_HW_CORE_TYPE_ATOM:
+        return 1;
+      case KMP_HW_CORE_TYPE_CORE:
+        return 2;
+      case KMP_HW_CORE_TYPE_UNKNOWN:
+        return 0;
+      }
+      KMP_ASSERT(0);
+      return 0;
+    }
+  };
+  struct core_eff_indexer {
+    int operator()(const kmp_hw_thread_t &t) const {
+      return t.attrs.get_core_eff();
+    }
+  };
+
+  kmp_sub_ids_t<KMP_HW_MAX_NUM_CORE_TYPES, core_type_indexer> core_type_sub_ids(
+      core_level);
+  kmp_sub_ids_t<KMP_HW_MAX_NUM_CORE_EFFS, core_eff_indexer> core_eff_sub_ids(
+      core_level);
+
+  // Determine which hardware threads should be filtered.
+  int num_filtered = 0;
+  bool *filtered = (bool *)__kmp_allocate(sizeof(bool) * num_hw_threads);
+  for (int i = 0; i < num_hw_threads; ++i) {
+    kmp_hw_thread_t &hw_thread = hw_threads[i];
+    // Update type_sub_id
+    if (using_core_types)
+      core_type_sub_ids.update(hw_thread);
+    if (using_core_effs)
+      core_eff_sub_ids.update(hw_thread);
+
+    // Check to see if this hardware thread should be filtered
+    bool should_be_filtered = false;
+    for (int hw_subset_index = 0; hw_subset_index < hw_subset_depth;
+         ++hw_subset_index) {
+      const auto &hw_subset_item = __kmp_hw_subset->at(hw_subset_index);
+      int level = topology_levels[hw_subset_index];
+      if (level == -1)
+        continue;
+      if ((using_core_effs || using_core_types) && level == core_level) {
+        // Look for the core attribute in KMP_HW_SUBSET which corresponds
+        // to this hardware thread's core attribute. Use this num,offset plus
+        // the running sub_id for the particular core attribute of this hardware
+        // thread to determine if the hardware thread should be filtered or not.
+        int attr_idx;
+        kmp_hw_core_type_t core_type = hw_thread.attrs.get_core_type();
+        int core_eff = hw_thread.attrs.get_core_eff();
+        for (attr_idx = 0; attr_idx < hw_subset_item.num_attrs; ++attr_idx) {
+          if (using_core_types &&
+              hw_subset_item.attr[attr_idx].get_core_type() == core_type)
+            break;
+          if (using_core_effs &&
+              hw_subset_item.attr[attr_idx].get_core_eff() == core_eff)
+            break;
+        }
+        // This core attribute isn't in the KMP_HW_SUBSET so always filter it.
+        if (attr_idx == hw_subset_item.num_attrs) {
+          should_be_filtered = true;
+          break;
+        }
+        int sub_id;
+        int num = hw_subset_item.num[attr_idx];
+        int offset = hw_subset_item.offset[attr_idx];
+        if (using_core_types)
+          sub_id = core_type_sub_ids.get_sub_id(hw_thread);
+        else
+          sub_id = core_eff_sub_ids.get_sub_id(hw_thread);
+        if (sub_id < offset || sub_id >= offset + num) {
+          should_be_filtered = true;
+          break;
+        }
+      } else {
+        int num = hw_subset_item.num[0];
+        int offset = hw_subset_item.offset[0];
+        if (hw_thread.sub_ids[level] < offset ||
+            hw_thread.sub_ids[level] >= offset + num) {
+          should_be_filtered = true;
+          break;
+        }
+      }
+    }
+    // Collect filtering information
+    filtered[i] = should_be_filtered;
+    if (should_be_filtered)
+      num_filtered++;
+  }
+
+  // One last check that we shouldn't allow filtering entire machine
+  if (num_filtered == num_hw_threads) {
+    KMP_WARNING(AffHWSubsetAllFiltered);
+    __kmp_free(filtered);
+    return false;
+  }
+
+  // Apply the filter
+  int new_index = 0;
+  for (int i = 0; i < num_hw_threads; ++i) {
+    if (!filtered[i]) {
       if (i != new_index)
-        hw_threads[new_index] = hw_thread;
+        hw_threads[new_index] = hw_threads[i];
       new_index++;
     } else {
 #if KMP_AFFINITY_SUPPORTED
-      KMP_CPU_CLR(hw_thread.os_id, __kmp_affin_fullMask);
+      KMP_CPU_CLR(hw_threads[i].os_id, __kmp_affin_fullMask);
 #endif
       __kmp_avail_proc--;
     }
   }
+
   KMP_DEBUG_ASSERT(new_index <= num_hw_threads);
   num_hw_threads = new_index;
 
@@ -909,6 +1223,7 @@ bool kmp_topology_t::filter_hw_subset() {
   _discover_uniformity();
   _set_globals();
   _set_last_level_cache();
+  __kmp_free(filtered);
   return true;
 }
 
@@ -1461,8 +1776,10 @@ static bool __kmp_affinity_create_hwloc_map(kmp_i18n_id_t *const msg_id) {
             break;
           }
         }
-        if (cpukind_index >= 0)
-          hw_thread.core_type = cpukinds[cpukind_index].core_type;
+        if (cpukind_index >= 0) {
+          hw_thread.attrs.set_core_type(cpukinds[cpukind_index].core_type);
+          hw_thread.attrs.set_core_eff(cpukinds[cpukind_index].efficiency);
+        }
       }
       index--;
     }
@@ -2040,11 +2357,21 @@ static bool __kmp_affinity_create_apicid_map(kmp_i18n_id_t *const msg_id) {
 
 // Hybrid cpu detection using CPUID.1A
 // Thread should be pinned to processor already
-static void __kmp_get_hybrid_info(kmp_hw_core_type_t *type,
+static void __kmp_get_hybrid_info(kmp_hw_core_type_t *type, int *efficiency,
                                   unsigned *native_model_id) {
   kmp_cpuid buf;
   __kmp_x86_cpuid(0x1a, 0, &buf);
   *type = (kmp_hw_core_type_t)__kmp_extract_bits<24, 31>(buf.eax);
+  switch (*type) {
+  case KMP_HW_CORE_TYPE_ATOM:
+    *efficiency = 0;
+    break;
+  case KMP_HW_CORE_TYPE_CORE:
+    *efficiency = 1;
+    break;
+  default:
+    *efficiency = 0;
+  }
   *native_model_id = __kmp_extract_bits<0, 23>(buf.eax);
 }
 
@@ -2321,8 +2648,10 @@ static bool __kmp_affinity_create_x2apicid_map(kmp_i18n_id_t *const msg_id) {
     if (__kmp_is_hybrid_cpu() && highest_leaf >= 0x1a) {
       kmp_hw_core_type_t type;
       unsigned native_model_id;
-      __kmp_get_hybrid_info(&type, &native_model_id);
-      hw_thread.core_type = type;
+      int efficiency;
+      __kmp_get_hybrid_info(&type, &efficiency, &native_model_id);
+      hw_thread.attrs.set_core_type(type);
+      hw_thread.attrs.set_core_eff(efficiency);
     }
     hw_thread_index++;
   }

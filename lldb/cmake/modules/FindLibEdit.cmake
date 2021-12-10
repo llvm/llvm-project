@@ -25,14 +25,14 @@ else()
             HINTS
               ${PC_LIBEDIT_INCLUDEDIR}
               ${PC_LIBEDIT_INCLUDE_DIRS}
-              ${CMAKE_INSTALL_FULL_INCLUDEDIR})
+              "${CMAKE_INSTALL_FULL_INCLUDEDIR}")
   find_library(LibEdit_LIBRARIES
                NAMES
                  edit libedit
                HINTS
                  ${PC_LIBEDIT_LIBDIR}
                  ${PC_LIBEDIT_LIBRARY_DIRS}
-                 ${CMAKE_INSTALL_FULL_LIBDIR})
+                 "${CMAKE_INSTALL_FULL_LIBDIR}")
 
   if(LibEdit_INCLUDE_DIRS AND EXISTS "${LibEdit_INCLUDE_DIRS}/histedit.h")
     file(STRINGS "${LibEdit_INCLUDE_DIRS}/histedit.h"
