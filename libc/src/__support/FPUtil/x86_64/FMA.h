@@ -26,11 +26,11 @@ __attribute__((target(
     "fma"))) static inline cpp::EnableIfType<cpp::IsSame<T, float>::Value, T>
 fma(T x, T y, T z) {
   float result;
-  __m128 xmm = _mm_load_ss(&x);
-  __m128 ymm = _mm_load_ss(&y);
-  __m128 zmm = _mm_load_ss(&z);
-  __m128 r = _mm_fmadd_ss(xmm, ymm, zmm);
-  _mm_store_ss(&result, r);
+  __m128 xmm = _mm_load_ss(&x);           // NOLINT
+  __m128 ymm = _mm_load_ss(&y);           // NOLINT
+  __m128 zmm = _mm_load_ss(&z);           // NOLINT
+  __m128 r = _mm_fmadd_ss(xmm, ymm, zmm); // NOLINT
+  _mm_store_ss(&result, r);               // NOLINT
   return result;
 }
 
@@ -39,11 +39,11 @@ __attribute__((target(
     "fma"))) static inline cpp::EnableIfType<cpp::IsSame<T, double>::Value, T>
 fma(T x, T y, T z) {
   double result;
-  __m128d xmm = _mm_load_sd(&x);
-  __m128d ymm = _mm_load_sd(&y);
-  __m128d zmm = _mm_load_sd(&z);
-  __m128d r = _mm_fmadd_sd(xmm, ymm, zmm);
-  _mm_store_sd(&result, r);
+  __m128d xmm = _mm_load_sd(&x);           // NOLINT
+  __m128d ymm = _mm_load_sd(&y);           // NOLINT
+  __m128d zmm = _mm_load_sd(&z);           // NOLINT
+  __m128d r = _mm_fmadd_sd(xmm, ymm, zmm); // NOLINT
+  _mm_store_sd(&result, r);                // NOLINT
   return result;
 }
 
