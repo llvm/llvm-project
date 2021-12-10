@@ -15,11 +15,20 @@
 #ifndef LLVM_CLANG_ANALYSIS_FLOWSENSITIVE_DATAFLOWENVIRONMENT_H
 #define LLVM_CLANG_ANALYSIS_FLOWSENSITIVE_DATAFLOWENVIRONMENT_H
 
+#include "clang/Analysis/FlowSensitive/DataflowLattice.h"
+
 namespace clang {
 namespace dataflow {
 
 /// Holds the state of the program (store and heap) at a given program point.
-class Environment {};
+class Environment {
+public:
+  bool operator==(const Environment &) const { return true; }
+
+  LatticeJoinEffect join(const Environment &) {
+    return LatticeJoinEffect::Unchanged;
+  }
+};
 
 } // namespace dataflow
 } // namespace clang
