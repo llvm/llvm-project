@@ -30,10 +30,10 @@ namespace dependencies {
 /// - an opened source file with original contents and a stat value.
 /// - a directory entry with its stat value.
 /// - an error value to represent a file system error.
-/// - a placeholder with an invalid stat indicating a not yet initialized entry.
+/// - uninitialized entry with unknown status.
 class CachedFileSystemEntry {
 public:
-  /// Default constructor creates an entry with an invalid stat.
+  /// Creates an uninitialized entry.
   CachedFileSystemEntry() : MaybeStat(llvm::vfs::Status()) {}
 
   CachedFileSystemEntry(std::error_code Error) : MaybeStat(std::move(Error)) {}
@@ -51,8 +51,10 @@ public:
   /// Create an entry that represents a directory on the filesystem.
   static CachedFileSystemEntry createDirectoryEntry(llvm::vfs::Status &&Stat);
 
-  /// \returns True if the entry is valid.
-  bool isValid() const { return !MaybeStat || MaybeStat->isStatusKnown(); }
+  /// \returns True if the entry is initialized.
+  bool isInitialized() const {
+    return !MaybeStat || MaybeStat->isStatusKnown();
+  }
 
   /// \returns True if the current entry points to a directory.
   bool isDirectory() const { return MaybeStat && MaybeStat->isDirectory(); }
@@ -62,19 +64,19 @@ public:
     if (!MaybeStat)
       return MaybeStat.getError();
     assert(!MaybeStat->isDirectory() && "not a file");
-    assert(isValid() && "not initialized");
+    assert(isInitialized() && "not initialized");
     return Contents->getBuffer();
   }
 
   /// \returns The error or the status of the entry.
   llvm::ErrorOr<llvm::vfs::Status> getStatus() const {
-    assert(isValid() && "not initialized");
+    assert(isInitialized() && "not initialized");
     return MaybeStat;
   }
 
   /// \returns the name of the file.
   StringRef getName() const {
-    assert(isValid() && "not initialized");
+    assert(isInitialized() && "not initialized");
     return MaybeStat->getName();
   }
 
