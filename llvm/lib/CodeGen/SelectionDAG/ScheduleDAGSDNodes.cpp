@@ -721,10 +721,7 @@ void ScheduleDAGSDNodes::dumpSchedule() const {
 ///
 void ScheduleDAGSDNodes::VerifyScheduledSequence(bool isBottomUp) {
   unsigned ScheduledNodes = ScheduleDAG::VerifyScheduledDAG(isBottomUp);
-  unsigned Noops = 0;
-  for (unsigned i = 0, e = Sequence.size(); i != e; ++i)
-    if (!Sequence[i])
-      ++Noops;
+  unsigned Noops = llvm::count(Sequence, nullptr);
   assert(Sequence.size() - Noops == ScheduledNodes &&
          "The number of nodes scheduled doesn't match the expected number!");
 }

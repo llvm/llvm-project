@@ -15192,12 +15192,10 @@ static SDValue lowerV8I16GeneralSingleInputShuffle(
       // need
       // to balance this to ensure we don't form a 3-1 shuffle in the other
       // half.
-      int NumFlippedAToBInputs =
-          std::count(AToBInputs.begin(), AToBInputs.end(), 2 * ADWord) +
-          std::count(AToBInputs.begin(), AToBInputs.end(), 2 * ADWord + 1);
-      int NumFlippedBToBInputs =
-          std::count(BToBInputs.begin(), BToBInputs.end(), 2 * BDWord) +
-          std::count(BToBInputs.begin(), BToBInputs.end(), 2 * BDWord + 1);
+      int NumFlippedAToBInputs = llvm::count(AToBInputs, 2 * ADWord) +
+                                 llvm::count(AToBInputs, 2 * ADWord + 1);
+      int NumFlippedBToBInputs = llvm::count(BToBInputs, 2 * BDWord) +
+                                 llvm::count(BToBInputs, 2 * BDWord + 1);
       if ((NumFlippedAToBInputs == 1 &&
            (NumFlippedBToBInputs == 0 || NumFlippedBToBInputs == 2)) ||
           (NumFlippedBToBInputs == 1 &&
