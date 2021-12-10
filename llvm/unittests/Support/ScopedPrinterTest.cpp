@@ -13,13 +13,63 @@
 
 using namespace llvm;
 
+TEST(JSONScopedPrinterTest, PrettyPrintCtor) {
+  auto PrintFunc = [](ScopedPrinter &W) {
+    DictScope D(W);
+    W.printString("Key", "Value");
+  };
+  std::string StreamBuffer;
+  raw_string_ostream OS(StreamBuffer);
+  JSONScopedPrinter PrettyPrintWriter(OS, /*PrettyPrint=*/true);
+  JSONScopedPrinter NoPrettyPrintWriter(OS, /*PrettyPrint=*/false);
+
+  const char *PrettyPrintOut = R"({
+  "Key": "Value"
+})";
+  const char *NoPrettyPrintOut = R"({"Key":"Value"})";
+  PrintFunc(PrettyPrintWriter);
+  EXPECT_EQ(PrettyPrintOut, OS.str());
+  StreamBuffer.clear();
+  PrintFunc(NoPrettyPrintWriter);
+  EXPECT_EQ(NoPrettyPrintOut, OS.str());
+}
+
+TEST(JSONScopedPrinterTest, DelimitedScopeCtor) {
+  std::string StreamBuffer;
+  raw_string_ostream OS(StreamBuffer);
+  {
+    JSONScopedPrinter DictScopeWriter(OS, /*PrettyPrint=*/false,
+                                      std::make_unique<DictScope>());
+    DictScopeWriter.printString("Label", "DictScope");
+  }
+  EXPECT_EQ(R"({"Label":"DictScope"})", OS.str());
+  StreamBuffer.clear();
+  {
+    JSONScopedPrinter ListScopeWriter(OS, /*PrettyPrint=*/false,
+                                      std::make_unique<ListScope>());
+    ListScopeWriter.printString("ListScope");
+  }
+  EXPECT_EQ(R"(["ListScope"])", OS.str());
+  StreamBuffer.clear();
+  {
+    JSONScopedPrinter NoScopeWriter(OS, /*PrettyPrint=*/false);
+    NoScopeWriter.printString("NoScope");
+  }
+  EXPECT_EQ(R"("NoScope")", OS.str());
+}
+
 class ScopedPrinterTest : public ::testing::Test {
 protected:
   std::string StreamBuffer;
   raw_string_ostream OS;
   ScopedPrinter Writer;
+  JSONScopedPrinter JSONWriter;
 
-  ScopedPrinterTest() : OS(StreamBuffer), Writer(OS) {}
+  bool HasPrintedToJSON;
+
+  ScopedPrinterTest()
+      : OS(StreamBuffer), Writer(OS), JSONWriter(OS, /*PrettyPrint=*/true),
+        HasPrintedToJSON(false) {}
 
   using PrintFunc = function_ref<void(ScopedPrinter &)>;
 
@@ -27,8 +77,44 @@ protected:
     Func(Writer);
     Writer.flush();
     EXPECT_EQ(Expected.str(), OS.str());
+    StreamBuffer.clear();
+  }
+
+  void verifyJSONScopedPrinter(StringRef Expected, PrintFunc Func) {
+    {
+      DictScope D(JSONWriter);
+      Func(JSONWriter);
+    }
+    JSONWriter.flush();
+    EXPECT_EQ(Expected.str(), OS.str());
+    StreamBuffer.clear();
+    HasPrintedToJSON = true;
+  }
+
+  void verifyAll(StringRef ExpectedOut, StringRef JSONExpectedOut,
+                 PrintFunc Func) {
+    verifyScopedPrinter(ExpectedOut, Func);
+    verifyJSONScopedPrinter(JSONExpectedOut, Func);
+  }
+
+  void TearDown() {
+    // JSONScopedPrinter fails an assert if nothing's been printed.
+    if (!HasPrintedToJSON)
+      JSONWriter.printString("");
   }
 };
+
+TEST_F(ScopedPrinterTest, GetKind) {
+  EXPECT_EQ(ScopedPrinter::ScopedPrinterKind::Base, Writer.getKind());
+  EXPECT_EQ(ScopedPrinter::ScopedPrinterKind::JSON, JSONWriter.getKind());
+}
+
+TEST_F(ScopedPrinterTest, ClassOf) {
+  EXPECT_TRUE(ScopedPrinter::classof(&Writer));
+  EXPECT_TRUE(JSONScopedPrinter::classof(&JSONWriter));
+  EXPECT_FALSE(ScopedPrinter::classof(&JSONWriter));
+  EXPECT_FALSE(JSONScopedPrinter::classof(&Writer));
+}
 
 TEST_F(ScopedPrinterTest, Indent) {
   auto PrintFunc = [](ScopedPrinter &W) {
@@ -147,7 +233,15 @@ TEST_F(ScopedPrinterTest, PrintEnum) {
   const char *ExpectedOut = R"(Exists: Name2 (0x2)
 DoesNotExist: 0x5
 )";
-  verifyScopedPrinter(ExpectedOut, PrintFunc);
+
+  const char *JSONExpectedOut = R"({
+  "Exists": {
+    "Value": "Name2",
+    "RawValue": 2
+  },
+  "DoesNotExist": 5
+})";
+  verifyAll(ExpectedOut, JSONExpectedOut, PrintFunc);
 }
 
 TEST_F(ScopedPrinterTest, PrintFlag) {
@@ -251,7 +345,169 @@ FirstSecondThirdByteMask [ (0x333)
   ThirdByte3 (0x300)
 ]
 )";
-  verifyScopedPrinter(ExpectedOut, PrintFunc);
+
+  const char *JSONExpectedOut = R"({
+  "ZeroFlag": {
+    "RawFlags": 0,
+    "Flags": []
+  },
+  "NoFlag": {
+    "RawFlags": 8,
+    "Flags": []
+  },
+  "Flag1": {
+    "RawFlags": 1,
+    "Flags": [
+      {
+        "Name": "Name1",
+        "Value": 1
+      }
+    ]
+  },
+  "Flag1&3": {
+    "RawFlags": 5,
+    "Flags": [
+      {
+        "Name": "Name1",
+        "Value": 1
+      },
+      {
+        "Name": "Name3",
+        "Value": 4
+      }
+    ]
+  },
+  "ZeroFlagRaw": {
+    "RawFlags": 0,
+    "Flags": []
+  },
+  "NoFlagRaw": {
+    "RawFlags": 8,
+    "Flags": [
+      8
+    ]
+  },
+  "Flag1Raw": {
+    "RawFlags": 1,
+    "Flags": [
+      1
+    ]
+  },
+  "Flag1&3Raw": {
+    "RawFlags": 5,
+    "Flags": [
+      1,
+      4
+    ]
+  },
+  "FlagSorted": {
+    "RawFlags": 7,
+    "Flags": [
+      {
+        "Name": "A",
+        "Value": 4
+      },
+      {
+        "Name": "B",
+        "Value": 2
+      },
+      {
+        "Name": "C",
+        "Value": 1
+      }
+    ]
+  },
+  "NoBitMask": {
+    "RawFlags": 4095,
+    "Flags": [
+      {
+        "Name": "FirstByte1",
+        "Value": 1
+      },
+      {
+        "Name": "FirstByte2",
+        "Value": 2
+      },
+      {
+        "Name": "FirstByte3",
+        "Value": 3
+      },
+      {
+        "Name": "SecondByte1",
+        "Value": 16
+      },
+      {
+        "Name": "SecondByte2",
+        "Value": 32
+      },
+      {
+        "Name": "SecondByte3",
+        "Value": 48
+      },
+      {
+        "Name": "ThirdByte1",
+        "Value": 256
+      },
+      {
+        "Name": "ThirdByte2",
+        "Value": 512
+      },
+      {
+        "Name": "ThirdByte3",
+        "Value": 768
+      }
+    ]
+  },
+  "FirstByteMask": {
+    "RawFlags": 3,
+    "Flags": [
+      {
+        "Name": "FirstByte3",
+        "Value": 3
+      }
+    ]
+  },
+  "SecondByteMask": {
+    "RawFlags": 48,
+    "Flags": [
+      {
+        "Name": "SecondByte3",
+        "Value": 48
+      }
+    ]
+  },
+  "ValueOutsideMask": {
+    "RawFlags": 1,
+    "Flags": [
+      {
+        "Name": "FirstByte1",
+        "Value": 1
+      }
+    ]
+  },
+  "FirstSecondByteMask": {
+    "RawFlags": 255,
+    "Flags": []
+  },
+  "FirstSecondThirdByteMask": {
+    "RawFlags": 819,
+    "Flags": [
+      {
+        "Name": "FirstByte3",
+        "Value": 3
+      },
+      {
+        "Name": "SecondByte3",
+        "Value": 48
+      },
+      {
+        "Name": "ThirdByte3",
+        "Value": 768
+      }
+    ]
+  }
+})";
+  verifyAll(ExpectedOut, JSONExpectedOut, PrintFunc);
 }
 
 TEST_F(ScopedPrinterTest, PrintNumber) {
@@ -321,7 +577,31 @@ int8_t-min: -128
 apsint: 9999999999999999999999
 label: value (0)
 )";
-  verifyScopedPrinter(ExpectedOut, PrintFunc);
+
+  const char *JSONExpectedOut = R"({
+  "uint64_t-max": 18446744073709551615,
+  "uint64_t-min": 0,
+  "uint32_t-max": 4294967295,
+  "uint32_t-min": 0,
+  "uint16_t-max": 65535,
+  "uint16_t-min": 0,
+  "uint8_t-max": 255,
+  "uint8_t-min": 0,
+  "int64_t-max": 9223372036854775807,
+  "int64_t-min": -9223372036854775808,
+  "int32_t-max": 2147483647,
+  "int32_t-min": -2147483648,
+  "int16_t-max": 32767,
+  "int16_t-min": -32768,
+  "int8_t-max": 127,
+  "int8_t-min": -128,
+  "apsint": 9999999999999999999999,
+  "label": {
+    "Value": "value",
+    "RawValue": 0
+  }
+})";
+  verifyAll(ExpectedOut, JSONExpectedOut, PrintFunc);
 }
 
 TEST_F(ScopedPrinterTest, PrintBoolean) {
@@ -333,7 +613,12 @@ TEST_F(ScopedPrinterTest, PrintBoolean) {
   const char *ExpectedOut = R"(True: Yes
 False: No
 )";
-  verifyScopedPrinter(ExpectedOut, PrintFunc);
+
+  const char *JSONExpectedOut = R"({
+  "True": true,
+  "False": false
+})";
+  verifyAll(ExpectedOut, JSONExpectedOut, PrintFunc);
 }
 
 TEST_F(ScopedPrinterTest, PrintVersion) {
@@ -402,7 +687,56 @@ int16List: [32767, -32768]
 int8List: [127, -128]
 APSIntList: [9999999999999999999999, -9999999999999999999999]
 )";
-  verifyScopedPrinter(ExpectedOut, PrintFunc);
+
+  const char *JSONExpectedOut = R"({
+  "EmptyList": [],
+  "StringList": [
+    "foo",
+    "bar",
+    "baz"
+  ],
+  "BoolList": [
+    true,
+    false
+  ],
+  "uint64List": [
+    18446744073709551615,
+    0
+  ],
+  "uint32List": [
+    4294967295,
+    0
+  ],
+  "uint16List": [
+    65535,
+    0
+  ],
+  "uint8List": [
+    255,
+    0
+  ],
+  "int64List": [
+    9223372036854775807,
+    -9223372036854775808
+  ],
+  "int32List": [
+    2147483647,
+    -2147483648
+  ],
+  "int16List": [
+    32767,
+    -32768
+  ],
+  "int8List": [
+    127,
+    -128
+  ],
+  "APSIntList": [
+    9999999999999999999999,
+    -9999999999999999999999
+  ]
+})";
+  verifyAll(ExpectedOut, JSONExpectedOut, PrintFunc);
 }
 
 TEST_F(ScopedPrinterTest, PrintListPrinter) {
@@ -426,7 +760,15 @@ TEST_F(ScopedPrinterTest, PrintHex) {
   const char *ExpectedOut = R"(HexNumber: 0x10
 HexLabel: Name (0x10)
 )";
-  verifyScopedPrinter(ExpectedOut, PrintFunc);
+
+  const char *JSONExpectedOut = R"({
+  "HexNumber": 16,
+  "HexLabel": {
+    "Value": "Name",
+    "RawValue": 16
+  }
+})";
+  verifyAll(ExpectedOut, JSONExpectedOut, PrintFunc);
 }
 
 TEST_F(ScopedPrinterTest, PrintHexList) {
@@ -436,7 +778,15 @@ TEST_F(ScopedPrinterTest, PrintHexList) {
   };
   const char *ExpectedOut = R"(HexList: [0x1, 0x10, 0x100]
 )";
-  verifyScopedPrinter(ExpectedOut, PrintFunc);
+
+  const char *JSONExpectedOut = R"({
+  "HexList": [
+    1,
+    16,
+    256
+  ]
+})";
+  verifyAll(ExpectedOut, JSONExpectedOut, PrintFunc);
 }
 
 TEST_F(ScopedPrinterTest, PrintSymbolOffset) {
@@ -447,7 +797,18 @@ TEST_F(ScopedPrinterTest, PrintSymbolOffset) {
   const char *ExpectedOut = R"(SymbolOffset: SymbolName+0x10
 NoSymbolOffset: SymbolName+0x0
 )";
-  verifyScopedPrinter(ExpectedOut, PrintFunc);
+
+  const char *JSONExpectedOut = R"({
+  "SymbolOffset": {
+    "SymName": "SymbolName",
+    "Offset": 16
+  },
+  "NoSymbolOffset": {
+    "SymName": "SymbolName",
+    "Offset": 0
+  }
+})";
+  verifyAll(ExpectedOut, JSONExpectedOut, PrintFunc);
 }
 
 TEST_F(ScopedPrinterTest, PrintString) {
@@ -469,7 +830,16 @@ StringList [
   Value
 ]
 )";
-  verifyScopedPrinter(ExpectedOut, PrintFunc);
+
+  const char *JSONExpectedOut = R"({
+  "StringRef": "Value",
+  "String": "Value",
+  "CharArray": "Value",
+  "StringList": [
+    "Value"
+  ]
+})";
+  verifyAll(ExpectedOut, JSONExpectedOut, PrintFunc);
 }
 
 TEST_F(ScopedPrinterTest, PrintBinary) {
@@ -516,7 +886,157 @@ Binary11 (
   0000: FFFF                                 |..|
 )
 )";
-  verifyScopedPrinter(ExpectedOut, PrintFunc);
+
+  const char *JSONExpectedOut = R"({
+  "Binary1": {
+    "Value": "FooBar",
+    "Offset": 0,
+    "Bytes": [
+      70,
+      111,
+      111,
+      66,
+      97,
+      114
+    ]
+  },
+  "Binary2": {
+    "Value": "FooBar",
+    "Offset": 0,
+    "Bytes": [
+      70,
+      111,
+      111,
+      66,
+      97,
+      114
+    ]
+  },
+  "Binary3": {
+    "Offset": 0,
+    "Bytes": [
+      70,
+      111,
+      111,
+      66,
+      97,
+      114
+    ]
+  },
+  "Binary4": {
+    "Offset": 0,
+    "Bytes": [
+      70,
+      111,
+      111,
+      66,
+      97,
+      114
+    ]
+  },
+  "Binary5": {
+    "Offset": 0,
+    "Bytes": [
+      70,
+      111,
+      111,
+      66,
+      97,
+      114
+    ]
+  },
+  "Binary6": {
+    "Offset": 0,
+    "Bytes": [
+      77,
+      117,
+      108,
+      116,
+      105,
+      112,
+      108,
+      101,
+      32,
+      76,
+      105,
+      110,
+      101,
+      32,
+      70,
+      111,
+      111,
+      66,
+      97,
+      114
+    ]
+  },
+  "Binary7": {
+    "Offset": 20,
+    "Bytes": [
+      70,
+      111,
+      111,
+      66,
+      97,
+      114
+    ]
+  },
+  "Binary8": {
+    "Offset": 0,
+    "Bytes": [
+      70,
+      111,
+      111,
+      66,
+      97,
+      114
+    ]
+  },
+  "Binary9": {
+    "Offset": 0,
+    "Bytes": [
+      70,
+      111,
+      111,
+      66,
+      97,
+      114
+    ]
+  },
+  "Binary10": {
+    "Offset": 0,
+    "Bytes": [
+      77,
+      117,
+      108,
+      116,
+      105,
+      112,
+      108,
+      101,
+      32,
+      76,
+      105,
+      110,
+      101,
+      32,
+      70,
+      111,
+      111,
+      66,
+      97,
+      114
+    ]
+  },
+  "Binary11": {
+    "Offset": 0,
+    "Bytes": [
+      255,
+      255
+    ]
+  }
+})";
+  verifyAll(ExpectedOut, JSONExpectedOut, PrintFunc);
 }
 
 TEST_F(ScopedPrinterTest, PrintObject) {
@@ -524,7 +1044,11 @@ TEST_F(ScopedPrinterTest, PrintObject) {
 
   const char *ExpectedOut = R"(Object: Value
 )";
-  verifyScopedPrinter(ExpectedOut, PrintFunc);
+
+  const char *JSONExpectedOut = R"({
+  "Object": "Value"
+})";
+  verifyAll(ExpectedOut, JSONExpectedOut, PrintFunc);
 }
 
 TEST_F(ScopedPrinterTest, StartLine) {
@@ -574,5 +1098,20 @@ List [
   ]
 ]
 )";
-  verifyScopedPrinter(ExpectedOut, PrintFunc);
+
+  const char *JSONExpectedOut = R"({
+  "Object": {
+    "ObjectInObject": {},
+    "ListInObject": []
+  },
+  "List": [
+    {
+      "ObjectInList": {}
+    },
+    {
+      "ListInList": []
+    }
+  ]
+})";
+  verifyAll(ExpectedOut, JSONExpectedOut, PrintFunc);
 }
