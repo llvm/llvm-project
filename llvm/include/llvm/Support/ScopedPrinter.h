@@ -222,6 +222,11 @@ public:
     startLine() << Label << ": " << Value << "\n";
   }
 
+  template <typename T>
+  void printNumber(StringRef Label, StringRef Str, T Value) {
+    printNumberImpl(Label, Str, to_string(Value));
+  }
+
   virtual void printBoolean(StringRef Label, bool Value) {
     startLine() << Label << ": " << (Value ? "Yes" : "No") << '\n';
   }
@@ -325,11 +330,6 @@ public:
 
   virtual void printString(StringRef Label, StringRef Value) {
     startLine() << Label << ": " << Value << "\n";
-  }
-
-  template <typename T>
-  void printNumber(StringRef Label, StringRef Str, T Value) {
-    printNumberImpl(Label, Str, to_string(Value));
   }
 
   void printBinary(StringRef Label, StringRef Str, ArrayRef<uint8_t> Value) {
