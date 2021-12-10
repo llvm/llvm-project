@@ -33,5 +33,6 @@ executable("lld") {
     "//llvm/lib/Support",
     "//llvm/utils/gn/build/libs/xar",
   ]
+  assert_no_deps = [ "//llvm/lib/Debuginfod" ]
   sources = [ "lld.cpp" ]
 }
