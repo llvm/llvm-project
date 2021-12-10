@@ -797,12 +797,25 @@ public:
     snapshotStack.push_back(simplex.getSnapshot());
     simplex.addEquality(getCoeffsForDirection(dir));
   }
+  /// Compute max(dotProduct(dir, x - y)).
+  Fraction computeWidth(ArrayRef<int64_t> dir) {
+    Optional<Fraction> maybeWidth =
+        simplex.computeOptimum(Direction::Up, getCoeffsForDirection(dir));
+    assert(maybeWidth.hasValue() && "Width should not be unbounded!");
+    return *maybeWidth;
+  }
 
   /// Compute max(dotProduct(dir, x - y)) and save the dual variables for only
   /// the direction equalities to `dual`.
   Fraction computeWidthAndDuals(ArrayRef<int64_t> dir,
                                 SmallVectorImpl<int64_t> &dual,
                                 int64_t &dualDenom) {
+    // We can't just call into computeWidth or computeOptimum since we need to
+    // access the state of the tableau after computing the optimum, and these
+    // functions rollback the insertion of the objective function into the
+    // tableau before returning. We instead add a row for the objective function
+    // ourselves, call into computeOptimum, compute the duals from the tableau
+    // state, and finally rollback the addition of the row before returning.
     unsigned snap = simplex.getSnapshot();
     unsigned conIndex = simplex.addRow(getCoeffsForDirection(dir));
     unsigned row = simplex.con[conIndex].pos;
@@ -811,51 +824,40 @@ public:
     assert(maybeWidth.hasValue() && "Width should not be unbounded!");
     dualDenom = simplex.tableau(row, 0);
     dual.clear();
+
     // The increment is i += 2 because equalities are added as two inequalities,
     // one positive and one negative. Each iteration processes one equality.
     for (unsigned i = simplexConstraintOffset; i < conIndex; i += 2) {
-      // The dual variable is the negative of the coefficient of the new row
-      // in the column of the constraint, if the constraint is in a column.
-      // Note that the second inequality for the equality is negated.
+      // The dual variable for an inequality in column orientation is the
+      // negative of its coefficient at the objective row. If the inequality is
+      // in row orientation, the corresponding dual variable is zero.
       //
-      // We want the dual for the original equality. If the positive inequality
-      // is in column position, the negative of its row coefficient is the
-      // desired dual. If the negative inequality is in column position, its row
-      // coefficient is the desired dual. (its coefficients are already the
-      // negated coefficients of the original equality, so we don't need to
-      // negate it now.)
+      // We want the dual for the original equality, which corresponds to two
+      // inequalities: a positive inequality, which has the same coefficients as
+      // the equality, and a negative equality, which has negated coefficients.
       //
-      // If neither are in column position, we move the negated inequality to
-      // column position. Since the inequality must have sample value zero
-      // (since it corresponds to an equality), we are free to pivot with
-      // any column. Since both the unknowns have sample value before and after
-      // pivoting, no other sample values will change and the tableau will
-      // remain consistent. To pivot, we just need to find a column that has a
-      // non-zero coefficient in this row. There must be one since otherwise the
-      // equality would be 0 == 0, which should never be passed to
-      // addEqualityForDirection.
+      // Note that at most one of these inequalities can be in column
+      // orientation because the column unknowns should form a basis and hence
+      // must be linearly independent. If the positive inequality is in column
+      // position, its dual is the dual corresponding to the equality. If the
+      // negative inequality is in column position, the negation of its dual is
+      // the dual corresponding to the equality. If neither is in column
+      // position, then that means that this equality is redundant, and its dual
+      // is zero.
       //
-      // After finding a column, we pivot with the column, after which we can
-      // get the dual from the inequality in column position as explained above.
-      if (simplex.con[i].orientation == Orientation::Column) {
+      // Note that it is NOT valid to perform pivots during the computation of
+      // the duals. This entire dual computation must be performed on the same
+      // tableau configuration.
+      assert(!(simplex.con[i].orientation == Orientation::Column &&
+               simplex.con[i + 1].orientation == Orientation::Column) &&
+             "Both inequalities for the equality cannot be in column "
+             "orientation!");
+      if (simplex.con[i].orientation == Orientation::Column)
         dual.push_back(-simplex.tableau(row, simplex.con[i].pos));
-      } else {
-        if (simplex.con[i + 1].orientation == Orientation::Row) {
-          unsigned ineqRow = simplex.con[i + 1].pos;
-          // Since it is an equality, the sample value must be zero.
-          assert(simplex.tableau(ineqRow, 1) == 0 &&
-                 "Equality's sample value must be zero.");
-          for (unsigned col = 2; col < simplex.nCol; ++col) {
-            if (simplex.tableau(ineqRow, col) != 0) {
-              simplex.pivot(ineqRow, col);
-              break;
-            }
-          }
-          assert(simplex.con[i + 1].orientation == Orientation::Column &&
-                 "No pivot found. Equality has all-zeros row in tableau!");
-        }
+      else if (simplex.con[i + 1].orientation == Orientation::Column)
         dual.push_back(simplex.tableau(row, simplex.con[i + 1].pos));
-      }
+      else
+        dual.push_back(0);
     }
     simplex.rollback(snap);
     return *maybeWidth;
@@ -894,6 +896,17 @@ private:
   /// A stack of snapshots, used for rolling back.
   SmallVector<unsigned, 8> snapshotStack;
 };
+
+// Return a + scale*b;
+static SmallVector<int64_t, 8> scaleAndAdd(ArrayRef<int64_t> a, int64_t scale,
+                                           ArrayRef<int64_t> b) {
+  assert(a.size() == b.size());
+  SmallVector<int64_t, 8> res;
+  res.reserve(a.size());
+  for (unsigned i = 0, e = a.size(); i < e; ++i)
+    res.push_back(a[i] + scale * b[i]);
+  return res;
+}
 
 /// Reduce the basis to try and find a direction in which the polytope is
 /// "thin". This only works for bounded polytopes.
@@ -1003,13 +1016,34 @@ void Simplex::reduceBasis(Matrix &basis, unsigned level) {
       if (j == 0)
         // Subtract 1 to go from u = ceil(dual) back to floor(dual).
         basis.addToRow(i, i + 1, -1);
+
+      // width_i(b{i+1} + u*b_i) should be minimized at our value of u.
+      // We assert that this holds by checking that the values of width_i at
+      // u - 1 and u + 1 are greater than or equal to the value at u. If the
+      // width is lesser at either of the adjacent values, then our computed
+      // value of u is clearly not the minimizer. Otherwise by convexity the
+      // computed value of u is really the minimizer.
+
+      // Check the value at u - 1.
+      assert(gbrSimplex.computeWidth(scaleAndAdd(
+                 basis.getRow(i + 1), -1, basis.getRow(i))) >= widthI[j] &&
+             "Computed u value does not minimize the width!");
+      // Check the value at u + 1.
+      assert(gbrSimplex.computeWidth(scaleAndAdd(
+                 basis.getRow(i + 1), +1, basis.getRow(i))) >= widthI[j] &&
+             "Computed u value does not minimize the width!");
+
       dual = std::move(candidateDual[j]);
       dualDenom = candidateDualDenom[j];
       return widthI[j];
     }
+
     assert(i + 1 - level < width.size() && "width_{i+1} wasn't saved");
-    // When dual minimizes f_i(b_{i+1} + dual*b_i), this is equal to
-    // width_{i+1}(b_{i+1}).
+    // f_i(b_{i+1} + dual*b_i) == width_{i+1}(b_{i+1}) when `dual` minimizes the
+    // LHS. (note: the basis has already been updated, so b_{i+1} + dual*b_i in
+    // the above expression is equal to basis.getRow(i+1) below.)
+    assert(gbrSimplex.computeWidth(basis.getRow(i + 1)) ==
+           width[i + 1 - level]);
     return width[i + 1 - level];
   };
 

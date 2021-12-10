@@ -358,6 +358,22 @@ TEST(FlatAffineConstraintsTest, FindSampleTest) {
                                                {1, -1, 0, -1}, // y = x - 1
                                                {0, 1, -1, 0},  // z = y
                                            }}));
+
+  // Regression tests for the computation of dual coefficients.
+  checkSample(false, parseFAC("(x, y, z) : ("
+                              "6*x - 4*y + 9*z + 2 >= 0,"
+                              "x + 5*y + z + 5 >= 0,"
+                              "-4*x + y + 2*z - 1 >= 0,"
+                              "-3*x - 2*y - 7*z - 1 >= 0,"
+                              "-7*x - 5*y - 9*z - 1 >= 0)",
+                              &context));
+  checkSample(true, parseFAC("(x, y, z) : ("
+                             "3*x + 3*y + 3 >= 0,"
+                             "-4*x - 8*y - z + 4 >= 0,"
+                             "-7*x - 4*y + z + 1 >= 0,"
+                             "2*x - 7*y - 8*z - 7 >= 0,"
+                             "9*x + 8*y - 9*z - 7 >= 0)",
+                             &context));
 }
 
 TEST(FlatAffineConstraintsTest, IsIntegerEmptyTest) {
