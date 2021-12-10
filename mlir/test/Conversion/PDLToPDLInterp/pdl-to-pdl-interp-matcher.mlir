@@ -573,3 +573,42 @@ module @variadic_results_at {
     pdl.rewrite with "rewriter"(%root1, %root2 : !pdl.operation, !pdl.operation)
   }
 }
+
+// -----
+
+// CHECK-LABEL: module @attribute_literal
+module @attribute_literal {
+  // CHECK: func @matcher(%{{.*}}: !pdl.operation)
+  // CHECK: %[[ATTR:.*]] = pdl_interp.create_attribute 10 : i64
+  // CHECK: pdl_interp.apply_constraint "constraint"(%[[ATTR]] : !pdl.attribute)
+
+  // Check the correct lowering of an attribute that hasn't been bound.
+  pdl.pattern : benefit(1) {
+    %attr = pdl.attribute 10
+    pdl.apply_native_constraint "constraint"(%attr: !pdl.attribute)
+
+    %root = pdl.operation
+    pdl.rewrite %root with "rewriter"
+  }
+}
+
+// -----
+
+// CHECK-LABEL: module @type_literal
+module @type_literal {
+  // CHECK: func @matcher(%{{.*}}: !pdl.operation)
+  // CHECK: %[[TYPE:.*]] = pdl_interp.create_type i32
+  // CHECK: %[[TYPES:.*]] = pdl_interp.create_types [i32, i64]
+  // CHECK: pdl_interp.apply_constraint "constraint"(%[[TYPE]], %[[TYPES]] : !pdl.type, !pdl.range<type>)
+
+  // Check the correct lowering of a type that hasn't been bound.
+  pdl.pattern : benefit(1) {
+    %type = pdl.type : i32
+    %types = pdl.types : [i32, i64]
+    pdl.apply_native_constraint "constraint"(%type, %types: !pdl.type, !pdl.range<type>)
+
+    %root = pdl.operation
+    pdl.rewrite %root with "rewriter"
+  }
+}
+

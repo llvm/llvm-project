@@ -50,6 +50,8 @@ enum Kind : unsigned {
   ResultPos,
   ResultGroupPos,
   TypePos,
+  AttributeLiteralPos,
+  TypeLiteralPos,
 
   // Questions, ordered by dependency and decreasing priority.
   IsNotNullQuestion,
@@ -171,6 +173,16 @@ struct AttributePosition
 
   /// Returns the attribute name of this position.
   StringAttr getName() const { return key.second; }
+};
+
+//===----------------------------------------------------------------------===//
+// AttributeLiteralPosition
+
+/// A position describing a literal attribute.
+struct AttributeLiteralPosition
+    : public PredicateBase<AttributeLiteralPosition, Position, Attribute,
+                           Predicates::AttributeLiteralPos> {
+  using PredicateBase::PredicateBase;
 };
 
 //===----------------------------------------------------------------------===//
@@ -318,6 +330,17 @@ struct TypePosition : public PredicateBase<TypePosition, Position, Position *,
 };
 
 //===----------------------------------------------------------------------===//
+// TypeLiteralPosition
+
+/// A position describing a literal type or type range. The value is stored as
+/// either a TypeAttr, or an ArrayAttr of TypeAttr.
+struct TypeLiteralPosition
+    : public PredicateBase<TypeLiteralPosition, Position, Attribute,
+                           Predicates::TypeLiteralPos> {
+  using PredicateBase::PredicateBase;
+};
+
+//===----------------------------------------------------------------------===//
 // Qualifiers
 //===----------------------------------------------------------------------===//
 
@@ -404,6 +427,17 @@ struct ConstraintQuestion
           Predicates::ConstraintQuestion> {
   using Base::Base;
 
+  /// Return the name of the constraint.
+  StringRef getName() const { return std::get<0>(key); }
+
+  /// Return the arguments of the constraint.
+  ArrayRef<Position *> getArgs() const { return std::get<1>(key); }
+
+  /// Return the constant parameters of the constraint.
+  ArrayAttr getParams() const {
+    return std::get<2>(key).dyn_cast_or_null<ArrayAttr>();
+  }
+
   /// Construct an instance with the given storage allocator.
   static ConstraintQuestion *construct(StorageUniquer::StorageAllocator &alloc,
                                        KeyTy key) {
@@ -461,12 +495,14 @@ public:
   PredicateUniquer() {
     // Register the types of Positions with the uniquer.
     registerParametricStorageType<AttributePosition>();
+    registerParametricStorageType<AttributeLiteralPosition>();
     registerParametricStorageType<OperandPosition>();
     registerParametricStorageType<OperandGroupPosition>();
     registerParametricStorageType<OperationPosition>();
     registerParametricStorageType<ResultPosition>();
     registerParametricStorageType<ResultGroupPosition>();
     registerParametricStorageType<TypePosition>();
+    registerParametricStorageType<TypeLiteralPosition>();
 
     // Register the types of Questions with the uniquer.
     registerParametricStorageType<AttributeAnswer>();
@@ -527,6 +563,11 @@ public:
     return AttributePosition::get(uniquer, p, StringAttr::get(ctx, name));
   }
 
+  /// Returns an attribute position for the given attribute.
+  Position *getAttributeLiteral(Attribute attr) {
+    return AttributeLiteralPosition::get(uniquer, attr);
+  }
+
   /// Returns an operand position for an operand of the given operation.
   Position *getOperand(OperationPosition *p, unsigned operand) {
     return OperandPosition::get(uniquer, p, operand);
@@ -557,6 +598,12 @@ public:
 
   /// Returns a type position for the given entity.
   Position *getType(Position *p) { return TypePosition::get(uniquer, p); }
+
+  /// Returns a type position for the given type value. The value is stored
+  /// as either a TypeAttr, or an ArrayAttr of TypeAttr.
+  Position *getTypeLiteral(Attribute attr) {
+    return TypeLiteralPosition::get(uniquer, attr);
+  }
 
   //===--------------------------------------------------------------------===//
   // Qualifiers

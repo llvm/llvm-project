@@ -237,10 +237,12 @@ Value PatternLowering::getValueAt(Block *&currentBlock, Position *pos) {
     return val;
 
   // Get the value for the parent position.
-  Value parentVal = getValueAt(currentBlock, pos->getParent());
+  Value parentVal;
+  if (Position *parent = pos->getParent())
+    parentVal = getValueAt(currentBlock, pos->getParent());
 
   // TODO: Use a location from the position.
-  Location loc = parentVal.getLoc();
+  Location loc = parentVal ? parentVal.getLoc() : builder.getUnknownLoc();
   builder.setInsertionPointToEnd(currentBlock);
   Value value;
   switch (pos->getKind()) {
@@ -331,6 +333,22 @@ Value PatternLowering::getValueAt(Block *&currentBlock, Position *pos) {
         parentVal, resPos->getResultGroupNumber());
     break;
   }
+  case Predicates::AttributeLiteralPos: {
+    auto *attrPos = cast<AttributeLiteralPosition>(pos);
+    value =
+        builder.create<pdl_interp::CreateAttributeOp>(loc, attrPos->getValue());
+    break;
+  }
+  case Predicates::TypeLiteralPos: {
+    auto *typePos = cast<TypeLiteralPosition>(pos);
+    Attribute rawTypeAttr = typePos->getValue();
+    if (TypeAttr typeAttr = rawTypeAttr.dyn_cast<TypeAttr>())
+      value = builder.create<pdl_interp::CreateTypeOp>(loc, typeAttr);
+    else
+      value = builder.create<pdl_interp::CreateTypesOp>(
+          loc, rawTypeAttr.cast<ArrayAttr>());
+    break;
+  }
   default:
     llvm_unreachable("Generating unknown Position getter");
     break;
@@ -353,7 +371,7 @@ void PatternLowering::generate(BoolNode *boolNode, Block *&currentBlock,
   if (auto *equalToQuestion = dyn_cast<EqualToQuestion>(question)) {
     args = {getValueAt(currentBlock, equalToQuestion->getValue())};
   } else if (auto *cstQuestion = dyn_cast<ConstraintQuestion>(question)) {
-    for (Position *position : std::get<1>(cstQuestion->getValue()))
+    for (Position *position : cstQuestion->getArgs())
       args.push_back(getValueAt(currentBlock, position));
   }
 
@@ -413,10 +431,10 @@ void PatternLowering::generate(BoolNode *boolNode, Block *&currentBlock,
     break;
   }
   case Predicates::ConstraintQuestion: {
-    auto value = cast<ConstraintQuestion>(question)->getValue();
+    auto *cstQuestion = cast<ConstraintQuestion>(question);
     builder.create<pdl_interp::ApplyConstraintOp>(
-        loc, std::get<0>(value), args, std::get<2>(value).cast<ArrayAttr>(),
-        success, failure);
+        loc, cstQuestion->getName(), args, cstQuestion->getParams(), success,
+        failure);
     break;
   }
   default:

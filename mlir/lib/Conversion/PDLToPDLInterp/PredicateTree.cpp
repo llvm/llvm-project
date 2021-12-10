@@ -243,8 +243,18 @@ static void getTreePredicates(std::vector<PositionalPredicate> &predList,
       .Default([](auto *) { llvm_unreachable("unexpected position kind"); });
 }
 
-/// Collect all of the predicates related to constraints within the given
-/// pattern operation.
+static void getAttributePredicates(pdl::AttributeOp op,
+                                   std::vector<PositionalPredicate> &predList,
+                                   PredicateBuilder &builder,
+                                   DenseMap<Value, Position *> &inputs) {
+  Position *&attrPos = inputs[op];
+  if (attrPos)
+    return;
+  Attribute value = op.valueAttr();
+  assert(value && "expected non-tree `pdl.attribute` to contain a value");
+  attrPos = builder.getAttributeLiteral(value);
+}
+
 static void getConstraintPredicates(pdl::ApplyNativeConstraintOp op,
                                     std::vector<PositionalPredicate> &predList,
                                     PredicateBuilder &builder,
@@ -296,6 +306,19 @@ static void getResultPredicates(pdl::ResultsOp op,
     predList.emplace_back(resultPos, builder.getIsNotNull());
 }
 
+static void getTypePredicates(Value typeValue,
+                              function_ref<Attribute()> typeAttrFn,
+                              PredicateBuilder &builder,
+                              DenseMap<Value, Position *> &inputs) {
+  Position *&typePos = inputs[typeValue];
+  if (typePos)
+    return;
+  Attribute typeAttr = typeAttrFn();
+  assert(typeAttr &&
+         "expected non-tree `pdl.type`/`pdl.types` to contain a value");
+  typePos = builder.getTypeLiteral(typeAttr);
+}
+
 /// Collect all of the predicates that cannot be determined via walking the
 /// tree.
 static void getNonTreePredicates(pdl::PatternOp pattern,
@@ -304,11 +327,22 @@ static void getNonTreePredicates(pdl::PatternOp pattern,
                                  DenseMap<Value, Position *> &inputs) {
   for (Operation &op : pattern.body().getOps()) {
     TypeSwitch<Operation *>(&op)
+        .Case([&](pdl::AttributeOp attrOp) {
+          getAttributePredicates(attrOp, predList, builder, inputs);
+        })
         .Case<pdl::ApplyNativeConstraintOp>([&](auto constraintOp) {
           getConstraintPredicates(constraintOp, predList, builder, inputs);
         })
         .Case<pdl::ResultOp, pdl::ResultsOp>([&](auto resultOp) {
           getResultPredicates(resultOp, predList, builder, inputs);
+        })
+        .Case([&](pdl::TypeOp typeOp) {
+          getTypePredicates(
+              typeOp, [&] { return typeOp.typeAttr(); }, builder, inputs);
+        })
+        .Case([&](pdl::TypesOp typeOp) {
+          getTypePredicates(
+              typeOp, [&] { return typeOp.typesAttr(); }, builder, inputs);
         });
   }
 }
