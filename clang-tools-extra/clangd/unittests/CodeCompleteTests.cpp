@@ -24,6 +24,7 @@
 #include "support/Threading.h"
 #include "clang/Sema/CodeCompleteConsumer.h"
 #include "clang/Tooling/CompilationDatabase.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Testing/Support/Annotations.h"
@@ -1171,8 +1172,10 @@ TEST(CompletionTest, ASTSignals) {
                         MainFileRefs(0u), ScopeRefs(3u))));
 }
 
-SignatureHelp signatures(llvm::StringRef Text, Position Point,
-                         std::vector<Symbol> IndexSymbols = {}) {
+SignatureHelp
+signatures(llvm::StringRef Text, Position Point,
+           std::vector<Symbol> IndexSymbols = {},
+           MarkupKind DocumentationFormat = MarkupKind::PlainText) {
   std::unique_ptr<SymbolIndex> Index;
   if (!IndexSymbols.empty())
     Index = memIndex(IndexSymbols);
@@ -1193,13 +1196,16 @@ SignatureHelp signatures(llvm::StringRef Text, Position Point,
     ADD_FAILURE() << "Couldn't build Preamble";
     return {};
   }
-  return signatureHelp(testPath(TU.Filename), Point, *Preamble, Inputs);
+  return signatureHelp(testPath(TU.Filename), Point, *Preamble, Inputs,
+                       DocumentationFormat);
 }
 
-SignatureHelp signatures(llvm::StringRef Text,
-                         std::vector<Symbol> IndexSymbols = {}) {
+SignatureHelp
+signatures(llvm::StringRef Text, std::vector<Symbol> IndexSymbols = {},
+           MarkupKind DocumentationFormat = MarkupKind::PlainText) {
   Annotations Test(Text);
-  return signatures(Test.code(), Test.point(), std::move(IndexSymbols));
+  return signatures(Test.code(), Test.point(), std::move(IndexSymbols),
+                    DocumentationFormat);
 }
 
 struct ExpectedParameter {
@@ -1216,7 +1222,7 @@ MATCHER_P(ParamsAre, P, "") {
   }
   return true;
 }
-MATCHER_P(SigDoc, Doc, "") { return arg.documentation == Doc; }
+MATCHER_P(SigDoc, Doc, "") { return arg.documentation.value == Doc; }
 
 /// \p AnnotatedLabel is a signature label with ranges marking parameters, e.g.
 ///    foo([[int p1]], [[double p2]]) -> void
@@ -1388,8 +1394,9 @@ TEST(SignatureHelpTest, StalePreamble) {
     #include "a.h"
     void bar() { foo(^2); })cpp");
   TU.Code = Test.code().str();
-  auto Results = signatureHelp(testPath(TU.Filename), Test.point(),
-                               *EmptyPreamble, TU.inputs(FS));
+  auto Results =
+      signatureHelp(testPath(TU.Filename), Test.point(), *EmptyPreamble,
+                    TU.inputs(FS), MarkupKind::PlainText);
   EXPECT_THAT(Results.signatures, ElementsAre(Sig("foo([[int x]]) -> int")));
   EXPECT_EQ(0, Results.activeSignature);
   EXPECT_EQ(0, Results.activeParameter);
@@ -2261,10 +2268,10 @@ TEST(SignatureHelpTest, DynamicIndexDocumentation) {
   Server.addDocument(File, FileContent.code());
   // Wait for the dynamic index being built.
   ASSERT_TRUE(Server.blockUntilIdleForTest());
-  EXPECT_THAT(
-      llvm::cantFail(runSignatureHelp(Server, File, FileContent.point()))
-          .signatures,
-      ElementsAre(AllOf(Sig("foo() -> int"), SigDoc("Member doc"))));
+  EXPECT_THAT(llvm::cantFail(runSignatureHelp(Server, File, FileContent.point(),
+                                              MarkupKind::PlainText))
+                  .signatures,
+              ElementsAre(AllOf(Sig("foo() -> int"), SigDoc("Member doc"))));
 }
 
 TEST(CompletionTest, CompletionFunctionArgsDisabled) {
@@ -3429,6 +3436,21 @@ TEST(CompletionTest, CommentParamName) {
   EXPECT_THAT(completions(Code + "fun(/* x^", {}, Opts).Completions, IsEmpty());
   EXPECT_THAT(completions(Code + "fun(/* f ^", {}, Opts).Completions,
               IsEmpty());
+}
+
+TEST(SignatureHelp, DocFormat) {
+  Annotations Code(R"cpp(
+    // Comment `with` markup.
+    void foo(int);
+    void bar() { foo(^); }
+  )cpp");
+  for (auto DocumentationFormat :
+       {MarkupKind::PlainText, MarkupKind::Markdown}) {
+    auto Sigs = signatures(Code.code(), Code.point(), /*IndexSymbols=*/{},
+                           DocumentationFormat);
+    ASSERT_EQ(Sigs.signatures.size(), 1U);
+    EXPECT_EQ(Sigs.signatures[0].documentation.kind, DocumentationFormat);
+  }
 }
 
 } // namespace

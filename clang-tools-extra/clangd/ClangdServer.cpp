@@ -403,9 +403,11 @@ void ClangdServer::codeComplete(PathRef File, Position Pos,
 }
 
 void ClangdServer::signatureHelp(PathRef File, Position Pos,
+                                 MarkupKind DocumentationFormat,
                                  Callback<SignatureHelp> CB) {
 
   auto Action = [Pos, File = File.str(), CB = std::move(CB),
+                 DocumentationFormat,
                  this](llvm::Expected<InputsAndPreamble> IP) mutable {
     if (!IP)
       return CB(IP.takeError());
@@ -416,7 +418,8 @@ void ClangdServer::signatureHelp(PathRef File, Position Pos,
 
     ParseInputs ParseInput{IP->Command, &TFS, IP->Contents.str()};
     ParseInput.Index = Index;
-    CB(clangd::signatureHelp(File, Pos, *PreambleData, ParseInput));
+    CB(clangd::signatureHelp(File, Pos, *PreambleData, ParseInput,
+                             DocumentationFormat));
   };
 
   // Unlike code completion, we wait for a preamble here.
