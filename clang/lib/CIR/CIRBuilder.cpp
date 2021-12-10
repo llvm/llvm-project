@@ -2093,6 +2093,11 @@ public:
     case Decl::Function:
       buildFunction(cast<FunctionDecl>(decl));
       break;
+    case Decl::Record:
+      // There's nothing to do here, we emit everything pertaining to `Record`s
+      // lazily.
+      // TODO: handle debug info here? See clang's CodeGenModule::EmitTopLevelDecl
+      break;
     }
   }
 

@@ -13,6 +13,7 @@
 #ifndef MLIR_DIALECT_CIR_IR_CIRTYPES_H_
 #define MLIR_DIALECT_CIR_IR_CIRTYPES_H_
 
+#include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/Types.h"
 
 //===----------------------------------------------------------------------===//
