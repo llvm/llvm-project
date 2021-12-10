@@ -1,5 +1,4 @@
 // RUN: %clang_cc1 -triple x86_64-apple-darwin10 -fsyntax-only -verify %s
-// RUN: %clang_cc1 -triple x86_64-unknown-windows -fsyntax-only -verify %s
 
 #define SWIFTCALL __attribute__((swiftcall))
 #define SWIFTASYNCCALL __attribute__((swiftasynccall))
