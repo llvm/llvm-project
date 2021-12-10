@@ -770,7 +770,7 @@ inline const char *ModuleArchToString(ModuleArch arch) {
   return "";
 }
 
-const uptr kModuleUUIDSize = 16;
+const uptr kModuleUUIDSize = 32;
 const uptr kMaxSegName = 16;
 
 // Represents a binary loaded into virtual memory (e.g. this can be an
@@ -782,6 +782,7 @@ class LoadedModule {
         base_address_(0),
         max_executable_address_(0),
         arch_(kModuleArchUnknown),
+        uuid_size_(0),
         instrumented_(false) {
     internal_memset(uuid_, 0, kModuleUUIDSize);
     ranges_.clear();
@@ -789,6 +790,7 @@ class LoadedModule {
   void set(const char *module_name, uptr base_address);
   void set(const char *module_name, uptr base_address, ModuleArch arch,
            u8 uuid[kModuleUUIDSize], bool instrumented);
+  void setUuid(const char *uuid, uptr size);
   void clear();
   void addAddressRange(uptr beg, uptr end, bool executable, bool writable,
                        const char *name = nullptr);
@@ -799,6 +801,7 @@ class LoadedModule {
   uptr max_executable_address() const { return max_executable_address_; }
   ModuleArch arch() const { return arch_; }
   const u8 *uuid() const { return uuid_; }
+  uptr uuid_size() const { return uuid_size_; }
   bool instrumented() const { return instrumented_; }
 
   struct AddressRange {
@@ -827,6 +830,7 @@ class LoadedModule {
   uptr base_address_;
   uptr max_executable_address_;
   ModuleArch arch_;
+  uptr uuid_size_;
   u8 uuid_[kModuleUUIDSize];
   bool instrumented_;
   IntrusiveList<AddressRange> ranges_;
