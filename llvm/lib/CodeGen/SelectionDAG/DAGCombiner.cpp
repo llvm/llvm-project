@@ -9505,18 +9505,27 @@ static SDValue combineABSToABD(SDNode *N, SelectionDAG &DAG,
       (Opc0 != ISD::ZERO_EXTEND && Opc0 != ISD::SIGN_EXTEND))
     return SDValue();
 
+  EVT VT = N->getValueType(0);
   EVT VT1 = Op0.getOperand(0).getValueType();
   EVT VT2 = Op1.getOperand(0).getValueType();
-  // Check if the operands are of same type and valid size.
   unsigned ABDOpcode = (Opc0 == ISD::SIGN_EXTEND) ? ISD::ABDS : ISD::ABDU;
-  if (VT1 != VT2 || !TLI.isOperationLegalOrCustom(ABDOpcode, VT1))
-    return SDValue();
 
-  Op0 = Op0.getOperand(0);
-  Op1 = Op1.getOperand(0);
-  SDValue ABD =
-      DAG.getNode(ABDOpcode, SDLoc(N), Op0->getValueType(0), Op0, Op1);
-  return DAG.getNode(ISD::ZERO_EXTEND, SDLoc(N), N->getValueType(0), ABD);
+  // fold abs(sext(x) - sext(y)) -> zext(abds(x, y))
+  // fold abs(zext(x) - zext(y)) -> zext(abdu(x, y))
+  // NOTE: Extensions must be equivalent.
+  if (VT1 == VT2 && TLI.isOperationLegalOrCustom(ABDOpcode, VT1)) {
+    Op0 = Op0.getOperand(0);
+    Op1 = Op1.getOperand(0);
+    SDValue ABD = DAG.getNode(ABDOpcode, SDLoc(N), VT1, Op0, Op1);
+    return DAG.getNode(ISD::ZERO_EXTEND, SDLoc(N), VT, ABD);
+  }
+
+  // fold abs(sext(x) - sext(y)) -> abds(sext(x), sext(y))
+  // fold abs(zext(x) - zext(y)) -> abdu(zext(x), zext(y))
+  if (TLI.isOperationLegalOrCustom(ABDOpcode, VT))
+    return DAG.getNode(ABDOpcode, SDLoc(N), VT, Op0, Op1);
+
+  return SDValue();
 }
 
 SDValue DAGCombiner::visitABS(SDNode *N) {
