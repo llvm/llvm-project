@@ -5,7 +5,7 @@
 ; CHECK: movl    %edx, arr(,%rdx,4)
 define dso_local i32 @main() #0 {
 entry:
-  call void asm sideeffect inteldialect "mov dword ptr $0[rdx * $$4],edx", "=*m,~{dirflag},~{fpsr},~{flags}"([10 x i32]* @arr) #1, !srcloc !4
+  call void asm sideeffect inteldialect "mov dword ptr arr[rdx * $$4],edx", "=*m,~{dirflag},~{fpsr},~{flags}"([10 x i32]* @arr) #1, !srcloc !4
   ret i32 0
 }
 
