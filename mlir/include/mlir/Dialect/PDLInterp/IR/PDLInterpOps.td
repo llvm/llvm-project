@@ -413,7 +413,7 @@ def PDLInterp_CreateAttributeOp
 
   let arguments = (ins AnyAttr:$value);
   let results = (outs PDL_Attribute:$attribute);
-  let assemblyFormat = "$value attr-dict";
+  let assemblyFormat = "$value attr-dict-with-keyword";
 
   let builders = [
     OpBuilder<(ins "Attribute":$value), [{
