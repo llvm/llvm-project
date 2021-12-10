@@ -232,7 +232,7 @@ def which(command, paths=None):
         for ext in pathext:
             p = os.path.join(path, command + ext)
             if os.path.exists(p) and not os.path.isdir(p):
-                return os.path.normcase(os.path.normpath(p))
+                return os.path.normcase(os.path.abspath(p))
 
     return None
 

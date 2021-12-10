@@ -92,7 +92,8 @@ def parse_args():
     execution_group.add_argument("--path",
             help="Additional paths to add to testing environment",
             action="append",
-            default=[])
+            default=[],
+            type=os.path.abspath)
     execution_group.add_argument("--vg",
             dest="useValgrind",
             help="Run tests under valgrind",
