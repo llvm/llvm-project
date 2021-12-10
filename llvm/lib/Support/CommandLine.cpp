@@ -1538,10 +1538,8 @@ bool CommandLineParser::ParseCommandLineOptions(int argc,
 
         ErrorParsing = true;
       } else {
-        for (SmallVectorImpl<Option *>::iterator I = SinkOpts.begin(),
-                                                 E = SinkOpts.end();
-             I != E; ++I)
-          (*I)->addOccurrence(i, "", StringRef(argv[i]));
+        for (Option *SinkOpt : SinkOpts)
+          SinkOpt->addOccurrence(i, "", StringRef(argv[i]));
       }
       continue;
     }
@@ -2303,11 +2301,8 @@ protected:
 
     // Collect registered option categories into vector in preparation for
     // sorting.
-    for (auto I = GlobalParser->RegisteredOptionCategories.begin(),
-              E = GlobalParser->RegisteredOptionCategories.end();
-         I != E; ++I) {
-      SortedCategories.push_back(*I);
-    }
+    for (OptionCategory *Category : GlobalParser->RegisteredOptionCategories)
+      SortedCategories.push_back(Category);
 
     // Sort the different option categories alphabetically.
     assert(SortedCategories.size() > 0 && "No option categories registered!");
@@ -2315,11 +2310,8 @@ protected:
                    OptionCategoryCompare);
 
     // Create map to empty vectors.
-    for (std::vector<OptionCategory *>::const_iterator
-             I = SortedCategories.begin(),
-             E = SortedCategories.end();
-         I != E; ++I)
-      CategorizedOptions[*I] = std::vector<Option *>();
+    for (OptionCategory *Category : SortedCategories)
+      CategorizedOptions[Category] = std::vector<Option *>();
 
     // Walk through pre-sorted options and assign into categories.
     // Because the options are already alphabetically sorted the
@@ -2334,23 +2326,20 @@ protected:
     }
 
     // Now do printing.
-    for (std::vector<OptionCategory *>::const_iterator
-             Category = SortedCategories.begin(),
-             E = SortedCategories.end();
-         Category != E; ++Category) {
+    for (OptionCategory *Category : SortedCategories) {
       // Hide empty categories for --help, but show for --help-hidden.
-      const auto &CategoryOptions = CategorizedOptions[*Category];
+      const auto &CategoryOptions = CategorizedOptions[Category];
       bool IsEmptyCategory = CategoryOptions.empty();
       if (!ShowHidden && IsEmptyCategory)
         continue;
 
       // Print category information.
       outs() << "\n";
-      outs() << (*Category)->getName() << ":\n";
+      outs() << Category->getName() << ":\n";
 
       // Check if description is set.
-      if (!(*Category)->getDescription().empty())
-        outs() << (*Category)->getDescription() << "\n\n";
+      if (!Category->getDescription().empty())
+        outs() << Category->getDescription() << "\n\n";
       else
         outs() << "\n";
 
