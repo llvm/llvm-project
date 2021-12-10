@@ -9,6 +9,7 @@
 #include "AMDGPUOpenMP.h"
 #include "AMDGPU.h"
 #include "CommonArgs.h"
+#include "HIPUtility.h"
 #include "ToolChains/ROCm.h"
 #include "clang/Basic/DiagnosticDriver.h"
 #include "clang/Driver/Compilation.h"
@@ -504,7 +505,7 @@ void AMDGCN::OpenMPLinker::ConstructJob(Compilation &C, const JobAction &JA,
                                    const char *LinkingOutput) const {
 
   if (JA.getType() == types::TY_HIP_FATBIN)
-    return constructHIPFatbinCommand(C, JA, Output.getFilename(), Inputs, Args, *this);
+    return HIP::constructHIPFatbinCommand(C, JA, Output.getFilename(), Inputs, Args, *this);
   const ToolChain &TC = getToolChain();
   assert(getToolChain().getTriple().isAMDGCN() && "Unsupported target");
 
