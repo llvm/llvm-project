@@ -114,8 +114,8 @@ def PDL_ApplyNativeRewriteOp
                        OptionalAttr<ArrayAttr>:$constParams);
   let results = (outs Variadic<PDL_AnyType>:$results);
   let assemblyFormat = [{
-    $name ($constParams^)? (`(` $args^ `:` type($args) `)`)? `:` type($results)
-    attr-dict
+    $name ($constParams^)? (`(` $args^ `:` type($args) `)`)?
+    (`:` type($results)^)? attr-dict
   }];
 }
 
