@@ -428,6 +428,8 @@ class GeneratedRTChecks;
 
 namespace llvm {
 
+AnalysisKey ShouldRunExtraVectorPasses::Key;
+
 /// InnerLoopVectorizer vectorizes loops which contain only one basic
 /// block to a specified vectorization factor (VF).
 /// This class performs the widening of scalars into vectors, or multiple
@@ -10746,8 +10748,17 @@ PreservedAnalyses LoopVectorizePass::run(Function &F,
       PA.preserve<LoopAnalysis>();
       PA.preserve<DominatorTreeAnalysis>();
     }
-    if (!Result.MadeCFGChange)
+
+    if (Result.MadeCFGChange) {
+      // Making CFG changes likely means a loop got vectorized. Indicate that
+      // extra simplification passes should be run.
+      // TODO: MadeCFGChanges is not a prefect proxy. Extra passes should only
+      // be run if runtime checks have been added.
+      AM.getResult<ShouldRunExtraVectorPasses>(F);
+      PA.preserve<ShouldRunExtraVectorPasses>();
+    } else {
       PA.preserveSet<CFGAnalyses>();
+    }
     return PA;
 }
 

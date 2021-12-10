@@ -2,6 +2,9 @@
 ; RUN: opt -disable-verify -debug-pass-manager -passes='default<O2>' -force-vector-width=4 -S %s 2>&1 | FileCheck %s --check-prefixes=O2
 ; RUN: opt -disable-verify -debug-pass-manager -passes='default<O2>' -force-vector-width=4 -extra-vectorizer-passes -S %s 2>&1 | FileCheck %s --check-prefixes=O2_EXTRA
 
+; When the loop doesn't get vectorized, no extra vector passes should run.
+; RUN: opt -disable-verify -debug-pass-manager -passes='default<O2>' -force-vector-width=0 -extra-vectorizer-passes -S %s 2>&1 | FileCheck %s --check-prefixes=O2
+
 ; REQUIRES: asserts
 
 ; The loop vectorizer still runs at both -O1/-O2 even with the

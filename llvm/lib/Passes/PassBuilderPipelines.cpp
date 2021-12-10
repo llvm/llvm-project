@@ -995,26 +995,28 @@ void PassBuilder::addVectorPasses(OptimizationLevel Level,
   FPM.addPass(InstCombinePass());
 
   if (Level.getSpeedupLevel() > 1 && ExtraVectorizerPasses) {
+    ExtraVectorPassManager ExtraPasses;
     // At higher optimization levels, try to clean up any runtime overlap and
     // alignment checks inserted by the vectorizer. We want to track correlated
     // runtime checks for two inner loops in the same outer loop, fold any
     // common computations, hoist loop-invariant aspects out of any outer loop,
     // and unswitch the runtime checks if possible. Once hoisted, we may have
     // dead (or speculatable) control flows or more combining opportunities.
-    FPM.addPass(EarlyCSEPass());
-    FPM.addPass(CorrelatedValuePropagationPass());
-    FPM.addPass(InstCombinePass());
+    ExtraPasses.addPass(EarlyCSEPass());
+    ExtraPasses.addPass(CorrelatedValuePropagationPass());
+    ExtraPasses.addPass(InstCombinePass());
     LoopPassManager LPM;
     LPM.addPass(LICMPass(PTO.LicmMssaOptCap, PTO.LicmMssaNoAccForPromotionCap));
     LPM.addPass(SimpleLoopUnswitchPass(/* NonTrivial */ Level ==
                                        OptimizationLevel::O3));
-    FPM.addPass(
+    ExtraPasses.addPass(
         RequireAnalysisPass<OptimizationRemarkEmitterAnalysis, Function>());
-    FPM.addPass(
+    ExtraPasses.addPass(
         createFunctionToLoopPassAdaptor(std::move(LPM), /*UseMemorySSA=*/true,
                                         /*UseBlockFrequencyInfo=*/true));
-    FPM.addPass(SimplifyCFGPass());
-    FPM.addPass(InstCombinePass());
+    ExtraPasses.addPass(SimplifyCFGPass());
+    ExtraPasses.addPass(InstCombinePass());
+    FPM.addPass(std::move(ExtraPasses));
   }
 
   // Now that we've formed fast to execute loop structures, we do further
