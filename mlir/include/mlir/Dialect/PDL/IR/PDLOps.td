@@ -114,8 +114,8 @@ def PDL_ApplyNativeRewriteOp
                        OptionalAttr<ArrayAttr>:$constParams);
   let results = (outs Variadic<PDL_AnyType>:$results);
   let assemblyFormat = [{
-    $name ($constParams^)? (`(` $args^ `:` type($args) `)`)? `:` type($results)
-    attr-dict
+    $name ($constParams^)? (`(` $args^ `:` type($args) `)`)?
+    (`:` type($results)^)? attr-dict
   }];
 }
 
@@ -152,7 +152,7 @@ def PDL_AttributeOp : PDL_Op<"attribute"> {
   let arguments = (ins Optional<PDL_Type>:$type,
                        OptionalAttr<AnyAttr>:$value);
   let results = (outs PDL_Attribute:$attr);
-  let assemblyFormat = "attr-dict (`:` $type^)? ($value^)?";
+  let assemblyFormat = "(`:` $type^)? ($value^)? attr-dict-with-keyword";
 
   let builders = [
     OpBuilder<(ins CArg<"Value", "Value()">:$type), [{

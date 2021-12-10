@@ -424,14 +424,18 @@ struct OperationFormat {
   /// Generate the parser code for a specific format element.
   void genElementParser(Element *element, MethodBody &body,
                         FmtContext &attrTypeCtx);
-  /// Generate the c++ to resolve the types of operands and results during
+  /// Generate the C++ to resolve the types of operands and results during
   /// parsing.
   void genParserTypeResolution(Operator &op, MethodBody &body);
-  /// Generate the c++ to resolve regions during parsing.
+  /// Generate the C++ to resolve the types of the operands during parsing.
+  void genParserOperandTypeResolution(
+      Operator &op, MethodBody &body,
+      function_ref<void(TypeResolution &, StringRef)> emitTypeResolver);
+  /// Generate the C++ to resolve regions during parsing.
   void genParserRegionResolution(Operator &op, MethodBody &body);
-  /// Generate the c++ to resolve successors during parsing.
+  /// Generate the C++ to resolve successors during parsing.
   void genParserSuccessorResolution(Operator &op, MethodBody &body);
-  /// Generate the c++ to handling variadic segment size traits.
+  /// Generate the C++ to handling variadic segment size traits.
   void genParserVariadicSegmentResolution(Operator &op, MethodBody &body);
 
   /// Generate the operation printer from this format.
@@ -1462,17 +1466,25 @@ void OperationFormat::genParserTypeResolution(Operator &op, MethodBody &body) {
     }
   }
 
-  // Early exit if there are no operands.
-  if (op.getNumOperands() == 0) {
-    // Handle return type inference here if there are no operands
-    if (infersResultTypes)
-      body << formatv(inferReturnTypesParserCode, op.getCppClassName());
-    return;
-  }
+  // Emit the operand type resolutions.
+  genParserOperandTypeResolution(op, body, emitTypeResolver);
 
-  // Handle the case where all operand types are in one group.
+  // Handle return type inference once all operands have been resolved
+  if (infersResultTypes)
+    body << formatv(inferReturnTypesParserCode, op.getCppClassName());
+}
+
+void OperationFormat::genParserOperandTypeResolution(
+    Operator &op, MethodBody &body,
+    function_ref<void(TypeResolution &, StringRef)> emitTypeResolver) {
+  // Early exit if there are no operands.
+  if (op.getNumOperands() == 0)
+    return;
+
+  // Handle the case where all operand types are grouped together with
+  // "types(operands)".
   if (allOperandTypes) {
-    // If we have all operands together, use the full operand list directly.
+    // If `operands` was specified, use the full operand list directly.
     if (allOperands) {
       body << "  if (parser.resolveOperands(allOperands, allOperandTypes, "
               "allOperandLoc, result.operands))\n"
@@ -1496,7 +1508,8 @@ void OperationFormat::genParserTypeResolution(Operator &op, MethodBody &body) {
          << "    return ::mlir::failure();\n";
     return;
   }
-  // Handle the case where all of the operands were grouped together.
+
+  // Handle the case where all operands are grouped together with "operands".
   if (allOperands) {
     body << "  if (parser.resolveOperands(allOperands, ";
 
@@ -1551,10 +1564,6 @@ void OperationFormat::genParserTypeResolution(Operator &op, MethodBody &body) {
       body << ", " << operand.name << "OperandsLoc";
     body << ", result.operands))\n    return ::mlir::failure();\n";
   }
-
-  // Handle return type inference once all operands have been resolved
-  if (infersResultTypes)
-    body << formatv(inferReturnTypesParserCode, op.getCppClassName());
 }
 
 void OperationFormat::genParserRegionResolution(Operator &op,
@@ -1833,7 +1842,7 @@ static void genEnumAttrPrinter(const NamedAttribute *var, const Operator &op,
   // keyword.
   llvm::BitVector nonKeywordCases(cases.size());
   bool hasStrCase = false;
-  for (auto it : llvm::enumerate(cases)) {
+  for (auto &it : llvm::enumerate(cases)) {
     hasStrCase = it.value().isStrCase();
     if (!canFormatStringAsKeyword(it.value().getStr()))
       nonKeywordCases.set(it.index());
@@ -1860,7 +1869,7 @@ static void genEnumAttrPrinter(const NamedAttribute *var, const Operator &op,
   // overlap with other cases. For simplicity sake, only allow cases with a
   // single bit value.
   if (enumAttr.isBitEnum()) {
-    for (auto it : llvm::enumerate(cases)) {
+    for (auto &it : llvm::enumerate(cases)) {
       int64_t value = it.value().getValue();
       if (value < 0 || !llvm::isPowerOf2_64(value))
         nonKeywordCases.set(it.index());
@@ -1873,7 +1882,7 @@ static void genEnumAttrPrinter(const NamedAttribute *var, const Operator &op,
     body << "    switch (caseValue) {\n";
     StringRef cppNamespace = enumAttr.getCppNamespace();
     StringRef enumName = enumAttr.getEnumClassName();
-    for (auto it : llvm::enumerate(cases)) {
+    for (auto &it : llvm::enumerate(cases)) {
       if (nonKeywordCases.test(it.index()))
         continue;
       StringRef symbol = it.value().getSymbol();

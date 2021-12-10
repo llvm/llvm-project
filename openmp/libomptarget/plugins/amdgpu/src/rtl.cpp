@@ -1042,10 +1042,10 @@ static uint64_t acquire_available_packet_id(hsa_queue_t *queue) {
   return packet_id;
 }
 
-int32_t __tgt_rtl_run_target_team_region_locked(
-    int32_t device_id, void *tgt_entry_ptr, void **tgt_args,
-    ptrdiff_t *tgt_offsets, int32_t arg_num, int32_t num_teams,
-    int32_t thread_limit, uint64_t loop_tripcount) {
+int32_t runRegionLocked(int32_t device_id, void *tgt_entry_ptr, void **tgt_args,
+                        ptrdiff_t *tgt_offsets, int32_t arg_num,
+                        int32_t num_teams, int32_t thread_limit,
+                        uint64_t loop_tripcount) {
   // Set the context we are using
   // update thread limit content in gpu memory if un-initialized or specified
   // from host
@@ -2218,9 +2218,9 @@ int32_t __tgt_rtl_run_target_team_region(int32_t device_id, void *tgt_entry_ptr,
                                          uint64_t loop_tripcount) {
 
   DeviceInfo.load_run_lock.lock_shared();
-  int32_t res = __tgt_rtl_run_target_team_region_locked(
-      device_id, tgt_entry_ptr, tgt_args, tgt_offsets, arg_num, num_teams,
-      thread_limit, loop_tripcount);
+  int32_t res =
+      runRegionLocked(device_id, tgt_entry_ptr, tgt_args, tgt_offsets, arg_num,
+                      num_teams, thread_limit, loop_tripcount);
 
   DeviceInfo.load_run_lock.unlock_shared();
   return res;
@@ -2238,6 +2238,20 @@ int32_t __tgt_rtl_run_target_region(int32_t device_id, void *tgt_entry_ptr,
                                           thread_limit, 0);
 }
 
+int32_t __tgt_rtl_run_target_team_region_async(
+    int32_t device_id, void *tgt_entry_ptr, void **tgt_args,
+    ptrdiff_t *tgt_offsets, int32_t arg_num, int32_t num_teams,
+    int32_t thread_limit, uint64_t loop_tripcount) {
+
+  DeviceInfo.load_run_lock.lock_shared();
+  int32_t res =
+      runRegionLocked(device_id, tgt_entry_ptr, tgt_args, tgt_offsets, arg_num,
+                      num_teams, thread_limit, loop_tripcount);
+
+  DeviceInfo.load_run_lock.unlock_shared();
+  return res;
+}
+
 int32_t __tgt_rtl_run_target_region_async(int32_t device_id,
                                           void *tgt_entry_ptr, void **tgt_args,
                                           ptrdiff_t *tgt_offsets,
@@ -2250,9 +2264,9 @@ int32_t __tgt_rtl_run_target_region_async(int32_t device_id,
   // fix thread num
   int32_t team_num = 1;
   int32_t thread_limit = 0; // use default
-  return __tgt_rtl_run_target_team_region(device_id, tgt_entry_ptr, tgt_args,
-                                          tgt_offsets, arg_num, team_num,
-                                          thread_limit, 0);
+  return __tgt_rtl_run_target_team_region_async(device_id, tgt_entry_ptr,
+                                                tgt_args, tgt_offsets, arg_num,
+                                                team_num, thread_limit, 0);
 }
 
 int32_t __tgt_rtl_synchronize(int32_t device_id, __tgt_async_info *AsyncInfo) {

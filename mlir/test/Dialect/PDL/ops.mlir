@@ -110,3 +110,22 @@ pdl.pattern @infer_type_from_type_used_in_match : benefit(1) {
     %newOp = pdl.operation "foo.op" -> (%types, %otherTypes : !pdl.range<type>, !pdl.range<type>)
   }
 }
+
+// -----
+
+pdl.pattern @apply_rewrite_with_no_results : benefit(1) {
+  %root = pdl.operation
+  pdl.rewrite %root {
+    pdl.apply_native_rewrite "NativeRewrite"(%root : !pdl.operation)
+  }
+}
+
+// -----
+
+pdl.pattern @attribute_with_dict : benefit(1) {
+  %root = pdl.operation
+  pdl.rewrite %root {
+    %attr = pdl.attribute {some_unit_attr} attributes {pdl.special_attribute}
+    pdl.apply_native_rewrite "NativeRewrite"(%attr : !pdl.attribute)
+  }
+}

@@ -233,7 +233,6 @@ void PredicateExpander::expandReturnStatement(raw_ostream &OS,
   SS << "return ";
   expandPredicate(SS, Rec);
   SS << ";";
-  SS.flush();
   OS << Buffer;
 }
 
@@ -276,7 +275,6 @@ void PredicateExpander::expandOpcodeSwitchStatement(raw_ostream &OS,
 
   SS.indent(getIndentLevel() * 2);
   SS << "} // end of switch-stmt";
-  SS.flush();
   OS << Buffer;
 }
 
