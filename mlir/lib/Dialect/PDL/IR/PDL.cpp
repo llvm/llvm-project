@@ -114,12 +114,15 @@ static LogicalResult verify(AttributeOp op) {
   Value attrType = op.type();
   Optional<Attribute> attrValue = op.value();
 
-  if (!attrValue && isa<RewriteOp>(op->getParentOp()))
-    return op.emitOpError("expected constant value when specified within a "
-                          "`pdl.rewrite`");
-  if (attrValue && attrType)
+  if (!attrValue) {
+    if (isa<RewriteOp>(op->getParentOp()))
+      return op.emitOpError("expected constant value when specified within a "
+                            "`pdl.rewrite`");
+    return verifyHasBindingUse(op);
+  }
+  if (attrType)
     return op.emitOpError("expected only one of [`type`, `value`] to be set");
-  return verifyHasBindingUse(op);
+  return success();
 }
 
 //===----------------------------------------------------------------------===//
@@ -431,13 +434,21 @@ static LogicalResult verify(RewriteOp op) {
 // pdl::TypeOp
 //===----------------------------------------------------------------------===//
 
-static LogicalResult verify(TypeOp op) { return verifyHasBindingUse(op); }
+static LogicalResult verify(TypeOp op) {
+  if (!op.typeAttr())
+    return verifyHasBindingUse(op);
+  return success();
+}
 
 //===----------------------------------------------------------------------===//
 // pdl::TypesOp
 //===----------------------------------------------------------------------===//
 
-static LogicalResult verify(TypesOp op) { return verifyHasBindingUse(op); }
+static LogicalResult verify(TypesOp op) {
+  if (!op.typesAttr())
+    return verifyHasBindingUse(op);
+  return success();
+}
 
 //===----------------------------------------------------------------------===//
 // TableGen'd op method definitions
