@@ -83,6 +83,7 @@ Changes to the ARM Backend
 --------------------------
 
 * Added support for the Armv9-A, Armv9.1-A and Armv9.2-A architectures.
+* Added support for the Armv8.1-M PACBTI-M extension.
 
 Changes to the MIPS Target
 --------------------------
