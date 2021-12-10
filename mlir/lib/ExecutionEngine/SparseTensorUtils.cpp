@@ -1071,6 +1071,59 @@ void *convertToMLIRSparseTensor(uint64_t rank, uint64_t nse, uint64_t *shape,
       rank, shape, perm.data(), sparse.data(), tensor);
 }
 
+/// Converts a sparse tensor to COO-flavored format expressed using C-style
+/// data structures. The expected output parameters are pointers for these
+/// values:
+///
+///   rank:    rank of tensor
+///   nse:     number of specified elements (usually the nonzeros)
+///   shape:   array with dimension size for each rank
+///   values:  a "nse" array with values for all specified elements
+///   indices: a flat "nse x rank" array with indices for all specified elements
+///
+/// The input is a pointer to SparseTensorStorage<P, I, V>, typically returned
+/// from convertToMLIRSparseTensor.
+///
+//  TODO: Currently, values are copied from SparseTensorStorage to
+//  SparseTensorCOO, then to the output. We may want to reduce the number of
+//  copies.
+//
+//  TODO: for now f64 tensors only, no dim ordering, all dimensions compressed
+//
+void convertFromMLIRSparseTensor(void *tensor, uint64_t *p_rank,
+                                 uint64_t *p_nse, uint64_t **p_shape,
+                                 double **p_values, uint64_t **p_indices) {
+  SparseTensorStorage<uint64_t, uint64_t, double> *sparse_tensor =
+      static_cast<SparseTensorStorage<uint64_t, uint64_t, double> *>(tensor);
+  uint64_t rank = sparse_tensor->getRank();
+  std::vector<uint64_t> perm(rank);
+  std::iota(perm.begin(), perm.end(), 0);
+  SparseTensorCOO<double> *coo = sparse_tensor->toCOO(perm.data());
+
+  const std::vector<Element<double>> &elements = coo->getElements();
+  uint64_t nse = elements.size();
+
+  uint64_t *shape = new uint64_t[rank];
+  for (uint64_t i = 0; i < rank; i++)
+    shape[i] = coo->getSizes()[i];
+
+  double *values = new double[nse];
+  uint64_t *indices = new uint64_t[rank * nse];
+
+  for (uint64_t i = 0, base = 0; i < nse; i++) {
+    values[i] = elements[i].value;
+    for (uint64_t j = 0; j < rank; j++)
+      indices[base + j] = elements[i].indices[j];
+    base += rank;
+  }
+
+  delete coo;
+  *p_rank = rank;
+  *p_nse = nse;
+  *p_shape = shape;
+  *p_values = values;
+  *p_indices = indices;
+}
 } // extern "C"
 
 #endif // MLIR_CRUNNERUTILS_DEFINE_FUNCTIONS
