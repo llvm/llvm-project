@@ -21,12 +21,10 @@ define signext i32 @wobble() nounwind {
 ; CHECK-NEXT:    lui a2, %hi(global.1)
 ; CHECK-NEXT:    sw a0, %lo(global.1)(a2)
 ; CHECK-NEXT:    mul a0, a0, a1
-; CHECK-NEXT:    lui a1, 16
-; CHECK-NEXT:    addiw a1, a1, -1
-; CHECK-NEXT:    and a1, a0, a1
-; CHECK-NEXT:    lui a2, 13
-; CHECK-NEXT:    addiw a2, a2, -819
-; CHECK-NEXT:    mul a1, a1, a2
+; CHECK-NEXT:    slli a1, a0, 48
+; CHECK-NEXT:    lui a2, 52429
+; CHECK-NEXT:    slli a2, a2, 4
+; CHECK-NEXT:    mulhu a1, a1, a2
 ; CHECK-NEXT:    srli a1, a1, 18
 ; CHECK-NEXT:    lui a2, %hi(global.3)
 ; CHECK-NEXT:    li a3, 5

@@ -212,11 +212,6 @@ int32_t __kmpc_global_thread_num(IdentTy *) {
   return omp_get_thread_num();
 }
 
-void __kmpc_push_num_threads(IdentTy *, int32_t, int32_t NumThreads) {
-  FunctionTracingRAII();
-  icv::NThreads = NumThreads;
-}
-
 void __kmpc_push_num_teams(IdentTy *loc, int32_t tid, int32_t num_teams,
                            int32_t thread_limit) {
   FunctionTracingRAII();

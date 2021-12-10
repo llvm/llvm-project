@@ -533,8 +533,8 @@ Error readPGOFuncNameStrings(StringRef NameStrings, InstrProfSymtab &Symtab) {
 void InstrProfRecord::accumulateCounts(CountSumOrPercent &Sum) const {
   uint64_t FuncSum = 0;
   Sum.NumEntries += Counts.size();
-  for (size_t F = 0, E = Counts.size(); F < E; ++F)
-    FuncSum += Counts[F];
+  for (uint64_t Count : Counts)
+    FuncSum += Count;
   Sum.CountSum += FuncSum;
 
   for (uint32_t VK = IPVK_First; VK <= IPVK_Last; ++VK) {
@@ -674,9 +674,9 @@ void InstrProfValueSiteRecord::merge(InstrProfValueSiteRecord &Input,
 
 void InstrProfValueSiteRecord::scale(uint64_t N, uint64_t D,
                                      function_ref<void(instrprof_error)> Warn) {
-  for (auto I = ValueData.begin(), IE = ValueData.end(); I != IE; ++I) {
+  for (InstrProfValueData &I : ValueData) {
     bool Overflowed;
-    I->Count = SaturatingMultiply(I->Count, N, &Overflowed) / D;
+    I.Count = SaturatingMultiply(I.Count, N, &Overflowed) / D;
     if (Overflowed)
       Warn(instrprof_error::counter_overflow);
   }

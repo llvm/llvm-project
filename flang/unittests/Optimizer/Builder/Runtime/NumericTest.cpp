@@ -61,7 +61,7 @@ void testGenNearest(fir::FirOpBuilder &builder, mlir::Type xType,
   mlir::Value cmp = selectOp.condition();
   EXPECT_TRUE(mlir::isa<mlir::arith::CmpFOp>(cmp.getDefiningOp()));
   auto cmpOp = mlir::dyn_cast<mlir::arith::CmpFOp>(cmp.getDefiningOp());
-  EXPECT_EQ(s, cmpOp.lhs());
+  EXPECT_EQ(s, cmpOp.getLhs());
 }
 
 TEST_F(RuntimeCallTest, genNearestTest) {

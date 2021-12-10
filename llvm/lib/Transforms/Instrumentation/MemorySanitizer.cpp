@@ -3887,8 +3887,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
           &I, IRB, IRB.getInt8Ty(), Align(1), /*isStore*/ true);
 
       Value *PoisonValue = IRB.getInt8(PoisonStack ? ClPoisonStackPattern : 0);
-      IRB.CreateMemSet(ShadowBase, PoisonValue, Len,
-                       MaybeAlign(I.getAlignment()));
+      IRB.CreateMemSet(ShadowBase, PoisonValue, Len, I.getAlign());
     }
 
     if (PoisonStack && MS.TrackOrigins) {

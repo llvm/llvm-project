@@ -81,35 +81,25 @@ void test() {
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: prefer absl::Cleanup's class template argument deduction pattern in C++17 and higher
   // CHECK-FIXES: {{^}}  absl::Cleanup a = [] {};{{$}}
 
-  // Removes extra parens
-  auto b = absl::MakeCleanup(([] {}));
+  auto b = absl::MakeCleanup(std::function<void()>([] {}));
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: prefer absl::Cleanup{{.*}}C++17 and higher
-  // CHECK-FIXES: {{^}}  absl::Cleanup b = [] {};{{$}}
+  // CHECK-FIXES: {{^}}  absl::Cleanup b = std::function<void()>([] {});{{$}}
 
-  auto c = absl::MakeCleanup(std::function<void()>([] {}));
+  const auto c = absl::MakeCleanup([] {});
+  // CHECK-MESSAGES: :[[@LINE-1]]:9: warning: prefer absl::Cleanup{{.*}}C++17 and higher
+  // CHECK-FIXES: {{^}}  const absl::Cleanup c = [] {};{{$}}
+
+  const auto d = absl::MakeCleanup(std::function<void()>([] {}));
+  // CHECK-MESSAGES: :[[@LINE-1]]:9: warning: prefer absl::Cleanup{{.*}}C++17 and higher
+  // CHECK-FIXES: {{^}}  const absl::Cleanup d = std::function<void()>([] {});{{$}}
+
+  // Preserves extra parens
+  auto e = absl::MakeCleanup(([] {}));
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: prefer absl::Cleanup{{.*}}C++17 and higher
-  // CHECK-FIXES: {{^}}  absl::Cleanup c = std::function<void()>([] {});{{$}}
+  // CHECK-FIXES: {{^}}  absl::Cleanup e = ([] {});{{$}}
 
-  // Removes extra parens
-  auto d = absl::MakeCleanup((std::function<void()>([] {})));
+  // Preserves comments
+  auto f = /* a */ absl::MakeCleanup(/* b */ [] { /* c */ } /* d */) /* e */;
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: prefer absl::Cleanup{{.*}}C++17 and higher
-  // CHECK-FIXES: {{^}}  absl::Cleanup d = std::function<void()>([] {});{{$}}
-
-  const auto e = absl::MakeCleanup([] {});
-  // CHECK-MESSAGES: :[[@LINE-1]]:9: warning: prefer absl::Cleanup{{.*}}C++17 and higher
-  // CHECK-FIXES: {{^}}  const absl::Cleanup e = [] {};{{$}}
-
-  // Removes extra parens
-  const auto f = absl::MakeCleanup(([] {}));
-  // CHECK-MESSAGES: :[[@LINE-1]]:9: warning: prefer absl::Cleanup{{.*}}C++17 and higher
-  // CHECK-FIXES: {{^}}  const absl::Cleanup f = [] {};{{$}}
-
-  const auto g = absl::MakeCleanup(std::function<void()>([] {}));
-  // CHECK-MESSAGES: :[[@LINE-1]]:9: warning: prefer absl::Cleanup{{.*}}C++17 and higher
-  // CHECK-FIXES: {{^}}  const absl::Cleanup g = std::function<void()>([] {});{{$}}
-
-  // Removes extra parens
-  const auto h = absl::MakeCleanup((std::function<void()>([] {})));
-  // CHECK-MESSAGES: :[[@LINE-1]]:9: warning: prefer absl::Cleanup{{.*}}C++17 and higher
-  // CHECK-FIXES: {{^}}  const absl::Cleanup h = std::function<void()>([] {});{{$}}
+  // CHECK-FIXES: {{^}}  absl::Cleanup f = /* a */ /* b */ [] { /* c */ } /* d */ /* e */;{{$}}
 }

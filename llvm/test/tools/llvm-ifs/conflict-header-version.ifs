@@ -1,7 +1,7 @@
-# RUN: not llvm-ifs --input-format=IFS --output-format=IFS -o - %s %S/object.ifs 2>&1 | \
+# RUN: not llvm-ifs --input-format=IFS --output-ifs - %s %S/object.ifs 2>&1 | \
 # RUN: FileCheck %s --check-prefixes=CHECK-IFS
 
-# RUN: not llvm-ifs --input-format=IFS --output-format=IFS -o - %s 2>&1 | \
+# RUN: not llvm-ifs --input-format=IFS --output-ifs - %s 2>&1 | \
 # RUN: FileCheck %s --check-prefixes=CHECK-IFS2
 
 # CHECK-IFS: error: Interface Stub: IfsVersion Mismatch.

@@ -160,8 +160,6 @@ omptarget_nvptx_ThreadPrivateContext::InitThreadPrivateContext(int tid) {
   // levelOneTaskDescr is init when starting the parallel region
   // top task descr is NULL (team master version will be fixed separately)
   topTaskDescr[tid] = NULL;
-  // no num threads value has been pushed
-  nextRegion.tnum[tid] = 0;
   // the following don't need to be init here; they are init when using dyn
   // sched
   // current_Event, events_Number, chunk, num_Iterations, schedule

@@ -57,11 +57,11 @@ cl::opt<FileFormat> InputFormat(
                clEnumValN(FileFormat::ELF, "ELF", "ELF object file")),
     cl::cat(IfsCategory));
 cl::opt<FileFormat> OutputFormat(
-    "output-format", cl::desc("Specify the output file format"),
+    "output-format", cl::desc("Specify the output file format **DEPRECATED**"),
     cl::values(clEnumValN(FileFormat::IFS, "IFS", "Text based ELF stub file"),
                clEnumValN(FileFormat::ELF, "ELF", "ELF stub file"),
                clEnumValN(FileFormat::TBD, "TBD", "Apple TBD text stub file")),
-    cl::Required, cl::cat(IfsCategory));
+    cl::cat(IfsCategory));
 cl::opt<std::string> OptArch("arch",
                              cl::desc("Specify the architecture, e.g. x86_64"),
                              cl::cat(IfsCategory));
@@ -108,10 +108,21 @@ cl::opt<std::string>
     SoName("soname",
            cl::desc("Manually set the DT_SONAME entry of any emitted files"),
            cl::value_desc("name"), cl::cat(IfsCategory));
-cl::opt<std::string> OutputFilePath("output", cl::desc("Output file"),
+cl::opt<std::string> OutputFilePath("output",
+                                    cl::desc("Output file **DEPRECATED**"),
                                     cl::cat(IfsCategory));
 cl::alias OutputFilePathA("o", cl::desc("Alias for --output"),
                           cl::aliasopt(OutputFilePath), cl::cat(IfsCategory));
+cl::opt<std::string> OutputELFFilePath("output-elf",
+                                       cl::desc("Output path for ELF file"),
+                                       cl::cat(IfsCategory));
+cl::opt<std::string> OutputIFSFilePath("output-ifs",
+                                       cl::desc("Output path for IFS file"),
+                                       cl::cat(IfsCategory));
+cl::opt<std::string> OutputTBDFilePath("output-tbd",
+                                       cl::desc("Output path for TBD file"),
+                                       cl::cat(IfsCategory));
+
 cl::opt<bool> WriteIfChanged(
     "write-if-changed",
     cl::desc("Write the output file only if it is new or has changed."),
@@ -320,8 +331,6 @@ int main(int argc, char *argv[]) {
         WithColor::error() << "Interface Stub: Target Mismatch."
                            << "\nFilenames: " << PreviousInputFilePath << " "
                            << InputFilePath;
-        //  << "\nTriple Values: " << Stub.Triple << " "
-        //  << TargetStub->Triple << "\n";
         return -1;
       }
       if (Stub.SoName != TargetStub->SoName) {
@@ -408,63 +417,136 @@ int main(int argc, char *argv[]) {
   if (OverrideError)
     fatalError(std::move(OverrideError));
 
-  switch (OutputFormat.getValue()) {
-  case FileFormat::TBD: {
-    std::error_code SysErr;
-    raw_fd_ostream Out(OutputFilePath, SysErr);
-    if (SysErr) {
-      WithColor::error() << "Couldn't open " << OutputFilePath
-                         << " for writing.\n";
+  if (OutputELFFilePath.getNumOccurrences() == 0 &&
+      OutputIFSFilePath.getNumOccurrences() == 0 &&
+      OutputTBDFilePath.getNumOccurrences() == 0) {
+    if (OutputFormat.getNumOccurrences() == 0) {
+      WithColor::error() << "at least one output should be specified.";
       return -1;
     }
-    if (!Stub.Target.Triple) {
-      WithColor::error()
-          << "Triple should be defined when output format is TBD";
-      return -1;
-    }
-    return writeTbdStub(llvm::Triple(Stub.Target.Triple.getValue()),
-                        Stub.Symbols, "TBD", Out);
+  } else if (OutputFormat.getNumOccurrences() == 1) {
+    WithColor::error() << "'--output-format' cannot be used with "
+                          "'--output-{FILE_FORMAT}' options at the same time";
+    return -1;
   }
-  case FileFormat::IFS: {
-    Stub.IfsVersion = IfsVersionCurrent;
-    if (InputFormat.getValue() == FileFormat::ELF &&
-        OptTargetTripleHint.getNumOccurrences() == 1) {
-      std::error_code HintEC(1, std::generic_category());
-      IFSTarget HintTarget = parseTriple(OptTargetTripleHint);
-      if (Stub.Target.Arch.getValue() != HintTarget.Arch.getValue())
-        fatalError(make_error<StringError>(
-            "Triple hint does not match the actual architecture", HintEC));
-      if (Stub.Target.Endianness.getValue() !=
-          HintTarget.Endianness.getValue())
-        fatalError(make_error<StringError>(
-            "Triple hint does not match the actual endianness", HintEC));
-      if (Stub.Target.BitWidth.getValue() != HintTarget.BitWidth.getValue())
-        fatalError(make_error<StringError>(
-            "Triple hint does not match the actual bit width", HintEC));
+  if (OutputFormat.getNumOccurrences() == 1) {
+    // TODO: Remove OutputFormat flag in the next revision.
+    WithColor::warning() << "--output-format option is deprecated, please use "
+                            "--output-{FILE_FORMAT} options instead\n";
+    switch (OutputFormat.getValue()) {
+    case FileFormat::TBD: {
+      std::error_code SysErr;
+      raw_fd_ostream Out(OutputFilePath, SysErr);
+      if (SysErr) {
+        WithColor::error() << "Couldn't open " << OutputFilePath
+                           << " for writing.\n";
+        return -1;
+      }
+      if (!Stub.Target.Triple) {
+        WithColor::error()
+            << "Triple should be defined when output format is TBD";
+        return -1;
+      }
+      return writeTbdStub(llvm::Triple(Stub.Target.Triple.getValue()),
+                          Stub.Symbols, "TBD", Out);
+    }
+    case FileFormat::IFS: {
+      Stub.IfsVersion = IfsVersionCurrent;
+      if (InputFormat.getValue() == FileFormat::ELF &&
+          OptTargetTripleHint.getNumOccurrences() == 1) {
+        std::error_code HintEC(1, std::generic_category());
+        IFSTarget HintTarget = parseTriple(OptTargetTripleHint);
+        if (Stub.Target.Arch.getValue() != HintTarget.Arch.getValue())
+          fatalError(make_error<StringError>(
+              "Triple hint does not match the actual architecture", HintEC));
+        if (Stub.Target.Endianness.getValue() !=
+            HintTarget.Endianness.getValue())
+          fatalError(make_error<StringError>(
+              "Triple hint does not match the actual endianness", HintEC));
+        if (Stub.Target.BitWidth.getValue() != HintTarget.BitWidth.getValue())
+          fatalError(make_error<StringError>(
+              "Triple hint does not match the actual bit width", HintEC));
 
-      stripIFSTarget(Stub, true, false, false, false);
-      Stub.Target.Triple = OptTargetTripleHint.getValue();
-    } else {
-      stripIFSTarget(Stub, StripIFSTarget, StripIFSArch,
-                     StripIFSEndiannessWidth, StripIFSBitWidth);
+        stripIFSTarget(Stub, true, false, false, false);
+        Stub.Target.Triple = OptTargetTripleHint.getValue();
+      } else {
+        stripIFSTarget(Stub, StripIFSTarget, StripIFSArch,
+                       StripIFSEndiannessWidth, StripIFSBitWidth);
+      }
+      if (StripUndefined)
+        stripIFSUndefinedSymbols(Stub);
+      Error IFSWriteError = writeIFS(OutputFilePath.getValue(), Stub);
+      if (IFSWriteError)
+        fatalError(std::move(IFSWriteError));
+      break;
     }
-    if (StripUndefined)
-      stripIFSUndefinedSymbols(Stub);
-    Error IFSWriteError = writeIFS(OutputFilePath.getValue(), Stub);
-    if (IFSWriteError)
-      fatalError(std::move(IFSWriteError));
-    break;
-  }
-  case FileFormat::ELF: {
-    Error TargetError = validateIFSTarget(Stub, true);
-    if (TargetError)
-      fatalError(std::move(TargetError));
-    Error BinaryWriteError =
-        writeBinaryStub(OutputFilePath, Stub, WriteIfChanged);
-    if (BinaryWriteError)
-      fatalError(std::move(BinaryWriteError));
-    break;
-  }
+    case FileFormat::ELF: {
+      Error TargetError = validateIFSTarget(Stub, true);
+      if (TargetError)
+        fatalError(std::move(TargetError));
+      Error BinaryWriteError =
+          writeBinaryStub(OutputFilePath, Stub, WriteIfChanged);
+      if (BinaryWriteError)
+        fatalError(std::move(BinaryWriteError));
+      break;
+    }
+    }
+  } else {
+    // Check if output path for individual format.
+    if (OutputELFFilePath.getNumOccurrences() == 1) {
+      Error TargetError = validateIFSTarget(Stub, true);
+      if (TargetError)
+        fatalError(std::move(TargetError));
+      Error BinaryWriteError =
+          writeBinaryStub(OutputELFFilePath, Stub, WriteIfChanged);
+      if (BinaryWriteError)
+        fatalError(std::move(BinaryWriteError));
+    }
+    if (OutputIFSFilePath.getNumOccurrences() == 1) {
+      Stub.IfsVersion = IfsVersionCurrent;
+      if (InputFormat.getValue() == FileFormat::ELF &&
+          OptTargetTripleHint.getNumOccurrences() == 1) {
+        std::error_code HintEC(1, std::generic_category());
+        IFSTarget HintTarget = parseTriple(OptTargetTripleHint);
+        if (Stub.Target.Arch.getValue() != HintTarget.Arch.getValue())
+          fatalError(make_error<StringError>(
+              "Triple hint does not match the actual architecture", HintEC));
+        if (Stub.Target.Endianness.getValue() !=
+            HintTarget.Endianness.getValue())
+          fatalError(make_error<StringError>(
+              "Triple hint does not match the actual endianness", HintEC));
+        if (Stub.Target.BitWidth.getValue() != HintTarget.BitWidth.getValue())
+          fatalError(make_error<StringError>(
+              "Triple hint does not match the actual bit width", HintEC));
+
+        stripIFSTarget(Stub, true, false, false, false);
+        Stub.Target.Triple = OptTargetTripleHint.getValue();
+      } else {
+        stripIFSTarget(Stub, StripIFSTarget, StripIFSArch,
+                       StripIFSEndiannessWidth, StripIFSBitWidth);
+      }
+      if (StripUndefined)
+        stripIFSUndefinedSymbols(Stub);
+      Error IFSWriteError = writeIFS(OutputIFSFilePath.getValue(), Stub);
+      if (IFSWriteError)
+        fatalError(std::move(IFSWriteError));
+    }
+    if (OutputTBDFilePath.getNumOccurrences() == 1) {
+      std::error_code SysErr;
+      raw_fd_ostream Out(OutputTBDFilePath, SysErr);
+      if (SysErr) {
+        WithColor::error() << "Couldn't open " << OutputTBDFilePath
+                           << " for writing.\n";
+        return -1;
+      }
+      if (!Stub.Target.Triple) {
+        WithColor::error()
+            << "Triple should be defined when output format is TBD";
+        return -1;
+      }
+      return writeTbdStub(llvm::Triple(Stub.Target.Triple.getValue()),
+                          Stub.Symbols, "TBD", Out);
+    }
   }
   return 0;
 }
