@@ -20,6 +20,7 @@
 
 namespace llvm {
 namespace object {
+class Archive;
 class COFFImportFile;
 class ObjectFile;
 class XCOFFObjectFile;
@@ -39,6 +40,9 @@ public:
 
   virtual bool canDumpContent() { return true; }
 
+  virtual void printFileSummary(StringRef FileStr, object::ObjectFile &Obj,
+                                ArrayRef<std::string> InputFilenames,
+                                const object::Archive *A);
   virtual void printFileHeaders() = 0;
   virtual void printSectionHeaders() = 0;
   virtual void printRelocations() = 0;
