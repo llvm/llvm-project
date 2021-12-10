@@ -14,6 +14,6 @@ if (NOT WIN32)
     BUILDTREE_ONLY
    )
 
-  install(TARGETS ${name} RUNTIME DESTINATION examples)
+  install(TARGETS ${name} RUNTIME DESTINATION "${CMAKE_INSTALL_DOCDIR}/examples")
   set_target_properties(${name} PROPERTIES FOLDER "Examples")
 endif()
