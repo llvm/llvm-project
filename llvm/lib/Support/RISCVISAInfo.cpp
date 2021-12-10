@@ -72,6 +72,28 @@ static bool stripExperimentalPrefix(StringRef &Ext) {
   return Ext.consume_front("experimental-");
 }
 
+// This function finds the first character that doesn't belong to a version
+// (e.g. zbe0p93 is extension 'zbe' of version '0p93'). So the function will
+// consume [0-9]*p[0-9]* starting from the backward. An extension name will not
+// end with a digit or the letter 'p', so this function will parse correctly.
+// NOTE: This function is NOT able to take empty strings or strings that only
+// have version numbers and no extension name. It assumes the extension name
+// will be at least more than one character.
+static size_t findFirstNonVersionCharacter(const StringRef &Ext) {
+  if (Ext.size() == 0)
+    llvm_unreachable("Already guarded by if-statement in ::parseArchString");
+
+  int Pos = Ext.size() - 1;
+  while (Pos > 0 && isDigit(Ext[Pos]))
+    Pos--;
+  if (Pos > 0 && Ext[Pos] == 'p' && isDigit(Ext[Pos - 1])) {
+    Pos--;
+    while (Pos > 0 && isDigit(Ext[Pos]))
+      Pos--;
+  }
+  return Pos;
+}
+
 struct FindByName {
   FindByName(StringRef Ext) : Ext(Ext){};
   StringRef Ext;
@@ -638,7 +660,7 @@ RISCVISAInfo::parseArchString(StringRef Arch, bool EnableExperimentalExtension,
 
     StringRef Type = getExtensionType(Ext);
     StringRef Desc = getExtensionTypeDesc(Ext);
-    auto Pos = Ext.find_if(isDigit);
+    size_t Pos = findFirstNonVersionCharacter(Ext) + 1;
     StringRef Name(Ext.substr(0, Pos));
     StringRef Vers(Ext.substr(Pos));
 
