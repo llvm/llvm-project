@@ -1583,7 +1583,7 @@ static TreePatternNode *getOperandNum(unsigned OpNo, TreePatternNode *N,
     OS << "Invalid operand number in type constraint "
            << (OpNo+NumResults) << " ";
     N->print(OS);
-    PrintFatalError(OS.str());
+    PrintFatalError(S);
   }
 
   return N->getChild(OpNo);

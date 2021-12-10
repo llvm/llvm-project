@@ -757,8 +757,6 @@ public:
         ++I;
       }
     }
-
-    OS.flush();
     return OutString;
   }
 

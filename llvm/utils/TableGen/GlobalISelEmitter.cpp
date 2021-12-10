@@ -109,7 +109,7 @@ public:
     raw_string_ostream OS(Str);
 
     emitCxxEnumValue(OS);
-    return OS.str();
+    return Str;
   }
 
   void emitCxxEnumValue(raw_ostream &OS) const {
@@ -1673,7 +1673,7 @@ public:
         CommentOS << "Operand " << OpIdx;
       else
         CommentOS << SymbolicName;
-      Table << MatchTable::Comment(CommentOS.str()) << MatchTable::LineBreak;
+      Table << MatchTable::Comment(Comment) << MatchTable::LineBreak;
     }
 
     emitPredicateListOpcodes(Table, Rule);
