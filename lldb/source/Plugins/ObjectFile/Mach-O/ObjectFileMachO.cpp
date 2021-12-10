@@ -5154,17 +5154,7 @@ void ObjectFileMachO::GetAllArchSpecs(const llvm::MachO::mach_header &header,
   }
 
   if (!found_any) {
-    if (header.filetype == MH_KEXT_BUNDLE) {
-      base_triple.setVendor(llvm::Triple::Apple);
-      add_triple(base_triple);
-    } else {
-      // We didn't find a LC_VERSION_MIN load command and this isn't a KEXT
-      // so lets not say our Vendor is Apple, leave it as an unspecified
-      // unknown.
-      base_triple.setVendor(llvm::Triple::UnknownVendor);
-      base_triple.setVendorName(llvm::StringRef());
-      add_triple(base_triple);
-    }
+    add_triple(base_triple);
   }
 }
 

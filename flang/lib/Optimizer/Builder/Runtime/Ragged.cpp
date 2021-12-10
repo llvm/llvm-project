@@ -30,10 +30,10 @@ void fir::runtime::genRaggedArrayAllocate(mlir::Location loc,
   auto extentTy = fir::SequenceType::get(shape, i64Ty);
   auto refTy = fir::ReferenceType::get(i64Ty);
   // Position of the bufferPointer in the header struct.
-  auto two = builder.createIntegerConstant(loc, i32Ty, 2);
+  auto one = builder.createIntegerConstant(loc, i32Ty, 1);
   auto eleTy = fir::unwrapSequenceType(fir::unwrapRefType(header.getType()));
   auto ptrTy = builder.getRefType(eleTy.cast<mlir::TupleType>().getType(1));
-  auto ptr = builder.create<fir::CoordinateOp>(loc, ptrTy, header, two);
+  auto ptr = builder.create<fir::CoordinateOp>(loc, ptrTy, header, one);
   auto heap = builder.create<fir::LoadOp>(loc, ptr);
   auto cmp = builder.genIsNull(loc, heap);
   builder.genIfThen(loc, cmp)

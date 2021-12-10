@@ -3,7 +3,7 @@
 # REQUIRES: system-windows
 # RUN: touch %t.TestFile
 # RUN: chmod 400 %t.TestFile
-# RUN: not llvm-ifs --output-format=ELF --output=%t.TestFile %s 2>&1 | FileCheck -DMSG=%errc_EACCES %s --check-prefix=ERR
+# RUN: not llvm-ifs --output-elf=%t.TestFile %s 2>&1 | FileCheck -DMSG=%errc_EACCES %s --check-prefix=ERR
 # RUN: chmod 777 %t.TestFile
 # RUN: rm -rf %t.TestFile
 

@@ -37,6 +37,7 @@
 #include "index/Symbol.h"
 #include "index/SymbolOrigin.h"
 #include "support/Logger.h"
+#include "support/Markup.h"
 #include "support/Threading.h"
 #include "support/ThreadsafeFS.h"
 #include "support/Trace.h"
@@ -155,6 +156,21 @@ toCompletionItemKind(CodeCompletionResult::ResultKind ResKind,
     return CompletionItemKind::Snippet;
   }
   llvm_unreachable("Unhandled CodeCompletionResult::ResultKind.");
+}
+
+// FIXME: find a home for this (that can depend on both markup and Protocol).
+MarkupContent renderDoc(const markup::Document &Doc, MarkupKind Kind) {
+  MarkupContent Result;
+  Result.kind = Kind;
+  switch (Kind) {
+  case MarkupKind::PlainText:
+    Result.value.append(Doc.asPlainText());
+    break;
+  case MarkupKind::Markdown:
+    Result.value.append(Doc.asMarkdown());
+    break;
+  }
+  return Result;
 }
 
 // Identifier code completion result.
@@ -897,10 +913,12 @@ int paramIndexForArg(const CodeCompleteConsumer::OverloadCandidate &Candidate,
 class SignatureHelpCollector final : public CodeCompleteConsumer {
 public:
   SignatureHelpCollector(const clang::CodeCompleteOptions &CodeCompleteOpts,
+                         MarkupKind DocumentationFormat,
                          const SymbolIndex *Index, SignatureHelp &SigHelp)
       : CodeCompleteConsumer(CodeCompleteOpts), SigHelp(SigHelp),
         Allocator(std::make_shared<clang::GlobalCodeCompletionAllocator>()),
-        CCTUInfo(Allocator), Index(Index) {}
+        CCTUInfo(Allocator), Index(Index),
+        DocumentationFormat(DocumentationFormat) {}
 
   void ProcessOverloadCandidates(Sema &S, unsigned CurrentArg,
                                  OverloadCandidate *Candidates,
@@ -969,9 +987,9 @@ public:
         if (!S.Documentation.empty())
           FetchedDocs[S.ID] = std::string(S.Documentation);
       });
-      log("SigHelp: requested docs for {0} symbols from the index, got {1} "
-          "symbols with non-empty docs in the response",
-          IndexRequest.IDs.size(), FetchedDocs.size());
+      vlog("SigHelp: requested docs for {0} symbols from the index, got {1} "
+           "symbols with non-empty docs in the response",
+           IndexRequest.IDs.size(), FetchedDocs.size());
     }
 
     llvm::sort(ScoredSignatures, [](const ScoredSignature &L,
@@ -1009,8 +1027,12 @@ public:
     for (auto &SS : ScoredSignatures) {
       auto IndexDocIt =
           SS.IDForDoc ? FetchedDocs.find(SS.IDForDoc) : FetchedDocs.end();
-      if (IndexDocIt != FetchedDocs.end())
-        SS.Signature.documentation = IndexDocIt->second;
+      if (IndexDocIt != FetchedDocs.end()) {
+        markup::Document SignatureComment;
+        parseDocumentation(IndexDocIt->second, SignatureComment);
+        SS.Signature.documentation =
+            renderDoc(SignatureComment, DocumentationFormat);
+      }
 
       SigHelp.signatures.push_back(std::move(SS.Signature));
     }
@@ -1071,7 +1093,9 @@ private:
     SignatureQualitySignals Signal;
     const char *ReturnType = nullptr;
 
-    Signature.documentation = formatDocumentation(CCS, DocComment);
+    markup::Document OverloadComment;
+    parseDocumentation(formatDocumentation(CCS, DocComment), OverloadComment);
+    Signature.documentation = renderDoc(OverloadComment, DocumentationFormat);
     Signal.Kind = Candidate.getKind();
 
     for (const auto &Chunk : CCS) {
@@ -1110,7 +1134,7 @@ private:
     Result.Signature = std::move(Signature);
     Result.Quality = Signal;
     const FunctionDecl *Func = Candidate.getFunction();
-    if (Func && Result.Signature.documentation.empty()) {
+    if (Func && Result.Signature.documentation.value.empty()) {
       // Computing USR caches linkage, which may change after code completion.
       if (!hasUnstableLinkage(Func))
         Result.IDForDoc = clangd::getSymbolID(Func);
@@ -1122,6 +1146,7 @@ private:
   std::shared_ptr<clang::GlobalCodeCompletionAllocator> Allocator;
   CodeCompletionTUInfo CCTUInfo;
   const SymbolIndex *Index;
+  MarkupKind DocumentationFormat;
 }; // SignatureHelpCollector
 
 // Used only for completion of C-style comments in function call (i.e.
@@ -2020,7 +2045,8 @@ CodeCompleteResult codeComplete(PathRef FileName, Position Pos,
 
 SignatureHelp signatureHelp(PathRef FileName, Position Pos,
                             const PreambleData &Preamble,
-                            const ParseInputs &ParseInput) {
+                            const ParseInputs &ParseInput,
+                            MarkupKind DocumentationFormat) {
   auto Offset = positionToOffset(ParseInput.Contents, Pos);
   if (!Offset) {
     elog("Signature help position was invalid {0}", Offset.takeError());
@@ -2033,8 +2059,8 @@ SignatureHelp signatureHelp(PathRef FileName, Position Pos,
   Options.IncludeCodePatterns = false;
   Options.IncludeBriefComments = false;
   semaCodeComplete(
-      std::make_unique<SignatureHelpCollector>(Options, ParseInput.Index,
-                                               Result),
+      std::make_unique<SignatureHelpCollector>(Options, DocumentationFormat,
+                                               ParseInput.Index, Result),
       Options,
       {FileName, *Offset, Preamble,
        PreamblePatch::createFullPatch(FileName, ParseInput, Preamble),
@@ -2073,21 +2099,6 @@ bool isIndexedForCodeCompletion(const NamedDecl &ND, ASTContext &ASTCtx) {
     return InTopLevelScope(*EnumDecl) && !EnumDecl->isScoped();
 
   return false;
-}
-
-// FIXME: find a home for this (that can depend on both markup and Protocol).
-static MarkupContent renderDoc(const markup::Document &Doc, MarkupKind Kind) {
-  MarkupContent Result;
-  Result.kind = Kind;
-  switch (Kind) {
-  case MarkupKind::PlainText:
-    Result.value.append(Doc.asPlainText());
-    break;
-  case MarkupKind::Markdown:
-    Result.value.append(Doc.asMarkdown());
-    break;
-  }
-  return Result;
 }
 
 CompletionItem CodeCompletion::render(const CodeCompleteOptions &Opts) const {

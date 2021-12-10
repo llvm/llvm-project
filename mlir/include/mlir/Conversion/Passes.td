@@ -203,7 +203,15 @@ def ConvertGpuOpsToROCDLOps : Pass<"convert-gpu-to-rocdl", "gpu::GPUModuleOp"> {
   let options = [
     Option<"indexBitwidth", "index-bitwidth", "unsigned",
            /*default=kDeriveIndexBitwidthFromDataLayout*/"0",
-           "Bitwidth of the index type, 0 to use size of machine word">
+           "Bitwidth of the index type, 0 to use size of machine word">,
+    Option<"runtime", "runtime", "::mlir::gpu::amd::Runtime",
+          "::mlir::gpu::amd::Runtime::Unknown",
+          "Runtime code will be run on (default is Unknown, can also use HIP or OpenCl)",
+          [{::llvm::cl::values(
+            clEnumValN(::mlir::gpu::amd::Runtime::Unknown, "unknown", "Unknown (default)"),
+            clEnumValN(::mlir::gpu::amd::Runtime::HIP, "HIP", "HIP"),
+            clEnumValN(::mlir::gpu::amd::Runtime::OpenCL, "OpenCL", "OpenCL")
+          )}]>
   ];
 }
 

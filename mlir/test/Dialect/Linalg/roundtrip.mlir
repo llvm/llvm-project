@@ -446,19 +446,6 @@ func @named_ops(%a3: memref<?x?x?xf32>, %b3: memref<?x?x?xf32>, %c3: memref<?x?x
 
 // -----
 
-func @tensor_reshape_zero_dim(%arg0 : tensor<1x1xf32>, %arg1 : tensor<f32>) -> (tensor<f32>, tensor<1x1xf32>)
-{
-  %0 = linalg.tensor_collapse_shape %arg0 [] : tensor<1x1xf32> into tensor<f32>
-  %1 = linalg.tensor_expand_shape %0 [] : tensor<f32> into tensor<1x1xf32>
-  return %0, %1 : tensor<f32>, tensor<1x1xf32>
-}
-// CHECK-LABEL: func @tensor_reshape_zero_dim
-//       CHECK:   linalg.tensor_collapse_shape %{{.*}} [] : tensor<1x1xf32> into tensor<f32>
-//       CHECK:   linalg.tensor_expand_shape %{{.*}} [] : tensor<f32> into tensor<1x1xf32>
-
-// -----
-
-
 func @init_tensor(%arg0 : index, %arg1 : index)
 {
   %0 = linalg.init_tensor [3, 42] : tensor<3x42xf32>
@@ -468,19 +455,6 @@ func @init_tensor(%arg0 : index, %arg1 : index)
 // CHECK-LABEL: func @init_tensor
 //       CHECK:   linalg.init_tensor [3, 42] : tensor<3x42xf32>
 //       CHECK:   linalg.init_tensor [4, %{{.*}}, %{{.*}}, 5] : tensor<4x?x?x5xf32>
-
-// -----
-
-func @legal_collapsing_reshape_dynamic_tensor
-  (%arg0: tensor<?x?x?x4x?xf32>) -> tensor<?x?x?xf32>
-{
-  %0 = linalg.tensor_collapse_shape %arg0 [[0], [1], [2, 3, 4]] :
-    tensor<?x?x?x4x?xf32> into tensor<?x?x?xf32>
-  return %0 : tensor<?x?x?xf32>
-}
-//      CHECK: func @legal_collapsing_reshape_dynamic_tensor
-//      CHECK:   linalg.tensor_collapse_shape
-// CHECK-SAME:    [0], [1], [2, 3, 4]
 
 // -----
 

@@ -928,7 +928,7 @@ Align Value::getPointerAlignment(const DataLayout &DL) const {
       }
       llvm_unreachable("Unhandled FunctionPtrAlignType");
     }
-    const MaybeAlign Alignment(GO->getAlignment());
+    const MaybeAlign Alignment(GO->getAlign());
     if (!Alignment) {
       if (auto *GVar = dyn_cast<GlobalVariable>(GO)) {
         Type *ObjectType = GVar->getValueType();

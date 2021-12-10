@@ -8,9 +8,10 @@
 ; RUN: llc -mtriple=riscv64 -verify-machineinstrs < %s \
 ; RUN:   | FileCheck -check-prefix=RV64I %s
 
-; These tests are each targeted at a particular RISC-V FPU instruction. Most
-; other files in this folder exercise LLVM IR instructions that don't directly
-; match a RISC-V instruction.
+; These tests are each targeted at a particular RISC-V FPU instruction.
+; Compares and conversions can be found in float-fcmp.ll and float-convert.ll
+; respectively. Some other float-*.ll files in this folder exercise LLVM IR
+; instructions that don't directly match a RISC-V instruction.
 
 define float @fadd_s(float %a, float %b) nounwind {
 ; RV32IF-LABEL: fadd_s:
@@ -493,123 +494,6 @@ define float @fmax_s(float %a, float %b) nounwind {
 ; RV64I-NEXT:    ret
   %1 = call float @llvm.maxnum.f32(float %a, float %b)
   ret float %1
-}
-
-define i32 @feq_s(float %a, float %b) nounwind {
-; RV32IF-LABEL: feq_s:
-; RV32IF:       # %bb.0:
-; RV32IF-NEXT:    fmv.w.x ft0, a1
-; RV32IF-NEXT:    fmv.w.x ft1, a0
-; RV32IF-NEXT:    feq.s a0, ft1, ft0
-; RV32IF-NEXT:    ret
-;
-; RV64IF-LABEL: feq_s:
-; RV64IF:       # %bb.0:
-; RV64IF-NEXT:    fmv.w.x ft0, a1
-; RV64IF-NEXT:    fmv.w.x ft1, a0
-; RV64IF-NEXT:    feq.s a0, ft1, ft0
-; RV64IF-NEXT:    ret
-;
-; RV32I-LABEL: feq_s:
-; RV32I:       # %bb.0:
-; RV32I-NEXT:    addi sp, sp, -16
-; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32I-NEXT:    call __eqsf2@plt
-; RV32I-NEXT:    seqz a0, a0
-; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    addi sp, sp, 16
-; RV32I-NEXT:    ret
-;
-; RV64I-LABEL: feq_s:
-; RV64I:       # %bb.0:
-; RV64I-NEXT:    addi sp, sp, -16
-; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    call __eqsf2@plt
-; RV64I-NEXT:    seqz a0, a0
-; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    addi sp, sp, 16
-; RV64I-NEXT:    ret
-  %1 = fcmp oeq float %a, %b
-  %2 = zext i1 %1 to i32
-  ret i32 %2
-}
-
-define i32 @flt_s(float %a, float %b) nounwind {
-; RV32IF-LABEL: flt_s:
-; RV32IF:       # %bb.0:
-; RV32IF-NEXT:    fmv.w.x ft0, a1
-; RV32IF-NEXT:    fmv.w.x ft1, a0
-; RV32IF-NEXT:    flt.s a0, ft1, ft0
-; RV32IF-NEXT:    ret
-;
-; RV64IF-LABEL: flt_s:
-; RV64IF:       # %bb.0:
-; RV64IF-NEXT:    fmv.w.x ft0, a1
-; RV64IF-NEXT:    fmv.w.x ft1, a0
-; RV64IF-NEXT:    flt.s a0, ft1, ft0
-; RV64IF-NEXT:    ret
-;
-; RV32I-LABEL: flt_s:
-; RV32I:       # %bb.0:
-; RV32I-NEXT:    addi sp, sp, -16
-; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32I-NEXT:    call __ltsf2@plt
-; RV32I-NEXT:    slti a0, a0, 0
-; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    addi sp, sp, 16
-; RV32I-NEXT:    ret
-;
-; RV64I-LABEL: flt_s:
-; RV64I:       # %bb.0:
-; RV64I-NEXT:    addi sp, sp, -16
-; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    call __ltsf2@plt
-; RV64I-NEXT:    slti a0, a0, 0
-; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    addi sp, sp, 16
-; RV64I-NEXT:    ret
-  %1 = fcmp olt float %a, %b
-  %2 = zext i1 %1 to i32
-  ret i32 %2
-}
-
-define i32 @fle_s(float %a, float %b) nounwind {
-; RV32IF-LABEL: fle_s:
-; RV32IF:       # %bb.0:
-; RV32IF-NEXT:    fmv.w.x ft0, a1
-; RV32IF-NEXT:    fmv.w.x ft1, a0
-; RV32IF-NEXT:    fle.s a0, ft1, ft0
-; RV32IF-NEXT:    ret
-;
-; RV64IF-LABEL: fle_s:
-; RV64IF:       # %bb.0:
-; RV64IF-NEXT:    fmv.w.x ft0, a1
-; RV64IF-NEXT:    fmv.w.x ft1, a0
-; RV64IF-NEXT:    fle.s a0, ft1, ft0
-; RV64IF-NEXT:    ret
-;
-; RV32I-LABEL: fle_s:
-; RV32I:       # %bb.0:
-; RV32I-NEXT:    addi sp, sp, -16
-; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32I-NEXT:    call __lesf2@plt
-; RV32I-NEXT:    slti a0, a0, 1
-; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    addi sp, sp, 16
-; RV32I-NEXT:    ret
-;
-; RV64I-LABEL: fle_s:
-; RV64I:       # %bb.0:
-; RV64I-NEXT:    addi sp, sp, -16
-; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    call __lesf2@plt
-; RV64I-NEXT:    slti a0, a0, 1
-; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    addi sp, sp, 16
-; RV64I-NEXT:    ret
-  %1 = fcmp ole float %a, %b
-  %2 = zext i1 %1 to i32
-  ret i32 %2
 }
 
 declare float @llvm.fma.f32(float, float, float)

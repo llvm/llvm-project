@@ -71,17 +71,19 @@ class LeakSuppressionContext {
   SuppressionContext context;
   bool suppressed_stacks_sorted = true;
   InternalMmapVector<u32> suppressed_stacks;
+  const LoadedModule *suppress_module = nullptr;
 
-  Suppression *GetSuppressionForAddr(uptr addr);
   void LazyInit();
+  Suppression *GetSuppressionForAddr(uptr addr);
+  bool SuppressInvalid(const StackTrace &stack);
+  bool SuppressByRule(const StackTrace &stack, uptr hit_count, uptr total_size);
 
  public:
   LeakSuppressionContext(const char *supprression_types[],
                          int suppression_types_num)
       : context(supprression_types, suppression_types_num) {}
 
-  Suppression *GetSuppressionForStack(u32 stack_trace_id,
-                                      const StackTrace &stack);
+  bool Suppress(u32 stack_trace_id, uptr hit_count, uptr total_size);
 
   const InternalMmapVector<u32> &GetSortedSuppressedStacks() {
     if (!suppressed_stacks_sorted) {
@@ -124,6 +126,8 @@ void LeakSuppressionContext::LazyInit() {
     if (&__lsan_default_suppressions)
       context.Parse(__lsan_default_suppressions());
     context.Parse(kStdSuppressions);
+    if (flags()->use_tls && flags()->use_ld_allocations)
+      suppress_module = GetLinker();
   }
 }
 
@@ -148,19 +152,64 @@ Suppression *LeakSuppressionContext::GetSuppressionForAddr(uptr addr) {
   return s;
 }
 
-Suppression *LeakSuppressionContext::GetSuppressionForStack(
-    u32 stack_trace_id, const StackTrace &stack) {
-  LazyInit();
+static uptr GetCallerPC(const StackTrace &stack) {
+  // The top frame is our malloc/calloc/etc. The next frame is the caller.
+  if (stack.size >= 2)
+    return stack.trace[1];
+  return 0;
+}
+
+// On Linux, treats all chunks allocated from ld-linux.so as reachable, which
+// covers dynamically allocated TLS blocks, internal dynamic loader's loaded
+// modules accounting etc.
+// Dynamic TLS blocks contain the TLS variables of dynamically loaded modules.
+// They are allocated with a __libc_memalign() call in allocate_and_init()
+// (elf/dl-tls.c). Glibc won't tell us the address ranges occupied by those
+// blocks, but we can make sure they come from our own allocator by intercepting
+// __libc_memalign(). On top of that, there is no easy way to reach them. Their
+// addresses are stored in a dynamically allocated array (the DTV) which is
+// referenced from the static TLS. Unfortunately, we can't just rely on the DTV
+// being reachable from the static TLS, and the dynamic TLS being reachable from
+// the DTV. This is because the initial DTV is allocated before our interception
+// mechanism kicks in, and thus we don't recognize it as allocated memory. We
+// can't special-case it either, since we don't know its size.
+// Our solution is to include in the root set all allocations made from
+// ld-linux.so (which is where allocate_and_init() is implemented). This is
+// guaranteed to include all dynamic TLS blocks (and possibly other allocations
+// which we don't care about).
+// On all other platforms, this simply checks to ensure that the caller pc is
+// valid before reporting chunks as leaked.
+bool LeakSuppressionContext::SuppressInvalid(const StackTrace &stack) {
+  uptr caller_pc = GetCallerPC(stack);
+  // If caller_pc is unknown, this chunk may be allocated in a coroutine. Mark
+  // it as reachable, as we can't properly report its allocation stack anyway.
+  return !caller_pc ||
+         (suppress_module && suppress_module->containsAddress(caller_pc));
+}
+
+bool LeakSuppressionContext::SuppressByRule(const StackTrace &stack,
+                                            uptr hit_count, uptr total_size) {
   for (uptr i = 0; i < stack.size; i++) {
     Suppression *s = GetSuppressionForAddr(
         StackTrace::GetPreviousInstructionPc(stack.trace[i]));
     if (s) {
-      suppressed_stacks_sorted = false;
-      suppressed_stacks.push_back(stack_trace_id);
-      return s;
+      s->weight += total_size;
+      atomic_fetch_add(&s->hit_count, hit_count, memory_order_relaxed);
+      return true;
     }
   }
-  return nullptr;
+  return false;
+}
+
+bool LeakSuppressionContext::Suppress(u32 stack_trace_id, uptr hit_count,
+                                      uptr total_size) {
+  LazyInit();
+  StackTrace stack = StackDepotGet(stack_trace_id);
+  if (!SuppressInvalid(stack) && !SuppressByRule(stack, hit_count, total_size))
+    return false;
+  suppressed_stacks_sorted = false;
+  suppressed_stacks.push_back(stack_trace_id);
+  return true;
 }
 
 static LeakSuppressionContext *GetSuppressionContext() {
@@ -520,68 +569,6 @@ static void CollectIgnoredCb(uptr chunk, void *arg) {
   }
 }
 
-static uptr GetCallerPC(const StackTrace &stack) {
-  // The top frame is our malloc/calloc/etc. The next frame is the caller.
-  if (stack.size >= 2)
-    return stack.trace[1];
-  return 0;
-}
-
-struct InvalidPCParam {
-  Frontier *frontier;
-  bool skip_linker_allocations;
-};
-
-// ForEachChunk callback. If the caller pc is invalid or is within the linker,
-// mark as reachable. Called by ProcessPlatformSpecificAllocations.
-static void MarkInvalidPCCb(uptr chunk, void *arg) {
-  CHECK(arg);
-  InvalidPCParam *param = reinterpret_cast<InvalidPCParam *>(arg);
-  chunk = GetUserBegin(chunk);
-  LsanMetadata m(chunk);
-  if (m.allocated() && m.tag() != kReachable && m.tag() != kIgnored) {
-    u32 stack_id = m.stack_trace_id();
-    uptr caller_pc = 0;
-    if (stack_id > 0)
-      caller_pc = GetCallerPC(StackDepotGet(stack_id));
-    // If caller_pc is unknown, this chunk may be allocated in a coroutine. Mark
-    // it as reachable, as we can't properly report its allocation stack anyway.
-    if (caller_pc == 0 || (param->skip_linker_allocations &&
-                           GetLinker()->containsAddress(caller_pc))) {
-      m.set_tag(kIgnored);
-      param->frontier->push_back(chunk);
-    }
-  }
-}
-
-// On Linux, treats all chunks allocated from ld-linux.so as reachable, which
-// covers dynamically allocated TLS blocks, internal dynamic loader's loaded
-// modules accounting etc.
-// Dynamic TLS blocks contain the TLS variables of dynamically loaded modules.
-// They are allocated with a __libc_memalign() call in allocate_and_init()
-// (elf/dl-tls.c). Glibc won't tell us the address ranges occupied by those
-// blocks, but we can make sure they come from our own allocator by intercepting
-// __libc_memalign(). On top of that, there is no easy way to reach them. Their
-// addresses are stored in a dynamically allocated array (the DTV) which is
-// referenced from the static TLS. Unfortunately, we can't just rely on the DTV
-// being reachable from the static TLS, and the dynamic TLS being reachable from
-// the DTV. This is because the initial DTV is allocated before our interception
-// mechanism kicks in, and thus we don't recognize it as allocated memory. We
-// can't special-case it either, since we don't know its size.
-// Our solution is to include in the root set all allocations made from
-// ld-linux.so (which is where allocate_and_init() is implemented). This is
-// guaranteed to include all dynamic TLS blocks (and possibly other allocations
-// which we don't care about).
-// On all other platforms, this simply checks to ensure that the caller pc is
-// valid before reporting chunks as leaked.
-static void ProcessPC(Frontier *frontier) {
-  InvalidPCParam arg;
-  arg.frontier = frontier;
-  arg.skip_linker_allocations =
-      flags()->use_tls && flags()->use_ld_allocations && GetLinker() != nullptr;
-  ForEachChunk(MarkInvalidPCCb, &arg);
-}
-
 // Sets the appropriate tag on each chunk.
 static void ClassifyAllChunks(SuspendedThreadsList const &suspended_threads,
                               Frontier *frontier) {
@@ -596,9 +583,6 @@ static void ClassifyAllChunks(SuspendedThreadsList const &suspended_threads,
   ProcessThreads(suspended_threads, frontier);
   ProcessRootRegions(frontier);
   FloodFillTag(frontier, kReachable);
-
-  CHECK_EQ(0, frontier->size());
-  ProcessPC(frontier);
 
   // The check here is relatively expensive, so we do this in a separate flood
   // fill. That way we can skip the check for chunks that are reachable
@@ -626,15 +610,13 @@ static void ResetTagsCb(uptr chunk, void *arg) {
 // a LeakReport.
 static void CollectLeaksCb(uptr chunk, void *arg) {
   CHECK(arg);
-  LeakReport *leak_report = reinterpret_cast<LeakReport *>(arg);
+  LeakedChunks *leaks = reinterpret_cast<LeakedChunks *>(arg);
   chunk = GetUserBegin(chunk);
   LsanMetadata m(chunk);
   if (!m.allocated())
     return;
-  if (m.tag() == kDirectlyLeaked || m.tag() == kIndirectlyLeaked) {
-    leak_report->AddLeakedChunk(chunk, m.stack_trace_id(), m.requested_size(),
-                                m.tag());
-  }
+  if (m.tag() == kDirectlyLeaked || m.tag() == kIndirectlyLeaked)
+    leaks->push_back({chunk, m.stack_trace_id(), m.requested_size(), m.tag()});
 }
 
 void LeakSuppressionContext::PrintMatchedSuppressions() {
@@ -695,7 +677,7 @@ static void CheckForLeaksCallback(const SuspendedThreadsList &suspended_threads,
   CHECK(!param->success);
   ReportUnsuspendedThreads(suspended_threads);
   ClassifyAllChunks(suspended_threads, &param->frontier);
-  ForEachChunk(CollectLeaksCb, &param->leak_report);
+  ForEachChunk(CollectLeaksCb, &param->leaks);
   // Clean up for subsequent leak checks. This assumes we did not overwrite any
   // kIgnored tags.
   ForEachChunk(ResetTagsCb, nullptr);
@@ -744,17 +726,20 @@ static bool CheckForLeaks() {
           "etc)\n");
       Die();
     }
+    LeakReport leak_report;
+    leak_report.AddLeakedChunks(param.leaks);
+
     // No new suppressions stacks, so rerun will not help and we can report.
-    if (!param.leak_report.ApplySuppressions())
-      return PrintResults(param.leak_report);
+    if (!leak_report.ApplySuppressions())
+      return PrintResults(leak_report);
 
     // No indirect leaks to report, so we are done here.
-    if (!param.leak_report.IndirectUnsuppressedLeakCount())
-      return PrintResults(param.leak_report);
+    if (!leak_report.IndirectUnsuppressedLeakCount())
+      return PrintResults(leak_report);
 
     if (i >= 8) {
       Report("WARNING: LeakSanitizer gave up on indirect leaks suppression.\n");
-      return PrintResults(param.leak_report);
+      return PrintResults(leak_report);
     }
 
     // We found a new previously unseen suppressed call stack. Rerun to make
@@ -791,40 +776,45 @@ void DoRecoverableLeakCheckVoid() { DoRecoverableLeakCheck(); }
 // A hard limit on the number of distinct leaks, to avoid quadratic complexity
 // in LeakReport::AddLeakedChunk(). We don't expect to ever see this many leaks
 // in real-world applications.
-// FIXME: Get rid of this limit by changing the implementation of LeakReport to
-// use a hash table.
+// FIXME: Get rid of this limit by moving logic into DedupLeaks.
 const uptr kMaxLeaksConsidered = 5000;
 
-void LeakReport::AddLeakedChunk(uptr chunk, u32 stack_trace_id,
-                                uptr leaked_size, ChunkTag tag) {
-  CHECK(tag == kDirectlyLeaked || tag == kIndirectlyLeaked);
+void LeakReport::AddLeakedChunks(const LeakedChunks &chunks) {
+  for (const LeakedChunk &leak : chunks) {
+    uptr chunk = leak.chunk;
+    u32 stack_trace_id = leak.stack_trace_id;
+    uptr leaked_size = leak.leaked_size;
+    ChunkTag tag = leak.tag;
+    CHECK(tag == kDirectlyLeaked || tag == kIndirectlyLeaked);
 
-  if (u32 resolution = flags()->resolution) {
-    StackTrace stack = StackDepotGet(stack_trace_id);
-    stack.size = Min(stack.size, resolution);
-    stack_trace_id = StackDepotPut(stack);
-  }
-
-  bool is_directly_leaked = (tag == kDirectlyLeaked);
-  uptr i;
-  for (i = 0; i < leaks_.size(); i++) {
-    if (leaks_[i].stack_trace_id == stack_trace_id &&
-        leaks_[i].is_directly_leaked == is_directly_leaked) {
-      leaks_[i].hit_count++;
-      leaks_[i].total_size += leaked_size;
-      break;
+    if (u32 resolution = flags()->resolution) {
+      StackTrace stack = StackDepotGet(stack_trace_id);
+      stack.size = Min(stack.size, resolution);
+      stack_trace_id = StackDepotPut(stack);
     }
-  }
-  if (i == leaks_.size()) {
-    if (leaks_.size() == kMaxLeaksConsidered)
-      return;
-    Leak leak = {next_id_++,     /* hit_count */ 1,  leaked_size,
-                 stack_trace_id, is_directly_leaked, /* is_suppressed */ false};
-    leaks_.push_back(leak);
-  }
-  if (flags()->report_objects) {
-    LeakedObject obj = {leaks_[i].id, chunk, leaked_size};
-    leaked_objects_.push_back(obj);
+
+    bool is_directly_leaked = (tag == kDirectlyLeaked);
+    uptr i;
+    for (i = 0; i < leaks_.size(); i++) {
+      if (leaks_[i].stack_trace_id == stack_trace_id &&
+          leaks_[i].is_directly_leaked == is_directly_leaked) {
+        leaks_[i].hit_count++;
+        leaks_[i].total_size += leaked_size;
+        break;
+      }
+    }
+    if (i == leaks_.size()) {
+      if (leaks_.size() == kMaxLeaksConsidered)
+        return;
+      Leak leak = {next_id_++,         /* hit_count */ 1,
+                   leaked_size,        stack_trace_id,
+                   is_directly_leaked, /* is_suppressed */ false};
+      leaks_.push_back(leak);
+    }
+    if (flags()->report_objects) {
+      LeakedObject obj = {leaks_[i].id, chunk, leaked_size};
+      leaked_objects_.push_back(obj);
+    }
   }
 }
 
@@ -909,12 +899,8 @@ uptr LeakReport::ApplySuppressions() {
   LeakSuppressionContext *suppressions = GetSuppressionContext();
   uptr new_suppressions = false;
   for (uptr i = 0; i < leaks_.size(); i++) {
-    Suppression *s = suppressions->GetSuppressionForStack(
-        leaks_[i].stack_trace_id, StackDepotGet(leaks_[i].stack_trace_id));
-    if (s) {
-      s->weight += leaks_[i].total_size;
-      atomic_fetch_add(&s->hit_count, leaks_[i].hit_count,
-                       memory_order_relaxed);
+    if (suppressions->Suppress(leaks_[i].stack_trace_id, leaks_[i].hit_count,
+                               leaks_[i].total_size)) {
       leaks_[i].is_suppressed = true;
       ++new_suppressions;
     }

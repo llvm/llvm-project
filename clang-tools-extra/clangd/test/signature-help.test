@@ -1,10 +1,10 @@
 # RUN: clangd -lit-test < %s | FileCheck -strict-whitespace %s
 # Start a session.
-{"jsonrpc":"2.0","id":0,"method":"initialize","params":{"processId":123,"rootPath":"clangd","capabilities":{},"trace":"off"}}
+{"jsonrpc":"2.0","id":0,"method":"initialize","params":{"processId":123,"rootPath":"clangd","capabilities":{"textDocument": {"signatureHelp": {"signatureInformation": {"documentationFormat": ["markdown", "plaintext"]}}}},"trace":"off"}}
 ---
-{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"test:///main.cpp","languageId":"cpp","version":1,"text":"void x(int);\nint main(){\nx("}}}
+{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"test:///main.cpp","languageId":"cpp","version":1,"text":"// comment `markdown` _escape_\nvoid x(int);\nint main(){\nx("}}}
 ---
-{"jsonrpc":"2.0","id":1,"method":"textDocument/signatureHelp","params":{"textDocument":{"uri":"test:///main.cpp"},"position":{"line":2,"character":2}}}
+{"jsonrpc":"2.0","id":1,"method":"textDocument/signatureHelp","params":{"textDocument":{"uri":"test:///main.cpp"},"position":{"line":3,"character":2}}}
 #      CHECK: "id": 1,
 # CHECK-NEXT: "jsonrpc": "2.0",
 # CHECK-NEXT: "result": {
@@ -12,6 +12,10 @@
 # CHECK-NEXT:   "activeSignature": 0,
 # CHECK-NEXT:   "signatures": [
 # CHECK-NEXT:     {
+# CHECK-NEXT:       "documentation": {
+# CHECK-NEXT:         "kind": "markdown",
+# CHECK-NEXT:         "value": "comment `markdown` \\_escape\\_"
+# CHECK-NEXT:       },
 # CHECK-NEXT:       "label": "x(int) -> void",
 # CHECK-NEXT:       "parameters": [
 # CHECK-NEXT:         {

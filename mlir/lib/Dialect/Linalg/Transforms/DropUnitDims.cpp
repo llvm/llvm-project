@@ -323,7 +323,7 @@ struct ReplaceUnitExtents : public OpRewritePattern<GenericOp> {
     if (origResultType == result.getType())
       return result;
     if (origResultType.isa<RankedTensorType>()) {
-      return rewriter.create<linalg::TensorExpandShapeOp>(
+      return rewriter.create<tensor::ExpandShapeOp>(
           loc, origResultType, result,
           convertAffineMapArrayToExprs(reassociationMap));
     }
@@ -349,7 +349,7 @@ struct ReplaceUnitExtents : public OpRewritePattern<GenericOp> {
           convertAffineMapArrayToExprs(reassociationMap));
     }
     if (operandType.isa<RankedTensorType>()) {
-      return rewriter.create<linalg::TensorCollapseShapeOp>(
+      return rewriter.create<tensor::CollapseShapeOp>(
           loc, newInputOutputType, operand,
           convertAffineMapArrayToExprs(reassociationMap));
     }
@@ -508,8 +508,8 @@ struct UseRankReducedExtractSliceOp
     Location loc = sliceOp.getLoc();
     Value newSlice = rewriter.create<tensor::ExtractSliceOp>(
         loc, rankReducedType, sliceOp.source(), offsets, sizes, strides);
-    rewriter.replaceOpWithNewOp<TensorExpandShapeOp>(sliceOp, resultType,
-                                                     newSlice, *reassociation);
+    rewriter.replaceOpWithNewOp<tensor::ExpandShapeOp>(
+        sliceOp, resultType, newSlice, *reassociation);
     return success();
   }
 };
@@ -530,7 +530,7 @@ struct UseRankReducedInsertSliceOp
         reassociation->size() == static_cast<size_t>(sourceType.getRank()))
       return failure();
     Location loc = insertOp.getLoc();
-    auto reshapedSource = rewriter.create<TensorCollapseShapeOp>(
+    auto reshapedSource = rewriter.create<tensor::CollapseShapeOp>(
         loc, insertOp.source(), *reassociation);
     rewriter.replaceOpWithNewOp<tensor::InsertSliceOp>(
         insertOp, reshapedSource, insertOp.dest(), insertOp.getMixedOffsets(),
@@ -548,8 +548,10 @@ void mlir::linalg::populateFoldUnitExtentDimsPatterns(
   patterns.add<FoldUnitDimLoops, ReplaceUnitExtents,
                UseRankReducedExtractSliceOp, UseRankReducedInsertSliceOp>(
       context);
-  TensorCollapseShapeOp::getCanonicalizationPatterns(patterns, context);
-  TensorExpandShapeOp::getCanonicalizationPatterns(patterns, context);
+  linalg::FillOp::getCanonicalizationPatterns(patterns, context);
+  linalg::InitTensorOp::getCanonicalizationPatterns(patterns, context);
+  tensor::CollapseShapeOp::getCanonicalizationPatterns(patterns, context);
+  tensor::ExpandShapeOp::getCanonicalizationPatterns(patterns, context);
 }
 
 namespace {

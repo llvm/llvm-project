@@ -204,7 +204,7 @@ std::string Diagnostics::toString() const {
   std::string S;
   llvm::raw_string_ostream OS(S);
   printToStream(OS);
-  return OS.str();
+  return S;
 }
 
 void Diagnostics::printToStreamFull(llvm::raw_ostream &OS) const {
@@ -223,7 +223,7 @@ std::string Diagnostics::toStringFull() const {
   std::string S;
   llvm::raw_string_ostream OS(S);
   printToStreamFull(OS);
-  return OS.str();
+  return S;
 }
 
 }  // namespace dynamic

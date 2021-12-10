@@ -181,10 +181,6 @@ public:
     topTaskDescr[tid] = taskICV;
   }
   INLINE omptarget_nvptx_TaskDescr *GetTopLevelTaskDescr(int tid) const;
-  // parallel
-  INLINE uint16_t &NumThreadsForNextParallel(int tid) {
-    return nextRegion.tnum[tid];
-  }
   // schedule (for dispatch)
   INLINE kmp_sched_t &ScheduleType(int tid) { return schedule[tid]; }
   INLINE int64_t &Chunk(int tid) { return chunk[tid]; }
@@ -204,11 +200,6 @@ private:
   omptarget_nvptx_TaskDescr levelOneTaskDescr[MAX_THREADS_PER_TEAM];
   // pointer where to find the current task ICV (top of the stack)
   omptarget_nvptx_TaskDescr *topTaskDescr[MAX_THREADS_PER_TEAM];
-  union {
-    // Only one of the two is live at the same time.
-    // parallel
-    uint16_t tnum[MAX_THREADS_PER_TEAM];
-  } nextRegion;
   // schedule (for dispatch)
   kmp_sched_t schedule[MAX_THREADS_PER_TEAM]; // remember schedule type for #for
   int64_t chunk[MAX_THREADS_PER_TEAM];

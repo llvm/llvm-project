@@ -927,5 +927,5 @@ std::string TokenBuffer::dumpForTests() const {
           M.EndExpanded);
     }
   }
-  return OS.str();
+  return Dump;
 }
