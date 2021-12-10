@@ -7861,7 +7861,7 @@ void OffloadBundler::ConstructJob(Compilation &C, const JobAction &JA,
     Triples += '-';
     Triples += CurTC->getTriple().normalize();
     if ((CurKind == Action::OFK_HIP || CurKind == Action::OFK_Cuda) &&
-        CurDep->getOffloadingArch()) {
+        !StringRef(CurDep->getOffloadingArch()).empty()) {
       Triples += '-';
       Triples += CurDep->getOffloadingArch();
     }
