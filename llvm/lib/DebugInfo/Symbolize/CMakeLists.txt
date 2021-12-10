@@ -9,6 +9,7 @@ add_llvm_component_library(LLVMSymbolize
   LINK_COMPONENTS
   DebugInfoDWARF
   DebugInfoPDB
+  Debuginfod
   Object
   Support
   Demangle
