@@ -119,3 +119,13 @@ pdl.pattern @apply_rewrite_with_no_results : benefit(1) {
     pdl.apply_native_rewrite "NativeRewrite"(%root : !pdl.operation)
   }
 }
+
+// -----
+
+pdl.pattern @attribute_with_dict : benefit(1) {
+  %root = pdl.operation
+  pdl.rewrite %root {
+    %attr = pdl.attribute {some_unit_attr} attributes {pdl.special_attribute}
+    pdl.apply_native_rewrite "NativeRewrite"(%attr : !pdl.attribute)
+  }
+}
