@@ -1004,29 +1004,21 @@ public:
 
 /// A recipe for handling phi nodes of integer and floating-point inductions,
 /// producing their vector and scalar values.
-class VPWidenIntOrFpInductionRecipe : public VPRecipeBase {
+class VPWidenIntOrFpInductionRecipe : public VPRecipeBase, public VPValue {
   PHINode *IV;
   const InductionDescriptor &IndDesc;
 
 public:
   VPWidenIntOrFpInductionRecipe(PHINode *IV, VPValue *Start,
-                                const InductionDescriptor &IndDesc,
-                                Instruction *Cast = nullptr)
-      : VPRecipeBase(VPWidenIntOrFpInductionSC, {Start}), IV(IV),
-        IndDesc(IndDesc) {
-    new VPValue(IV, this);
-
-    if (Cast)
-      new VPValue(Cast, this);
-  }
+                                const InductionDescriptor &IndDesc)
+      : VPRecipeBase(VPWidenIntOrFpInductionSC, {Start}), VPValue(IV, this),
+        IV(IV), IndDesc(IndDesc) {}
 
   VPWidenIntOrFpInductionRecipe(PHINode *IV, VPValue *Start,
                                 const InductionDescriptor &IndDesc,
                                 TruncInst *Trunc)
-      : VPRecipeBase(VPWidenIntOrFpInductionSC, {Start}), IV(IV),
-        IndDesc(IndDesc) {
-    new VPValue(Trunc, this);
-  }
+      : VPRecipeBase(VPWidenIntOrFpInductionSC, {Start}), VPValue(Trunc, this),
+        IV(IV), IndDesc(IndDesc) {}
 
   ~VPWidenIntOrFpInductionRecipe() override = default;
 
@@ -1047,13 +1039,6 @@ public:
 
   /// Returns the start value of the induction.
   VPValue *getStartValue() { return getOperand(0); }
-
-  /// Returns the cast VPValue, if one is attached, or nullptr otherwise.
-  VPValue *getCastValue() {
-    if (getNumDefinedValues() != 2)
-      return nullptr;
-    return getVPValue(1);
-  }
 
   /// Returns the first defined value as TruncInst, if it is one or nullptr
   /// otherwise.

@@ -294,3 +294,35 @@ bool VPlanTransforms::mergeReplicateRegions(VPlan &Plan) {
     delete ToDelete;
   return Changed;
 }
+
+void VPlanTransforms::removeRedundantInductionCasts(VPlan &Plan) {
+  SmallVector<std::pair<VPRecipeBase *, VPValue *>> CastsToRemove;
+  for (auto &Phi : Plan.getEntry()->getEntryBasicBlock()->phis()) {
+    auto *IV = dyn_cast<VPWidenIntOrFpInductionRecipe>(&Phi);
+    if (!IV || IV->getTruncInst())
+      continue;
+
+    // Visit all casts connected to IV and in Casts. Collect them.
+    // remember them for removal.
+    auto &Casts = IV->getInductionDescriptor().getCastInsts();
+    VPValue *FindMyCast = IV;
+    for (Instruction *IRCast : reverse(Casts)) {
+      VPRecipeBase *FoundUserCast = nullptr;
+      for (auto *U : FindMyCast->users()) {
+        auto *UserCast = cast<VPRecipeBase>(U);
+        if (UserCast->getNumDefinedValues() == 1 &&
+            UserCast->getVPSingleValue()->getUnderlyingValue() == IRCast) {
+          FoundUserCast = UserCast;
+          break;
+        }
+      }
+      assert(FoundUserCast && "Missing a cast to remove");
+      CastsToRemove.emplace_back(FoundUserCast, IV);
+      FindMyCast = FoundUserCast->getVPSingleValue();
+    }
+  }
+  for (auto &E : CastsToRemove) {
+    E.first->getVPSingleValue()->replaceAllUsesWith(E.second);
+    E.first->eraseFromParent();
+  }
+}
