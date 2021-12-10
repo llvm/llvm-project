@@ -4095,6 +4095,17 @@ llvm::Value *CGOpenMPRuntimeGPU::getGPUWarpSize(CodeGenFunction &CGF) {
                              Args);
 }
 
+bool CGOpenMPRuntimeGPU::supportFastFPAtomics() {
+    CudaArch Arch = getCudaArch(CGM);
+    switch (Arch) {
+      case CudaArch::GFX90a:
+        return true;
+      default:
+        break;
+    }
+    return false;
+}
+
 std::pair<bool, RValue> CGOpenMPRuntimeGPU::emitFastFPAtomicCall(
     CodeGenFunction &CGF, LValue X, RValue Update, BinaryOperatorKind BO) {
   CGBuilderTy &Bld = CGF.Builder;

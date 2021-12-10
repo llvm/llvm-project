@@ -1931,6 +1931,9 @@ public:
   /// Returns true if the variable is a local variable in untied task.
   bool isLocalVarInUntiedTask(CodeGenFunction &CGF, const VarDecl *VD) const;
 
+  /// Returns whether the current architecture supports fast FP atomics
+  virtual bool supportFastFPAtomics() { return false; }
+
   /// Used for AMDGPU architectures where certain fast FP atomics are defined as
   /// instrinsic functions
   virtual std::pair<bool, RValue> emitFastFPAtomicCall(CodeGenFunction &CGF,

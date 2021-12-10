@@ -1,9 +1,9 @@
 // REQUIRES: amdgpu-registered-target
 
 // RUN: %clang_cc1 -fopenmp -x c++ -std=c++11 -DCHECK_HINTS -triple x86_64-unknown-unknown -fopenmp-targets=amdgcn-amd-amdhsa -emit-llvm-bc %s -o %t-ppc-host.bc
-// RUN: %clang_cc1 -fopenmp -x c++ -std=c++11 -DCHECK_HINTS -triple amdgcn-amd-amdhsa -fopenmp-targets=amdgcn-amd-amdhsa -emit-llvm %s -fopenmp-is-device -fopenmp-host-ir-file-path %t-ppc-host.bc -o - | FileCheck %s --check-prefix CHECK-HINTS
+// RUN: %clang_cc1 -fopenmp -x c++ -std=c++11 -DCHECK_HINTS -triple amdgcn-amd-amdhsa -fopenmp-targets=amdgcn-amd-amdhsa -target-cpu gfx90a -emit-llvm %s -fopenmp-is-device -fopenmp-host-ir-file-path %t-ppc-host.bc -o - | FileCheck %s --check-prefix CHECK-HINTS
 // RUN: %clang_cc1 -fopenmp -x c++ -std=c++11 -DCHECK_FLAG_UNSAFE -triple x86_64-unknown-unknown -fopenmp-targets=amdgcn-amd-amdhsa -emit-llvm-bc %s -o %t-ppc-host.bc
-// RUN: %clang_cc1 -fopenmp -x c++ -std=c++11 -DCHECK_FLAG_UNSAFE -munsafe-fp-atomics -triple amdgcn-amd-amdhsa -fopenmp-targets=amdgcn-amd-amdhsa -emit-llvm %s -fopenmp-is-device -fopenmp-host-ir-file-path %t-ppc-host.bc -o - | FileCheck %s --check-prefix CHECK-FLAG-UNSAFE
+// RUN: %clang_cc1 -fopenmp -x c++ -std=c++11 -DCHECK_FLAG_UNSAFE -munsafe-fp-atomics -triple amdgcn-amd-amdhsa -fopenmp-targets=amdgcn-amd-amdhsa -target-cpu gfx90a -emit-llvm %s -fopenmp-is-device -fopenmp-host-ir-file-path %t-ppc-host.bc -o - | FileCheck %s --check-prefix CHECK-FLAG-UNSAFE
 
 // expected-no-diagnostics
 #ifndef HEADER

@@ -187,6 +187,9 @@ public:
   /// Get the maximum number of threads in a block of the GPU.
   llvm::Value *getGPUNumThreads(CodeGenFunction &CGF);
 
+  /// Returns whether the current architecture supports fast FP atomics
+  bool supportFastFPAtomics() override;
+
   // Emit call to fast FP intrinsics
   std::pair<bool, RValue> emitFastFPAtomicCall(CodeGenFunction &CGF, LValue X,
                                                RValue Update,
