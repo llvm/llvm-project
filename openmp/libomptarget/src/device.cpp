@@ -285,13 +285,12 @@ DeviceTy::getTargetPointer(void *HstPtrBegin, void *HstPtrBase, int64_t Size,
 
 // Used by targetDataBegin, targetDataEnd, targetDataUpdate and target.
 // Return the target pointer begin (where the data will be moved).
-// Decrement the reference counter if called from targetDataEnd. The data is
-// excepted to be mapped already, so the result will never be new.
-TargetPointerResultTy
-DeviceTy::getTgtPtrBegin(void *HstPtrBegin, int64_t Size, bool &IsLast,
-                         bool UpdateRefCount, bool UseHoldRefCount,
-                         bool &IsHostPtr, bool MustContain, bool ForceDelete) {
-  void *TargetPointer = NULL;
+// Decrement the reference counter if called from targetDataEnd.
+void *DeviceTy::getTgtPtrBegin(void *HstPtrBegin, int64_t Size, bool &IsLast,
+                               bool UpdateRefCount, bool UseHoldRefCount,
+                               bool &IsHostPtr, bool MustContain,
+                               bool ForceDelete) {
+  void *rc = NULL;
   IsHostPtr = false;
   IsLast = false;
   DataMapMtx.lock();
@@ -333,7 +332,7 @@ DeviceTy::getTgtPtrBegin(void *HstPtrBegin, int64_t Size, bool &IsLast,
          "Size=%" PRId64 ", DynRefCount=%s%s, HoldRefCount=%s%s\n",
          DPxPTR(HstPtrBegin), DPxPTR(tp), Size, HT.dynRefCountToStr().c_str(),
          DynRefCountAction, HT.holdRefCountToStr().c_str(), HoldRefCountAction);
-    TargetPointer = (void *)tp;
+    rc = (void *)tp;
   } else if (PM->RTLs.RequiresFlags & OMP_REQ_UNIFIED_SHARED_MEMORY) {
     // If the value isn't found in the mapping and unified shared memory
     // is on then it means we have stumbled upon a value which we need to
@@ -342,11 +341,11 @@ DeviceTy::getTgtPtrBegin(void *HstPtrBegin, int64_t Size, bool &IsLast,
        "memory\n",
        DPxPTR((uintptr_t)HstPtrBegin), Size);
     IsHostPtr = true;
-    TargetPointer = HstPtrBegin;
+    rc = HstPtrBegin;
   }
 
   DataMapMtx.unlock();
-  return {{false, IsHostPtr}, lr.Entry, TargetPointer};
+  return rc;
 }
 
 // Return the target pointer begin (where the data will be moved).
