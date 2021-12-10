@@ -65,6 +65,10 @@ Symbol cls(llvm::StringRef Name) {
   return sym(Name, index::SymbolKind::Class, "@S@\\0");
 }
 
+Symbol enm(llvm::StringRef Name) {
+  return sym(Name, index::SymbolKind::Enum, "@E@\\0");
+}
+
 Symbol var(llvm::StringRef Name) {
   return sym(Name, index::SymbolKind::Variable, "@\\0");
 }

@@ -843,14 +843,29 @@ TEST(IncludeFixerTest, IncompleteType) {
       {"incomplete_base_class", "class Y : [[ns::X]] {};"},
       {"incomplete_member_access", "auto i = x[[->]]f();"},
       {"incomplete_type", "auto& [[[]]m] = *x;"},
+      {"init_incomplete_type",
+       "struct C { static int f(ns::X&); }; int i = C::f([[{]]});"},
+      {"bad_cast_incomplete", "auto a = [[static_cast]]<ns::X>(0);"},
+      {"template_nontype_parm_incomplete", "template <ns::X [[foo]]> int a;"},
       {"typecheck_decl_incomplete_type", "ns::X [[var]];"},
       {"typecheck_incomplete_tag", "auto i = [[(*x)]]->f();"},
+      {"typecheck_nonviable_condition_incomplete",
+       "struct A { operator ns::X(); } a; const ns::X &[[b]] = a;"},
       {"invalid_incomplete_type_use", "auto var = [[ns::X()]];"},
       {"sizeof_alignof_incomplete_or_sizeless_type",
        "auto s = [[sizeof]](ns::X);"},
       {"for_range_incomplete_type", "void foo() { for (auto i : [[*]]x ) {} }"},
       {"func_def_incomplete_result", "ns::X [[func]] () {}"},
       {"field_incomplete_or_sizeless", "class M { ns::X [[member]]; };"},
+      {"array_incomplete_or_sizeless_type", "auto s = [[(ns::X[]){}]];"},
+      {"call_incomplete_return", "ns::X f(); auto fp = &f; auto z = [[fp()]];"},
+      {"call_function_incomplete_return", "ns::X foo(); auto a = [[foo()]];"},
+      {"call_incomplete_argument", "int m(ns::X); int i = m([[*x]]);"},
+      {"switch_incomplete_class_type", "void a() { [[switch]](*x) {} }"},
+      {"delete_incomplete_class_type", "void f() { [[delete]] *x; }"},
+      {"-Wdelete-incomplete", "void f() { [[delete]] x; }"},
+      {"dereference_incomplete_type",
+       R"cpp(void f() { asm("" : "=r"([[*]]x)::); })cpp"},
   };
   for (auto Case : Tests) {
     Annotations Main(Case.second);
@@ -860,6 +875,36 @@ TEST(IncludeFixerTest, IncompleteType) {
         ElementsAre(AllOf(DiagName(Case.first), HasRange(Main.range()),
                           WithFix(Fix(Range{}, "#include \"x.h\"\n",
                                       "Include \"x.h\" for symbol ns::X")))))
+        << Case.second;
+  }
+}
+
+TEST(IncludeFixerTest, IncompleteEnum) {
+  Symbol Sym = enm("X");
+  Sym.Flags |= Symbol::IndexedForCodeCompletion;
+  Sym.CanonicalDeclaration.FileURI = Sym.Definition.FileURI = "unittest:///x.h";
+  Sym.IncludeHeaders.emplace_back("\"x.h\"", 1);
+  SymbolSlab::Builder Slab;
+  Slab.insert(Sym);
+  auto Index =
+      MemIndex::build(std::move(Slab).build(), RefSlab(), RelationSlab());
+
+  TestTU TU;
+  TU.ExternalIndex = Index.get();
+  TU.ExtraArgs.push_back("-std=c++20");
+
+  std::vector<std::pair<llvm::StringRef, llvm::StringRef>> Tests{
+      {"incomplete_enum", "enum class X : int; using enum [[X]];"},
+      {"underlying_type_of_incomplete_enum",
+       "[[__underlying_type]](enum X) i;"},
+  };
+  for (auto Case : Tests) {
+    Annotations Main(Case.second);
+    TU.Code = Main.code().str() + "\n // error-ok";
+    EXPECT_THAT(*TU.build().getDiagnostics(),
+                Contains(AllOf(DiagName(Case.first), HasRange(Main.range()),
+                               WithFix(Fix(Range{}, "#include \"x.h\"\n",
+                                           "Include \"x.h\" for symbol X")))))
         << Case.second;
   }
 }
