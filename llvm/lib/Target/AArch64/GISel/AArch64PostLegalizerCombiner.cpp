@@ -314,6 +314,7 @@ static void applySplitStoreZero128(MachineInstr &MI, MachineRegisterInfo &MRI,
   GStore &Store = cast<GStore>(MI);
   LLT ValTy = MRI.getType(Store.getValueReg());
   assert(ValTy.isVector() && "Expected a vector store value");
+  (void)ValTy;
   LLT NewTy = LLT::scalar(64);
   Register PtrReg = Store.getPointerReg();
   auto Zero = B.buildConstant(NewTy, 0);
