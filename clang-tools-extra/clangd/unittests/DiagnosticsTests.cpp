@@ -1285,6 +1285,31 @@ TEST(IncludeFixerTest, HeaderNamedInDiag) {
                       "Include <stdio.h> for symbol printf")))));
 }
 
+TEST(IncludeFixerTest, CImplicitFunctionDecl) {
+  Annotations Test("void x() { [[foo]](); }");
+  auto TU = TestTU::withCode(Test.code());
+  TU.Filename = "test.c";
+
+  Symbol Sym = func("foo");
+  Sym.Flags |= Symbol::IndexedForCodeCompletion;
+  Sym.CanonicalDeclaration.FileURI = "unittest:///foo.h";
+  Sym.IncludeHeaders.emplace_back("\"foo.h\"", 1);
+
+  SymbolSlab::Builder Slab;
+  Slab.insert(Sym);
+  auto Index =
+      MemIndex::build(std::move(Slab).build(), RefSlab(), RelationSlab());
+  TU.ExternalIndex = Index.get();
+
+  EXPECT_THAT(
+      *TU.build().getDiagnostics(),
+      ElementsAre(AllOf(
+          Diag(Test.range(),
+               "implicit declaration of function 'foo' is invalid in C99"),
+          WithFix(Fix(Range{}, "#include \"foo.h\"\n",
+                      "Include \"foo.h\" for symbol foo")))));
+}
+
 TEST(DiagsInHeaders, DiagInsideHeader) {
   Annotations Main(R"cpp(
     #include [["a.h"]]
