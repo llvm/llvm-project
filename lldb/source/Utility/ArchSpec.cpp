@@ -859,7 +859,6 @@ bool ArchSpec::SetArchitecture(ArchitectureType arch_type, uint32_t cpu,
         m_triple.setArchName(llvm::StringRef(core_def->name));
         if (arch_type == eArchTypeMachO) {
           m_triple.setVendor(llvm::Triple::Apple);
-          m_triple.setObjectFormat(llvm::Triple::MachO);
 
           // Don't set the OS.  It could be simulator, macosx, ios, watchos,
           // tvos, bridgeos.  We could get close with the cpu type - but we
