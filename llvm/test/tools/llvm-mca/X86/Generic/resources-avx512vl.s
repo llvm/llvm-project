@@ -41,6 +41,46 @@ vaddps            %ymm16, %ymm17, %ymm19 {z}{k1}
 vaddps            (%rax), %ymm17, %ymm19 {z}{k1}
 vaddps            (%rax){1to8}, %ymm17, %ymm19 {z}{k1}
 
+valignd           $1, %xmm16, %xmm17, %xmm19
+valignd           $1, (%rax), %xmm17, %xmm19
+valignd           $1, (%rax){1to4}, %xmm17, %xmm19
+valignd           $1, %xmm16, %xmm17, %xmm19 {k1}
+valignd           $1, (%rax), %xmm17, %xmm19 {k1}
+valignd           $1, (%rax){1to4}, %xmm17, %xmm19 {k1}
+valignd           $1, %xmm16, %xmm17, %xmm19 {z}{k1}
+valignd           $1, (%rax), %xmm17, %xmm19 {z}{k1}
+valignd           $1, (%rax){1to4}, %xmm17, %xmm19 {z}{k1}
+
+valignd           $1, %ymm16, %ymm17, %ymm19
+valignd           $1, (%rax), %ymm17, %ymm19
+valignd           $1, (%rax){1to8}, %ymm17, %ymm19
+valignd           $1, %ymm16, %ymm17, %ymm19 {k1}
+valignd           $1, (%rax), %ymm17, %ymm19 {k1}
+valignd           $1, (%rax){1to8}, %ymm17, %ymm19 {k1}
+valignd           $1, %ymm16, %ymm17, %ymm19 {z}{k1}
+valignd           $1, (%rax), %ymm17, %ymm19 {z}{k1}
+valignd           $1, (%rax){1to8}, %ymm17, %ymm19 {z}{k1}
+
+valignq           $1, %xmm16, %xmm17, %xmm19
+valignq           $1, (%rax), %xmm17, %xmm19
+valignq           $1, (%rax){1to2}, %xmm17, %xmm19
+valignq           $1, %xmm16, %xmm17, %xmm19 {k1}
+valignq           $1, (%rax), %xmm17, %xmm19 {k1}
+valignq           $1, (%rax){1to2}, %xmm17, %xmm19 {k1}
+valignq           $1, %xmm16, %xmm17, %xmm19 {z}{k1}
+valignq           $1, (%rax), %xmm17, %xmm19 {z}{k1}
+valignq           $1, (%rax){1to2}, %xmm17, %xmm19 {z}{k1}
+
+valignq           $1, %ymm16, %ymm17, %ymm19
+valignq           $1, (%rax), %ymm17, %ymm19
+valignq           $1, (%rax){1to4}, %ymm17, %ymm19
+valignq           $1, %ymm16, %ymm17, %ymm19 {k1}
+valignq           $1, (%rax), %ymm17, %ymm19 {k1}
+valignq           $1, (%rax){1to4}, %ymm17, %ymm19 {k1}
+valignq           $1, %ymm16, %ymm17, %ymm19 {z}{k1}
+valignq           $1, (%rax), %ymm17, %ymm19 {z}{k1}
+valignq           $1, (%rax){1to4}, %ymm17, %ymm19 {z}{k1}
+
 vcmppd            $0, %xmm0, %xmm1, %k2
 vcmppd            $0, (%rax), %xmm1, %k2
 vcmppd            $0, (%rax){1to2}, %xmm1, %k2
@@ -1002,6 +1042,42 @@ vunpcklps         (%rax){1to8}, %ymm17, %ymm19 {z}{k1}
 # CHECK-NEXT:  1      3     1.00                        vaddps	%ymm16, %ymm17, %ymm19 {%k1} {z}
 # CHECK-NEXT:  2      10    1.00    *                   vaddps	(%rax), %ymm17, %ymm19 {%k1} {z}
 # CHECK-NEXT:  2      10    1.00    *                   vaddps	(%rax){1to8}, %ymm17, %ymm19 {%k1} {z}
+# CHECK-NEXT:  1      1     0.50                        valignd	$1, %xmm16, %xmm17, %xmm19
+# CHECK-NEXT:  2      7     0.50    *                   valignd	$1, (%rax), %xmm17, %xmm19
+# CHECK-NEXT:  2      7     0.50    *                   valignd	$1, (%rax){1to4}, %xmm17, %xmm19
+# CHECK-NEXT:  1      1     0.50                        valignd	$1, %xmm16, %xmm17, %xmm19 {%k1}
+# CHECK-NEXT:  2      7     0.50    *                   valignd	$1, (%rax), %xmm17, %xmm19 {%k1}
+# CHECK-NEXT:  2      7     0.50    *                   valignd	$1, (%rax){1to4}, %xmm17, %xmm19 {%k1}
+# CHECK-NEXT:  1      1     0.50                        valignd	$1, %xmm16, %xmm17, %xmm19 {%k1} {z}
+# CHECK-NEXT:  2      7     0.50    *                   valignd	$1, (%rax), %xmm17, %xmm19 {%k1} {z}
+# CHECK-NEXT:  2      7     0.50    *                   valignd	$1, (%rax){1to4}, %xmm17, %xmm19 {%k1} {z}
+# CHECK-NEXT:  1      1     1.00                        valignd	$1, %ymm16, %ymm17, %ymm19
+# CHECK-NEXT:  2      8     1.00    *                   valignd	$1, (%rax), %ymm17, %ymm19
+# CHECK-NEXT:  2      8     1.00    *                   valignd	$1, (%rax){1to8}, %ymm17, %ymm19
+# CHECK-NEXT:  1      1     1.00                        valignd	$1, %ymm16, %ymm17, %ymm19 {%k1}
+# CHECK-NEXT:  2      8     1.00    *                   valignd	$1, (%rax), %ymm17, %ymm19 {%k1}
+# CHECK-NEXT:  2      8     1.00    *                   valignd	$1, (%rax){1to8}, %ymm17, %ymm19 {%k1}
+# CHECK-NEXT:  1      1     1.00                        valignd	$1, %ymm16, %ymm17, %ymm19 {%k1} {z}
+# CHECK-NEXT:  2      8     1.00    *                   valignd	$1, (%rax), %ymm17, %ymm19 {%k1} {z}
+# CHECK-NEXT:  2      8     1.00    *                   valignd	$1, (%rax){1to8}, %ymm17, %ymm19 {%k1} {z}
+# CHECK-NEXT:  1      1     0.50                        valignq	$1, %xmm16, %xmm17, %xmm19
+# CHECK-NEXT:  2      7     0.50    *                   valignq	$1, (%rax), %xmm17, %xmm19
+# CHECK-NEXT:  2      7     0.50    *                   valignq	$1, (%rax){1to2}, %xmm17, %xmm19
+# CHECK-NEXT:  1      1     0.50                        valignq	$1, %xmm16, %xmm17, %xmm19 {%k1}
+# CHECK-NEXT:  2      7     0.50    *                   valignq	$1, (%rax), %xmm17, %xmm19 {%k1}
+# CHECK-NEXT:  2      7     0.50    *                   valignq	$1, (%rax){1to2}, %xmm17, %xmm19 {%k1}
+# CHECK-NEXT:  1      1     0.50                        valignq	$1, %xmm16, %xmm17, %xmm19 {%k1} {z}
+# CHECK-NEXT:  2      7     0.50    *                   valignq	$1, (%rax), %xmm17, %xmm19 {%k1} {z}
+# CHECK-NEXT:  2      7     0.50    *                   valignq	$1, (%rax){1to2}, %xmm17, %xmm19 {%k1} {z}
+# CHECK-NEXT:  1      1     1.00                        valignq	$1, %ymm16, %ymm17, %ymm19
+# CHECK-NEXT:  2      8     1.00    *                   valignq	$1, (%rax), %ymm17, %ymm19
+# CHECK-NEXT:  2      8     1.00    *                   valignq	$1, (%rax){1to4}, %ymm17, %ymm19
+# CHECK-NEXT:  1      1     1.00                        valignq	$1, %ymm16, %ymm17, %ymm19 {%k1}
+# CHECK-NEXT:  2      8     1.00    *                   valignq	$1, (%rax), %ymm17, %ymm19 {%k1}
+# CHECK-NEXT:  2      8     1.00    *                   valignq	$1, (%rax){1to4}, %ymm17, %ymm19 {%k1}
+# CHECK-NEXT:  1      1     1.00                        valignq	$1, %ymm16, %ymm17, %ymm19 {%k1} {z}
+# CHECK-NEXT:  2      8     1.00    *                   valignq	$1, (%rax), %ymm17, %ymm19 {%k1} {z}
+# CHECK-NEXT:  2      8     1.00    *                   valignq	$1, (%rax){1to4}, %ymm17, %ymm19 {%k1} {z}
 # CHECK-NEXT:  1      3     1.00                        vcmpeqpd	%xmm0, %xmm1, %k2
 # CHECK-NEXT:  2      9     1.00    *                   vcmpeqpd	(%rax), %xmm1, %k2
 # CHECK-NEXT:  2      9     1.00    *                   vcmpeqpd	(%rax){1to2}, %xmm1, %k2
@@ -1829,7 +1905,7 @@ vunpcklps         (%rax){1to8}, %ymm17, %ymm19 {z}{k1}
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6.0]  [6.1]
-# CHECK-NEXT:  -     1935.00 196.00 317.50  -    410.50 286.00 286.00
+# CHECK-NEXT:  -     1935.00 196.00 326.50  -    437.50 298.00 298.00
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6.0]  [6.1]  Instructions:
@@ -1869,6 +1945,42 @@ vunpcklps         (%rax){1to8}, %ymm17, %ymm19 {z}{k1}
 # CHECK-NEXT:  -      -      -     1.00    -      -      -      -     vaddps	%ymm16, %ymm17, %ymm19 {%k1} {z}
 # CHECK-NEXT:  -      -      -     1.00    -      -     0.50   0.50   vaddps	(%rax), %ymm17, %ymm19 {%k1} {z}
 # CHECK-NEXT:  -      -      -     1.00    -      -     0.50   0.50   vaddps	(%rax){1to8}, %ymm17, %ymm19 {%k1} {z}
+# CHECK-NEXT:  -      -      -     0.50    -     0.50    -      -     valignd	$1, %xmm16, %xmm17, %xmm19
+# CHECK-NEXT:  -      -      -     0.50    -     0.50   0.50   0.50   valignd	$1, (%rax), %xmm17, %xmm19
+# CHECK-NEXT:  -      -      -     0.50    -     0.50   0.50   0.50   valignd	$1, (%rax){1to4}, %xmm17, %xmm19
+# CHECK-NEXT:  -      -      -     0.50    -     0.50    -      -     valignd	$1, %xmm16, %xmm17, %xmm19 {%k1}
+# CHECK-NEXT:  -      -      -     0.50    -     0.50   0.50   0.50   valignd	$1, (%rax), %xmm17, %xmm19 {%k1}
+# CHECK-NEXT:  -      -      -     0.50    -     0.50   0.50   0.50   valignd	$1, (%rax){1to4}, %xmm17, %xmm19 {%k1}
+# CHECK-NEXT:  -      -      -     0.50    -     0.50    -      -     valignd	$1, %xmm16, %xmm17, %xmm19 {%k1} {z}
+# CHECK-NEXT:  -      -      -     0.50    -     0.50   0.50   0.50   valignd	$1, (%rax), %xmm17, %xmm19 {%k1} {z}
+# CHECK-NEXT:  -      -      -     0.50    -     0.50   0.50   0.50   valignd	$1, (%rax){1to4}, %xmm17, %xmm19 {%k1} {z}
+# CHECK-NEXT:  -      -      -      -      -     1.00    -      -     valignd	$1, %ymm16, %ymm17, %ymm19
+# CHECK-NEXT:  -      -      -      -      -     1.00   0.50   0.50   valignd	$1, (%rax), %ymm17, %ymm19
+# CHECK-NEXT:  -      -      -      -      -     1.00   0.50   0.50   valignd	$1, (%rax){1to8}, %ymm17, %ymm19
+# CHECK-NEXT:  -      -      -      -      -     1.00    -      -     valignd	$1, %ymm16, %ymm17, %ymm19 {%k1}
+# CHECK-NEXT:  -      -      -      -      -     1.00   0.50   0.50   valignd	$1, (%rax), %ymm17, %ymm19 {%k1}
+# CHECK-NEXT:  -      -      -      -      -     1.00   0.50   0.50   valignd	$1, (%rax){1to8}, %ymm17, %ymm19 {%k1}
+# CHECK-NEXT:  -      -      -      -      -     1.00    -      -     valignd	$1, %ymm16, %ymm17, %ymm19 {%k1} {z}
+# CHECK-NEXT:  -      -      -      -      -     1.00   0.50   0.50   valignd	$1, (%rax), %ymm17, %ymm19 {%k1} {z}
+# CHECK-NEXT:  -      -      -      -      -     1.00   0.50   0.50   valignd	$1, (%rax){1to8}, %ymm17, %ymm19 {%k1} {z}
+# CHECK-NEXT:  -      -      -     0.50    -     0.50    -      -     valignq	$1, %xmm16, %xmm17, %xmm19
+# CHECK-NEXT:  -      -      -     0.50    -     0.50   0.50   0.50   valignq	$1, (%rax), %xmm17, %xmm19
+# CHECK-NEXT:  -      -      -     0.50    -     0.50   0.50   0.50   valignq	$1, (%rax){1to2}, %xmm17, %xmm19
+# CHECK-NEXT:  -      -      -     0.50    -     0.50    -      -     valignq	$1, %xmm16, %xmm17, %xmm19 {%k1}
+# CHECK-NEXT:  -      -      -     0.50    -     0.50   0.50   0.50   valignq	$1, (%rax), %xmm17, %xmm19 {%k1}
+# CHECK-NEXT:  -      -      -     0.50    -     0.50   0.50   0.50   valignq	$1, (%rax){1to2}, %xmm17, %xmm19 {%k1}
+# CHECK-NEXT:  -      -      -     0.50    -     0.50    -      -     valignq	$1, %xmm16, %xmm17, %xmm19 {%k1} {z}
+# CHECK-NEXT:  -      -      -     0.50    -     0.50   0.50   0.50   valignq	$1, (%rax), %xmm17, %xmm19 {%k1} {z}
+# CHECK-NEXT:  -      -      -     0.50    -     0.50   0.50   0.50   valignq	$1, (%rax){1to2}, %xmm17, %xmm19 {%k1} {z}
+# CHECK-NEXT:  -      -      -      -      -     1.00    -      -     valignq	$1, %ymm16, %ymm17, %ymm19
+# CHECK-NEXT:  -      -      -      -      -     1.00   0.50   0.50   valignq	$1, (%rax), %ymm17, %ymm19
+# CHECK-NEXT:  -      -      -      -      -     1.00   0.50   0.50   valignq	$1, (%rax){1to4}, %ymm17, %ymm19
+# CHECK-NEXT:  -      -      -      -      -     1.00    -      -     valignq	$1, %ymm16, %ymm17, %ymm19 {%k1}
+# CHECK-NEXT:  -      -      -      -      -     1.00   0.50   0.50   valignq	$1, (%rax), %ymm17, %ymm19 {%k1}
+# CHECK-NEXT:  -      -      -      -      -     1.00   0.50   0.50   valignq	$1, (%rax){1to4}, %ymm17, %ymm19 {%k1}
+# CHECK-NEXT:  -      -      -      -      -     1.00    -      -     valignq	$1, %ymm16, %ymm17, %ymm19 {%k1} {z}
+# CHECK-NEXT:  -      -      -      -      -     1.00   0.50   0.50   valignq	$1, (%rax), %ymm17, %ymm19 {%k1} {z}
+# CHECK-NEXT:  -      -      -      -      -     1.00   0.50   0.50   valignq	$1, (%rax){1to4}, %ymm17, %ymm19 {%k1} {z}
 # CHECK-NEXT:  -      -      -     1.00    -      -      -      -     vcmpeqpd	%xmm0, %xmm1, %k2
 # CHECK-NEXT:  -      -      -     1.00    -      -     0.50   0.50   vcmpeqpd	(%rax), %xmm1, %k2
 # CHECK-NEXT:  -      -      -     1.00    -      -     0.50   0.50   vcmpeqpd	(%rax){1to2}, %xmm1, %k2
