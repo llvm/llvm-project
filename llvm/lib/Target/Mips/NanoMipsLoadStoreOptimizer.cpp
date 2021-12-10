@@ -699,7 +699,8 @@ bool NMLoadStoreOpt::generatePCRelative(MachineBasicBlock &MBB) {
           .addReg(LA->getOperand(0).getReg(), RegState::Define)
           .addGlobalAddress(Address.getGlobal(), Offset, MipsII::MO_PCREL_HI);
 
-      Use->getOperand(2).ChangeToGA(Address.getGlobal(), Offset, MipsII::MO_ABS_LO);
+      Use->getOperand(2).ChangeToGA(Address.getGlobal(), Offset,
+                                    MipsII::MO_ABS_LO);
       MBB.erase(LA);
     } else {
       auto InsertBefore = std::next(MBBIter(Use));
