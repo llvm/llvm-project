@@ -355,10 +355,12 @@ template <typename SourceOp>
 struct OpRewritePattern
     : public detail::OpOrInterfaceRewritePatternBase<SourceOp> {
   /// Patterns must specify the root operation name they match against, and can
-  /// also specify the benefit of the pattern matching.
-  OpRewritePattern(MLIRContext *context, PatternBenefit benefit = 1)
+  /// also specify the benefit of the pattern matching and a list of generated
+  /// ops.
+  OpRewritePattern(MLIRContext *context, PatternBenefit benefit = 1,
+                   ArrayRef<StringRef> generatedNames = {})
       : detail::OpOrInterfaceRewritePatternBase<SourceOp>(
-            SourceOp::getOperationName(), benefit, context) {}
+            SourceOp::getOperationName(), benefit, context, generatedNames) {}
 };
 
 /// OpInterfaceRewritePattern is a wrapper around RewritePattern that allows for
