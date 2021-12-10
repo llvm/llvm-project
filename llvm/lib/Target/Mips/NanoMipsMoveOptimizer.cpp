@@ -184,7 +184,7 @@ bool NMMoveOpt::areMovePRevCompatibleMoves(MachineInstr *Move1,
 // move $a4, $a1
 //
 bool NMMoveOpt::generateMoveP(MachineBasicBlock &MBB) {
-  InstrPairs MovePairs;
+  SmallVector<std::tuple<MachineInstr *, MachineInstr *, bool>> MovePairs;
   MachineInstr *PrevMove = nullptr;
 
   auto IsMovePCandidate = [this](MachineInstr *MI) -> bool {
@@ -207,10 +207,7 @@ bool NMMoveOpt::generateMoveP(MachineBasicBlock &MBB) {
         bool Swap;
         if (areMovePRevCompatibleMoves(PrevMove, &MI, Swap) ||
             areMovePCompatibleMoves(PrevMove, &MI, Swap)) {
-          if (Swap)
-            MovePairs.push_back({&MI, PrevMove});
-          else
-            MovePairs.push_back({PrevMove, &MI});
+          MovePairs.push_back({PrevMove, &MI, Swap});
           PrevMove = nullptr;
           continue;
         }
@@ -221,20 +218,35 @@ bool NMMoveOpt::generateMoveP(MachineBasicBlock &MBB) {
       }
     }
     // CFI and debug instructions don't break the pair.
-    if (!MI.isCFIInstruction() && !MI.isDebugInstr())
+    if (MI.isCFIInstruction() || MI.isDebugInstr())
+      continue;
+
+    if (MI.isCall() || MI.isBranch())
+      PrevMove = nullptr;
+
+    // Use or define of previous move's destination breaks the pair.
+    // Define of previous move's source breaks the pair.
+    if (PrevMove && (MI.readsRegister(PrevMove->getOperand(0).getReg()) ||
+                     MI.modifiesRegister(PrevMove->getOperand(0).getReg()) ||
+                     MI.modifiesRegister(PrevMove->getOperand(1).getReg())))
       PrevMove = nullptr;
   }
 
-  for (const auto &Pair : MovePairs) {
-    auto InsertBefore = std::next(MBBIter(Pair.first));
-    BuildMI(MBB, InsertBefore, Pair.first->getDebugLoc(),
-            TII->get(Mips::MOVEP_NM))
-        .addReg(Pair.first->getOperand(0).getReg(), RegState::Define)
-        .addReg(Pair.second->getOperand(0).getReg(), RegState::Define)
-        .addReg(Pair.first->getOperand(1).getReg())
-        .addReg(Pair.second->getOperand(1).getReg());
-    MBB.erase(Pair.first);
-    MBB.erase(Pair.second);
+  for (const auto &Tuple : MovePairs) {
+    auto *Move1 = std::get<0>(Tuple);
+    auto *Move2 = std::get<1>(Tuple);
+    auto InsertBefore = std::next(MBBIter(Move2));
+    auto DL = Move2->getDebugLoc();
+    bool Swap = std::get<2>(Tuple);
+    if (Swap)
+      std::swap(Move1, Move2);
+    BuildMI(MBB, InsertBefore, DL, TII->get(Mips::MOVEP_NM))
+        .addReg(Move1->getOperand(0).getReg(), RegState::Define)
+        .addReg(Move2->getOperand(0).getReg(), RegState::Define)
+        .addReg(Move1->getOperand(1).getReg())
+        .addReg(Move2->getOperand(1).getReg());
+    MBB.erase(Move1);
+    MBB.erase(Move2);
   }
 
   return MovePairs.size() > 0;
