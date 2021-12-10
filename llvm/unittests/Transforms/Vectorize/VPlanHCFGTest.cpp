@@ -134,10 +134,10 @@ compound=true
   EXPECT_EQ(ExpectedStr, FullDump);
 #endif
 
-  LoopVectorizationLegality::InductionList Inductions;
   SmallPtrSet<Instruction *, 1> DeadInstructions;
-  VPlanTransforms::VPInstructionsToVPRecipes(LI->getLoopFor(LoopHeader), Plan,
-                                             Inductions, DeadInstructions, *SE);
+  VPlanTransforms::VPInstructionsToVPRecipes(
+      LI->getLoopFor(LoopHeader), Plan, [](PHINode *P) { return nullptr; },
+      DeadInstructions, *SE);
 }
 
 TEST_F(VPlanHCFGTest, testVPInstructionToVPRecipesInner) {
@@ -164,10 +164,10 @@ TEST_F(VPlanHCFGTest, testVPInstructionToVPRecipesInner) {
   BasicBlock *LoopHeader = F->getEntryBlock().getSingleSuccessor();
   auto Plan = buildHCFG(LoopHeader);
 
-  LoopVectorizationLegality::InductionList Inductions;
   SmallPtrSet<Instruction *, 1> DeadInstructions;
-  VPlanTransforms::VPInstructionsToVPRecipes(LI->getLoopFor(LoopHeader), Plan,
-                                             Inductions, DeadInstructions, *SE);
+  VPlanTransforms::VPInstructionsToVPRecipes(
+      LI->getLoopFor(LoopHeader), Plan, [](PHINode *P) { return nullptr; },
+      DeadInstructions, *SE);
 
   VPBlockBase *Entry = Plan->getEntry()->getEntryBasicBlock();
   EXPECT_NE(nullptr, Entry->getSingleSuccessor());

@@ -51,6 +51,7 @@ namespace llvm {
 
 class BasicBlock;
 class DominatorTree;
+class InductionDescriptor;
 class InnerLoopVectorizer;
 class LoopInfo;
 class raw_ostream;
@@ -1005,19 +1006,25 @@ public:
 /// producing their vector and scalar values.
 class VPWidenIntOrFpInductionRecipe : public VPRecipeBase {
   PHINode *IV;
+  const InductionDescriptor &IndDesc;
 
 public:
   VPWidenIntOrFpInductionRecipe(PHINode *IV, VPValue *Start,
+                                const InductionDescriptor &IndDesc,
                                 Instruction *Cast = nullptr)
-      : VPRecipeBase(VPWidenIntOrFpInductionSC, {Start}), IV(IV) {
+      : VPRecipeBase(VPWidenIntOrFpInductionSC, {Start}), IV(IV),
+        IndDesc(IndDesc) {
     new VPValue(IV, this);
 
     if (Cast)
       new VPValue(Cast, this);
   }
 
-  VPWidenIntOrFpInductionRecipe(PHINode *IV, VPValue *Start, TruncInst *Trunc)
-      : VPRecipeBase(VPWidenIntOrFpInductionSC, {Start}), IV(IV) {
+  VPWidenIntOrFpInductionRecipe(PHINode *IV, VPValue *Start,
+                                const InductionDescriptor &IndDesc,
+                                TruncInst *Trunc)
+      : VPRecipeBase(VPWidenIntOrFpInductionSC, {Start}), IV(IV),
+        IndDesc(IndDesc) {
     new VPValue(Trunc, this);
   }
 
@@ -1056,6 +1063,9 @@ public:
   const TruncInst *getTruncInst() const {
     return dyn_cast_or_null<TruncInst>(getVPValue(0)->getUnderlyingValue());
   }
+
+  /// Returns the induction descriptor for the recipe.
+  const InductionDescriptor &getInductionDescriptor() const { return IndDesc; }
 };
 
 /// A recipe for handling first order recurrences and pointer inductions. For

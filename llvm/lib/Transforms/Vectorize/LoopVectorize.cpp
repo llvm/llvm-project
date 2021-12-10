@@ -506,9 +506,9 @@ public:
   /// Widen an integer or floating-point induction variable \p IV. If \p Trunc
   /// is provided, the integer induction variable will first be truncated to
   /// the corresponding type.
-  void widenIntOrFpInduction(PHINode *IV, Value *Start, TruncInst *Trunc,
-                             VPValue *Def, VPValue *CastDef,
-                             VPTransformState &State);
+  void widenIntOrFpInduction(PHINode *IV, const InductionDescriptor &ID,
+                             Value *Start, TruncInst *Trunc, VPValue *Def,
+                             VPValue *CastDef, VPTransformState &State);
 
   /// Construct the vector value of a scalarized value \p V one lane at a time.
   void packScalarIntoVectorValue(VPValue *Def, const VPIteration &Instance,
@@ -2487,17 +2487,13 @@ void InnerLoopVectorizer::recordVectorLoopValueForInductionCast(
     State.set(CastDef, VectorLoopVal, Part);
 }
 
-void InnerLoopVectorizer::widenIntOrFpInduction(PHINode *IV, Value *Start,
-                                                TruncInst *Trunc, VPValue *Def,
-                                                VPValue *CastDef,
+void InnerLoopVectorizer::widenIntOrFpInduction(PHINode *IV,
+                                                const InductionDescriptor &ID,
+                                                Value *Start, TruncInst *Trunc,
+                                                VPValue *Def, VPValue *CastDef,
                                                 VPTransformState &State) {
   assert((IV->getType()->isIntegerTy() || IV != OldInduction) &&
          "Primary induction variable must have an integer type");
-
-  auto II = Legal->getInductionVars().find(IV);
-  assert(II != Legal->getInductionVars().end() && "IV is not an induction");
-
-  auto ID = II->second;
   assert(IV->getType() == ID.getStartValue()->getType() && "Types must match");
 
   // The value from the original loop to which we are mapping the new induction
@@ -8592,14 +8588,12 @@ VPRecipeBuilder::tryToOptimizeInductionPHI(PHINode *Phi,
                                            ArrayRef<VPValue *> Operands) const {
   // Check if this is an integer or fp induction. If so, build the recipe that
   // produces its scalar and vector values.
-  InductionDescriptor II = Legal->getInductionVars().lookup(Phi);
-  if (II.getKind() == InductionDescriptor::IK_IntInduction ||
-      II.getKind() == InductionDescriptor::IK_FpInduction) {
-    assert(II.getStartValue() ==
+  if (auto *II = Legal->getIntOrFpInductionDescriptor(Phi)) {
+    assert(II->getStartValue() ==
            Phi->getIncomingValueForBlock(OrigLoop->getLoopPreheader()));
-    const SmallVectorImpl<Instruction *> &Casts = II.getCastInsts();
+    const SmallVectorImpl<Instruction *> &Casts = II->getCastInsts();
     return new VPWidenIntOrFpInductionRecipe(
-        Phi, Operands[0], Casts.empty() ? nullptr : Casts.front());
+        Phi, Operands[0], *II, Casts.empty() ? nullptr : Casts.front());
   }
 
   return nullptr;
@@ -8625,11 +8619,10 @@ VPWidenIntOrFpInductionRecipe *VPRecipeBuilder::tryToOptimizeInductionTruncate(
   if (LoopVectorizationPlanner::getDecisionAndClampRange(
           isOptimizableIVTruncate(I), Range)) {
 
-    InductionDescriptor II =
-        Legal->getInductionVars().lookup(cast<PHINode>(I->getOperand(0)));
+    auto *Phi = cast<PHINode>(I->getOperand(0));
+    const InductionDescriptor &II = *Legal->getIntOrFpInductionDescriptor(Phi);
     VPValue *Start = Plan.getOrAddVPValue(II.getStartValue());
-    return new VPWidenIntOrFpInductionRecipe(cast<PHINode>(I->getOperand(0)),
-                                             Start, I);
+    return new VPWidenIntOrFpInductionRecipe(Phi, Start, II, I);
   }
   return nullptr;
 }
@@ -9359,9 +9352,10 @@ VPlanPtr LoopVectorizationPlanner::buildVPlan(VFRange &Range) {
   }
 
   SmallPtrSet<Instruction *, 1> DeadInstructions;
-  VPlanTransforms::VPInstructionsToVPRecipes(OrigLoop, Plan,
-                                             Legal->getInductionVars(),
-                                             DeadInstructions, *PSE.getSE());
+  VPlanTransforms::VPInstructionsToVPRecipes(
+      OrigLoop, Plan,
+      [this](PHINode *P) { return Legal->getIntOrFpInductionDescriptor(P); },
+      DeadInstructions, *PSE.getSE());
   return Plan;
 }
 
@@ -9719,9 +9713,9 @@ void VPWidenGEPRecipe::execute(VPTransformState &State) {
 
 void VPWidenIntOrFpInductionRecipe::execute(VPTransformState &State) {
   assert(!State.Instance && "Int or FP induction being replicated.");
-  State.ILV->widenIntOrFpInduction(IV, getStartValue()->getLiveInIRValue(),
-                                   getTruncInst(), getVPValue(0),
-                                   getCastValue(), State);
+  State.ILV->widenIntOrFpInduction(
+      IV, getInductionDescriptor(), getStartValue()->getLiveInIRValue(),
+      getTruncInst(), getVPValue(0), getCastValue(), State);
 }
 
 void VPWidenPHIRecipe::execute(VPTransformState &State) {
