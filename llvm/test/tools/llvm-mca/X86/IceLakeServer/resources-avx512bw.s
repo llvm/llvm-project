@@ -144,6 +144,12 @@ vpshuflw          $0, (%rax), %zmm19 {k1}
 vpshuflw          $0, %zmm16, %zmm19 {z}{k1}
 vpshuflw          $0, (%rax), %zmm19 {z}{k1}
 
+vpslldq           $1, %zmm16, %zmm19
+vpslldq           $1, (%rax), %zmm19
+
+vpsrldq           $1, %zmm16, %zmm19
+vpsrldq           $1, (%rax), %zmm19
+
 vpsubb            %zmm16, %zmm17, %zmm19
 vpsubb            (%rax), %zmm17, %zmm19
 vpsubb            %zmm16, %zmm17, %zmm19 {k1}
@@ -343,6 +349,10 @@ vpmovw2m          %zmm0, %k0
 # CHECK-NEXT:  2      8     1.00    *                   vpshuflw	$0, (%rax), %zmm19 {%k1}
 # CHECK-NEXT:  1      1     1.00                        vpshuflw	$0, %zmm16, %zmm19 {%k1} {z}
 # CHECK-NEXT:  2      8     1.00    *                   vpshuflw	$0, (%rax), %zmm19 {%k1} {z}
+# CHECK-NEXT:  1      1     1.00                        vpslldq	$1, %zmm16, %zmm19
+# CHECK-NEXT:  2      8     1.00    *                   vpslldq	$1, (%rax), %zmm19
+# CHECK-NEXT:  1      1     1.00                        vpsrldq	$1, %zmm16, %zmm19
+# CHECK-NEXT:  2      8     1.00    *                   vpsrldq	$1, (%rax), %zmm19
 # CHECK-NEXT:  1      1     0.33                        vpsubb	%zmm16, %zmm17, %zmm19
 # CHECK-NEXT:  2      8     0.50    *                   vpsubb	(%rax), %zmm17, %zmm19
 # CHECK-NEXT:  1      1     0.33                        vpsubb	%zmm16, %zmm17, %zmm19 {%k1}
@@ -416,7 +426,7 @@ vpmovw2m          %zmm0, %k0
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]
-# CHECK-NEXT:  -      -     32.50  8.50   39.00  39.00   -     142.50 0.50    -      -      -
+# CHECK-NEXT:  -      -     32.50  8.50   40.00  40.00   -     146.50 0.50    -      -      -
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   Instructions:
@@ -542,6 +552,10 @@ vpmovw2m          %zmm0, %k0
 # CHECK-NEXT:  -      -      -      -     0.50   0.50    -     1.00    -      -      -      -     vpshuflw	$0, (%rax), %zmm19 {%k1}
 # CHECK-NEXT:  -      -      -      -      -      -      -     1.00    -      -      -      -     vpshuflw	$0, %zmm16, %zmm19 {%k1} {z}
 # CHECK-NEXT:  -      -      -      -     0.50   0.50    -     1.00    -      -      -      -     vpshuflw	$0, (%rax), %zmm19 {%k1} {z}
+# CHECK-NEXT:  -      -      -      -      -      -      -     1.00    -      -      -      -     vpslldq	$1, %zmm16, %zmm19
+# CHECK-NEXT:  -      -      -      -     0.50   0.50    -     1.00    -      -      -      -     vpslldq	$1, (%rax), %zmm19
+# CHECK-NEXT:  -      -      -      -      -      -      -     1.00    -      -      -      -     vpsrldq	$1, %zmm16, %zmm19
+# CHECK-NEXT:  -      -      -      -     0.50   0.50    -     1.00    -      -      -      -     vpsrldq	$1, (%rax), %zmm19
 # CHECK-NEXT:  -      -     0.33   0.33    -      -      -     0.33    -      -      -      -     vpsubb	%zmm16, %zmm17, %zmm19
 # CHECK-NEXT:  -      -     0.33   0.33   0.50   0.50    -     0.33    -      -      -      -     vpsubb	(%rax), %zmm17, %zmm19
 # CHECK-NEXT:  -      -     0.33   0.33    -      -      -     0.33    -      -      -      -     vpsubb	%zmm16, %zmm17, %zmm19 {%k1}
