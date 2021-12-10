@@ -61,11 +61,12 @@ struct ReversePostOrderCompare {
 /// the same block multiple times at once.
 struct ForwardDataflowWorklist
     : DataflowWorklistBase<ReversePostOrderCompare, 20> {
+  ForwardDataflowWorklist(const CFG &Cfg, PostOrderCFGView *POV)
+      : DataflowWorklistBase(Cfg, POV,
+                             ReversePostOrderCompare{POV->getComparator()}) {}
+
   ForwardDataflowWorklist(const CFG &Cfg, AnalysisDeclContext &Ctx)
-      : DataflowWorklistBase(
-            Cfg, Ctx.getAnalysis<PostOrderCFGView>(),
-            ReversePostOrderCompare{
-                Ctx.getAnalysis<PostOrderCFGView>()->getComparator()}) {}
+      : ForwardDataflowWorklist(Cfg, Ctx.getAnalysis<PostOrderCFGView>()) {}
 
   void enqueueSuccessors(const CFGBlock *Block) {
     for (auto B : Block->succs())
