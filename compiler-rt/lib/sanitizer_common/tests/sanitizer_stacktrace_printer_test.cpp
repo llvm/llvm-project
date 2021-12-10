@@ -112,6 +112,28 @@ TEST(SanitizerStacktracePrinter, RenderFrame) {
   EXPECT_STREQ("(/path/to/module+0x200)", str.data());
   str.clear();
 
+  RenderFrame(&str, "%b", frame_no, info.address, &info, false);
+  EXPECT_STREQ("", str.data());
+  str.clear();
+
+  info.uuid_size = 2;
+  info.uuid[0] = 0x55;
+  info.uuid[1] = 0x66;
+
+  RenderFrame(&str, "%M", frame_no, info.address, &info, false);
+  EXPECT_NE(nullptr, internal_strstr(str.data(), "(module+0x"));
+  EXPECT_NE(nullptr, internal_strstr(str.data(), "200"));
+  EXPECT_NE(nullptr, internal_strstr(str.data(), "BuildId: 5566"));
+  str.clear();
+
+  RenderFrame(&str, "%L", frame_no, info.address, &info, false);
+  EXPECT_STREQ("(/path/to/module+0x200) (BuildId: 5566)", str.data());
+  str.clear();
+
+  RenderFrame(&str, "%b", frame_no, info.address, &info, false);
+  EXPECT_STREQ("(BuildId: 5566)", str.data());
+  str.clear();
+
   info.function = internal_strdup("my_function");
   RenderFrame(&str, "%F", frame_no, info.address, &info, false);
   EXPECT_STREQ("in my_function", str.data());
