@@ -1384,16 +1384,16 @@ the coroutine will already be marked as done by the final suspend.
 
 The following table summarizes the handling of `coro.end`_ intrinsic.
 
-+--------------------------+------------------------+-------------------------------+
-|                          | In Start Function      | In Resume/Destroy Functions   |
-+--------------------------+------------------------+-------------------------------+
-|unwind=false              | nothing                |``ret void``                   |
-+------------+-------------+------------------------+-------------------------------+
-|            | WinEH       | mark coroutine as done |``cleanupret unwind to caller``|
-|            |             |                        |mark coroutine done            |
-|unwind=true +-------------+------------------------+-------------------------------+
-|            | Landingpad  | mark coroutine as done | mark coroutine done           |
-+------------+-------------+------------------------+-------------------------------+
++--------------------------+------------------------+---------------------------------+
+|                          | In Start Function      | In Resume/Destroy Functions     |
++--------------------------+------------------------+---------------------------------+
+|unwind=false              | nothing                |``ret void``                     |
++------------+-------------+------------------------+---------------------------------+
+|            | WinEH       | mark coroutine as done || ``cleanupret unwind to caller``|
+|            |             |                        || mark coroutine done            |
+|unwind=true +-------------+------------------------+---------------------------------+
+|            | Landingpad  | mark coroutine as done | mark coroutine done             |
++------------+-------------+------------------------+---------------------------------+
 
 
 'llvm.coro.end.async' Intrinsic
