@@ -3,9 +3,9 @@
 ; therefore, the tests are a bit fragile/reliant on instruction scheduling. The
 ; test cases have been minimized as much as possible, but still most of the test
 ; cases could break if instruction scheduling heuristics for cortex-a53 change
-; RUN: llc < %s -mcpu=cortex-a53 -aarch64-fix-cortex-a53-835769=1 -frame-pointer=non-leaf -stats 2>&1 \
+; RUN: llc < %s -mcpu=cortex-a53 -mattr=+fix-cortex-a53-835769 -frame-pointer=non-leaf -stats 2>&1 \
 ; RUN:  | FileCheck %s
-; RUN: llc < %s -mcpu=cortex-a53 -aarch64-fix-cortex-a53-835769=0 -frame-pointer=non-leaf -stats 2>&1 \
+; RUN: llc < %s -mcpu=cortex-a53 -mattr=-fix-cortex-a53-835769 -frame-pointer=non-leaf -stats 2>&1 \
 ; RUN:  | FileCheck %s --check-prefix CHECK-NOWORKAROUND
 ; The following run lines are just to verify whether or not this pass runs by
 ; default for given CPUs. Given the fragility of the tests, this is only run on
