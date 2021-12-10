@@ -29,7 +29,7 @@ class TestSwiftDeploymentTarget(TestBase):
             setting=('symbols.use-swift-clangimporter', 'false'))
     @skipUnlessDarwin
     @skipIfDarwinEmbedded # This test uses macOS triples explicitly.
-    @skipIf(macos_version=["<", "10.11"])
+    @skipIf(macos_version=["<", "11.1"])
     @swiftTest
     def test_swift_deployment_target(self):
         self.build()
@@ -42,7 +42,7 @@ class TestSwiftDeploymentTarget(TestBase):
             setting=('symbols.use-swift-clangimporter', 'false'))
     @skipUnlessDarwin
     @skipIfDarwinEmbedded # This test uses macOS triples explicitly.
-    @skipIf(macos_version=["<", "10.11"])
+    @skipIf(macos_version=["<", "11.1"])
     @swiftTest
     def test_swift_deployment_target_dlopen(self):
         self.build()
@@ -55,7 +55,7 @@ class TestSwiftDeploymentTarget(TestBase):
 
     @skipUnlessDarwin
     @skipIfDarwinEmbedded # This test uses macOS triples explicitly.
-    @skipIf(macos_version=["<", "10.11"])
+    @skipIf(macos_version=["<", "11.1"])
     @swiftTest
     def test_swift_deployment_target_from_macho(self):
         self.build(dictionary={"MAKE_DSYM": "NO"})
@@ -70,10 +70,11 @@ class TestSwiftDeploymentTarget(TestBase):
         found_no_ast = False
         found_triple = False
         logfile = open(log, "r")
+        print (log)
         for line in logfile:
             if 'SwiftASTContextForModule("a.out")::DeserializeAllCompilerFlags() -- Found 0 AST file data entries.' in line:
                 found_no_ast = True
-            if 'SwiftASTContextForModule("a.out")::SetTriple("x86_64-apple-macosx10.10.0")' in line:
+            if 'SwiftASTContextForModule("a.out")::SetTriple(' in line and 'apple-macosx11.0' in line:
                 found_triple = True
         self.assertTrue(found_no_ast)
         self.assertTrue(found_triple)
