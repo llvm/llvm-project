@@ -335,7 +335,7 @@ ConvertTypeToDiagnosticString(ASTContext &Context, QualType Ty,
       OS << "'" << S << "' (vector of " << VTy->getNumElements() << " '"
          << VTy->getElementType().getAsString(Context.getPrintingPolicy())
          << "' " << Values << ")";
-      return OS.str();
+      return DecoratedString;
     }
   }
 

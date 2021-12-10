@@ -139,7 +139,7 @@ static std::string OptLLVM(const std::string &IR, CodeGenOpt::Level OLvl) {
 
   Passes.run(*M);
 
-  return OS.str();
+  return outString;
 }
 
 // Takes a function and runs it on a set of inputs

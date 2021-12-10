@@ -39,7 +39,7 @@ int bar() {
 int baz() {
   // CHECK-LABEL: _baz:
   __asm mov eax, k;
-  // CHECK: movl    _k, %eax
+  // CHECK: movl    k, %eax
   __asm mov eax, kptr;
   // CHECK: movl    _kptr, %eax
 }

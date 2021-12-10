@@ -283,8 +283,8 @@ TEST(AddressSanitizer, LoadStoreCallbacks) {
 
 #if defined(__x86_64__) && \
     !(defined(SANITIZER_MAC) || defined(SANITIZER_WINDOWS))
-
 // clang-format off
+
 #define CALL_ASAN_MEMORY_ACCESS_CALLBACK_ADD(s, reg, op)        \
   void CallAsanMemoryAccessAdd##reg##op##s(uptr address) {      \
   asm("push  %%" #reg " \n"                                     \
@@ -342,6 +342,6 @@ TEST_ASAN_MEMORY_ACCESS_CALLBACKS_ADD(R12)
 TEST_ASAN_MEMORY_ACCESS_CALLBACKS_ADD(R13)
 TEST_ASAN_MEMORY_ACCESS_CALLBACKS_ADD(R14)
 TEST_ASAN_MEMORY_ACCESS_CALLBACKS_ADD(R15)
-// clang-format on
 
-#endif  // defined(__x86_64__)
+// clang-format on
+#endif

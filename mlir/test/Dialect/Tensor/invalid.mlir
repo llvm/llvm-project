@@ -222,3 +222,73 @@ func @insert_slice_wrong_dynamic_type(%t1: tensor<?x4x4xf32>, %t2: tensor<8x16x4
 
   return
 }
+
+// -----
+
+func @illegal_expanding_reshape_dynamic_tensor
+  (%arg0: tensor<?x?x?xf32>) -> tensor<?x?x?x4x?xf32> {
+  // expected-error @+1 {{invalid to have a single dimension (2) expanded into multiple dynamic dims (2,4)}}
+  %0 = tensor.expand_shape %arg0 [[0], [1], [2, 3, 4]]
+      : tensor<?x?x?xf32> into tensor<?x?x?x4x?xf32>
+  return %0 : tensor<?x?x?x4x?xf32>
+}
+
+// -----
+
+
+func @illegal_expanding_reshape_static_tensor
+    (%arg0: tensor<2x3x20xf32>) -> tensor<2x3x2x4x5xf32> {
+  // expected-error @+1 {{expected dimension 2 of collapsed type to be static value of 40}}
+  %0 = tensor.expand_shape %arg0 [[0], [1], [2, 3, 4]]
+      : tensor<2x3x20xf32> into tensor<2x3x2x4x5xf32>
+  return %0 : tensor<2x3x2x4x5xf32>
+}
+
+// -----
+
+func @illegal_collapsing_reshape_static_tensor
+    (%arg0: tensor<2x3x2x4x5xf32>) -> tensor<2x3x20xf32> {
+  // expected-error @+1 {{expected dimension 2 of collapsed type to be static value of 40}}
+  %0 = tensor.collapse_shape %arg0 [[0], [1], [2, 3, 4]]
+      : tensor<2x3x2x4x5xf32> into tensor<2x3x20xf32>
+  return %0 : tensor<2x3x20xf32>
+}
+
+// -----
+
+func @illegal_expanding_reshape_mixed_tensor(%arg0 : tensor<?x?xf32>)
+    -> tensor<?x4x5xf32> {
+  // expected-error @+1 {{expected dimension 1 of collapsed type to be static value of 5}}
+  %0 = tensor.expand_shape %arg0 [[0, 1], [2]]
+      : tensor<?x?xf32> into tensor<?x4x5xf32>
+  return %0 : tensor<?x4x5xf32>
+}
+
+// -----
+
+func @illegal_expanding_reshape_mixed_tensor_2(%arg0 : tensor<?x?xf32>)
+    -> tensor<?x4x5xf32> {
+  // expected-error @+1 {{expected dimension 1 of collapsed type to be static value of 20}}
+  %0 = tensor.expand_shape %arg0 [[0], [1, 2]]
+      : tensor<?x?xf32> into tensor<?x4x5xf32>
+  return %0 : tensor<?x4x5xf32>
+}
+
+// -----
+
+func @illegal_collapsing_reshape_mixed_tensor(%arg0 : tensor<?x4x5xf32>) -> tensor<?x?xf32> {
+  // expected-error @+1 {{expected dimension 1 of collapsed type to be static value of 5}}
+  %0 = tensor.collapse_shape %arg0 [[0, 1], [2]]
+      : tensor<?x4x5xf32> into tensor<?x?xf32>
+  return %0 : tensor<?x?xf32>
+}
+
+// -----
+
+func @illegal_collapsing_reshape_mixed_tensor_2(%arg0 : tensor<?x4x5xf32>)
+    -> tensor<?x?xf32> {
+  // expected-error @+1 {{expected dimension 1 of collapsed type to be static value of 20}}
+  %0 = tensor.collapse_shape %arg0 [[0], [1, 2]]
+      : tensor<?x4x5xf32> into tensor<?x?xf32>
+  return %0 : tensor<?x?xf32>
+}

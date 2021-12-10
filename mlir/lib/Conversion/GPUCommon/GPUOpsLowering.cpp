@@ -238,11 +238,10 @@ LogicalResult GPUPrintfOpToHIPLowering::matchAndRewrite(
   Value zeroI32 = rewriter.create<LLVM::ConstantOp>(
       loc, llvmI32, rewriter.getI32IntegerAttr(0));
 
-  mlir::ValueRange appendFormatArgs = {printfDesc, stringStart, stringLen,
-                                       adaptor.args().empty() ? oneI32
-                                                              : zeroI32};
-  auto appendFormatCall =
-      rewriter.create<LLVM::CallOp>(loc, ocklAppendStringN, appendFormatArgs);
+  auto appendFormatCall = rewriter.create<LLVM::CallOp>(
+      loc, ocklAppendStringN,
+      ValueRange{printfDesc, stringStart, stringLen,
+                 adaptor.args().empty() ? oneI32 : zeroI32});
   printfDesc = appendFormatCall.getResult(0);
 
   // __ockl_printf_append_args takes 7 values per append call

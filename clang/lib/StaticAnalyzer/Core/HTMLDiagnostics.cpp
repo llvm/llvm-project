@@ -437,7 +437,7 @@ std::string HTMLDiagnostics::GenerateHTML(const PathDiagnostic& D, Rewriter &R,
   for (auto BI : *Buf)
     os << BI;
 
-  return os.str();
+  return file;
 }
 
 void HTMLDiagnostics::dumpCoverageData(
@@ -534,7 +534,7 @@ document.addEventListener("DOMContentLoaded", function() {
 </form>
 )<<<";
 
-  return os.str();
+  return s;
 }
 
 void HTMLDiagnostics::FinalizeHTML(const PathDiagnostic& D, Rewriter &R,
@@ -1202,7 +1202,7 @@ std::string getSpanBeginForControl(const char *ClassName, unsigned Index) {
   std::string Result;
   llvm::raw_string_ostream OS(Result);
   OS << "<span id=\"" << ClassName << Index << "\">";
-  return OS.str();
+  return Result;
 }
 
 std::string getSpanBeginForControlStart(unsigned Index) {

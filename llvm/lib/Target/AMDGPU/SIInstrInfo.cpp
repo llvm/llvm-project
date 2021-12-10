@@ -1521,6 +1521,7 @@ void SIInstrInfo::storeRegToStackSlotImpl(
                     : RI.isAGPRClass(RC) ? getAGPRSpillSaveOpcode(SpillSize, NeedsCFI)
                                          : getVGPRSpillSaveOpcode(SpillSize, NeedsCFI);
   MFI->setHasSpilledVGPRs();
+
   BuildMI(MBB, MI, DL, get(Opcode))
     .addReg(SrcReg, getKillRegState(isKill)) // data
     .addFrameIndex(FrameIndex)               // addr

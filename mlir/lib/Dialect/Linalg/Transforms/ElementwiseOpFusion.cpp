@@ -359,7 +359,7 @@ template <typename TensorReshapeOp>
 static AffineMap linearizeCollapsedDims(AffineMap sourceMap,
                                         TensorReshapeOp reshapeOp) {
   constexpr bool isExpanding =
-      std::is_same<TensorReshapeOp, TensorExpandShapeOp>::value;
+      std::is_same<TensorReshapeOp, tensor::ExpandShapeOp>::value;
   ArrayRef<int64_t> sourceShape =
       (isExpanding ? reshapeOp.getResultType().getShape()
                    : reshapeOp.getSrcType().getShape());
@@ -396,20 +396,22 @@ static AffineMap linearizeCollapsedDims(AffineMap sourceMap,
   return AffineMap::get(numDims, numSyms, resultExprs, context);
 }
 
-// TensorExpandShapeOp is fusable with its consumer (i.e. reshape as a
+// tensor::ExpandShapeOp is fusable with its consumer (i.e. reshape as a
 // producer). Fusing when operand has higher rank will require use of mods and
 // divs in the indexing maps of the fused op which would make it non-invertible.
 static bool isTensorReshapeOpFoldableByLinearization(
-    TensorExpandShapeOp expandOp, AffineMap useIndexMap, bool asProducer) {
+    tensor::ExpandShapeOp expandOp, AffineMap useIndexMap, bool asProducer) {
   if (!asProducer)
     return false;
   return useIndexMap.isPermutation();
 }
 
-// TensorCollapseShapeOp is fusable with its producer (i.e. reshape as a
+// tensor::CollapseShapeOp is fusable with its producer (i.e. reshape as a
 // consumer).
-static bool isTensorReshapeOpFoldableByLinearization(
-    TensorCollapseShapeOp collapseOp, AffineMap useIndexMap, bool asProducer) {
+static bool
+isTensorReshapeOpFoldableByLinearization(tensor::CollapseShapeOp collapseOp,
+                                         AffineMap useIndexMap,
+                                         bool asProducer) {
   if (asProducer)
     return false;
   return useIndexMap.isPermutation();
@@ -420,7 +422,7 @@ static bool isTensorReshapeOpFoldableByLinearization(
 template <typename TensorReshapeOp>
 static bool isUnitDimExpansionOnly(TensorReshapeOp reshapeOp) {
   constexpr bool isExpanding =
-      std::is_same<TensorReshapeOp, TensorExpandShapeOp>::value;
+      std::is_same<TensorReshapeOp, tensor::ExpandShapeOp>::value;
   ArrayRef<int64_t> expandedShape =
       (isExpanding ? reshapeOp.getResultType().getShape()
                    : reshapeOp.getSrcType().getShape());
@@ -722,8 +724,8 @@ fuseWithReshapeByExpansion(GenericOp genericOp, Operation *reshapeOp,
   assert(isFusableWithReshapeByDimExpansion(genericOp, fusableOpOperand) &&
          "preconditions for fuse operation failed");
   // Check if reshape is expanding or collapsing.
-  auto expandingReshapeOp = dyn_cast<TensorExpandShapeOp>(*reshapeOp);
-  auto collapsingReshapeOp = dyn_cast<TensorCollapseShapeOp>(*reshapeOp);
+  auto expandingReshapeOp = dyn_cast<tensor::ExpandShapeOp>(*reshapeOp);
+  auto collapsingReshapeOp = dyn_cast<tensor::CollapseShapeOp>(*reshapeOp);
   bool isExpanding = (expandingReshapeOp != nullptr);
   RankedTensorType expandedType = isExpanding
                                       ? expandingReshapeOp.getResultType()
@@ -762,7 +764,7 @@ fuseWithReshapeByExpansion(GenericOp genericOp, Operation *reshapeOp,
         // Reshape the operand to get the right type.
         SmallVector<ReassociationIndices> reassociation =
             getReassociationForExpansion(indexingMap, expansionInfo);
-        expandedOpOperands.push_back(rewriter.create<TensorExpandShapeOp>(
+        expandedOpOperands.push_back(rewriter.create<tensor::ExpandShapeOp>(
             genericOp.getLoc(), expandedOperandType, opOperand->get(),
             reassociation));
         continue;
@@ -781,7 +783,7 @@ fuseWithReshapeByExpansion(GenericOp genericOp, Operation *reshapeOp,
     if (expandedOutputType != opOperand->get().getType()) {
       SmallVector<ReassociationIndices> reassociation =
           getReassociationForExpansion(indexingMap, expansionInfo);
-      outputs.push_back(rewriter.create<TensorExpandShapeOp>(
+      outputs.push_back(rewriter.create<tensor::ExpandShapeOp>(
           genericOp.getLoc(), expandedOutputType, opOperand->get(),
           reassociation));
     }
@@ -814,7 +816,7 @@ fuseWithReshapeByExpansion(GenericOp genericOp, Operation *reshapeOp,
               genericOp.getTiedIndexingMap(
                   genericOp.getOutputOperand(resultNumber)),
               expansionInfo);
-      resultVals.push_back(rewriter.create<TensorCollapseShapeOp>(
+      resultVals.push_back(rewriter.create<tensor::CollapseShapeOp>(
           genericOp.getLoc(), opResult.getType(),
           fusedOp->getResult(resultNumber), reassociation));
     } else {
@@ -969,13 +971,13 @@ struct PushExpandingReshape : public OpRewritePattern<GenericOp> {
       return failure();
     int64_t destRank = genericOp.getNumParallelLoops();
     SmallVector<Value> newOperands = genericOp.getInputOperands();
-    TensorExpandShapeOp reshapeFound;
+    tensor::ExpandShapeOp reshapeFound;
     // 1. Look for tensor_expand_shape operands and figure out save the
     // dimensions merged.
     SmallVector<OpOperand *> inputOperands = genericOp.getInputOperands();
     for (auto en : llvm::enumerate(inputOperands)) {
       auto reshapeOp =
-          en.value()->get().template getDefiningOp<TensorExpandShapeOp>();
+          en.value()->get().template getDefiningOp<tensor::ExpandShapeOp>();
       if (!reshapeOp)
         continue;
       // TODO: We could support non-identity map as long as the merged
@@ -1042,7 +1044,7 @@ struct PushExpandingReshape : public OpRewritePattern<GenericOp> {
       auto newOutputType = RankedTensorType::get(
           reshapeFound.getSrcType().getShape(),
           output.getType().template cast<RankedTensorType>().getElementType());
-      Value newOutput = rewriter.create<TensorCollapseShapeOp>(
+      Value newOutput = rewriter.create<tensor::CollapseShapeOp>(
           genericOp->getLoc(), newOutputType, output, reassociation);
       newOutputTypes.push_back(newOutputType);
       newOutputs.push_back(newOutput);
@@ -1058,7 +1060,7 @@ struct PushExpandingReshape : public OpRewritePattern<GenericOp> {
     // 6. Reshape the so that the type matches the uses.
     SmallVector<Value> newResults;
     for (auto result : llvm::enumerate(newOp->getResults())) {
-      newResults.push_back(rewriter.create<TensorExpandShapeOp>(
+      newResults.push_back(rewriter.create<tensor::ExpandShapeOp>(
           genericOp->getLoc(), genericOp.getOutputTensorTypes()[result.index()],
           result.value(), reassociation));
     }
@@ -1082,8 +1084,8 @@ public:
   LogicalResult matchAndRewrite(GenericOp genericOp,
                                 PatternRewriter &rewriter) const override {
     for (OpOperand *opOperand : genericOp.getInputTensorOperands()) {
-      TensorCollapseShapeOp reshapeOp =
-          opOperand->get().getDefiningOp<TensorCollapseShapeOp>();
+      tensor::CollapseShapeOp reshapeOp =
+          opOperand->get().getDefiningOp<tensor::CollapseShapeOp>();
       if (!reshapeOp)
         continue;
       // Fold only if
@@ -1174,15 +1176,15 @@ struct FoldConsumerReshapeOpByLinearization
 /// Pattern to fold a tensor_expand_shape op with its producer generic op
 /// by expanding the dimensionality of the loop in the producer op.
 struct FoldReshapeWithGenericOpByExpansion
-    : public OpRewritePattern<TensorExpandShapeOp> {
+    : public OpRewritePattern<tensor::ExpandShapeOp> {
 
   FoldReshapeWithGenericOpByExpansion(
       MLIRContext *context, ControlElementwiseOpsFusionFn foldReshapes,
       PatternBenefit benefit = 1)
-      : OpRewritePattern<TensorExpandShapeOp>(context, benefit),
+      : OpRewritePattern<tensor::ExpandShapeOp>(context, benefit),
         controlFoldingReshapes(foldReshapes) {}
 
-  LogicalResult matchAndRewrite(TensorExpandShapeOp reshapeOp,
+  LogicalResult matchAndRewrite(tensor::ExpandShapeOp reshapeOp,
                                 PatternRewriter &rewriter) const override {
     // Fold only if all constraints of fusing with reshape by expansion are met.
     GenericOp producer = reshapeOp.src().getDefiningOp<GenericOp>();
@@ -1606,11 +1608,11 @@ fuseElementwiseOps(PatternRewriter &rewriter, OpOperand *consumerOpOperand,
 bool mlir::linalg::skipUnitDimReshape(const OpResult &producer,
                                       OpOperand &consumer) {
   if (auto producerCollapseOp =
-          dyn_cast<linalg::TensorCollapseShapeOp>(producer.getOwner())) {
+          dyn_cast<tensor::CollapseShapeOp>(producer.getOwner())) {
     return !isUnitDimExpansionOnly(producerCollapseOp);
   }
   if (auto consumerExpandOp =
-          dyn_cast<linalg::TensorExpandShapeOp>(consumer.getOwner())) {
+          dyn_cast<tensor::ExpandShapeOp>(consumer.getOwner())) {
     return !isUnitDimExpansionOnly(consumerExpandOp);
   }
   return true;
@@ -1735,20 +1737,20 @@ struct RemoveOutsDependency : public OpRewritePattern<GenericOp> {
 void mlir::linalg::populateFoldReshapeOpsByLinearizationPatterns(
     RewritePatternSet &patterns) {
   patterns
-      .add<FoldProducerReshapeOpByLinearization<false, TensorCollapseShapeOp>,
-           FoldProducerReshapeOpByLinearization<false, TensorExpandShapeOp>,
-           FoldConsumerReshapeOpByLinearization<false, TensorCollapseShapeOp>,
-           FoldConsumerReshapeOpByLinearization<false, TensorExpandShapeOp>>(
+      .add<FoldProducerReshapeOpByLinearization<false, tensor::CollapseShapeOp>,
+           FoldProducerReshapeOpByLinearization<false, tensor::ExpandShapeOp>,
+           FoldConsumerReshapeOpByLinearization<false, tensor::CollapseShapeOp>,
+           FoldConsumerReshapeOpByLinearization<false, tensor::ExpandShapeOp>>(
           patterns.getContext());
 }
 
 void mlir::linalg::populateFoldUnitDimsReshapeOpsByLinearizationPatterns(
     RewritePatternSet &patterns) {
   patterns
-      .add<FoldProducerReshapeOpByLinearization<true, TensorCollapseShapeOp>,
-           FoldProducerReshapeOpByLinearization<true, TensorExpandShapeOp>,
-           FoldConsumerReshapeOpByLinearization<true, TensorCollapseShapeOp>,
-           FoldConsumerReshapeOpByLinearization<true, TensorExpandShapeOp>>(
+      .add<FoldProducerReshapeOpByLinearization<true, tensor::CollapseShapeOp>,
+           FoldProducerReshapeOpByLinearization<true, tensor::ExpandShapeOp>,
+           FoldConsumerReshapeOpByLinearization<true, tensor::CollapseShapeOp>,
+           FoldConsumerReshapeOpByLinearization<true, tensor::ExpandShapeOp>>(
           patterns.getContext());
 }
 
@@ -1772,8 +1774,8 @@ void mlir::linalg::populateElementwiseOpsFusionPatterns(
                                             options.controlFoldingReshapesFn);
   AffineApplyOp::getCanonicalizationPatterns(patterns, context);
   GenericOp::getCanonicalizationPatterns(patterns, context);
-  TensorExpandShapeOp::getCanonicalizationPatterns(patterns, context);
-  TensorCollapseShapeOp::getCanonicalizationPatterns(patterns, context);
+  tensor::ExpandShapeOp::getCanonicalizationPatterns(patterns, context);
+  tensor::CollapseShapeOp::getCanonicalizationPatterns(patterns, context);
   context->getLoadedDialect<LinalgDialect>()->getCanonicalizationPatterns(
       patterns);
 }
