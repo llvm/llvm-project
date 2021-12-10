@@ -126,7 +126,11 @@
 #if __has_attribute(visibility) && !defined(__MINGW32__) &&                    \
     !defined(__CYGWIN__) && !defined(_WIN32)
 #define LLVM_LIBRARY_VISIBILITY __attribute__ ((visibility("hidden")))
-#define LLVM_EXTERNAL_VISIBILITY __attribute__ ((visibility("default")))
+#if defined(LLVM_BUILD_LLVM_DYLIB) || defined(LLVM_BUILD_SHARED_LIBS)
+#define LLVM_EXTERNAL_VISIBILITY __attribute__((visibility("default")))
+#else
+#define LLVM_EXTERNAL_VISIBILITY
+#endif
 #else
 #define LLVM_LIBRARY_VISIBILITY
 #define LLVM_EXTERNAL_VISIBILITY
