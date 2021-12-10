@@ -66,7 +66,10 @@ static TypeErasedDataflowAnalysisState computeBlockInputState(
 TypeErasedDataflowAnalysisState transferBlock(
     std::vector<llvm::Optional<TypeErasedDataflowAnalysisState>> &BlockStates,
     const CFGBlock &Block, const Environment &InitEnv,
-    TypeErasedDataflowAnalysis &Analysis) {
+    TypeErasedDataflowAnalysis &Analysis,
+    std::function<void(const CFGStmt &,
+                       const TypeErasedDataflowAnalysisState &)>
+        HandleTransferredStmt) {
   TypeErasedDataflowAnalysisState State =
       computeBlockInputState(BlockStates, Block, InitEnv, Analysis);
   for (const CFGElement &Element : Block) {
@@ -79,6 +82,8 @@ TypeErasedDataflowAnalysisState transferBlock(
 
     State.Lattice = Analysis.transferTypeErased(Stmt.getValue().getStmt(),
                                                 State.Lattice, State.Env);
+    if (HandleTransferredStmt != nullptr)
+      HandleTransferredStmt(Stmt.getValue(), State);
   }
   return State;
 }
