@@ -352,6 +352,9 @@ Constant *llvm::ConstantFoldLoadThroughBitcast(Constant *C, Type *DestTy,
                                          const DataLayout &DL) {
   do {
     Type *SrcTy = C->getType();
+    if (SrcTy == DestTy)
+      return C;
+
     TypeSize DestSize = DL.getTypeSizeInBits(DestTy);
     TypeSize SrcSize = DL.getTypeSizeInBits(SrcTy);
     if (!TypeSize::isKnownGE(SrcSize, DestSize))

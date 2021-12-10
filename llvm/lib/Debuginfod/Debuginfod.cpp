@@ -139,13 +139,6 @@ Expected<std::string> getCachedOrDownloadArtifact(
     return createStringError(errc::io_error,
                              "No working HTTP client is available.");
 
-  if (!HTTPClient::IsInitialized)
-    return createStringError(
-        errc::io_error,
-        "A working HTTP client is available, but it is not initialized. To "
-        "allow Debuginfod to make HTTP requests, call HTTPClient::initialize() "
-        "at the beginning of main.");
-
   HTTPClient Client;
   Client.setTimeout(Timeout);
   for (StringRef ServerUrl : DebuginfodUrls) {
@@ -164,7 +157,7 @@ Expected<std::string> getCachedOrDownloadArtifact(
     // file cache.
     Expected<std::unique_ptr<CachedFileStream>> FileStreamOrErr =
         CacheAddStream(Task);
-    if (!FileStreamOrErr)
+    if (FileStreamOrErr)
       return FileStreamOrErr.takeError();
     std::unique_ptr<CachedFileStream> &FileStream = *FileStreamOrErr;
     if (!Response.Body)
