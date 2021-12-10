@@ -71,6 +71,10 @@ fputc U
 free U
 freelocale U
 fwrite U
+getCachedOrDownloadDebuginfoENS_8ArrayRef T
+getDefaultDebuginfodCacheDirectory T
+getDefaultDebuginfodTimeout T
+getDefaultDebuginfodUrls T
 getc U
 getcwd U
 getenv U
