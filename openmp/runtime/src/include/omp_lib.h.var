@@ -769,7 +769,8 @@
           integer(omp_allocator_handle_kind), value :: allocator
         end function omp_calloc
 
-        function omp_aligned_calloc(alignment, nmemb, size, allocator) bind(c)
+        function omp_aligned_calloc(alignment, nmemb, size,                                                                         &
+     &      allocator) bind(c)
           use omp_lib_kinds
           use, intrinsic :: iso_c_binding, only : c_ptr, c_size_t
           type(c_ptr) omp_aligned_calloc
@@ -777,7 +778,8 @@
           integer(omp_allocator_handle_kind), value :: allocator
         end function omp_aligned_calloc
 
-        function omp_realloc(ptr, size, allocator, free_allocator) bind(c)
+        function omp_realloc(ptr, size, allocator,                                                                                  &
+     &      free_allocator) bind(c)
           use omp_lib_kinds
           use, intrinsic :: iso_c_binding, only : c_ptr, c_size_t
           type(c_ptr) omp_realloc
