@@ -932,6 +932,7 @@ static FunctionSummary::FFlags getDecodedFFlags(uint64_t RawFlags) {
   Flags.NoUnwind = (RawFlags >> 6) & 0x1;
   Flags.MayThrow = (RawFlags >> 7) & 0x1;
   Flags.HasUnknownCall = (RawFlags >> 8) & 0x1;
+  Flags.MustBeUnreachable = (RawFlags >> 9) & 0x1;
   return Flags;
 }
 

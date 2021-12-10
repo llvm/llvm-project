@@ -234,6 +234,26 @@ static bool isNonVolatileStore(const Instruction *I) {
   return false;
 }
 
+// Returns true if `F` must be an unreachable function.
+//
+// Note if this helper function returns true, `F` is guaranteed
+// to be unreachable; if it returns false, `F` might still
+// be unreachable but not covered by this helper function.
+static bool mustBeUnreachableFunction(const Function &F) {
+  if (!F.empty()) {
+    const BasicBlock &entryBlock = F.getEntryBlock();
+    // A function must be unreachable if its entry block
+    // ends with an 'unreachable'.
+    if (!entryBlock.empty()) {
+      const Instruction *inst = &(*entryBlock.rbegin());
+      if (inst->getOpcode() == Instruction::Unreachable) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
 static void computeFunctionSummary(
     ModuleSummaryIndex &Index, const Module &M, const Function &F,
     BlockFrequencyInfo *BFI, ProfileSummaryInfo *PSI, DominatorTree &DT,
@@ -488,7 +508,8 @@ static void computeFunctionSummary(
       // Don't try to import functions with noinline attribute.
       F.getAttributes().hasFnAttr(Attribute::NoInline),
       F.hasFnAttribute(Attribute::AlwaysInline),
-      F.hasFnAttribute(Attribute::NoUnwind), MayThrow, HasUnknownCall};
+      F.hasFnAttribute(Attribute::NoUnwind), MayThrow, HasUnknownCall,
+      mustBeUnreachableFunction(F)};
   std::vector<FunctionSummary::ParamAccess> ParamAccesses;
   if (auto *SSI = GetSSICallback(F))
     ParamAccesses = SSI->getParamAccesses(Index);
@@ -737,7 +758,8 @@ ModuleSummaryIndex llvm::buildModuleSummaryIndex(
                         F->hasFnAttribute(Attribute::AlwaysInline),
                         F->hasFnAttribute(Attribute::NoUnwind),
                         /* MayThrow */ true,
-                        /* HasUnknownCall */ true},
+                        /* HasUnknownCall */ true,
+                        /* MustBeUnreachable */ false},
                     /*EntryCount=*/0, ArrayRef<ValueInfo>{},
                     ArrayRef<FunctionSummary::EdgeTy>{},
                     ArrayRef<GlobalValue::GUID>{},
