@@ -121,7 +121,8 @@ bool addOpenMPRuntime(llvm::opt::ArgStringList &CmdArgs, const ToolChain &TC,
                       bool IsOffloadingHost = false, bool GompNeedsRT = false);
 
 /// Adds Fortran runtime libraries to \p CmdArgs.
-void addFortranRuntimeLibs(llvm::opt::ArgStringList &CmdArgs);
+void addFortranRuntimeLibs(const ToolChain &TC,
+                           llvm::opt::ArgStringList &CmdArgs);
 
 /// Adds the path for the Fortran runtime libraries to \p CmdArgs.
 void addFortranRuntimeLibraryPath(const ToolChain &TC,
