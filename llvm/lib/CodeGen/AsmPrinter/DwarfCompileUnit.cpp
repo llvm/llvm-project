@@ -789,7 +789,7 @@ DIE *DwarfCompileUnit::constructVariableDIEImpl(const DbgVariable &DV,
     const TargetRegisterInfo &TRI = *Asm->MF->getSubtarget().getRegisterInfo();
 
     auto AddEntry = [&](const DbgValueLocEntry &Entry,
-                                            DIExpressionCursor &Cursor) {
+                        DIExpressionCursor &Cursor) {
       if (Entry.isLocation()) {
         if (!DwarfExpr.addMachineRegExpression(TRI, Cursor,
                                                Entry.getLoc().getReg()))
@@ -798,11 +798,19 @@ DIE *DwarfCompileUnit::constructVariableDIEImpl(const DbgVariable &DV,
         // If there is an expression, emit raw unsigned bytes.
         DwarfExpr.addUnsignedConstant(Entry.getInt());
       } else if (Entry.isConstantFP()) {
+        // DwarfExpression does not support arguments wider than 64 bits
+        // (see PR52584).
+        // TODO: Consider chunking expressions containing overly wide
+        // arguments into separate pointer-sized fragment expressions.
         APInt RawBytes = Entry.getConstantFP()->getValueAPF().bitcastToAPInt();
-        DwarfExpr.addUnsignedConstant(RawBytes);
+        if (RawBytes.getBitWidth() > 64)
+          return false;
+        DwarfExpr.addUnsignedConstant(RawBytes.getZExtValue());
       } else if (Entry.isConstantInt()) {
         APInt RawBytes = Entry.getConstantInt()->getValue();
-        DwarfExpr.addUnsignedConstant(RawBytes);
+        if (RawBytes.getBitWidth() > 64)
+          return false;
+        DwarfExpr.addUnsignedConstant(RawBytes.getZExtValue());
       } else if (Entry.isTargetIndexLocation()) {
         TargetIndexLocation Loc = Entry.getTargetIndexLocation();
         // TODO TargetIndexLocation is a target-independent. Currently only the
@@ -815,11 +823,12 @@ DIE *DwarfCompileUnit::constructVariableDIEImpl(const DbgVariable &DV,
       return true;
     };
 
-    DwarfExpr.addExpression(
-        std::move(Cursor),
-        [&](unsigned Idx, DIExpressionCursor &Cursor) -> bool {
-          return AddEntry(DVal->getLocEntries()[Idx], Cursor);
-        });
+    if (!DwarfExpr.addExpression(
+            std::move(Cursor),
+            [&](unsigned Idx, DIExpressionCursor &Cursor) -> bool {
+              return AddEntry(DVal->getLocEntries()[Idx], Cursor);
+            }))
+      return VariableDie;
 
     // Now attach the location information to the DIE.
     addBlock(*VariableDie, dwarf::DW_AT_location, DwarfExpr.finalize());
