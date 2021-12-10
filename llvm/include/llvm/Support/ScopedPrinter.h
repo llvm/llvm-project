@@ -57,12 +57,35 @@ struct HexNumber {
   uint64_t Value;
 };
 
+struct FlagEntry {
+  FlagEntry(StringRef Name, char Value)
+      : Name(Name), Value(static_cast<unsigned char>(Value)) {}
+  FlagEntry(StringRef Name, signed char Value)
+      : Name(Name), Value(static_cast<unsigned char>(Value)) {}
+  FlagEntry(StringRef Name, signed short Value)
+      : Name(Name), Value(static_cast<unsigned short>(Value)) {}
+  FlagEntry(StringRef Name, signed int Value)
+      : Name(Name), Value(static_cast<unsigned int>(Value)) {}
+  FlagEntry(StringRef Name, signed long Value)
+      : Name(Name), Value(static_cast<unsigned long>(Value)) {}
+  FlagEntry(StringRef Name, signed long long Value)
+      : Name(Name), Value(static_cast<unsigned long long>(Value)) {}
+  FlagEntry(StringRef Name, unsigned char Value) : Name(Name), Value(Value) {}
+  FlagEntry(StringRef Name, unsigned short Value) : Name(Name), Value(Value) {}
+  FlagEntry(StringRef Name, unsigned int Value) : Name(Name), Value(Value) {}
+  FlagEntry(StringRef Name, unsigned long Value) : Name(Name), Value(Value) {}
+  FlagEntry(StringRef Name, unsigned long long Value)
+      : Name(Name), Value(Value) {}
+  StringRef Name;
+  uint64_t Value;
+};
+
 raw_ostream &operator<<(raw_ostream &OS, const HexNumber &Value);
 std::string to_hexString(uint64_t Value, bool UpperCase = true);
 
 template <class T> std::string to_string(const T &Value) {
   std::string number;
-  llvm::raw_string_ostream stream(number);
+  raw_string_ostream stream(number);
   stream << Value;
   return stream.str();
 }
@@ -78,6 +101,8 @@ std::string enumToString(T Value, ArrayRef<EnumEntry<TEnum>> EnumValues) {
 class ScopedPrinter {
 public:
   ScopedPrinter(raw_ostream &OS) : OS(OS), IndentLevel(0) {}
+
+  virtual ~ScopedPrinter() {}
 
   void flush() { OS.flush(); }
 
@@ -114,20 +139,17 @@ public:
       }
     }
 
-    if (Found) {
-      startLine() << Label << ": " << Name << " (" << hex(Value) << ")\n";
-    } else {
-      startLine() << Label << ": " << hex(Value) << "\n";
-    }
+    if (Found)
+      printHex(Label, Name, Value);
+    else
+      printHex(Label, Value);
   }
 
   template <typename T, typename TFlag>
   void printFlags(StringRef Label, T Value, ArrayRef<EnumEntry<TFlag>> Flags,
                   TFlag EnumMask1 = {}, TFlag EnumMask2 = {},
                   TFlag EnumMask3 = {}) {
-    typedef EnumEntry<TFlag> FlagEntry;
-    typedef SmallVector<FlagEntry, 10> FlagVector;
-    FlagVector SetFlags;
+    SmallVector<FlagEntry, 10> SetFlags;
 
     for (const auto &Flag : Flags) {
       if (Flag.Value == 0)
@@ -143,69 +165,64 @@ public:
       bool IsEnum = (Flag.Value & EnumMask) != 0;
       if ((!IsEnum && (Value & Flag.Value) == Flag.Value) ||
           (IsEnum && (Value & EnumMask) == Flag.Value)) {
-        SetFlags.push_back(Flag);
+        SetFlags.emplace_back(Flag.Name, Flag.Value);
       }
     }
 
-    llvm::sort(SetFlags, &flagName<TFlag>);
-
-    startLine() << Label << " [ (" << hex(Value) << ")\n";
-    for (const auto &Flag : SetFlags) {
-      startLine() << "  " << Flag.Name << " (" << hex(Flag.Value) << ")\n";
-    }
-    startLine() << "]\n";
+    llvm::sort(SetFlags, &flagName);
+    printFlagsImpl(Label, hex(Value), SetFlags);
   }
 
   template <typename T> void printFlags(StringRef Label, T Value) {
-    startLine() << Label << " [ (" << hex(Value) << ")\n";
+    SmallVector<HexNumber, 10> SetFlags;
     uint64_t Flag = 1;
     uint64_t Curr = Value;
     while (Curr > 0) {
       if (Curr & 1)
-        startLine() << "  " << hex(Flag) << "\n";
+        SetFlags.emplace_back(Flag);
       Curr >>= 1;
       Flag <<= 1;
     }
-    startLine() << "]\n";
+    printFlagsImpl(Label, hex(Value), SetFlags);
   }
 
-  void printNumber(StringRef Label, uint64_t Value) {
+  virtual void printNumber(StringRef Label, uint64_t Value) {
     startLine() << Label << ": " << Value << "\n";
   }
 
-  void printNumber(StringRef Label, uint32_t Value) {
+  virtual void printNumber(StringRef Label, uint32_t Value) {
     startLine() << Label << ": " << Value << "\n";
   }
 
-  void printNumber(StringRef Label, uint16_t Value) {
+  virtual void printNumber(StringRef Label, uint16_t Value) {
     startLine() << Label << ": " << Value << "\n";
   }
 
-  void printNumber(StringRef Label, uint8_t Value) {
+  virtual void printNumber(StringRef Label, uint8_t Value) {
     startLine() << Label << ": " << unsigned(Value) << "\n";
   }
 
-  void printNumber(StringRef Label, int64_t Value) {
+  virtual void printNumber(StringRef Label, int64_t Value) {
     startLine() << Label << ": " << Value << "\n";
   }
 
-  void printNumber(StringRef Label, int32_t Value) {
+  virtual void printNumber(StringRef Label, int32_t Value) {
     startLine() << Label << ": " << Value << "\n";
   }
 
-  void printNumber(StringRef Label, int16_t Value) {
+  virtual void printNumber(StringRef Label, int16_t Value) {
     startLine() << Label << ": " << Value << "\n";
   }
 
-  void printNumber(StringRef Label, int8_t Value) {
+  virtual void printNumber(StringRef Label, int8_t Value) {
     startLine() << Label << ": " << int(Value) << "\n";
   }
 
-  void printNumber(StringRef Label, const APSInt &Value) {
+  virtual void printNumber(StringRef Label, const APSInt &Value) {
     startLine() << Label << ": " << Value << "\n";
   }
 
-  void printBoolean(StringRef Label, bool Value) {
+  virtual void printBoolean(StringRef Label, bool Value) {
     startLine() << Label << ": " << (Value ? "Yes" : "No") << '\n';
   }
 
@@ -215,12 +232,62 @@ public:
     getOStream() << "\n";
   }
 
-  template <typename T> void printList(StringRef Label, const T &List) {
-    startLine() << Label << ": [";
-    ListSeparator LS;
+  template <typename T>
+  void printList(StringRef Label, const ArrayRef<T> List) {
+    SmallVector<std::string, 10> StringList;
     for (const auto &Item : List)
-      OS << LS << Item;
-    OS << "]\n";
+      StringList.emplace_back(to_string(Item));
+    printList(Label, StringList);
+  }
+
+  virtual void printList(StringRef Label, const ArrayRef<bool> List) {
+    printListImpl(Label, List);
+  }
+
+  virtual void printList(StringRef Label, const ArrayRef<std::string> List) {
+    printListImpl(Label, List);
+  }
+
+  virtual void printList(StringRef Label, const ArrayRef<uint64_t> List) {
+    printListImpl(Label, List);
+  }
+
+  virtual void printList(StringRef Label, const ArrayRef<uint32_t> List) {
+    printListImpl(Label, List);
+  }
+
+  virtual void printList(StringRef Label, const ArrayRef<uint16_t> List) {
+    printListImpl(Label, List);
+  }
+
+  virtual void printList(StringRef Label, const ArrayRef<uint8_t> List) {
+    SmallVector<unsigned> NumberList;
+    for (const uint8_t &Item : List)
+      NumberList.emplace_back(Item);
+    printListImpl(Label, NumberList);
+  }
+
+  virtual void printList(StringRef Label, const ArrayRef<int64_t> List) {
+    printListImpl(Label, List);
+  }
+
+  virtual void printList(StringRef Label, const ArrayRef<int32_t> List) {
+    printListImpl(Label, List);
+  }
+
+  virtual void printList(StringRef Label, const ArrayRef<int16_t> List) {
+    printListImpl(Label, List);
+  }
+
+  virtual void printList(StringRef Label, const ArrayRef<int8_t> List) {
+    SmallVector<int> NumberList;
+    for (const int8_t &Item : List)
+      NumberList.emplace_back(Item);
+    printListImpl(Label, NumberList);
+  }
+
+  virtual void printList(StringRef Label, const ArrayRef<APSInt> List) {
+    printListImpl(Label, List);
   }
 
   template <typename T, typename U>
@@ -235,29 +302,28 @@ public:
   }
 
   template <typename T> void printHexList(StringRef Label, const T &List) {
-    startLine() << Label << ": [";
-    ListSeparator LS;
+    SmallVector<HexNumber> HexList;
     for (const auto &Item : List)
-      OS << LS << hex(Item);
-    OS << "]\n";
+      HexList.emplace_back(Item);
+    printHexListImpl(Label, HexList);
   }
 
   template <typename T> void printHex(StringRef Label, T Value) {
-    startLine() << Label << ": " << hex(Value) << "\n";
+    printHexImpl(Label, hex(Value));
   }
 
   template <typename T> void printHex(StringRef Label, StringRef Str, T Value) {
-    startLine() << Label << ": " << Str << " (" << hex(Value) << ")\n";
+    printHexImpl(Label, Str, hex(Value));
   }
 
   template <typename T>
   void printSymbolOffset(StringRef Label, StringRef Symbol, T Value) {
-    startLine() << Label << ": " << Symbol << '+' << hex(Value) << '\n';
+    printSymbolOffsetImpl(Label, Symbol, hex(Value));
   }
 
-  void printString(StringRef Value) { startLine() << Value << "\n"; }
+  virtual void printString(StringRef Value) { startLine() << Value << "\n"; }
 
-  void printString(StringRef Label, StringRef Value) {
+  virtual void printString(StringRef Label, StringRef Value) {
     startLine() << Label << ": " << Value << "\n";
   }
 
@@ -265,13 +331,13 @@ public:
     printString(Label, StringRef(Value));
   }
 
-  void printString(StringRef Label, const char* Value) {
+  void printString(StringRef Label, const char *Value) {
     printString(Label, StringRef(Value));
   }
 
   template <typename T>
   void printNumber(StringRef Label, StringRef Str, T Value) {
-    startLine() << Label << ": " << Str << " (" << Value << ")\n";
+    printNumberImpl(Label, Str, to_string(Value));
   }
 
   void printBinary(StringRef Label, StringRef Str, ArrayRef<uint8_t> Value) {
@@ -316,15 +382,27 @@ public:
   }
 
   template <typename T> void printObject(StringRef Label, const T &Value) {
-    startLine() << Label << ": " << Value << "\n";
+    printString(Label, to_string(Value));
   }
 
-  raw_ostream &startLine() {
+  virtual void objectBegin() { scopedBegin('{'); }
+
+  virtual void objectBegin(StringRef Label) { scopedBegin(Label, '{'); }
+
+  virtual void objectEnd() { scopedEnd('}'); }
+
+  virtual void arrayBegin() { scopedBegin('['); }
+
+  virtual void arrayBegin(StringRef Label) { scopedBegin(Label, '['); }
+
+  virtual void arrayEnd() { scopedEnd(']'); }
+
+  virtual raw_ostream &startLine() {
     printIndent();
     return OS;
   }
 
-  raw_ostream &getOStream() { return OS; }
+  virtual raw_ostream &getOStream() { return OS; }
 
 private:
   template <typename T> void printVersionInternal(T Value) {
@@ -337,13 +415,82 @@ private:
     printVersionInternal(Value2, Args...);
   }
 
-  template <typename T>
-  static bool flagName(const EnumEntry<T> &lhs, const EnumEntry<T> &rhs) {
-    return lhs.Name < rhs.Name;
+  static bool flagName(const FlagEntry &LHS, const FlagEntry &RHS) {
+    return LHS.Name < RHS.Name;
   }
 
-  void printBinaryImpl(StringRef Label, StringRef Str, ArrayRef<uint8_t> Value,
-                       bool Block, uint32_t StartOffset = 0);
+  virtual void printBinaryImpl(StringRef Label, StringRef Str,
+                               ArrayRef<uint8_t> Value, bool Block,
+                               uint32_t StartOffset = 0);
+
+  virtual void printFlagsImpl(StringRef Label, HexNumber Value,
+                              ArrayRef<FlagEntry> Flags) {
+    startLine() << Label << " [ (" << Value << ")\n";
+    for (const auto &Flag : Flags)
+      startLine() << "  " << Flag.Name << " (" << hex(Flag.Value) << ")\n";
+    startLine() << "]\n";
+  }
+
+  virtual void printFlagsImpl(StringRef Label, HexNumber Value,
+                              ArrayRef<HexNumber> Flags) {
+    startLine() << Label << " [ (" << Value << ")\n";
+    for (const auto &Flag : Flags)
+      startLine() << "  " << Flag << '\n';
+    startLine() << "]\n";
+  }
+
+  template <typename T> void printListImpl(StringRef Label, const T List) {
+    startLine() << Label << ": [";
+    ListSeparator LS;
+    for (const auto &Item : List)
+      OS << LS << Item;
+    OS << "]\n";
+  }
+
+  virtual void printHexListImpl(StringRef Label,
+                                const ArrayRef<HexNumber> List) {
+    startLine() << Label << ": [";
+    ListSeparator LS;
+    for (const auto &Item : List)
+      OS << LS << hex(Item);
+    OS << "]\n";
+  }
+
+  virtual void printHexImpl(StringRef Label, HexNumber Value) {
+    startLine() << Label << ": " << Value << "\n";
+  }
+
+  virtual void printHexImpl(StringRef Label, StringRef Str, HexNumber Value) {
+    startLine() << Label << ": " << Str << " (" << Value << ")\n";
+  }
+
+  virtual void printSymbolOffsetImpl(StringRef Label, StringRef Symbol,
+                                     HexNumber Value) {
+    startLine() << Label << ": " << Symbol << '+' << Value << '\n';
+  }
+
+  virtual void printNumberImpl(StringRef Label, StringRef Str,
+                               StringRef Value) {
+    startLine() << Label << ": " << Str << " (" << Value << ")\n";
+  }
+
+  void scopedBegin(char Symbol) {
+    startLine() << Symbol << '\n';
+    indent();
+  }
+
+  void scopedBegin(StringRef Label, char Symbol) {
+    startLine() << Label;
+    if (!Label.empty())
+      OS << ' ';
+    OS << Symbol << '\n';
+    indent();
+  }
+
+  void scopedEnd(char Symbol) {
+    unindent();
+    startLine() << Symbol << '\n';
+  }
 
   raw_ostream &OS;
   int IndentLevel;
@@ -357,31 +504,31 @@ ScopedPrinter::printHex<support::ulittle16_t>(StringRef Label,
   startLine() << Label << ": " << hex(Value) << "\n";
 }
 
-template<char Open, char Close>
 struct DelimitedScope {
-  explicit DelimitedScope(ScopedPrinter &W) : W(W) {
-    W.startLine() << Open << '\n';
-    W.indent();
-  }
-
-  DelimitedScope(ScopedPrinter &W, StringRef N) : W(W) {
-    W.startLine() << N;
-    if (!N.empty())
-      W.getOStream() << ' ';
-    W.getOStream() << Open << '\n';
-    W.indent();
-  }
-
-  ~DelimitedScope() {
-    W.unindent();
-    W.startLine() << Close << '\n';
-  }
-
+  DelimitedScope(ScopedPrinter &W) : W(W) {}
+  virtual ~DelimitedScope(){};
   ScopedPrinter &W;
 };
 
-using DictScope = DelimitedScope<'{', '}'>;
-using ListScope = DelimitedScope<'[', ']'>;
+struct DictScope : DelimitedScope {
+  explicit DictScope(ScopedPrinter &W) : DelimitedScope(W) { W.objectBegin(); }
+
+  DictScope(ScopedPrinter &W, StringRef N) : DelimitedScope(W) {
+    W.objectBegin(N);
+  }
+
+  ~DictScope() { W.objectEnd(); }
+};
+
+struct ListScope : DelimitedScope {
+  explicit ListScope(ScopedPrinter &W) : DelimitedScope(W) { W.arrayBegin(); }
+
+  ListScope(ScopedPrinter &W, StringRef N) : DelimitedScope(W) {
+    W.arrayBegin(N);
+  }
+
+  ~ListScope() { W.arrayEnd(); }
+};
 
 } // namespace llvm
 
