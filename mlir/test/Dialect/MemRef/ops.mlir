@@ -108,13 +108,13 @@ func @expand_collapse_shape_static(%arg0: memref<3x4x5xf32>,
   %r3 = memref.collapse_shape %3 [[0, 1], [2], [3, 4]] :
     memref<1x3x4x1x5xf32> into memref<3x4x5xf32>
   // Reshapes on tensors.
-  %t0 = linalg.tensor_expand_shape %arg1 [[0, 1], [2], [3, 4]] :
+  %t0 = tensor.expand_shape %arg1 [[0, 1], [2], [3, 4]] :
     tensor<3x4x5xf32> into tensor<1x3x4x1x5xf32>
-  %rt0 = linalg.tensor_collapse_shape %t0 [[0, 1], [2], [3, 4]] :
+  %rt0 = tensor.collapse_shape %t0 [[0, 1], [2], [3, 4]] :
     tensor<1x3x4x1x5xf32> into tensor<3x4x5xf32>
-  %t1 = linalg.tensor_expand_shape %arg2 [[0, 1], [2], [3, 4]] :
+  %t1 = tensor.expand_shape %arg2 [[0, 1], [2], [3, 4]] :
     tensor<3x?x5xf32> into tensor<1x3x?x1x5xf32>
-  %rt1 = linalg.tensor_collapse_shape %t1 [[0], [1, 2], [3, 4]] :
+  %rt1 = tensor.collapse_shape %t1 [[0], [1, 2], [3, 4]] :
     tensor<1x3x?x1x5xf32> into tensor<1x?x5xf32>
   return
 }
@@ -136,10 +136,10 @@ func @expand_collapse_shape_static(%arg0: memref<3x4x5xf32>,
 //       CHECK:   memref.collapse_shape {{.*}} {{\[}}[0, 1], [2], [3, 4]]
 //  CHECK-SAME:     memref<1x3x4x1x5xf32> into memref<3x4x5xf32>
 //
-//       CHECK:   linalg.tensor_expand_shape {{.*}}: tensor<3x4x5xf32> into tensor<1x3x4x1x5xf32>
-//       CHECK:   linalg.tensor_collapse_shape {{.*}}: tensor<1x3x4x1x5xf32> into tensor<3x4x5xf32>
-//       CHECK:   linalg.tensor_expand_shape {{.*}}: tensor<3x?x5xf32> into tensor<1x3x?x1x5xf32>
-//       CHECK:   linalg.tensor_collapse_shape {{.*}}: tensor<1x3x?x1x5xf32> into tensor<1x?x5xf32>
+//       CHECK:   tensor.expand_shape {{.*}}: tensor<3x4x5xf32> into tensor<1x3x4x1x5xf32>
+//       CHECK:   tensor.collapse_shape {{.*}}: tensor<1x3x4x1x5xf32> into tensor<3x4x5xf32>
+//       CHECK:   tensor.expand_shape {{.*}}: tensor<3x?x5xf32> into tensor<1x3x?x1x5xf32>
+//       CHECK:   tensor.collapse_shape {{.*}}: tensor<1x3x?x1x5xf32> into tensor<1x?x5xf32>
 
 
 func @expand_collapse_shape_dynamic(%arg0: memref<?x?x?xf32>,

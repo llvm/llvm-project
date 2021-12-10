@@ -4149,12 +4149,11 @@ gentbl_cc_library(
 
 cc_library(
     name = "TensorDialect",
-    srcs = glob(
-        [
-            "lib/Dialect/Tensor/IR/*.cpp",
-            "lib/Dialect/Tensor/IR/*.h",
-        ],
-    ) + ["include/mlir/Transforms/InliningUtils.h"],
+    srcs = [
+        "include/mlir/Transforms/InliningUtils.h",
+        "lib/Dialect/Tensor/IR/TensorDialect.cpp",
+        "lib/Dialect/Tensor/IR/TensorOps.cpp",
+    ],
     hdrs = ["include/mlir/Dialect/Tensor/IR/Tensor.h"],
     includes = ["include"],
     deps = [
@@ -4169,6 +4168,21 @@ cc_library(
         ":Support",
         ":TensorOpsIncGen",
         ":ViewLikeInterface",
+        "//llvm:Support",
+    ],
+)
+
+cc_library(
+    name = "TensorInferTypeOpInterfaceImpl",
+    srcs = ["lib/Dialect/Tensor/IR/TensorInferTypeOpInterfaceImpl.cpp"],
+    hdrs = ["include/mlir/Dialect/Tensor/IR/TensorInferTypeOpInterfaceImpl.h"],
+    includes = ["include"],
+    deps = [
+        ":Affine",
+        ":IR",
+        ":InferTypeOpInterface",
+        ":StandardOps",
+        ":TensorDialect",
         "//llvm:Support",
     ],
 )
@@ -5447,6 +5461,7 @@ cc_library(
         ":StandardToLLVM",
         ":StandardToSPIRV",
         ":TensorDialect",
+        ":TensorInferTypeOpInterfaceImpl",
         ":TensorTransforms",
         ":TosaDialect",
         ":TosaToLinalg",
