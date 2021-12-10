@@ -1425,3 +1425,8 @@ test.graph_region {
 // This is an unregister operation, the printing/parsing is handled by the dialect.
 // CHECK: test.dialect_custom_printer custom_format
 test.dialect_custom_printer custom_format
+
+// This is a registered operation with no custom parser and printer, and should
+// be handled by the dialect.
+// CHECK: test.dialect_custom_format_fallback custom_format_fallback
+test.dialect_custom_format_fallback custom_format_fallback
