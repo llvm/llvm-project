@@ -1417,11 +1417,11 @@ struct InsertSliceOpSourceCastInserter final
       return failure();
     SmallVector<int64_t> newSrcShape(srcType.getShape().begin(),
                                      srcType.getShape().end());
-    for (int64_t i = 0; i < srcType.getRank(); ++i) {
-      if (Optional<int64_t> constInt =
-              getConstantIntValue(insertSliceOp.getMixedSizes()[i]))
-        newSrcShape[i] = *constInt;
-    }
+    // Offsets / sizes / strides can be a subprefix of the rank; take only the
+    // leading dimensions.
+    for (auto en : llvm::enumerate(insertSliceOp.getMixedSizes()))
+      if (Optional<int64_t> constInt = getConstantIntValue(en.value()))
+        newSrcShape[en.index()] = *constInt;
 
     RankedTensorType newSrcType =
         RankedTensorType::get(newSrcShape, srcType.getElementType());
