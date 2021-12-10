@@ -2458,21 +2458,33 @@ TypeSystemSwiftTypeRef::GetNumChildren(opaque_compiler_type_t type,
   LLDB_SCOPED_TIMER();
   FALLBACK(GetNumChildren,
            (ReconstructType(type), omit_empty_base_classes, exe_ctx));
-  if (exe_ctx)
-    if (auto *exe_scope = exe_ctx->GetBestExecutionContextScope())
-      if (auto *runtime =
-              SwiftLanguageRuntime::Get(exe_scope->CalculateProcess()))
-        if (auto num_children =
-                runtime->GetNumChildren(GetCanonicalType(type), nullptr))
-          // Use a lambda to intercept and unwrap the `Optional` return value.
-          // Optional<uint32_t> uses more lax equivalency function.
-          return [&]() -> llvm::Optional<uint32_t> {
-            auto impl = [&]() { return num_children; };
-            VALIDATE_AND_RETURN(
-                impl, GetNumChildren, type,
-                (ReconstructType(type), omit_empty_base_classes, exe_ctx),
-                (ReconstructType(type), omit_empty_base_classes, exe_ctx));
-          }().getValueOr(0);
+
+  auto impl = [&]() -> llvm::Optional<uint32_t> {
+    if (exe_ctx)
+      if (auto *exe_scope = exe_ctx->GetBestExecutionContextScope())
+        if (auto *runtime =
+                SwiftLanguageRuntime::Get(exe_scope->CalculateProcess()))
+          return runtime->GetNumChildren(GetCanonicalType(type), nullptr);
+
+    if (CompilerType clang_type = GetAsClangTypeOrNull(type)) {
+      bool is_signed;
+      // Clang-imported enum types always have one child in Swift.
+      if (clang_type.IsEnumerationType(is_signed))
+        return 1;
+      return clang_type.GetNumChildren(omit_empty_base_classes, exe_ctx);
+    }
+    return {};
+  };
+  if (llvm::Optional<uint32_t> num_children = impl())
+    // Use a lambda to intercept and unwrap the `Optional` return value.
+    // Optional<uint32_t> uses more lax equivalency function.
+    return [&]() -> llvm::Optional<uint32_t> {
+      auto impl = [&]() { return num_children; };
+      VALIDATE_AND_RETURN(
+          impl, GetNumChildren, type,
+          (ReconstructType(type), omit_empty_base_classes, exe_ctx),
+          (ReconstructType(type), omit_empty_base_classes, exe_ctx));
+    }().getValueOr(0);
 
   LLDB_LOGF(GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES),
             "Using SwiftASTContext::GetNumChildren fallback for type %s",
