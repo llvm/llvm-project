@@ -60,7 +60,7 @@ std::string LoopHintAttr::getValueString(const PrintingPolicy &Policy) const {
   else
     OS << "disable";
   OS << ")";
-  return OS.str();
+  return ValueName;
 }
 
 // Return a string suitable for identifying this attribute in diagnostics.
