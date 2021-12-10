@@ -17,12 +17,12 @@ func @do_not_fold1(%arg0 : tensor<?x?xf32>, %arg1 : tensor<?x?xf32>) -> tensor<?
         %4 = arith.addf %arg2, %arg3 : f32
         linalg.yield %4 : f32
       } -> tensor<?x?xf32>
-  %4 = linalg.tensor_expand_shape %3 [[0], [1, 2]] : tensor<?x?xf32> into tensor<?x?x1xf32>
+  %4 = tensor.expand_shape %3 [[0], [1, 2]] : tensor<?x?xf32> into tensor<?x?x1xf32>
   return %4 : tensor<?x?x1xf32>
 }
 // CHECK-LABEL: func @do_not_fold1
 //       CHECK: %[[VAL:.+]] = linalg.generic
-//       CHECK: linalg.tensor_expand_shape %[[VAL]]
+//       CHECK: tensor.expand_shape %[[VAL]]
 
 // -----
 
@@ -31,7 +31,7 @@ func @do_not_fold2(%arg0 : tensor<?x?x1xf32>, %arg1 : tensor<?x?xf32>) -> tensor
 {
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index
-  %0 = linalg.tensor_collapse_shape %arg0 [[0], [1, 2]] : tensor<?x?x1xf32> into tensor<?x?xf32>
+  %0 = tensor.collapse_shape %arg0 [[0], [1, 2]] : tensor<?x?x1xf32> into tensor<?x?xf32>
   %1 = tensor.dim %arg1, %c0 : tensor<?x?xf32>
   %2 = tensor.dim %arg1, %c1 : tensor<?x?xf32>
   %3 = linalg.init_tensor [%1, %2] : tensor<?x?xf32>
@@ -47,6 +47,6 @@ func @do_not_fold2(%arg0 : tensor<?x?x1xf32>, %arg1 : tensor<?x?xf32>) -> tensor
   return %4 : tensor<?x?xf32>
 }
 // CHECK-LABEL: func @do_not_fold2
-//       CHECK: %[[VAL:.+]] = linalg.tensor_collapse_shape
+//       CHECK: %[[VAL:.+]] = tensor.collapse_shape
 //       CHECK: linalg.generic
 //  CHECK-SAME:   ins(%[[VAL]], %{{.+}} : tensor<?x?xf32>, tensor<?x?xf32>)

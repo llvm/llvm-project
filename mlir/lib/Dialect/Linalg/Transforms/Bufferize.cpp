@@ -124,7 +124,7 @@ class BufferizeTensorReshapeOp : public OpConversionPattern<TensorReshapeOp> {
 public:
   using OpConversionPattern<TensorReshapeOp>::OpConversionPattern;
   using ReshapeOp = typename std::conditional_t<
-      std::is_same<TensorReshapeOp, TensorExpandShapeOp>::value,
+      std::is_same<TensorReshapeOp, tensor::ExpandShapeOp>::value,
       memref::ExpandShapeOp, memref::CollapseShapeOp>;
 
   LogicalResult
@@ -320,8 +320,9 @@ struct LinalgBufferizePass : public LinalgBufferizeBase<LinalgBufferizePass> {
     target.addLegalDialect<arith::ArithmeticDialect, AffineDialect,
                            memref::MemRefDialect, StandardOpsDialect,
                            tensor::TensorDialect>();
-    target.addIllegalOp<InitTensorOp, tensor::ExtractSliceOp,
-                        tensor::InsertSliceOp, PadTensorOp>();
+    target.addIllegalOp<InitTensorOp, PadTensorOp, tensor::CollapseShapeOp,
+                        tensor::ExpandShapeOp, tensor::ExtractSliceOp,
+                        tensor::InsertSliceOp>();
 
     // Mark all Linalg operations illegal as long as they work on tensors.
     auto isLegalOperation = [&](Operation *op) {
@@ -354,8 +355,8 @@ void mlir::linalg::populateLinalgBufferizePatterns(
       BufferizeAnyLinalgOp,
       BufferizeFillOp,
       BufferizeInitTensorOp,
-      BufferizeTensorReshapeOp<TensorExpandShapeOp>,
-      BufferizeTensorReshapeOp<TensorCollapseShapeOp>,
+      BufferizeTensorReshapeOp<tensor::ExpandShapeOp>,
+      BufferizeTensorReshapeOp<tensor::CollapseShapeOp>,
       ExtractSliceOpConverter,
       InsertSliceOpConverter,
       VectorTransferReadOpConverter,

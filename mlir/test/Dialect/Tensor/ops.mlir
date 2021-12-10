@@ -102,6 +102,8 @@ func @slice(%t: tensor<8x16x4xf32>, %idx : index) {
   return
 }
 
+// -----
+
 // CHECK-LABEL: func @insert_slice({{.*}}) {
 func @insert_slice(
     %t: tensor<8x16x4xf32>,
@@ -135,3 +137,26 @@ func @insert_slice(
 
   return
 }
+
+// -----
+
+func @tensor_reshape_zero_dim(%arg0 : tensor<1x1xf32>, %arg1 : tensor<f32>)
+    -> (tensor<f32>, tensor<1x1xf32>) {
+  %0 = tensor.collapse_shape %arg0 [] : tensor<1x1xf32> into tensor<f32>
+  %1 = tensor.expand_shape %0 [] : tensor<f32> into tensor<1x1xf32>
+  return %0, %1 : tensor<f32>, tensor<1x1xf32>
+}
+// CHECK-LABEL: func @tensor_reshape_zero_dim
+//       CHECK:   tensor.collapse_shape %{{.*}} [] : tensor<1x1xf32> into tensor<f32>
+//       CHECK:   tensor.expand_shape %{{.*}} [] : tensor<f32> into tensor<1x1xf32>
+
+func @legal_collapsing_reshape_dynamic_tensor
+  (%arg0: tensor<?x?x?x4x?xf32>) -> tensor<?x?x?xf32>
+{
+  %0 = tensor.collapse_shape %arg0 [[0], [1], [2, 3, 4]] :
+    tensor<?x?x?x4x?xf32> into tensor<?x?x?xf32>
+  return %0 : tensor<?x?x?xf32>
+}
+//      CHECK: func @legal_collapsing_reshape_dynamic_tensor
+//      CHECK:   tensor.collapse_shape
+// CHECK-SAME:    [0], [1], [2, 3, 4]

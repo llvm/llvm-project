@@ -34,7 +34,7 @@ static Value sourceMaterializationCallback(OpBuilder &builder, Type type,
 
   // FromElementsOp results in a tensor<1xdtype>, we need to reshape that to
   // a tensor<dtype> instead.
-  return builder.create<linalg::TensorCollapseShapeOp>(
+  return builder.create<tensor::CollapseShapeOp>(
       loc, type, createNewTensorOp, ArrayRef<ReassociationExprs>{});
 }
 
@@ -178,7 +178,7 @@ struct ExtractFromReshapeFromElements
       return failure();
 
     auto tensorReshape =
-        extract.tensor().getDefiningOp<TensorCollapseShapeOp>();
+        extract.tensor().getDefiningOp<tensor::CollapseShapeOp>();
     if (tensorReshape == nullptr)
       return failure();
 

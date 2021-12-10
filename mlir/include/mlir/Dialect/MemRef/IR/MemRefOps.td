@@ -1064,9 +1064,6 @@ def MemRef_ReshapeOp: MemRef_Op<"reshape", [
 // ExpandShapeOp / CollapseShapeOp
 //===----------------------------------------------------------------------===//
 
-def IndexListArrayAttr :
-  TypedArrayAttrBase<I64ArrayAttr, "Array of 64-bit integer array attributes">;
-
 class MemRef_ReassociativeReshapeOp<string mnemonic, list<OpTrait> traits = []> :
     MemRef_Op<mnemonic, !listconcat(traits,
       [NoSideEffect, ViewLikeOpInterface])>,

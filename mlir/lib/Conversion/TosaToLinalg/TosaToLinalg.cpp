@@ -1606,7 +1606,7 @@ public:
           reshape, "tosa.reshape Cannot collapse into given shape");
     }
 
-    rewriter.replaceOpWithNewOp<linalg::TensorCollapseShapeOp>(
+    rewriter.replaceOpWithNewOp<tensor::CollapseShapeOp>(
         reshape, resultTy, adaptor.getOperands()[0], reassociationMap);
     return success();
   }
@@ -1649,7 +1649,7 @@ public:
       return rewriter.notifyMatchFailure(
           reshape, "tosa.reshape Cannot expand into given shape");
     }
-    rewriter.replaceOpWithNewOp<linalg::TensorExpandShapeOp>(
+    rewriter.replaceOpWithNewOp<tensor::ExpandShapeOp>(
         reshape, resultTy, adaptor.getOperands()[0], reassociationMap);
     return success();
   }
