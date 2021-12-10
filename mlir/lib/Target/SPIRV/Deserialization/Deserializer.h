@@ -312,7 +312,7 @@ private:
 
   /// Discontinues any source-level location information that might be active
   /// from a previous OpLine instruction.
-  LogicalResult clearDebugLine();
+  void clearDebugLine();
 
   /// Creates a FileLineColLoc with the OpLine location information.
   Location createFileLineColLoc(OpBuilder opBuilder);
