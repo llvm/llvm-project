@@ -25,6 +25,7 @@ group("unittests") {
   if (clang_enable_static_analyzer) {
     deps += [
       "Analysis:ClangAnalysisTests",
+      "Analysis/FlowSensitive:ClangAnalysisFlowSensitiveTests",
       "StaticAnalyzer:StaticAnalysisTests",
     ]
   }
