@@ -577,7 +577,6 @@ foreach m = LMULList.m in {
 // Special registers
 def FFLAGS : RISCVReg<0, "fflags">;
 def FRM    : RISCVReg<0, "frm">;
-def FCSR   : RISCVReg<0, "fcsr">;
 
 // Any type register. Used for .insn directives when we don't know what the
 // register types could be.
