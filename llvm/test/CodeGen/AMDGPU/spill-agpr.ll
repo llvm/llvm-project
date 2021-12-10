@@ -116,17 +116,23 @@ use:
 
 ; GFX90A-DAG:  buffer_store_dword a0, off, s[{{[0-9:]+}}], 0 offset:4 ; 4-byte Folded Spill
 ; GFX90A-DAG:  buffer_store_dword a1, off, s[{{[0-9:]+}}], 0 offset:8 ; 4-byte Folded Spill
-; GFX90A-DAG:  buffer_store_dword a2, off, s[{{[0-9:]+}}], 0 offset:12 ; 4-byte Folded Spill
-; GFX90A-DAG:  buffer_store_dword a3, off, s[{{[0-9:]+}}], 0 offset:16 ; 4-byte Folded Spill
+; GFX90A-DAG:  v_accvgpr_read_b32 v4, a2               ;  Reload Reuse
+; GFX90A-DAG:  v_accvgpr_read_b32 v3, a3               ;  Reload Reuse
 
 ; GCN:  v_mfma_f32_4x4x1f32 a[0:3], v{{[0-9]+}}, v{{[0-9]+}}, a[0:3]
 
-; GCN-DAG:  buffer_load_dword v0, off, s[{{[0-9:]+}}], 0 offset:4 ; 4-byte Folded Reload
-; GCN-DAG:  buffer_load_dword v1, off, s[{{[0-9:]+}}], 0 offset:8 ; 4-byte Folded Reload
-; GCN-DAG:  buffer_load_dword v2, off, s[{{[0-9:]+}}], 0 offset:12 ; 4-byte Folded Reload
-; GCN-DAG:  buffer_load_dword v3, off, s[{{[0-9:]+}}], 0 offset:16 ; 4-byte Folded Reload
+; GFX908-DAG:  buffer_load_dword v0, off, s[{{[0-9:]+}}], 0 offset:4 ; 4-byte Folded Reload
+; GFX908-DAG:  buffer_load_dword v1, off, s[{{[0-9:]+}}], 0 offset:8 ; 4-byte Folded Reload
+; GFX908-DAG:  buffer_load_dword v2, off, s[{{[0-9:]+}}], 0 offset:12 ; 4-byte Folded Reload
+; GFX908-DAG:  buffer_load_dword v3, off, s[{{[0-9:]+}}], 0 offset:16 ; 4-byte Folded Reload
+; GFX908: global_store_dwordx4 v[{{[0-9:]+}}], v[0:3], off
 
-; GCN: global_store_dwordx4 v[{{[0-9:]+}}], v[0:3], off
+; GFX90A-DAG:  buffer_load_dword a0, off, s[4:7], 0 offset:4 ; 4-byte Folded Reload
+; GFX90A-DAG:  buffer_load_dword a1, off, s[4:7], 0 offset:8 ; 4-byte Folded Reload
+; GFX90A-DAG:  v_accvgpr_write_b32 a2, v4              ;  Reload Reuse
+; GFX90A-DAG:  v_accvgpr_write_b32 a3, v3              ;  Reload Reuse
+; GFX90A:  global_store_dwordx4 v[0:1], a[0:3], off
+
 ; GCN: ScratchSize: 20
 define amdgpu_kernel void @max_5regs_used_8a(<4 x float> addrspace(1)* %arg) #4 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
