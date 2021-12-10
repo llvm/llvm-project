@@ -79,13 +79,12 @@ public:
 class HTTPClient {
 #ifdef LLVM_ENABLE_CURL
   void *Curl = nullptr;
+  static bool IsInitialized;
 #endif
 
 public:
   HTTPClient();
   ~HTTPClient();
-
-  static bool IsInitialized;
 
   /// Returns true only if LLVM has been compiled with a working HTTPClient.
   static bool isAvailable();
