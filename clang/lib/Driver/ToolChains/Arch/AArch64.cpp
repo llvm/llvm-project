@@ -568,4 +568,15 @@ fp16_fml_fallthrough:
 
   if (Args.hasArg(options::OPT_mno_neg_immediates))
     Features.push_back("+no-neg-immediates");
+
+  if (Arg *A = Args.getLastArg(options::OPT_mfix_cortex_a53_835769,
+                               options::OPT_mno_fix_cortex_a53_835769)) {
+    if (A->getOption().matches(options::OPT_mfix_cortex_a53_835769))
+      Features.push_back("+fix-cortex-a53-835769");
+    else
+      Features.push_back("-fix-cortex-a53-835769");
+  } else if (Triple.isAndroid()) {
+    // Enabled A53 errata (835769) workaround by default on android
+    Features.push_back("+fix-cortex-a53-835769");
+  }
 }
