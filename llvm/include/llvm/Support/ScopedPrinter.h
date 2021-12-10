@@ -327,14 +327,6 @@ public:
     startLine() << Label << ": " << Value << "\n";
   }
 
-  void printString(StringRef Label, const std::string &Value) {
-    printString(Label, StringRef(Value));
-  }
-
-  void printString(StringRef Label, const char *Value) {
-    printString(Label, StringRef(Value));
-  }
-
   template <typename T>
   void printNumber(StringRef Label, StringRef Str, T Value) {
     printNumberImpl(Label, Str, to_string(Value));
