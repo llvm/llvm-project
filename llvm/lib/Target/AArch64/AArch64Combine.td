@@ -196,6 +196,13 @@ def mutate_anyext_to_zext : GICombineRule<
   (apply [{ applyMutateAnyExtToZExt(*${d}, MRI, B, Observer); }])
 >;
 
+def split_store_zero_128 : GICombineRule<
+  (defs root:$d),
+  (match (wip_match_opcode G_STORE):$d,
+          [{ return matchSplitStoreZero128(*${d}, MRI); }]),
+  (apply [{ applySplitStoreZero128(*${d}, MRI, B, Observer); }])
+>;
+
 // Post-legalization combines which should happen at all optimization levels.
 // (E.g. ones that facilitate matching for the selector) For example, matching
 // pseudos.
@@ -220,6 +227,7 @@ def AArch64PostLegalizerCombinerHelper
                         icmp_to_true_false_known_bits, merge_unmerge,
                         select_combines, fold_merge_to_zext,
                         constant_fold, identity_combines,
-                        ptr_add_immed_chain, overlapping_and]> {
+                        ptr_add_immed_chain, overlapping_and,
+                        split_store_zero_128]> {
   let DisableRuleOption = "aarch64postlegalizercombiner-disable-rule";
 }
