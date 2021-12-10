@@ -316,18 +316,6 @@ Serializer::processGlobalVariableOp(spirv::GlobalVariableOp varOp) {
     return failure();
   }
 
-  if (isInterfaceStructPtrType(varOp.type())) {
-    auto structType = varOp.type()
-                          .cast<spirv::PointerType>()
-                          .getPointeeType()
-                          .cast<spirv::StructType>();
-    if (failed(
-            emitDecoration(getTypeID(structType), spirv::Decoration::Block))) {
-      return varOp.emitError("cannot decorate ")
-             << structType << " with Block decoration";
-    }
-  }
-
   elidedAttrs.push_back("type");
   SmallVector<uint32_t, 4> operands;
   operands.push_back(resultTypeID);

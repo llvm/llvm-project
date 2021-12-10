@@ -76,27 +76,29 @@ protected:
         builder.getStringAttr(name), nullptr);
   }
 
+  /// Handles a SPIR-V instruction with the given `opcode` and `operand`.
+  /// Returns true to interrupt.
+  using HandleFn = llvm::function_ref<bool(spirv::Opcode opcode,
+                                           ArrayRef<uint32_t> operands)>;
+
   /// Returns true if we can find a matching instruction in the SPIR-V blob.
-  bool findInstruction(llvm::function_ref<bool(spirv::Opcode opcode,
-                                               ArrayRef<uint32_t> operands)>
-                           matchFn) {
+  bool scanInstruction(HandleFn handleFn) {
     auto binarySize = binary.size();
     auto *begin = binary.begin();
     auto currOffset = spirv::kHeaderWordCount;
 
     while (currOffset < binarySize) {
       auto wordCount = binary[currOffset] >> 16;
-      if (!wordCount || (currOffset + wordCount > binarySize)) {
+      if (!wordCount || (currOffset + wordCount > binarySize))
         return false;
-      }
+
       spirv::Opcode opcode =
           static_cast<spirv::Opcode>(binary[currOffset] & 0xffff);
-
-      if (matchFn(opcode,
-                  llvm::ArrayRef<uint32_t>(begin + currOffset + 1,
-                                           begin + currOffset + wordCount))) {
+      llvm::ArrayRef<uint32_t> operands(begin + currOffset + 1,
+                                        begin + currOffset + wordCount);
+      if (handleFn(opcode, operands))
         return true;
-      }
+
       currOffset += wordCount;
     }
     return false;
@@ -119,12 +121,32 @@ TEST_F(SerializationTest, ContainsBlockDecoration) {
   ASSERT_TRUE(succeeded(spirv::serialize(module.get(), binary)));
 
   auto hasBlockDecoration = [](spirv::Opcode opcode,
-                               ArrayRef<uint32_t> operands) -> bool {
-    if (opcode != spirv::Opcode::OpDecorate || operands.size() != 2)
-      return false;
-    return operands[1] == static_cast<uint32_t>(spirv::Decoration::Block);
+                               ArrayRef<uint32_t> operands) {
+    return opcode == spirv::Opcode::OpDecorate && operands.size() == 2 &&
+           operands[1] == static_cast<uint32_t>(spirv::Decoration::Block);
   };
-  EXPECT_TRUE(findInstruction(hasBlockDecoration));
+  EXPECT_TRUE(scanInstruction(hasBlockDecoration));
+}
+
+TEST_F(SerializationTest, ContainsNoDuplicatedBlockDecoration) {
+  auto structType = getFloatStructType();
+  // Two global variables using the same type should not decorate the type with
+  // duplicated `Block` decorations.
+  addGlobalVar(structType, "var0");
+  addGlobalVar(structType, "var1");
+
+  ASSERT_TRUE(succeeded(spirv::serialize(module.get(), binary)));
+
+  unsigned count = 0;
+  auto countBlockDecoration = [&count](spirv::Opcode opcode,
+                                       ArrayRef<uint32_t> operands) {
+    if (opcode == spirv::Opcode::OpDecorate && operands.size() == 2 &&
+        operands[1] == static_cast<uint32_t>(spirv::Decoration::Block))
+      ++count;
+    return false;
+  };
+  ASSERT_FALSE(scanInstruction(countBlockDecoration));
+  EXPECT_EQ(count, 1u);
 }
 
 TEST_F(SerializationTest, ContainsSymbolName) {
@@ -140,7 +162,7 @@ TEST_F(SerializationTest, ContainsSymbolName) {
     return opcode == spirv::Opcode::OpName &&
            spirv::decodeStringLiteral(operands, index) == "var0";
   };
-  EXPECT_TRUE(findInstruction(hasVarName));
+  EXPECT_TRUE(scanInstruction(hasVarName));
 }
 
 TEST_F(SerializationTest, DoesNotContainSymbolName) {
@@ -156,5 +178,5 @@ TEST_F(SerializationTest, DoesNotContainSymbolName) {
     return opcode == spirv::Opcode::OpName &&
            spirv::decodeStringLiteral(operands, index) == "var0";
   };
-  EXPECT_FALSE(findInstruction(hasVarName));
+  EXPECT_FALSE(scanInstruction(hasVarName));
 }

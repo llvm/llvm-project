@@ -331,9 +331,9 @@ LogicalResult
 Serializer::processTypeImpl(Location loc, Type type, uint32_t &typeID,
                             SetVector<StringRef> &serializationCtx) {
   typeID = getTypeID(type);
-  if (typeID) {
+  if (typeID)
     return success();
-  }
+
   typeID = getNextID();
   SmallVector<uint32_t, 4> operands;
 
@@ -499,6 +499,14 @@ LogicalResult Serializer::prepareBasicType(
     typeEnum = spirv::Opcode::OpTypePointer;
     operands.push_back(static_cast<uint32_t>(ptrType.getStorageClass()));
     operands.push_back(pointeeTypeID);
+
+    if (isInterfaceStructPtrType(ptrType)) {
+      if (failed(emitDecoration(getTypeID(pointeeStruct),
+                                spirv::Decoration::Block)))
+        return emitError(loc, "cannot decorate ")
+               << pointeeStruct << " with Block decoration";
+    }
+
     return success();
   }
 
