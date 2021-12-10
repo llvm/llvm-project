@@ -17,6 +17,78 @@ CIRGenTypes::CIRGenTypes(ASTContext &Ctx, mlir::OpBuilder &B)
     : Context(Ctx), Builder(B) {}
 CIRGenTypes::~CIRGenTypes() = default;
 
+std::string CIRGenTypes::getRecordTypeName(const clang::RecordDecl *recordDecl,
+                                           StringRef suffix) {
+  llvm::SmallString<256> typeName;
+  llvm::raw_svector_ostream outStream(typeName);
+
+  outStream << recordDecl->getKindName() << '.';
+
+  PrintingPolicy policy = recordDecl->getASTContext().getPrintingPolicy();
+  policy.SuppressInlineNamespace = false;
+
+  if (recordDecl->getIdentifier()) {
+    if (recordDecl->getDeclContext())
+      recordDecl->printQualifiedName(outStream, policy);
+    else
+      recordDecl->DeclaratorDecl::printName(outStream);
+  } else if (auto *typedefNameDecl = recordDecl->getTypedefNameForAnonDecl()) {
+    if (typedefNameDecl->getDeclContext())
+      typedefNameDecl->printQualifiedName(outStream, policy);
+    else
+      typedefNameDecl->printName(outStream);
+  } else {
+    outStream << "anon";
+  }
+
+  if (!suffix.empty())
+    outStream << suffix;
+
+  return std::string(typeName);
+}
+
+mlir::Type
+CIRGenTypes::convertRecordDeclType(const clang::RecordDecl *recordDecl) {
+  const auto *key = Context.getTagDeclType(recordDecl).getTypePtr();
+  mlir::cir::StructType &entry = recordDeclTypes[key];
+
+  recordDecl = recordDecl->getDefinition();
+  // TODO: clang checks here whether the type is known to be opaque. This is
+  // equivalent to a forward decl. Is checking for a non-null entry close enough
+  // of a match?
+  if (!recordDecl || !recordDecl->isCompleteDefinition() || entry)
+    return entry;
+
+  // TODO: Implement checking for whether or not this type is safe to convert.
+  // Clang CodeGen has issues with infinitely looping on recursive types that
+  // has to be worked around
+
+  assert(!dyn_cast_or_null<clang::CXXRecordDecl>(recordDecl) &&
+         "CXXRecordDecl not yet finished");
+
+  entry = computeRecordLayout(recordDecl);
+
+  // TODO: handle whether or not layout was skipped
+
+  return entry;
+}
+
+mlir::Type CIRGenTypes::convertTypeForMem(clang::QualType qualType,
+                                          bool forBitField) {
+  assert(!qualType->isConstantMatrixType() && "Matrix types NYI");
+
+  mlir::Type convertedType = ConvertType(qualType);
+
+  assert(!forBitField && "Bit fields NYI");
+  assert(!qualType->isBitIntType() && "BitIntType NYI");
+
+  return convertedType;
+}
+
+mlir::MLIRContext &CIRGenTypes::getMLIRContext() const {
+  return *Builder.getContext();
+}
+
 /// ConvertType - Convert the specified type to its MLIR form.
 mlir::Type CIRGenTypes::ConvertType(QualType T) {
   T = Context.getCanonicalType(T);
@@ -26,8 +98,8 @@ mlir::Type CIRGenTypes::ConvertType(QualType T) {
   // may be represented in different types.
   assert(!Context.getLangOpts().CUDAIsDevice && "not implemented");
 
-  // RecordTypes are cached and processed specially.
-  assert(!dyn_cast<RecordType>(Ty) && "not implemented");
+  if (const auto *recordType = dyn_cast<RecordType>(T))
+    return convertRecordDeclType(recordType->getDecl());
 
   // See if type is already cached.
   TypeCacheTy::iterator TCI = TypeCache.find(Ty);

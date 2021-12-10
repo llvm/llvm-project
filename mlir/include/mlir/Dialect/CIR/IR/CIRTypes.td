@@ -66,4 +66,34 @@ def CIR_BoolType :
 
 def CIR_AnyCIRType : AnyTypeOf<[CIR_PointerType, CIR_BoolType]>;
 
+
+//===----------------------------------------------------------------------===//
+// The base type for all RecordDecls.
+//===----------------------------------------------------------------------===//
+
+def CIR_StructType : CIR_Type<"Struct", "struct"> {
+
+  let summary = "CIR struct type";
+  let description = [{
+    Each unique clang::RecordDecl is mapped to a `cir.struct` and any object in
+    C/C++ that has a struct type will have a `cir.struct` in CIR.
+  }];
+
+  let parameters = (ins
+    ArrayRefParameter<"mlir::Type", "members">:$members,
+    "mlir::StringAttr":$typeName
+  );
+
+  let builders = [
+    TypeBuilder<(ins
+      "ArrayRef<mlir::Type>":$members, "StringRef":$typeName
+    ), [{
+      auto id = mlir::StringAttr::get(context, typeName);
+      return StructType::get(context, members, id);
+    }]>
+  ];
+
+  let hasCustomAssemblyFormat = 1;
+}
+
 #endif // MLIR_CIR_DIALECT_CIR_TYPES

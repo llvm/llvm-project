@@ -13,8 +13,12 @@
 #ifndef LLVM_CLANG_LIB_CODEGEN_CODEGENTYPES_H
 #define LLVM_CLANG_LIB_CODEGEN_CODEGENTYPES_H
 
+#include "mlir/Dialect/CIR/IR/CIRTypes.h"
+#include "mlir/IR/MLIRContext.h"
 #include "clang/CodeGen/CGFunctionInfo.h"
 #include "llvm/ADT/DenseMap.h"
+
+#include <utility>
 
 namespace llvm {
 class FunctionType;
@@ -47,8 +51,6 @@ class GlobalDecl;
 namespace CodeGen {
 class ABIInfo;
 class CGCXXABI;
-class CGRecordLayout;
-class CodeGenModule;
 class RequiredArgs;
 } // end namespace CodeGen
 } // end namespace clang
@@ -56,6 +58,9 @@ class RequiredArgs;
 namespace mlir {
 class Type;
 class OpBuilder;
+namespace cir {
+class StructType;
+}
 } // namespace mlir
 
 /// This class organizes the cross-module state that is used while lowering
@@ -64,6 +69,8 @@ namespace cir {
 class CIRGenTypes {
   clang::ASTContext &Context;
   mlir::OpBuilder &Builder;
+
+  llvm::DenseMap<const clang::Type *, mlir::cir::StructType> recordDeclTypes;
 
 public:
   CIRGenTypes(clang::ASTContext &Ctx, mlir::OpBuilder &B);
@@ -75,9 +82,24 @@ public:
   TypeCacheTy TypeCache;
 
   clang::ASTContext &getContext() const { return Context; }
+  mlir::MLIRContext &getMLIRContext() const;
 
   /// ConvertType - Convert type T into a mlir::Type.
   mlir::Type ConvertType(clang::QualType T);
+
+  mlir::Type convertRecordDeclType(const clang::RecordDecl *recordDecl);
+
+  mlir::cir::StructType computeRecordLayout(const clang::RecordDecl *);
+
+  std::string getRecordTypeName(const clang::RecordDecl *,
+                                llvm::StringRef suffix);
+
+  /// convertTypeForMem - Convert type T into an mlir::Type. This differs from
+  /// convertType in that it is used to convert to the memory representation for
+  /// a type. For example, the scalar representation for _Bool is i1, but the
+  /// memory representation is usually i8 or i32, depending on the target.
+  // TODO: convert this comment to account for MLIR's equivalence
+  mlir::Type convertTypeForMem(clang::QualType, bool forBitField = false);
 };
 } // namespace cir
 
