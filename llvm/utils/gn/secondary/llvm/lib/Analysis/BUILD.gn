@@ -89,6 +89,7 @@ static_library("Analysis") {
     "MemoryLocation.cpp",
     "MemorySSA.cpp",
     "MemorySSAUpdater.cpp",
+    "ModelUnderTrainingRunner.cpp",
     "ModuleDebugInfoPrinter.cpp",
     "ModuleSummaryAnalysis.cpp",
     "MustExecute.cpp",
