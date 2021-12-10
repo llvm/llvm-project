@@ -221,7 +221,9 @@ bool NMMoveOpt::generateMoveP(MachineBasicBlock &MBB) {
         continue;
       }
     }
-    PrevMove = nullptr;
+    // CFI and debug instructions don't break the pair.
+    if (!MI.isCFIInstruction() && !MI.isDebugInstr())
+      PrevMove = nullptr;
   }
 
   for (const auto &Pair : MovePairs) {
@@ -288,6 +290,10 @@ bool NMMoveOpt::generateMoveBalc(MachineBasicBlock &MBB) {
 
         if (CandidateDstRegs.empty())
           break;
+
+        // CFI and debug instructions don't affect this.
+        if (MI2.isCFIInstruction() || MI2.isDebugInstr())
+          continue;
 
         if (MI2.getOpcode() == Mips::MOVE_NM &&
             // Make sure $rt is used only by BALC.

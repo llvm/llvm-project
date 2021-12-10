@@ -225,8 +225,8 @@ bool NMLoadStoreOpt::generateSaveOrRestore(MachineBasicBlock &MBB,
         continue;
       }
 
-      // CFI instructions don't break the sequence.
-      if (MI.isCFIInstruction())
+      // CFI and debug instructions don't break the sequence.
+      if (MI.isCFIInstruction() || MI.isDebugInstr())
         continue;
 
       // Sequence has been broken, no need to continue. We either reached the
@@ -250,8 +250,8 @@ bool NMLoadStoreOpt::generateSaveOrRestore(MachineBasicBlock &MBB,
         continue;
       }
 
-      // CFI instructions don't break the sequence.
-      if (MI.isCFIInstruction())
+      // CFI and debug instructions don't break the sequence.
+      if (MI.isCFIInstruction() || MI.isDebugInstr())
         continue;
 
       // Sequence has been broken, no need to continue. We either reached the
@@ -472,7 +472,8 @@ bool NMLoadStoreOpt::generateLoadStoreMultiple(MachineBasicBlock &MBB,
   SmallVector<MachineInstr *> Sequence;
   bool IsAscending;
   for (auto &MI : MBB) {
-    if (MI.isCFIInstruction())
+    // CFI and debug instructions don't break the sequence.
+    if (MI.isCFIInstruction() || MI.isDebugInstr())
       continue;
 
     if (isValidLoadStore(MI, IsLoad)) {
