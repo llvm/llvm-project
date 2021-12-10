@@ -275,8 +275,7 @@ define {}* @test_trailing_zero_gep_index() {
 
 define { i64, i64 } @test_load_struct() {
 ; CHECK-LABEL: @test_load_struct(
-; CHECK-NEXT:    [[V:%.*]] = load { i64, i64 }, { i64, i64 }* @g3, align 8
-; CHECK-NEXT:    ret { i64, i64 } [[V]]
+; CHECK-NEXT:    ret { i64, i64 } { i64 123, i64 112312312 }
 ;
   %v = load { i64, i64 }, { i64, i64 }* @g3
   ret { i64, i64 } %v
