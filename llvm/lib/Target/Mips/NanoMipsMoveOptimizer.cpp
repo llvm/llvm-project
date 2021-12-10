@@ -186,7 +186,6 @@ bool NMMoveOpt::areMovePRevCompatibleMoves(MachineInstr *Move1,
 bool NMMoveOpt::generateMoveP(MachineBasicBlock &MBB) {
   InstrPairs MovePairs;
   MachineInstr *PrevMove = nullptr;
-  bool Modified = false;
 
   auto IsMovePCandidate = [this](MachineInstr *MI) -> bool {
     Register Dst = MI->getOperand(0).getReg();
@@ -238,10 +237,7 @@ bool NMMoveOpt::generateMoveP(MachineBasicBlock &MBB) {
     MBB.erase(Pair.second);
   }
 
-  if (MovePairs.size())
-    Modified = true;
-
-  return Modified;
+  return MovePairs.size() > 0;
 }
 
 // Copies implicit operands, but removes implicit uses of the destination
