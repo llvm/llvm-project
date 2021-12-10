@@ -108,7 +108,8 @@ EXTERN int fprintf_execute(char *print_buffer, uint32_t bufsz) {
   return (int)result.arg0;
 }
 
-EXTERN uint64_t tgt_fort_ptr_assn_i8(void *varg0, void * varg1, void* varg2, void *varg3, void *varg4) {
+EXTERN uint64_t __tgt_fort_ptr_assn_i8(void *varg0, void *varg1, void *varg2,
+                                       void *varg3, void *varg4) {
   uint64_t arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7;
   arg0 = (uint64_t)varg0;
   arg1 = (uint64_t)varg1;
