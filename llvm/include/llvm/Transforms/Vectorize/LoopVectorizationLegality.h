@@ -310,6 +310,10 @@ public:
   /// Returns True if V is a Phi node of an induction variable in this loop.
   bool isInductionPhi(const Value *V) const;
 
+  /// Returns a pointer to the induction descriptor, if \p Phi is an integer or
+  /// floating point induction.
+  const InductionDescriptor *getIntOrFpInductionDescriptor(PHINode *Phi) const;
+
   /// Returns True if V is a cast that is part of an induction def-use chain,
   /// and had been proven to be redundant under a runtime guard (in other
   /// words, the cast has the same SCEV expression as the induction phi).
