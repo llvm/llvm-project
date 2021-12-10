@@ -2086,9 +2086,20 @@ public:
     return mlir::success();
   }
 
+  void buildTopLevelDecl(Decl *decl) {
+    switch (decl->getKind()) {
+    default:
+      assert(false && "Not yet implemented");
+    case Decl::Function:
+      buildFunction(cast<FunctionDecl>(decl));
+      break;
+    }
+  }
+
   // Emit a new function and add it to the MLIR module.
-  mlir::FuncOp buildCIR(CIRCodeGenFunction *CCGF, const FunctionDecl *FD) {
-    CurCCGF = CCGF;
+  mlir::FuncOp buildFunction(const FunctionDecl *FD) {
+    CIRCodeGenFunction CCGF;
+    CurCCGF = &CCGF;
 
     // Create a scope in the symbol table to hold variable declarations.
     SymTableScopeTy varScope(symbolTable);
@@ -2191,19 +2202,16 @@ void CIRContext::Initialize(clang::ASTContext &astCtx) {
 void CIRContext::verifyModule() { builder->verifyModule(); }
 
 bool CIRContext::EmitFunction(const FunctionDecl *FD) {
-  CIRCodeGenFunction CCGF{};
-  auto func = builder->buildCIR(&CCGF, FD);
+  auto func = builder->buildFunction(FD);
   assert(func && "should emit function");
-  return true;
+  return func.getOperation() != nullptr;
 }
 
 mlir::ModuleOp CIRContext::getModule() { return builder->getModule(); }
 
 bool CIRContext::HandleTopLevelDecl(clang::DeclGroupRef D) {
   for (DeclGroupRef::iterator I = D.begin(), E = D.end(); I != E; ++I) {
-    auto *FD = cast<clang::FunctionDecl>(*I);
-    assert(FD && "We can't handle anything else yet");
-    EmitFunction(FD);
+    builder->buildTopLevelDecl(*I);
   }
 
   return true;
