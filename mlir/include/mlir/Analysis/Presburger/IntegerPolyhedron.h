@@ -189,8 +189,8 @@ protected:
   /// Return the index at which the specified kind of id starts.
   unsigned getIdKindOffset(IdKind kind) const;
 
-  /// Assert that `value` is at most the number of ids of the specified kind.
-  void assertAtMostNumIdKind(unsigned value, IdKind kind) const;
+  /// Get the number of ids of the specified kind.
+  unsigned getNumIdKind(IdKind kind) const;
 
   /// Removes identifiers in the column range [idStart, idLimit), and copies any
   /// remaining valid data into place, updates member variables, and resizes
