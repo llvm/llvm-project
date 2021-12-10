@@ -1060,7 +1060,7 @@ struct GlobalOpConversion : public FIROpConversion<fir::GlobalOp> {
           mlir::Type vecType = mlir::VectorType::get(
               insertOp.getType().getShape(), constant.getType());
           auto denseAttr = mlir::DenseElementsAttr::get(
-              vecType.cast<ShapedType>(), constant.value());
+              vecType.cast<ShapedType>(), constant.getValue());
           rewriter.setInsertionPointAfter(insertOp);
           rewriter.replaceOpWithNewOp<mlir::arith::ConstantOp>(
               insertOp, seqTyAttr, denseAttr);

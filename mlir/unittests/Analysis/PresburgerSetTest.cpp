@@ -613,7 +613,7 @@ TEST(SetTest, isEqual) {
   EXPECT_FALSE(rect.complement().isEqual(square.complement()));
 }
 
-void expectEqual(PresburgerSet s, PresburgerSet t) {
+void expectEqual(const PresburgerSet &s, const PresburgerSet &t) {
   EXPECT_TRUE(s.isEqual(t));
 }
 

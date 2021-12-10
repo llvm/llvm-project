@@ -231,9 +231,9 @@ def SparseTensor_ExpandOp : SparseTensor_Op<"expand", []>,
     given tensor. This operation is useful to implement kernels in which a
     sparse tensor appears as output. This technique is known under several
     different names and using several alternative implementations,
-    for example, phase counter [Gustavson71], expanded or switch array
+    for example, phase counter [Gustavson72], expanded or switch array
     [Pissanetzky84], in phase scan [Duff90], access pattern expansion [Bik96],
-    and workspaces [Kjolstad2018].
+    and workspaces [Kjolstad19].
 
     The values and filled array have sizes that suffice for a *dense* innermost
     dimension (e.g. a full row for matrices). The added array and count are used

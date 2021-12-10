@@ -35,6 +35,12 @@ static inline T polyeval(T x, T a0, Ts... a) {
 } // namespace fputil
 } // namespace __llvm_libc
 
+#ifdef LLVM_LIBC_ARCH_X86_64
+
+#include "x86_64/PolyEval.h"
+
+#endif // LLVM_LIBC_ARCH_X86_64
+
 #else
 
 namespace __llvm_libc {

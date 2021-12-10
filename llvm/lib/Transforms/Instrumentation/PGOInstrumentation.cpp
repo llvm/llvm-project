@@ -273,14 +273,14 @@ static cl::opt<bool> PGOVerifyBFI(
              "internal option -pass-remakrs-analysis=pgo."));
 
 static cl::opt<unsigned> PGOVerifyBFIRatio(
-    "pgo-verify-bfi-ratio", cl::init(5), cl::Hidden,
-    cl::desc("Set the threshold for pgo-verify-big -- only print out "
+    "pgo-verify-bfi-ratio", cl::init(2), cl::Hidden,
+    cl::desc("Set the threshold for pgo-verify-bfi:  only print out "
              "mismatched BFI if the difference percentage is greater than "
              "this value (in percentage)."));
 
 static cl::opt<unsigned> PGOVerifyBFICutoff(
-    "pgo-verify-bfi-cutoff", cl::init(1), cl::Hidden,
-    cl::desc("Set the threshold for pgo-verify-bfi -- skip the counts whose "
+    "pgo-verify-bfi-cutoff", cl::init(5), cl::Hidden,
+    cl::desc("Set the threshold for pgo-verify-bfi: skip the counts whose "
              "profile count value is below."));
 
 namespace llvm {
@@ -1774,7 +1774,7 @@ static void verifyFuncBFI(PGOUseFunc &Func, LoopInfo &LI,
       uint64_t Diff = (BFICountValue >= CountValue)
                           ? BFICountValue - CountValue
                           : CountValue - BFICountValue;
-      if (Diff < CountValue / 100 * PGOVerifyBFIRatio)
+      if (Diff <= CountValue / 100 * PGOVerifyBFIRatio)
         continue;
     }
     BBMisMatchNum++;

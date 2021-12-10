@@ -350,20 +350,14 @@ private:
       refineUsesAlignmentAndAA(GEP, A, DL, AliasScope, NoAlias);
     }
 
-    // Mark kernels with asm that reads the address of the allocated structure
-    // This is not necessary for lowering. This lets other passes, specifically
-    // PromoteAlloca, accurately calculate how much LDS will be used by the
-    // kernel after lowering.
+    // This ensures the variable is allocated when called functions access it.
+    // It also lets other passes, specifically PromoteAlloca, accurately
+    // calculate how much LDS will be used by the kernel after lowering.
     if (!F) {
       IRBuilder<> Builder(Ctx);
-      SmallPtrSet<Function *, 32> Kernels;
       for (Function &Func : M.functions()) {
-        if (Func.isDeclaration())
-          continue;
-
-        if (AMDGPU::isKernelCC(&Func) && !Kernels.contains(&Func)) {
+        if (!Func.isDeclaration() && AMDGPU::isKernelCC(&Func)) {
           markUsedByKernel(Builder, &Func, SGV);
-          Kernels.insert(&Func);
         }
       }
     }

@@ -631,9 +631,13 @@ void Verifier::visitGlobalValue(const GlobalValue &GV) {
   Assert(!GV.isDeclaration() || GV.hasValidDeclarationLinkage(),
          "Global is external, but doesn't have external or weak linkage!", &GV);
 
-  if (const GlobalObject *GO = dyn_cast<GlobalObject>(&GV))
-    Assert(GO->getAlignment() <= Value::MaximumAlignment,
-           "huge alignment values are unsupported", GO);
+  if (const GlobalObject *GO = dyn_cast<GlobalObject>(&GV)) {
+
+    if (MaybeAlign A = GO->getAlign()) {
+      Assert(A->value() <= Value::MaximumAlignment,
+             "huge alignment values are unsupported", GO);
+    }
+  }
   Assert(!GV.hasAppendingLinkage() || isa<GlobalVariable>(GV),
          "Only global variables can have appending linkage!", &GV);
 
@@ -3804,8 +3808,10 @@ void Verifier::visitLoadInst(LoadInst &LI) {
   PointerType *PTy = dyn_cast<PointerType>(LI.getOperand(0)->getType());
   Assert(PTy, "Load operand must be a pointer.", &LI);
   Type *ElTy = LI.getType();
-  Assert(LI.getAlignment() <= Value::MaximumAlignment,
-         "huge alignment values are unsupported", &LI);
+  if (MaybeAlign A = LI.getAlign()) {
+    Assert(A->value() <= Value::MaximumAlignment,
+           "huge alignment values are unsupported", &LI);
+  }
   Assert(ElTy->isSized(), "loading unsized types is not allowed", &LI);
   if (LI.isAtomic()) {
     Assert(LI.getOrdering() != AtomicOrdering::Release &&
@@ -3830,8 +3836,10 @@ void Verifier::visitStoreInst(StoreInst &SI) {
   Type *ElTy = SI.getOperand(0)->getType();
   Assert(PTy->isOpaqueOrPointeeTypeMatches(ElTy),
          "Stored value type does not match pointer operand type!", &SI, ElTy);
-  Assert(SI.getAlignment() <= Value::MaximumAlignment,
-         "huge alignment values are unsupported", &SI);
+  if (MaybeAlign A = SI.getAlign()) {
+    Assert(A->value() <= Value::MaximumAlignment,
+           "huge alignment values are unsupported", &SI);
+  }
   Assert(ElTy->isSized(), "storing unsized types is not allowed", &SI);
   if (SI.isAtomic()) {
     Assert(SI.getOrdering() != AtomicOrdering::Acquire &&
@@ -3887,8 +3895,10 @@ void Verifier::visitAllocaInst(AllocaInst &AI) {
          "Cannot allocate unsized type", &AI);
   Assert(AI.getArraySize()->getType()->isIntegerTy(),
          "Alloca array size must have integer type", &AI);
-  Assert(AI.getAlignment() <= Value::MaximumAlignment,
-         "huge alignment values are unsupported", &AI);
+  if (MaybeAlign A = AI.getAlign()) {
+    Assert(A->value() <= Value::MaximumAlignment,
+           "huge alignment values are unsupported", &AI);
+  }
 
   if (AI.isSwiftError()) {
     verifySwiftErrorValue(&AI);

@@ -21,40 +21,12 @@ namespace {
 
 // TODO: Ops in the linalg dialect can directly implement this interface.
 
-/// Helper function for LinalgOp bufferization.
-/// When allocating a new buffer, analyze whether `op` wants to read form that
-/// buffer. Only in that case, a copy of the result buffer may be needed.
-static LogicalResult
-allocateBuffersForResults(OpBuilder &b, Location loc, LinalgOp op,
-                          SmallVectorImpl<Value> &resultBuffers,
-                          BufferizationState &state) {
-  // Take a guard before anything else.
-  OpBuilder::InsertionGuard g(b);
-  b.setInsertionPoint(op);
-
-  // TODO: provide the proper interface to iterate on OpResults and get the
-  // matching OpOperands.
-  for (OpOperand *opOperand : op.getOutputOperands()) {
-    OpResult opResult = cast<BufferizableOpInterface>(op.getOperation())
-                            .getAliasingOpResult(*opOperand);
-    assert(opResult && "could not find correspond OpResult");
-    Value resultBuffer = state.getResultBuffer(opResult);
-    if (!resultBuffer)
-      return failure();
-    resultBuffers.push_back(resultBuffer);
-  }
-
-  if (op->getNumResults())
-    state.mapBuffer(op->getResults(), resultBuffers);
-
-  return success();
-}
-
 /// Generic conversion for any LinalgOp on tensors.
 static LogicalResult bufferizeLinalgOp(OpBuilder &b, LinalgOp op,
                                        BufferizationState &state) {
   // Take a guard before anything else.
   OpBuilder::InsertionGuard g(b);
+  b.setInsertionPoint(op);
 
   // Nothing to do. This op is already bufferized.
   if (op.hasBufferSemantics())
@@ -65,7 +37,6 @@ static LogicalResult bufferizeLinalgOp(OpBuilder &b, LinalgOp op,
   if (!op.hasTensorSemantics())
     return op->emitError() << "op does not have tensor semantics";
 
-  Location loc = op.getLoc();
   SmallVector<Value> newInputBuffers;
   newInputBuffers.reserve(op.getNumInputs());
   for (OpOperand *opOperand : op.getInputOperands()) {
@@ -75,10 +46,17 @@ static LogicalResult bufferizeLinalgOp(OpBuilder &b, LinalgOp op,
     }
     newInputBuffers.push_back(state.lookupBuffer(opOperand->get()));
   }
+
   SmallVector<Value> newOutputBuffers;
-  // Try to allocate new buffers depending on op's inplace semantics.
-  if (failed(allocateBuffersForResults(b, loc, op, newOutputBuffers, state)))
-    return failure();
+  for (OpOperand *opOperand : op.getOutputOperands()) {
+    OpResult opResult = op.getTiedOpResult(opOperand);
+    assert(opResult && "could not find correspond OpResult");
+    Value resultBuffer = state.getResultBuffer(opResult);
+    if (!resultBuffer)
+      return failure();
+    newOutputBuffers.push_back(resultBuffer);
+    state.mapBuffer(opResult, resultBuffer);
+  }
 
   // Clone the newly bufferized op.
   SmallVector<Value> newOperands = newInputBuffers;
@@ -87,14 +65,73 @@ static LogicalResult bufferizeLinalgOp(OpBuilder &b, LinalgOp op,
   // Set insertion point now that potential alloc/dealloc are introduced.
   b.setInsertionPoint(op);
   auto bufferizedOp = cast<LinalgOp>(
-      op.clone(b, loc, /*resultTypes=*/TypeRange{}, newOperands));
-
-  // Replace the results of the old op with the new output buffers.
-  if (op->getNumResults())
-    state.mapBuffer(op->getResults(), newOutputBuffers);
+      op.clone(b, op.getLoc(), /*resultTypes=*/TypeRange{}, newOperands));
 
   // The original op will be DCE'd away later.
   return comprehensive_bufferize::bufferize(bufferizedOp.getBlock(), state);
+}
+
+/// Linalg OpResults usually bufferize inplace with their tied (output
+/// OpOperands. However, if an output OpOperand is not used in the computation,
+/// it is better to bufferize inplace with an actually used input OpOperand;
+/// less memory will be touched that way.
+///
+/// Example:
+/// O(i, j) = A(i, j) + B(j)  --> bufferizes inplace to:  A(i, j) += B(j)
+///
+/// O(i, j) = A(j, i) + B(j)  --> cannot bufferize inplace with A because
+///                               indexing maps are not identical
+///
+/// O(i, j) += A(i, j) + B(j) --> Output is used in computation.
+/// This could bufferize inplace with A:
+/// A(i, j) += O(i, j) + B(j)
+/// However, we choose to bufferize inplace with O here, as there is no clear
+/// benefit of choosing A. TODO: We may want to consider both options and make
+/// an informed decision during analysis in the future.
+static DenseMap<OpOperand *, OpResult> computeAliasingPairs(LinalgOp op) {
+  DenseMap<OpOperand *, OpResult> mapping;
+  for (OpResult opResult : op->getOpResults()) {
+    OpOperand *tiedOperand =
+        op.getOutputTensorOperands()[opResult.getResultNumber()];
+    AffineMap outputIndexingMap = op.getTiedIndexingMap(tiedOperand);
+    bool onlyParallelIterators = op.getNumParallelLoops() == op.getNumLoops();
+    bool tiedOperandUsed = op.payloadUsesValueFromOperand(tiedOperand);
+
+    // If the output arg is used in the computation or at least one iterator is
+    // not parallel, try to bufferize inplace with the corresponding output
+    // tensor.
+    if (tiedOperandUsed || !onlyParallelIterators) {
+      mapping[tiedOperand] = opResult;
+      continue;
+    }
+
+    // Otherwise, try to bufferize inplace with one of the inputs.
+    OpOperand *chosenOperand = nullptr;
+    for (OpOperand *opOperand : op.getInputTensorOperands()) {
+      if (opOperand->get().getType() != opResult.getType())
+        continue;
+      if (!op.payloadUsesValueFromOperand(opOperand))
+        continue;
+      if (op.getTiedIndexingMap(opOperand) != outputIndexingMap)
+        continue;
+      // No other OpResult bufferizes aliases with this OpOperand.
+      if (mapping.count(opOperand))
+        continue;
+      assert(op.getTiedIndexingMap(opOperand).isProjectedPermutation() &&
+             "expected projected permutation");
+      chosenOperand = opOperand;
+      break;
+    }
+
+    // No suitable input tensor found. Use output tensor.
+    // TODO: This operand could bufferize inplace with OpOperands that have the
+    // correct type, even if they are not used inside the computation.
+    if (!chosenOperand)
+      chosenOperand = tiedOperand;
+
+    mapping[chosenOperand] = opResult;
+  }
+  return mapping;
 }
 
 template <typename OpTy>
@@ -103,37 +140,28 @@ struct LinalgOpInterface
                                                     OpTy> {
   bool bufferizesToMemoryRead(Operation *op, OpOperand &opOperand) const {
     auto genericOp = cast<linalg::LinalgOp>(op);
-    return (genericOp.isInputTensor(&opOperand) ||
-            genericOp.isInitTensor(&opOperand)) &&
-           genericOp.payloadUsesValueFromOperand(&opOperand);
+    return genericOp.payloadUsesValueFromOperand(&opOperand);
   }
 
   bool bufferizesToMemoryWrite(Operation *op, OpOperand &opOperand) const {
-    auto genericOp = cast<linalg::LinalgOp>(op);
-    return genericOp.isOutputTensor(&opOperand);
+    auto bufferizableOp = cast<BufferizableOpInterface>(op);
+    return static_cast<bool>(bufferizableOp.getAliasingOpResult(opOperand));
   }
 
   SmallVector<OpOperand *> getAliasingOpOperand(Operation *op,
                                                 OpResult opResult) const {
     auto genericOp = cast<linalg::LinalgOp>(op);
-    return {genericOp.getOutputTensorOperands()[opResult.getResultNumber()]};
+    DenseMap<OpOperand *, OpResult> pairs = computeAliasingPairs(genericOp);
+    for (OpOperand *opOperand : genericOp.getInputAndOutputOperands())
+      if (pairs[opOperand] == opResult)
+        return {opOperand};
+    return {};
   }
 
   OpResult getAliasingOpResult(Operation *op, OpOperand &opOperand) const {
     auto genericOp = cast<linalg::LinalgOp>(op);
-    if (!opOperand.get().getType().isa<RankedTensorType>())
-      return OpResult();
-    // For now assume inputs are never inplaceable.
-    // TODO: refine this.
-    if (opOperand.getOperandNumber() < genericOp.getNumInputs())
-      return OpResult();
-    int64_t outputOperandIndex =
-        opOperand.getOperandNumber() - genericOp.getNumInputs();
-    int64_t numOutputBuffers = 0;
-    for (unsigned idx = 0; idx < outputOperandIndex; ++idx)
-      if (!genericOp.getOutputOperand(idx)->get().getType().isa<TensorType>())
-        ++numOutputBuffers;
-    return genericOp->getResult(outputOperandIndex - numOutputBuffers);
+    DenseMap<OpOperand *, OpResult> pairs = computeAliasingPairs(genericOp);
+    return pairs[&opOperand];
   }
 
   BufferRelation bufferRelation(Operation *op, OpResult opResult,
