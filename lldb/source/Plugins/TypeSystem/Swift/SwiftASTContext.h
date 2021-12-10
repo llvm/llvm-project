@@ -164,8 +164,8 @@ public:
 
 protected:
   // Constructors and destructors
-  SwiftASTContext(std::string description, llvm::Triple triple,
-                  Target *target = nullptr);
+  SwiftASTContext(std::string description, Target *target = nullptr);
+
 public:
 
   SwiftASTContext(const SwiftASTContext &rhs) = delete;
@@ -944,9 +944,8 @@ public:
   /// \}
 
   SwiftASTContextForModule(TypeSystemSwiftTypeRef &typeref_typesystem,
-                           std::string description, llvm::Triple triple,
-                           Target *target)
-      : SwiftASTContext(description, triple, target),
+                           std::string description, Target *target)
+      : SwiftASTContext(description, target),
         m_typeref_typesystem(typeref_typesystem) {}
   virtual ~SwiftASTContextForModule() {}
 

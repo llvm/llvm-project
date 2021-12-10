@@ -913,8 +913,7 @@ SwiftASTContext::SwiftASTContext() {
 }
 #endif
 
-SwiftASTContext::SwiftASTContext(std::string description, llvm::Triple triple,
-                                 Target *target)
+SwiftASTContext::SwiftASTContext(std::string description, Target *target)
     : TypeSystemSwift(),
       m_compiler_invocation_ap(new swift::CompilerInvocation()) {
   m_description = description;
@@ -934,7 +933,6 @@ SwiftASTContext::SwiftASTContext(std::string description, llvm::Triple triple,
   if (target)
     m_target_wp = target->shared_from_this();
 
-  SetTriple(triple);
   swift::IRGenOptions &ir_gen_opts =
       m_compiler_invocation_ap->getIRGenOptions();
   ir_gen_opts.OutputKind = swift::IRGenOutputKind::Module;
@@ -1714,9 +1712,7 @@ SwiftASTContext::CreateInstance(lldb::LanguageType language, Module &module,
       fallback ? static_cast<SwiftASTContext *>(
                      new SwiftASTContextForExpressions(m_description, *target))
                : static_cast<SwiftASTContext *>(new SwiftASTContextForModule(
-                     *typeref_typesystem, m_description,
-                     target ? target->GetArchitecture().GetTriple() : triple,
-                     target)));
+                     *typeref_typesystem, m_description, target)));
   bool suppress_config_log = false;
   auto defer_log = llvm::make_scope_exit([swift_ast_sp, &suppress_config_log] {
     // To avoid spamming the log with useless info, we don't log the
@@ -1733,12 +1729,8 @@ SwiftASTContext::CreateInstance(lldb::LanguageType language, Module &module,
   swift_ast_sp->GetLanguageOptions().EnableAccessControl = false;
   swift_ast_sp->GetLanguageOptions().EnableTargetOSChecking = false;
 
-  swift_ast_sp->SetTriple(triple, &module);
-
-  bool set_triple = false;
   bool found_swift_modules = false;
   SymbolFile *sym_file = module.GetSymbolFile();
-  std::string target_triple;
 
   if (sym_file) {
     bool got_serialized_options = false;
@@ -1751,17 +1743,11 @@ SwiftASTContext::CreateInstance(lldb::LanguageType language, Module &module,
       swift_ast_sp->m_module_import_warnings.push_back(std::string(error));
     }
 
-    // Some of the bits in the compiler options we keep separately, so
-    // we need to populate them from the serialized options:
     llvm::StringRef serialized_triple =
         swift_ast_sp->GetCompilerInvocation().getTargetTriple();
-    if (serialized_triple.empty()) {
-      LOG_PRINTF(LIBLLDB_LOG_TYPES, "Serialized triple was empty.");
-    } else {
-      LOG_PRINTF(LIBLLDB_LOG_TYPES, "Found serialized triple %s.",
+    if (!serialized_triple.empty()) {
+      LOG_PRINTF(LIBLLDB_LOG_TYPES, "Serialized/default triple would have been %s.",
                  serialized_triple.str().c_str());
-      swift_ast_sp->SetTriple(llvm::Triple(serialized_triple), &module);
-      set_triple = true;
     }
 
     // SDK path setup.
@@ -1801,24 +1787,12 @@ SwiftASTContext::CreateInstance(lldb::LanguageType language, Module &module,
     }
   }
 
-  if (!set_triple) {
-    llvm::Triple llvm_triple = swift_ast_sp->GetTriple();
+  // The serialized triple is the triple of the last binary
+  // __swiftast section that was processed. Instead of relying on
+  // the section contents order, we overwrite the triple in the
+  // CompilerInvocation with the triple recovered from the binary.
+  swift_ast_sp->SetTriple(triple, &module);
 
-    // LLVM wants this to be set to iOS or MacOSX; if we're working on
-    // a bare-boards type image, change the triple for LLVM's benefit.
-    if (llvm_triple.getVendor() == llvm::Triple::Apple &&
-        llvm_triple.getOS() == llvm::Triple::UnknownOS) {
-      if (llvm_triple.getArch() == llvm::Triple::arm ||
-          llvm_triple.getArch() == llvm::Triple::thumb) {
-        llvm_triple.setOS(llvm::Triple::IOS);
-      } else {
-        llvm_triple.setOS(llvm::Triple::MacOSX);
-      }
-      swift_ast_sp->SetTriple(llvm_triple, &module);
-    }
-  }
-
-  triple = swift_ast_sp->GetTriple();
   std::string resource_dir = swift_ast_sp->GetResourceDir(triple);
   ConfigureResourceDirs(swift_ast_sp->GetCompilerInvocation(),
                         FileSpec(resource_dir), triple);
@@ -3294,6 +3268,8 @@ public:
       for (size_t i = 0; i != images.GetSize(); ++i) {
         auto module_sp = images.GetModuleAtIndex(i);
         auto *swift_ast_ctx = GetModuleSwiftASTContext(*module_sp);
+        if (!swift_ast_ctx)
+          continue;
         auto *dwarf_imp = static_cast<SwiftDWARFImporterDelegate *>(
             swift_ast_ctx->GetDWARFImporterDelegate());
         if (!dwarf_imp || dwarf_imp == this)
@@ -5635,20 +5611,21 @@ SwiftASTContext::GetTypeInfo(opaque_compiler_type_t type,
   case swift::TypeKind::BuiltinJob:
   case swift::TypeKind::BuiltinRawUnsafeContinuation:
   case swift::TypeKind::Error:
+  case swift::TypeKind::InOut:
   case swift::TypeKind::Module:
   case swift::TypeKind::NestedArchetype:
-  case swift::TypeKind::OpenedArchetype:
   case swift::TypeKind::OpaqueTypeArchetype:
-  case swift::TypeKind::InOut:
-  case swift::TypeKind::VariadicSequence:
+  case swift::TypeKind::OpenedArchetype:
   case swift::TypeKind::Placeholder:
   case swift::TypeKind::PrimaryArchetype:
   case swift::TypeKind::SILBlockStorage:
   case swift::TypeKind::SILBox:
   case swift::TypeKind::SILFunction:
   case swift::TypeKind::SILToken:
+  case swift::TypeKind::SequenceArchetype:
   case swift::TypeKind::TypeVariable:
   case swift::TypeKind::Unresolved:
+  case swift::TypeKind::VariadicSequence:
     LOG_PRINTF(LIBLLDB_LOG_TYPES, "Unexpected type: %s",
                swift_can_type.getString().c_str());
     assert(false && "Internal compiler type");
@@ -5819,10 +5796,11 @@ lldb::TypeClass SwiftASTContext::GetTypeClass(opaque_compiler_type_t type) {
   case swift::TypeKind::ProtocolComposition:
   case swift::TypeKind::Metatype:
   case swift::TypeKind::Module:
-  case swift::TypeKind::PrimaryArchetype:
   case swift::TypeKind::NestedArchetype:
   case swift::TypeKind::OpaqueTypeArchetype:
   case swift::TypeKind::OpenedArchetype:
+  case swift::TypeKind::PrimaryArchetype:
+  case swift::TypeKind::SequenceArchetype:
   case swift::TypeKind::UnboundGeneric:
   case swift::TypeKind::TypeVariable:
   case swift::TypeKind::ExistentialMetatype:
@@ -6278,10 +6256,11 @@ lldb::Encoding SwiftASTContext::GetEncoding(opaque_compiler_type_t type,
   case swift::TypeKind::BuiltinFloat:
     return lldb::eEncodingIEEE754; // TODO: detect if an integer is unsigned
 
-  case swift::TypeKind::PrimaryArchetype:
-  case swift::TypeKind::OpenedArchetype:
-  case swift::TypeKind::OpaqueTypeArchetype:
   case swift::TypeKind::NestedArchetype:
+  case swift::TypeKind::OpaqueTypeArchetype:
+  case swift::TypeKind::OpenedArchetype:
+  case swift::TypeKind::PrimaryArchetype:
+  case swift::TypeKind::SequenceArchetype:
   case swift::TypeKind::BuiltinRawPointer:
   case swift::TypeKind::BuiltinNativeObject:
   case swift::TypeKind::BuiltinUnsafeValueBuffer:
@@ -6416,10 +6395,11 @@ uint32_t SwiftASTContext::GetNumChildren(opaque_compiler_type_t type,
 
   case swift::TypeKind::ExistentialMetatype:
   case swift::TypeKind::Metatype:
-  case swift::TypeKind::PrimaryArchetype:
-  case swift::TypeKind::OpenedArchetype:
-  case swift::TypeKind::OpaqueTypeArchetype:
   case swift::TypeKind::NestedArchetype:
+  case swift::TypeKind::OpaqueTypeArchetype:
+  case swift::TypeKind::OpenedArchetype:
+  case swift::TypeKind::PrimaryArchetype:
+  case swift::TypeKind::SequenceArchetype:
     return 0;
 
   case swift::TypeKind::LValue: {
@@ -6551,10 +6531,11 @@ uint32_t SwiftASTContext::GetNumFields(opaque_compiler_type_t type,
   case swift::TypeKind::Metatype:
     return 0;
 
-  case swift::TypeKind::PrimaryArchetype:
-  case swift::TypeKind::OpenedArchetype:
-  case swift::TypeKind::OpaqueTypeArchetype:
   case swift::TypeKind::NestedArchetype:
+  case swift::TypeKind::OpaqueTypeArchetype:
+  case swift::TypeKind::OpenedArchetype:
+  case swift::TypeKind::PrimaryArchetype:
+  case swift::TypeKind::SequenceArchetype:
   case swift::TypeKind::Function:
   case swift::TypeKind::GenericFunction:
   case swift::TypeKind::LValue:
@@ -6847,10 +6828,11 @@ CompilerType SwiftASTContext::GetFieldAtIndex(opaque_compiler_type_t type,
   case swift::TypeKind::Metatype:
     break;
 
-  case swift::TypeKind::PrimaryArchetype:
-  case swift::TypeKind::OpenedArchetype:
-  case swift::TypeKind::OpaqueTypeArchetype:
   case swift::TypeKind::NestedArchetype:
+  case swift::TypeKind::OpaqueTypeArchetype:
+  case swift::TypeKind::OpenedArchetype:
+  case swift::TypeKind::PrimaryArchetype:
+  case swift::TypeKind::SequenceArchetype:
   case swift::TypeKind::Function:
   case swift::TypeKind::GenericFunction:
   case swift::TypeKind::LValue:
@@ -6922,10 +6904,11 @@ uint32_t SwiftASTContext::GetNumPointeeChildren(opaque_compiler_type_t type) {
   case swift::TypeKind::Class:
   case swift::TypeKind::Protocol:
   case swift::TypeKind::Metatype:
-  case swift::TypeKind::PrimaryArchetype:
-  case swift::TypeKind::OpenedArchetype:
-  case swift::TypeKind::OpaqueTypeArchetype:
   case swift::TypeKind::NestedArchetype:
+  case swift::TypeKind::OpaqueTypeArchetype:
+  case swift::TypeKind::OpenedArchetype:
+  case swift::TypeKind::PrimaryArchetype:
+  case swift::TypeKind::SequenceArchetype:
   case swift::TypeKind::Function:
   case swift::TypeKind::GenericFunction:
   case swift::TypeKind::ProtocolComposition:
@@ -7274,10 +7257,11 @@ CompilerType SwiftASTContext::GetChildCompilerTypeAtIndex(
   case swift::TypeKind::Metatype:
     break;
 
-  case swift::TypeKind::PrimaryArchetype:
-  case swift::TypeKind::OpenedArchetype:
-  case swift::TypeKind::OpaqueTypeArchetype:
   case swift::TypeKind::NestedArchetype:
+  case swift::TypeKind::OpaqueTypeArchetype:
+  case swift::TypeKind::OpenedArchetype:
+  case swift::TypeKind::PrimaryArchetype:
+  case swift::TypeKind::SequenceArchetype:
   case swift::TypeKind::Function:
   case swift::TypeKind::GenericFunction:
     break;
@@ -7508,10 +7492,11 @@ size_t SwiftASTContext::GetIndexOfChildMemberWithName(
     case swift::TypeKind::Metatype:
       break;
 
-    case swift::TypeKind::PrimaryArchetype:
-    case swift::TypeKind::OpenedArchetype:
-    case swift::TypeKind::OpaqueTypeArchetype:
     case swift::TypeKind::NestedArchetype:
+    case swift::TypeKind::OpaqueTypeArchetype:
+    case swift::TypeKind::OpenedArchetype:
+    case swift::TypeKind::PrimaryArchetype:
+    case swift::TypeKind::SequenceArchetype:
     case swift::TypeKind::Function:
     case swift::TypeKind::GenericFunction:
       break;
@@ -7764,10 +7749,11 @@ bool SwiftASTContext::DumpTypeValue(
   case swift::TypeKind::BuiltinNativeObject:
   case swift::TypeKind::BuiltinUnsafeValueBuffer:
   case swift::TypeKind::BuiltinBridgeObject:
-  case swift::TypeKind::PrimaryArchetype:
+  case swift::TypeKind::NestedArchetype:
   case swift::TypeKind::OpaqueTypeArchetype:
   case swift::TypeKind::OpenedArchetype:
-  case swift::TypeKind::NestedArchetype:
+  case swift::TypeKind::PrimaryArchetype:
+  case swift::TypeKind::SequenceArchetype:
   case swift::TypeKind::Function:
   case swift::TypeKind::GenericFunction:
   case swift::TypeKind::GenericTypeParam:
@@ -8196,8 +8182,7 @@ SwiftASTContext::GetASTVectorForModule(const Module *module) {
 
 SwiftASTContextForExpressions::SwiftASTContextForExpressions(
     std::string description, Target &target)
-    : SwiftASTContext(std::move(description),
-                      target.GetArchitecture().GetTriple(), &target),
+    : SwiftASTContext(std::move(description), &target),
       m_typeref_typesystem(*this),
       m_persistent_state_up(new SwiftPersistentExpressionState) {}
 
