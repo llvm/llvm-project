@@ -512,7 +512,7 @@ template <typename ET>
 void PrinterContext<ET>::PrintOpcodes(const uint8_t *Entry,
                                       size_t Length, off_t Offset) const {
   ListScope OCC(SW, "Opcodes");
-  OpcodeDecoder(OCC.W).Decode(Entry, Offset, Length);
+  OpcodeDecoder(SW).Decode(Entry, Offset, Length);
 }
 
 template <typename ET>

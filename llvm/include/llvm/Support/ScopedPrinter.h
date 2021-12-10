@@ -16,6 +16,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/DataTypes.h"
 #include "llvm/Support/Endian.h"
+#include "llvm/Support/JSON.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 
@@ -100,7 +101,20 @@ std::string enumToString(T Value, ArrayRef<EnumEntry<TEnum>> EnumValues) {
 
 class ScopedPrinter {
 public:
-  ScopedPrinter(raw_ostream &OS) : OS(OS), IndentLevel(0) {}
+  enum class ScopedPrinterKind {
+    Base,
+    JSON,
+  };
+
+  ScopedPrinter(raw_ostream &OS,
+                ScopedPrinterKind Kind = ScopedPrinterKind::Base)
+      : OS(OS), IndentLevel(0), Kind(Kind) {}
+
+  ScopedPrinterKind getKind() const { return Kind; }
+
+  static bool classof(const ScopedPrinter *SP) {
+    return SP->getKind() == ScopedPrinterKind::Base;
+  }
 
   virtual ~ScopedPrinter() {}
 
@@ -487,6 +501,7 @@ private:
   raw_ostream &OS;
   int IndentLevel;
   StringRef Prefix;
+  ScopedPrinterKind Kind;
 };
 
 template <>
@@ -496,30 +511,329 @@ ScopedPrinter::printHex<support::ulittle16_t>(StringRef Label,
   startLine() << Label << ": " << hex(Value) << "\n";
 }
 
+struct DelimitedScope;
+
+class JSONScopedPrinter : public ScopedPrinter {
+private:
+  enum class Scope {
+    Array,
+    Object,
+  };
+
+  enum class ScopeKind {
+    NoAttribute,
+    Attribute,
+    NestedAttribute,
+  };
+
+  struct ScopeContext {
+    Scope Context;
+    ScopeKind Kind;
+    ScopeContext(Scope Context, ScopeKind Kind = ScopeKind::NoAttribute)
+        : Context(Context), Kind(Kind) {}
+  };
+
+  SmallVector<ScopeContext, 8> ScopeHistory;
+  json::OStream JOS;
+  std::unique_ptr<DelimitedScope> OuterScope;
+
+public:
+  JSONScopedPrinter(raw_ostream &OS, bool PrettyPrint = false,
+                    std::unique_ptr<DelimitedScope> &&OuterScope =
+                        std::unique_ptr<DelimitedScope>{});
+
+  static bool classof(const ScopedPrinter *SP) {
+    return SP->getKind() == ScopedPrinter::ScopedPrinterKind::JSON;
+  }
+
+  void printNumber(StringRef Label, uint64_t Value) override {
+    JOS.attribute(Label, Value);
+  }
+
+  void printNumber(StringRef Label, uint32_t Value) override {
+    JOS.attribute(Label, Value);
+  }
+
+  void printNumber(StringRef Label, uint16_t Value) override {
+    JOS.attribute(Label, Value);
+  }
+
+  void printNumber(StringRef Label, uint8_t Value) override {
+    JOS.attribute(Label, Value);
+  }
+
+  void printNumber(StringRef Label, int64_t Value) override {
+    JOS.attribute(Label, Value);
+  }
+
+  void printNumber(StringRef Label, int32_t Value) override {
+    JOS.attribute(Label, Value);
+  }
+
+  void printNumber(StringRef Label, int16_t Value) override {
+    JOS.attribute(Label, Value);
+  }
+
+  void printNumber(StringRef Label, int8_t Value) override {
+    JOS.attribute(Label, Value);
+  }
+
+  void printNumber(StringRef Label, const APSInt &Value) override {
+    JOS.attributeBegin(Label);
+    printAPSInt(Value);
+    JOS.attributeEnd();
+  }
+
+  void printBoolean(StringRef Label, bool Value) override {
+    JOS.attribute(Label, Value);
+  }
+
+  void printList(StringRef Label, const ArrayRef<bool> List) override {
+    printListImpl(Label, List);
+  }
+
+  void printList(StringRef Label, const ArrayRef<std::string> List) override {
+    printListImpl(Label, List);
+  }
+
+  void printList(StringRef Label, const ArrayRef<uint64_t> List) override {
+    printListImpl(Label, List);
+  }
+
+  void printList(StringRef Label, const ArrayRef<uint32_t> List) override {
+    printListImpl(Label, List);
+  }
+
+  void printList(StringRef Label, const ArrayRef<uint16_t> List) override {
+    printListImpl(Label, List);
+  }
+
+  void printList(StringRef Label, const ArrayRef<uint8_t> List) override {
+    printListImpl(Label, List);
+  }
+
+  void printList(StringRef Label, const ArrayRef<int64_t> List) override {
+    printListImpl(Label, List);
+  }
+
+  void printList(StringRef Label, const ArrayRef<int32_t> List) override {
+    printListImpl(Label, List);
+  }
+
+  void printList(StringRef Label, const ArrayRef<int16_t> List) override {
+    printListImpl(Label, List);
+  }
+
+  void printList(StringRef Label, const ArrayRef<int8_t> List) override {
+    printListImpl(Label, List);
+  }
+
+  void printList(StringRef Label, const ArrayRef<APSInt> List) override {
+    JOS.attributeArray(Label, [&]() {
+      for (const APSInt &Item : List) {
+        printAPSInt(Item);
+      }
+    });
+  }
+
+  void printString(StringRef Value) override { JOS.value(Value); }
+
+  void printString(StringRef Label, StringRef Value) override {
+    JOS.attribute(Label, Value);
+  }
+
+  void objectBegin() override {
+    scopedBegin({Scope::Object, ScopeKind::NoAttribute});
+  }
+
+  void objectBegin(StringRef Label) override {
+    scopedBegin(Label, Scope::Object);
+  }
+
+  void objectEnd() override { scopedEnd(); }
+
+  void arrayBegin() override {
+    scopedBegin({Scope::Array, ScopeKind::NoAttribute});
+  }
+
+  void arrayBegin(StringRef Label) override {
+    scopedBegin(Label, Scope::Array);
+  }
+
+  void arrayEnd() override { scopedEnd(); }
+
+private:
+  // Output HexNumbers as decimals so that they're easier to parse.
+  uint64_t hexNumberToInt(HexNumber Hex) { return Hex.Value; }
+
+  void printAPSInt(const APSInt &Value) {
+    JOS.rawValueBegin() << Value;
+    JOS.rawValueEnd();
+  }
+
+  void printFlagsImpl(StringRef Label, HexNumber Value,
+                      ArrayRef<FlagEntry> Flags) override {
+    JOS.attributeObject(Label, [&]() {
+      JOS.attribute("RawFlags", hexNumberToInt(Value));
+      JOS.attributeArray("Flags", [&]() {
+        for (const FlagEntry &Flag : Flags) {
+          JOS.objectBegin();
+          JOS.attribute("Name", Flag.Name);
+          JOS.attribute("Value", Flag.Value);
+          JOS.objectEnd();
+        }
+      });
+    });
+  }
+
+  void printFlagsImpl(StringRef Label, HexNumber Value,
+                      ArrayRef<HexNumber> Flags) override {
+    JOS.attributeObject(Label, [&]() {
+      JOS.attribute("RawFlags", hexNumberToInt(Value));
+      JOS.attributeArray("Flags", [&]() {
+        for (const HexNumber &Flag : Flags) {
+          JOS.value(Flag.Value);
+        }
+      });
+    });
+  }
+
+  template <typename T> void printListImpl(StringRef Label, const T &List) {
+    JOS.attributeArray(Label, [&]() {
+      for (const auto &Item : List)
+        JOS.value(Item);
+    });
+  }
+
+  void printHexListImpl(StringRef Label,
+                        const ArrayRef<HexNumber> List) override {
+    JOS.attributeArray(Label, [&]() {
+      for (const HexNumber &Item : List) {
+        JOS.value(hexNumberToInt(Item));
+      }
+    });
+  }
+
+  void printHexImpl(StringRef Label, HexNumber Value) override {
+    JOS.attribute(Label, hexNumberToInt(Value));
+  }
+
+  void printHexImpl(StringRef Label, StringRef Str, HexNumber Value) override {
+    JOS.attributeObject(Label, [&]() {
+      JOS.attribute("Value", Str);
+      JOS.attribute("RawValue", hexNumberToInt(Value));
+    });
+  }
+
+  void printSymbolOffsetImpl(StringRef Label, StringRef Symbol,
+                             HexNumber Value) override {
+    JOS.attributeObject(Label, [&]() {
+      JOS.attribute("SymName", Symbol);
+      JOS.attribute("Offset", hexNumberToInt(Value));
+    });
+  }
+
+  void printNumberImpl(StringRef Label, StringRef Str,
+                       StringRef Value) override {
+    JOS.attributeObject(Label, [&]() {
+      JOS.attribute("Value", Str);
+      JOS.attributeBegin("RawValue");
+      JOS.rawValueBegin() << Value;
+      JOS.rawValueEnd();
+      JOS.attributeEnd();
+    });
+  }
+
+  void printBinaryImpl(StringRef Label, StringRef Str, ArrayRef<uint8_t> Value,
+                       bool Block, uint32_t StartOffset = 0) override {
+    JOS.attributeObject(Label, [&]() {
+      if (!Str.empty())
+        JOS.attribute("Value", Str);
+      JOS.attribute("Offset", StartOffset);
+      JOS.attributeArray("Bytes", [&]() {
+        for (uint8_t Val : Value)
+          JOS.value(Val);
+      });
+    });
+  }
+
+  void scopedBegin(ScopeContext ScopeCtx) {
+    if (ScopeCtx.Context == Scope::Object)
+      JOS.objectBegin();
+    else if (ScopeCtx.Context == Scope::Array)
+      JOS.arrayBegin();
+    ScopeHistory.push_back(ScopeCtx);
+  }
+
+  void scopedBegin(StringRef Label, Scope Ctx) {
+    ScopeKind Kind = ScopeKind::Attribute;
+    if (ScopeHistory.empty() || ScopeHistory.back().Context != Scope::Object) {
+      JOS.objectBegin();
+      Kind = ScopeKind::NestedAttribute;
+    }
+    JOS.attributeBegin(Label);
+    scopedBegin({Ctx, Kind});
+  }
+
+  void scopedEnd() {
+    ScopeContext ScopeCtx = ScopeHistory.back();
+    if (ScopeCtx.Context == Scope::Object)
+      JOS.objectEnd();
+    else if (ScopeCtx.Context == Scope::Array)
+      JOS.arrayEnd();
+    if (ScopeCtx.Kind == ScopeKind::Attribute ||
+        ScopeCtx.Kind == ScopeKind::NestedAttribute)
+      JOS.attributeEnd();
+    if (ScopeCtx.Kind == ScopeKind::NestedAttribute)
+      JOS.objectEnd();
+    ScopeHistory.pop_back();
+  }
+};
+
 struct DelimitedScope {
-  DelimitedScope(ScopedPrinter &W) : W(W) {}
+  DelimitedScope(ScopedPrinter &W) : W(&W) {}
+  DelimitedScope() : W(nullptr) {}
   virtual ~DelimitedScope(){};
-  ScopedPrinter &W;
+  virtual void setPrinter(ScopedPrinter &W) = 0;
+  ScopedPrinter *W;
 };
 
 struct DictScope : DelimitedScope {
+  explicit DictScope() : DelimitedScope() {}
   explicit DictScope(ScopedPrinter &W) : DelimitedScope(W) { W.objectBegin(); }
 
   DictScope(ScopedPrinter &W, StringRef N) : DelimitedScope(W) {
     W.objectBegin(N);
   }
 
-  ~DictScope() { W.objectEnd(); }
+  void setPrinter(ScopedPrinter &W) override {
+    this->W = &W;
+    W.objectBegin();
+  }
+
+  ~DictScope() {
+    if (W)
+      W->objectEnd();
+  }
 };
 
 struct ListScope : DelimitedScope {
+  explicit ListScope() : DelimitedScope() {}
   explicit ListScope(ScopedPrinter &W) : DelimitedScope(W) { W.arrayBegin(); }
 
   ListScope(ScopedPrinter &W, StringRef N) : DelimitedScope(W) {
     W.arrayBegin(N);
   }
 
-  ~ListScope() { W.arrayEnd(); }
+  void setPrinter(ScopedPrinter &W) override {
+    this->W = &W;
+    W.arrayBegin();
+  }
+
+  ~ListScope() {
+    if (W)
+      W->arrayEnd();
+  }
 };
 
 } // namespace llvm
