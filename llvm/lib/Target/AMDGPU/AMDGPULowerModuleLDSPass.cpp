@@ -55,20 +55,6 @@ static cl::opt<bool> SuperAlignLDSGlobals(
 
 namespace {
 
-SmallPtrSet<GlobalValue *, 32> getUsedList(Module &M) {
-  SmallPtrSet<GlobalValue *, 32> UsedList;
-
-  SmallVector<GlobalValue *, 32> TmpVec;
-  collectUsedGlobalVariables(M, TmpVec, true);
-  UsedList.insert(TmpVec.begin(), TmpVec.end());
-
-  TmpVec.clear();
-  collectUsedGlobalVariables(M, TmpVec, false);
-  UsedList.insert(TmpVec.begin(), TmpVec.end());
-
-  return UsedList;
-}
-
 class AMDGPULowerModuleLDS : public ModulePass {
 
   static void removeFromUsedList(Module &M, StringRef Name,
@@ -165,8 +151,6 @@ public:
   }
 
   bool runOnModule(Module &M) override {
-    UsedList = getUsedList(M);
-
     bool Changed = processUsedLDS(M);
 
     for (Function &F : M.functions()) {
@@ -179,7 +163,6 @@ public:
       Changed |= processUsedLDS(M, &F);
     }
 
-    UsedList.clear();
     return Changed;
   }
 
