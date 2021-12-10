@@ -200,7 +200,7 @@ walk(Operation *op, FuncTy &&callback) {
 /// Utility to provide the return type of a templated walk method.
 template <typename FnT>
 using walkResultType = decltype(walk(nullptr, std::declval<FnT>()));
-} // end namespace detail
+} // namespace detail
 
 } // namespace mlir
 

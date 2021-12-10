@@ -39,7 +39,7 @@ struct TestTraitFolder : public PassWrapper<TestTraitFolder, FunctionPass> {
                                        RewritePatternSet(&getContext()));
   }
 };
-} // end anonymous namespace
+} // namespace
 
 namespace mlir {
 void registerTestTraitsPass() { PassRegistration<TestTraitFolder>(); }

@@ -644,8 +644,7 @@ LowerCallResults(MachineInstr &CallResults, DebugLoc DL, MachineBasicBlock *BB,
     Register RegFuncref =
         MF.getRegInfo().createVirtualRegister(&WebAssembly::FUNCREFRegClass);
     MachineInstr *RefNull =
-        BuildMI(MF, DL, TII.get(WebAssembly::REF_NULL_FUNCREF), RegFuncref)
-            .addImm(static_cast<int32_t>(WebAssembly::HeapType::Funcref));
+        BuildMI(MF, DL, TII.get(WebAssembly::REF_NULL_FUNCREF), RegFuncref);
     BB->insertAfter(Const0->getIterator(), RefNull);
 
     MachineInstr *TableSet =

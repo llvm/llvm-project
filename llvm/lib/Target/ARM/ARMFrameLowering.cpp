@@ -503,20 +503,12 @@ void ARMFrameLowering::emitPrologue(MachineFunction &MF,
   StackAdjustingInsts DefCFAOffsetCandidates;
   bool HasFP = hasFP(MF);
 
-  // Allocate the vararg register save area.
-  if (ArgRegsSaveSize) {
-    emitSPUpdate(isARM, MBB, MBBI, dl, TII, -ArgRegsSaveSize,
-                 MachineInstr::FrameSetup);
-    DefCFAOffsetCandidates.addInst(std::prev(MBBI), ArgRegsSaveSize, true);
-  }
-
   if (!AFI->hasStackFrame() &&
       (!STI.isTargetWindows() || !WindowsRequiresStackProbe(MF, NumBytes))) {
-    if (NumBytes - ArgRegsSaveSize != 0) {
-      emitSPUpdate(isARM, MBB, MBBI, dl, TII, -(NumBytes - ArgRegsSaveSize),
+    if (NumBytes != 0) {
+      emitSPUpdate(isARM, MBB, MBBI, dl, TII, -NumBytes,
                    MachineInstr::FrameSetup);
-      DefCFAOffsetCandidates.addInst(std::prev(MBBI),
-                                     NumBytes - ArgRegsSaveSize, true);
+      DefCFAOffsetCandidates.addInst(std::prev(MBBI), NumBytes, true);
     }
     DefCFAOffsetCandidates.emitDefCFAOffsets(MBB, dl, TII, HasFP);
     return;
@@ -562,11 +554,24 @@ void ARMFrameLowering::emitPrologue(MachineFunction &MF,
     }
   }
 
-  // Move past FPCXT area.
   MachineBasicBlock::iterator LastPush = MBB.end(), GPRCS1Push, GPRCS2Push;
+
+  // Move past the PAC computation.
+  if (AFI->shouldSignReturnAddress())
+    LastPush = MBBI++;
+
+  // Move past FPCXT area.
   if (FPCXTSaveSize > 0) {
     LastPush = MBBI++;
     DefCFAOffsetCandidates.addInst(LastPush, FPCXTSaveSize, true);
+  }
+
+  // Allocate the vararg register save area.
+  if (ArgRegsSaveSize) {
+    emitSPUpdate(isARM, MBB, MBBI, dl, TII, -ArgRegsSaveSize,
+                 MachineInstr::FrameSetup);
+    LastPush = std::prev(MBBI);
+    DefCFAOffsetCandidates.addInst(LastPush, ArgRegsSaveSize, true);
   }
 
   // Move past area 1.
@@ -788,7 +793,8 @@ void ARMFrameLowering::emitPrologue(MachineFunction &MF,
       case ARM::R11:
       case ARM::R12:
         if (STI.splitFramePushPop(MF)) {
-          unsigned DwarfReg =  MRI->getDwarfRegNum(Reg, true);
+          unsigned DwarfReg = MRI->getDwarfRegNum(
+              Reg == ARM::R12 ? (unsigned)ARM::RA_AUTH_CODE : Reg, true);
           unsigned Offset = MFI.getObjectOffset(FI);
           unsigned CFIIndex = MF.addFrameInst(
               MCCFIInstruction::createOffset(nullptr, DwarfReg, Offset));
@@ -923,8 +929,9 @@ void ARMFrameLowering::emitEpilogue(MachineFunction &MF,
   DebugLoc dl = MBBI != MBB.end() ? MBBI->getDebugLoc() : DebugLoc();
 
   if (!AFI->hasStackFrame()) {
-    if (NumBytes - ReservedArgStack != 0)
-      emitSPUpdate(isARM, MBB, MBBI, dl, TII, NumBytes - ReservedArgStack,
+    if (NumBytes + IncomingArgStackToRestore != 0)
+      emitSPUpdate(isARM, MBB, MBBI, dl, TII,
+                   NumBytes + IncomingArgStackToRestore,
                    MachineInstr::FrameDestroy);
   } else {
     // Unwind MBBI to point to first LDR / VLDRD.
@@ -1007,15 +1014,21 @@ void ARMFrameLowering::emitEpilogue(MachineFunction &MF,
 
     if (AFI->getGPRCalleeSavedArea2Size()) MBBI++;
     if (AFI->getGPRCalleeSavedArea1Size()) MBBI++;
-    if (AFI->getFPCXTSaveAreaSize()) MBBI++;
-  }
 
-  if (ReservedArgStack || IncomingArgStackToRestore) {
-    assert((int)ReservedArgStack + IncomingArgStackToRestore >= 0 &&
-           "attempting to restore negative stack amount");
-    emitSPUpdate(isARM, MBB, MBBI, dl, TII,
-                 ReservedArgStack + IncomingArgStackToRestore,
-                 MachineInstr::FrameDestroy);
+    if (ReservedArgStack || IncomingArgStackToRestore) {
+      assert((int)ReservedArgStack + IncomingArgStackToRestore >= 0 &&
+             "attempting to restore negative stack amount");
+      emitSPUpdate(isARM, MBB, MBBI, dl, TII,
+                   ReservedArgStack + IncomingArgStackToRestore,
+                   MachineInstr::FrameDestroy);
+    }
+
+    // Validate PAC, It should have been already popped into R12. For CMSE entry
+    // function, the validation instruction is emitted during expansion of the
+    // tBXNS_RET, since the validation must use the value of SP at function
+    // entry, before saving, resp. after restoring, FPCXTNS.
+    if (AFI->shouldSignReturnAddress() && !AFI->isCmseNSEntryFunction())
+      BuildMI(MBB, MBBI, DebugLoc(), STI.getInstrInfo()->get(ARM::t2AUT));
   }
 }
 
@@ -1199,6 +1212,7 @@ void ARMFrameLowering::emitPopInst(MachineBasicBlock &MBB,
   const TargetInstrInfo &TII = *MF.getSubtarget().getInstrInfo();
   const TargetRegisterInfo &TRI = *STI.getRegisterInfo();
   ARMFunctionInfo *AFI = MF.getInfo<ARMFunctionInfo>();
+  bool hasPAC = AFI->shouldSignReturnAddress();
   DebugLoc DL;
   bool isTailCall = false;
   bool isInterrupt = false;
@@ -1231,7 +1245,7 @@ void ARMFrameLowering::emitPopInst(MachineBasicBlock &MBB,
         continue;
       if (Reg == ARM::LR && !isTailCall && !isVarArg && !isInterrupt &&
           !isCmseEntry && !isTrap && AFI->getArgumentStackToRestore() == 0 &&
-          STI.hasV5TOps() && MBB.succ_empty()) {
+          STI.hasV5TOps() && MBB.succ_empty() && !hasPAC) {
         Reg = ARM::PC;
         // Fold the return instruction into the LDM.
         DeleteRet = true;
@@ -1580,6 +1594,11 @@ bool ARMFrameLowering::spillCalleeSavedRegisters(
     ARM::t2STR_PRE : ARM::STR_PRE_IMM;
   unsigned FltOpc = ARM::VSTMDDB_UPD;
   unsigned NumAlignedDPRCS2Regs = AFI->getNumAlignedDPRCS2Regs();
+  // Compute PAC in R12.
+  if (AFI->shouldSignReturnAddress()) {
+    BuildMI(MBB, MI, DebugLoc(), STI.getInstrInfo()->get(ARM::t2PAC))
+        .setMIFlags(MachineInstr::FrameSetup);
+  }
   // Save the non-secure floating point context.
   if (llvm::any_of(CSI, [](const CalleeSavedInfo &C) {
         return C.getReg() == ARM::FPCXTNS;
@@ -1787,6 +1806,13 @@ bool ARMFrameLowering::enableShrinkWrapping(const MachineFunction &MF) const {
   // upon function entry (resp. restore it immmediately before return)
   if (STI.hasV8_1MMainlineOps() &&
       MF.getInfo<ARMFunctionInfo>()->isCmseNSEntryFunction())
+    return false;
+
+  // We are disabling shrinkwrapping for now when PAC is enabled, as
+  // shrinkwrapping can cause clobbering of r12 when the PAC code is
+  // generated. A follow-up patch will fix this in a more performant manner.
+  if (MF.getInfo<ARMFunctionInfo>()->shouldSignReturnAddress(
+          false /*SpillsLR */))
     return false;
 
   return true;
@@ -2313,6 +2339,26 @@ bool ARMFrameLowering::assignCalleeSavedSpillSlots(
       MF.getInfo<ARMFunctionInfo>()->isCmseNSEntryFunction()) {
     CSI.emplace_back(ARM::FPCXTNS);
     CSI.back().setRestored(false);
+  }
+
+  // For functions, which sign their return address, upon function entry, the
+  // return address PAC is computed in R12. Treat R12 as a callee-saved register
+  // in this case.
+  const auto &AFI = *MF.getInfo<ARMFunctionInfo>();
+  if (AFI.shouldSignReturnAddress()) {
+    // The order of register must match the order we push them, because the
+    // PEI assigns frame indices in that order. When compiling for return
+    // address sign and authenication, we use split push, therefore the orders
+    // we want are:
+    // LR, R7, R6, R5, R4, <R12>, R11, R10,  R9,  R8, D15-D8
+    CSI.insert(find_if(CSI,
+                       [=](const auto &CS) {
+                         unsigned Reg = CS.getReg();
+                         return Reg == ARM::R10 || Reg == ARM::R11 ||
+                                Reg == ARM::R8 || Reg == ARM::R9 ||
+                                ARM::DPRRegClass.contains(Reg);
+                       }),
+               CalleeSavedInfo(ARM::R12));
   }
 
   return false;

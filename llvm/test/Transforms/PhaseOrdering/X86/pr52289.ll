@@ -6,16 +6,6 @@ target datalayout = "n8:16:32:64"
 define i32 @main(i32 %a) {
 ; CHECK-LABEL: @main(
 ; CHECK-NEXT:  if.end:
-; CHECK-NEXT:    [[TMP0:%.*]] = trunc i32 [[A:%.*]] to i8
-; CHECK-NEXT:    [[TMP1:%.*]] = add i8 [[TMP0]], 1
-; CHECK-NEXT:    [[CONV:%.*]] = and i8 [[TMP1]], 8
-; CHECK-NEXT:    [[CMP_I_NOT:%.*]] = icmp eq i8 [[CONV]], 0
-; CHECK-NEXT:    [[SHL_I:%.*]] = select i1 [[CMP_I_NOT]], i8 7, i8 0
-; CHECK-NEXT:    [[COND_I:%.*]] = shl i8 [[CONV]], [[SHL_I]]
-; CHECK-NEXT:    [[CONV1:%.*]] = sext i8 [[COND_I]] to i32
-; CHECK-NEXT:    [[SEXT:%.*]] = mul i32 [[CONV1]], 1355350016
-; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp ne i32 [[SEXT]], 65536
-; CHECK-NEXT:    tail call void @llvm.assume(i1 [[TOBOOL]])
 ; CHECK-NEXT:    ret i32 0
 ;
   %inc = add nsw i32 %a, 1

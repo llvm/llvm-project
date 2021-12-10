@@ -89,7 +89,7 @@ private:
   ArrayRef<Attribute> operandConsts;
 };
 
-} // end anonymous namespace
+} // namespace
 
 /// Returns a single constant result affine map.
 AffineMap AffineMap::getConstantMap(int64_t val, MLIRContext *context) {

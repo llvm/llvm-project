@@ -29,7 +29,11 @@ namespace comprehensive_bufferize {
 // TODO: from some HW description.
 static constexpr int64_t kBufferAlignments = 128;
 
-struct BufferizationState;
+class BufferizationAliasInfo;
+class BufferizableOpInterface;
+struct BufferizationOptions;
+class BufferizationState;
+struct PostAnalysisStep;
 
 /// Callback functions that are used to allocate/deallocate/copy memory buffers.
 /// Comprehensive Bufferize provides default implementations of these functions.
@@ -67,9 +71,12 @@ struct PostAnalysisStep {
   /// Run the post analysis step. This function may modify the IR, but must keep
   /// `aliasInfo` (inside `state`) consistent. Newly created operations and
   /// operations that should be re-analyzed must be stored in `newOps`.
-  virtual LogicalResult run(FuncOp funcOp, BufferizationState &state,
+  virtual LogicalResult run(Operation *op, BufferizationState &state,
+                            BufferizationAliasInfo &aliasInfo,
                             SmallVector<Operation *> &newOps) = 0;
 };
+
+using PostAnalysisStepList = std::vector<std::unique_ptr<PostAnalysisStep>>;
 
 /// Options for ComprehensiveBufferize.
 struct BufferizationOptions {
@@ -85,6 +92,33 @@ struct BufferizationOptions {
     postAnalysisSteps.emplace_back(
         std::make_unique<Step>(std::forward<Args>(args)...));
   }
+
+  /// Return `true` if the op is allowed to be bufferized.
+  bool isOpAllowed(Operation *op) const {
+    if (!dialectFilter.hasValue())
+      return true;
+    return dialectFilter->contains(op->getDialect()->getNamespace());
+  }
+
+  /// Allow-list the given dialects in the dialect filter. Only ops from
+  /// allow-listed dialects will be bufferized.
+  template <typename... DialectTs>
+  void addToDialectFilter() {
+    // The following expands a call to addToDialectFilterImpl for each dialect
+    // in 'DialectTs'. This magic is necessary due to a limitation in the places
+    // that a parameter pack can be expanded in c++11.
+    // FIXME: In c++17 this can be simplified by using 'fold expressions'.
+    (void)std::initializer_list<int>{
+        0, (addToDialectFilterImpl<DialectTs>(), 0)...};
+  }
+
+  /// Try to cast the given op to BufferizableOpInterface if the op is allow
+  /// listed.
+  BufferizableOpInterface dynCastBufferizableOp(Operation *op) const;
+
+  /// Try to cast the given value to BufferizableOpInterface if the op is allow
+  /// listed.
+  BufferizableOpInterface dynCastBufferizableOp(Value value) const;
 
   /// Helper functions for allocation, deallocation, memory copying.
   std::unique_ptr<AllocationCallbacks> allocationFns;
@@ -107,7 +141,26 @@ struct BufferizationOptions {
   bool testAnalysisOnly = false;
 
   /// Registered post analysis steps.
-  std::vector<std::unique_ptr<PostAnalysisStep>> postAnalysisSteps;
+  PostAnalysisStepList postAnalysisSteps;
+
+  /// Only bufferize ops from dialects that are allowed-listed by the filter.
+  /// All other ops are ignored. This option controls the scope of partial
+  /// bufferization.
+  ///
+  /// Note: If no filter is specified, all ops are bufferized (as long as they
+  /// implement BufferizableOpInterface). If a filter is specified,
+  /// `allowUnknownOps` should be enabled. Otherwise, bufferization would fail
+  /// when encountering an op that is forbidden by the filter.
+  Optional<DenseSet<StringRef>> dialectFilter;
+
+private:
+  /// Allow-list a dialect in the dialect filter.
+  template <typename DialectT>
+  void addToDialectFilterImpl() {
+    if (!dialectFilter.hasValue())
+      dialectFilter.emplace();
+    dialectFilter->insert(DialectT::getDialectNamespace());
+  }
 };
 
 /// Specify fine-grain relationship between buffers to enable more analysis.
@@ -122,7 +175,8 @@ enum class BufferRelation {
 /// equivalence classes to support bufferization.
 class BufferizationAliasInfo {
 public:
-  explicit BufferizationAliasInfo(Operation *rootOp);
+  explicit BufferizationAliasInfo(Operation *rootOp,
+                                  const BufferizationOptions &options);
 
   // BufferizationAliasInfo should be passed as a reference.
   BufferizationAliasInfo(const BufferizationAliasInfo &) = delete;
@@ -170,13 +224,6 @@ public:
   /// Apply `fun` to all aliases of `v`.
   void applyOnAliases(Value v, function_ref<void(Value)> fun) const;
 
-  // TODO: Move these out of BufferizationAliasInfo.
-  /// Return true if the value is known to bufferize to writable memory.
-  bool bufferizesToWritableMemory(Value v) const;
-
-  /// Specify that the value is known to bufferize to writable memory.
-  void setBufferizesToWritableMemory(Value v);
-
   /// Mark a value as in-place bufferized.
   void markInPlace(OpResult v) { inplaceBufferized.insert(v); }
 
@@ -197,9 +244,6 @@ private:
       llvm::EquivalenceClasses<Value, ValueComparator>::member_iterator>;
   /// Check that aliasInfo for `v` exists and return a reference to it.
   EquivalenceClassRangeType getAliases(Value v) const;
-
-  /// Set of tensors that are known to bufferize to writable memory.
-  llvm::DenseSet<Value> bufferizeToWritableMemory;
 
   /// Set of all OpResults that were decided to bufferize in-place.
   llvm::DenseSet<OpResult> inplaceBufferized;
@@ -269,7 +313,7 @@ bool isValueRead(Value value);
 /// starting the traversal from Value 1, the resulting SetVector is:
 /// { 2, 7, 8, 5 }
 llvm::SetVector<Value>
-findValueInReverseUseDefChain(Value value,
+findValueInReverseUseDefChain(Value value, const BufferizationOptions &options,
                               std::function<bool(Value)> condition);
 
 /// Find the Value of the last preceding write of a given Value.
@@ -280,7 +324,7 @@ findValueInReverseUseDefChain(Value value,
 ///
 /// Note: When reaching an end of the reverse SSA use-def chain, that value
 /// is returned regardless of whether it is a memory write or not.
-Value findLastPrecedingWrite(Value value);
+Value findLastPrecedingWrite(Value value, const BufferizationOptions &options);
 
 /// Dialect-specific bufferization state. Analysis/bufferization information
 /// that is specific to ops from a certain dialect can be stored in derived
@@ -289,21 +333,41 @@ struct DialectBufferizationState {
   virtual ~DialectBufferizationState() = default;
 };
 
-/// BufferizationState keeps track of bufferization state and provides access to
-/// the results of the analysis.
-struct BufferizationState {
-  BufferizationState(ModuleOp moduleOp, const BufferizationOptions &options)
-      : aliasInfo(moduleOp), options(options),
-        builder(moduleOp->getContext()) {}
+/// BufferizationState keeps track of memory buffers and provides a variety of
+/// helper functions for dealing with them. In particular,
+/// `BufferizableOpInterface::bufferize` implementation should utilize the
+/// following helper functions.
+///
+/// * `createAlloc` / `createDealloc` / `createAllocDeallocPair` creates ops
+///   that allocate and/or deallocate memref buffers.
+/// * `mapBuffer` maps a tensor value to a memref buffer during bufferization.
+/// * `lookupBuffer` returns the mapped memref buffer of a given tensor value.
+/// * `getResultBuffer` returns the memref buffer for a given tensor OpResult.
+///   Based on inplace bufferization decisions of the analysis, it may either
+///   directly return a mapped buffer or allocate a new brand new buffer.
+class BufferizationState {
+public:
+  BufferizationState(Operation *op, const BufferizationOptions &options)
+      : aliasInfo(op, options), options(options), builder(op->getContext()) {}
 
   // BufferizationState should be passed as a reference.
   BufferizationState(const BufferizationState &) = delete;
 
-  /// A function that creates an alloc-dealloc pair. This function may perform
-  /// additional optimizations such as buffer allocation hoisting. This function
-  /// calls `allocationFn` and `deallocationFn` to create (de)allocations.
-  Value createAllocDeallocFn(OpBuilder &builder, Location loc,
-                             Value shapedValue);
+  /// Creates a memref allocation.
+  Optional<Value> createAlloc(OpBuilder &b, Location loc, MemRefType type,
+                              ArrayRef<Value> dynShape);
+
+  /// Creates an alloc-dealloc pair. This function may perform additional
+  /// optimizations such as buffer allocation hoisting.
+  Value createAllocDeallocPair(OpBuilder &builder, Location loc,
+                               Value shapedValue);
+
+  /// Creates a memref deallocation. The given memref buffer must have been
+  /// allocated using `createAlloc`.
+  void createDealloc(OpBuilder &b, Location loc, Value allocatedBuffer);
+
+  /// Creates a memcpy between two given buffers.
+  void createMemCpy(OpBuilder &b, Location loc, Value from, Value to);
 
   /// Map tensor values to memref buffers.
   void mapBuffer(ValueRange tensors, ValueRange buffers);
@@ -314,6 +378,9 @@ struct BufferizationState {
   /// Lookup the memref buffer that is associated to the given tensor value.
   /// Asserts if no buffer is associated.
   Value lookupBuffer(Value tensor);
+
+  /// Return `true` if the given OpResult has been decided to bufferize inplace.
+  bool isInPlace(OpResult opResult) const;
 
   /// Return `true` if the given value is mapped.
   bool isMapped(Value value) const;
@@ -337,7 +404,24 @@ struct BufferizationState {
     return static_cast<StateT &>(*dialectState[name]);
   }
 
-  /// `aliasInfo` keeps track of aliasing and equivalent values.
+  /// Return a reference to the BufferizationOptions.
+  const BufferizationOptions &getOptions() const { return options; }
+
+  /// Return a reference to the OpBuilder.
+  OpBuilder &getBuilder() { return builder; }
+
+private:
+  friend LogicalResult
+  runComprehensiveBufferize(Operation *op, const BufferizationOptions &options,
+                            BufferizationState &state,
+                            const PostAnalysisStepList &extraSteps);
+
+  friend LogicalResult
+  runComprehensiveBufferize(ModuleOp moduleOp,
+                            const BufferizationOptions &options);
+
+  /// `aliasInfo` keeps track of aliasing and equivalent values. Only internal
+  /// functions and `runComprehensiveBufferize` may access this object.
   BufferizationAliasInfo aliasInfo;
 
   /// The mapping of tensors to buffers.
@@ -427,14 +511,16 @@ struct AllocationHoistingBarrierOnly
     return BufferRelation::None;
   }
 
-  bool isWritable(Operation *op, Value value) const { return false; }
+  bool isWritable(Operation *op, Value value, BufferizationState &state) const {
+    return false;
+  }
 
   LogicalResult bufferize(Operation *op, OpBuilder &b,
                           BufferizationState &state) const {
     auto isaTensor = [](Type t) { return t.isa<TensorType>(); };
     if (any_of(op->getOperandTypes(), isaTensor) ||
         any_of(op->getResultTypes(), isaTensor))
-      if (!state.options.allowUnknownOps)
+      if (!state.getOptions().allowUnknownOps)
         return op->emitError() << "unsupported op with tensors";
 
     for (Region &region : op->getRegions())

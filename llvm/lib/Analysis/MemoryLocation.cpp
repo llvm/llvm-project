@@ -101,13 +101,8 @@ MemoryLocation MemoryLocation::getForSource(const AtomicMemTransferInst *MTI) {
 }
 
 MemoryLocation MemoryLocation::getForSource(const AnyMemTransferInst *MTI) {
-  auto Size = LocationSize::afterPointer();
-  if (ConstantInt *C = dyn_cast<ConstantInt>(MTI->getLength()))
-    Size = LocationSize::precise(C->getValue().getZExtValue());
-
-  // memcpy/memmove can have AA tags. For memcpy, they apply
-  // to both the source and the destination.
-  return MemoryLocation(MTI->getRawSource(), Size, MTI->getAAMetadata());
+  assert(MTI->getRawSource() == MTI->getArgOperand(1));
+  return getForArgument(MTI, 1, nullptr);
 }
 
 MemoryLocation MemoryLocation::getForDest(const MemIntrinsic *MI) {
@@ -119,13 +114,8 @@ MemoryLocation MemoryLocation::getForDest(const AtomicMemIntrinsic *MI) {
 }
 
 MemoryLocation MemoryLocation::getForDest(const AnyMemIntrinsic *MI) {
-  auto Size = LocationSize::afterPointer();
-  if (ConstantInt *C = dyn_cast<ConstantInt>(MI->getLength()))
-    Size = LocationSize::precise(C->getValue().getZExtValue());
-
-  // memcpy/memmove can have AA tags. For memcpy, they apply
-  // to both the source and the destination.
-  return MemoryLocation(MI->getRawDest(), Size, MI->getAAMetadata());
+  assert(MI->getRawDest() == MI->getArgOperand(0));
+  return getForArgument(MI, 0, nullptr);
 }
 
 Optional<MemoryLocation>
@@ -177,6 +167,9 @@ MemoryLocation MemoryLocation::getForArgument(const CallBase *Call,
     case Intrinsic::memcpy:
     case Intrinsic::memcpy_inline:
     case Intrinsic::memmove:
+    case Intrinsic::memcpy_element_unordered_atomic:
+    case Intrinsic::memmove_element_unordered_atomic:
+    case Intrinsic::memset_element_unordered_atomic:
       assert((ArgIdx == 0 || ArgIdx == 1) &&
              "Invalid argument index for memory intrinsic");
       if (ConstantInt *LenCI = dyn_cast<ConstantInt>(II->getArgOperand(2)))
@@ -236,6 +229,10 @@ MemoryLocation MemoryLocation::getForArgument(const CallBase *Call,
                                 II->getArgOperand(1)->getType())),
                             AATags);
     }
+
+    assert(
+        !isa<AnyMemTransferInst>(II) &&
+        "all memory transfer intrinsics should be handled by the switch above");
   }
 
   // We can bound the aliasing properties of memset_pattern16 just as we can
@@ -274,10 +271,18 @@ MemoryLocation MemoryLocation::getForArgument(const CallBase *Call,
       return MemoryLocation(Arg, Size, AATags);
     }
     case LibFunc_memset_pattern16:
+    case LibFunc_memset_pattern4:
+    case LibFunc_memset_pattern8:
       assert((ArgIdx == 0 || ArgIdx == 1) &&
              "Invalid argument index for memset_pattern16");
-      if (ArgIdx == 1)
-        return MemoryLocation(Arg, LocationSize::precise(16), AATags);
+      if (ArgIdx == 1) {
+        unsigned Size = 16;
+        if (F == LibFunc_memset_pattern4)
+          Size = 4;
+        else if (F == LibFunc_memset_pattern8)
+          Size = 8;
+        return MemoryLocation(Arg, LocationSize::precise(Size), AATags);
+      }
       if (const ConstantInt *LenCI =
               dyn_cast<ConstantInt>(Call->getArgOperand(2)))
         return MemoryLocation(Arg, LocationSize::precise(LenCI->getZExtValue()),
@@ -312,7 +317,6 @@ MemoryLocation MemoryLocation::getForArgument(const CallBase *Call,
       break;
     };
   }
-  // FIXME: Handle memset_pattern4 and memset_pattern8 also.
 
   return MemoryLocation::getBeforeOrAfter(Call->getArgOperand(ArgIdx), AATags);
 }

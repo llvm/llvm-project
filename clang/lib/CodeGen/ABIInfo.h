@@ -105,7 +105,7 @@ namespace swiftcall {
                                 uint64_t &Members) const;
 
     // Implement the Type::IsPromotableIntegerType for ABI specific needs. The
-    // only difference is that this considers _ExtInt as well.
+    // only difference is that this considers bit-precise integer types as well.
     bool isPromotableIntegerTypeForABI(QualType Ty) const;
 
     /// A convenience method to return an indirect ABIArgInfo with an

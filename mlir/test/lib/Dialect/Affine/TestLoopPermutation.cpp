@@ -44,24 +44,25 @@ private:
                                 llvm::cl::OneOrMore, llvm::cl::CommaSeparated};
 };
 
-} // end anonymous namespace
+} // namespace
 
 void TestLoopPermutation::runOnFunction() {
-  // Get the first maximal perfect nest.
-  SmallVector<AffineForOp, 6> nest;
-  for (auto &op : getFunction().front()) {
-    if (auto forOp = dyn_cast<AffineForOp>(op)) {
-      getPerfectlyNestedLoops(nest, forOp);
-      break;
-    }
-  }
-
-  // Nothing to do.
-  if (nest.size() < 2)
-    return;
 
   SmallVector<unsigned, 4> permMap(permList.begin(), permList.end());
-  permuteLoops(nest, permMap);
+
+  SmallVector<AffineForOp, 2> forOps;
+  getFunction().walk([&](AffineForOp forOp) { forOps.push_back(forOp); });
+
+  for (auto forOp : forOps) {
+    SmallVector<AffineForOp, 6> nest;
+    // Get the maximal perfect nest.
+    getPerfectlyNestedLoops(nest, forOp);
+    // Permute if the nest's size is consistent with the specified
+    // permutation.
+    if (nest.size() >= 2 && nest.size() == permMap.size()) {
+      permuteLoops(nest, permMap);
+    }
+  }
 }
 
 namespace mlir {

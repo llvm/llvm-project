@@ -447,7 +447,7 @@ define void @test12_memset_other_store_in_between(i8* %ptr) {
   ret void
 }
 
-declare i8* @__memset_chk(i8* writeonly, i32, i64, i64) argmemonly
+declare i8* @__memset_chk(i8* writeonly, i32, i64, i64) argmemonly writeonly nofree nounwind
 
 define void @test12_memset_chk_other_store_in_between(i8* %ptr) {
 ; CHECK-LABEL: @test12_memset_chk_other_store_in_between(
@@ -463,6 +463,60 @@ define void @test12_memset_chk_other_store_in_between(i8* %ptr) {
   store i8 8, i8* %ptr.4
   %ptr.5 = getelementptr i8, i8* %ptr, i64 5
   store i8 0, i8* %ptr.5
+  ret void
+}
+
+declare void @use(i8*)
+
+define void @test12_memset_chk_other_store_in_between_stack_obj_escape_after(i64 %n) {
+; CHECK-LABEL: @test12_memset_chk_other_store_in_between_stack_obj_escape_after(
+; CHECK-NEXT:    [[OBJ:%.*]] = alloca [200 x i8], align 1
+; CHECK-NEXT:    [[PTR:%.*]] = bitcast [200 x i8]* [[OBJ]] to i8*
+; CHECK-NEXT:    [[CALL:%.*]] = tail call i8* @__memset_chk(i8* [[PTR]], i32 0, i64 10, i64 [[N:%.*]])
+; CHECK-NEXT:    [[PTR_4:%.*]] = getelementptr i8, i8* [[PTR]], i64 4
+; CHECK-NEXT:    store i8 8, i8* [[PTR_4]], align 1
+; CHECK-NEXT:    [[PTR_5:%.*]] = getelementptr i8, i8* [[PTR]], i64 5
+; CHECK-NEXT:    store i8 0, i8* [[PTR_5]], align 1
+; CHECK-NEXT:    call void @use(i8* [[PTR]])
+; CHECK-NEXT:    ret void
+;
+  %obj = alloca [200 x i8]
+  %ptr = bitcast [200 x i8]* %obj to i8*
+  %call = tail call i8* @__memset_chk(i8* %ptr, i32 0, i64 10, i64 %n)
+  %ptr.4 = getelementptr i8, i8* %ptr, i64 4
+  store i8 8, i8* %ptr.4
+  %ptr.5 = getelementptr i8, i8* %ptr, i64 5
+  store i8 0, i8* %ptr.5
+  call void @use(i8* %ptr)
+  ret void
+}
+
+define void @test12_memset_chk_other_store_in_between_stack_obj_escape_before(i64 %n) {
+; CHECK-LABEL: @test12_memset_chk_other_store_in_between_stack_obj_escape_before(
+; CHECK-NEXT:    [[OBJ:%.*]] = alloca [200 x i8], align 1
+; CHECK-NEXT:    [[PTR:%.*]] = bitcast [200 x i8]* [[OBJ]] to i8*
+; CHECK-NEXT:    call void @use(i8* [[PTR]])
+; CHECK-NEXT:    [[CALL:%.*]] = tail call i8* @__memset_chk(i8* [[PTR]], i32 0, i64 10, i64 [[N:%.*]])
+; CHECK-NEXT:    [[PTR_4:%.*]] = getelementptr i8, i8* [[PTR]], i64 4
+; CHECK-NEXT:    store i8 8, i8* [[PTR_4]], align 1
+; CHECK-NEXT:    [[PTR_5:%.*]] = getelementptr i8, i8* [[PTR]], i64 5
+; CHECK-NEXT:    store i8 0, i8* [[PTR_5]], align 1
+; CHECK-NEXT:    [[PTR_10:%.*]] = getelementptr i8, i8* [[PTR]], i64 10
+; CHECK-NEXT:    store i8 0, i8* [[PTR_10]], align 1
+; CHECK-NEXT:    call void @use(i8* [[PTR]])
+; CHECK-NEXT:    ret void
+;
+  %obj = alloca [200 x i8]
+  %ptr = bitcast [200 x i8]* %obj to i8*
+  call void @use(i8* %ptr)
+  %call = tail call i8* @__memset_chk(i8* %ptr, i32 0, i64 10, i64 %n)
+  %ptr.4 = getelementptr i8, i8* %ptr, i64 4
+  store i8 8, i8* %ptr.4
+  %ptr.5 = getelementptr i8, i8* %ptr, i64 5
+  store i8 0, i8* %ptr.5
+  %ptr.10 = getelementptr i8, i8* %ptr, i64 10
+  store i8 0, i8* %ptr.10
+  call void @use(i8* %ptr)
   ret void
 }
 

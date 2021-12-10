@@ -2263,8 +2263,8 @@ bool CXXNameMangler::mangleUnresolvedTypeOrSimpleId(QualType Ty,
   case Type::Atomic:
   case Type::Pipe:
   case Type::MacroQualified:
-  case Type::ExtInt:
-  case Type::DependentExtInt:
+  case Type::BitInt:
+  case Type::DependentBitInt:
     llvm_unreachable("type is illegal as a nested name specifier");
 
   case Type::SubstTemplateTypeParmPack:
@@ -3967,26 +3967,20 @@ void CXXNameMangler::mangleType(const PipeType *T) {
   Out << "8ocl_pipe";
 }
 
-void CXXNameMangler::mangleType(const ExtIntType *T) {
-  Out << "U7_ExtInt";
-  llvm::APSInt BW(32, true);
-  BW = T->getNumBits();
-  TemplateArgument TA(Context.getASTContext(), BW, getASTContext().IntTy);
-  mangleTemplateArgs(TemplateName(), &TA, 1);
-  if (T->isUnsigned())
-    Out << "j";
-  else
-    Out << "i";
+void CXXNameMangler::mangleType(const BitIntType *T) {
+  // 5.1.5.2 Builtin types
+  // <type> ::= DB <number | instantiation-dependent expression> _
+  //        ::= DU <number | instantiation-dependent expression> _
+  Out << "D" << (T->isUnsigned() ? "U" : "B") << T->getNumBits() << "_";
 }
 
-void CXXNameMangler::mangleType(const DependentExtIntType *T) {
-  Out << "U7_ExtInt";
-  TemplateArgument TA(T->getNumBitsExpr());
-  mangleTemplateArgs(TemplateName(), &TA, 1);
-  if (T->isUnsigned())
-    Out << "j";
-  else
-    Out << "i";
+void CXXNameMangler::mangleType(const DependentBitIntType *T) {
+  // 5.1.5.2 Builtin types
+  // <type> ::= DB <number | instantiation-dependent expression> _
+  //        ::= DU <number | instantiation-dependent expression> _
+  Out << "D" << (T->isUnsigned() ? "U" : "B");
+  mangleExpression(T->getNumBitsExpr());
+  Out << "_";
 }
 
 void CXXNameMangler::mangleIntegerLiteral(QualType T,

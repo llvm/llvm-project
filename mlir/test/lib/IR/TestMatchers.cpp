@@ -22,7 +22,7 @@ struct TestMatchers : public PassWrapper<TestMatchers, FunctionPass> {
     return "Test C++ pattern matchers.";
   }
 };
-} // end anonymous namespace
+} // namespace
 
 // This could be done better but is not worth the variadic template trouble.
 template <typename Matcher>

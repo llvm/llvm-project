@@ -226,7 +226,7 @@ lrw16 a0, [.L.test14]
 .ifdef ERR
 
 # oimm8
-addi16 a0, 0 # CHECK: :[[#@LINE]]:12: error: operand must be sp register
+addi16 a0, 0 # CHECK: :[[#@LINE]]:12: error: immediate must be an integer in the range [1, 256]
 
 # oimm5
 cmphsi16 a0, 0 # CHECK: :[[#@LINE]]:14: error: immediate must be an integer in the range [1, 32]

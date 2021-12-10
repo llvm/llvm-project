@@ -3,26 +3,26 @@
 ; RUN: llvm-profgen --format=text --perfscript=%S/Inputs/func-split.perfscript --binary=%S/Inputs/func-split.perfbin --output=%t --ignore-stack-samples
 ; RUN: FileCheck %s --input-file %t --check-prefix=CHECK-STRIP-CTX
 
-;CHECK: [foo]:82:0
+;CHECK: [foo]:409:0
 ;CHECK:  2.1: 27
 ;CHECK:  3: 27
 ;CHECK:  3.1: 2 bar:2
 ;CHECK:  3.2: 26
-;CHECK: [foo:3.1 @ bar]:2:0
+;CHECK: [foo:3.1 @ bar]:8:0
 ;CHECK:  1: 1
 ;CHECK:  5: 1
 ;CHECK: [bar]:0:1
 
 ;CHECK-NOT: foo.cold
 
-;CHECK-STRIP-CTX: foo:81:0
+;CHECK-STRIP-CTX: foo:1334:0
 ;CHECK-STRIP-CTX:  0: 0
 ;CHECK-STRIP-CTX:  2.1: 27
 ;CHECK-STRIP-CTX:  3: 27
 ;CHECK-STRIP-CTX:  3.1: 1 bar:1
 ;CHECK-STRIP-CTX:  3.2: 26
 ;CHECK-STRIP-CTX:  4: 0
-;CHECK-STRIP-CTX: bar:2:1
+;CHECK-STRIP-CTX: bar:27:1
 ;CHECK-STRIP-CTX:  1: 1
 ;CHECK-STRIP-CTX:  5: 1
 

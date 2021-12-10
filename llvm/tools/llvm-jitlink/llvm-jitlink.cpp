@@ -649,24 +649,23 @@ Error LLVMJITLinkObjectLinkingLayer::add(ResourceTrackerSP RT,
 
   // Use getObjectSymbolInfo to compute the init symbol, but ignore
   // the symbols field. We'll handle that manually to include promotion.
-  auto ObjSymInfo =
-      getObjectSymbolInfo(getExecutionSession(), O->getMemBufferRef());
+  auto ObjInterface =
+      getObjectInterface(getExecutionSession(), O->getMemBufferRef());
 
-  if (!ObjSymInfo)
-    return ObjSymInfo.takeError();
-
-  auto &InitSymbol = ObjSymInfo->second;
+  if (!ObjInterface)
+    return ObjInterface.takeError();
 
   // If creating an object file was going to fail it would have happened above,
   // so we can 'cantFail' this.
   auto Obj =
       cantFail(object::ObjectFile::createObjectFile(O->getMemBufferRef()));
 
-  SymbolFlagsMap SymbolFlags;
+  ObjInterface->SymbolFlags.clear();
 
   // The init symbol must be included in the SymbolFlags map if present.
-  if (InitSymbol)
-    SymbolFlags[InitSymbol] = JITSymbolFlags::MaterializationSideEffectsOnly;
+  if (ObjInterface->InitSymbol)
+    ObjInterface->SymbolFlags[ObjInterface->InitSymbol] =
+        JITSymbolFlags::MaterializationSideEffectsOnly;
 
   for (auto &Sym : Obj->symbols()) {
     Expected<uint32_t> SymFlagsOrErr = Sym.getFlags();
@@ -710,11 +709,11 @@ Error LLVMJITLinkObjectLinkingLayer::add(ResourceTrackerSP RT,
       continue;
 
     auto InternedName = S.ES.intern(*Name);
-    SymbolFlags[InternedName] = std::move(*SymFlags);
+    ObjInterface->SymbolFlags[InternedName] = std::move(*SymFlags);
   }
 
   auto MU = std::make_unique<BasicObjectLayerMaterializationUnit>(
-      *this, std::move(O), std::move(SymbolFlags), std::move(InitSymbol));
+      *this, std::move(O), std::move(*ObjInterface));
 
   auto &JD = RT->getJITDylib();
   return JD.define(std::move(MU), std::move(RT));
@@ -1034,10 +1033,10 @@ Session::Session(std::unique_ptr<ExecutorProcessControl> EPC, Error &Err)
     auto ObjBuffer =
         ExitOnErr(errorOrToExpected(MemoryBuffer::getFile(HarnessFile)));
 
-    auto ObjSymbolInfo =
-        ExitOnErr(getObjectSymbolInfo(ES, ObjBuffer->getMemBufferRef()));
+    auto ObjInterface =
+        ExitOnErr(getObjectInterface(ES, ObjBuffer->getMemBufferRef()));
 
-    for (auto &KV : ObjSymbolInfo.first)
+    for (auto &KV : ObjInterface.SymbolFlags)
       HarnessDefinitions.insert(*KV.first);
 
     auto Obj = ExitOnErr(
@@ -1301,7 +1300,7 @@ static Error loadObjects(Session &S) {
   {
     // Create a "main" JITLinkDylib.
     IdxToJLD[0] = S.MainJD;
-    S.JDSearchOrder.push_back(S.MainJD);
+    S.JDSearchOrder.push_back({S.MainJD, JITDylibLookupFlags::MatchAllSymbols});
     LLVM_DEBUG(dbgs() << "  0: " << S.MainJD->getName() << "\n");
 
     // Add any extra JITLinkDylibs from the command line.
@@ -1314,15 +1313,18 @@ static Error loadObjects(Session &S) {
       unsigned JDIdx =
           JITLinkDylibs.getPosition(JLDItr - JITLinkDylibs.begin());
       IdxToJLD[JDIdx] = &*JD;
-      S.JDSearchOrder.push_back(&*JD);
+      S.JDSearchOrder.push_back({&*JD, JITDylibLookupFlags::MatchAllSymbols});
       LLVM_DEBUG(dbgs() << "  " << JDIdx << ": " << JD->getName() << "\n");
     }
 
-    // Set every dylib to link against every other, in command line order.
-    for (auto *JD : S.JDSearchOrder) {
+    // Set every dylib to link against every other, in command line order,
+    // using exported symbols only.
+    for (auto &KV : S.JDSearchOrder) {
+      auto *JD = KV.first;
       auto LookupFlags = JITDylibLookupFlags::MatchExportedSymbolsOnly;
       JITDylibSearchOrder LinkOrder;
-      for (auto *JD2 : S.JDSearchOrder) {
+      for (auto &KV2 : S.JDSearchOrder) {
+        auto *JD2 = KV2.first;
         if (JD2 == JD)
           continue;
         LinkOrder.push_back(std::make_pair(JD2, LookupFlags));
@@ -1395,8 +1397,8 @@ static Error loadObjects(Session &S) {
 
   LLVM_DEBUG({
     dbgs() << "Dylib search order is [ ";
-    for (auto *JD : S.JDSearchOrder)
-      dbgs() << JD->getName() << " ";
+    for (auto &KV : S.JDSearchOrder)
+      dbgs() << KV.first->getName() << " ";
     dbgs() << "]\n";
   });
 
@@ -1553,7 +1555,7 @@ static void dumpSessionStats(Session &S) {
 }
 
 static Expected<JITEvaluatedSymbol> getMainEntryPoint(Session &S) {
-  return S.ES.lookup(S.JDSearchOrder, EntryPointName);
+  return S.ES.lookup(S.JDSearchOrder, S.ES.intern(EntryPointName));
 }
 
 static Expected<JITEvaluatedSymbol> getOrcRuntimeEntryPoint(Session &S) {
@@ -1561,7 +1563,7 @@ static Expected<JITEvaluatedSymbol> getOrcRuntimeEntryPoint(Session &S) {
   const auto &TT = S.ES.getExecutorProcessControl().getTargetTriple();
   if (TT.getObjectFormat() == Triple::MachO)
     RuntimeEntryPoint = '_' + RuntimeEntryPoint;
-  return S.ES.lookup(S.JDSearchOrder, RuntimeEntryPoint);
+  return S.ES.lookup(S.JDSearchOrder, S.ES.intern(RuntimeEntryPoint));
 }
 
 static Expected<int> runWithRuntime(Session &S, ExecutorAddr EntryPointAddr) {
@@ -1630,11 +1632,20 @@ int main(int argc, char *argv[]) {
     // Find the entry-point function unconditionally, since we want to force
     // it to be materialized to collect stats.
     EntryPoint = ExitOnErr(getMainEntryPoint(*S));
+    LLVM_DEBUG({
+      dbgs() << "Using entry point \"" << EntryPointName
+             << "\": " << formatv("{0:x16}", EntryPoint.getAddress()) << "\n";
+    });
 
     // If we're running with the ORC runtime then replace the entry-point
     // with the __orc_rt_run_program symbol.
-    if (!OrcRuntime.empty())
+    if (!OrcRuntime.empty()) {
       EntryPoint = ExitOnErr(getOrcRuntimeEntryPoint(*S));
+      LLVM_DEBUG({
+        dbgs() << "(called via __orc_rt_run_program_wrapper at "
+               << formatv("{0:x16}", EntryPoint.getAddress()) << ")\n";
+      });
+    }
   }
 
   if (ShowAddrs)

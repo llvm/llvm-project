@@ -429,6 +429,10 @@ void printType(Type type, AsmPrinter &printer);
 /// Returns `true` if the given type is compatible with the LLVM dialect.
 bool isCompatibleType(Type type);
 
+/// Returns `true` if the given outer type is compatible with the LLVM dialect
+/// without checking its potential nested types such as struct elements.
+bool isCompatibleOuterType(Type type);
+
 /// Returns `true` if the given type is a floating-point type compatible with
 /// the LLVM dialect.
 bool isCompatibleFloatingPointType(Type type);

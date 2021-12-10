@@ -33,16 +33,6 @@ def br_symbol_16bit : Operand<iPTR> {
   let OperandType = "OPERAND_PCREL";
 }
 
-def SPOperand : AsmOperandClass {
-  let Name = "SPOperand";
-  let RenderMethod = "addRegOperands";
-  let DiagnosticType = !strconcat("Invalid", Name);
-}
-
-def SPOp : RegisterOperand<GPR> {
- let ParserMatchClass = SPOperand;
-}
-
 def constpool_symbol_16bit : Operand<iPTR> {
   let ParserMatchClass = Constpool;
   let EncoderMethod =
@@ -83,7 +73,7 @@ let isCommutable = 1 in {
   def XOR16 : R16_XZ_BINOP<0b1011, 0b01, "xor16", BinOpFrag<(xor node:$LHS, node:$RHS)>>;
   def NOR16 : R16_XZ_BINOP<0b1011, 0b10, "nor16", BinOpFrag<(not (or node:$LHS, node:$RHS))>>;
   let isCodeGenOnly = 1 in
-  def NOT16 : R16_XZ_UNOP<0b1011, 0b10, "not16">;
+  def NOT16 : R16_Z_UNOP<0b1011, 0b10, "not16">;
   def MULT16 :  R16_XZ_BINOP<0b1111, 0b00, "mult16", BinOpFrag<(mul node:$LHS, node:$RHS)>>;
 }
 def SUBU16XZ : R16_XZ_BINOP<0b1000, 0b10, "subu16", BinOpFrag<(sub node:$LHS, node:$RHS)>>;
@@ -108,7 +98,7 @@ let Constraints = "$rZ = $rz", isReMaterializable = 1, isAsCheapAsAMove = 1 in {
 }
 
 let isAdd = 1 in
-def ADDI16ZSP : I16_Z_8<0b011, (ins SPOp:$sp, uimm8_2:$imm8),
+def ADDI16ZSP : I16_Z_8<0b011, (ins GPRSP:$sp, uimm8_2:$imm8),
                         "addi16\t$rz, $sp, $imm8">;
 
 let isAdd = 1 in
@@ -150,9 +140,9 @@ def ST16W : I16_XZ_LDST<AddrMode16W, 0b110, "st16.w",
   (outs), (ins mGPR:$rz, mGPR:$rx, uimm5_2:$imm)>;
 
 def LD16WSP : I16_ZSP_LDST<AddrMode16W, 0b011, "ld16.w",
-  (outs mGPR:$rz), (ins SPOp:$sp, uimm8_2:$addr)>;
+  (outs mGPR:$rz), (ins GPRSP:$sp, uimm8_2:$addr)>;
 def ST16WSP : I16_ZSP_LDST<AddrMode16W, 0b111, "st16.w",
-  (outs), (ins mGPR:$rz, SPOp:$sp, uimm8_2:$addr)>;
+  (outs), (ins mGPR:$rz, GPRSP:$sp, uimm8_2:$addr)>;
 
 //===----------------------------------------------------------------------===//
 // Compare instructions.
@@ -450,3 +440,150 @@ def JBF16 : JBranchPseudo<(outs),
 let mayLoad = 1, Size = 2, isCodeGenOnly = 0 in
 def PseudoLRW16 : CSKYPseudo<(outs mGPR:$rz),
   (ins bare_symbol:$src), "lrw16 $rz, $src", []>;
+
+
+//===----------------------------------------------------------------------===//
+// Compress Instruction tablegen backend.
+//===----------------------------------------------------------------------===//
+
+def : CompressPat<(ADDU32 sGPR:$rd, sGPR:$rd, sGPR:$rs2),
+                  (ADDU16XZ sGPR:$rd, sGPR:$rs2)>;
+def : CompressPat<(ADDU32 sGPR:$rd, sGPR:$rs1, sGPR:$rd),
+                  (ADDU16XZ sGPR:$rd, sGPR:$rs1)>;
+def : CompressPat<(ADDU32 mGPR:$rd, mGPR:$rs1, mGPR:$rs2),
+                  (ADDU16 mGPR:$rd, mGPR:$rs1, mGPR:$rs2)>;
+def : CompressPat<(SUBU32 sGPR:$rd, sGPR:$rd, sGPR:$rs2),
+                  (SUBU16XZ sGPR:$rd, sGPR:$rs2)>;
+def : CompressPat<(SUBU32 mGPR:$rd, mGPR:$rs1, mGPR:$rs2),
+                  (SUBU16 mGPR:$rd, mGPR:$rs1, mGPR:$rs2)>;
+
+def : CompressPat<
+  (ADDC32 sGPR:$rd, CARRY:$cout, sGPR:$rd, sGPR:$rs2, CARRY:$cout),
+  (ADDC16 sGPR:$rd, CARRY:$cout, sGPR:$rs2, CARRY:$cout)
+  >;
+def : CompressPat<
+  (SUBC32 sGPR:$rd, CARRY:$cout, sGPR:$rd, sGPR:$rs2, CARRY:$cout),
+  (SUBC16 sGPR:$rd, CARRY:$cout, sGPR:$rs2, CARRY:$cout)
+  >;
+
+def : CompressPat<(ADDI32 mGPR:$rd, mGPR:$rs, oimm3:$imm),
+                  (ADDI16XZ mGPR:$rd, mGPR:$rs, oimm3:$imm)>;
+def : CompressPat<(SUBI32 mGPR:$rd, mGPR:$rs, oimm3:$imm),
+                  (SUBI16XZ mGPR:$rd, mGPR:$rs, oimm3:$imm)>;
+
+def : CompressPat<(ADDI32 mGPR:$rd, mGPR:$rd, oimm8:$imm),
+                  (ADDI16 mGPR:$rd, oimm8:$imm)>;
+def : CompressPat<(SUBI32 mGPR:$rd, mGPR:$rd, oimm8:$imm),
+                  (SUBI16 mGPR:$rd, oimm8:$imm)>;
+
+def : CompressPat<(ADDI32 GPRSP:$sp, GPRSP:$sp, uimm7_2:$imm),
+                  (ADDI16SPSP GPRSP:$sp, GPRSP:$sp, uimm7_2:$imm)>;
+def : CompressPat<(SUBI32 GPRSP:$sp, GPRSP:$sp, uimm7_2:$imm),
+                  (SUBI16SPSP GPRSP:$sp, GPRSP:$sp, uimm7_2:$imm)>;
+
+def : CompressPat<(ADDI32 mGPR:$rd, GPRSP:$sp, uimm8_2:$imm),
+                  (ADDI16ZSP mGPR:$rd, GPRSP:$sp, uimm8_2:$imm)>;
+
+def : CompressPat<(MULT32 sGPR:$rd, sGPR:$rd, sGPR:$rs2),
+                  (MULT16 sGPR:$rd, sGPR:$rs2)>;
+def : CompressPat<(MULT32 sGPR:$rd, sGPR:$rs1, sGPR:$rd),
+                  (MULT16 sGPR:$rd, sGPR:$rs1)>;
+def : CompressPat<(AND32 sGPR:$rd, sGPR:$rd, sGPR:$rs2),
+                  (AND16 sGPR:$rd, sGPR:$rs2)>;
+def : CompressPat<(AND32 sGPR:$rd, sGPR:$rs1, sGPR:$rd),
+                  (AND16 sGPR:$rd, sGPR:$rs1)>;
+def : CompressPat<(OR32 sGPR:$rd, sGPR:$rd, sGPR:$rs2),
+                  (OR16 sGPR:$rd, sGPR:$rs2)>;
+def : CompressPat<(OR32 sGPR:$rd, sGPR:$rs1, sGPR:$rd),
+                  (OR16 sGPR:$rd, sGPR:$rs1)>;
+def : CompressPat<(XOR32 sGPR:$rd, sGPR:$rd, sGPR:$rs2),
+                  (XOR16 sGPR:$rd, sGPR:$rs2)>;
+def : CompressPat<(XOR32 sGPR:$rd, sGPR:$rs1, sGPR:$rd),
+                  (XOR16 sGPR:$rd, sGPR:$rs1)>;
+
+def : CompressPat<(ANDN32 sGPR:$rd, sGPR:$rd, sGPR:$rs2),
+                  (ANDN16 sGPR:$rd, sGPR:$rs2)>;
+def : CompressPat<(NOR32 sGPR:$rd, sGPR:$rd, sGPR:$rs2),
+                  (NOR16 sGPR:$rd, sGPR:$rs2)>;
+def : CompressPat<(LSL32 sGPR:$rd, sGPR:$rd, sGPR:$rs2),
+                  (LSL16 sGPR:$rd, sGPR:$rs2)>;
+def : CompressPat<(LSR32 sGPR:$rd, sGPR:$rd, sGPR:$rs2),
+                  (LSR16 sGPR:$rd, sGPR:$rs2)>;
+def : CompressPat<(ASR32 sGPR:$rd, sGPR:$rd, sGPR:$rs2),
+                  (ASR16 sGPR:$rd, sGPR:$rs2)>;
+def : CompressPat<(ROTL32 sGPR:$rd, sGPR:$rd, sGPR:$rs2),
+                  (ROTL16 sGPR:$rd, sGPR:$rs2)>;
+
+def : CompressPat<(NOT32 sGPR:$rd, sGPR:$rd),
+                  (NOT16 sGPR:$rd)>;
+
+let Predicates = [iHas2E3] in
+def : CompressPat<(REVB32 sGPR:$rd, sGPR:$rs),
+                  (REVB16 sGPR:$rd, sGPR:$rs)>;
+
+def : CompressPat<(LSLI32 mGPR:$rd, mGPR:$rs, uimm5:$imm),
+                  (LSLI16 mGPR:$rd, mGPR:$rs, uimm5:$imm)>;
+def : CompressPat<(LSRI32 mGPR:$rd, mGPR:$rs, uimm5:$imm),
+                  (LSRI16 mGPR:$rd, mGPR:$rs, uimm5:$imm)>;
+def : CompressPat<(ASRI32 mGPR:$rd, mGPR:$rs, uimm5:$imm),
+                  (ASRI16 mGPR:$rd, mGPR:$rs, uimm5:$imm)>;
+
+def : CompressPat<(CMPHS32 CARRY:$ca, sGPR:$rs1, sGPR:$rs2),
+                  (CMPHS16 CARRY:$ca, sGPR:$rs1, sGPR:$rs2)>;
+def : CompressPat<(CMPLT32 CARRY:$ca, sGPR:$rs1, sGPR:$rs2),
+                  (CMPLT16 CARRY:$ca, sGPR:$rs1, sGPR:$rs2)>;
+def : CompressPat<(CMPNE32 CARRY:$ca, sGPR:$rs1, sGPR:$rs2),
+                  (CMPNE16 CARRY:$ca, sGPR:$rs1, sGPR:$rs2)>;
+
+def : CompressPat<(CMPHSI32 CARRY:$ca, mGPR:$rs, oimm5:$imm),
+                  (CMPHSI16 CARRY:$ca, mGPR:$rs, oimm5:$imm)>;
+def : CompressPat<(CMPLTI32 CARRY:$ca, mGPR:$rs, oimm5:$imm),
+                  (CMPLTI16 CARRY:$ca, mGPR:$rs, oimm5:$imm)>;
+def : CompressPat<(CMPNEI32 CARRY:$ca, mGPR:$rs, uimm5:$imm),
+                  (CMPNEI16 CARRY:$ca, mGPR:$rs, uimm5:$imm)>;
+
+def : CompressPat<(JSR32 sGPR:$rd),
+                  (JSR16 sGPR:$rd)>;
+
+
+def : CompressPat<(MVCV32 sGPR:$rd, CARRY:$ca),
+                  (MVCV16 sGPR:$rd, CARRY:$ca)>;
+def : CompressPat<(MOV32 sGPR:$rd, sGPR:$ca),
+                  (MOV16 sGPR:$rd, sGPR:$ca)>;
+def : CompressPat<(MOVI32 mGPR:$rd, uimm8:$imm),
+                  (MOVI16 mGPR:$rd, uimm8:$imm)>;
+
+def : CompressPat<(LD32B mGPR:$rd, mGPR:$rs, uimm5:$imm),
+                  (LD16B mGPR:$rd, mGPR:$rs, uimm5:$imm)>;
+def : CompressPat<(LD32H mGPR:$rd, mGPR:$rs, uimm5_1:$imm),
+                  (LD16H mGPR:$rd, mGPR:$rs, uimm5_1:$imm)>;
+def : CompressPat<(LD32W mGPR:$rd, mGPR:$rs, uimm5_2:$imm),
+                  (LD16W mGPR:$rd, mGPR:$rs, uimm5_2:$imm)>;
+def : CompressPat<(LD32W mGPR:$rd, GPRSP:$sp, uimm8_2:$imm),
+                  (LD16WSP mGPR:$rd, GPRSP:$sp, uimm8_2:$imm)>;
+
+def : CompressPat<(ST32B mGPR:$rd, mGPR:$rs, uimm5:$imm),
+                  (ST16B mGPR:$rd, mGPR:$rs, uimm5:$imm)>;
+def : CompressPat<(ST32H mGPR:$rd, mGPR:$rs, uimm5_1:$imm),
+                  (ST16H mGPR:$rd, mGPR:$rs, uimm5_1:$imm)>;
+def : CompressPat<(ST32W mGPR:$rd, mGPR:$rs, uimm5_2:$imm),
+                  (ST16W mGPR:$rd, mGPR:$rs, uimm5_2:$imm)>;
+def : CompressPat<(ST32W mGPR:$rd, GPRSP:$sp, uimm8_2:$imm),
+                  (ST16WSP mGPR:$rd, GPRSP:$sp, uimm8_2:$imm)>;
+
+let Predicates = [HasBTST16] in
+def : CompressPat<(BTSTI32 CARRY:$ca, mGPR:$rs, uimm5:$imm),
+                  (BTSTI16 CARRY:$ca, mGPR:$rs, uimm5:$imm)>;
+def : CompressPat<(BCLRI32 mGPR:$rd, mGPR:$rd, uimm5:$imm),
+                  (BCLRI16 mGPR:$rd, uimm5:$imm)>;
+def : CompressPat<(BSETI32 mGPR:$rd, mGPR:$rd, uimm5:$imm),
+                  (BSETI16 mGPR:$rd, uimm5:$imm)>;
+
+def : CompressPat<(ZEXTB32 sGPR:$rd, sGPR:$rs),
+                  (ZEXTB16 sGPR:$rd, sGPR:$rs)>;
+def : CompressPat<(ZEXTH32 sGPR:$rd, sGPR:$rs),
+                  (ZEXTH16 sGPR:$rd, sGPR:$rs)>;
+def : CompressPat<(SEXTB32 sGPR:$rd, sGPR:$rs),
+                  (SEXTB16 sGPR:$rd, sGPR:$rs)>;
+def : CompressPat<(SEXTH32 sGPR:$rd, sGPR:$rs),
+                  (SEXTH16 sGPR:$rd, sGPR:$rs)>;

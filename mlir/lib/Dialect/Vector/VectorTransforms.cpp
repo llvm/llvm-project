@@ -960,7 +960,20 @@ public:
     auto dstType = op.getType();
     auto eltType = dstType.getElementType();
     auto dimSizes = op.mask_dim_sizes();
-    int64_t rank = dimSizes.size();
+    int64_t rank = dstType.getRank();
+
+    if (rank == 0) {
+      assert(dimSizes.size() == 1 &&
+             "Expected exactly one dim size for a 0-D vector");
+      bool value = dimSizes[0].cast<IntegerAttr>().getInt() == 1;
+      rewriter.replaceOpWithNewOp<arith::ConstantOp>(
+          op, dstType,
+          DenseIntElementsAttr::get(
+              VectorType::get(ArrayRef<int64_t>{}, rewriter.getI1Type()),
+              ArrayRef<bool>{value}));
+      return success();
+    }
+
     int64_t trueDim = std::min(dstType.getDimSize(0),
                                dimSizes[0].cast<IntegerAttr>().getInt());
 
@@ -1175,7 +1188,7 @@ private:
 /// Ex:
 /// ```
 ///   %0 = arith.mulf %arg0, %arg1 : vector<8x32x16xf32>
-///   %1 = vector.multi_reduction #vector.kind<add>, %0 [1]
+///   %1 = vector.multi_reduction add, %0 [1]
 ///     : vector<8x32x16xf32> to vector<8x16xf32>
 /// ```
 /// Gets converted to:
@@ -1185,7 +1198,7 @@ private:
 ///         affine_map<(d0, d1, d2) -> (d0, d1, d2)>,
 ///         affine_map<(d0, d1, d2) -> (d0, d1)>],
 ///    iterator_types = ["parallel", "parallel", "reduction"],
-///    kind = #vector.kind<add>} %0, %arg1, %cst_f0
+///    kind = add} %0, %arg1, %cst_f0
 ///    : vector<8x32x16xf32>, vector<8x32x16xf32> into vector<8x32xf32>
 ///  ```
 struct MultiReduceToContract
@@ -1234,7 +1247,7 @@ struct MultiReduceToContract
 ///         affine_map<(d0, d1, d2) -> (d0, d1, d2)>,
 ///         affine_map<(d0, d1, d2) -> (d0, d1)>],
 ///    iterator_types = ["parallel", "parallel", "reduction"],
-///    kind = #vector.kind<add>} %0, %arg1, %cst_f0
+///    kind = add} %0, %arg1, %cst_f0
 ///    : vector<8x32x16xf32>, vector<8x32x16xf32> into vector<8x32xf32>
 /// ```
 /// Gets converted to:
@@ -1244,7 +1257,7 @@ struct MultiReduceToContract
 ///         affine_map<(d0, d1, d2) -> (d0, d1, d2)>,
 ///         affine_map<(d0, d1, d2) -> (d0, d1)>],
 ///    iterator_types = ["parallel", "parallel", "reduction"],
-///    kind = #vector.kind<add>} %arg0, %arg1, %cst_f0
+///    kind = add} %arg0, %arg1, %cst_f0
 ///    : vector<8x32x16xf32>, vector<8x32x16xf32> into vector<8x32xf32>
 ///  ```
 struct CombineContractTranspose
@@ -1291,7 +1304,7 @@ struct CombineContractTranspose
 ///         affine_map<(d0, d1, d2) -> (d0, d1, d2)>,
 ///         affine_map<(d0, d1, d2) -> (d0, d1)>],
 ///    iterator_types = ["parallel", "parallel", "reduction"],
-///    kind = #vector.kind<add>} %0, %arg1, %cst_f0
+///    kind = add} %0, %arg1, %cst_f0
 ///    : vector<8x32x16xf32>, vector<8x32x16xf32> into vector<8x32xf32>
 /// ```
 /// Gets converted to:
@@ -1301,7 +1314,7 @@ struct CombineContractTranspose
 ///         affine_map<(d0, d1, d2) -> (d0, d1, d2)>,
 ///         affine_map<(d0, d1, d2) -> (d0, d1)>],
 ///    iterator_types = ["parallel", "parallel", "reduction"],
-///    kind = #vector.kind<add>} %arg0, %arg1, %cst_f0
+///    kind = add} %arg0, %arg1, %cst_f0
 ///    : vector<32x16xf32>, vector<8x32x16xf32> into vector<8x32xf32>
 ///  ```
 struct CombineContractBroadcast

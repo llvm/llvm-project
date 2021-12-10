@@ -19,6 +19,6 @@ namespace mlir {
 #define GEN_PASS_CLASSES
 #include "mlir/Dialect/Tosa/Transforms/Passes.h.inc"
 
-} // end namespace mlir
+} // namespace mlir
 
 #endif // MLIR_DIALECT_TOSA_TRANSFORMS_PASSDETAIL_H

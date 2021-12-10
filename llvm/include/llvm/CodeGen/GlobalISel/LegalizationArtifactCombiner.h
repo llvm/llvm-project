@@ -1248,7 +1248,7 @@ private:
     for (auto *DeadMI : DeadInsts) {
       LLVM_DEBUG(dbgs() << *DeadMI << "Is dead, eagerly deleting\n");
       WrapperObserver.erasingInstr(*DeadMI);
-      DeadMI->eraseFromParentAndMarkDBGValuesForRemoval();
+      DeadMI->eraseFromParent();
     }
     DeadInsts.clear();
   }

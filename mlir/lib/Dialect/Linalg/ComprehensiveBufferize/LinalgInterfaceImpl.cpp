@@ -56,6 +56,10 @@ static LogicalResult bufferizeLinalgOp(OpBuilder &b, LinalgOp op,
   // Take a guard before anything else.
   OpBuilder::InsertionGuard g(b);
 
+  // Nothing to do. This op is already bufferized.
+  if (op.hasBufferSemantics())
+    return success();
+
   // Ensure op has only tensors. Allow mixed tensor-buffer mode on a per-need
   // basis.
   if (!op.hasTensorSemantics())
@@ -82,15 +86,15 @@ static LogicalResult bufferizeLinalgOp(OpBuilder &b, LinalgOp op,
 
   // Set insertion point now that potential alloc/dealloc are introduced.
   b.setInsertionPoint(op);
-  op.clone(b, loc, /*resultTypes=*/TypeRange{}, newOperands);
+  auto bufferizedOp = cast<LinalgOp>(
+      op.clone(b, loc, /*resultTypes=*/TypeRange{}, newOperands));
 
   // Replace the results of the old op with the new output buffers.
   if (op->getNumResults())
     state.mapBuffer(op->getResults(), newOutputBuffers);
 
   // The original op will be DCE'd away later.
-
-  return success();
+  return comprehensive_bufferize::bufferize(bufferizedOp.getBlock(), state);
 }
 
 template <typename OpTy>
@@ -159,8 +163,8 @@ struct InitTensorOpInterface
     if (initTensorOp->getUses().empty())
       return success();
 
-    Value alloc = state.createAllocDeallocFn(b, initTensorOp->getLoc(),
-                                             initTensorOp.result());
+    Value alloc = state.createAllocDeallocPair(b, initTensorOp->getLoc(),
+                                               initTensorOp.result());
     state.mapBuffer(initTensorOp.result(), alloc);
     return success();
   }
@@ -193,7 +197,7 @@ struct TiledLoopOpInterface
     return BufferRelation::Equivalent;
   }
 
-  bool isWritable(Operation *op, Value value) const {
+  bool isWritable(Operation *op, Value value, BufferizationState &state) const {
     // Interestingly, linalg::TiledLoopOp's bbArg can **always** be viewed
     // inplace from the perspective of ops nested under:
     //   1. Either the matching iter operand is not bufferized inplace and an
@@ -253,8 +257,6 @@ struct TiledLoopOpInterface
         return failure();
 
       // Insert mapping and aliasing info.
-      state.aliasInfo.createAliasInfoEntry(resultBuffer);
-      state.aliasInfo.insertNewBufferEquivalence(opResult, resultBuffer);
       state.mapBuffer(opResult, resultBuffer);
 
       // Insert new operand and bbArg.
@@ -263,9 +265,6 @@ struct TiledLoopOpInterface
           body->insertArgument(nextOutputBBArgIndex, resultBuffer.getType());
       BlockArgument oldTensorBBArg = body->getArgument(oldOutputBBArgIndex);
       // Insert mapping and aliasing info.
-      state.aliasInfo.createAliasInfoEntry(newBufferBBArg);
-      state.aliasInfo.insertNewBufferEquivalence(oldTensorBBArg,
-                                                 newBufferBBArg);
       state.mapBuffer(oldTensorBBArg, newBufferBBArg);
 
       // Set operand of `linalg.yield` to the bbArg so it just canonicalizes
@@ -303,9 +302,6 @@ struct TiledLoopOpInterface
       BlockArgument oldTensorBBArg = body->getArgument(oldInputBBArgIndex);
 
       // Insert mapping and aliasing info.
-      state.aliasInfo.createAliasInfoEntry(newBufferBBArg);
-      state.aliasInfo.insertNewBufferEquivalence(oldTensorBBArg,
-                                                 newBufferBBArg);
       state.mapBuffer(oldTensorBBArg, newBufferBBArg);
 
       // Increment indices.
@@ -379,28 +375,29 @@ struct LinalgOpInterfaceHelper<> {
 
 } // namespace
 
-/// Try to eliminate InitTensorOps inside funcOp. An InitTensorOp is replaced
+/// Try to eliminate InitTensorOps inside `op`. An InitTensorOp is replaced
 /// with the the result of `rewriteFunc` if it is anchored on a matching
 /// OpOperand. "Anchored" means that there is a path on the reverse SSA use-def
 /// chain, starting from the OpOperand and always following the aliasing
 /// OpOperand, that eventually ends at a single InitTensorOp.
 LogicalResult mlir::linalg::comprehensive_bufferize::linalg_ext::
     InitTensorEliminationStep::eliminateInitTensors(
-        FuncOp funcOp, BufferizationState &state,
+        Operation *op, BufferizationState &state,
+        BufferizationAliasInfo &aliasInfo,
         std::function<bool(OpOperand &)> anchorMatchFunc,
         std::function<Value(OpBuilder &, Location, OpOperand &)> rewriteFunc,
         SmallVector<Operation *> &newOps) {
-  OpBuilder b(funcOp->getContext());
-  BufferizationAliasInfo &aliasInfo = state.aliasInfo;
+  OpBuilder b(op->getContext());
+  const BufferizationOptions &options = state.getOptions();
 
-  WalkResult status = funcOp->walk([&](Operation *op) {
+  WalkResult status = op->walk([&](Operation *op) {
     for (OpOperand &operand : op->getOpOperands()) {
       // Is this a matching OpOperand?
       if (!anchorMatchFunc(operand))
         continue;
 
       SetVector<Value> maybeInitTensor =
-          findValueInReverseUseDefChain(operand.get(), [&](Value val) {
+          findValueInReverseUseDefChain(operand.get(), options, [&](Value val) {
             // Continue traversal until this function returns true.
             OpResult opResult = val.dyn_cast<OpResult>();
             if (!opResult)
@@ -451,7 +448,7 @@ LogicalResult mlir::linalg::comprehensive_bufferize::linalg_ext::
   return failure(status.wasInterrupted());
 }
 
-/// Try to eliminate InitTensorOps inside funcOp. An InitTensorOp can be
+/// Try to eliminate InitTensorOps inside `op`. An InitTensorOp can be
 /// eliminated if it is eventually inserted into another tensor (and some other
 /// conditions are met).
 ///
@@ -481,17 +478,17 @@ LogicalResult mlir::linalg::comprehensive_bufferize::linalg_ext::
 /// out-of-place due to RaW conflicts.
 LogicalResult mlir::linalg::comprehensive_bufferize::linalg_ext::
     InsertSliceAnchoredInitTensorEliminationStep::run(
-        FuncOp funcOp, BufferizationState &state,
-        SmallVector<Operation *> &newOps) {
+        Operation *op, BufferizationState &state,
+        BufferizationAliasInfo &aliasInfo, SmallVector<Operation *> &newOps) {
   return eliminateInitTensors(
-      funcOp, state,
+      op, state, aliasInfo,
       [&](OpOperand &operand) {
         auto insertSliceOp =
             dyn_cast<tensor::InsertSliceOp>(operand.getOwner());
         if (!insertSliceOp)
           return false;
         // Only inplace bufferized InsertSliceOps are eligible.
-        if (!state.aliasInfo.isInPlace(insertSliceOp->getOpResult(0)))
+        if (!aliasInfo.isInPlace(insertSliceOp->getOpResult(0)))
           return false;
         return &operand == &insertSliceOp->getOpOperand(0) /*source*/;
       },

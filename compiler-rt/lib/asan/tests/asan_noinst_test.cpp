@@ -233,14 +233,20 @@ TEST(AddressSanitizer, ShadowRegionIsPoisonedTest) {
 // Test __asan_load1 & friends.
 TEST(AddressSanitizer, LoadStoreCallbacks) {
   typedef void (*CB)(uptr p);
-  CB cb[2][5] = {
-      {
-        __asan_load1, __asan_load2, __asan_load4, __asan_load8, __asan_load16,
-      }, {
-        __asan_store1, __asan_store2, __asan_store4, __asan_store8,
-        __asan_store16,
-      }
-  };
+  CB cb[2][5] = {{
+                     __asan_load1,
+                     __asan_load2,
+                     __asan_load4,
+                     __asan_load8,
+                     __asan_load16,
+                 },
+                 {
+                     __asan_store1,
+                     __asan_store2,
+                     __asan_store4,
+                     __asan_store8,
+                     __asan_store16,
+                 }};
 
   uptr buggy_ptr;
 

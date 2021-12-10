@@ -20,6 +20,7 @@
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Lex/HeaderSearch.h"
 #include "clang/Lex/PPCallbacks.h"
+#include "clang/Lex/Preprocessor.h"
 #include "clang/Tooling/Inclusions/HeaderIncludes.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseSet.h"
@@ -64,6 +65,7 @@ struct Inclusion {
   int HashLine = 0;        // Line number containing the directive, 0-indexed.
   SrcMgr::CharacteristicKind FileKind = SrcMgr::C_User;
   llvm::Optional<unsigned> HeaderID;
+  bool BehindPragmaKeep = false; // Has IWYU pragma: keep right after.
 };
 llvm::raw_ostream &operator<<(llvm::raw_ostream &, const Inclusion &);
 bool operator==(const Inclusion &LHS, const Inclusion &RHS);
@@ -123,9 +125,10 @@ public:
     RealPathNames.emplace_back();
   }
 
-  // Returns a PPCallback that visits all inclusions in the main file and
-  // populates the structure.
-  std::unique_ptr<PPCallbacks> collect(const CompilerInstance &CI);
+  // Inserts a PPCallback and CommentHandler that visits all includes in the
+  // main file and populates the structure. It will also scan for IWYU pragmas
+  // in comments.
+  void collect(const CompilerInstance &CI);
 
   // HeaderID identifies file in the include graph. It corresponds to a
   // FileEntry rather than a FileID, but stays stable across preamble & main

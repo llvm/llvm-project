@@ -1,6 +1,7 @@
 add_mlir_library(MLIRPresburger
-  Simplex.cpp
+  IntegerPolyhedron.cpp
   Matrix.cpp
+  Simplex.cpp
 
   DEPENDS
   MLIRBuiltinLocationAttributesIncGen

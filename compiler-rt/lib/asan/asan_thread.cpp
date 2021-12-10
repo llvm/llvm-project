@@ -305,7 +305,7 @@ void AsanThread::SetThreadStackAndTls(const InitOptions *options) {
   uptr stack_size = 0;
   GetThreadStackAndTls(tid() == kMainTid, &stack_bottom_, &stack_size,
                        &tls_begin_, &tls_size);
-  stack_top_ = RoundDownTo(stack_bottom_ + stack_size, SHADOW_GRANULARITY);
+  stack_top_ = RoundDownTo(stack_bottom_ + stack_size, ASAN_SHADOW_GRANULARITY);
   tls_end_ = tls_begin_ + tls_size;
   dtls_ = DTLS_Get();
 
@@ -321,8 +321,8 @@ void AsanThread::ClearShadowForThreadStackAndTLS() {
   if (stack_top_ != stack_bottom_)
     PoisonShadow(stack_bottom_, stack_top_ - stack_bottom_, 0);
   if (tls_begin_ != tls_end_) {
-    uptr tls_begin_aligned = RoundDownTo(tls_begin_, SHADOW_GRANULARITY);
-    uptr tls_end_aligned = RoundUpTo(tls_end_, SHADOW_GRANULARITY);
+    uptr tls_begin_aligned = RoundDownTo(tls_begin_, ASAN_SHADOW_GRANULARITY);
+    uptr tls_end_aligned = RoundUpTo(tls_end_, ASAN_SHADOW_GRANULARITY);
     FastPoisonShadowPartialRightRedzone(tls_begin_aligned,
                                         tls_end_ - tls_begin_aligned,
                                         tls_end_aligned - tls_end_, 0);
@@ -346,27 +346,27 @@ bool AsanThread::GetStackFrameAccessByAddr(uptr addr,
     return true;
   }
   uptr aligned_addr = RoundDownTo(addr, SANITIZER_WORDSIZE / 8);  // align addr.
-  uptr mem_ptr = RoundDownTo(aligned_addr, SHADOW_GRANULARITY);
+  uptr mem_ptr = RoundDownTo(aligned_addr, ASAN_SHADOW_GRANULARITY);
   u8 *shadow_ptr = (u8*)MemToShadow(aligned_addr);
   u8 *shadow_bottom = (u8*)MemToShadow(bottom);
 
   while (shadow_ptr >= shadow_bottom &&
          *shadow_ptr != kAsanStackLeftRedzoneMagic) {
     shadow_ptr--;
-    mem_ptr -= SHADOW_GRANULARITY;
+    mem_ptr -= ASAN_SHADOW_GRANULARITY;
   }
 
   while (shadow_ptr >= shadow_bottom &&
          *shadow_ptr == kAsanStackLeftRedzoneMagic) {
     shadow_ptr--;
-    mem_ptr -= SHADOW_GRANULARITY;
+    mem_ptr -= ASAN_SHADOW_GRANULARITY;
   }
 
   if (shadow_ptr < shadow_bottom) {
     return false;
   }
 
-  uptr* ptr = (uptr*)(mem_ptr + SHADOW_GRANULARITY);
+  uptr *ptr = (uptr *)(mem_ptr + ASAN_SHADOW_GRANULARITY);
   CHECK(ptr[0] == kCurrentStackFrameMagic);
   access->offset = addr - (uptr)ptr;
   access->frame_pc = ptr[2];

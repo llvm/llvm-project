@@ -932,6 +932,7 @@ inline uptr GetPthreadDestructorIterations() {
 
 void *internal_start_thread(void *(*func)(void*), void *arg);
 void internal_join_thread(void *th);
+void MaybeStartBackgroudThread();
 
 // Make the compiler think that something is going on there.
 // Use this inside a loop that looks like memset/memcpy/etc to prevent the

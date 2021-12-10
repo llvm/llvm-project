@@ -896,6 +896,13 @@
 // CHECK-PAC-LEAF: #define __ARM_FEATURE_PAC_DEFAULT 5
 // CHECK-PAC-BKEY-LEAF: #define __ARM_FEATURE_PAC_DEFAULT 6
 
+// RUN: %clang -target arm-arm-none-eabi -march=armv8.1-m.main -x c -E -dM %s -o - | FileCheck --check-prefixes=CHECK-NOBTI-EXT,CHECK-NOPAC-EXT %s
+// RUN: %clang -target arm-arm-none-eabi -march=armv7-m+pacbti -x c -E -dM %s -o - | FileCheck --check-prefixes=CHECK-PACBTI-EXT %s
+// CHECK-NOBTI-EXT-NOT: #define __ARM_FEATURE_BTI 1
+// CHECK-NOPAC-EXT-NOT: #define __ARM_FEATURE_PAUTH 1
+// CHECK-PACBTI-EXT: #define __ARM_FEATURE_BTI 1
+// CHECK-PACBTI-EXT: #define __ARM_FEATURE_PAUTH 1
+
 // ================== Check BFloat16 Extensions.
 // RUN: %clang -target arm-arm-none-eabi -march=armv8.6-a+bf16 -x c -E -dM %s -o - 2>&1 | FileCheck -check-prefix=CHECK-BFLOAT %s
 // CHECK-BFLOAT: #define __ARM_BF16_FORMAT_ALTERNATIVE 1

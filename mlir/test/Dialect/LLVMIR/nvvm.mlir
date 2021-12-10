@@ -95,6 +95,15 @@ func @nvvm_wmma_mma(%0 : i32, %1 : i32, %2 : i32, %3 : i32, %4 : i32, %5 : i32,
   llvm.return %r : !llvm.struct<(f32, f32, f32, f32, f32, f32, f32, f32)>
 }
 
+llvm.func @cp_async(%arg0: !llvm.ptr<i8, 3>, %arg1: !llvm.ptr<i8, 1>) {
+// CHECK:  nvvm.cp.async.shared.global %{{.*}}, %{{.*}}, 16
+  nvvm.cp.async.shared.global %arg0, %arg1, 16
+// CHECK: nvvm.cp.async.commit.group
+  nvvm.cp.async.commit.group
+// CHECK: nvvm.cp.async.wait.group 0
+  nvvm.cp.async.wait.group 0
+  llvm.return
+}
 
 // -----
 

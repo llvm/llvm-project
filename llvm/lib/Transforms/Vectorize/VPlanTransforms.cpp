@@ -18,7 +18,7 @@ using namespace llvm;
 
 void VPlanTransforms::VPInstructionsToVPRecipes(
     Loop *OrigLoop, VPlanPtr &Plan,
-    LoopVectorizationLegality::InductionList &Inductions,
+    const LoopVectorizationLegality::InductionList &Inductions,
     SmallPtrSetImpl<Instruction *> &DeadInstructions, ScalarEvolution &SE) {
 
   auto *TopRegion = cast<VPRegionBlock>(Plan->getEntry());
@@ -48,7 +48,7 @@ void VPlanTransforms::VPInstructionsToVPRecipes(
         if (II.getKind() == InductionDescriptor::IK_IntInduction ||
             II.getKind() == InductionDescriptor::IK_FpInduction) {
           VPValue *Start = Plan->getOrAddVPValue(II.getStartValue());
-          NewRecipe = new VPWidenIntOrFpInductionRecipe(Phi, Start, nullptr);
+          NewRecipe = new VPWidenIntOrFpInductionRecipe(Phi, Start);
         } else {
           Plan->addVPValue(Phi, VPPhi);
           continue;

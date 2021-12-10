@@ -64,6 +64,10 @@ lldb::ProcessSP ProcessElfCore::CreateInstance(lldb::TargetSP target_sp,
       DataExtractor data(data_sp, lldb::eByteOrderLittle, 4);
       lldb::offset_t data_offset = 0;
       if (elf_header.Parse(data, &data_offset)) {
+        // Check whether we're dealing with a raw FreeBSD "full memory dump"
+        // ELF vmcore that needs to be handled via FreeBSDKernel plugin instead.
+        if (elf_header.e_ident[7] == 0xFF && elf_header.e_version == 0)
+          return process_sp;
         if (elf_header.e_type == llvm::ELF::ET_CORE)
           process_sp = std::make_shared<ProcessElfCore>(target_sp, listener_sp,
                                                         *crash_file);

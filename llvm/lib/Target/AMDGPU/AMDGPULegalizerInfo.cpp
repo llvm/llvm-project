@@ -4873,7 +4873,7 @@ bool AMDGPULegalizerInfo::legalizeBVHIntrinsic(MachineInstr &MI,
   SmallVector<Register, 12> Ops;
   if (UseNSA && IsGFX11Plus) {
     auto packLanes = [&Ops, &S32, &V3S32, &B] (Register Src) {
-      auto Unmerge = B.buildUnmerge({S32, S32, S32, S32}, Src);
+      auto Unmerge = B.buildUnmerge({S32, S32, S32}, Src);
       auto Merged = B.buildMerge(V3S32,
         {Unmerge.getReg(0), Unmerge.getReg(1), Unmerge.getReg(2)});
       Ops.push_back(Merged.getReg(0));
@@ -4884,8 +4884,8 @@ bool AMDGPULegalizerInfo::legalizeBVHIntrinsic(MachineInstr &MI,
     packLanes(RayOrigin);
 
     if (IsA16) {
-      auto UnmergeRayDir = B.buildUnmerge({S16, S16, S16, S16}, RayDir);
-      auto UnmergeRayInvDir = B.buildUnmerge({S16, S16, S16, S16}, RayInvDir);
+      auto UnmergeRayDir = B.buildUnmerge({S16, S16, S16}, RayDir);
+      auto UnmergeRayInvDir = B.buildUnmerge({S16, S16, S16}, RayInvDir);
       auto MergedDir = B.buildMerge(V3S32, {
         B.buildBitcast(S32, B.buildMerge(V2S16,
           {UnmergeRayInvDir.getReg(0), UnmergeRayDir.getReg(0)})).getReg(0),
@@ -4909,8 +4909,8 @@ bool AMDGPULegalizerInfo::legalizeBVHIntrinsic(MachineInstr &MI,
     }
     Ops.push_back(RayExtent);
 
-    auto packLanes = [&Ops, &S32, &B] (Register Src) {
-      auto Unmerge = B.buildUnmerge({S32, S32, S32, S32}, Src);
+    auto packLanes = [&Ops, &S32, &B](Register Src) {
+      auto Unmerge = B.buildUnmerge({S32, S32, S32}, Src);
       Ops.push_back(Unmerge.getReg(0));
       Ops.push_back(Unmerge.getReg(1));
       Ops.push_back(Unmerge.getReg(2));
@@ -4918,8 +4918,8 @@ bool AMDGPULegalizerInfo::legalizeBVHIntrinsic(MachineInstr &MI,
 
     packLanes(RayOrigin);
     if (IsA16) {
-      auto UnmergeRayDir = B.buildUnmerge({S16, S16, S16, S16}, RayDir);
-      auto UnmergeRayInvDir = B.buildUnmerge({S16, S16, S16, S16}, RayInvDir);
+      auto UnmergeRayDir = B.buildUnmerge({S16, S16, S16}, RayDir);
+      auto UnmergeRayInvDir = B.buildUnmerge({S16, S16, S16}, RayInvDir);
       Register R1 = MRI.createGenericVirtualRegister(S32);
       Register R2 = MRI.createGenericVirtualRegister(S32);
       Register R3 = MRI.createGenericVirtualRegister(S32);

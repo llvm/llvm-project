@@ -503,10 +503,8 @@ LogicalResult mlir::linalg::LinalgPaddingPattern::matchAndRewrite(
   FailureOr<SmallVector<Value>> newResults = rewriteAsPaddedOp(
       rewriter, linalgOp, options.paddingValueComputationFunction,
       options.paddingNoFoldComputationFunction, paddedOp);
-  if (failed(newResults)) {
-    filter.replaceLinalgTransformationFilter(rewriter, linalgOp);
+  if (failed(newResults))
     return failure();
-  }
 
   // Compute the desired hoisting depths.
   SmallVector<int64_t> depths;
@@ -907,9 +905,12 @@ LogicalResult ExtractSliceOfPadTensorSwapPattern::matchAndRewrite(
   if (!sliceOp.hasUnitStride())
     return failure();
 
-  Operation *tiledPadOp = padOp.getTiledImplementation(
-      rewriter, /*dest=*/ValueRange{}, sliceOp.getMixedOffsets(),
-      sliceOp.getMixedSizes());
+  Operation *tiledPadOp =
+      padOp
+          .getTiledImplementation(
+              rewriter, /*dest=*/ValueRange{}, sliceOp.getMixedOffsets(),
+              sliceOp.getMixedSizes(), /*tileDestOperands=*/false)
+          .front();
   // All shapes are static and the data source is actually used. Rewrite into
   // pad_tensor(subtensor(x)).
   rewriter.replaceOp(sliceOp, tiledPadOp->getResults());

@@ -50,7 +50,7 @@ struct format_provider<mlir::tblgen::Pattern::IdentifierLine> {
     os << v.first << ":" << v.second;
   }
 };
-} // end namespace llvm
+} // namespace llvm
 
 //===----------------------------------------------------------------------===//
 // PatternEmitter
@@ -328,7 +328,7 @@ private:
   StaticVerifierFunctionEmitter staticVerifierEmitter;
 };
 
-} // end anonymous namespace
+} // namespace
 
 PatternEmitter::PatternEmitter(Record *pat, RecordOperatorMap *mapper,
                                raw_ostream &os, StaticMatcherHelper &helper)

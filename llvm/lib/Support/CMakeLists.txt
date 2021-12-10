@@ -45,7 +45,7 @@ elseif( CMAKE_HOST_UNIX )
     set(system_libs ${system_libs} ${Backtrace_LIBFILE})
   endif()
   if( LLVM_ENABLE_TERMINFO )
-    set(imported_libs ${imported_libs} "${TERMINFO_LIB}")
+    set(imported_libs ${imported_libs} Terminfo::terminfo)
   endif()
   if( LLVM_ENABLE_THREADS AND (HAVE_LIBATOMIC OR HAVE_CXX_LIBATOMICS64) )
     set(system_libs ${system_libs} atomic)
@@ -72,11 +72,6 @@ endif()
 # Link Z3 if the user wants to build it.
 if(LLVM_WITH_Z3)
   set(system_libs ${system_libs} ${Z3_LIBRARIES})
-endif()
-
-# Link LibCURL if the user wants it
-if (LLVM_ENABLE_CURL)
-  set(system_libs ${system_libs} ${CURL_LIBRARIES})
 endif()
 
 # Override the C runtime allocator on Windows and embed it into LLVM tools & libraries
@@ -160,7 +155,6 @@ add_llvm_component_library(LLVMSupport
   GlobPattern.cpp
   GraphWriter.cpp
   Hashing.cpp
-  HTTPClient.cpp
   InitLLVM.cpp
   InstructionCost.cpp
   IntEqClasses.cpp
@@ -287,7 +281,10 @@ if(LLVM_ENABLE_ZLIB)
 endif()
 
 if(LLVM_ENABLE_TERMINFO)
-  get_library_name(${TERMINFO_LIB} terminfo_library)
+  if(NOT terminfo_library)
+    get_property(terminfo_library TARGET Terminfo::terminfo PROPERTY LOCATION)
+  endif()
+  get_library_name(${terminfo_library} terminfo_library)
   set(llvm_system_libs ${llvm_system_libs} "${terminfo_library}")
 endif()
 

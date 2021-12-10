@@ -23,12 +23,6 @@ using namespace llvm::orc;
 namespace {
 
 class LinkGraphMaterializationUnit : public MaterializationUnit {
-private:
-  struct LinkGraphInterface {
-    SymbolFlagsMap SymbolFlags;
-    SymbolStringPtr InitSymbol;
-  };
-
 public:
   static std::unique_ptr<LinkGraphMaterializationUnit>
   Create(ObjectLinkingLayer &ObjLinkingLayer, std::unique_ptr<LinkGraph> G) {
@@ -44,9 +38,9 @@ public:
   }
 
 private:
-  static LinkGraphInterface scanLinkGraph(ExecutionSession &ES, LinkGraph &G) {
+  static Interface scanLinkGraph(ExecutionSession &ES, LinkGraph &G) {
 
-    LinkGraphInterface LGI;
+    Interface LGI;
 
     for (auto *Sym : G.defined_symbols()) {
       // Skip local symbols.
@@ -98,11 +92,9 @@ private:
   }
 
   LinkGraphMaterializationUnit(ObjectLinkingLayer &ObjLinkingLayer,
-                               std::unique_ptr<LinkGraph> G,
-                               LinkGraphInterface LGI)
-      : MaterializationUnit(std::move(LGI.SymbolFlags),
-                            std::move(LGI.InitSymbol)),
-        ObjLinkingLayer(ObjLinkingLayer), G(std::move(G)) {}
+                               std::unique_ptr<LinkGraph> G, Interface LGI)
+      : MaterializationUnit(std::move(LGI)), ObjLinkingLayer(ObjLinkingLayer),
+        G(std::move(G)) {}
 
   void discard(const JITDylib &JD, const SymbolStringPtr &Name) override {
     for (auto *Sym : G->defined_symbols())

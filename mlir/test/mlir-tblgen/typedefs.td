@@ -9,7 +9,7 @@ include "mlir/IR/OpBase.td"
 // DECL: namespace mlir {
 // DECL: class AsmParser;
 // DECL: class AsmPrinter;
-// DECL: } // end namespace mlir
+// DECL: } // namespace mlir
 
 // DEF: #ifdef GET_TYPEDEF_LIST
 // DEF: #undef GET_TYPEDEF_LIST

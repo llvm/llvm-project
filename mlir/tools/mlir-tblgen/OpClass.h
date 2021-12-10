@@ -43,7 +43,7 @@ private:
   ParentClass &parent;
 };
 
-} // end namespace tblgen
-} // end namespace mlir
+} // namespace tblgen
+} // namespace mlir
 
 #endif // MLIR_TOOLS_MLIRTBLGEN_OPCLASS_H_

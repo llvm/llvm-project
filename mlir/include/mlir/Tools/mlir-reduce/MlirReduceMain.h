@@ -17,6 +17,6 @@ class MLIRContext;
 
 LogicalResult mlirReduceMain(int argc, char **argv, MLIRContext &context);
 
-} // end namespace mlir
+} // namespace mlir
 
 #endif // MLIR_TOOLS_MLIRREDUCE_MLIRREDUCEMAIN_H

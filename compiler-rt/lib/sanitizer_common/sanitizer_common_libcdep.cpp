@@ -15,9 +15,14 @@
 #include "sanitizer_common.h"
 #include "sanitizer_flags.h"
 #include "sanitizer_procmaps.h"
-
+#include "sanitizer_stackdepot.h"
 
 namespace __sanitizer {
+
+// Weak default implementation for when sanitizer_stackdepot is not linked in.
+#if !SANITIZER_GO
+SANITIZER_WEAK_ATTRIBUTE void StackDepotStopBackgroundThread() {}
+#endif
 
 #if (SANITIZER_LINUX || SANITIZER_NETBSD) && !SANITIZER_GO
 // Weak default implementation for when sanitizer_stackdepot is not linked in.
@@ -78,7 +83,7 @@ void *BackgroundThread(void *arg) {
   }
 }
 
-static void MaybeStartBackgroudThread() {
+void MaybeStartBackgroudThread() {
   // Need to implement/test on other platforms.
   // Start the background thread if one of the rss limits is given.
   if (!common_flags()->hard_rss_limit_mb &&
@@ -96,15 +101,17 @@ static void MaybeStartBackgroudThread() {
   }
 }
 
-#  pragma clang diagnostic push
+#  if !SANITIZER_START_BACKGROUND_THREAD_IN_ASAN_INTERNAL
+#    pragma clang diagnostic push
 // We avoid global-constructors to be sure that globals are ready when
 // sanitizers need them. This can happend before global constructors executed.
 // Here we don't mind if thread is started on later stages.
-#  pragma clang diagnostic ignored "-Wglobal-constructors"
+#    pragma clang diagnostic ignored "-Wglobal-constructors"
 static struct BackgroudThreadStarted {
   BackgroudThreadStarted() { MaybeStartBackgroudThread(); }
 } background_thread_strarter UNUSED;
-#  pragma clang diagnostic pop
+#    pragma clang diagnostic pop
+#  endif
 #endif
 
 void WriteToSyslog(const char *msg) {
@@ -199,6 +206,7 @@ void ProtectGap(uptr addr, uptr size, uptr zero_base_shadow_start,
 
 SANITIZER_INTERFACE_WEAK_DEF(void, __sanitizer_sandbox_on_notify,
                              __sanitizer_sandbox_arguments *args) {
+  __sanitizer::StackDepotStopBackgroundThread();
   __sanitizer::PlatformPrepareForSandboxing(args);
   if (__sanitizer::sandboxing_callback)
     __sanitizer::sandboxing_callback();

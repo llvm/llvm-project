@@ -660,6 +660,42 @@ func @static_stride_to_dynamic_stride(%arg0 : memref<?x?x?xf32>, %arg1 : index,
 
 // -----
 
+#map0 = affine_map<(d0, d1)[s0] -> (d0 * 16 + d1)>
+
+func @subview_bad_offset_1(%arg0: memref<16x16xf32>) {
+  %c0 = arith.constant 0 : index
+  %c8 = arith.constant 8 : index
+  // expected-error @+1 {{expected result type to be 'memref<8x8xf32, affine_map<(d0, d1)[s0] -> (d0 * 16 + s0 + d1)>>' or a rank-reduced version}}
+  %s2 = memref.subview %arg0[%c8, %c8][8, 8][1, 1]  : memref<16x16xf32> to memref<8x8xf32, #map0>
+  return
+}
+
+// -----
+
+#map0 = affine_map<(d0, d1)[s0] -> (d0 * 16 + d1 + 136)>
+
+func @subview_bad_offset_2(%arg0: memref<16x16xf32>) {
+  %c0 = arith.constant 0 : index
+  %c8 = arith.constant 8 : index
+  // expected-error @+1 {{expected result type to be 'memref<8x8xf32, affine_map<(d0, d1)[s0] -> (d0 * 16 + s0 + d1)>>' or a rank-reduced version}}
+  %s2 = memref.subview %arg0[%c8, 8][8, 8][1, 1]  : memref<16x16xf32> to memref<8x8xf32, #map0>
+  return
+}
+
+// -----
+
+#map0 = affine_map<(d0, d1)[s0] -> (d0 * 16 + d1 + s0 * 437)>
+
+func @subview_bad_offset_3(%arg0: memref<16x16xf32>) {
+  %c0 = arith.constant 0 : index
+  %c8 = arith.constant 8 : index
+  // expected-error @+1 {{expected result type to be 'memref<8x8xf32, affine_map<(d0, d1)[s0] -> (d0 * 16 + s0 + d1)>>' or a rank-reduced version}}
+  %s2 = memref.subview %arg0[%c8, 8][8, 8][1, 1]  : memref<16x16xf32> to memref<8x8xf32, #map0>
+  return
+}
+
+// -----
+
 func @invalid_memref_cast(%arg0 : memref<12x4x16xf32, offset:0, strides:[64, 16, 1]>) {
   // expected-error@+1{{operand type 'memref<12x4x16xf32, affine_map<(d0, d1, d2) -> (d0 * 64 + d1 * 16 + d2)>>' and result type 'memref<12x4x16xf32, affine_map<(d0, d1, d2) -> (d0 * 128 + d1 * 32 + d2 * 2)>>' are cast incompatible}}
   %0 = memref.cast %arg0 : memref<12x4x16xf32, offset:0, strides:[64, 16, 1]> to memref<12x4x16xf32, offset:0, strides:[128, 32, 2]>

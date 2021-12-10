@@ -18,6 +18,7 @@
 #include "ARMConstantPoolValue.h"
 #include "ARMFrameLowering.h"
 #include "ARMISelLowering.h"
+#include "ARMMachineFunctionInfo.h"
 #include "ARMSelectionDAGInfo.h"
 #include "llvm/ADT/Triple.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
@@ -534,6 +535,10 @@ protected:
   /// Selected instruction itineraries (one entry per itinerary class.)
   InstrItineraryData InstrItins;
 
+  /// NoBTIAtReturnTwice - Don't place a BTI instruction after
+  /// return-twice constructs (setjmp)
+  bool NoBTIAtReturnTwice = false;
+
   /// Options passed via command line that could influence the target
   const TargetOptions &Options;
 
@@ -840,6 +845,8 @@ public:
   /// to lr. This is always required on Thumb1-only targets, as the push and
   /// pop instructions can't access the high registers.
   bool splitFramePushPop(const MachineFunction &MF) const {
+    if (MF.getInfo<ARMFunctionInfo>()->shouldSignReturnAddress())
+      return true;
     return (getFramePointerReg() == ARM::R7 &&
             MF.getTarget().Options.DisableFramePointerElim(MF)) ||
            isThumb1Only();
@@ -948,6 +955,8 @@ public:
   bool hardenSlsRetBr() const { return HardenSlsRetBr; }
   bool hardenSlsBlr() const { return HardenSlsBlr; }
   bool hardenSlsNoComdat() const { return HardenSlsNoComdat; }
+
+  bool getNoBTIAtReturnTwice() const { return NoBTIAtReturnTwice; }
 };
 
 } // end namespace llvm

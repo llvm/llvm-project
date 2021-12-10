@@ -41,7 +41,7 @@ namespace {
 using DialectFilterIterator =
     llvm::filter_iterator<ArrayRef<llvm::Record *>::iterator,
                           std::function<bool(const llvm::Record *)>>;
-} // end anonymous namespace
+} // namespace
 
 /// Given a set of records for a T, filter the ones that correspond to
 /// the given dialect.

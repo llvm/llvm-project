@@ -32,7 +32,7 @@ class ValueRange;
 namespace scf {
 class ForOp;
 class ParallelOp;
-} // end namespace scf
+} // namespace scf
 
 /// Unrolls this for operation completely if the trip count is known to be
 /// constant. Returns failure otherwise.
@@ -323,6 +323,6 @@ separateFullTiles(MutableArrayRef<AffineForOp> nest,
 /// Move loop invariant code out of `looplike`.
 LogicalResult moveLoopInvariantCode(LoopLikeOpInterface looplike);
 
-} // end namespace mlir
+} // namespace mlir
 
 #endif // MLIR_TRANSFORMS_LOOP_UTILS_H

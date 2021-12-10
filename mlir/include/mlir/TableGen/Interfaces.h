@@ -16,7 +16,7 @@
 namespace llvm {
 class Init;
 class Record;
-} // end namespace llvm
+} // namespace llvm
 
 namespace mlir {
 namespace tblgen {
@@ -123,7 +123,7 @@ struct TypeInterface : public Interface {
 
   static bool classof(const Interface *interface);
 };
-} // end namespace tblgen
-} // end namespace mlir
+} // namespace tblgen
+} // namespace mlir
 
 #endif // MLIR_TABLEGEN_INTERFACES_H_

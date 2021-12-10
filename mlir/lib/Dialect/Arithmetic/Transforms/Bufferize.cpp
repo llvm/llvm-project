@@ -55,7 +55,7 @@ struct ArithmeticBufferizePass
   }
 };
 
-} // end anonymous namespace
+} // namespace
 
 void mlir::arith::populateArithmeticBufferizePatterns(
     bufferization::BufferizeTypeConverter &typeConverter,

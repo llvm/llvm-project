@@ -549,7 +549,7 @@ struct DefaultTimingManagerOptions {
           clEnumValN(DisplayMode::Tree, "tree",
                      "display the results ina with a nested tree view"))};
 };
-} // end anonymous namespace
+} // namespace
 
 static llvm::ManagedStatic<DefaultTimingManagerOptions> options;
 

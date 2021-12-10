@@ -87,7 +87,7 @@ struct LowerGpuOpsToROCDLOpsPass
   }
 };
 
-} // anonymous namespace
+} // namespace
 
 void mlir::configureGpuToROCDLConversionLegality(ConversionTarget &target) {
   target.addIllegalOp<FuncOp>();

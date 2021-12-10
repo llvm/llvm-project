@@ -48,7 +48,10 @@ def TilingInterface : OpInterface<"TilingInterface"> {
           from MLIR Structured Op Utils.
         }],
         /*retType=*/"SmallVector<StringRef>",
-        /*methodName=*/"getLoopIteratorTypes"
+        /*methodName=*/"getLoopIteratorTypes",
+        /*args=*/(ins),
+        /*methodBody=*/"",
+        /*defaultImplementation=*/"return {};"
       >,
       InterfaceMethod<
         /*desc=*/[{
@@ -56,15 +59,17 @@ def TilingInterface : OpInterface<"TilingInterface"> {
           step for the loops of the operation.
         }],
         /*retTy=*/"SmallVector<Range>",
-        /*methodName=*/"getLoopBounds",
-        /*args=*/(ins "OpBuilder &":$b)
+        /*methodName=*/"getIterationDomain",
+        /*args=*/(ins "OpBuilder &":$b),
+        /*methodBody=*/"",
+        /*defaultImplementation=*/"return {};"
       >,
       InterfaceMethod<
         /*desc=*/[{
           Method to generate the tiled implementation of an operation.
 
           The iteration space of the operation is returned by
-          `getLoopBounds`. The caller provides the information of the
+          `getIterationDomain`. The caller provides the information of the
           tile within this iteration space whose implementation the
           caller needs.
           - `dest` are the Value into which the result of the tiled
@@ -74,20 +79,24 @@ def TilingInterface : OpInterface<"TilingInterface"> {
           - `offsets` provides the offset of the tile within the
             iteration space
           - `sizes` provides the size of the tile.
+          - `tileDestOperands` specifies whether to also tile `dest` operands
+            or not. Avoiding tiling `dest` operands can be useful for 
+            composition with various looping container ops.
 
           The method returns the operation that is the tiled
           implementation.
         }],
-        /*retType=*/"Operation *",
+        /*retType=*/"SmallVector<Operation *>",
         /*methodName=*/"getTiledImplementation",
         /*args=*/(ins
             "OpBuilder &":$b,
             "ValueRange ":$dest,
             "ArrayRef<OpFoldResult> ":$offsets,
-            "ArrayRef<OpFoldResult> ":$sizes),
+            "ArrayRef<OpFoldResult> ":$sizes,
+            "bool ":$tileDestOperands),
         /*methodBody=*/"",
         /*defaultImplementation=*/[{
-          return nullptr;
+          return {};
         }]
       >
   ];

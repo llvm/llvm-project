@@ -17,29 +17,44 @@ using namespace llvm;
 
 #define DEBUG_TYPE "systemz-selectiondag-info"
 
-static SDVTList getMemMemVTs(unsigned Op, SelectionDAG &DAG) {
-  return Op == SystemZISD::CLC ? DAG.getVTList(MVT::i32, MVT::Other)
-                               : DAG.getVTList(MVT::Other);
+static unsigned getMemMemLenAdj(unsigned Op) {
+  return Op == SystemZISD::MEMSET_MVC ? 2 : 1;
 }
 
-// Emit a mem-mem operation after subtracting one from size, which will be
-// added back during pseudo expansion. As the Reg case emitted here may be
-// converted by DAGCombiner into having an Imm length, they are both emitted
-// the same way.
+static SDValue createMemMemNode(SelectionDAG &DAG, const SDLoc &DL, unsigned Op,
+                                SDValue Chain, SDValue Dst, SDValue Src,
+                                SDValue LenAdj, SDValue Byte) {
+  SDVTList VTs = Op == SystemZISD::CLC ? DAG.getVTList(MVT::i32, MVT::Other)
+                                       : DAG.getVTList(MVT::Other);
+  SmallVector<SDValue, 6> Ops;
+  if (Op == SystemZISD::MEMSET_MVC)
+    Ops = { Chain, Dst, LenAdj, Byte };
+  else
+    Ops = { Chain, Dst, Src, LenAdj };
+  return DAG.getNode(Op, DL, VTs, Ops);
+}
+
+// Emit a mem-mem operation after subtracting one (or two for memset) from
+// size, which will be added back during pseudo expansion. As the Reg case
+// emitted here may be converted by DAGCombiner into having an Imm length,
+// they are both emitted the same way.
 static SDValue emitMemMemImm(SelectionDAG &DAG, const SDLoc &DL, unsigned Op,
                              SDValue Chain, SDValue Dst, SDValue Src,
-                             uint64_t Size) {
-  return DAG.getNode(Op, DL, getMemMemVTs(Op, DAG), Chain, Dst, Src,
-                     DAG.getConstant(Size - 1, DL, Src.getValueType()));
+                             uint64_t Size, SDValue Byte = SDValue()) {
+  unsigned Adj = getMemMemLenAdj(Op);
+  assert(Size >= Adj && "Adjusted length overflow.");
+  SDValue LenAdj = DAG.getConstant(Size - Adj, DL, Dst.getValueType());
+  return createMemMemNode(DAG, DL, Op, Chain, Dst, Src, LenAdj, Byte);
 }
 
 static SDValue emitMemMemReg(SelectionDAG &DAG, const SDLoc &DL, unsigned Op,
                              SDValue Chain, SDValue Dst, SDValue Src,
-                             SDValue Size) {
-  SDValue LenMinus1 = DAG.getNode(ISD::ADD, DL, MVT::i64,
-                                  DAG.getZExtOrTrunc(Size, DL, MVT::i64),
-                                  DAG.getConstant(-1, DL, MVT::i64));
-  return DAG.getNode(Op, DL, getMemMemVTs(Op, DAG), Chain, Dst, Src, LenMinus1);
+                             SDValue Size, SDValue Byte = SDValue()) {
+  int64_t Adj = getMemMemLenAdj(Op);
+  SDValue LenAdj = DAG.getNode(ISD::ADD, DL, MVT::i64,
+                               DAG.getZExtOrTrunc(Size, DL, MVT::i64),
+                               DAG.getConstant(0 - Adj, DL, MVT::i64));
+  return createMemMemNode(DAG, DL, Op, Chain, Dst, Src, LenAdj, Byte);
 }
 
 SDValue SystemZSelectionDAGInfo::EmitTargetCodeForMemcpy(
@@ -127,13 +142,8 @@ SDValue SystemZSelectionDAGInfo::EmitTargetCodeForMemset(
     if (CByte && CByte->getZExtValue() == 0)
       return emitMemMemImm(DAG, DL, SystemZISD::XC, Chain, Dst, Dst, Bytes);
 
-    // Copy the byte to the first location and then use MVC to copy
-    // it to the rest.
-    Chain = DAG.getStore(Chain, DL, Byte, Dst, DstPtrInfo, Alignment);
-    SDValue DstPlus1 = DAG.getNode(ISD::ADD, DL, PtrVT, Dst,
-                                   DAG.getConstant(1, DL, PtrVT));
-    return emitMemMemImm(DAG, DL, SystemZISD::MVC, Chain, DstPlus1, Dst,
-                         Bytes - 1);
+    return emitMemMemImm(DAG, DL, SystemZISD::MEMSET_MVC, Chain, Dst, SDValue(),
+                         Bytes, DAG.getAnyExtOrTrunc(Byte, DL, MVT::i32));
   }
 
   // Variable length
@@ -141,7 +151,8 @@ SDValue SystemZSelectionDAGInfo::EmitTargetCodeForMemset(
     // Handle the special case of a variable length memset of 0 with XC.
     return emitMemMemReg(DAG, DL, SystemZISD::XC, Chain, Dst, Dst, Size);
 
-  return SDValue();
+  return emitMemMemReg(DAG, DL, SystemZISD::MEMSET_MVC, Chain, Dst, SDValue(),
+                       Size, DAG.getAnyExtOrTrunc(Byte, DL, MVT::i32));
 }
 
 // Convert the current CC value into an integer that is 0 if CC == 0,

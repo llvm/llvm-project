@@ -47,6 +47,20 @@ public:
     return m_collection_sp->GetPropertyAtIndexAsFileSpec(nullptr,
                                                          ePropertyEmulatorPath);
   }
+
+  Args GetEmulatorArgs() {
+    Args result;
+    m_collection_sp->GetPropertyAtIndexAsArgs(nullptr, ePropertyEmulatorArgs,
+                                              result);
+    return result;
+  }
+
+  Environment GetTargetEnvVars() {
+    Args args;
+    m_collection_sp->GetPropertyAtIndexAsArgs(nullptr, ePropertyTargetEnvVars,
+                                              args);
+    return Environment(args);
+  }
 };
 
 static PluginProperties &GetGlobalProperties() {
@@ -98,6 +112,44 @@ static auto get_arg_range(const Args &args) {
                           args.GetArgumentArrayRef().end());
 }
 
+// Returns the emulator environment which result in the desired environment
+// being presented to the emulated process. We want to be careful about
+// preserving the host environment, as it may contain entries (LD_LIBRARY_PATH,
+// for example) needed for the operation of the emulator itself.
+static Environment ComputeLaunchEnvironment(Environment target,
+                                            Environment host) {
+  std::vector<std::string> set_env;
+  for (const auto &KV : target) {
+    // If the host value differs from the target (or is unset), then set it
+    // through QEMU_SET_ENV. Identical entries will be forwarded automatically.
+    auto host_it = host.find(KV.first());
+    if (host_it == host.end() || host_it->second != KV.second)
+      set_env.push_back(Environment::compose(KV));
+  }
+  llvm::sort(set_env);
+
+  std::vector<llvm::StringRef> unset_env;
+  for (const auto &KV : host) {
+    // If the target is missing some host entries, then unset them through
+    // QEMU_UNSET_ENV.
+    if (target.count(KV.first()) == 0)
+      unset_env.push_back(KV.first());
+  }
+  llvm::sort(unset_env);
+
+  // The actual QEMU_(UN)SET_ENV variables should not be forwarded to the
+  // target.
+  if (!set_env.empty()) {
+    host["QEMU_SET_ENV"] = llvm::join(set_env, ",");
+    unset_env.push_back("QEMU_SET_ENV");
+  }
+  if (!unset_env.empty()) {
+    unset_env.push_back("QEMU_UNSET_ENV");
+    host["QEMU_UNSET_ENV"] = llvm::join(unset_env, ",");
+  }
+  return host;
+}
+
 lldb::ProcessSP PlatformQemuUser::DebugProcess(ProcessLaunchInfo &launch_info,
                                                Debugger &debugger,
                                                Target &target, Status &error) {
@@ -112,8 +164,10 @@ lldb::ProcessSP PlatformQemuUser::DebugProcess(ProcessLaunchInfo &launch_info,
     llvm::sys::fs::createUniquePath(socket_model, socket_path, false);
   } while (FileSystem::Instance().Exists(socket_path));
 
-  Args args(
-      {qemu, "-g", socket_path, launch_info.GetExecutableFile().GetPath()});
+  Args args({qemu, "-g", socket_path});
+  args.AppendArguments(GetGlobalProperties().GetEmulatorArgs());
+  args.AppendArgument("--");
+  args.AppendArgument(launch_info.GetExecutableFile().GetPath());
   for (size_t i = 1; i < launch_info.GetArguments().size(); ++i)
     args.AppendArgument(launch_info.GetArguments()[i].ref());
 
@@ -121,10 +175,17 @@ lldb::ProcessSP PlatformQemuUser::DebugProcess(ProcessLaunchInfo &launch_info,
            get_arg_range(args));
 
   launch_info.SetArguments(args, true);
+  launch_info.GetEnvironment() = ComputeLaunchEnvironment(
+      std::move(launch_info.GetEnvironment()), Host::GetEnvironment());
   launch_info.SetLaunchInSeparateProcessGroup(true);
   launch_info.GetFlags().Clear(eLaunchFlagDebug);
   launch_info.SetMonitorProcessCallback(ProcessLaunchInfo::NoOpMonitorCallback,
                                         false);
+
+  // This is automatically done for host platform in
+  // Target::FinalizeFileActions, but we're not a host platform.
+  llvm::Error Err = launch_info.SetUpPtyRedirection();
+  LLDB_LOG_ERROR(log, std::move(Err), "SetUpPtyRedirection failed: {0}");
 
   error = Host::LaunchProcess(launch_info);
   if (error.Fail())
@@ -134,6 +195,7 @@ lldb::ProcessSP PlatformQemuUser::DebugProcess(ProcessLaunchInfo &launch_info,
       launch_info.GetListener(),
       process_gdb_remote::ProcessGDBRemote::GetPluginNameStatic(), nullptr,
       true);
+
   ListenerSP listener_sp =
       Listener::MakeListener("lldb.platform_qemu_user.debugprocess");
   launch_info.SetHijackListener(listener_sp);
@@ -143,6 +205,18 @@ lldb::ProcessSP PlatformQemuUser::DebugProcess(ProcessLaunchInfo &launch_info,
   if (error.Fail())
     return nullptr;
 
+  if (launch_info.GetPTY().GetPrimaryFileDescriptor() !=
+      PseudoTerminal::invalid_fd)
+    process_sp->SetSTDIOFileDescriptor(
+        launch_info.GetPTY().ReleasePrimaryFileDescriptor());
+
   process_sp->WaitForProcessToStop(llvm::None, nullptr, false, listener_sp);
   return process_sp;
+}
+
+Environment PlatformQemuUser::GetEnvironment() {
+  Environment env = Host::GetEnvironment();
+  for (const auto &KV : GetGlobalProperties().GetTargetEnvVars())
+    env[KV.first()] = KV.second;
+  return env;
 }

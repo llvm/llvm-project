@@ -485,7 +485,7 @@ static void insertDeleteInstructions(MachineBasicBlock *MBB, MachineInstr &MI,
     MBB->insert((MachineBasicBlock::iterator)&MI, InstrPtr);
 
   for (auto *InstrPtr : DelInstrs) {
-    InstrPtr->eraseFromParentAndMarkDBGValuesForRemoval();
+    InstrPtr->eraseFromParent();
     // Erase all LiveRegs defined by the removed instruction
     for (auto I = RegUnits.begin(); I != RegUnits.end(); ) {
       if (I->MI == InstrPtr)
@@ -693,7 +693,7 @@ bool MachineCombiner::combineInstructions(MachineBasicBlock *MBB) {
         // use for them.
         MachineFunction *MF = MBB->getParent();
         for (auto *InstrPtr : InsInstrs)
-          MF->DeleteMachineInstr(InstrPtr);
+          MF->deleteMachineInstr(InstrPtr);
       }
       InstrIdxForVirtReg.clear();
     }

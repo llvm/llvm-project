@@ -196,7 +196,7 @@ def BufferizableOpInterface : OpInterface<"BufferizableOpInterface"> {
           before returning. Otherwise, nested ops will not be bufferized.
 
           This method will never be called on ops that do not have at least one
-          tensor operand or result.
+          tensor operand/result or a region.
         }],
         /*retType=*/"LogicalResult",
         /*methodName=*/"bufferize",
@@ -226,7 +226,8 @@ def BufferizableOpInterface : OpInterface<"BufferizableOpInterface"> {
         }],
         /*retType=*/"bool",
         /*methodName=*/"isWritable",
-        /*args=*/(ins "Value":$value),
+        /*args=*/(ins "Value":$value,
+                      "BufferizationState &":$state),
         /*methodBody=*/"",
         /*defaultImplementation=*/[{
           return value.isa<OpResult>();
@@ -265,6 +266,7 @@ def BufferizableOpInterface : OpInterface<"BufferizableOpInterface"> {
         /*methodName=*/"isNotConflicting",
         /*args=*/(ins "OpOperand *":$uRead,
                       "OpOperand *":$uWrite,
+                      "BufferizationState &":$state,
                       "const BufferizationAliasInfo &":$aliasInfo),
         /*methodBody=*/"",
         /*defaultImplementation=*/[{

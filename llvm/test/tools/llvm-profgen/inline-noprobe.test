@@ -4,6 +4,8 @@
 ; RUN: FileCheck %s --input-file %t --check-prefix=CHECK-RAW-PROFILE
 ; RUN: llvm-profgen --format=text --unsymbolized-profile=%t --binary=%S/Inputs/inline-noprobe.perfbin --output=%t1
 ; RUN: FileCheck %s --input-file %t1 --check-prefix=CHECK
+; RUN: llvm-profgen --format=text --unsymbolized-profile=%t --binary=%S/Inputs/inline-noprobe.perfbin --output=%t1 --update-total-samples
+; RUN: FileCheck %s --input-file %t1 --check-prefix=CHECK-UPDATE-TOTAL-SAMPLE
 ; RUN: llvm-profgen --format=text --use-dwarf-correlation --perfscript=%S/Inputs/inline-noprobe.perfscript --binary=%S/Inputs/inline-noprobe.perfbin --output=%t
 ; RUN: FileCheck %s --input-file %t --check-prefix=CHECK
 ; RUN: echo -e "0\n0" > %t
@@ -12,18 +14,35 @@
 ; RUN: llvm-profgen --format=text --unsymbolized-profile=%S/Inputs/out-of-bounds.raw.prof --binary=%S/Inputs/inline-noprobe.perfbin --output=%t1
 ; RUN: FileCheck %s --input-file %t1 --check-prefix=CHECK-OB
 
-CHECK: main:188:0
+CHECK: main:2609:0
 CHECK:  0: 0
 CHECK:  2: 0
-CHECK:  1: foo:188
+CHECK:  1: foo:2609
 CHECK:   2.1: 42
 CHECK:   3: 62
 CHECK:   3.2: 21
 CHECK:   4: 0
-CHECK:   3.1: bar:42
+CHECK:   65526: 62
+CHECK:   3.1: bar:546
 CHECK:    1: 42
-CHECK:   3.2: bar:21
+CHECK:    65533: 42
+CHECK:   3.2: bar:189
 CHECK:    1: 21
+
+CHECK-UPDATE-TOTAL-SAMPLE: main:292:0
+CHECK-UPDATE-TOTAL-SAMPLE:  0: 0
+CHECK-UPDATE-TOTAL-SAMPLE:  2: 0
+CHECK-UPDATE-TOTAL-SAMPLE:  1: foo:292
+CHECK-UPDATE-TOTAL-SAMPLE:   2.1: 42
+CHECK-UPDATE-TOTAL-SAMPLE:   3: 62
+CHECK-UPDATE-TOTAL-SAMPLE:   3.2: 21
+CHECK-UPDATE-TOTAL-SAMPLE:   4: 0
+CHECK-UPDATE-TOTAL-SAMPLE:   65526: 62
+CHECK-UPDATE-TOTAL-SAMPLE:   3.1: bar:84
+CHECK-UPDATE-TOTAL-SAMPLE:    1: 42
+CHECK-UPDATE-TOTAL-SAMPLE:    65533: 42
+CHECK-UPDATE-TOTAL-SAMPLE:   3.2: bar:21
+CHECK-UPDATE-TOTAL-SAMPLE:    1: 21
 
 CHECK-ALL-ZERO: bar:0:0
 CHECK-ALL-ZERO:  1: 0
@@ -60,30 +79,33 @@ CHECK-RAW-PROFILE-NEXT: 2
 CHECK-RAW-PROFILE-NEXT: 677->650:21
 CHECK-RAW-PROFILE-NEXT: 691->669:43
 
-;CHECK-OB: foo:8:0
+;CHECK-OB: foo:114:0
 ;CHECK-OB:  0: 1
 ;CHECK-OB:  2.1: 1
 ;CHECK-OB:  3: 1
 ;CHECK-OB:  3.2: 1
 ;CHECK-OB:  4: 1
-;CHECK-OB:  3.1: bar:1
+;CHECK-OB:  3.1: bar:13
 ;CHECK-OB:   1: 1
-;CHECK-OB:  3.2: bar:2
+;CHECK-OB:   65533: 1
+;CHECK-OB:  3.2: bar:24
 ;CHECK-OB:   1: 1
 ;CHECK-OB:   7: 1
-;CHECK-OB: main:8:0
+;CHECK-OB: main:100:0
 ;CHECK-OB:  0: 1
 ;CHECK-OB:  2: 1
-;CHECK-OB:  1: foo:6
+;CHECK-OB:  1: foo:80
 ;CHECK-OB:   2.1: 1
 ;CHECK-OB:   3: 1
 ;CHECK-OB:   3.2: 1
 ;CHECK-OB:   4: 1
-;CHECK-OB:   3.1: bar:1
+;CHECK-OB:   65526: 1
+;CHECK-OB:   3.1: bar:13
 ;CHECK-OB:    1: 1
-;CHECK-OB:   3.2: bar:1
+;CHECK-OB:    65533: 1
+;CHECK-OB:   3.2: bar:9
 ;CHECK-OB:    1: 1
-;CHECK-OB: bar:2:0
+;CHECK-OB: bar:14:0
 ;CHECK-OB:  1: 1
 ;CHECK-OB:  5: 1
 

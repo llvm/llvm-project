@@ -12,6 +12,6 @@
 
 namespace __llvm_libc {
 
-LLVM_LIBC_FUNCTION(int, abs, (int n)) { return integerAbs(n); }
+LLVM_LIBC_FUNCTION(int, abs, (int n)) { return integer_abs(n); }
 
 } // namespace __llvm_libc

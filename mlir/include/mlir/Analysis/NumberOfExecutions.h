@@ -102,6 +102,6 @@ private:
   Optional<int64_t> numberOfBlockExecutions;
 };
 
-} // end namespace mlir
+} // namespace mlir
 
 #endif // MLIR_ANALYSIS_NUMBER_OF_EXECUTIONS_H

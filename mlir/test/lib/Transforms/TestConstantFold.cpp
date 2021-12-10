@@ -26,7 +26,7 @@ struct TestConstantFold : public PassWrapper<TestConstantFold, FunctionPass> {
   void foldOperation(Operation *op, OperationFolder &helper);
   void runOnFunction() override;
 };
-} // end anonymous namespace
+} // namespace
 
 void TestConstantFold::foldOperation(Operation *op, OperationFolder &helper) {
   auto processGeneratedConstants = [this](Operation *op) {

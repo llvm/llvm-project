@@ -339,7 +339,7 @@ struct MultiOperandTraitBase : public TraitBase<ConcreteType, TraitType> {
     return this->getOperation()->getOperandTypes();
   }
 };
-} // end namespace detail
+} // namespace detail
 
 /// This class provides the API for ops that are known to have no
 /// SSA operand.
@@ -448,7 +448,7 @@ struct MultiRegionTraitBase : public TraitBase<ConcreteType, TraitType> {
   region_iterator region_end() { return this->getOperation()->region_end(); }
   region_range getRegions() { return this->getOperation()->getRegions(); }
 };
-} // end namespace detail
+} // namespace detail
 
 /// This class provides APIs for ops that are known to have a single region.
 template <typename ConcreteType>
@@ -563,7 +563,7 @@ struct MultiResultTraitBase : public TraitBase<ConcreteType, TraitType> {
     return this->getOperation()->getResultTypes();
   }
 };
-} // end namespace detail
+} // namespace detail
 
 /// This class provides return value APIs for ops that are known to have a
 /// single result.  ResultType is the concrete type returned by getType().
@@ -712,7 +712,7 @@ struct MultiSuccessorTraitBase : public TraitBase<ConcreteType, TraitType> {
   succ_iterator succ_end() { return this->getOperation()->succ_end(); }
   succ_range getSuccessors() { return this->getOperation()->getSuccessors(); }
 };
-} // end namespace detail
+} // namespace detail
 
 /// This class provides APIs for ops that are known to have a single successor.
 template <typename ConcreteType>
@@ -1418,7 +1418,7 @@ struct Tensorizable : public TraitBase<ConcreteType, Tensorizable> {
 /// behavior to vectors/tensors, and systematize conversion between these forms.
 bool hasElementwiseMappableTraits(Operation *op);
 
-} // end namespace OpTrait
+} // namespace OpTrait
 
 //===----------------------------------------------------------------------===//
 // Internal Trait Utilities
@@ -1906,7 +1906,7 @@ Value foldCastOp(Operation *op);
 LogicalResult verifyCastOp(Operation *op,
                            function_ref<bool(Type, Type)> areCastCompatible);
 } // namespace impl
-} // end namespace mlir
+} // namespace mlir
 
 namespace llvm {
 
@@ -1927,6 +1927,6 @@ struct DenseMapInfo<
   static bool isEqual(T lhs, T rhs) { return lhs == rhs; }
 };
 
-} // end namespace llvm
+} // namespace llvm
 
 #endif

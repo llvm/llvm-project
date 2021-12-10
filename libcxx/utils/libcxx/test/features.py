@@ -59,6 +59,19 @@ DEFAULT_FEATURES = [
             int main(int, char**) { return x.is_lock_free(); }
           """)),
 
+  # Some tests rely on creating shared libraries which link in the C++ Standard Library. In some
+  # cases, this doesn't work (e.g. if the library was built as a static archive and wasn't compiled
+  # as position independent). This feature informs the test suite of whether it's possible to create
+  # a shared library in a shell test by using the '-shared' compiler flag.
+  #
+  # Note: To implement this check properly, we need to make sure that we use something inside the
+  # compiled library, not only in the headers. It should be safe to assume that all implementations
+  # define `operator new` in the compiled library.
+  Feature(name='cant-build-shared-library',
+          when=lambda cfg: not sourceBuilds(cfg, """
+            void f() { new int(3); }
+          """, ['-shared'])),
+
   Feature(name='apple-clang',                                                                                                      when=_isAppleClang),
   Feature(name=lambda cfg: 'apple-clang-{__clang_major__}'.format(**compilerMacros(cfg)),                                          when=_isAppleClang),
   Feature(name=lambda cfg: 'apple-clang-{__clang_major__}.{__clang_minor__}'.format(**compilerMacros(cfg)),                        when=_isAppleClang),

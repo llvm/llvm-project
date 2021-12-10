@@ -722,7 +722,7 @@ public:
   }
 };
 
-} // end namespace
+} // namespace
 
 void mlir::populateAffineToStdConversionPatterns(RewritePatternSet &patterns) {
   // clang-format off

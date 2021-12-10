@@ -30,10 +30,10 @@ typedef struct {
 } sincos_t;
 
 // Polynomial data (the cosine polynomial is negated in the 2nd entry).
-extern const sincos_t __sincosf_table[2];
+extern const sincos_t __SINCOSF_TABLE[2];
 
 // Table with 4/PI to 192 bit precision.
-extern const uint32_t __inv_pio4[];
+extern const uint32_t __INV_PIO4[];
 
 // Top 12 bits of the float representation with the sign bit cleared.
 static inline uint32_t abstop12(float x) {
@@ -117,7 +117,7 @@ static inline double reduce_fast(double x, const sincos_t *p, int *np) {
 // can have at most 29 leading zeros after the binary point, the double
 // precision result is accurate to 33 bits.
 static inline double reduce_large(uint32_t xi, int *np) {
-  const uint32_t *arr = &__inv_pio4[(xi >> 26) & 15];
+  const uint32_t *arr = &__INV_PIO4[(xi >> 26) & 15];
   int shift = (xi >> 23) & 7;
   uint64_t n, res0, res1, res2;
 

@@ -52,6 +52,11 @@ class OImmAsmOperand<int width, string suffix = "">
     : ImmAsmOperand<"O", width, suffix> {
 }
 
+def to_tframeindex : SDNodeXForm<frameindex, [{
+  auto FI = cast<FrameIndexSDNode>(N);
+  return CurDAG->getTargetFrameIndex(FI->getIndex(), TLI->getPointerTy(CurDAG->getDataLayout()));
+}]>;
+
 class oimm<int num> : Operand<i32>,
   ImmLeaf<i32, "return isUInt<"#num#">(Imm - 1);"> {
   let EncoderMethod = "getOImmOpValue";
@@ -166,9 +171,23 @@ def bare_symbol : Operand<iPTR> {
   let OperandType = "OPERAND_PCREL";
 }
 
-def oimm3 : oimm<3>;
+def oimm3 : oimm<3> {
+  let MCOperandPredicate = [{
+    int64_t Imm;
+    if (MCOp.evaluateAsConstantImm(Imm))
+      return isUInt<3>(Imm - 1);
+    return MCOp.isBareSymbolRef();
+  }];
+}
 def oimm4 : oimm<4>;
-def oimm5 : oimm<5>;
+def oimm5 : oimm<5> {
+  let MCOperandPredicate = [{
+    int64_t Imm;
+    if (MCOp.evaluateAsConstantImm(Imm))
+      return isUInt<5>(Imm - 1);
+    return MCOp.isBareSymbolRef();
+  }];
+}
 def oimm6 : oimm<6>;
 
 def imm5_idly : Operand<i32>, ImmLeaf<i32,
@@ -177,9 +196,30 @@ def imm5_idly : Operand<i32>, ImmLeaf<i32,
   let DecoderMethod = "decodeOImmOperand<5>";
 }
 
-def oimm8 : oimm<8>;
-def oimm12 : oimm<12>;
-def oimm16 : oimm<16>;
+def oimm8 : oimm<8> {
+  let MCOperandPredicate = [{
+    int64_t Imm;
+    if (MCOp.evaluateAsConstantImm(Imm))
+      return isUInt<8>(Imm - 1);
+    return MCOp.isBareSymbolRef();
+  }];
+}
+def oimm12 : oimm<12> {
+  let MCOperandPredicate = [{
+    int64_t Imm;
+    if (MCOp.evaluateAsConstantImm(Imm))
+      return isUInt<12>(Imm - 1);
+    return MCOp.isBareSymbolRef();
+  }];
+}
+def oimm16 : oimm<16> {
+  let MCOperandPredicate = [{
+    int64_t Imm;
+    if (MCOp.evaluateAsConstantImm(Imm))
+      return isUInt<16>(Imm - 1);
+    return MCOp.isBareSymbolRef();
+  }];
+}
 
 def nimm12 : nimm<12>;
 
@@ -195,28 +235,98 @@ def uimm2_jmpix : Operand<i32>,
 
 def uimm3 : uimm<3>;
 def uimm4 : uimm<4>;
-def uimm5 : uimm<5>;
+def uimm5 : uimm<5> {
+  let MCOperandPredicate = [{
+    int64_t Imm;
+    if (MCOp.evaluateAsConstantImm(Imm))
+      return isShiftedUInt<5, 0>(Imm);
+    return MCOp.isBareSymbolRef();
+  }];
+}
 def uimm5_msb_size : uimm<5> {
   let EncoderMethod = "getImmOpValueMSBSize";
 }
 
-def uimm5_1 : uimm<5, 1>;
-def uimm5_2 : uimm<5, 2>;
+def uimm5_1 : uimm<5, 1> {
+  let MCOperandPredicate = [{
+    int64_t Imm;
+    if (MCOp.evaluateAsConstantImm(Imm))
+      return isShiftedUInt<5, 1>(Imm);
+    return MCOp.isBareSymbolRef();
+  }];
+}
+def uimm5_2 : uimm<5, 2> {
+  let MCOperandPredicate = [{
+    int64_t Imm;
+    if (MCOp.evaluateAsConstantImm(Imm))
+      return isShiftedUInt<5, 2>(Imm);
+    return MCOp.isBareSymbolRef();
+  }];
+}
 def uimm6 : uimm<6>;
 def uimm7 : uimm<7>;
 def uimm7_1 : uimm<7, 1>;
-def uimm7_2 : uimm<7, 2>;
+def uimm7_2 : uimm<7, 2>{
+  let MCOperandPredicate = [{
+    int64_t Imm;
+    if (MCOp.evaluateAsConstantImm(Imm))
+      return isShiftedUInt<7, 2>(Imm);
+    return MCOp.isBareSymbolRef();
+  }];
+}
 def uimm7_3 : uimm<7, 3>;
-def uimm8 : uimm<8>;
-def uimm8_2 : uimm<8, 2>;
+def uimm8 : uimm<8> {
+  let MCOperandPredicate = [{
+    int64_t Imm;
+    if (MCOp.evaluateAsConstantImm(Imm))
+      return isShiftedUInt<8, 0>(Imm);
+    return MCOp.isBareSymbolRef();
+  }];
+}
+def uimm8_2 : uimm<8, 2> {
+  let MCOperandPredicate = [{
+    int64_t Imm;
+    if (MCOp.evaluateAsConstantImm(Imm))
+      return isShiftedUInt<8, 2>(Imm);
+    return MCOp.isBareSymbolRef();
+  }];
+}
 def uimm8_3 : uimm<8, 3>;
 def uimm8_8 : uimm<8, 8>;
 def uimm8_16 : uimm<8, 16>;
 def uimm8_24 : uimm<8, 24>;
-def uimm12 : uimm<12>;
-def uimm12_1 : uimm<12, 1>;
-def uimm12_2 : uimm<12, 2>;
-def uimm16 : uimm<16>;
+def uimm12 : uimm<12>  {
+  let MCOperandPredicate = [{
+    int64_t Imm;
+    if (MCOp.evaluateAsConstantImm(Imm))
+      return isShiftedUInt<12, 0>(Imm);
+    return MCOp.isBareSymbolRef();
+  }];
+}
+def uimm12_1 : uimm<12, 1> {
+  let MCOperandPredicate = [{
+    int64_t Imm;
+    if (MCOp.evaluateAsConstantImm(Imm))
+      return isShiftedUInt<12, 1>(Imm);
+    return MCOp.isBareSymbolRef();
+  }];
+}
+def uimm12_2 : uimm<12, 2> {
+  let MCOperandPredicate = [{
+    int64_t Imm;
+    if (MCOp.evaluateAsConstantImm(Imm))
+      return isShiftedUInt<12, 2>(Imm);
+    return MCOp.isBareSymbolRef();
+  }];
+}
+def uimm16 : uimm<16> {
+  let MCOperandPredicate = [{
+    int64_t Imm;
+    if (MCOp.evaluateAsConstantImm(Imm))
+      return isShiftedUInt<16, 0>(Imm);
+    return MCOp.isBareSymbolRef();
+  }];
+}
 def uimm16_8 : uimm<16, 8>;
 def uimm16_16 : uimm<16, 16>;
 def uimm20 : uimm<20>;
@@ -642,11 +752,6 @@ def BSR32_BR : J<0x38, (outs), (ins call_symbol:$offset), "bsr32", []>{
   let Defs = [ R15 ];
 }
 
-let Predicates = [iHasE2], isCodeGenOnly = 1 in {
-  def RTS32 : I_16_RET<0x6, 0xF, "rts32", [(CSKY_RET)]>;
-}
-
-
 //===----------------------------------------------------------------------===//
 // Symbol address instructions.
 //===----------------------------------------------------------------------===//
@@ -872,6 +977,102 @@ def TRAP32 : CSKY32Inst<AddrModeNone, 0x30, (outs), (ins uimm2:$imm2), "trap32 $
 
 }
 
+//===----------------------------------------------------------------------===//
+// Instruction Patterns.
+//===----------------------------------------------------------------------===//
+
+// Load & Store Patterns
+multiclass LdPat<PatFrag LoadOp, ImmLeaf imm_type, Instruction Inst, ValueType Type> {
+  def : Pat<(Type (LoadOp GPR:$rs1)), (Inst GPR:$rs1, 0)>;
+  def : Pat<(Type (LoadOp (i32 frameindex:$rs1))), (Inst (i32 (to_tframeindex tframeindex:$rs1)), 0)>;
+  def : Pat<(Type (LoadOp (add GPR:$rs1, imm_type:$uimm))),
+            (Inst GPR:$rs1, imm_type:$uimm)>;
+  def : Pat<(Type (LoadOp (add frameindex:$rs1, imm_type:$uimm))),
+            (Inst (i32 (to_tframeindex tframeindex:$rs1)), imm_type:$uimm)>;
+  def : Pat<(Type (LoadOp (eqToAdd frameindex:$rs1, imm_type:$uimm))),
+            (Inst (i32 (to_tframeindex tframeindex:$rs1)), imm_type:$uimm)>;
+  def : Pat<(Type (LoadOp (add GPR:$rs1, tglobaladdr:$gd))),
+            (Inst GPR:$rs1, tglobaladdr:$gd)>;
+}
+
+defm : LdPat<extloadi8, uimm12, LD32B, i32>;
+defm : LdPat<zextloadi8, uimm12, LD32B, i32>;
+let Predicates = [iHasE2] in {
+  defm : LdPat<sextloadi8, uimm12, LD32BS, i32>;
+}
+defm : LdPat<extloadi16, uimm12_1, LD32H, i32>;
+defm : LdPat<zextloadi16, uimm12_1, LD32H, i32>;
+let Predicates = [iHasE2] in {
+defm : LdPat<sextloadi16, uimm12_1, LD32HS, i32>;
+}
+defm : LdPat<load, uimm12_2, LD32W, i32>;
+
+multiclass LdrPat<PatFrag LoadOp, Instruction Inst, ValueType Type> {
+  def : Pat<(Type (LoadOp (add GPR:$rs1, GPR:$rs2))), (Inst GPR:$rs1, GPR:$rs2, 0)>;
+  def : Pat<(Type (LoadOp (add GPR:$rs1, (shl GPR:$rs2, (i32 1))))), (Inst GPR:$rs1, GPR:$rs2, 1)>;
+  def : Pat<(Type (LoadOp (add GPR:$rs1, (shl GPR:$rs2, (i32 2))))), (Inst GPR:$rs1, GPR:$rs2, 2)>;
+  def : Pat<(Type (LoadOp (add GPR:$rs1, (shl GPR:$rs2, (i32 3))))), (Inst GPR:$rs1, GPR:$rs2, 3)>;
+}
+
+let Predicates = [iHas2E3] in {
+  defm : LdrPat<zextloadi8, LDR32B, i32>;
+  defm : LdrPat<sextloadi8, LDR32BS, i32>;
+  defm : LdrPat<extloadi8, LDR32BS, i32>;
+  defm : LdrPat<zextloadi16, LDR32H, i32>;
+  defm : LdrPat<sextloadi16, LDR32HS, i32>;
+  defm : LdrPat<extloadi16, LDR32HS, i32>;
+  defm : LdrPat<load, LDR32W, i32>;
+}
+
+multiclass StPat<PatFrag StoreOp, ValueType Type, ImmLeaf imm_type, Instruction Inst> {
+  def : Pat<(StoreOp Type:$rs2, GPR:$rs1), (Inst Type:$rs2, GPR:$rs1, 0)>;
+  def : Pat<(StoreOp Type:$rs2, frameindex:$rs1), (Inst Type:$rs2, (i32 (to_tframeindex tframeindex:$rs1)), 0)>;
+  def : Pat<(StoreOp Type:$rs2, (add GPR:$rs1, imm_type:$uimm12)),
+            (Inst Type:$rs2, GPR:$rs1, imm_type:$uimm12)>;
+  def : Pat<(StoreOp Type:$rs2, (add frameindex:$rs1, imm_type:$uimm12)),
+            (Inst Type:$rs2, (i32 (to_tframeindex tframeindex:$rs1)), imm_type:$uimm12)>;
+  def : Pat<(StoreOp Type:$rs2, (eqToAdd frameindex:$rs1, imm_type:$uimm12)),
+            (Inst Type:$rs2, (i32 (to_tframeindex tframeindex:$rs1)), imm_type:$uimm12)>;
+}
+
+defm : StPat<truncstorei8, i32, uimm12, ST32B>;
+defm : StPat<truncstorei16, i32, uimm12_1, ST32H>;
+defm : StPat<store, i32, uimm12_2, ST32W>;
+
+multiclass StrPat<PatFrag StoreOp, ValueType Type, Instruction Inst> {
+  def : Pat<(StoreOp Type:$rz, (add GPR:$rs1, GPR:$rs2)), (Inst Type:$rz, GPR:$rs1, GPR:$rs2, 0)>;
+  def : Pat<(StoreOp Type:$rz, (add GPR:$rs1, (shl GPR:$rs2, (i32 1)))), (Inst Type:$rz, GPR:$rs1, GPR:$rs2, 1)>;
+  def : Pat<(StoreOp Type:$rz, (add GPR:$rs1, (shl GPR:$rs2, (i32 2)))), (Inst Type:$rz, GPR:$rs1, GPR:$rs2, 2)>;
+  def : Pat<(StoreOp Type:$rz, (add GPR:$rs1, (shl GPR:$rs2, (i32 3)))), (Inst Type:$rz, GPR:$rs1, GPR:$rs2, 3)>;
+}
+
+let Predicates = [iHas2E3] in {
+  defm : StrPat<truncstorei8, i32, STR32B>;
+  defm : StrPat<truncstorei16, i32, STR32H>;
+  defm : StrPat<store, i32, STR32W>;
+
+  // Sext & Zext Patterns
+  def : Pat<(sext_inreg GPR:$src, i1), (SEXT32 GPR:$src, 0, 0)>;
+  def : Pat<(and GPR:$src, 255), (ZEXT32 GPR:$src, 7, 0)>;
+  def : Pat<(and GPR:$src, 65535), (ZEXT32 GPR:$src, 15, 0)>;
+}
+
+// Constant materialize patterns.
+let Predicates = [iHasE2] in
+  def : Pat<(i32 imm:$imm),
+            (ORI32 (MOVIH32 (uimm32_hi16 imm:$imm)), (uimm32_lo16 imm:$imm))>;
+
+
+// Other operations.
+let Predicates = [iHasE2] in {
+  def : Pat<(rotl GPR:$rs1, GPR:$rs2),
+            (ROTL32 GPR:$rs1, (ANDI32 GPR:$rs2, 0x1f))>;
+  let Predicates = [iHas2E3] in {
+    def : Pat<(bitreverse GPR:$rx), (BREV32 GPR:$rx)>;
+    def : Pat<(bswap GPR:$rx), (REVB32 GPR:$rx)>;
+  }
+  def : Pat<(i32 (ctlz GPR:$rx)), (FF1 GPR:$rx)>;
+}
 
 //===----------------------------------------------------------------------===//
 // Pseudo for assembly

@@ -52,7 +52,7 @@ void populateBufferizeMaterializationLegality(ConversionTarget &target);
 void populateEliminateBufferizeMaterializationsPatterns(
     BufferizeTypeConverter &typeConverter, RewritePatternSet &patterns);
 
-} // end namespace bufferization
-} // end namespace mlir
+} // namespace bufferization
+} // namespace mlir
 
 #endif // MLIR_DIALECT_BUFFERIZATION_TRANSFORMS_BUFFERIZE_H

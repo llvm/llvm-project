@@ -183,7 +183,7 @@ public:
   unsigned getMemorySpaceAsInt() const;
 };
 
-} // end namespace mlir
+} // namespace mlir
 
 //===----------------------------------------------------------------------===//
 // Tablegen Type Declarations
@@ -531,6 +531,6 @@ bool isStrided(MemRefType t);
 /// Return null if the layout is not compatible with a strided layout.
 AffineMap getStridedLinearLayoutMap(MemRefType t);
 
-} // end namespace mlir
+} // namespace mlir
 
 #endif // MLIR_IR_BUILTINTYPES_H

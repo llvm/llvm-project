@@ -198,7 +198,7 @@ protected:
   }
 };
 
-} // anonymous namespace
+} // namespace
 
 /// Vector addition of 2 vectors, i.e.:
 ///   a(i) = b(i) + c(i)

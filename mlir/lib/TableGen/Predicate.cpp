@@ -110,7 +110,7 @@ struct PredNode {
   std::string prefix;
   std::string suffix;
 };
-} // end anonymous namespace
+} // namespace
 
 // Get a predicate tree node kind based on the kind used in the predicate
 // TableGen record.
@@ -131,7 +131,7 @@ static PredCombinerKind getPredCombinerKind(const Pred &pred) {
 namespace {
 // Substitution<pattern, replacement>.
 using Subst = std::pair<StringRef, StringRef>;
-} // end anonymous namespace
+} // namespace
 
 /// Perform the given substitutions on 'str' in-place.
 static void performSubstitutions(std::string &str,

@@ -9,4 +9,11 @@ let Definition = "platformqemuuser" in {
     Global,
     DefaultStringValue<"">,
     Desc<"Path to the emulator binary.">;
+  def EmulatorArgs: Property<"emulator-args", "Args">,
+    Global,
+    DefaultStringValue<"">,
+    Desc<"Extra arguments to pass to the emulator.">;
+  def TargetEnvVars: Property<"target-env-vars", "Dictionary">,
+    ElementType<"String">,
+    Desc<"Extra variables to add to emulated target environment.">;
 }

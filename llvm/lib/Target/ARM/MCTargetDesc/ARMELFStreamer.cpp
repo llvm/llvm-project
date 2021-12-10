@@ -1289,34 +1289,65 @@ void ARMELFStreamer::emitPad(int64_t Offset) {
   PendingOffset -= Offset;
 }
 
-void ARMELFStreamer::emitRegSave(const SmallVectorImpl<unsigned> &RegList,
-                                 bool IsVector) {
-  // Collect the registers in the register list
-  unsigned Count = 0;
+static std::pair<unsigned, unsigned>
+collectHWRegs(const MCRegisterInfo &MRI, unsigned Idx,
+              const SmallVectorImpl<unsigned> &RegList, bool IsVector,
+              uint32_t &Mask_) {
   uint32_t Mask = 0;
-  const MCRegisterInfo *MRI = getContext().getRegisterInfo();
-  for (size_t i = 0; i < RegList.size(); ++i) {
-    unsigned Reg = MRI->getEncodingValue(RegList[i]);
+  unsigned Count = 0;
+  while (Idx > 0) {
+    unsigned Reg = RegList[Idx - 1];
+    if (Reg == ARM::RA_AUTH_CODE)
+      break;
+    Reg = MRI.getEncodingValue(Reg);
     assert(Reg < (IsVector ? 32U : 16U) && "Register out of range");
     unsigned Bit = (1u << Reg);
     if ((Mask & Bit) == 0) {
       Mask |= Bit;
       ++Count;
     }
+    --Idx;
   }
 
-  // Track the change the $sp offset: For the .save directive, the
-  // corresponding push instruction will decrease the $sp by (4 * Count).
-  // For the .vsave directive, the corresponding vpush instruction will
-  // decrease $sp by (8 * Count).
-  SPOffset -= Count * (IsVector ? 8 : 4);
+  Mask_ = Mask;
+  return {Idx, Count};
+}
 
-  // Emit the opcode
-  FlushPendingOffset();
-  if (IsVector)
-    UnwindOpAsm.EmitVFPRegSave(Mask);
-  else
-    UnwindOpAsm.EmitRegSave(Mask);
+void ARMELFStreamer::emitRegSave(const SmallVectorImpl<unsigned> &RegList,
+                                 bool IsVector) {
+  uint32_t Mask;
+  unsigned Idx, Count;
+  const MCRegisterInfo &MRI = *getContext().getRegisterInfo();
+
+  // Collect the registers in the register list. Issue unwinding instructions in
+  // three parts: ordinary hardware registers, return address authentication
+  // code pseudo register, the rest of the registers. The RA PAC is kept in an
+  // architectural register (usually r12), but we treat it as a special case in
+  // order to distinguish between that register containing RA PAC or a general
+  // value.
+  Idx = RegList.size();
+  while (Idx > 0) {
+    std::tie(Idx, Count) = collectHWRegs(MRI, Idx, RegList, IsVector, Mask);
+    if (Count) {
+      // Track the change the $sp offset: For the .save directive, the
+      // corresponding push instruction will decrease the $sp by (4 * Count).
+      // For the .vsave directive, the corresponding vpush instruction will
+      // decrease $sp by (8 * Count).
+      SPOffset -= Count * (IsVector ? 8 : 4);
+
+      // Emit the opcode
+      FlushPendingOffset();
+      if (IsVector)
+        UnwindOpAsm.EmitVFPRegSave(Mask);
+      else
+        UnwindOpAsm.EmitRegSave(Mask);
+    } else if (Idx > 0 && RegList[Idx - 1] == ARM::RA_AUTH_CODE) {
+      --Idx;
+      SPOffset -= 4;
+      FlushPendingOffset();
+      UnwindOpAsm.EmitRegSave(0);
+    }
+  }
 }
 
 void ARMELFStreamer::emitUnwindRaw(int64_t Offset,

@@ -9,6 +9,7 @@
 #include "clang/Tooling/DependencyScanning/DependencyScanningFilesystem.h"
 #include "clang/Lex/DependencyDirectivesSourceMinimizer.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/SmallVectorMemoryBuffer.h"
 #include "llvm/Support/Threading.h"
 
 using namespace clang;
@@ -43,11 +44,7 @@ CachedFileSystemEntry CachedFileSystemEntry::createFileEntry(
     // FIXME: Propage the diagnostic if desired by the client.
     CachedFileSystemEntry Result;
     Result.MaybeStat = std::move(*Stat);
-    Result.Contents.reserve(Buffer->getBufferSize() + 1);
-    Result.Contents.append(Buffer->getBufferStart(), Buffer->getBufferEnd());
-    // Implicitly null terminate the contents for Clang's lexer.
-    Result.Contents.push_back('\0');
-    Result.Contents.pop_back();
+    Result.Contents = std::move(*MaybeBuffer);
     return Result;
   }
 
@@ -60,15 +57,8 @@ CachedFileSystemEntry CachedFileSystemEntry::createFileEntry(
   // The contents produced by the minimizer must be null terminated.
   assert(MinimizedFileContents.data()[MinimizedFileContents.size()] == '\0' &&
          "not null terminated contents");
-  // Even though there's an implicit null terminator in the minimized contents,
-  // we want to temporarily make it explicit. This will ensure that the
-  // std::move will preserve it even if it needs to do a copy if the
-  // SmallString still has the small capacity.
-  MinimizedFileContents.push_back('\0');
-  Result.Contents = std::move(MinimizedFileContents);
-  // Now make the null terminator implicit again, so that Clang's lexer can find
-  // it right where the buffer ends.
-  Result.Contents.pop_back();
+  Result.Contents = std::make_unique<llvm::SmallVectorMemoryBuffer>(
+      std::move(MinimizedFileContents));
 
   // Compute the skipped PP ranges that speedup skipping over inactive
   // preprocessor blocks.
@@ -113,7 +103,7 @@ DependencyScanningFilesystemSharedCache::SingleCache::SingleCache() {
 DependencyScanningFilesystemSharedCache::SharedFileSystemEntry &
 DependencyScanningFilesystemSharedCache::SingleCache::get(StringRef Key) {
   CacheShard &Shard = CacheShards[llvm::hash_value(Key) % NumShards];
-  std::unique_lock<std::mutex> LockGuard(Shard.CacheLock);
+  std::lock_guard<std::mutex> LockGuard(Shard.CacheLock);
   auto It = Shard.Cache.try_emplace(Key);
   return It.first->getValue();
 }
@@ -195,7 +185,7 @@ DependencyScanningWorkerFilesystem::getOrCreateFileSystemEntry(
       &SharedCacheEntry = SharedCache.get(Filename, ShouldMinimize);
   const CachedFileSystemEntry *Result;
   {
-    std::unique_lock<std::mutex> LockGuard(SharedCacheEntry.ValueLock);
+    std::lock_guard<std::mutex> LockGuard(SharedCacheEntry.ValueLock);
     CachedFileSystemEntry &CacheEntry = SharedCacheEntry.Value;
 
     if (!CacheEntry.isValid()) {

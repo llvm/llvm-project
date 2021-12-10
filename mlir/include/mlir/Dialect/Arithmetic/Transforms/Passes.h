@@ -14,7 +14,7 @@
 namespace mlir {
 namespace bufferization {
 class BufferizeTypeConverter;
-} // end namespace bufferization
+} // namespace bufferization
 
 namespace arith {
 
@@ -40,7 +40,7 @@ std::unique_ptr<Pass> createArithmeticExpandOpsPass();
 #define GEN_PASS_REGISTRATION
 #include "mlir/Dialect/Arithmetic/Transforms/Passes.h.inc"
 
-} // end namespace arith
-} // end namespace mlir
+} // namespace arith
+} // namespace mlir
 
 #endif // MLIR_DIALECT_ARITHMETIC_TRANSFORMS_PASSES_H_

@@ -59,7 +59,7 @@ struct LoopUnroll : public AffineLoopUnrollBase<LoopUnroll> {
   /// Unroll this for op. Returns failure if nothing was done.
   LogicalResult runOnAffineForOp(AffineForOp forOp);
 };
-} // end anonymous namespace
+} // namespace
 
 /// Returns true if no other affine.for ops are nested within.
 static bool isInnermostAffineForOp(AffineForOp forOp) {

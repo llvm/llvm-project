@@ -376,6 +376,15 @@ func @create_vector_mask() {
   return
 }
 
+// CHECK-LABEL: @constant_vector_mask_0d
+func @constant_vector_mask_0d() {
+  // CHECK: vector.constant_mask [0] : vector<i1>
+  %0 = vector.constant_mask [0] : vector<i1>
+  // CHECK: vector.constant_mask [1] : vector<i1>
+  %1 = vector.constant_mask [1] : vector<i1>
+  return
+}
+
 // CHECK-LABEL: @constant_vector_mask
 func @constant_vector_mask() {
   // CHECK: vector.constant_mask [3, 2] : vector<4x3xi1>
@@ -676,9 +685,9 @@ func @extract_insert_map(%v: vector<32xf32>, %v2: vector<16x32xf32>,
 
 // CHECK-LABEL: @multi_reduction
 func @multi_reduction(%0: vector<4x8x16x32xf32>) -> f32 {
-  %1 = vector.multi_reduction #vector.kind<add>, %0 [1, 3] :
+  %1 = vector.multi_reduction <add>, %0 [1, 3] :
     vector<4x8x16x32xf32> to vector<4x16xf32>
-  %2 = vector.multi_reduction #vector.kind<add>, %1 [0, 1] :
+  %2 = vector.multi_reduction <add>, %1 [0, 1] :
     vector<4x16xf32> to f32
   return %2 : f32
 }

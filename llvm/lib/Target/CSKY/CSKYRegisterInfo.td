@@ -168,6 +168,11 @@ def mGPR : RegisterClass<"CSKY", [i32], 32,
   let Size = 32;
 }
 
+// Register class for SP only.
+def GPRSP : RegisterClass<"CSKY", [i32], 32, (add R14)> {
+  let Size = 32;
+}
+
 def GPRPair : RegisterClass<"CSKY", [untyped], 32, (add GPRTuple)> {
   let Size = 64;
 }

@@ -13,8 +13,8 @@
 namespace __llvm_libc {
 
 LLVM_LIBC_FUNCTION(long, lrintl, (long double x)) {
-  return fputil::roundToSignedIntegerUsingCurrentRoundingMode<long double,
-                                                              long>(x);
+  return fputil::round_to_signed_integer_using_current_rounding_mode<
+      long double, long>(x);
 }
 
 } // namespace __llvm_libc

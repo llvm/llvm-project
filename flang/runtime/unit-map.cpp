@@ -52,14 +52,23 @@ void UnitMap::DestroyClosed(ExternalFileUnit &unit) {
 }
 
 void UnitMap::CloseAll(IoErrorHandler &handler) {
-  CriticalSection critical{lock_};
-  for (int j{0}; j < buckets_; ++j) {
-    while (Chain * p{bucket_[j].get()}) {
-      bucket_[j].swap(p->next); // pops p from head of list
-      p->unit.CloseUnit(CloseStatus::Keep, handler);
-      p->unit.~ExternalFileUnit();
-      FreeMemory(p);
+  // Extract units from the map so they can be closed
+  // without holding lock_.
+  OwningPtr<Chain> closeList;
+  {
+    CriticalSection critical{lock_};
+    for (int j{0}; j < buckets_; ++j) {
+      while (Chain * p{bucket_[j].get()}) {
+        bucket_[j].swap(p->next); // pops p from head of bucket list
+        closeList.swap(p->next); // pushes p to closeList
+      }
     }
+  }
+  while (Chain * p{closeList.get()}) {
+    closeList.swap(p->next); // pops p from head of closeList
+    p->unit.CloseUnit(CloseStatus::Keep, handler);
+    p->unit.~ExternalFileUnit();
+    FreeMemory(p);
   }
 }
 

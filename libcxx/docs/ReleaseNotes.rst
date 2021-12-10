@@ -149,11 +149,17 @@ Build System Changes
 
         $ cmake -S <monorepo>/runtimes -B build -DLLVM_ENABLE_RUNTIMES="libcxx;libcxxabi" <LIBCXX-OPTIONS> <LIBCXXABI-OPTIONS>
 
-  - Support for building the runtimes using the GCC 32 bit multilib flag (``-m32``) has been removed. Support
-    for this had been flaky for a while, and we didn't know of anyone depending on this. Instead, please perform
-    a normal cross-compilation of the runtimes using the appropriate target, such as passing the following to
-    your bootstrapping build:
+- Support for building the runtimes using the GCC 32 bit multilib flag (``-m32``) has been removed. Support
+  for this had been flaky for a while, and we didn't know of anyone depending on this. Instead, please perform
+  a normal cross-compilation of the runtimes using the appropriate target, such as passing the following to
+  your bootstrapping build:
 
-    .. code-block:: bash
+  .. code-block:: bash
 
-        -DLLVM_RUNTIME_TARGETS=i386-unknown-linux
+      -DLLVM_RUNTIME_TARGETS=i386-unknown-linux
+
+- Libc++, libc++abi and libunwind will not be built with ``-fPIC`` by default anymore.
+  If you want to build those runtimes with position independent code, please specify
+  ``-DCMAKE_POSITION_INDEPENDENT_CODE=ON`` explicitly when configuring the build, or
+  ``-DRUNTIMES_<target-name>_CMAKE_POSITION_INDEPENDENT_CODE=ON`` if using the
+  bootstrapping build.

@@ -149,7 +149,7 @@ struct TestFuncSetType
     }
   }
 };
-} // end anonymous namespace
+} // namespace
 
 namespace mlir {
 void registerTestFunc() {

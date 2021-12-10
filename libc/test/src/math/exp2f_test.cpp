@@ -29,7 +29,7 @@ TEST(LlvmLibcExp2fTest, SpecialNumbers) {
   EXPECT_FP_EQ(inf, __llvm_libc::exp2f(inf));
   EXPECT_EQ(errno, 0);
 
-  EXPECT_FP_EQ(0.0f, __llvm_libc::exp2f(negInf));
+  EXPECT_FP_EQ(0.0f, __llvm_libc::exp2f(neg_inf));
   EXPECT_EQ(errno, 0);
 
   EXPECT_FP_EQ(1.0f, __llvm_libc::exp2f(0.0f));

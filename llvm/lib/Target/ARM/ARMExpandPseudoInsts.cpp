@@ -2160,6 +2160,11 @@ bool ARMExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
       return true;
     }
     case ARM::tBXNS_RET: {
+      // For v8.0-M.Main we need to authenticate LR before clearing FPRs, which
+      // uses R12 as a scratch register.
+      if (!STI->hasV8_1MMainlineOps() && AFI->shouldSignReturnAddress())
+        BuildMI(MBB, MBBI, DebugLoc(), TII->get(ARM::t2AUT));
+
       MachineBasicBlock &AfterBB = CMSEClearFPRegs(MBB, MBBI);
 
       if (STI->hasV8_1MMainlineOps()) {
@@ -2169,6 +2174,9 @@ bool ARMExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
             .addReg(ARM::SP)
             .addImm(4)
             .add(predOps(ARMCC::AL));
+
+        if (AFI->shouldSignReturnAddress())
+          BuildMI(AfterBB, AfterBB.end(), DebugLoc(), TII->get(ARM::t2AUT));
       }
 
       // Clear all GPR that are not a use of the return instruction.
@@ -3070,6 +3078,22 @@ bool ARMExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
       MIB.cloneMemRefs(MI);
       for (const MachineOperand &MO : llvm::drop_begin(MI.operands()))
         MIB.add(MO);
+      MI.eraseFromParent();
+      return true;
+    }
+    case ARM::t2CALL_BTI: {
+      MachineFunction &MF = *MI.getMF();
+      MachineInstrBuilder MIB =
+          BuildMI(MF, MI.getDebugLoc(), TII->get(ARM::tBL));
+      MIB.cloneMemRefs(MI);
+      for (unsigned i = 0; i < MI.getNumOperands(); ++i)
+        MIB.add(MI.getOperand(i));
+      if (MI.isCandidateForCallSiteEntry())
+        MF.moveCallSiteInfo(&MI, MIB.getInstr());
+      MIBundleBuilder Bundler(MBB, MI);
+      Bundler.append(MIB);
+      Bundler.append(BuildMI(MF, MI.getDebugLoc(), TII->get(ARM::t2BTI)));
+      finalizeBundle(MBB, Bundler.begin(), Bundler.end());
       MI.eraseFromParent();
       return true;
     }

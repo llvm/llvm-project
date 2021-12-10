@@ -91,7 +91,7 @@ struct VectorizerTestPass
   void testVecAffineLoopNest();
 };
 
-} // end anonymous namespace
+} // namespace
 
 void VectorizerTestPass::testVectorShapeRatio(llvm::raw_ostream &outs) {
   auto f = getFunction();

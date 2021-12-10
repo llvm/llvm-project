@@ -196,6 +196,7 @@ struct FragmentCompiler {
     compile(std::move(F.Index));
     compile(std::move(F.Diagnostics));
     compile(std::move(F.Completion));
+    compile(std::move(F.Hover));
   }
 
   void compile(Fragment::IfBlock &&F) {
@@ -504,6 +505,14 @@ struct FragmentCompiler {
           [AllScopes(**F.AllScopes)](const Params &, Config &C) {
             C.Completion.AllScopes = AllScopes;
           });
+    }
+  }
+
+  void compile(Fragment::HoverBlock &&F) {
+    if (F.ShowAKA) {
+      Out.Apply.push_back([ShowAKA(**F.ShowAKA)](const Params &, Config &C) {
+        C.Hover.ShowAKA = ShowAKA;
+      });
     }
   }
 

@@ -63,7 +63,7 @@ struct LegalizeForExportPass
     LLVM::ensureDistinctSuccessors(getOperation());
   }
 };
-} // end namespace
+} // namespace
 
 std::unique_ptr<Pass> LLVM::createLegalizeForExportPass() {
   return std::make_unique<LegalizeForExportPass>();

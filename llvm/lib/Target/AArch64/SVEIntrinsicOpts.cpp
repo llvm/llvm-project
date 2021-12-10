@@ -287,10 +287,10 @@ bool SVEIntrinsicOpts::optimizePredicateStore(Instruction *I) {
   if (!Attr.isValid())
     return false;
 
-  unsigned MinVScale, MaxVScale;
-  std::tie(MinVScale, MaxVScale) = Attr.getVScaleRangeArgs();
+  unsigned MinVScale = Attr.getVScaleRangeMin();
+  Optional<unsigned> MaxVScale = Attr.getVScaleRangeMax();
   // The transform needs to know the exact runtime length of scalable vectors
-  if (MinVScale != MaxVScale || MinVScale == 0)
+  if (!MaxVScale || MinVScale != MaxVScale)
     return false;
 
   auto *PredType =
@@ -351,10 +351,10 @@ bool SVEIntrinsicOpts::optimizePredicateLoad(Instruction *I) {
   if (!Attr.isValid())
     return false;
 
-  unsigned MinVScale, MaxVScale;
-  std::tie(MinVScale, MaxVScale) = Attr.getVScaleRangeArgs();
+  unsigned MinVScale = Attr.getVScaleRangeMin();
+  Optional<unsigned> MaxVScale = Attr.getVScaleRangeMax();
   // The transform needs to know the exact runtime length of scalable vectors
-  if (MinVScale != MaxVScale || MinVScale == 0)
+  if (!MaxVScale || MinVScale != MaxVScale)
     return false;
 
   auto *PredType =

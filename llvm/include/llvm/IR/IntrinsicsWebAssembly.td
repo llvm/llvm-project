@@ -11,6 +11,9 @@
 ///
 //===----------------------------------------------------------------------===//
 
+// Type definition for a table in an intrinsic
+def llvm_table_ty : LLVMQualPointerType<llvm_i8_ty, 1>;
+
 let TargetPrefix = "wasm" in {  // All intrinsics start with "llvm.wasm.".
 
 // Query the current memory size, and increase the current memory size.
@@ -22,6 +25,35 @@ def int_wasm_memory_size : Intrinsic<[llvm_anyint_ty],
 def int_wasm_memory_grow : Intrinsic<[llvm_anyint_ty],
                                      [llvm_i32_ty, LLVMMatchType<0>],
                                      []>;
+
+//===----------------------------------------------------------------------===//
+// ref.null intrinsics
+//===----------------------------------------------------------------------===//
+def int_wasm_ref_null_extern : Intrinsic<[llvm_externref_ty], [], [IntrNoMem]>;
+def int_wasm_ref_null_func : Intrinsic<[llvm_funcref_ty], [], [IntrNoMem]>;
+
+//===----------------------------------------------------------------------===//
+// Table intrinsics
+//===----------------------------------------------------------------------===//
+// Query the current table size, and increase the current table size.
+def int_wasm_table_size : Intrinsic<[llvm_i32_ty],
+                                    [llvm_table_ty],
+                                    [IntrReadMem]>;
+def int_wasm_table_copy : Intrinsic<[],
+                                    [llvm_table_ty, llvm_table_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+                                    []>;
+def int_wasm_table_grow_externref : Intrinsic<[llvm_i32_ty],
+                                              [llvm_table_ty, llvm_externref_ty, llvm_i32_ty],
+                                              []>;
+def int_wasm_table_grow_funcref : Intrinsic<[llvm_i32_ty],
+                                            [llvm_table_ty, llvm_funcref_ty, llvm_i32_ty],
+                                            []>;
+def int_wasm_table_fill_externref : Intrinsic<[],
+                                              [llvm_table_ty, llvm_i32_ty, llvm_externref_ty, llvm_i32_ty],
+                                              []>;
+def int_wasm_table_fill_funcref : Intrinsic<[],
+                                            [llvm_table_ty, llvm_i32_ty, llvm_funcref_ty, llvm_i32_ty],
+                                            []>;
 
 //===----------------------------------------------------------------------===//
 // Trapping float-to-int conversions

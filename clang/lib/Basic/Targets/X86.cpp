@@ -387,6 +387,9 @@ bool X86TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
   if (!HasX87 && LongDoubleFormat == &llvm::APFloat::x87DoubleExtended())
     HasLongDouble = false;
 
+  if (SSELevel < SSE1 && getTriple().getArch() == llvm::Triple::x86_64)
+    HasFPReturn = false;
+
   return true;
 }
 

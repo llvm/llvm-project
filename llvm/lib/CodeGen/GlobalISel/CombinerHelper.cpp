@@ -1551,8 +1551,8 @@ void CombinerHelper::applyShiftOfShiftedLogic(MachineInstr &MI,
   Builder.buildInstr(MatchInfo.Logic->getOpcode(), {Dest}, {Shift1, Shift2});
 
   // These were one use so it's safe to remove them.
-  MatchInfo.Shift2->eraseFromParentAndMarkDBGValuesForRemoval();
-  MatchInfo.Logic->eraseFromParentAndMarkDBGValuesForRemoval();
+  MatchInfo.Shift2->eraseFromParent();
+  MatchInfo.Logic->eraseFromParent();
 
   MI.eraseFromParent();
 }
