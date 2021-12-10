@@ -31,6 +31,14 @@ filegroup(
     srcs = glob(["include/mlir-c/**/*"]),  # <== i.e. match the entire tree
 )
 
+filegroup(
+    name = "ConversionPassDetail",
+    srcs = [
+        "include/mlir/Conversion/GPUToROCDL/Runtimes.h",
+        "lib/Conversion/PassDetail.h",
+    ],
+)
+
 exports_files(glob(["include/**/*.td"]))
 
 [
@@ -1267,7 +1275,7 @@ cc_library(
     srcs = glob([
         "lib/Conversion/ArmNeon2dToIntr/*.cpp",
         "lib/Conversion/ArmNeon2dToIntr/*.h",
-    ]) + ["lib/Conversion/PassDetail.h"],
+    ]) + [":ConversionPassDetail"],
     hdrs = glob([
         "include/mlir/Conversion/ArmNeon2dToIntr/*.h",
     ]),
@@ -2181,7 +2189,7 @@ cc_library(
     srcs = glob([
         "lib/Conversion/AsyncToLLVM/*.cpp",
         "lib/Conversion/AsyncToLLVM/*.h",
-    ]) + ["lib/Conversion/PassDetail.h"],
+    ]) + [":ConversionPassDetail"],
     hdrs = glob(["include/mlir/Conversion/AsyncToLLVM/*.h"]),
     includes = ["include"],
     deps = [
@@ -2206,7 +2214,7 @@ cc_library(
     srcs = glob([
         "lib/Conversion/AffineToStandard/*.cpp",
         "lib/Conversion/AffineToStandard/*.h",
-    ]) + ["lib/Conversion/PassDetail.h"],
+    ]) + [":ConversionPassDetail"],
     hdrs = glob(["include/mlir/Conversion/AffineToStandard/*.h"]),
     includes = ["include"],
     deps = [
@@ -2455,7 +2463,7 @@ cc_library(
     srcs = glob([
         "lib/Conversion/ShapeToStandard/*.cpp",
         "lib/Conversion/ShapeToStandard/*.h",
-    ]) + ["lib/Conversion/PassDetail.h"],
+    ]) + [":ConversionPassDetail"],
     hdrs = ["include/mlir/Conversion/ShapeToStandard/ShapeToStandard.h"],
     includes = ["include"],
     deps = [
@@ -3078,7 +3086,7 @@ cc_library(
     srcs = glob([
         "lib/Conversion/GPUToNVVM/*.cpp",
         "lib/Conversion/GPUToNVVM/*.h",
-    ]) + ["lib/Conversion/PassDetail.h"],
+    ]) + [":ConversionPassDetail"],
     hdrs = glob([
         "include/mlir/Conversion/GPUToNVVM/*.h",
     ]),
@@ -3108,8 +3116,8 @@ cc_library(
 cc_library(
     name = "VectorToROCDL",
     srcs = [
-        "lib/Conversion/PassDetail.h",
         "lib/Conversion/VectorToROCDL/VectorToROCDL.cpp",
+        ":ConversionPassDetail",
     ],
     hdrs = ["include/mlir/Conversion/VectorToROCDL/VectorToROCDL.h"],
     includes = ["include"],
@@ -3133,7 +3141,7 @@ cc_library(
     srcs = glob([
         "lib/Conversion/VectorToSPIRV/*.cpp",
         "lib/Conversion/VectorToSPIRV/*.h",
-    ]) + ["lib/Conversion/PassDetail.h"],
+    ]) + [":ConversionPassDetail"],
     hdrs = glob([
         "include/mlir/Conversion/VectorToSPIRV/*.h",
     ]),
@@ -3169,7 +3177,7 @@ cc_library(
     name = "GPUToROCDLTransforms",
     srcs = [
         "lib/Conversion/GPUToROCDL/LowerGpuOpsToROCDLOps.cpp",
-        "lib/Conversion/PassDetail.h",
+        ":ConversionPassDetail",
     ],
     hdrs = ["include/mlir/Conversion/GPUToROCDL/GPUToROCDLPass.h"],
     includes = ["include"],
@@ -3200,7 +3208,7 @@ cc_library(
     srcs = [
         "lib/Conversion/GPUToVulkan/ConvertGPULaunchFuncToVulkanLaunchFunc.cpp",
         "lib/Conversion/GPUToVulkan/ConvertLaunchFuncToVulkanCalls.cpp",
-        "lib/Conversion/PassDetail.h",
+        ":ConversionPassDetail",
     ],
     hdrs = ["include/mlir/Conversion/GPUToVulkan/ConvertGPUToVulkanPass.h"],
     includes = ["include"],
@@ -3222,7 +3230,7 @@ cc_library(
     name = "GPUToGPURuntimeTransforms",
     srcs = [
         "lib/Conversion/GPUCommon/GPUToLLVMConversion.cpp",
-        "lib/Conversion/PassDetail.h",
+        ":ConversionPassDetail",
     ],
     hdrs = ["include/mlir/Conversion/GPUCommon/GPUCommonPass.h"],
     includes = ["include"],
@@ -3251,7 +3259,7 @@ cc_library(
     srcs = glob([
         "lib/Conversion/GPUToSPIRV/*.cpp",
         "lib/Conversion/GPUToSPIRV/*.h",
-    ]) + ["lib/Conversion/PassDetail.h"],
+    ]) + [":ConversionPassDetail"],
     hdrs = glob([
         "include/mlir/Conversion/GPUToSPIRV/*.h",
     ]),
@@ -3283,7 +3291,7 @@ cc_library(
     srcs = glob([
         "lib/Conversion/PDLToPDLInterp/*.cpp",
         "lib/Conversion/PDLToPDLInterp/*.h",
-    ]) + ["lib/Conversion/PassDetail.h"],
+    ]) + [":ConversionPassDetail"],
     hdrs = ["include/mlir/Conversion/PDLToPDLInterp/PDLToPDLInterp.h"],
     includes = ["include"],
     deps = [
@@ -3302,7 +3310,7 @@ cc_library(
     name = "SPIRVToLLVM",
     srcs = glob([
         "lib/Conversion/SPIRVToLLVM/*.cpp",
-    ]) + ["lib/Conversion/PassDetail.h"],
+    ]) + [":ConversionPassDetail"],
     hdrs = glob([
         "include/mlir/Conversion/SPIRVToLLVM/*.h",
     ]),
@@ -3946,7 +3954,7 @@ cc_library(
     srcs = glob([
         "lib/Conversion/MathToSPIRV/*.cpp",
         "lib/Conversion/MathToSPIRV/*.h",
-    ]) + ["lib/Conversion/PassDetail.h"],
+    ]) + [":ConversionPassDetail"],
     hdrs = glob([
         "include/mlir/Conversion/MathToSPIRV/*.h",
     ]),
@@ -3973,7 +3981,7 @@ cc_library(
     srcs = glob([
         "lib/Conversion/StandardToSPIRV/*.cpp",
         "lib/Conversion/StandardToSPIRV/*.h",
-    ]) + ["lib/Conversion/PassDetail.h"],
+    ]) + [":ConversionPassDetail"],
     hdrs = glob([
         "include/mlir/Conversion/StandardToSPIRV/*.h",
     ]),
@@ -4507,8 +4515,8 @@ cc_library(
 cc_library(
     name = "SCFToGPUPass",
     srcs = [
-        "lib/Conversion/PassDetail.h",
         "lib/Conversion/SCFToGPU/SCFToGPUPass.cpp",
+        ":ConversionPassDetail",
     ],
     hdrs = ["include/mlir/Conversion/SCFToGPU/SCFToGPUPass.h"],
     includes = ["include"],
@@ -4533,7 +4541,7 @@ cc_library(
     srcs = glob([
         "lib/Conversion/SCFToSPIRV/*.cpp",
         "lib/Conversion/SCFToSPIRV/*.h",
-    ]) + ["lib/Conversion/PassDetail.h"],
+    ]) + [":ConversionPassDetail"],
     hdrs = glob([
         "include/mlir/Conversion/SCFToSPIRV/*.h",
     ]),
@@ -4560,8 +4568,8 @@ cc_library(
 cc_library(
     name = "SCFToOpenMP",
     srcs = [
-        "lib/Conversion/PassDetail.h",
         "lib/Conversion/SCFToOpenMP/SCFToOpenMP.cpp",
+        ":ConversionPassDetail",
     ],
     hdrs = ["include/mlir/Conversion/SCFToOpenMP/SCFToOpenMP.h"],
     includes = ["include"],
@@ -4583,8 +4591,8 @@ cc_library(
 cc_library(
     name = "SCFToStandard",
     srcs = [
-        "lib/Conversion/PassDetail.h",
         "lib/Conversion/SCFToStandard/SCFToStandard.cpp",
+        ":ConversionPassDetail",
     ],
     hdrs = ["include/mlir/Conversion/SCFToStandard/SCFToStandard.h"],
     includes = ["include"],
@@ -4625,7 +4633,7 @@ cc_library(
 
 cc_library(
     name = "ReconcileUnrealizedCasts",
-    srcs = ["lib/Conversion/PassDetail.h"] + glob(["lib/Conversion/ReconcileUnrealizedCasts/*.cpp"]),
+    srcs = glob(["lib/Conversion/ReconcileUnrealizedCasts/*.cpp"]) + [":ConversionPassDetail"],
     hdrs = glob(["include/mlir/Conversion/ReconcileUnrealizedCasts/*.h"]),
     includes = ["include"],
     deps = [
@@ -4639,8 +4647,8 @@ cc_library(
 cc_library(
     name = "StandardToLLVM",
     srcs = [
-        "lib/Conversion/PassDetail.h",
         "lib/Conversion/StandardToLLVM/StandardToLLVM.cpp",
+        ":ConversionPassDetail",
     ],
     hdrs = [
         "include/mlir/Conversion/StandardToLLVM/ConvertStandardToLLVM.h",
@@ -4672,7 +4680,7 @@ cc_library(
 
 cc_library(
     name = "MemRefToLLVM",
-    srcs = glob(["lib/Conversion/MemRefToLLVM/*.cpp"]) + ["lib/Conversion/PassDetail.h"],
+    srcs = glob(["lib/Conversion/MemRefToLLVM/*.cpp"]) + [":ConversionPassDetail"],
     hdrs = glob(["include/mlir/Conversion/MemRefToLLVM/*.h"]),
     includes = ["include"],
     deps = [
@@ -4694,7 +4702,7 @@ cc_library(
     srcs = glob([
         "lib/Conversion/MemRefToSPIRV/*.cpp",
         "lib/Conversion/MemRefToSPIRV/*.h",
-    ]) + ["lib/Conversion/PassDetail.h"],
+    ]) + [":ConversionPassDetail"],
     hdrs = glob([
         "include/mlir/Conversion/MemRefToSPIRV/*.h",
     ]),
@@ -4717,7 +4725,7 @@ cc_library(
 
 cc_library(
     name = "ArithmeticToLLVM",
-    srcs = glob(["lib/Conversion/ArithmeticToLLVM/*.cpp"]) + ["lib/Conversion/PassDetail.h"],
+    srcs = glob(["lib/Conversion/ArithmeticToLLVM/*.cpp"]) + [":ConversionPassDetail"],
     hdrs = glob(["include/mlir/Conversion/ArithmeticToLLVM/*.h"]),
     includes = ["include"],
     deps = [
@@ -4735,7 +4743,7 @@ cc_library(
 
 cc_library(
     name = "ArithmeticToSPIRV",
-    srcs = glob(["lib/Conversion/ArithmeticToSPIRV/*.cpp"]) + ["lib/Conversion/PassDetail.h"],
+    srcs = glob(["lib/Conversion/ArithmeticToSPIRV/*.cpp"]) + [":ConversionPassDetail"],
     hdrs = glob(["include/mlir/Conversion/ArithmeticToSPIRV/*.h"]),
     includes = ["include"],
     deps = [
@@ -4754,7 +4762,7 @@ cc_library(
 
 cc_library(
     name = "MathToLLVM",
-    srcs = glob(["lib/Conversion/MathToLLVM/*.cpp"]) + ["lib/Conversion/PassDetail.h"],
+    srcs = glob(["lib/Conversion/MathToLLVM/*.cpp"]) + [":ConversionPassDetail"],
     hdrs = glob(["include/mlir/Conversion/MathToLLVM/*.h"]),
     includes = ["include"],
     deps = [
@@ -5991,7 +5999,7 @@ cc_library(
     srcs = glob([
         "lib/Conversion/OpenACCToSCF/*.cpp",
         "lib/Conversion/OpenACCToSCF/*.h",
-    ]) + ["lib/Conversion/PassDetail.h"],
+    ]) + [":ConversionPassDetail"],
     hdrs = glob([
         "include/mlir/Conversion/OpenACCToSCF/*.h",
     ]),
@@ -6013,7 +6021,7 @@ cc_library(
     srcs = glob([
         "lib/Conversion/OpenACCToLLVM/*.cpp",
         "lib/Conversion/OpenACCToLLVM/*.h",
-    ]) + ["lib/Conversion/PassDetail.h"],
+    ]) + [":ConversionPassDetail"],
     hdrs = glob([
         "include/mlir/Conversion/OpenACCToLLVM/*.h",
     ]),
@@ -6037,7 +6045,7 @@ cc_library(
     srcs = glob([
         "lib/Conversion/OpenMPToLLVM/*.cpp",
         "lib/Conversion/OpenMPToLLVM/*.h",
-    ]) + ["lib/Conversion/PassDetail.h"],
+    ]) + [":ConversionPassDetail"],
     hdrs = glob([
         "include/mlir/Conversion/OpenMPToLLVM/*.h",
     ]),
@@ -6464,7 +6472,7 @@ cc_library(
     srcs = glob([
         "lib/Conversion/LinalgToLLVM/*.cpp",
         "lib/Conversion/LinalgToLLVM/*.h",
-    ]) + ["lib/Conversion/PassDetail.h"],
+    ]) + [":ConversionPassDetail"],
     hdrs = glob([
         "include/mlir/Conversion/LinalgToLLVM/*.h",
     ]),
@@ -6497,7 +6505,7 @@ cc_library(
     srcs = glob([
         "lib/Conversion/LinalgToStandard/*.cpp",
         "lib/Conversion/LinalgToStandard/*.h",
-    ]) + ["lib/Conversion/PassDetail.h"],
+    ]) + [":ConversionPassDetail"],
     hdrs = glob([
         "include/mlir/Conversion/LinalgToStandard/*.h",
     ]),
@@ -6524,7 +6532,7 @@ cc_library(
     srcs = glob([
         "lib/Conversion/LinalgToSPIRV/*.cpp",
         "lib/Conversion/LinalgToSPIRV/*.h",
-    ]) + ["lib/Conversion/PassDetail.h"],
+    ]) + [":ConversionPassDetail"],
     hdrs = glob([
         "include/mlir/Conversion/LinalgToSPIRV/*.h",
     ]),
@@ -6773,7 +6781,7 @@ cc_library(
     srcs = glob([
         "lib/Conversion/VectorToLLVM/*.cpp",
         "lib/Conversion/VectorToLLVM/*.h",
-    ]) + ["lib/Conversion/PassDetail.h"],
+    ]) + [":ConversionPassDetail"],
     hdrs = glob([
         "include/mlir/Conversion/VectorToLLVM/*.h",
     ]),
@@ -6809,7 +6817,7 @@ cc_library(
     srcs = glob([
         "lib/Conversion/VectorToGPU/*.cpp",
         "lib/Conversion/VectorToGPU/*.h",
-    ]) + ["lib/Conversion/PassDetail.h"],
+    ]) + [":ConversionPassDetail"],
     hdrs = glob([
         "include/mlir/Conversion/VectorToGPU/*.h",
     ]),
@@ -6841,7 +6849,7 @@ cc_library(
     srcs = glob([
         "lib/Conversion/VectorToSCF/*.cpp",
         "lib/Conversion/VectorToSCF/*.h",
-    ]) + ["lib/Conversion/PassDetail.h"],
+    ]) + [":ConversionPassDetail"],
     hdrs = glob([
         "include/mlir/Conversion/VectorToSCF/*.h",
     ]),
@@ -6988,7 +6996,7 @@ cc_library(
     srcs = glob([
         "lib/Conversion/TosaToLinalg/*.cpp",
         "lib/Conversion/TosaToLinalg/*.h",
-    ]) + ["lib/Conversion/PassDetail.h"],
+    ]) + [":ConversionPassDetail"],
     hdrs = glob([
         "include/mlir/Conversion/TosaToLinalg/*.h",
     ]),
@@ -7017,7 +7025,7 @@ cc_library(
     srcs = glob([
         "lib/Conversion/TosaToSCF/*.cpp",
         "lib/Conversion/TosaToSCF/*.h",
-    ]) + ["lib/Conversion/PassDetail.h"],
+    ]) + [":ConversionPassDetail"],
     hdrs = glob([
         "include/mlir/Conversion/TosaToSCF/*.h",
     ]),
@@ -7041,7 +7049,7 @@ cc_library(
     srcs = glob([
         "lib/Conversion/TosaToStandard/*.cpp",
         "lib/Conversion/TosaToStandard/*.h",
-    ]) + ["lib/Conversion/PassDetail.h"],
+    ]) + [":ConversionPassDetail"],
     hdrs = glob([
         "include/mlir/Conversion/TosaToStandard/*.h",
     ]),
@@ -7145,7 +7153,7 @@ cc_library(
     srcs = glob([
         "lib/Conversion/ComplexToLLVM/*.cpp",
         "lib/Conversion/ComplexToLLVM/*.h",
-    ]) + ["lib/Conversion/PassDetail.h"],
+    ]) + [":ConversionPassDetail"],
     hdrs = glob([
         "include/mlir/Conversion/ComplexToLLVM/*.h",
     ]),
@@ -7171,7 +7179,7 @@ cc_library(
     srcs = glob([
         "lib/Conversion/ComplexToStandard/*.cpp",
         "lib/Conversion/ComplexToStandard/*.h",
-    ]) + ["lib/Conversion/PassDetail.h"],
+    ]) + [":ConversionPassDetail"],
     hdrs = glob([
         "include/mlir/Conversion/ComplexToStandard/*.h",
     ]),
@@ -7454,7 +7462,7 @@ cc_library(
     srcs = glob([
         "lib/Conversion/MathToLibm/*.cpp",
         "lib/Conversion/MathToLibm/*.h",
-    ]) + ["lib/Conversion/PassDetail.h"],
+    ]) + [":ConversionPassDetail"],
     hdrs = glob([
         "include/mlir/Conversion/MathToLibm/*.h",
     ]),
@@ -7770,7 +7778,7 @@ cc_library(
     name = "BufferizationToMemRef",
     srcs = [
         "lib/Conversion/BufferizationToMemRef/BufferizationToMemRef.cpp",
-        "lib/Conversion/PassDetail.h",
+        ":ConversionPassDetail",
     ],
     hdrs = [
         "include/mlir/Conversion/BufferizationToMemRef/BufferizationToMemRef.h",
