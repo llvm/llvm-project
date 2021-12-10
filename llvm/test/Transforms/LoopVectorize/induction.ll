@@ -933,3 +933,41 @@ loop:
 exit:
   ret void
 }
+
+; Test case where %iv.2.ext and %iv.2.conv become redundant due to the SCEV
+; predicates generated for the vector loop. They should be removed in the
+; vector loop.
+define void @test_optimized_cast_induction_feeding_first_order_recurrence(i64 %n, i32 %step, i32* %ptr) {
+; CHECK-LABEL: @test_optimized_cast_induction_feeding_first_order_recurrence(
+; CHECK-LABEL: vector.body:
+; CHECK-NEXT:    [[MAIN_IV:%.+]] = phi i64 [ 0, %vector.ph ], [ [[MAIN_IV_NEXT:%.+]], %vector.body ]
+; CHECK-NEXT:    [[VEC_RECUR:%.+]] = phi <2 x i32> [ <i32 poison, i32 0>, %vector.ph ], [ [[VEC_IV:%.+]], %vector.body ]
+; CHECK-NEXT:    [[VEC_IV]] = phi <2 x i32> [ %induction, %vector.ph ], [ [[VEC_IV_NEXT:%.+]], %vector.body ]
+; CHECK-NEXT:    [[MAIN_IV_0:%.+]] = add i64 [[MAIN_IV]], 0
+; CHECK-NEXT:    [[RECUR_SHUFFLE:%.+]] = shufflevector <2 x i32> [[VEC_RECUR]], <2 x i32> [[VEC_IV]], <2 x i32> <i32 1, i32 2>
+; CHECK-NEXT:    [[GEP0:%.+]] = getelementptr inbounds i32, i32* %ptr, i64 [[MAIN_IV_0]]
+; CHECK-NEXT:    [[GEP1:%.+]] = getelementptr inbounds i32, i32* [[GEP0]], i32 0
+; CHECK-NEXT:    [[GEP_CAST:%.+]] = bitcast i32* [[GEP1]] to <2 x i32>*
+; CHECK-NEXT:    store <2 x i32> [[RECUR_SHUFFLE]], <2 x i32>* [[GEP_CAST]], align 4
+; CHECK-NEXT:    [[MAIN_IV_NEXT]] = add nuw i64 [[MAIN_IV]], 2
+; CHECK-NEXT:    [[VEC_IV_NEXT]] = add <2 x i32> [[VEC_IV]],
+;
+entry:
+  br label %loop
+
+loop:
+  %for = phi i32 [ 0, %entry ], [ %iv.2.conv, %loop ]
+  %iv.1 = phi i64 [ 0, %entry ], [ %iv.1.next, %loop ]
+  %iv.2 = phi i32 [ 0, %entry ], [ %iv.2.next, %loop ]
+  %iv.2.ext = shl i32 %iv.2, 24
+  %iv.2.conv = ashr exact i32 %iv.2.ext, 24
+  %gep = getelementptr inbounds i32, i32* %ptr, i64 %iv.1
+  store i32 %for, i32* %gep, align 4
+  %iv.2.next = add nsw i32 %iv.2.conv, %step
+  %iv.1.next = add nuw nsw i64 %iv.1, 1
+  %exitcond = icmp eq i64 %iv.1.next, %n
+  br i1 %exitcond, label %exit, label %loop
+
+exit:
+  ret void
+}

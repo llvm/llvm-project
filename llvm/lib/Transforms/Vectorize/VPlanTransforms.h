@@ -37,6 +37,14 @@ struct VPlanTransforms {
   static bool sinkScalarOperands(VPlan &Plan);
 
   static bool mergeReplicateRegions(VPlan &Plan);
+
+  /// Remove redundant casts of inductions.
+  ///
+  /// Such redundant casts are casts of induction variables that can be ignored,
+  /// because we already proved that the casted phi is equal to the uncasted phi
+  /// in the vectorized loop. There is no need to vectorize the cast - the same
+  /// value can be used for both the phi and casts in the vector loop.
+  static void removeRedundantInductionCasts(VPlan &Plan);
 };
 
 } // namespace llvm
