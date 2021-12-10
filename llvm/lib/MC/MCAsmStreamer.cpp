@@ -174,6 +174,8 @@ public:
   void emitThumbFunc(MCSymbol *Func) override;
 
   void emitAssignment(MCSymbol *Symbol, const MCExpr *Value) override;
+  void emitConditionalAssignment(MCSymbol *Symbol,
+                                 const MCExpr *Value) override;
   void emitWeakReference(MCSymbol *Alias, const MCSymbol *Symbol) override;
   bool emitSymbolAttribute(MCSymbol *Symbol, MCSymbolAttr Attribute) override;
 
@@ -677,6 +679,15 @@ void MCAsmStreamer::emitAssignment(MCSymbol *Symbol, const MCExpr *Value) {
   }
 
   MCStreamer::emitAssignment(Symbol, Value);
+}
+
+void MCAsmStreamer::emitConditionalAssignment(MCSymbol *Symbol,
+                                              const MCExpr *Value) {
+  OS << ".lto_set_conditional ";
+  Symbol->print(OS, MAI);
+  OS << ", ";
+  Value->print(OS, MAI);
+  EmitEOL();
 }
 
 void MCAsmStreamer::emitWeakReference(MCSymbol *Alias, const MCSymbol *Symbol) {

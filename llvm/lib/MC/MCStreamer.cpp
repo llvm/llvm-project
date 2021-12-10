@@ -431,6 +431,9 @@ void MCStreamer::emitLabel(MCSymbol *Symbol, SMLoc Loc) {
     TS->emitLabel(Symbol);
 }
 
+void MCStreamer::emitConditionalAssignment(MCSymbol *Symbol,
+                                           const MCExpr *Value) {}
+
 void MCStreamer::emitCFISections(bool EH, bool Debug) {}
 
 void MCStreamer::emitCFIStartProc(bool IsSimple, SMLoc Loc) {
