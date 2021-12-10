@@ -57,7 +57,8 @@ private:
 
   struct StatesTy {
     StatesTy(uint64_t DRC, uint64_t HRC)
-        : DynRefCount(DRC), HoldRefCount(HRC) {}
+        : DynRefCount(DRC), HoldRefCount(HRC),
+          MayContainAttachedPointers(false) {}
     /// The dynamic reference count is the standard reference count as of OpenMP
     /// 4.5.  The hold reference count is an OpenMP extension for the sake of
     /// OpenACC support.
@@ -75,6 +76,11 @@ private:
     ///
     uint64_t DynRefCount;
     uint64_t HoldRefCount;
+
+    /// Boolean flag to remember if any subpart of the mapped region might be
+    /// an attached pointer.
+    bool MayContainAttachedPointers;
+
     /// This mutex will be locked when data movement is issued. For targets that
     /// doesn't support async data movement, this mutex can guarantee that after
     /// it is released, memory region on the target is update to date. For
@@ -181,6 +187,13 @@ public:
   void lock() const { States->UpdateMtx.lock(); }
 
   void unlock() const { States->UpdateMtx.unlock(); }
+
+  void setMayContainAttachedPointers() const {
+    States->MayContainAttachedPointers = true;
+  }
+  bool getMayContainAttachedPointers() const {
+    return States->MayContainAttachedPointers;
+  }
 };
 
 typedef uintptr_t HstPtrBeginTy;
@@ -290,10 +303,11 @@ struct DeviceTy {
                    bool HasCloseModifier, bool HasPresentModifier,
                    bool HasHoldModifier, AsyncInfoTy &AsyncInfo);
   void *getTgtPtrBegin(void *HstPtrBegin, int64_t Size);
-  void *getTgtPtrBegin(void *HstPtrBegin, int64_t Size, bool &IsLast,
-                       bool UpdateRefCount, bool UseHoldRefCount,
-                       bool &IsHostPtr, bool MustContain = false,
-                       bool ForceDelete = false);
+  TargetPointerResultTy getTgtPtrBegin(void *HstPtrBegin, int64_t Size,
+                                       bool &IsLast, bool UpdateRefCount,
+                                       bool UseHoldRefCount, bool &IsHostPtr,
+                                       bool MustContain = false,
+                                       bool ForceDelete = false);
   /// For the map entry for \p HstPtrBegin, decrement the reference count
   /// specified by \p HasHoldModifier and, if the the total reference count is
   /// then zero, deallocate the corresponding device storage and remove the map
