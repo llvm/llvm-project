@@ -2053,9 +2053,8 @@ cc_library(
         ":Affine",
         ":Analysis",
         ":IR",
-        ":Support",
+        ":MemRefDialect",
         ":TransformUtils",
-        "//llvm:Support",
     ],
 )
 
