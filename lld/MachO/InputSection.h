@@ -57,9 +57,8 @@ public:
   OutputSection *parent = nullptr;
 
   uint32_t align = 1;
-  uint32_t callSiteCount : 31;
   // is address assigned?
-  uint32_t isFinal : 1;
+  bool isFinal = false;
 
   ArrayRef<uint8_t> data;
   std::vector<Reloc> relocs;
@@ -86,12 +85,11 @@ protected:
 
   InputSection(Kind kind, StringRef segname, StringRef name, InputFile *file,
                ArrayRef<uint8_t> data, uint32_t align, uint32_t flags)
-      : align(align), callSiteCount(0), isFinal(false), data(data),
+      : align(align), data(data),
         shared(make<Shared>(file, name, segname, flags, kind)) {}
 
   InputSection(const InputSection &rhs)
-      : align(rhs.align), callSiteCount(0), isFinal(false), data(rhs.data),
-        shared(rhs.shared) {}
+      : align(rhs.align), data(rhs.data), shared(rhs.shared) {}
 
   const Shared *const shared;
 };
@@ -143,6 +141,7 @@ public:
   // first and not copied to the output.
   bool wasCoalesced = false;
   bool live = !config->deadStrip;
+  bool hasCallSites = false;
   // This variable has two usages. Initially, it represents the input order.
   // After assignAddresses is called, it represents the offset from the
   // beginning of the output section this section was assigned to.

@@ -124,13 +124,13 @@ bool ConcatOutputSection::needsThunks() const {
   if (!target->usesThunks())
     return false;
   uint64_t isecAddr = addr;
-  for (InputSection *isec : inputs)
+  for (ConcatInputSection *isec : inputs)
     isecAddr = alignTo(isecAddr, isec->align) + isec->getSize();
   if (isecAddr - addr + in.stubs->getSize() <=
       std::min(target->backwardBranchRange, target->forwardBranchRange))
     return false;
   // Yes, this program is large enough to need thunks.
-  for (InputSection *isec : inputs) {
+  for (ConcatInputSection *isec : inputs) {
     for (Reloc &r : isec->relocs) {
       if (!target->hasAttr(r.type, RelocAttrBits::BRANCH))
         continue;
@@ -143,9 +143,8 @@ bool ConcatOutputSection::needsThunks() const {
       // might need to create more for this referent at the time we are
       // estimating distance to __stubs in estimateStubsInRangeVA().
       ++thunkInfo.callSiteCount;
-      // Knowing InputSection call site count will help us avoid work on those
-      // that have no BRANCH relocs.
-      ++isec->callSiteCount;
+      // We can avoid work on InputSections that have no BRANCH relocs.
+      isec->hasCallSites = true;
     }
   }
   return true;
@@ -250,7 +249,7 @@ void ConcatOutputSection::finalize() {
                                     isecVA + forwardBranchRange - slop)
       finalizeOne(inputs[finalIdx++]);
 
-    if (isec->callSiteCount == 0)
+    if (!isec->hasCallSites)
       continue;
 
     if (finalIdx == endIdx && stubsInRangeVA == TargetInfo::outOfRangeVA) {
