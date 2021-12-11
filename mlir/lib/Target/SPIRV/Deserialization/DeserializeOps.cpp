@@ -137,7 +137,8 @@ LogicalResult spirv::Deserializer::processInstruction(
   case spirv::Opcode::OpLine:
     return processDebugLine(operands);
   case spirv::Opcode::OpNoLine:
-    return clearDebugLine();
+    clearDebugLine();
+    return success();
   case spirv::Opcode::OpName:
     return processName(operands);
   case spirv::Opcode::OpString:
@@ -287,7 +288,7 @@ LogicalResult spirv::Deserializer::processOpWithoutGrammarAttr(
     valueMap[valueID] = op->getResult(0);
 
   if (op->hasTrait<OpTrait::IsTerminator>())
-    (void)clearDebugLine();
+    clearDebugLine();
 
   return success();
 }

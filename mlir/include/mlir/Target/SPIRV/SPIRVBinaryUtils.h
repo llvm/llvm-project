@@ -39,8 +39,8 @@ void appendModuleHeader(SmallVectorImpl<uint32_t> &header,
 uint32_t getPrefixedOpcode(uint32_t wordCount, spirv::Opcode opcode);
 
 /// Encodes an SPIR-V `literal` string into the given `binary` vector.
-LogicalResult encodeStringLiteralInto(SmallVectorImpl<uint32_t> &binary,
-                                      StringRef literal);
+void encodeStringLiteralInto(SmallVectorImpl<uint32_t> &binary,
+                             StringRef literal);
 
 /// Decodes a string literal in `words` starting at `wordIndex`. Update the
 /// latter to point to the position in words after the string literal.

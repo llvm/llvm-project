@@ -23,9 +23,8 @@
 namespace mlir {
 namespace spirv {
 
-LogicalResult encodeInstructionInto(SmallVectorImpl<uint32_t> &binary,
-                                    spirv::Opcode op,
-                                    ArrayRef<uint32_t> operands);
+void encodeInstructionInto(SmallVectorImpl<uint32_t> &binary, spirv::Opcode op,
+                           ArrayRef<uint32_t> operands);
 
 /// A SPIR-V module serializer.
 ///
@@ -246,7 +245,7 @@ private:
   /// instruction if this is a SPIR-V selection/loop header block.
   LogicalResult
   processBlock(Block *block, bool omitLabel = false,
-               function_ref<void()> actionBeforeTerminator = nullptr);
+               function_ref<LogicalResult()> actionBeforeTerminator = nullptr);
 
   /// Emits OpPhi instructions for the given block if it has block arguments.
   LogicalResult emitPhiForBlockArguments(Block *block);

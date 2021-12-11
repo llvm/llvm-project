@@ -62,12 +62,11 @@ uint32_t spirv::getPrefixedOpcode(uint32_t wordCount, spirv::Opcode opcode) {
   return (wordCount << 16) | static_cast<uint32_t>(opcode);
 }
 
-LogicalResult spirv::encodeStringLiteralInto(SmallVectorImpl<uint32_t> &binary,
-                                             StringRef literal) {
+void spirv::encodeStringLiteralInto(SmallVectorImpl<uint32_t> &binary,
+                                    StringRef literal) {
   // We need to encode the literal and the null termination.
   auto encodingSize = literal.size() / 4 + 1;
   auto bufferStartSize = binary.size();
   binary.resize(bufferStartSize + encodingSize, 0);
   std::memcpy(binary.data() + bufferStartSize, literal.data(), literal.size());
-  return success();
 }
