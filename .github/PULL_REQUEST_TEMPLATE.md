@@ -1,3 +1,5 @@
 # **DO NOT FILE A PULL REQUEST**
 
-We are in the process of a github migration.  Please do not create a pull request as this could interfere with the process.
+This repository does not accept pull requests. Please follow http://llvm.org/docs/Contributing.html#how-to-submit-a-patch for contribution to LLVM.
+
+# **DO NOT FILE A PULL REQUEST**
