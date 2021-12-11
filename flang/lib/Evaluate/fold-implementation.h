@@ -1094,7 +1094,7 @@ Expr<ImpliedDoIndex::Result> FoldOperation(FoldingContext &, ImpliedDoIndex &&);
 // Array constructor folding
 template <typename T> class ArrayConstructorFolder {
 public:
-  explicit ArrayConstructorFolder(const FoldingContext &c) : context_{c} {}
+  explicit ArrayConstructorFolder(FoldingContext &c) : context_{c} {}
 
   Expr<T> FoldArray(ArrayConstructor<T> &&array) {
     // Calls FoldArray(const ArrayConstructorValues<T> &) below
@@ -1118,8 +1118,8 @@ public:
   }
 
 private:
-  bool FoldArray(const common::CopyableIndirection<Expr<T>> &expr) {
-    Expr<T> folded{Fold(context_, common::Clone(expr.value()))};
+  bool FoldArray(const Expr<T> &expr) {
+    Expr<T> folded{Fold(context_, common::Clone(expr))};
     if (const auto *c{UnwrapConstantValue<T>(folded)}) {
       // Copy elements in Fortran array element order
       if (!c->empty()) {
@@ -1132,6 +1132,9 @@ private:
     } else {
       return false;
     }
+  }
+  bool FoldArray(const common::CopyableIndirection<Expr<T>> &expr) {
+    return FoldArray(expr.value());
   }
   bool FoldArray(const ImpliedDo<T> &iDo) {
     Expr<SubscriptInteger> lower{
@@ -1172,7 +1175,7 @@ private:
     return true;
   }
 
-  FoldingContext context_;
+  FoldingContext &context_;
   std::vector<Scalar<T>> elements_;
 };
 
