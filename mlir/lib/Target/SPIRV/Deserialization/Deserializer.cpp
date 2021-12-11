@@ -1733,6 +1733,7 @@ LogicalResult ControlFlowStructurizer::structurizeImpl() {
       LLVM_DEBUG(llvm::dbgs()
                  << "[cf] block " << block << " is a function entry block\n");
     }
+
     for (auto &op : *block)
       newBlock->push_back(op.clone(mapper));
   }
@@ -1746,9 +1747,8 @@ LogicalResult ControlFlowStructurizer::structurizeImpl() {
       if (Block *mappedOp = mapper.lookupOrNull(succOp.get()))
         succOp.set(mappedOp);
   };
-  for (auto &block : body) {
+  for (auto &block : body)
     block.walk(remapOperands);
-  }
 
   // We have created the SelectionOp/LoopOp and "moved" all blocks belonging to
   // the selection/loop construct into its region. Next we need to fix the
@@ -1758,8 +1758,12 @@ LogicalResult ControlFlowStructurizer::structurizeImpl() {
   // SelectionOp/LoopOp resides right now.
   headerBlock->replaceAllUsesWith(mergeBlock);
 
+  LLVM_DEBUG(llvm::dbgs() << "[cf] after cloning and fixing references:\n");
+  LLVM_DEBUG(llvm::dbgs() << *headerBlock->getParentOp());
+  LLVM_DEBUG(llvm::dbgs() << "\n");
+
   if (isLoop) {
-    // The loop selection/loop header block may have block arguments. Since now
+    // The selection/loop header block may have block arguments. Since now
     // we place the selection/loop op inside the old merge block, we need to
     // make sure the old merge block has the same block argument list.
     assert(mergeBlock->args_empty() && "OpPhi in loop merge block unsupported");
