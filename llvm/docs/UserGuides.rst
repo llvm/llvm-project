@@ -226,3 +226,8 @@ Additional Topics
 :doc:`AMDGPUDwarfExtensionsForHeterogeneousDebugging`
    This document describes DWARF extensions to support heterogeneous debugging
    for targets such as the AMDGPU backend.
+
+:doc:`AMDGPUDwarfExtensionAllowLocationDescriptionOnTheDwarfExpressionStack/AMDGPUDwarfExtensionAllowLocationDescriptionOnTheDwarfExpressionStack`
+   This document describes a DWARF extension to allow location descriptions on
+   the DWARF expression stack. It is part of
+   :doc:`AMDGPUDwarfExtensionsForHeterogeneousDebugging`.
