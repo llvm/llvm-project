@@ -48,7 +48,7 @@ def LLVM_Dialect : Dialect {
     static StringRef getTargetTripleAttrName() { return "llvm.target_triple"; }
   }];
 
-  let emitAccessorPrefix = kEmitAccessorPrefix_Both;
+  let emitAccessorPrefix = kEmitAccessorPrefix_Prefixed;
 }
 
 //===----------------------------------------------------------------------===//
