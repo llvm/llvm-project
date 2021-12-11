@@ -26,41 +26,6 @@ def RISCVBuildPairF64 : SDNode<"RISCVISD::BuildPairF64", SDT_RISCVBuildPairF64>;
 def RISCVSplitF64     : SDNode<"RISCVISD::SplitF64", SDT_RISCVSplitF64>;
 
 //===----------------------------------------------------------------------===//
-// Instruction Class Templates
-//===----------------------------------------------------------------------===//
-
-let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
-class FPFMAD_rrr_frm<RISCVOpcode opcode, string opcodestr>
-    : RVInstR4Frm<0b01, opcode, (outs FPR64:$rd),
-                  (ins FPR64:$rs1, FPR64:$rs2, FPR64:$rs3, frmarg:$funct3),
-                  opcodestr, "$rd, $rs1, $rs2, $rs3, $funct3">;
-
-class FPFMADDynFrmAlias<FPFMAD_rrr_frm Inst, string OpcodeStr>
-    : InstAlias<OpcodeStr#" $rd, $rs1, $rs2, $rs3",
-                (Inst FPR64:$rd, FPR64:$rs1, FPR64:$rs2, FPR64:$rs3, 0b111)>;
-
-let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
-class FPALUD_rr<bits<7> funct7, bits<3> funct3, string opcodestr>
-    : RVInstR<funct7, funct3, OPC_OP_FP, (outs FPR64:$rd),
-              (ins FPR64:$rs1, FPR64:$rs2), opcodestr, "$rd, $rs1, $rs2">;
-
-let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
-class FPALUD_rr_frm<bits<7> funct7, string opcodestr>
-    : RVInstRFrm<funct7, OPC_OP_FP, (outs FPR64:$rd),
-                (ins FPR64:$rs1, FPR64:$rs2, frmarg:$funct3), opcodestr,
-                 "$rd, $rs1, $rs2, $funct3">;
-
-class FPALUDDynFrmAlias<FPALUD_rr_frm Inst, string OpcodeStr>
-    : InstAlias<OpcodeStr#" $rd, $rs1, $rs2",
-                (Inst FPR64:$rd, FPR64:$rs1, FPR64:$rs2, 0b111)>;
-
-let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
-class FPCmpD_rr<bits<3> funct3, string opcodestr>
-    : RVInstR<0b1010001, funct3, OPC_OP_FP, (outs GPR:$rd),
-              (ins FPR64:$rs1, FPR64:$rs2), opcodestr, "$rd, $rs1, $rs2">,
-      Sched<[WriteFCmp64, ReadFCmp64, ReadFCmp64]>;
-
-//===----------------------------------------------------------------------===//
 // Instructions
 //===----------------------------------------------------------------------===//
 
@@ -81,31 +46,31 @@ def FSD : RVInstS<0b011, OPC_STORE_FP, (outs),
                    "fsd", "$rs2, ${imm12}(${rs1})">,
           Sched<[WriteFST64, ReadStoreData, ReadFMemBase]>;
 
-def FMADD_D  : FPFMAD_rrr_frm<OPC_MADD, "fmadd.d">,
-               Sched<[WriteFMA64, ReadFMA64, ReadFMA64, ReadFMA64]>;
-def          : FPFMADDynFrmAlias<FMADD_D, "fmadd.d">;
-def FMSUB_D  : FPFMAD_rrr_frm<OPC_MSUB, "fmsub.d">,
-               Sched<[WriteFMA64, ReadFMA64, ReadFMA64, ReadFMA64]>;
-def          : FPFMADDynFrmAlias<FMSUB_D, "fmsub.d">;
-def FNMSUB_D : FPFMAD_rrr_frm<OPC_NMSUB, "fnmsub.d">,
-               Sched<[WriteFMA64, ReadFMA64, ReadFMA64, ReadFMA64]>;
-def          : FPFMADDynFrmAlias<FNMSUB_D, "fnmsub.d">;
-def FNMADD_D : FPFMAD_rrr_frm<OPC_NMADD, "fnmadd.d">,
-               Sched<[WriteFMA64, ReadFMA64, ReadFMA64, ReadFMA64]>;
-def          : FPFMADDynFrmAlias<FNMADD_D, "fnmadd.d">;
+let SchedRW = [WriteFMA64, ReadFMA64, ReadFMA64, ReadFMA64] in {
+def FMADD_D  : FPFMA_rrr_frm<OPC_MADD,  0b01, "fmadd.d",  FPR64>;
+def FMSUB_D  : FPFMA_rrr_frm<OPC_MSUB,  0b01, "fmsub.d",  FPR64>;
+def FNMSUB_D : FPFMA_rrr_frm<OPC_NMSUB, 0b01, "fnmsub.d", FPR64>;
+def FNMADD_D : FPFMA_rrr_frm<OPC_NMADD, 0b01, "fnmadd.d", FPR64>;
+}
 
-def FADD_D : FPALUD_rr_frm<0b0000001, "fadd.d">,
+def : FPFMADynFrmAlias<FMADD_D,  "fmadd.d",  FPR64>;
+def : FPFMADynFrmAlias<FMSUB_D,  "fmsub.d",  FPR64>;
+def : FPFMADynFrmAlias<FNMSUB_D, "fnmsub.d", FPR64>;
+def : FPFMADynFrmAlias<FNMADD_D, "fnmadd.d", FPR64>;
+
+def FADD_D : FPALU_rr_frm<0b0000001, "fadd.d", FPR64>,
              Sched<[WriteFALU64, ReadFALU64, ReadFALU64]>;
-def        : FPALUDDynFrmAlias<FADD_D, "fadd.d">;
-def FSUB_D : FPALUD_rr_frm<0b0000101, "fsub.d">,
+def FSUB_D : FPALU_rr_frm<0b0000101, "fsub.d", FPR64>,
              Sched<[WriteFALU64, ReadFALU64, ReadFALU64]>;
-def        : FPALUDDynFrmAlias<FSUB_D, "fsub.d">;
-def FMUL_D : FPALUD_rr_frm<0b0001001, "fmul.d">,
+def FMUL_D : FPALU_rr_frm<0b0001001, "fmul.d", FPR64>,
              Sched<[WriteFMul64, ReadFMul64, ReadFMul64]>;
-def        : FPALUDDynFrmAlias<FMUL_D, "fmul.d">;
-def FDIV_D : FPALUD_rr_frm<0b0001101, "fdiv.d">,
+def FDIV_D : FPALU_rr_frm<0b0001101, "fdiv.d", FPR64>,
              Sched<[WriteFDiv64, ReadFDiv64, ReadFDiv64]>;
-def        : FPALUDDynFrmAlias<FDIV_D, "fdiv.d">;
+
+def        : FPALUDynFrmAlias<FADD_D, "fadd.d", FPR64>;
+def        : FPALUDynFrmAlias<FSUB_D, "fsub.d", FPR64>;
+def        : FPALUDynFrmAlias<FMUL_D, "fmul.d", FPR64>;
+def        : FPALUDynFrmAlias<FDIV_D, "fdiv.d", FPR64>;
 
 def FSQRT_D : FPUnaryOp_r_frm<0b0101101, FPR64, FPR64, "fsqrt.d">,
               Sched<[WriteFSqrt64, ReadFSqrt64]> {
@@ -113,16 +78,16 @@ def FSQRT_D : FPUnaryOp_r_frm<0b0101101, FPR64, FPR64, "fsqrt.d">,
 }
 def         : FPUnaryOpDynFrmAlias<FSQRT_D, "fsqrt.d", FPR64, FPR64>;
 
-def FSGNJ_D  : FPALUD_rr<0b0010001, 0b000, "fsgnj.d">,
-               Sched<[WriteFSGNJ64, ReadFSGNJ64, ReadFSGNJ64]>;
-def FSGNJN_D : FPALUD_rr<0b0010001, 0b001, "fsgnjn.d">,
-               Sched<[WriteFSGNJ64, ReadFSGNJ64, ReadFSGNJ64]>;
-def FSGNJX_D : FPALUD_rr<0b0010001, 0b010, "fsgnjx.d">,
-               Sched<[WriteFSGNJ64, ReadFSGNJ64, ReadFSGNJ64]>;
-def FMIN_D   : FPALUD_rr<0b0010101, 0b000, "fmin.d">,
-               Sched<[WriteFMinMax64, ReadFMinMax64, ReadFMinMax64]>;
-def FMAX_D   : FPALUD_rr<0b0010101, 0b001, "fmax.d">,
-               Sched<[WriteFMinMax64, ReadFMinMax64, ReadFMinMax64]>;
+let SchedRW = [WriteFSGNJ64, ReadFSGNJ64, ReadFSGNJ64] in {
+def FSGNJ_D  : FPALU_rr<0b0010001, 0b000, "fsgnj.d", FPR64>;
+def FSGNJN_D : FPALU_rr<0b0010001, 0b001, "fsgnjn.d", FPR64>;
+def FSGNJX_D : FPALU_rr<0b0010001, 0b010, "fsgnjx.d", FPR64>;
+}
+
+let SchedRW = [WriteFMinMax64, ReadFMinMax64, ReadFMinMax64] in {
+def FMIN_D   : FPALU_rr<0b0010101, 0b000, "fmin.d", FPR64>;
+def FMAX_D   : FPALU_rr<0b0010101, 0b001, "fmax.d", FPR64>;
+}
 
 def FCVT_S_D : FPUnaryOp_r_frm<0b0100000, FPR32, FPR64, "fcvt.s.d">,
                Sched<[WriteFCvtF64ToF32, ReadFCvtF64ToF32]> {
@@ -135,9 +100,11 @@ def FCVT_D_S : FPUnaryOp_r<0b0100001, 0b000, FPR64, FPR32, "fcvt.d.s">,
   let rs2 = 0b00000;
 }
 
-def FEQ_D : FPCmpD_rr<0b010, "feq.d">;
-def FLT_D : FPCmpD_rr<0b001, "flt.d">;
-def FLE_D : FPCmpD_rr<0b000, "fle.d">;
+let SchedRW = [WriteFCmp64, ReadFCmp64, ReadFCmp64] in {
+def FEQ_D : FPCmp_rr<0b1010001, 0b010, "feq.d", FPR64>;
+def FLT_D : FPCmp_rr<0b1010001, 0b001, "flt.d", FPR64>;
+def FLE_D : FPCmp_rr<0b1010001, 0b000, "fle.d", FPR64>;
+}
 
 def FCLASS_D : FPUnaryOp_r<0b1110001, 0b001, GPR, FPR64, "fclass.d">,
                Sched<[WriteFClass64, ReadFClass64]> {

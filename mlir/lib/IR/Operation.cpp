@@ -580,14 +580,27 @@ Operation *Operation::clone() {
 // OpState trait class.
 //===----------------------------------------------------------------------===//
 
-// The fallback for the parser is to reject the custom assembly form.
+// The fallback for the parser is to try for a dialect operation parser.
+// Otherwise, reject the custom assembly form.
 ParseResult OpState::parse(OpAsmParser &parser, OperationState &result) {
+  if (auto parseFn = result.name.getDialect()->getParseOperationHook(
+          result.name.getStringRef()))
+    return (*parseFn)(parser, result);
   return parser.emitError(parser.getNameLoc(), "has no custom assembly form");
 }
 
-// The fallback for the printer is to print in the generic assembly form.
-void OpState::print(Operation *op, OpAsmPrinter &p) { p.printGenericOp(op); }
-// The fallback for the printer is to print in the generic assembly form.
+// The fallback for the printer is to try for a dialect operation printer.
+// Otherwise, it prints the generic form.
+void OpState::print(Operation *op, OpAsmPrinter &p, StringRef defaultDialect) {
+  if (auto printFn = op->getDialect()->getOperationPrinter(op)) {
+    printOpName(op, p, defaultDialect);
+    printFn(op, p);
+  } else {
+    p.printGenericOp(op);
+  }
+}
+
+/// Print an operation name, eliding the dialect prefix if necessary.
 void OpState::printOpName(Operation *op, OpAsmPrinter &p,
                           StringRef defaultDialect) {
   StringRef name = op->getName().getStringRef();
