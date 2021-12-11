@@ -413,7 +413,7 @@ def PDLInterp_CreateAttributeOp
 
   let arguments = (ins AnyAttr:$value);
   let results = (outs PDL_Attribute:$attribute);
-  let assemblyFormat = "$value attr-dict";
+  let assemblyFormat = "$value attr-dict-with-keyword";
 
   let builders = [
     OpBuilder<(ins "Attribute":$value), [{
@@ -512,6 +512,13 @@ def PDLInterp_CreateTypesOp : PDLInterp_Op<"create_types", [NoSideEffect]> {
   let arguments = (ins TypeArrayAttr:$value);
   let results = (outs PDL_RangeOf<PDL_Type>:$result);
   let assemblyFormat = "$value attr-dict";
+
+  let builders = [
+    OpBuilder<(ins "ArrayAttr":$type), [{
+      build($_builder, $_state,
+            pdl::RangeType::get($_builder.getType<pdl::TypeType>()), type);
+    }]>
+  ];
 }
 
 //===----------------------------------------------------------------------===//

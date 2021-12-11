@@ -177,11 +177,10 @@ void llvm::PrintStatistics(raw_ostream &OS) {
 
   // Figure out how long the biggest Value and Name fields are.
   unsigned MaxDebugTypeLen = 0, MaxValLen = 0;
-  for (size_t i = 0, e = Stats.Stats.size(); i != e; ++i) {
-    MaxValLen = std::max(MaxValLen,
-                         (unsigned)utostr(Stats.Stats[i]->getValue()).size());
-    MaxDebugTypeLen = std::max(MaxDebugTypeLen,
-                         (unsigned)std::strlen(Stats.Stats[i]->getDebugType()));
+  for (TrackingStatistic *Stat : Stats.Stats) {
+    MaxValLen = std::max(MaxValLen, (unsigned)utostr(Stat->getValue()).size());
+    MaxDebugTypeLen =
+        std::max(MaxDebugTypeLen, (unsigned)std::strlen(Stat->getDebugType()));
   }
 
   Stats.sort();
@@ -192,11 +191,9 @@ void llvm::PrintStatistics(raw_ostream &OS) {
      << "===" << std::string(73, '-') << "===\n\n";
 
   // Print all of the statistics.
-  for (size_t i = 0, e = Stats.Stats.size(); i != e; ++i)
-    OS << format("%*u %-*s - %s\n",
-                 MaxValLen, Stats.Stats[i]->getValue(),
-                 MaxDebugTypeLen, Stats.Stats[i]->getDebugType(),
-                 Stats.Stats[i]->getDesc());
+  for (TrackingStatistic *Stat : Stats.Stats)
+    OS << format("%*u %-*s - %s\n", MaxValLen, Stat->getValue(),
+                 MaxDebugTypeLen, Stat->getDebugType(), Stat->getDesc());
 
   OS << '\n';  // Flush the output stream.
   OS.flush();

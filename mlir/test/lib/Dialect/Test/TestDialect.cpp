@@ -318,6 +318,11 @@ TestDialect::getParseOperationHook(StringRef opName) const {
       return parser.parseKeyword("custom_format");
     }};
   }
+  if (opName == "test.dialect_custom_format_fallback") {
+    return ParseOpHook{[](OpAsmParser &parser, OperationState &state) {
+      return parser.parseKeyword("custom_format_fallback");
+    }};
+  }
   return None;
 }
 
@@ -327,6 +332,11 @@ TestDialect::getOperationPrinter(Operation *op) const {
   if (opName == "test.dialect_custom_printer") {
     return [](Operation *op, OpAsmPrinter &printer) {
       printer.getStream() << " custom_format";
+    };
+  }
+  if (opName == "test.dialect_custom_format_fallback") {
+    return [](Operation *op, OpAsmPrinter &printer) {
+      printer.getStream() << " custom_format_fallback";
     };
   }
   return {};

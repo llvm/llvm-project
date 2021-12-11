@@ -382,6 +382,9 @@ void CodeGenFunction::FinishFunction(SourceLocation EndLoc) {
                        "__cyg_profile_func_exit");
   }
 
+  if (ShouldSkipSanitizerInstrumentation())
+    CurFn->addFnAttr(llvm::Attribute::DisableSanitizerInstrumentation);
+
   // Emit debug descriptor for function end.
   if (CGDebugInfo *DI = getDebugInfo())
     DI->EmitFunctionEnd(Builder, CurFn);
@@ -763,22 +766,17 @@ void CodeGenFunction::StartFunction(GlobalDecl GD, QualType RetTy,
       Fn->addFnAttr(llvm::Attribute::NoSanitizeCoverage);
   }
 
-  if (ShouldSkipSanitizerInstrumentation()) {
-    CurFn->addFnAttr(llvm::Attribute::DisableSanitizerInstrumentation);
-  } else {
-    // Apply sanitizer attributes to the function.
-    if (SanOpts.hasOneOf(SanitizerKind::Address | SanitizerKind::KernelAddress))
-      Fn->addFnAttr(llvm::Attribute::SanitizeAddress);
-    if (SanOpts.hasOneOf(SanitizerKind::HWAddress |
-                         SanitizerKind::KernelHWAddress))
-      Fn->addFnAttr(llvm::Attribute::SanitizeHWAddress);
-    if (SanOpts.has(SanitizerKind::MemTag))
-      Fn->addFnAttr(llvm::Attribute::SanitizeMemTag);
-    if (SanOpts.has(SanitizerKind::Thread))
-      Fn->addFnAttr(llvm::Attribute::SanitizeThread);
-    if (SanOpts.hasOneOf(SanitizerKind::Memory | SanitizerKind::KernelMemory))
-      Fn->addFnAttr(llvm::Attribute::SanitizeMemory);
-  }
+  // Apply sanitizer attributes to the function.
+  if (SanOpts.hasOneOf(SanitizerKind::Address | SanitizerKind::KernelAddress))
+    Fn->addFnAttr(llvm::Attribute::SanitizeAddress);
+  if (SanOpts.hasOneOf(SanitizerKind::HWAddress | SanitizerKind::KernelHWAddress))
+    Fn->addFnAttr(llvm::Attribute::SanitizeHWAddress);
+  if (SanOpts.has(SanitizerKind::MemTag))
+    Fn->addFnAttr(llvm::Attribute::SanitizeMemTag);
+  if (SanOpts.has(SanitizerKind::Thread))
+    Fn->addFnAttr(llvm::Attribute::SanitizeThread);
+  if (SanOpts.hasOneOf(SanitizerKind::Memory | SanitizerKind::KernelMemory))
+    Fn->addFnAttr(llvm::Attribute::SanitizeMemory);
   if (SanOpts.has(SanitizerKind::SafeStack))
     Fn->addFnAttr(llvm::Attribute::SafeStack);
   if (SanOpts.has(SanitizerKind::ShadowCallStack))

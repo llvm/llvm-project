@@ -21,7 +21,7 @@ Position::~Position() {}
 unsigned Position::getOperationDepth() const {
   if (const auto *operationPos = dyn_cast<OperationPosition>(this))
     return operationPos->getDepth();
-  return parent->getOperationDepth();
+  return parent ? parent->getOperationDepth() : 0;
 }
 
 //===----------------------------------------------------------------------===//
