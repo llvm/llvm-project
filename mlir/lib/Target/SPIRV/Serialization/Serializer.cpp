@@ -81,9 +81,9 @@ LogicalResult encodeInstructionInto(SmallVectorImpl<uint32_t> &binary,
   return success();
 }
 
-Serializer::Serializer(spirv::ModuleOp module, bool emitDebugInfo)
-    : module(module), mlirBuilder(module.getContext()),
-      emitDebugInfo(emitDebugInfo) {}
+Serializer::Serializer(spirv::ModuleOp module,
+                       const SerializationOptions &options)
+    : module(module), mlirBuilder(module.getContext()), options(options) {}
 
 LogicalResult Serializer::serialize() {
   LLVM_DEBUG(llvm::dbgs() << "+++ starting serialization +++\n");
@@ -172,7 +172,7 @@ void Serializer::processCapability() {
 }
 
 void Serializer::processDebugInfo() {
-  if (!emitDebugInfo)
+  if (!options.emitDebugInfo)
     return;
   auto fileLoc = module.getLoc().dyn_cast<FileLineColLoc>();
   auto fileName = fileLoc ? fileLoc.getFilename().strref() : "<unknown>";
@@ -254,12 +254,13 @@ LogicalResult Serializer::processDecoration(Location loc, uint32_t resultID,
 
 LogicalResult Serializer::processName(uint32_t resultID, StringRef name) {
   assert(!name.empty() && "unexpected empty string for OpName");
+  if (!options.emitSymbolName)
+    return success();
 
   SmallVector<uint32_t, 4> nameOperands;
   nameOperands.push_back(resultID);
-  if (failed(spirv::encodeStringLiteralInto(nameOperands, name))) {
+  if (failed(spirv::encodeStringLiteralInto(nameOperands, name)))
     return failure();
-  }
   return encodeInstructionInto(names, spirv::Opcode::OpName, nameOperands);
 }
 
@@ -1170,7 +1171,7 @@ LogicalResult Serializer::emitDecoration(uint32_t target,
 
 LogicalResult Serializer::emitDebugLine(SmallVectorImpl<uint32_t> &binary,
                                         Location loc) {
-  if (!emitDebugInfo)
+  if (!options.emitDebugInfo)
     return success();
 
   if (lastProcessedWasMergeInst) {

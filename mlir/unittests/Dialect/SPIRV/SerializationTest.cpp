@@ -37,10 +37,11 @@ class SerializationTest : public ::testing::Test {
 protected:
   SerializationTest() {
     context.getOrLoadDialect<mlir::spirv::SPIRVDialect>();
-    createModuleOp();
+    initModuleOp();
   }
 
-  void createModuleOp() {
+  /// Initializes an empty SPIR-V module op.
+  void initModuleOp() {
     OpBuilder builder(&context);
     OperationState state(UnknownLoc::get(&context),
                          spirv::ModuleOp::getOperationName());
@@ -58,27 +59,29 @@ protected:
     module = cast<spirv::ModuleOp>(Operation::create(state));
   }
 
-  Type getFloatStructType() {
-    OpBuilder opBuilder(module->getRegion());
-    llvm::SmallVector<Type, 1> elementTypes{opBuilder.getF32Type()};
+  /// Gets the `struct { float }` type.
+  spirv::StructType getFloatStructType() {
+    OpBuilder builder(module->getRegion());
+    llvm::SmallVector<Type, 1> elementTypes{builder.getF32Type()};
     llvm::SmallVector<spirv::StructType::OffsetInfo, 1> offsetInfo{0};
-    auto structType = spirv::StructType::get(elementTypes, offsetInfo);
-    return structType;
+    return spirv::StructType::get(elementTypes, offsetInfo);
   }
 
-  void addGlobalVar(Type type, llvm::StringRef name) {
-    OpBuilder opBuilder(module->getRegion());
+  /// Inserts a global variable of the given `type` and `name`.
+  spirv::GlobalVariableOp addGlobalVar(Type type, llvm::StringRef name) {
+    OpBuilder builder(module->getRegion());
     auto ptrType = spirv::PointerType::get(type, spirv::StorageClass::Uniform);
-    opBuilder.create<spirv::GlobalVariableOp>(
+    return builder.create<spirv::GlobalVariableOp>(
         UnknownLoc::get(&context), TypeAttr::get(ptrType),
-        opBuilder.getStringAttr(name), nullptr);
+        builder.getStringAttr(name), nullptr);
   }
 
+  /// Returns true if we can find a matching instruction in the SPIR-V blob.
   bool findInstruction(llvm::function_ref<bool(spirv::Opcode opcode,
                                                ArrayRef<uint32_t> operands)>
                            matchFn) {
     auto binarySize = binary.size();
-    auto begin = binary.begin();
+    auto *begin = binary.begin();
     auto currOffset = spirv::kHeaderWordCount;
 
     while (currOffset < binarySize) {
@@ -109,10 +112,12 @@ protected:
 // Block decoration
 //===----------------------------------------------------------------------===//
 
-TEST_F(SerializationTest, BlockDecorationTest) {
+TEST_F(SerializationTest, ContainsBlockDecoration) {
   auto structType = getFloatStructType();
   addGlobalVar(structType, "var0");
+
   ASSERT_TRUE(succeeded(spirv::serialize(module.get(), binary)));
+
   auto hasBlockDecoration = [](spirv::Opcode opcode,
                                ArrayRef<uint32_t> operands) -> bool {
     if (opcode != spirv::Opcode::OpDecorate || operands.size() != 2)
@@ -120,4 +125,36 @@ TEST_F(SerializationTest, BlockDecorationTest) {
     return operands[1] == static_cast<uint32_t>(spirv::Decoration::Block);
   };
   EXPECT_TRUE(findInstruction(hasBlockDecoration));
+}
+
+TEST_F(SerializationTest, ContainsSymbolName) {
+  auto structType = getFloatStructType();
+  addGlobalVar(structType, "var0");
+
+  spirv::SerializationOptions options;
+  options.emitSymbolName = true;
+  ASSERT_TRUE(succeeded(spirv::serialize(module.get(), binary, options)));
+
+  auto hasVarName = [](spirv::Opcode opcode, ArrayRef<uint32_t> operands) {
+    unsigned index = 1; // Skip the result <id>
+    return opcode == spirv::Opcode::OpName &&
+           spirv::decodeStringLiteral(operands, index) == "var0";
+  };
+  EXPECT_TRUE(findInstruction(hasVarName));
+}
+
+TEST_F(SerializationTest, DoesNotContainSymbolName) {
+  auto structType = getFloatStructType();
+  addGlobalVar(structType, "var0");
+
+  spirv::SerializationOptions options;
+  options.emitSymbolName = false;
+  ASSERT_TRUE(succeeded(spirv::serialize(module.get(), binary, options)));
+
+  auto hasVarName = [](spirv::Opcode opcode, ArrayRef<uint32_t> operands) {
+    unsigned index = 1; // Skip the result <id>
+    return opcode == spirv::Opcode::OpName &&
+           spirv::decodeStringLiteral(operands, index) == "var0";
+  };
+  EXPECT_FALSE(findInstruction(hasVarName));
 }

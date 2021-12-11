@@ -15,6 +15,7 @@
 
 #include "mlir/Dialect/SPIRV/IR/SPIRVOps.h"
 #include "mlir/IR/Builders.h"
+#include "mlir/Target/SPIRV/Serialization.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/raw_ostream.h"
@@ -42,7 +43,8 @@ LogicalResult encodeInstructionInto(SmallVectorImpl<uint32_t> &binary,
 class Serializer {
 public:
   /// Creates a serializer for the given SPIR-V `module`.
-  explicit Serializer(spirv::ModuleOp module, bool emitDebugInfo = false);
+  explicit Serializer(spirv::ModuleOp module,
+                      const SerializationOptions &options);
 
   /// Serializes the remembered SPIR-V module.
   LogicalResult serialize();
@@ -316,8 +318,8 @@ private:
   /// An MLIR builder for getting MLIR constructs.
   mlir::Builder mlirBuilder;
 
-  /// A flag which indicates if the debuginfo should be emitted.
-  bool emitDebugInfo = false;
+  /// Serialization options.
+  SerializationOptions options;
 
   /// A flag which indicates if the last processed instruction was a merge
   /// instruction.
