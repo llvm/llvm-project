@@ -22,7 +22,7 @@ declare void @use.i8(i8*)
 
 define void @test_inbounds_program_ub_if_first_gep_poison(i8* %ptr, i64 %n) {
 ; CHECK-LABEL: @test_inbounds_program_ub_if_first_gep_poison(
-; CHECK-NEXT:    [[ADD_PTR_1:%.*]] = getelementptr i8, i8* [[PTR:%.*]], i64 [[N:%.*]]
+; CHECK-NEXT:    [[ADD_PTR_1:%.*]] = getelementptr inbounds i8, i8* [[PTR:%.*]], i64 [[N:%.*]]
 ; CHECK-NEXT:    call void @use.i8(i8* noundef [[ADD_PTR_1]])
 ; CHECK-NEXT:    call void @use.i8(i8* [[ADD_PTR_1]])
 ; CHECK-NEXT:    ret void
