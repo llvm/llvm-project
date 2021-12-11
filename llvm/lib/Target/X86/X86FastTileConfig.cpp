@@ -134,11 +134,7 @@ bool X86FastTileConfig::isAMXInstr(MachineInstr &MI) {
   if (MI.getOpcode() == X86::PLDTILECFGV || MI.isDebugInstr())
     return false;
 
-  for (MachineOperand &MO : MI.operands())
-    if (isTilePhysReg(MO))
-      return true;
-
-  return false;
+  return llvm::any_of(MI.operands(), isTilePhysReg);
 }
 
 MachineInstr *X86FastTileConfig::getKeyAMXInstr(MachineInstr *MI) {
