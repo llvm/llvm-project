@@ -259,10 +259,9 @@ class ReplaceLDSUseImpl {
       auto FunctionToInsts =
           AMDGPU::getFunctionToInstsMap(U, false /*=CollectKernelInsts*/);
 
-      for (auto FI = FunctionToInsts.begin(), FE = FunctionToInsts.end();
-           FI != FE; ++FI) {
-        Function *F = FI->first;
-        auto &Insts = FI->second;
+      for (const auto &FunctionToInst : FunctionToInsts) {
+        Function *F = FunctionToInst.first;
+        auto &Insts = FunctionToInst.second;
         for (auto *I : Insts) {
           // If `U` is a constant expression, then we need to break the
           // associated instruction into a set of separate instructions by
@@ -355,10 +354,9 @@ bool ReplaceLDSUseImpl::replaceLDSUse(GlobalVariable *GV) {
 
   // Traverse through each kernel K, check and if required, initialize the
   // LDS pointer to point to LDS within K.
-  for (auto KI = KernelToCallees.begin(), KE = KernelToCallees.end(); KI != KE;
-       ++KI) {
-    Function *K = KI->first;
-    SmallPtrSet<Function *, 8> Callees = KI->second;
+  for (const auto &KernelToCallee : KernelToCallees) {
+    Function *K = KernelToCallee.first;
+    SmallPtrSet<Function *, 8> Callees = KernelToCallee.second;
 
     // Compute reachable and LDS used callees for kernel K.
     set_intersect(Callees, LDSAccessors);
