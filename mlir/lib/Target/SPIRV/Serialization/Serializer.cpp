@@ -72,18 +72,16 @@ namespace spirv {
 
 /// Encodes an SPIR-V instruction with the given `opcode` and `operands` into
 /// the given `binary` vector.
-LogicalResult encodeInstructionInto(SmallVectorImpl<uint32_t> &binary,
-                                    spirv::Opcode op,
-                                    ArrayRef<uint32_t> operands) {
+void encodeInstructionInto(SmallVectorImpl<uint32_t> &binary, spirv::Opcode op,
+                           ArrayRef<uint32_t> operands) {
   uint32_t wordCount = 1 + operands.size();
   binary.push_back(spirv::getPrefixedOpcode(wordCount, op));
   binary.append(operands.begin(), operands.end());
-  return success();
 }
 
-Serializer::Serializer(spirv::ModuleOp module, bool emitDebugInfo)
-    : module(module), mlirBuilder(module.getContext()),
-      emitDebugInfo(emitDebugInfo) {}
+Serializer::Serializer(spirv::ModuleOp module,
+                       const SerializationOptions &options)
+    : module(module), mlirBuilder(module.getContext()), options(options) {}
 
 LogicalResult Serializer::serialize() {
   LLVM_DEBUG(llvm::dbgs() << "+++ starting serialization +++\n");
@@ -167,20 +165,20 @@ uint32_t Serializer::getOrCreateFunctionID(StringRef fnName) {
 
 void Serializer::processCapability() {
   for (auto cap : module.vce_triple()->getCapabilities())
-    (void)encodeInstructionInto(capabilities, spirv::Opcode::OpCapability,
-                                {static_cast<uint32_t>(cap)});
+    encodeInstructionInto(capabilities, spirv::Opcode::OpCapability,
+                          {static_cast<uint32_t>(cap)});
 }
 
 void Serializer::processDebugInfo() {
-  if (!emitDebugInfo)
+  if (!options.emitDebugInfo)
     return;
   auto fileLoc = module.getLoc().dyn_cast<FileLineColLoc>();
   auto fileName = fileLoc ? fileLoc.getFilename().strref() : "<unknown>";
   fileID = getNextID();
   SmallVector<uint32_t, 16> operands;
   operands.push_back(fileID);
-  (void)spirv::encodeStringLiteralInto(operands, fileName);
-  (void)encodeInstructionInto(debug, spirv::Opcode::OpString, operands);
+  spirv::encodeStringLiteralInto(operands, fileName);
+  encodeInstructionInto(debug, spirv::Opcode::OpString, operands);
   // TODO: Encode more debug instructions.
 }
 
@@ -188,10 +186,8 @@ void Serializer::processExtension() {
   llvm::SmallVector<uint32_t, 16> extName;
   for (spirv::Extension ext : module.vce_triple()->getExtensions()) {
     extName.clear();
-    (void)spirv::encodeStringLiteralInto(extName,
-                                         spirv::stringifyExtension(ext));
-    (void)encodeInstructionInto(extensions, spirv::Opcode::OpExtension,
-                                extName);
+    spirv::encodeStringLiteralInto(extName, spirv::stringifyExtension(ext));
+    encodeInstructionInto(extensions, spirv::Opcode::OpExtension, extName);
   }
 }
 
@@ -199,8 +195,7 @@ void Serializer::processMemoryModel() {
   uint32_t mm = module->getAttrOfType<IntegerAttr>("memory_model").getInt();
   uint32_t am = module->getAttrOfType<IntegerAttr>("addressing_model").getInt();
 
-  (void)encodeInstructionInto(memoryModel, spirv::Opcode::OpMemoryModel,
-                              {am, mm});
+  encodeInstructionInto(memoryModel, spirv::Opcode::OpMemoryModel, {am, mm});
 }
 
 LogicalResult Serializer::processDecoration(Location loc, uint32_t resultID,
@@ -254,13 +249,14 @@ LogicalResult Serializer::processDecoration(Location loc, uint32_t resultID,
 
 LogicalResult Serializer::processName(uint32_t resultID, StringRef name) {
   assert(!name.empty() && "unexpected empty string for OpName");
+  if (!options.emitSymbolName)
+    return success();
 
   SmallVector<uint32_t, 4> nameOperands;
   nameOperands.push_back(resultID);
-  if (failed(spirv::encodeStringLiteralInto(nameOperands, name))) {
-    return failure();
-  }
-  return encodeInstructionInto(names, spirv::Opcode::OpName, nameOperands);
+  spirv::encodeStringLiteralInto(nameOperands, name);
+  encodeInstructionInto(names, spirv::Opcode::OpName, nameOperands);
+  return success();
 }
 
 template <>
@@ -292,8 +288,8 @@ LogicalResult Serializer::processMemberDecoration(
   if (memberDecoration.hasValue) {
     args.push_back(memberDecoration.decorationValue);
   }
-  return encodeInstructionInto(decorations, spirv::Opcode::OpMemberDecorate,
-                               args);
+  encodeInstructionInto(decorations, spirv::Opcode::OpMemberDecorate, args);
+  return success();
 }
 
 //===----------------------------------------------------------------------===//
@@ -330,9 +326,9 @@ LogicalResult
 Serializer::processTypeImpl(Location loc, Type type, uint32_t &typeID,
                             SetVector<StringRef> &serializationCtx) {
   typeID = getTypeID(type);
-  if (typeID) {
+  if (typeID)
     return success();
-  }
+
   typeID = getNextID();
   SmallVector<uint32_t, 4> operands;
 
@@ -350,8 +346,7 @@ Serializer::processTypeImpl(Location loc, Type type, uint32_t &typeID,
 
     typeIDMap[type] = typeID;
 
-    if (failed(encodeInstructionInto(typesGlobalValues, typeEnum, operands)))
-      return failure();
+    encodeInstructionInto(typesGlobalValues, typeEnum, operands);
 
     if (recursiveStructInfos.count(type) != 0) {
       // This recursive struct type is emitted already, now the OpTypePointer
@@ -364,9 +359,8 @@ Serializer::processTypeImpl(Location loc, Type type, uint32_t &typeID,
         ptrOperands.push_back(static_cast<uint32_t>(ptrInfo.storageClass));
         ptrOperands.push_back(typeIDMap[type]);
 
-        if (failed(encodeInstructionInto(
-                typesGlobalValues, spirv::Opcode::OpTypePointer, ptrOperands)))
-          return failure();
+        encodeInstructionInto(typesGlobalValues, spirv::Opcode::OpTypePointer,
+                              ptrOperands);
       }
 
       recursiveStructInfos[type].clear();
@@ -470,9 +464,9 @@ LogicalResult Serializer::prepareBasicType(
       forwardPtrOperands.push_back(
           static_cast<uint32_t>(ptrType.getStorageClass()));
 
-      (void)encodeInstructionInto(typesGlobalValues,
-                                  spirv::Opcode::OpTypeForwardPointer,
-                                  forwardPtrOperands);
+      encodeInstructionInto(typesGlobalValues,
+                            spirv::Opcode::OpTypeForwardPointer,
+                            forwardPtrOperands);
 
       // 2. Find the pointee (enclosing) struct.
       auto structType = spirv::StructType::getIdentified(
@@ -498,6 +492,14 @@ LogicalResult Serializer::prepareBasicType(
     typeEnum = spirv::Opcode::OpTypePointer;
     operands.push_back(static_cast<uint32_t>(ptrType.getStorageClass()));
     operands.push_back(pointeeTypeID);
+
+    if (isInterfaceStructPtrType(ptrType)) {
+      if (failed(emitDecoration(getTypeID(pointeeStruct),
+                                spirv::Decoration::Block)))
+        return emitError(loc, "cannot decorate ")
+               << pointeeStruct << " with Block decoration";
+    }
+
     return success();
   }
 
@@ -525,7 +527,8 @@ LogicalResult Serializer::prepareBasicType(
 
   if (auto structType = type.dyn_cast<spirv::StructType>()) {
     if (structType.isIdentified()) {
-      (void)processName(resultID, structType.getIdentifier());
+      if (failed(processName(resultID, structType.getIdentifier())))
+        return failure();
       serializationCtx.insert(structType.getIdentifier());
     }
 
@@ -690,7 +693,7 @@ uint32_t Serializer::prepareArrayConstant(Location loc, Type constType,
     }
   }
   spirv::Opcode opcode = spirv::Opcode::OpConstantComposite;
-  (void)encodeInstructionInto(typesGlobalValues, opcode, operands);
+  encodeInstructionInto(typesGlobalValues, opcode, operands);
 
   return resultID;
 }
@@ -735,7 +738,7 @@ Serializer::prepareDenseElementsConstant(Location loc, Type constType,
     }
   }
   spirv::Opcode opcode = spirv::Opcode::OpConstantComposite;
-  (void)encodeInstructionInto(typesGlobalValues, opcode, operands);
+  encodeInstructionInto(typesGlobalValues, opcode, operands);
 
   return resultID;
 }
@@ -776,7 +779,7 @@ uint32_t Serializer::prepareConstantBool(Location loc, BoolAttr boolAttr,
                               : spirv::Opcode::OpConstantTrue)
                     : (isSpec ? spirv::Opcode::OpSpecConstantFalse
                               : spirv::Opcode::OpConstantFalse);
-  (void)encodeInstructionInto(typesGlobalValues, opcode, {typeID, resultID});
+  encodeInstructionInto(typesGlobalValues, opcode, {typeID, resultID});
 
   if (!isSpec) {
     constIDMap[boolAttr] = resultID;
@@ -822,8 +825,7 @@ uint32_t Serializer::prepareConstantInt(Location loc, IntegerAttr intAttr,
     } else {
       word = static_cast<uint32_t>(value.getZExtValue());
     }
-    (void)encodeInstructionInto(typesGlobalValues, opcode,
-                                {typeID, resultID, word});
+    encodeInstructionInto(typesGlobalValues, opcode, {typeID, resultID, word});
   } break;
     // According to SPIR-V spec: "When the type's bit width is larger than one
     // word, the literal’s low-order words appear first."
@@ -837,8 +839,8 @@ uint32_t Serializer::prepareConstantInt(Location loc, IntegerAttr intAttr,
     } else {
       words = llvm::bit_cast<DoubleWord>(value.getZExtValue());
     }
-    (void)encodeInstructionInto(typesGlobalValues, opcode,
-                                {typeID, resultID, words.word1, words.word2});
+    encodeInstructionInto(typesGlobalValues, opcode,
+                          {typeID, resultID, words.word1, words.word2});
   } break;
   default: {
     std::string valueStr;
@@ -881,20 +883,18 @@ uint32_t Serializer::prepareConstantFp(Location loc, FloatAttr floatAttr,
 
   if (&value.getSemantics() == &APFloat::IEEEsingle()) {
     uint32_t word = llvm::bit_cast<uint32_t>(value.convertToFloat());
-    (void)encodeInstructionInto(typesGlobalValues, opcode,
-                                {typeID, resultID, word});
+    encodeInstructionInto(typesGlobalValues, opcode, {typeID, resultID, word});
   } else if (&value.getSemantics() == &APFloat::IEEEdouble()) {
     struct DoubleWord {
       uint32_t word1;
       uint32_t word2;
     } words = llvm::bit_cast<DoubleWord>(value.convertToDouble());
-    (void)encodeInstructionInto(typesGlobalValues, opcode,
-                                {typeID, resultID, words.word1, words.word2});
+    encodeInstructionInto(typesGlobalValues, opcode,
+                          {typeID, resultID, words.word1, words.word2});
   } else if (&value.getSemantics() == &APFloat::IEEEhalf()) {
     uint32_t word =
         static_cast<uint32_t>(value.bitcastToAPInt().getZExtValue());
-    (void)encodeInstructionInto(typesGlobalValues, opcode,
-                                {typeID, resultID, word});
+    encodeInstructionInto(typesGlobalValues, opcode, {typeID, resultID, word});
   } else {
     std::string valueStr;
     llvm::raw_string_ostream rss(valueStr);
@@ -923,7 +923,7 @@ uint32_t Serializer::getOrCreateBlockID(Block *block) {
 
 LogicalResult
 Serializer::processBlock(Block *block, bool omitLabel,
-                         function_ref<void()> actionBeforeTerminator) {
+                         function_ref<LogicalResult()> actionBeforeTerminator) {
   LLVM_DEBUG(llvm::dbgs() << "processing block " << block << ":\n");
   LLVM_DEBUG(block->print(llvm::dbgs()));
   LLVM_DEBUG(llvm::dbgs() << '\n');
@@ -933,8 +933,7 @@ Serializer::processBlock(Block *block, bool omitLabel,
                << "[block] " << block << " (id = " << blockID << ")\n");
 
     // Emit OpLabel for this block.
-    (void)encodeInstructionInto(functionBody, spirv::Opcode::OpLabel,
-                                {blockID});
+    encodeInstructionInto(functionBody, spirv::Opcode::OpLabel, {blockID});
   }
 
   // Emit OpPhi instructions for block arguments, if any.
@@ -949,7 +948,8 @@ Serializer::processBlock(Block *block, bool omitLabel,
 
   // Process the terminator.
   if (actionBeforeTerminator)
-    actionBeforeTerminator();
+    if (failed(actionBeforeTerminator()))
+      return failure();
   if (failed(processOperation(&block->back())))
     return failure();
 
@@ -1038,7 +1038,7 @@ LogicalResult Serializer::emitPhiForBlockArguments(Block *block) {
       phiArgs.push_back(predBlockId);
     }
 
-    (void)encodeInstructionInto(functionBody, spirv::Opcode::OpPhi, phiArgs);
+    encodeInstructionInto(functionBody, spirv::Opcode::OpPhi, phiArgs);
     valueIDMap[arg] = phiID;
   }
 
@@ -1058,12 +1058,9 @@ LogicalResult Serializer::encodeExtensionInstruction(
     setID = getNextID();
     SmallVector<uint32_t, 16> importOperands;
     importOperands.push_back(setID);
-    if (failed(
-            spirv::encodeStringLiteralInto(importOperands, extensionSetName)) ||
-        failed(encodeInstructionInto(
-            extendedSets, spirv::Opcode::OpExtInstImport, importOperands))) {
-      return failure();
-    }
+    spirv::encodeStringLiteralInto(importOperands, extensionSetName);
+    encodeInstructionInto(extendedSets, spirv::Opcode::OpExtInstImport,
+                          importOperands);
   }
 
   // The first two operands are the result type <id> and result <id>. The set
@@ -1077,8 +1074,9 @@ LogicalResult Serializer::encodeExtensionInstruction(
   extInstOperands.push_back(setID);
   extInstOperands.push_back(extensionOpcode);
   extInstOperands.append(std::next(operands.begin(), 2), operands.end());
-  return encodeInstructionInto(functionBody, spirv::Opcode::OpExtInst,
-                               extInstOperands);
+  encodeInstructionInto(functionBody, spirv::Opcode::OpExtInst,
+                        extInstOperands);
+  return success();
 }
 
 LogicalResult Serializer::processOperation(Operation *opInst) {
@@ -1137,13 +1135,15 @@ LogicalResult Serializer::processOpWithoutGrammarAttr(Operation *op,
   for (Value operand : op->getOperands())
     operands.push_back(getValueID(operand));
 
-  (void)emitDebugLine(functionBody, loc);
+  if (failed(emitDebugLine(functionBody, loc)))
+    return failure();
 
   if (extInstSet.empty()) {
-    (void)encodeInstructionInto(functionBody,
-                                static_cast<spirv::Opcode>(opcode), operands);
+    encodeInstructionInto(functionBody, static_cast<spirv::Opcode>(opcode),
+                          operands);
   } else {
-    (void)encodeExtensionInstruction(op, extInstSet, opcode, operands);
+    if (failed(encodeExtensionInstruction(op, extInstSet, opcode, operands)))
+      return failure();
   }
 
   if (op->getNumResults() != 0) {
@@ -1170,7 +1170,7 @@ LogicalResult Serializer::emitDecoration(uint32_t target,
 
 LogicalResult Serializer::emitDebugLine(SmallVectorImpl<uint32_t> &binary,
                                         Location loc) {
-  if (!emitDebugInfo)
+  if (!options.emitDebugInfo)
     return success();
 
   if (lastProcessedWasMergeInst) {
@@ -1180,9 +1180,8 @@ LogicalResult Serializer::emitDebugLine(SmallVectorImpl<uint32_t> &binary,
 
   auto fileLoc = loc.dyn_cast<FileLineColLoc>();
   if (fileLoc)
-    (void)encodeInstructionInto(
-        binary, spirv::Opcode::OpLine,
-        {fileID, fileLoc.getLine(), fileLoc.getColumn()});
+    encodeInstructionInto(binary, spirv::Opcode::OpLine,
+                          {fileID, fileLoc.getLine(), fileLoc.getColumn()});
   return success();
 }
 } // namespace spirv

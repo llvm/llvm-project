@@ -1215,15 +1215,28 @@ bool FlatAffineConstraints::containsPoint(ArrayRef<int64_t> point) const {
 ///      -divisor * id + expr                 >= 0  <-- Upper bound for 'id'
 ///
 /// For example:
-///       32*k >= 16*i + j - 31                 <-- Lower bound for 'k'
-///       32*k  <= 16*i + j                     <-- Upper bound for 'k'
-///       expr = 16*i + j, divisor = 32
-///       k = ( 16*i + j ) floordiv 32
+///     32*k >= 16*i + j - 31                 <-- Lower bound for 'k'
+///     32*k  <= 16*i + j                     <-- Upper bound for 'k'
+///     expr = 16*i + j, divisor = 32
+///     k = ( 16*i + j ) floordiv 32
 ///
-///       4q >= i + j - 2                       <-- Lower bound for 'q'
-///       4q <= i + j + 1                       <-- Upper bound for 'q'
-///       expr = i + j + 1, divisor = 4
-///       q = (i + j + 1) floordiv 4
+///     4q >= i + j - 2                       <-- Lower bound for 'q'
+///     4q <= i + j + 1                       <-- Upper bound for 'q'
+///     expr = i + j + 1, divisor = 4
+///     q = (i + j + 1) floordiv 4
+//
+/// This function also supports detecting divisions from bounds that are
+/// strictly tighter than the division bounds described above, since tighter
+/// bounds imply the division bounds. For example:
+///     4q - i - j + 2 >= 0                       <-- Lower bound for 'q'
+///    -4q + i + j     >= 0                       <-- Tight upper bound for 'q'
+///
+/// To extract floor divisions with tighter bounds, we assume that that the
+/// constraints are of the form:
+///     c <= expr - divisior * id <= divisor - 1, where 0 <= c <= divisor - 1
+/// Rearranging, we have:
+///     divisor * id - expr + (divisor - 1) >= 0  <-- Lower bound for 'id'
+///    -divisor * id + expr - c             >= 0  <-- Upper bound for 'id'
 ///
 /// If successful, `expr` is set to dividend of the division and `divisor` is
 /// set to the denominator of the division.
@@ -1238,21 +1251,11 @@ static LogicalResult getDivRepr(const FlatAffineConstraints &cst, unsigned pos,
   assert(lbIneq <= cst.getNumInequalities() &&
          "Invalid upper bound inequality position");
 
-  // Due to the form of the inequalities, sum of constants of the
-  // inequalities is (divisor - 1).
-  int64_t denominator = cst.atIneq(lbIneq, cst.getNumCols() - 1) +
-                        cst.atIneq(ubIneq, cst.getNumCols() - 1) + 1;
+  // Extract divisor from the lower bound.
+  divisor = cst.atIneq(lbIneq, pos);
 
-  // Divisor should be positive.
-  if (denominator <= 0)
-    return failure();
-
-  // Check if coeff of variable is equal to divisor.
-  if (denominator != cst.atIneq(lbIneq, pos))
-    return failure();
-
-  // Check if constraints are opposite of each other. Constant term
-  // is not required to be opposite and is not checked.
+  // First, check if the constraints are opposite of each other except the
+  // constant term.
   unsigned i = 0, e = 0;
   for (i = 0, e = cst.getNumIds(); i < e; ++i)
     if (cst.atIneq(ubIneq, i) != -cst.atIneq(lbIneq, i))
@@ -1261,15 +1264,30 @@ static LogicalResult getDivRepr(const FlatAffineConstraints &cst, unsigned pos,
   if (i < e)
     return failure();
 
-  // Set expr with dividend of the division.
-  SmallVector<int64_t, 8> dividend(cst.getNumCols());
-  for (i = 0, e = cst.getNumCols(); i < e; ++i)
-    if (i != pos)
-      dividend[i] = cst.atIneq(ubIneq, i);
-  expr = dividend;
+  // Then, check if the constant term is of the proper form.
+  // Due to the form of the upper/lower bound inequalities, the sum of their
+  // constants is `divisor - 1 - c`. From this, we can extract c:
+  int64_t constantSum = cst.atIneq(lbIneq, cst.getNumCols() - 1) +
+                        cst.atIneq(ubIneq, cst.getNumCols() - 1);
+  int64_t c = divisor - 1 - constantSum;
 
-  // Set divisor.
-  divisor = denominator;
+  // Check if `c` satisfies the condition `0 <= c <= divisor - 1`. This also
+  // implictly checks that `divisor` is positive.
+  if (!(c >= 0 && c <= divisor - 1))
+    return failure();
+
+  // The inequality pair can be used to extract the division.
+  // Set `expr` to the dividend of the division except the constant term, which
+  // is set below.
+  expr.resize(cst.getNumCols(), 0);
+  for (i = 0, e = cst.getNumIds(); i < e; ++i)
+    if (i != pos)
+      expr[i] = cst.atIneq(ubIneq, i);
+
+  // From the upper bound inequality's form, its constant term is equal to the
+  // constant term of `expr`, minus `c`. From this,
+  // constant term of `expr` = constant term of upper bound + `c`.
+  expr.back() = cst.atIneq(ubIneq, cst.getNumCols() - 1) + c;
 
   return success();
 }

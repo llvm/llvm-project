@@ -21,19 +21,6 @@
 #include "llvm/ADT/StringRef.h"
 #include <cstdint>
 
-//===----------------------------------------------------------------------===//
-// Utility Functions
-//===----------------------------------------------------------------------===//
-
-/// Decodes a string literal in `words` starting at `wordIndex`. Update the
-/// latter to point to the position in words after the string literal.
-static inline llvm::StringRef
-decodeStringLiteral(llvm::ArrayRef<uint32_t> words, unsigned &wordIndex) {
-  llvm::StringRef str(reinterpret_cast<const char *>(words.data() + wordIndex));
-  wordIndex += str.size() / 4 + 1;
-  return str;
-}
-
 namespace mlir {
 namespace spirv {
 
@@ -325,7 +312,7 @@ private:
 
   /// Discontinues any source-level location information that might be active
   /// from a previous OpLine instruction.
-  LogicalResult clearDebugLine();
+  void clearDebugLine();
 
   /// Creates a FileLineColLoc with the OpLine location information.
   Location createFileLineColLoc(OpBuilder opBuilder);
