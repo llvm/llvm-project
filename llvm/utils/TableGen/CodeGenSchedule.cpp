@@ -1398,7 +1398,7 @@ bool PredTransitions::mutuallyExclusive(Record *PredDef,
       //
       // if (A) return ...;
       // if (B) return ...;
-      if (!count(Preds, PC.Predicate))
+      if (!llvm::is_contained(Preds, PC.Predicate))
         continue;
       return true;
     }
