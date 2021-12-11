@@ -251,10 +251,7 @@ namespace {
       SetVector<MachineInstr *> &Predicates = PredicatedInsts[MI]->Predicates;
       if (Exclusive && Predicates.size() != 1)
         return false;
-      for (auto *PredMI : Predicates)
-        if (isVCTP(PredMI))
-          return true;
-      return false;
+      return llvm::any_of(Predicates, isVCTP);
     }
 
     // Is the VPST, controlling the block entry, predicated upon a VCTP.
@@ -351,10 +348,7 @@ namespace {
     }
 
     bool containsVCTP() const {
-      for (auto *MI : Insts)
-        if (isVCTP(MI))
-          return true;
-      return false;
+      return llvm::any_of(Insts, isVCTP);
     }
 
     unsigned size() const { return Insts.size(); }
