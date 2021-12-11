@@ -1366,8 +1366,16 @@ bool EarlyCSE::processNode(DomTreeNode *Node) {
           LLVM_DEBUG(dbgs() << "Skipping due to debug counter\n");
           continue;
         }
-        if (auto *I = dyn_cast<Instruction>(V))
-          I->andIRFlags(&Inst);
+        if (auto *I = dyn_cast<Instruction>(V)) {
+          // If I being poison triggers UB, there is no need to drop those
+          // flags. Otherwise, only retain flags present on both I and Inst.
+          // TODO: Currently some fast-math flags are not treated as
+          // poison-generating even though they should. Until this is fixed,
+          // always retain flags present on both I and Inst for floating point
+          // instructions.
+          if (isa<FPMathOperator>(I) || (I->hasPoisonGeneratingFlags() && !programUndefinedIfPoison(I)))
+            I->andIRFlags(&Inst);
+        }
         Inst.replaceAllUsesWith(V);
         salvageKnowledge(&Inst, &AC);
         removeMSSA(Inst);
