@@ -28,7 +28,7 @@ namespace fputil {
 template <typename T> static inline T polyeval(T x, T a0) { return a0; }
 
 template <typename T, typename... Ts>
-static inline T polyeval(T x, T a0, Ts... a) {
+INLINE_FMA static inline T polyeval(T x, T a0, Ts... a) {
   return fma(x, polyeval(x, a...), a0);
 }
 
