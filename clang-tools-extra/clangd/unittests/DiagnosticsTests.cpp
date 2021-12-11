@@ -1084,6 +1084,8 @@ void g() {  ns::$[[scope]]::X_Y();  }
   )cpp");
   TestTU TU;
   TU.Code = std::string(Test.code());
+  // FIXME: Figure out why this is needed and remove it, PR43662.
+  TU.ExtraArgs.push_back("-fno-ms-compatibility");
   auto Index = buildIndexWithSymbol(
       SymbolWithHeader{"ns::scope::X_Y", "unittest:///x.h", "\"x.h\""});
   TU.ExternalIndex = Index.get();
@@ -1109,6 +1111,8 @@ void f() {
   )cpp");
   TestTU TU;
   TU.Code = std::string(Test.code());
+  // FIXME: Figure out why this is needed and remove it, PR43662.
+  TU.ExtraArgs.push_back("-fno-ms-compatibility");
   auto Index = buildIndexWithSymbol(
       {SymbolWithHeader{"clang::clangd::X", "unittest:///x.h", "\"x.h\""},
        SymbolWithHeader{"clang::clangd::ns::Y", "unittest:///y.h", "\"y.h\""}});
