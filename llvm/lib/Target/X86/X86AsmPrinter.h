@@ -100,6 +100,20 @@ class LLVM_LIBRARY_VISIBILITY X86AsmPrinter : public AsmPrinter {
 
   // Address sanitizer specific lowering for X86.
   void LowerASAN_CHECK_MEMACCESS(const MachineInstr &MI);
+  void emitAsanMemaccessSymbols(Module &M);
+  void emitAsanMemaccessPartial(Module &M, unsigned Reg,
+                                const ASanAccessInfo &AccessInfo,
+                                MCSubtargetInfo &STI);
+  void emitAsanMemaccessFull(Module &M, unsigned Reg,
+                             const ASanAccessInfo &AccessInfo,
+                             MCSubtargetInfo &STI);
+  void emitAsanReportError(Module &M, unsigned Reg,
+                           const ASanAccessInfo &AccessInfo,
+                           MCSubtargetInfo &STI);
+
+  typedef std::tuple<unsigned /*Reg*/, uint32_t /*AccessInfo*/>
+      AsanMemaccessTuple;
+  std::map<AsanMemaccessTuple, MCSymbol *> AsanMemaccessSymbols;
 
   // Choose between emitting .seh_ directives and .cv_fpo_ directives.
   void EmitSEHInstruction(const MachineInstr *MI);
