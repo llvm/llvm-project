@@ -892,6 +892,7 @@ TEST(IncludeFixerTest, IncompleteEnum) {
   TestTU TU;
   TU.ExternalIndex = Index.get();
   TU.ExtraArgs.push_back("-std=c++20");
+  TU.ExtraArgs.push_back("-fno-ms-compatibility"); // else incomplete enum is OK
 
   std::vector<std::pair<llvm::StringRef, llvm::StringRef>> Tests{
       {"incomplete_enum", "enum class X : int; using enum [[X]];"},
