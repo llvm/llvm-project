@@ -593,7 +593,7 @@ func @broadcast_3_shapes_different_extents(%a : tensor<2xindex>,
   return
 }
 
-// ----
+// -----
 
 // CHECK-LABEL: @broadcast_to_known_rank
 func @broadcast_to_known_rank(%a : tensor<1xindex>, %b : tensor<3xindex>)
