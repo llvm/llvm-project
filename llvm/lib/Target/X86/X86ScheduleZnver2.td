@@ -1304,15 +1304,15 @@ def Zn2WriteCVTPS2PIr: SchedWriteRes<[Zn2FPU3]> {
 }
 // CVT(T)PS2PI.
 // mm,x.
-def : InstRW<[Zn2WriteCVTPS2PIr], (instregex "MMX_CVT(T?)PS2PIirr")>;
+def : InstRW<[Zn2WriteCVTPS2PIr], (instregex "MMX_CVT(T?)PS2PIrr")>;
 
 // CVTPI2PD.
 // x,mm.
-def : InstRW<[Zn2WriteCVTPS2PDr], (instrs MMX_CVTPI2PDirr)>;
+def : InstRW<[Zn2WriteCVTPS2PDr], (instrs MMX_CVTPI2PDrr)>;
 
 // CVT(T)PD2PI.
 // mm,x.
-def : InstRW<[Zn2WriteCVTPS2PIr], (instregex "MMX_CVT(T?)PD2PIirr")>;
+def : InstRW<[Zn2WriteCVTPS2PIr], (instregex "MMX_CVT(T?)PD2PIrr")>;
 
 def Zn2WriteCVSTSI2SSr: SchedWriteRes<[Zn2FPU3]> {
   let Latency = 3;

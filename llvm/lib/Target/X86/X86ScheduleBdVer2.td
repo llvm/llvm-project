@@ -1008,11 +1008,11 @@ defm : PdWriteResXMMPair<WriteCvtPD2I,   [PdFPU0, PdFPCVT, PdFPSTO],          8,
 defm : PdWriteResYMMPair<WriteCvtPD2IY,  [PdFPU0, PdFPCVT, PdFPSTO, PdFPFMA], 8, [1, 2, 1, 1], 4>;
 defm : X86WriteResPairUnsupported<WriteCvtPD2IZ>;
 
-def PdWriteMMX_CVTTPD2PIirr : SchedWriteRes<[PdFPU0, PdFPCVT, PdFPSTO]> {
+def PdWriteMMX_CVTTPD2PIrr : SchedWriteRes<[PdFPU0, PdFPCVT, PdFPSTO]> {
   let Latency = 6;
   let NumMicroOps = 2;
 }
-def : InstRW<[PdWriteMMX_CVTTPD2PIirr], (instrs MMX_CVTTPD2PIirr)>;
+def : InstRW<[PdWriteMMX_CVTTPD2PIrr], (instrs MMX_CVTTPD2PIrr)>;
 
 // FIXME: f+3 ST, LD+STC latency
 defm : PdWriteResXMMPair<WriteCvtI2SS,   [PdFPU0, PdFPCVT, PdFPSTO], 4, [], 2>;
@@ -1048,18 +1048,18 @@ defm : PdWriteResXMMPair<WriteCvtPD2PS,  [PdFPU0, PdFPCVT, PdFPSTO],          8,
 defm : PdWriteResYMMPair<WriteCvtPD2PSY, [PdFPU0, PdFPCVT, PdFPSTO, PdFPFMA], 8, [1, 2, 1, 1], 4>;
 defm : X86WriteResPairUnsupported<WriteCvtPD2PSZ>;
 
-def PdWriteMMX_CVTPD2PIirrMMX_CVTPI2PDirr : SchedWriteRes<[PdFPU0, PdFPCVT, PdFPSTO]> {
+def PdWriteMMX_CVTPD2PIrrMMX_CVTPI2PDrr : SchedWriteRes<[PdFPU0, PdFPCVT, PdFPSTO]> {
   let Latency = 6;
   let NumMicroOps = 2;
 }
-def : InstRW<[PdWriteMMX_CVTPD2PIirrMMX_CVTPI2PDirr], (instrs MMX_CVTPD2PIirr,
-                                                            MMX_CVTPI2PDirr)>;
+def : InstRW<[PdWriteMMX_CVTPD2PIrrMMX_CVTPI2PDrr], (instrs MMX_CVTPD2PIrr,
+                                                            MMX_CVTPI2PDrr)>;
 
-def PdWriteMMX_CVTPI2PSirr : SchedWriteRes<[PdFPU0, PdFPCVT, PdFPSTO]> {
+def PdWriteMMX_CVTPI2PSrr : SchedWriteRes<[PdFPU0, PdFPCVT, PdFPSTO]> {
   let Latency = 4;
   let NumMicroOps = 2;
 }
-def : InstRW<[PdWriteMMX_CVTPI2PSirr], (instrs MMX_CVTPI2PSirr)>;
+def : InstRW<[PdWriteMMX_CVTPI2PSrr], (instrs MMX_CVTPI2PSrr)>;
 
 defm : PdWriteResXMMPair<WriteCvtPH2PS,  [PdFPU0, PdFPCVT, PdFPSTO], 8, [1, 2, 1], 2, 1>;
 defm : PdWriteResYMMPair<WriteCvtPH2PSY, [PdFPU0, PdFPCVT, PdFPSTO], 8, [1, 2, 1], 4, 3>;

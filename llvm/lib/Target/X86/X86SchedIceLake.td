@@ -1055,8 +1055,8 @@ def ICXWriteResGroup61 : SchedWriteRes<[ICXPort5,ICXPort015]> {
   let NumMicroOps = 2;
   let ResourceCycles = [1,1];
 }
-def: InstRW<[ICXWriteResGroup61], (instregex "MMX_CVT(T?)PD2PIirr",
-                                             "MMX_CVT(T?)PS2PIirr",
+def: InstRW<[ICXWriteResGroup61], (instregex "MMX_CVT(T?)PD2PIrr",
+                                             "MMX_CVT(T?)PS2PIrr",
                                              "VCVTDQ2PDZ128rr",
                                              "VCVTPD2DQZ128rr",
                                              "(V?)CVT(T?)PD2DQrr",
@@ -1162,7 +1162,7 @@ def ICXWriteResGroup72 : SchedWriteRes<[ICXPort5]> {
   let NumMicroOps = 2;
   let ResourceCycles = [2];
 }
-def: InstRW<[ICXWriteResGroup72], (instrs MMX_CVTPI2PSirr)>;
+def: InstRW<[ICXWriteResGroup72], (instrs MMX_CVTPI2PSrr)>;
 def: InstRW<[ICXWriteResGroup72], (instregex "VCOMPRESSPD(Z|Z128|Z256)rr",
                                              "VCOMPRESSPS(Z|Z128|Z256)rr",
                                              "VPCOMPRESSD(Z|Z128|Z256)rr",
@@ -1683,7 +1683,7 @@ def ICXWriteResGroup135 : SchedWriteRes<[ICXPort0,ICXPort23]> {
   let NumMicroOps = 2;
   let ResourceCycles = [1,1];
 }
-def: InstRW<[ICXWriteResGroup135], (instrs MMX_CVTPI2PSirm)>;
+def: InstRW<[ICXWriteResGroup135], (instrs MMX_CVTPI2PSrm)>;
 
 def ICXWriteResGroup136 : SchedWriteRes<[ICXPort5,ICXPort23]> {
   let Latency = 9;
@@ -1741,7 +1741,7 @@ def ICXWriteResGroup137 : SchedWriteRes<[ICXPort23,ICXPort015]> {
   let NumMicroOps = 2;
   let ResourceCycles = [1,1];
 }
-def: InstRW<[ICXWriteResGroup137], (instregex "MMX_CVT(T?)PS2PIirm",
+def: InstRW<[ICXWriteResGroup137], (instregex "MMX_CVT(T?)PS2PIrm",
                                               "(V?)CVTPS2PDrm")>;
 
 def ICXWriteResGroup143 : SchedWriteRes<[ICXPort5,ICXPort01,ICXPort23]> {
@@ -1938,8 +1938,8 @@ def ICXWriteResGroup166 : SchedWriteRes<[ICXPort5,ICXPort23,ICXPort015]> {
 def: InstRW<[ICXWriteResGroup166], (instrs CVTPD2PSrm,
                                            CVTPD2DQrm,
                                            CVTTPD2DQrm,
-                                           MMX_CVTPD2PIirm,
-                                           MMX_CVTTPD2PIirm)>;
+                                           MMX_CVTPD2PIrm,
+                                           MMX_CVTTPD2PIrm)>;
 
 def ICXWriteResGroup167 : SchedWriteRes<[ICXPort5,ICXPort23,ICXPort015]> {
   let Latency = 11;
