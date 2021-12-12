@@ -2,11 +2,11 @@
 ; This test ensures that the MXCSR is implicitly used by MMX FP instructions.
 
 define x86_mmx @mxcsr_mmx(<4 x float> %a0) {
-; CHECK: MMX_CVTPS2PIirr %{{[0-9]}}, implicit $mxcsr
-; CHECK: MMX_CVTPI2PSirr %{{[0-9]}}, killed %{{[0-9]}}, implicit $mxcsr
-; CHECK: MMX_CVTTPS2PIirr killed %{{[0-9]}}, implicit $mxcsr
-; CHECK: MMX_CVTPI2PDirr killed %{{[0-9]$}}
-; CHECK: MMX_CVTPD2PIirr killed %{{[0-9]}}, implicit $mxcsr
+; CHECK: MMX_CVTPS2PIrr %{{[0-9]}}, implicit $mxcsr
+; CHECK: MMX_CVTPI2PSrr %{{[0-9]}}, killed %{{[0-9]}}, implicit $mxcsr
+; CHECK: MMX_CVTTPS2PIrr killed %{{[0-9]}}, implicit $mxcsr
+; CHECK: MMX_CVTPI2PDrr killed %{{[0-9]$}}
+; CHECK: MMX_CVTPD2PIrr killed %{{[0-9]}}, implicit $mxcsr
   %1 = call x86_mmx @llvm.x86.sse.cvtps2pi(<4 x float> %a0)
   %2 = call <4 x float> @llvm.x86.sse.cvtpi2ps(<4 x float> %a0, x86_mmx %1)
   %3 = call x86_mmx @llvm.x86.sse.cvttps2pi(<4 x float> %2)
