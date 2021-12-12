@@ -126,17 +126,11 @@ ParseResult Parser::parseNameOrFileLineColLocation(LocationAttr &loc) {
 
   // Check for a child location.
   if (consumeIf(Token::l_paren)) {
-    auto childSourceLoc = getToken().getLoc();
-
     // Parse the child location.
     LocationAttr childLoc;
     if (parseLocationInstance(childLoc))
       return failure();
 
-    // The child must not be another NameLoc.
-    if (childLoc.isa<NameLoc>())
-      return emitError(childSourceLoc,
-                       "child of NameLoc cannot be another NameLoc");
     loc = NameLoc::get(StringAttr::get(ctx, str), childLoc);
 
     // Parse the closing ')'.
