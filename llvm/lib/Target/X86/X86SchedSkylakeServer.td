@@ -1701,19 +1701,7 @@ def: InstRW<[SKXWriteResGroup136], (instregex "VALIGN(D|Q)Z128rm(b?)i",
                                               "VPMAXSQZ128rm(b?)",
                                               "VPMAXUQZ128rm(b?)",
                                               "VPMINSQZ128rm(b?)",
-                                              "VPMINUQZ128rm(b?)",
-                                              "VPMOVSXBDZ128rm(b?)",
-                                              "VPMOVSXBQZ128rm(b?)",
-                                              "VPMOVSXBWZ128rm(b?)",
-                                              "VPMOVSXDQZ128rm(b?)",
-                                              "VPMOVSXWDZ128rm(b?)",
-                                              "VPMOVSXWQZ128rm(b?)",
-                                              "VPMOVZXBDZ128rm(b?)",
-                                              "VPMOVZXBQZ128rm(b?)",
-                                              "VPMOVZXBWZ128rm(b?)",
-                                              "VPMOVZXDQZ128rm(b?)",
-                                              "VPMOVZXWDZ128rm(b?)",
-                                              "VPMOVZXWQZ128rm(b?)")>;
+                                              "VPMINUQZ128rm(b?)")>;
 
 def SKXWriteResGroup136_2 : SchedWriteRes<[SKXPort5,SKXPort23]> {
   let Latency = 10;
