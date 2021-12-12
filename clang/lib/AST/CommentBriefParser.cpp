@@ -28,7 +28,6 @@ void cleanupBrief(std::string &S) {
         *O++ = ' ';
         PrevWasSpace = true;
       }
-      continue;
     } else {
       *O++ = C;
       PrevWasSpace = false;
