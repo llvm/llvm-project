@@ -67,7 +67,6 @@ func @bitcast_0d() {
   return
 }
 
-
 func @constant_mask_0d() {
   %1 = vector.constant_mask [0] : vector<i1>
   // CHECK: ( 0 )
@@ -75,6 +74,22 @@ func @constant_mask_0d() {
   %2 = vector.constant_mask [1] : vector<i1>
   // CHECK: ( 1 )
   vector.print %2: vector<i1>
+  return
+}
+
+func @arith_cmpi_0d(%smaller : vector<i32>, %bigger : vector<i32>) {
+  %0 = arith.cmpi ult, %smaller, %bigger : vector<i32>
+  // CHECK: ( 1 )
+  vector.print %0: vector<i1>
+
+  %1 = arith.cmpi ugt, %smaller, %bigger : vector<i32>
+  // CHECK: ( 0 )
+  vector.print %1: vector<i1>
+
+  %2 = arith.cmpi eq, %smaller, %bigger : vector<i32>
+  // CHECK: ( 0 )
+  vector.print %2: vector<i1>
+
   return
 }
 
@@ -95,6 +110,10 @@ func @entry() {
   call  @broadcast_0d(%4) : (f32) -> ()
   call  @bitcast_0d() : () -> ()
   call  @constant_mask_0d() : () -> ()
+
+  %smaller = arith.constant dense<42> : vector<i32>
+  %bigger = arith.constant dense<4242> : vector<i32>
+  call  @arith_cmpi_0d(%smaller, %bigger) : (vector<i32>, vector<i32>) -> ()
 
   return
 }
