@@ -93,6 +93,18 @@ func @arith_cmpi_0d(%smaller : vector<i32>, %bigger : vector<i32>) {
   return
 }
 
+func @create_mask_0d(%zero : index, %one : index) {
+  %zero_mask = vector.create_mask %zero : vector<i1>
+  // CHECK: ( 0 )
+  vector.print %zero_mask : vector<i1>
+
+  %one_mask = vector.create_mask %one : vector<i1>
+  // CHECK: ( 1 )
+  vector.print %one_mask : vector<i1>
+
+  return
+}
+
 func @entry() {
   %0 = arith.constant 42.0 : f32
   %1 = arith.constant dense<0.0> : vector<f32>
@@ -114,6 +126,10 @@ func @entry() {
   %smaller = arith.constant dense<42> : vector<i32>
   %bigger = arith.constant dense<4242> : vector<i32>
   call  @arith_cmpi_0d(%smaller, %bigger) : (vector<i32>, vector<i32>) -> ()
+
+  %zero_idx = arith.constant 0 : index
+  %one_idx = arith.constant 1 : index
+  call  @create_mask_0d(%zero_idx, %one_idx) : (index, index) -> ()
 
   return
 }
