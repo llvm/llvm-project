@@ -1075,9 +1075,9 @@ def Zn3WriteVecALUXMMX : SchedWriteRes<[Zn3FPVAdd01]> {
 }
 def : InstRW<[Zn3WriteVecALUXMMX], (instrs MMX_PABSBrr, MMX_PABSDrr, MMX_PABSWrr,
                                            MMX_PSIGNBrr, MMX_PSIGNDrr, MMX_PSIGNWrr,
-                                           MMX_PADDSBirr, MMX_PADDSWirr, MMX_PADDUSBirr, MMX_PADDUSWirr,
-                                           MMX_PAVGBirr, MMX_PAVGWirr,
-                                           MMX_PSUBSBirr, MMX_PSUBSWirr, MMX_PSUBUSBirr, MMX_PSUBUSWirr)>;
+                                           MMX_PADDSBrr, MMX_PADDSWrr, MMX_PADDUSBrr, MMX_PADDUSWrr,
+                                           MMX_PAVGBrr, MMX_PAVGWrr,
+                                           MMX_PSUBSBrr, MMX_PSUBSWrr, MMX_PSUBUSBrr, MMX_PSUBUSWrr)>;
 
 defm : Zn3WriteResYMMPair<WriteVecALUY, [Zn3FPVAdd0123], 1, [1], 1>; // Vector integer ALU op, no logicals (YMM).
 
@@ -1621,7 +1621,7 @@ def : IsDepBreakingFunction<[
 
   // MMX
   DepBreakingClass<[
-    MMX_PCMPEQBirr, MMX_PCMPEQWirr, MMX_PCMPEQDirr
+    MMX_PCMPEQBrr, MMX_PCMPEQWrr, MMX_PCMPEQDrr
   ], ZeroIdiomPredicate>,
 
   // SSE

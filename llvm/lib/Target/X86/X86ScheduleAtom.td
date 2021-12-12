@@ -570,7 +570,7 @@ def : InstRW<[AtomWrite01_2], (instrs LEAVE, LEAVE64, POP16r,
                                       SCASB, SCASL, SCASQ, SCASW)>;
 def : InstRW<[AtomWrite01_2], (instregex "PUSH(CS|DS|ES|FS|GS|SS)(16|32|64)",
                                          "(ST|ISTT)_F(P)?(16|32|64)?(m|rr)",
-                                         "MMX_P(ADD|SUB)Qirr",
+                                         "MMX_P(ADD|SUB)Qrr",
                                          "MOV(S|Z)X16rr8",
                                          "MOV(UPS|UPD|DQU)mr",
                                          "MASKMOVDQU(64)?",
@@ -589,7 +589,7 @@ def : InstRW<[AtomWrite01_3], (instregex "XADD(8|16|32|64)rm",
                                          "XCHG(8|16|32|64)rm",
                                          "PH(ADD|SUB)Drr",
                                          "MOV(S|Z)X16rm8",
-                                         "MMX_P(ADD|SUB)Qirm",
+                                         "MMX_P(ADD|SUB)Qrm",
                                          "MOV(UPS|UPD|DQU)rm",
                                          "P(ADD|SUB)Qrm")>;
 

@@ -1000,12 +1000,12 @@ def ZnWriteFPU12Ym : SchedWriteRes<[ZnAGU, ZnFPU12]> {
   let NumMicroOps = 2;
 }
 
-def : InstRW<[ZnWriteFPU12], (instrs MMX_PACKSSDWirr,
-                                     MMX_PACKSSWBirr,
-                                     MMX_PACKUSWBirr)>;
-def : InstRW<[ZnWriteFPU12m], (instrs MMX_PACKSSDWirm,
-                                      MMX_PACKSSWBirm,
-                                      MMX_PACKUSWBirm)>;
+def : InstRW<[ZnWriteFPU12], (instrs MMX_PACKSSDWrr,
+                                     MMX_PACKSSWBrr,
+                                     MMX_PACKUSWBrr)>;
+def : InstRW<[ZnWriteFPU12m], (instrs MMX_PACKSSDWrm,
+                                      MMX_PACKSSWBrm,
+                                      MMX_PACKUSWBrm)>;
 
 def ZnWriteFPU013 : SchedWriteRes<[ZnFPU013]> ;
 def ZnWriteFPU013Y : SchedWriteRes<[ZnFPU013]> {

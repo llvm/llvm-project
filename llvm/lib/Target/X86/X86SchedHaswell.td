@@ -1164,9 +1164,9 @@ def HWWriteResGroup36_2 : SchedWriteRes<[HWPort5,HWPort23]> {
   let NumMicroOps = 3;
   let ResourceCycles = [2,1];
 }
-def: InstRW<[HWWriteResGroup36_2], (instrs MMX_PACKSSDWirm,
-                                           MMX_PACKSSWBirm,
-                                           MMX_PACKUSWBirm)>;
+def: InstRW<[HWWriteResGroup36_2], (instrs MMX_PACKSSDWrm,
+                                           MMX_PACKSSWBrm,
+                                           MMX_PACKUSWBrm)>;
 
 def HWWriteResGroup37 : SchedWriteRes<[HWPort23,HWPort0156]> {
   let Latency = 7;
@@ -1285,9 +1285,9 @@ def HWWriteResGroup57 : SchedWriteRes<[HWPort5,HWPort0156]> {
   let NumMicroOps = 3;
   let ResourceCycles = [2,1];
 }
-def: InstRW<[HWWriteResGroup57], (instrs MMX_PACKSSDWirr,
-                                         MMX_PACKSSWBirr,
-                                         MMX_PACKUSWBirr)>;
+def: InstRW<[HWWriteResGroup57], (instrs MMX_PACKSSDWrr,
+                                         MMX_PACKSSWBrr,
+                                         MMX_PACKUSWBrr)>;
 
 def HWWriteResGroup58 : SchedWriteRes<[HWPort6,HWPort0156]> {
   let Latency = 3;

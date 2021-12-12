@@ -34,14 +34,14 @@ let Constraints = "$src1 = $dst" in {
   multiclass MMXI_binop_rm_int<bits<8> opc, string OpcodeStr, Intrinsic IntId,
                                X86FoldableSchedWrite sched, bit Commutable = 0,
                                X86MemOperand OType = i64mem> {
-    def irr : MMXI<opc, MRMSrcReg, (outs VR64:$dst),
+    def rr : MMXI<opc, MRMSrcReg, (outs VR64:$dst),
                  (ins VR64:$src1, VR64:$src2),
                  !strconcat(OpcodeStr, "\t{$src2, $dst|$dst, $src2}"),
                  [(set VR64:$dst, (IntId VR64:$src1, VR64:$src2))]>,
               Sched<[sched]> {
       let isCommutable = Commutable;
     }
-    def irm : MMXI<opc, MRMSrcMem, (outs VR64:$dst),
+    def rm : MMXI<opc, MRMSrcMem, (outs VR64:$dst),
                  (ins VR64:$src1, OType:$src2),
                  !strconcat(OpcodeStr, "\t{$src2, $dst|$dst, $src2}"),
                  [(set VR64:$dst, (IntId VR64:$src1, (load_mmx addr:$src2)))]>,

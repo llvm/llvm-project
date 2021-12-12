@@ -800,9 +800,9 @@ def BWWriteResGroup33 : SchedWriteRes<[BWPort5,BWPort0156]> {
   let NumMicroOps = 3;
   let ResourceCycles = [2,1];
 }
-def: InstRW<[BWWriteResGroup33], (instrs MMX_PACKSSDWirr,
-                                         MMX_PACKSSWBirr,
-                                         MMX_PACKUSWBirr)>;
+def: InstRW<[BWWriteResGroup33], (instrs MMX_PACKSSDWrr,
+                                         MMX_PACKSSWBrr,
+                                         MMX_PACKUSWBrr)>;
 
 def BWWriteResGroup34 : SchedWriteRes<[BWPort6,BWPort0156]> {
   let Latency = 3;
@@ -1086,9 +1086,9 @@ def BWWriteResGroup79 : SchedWriteRes<[BWPort5,BWPort23]> {
   let NumMicroOps = 3;
   let ResourceCycles = [2,1];
 }
-def: InstRW<[BWWriteResGroup79], (instrs MMX_PACKSSDWirm,
-                                         MMX_PACKSSWBirm,
-                                         MMX_PACKUSWBirm)>;
+def: InstRW<[BWWriteResGroup79], (instrs MMX_PACKSSDWrm,
+                                         MMX_PACKSSWBrm,
+                                         MMX_PACKUSWBrm)>;
 
 def BWWriteResGroup80 : SchedWriteRes<[BWPort23,BWPort0156]> {
   let Latency = 7;
