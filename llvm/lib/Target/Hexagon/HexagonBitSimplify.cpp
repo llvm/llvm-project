@@ -3084,8 +3084,7 @@ void HexagonLoopRescheduling::moveGroup(InstrGroup &G, MachineBasicBlock &LB,
     .addMBB(&LB);
   RegMap.insert(std::make_pair(G.Inp.Reg, PhiR));
 
-  for (unsigned i = G.Ins.size(); i > 0; --i) {
-    const MachineInstr *SI = G.Ins[i-1];
+  for (const MachineInstr *SI : llvm::reverse(G.Ins)) {
     unsigned DR = getDefReg(SI);
     const TargetRegisterClass *RC = MRI->getRegClass(DR);
     Register NewDR = MRI->createVirtualRegister(RC);

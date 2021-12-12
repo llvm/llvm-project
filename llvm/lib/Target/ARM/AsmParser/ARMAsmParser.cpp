@@ -7119,13 +7119,12 @@ bool ARMAsmParser::ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
       return Error(Loc, "too many conditions on VPT instruction");
     }
     unsigned Mask = 8;
-    for (unsigned i = ITMask.size(); i != 0; --i) {
-      char pos = ITMask[i - 1];
-      if (pos != 't' && pos != 'e') {
+    for (char Pos : llvm::reverse(ITMask)) {
+      if (Pos != 't' && Pos != 'e') {
         return Error(Loc, "illegal IT block condition mask '" + ITMask + "'");
       }
       Mask >>= 1;
-      if (ITMask[i - 1] == 'e')
+      if (Pos == 'e')
         Mask |= 8;
     }
     Operands.push_back(ARMOperand::CreateITMask(Mask, Loc));
