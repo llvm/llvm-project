@@ -435,25 +435,22 @@ static std::string getContextKeyStr(ContextKey *K,
 void HybridPerfReader::unwindSamples() {
   if (Binary->useFSDiscriminator())
     exitWithError("FS discriminator is not supported in CS profile.");
-  std::set<uint64_t> AllUntrackedCallsites;
   VirtualUnwinder Unwinder(&SampleCounters, Binary);
   for (const auto &Item : AggregatedSamples) {
     const PerfSample *Sample = Item.first.getPtr();
     Unwinder.unwind(Sample, Item.second);
-    auto &CurrUntrackedCallsites = Unwinder.getUntrackedCallsites();
-    AllUntrackedCallsites.insert(CurrUntrackedCallsites.begin(),
-                                 CurrUntrackedCallsites.end());
   }
 
   // Warn about untracked frames due to missing probes.
   if (ShowDetailedWarning) {
-    for (auto Address : AllUntrackedCallsites)
+    for (auto Address : Unwinder.getUntrackedCallsites())
       WithColor::warning() << "Profile context truncated due to missing probe "
                            << "for call instruction at "
                            << format("0x%" PRIx64, Address) << "\n";
   }
 
-  emitWarningSummary(AllUntrackedCallsites.size(), SampleCounters.size(),
+  emitWarningSummary(Unwinder.getUntrackedCallsites().size(),
+                     SampleCounters.size(),
                      "of profiled contexts are truncated due to missing probe "
                      "for call instruction.");
 }
