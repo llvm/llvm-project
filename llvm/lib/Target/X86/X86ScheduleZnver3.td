@@ -1161,7 +1161,7 @@ def Zn3WriteCvtPD2IMMX : SchedWriteRes<[Zn3FPFCvt01]> {
   let ResourceCycles = [2];
   let NumMicroOps = 2;
 }
-def : InstRW<[Zn3WriteCvtPD2IMMX], (instrs MMX_CVTPD2PIirm, MMX_CVTTPD2PIirm, MMX_CVTPD2PIirr, MMX_CVTTPD2PIirr)>;
+def : InstRW<[Zn3WriteCvtPD2IMMX], (instrs MMX_CVTPD2PIrm, MMX_CVTTPD2PIrm, MMX_CVTPD2PIrr, MMX_CVTTPD2PIrr)>;
 
 defm : Zn3WriteResXMMPair<WriteCvtSS2I, [Zn3FPFCvt01], 2, [2], 2>;  // Float -> Integer.
 
@@ -1179,7 +1179,7 @@ def Zn3WriteCvtI2PDMMX : SchedWriteRes<[Zn3FPFCvt01]> {
   let ResourceCycles = [6];
   let NumMicroOps = 2;
 }
-def : InstRW<[Zn3WriteCvtI2PDMMX], (instrs MMX_CVTPI2PDirm, MMX_CVTPI2PDirr)>;
+def : InstRW<[Zn3WriteCvtI2PDMMX], (instrs MMX_CVTPI2PDrm, MMX_CVTPI2PDrr)>;
 
 defm : Zn3WriteResXMMPair<WriteCvtI2SS, [Zn3FPFCvt01], 3, [2], 2, /*LoadUOps=*/-1>;  // Integer -> Float.
 defm : Zn3WriteResXMMPair<WriteCvtI2PS, [Zn3FPFCvt01], 3, [1], 1>; // Integer -> Float (XMM).
@@ -1191,7 +1191,7 @@ def Zn3WriteCvtI2PSMMX : SchedWriteRes<[Zn3FPFCvt01]> {
   let ResourceCycles = [1];
   let NumMicroOps = 2;
 }
-def : InstRW<[Zn3WriteCvtI2PSMMX], (instrs MMX_CVTPI2PSirr)>;
+def : InstRW<[Zn3WriteCvtI2PSMMX], (instrs MMX_CVTPI2PSrr)>;
 
 defm : Zn3WriteResXMMPair<WriteCvtSS2SD, [Zn3FPFCvt01], 3, [1], 1>;  // Float -> Double size conversion.
 defm : Zn3WriteResXMMPair<WriteCvtPS2PD, [Zn3FPFCvt01], 3, [1], 1>; // Float -> Double size conversion (XMM).
