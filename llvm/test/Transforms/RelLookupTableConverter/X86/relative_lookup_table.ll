@@ -12,6 +12,9 @@ target triple = "x86_64-unknown-linux-gnu"
 @.str.5 = private unnamed_addr constant [5 x i8] c"str1\00", align 1
 @.str.6 = private unnamed_addr constant [5 x i8] c"str2\00", align 1
 @.str.7 = private unnamed_addr constant [12 x i8] c"singlevalue\00", align 1
+@.str.8 = private unnamed_addr constant [2 x i8] c"a\00", align 1
+@.str.9 = private unnamed_addr constant [2 x i8] c"b\00", align 1
+@.str.10 = private unnamed_addr constant [2 x i8] c"c\00", align 1
 
 @a1 = external global i32, align 4
 @b1 = external global i32, align 4
@@ -56,6 +59,16 @@ target triple = "x86_64-unknown-linux-gnu"
                                     i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str.2, i32 0, i32 0)
                                    ], align 16
 
+@table = internal constant [2 x i8*] [
+  i8* getelementptr inbounds ([2 x i8], [2 x i8]* @.str.8, i32 0, i32 0),
+  i8* getelementptr inbounds ([2 x i8], [2 x i8]* @.str.9, i32 0, i32 0)
+], align 16
+
+@table2 = internal constant [2 x i8*] [
+  i8* getelementptr inbounds ([2 x i8], [2 x i8]* @.str.8, i32 0, i32 0),
+  i8* getelementptr inbounds ([2 x i8], [2 x i8]* @.str.9, i32 0, i32 0)
+], align 16
+
 ; Lookup table check for integer pointers that have external linkage
 ; CHECK: @switch.table.external_linkage = private unnamed_addr constant [3 x i32*] [i32* @a1, i32* @b1, i32* @c1], align
 
@@ -92,6 +105,20 @@ target triple = "x86_64-unknown-linux-gnu"
 ; CHECK-SAME: i32 trunc (i64 sub (i64 ptrtoint ([4 x i8]* @.str.2 to i64), i64 ptrtoint ([3 x i32]* @reltable.single_value to i64)) to i32)
 ; CHECK-SAME: ], align 4
 ;
+
+; Relative lookup table for the loop hoist check test
+; CHECK: @reltable.loop_hoist = internal unnamed_addr constant [2 x i32]
+; CHECK-SAME: [
+; CHECK-SAME: i32 trunc (i64 sub (i64 ptrtoint ([2 x i8]* @.str.8 to i64), i64 ptrtoint ([2 x i32]* @reltable.loop_hoist to i64)) to i32),
+; CHECK-SAME: i32 trunc (i64 sub (i64 ptrtoint ([2 x i8]* @.str.9 to i64), i64 ptrtoint ([2 x i32]* @reltable.loop_hoist to i64)) to i32)
+; CHECK-SAME: ], align 4
+
+; Relative look up table for the test where gep is not immediately followed by a load check
+; CHECK: @reltable.gep_is_not_imm_followed_by_load = internal unnamed_addr constant [2 x i32]
+; CHECK-SAME: [
+; CHECK-SAME: i32 trunc (i64 sub (i64 ptrtoint ([2 x i8]* @.str.8 to i64), i64 ptrtoint ([2 x i32]* @reltable.gep_is_not_imm_followed_by_load to i64)) to i32),
+; CHECK-SAME: i32 trunc (i64 sub (i64 ptrtoint ([2 x i8]* @.str.9 to i64), i64 ptrtoint ([2 x i32]* @reltable.gep_is_not_imm_followed_by_load to i64)) to i32)
+; CHECK-SAME: ], align 4
 
 ; Lookup table check for integer pointers that have external linkage
 define i32* @external_linkage(i32 %cond) {
@@ -258,6 +285,59 @@ cond.false:                                       ; preds = %entry
 cond.end:                                         ; preds = %entry, %cond.false
   %cond1 = phi i8* [ %0, %cond.false ], [ getelementptr inbounds ([8 x i8], [8 x i8]* @.str.3, i64 0, i64 0), %entry ]
   ret i8* %cond1
+}
+
+; Check to ensure that call @llvm.load.relative is inserted before load, not before gep.
+; When a lookup table is accessed inside a loop, and a gep is hosted outside the loop via licm,
+; make sure that call @llvm.load.relative is inserted before load.
+define i8* @loop_hoist(i32 %x) {
+; CHECK-LABEL: @loop_hoist(i32 %x)
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp sgt i32 [[X:%.*]], 1
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [2 x i8], [2 x i8]* @.str.10, i32 0, i32 0
+; CHECK-NEXT:    [[RELTABLE_SHIFT:%.*]] = shl i32 [[X:%.*]], 2
+; CHECK-NEXT:    br i1 [[TMP0]], label %if.done, label %if.false
+; CHECK:       if.false:
+; CHECK-NEXT:    [[RELTABLE_INTRINSIC:%.*]] = call i8* @llvm.load.relative.i32(i8* bitcast ([2 x i32]* @reltable.loop_hoist to i8*), i32 [[RELTABLE_SHIFT]])
+; CHECK-NEXT:    br label %if.done
+; CHECK:       if.done:
+; CHECK-NEXT:    [[TMP2:%.*]] = phi i8* [ [[TMP1]], %entry ], [ [[RELTABLE_INTRINSIC]], %if.false ]
+; CHECK-NEXT:    ret i8* [[TMP2]]
+;
+entry:
+  %0 = icmp sgt i32 %x, 1
+  %1 = getelementptr inbounds [2 x i8], [2 x i8]* @.str.10, i32 0, i32 0
+  %2 = getelementptr [2 x i8*], [2 x i8*]* @table, i32 0, i32 %x
+  br i1 %0, label %if.done, label %if.false
+
+if.false:
+  %3 = load i8*, i8** %2
+  br label %if.done
+
+if.done:
+  %4 = phi i8* [ %1, %entry ], [ %3, %if.false ]
+  ret i8* %4
+}
+
+; Another check to ensure that call @llvm.load.relative is inserted before load but not before gep.
+; When a lookup table is accessed, and gep is not immediately followed by a load (like if there is a function call
+; or an exception in between), make sure that call @llvm.load.relative is inserted before load.
+; CHECK-LABEL: @may_not_return()
+declare void @may_not_return()
+
+define i8* @gep_is_not_imm_followed_by_load(i32 %x) {
+; CHECK-LABEL: @gep_is_not_imm_followed_by_load(i32 %x)
+; CHECK:       entry:
+; CHECK-NEXT:    [[RELTABLE_SHIFT:%.*]] = shl i32 [[X:%.*]], 2
+; CHECK-NEXT:    call void @may_not_return()
+; CHECK-NEXT:    [[RELTABLE_INTRINSIC:%.*]] = call i8* @llvm.load.relative.i32(i8* bitcast ([2 x i32]* @reltable.gep_is_not_imm_followed_by_load to i8*), i32 [[RELTABLE_SHIFT]])
+; CHECK-NEXT:    ret i8* [[RELTABLE_INTRINSIC]]
+;
+entry:
+  %0 = getelementptr [2 x i8*], [2 x i8*]* @table2, i32 0, i32 %x
+  call void @may_not_return()
+  %1 = load i8*, i8** %0
+  ret i8* %1
 }
 
 !llvm.module.flags = !{!0, !1}
