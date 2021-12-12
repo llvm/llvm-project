@@ -449,14 +449,15 @@ struct ThrowingIterator {
 
     enum ThrowingAction { TAIncrement, TADecrement, TADereference, TAAssignment, TAComparison };
 
-    ThrowingIterator()
+    TEST_CONSTEXPR ThrowingIterator()
         : begin_(nullptr), end_(nullptr), current_(nullptr), action_(TADereference), index_(0) {}
-    explicit ThrowingIterator(const T *first, const T *last, int index = 0, ThrowingAction action = TADereference)
+    TEST_CONSTEXPR explicit ThrowingIterator(const T* first, const T* last, int index = 0,
+                                                   ThrowingAction action = TADereference)
         : begin_(first), end_(last), current_(first), action_(action), index_(index) {}
-    ThrowingIterator(const ThrowingIterator &rhs)
+    TEST_CONSTEXPR ThrowingIterator(const ThrowingIterator &rhs)
         : begin_(rhs.begin_), end_(rhs.end_), current_(rhs.current_), action_(rhs.action_), index_(rhs.index_) {}
 
-    ThrowingIterator& operator=(const ThrowingIterator& rhs) {
+    TEST_CONSTEXPR_CXX14 ThrowingIterator& operator=(const ThrowingIterator& rhs) {
         if (action_ == TAAssignment && --index_ < 0) {
 #ifndef TEST_HAS_NO_EXCEPTIONS
             throw std::runtime_error("throw from iterator assignment");
@@ -472,7 +473,7 @@ struct ThrowingIterator {
         return *this;
     }
 
-    reference operator*() const {
+    TEST_CONSTEXPR_CXX14 reference operator*() const {
         if (action_ == TADereference && --index_ < 0) {
 #ifndef TEST_HAS_NO_EXCEPTIONS
             throw std::runtime_error("throw from iterator dereference");
@@ -483,7 +484,7 @@ struct ThrowingIterator {
         return *current_;
     }
 
-    ThrowingIterator& operator++() {
+    TEST_CONSTEXPR_CXX14 ThrowingIterator& operator++() {
         if (action_ == TAIncrement && --index_ < 0) {
 #ifndef TEST_HAS_NO_EXCEPTIONS
             throw std::runtime_error("throw from iterator increment");
@@ -495,13 +496,13 @@ struct ThrowingIterator {
         return *this;
     }
 
-    ThrowingIterator operator++(int) {
+    TEST_CONSTEXPR_CXX14 ThrowingIterator operator++(int) {
         ThrowingIterator temp = *this;
         ++(*this);
         return temp;
     }
 
-    ThrowingIterator& operator--() {
+    TEST_CONSTEXPR_CXX14 ThrowingIterator& operator--() {
         if (action_ == TADecrement && --index_ < 0) {
 #ifndef TEST_HAS_NO_EXCEPTIONS
             throw std::runtime_error("throw from iterator decrement");
@@ -513,13 +514,13 @@ struct ThrowingIterator {
         return *this;
     }
 
-    ThrowingIterator operator--(int) {
+    TEST_CONSTEXPR_CXX14 ThrowingIterator operator--(int) {
         ThrowingIterator temp = *this;
         --(*this);
         return temp;
     }
 
-    friend bool operator==(const ThrowingIterator& a, const ThrowingIterator& b) {
+    TEST_CONSTEXPR_CXX14 friend bool operator==(const ThrowingIterator& a, const ThrowingIterator& b) {
         if (a.action_ == TAComparison && --a.index_ < 0) {
 #ifndef TEST_HAS_NO_EXCEPTIONS
             throw std::runtime_error("throw from iterator comparison");
@@ -534,7 +535,7 @@ struct ThrowingIterator {
         return a.current_ == b.current_;
     }
 
-    friend bool operator!=(const ThrowingIterator& a, const ThrowingIterator& b) {
+    TEST_CONSTEXPR friend bool operator!=(const ThrowingIterator& a, const ThrowingIterator& b) {
         return !(a == b);
     }
 
