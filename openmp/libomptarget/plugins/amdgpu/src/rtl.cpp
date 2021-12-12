@@ -144,6 +144,22 @@ struct FuncOrGblEntryTy {
   std::vector<__tgt_offload_entry> Entries;
 };
 
+typedef enum { INIT = 1, FINI } initORfini;
+
+typedef struct DeviceImageTy {
+  int size;
+  bool initfini;
+  DeviceImageTy() {
+    size = 0;
+    initfini = false;
+  }
+  DeviceImageTy(int s, bool init_fini) {
+    size = s;
+    initfini = init_fini;
+  }
+  ~DeviceImageTy() {}
+} Image_t;
+
 struct KernelArgPool {
 private:
   static pthread_mutex_t mutex;
@@ -317,6 +333,9 @@ static void callbackQueue(hsa_status_t status, hsa_queue_t *source,
 }
 
 namespace core {
+
+void launchInitFiniKernel(int32_t, void *, const size_t &, const initORfini);
+
 namespace {
 
 bool checkResult(hsa_status_t Err, const char *ErrMsg) {
@@ -338,6 +357,23 @@ uint16_t create_header() {
   header |= HSA_FENCE_SCOPE_SYSTEM << HSA_PACKET_HEADER_ACQUIRE_FENCE_SCOPE;
   header |= HSA_FENCE_SCOPE_SYSTEM << HSA_PACKET_HEADER_RELEASE_FENCE_SCOPE;
   return header;
+}
+
+uint16_t create_BarrierAND_header() {
+  uint16_t header = HSA_PACKET_TYPE_BARRIER_AND << HSA_PACKET_HEADER_TYPE;
+  header |= HSA_FENCE_SCOPE_SYSTEM << HSA_PACKET_HEADER_ACQUIRE_FENCE_SCOPE;
+  header |= HSA_FENCE_SCOPE_SYSTEM << HSA_PACKET_HEADER_RELEASE_FENCE_SCOPE;
+  return header;
+}
+
+static uint64_t acquire_available_packet_id(hsa_queue_t *queue) {
+  uint64_t packet_id = hsa_queue_add_write_index_relaxed(queue, 1);
+  bool full = true;
+  while (full) {
+    full =
+        packet_id >= (queue->size + hsa_queue_load_read_index_scacquire(queue));
+  }
+  return packet_id;
 }
 
 hsa_status_t isValidMemoryPool(hsa_amd_memory_pool_t MemoryPool) {
@@ -469,6 +505,9 @@ public:
     }
   }
 
+  // Get the Number of Queues per Device
+  int getNumQueues() { return NUM_QUEUES_PER_DEVICE; }
+
 private:
   // Number of queues per device
   enum : uint8_t { NUM_QUEUES_PER_DEVICE = 4 };
@@ -531,6 +570,7 @@ public:
 
   std::vector<hsa_executable_t> HSAExecutables;
 
+  std::map<void *, Image_t> ImageList;
   std::vector<std::map<std::string, atl_kernel_info_t>> KernelInfoTable;
   std::vector<std::map<std::string, atl_symbol_info_t>> SymbolInfoTable;
 
@@ -1248,6 +1288,16 @@ public:
       return;
     }
 
+    for (int i = 0; i < NumberOfDevices; i++) {
+      std::map<void *, Image_t>::iterator itr = ImageList.begin();
+      if (itr != ImageList.end()) {
+        void *img = itr->first;
+        Image_t img_attr = (itr->second);
+        core::launchInitFiniKernel(i, img, img_attr.size, FINI);
+        itr++;
+      }
+    }
+
     // Run destructors on types that use HSA before
     // impl_finalize removes access to it
     deviceStateStore.clear();
@@ -1351,23 +1401,6 @@ private:
     ompt_set_timestamp_fn(StartTime, EndTime);
   }
 };
-
-uint16_t create_BarrierAND_header() {
-  uint16_t header = HSA_PACKET_TYPE_BARRIER_AND << HSA_PACKET_HEADER_TYPE;
-  header |= HSA_FENCE_SCOPE_SYSTEM << HSA_PACKET_HEADER_ACQUIRE_FENCE_SCOPE;
-  header |= HSA_FENCE_SCOPE_SYSTEM << HSA_PACKET_HEADER_RELEASE_FENCE_SCOPE;
-  return header;
-}
-
-static uint64_t acquire_available_packet_id(hsa_queue_t *queue) {
-  uint64_t packet_id = hsa_queue_add_write_index_relaxed(queue, 1);
-  bool full = true;
-  while (full) {
-    full =
-        packet_id >= (queue->size + hsa_queue_load_read_index_scacquire(queue));
-  }
-  return packet_id;
-}
 
 // Enable delaying of memory copy completion check
 // and unlocking of host pointers used in the transfer
@@ -1550,7 +1583,7 @@ AMDGPUAsyncInfoQueueTy::createMapEnteringDependencies(hsa_queue_t *queue) {
     }
     barrierANDCompletionSignals.emplace_back(completion_signal);
 
-    uint64_t packetId = acquire_available_packet_id(queue);
+    uint64_t packetId = core::acquire_available_packet_id(queue);
     barrierANDMapEnteringPacketIDs[i] = packetId;
     const uint32_t mask = queue->size - 1; // size is a power of 2
     hsa_barrier_and_packet_s *barrierPacket =
@@ -1594,7 +1627,7 @@ AMDGPUAsyncInfoQueueTy::createMapEnteringDependencies(hsa_queue_t *queue) {
     // Publish the packet indicating it is ready to be processed
     core::packet_store_release(
         reinterpret_cast<uint32_t *>(barrierANDMapEnteringBarrierPackets[k]),
-        create_BarrierAND_header(), 0);
+        core::create_BarrierAND_header(), 0);
 
     hsa_signal_store_relaxed(queue->doorbell_signal,
                              barrierANDMapEnteringPacketIDs[k]);
@@ -2016,7 +2049,7 @@ int32_t runRegionLocked(int32_t device_id, void *tgt_entry_ptr, void **tgt_args,
     }
 
     AsyncInfo.createMapEnteringDependencies(queue);
-    uint64_t packet_id = acquire_available_packet_id(queue);
+    uint64_t packet_id = core::acquire_available_packet_id(queue);
 
     const uint32_t mask = queue->size - 1; // size is a power of 2
     hsa_kernel_dispatch_packet_t *packet =
@@ -2491,6 +2524,131 @@ hsa_status_t allow_access_to_all_gpu_agents(void *ptr) {
   return hsa_amd_agents_allow_access(DeviceInfo.HSAAgents.size(),
                                      &DeviceInfo.HSAAgents[0], NULL, ptr);
 }
+
+hsa_signal_t launchBarrierANDPacket(hsa_queue_t *queue,
+                                    std::vector<hsa_signal_t> &depSignals,
+                                    bool isBarrierBitSet) {
+  hsa_signal_t barrier_signal = DeviceInfo.FreeSignalPool.pop();
+  uint64_t barrierAndPacketId = acquire_available_packet_id(queue);
+  const uint32_t mask = queue->size - 1;
+  hsa_barrier_and_packet_t *barrier_and_packet =
+      (hsa_barrier_and_packet_t *)queue->base_address +
+      (barrierAndPacketId & mask);
+  memset(barrier_and_packet, 0, sizeof(hsa_barrier_and_packet_t));
+  for (size_t i = 0; (i < depSignals.size()) && (depSignals.size() <= 5); i++)
+    barrier_and_packet->dep_signal[i] = depSignals[i];
+  int16_t header = create_BarrierAND_header();
+  if (isBarrierBitSet)
+    header |= 1 << 8;
+  packet_store_release(reinterpret_cast<uint32_t *>(barrier_and_packet), header,
+                       0);
+  hsa_signal_store_screlease(queue->doorbell_signal, barrierAndPacketId);
+  return barrier_signal;
+}
+
+int32_t runInitFiniKernel(int device_id, uint16_t header,
+                          const atl_kernel_info_t &entryInfo) {
+  hsa_signal_t signal;
+  void *kernarg_address = nullptr;
+
+  hsa_queue_t *queue = DeviceInfo.HSAQueueSchedulers[device_id].Next();
+  if (!queue) {
+    DP("Failed to get the queue instance.\n");
+    return OFFLOAD_FAIL;
+  }
+
+  uint64_t packet_id = acquire_available_packet_id(queue);
+  const uint32_t mask = queue->size - 1; // size is a power of 2
+  hsa_kernel_dispatch_packet_t *dispatch_packet =
+      (hsa_kernel_dispatch_packet_t *)queue->base_address + (packet_id & mask);
+
+  signal = DeviceInfo.FreeSignalPool.pop();
+  if (signal.handle == 0) {
+    DP("Failed to get signal instance\n");
+    return OFFLOAD_FAIL;
+  }
+
+  dispatch_packet->setup |= 1 << HSA_KERNEL_DISPATCH_PACKET_SETUP_DIMENSIONS;
+  dispatch_packet->workgroup_size_x = (uint16_t)1;
+  dispatch_packet->workgroup_size_y = (uint16_t)1;
+  dispatch_packet->workgroup_size_z = (uint16_t)1;
+  dispatch_packet->grid_size_x = (uint32_t)(1 * 1);
+  dispatch_packet->grid_size_y = 1;
+  dispatch_packet->grid_size_z = 1;
+  dispatch_packet->completion_signal = signal;
+  dispatch_packet->kernel_object = entryInfo.kernel_object;
+  dispatch_packet->private_segment_size = entryInfo.private_segment_size;
+  dispatch_packet->group_segment_size = entryInfo.group_segment_size;
+  dispatch_packet->kernarg_address = (void *)kernarg_address;
+  dispatch_packet->completion_signal = signal;
+
+  hsa_signal_store_relaxed(dispatch_packet->completion_signal, 1);
+
+  packet_store_release(reinterpret_cast<uint32_t *>(dispatch_packet), header,
+                       dispatch_packet->setup);
+
+  // Increment the write index and ring the doorbell to dispatch the kernel.
+  hsa_signal_store_screlease(queue->doorbell_signal, packet_id);
+
+  while (hsa_signal_wait_scacquire(dispatch_packet->completion_signal,
+                                   HSA_SIGNAL_CONDITION_EQ, 0, UINT64_MAX,
+                                   HSA_WAIT_STATE_ACTIVE) != 0)
+    ;
+  DeviceInfo.FreeSignalPool.push(signal);
+  return OFFLOAD_SUCCESS;
+}
+
+void launchInitFiniKernel(int32_t device_id, void *img, const size_t &size,
+                          const initORfini status) {
+  std::string kernelName, kernelTag;
+  bool symbolExist = false;
+  auto &KernelInfoTable = DeviceInfo.KernelInfoTable;
+  int32_t runInitFini = OFFLOAD_FAIL;
+  atl_kernel_info_t kernelInfoEntry;
+  switch (status) {
+  case INIT:
+    kernelName = "amdgcn.device.init";
+    kernelTag = "Init";
+    symbolExist =
+        image_contains_symbol(img, size, (kernelName + ".kd").c_str());
+    if (symbolExist && KernelInfoTable[device_id].find(kernelName) !=
+                           KernelInfoTable[device_id].end()) {
+      assert(DeviceInfo.ImageList[img].initfini != 0);
+      kernelInfoEntry = KernelInfoTable[device_id][kernelName];
+      assert(kernelInfoEntry.kind == "init");
+      runInitFini =
+          runInitFiniKernel(device_id, create_header(), kernelInfoEntry);
+    }
+    break;
+
+  case FINI:
+    kernelName = "amdgcn.device.fini";
+    kernelTag = "Fini";
+    symbolExist =
+        image_contains_symbol(img, size, (kernelName + ".kd").c_str());
+    if (symbolExist && KernelInfoTable[device_id].find(kernelName) !=
+                           KernelInfoTable[device_id].end()) {
+      assert(DeviceInfo.ImageList[img].initfini != 0);
+      kernelInfoEntry = KernelInfoTable[device_id][kernelName];
+      assert(kernelInfoEntry.kind == "fini");
+      runInitFini =
+          runInitFiniKernel(device_id, create_header(), kernelInfoEntry);
+    }
+    break;
+
+  default:
+    kernelTag = "Normal";
+  };
+
+  if (runInitFini == OFFLOAD_SUCCESS) {
+    DP("%s kernel launch successfull on AMDGPU Device %d for image(" DPxMOD
+       ")!\n ",
+       kernelTag.c_str(), device_id, DPxPTR(img));
+  } else {
+    DP("%s kernel launch failed on AMDGPU Device %d for image(" DPxMOD ")!\n ",
+       kernelTag.c_str(), device_id, DPxPTR(img));
+  }
+}
 } // namespace core
 
 extern "C" {
@@ -2747,6 +2905,15 @@ __tgt_target_table *__tgt_rtl_load_binary_locked(int32_t device_id,
             __atomic_store_n(&DeviceInfo.hostcall_required, true,
                              __ATOMIC_RELEASE);
           }
+          if (image_contains_symbol(data, size, "amdgcn.device.init") &&
+              image_contains_symbol(data, size, "amdgcn.device.fini")) {
+            DeviceInfo.ImageList.insert(
+                {image->ImageStart, Image_t(size, true)});
+          } else {
+            DeviceInfo.ImageList.insert(
+                {image->ImageStart, Image_t(size, false)});
+          }
+
           return env.before_loading(data, size);
         },
         DeviceInfo.HSAExecutables);
@@ -2781,6 +2948,8 @@ __tgt_target_table *__tgt_rtl_load_binary_locked(int32_t device_id,
                   ompt_device_callbacks.ompt_callback_device_load(
                       device_id, filename, offset_in_file, vma_in_file, bytes,
                       host_addr, device_addr, module_id););
+
+  core::launchInitFiniKernel(device_id, image->ImageStart, img_size, INIT);
 
   {
     // the device_State array is either large value in bss or a void* that

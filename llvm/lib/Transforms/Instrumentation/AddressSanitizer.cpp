@@ -2265,6 +2265,32 @@ bool ModuleAddressSanitizer::InstrumentGlobals(IRBuilder<> &IRB, Module &M,
   for (auto &G : M.globals()) {
     if (!AliasedGlobalExclusions.count(&G) && shouldInstrumentGlobal(&G))
       GlobalsToChange.push_back(&G);
+
+    StringRef off_ent_str = G.getSection();
+    const StringRef sectionName = "omp_offloading_entries";
+    if (off_ent_str.compare(sectionName) == 0 &&
+        (G.getOperand(0)->getType()->isStructTy())) {
+      StringRef GName = G.getOperand(0)->getType()->getStructName();
+      const APInt &UI = G.getInitializer()
+                            ->getAggregateElement(unsigned(2))
+                            ->getUniqueInteger();
+      const uint64_t SizeInBytes = UI.getSExtValue();
+      if (SizeInBytes != 0) {
+        const uint64_t RightRedzoneSize = getRedzoneSizeForGlobal(SizeInBytes);
+        Constant *val = ConstantInt::get(IRB.getInt64Ty(),
+                                         SizeInBytes + RightRedzoneSize, true);
+        StructType *sttype = StructType::getTypeByName(M.getContext(), GName);
+        SmallVector<Constant *> indices(5);
+        indices[0] = G.getInitializer()->getAggregateElement(unsigned(0));
+        indices[1] = G.getInitializer()->getAggregateElement(unsigned(1));
+        indices[2] = val;
+        indices[3] = G.getInitializer()->getAggregateElement(unsigned(3));
+        indices[4] = G.getInitializer()->getAggregateElement(unsigned(4));
+        Constant *NewInit = ConstantStruct::get(sttype, indices);
+        NewInit->takeName(G.getInitializer());
+        G.setInitializer(NewInit);
+      }
+    }
   }
 
   size_t n = GlobalsToChange.size();

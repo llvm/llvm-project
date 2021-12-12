@@ -359,6 +359,7 @@ static hsa_status_t get_code_object_custom_metadata(
     assert(msgpack_errors == 0);
     std::string kernelName;
     std::string symbolName;
+    std::string kernelKind;
 
     msgpack::byte_range element;
     msgpack_errors += array_lookup_element(kernel_array, i, &element);
@@ -383,9 +384,21 @@ static hsa_status_t get_code_object_custom_metadata(
       return HSA_STATUS_ERROR_INVALID_CODE_OBJECT;
     }
 
-    atl_kernel_info_t info = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+    atl_kernel_info_t info = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, "normal"};
 
     uint64_t sgpr_count, vgpr_count, sgpr_spill_count, vgpr_spill_count;
+
+    if (symbolName == "amdgcn.device.init.kd" ||
+        symbolName == "amdgcn.device.fini.kd") {
+      msgpack_errors += map_lookup_string(element, ".kind", &kernelKind);
+      if (msgpack_errors != 0) {
+        printf("[%s:%d] %s failed\n", __FILE__, __LINE__,
+               "kind metadata lookup in kernel metadata");
+        return HSA_STATUS_ERROR_INVALID_CODE_OBJECT;
+      }
+      info.kind = kernelKind;
+    }
+
     msgpack_errors += map_lookup_uint64_t(element, ".sgpr_count", &sgpr_count);
     if (msgpack_errors != 0) {
       printf("[%s:%d] %s failed\n", __FILE__, __LINE__,
