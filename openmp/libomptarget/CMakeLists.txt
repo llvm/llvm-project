@@ -86,8 +86,17 @@ endif()
 include_directories(include)
 
 set(LIBOMPTARGET_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/include)
-set(LIBOMP_RUNTIME_SRC_BINARY_DIR ${CMAKE_BINARY_DIR}/runtime/src)
-include_directories(${LIBOMPTARGET_INCLUDE_DIR} ${LIBOMP_RUNTIME_SRC_BINARY_DIR})
+
+find_path (
+  LIBOMP_OMP_TOOLS_INCLUDE_DIR
+  NAMES
+    omp-tools.h
+  PATHS
+    ${CMAKE_BINARY_DIR}/openmp/runtime/src
+    ${CMAKE_BINARY_DIR}/runtime/src
+  )
+
+include_directories(${LIBOMPTARGET_INCLUDE_DIR} ${LIBOMP_OMP_TOOLS_INCLUDE_DIR})
 
 # Build target agnostic offloading library.
 set(LIBOMPTARGET_SRC_DIR ${CMAKE_CURRENT_SOURCE_DIR}/src)
