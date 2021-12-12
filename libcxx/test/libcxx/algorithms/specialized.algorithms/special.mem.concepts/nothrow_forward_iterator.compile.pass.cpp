@@ -29,3 +29,10 @@ struct ForwardProxyIterator {
 static_assert(std::ranges::__nothrow_forward_iterator<forward_iterator<int*>>);
 static_assert(std::forward_iterator<ForwardProxyIterator>);
 static_assert(!std::ranges::__nothrow_forward_iterator<ForwardProxyIterator>);
+
+constexpr bool forward_subsumes_input(std::ranges::__nothrow_forward_iterator auto) {
+  return true;
+}
+constexpr bool forward_subsumes_input(std::ranges::__nothrow_input_iterator auto);
+
+static_assert(forward_subsumes_input("foo"));
