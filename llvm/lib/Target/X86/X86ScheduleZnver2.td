@@ -1012,12 +1012,12 @@ def Zn2WriteFPU12Ym : SchedWriteRes<[Zn2AGU, Zn2FPU12]> {
   let NumMicroOps = 2;
 }
 
-def : InstRW<[Zn2WriteFPU12], (instrs MMX_PACKSSDWirr,
-                                     MMX_PACKSSWBirr,
-                                     MMX_PACKUSWBirr)>;
-def : InstRW<[Zn2WriteFPU12m], (instrs MMX_PACKSSDWirm,
-                                      MMX_PACKSSWBirm,
-                                      MMX_PACKUSWBirm)>;
+def : InstRW<[Zn2WriteFPU12], (instrs MMX_PACKSSDWrr,
+                                     MMX_PACKSSWBrr,
+                                     MMX_PACKUSWBrr)>;
+def : InstRW<[Zn2WriteFPU12m], (instrs MMX_PACKSSDWrm,
+                                      MMX_PACKSSWBrm,
+                                      MMX_PACKUSWBrm)>;
 
 def Zn2WriteFPU013 : SchedWriteRes<[Zn2FPU013]> ;
 def Zn2WriteFPU013Y : SchedWriteRes<[Zn2FPU013]> ;

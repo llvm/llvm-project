@@ -467,8 +467,8 @@ def SLMWriteResGroup1rr : SchedWriteRes<[SLM_FPC_RSV01]> {
   let NumMicroOps = 2;
   let ResourceCycles = [8];
 }
-def: InstRW<[SLMWriteResGroup1rr], (instrs MMX_PADDQirr, PADDQrr,
-                                           MMX_PSUBQirr, PSUBQrr,
+def: InstRW<[SLMWriteResGroup1rr], (instrs MMX_PADDQrr, PADDQrr,
+                                           MMX_PSUBQrr, PSUBQrr,
                                            PCMPEQQrr)>;
 
 def SLMWriteResGroup1rm : SchedWriteRes<[SLM_MEC_RSV,SLM_FPC_RSV01]> {
@@ -476,8 +476,8 @@ def SLMWriteResGroup1rm : SchedWriteRes<[SLM_MEC_RSV,SLM_FPC_RSV01]> {
   let NumMicroOps = 3;
   let ResourceCycles = [1,8];
 }
-def: InstRW<[SLMWriteResGroup1rm], (instrs MMX_PADDQirm, PADDQrm,
-                                           MMX_PSUBQirm, PSUBQrm,
+def: InstRW<[SLMWriteResGroup1rm], (instrs MMX_PADDQrm, PADDQrm,
+                                           MMX_PSUBQrm, PSUBQrm,
                                            PCMPEQQrm)>;
 
 } // SchedModel
