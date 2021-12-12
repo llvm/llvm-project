@@ -2,12 +2,12 @@ name: Labeling new issues
 on:
   issues:
     types: ['opened']
+
 jobs:
-  build:
+  automate-issues-labels:
     runs-on: ubuntu-latest
     steps:
-      - uses: Renato66/auto-label@v2
+      - uses: andymckay/labeler@1.0.2
         with:
-          repo-token: ${{ secrets.GITHUB_TOKEN }}
-          ignore-comments: true
-          default-labels: '["help wanted"]'
+          add-labels: "help wanted"
+          ignore-if-labeled: true
