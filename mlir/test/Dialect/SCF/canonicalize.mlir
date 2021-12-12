@@ -250,7 +250,7 @@ func @empty_if2(%cond: i1) {
 // CHECK-NOT:       scf.if
 // CHECK:           return
 
-// ----
+// -----
 
 func @empty_else(%cond: i1, %v : memref<i1>) {
   scf.if %cond {
