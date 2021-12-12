@@ -403,8 +403,8 @@ class CollectReachableCallees {
   void collectAddressTakenFunctions() {
     auto *ECNode = CG.getExternalCallingNode();
 
-    for (auto GI = ECNode->begin(), GE = ECNode->end(); GI != GE; ++GI) {
-      auto *CGN = GI->second;
+    for (const auto &GI : *ECNode) {
+      auto *CGN = GI.second;
       auto *F = CGN->getFunction();
       if (!F || F->isDeclaration() || llvm::AMDGPU::isKernelCC(F))
         continue;
@@ -441,9 +441,9 @@ class CollectReachableCallees {
       if (!CGN->getFunction() || CGN->getFunction()->isDeclaration())
         continue;
 
-      for (auto GI = CGN->begin(), GE = CGN->end(); GI != GE; ++GI) {
-        auto *RCB = cast<CallBase>(GI->first.getValue());
-        auto *RCGN = GI->second;
+      for (const auto &GI : *CGN) {
+        auto *RCB = cast<CallBase>(GI.first.getValue());
+        auto *RCGN = GI.second;
 
         if (auto *DCallee = RCGN->getFunction()) {
           ReachableCallees.insert(DCallee);
