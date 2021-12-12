@@ -210,6 +210,8 @@ uint32_t llvm::object::getELFRelativeRelocationType(uint32_t Machine) {
     return ELF::R_SPARC_RELATIVE;
   case ELF::EM_CSKY:
     return ELF::R_CKCORE_RELATIVE;
+  case ELF::EM_VE:
+    return ELF::R_VE_RELATIVE;
   case ELF::EM_AMDGPU:
     break;
   case ELF::EM_BPF:
