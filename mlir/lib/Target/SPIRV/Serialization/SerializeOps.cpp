@@ -406,6 +406,9 @@ LogicalResult Serializer::processSelectionOp(spirv::SelectionOp selectionOp) {
   // instruction to start a new SPIR-V block for ops following this SelectionOp.
   // The block should use the <id> for the merge block.
   encodeInstructionInto(functionBody, spirv::Opcode::OpLabel, {mergeID});
+  LLVM_DEBUG(llvm::dbgs() << "done merge ");
+  LLVM_DEBUG(printBlock(mergeBlock, llvm::dbgs()));
+  LLVM_DEBUG(llvm::dbgs() << "\n");
   return success();
 }
 
@@ -414,10 +417,9 @@ LogicalResult Serializer::processLoopOp(spirv::LoopOp loopOp) {
   // properly. We don't need to assign for the entry block, which is just for
   // satisfying MLIR region's structural requirement.
   auto &body = loopOp.body();
-  for (Block &block :
-       llvm::make_range(std::next(body.begin(), 1), body.end())) {
+  for (Block &block : llvm::make_range(std::next(body.begin(), 1), body.end()))
     getOrCreateBlockID(&block);
-  }
+
   auto *headerBlock = loopOp.getHeaderBlock();
   auto *continueBlock = loopOp.getContinueBlock();
   auto *mergeBlock = loopOp.getMergeBlock();
@@ -469,6 +471,9 @@ LogicalResult Serializer::processLoopOp(spirv::LoopOp loopOp) {
   // start a new SPIR-V block for ops following this LoopOp. The block should
   // use the <id> for the merge block.
   encodeInstructionInto(functionBody, spirv::Opcode::OpLabel, {mergeID});
+  LLVM_DEBUG(llvm::dbgs() << "done merge ");
+  LLVM_DEBUG(printBlock(mergeBlock, llvm::dbgs()));
+  LLVM_DEBUG(llvm::dbgs() << "\n");
   return success();
 }
 

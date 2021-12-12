@@ -921,16 +921,26 @@ uint32_t Serializer::getOrCreateBlockID(Block *block) {
   return blockIDMap[block] = getNextID();
 }
 
+#ifndef NDEBUG
+void Serializer::printBlock(Block *block, raw_ostream &os) {
+  os << "block " << block << " (id = ";
+  if (uint32_t id = getBlockID(block))
+    os << id;
+  else
+    os << "unknown";
+  os << ")\n";
+}
+#endif
+
 LogicalResult
 Serializer::processBlock(Block *block, bool omitLabel,
-                         function_ref<LogicalResult()> actionBeforeTerminator) {
+                         function_ref<LogicalResult()> emitMerge) {
   LLVM_DEBUG(llvm::dbgs() << "processing block " << block << ":\n");
   LLVM_DEBUG(block->print(llvm::dbgs()));
   LLVM_DEBUG(llvm::dbgs() << '\n');
   if (!omitLabel) {
     uint32_t blockID = getOrCreateBlockID(block);
-    LLVM_DEBUG(llvm::dbgs()
-               << "[block] " << block << " (id = " << blockID << ")\n");
+    LLVM_DEBUG(printBlock(block, llvm::dbgs()));
 
     // Emit OpLabel for this block.
     encodeInstructionInto(functionBody, spirv::Opcode::OpLabel, {blockID});
@@ -940,6 +950,24 @@ Serializer::processBlock(Block *block, bool omitLabel,
   if (failed(emitPhiForBlockArguments(block)))
     return failure();
 
+  // If we need to emit merge instructions, it must happen in this block. Check
+  // whether we have other structured control flow ops, which will be expanded
+  // into multiple basic blocks. If that's the case, we need to emit the merge
+  // right now and then create new blocks for further serialization of the ops
+  // in this block.
+  if (emitMerge && llvm::any_of(block->getOperations(), [](Operation &op) {
+        return isa<spirv::LoopOp, spirv::SelectionOp>(op);
+      })) {
+    if (failed(emitMerge()))
+      return failure();
+    emitMerge = nullptr;
+
+    // Start a new block for further serialization.
+    uint32_t blockID = getNextID();
+    encodeInstructionInto(functionBody, spirv::Opcode::OpBranch, {blockID});
+    encodeInstructionInto(functionBody, spirv::Opcode::OpLabel, {blockID});
+  }
+
   // Process each op in this block except the terminator.
   for (auto &op : llvm::make_range(block->begin(), std::prev(block->end()))) {
     if (failed(processOperation(&op)))
@@ -947,8 +975,8 @@ Serializer::processBlock(Block *block, bool omitLabel,
   }
 
   // Process the terminator.
-  if (actionBeforeTerminator)
-    if (failed(actionBeforeTerminator()))
+  if (emitMerge)
+    if (failed(emitMerge()))
       return failure();
   if (failed(processOperation(&block->back())))
     return failure();
@@ -962,14 +990,19 @@ LogicalResult Serializer::emitPhiForBlockArguments(Block *block) {
   if (block->args_empty() || block->isEntryBlock())
     return success();
 
+  LLVM_DEBUG(llvm::dbgs() << "emitting phi instructions..\n");
+
   // If the block has arguments, we need to create SPIR-V OpPhi instructions.
   // A SPIR-V OpPhi instruction is of the syntax:
   //   OpPhi | result type | result <id> | (value <id>, parent block <id>) pair
   // So we need to collect all predecessor blocks and the arguments they send
   // to this block.
   SmallVector<std::pair<Block *, OperandRange>, 4> predecessors;
-  for (Block *predecessor : block->getPredecessors()) {
-    auto *terminator = predecessor->getTerminator();
+  for (Block *mlirPredecessor : block->getPredecessors()) {
+    auto *terminator = mlirPredecessor->getTerminator();
+    LLVM_DEBUG(llvm::dbgs() << "  mlir predecessor ");
+    LLVM_DEBUG(printBlock(mlirPredecessor, llvm::dbgs()));
+    LLVM_DEBUG(llvm::dbgs() << "    terminator: " << *terminator << "\n");
     // The predecessor here is the immediate one according to MLIR's IR
     // structure. It does not directly map to the incoming parent block for the
     // OpPhi instructions at SPIR-V binary level. This is because structured
@@ -977,26 +1010,32 @@ LogicalResult Serializer::emitPhiForBlockArguments(Block *block) {
     // spv.mlir.selection/spv.mlir.loop op in the MLIR predecessor block, the
     // branch op jumping to the OpPhi's block then resides in the previous
     // structured control flow op's merge block.
-    predecessor = getPhiIncomingBlock(predecessor);
+    Block *spirvPredecessor = getPhiIncomingBlock(mlirPredecessor);
+    LLVM_DEBUG(llvm::dbgs() << "  spirv predecessor ");
+    LLVM_DEBUG(printBlock(spirvPredecessor, llvm::dbgs()));
     if (auto branchOp = dyn_cast<spirv::BranchOp>(terminator)) {
-      predecessors.emplace_back(predecessor, branchOp.getOperands());
+      predecessors.emplace_back(spirvPredecessor, branchOp.getOperands());
     } else if (auto branchCondOp =
                    dyn_cast<spirv::BranchConditionalOp>(terminator)) {
       Optional<OperandRange> blockOperands;
+      if (branchCondOp.trueTarget() == block) {
+        blockOperands = branchCondOp.trueTargetOperands();
+      } else {
+        assert(branchCondOp.falseTarget() == block);
+        blockOperands = branchCondOp.falseTargetOperands();
+      }
 
-      for (auto successorIdx :
-           llvm::seq<unsigned>(0, predecessor->getNumSuccessors()))
-        if (predecessor->getSuccessors()[successorIdx] == block) {
-          blockOperands = branchCondOp.getSuccessorOperands(successorIdx);
-          break;
-        }
-
-      assert(blockOperands && !blockOperands->empty() &&
+      assert(!blockOperands->empty() &&
              "expected non-empty block operand range");
-      predecessors.emplace_back(predecessor, *blockOperands);
+      predecessors.emplace_back(spirvPredecessor, *blockOperands);
     } else {
       return terminator->emitError("unimplemented terminator for Phi creation");
     }
+    LLVM_DEBUG({
+      llvm::dbgs() << "    block arguments:\n";
+      for (Value v : predecessors.back().second)
+        llvm::dbgs() << "      " << v << "\n";
+    });
   }
 
   // Then create OpPhi instruction for each of the block argument.

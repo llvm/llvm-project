@@ -238,14 +238,18 @@ private:
   /// assigns the next available <id>
   uint32_t getOrCreateBlockID(Block *block);
 
+#ifndef NDEBUG
+  /// (For debugging) prints the block with its result <id>.
+  void printBlock(Block *block, raw_ostream &os);
+#endif
+
   /// Processes the given `block` and emits SPIR-V instructions for all ops
   /// inside. Does not emit OpLabel for this block if `omitLabel` is true.
-  /// `actionBeforeTerminator` is a callback that will be invoked before
-  /// handling the terminator op. It can be used to inject the Op*Merge
-  /// instruction if this is a SPIR-V selection/loop header block.
-  LogicalResult
-  processBlock(Block *block, bool omitLabel = false,
-               function_ref<LogicalResult()> actionBeforeTerminator = nullptr);
+  /// `emitMerge` is a callback that will be invoked before handling the
+  /// terminator op to inject the Op*Merge instruction if this is a SPIR-V
+  /// selection/loop header block.
+  LogicalResult processBlock(Block *block, bool omitLabel = false,
+                             function_ref<LogicalResult()> emitMerge = nullptr);
 
   /// Emits OpPhi instructions for the given block if it has block arguments.
   LogicalResult emitPhiForBlockArguments(Block *block);

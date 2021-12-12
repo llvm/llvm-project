@@ -350,9 +350,8 @@ private:
   //    guarantees that we enter and exit in structured ways and the construct
   //    is nestable.
   // 3. Put the new spv.mlir.selection/spv.mlir.loop op at the beginning of the
-  // old merge
-  //    block and redirect all branches to the old header block to the old
-  //    merge block (which contains the spv.mlir.selection/spv.mlir.loop op
+  //    old merge block and redirect all branches to the old header block to the
+  //    old merge block (which contains the spv.mlir.selection/spv.mlir.loop op
   //    now).
 
   /// For OpPhi instructions, we use block arguments to represent them. OpPhi

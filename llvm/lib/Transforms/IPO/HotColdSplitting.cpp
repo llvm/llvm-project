@@ -294,7 +294,7 @@ static int getOutliningPenalty(ArrayRef<BasicBlock *> Region,
       // Find all incoming values from the outlining region.
       int NumIncomingVals = 0;
       for (unsigned i = 0; i < PN.getNumIncomingValues(); ++i)
-        if (find(Region, PN.getIncomingBlock(i)) != Region.end()) {
+        if (llvm::is_contained(Region, PN.getIncomingBlock(i))) {
           ++NumIncomingVals;
           if (NumIncomingVals > 1) {
             ++NumSplitExitPhis;

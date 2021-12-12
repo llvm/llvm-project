@@ -976,11 +976,7 @@ static bool ContainsCompileAction(const Action *A) {
   if (isa<CompileJobAction>(A) || isa<BackendJobAction>(A))
     return true;
 
-  for (const auto &AI : A->inputs())
-    if (ContainsCompileAction(AI))
-      return true;
-
-  return false;
+  return llvm::any_of(A->inputs(), ContainsCompileAction);
 }
 
 /// Check if -relax-all should be passed to the internal assembler.

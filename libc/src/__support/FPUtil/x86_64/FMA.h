@@ -11,7 +11,7 @@
 
 #include "src/__support/architectures.h"
 
-#if !defined(LLVM_LIBC_ARCH_X86)
+#if !defined(LLVM_LIBC_ARCH_X86_64)
 #error "Invalid include"
 #endif
 
@@ -22,8 +22,7 @@ namespace __llvm_libc {
 namespace fputil {
 
 template <typename T>
-__attribute__((target(
-    "fma"))) static inline cpp::EnableIfType<cpp::IsSame<T, float>::Value, T>
+INLINE_FMA static inline cpp::EnableIfType<cpp::IsSame<T, float>::Value, T>
 fma(T x, T y, T z) {
   float result;
   __m128 xmm = _mm_load_ss(&x);           // NOLINT
@@ -35,8 +34,7 @@ fma(T x, T y, T z) {
 }
 
 template <typename T>
-__attribute__((target(
-    "fma"))) static inline cpp::EnableIfType<cpp::IsSame<T, double>::Value, T>
+INLINE_FMA static inline cpp::EnableIfType<cpp::IsSame<T, double>::Value, T>
 fma(T x, T y, T z) {
   double result;
   __m128d xmm = _mm_load_sd(&x);           // NOLINT
