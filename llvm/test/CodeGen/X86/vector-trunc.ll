@@ -4,8 +4,8 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+sse4.1 | FileCheck %s --check-prefix=SSE --check-prefix=SSE41
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx | FileCheck %s --check-prefix=AVX --check-prefix=AVX1
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx2 | FileCheck %s --check-prefixes=AVX,AVX2,AVX2-SLOW
-; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx2,+fast-variable-crosslane-shuffle,+fast-variable-perlane-shuffle | FileCheck %s --check-prefixes=AVX,AVX2,AVX2-FAST,AVX2-FAST-ALL
-; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx2,+fast-variable-perlane-shuffle | FileCheck %s --check-prefixes=AVX,AVX2,AVX2-FAST,AVX2-FAST-PERLANE
+; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx2,+fast-variable-crosslane-shuffle,+fast-variable-perlane-shuffle | FileCheck %s --check-prefixes=AVX,AVX2,AVX2-FAST-ALL
+; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx2,+fast-variable-perlane-shuffle | FileCheck %s --check-prefixes=AVX,AVX2,AVX2-FAST-PERLANE
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512f | FileCheck %s --check-prefix=AVX512 --check-prefix=AVX512F
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512vl,+fast-variable-crosslane-shuffle,+fast-variable-perlane-shuffle | FileCheck %s --check-prefixes=AVX512,AVX512VL
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512vl,+fast-variable-perlane-shuffle | FileCheck %s --check-prefixes=AVX512,AVX512VL
@@ -1902,25 +1902,11 @@ define <8 x i16> @PR32160(<8 x i32> %x) {
 ; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[2,2,2,2]
 ; SSE-NEXT:    retq
 ;
-; AVX1-LABEL: PR32160:
-; AVX1:       # %bb.0:
-; AVX1-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[8,9,8,9,8,9,8,9,8,9,8,9,8,9,8,9]
-; AVX1-NEXT:    vzeroupper
-; AVX1-NEXT:    retq
-;
-; AVX2-SLOW-LABEL: PR32160:
-; AVX2-SLOW:       # %bb.0:
-; AVX2-SLOW-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[2,2,2,2]
-; AVX2-SLOW-NEXT:    vpshuflw {{.*#+}} xmm0 = xmm0[2,2,2,2,4,5,6,7]
-; AVX2-SLOW-NEXT:    vpbroadcastd %xmm0, %xmm0
-; AVX2-SLOW-NEXT:    vzeroupper
-; AVX2-SLOW-NEXT:    retq
-;
-; AVX2-FAST-LABEL: PR32160:
-; AVX2-FAST:       # %bb.0:
-; AVX2-FAST-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[8,9,8,9,8,9,8,9,8,9,8,9,8,9,8,9]
-; AVX2-FAST-NEXT:    vzeroupper
-; AVX2-FAST-NEXT:    retq
+; AVX-LABEL: PR32160:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[8,9,8,9,8,9,8,9,8,9,8,9,8,9,8,9]
+; AVX-NEXT:    vzeroupper
+; AVX-NEXT:    retq
 ;
 ; AVX512F-LABEL: PR32160:
 ; AVX512F:       # %bb.0:
