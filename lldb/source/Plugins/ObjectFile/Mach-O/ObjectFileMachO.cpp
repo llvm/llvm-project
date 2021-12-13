@@ -6973,6 +6973,23 @@ ObjectFileMachO::GetCorefileAllImageInfos() {
           }
           image_infos.all_image_infos.push_back(image_entry);
         }
+      } else if (strcmp("load binary", data_owner) == 0) {
+        uint32_t version = m_data.GetU32(&fileoff);
+        if (version == 1) {
+          uuid_t uuid;
+          memcpy(&uuid, m_data.GetData(&fileoff, sizeof(uuid_t)),
+                 sizeof(uuid_t));
+          uint64_t load_address = m_data.GetU64(&fileoff);
+          uint64_t slide = m_data.GetU64(&fileoff);
+          std::string filename = m_data.GetCStr(&fileoff);
+
+          MachOCorefileImageEntry image_entry;
+          image_entry.filename = filename;
+          image_entry.uuid = UUID::fromData(uuid, sizeof(uuid_t));
+          image_entry.load_address = load_address;
+          image_entry.slide = slide;
+          image_infos.all_image_infos.push_back(image_entry);
+        }
       }
     }
     offset = cmd_offset + lc.cmdsize;
@@ -6983,29 +7000,42 @@ ObjectFileMachO::GetCorefileAllImageInfos() {
 
 bool ObjectFileMachO::LoadCoreFileImages(lldb_private::Process &process) {
   MachOCorefileAllImageInfos image_infos = GetCorefileAllImageInfos();
-  bool added_images = false;
-  if (image_infos.IsValid()) {
-    for (const MachOCorefileImageEntry &image : image_infos.all_image_infos) {
-      ModuleSpec module_spec;
-      module_spec.GetUUID() = image.uuid;
-      module_spec.GetFileSpec() = FileSpec(image.filename.c_str());
-      if (image.currently_executing) {
-        Symbols::DownloadObjectAndSymbolFile(module_spec, true);
-        if (FileSystem::Instance().Exists(module_spec.GetFileSpec())) {
-          process.GetTarget().GetOrCreateModule(module_spec, false);
-        }
+  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_DYNAMIC_LOADER));
+
+  ModuleList added_modules;
+  for (const MachOCorefileImageEntry &image : image_infos.all_image_infos) {
+    ModuleSpec module_spec;
+    module_spec.GetUUID() = image.uuid;
+    module_spec.GetFileSpec() = FileSpec(image.filename.c_str());
+    if (image.currently_executing) {
+      Symbols::DownloadObjectAndSymbolFile(module_spec, true);
+      if (FileSystem::Instance().Exists(module_spec.GetFileSpec())) {
+        process.GetTarget().GetOrCreateModule(module_spec, false);
       }
-      Status error;
-      ModuleSP module_sp =
-          process.GetTarget().GetOrCreateModule(module_spec, false, &error);
-      if (!module_sp.get() || !module_sp->GetObjectFile()) {
-        if (image.load_address != LLDB_INVALID_ADDRESS) {
-          module_sp = process.ReadModuleFromMemory(module_spec.GetFileSpec(),
-                                                   image.load_address);
-        }
+    }
+    Status error;
+    ModuleSP module_sp =
+        process.GetTarget().GetOrCreateModule(module_spec, false, &error);
+    if (!module_sp.get() || !module_sp->GetObjectFile()) {
+      if (image.load_address != LLDB_INVALID_ADDRESS) {
+        module_sp = process.ReadModuleFromMemory(module_spec.GetFileSpec(),
+                                                 image.load_address);
       }
-      if (module_sp.get()) {
-        added_images = true;
+    }
+    if (module_sp.get()) {
+      // Will call ModulesDidLoad with all modules once they've all
+      // been added to the Target with load addresses.  Don't notify
+      // here, before the load address is set.
+      const bool notify = false;
+      process.GetTarget().GetImages().AppendIfNeeded(module_sp, notify);
+      added_modules.Append(module_sp, notify);
+      if (image.segment_load_addresses.size() > 0) {
+        if (log) {
+          std::string uuidstr = image.uuid.GetAsString();
+          log->Printf("ObjectFileMachO::LoadCoreFileImages adding binary '%s' "
+                      "UUID %s with section load addresses",
+                      image.filename.c_str(), uuidstr.c_str());
+        }
         for (auto name_vmaddr_tuple : image.segment_load_addresses) {
           SectionList *sectlist = module_sp->GetObjectFile()->GetSectionList();
           if (sectlist) {
@@ -7017,8 +7047,47 @@ bool ObjectFileMachO::LoadCoreFileImages(lldb_private::Process &process) {
             }
           }
         }
+      } else if (image.load_address != LLDB_INVALID_ADDRESS) {
+        if (log) {
+          std::string uuidstr = image.uuid.GetAsString();
+          log->Printf("ObjectFileMachO::LoadCoreFileImages adding binary '%s' "
+                      "UUID %s with load address 0x%" PRIx64,
+                      image.filename.c_str(), uuidstr.c_str(),
+                      image.load_address);
+        }
+        const bool address_is_slide = false;
+        bool changed = false;
+        module_sp->SetLoadAddress(process.GetTarget(), image.load_address,
+                                  address_is_slide, changed);
+      } else if (image.slide != 0) {
+        if (log) {
+          std::string uuidstr = image.uuid.GetAsString();
+          log->Printf("ObjectFileMachO::LoadCoreFileImages adding binary '%s' "
+                      "UUID %s with slide amount 0x%" PRIx64,
+                      image.filename.c_str(), uuidstr.c_str(), image.slide);
+        }
+        const bool address_is_slide = true;
+        bool changed = false;
+        module_sp->SetLoadAddress(process.GetTarget(), image.slide,
+                                  address_is_slide, changed);
+      } else {
+        if (log) {
+          std::string uuidstr = image.uuid.GetAsString();
+          log->Printf("ObjectFileMachO::LoadCoreFileImages adding binary '%s' "
+                      "UUID %s at its file address, no slide applied",
+                      image.filename.c_str(), uuidstr.c_str());
+        }
+        const bool address_is_slide = true;
+        bool changed = false;
+        module_sp->SetLoadAddress(process.GetTarget(), 0, address_is_slide,
+                                  changed);
       }
     }
   }
-  return added_images;
+  if (added_modules.GetSize() > 0) {
+    process.GetTarget().ModulesDidLoad(added_modules);
+    process.Flush();
+    return true;
+  }
+  return false;
 }
