@@ -277,6 +277,31 @@ func @different_padding_dynamic_sizes(%arg0: tensor<64x64xf32>,
 
 #map0 = affine_map<()[s0] -> (64, s0)>
 
+//      MATMUL:  different_padding_dynamic_rank
+func @different_padding_dynamic_rank(%arg0: tensor<64x64x1xf32>,
+                                     %iv0 : index) -> tensor<?x?xf32> {
+  %cst = arith.constant 0.0 : f32
+  %size = affine.min #map0()[%iv0]
+  %0 = tensor.extract_slice %arg0[0, 0, 0] [%size, %size, 1] [1, 1, 1] : tensor<64x64x1xf32> to tensor<?x?xf32>
+  %1 = linalg.pad_tensor %0 low[0, 0] high[%iv0, %iv0]  {
+    ^bb0(%arg3: index, %arg4: index):  // no predecessors
+      linalg.yield %cst : f32
+  } : tensor<?x?xf32> to tensor<64x64xf32>
+  %2 = linalg.fill(%cst, %1) : f32, tensor<64x64xf32> -> tensor<64x64xf32>
+  %3 = tensor.extract_slice %2[0, 0] [%size, %size] [1, 1] : tensor<64x64xf32> to tensor<?x?xf32>
+
+  // Different dynamic ranks prevent composing the paddings ([%size, %size, 1] vs [%size, %size]).
+  //      MATMUL:  = linalg.fill
+  //      MATMUL:  = linalg.pad_tensor
+  //      MATMUL:  = linalg.matmul
+  %4 = linalg.matmul ins(%3, %3 : tensor<?x?xf32>, tensor<?x?xf32>) outs(%3 : tensor<?x?xf32>) -> tensor<?x?xf32>
+  return %4 : tensor<?x?xf32>
+}
+
+// -----
+
+#map0 = affine_map<()[s0] -> (64, s0)>
+
 //      MATMUL:  different_padding_static_sizes
 func @different_padding_static_sizes(%arg0: tensor<62x62xf32>,
                                      %iv0 : index) -> tensor<?x?xf32> {
