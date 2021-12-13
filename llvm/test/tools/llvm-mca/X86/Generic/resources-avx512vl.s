@@ -81,6 +81,27 @@ valignq           $1, %ymm16, %ymm17, %ymm19 {z}{k1}
 valignq           $1, (%rax), %ymm17, %ymm19 {z}{k1}
 valignq           $1, (%rax){1to4}, %ymm17, %ymm19 {z}{k1}
 
+vbroadcastsd      %xmm16, %ymm19
+vbroadcastsd      (%rax), %ymm19
+vbroadcastsd      %xmm16, %ymm19 {k1}
+vbroadcastsd      (%rax), %ymm19 {k1}
+vbroadcastsd      %xmm16, %ymm19 {z}{k1}
+vbroadcastsd      (%rax), %ymm19 {z}{k1}
+
+vbroadcastss      %xmm16, %xmm19
+vbroadcastss      (%rax), %xmm19
+vbroadcastss      %xmm16, %xmm19 {k1}
+vbroadcastss      (%rax), %xmm19 {k1}
+vbroadcastss      %xmm16, %xmm19 {z}{k1}
+vbroadcastss      (%rax), %xmm19 {z}{k1}
+
+vbroadcastss      %xmm16, %ymm19
+vbroadcastss      (%rax), %ymm19
+vbroadcastss      %xmm16, %ymm19 {k1}
+vbroadcastss      (%rax), %ymm19 {k1}
+vbroadcastss      %xmm16, %ymm19 {z}{k1}
+vbroadcastss      (%rax), %ymm19 {z}{k1}
+
 vcmppd            $0, %xmm0, %xmm1, %k2
 vcmppd            $0, (%rax), %xmm1, %k2
 vcmppd            $0, (%rax){1to2}, %xmm1, %k2
@@ -358,6 +379,34 @@ vpaddq            (%rax){1to4}, %ymm17, %ymm19 {k1}
 vpaddq            %ymm16, %ymm17, %ymm19 {z}{k1}
 vpaddq            (%rax), %ymm17, %ymm19 {z}{k1}
 vpaddq            (%rax){1to4}, %ymm17, %ymm19 {z}{k1}
+
+vpbroadcastd      %xmm16, %xmm19
+vpbroadcastd      (%rax), %xmm19
+vpbroadcastd      %xmm16, %xmm19 {k1}
+vpbroadcastd      (%rax), %xmm19 {k1}
+vpbroadcastd      %xmm16, %xmm19 {z}{k1}
+vpbroadcastd      (%rax), %xmm19 {z}{k1}
+
+vpbroadcastd      %xmm16, %ymm19
+vpbroadcastd      (%rax), %ymm19
+vpbroadcastd      %xmm16, %ymm19 {k1}
+vpbroadcastd      (%rax), %ymm19 {k1}
+vpbroadcastd      %xmm16, %ymm19 {z}{k1}
+vpbroadcastd      (%rax), %ymm19 {z}{k1}
+
+vpbroadcastq      %xmm16, %xmm19
+vpbroadcastq      (%rax), %xmm19
+vpbroadcastq      %xmm16, %xmm19 {k1}
+vpbroadcastq      (%rax), %xmm19 {k1}
+vpbroadcastq      %xmm16, %xmm19 {z}{k1}
+vpbroadcastq      (%rax), %xmm19 {z}{k1}
+
+vpbroadcastq      %xmm16, %ymm19
+vpbroadcastq      (%rax), %ymm19
+vpbroadcastq      %xmm16, %ymm19 {k1}
+vpbroadcastq      (%rax), %ymm19 {k1}
+vpbroadcastq      %xmm16, %ymm19 {z}{k1}
+vpbroadcastq      (%rax), %ymm19 {z}{k1}
 
 vpcmpd            $0, %xmm0, %xmm1, %k2
 vpcmpd            $0, (%rax), %xmm1, %k2
@@ -1218,6 +1267,24 @@ vunpcklps         (%rax){1to8}, %ymm17, %ymm19 {z}{k1}
 # CHECK-NEXT:  1      1     1.00                        valignq	$1, %ymm16, %ymm17, %ymm19 {%k1} {z}
 # CHECK-NEXT:  2      8     1.00    *                   valignq	$1, (%rax), %ymm17, %ymm19 {%k1} {z}
 # CHECK-NEXT:  2      8     1.00    *                   valignq	$1, (%rax){1to4}, %ymm17, %ymm19 {%k1} {z}
+# CHECK-NEXT:  1      1     1.00                        vbroadcastsd	%xmm16, %ymm19
+# CHECK-NEXT:  2      8     1.00    *                   vbroadcastsd	(%rax), %ymm19
+# CHECK-NEXT:  1      1     1.00                        vbroadcastsd	%xmm16, %ymm19 {%k1}
+# CHECK-NEXT:  2      8     1.00    *                   vbroadcastsd	(%rax), %ymm19 {%k1}
+# CHECK-NEXT:  1      1     1.00                        vbroadcastsd	%xmm16, %ymm19 {%k1} {z}
+# CHECK-NEXT:  2      8     1.00    *                   vbroadcastsd	(%rax), %ymm19 {%k1} {z}
+# CHECK-NEXT:  1      1     1.00                        vbroadcastss	%xmm16, %xmm19
+# CHECK-NEXT:  2      8     1.00    *                   vbroadcastss	(%rax), %xmm19
+# CHECK-NEXT:  1      1     1.00                        vbroadcastss	%xmm16, %xmm19 {%k1}
+# CHECK-NEXT:  2      8     1.00    *                   vbroadcastss	(%rax), %xmm19 {%k1}
+# CHECK-NEXT:  1      1     1.00                        vbroadcastss	%xmm16, %xmm19 {%k1} {z}
+# CHECK-NEXT:  2      8     1.00    *                   vbroadcastss	(%rax), %xmm19 {%k1} {z}
+# CHECK-NEXT:  1      1     1.00                        vbroadcastss	%xmm16, %ymm19
+# CHECK-NEXT:  2      8     1.00    *                   vbroadcastss	(%rax), %ymm19
+# CHECK-NEXT:  1      1     1.00                        vbroadcastss	%xmm16, %ymm19 {%k1}
+# CHECK-NEXT:  2      8     1.00    *                   vbroadcastss	(%rax), %ymm19 {%k1}
+# CHECK-NEXT:  1      1     1.00                        vbroadcastss	%xmm16, %ymm19 {%k1} {z}
+# CHECK-NEXT:  2      8     1.00    *                   vbroadcastss	(%rax), %ymm19 {%k1} {z}
 # CHECK-NEXT:  1      3     1.00                        vcmpeqpd	%xmm0, %xmm1, %k2
 # CHECK-NEXT:  2      9     1.00    *                   vcmpeqpd	(%rax), %xmm1, %k2
 # CHECK-NEXT:  2      9     1.00    *                   vcmpeqpd	(%rax){1to2}, %xmm1, %k2
@@ -1466,6 +1533,30 @@ vunpcklps         (%rax){1to8}, %ymm17, %ymm19 {z}{k1}
 # CHECK-NEXT:  1      1     0.50                        vpaddq	%ymm16, %ymm17, %ymm19 {%k1} {z}
 # CHECK-NEXT:  2      8     0.50    *                   vpaddq	(%rax), %ymm17, %ymm19 {%k1} {z}
 # CHECK-NEXT:  2      8     0.50    *                   vpaddq	(%rax){1to4}, %ymm17, %ymm19 {%k1} {z}
+# CHECK-NEXT:  1      1     1.00                        vpbroadcastd	%xmm16, %xmm19
+# CHECK-NEXT:  2      7     0.50    *                   vpbroadcastd	(%rax), %xmm19
+# CHECK-NEXT:  1      1     1.00                        vpbroadcastd	%xmm16, %xmm19 {%k1}
+# CHECK-NEXT:  2      7     0.50    *                   vpbroadcastd	(%rax), %xmm19 {%k1}
+# CHECK-NEXT:  1      1     1.00                        vpbroadcastd	%xmm16, %xmm19 {%k1} {z}
+# CHECK-NEXT:  2      7     0.50    *                   vpbroadcastd	(%rax), %xmm19 {%k1} {z}
+# CHECK-NEXT:  1      1     1.00                        vpbroadcastd	%xmm16, %ymm19
+# CHECK-NEXT:  2      8     1.00    *                   vpbroadcastd	(%rax), %ymm19
+# CHECK-NEXT:  1      1     1.00                        vpbroadcastd	%xmm16, %ymm19 {%k1}
+# CHECK-NEXT:  2      8     1.00    *                   vpbroadcastd	(%rax), %ymm19 {%k1}
+# CHECK-NEXT:  1      1     1.00                        vpbroadcastd	%xmm16, %ymm19 {%k1} {z}
+# CHECK-NEXT:  2      8     1.00    *                   vpbroadcastd	(%rax), %ymm19 {%k1} {z}
+# CHECK-NEXT:  1      1     1.00                        vpbroadcastq	%xmm16, %xmm19
+# CHECK-NEXT:  2      7     0.50    *                   vpbroadcastq	(%rax), %xmm19
+# CHECK-NEXT:  1      1     1.00                        vpbroadcastq	%xmm16, %xmm19 {%k1}
+# CHECK-NEXT:  2      7     0.50    *                   vpbroadcastq	(%rax), %xmm19 {%k1}
+# CHECK-NEXT:  1      1     1.00                        vpbroadcastq	%xmm16, %xmm19 {%k1} {z}
+# CHECK-NEXT:  2      7     0.50    *                   vpbroadcastq	(%rax), %xmm19 {%k1} {z}
+# CHECK-NEXT:  1      1     1.00                        vpbroadcastq	%xmm16, %ymm19
+# CHECK-NEXT:  2      8     1.00    *                   vpbroadcastq	(%rax), %ymm19
+# CHECK-NEXT:  1      1     1.00                        vpbroadcastq	%xmm16, %ymm19 {%k1}
+# CHECK-NEXT:  2      8     1.00    *                   vpbroadcastq	(%rax), %ymm19 {%k1}
+# CHECK-NEXT:  1      1     1.00                        vpbroadcastq	%xmm16, %ymm19 {%k1} {z}
+# CHECK-NEXT:  2      8     1.00    *                   vpbroadcastq	(%rax), %ymm19 {%k1} {z}
 # CHECK-NEXT:  1      1     0.50                        vpcmpeqd	%xmm0, %xmm1, %k2
 # CHECK-NEXT:  2      7     0.50    *                   vpcmpeqd	(%rax), %xmm1, %k2
 # CHECK-NEXT:  2      7     0.50    *                   vpcmpeqd	(%rax){1to4}, %xmm1, %k2
@@ -2165,7 +2256,7 @@ vunpcklps         (%rax){1to8}, %ymm17, %ymm19 {z}{k1}
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6.0]  [6.1]
-# CHECK-NEXT:  -     1935.00 196.00 356.50  -    527.50 328.00 328.00
+# CHECK-NEXT:  -     1935.00 196.00 359.50  -    566.50 338.50 338.50
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6.0]  [6.1]  Instructions:
@@ -2241,6 +2332,24 @@ vunpcklps         (%rax){1to8}, %ymm17, %ymm19 {z}{k1}
 # CHECK-NEXT:  -      -      -      -      -     1.00    -      -     valignq	$1, %ymm16, %ymm17, %ymm19 {%k1} {z}
 # CHECK-NEXT:  -      -      -      -      -     1.00   0.50   0.50   valignq	$1, (%rax), %ymm17, %ymm19 {%k1} {z}
 # CHECK-NEXT:  -      -      -      -      -     1.00   0.50   0.50   valignq	$1, (%rax){1to4}, %ymm17, %ymm19 {%k1} {z}
+# CHECK-NEXT:  -      -      -      -      -     1.00    -      -     vbroadcastsd	%xmm16, %ymm19
+# CHECK-NEXT:  -      -      -      -      -     1.00   0.50   0.50   vbroadcastsd	(%rax), %ymm19
+# CHECK-NEXT:  -      -      -      -      -     1.00    -      -     vbroadcastsd	%xmm16, %ymm19 {%k1}
+# CHECK-NEXT:  -      -      -      -      -     1.00   0.50   0.50   vbroadcastsd	(%rax), %ymm19 {%k1}
+# CHECK-NEXT:  -      -      -      -      -     1.00    -      -     vbroadcastsd	%xmm16, %ymm19 {%k1} {z}
+# CHECK-NEXT:  -      -      -      -      -     1.00   0.50   0.50   vbroadcastsd	(%rax), %ymm19 {%k1} {z}
+# CHECK-NEXT:  -      -      -      -      -     1.00    -      -     vbroadcastss	%xmm16, %xmm19
+# CHECK-NEXT:  -      -      -      -      -     1.00   0.50   0.50   vbroadcastss	(%rax), %xmm19
+# CHECK-NEXT:  -      -      -      -      -     1.00    -      -     vbroadcastss	%xmm16, %xmm19 {%k1}
+# CHECK-NEXT:  -      -      -      -      -     1.00   0.50   0.50   vbroadcastss	(%rax), %xmm19 {%k1}
+# CHECK-NEXT:  -      -      -      -      -     1.00    -      -     vbroadcastss	%xmm16, %xmm19 {%k1} {z}
+# CHECK-NEXT:  -      -      -      -      -     1.00   0.50   0.50   vbroadcastss	(%rax), %xmm19 {%k1} {z}
+# CHECK-NEXT:  -      -      -      -      -     1.00    -      -     vbroadcastss	%xmm16, %ymm19
+# CHECK-NEXT:  -      -      -      -      -     1.00   0.50   0.50   vbroadcastss	(%rax), %ymm19
+# CHECK-NEXT:  -      -      -      -      -     1.00    -      -     vbroadcastss	%xmm16, %ymm19 {%k1}
+# CHECK-NEXT:  -      -      -      -      -     1.00   0.50   0.50   vbroadcastss	(%rax), %ymm19 {%k1}
+# CHECK-NEXT:  -      -      -      -      -     1.00    -      -     vbroadcastss	%xmm16, %ymm19 {%k1} {z}
+# CHECK-NEXT:  -      -      -      -      -     1.00   0.50   0.50   vbroadcastss	(%rax), %ymm19 {%k1} {z}
 # CHECK-NEXT:  -      -      -     1.00    -      -      -      -     vcmpeqpd	%xmm0, %xmm1, %k2
 # CHECK-NEXT:  -      -      -     1.00    -      -     0.50   0.50   vcmpeqpd	(%rax), %xmm1, %k2
 # CHECK-NEXT:  -      -      -     1.00    -      -     0.50   0.50   vcmpeqpd	(%rax){1to2}, %xmm1, %k2
@@ -2489,6 +2598,30 @@ vunpcklps         (%rax){1to8}, %ymm17, %ymm19 {z}{k1}
 # CHECK-NEXT:  -      -      -     0.50    -     0.50    -      -     vpaddq	%ymm16, %ymm17, %ymm19 {%k1} {z}
 # CHECK-NEXT:  -      -      -     0.50    -     0.50   0.50   0.50   vpaddq	(%rax), %ymm17, %ymm19 {%k1} {z}
 # CHECK-NEXT:  -      -      -     0.50    -     0.50   0.50   0.50   vpaddq	(%rax){1to4}, %ymm17, %ymm19 {%k1} {z}
+# CHECK-NEXT:  -      -      -      -      -     1.00    -      -     vpbroadcastd	%xmm16, %xmm19
+# CHECK-NEXT:  -      -      -     0.50    -     0.50   0.50   0.50   vpbroadcastd	(%rax), %xmm19
+# CHECK-NEXT:  -      -      -      -      -     1.00    -      -     vpbroadcastd	%xmm16, %xmm19 {%k1}
+# CHECK-NEXT:  -      -      -     0.50    -     0.50   0.50   0.50   vpbroadcastd	(%rax), %xmm19 {%k1}
+# CHECK-NEXT:  -      -      -      -      -     1.00    -      -     vpbroadcastd	%xmm16, %xmm19 {%k1} {z}
+# CHECK-NEXT:  -      -      -     0.50    -     0.50   0.50   0.50   vpbroadcastd	(%rax), %xmm19 {%k1} {z}
+# CHECK-NEXT:  -      -      -      -      -     1.00    -      -     vpbroadcastd	%xmm16, %ymm19
+# CHECK-NEXT:  -      -      -      -      -     1.00   0.50   0.50   vpbroadcastd	(%rax), %ymm19
+# CHECK-NEXT:  -      -      -      -      -     1.00    -      -     vpbroadcastd	%xmm16, %ymm19 {%k1}
+# CHECK-NEXT:  -      -      -      -      -     1.00   0.50   0.50   vpbroadcastd	(%rax), %ymm19 {%k1}
+# CHECK-NEXT:  -      -      -      -      -     1.00    -      -     vpbroadcastd	%xmm16, %ymm19 {%k1} {z}
+# CHECK-NEXT:  -      -      -      -      -     1.00   0.50   0.50   vpbroadcastd	(%rax), %ymm19 {%k1} {z}
+# CHECK-NEXT:  -      -      -      -      -     1.00    -      -     vpbroadcastq	%xmm16, %xmm19
+# CHECK-NEXT:  -      -      -     0.50    -     0.50   0.50   0.50   vpbroadcastq	(%rax), %xmm19
+# CHECK-NEXT:  -      -      -      -      -     1.00    -      -     vpbroadcastq	%xmm16, %xmm19 {%k1}
+# CHECK-NEXT:  -      -      -     0.50    -     0.50   0.50   0.50   vpbroadcastq	(%rax), %xmm19 {%k1}
+# CHECK-NEXT:  -      -      -      -      -     1.00    -      -     vpbroadcastq	%xmm16, %xmm19 {%k1} {z}
+# CHECK-NEXT:  -      -      -     0.50    -     0.50   0.50   0.50   vpbroadcastq	(%rax), %xmm19 {%k1} {z}
+# CHECK-NEXT:  -      -      -      -      -     1.00    -      -     vpbroadcastq	%xmm16, %ymm19
+# CHECK-NEXT:  -      -      -      -      -     1.00   0.50   0.50   vpbroadcastq	(%rax), %ymm19
+# CHECK-NEXT:  -      -      -      -      -     1.00    -      -     vpbroadcastq	%xmm16, %ymm19 {%k1}
+# CHECK-NEXT:  -      -      -      -      -     1.00   0.50   0.50   vpbroadcastq	(%rax), %ymm19 {%k1}
+# CHECK-NEXT:  -      -      -      -      -     1.00    -      -     vpbroadcastq	%xmm16, %ymm19 {%k1} {z}
+# CHECK-NEXT:  -      -      -      -      -     1.00   0.50   0.50   vpbroadcastq	(%rax), %ymm19 {%k1} {z}
 # CHECK-NEXT:  -      -      -     0.50    -     0.50    -      -     vpcmpeqd	%xmm0, %xmm1, %k2
 # CHECK-NEXT:  -      -      -     0.50    -     0.50   0.50   0.50   vpcmpeqd	(%rax), %xmm1, %k2
 # CHECK-NEXT:  -      -      -     0.50    -     0.50   0.50   0.50   vpcmpeqd	(%rax){1to4}, %xmm1, %k2
