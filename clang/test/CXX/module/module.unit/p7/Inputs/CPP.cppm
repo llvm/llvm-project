@@ -4,5 +4,5 @@ export module X;
 
 extern "C++" class CPP {
 public:
-  void print() {}
+    void print() {}
 };

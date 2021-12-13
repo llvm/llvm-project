@@ -8,7 +8,7 @@ export module X;
 import Y;
 
 export namespace foo {
-namespace bar {
-void baz();
+namespace bar{
+    void baz();
 }
-} // namespace foo
+}
