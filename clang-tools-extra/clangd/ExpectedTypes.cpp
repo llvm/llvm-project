@@ -53,7 +53,7 @@ typeOfCompletion(const CodeCompletionResult &R) {
   auto T = VD->getType();
   if (T.isNull())
     return llvm::None;
-  if (auto FuncT = T->getAs<FunctionType>()) {
+  if (auto *FuncT = T->getAs<FunctionType>()) {
     // Functions are a special case. They are completed as 'foo()' and we want
     // to match their return type rather than the function type itself.
     // FIXME(ibiryukov): in some cases, we might want to avoid completing `()`

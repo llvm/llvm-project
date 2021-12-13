@@ -483,7 +483,7 @@ private:
     if (!llvm::isa<NamedDecl>(D))
       return VisitKind::No;
 
-    if (auto Func = llvm::dyn_cast<FunctionDecl>(D)) {
+    if (auto *Func = llvm::dyn_cast<FunctionDecl>(D)) {
       // Some functions are implicit template instantiations, those should be
       // ignored.
       if (auto *Info = Func->getTemplateSpecializationInfo()) {

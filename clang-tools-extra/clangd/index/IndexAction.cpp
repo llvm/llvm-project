@@ -61,7 +61,7 @@ public:
       return;
 
     const auto FileID = SM.getFileID(Loc);
-    const auto File = SM.getFileEntryForID(FileID);
+    const auto *File = SM.getFileEntryForID(FileID);
     auto URI = toURI(File);
     if (!URI)
       return;
