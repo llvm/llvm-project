@@ -1763,15 +1763,19 @@ LogicalResult ControlFlowStructurizer::structurizeImpl() {
   LLVM_DEBUG(llvm::dbgs() << "\n");
 
   if (isLoop) {
-    // The selection/loop header block may have block arguments. Since now
-    // we place the selection/loop op inside the old merge block, we need to
-    // make sure the old merge block has the same block argument list.
-    assert(mergeBlock->args_empty() && "OpPhi in loop merge block unsupported");
+    if (!mergeBlock->args_empty()) {
+      return mergeBlock->getParentOp()->emitError(
+          "OpPhi in loop merge block unsupported");
+    }
+
+    // The loop header block may have block arguments. Since now we place the
+    // loop op inside the old merge block, we need to make sure the old merge
+    // block has the same block argument list.
     for (BlockArgument blockArg : headerBlock->getArguments()) {
       mergeBlock->addArgument(blockArg.getType());
     }
 
-    // If the loop header block has block arguments, make sure the spv.branch op
+    // If the loop header block has block arguments, make sure the spv.Branch op
     // matches.
     SmallVector<Value, 4> blockArgs;
     if (!headerBlock->args_empty())
@@ -1792,6 +1796,19 @@ LogicalResult ControlFlowStructurizer::structurizeImpl() {
   for (auto *block : constructBlocks)
     block->dropAllReferences();
 
+  // Check that whether some op in the to-be-erased blocks still has uses. Those
+  // uses come from blocks that won't be sinked into the SelectionOp/LoopOp's
+  // region. We cannot handle such cases given that once a value is sinked into
+  // the SelectionOp/LoopOp's region, there is no escape for it:
+  // SelectionOp/LooOp does not support yield values right now.
+  for (auto *block : constructBlocks) {
+    for (Operation &op : *block)
+      if (!op.use_empty())
+        return op.emitOpError(
+            "failed control flow structurization: it has uses outside of the "
+            "enclosing selection/loop construct");
+  }
+
   // Then erase all old blocks.
   for (auto *block : constructBlocks) {
     // We've cloned all blocks belonging to this construct into the structured
@@ -1799,26 +1816,31 @@ LogicalResult ControlFlowStructurizer::structurizeImpl() {
     // selection/loop. If so, they will be recorded within blockMergeInfo.
     // We need to update the pointers there to the newly remapped ones so we can
     // continue structurizing them later.
-    // TODO: The asserts in the following assumes input SPIR-V blob
-    // forms correctly nested selection/loop constructs. We should relax this
-    // and support error cases better.
+    // TODO: The asserts in the following assumes input SPIR-V blob forms
+    // correctly nested selection/loop constructs. We should relax this and
+    // support error cases better.
     auto it = blockMergeInfo.find(block);
     if (it != blockMergeInfo.end()) {
+      // Use the original location for nested selection/loop ops.
+      Location loc = it->second.loc;
+
       Block *newHeader = mapper.lookupOrNull(block);
-      assert(newHeader && "nested loop header block should be remapped!");
+      if (!newHeader)
+        return emitError(loc, "failed control flow structurization: nested "
+                              "loop header block should be remapped!");
 
       Block *newContinue = it->second.continueBlock;
       if (newContinue) {
         newContinue = mapper.lookupOrNull(newContinue);
-        assert(newContinue && "nested loop continue block should be remapped!");
+        if (!newContinue)
+          return emitError(loc, "failed control flow structurization: nested "
+                                "loop continue block should be remapped!");
       }
 
       Block *newMerge = it->second.mergeBlock;
       if (Block *mappedTo = mapper.lookupOrNull(newMerge))
         newMerge = mappedTo;
 
-      // Keep original location for nested selection/loop ops.
-      Location loc = it->second.loc;
       // The iterator should be erased before adding a new entry into
       // blockMergeInfo to avoid iterator invalidation.
       blockMergeInfo.erase(it);
