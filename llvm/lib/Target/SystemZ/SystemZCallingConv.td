@@ -166,6 +166,7 @@ def CSR_SystemZ_NoRegs : CalleeSavedRegs<(add)>;
 // any non-leaf function and restored in the epilogue for use by the
 // return instruction so it functions exactly like a callee-saved register.
 def CSR_SystemZ_XPLINK64 : CalleeSavedRegs<(add (sequence "R%dD", 7, 15),
+                                                (sequence "R%dD", 4, 4),
                                                 (sequence "F%dD", 15, 8))>;
 
 def CSR_SystemZ_XPLINK64_Vector : CalleeSavedRegs<(add CSR_SystemZ_XPLINK64,
