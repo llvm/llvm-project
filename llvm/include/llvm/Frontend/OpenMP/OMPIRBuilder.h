@@ -539,23 +539,26 @@ public:
       function_ref<InsertPointTy(InsertPointTy, Value *, Value *, Value *&)>;
 
   /// Functions used to generate atomic reductions. Such functions take two
-  /// Values representing pointers to LHS and RHS of the reduction. They are
-  /// expected to atomically update the LHS to the reduced value.
+  /// Values representing pointers to LHS and RHS of the reduction, as well as
+  /// the element type of these pointers. They are expected to atomically
+  /// update the LHS to the reduced value.
   using AtomicReductionGenTy =
-      function_ref<InsertPointTy(InsertPointTy, Value *, Value *)>;
+      function_ref<InsertPointTy(InsertPointTy, Type *, Value *, Value *)>;
 
   /// Information about an OpenMP reduction.
   struct ReductionInfo {
-    ReductionInfo(Value *Variable, Value *PrivateVariable,
+    ReductionInfo(Type *ElementType, Value *Variable, Value *PrivateVariable,
                   ReductionGenTy ReductionGen,
                   AtomicReductionGenTy AtomicReductionGen)
-        : Variable(Variable), PrivateVariable(PrivateVariable),
-          ReductionGen(ReductionGen), AtomicReductionGen(AtomicReductionGen) {}
-
-    /// Returns the type of the element being reduced.
-    Type *getElementType() const {
-      return Variable->getType()->getPointerElementType();
+        : ElementType(ElementType), Variable(Variable),
+          PrivateVariable(PrivateVariable), ReductionGen(ReductionGen),
+          AtomicReductionGen(AtomicReductionGen) {
+      assert(cast<PointerType>(Variable->getType())
+          ->isOpaqueOrPointeeTypeMatches(ElementType) && "Invalid elem type");
     }
+
+    /// Reduction element type, must match pointee type of variable.
+    Type *ElementType;
 
     /// Reduction variable of pointer type.
     Value *Variable;

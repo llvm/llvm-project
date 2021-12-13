@@ -1156,7 +1156,7 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createReductions(
   Builder.SetInsertPoint(NonAtomicRedBlock);
   for (auto En : enumerate(ReductionInfos)) {
     const ReductionInfo &RI = En.value();
-    Type *ValueType = RI.getElementType();
+    Type *ValueType = RI.ElementType;
     Value *RedValue = Builder.CreateLoad(ValueType, RI.Variable,
                                          "red.value." + Twine(En.index()));
     Value *PrivateRedValue =
@@ -1181,8 +1181,8 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createReductions(
   Builder.SetInsertPoint(AtomicRedBlock);
   if (CanGenerateAtomic) {
     for (const ReductionInfo &RI : ReductionInfos) {
-      Builder.restoreIP(RI.AtomicReductionGen(Builder.saveIP(), RI.Variable,
-                                              RI.PrivateVariable));
+      Builder.restoreIP(RI.AtomicReductionGen(Builder.saveIP(), RI.ElementType,
+                                              RI.Variable, RI.PrivateVariable));
       if (!Builder.GetInsertBlock())
         return InsertPointTy();
     }
@@ -1207,13 +1207,13 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createReductions(
         RedArrayTy, LHSArrayPtr, 0, En.index());
     Value *LHSI8Ptr = Builder.CreateLoad(Builder.getInt8PtrTy(), LHSI8PtrPtr);
     Value *LHSPtr = Builder.CreateBitCast(LHSI8Ptr, RI.Variable->getType());
-    Value *LHS = Builder.CreateLoad(RI.getElementType(), LHSPtr);
+    Value *LHS = Builder.CreateLoad(RI.ElementType, LHSPtr);
     Value *RHSI8PtrPtr = Builder.CreateConstInBoundsGEP2_64(
         RedArrayTy, RHSArrayPtr, 0, En.index());
     Value *RHSI8Ptr = Builder.CreateLoad(Builder.getInt8PtrTy(), RHSI8PtrPtr);
     Value *RHSPtr =
         Builder.CreateBitCast(RHSI8Ptr, RI.PrivateVariable->getType());
-    Value *RHS = Builder.CreateLoad(RI.getElementType(), RHSPtr);
+    Value *RHS = Builder.CreateLoad(RI.ElementType, RHSPtr);
     Value *Reduced;
     Builder.restoreIP(RI.ReductionGen(Builder.saveIP(), LHS, RHS, Reduced));
     if (!Builder.GetInsertBlock())

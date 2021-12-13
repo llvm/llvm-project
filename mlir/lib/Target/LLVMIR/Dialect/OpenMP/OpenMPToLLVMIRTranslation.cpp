@@ -415,7 +415,8 @@ using OwningReductionGen = std::function<llvm::OpenMPIRBuilder::InsertPointTy(
     llvm::Value *&)>;
 using OwningAtomicReductionGen =
     std::function<llvm::OpenMPIRBuilder::InsertPointTy(
-        llvm::OpenMPIRBuilder::InsertPointTy, llvm::Value *, llvm::Value *)>;
+        llvm::OpenMPIRBuilder::InsertPointTy, llvm::Type *, llvm::Value *,
+        llvm::Value *)>;
 } // namespace
 
 /// Create an OpenMPIRBuilder-compatible reduction generator for the given
@@ -462,7 +463,7 @@ makeAtomicReductionGen(omp::ReductionDeclareOp decl,
   // (which aren't actually mutating it), and we must capture decl by-value to
   // avoid the dangling reference after the parent function returns.
   OwningAtomicReductionGen atomicGen =
-      [&, decl](llvm::OpenMPIRBuilder::InsertPointTy insertPoint,
+      [&, decl](llvm::OpenMPIRBuilder::InsertPointTy insertPoint, llvm::Type *,
                 llvm::Value *lhs, llvm::Value *rhs) mutable {
         Region &atomicRegion = decl.atomicReductionRegion();
         moduleTranslation.mapValue(atomicRegion.front().getArgument(0), lhs);
@@ -763,9 +764,11 @@ convertOmpWsLoop(Operation &opInst, llvm::IRBuilderBase &builder,
     llvm::OpenMPIRBuilder::AtomicReductionGenTy atomicGen = nullptr;
     if (owningAtomicReductionGens[i])
       atomicGen = owningAtomicReductionGens[i];
-    reductionInfos.push_back(
-        {moduleTranslation.lookupValue(loop.reduction_vars()[i]),
-         privateReductionVariables[i], owningReductionGens[i], atomicGen});
+    llvm::Value *variable =
+        moduleTranslation.lookupValue(loop.reduction_vars()[i]);
+    reductionInfos.push_back({variable->getType()->getPointerElementType(),
+                              variable, privateReductionVariables[i],
+                              owningReductionGens[i], atomicGen});
   }
 
   // The call to createReductions below expects the block to have a
