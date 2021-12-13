@@ -374,6 +374,25 @@ void SBData::SetData(lldb::SBError &error, const void *buf, size_t size,
   }
 }
 
+void SBData::SetDataWithOwnership(lldb::SBError &error, const void *buf,
+                                  size_t size, lldb::ByteOrder endian,
+                                  uint8_t addr_size) {
+  LLDB_RECORD_DUMMY(
+      void, SBData, SetData,
+      (lldb::SBError &, const void *, size_t, lldb::ByteOrder, uint8_t, bool),
+      error, buf, size, endian, addr_size, copy);
+
+  lldb::DataBufferSP buffer_sp = std::make_shared<DataBufferHeap>(buf, size);
+
+  if (!m_opaque_sp.get())
+    m_opaque_sp = std::make_shared<DataExtractor>(buf, size, endian, addr_size);
+  else {
+    m_opaque_sp->SetData(buffer_sp);
+    m_opaque_sp->SetByteOrder(endian);
+    m_opaque_sp->SetAddressByteSize(addr_size);
+  }
+}
+
 bool SBData::Append(const SBData &rhs) {
   LLDB_RECORD_METHOD(bool, SBData, Append, (const lldb::SBData &), rhs);
 
