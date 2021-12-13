@@ -307,6 +307,25 @@ public:
   }
 };
 
+// The Folder will fold expressions that are guarded by the loop entry.
+class SCEVSignToZeroExtentionRewriter
+    : public SCEVRewriteVisitor<SCEVSignToZeroExtentionRewriter> {
+public:
+  ScalarEvolution &SE;
+  const Loop *CurLoop;
+  SCEVSignToZeroExtentionRewriter(ScalarEvolution &SE, const Loop *CurLoop)
+      : SCEVRewriteVisitor(SE), SE(SE), CurLoop(CurLoop) {}
+
+  const SCEV *visitSignExtendExpr(const SCEVSignExtendExpr *Expr) {
+    // If expression is guarded by CurLoop to be greater or equal to zero
+    // then convert sext to zext. Otherwise return the original expression.
+    if (SE.isLoopEntryGuardedByCond(CurLoop, ICmpInst::ICMP_SGE, Expr,
+                                    SE.getZero(Expr->getType())))
+      return SE.getZeroExtendExpr(visit(Expr->getOperand()), Expr->getType());
+    return Expr;
+  }
+};
+
 } // end anonymous namespace
 
 char LoopIdiomRecognizeLegacyPass::ID = 0;
@@ -967,12 +986,22 @@ bool LoopIdiomRecognize::processLoopMemSet(MemSetInst *MSI,
                       << "\n");
 
     if (PositiveStrideSCEV != MemsetSizeSCEV) {
-      // TODO: folding can be done to the SCEVs
-      // The folding is to fold expressions that is covered by the loop guard
-      // at loop entry. After the folding, compare again and proceed
-      // optimization if equal.
-      LLVM_DEBUG(dbgs() << "  SCEV don't match, abort\n");
-      return false;
+      // The folding is to fold an expression that is covered by the loop guard
+      // at loop entry. After the folding, compare again and proceed with
+      // optimization, if equal.
+      SCEVSignToZeroExtentionRewriter Folder(*SE, CurLoop);
+      const SCEV *FoldedPositiveStride = Folder.visit(PositiveStrideSCEV);
+      const SCEV *FoldedMemsetSize = Folder.visit(MemsetSizeSCEV);
+
+      LLVM_DEBUG(dbgs() << "  Try to fold SCEV based on loop guard\n"
+                        << "    FoldedMemsetSize: " << *FoldedMemsetSize << "\n"
+                        << "    FoldedPositiveStride: " << *FoldedPositiveStride
+                        << "\n");
+
+      if (FoldedPositiveStride != FoldedMemsetSize) {
+        LLVM_DEBUG(dbgs() << "  SCEV don't match, abort\n");
+        return false;
+      }
     }
   }
 
