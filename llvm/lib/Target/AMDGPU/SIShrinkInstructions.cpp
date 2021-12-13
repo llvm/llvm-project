@@ -771,10 +771,6 @@ bool SIShrinkInstructions::runOnMachineFunction(MachineFunction &MF) {
       const MachineOperand *SDst = TII->getNamedOperand(MI,
                                                         AMDGPU::OpName::sdst);
 
-      // Check the carry-in operand for v_addc_u32_e64.
-      const MachineOperand *Src2 = TII->getNamedOperand(MI,
-                                                        AMDGPU::OpName::src2);
-
       if (SDst) {
         bool Next = false;
 
@@ -786,6 +782,8 @@ bool SIShrinkInstructions::runOnMachineFunction(MachineFunction &MF) {
 
         // All of the instructions with carry outs also have an SGPR input in
         // src2.
+        const MachineOperand *Src2 = TII->getNamedOperand(MI,
+                                                          AMDGPU::OpName::src2);
         if (Src2 && Src2->getReg() != VCCReg) {
           if (Src2->getReg().isVirtual())
             MRI.setRegAllocationHint(Src2->getReg(), 0, VCCReg);
