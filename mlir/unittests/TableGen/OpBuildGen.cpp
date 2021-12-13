@@ -219,4 +219,11 @@ TEST_F(
   testSingleVariadicInputInferredType<test::TableGenBuildOp5>();
 }
 
+TEST_F(OpBuildGenTest, BuildMethodsRegionsAndInferredType) {
+  auto op = builder.create<test::TableGenBuildOp6>(
+      loc, ValueRange{*cstI32, *cstF32}, /*attributes=*/noAttrs);
+  ASSERT_EQ(op->getNumRegions(), 1u);
+  verifyOp(std::move(op), {i32Ty}, {*cstI32, *cstF32}, noAttrs);
+}
+
 } // namespace mlir

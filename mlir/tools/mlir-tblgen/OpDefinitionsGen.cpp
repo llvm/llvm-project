@@ -1220,8 +1220,7 @@ static bool canGenerateUnwrappedBuilder(Operator &op) {
 }
 
 static bool canInferType(Operator &op) {
-  return op.getTrait("::mlir::InferTypeOpInterface::Trait") &&
-         op.getNumRegions() == 0;
+  return op.getTrait("::mlir::InferTypeOpInterface::Trait");
 }
 
 void OpEmitter::genSeparateArgParamBuilder() {
@@ -1304,7 +1303,7 @@ void OpEmitter::genSeparateArgParamBuilder() {
   // ambiguous function detection will elide those ones.
   for (auto attrType : attrBuilderType) {
     emit(attrType, TypeParamKind::Separate, /*inferType=*/false);
-    if (canInferType(op))
+    if (canInferType(op) && op.getNumRegions() == 0)
       emit(attrType, TypeParamKind::None, /*inferType=*/true);
     emit(attrType, TypeParamKind::Collective, /*inferType=*/false);
   }
@@ -1392,21 +1391,22 @@ void OpEmitter::genInferredTypeCollectiveParamBuilder() {
 
   // Result types
   body << formatv(R"(
-    ::mlir::SmallVector<::mlir::Type, 2> inferredReturnTypes;
-    if (::mlir::succeeded({0}::inferReturnTypes(odsBuilder.getContext(),
-                  {1}.location, operands,
-                  {1}.attributes.getDictionary({1}.getContext()),
-                  /*regions=*/{{}, inferredReturnTypes))) {{)",
+  ::mlir::SmallVector<::mlir::Type, 2> inferredReturnTypes;
+  if (::mlir::succeeded({0}::inferReturnTypes(odsBuilder.getContext(),
+          {1}.location, operands,
+          {1}.attributes.getDictionary({1}.getContext()),
+          {1}.regions, inferredReturnTypes))) {{)",
                   opClass.getClassName(), builderOpState);
   if (numVariadicResults == 0 || numNonVariadicResults != 0)
-    body << "  assert(inferredReturnTypes.size()"
+    body << "\n    assert(inferredReturnTypes.size()"
          << (numVariadicResults != 0 ? " >= " : " == ") << numNonVariadicResults
-         << "u && \"mismatched number of return types\");\n";
-  body << "      " << builderOpState << ".addTypes(inferredReturnTypes);";
+         << "u && \"mismatched number of return types\");";
+  body << "\n    " << builderOpState << ".addTypes(inferredReturnTypes);";
 
   body << formatv(R"(
-    } else
-      ::llvm::report_fatal_error("Failed to infer result type(s).");)",
+  } else {{
+    ::llvm::report_fatal_error("Failed to infer result type(s).");
+  })",
                   opClass.getClassName(), builderOpState);
 }
 
@@ -1606,7 +1606,7 @@ void OpEmitter::genCollectiveParamBuilder() {
   body << "  " << builderOpState << ".addTypes(resultTypes);\n";
 
   // Generate builder that infers type too.
-  // TODO: Expand to handle regions and successors.
+  // TODO: Expand to handle successors.
   if (canInferType(op) && op.getNumSuccessors() == 0)
     genInferredTypeCollectiveParamBuilder();
 }
