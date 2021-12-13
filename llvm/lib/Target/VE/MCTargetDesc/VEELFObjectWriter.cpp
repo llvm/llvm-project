@@ -67,6 +67,7 @@ unsigned VEELFObjectWriter::getRelocType(MCContext &Ctx, const MCValue &Target,
       Ctx.reportError(Fixup.getLoc(),
                       "8-byte pc-relative data relocation is not supported");
       return ELF::R_VE_NONE;
+    case VE::fixup_ve_reflong:
     case VE::fixup_ve_srel32:
       return ELF::R_VE_SREL32;
     case VE::fixup_ve_pc_hi32:

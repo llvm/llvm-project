@@ -8,7 +8,7 @@
 // RUN:   %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
 // RUN:     --target=i386-unknown-linux \
 // RUN:     --sysroot=%S/Inputs/basic_linux_tree \
-// RUN:     --rtlib=platform \
+// RUN:     --rtlib=platform -no-pie \
 // RUN:     --gcc-toolchain="" \
 // RUN:   | FileCheck --check-prefix=CHECK-LD-32 %s
 //
@@ -16,7 +16,7 @@
 // RUN:   %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
 // RUN:     --target=i386-unknown-linux \
 // RUN:     --sysroot=%S/Inputs/basic_linux_tree \
-// RUN:     --rtlib=platform \
+// RUN:     --rtlib=platform -no-pie \
 // RUN:     --gcc-toolchain="" \
 // RUN:   | FileCheck --check-prefix=CHECK-LD-32 %s
 //

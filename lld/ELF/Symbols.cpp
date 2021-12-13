@@ -67,7 +67,7 @@ DenseMap<const Symbol *, std::pair<const InputFile *, const InputFile *>>
 SmallVector<std::tuple<std::string, const InputFile *, const Symbol &>, 0>
     elf::whyExtract;
 
-static uint64_t getSymVA(const Symbol &sym, int64_t &addend) {
+static uint64_t getSymVA(const Symbol &sym, int64_t addend) {
   switch (sym.kind()) {
   case Symbol::DefinedKind: {
     auto &d = cast<Defined>(sym);
@@ -93,10 +93,8 @@ static uint64_t getSymVA(const Symbol &sym, int64_t &addend) {
     // To make this work, we incorporate the addend into the section
     // offset (and zero out the addend for later processing) so that
     // we find the right object in the section.
-    if (d.isSection()) {
+    if (d.isSection())
       offset += addend;
-      addend = 0;
-    }
 
     // In the typical case, this is actually very simple and boils
     // down to adding together 3 numbers:
@@ -109,6 +107,8 @@ static uint64_t getSymVA(const Symbol &sym, int64_t &addend) {
     // line (and how they get built), then you have a pretty good
     // understanding of the linker.
     uint64_t va = isec->getVA(offset);
+    if (d.isSection())
+      va -= addend;
 
     // MIPS relocatable files can mix regular and microMIPS code.
     // Linker needs to distinguish such code. To do so microMIPS
@@ -152,8 +152,7 @@ static uint64_t getSymVA(const Symbol &sym, int64_t &addend) {
 }
 
 uint64_t Symbol::getVA(int64_t addend) const {
-  uint64_t outVA = getSymVA(*this, addend);
-  return outVA + addend;
+  return getSymVA(*this, addend) + addend;
 }
 
 uint64_t Symbol::getGotVA() const {

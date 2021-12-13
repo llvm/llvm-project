@@ -549,7 +549,7 @@ define <vscale x 8 x half> @fnmla_h_reversed(<vscale x 8 x half> %acc, <vscale x
 ; CHECK-NEXT:    ret
   %mul = fmul contract <vscale x 8 x half> %m1, %m2
   %add = fadd contract <vscale x 8 x half> %mul, %acc
-  %res = fneg contract <vscale x 8 x half> %add
+  %res = fneg contract nsz <vscale x 8 x half> %add
   ret <vscale x 8 x half> %res
 }
 
@@ -561,7 +561,7 @@ define <vscale x 4 x half> @fnmla_hx4_reversed(<vscale x 4 x half> %acc, <vscale
 ; CHECK-NEXT:    ret
   %mul = fmul contract <vscale x 4 x half> %m1, %m2
   %add = fadd contract <vscale x 4 x half> %mul, %acc
-  %res = fneg contract <vscale x 4 x half> %add
+  %res = fneg contract nsz <vscale x 4 x half> %add
   ret <vscale x 4 x half> %res
 }
 
@@ -573,7 +573,7 @@ define <vscale x 2 x half> @fnmla_hx2_reversed(<vscale x 2 x half> %acc, <vscale
 ; CHECK-NEXT:    ret
   %mul = fmul contract <vscale x 2 x half> %m1, %m2
   %add = fadd contract <vscale x 2 x half> %mul, %acc
-  %res = fneg contract <vscale x 2 x half> %add
+  %res = fneg contract nsz <vscale x 2 x half> %add
   ret <vscale x 2 x half> %res
 }
 
@@ -585,7 +585,7 @@ define <vscale x 4 x float> @fnmla_s_reversed(<vscale x 4 x float> %acc, <vscale
 ; CHECK-NEXT:    ret
   %mul = fmul contract <vscale x 4 x float> %m1, %m2
   %add = fadd contract <vscale x 4 x float> %mul, %acc
-  %res = fneg contract <vscale x 4 x float> %add
+  %res = fneg contract nsz <vscale x 4 x float> %add
   ret <vscale x 4 x float> %res
 }
 
@@ -597,7 +597,7 @@ define <vscale x 2 x float> @fnmla_sx2_reversed(<vscale x 2 x float> %acc, <vsca
 ; CHECK-NEXT:    ret
   %mul = fmul contract <vscale x 2 x float> %m1, %m2
   %add = fadd contract <vscale x 2 x float> %mul, %acc
-  %res = fneg contract <vscale x 2 x float> %add
+  %res = fneg contract nsz <vscale x 2 x float> %add
   ret <vscale x 2 x float> %res
 }
 
@@ -606,6 +606,84 @@ define <vscale x 2 x double> @fnmla_d_reversed(<vscale x 2 x double> %acc, <vsca
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    fnmla z0.d, p0/m, z1.d, z2.d
+; CHECK-NEXT:    ret
+  %mul = fmul contract <vscale x 2 x double> %m1, %m2
+  %add = fadd contract <vscale x 2 x double> %mul, %acc
+  %res = fneg contract nsz <vscale x 2 x double> %add
+  ret <vscale x 2 x double> %res
+}
+
+define <vscale x 8 x half> @signed_zeros_negtest_fnmla_h_reversed(<vscale x 8 x half> %acc, <vscale x 8 x half> %m1, <vscale x 8 x half> %m2) {
+; CHECK-LABEL: signed_zeros_negtest_fnmla_h_reversed:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.h
+; CHECK-NEXT:    fmla z0.h, p0/m, z1.h, z2.h
+; CHECK-NEXT:    fneg z0.h, p0/m, z0.h
+; CHECK-NEXT:    ret
+  %mul = fmul contract <vscale x 8 x half> %m1, %m2
+  %add = fadd contract <vscale x 8 x half> %mul, %acc
+  %res = fneg contract <vscale x 8 x half> %add
+  ret <vscale x 8 x half> %res
+}
+
+define <vscale x 4 x half> @signed_zeros_negtest_fnmla_hx4_reversed(<vscale x 4 x half> %acc, <vscale x 4 x half> %m1, <vscale x 4 x half> %m2) {
+; CHECK-LABEL: signed_zeros_negtest_fnmla_hx4_reversed:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    fmla z0.h, p0/m, z1.h, z2.h
+; CHECK-NEXT:    fneg z0.h, p0/m, z0.h
+; CHECK-NEXT:    ret
+  %mul = fmul contract <vscale x 4 x half> %m1, %m2
+  %add = fadd contract <vscale x 4 x half> %mul, %acc
+  %res = fneg contract <vscale x 4 x half> %add
+  ret <vscale x 4 x half> %res
+}
+
+define <vscale x 2 x half> @signed_zeros_negtest_fnmla_hx2_reversed(<vscale x 2 x half> %acc, <vscale x 2 x half> %m1, <vscale x 2 x half> %m2) {
+; CHECK-LABEL: signed_zeros_negtest_fnmla_hx2_reversed:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    fmla z0.h, p0/m, z1.h, z2.h
+; CHECK-NEXT:    fneg z0.h, p0/m, z0.h
+; CHECK-NEXT:    ret
+  %mul = fmul contract <vscale x 2 x half> %m1, %m2
+  %add = fadd contract <vscale x 2 x half> %mul, %acc
+  %res = fneg contract <vscale x 2 x half> %add
+  ret <vscale x 2 x half> %res
+}
+
+define <vscale x 4 x float> @signed_zeros_negtest_fnmla_s_reversed(<vscale x 4 x float> %acc, <vscale x 4 x float> %m1, <vscale x 4 x float> %m2) {
+; CHECK-LABEL: signed_zeros_negtest_fnmla_s_reversed:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    fmla z0.s, p0/m, z1.s, z2.s
+; CHECK-NEXT:    fneg z0.s, p0/m, z0.s
+; CHECK-NEXT:    ret
+  %mul = fmul contract <vscale x 4 x float> %m1, %m2
+  %add = fadd contract <vscale x 4 x float> %mul, %acc
+  %res = fneg contract <vscale x 4 x float> %add
+  ret <vscale x 4 x float> %res
+}
+
+define <vscale x 2 x float> @signed_zeros_negtest_fnmla_sx2_reversed(<vscale x 2 x float> %acc, <vscale x 2 x float> %m1, <vscale x 2 x float> %m2) {
+; CHECK-LABEL: signed_zeros_negtest_fnmla_sx2_reversed:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    fmla z0.s, p0/m, z1.s, z2.s
+; CHECK-NEXT:    fneg z0.s, p0/m, z0.s
+; CHECK-NEXT:    ret
+  %mul = fmul contract <vscale x 2 x float> %m1, %m2
+  %add = fadd contract <vscale x 2 x float> %mul, %acc
+  %res = fneg contract <vscale x 2 x float> %add
+  ret <vscale x 2 x float> %res
+}
+
+define <vscale x 2 x double> @signed_zeros_negtest_fnmla_d_reversed(<vscale x 2 x double> %acc, <vscale x 2 x double> %m1, <vscale x 2 x double> %m2) {
+; CHECK-LABEL: signed_zeros_negtest_fnmla_d_reversed:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    fmla z0.d, p0/m, z1.d, z2.d
+; CHECK-NEXT:    fneg z0.d, p0/m, z0.d
 ; CHECK-NEXT:    ret
   %mul = fmul contract <vscale x 2 x double> %m1, %m2
   %add = fadd contract <vscale x 2 x double> %mul, %acc
