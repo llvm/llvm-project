@@ -214,7 +214,7 @@ HELPER_REGISTER_BINARY_FP_VP(frem, VP_FREM, FRem)
 ///// } Floating-Point Arithmetic
 
 ///// Memory Operations {
-// llvm.vp.store(ptr,val,mask,vlen)
+// llvm.vp.store(val,ptr,mask,vlen)
 BEGIN_REGISTER_VP_INTRINSIC(vp_store, 2, 3)
 // chain = VP_STORE chain,val,base,offset,mask,evl
 BEGIN_REGISTER_VP_SDNODE(VP_STORE, 0, vp_store, 4, 5)
