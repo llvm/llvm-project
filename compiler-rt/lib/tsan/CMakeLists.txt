@@ -16,7 +16,7 @@ if(COMPILER_RT_TSAN_DEBUG_OUTPUT)
 endif()
 
 # Add the actual runtime library.
-option(TSAN_USE_OLD_RUNTIME "Use the old tsan runtime (temporal option for emergencies)." OFF)
+option(TSAN_USE_OLD_RUNTIME "Use the old tsan runtime (temporal option for emergencies)." ON)
 if (TSAN_USE_OLD_RUNTIME)
   add_subdirectory(rtl-old)
 else()
