@@ -41,6 +41,7 @@ namespace llvm {
   FunctionPass *createNanoMipsLoadStoreOptimizerPass();
   FunctionPass *createNanoMipsMoveOptimizerPass();
   FunctionPass *createNanoMipsRegisterReAllocationPass();
+  FunctionPass *createRedundantCopyEliminationPass();
 
   InstructionSelector *createMipsInstructionSelector(const MipsTargetMachine &,
                                                      MipsSubtarget &,
@@ -51,6 +52,7 @@ namespace llvm {
   void initializeMicroMipsSizeReducePass(PassRegistry &);
   void initializeMipsPreLegalizerCombinerPass(PassRegistry&);
   void initializeNanoMipsRegisterReAllocPass(PassRegistry &);
+  void initializeRedundantCopyEliminationPass(PassRegistry&);
 } // end namespace llvm;
 
 #endif
