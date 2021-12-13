@@ -555,13 +555,12 @@ void ObjFile<ELFT>::initializeSections(bool ignoreComdats) {
       continue;
     const Elf_Shdr &sec = objSections[i];
 
-    if (sec.sh_type == ELF::SHT_LLVM_CALL_GRAPH_PROFILE)
-      cgProfileSectionIndex = i;
-
     // SHF_EXCLUDE'ed sections are discarded by the linker. However,
     // if -r is given, we'll let the final link discard such sections.
     // This is compatible with GNU.
     if ((sec.sh_flags & SHF_EXCLUDE) && !config->relocatable) {
+      if (sec.sh_type == SHT_LLVM_CALL_GRAPH_PROFILE)
+        cgProfileSectionIndex = i;
       if (sec.sh_type == SHT_LLVM_ADDRSIG) {
         // We ignore the address-significance table if we know that the object
         // file was created by objcopy or ld -r. This is because these tools
