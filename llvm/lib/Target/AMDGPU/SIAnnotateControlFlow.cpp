@@ -245,6 +245,12 @@ Value *SIAnnotateControlFlow::handleLoopCondition(
     return CallInst::Create(IfBreak, Args, "", Insert);
   }
 
+  if (isa<Argument>(Cond)) {
+    Instruction *Insert = L->getHeader()->getFirstNonPHIOrDbgOrLifetime();
+    Value *Args[] = { Cond, Broken };
+    return CallInst::Create(IfBreak, Args, "", Insert);
+  }
+
   llvm_unreachable("Unhandled loop condition!");
 }
 
