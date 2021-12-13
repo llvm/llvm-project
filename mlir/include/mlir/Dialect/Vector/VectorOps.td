@@ -2149,7 +2149,8 @@ def Vector_ConstantMaskOp :
 
 def Vector_CreateMaskOp :
   Vector_Op<"create_mask", [NoSideEffect]>,
-    Arguments<(ins Variadic<Index>:$operands)>, Results<(outs VectorOf<[I1]>)> {
+    Arguments<(ins Variadic<Index>:$operands)>,
+    Results<(outs VectorOfAnyRankOf<[I1]>)> {
   let summary = "creates a vector mask";
   let description = [{
     Creates and returns a vector mask where elements of the result vector

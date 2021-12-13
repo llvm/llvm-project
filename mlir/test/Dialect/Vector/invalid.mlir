@@ -874,6 +874,24 @@ func @contraction(%arg0: vector<2x1xf32>, %arg1: vector<1x3xf32>, %arg2: vector<
 
 // -----
 
+func @create_mask_0d_no_operands() {
+  %c1 = arith.constant 1 : index
+  // expected-error@+1 {{must specify exactly one operand for 0-D create_mask}}
+  %0 = vector.create_mask : vector<i1>
+}
+
+// -----
+
+func @create_mask_0d_many_operands() {
+  %c1 = arith.constant 1 : index
+  %c2 = arith.constant 2 : index
+  %c3 = arith.constant 3 : index
+  // expected-error@+1 {{must specify exactly one operand for 0-D create_mask}}
+  %0 = vector.create_mask %c1, %c2, %c3 : vector<i1>
+}
+
+// -----
+
 func @create_mask() {
   %c2 = arith.constant 2 : index
   %c3 = arith.constant 3 : index
