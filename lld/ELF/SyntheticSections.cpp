@@ -1678,7 +1678,7 @@ template <class ELFT> void RelocationSection<ELFT>::writeTo(uint8_t *buf) {
   // place R_*_RELATIVE first. SymIndex is to improve locality, while r_offset
   // is to make results easier to read.
   if (sort)
-    llvm::stable_sort(
+    parallelSort(
         relocs, [&](const DynamicReloc &a, const DynamicReloc &b) {
           return std::make_tuple(a.type != target->relativeRel,
                                  a.getSymIndex(symTab), a.getOffset()) <
