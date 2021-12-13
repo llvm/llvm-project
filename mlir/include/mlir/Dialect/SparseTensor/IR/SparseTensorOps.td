@@ -197,12 +197,12 @@ def SparseTensor_LexInsertOp : SparseTensor_Op<"lex_insert", []>,
     Arguments<(ins AnyTensor:$tensor,
                StridedMemRefRankOf<[Index], [1]>:$indices,
                AnyType:$value)> {
-  string summary = "Inserts a value into given sparse tensor in lexicograph index order";
+  string summary = "Inserts a value into given sparse tensor in lexicographical index order";
   string description = [{
     Inserts the given value at given indices into the underlying sparse
     storage format of the given tensor with the given indices. This
     operation can only be applied when a tensor materializes unintialized
-    with an `init` operation, the insertions occur in strict lexicographic
+    with an `init` operation, the insertions occur in strict lexicographical
     index order, and the final tensor is constructed with a `tensor`
     operation that has the `hasInserts` attribute set.
 
