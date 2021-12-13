@@ -731,11 +731,6 @@ bool SIShrinkInstructions::runOnMachineFunction(MachineFunction &MF) {
           continue;
       }
 
-      // getVOPe32 could be -1 here if we started with an instruction that had
-      // a 32-bit encoding and then commuted it to an instruction that did not.
-      if (!TII->hasVALU32BitEncoding(MI.getOpcode()))
-        continue;
-
       int Op32 = AMDGPU::getVOPe32(MI.getOpcode());
 
       if (TII->isVOPC(Op32)) {
