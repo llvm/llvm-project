@@ -29,6 +29,27 @@ define double @cos_negated_arg(double %x) {
   ret double %r
 }
 
+define double @cos_negated_arg_tail(double %x) {
+; ANY-LABEL: @cos_negated_arg_tail(
+; ANY-NEXT:    [[COS:%.*]] = tail call double @cos(double [[X:%.*]])
+; ANY-NEXT:    ret double [[COS]]
+;
+  %neg = fsub double -0.0, %x
+  %r = tail call double @cos(double %neg)
+  ret double %r
+}
+
+define double @cos_negated_arg_musttail(double %x) {
+; ANY-LABEL: @cos_negated_arg_musttail(
+; ANY-NEXT:    [[NEG:%.*]] = fneg double [[X:%.*]]
+; ANY-NEXT:    [[R:%.*]] = musttail call double @cos(double [[NEG]])
+; ANY-NEXT:    ret double [[R]]
+;
+  %neg = fsub double -0.0, %x
+  %r = musttail call double @cos(double %neg)
+  ret double %r
+}
+
 define double @cos_unary_negated_arg(double %x) {
 ; ANY-LABEL: @cos_unary_negated_arg(
 ; ANY-NEXT:    [[COS:%.*]] = call double @cos(double [[X:%.*]])
@@ -100,6 +121,17 @@ define double @sin_unary_negated_arg(double %x) {
 ;
   %neg = fneg double %x
   %r = call double @sin(double %neg)
+  ret double %r
+}
+
+define double @sin_unary_negated_arg_musttail(double %x) {
+; ANY-LABEL: @sin_unary_negated_arg_musttail(
+; ANY-NEXT:    [[NEG:%.*]] = fneg double [[X:%.*]]
+; ANY-NEXT:    [[R:%.*]] = musttail call double @sin(double [[NEG]])
+; ANY-NEXT:    ret double [[R]]
+;
+  %neg = fneg double %x
+  %r = musttail call double @sin(double %neg)
   ret double %r
 }
 
@@ -232,6 +264,27 @@ define double @tan_negated_arg(double %x) {
 ;
   %neg = fsub double -0.0, %x
   %r = call double @tan(double %neg)
+  ret double %r
+}
+
+define double @tan_negated_arg_tail(double %x) {
+; ANY-LABEL: @tan_negated_arg_tail(
+; ANY-NEXT:    [[TMP1:%.*]] = tail call double @tan(double [[X:%.*]])
+; ANY-NEXT:    [[TMP2:%.*]] = fneg double [[TMP1]]
+; ANY-NEXT:    ret double [[TMP2]]
+;
+  %neg = fsub double -0.0, %x
+  %r = tail call double @tan(double %neg)
+  ret double %r
+}
+define double @tan_negated_arg_musttail(double %x) {
+; ANY-LABEL: @tan_negated_arg_musttail(
+; ANY-NEXT:    [[NEG:%.*]] = fneg double [[X:%.*]]
+; ANY-NEXT:    [[R:%.*]] = musttail call double @tan(double [[NEG]])
+; ANY-NEXT:    ret double [[R]]
+;
+  %neg = fsub double -0.0, %x
+  %r = musttail call double @tan(double %neg)
   ret double %r
 }
 

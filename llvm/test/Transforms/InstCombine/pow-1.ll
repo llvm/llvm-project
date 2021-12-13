@@ -270,6 +270,23 @@ define float @powf_libcall_half_ninf(float %x) {
   ret float %retval
 }
 
+define float @powf_libcall_half_ninf_tail(float %x) {
+; CHECK-LABEL: @powf_libcall_half_ninf_tail(
+; ANY-NEXT:      %sqrtf = call ninf float @sqrtf(float %x)
+; ANY-NEXT:      %abs = tail call ninf float @llvm.fabs.f32(float %sqrtf)
+; ANY-NEXT:      ret float %abs
+  %retval = tail call ninf float @powf(float %x, float 0.5)
+  ret float %retval
+}
+
+define float @powf_libcall_half_ninf_musttail(float %x, float %y) {
+; CHECK-LABEL: @powf_libcall_half_ninf_musttail(
+; ANY-NEXT:      %retval = musttail call ninf float @powf(float %x, float 5.000000e-01)
+; ANY-NEXT:      ret float %retval
+  %retval = musttail call ninf float @powf(float %x, float 0.5)
+  ret float %retval
+}
+
 ; Check pow(x, 0.5) where x may be -infinity does not call a library sqrt function.
 
 define double @pow_libcall_half_no_FMF(double %x) {

@@ -5,6 +5,8 @@
 @.str.1 = private unnamed_addr constant [3 x i8] c"%%\00", align 1
 @.str.2 = private unnamed_addr constant [3 x i8] c"%c\00", align 1
 @.str.3 = private unnamed_addr constant [3 x i8] c"%s\00", align 1
+@.str.4 = private unnamed_addr constant [1 x i8] zeroinitializer, align 1
+
 
 declare i32 @snprintf(i8*, i64, i8*, ...) #1
 
@@ -135,4 +137,43 @@ define i32 @test_str_ok_size(i8* %buf) #0 {
 ;
   %call = call i32 (i8*, i64, i8*, ...) @snprintf(i8* %buf, i64 32, i8* getelementptr inbounds ([3 x i8], [3 x i8]* @.str.3, i64 0, i64 0), i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str, i64 0, i64 0)) #2
   ret i32 %call
+}
+
+; snprintf(buf, 32, "") -> memcpy -> store
+define i32 @test_str_ok_size_tail(i8* %buf) {
+; CHECK-LABEL: @test_str_ok_size_tail(
+; CHECK-NEXT:    store i8 0, i8* %buf, align 1
+; CHECK-NEXT:    ret i32 0
+;
+  %1 = tail call i32 (i8*, i64, i8*, ...) @snprintf(i8* %buf, i64 8, i8* getelementptr inbounds ([1 x i8], [1 x i8]* @.str.4, i64 0, i64 0))
+  ret i32 %1
+}
+
+define i32 @test_str_ok_size_musttail(i8* %buf, i64 %x, i8* %y, ...) {
+; CHECK-LABEL: @test_str_ok_size_musttail(
+; CHECK-NEXT:    %1 = musttail call i32 (i8*, i64, i8*, ...) @snprintf(i8* %buf, i64 8, i8* getelementptr inbounds ([1 x i8], [1 x i8]* @.str.4, i64 0, i64 0), ...)
+; CHECK-NEXT:    ret i32 %1
+;
+  %1 = musttail call i32 (i8*, i64, i8*, ...) @snprintf(i8* %buf, i64 8, i8* getelementptr inbounds ([1 x i8], [1 x i8]* @.str.4, i64 0, i64 0), ...)
+  ret i32 %1
+}
+
+; snprintf(buf, 32, "%s", "str") -> memcpy -> store
+define i32 @test_str_ok_size_tail2(i8* %buf) {
+; CHECK-LABEL: @test_str_ok_size_tail2(
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i8* [[BUF:%.*]] to i32*
+; CHECK-NEXT:    store i32 7500915, i32* [[TMP1]], align 1
+; CHECK-NEXT:    ret i32 3
+;
+  %1 = tail call i32 (i8*, i64, i8*, ...) @snprintf(i8* %buf, i64 8, i8* getelementptr inbounds ([3 x i8], [3 x i8]* @.str.3, i64 0, i64 0), i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str, i64 0, i64 0))
+  ret i32 %1
+}
+
+define i32 @test_str_ok_size_musttail2(i8* %buf, i64 %x, i8* %y, ...) {
+; CHECK-LABEL: @test_str_ok_size_musttail2(
+; CHECK-NEXT:    %1 = musttail call i32 (i8*, i64, i8*, ...) @snprintf(i8* %buf, i64 8, i8* getelementptr inbounds ([3 x i8], [3 x i8]* @.str.3, i64 0, i64 0), i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str, i64 0, i64 0), ...)
+; CHECK-NEXT:    ret i32 %1
+;
+  %1 = musttail call i32 (i8*, i64, i8*, ...) @snprintf(i8* %buf, i64 8, i8* getelementptr inbounds ([3 x i8], [3 x i8]* @.str.3, i64 0, i64 0), i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str, i64 0, i64 0), ...)
+  ret i32 %1
 }

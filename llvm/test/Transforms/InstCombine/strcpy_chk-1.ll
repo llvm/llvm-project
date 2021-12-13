@@ -24,6 +24,18 @@ define i8* @test_simplify1() {
   ret i8* %ret
 }
 
+define i8* @test_simplify1_tail() {
+; CHECK-LABEL: @test_simplify1_tail(
+; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i32(i8* noundef nonnull align 1 dereferenceable(12) getelementptr inbounds ([60 x i8], [60 x i8]* @a, i32 0, i32 0), i8* noundef nonnull align 1 dereferenceable(12) getelementptr inbounds ([12 x i8], [12 x i8]* @.str, i32 0, i32 0), i32 12, i1 false)
+; CHECK-NEXT:    ret i8* getelementptr inbounds ([60 x i8], [60 x i8]* @a, i32 0, i32 0)
+;
+  %dst = getelementptr inbounds [60 x i8], [60 x i8]* @a, i32 0, i32 0
+  %src = getelementptr inbounds [12 x i8], [12 x i8]* @.str, i32 0, i32 0
+
+  %ret = tail call i8* @__strcpy_chk(i8* %dst, i8* %src, i32 60)
+  ret i8* %ret
+}
+
 define i8* @test_simplify2() {
 ; CHECK-LABEL: @test_simplify2(
 ; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i32(i8* noundef nonnull align 1 dereferenceable(12) getelementptr inbounds ([60 x i8], [60 x i8]* @a, i32 0, i32 0), i8* noundef nonnull align 1 dereferenceable(12) getelementptr inbounds ([12 x i8], [12 x i8]* @.str, i32 0, i32 0), i32 12, i1 false)
@@ -62,6 +74,18 @@ define i8* @test_simplify4() {
   ret i8* %ret
 }
 
+define i8* @test_simplify4_tail() {
+; CHECK-LABEL: @test_simplify4_tail(
+; CHECK-NEXT:    [[STRCPY:%.*]] = tail call i8* @strcpy(i8* noundef nonnull dereferenceable(1) getelementptr inbounds ([60 x i8], [60 x i8]* @a, i32 0, i32 0), i8* noundef nonnull dereferenceable(1) getelementptr inbounds ([60 x i8], [60 x i8]* @b, i32 0, i32 0))
+; CHECK-NEXT:    ret i8* getelementptr inbounds ([60 x i8], [60 x i8]* @a, i32 0, i32 0)
+;
+  %dst = getelementptr inbounds [60 x i8], [60 x i8]* @a, i32 0, i32 0
+  %src = getelementptr inbounds [60 x i8], [60 x i8]* @b, i32 0, i32 0
+
+  %ret = tail call i8* @__strcpy_chk(i8* %dst, i8* %src, i32 -1)
+  ret i8* %ret
+}
+
 ; Check case where the string length is not constant.
 
 define i8* @test_simplify5() {
@@ -93,6 +117,20 @@ define i8* @test_simplify6() {
   ret i8* %ret
 }
 
+; Check cases where there are no string constants, and is a tail call.
+
+define i8* @test_simplify7() {
+; CHECK-LABEL: @test_simplify7(
+; CHECK-NEXT:    [[STRCPY:%.*]] = tail call i8* @strcpy(i8* noundef nonnull dereferenceable(1) getelementptr inbounds ([60 x i8], [60 x i8]* @a, i32 0, i32 0), i8* noundef nonnull dereferenceable(1) getelementptr inbounds ([60 x i8], [60 x i8]* @b, i32 0, i32 0))
+; CHECK-NEXT:    ret i8* getelementptr inbounds ([60 x i8], [60 x i8]* @a, i32 0, i32 0)
+;
+  %dst = getelementptr inbounds [60 x i8], [60 x i8]* @a, i32 0, i32 0
+  %src = getelementptr inbounds [60 x i8], [60 x i8]* @b, i32 0, i32 0
+
+  %ret = tail call i8* @__strcpy_chk(i8* %dst, i8* %src, i32 -1)
+  ret i8* %ret
+}
+
 ; Check case where slen < strlen (src).
 
 define i8* @test_no_simplify1() {
@@ -104,6 +142,15 @@ define i8* @test_no_simplify1() {
   %src = getelementptr inbounds [60 x i8], [60 x i8]* @b, i32 0, i32 0
 
   %ret = call i8* @__strcpy_chk(i8* %dst, i8* %src, i32 8)
+  ret i8* %ret
+}
+
+define i8* @test_no_simplify2(i8* %dst, i8* %src, i32 %a) {
+; CHECK-LABEL: @test_no_simplify2(
+; CHECK-NEXT:    %ret = musttail call i8* @__strcpy_chk(i8* %dst, i8* %src, i32 60)
+; CHECK-NEXT:    ret i8* %ret
+;
+  %ret = musttail call i8* @__strcpy_chk(i8* %dst, i8* %src, i32 60)
   ret i8* %ret
 }
 

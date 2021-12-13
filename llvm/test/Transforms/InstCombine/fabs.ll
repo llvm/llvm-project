@@ -18,7 +18,7 @@ declare void @use(float)
 
 define float @replace_fabs_call_f32(float %x) {
 ; CHECK-LABEL: @replace_fabs_call_f32(
-; CHECK-NEXT:    [[FABSF:%.*]] = call float @llvm.fabs.f32(float [[X:%.*]])
+; CHECK-NEXT:    [[FABSF:%.*]] = tail call float @llvm.fabs.f32(float [[X:%.*]])
 ; CHECK-NEXT:    ret float [[FABSF]]
 ;
   %fabsf = tail call float @fabsf(float %x)
@@ -27,7 +27,7 @@ define float @replace_fabs_call_f32(float %x) {
 
 define double @replace_fabs_call_f64(double %x) {
 ; CHECK-LABEL: @replace_fabs_call_f64(
-; CHECK-NEXT:    [[FABS:%.*]] = call double @llvm.fabs.f64(double [[X:%.*]])
+; CHECK-NEXT:    [[FABS:%.*]] = tail call double @llvm.fabs.f64(double [[X:%.*]])
 ; CHECK-NEXT:    ret double [[FABS]]
 ;
   %fabs = tail call double @fabs(double %x)
@@ -36,7 +36,7 @@ define double @replace_fabs_call_f64(double %x) {
 
 define fp128 @replace_fabs_call_f128(fp128 %x) {
 ; CHECK-LABEL: @replace_fabs_call_f128(
-; CHECK-NEXT:    [[FABSL:%.*]] = call fp128 @llvm.fabs.f128(fp128 [[X:%.*]])
+; CHECK-NEXT:    [[FABSL:%.*]] = tail call fp128 @llvm.fabs.f128(fp128 [[X:%.*]])
 ; CHECK-NEXT:    ret fp128 [[FABSL]]
 ;
   %fabsl = tail call fp128 @fabsl(fp128 %x)
@@ -46,7 +46,7 @@ define fp128 @replace_fabs_call_f128(fp128 %x) {
 ; Make sure fast math flags are preserved when replacing the libcall.
 define float @fmf_replace_fabs_call_f32(float %x) {
 ; CHECK-LABEL: @fmf_replace_fabs_call_f32(
-; CHECK-NEXT:    [[FABSF:%.*]] = call nnan float @llvm.fabs.f32(float [[X:%.*]])
+; CHECK-NEXT:    [[FABSF:%.*]] = tail call nnan float @llvm.fabs.f32(float [[X:%.*]])
 ; CHECK-NEXT:    ret float [[FABSF]]
 ;
   %fabsf = tail call nnan float @fabsf(float %x)
