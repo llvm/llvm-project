@@ -1,5 +1,5 @@
-; RUN: opt -loop-vectorize -scalable-vectorization=on -force-vector-width=4 -force-vector-interleave=1 -mtriple aarch64-unknown-linux-gnu -mattr=+sve -S < %s | FileCheck %s --check-prefix=CHECK-VF4UF1
-; RUN: opt -loop-vectorize -scalable-vectorization=on -force-vector-width=4 -force-vector-interleave=2 -mtriple aarch64-unknown-linux-gnu -mattr=+sve -S < %s | FileCheck %s --check-prefix=CHECK-VF4UF2
+; RUN: opt -loop-vectorize -force-vector-width=4 -force-vector-interleave=1 -mtriple aarch64-unknown-linux-gnu -mattr=+sve -S < %s | FileCheck %s --check-prefix=CHECK-VF4UF1
+; RUN: opt -loop-vectorize -force-vector-width=4 -force-vector-interleave=2 -mtriple aarch64-unknown-linux-gnu -mattr=+sve -S < %s | FileCheck %s --check-prefix=CHECK-VF4UF2
 
 ; We vectorize this first order recurrence, with a set of insertelements for
 ; each unrolled part. Make sure these insertelements are generated in-order,

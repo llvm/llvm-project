@@ -1,4 +1,4 @@
-; RUN: opt -S -loop-vectorize -scalable-vectorization=on -mattr=+sve -mtriple aarch64-linux-gnu < %s | FileCheck %s
+; RUN: opt -S -loop-vectorize -mattr=+sve -mtriple aarch64-linux-gnu < %s | FileCheck %s
 
 define void @invariant_load(i64 %n, i32* noalias nocapture %a, i32* nocapture readonly %b) {
 ; CHECK-LABEL: @invariant_load
