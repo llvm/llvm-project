@@ -468,6 +468,7 @@ bool VPIntrinsic::canIgnoreVectorLengthParam() const {
 }
 
 Function *VPIntrinsic::getDeclarationForParams(Module *M, Intrinsic::ID VPID,
+                                               Type *ReturnType,
                                                ArrayRef<Value *> Params) {
   assert(isVPIntrinsic(VPID) && "not a VP intrinsic");
   Function *VPFunc;
@@ -486,22 +487,15 @@ Function *VPIntrinsic::getDeclarationForParams(Module *M, Intrinsic::ID VPID,
     break;
   case Intrinsic::vp_load:
     VPFunc = Intrinsic::getDeclaration(
-        M, VPID,
-        {Params[0]->getType()->getPointerElementType(), Params[0]->getType()});
+        M, VPID, {ReturnType, Params[0]->getType()});
     break;
   case Intrinsic::vp_gather:
     VPFunc = Intrinsic::getDeclaration(
-        M, VPID,
-        {VectorType::get(cast<VectorType>(Params[0]->getType())
-                             ->getElementType()
-                             ->getPointerElementType(),
-                         cast<VectorType>(Params[0]->getType())),
-         Params[0]->getType()});
+        M, VPID, {ReturnType, Params[0]->getType()});
     break;
   case Intrinsic::vp_store:
     VPFunc = Intrinsic::getDeclaration(
-        M, VPID,
-        {Params[1]->getType()->getPointerElementType(), Params[1]->getType()});
+        M, VPID, {Params[0]->getType(), Params[1]->getType()});
     break;
   case Intrinsic::vp_scatter:
     VPFunc = Intrinsic::getDeclaration(
