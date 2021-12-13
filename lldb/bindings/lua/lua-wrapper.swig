@@ -11,23 +11,21 @@ lldb_private::LLDBSwigLuaBreakpointCallbackFunction
    lua_State *L,
    lldb::StackFrameSP stop_frame_sp,
    lldb::BreakpointLocationSP bp_loc_sp,
-   StructuredDataImpl *extra_args_impl
+   const StructuredDataImpl &extra_args_impl
 )
 {
    lldb::SBFrame sb_frame(stop_frame_sp);
    lldb::SBBreakpointLocation sb_bp_loc(bp_loc_sp);
    int nargs = 2;
 
-   llvm::Optional<lldb::SBStructuredData> extra_args;
-   if (extra_args_impl)
-      extra_args = lldb::SBStructuredData(extra_args_impl);
+   lldb::SBStructuredData extra_args(extra_args_impl);
 
    // Push the Lua wrappers
    PushSBClass(L, &sb_frame);
    PushSBClass(L, &sb_bp_loc);
 
-   if (extra_args.hasValue()) {
-      PushSBClass(L, extra_args.getPointer());
+   if (extra_args.IsValid()) {
+      PushSBClass(L, &extra_args);
       nargs++;
    }
 
