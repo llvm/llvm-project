@@ -1744,7 +1744,7 @@ void DevirtModule::rebuildGlobal(VTableBits &B) {
                          GlobalVariable::PrivateLinkage, NewInit, "", B.GV);
   NewGV->setSection(B.GV->getSection());
   NewGV->setComdat(B.GV->getComdat());
-  NewGV->setAlignment(MaybeAlign(B.GV->getAlignment()));
+  NewGV->setAlignment(B.GV->getAlign());
 
   // Copy the original vtable's metadata to the anonymous global, adjusting
   // offsets as required.

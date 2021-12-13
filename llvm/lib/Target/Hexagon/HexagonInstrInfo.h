@@ -524,6 +524,8 @@ public:
   short changeAddrMode_ur_rr(const MachineInstr &MI) const {
     return changeAddrMode_ur_rr(MI.getOpcode());
   }
+
+  MCInst getNop() const override;
 };
 
 } // end namespace llvm

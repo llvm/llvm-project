@@ -26,13 +26,22 @@
 
 template <class C, class Iterator>
 void test(Iterator first, Iterator last) {
-  C c(first, last);
-  LIBCPP_ASSERT(c.__invariants());
-  assert(c.size() == static_cast<std::size_t>(std::distance(first, last)));
-  LIBCPP_ASSERT(is_contiguous_container_asan_correct(c));
-  for (typename C::const_iterator i = c.cbegin(), e = c.cend(); i != e;
-       ++i, ++first)
+  {
+    C c(first, last);
+    LIBCPP_ASSERT(c.__invariants());
+    assert(c.size() == static_cast<std::size_t>(std::distance(first, last)));
+    LIBCPP_ASSERT(is_contiguous_container_asan_correct(c));
+    for (typename C::const_iterator i = c.cbegin(), e = c.cend(); i != e;
+      ++i, ++first)
     assert(*i == *first);
+  }
+  // Test with an empty range
+  {
+    C c(first, first);
+    LIBCPP_ASSERT(c.__invariants());
+    assert(c.empty());
+    LIBCPP_ASSERT(is_contiguous_container_asan_correct(c));
+  }
 }
 
 static void basic_test_cases() {

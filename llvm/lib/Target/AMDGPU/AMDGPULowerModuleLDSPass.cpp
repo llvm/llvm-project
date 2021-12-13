@@ -55,20 +55,6 @@ static cl::opt<bool> SuperAlignLDSGlobals(
 
 namespace {
 
-SmallPtrSet<GlobalValue *, 32> getUsedList(Module &M) {
-  SmallPtrSet<GlobalValue *, 32> UsedList;
-
-  SmallVector<GlobalValue *, 32> TmpVec;
-  collectUsedGlobalVariables(M, TmpVec, true);
-  UsedList.insert(TmpVec.begin(), TmpVec.end());
-
-  TmpVec.clear();
-  collectUsedGlobalVariables(M, TmpVec, false);
-  UsedList.insert(TmpVec.begin(), TmpVec.end());
-
-  return UsedList;
-}
-
 class AMDGPULowerModuleLDS : public ModulePass {
 
   static void removeFromUsedList(Module &M, StringRef Name,
@@ -165,8 +151,6 @@ public:
   }
 
   bool runOnModule(Module &M) override {
-    UsedList = getUsedList(M);
-
     bool Changed = processUsedLDS(M);
 
     for (Function &F : M.functions()) {
@@ -179,7 +163,6 @@ public:
       Changed |= processUsedLDS(M, &F);
     }
 
-    UsedList.clear();
     return Changed;
   }
 
@@ -350,20 +333,14 @@ private:
       refineUsesAlignmentAndAA(GEP, A, DL, AliasScope, NoAlias);
     }
 
-    // Mark kernels with asm that reads the address of the allocated structure
-    // This is not necessary for lowering. This lets other passes, specifically
-    // PromoteAlloca, accurately calculate how much LDS will be used by the
-    // kernel after lowering.
+    // This ensures the variable is allocated when called functions access it.
+    // It also lets other passes, specifically PromoteAlloca, accurately
+    // calculate how much LDS will be used by the kernel after lowering.
     if (!F) {
       IRBuilder<> Builder(Ctx);
-      SmallPtrSet<Function *, 32> Kernels;
       for (Function &Func : M.functions()) {
-        if (Func.isDeclaration())
-          continue;
-
-        if (AMDGPU::isKernelCC(&Func) && !Kernels.contains(&Func)) {
+        if (!Func.isDeclaration() && AMDGPU::isKernelCC(&Func)) {
           markUsedByKernel(Builder, &Func, SGV);
-          Kernels.insert(&Func);
         }
       }
     }

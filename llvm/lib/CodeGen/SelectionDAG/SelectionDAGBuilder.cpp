@@ -7129,12 +7129,10 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     }
     SDValue VectorStep = DAG.getStepVector(sdl, VecTy);
     SDValue VectorInduction = DAG.getNode(
-        ISD::UADDO, sdl, DAG.getVTList(VecTy, CCVT), VectorIndex, VectorStep);
-    SDValue SetCC = DAG.getSetCC(sdl, CCVT, VectorInduction.getValue(0),
+        ISD::UADDSAT, sdl, VecTy, VectorIndex, VectorStep);
+    SDValue SetCC = DAG.getSetCC(sdl, CCVT, VectorInduction,
                                  VectorTripCount, ISD::CondCode::SETULT);
-    setValue(&I, DAG.getNode(ISD::AND, sdl, CCVT,
-                             DAG.getNOT(sdl, VectorInduction.getValue(1), CCVT),
-                             SetCC));
+    setValue(&I, SetCC);
     return;
   }
   case Intrinsic::experimental_vector_insert: {

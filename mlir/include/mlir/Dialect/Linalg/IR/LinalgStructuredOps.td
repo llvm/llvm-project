@@ -218,6 +218,7 @@ def FillOp : LinalgStructured_Op<"fill", []> {
   let verifier = [{ return ::verify(*this); }];
 
   let hasFolder = 1;
+  let hasCanonicalizer = 1;
 }
 
 //===----------------------------------------------------------------------===//

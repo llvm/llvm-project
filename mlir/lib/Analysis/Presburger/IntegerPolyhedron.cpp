@@ -65,7 +65,7 @@ unsigned IntegerPolyhedron::insertLocalId(unsigned pos, unsigned num) {
 }
 
 unsigned IntegerPolyhedron::insertId(IdKind kind, unsigned pos, unsigned num) {
-  assertAtMostNumIdKind(pos, kind);
+  assert(pos <= getNumIdKind(kind));
 
   unsigned absolutePos = getIdKindOffset(kind) + pos;
   if (kind == IdKind::Dimension)
@@ -120,7 +120,7 @@ void IntegerPolyhedron::removeId(unsigned pos) { removeIdRange(pos, pos + 1); }
 
 void IntegerPolyhedron::removeIdRange(IdKind kind, unsigned idStart,
                                       unsigned idLimit) {
-  assertAtMostNumIdKind(idLimit, kind);
+  assert(idLimit <= getNumIdKind(kind));
   removeIdRange(getIdKindOffset(kind) + idStart,
                 getIdKindOffset(kind) + idLimit);
 }
@@ -203,15 +203,14 @@ unsigned IntegerPolyhedron::getIdKindOffset(IdKind kind) const {
   llvm_unreachable("IdKind expected to be Dimension, Symbol or Local!");
 }
 
-void IntegerPolyhedron::assertAtMostNumIdKind(unsigned val, IdKind kind) const {
+unsigned IntegerPolyhedron::getNumIdKind(IdKind kind) const {
   if (kind == IdKind::Dimension)
-    assert(val <= getNumDimIds());
-  else if (kind == IdKind::Symbol)
-    assert(val <= getNumSymbolIds());
-  else if (kind == IdKind::Local)
-    assert(val <= getNumLocalIds());
-  else
-    llvm_unreachable("IdKind expected to be Dimension, Symbol or Local!");
+    return getNumDimIds();
+  if (kind == IdKind::Symbol)
+    return getNumSymbolIds();
+  if (kind == IdKind::Local)
+    return getNumLocalIds();
+  llvm_unreachable("IdKind expected to be Dimension, Symbol or Local!");
 }
 
 void IntegerPolyhedron::clearConstraints() {

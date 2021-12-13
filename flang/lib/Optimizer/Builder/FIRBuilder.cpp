@@ -597,12 +597,10 @@ fir::factory::createExtents(fir::FirOpBuilder &builder, mlir::Location loc,
 
 mlir::TupleType
 fir::factory::getRaggedArrayHeaderType(fir::FirOpBuilder &builder) {
-  mlir::IntegerType i1Ty = builder.getIntegerType(1);
-  mlir::IntegerType i8Ty = builder.getIntegerType(8);
   mlir::IntegerType i64Ty = builder.getIntegerType(64);
   auto arrTy = fir::SequenceType::get(builder.getIntegerType(8), 1);
   auto buffTy = fir::HeapType::get(arrTy);
   auto extTy = fir::SequenceType::get(i64Ty, 1);
   auto shTy = fir::HeapType::get(extTy);
-  return mlir::TupleType::get(builder.getContext(), {i1Ty, i8Ty, buffTy, shTy});
+  return mlir::TupleType::get(builder.getContext(), {i64Ty, buffTy, shTy});
 }

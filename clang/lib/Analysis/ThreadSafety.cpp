@@ -418,7 +418,6 @@ public:
 private:
   Context::Factory ContextFactory;
   std::vector<VarDefinition> VarDefinitions;
-  std::vector<unsigned> CtxIndices;
   std::vector<std::pair<const Stmt *, Context>> SavedContexts;
 
 public:
@@ -730,8 +729,6 @@ void LocalVariableMap::traverseCFG(CFG *CFGraph,
                                    const PostOrderCFGView *SortedGraph,
                                    std::vector<CFGBlockInfo> &BlockInfo) {
   PostOrderCFGView::CFGBlockSet VisitedBlocks(CFGraph);
-
-  CtxIndices.resize(CFGraph->getNumBlockIDs());
 
   for (const auto *CurrBlock : *SortedGraph) {
     unsigned CurrBlockID = CurrBlock->getBlockID();

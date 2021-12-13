@@ -3533,14 +3533,43 @@ bool Sema::CheckPPCBuiltinFunctionCall(const TargetInfo &TI, unsigned BuiltinID,
   case PPC::BI__builtin_altivec_dss:
     return SemaBuiltinConstantArgRange(TheCall, 0, 0, 3);
   case PPC::BI__builtin_tbegin:
-  case PPC::BI__builtin_tend: i = 0; l = 0; u = 1; break;
-  case PPC::BI__builtin_tsr: i = 0; l = 0; u = 7; break;
+  case PPC::BI__builtin_tend:
+    return SemaBuiltinConstantArgRange(TheCall, 0, 0, 1) ||
+           SemaFeatureCheck(*this, TheCall, "htm",
+                            diag::err_ppc_builtin_requires_htm);
+  case PPC::BI__builtin_tsr:
+    return SemaBuiltinConstantArgRange(TheCall, 0, 0, 7) ||
+           SemaFeatureCheck(*this, TheCall, "htm",
+                            diag::err_ppc_builtin_requires_htm);
   case PPC::BI__builtin_tabortwc:
-  case PPC::BI__builtin_tabortdc: i = 0; l = 0; u = 31; break;
+  case PPC::BI__builtin_tabortdc:
+    return SemaBuiltinConstantArgRange(TheCall, 0, 0, 31) ||
+           SemaFeatureCheck(*this, TheCall, "htm",
+                            diag::err_ppc_builtin_requires_htm);
   case PPC::BI__builtin_tabortwci:
   case PPC::BI__builtin_tabortdci:
-    return SemaBuiltinConstantArgRange(TheCall, 0, 0, 31) ||
-           SemaBuiltinConstantArgRange(TheCall, 2, 0, 31);
+    return SemaFeatureCheck(*this, TheCall, "htm",
+                            diag::err_ppc_builtin_requires_htm) ||
+           (SemaBuiltinConstantArgRange(TheCall, 0, 0, 31) ||
+            SemaBuiltinConstantArgRange(TheCall, 2, 0, 31));
+  case PPC::BI__builtin_tabort:
+  case PPC::BI__builtin_tcheck:
+  case PPC::BI__builtin_treclaim:
+  case PPC::BI__builtin_trechkpt:
+  case PPC::BI__builtin_tendall:
+  case PPC::BI__builtin_tresume:
+  case PPC::BI__builtin_tsuspend:
+  case PPC::BI__builtin_get_texasr:
+  case PPC::BI__builtin_get_texasru:
+  case PPC::BI__builtin_get_tfhar:
+  case PPC::BI__builtin_get_tfiar:
+  case PPC::BI__builtin_set_texasr:
+  case PPC::BI__builtin_set_texasru:
+  case PPC::BI__builtin_set_tfhar:
+  case PPC::BI__builtin_set_tfiar:
+  case PPC::BI__builtin_ttest:
+    return SemaFeatureCheck(*this, TheCall, "htm",
+                            diag::err_ppc_builtin_requires_htm);
   // According to GCC 'Basic PowerPC Built-in Functions Available on ISA 2.05',
   // __builtin_(un)pack_longdouble are available only if long double uses IBM
   // extended double representation.

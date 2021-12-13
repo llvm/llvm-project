@@ -5,7 +5,7 @@
 # RUN: mkdir %t.TestDir
 # RUN: touch %t.TestDir/Output.TestFile
 # RUN: chmod 400 %t.TestDir
-# RUN: not llvm-ifs --output-format=ELF --output=%t.TestDir/Output.TestFile %s 2>&1 | FileCheck -DMSG=%errc_EACCES %s --check-prefix=ERR
+# RUN: not llvm-ifs --output-elf=%t.TestDir/Output.TestFile %s 2>&1 | FileCheck -DMSG=%errc_EACCES %s --check-prefix=ERR
 # RUN: chmod 777 %t.TestDir
 # RUN: rm -rf %t.TestDir
 

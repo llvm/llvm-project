@@ -411,6 +411,18 @@ test.format_infer_variadic_type_from_non_variadic %i64, %i64 : i64
 // CHECK: test.format_infer_type
 %ignored_res7 = test.format_infer_type
 
+// CHECK: test.format_infer_type_all_operands_and_types(%[[I64]], %[[I32]]) : i64, i32
+%ignored_res8:2 = test.format_infer_type_all_operands_and_types(%i64, %i32) : i64, i32
+
+// CHECK: test.format_infer_type_all_types_one_operand(%[[I64]], %[[I32]]) : i64, i32
+%ignored_res9:2 = test.format_infer_type_all_types_one_operand(%i64, %i32) : i64, i32
+
+// CHECK: test.format_infer_type_all_types_two_operands(%[[I64]], %[[I32]]) (%[[I64]], %[[I32]]) : i64, i32, i64, i32
+%ignored_res10:4 = test.format_infer_type_all_types_two_operands(%i64, %i32) (%i64, %i32) : i64, i32, i64, i32
+
+// CHECK: test.format_infer_type_all_types(%[[I64]], %[[I32]]) : i64, i32
+%ignored_res11:2 = test.format_infer_type_all_types(%i64, %i32) : i64, i32
+
 //===----------------------------------------------------------------------===//
 // Check DefaultValuedStrAttr
 //===----------------------------------------------------------------------===//

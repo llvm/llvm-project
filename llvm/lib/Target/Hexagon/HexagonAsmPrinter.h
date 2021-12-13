@@ -36,7 +36,11 @@ class TargetMachine;
 
     bool runOnMachineFunction(MachineFunction &Fn) override {
       Subtarget = &Fn.getSubtarget<HexagonSubtarget>();
-      return AsmPrinter::runOnMachineFunction(Fn);
+      const bool Modified = AsmPrinter::runOnMachineFunction(Fn);
+      // Emit the XRay table for this function.
+      emitXRayTable();
+
+      return Modified;
     }
 
     StringRef getPassName() const override {
@@ -47,6 +51,16 @@ class TargetMachine;
           const override;
 
     void emitInstruction(const MachineInstr *MI) override;
+
+    //===------------------------------------------------------------------===//
+    // XRay implementation
+    //===------------------------------------------------------------------===//
+    // XRay-specific lowering for Hexagon.
+    void LowerPATCHABLE_FUNCTION_ENTER(const MachineInstr &MI);
+    void LowerPATCHABLE_FUNCTION_EXIT(const MachineInstr &MI);
+    void LowerPATCHABLE_TAIL_CALL(const MachineInstr &MI);
+    void EmitSled(const MachineInstr &MI, SledKind Kind);
+
     void HexagonProcessInstruction(MCInst &Inst, const MachineInstr &MBB);
 
     void printOperand(const MachineInstr *MI, unsigned OpNo, raw_ostream &O);

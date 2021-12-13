@@ -54,7 +54,7 @@ def no_odr: F<"no-odr">,
   Group<grp_general>;
 
 def dump_debug_map: F<"dump-debug-map">,
-  HelpText<"Parse and dump the debug map to standard output. Not DWARF link will take place.">,
+  HelpText<"Parse and dump the debug map to standard output. No DWARF link will take place.">,
   Group<grp_general>;
 
 def yaml_input: Flag<["-", "--"], "y">,

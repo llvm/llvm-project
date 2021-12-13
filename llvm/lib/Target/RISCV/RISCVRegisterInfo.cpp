@@ -105,7 +105,6 @@ BitVector RISCVRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
   // Floating point environment registers.
   markSuperRegs(Reserved, RISCV::FRM);
   markSuperRegs(Reserved, RISCV::FFLAGS);
-  markSuperRegs(Reserved, RISCV::FCSR);
 
   assert(checkAllSuperRegsMarked(Reserved));
   return Reserved;

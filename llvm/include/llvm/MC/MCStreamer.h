@@ -524,6 +524,10 @@ public:
   /// \param Value - The value for the symbol.
   virtual void emitAssignment(MCSymbol *Symbol, const MCExpr *Value);
 
+  /// Emit an assignment of \p Value to \p Symbol, but only if \p Value is also
+  /// emitted.
+  virtual void emitConditionalAssignment(MCSymbol *Symbol, const MCExpr *Value);
+
   /// Emit an weak reference from \p Alias to \p Symbol.
   ///
   /// This corresponds to an assembler statement such as:

@@ -392,7 +392,7 @@
 
 // RUN: %clang -target riscv32-unknown-elf -march=rv32izbb1p0zbp0p93 -menable-experimental-extensions -### %s \
 // RUN: -fsyntax-only 2>&1 | FileCheck -check-prefix=RV32-EXPERIMENTAL-ZBB-ZBP-UNDERSCORE %s
-// RV32-EXPERIMENTAL-ZBB-ZBP-UNDERSCORE: error: invalid arch name 'rv32izbb1p0zbp0p93', multi-character extensions must be separated by underscores
+// RV32-EXPERIMENTAL-ZBB-ZBP-UNDERSCORE: error: invalid arch name 'rv32izbb1p0zbp0p93', unsupported version number 0.93 for extension 'zbb1p0zbp'
 
 // RUN: %clang -target riscv32-unknown-elf -march=rv32izba1p0 -menable-experimental-extensions -### %s \
 // RUN: -fsyntax-only 2>&1 | FileCheck -check-prefix=RV32-EXPERIMENTAL-ZBA %s
