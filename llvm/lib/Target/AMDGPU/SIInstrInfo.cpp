@@ -3656,12 +3656,6 @@ bool SIInstrInfo::canShrink(const MachineInstr &MI,
                             const MachineRegisterInfo &MRI) const {
   const MachineOperand *Src2 = getNamedOperand(MI, AMDGPU::OpName::src2);
   // Can't shrink instruction with three operands.
-  // FIXME: v_cndmask_b32 has 3 operands and is shrinkable, but we need to add
-  // a special case for it.  It can only be shrunk if the third operand
-  // is vcc, and src0_modifiers and src1_modifiers are not set.
-  // We should handle this the same way we handle vopc, by addding
-  // a register allocation hint pre-regalloc and then do the shrinking
-  // post-regalloc.
   if (Src2) {
     switch (MI.getOpcode()) {
       default: return false;
