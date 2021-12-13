@@ -442,6 +442,9 @@ public:
   /// This starts an array initializer.
   bool IsArrayInitializer = false;
 
+  /// Is optional and can be removed.
+  bool Optional = false;
+
   /// If this token starts a block, this contains all the unwrapped lines
   /// in it.
   SmallVector<AnnotatedLine *, 1> Children;

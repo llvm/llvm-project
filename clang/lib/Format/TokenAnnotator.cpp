@@ -780,6 +780,7 @@ private:
       unsigned CommaCount = 0;
       while (CurrentToken) {
         if (CurrentToken->is(tok::r_brace)) {
+          assert(Left->Optional == CurrentToken->Optional);
           Left->MatchingParen = CurrentToken;
           CurrentToken->MatchingParen = Left;
           if (Style.AlignArrayOfStructures != FormatStyle::AIAS_None) {

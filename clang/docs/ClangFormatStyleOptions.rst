@@ -3402,6 +3402,62 @@ the configuration (without a prefix: ``Auto``).
      /* second veryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryLongComment with plenty of
       * information */
 
+**RemoveBracesLLVM** (``Boolean``) :versionbadge:`clang-format 14`
+  Remove optional braces of control statements (``if``, ``else``, ``for``,
+  and ``while``) in C++ according to the LLVM coding style.
+
+  .. warning:: 
+
+   This option will be renamed and expanded to support other styles.
+
+  .. warning:: 
+
+   Setting this option to `true` could lead to incorrect code formatting due
+   to clang-format's lack of complete semantic information. As such, extra
+   care should be taken to review code changes made by this option.
+
+  .. code-block:: c++
+
+    false:                                     true:
+
+    if (isa<FunctionDecl>(D)) {        vs.     if (isa<FunctionDecl>(D))
+      handleFunctionDecl(D);                     handleFunctionDecl(D);
+    } else if (isa<VarDecl>(D)) {              else if (isa<VarDecl>(D))
+      handleVarDecl(D);                          handleVarDecl(D);
+    }
+
+    if (isa<VarDecl>(D)) {             vs.     if (isa<VarDecl>(D)) {
+      for (auto *A : D.attrs()) {                for (auto *A : D.attrs())
+        if (shouldProcessAttr(A)) {                if (shouldProcessAttr(A))
+          handleAttr(A);                             handleAttr(A);
+        }                                      }
+      }
+    }
+
+    if (isa<FunctionDecl>(D)) {        vs.     if (isa<FunctionDecl>(D))
+      for (auto *A : D.attrs()) {                for (auto *A : D.attrs())
+        handleAttr(A);                             handleAttr(A);
+      }
+    }
+
+    if (auto *D = (T)(D)) {            vs.     if (auto *D = (T)(D)) {
+      if (shouldProcess(D)) {                    if (shouldProcess(D))
+        handleVarDecl(D);                          handleVarDecl(D);
+      } else {                                   else
+        markAsIgnored(D);                          markAsIgnored(D);
+      }                                        }
+    }
+
+    if (a) {                           vs.     if (a)
+      b();                                       b();
+    } else {                                   else if (c)
+      if (c) {                                   d();
+        d();                                   else
+      } else {                                   e();
+        e();
+      }
+    }
+
 **SeparateDefinitionBlocks** (``SeparateDefinitionStyle``) :versionbadge:`clang-format 14`
   Specifies the use of empty lines to separate definition blocks, including
   classes, structs, enums, and functions.

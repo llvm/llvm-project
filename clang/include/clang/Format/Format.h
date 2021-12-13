@@ -3049,6 +3049,60 @@ struct FormatStyle {
   bool ReflowComments;
   // clang-format on
 
+  /// Remove optional braces of control statements (``if``, ``else``, ``for``,
+  /// and ``while``) in C++ according to the LLVM coding style.
+  /// \warning
+  ///  This option will be renamed and expanded to support other styles.
+  /// \endwarning
+  /// \warning
+  ///  Setting this option to `true` could lead to incorrect code formatting due
+  ///  to clang-format's lack of complete semantic information. As such, extra
+  ///  care should be taken to review code changes made by this option.
+  /// \endwarning
+  /// \code
+  ///   false:                                     true:
+  ///
+  ///   if (isa<FunctionDecl>(D)) {        vs.     if (isa<FunctionDecl>(D))
+  ///     handleFunctionDecl(D);                     handleFunctionDecl(D);
+  ///   } else if (isa<VarDecl>(D)) {              else if (isa<VarDecl>(D))
+  ///     handleVarDecl(D);                          handleVarDecl(D);
+  ///   }
+  ///
+  ///   if (isa<VarDecl>(D)) {             vs.     if (isa<VarDecl>(D)) {
+  ///     for (auto *A : D.attrs()) {                for (auto *A : D.attrs())
+  ///       if (shouldProcessAttr(A)) {                if (shouldProcessAttr(A))
+  ///         handleAttr(A);                             handleAttr(A);
+  ///       }                                      }
+  ///     }
+  ///   }
+  ///
+  ///   if (isa<FunctionDecl>(D)) {        vs.     if (isa<FunctionDecl>(D))
+  ///     for (auto *A : D.attrs()) {                for (auto *A : D.attrs())
+  ///       handleAttr(A);                             handleAttr(A);
+  ///     }
+  ///   }
+  ///
+  ///   if (auto *D = (T)(D)) {            vs.     if (auto *D = (T)(D)) {
+  ///     if (shouldProcess(D)) {                    if (shouldProcess(D))
+  ///       handleVarDecl(D);                          handleVarDecl(D);
+  ///     } else {                                   else
+  ///       markAsIgnored(D);                          markAsIgnored(D);
+  ///     }                                        }
+  ///   }
+  ///
+  ///   if (a) {                           vs.     if (a)
+  ///     b();                                       b();
+  ///   } else {                                   else if (c)
+  ///     if (c) {                                   d();
+  ///       d();                                   else
+  ///     } else {                                   e();
+  ///       e();
+  ///     }
+  ///   }
+  /// \endcode
+  /// \version 14
+  bool RemoveBracesLLVM;
+
   /// \brief The style if definition blocks should be separated.
   enum SeparateDefinitionStyle {
     /// Leave definition blocks as they are.
@@ -3858,6 +3912,7 @@ struct FormatStyle {
            QualifierOrder == R.QualifierOrder &&
            RawStringFormats == R.RawStringFormats &&
            ReferenceAlignment == R.ReferenceAlignment &&
+           RemoveBracesLLVM == R.RemoveBracesLLVM &&
            SeparateDefinitionBlocks == R.SeparateDefinitionBlocks &&
            ShortNamespaceLines == R.ShortNamespaceLines &&
            SortIncludes == R.SortIncludes &&
