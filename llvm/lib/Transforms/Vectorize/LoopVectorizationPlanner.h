@@ -127,11 +127,6 @@ public:
     NewVPInst->setUnderlyingValue(Inst);
     return NewVPInst;
   }
-  VPValue *createNaryOp(unsigned Opcode,
-                        std::initializer_list<VPValue *> Operands,
-                        Instruction *Inst = nullptr) {
-    return createNaryOp(Opcode, ArrayRef<VPValue *>(Operands), Inst);
-  }
 
   VPValue *createNot(VPValue *Operand) {
     return createInstruction(VPInstruction::Not, {Operand});
