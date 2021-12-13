@@ -49,6 +49,7 @@ void *thread(void *arg) {
   barrier_wait(&barrier);
   if (__atomic_load_n(&ready, __ATOMIC_ACQUIRE))
     func();
+  barrier_wait(&barrier);
   if (dlclose(lib)) {
     printf("error in dlclose: %s\n", dlerror());
     exit(1);
@@ -73,6 +74,7 @@ int main(int argc, char *argv[]) {
   __atomic_store_n(&ready, 1, __ATOMIC_RELEASE);
   barrier_wait(&barrier);
   func();
+  barrier_wait(&barrier);
   pthread_join(th, 0);
   fprintf(stderr, "DONE\n");
   return 0;
