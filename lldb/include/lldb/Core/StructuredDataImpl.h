@@ -29,6 +29,9 @@ public:
 
   StructuredDataImpl(const StructuredDataImpl &rhs) = default;
 
+  StructuredDataImpl(StructuredData::ObjectSP obj)
+      : m_data_sp(std::move(obj)) {}
+
   StructuredDataImpl(const lldb::EventSP &event_sp)
       : m_plugin_wp(
             EventDataStructuredData::GetPluginFromEvent(event_sp.get())),

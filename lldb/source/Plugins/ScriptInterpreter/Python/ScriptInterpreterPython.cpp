@@ -1718,7 +1718,7 @@ StructuredData::DictionarySP ScriptInterpreterPythonImpl::OSPlugin_CreateThread(
 }
 
 StructuredData::ObjectSP ScriptInterpreterPythonImpl::CreateScriptedThreadPlan(
-    const char *class_name, StructuredDataImpl *args_data,
+    const char *class_name, const StructuredDataImpl &args_data,
     std::string &error_str, lldb::ThreadPlanSP thread_plan_sp) {
   if (class_name == nullptr || class_name[0] == '\0')
     return StructuredData::ObjectSP();
@@ -1820,7 +1820,7 @@ lldb::StateType ScriptInterpreterPythonImpl::ScriptedThreadPlanGetRunState(
 
 StructuredData::GenericSP
 ScriptInterpreterPythonImpl::CreateScriptedBreakpointResolver(
-    const char *class_name, StructuredDataImpl *args_data,
+    const char *class_name, const StructuredDataImpl &args_data,
     lldb::BreakpointSP &bkpt_sp) {
 
   if (class_name == nullptr || class_name[0] == '\0')
@@ -1890,8 +1890,8 @@ ScriptInterpreterPythonImpl::ScriptedBreakpointResolverSearchDepth(
 }
 
 StructuredData::GenericSP ScriptInterpreterPythonImpl::CreateScriptedStopHook(
-    TargetSP target_sp, const char *class_name, StructuredDataImpl *args_data,
-    Status &error) {
+    TargetSP target_sp, const char *class_name,
+    const StructuredDataImpl &args_data, Status &error) {
 
   if (!target_sp) {
     error.SetErrorString("No target for scripted stop-hook.");
@@ -2197,7 +2197,7 @@ bool ScriptInterpreterPythonImpl::BreakpointCallbackFunction(
               LLDBSwigPythonBreakpointCallbackFunction(
                   python_function_name,
                   python_interpreter->m_dictionary_name.c_str(), stop_frame_sp,
-                  bp_loc_sp, bp_option_data->m_extra_args_up.get());
+                  bp_loc_sp, bp_option_data->m_extra_args);
 
           if (!maybe_ret_val) {
 

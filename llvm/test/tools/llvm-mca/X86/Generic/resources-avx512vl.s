@@ -81,6 +81,14 @@ valignq           $1, %ymm16, %ymm17, %ymm19 {z}{k1}
 valignq           $1, (%rax), %ymm17, %ymm19 {z}{k1}
 valignq           $1, (%rax){1to4}, %ymm17, %ymm19 {z}{k1}
 
+vbroadcastf32x4   (%rax), %ymm19
+vbroadcastf32x4   (%rax), %ymm19 {k1}
+vbroadcastf32x4   (%rax), %ymm19 {z}{k1}
+
+vbroadcasti32x4   (%rax), %ymm19
+vbroadcasti32x4   (%rax), %ymm19 {k1}
+vbroadcasti32x4   (%rax), %ymm19 {z}{k1}
+
 vbroadcastsd      %xmm16, %ymm19
 vbroadcastsd      (%rax), %ymm19
 vbroadcastsd      %xmm16, %ymm19 {k1}
@@ -1309,6 +1317,12 @@ vunpcklps         (%rax){1to8}, %ymm17, %ymm19 {z}{k1}
 # CHECK-NEXT:  1      1     1.00                        valignq	$1, %ymm16, %ymm17, %ymm19 {%k1} {z}
 # CHECK-NEXT:  2      8     1.00    *                   valignq	$1, (%rax), %ymm17, %ymm19 {%k1} {z}
 # CHECK-NEXT:  2      8     1.00    *                   valignq	$1, (%rax){1to4}, %ymm17, %ymm19 {%k1} {z}
+# CHECK-NEXT:  2      8     1.00    *                   vbroadcastf32x4	(%rax), %ymm19
+# CHECK-NEXT:  2      8     1.00    *                   vbroadcastf32x4	(%rax), %ymm19 {%k1}
+# CHECK-NEXT:  2      8     1.00    *                   vbroadcastf32x4	(%rax), %ymm19 {%k1} {z}
+# CHECK-NEXT:  2      8     1.00    *                   vbroadcasti32x4	(%rax), %ymm19
+# CHECK-NEXT:  2      8     1.00    *                   vbroadcasti32x4	(%rax), %ymm19 {%k1}
+# CHECK-NEXT:  2      8     1.00    *                   vbroadcasti32x4	(%rax), %ymm19 {%k1} {z}
 # CHECK-NEXT:  1      1     1.00                        vbroadcastsd	%xmm16, %ymm19
 # CHECK-NEXT:  2      8     1.00    *                   vbroadcastsd	(%rax), %ymm19
 # CHECK-NEXT:  1      1     1.00                        vbroadcastsd	%xmm16, %ymm19 {%k1}
@@ -2334,7 +2348,7 @@ vunpcklps         (%rax){1to8}, %ymm17, %ymm19 {z}{k1}
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6.0]  [6.1]
-# CHECK-NEXT:  -     1935.00 196.00 359.50  -    602.50 347.50 347.50
+# CHECK-NEXT:  -     1935.00 196.00 359.50  -    608.50 350.50 350.50
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6.0]  [6.1]  Instructions:
@@ -2410,6 +2424,12 @@ vunpcklps         (%rax){1to8}, %ymm17, %ymm19 {z}{k1}
 # CHECK-NEXT:  -      -      -      -      -     1.00    -      -     valignq	$1, %ymm16, %ymm17, %ymm19 {%k1} {z}
 # CHECK-NEXT:  -      -      -      -      -     1.00   0.50   0.50   valignq	$1, (%rax), %ymm17, %ymm19 {%k1} {z}
 # CHECK-NEXT:  -      -      -      -      -     1.00   0.50   0.50   valignq	$1, (%rax){1to4}, %ymm17, %ymm19 {%k1} {z}
+# CHECK-NEXT:  -      -      -      -      -     1.00   0.50   0.50   vbroadcastf32x4	(%rax), %ymm19
+# CHECK-NEXT:  -      -      -      -      -     1.00   0.50   0.50   vbroadcastf32x4	(%rax), %ymm19 {%k1}
+# CHECK-NEXT:  -      -      -      -      -     1.00   0.50   0.50   vbroadcastf32x4	(%rax), %ymm19 {%k1} {z}
+# CHECK-NEXT:  -      -      -      -      -     1.00   0.50   0.50   vbroadcasti32x4	(%rax), %ymm19
+# CHECK-NEXT:  -      -      -      -      -     1.00   0.50   0.50   vbroadcasti32x4	(%rax), %ymm19 {%k1}
+# CHECK-NEXT:  -      -      -      -      -     1.00   0.50   0.50   vbroadcasti32x4	(%rax), %ymm19 {%k1} {z}
 # CHECK-NEXT:  -      -      -      -      -     1.00    -      -     vbroadcastsd	%xmm16, %ymm19
 # CHECK-NEXT:  -      -      -      -      -     1.00   0.50   0.50   vbroadcastsd	(%rax), %ymm19
 # CHECK-NEXT:  -      -      -      -      -     1.00    -      -     vbroadcastsd	%xmm16, %ymm19 {%k1}

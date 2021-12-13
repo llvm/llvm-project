@@ -631,27 +631,26 @@ static void addMask(SmallVectorImpl<int> &Mask, ArrayRef<int> SubMask) {
 /// after:   6 3 5 4 7 2 1 0
 static void fixupOrderingIndices(SmallVectorImpl<unsigned> &Order) {
   const unsigned Sz = Order.size();
-  SmallBitVector UsedIndices(Sz);
-  SmallVector<int> MaskedIndices;
+  SmallBitVector UnusedIndices(Sz, /*t=*/true);
+  SmallBitVector MaskedIndices(Sz);
   for (unsigned I = 0; I < Sz; ++I) {
     if (Order[I] < Sz)
-      UsedIndices.set(Order[I]);
+      UnusedIndices.reset(Order[I]);
     else
-      MaskedIndices.push_back(I);
+      MaskedIndices.set(I);
   }
-  if (MaskedIndices.empty())
+  if (MaskedIndices.none())
     return;
-  SmallVector<int> AvailableIndices(MaskedIndices.size());
-  unsigned Cnt = 0;
-  int Idx = UsedIndices.find_first();
-  do {
-    AvailableIndices[Cnt] = Idx;
-    Idx = UsedIndices.find_next(Idx);
-    ++Cnt;
-  } while (Idx > 0);
-  assert(Cnt == MaskedIndices.size() && "Non-synced masked/available indices.");
-  for (int I = 0, E = MaskedIndices.size(); I < E; ++I)
-    Order[MaskedIndices[I]] = AvailableIndices[I];
+  assert(UnusedIndices.count() == MaskedIndices.count() &&
+         "Non-synced masked/available indices.");
+  int Idx = UnusedIndices.find_first();
+  int MIdx = MaskedIndices.find_first();
+  while (MIdx >= 0) {
+    assert(Idx >= 0 && "Indices must be synced.");
+    Order[MIdx] = Idx;
+    Idx = UnusedIndices.find_next(Idx);
+    MIdx = MaskedIndices.find_next(MIdx);
+  }
 }
 
 namespace llvm {
@@ -811,6 +810,13 @@ public:
   /// implements the checks only for possibly ordered scalars (Loads,
   /// ExtractElement, ExtractValue), which can be part of the graph.
   Optional<OrdersType> findReusedOrderedScalars(const TreeEntry &TE);
+
+  /// Gets reordering data for the given tree entry. If the entry is vectorized
+  /// - just return ReorderIndices, otherwise check if the scalars can be
+  /// reordered and return the most optimal order.
+  /// \param TopToBottom If true, include the order of vectorized stores and
+  /// insertelement nodes, otherwise skip them.
+  Optional<OrdersType> getReorderingData(const TreeEntry &TE, bool TopToBottom);
 
   /// Reorders the current graph to the most profitable order starting from the
   /// root node to the leaf nodes. The best order is chosen only from the nodes
@@ -2819,6 +2825,50 @@ BoUpSLP::findReusedOrderedScalars(const BoUpSLP::TreeEntry &TE) {
   return None;
 }
 
+Optional<BoUpSLP::OrdersType> BoUpSLP::getReorderingData(const TreeEntry &TE,
+                                                         bool TopToBottom) {
+  // No need to reorder if need to shuffle reuses, still need to shuffle the
+  // node.
+  if (!TE.ReuseShuffleIndices.empty())
+    return None;
+  if (TE.State == TreeEntry::Vectorize &&
+      (isa<LoadInst, ExtractElementInst, ExtractValueInst>(TE.getMainOp()) ||
+       (TopToBottom && isa<StoreInst, InsertElementInst>(TE.getMainOp()))) &&
+      !TE.isAltShuffle())
+    return TE.ReorderIndices;
+  if (TE.State == TreeEntry::NeedToGather) {
+    // TODO: add analysis of other gather nodes with extractelement
+    // instructions and other values/instructions, not only undefs.
+    if (((TE.getOpcode() == Instruction::ExtractElement &&
+          !TE.isAltShuffle()) ||
+         (all_of(TE.Scalars,
+                 [](Value *V) {
+                   return isa<UndefValue, ExtractElementInst>(V);
+                 }) &&
+          any_of(TE.Scalars,
+                 [](Value *V) { return isa<ExtractElementInst>(V); }))) &&
+        all_of(TE.Scalars,
+               [](Value *V) {
+                 auto *EE = dyn_cast<ExtractElementInst>(V);
+                 return !EE || isa<FixedVectorType>(EE->getVectorOperandType());
+               }) &&
+        allSameType(TE.Scalars)) {
+      // Check that gather of extractelements can be represented as
+      // just a shuffle of a single vector.
+      OrdersType CurrentOrder;
+      bool Reuse = canReuseExtract(TE.Scalars, TE.getMainOp(), CurrentOrder);
+      if (Reuse || !CurrentOrder.empty()) {
+        if (!CurrentOrder.empty())
+          fixupOrderingIndices(CurrentOrder);
+        return CurrentOrder;
+      }
+    }
+    if (Optional<OrdersType> CurrentOrder = findReusedOrderedScalars(TE))
+      return CurrentOrder;
+  }
+  return None;
+}
+
 void BoUpSLP::reorderTopToBottom() {
   // Maps VF to the graph nodes.
   DenseMap<unsigned, SmallPtrSet<TreeEntry *, 4>> VFToOrderedEntries;
@@ -2829,39 +2879,11 @@ void BoUpSLP::reorderTopToBottom() {
   // Currently the are vectorized loads,extracts + some gathering of extracts.
   for_each(VectorizableTree, [this, &VFToOrderedEntries, &GathersToOrders](
                                  const std::unique_ptr<TreeEntry> &TE) {
-    // No need to reorder if need to shuffle reuses, still need to shuffle the
-    // node.
-    if (!TE->ReuseShuffleIndices.empty())
-      return;
-    if (TE->State == TreeEntry::Vectorize &&
-        isa<LoadInst, ExtractElementInst, ExtractValueInst, StoreInst,
-            InsertElementInst>(TE->getMainOp()) &&
-        !TE->isAltShuffle()) {
+    if (Optional<OrdersType> CurrentOrder =
+            getReorderingData(*TE.get(), /*TopToBottom=*/true)) {
       VFToOrderedEntries[TE->Scalars.size()].insert(TE.get());
-      return;
-    }
-    if (TE->State == TreeEntry::NeedToGather) {
-      if (TE->getOpcode() == Instruction::ExtractElement &&
-          !TE->isAltShuffle() &&
-          isa<FixedVectorType>(cast<ExtractElementInst>(TE->getMainOp())
-                                   ->getVectorOperandType()) &&
-          allSameType(TE->Scalars) && allSameBlock(TE->Scalars)) {
-        // Check that gather of extractelements can be represented as
-        // just a shuffle of a single vector.
-        OrdersType CurrentOrder;
-        bool Reuse =
-            canReuseExtract(TE->Scalars, TE->getMainOp(), CurrentOrder);
-        if (Reuse || !CurrentOrder.empty()) {
-          VFToOrderedEntries[TE->Scalars.size()].insert(TE.get());
-          GathersToOrders.try_emplace(TE.get(), CurrentOrder);
-          return;
-        }
-      }
-      if (Optional<OrdersType> CurrentOrder =
-              findReusedOrderedScalars(*TE.get())) {
-        VFToOrderedEntries[TE->Scalars.size()].insert(TE.get());
+      if (TE->State != TreeEntry::Vectorize)
         GathersToOrders.try_emplace(TE.get(), *CurrentOrder);
-      }
     }
   });
 
@@ -2993,44 +3015,11 @@ void BoUpSLP::reorderBottomToTop(bool IgnoreReorder) {
                                  const std::unique_ptr<TreeEntry> &TE) {
     if (TE->State != TreeEntry::Vectorize)
       NonVectorized.push_back(TE.get());
-    // No need to reorder if need to shuffle reuses, still need to shuffle the
-    // node.
-    if (!TE->ReuseShuffleIndices.empty())
-      return;
-    if (TE->State == TreeEntry::Vectorize &&
-        isa<LoadInst, ExtractElementInst, ExtractValueInst>(TE->getMainOp()) &&
-        !TE->isAltShuffle()) {
+    if (Optional<OrdersType> CurrentOrder =
+            getReorderingData(*TE.get(), /*TopToBottom=*/false)) {
       OrderedEntries.insert(TE.get());
-      return;
-    }
-    if (TE->State == TreeEntry::NeedToGather) {
-      if (TE->getOpcode() == Instruction::ExtractElement &&
-          !TE->isAltShuffle() &&
-          isa<FixedVectorType>(cast<ExtractElementInst>(TE->getMainOp())
-                                   ->getVectorOperandType()) &&
-          allSameType(TE->Scalars) && allSameBlock(TE->Scalars)) {
-        // Check that gather of extractelements can be represented as
-        // just a shuffle of a single vector with a single user only.
-        OrdersType CurrentOrder;
-        bool Reuse =
-            canReuseExtract(TE->Scalars, TE->getMainOp(), CurrentOrder);
-        if ((Reuse || !CurrentOrder.empty()) &&
-            !any_of(VectorizableTree,
-                    [&TE](const std::unique_ptr<TreeEntry> &Entry) {
-                      return Entry->State == TreeEntry::NeedToGather &&
-                             Entry.get() != TE.get() &&
-                             Entry->isSame(TE->Scalars);
-                    })) {
-          OrderedEntries.insert(TE.get());
-          GathersToOrders.try_emplace(TE.get(), CurrentOrder);
-          return;
-        }
-      }
-      if (Optional<OrdersType> CurrentOrder =
-              findReusedOrderedScalars(*TE.get())) {
-        OrderedEntries.insert(TE.get());
+      if (TE->State != TreeEntry::Vectorize)
         GathersToOrders.try_emplace(TE.get(), *CurrentOrder);
-      }
     }
   });
 
@@ -4219,10 +4208,17 @@ unsigned BoUpSLP::canMapToVector(Type *T, const DataLayout &DL) const {
 
 bool BoUpSLP::canReuseExtract(ArrayRef<Value *> VL, Value *OpValue,
                               SmallVectorImpl<unsigned> &CurrentOrder) const {
-  Instruction *E0 = cast<Instruction>(OpValue);
-  assert(E0->getOpcode() == Instruction::ExtractElement ||
-         E0->getOpcode() == Instruction::ExtractValue);
-  assert(E0->getOpcode() == getSameOpcode(VL).getOpcode() && "Invalid opcode");
+  const auto *It = find_if(VL, [](Value *V) {
+    return isa<ExtractElementInst, ExtractValueInst>(V);
+  });
+  assert(It != VL.end() && "Expected at least one extract instruction.");
+  auto *E0 = cast<Instruction>(*It);
+  assert(all_of(VL,
+                [](Value *V) {
+                  return isa<UndefValue, ExtractElementInst, ExtractValueInst>(
+                      V);
+                }) &&
+         "Invalid opcode");
   // Check if all of the extracts come from the same vector and from the
   // correct offset.
   Value *Vec = E0->getOperand(0);
@@ -4255,23 +4251,28 @@ bool BoUpSLP::canReuseExtract(ArrayRef<Value *> VL, Value *OpValue,
   // Also, later we can check that all the indices are used and we have a
   // consecutive access in the extract instructions, by checking that no
   // element of CurrentOrder still has value E + 1.
-  CurrentOrder.assign(E, E + 1);
+  CurrentOrder.assign(E, E);
   unsigned I = 0;
   for (; I < E; ++I) {
-    auto *Inst = cast<Instruction>(VL[I]);
+    auto *Inst = dyn_cast<Instruction>(VL[I]);
+    if (!Inst)
+      continue;
     if (Inst->getOperand(0) != Vec)
       break;
+    if (auto *EE = dyn_cast<ExtractElementInst>(Inst))
+      if (isa<UndefValue>(EE->getIndexOperand()))
+        continue;
     Optional<unsigned> Idx = getExtractIndex(Inst);
     if (!Idx)
       break;
     const unsigned ExtIdx = *Idx;
     if (ExtIdx != I) {
-      if (ExtIdx >= E || CurrentOrder[ExtIdx] != E + 1)
+      if (ExtIdx >= E || CurrentOrder[ExtIdx] != E)
         break;
       ShouldKeepOrder = false;
       CurrentOrder[ExtIdx] = I;
     } else {
-      if (CurrentOrder[I] != E + 1)
+      if (CurrentOrder[I] != E)
         break;
       CurrentOrder[I] = I;
     }
