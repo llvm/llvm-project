@@ -482,7 +482,12 @@ TEST(ConstantsTest, BitcastToGEP) {
       new GlobalVariable(*M, S, false, GlobalValue::ExternalLinkage, nullptr);
   auto *PtrTy = PointerType::get(i32, 0);
   auto *C = ConstantExpr::getBitCast(G, PtrTy);
-  ASSERT_EQ(cast<ConstantExpr>(C)->getOpcode(), Instruction::BitCast);
+  if (Context.supportsTypedPointers()) {
+    EXPECT_EQ(cast<ConstantExpr>(C)->getOpcode(), Instruction::BitCast);
+  } else {
+    /* With opaque pointers, no cast is necessary. */
+    EXPECT_EQ(C, G);
+  }
 }
 
 bool foldFuncPtrAndConstToNull(LLVMContext &Context, Module *TheModule,
