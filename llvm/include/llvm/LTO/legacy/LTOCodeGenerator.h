@@ -193,6 +193,8 @@ struct LTOCodeGenerator {
   void resetMergedModule() { MergedModule.reset(); }
   void DiagnosticHandler(const DiagnosticInfo &DI);
 
+  Module &getMergedModule() { return *MergedModule; }
+
 private:
   /// Verify the merged module on first call.
   ///
