@@ -131,15 +131,15 @@ bool StackMapLiveness::calculateLiveness(MachineFunction &MF) {
     bool HasStackMap = false;
     // Reverse iterate over all instructions and add the current live register
     // set to an instruction if we encounter a patchpoint instruction.
-    for (auto I = MBB.rbegin(), E = MBB.rend(); I != E; ++I) {
-      if (I->getOpcode() == TargetOpcode::PATCHPOINT) {
-        addLiveOutSetToMI(MF, *I);
+    for (MachineInstr &MI : llvm::reverse(MBB)) {
+      if (MI.getOpcode() == TargetOpcode::PATCHPOINT) {
+        addLiveOutSetToMI(MF, MI);
         HasChanged = true;
         HasStackMap = true;
         ++NumStackMaps;
       }
-      LLVM_DEBUG(dbgs() << "   " << LiveRegs << "   " << *I);
-      LiveRegs.stepBackward(*I);
+      LLVM_DEBUG(dbgs() << "   " << LiveRegs << "   " << MI);
+      LiveRegs.stepBackward(MI);
     }
     ++NumBBsVisited;
     if (!HasStackMap)

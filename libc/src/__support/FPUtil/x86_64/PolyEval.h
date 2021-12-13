@@ -25,9 +25,9 @@ namespace fputil {
 template <>
 INLINE_FMA inline float polyeval(float x, float a0, float a1, float a2,
                                  float a3) {
-  __m128 xmm = _mm_set1_ps(x);
-  __m128 a13 = _mm_set_ps(0.0f, x, a3, a1);
-  __m128 a02 = _mm_set_ps(0.0f, 0.0f, a2, a0);
+  __m128 xmm = _mm_set1_ps(x);                 // NOLINT
+  __m128 a13 = _mm_set_ps(0.0f, x, a3, a1);    // NOLINT
+  __m128 a02 = _mm_set_ps(0.0f, 0.0f, a2, a0); // NOLINT
   // r = (0, x^2, a3*x + a2, a1*x + a0)
   __m128 r = _mm_fmadd_ps(a13, xmm, a02); // NOLINT
   // result = (a3*x + a2) * x^2 + (a1*x + a0)
@@ -37,9 +37,9 @@ INLINE_FMA inline float polyeval(float x, float a0, float a1, float a2,
 template <>
 INLINE_FMA inline double polyeval(double x, double a0, double a1, double a2,
                                   double a3) {
-  __m256d xmm = _mm256_set1_pd(x);
-  __m256d a13 = _mm256_set_pd(0.0, x, a3, a1);
-  __m256d a02 = _mm256_set_pd(0.0, 0.0, a2, a0);
+  __m256d xmm = _mm256_set1_pd(x);               // NOLINT
+  __m256d a13 = _mm256_set_pd(0.0, x, a3, a1);   // NOLINT
+  __m256d a02 = _mm256_set_pd(0.0, 0.0, a2, a0); // NOLINT
   // r = (0, x^2, a3*x + a2, a1*x + a0)
   __m256d r = _mm256_fmadd_pd(a13, xmm, a02); // NOLINT
   // result = (a3*x + a2) * x^2 + (a1*x + a0)
@@ -52,10 +52,10 @@ INLINE_FMA inline double polyeval(double x, double a0, double a1, double a2,
 template <>
 INLINE_FMA inline float polyeval(float x, float a0, float a1, float a2,
                                  float a3, float a4, float a5) {
-  __m128 xmm = _mm_set1_ps(x);
-  __m128 a25 = _mm_set_ps(0.0f, x, a5, a2);
-  __m128 a14 = _mm_set_ps(0.0f, 0.0f, a4, a1);
-  __m128 a03 = _mm_set_ps(0.0f, 0.0f, a3, a0);
+  __m128 xmm = _mm_set1_ps(x);                 // NOLINT
+  __m128 a25 = _mm_set_ps(0.0f, x, a5, a2);    // NOLINT
+  __m128 a14 = _mm_set_ps(0.0f, 0.0f, a4, a1); // NOLINT
+  __m128 a03 = _mm_set_ps(0.0f, 0.0f, a3, a0); // NOLINT
   // r1 = (0, x^2, a5*x + a4, a2*x + a1)
   __m128 r1 = _mm_fmadd_ps(a25, xmm, a14); // NOLINT
   // r2 = (0, x^3, (a5*x + a4)*x + a3, (a2*x + a1)*x + a0
@@ -67,10 +67,10 @@ INLINE_FMA inline float polyeval(float x, float a0, float a1, float a2,
 template <>
 INLINE_FMA inline double polyeval(double x, double a0, double a1, double a2,
                                   double a3, double a4, double a5) {
-  __m256d xmm = _mm256_set1_pd(x);
-  __m256d a25 = _mm256_set_pd(0.0, x, a5, a2);
-  __m256d a14 = _mm256_set_pd(0.0, 0.0, a4, a1);
-  __m256d a03 = _mm256_set_pd(0.0, 0.0, a3, a0);
+  __m256d xmm = _mm256_set1_pd(x);               // NOLINT
+  __m256d a25 = _mm256_set_pd(0.0, x, a5, a2);   // NOLINT
+  __m256d a14 = _mm256_set_pd(0.0, 0.0, a4, a1); // NOLINT
+  __m256d a03 = _mm256_set_pd(0.0, 0.0, a3, a0); // NOLINT
   // r1 = (0, x^2, a5*x + a4, a2*x + a1)
   __m256d r1 = _mm256_fmadd_pd(a25, xmm, a14); // NOLINT
   // r2 = (0, x^3, (a5*x + a4)*x + a3, (a2*x + a1)*x + a0

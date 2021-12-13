@@ -4,14 +4,9 @@
 define <vscale x 2 x i64> @insert_v2i64_nxv2i64(<vscale x 2 x i64> %vec, <2 x i64> %subvec) nounwind {
 ; CHECK-LABEL: insert_v2i64_nxv2i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    addvl sp, sp, #-1
-; CHECK-NEXT:    ptrue p0.d
-; CHECK-NEXT:    st1d { z0.d }, p0, [sp]
-; CHECK-NEXT:    str q1, [sp]
-; CHECK-NEXT:    ld1d { z0.d }, p0/z, [sp]
-; CHECK-NEXT:    addvl sp, sp, #1
-; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    ptrue p0.d, vl2
+; CHECK-NEXT:    // kill: def $q1 killed $q1 def $z1
+; CHECK-NEXT:    mov z0.d, p0/m, z1.d
 ; CHECK-NEXT:    ret
   %retval = call <vscale x 2 x i64> @llvm.experimental.vector.insert.nxv2i64.v2i64(<vscale x 2 x i64> %vec, <2 x i64> %subvec, i64 0)
   ret <vscale x 2 x i64> %retval
@@ -43,14 +38,9 @@ define <vscale x 2 x i64> @insert_v2i64_nxv2i64_idx2(<vscale x 2 x i64> %vec, <2
 define <vscale x 4 x i32> @insert_v4i32_nxv4i32(<vscale x 4 x i32> %vec, <4 x i32> %subvec) nounwind {
 ; CHECK-LABEL: insert_v4i32_nxv4i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    addvl sp, sp, #-1
-; CHECK-NEXT:    ptrue p0.s
-; CHECK-NEXT:    st1w { z0.s }, p0, [sp]
-; CHECK-NEXT:    str q1, [sp]
-; CHECK-NEXT:    ld1w { z0.s }, p0/z, [sp]
-; CHECK-NEXT:    addvl sp, sp, #1
-; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    ptrue p0.s, vl4
+; CHECK-NEXT:    // kill: def $q1 killed $q1 def $z1
+; CHECK-NEXT:    mov z0.s, p0/m, z1.s
 ; CHECK-NEXT:    ret
   %retval = call <vscale x 4 x i32> @llvm.experimental.vector.insert.nxv4i32.v4i32(<vscale x 4 x i32> %vec, <4 x i32> %subvec, i64 0)
   ret <vscale x 4 x i32> %retval
@@ -82,14 +72,9 @@ define <vscale x 4 x i32> @insert_v4i32_nxv4i32_idx4(<vscale x 4 x i32> %vec, <4
 define <vscale x 8 x i16> @insert_v8i16_nxv8i16(<vscale x 8 x i16> %vec, <8 x i16> %subvec) nounwind {
 ; CHECK-LABEL: insert_v8i16_nxv8i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    addvl sp, sp, #-1
-; CHECK-NEXT:    ptrue p0.h
-; CHECK-NEXT:    st1h { z0.h }, p0, [sp]
-; CHECK-NEXT:    str q1, [sp]
-; CHECK-NEXT:    ld1h { z0.h }, p0/z, [sp]
-; CHECK-NEXT:    addvl sp, sp, #1
-; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    ptrue p0.h, vl8
+; CHECK-NEXT:    // kill: def $q1 killed $q1 def $z1
+; CHECK-NEXT:    mov z0.h, p0/m, z1.h
 ; CHECK-NEXT:    ret
   %retval = call <vscale x 8 x i16> @llvm.experimental.vector.insert.nxv8i16.v8i16(<vscale x 8 x i16> %vec, <8 x i16> %subvec, i64 0)
   ret <vscale x 8 x i16> %retval
@@ -121,14 +106,9 @@ define <vscale x 8 x i16> @insert_v8i16_nxv8i16_idx8(<vscale x 8 x i16> %vec, <8
 define <vscale x 16 x i8> @insert_v16i8_nxv16i8(<vscale x 16 x i8> %vec, <16 x i8> %subvec) nounwind {
 ; CHECK-LABEL: insert_v16i8_nxv16i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    addvl sp, sp, #-1
-; CHECK-NEXT:    ptrue p0.b
-; CHECK-NEXT:    st1b { z0.b }, p0, [sp]
-; CHECK-NEXT:    str q1, [sp]
-; CHECK-NEXT:    ld1b { z0.b }, p0/z, [sp]
-; CHECK-NEXT:    addvl sp, sp, #1
-; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    ptrue p0.b, vl16
+; CHECK-NEXT:    // kill: def $q1 killed $q1 def $z1
+; CHECK-NEXT:    mov z0.b, p0/m, z1.b
 ; CHECK-NEXT:    ret
   %retval = call <vscale x 16 x i8> @llvm.experimental.vector.insert.nxv16i8.v16i8(<vscale x 16 x i8> %vec, <16 x i8> %subvec, i64 0)
   ret <vscale x 16 x i8> %retval
@@ -469,7 +449,7 @@ define <vscale x 12 x i32> @insert_nxv12i32_nxv4i32(<vscale x 4 x i32> %sv0, <vs
 define <vscale x 2 x bfloat> @insert_nxv2bf16_nxv2bf16(<vscale x 2 x bfloat> %sv0, <vscale x 2 x bfloat> %sv1) nounwind {
 ; CHECK-LABEL: insert_nxv2bf16_nxv2bf16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    z0.d, z1.d
+; CHECK-NEXT:    mov z0.d, z1.d
 ; CHECK-NEXT:    ret
   %v0 = call <vscale x 2 x bfloat> @llvm.experimental.vector.insert.nxv2bf16.nxv2bf16(<vscale x 2 x bfloat> %sv0, <vscale x 2 x bfloat> %sv1, i64 0)
   ret <vscale x 2 x bfloat> %v0
@@ -478,7 +458,7 @@ define <vscale x 2 x bfloat> @insert_nxv2bf16_nxv2bf16(<vscale x 2 x bfloat> %sv
 define <vscale x 4 x bfloat> @insert_nxv4bf16_nxv4bf16(<vscale x 4 x bfloat> %sv0, <vscale x 4 x bfloat> %sv1) nounwind {
 ; CHECK-LABEL: insert_nxv4bf16_nxv4bf16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    z0.d, z1.d
+; CHECK-NEXT:    mov z0.d, z1.d
 ; CHECK-NEXT:    ret
   %v0 = call <vscale x 4 x bfloat> @llvm.experimental.vector.insert.nxv4bf16.nxv4bf16(<vscale x 4 x bfloat> %sv0, <vscale x 4 x bfloat> %sv1, i64 0)
   ret <vscale x 4 x bfloat> %v0
@@ -487,15 +467,15 @@ define <vscale x 4 x bfloat> @insert_nxv4bf16_nxv4bf16(<vscale x 4 x bfloat> %sv
 define <vscale x 4 x bfloat> @insert_nxv4bf16_v4bf16(<vscale x 4 x bfloat> %sv0, <4 x bfloat> %v1) nounwind {
 ; CHECK-LABEL: insert_nxv4bf16_v4bf16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    str     x29, [sp, #-16]!                // 8-byte Folded Spill
-; CHECK-NEXT:    addvl   sp, sp, #-1
-; CHECK-NEXT:    ptrue   p0.s
-; CHECK-NEXT:    st1h    { z0.s }, p0, [sp, #1, mul vl]
-; CHECK-NEXT:    addpl   x8, sp, #4
-; CHECK-NEXT:    str     d1, [x8]
-; CHECK-NEXT:    ld1h    { z0.s }, p0/z, [sp, #1, mul vl]
-; CHECK-NEXT:    addvl   sp, sp, #1
-; CHECK-NEXT:    ldr     x29, [sp], #16                  // 8-byte Folded Reload
+; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NEXT:    addvl sp, sp, #-1
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    st1h { z0.s }, p0, [sp, #1, mul vl]
+; CHECK-NEXT:    addpl x8, sp, #4
+; CHECK-NEXT:    str d1, [x8]
+; CHECK-NEXT:    ld1h { z0.s }, p0/z, [sp, #1, mul vl]
+; CHECK-NEXT:    addvl sp, sp, #1
+; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret
   %v0 = call <vscale x 4 x bfloat> @llvm.experimental.vector.insert.nxv4bf16.v4bf16(<vscale x 4 x bfloat> %sv0, <4 x bfloat> %v1, i64 0)
   ret <vscale x 4 x bfloat> %v0
@@ -504,7 +484,7 @@ define <vscale x 4 x bfloat> @insert_nxv4bf16_v4bf16(<vscale x 4 x bfloat> %sv0,
 define <vscale x 8 x bfloat> @insert_nxv8bf16_nxv8bf16(<vscale x 8 x bfloat> %sv0, <vscale x 8 x bfloat> %sv1) nounwind {
 ; CHECK-LABEL: insert_nxv8bf16_nxv8bf16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    z0.d, z1.d
+; CHECK-NEXT:    mov z0.d, z1.d
 ; CHECK-NEXT:    ret
   %v0 = call <vscale x 8 x bfloat> @llvm.experimental.vector.insert.nxv8bf16.nxv8bf16(<vscale x 8 x bfloat> %sv0, <vscale x 8 x bfloat> %sv1, i64 0)
   ret <vscale x 8 x bfloat> %v0
@@ -513,14 +493,9 @@ define <vscale x 8 x bfloat> @insert_nxv8bf16_nxv8bf16(<vscale x 8 x bfloat> %sv
 define <vscale x 8 x bfloat> @insert_nxv8bf16_v8bf16(<vscale x 8 x bfloat> %sv0, <8 x bfloat> %v1) nounwind {
 ; CHECK-LABEL: insert_nxv8bf16_v8bf16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    str     x29, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    addvl   sp, sp, #-1
-; CHECK-NEXT:    ptrue   p0.h
-; CHECK-NEXT:    st1h    { z0.h }, p0, [sp]
-; CHECK-NEXT:    str     q1, [sp]
-; CHECK-NEXT:    ld1h    { z0.h }, p0/z, [sp]
-; CHECK-NEXT:    addvl   sp, sp, #1
-; CHECK-NEXT:    ldr     x29, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    ptrue p0.h, vl8
+; CHECK-NEXT:    // kill: def $q1 killed $q1 def $z1
+; CHECK-NEXT:    mov z0.h, p0/m, z1.h
 ; CHECK-NEXT:    ret
   %v0 = call <vscale x 8 x bfloat> @llvm.experimental.vector.insert.nxv8bf16.v8bf16(<vscale x 8 x bfloat> %sv0, <8 x bfloat> %v1, i64 0)
   ret <vscale x 8 x bfloat> %v0

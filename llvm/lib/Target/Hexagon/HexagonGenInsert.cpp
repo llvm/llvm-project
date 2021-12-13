@@ -1445,8 +1445,8 @@ bool HexagonGenInsert::removeDeadCode(MachineDomTreeNode *N) {
 
   MachineBasicBlock *B = N->getBlock();
   std::vector<MachineInstr*> Instrs;
-  for (auto I = B->rbegin(), E = B->rend(); I != E; ++I)
-    Instrs.push_back(&*I);
+  for (MachineInstr &MI : llvm::reverse(*B))
+    Instrs.push_back(&MI);
 
   for (MachineInstr *MI : Instrs) {
     unsigned Opc = MI->getOpcode();
