@@ -5,7 +5,11 @@ target datalayout = "e"
 
 declare void @foo(i8*)
 declare void @llvm.memcpy.p0i8.p0i8.i32(i8* nocapture, i8* nocapture, i32, i1) nounwind
+declare void @llvm.lifetime.start.p0i8(i64, i8* nocapture)
+declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture)
 
+; Check that the transformation isn't applied if the called function can
+; capture the pointer argument (i.e. the nocapture attribute isn't present)
 define void @test() {
 ; CHECK-LABEL: @test(
 ; CHECK-NEXT:    [[PTR1:%.*]] = alloca i8, align 1
@@ -21,7 +25,67 @@ define void @test() {
   call void @llvm.memcpy.p0i8.p0i8.i32(i8* %ptr1, i8* %ptr2, i32 1, i1 false)
   call void @foo(i8* %ptr1)
   ret void
+}
 
-  ; Check that the transformation isn't applied if the called function can
-  ; capture the pointer argument (i.e. the nocapture attribute isn't present)
+; Same as previous test, but with a bitcasted argument.
+; TODO: Call slot optimization should not be applied here.
+define void @test_bitcast() {
+; CHECK-LABEL: @test_bitcast(
+; CHECK-NEXT:    [[PTR1:%.*]] = alloca [2 x i8], align 1
+; CHECK-NEXT:    [[PTR2:%.*]] = alloca [2 x i8], align 1
+; CHECK-NEXT:    [[PTR1_CAST:%.*]] = bitcast [2 x i8]* [[PTR1]] to i8*
+; CHECK-NEXT:    [[PTR2_CAST:%.*]] = bitcast [2 x i8]* [[PTR2]] to i8*
+; CHECK-NEXT:    [[PTR11:%.*]] = bitcast [2 x i8]* [[PTR1]] to i8*
+; CHECK-NEXT:    call void @foo(i8* [[PTR11]])
+; CHECK-NEXT:    call void @foo(i8* [[PTR1_CAST]])
+; CHECK-NEXT:    ret void
+;
+  %ptr1 = alloca [2 x i8]
+  %ptr2 = alloca [2 x i8]
+  %ptr1.cast = bitcast [2 x i8]* %ptr1 to i8*
+  %ptr2.cast = bitcast [2 x i8]* %ptr2 to i8*
+  call void @foo(i8* %ptr2.cast)
+  call void @llvm.memcpy.p0i8.p0i8.i32(i8* %ptr1.cast, i8* %ptr2.cast, i32 2, i1 false)
+  call void @foo(i8* %ptr1.cast)
+  ret void
+}
+
+; Lifetime of %ptr2 ends before the potential use of the capture in the second
+; call.
+define void @test_lifetime_end() {
+; CHECK-LABEL: @test_lifetime_end(
+; CHECK-NEXT:    [[PTR1:%.*]] = alloca i8, align 1
+; CHECK-NEXT:    [[PTR2:%.*]] = alloca i8, align 1
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0i8(i64 1, i8* [[PTR2]])
+; CHECK-NEXT:    call void @foo(i8* [[PTR2]])
+; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i32(i8* [[PTR1]], i8* [[PTR2]], i32 1, i1 false)
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0i8(i64 1, i8* [[PTR2]])
+; CHECK-NEXT:    call void @foo(i8* [[PTR1]])
+; CHECK-NEXT:    ret void
+;
+  %ptr1 = alloca i8
+  %ptr2 = alloca i8
+  call void @llvm.lifetime.start.p0i8(i64 1, i8* %ptr2)
+  call void @foo(i8* %ptr2)
+  call void @llvm.memcpy.p0i8.p0i8.i32(i8* %ptr1, i8* %ptr2, i32 1, i1 false)
+  call void @llvm.lifetime.end.p0i8(i64 1, i8* %ptr2)
+  call void @foo(i8* %ptr1)
+  ret void
+}
+
+; Lifetime of %ptr2 ends before any potential use of the capture because we
+; return from the function.
+define void @test_function_end() {
+; CHECK-LABEL: @test_function_end(
+; CHECK-NEXT:    [[PTR1:%.*]] = alloca i8, align 1
+; CHECK-NEXT:    [[PTR2:%.*]] = alloca i8, align 1
+; CHECK-NEXT:    call void @foo(i8* [[PTR2]])
+; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i32(i8* [[PTR1]], i8* [[PTR2]], i32 1, i1 false)
+; CHECK-NEXT:    ret void
+;
+  %ptr1 = alloca i8
+  %ptr2 = alloca i8
+  call void @foo(i8* %ptr2)
+  call void @llvm.memcpy.p0i8.p0i8.i32(i8* %ptr1, i8* %ptr2, i32 1, i1 false)
+  ret void
 }
