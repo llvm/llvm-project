@@ -72,4 +72,4 @@ define %funcref @get_funcref_from_table_with_var_offset2(i32 %i) {
   ret %funcref %ref
 }
 
-; CHECK: .globl funcref_table
+; CHECK: .tabletype funcref_table, funcref
