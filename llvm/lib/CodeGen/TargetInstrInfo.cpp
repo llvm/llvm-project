@@ -1417,3 +1417,16 @@ std::string TargetInstrInfo::createMIROperandComment(
 }
 
 TargetInstrInfo::PipelinerLoopInfo::~PipelinerLoopInfo() {}
+
+bool TargetInstrInfo::isMBBSafeToOutlineFrom(MachineBasicBlock &MBB,
+                                             unsigned &Flags) const {
+  // Some instrumentations create special TargetOpcode at the start which
+  // expands to special code sequences which must be present.
+  auto First = MBB.getFirstNonDebugInstr();
+  if (First != MBB.end() &&
+      (First->getOpcode() == TargetOpcode::FENTRY_CALL ||
+       First->getOpcode() == TargetOpcode::PATCHABLE_FUNCTION_ENTER))
+    return false;
+
+  return true;
+}
