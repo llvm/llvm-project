@@ -2786,12 +2786,8 @@ AMDGPUMachineCFGStructurizer::initializeSelectRegisters(MRT *MRT, unsigned Selec
     // Fixme: Move linearization creation to the original spot
     createLinearizedRegion(Region, SelectOut);
 
-    for (auto CI = Region->getChildren()->begin(),
-              CE = Region->getChildren()->end();
-         CI != CE; ++CI) {
-      InnerSelectOut =
-          initializeSelectRegisters((*CI), InnerSelectOut, MRI, TII);
-    }
+    for (auto *CI : *Region->getChildren())
+      InnerSelectOut = initializeSelectRegisters(CI, InnerSelectOut, MRI, TII);
     MRT->setBBSelectRegIn(InnerSelectOut);
     return InnerSelectOut;
   } else {

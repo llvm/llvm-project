@@ -219,6 +219,10 @@ if(ARM IN_LIST LLVM_TARGETS_TO_BUILD OR AArch64 IN_LIST LLVM_TARGETS_TO_BUILD)
   clang_generate_header(-gen-arm-mve-header arm_mve.td arm_mve.h)
   # Generate arm_cde.h
   clang_generate_header(-gen-arm-cde-header arm_cde.td arm_cde.h)
+  # Copy arm_neon_sve_bridge.h
+  copy_header_to_output_dir(${CMAKE_CURRENT_SOURCE_DIR}
+    arm_neon_sve_bridge.h
+  )
 endif()
 if(RISCV IN_LIST LLVM_TARGETS_TO_BUILD)
   # Generate riscv_vector.h

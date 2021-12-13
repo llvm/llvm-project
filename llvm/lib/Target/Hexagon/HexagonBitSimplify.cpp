@@ -995,8 +995,8 @@ bool DeadCodeElimination::runOnNode(MachineDomTreeNode *N) {
 
   MachineBasicBlock *B = N->getBlock();
   std::vector<MachineInstr*> Instrs;
-  for (auto I = B->rbegin(), E = B->rend(); I != E; ++I)
-    Instrs.push_back(&*I);
+  for (MachineInstr &MI : llvm::reverse(*B))
+    Instrs.push_back(&MI);
 
   for (auto MI : Instrs) {
     unsigned Opc = MI->getOpcode();
@@ -3084,8 +3084,7 @@ void HexagonLoopRescheduling::moveGroup(InstrGroup &G, MachineBasicBlock &LB,
     .addMBB(&LB);
   RegMap.insert(std::make_pair(G.Inp.Reg, PhiR));
 
-  for (unsigned i = G.Ins.size(); i > 0; --i) {
-    const MachineInstr *SI = G.Ins[i-1];
+  for (const MachineInstr *SI : llvm::reverse(G.Ins)) {
     unsigned DR = getDefReg(SI);
     const TargetRegisterClass *RC = MRI->getRegClass(DR);
     Register NewDR = MRI->createVirtualRegister(RC);
@@ -3156,20 +3155,20 @@ bool HexagonLoopRescheduling::processLoop(LoopCand &C) {
   // if that instruction could potentially be moved to the front of the loop:
   // the output of the loop cannot be used in a non-shuffling instruction
   // in this loop.
-  for (auto I = C.LB->rbegin(), E = C.LB->rend(); I != E; ++I) {
-    if (I->isTerminator())
+  for (MachineInstr &MI : llvm::reverse(*C.LB)) {
+    if (MI.isTerminator())
       continue;
-    if (I->isPHI())
+    if (MI.isPHI())
       break;
 
     RegisterSet Defs;
-    HBS::getInstrDefs(*I, Defs);
+    HBS::getInstrDefs(MI, Defs);
     if (Defs.count() != 1)
       continue;
     Register DefR = Defs.find_first();
     if (!DefR.isVirtual())
       continue;
-    if (!isBitShuffle(&*I, DefR))
+    if (!isBitShuffle(&MI, DefR))
       continue;
 
     bool BadUse = false;
@@ -3199,7 +3198,7 @@ bool HexagonLoopRescheduling::processLoop(LoopCand &C) {
 
     if (BadUse)
       continue;
-    ShufIns.push_back(&*I);
+    ShufIns.push_back(&MI);
   }
 
   // Partition the list of shuffling instructions into instruction groups,

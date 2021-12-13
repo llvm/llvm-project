@@ -1331,7 +1331,7 @@ func @cast_extent_tensor(%arg : tensor<*xf32>) -> tensor<3xindex> {
   return %1 : tensor<3xindex>
 }
 
-// ----
+// -----
 
 // CHECK-LABEL: max_same_arg
 // CHECK-SAME: (%[[SHAPE:.*]]: !shape.shape)
@@ -1341,7 +1341,7 @@ func @max_same_arg(%a: !shape.shape) -> !shape.shape {
   return %1 : !shape.shape
 }
 
-// ----
+// -----
 
 // CHECK-LABEL: min_same_arg
 // CHECK-SAME: (%[[SHAPE:.*]]: !shape.shape)
@@ -1350,7 +1350,7 @@ func @min_same_arg(%a: !shape.shape) -> !shape.shape {
   // CHECK: return %[[SHAPE]]
   return %1 : !shape.shape
 }
-// ----
+// -----
 
 // CHECK-LABEL: @cstr_broadcastable_folding
 func @cstr_broadcastable_folding(%arg : tensor<?x4xf32>) {

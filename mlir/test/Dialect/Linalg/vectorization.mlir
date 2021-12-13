@@ -684,7 +684,7 @@ func @pad_and_transfer_write_dynamic_static(
 
 func private @make_vector() -> tensor<12x13xf32>
 
-// CHECK-LABEL: func @pad_and_insert_slice
+// CHECK-LABEL: func @pad_and_insert_slice_source
 //  CHECK-SAME:     %[[ARG0:.*]]: tensor<5x6xf32>
 //   CHECK-NOT:   linalg.pad_tensor
 //   CHECK-DAG:   %[[C0:.*]] = arith.constant 0 : index
@@ -693,7 +693,7 @@ func private @make_vector() -> tensor<12x13xf32>
 //       CHECK:   %[[READ:.*]] = vector.transfer_read %[[ARG0]][%[[C0]], %[[C0]]], %[[C5]] : tensor<5x6xf32>, vector<7x9xf32>
 //       CHECK:   %[[WRITE:.*]] = vector.transfer_write %[[READ]], %[[VEC0]][%[[C0]], %[[C0]]] {in_bounds = [true, true]} : vector<7x9xf32>, tensor<12x13xf32>
 //       CHECK:   return %[[WRITE]]
-func @pad_and_insert_slice(
+func @pad_and_insert_slice_source(
     %arg0: tensor<5x6xf32>) -> tensor<12x13xf32> {
   %c0 = arith.constant 0 : index
   %c5 = arith.constant 5.0 : f32
@@ -704,6 +704,26 @@ func @pad_and_insert_slice(
   %1 = call @make_vector() : () -> tensor<12x13xf32>
   %r = tensor.insert_slice %0 into %1[0, 0][7, 9][1, 1] : tensor<7x9xf32> into tensor<12x13xf32>
   return %r : tensor<12x13xf32>
+}
+
+// -----
+
+func private @make_vector() -> tensor<12x13xf32>
+
+// CHECK-LABEL: func @pad_and_insert_slice_dest
+// Check the insert slice is not rewritten if the padded result is used by the destination operand.
+//       CHECK:   %[[T1:.*]] = call @make_vector() : () -> tensor<12x13xf32>
+//       CHECK:   = tensor.insert_slice %[[T1]] into
+func @pad_and_insert_slice_dest(
+    %arg0: tensor<1x5x6xf32>) -> tensor<1x12x13xf32> {
+  %c5 = arith.constant 5.0 : f32
+  %0 = linalg.pad_tensor %arg0 low[0, 0, 0] high[0, 7, 7] {
+    ^bb0(%arg2: index, %arg3: index, %arg4: index):
+      linalg.yield %c5 : f32
+  } : tensor<1x5x6xf32> to tensor<1x12x13xf32>
+  %1 = call @make_vector() : () -> tensor<12x13xf32>
+  %r = tensor.insert_slice %1 into %0[0, 0, 0][1, 12, 13][1, 1, 1] : tensor<12x13xf32> into tensor<1x12x13xf32>
+  return %r : tensor<1x12x13xf32>
 }
 
 // -----

@@ -824,8 +824,8 @@ bool Thumb1FrameLowering::spillCalleeSavedRegisters(
   ARMRegSet CopyRegs;     // Registers which can be used after pushing
                           // LoRegs for saving HiRegs.
 
-  for (unsigned i = CSI.size(); i != 0; --i) {
-    unsigned Reg = CSI[i-1].getReg();
+  for (const CalleeSavedInfo &I : llvm::reverse(CSI)) {
+    unsigned Reg = I.getReg();
 
     if (ARM::tGPRRegClass.contains(Reg) || Reg == ARM::LR) {
       LoRegsToSave[Reg] = true;
@@ -1021,8 +1021,7 @@ bool Thumb1FrameLowering::restoreCalleeSavedRegisters(
       BuildMI(MF, DL, TII.get(ARM::tPOP)).add(predOps(ARMCC::AL));
 
   bool NeedsPop = false;
-  for (unsigned i = CSI.size(); i != 0; --i) {
-    CalleeSavedInfo &Info = CSI[i-1];
+  for (CalleeSavedInfo &Info : llvm::reverse(CSI)) {
     unsigned Reg = Info.getReg();
 
     // High registers (excluding lr) have already been dealt with

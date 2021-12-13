@@ -4,6 +4,7 @@
 
 spv.module Logical GLSL450 requires #spv.vce<v1.0, [Shader], []> {
   // for (int i = 0; i < count; ++i) {}
+// CHECK-LABEL: @loop
   spv.func @loop(%count : i32) -> () "None" {
     %zero = spv.Constant 0: i32
     %one = spv.Constant 1: i32
@@ -59,9 +60,12 @@ spv.module Logical GLSL450 requires #spv.vce<v1.0, [Shader], []> {
 
 // -----
 
+// Single loop with block arguments
+
 spv.module Logical GLSL450 requires #spv.vce<v1.0, [Shader], []> {
   spv.GlobalVariable @GV1 bind(0, 0) : !spv.ptr<!spv.struct<(!spv.array<10 x f32, stride=4> [0])>, StorageBuffer>
   spv.GlobalVariable @GV2 bind(0, 1) : !spv.ptr<!spv.struct<(!spv.array<10 x f32, stride=4> [0])>, StorageBuffer>
+// CHECK-LABEL: @loop_kernel
   spv.func @loop_kernel() "None" {
     %0 = spv.mlir.addressof @GV1 : !spv.ptr<!spv.struct<(!spv.array<10 x f32, stride=4> [0])>, StorageBuffer>
     %1 = spv.Constant 0 : i32
@@ -111,6 +115,7 @@ spv.module Logical GLSL450 requires #spv.vce<v1.0, [Shader], []> {
   // for (int i = 0; i < count; ++i) {
   //   for (int j = 0; j < count; ++j) { }
   // }
+// CHECK-LABEL: @loop
   spv.func @loop(%count : i32) -> () "None" {
     %zero = spv.Constant 0: i32
     %one = spv.Constant 1: i32
@@ -207,3 +212,79 @@ spv.module Logical GLSL450 requires #spv.vce<v1.0, [Shader], []> {
   spv.EntryPoint "GLCompute" @main
 }
 
+
+// -----
+
+// Loop with selection in its header
+
+spv.module Physical64 OpenCL requires #spv.vce<v1.0, [Kernel, Linkage, Addresses, Int64], []> {
+// CHECK-LABEL:   @kernel
+// CHECK-SAME:    (%[[INPUT0:.+]]: i64)
+  spv.func @kernel(%input: i64) "None" {
+// CHECK-NEXT:     %[[VAR:.+]] = spv.Variable : !spv.ptr<i1, Function>
+// CHECK-NEXT:     spv.Branch ^[[BB0:.+]](%[[INPUT0]] : i64)
+// CHECK-NEXT:   ^[[BB0]](%[[INPUT1:.+]]: i64):
+    %cst0_i64 = spv.Constant 0 : i64
+    %true = spv.Constant true
+    %false = spv.Constant false
+// CHECK-NEXT:     spv.mlir.loop {
+    spv.mlir.loop {
+// CHECK-NEXT:       spv.Branch ^[[LOOP_HEADER:.+]](%[[INPUT1]] : i64)
+      spv.Branch ^loop_header(%input : i64)
+// CHECK-NEXT:     ^[[LOOP_HEADER]](%[[ARG1:.+]]: i64):
+    ^loop_header(%arg1: i64):
+// CHECK-NEXT:       spv.Branch ^[[LOOP_BODY:.+]]
+// CHECK-NEXT:     ^[[LOOP_BODY]]:
+// CHECK-NEXT:         %[[C0:.+]] = spv.Constant 0 : i64
+      %gt = spv.SGreaterThan %arg1, %cst0_i64 : i64
+// CHECK-NEXT:         %[[GT:.+]] = spv.SGreaterThan %[[ARG1]], %[[C0]] : i64
+// CHECK-NEXT:         spv.Branch ^[[BB1:.+]]
+// CHECK-NEXT:     ^[[BB1]]:
+      %var = spv.Variable : !spv.ptr<i1, Function>
+// CHECK-NEXT:       spv.mlir.selection {
+      spv.mlir.selection {
+// CHECK-NEXT:         spv.BranchConditional %[[GT]], ^[[THEN:.+]], ^[[ELSE:.+]]
+        spv.BranchConditional %gt, ^then, ^else
+// CHECK-NEXT:       ^[[THEN]]:
+      ^then:
+// CHECK-NEXT:         %true = spv.Constant true
+// CHECK-NEXT:         spv.Store "Function" %[[VAR]], %true : i1
+        spv.Store "Function" %var, %true : i1
+// CHECK-NEXT:         spv.Branch ^[[SELECTION_MERGE:.+]]
+        spv.Branch ^selection_merge
+// CHECK-NEXT:       ^[[ELSE]]:
+      ^else:
+// CHECK-NEXT:         %false = spv.Constant false
+// CHECK-NEXT:         spv.Store "Function" %[[VAR]], %false : i1
+        spv.Store "Function" %var, %false : i1
+// CHECK-NEXT:         spv.Branch ^[[SELECTION_MERGE]]
+        spv.Branch ^selection_merge
+// CHECK-NEXT:       ^[[SELECTION_MERGE]]:
+      ^selection_merge:
+// CHECK-NEXT:         spv.mlir.merge
+        spv.mlir.merge
+// CHECK-NEXT:       }
+      }
+// CHECK-NEXT:       %[[LOAD:.+]] = spv.Load "Function" %[[VAR]] : i1
+      %load = spv.Load "Function" %var : i1
+// CHECK-NEXT:       spv.BranchConditional %[[LOAD]], ^[[CONTINUE:.+]](%[[ARG1]] : i64), ^[[LOOP_MERGE:.+]]
+      spv.BranchConditional %load, ^continue(%arg1 : i64), ^loop_merge
+// CHECK-NEXT:     ^[[CONTINUE]](%[[ARG2:.+]]: i64):
+    ^continue(%arg2: i64):
+// CHECK-NEXT:       %[[C0:.+]] = spv.Constant 0 : i64
+// CHECK-NEXT:       %[[LT:.+]] = spv.SLessThan %[[ARG2]], %[[C0]] : i64
+      %lt = spv.SLessThan %arg2, %cst0_i64 : i64
+// CHECK-NEXT:       spv.Store "Function" %[[VAR]], %[[LT]] : i1
+      spv.Store "Function" %var, %lt : i1
+// CHECK-NEXT:       spv.Branch ^[[LOOP_HEADER]](%[[ARG2]] : i64)
+      spv.Branch ^loop_header(%arg2 : i64)
+// CHECK-NEXT:     ^[[LOOP_MERGE]]:
+    ^loop_merge:
+// CHECK-NEXT:       spv.mlir.merge
+      spv.mlir.merge
+// CHECK-NEXT:     }
+    }
+// CHECK-NEXT:     spv.Return
+    spv.Return
+  }
+}

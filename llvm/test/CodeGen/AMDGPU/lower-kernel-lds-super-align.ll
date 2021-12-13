@@ -1,5 +1,5 @@
-; RUN: opt -S -mtriple=amdgcn-- -amdgpu-lower-module-lds < %s | FileCheck --check-prefixes=CHECK,SUPER-ALIGN_ON %s
-; RUN: opt -S -mtriple=amdgcn-- -passes=amdgpu-lower-module-lds < %s | FileCheck --check-prefixes=CHECK,SUPER-ALIGN_ON %s
+; RUN: opt -S -mtriple=amdgcn-- -amdgpu-lower-module-lds --amdgpu-super-align-lds-globals=true < %s | FileCheck --check-prefixes=CHECK,SUPER-ALIGN_ON %s
+; RUN: opt -S -mtriple=amdgcn-- -passes=amdgpu-lower-module-lds --amdgpu-super-align-lds-globals=true < %s | FileCheck --check-prefixes=CHECK,SUPER-ALIGN_ON %s
 ; RUN: opt -S -mtriple=amdgcn-- -amdgpu-lower-module-lds --amdgpu-super-align-lds-globals=false < %s | FileCheck --check-prefixes=CHECK,SUPER-ALIGN_OFF %s
 ; RUN: opt -S -mtriple=amdgcn-- -passes=amdgpu-lower-module-lds --amdgpu-super-align-lds-globals=false < %s | FileCheck --check-prefixes=CHECK,SUPER-ALIGN_OFF %s
 
@@ -7,6 +7,10 @@
 ; CHECK: %llvm.amdgcn.kernel.k2.lds.t = type { i16, [2 x i8], i16 }
 ; CHECK: %llvm.amdgcn.kernel.k3.lds.t = type { [32 x i64], [32 x i32] }
 ; CHECK: %llvm.amdgcn.kernel.k4.lds.t = type { [2 x i32 addrspace(3)*] }
+
+; SUPER-ALIGN_ON: @lds.unused = addrspace(3) global i32 undef, align 4
+; SUPER-ALIGN_OFF: @lds.unused = addrspace(3) global i32 undef, align 2
+@lds.unused = addrspace(3) global i32 undef, align 2
 
 ; CHECK-NOT: @lds.1
 @lds.1 = internal unnamed_addr addrspace(3) global [32 x i8] undef, align 1

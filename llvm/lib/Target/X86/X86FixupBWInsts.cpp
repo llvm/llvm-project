@@ -457,14 +457,12 @@ void FixupBWInstPass::processBasicBlock(MachineFunction &MF,
   OptForSize = MF.getFunction().hasOptSize() ||
                llvm::shouldOptimizeForSize(&MBB, PSI, MBFI);
 
-  for (auto I = MBB.rbegin(); I != MBB.rend(); ++I) {
-    MachineInstr *MI = &*I;
-
-    if (MachineInstr *NewMI = tryReplaceInstr(MI, MBB))
-      MIReplacements.push_back(std::make_pair(MI, NewMI));
+  for (MachineInstr &MI : llvm::reverse(MBB)) {
+    if (MachineInstr *NewMI = tryReplaceInstr(&MI, MBB))
+      MIReplacements.push_back(std::make_pair(&MI, NewMI));
 
     // We're done with this instruction, update liveness for the next one.
-    LiveRegs.stepBackward(*MI);
+    LiveRegs.stepBackward(MI);
   }
 
   while (!MIReplacements.empty()) {

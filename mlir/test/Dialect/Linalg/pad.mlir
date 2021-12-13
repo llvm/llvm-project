@@ -277,6 +277,31 @@ func @different_padding_dynamic_sizes(%arg0: tensor<64x64xf32>,
 
 #map0 = affine_map<()[s0] -> (64, s0)>
 
+//      MATMUL:  different_padding_dynamic_rank
+func @different_padding_dynamic_rank(%arg0: tensor<64x64x1xf32>,
+                                     %iv0 : index) -> tensor<?x?xf32> {
+  %cst = arith.constant 0.0 : f32
+  %size = affine.min #map0()[%iv0]
+  %0 = tensor.extract_slice %arg0[0, 0, 0] [%size, %size, 1] [1, 1, 1] : tensor<64x64x1xf32> to tensor<?x?xf32>
+  %1 = linalg.pad_tensor %0 low[0, 0] high[%iv0, %iv0]  {
+    ^bb0(%arg3: index, %arg4: index):  // no predecessors
+      linalg.yield %cst : f32
+  } : tensor<?x?xf32> to tensor<64x64xf32>
+  %2 = linalg.fill(%cst, %1) : f32, tensor<64x64xf32> -> tensor<64x64xf32>
+  %3 = tensor.extract_slice %2[0, 0] [%size, %size] [1, 1] : tensor<64x64xf32> to tensor<?x?xf32>
+
+  // Different dynamic ranks prevent composing the paddings ([%size, %size, 1] vs [%size, %size]).
+  //      MATMUL:  = linalg.fill
+  //      MATMUL:  = linalg.pad_tensor
+  //      MATMUL:  = linalg.matmul
+  %4 = linalg.matmul ins(%3, %3 : tensor<?x?xf32>, tensor<?x?xf32>) outs(%3 : tensor<?x?xf32>) -> tensor<?x?xf32>
+  return %4 : tensor<?x?xf32>
+}
+
+// -----
+
+#map0 = affine_map<()[s0] -> (64, s0)>
+
 //      MATMUL:  different_padding_static_sizes
 func @different_padding_static_sizes(%arg0: tensor<62x62xf32>,
                                      %iv0 : index) -> tensor<?x?xf32> {
@@ -425,4 +450,25 @@ func @dynamic_input_padding_only(%arg0: tensor<24x12xf32>,
   %4 = linalg.matmul ins(%1, %2 : tensor<4x?xf32>, tensor<?x?xf32>) outs(%3 : tensor<4x?xf32>) -> tensor<4x?xf32>
   %5 = tensor.insert_slice %4 into %arg2[%iv0, %iv1] [4, %0] [1, 1] : tensor<4x?xf32> into tensor<24x25xf32>
   return %5 : tensor<24x25xf32>
+}
+
+// -----
+
+#map0 = affine_map<()[s0] -> (64, s0)>
+
+//      FILL:  rank_reducing
+// FILL-SAME:    %[[ARG0:[0-9a-zA-Z]*]]: tensor<1x64x1x64xf32>
+func @rank_reducing(%arg0: tensor<1x64x1x64xf32>,
+                    %iv0 : index) -> tensor<1x?x?xf32> {
+  %cst = arith.constant 0.0 : f32
+  %size = affine.min #map0()[%iv0]
+  %0 = tensor.extract_slice %arg0[0, 0, 0, 0] [1, %size, 1, %size] [1, 1, 1, 1] : tensor<1x64x1x64xf32> to tensor<1x?x?xf32>
+
+  // Check the fill is padded despite the rank-reducing slice operation.
+  //      FILL:  %[[T0:.*]] = linalg.pad_tensor
+  //      FILL:  %[[T1:.*]] = linalg.fill(%{{.*}}, %[[T0]])
+  // FILL-SAME:    tensor<1x64x64xf32>
+  //      FILL:  = tensor.extract_slice %[[T1]]
+  %1 = linalg.fill(%cst, %0) : f32, tensor<1x?x?xf32> -> tensor<1x?x?xf32>
+  return %1 : tensor<1x?x?xf32>
 }

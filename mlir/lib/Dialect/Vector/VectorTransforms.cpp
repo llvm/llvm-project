@@ -677,15 +677,16 @@ public:
 
   LogicalResult matchAndRewrite(vector::CreateMaskOp op,
                                 PatternRewriter &rewriter) const override {
-    auto loc = op.getLoc();
     auto dstType = op.getResult().getType().cast<VectorType>();
+    int64_t rank = dstType.getRank();
+    if (rank <= 1)
+      return rewriter.notifyMatchFailure(
+          op, "0-D and 1-D vectors are handled separately");
+
+    auto loc = op.getLoc();
     auto eltType = dstType.getElementType();
     int64_t dim = dstType.getDimSize(0);
-    int64_t rank = dstType.getRank();
     Value idx = op.getOperand(0);
-
-    if (rank == 1)
-      return failure(); // leave for lowering
 
     VectorType lowType =
         VectorType::get(dstType.getShape().drop_front(), eltType);
@@ -2717,6 +2718,8 @@ static Value createCastToIndexLike(PatternRewriter &rewriter, Location loc,
 // Helper that returns a vector comparison that constructs a mask:
 //     mask = [0,1,..,n-1] + [o,o,..,o] < [b,b,..,b]
 //
+// If `dim == 0` then the result will be a 0-D vector.
+//
 // NOTE: The LLVM::GetActiveLaneMaskOp intrinsic would provide an alternative,
 //       much more compact, IR for this operation, but LLVM eventually
 //       generates more elaborate instructions for this intrinsic since it
@@ -2728,19 +2731,23 @@ static Value buildVectorComparison(PatternRewriter &rewriter, Operation *op,
   // If we can assume all indices fit in 32-bit, we perform the vector
   // comparison in 32-bit to get a higher degree of SIMD parallelism.
   // Otherwise we perform the vector comparison using 64-bit indices.
-  Value indices;
-  Type idxType;
-  if (indexOptimizations) {
-    indices = rewriter.create<arith::ConstantOp>(
-        loc, rewriter.getI32VectorAttr(
-                 llvm::to_vector<4>(llvm::seq<int32_t>(0, dim))));
-    idxType = rewriter.getI32Type();
+  Type idxType =
+      indexOptimizations ? rewriter.getI32Type() : rewriter.getI64Type();
+  DenseIntElementsAttr indicesAttr;
+  if (dim == 0 && indexOptimizations) {
+    indicesAttr = DenseIntElementsAttr::get(
+        VectorType::get(ArrayRef<int64_t>{}, idxType), ArrayRef<int32_t>{0});
+  } else if (dim == 0) {
+    indicesAttr = DenseIntElementsAttr::get(
+        VectorType::get(ArrayRef<int64_t>{}, idxType), ArrayRef<int64_t>{0});
+  } else if (indexOptimizations) {
+    indicesAttr = rewriter.getI32VectorAttr(
+        llvm::to_vector<4>(llvm::seq<int32_t>(0, dim)));
   } else {
-    indices = rewriter.create<arith::ConstantOp>(
-        loc, rewriter.getI64VectorAttr(
-                 llvm::to_vector<4>(llvm::seq<int64_t>(0, dim))));
-    idxType = rewriter.getI64Type();
+    indicesAttr = rewriter.getI64VectorAttr(
+        llvm::to_vector<4>(llvm::seq<int64_t>(0, dim)));
   }
+  Value indices = rewriter.create<arith::ConstantOp>(loc, indicesAttr);
   // Add in an offset if requested.
   if (off) {
     Value o = createCastToIndexLike(rewriter, loc, idxType, *off);
@@ -2806,7 +2813,7 @@ private:
   const bool indexOptimizations;
 };
 
-/// Conversion pattern for a vector.create_mask (1-D only).
+/// Conversion pattern for a `vector.create_mask` (0-D and 1-D only).
 class VectorCreateMaskOpConversion
     : public OpRewritePattern<vector::CreateMaskOp> {
 public:
@@ -2819,13 +2826,13 @@ public:
                                 PatternRewriter &rewriter) const override {
     auto dstType = op.getType();
     int64_t rank = dstType.getRank();
-    if (rank == 1) {
-      rewriter.replaceOp(
-          op, buildVectorComparison(rewriter, op, indexOptimizations,
-                                    dstType.getDimSize(0), op.getOperand(0)));
-      return success();
-    }
-    return failure();
+    if (rank > 1)
+      return failure();
+    rewriter.replaceOp(
+        op, buildVectorComparison(rewriter, op, indexOptimizations,
+                                  rank == 0 ? 0 : dstType.getDimSize(0),
+                                  op.getOperand(0)));
+    return success();
   }
 
 private:
