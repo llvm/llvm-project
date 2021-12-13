@@ -1,0 +1,27 @@
+# This test uses the local debuginfod cache to test the symbolizer integration
+# with the debuginfod client.
+RUN: rm -rf %t
+RUN: mkdir %t
+
+# Produce a stripped copy of the input binary addr.exe
+RUN: llvm-objcopy --strip-debug %p/Inputs/addr.exe %t/addr.exe
+
+# Symbolizing the stripped binary should fail.
+RUN: env DEBUGINFOD_CACHE_PATH=%t llvm-symbolizer --print-address \
+RUN:   --obj=%t/addr.exe 0x40054d | FileCheck %s --check-prefix=NOTFOUND
+NOTFOUND: 0x40054d
+NOTFOUND-NEXT: main
+NOTFOUND-NEXT: ??:0:0
+
+# Use llvm-objcopy to write the debuginfo of the addr.exe binary to an
+# appropriately-named file in the llvm debuginfod cache. The filename is
+# determined by the debuginfod client's caching scheme, so it is manually
+# specified here as llvmcache-98...19
+RUN: llvm-objcopy --keep-section=.debug_info %p/Inputs/addr.exe \
+RUN:   %t/llvmcache-9800707741016212219
+
+# The symbolizer should call the debuginfod client library, which finds the
+# debuginfo placed in the cache, enabling symbolization of the address.
+RUN: env DEBUGINFOD_CACHE_PATH=%t llvm-symbolizer \
+RUN:   --obj=%t/addr.exe 0x40054d | FileCheck %s --check-prefix=FOUND
+FOUND: {{[/\]+}}tmp{{[/\]+}}x.c:14:0
