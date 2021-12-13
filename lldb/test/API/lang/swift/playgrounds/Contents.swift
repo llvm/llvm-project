@@ -17,7 +17,7 @@ let b = 5
 
 a + b
 
-@available(macOS 10.11, iOS 8.0, tvOS 8.0, watchOS 6.0, *) func newAPI() -> Int {
+@available(macOS 11.1, iOS 8.0, tvOS 8.0, watchOS 6.0, *) func newAPI() -> Int {
   return 11
 }
 
