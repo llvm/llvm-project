@@ -15,7 +15,6 @@ static_library("COFF") {
     "//llvm/lib/DebugInfo/CodeView",
     "//llvm/lib/DebugInfo/MSF",
     "//llvm/lib/DebugInfo/PDB",
-    "//llvm/lib/DebugInfo/Symbolize",
     "//llvm/lib/IR",
     "//llvm/lib/LTO",
     "//llvm/lib/MC",
