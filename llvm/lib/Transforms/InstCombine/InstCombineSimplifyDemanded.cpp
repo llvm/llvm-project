@@ -1595,12 +1595,6 @@ Value *InstCombinerImpl::SimplifyDemandedVectorElts(Value *V,
     simplifyAndSetOp(I, 0, DemandedElts, UndefElts);
     simplifyAndSetOp(I, 1, DemandedElts, UndefElts2);
 
-    // Any change to an instruction with potential poison must clear those flags
-    // because we can not guarantee those constraints now. Other analysis may
-    // determine that it is safe to re-apply the flags.
-    if (MadeChange)
-      BO->dropPoisonGeneratingFlags();
-
     // Output elements are undefined if both are undefined. Consider things
     // like undef & 0. The result is known zero, not undef.
     UndefElts &= UndefElts2;
