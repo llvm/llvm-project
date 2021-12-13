@@ -168,10 +168,10 @@ std::recursive_mutex g_log_mutex;
 
 /// Similar to LLDB_LOG, but with richer contextual information.
 #define LOG_PRINTF(CHANNEL, FMT, ...)                                          \
-  LOG_PRINTF_IMPL(lldb_private::GetLogIfAllCategoriesSet(CHANNEL), false, FMT, \
+  LOG_PRINTF_IMPL(lldb_private::GetLogIfAnyCategoriesSet(CHANNEL), false, FMT, \
                   ##__VA_ARGS__)
 #define LOG_VERBOSE_PRINTF(CHANNEL, FMT, ...)                                  \
-  LOG_PRINTF_IMPL(lldb_private::GetLogIfAllCategoriesSet(CHANNEL), true, FMT,  \
+  LOG_PRINTF_IMPL(lldb_private::GetLogIfAnyCategoriesSet(CHANNEL), true, FMT,  \
                   ##__VA_ARGS__)
 #define LOG_PRINTF_IMPL(CHANNEL, VERBOSE, FMT, ...)                            \
   do {                                                                         \
@@ -3843,13 +3843,14 @@ void SwiftASTContext::LoadModule(swift::ModuleDecl *swift_module,
       return;
 
     swift::LibraryKind library_kind = link_lib.getKind();
-
-    LOG_PRINTF(LIBLLDB_LOG_TYPES, "Loading link library \"%s\" of kind: %d.",
-               library_name.c_str(), library_kind);
+    LOG_PRINTF(LIBLLDB_LOG_TYPES | LIBLLDB_LOG_EXPRESSIONS,
+               "Loading linked %s \"%s\".",
+               library_kind == swift::LibraryKind::Framework ? "framework"
+                                                             : "library",
+               library_name.c_str());
 
     switch (library_kind) {
     case swift::LibraryKind::Framework: {
-
       // First make sure the library isn't already loaded. Since this
       // is a framework, we make sure the file name and the framework
       // name are the same, and that we are contained in
@@ -8298,7 +8299,7 @@ static swift::ModuleDecl *LoadOneModule(const SourceModule &module,
   error.Clear();
   ConstString toplevel = module.path.front();
   const std::string &m_description = swift_ast_context.GetDescription();
-  LOG_PRINTF(LIBLLDB_LOG_EXPRESSIONS, "Importing module %s",
+  LOG_PRINTF(LIBLLDB_LOG_TYPES | LIBLLDB_LOG_EXPRESSIONS, "Importing module %s",
              toplevel.AsCString());
   swift::ModuleDecl *swift_module = nullptr;
   lldb::StackFrameSP this_frame_sp(stack_frame_wp.lock());
@@ -8323,7 +8324,7 @@ static swift::ModuleDecl *LoadOneModule(const SourceModule &module,
     // checked that DWARF debug info for this module actually exists
     // and there is no good mechanism to do so ahead of time.
     // We do know that we never load the stdlib from DWARF though.
-    LOG_PRINTF(LIBLLDB_LOG_EXPRESSIONS,
+    LOG_PRINTF(LIBLLDB_LOG_TYPES | LIBLLDB_LOG_EXPRESSIONS,
                "\"Imported\" module %s via SwiftDWARFImporterDelegate "
                "(no Swift AST or Clang module found)",
                toplevel.AsCString());
@@ -8333,20 +8334,23 @@ static swift::ModuleDecl *LoadOneModule(const SourceModule &module,
   }
 
   if (!swift_module || !error.Success() || swift_ast_context.HasFatalErrors()) {
-    LOG_PRINTF(LIBLLDB_LOG_EXPRESSIONS, "Couldn't import module %s: %s",
-               toplevel.AsCString(), error.AsCString());
+    LOG_PRINTF(LIBLLDB_LOG_TYPES | LIBLLDB_LOG_EXPRESSIONS,
+               "Couldn't import module %s: %s", toplevel.AsCString(),
+               error.AsCString());
 
     if (!swift_module || swift_ast_context.HasFatalErrors()) {
       return nullptr;
     }
   }
 
-  if (lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS)) {
+  if (lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_TYPES |
+                                             LIBLLDB_LOG_EXPRESSIONS)) {
     StreamString ss;
     for (swift::FileUnit *file_unit : swift_module->getFiles())
       DescribeFileUnit(ss, file_unit);
-    LOG_PRINTF(LIBLLDB_LOG_EXPRESSIONS, "Imported module %s from {%s}",
-               module.path.front().AsCString(), ss.GetData());
+    LOG_PRINTF(LIBLLDB_LOG_TYPES | LIBLLDB_LOG_EXPRESSIONS,
+               "Imported module %s from {%s}", module.path.front().AsCString(),
+               ss.GetData());
   }
   return swift_module;
 }
@@ -8414,7 +8418,7 @@ bool SwiftASTContext::CacheUserImports(SwiftASTContext &swift_ast_context,
         SourceModule module_info;
         ConstString module_const_str(module_name);
         module_info.path.push_back(module_const_str);
-        LOG_PRINTF(LIBLLDB_LOG_EXPRESSIONS,
+        LOG_PRINTF(LIBLLDB_LOG_TYPES | LIBLLDB_LOG_EXPRESSIONS,
                    "Performing auto import on found module: %s.\n",
                    module_name.c_str());
         if (!LoadOneModule(module_info, swift_ast_context, stack_frame_wp,
