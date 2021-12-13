@@ -139,11 +139,17 @@ struct scoped_test_env
         int ret = std::system(cmd.c_str());
         assert(ret == 0);
 #else
+#if defined(__MVS__)
+        // The behaviour of chmod -R on z/OS prevents recursive
+        // permission change for directories that do not have read permission.
+        std::string cmd = "find  " + test_root.string() + " -exec chmod 777 {} \\;";
+#else
         std::string cmd = "chmod -R 777 " + test_root.string();
+#endif // defined(__MVS__)
         int ret = std::system(cmd.c_str());
         assert(ret == 0);
 
-        cmd = "rm -r " + test_root.string();
+        cmd = "rm -rf " + test_root.string();
         ret = std::system(cmd.c_str());
         assert(ret == 0);
 #endif
