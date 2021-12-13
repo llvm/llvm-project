@@ -126,7 +126,7 @@ namespace {
 class ConvertElementwiseToLinalgPass
     : public ConvertElementwiseToLinalgBase<ConvertElementwiseToLinalgPass> {
 
-  void runOnFunction() final {
+  void runOnOperation() final {
     auto func = getOperation();
     auto *context = &getContext();
     ConversionTarget target(*context);
@@ -143,7 +143,6 @@ class ConvertElementwiseToLinalgPass
 };
 } // namespace
 
-std::unique_ptr<OperationPass<FuncOp>>
-mlir::createConvertElementwiseToLinalgPass() {
+std::unique_ptr<Pass> mlir::createConvertElementwiseToLinalgPass() {
   return std::make_unique<ConvertElementwiseToLinalgPass>();
 }

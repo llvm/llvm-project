@@ -19,9 +19,9 @@
 
 namespace mlir {
 
-std::unique_ptr<OperationPass<FuncOp>> createConvertElementwiseToLinalgPass();
+std::unique_ptr<Pass> createConvertElementwiseToLinalgPass();
 
-std::unique_ptr<OperationPass<FuncOp>> createLinalgFoldUnitExtentDimsPass();
+std::unique_ptr<Pass> createLinalgFoldUnitExtentDimsPass();
 
 std::unique_ptr<Pass> createLinalgElementwiseOpFusionPass();
 std::unique_ptr<Pass> createFoldReshapeOpsByLinearizationPass();
