@@ -3922,3 +3922,47 @@ define amdgpu_kernel void @image_sample_a16_2darray_nnan(<4 x float> addrspace(1
   store <4 x float> %res, <4 x float> addrspace(1)* %out
   ret void
 }
+
+; --------------------------------------------------------------------
+; llvm.amdgcn.is.shared
+; --------------------------------------------------------------------
+
+declare i1 @llvm.amdgcn.is.shared(i8*) nounwind readnone
+
+define i1 @test_is_shared_null() nounwind {
+; CHECK-LABEL: @test_is_shared_null(
+; CHECK-NEXT:    ret i1 false
+;
+  %val = call i1 @llvm.amdgcn.is.shared(i8* null)
+  ret i1 %val
+}
+
+define i1 @test_is_shared_undef() nounwind {
+; CHECK-LABEL: @test_is_shared_undef(
+; CHECK-NEXT:    ret i1 undef
+;
+  %val = call i1 @llvm.amdgcn.is.shared(i8* undef)
+  ret i1 %val
+}
+
+; --------------------------------------------------------------------
+; llvm.amdgcn.is.private
+; --------------------------------------------------------------------
+
+declare i1 @llvm.amdgcn.is.private(i8*) nounwind readnone
+
+define i1 @test_is_private_null() nounwind {
+; CHECK-LABEL: @test_is_private_null(
+; CHECK-NEXT:    ret i1 false
+;
+  %val = call i1 @llvm.amdgcn.is.private(i8* null)
+  ret i1 %val
+}
+
+define i1 @test_is_private_undef() nounwind {
+; CHECK-LABEL: @test_is_private_undef(
+; CHECK-NEXT:    ret i1 undef
+;
+  %val = call i1 @llvm.amdgcn.is.private(i8* undef)
+  ret i1 %val
+}

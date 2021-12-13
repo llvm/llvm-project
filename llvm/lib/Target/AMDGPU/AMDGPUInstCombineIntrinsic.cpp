@@ -892,6 +892,15 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
     }
     break;
   }
+  case Intrinsic::amdgcn_is_shared:
+  case Intrinsic::amdgcn_is_private: {
+    if (isa<UndefValue>(II.getArgOperand(0)))
+      return IC.replaceInstUsesWith(II, UndefValue::get(II.getType()));
+
+    if (isa<ConstantPointerNull>(II.getArgOperand(0)))
+      return IC.replaceInstUsesWith(II, ConstantInt::getFalse(II.getType()));
+    break;
+  }
   default: {
     if (const AMDGPU::ImageDimIntrinsicInfo *ImageDimIntr =
             AMDGPU::getImageDimIntrinsicInfo(II.getIntrinsicID())) {
