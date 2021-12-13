@@ -196,6 +196,27 @@ vminps            %zmm16, %zmm17, %zmm19 {z}{k1}
 vminps            (%rax), %zmm17, %zmm19 {z}{k1}
 vminps            (%rax){1to16}, %zmm17, %zmm19 {z}{k1}
 
+vmovddup          %zmm16, %zmm19
+vmovddup          (%rax), %zmm19
+vmovddup          %zmm16, %zmm19 {k1}
+vmovddup          (%rax), %zmm19 {k1}
+vmovddup          %zmm16, %zmm19 {z}{k1}
+vmovddup          (%rax), %zmm19 {z}{k1}
+
+vmovshdup         %zmm16, %zmm19
+vmovshdup         (%rax), %zmm19
+vmovshdup         %zmm16, %zmm19 {k1}
+vmovshdup         (%rax), %zmm19 {k1}
+vmovshdup         %zmm16, %zmm19 {z}{k1}
+vmovshdup         (%rax), %zmm19 {z}{k1}
+
+vmovsldup         %zmm16, %zmm19
+vmovsldup         (%rax), %zmm19
+vmovsldup         %zmm16, %zmm19 {k1}
+vmovsldup         (%rax), %zmm19 {k1}
+vmovsldup         %zmm16, %zmm19 {z}{k1}
+vmovsldup         (%rax), %zmm19 {z}{k1}
+
 vmulpd            %zmm16, %zmm17, %zmm19
 vmulpd            (%rax), %zmm17, %zmm19
 vmulpd            (%rax){1to8}, %zmm17, %zmm19
@@ -947,6 +968,24 @@ vunpcklps         (%rax){1to16}, %zmm17, %zmm19 {z}{k1}
 # CHECK-NEXT:  1      3     1.00                        vminps	%zmm16, %zmm17, %zmm19 {%k1} {z}
 # CHECK-NEXT:  2      10    1.00    *                   vminps	(%rax), %zmm17, %zmm19 {%k1} {z}
 # CHECK-NEXT:  2      10    1.00    *                   vminps	(%rax){1to16}, %zmm17, %zmm19 {%k1} {z}
+# CHECK-NEXT:  1      1     1.00                        vmovddup	%zmm16, %zmm19
+# CHECK-NEXT:  2      8     1.00    *                   vmovddup	(%rax), %zmm19
+# CHECK-NEXT:  1      1     1.00                        vmovddup	%zmm16, %zmm19 {%k1}
+# CHECK-NEXT:  2      8     1.00    *                   vmovddup	(%rax), %zmm19 {%k1}
+# CHECK-NEXT:  1      1     1.00                        vmovddup	%zmm16, %zmm19 {%k1} {z}
+# CHECK-NEXT:  2      8     1.00    *                   vmovddup	(%rax), %zmm19 {%k1} {z}
+# CHECK-NEXT:  1      1     1.00                        vmovshdup	%zmm16, %zmm19
+# CHECK-NEXT:  2      8     1.00    *                   vmovshdup	(%rax), %zmm19
+# CHECK-NEXT:  1      1     1.00                        vmovshdup	%zmm16, %zmm19 {%k1}
+# CHECK-NEXT:  2      8     1.00    *                   vmovshdup	(%rax), %zmm19 {%k1}
+# CHECK-NEXT:  1      1     1.00                        vmovshdup	%zmm16, %zmm19 {%k1} {z}
+# CHECK-NEXT:  2      8     1.00    *                   vmovshdup	(%rax), %zmm19 {%k1} {z}
+# CHECK-NEXT:  1      1     1.00                        vmovsldup	%zmm16, %zmm19
+# CHECK-NEXT:  2      8     1.00    *                   vmovsldup	(%rax), %zmm19
+# CHECK-NEXT:  1      1     1.00                        vmovsldup	%zmm16, %zmm19 {%k1}
+# CHECK-NEXT:  2      8     1.00    *                   vmovsldup	(%rax), %zmm19 {%k1}
+# CHECK-NEXT:  1      1     1.00                        vmovsldup	%zmm16, %zmm19 {%k1} {z}
+# CHECK-NEXT:  2      8     1.00    *                   vmovsldup	(%rax), %zmm19 {%k1} {z}
 # CHECK-NEXT:  1      5     1.00                        vmulpd	%zmm16, %zmm17, %zmm19
 # CHECK-NEXT:  2      12    1.00    *                   vmulpd	(%rax), %zmm17, %zmm19
 # CHECK-NEXT:  2      12    1.00    *                   vmulpd	(%rax){1to8}, %zmm17, %zmm19
@@ -1464,7 +1503,7 @@ vunpcklps         (%rax){1to16}, %zmm17, %zmm19 {z}{k1}
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6.0]  [6.1]
-# CHECK-NEXT:  -     1506.00 138.67 201.67  -    408.67 215.00 215.00
+# CHECK-NEXT:  -     1506.00 138.67 201.67  -    426.67 219.50 219.50
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6.0]  [6.1]  Instructions:
@@ -1640,6 +1679,24 @@ vunpcklps         (%rax){1to16}, %zmm17, %zmm19 {z}{k1}
 # CHECK-NEXT:  -      -      -     1.00    -      -      -      -     vminps	%zmm16, %zmm17, %zmm19 {%k1} {z}
 # CHECK-NEXT:  -      -      -     1.00    -      -     0.50   0.50   vminps	(%rax), %zmm17, %zmm19 {%k1} {z}
 # CHECK-NEXT:  -      -      -     1.00    -      -     0.50   0.50   vminps	(%rax){1to16}, %zmm17, %zmm19 {%k1} {z}
+# CHECK-NEXT:  -      -      -      -      -     1.00    -      -     vmovddup	%zmm16, %zmm19
+# CHECK-NEXT:  -      -      -      -      -     1.00   0.50   0.50   vmovddup	(%rax), %zmm19
+# CHECK-NEXT:  -      -      -      -      -     1.00    -      -     vmovddup	%zmm16, %zmm19 {%k1}
+# CHECK-NEXT:  -      -      -      -      -     1.00   0.50   0.50   vmovddup	(%rax), %zmm19 {%k1}
+# CHECK-NEXT:  -      -      -      -      -     1.00    -      -     vmovddup	%zmm16, %zmm19 {%k1} {z}
+# CHECK-NEXT:  -      -      -      -      -     1.00   0.50   0.50   vmovddup	(%rax), %zmm19 {%k1} {z}
+# CHECK-NEXT:  -      -      -      -      -     1.00    -      -     vmovshdup	%zmm16, %zmm19
+# CHECK-NEXT:  -      -      -      -      -     1.00   0.50   0.50   vmovshdup	(%rax), %zmm19
+# CHECK-NEXT:  -      -      -      -      -     1.00    -      -     vmovshdup	%zmm16, %zmm19 {%k1}
+# CHECK-NEXT:  -      -      -      -      -     1.00   0.50   0.50   vmovshdup	(%rax), %zmm19 {%k1}
+# CHECK-NEXT:  -      -      -      -      -     1.00    -      -     vmovshdup	%zmm16, %zmm19 {%k1} {z}
+# CHECK-NEXT:  -      -      -      -      -     1.00   0.50   0.50   vmovshdup	(%rax), %zmm19 {%k1} {z}
+# CHECK-NEXT:  -      -      -      -      -     1.00    -      -     vmovsldup	%zmm16, %zmm19
+# CHECK-NEXT:  -      -      -      -      -     1.00   0.50   0.50   vmovsldup	(%rax), %zmm19
+# CHECK-NEXT:  -      -      -      -      -     1.00    -      -     vmovsldup	%zmm16, %zmm19 {%k1}
+# CHECK-NEXT:  -      -      -      -      -     1.00   0.50   0.50   vmovsldup	(%rax), %zmm19 {%k1}
+# CHECK-NEXT:  -      -      -      -      -     1.00    -      -     vmovsldup	%zmm16, %zmm19 {%k1} {z}
+# CHECK-NEXT:  -      -      -      -      -     1.00   0.50   0.50   vmovsldup	(%rax), %zmm19 {%k1} {z}
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -     vmulpd	%zmm16, %zmm17, %zmm19
 # CHECK-NEXT:  -      -     1.00    -      -      -     0.50   0.50   vmulpd	(%rax), %zmm17, %zmm19
 # CHECK-NEXT:  -      -     1.00    -      -      -     0.50   0.50   vmulpd	(%rax){1to8}, %zmm17, %zmm19
