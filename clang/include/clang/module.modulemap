@@ -33,6 +33,7 @@ module Clang_Basic {
 
   textual header "Basic/AArch64SVEACLETypes.def"
   textual header "Basic/BuiltinsAArch64.def"
+  textual header "Basic/BuiltinsAArch64NeonSVEBridge.def"
   textual header "Basic/BuiltinsAMDGPU.def"
   textual header "Basic/BuiltinsARM.def"
   textual header "Basic/BuiltinsBPF.def"
