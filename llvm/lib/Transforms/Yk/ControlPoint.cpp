@@ -203,8 +203,8 @@ void createControlPoint(Module &Mod, Function *F, std::vector<Value *> LiveVars,
   for (Value *LV : LiveVars) {
     TypeParams.push_back(LV->getType());
   }
-  FunctionType *FType =
-      FunctionType::get(YkCtrlPointStruct, {YkCtrlPointStruct}, false);
+  FunctionType *FType = FunctionType::get(
+      Type::getVoidTy(Context), {YkCtrlPointStruct->getPointerTo()}, false);
   Value *JITActionPtr =
       Builder.CreateIntToPtr(JITAction, Type::getInt8PtrTy(Context));
   Value *CastTrace = Builder.CreateBitCast(JITActionPtr, FType->getPointerTo());
@@ -226,16 +226,9 @@ void createControlPoint(Module &Mod, Function *F, std::vector<Value *> LiveVars,
   createJITStatePrint(Builder, &Mod, "stop-tracing");
   Builder.CreateBr(BBReturn);
 
-  // Create return block. Returns the unchanged YkCtrlPointStruct if no
-  // compiled trace was executed, otherwise return a new YkCtrlPointStruct
-  // which contains the changed interpreter state.
+  // Populate the return block.
   Builder.SetInsertPoint(BBReturn);
-  Value *YkCtrlPointVars = F->getArg(1);
-  PHINode *Phi = Builder.CreatePHI(YkCtrlPointStruct, 2);
-  Phi->addIncoming(YkCtrlPointVars, CtrlPointEntry);
-  Phi->addIncoming(YkCtrlPointVars, BBStartTracing);
-  Phi->addIncoming(YkCtrlPointVars, BBStopTracing);
-  Builder.CreateRet(Phi);
+  Builder.CreateRetVoid();
 }
 
 /// Extract all live variables that need to be passed into the control point.
@@ -278,9 +271,6 @@ public:
       return false;
     }
 
-    // Replace old control point call.
-    IRBuilder<> Builder(OldCtrlPointCall);
-
     // Get function containing the control point.
     Function *Caller = OldCtrlPointCall->getFunction();
 
@@ -305,27 +295,36 @@ public:
     for (Value *V : LiveVals) {
       TypeParams.push_back(V->getType());
     }
-    StructType *CtrlPointReturnTy =
+    StructType *CtrlPointVarsTy =
         StructType::create(TypeParams, "YkCtrlPointVars");
 
     // Create the new control point.
     Type *YkLocTy = OldCtrlPointCall->getArgOperand(0)->getType();
-    FunctionType *FType = FunctionType::get(
-        CtrlPointReturnTy, {YkLocTy, CtrlPointReturnTy}, false);
+    FunctionType *FType =
+        FunctionType::get(Type::getVoidTy(Context),
+                          {YkLocTy, CtrlPointVarsTy->getPointerTo()}, false);
     Function *NF = Function::Create(FType, GlobalVariable::ExternalLinkage,
                                     YK_NEW_CONTROL_POINT, M);
 
-    // Instantiate the YkCtrlPointStruct to pass in to the control point.
-    Value *InputStruct = cast<Value>(Constant::getNullValue(CtrlPointReturnTy));
+    // At the top of the function, instantiate a `YkCtrlPointStruct` to pass in
+    // to the control point. We do so on the stack, so that we can pass the
+    // struct by pointer.
+    IRBuilder<> Builder(Caller->getEntryBlock().getFirstNonPHI());
+    Value *InputStruct = Builder.CreateAlloca(CtrlPointVarsTy, 0, "");
+
+    Builder.SetInsertPoint(OldCtrlPointCall);
     unsigned LvIdx = 0;
     for (Value *LV : LiveVals) {
-      InputStruct = Builder.CreateInsertValue(InputStruct, LV, LvIdx);
+      Value *FieldPtr =
+          Builder.CreateGEP(CtrlPointVarsTy, InputStruct,
+                            {Builder.getInt32(0), Builder.getInt32(LvIdx)});
+      Builder.CreateStore(LV, FieldPtr);
       assert(LvIdx != UINT_MAX);
       LvIdx++;
     }
 
     // Insert call to the new control point.
-    CallInst *CtrlPointRet = Builder.CreateCall(
+    Instruction *NewCtrlPointCallInst = Builder.CreateCall(
         NF, {OldCtrlPointCall->getArgOperand(0), InputStruct});
 
     // Once the control point returns we need to extract the (potentially
@@ -334,9 +333,12 @@ public:
     // replacing all future references with the new values.
     LvIdx = 0;
     for (Value *LV : LiveVals) {
-      Value *New = Builder.CreateExtractValue(cast<Value>(CtrlPointRet), LvIdx);
+      Value *FieldPtr =
+          Builder.CreateGEP(CtrlPointVarsTy, InputStruct,
+                            {Builder.getInt32(0), Builder.getInt32(LvIdx)});
+      Value *New = Builder.CreateLoad(TypeParams[LvIdx], FieldPtr);
       LV->replaceUsesWithIf(
-          New, [&](Use &U) { return DT.dominates(CtrlPointRet, U); });
+          New, [&](Use &U) { return DT.dominates(NewCtrlPointCallInst, U); });
       assert(LvIdx != UINT_MAX);
       LvIdx++;
     }
@@ -345,7 +347,7 @@ public:
     OldCtrlPointCall->eraseFromParent();
 
     // Generate new control point logic.
-    createControlPoint(M, NF, LiveVals, CtrlPointReturnTy, YkLocTy);
+    createControlPoint(M, NF, LiveVals, CtrlPointVarsTy, YkLocTy);
     return true;
   }
 };
