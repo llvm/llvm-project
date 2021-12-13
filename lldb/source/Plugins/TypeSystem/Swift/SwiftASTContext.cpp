@@ -7947,21 +7947,24 @@ std::string SwiftASTContext::ImportName(const clang::NamedDecl *clang_decl) {
 }
 
 void SwiftASTContext::DumpTypeDescription(opaque_compiler_type_t type,
-                                          lldb::DescriptionLevel level) {
+                                          lldb::DescriptionLevel level,
+                                          ExecutionContextScope *) {
   StreamFile s(stdout, false);
   DumpTypeDescription(type, &s, level);
 }
 
 void SwiftASTContext::DumpTypeDescription(opaque_compiler_type_t type,
                                           Stream *s,
-                                          lldb::DescriptionLevel level) {
+                                          lldb::DescriptionLevel level,
+                                          ExecutionContextScope *) {
   DumpTypeDescription(type, s, false, true, level);
 }
 
 void SwiftASTContext::DumpTypeDescription(opaque_compiler_type_t type,
                                           bool print_help_if_available,
                                           bool print_extensions_if_available,
-                                          lldb::DescriptionLevel level) {
+                                          lldb::DescriptionLevel level,
+                                          ExecutionContextScope *) {
   StreamFile s(stdout, false);
   DumpTypeDescription(type, &s, print_help_if_available,
                       print_extensions_if_available, level);
@@ -7999,7 +8002,8 @@ void SwiftASTContext::DumpTypeDescription(opaque_compiler_type_t type,
                                           Stream *s,
                                           bool print_help_if_available,
                                           bool print_extensions_if_available,
-                                          lldb::DescriptionLevel level) {
+                                          lldb::DescriptionLevel level,
+                                          ExecutionContextScope *) {
   LLDB_SCOPED_TIMER();
   const auto initial_written_bytes = s->GetWrittenBytes();
 

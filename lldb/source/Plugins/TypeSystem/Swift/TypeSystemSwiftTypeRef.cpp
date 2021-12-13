@@ -15,6 +15,7 @@
 
 #include "Plugins/LanguageRuntime/Swift/SwiftLanguageRuntime.h"
 #include "lldb/Core/DumpDataExtractor.h"
+#include "lldb/Core/StreamFile.h"
 #include "lldb/Symbol/CompileUnit.h"
 #include "lldb/Symbol/TypeList.h"
 #include "lldb/Symbol/TypeMap.h"
@@ -3160,22 +3161,59 @@ bool TypeSystemSwiftTypeRef::IsTupleType(lldb::opaque_compiler_type_t type) {
 }
 
 void TypeSystemSwiftTypeRef::DumpTypeDescription(
-    opaque_compiler_type_t type, bool print_help_if_available,
-    bool print_extensions_if_available, lldb::DescriptionLevel level) {
+    opaque_compiler_type_t type, lldb::DescriptionLevel level,
+    ExecutionContextScope *exe_scope) {
   LLDB_SCOPED_TIMER();
-  if (auto *swift_ast_context = GetSwiftASTContext())
-    return swift_ast_context->DumpTypeDescription(
-        ReconstructType(type), print_help_if_available, print_help_if_available,
-        level);
+
+  StreamFile s(stdout, false);
+  DumpTypeDescription(type, &s, level, exe_scope);
 }
+
+void TypeSystemSwiftTypeRef::DumpTypeDescription(
+    opaque_compiler_type_t type, Stream *s, lldb::DescriptionLevel level,
+    ExecutionContextScope *exe_scope) {
+  LLDB_SCOPED_TIMER();
+  DumpTypeDescription(type, s, false, true, level, exe_scope);
+}
+
+void TypeSystemSwiftTypeRef::DumpTypeDescription(
+    opaque_compiler_type_t type, bool print_help_if_available,
+    bool print_extensions_if_available, lldb::DescriptionLevel level,
+    ExecutionContextScope *exe_scope) {
+  LLDB_SCOPED_TIMER();
+  StreamFile s(stdout, false);
+  DumpTypeDescription(type, &s, print_help_if_available,
+                      print_extensions_if_available, level, exe_scope);
+}
+
 void TypeSystemSwiftTypeRef::DumpTypeDescription(
     opaque_compiler_type_t type, Stream *s, bool print_help_if_available,
-    bool print_extensions_if_available, lldb::DescriptionLevel level) {
+    bool print_extensions_if_available, lldb::DescriptionLevel level,
+    ExecutionContextScope *exe_scope) {
   LLDB_SCOPED_TIMER();
-  if (auto *swift_ast_context = GetSwiftASTContext())
-    return swift_ast_context->DumpTypeDescription(
+  // Currently, we need an execution scope so we can access the runtime, which
+  // in turn owns the reflection context, which is used to read the typeref. If
+  // we were to decouple the reflection context from the runtime, we'd be able
+  // to read the typeref without needing an execution scope.
+  if (exe_scope) {
+    if (auto *runtime =
+            SwiftLanguageRuntime::Get(exe_scope->CalculateProcess())) {
+      const auto initial_written_bytes = s->GetWrittenBytes();
+      s->Printf("Swift Reflection Metadata:\n");
+      runtime->DumpTyperef({this, type}, this, GetSwiftASTContext(), s);
+      if (s->GetWrittenBytes() == initial_written_bytes)
+        s->Printf("<could not resolve type>\n");
+    }
+  }
+
+  // Also dump the swift ast context info, as this functions should not be in
+  // any critical path.
+  if (auto *swift_ast_context = GetSwiftASTContext()) {
+    s->PutCString("Source code info:\n");
+    swift_ast_context->DumpTypeDescription(
         ReconstructType(type), s, print_help_if_available,
         print_extensions_if_available, level);
+  }
 }
 
 // Dumping types
@@ -3346,20 +3384,6 @@ bool TypeSystemSwiftTypeRef::DumpTypeValue(
        bitfield_bit_size, bitfield_bit_offset, exe_scope, is_base_class));
 }
 
-void TypeSystemSwiftTypeRef::DumpTypeDescription(opaque_compiler_type_t type,
-                                                 lldb::DescriptionLevel level) {
-  LLDB_SCOPED_TIMER();
-  if (auto *swift_ast_context = GetSwiftASTContext())
-    return swift_ast_context->DumpTypeDescription(ReconstructType(type), level);
-}
-void TypeSystemSwiftTypeRef::DumpTypeDescription(opaque_compiler_type_t type,
-                                                 Stream *s,
-                                                 lldb::DescriptionLevel level) {
-  LLDB_SCOPED_TIMER();
-  if (auto *swift_ast_context = GetSwiftASTContext())
-    return swift_ast_context->DumpTypeDescription(ReconstructType(type), s,
-                                                  level);
-}
 bool TypeSystemSwiftTypeRef::IsPointerOrReferenceType(
     opaque_compiler_type_t type, CompilerType *pointee_type) {
   auto impl = [&]() {

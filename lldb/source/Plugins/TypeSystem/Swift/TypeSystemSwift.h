@@ -143,11 +143,13 @@ public:
   virtual void DumpTypeDescription(
       lldb::opaque_compiler_type_t type, bool print_help_if_available,
       bool print_extensions_if_available,
-      lldb::DescriptionLevel level = lldb::eDescriptionLevelFull) = 0;
+      lldb::DescriptionLevel level = lldb::eDescriptionLevelFull,
+      ExecutionContextScope *exe_scope = nullptr) = 0;
   virtual void DumpTypeDescription(
       lldb::opaque_compiler_type_t type, Stream *s,
       bool print_help_if_available, bool print_extensions_if_available,
-      lldb::DescriptionLevel level = lldb::eDescriptionLevelFull) = 0;
+      lldb::DescriptionLevel level = lldb::eDescriptionLevelFull,
+      ExecutionContextScope *exe_scope = nullptr) = 0;
 
   /// Create a CompilerType from a mangled Swift type name.
   virtual CompilerType

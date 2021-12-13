@@ -774,15 +774,16 @@ void CompilerType::DumpSummary(ExecutionContext *exe_ctx, Stream *s,
                                data_byte_size);
 }
 
-void CompilerType::DumpTypeDescription(lldb::DescriptionLevel level) const {
+void CompilerType::DumpTypeDescription(lldb::DescriptionLevel level,
+                                       ExecutionContextScope *exe_scope) const {
   if (IsValid())
-    m_type_system->DumpTypeDescription(m_type, level);
+    m_type_system->DumpTypeDescription(m_type, level, exe_scope);
 }
 
-void CompilerType::DumpTypeDescription(Stream *s,
-                                       lldb::DescriptionLevel level) const {
+void CompilerType::DumpTypeDescription(Stream *s, lldb::DescriptionLevel level,
+                                       ExecutionContextScope *exe_scope) const {
   if (IsValid()) {
-    m_type_system->DumpTypeDescription(m_type, s, level);
+    m_type_system->DumpTypeDescription(m_type, s, level, exe_scope);
   }
 }
 

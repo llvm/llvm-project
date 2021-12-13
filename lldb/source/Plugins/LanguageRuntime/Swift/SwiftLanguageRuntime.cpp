@@ -256,6 +256,11 @@ public:
     return false;
   }
 
+  void DumpTyperef(CompilerType type, TypeSystemSwiftTypeRef *module_holder,
+                    SwiftASTContext *swift_ast_context, Stream *s) {
+    STUB_LOG();
+  }
+
   llvm::Optional<uint64_t> GetMemberVariableOffset(CompilerType instance_type,
                                                    ValueObject *instance,
                                                    llvm::StringRef member_name,
@@ -2033,6 +2038,13 @@ bool SwiftLanguageRuntime::GetDynamicTypeAndAddress(
     Value::ValueType &value_type) {
   FORWARD(GetDynamicTypeAndAddress, in_value, use_dynamic, class_type_or_name,
           address, value_type);
+}
+
+void SwiftLanguageRuntime::DumpTyperef(CompilerType type,
+                                        TypeSystemSwiftTypeRef *module_holder,
+                                        SwiftASTContext *swift_ast_context,
+                                        Stream *s) {
+  FORWARD(DumpTyperef, type, module_holder, swift_ast_context, s);
 }
 
 TypeAndOrName

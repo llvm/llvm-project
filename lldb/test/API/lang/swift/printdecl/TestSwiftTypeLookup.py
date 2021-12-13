@@ -42,16 +42,19 @@ class TestSwiftTypeLookup(TestBase):
         self.expect(
             "type lookup String",
             substrs=[
+                '(struct Swift.String)',
                 'struct String {',
                 'extension Swift.String : '])
         self.expect(
             "type lookup Cla1",
             substrs=[
+                '(class a.Cla1)',
                 'class Cla1 {',
                 'func bat(_ x: Swift.Int, y: a.Str1) -> Swift.Int'])
         self.expect(
             "type lookup Str1",
             substrs=[
+                '(struct a.Str1)',
                 'struct Str1 {',
                 'func bar()',
                 'var b'])
@@ -67,10 +70,13 @@ class TestSwiftTypeLookup(TestBase):
         # self.expect('type lookup struct Cla1', substrs=['class Cla1 {'], matching=False, error=True)
 
         # check that modules are honored
-        self.expect("type lookup Swift.String", substrs=['struct String {'])
+        self.expect("type lookup Swift.String",
+                    substrs=['(struct Swift.String)',
+                             'struct String {'])
         self.expect(
             "type lookup a.String",
-            substrs=['struct String {'],
+            substrs=['(struct Swift.String)',
+                     'struct String {'],
             matching=False)
 
         # check that a combination of module and specifier is honored
@@ -81,7 +87,11 @@ class TestSwiftTypeLookup(TestBase):
 
         # check that nested types are looked up correctly
         self.expect('type lookup Toplevel.Nested.Deeper',
-                    substrs=['class Deeper', 'func foo'])
+                    substrs=['class a.Toplevel.Nested.Deeper',
+                             'struct a.Toplevel.Nested',
+                             'class a.Toplevel',
+                             'class Deeper', 
+                             'func foo'])
 
         # check that mangled name lookup works
         self.expect(
@@ -95,6 +105,8 @@ class TestSwiftTypeLookup(TestBase):
         self.expect(
             'type lookup Generic<String>',
             substrs=[
+                'bound_generic_class a.Generic',
+                'struct Swift.String',
                 'class Generic',
                 'func foo'])
 

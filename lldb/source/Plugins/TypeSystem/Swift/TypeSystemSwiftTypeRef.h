@@ -208,10 +208,22 @@ public:
 
   void DumpTypeDescription(
       lldb::opaque_compiler_type_t type,
-      lldb::DescriptionLevel level = lldb::eDescriptionLevelFull) override;
+      lldb::DescriptionLevel level = lldb::eDescriptionLevelFull,
+      ExecutionContextScope *exe_scope = nullptr) override;
   void DumpTypeDescription(
       lldb::opaque_compiler_type_t type, Stream *s,
-      lldb::DescriptionLevel level = lldb::eDescriptionLevelFull) override;
+      lldb::DescriptionLevel level = lldb::eDescriptionLevelFull,
+      ExecutionContextScope *exe_scope = nullptr) override;
+  void DumpTypeDescription(
+      lldb::opaque_compiler_type_t type, bool print_help_if_available,
+      bool print_extensions_if_available,
+      lldb::DescriptionLevel level = lldb::eDescriptionLevelFull,
+      ExecutionContextScope *exe_scope = nullptr) override;
+  void DumpTypeDescription(
+      lldb::opaque_compiler_type_t type, Stream *s,
+      bool print_help_if_available, bool print_extensions_if_available,
+      lldb::DescriptionLevel level = lldb::eDescriptionLevelFull,
+      ExecutionContextScope *exe_scope = nullptr) override;
 
   bool IsPointerOrReferenceType(lldb::opaque_compiler_type_t type,
                                 CompilerType *pointee_type) override;
@@ -247,15 +259,6 @@ public:
   CompilerType
   CreateTupleType(const std::vector<TupleElement> &elements) override;
   bool IsTupleType(lldb::opaque_compiler_type_t type) override;
-  void DumpTypeDescription(
-      lldb::opaque_compiler_type_t type, bool print_help_if_available,
-      bool print_extensions_if_available,
-      lldb::DescriptionLevel level = lldb::eDescriptionLevelFull) override;
-  void DumpTypeDescription(
-      lldb::opaque_compiler_type_t type, Stream *s,
-      bool print_help_if_available, bool print_extensions_if_available,
-      lldb::DescriptionLevel level = lldb::eDescriptionLevelFull) override;
-
 
   /// Return the nth tuple element's type and name, if it has one.
   llvm::Optional<TupleElement>
