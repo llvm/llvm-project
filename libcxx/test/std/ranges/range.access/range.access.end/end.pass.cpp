@@ -298,6 +298,13 @@ ASSERT_NOEXCEPT(std::ranges::cend(std::declval<NoThrowADLEnd<int*>&>()));
 ASSERT_NOT_NOEXCEPT(std::ranges::end(std::declval<NoThrowADLEnd<ThrowingIterator<int>>&>()));
 ASSERT_NOT_NOEXCEPT(std::ranges::cend(std::declval<NoThrowADLEnd<ThrowingIterator<int>>&>()));
 
+struct BeginReturnsArrayRef {
+    auto begin() const noexcept -> int(&)[10];
+    auto end() const noexcept -> int(&)[10];
+} brar;
+static_assert(noexcept(std::ranges::end(brar)));
+static_assert(noexcept(std::ranges::cend(brar)));
+
 
 int main(int, char**) {
   testArray();

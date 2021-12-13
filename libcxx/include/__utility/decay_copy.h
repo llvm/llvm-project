@@ -24,7 +24,7 @@ template <class _Tp>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR
 typename decay<_Tp>::type __decay_copy(_Tp&& __t)
 #if _LIBCPP_STD_VER > 17
-    noexcept(is_nothrow_convertible_v<_Tp, remove_reference_t<_Tp>>)
+    noexcept(is_nothrow_convertible_v<_Tp, decay_t<_Tp>>)
 #endif
 {
   return _VSTD::forward<_Tp>(__t);
