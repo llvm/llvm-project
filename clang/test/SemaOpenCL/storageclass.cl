@@ -1,12 +1,12 @@
 // RUN: %clang_cc1 %s -verify -pedantic -fsyntax-only -cl-std=CL1.2
-// RUN: %clang_cc1 %s -verify -pedantic -fsyntax-only -cl-std=CL3.0 -cl-ext=-__opencl_c_program_scope_global_variables,-__opencl_c_generic_address_space,-__opencl_c_pipes
-// RUN: %clang_cc1 %s -verify -pedantic -fsyntax-only -cl-std=CL3.0 -cl-ext=+__opencl_c_program_scope_global_variables,-__opencl_c_generic_address_space,-__opencl_c_pipes
-// RUN: %clang_cc1 %s -verify -pedantic -fsyntax-only -cl-std=CL3.0 -cl-ext=-__opencl_c_program_scope_global_variables,+__opencl_c_generic_address_space
-// RUN: %clang_cc1 %s -verify -pedantic -fsyntax-only -cl-std=CL3.0 -cl-ext=+__opencl_c_program_scope_global_variables,+__opencl_c_generic_address_space
-// RUN: %clang_cc1 %s -verify -pedantic -fsyntax-only -cl-std=clc++2021 -cl-ext=-__opencl_c_program_scope_global_variables,-__opencl_c_generic_address_space,-__opencl_c_pipes
-// RUN: %clang_cc1 %s -verify -pedantic -fsyntax-only -cl-std=clc++2021 -cl-ext=+__opencl_c_program_scope_global_variables,-__opencl_c_generic_address_space,-__opencl_c_pipes
-// RUN: %clang_cc1 %s -verify -pedantic -fsyntax-only -cl-std=clc++2021 -cl-ext=-__opencl_c_program_scope_global_variables,+__opencl_c_generic_address_space
-// RUN: %clang_cc1 %s -verify -pedantic -fsyntax-only -cl-std=clc++2021 -cl-ext=+__opencl_c_program_scope_global_variables,+__opencl_c_generic_address_space
+// RUN: %clang_cc1 %s -verify -pedantic -fsyntax-only -cl-std=CL3.0 -cl-ext=-all
+// RUN: %clang_cc1 %s -verify -pedantic -fsyntax-only -cl-std=CL3.0 -cl-ext=-all,+__opencl_c_program_scope_global_variables
+// RUN: %clang_cc1 %s -verify -pedantic -fsyntax-only -cl-std=CL3.0 -cl-ext=-all,+__opencl_c_generic_address_space
+// RUN: %clang_cc1 %s -verify -pedantic -fsyntax-only -cl-std=CL3.0 -cl-ext=-all,+__opencl_c_program_scope_global_variables,+__opencl_c_generic_address_space
+// RUN: %clang_cc1 %s -verify -pedantic -fsyntax-only -cl-std=clc++2021 -cl-ext=-all
+// RUN: %clang_cc1 %s -verify -pedantic -fsyntax-only -cl-std=clc++2021 -cl-ext=-all,+__opencl_c_program_scope_global_variables
+// RUN: %clang_cc1 %s -verify -pedantic -fsyntax-only -cl-std=clc++2021 -cl-ext=-all,+__opencl_c_generic_address_space
+// RUN: %clang_cc1 %s -verify -pedantic -fsyntax-only -cl-std=clc++2021 -cl-ext=-all,+__opencl_c_program_scope_global_variables,+__opencl_c_generic_address_space
 static constant int G1 = 0;
 constant int G2 = 0;
 
