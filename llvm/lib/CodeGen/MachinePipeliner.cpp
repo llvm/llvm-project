@@ -2874,10 +2874,8 @@ void SMSchedule::finalizeSchedule(SwingSchedulerDAG *SSD) {
          ++stage) {
       std::deque<SUnit *> &cycleInstrs =
           ScheduledInstrs[cycle + (stage * InitiationInterval)];
-      for (std::deque<SUnit *>::reverse_iterator I = cycleInstrs.rbegin(),
-                                                 E = cycleInstrs.rend();
-           I != E; ++I)
-        ScheduledInstrs[cycle].push_front(*I);
+      for (SUnit *SU : llvm::reverse(cycleInstrs))
+        ScheduledInstrs[cycle].push_front(SU);
     }
   }
 

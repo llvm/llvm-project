@@ -984,8 +984,7 @@ addLiveIns(const MachineInstr *DefMI, unsigned DefOp,
   const MachineBasicBlock *DefMBB = DefMI->getParent();
 
   // Reg is live-in to all blocks in Trace that follow DefMBB.
-  for (unsigned i = Trace.size(); i; --i) {
-    const MachineBasicBlock *MBB = Trace[i-1];
+  for (const MachineBasicBlock *MBB : llvm::reverse(Trace)) {
     if (MBB == DefMBB)
       return;
     TraceBlockInfo &TBI = BlockInfo[MBB->getNumber()];
