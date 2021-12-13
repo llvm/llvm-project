@@ -10,8 +10,8 @@
 
 // CHECK:      Relocations [
 // CHECK-NEXT:   Section ({{.*}}) .rela.plt {
-// CHECK-NEXT:     R_X86_64_JUMP_SLOT __wrap_foo 0x0
 // CHECK-NEXT:     R_X86_64_JUMP_SLOT foo 0x0
+// CHECK-NEXT:     R_X86_64_JUMP_SLOT __wrap_foo 0x0
 // CHECK-NEXT:     R_X86_64_JUMP_SLOT _start 0x0
 // CHECK-NEXT:   }
 // CHECK-NEXT: ]
