@@ -16,7 +16,6 @@ class FoundationDisassembleTestCase(TestBase):
 
     NO_DEBUG_INFO_TESTCASE = True
 
-    @expectedFailureDarwin('rdar://problem/54977700')
     @skipIfAsan
     def test_foundation_disasm(self):
         """Do 'disassemble -n func' on each and every 'Code' symbol entry from the Foundation.framework."""
