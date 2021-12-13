@@ -196,6 +196,13 @@ void WebAssemblyAsmPrinter::emitGlobalVariable(const GlobalVariable *GV) {
     Sym->setGlobalType(wasm::WasmGlobalType{uint8_t(Type), Mutable});
   }
 
+  // If the GlobalVariable refers to a table, we handle it here instead of
+  // in emitExternalDecls
+  if (Sym->isTable()) {
+    getTargetStreamer()->emitTableType(Sym);
+    return;
+  }
+
   emitVisibility(Sym, GV->getVisibility(), !GV->isDeclaration());
   if (GV->hasInitializer()) {
     assert(getSymbolPreferLocal(*GV) == Sym);

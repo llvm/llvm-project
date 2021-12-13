@@ -13,7 +13,7 @@ define void @call_funcref_from_table(i32 %i) {
   ret void
 }
 
-; CHECK: .tabletype __funcref_call_table, funcref, 1
+; CHECK: .tabletype      __funcref_call_table, funcref, 1
 
 ; CHECK-LABEL: call_funcref_from_table:
 ; CHECK-NEXT: .functype       call_funcref_from_table (i32) -> ()
@@ -28,6 +28,5 @@ define void @call_funcref_from_table(i32 %i) {
 ; CHECK-NEXT: table.set       __funcref_call_table
 ; CHECK-NEXT: end_function
 
+; CHECK: .tabletype     funcref_table, funcref
 
-; CHECK:     .globl funcref_table
-; CHECK-NEXT .globaltype     funcref_table, funcref
