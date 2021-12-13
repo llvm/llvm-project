@@ -96,6 +96,10 @@ public:
     void
     SetData (lldb::SBError& error, const void *buf, size_t size, lldb::ByteOrder endian, uint8_t addr_size);
 
+    void
+    SetDataWithOwnership (lldb::SBError& error, const void *buf, size_t size,
+                          lldb::ByteOrder endian, uint8_t addr_size);
+
     bool
     Append (const SBData& rhs);
 
