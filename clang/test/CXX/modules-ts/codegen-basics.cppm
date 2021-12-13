@@ -9,7 +9,7 @@ export {
 }
 
 // CHECK-DAG: define weak_odr void @_ZW6FooBarE2f2v(
-inline void f2() { }
+inline void f2() {}
 
 // CHECK-DAG: define{{.*}} void @_ZW6FooBarE2f3v(
 static void f3() {}
