@@ -15,9 +15,9 @@
 struct DoLoopHelperTest : public testing::Test {
 public:
   void SetUp() {
-    fir::KindMapping kindMap(&context);
+    kindMap = std::make_unique<fir::KindMapping>(&context);
     mlir::OpBuilder builder(&context);
-    firBuilder = new fir::FirOpBuilder(builder, kindMap);
+    firBuilder = new fir::FirOpBuilder(builder, *kindMap);
     fir::support::loadDialects(context);
   }
   void TearDown() { delete firBuilder; }
@@ -25,6 +25,7 @@ public:
   fir::FirOpBuilder &getBuilder() { return *firBuilder; }
 
   mlir::MLIRContext context;
+  std::unique_ptr<fir::KindMapping> kindMap;
   fir::FirOpBuilder *firBuilder;
 };
 
