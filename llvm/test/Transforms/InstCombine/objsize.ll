@@ -251,7 +251,7 @@ define i32 @test10(i8** %esc) {
 
 define i32 @test11(i8** %esc) {
 ; CHECK-LABEL: @test11(
-; CHECK-NEXT:    [[STRDUP:%.*]] = call dereferenceable_or_null(8) i8* @strdup(i8* getelementptr inbounds ([8 x i8], [8 x i8]* @.str, i32 0, i32 0))
+; CHECK-NEXT:    [[STRDUP:%.*]] = tail call dereferenceable_or_null(8) i8* @strdup(i8* getelementptr inbounds ([8 x i8], [8 x i8]* @.str, i32 0, i32 0))
 ; CHECK-NEXT:    store i8* [[STRDUP]], i8** [[ESC:%.*]], align 8
 ; CHECK-NEXT:    ret i32 8
 ;
@@ -263,7 +263,7 @@ define i32 @test11(i8** %esc) {
 
 define i32 @test12(i8** %esc) {
 ; CHECK-LABEL: @test12(
-; CHECK-NEXT:    [[STRDUP:%.*]] = call dereferenceable_or_null(8) i8* @strdup(i8* getelementptr inbounds ([8 x i8], [8 x i8]* @.str, i32 0, i32 0))
+; CHECK-NEXT:    [[STRDUP:%.*]] = tail call dereferenceable_or_null(8) i8* @strdup(i8* getelementptr inbounds ([8 x i8], [8 x i8]* @.str, i32 0, i32 0))
 ; CHECK-NEXT:    store i8* [[STRDUP]], i8** [[ESC:%.*]], align 8
 ; CHECK-NEXT:    ret i32 8
 ;
@@ -275,7 +275,7 @@ define i32 @test12(i8** %esc) {
 
 define i32 @test13(i8** %esc) {
 ; CHECK-LABEL: @test13(
-; CHECK-NEXT:    [[STRDUP:%.*]] = call dereferenceable_or_null(8) i8* @strdup(i8* getelementptr inbounds ([8 x i8], [8 x i8]* @.str, i32 0, i32 0))
+; CHECK-NEXT:    [[STRDUP:%.*]] = tail call dereferenceable_or_null(8) i8* @strdup(i8* getelementptr inbounds ([8 x i8], [8 x i8]* @.str, i32 0, i32 0))
 ; CHECK-NEXT:    store i8* [[STRDUP]], i8** [[ESC:%.*]], align 8
 ; CHECK-NEXT:    ret i32 8
 ;

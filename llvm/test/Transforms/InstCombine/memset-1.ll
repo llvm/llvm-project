@@ -21,6 +21,25 @@ define i8* @test_simplify1(i8* %mem, i32 %val, i32 %size) {
   ret i8* %ret
 }
 
+define i8* @test_simplify1_tail(i8* %mem, i32 %val, i32 %size) {
+; CHECK-LABEL: @test_simplify1_tail(
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc i32 [[VAL:%.*]] to i8
+; CHECK-NEXT:    tail call void @llvm.memset.p0i8.i32(i8* align 1 [[MEM:%.*]], i8 [[TMP1]], i32 [[SIZE:%.*]], i1 false)
+; CHECK-NEXT:    ret i8* [[MEM]]
+;
+  %ret = tail call i8* @memset(i8* %mem, i32 %val, i32 %size)
+  ret i8* %ret
+}
+
+define i8* @test_simplify1_musttail(i8* %mem, i32 %val, i32 %size) {
+; CHECK-LABEL: @test_simplify1_musttail(
+; CHECK-NEXT:    %ret = musttail call i8* @memset(i8* %mem, i32 %val, i32 %size)
+; CHECK-NEXT:    ret i8* %ret
+;
+  %ret = musttail call i8* @memset(i8* %mem, i32 %val, i32 %size)
+  ret i8* %ret
+}
+
 ; Malloc + memset pattern is now handled by DSE in a more general way.
 
 define i8* @pr25892_lite(i32 %size) #0 {

@@ -180,6 +180,25 @@ define void @test_no_simplify2() {
   ret void
 }
 
+define i8* @test_no_simplify3(i8* %dst, i8* %src, i32 %count) {
+; CHECK-LABEL: @test_no_simplify3(
+; CHECK-NEXT:    %ret = musttail call i8* @strncpy(i8* %dst, i8* %src, i32 32)
+; CHECK-NEXT:    ret i8* %ret
+;
+  %ret = musttail call i8* @strncpy(i8* %dst, i8* %src, i32 32)
+  ret i8* %ret
+}
+
+define i8* @test_no_simplify4(i8* %dst, i8* %src, i32 %count) {
+; CHECK-LABEL: @test_no_simplify4(
+; CHECK-NEXT:    %ret = musttail call i8* @strncpy(i8* %dst, i8* %src, i32 6)
+; CHECK-NEXT:    ret i8* %ret
+;
+  %ret = musttail call i8* @strncpy(i8* %dst, i8* %src, i32 6)
+  ret i8* %ret
+}
+
+
 define void @test_no_incompatible_attr() {
 ; CHECK-LABEL: @test_no_incompatible_attr(
 ; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i32(i8* noundef nonnull align 1 dereferenceable(6) getelementptr inbounds ([32 x i8], [32 x i8]* @a, i32 0, i32 0), i8* noundef nonnull align 1 dereferenceable(6) getelementptr inbounds ([6 x i8], [6 x i8]* @hello, i32 0, i32 0), i32 6, i1 false)
