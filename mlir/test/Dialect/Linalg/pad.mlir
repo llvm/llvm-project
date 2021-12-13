@@ -426,3 +426,24 @@ func @dynamic_input_padding_only(%arg0: tensor<24x12xf32>,
   %5 = tensor.insert_slice %4 into %arg2[%iv0, %iv1] [4, %0] [1, 1] : tensor<4x?xf32> into tensor<24x25xf32>
   return %5 : tensor<24x25xf32>
 }
+
+// -----
+
+#map0 = affine_map<()[s0] -> (64, s0)>
+
+//      FILL:  rank_reducing
+// FILL-SAME:    %[[ARG0:[0-9a-zA-Z]*]]: tensor<1x64x1x64xf32>
+func @rank_reducing(%arg0: tensor<1x64x1x64xf32>,
+                    %iv0 : index) -> tensor<1x?x?xf32> {
+  %cst = arith.constant 0.0 : f32
+  %size = affine.min #map0()[%iv0]
+  %0 = tensor.extract_slice %arg0[0, 0, 0, 0] [1, %size, 1, %size] [1, 1, 1, 1] : tensor<1x64x1x64xf32> to tensor<1x?x?xf32>
+
+  // Check the fill is padded despite the rank-reducing slice operation.
+  //      FILL:  %[[T0:.*]] = linalg.pad_tensor
+  //      FILL:  %[[T1:.*]] = linalg.fill(%{{.*}}, %[[T0]])
+  // FILL-SAME:    tensor<1x64x64xf32>
+  //      FILL:  = tensor.extract_slice %[[T1]]
+  %1 = linalg.fill(%cst, %0) : f32, tensor<1x?x?xf32> -> tensor<1x?x?xf32>
+  return %1 : tensor<1x?x?xf32>
+}
