@@ -8,7 +8,7 @@ frequently walk this graph (e.g. traversing from defs to users). The early
 design of MLIR adopted the `const` model of LLVM, which is familiar and well
 understood (even though the LLVM implementation is flawed in many ways).
 
-The design team since decided to change to a different module, which eschews
+The design team since decided to change to a different model, which eschews
 `const` entirely for the core IR types: you should never see a `const` method on
 `Operation`, should never see the type `const Value`, and you shouldn't feel bad
 about this. That said, you *should* use `const` for non-IR types, like
@@ -39,9 +39,9 @@ into the MLIR codebase, argues that the cost/benefit tradeoff of this design is
 a poor tradeoff, and proposes switching to a much simpler approach - eliminating
 the use of const of these IR types entirely.
 
-**Note:** **This document is only discussing things like `const Value` and
+**Note:** This document is only discussing things like `const Value` and
 `const Operation*`. There is no proposed change for other types, e.g.
-`SmallVector` references, the immutable types like `Attribute`, etc.**
+`SmallVector` references, the immutable types like `Attribute`, etc.
 
 ## Background: The LLVM Const Model
 
@@ -58,7 +58,7 @@ const pointer to the block containing the instruction (or value defining the
 operand, instruction using the instruction, etc). The instruction class looks
 like this:
 
-```
+```c++
 namespace llvm {
 class Instruction : ...  {
   BasicBlock *Parent;
@@ -67,7 +67,7 @@ public:
   inline const BasicBlock *getParent() const { return Parent; }
   // A non-const instruction returns a non-const parent pointer.
   inline       BasicBlock *getParent()       { return Parent; }
-…
+...
 };
 }
 ```
@@ -77,7 +77,7 @@ non-const pointer from getParent, because you could then walk the block to find
 the instruction again and get non-const references to the same instruction - all
 without a `const_cast`.
 
-This const model is simple and the C++ type system generally supports it through
+This `const` model is simple and the C++ type system generally supports it through
 code duplication of methods. That said, LLVM is actually inconsistent and buggy
 about this. Even the core classes have bugs: `llvm::Instruction::getOperand()`
 isn't currently const correct! There are other subsystems (e.g. the
@@ -177,13 +177,13 @@ updated.
 
 This means that certain API in practice don't provide a const variant, leading
 to pervasive use of `const_cast` to drop the const qualifier. For example the
-logic in `Matchers.h` doesn't support const pointers at all (b/123355851), even
+logic in `Matchers.h` doesn't support const pointers at all, even
 though matching and binding values themselves makes perfect sense for both const
 and non-const values. Actually fixing this would cause massive code bloat and
 complexity.
 
 Other parts of the code are just outright incorrect. For example, the operation
-cloning methods are defined on Operation like this:
+cloning methods are defined on `Operation` like this:
 
 ```C++
 Operation *clone(BlockAndValueMapping &mapper, MLIRContext *context) const;
@@ -204,10 +204,10 @@ the "memref.dim" operation in memref ops) contain a pointer to an operation and
 provide typed APIs for processing it.
 
 However, this is a problem for our current `const` design - `const DimOp` means
-the pointer itself is immutable, not the pointee. The current solution for this
-is the `OpPointer<>` and `ConstOpPointer<>` classes, which exist solely to
+the pointer itself is immutable, not the pointee. The previous solution for this
+was the `OpPointer<>` and `ConstOpPointer<>` classes, which existed solely to
 provide const correctness when referring to a typed operation. Instead of
-referring to `DimOp` directly, we need to use `OpPointer<DimOp>` and
+referring to `DimOp` directly, we used `OpPointer<DimOp>` and
 `ConstOpPointer<DimOp>` to preserve this constness.
 
 While `auto` hides many instances of these `OpPointer` classes, their presence
@@ -232,7 +232,7 @@ if (auto *dimOp = inst->dyn_cast<DimOp>()) {
 }
 ```
 
-It would be much better to eliminate them entirely, and just pass around `DimOp`
+It is much better to eliminate them entirely, and just pass around `DimOp`
 directly. For example, instead of:
 
 ```C++
@@ -241,7 +241,7 @@ LogicalResult mlir::getIndexSet(MutableArrayRef<OpPointer<AffineForOp>> forOps,
 
 ```
 
-It would be a lot nicer to just have:
+It is a lot nicer to just have:
 
 ```c++
 LogicalResult mlir::getIndexSet(MutableArrayRef<AffineForOp> forOps,
@@ -251,7 +251,7 @@ LogicalResult mlir::getIndexSet(MutableArrayRef<AffineForOp> forOps,
 Particularly since all of the `FooOp` classes are already semantically a smart
 pointer to their underlying operation.
 
-## Proposal: Remove `const` from IR objects
+## (Accepted) Proposal: Remove `const` from IR objects
 
 As we can see above, there is very little benefit to our const design and
 significant cost, and given that the primary purpose of an IR is to represent
@@ -270,3 +270,4 @@ MLIR.  This implies the following changes to the codebase:
 1.  Types like `OpPointer` and `ConstOpPointer` that exist solely to propagate
     const can be entirely removed from the codebase.
 1.  We can close bugs complaining about const incorrectness in the IR.
+
