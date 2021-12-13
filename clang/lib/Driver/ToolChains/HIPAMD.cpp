@@ -35,10 +35,6 @@ using namespace llvm::opt;
 #define NULL_FILE "/dev/null"
 #endif
 
-namespace {
-const unsigned HIPCodeObjectAlign = 4096;
-} // namespace
-
 static bool shouldSkipSanitizeOption(const ToolChain &TC,
                                      const llvm::opt::ArgList &DriverArgs,
                                      StringRef TargetID,
