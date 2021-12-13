@@ -104,8 +104,8 @@ spirv::Deserializer::sliceInstruction(spirv::Opcode &opcode,
 
 LogicalResult spirv::Deserializer::processInstruction(
     spirv::Opcode opcode, ArrayRef<uint32_t> operands, bool deferInstructions) {
-  LLVM_DEBUG(llvm::dbgs() << "[inst] processing instruction "
-                          << spirv::stringifyOpcode(opcode) << "\n");
+  LLVM_DEBUG(logger.startLine() << "[inst] processing instruction "
+                                << spirv::stringifyOpcode(opcode) << "\n");
 
   // First dispatch all the instructions whose opcode does not correspond to
   // those that have a direct mirror in the SPIR-V dialect
