@@ -558,23 +558,20 @@ namespace {
 /// Pass that removes unit-extent dims within generic ops.
 struct LinalgFoldUnitExtentDimsPass
     : public LinalgFoldUnitExtentDimsBase<LinalgFoldUnitExtentDimsPass> {
-  void runOnOperation() override {
-    auto funcOp = getOperation();
-    assert(funcOp->hasTrait<OpTrait::FunctionLike>() &&
-           "LinalgFoldUnitExtentDimsPass can only be run on FunctionLike "
-           "operations");
-    MLIRContext *context = funcOp->getContext();
+  void runOnFunction() override {
+    FuncOp funcOp = getFunction();
+    MLIRContext *context = funcOp.getContext();
     RewritePatternSet patterns(context);
     if (foldOneTripLoopsOnly)
       patterns.add<FoldUnitDimLoops>(context);
     else
       populateFoldUnitExtentDimsPatterns(patterns);
-    (void)applyPatternsAndFoldGreedily(
-        function_like_impl::getFunctionBody(funcOp), std::move(patterns));
+    (void)applyPatternsAndFoldGreedily(funcOp.getBody(), std::move(patterns));
   }
 };
 } // namespace
 
-std::unique_ptr<Pass> mlir::createLinalgFoldUnitExtentDimsPass() {
+std::unique_ptr<OperationPass<FuncOp>>
+mlir::createLinalgFoldUnitExtentDimsPass() {
   return std::make_unique<LinalgFoldUnitExtentDimsPass>();
 }

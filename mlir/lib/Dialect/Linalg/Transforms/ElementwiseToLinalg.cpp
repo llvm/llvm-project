@@ -126,12 +126,8 @@ namespace {
 class ConvertElementwiseToLinalgPass
     : public ConvertElementwiseToLinalgBase<ConvertElementwiseToLinalgPass> {
 
-  void runOnOperation() final {
+  void runOnFunction() final {
     auto func = getOperation();
-    assert(func->hasTrait<OpTrait::FunctionLike>() &&
-           "ConvertElementwiseToLinalgPass can only be run on FunctionLike "
-           "operations");
-
     auto *context = &getContext();
     ConversionTarget target(*context);
     RewritePatternSet patterns(context);
@@ -147,6 +143,7 @@ class ConvertElementwiseToLinalgPass
 };
 } // namespace
 
-std::unique_ptr<Pass> mlir::createConvertElementwiseToLinalgPass() {
+std::unique_ptr<OperationPass<FuncOp>>
+mlir::createConvertElementwiseToLinalgPass() {
   return std::make_unique<ConvertElementwiseToLinalgPass>();
 }
