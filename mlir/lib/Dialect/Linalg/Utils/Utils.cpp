@@ -357,12 +357,17 @@ Value makeComposedPadHighOp(OpBuilder &b, Location loc, RankedTensorType type,
       }))
     return PadTensorOp::createPadHighOp(type, source, pad, nofold, loc, b);
 
-  // Exit if the sizes of the dynamic sizes of `sliceOp` do not match the size
-  // of the slice padded by `padTensorOp`.
+  // Exit if `padTensorOpSliceOp`, which defines the slice used by
+  // `padTensorOp`, is rank-reducing.
   auto padTensorOpSliceOp =
       padTensorOp.source().getDefiningOp<tensor::ExtractSliceOp>();
-  if (!padTensorOpSliceOp ||
-      llvm::any_of(llvm::zip(sliceOp.getMixedSizes(),
+  if (!padTensorOpSliceOp || sliceOp.getMixedSizes().size() !=
+                                 padTensorOpSliceOp.getMixedSizes().size())
+    return PadTensorOp::createPadHighOp(type, source, pad, nofold, loc, b);
+
+  // Exit if the sizes of the dynamic sizes of `sliceOp` do not match the size
+  // of the slice padded by `padTensorOp`.
+  if (llvm::any_of(llvm::zip(sliceOp.getMixedSizes(),
                              padTensorOpSliceOp.getMixedSizes()),
                    [](std::tuple<OpFoldResult, OpFoldResult> it) {
                      return !isEqualConstantIntOrValue(std::get<0>(it),
