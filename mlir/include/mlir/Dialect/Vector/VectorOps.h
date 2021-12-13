@@ -67,6 +67,13 @@ void populateShapeCastFoldingPatterns(RewritePatternSet &patterns);
 /// pairs or forward write-read pairs.
 void populateCastAwayVectorLeadingOneDimPatterns(RewritePatternSet &patterns);
 
+/// Collect a set of leading one dimension removal patterns.
+///
+/// These patterns insert rank-reducing memref.subview ops to remove one
+/// dimensions. With them, there are more chances that we can avoid
+/// potentially exensive vector.shape_cast operations.
+void populateVectorTransferDropUnitDimsPatterns(RewritePatternSet &patterns);
+
 /// Collect a set of patterns that bubble up/down bitcast ops.
 ///
 /// These patterns move vector.bitcast ops to be before insert ops or after

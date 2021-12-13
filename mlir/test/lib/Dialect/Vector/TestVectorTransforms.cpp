@@ -583,6 +583,21 @@ struct TestVectorReduceToContractPatternsPatterns
   }
 };
 
+struct TestVectorTransferDropUnitDimsPatterns
+    : public PassWrapper<TestVectorTransferDropUnitDimsPatterns, FunctionPass> {
+  StringRef getArgument() const final {
+    return "test-vector-transfer-drop-unit-dims-patterns";
+  }
+  void getDependentDialects(DialectRegistry &registry) const override {
+    registry.insert<memref::MemRefDialect>();
+  }
+  void runOnFunction() override {
+    RewritePatternSet patterns(&getContext());
+    populateVectorTransferDropUnitDimsPatterns(patterns);
+    (void)applyPatternsAndFoldGreedily(getFunction(), std::move(patterns));
+  }
+};
+
 } // namespace
 
 namespace mlir {
@@ -613,6 +628,8 @@ void registerTestVectorLowerings() {
   PassRegistration<TestVectorTransferCollapseInnerMostContiguousDims>();
 
   PassRegistration<TestVectorReduceToContractPatternsPatterns>();
+
+  PassRegistration<TestVectorTransferDropUnitDimsPatterns>();
 }
 } // namespace test
 } // namespace mlir
