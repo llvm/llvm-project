@@ -354,6 +354,7 @@ module LLVM_ProfileData {
   module * { export * }
 
   textual header "ProfileData/InstrProfData.inc"
+  textual header "ProfileData/MemProfData.inc"
 }
 
 // FIXME: Mislayered?
