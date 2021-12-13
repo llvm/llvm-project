@@ -281,7 +281,7 @@ SDValue VectorLegalizer::LegalizeOp(SDValue Op) {
         std::pair<SDValue, SDValue> Tmp = ExpandLoad(Node);
         AddLegalizedOperand(Op.getValue(0), Tmp.first);
         AddLegalizedOperand(Op.getValue(1), Tmp.second);
-        return Op.getResNo() ? Tmp.first : Tmp.second;
+        return Op.getResNo() ? Tmp.second : Tmp.first;
       }
       }
     }
