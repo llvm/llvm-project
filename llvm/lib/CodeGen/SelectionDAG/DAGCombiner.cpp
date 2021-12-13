@@ -20744,6 +20744,156 @@ static SDValue narrowExtractedVectorLoad(SDNode *Extract, SelectionDAG &DAG) {
   return NewLd;
 }
 
+/// Given  EXTRACT_SUBVECTOR(VECTOR_SHUFFLE(Op0, Op1, Mask)),
+/// try to produce  VECTOR_SHUFFLE(EXTRACT_SUBVECTOR(Op?, ?),
+///                                EXTRACT_SUBVECTOR(Op?, ?),
+///                                Mask'))
+/// iff it is legal and profitable to do so. Notably, the trimmed mask
+/// (containing only the elements that are extracted)
+/// must reference at most two subvectors.
+static SDValue foldExtractSubvectorFromShuffleVector(SDNode *N,
+                                                     SelectionDAG &DAG,
+                                                     const TargetLowering &TLI,
+                                                     bool LegalOperations) {
+  assert(N->getOpcode() == ISD::EXTRACT_SUBVECTOR &&
+         "Must only be called on EXTRACT_SUBVECTOR's");
+
+  SDValue N0 = N->getOperand(0);
+
+  // Only deal with non-scalable vectors.
+  EVT NarrowVT = N->getValueType(0);
+  EVT WideVT = N0.getValueType();
+  if (!NarrowVT.isFixedLengthVector() || !WideVT.isFixedLengthVector())
+    return SDValue();
+
+  // The operand must be a shufflevector.
+  auto *WideShuffleVector = dyn_cast<ShuffleVectorSDNode>(N0);
+  if (!WideShuffleVector)
+    return SDValue();
+
+  // The old shuffleneeds to go away.
+  if (!WideShuffleVector->hasOneUse())
+    return SDValue();
+
+  // And the narrow shufflevector that we'll form must be legal.
+  if (LegalOperations &&
+      !TLI.isOperationLegalOrCustom(ISD::VECTOR_SHUFFLE, NarrowVT))
+    return SDValue();
+
+  uint64_t FirstExtractedEltIdx = N->getConstantOperandVal(1);
+  int NumEltsExtracted = NarrowVT.getVectorNumElements();
+  assert((FirstExtractedEltIdx % NumEltsExtracted) == 0 &&
+         "Extract index is not a multiple of the output vector length.");
+
+  int WideNumElts = WideVT.getVectorNumElements();
+
+  SmallVector<int, 16> NewMask;
+  NewMask.reserve(NumEltsExtracted);
+  SmallSetVector<std::pair<SDValue /*Op*/, int /*SubvectorIndex*/>, 2>
+      DemandedSubvectors;
+
+  // Try to decode the wide mask into narrow mask from at most two subvectors.
+  for (int M : WideShuffleVector->getMask().slice(FirstExtractedEltIdx,
+                                                  NumEltsExtracted)) {
+    assert((M >= -1) && (M < (2 * WideNumElts)) &&
+           "Out-of-bounds shuffle mask?");
+
+    if (M < 0) {
+      // Does not depend on operands, does not require adjustment.
+      NewMask.emplace_back(M);
+      continue;
+    }
+
+    // From which operand of the shuffle does this shuffle mask element pick?
+    int WideShufOpIdx = M / WideNumElts;
+    // Which element of that operand is picked?
+    int OpEltIdx = M % WideNumElts;
+
+    assert((OpEltIdx + WideShufOpIdx * WideNumElts) == M &&
+           "Shuffle mask vector decomposition failure.");
+
+    // And which NumEltsExtracted-sized subvector of that operand is that?
+    int OpSubvecIdx = OpEltIdx / NumEltsExtracted;
+    // And which element within that subvector of that operand is that?
+    int OpEltIdxInSubvec = OpEltIdx % NumEltsExtracted;
+
+    assert((OpEltIdxInSubvec + OpSubvecIdx * NumEltsExtracted) == OpEltIdx &&
+           "Shuffle mask subvector decomposition failure.");
+
+    assert((OpEltIdxInSubvec + OpSubvecIdx * NumEltsExtracted +
+            WideShufOpIdx * WideNumElts) == M &&
+           "Shuffle mask full decomposition failure.");
+
+    SDValue Op = WideShuffleVector->getOperand(WideShufOpIdx);
+
+    if (Op.isUndef()) {
+      // Picking from an undef operand. Let's adjust mask instead.
+      NewMask.emplace_back(-1);
+      continue;
+    }
+
+    // Profitability check: only deal with extractions from the first subvector.
+    if (OpSubvecIdx != 0)
+      return SDValue();
+
+    const std::pair<SDValue, int> DemandedSubvector =
+        std::make_pair(Op, OpSubvecIdx);
+
+    if (DemandedSubvectors.insert(DemandedSubvector)) {
+      if (DemandedSubvectors.size() > 2)
+        return SDValue(); // We can't handle more than two subvectors.
+      // How many elements into the WideVT does this subvector start?
+      int Index = NumEltsExtracted * OpSubvecIdx;
+      // Bail out if the extraction isn't going to be cheap.
+      if (!TLI.isExtractSubvectorCheap(NarrowVT, WideVT, Index))
+        return SDValue();
+    }
+
+    // Ok, but from which operand of the new shuffle will this element pick?
+    int NewOpIdx =
+        getFirstIndexOf(DemandedSubvectors.getArrayRef(), DemandedSubvector);
+    assert((NewOpIdx == 0 || NewOpIdx == 1) && "Unexpected operand index.");
+
+    int AdjM = OpEltIdxInSubvec + NewOpIdx * NumEltsExtracted;
+    NewMask.emplace_back(AdjM);
+  }
+  assert(NewMask.size() == (unsigned)NumEltsExtracted && "Produced bad mask.");
+  assert(DemandedSubvectors.size() <= 2 &&
+         "Should have ended up demanding at most two subvectors.");
+
+  // Did we discover that the shuffle does not actually depend on operands?
+  if (DemandedSubvectors.empty())
+    return DAG.getUNDEF(NarrowVT);
+
+  // We still perform the exact same EXTRACT_SUBVECTOR,  just on different
+  // operand[s]/index[es], so there is no point in checking for it's legality.
+
+  // Do not turn a legal shuffle into an illegal one.
+  if (TLI.isShuffleMaskLegal(WideShuffleVector->getMask(), WideVT) &&
+      !TLI.isShuffleMaskLegal(NewMask, NarrowVT))
+    return SDValue();
+
+  SDLoc DL(N);
+
+  SmallVector<SDValue, 2> NewOps;
+  for (const std::pair<SDValue /*Op*/, int /*SubvectorIndex*/>
+           &DemandedSubvector : DemandedSubvectors) {
+    // How many elements into the WideVT does this subvector start?
+    int Index = NumEltsExtracted * DemandedSubvector.second;
+    SDValue IndexC = DAG.getVectorIdxConstant(Index, DL);
+    NewOps.emplace_back(DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, NarrowVT,
+                                    DemandedSubvector.first, IndexC));
+  }
+  assert((NewOps.size() == 1 || NewOps.size() == 2) &&
+         "Should end up with either one or two ops");
+
+  // If we ended up with only one operand, pad with an undef.
+  if (NewOps.size() == 1)
+    NewOps.emplace_back(DAG.getUNDEF(NarrowVT));
+
+  return DAG.getVectorShuffle(NarrowVT, DL, NewOps[0], NewOps[1], NewMask);
+}
+
 SDValue DAGCombiner::visitEXTRACT_SUBVECTOR(SDNode *N) {
   EVT NVT = N->getValueType(0);
   SDValue V = N->getOperand(0);
@@ -20856,6 +21006,10 @@ SDValue DAGCombiner::visitEXTRACT_SUBVECTOR(SDNode *N) {
                          V.getOperand(ConcatOpIdx), NewIndexC);
     }
   }
+
+  if (SDValue V =
+          foldExtractSubvectorFromShuffleVector(N, DAG, TLI, LegalOperations))
+    return V;
 
   V = peekThroughBitcasts(V);
 
