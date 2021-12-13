@@ -11,8 +11,8 @@
 # CHECK:      .plt      PROGBITS 002011e0 0001e0 000030 00 AX   0   0 16
 # CHECK:      .got.plt  PROGBITS 00203278 000278 000028 00 WA   0   0  8
 # CHECK:      Relocation section '.rela.plt' at offset {{.*}} contains 2 entries:
-# CHECK:      00203290 {{.*}} R_X86_64_JUMP_SLOT 00000000 bar + 0
-# CHECK-NEXT: 00203298 {{.*}} R_X86_64_JUMP_SLOT 00000000 weak + 0
+# CHECK:      00203290 {{.*}} R_X86_64_JUMP_SLOT 00000000 weak + 0
+# CHECK-NEXT: 00203298 {{.*}} R_X86_64_JUMP_SLOT 00000000 bar + 0
 
 # DISASM:       <_start>:
 # DISASM-NEXT:    callq {{.*}} <local>
@@ -27,12 +27,12 @@
 # DISASM-NEXT:             jmpq *8348(%rip)  # 0x203288
 # DISASM-NEXT:             nopl (%rax)
 # DISASM-EMPTY:
-# DISASM-NEXT: <bar@plt>:
+# DISASM-NEXT: <weak@plt>:
 # DISASM-NEXT: 2011f0:     jmpq *8346(%rip)  # 0x203290
 # DISASM-NEXT:             pushq $0
 # DISASM-NEXT:             jmp 0x2011e0 <.plt>
 # DISASM-EMPTY:
-# DISASM-NEXT: <weak@plt>:
+# DISASM-NEXT: <bar@plt>:
 # DISASM-NEXT: 201200:     jmpq *8338(%rip)  # 0x203298
 # DISASM-NEXT:             pushq $1
 # DISASM-NEXT:             jmp 0x2011e0 <.plt>
