@@ -4,7 +4,7 @@
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
 // RUN:     --target=mips-linux-gnu \
 // RUN:     --sysroot=%S/Inputs/debian_reduced_mips_tree \
-// RUN:     --gcc-toolchain="" \
+// RUN:     --gcc-toolchain="" -no-pie \
 // RUN:   | FileCheck --check-prefix=CHECK-DEBIAN-MIPS %s
 // CHECK-DEBIAN-MIPS: "{{.*}}ld{{(.exe)?}}" "--sysroot=[[SYSROOT:[^"]+]]"
 // CHECK-DEBIAN-MIPS: "{{.*}}/usr/lib/gcc/mips-linux-gnu/4.7{{/|\\\\}}crtbegin.o"
@@ -16,7 +16,7 @@
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
 // RUN:     --target=mipsel-linux-gnu \
 // RUN:     --sysroot=%S/Inputs/debian_reduced_mips_tree \
-// RUN:     --gcc-toolchain="" \
+// RUN:     --gcc-toolchain="" -no-pie \
 // RUN:   | FileCheck --check-prefix=CHECK-DEBIAN-MIPSEL %s
 // CHECK-DEBIAN-MIPSEL: "{{.*}}ld{{(.exe)?}}" "--sysroot=[[SYSROOT:[^"]+]]"
 // CHECK-DEBIAN-MIPSEL: "{{.*}}/usr/lib/gcc/mipsel-linux-gnu/4.7{{/|\\\\}}crtbegin.o"
