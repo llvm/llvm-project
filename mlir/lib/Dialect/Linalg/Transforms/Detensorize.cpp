@@ -163,7 +163,7 @@ public:
 /// Canonicalizes the pattern of the form
 ///
 /// %tensor = tensor.from_elements(%element) : (i32) -> tensor<1xi32>
-/// %reshaped_tensor = linalg.tensor_collapse_shape %tensor []
+/// %reshaped_tensor = tensor.collapse_shape %tensor []
 ///     : tensor<1xi32> into tensor<i32>
 /// %extracted_element = tensor.extract %reshaped_tensor[] : tensor<i32>
 ///

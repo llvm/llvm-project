@@ -348,7 +348,7 @@ fuseElementwiseOpsImpl(GenericOp producer, OpOperand *consumerOpOperand,
 /// with output index_map `affine_map<(d0, d1, d2, d3) -> (d0, d1, d2, d3)>`
 ///
 /// and reshape:
-/// %1 = linalg.tensor_collapse_shape %0 [[0], [0, 1, 2]] :
+/// %1 = tensor.collapse_shape %0 [[0], [0, 1, 2]] :
 ///        tensor<?x?x4x5xf32> into tensor<?x?xf32>
 ///
 /// would be rewritten into:
@@ -448,7 +448,7 @@ static bool isUnitDimExpansionOnly(TensorReshapeOp reshapeOp) {
 ///         indexing_maps = [affine_map<(d0, d1, d2) -> (d1, d0, d2)>,
 ///                          affine_map<(d0, d1, d2) -> (d1, d2)>,
 ///                          affine_map<(d0, d1, d2) -> (d0, d2, d1)>]
-///  %d = linalg.tensor_expand_shape %c [[0, 1], [2], [3, 4, 5]]
+///  %d = tensor.expand_shape %c [[0, 1], [2], [3, 4, 5]]
 ///       : tensor<?x?x?xf32> into tensor<?x?x?x?x?x?xf32>
 ///
 ///  The reshape can be folded into the `genericOp` if its loop dimensionality
@@ -483,9 +483,9 @@ static bool isUnitDimExpansionOnly(TensorReshapeOp reshapeOp) {
 ///  Since operands to the linalg generic are now 5D, reshapes can be introduced
 ///  to make it consistent
 ///
-///  %0 = linalg.tensor_expand_shape %a [[0, 1, 2], [3, 4], [5]]
+///  %0 = tensor.expand_shape %a [[0, 1, 2], [3, 4], [5]]
 ///       : tensor<?x?x?xf32> into tensor<?x?x?x?x?x?xf32>
-///  %1 = linalg.tensor_expand_shape %b [[0, 1, 2], [3]]
+///  %1 = tensor.expand_shape %b [[0, 1, 2], [3]]
 ///       : tensor<?x?x?xf32> into tensor<?x?x?x?xf32>
 ///
 ///  The added reshapes are again expanding patterns, so they will get fused
@@ -649,10 +649,10 @@ static RankedTensorType getExpandedType(RankedTensorType originalType,
   return RankedTensorType::get(expandedShape, originalType.getElementType());
 }
 
-/// Returns the reassociation maps to use in the `linalg.tensor_expand_shape`
+/// Returns the reassociation maps to use in the `tensor.expand_shape`
 /// operation to convert the operands of the original operation to operands of
 /// the expanded operation. The same method is used to compute the
-/// `linalg.tensor_collapse_shape` used to collapse the result of the expanded
+/// `tensor.collapse_shape` used to collapse the result of the expanded
 /// op to get the value that can replace all uses of the results of the original
 /// op.
 static SmallVector<ReassociationIndices>
@@ -837,7 +837,7 @@ namespace {
 /// For example,
 ///
 /// #map0 = affine_map<(d0, d1, d2, d3) -> (d0, d1, d2, d3)>
-/// %0 = linalg.tensor_expand_shape %arg0 [[0], [1, 2], [3]]
+/// %0 = tensor.expand_shape %arg0 [[0], [1, 2], [3]]
 ///      tensor<?x?x?xf32> into tensor<?x?x4x?xf32>
 /// %1 = linalg.generic { indexing_maps = [#map0, #map0, #map0], ... }
 ///        ins(%0, %arg1 : tensor<?x?x4x?xf32>, tensor<?x?x4x?xf32>) ...
@@ -934,7 +934,7 @@ getReassociationIndices(ArrayRef<AffineMap> maps) {
 ///
 /// For example,
 ///
-///  %0 = linalg.tensor_expand_shape %A [[0, 1], [2]]
+///  %0 = tensor.expand_shape %A [[0, 1], [2]]
 ///      : tensor<12544x16xf32> into tensor<112x112x16xf32>
 ///  %2 = linalg.generic {indexing_maps = [
 ///    affine_map<(d0, d1, d2) -> (d0, d1, d2)>,
@@ -952,7 +952,7 @@ getReassociationIndices(ArrayRef<AffineMap> maps) {
 ///    iterator_types = ["parallel", "parallel"]} ins(%arg0, %arg1
 ///    : tensor<12544x16xf32>, tensor<16xf32>) outs(%1 : tensor<12544x16xf32>) {
 ///  } -> tensor<12544x16xf32>
-///  %3 = linalg.tensor_expand_shape %2 [[0, 1], [2]]
+///  %3 = tensor.expand_shape %2 [[0, 1], [2]]
 ///    : tensor<12544x16xf32> into tensor<112x112x16xf32>
 struct PushExpandingReshape : public OpRewritePattern<GenericOp> {
   using OpRewritePattern<GenericOp>::OpRewritePattern;
