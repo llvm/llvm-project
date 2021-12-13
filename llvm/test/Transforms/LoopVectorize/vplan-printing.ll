@@ -277,5 +277,101 @@ for.end:
   ret float %muladd
 }
 
+define void @debug_loc_vpinstruction(i32* nocapture %asd, i32* nocapture %bsd) !dbg !5 {
+; CHECK-LABEL: Checking a loop in "debug_loc_vpinstruction"
+; CHECK:    VPlan 'Initial VPlan for VF={4},UF>=1' {
+; CHECK-NEXT: <x1> vector loop: {
+; CHECK-NEXT:  loop:
+; CHECK-NEXT:    WIDEN-INDUCTION %iv = phi 0, %iv.next
+; CHECK-NEXT:    CLONE ir<%isd> = getelementptr ir<%asd>, ir<%iv>
+; CHECK-NEXT:    WIDEN ir<%lsd> = load ir<%isd>
+; CHECK-NEXT:    WIDEN ir<%psd> = add ir<%lsd>, ir<23>
+; CHECK-NEXT:    WIDEN ir<%cmp1> = icmp ir<%lsd>, ir<100>
+; CHECK-NEXT:  Successor(s): check
+; CHECK-EMPTY:
+; CHECK-NEXT:  check:
+; CHECK-NEXT:    WIDEN ir<%cmp2> = icmp ir<%lsd>, ir<200>
+; CHECK-NEXT:  Successor(s): if.then
+; CHECK-EMPTY:
+; CHECK-NEXT:  if.then:
+; CHECK-NEXT:    EMIT vp<[[NOT1:%.+]]> = not ir<%cmp1>
+; CHECK-NOT:     !dbg
+; CHECK-NEXT:    EMIT vp<[[SEL1:%.+]]> = select vp<[[NOT1]]> ir<%cmp2> ir<false>
+; CHECK-NOT:     !dbg
+; CHECK-NEXT:    EMIT vp<[[OR1:%.+]]> = or vp<[[SEL1]]> ir<%cmp1>
+; CHECK-NEXT:  Successor(s): pred.sdiv
+; CHECK-EMPTY:
+; CHECK-NEXT:  <xVFxUF> pred.sdiv: {
+; CHECK-NEXT:    pred.sdiv.entry:
+; CHECK-NEXT:      BRANCH-ON-MASK vp<[[OR1]]>
+; CHECK-NEXT:    Successor(s): pred.sdiv.if, pred.sdiv.continue
+; CHECK-NEXT:    CondBit: vp<[[OR1]]> (if.then)
+; CHECK-EMPTY:
+; CHECK-NEXT:    pred.sdiv.if:
+; CHECK-NEXT:      REPLICATE ir<%sd1> = sdiv ir<%psd>, ir<%lsd> (S->V)
+; CHECK-NEXT:    Successor(s): pred.sdiv.continue
+; CHECK-EMPTY:
+; CHECK-NEXT:    pred.sdiv.continue:
+; CHECK-NEXT:      PHI-PREDICATED-INSTRUCTION vp<[[PHI:%.+]]> = ir<%sd1>
+; CHECK-NEXT:    No successors
+; CHECK-NEXT:  }
+; CHECK-NEXT:  Successor(s): if.then.0
+; CHECK-EMPTY:
+; CHECK-NEXT:  if.then.0:
+; CHECK-NEXT:  Successor(s): if.end
+; CHECK-EMPTY:
+; CHECK-NEXT:  if.end:
+; CHECK-NEXT:    EMIT vp<[[NOT2:%.+]]> = not ir<%cmp2>
+; CHECK-NEXT:    EMIT vp<[[SEL2:%.+]]> = select vp<[[NOT1]]> vp<[[NOT2]]> ir<false>
+; CHECK-NEXT:    BLEND %ysd.0 = vp<[[PHI]]>/vp<[[OR1]]> ir<%psd>/vp<[[SEL2]]>
+; CHECK-NEXT:    WIDEN store ir<%isd>, ir<%ysd.0>
+; CHECK-NEXT:  No successors
+; CHECK-NEXT:}
+; CHECK-NEXT:No successors
+; CHECK-NEXT:}
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %if.end ]
+  %isd = getelementptr inbounds i32, i32* %asd, i64 %iv
+  %lsd = load i32, i32* %isd, align 4
+  %psd = add nsw i32 %lsd, 23
+  %cmp1 = icmp slt i32 %lsd, 100
+  br i1 %cmp1, label %if.then, label %check, !dbg !7
+
+check:
+  %cmp2 = icmp sge i32 %lsd, 200
+  br i1 %cmp2, label %if.then, label %if.end, !dbg !8
+
+if.then:
+  %sd1 = sdiv i32 %psd, %lsd
+  br label %if.end
+
+if.end:
+  %ysd.0 = phi i32 [ %sd1, %if.then ], [ %psd, %check ]
+  store i32 %ysd.0, i32* %isd, align 4
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond = icmp eq i64 %iv.next, 128
+  br i1 %exitcond, label %exit, label %loop
+
+exit:
+  ret void
+}
+
 declare float @llvm.sqrt.f32(float) nounwind readnone
 declare float @llvm.fmuladd.f32(float, float, float)
+
+!llvm.dbg.cu = !{!0}
+!llvm.module.flags = !{!3, !4}
+
+!0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang", isOptimized: true, runtimeVersion: 0, emissionKind: NoDebug, enums: !2)
+!1 = !DIFile(filename: "/tmp/s.c", directory: "/tmp")
+!2 = !{}
+!3 = !{i32 2, !"Debug Info Version", i32 3}
+!4 = !{i32 7, !"PIC Level", i32 2}
+!5 = distinct !DISubprogram(name: "f", scope: !1, file: !1, line: 4, type: !6, scopeLine: 4, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !2)
+!6 = !DISubroutineType(types: !2)
+!7 = !DILocation(line: 5, column: 3, scope: !5)
+!8 = !DILocation(line: 5, column: 21, scope: !5)
