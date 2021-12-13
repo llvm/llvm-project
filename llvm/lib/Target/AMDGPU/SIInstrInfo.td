@@ -1252,9 +1252,17 @@ class FPInputModsMatchClass <int opSize> : AsmOperandClass {
   let PredicateMethod = "isRegOrImmWithFP"#opSize#"InputMods";
 }
 
+class FPVCSrcInputModsMatchClass <int opSize> : FPInputModsMatchClass <opSize> {
+  let Name = "RegOrInlineImmWithFP"#opSize#"InputMods";
+  let PredicateMethod = "isRegOrInlineImmWithFP"#opSize#"InputMods";
+}
+
 def FP16InputModsMatchClass : FPInputModsMatchClass<16>;
 def FP32InputModsMatchClass : FPInputModsMatchClass<32>;
 def FP64InputModsMatchClass : FPInputModsMatchClass<64>;
+
+def FP16VCSrcInputModsMatchClass : FPVCSrcInputModsMatchClass<16>;
+def FP32VCSrcInputModsMatchClass : FPVCSrcInputModsMatchClass<32>;
 
 class InputMods <AsmOperandClass matchClass> : Operand <i32> {
   let OperandNamespace = "AMDGPU";
@@ -1270,19 +1278,28 @@ def FP16InputMods : FPInputMods<FP16InputModsMatchClass>;
 def FP32InputMods : FPInputMods<FP32InputModsMatchClass>;
 def FP64InputMods : FPInputMods<FP64InputModsMatchClass>;
 
+def FP16VCSrcInputMods : FPInputMods<FP16VCSrcInputModsMatchClass>;
+def FP32VCSrcInputMods : FPInputMods<FP32VCSrcInputModsMatchClass>;
+
 class IntInputModsMatchClass <int opSize> : AsmOperandClass {
   let Name = "RegOrImmWithInt"#opSize#"InputMods";
   let ParserMethod = "parseRegOrImmWithIntInputMods";
   let PredicateMethod = "isRegOrImmWithInt"#opSize#"InputMods";
 }
+class IntVCSrcInputModsMatchClass <int opSize> : IntInputModsMatchClass <opSize> {
+  let Name = "RegOrInlineImmWithInt"#opSize#"InputMods";
+  let PredicateMethod = "isRegOrInlineImmWithInt"#opSize#"InputMods";
+}
 def Int32InputModsMatchClass : IntInputModsMatchClass<32>;
 def Int64InputModsMatchClass : IntInputModsMatchClass<64>;
+def Int32VCSrcInputModsMatchClass : IntVCSrcInputModsMatchClass<32>;
 
 class IntInputMods <IntInputModsMatchClass matchClass> : InputMods <matchClass> {
   let PrintMethod = "printOperandAndIntInputMods";
 }
 def Int32InputMods : IntInputMods<Int32InputModsMatchClass>;
 def Int64InputMods : IntInputMods<Int64InputModsMatchClass>;
+def Int32VCSrcInputMods : IntInputMods<Int32VCSrcInputModsMatchClass>;
 
 class OpSelModsMatchClass : AsmOperandClass {
   let Name = "OpSelMods";
@@ -1613,6 +1630,19 @@ class getVOP3SrcForVT<ValueType VT> {
   );
 }
 
+// Src2 of VOP3 DPP instructions cannot be a literal
+class getVOP3DPPSrcForVT<ValueType VT> {
+  bit isFP = isFloatType<VT>.ret;
+  RegisterOperand ret =
+      !if (!eq(VT.Value, i1.Value), SSrc_i1,
+           !if (isFP,
+                !if (!eq(VT.Value, f16.Value), VCSrc_f16,
+                     !if (!eq(VT.Value, v2f16.Value), VCSrc_v2f16, VCSrc_f32)),
+                !if (!eq(VT.Value, i16.Value), VCSrc_b16,
+                     !if (!eq(VT.Value, v2i16.Value), VCSrc_v2b16,
+                          VCSrc_b32))));
+}
+
 // Float or packed int
 class isModifierType<ValueType SrcVT> {
   bit ret = !or(!eq(SrcVT.Value, f16.Value),
@@ -1651,6 +1681,17 @@ class getOpSelMod <ValueType VT> {
 class getSrcModDPP <ValueType VT> {
   bit isFP = isFloatType<VT>.ret;
   Operand ret = !if(isFP, FPVRegInputMods, IntVRegInputMods);
+}
+
+// Return type of input modifiers operand for specified input operand for DPP
+class getSrcModVOP3DPP <ValueType VT, bit EnableF32SrcMods> {
+  bit isFP = isFloatType<VT>.ret;
+  bit isPacked = isPackedType<VT>.ret;
+  Operand ret =
+      !if (isFP,
+           !if (!eq(VT.Value, f16.Value), FP16VCSrcInputMods,
+                FP32VCSrcInputMods),
+           !if (EnableF32SrcMods, FP32VCSrcInputMods, Int32VCSrcInputMods));
 }
 
 // Return type of input modifiers operand specified input operand for SDWA
@@ -2287,8 +2328,10 @@ class VOPProfile <list<ValueType> _ArgVT, bit _EnableF32SrcMods = 0,
   field RegisterClass Src0DPP = getVregSrcForVT<Src0VT>.ret;
   field RegisterClass Src1DPP = getVregSrcForVT<Src1VT>.ret;
   field RegisterClass Src2DPP = getVregSrcForVT<Src2VT>.ret;
-  // TODO-GFX11 Choose Src0VOP3DPP operand class when real 16bit regs exist
+  // TODO-GFX11 Choose Src{0,1}VOP3DPP operand class when real 16bit regs exist
   field RegisterOperand Src0VOP3DPP = VGPRSrc_32;
+  field RegisterOperand Src1VOP3DPP = VGPRSrc_32;
+  field RegisterOperand Src2VOP3DPP = getVOP3DPPSrcForVT<Src2VT>.ret;
   field RegisterOperand Src0SDWA = getSDWASrcForVT<Src0VT>.ret;
   field RegisterOperand Src1SDWA = getSDWASrcForVT<Src0VT>.ret;
   field Operand Src0Mod = getSrcMod<Src0VT, EnableF32SrcMods>.ret;
@@ -2297,6 +2340,7 @@ class VOPProfile <list<ValueType> _ArgVT, bit _EnableF32SrcMods = 0,
   field Operand Src0ModDPP = getSrcModDPP<Src0VT>.ret;
   field Operand Src1ModDPP = getSrcModDPP<Src1VT>.ret;
   field Operand Src2ModDPP = getSrcModDPP<Src2VT>.ret;
+  field Operand Src2ModVOP3DPP = getSrcModVOP3DPP<Src2VT, EnableF32SrcMods>.ret;
   field Operand Src0ModSDWA = getSrcModSDWA<Src0VT>.ret;
   field Operand Src1ModSDWA = getSrcModSDWA<Src1VT>.ret;
 
@@ -2398,9 +2442,9 @@ class VOPProfile <list<ValueType> _ArgVT, bit _EnableF32SrcMods = 0,
   field dag InsDPP8 = getInsDPP8<DstRCDPP, Src0DPP, Src1DPP, Src2DPP,
                                  NumSrcArgs, HasModifiers,
                                  Src0ModDPP, Src1ModDPP, Src2ModDPP>.ret;
-  field dag InsVOP3Base = getInsVOP3Base<Src0VOP3DPP, Src1RC64,
-                  Src2RC64, NumSrcArgs, HasClamp, HasModifiers, HasSrc2Mods, HasOMod,
-                  Src0ModDPP, Src1ModDPP, Src2ModDPP, HasOpSel, IsVOP3P>.ret;
+  field dag InsVOP3Base = getInsVOP3Base<Src0VOP3DPP, Src1VOP3DPP,
+                  Src2VOP3DPP, NumSrcArgs, HasClamp, HasModifiers, HasSrc2Mods, HasOMod,
+                  Src0ModDPP, Src1ModDPP, Src2ModVOP3DPP, HasOpSel, IsVOP3P>.ret;
   field dag InsVOP3DPP = getInsVOP3DPP<InsVOP3Base, DstRCDPP, NumSrcArgs>.ret;
   field dag InsVOP3DPP16 = getInsVOP3DPP16<InsVOP3Base, DstRCDPP, NumSrcArgs>.ret;
   field dag InsVOP3DPP8 = getInsVOP3DPP8<InsVOP3Base, DstRCDPP, NumSrcArgs>.ret;

@@ -264,6 +264,14 @@ public:
     return isRegOrImmWithInputMods(AMDGPU::VS_32RegClassID, MVT::i32);
   }
 
+  bool isRegOrInlineImmWithInt16InputMods() const {
+    return isRegOrInline(AMDGPU::VS_32RegClassID, MVT::i16);
+  }
+
+  bool isRegOrInlineImmWithInt32InputMods() const {
+    return isRegOrInline(AMDGPU::VS_32RegClassID, MVT::i32);
+  }
+
   bool isRegOrImmWithInt64InputMods() const {
     return isRegOrImmWithInputMods(AMDGPU::VS_64RegClassID, MVT::i64);
   }
@@ -279,6 +287,15 @@ public:
   bool isRegOrImmWithFP64InputMods() const {
     return isRegOrImmWithInputMods(AMDGPU::VS_64RegClassID, MVT::f64);
   }
+
+  bool isRegOrInlineImmWithFP16InputMods() const {
+    return isRegOrInline(AMDGPU::VS_32RegClassID, MVT::f16);
+  }
+
+  bool isRegOrInlineImmWithFP32InputMods() const {
+    return isRegOrInline(AMDGPU::VS_32RegClassID, MVT::f32);
+  }
+
 
   bool isVReg() const {
     return isRegClass(AMDGPU::VGPR_32RegClassID) ||
@@ -8373,29 +8390,22 @@ void AMDGPUAsmParser::cvtVOP3DPP(MCInst &Inst, const OperandVector &Operands, bo
     }
     AMDGPUOperand &Op = ((AMDGPUOperand &)*Operands[I]);
     // Add the register arguments
-
-    if (IsDPP8) {
-      if (Op.isFI()) {
-        Fi = Op.getImm();
-      } else if (HasModifiers && isRegOrImmWithInputMods(Desc, Inst.getNumOperands())) {
-        Op.addRegWithFPInputModsOperands(Inst, 2);
-      } else if (Op.isReg()) {
-        Op.addRegOperands(Inst, 1);
-      } else if (Op.isImm()) {
-        OptionalIdx[Op.getImmTy()] = I;
-      } else {
-        llvm_unreachable("unhandled operand type");
-      }
+    if (IsDPP8 && Op.isFI()) {
+      Fi = Op.getImm();
+    } else if (HasModifiers &&
+               isRegOrImmWithInputMods(Desc, Inst.getNumOperands())) {
+      Op.addRegOrImmWithFPInputModsOperands(Inst, 2);
+    } else if (Op.isReg()) {
+      Op.addRegOperands(Inst, 1);
+    } else if (Op.isImm() &&
+               Desc.OpInfo[Inst.getNumOperands()].RegClass != -1) {
+      assert(!HasModifiers && "Case should be unreachable with modifiers");
+      assert(!Op.IsImmKindLiteral() && "Cannot use literal with DPP");
+      Op.addImmOperands(Inst, 1);
+    } else if (Op.isImm()) {
+      OptionalIdx[Op.getImmTy()] = I;
     } else {
-      if (HasModifiers && isRegOrImmWithInputMods(Desc, Inst.getNumOperands())) {
-        Op.addRegWithFPInputModsOperands(Inst, 2);
-      } else if (Op.isReg()) {
-        Op.addRegOperands(Inst, 1);
-      } else if (Op.isImm()) {
-        OptionalIdx[Op.getImmTy()] = I;
-      } else {
-        llvm_unreachable("unhandled operand type");
-      }
+      llvm_unreachable("unhandled operand type");
     }
   }
   if (AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::clamp) != -1) {
