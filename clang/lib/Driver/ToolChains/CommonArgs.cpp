@@ -15,7 +15,7 @@
 #include "Arch/SystemZ.h"
 #include "Arch/VE.h"
 #include "Arch/X86.h"
-#include "HIP.h"
+#include "HIPAMD.h"
 #include "Hexagon.h"
 #include "clang/Basic/CharInfo.h"
 #include "clang/Basic/LangOptions.h"
