@@ -192,12 +192,12 @@ def : Pat<(fpextend FPR32:$rs1), (FCVT_D_S FPR32:$rs1)>;
 
 /// Float arithmetic operations
 
-def : PatFpr64Fpr64DynFrm<fadd, FADD_D>;
-def : PatFpr64Fpr64DynFrm<fsub, FSUB_D>;
-def : PatFpr64Fpr64DynFrm<fmul, FMUL_D>;
-def : PatFpr64Fpr64DynFrm<fdiv, FDIV_D>;
+def : PatFpr64Fpr64DynFrm<any_fadd, FADD_D>;
+def : PatFpr64Fpr64DynFrm<any_fsub, FSUB_D>;
+def : PatFpr64Fpr64DynFrm<any_fmul, FMUL_D>;
+def : PatFpr64Fpr64DynFrm<any_fdiv, FDIV_D>;
 
-def : Pat<(fsqrt FPR64:$rs1), (FSQRT_D FPR64:$rs1, 0b111)>;
+def : Pat<(any_fsqrt FPR64:$rs1), (FSQRT_D FPR64:$rs1, 0b111)>;
 
 def : Pat<(fneg FPR64:$rs1), (FSGNJN_D $rs1, $rs1)>;
 def : Pat<(fabs FPR64:$rs1), (FSGNJX_D $rs1, $rs1)>;
@@ -209,19 +209,19 @@ def : Pat<(fcopysign FPR32:$rs1, FPR64:$rs2), (FSGNJ_S $rs1, (FCVT_S_D $rs2,
                                                               0b111))>;
 
 // fmadd: rs1 * rs2 + rs3
-def : Pat<(fma FPR64:$rs1, FPR64:$rs2, FPR64:$rs3),
+def : Pat<(any_fma FPR64:$rs1, FPR64:$rs2, FPR64:$rs3),
           (FMADD_D $rs1, $rs2, $rs3, 0b111)>;
 
 // fmsub: rs1 * rs2 - rs3
-def : Pat<(fma FPR64:$rs1, FPR64:$rs2, (fneg FPR64:$rs3)),
+def : Pat<(any_fma FPR64:$rs1, FPR64:$rs2, (fneg FPR64:$rs3)),
           (FMSUB_D FPR64:$rs1, FPR64:$rs2, FPR64:$rs3, 0b111)>;
 
 // fnmsub: -rs1 * rs2 + rs3
-def : Pat<(fma (fneg FPR64:$rs1), FPR64:$rs2, FPR64:$rs3),
+def : Pat<(any_fma (fneg FPR64:$rs1), FPR64:$rs2, FPR64:$rs3),
           (FNMSUB_D FPR64:$rs1, FPR64:$rs2, FPR64:$rs3, 0b111)>;
 
 // fnmadd: -rs1 * rs2 - rs3
-def : Pat<(fma (fneg FPR64:$rs1), FPR64:$rs2, (fneg FPR64:$rs3)),
+def : Pat<(any_fma (fneg FPR64:$rs1), FPR64:$rs2, (fneg FPR64:$rs3)),
           (FNMADD_D FPR64:$rs1, FPR64:$rs2, FPR64:$rs3, 0b111)>;
 
 // The ratified 20191213 ISA spec defines fmin and fmax in a way that matches
