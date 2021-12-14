@@ -6,6 +6,7 @@ add_flang_library(FIRTransforms
   ArrayValueCopy.cpp
   Inliner.cpp
   ExternalNameConversion.cpp
+  MemoryAllocation.cpp
   MemRefDataFlowOpt.cpp
   RewriteLoop.cpp
 
