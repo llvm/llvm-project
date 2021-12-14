@@ -532,7 +532,7 @@ entry:
 define <8 x i16> @stest_f16i16(<8 x half> %x) {
 ; CHECK-LABEL: stest_f16i16:
 ; CHECK:         .functype stest_f16i16 (f32, f32, f32, f32, f32, f32, f32, f32) -> (v128)
-; CHECK-NEXT:    .local v128, v128
+; CHECK-NEXT:    .local v128, v128, v128
 ; CHECK-NEXT:  # %bb.0: # %entry
 ; CHECK-NEXT:    local.get 5
 ; CHECK-NEXT:    call __truncsfhf2
@@ -578,6 +578,9 @@ define <8 x i16> @stest_f16i16(<8 x half> %x) {
 ; CHECK-NEXT:    v128.const -32768, -32768, -32768, -32768
 ; CHECK-NEXT:    local.tee 9
 ; CHECK-NEXT:    i32x4.max_s
+; CHECK-NEXT:    v128.const 65535, 65535, 65535, 65535
+; CHECK-NEXT:    local.tee 10
+; CHECK-NEXT:    v128.and
 ; CHECK-NEXT:    local.get 4
 ; CHECK-NEXT:    i32.trunc_sat_f32_s
 ; CHECK-NEXT:    i32x4.splat
@@ -594,7 +597,9 @@ define <8 x i16> @stest_f16i16(<8 x half> %x) {
 ; CHECK-NEXT:    i32x4.min_s
 ; CHECK-NEXT:    local.get 9
 ; CHECK-NEXT:    i32x4.max_s
-; CHECK-NEXT:    i8x16.shuffle 0, 1, 4, 5, 8, 9, 12, 13, 16, 17, 20, 21, 24, 25, 28, 29
+; CHECK-NEXT:    local.get 10
+; CHECK-NEXT:    v128.and
+; CHECK-NEXT:    i16x8.narrow_i32x4_u
 ; CHECK-NEXT:    # fallthrough-return
 entry:
   %conv = fptosi <8 x half> %x to <8 x i32>
@@ -666,7 +671,7 @@ define <8 x i16> @utesth_f16i16(<8 x half> %x) {
 ; CHECK-NEXT:    i32x4.replace_lane 3
 ; CHECK-NEXT:    local.get 8
 ; CHECK-NEXT:    i32x4.min_u
-; CHECK-NEXT:    i8x16.shuffle 0, 1, 4, 5, 8, 9, 12, 13, 16, 17, 20, 21, 24, 25, 28, 29
+; CHECK-NEXT:    i16x8.narrow_i32x4_u
 ; CHECK-NEXT:    # fallthrough-return
 entry:
   %conv = fptoui <8 x half> %x to <8 x i32>
@@ -741,7 +746,7 @@ define <8 x i16> @ustest_f16i16(<8 x half> %x) {
 ; CHECK-NEXT:    i32x4.min_s
 ; CHECK-NEXT:    local.get 9
 ; CHECK-NEXT:    i32x4.max_s
-; CHECK-NEXT:    i8x16.shuffle 0, 1, 4, 5, 8, 9, 12, 13, 16, 17, 20, 21, 24, 25, 28, 29
+; CHECK-NEXT:    i16x8.narrow_i32x4_u
 ; CHECK-NEXT:    # fallthrough-return
 entry:
   %conv = fptosi <8 x half> %x to <8 x i32>
@@ -2106,7 +2111,7 @@ entry:
 define <8 x i16> @stest_f16i16_mm(<8 x half> %x) {
 ; CHECK-LABEL: stest_f16i16_mm:
 ; CHECK:         .functype stest_f16i16_mm (f32, f32, f32, f32, f32, f32, f32, f32) -> (v128)
-; CHECK-NEXT:    .local v128, v128
+; CHECK-NEXT:    .local v128, v128, v128
 ; CHECK-NEXT:  # %bb.0: # %entry
 ; CHECK-NEXT:    local.get 5
 ; CHECK-NEXT:    call __truncsfhf2
@@ -2152,6 +2157,9 @@ define <8 x i16> @stest_f16i16_mm(<8 x half> %x) {
 ; CHECK-NEXT:    v128.const -32768, -32768, -32768, -32768
 ; CHECK-NEXT:    local.tee 9
 ; CHECK-NEXT:    i32x4.max_s
+; CHECK-NEXT:    v128.const 65535, 65535, 65535, 65535
+; CHECK-NEXT:    local.tee 10
+; CHECK-NEXT:    v128.and
 ; CHECK-NEXT:    local.get 4
 ; CHECK-NEXT:    i32.trunc_sat_f32_s
 ; CHECK-NEXT:    i32x4.splat
@@ -2168,7 +2176,9 @@ define <8 x i16> @stest_f16i16_mm(<8 x half> %x) {
 ; CHECK-NEXT:    i32x4.min_s
 ; CHECK-NEXT:    local.get 9
 ; CHECK-NEXT:    i32x4.max_s
-; CHECK-NEXT:    i8x16.shuffle 0, 1, 4, 5, 8, 9, 12, 13, 16, 17, 20, 21, 24, 25, 28, 29
+; CHECK-NEXT:    local.get 10
+; CHECK-NEXT:    v128.and
+; CHECK-NEXT:    i16x8.narrow_i32x4_u
 ; CHECK-NEXT:    # fallthrough-return
 entry:
   %conv = fptosi <8 x half> %x to <8 x i32>
@@ -2238,7 +2248,7 @@ define <8 x i16> @utesth_f16i16_mm(<8 x half> %x) {
 ; CHECK-NEXT:    i32x4.replace_lane 3
 ; CHECK-NEXT:    local.get 8
 ; CHECK-NEXT:    i32x4.min_u
-; CHECK-NEXT:    i8x16.shuffle 0, 1, 4, 5, 8, 9, 12, 13, 16, 17, 20, 21, 24, 25, 28, 29
+; CHECK-NEXT:    i16x8.narrow_i32x4_u
 ; CHECK-NEXT:    # fallthrough-return
 entry:
   %conv = fptoui <8 x half> %x to <8 x i32>
@@ -2312,7 +2322,7 @@ define <8 x i16> @ustest_f16i16_mm(<8 x half> %x) {
 ; CHECK-NEXT:    i32x4.min_s
 ; CHECK-NEXT:    local.get 9
 ; CHECK-NEXT:    i32x4.max_s
-; CHECK-NEXT:    i8x16.shuffle 0, 1, 4, 5, 8, 9, 12, 13, 16, 17, 20, 21, 24, 25, 28, 29
+; CHECK-NEXT:    i16x8.narrow_i32x4_u
 ; CHECK-NEXT:    # fallthrough-return
 entry:
   %conv = fptosi <8 x half> %x to <8 x i32>
