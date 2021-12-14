@@ -244,3 +244,47 @@ module attributes { dlti.dl_spec = #dlti.dl_spec<
 }
 
 // -----
+
+module {
+    // CHECK: @arrays
+    func @arrays() {
+        // simple case
+        // CHECK: alignment = 4
+        // CHECK: bitsize = 64
+        // CHECK: preferred = 4
+        // CHECK: size = 8
+        "test.data_layout_query"() : () -> !llvm.array<2 x i32>
+
+        // size 0
+        // CHECK: alignment = 8
+        // CHECK: bitsize = 0
+        // CHECK: preferred = 8
+        // CHECK: size = 0
+        "test.data_layout_query"() : () -> !llvm.array<0 x f64>
+
+        // alignment info matches element type
+        // CHECK: alignment = 4
+        // CHECK: bitsize = 64
+        // CHECK: preferred = 8
+        // CHECK: size = 8
+        "test.data_layout_query"() : () -> !llvm.array<1 x i64>
+        return
+    }
+}
+
+// -----
+
+module attributes { dlti.dl_spec = #dlti.dl_spec<
+  #dlti.dl_entry<!llvm.struct<()>, dense<[64]> : vector<1xi32>>
+>} {
+    // CHECK: @overaligned
+    func @overaligned() {
+        // Over aligned element types are respected
+        // CHECK: alignment = 8
+        // CHECK: bitsize = 128
+        // CHECK: preferred = 8
+        // CHECK: size = 16
+        "test.data_layout_query"() : () -> !llvm.array<2 x struct<(i8)>>
+         return
+    }
+}
