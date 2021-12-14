@@ -247,8 +247,9 @@ protected:
         exportDynamic(isExportDynamic(k, visibility)), inDynamicList(false),
         canInline(false), referenced(false), traced(false), needsPltAddr(false),
         isInIplt(false), gotInIgot(false), isPreemptible(false),
-        used(!config->gcSections), needsTocRestore(false),
-        scriptDefined(false) {}
+        used(!config->gcSections), needsTocRestore(false), scriptDefined(false),
+        needsCopy(false), needsGot(false), needsPlt(false),
+        hasDirectReloc(false) {}
 
 public:
   // True the symbol should point to its PLT entry.
@@ -278,6 +279,16 @@ public:
 
   // True if this symbol is defined by a linker script.
   uint8_t scriptDefined : 1;
+
+  // True if this symbol needs a canonical PLT entry, or (during
+  // postScanRelocations) a copy relocation.
+  uint8_t needsCopy : 1;
+
+  // Temporary flags used to communicate which symbol entries need PLT and GOT
+  // entries during postScanRelocations();
+  uint8_t needsGot : 1;
+  uint8_t needsPlt : 1;
+  uint8_t hasDirectReloc : 1;
 
   // The partition whose dynamic symbol table contains this symbol's definition.
   uint8_t partition = 1;
