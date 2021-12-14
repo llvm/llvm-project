@@ -42,7 +42,7 @@ define <2 x half> @masked_load_v2f16(<2 x half>* %ap, <2 x half>* %bp) #0 {
 ; CHECK-NEXT:    mov v0.h[0], w8
 ; CHECK-NEXT:    mov v0.h[1], w9
 ; CHECK-NEXT:    shl v0.4h, v0.4h, #15
-; CHECK-NEXT:    sshr v0.4h, v0.4h, #15
+; CHECK-NEXT:    cmlt v0.4h, v0.4h, #0
 ; CHECK-NEXT:    cmpne p0.h, p0/z, z0.h, #0
 ; CHECK-NEXT:    ld1h { z0.h }, p0/z, [x0]
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
