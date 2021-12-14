@@ -583,9 +583,12 @@ define <4 x i32> @vec_sel_xor_multi_use(<4 x i32> %a, <4 x i32> %b, <4 x i1> %c)
 
 define i32 @allSignBits(i32 %cond, i32 %tval, i32 %fval) {
 ; CHECK-LABEL: @allSignBits(
-; CHECK-NEXT:    [[DOTNOT:%.*]] = icmp sgt i32 [[COND:%.*]], -1
-; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[DOTNOT]], i32 [[FVAL:%.*]], i32 [[TVAL:%.*]]
-; CHECK-NEXT:    ret i32 [[TMP1]]
+; CHECK-NEXT:    [[ISNEG1:%.*]] = icmp slt i32 [[COND:%.*]], 0
+; CHECK-NEXT:    [[A1:%.*]] = select i1 [[ISNEG1]], i32 [[TVAL:%.*]], i32 0
+; CHECK-NEXT:    [[ISNEG:%.*]] = icmp slt i32 [[COND]], 0
+; CHECK-NEXT:    [[A2:%.*]] = select i1 [[ISNEG]], i32 0, i32 [[FVAL:%.*]]
+; CHECK-NEXT:    [[SEL:%.*]] = or i32 [[A1]], [[A2]]
+; CHECK-NEXT:    ret i32 [[SEL]]
 ;
   %bitmask = ashr i32 %cond, 31
   %not_bitmask = xor i32 %bitmask, -1
@@ -597,9 +600,12 @@ define i32 @allSignBits(i32 %cond, i32 %tval, i32 %fval) {
 
 define <4 x i8> @allSignBits_vec(<4 x i8> %cond, <4 x i8> %tval, <4 x i8> %fval) {
 ; CHECK-LABEL: @allSignBits_vec(
-; CHECK-NEXT:    [[DOTNOT:%.*]] = icmp sgt <4 x i8> [[COND:%.*]], <i8 -1, i8 -1, i8 -1, i8 -1>
-; CHECK-NEXT:    [[TMP1:%.*]] = select <4 x i1> [[DOTNOT]], <4 x i8> [[FVAL:%.*]], <4 x i8> [[TVAL:%.*]]
-; CHECK-NEXT:    ret <4 x i8> [[TMP1]]
+; CHECK-NEXT:    [[ISNEG1:%.*]] = icmp slt <4 x i8> [[COND:%.*]], zeroinitializer
+; CHECK-NEXT:    [[A1:%.*]] = select <4 x i1> [[ISNEG1]], <4 x i8> [[TVAL:%.*]], <4 x i8> zeroinitializer
+; CHECK-NEXT:    [[ISNEG:%.*]] = icmp slt <4 x i8> [[COND]], zeroinitializer
+; CHECK-NEXT:    [[A2:%.*]] = select <4 x i1> [[ISNEG]], <4 x i8> zeroinitializer, <4 x i8> [[FVAL:%.*]]
+; CHECK-NEXT:    [[SEL:%.*]] = or <4 x i8> [[A2]], [[A1]]
+; CHECK-NEXT:    ret <4 x i8> [[SEL]]
 ;
   %bitmask = ashr <4 x i8> %cond, <i8 7, i8 7, i8 7, i8 7>
   %not_bitmask = xor <4 x i8> %bitmask, <i8 -1, i8 -1, i8 -1, i8 -1>

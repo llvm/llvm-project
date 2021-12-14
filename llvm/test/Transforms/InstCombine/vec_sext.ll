@@ -4,9 +4,12 @@
 define <4 x i32> @vec_select(<4 x i32> %a, <4 x i32> %b) {
 ; CHECK-LABEL: @vec_select(
 ; CHECK-NEXT:    [[SUB:%.*]] = sub nsw <4 x i32> zeroinitializer, [[A:%.*]]
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp sgt <4 x i32> [[B:%.*]], <i32 -1, i32 -1, i32 -1, i32 -1>
-; CHECK-NEXT:    [[TMP2:%.*]] = select <4 x i1> [[TMP1]], <4 x i32> [[A]], <4 x i32> [[SUB]]
-; CHECK-NEXT:    ret <4 x i32> [[TMP2]]
+; CHECK-NEXT:    [[ISNEG:%.*]] = icmp slt <4 x i32> [[B:%.*]], zeroinitializer
+; CHECK-NEXT:    [[T2:%.*]] = select <4 x i1> [[ISNEG]], <4 x i32> zeroinitializer, <4 x i32> [[A]]
+; CHECK-NEXT:    [[ISNEG1:%.*]] = icmp slt <4 x i32> [[B]], zeroinitializer
+; CHECK-NEXT:    [[T3:%.*]] = select <4 x i1> [[ISNEG1]], <4 x i32> [[SUB]], <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[COND:%.*]] = or <4 x i32> [[T2]], [[T3]]
+; CHECK-NEXT:    ret <4 x i32> [[COND]]
 ;
   %cmp = icmp slt <4 x i32> %b, zeroinitializer
   %sext = sext <4 x i1> %cmp to <4 x i32>
@@ -23,9 +26,12 @@ define <4 x i32> @vec_select(<4 x i32> %a, <4 x i32> %b) {
 define <4 x i32> @vec_select_alternate_sign_bit_test(<4 x i32> %a, <4 x i32> %b) {
 ; CHECK-LABEL: @vec_select_alternate_sign_bit_test(
 ; CHECK-NEXT:    [[SUB:%.*]] = sub nsw <4 x i32> zeroinitializer, [[A:%.*]]
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp sgt <4 x i32> [[B:%.*]], <i32 -1, i32 -1, i32 -1, i32 -1>
-; CHECK-NEXT:    [[TMP2:%.*]] = select <4 x i1> [[TMP1]], <4 x i32> [[SUB]], <4 x i32> [[A]]
-; CHECK-NEXT:    ret <4 x i32> [[TMP2]]
+; CHECK-NEXT:    [[ISNEG1:%.*]] = icmp slt <4 x i32> [[B:%.*]], zeroinitializer
+; CHECK-NEXT:    [[T2:%.*]] = select <4 x i1> [[ISNEG1]], <4 x i32> [[A]], <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[ISNEG:%.*]] = icmp slt <4 x i32> [[B]], zeroinitializer
+; CHECK-NEXT:    [[T3:%.*]] = select <4 x i1> [[ISNEG]], <4 x i32> zeroinitializer, <4 x i32> [[SUB]]
+; CHECK-NEXT:    [[COND:%.*]] = or <4 x i32> [[T2]], [[T3]]
+; CHECK-NEXT:    ret <4 x i32> [[COND]]
 ;
   %cmp = icmp sgt <4 x i32> %b, <i32 -1, i32 -1, i32 -1, i32 -1>
   %sext = sext <4 x i1> %cmp to <4 x i32>
