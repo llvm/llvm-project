@@ -79,7 +79,8 @@ def FSQRT_H : FPUnaryOp_r_frm<0b0101110, 0b00000, FPR16, FPR16, "fsqrt.h">,
               Sched<[WriteFSqrt16, ReadFSqrt16]>;
 def         : FPUnaryOpDynFrmAlias<FSQRT_H, "fsqrt.h", FPR16, FPR16>;
 
-let SchedRW = [WriteFSGNJ16, ReadFSGNJ16, ReadFSGNJ16] in {
+let SchedRW = [WriteFSGNJ16, ReadFSGNJ16, ReadFSGNJ16],
+    mayRaiseFPException = 0 in {
 def FSGNJ_H  : FPALU_rr<0b0010010, 0b000, "fsgnj.h", FPR16>;
 def FSGNJN_H : FPALU_rr<0b0010010, 0b001, "fsgnjn.h", FPR16>;
 def FSGNJX_H : FPALU_rr<0b0010010, 0b010, "fsgnjx.h", FPR16>;
@@ -115,9 +116,11 @@ def          : FPUnaryOpDynFrmAlias<FCVT_H_S, "fcvt.h.s", FPR16, FPR32>;
 def FCVT_S_H : FPUnaryOp_r<0b0100000, 0b00010, 0b000, FPR32, FPR16, "fcvt.s.h">,
                Sched<[WriteFCvtF16ToF32, ReadFCvtF16ToF32]>;
 
+let mayRaiseFPException = 0 in
 def FMV_X_H : FPUnaryOp_r<0b1110010, 0b00000, 0b000, GPR, FPR16, "fmv.x.h">,
               Sched<[WriteFMovF16ToI16, ReadFMovF16ToI16]>;
 
+let mayRaiseFPException = 0 in
 def FMV_H_X : FPUnaryOp_r<0b1111010, 0b00000, 0b000, FPR16, GPR, "fmv.h.x">,
               Sched<[WriteFMovI16ToF16, ReadFMovI16ToF16]>;
 } // Predicates = [HasStdExtZfhmin]
@@ -130,6 +133,7 @@ def FLT_H : FPCmp_rr<0b1010010, 0b001, "flt.h", FPR16>;
 def FLE_H : FPCmp_rr<0b1010010, 0b000, "fle.h", FPR16>;
 }
 
+let mayRaiseFPException = 0 in
 def FCLASS_H : FPUnaryOp_r<0b1110010, 0b00000, 0b001, GPR, FPR16, "fclass.h">,
                Sched<[WriteFClass16, ReadFClass16]>;
 } // Predicates = [HasStdExtZfh]
