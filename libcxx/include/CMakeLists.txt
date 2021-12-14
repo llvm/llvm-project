@@ -358,6 +358,7 @@ set(files
   __utility/rel_ops.h
   __utility/swap.h
   __utility/to_underlying.h
+  __utility/transaction.h
   __variant/monostate.h
   algorithm
   any
