@@ -174,6 +174,20 @@ def uimm5 : Operand<XLenVT>, ImmLeaf<XLenVT, [{return isUInt<5>(Imm);}]> {
   let OperandNamespace = "RISCVOp";
 }
 
+def InsnDirectiveOpcode : AsmOperandClass {
+  let Name = "InsnDirectiveOpcode";
+  let ParserMethod = "parseInsnDirectiveOpcode";
+  let RenderMethod = "addImmOperands";
+  let PredicateMethod = "isImm";
+}
+
+def uimm7_opcode : Operand<XLenVT> {
+  let ParserMatchClass = InsnDirectiveOpcode;
+  let DecoderMethod = "decodeUImmOperand<7>";
+  let OperandType = "OPERAND_UIMM7";
+  let OperandNamespace = "RISCVOp";
+}
+
 def uimm7 : Operand<XLenVT> {
   let ParserMatchClass = UImmAsmOperand<7>;
   let DecoderMethod = "decodeUImmOperand<7>";
@@ -878,35 +892,35 @@ def : InstAlias<"zext.b $rd, $rs", (ANDI GPR:$rd, GPR:$rs, 0xFF), 0>;
 // isCodeGenOnly = 1 to hide them from the tablegened assembly parser.
 let isCodeGenOnly = 1, hasSideEffects = 1, mayLoad = 1, mayStore = 1,
     hasNoSchedulingInfo = 1 in {
-def InsnR : DirectiveInsnR<(outs AnyReg:$rd), (ins uimm7:$opcode, uimm3:$funct3,
+def InsnR : DirectiveInsnR<(outs AnyReg:$rd), (ins uimm7_opcode:$opcode, uimm3:$funct3,
                                                    uimm7:$funct7, AnyReg:$rs1,
                                                    AnyReg:$rs2),
                            "$opcode, $funct3, $funct7, $rd, $rs1, $rs2">;
-def InsnR4 : DirectiveInsnR4<(outs AnyReg:$rd), (ins uimm7:$opcode,
+def InsnR4 : DirectiveInsnR4<(outs AnyReg:$rd), (ins uimm7_opcode:$opcode,
                                                      uimm3:$funct3,
                                                      uimm2:$funct2,
                                                      AnyReg:$rs1, AnyReg:$rs2,
                                                      AnyReg:$rs3),
                             "$opcode, $funct3, $funct2, $rd, $rs1, $rs2, $rs3">;
-def InsnI : DirectiveInsnI<(outs AnyReg:$rd), (ins uimm7:$opcode, uimm3:$funct3,
+def InsnI : DirectiveInsnI<(outs AnyReg:$rd), (ins uimm7_opcode:$opcode, uimm3:$funct3,
                                                    AnyReg:$rs1, simm12:$imm12),
                            "$opcode, $funct3, $rd, $rs1, $imm12">;
-def InsnI_Mem : DirectiveInsnI<(outs AnyReg:$rd), (ins uimm7:$opcode,
+def InsnI_Mem : DirectiveInsnI<(outs AnyReg:$rd), (ins uimm7_opcode:$opcode,
                                                        uimm3:$funct3,
                                                        AnyReg:$rs1,
                                                        simm12:$imm12),
                                "$opcode, $funct3, $rd, ${imm12}(${rs1})">;
-def InsnB : DirectiveInsnB<(outs), (ins uimm7:$opcode, uimm3:$funct3,
+def InsnB : DirectiveInsnB<(outs), (ins uimm7_opcode:$opcode, uimm3:$funct3,
                                         AnyReg:$rs1, AnyReg:$rs2,
                                         simm13_lsb0:$imm12),
                            "$opcode, $funct3, $rs1, $rs2, $imm12">;
-def InsnU : DirectiveInsnU<(outs AnyReg:$rd), (ins uimm7:$opcode,
+def InsnU : DirectiveInsnU<(outs AnyReg:$rd), (ins uimm7_opcode:$opcode,
                                                    uimm20_lui:$imm20),
                            "$opcode, $rd, $imm20">;
-def InsnJ : DirectiveInsnJ<(outs AnyReg:$rd), (ins uimm7:$opcode,
+def InsnJ : DirectiveInsnJ<(outs AnyReg:$rd), (ins uimm7_opcode:$opcode,
                                                    simm21_lsb0_jal:$imm20),
                            "$opcode, $rd, $imm20">;
-def InsnS : DirectiveInsnS<(outs), (ins uimm7:$opcode, uimm3:$funct3,
+def InsnS : DirectiveInsnS<(outs), (ins uimm7_opcode:$opcode, uimm3:$funct3,
                                         AnyReg:$rs2, AnyReg:$rs1,
                                         simm12:$imm12),
                            "$opcode, $funct3, $rs2, ${imm12}(${rs1})">;
@@ -918,37 +932,37 @@ def InsnS : DirectiveInsnS<(outs), (ins uimm7:$opcode, uimm3:$funct3,
 // for known formats.
 let EmitPriority = 0 in {
 def : InstAlias<".insn_r $opcode, $funct3, $funct7, $rd, $rs1, $rs2",
-                (InsnR AnyReg:$rd, uimm7:$opcode, uimm3:$funct3, uimm7:$funct7,
+                (InsnR AnyReg:$rd, uimm7_opcode:$opcode, uimm3:$funct3, uimm7:$funct7,
                        AnyReg:$rs1, AnyReg:$rs2)>;
 // Accept 4 register form of ".insn r" as alias for ".insn r4".
 def : InstAlias<".insn_r $opcode, $funct3, $funct2, $rd, $rs1, $rs2, $rs3",
-                (InsnR4 AnyReg:$rd, uimm7:$opcode, uimm3:$funct3, uimm2:$funct2,
+                (InsnR4 AnyReg:$rd, uimm7_opcode:$opcode, uimm3:$funct3, uimm2:$funct2,
                         AnyReg:$rs1, AnyReg:$rs2, AnyReg:$rs3)>;
 def : InstAlias<".insn_r4 $opcode, $funct3, $funct2, $rd, $rs1, $rs2, $rs3",
-                (InsnR4 AnyReg:$rd, uimm7:$opcode, uimm3:$funct3, uimm2:$funct2,
+                (InsnR4 AnyReg:$rd, uimm7_opcode:$opcode, uimm3:$funct3, uimm2:$funct2,
                         AnyReg:$rs1, AnyReg:$rs2, AnyReg:$rs3)>;
 def : InstAlias<".insn_i $opcode, $funct3, $rd, $rs1, $imm12",
-                (InsnI AnyReg:$rd, uimm7:$opcode, uimm3:$funct3, AnyReg:$rs1,
+                (InsnI AnyReg:$rd, uimm7_opcode:$opcode, uimm3:$funct3, AnyReg:$rs1,
                        simm12:$imm12)>;
 def : InstAlias<".insn_i $opcode, $funct3, $rd, ${imm12}(${rs1})",
-                (InsnI_Mem AnyReg:$rd, uimm7:$opcode, uimm3:$funct3,
+                (InsnI_Mem AnyReg:$rd, uimm7_opcode:$opcode, uimm3:$funct3,
                            AnyReg:$rs1, simm12:$imm12)>;
 def : InstAlias<".insn_b $opcode, $funct3, $rs1, $rs2, $imm12",
-                (InsnB uimm7:$opcode, uimm3:$funct3, AnyReg:$rs1,
+                (InsnB uimm7_opcode:$opcode, uimm3:$funct3, AnyReg:$rs1,
                        AnyReg:$rs2, simm13_lsb0:$imm12)>;
 // Accept sb as an alias for b.
 def : InstAlias<".insn_sb $opcode, $funct3, $rs1, $rs2, $imm12",
-                (InsnB uimm7:$opcode, uimm3:$funct3, AnyReg:$rs1,
+                (InsnB uimm7_opcode:$opcode, uimm3:$funct3, AnyReg:$rs1,
                        AnyReg:$rs2, simm13_lsb0:$imm12)>;
 def : InstAlias<".insn_u $opcode, $rd, $imm20",
-                (InsnU AnyReg:$rd, uimm7:$opcode, uimm20_lui:$imm20)>;
+                (InsnU AnyReg:$rd, uimm7_opcode:$opcode, uimm20_lui:$imm20)>;
 def : InstAlias<".insn_j $opcode, $rd, $imm20",
-                (InsnJ AnyReg:$rd, uimm7:$opcode, simm21_lsb0_jal:$imm20)>;
+                (InsnJ AnyReg:$rd, uimm7_opcode:$opcode, simm21_lsb0_jal:$imm20)>;
 // Accept uj as an alias for j.
 def : InstAlias<".insn_uj $opcode, $rd, $imm20",
-                (InsnJ AnyReg:$rd, uimm7:$opcode, simm21_lsb0_jal:$imm20)>;
+                (InsnJ AnyReg:$rd, uimm7_opcode:$opcode, simm21_lsb0_jal:$imm20)>;
 def : InstAlias<".insn_s $opcode, $funct3, $rs2, ${imm12}(${rs1})",
-                (InsnS uimm7:$opcode, uimm3:$funct3, AnyReg:$rs2,
+                (InsnS uimm7_opcode:$opcode, uimm3:$funct3, AnyReg:$rs2,
                        AnyReg:$rs1, simm12:$imm12)>;
 }
 

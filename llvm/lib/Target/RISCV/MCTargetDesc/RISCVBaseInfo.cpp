@@ -27,6 +27,11 @@ namespace RISCVSysReg {
 #include "RISCVGenSearchableTables.inc"
 } // namespace RISCVSysReg
 
+namespace RISCVInsnOpcode {
+#define GET_RISCVOpcodesList_IMPL
+#include "RISCVGenSearchableTables.inc"
+} // namespace RISCVInsnOpcode
+
 namespace RISCVABI {
 ABI computeTargetABI(const Triple &TT, FeatureBitset FeatureBits,
                      StringRef ABIName) {
