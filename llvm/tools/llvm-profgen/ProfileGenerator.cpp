@@ -89,6 +89,10 @@ static cl::opt<bool> UpdateTotalSamples(
 
 extern cl::opt<int> ProfileSummaryCutoffHot;
 
+static cl::opt<bool> GenCSNestedProfile(
+    "gen-cs-nested-profile", cl::Hidden, cl::init(false),
+    cl::desc("Generate nested function profiles for CSSPGO"));
+
 using namespace llvm;
 using namespace sampleprof;
 
@@ -105,9 +109,9 @@ bool ProfileGeneratorBase::UseFSDiscriminator = false;
 std::unique_ptr<ProfileGeneratorBase>
 ProfileGeneratorBase::create(ProfiledBinary *Binary,
                              const ContextSampleCounterMap &SampleCounters,
-                             bool ProfileIsCS) {
+                             bool ProfileIsCSFlat) {
   std::unique_ptr<ProfileGeneratorBase> Generator;
-  if (ProfileIsCS) {
+  if (ProfileIsCSFlat) {
     if (Binary->useFSDiscriminator())
       exitWithError("FS discriminator is not supported in CS profile.");
     Generator.reset(new CSProfileGenerator(Binary, SampleCounters));
@@ -567,7 +571,7 @@ FunctionSamples &CSProfileGenerator::getFunctionProfileForContext(
 }
 
 void CSProfileGenerator::generateProfile() {
-  FunctionSamples::ProfileIsCS = true;
+  FunctionSamples::ProfileIsCSFlat = true;
 
   if (Binary->getTrackFuncContextSize())
     computeSizeForProfiledFunctions();
@@ -783,6 +787,12 @@ void CSProfileGenerator::postProcessProfiles() {
   }
 
   calculateAndShowDensity(ContextLessProfiles);
+  if (GenCSNestedProfile) {
+    CSProfileConverter CSConverter(ProfileMap);
+    CSConverter.convertProfiles();
+    FunctionSamples::ProfileIsCSFlat = false;
+    FunctionSamples::ProfileIsCSNested = EnableCSPreInliner;
+  }
 }
 
 void ProfileGeneratorBase::computeSummaryAndThreshold() {

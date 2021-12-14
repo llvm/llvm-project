@@ -5,6 +5,7 @@
 
 ; Test we properly merge not inlined profile with '-sample-profile-merge-inlinee'
 ; RUN: opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/inline-mergeprof.prof -sample-profile-merge-inlinee=true -use-profiled-call-graph=0 -S | FileCheck -check-prefix=MERGE  %s
+; RUN: opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/inline-mergeprof.prof -sample-profile-merge-inlinee=true -use-profiled-call-graph=0 -sample-profile-prioritized-inline=1 -S | FileCheck -check-prefix=MERGE  %s
 
 ; Test we properly merge not inlined profile with '-sample-profile-merge-inlinee'
 ; when the profile uses md5.
