@@ -66,6 +66,7 @@ protected:
 class Type : public std::enable_shared_from_this<Type>, public UserID {
 public:
   enum EncodingDataType {
+    /// Invalid encoding.
     eEncodingInvalid,
     /// This type is the type whose UID is m_encoding_uid.
     eEncodingIsUID,
@@ -78,7 +79,7 @@ public:
     /// This type is the type whose UID is m_encoding_uid with the volatile
     /// qualifier added.
     eEncodingIsVolatileUID,
-    /// This type is pointer to a type whose UID is m_encoding_uid.
+    /// This type is alias to a type whose UID is m_encoding_uid.
     eEncodingIsTypedefUID,
     /// This type is pointer to a type whose UID is m_encoding_uid.
     eEncodingIsPointerUID,
@@ -88,6 +89,7 @@ public:
     eEncodingIsRValueReferenceUID,
     /// This type is the type whose UID is m_encoding_uid as an atomic type.
     eEncodingIsAtomicUID,
+    /// This type is the synthetic type whose UID is m_encoding_uid.
     eEncodingIsSyntheticUID
   };
 
