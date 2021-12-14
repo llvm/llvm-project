@@ -1,5 +1,5 @@
-; RUN: llc -amdgpu-fixed-function-abi -mtriple=amdgcn-amd-amdhsa -mcpu=kaveri -enable-ipra=0 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,CIVI %s
-; RUN: llc -amdgpu-fixed-function-abi -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -enable-ipra=0 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX9 %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=kaveri -enable-ipra=0 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,CIVI %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -enable-ipra=0 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX9 %s
 
 ; GCN-LABEL: {{^}}use_dispatch_ptr:
 ; GCN: s_load_dword s{{[0-9]+}}, s[4:5]
@@ -7,6 +7,16 @@ define hidden void @use_dispatch_ptr() #1 {
   %dispatch_ptr = call noalias i8 addrspace(4)* @llvm.amdgcn.dispatch.ptr() #0
   %header_ptr = bitcast i8 addrspace(4)* %dispatch_ptr to i32 addrspace(4)*
   %value = load volatile i32, i32 addrspace(4)* %header_ptr
+  ret void
+}
+
+; GCN-LABEL: {{^}}kern_indirect_use_dispatch_ptr:
+; GCN-NOT: s[4:5]
+; GCN-NOT: s4
+; GCN-NOT: s5
+; GCN: .amdhsa_user_sgpr_dispatch_ptr 1
+define amdgpu_kernel void @kern_indirect_use_dispatch_ptr(i32) #1 {
+  call void @use_dispatch_ptr()
   ret void
 }
 
@@ -19,6 +29,39 @@ define hidden void @use_queue_ptr() #1 {
   ret void
 }
 
+; GCN-LABEL: {{^}}kern_indirect_use_queue_ptr:
+; GCN: s_mov_b64 s[6:7], s[4:5]
+; GCN: .amdhsa_user_sgpr_queue_ptr 1
+define amdgpu_kernel void @kern_indirect_use_queue_ptr(i32) #1 {
+  call void @use_queue_ptr()
+  ret void
+}
+
+; GCN-LABEL: {{^}}use_queue_ptr_addrspacecast:
+; CIVI: s_load_dword [[APERTURE_LOAD:s[0-9]+]], s[6:7], 0x10
+; GFX9: s_getreg_b32 [[APERTURE_LOAD:s[0-9]+]]
+; CIVI: v_mov_b32_e32 v[[LO:[0-9]+]], 16
+; GCN-DAG: v_mov_b32_e32 v[[HI:[0-9]+]], [[APERTURE_LOAD]]
+; GFX9: {{flat|global}}_store_dword v{{\[[0-9]+}}:[[HI]]{{\]}}
+; CIVI: {{flat|global}}_store_dword v{{\[}}[[LO]]:[[HI]]{{\]}}
+define hidden void @use_queue_ptr_addrspacecast() #1 {
+  %asc = addrspacecast i32 addrspace(3)* inttoptr (i32 16 to i32 addrspace(3)*) to i32*
+  store volatile i32 0, i32* %asc
+  ret void
+}
+
+; GCN-LABEL: {{^}}kern_indirect_use_queue_ptr_addrspacecast:
+; CIVI: s_mov_b64 s[6:7], s[4:5]
+; CIVI: .amdhsa_user_sgpr_queue_ptr 1
+
+; GFX9-NOT: s_mov_b64 s[6:7]
+; GFX9: .amdhsa_user_sgpr_queue_ptr 0
+define amdgpu_kernel void @kern_indirect_use_queue_ptr_addrspacecast(i32) #1 {
+  call void @use_queue_ptr_addrspacecast()
+  ret void
+}
+
+; Not really supported in callable functions.
 ; GCN-LABEL: {{^}}use_kernarg_segment_ptr:
 ; GCN: s_mov_b64 [[PTR:s\[[0-9]+:[0-9]+\]]], 0
 ; GCN: s_load_dword s{{[0-9]+}}, [[PTR]], 0x0
@@ -38,6 +81,13 @@ define hidden void @use_implicitarg_ptr() #1 {
   ret void
 }
 
+; GCN-LABEL: {{^}}kern_indirect_use_kernarg_segment_ptr:
+; GCN: .amdhsa_user_sgpr_kernarg_segment_ptr 1
+define amdgpu_kernel void @kern_indirect_use_kernarg_segment_ptr(i32) #1 {
+  call void @use_kernarg_segment_ptr()
+  ret void
+}
+
 ; GCN-LABEL: {{^}}use_dispatch_id:
 ; GCN: ; use s[10:11]
 define hidden void @use_dispatch_id() #1 {
@@ -45,6 +95,18 @@ define hidden void @use_dispatch_id() #1 {
   call void asm sideeffect "; use $0", "s"(i64 %id)
   ret void
 }
+
+; No kernarg segment so that there is a mov to check. With kernarg
+; pointer enabled, it happens to end up in the right place anyway.
+
+; GCN-LABEL: {{^}}kern_indirect_use_dispatch_id:
+; GCN: s_mov_b64 s[10:11], s[4:5]
+; GCN: .amdhsa_user_sgpr_dispatch_id 1
+define amdgpu_kernel void @kern_indirect_use_dispatch_id() #1 {
+  call void @use_dispatch_id()
+  ret void
+}
+
 ; GCN-LABEL: {{^}}use_workgroup_id_x:
 ; GCN: s_waitcnt
 ; GCN: ; use s12
@@ -133,6 +195,123 @@ define hidden void @use_workgroup_id_yz() #1 {
   ret void
 }
 
+; GCN-LABEL: {{^}}kern_indirect_use_workgroup_id_x:
+; GCN-NOT: s6
+; GCN: s_mov_b32 s12, s6
+; GCN: s_mov_b32 s32, 0
+; GCN: s_getpc_b64 s[4:5]
+; GCN-NEXT: s_add_u32 s4, s4, use_workgroup_id_x@rel32@lo+4
+; GCN-NEXT: s_addc_u32 s5, s5, use_workgroup_id_x@rel32@hi+12
+; GCN: s_swappc_b64
+; GCN-NEXT: s_endpgm
+
+; GCN: .amdhsa_system_sgpr_workgroup_id_x 1
+; GCN: .amdhsa_system_sgpr_workgroup_id_y 0
+; GCN: .amdhsa_system_sgpr_workgroup_id_z 0
+define amdgpu_kernel void @kern_indirect_use_workgroup_id_x() #1 {
+  call void @use_workgroup_id_x()
+  ret void
+}
+
+; GCN-LABEL: {{^}}kern_indirect_use_workgroup_id_y:
+; GCN-NOT: s12
+; GCN: s_mov_b32 s13, s7
+; GCN-NOT: s12
+; GCN: s_mov_b32 s32, 0
+; GCN: s_swappc_b64
+
+; GCN: .amdhsa_system_sgpr_workgroup_id_x 1
+; GCN: .amdhsa_system_sgpr_workgroup_id_y 1
+; GCN: .amdhsa_system_sgpr_workgroup_id_z 0
+define amdgpu_kernel void @kern_indirect_use_workgroup_id_y() #1 {
+  call void @use_workgroup_id_y()
+  ret void
+}
+
+; GCN-LABEL: {{^}}kern_indirect_use_workgroup_id_z:
+; GCN-NOT: s12
+; GCN-NOT: s13
+; GCN: s_mov_b32 s14, s7
+; GCN-NOT: s12
+; GCN-NOT: s13
+
+; GCN: s_mov_b32 s32, 0
+; GCN: s_swappc_b64
+
+; GCN: .amdhsa_system_sgpr_workgroup_id_x 1
+; GCN: .amdhsa_system_sgpr_workgroup_id_y 0
+; GCN: .amdhsa_system_sgpr_workgroup_id_z 1
+define amdgpu_kernel void @kern_indirect_use_workgroup_id_z() #1 {
+  call void @use_workgroup_id_z()
+  ret void
+}
+
+; GCN-LABEL: {{^}}kern_indirect_use_workgroup_id_xy:
+; GCN-NOT: s14
+; GCN: s_mov_b32 s12, s6
+; GCN-NEXT: s_mov_b32 s13, s7
+; GCN-NOT: s14
+
+; GCN: s_mov_b32 s32, 0
+; GCN: s_swappc_b64
+
+; GCN: .amdhsa_system_sgpr_workgroup_id_x 1
+; GCN: .amdhsa_system_sgpr_workgroup_id_y 1
+; GCN: .amdhsa_system_sgpr_workgroup_id_z 0
+define amdgpu_kernel void @kern_indirect_use_workgroup_id_xy() #1 {
+  call void @use_workgroup_id_xy()
+  ret void
+}
+
+; GCN-LABEL: {{^}}kern_indirect_use_workgroup_id_xyz:
+; GCN: s_mov_b32 s12, s6
+; GCN: s_mov_b32 s13, s7
+; GCN: s_mov_b32 s14, s8
+; GCN: s_mov_b32 s32, 0
+; GCN: s_swappc_b64
+
+; GCN: .amdhsa_system_sgpr_workgroup_id_x 1
+; GCN: .amdhsa_system_sgpr_workgroup_id_y 1
+; GCN: .amdhsa_system_sgpr_workgroup_id_z 1
+define amdgpu_kernel void @kern_indirect_use_workgroup_id_xyz() #1 {
+  call void @use_workgroup_id_xyz()
+  ret void
+}
+
+; GCN-LABEL: {{^}}kern_indirect_use_workgroup_id_xz:
+
+; GCN-NOT: s13
+; GCN: s_mov_b32 s12, s6
+; GCN-NEXT: s_mov_b32 s14, s7
+; GCN-NOT: s13
+
+; GCN: s_mov_b32 s32, 0
+; GCN: s_swappc_b64
+
+; GCN: .amdhsa_system_sgpr_workgroup_id_x 1
+; GCN: .amdhsa_system_sgpr_workgroup_id_y 0
+; GCN: .amdhsa_system_sgpr_workgroup_id_z 1
+define amdgpu_kernel void @kern_indirect_use_workgroup_id_xz() #1 {
+  call void @use_workgroup_id_xz()
+  ret void
+}
+
+; GCN-LABEL: {{^}}kern_indirect_use_workgroup_id_yz:
+
+; GCN: s_mov_b32 s13, s7
+; GCN: s_mov_b32 s14, s8
+
+; GCN: s_mov_b32 s32, 0
+; GCN: s_swappc_b64
+
+; GCN: .amdhsa_system_sgpr_workgroup_id_x 1
+; GCN: .amdhsa_system_sgpr_workgroup_id_y 1
+; GCN: .amdhsa_system_sgpr_workgroup_id_z 1
+define amdgpu_kernel void @kern_indirect_use_workgroup_id_yz() #1 {
+  call void @use_workgroup_id_yz()
+  ret void
+}
+
 ; Argument is in right place already
 ; GCN-LABEL: {{^}}func_indirect_use_workgroup_id_x:
 ; GCN-NOT: s12
@@ -194,6 +373,56 @@ define hidden void @other_arg_use_workgroup_id_z(i32 %arg0) #1 {
   %val = call i32 @llvm.amdgcn.workgroup.id.z()
   store volatile i32 %arg0, i32 addrspace(1)* undef
   call void asm sideeffect "; use $0", "s"(i32 %val)
+  ret void
+}
+
+; GCN-LABEL: {{^}}kern_indirect_other_arg_use_workgroup_id_x:
+
+; GCN-NOT: s13
+; GCN-NOT: s14
+; GCN-DAG: s_mov_b32 s12, s6
+; GCN-DAG: v_mov_b32_e32 v0, 0x22b
+; GCN-NOT: s13
+; GCN-NOT: s14
+
+; GCN-DAG: s_mov_b32 s32, 0
+; GCN: s_swappc_b64
+
+; GCN: .amdhsa_system_sgpr_workgroup_id_x 1
+; GCN: .amdhsa_system_sgpr_workgroup_id_y 0
+; GCN: .amdhsa_system_sgpr_workgroup_id_z 0
+define amdgpu_kernel void @kern_indirect_other_arg_use_workgroup_id_x() #1 {
+  call void @other_arg_use_workgroup_id_x(i32 555)
+  ret void
+}
+
+; GCN-LABEL: {{^}}kern_indirect_other_arg_use_workgroup_id_y:
+; GCN-DAG: v_mov_b32_e32 v0, 0x22b
+; GCN-DAG: s_mov_b32 s13, s7
+
+; GCN-DAG: s_mov_b32 s32, 0
+; GCN: s_swappc_b64
+
+; GCN: .amdhsa_system_sgpr_workgroup_id_x 1
+; GCN: .amdhsa_system_sgpr_workgroup_id_y 1
+; GCN: .amdhsa_system_sgpr_workgroup_id_z 0
+define amdgpu_kernel void @kern_indirect_other_arg_use_workgroup_id_y() #1 {
+  call void @other_arg_use_workgroup_id_y(i32 555)
+  ret void
+}
+
+; GCN-LABEL: {{^}}kern_indirect_other_arg_use_workgroup_id_z:
+; GCN-DAG: v_mov_b32_e32 v0, 0x22b
+; GCN-DAG: s_mov_b32 s14, s7
+
+; GCN: s_mov_b32 s32, 0
+; GCN: s_swappc_b64
+
+; GCN: .amdhsa_system_sgpr_workgroup_id_x 1
+; GCN: .amdhsa_system_sgpr_workgroup_id_y 0
+; GCN: .amdhsa_system_sgpr_workgroup_id_z 1
+define amdgpu_kernel void @kern_indirect_other_arg_use_workgroup_id_z() #1 {
+  call void @other_arg_use_workgroup_id_z(i32 555)
   ret void
 }
 

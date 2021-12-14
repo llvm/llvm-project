@@ -1038,7 +1038,7 @@ struct GlobalOpConversion : public FIROpConversion<fir::GlobalOp> {
     auto linkage = convertLinkage(global.linkName());
     auto isConst = global.constant().hasValue();
     auto g = rewriter.create<mlir::LLVM::GlobalOp>(
-        loc, tyAttr, isConst, linkage, global.sym_name(), initAttr);
+        loc, tyAttr, isConst, linkage, global.getSymName(), initAttr);
     auto &gr = g.getInitializerRegion();
     rewriter.inlineRegionBefore(global.region(), gr, gr.end());
     if (!gr.empty()) {
@@ -1640,14 +1640,14 @@ struct EmboxCommonConversion : public FIROpConversion<OP> {
       auto ty = mlir::LLVM::LLVMPointerType::get(
           this->lowerTy().convertType(global.getType()));
       return rewriter.create<mlir::LLVM::AddressOfOp>(loc, ty,
-                                                      global.sym_name());
+                                                      global.getSymName());
     }
     if (auto global =
             module.template lookupSymbol<mlir::LLVM::GlobalOp>(name)) {
       // The global may have already been translated to LLVM.
       auto ty = mlir::LLVM::LLVMPointerType::get(global.getType());
       return rewriter.create<mlir::LLVM::AddressOfOp>(loc, ty,
-                                                      global.sym_name());
+                                                      global.getSymName());
     }
     // The global does not exist in the current translation unit, but may be
     // defined elsewhere (e.g., type defined in a module).
@@ -2971,7 +2971,7 @@ struct CoordinateOpConversion
     if (auto constOp = dyn_cast<mlir::arith::ConstantIntOp>(defop))
       return constOp.value();
     if (auto llConstOp = dyn_cast<mlir::LLVM::ConstantOp>(defop))
-      if (auto attr = llConstOp.value().dyn_cast<mlir::IntegerAttr>())
+      if (auto attr = llConstOp.getValue().dyn_cast<mlir::IntegerAttr>())
         return attr.getValue().getSExtValue();
     fir::emitFatalError(val.getLoc(), "must be a constant");
   }

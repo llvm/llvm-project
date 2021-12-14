@@ -173,10 +173,8 @@ protected:
   }
 
   static void PrintLoopinfo(const MachineLoopInfo &LoopInfo) {
-    for (MachineLoop::iterator iter = LoopInfo.begin(),
-         iterEnd = LoopInfo.end(); iter != iterEnd; ++iter) {
-      (*iter)->print(dbgs());
-    }
+    for (const MachineLoop *L : LoopInfo)
+      L->print(dbgs());
   }
 
   // UTILITY FUNCTIONS
@@ -691,9 +689,7 @@ bool AMDGPUCFGStructurizer::prepare() {
   SmallVector<MachineBasicBlock *, DEFAULT_VEC_SLOTS> RetBlks;
 
   // Add an ExitBlk to loop that don't have one
-  for (MachineLoopInfo::iterator It = MLI->begin(),
-       E = MLI->end(); It != E; ++It) {
-    MachineLoop *LoopRep = (*It);
+  for (MachineLoop *LoopRep : *MLI) {
     MBBVector ExitingMBBs;
     LoopRep->getExitingBlocks(ExitingMBBs);
 
@@ -827,14 +823,13 @@ bool AMDGPUCFGStructurizer::run() {
   wrapup(*GraphTraits<MachineFunction *>::nodes_begin(FuncRep));
 
   // Detach retired Block, release memory.
-  for (MBBInfoMap::iterator It = BlockInfoMap.begin(), E = BlockInfoMap.end();
-      It != E; ++It) {
-    if ((*It).second && (*It).second->IsRetired) {
-      assert(((*It).first)->getNumber() != -1);
-      LLVM_DEBUG(dbgs() << "Erase BB" << ((*It).first)->getNumber() << "\n";);
-      (*It).first->eraseFromParent();  //Remove from the parent Function.
+  for (auto &It : BlockInfoMap) {
+    if (It.second && It.second->IsRetired) {
+      assert((It.first)->getNumber() != -1);
+      LLVM_DEBUG(dbgs() << "Erase BB" << (It.first)->getNumber() << "\n";);
+      It.first->eraseFromParent(); // Remove from the parent Function.
     }
-    delete (*It).second;
+    delete It.second;
   }
   BlockInfoMap.clear();
   LLInfoMap.clear();

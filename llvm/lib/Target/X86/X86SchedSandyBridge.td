@@ -623,7 +623,7 @@ def SBWriteResGroup5 : SchedWriteRes<[SBPort15]> {
 def: InstRW<[SBWriteResGroup5], (instrs MMX_PABSBrr,
                                         MMX_PABSDrr,
                                         MMX_PABSWrr,
-                                        MMX_PADDQirr,
+                                        MMX_PADDQrr,
                                         MMX_PALIGNRrri,
                                         MMX_PSIGNBrr,
                                         MMX_PSIGNDrr,
@@ -870,7 +870,7 @@ def SBWriteResGroup59 : SchedWriteRes<[SBPort23,SBPort15]> {
   let NumMicroOps = 2;
   let ResourceCycles = [1,1];
 }
-def: InstRW<[SBWriteResGroup59], (instrs MMX_PADDQirm)>;
+def: InstRW<[SBWriteResGroup59], (instrs MMX_PADDQrm)>;
 
 def SBWriteResGroup62 : SchedWriteRes<[SBPort5,SBPort23]> {
   let Latency = 7;

@@ -1256,15 +1256,11 @@ void HexagonCommonGEP::removeDeadCode() {
       BO.push_back(DTN->getBlock());
   }
 
-  for (unsigned i = BO.size(); i > 0; --i) {
-    BasicBlock *B = cast<BasicBlock>(BO[i-1]);
-    BasicBlock::InstListType &IL = B->getInstList();
-
-    using reverse_iterator = BasicBlock::InstListType::reverse_iterator;
-
+  for (Value *V : llvm::reverse(BO)) {
+    BasicBlock *B = cast<BasicBlock>(V);
     ValueVect Ins;
-    for (reverse_iterator I = IL.rbegin(), E = IL.rend(); I != E; ++I)
-      Ins.push_back(&*I);
+    for (Instruction &I : llvm::reverse(*B))
+      Ins.push_back(&I);
     for (ValueVect::iterator I = Ins.begin(), E = Ins.end(); I != E; ++I) {
       Instruction *In = cast<Instruction>(*I);
       if (isInstructionTriviallyDead(In))

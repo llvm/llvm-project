@@ -1015,6 +1015,7 @@ struct PadTensorOpVectorizationWithTransferWritePattern
 ///   (Implies that sizes of `insertOp` are all static.)
 /// - Only unit strides in `insertOp`.
 /// - Single, scalar padding value.
+/// - `padOp` result not used as destination.
 struct PadTensorOpVectorizationWithInsertSlicePattern
     : public VectorizePadTensorOpUserPattern<tensor::InsertSliceOp> {
   using VectorizePadTensorOpUserPattern<
@@ -1034,6 +1035,9 @@ struct PadTensorOpVectorizationWithInsertSlicePattern
       return failure();
     // Dynamic shapes not supported.
     if (!padOp.result().getType().cast<ShapedType>().hasStaticShape())
+      return failure();
+    // Pad result not used as destination.
+    if (insertOp.dest() == padOp.result())
       return failure();
 
     auto vecType = VectorType::get(padOp.getType().getShape(),

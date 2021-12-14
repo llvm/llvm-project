@@ -61,7 +61,7 @@ func @testupdateop(%a: memref<10xf32>) -> () {
 // CHECK: func @testupdateop
 // CHECK-NOT: acc.update
 
-// ----
+// -----
 
 func @testenterdataop(%a: memref<10xf32>, %ifCond: i1) -> () {
   acc.enter_data if(%ifCond) create(%a: memref<10xf32>)

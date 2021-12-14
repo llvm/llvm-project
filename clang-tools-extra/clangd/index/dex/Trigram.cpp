@@ -28,6 +28,7 @@ namespace dex {
 // Produce trigrams (including duplicates) and pass them to Out().
 template <typename Func>
 static void identifierTrigrams(llvm::StringRef Identifier, Func Out) {
+  assert(!Identifier.empty());
   // Apply fuzzy matching text segmentation.
   llvm::SmallVector<CharRole> Roles(Identifier.size());
   calculateRoles(Identifier,
@@ -104,6 +105,9 @@ void generateIdentifierTrigrams(llvm::StringRef Identifier,
   // The magic number was tuned by running IndexBenchmark.DexBuild.
   constexpr unsigned ManyTrigramsIdentifierThreshold = 14;
   Result.clear();
+  if (Identifier.empty())
+    return;
+
   if (Identifier.size() < ManyTrigramsIdentifierThreshold) {
     identifierTrigrams(Identifier, [&](Trigram T) {
       if (!llvm::is_contained(Result, T))

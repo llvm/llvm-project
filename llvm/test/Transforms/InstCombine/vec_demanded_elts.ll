@@ -204,7 +204,7 @@ define <4 x float> @inselt_shuf_no_demand_bogus_insert_index_in_chain(float %a1,
 
 define <3 x i8> @shuf_add(<3 x i8> %x) {
 ; CHECK-LABEL: @shuf_add(
-; CHECK-NEXT:    [[BO:%.*]] = add <3 x i8> [[X:%.*]], <i8 poison, i8 2, i8 3>
+; CHECK-NEXT:    [[BO:%.*]] = add nsw <3 x i8> [[X:%.*]], <i8 poison, i8 2, i8 3>
 ; CHECK-NEXT:    [[R:%.*]] = shufflevector <3 x i8> [[BO]], <3 x i8> undef, <3 x i32> <i32 1, i32 undef, i32 2>
 ; CHECK-NEXT:    ret <3 x i8> [[R]]
 ;
@@ -215,7 +215,7 @@ define <3 x i8> @shuf_add(<3 x i8> %x) {
 
 define <3 x i8> @shuf_sub(<3 x i8> %x) {
 ; CHECK-LABEL: @shuf_sub(
-; CHECK-NEXT:    [[BO:%.*]] = sub <3 x i8> <i8 1, i8 poison, i8 3>, [[X:%.*]]
+; CHECK-NEXT:    [[BO:%.*]] = sub nuw <3 x i8> <i8 1, i8 poison, i8 3>, [[X:%.*]]
 ; CHECK-NEXT:    [[R:%.*]] = shufflevector <3 x i8> [[BO]], <3 x i8> undef, <3 x i32> <i32 0, i32 undef, i32 2>
 ; CHECK-NEXT:    ret <3 x i8> [[R]]
 ;
@@ -226,7 +226,7 @@ define <3 x i8> @shuf_sub(<3 x i8> %x) {
 
 define <3 x i8> @shuf_mul(<3 x i8> %x) {
 ; CHECK-LABEL: @shuf_mul(
-; CHECK-NEXT:    [[BO:%.*]] = mul <3 x i8> [[X:%.*]], <i8 1, i8 poison, i8 3>
+; CHECK-NEXT:    [[BO:%.*]] = mul nsw <3 x i8> [[X:%.*]], <i8 1, i8 poison, i8 3>
 ; CHECK-NEXT:    [[R:%.*]] = shufflevector <3 x i8> [[BO]], <3 x i8> undef, <3 x i32> <i32 0, i32 2, i32 0>
 ; CHECK-NEXT:    ret <3 x i8> [[R]]
 ;

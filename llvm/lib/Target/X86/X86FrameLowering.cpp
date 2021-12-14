@@ -2496,8 +2496,8 @@ bool X86FrameLowering::assignCalleeSavedSpillSlots(
   }
 
   // Assign slots for GPRs. It increases frame size.
-  for (unsigned i = CSI.size(); i != 0; --i) {
-    unsigned Reg = CSI[i - 1].getReg();
+  for (CalleeSavedInfo &I : llvm::reverse(CSI)) {
+    unsigned Reg = I.getReg();
 
     if (!X86::GR64RegClass.contains(Reg) && !X86::GR32RegClass.contains(Reg))
       continue;
@@ -2506,15 +2506,15 @@ bool X86FrameLowering::assignCalleeSavedSpillSlots(
     CalleeSavedFrameSize += SlotSize;
 
     int SlotIndex = MFI.CreateFixedSpillStackObject(SlotSize, SpillSlotOffset);
-    CSI[i - 1].setFrameIdx(SlotIndex);
+    I.setFrameIdx(SlotIndex);
   }
 
   X86FI->setCalleeSavedFrameSize(CalleeSavedFrameSize);
   MFI.setCVBytesOfCalleeSavedRegisters(CalleeSavedFrameSize);
 
   // Assign slots for XMMs.
-  for (unsigned i = CSI.size(); i != 0; --i) {
-    unsigned Reg = CSI[i - 1].getReg();
+  for (CalleeSavedInfo &I : llvm::reverse(CSI)) {
+    unsigned Reg = I.getReg();
     if (X86::GR64RegClass.contains(Reg) || X86::GR32RegClass.contains(Reg))
       continue;
 
@@ -2533,7 +2533,7 @@ bool X86FrameLowering::assignCalleeSavedSpillSlots(
     // spill into slot
     SpillSlotOffset -= Size;
     int SlotIndex = MFI.CreateFixedSpillStackObject(Size, SpillSlotOffset);
-    CSI[i - 1].setFrameIdx(SlotIndex);
+    I.setFrameIdx(SlotIndex);
     MFI.ensureMaxAlignment(Alignment);
 
     // Save the start offset and size of XMM in stack frame for funclets.
@@ -2559,8 +2559,8 @@ bool X86FrameLowering::spillCalleeSavedRegisters(
   // Push GPRs. It increases frame size.
   const MachineFunction &MF = *MBB.getParent();
   unsigned Opc = STI.is64Bit() ? X86::PUSH64r : X86::PUSH32r;
-  for (unsigned i = CSI.size(); i != 0; --i) {
-    unsigned Reg = CSI[i - 1].getReg();
+  for (const CalleeSavedInfo &I : llvm::reverse(CSI)) {
+    unsigned Reg = I.getReg();
 
     if (!X86::GR64RegClass.contains(Reg) && !X86::GR32RegClass.contains(Reg))
       continue;
@@ -2593,8 +2593,8 @@ bool X86FrameLowering::spillCalleeSavedRegisters(
 
   // Make XMM regs spilled. X86 does not have ability of push/pop XMM.
   // It can be done by spilling XMMs to stack frame.
-  for (unsigned i = CSI.size(); i != 0; --i) {
-    unsigned Reg = CSI[i-1].getReg();
+  for (const CalleeSavedInfo &I : llvm::reverse(CSI)) {
+    unsigned Reg = I.getReg();
     if (X86::GR64RegClass.contains(Reg) || X86::GR32RegClass.contains(Reg))
       continue;
 
@@ -2607,8 +2607,7 @@ bool X86FrameLowering::spillCalleeSavedRegisters(
     MBB.addLiveIn(Reg);
     const TargetRegisterClass *RC = TRI->getMinimalPhysRegClass(Reg, VT);
 
-    TII.storeRegToStackSlot(MBB, MI, Reg, true, CSI[i - 1].getFrameIdx(), RC,
-                            TRI);
+    TII.storeRegToStackSlot(MBB, MI, Reg, true, I.getFrameIdx(), RC, TRI);
     --MI;
     MI->setFlag(MachineInstr::FrameSetup);
     ++MI;

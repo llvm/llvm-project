@@ -39,7 +39,7 @@ extern bool ExpandRelocs;
 extern bool RawRelr;
 extern bool CodeViewSubsectionBytes;
 extern bool Demangle;
-enum OutputStyleTy { LLVM, GNU };
+enum OutputStyleTy { LLVM, GNU, JSON, UNKNOWN };
 extern OutputStyleTy Output;
 } // namespace opts
 

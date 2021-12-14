@@ -1442,6 +1442,35 @@ func @genbool_2d() -> vector<4x4xi1> {
 
 // -----
 
+func @create_mask_0d(%a : index) -> vector<i1> {
+  %v = vector.create_mask %a : vector<i1>
+  return %v: vector<i1>
+}
+
+// CHECK-LABEL: func @create_mask_0d
+// CHECK-SAME: %[[arg:.*]]: index
+// CHECK:  %[[indices:.*]] = arith.constant dense<0> : vector<i32>
+// CHECK:  %[[arg_i32:.*]] = arith.index_cast %[[arg]] : index to i32
+// CHECK:  %[[bounds:.*]] = splat %[[arg_i32]] : vector<i32>
+// CHECK:  %[[result:.*]] = arith.cmpi slt, %[[indices]], %[[bounds]] : vector<i32>
+// CHECK:  return %[[result]] : vector<i1>
+// -----
+
+func @create_mask_1d(%a : index) -> vector<4xi1> {
+  %v = vector.create_mask %a : vector<4xi1>
+  return %v: vector<4xi1>
+}
+
+// CHECK-LABEL: func @create_mask_1d
+// CHECK-SAME: %[[arg:.*]]: index
+// CHECK:  %[[indices:.*]] = arith.constant dense<[0, 1, 2, 3]> : vector<4xi32>
+// CHECK:  %[[arg_i32:.*]] = arith.index_cast %[[arg]] : index to i32
+// CHECK:  %[[bounds:.*]] = splat %[[arg_i32]] : vector<4xi32>
+// CHECK:  %[[result:.*]] = arith.cmpi slt, %[[indices]], %[[bounds]] : vector<4xi32>
+// CHECK:  return %[[result]] : vector<4xi1>
+
+// -----
+
 func @flat_transpose(%arg0: vector<16xf32>) -> vector<16xf32> {
   %0 = vector.flat_transpose %arg0 { rows = 4: i32, columns = 4: i32 }
      : vector<16xf32> -> vector<16xf32>

@@ -452,7 +452,6 @@ define <16 x i32> @splatvar_funnnel_v16i32(<16 x i32> %x, <16 x i32> %amt) nounw
 define <32 x i16> @splatvar_funnnel_v32i16(<32 x i16> %x, <32 x i16> %amt) nounwind {
 ; AVX512F-LABEL: splatvar_funnnel_v32i16:
 ; AVX512F:       # %bb.0:
-; AVX512F-NEXT:    vpbroadcastw %xmm1, %xmm1
 ; AVX512F-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; AVX512F-NEXT:    vpsubw %xmm1, %xmm2, %xmm1
 ; AVX512F-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
@@ -472,7 +471,6 @@ define <32 x i16> @splatvar_funnnel_v32i16(<32 x i16> %x, <32 x i16> %amt) nounw
 ;
 ; AVX512VL-LABEL: splatvar_funnnel_v32i16:
 ; AVX512VL:       # %bb.0:
-; AVX512VL-NEXT:    vpbroadcastw %xmm1, %xmm1
 ; AVX512VL-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; AVX512VL-NEXT:    vpsubw %xmm1, %xmm2, %xmm1
 ; AVX512VL-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1

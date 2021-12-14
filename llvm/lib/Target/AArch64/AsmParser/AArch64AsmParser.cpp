@@ -1031,12 +1031,7 @@ public:
     if (DarwinRefKind != MCSymbolRefExpr::VK_None)
       return false;
 
-    for (unsigned i = 0; i != AllowedModifiers.size(); ++i) {
-      if (ELFRefKind == AllowedModifiers[i])
-        return true;
-    }
-
-    return false;
+    return llvm::is_contained(AllowedModifiers, ELFRefKind);
   }
 
   bool isMovWSymbolG3() const {

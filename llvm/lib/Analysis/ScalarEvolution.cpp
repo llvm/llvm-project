@@ -13057,11 +13057,13 @@ void ScalarEvolution::verify() const {
     Worklist.append(L->begin(), L->end());
   }
   for (auto &KV : ValueExprMap) {
+#ifndef NDEBUG
     // Check for SCEV expressions referencing invalid/deleted loops.
     if (auto *AR = dyn_cast<SCEVAddRecExpr>(KV.second)) {
       assert(ValidLoops.contains(AR->getLoop()) &&
              "AddRec references invalid loop");
     }
+#endif
 
     // Check that the value is also part of the reverse map.
     auto It = ExprValueMap.find(KV.second);

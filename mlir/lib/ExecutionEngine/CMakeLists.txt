@@ -26,7 +26,6 @@ add_mlir_library(MLIRExecutionEngine
   intrinsics_gen
 
   LINK_COMPONENTS
-  ${LLVM_NATIVE_ARCH}AsmParser
   Core
   Coroutines
   ExecutionEngine

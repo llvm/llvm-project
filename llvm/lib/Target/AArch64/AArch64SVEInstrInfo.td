@@ -275,6 +275,11 @@ def AArch64mul_p_oneuse : PatFrag<(ops node:$pred, node:$src1, node:$src2),
   return N->hasOneUse();
 }]>;
 
+def AArch64fneg_mt_nsz : PatFrag<(ops node:$pred, node:$op, node:$pt),
+                                  (AArch64fneg_mt node:$pred, node:$op, node:$pt), [{
+  return N->getFlags().hasNoSignedZeros();
+}]>;
+
 def SDT_AArch64Arith_Unpred : SDTypeProfile<1, 2, [
   SDTCisVec<0>, SDTCisVec<1>, SDTCisVec<2>,
   SDTCisSameAs<0,1>, SDTCisSameAs<1,2>
@@ -536,7 +541,8 @@ let Predicates = [HasSVEorStreamingSVE] in {
               (!cast<Instruction>("FNMLA_ZPZZZ_UNDEF_"#Suffix) $P, ZPR:$Za, ZPR:$Zn, ZPR:$Zm)>;
 
     // Zd = -(Za + Zn * Zm)
-    def : Pat<(AArch64fneg_mt PredTy:$P, (AArch64fma_p PredTy:$P, Ty:$Zn, Ty:$Zm, Ty:$Za), (Ty (undef))),
+    // (with nsz neg.)
+    def : Pat<(AArch64fneg_mt_nsz PredTy:$P, (AArch64fma_p PredTy:$P, Ty:$Zn, Ty:$Zm, Ty:$Za), (Ty (undef))),
               (!cast<Instruction>("FNMLA_ZPZZZ_UNDEF_"#Suffix) $P, ZPR:$Za, ZPR:$Zn, ZPR:$Zm)>;
 
     // Zda = Zda + Zn * Zm

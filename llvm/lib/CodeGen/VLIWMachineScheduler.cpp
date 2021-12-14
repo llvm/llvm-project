@@ -219,16 +219,20 @@ void VLIWMachineScheduler::schedule() {
   // Initialize the strategy before modifying the DAG.
   SchedImpl->initialize(this);
 
-  LLVM_DEBUG(unsigned maxH = 0;
-             for (unsigned su = 0, e = SUnits.size(); su != e;
-                  ++su) if (SUnits[su].getHeight() > maxH) maxH =
-                 SUnits[su].getHeight();
-             dbgs() << "Max Height " << maxH << "\n";);
-  LLVM_DEBUG(unsigned maxD = 0;
-             for (unsigned su = 0, e = SUnits.size(); su != e;
-                  ++su) if (SUnits[su].getDepth() > maxD) maxD =
-                 SUnits[su].getDepth();
-             dbgs() << "Max Depth " << maxD << "\n";);
+  LLVM_DEBUG({
+    unsigned maxH = 0;
+    for (const SUnit &SU : SUnits)
+      if (SU.getHeight() > maxH)
+        maxH = SU.getHeight();
+    dbgs() << "Max Height " << maxH << "\n";
+  });
+  LLVM_DEBUG({
+    unsigned maxD = 0;
+    for (const SUnit &SU : SUnits)
+      if (SU.getDepth() > maxD)
+        maxD = SU.getDepth();
+    dbgs() << "Max Depth " << maxD << "\n";
+  });
   LLVM_DEBUG(dump());
   if (ViewMISchedDAGs)
     viewGraph();

@@ -116,6 +116,13 @@ class Arith_CompareOp<string mnemonic, list<OpTrait> traits = []> :
   let assemblyFormat = "$predicate `,` $lhs `,` $rhs attr-dict `:` type($lhs)";
 }
 
+// Just like `Arith_CompareOp` but also admits 0-D vectors. Introduced
+// temporarily to allow gradual transition to 0-D vectors.
+class Arith_CompareOpOfAnyRank<string mnemonic, list<OpTrait> traits = []> :
+    Arith_CompareOp<mnemonic, traits> {
+  let results = (outs BoolLikeOfAnyRank:$result);
+}
+
 //===----------------------------------------------------------------------===//
 // ConstantOp
 //===----------------------------------------------------------------------===//
@@ -284,7 +291,7 @@ def Arith_DivSIOp : Arith_IntBinaryOp<"divsi"> {
 def Arith_CeilDivUIOp : Arith_IntBinaryOp<"ceildivui"> {
   let summary = "unsigned ceil integer division operation";
   let description = [{
-    Unsigned integer division. Rounds towards positive infinity. Treats the 
+    Unsigned integer division. Rounds towards positive infinity. Treats the
     leading bit as the most significant, i.e. for `i16` given two's complement
     representation, `6 / -2 = 6 / (2^16 - 2) = 1`.
 
@@ -990,7 +997,7 @@ def Arith_BitcastOp : Arith_CastOp<"bitcast", BitcastTypeConstraint,
 // CmpIOp
 //===----------------------------------------------------------------------===//
 
-def Arith_CmpIOp : Arith_CompareOp<"cmpi"> {
+def Arith_CmpIOp : Arith_CompareOpOfAnyRank<"cmpi"> {
   let summary = "integer comparison operation";
   let description = [{
     The `cmpi` operation is a generic comparison for integer-like types. Its two
@@ -1057,8 +1064,8 @@ def Arith_CmpIOp : Arith_CompareOp<"cmpi"> {
   }];
 
   let arguments = (ins Arith_CmpIPredicateAttr:$predicate,
-                       SignlessIntegerLike:$lhs,
-                       SignlessIntegerLike:$rhs);
+                       SignlessIntegerLikeOfAnyRank:$lhs,
+                       SignlessIntegerLikeOfAnyRank:$rhs);
 
   let builders = [
     OpBuilder<(ins "CmpIPredicate":$predicate, "Value":$lhs, "Value":$rhs), [{

@@ -11,12 +11,13 @@
 
 include "mlir/Pass/PassBase.td"
 
-def ConvertElementwiseToLinalg : FunctionPass<"convert-elementwise-to-linalg"> {
+def ConvertElementwiseToLinalg : Pass<"convert-elementwise-to-linalg", ""> {
   let summary = "Convert ElementwiseMappable ops to linalg";
   let description = [{
     Convert ops with the `ElementwiseMappable` trait to linalg parallel loops.
 
-    This pass only converts ops that operate on ranked tensors.
+    This pass only converts ops that operate on ranked tensors. It can be
+    run on op which contains linalg ops (most commonly a FunctionLike op).
   }];
   let constructor = "mlir::createConvertElementwiseToLinalgPass()";
   let dependentDialects = ["linalg::LinalgDialect", "memref::MemRefDialect"];
@@ -54,7 +55,7 @@ def LinalgComprehensiveModuleBufferize :
   let constructor = "mlir::createLinalgComprehensiveModuleBufferizePass()";
 }
 
-def LinalgFoldUnitExtentDims : FunctionPass<"linalg-fold-unit-extent-dims"> {
+def LinalgFoldUnitExtentDims : Pass<"linalg-fold-unit-extent-dims", ""> {
   let summary = "Remove unit-extent dimension in Linalg ops on tensors";
   let constructor = "mlir::createLinalgFoldUnitExtentDimsPass()";
   let options = [
@@ -197,13 +198,13 @@ def LinalgGeneralization : FunctionPass<"linalg-generalize-named-ops"> {
   let dependentDialects = ["linalg::LinalgDialect"];
 }
 
-def LinalgDetensorize : FunctionPass<"linalg-detensorize"> {
+def LinalgDetensorize : Pass<"linalg-detensorize", ""> {
   let summary = "Detensorize linalg ops";
   let constructor = "mlir::createLinalgDetensorizePass()";
   let dependentDialects = [];
 
   let description = [{
-    Detensoring is the process through which a tensor value is convereted to one
+    Detensoring is the process through which a tensor value is converted to one
     or potentially more primitive value(s). During this process, operations with
     such detensored operands are also converted to an equivalent form that works
     on primitives.
@@ -222,6 +223,10 @@ def LinalgDetensorize : FunctionPass<"linalg-detensorize"> {
     In addition to detensoring individual ops, this pass detensors internal
     control flow inside a function. All blocks except for the entry block are
     detensored by converting their arguments whenever possible.
+
+    This can be run on any op with the FunctionLike trait and must not be
+    run on others. This is because it performs specific legalization of the
+    blocks that make up the body, which it assumes has a FunctionLike trait.
   }];
 }
 

@@ -80,7 +80,7 @@ void checkCharCompare2(
       builder, loc, mlir::arith::CmpIPredicate::eq, lhs, rhs);
   EXPECT_TRUE(mlir::isa<mlir::arith::CmpIOp>(res.getDefiningOp()));
   auto cmpOp = mlir::dyn_cast<mlir::arith::CmpIOp>(res.getDefiningOp());
-  checkCallOp(cmpOp.lhs().getDefiningOp(), fctName, 4, /*addLocArgs=*/false);
+  checkCallOp(cmpOp.getLhs().getDefiningOp(), fctName, 4, /*addLocArgs=*/false);
   auto allocas = res.getParentBlock()->getOps<fir::AllocaOp>();
   EXPECT_TRUE(llvm::empty(allocas));
 }

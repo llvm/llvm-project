@@ -173,5 +173,6 @@ def main():
     # CHECK: Passed 8 tests
     print('Passed ', count, 'tests')
 
+
 if __name__ == '__main__':
   main()

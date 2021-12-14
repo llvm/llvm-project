@@ -66,9 +66,11 @@ WebAssemblyMCInstLower::GetGlobalAddressSymbol(const MachineOperand &MO) const {
       // they reach this point as aggregate Array types with an element type
       // that is a reference type.
       wasm::ValType Type;
+      bool IsTable = false;
       if (GlobalVT->isArrayTy() &&
           WebAssembly::isRefType(GlobalVT->getArrayElementType())) {
         MVT VT;
+        IsTable = true;
         switch (GlobalVT->getArrayElementType()->getPointerAddressSpace()) {
         case WebAssembly::WasmAddressSpace::WASM_ADDRESS_SPACE_FUNCREF:
           VT = MVT::funcref;
@@ -85,9 +87,14 @@ WebAssemblyMCInstLower::GetGlobalAddressSymbol(const MachineOperand &MO) const {
       } else
         report_fatal_error("Aggregate globals not yet implemented");
 
-      WasmSym->setType(wasm::WASM_SYMBOL_TYPE_GLOBAL);
-      WasmSym->setGlobalType(
-          wasm::WasmGlobalType{uint8_t(Type), /*Mutable=*/true});
+      if (IsTable) {
+        WasmSym->setType(wasm::WASM_SYMBOL_TYPE_TABLE);
+        WasmSym->setTableType(Type);
+      } else {
+        WasmSym->setType(wasm::WASM_SYMBOL_TYPE_GLOBAL);
+        WasmSym->setGlobalType(
+            wasm::WasmGlobalType{uint8_t(Type), /*Mutable=*/true});
+      }
     }
     return WasmSym;
   }

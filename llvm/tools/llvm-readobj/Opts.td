@@ -28,6 +28,7 @@ def expand_relocs : FF<"expand-relocs", "Expand each shown relocation to multipl
 def file_header : FF<"file-header", "Display file header">;
 def headers : FF<"headers", "Equivalent to setting: --file-header, --program-headers, --section-headers">;
 defm hex_dump : Eq<"hex-dump", "Display the specified section(s) as hexadecimal bytes">, MetaVarName<"<name or index>">;
+def pretty_print : FF<"pretty-print", "Pretty print JSON output">;
 def relocs : FF<"relocs", "Display the relocation entries in the file">;
 def section_data : FF<"section-data", "Display section data for each section shown. This option has no effect for GNU style output">;
 def section_details : FF<"section-details", "Display the section details">;
@@ -47,7 +48,7 @@ def unwind : FF<"unwind", "Display unwind information">;
 def grp_elf : OptionGroup<"kind">, HelpText<"OPTIONS (ELF specific)">;
 def dynamic_table : FF<"dynamic-table", "Display the dynamic section table">, Group<grp_elf>;
 def elf_linker_options : FF<"elf-linker-options", "Display the .linker-options section">, Group<grp_elf>;
-defm elf_output_style : Eq<"elf-output-style", "Specify ELF dump style: LLVM or GNU">, Group<grp_elf>;
+defm elf_output_style : Eq<"elf-output-style", "Specify ELF dump style: LLVM, GNU, JSON">, Group<grp_elf>;
 def histogram : FF<"histogram", "Display bucket list histogram for hash sections">, Group<grp_elf>;
 def section_groups : FF<"section-groups", "Display section groups">, Group<grp_elf>;
 def gnu_hash_table : FF<"gnu-hash-table", "Display the GNU hash table for dynamic symbols">, Group<grp_elf>;

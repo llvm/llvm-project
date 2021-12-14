@@ -2629,8 +2629,8 @@ bool llvm::tryFoldSPUpdateIntoPushPop(const ARMSubtarget &Subtarget,
 
   // Add the complete list back in.
   MachineInstrBuilder MIB(MF, &*MI);
-  for (int i = RegList.size() - 1; i >= 0; --i)
-    MIB.add(RegList[i]);
+  for (const MachineOperand &MO : llvm::reverse(RegList))
+    MIB.add(MO);
 
   return true;
 }

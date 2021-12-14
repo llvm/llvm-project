@@ -183,9 +183,10 @@ The following options are implemented only for the ELF file format.
 
 .. option:: --elf-output-style=<value>
 
- Format ELF information in the specified style. Valid options are ``LLVM`` and
- ``GNU``. ``LLVM`` output (the default) is an expanded and structured format,
- whilst ``GNU`` output mimics the equivalent GNU :program:`readelf` output.
+ Format ELF information in the specified style. Valid options are ``LLVM``,
+ ``GNU``, and ``JSON``. ``LLVM`` output (the default) is an expanded and
+ structured format. ``GNU`` output mimics the equivalent GNU :program:`readelf`
+ output. ``JSON`` is JSON formatted output intended for machine consumption.
 
 .. option:: --section-groups, -g
 
@@ -206,6 +207,11 @@ The following options are implemented only for the ELF file format.
 .. option:: --notes, -n
 
  Display all notes.
+
+.. option:: --pretty-print
+
+ When used with :option:`--elf-output-style`, JSON output will be formatted in
+ a more readable format.
 
 .. option:: --program-headers, --segments, -l
 

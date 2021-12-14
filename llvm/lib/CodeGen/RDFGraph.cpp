@@ -1500,8 +1500,8 @@ void DataFlowGraph::buildPhis(BlockRefsMap &PhiM, RegisterSet &AllRefs,
 
     // Erase from MaxRefs all elements in the closure.
     auto Begin = MaxRefs.begin();
-    for (unsigned i = ClosureIdx.size(); i != 0; --i)
-      MaxRefs.erase(Begin + ClosureIdx[i-1]);
+    for (unsigned Idx : llvm::reverse(ClosureIdx))
+      MaxRefs.erase(Begin + Idx);
   }
 }
 

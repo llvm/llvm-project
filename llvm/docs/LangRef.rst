@@ -19772,12 +19772,12 @@ Examples:
 
 .. code-block:: text
 
-     %r = call void @llvm.vp.scatter.v8i8.v8p0i8(<8 x i8> %val, <8 x i8*> %ptrs, <8 x i1> %mask, i32 %evl)
+     %r = call <8 x i8> @llvm.vp.gather.v8i8.v8p0i8(<8 x i8*> %ptrs, <8 x i1> %mask, i32 %evl)
      ;; For all lanes below %evl, %r is lane-wise equivalent to %also.r
      ;; Note that since the alignment is ultimately up to the data layout
      ;; string, 8 is used as an example.
 
-     %also.r = call void @llvm.masked.scatter.v8i8.v8p0i8(<8 x i8> %val, <8 x i8*> %ptrs, i32 8, <8 x i1> %mask, <8 x i8> undef)
+     %also.r = call <8 x i8> @llvm.masked.gather.v8i8.v8p0i8(<8 x i8*> %ptrs, i32 8, <8 x i1> %mask, <8 x i8> undef)
 
 
 .. _int_vp_scatter:

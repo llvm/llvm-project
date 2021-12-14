@@ -23,7 +23,7 @@
 #include "ToolChains/FreeBSD.h"
 #include "ToolChains/Fuchsia.h"
 #include "ToolChains/Gnu.h"
-#include "ToolChains/HIP.h"
+#include "ToolChains/HIPAMD.h"
 #include "ToolChains/Haiku.h"
 #include "ToolChains/Hexagon.h"
 #include "ToolChains/Hurd.h"
@@ -701,7 +701,7 @@ void Driver::CreateOffloadingDeviceToolChains(Compilation &C,
     // because the device toolchain we create depends on both.
     auto &HIPTC = ToolChains[HIPTriple.str() + "/" + HostTriple.str()];
     if (!HIPTC) {
-      HIPTC = std::make_unique<toolchains::HIPToolChain>(
+      HIPTC = std::make_unique<toolchains::HIPAMDToolChain>(
           *this, HIPTriple, *HostTC, C.getInputArgs());
     }
     C.addOffloadDeviceToolChain(HIPTC.get(), OFK);
@@ -2040,11 +2040,7 @@ static bool ContainsCompileOrAssembleAction(const Action *A) {
       isa<AssembleJobAction>(A))
     return true;
 
-  for (const Action *Input : A->inputs())
-    if (ContainsCompileOrAssembleAction(Input))
-      return true;
-
-  return false;
+  return llvm::any_of(A->inputs(), ContainsCompileOrAssembleAction);
 }
 
 void Driver::BuildUniversalActions(Compilation &C, const ToolChain &TC,

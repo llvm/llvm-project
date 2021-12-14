@@ -4883,7 +4883,7 @@ bool X86InstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
   case X86::SETB_C64r:
     return Expand2AddrUndef(MIB, get(X86::SBB64rr));
   case X86::MMX_SET0:
-    return Expand2AddrUndef(MIB, get(X86::MMX_PXORirr));
+    return Expand2AddrUndef(MIB, get(X86::MMX_PXORrr));
   case X86::V_SET0:
   case X86::FsFLD0SS:
   case X86::FsFLD0SD:
@@ -5156,12 +5156,12 @@ static bool hasUndefRegUpdate(unsigned Opcode, unsigned OpNum,
                               bool ForLoadFold = false) {
   // Set the OpNum parameter to the first source operand.
   switch (Opcode) {
-  case X86::MMX_PUNPCKHBWirr:
-  case X86::MMX_PUNPCKHWDirr:
-  case X86::MMX_PUNPCKHDQirr:
-  case X86::MMX_PUNPCKLBWirr:
-  case X86::MMX_PUNPCKLWDirr:
-  case X86::MMX_PUNPCKLDQirr:
+  case X86::MMX_PUNPCKHBWrr:
+  case X86::MMX_PUNPCKHWDrr:
+  case X86::MMX_PUNPCKHDQrr:
+  case X86::MMX_PUNPCKLBWrr:
+  case X86::MMX_PUNPCKLWDrr:
+  case X86::MMX_PUNPCKLDQrr:
   case X86::MOVHLPSrr:
   case X86::PACKSSWBrr:
   case X86::PACKUSWBrr:

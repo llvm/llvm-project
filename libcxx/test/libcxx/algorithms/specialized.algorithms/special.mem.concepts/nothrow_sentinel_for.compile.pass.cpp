@@ -16,3 +16,20 @@
 
 static_assert(std::ranges::__nothrow_sentinel_for<int*, int*>);
 static_assert(!std::ranges::__nothrow_sentinel_for<int*, long*>);
+
+// Because `__nothrow_sentinel_for` is essentially an alias for `sentinel_for`,
+// the two concepts should subsume each other.
+
+constexpr bool ntsf_subsumes_sf(std::ranges::__nothrow_sentinel_for<char*> auto) requires true {
+  return true;
+}
+constexpr bool ntsf_subsumes_sf(std::sentinel_for<char*> auto);
+
+static_assert(ntsf_subsumes_sf("foo"));
+
+constexpr bool sf_subsumes_ntsf(std::sentinel_for<char*> auto) requires true {
+  return true;
+}
+constexpr bool sf_subsumes_ntsf(std::ranges::__nothrow_sentinel_for<char*> auto);
+
+static_assert(sf_subsumes_ntsf("foo"));

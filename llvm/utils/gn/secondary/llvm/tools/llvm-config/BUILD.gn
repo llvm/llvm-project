@@ -73,8 +73,6 @@ write_cmake_config("BuildVariables.inc") {
   }
 
   values = [
-    "CMAKE_INSTALL_BINDIR=bin",
-    "CMAKE_INSTALL_INCLUDEDIR=include",
     "LLVM_SRC_ROOT=" + rebase_path("//llvm"),
     "LLVM_OBJ_ROOT=" + rebase_path(root_out_dir),
 

@@ -33,13 +33,12 @@ public:
     CommandDataPython() : BreakpointOptions::CommandData() {
       interpreter = lldb::eScriptLanguagePython;
     }
-    CommandDataPython(StructuredData::ObjectSP extra_args_sp) :
-        BreakpointOptions::CommandData(),
-        m_extra_args_up(new StructuredDataImpl()) {
-        interpreter = lldb::eScriptLanguagePython;
-        m_extra_args_up->SetObjectSP(extra_args_sp);
+    CommandDataPython(StructuredData::ObjectSP extra_args_sp)
+        : BreakpointOptions::CommandData(),
+          m_extra_args(std::move(extra_args_sp)) {
+      interpreter = lldb::eScriptLanguagePython;
     }
-    lldb::StructuredDataImplUP m_extra_args_up;
+    StructuredDataImpl m_extra_args;
   };
 
   ScriptInterpreterPython(Debugger &debugger)

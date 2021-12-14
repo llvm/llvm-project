@@ -415,6 +415,7 @@ TEST(DexTrigrams, IdentifierTrigrams) {
                            "cdg", "def", "deg", "dgh", "dgk", "efg", "egh",
                            "egk", "fgh", "fgk", "ghi", "ghk", "gkl", "hij",
                            "hik", "hkl", "ijk", "ikl", "jkl", "klm"}));
+  EXPECT_THAT(identifierTrigramTokens(""), IsEmpty());
 }
 
 TEST(DexTrigrams, QueryTrigrams) {

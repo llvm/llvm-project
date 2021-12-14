@@ -771,8 +771,8 @@ MCSymbol *MachineFunction::addLandingPad(MachineBasicBlock *LandingPad) {
 void MachineFunction::addCatchTypeInfo(MachineBasicBlock *LandingPad,
                                        ArrayRef<const GlobalValue *> TyInfo) {
   LandingPadInfo &LP = getOrCreateLandingPadInfo(LandingPad);
-  for (unsigned N = TyInfo.size(); N; --N)
-    LP.TypeIds.push_back(getTypeIDFor(TyInfo[N - 1]));
+  for (const GlobalValue *GV : llvm::reverse(TyInfo))
+    LP.TypeIds.push_back(getTypeIDFor(GV));
 }
 
 void MachineFunction::addFilterTypeInfo(MachineBasicBlock *LandingPad,

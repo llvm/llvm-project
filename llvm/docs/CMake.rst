@@ -252,22 +252,6 @@ manual, or execute ``cmake --help-variable VARIABLE_NAME``.
   Sets the C++ standard to conform to when building LLVM.  Possible values are
   14, 17, 20.  LLVM Requires C++ 14 or higher.  This defaults to 14.
 
-**CMAKE_INSTALL_BINDIR**:STRING
-  The path to install binary tools, relative to the ``CMAKE_INSTALL_PREFIX``.
-  Defaults to ``bin``.
-
-**CMAKE_INSTALL_INCLUDEDIR**:STRING
-  The path to install header files, relative to the ``CMAKE_INSTALL_PREFIX``.
-  Defaults to ``include``.
-
-**CMAKE_INSTALL_DOCDIR**:STRING
-  The path to install documentation, relative to the ``CMAKE_INSTALL_PREFIX``.
-  Defaults to ``share/doc``.
-
-**CMAKE_INSTALL_MANDIR**:STRING
-  The path to install manpage files, relative to the ``CMAKE_INSTALL_PREFIX``.
-  Defaults to ``share/man``.
-
 .. _LLVM-related variables:
 
 LLVM-related variables
@@ -614,12 +598,12 @@ enabled sub-projects. Nearly all of these variable names begin with
 **LLVM_INSTALL_OCAMLDOC_HTML_DIR**:STRING
   The path to install OCamldoc-generated HTML documentation to. This path can
   either be absolute or relative to the CMAKE_INSTALL_PREFIX. Defaults to
-  ``${CMAKE_INSTALL_DOCDIR}/llvm/ocaml-html``.
+  `share/doc/llvm/ocaml-html`.
 
 **LLVM_INSTALL_SPHINX_HTML_DIR**:STRING
   The path to install Sphinx-generated HTML documentation to. This path can
   either be absolute or relative to the CMAKE_INSTALL_PREFIX. Defaults to
-  ``${CMAKE_INSTALL_DOCDIR}/llvm/html``.
+  `share/doc/llvm/html`.
 
 **LLVM_INSTALL_UTILS**:BOOL
   If enabled, utility binaries like ``FileCheck`` and ``not`` will be installed
@@ -643,8 +627,8 @@ enabled sub-projects. Nearly all of these variable names begin with
 
 **LLVM_INSTALL_DOXYGEN_HTML_DIR**:STRING
   The path to install Doxygen-generated HTML documentation to. This path can
-  either be absolute or relative to the ``CMAKE_INSTALL_PREFIX``. Defaults to
-  ``${CMAKE_INSTALL_DOCDIR}/llvm/doxygen-html``.
+  either be absolute or relative to the CMAKE_INSTALL_PREFIX. Defaults to
+  `share/doc/llvm/doxygen-html`.
 
 **LLVM_LINK_LLVM_DYLIB**:BOOL
   If enabled, tools will be linked with the libLLVM shared library. Defaults

@@ -22,6 +22,17 @@
 
 namespace mlir {
 
+/// Parses a FlatAffineConstraints from a StringRef. It is expected that the
+/// string represents a valid IntegerSet, otherwise it will violate a gtest
+/// assertion.
+static FlatAffineConstraints parseFAC(StringRef str, MLIRContext *context) {
+  FailureOr<FlatAffineConstraints> fac = parseIntegerSetToFAC(str, context);
+
+  EXPECT_TRUE(succeeded(fac));
+
+  return *fac;
+}
+
 /// Compute the union of s and t, and check that each of the given points
 /// belongs to the union iff it belongs to at least one of s and t.
 static void testUnionAtPoints(PresburgerSet s, PresburgerSet t,
@@ -620,6 +631,7 @@ void expectEqual(const PresburgerSet &s, const PresburgerSet &t) {
 void expectEmpty(PresburgerSet s) { EXPECT_TRUE(s.isIntegerEmpty()); }
 
 TEST(SetTest, divisions) {
+  MLIRContext context;
   // Note: we currently need to add the equalities as inequalities to the FAC
   // since detecting divisions based on equalities is not yet supported.
 
@@ -644,17 +656,12 @@ TEST(SetTest, divisions) {
   expectEqual(odds.complement(), evens);
   // even multiples of 3 = multiples of 6.
   expectEqual(multiples3.intersect(evens), multiples6);
-}
 
-/// Parses a FlatAffineConstraints from a StringRef. It is expected that the
-/// string represents a valid IntegerSet, otherwise it will violate a gtest
-/// assertion.
-static FlatAffineConstraints parseFAC(StringRef str, MLIRContext *context) {
-  FailureOr<FlatAffineConstraints> fac = parseIntegerSetToFAC(str, context);
-
-  EXPECT_TRUE(succeeded(fac));
-
-  return *fac;
+  PresburgerSet setA =
+      makeSetFromFACs(1, {parseFAC("(x) : (-x >= 0)", &context)});
+  PresburgerSet setB =
+      makeSetFromFACs(1, {parseFAC("(x) : (x floordiv 2 - 4 >= 0)", &context)});
+  EXPECT_TRUE(setA.subtract(setB).isEqual(setA));
 }
 
 /// Coalesce `set` and check that the `newSet` is equal to `set and that

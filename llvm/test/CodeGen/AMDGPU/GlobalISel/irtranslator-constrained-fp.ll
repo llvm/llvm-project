@@ -41,8 +41,8 @@ define float @v_constained_fadd_f32_fpexcept_ignore(float %x, float %y) #0 {
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
   ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:sgpr_64 = COPY $sgpr30_sgpr31
-  ; CHECK-NEXT:   %10:_(s32) = nofpexcept G_STRICT_FADD [[COPY]], [[COPY1]]
-  ; CHECK-NEXT:   $vgpr0 = COPY %10(s32)
+  ; CHECK-NEXT:   %3:_(s32) = nofpexcept G_STRICT_FADD [[COPY]], [[COPY1]]
+  ; CHECK-NEXT:   $vgpr0 = COPY %3(s32)
   ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:ccr_sgpr_64 = COPY [[COPY2]]
   ; CHECK-NEXT:   S_SETPC_B64_return [[COPY3]], implicit $vgpr0
   %val = call float @llvm.experimental.constrained.fadd.f32(float %x, float %y, metadata !"round.tonearest", metadata !"fpexcept.ignore")
@@ -57,8 +57,8 @@ define float @v_constained_fadd_f32_fpexcept_ignore_flags(float %x, float %y) #0
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
   ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:sgpr_64 = COPY $sgpr30_sgpr31
-  ; CHECK-NEXT:   %10:_(s32) = nsz nofpexcept G_STRICT_FADD [[COPY]], [[COPY1]]
-  ; CHECK-NEXT:   $vgpr0 = COPY %10(s32)
+  ; CHECK-NEXT:   %3:_(s32) = nsz nofpexcept G_STRICT_FADD [[COPY]], [[COPY1]]
+  ; CHECK-NEXT:   $vgpr0 = COPY %3(s32)
   ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:ccr_sgpr_64 = COPY [[COPY2]]
   ; CHECK-NEXT:   S_SETPC_B64_return [[COPY3]], implicit $vgpr0
   %val = call nsz float @llvm.experimental.constrained.fadd.f32(float %x, float %y, metadata !"round.tonearest", metadata !"fpexcept.ignore")
@@ -115,8 +115,8 @@ define <2 x float> @v_constained_fadd_v2f32_fpexcept_ignore(<2 x float> %x, <2 x
   ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:_(s32) = COPY $vgpr3
   ; CHECK-NEXT:   [[BUILD_VECTOR1:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[COPY2]](s32), [[COPY3]](s32)
   ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:sgpr_64 = COPY $sgpr30_sgpr31
-  ; CHECK-NEXT:   %14:_(<2 x s32>) = nofpexcept G_STRICT_FADD [[BUILD_VECTOR]], [[BUILD_VECTOR1]]
-  ; CHECK-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES %14(<2 x s32>)
+  ; CHECK-NEXT:   %7:_(<2 x s32>) = nofpexcept G_STRICT_FADD [[BUILD_VECTOR]], [[BUILD_VECTOR1]]
+  ; CHECK-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES %7(<2 x s32>)
   ; CHECK-NEXT:   $vgpr0 = COPY [[UV]](s32)
   ; CHECK-NEXT:   $vgpr1 = COPY [[UV1]](s32)
   ; CHECK-NEXT:   [[COPY5:%[0-9]+]]:ccr_sgpr_64 = COPY [[COPY4]]
@@ -155,8 +155,8 @@ define float @v_constained_fsub_f32_fpexcept_ignore_flags(float %x, float %y) #0
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
   ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:sgpr_64 = COPY $sgpr30_sgpr31
-  ; CHECK-NEXT:   %10:_(s32) = nsz nofpexcept G_STRICT_FSUB [[COPY]], [[COPY1]]
-  ; CHECK-NEXT:   $vgpr0 = COPY %10(s32)
+  ; CHECK-NEXT:   %3:_(s32) = nsz nofpexcept G_STRICT_FSUB [[COPY]], [[COPY1]]
+  ; CHECK-NEXT:   $vgpr0 = COPY %3(s32)
   ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:ccr_sgpr_64 = COPY [[COPY2]]
   ; CHECK-NEXT:   S_SETPC_B64_return [[COPY3]], implicit $vgpr0
   %val = call nsz float @llvm.experimental.constrained.fsub.f32(float %x, float %y, metadata !"round.tonearest", metadata !"fpexcept.ignore")
@@ -171,8 +171,8 @@ define float @v_constained_fmul_f32_fpexcept_ignore_flags(float %x, float %y) #0
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
   ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:sgpr_64 = COPY $sgpr30_sgpr31
-  ; CHECK-NEXT:   %10:_(s32) = nsz nofpexcept G_STRICT_FMUL [[COPY]], [[COPY1]]
-  ; CHECK-NEXT:   $vgpr0 = COPY %10(s32)
+  ; CHECK-NEXT:   %3:_(s32) = nsz nofpexcept G_STRICT_FMUL [[COPY]], [[COPY1]]
+  ; CHECK-NEXT:   $vgpr0 = COPY %3(s32)
   ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:ccr_sgpr_64 = COPY [[COPY2]]
   ; CHECK-NEXT:   S_SETPC_B64_return [[COPY3]], implicit $vgpr0
   %val = call nsz float @llvm.experimental.constrained.fmul.f32(float %x, float %y, metadata !"round.tonearest", metadata !"fpexcept.ignore")
@@ -187,8 +187,8 @@ define float @v_constained_fdiv_f32_fpexcept_ignore_flags(float %x, float %y) #0
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
   ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:sgpr_64 = COPY $sgpr30_sgpr31
-  ; CHECK-NEXT:   %10:_(s32) = nsz nofpexcept G_STRICT_FDIV [[COPY]], [[COPY1]]
-  ; CHECK-NEXT:   $vgpr0 = COPY %10(s32)
+  ; CHECK-NEXT:   %3:_(s32) = nsz nofpexcept G_STRICT_FDIV [[COPY]], [[COPY1]]
+  ; CHECK-NEXT:   $vgpr0 = COPY %3(s32)
   ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:ccr_sgpr_64 = COPY [[COPY2]]
   ; CHECK-NEXT:   S_SETPC_B64_return [[COPY3]], implicit $vgpr0
   %val = call nsz float @llvm.experimental.constrained.fdiv.f32(float %x, float %y, metadata !"round.tonearest", metadata !"fpexcept.ignore")
@@ -203,8 +203,8 @@ define float @v_constained_frem_f32_fpexcept_ignore_flags(float %x, float %y) #0
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
   ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:sgpr_64 = COPY $sgpr30_sgpr31
-  ; CHECK-NEXT:   %10:_(s32) = nsz nofpexcept G_STRICT_FREM [[COPY]], [[COPY1]]
-  ; CHECK-NEXT:   $vgpr0 = COPY %10(s32)
+  ; CHECK-NEXT:   %3:_(s32) = nsz nofpexcept G_STRICT_FREM [[COPY]], [[COPY1]]
+  ; CHECK-NEXT:   $vgpr0 = COPY %3(s32)
   ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:ccr_sgpr_64 = COPY [[COPY2]]
   ; CHECK-NEXT:   S_SETPC_B64_return [[COPY3]], implicit $vgpr0
   %val = call nsz float @llvm.experimental.constrained.frem.f32(float %x, float %y, metadata !"round.tonearest", metadata !"fpexcept.ignore")
@@ -220,8 +220,8 @@ define float @v_constained_fma_f32_fpexcept_ignore_flags(float %x, float %y, flo
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
   ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr2
   ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:sgpr_64 = COPY $sgpr30_sgpr31
-  ; CHECK-NEXT:   %11:_(s32) = nsz nofpexcept G_STRICT_FMA [[COPY]], [[COPY1]], [[COPY2]]
-  ; CHECK-NEXT:   $vgpr0 = COPY %11(s32)
+  ; CHECK-NEXT:   %4:_(s32) = nsz nofpexcept G_STRICT_FMA [[COPY]], [[COPY1]], [[COPY2]]
+  ; CHECK-NEXT:   $vgpr0 = COPY %4(s32)
   ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:ccr_sgpr_64 = COPY [[COPY3]]
   ; CHECK-NEXT:   S_SETPC_B64_return [[COPY4]], implicit $vgpr0
   %val = call nsz float @llvm.experimental.constrained.fma.f32(float %x, float %y, float %z, metadata !"round.tonearest", metadata !"fpexcept.ignore")

@@ -19,6 +19,16 @@ set(LIBCXX_SOURCES
   include/atomic_support.h
   include/config_elast.h
   include/refstring.h
+  include/ryu/common.h
+  include/ryu/d2fixed.h
+  include/ryu/d2fixed_full_table.h
+  include/ryu/d2s.h
+  include/ryu/d2s_full_table.h
+  include/ryu/d2s_intrinsics.h
+  include/ryu/digit_table.h
+  include/ryu/f2s.h
+  include/ryu/ryu.h
+  include/to_chars_floating_point.h
   legacy_pointer_safety.cpp
   memory.cpp
   mutex.cpp
@@ -26,6 +36,9 @@ set(LIBCXX_SOURCES
   new.cpp
   optional.cpp
   random_shuffle.cpp
+  ryu/d2fixed.cpp
+  ryu/d2s.cpp
+  ryu/f2s.cpp
   shared_mutex.cpp
   stdexcept.cpp
   string.cpp
