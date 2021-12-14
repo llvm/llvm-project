@@ -32,6 +32,7 @@
 #include <vector>
 
 using namespace llvm;
+extern cl::opt<bool> DebugInfoCorrelate;
 
 // A struct to define how the data stream should be patched. For Indexed
 // profiling, only uint64_t data type is needed.

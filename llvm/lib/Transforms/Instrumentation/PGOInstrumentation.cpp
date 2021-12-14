@@ -291,6 +291,8 @@ extern cl::opt<PGOViewCountsType> PGOViewCounts;
 // Command line option to specify the name of the function for CFG dump
 // Defined in Analysis/BlockFrequencyInfo.cpp:  -view-bfi-func-name=
 extern cl::opt<std::string> ViewBlockFreqFuncName;
+
+extern cl::opt<bool> DebugInfoCorrelate;
 } // namespace llvm
 
 static cl::opt<bool>
@@ -467,8 +469,9 @@ private:
     createProfileFileNameVar(M, InstrProfileOutput);
     // The variable in a comdat may be discarded by LTO. Ensure the
     // declaration will be retained.
-    appendToCompilerUsed(
-        M, createIRLevelProfileFlagVar(M, /*IsCS=*/true, PGOInstrumentEntry));
+    appendToCompilerUsed(M, createIRLevelProfileFlagVar(M, /*IsCS=*/true,
+                                                        PGOInstrumentEntry,
+                                                        DebugInfoCorrelate));
     return false;
   }
   std::string InstrProfileOutput;
@@ -1616,7 +1619,8 @@ static bool InstrumentAllFunctions(
   // For the context-sensitve instrumentation, we should have a separated pass
   // (before LTO/ThinLTO linking) to create these variables.
   if (!IsCS)
-    createIRLevelProfileFlagVar(M, /*IsCS=*/false, PGOInstrumentEntry);
+    createIRLevelProfileFlagVar(M, /*IsCS=*/false, PGOInstrumentEntry,
+                                DebugInfoCorrelate);
   std::unordered_multimap<Comdat *, GlobalValue *> ComdatMembers;
   collectComdatMembers(M, ComdatMembers);
 
@@ -1638,8 +1642,9 @@ PGOInstrumentationGenCreateVar::run(Module &M, ModuleAnalysisManager &AM) {
   createProfileFileNameVar(M, CSInstrName);
   // The variable in a comdat may be discarded by LTO. Ensure the declaration
   // will be retained.
-  appendToCompilerUsed(
-      M, createIRLevelProfileFlagVar(M, /*IsCS=*/true, PGOInstrumentEntry));
+  appendToCompilerUsed(M, createIRLevelProfileFlagVar(M, /*IsCS=*/true,
+                                                      PGOInstrumentEntry,
+                                                      DebugInfoCorrelate));
   return PreservedAnalyses::all();
 }
 

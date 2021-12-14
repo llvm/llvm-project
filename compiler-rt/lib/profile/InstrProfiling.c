@@ -38,7 +38,7 @@ __llvm_profile_get_num_padding_bytes(uint64_t SizeInBytes) {
 }
 
 COMPILER_RT_VISIBILITY uint64_t __llvm_profile_get_version(void) {
-  return __llvm_profile_raw_version;
+  return INSTR_PROF_RAW_VERSION_VAR;
 }
 
 COMPILER_RT_VISIBILITY void __llvm_profile_reset_counters(void) {
