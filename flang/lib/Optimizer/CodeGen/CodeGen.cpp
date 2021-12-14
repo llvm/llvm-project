@@ -38,7 +38,7 @@ static constexpr unsigned defaultAlign = 8;
 static constexpr unsigned kAttrPointer = CFI_attribute_pointer;
 static constexpr unsigned kAttrAllocatable = CFI_attribute_allocatable;
 
-static mlir::Type getVoidPtrType(mlir::MLIRContext *context) {
+static inline mlir::Type getVoidPtrType(mlir::MLIRContext *context) {
   return mlir::LLVM::LLVMPointerType::get(mlir::IntegerType::get(context, 8));
 }
 
