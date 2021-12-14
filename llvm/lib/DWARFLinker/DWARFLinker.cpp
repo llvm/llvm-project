@@ -223,22 +223,21 @@ static void analyzeImportedModule(
     SysRoot = CU.getSysRoot();
   if (!SysRoot.empty() && Path.startswith(SysRoot))
     return;
-  if (Optional<DWARFFormValue> Val = DIE.find(dwarf::DW_AT_name))
-    if (Optional<const char *> Name = Val->getAsCString()) {
-      auto &Entry = (*ParseableSwiftInterfaces)[*Name];
-      // The prepend path is applied later when copying.
-      DWARFDie CUDie = CU.getOrigUnit().getUnitDIE();
-      SmallString<128> ResolvedPath;
-      if (sys::path::is_relative(Path))
-        resolveRelativeObjectPath(ResolvedPath, CUDie);
-      sys::path::append(ResolvedPath, Path);
-      if (!Entry.empty() && Entry != ResolvedPath)
-        ReportWarning(
-            Twine("Conflicting parseable interfaces for Swift Module ") +
-                *Name + ": " + Entry + " and " + Path,
-            DIE);
-      Entry = std::string(ResolvedPath.str());
-    }
+  Optional<const char*> Name = dwarf::toString(DIE.find(dwarf::DW_AT_name));
+  if (!Name)
+    return;
+  auto &Entry = (*ParseableSwiftInterfaces)[*Name];
+  // The prepend path is applied later when copying.
+  DWARFDie CUDie = CU.getOrigUnit().getUnitDIE();
+  SmallString<128> ResolvedPath;
+  if (sys::path::is_relative(Path))
+    resolveRelativeObjectPath(ResolvedPath, CUDie);
+  sys::path::append(ResolvedPath, Path);
+  if (!Entry.empty() && Entry != ResolvedPath)
+    ReportWarning(Twine("Conflicting parseable interfaces for Swift Module ") +
+                      *Name + ": " + Entry + " and " + Path,
+                  DIE);
+  Entry = std::string(ResolvedPath.str());
 }
 
 /// The distinct types of work performed by the work loop in
@@ -846,7 +845,7 @@ void DWARFLinker::assignAbbrev(DIEAbbrev &Abbrev) {
 unsigned DWARFLinker::DIECloner::cloneStringAttribute(
     DIE &Die, AttributeSpec AttrSpec, const DWARFFormValue &Val,
     const DWARFUnit &U, OffsetsStringPool &StringPool, AttributesInfo &Info) {
-  Optional<const char *> String = Val.getAsCString();
+  Optional<const char *> String = dwarf::toString(Val);
   if (!String)
     return 0;
 
