@@ -14,12 +14,6 @@
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/IR/Operation.h"
-#include "llvm/Support/Debug.h"
-#include "llvm/Support/FormatVariadic.h"
-
-#define DEBUG_TYPE "comprehensive-module-bufferize"
-#define DBGS() (llvm::dbgs() << '[' << DEBUG_TYPE << "] ")
-#define LDBG(X) LLVM_DEBUG(DBGS() << X)
 
 using namespace mlir;
 using namespace linalg;
@@ -181,7 +175,6 @@ static FunctionType getOrCreateBufferizedFunctionType(
   auto it2 = bufferizedFunctionTypes.try_emplace(
       funcOp, getBufferizedFunctionType(funcOp.getContext(), argumentTypes,
                                         resultTypes));
-  LDBG("FT: " << funcOp.getType() << " -> " << it2.first->second << "\n");
   return it2.first->second;
 }
 
@@ -227,7 +220,6 @@ static void equivalenceAnalysis(FuncOp funcOp,
 /// future.
 static LogicalResult bufferizeFuncOpBoundary(FuncOp funcOp,
                                              BufferizationState &state) {
-  LLVM_DEBUG(DBGS() << "Begin bufferizeFuncOpBoundary:\n" << funcOp << "\n");
   ModuleBufferizationState &moduleState = getModuleBufferizationState(state);
 
   // If nothing to do then we are done.
@@ -261,7 +253,6 @@ static LogicalResult bufferizeFuncOpBoundary(FuncOp funcOp,
         funcOp, funcOp.getType().getInputs(), TypeRange{},
         moduleState.bufferizedFunctionTypes);
     funcOp.setType(bufferizedFuncType);
-    LLVM_DEBUG(DBGS() << "End bufferizeFuncOpBoundary no fun body: " << funcOp);
     return success();
   }
 
@@ -340,8 +331,6 @@ static LogicalResult bufferizeFuncOpBoundary(FuncOp funcOp,
 
   // 4. Rewrite the FuncOp type to buffer form.
   funcOp.setType(bufferizedFuncType);
-
-  LLVM_DEBUG(DBGS() << "End bufferizeFuncOpBoundary:\n" << funcOp);
 
   return success();
 }
