@@ -330,6 +330,12 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::LLRINT, MVT::f16, Legal);
     setOperationAction(ISD::LROUND, MVT::f16, Legal);
     setOperationAction(ISD::LLROUND, MVT::f16, Legal);
+    setOperationAction(ISD::STRICT_FADD, MVT::f16, Legal);
+    setOperationAction(ISD::STRICT_FMA, MVT::f16, Legal);
+    setOperationAction(ISD::STRICT_FSUB, MVT::f16, Legal);
+    setOperationAction(ISD::STRICT_FMUL, MVT::f16, Legal);
+    setOperationAction(ISD::STRICT_FDIV, MVT::f16, Legal);
+    setOperationAction(ISD::STRICT_FSQRT, MVT::f16, Legal);
     for (auto CC : FPCCToExpand)
       setCondCodeAction(CC, MVT::f16, Expand);
     setOperationAction(ISD::SELECT_CC, MVT::f16, Expand);
@@ -367,6 +373,12 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::LLRINT, MVT::f32, Legal);
     setOperationAction(ISD::LROUND, MVT::f32, Legal);
     setOperationAction(ISD::LLROUND, MVT::f32, Legal);
+    setOperationAction(ISD::STRICT_FADD, MVT::f32, Legal);
+    setOperationAction(ISD::STRICT_FMA, MVT::f32, Legal);
+    setOperationAction(ISD::STRICT_FSUB, MVT::f32, Legal);
+    setOperationAction(ISD::STRICT_FMUL, MVT::f32, Legal);
+    setOperationAction(ISD::STRICT_FDIV, MVT::f32, Legal);
+    setOperationAction(ISD::STRICT_FSQRT, MVT::f32, Legal);
     for (auto CC : FPCCToExpand)
       setCondCodeAction(CC, MVT::f32, Expand);
     setOperationAction(ISD::SELECT_CC, MVT::f32, Expand);
@@ -388,6 +400,12 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::LLRINT, MVT::f64, Legal);
     setOperationAction(ISD::LROUND, MVT::f64, Legal);
     setOperationAction(ISD::LLROUND, MVT::f64, Legal);
+    setOperationAction(ISD::STRICT_FMA, MVT::f64, Legal);
+    setOperationAction(ISD::STRICT_FADD, MVT::f64, Legal);
+    setOperationAction(ISD::STRICT_FSUB, MVT::f64, Legal);
+    setOperationAction(ISD::STRICT_FMUL, MVT::f64, Legal);
+    setOperationAction(ISD::STRICT_FDIV, MVT::f64, Legal);
+    setOperationAction(ISD::STRICT_FSQRT, MVT::f64, Legal);
     for (auto CC : FPCCToExpand)
       setCondCodeAction(CC, MVT::f64, Expand);
     setOperationAction(ISD::SELECT_CC, MVT::f64, Expand);
@@ -8013,6 +8031,22 @@ RISCVTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
   case RISCV::SplitF64Pseudo:
     return emitSplitF64Pseudo(MI, BB);
   }
+}
+
+void RISCVTargetLowering::AdjustInstrPostInstrSelection(MachineInstr &MI,
+                                                        SDNode *Node) const {
+  // Add FRM dependency to any instructions with dynamic rounding mode.
+  unsigned Opc = MI.getOpcode();
+  auto Idx = RISCV::getNamedOperandIdx(Opc, RISCV::OpName::frm);
+  if (Idx < 0)
+    return;
+  if (MI.getOperand(Idx).getImm() != RISCVFPRndMode::DYN)
+    return;
+  // If the instruction already reads FRM, don't add another read.
+  if (MI.readsRegister(RISCV::FRM))
+    return;
+  MI.addOperand(
+      MachineOperand::CreateReg(RISCV::FRM, /*isDef*/ false, /*isImp*/ true));
 }
 
 // Calling Convention Implementation.

@@ -1460,3 +1460,87 @@ define i8 @lshr_bitwidth_mask(i8 %x, i8 %y) {
   %r = and i8 %sign, %y
   ret i8 %r
 }
+
+define i8 @not_ashr_bitwidth_mask(i8 %x, i8 %y) {
+; CHECK-LABEL: @not_ashr_bitwidth_mask(
+; CHECK-NEXT:    [[SIGN:%.*]] = ashr i8 [[X:%.*]], 7
+; CHECK-NEXT:    [[NOT:%.*]] = xor i8 [[SIGN]], -1
+; CHECK-NEXT:    [[POS_OR_ZERO:%.*]] = and i8 [[NOT]], [[Y:%.*]]
+; CHECK-NEXT:    ret i8 [[POS_OR_ZERO]]
+;
+  %sign = ashr i8 %x, 7
+  %not = xor i8 %sign, -1
+  %pos_or_zero = and i8 %not, %y
+  ret i8 %pos_or_zero
+}
+
+define <2 x i8> @not_ashr_bitwidth_mask_vec_commute(<2 x i8> %x, <2 x i8> %py) {
+; CHECK-LABEL: @not_ashr_bitwidth_mask_vec_commute(
+; CHECK-NEXT:    [[Y:%.*]] = mul <2 x i8> [[PY:%.*]], <i8 42, i8 2>
+; CHECK-NEXT:    [[SIGN:%.*]] = ashr <2 x i8> [[X:%.*]], <i8 7, i8 7>
+; CHECK-NEXT:    [[NOT:%.*]] = xor <2 x i8> [[SIGN]], <i8 -1, i8 -1>
+; CHECK-NEXT:    [[POS_OR_ZERO:%.*]] = and <2 x i8> [[Y]], [[NOT]]
+; CHECK-NEXT:    ret <2 x i8> [[POS_OR_ZERO]]
+;
+  %y = mul <2 x i8> %py, <i8 42, i8 2>      ; thwart complexity-based ordering
+  %sign = ashr <2 x i8> %x, <i8 7, i8 7>
+  %not = xor <2 x i8> %sign, <i8 -1, i8 -1>
+  %pos_or_zero = and <2 x i8> %y, %not
+  ret <2 x i8> %pos_or_zero
+}
+
+define i8 @not_ashr_bitwidth_mask_use1(i8 %x, i8 %y) {
+; CHECK-LABEL: @not_ashr_bitwidth_mask_use1(
+; CHECK-NEXT:    [[SIGN:%.*]] = ashr i8 [[X:%.*]], 7
+; CHECK-NEXT:    call void @use8(i8 [[SIGN]])
+; CHECK-NEXT:    [[NOT:%.*]] = xor i8 [[SIGN]], -1
+; CHECK-NEXT:    [[R:%.*]] = and i8 [[NOT]], [[Y:%.*]]
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %sign = ashr i8 %x, 7
+  call void @use8(i8 %sign)
+  %not = xor i8 %sign, -1
+  %r = and i8 %not, %y
+  ret i8 %r
+}
+
+define i8 @not_ashr_bitwidth_mask_use2(i8 %x, i8 %y) {
+; CHECK-LABEL: @not_ashr_bitwidth_mask_use2(
+; CHECK-NEXT:    [[SIGN:%.*]] = ashr i8 [[X:%.*]], 7
+; CHECK-NEXT:    [[NOT:%.*]] = xor i8 [[SIGN]], -1
+; CHECK-NEXT:    call void @use8(i8 [[NOT]])
+; CHECK-NEXT:    [[R:%.*]] = and i8 [[NOT]], [[Y:%.*]]
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %sign = ashr i8 %x, 7
+  %not = xor i8 %sign, -1
+  call void @use8(i8 %not)
+  %r = and i8 %not, %y
+  ret i8 %r
+}
+
+define i8 @not_ashr_not_bitwidth_mask(i8 %x, i8 %y) {
+; CHECK-LABEL: @not_ashr_not_bitwidth_mask(
+; CHECK-NEXT:    [[SIGN:%.*]] = ashr i8 [[X:%.*]], 6
+; CHECK-NEXT:    [[NOT:%.*]] = xor i8 [[SIGN]], -1
+; CHECK-NEXT:    [[R:%.*]] = and i8 [[NOT]], [[Y:%.*]]
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %sign = ashr i8 %x, 6
+  %not = xor i8 %sign, -1
+  %r = and i8 %not, %y
+  ret i8 %r
+}
+
+define i8 @not_lshr_bitwidth_mask(i8 %x, i8 %y) {
+; CHECK-LABEL: @not_lshr_bitwidth_mask(
+; CHECK-NEXT:    [[SIGN:%.*]] = lshr i8 [[X:%.*]], 7
+; CHECK-NEXT:    [[NOT:%.*]] = xor i8 [[SIGN]], -1
+; CHECK-NEXT:    [[R:%.*]] = and i8 [[NOT]], [[Y:%.*]]
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %sign = lshr i8 %x, 7
+  %not = xor i8 %sign, -1
+  %r = and i8 %not, %y
+  ret i8 %r
+}

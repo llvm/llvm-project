@@ -11,6 +11,15 @@ func @dim(%arg0: tensor<f32>, %arg1: index) -> index {
   return %0 : index
 }
 
+// CHECK-LABEL: func @rank(
+// CHECK-SAME:    %[[TENSOR:.*]]: tensor<*xf32>) -> index {
+// CHECK:           %[[MEMREF:.*]] = bufferization.to_memref %[[TENSOR]]
+// CHECK:           %[[EXTENT:.*]] = memref.rank %[[MEMREF]] : memref<*xf32>
+func @rank(%arg0: tensor<*xf32>) -> index {
+  %0 = tensor.rank %arg0 : tensor<*xf32>
+  return %0 : index
+}
+
 // CHECK-LABEL:   func @tensor.cast(
 // CHECK-SAME:                      %[[TENSOR:.*]]: tensor<?xindex>) -> tensor<2xindex> {
 // CHECK:           %[[MEMREF:.*]] = bufferization.to_memref %[[TENSOR]]

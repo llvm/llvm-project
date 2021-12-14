@@ -121,16 +121,12 @@
 /// On PE/COFF targets, library visibility is the default, so this isn't needed.
 ///
 /// LLVM_EXTERNAL_VISIBILITY - classes, functions, and variables marked with
-/// this attribute will be made public and visible outside the libLLVM dynamic
-/// library.
+/// this attribute will be made public and visible outside of any shared library
+/// they are linked in to.
 #if __has_attribute(visibility) && !defined(__MINGW32__) &&                    \
     !defined(__CYGWIN__) && !defined(_WIN32)
 #define LLVM_LIBRARY_VISIBILITY __attribute__ ((visibility("hidden")))
-#if defined(LLVM_BUILD_LLVM_DYLIB)
-#define LLVM_EXTERNAL_VISIBILITY __attribute__((visibility("default")))
-#else
-#define LLVM_EXTERNAL_VISIBILITY
-#endif
+#define LLVM_EXTERNAL_VISIBILITY __attribute__ ((visibility("default")))
 #else
 #define LLVM_LIBRARY_VISIBILITY
 #define LLVM_EXTERNAL_VISIBILITY
