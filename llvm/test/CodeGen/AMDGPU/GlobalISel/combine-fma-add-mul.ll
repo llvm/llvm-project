@@ -166,8 +166,7 @@ define half @test_half_add_mul(half %x, half %y, half %z) {
 ; GFX10-CONTRACT:       ; %bb.0: ; %.entry
 ; GFX10-CONTRACT-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-CONTRACT-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX10-CONTRACT-NEXT:    v_fmac_f16_e32 v2, v0, v1
-; GFX10-CONTRACT-NEXT:    v_mov_b32_e32 v0, v2
+; GFX10-CONTRACT-NEXT:    v_fma_f16 v0, v0, v1, v2
 ; GFX10-CONTRACT-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-DENORM-LABEL: test_half_add_mul:
@@ -182,8 +181,7 @@ define half @test_half_add_mul(half %x, half %y, half %z) {
 ; GFX10-UNSAFE:       ; %bb.0: ; %.entry
 ; GFX10-UNSAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-UNSAFE-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX10-UNSAFE-NEXT:    v_fmac_f16_e32 v2, v0, v1
-; GFX10-UNSAFE-NEXT:    v_mov_b32_e32 v0, v2
+; GFX10-UNSAFE-NEXT:    v_fma_f16 v0, v0, v1, v2
 ; GFX10-UNSAFE-NEXT:    s_setpc_b64 s[30:31]
 .entry:
   %a = fmul half %x, %y
@@ -229,8 +227,7 @@ define half @test_half_add_mul_rhs(half %x, half %y, half %z) {
 ; GFX10-CONTRACT:       ; %bb.0: ; %.entry
 ; GFX10-CONTRACT-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-CONTRACT-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX10-CONTRACT-NEXT:    v_fmac_f16_e32 v2, v0, v1
-; GFX10-CONTRACT-NEXT:    v_mov_b32_e32 v0, v2
+; GFX10-CONTRACT-NEXT:    v_fma_f16 v0, v0, v1, v2
 ; GFX10-CONTRACT-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-DENORM-LABEL: test_half_add_mul_rhs:
@@ -245,8 +242,7 @@ define half @test_half_add_mul_rhs(half %x, half %y, half %z) {
 ; GFX10-UNSAFE:       ; %bb.0: ; %.entry
 ; GFX10-UNSAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-UNSAFE-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX10-UNSAFE-NEXT:    v_fmac_f16_e32 v2, v0, v1
-; GFX10-UNSAFE-NEXT:    v_mov_b32_e32 v0, v2
+; GFX10-UNSAFE-NEXT:    v_fma_f16 v0, v0, v1, v2
 ; GFX10-UNSAFE-NEXT:    s_setpc_b64 s[30:31]
 .entry:
   %a = fmul half %x, %y
