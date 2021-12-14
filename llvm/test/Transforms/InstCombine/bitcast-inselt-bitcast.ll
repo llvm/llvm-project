@@ -10,7 +10,7 @@ declare void @use(<2 x i8>)
 define i16 @insert0_v2i8(i16 %x, i8 %y) {
 ; BE-LABEL: @insert0_v2i8(
 ; BE-NEXT:    [[V:%.*]] = bitcast i16 [[X:%.*]] to <2 x i8>
-; BE-NEXT:    [[I:%.*]] = insertelement <2 x i8> [[V]], i8 [[Y:%.*]], i8 0
+; BE-NEXT:    [[I:%.*]] = insertelement <2 x i8> [[V]], i8 [[Y:%.*]], i64 0
 ; BE-NEXT:    [[R:%.*]] = bitcast <2 x i8> [[I]] to i16
 ; BE-NEXT:    ret i16 [[R]]
 ;
@@ -38,7 +38,7 @@ define i16 @insert1_v2i8(i16 %x, i8 %y) {
 ;
 ; LE-LABEL: @insert1_v2i8(
 ; LE-NEXT:    [[V:%.*]] = bitcast i16 [[X:%.*]] to <2 x i8>
-; LE-NEXT:    [[I:%.*]] = insertelement <2 x i8> [[V]], i8 [[Y:%.*]], i8 1
+; LE-NEXT:    [[I:%.*]] = insertelement <2 x i8> [[V]], i8 [[Y:%.*]], i64 1
 ; LE-NEXT:    [[R:%.*]] = bitcast <2 x i8> [[I]] to i16
 ; LE-NEXT:    ret i16 [[R]]
 ;
@@ -54,7 +54,7 @@ define i16 @insert1_v2i8(i16 %x, i8 %y) {
 define i32 @insert0_v4i8(i32 %x, i8 %y) {
 ; BE-LABEL: @insert0_v4i8(
 ; BE-NEXT:    [[V:%.*]] = bitcast i32 [[X:%.*]] to <4 x i8>
-; BE-NEXT:    [[I:%.*]] = insertelement <4 x i8> [[V]], i8 [[Y:%.*]], i8 0
+; BE-NEXT:    [[I:%.*]] = insertelement <4 x i8> [[V]], i8 [[Y:%.*]], i64 0
 ; BE-NEXT:    [[R:%.*]] = bitcast <4 x i8> [[I]] to i32
 ; BE-NEXT:    ret i32 [[R]]
 ;
@@ -75,17 +75,11 @@ define i32 @insert0_v4i8(i32 %x, i8 %y) {
 ; half type can not be used in zext instruction (and so the transform is avoided).
 
 define i32 @insert0_v2half(i32 %x, half %y) {
-; BE-LABEL: @insert0_v2half(
-; BE-NEXT:    [[V:%.*]] = bitcast i32 [[X:%.*]] to <2 x half>
-; BE-NEXT:    [[I:%.*]] = insertelement <2 x half> [[V]], half [[Y:%.*]], i8 0
-; BE-NEXT:    [[R:%.*]] = bitcast <2 x half> [[I]] to i32
-; BE-NEXT:    ret i32 [[R]]
-;
-; LE-LABEL: @insert0_v2half(
-; LE-NEXT:    [[V:%.*]] = bitcast i32 [[X:%.*]] to <2 x half>
-; LE-NEXT:    [[I:%.*]] = insertelement <2 x half> [[V]], half [[Y:%.*]], i8 0
-; LE-NEXT:    [[R:%.*]] = bitcast <2 x half> [[I]] to i32
-; LE-NEXT:    ret i32 [[R]]
+; ALL-LABEL: @insert0_v2half(
+; ALL-NEXT:    [[V:%.*]] = bitcast i32 [[X:%.*]] to <2 x half>
+; ALL-NEXT:    [[I:%.*]] = insertelement <2 x half> [[V]], half [[Y:%.*]], i64 0
+; ALL-NEXT:    [[R:%.*]] = bitcast <2 x half> [[I]] to i32
+; ALL-NEXT:    ret i32 [[R]]
 ;
   %v = bitcast i32 %x to <2 x half>
   %i = insertelement <2 x half> %v, half %y, i8 0
@@ -99,7 +93,7 @@ define i32 @insert0_v2half(i32 %x, half %y) {
 define i64 @insert0_v4i16(i64 %x, i16 %y) {
 ; BE-LABEL: @insert0_v4i16(
 ; BE-NEXT:    [[V:%.*]] = bitcast i64 [[X:%.*]] to <4 x i16>
-; BE-NEXT:    [[I:%.*]] = insertelement <4 x i16> [[V]], i16 [[Y:%.*]], i8 0
+; BE-NEXT:    [[I:%.*]] = insertelement <4 x i16> [[V]], i16 [[Y:%.*]], i64 0
 ; BE-NEXT:    [[R:%.*]] = bitcast <4 x i16> [[I]] to i64
 ; BE-NEXT:    ret i64 [[R]]
 ;
@@ -120,7 +114,7 @@ define i64 @insert0_v4i16(i64 %x, i16 %y) {
 define i64 @insert1_v4i16(i64 %x, i16 %y) {
 ; ALL-LABEL: @insert1_v4i16(
 ; ALL-NEXT:    [[V:%.*]] = bitcast i64 [[X:%.*]] to <4 x i16>
-; ALL-NEXT:    [[I:%.*]] = insertelement <4 x i16> [[V]], i16 [[Y:%.*]], i8 1
+; ALL-NEXT:    [[I:%.*]] = insertelement <4 x i16> [[V]], i16 [[Y:%.*]], i64 1
 ; ALL-NEXT:    [[R:%.*]] = bitcast <4 x i16> [[I]] to i64
 ; ALL-NEXT:    ret i64 [[R]]
 ;
@@ -142,7 +136,7 @@ define i64 @insert3_v4i16(i64 %x, i16 %y) {
 ;
 ; LE-LABEL: @insert3_v4i16(
 ; LE-NEXT:    [[V:%.*]] = bitcast i64 [[X:%.*]] to <4 x i16>
-; LE-NEXT:    [[I:%.*]] = insertelement <4 x i16> [[V]], i16 [[Y:%.*]], i8 3
+; LE-NEXT:    [[I:%.*]] = insertelement <4 x i16> [[V]], i16 [[Y:%.*]], i64 3
 ; LE-NEXT:    [[R:%.*]] = bitcast <4 x i16> [[I]] to i64
 ; LE-NEXT:    ret i64 [[R]]
 ;
@@ -157,7 +151,7 @@ define i64 @insert3_v4i16(i64 %x, i16 %y) {
 define i128 @insert0_v4i32(i128 %x, i32 %y) {
 ; ALL-LABEL: @insert0_v4i32(
 ; ALL-NEXT:    [[V:%.*]] = bitcast i128 [[X:%.*]] to <4 x i32>
-; ALL-NEXT:    [[I:%.*]] = insertelement <4 x i32> [[V]], i32 [[Y:%.*]], i8 0
+; ALL-NEXT:    [[I:%.*]] = insertelement <4 x i32> [[V]], i32 [[Y:%.*]], i64 0
 ; ALL-NEXT:    [[R:%.*]] = bitcast <4 x i32> [[I]] to i128
 ; ALL-NEXT:    ret i128 [[R]]
 ;
@@ -173,7 +167,7 @@ define i16 @insert0_v2i8_use1(i16 %x, i8 %y) {
 ; ALL-LABEL: @insert0_v2i8_use1(
 ; ALL-NEXT:    [[V:%.*]] = bitcast i16 [[X:%.*]] to <2 x i8>
 ; ALL-NEXT:    call void @use(<2 x i8> [[V]])
-; ALL-NEXT:    [[I:%.*]] = insertelement <2 x i8> [[V]], i8 [[Y:%.*]], i8 0
+; ALL-NEXT:    [[I:%.*]] = insertelement <2 x i8> [[V]], i8 [[Y:%.*]], i64 0
 ; ALL-NEXT:    [[R:%.*]] = bitcast <2 x i8> [[I]] to i16
 ; ALL-NEXT:    ret i16 [[R]]
 ;
@@ -189,7 +183,7 @@ define i16 @insert0_v2i8_use1(i16 %x, i8 %y) {
 define i16 @insert0_v2i8_use2(i16 %x, i8 %y) {
 ; ALL-LABEL: @insert0_v2i8_use2(
 ; ALL-NEXT:    [[V:%.*]] = bitcast i16 [[X:%.*]] to <2 x i8>
-; ALL-NEXT:    [[I:%.*]] = insertelement <2 x i8> [[V]], i8 [[Y:%.*]], i8 0
+; ALL-NEXT:    [[I:%.*]] = insertelement <2 x i8> [[V]], i8 [[Y:%.*]], i64 0
 ; ALL-NEXT:    call void @use(<2 x i8> [[I]])
 ; ALL-NEXT:    [[R:%.*]] = bitcast <2 x i8> [[I]] to i16
 ; ALL-NEXT:    ret i16 [[R]]

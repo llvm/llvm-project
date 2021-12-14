@@ -5,12 +5,12 @@
 define i32 @shrinkExtractElt_i64_to_i32_0(<3 x i64> %x) {
 ; LE-LABEL: @shrinkExtractElt_i64_to_i32_0(
 ; LE-NEXT:    [[TMP1:%.*]] = bitcast <3 x i64> [[X:%.*]] to <6 x i32>
-; LE-NEXT:    [[T:%.*]] = extractelement <6 x i32> [[TMP1]], i32 0
+; LE-NEXT:    [[T:%.*]] = extractelement <6 x i32> [[TMP1]], i64 0
 ; LE-NEXT:    ret i32 [[T]]
 ;
 ; BE-LABEL: @shrinkExtractElt_i64_to_i32_0(
 ; BE-NEXT:    [[TMP1:%.*]] = bitcast <3 x i64> [[X:%.*]] to <6 x i32>
-; BE-NEXT:    [[T:%.*]] = extractelement <6 x i32> [[TMP1]], i32 1
+; BE-NEXT:    [[T:%.*]] = extractelement <6 x i32> [[TMP1]], i64 1
 ; BE-NEXT:    ret i32 [[T]]
 ;
   %e = extractelement <3 x i64> %x, i32 0
@@ -21,12 +21,12 @@ define i32 @shrinkExtractElt_i64_to_i32_0(<3 x i64> %x) {
 define i32 @vscale_shrinkExtractElt_i64_to_i32_0(<vscale x 3 x i64> %x) {
 ; LE-LABEL: @vscale_shrinkExtractElt_i64_to_i32_0(
 ; LE-NEXT:    [[TMP1:%.*]] = bitcast <vscale x 3 x i64> [[X:%.*]] to <vscale x 6 x i32>
-; LE-NEXT:    [[T:%.*]] = extractelement <vscale x 6 x i32> [[TMP1]], i32 0
+; LE-NEXT:    [[T:%.*]] = extractelement <vscale x 6 x i32> [[TMP1]], i64 0
 ; LE-NEXT:    ret i32 [[T]]
 ;
 ; BE-LABEL: @vscale_shrinkExtractElt_i64_to_i32_0(
 ; BE-NEXT:    [[TMP1:%.*]] = bitcast <vscale x 3 x i64> [[X:%.*]] to <vscale x 6 x i32>
-; BE-NEXT:    [[T:%.*]] = extractelement <vscale x 6 x i32> [[TMP1]], i32 1
+; BE-NEXT:    [[T:%.*]] = extractelement <vscale x 6 x i32> [[TMP1]], i64 1
 ; BE-NEXT:    ret i32 [[T]]
 ;
   %e = extractelement <vscale x 3 x i64> %x, i32 0
@@ -38,12 +38,12 @@ define i32 @vscale_shrinkExtractElt_i64_to_i32_0(<vscale x 3 x i64> %x) {
 define i32 @shrinkExtractElt_i64_to_i32_1(<3 x i64> %x) {
 ; LE-LABEL: @shrinkExtractElt_i64_to_i32_1(
 ; LE-NEXT:    [[TMP1:%.*]] = bitcast <3 x i64> [[X:%.*]] to <6 x i32>
-; LE-NEXT:    [[T:%.*]] = extractelement <6 x i32> [[TMP1]], i32 2
+; LE-NEXT:    [[T:%.*]] = extractelement <6 x i32> [[TMP1]], i64 2
 ; LE-NEXT:    ret i32 [[T]]
 ;
 ; BE-LABEL: @shrinkExtractElt_i64_to_i32_1(
 ; BE-NEXT:    [[TMP1:%.*]] = bitcast <3 x i64> [[X:%.*]] to <6 x i32>
-; BE-NEXT:    [[T:%.*]] = extractelement <6 x i32> [[TMP1]], i32 3
+; BE-NEXT:    [[T:%.*]] = extractelement <6 x i32> [[TMP1]], i64 3
 ; BE-NEXT:    ret i32 [[T]]
 ;
   %e = extractelement <3 x i64> %x, i32 1
@@ -54,12 +54,12 @@ define i32 @shrinkExtractElt_i64_to_i32_1(<3 x i64> %x) {
 define i32 @shrinkExtractElt_i64_to_i32_2(<3 x i64> %x) {
 ; LE-LABEL: @shrinkExtractElt_i64_to_i32_2(
 ; LE-NEXT:    [[TMP1:%.*]] = bitcast <3 x i64> [[X:%.*]] to <6 x i32>
-; LE-NEXT:    [[T:%.*]] = extractelement <6 x i32> [[TMP1]], i32 4
+; LE-NEXT:    [[T:%.*]] = extractelement <6 x i32> [[TMP1]], i64 4
 ; LE-NEXT:    ret i32 [[T]]
 ;
 ; BE-LABEL: @shrinkExtractElt_i64_to_i32_2(
 ; BE-NEXT:    [[TMP1:%.*]] = bitcast <3 x i64> [[X:%.*]] to <6 x i32>
-; BE-NEXT:    [[T:%.*]] = extractelement <6 x i32> [[TMP1]], i32 5
+; BE-NEXT:    [[T:%.*]] = extractelement <6 x i32> [[TMP1]], i64 5
 ; BE-NEXT:    ret i32 [[T]]
 ;
   %e = extractelement <3 x i64> %x, i32 2
@@ -70,12 +70,12 @@ define i32 @shrinkExtractElt_i64_to_i32_2(<3 x i64> %x) {
 define i16 @shrinkExtractElt_i64_to_i16_0(<3 x i64> %x) {
 ; LE-LABEL: @shrinkExtractElt_i64_to_i16_0(
 ; LE-NEXT:    [[TMP1:%.*]] = bitcast <3 x i64> [[X:%.*]] to <12 x i16>
-; LE-NEXT:    [[T:%.*]] = extractelement <12 x i16> [[TMP1]], i32 0
+; LE-NEXT:    [[T:%.*]] = extractelement <12 x i16> [[TMP1]], i64 0
 ; LE-NEXT:    ret i16 [[T]]
 ;
 ; BE-LABEL: @shrinkExtractElt_i64_to_i16_0(
 ; BE-NEXT:    [[TMP1:%.*]] = bitcast <3 x i64> [[X:%.*]] to <12 x i16>
-; BE-NEXT:    [[T:%.*]] = extractelement <12 x i16> [[TMP1]], i32 3
+; BE-NEXT:    [[T:%.*]] = extractelement <12 x i16> [[TMP1]], i64 3
 ; BE-NEXT:    ret i16 [[T]]
 ;
   %e = extractelement <3 x i64> %x, i16 0
@@ -86,12 +86,12 @@ define i16 @shrinkExtractElt_i64_to_i16_0(<3 x i64> %x) {
 define i16 @shrinkExtractElt_i64_to_i16_1(<3 x i64> %x) {
 ; LE-LABEL: @shrinkExtractElt_i64_to_i16_1(
 ; LE-NEXT:    [[TMP1:%.*]] = bitcast <3 x i64> [[X:%.*]] to <12 x i16>
-; LE-NEXT:    [[T:%.*]] = extractelement <12 x i16> [[TMP1]], i32 4
+; LE-NEXT:    [[T:%.*]] = extractelement <12 x i16> [[TMP1]], i64 4
 ; LE-NEXT:    ret i16 [[T]]
 ;
 ; BE-LABEL: @shrinkExtractElt_i64_to_i16_1(
 ; BE-NEXT:    [[TMP1:%.*]] = bitcast <3 x i64> [[X:%.*]] to <12 x i16>
-; BE-NEXT:    [[T:%.*]] = extractelement <12 x i16> [[TMP1]], i32 7
+; BE-NEXT:    [[T:%.*]] = extractelement <12 x i16> [[TMP1]], i64 7
 ; BE-NEXT:    ret i16 [[T]]
 ;
   %e = extractelement <3 x i64> %x, i16 1
@@ -102,12 +102,12 @@ define i16 @shrinkExtractElt_i64_to_i16_1(<3 x i64> %x) {
 define i16 @shrinkExtractElt_i64_to_i16_2(<3 x i64> %x) {
 ; LE-LABEL: @shrinkExtractElt_i64_to_i16_2(
 ; LE-NEXT:    [[TMP1:%.*]] = bitcast <3 x i64> [[X:%.*]] to <12 x i16>
-; LE-NEXT:    [[T:%.*]] = extractelement <12 x i16> [[TMP1]], i32 8
+; LE-NEXT:    [[T:%.*]] = extractelement <12 x i16> [[TMP1]], i64 8
 ; LE-NEXT:    ret i16 [[T]]
 ;
 ; BE-LABEL: @shrinkExtractElt_i64_to_i16_2(
 ; BE-NEXT:    [[TMP1:%.*]] = bitcast <3 x i64> [[X:%.*]] to <12 x i16>
-; BE-NEXT:    [[T:%.*]] = extractelement <12 x i16> [[TMP1]], i32 11
+; BE-NEXT:    [[T:%.*]] = extractelement <12 x i16> [[TMP1]], i64 11
 ; BE-NEXT:    ret i16 [[T]]
 ;
   %e = extractelement <3 x i64> %x, i16 2
@@ -119,12 +119,12 @@ define i16 @shrinkExtractElt_i64_to_i16_2(<3 x i64> %x) {
 define i11 @shrinkExtractElt_i33_to_11_2(<3 x i33> %x) {
 ; LE-LABEL: @shrinkExtractElt_i33_to_11_2(
 ; LE-NEXT:    [[TMP1:%.*]] = bitcast <3 x i33> [[X:%.*]] to <9 x i11>
-; LE-NEXT:    [[T:%.*]] = extractelement <9 x i11> [[TMP1]], i32 6
+; LE-NEXT:    [[T:%.*]] = extractelement <9 x i11> [[TMP1]], i64 6
 ; LE-NEXT:    ret i11 [[T]]
 ;
 ; BE-LABEL: @shrinkExtractElt_i33_to_11_2(
 ; BE-NEXT:    [[TMP1:%.*]] = bitcast <3 x i33> [[X:%.*]] to <9 x i11>
-; BE-NEXT:    [[T:%.*]] = extractelement <9 x i11> [[TMP1]], i32 8
+; BE-NEXT:    [[T:%.*]] = extractelement <9 x i11> [[TMP1]], i64 8
 ; BE-NEXT:    ret i11 [[T]]
 ;
   %e = extractelement <3 x i33> %x, i16 2
@@ -135,7 +135,7 @@ define i11 @shrinkExtractElt_i33_to_11_2(<3 x i33> %x) {
 ; Do not optimize if it would result in an invalid bitcast instruction.
 define i13 @shrinkExtractElt_i67_to_i13_2(<3 x i67> %x) {
 ; ANY-LABEL: @shrinkExtractElt_i67_to_i13_2(
-; ANY-NEXT:    [[E:%.*]] = extractelement <3 x i67> [[X:%.*]], i459 2
+; ANY-NEXT:    [[E:%.*]] = extractelement <3 x i67> [[X:%.*]], i64 2
 ; ANY-NEXT:    [[T:%.*]] = trunc i67 [[E]] to i13
 ; ANY-NEXT:    ret i13 [[T]]
 ;
@@ -148,7 +148,7 @@ define i13 @shrinkExtractElt_i67_to_i13_2(<3 x i67> %x) {
 ; transform would be wrong.
 define i30 @shrinkExtractElt_i40_to_i30_1(<3 x i40> %x) {
 ; ANY-LABEL: @shrinkExtractElt_i40_to_i30_1(
-; ANY-NEXT:    [[E:%.*]] = extractelement <3 x i40> [[X:%.*]], i32 1
+; ANY-NEXT:    [[E:%.*]] = extractelement <3 x i40> [[X:%.*]], i64 1
 ; ANY-NEXT:    [[T:%.*]] = trunc i40 [[E]] to i30
 ; ANY-NEXT:    ret i30 [[T]]
 ;
