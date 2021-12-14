@@ -183,7 +183,7 @@ func @extract_oob_from_tensor.from_elements(%element : index) -> index {
 // CHECK-LABEL: func @extract_from_tensor.generate
 // CHECK-SAME: %[[IDX:.*]]: index, %[[TENSOR:.*]]: tensor<*xf32>
 func @extract_from_tensor.generate(%idx: index, %tensor: tensor<*xf32>) -> index {
-  %size = rank %tensor : tensor<*xf32>
+  %size = tensor.rank %tensor : tensor<*xf32>
   // CHECK-NEXT: %[[RES:.*]] = tensor.dim %[[TENSOR]], %[[IDX]]
   %0 = tensor.generate %size {
     ^bb0(%arg0: index):
@@ -200,7 +200,7 @@ func @extract_from_tensor.generate(%idx: index, %tensor: tensor<*xf32>) -> index
 // CHECK-LABEL: func @extract_from_tensor.generate_2d
 // CHECK-SAME: %[[IDX0:.*]]: index, %[[IDX1:.*]]: index, %[[TENSOR:.*]]: tensor<*xf32>
 func @extract_from_tensor.generate_2d(%idx0: index, %idx1: index, %tensor: tensor<*xf32>) -> index {
-  %size = rank %tensor : tensor<*xf32>
+  %size = tensor.rank %tensor : tensor<*xf32>
   // CHECK-NEXT: %[[DIM0:.*]] = tensor.dim %[[TENSOR]], %[[IDX0]]
   // CHECK-NEXT: %[[DIM1:.*]] = tensor.dim %[[TENSOR]], %[[IDX1]]
   // CHECK-NEXT: %[[RES:.*]] = arith.addi %[[DIM0]], %[[DIM1]]
@@ -221,7 +221,7 @@ func @extract_from_tensor.generate_2d(%idx0: index, %idx1: index, %tensor: tenso
 // CHECK-LABEL: func @extract_from_tensor.generate_sideeffects
 // CHECK-SAME: %[[IDX:.*]]: index
 func @extract_from_tensor.generate_sideeffects(%idx: index, %tensor: tensor<*xf32>, %mem: memref<?xindex>) -> index {
-  %size = rank %tensor : tensor<*xf32>
+  %size = tensor.rank %tensor : tensor<*xf32>
   // CHECK: %[[DTENSOR:.*]] = tensor.generate
   %0 = tensor.generate %size {
     ^bb0(%arg0: index):
@@ -900,3 +900,18 @@ func @reshape_splat_constant_float64() -> tensor<2x4x2xf64> {
 //       CHECK:   %[[CST:.*]] = arith.constant dense<{{.*}}> : tensor<2x4x2xf64>
 //   CHECK-NOT:   tensor.expand_shape
 //       CHECK:   return %[[CST]]
+
+// -----
+
+// CHECK-LABEL: func @fold_rank
+func @fold_rank() -> (index) {
+  %const_0 = arith.constant dense<[[[1, -2, 1, 36]], [[0, 2, -1, 64]]]>
+    : tensor<2x1x4xi32>
+
+  // Fold a ank into a constant
+  // CHECK-NEXT: [[C3:%.+]] = arith.constant 3 : index
+  %rank_0 = tensor.rank %const_0 : tensor<2x1x4xi32>
+
+  // CHECK-NEXT: return [[C3]]
+  return %rank_0 : index
+}
