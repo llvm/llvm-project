@@ -140,6 +140,10 @@ struct BufferizationOptions {
   /// checking the results of the analysis) and post analysis steps.
   bool testAnalysisOnly = false;
 
+  /// If set to `true`, the IR is annotated with details about RaW conflicts.
+  /// For debugging only. Should be used together with `testAnalysisOnly`.
+  bool printConflicts = false;
+
   /// Registered post analysis steps.
   PostAnalysisStepList postAnalysisSteps;
 

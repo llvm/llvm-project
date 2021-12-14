@@ -89,6 +89,7 @@ void LinalgComprehensiveModuleBufferize::runOnOperation() {
   options.allowUnknownOps = allowUnknownOps;
   options.analysisFuzzerSeed = analysisFuzzerSeed;
   options.testAnalysisOnly = testAnalysisOnly;
+  options.printConflicts = printConflicts;
 
   // Enable InitTensorOp elimination.
   options.addPostAnalysisStep<
