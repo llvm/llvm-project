@@ -57,9 +57,8 @@ define <4 x half> @uitofp_v4i64_to_v4f16(<4 x i64>* %ptr) {
 define <4 x i16> @trunc_v4i64_to_v4i16(<4 x i64>* %ptr) {
 ; CHECK-LABEL: trunc_v4i64_to_v4i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldp q0, q1, [x0]
-; CHECK-NEXT:    xtn v0.2s, v0.2d
-; CHECK-NEXT:    xtn2 v0.4s, v1.2d
+; CHECK-NEXT:    ldp q1, q0, [x0]
+; CHECK-NEXT:    uzp1 v0.4s, v1.4s, v0.4s
 ; CHECK-NEXT:    xtn v0.4h, v0.4s
 ; CHECK-NEXT:    ret
   %tmp1 = load <4 x i64>, <4 x i64>* %ptr

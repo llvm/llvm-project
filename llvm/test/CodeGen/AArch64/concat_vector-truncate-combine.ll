@@ -16,6 +16,28 @@ entry:
   ret <4 x i16> %shuffle
 }
 
+define <4 x i32> @test_concat_truncate_v2i64_to_v4i32(<2 x i64> %a, <2 x i64> %b) #0 {
+entry:
+; CHECK-LABEL: test_concat_truncate_v2i64_to_v4i32:
+; CHECK-NEXT: uzp1.4s v0, v0, v1
+; CHECK-NEXT: ret
+  %at = trunc <2 x i64> %a to <2 x i32>
+  %bt = trunc <2 x i64> %b to <2 x i32>
+  %shuffle = shufflevector <2 x i32> %at, <2 x i32> %bt, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  ret <4 x i32> %shuffle
+}
+
+define <4 x i16> @test_concat_truncate_v2i32_to_v4i16(<2 x i32> %a, <2 x i32> %b) #0 {
+entry:
+; CHECK-LABEL: test_concat_truncate_v2i32_to_v4i16:
+; CHECK-NEXT: uzp1.4h v0, v0, v1
+; CHECK-NEXT: ret
+  %at = trunc <2 x i32> %a to <2 x i16>
+  %bt = trunc <2 x i32> %b to <2 x i16>
+  %shuffle = shufflevector <2 x i16> %at, <2 x i16> %bt, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  ret <4 x i16> %shuffle
+}
+
 define <8 x i8> @test_concat_truncate_v4i32_to_v8i8(<4 x i32> %a, <4 x i32> %b) #0 {
 entry:
 ; CHECK-LABEL: test_concat_truncate_v4i32_to_v8i8:
@@ -31,8 +53,7 @@ entry:
 define <8 x i16> @test_concat_truncate_v4i32_to_v8i16(<4 x i32> %a, <4 x i32> %b) #0 {
 entry:
 ; CHECK-LABEL: test_concat_truncate_v4i32_to_v8i16:
-; CHECK-NEXT: xtn.4h v0, v0
-; CHECK-NEXT: xtn2.8h v0, v1
+; CHECK-NEXT: uzp1.8h v0, v0, v1
 ; CHECK-NEXT: ret
   %at = trunc <4 x i32> %a to <4 x i16>
   %bt = trunc <4 x i32> %b to <4 x i16>
@@ -40,6 +61,27 @@ entry:
   ret <8 x i16> %shuffle
 }
 
+define <8 x i8> @test_concat_truncate_v4i16_to_v8i8(<4 x i16> %a, <4 x i16> %b) #0 {
+entry:
+; CHECK-LABEL: test_concat_truncate_v4i16_to_v8i8:
+; CHECK-NEXT: uzp1.8b v0, v0, v1
+; CHECK-NEXT: ret
+  %at = trunc <4 x i16> %a to <4 x i8>
+  %bt = trunc <4 x i16> %b to <4 x i8>
+  %shuffle = shufflevector <4 x i8> %at, <4 x i8> %bt, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  ret <8 x i8> %shuffle
+}
+
+define <16 x i8> @test_concat_truncate_v8i16_to_v16i8(<8 x i16> %a, <8 x i16> %b) #0 {
+entry:
+; CHECK-LABEL: test_concat_truncate_v8i16_to_v16i8:
+; CHECK-NEXT: uzp1.16b v0, v0, v1
+; CHECK-NEXT: ret
+  %at = trunc <8 x i16> %a to <8 x i8>
+  %bt = trunc <8 x i16> %b to <8 x i8>
+  %shuffle = shufflevector <8 x i8> %at, <8 x i8> %bt, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32  9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  ret <16 x i8> %shuffle
+}
 
 ; The concat_vectors operation in this test is introduced when splitting
 ; the fptrunc operation due to the split <vscale x 4 x double> input operand.
