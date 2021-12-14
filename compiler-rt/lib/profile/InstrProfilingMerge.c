@@ -95,11 +95,6 @@ static uintptr_t signextIfWin64(void *V) {
 COMPILER_RT_VISIBILITY
 int __llvm_profile_merge_from_buffer(const char *ProfileData,
                                      uint64_t ProfileSize) {
-  int DebugInfoCorrelate =
-      (__llvm_profile_get_version() & VARIANT_MASK_DBG_CORRELATE) != 0ULL;
-  if (DebugInfoCorrelate)
-    return 1;
-
   __llvm_profile_data *SrcDataStart, *SrcDataEnd, *SrcData, *DstData;
   __llvm_profile_header *Header = (__llvm_profile_header *)ProfileData;
   uint64_t *SrcCountersStart;
