@@ -61,7 +61,6 @@ static const RISCVSupportedExtension SupportedExperimentalExtensions[] = {
     {"zbs", RISCVExtensionVersion{1, 0}},
     {"zbt", RISCVExtensionVersion{0, 93}},
 
-    {"zvamo", RISCVExtensionVersion{0, 10}},
     {"zvlsseg", RISCVExtensionVersion{0, 10}},
 
     {"zfhmin", RISCVExtensionVersion{0, 1}},
@@ -286,10 +285,6 @@ void RISCVISAInfo::toFeatures(
     if (ExtName == "zvlsseg") {
       Features.push_back("+experimental-v");
       Features.push_back("+experimental-zvlsseg");
-    } else if (ExtName == "zvamo") {
-      Features.push_back("+experimental-v");
-      Features.push_back("+experimental-zvlsseg");
-      Features.push_back("+experimental-zvamo");
     } else if (isExperimentalExtension(ExtName)) {
       Features.push_back(StrAlloc("+experimental-" + ExtName));
     } else {

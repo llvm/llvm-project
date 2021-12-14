@@ -44,5 +44,5 @@
 .attribute arch, "rv32ifzfh"
 # CHECK: error: invalid arch name 'rv32ifzfh', experimental extension requires explicit version number `zfh`
 
-.attribute arch, "rv32ivzvamo_zvlsseg"
-# CHECK: error: invalid arch name 'rv32ivzvamo_zvlsseg', experimental extension requires explicit version number `v`
+.attribute arch, "rv32ivzvlsseg"
+# CHECK: error: invalid arch name 'rv32ivzvlsseg', experimental extension requires explicit version number `v`

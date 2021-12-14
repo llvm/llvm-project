@@ -45,19 +45,6 @@ def SUMOPUnitStride  : RISCVLSUMOP<0b00000>;
 def SUMOPUnitStrideMask : RISCVLSUMOP<0b01011>;
 def SUMOPUnitStrideWholeReg : RISCVLSUMOP<0b01000>;
 
-class RISCVAMOOP<bits<5> val> {
-  bits<5> Value = val;
-}
-def AMOOPVamoSwap : RISCVAMOOP<0b00001>;
-def AMOOPVamoAdd : RISCVAMOOP<0b00000>;
-def AMOOPVamoXor : RISCVAMOOP<0b00100>;
-def AMOOPVamoAnd : RISCVAMOOP<0b01100>;
-def AMOOPVamoOr : RISCVAMOOP<0b01000>;
-def AMOOPVamoMin : RISCVAMOOP<0b10000>;
-def AMOOPVamoMax : RISCVAMOOP<0b10100>;
-def AMOOPVamoMinu : RISCVAMOOP<0b11000>;
-def AMOOPVamoMaxu : RISCVAMOOP<0b11100>;
-
 class RISCVWidth<bits<4> val> {
   bits<4> Value = val;
 }
@@ -339,25 +326,6 @@ class RVInstVSX<bits<3> nf, bit mew, RISCVMOP mop, bits<3> width,
   let Inst{14-12} = width;
   let Inst{11-7} = vs3;
   let Opcode = OPC_STORE_FP.Value;
-
-  let Uses = [VTYPE, VL];
-}
-
-class RVInstVAMO<RISCVAMOOP amoop, bits<3> width, dag outs, 
-                 dag ins, string opcodestr, string argstr>
-    : RVInst<outs, ins, opcodestr, argstr, [], InstFormatR> {
-  bits<5> vs2;
-  bits<5> rs1;
-  bit wd;
-  bit vm;
-
-  let Inst{31-27} = amoop.Value;
-  let Inst{26} = wd;
-  let Inst{25} = vm;
-  let Inst{24-20} = vs2;
-  let Inst{19-15} = rs1;
-  let Inst{14-12} = width;
-  let Opcode = OPC_AMO.Value;
 
   let Uses = [VTYPE, VL];
 }
