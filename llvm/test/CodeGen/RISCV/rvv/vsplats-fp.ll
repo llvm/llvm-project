@@ -105,3 +105,22 @@ define <vscale x 8 x double> @vsplat_zero_nxv8f64() {
   %splat = shufflevector <vscale x 8 x double> %head, <vscale x 8 x double> undef, <vscale x 8 x i32> zeroinitializer
   ret <vscale x 8 x double> %splat
 }
+
+; Test that we fold this to a vlse with 0 stride.
+define <vscale x 8 x float> @vsplat_load_nxv8f32(float* %ptr) {
+; RV32V-LABEL: vsplat_load_nxv8f32:
+; RV32V:       # %bb.0:
+; RV32V-NEXT:    vsetvli a1, zero, e32, m4, ta, mu
+; RV32V-NEXT:    vlse32.v v8, (a0), zero
+; RV32V-NEXT:    ret
+;
+; RV64V-LABEL: vsplat_load_nxv8f32:
+; RV64V:       # %bb.0:
+; RV64V-NEXT:    vsetvli a1, zero, e32, m4, ta, mu
+; RV64V-NEXT:    vlse32.v v8, (a0), zero
+; RV64V-NEXT:    ret
+  %f = load float, float* %ptr
+  %head = insertelement <vscale x 8 x float> undef, float %f, i32 0
+  %splat = shufflevector <vscale x 8 x float> %head, <vscale x 8 x float> undef, <vscale x 8 x i32> zeroinitializer
+  ret <vscale x 8 x float> %splat
+}
