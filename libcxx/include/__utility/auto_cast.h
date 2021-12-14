@@ -7,29 +7,16 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___UTILITY_DECAY_COPY_H
-#define _LIBCPP___UTILITY_DECAY_COPY_H
+#ifndef _LIBCPP___UTILITY_AUTO_CAST_H
+#define _LIBCPP___UTILITY_AUTO_CAST_H
 
 #include <__config>
-#include <__utility/forward.h>
 #include <type_traits>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #pragma GCC system_header
 #endif
 
-_LIBCPP_BEGIN_NAMESPACE_STD
+#define _LIBCPP_AUTO_CAST(expr) static_cast<typename decay<decltype((expr))>::type>(expr)
 
-template <class _Tp>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR
-typename decay<_Tp>::type __decay_copy(_Tp&& __t)
-#if _LIBCPP_STD_VER > 17
-    noexcept(is_nothrow_convertible_v<_Tp, decay_t<_Tp>>)
-#endif
-{
-  return _VSTD::forward<_Tp>(__t);
-}
-
-_LIBCPP_END_NAMESPACE_STD
-
-#endif // _LIBCPP___UTILITY_DECAY_COPY_H
+#endif // _LIBCPP___UTILITY_AUTO_CAST_H

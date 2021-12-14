@@ -135,7 +135,7 @@ struct SizeFunctionSigned {
 bool constexpr testHasSizeFunction() {
   assert(std::ranges::size(SizeFunction()) == 42);
   ASSERT_SAME_TYPE(decltype(std::ranges::size(SizeFunction())), size_t);
-  assert(std::ranges::size(MoveOnlySizeFunction()) == 42);
+  static_assert(!std::is_invocable_v<RangeSizeT, MoveOnlySizeFunction>);
   assert(std::ranges::size(EnumSizeFunction()) == 42);
   assert(std::ranges::size(SizeFunctionConst()) == 42);
 

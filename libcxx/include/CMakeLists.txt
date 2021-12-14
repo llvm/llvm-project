@@ -360,8 +360,8 @@ set(files
   __tuple
   __undef_macros
   __utility/as_const.h
+  __utility/auto_cast.h
   __utility/cmp.h
-  __utility/decay_copy.h
   __utility/declval.h
   __utility/exchange.h
   __utility/forward.h

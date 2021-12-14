@@ -17,7 +17,7 @@
 #include <__ranges/range_adaptor.h>
 #include <__ranges/ref_view.h>
 #include <__ranges/subrange.h>
-#include <__utility/decay_copy.h>
+#include <__utility/auto_cast.h>
 #include <__utility/declval.h>
 #include <__utility/forward.h>
 #include <type_traits>
@@ -38,9 +38,9 @@ namespace __all {
       requires ranges::view<decay_t<_Tp>>
     [[nodiscard]] _LIBCPP_HIDE_FROM_ABI
     constexpr auto operator()(_Tp&& __t) const
-      noexcept(noexcept(_VSTD::__decay_copy(_VSTD::forward<_Tp>(__t))))
+      noexcept(noexcept(_LIBCPP_AUTO_CAST(_VSTD::forward<_Tp>(__t))))
     {
-      return _VSTD::forward<_Tp>(__t);
+      return _LIBCPP_AUTO_CAST(_VSTD::forward<_Tp>(__t));
     }
 
     template<class _Tp>
