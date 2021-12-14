@@ -778,7 +778,7 @@ define <4 x float> @fmul_fmul(<4 x float> %v0) {
 
 define <4 x double> @fdiv_fdiv(<4 x double> %v0) {
 ; CHECK-LABEL: @fdiv_fdiv(
-; CHECK-NEXT:    [[TMP1:%.*]] = fdiv nnan arcp <4 x double> <double undef, double 2.000000e+00, double 7.000000e+00, double 8.000000e+00>, [[V0:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = fdiv arcp <4 x double> <double undef, double 2.000000e+00, double 7.000000e+00, double 8.000000e+00>, [[V0:%.*]]
 ; CHECK-NEXT:    ret <4 x double> [[TMP1]]
 ;
   %t1 = fdiv fast <4 x double> <double 1.0, double 2.0, double 3.0, double 4.0>, %v0
@@ -1271,7 +1271,7 @@ define <4 x float> @fmul_2_vars(<4 x float> %v0, <4 x float> %v1) {
 define <4 x double> @frem_2_vars(<4 x double> %v0, <4 x double> %v1) {
 ; CHECK-LABEL: @frem_2_vars(
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x double> [[V0:%.*]], <4 x double> [[V1:%.*]], <4 x i32> <i32 undef, i32 1, i32 6, i32 7>
-; CHECK-NEXT:    [[TMP2:%.*]] = frem nnan <4 x double> <double undef, double 2.000000e+00, double 7.000000e+00, double 8.000000e+00>, [[TMP1]]
+; CHECK-NEXT:    [[TMP2:%.*]] = frem <4 x double> <double undef, double 2.000000e+00, double 7.000000e+00, double 8.000000e+00>, [[TMP1]]
 ; CHECK-NEXT:    ret <4 x double> [[TMP2]]
 ;
   %t1 = frem nnan ninf <4 x double> <double 1.0, double 2.0, double 3.0, double 4.0>, %v0
