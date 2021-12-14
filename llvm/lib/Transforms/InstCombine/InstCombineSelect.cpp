@@ -1482,7 +1482,12 @@ tryToReuseConstantFromSelectInComparison(SelectInst &Sel, ICmpInst &Cmp,
   if (C0->getType() != Sel.getType())
     return nullptr;
 
-  // FIXME: are there any magic icmp predicate+constant pairs we must not touch?
+  // ULT with 'add' of a constant is canonical. See foldICmpAddConstant().
+  // FIXME: Are there more magic icmp predicate+constant pairs we must avoid?
+  //        Or should we just abandon this transform entirely?
+  if (Pred == CmpInst::ICMP_ULT && match(X, m_Add(m_Value(), m_Constant())))
+    return nullptr;
+
 
   Value *SelVal0, *SelVal1; // We do not care which one is from where.
   match(&Sel, m_Select(m_Value(), m_Value(SelVal0), m_Value(SelVal1)));
