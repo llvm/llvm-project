@@ -1,5 +1,0 @@
-thread list
-register read pc
-bt
-p *(int*)&hz
-memory read &hz
