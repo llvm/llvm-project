@@ -15,7 +15,7 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#if !defined(_LIBCPP_HAS_NO_TREE_BARRIER) && (_LIBCPP_STD_VER > 11)
+#if !defined(_LIBCPP_HAS_NO_TREE_BARRIER)
 
 class __barrier_algorithm_base {
 public:
@@ -90,7 +90,7 @@ void __destroy_barrier_algorithm_base(__barrier_algorithm_base* __barrier)
     delete __barrier;
 }
 
-#endif //!defined(_LIBCPP_HAS_NO_TREE_BARRIER) && (_LIBCPP_STD_VER >= 11)
+#endif //!defined(_LIBCPP_HAS_NO_TREE_BARRIER)
 
 _LIBCPP_END_NAMESPACE_STD
 
