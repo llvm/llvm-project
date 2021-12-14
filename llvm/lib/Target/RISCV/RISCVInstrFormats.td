@@ -277,14 +277,14 @@ class RVInstR4Frm<bits<2> funct2, RISCVOpcode opcode, dag outs, dag ins,
   bits<5> rs3;
   bits<5> rs2;
   bits<5> rs1;
-  bits<3> funct3;
+  bits<3> frm;
   bits<5> rd;
 
   let Inst{31-27} = rs3;
   let Inst{26-25} = funct2;
   let Inst{24-20} = rs2;
   let Inst{19-15} = rs1;
-  let Inst{14-12} = funct3;
+  let Inst{14-12} = frm;
   let Inst{11-7} = rd;
   let Opcode = opcode.Value;
 }
@@ -312,13 +312,13 @@ class RVInstRFrm<bits<7> funct7, RISCVOpcode opcode, dag outs, dag ins,
     : RVInst<outs, ins, opcodestr, argstr, [], InstFormatR> {
   bits<5> rs2;
   bits<5> rs1;
-  bits<3> funct3;
+  bits<3> frm;
   bits<5> rd;
 
   let Inst{31-25} = funct7;
   let Inst{24-20} = rs2;
   let Inst{19-15} = rs1;
-  let Inst{14-12} = funct3;
+  let Inst{14-12} = frm;
   let Inst{11-7} = rd;
   let Opcode = opcode.Value;
 }

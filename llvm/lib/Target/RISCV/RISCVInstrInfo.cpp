@@ -35,6 +35,7 @@ using namespace llvm;
 #include "RISCVGenCompressInstEmitter.inc"
 
 #define GET_INSTRINFO_CTOR_DTOR
+#define GET_INSTRINFO_NAMED_OPS
 #include "RISCVGenInstrInfo.inc"
 
 static cl::opt<bool> PreferWholeRegisterMove(

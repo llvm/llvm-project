@@ -8015,6 +8015,22 @@ RISCVTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
   }
 }
 
+void RISCVTargetLowering::AdjustInstrPostInstrSelection(MachineInstr &MI,
+                                                        SDNode *Node) const {
+  // Add FRM dependency to any instructions with dynamic rounding mode.
+  unsigned Opc = MI.getOpcode();
+  auto Idx = RISCV::getNamedOperandIdx(Opc, RISCV::OpName::frm);
+  if (Idx < 0)
+    return;
+  if (MI.getOperand(Idx).getImm() != RISCVFPRndMode::DYN)
+    return;
+  // If the instruction already reads FRM, don't add another read.
+  if (MI.readsRegister(RISCV::FRM))
+    return;
+  MI.addOperand(
+      MachineOperand::CreateReg(RISCV::FRM, /*isDef*/ false, /*isImp*/ true));
+}
+
 // Calling Convention Implementation.
 // The expectations for frontend ABI lowering vary from target to target.
 // Ideally, an LLVM frontend would be able to avoid worrying about many ABI

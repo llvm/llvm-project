@@ -59,12 +59,13 @@ def frmarg : Operand<XLenVT> {
 // Instruction class templates
 //===----------------------------------------------------------------------===//
 
-let hasSideEffects = 0, mayLoad = 0, mayStore = 0, mayRaiseFPException = 1 in
+let hasSideEffects = 0, mayLoad = 0, mayStore = 0, mayRaiseFPException = 1,
+    UseNamedOperandTable = 1, hasPostISelHook = 1 in
 class FPFMA_rrr_frm<RISCVOpcode opcode, bits<2> funct2, string opcodestr,
                     RegisterClass rty>
     : RVInstR4Frm<funct2, opcode, (outs rty:$rd),
-                  (ins rty:$rs1, rty:$rs2, rty:$rs3, frmarg:$funct3),
-                  opcodestr, "$rd, $rs1, $rs2, $rs3, $funct3">;
+                  (ins rty:$rs1, rty:$rs2, rty:$rs3, frmarg:$frm),
+                  opcodestr, "$rd, $rs1, $rs2, $rs3, $frm">;
 
 class FPFMADynFrmAlias<FPFMA_rrr_frm Inst, string OpcodeStr,
                        RegisterClass rty>
@@ -77,11 +78,12 @@ class FPALU_rr<bits<7> funct7, bits<3> funct3, string opcodestr,
     : RVInstR<funct7, funct3, OPC_OP_FP, (outs rty:$rd),
               (ins rty:$rs1, rty:$rs2), opcodestr, "$rd, $rs1, $rs2">;
 
-let hasSideEffects = 0, mayLoad = 0, mayStore = 0, mayRaiseFPException = 1 in
+let hasSideEffects = 0, mayLoad = 0, mayStore = 0, mayRaiseFPException = 1,
+    UseNamedOperandTable = 1, hasPostISelHook = 1 in
 class FPALU_rr_frm<bits<7> funct7, string opcodestr, RegisterClass rty>
     : RVInstRFrm<funct7, OPC_OP_FP, (outs rty:$rd),
-                 (ins rty:$rs1, rty:$rs2, frmarg:$funct3), opcodestr,
-                  "$rd, $rs1, $rs2, $funct3">;
+                 (ins rty:$rs1, rty:$rs2, frmarg:$frm), opcodestr,
+                  "$rd, $rs1, $rs2, $frm">;
 
 class FPALUDynFrmAlias<FPALU_rr_frm Inst, string OpcodeStr,
                        RegisterClass rty>
@@ -96,12 +98,13 @@ class FPUnaryOp_r<bits<7> funct7, bits<5> rs2val, bits<3> funct3,
   let rs2 = rs2val;
 }
 
-let hasSideEffects = 0, mayLoad = 0, mayStore = 0, mayRaiseFPException = 1 in
+let hasSideEffects = 0, mayLoad = 0, mayStore = 0, mayRaiseFPException = 1,
+    UseNamedOperandTable = 1, hasPostISelHook = 1 in
 class FPUnaryOp_r_frm<bits<7> funct7, bits<5> rs2val, RegisterClass rdty,
                       RegisterClass rs1ty, string opcodestr>
     : RVInstRFrm<funct7, OPC_OP_FP, (outs rdty:$rd),
-                 (ins rs1ty:$rs1, frmarg:$funct3), opcodestr,
-                  "$rd, $rs1, $funct3"> {
+                 (ins rs1ty:$rs1, frmarg:$frm), opcodestr,
+                  "$rd, $rs1, $frm"> {
   let rs2 = rs2val;
 }
 
