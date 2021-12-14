@@ -30,7 +30,15 @@ llvm.func @rocdl_special_regs() -> i32 {
 }
 
 llvm.func @kernel_func() attributes {rocdl.kernel} {
-  // CHECK-LABEL: amdgpu_kernel void @kernel_func
+  // CHECK-LABEL: amdgpu_kernel void @kernel_func()
+  // CHECK: #[[$KERNEL_ATTRS:[0-9]+]]
+  llvm.return
+}
+
+llvm.func @kernel_func_workgroups()
+    attributes {rocdl.kernel, rocdl.max_flat_work_group_size = 1024 : index} {
+  // CHECK-LABEL: amdgpu_kernel void @kernel_func_workgroups()
+  // CHECK: #[[$KERNEL_WORKGROUP_ATTRS:[0-9]+]]
   llvm.return
 }
 
@@ -177,3 +185,5 @@ llvm.func @rocdl.mubuf(%rsrc : vector<4xi32>, %vindex : i32,
   llvm.return
 }
 
+// CHECK-DAG: attributes #[[$KERNEL_ATTRS]] = { "amdgpu-flat-work-group-size"="1, 256" "amdgpu-implicitarg-num-bytes"="56" }
+// CHECK-DAG: attributes #[[$KERNEL_WORKGROUP_ATTRS]] = { "amdgpu-flat-work-group-size"="1, 1024"
