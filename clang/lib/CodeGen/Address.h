@@ -26,7 +26,7 @@ class Address {
   CharUnits Alignment;
 
 protected:
-  Address(nullptr_t) : Pointer(nullptr) {}
+  Address(std::nullptr_t) : Pointer(nullptr) {}
 
 public:
   Address(llvm::Value *pointer, CharUnits alignment)
@@ -76,7 +76,7 @@ public:
 /// A specialization of Address that requires the address to be an
 /// LLVM Constant.
 class ConstantAddress : public Address {
-  ConstantAddress(nullptr_t) : Address(nullptr) {}
+  ConstantAddress(std::nullptr_t) : Address(nullptr) {}
 
 public:
   ConstantAddress(llvm::Constant *pointer, CharUnits alignment)
