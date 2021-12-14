@@ -1,0 +1,10 @@
+// Basic sanity checking of the REPL.
+
+// RUN: %lldb --repl --repl-language c++ 2>&1 | FileCheck %s --check-prefix=CPP
+// CPP: error: must have a target to create a REPL
+
+// RUN: %lldb --repl --repl-language python 2>&1 | FileCheck %s --check-prefix=PYTHON
+// PYTHON: error: couldn't find a REPL for python
+
+// RUN: not %lldb --repl --repl-language bogus 2>&1 | FileCheck %s --check-prefix=BOGUS
+// BOGUS: error: Unrecognized language name: "bogus"

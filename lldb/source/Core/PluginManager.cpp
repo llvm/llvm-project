@@ -1345,6 +1345,12 @@ REPLCreateInstance PluginManager::GetREPLCreateCallbackAtIndex(uint32_t idx) {
   return GetREPLInstances().GetCallbackAtIndex(idx);
 }
 
+LanguageSet PluginManager::GetREPLSupportedLanguagesAtIndex(uint32_t idx) {
+  const auto &instances = GetREPLInstances().GetInstances();
+  return idx < instances.size() ? instances[idx].supported_languages
+                                : LanguageSet();
+}
+
 LanguageSet PluginManager::GetREPLAllTypeSystemSupportedLanguages() {
   const auto &instances = GetREPLInstances().GetInstances();
   LanguageSet all;

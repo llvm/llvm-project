@@ -449,6 +449,8 @@ public:
 
   static REPLCreateInstance GetREPLCreateCallbackAtIndex(uint32_t idx);
 
+  static LanguageSet GetREPLSupportedLanguagesAtIndex(uint32_t idx);
+
   static LanguageSet GetREPLAllTypeSystemSupportedLanguages();
 
   // Some plug-ins might register a DebuggerInitializeCallback callback when
