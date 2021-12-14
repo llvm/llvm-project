@@ -105,6 +105,23 @@ void division(unsigned U, signed S) {
     S = U / S; // expected-warning {{Loss of sign}}
 }
 
+void f(unsigned x) {}
+void g(unsigned x) {}
+
+void functioncall1() {
+  long x = -1;
+  int y = 0;
+  f(x); // expected-warning {{Loss of sign in implicit conversion}}
+  f(y);
+}
+
+void functioncall2(int x, int y) {
+  if (x < 0)
+    f(x); // expected-warning {{Loss of sign in implicit conversion}}
+  f(y);
+  f(x); // expected-warning {{Loss of sign in implicit conversion}}
+}
+
 void dontwarn1(unsigned U, signed S) {
   U8 = S; // It might be known that S is always 0x00-0xff.
   S8 = U; // It might be known that U is always 0x00-0xff.
@@ -132,15 +149,38 @@ void dontwarn4() {
   DOSTUFF;
 }
 
-// don't warn for calculations
-// seen some fp. For instance:  c2 = (c2 >= 'A' && c2 <= 'Z') ? c2 - 'A' + 'a' : c2;
-// there is a todo in the checker to handle calculations
 void dontwarn5() {
-  signed S = -32;
-  U8 = S + 10;
+  unsigned char c1 = 'A';
+  c1 = (c1 >= 'A' && c1 <= 'Z') ? c1 - 'A' + 'a' : c1;
+  unsigned char c2 = 0;
+  c2 = (c2 >= 'A' && c2 <= 'Z') ? c2 - 'A' + 'a' : c2;
+  unsigned char c3 = 'Z';
+  c3 = (c3 >= 'A' && c3 <= 'Z') ? c3 - 'A' + 'a' : c3;
+  unsigned char c4 = 'a';
+  c4 = (c4 >= 'A' && c4 <= 'Z') ? c4 - 'A' + 'a' : c4;
+  unsigned char c5 = '@';
+  c5 = (c5 >= 'A' && c5 <= 'Z') ? c5 - 'A' + 'a' : c5;
 }
 
-char dontwarn6(long long x) {
+void dontwarn6() {
+  int x = ~0;
+  unsigned y = ~0;
+}
+
+void dontwarn7(unsigned x) {
+  if (x == (unsigned)-1) {
+  }
+}
+
+void dontwarn8() {
+  unsigned x = (unsigned)-1;
+}
+
+unsigned dontwarn9() {
+  return ~0;
+}
+
+char dontwarn10(long long x) {
   long long y = 42;
   y += x;
   return y == 42;
