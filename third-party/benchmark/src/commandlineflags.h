@@ -9,23 +9,23 @@
 #define FLAG(name) FLAGS_##name
 
 // Macros for declaring flags.
-#define DECLARE_bool(name) extern bool FLAG(name)
-#define DECLARE_int32(name) extern int32_t FLAG(name)
-#define DECLARE_double(name) extern double FLAG(name)
-#define DECLARE_string(name) extern std::string FLAG(name)
-#define DECLARE_kvpairs(name) \
+#define BM_DECLARE_bool(name) extern bool FLAG(name)
+#define BM_DECLARE_int32(name) extern int32_t FLAG(name)
+#define BM_DECLARE_double(name) extern double FLAG(name)
+#define BM_DECLARE_string(name) extern std::string FLAG(name)
+#define BM_DECLARE_kvpairs(name) \
   extern std::map<std::string, std::string> FLAG(name)
 
 // Macros for defining flags.
-#define DEFINE_bool(name, default_val) \
+#define BM_DEFINE_bool(name, default_val) \
   bool FLAG(name) = benchmark::BoolFromEnv(#name, default_val)
-#define DEFINE_int32(name, default_val) \
+#define BM_DEFINE_int32(name, default_val) \
   int32_t FLAG(name) = benchmark::Int32FromEnv(#name, default_val)
-#define DEFINE_double(name, default_val) \
+#define BM_DEFINE_double(name, default_val) \
   double FLAG(name) = benchmark::DoubleFromEnv(#name, default_val)
-#define DEFINE_string(name, default_val) \
+#define BM_DEFINE_string(name, default_val) \
   std::string FLAG(name) = benchmark::StringFromEnv(#name, default_val)
-#define DEFINE_kvpairs(name, default_val)         \
+#define BM_DEFINE_kvpairs(name, default_val)      \
   std::map<std::string, std::string> FLAG(name) = \
       benchmark::KvPairsFromEnv(#name, default_val)
 

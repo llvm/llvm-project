@@ -30,13 +30,13 @@ struct TestCase {
 
   void CheckRun(Run const& run) const {
     // clang-format off
-    CHECK(name == run.benchmark_name()) << "expected " << name << " got "
+    BM_CHECK(name == run.benchmark_name()) << "expected " << name << " got "
                                       << run.benchmark_name();
     if (label) {
-      CHECK(run.report_label == label) << "expected " << label << " got "
+      BM_CHECK(run.report_label == label) << "expected " << label << " got "
                                        << run.report_label;
     } else {
-      CHECK(run.report_label == "");
+      BM_CHECK(run.report_label.empty());
     }
     // clang-format on
   }
@@ -45,7 +45,7 @@ struct TestCase {
 std::vector<TestCase> ExpectedResults;
 
 int AddCases(std::initializer_list<TestCase> const& v) {
-  for (auto N : v) {
+  for (const auto& N : v) {
     ExpectedResults.push_back(N);
   }
   return 0;

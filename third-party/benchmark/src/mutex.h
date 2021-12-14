@@ -130,7 +130,7 @@ class Barrier {
   // entered the barrier.  Returns iff this is the last thread to
   // enter the barrier.
   bool createBarrier(MutexLock& ml) REQUIRES(lock_) {
-    CHECK_LT(entered_, running_threads_);
+    BM_CHECK_LT(entered_, running_threads_);
     entered_++;
     if (entered_ < running_threads_) {
       // Wait for all threads to enter

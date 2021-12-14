@@ -5,7 +5,7 @@
 #include "benchmark/benchmark.h"
 #include "output_test.h"
 
-void BM_Simple(benchmark::State& state) {
+static void BM_Simple(benchmark::State& state) {
   for (auto _ : state) {
     benchmark::DoNotOptimize(state.iterations());
   }
@@ -13,7 +13,7 @@ void BM_Simple(benchmark::State& state) {
 BENCHMARK(BM_Simple);
 ADD_CASES(TC_JSONOut, {{"\"name\": \"BM_Simple\",$"}});
 
-void CheckSimple(Results const& e) {
+static void CheckSimple(Results const& e) {
   CHECK_COUNTER_VALUE(e, double, "CYCLES", GT, 0);
   CHECK_COUNTER_VALUE(e, double, "BRANCHES", GT, 0.0);
 }

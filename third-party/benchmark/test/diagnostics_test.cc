@@ -26,7 +26,8 @@ void TestHandler() {
 }
 
 void try_invalid_pause_resume(benchmark::State& state) {
-#if !defined(TEST_BENCHMARK_LIBRARY_HAS_NO_ASSERTIONS) && !defined(TEST_HAS_NO_EXCEPTIONS)
+#if !defined(TEST_BENCHMARK_LIBRARY_HAS_NO_ASSERTIONS) && \
+    !defined(TEST_HAS_NO_EXCEPTIONS)
   try {
     state.PauseTiming();
     std::abort();
@@ -57,13 +58,12 @@ void BM_diagnostic_test(benchmark::State& state) {
 }
 BENCHMARK(BM_diagnostic_test);
 
-
 void BM_diagnostic_test_keep_running(benchmark::State& state) {
   static bool called_once = false;
 
   if (called_once == false) try_invalid_pause_resume(state);
 
-  while(state.KeepRunning()) {
+  while (state.KeepRunning()) {
     benchmark::DoNotOptimize(state.iterations());
   }
 

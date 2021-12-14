@@ -126,7 +126,7 @@ inline bool Regex::Init(const std::string& spec, std::string* error) {
 
       // regerror returns the number of bytes necessary to null terminate
       // the string, so we move that when assigning to error.
-      CHECK_NE(needed, 0);
+      BM_CHECK_NE(needed, 0);
       error->assign(errbuf, needed - 1);
 
       delete[] errbuf;

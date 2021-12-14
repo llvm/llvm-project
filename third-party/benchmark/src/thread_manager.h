@@ -36,7 +36,6 @@ class ThreadManager {
                         [this]() { return alive_threads_ == 0; });
   }
 
- public:
   struct Result {
     IterationCount iterations = 0;
     double real_time_used = 0;

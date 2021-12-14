@@ -49,7 +49,7 @@ PerfCounters PerfCounters::Create(
   const int mode = PFM_PLM3;  // user mode only
   for (size_t i = 0; i < counter_names.size(); ++i) {
     const bool is_first = i == 0;
-    struct perf_event_attr attr{};
+    struct perf_event_attr attr {};
     attr.size = sizeof(attr);
     const int group_id = !is_first ? counter_ids[0] : -1;
     const auto& name = counter_names[i];

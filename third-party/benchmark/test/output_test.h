@@ -85,7 +85,7 @@ std::string GetFileReporterOutput(int argc, char* argv[]);
 struct Results;
 typedef std::function<void(Results const&)> ResultsCheckFn;
 
-size_t AddChecker(const char* bm_name_pattern, ResultsCheckFn fn);
+size_t AddChecker(const char* bm_name_pattern, const ResultsCheckFn& fn);
 
 // Class holding the results of a benchmark.
 // It is passed in calls to checker functions.
@@ -113,9 +113,7 @@ struct Results {
     return NumIterations() * GetTime(kRealTime);
   }
   // get the cpu_time duration of the benchmark in seconds
-  double DurationCPUTime() const {
-    return NumIterations() * GetTime(kCpuTime);
-  }
+  double DurationCPUTime() const { return NumIterations() * GetTime(kCpuTime); }
 
   // get the string for a result by name, or nullptr if the name
   // is not found
@@ -143,12 +141,12 @@ struct Results {
 template <class T>
 T Results::GetAs(const char* entry_name) const {
   auto* sv = Get(entry_name);
-  CHECK(sv != nullptr && !sv->empty());
+  BM_CHECK(sv != nullptr && !sv->empty());
   std::stringstream ss;
   ss << *sv;
   T out;
   ss >> out;
-  CHECK(!ss.fail());
+  BM_CHECK(!ss.fail());
   return out;
 }
 
@@ -159,7 +157,7 @@ T Results::GetAs(const char* entry_name) const {
 // clang-format off
 
 #define CHECK_RESULT_VALUE_IMPL(entry, getfn, var_type, var_name, relationship, value) \
-    CONCAT(CHECK_, relationship)                                        \
+    CONCAT(BM_CHECK_, relationship)                                        \
     (entry.getfn< var_type >(var_name), (value)) << "\n"                \
     << __FILE__ << ":" << __LINE__ << ": " << (entry).name << ":\n"     \
     << __FILE__ << ":" << __LINE__ << ": "                              \
@@ -170,7 +168,7 @@ T Results::GetAs(const char* entry_name) const {
 // check with tolerance. eps_factor is the tolerance window, which is
 // interpreted relative to value (eg, 0.1 means 10% of value).
 #define CHECK_FLOAT_RESULT_VALUE_IMPL(entry, getfn, var_type, var_name, relationship, value, eps_factor) \
-    CONCAT(CHECK_FLOAT_, relationship)                                  \
+    CONCAT(BM_CHECK_FLOAT_, relationship)                                  \
     (entry.getfn< var_type >(var_name), (value), (eps_factor) * (value)) << "\n" \
     << __FILE__ << ":" << __LINE__ << ": " << (entry).name << ":\n"     \
     << __FILE__ << ":" << __LINE__ << ": "                              \

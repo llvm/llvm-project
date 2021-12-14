@@ -5,7 +5,7 @@
 
 #ifndef GTEST_SKIP
 struct MsgHandler {
-  void operator=(std::ostream&){}
+  void operator=(std::ostream&) {}
 };
 #define GTEST_SKIP() return MsgHandler() = std::cout
 #endif
@@ -103,10 +103,10 @@ size_t do_work() {
 
 void measure(size_t threadcount, PerfCounterValues* values1,
              PerfCounterValues* values2) {
-  CHECK_NE(values1, nullptr);
-  CHECK_NE(values2, nullptr);
+  BM_CHECK_NE(values1, nullptr);
+  BM_CHECK_NE(values2, nullptr);
   std::vector<std::thread> threads(threadcount);
-  auto work = [&]() { CHECK(do_work() > 1000); };
+  auto work = [&]() { BM_CHECK(do_work() > 1000); };
 
   // We need to first set up the counters, then start the threads, so the
   // threads would inherit the counters. But later, we need to first destroy the

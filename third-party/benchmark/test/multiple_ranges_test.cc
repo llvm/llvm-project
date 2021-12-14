@@ -1,9 +1,9 @@
-#include "benchmark/benchmark.h"
-
 #include <cassert>
 #include <iostream>
 #include <set>
 #include <vector>
+
+#include "benchmark/benchmark.h"
 
 class MultipleRangesFixture : public ::benchmark::Fixture {
  public:
@@ -42,7 +42,7 @@ class MultipleRangesFixture : public ::benchmark::Fixture {
   virtual ~MultipleRangesFixture() {
     if (actualValues != expectedValues) {
       std::cout << "EXPECTED\n";
-      for (auto v : expectedValues) {
+      for (const auto& v : expectedValues) {
         std::cout << "{";
         for (int64_t iv : v) {
           std::cout << iv << ", ";
@@ -50,7 +50,7 @@ class MultipleRangesFixture : public ::benchmark::Fixture {
         std::cout << "}\n";
       }
       std::cout << "ACTUAL\n";
-      for (auto v : actualValues) {
+      for (const auto& v : actualValues) {
         std::cout << "{";
         for (int64_t iv : v) {
           std::cout << iv << ", ";

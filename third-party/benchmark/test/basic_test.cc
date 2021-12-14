@@ -13,7 +13,7 @@ BENCHMARK(BM_empty)->ThreadPerCpu();
 
 void BM_spin_empty(benchmark::State& state) {
   for (auto _ : state) {
-    for (int x = 0; x < state.range(0); ++x) {
+    for (auto x = 0; x < state.range(0); ++x) {
       benchmark::DoNotOptimize(x);
     }
   }
@@ -22,11 +22,11 @@ BASIC_BENCHMARK_TEST(BM_spin_empty);
 BASIC_BENCHMARK_TEST(BM_spin_empty)->ThreadPerCpu();
 
 void BM_spin_pause_before(benchmark::State& state) {
-  for (int i = 0; i < state.range(0); ++i) {
+  for (auto i = 0; i < state.range(0); ++i) {
     benchmark::DoNotOptimize(i);
   }
   for (auto _ : state) {
-    for (int i = 0; i < state.range(0); ++i) {
+    for (auto i = 0; i < state.range(0); ++i) {
       benchmark::DoNotOptimize(i);
     }
   }
@@ -37,11 +37,11 @@ BASIC_BENCHMARK_TEST(BM_spin_pause_before)->ThreadPerCpu();
 void BM_spin_pause_during(benchmark::State& state) {
   for (auto _ : state) {
     state.PauseTiming();
-    for (int i = 0; i < state.range(0); ++i) {
+    for (auto i = 0; i < state.range(0); ++i) {
       benchmark::DoNotOptimize(i);
     }
     state.ResumeTiming();
-    for (int i = 0; i < state.range(0); ++i) {
+    for (auto i = 0; i < state.range(0); ++i) {
       benchmark::DoNotOptimize(i);
     }
   }
@@ -62,11 +62,11 @@ BENCHMARK(BM_pause_during)->UseRealTime()->ThreadPerCpu();
 
 void BM_spin_pause_after(benchmark::State& state) {
   for (auto _ : state) {
-    for (int i = 0; i < state.range(0); ++i) {
+    for (auto i = 0; i < state.range(0); ++i) {
       benchmark::DoNotOptimize(i);
     }
   }
-  for (int i = 0; i < state.range(0); ++i) {
+  for (auto i = 0; i < state.range(0); ++i) {
     benchmark::DoNotOptimize(i);
   }
 }
@@ -74,15 +74,15 @@ BASIC_BENCHMARK_TEST(BM_spin_pause_after);
 BASIC_BENCHMARK_TEST(BM_spin_pause_after)->ThreadPerCpu();
 
 void BM_spin_pause_before_and_after(benchmark::State& state) {
-  for (int i = 0; i < state.range(0); ++i) {
+  for (auto i = 0; i < state.range(0); ++i) {
     benchmark::DoNotOptimize(i);
   }
   for (auto _ : state) {
-    for (int i = 0; i < state.range(0); ++i) {
+    for (auto i = 0; i < state.range(0); ++i) {
       benchmark::DoNotOptimize(i);
     }
   }
-  for (int i = 0; i < state.range(0); ++i) {
+  for (auto i = 0; i < state.range(0); ++i) {
     benchmark::DoNotOptimize(i);
   }
 }
@@ -95,7 +95,6 @@ void BM_empty_stop_start(benchmark::State& state) {
 }
 BENCHMARK(BM_empty_stop_start);
 BENCHMARK(BM_empty_stop_start)->ThreadPerCpu();
-
 
 void BM_KeepRunning(benchmark::State& state) {
   benchmark::IterationCount iter_count = 0;
@@ -142,10 +141,39 @@ void BM_RangedFor(benchmark::State& state) {
 }
 BENCHMARK(BM_RangedFor);
 
+#ifdef BENCHMARK_HAS_CXX11
+template <typename T>
+void BM_OneTemplateFunc(benchmark::State& state) {
+  auto arg = state.range(0);
+  T sum = 0;
+  for (auto _ : state) {
+    sum += arg;
+  }
+}
+BENCHMARK(BM_OneTemplateFunc<int>)->Arg(1);
+BENCHMARK(BM_OneTemplateFunc<double>)->Arg(1);
+
+template <typename A, typename B>
+void BM_TwoTemplateFunc(benchmark::State& state) {
+  auto arg = state.range(0);
+  A sum = 0;
+  B prod = 1;
+  for (auto _ : state) {
+    sum += arg;
+    prod *= arg;
+  }
+}
+BENCHMARK(BM_TwoTemplateFunc<int, double>)->Arg(1);
+BENCHMARK(BM_TwoTemplateFunc<double, int>)->Arg(1);
+
+#endif  // BENCHMARK_HAS_CXX11
+
 // Ensure that StateIterator provides all the necessary typedefs required to
 // instantiate std::iterator_traits.
-static_assert(std::is_same<
-  typename std::iterator_traits<benchmark::State::StateIterator>::value_type,
-  typename benchmark::State::StateIterator::value_type>::value, "");
+static_assert(
+    std::is_same<typename std::iterator_traits<
+                     benchmark::State::StateIterator>::value_type,
+                 typename benchmark::State::StateIterator::value_type>::value,
+    "");
 
 BENCHMARK_MAIN();

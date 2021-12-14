@@ -6,7 +6,7 @@
 // ------------------------ Testing Basic Output --------------------------- //
 // ========================================================================= //
 
-void BM_ExplicitRepetitions(benchmark::State& state) {
+static void BM_ExplicitRepetitions(benchmark::State& state) {
   for (auto _ : state) {
   }
 }
@@ -59,6 +59,7 @@ ADD_CASES(TC_JSONOut,
            {"\"repetitions\": 2,$", MR_Next},
            {"\"threads\": 1,$", MR_Next},
            {"\"aggregate_name\": \"mean\",$", MR_Next},
+           {"\"aggregate_unit\": \"time\",$", MR_Next},
            {"\"iterations\": %int,$", MR_Next},
            {"\"real_time\": %float,$", MR_Next},
            {"\"cpu_time\": %float,$", MR_Next},
@@ -73,6 +74,7 @@ ADD_CASES(TC_JSONOut,
            {"\"repetitions\": 2,$", MR_Next},
            {"\"threads\": 1,$", MR_Next},
            {"\"aggregate_name\": \"median\",$", MR_Next},
+           {"\"aggregate_unit\": \"time\",$", MR_Next},
            {"\"iterations\": %int,$", MR_Next},
            {"\"real_time\": %float,$", MR_Next},
            {"\"cpu_time\": %float,$", MR_Next},
@@ -87,6 +89,7 @@ ADD_CASES(TC_JSONOut,
            {"\"repetitions\": 2,$", MR_Next},
            {"\"threads\": 1,$", MR_Next},
            {"\"aggregate_name\": \"stddev\",$", MR_Next},
+           {"\"aggregate_unit\": \"time\",$", MR_Next},
            {"\"iterations\": %int,$", MR_Next},
            {"\"real_time\": %float,$", MR_Next},
            {"\"cpu_time\": %float,$", MR_Next},
@@ -105,7 +108,7 @@ ADD_CASES(TC_CSVOut,
 // ------------------------ Testing Basic Output --------------------------- //
 // ========================================================================= //
 
-void BM_ImplicitRepetitions(benchmark::State& state) {
+static void BM_ImplicitRepetitions(benchmark::State& state) {
   for (auto _ : state) {
   }
 }
@@ -164,6 +167,7 @@ ADD_CASES(TC_JSONOut, {{"\"name\": \"BM_ImplicitRepetitions_mean\",$"},
                        {"\"repetitions\": 3,$", MR_Next},
                        {"\"threads\": 1,$", MR_Next},
                        {"\"aggregate_name\": \"mean\",$", MR_Next},
+                       {"\"aggregate_unit\": \"time\",$", MR_Next},
                        {"\"iterations\": %int,$", MR_Next},
                        {"\"real_time\": %float,$", MR_Next},
                        {"\"cpu_time\": %float,$", MR_Next},
@@ -177,6 +181,7 @@ ADD_CASES(TC_JSONOut, {{"\"name\": \"BM_ImplicitRepetitions_median\",$"},
                        {"\"repetitions\": 3,$", MR_Next},
                        {"\"threads\": 1,$", MR_Next},
                        {"\"aggregate_name\": \"median\",$", MR_Next},
+                       {"\"aggregate_unit\": \"time\",$", MR_Next},
                        {"\"iterations\": %int,$", MR_Next},
                        {"\"real_time\": %float,$", MR_Next},
                        {"\"cpu_time\": %float,$", MR_Next},
@@ -190,6 +195,7 @@ ADD_CASES(TC_JSONOut, {{"\"name\": \"BM_ImplicitRepetitions_stddev\",$"},
                        {"\"repetitions\": 3,$", MR_Next},
                        {"\"threads\": 1,$", MR_Next},
                        {"\"aggregate_name\": \"stddev\",$", MR_Next},
+                       {"\"aggregate_unit\": \"time\",$", MR_Next},
                        {"\"iterations\": %int,$", MR_Next},
                        {"\"real_time\": %float,$", MR_Next},
                        {"\"cpu_time\": %float,$", MR_Next},

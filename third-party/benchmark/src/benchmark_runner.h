@@ -23,17 +23,13 @@
 #include "perf_counters.h"
 #include "thread_manager.h"
 
-DECLARE_double(benchmark_min_time);
-
-DECLARE_int32(benchmark_repetitions);
-
-DECLARE_bool(benchmark_report_aggregates_only);
-
-DECLARE_bool(benchmark_display_aggregates_only);
-
-DECLARE_string(benchmark_perf_counters);
-
 namespace benchmark {
+
+BM_DECLARE_double(benchmark_min_time);
+BM_DECLARE_int32(benchmark_repetitions);
+BM_DECLARE_bool(benchmark_report_aggregates_only);
+BM_DECLARE_bool(benchmark_display_aggregates_only);
+BM_DECLARE_string(benchmark_perf_counters);
 
 namespace internal {
 
@@ -64,7 +60,7 @@ class BenchmarkRunner {
 
   BenchmarkReporter::PerFamilyRunReports* GetReportsForFamily() const {
     return reports_for_family;
-  };
+  }
 
  private:
   RunResults run_results;
@@ -79,6 +75,8 @@ class BenchmarkRunner {
   int num_repetitions_done = 0;
 
   std::vector<std::thread> pool;
+
+  std::vector<MemoryManager::Result> memory_results;
 
   IterationCount iters;  // preserved between repetitions!
   // So only the first repetition has to find/calculate it,

@@ -1,9 +1,17 @@
-load("@rules_cc//cc:defs.bzl", "cc_library")
-
 licenses(["notice"])
 
 config_setting(
+    name = "qnx",
+    constraint_values = ["@platforms//os:qnx"],
+    values = {
+        "cpu": "x64_qnx",
+    },
+    visibility = [":__subpackages__"],
+)
+
+config_setting(
     name = "windows",
+    constraint_values = ["@platforms//os:windows"],
     values = {
         "cpu": "x64_windows",
     },

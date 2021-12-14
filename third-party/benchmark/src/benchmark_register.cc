@@ -111,7 +111,7 @@ void BenchmarkFamilies::ClearBenchmarks() {
 bool BenchmarkFamilies::FindBenchmarks(
     std::string spec, std::vector<BenchmarkInstance>* benchmarks,
     std::ostream* ErrStream) {
-  CHECK(ErrStream);
+  BM_CHECK(ErrStream);
   auto& Err = *ErrStream;
   // Make regular expression out of command-line flag
   std::string error_msg;
@@ -211,10 +211,13 @@ Benchmark::Benchmark(const char* name)
       use_real_time_(false),
       use_manual_time_(false),
       complexity_(oNone),
-      complexity_lambda_(nullptr) {
+      complexity_lambda_(nullptr),
+      setup_(nullptr),
+      teardown_(nullptr) {
   ComputeStatistics("mean", StatisticsMean);
   ComputeStatistics("median", StatisticsMedian);
   ComputeStatistics("stddev", StatisticsStdDev);
+  ComputeStatistics("cv", StatisticsCV, kPercentage);
 }
 
 Benchmark::~Benchmark() {}
@@ -225,7 +228,7 @@ Benchmark* Benchmark::Name(const std::string& name) {
 }
 
 Benchmark* Benchmark::Arg(int64_t x) {
-  CHECK(ArgsCnt() == -1 || ArgsCnt() == 1);
+  BM_CHECK(ArgsCnt() == -1 || ArgsCnt() == 1);
   args_.push_back({x});
   return this;
 }
@@ -236,7 +239,7 @@ Benchmark* Benchmark::Unit(TimeUnit unit) {
 }
 
 Benchmark* Benchmark::Range(int64_t start, int64_t limit) {
-  CHECK(ArgsCnt() == -1 || ArgsCnt() == 1);
+  BM_CHECK(ArgsCnt() == -1 || ArgsCnt() == 1);
   std::vector<int64_t> arglist;
   AddRange(&arglist, start, limit, range_multiplier_);
 
@@ -248,7 +251,7 @@ Benchmark* Benchmark::Range(int64_t start, int64_t limit) {
 
 Benchmark* Benchmark::Ranges(
     const std::vector<std::pair<int64_t, int64_t>>& ranges) {
-  CHECK(ArgsCnt() == -1 || ArgsCnt() == static_cast<int>(ranges.size()));
+  BM_CHECK(ArgsCnt() == -1 || ArgsCnt() == static_cast<int>(ranges.size()));
   std::vector<std::vector<int64_t>> arglists(ranges.size());
   for (std::size_t i = 0; i < ranges.size(); i++) {
     AddRange(&arglists[i], ranges[i].first, ranges[i].second,
@@ -262,7 +265,7 @@ Benchmark* Benchmark::Ranges(
 
 Benchmark* Benchmark::ArgsProduct(
     const std::vector<std::vector<int64_t>>& arglists) {
-  CHECK(ArgsCnt() == -1 || ArgsCnt() == static_cast<int>(arglists.size()));
+  BM_CHECK(ArgsCnt() == -1 || ArgsCnt() == static_cast<int>(arglists.size()));
 
   std::vector<std::size_t> indices(arglists.size());
   const std::size_t total = std::accumulate(
@@ -289,20 +292,20 @@ Benchmark* Benchmark::ArgsProduct(
 }
 
 Benchmark* Benchmark::ArgName(const std::string& name) {
-  CHECK(ArgsCnt() == -1 || ArgsCnt() == 1);
+  BM_CHECK(ArgsCnt() == -1 || ArgsCnt() == 1);
   arg_names_ = {name};
   return this;
 }
 
 Benchmark* Benchmark::ArgNames(const std::vector<std::string>& names) {
-  CHECK(ArgsCnt() == -1 || ArgsCnt() == static_cast<int>(names.size()));
+  BM_CHECK(ArgsCnt() == -1 || ArgsCnt() == static_cast<int>(names.size()));
   arg_names_ = names;
   return this;
 }
 
 Benchmark* Benchmark::DenseRange(int64_t start, int64_t limit, int step) {
-  CHECK(ArgsCnt() == -1 || ArgsCnt() == 1);
-  CHECK_LE(start, limit);
+  BM_CHECK(ArgsCnt() == -1 || ArgsCnt() == 1);
+  BM_CHECK_LE(start, limit);
   for (int64_t arg = start; arg <= limit; arg += step) {
     args_.push_back({arg});
   }
@@ -310,7 +313,7 @@ Benchmark* Benchmark::DenseRange(int64_t start, int64_t limit, int step) {
 }
 
 Benchmark* Benchmark::Args(const std::vector<int64_t>& args) {
-  CHECK(ArgsCnt() == -1 || ArgsCnt() == static_cast<int>(args.size()));
+  BM_CHECK(ArgsCnt() == -1 || ArgsCnt() == static_cast<int>(args.size()));
   args_.push_back(args);
   return this;
 }
@@ -320,28 +323,40 @@ Benchmark* Benchmark::Apply(void (*custom_arguments)(Benchmark* benchmark)) {
   return this;
 }
 
+Benchmark* Benchmark::Setup(void (*setup)(const benchmark::State&)) {
+  BM_CHECK(setup != nullptr);
+  setup_ = setup;
+  return this;
+}
+
+Benchmark* Benchmark::Teardown(void (*teardown)(const benchmark::State&)) {
+  BM_CHECK(teardown != nullptr);
+  teardown_ = teardown;
+  return this;
+}
+
 Benchmark* Benchmark::RangeMultiplier(int multiplier) {
-  CHECK(multiplier > 1);
+  BM_CHECK(multiplier > 1);
   range_multiplier_ = multiplier;
   return this;
 }
 
 Benchmark* Benchmark::MinTime(double t) {
-  CHECK(t > 0.0);
-  CHECK(iterations_ == 0);
+  BM_CHECK(t > 0.0);
+  BM_CHECK(iterations_ == 0);
   min_time_ = t;
   return this;
 }
 
 Benchmark* Benchmark::Iterations(IterationCount n) {
-  CHECK(n > 0);
-  CHECK(IsZero(min_time_));
+  BM_CHECK(n > 0);
+  BM_CHECK(IsZero(min_time_));
   iterations_ = n;
   return this;
 }
 
 Benchmark* Benchmark::Repetitions(int n) {
-  CHECK(n > 0);
+  BM_CHECK(n > 0);
   repetitions_ = n;
   return this;
 }
@@ -374,14 +389,14 @@ Benchmark* Benchmark::MeasureProcessCPUTime() {
 }
 
 Benchmark* Benchmark::UseRealTime() {
-  CHECK(!use_manual_time_)
+  BM_CHECK(!use_manual_time_)
       << "Cannot set UseRealTime and UseManualTime simultaneously.";
   use_real_time_ = true;
   return this;
 }
 
 Benchmark* Benchmark::UseManualTime() {
-  CHECK(!use_real_time_)
+  BM_CHECK(!use_real_time_)
       << "Cannot set UseRealTime and UseManualTime simultaneously.";
   use_manual_time_ = true;
   return this;
@@ -398,21 +413,22 @@ Benchmark* Benchmark::Complexity(BigOFunc* complexity) {
   return this;
 }
 
-Benchmark* Benchmark::ComputeStatistics(std::string name,
-                                        StatisticsFunc* statistics) {
-  statistics_.emplace_back(name, statistics);
+Benchmark* Benchmark::ComputeStatistics(const std::string& name,
+                                        StatisticsFunc* statistics,
+                                        StatisticUnit unit) {
+  statistics_.emplace_back(name, statistics, unit);
   return this;
 }
 
 Benchmark* Benchmark::Threads(int t) {
-  CHECK_GT(t, 0);
+  BM_CHECK_GT(t, 0);
   thread_counts_.push_back(t);
   return this;
 }
 
 Benchmark* Benchmark::ThreadRange(int min_threads, int max_threads) {
-  CHECK_GT(min_threads, 0);
-  CHECK_GE(max_threads, min_threads);
+  BM_CHECK_GT(min_threads, 0);
+  BM_CHECK_GE(max_threads, min_threads);
 
   AddRange(&thread_counts_, min_threads, max_threads, 2);
   return this;
@@ -420,9 +436,9 @@ Benchmark* Benchmark::ThreadRange(int min_threads, int max_threads) {
 
 Benchmark* Benchmark::DenseThreadRange(int min_threads, int max_threads,
                                        int stride) {
-  CHECK_GT(min_threads, 0);
-  CHECK_GE(max_threads, min_threads);
-  CHECK_GE(stride, 1);
+  BM_CHECK_GT(min_threads, 0);
+  BM_CHECK_GE(max_threads, min_threads);
+  BM_CHECK_GE(stride, 1);
 
   for (auto i = min_threads; i < max_threads; i += stride) {
     thread_counts_.push_back(i);
@@ -456,6 +472,21 @@ void FunctionBenchmark::Run(State& st) { func_(st); }
 
 void ClearRegisteredBenchmarks() {
   internal::BenchmarkFamilies::GetInstance()->ClearBenchmarks();
+}
+
+std::vector<int64_t> CreateRange(int64_t lo, int64_t hi, int multi) {
+  std::vector<int64_t> args;
+  internal::AddRange(&args, lo, hi, multi);
+  return args;
+}
+
+std::vector<int64_t> CreateDenseRange(int64_t start, int64_t limit, int step) {
+  BM_CHECK_LE(start, limit);
+  std::vector<int64_t> args;
+  for (int64_t arg = start; arg <= limit; arg += step) {
+    args.push_back(arg);
+  }
+  return args;
 }
 
 }  // end namespace benchmark

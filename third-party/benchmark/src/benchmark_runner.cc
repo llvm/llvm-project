@@ -67,7 +67,7 @@ BenchmarkReporter::Run CreateRunReport(
     const benchmark::internal::BenchmarkInstance& b,
     const internal::ThreadManager::Result& results,
     IterationCount memory_iterations,
-    const MemoryManager::Result& memory_result, double seconds,
+    const MemoryManager::Result* memory_result, double seconds,
     int64_t repetition_index, int64_t repeats) {
   // Create report about this benchmark run.
   BenchmarkReporter::Run report;
@@ -99,12 +99,12 @@ BenchmarkReporter::Run CreateRunReport(
     report.counters = results.counters;
 
     if (memory_iterations > 0) {
-      report.has_memory_result = true;
+      assert(memory_result != nullptr);
+      report.memory_result = memory_result;
       report.allocs_per_iter =
-          memory_iterations ? static_cast<double>(memory_result.num_allocs) /
+          memory_iterations ? static_cast<double>(memory_result->num_allocs) /
                                   memory_iterations
                             : 0;
-      report.max_bytes_used = memory_result.max_bytes_used;
     }
 
     internal::Finish(&report.counters, results.iterations, seconds,
@@ -124,7 +124,7 @@ void RunInThread(const BenchmarkInstance* b, IterationCount iters,
           : internal::ThreadTimer::Create());
   State st =
       b->Run(iters, thread_id, &timer, manager, perf_counters_measurement);
-  CHECK(st.error_occurred() || st.iterations() >= st.max_iterations)
+  BM_CHECK(st.error_occurred() || st.iterations() >= st.max_iterations)
       << "Benchmark returned before State::KeepRunning() returned false!";
   {
     MutexLock l(manager->GetBenchmarkMutex());
@@ -168,14 +168,14 @@ BenchmarkRunner::BenchmarkRunner(
          internal::ARM_DisplayReportAggregatesOnly);
     run_results.file_report_aggregates_only =
         (b.aggregation_report_mode() & internal::ARM_FileReportAggregatesOnly);
-    CHECK(FLAGS_benchmark_perf_counters.empty() ||
-          perf_counters_measurement.IsValid())
+    BM_CHECK(FLAGS_benchmark_perf_counters.empty() ||
+             perf_counters_measurement.IsValid())
         << "Perf counters were requested but could not be set up.";
   }
 }
 
 BenchmarkRunner::IterationResults BenchmarkRunner::DoNIterations() {
-  VLOG(2) << "Running " << b.name().str() << " for " << iters << "\n";
+  BM_VLOG(2) << "Running " << b.name().str() << " for " << iters << "\n";
 
   std::unique_ptr<internal::ThreadManager> manager;
   manager.reset(new internal::ThreadManager(b.threads()));
@@ -210,8 +210,8 @@ BenchmarkRunner::IterationResults BenchmarkRunner::DoNIterations() {
   // If we were measuring whole-process CPU usage, adjust the CPU time too.
   if (b.measure_process_cpu_time()) i.results.cpu_time_used /= b.threads();
 
-  VLOG(2) << "Ran in " << i.results.cpu_time_used << "/"
-          << i.results.real_time_used << "\n";
+  BM_VLOG(2) << "Ran in " << i.results.cpu_time_used << "/"
+             << i.results.real_time_used << "\n";
 
   // By using KeepRunningBatch a benchmark can iterate more times than
   // requested, so take the iteration count from i.results.
@@ -239,8 +239,7 @@ IterationCount BenchmarkRunner::PredictNumItersNeeded(
   // NOTE: When the last run was at least 10% of the min time the max
   // expansion should be 14x.
   bool is_significant = (i.seconds / min_time) > 0.1;
-  multiplier = is_significant ? multiplier : std::min(10.0, multiplier);
-  if (multiplier <= 1.0) multiplier = 2.0;
+  multiplier = is_significant ? multiplier : 10.0;
 
   // So what seems to be the sufficiently-large iteration count? Round up.
   const IterationCount max_next_iters = static_cast<IterationCount>(
@@ -249,7 +248,7 @@ IterationCount BenchmarkRunner::PredictNumItersNeeded(
   // But we do have *some* sanity limits though..
   const IterationCount next_iters = std::min(max_next_iters, kMaxIterations);
 
-  VLOG(3) << "Next iters: " << next_iters << ", " << multiplier << "\n";
+  BM_VLOG(3) << "Next iters: " << next_iters << ", " << multiplier << "\n";
   return next_iters;  // round up before conversion to integer.
 }
 
@@ -280,7 +279,9 @@ void BenchmarkRunner::DoOneRepetition() {
   // is *only* calculated for the *first* repetition, and other repetitions
   // simply use that precomputed iteration count.
   for (;;) {
+    b.Setup();
     i = DoNIterations();
+    b.Teardown();
 
     // Do we consider the results to be significant?
     // If we are doing repetitions, and the first repetition was already done,
@@ -303,24 +304,33 @@ void BenchmarkRunner::DoOneRepetition() {
   }
 
   // Oh, one last thing, we need to also produce the 'memory measurements'..
-  MemoryManager::Result memory_result;
+  MemoryManager::Result* memory_result = nullptr;
   IterationCount memory_iterations = 0;
   if (memory_manager != nullptr) {
+    // TODO(vyng): Consider making BenchmarkReporter::Run::memory_result an
+    // optional so we don't have to own the Result here.
+    // Can't do it now due to cxx03.
+    memory_results.push_back(MemoryManager::Result());
+    memory_result = &memory_results.back();
     // Only run a few iterations to reduce the impact of one-time
     // allocations in benchmarks that are not properly managed.
     memory_iterations = std::min<IterationCount>(16, iters);
     memory_manager->Start();
     std::unique_ptr<internal::ThreadManager> manager;
     manager.reset(new internal::ThreadManager(1));
+    b.Setup();
     RunInThread(&b, memory_iterations, 0, manager.get(),
                 perf_counters_measurement_ptr);
     manager->WaitForAllThreads();
     manager.reset();
+    b.Teardown();
 
-    memory_manager->Stop(&memory_result);
+    BENCHMARK_DISABLE_DEPRECATED_WARNING
+    memory_manager->Stop(memory_result);
+    BENCHMARK_RESTORE_DEPRECATED_WARNING
   }
 
-  // Ok, now actualy report.
+  // Ok, now actually report.
   BenchmarkReporter::Run report =
       CreateRunReport(b, i.results, memory_iterations, memory_result, i.seconds,
                       num_repetitions_done, repeats);

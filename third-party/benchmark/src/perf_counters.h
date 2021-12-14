@@ -42,7 +42,7 @@ namespace internal {
 class PerfCounterValues {
  public:
   explicit PerfCounterValues(size_t nr_counters) : nr_counters_(nr_counters) {
-    CHECK_LE(nr_counters_, kMaxCounters);
+    BM_CHECK_LE(nr_counters_, kMaxCounters);
   }
 
   uint64_t operator[](size_t pos) const { return values_[kPadding + pos]; }

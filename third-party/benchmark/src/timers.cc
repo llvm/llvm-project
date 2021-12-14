@@ -13,6 +13,7 @@
 // limitations under the License.
 
 #include "timers.h"
+
 #include "internal_macros.h"
 
 #ifdef BENCHMARK_OS_WINDOWS
@@ -125,8 +126,8 @@ double ProcessCPUUsage() {
   // syncronous system calls in Emscripten.
   return emscripten_get_now() * 1e-3;
 #elif defined(CLOCK_PROCESS_CPUTIME_ID) && !defined(BENCHMARK_OS_MACOSX)
-  // FIXME We want to use clock_gettime, but its not available in MacOS 10.11. See
-  // https://github.com/google/benchmark/pull/292
+  // FIXME We want to use clock_gettime, but its not available in MacOS 10.11.
+  // See https://github.com/google/benchmark/pull/292
   struct timespec spec;
   if (clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &spec) == 0)
     return MakeTime(spec);
@@ -149,13 +150,14 @@ double ThreadCPUUsage() {
                  &user_time);
   return MakeTime(kernel_time, user_time);
 #elif defined(BENCHMARK_OS_MACOSX)
-  // FIXME We want to use clock_gettime, but its not available in MacOS 10.11. See
-  // https://github.com/google/benchmark/pull/292
+  // FIXME We want to use clock_gettime, but its not available in MacOS 10.11.
+  // See https://github.com/google/benchmark/pull/292
   mach_msg_type_number_t count = THREAD_BASIC_INFO_COUNT;
   thread_basic_info_data_t info;
   mach_port_t thread = pthread_mach_thread_np(pthread_self());
-  if (thread_info(thread, THREAD_BASIC_INFO, (thread_info_t)&info, &count) ==
-      KERN_SUCCESS) {
+  if (thread_info(thread, THREAD_BASIC_INFO,
+                  reinterpret_cast<thread_info_t>(&info),
+                  &count) == KERN_SUCCESS) {
     return MakeTime(info);
   }
   DiagnoseAndExit("ThreadCPUUsage() failed when evaluating thread_info");
@@ -191,11 +193,14 @@ std::string LocalDateTimeString() {
   long int offset_minutes;
   char tz_offset_sign = '+';
   // tz_offset is set in one of three ways:
-  // * strftime with %z - This either returns empty or the ISO 8601 time.  The maximum length an
+  // * strftime with %z - This either returns empty or the ISO 8601 time.  The
+  // maximum length an
   //   ISO 8601 string can be is 7 (e.g. -03:30, plus trailing zero).
-  // * snprintf with %c%02li:%02li - The maximum length is 41 (one for %c, up to 19 for %02li,
+  // * snprintf with %c%02li:%02li - The maximum length is 41 (one for %c, up to
+  // 19 for %02li,
   //   one for :, up to 19 %02li, plus trailing zero).
-  // * A fixed string of "-00:00".  The maximum length is 7 (-00:00, plus trailing zero).
+  // * A fixed string of "-00:00".  The maximum length is 7 (-00:00, plus
+  // trailing zero).
   //
   // Thus, the maximum size this needs to be is 41.
   char tz_offset[41];
@@ -203,10 +208,10 @@ std::string LocalDateTimeString() {
   char storage[128];
 
 #if defined(BENCHMARK_OS_WINDOWS)
-  std::tm *timeinfo_p = ::localtime(&now);
+  std::tm* timeinfo_p = ::localtime(&now);
 #else
   std::tm timeinfo;
-  std::tm *timeinfo_p = &timeinfo;
+  std::tm* timeinfo_p = &timeinfo;
   ::localtime_r(&now, &timeinfo);
 #endif
 
@@ -223,10 +228,11 @@ std::string LocalDateTimeString() {
       tz_offset_sign = '-';
     }
 
-    tz_len = ::snprintf(tz_offset, sizeof(tz_offset), "%c%02li:%02li",
-        tz_offset_sign, offset_minutes / 100, offset_minutes % 100);
-    CHECK(tz_len == kTzOffsetLen);
-    ((void)tz_len); // Prevent unused variable warning in optimized build.
+    tz_len =
+        ::snprintf(tz_offset, sizeof(tz_offset), "%c%02li:%02li",
+                   tz_offset_sign, offset_minutes / 100, offset_minutes % 100);
+    BM_CHECK(tz_len == kTzOffsetLen);
+    ((void)tz_len);  // Prevent unused variable warning in optimized build.
   } else {
     // Unknown offset. RFC3339 specifies that unknown local offsets should be
     // written as UTC time with -00:00 timezone.
@@ -240,9 +246,9 @@ std::string LocalDateTimeString() {
     strncpy(tz_offset, "-00:00", kTzOffsetLen + 1);
   }
 
-  timestamp_len = std::strftime(storage, sizeof(storage), "%Y-%m-%dT%H:%M:%S",
-      timeinfo_p);
-  CHECK(timestamp_len == kTimestampLen);
+  timestamp_len =
+      std::strftime(storage, sizeof(storage), "%Y-%m-%dT%H:%M:%S", timeinfo_p);
+  BM_CHECK(timestamp_len == kTimestampLen);
   // Prevent unused variable warning in optimized build.
   ((void)kTimestampLen);
 

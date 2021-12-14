@@ -12,11 +12,11 @@ namespace internal {
 // Append the powers of 'mult' in the closed interval [lo, hi].
 // Returns iterator to the start of the inserted range.
 template <typename T>
-typename std::vector<T>::iterator
-AddPowers(std::vector<T>* dst, T lo, T hi, int mult) {
-  CHECK_GE(lo, 0);
-  CHECK_GE(hi, lo);
-  CHECK_GE(mult, 2);
+typename std::vector<T>::iterator AddPowers(std::vector<T>* dst, T lo, T hi,
+                                            int mult) {
+  BM_CHECK_GE(lo, 0);
+  BM_CHECK_GE(hi, lo);
+  BM_CHECK_GE(mult, 2);
 
   const size_t start_offset = dst->size();
 
@@ -38,10 +38,10 @@ AddPowers(std::vector<T>* dst, T lo, T hi, int mult) {
 template <typename T>
 void AddNegatedPowers(std::vector<T>* dst, T lo, T hi, int mult) {
   // We negate lo and hi so we require that they cannot be equal to 'min'.
-  CHECK_GT(lo, std::numeric_limits<T>::min());
-  CHECK_GT(hi, std::numeric_limits<T>::min());
-  CHECK_GE(hi, lo);
-  CHECK_LE(hi, 0);
+  BM_CHECK_GT(lo, std::numeric_limits<T>::min());
+  BM_CHECK_GT(hi, std::numeric_limits<T>::min());
+  BM_CHECK_GE(hi, lo);
+  BM_CHECK_LE(hi, 0);
 
   // Add positive powers, then negate and reverse.
   // Casts necessary since small integers get promoted
@@ -60,8 +60,8 @@ void AddRange(std::vector<T>* dst, T lo, T hi, int mult) {
   static_assert(std::is_integral<T>::value && std::is_signed<T>::value,
                 "Args type must be a signed integer");
 
-  CHECK_GE(hi, lo);
-  CHECK_GE(mult, 2);
+  BM_CHECK_GE(hi, lo);
+  BM_CHECK_GE(mult, 2);
 
   // Add "lo"
   dst->push_back(lo);

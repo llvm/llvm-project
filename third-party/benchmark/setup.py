@@ -1,5 +1,6 @@
 import os
 import posixpath
+import platform
 import re
 import shutil
 import sys
@@ -89,6 +90,8 @@ class BuildBazelExtension(build_ext.build_ext):
             # Link with python*.lib.
             for library_dir in self.library_dirs:
                 bazel_argv.append("--linkopt=/LIBPATH:" + library_dir)
+        elif sys.platform == "darwin" and platform.machine() == "x86_64":
+            bazel_argv.append("--macos_minimum_os=10.9")
 
         self.spawn(bazel_argv)
 

@@ -93,8 +93,9 @@ static void BM_SetInsert(benchmark::State& state) {
   state.SetBytesProcessed(state.iterations() * state.range(1) * sizeof(int));
 }
 
-// Test many inserts at once to reduce the total iterations needed. Otherwise, the slower,
-// non-timed part of each iteration will make the benchmark take forever.
+// Test many inserts at once to reduce the total iterations needed. Otherwise,
+// the slower, non-timed part of each iteration will make the benchmark take
+// forever.
 BENCHMARK(BM_SetInsert)->Ranges({{1 << 10, 8 << 10}, {128, 512}});
 
 template <typename Container,
@@ -126,7 +127,7 @@ static void BM_StringCompare(benchmark::State& state) {
 BENCHMARK(BM_StringCompare)->Range(1, 1 << 20);
 
 static void BM_SetupTeardown(benchmark::State& state) {
-  if (state.thread_index == 0) {
+  if (state.thread_index() == 0) {
     // No need to lock test_vector_mu here as this is running single-threaded.
     test_vector = new std::vector<int>();
   }
@@ -139,7 +140,7 @@ static void BM_SetupTeardown(benchmark::State& state) {
       test_vector->pop_back();
     ++i;
   }
-  if (state.thread_index == 0) {
+  if (state.thread_index() == 0) {
     delete test_vector;
   }
 }
@@ -156,11 +157,11 @@ BENCHMARK(BM_LongTest)->Range(1 << 16, 1 << 28);
 
 static void BM_ParallelMemset(benchmark::State& state) {
   int64_t size = state.range(0) / static_cast<int64_t>(sizeof(int));
-  int thread_size = static_cast<int>(size) / state.threads;
-  int from = thread_size * state.thread_index;
+  int thread_size = static_cast<int>(size) / state.threads();
+  int from = thread_size * state.thread_index();
   int to = from + thread_size;
 
-  if (state.thread_index == 0) {
+  if (state.thread_index() == 0) {
     test_vector = new std::vector<int>(static_cast<size_t>(size));
   }
 
@@ -172,7 +173,7 @@ static void BM_ParallelMemset(benchmark::State& state) {
     }
   }
 
-  if (state.thread_index == 0) {
+  if (state.thread_index() == 0) {
     delete test_vector;
   }
 }
@@ -214,7 +215,8 @@ BENCHMARK_CAPTURE(BM_with_args, string_and_pair_test, std::string("abc"),
                   std::pair<int, double>(42, 3.8));
 
 void BM_non_template_args(benchmark::State& state, int, double) {
-  while(state.KeepRunning()) {}
+  while (state.KeepRunning()) {
+  }
 }
 BENCHMARK_CAPTURE(BM_non_template_args, basic_test, 0, 0);
 
@@ -223,14 +225,14 @@ BENCHMARK_CAPTURE(BM_non_template_args, basic_test, 0, 0);
 static void BM_DenseThreadRanges(benchmark::State& st) {
   switch (st.range(0)) {
     case 1:
-      assert(st.threads == 1 || st.threads == 2 || st.threads == 3);
+      assert(st.threads() == 1 || st.threads() == 2 || st.threads() == 3);
       break;
     case 2:
-      assert(st.threads == 1 || st.threads == 3 || st.threads == 4);
+      assert(st.threads() == 1 || st.threads() == 3 || st.threads() == 4);
       break;
     case 3:
-      assert(st.threads == 5 || st.threads == 8 || st.threads == 11 ||
-             st.threads == 14);
+      assert(st.threads() == 5 || st.threads() == 8 || st.threads() == 11 ||
+             st.threads() == 14);
       break;
     default:
       assert(false && "Invalid test case number");

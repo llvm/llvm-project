@@ -4,6 +4,7 @@
 #include <cmath>
 #include <cstdlib>
 #include <vector>
+
 #include "benchmark/benchmark.h"
 #include "output_test.h"
 
@@ -12,9 +13,10 @@ namespace {
 #define ADD_COMPLEXITY_CASES(...) \
   int CONCAT(dummy, __LINE__) = AddComplexityTest(__VA_ARGS__)
 
-int AddComplexityTest(std::string test_name, std::string big_o_test_name,
-                      std::string rms_test_name, std::string big_o,
-                      int family_index) {
+int AddComplexityTest(const std::string &test_name,
+                      const std::string &big_o_test_name,
+                      const std::string &rms_test_name,
+                      const std::string &big_o, int family_index) {
   SetSubstitutions({{"%name", test_name},
                     {"%bigo_name", big_o_test_name},
                     {"%rms_name", rms_test_name},
@@ -36,6 +38,7 @@ int AddComplexityTest(std::string test_name, std::string big_o_test_name,
        {"\"repetitions\": %int,$", MR_Next},
        {"\"threads\": 1,$", MR_Next},
        {"\"aggregate_name\": \"BigO\",$", MR_Next},
+       {"\"aggregate_unit\": \"time\",$", MR_Next},
        {"\"cpu_coefficient\": %float,$", MR_Next},
        {"\"real_coefficient\": %float,$", MR_Next},
        {"\"big_o\": \"%bigo\",$", MR_Next},
@@ -49,6 +52,7 @@ int AddComplexityTest(std::string test_name, std::string big_o_test_name,
        {"\"repetitions\": %int,$", MR_Next},
        {"\"threads\": 1,$", MR_Next},
        {"\"aggregate_name\": \"RMS\",$", MR_Next},
+       {"\"aggregate_unit\": \"percentage\",$", MR_Next},
        {"\"rms\": %float$", MR_Next},
        {"}", MR_Next}});
   AddCases(TC_CSVOut, {{"^\"%bigo_name\",,%float,%float,%bigo,,,,,$"},
@@ -63,7 +67,7 @@ int AddComplexityTest(std::string test_name, std::string big_o_test_name,
 // --------------------------- Testing BigO O(1) --------------------------- //
 // ========================================================================= //
 
-void BM_Complexity_O1(benchmark::State& state) {
+void BM_Complexity_O1(benchmark::State &state) {
   for (auto _ : state) {
     for (int i = 0; i < 1024; ++i) {
       benchmark::DoNotOptimize(&i);
@@ -112,7 +116,7 @@ std::vector<int> ConstructRandomVector(int64_t size) {
   return v;
 }
 
-void BM_Complexity_O_N(benchmark::State& state) {
+void BM_Complexity_O_N(benchmark::State &state) {
   auto v = ConstructRandomVector(state.range(0));
   // Test worst case scenario (item not in vector)
   const int64_t item_not_in_vector = state.range(0) * 2;
@@ -154,7 +158,7 @@ ADD_COMPLEXITY_CASES(n_test_name, big_o_n_test_name, rms_o_n_test_name,
 // ------------------------- Testing BigO O(N*lgN) ------------------------- //
 // ========================================================================= //
 
-static void BM_Complexity_O_N_log_N(benchmark::State& state) {
+static void BM_Complexity_O_N_log_N(benchmark::State &state) {
   auto v = ConstructRandomVector(state.range(0));
   for (auto _ : state) {
     std::sort(v.begin(), v.end());
@@ -197,7 +201,7 @@ ADD_COMPLEXITY_CASES(n_lg_n_test_name, big_o_n_lg_n_test_name,
 // -------- Testing formatting of Complexity with captured args ------------ //
 // ========================================================================= //
 
-void BM_ComplexityCaptureArgs(benchmark::State& state, int n) {
+void BM_ComplexityCaptureArgs(benchmark::State &state, int n) {
   for (auto _ : state) {
     // This test requires a non-zero CPU time to avoid divide-by-zero
     benchmark::DoNotOptimize(state.iterations());

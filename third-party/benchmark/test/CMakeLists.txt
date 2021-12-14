@@ -56,6 +56,12 @@ endmacro(compile_output_test)
 compile_benchmark_test(benchmark_test)
 add_test(NAME benchmark COMMAND benchmark_test --benchmark_min_time=0.01)
 
+compile_benchmark_test(spec_arg_test)
+add_test(NAME spec_arg COMMAND spec_arg_test --benchmark_filter=BM_NotChosen)
+
+compile_benchmark_test(benchmark_setup_teardown_test)
+add_test(NAME benchmark_setup_teardown COMMAND benchmark_setup_teardown_test)
+
 compile_benchmark_test(filter_test)
 macro(add_filter_test name filter expect)
   add_test(NAME ${name} COMMAND filter_test --benchmark_min_time=0.01 --benchmark_filter=${filter} ${expect})

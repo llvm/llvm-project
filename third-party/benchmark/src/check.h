@@ -23,8 +23,9 @@ BENCHMARK_NORETURN inline void CallAbortHandler() {
   std::abort();  // fallback to enforce noreturn
 }
 
-// CheckHandler is the class constructed by failing CHECK macros. CheckHandler
-// will log information about the failures and abort when it is destructed.
+// CheckHandler is the class constructed by failing BM_CHECK macros.
+// CheckHandler will log information about the failures and abort when it is
+// destructed.
 class CheckHandler {
  public:
   CheckHandler(const char* check, const char* file, const char* func, int line)
@@ -51,32 +52,32 @@ class CheckHandler {
 }  // end namespace internal
 }  // end namespace benchmark
 
-// The CHECK macro returns a std::ostream object that can have extra information
-// written to it.
+// The BM_CHECK macro returns a std::ostream object that can have extra
+// information written to it.
 #ifndef NDEBUG
-#define CHECK(b)                                                             \
+#define BM_CHECK(b)                                                          \
   (b ? ::benchmark::internal::GetNullLogInstance()                           \
      : ::benchmark::internal::CheckHandler(#b, __FILE__, __func__, __LINE__) \
            .GetLog())
 #else
-#define CHECK(b) ::benchmark::internal::GetNullLogInstance()
+#define BM_CHECK(b) ::benchmark::internal::GetNullLogInstance()
 #endif
 
 // clang-format off
 // preserve whitespacing between operators for alignment
-#define CHECK_EQ(a, b) CHECK((a) == (b))
-#define CHECK_NE(a, b) CHECK((a) != (b))
-#define CHECK_GE(a, b) CHECK((a) >= (b))
-#define CHECK_LE(a, b) CHECK((a) <= (b))
-#define CHECK_GT(a, b) CHECK((a) > (b))
-#define CHECK_LT(a, b) CHECK((a) < (b))
+#define BM_CHECK_EQ(a, b) BM_CHECK((a) == (b))
+#define BM_CHECK_NE(a, b) BM_CHECK((a) != (b))
+#define BM_CHECK_GE(a, b) BM_CHECK((a) >= (b))
+#define BM_CHECK_LE(a, b) BM_CHECK((a) <= (b))
+#define BM_CHECK_GT(a, b) BM_CHECK((a) > (b))
+#define BM_CHECK_LT(a, b) BM_CHECK((a) < (b))
 
-#define CHECK_FLOAT_EQ(a, b, eps) CHECK(std::fabs((a) - (b)) <  (eps))
-#define CHECK_FLOAT_NE(a, b, eps) CHECK(std::fabs((a) - (b)) >= (eps))
-#define CHECK_FLOAT_GE(a, b, eps) CHECK((a) - (b) > -(eps))
-#define CHECK_FLOAT_LE(a, b, eps) CHECK((b) - (a) > -(eps))
-#define CHECK_FLOAT_GT(a, b, eps) CHECK((a) - (b) >  (eps))
-#define CHECK_FLOAT_LT(a, b, eps) CHECK((b) - (a) >  (eps))
+#define BM_CHECK_FLOAT_EQ(a, b, eps) BM_CHECK(std::fabs((a) - (b)) <  (eps))
+#define BM_CHECK_FLOAT_NE(a, b, eps) BM_CHECK(std::fabs((a) - (b)) >= (eps))
+#define BM_CHECK_FLOAT_GE(a, b, eps) BM_CHECK((a) - (b) > -(eps))
+#define BM_CHECK_FLOAT_LE(a, b, eps) BM_CHECK((b) - (a) > -(eps))
+#define BM_CHECK_FLOAT_GT(a, b, eps) BM_CHECK((a) - (b) >  (eps))
+#define BM_CHECK_FLOAT_LT(a, b, eps) BM_CHECK((b) - (a) >  (eps))
 //clang-format on
 
 #endif  // CHECK_H_

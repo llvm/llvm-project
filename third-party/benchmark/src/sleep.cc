@@ -35,7 +35,7 @@ void SleepForMilliseconds(int milliseconds) { Sleep(milliseconds); }
 void SleepForSeconds(double seconds) {
   SleepForMilliseconds(static_cast<int>(kNumMillisPerSecond * seconds));
 }
-#else   // BENCHMARK_OS_WINDOWS
+#else  // BENCHMARK_OS_WINDOWS
 void SleepForMicroseconds(int microseconds) {
 #ifdef BENCHMARK_OS_ZOS
   // z/OS does not support nanosleep. Instead call sleep() and then usleep() to
@@ -43,8 +43,7 @@ void SleepForMicroseconds(int microseconds) {
   // argument is greater than 1000000.
   div_t sleepTime = div(microseconds, kNumMicrosPerSecond);
   int seconds = sleepTime.quot;
-  while (seconds != 0)
-    seconds = sleep(seconds);
+  while (seconds != 0) seconds = sleep(seconds);
   while (usleep(sleepTime.rem) == -1 && errno == EINTR)
     ;
 #else
