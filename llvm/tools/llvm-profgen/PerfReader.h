@@ -214,14 +214,6 @@ using AggregatedCounter =
 
 using SampleVector = SmallVector<std::tuple<uint64_t, uint64_t, uint64_t>, 16>;
 
-// The special frame addresses.
-enum SpecialFrameAddr {
-  // Dummy root of frame trie.
-  DummyRoot = 0,
-  // Represent all the addresses outside of current binary.
-  ExternalAddr = 1,
-};
-
 // The state for the unwinder, it doesn't hold the data but only keep the
 // pointer/index of the data, While unwinding, the CallStack is changed
 // dynamicially and will be recorded as the context of the sample
@@ -312,6 +304,8 @@ struct UnwindState {
   }
 
   void popFrame() { CurrentLeafFrame = CurrentLeafFrame->Parent; }
+
+  void clearCallStack() { CurrentLeafFrame = &DummyTrieRoot; }
 
   void initFrameTrie(const SmallVectorImpl<uint64_t> &CallStack) {
     ProfiledFrame *Cur = &DummyTrieRoot;
@@ -426,10 +420,8 @@ struct FrameStack {
   ProfiledBinary *Binary;
   FrameStack(ProfiledBinary *B) : Binary(B) {}
   bool pushFrame(UnwindState::ProfiledFrame *Cur) {
-    // Truncate the context for external frame since this isn't a real call
-    // context the compiler will see
-    if (Cur->isExternalFrame())
-      return false;
+    assert(!Cur->isExternalFrame() &&
+           "External frame's not expected for context stack.");
     Stack.push_back(Cur->Address);
     return true;
   }
@@ -446,10 +438,8 @@ struct ProbeStack {
   ProfiledBinary *Binary;
   ProbeStack(ProfiledBinary *B) : Binary(B) {}
   bool pushFrame(UnwindState::ProfiledFrame *Cur) {
-    // Truncate the context for external frame since this isn't a real call
-    // context the compiler will see
-    if (Cur->isExternalFrame())
-      return false;
+    assert(!Cur->isExternalFrame() &&
+           "External frame's not expected for context stack.");
     const MCDecodedPseudoProbe *CallProbe =
         Binary->getCallProbeForAddr(Cur->Address);
     // We may not find a probe for a merged or external callsite.
@@ -506,6 +496,12 @@ public:
   bool unwind(const PerfSample *Sample, uint64_t Repeat);
   std::set<uint64_t> &getUntrackedCallsites() { return UntrackedCallsites; }
 
+  uint64_t NumTotalBranches = 0;
+  uint64_t NumExtCallBranch = 0;
+  uint64_t NumMissingExternalFrame = 0;
+  uint64_t NumMismatchedProEpiBranch = 0;
+  uint64_t NumMismatchedExtCallBranch = 0;
+
 private:
   bool isCallState(UnwindState &State) const {
     // The tail call frame is always missing here in stack sample, we will
@@ -516,7 +512,19 @@ private:
   bool isReturnState(UnwindState &State) const {
     // Simply check addressIsReturn, as ret is always reliable, both for
     // regular call and tail call.
-    return Binary->addressIsReturn(State.getCurrentLBRSource());
+    if (!Binary->addressIsReturn(State.getCurrentLBRSource()))
+      return false;
+
+    // In a callback case, a return from internal code, say A, to external
+    // runtime can happen. The external runtime can then call back to
+    // another internal routine, say B. Making an artificial branch that
+    // looks like a return from A to B can confuse the unwinder to treat
+    // the instruction before B as the call instruction. Here we detect this
+    // case if the return target is not the next inst of call inst, then we just
+    // do not treat it as a return.
+    uint64_t CallAddr =
+        Binary->getCallAddrFromFrameAddr(State.getCurrentLBRTarget());
+    return (CallAddr != 0);
   }
 
   void unwindCall(UnwindState &State);

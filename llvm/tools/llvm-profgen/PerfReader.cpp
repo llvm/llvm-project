@@ -51,18 +51,44 @@ namespace llvm {
 namespace sampleprof {
 
 void VirtualUnwinder::unwindCall(UnwindState &State) {
+  uint64_t Source = State.getCurrentLBRSource();
+  // An artificial return should push an external frame and an artificial call
+  // will match it and pop the external frame so that the context before and
+  // after the external call will be the same.
+  if (State.getCurrentLBR().IsArtificial) {
+    NumExtCallBranch++;
+    // A return is matched and pop the external frame.
+    if (State.getParentFrame()->isExternalFrame()) {
+      State.popFrame();
+    } else {
+      // An artificial return is missing, it happens that the sample is just hit
+      // in the middle of the external code. In this case, the leading branch is
+      // a call to external, we just keep unwinding use a context-less stack.
+      if (State.getParentFrame() != State.getDummyRootPtr())
+        NumMissingExternalFrame++;
+      State.clearCallStack();
+      State.pushFrame(Source);
+      State.InstPtr.update(Source);
+      return;
+    }
+  }
+
+  auto *ParentFrame = State.getParentFrame();
   // The 2nd frame after leaf could be missing if stack sample is
   // taken when IP is within prolog/epilog, as frame chain isn't
   // setup yet. Fill in the missing frame in that case.
   // TODO: Currently we just assume all the addr that can't match the
   // 2nd frame is in prolog/epilog. In the future, we will switch to
   // pro/epi tracker(Dwarf CFI) for the precise check.
-  uint64_t Source = State.getCurrentLBRSource();
-  auto *ParentFrame = State.getParentFrame();
-
   if (ParentFrame == State.getDummyRootPtr() ||
       ParentFrame->Address != Source) {
     State.switchToFrame(Source);
+    if (ParentFrame != State.getDummyRootPtr()) {
+      if (State.getCurrentLBR().IsArtificial)
+        NumMismatchedExtCallBranch++;
+      else
+        NumMismatchedProEpiBranch++;
+    }
   } else {
     State.popFrame();
   }
@@ -118,6 +144,19 @@ void VirtualUnwinder::unwindReturn(UnwindState &State) {
   const LBREntry &LBR = State.getCurrentLBR();
   uint64_t CallAddr = Binary->getCallAddrFromFrameAddr(LBR.Target);
   State.switchToFrame(CallAddr);
+  // Push an external frame for the case of returning to external
+  // address(callback), later if an aitificial call is matched and it will be
+  // popped up. This is to 1)avoid context being interrupted by callback,
+  // context before or after the callback should be the same. 2) the call stack
+  // of function called by callback should be truncated which is done during
+  // recording the context on trie. For example:
+  //  main (call)--> foo (call)--> callback (call)--> bar (return)--> callback
+  //  (return)--> foo (return)--> main
+  // Context for bar should not include main and foo.
+  // For the code of foo, the context of before and after callback should both
+  // be [foo, main].
+  if (LBR.IsArtificial)
+    State.pushFrame(ExternalAddr);
   State.pushFrame(LBR.Source);
   State.InstPtr.update(LBR.Source);
 }
@@ -180,7 +219,9 @@ template <typename T>
 void VirtualUnwinder::collectSamplesFromFrameTrie(
     UnwindState::ProfiledFrame *Cur, T &Stack) {
   if (!Cur->isDummyRoot()) {
-    if (!Stack.pushFrame(Cur)) {
+    // Truncate the context for external frame since this isn't a real call
+    // context the compiler will see.
+    if (Cur->isExternalFrame() || !Stack.pushFrame(Cur)) {
       // Process truncated context
       // Start a new traversal ignoring its bottom context
       T EmptyStack(Binary);
@@ -453,6 +494,21 @@ void HybridPerfReader::unwindSamples() {
                      SampleCounters.size(),
                      "of profiled contexts are truncated due to missing probe "
                      "for call instruction.");
+
+  emitWarningSummary(
+      Unwinder.NumMismatchedExtCallBranch, Unwinder.NumTotalBranches,
+      "of branches'source is a call instruction but doesn't match call frame "
+      "stack, likely due to unwinding error of external frame.");
+
+  emitWarningSummary(
+      Unwinder.NumMismatchedProEpiBranch, Unwinder.NumTotalBranches,
+      "of branches'source is a call instruction but doesn't match call frame "
+      "stack, likely due to frame in prolog/epilog.");
+
+  emitWarningSummary(Unwinder.NumMissingExternalFrame,
+                     Unwinder.NumExtCallBranch,
+                     "of artificial call branches but doesn't have an external "
+                     "frame to match.");
 }
 
 bool PerfScriptReader::extractLBRStack(TraceStream &TraceIt,
@@ -535,15 +591,6 @@ bool PerfScriptReader::extractLBRStack(TraceStream &TraceIt,
         // This is middle unpaired outgoing jump which is likely due to
         // interrupt or incomplete LBR trace. Ignore current and subsequent
         // entries since they are likely in different contexts.
-        break;
-      }
-
-      if (Binary->addressIsReturn(Src)) {
-        // In a callback case, a return from internal code, say A, to external
-        // runtime can happen. The external runtime can then call back to
-        // another internal routine, say B. Making an artificial branch that
-        // looks like a return from A to B can confuse the unwinder to treat
-        // the instruction before B as the call instruction.
         break;
       }
 
@@ -854,10 +901,15 @@ void PerfScriptReader::computeCounterFromLBR(const PerfSample *Sample,
   SampleCounter &Counter = SampleCounters.begin()->second;
   uint64_t EndOffeset = 0;
   for (const LBREntry &LBR : Sample->LBRStack) {
+    assert(LBR.Source != ExternalAddr &&
+           "Branch' source should not be an external address, it should be "
+           "converted to aritificial branch.");
     uint64_t SourceOffset = Binary->virtualAddrToOffset(LBR.Source);
-    uint64_t TargetOffset = Binary->virtualAddrToOffset(LBR.Target);
+    uint64_t TargetOffset = LBR.Target == ExternalAddr
+                                ? ExternalAddr
+                                : Binary->virtualAddrToOffset(LBR.Target);
 
-    if (!LBR.IsArtificial) {
+    if (!LBR.IsArtificial && TargetOffset != ExternalAddr) {
       Counter.recordBranchCount(SourceOffset, TargetOffset, Repeat);
     }
 
