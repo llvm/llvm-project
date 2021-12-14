@@ -68,9 +68,9 @@ def Tensor_CastOp : Tensor_Op<"cast", [
 def Tensor_DimOp : Tensor_Op<"dim", [NoSideEffect]> {
   let summary = "dimension index operation";
   let description = [{
-    The `dim` operation takes a tensor and a dimension operand of type `index`.
-    It returns the size of the requested dimension of the given tensor.
-    If the dimension index is out of bounds, the behavior is undefined.
+    The `tensor.dim` operation takes a tensor and a dimension operand of type
+    `index`. It returns the size of the requested dimension of the given
+    tensor. If the dimension index is out of bounds, the behavior is undefined.
 
     The specified tensor type is that of the first operand.
 
@@ -556,6 +556,31 @@ def Tensor_InsertSliceOp : BaseOpWithOffsetSizesAndStrides<
 
   let hasCanonicalizer = 1;
   let hasFolder = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// RankOp
+//===----------------------------------------------------------------------===//
+
+def Tensor_RankOp : Tensor_Op<"rank", [NoSideEffect]> {
+  let summary = "rank operation";
+  let description = [{
+    The `tensor.rank` operation takes a tensor operand and returns its rank.
+
+    Example:
+
+    ```mlir
+    %0 = tensor.rank %arg0 : tensor<*xf32>
+    %1 = tensor.rank %arg1 : tensor<?x?xf32>
+    ```
+  }];
+
+  let arguments = (ins AnyTensor:$tensor);
+  let results = (outs Index);
+
+  let verifier = ?;
+  let hasFolder = 1;
+  let assemblyFormat = "$tensor attr-dict `:` type($tensor)";
 }
 
 //===----------------------------------------------------------------------===//

@@ -160,3 +160,14 @@ func @legal_collapsing_reshape_dynamic_tensor
 //      CHECK: func @legal_collapsing_reshape_dynamic_tensor
 //      CHECK:   tensor.collapse_shape
 // CHECK-SAME:    [0], [1], [2, 3, 4]
+
+// -----
+
+func @rank(%t : tensor<4x4x?xf32>) {
+  // CHECK: %{{.*}} = tensor.rank %{{.*}} : tensor<4x4x?xf32>
+  %0 = "tensor.rank"(%t) : (tensor<4x4x?xf32>) -> index
+
+  // CHECK: %{{.*}} = tensor.rank %{{.*}} : tensor<4x4x?xf32>
+  %1 = tensor.rank %t : tensor<4x4x?xf32>
+  return
+}

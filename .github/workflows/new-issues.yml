@@ -6,6 +6,7 @@ on:
 jobs:
   automate-issues-labels:
     runs-on: ubuntu-latest
+    if: github.repository == 'llvm/llvm-project'
     steps:
       - uses: andymckay/labeler@1.0.4
         with:

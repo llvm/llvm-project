@@ -292,3 +292,11 @@ func @illegal_collapsing_reshape_mixed_tensor_2(%arg0 : tensor<?x4x5xf32>)
       : tensor<?x4x5xf32> into tensor<?x?xf32>
   return %0 : tensor<?x?xf32>
 }
+
+// -----
+
+func @rank(%0: f32) {
+  // expected-error@+1 {{'tensor.rank' op operand #0 must be tensor of any type values}}
+  "tensor.rank"(%0): (f32)->index
+  return
+}

@@ -169,6 +169,7 @@ class RISCVAsmParser : public MCTargetAsmParser {
   OperandMatchResultTy parseJALOffset(OperandVector &Operands);
   OperandMatchResultTy parseVTypeI(OperandVector &Operands);
   OperandMatchResultTy parseMaskReg(OperandVector &Operands);
+  OperandMatchResultTy parseInsnDirectiveOpcode(OperandVector &Operands);
 
   bool parseOperand(OperandVector &Operands, StringRef Mnemonic);
 
@@ -1304,6 +1305,67 @@ OperandMatchResultTy RISCVAsmParser::parseRegister(OperandVector &Operands,
   }
 
   return MatchOperand_Success;
+}
+
+OperandMatchResultTy
+RISCVAsmParser::parseInsnDirectiveOpcode(OperandVector &Operands) {
+  SMLoc S = getLoc();
+  SMLoc E;
+  const MCExpr *Res;
+
+  switch (getLexer().getKind()) {
+  default:
+    return MatchOperand_NoMatch;
+  case AsmToken::LParen:
+  case AsmToken::Minus:
+  case AsmToken::Plus:
+  case AsmToken::Exclaim:
+  case AsmToken::Tilde:
+  case AsmToken::Integer:
+  case AsmToken::String: {
+    if (getParser().parseExpression(Res, E))
+      return MatchOperand_ParseFail;
+
+    auto *CE = dyn_cast<MCConstantExpr>(Res);
+    if (CE) {
+      int64_t Imm = CE->getValue();
+      if (isUInt<7>(Imm)) {
+        Operands.push_back(RISCVOperand::createImm(Res, S, E, isRV64()));
+        return MatchOperand_Success;
+      }
+    }
+
+    Twine Msg = "immediate must be an integer in the range";
+    Error(S, Msg + " [" + Twine(0) + ", " + Twine((1 << 7) - 1) + "]");
+    return MatchOperand_ParseFail;
+  }
+  case AsmToken::Identifier: {
+    StringRef Identifier;
+    if (getParser().parseIdentifier(Identifier))
+      return MatchOperand_ParseFail;
+
+    auto Opcode = RISCVInsnOpcode::lookupRISCVOpcodeByName(Identifier);
+    if (Opcode) {
+      Res = MCConstantExpr::create(Opcode->Value, getContext());
+      E = SMLoc::getFromPointer(S.getPointer() + Identifier.size());
+      Operands.push_back(RISCVOperand::createImm(Res, S, E, isRV64()));
+      return MatchOperand_Success;
+    }
+
+    Twine Msg = "operand must be a valid opcode name or an "
+                "integer in the range";
+    Error(S, Msg + " [" + Twine(0) + ", " + Twine((1 << 7) - 1) + "]");
+    return MatchOperand_ParseFail;
+  }
+  case AsmToken::Percent: {
+    // Discard operand with modifier.
+    Twine Msg = "immediate must be an integer in the range";
+    Error(S, Msg + " [" + Twine(0) + ", " + Twine((1 << 7) - 1) + "]");
+    return MatchOperand_ParseFail;
+  }
+  }
+
+  return MatchOperand_NoMatch;
 }
 
 OperandMatchResultTy

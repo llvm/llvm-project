@@ -1423,6 +1423,11 @@ DIE *DWARFLinker::DIECloner::cloneDIE(const DWARFDie &InputDIE,
     Flags |= TF_InFunctionScope;
     if (!Info.InDebugMap && LLVM_LIKELY(!Update))
       Flags |= TF_SkipPC;
+  } else if (Abbrev->getTag() == dwarf::DW_TAG_variable) {
+    // Function-local globals could be in the debug map even when the function
+    // is not, e.g., inlined functions.
+    if ((Flags & TF_InFunctionScope) && Info.InDebugMap)
+      Flags &= ~TF_SkipPC;
   }
 
   for (const auto &AttrSpec : Abbrev->attributes()) {

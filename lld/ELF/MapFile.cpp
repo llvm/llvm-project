@@ -58,7 +58,7 @@ static std::vector<Defined *> getSymbols() {
     for (Symbol *b : file->getSymbols())
       if (auto *dr = dyn_cast<Defined>(b))
         if (!dr->isSection() && dr->section && dr->section->isLive() &&
-            (dr->file == file || dr->needsPltAddr || dr->section->bss))
+            (dr->file == file || dr->needsCopy || dr->section->bss))
           v.push_back(dr);
   return v;
 }

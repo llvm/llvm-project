@@ -577,7 +577,7 @@ LogicalResult ShapeOfOpConversion::matchAndRewrite(
 
   // Lower to `tensor.generate` otherwise.
   auto *ctx = rewriter.getContext();
-  Value rank = rewriter.create<mlir::RankOp>(loc, tensor);
+  Value rank = rewriter.create<tensor::RankOp>(loc, tensor);
   rewriter.replaceOpWithNewOp<tensor::GenerateOp>(
       op, getExtentTensorType(ctx), ValueRange{rank},
       [&](OpBuilder &b, Location loc, ValueRange args) {

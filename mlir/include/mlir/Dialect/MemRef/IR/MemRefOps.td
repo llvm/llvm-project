@@ -999,6 +999,31 @@ def MemRef_ReinterpretCastOp:
 }
 
 //===----------------------------------------------------------------------===//
+// RankOp
+//===----------------------------------------------------------------------===//
+
+def MemRef_RankOp : MemRef_Op<"rank", [NoSideEffect]> {
+  let summary = "rank operation";
+  let description = [{
+    The `memref.rank` operation takes a memref operand and returns its rank.
+
+    Example:
+
+    ```mlir
+    %0 = memref.rank %arg0 : memref<*xf32>
+    %1 = memref.rank %arg1 : memref<?x?xf32>
+    ```
+  }];
+
+  let arguments = (ins AnyRankedOrUnrankedMemRef:$memref);
+  let results = (outs Index);
+
+  let verifier = ?;
+  let hasFolder = 1;
+  let assemblyFormat = "$memref attr-dict `:` type($memref)";
+}
+
+//===----------------------------------------------------------------------===//
 // ReshapeOp
 //===----------------------------------------------------------------------===//
 

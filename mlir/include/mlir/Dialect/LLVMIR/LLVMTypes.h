@@ -71,8 +71,9 @@ DEFINE_TRIVIAL_LLVM_TYPE(LLVMMetadataType);
 /// LLVM dialect array type. It is an aggregate type representing consecutive
 /// elements in memory, parameterized by the number of elements and the element
 /// type.
-class LLVMArrayType : public Type::TypeBase<LLVMArrayType, Type,
-                                            detail::LLVMTypeAndSizeStorage> {
+class LLVMArrayType
+    : public Type::TypeBase<LLVMArrayType, Type, detail::LLVMTypeAndSizeStorage,
+                            DataLayoutTypeInterface::Trait> {
 public:
   /// Inherit base constructors.
   using Base::Base;
@@ -88,14 +89,28 @@ public:
                                   Type elementType, unsigned numElements);
 
   /// Returns the element type of the array.
-  Type getElementType();
+  Type getElementType() const;
 
   /// Returns the number of elements in the array type.
-  unsigned getNumElements();
+  unsigned getNumElements() const;
 
   /// Verifies that the type about to be constructed is well-formed.
   static LogicalResult verify(function_ref<InFlightDiagnostic()> emitError,
                               Type elementType, unsigned numElements);
+
+  /// Hooks for DataLayoutTypeInterface. Should not be called directly. Obtain a
+  /// DataLayout instance and query it instead.
+  unsigned getTypeSizeInBits(const DataLayout &dataLayout,
+                             DataLayoutEntryListRef params) const;
+
+  unsigned getTypeSize(const DataLayout &dataLayout,
+                       DataLayoutEntryListRef params) const;
+
+  unsigned getABIAlignment(const DataLayout &dataLayout,
+                           DataLayoutEntryListRef params) const;
+
+  unsigned getPreferredAlignment(const DataLayout &dataLayout,
+                                 DataLayoutEntryListRef params) const;
 };
 
 //===----------------------------------------------------------------------===//

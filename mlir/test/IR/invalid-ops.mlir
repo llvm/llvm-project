@@ -1,13 +1,5 @@
 // RUN: mlir-opt -allow-unregistered-dialect %s -split-input-file -verify-diagnostics
 
-func @rank(f32) {
-^bb(%0: f32):
-  "std.rank"(%0): (f32)->index // expected-error {{'std.rank' op operand #0 must be any memref or tensor type}}
-
-  return
-}
-
-// -----
 func @affine_apply_no_map() {
 ^bb0:
   %i = arith.constant 0 : index

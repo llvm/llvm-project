@@ -1028,6 +1028,40 @@ static Optional<Instruction *> instCombineST1ScatterIndex(InstCombiner &IC,
   return None;
 }
 
+static Optional<Instruction *> instCombineSVESDIV(InstCombiner &IC,
+                                                  IntrinsicInst &II) {
+  IRBuilder<> Builder(II.getContext());
+  Builder.SetInsertPoint(&II);
+  Type *Int32Ty = Builder.getInt32Ty();
+  Value *Pred = II.getOperand(0);
+  Value *Vec = II.getOperand(1);
+  Value *DivVec = II.getOperand(2);
+
+  Value *SplatValue = getSplatValue(DivVec);
+  ConstantInt *SplatConstantInt = dyn_cast_or_null<ConstantInt>(SplatValue);
+  if (!SplatConstantInt)
+    return None;
+  APInt Divisor = SplatConstantInt->getValue();
+
+  if (Divisor.isPowerOf2()) {
+    Constant *DivisorLog2 = ConstantInt::get(Int32Ty, Divisor.logBase2());
+    auto ASRD = Builder.CreateIntrinsic(
+        Intrinsic::aarch64_sve_asrd, {II.getType()}, {Pred, Vec, DivisorLog2});
+    return IC.replaceInstUsesWith(II, ASRD);
+  }
+  if (Divisor.isNegatedPowerOf2()) {
+    Divisor.negate();
+    Constant *DivisorLog2 = ConstantInt::get(Int32Ty, Divisor.logBase2());
+    auto ASRD = Builder.CreateIntrinsic(
+        Intrinsic::aarch64_sve_asrd, {II.getType()}, {Pred, Vec, DivisorLog2});
+    auto NEG = Builder.CreateIntrinsic(Intrinsic::aarch64_sve_neg,
+                                       {ASRD->getType()}, {ASRD, Pred, ASRD});
+    return IC.replaceInstUsesWith(II, NEG);
+  }
+
+  return None;
+}
+
 Optional<Instruction *>
 AArch64TTIImpl::instCombineIntrinsic(InstCombiner &IC,
                                      IntrinsicInst &II) const {
@@ -1088,6 +1122,8 @@ AArch64TTIImpl::instCombineIntrinsic(InstCombiner &IC,
     return instCombineSVELD1(IC, II, DL);
   case Intrinsic::aarch64_sve_st1:
     return instCombineSVEST1(IC, II, DL);
+  case Intrinsic::aarch64_sve_sdiv:
+    return instCombineSVESDIV(IC, II);
   }
 
   return None;
