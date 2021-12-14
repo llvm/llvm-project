@@ -401,8 +401,14 @@ LogicalResult generalizeNamedOpPrecondition(Operation *op);
 LogicalResult promoteSubviewsPrecondition(Operation *op,
                                           LinalgPromotionOptions options);
 
-/// Rewrite a linalg.generic into a suitable vector.contraction op.
+/// Return success if the operation can be vectorized.
 LogicalResult vectorizeLinalgOpPrecondition(Operation *op);
+
+/// Return success if `op` can be vectorized assuming it is static. This allows
+/// checking if an op will be vectorizable once all the dimensions are folded to
+/// static values.
+/// It is the same as `vectorizeLinalgOpPrecondition` for static shapes.
+LogicalResult vectorizeStaticLinalgOpPrecondition(LinalgOp op);
 
 //===----------------------------------------------------------------------===//
 // Transformations exposed as rewrite patterns.
