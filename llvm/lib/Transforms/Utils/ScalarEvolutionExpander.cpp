@@ -1047,9 +1047,9 @@ bool SCEVExpander::hoistIVInc(Instruction *IncV, Instruction *InsertPos) {
     if (SE.DT.dominates(IncV, InsertPos))
       break;
   }
-  for (auto I = IVIncs.rbegin(), E = IVIncs.rend(); I != E; ++I) {
-    fixupInsertPoints(*I);
-    (*I)->moveBefore(InsertPos);
+  for (Instruction *I : llvm::reverse(IVIncs)) {
+    fixupInsertPoints(I);
+    I->moveBefore(InsertPos);
   }
   return true;
 }

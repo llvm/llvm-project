@@ -648,13 +648,13 @@ Value *ConstantOffsetExtractor::applyExts(Value *V) {
   Value *Current = V;
   // ExtInsts is built in the use-def order. Therefore, we apply them to V
   // in the reversed order.
-  for (auto I = ExtInsts.rbegin(), E = ExtInsts.rend(); I != E; ++I) {
+  for (CastInst *I : llvm::reverse(ExtInsts)) {
     if (Constant *C = dyn_cast<Constant>(Current)) {
       // If Current is a constant, apply s/zext using ConstantExpr::getCast.
       // ConstantExpr::getCast emits a ConstantInt if C is a ConstantInt.
-      Current = ConstantExpr::getCast((*I)->getOpcode(), C, (*I)->getType());
+      Current = ConstantExpr::getCast(I->getOpcode(), C, I->getType());
     } else {
-      Instruction *Ext = (*I)->clone();
+      Instruction *Ext = I->clone();
       Ext->setOperand(0, Current);
       Ext->insertBefore(IP);
       Current = Ext;
