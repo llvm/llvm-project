@@ -35,16 +35,13 @@
 # CHECK-EMPTY:
 ## The address of ifunc1@plt does not escape so it does not need `bti c`,
 ## but having bti is not wrong.
-# CHECK-NEXT: 00000000000103e0 <.iplt>:
+# CHECK-NEXT: 00000000000103e0 <ifunc2>:
 # CHECK-NEXT:    103e0:         bti     c
 # CHECK-NEXT:                   adrp    x16, 0x30000
 # CHECK-NEXT:                   ldr     x17, [x16, #1360]
 # CHECK-NEXT:                   add     x16, x16, #1360
 # CHECK-NEXT:                   br      x17
 # CHECK-NEXT:                   nop
-# CHECK-EMPTY:
-## The address of ifunc2 (STT_FUNC) escapes, so it must have `bti c`.
-# CHECK-NEXT: 00000000000103f8 <ifunc2>:
 # CHECK-NEXT:    103f8:         bti     c
 # CHECK-NEXT:                   adrp    x16, 0x30000
 # CHECK-NEXT:                   ldr     x17, [x16, #1368]
@@ -52,10 +49,11 @@
 # CHECK-NEXT:                   br      x17
 # CHECK-NEXT:                   nop
 
-# SHARED:      <.iplt>:
+## The address of ifunc2 (STT_FUNC) escapes, so it must have `bti c`.
+# SHARED:      <ifunc2>:
 # SHARED-NEXT:    bti     c
 
-# SHARED:      <ifunc2>:
+# SHARED:         nop
 # SHARED-NEXT:    bti     c
 
 .section ".note.gnu.property", "a"
