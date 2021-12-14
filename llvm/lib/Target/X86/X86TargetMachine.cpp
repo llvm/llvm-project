@@ -588,6 +588,18 @@ void X86PassConfig::addPreEmitPass2() {
 
   // Insert pseudo probe annotation for callsite profiling
   addPass(createPseudoProbeInserter());
+
+  // On Darwin platforms, BLR_RVMARKER pseudo instructions are lowered to
+  // bundles.
+  if (TT.isOSDarwin())
+    addPass(createUnpackMachineBundles([](const MachineFunction &MF) {
+      // Only run bundle expansion if there are relevant ObjC runtime functions
+      // present in the module.
+      const Function &F = MF.getFunction();
+      const Module *M = F.getParent();
+      return M->getFunction("objc_retainAutoreleasedReturnValue") ||
+             M->getFunction("objc_unsafeClaimAutoreleasedReturnValue");
+    }));
 }
 
 bool X86PassConfig::addPostFastRegAllocRewrite() {

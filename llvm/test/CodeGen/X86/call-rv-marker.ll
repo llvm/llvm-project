@@ -232,14 +232,16 @@ define i8* @rv_marker_block_placement(i1 %c.0) {
 
 ; CHECK-NEXT: ## %bb.1:
 ; CHECK-NEXT:   callq   _fn1
+; CHECK-NEXT:   movq    %rax, %rdi
+; CHECK-NEXT:   callq   _objc_retainAutoreleasedReturnValue
 ; CHECK-NEXT:   jmp LBB8_3
 
 ; CHECK-NEXT: LBB8_2:
 ; CHECK-NEXT:   callq   _fn2
-
-; CHECK-NEXT: LBB8_3:
 ; CHECK-NEXT:   movq    %rax, %rdi
 ; CHECK-NEXT:   callq   _objc_retainAutoreleasedReturnValue
+
+; CHECK-NEXT: LBB8_3:
 ; CHECK-NEXT:   xorl    %eax, %eax
 ; CHECK-NEXT:   popq    %rcx
 ; CHECK-NEXT:   retq

@@ -191,8 +191,6 @@ void X86ExpandPseudo::expandCALL_RVMARKER(MachineBasicBlock &MBB,
                                           MachineBasicBlock::iterator MBBI) {
   // Expand CALL_RVMARKER pseudo to call instruction, followed by the special
   //"movq %rax, %rdi" marker.
-  // TODO: Mark the sequence as bundle, to avoid passes moving other code
-  // in between.
   MachineInstr &MI = *MBBI;
 
   MachineInstr *OriginalCall;
@@ -236,15 +234,23 @@ void X86ExpandPseudo::expandCALL_RVMARKER(MachineBasicBlock &MBB,
   // Emit call to ObjC runtime.
   const uint32_t *RegMask =
       TRI->getCallPreservedMask(*MBB.getParent(), CallingConv::C);
-  BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(X86::CALL64pcrel32))
-      .addGlobalAddress(MI.getOperand(0).getGlobal(), 0, 0)
-      .addRegMask(RegMask)
-      .addReg(X86::RAX,
-              RegState::Implicit |
-                  (RAXImplicitDead ? (RegState::Dead | RegState::Define)
-                                   : RegState::Define))
-      .getInstr();
+  MachineInstr *RtCall =
+      BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(X86::CALL64pcrel32))
+          .addGlobalAddress(MI.getOperand(0).getGlobal(), 0, 0)
+          .addRegMask(RegMask)
+          .addReg(X86::RAX,
+                  RegState::Implicit |
+                      (RAXImplicitDead ? (RegState::Dead | RegState::Define)
+                                       : RegState::Define))
+          .getInstr();
   MI.eraseFromParent();
+
+  auto &TM = MBB.getParent()->getTarget();
+  // On Darwin platforms, wrap the expanded sequence in a bundle to prevent
+  // later optimizations from breaking up the sequence.
+  if (TM.getTargetTriple().isOSDarwin())
+    finalizeBundle(MBB, OriginalCall->getIterator(),
+                   std::next(RtCall->getIterator()));
 }
 
 /// If \p MBBI is a pseudo instruction, this method expands
