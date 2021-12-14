@@ -18,6 +18,7 @@
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/Register.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
+#include "llvm/Config/llvm-config.h"
 #include "llvm/Pass.h"
 
 namespace llvm {
@@ -163,6 +164,136 @@ public:
     }
   }
   void LRE_DidCloneVirtReg(Register New, Register Old);
+};
+
+/// Interface to the eviction advisor, which is responsible for making a
+/// decision as to which live ranges should be evicted (if any).
+class RegAllocEvictionAdvisor {
+public:
+  RegAllocEvictionAdvisor(const RegAllocEvictionAdvisor &) = delete;
+  RegAllocEvictionAdvisor(RegAllocEvictionAdvisor &&) = delete;
+  virtual ~RegAllocEvictionAdvisor() = default;
+
+  /// Find a physical register that can be freed by evicting the FixedRegisters,
+  /// or return NoRegister. The eviction decision is assumed to be correct (i.e.
+  /// no fixed live ranges are evicted) and profitable.
+  virtual MCRegister
+  tryFindEvictionCandidate(LiveInterval &VirtReg, const AllocationOrder &Order,
+                           uint8_t CostPerUseLimit,
+                           const SmallVirtRegSet &FixedRegisters) const = 0;
+
+  /// Find out if we can evict the live ranges occupying the given PhysReg,
+  /// which is a hint (preferred register) for VirtReg.
+  virtual bool
+  canEvictHintInterference(LiveInterval &VirtReg, MCRegister PhysReg,
+                           const SmallVirtRegSet &FixedRegisters) const = 0;
+
+  /// Returns true if the given \p PhysReg is a callee saved register and has
+  /// not been used for allocation yet.
+  bool isUnusedCalleeSavedReg(MCRegister PhysReg) const;
+
+protected:
+  RegAllocEvictionAdvisor(const MachineFunction &MF, LiveRegMatrix *Matrix,
+                          LiveIntervals *LIS, VirtRegMap *VRM,
+                          const RegisterClassInfo &RegClassInfo,
+                          ExtraRegInfo *ExtraInfo);
+
+  Register canReassign(LiveInterval &VirtReg, Register PrevReg) const;
+
+  const MachineFunction &MF;
+  LiveRegMatrix *const Matrix;
+  LiveIntervals *const LIS;
+  VirtRegMap *const VRM;
+  MachineRegisterInfo *const MRI;
+  const TargetRegisterInfo *const TRI;
+  const RegisterClassInfo &RegClassInfo;
+  const ArrayRef<uint8_t> RegCosts;
+  ExtraRegInfo *const ExtraInfo;
+
+  /// Run or not the local reassignment heuristic. This information is
+  /// obtained from the TargetSubtargetInfo.
+  const bool EnableLocalReassign;
+
+private:
+  unsigned NextCascade = 1;
+};
+
+/// ImmutableAnalysis abstraction for fetching the Eviction Advisor. We model it
+/// as an analysis to decouple the user from the implementation insofar as
+/// dependencies on other analyses goes. The motivation for it being an
+/// immutable pass is twofold:
+/// - in the ML implementation case, the evaluator is stateless but (especially
+/// in the development mode) expensive to set up. With an immutable pass, we set
+/// it up once.
+/// - in the 'development' mode ML case, we want to capture the training log
+/// during allocation (this is a log of features encountered and decisions
+/// made), and then measure a score, potentially a few steps after allocation
+/// completes. So we need the properties of an immutable pass to keep the logger
+/// state around until we can make that measurement.
+///
+/// Because we need to offer additional services in 'development' mode, the
+/// implementations of this analysis need to implement RTTI support.
+class RegAllocEvictionAdvisorAnalysis : public ImmutablePass {
+public:
+  enum class AdvisorMode : int { Default, Release, Development };
+
+  RegAllocEvictionAdvisorAnalysis(AdvisorMode Mode)
+      : ImmutablePass(ID), Mode(Mode){};
+  static char ID;
+
+  /// Get an advisor for the given context (i.e. machine function, etc)
+  virtual std::unique_ptr<RegAllocEvictionAdvisor>
+  getAdvisor(const MachineFunction &MF, LiveRegMatrix *Matrix,
+             LiveIntervals *LIS, VirtRegMap *VRM,
+             const RegisterClassInfo &RegClassInfo,
+             ExtraRegInfo *ExtraInfo) = 0;
+  AdvisorMode getAdvisorMode() const { return Mode; }
+
+private:
+  // This analysis preserves everything, and subclasses may have additional
+  // requirements.
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.setPreservesAll();
+  }
+
+  StringRef getPassName() const override;
+  const AdvisorMode Mode;
+};
+
+/// Specialization for the API used by the analysis infrastructure to create
+/// an instance of the eviction advisor.
+template <> Pass *callDefaultCtor<RegAllocEvictionAdvisorAnalysis>();
+
+// TODO(mtrofin): implement these.
+#ifdef LLVM_HAVE_TF_AOT
+RegAllocEvictionAdvisorAnalysis *createReleaseModeAdvisor();
+#endif
+
+#ifdef LLVM_HAVE_TF_API
+RegAllocEvictionAdvisorAnalysis *createDevelopmentModeAdvisor();
+#endif
+
+// TODO: move to RegAllocEvictionAdvisor.cpp when we move implementation
+// out of RegAllocGreedy.cpp
+class DefaultEvictionAdvisor : public RegAllocEvictionAdvisor {
+public:
+  DefaultEvictionAdvisor(const MachineFunction &MF, LiveRegMatrix *Matrix,
+                         LiveIntervals *LIS, VirtRegMap *VRM,
+                         const RegisterClassInfo &RegClassInfo,
+                         ExtraRegInfo *ExtraInfo)
+      : RegAllocEvictionAdvisor(MF, Matrix, LIS, VRM, RegClassInfo, ExtraInfo) {
+  }
+
+private:
+  MCRegister tryFindEvictionCandidate(LiveInterval &, const AllocationOrder &,
+                                      uint8_t,
+                                      const SmallVirtRegSet &) const override;
+  bool canEvictHintInterference(LiveInterval &, MCRegister,
+                                const SmallVirtRegSet &) const override;
+  bool canEvictInterferenceBasedOnCost(LiveInterval &, MCRegister, bool,
+                                       EvictionCost &,
+                                       const SmallVirtRegSet &) const;
+  bool shouldEvict(LiveInterval &A, bool, LiveInterval &B, bool) const;
 };
 } // namespace llvm
 
