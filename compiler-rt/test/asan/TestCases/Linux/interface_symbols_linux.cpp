@@ -1,7 +1,5 @@
 // Check the presence of interface symbols in compiled file.
 
-// RUN: %clangxx -x c++-header -o - -E %p/../../../../lib/asan/asan_interface.inc  \
-// RUN:  | sed "s/INTERFACE_FUNCTION/\nINTERFACE_FUNCTION/g" >  %t.asan_interface.inc
 // RUN: %clangxx_asan -O2 %s -o %t.exe
 // RUN: nm -D %t.exe | grep " [TWw] "                                          \
 // RUN:  | grep -o "\(__asan_\|__ubsan_\|__sancov_\|__sanitizer_\)[^ ]*"       \
@@ -12,7 +10,7 @@
 // RUN:  > %t.exports
 //
 // RUN: grep -e "INTERFACE_\(WEAK_\)\?FUNCTION"                                \
-// RUN:  %t.asan_interface.inc                                                 \
+// RUN:  %p/../../../../lib/asan/asan_interface.inc                            \
 // RUN:  %p/../../../../lib/ubsan/ubsan_interface.inc                          \
 // RUN:  %p/../../../../lib/sanitizer_common/sanitizer_common_interface.inc    \
 // RUN:  %p/../../../../lib/sanitizer_common/sanitizer_common_interface_posix.inc \
