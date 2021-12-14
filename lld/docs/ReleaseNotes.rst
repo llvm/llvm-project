@@ -31,7 +31,7 @@ ELF Improvements
 * ``e_entry`` no longer falls back to the address of ``.text`` if the entry symbol does not exist.
   Instead, a value of 0 will be written.
   (`D110014 <https://reviews.llvm.org/D110014>`_)
-* If ``-Map`` is specified, ``--cref`` will be printted to the specified file.
+* If ``-Map`` is specified, ``--cref`` will be printed to the specified file.
   (`D114663 <https://reviews.llvm.org/D114663>`_)
 
 Architecture specific changes:

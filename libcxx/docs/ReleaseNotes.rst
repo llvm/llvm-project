@@ -56,7 +56,7 @@ New Features
   randomization of both sides of partition for ``std::nth_element``)
 
 - Floating-point support for ``std::to_chars`` support has been added.
-  Thanks to Stephan T. Lavavej and Microsoft for providing their implemention
+  Thanks to Stephan T. Lavavej and Microsoft for providing their implementation
   to libc++.
 
 API Changes
@@ -65,11 +65,11 @@ API Changes
 - The functions ``std::atomic<T*>::fetch_(add|sub)`` and
   ``std::atomic_fetch_(add|sub)`` no longer accept a function pointer. While
   this is technically an API break, the invalid syntax isn't supported by
-  libstc++ and MSVC STL.  See https://godbolt.org/z/49fvzz98d.
+  libstdc++ and MSVC STL.  See https://godbolt.org/z/49fvzz98d.
 
 - The call of the functions ``std::atomic_(add|sub)(std::atomic<T*>*, ...)``
   with the explicit template argument ``T`` are now ill-formed. While this is
-  technically an API break, the invalid syntax isn't supported by libstc++ and
+  technically an API break, the invalid syntax isn't supported by libstdc++ and
   MSVC STL. See https://godbolt.org/z/v9959re3v.
 
   Due to this change it's now possible to call these functions with the
@@ -125,7 +125,7 @@ Build System Changes
   culminated in over 5 different ways to build the runtimes, which made it impossible to
   maintain with a good level of support. Starting with this release, the runtimes support
   exactly two ways of being built, which should cater to all use-cases. Furthermore,
-  these builds are as lightweight as possible and will work consistently even when targetting
+  these builds are as lightweight as possible and will work consistently even when targeting
   embedded platforms, which used not to be the case. Please see the documentation on building
   libc++ to see those two ways of building and migrate over to the appropriate build instructions
   as soon as possible.

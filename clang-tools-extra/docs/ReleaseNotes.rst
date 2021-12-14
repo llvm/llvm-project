@@ -172,5 +172,5 @@ Improvements to pp-trace
 
 The improvements are...
 
-Clang-tidy visual studio plugin
+Clang-tidy Visual Studio plugin
 -------------------------------
