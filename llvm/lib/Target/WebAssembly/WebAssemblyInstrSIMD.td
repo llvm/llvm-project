@@ -1278,6 +1278,14 @@ multiclass SIMDNarrow<Vec vec, bits<32> baseInst> {
 defm "" : SIMDNarrow<I16x8, 101>;
 defm "" : SIMDNarrow<I32x4, 133>;
 
+// WebAssemblyISD::NARROW_U
+def wasm_narrow_t : SDTypeProfile<1, 2, []>;
+def wasm_narrow_u : SDNode<"WebAssemblyISD::NARROW_U", wasm_narrow_t>;
+def : Pat<(v16i8 (wasm_narrow_u (v8i16 V128:$left), (v8i16 V128:$right))),
+          (NARROW_U_I8x16 $left, $right)>;
+def : Pat<(v8i16 (wasm_narrow_u (v4i32 V128:$left), (v4i32 V128:$right))),
+          (NARROW_U_I16x8 $left, $right)>;
+
 // Bitcasts are nops
 // Matching bitcast t1 to t1 causes strange errors, so avoid repeating types
 foreach t1 = AllVecs in
