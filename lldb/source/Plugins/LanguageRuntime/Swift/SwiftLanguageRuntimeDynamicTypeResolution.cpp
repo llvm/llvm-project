@@ -62,29 +62,20 @@ static lldb::addr_t
 MaskMaybeBridgedPointer(Process &process, lldb::addr_t addr,
                         lldb::addr_t *masked_bits = nullptr) {
   const ArchSpec &arch_spec(process.GetTarget().GetArchitecture());
-  ArchSpec::Core core_kind = arch_spec.GetCore();
+  const llvm::Triple &triple = arch_spec.GetTriple();
   bool is_arm = false;
   bool is_intel = false;
   bool is_s390x = false;
   bool is_32 = false;
   bool is_64 = false;
-  if (core_kind == ArchSpec::Core::eCore_arm_arm64) {
-    is_arm = is_64 = true;
-  } else if (core_kind >= ArchSpec::Core::kCore_arm_first &&
-             core_kind <= ArchSpec::Core::kCore_arm_last) {
+  if (triple.isAArch64() || triple.isARM())
     is_arm = true;
-  } else if (core_kind >= ArchSpec::Core::kCore_x86_64_first &&
-             core_kind <= ArchSpec::Core::kCore_x86_64_last) {
+  else if (triple.isX86())
     is_intel = true;
-  } else if (core_kind >= ArchSpec::Core::kCore_x86_32_first &&
-             core_kind <= ArchSpec::Core::kCore_x86_32_last) {
-    is_intel = true;
-  } else if (core_kind == ArchSpec::Core::eCore_s390x_generic) {
+  else if (triple.isSystemZ())
     is_s390x = true;
-  } else {
-    // this is a really random CPU core to be running on - just get out fast
+  else // this is a really random CPU core to be running on - just get out fast
     return addr;
-  }
 
   switch (arch_spec.GetAddressByteSize()) {
   case 4:
@@ -102,17 +93,13 @@ MaskMaybeBridgedPointer(Process &process, lldb::addr_t addr,
 
   if (is_arm && is_64)
     mask = SWIFT_ABI_ARM64_SWIFT_SPARE_BITS_MASK;
-
-  if (is_arm && is_32)
+  else if (is_arm && is_32)
     mask = SWIFT_ABI_ARM_SWIFT_SPARE_BITS_MASK;
-
-  if (is_intel && is_64)
+  else if (is_intel && is_64)
     mask = SWIFT_ABI_X86_64_SWIFT_SPARE_BITS_MASK;
-
-  if (is_intel && is_32)
+  else if (is_intel && is_32)
     mask = SWIFT_ABI_I386_SWIFT_SPARE_BITS_MASK;
-
-  if (is_s390x && is_64)
+  else if (is_s390x && is_64)
     mask = SWIFT_ABI_S390X_SWIFT_SPARE_BITS_MASK;
 
   if (masked_bits)
@@ -145,30 +132,19 @@ lldb::addr_t SwiftLanguageRuntime::MaybeMaskNonTrivialReferencePointer(
   if (!m_process)
     return addr;
   const ArchSpec &arch_spec(m_process->GetTarget().GetArchitecture());
-  ArchSpec::Core core_kind = arch_spec.GetCore();
+  const llvm::Triple &triple = arch_spec.GetTriple();
   bool is_arm = false;
   bool is_intel = false;
-  bool is_32 = false;
   bool is_64 = false;
-  if (core_kind == ArchSpec::Core::eCore_arm_arm64) {
-    is_arm = is_64 = true;
-  } else if (core_kind >= ArchSpec::Core::kCore_arm_first &&
-             core_kind <= ArchSpec::Core::kCore_arm_last) {
+  if (triple.isAArch64() || triple.isARM())
     is_arm = true;
-  } else if (core_kind >= ArchSpec::Core::kCore_x86_64_first &&
-             core_kind <= ArchSpec::Core::kCore_x86_64_last) {
+  else if (triple.isX86())
     is_intel = true;
-  } else if (core_kind >= ArchSpec::Core::kCore_x86_32_first &&
-             core_kind <= ArchSpec::Core::kCore_x86_32_last) {
-    is_intel = true;
-  } else {
-    // this is a really random CPU core to be running on - just get out fast
+  else // this is a really random CPU core to be running on - just get out fast
     return addr;
-  }
 
   switch (arch_spec.GetAddressByteSize()) {
   case 4:
-    is_32 = true;
     break;
   case 8:
     is_64 = true;
@@ -237,20 +213,18 @@ lldb::addr_t SwiftLanguageRuntime::MaybeMaskNonTrivialReferencePointer(
     }
     return isa_addr;
 
-  } else {
-    if (is_arm && is_64)
-      mask = SWIFT_ABI_ARM64_OBJC_NUM_RESERVED_LOW_BITS;
-    else if (is_intel && is_64)
-      mask = SWIFT_ABI_X86_64_OBJC_NUM_RESERVED_LOW_BITS;
-    else
-      mask = SWIFT_ABI_DEFAULT_OBJC_NUM_RESERVED_LOW_BITS;
-
-    mask = (1 << mask) | (1 << (mask + 1));
-
-    return addr & ~mask;
   }
 
-  return addr;
+  if (is_arm && is_64)
+    mask = SWIFT_ABI_ARM64_OBJC_NUM_RESERVED_LOW_BITS;
+  else if (is_intel && is_64)
+    mask = SWIFT_ABI_X86_64_OBJC_NUM_RESERVED_LOW_BITS;
+  else
+    mask = SWIFT_ABI_DEFAULT_OBJC_NUM_RESERVED_LOW_BITS;
+
+  mask = (1 << mask) | (1 << (mask + 1));
+
+  return addr & ~mask;
 }
 
 namespace {
