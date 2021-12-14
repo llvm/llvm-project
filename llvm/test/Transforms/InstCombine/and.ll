@@ -1463,9 +1463,8 @@ define i8 @lshr_bitwidth_mask(i8 %x, i8 %y) {
 
 define i8 @not_ashr_bitwidth_mask(i8 %x, i8 %y) {
 ; CHECK-LABEL: @not_ashr_bitwidth_mask(
-; CHECK-NEXT:    [[SIGN:%.*]] = ashr i8 [[X:%.*]], 7
-; CHECK-NEXT:    [[NOT:%.*]] = xor i8 [[SIGN]], -1
-; CHECK-NEXT:    [[POS_OR_ZERO:%.*]] = and i8 [[NOT]], [[Y:%.*]]
+; CHECK-NEXT:    [[ISNEG:%.*]] = icmp slt i8 [[X:%.*]], 0
+; CHECK-NEXT:    [[POS_OR_ZERO:%.*]] = select i1 [[ISNEG]], i8 0, i8 [[Y:%.*]]
 ; CHECK-NEXT:    ret i8 [[POS_OR_ZERO]]
 ;
   %sign = ashr i8 %x, 7
@@ -1477,9 +1476,8 @@ define i8 @not_ashr_bitwidth_mask(i8 %x, i8 %y) {
 define <2 x i8> @not_ashr_bitwidth_mask_vec_commute(<2 x i8> %x, <2 x i8> %py) {
 ; CHECK-LABEL: @not_ashr_bitwidth_mask_vec_commute(
 ; CHECK-NEXT:    [[Y:%.*]] = mul <2 x i8> [[PY:%.*]], <i8 42, i8 2>
-; CHECK-NEXT:    [[SIGN:%.*]] = ashr <2 x i8> [[X:%.*]], <i8 7, i8 7>
-; CHECK-NEXT:    [[NOT:%.*]] = xor <2 x i8> [[SIGN]], <i8 -1, i8 -1>
-; CHECK-NEXT:    [[POS_OR_ZERO:%.*]] = and <2 x i8> [[Y]], [[NOT]]
+; CHECK-NEXT:    [[ISNEG:%.*]] = icmp slt <2 x i8> [[X:%.*]], zeroinitializer
+; CHECK-NEXT:    [[POS_OR_ZERO:%.*]] = select <2 x i1> [[ISNEG]], <2 x i8> zeroinitializer, <2 x i8> [[Y]]
 ; CHECK-NEXT:    ret <2 x i8> [[POS_OR_ZERO]]
 ;
   %y = mul <2 x i8> %py, <i8 42, i8 2>      ; thwart complexity-based ordering
@@ -1489,12 +1487,14 @@ define <2 x i8> @not_ashr_bitwidth_mask_vec_commute(<2 x i8> %x, <2 x i8> %py) {
   ret <2 x i8> %pos_or_zero
 }
 
+; extra use of shift is ok
+
 define i8 @not_ashr_bitwidth_mask_use1(i8 %x, i8 %y) {
 ; CHECK-LABEL: @not_ashr_bitwidth_mask_use1(
 ; CHECK-NEXT:    [[SIGN:%.*]] = ashr i8 [[X:%.*]], 7
 ; CHECK-NEXT:    call void @use8(i8 [[SIGN]])
-; CHECK-NEXT:    [[NOT:%.*]] = xor i8 [[SIGN]], -1
-; CHECK-NEXT:    [[R:%.*]] = and i8 [[NOT]], [[Y:%.*]]
+; CHECK-NEXT:    [[ISNEG:%.*]] = icmp slt i8 [[X]], 0
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[ISNEG]], i8 0, i8 [[Y:%.*]]
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %sign = ashr i8 %x, 7
@@ -1503,6 +1503,8 @@ define i8 @not_ashr_bitwidth_mask_use1(i8 %x, i8 %y) {
   %r = and i8 %not, %y
   ret i8 %r
 }
+
+; negative test - extra use
 
 define i8 @not_ashr_bitwidth_mask_use2(i8 %x, i8 %y) {
 ; CHECK-LABEL: @not_ashr_bitwidth_mask_use2(
@@ -1519,6 +1521,8 @@ define i8 @not_ashr_bitwidth_mask_use2(i8 %x, i8 %y) {
   ret i8 %r
 }
 
+; negative test - wrong shift amount
+
 define i8 @not_ashr_not_bitwidth_mask(i8 %x, i8 %y) {
 ; CHECK-LABEL: @not_ashr_not_bitwidth_mask(
 ; CHECK-NEXT:    [[SIGN:%.*]] = ashr i8 [[X:%.*]], 6
@@ -1531,6 +1535,8 @@ define i8 @not_ashr_not_bitwidth_mask(i8 %x, i8 %y) {
   %r = and i8 %not, %y
   ret i8 %r
 }
+
+; negative test - wrong shift opcode
 
 define i8 @not_lshr_bitwidth_mask(i8 %x, i8 %y) {
 ; CHECK-LABEL: @not_lshr_bitwidth_mask(
