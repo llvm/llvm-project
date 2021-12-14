@@ -166,7 +166,10 @@ void Instruction::dropPoisonGeneratingFlags() {
     cast<GetElementPtrInst>(this)->setIsInBounds(false);
     break;
   }
-  // TODO: FastMathFlags!
+  if (isa<FPMathOperator>(this)) {
+    setHasNoNaNs(false);
+    setHasNoInfs(false);
+  }
 
   assert(!hasPoisonGeneratingFlags() && "must be kept in sync");
 }

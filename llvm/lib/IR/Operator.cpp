@@ -39,9 +39,10 @@ bool Operator::hasPoisonGeneratingFlags() const {
     return GEP->isInBounds() || GEP->getInRangeIndex() != None;
   }
   default:
+    if (const auto *FP = dyn_cast<FPMathOperator>(this))
+      return FP->hasNoNaNs() || FP->hasNoInfs();
     return false;
   }
-  // TODO: FastMathFlags!  (On instructions, but not constexpr)
 }
 
 Type *GEPOperator::getSourceElementType() const {
