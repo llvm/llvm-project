@@ -200,6 +200,17 @@ cc_test(
 )
 
 cc_test(
+    name = "debuginfod_tests",
+    srcs = glob(["Debuginfod/*.cpp"]),
+    deps = [
+        "//llvm:Debuginfod",
+        "//llvm:TestingSupport",
+        "//llvm:gtest",
+        "//llvm:gtest_main",
+    ],
+)
+
+cc_test(
     name = "execution_engine_tests",
     size = "small",
     srcs = glob(
