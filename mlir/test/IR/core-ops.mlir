@@ -99,12 +99,6 @@ func @standard_instrs(tensor<4x4x?xf32>, f32, i32, index, i64, f16) {
   // CHECK: %{{.*}} = arith.cmpf oeq, %{{.*}}, %{{.*}}: vector<4xf32>
   %70 = arith.cmpf oeq, %vcf32, %vcf32 : vector<4 x f32>
 
-  // CHECK: %{{.*}} = rank %arg0 : tensor<4x4x?xf32>
-  %71 = "std.rank"(%t) : (tensor<4x4x?xf32>) -> index
-
-  // CHECK: %{{.*}} = rank %arg0 : tensor<4x4x?xf32>
-  %72 = rank %t : tensor<4x4x?xf32>
-
   // CHECK: = constant unit
   %73 = constant unit
 

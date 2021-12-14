@@ -207,3 +207,14 @@ func @collapse_shape_to_dynamic
 //      CHECK: func @collapse_shape_to_dynamic
 //      CHECK:   memref.collapse_shape
 // CHECK-SAME:    [0], [1], [2, 3, 4]
+
+// -----
+
+func @rank(%t : memref<4x4x?xf32>) {
+  // CHECK: %{{.*}} = memref.rank %{{.*}} : memref<4x4x?xf32>
+  %0 = "memref.rank"(%t) : (memref<4x4x?xf32>) -> index
+
+  // CHECK: %{{.*}} = memref.rank %{{.*}} : memref<4x4x?xf32>
+  %1 = memref.rank %t : memref<4x4x?xf32>
+  return
+}

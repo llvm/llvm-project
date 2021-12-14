@@ -754,32 +754,6 @@ func @cmpf_inf() -> (i1, i1, i1, i1, i1, i1, i1, i1, i1, i1, i1, i1, i1, i1, i1,
 
 // -----
 
-// CHECK-LABEL: func @fold_rank
-func @fold_rank() -> (index) {
-  %const_0 = arith.constant dense<[[[1, -2, 1, 36]], [[0, 2, -1, 64]]]> : tensor<2x1x4xi32>
-
-  // Fold a rank into a constant
-  // CHECK-NEXT: [[C3:%.+]] = arith.constant 3 : index
-  %rank_0 = rank %const_0 : tensor<2x1x4xi32>
-
-  // CHECK-NEXT: return [[C3]]
-  return %rank_0 : index
-}
-
-// -----
-
-// CHECK-LABEL: func @fold_rank_memref
-func @fold_rank_memref(%arg0 : memref<?x?xf32>) -> (index) {
-  // Fold a rank into a constant
-  // CHECK-NEXT: [[C2:%.+]] = arith.constant 2 : index
-  %rank_0 = rank %arg0 : memref<?x?xf32>
-
-  // CHECK-NEXT: return [[C2]]
-  return %rank_0 : index
-}
-
-// -----
-
 // CHECK-LABEL: func @nested_isolated_region
 func @nested_isolated_region() {
   // CHECK-NEXT: func @isolated_op
