@@ -842,17 +842,13 @@ void DwarfUnit::addAnnotation(DIE &Buffer, DINodeArray Annotations) {
   for (const Metadata *Annotation : Annotations->operands()) {
     const MDNode *MD = cast<MDNode>(Annotation);
     const MDString *Name = cast<MDString>(MD->getOperand(0));
-    const auto &Value = MD->getOperand(1);
+
+    // Currently, only MDString is supported with btf_decl_tag attribute.
+    const MDString *Value = cast<MDString>(MD->getOperand(1));
 
     DIE &AnnotationDie = createAndAddDIE(dwarf::DW_TAG_LLVM_annotation, Buffer);
     addString(AnnotationDie, dwarf::DW_AT_name, Name->getString());
-    if (const auto *Data = dyn_cast<MDString>(Value))
-      addString(AnnotationDie, dwarf::DW_AT_const_value, Data->getString());
-    else if (const auto *Data = dyn_cast<ConstantAsMetadata>(Value))
-      addConstantValue(AnnotationDie, Data->getValue()->getUniqueInteger(),
-                       /*Unsigned=*/true);
-    else
-      assert(false && "Unsupported annotation value type");
+    addString(AnnotationDie, dwarf::DW_AT_const_value, Value->getString());
   }
 }
 

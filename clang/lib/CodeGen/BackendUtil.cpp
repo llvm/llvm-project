@@ -94,17 +94,10 @@ using namespace llvm;
   llvm::PassPluginLibraryInfo get##Ext##PluginInfo();
 #include "llvm/Support/Extension.def"
 
-namespace llvm {
-extern cl::opt<bool> DebugInfoCorrelate;
-}
-
 namespace {
 
 // Default filename used for profile generation.
-Twine getDefaultProfileGenName() {
-  const Twine Extension = DebugInfoCorrelate ? "proflite" : "profraw";
-  return "default_%m." + Extension;
-}
+static constexpr StringLiteral DefaultProfileGenName = "default_%m.profraw";
 
 class EmitAssemblyHelper {
   DiagnosticsEngine &Diags;
@@ -893,7 +886,7 @@ void EmitAssemblyHelper::CreatePasses(legacy::PassManager &MPM,
     if (!CodeGenOpts.InstrProfileOutput.empty())
       PMBuilder.PGOInstrGen = CodeGenOpts.InstrProfileOutput;
     else
-      PMBuilder.PGOInstrGen = getDefaultProfileGenName().str();
+      PMBuilder.PGOInstrGen = std::string(DefaultProfileGenName);
   }
   if (CodeGenOpts.hasProfileIRUse()) {
     PMBuilder.PGOInstrUse = CodeGenOpts.ProfileInstrumentUsePath;
@@ -1238,7 +1231,7 @@ void EmitAssemblyHelper::RunOptimizationPipeline(
   if (CodeGenOpts.hasProfileIRInstr())
     // -fprofile-generate.
     PGOOpt = PGOOptions(CodeGenOpts.InstrProfileOutput.empty()
-                            ? getDefaultProfileGenName().str()
+                            ? std::string(DefaultProfileGenName)
                             : CodeGenOpts.InstrProfileOutput,
                         "", "", PGOOptions::IRInstr, PGOOptions::NoCSAction,
                         CodeGenOpts.DebugInfoForProfiling);
@@ -1276,13 +1269,13 @@ void EmitAssemblyHelper::RunOptimizationPipeline(
              "Cannot run CSProfileGen pass with ProfileGen or SampleUse "
              " pass");
       PGOOpt->CSProfileGenFile = CodeGenOpts.InstrProfileOutput.empty()
-                                     ? getDefaultProfileGenName().str()
+                                     ? std::string(DefaultProfileGenName)
                                      : CodeGenOpts.InstrProfileOutput;
       PGOOpt->CSAction = PGOOptions::CSIRInstr;
     } else
       PGOOpt = PGOOptions("",
                           CodeGenOpts.InstrProfileOutput.empty()
-                              ? getDefaultProfileGenName().str()
+                              ? std::string(DefaultProfileGenName)
                               : CodeGenOpts.InstrProfileOutput,
                           "", PGOOptions::NoAction, PGOOptions::CSIRInstr,
                           CodeGenOpts.DebugInfoForProfiling);
