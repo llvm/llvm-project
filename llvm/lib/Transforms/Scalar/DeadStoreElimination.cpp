@@ -1701,8 +1701,7 @@ struct DSEState {
     LLVM_DEBUG(
         dbgs()
         << "Trying to eliminate MemoryDefs at the end of the function\n");
-    for (int I = MemDefs.size() - 1; I >= 0; I--) {
-      MemoryDef *Def = MemDefs[I];
+    for (MemoryDef *Def : llvm::reverse(MemDefs)) {
       if (SkipStores.contains(Def) || !isRemovable(Def->getMemoryInst()))
         continue;
 

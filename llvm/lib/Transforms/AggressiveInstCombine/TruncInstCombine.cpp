@@ -475,12 +475,12 @@ void TruncInstCombine::ReduceExpressionDag(Type *SclTy) {
   // any of its operands, this way, when we get to the operand, we already
   // removed the instructions (from the expression dag) that uses it.
   CurrentTruncInst->eraseFromParent();
-  for (auto I = InstInfoMap.rbegin(), E = InstInfoMap.rend(); I != E; ++I) {
+  for (auto &I : llvm::reverse(InstInfoMap)) {
     // We still need to check that the instruction has no users before we erase
     // it, because {SExt, ZExt}Inst Instruction might have other users that was
     // not reduced, in such case, we need to keep that instruction.
-    if (I->first->use_empty())
-      I->first->eraseFromParent();
+    if (I.first->use_empty())
+      I.first->eraseFromParent();
   }
 }
 
