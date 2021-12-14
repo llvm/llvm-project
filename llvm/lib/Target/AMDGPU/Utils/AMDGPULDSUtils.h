@@ -26,10 +26,6 @@ bool isKernelCC(const Function *Func);
 
 Align getAlign(DataLayout const &DL, const GlobalVariable *GV);
 
-/// \returns true if a given global variable \p GV (or its global users) appear
-/// as an use within some instruction (either from kernel or from non-kernel).
-bool hasUserInstruction(const GlobalValue *GV);
-
 std::vector<GlobalVariable *> findVariablesToLower(Module &M,
                                                    const Function *F = nullptr);
 

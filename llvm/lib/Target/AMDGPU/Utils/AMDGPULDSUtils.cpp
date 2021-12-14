@@ -62,29 +62,6 @@ void replaceConstantUsesInFunction(ConstantExpr *C, const Function *F) {
   }
 }
 
-bool hasUserInstruction(const GlobalValue *GV) {
-  SmallPtrSet<const User *, 8> Visited;
-  SmallVector<const User *, 16> Stack(GV->users());
-
-  while (!Stack.empty()) {
-    const User *U = Stack.pop_back_val();
-
-    if (!Visited.insert(U).second)
-      continue;
-
-    if (isa<Instruction>(U))
-      return true;
-
-    append_range(Stack, U->users());
-  }
-
-  return false;
-}
-
-/// \returns true if an LDS global requires lowering to a module LDS structure
-/// if \p F is not given. If \p F is given it must be a kernel and function
-/// \returns true if an LDS global is directly used from that kernel and it
-/// is safe to replace its uses with a kernel LDS structure member.
 static bool shouldLowerLDSToStruct(const GlobalVariable &GV,
                                    const Function *F) {
   // We are not interested in kernel LDS lowering for module LDS itself.
@@ -94,7 +71,6 @@ static bool shouldLowerLDSToStruct(const GlobalVariable &GV,
   bool Ret = false;
   SmallPtrSet<const User *, 8> Visited;
   SmallVector<const User *, 16> Stack(GV.users());
-  SmallPtrSet<const GlobalValue *, 8> GlobalUsers;
 
   assert(!F || isKernelCC(F));
 
@@ -102,15 +78,10 @@ static bool shouldLowerLDSToStruct(const GlobalVariable &GV,
     const User *V = Stack.pop_back_val();
     Visited.insert(V);
 
-    if (auto *G = dyn_cast<GlobalValue>(V)) {
-      StringRef GName = G->getName();
-      if (F && GName != "llvm.used" && GName != "llvm.compiler.used") {
-        // For kernel LDS lowering, if G is not a compiler.used list, then we
-        // cannot lower the lds GV since we cannot replace the use of GV within
-        // G.
-        return false;
-      }
-      GlobalUsers.insert(G);
+    if (isa<GlobalValue>(V)) {
+      // This use of the LDS variable is the initializer of a global variable.
+      // This is ill formed. The address of an LDS variable is kernel dependent
+      // and unknown until runtime. It can't be written to a global variable.
       continue;
     }
 
@@ -130,15 +101,6 @@ static bool shouldLowerLDSToStruct(const GlobalVariable &GV,
     // User V should be a constant, recursively visit users of V.
     assert(isa<Constant>(V) && "Expected a constant.");
     append_range(Stack, V->users());
-  }
-
-  if (!F && !Ret) {
-    // For module LDS lowering, we have not yet decided if we should lower GV or
-    // not. Explore all global users of GV, and check if atleast one of these
-    // global users appear as an use within an instruction (possibly nested use
-    // via constant expression), if so, then conservately lower LDS.
-    for (auto *G : GlobalUsers)
-      Ret |= hasUserInstruction(G);
   }
 
   return Ret;
