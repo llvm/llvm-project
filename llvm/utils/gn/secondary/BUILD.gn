@@ -71,6 +71,9 @@ group("llvm-nm") {
 group("llvm-cxxfilt") {
   deps = [ "//llvm/tools/llvm-cxxfilt:symlinks" ]
 }
+group("llvm-debuginfod-find") {
+  deps = [ "//llvm/tools/llvm-debuginfod-find:symlinks" ]
+}
 group("llvm-objcopy") {
   deps = [ "//llvm/tools/llvm-objcopy:symlinks" ]
 }
