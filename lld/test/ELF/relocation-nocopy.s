@@ -7,9 +7,6 @@
 // CHECK: unresolvable relocation R_X86_64_32S against symbol 'x'
 // CHECK: unresolvable relocation R_X86_64_32S against symbol 'y'
 // CHECK: unresolvable relocation R_X86_64_32S against symbol 'z'
-// CHECK: unresolvable relocation R_X86_64_32 against symbol 'x'
-// CHECK: unresolvable relocation R_X86_64_32 against symbol 'y'
-// CHECK: unresolvable relocation R_X86_64_32 against symbol 'z'
 
 .text
 .global _start
