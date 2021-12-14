@@ -121,6 +121,9 @@ config.substitutions.append(('%host_cxx', config.host_cxx))
 if config.has_plugins and config.llvm_plugin_ext:
     config.available_features.add('plugins')
 
+if config.clang_default_pie_on_linux == '1':
+    config.available_features.add('default-pie-on-linux')
+
 # Set available features we allow tests to conditionalize on.
 #
 if config.clang_default_cxx_stdlib != '':

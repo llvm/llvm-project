@@ -22,6 +22,9 @@
 /* Bug report URL. */
 #define BUG_REPORT_URL "https://bugs.llvm.org/"
 
+/* Default to -fPIE and -pie on Linux. */
+#define CLANG_DEFAULT_PIE_ON_LINUX 0
+
 /* Default linker to use. */
 #define CLANG_DEFAULT_LINKER ""
 
