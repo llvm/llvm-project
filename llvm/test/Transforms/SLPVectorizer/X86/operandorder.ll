@@ -142,16 +142,13 @@ define void @shuffle_nodes_match1(double * noalias %from, double * noalias %to, 
 ; CHECK-NEXT:    br label [[LP:%.*]]
 ; CHECK:       lp:
 ; CHECK-NEXT:    [[P:%.*]] = phi double [ 1.000000e+00, [[LP]] ], [ 0.000000e+00, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[FROM_1:%.*]] = getelementptr double, double* [[FROM:%.*]], i32 1
-; CHECK-NEXT:    [[V0_1:%.*]] = load double, double* [[FROM]], align 4
-; CHECK-NEXT:    [[V0_2:%.*]] = load double, double* [[FROM_1]], align 4
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x double> poison, double [[V0_2]], i64 0
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x double> [[TMP0]], double [[P]], i64 1
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x double> poison, double [[V0_1]], i64 0
-; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <2 x double> [[TMP2]], <2 x double> poison, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP4:%.*]] = fadd <2 x double> [[TMP1]], [[TMP3]]
-; CHECK-NEXT:    [[TMP5:%.*]] = bitcast double* [[TO:%.*]] to <2 x double>*
-; CHECK-NEXT:    store <2 x double> [[TMP4]], <2 x double>* [[TMP5]], align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = bitcast double* [[FROM:%.*]] to <2 x double>*
+; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x double>, <2 x double>* [[TMP0]], align 4
+; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <2 x double> [[TMP1]], <2 x double> poison, <2 x i32> <i32 1, i32 0>
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x double> [[TMP1]], double [[P]], i64 1
+; CHECK-NEXT:    [[TMP3:%.*]] = fadd <2 x double> [[TMP2]], [[SHUFFLE]]
+; CHECK-NEXT:    [[TMP4:%.*]] = bitcast double* [[TO:%.*]] to <2 x double>*
+; CHECK-NEXT:    store <2 x double> [[TMP3]], <2 x double>* [[TMP4]], align 4
 ; CHECK-NEXT:    br i1 undef, label [[LP]], label [[EXT:%.*]]
 ; CHECK:       ext:
 ; CHECK-NEXT:    ret void
@@ -183,11 +180,11 @@ define void @vecload_vs_broadcast4(double * noalias %from, double * noalias %to,
 ; CHECK-NEXT:    [[P:%.*]] = phi double [ 1.000000e+00, [[LP]] ], [ 0.000000e+00, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast double* [[FROM:%.*]] to <2 x double>*
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x double>, <2 x double>* [[TMP0]], align 4
+; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <2 x double> [[TMP1]], <2 x double> poison, <2 x i32> <i32 1, i32 0>
 ; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x double> [[TMP1]], double [[P]], i64 1
-; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <2 x double> [[TMP1]], <2 x double> poison, <2 x i32> <i32 1, i32 0>
-; CHECK-NEXT:    [[TMP4:%.*]] = fadd <2 x double> [[TMP2]], [[TMP3]]
-; CHECK-NEXT:    [[TMP5:%.*]] = bitcast double* [[TO:%.*]] to <2 x double>*
-; CHECK-NEXT:    store <2 x double> [[TMP4]], <2 x double>* [[TMP5]], align 4
+; CHECK-NEXT:    [[TMP3:%.*]] = fadd <2 x double> [[TMP2]], [[SHUFFLE]]
+; CHECK-NEXT:    [[TMP4:%.*]] = bitcast double* [[TO:%.*]] to <2 x double>*
+; CHECK-NEXT:    store <2 x double> [[TMP3]], <2 x double>* [[TMP4]], align 4
 ; CHECK-NEXT:    br i1 undef, label [[LP]], label [[EXT:%.*]]
 ; CHECK:       ext:
 ; CHECK-NEXT:    ret void
@@ -218,16 +215,13 @@ define void @shuffle_nodes_match2(double * noalias %from, double * noalias %to, 
 ; CHECK-NEXT:    br label [[LP:%.*]]
 ; CHECK:       lp:
 ; CHECK-NEXT:    [[P:%.*]] = phi double [ 1.000000e+00, [[LP]] ], [ 0.000000e+00, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[FROM_1:%.*]] = getelementptr double, double* [[FROM:%.*]], i32 1
-; CHECK-NEXT:    [[V0_1:%.*]] = load double, double* [[FROM]], align 4
-; CHECK-NEXT:    [[V0_2:%.*]] = load double, double* [[FROM_1]], align 4
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x double> poison, double [[V0_1]], i64 0
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <2 x double> [[TMP0]], <2 x double> poison, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x double> poison, double [[V0_2]], i64 0
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x double> [[TMP2]], double [[P]], i64 1
-; CHECK-NEXT:    [[TMP4:%.*]] = fadd <2 x double> [[TMP1]], [[TMP3]]
-; CHECK-NEXT:    [[TMP5:%.*]] = bitcast double* [[TO:%.*]] to <2 x double>*
-; CHECK-NEXT:    store <2 x double> [[TMP4]], <2 x double>* [[TMP5]], align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = bitcast double* [[FROM:%.*]] to <2 x double>*
+; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x double>, <2 x double>* [[TMP0]], align 4
+; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <2 x double> [[TMP1]], <2 x double> poison, <2 x i32> <i32 1, i32 0>
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x double> [[TMP1]], double [[P]], i64 1
+; CHECK-NEXT:    [[TMP3:%.*]] = fadd <2 x double> [[SHUFFLE]], [[TMP2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = bitcast double* [[TO:%.*]] to <2 x double>*
+; CHECK-NEXT:    store <2 x double> [[TMP3]], <2 x double>* [[TMP4]], align 4
 ; CHECK-NEXT:    br i1 undef, label [[LP]], label [[EXT:%.*]]
 ; CHECK:       ext:
 ; CHECK-NEXT:    ret void
@@ -348,7 +342,7 @@ define void @load_reorder_double(double* nocapture %c, double* noalias nocapture
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x double>, <2 x double>* [[TMP1]], align 4
 ; CHECK-NEXT:    [[TMP3:%.*]] = bitcast double* [[A:%.*]] to <2 x double>*
 ; CHECK-NEXT:    [[TMP4:%.*]] = load <2 x double>, <2 x double>* [[TMP3]], align 4
-; CHECK-NEXT:    [[TMP5:%.*]] = fadd <2 x double> [[TMP4]], [[TMP2]]
+; CHECK-NEXT:    [[TMP5:%.*]] = fadd <2 x double> [[TMP2]], [[TMP4]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = bitcast double* [[C:%.*]] to <2 x double>*
 ; CHECK-NEXT:    store <2 x double> [[TMP5]], <2 x double>* [[TMP6]], align 4
 ; CHECK-NEXT:    ret void
