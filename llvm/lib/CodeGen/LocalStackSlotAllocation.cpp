@@ -210,7 +210,11 @@ void LocalStackSlotPass::calculateFrameObjectOffsets(MachineFunction &Fn) {
     StackObjSet SmallArrayObjs;
     StackObjSet AddrOfObjs;
 
-    AdjustStackOffset(MFI, StackProtectorFI, Offset, StackGrowsDown, MaxAlign);
+    // Only place the stack protector in the local stack area if the target
+    // allows it.
+    if (TFI.isStackIdSafeForLocalArea(MFI.getStackID(StackProtectorFI)))
+      AdjustStackOffset(MFI, StackProtectorFI, Offset, StackGrowsDown,
+                        MaxAlign);
 
     // Assign large stack objects first.
     for (unsigned i = 0, e = MFI.getObjectIndexEnd(); i != e; ++i) {
