@@ -57,6 +57,12 @@ public:
   /// Get a reference to the kind map.
   const fir::KindMapping &getKindMap() { return kindMap; }
 
+  /// Get the default integer type
+  [[maybe_unused]] mlir::IntegerType getDefaultIntegerType() {
+    return getIntegerType(
+        getKindMap().getIntegerBitsize(getKindMap().defaultIntegerKind()));
+  }
+
   /// The LHS and RHS are not always in agreement in terms of
   /// type. In some cases, the disagreement is between COMPLEX and other scalar
   /// types. In that case, the conversion must insert/extract out of a COMPLEX
