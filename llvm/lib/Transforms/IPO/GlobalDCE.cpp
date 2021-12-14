@@ -18,6 +18,7 @@
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/TypeMetadataUtils.h"
+#include "llvm/IR/GlobalPtrAuthInfo.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Module.h"
@@ -132,7 +133,7 @@ void GlobalDCEPass::UpdateGVDependencies(GlobalValue &GV) {
     // range specified in !vcall_visibility, and we have complete information
     // about all virtual call sites which could call though this vtable, then
     // skip it, because the call site information will be more precise.
-    if (isa<Function>(&GV) && VFESafeVTablesAndFns.count(GVU) &&
+    if (VFESafeVTablesAndFns.count(GVU) &&
         VFESafeVTablesAndFns[GVU].contains(&GV)) {
       LLVM_DEBUG(dbgs() << "Ignoring dep " << GVU->getName() << " -> "
                         << GV.getName() << "\n");
@@ -178,9 +179,13 @@ static void FindVirtualFunctionsInVTable(Module &M, Constant *C,
                                          SmallPtrSet<GlobalValue *, 8> *VFuncs,
                                          uint64_t BaseOffset = 0) {
   if (auto *GV = dyn_cast<GlobalValue>(C)) {
-    if (auto *F = dyn_cast<Function>(GV))
-      if (RangeStart <= BaseOffset && BaseOffset < RangeEnd)
+    if (RangeStart <= BaseOffset && BaseOffset < RangeEnd) {
+      if (auto *F = dyn_cast<Function>(GV))
         VFuncs->insert(F);
+      else if (auto PAI = GlobalPtrAuthInfo::analyze(GV))
+        if (isa<Function>(PAI->getPointer()->stripPointerCasts()))
+          VFuncs->insert(GV);
+    }
 
     // Do not recurse outside of the current global.
     return;
@@ -279,9 +284,16 @@ void GlobalDCEPass::ScanVTableLoad(Function *Caller, Metadata *TypeId,
       return;
     }
 
-    auto Callee = dyn_cast<Function>(Ptr->stripPointerCasts());
+    Ptr = Ptr->stripPointerCasts();
+
+    GlobalValue *Callee = dyn_cast<Function>(Ptr);
+    if (!Callee)
+      if (GlobalPtrAuthInfo::analyze(Ptr))
+        Callee = dyn_cast<GlobalValue>(Ptr);
+
     if (!Callee) {
-      LLVM_DEBUG(dbgs() << "vtable entry is not function pointer!\n");
+      LLVM_DEBUG(dbgs() << "vtable entry is not function pointer or a .ptrauth "
+                           "global variable!\n");
       VFESafeVTablesAndFns.erase(VTable);
       return;
     }
@@ -625,8 +637,19 @@ PreservedAnalyses GlobalDCEPass::run(Module &M, ModuleAnalysisManager &MAM) {
   }
 
   NumVariables += DeadGlobalVars.size();
-  for (GlobalVariable *GV : DeadGlobalVars)
+  for (GlobalVariable *GV : DeadGlobalVars) {
+    if (!GV->use_empty()) {
+      // Normally, a vtable only contain Function references that are eliminated
+      // by VFE, and their "leftover uses" are handled by the for loop above.
+      // But with ptrauth on, we can also get "leftover uses" of GlobalVariables
+      // because the vtable references the .ptrauth wrappers instead. So we need
+      // to apply the same use-erasing logic as above. The same reasoning as
+      // above applies: These are proven to be unused, so they're safe to
+      // replace with null.
+      GV->replaceNonMetadataUsesWith(ConstantPointerNull::get(GV->getType()));
+    }
     EraseUnusedGlobalValue(GV);
+  }
 
   NumAliases += DeadAliases.size();
   for (GlobalAlias *GA : DeadAliases)
