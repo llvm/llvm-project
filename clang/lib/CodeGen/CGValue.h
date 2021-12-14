@@ -441,11 +441,12 @@ public:
     return R;
   }
 
-  static LValue MakeGlobalReg(Address Reg, QualType type) {
+  static LValue MakeGlobalReg(llvm::Value *V, CharUnits alignment,
+                              QualType type) {
     LValue R;
     R.LVType = GlobalReg;
-    R.V = Reg.getPointer();
-    R.Initialize(type, type.getQualifiers(), Reg.getAlignment(),
+    R.V = V;
+    R.Initialize(type, type.getQualifiers(), alignment,
                  LValueBaseInfo(AlignmentSource::Decl), TBAAAccessInfo());
     return R;
   }
