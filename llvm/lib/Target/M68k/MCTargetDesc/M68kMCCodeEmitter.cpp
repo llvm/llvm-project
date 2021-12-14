@@ -43,7 +43,8 @@ class M68kMCCodeEmitter : public MCCodeEmitter {
                              APInt &Inst, APInt &Scratch,
                              const MCSubtargetInfo &STI) const;
 
-  void getMachineOpValue(const MCInst &MI, const MCOperand &Op, APInt &Value,
+  void getMachineOpValue(const MCInst &MI, const MCOperand &Op,
+                         unsigned InsertPos, APInt &Value,
                          SmallVectorImpl<MCFixup> &Fixups,
                          const MCSubtargetInfo &STI) const;
 
@@ -83,7 +84,7 @@ public:
 #include "M68kGenMCCodeEmitter.inc"
 
 void M68kMCCodeEmitter::getMachineOpValue(const MCInst &MI, const MCOperand &Op,
-                                          APInt &Value,
+                                          unsigned InsertPos, APInt &Value,
                                           SmallVectorImpl<MCFixup> &Fixups,
                                           const MCSubtargetInfo &STI) const {
   // Register
