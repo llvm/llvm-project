@@ -131,3 +131,71 @@ define i8 @or_or_not_no_common_op(i8 %x, i8 %y, i8 %z) {
   %and = and i8 %xorynot, %xorz
   ret i8 %and
 }
+
+; ((A | B) ^ A ) & ((A | B) ^ B)
+
+define i8 @or_xor(i8 %x, i8 %y) {
+; CHECK-LABEL: @or_xor(
+; CHECK-NEXT:    [[OR:%.*]] = or i8 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[XOR1:%.*]] = xor i8 [[OR]], [[X]]
+; CHECK-NEXT:    [[XOR2:%.*]] = xor i8 [[OR]], [[Y]]
+; CHECK-NEXT:    [[AND:%.*]] = and i8 [[XOR1]], [[XOR2]]
+; CHECK-NEXT:    ret i8 [[AND]]
+;
+  %or = or i8 %x, %y
+  %xor1 = xor i8 %or, %x
+  %xor2 = xor i8 %or, %y
+  %and = and i8 %xor1, %xor2
+  ret i8 %and
+}
+
+; ((A | B) ^ B ) & ((A | B) ^ A)
+
+define i8 @or_xor_commute1(i8 %x, i8 %y) {
+; CHECK-LABEL: @or_xor_commute1(
+; CHECK-NEXT:    [[OR:%.*]] = or i8 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[XOR1:%.*]] = xor i8 [[OR]], [[X]]
+; CHECK-NEXT:    [[XOR2:%.*]] = xor i8 [[OR]], [[Y]]
+; CHECK-NEXT:    [[AND:%.*]] = and i8 [[XOR2]], [[XOR1]]
+; CHECK-NEXT:    ret i8 [[AND]]
+;
+  %or = or i8 %x, %y
+  %xor1 = xor i8 %or, %x
+  %xor2 = xor i8 %or, %y
+  %and = and i8 %xor2, %xor1
+  ret i8 %and
+}
+
+; (A ^ (A | B) ) & (B ^ (A | B))
+
+define i71 @or_xor_commute2(i71 %x, i71 %y) {
+; CHECK-LABEL: @or_xor_commute2(
+; CHECK-NEXT:    [[OR:%.*]] = or i71 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[XOR1:%.*]] = xor i71 [[X]], [[OR]]
+; CHECK-NEXT:    [[XOR2:%.*]] = xor i71 [[Y]], [[OR]]
+; CHECK-NEXT:    [[AND:%.*]] = and i71 [[XOR1]], [[XOR2]]
+; CHECK-NEXT:    ret i71 [[AND]]
+;
+  %or = or i71 %x, %y
+  %xor1 = xor i71 %x, %or
+  %xor2 = xor i71 %y, %or
+  %and = and i71 %xor1, %xor2
+  ret i71 %and
+}
+
+; (B ^ (A | B) ) & (A ^ (A | B))
+
+define <2 x i64> @or_xor_commute3(<2 x i64> %x, <2 x i64> %y) {
+; CHECK-LABEL: @or_xor_commute3(
+; CHECK-NEXT:    [[OR:%.*]] = or <2 x i64> [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[XOR1:%.*]] = xor <2 x i64> [[Y]], [[OR]]
+; CHECK-NEXT:    [[XOR2:%.*]] = xor <2 x i64> [[X]], [[OR]]
+; CHECK-NEXT:    [[AND:%.*]] = and <2 x i64> [[XOR1]], [[XOR2]]
+; CHECK-NEXT:    ret <2 x i64> [[AND]]
+;
+  %or = or <2 x i64> %x, %y
+  %xor1 = xor <2 x i64> %y, %or
+  %xor2 = xor <2 x i64> %x, %or
+  %and = and <2 x i64> %xor1, %xor2
+  ret <2 x i64> %and
+}
