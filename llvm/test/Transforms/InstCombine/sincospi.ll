@@ -22,8 +22,8 @@ define float @test_instbased_f32() {
 ; CHECK-FLOAT-IN-VEC-LABEL: @test_instbased_f32(
 ; CHECK-FLOAT-IN-VEC-NEXT:    [[VAL:%.*]] = load float, float* @var32, align 4
 ; CHECK-FLOAT-IN-VEC-NEXT:    [[SINCOSPI:%.*]] = call <2 x float> @__sincospif_stret(float [[VAL]])
-; CHECK-FLOAT-IN-VEC-NEXT:    [[SINPI:%.*]] = extractelement <2 x float> [[SINCOSPI]], i32 0
-; CHECK-FLOAT-IN-VEC-NEXT:    [[COSPI:%.*]] = extractelement <2 x float> [[SINCOSPI]], i32 1
+; CHECK-FLOAT-IN-VEC-NEXT:    [[SINPI:%.*]] = extractelement <2 x float> [[SINCOSPI]], i64 0
+; CHECK-FLOAT-IN-VEC-NEXT:    [[COSPI:%.*]] = extractelement <2 x float> [[SINCOSPI]], i64 1
 ; CHECK-FLOAT-IN-VEC-NEXT:    [[SIN:%.*]] = call float @__sinpif(float [[VAL]]) #[[ATTR0:[0-9]+]]
 ; CHECK-FLOAT-IN-VEC-NEXT:    [[COS:%.*]] = call float @__cospif(float [[VAL]]) #[[ATTR0]]
 ; CHECK-FLOAT-IN-VEC-NEXT:    [[RES:%.*]] = fadd float [[SINPI]], [[COSPI]]
@@ -58,8 +58,8 @@ define float @test_instbased_f32() {
 define float @test_constant_f32() {
 ; CHECK-FLOAT-IN-VEC-LABEL: @test_constant_f32(
 ; CHECK-FLOAT-IN-VEC-NEXT:    [[SINCOSPI:%.*]] = call <2 x float> @__sincospif_stret(float 1.000000e+00)
-; CHECK-FLOAT-IN-VEC-NEXT:    [[SINPI:%.*]] = extractelement <2 x float> [[SINCOSPI]], i32 0
-; CHECK-FLOAT-IN-VEC-NEXT:    [[COSPI:%.*]] = extractelement <2 x float> [[SINCOSPI]], i32 1
+; CHECK-FLOAT-IN-VEC-NEXT:    [[SINPI:%.*]] = extractelement <2 x float> [[SINCOSPI]], i64 0
+; CHECK-FLOAT-IN-VEC-NEXT:    [[COSPI:%.*]] = extractelement <2 x float> [[SINCOSPI]], i64 1
 ; CHECK-FLOAT-IN-VEC-NEXT:    [[SIN:%.*]] = call float @__sinpif(float 1.000000e+00) #[[ATTR0]]
 ; CHECK-FLOAT-IN-VEC-NEXT:    [[COS:%.*]] = call float @__cospif(float 1.000000e+00) #[[ATTR0]]
 ; CHECK-FLOAT-IN-VEC-NEXT:    [[RES:%.*]] = fadd float [[SINPI]], [[COSPI]]

@@ -15,7 +15,7 @@ inline int Add42(int x) { return x + 42; }
 struct NotTriviallyCopyable {
   NotTriviallyCopyable();
   explicit NotTriviallyCopyable(int x) : value(x) {}
-  NotTriviallyCopyable(NotTriviallyCopyable const&);
+  NotTriviallyCopyable(NotTriviallyCopyable const &);
   int value;
 };
 
@@ -23,7 +23,6 @@ struct Large {
   int value;
   int data[2];
 };
-
 }
 // CHECK-LABEL: test_with_rvalue:
 extern "C" void test_with_rvalue() {
@@ -118,8 +117,7 @@ extern "C" int test_div_by_two(int input) {
 // CHECK-LABEL: test_inc_integer:
 extern "C" int test_inc_integer() {
   int x = 0;
-  for (int i=0; i < 5; ++i)
-    benchmark::DoNotOptimize(++x);
+  for (int i = 0; i < 5; ++i) benchmark::DoNotOptimize(++x);
   // CHECK: movl $1, [[DEST:.*]]
   // CHECK: {{(addl \$1,|incl)}} [[DEST]]
   // CHECK: {{(addl \$1,|incl)}} [[DEST]]
@@ -147,7 +145,7 @@ extern "C" void test_pointer_const_lvalue() {
   // CHECK-CLANG: movq %rax, -{{[0-9]+}}(%[[REG:[a-z]+]])
   // CHECK: ret
   int x = 42;
-  int * const xp = &x;
+  int *const xp = &x;
   benchmark::DoNotOptimize(xp);
 }
 

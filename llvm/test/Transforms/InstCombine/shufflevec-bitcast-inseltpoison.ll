@@ -6,9 +6,9 @@ declare void @use(<4 x i16>)
 define void @test(<16 x i8> %w, i32* %o1, float* %o2) {
 ; CHECK-LABEL: @test(
 ; CHECK-NEXT:    [[V_BC:%.*]] = bitcast <16 x i8> [[W:%.*]] to <4 x i32>
-; CHECK-NEXT:    [[V_EXTRACT:%.*]] = extractelement <4 x i32> [[V_BC]], i32 3
+; CHECK-NEXT:    [[V_EXTRACT:%.*]] = extractelement <4 x i32> [[V_BC]], i64 3
 ; CHECK-NEXT:    [[V_BC1:%.*]] = bitcast <16 x i8> [[W]] to <4 x float>
-; CHECK-NEXT:    [[V_EXTRACT2:%.*]] = extractelement <4 x float> [[V_BC1]], i32 3
+; CHECK-NEXT:    [[V_EXTRACT2:%.*]] = extractelement <4 x float> [[V_BC1]], i64 3
 ; CHECK-NEXT:    store i32 [[V_EXTRACT]], i32* [[O1:%.*]], align 4
 ; CHECK-NEXT:    store float [[V_EXTRACT2]], float* [[O2:%.*]], align 4
 ; CHECK-NEXT:    ret void

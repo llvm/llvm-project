@@ -11,7 +11,7 @@ define void @test1(%struct.B* %p) personality i32 (...)* @__CxxFrameHandler3 {
 ; CHECK-NEXT:  invoke.cont:
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast %struct.B* [[P:%.*]] to <2 x i64>*
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i64>, <2 x i64>* [[TMP0]], align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <2 x i64> [[TMP1]], i32 0
+; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <2 x i64> [[TMP1]], i64 0
 ; CHECK-NEXT:    invoke void @throw()
 ; CHECK-NEXT:    to label [[UNREACHABLE:%.*]] unwind label [[CATCH_DISPATCH:%.*]]
 ; CHECK:       catch.dispatch:
