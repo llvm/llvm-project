@@ -1626,6 +1626,7 @@ void elf::postScanRelocations() {
           replaceWithDefined(
               sym, in.plt,
               target->pltHeaderSize + target->pltEntrySize * sym.pltIndex, 0);
+          sym.needsCopy = true;
           if (config->emachine == EM_PPC) {
             // PPC32 canonical PLT entries are at the beginning of .glink
             cast<Defined>(sym).value = in.plt->headerSize;
@@ -1633,7 +1634,6 @@ void elf::postScanRelocations() {
             cast<PPC32GlinkSection>(in.plt)->canonical_plts.push_back(&sym);
           }
         }
-        sym.needsPltAddr = true;
       }
     }
   };
