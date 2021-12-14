@@ -11,4 +11,6 @@ read -p "Press a key to continue, or Ctrl+C to cancel"
 rm -rf benchmark
 git clone https://github.com/google/benchmark.git
 rm -rf benchmark/.git*
+find benchmark/ -name BUILD -delete
+find benchmark/ -name BUILD.bazel -delete
 
