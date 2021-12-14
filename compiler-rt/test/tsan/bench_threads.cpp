@@ -4,11 +4,6 @@
 // bench.h needs pthread barriers which are not available on OS X
 // UNSUPPORTED: darwin
 
-// aarch64 fails with:
-// CHECK failed: tsan_rtl.cpp:327 "((addr + size)) <= ((TraceMemEnd()))"
-// TODO: try to re-enable when D112603 is landed.
-// XFAIL: aarch64
-
 #include "bench.h"
 
 void *nop_thread(void *arg) {

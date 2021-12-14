@@ -42,8 +42,8 @@
 # RUN: ld.lld --version-script %t4.script -shared %t.o %tref.o -o %t5.so
 # RUN: llvm-readelf -r %t5.so | FileCheck --check-prefix=RELOC %s
 
-# RELOC: R_X86_64_JUMP_SLOT {{.*}} foo3@v1 + 0
 # RELOC: R_X86_64_JUMP_SLOT {{.*}} foo4@@v2 + 0
+# RELOC: R_X86_64_JUMP_SLOT {{.*}} foo3@v1 + 0
 
 .globl foo1; foo1: ret
 .globl foo2; foo2: ret

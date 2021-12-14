@@ -9,6 +9,7 @@
 #include "HIPUtility.h"
 #include "CommonArgs.h"
 #include "clang/Driver/Compilation.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Triple.h"
 #include "llvm/Support/Path.h"
 
@@ -38,7 +39,7 @@ static std::string normalizeForBundler(const llvm::Triple &T,
 // Construct a clang-offload-bundler command to bundle code objects for
 // different devices into a HIP fat binary.
 void HIP::constructHIPFatbinCommand(Compilation &C, const JobAction &JA,
-                                    StringRef OutputFileName,
+                                    llvm::StringRef OutputFileName,
                                     const InputInfoList &Inputs,
                                     const llvm::opt::ArgList &Args,
                                     const Tool &T) {
@@ -64,7 +65,7 @@ void HIP::constructHIPFatbinCommand(Compilation &C, const JobAction &JA,
     OffloadKind = OffloadKind + "v4";
   for (const auto &II : Inputs) {
     const auto *A = II.getAction();
-    auto ArchStr = StringRef(A->getOffloadingArch());
+    auto ArchStr = llvm::StringRef(A->getOffloadingArch());
     BundlerTargetArg +=
         "," + OffloadKind + "-" + normalizeForBundler(TT, !ArchStr.empty());
     if (!ArchStr.empty())

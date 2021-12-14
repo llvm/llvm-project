@@ -16,6 +16,22 @@ define i8* @test_simplify1(i8* %mem1, i8* %mem2, i32 %size) {
 ; CHECK: ret i8* %mem1
 }
 
+define i8* @test_simplify2(i8* %mem1, i8* %mem2, i32 %size) {
+; CHECK-LABEL: @test_simplify2(
+; CHECK-NEXT:   tail call void @llvm.memmove
+; CHECK-NEXT:   ret i8* %mem1
+  %ret = tail call i8* @memmove(i8* %mem1, i8* %mem2, i32 %size)
+  ret i8* %ret
+}
+
+define i8* @test_no_simplify1(i8* %mem1, i8* %mem2, i32 %size) {
+; CHECK-LABEL: @test_no_simplify1(
+; CHECK-NEXT:   %ret = musttail call i8* @memmove(i8* %mem1, i8* %mem2, i32 %size)
+; CHECK-NEXT:   ret i8* %ret
+  %ret = musttail call i8* @memmove(i8* %mem1, i8* %mem2, i32 %size)
+  ret i8* %ret
+}
+
 define i8* @test_no_incompatible_attr(i8* %mem1, i8* %mem2, i32 %size) {
 ; CHECK-LABEL: @test_no_incompatible_attr(
   %ret = call dereferenceable(1) i8* @memmove(i8* %mem1, i8* %mem2, i32 %size)

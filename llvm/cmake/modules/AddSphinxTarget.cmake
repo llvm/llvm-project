@@ -1,3 +1,4 @@
+include(GNUInstallDirs)
 
 # Create sphinx target
 if (LLVM_ENABLE_SPHINX)
@@ -73,15 +74,10 @@ function (add_sphinx_target builder project)
     # Handle installation
     if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY)
       if (builder STREQUAL man)
-        if (CMAKE_INSTALL_MANDIR)
-          set(INSTALL_MANDIR ${CMAKE_INSTALL_MANDIR}/)
-        else()
-          set(INSTALL_MANDIR share/man/)
-        endif()
         # FIXME: We might not ship all the tools that these man pages describe
         install(DIRECTORY "${SPHINX_BUILD_DIR}/" # Slash indicates contents of
                 COMPONENT "${project}-sphinx-man"
-                DESTINATION ${INSTALL_MANDIR}man1)
+                DESTINATION "${CMAKE_INSTALL_MANDIR}/man1")
 
         if(NOT LLVM_ENABLE_IDE)
           add_llvm_install_targets("install-${SPHINX_TARGET_NAME}"

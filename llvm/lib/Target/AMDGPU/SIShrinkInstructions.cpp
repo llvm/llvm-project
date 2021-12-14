@@ -731,11 +731,6 @@ bool SIShrinkInstructions::runOnMachineFunction(MachineFunction &MF) {
           continue;
       }
 
-      // getVOPe32 could be -1 here if we started with an instruction that had
-      // a 32-bit encoding and then commuted it to an instruction that did not.
-      if (!TII->hasVALU32BitEncoding(MI.getOpcode()))
-        continue;
-
       int Op32 = AMDGPU::getVOPe32(MI.getOpcode());
 
       if (TII->isVOPC(Op32)) {
@@ -776,10 +771,6 @@ bool SIShrinkInstructions::runOnMachineFunction(MachineFunction &MF) {
       const MachineOperand *SDst = TII->getNamedOperand(MI,
                                                         AMDGPU::OpName::sdst);
 
-      // Check the carry-in operand for v_addc_u32_e64.
-      const MachineOperand *Src2 = TII->getNamedOperand(MI,
-                                                        AMDGPU::OpName::src2);
-
       if (SDst) {
         bool Next = false;
 
@@ -791,6 +782,8 @@ bool SIShrinkInstructions::runOnMachineFunction(MachineFunction &MF) {
 
         // All of the instructions with carry outs also have an SGPR input in
         // src2.
+        const MachineOperand *Src2 = TII->getNamedOperand(MI,
+                                                          AMDGPU::OpName::src2);
         if (Src2 && Src2->getReg() != VCCReg) {
           if (Src2->getReg().isVirtual())
             MRI.setRegAllocationHint(Src2->getReg(), 0, VCCReg);

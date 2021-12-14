@@ -222,8 +222,8 @@ spv.module Physical64 OpenCL requires #spv.vce<v1.0, [Kernel, Linkage, Addresses
 // CHECK-SAME:    (%[[INPUT0:.+]]: i64)
   spv.func @kernel(%input: i64) "None" {
 // CHECK-NEXT:     %[[VAR:.+]] = spv.Variable : !spv.ptr<i1, Function>
-// CHECK-NEXT:     spv.Branch ^[[BB:.+]](%[[INPUT0]] : i64)
-// CHECK-NEXT:   ^[[BB]](%[[INPUT1:.+]]: i64):
+// CHECK-NEXT:     spv.Branch ^[[BB0:.+]](%[[INPUT0]] : i64)
+// CHECK-NEXT:   ^[[BB0]](%[[INPUT1:.+]]: i64):
     %cst0_i64 = spv.Constant 0 : i64
     %true = spv.Constant true
     %false = spv.Constant false
@@ -235,12 +235,14 @@ spv.module Physical64 OpenCL requires #spv.vce<v1.0, [Kernel, Linkage, Addresses
     ^loop_header(%arg1: i64):
 // CHECK-NEXT:       spv.Branch ^[[LOOP_BODY:.+]]
 // CHECK-NEXT:     ^[[LOOP_BODY]]:
+// CHECK-NEXT:         %[[C0:.+]] = spv.Constant 0 : i64
       %gt = spv.SGreaterThan %arg1, %cst0_i64 : i64
+// CHECK-NEXT:         %[[GT:.+]] = spv.SGreaterThan %[[ARG1]], %[[C0]] : i64
+// CHECK-NEXT:         spv.Branch ^[[BB1:.+]]
+// CHECK-NEXT:     ^[[BB1]]:
       %var = spv.Variable : !spv.ptr<i1, Function>
 // CHECK-NEXT:       spv.mlir.selection {
       spv.mlir.selection {
-// CHECK-NEXT:         %[[C0:.+]] = spv.Constant 0 : i64
-// CHECK-NEXT:         %[[GT:.+]] = spv.SGreaterThan %[[ARG1]], %[[C0]] : i64
 // CHECK-NEXT:         spv.BranchConditional %[[GT]], ^[[THEN:.+]], ^[[ELSE:.+]]
         spv.BranchConditional %gt, ^then, ^else
 // CHECK-NEXT:       ^[[THEN]]:

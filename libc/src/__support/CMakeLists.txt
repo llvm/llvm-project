@@ -54,3 +54,4 @@ add_header_library(
 )
 
 add_subdirectory(FPUtil)
+add_subdirectory(OSUtil)

@@ -26,7 +26,7 @@ using namespace lldb_private;
 // ThreadPlanPython
 
 ThreadPlanPython::ThreadPlanPython(Thread &thread, const char *class_name,
-                                   StructuredDataImpl *args_data)
+                                   const StructuredDataImpl &args_data)
     : ThreadPlan(ThreadPlan::eKindPython, "Python based Thread Plan", thread,
                  eVoteNoOpinion, eVoteNoOpinion),
       m_class_name(class_name), m_args_data(args_data), m_did_push(false),
@@ -34,11 +34,6 @@ ThreadPlanPython::ThreadPlanPython(Thread &thread, const char *class_name,
   SetIsControllingPlan(true);
   SetOkayToDiscard(true);
   SetPrivate(false);
-}
-
-ThreadPlanPython::~ThreadPlanPython() {
-  // FIXME, do I need to decrement the ref count on this implementation object
-  // to make it go away?
 }
 
 bool ThreadPlanPython::ValidatePlan(Stream *error) {

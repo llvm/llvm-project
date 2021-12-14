@@ -29,7 +29,7 @@ lldb_private::LLDBSwigPythonBreakpointCallbackFunction
     const char *session_dictionary_name,
     const lldb::StackFrameSP& frame_sp,
     const lldb::BreakpointLocationSP& bp_loc_sp,
-    lldb_private::StructuredDataImpl *args_impl
+    const lldb_private::StructuredDataImpl &args_impl
 )
 {
     using namespace llvm;
@@ -254,7 +254,7 @@ lldb_private::LLDBSwigPythonCreateScriptedProcess
     const char *python_class_name,
     const char *session_dictionary_name,
     const lldb::TargetSP& target_sp,
-    lldb_private::StructuredDataImpl *args_impl,
+    const lldb_private::StructuredDataImpl &args_impl,
     std::string &error_string
 )
 {
@@ -290,7 +290,9 @@ lldb_private::LLDBSwigPythonCreateScriptedProcess
     PythonObject result = {};
     if (arg_info.get().max_positional_args == 2) {
         // FIXME: SBStructuredData leaked here
-        PythonObject args_arg(PyRefType::Owned, SBTypeToSWIGWrapper(*new lldb::SBStructuredData(args_impl)));
+        PythonObject args_arg(
+            PyRefType::Owned,
+            SBTypeToSWIGWrapper(*new lldb::SBStructuredData(args_impl)));
         result = pfunc(target_arg, args_arg);
     } else {
         error_string.assign("wrong number of arguments in __init__, should be 2 (not including self)");
@@ -308,7 +310,7 @@ lldb_private::LLDBSwigPythonCreateScriptedThread
     const char *python_class_name,
     const char *session_dictionary_name,
     const lldb::ProcessSP& process_sp,
-    lldb_private::StructuredDataImpl *args_impl,
+    const StructuredDataImpl &args_impl,
     std::string &error_string
 )
 {
@@ -342,7 +344,9 @@ lldb_private::LLDBSwigPythonCreateScriptedThread
     PythonObject result = {};
     if (arg_info.get().max_positional_args == 2) {
         // FIXME: SBStructuredData leaked here
-        PythonObject args_arg(PyRefType::Owned, SBTypeToSWIGWrapper(*new lldb::SBStructuredData(args_impl)));
+        PythonObject args_arg(
+            PyRefType::Owned,
+            SBTypeToSWIGWrapper(*new lldb::SBStructuredData(args_impl)));
         result = pfunc(ToSWIGWrapper(process_sp), args_arg);
     } else {
         error_string.assign("wrong number of arguments in __init__, should be 2 (not including self)");
@@ -359,7 +363,7 @@ lldb_private::LLDBSwigPythonCreateScriptedThreadPlan
 (
     const char *python_class_name,
     const char *session_dictionary_name,
-    lldb_private::StructuredDataImpl *args_impl,
+    const lldb_private::StructuredDataImpl &args_impl,
     std::string &error_string,
     const lldb::ThreadPlanSP& thread_plan_sp
 )
@@ -395,15 +399,16 @@ lldb_private::LLDBSwigPythonCreateScriptedThreadPlan
     }
 
     PythonObject result = {};
+    // FIXME: SBStructuredData leaked here
+    auto *args_sb = new lldb::SBStructuredData(args_impl);
     if (arg_info.get().max_positional_args == 2) {
-        if (args_impl != nullptr) {
+        if (args_sb->IsValid()) {
            error_string.assign("args passed, but __init__ does not take an args dictionary");
            Py_RETURN_NONE;
         }
         result = pfunc(tp_arg, dict);
     } else if (arg_info.get().max_positional_args >= 3) {
-        // FIXME: SBStructuredData leaked here
-        PythonObject args_arg(PyRefType::Owned, SBTypeToSWIGWrapper(*new lldb::SBStructuredData(args_impl)));
+        PythonObject args_arg(PyRefType::Owned, SBTypeToSWIGWrapper(*args_sb));
         result = pfunc(tp_arg, args_arg, dict);
     } else {
         error_string.assign("wrong number of arguments in __init__, should be 2 or 3 (not including self)");
@@ -467,7 +472,7 @@ lldb_private::LLDBSWIGPythonCallThreadPlan
 
 void *lldb_private::LLDBSwigPythonCreateScriptedBreakpointResolver(
     const char *python_class_name, const char *session_dictionary_name,
-    lldb_private::StructuredDataImpl *args_impl,
+    const StructuredDataImpl &args_impl,
     const lldb::BreakpointSP &breakpoint_sp) {
 
     if (python_class_name == NULL || python_class_name[0] == '\0' || !session_dictionary_name)
@@ -558,7 +563,7 @@ lldb_private::LLDBSwigPythonCreateScriptedStopHook
     lldb::TargetSP target_sp,
     const char *python_class_name,
     const char *session_dictionary_name,
-    lldb_private::StructuredDataImpl *args_impl,
+    const StructuredDataImpl &args_impl,
     Status &error
 )
 {

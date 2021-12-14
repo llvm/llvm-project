@@ -202,9 +202,9 @@ class TestQemuLaunch(TestBase):
         self.assertEqual(env.Get(var(3)), "from host")
 
         # Finally, make some launch_info specific changes.
-        env.Set(var(2), "from target", overwrite=True)
+        env.Set(var(2), "from target", True)
         env.Unset(var(3))
-        info.SetEnvironment(env, append=False)
+        info.SetEnvironment(env, False)
 
         # Now check everything. Launch info changes should trump everything, but
         # only for the target environment -- the emulator should still get the

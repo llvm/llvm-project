@@ -5616,7 +5616,7 @@ ElementCount LoopVectorizationCostModel::getMaximizedVFForTarget(
     auto ClampedConstTripCount = PowerOf2Floor(ConstTripCount);
     LLVM_DEBUG(dbgs() << "LV: Clamping the MaxVF to maximum power of two not "
                          "exceeding the constant trip count: "
-                      << ConstTripCount << "\n");
+                      << ClampedConstTripCount << "\n");
     return ElementCount::getFixed(ClampedConstTripCount);
   }
 

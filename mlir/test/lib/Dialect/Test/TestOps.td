@@ -2315,11 +2315,11 @@ def TableGenBuildOp4 : TEST_Op<"tblgen_build_4", [SameOperandsAndResultType]> {
   let results = (outs AnyType:$result);
 }
 
-// Single variadic arg with SameOperandsAndResultType and InferTypeOpInterface.
-// Tests suppression of ambiguous build methods for operations with
-// SameOperandsAndResultType and InferTypeOpInterface.
-def TableGenBuildOp5 : TEST_Op<"tblgen_build_5",
-      [SameOperandsAndResultType, InferTypeOpInterface]> {
+// Base class for testing `build` methods for ops with
+// InferReturnTypeOpInterface.
+class TableGenBuildInferReturnTypeBaseOp<string mnemonic,
+                                         list<OpTrait> traits = []>
+    : TEST_Op<mnemonic, [InferTypeOpInterface] # traits> {
   let arguments = (ins Variadic<AnyType>:$inputs);
   let results = (outs AnyType:$result);
 
@@ -2332,6 +2332,18 @@ def TableGenBuildOp5 : TEST_Op<"tblgen_build_5",
       return ::mlir::success();
     }
    }];
+}
+
+// Single variadic arg with SameOperandsAndResultType and InferTypeOpInterface.
+// Tests suppression of ambiguous build methods for operations with
+// SameOperandsAndResultType and InferTypeOpInterface.
+def TableGenBuildOp5 : TableGenBuildInferReturnTypeBaseOp<
+    "tblgen_build_5", [SameOperandsAndResultType]>;
+
+// Op with InferTypeOpInterface and regions.
+def TableGenBuildOp6 : TableGenBuildInferReturnTypeBaseOp<
+    "tblgen_build_6", [InferTypeOpInterface]> {
+  let regions = (region AnyRegion:$body);
 }
 
 //===----------------------------------------------------------------------===//

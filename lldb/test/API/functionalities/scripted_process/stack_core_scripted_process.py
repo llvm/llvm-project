@@ -43,8 +43,9 @@ class StackCoreScriptedProcess(ScriptedProcess):
         if error.Fail():
             return data
 
-        data.SetData(error, bytes_read, self.corefile_target.GetByteOrder(),
-                        self.corefile_target.GetAddressByteSize())
+        data.SetDataWithOwnership(error, bytes_read,
+                                  self.corefile_target.GetByteOrder(),
+                                  self.corefile_target.GetAddressByteSize())
 
         return data
 

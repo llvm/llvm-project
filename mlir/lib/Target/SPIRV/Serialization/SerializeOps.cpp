@@ -369,8 +369,16 @@ LogicalResult Serializer::processSelectionOp(spirv::SelectionOp selectionOp) {
 
   auto *headerBlock = selectionOp.getHeaderBlock();
   auto *mergeBlock = selectionOp.getMergeBlock();
+  auto headerID = getBlockID(headerBlock);
   auto mergeID = getBlockID(mergeBlock);
   auto loc = selectionOp.getLoc();
+
+  // This SelectionOp is in some MLIR block with preceding and following ops. In
+  // the binary format, it should reside in separate SPIR-V blocks from its
+  // preceding and following ops. So we need to emit unconditional branches to
+  // jump to this SelectionOp's SPIR-V blocks and jumping back to the normal
+  // flow afterwards.
+  encodeInstructionInto(functionBody, spirv::Opcode::OpBranch, {headerID});
 
   // Emit the selection header block, which dominates all other blocks, first.
   // We need to emit an OpSelectionMerge instruction before the selection header
@@ -384,13 +392,8 @@ LogicalResult Serializer::processSelectionOp(spirv::SelectionOp selectionOp) {
         {mergeID, static_cast<uint32_t>(selectionOp.selection_control())});
     return success();
   };
-  // For structured selection, we cannot have blocks in the selection construct
-  // branching to the selection header block. Entering the selection (and
-  // reaching the selection header) must be from the block containing the
-  // spv.mlir.selection op. If there are ops ahead of the spv.mlir.selection op
-  // in the block, we can "merge" them into the selection header. So here we
-  // don't need to emit a separate block; just continue with the existing block.
-  if (failed(processBlock(headerBlock, /*omitLabel=*/true, emitSelectionMerge)))
+  if (failed(
+          processBlock(headerBlock, /*omitLabel=*/false, emitSelectionMerge)))
     return failure();
 
   // Process all blocks with a depth-first visitor starting from the header

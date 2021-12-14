@@ -328,9 +328,11 @@ class GenericMultiMapDataFormatterTestCase(TestBase):
         self.check("ss", 0)
 
     @add_test_categories(["libstdcxx"])
+    @skipIf(compiler="clang", compiler_version=['<', '9.0'])
     def test_with_run_command_libstdcpp(self):
         self.do_test_with_run_command(USE_LIBSTDCPP)
 
+    @skipIf(compiler="clang", compiler_version=['<', '9.0'])
     @add_test_categories(["libc++"])
     def test_with_run_command_libcpp(self):
         self.do_test_with_run_command(USE_LIBCPP)

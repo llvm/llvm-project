@@ -361,15 +361,15 @@ LogicalResult LLVMStructType::setBody(ArrayRef<Type> types, bool isPacked) {
   return Base::mutate(types, isPacked);
 }
 
-bool LLVMStructType::isPacked() { return getImpl()->isPacked(); }
-bool LLVMStructType::isIdentified() { return getImpl()->isIdentified(); }
+bool LLVMStructType::isPacked() const { return getImpl()->isPacked(); }
+bool LLVMStructType::isIdentified() const { return getImpl()->isIdentified(); }
 bool LLVMStructType::isOpaque() {
   return getImpl()->isIdentified() &&
          (getImpl()->isOpaque() || !getImpl()->isInitialized());
 }
 bool LLVMStructType::isInitialized() { return getImpl()->isInitialized(); }
 StringRef LLVMStructType::getName() { return getImpl()->getIdentifier(); }
-ArrayRef<Type> LLVMStructType::getBody() {
+ArrayRef<Type> LLVMStructType::getBody() const {
   return isIdentified() ? getImpl()->getIdentifiedStructBody()
                         : getImpl()->getTypeList();
 }
@@ -387,6 +387,147 @@ LLVMStructType::verify(function_ref<InFlightDiagnostic()> emitError,
       return emitError() << "invalid LLVM structure element type: " << t;
 
   return success();
+}
+
+unsigned
+LLVMStructType::getTypeSizeInBits(const DataLayout &dataLayout,
+                                  DataLayoutEntryListRef params) const {
+  unsigned structSize = 0;
+  unsigned structAlignment = 1;
+  for (Type element : getBody()) {
+    unsigned elementAlignment =
+        isPacked() ? 1 : dataLayout.getTypeABIAlignment(element);
+    // Add padding to the struct size to align it to the abi alignment of the
+    // element type before than adding the size of the element
+    structSize = llvm::alignTo(structSize, elementAlignment);
+    structSize += dataLayout.getTypeSize(element);
+
+    // The alignment requirement of a struct is equal to the strictest alignment
+    // requirement of its elements.
+    structAlignment = std::max(elementAlignment, structAlignment);
+  }
+  // At the end, add padding to the struct to satisfy its own alignment
+  // requirement. Otherwise structs inside of arrays would be misaligned.
+  structSize = llvm::alignTo(structSize, structAlignment);
+  return structSize * kBitsInByte;
+}
+
+namespace {
+enum class StructDLEntryPos { Abi = 0, Preferred = 1 };
+}
+
+static Optional<unsigned>
+getStructDataLayoutEntry(DataLayoutEntryListRef params, LLVMStructType type,
+                         StructDLEntryPos pos) {
+  auto currentEntry = llvm::find_if(params, [](DataLayoutEntryInterface entry) {
+    return entry.isTypeEntry();
+  });
+  if (currentEntry == params.end())
+    return llvm::None;
+
+  auto attr = currentEntry->getValue().cast<DenseIntElementsAttr>();
+  if (pos == StructDLEntryPos::Preferred &&
+      attr.size() <= static_cast<unsigned>(StructDLEntryPos::Preferred))
+    // If no preferred was specified, fall back to abi alignment
+    pos = StructDLEntryPos::Abi;
+
+  return attr.getValues<unsigned>()[static_cast<unsigned>(pos)];
+}
+
+static unsigned calculateStructAlignment(const DataLayout &dataLayout,
+                                         DataLayoutEntryListRef params,
+                                         LLVMStructType type,
+                                         StructDLEntryPos pos) {
+  // Packed structs always have an abi alignment of 1
+  if (pos == StructDLEntryPos::Abi && type.isPacked()) {
+    return 1;
+  }
+
+  // The alignment requirement of a struct is equal to the strictest alignment
+  // requirement of its elements.
+  unsigned structAlignment = 1;
+  for (Type iter : type.getBody()) {
+    structAlignment =
+        std::max(dataLayout.getTypeABIAlignment(iter), structAlignment);
+  }
+
+  // Entries are only allowed to be stricter than the required alignment
+  if (Optional<unsigned> entryResult =
+          getStructDataLayoutEntry(params, type, pos))
+    return std::max(*entryResult / kBitsInByte, structAlignment);
+
+  return structAlignment;
+}
+
+unsigned LLVMStructType::getABIAlignment(const DataLayout &dataLayout,
+                                         DataLayoutEntryListRef params) const {
+  return calculateStructAlignment(dataLayout, params, *this,
+                                  StructDLEntryPos::Abi);
+}
+
+unsigned
+LLVMStructType::getPreferredAlignment(const DataLayout &dataLayout,
+                                      DataLayoutEntryListRef params) const {
+  return calculateStructAlignment(dataLayout, params, *this,
+                                  StructDLEntryPos::Preferred);
+}
+
+static unsigned extractStructSpecValue(Attribute attr, StructDLEntryPos pos) {
+  return attr.cast<DenseIntElementsAttr>()
+      .getValues<unsigned>()[static_cast<unsigned>(pos)];
+}
+
+bool LLVMStructType::areCompatible(DataLayoutEntryListRef oldLayout,
+                                   DataLayoutEntryListRef newLayout) const {
+  for (DataLayoutEntryInterface newEntry : newLayout) {
+    if (!newEntry.isTypeEntry())
+      continue;
+
+    auto previousEntry =
+        llvm::find_if(oldLayout, [](DataLayoutEntryInterface entry) {
+          return entry.isTypeEntry();
+        });
+    if (previousEntry == oldLayout.end())
+      continue;
+
+    unsigned abi = extractStructSpecValue(previousEntry->getValue(),
+                                          StructDLEntryPos::Abi);
+    unsigned newAbi =
+        extractStructSpecValue(newEntry.getValue(), StructDLEntryPos::Abi);
+    if (abi < newAbi || abi % newAbi != 0)
+      return false;
+  }
+  return true;
+}
+
+LogicalResult LLVMStructType::verifyEntries(DataLayoutEntryListRef entries,
+                                            Location loc) const {
+  for (DataLayoutEntryInterface entry : entries) {
+    if (!entry.isTypeEntry())
+      continue;
+
+    auto key = entry.getKey().get<Type>().cast<LLVMStructType>();
+    auto values = entry.getValue().dyn_cast<DenseIntElementsAttr>();
+    if (!values || (values.size() != 2 && values.size() != 1)) {
+      return emitError(loc)
+             << "expected layout attribute for " << entry.getKey().get<Type>()
+             << " to be a dense integer elements attribute of 1 or 2 elements";
+    }
+
+    if (key.isIdentified() || !key.getBody().empty()) {
+      return emitError(loc) << "unexpected layout attribute for struct " << key;
+    }
+
+    if (values.size() == 1)
+      continue;
+
+    if (extractStructSpecValue(values, StructDLEntryPos::Abi) >
+        extractStructSpecValue(values, StructDLEntryPos::Preferred)) {
+      return emitError(loc) << "preferred alignment is expected to be at least "
+                               "as large as ABI alignment";
+    }
+  }
+  return mlir::success();
 }
 
 //===----------------------------------------------------------------------===//
