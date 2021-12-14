@@ -1570,7 +1570,7 @@ class Base(unittest2.TestCase):
         return os.environ["CC"]
 
 
-    def yaml2obj(self, yaml_path, obj_path):
+    def yaml2obj(self, yaml_path, obj_path, max_size=None):
         """
         Create an object file at the given path from a yaml file.
 
@@ -1580,6 +1580,8 @@ class Base(unittest2.TestCase):
         if not yaml2obj_bin:
             self.assertTrue(False, "No valid yaml2obj executable specified")
         command = [yaml2obj_bin, "-o=%s" % obj_path, yaml_path]
+        if max_size is not None:
+            command += ["--max-size=%d" % max_size]
         self.runBuildCommand(command)
 
     def getBuildFlags(

@@ -3,16 +3,9 @@
 
 define <3 x float> @PR52631(<3 x float> %a, <3 x float> %b, <3 x i32> %c) {
 ; CHECK-LABEL: @PR52631(
-; CHECK-NEXT:    [[ASTYPE:%.*]] = bitcast <3 x float> [[B:%.*]] to <3 x i32>
-; CHECK-NEXT:    [[ISNEG:%.*]] = icmp slt <3 x i32> [[C:%.*]], zeroinitializer
-; CHECK-NEXT:    [[AND:%.*]] = select <3 x i1> [[ISNEG]], <3 x i32> [[ASTYPE]], <3 x i32> zeroinitializer
-; CHECK-NEXT:    [[C_LOBIT2:%.*]] = ashr <3 x i32> [[C]], <i32 31, i32 31, i32 31>
-; CHECK-NEXT:    [[C_LOBIT2_NOT:%.*]] = xor <3 x i32> [[C_LOBIT2]], <i32 -1, i32 -1, i32 -1>
-; CHECK-NEXT:    [[ASTYPE28:%.*]] = bitcast <3 x float> [[A:%.*]] to <3 x i32>
-; CHECK-NEXT:    [[AND29:%.*]] = and <3 x i32> [[C_LOBIT2_NOT]], [[ASTYPE28]]
-; CHECK-NEXT:    [[OR:%.*]] = or <3 x i32> [[AND29]], [[AND]]
-; CHECK-NEXT:    [[ASTYPE33:%.*]] = bitcast <3 x i32> [[OR]] to <3 x float>
-; CHECK-NEXT:    ret <3 x float> [[ASTYPE33]]
+; CHECK-NEXT:    [[ISNEG3:%.*]] = icmp slt <3 x i32> [[C:%.*]], zeroinitializer
+; CHECK-NEXT:    [[OR_V:%.*]] = select <3 x i1> [[ISNEG3]], <3 x float> [[B:%.*]], <3 x float> [[A:%.*]]
+; CHECK-NEXT:    ret <3 x float> [[OR_V]]
 ;
   %a.addr = alloca <3 x float>, align 16
   %b.addr = alloca <3 x float>, align 16
@@ -85,9 +78,9 @@ define <3 x float> @PR52631(<3 x float> %a, <3 x float> %b, <3 x i32> %c) {
 
 define <4 x i8> @allSignBits_vec(<4 x i8> %cond, <4 x i8> %tval, <4 x i8> %fval) {
 ; CHECK-LABEL: @allSignBits_vec(
-; CHECK-NEXT:    [[DOTNOT:%.*]] = icmp sgt <4 x i8> [[COND:%.*]], <i8 -1, i8 -1, i8 -1, i8 -1>
-; CHECK-NEXT:    [[TMP1:%.*]] = select <4 x i1> [[DOTNOT]], <4 x i8> [[FVAL:%.*]], <4 x i8> [[TVAL:%.*]]
-; CHECK-NEXT:    ret <4 x i8> [[TMP1]]
+; CHECK-NEXT:    [[ISNEG1:%.*]] = icmp slt <4 x i8> [[COND:%.*]], zeroinitializer
+; CHECK-NEXT:    [[SEL:%.*]] = select <4 x i1> [[ISNEG1]], <4 x i8> [[TVAL:%.*]], <4 x i8> [[FVAL:%.*]]
+; CHECK-NEXT:    ret <4 x i8> [[SEL]]
 ;
   %bitmask = ashr <4 x i8> %cond, <i8 7, i8 7, i8 7, i8 7>
   %not_bitmask = xor <4 x i8> %bitmask, <i8 -1, i8 -1, i8 -1, i8 -1>

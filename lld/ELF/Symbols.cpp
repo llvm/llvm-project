@@ -120,7 +120,7 @@ static uint64_t getSymVA(const Symbol &sym, int64_t addend) {
     // field etc) do the same trick as compiler uses to mark microMIPS
     // for CPU - set the less-significant bit.
     if (config->emachine == EM_MIPS && isMicroMips() &&
-        ((sym.stOther & STO_MIPS_MICROMIPS) || sym.needsCopy))
+        ((sym.stOther & STO_MIPS_MICROMIPS) || sym.needsPltAddr))
       va |= 1;
 
     if (d.isTls() && !config->relocatable) {

@@ -68,7 +68,8 @@ public:
 
   // Constructor for non-CS profile.
   ProfiledCallGraph(SampleProfileMap &ProfileMap) {
-    assert(!FunctionSamples::ProfileIsCS && "CS profile is not handled here");
+    assert(!FunctionSamples::ProfileIsCSFlat &&
+           "CS flat profile is not handled here");
     for (const auto &Samples : ProfileMap) {
       addProfiledCalls(Samples.second);
     }

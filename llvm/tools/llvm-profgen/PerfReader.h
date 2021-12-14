@@ -538,14 +538,14 @@ public:
   const ContextSampleCounterMap &getSampleCounters() const {
     return SampleCounters;
   }
-  bool profileIsCS() { return ProfileIsCS; }
+  bool profileIsCSFlat() { return ProfileIsCSFlat; }
 
 protected:
   ProfiledBinary *Binary = nullptr;
   StringRef PerfTraceFile;
 
   ContextSampleCounterMap SampleCounters;
-  bool ProfileIsCS = false;
+  bool ProfileIsCSFlat = false;
 };
 
 // Read perf script to parse the events and samples.
