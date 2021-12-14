@@ -313,12 +313,12 @@ def : Pat<(f32 (fpimm0)), (FMV_W_X X0)>;
 
 /// Float arithmetic operations
 
-def : PatFpr32Fpr32DynFrm<fadd, FADD_S>;
-def : PatFpr32Fpr32DynFrm<fsub, FSUB_S>;
-def : PatFpr32Fpr32DynFrm<fmul, FMUL_S>;
-def : PatFpr32Fpr32DynFrm<fdiv, FDIV_S>;
+def : PatFpr32Fpr32DynFrm<any_fadd, FADD_S>;
+def : PatFpr32Fpr32DynFrm<any_fsub, FSUB_S>;
+def : PatFpr32Fpr32DynFrm<any_fmul, FMUL_S>;
+def : PatFpr32Fpr32DynFrm<any_fdiv, FDIV_S>;
 
-def : Pat<(fsqrt FPR32:$rs1), (FSQRT_S FPR32:$rs1, 0b111)>;
+def : Pat<(any_fsqrt FPR32:$rs1), (FSQRT_S FPR32:$rs1, 0b111)>;
 
 def : Pat<(fneg FPR32:$rs1), (FSGNJN_S $rs1, $rs1)>;
 def : Pat<(fabs FPR32:$rs1), (FSGNJX_S $rs1, $rs1)>;
@@ -327,19 +327,19 @@ def : PatFpr32Fpr32<fcopysign, FSGNJ_S>;
 def : Pat<(fcopysign FPR32:$rs1, (fneg FPR32:$rs2)), (FSGNJN_S $rs1, $rs2)>;
 
 // fmadd: rs1 * rs2 + rs3
-def : Pat<(fma FPR32:$rs1, FPR32:$rs2, FPR32:$rs3),
+def : Pat<(any_fma FPR32:$rs1, FPR32:$rs2, FPR32:$rs3),
           (FMADD_S $rs1, $rs2, $rs3, 0b111)>;
 
 // fmsub: rs1 * rs2 - rs3
-def : Pat<(fma FPR32:$rs1, FPR32:$rs2, (fneg FPR32:$rs3)),
+def : Pat<(any_fma FPR32:$rs1, FPR32:$rs2, (fneg FPR32:$rs3)),
           (FMSUB_S FPR32:$rs1, FPR32:$rs2, FPR32:$rs3, 0b111)>;
 
 // fnmsub: -rs1 * rs2 + rs3
-def : Pat<(fma (fneg FPR32:$rs1), FPR32:$rs2, FPR32:$rs3),
+def : Pat<(any_fma (fneg FPR32:$rs1), FPR32:$rs2, FPR32:$rs3),
           (FNMSUB_S FPR32:$rs1, FPR32:$rs2, FPR32:$rs3, 0b111)>;
 
 // fnmadd: -rs1 * rs2 - rs3
-def : Pat<(fma (fneg FPR32:$rs1), FPR32:$rs2, (fneg FPR32:$rs3)),
+def : Pat<(any_fma (fneg FPR32:$rs1), FPR32:$rs2, (fneg FPR32:$rs3)),
           (FNMADD_S FPR32:$rs1, FPR32:$rs2, FPR32:$rs3, 0b111)>;
 
 // The ratified 20191213 ISA spec defines fmin and fmax in a way that matches
