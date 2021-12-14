@@ -4994,11 +4994,14 @@ static void __kmp_stg_parse_hw_subset(char const *name, char const *value,
       if (attr_ptr) {
         attr.clear();
         // save the attribute
+#if KMP_ARCH_X86 || KMP_ARCH_X86_64
         if (__kmp_str_match("intel_core", -1, attr_ptr + 1)) {
           attr.set_core_type(KMP_HW_CORE_TYPE_CORE);
         } else if (__kmp_str_match("intel_atom", -1, attr_ptr + 1)) {
           attr.set_core_type(KMP_HW_CORE_TYPE_ATOM);
-        } else if (__kmp_str_match("eff", 3, attr_ptr + 1)) {
+        }
+#endif
+        if (__kmp_str_match("eff", 3, attr_ptr + 1)) {
           const char *number = attr_ptr + 1;
           // skip the eff[iciency] token
           while (isalpha(*number))
