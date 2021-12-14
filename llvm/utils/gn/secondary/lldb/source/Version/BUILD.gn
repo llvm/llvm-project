@@ -14,7 +14,6 @@ write_vcsrevision("write_vcsversion") {
   public_configs = [ ":write_vcsrevision_config" ]
 }
 
-
 static_library("Version") {
   output_name = "lldbVersion"
   configs += [
