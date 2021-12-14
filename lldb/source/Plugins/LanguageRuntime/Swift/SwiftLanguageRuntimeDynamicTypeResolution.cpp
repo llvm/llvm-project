@@ -1947,8 +1947,7 @@ bool SwiftLanguageRuntimeImpl::GetDynamicTypeAndAddress_Protocol(
   }
 
   const swift::reflection::TypeRef *protocol_typeref =
-      GetTypeRef(protocol_type, &tss->GetTypeSystemSwiftTypeRef(),
-                 tss->GetSwiftASTContext());
+      GetTypeRef(protocol_type, &tss->GetTypeSystemSwiftTypeRef());
   if (!protocol_typeref) {
     if (log)
       log->Printf("Could not get protocol typeref");
@@ -2501,12 +2500,11 @@ bool SwiftLanguageRuntimeImpl::GetDynamicTypeAndAddress_IndirectEnumCase(
 }
 
 void SwiftLanguageRuntimeImpl::DumpTyperef(
-    CompilerType type, TypeSystemSwiftTypeRef *module_holder,
-    SwiftASTContext *swift_ast_context, Stream *s) {
+    CompilerType type, TypeSystemSwiftTypeRef *module_holder, Stream *s) {
   if (!s)
     return;
 
-  const auto *typeref = GetTypeRef(type, module_holder, swift_ast_context);
+  const auto *typeref = GetTypeRef(type, module_holder);
   if (!typeref)
     return;
 
@@ -2960,8 +2958,7 @@ lldb::addr_t SwiftLanguageRuntimeImpl::FixupAddress(lldb::addr_t addr,
 
 const swift::reflection::TypeRef *
 SwiftLanguageRuntimeImpl::GetTypeRef(CompilerType type,
-                                     TypeSystemSwiftTypeRef *module_holder,
-                                     SwiftASTContext *swift_ast_context) {
+                                     TypeSystemSwiftTypeRef *module_holder) {
   // Demangle the mangled name.
   swift::Demangle::Demangler dem;
   ConstString mangled_name = type.GetMangledTypeName();
@@ -2969,8 +2966,7 @@ SwiftLanguageRuntimeImpl::GetTypeRef(CompilerType type,
   if (!ts)
     return nullptr;
   swift::Demangle::NodePointer node =
-      TypeSystemSwiftTypeRef::GetCanonicalDemangleTree(
-          module_holder, swift_ast_context, dem, mangled_name.GetStringRef());
+      module_holder->GetCanonicalDemangleTree(dem, mangled_name.GetStringRef());
   if (!node)
     return nullptr;
 
@@ -3013,8 +3009,8 @@ SwiftLanguageRuntimeImpl::GetSwiftRuntimeTypeInfo(
   // BindGenericTypeParameters imports the type into the scratch
   // context, but we need to resolve (any DWARF links in) the typeref
   // in the original module.
-  const swift::reflection::TypeRef *type_ref = GetTypeRef(
-      type, &ts->GetTypeSystemSwiftTypeRef(), ts->GetSwiftASTContext());
+  const swift::reflection::TypeRef *type_ref =
+      GetTypeRef(type, &ts->GetTypeSystemSwiftTypeRef());
   if (!type_ref)
     return nullptr;
 
