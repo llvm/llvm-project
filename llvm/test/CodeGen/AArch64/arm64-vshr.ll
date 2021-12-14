@@ -48,7 +48,14 @@ entry:
 
 define <1 x i64> @sshr_v1i64(<1 x i64> %A) nounwind {
 ; CHECK-LABEL: sshr_v1i64:
-; CHECK: sshr d0, d0, #63
+; CHECK: sshr d0, d0, #42
+  %tmp3 = ashr <1 x i64> %A, < i64 42 >
+  ret <1 x i64> %tmp3
+}
+
+define <1 x i64> @cmlt_v1i64(<1 x i64> %A) nounwind {
+; CHECK-LABEL: cmlt_v1i64:
+; CHECK: cmlt d0, d0, #0
   %tmp3 = ashr <1 x i64> %A, < i64 63 >
   ret <1 x i64> %tmp3
 }

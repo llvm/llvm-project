@@ -167,7 +167,7 @@ define <16 x i8> @sel_shift_bool_v16i8(<16 x i1> %t) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    shl v0.16b, v0.16b, #7
 ; CHECK-NEXT:    movi v1.16b, #128
-; CHECK-NEXT:    sshr v0.16b, v0.16b, #7
+; CHECK-NEXT:    cmlt v0.16b, v0.16b, #0
 ; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    ret
   %shl = select <16 x i1> %t, <16 x i8> <i8 128, i8 128, i8 128, i8 128, i8 128, i8 128, i8 128, i8 128, i8 128, i8 128, i8 128, i8 128, i8 128, i8 128, i8 128, i8 128>, <16 x i8> zeroinitializer
@@ -180,7 +180,7 @@ define <8 x i16> @sel_shift_bool_v8i16(<8 x i1> %t) {
 ; CHECK-NEXT:    ushll v0.8h, v0.8b, #0
 ; CHECK-NEXT:    movi v1.8h, #128
 ; CHECK-NEXT:    shl v0.8h, v0.8h, #15
-; CHECK-NEXT:    sshr v0.8h, v0.8h, #15
+; CHECK-NEXT:    cmlt v0.8h, v0.8h, #0
 ; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    ret
   %shl= select <8 x i1> %t, <8 x i16> <i16 128, i16 128, i16 128, i16 128, i16 128, i16 128, i16 128, i16 128>, <8 x i16> zeroinitializer
@@ -193,7 +193,7 @@ define <4 x i32> @sel_shift_bool_v4i32(<4 x i1> %t) {
 ; CHECK-NEXT:    ushll v0.4s, v0.4h, #0
 ; CHECK-NEXT:    movi v1.4s, #64
 ; CHECK-NEXT:    shl v0.4s, v0.4s, #31
-; CHECK-NEXT:    sshr v0.4s, v0.4s, #31
+; CHECK-NEXT:    cmlt v0.4s, v0.4s, #0
 ; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    ret
   %shl = select <4 x i1> %t, <4 x i32> <i32 64, i32 64, i32 64, i32 64>, <4 x i32> zeroinitializer
@@ -207,7 +207,7 @@ define <2 x i64> @sel_shift_bool_v2i64(<2 x i1> %t) {
 ; CHECK-NEXT:    mov w8, #65536
 ; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    shl v0.2d, v0.2d, #63
-; CHECK-NEXT:    sshr v0.2d, v0.2d, #63
+; CHECK-NEXT:    cmlt v0.2d, v0.2d, #0
 ; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    ret
   %shl = select <2 x i1> %t, <2 x i64> <i64 65536, i64 65536>, <2 x i64> zeroinitializer

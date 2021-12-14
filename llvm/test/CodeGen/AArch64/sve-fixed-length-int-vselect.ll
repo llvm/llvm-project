@@ -25,7 +25,7 @@ define <8 x i8> @select_v8i8(<8 x i8> %op1, <8 x i8> %op2, <8 x i1> %mask) #0 {
 ; CHECK-LABEL: select_v8i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    shl v2.8b, v2.8b, #7
-; CHECK-NEXT:    sshr v2.8b, v2.8b, #7
+; CHECK-NEXT:    cmlt v2.8b, v2.8b, #0
 ; CHECK-NEXT:    bif v0.8b, v1.8b, v2.8b
 ; CHECK-NEXT:    ret
   %sel = select <8 x i1> %mask, <8 x i8> %op1, <8 x i8> %op2
@@ -37,7 +37,7 @@ define <16 x i8> @select_v16i8(<16 x i8> %op1, <16 x i8> %op2, <16 x i1> %mask) 
 ; CHECK-LABEL: select_v16i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    shl v2.16b, v2.16b, #7
-; CHECK-NEXT:    sshr v2.16b, v2.16b, #7
+; CHECK-NEXT:    cmlt v2.16b, v2.16b, #0
 ; CHECK-NEXT:    bif v0.16b, v1.16b, v2.16b
 ; CHECK-NEXT:    ret
   %sel = select <16 x i1> %mask, <16 x i8> %op1, <16 x i8> %op2
@@ -1137,7 +1137,7 @@ define <4 x i16> @select_v4i16(<4 x i16> %op1, <4 x i16> %op2, <4 x i1> %mask) #
 ; CHECK-LABEL: select_v4i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    shl v2.4h, v2.4h, #15
-; CHECK-NEXT:    sshr v2.4h, v2.4h, #15
+; CHECK-NEXT:    cmlt v2.4h, v2.4h, #0
 ; CHECK-NEXT:    bif v0.8b, v1.8b, v2.8b
 ; CHECK-NEXT:    ret
   %sel = select <4 x i1> %mask, <4 x i16> %op1, <4 x i16> %op2
@@ -1150,7 +1150,7 @@ define <8 x i16> @select_v8i16(<8 x i16> %op1, <8 x i16> %op2, <8 x i1> %mask) #
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ushll v2.8h, v2.8b, #0
 ; CHECK-NEXT:    shl v2.8h, v2.8h, #15
-; CHECK-NEXT:    sshr v2.8h, v2.8h, #15
+; CHECK-NEXT:    cmlt v2.8h, v2.8h, #0
 ; CHECK-NEXT:    bif v0.16b, v1.16b, v2.16b
 ; CHECK-NEXT:    ret
   %sel = select <8 x i1> %mask, <8 x i16> %op1, <8 x i16> %op2
@@ -1767,7 +1767,7 @@ define <2 x i32> @select_v2i32(<2 x i32> %op1, <2 x i32> %op2, <2 x i1> %mask) #
 ; CHECK-LABEL: select_v2i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    shl v2.2s, v2.2s, #31
-; CHECK-NEXT:    sshr v2.2s, v2.2s, #31
+; CHECK-NEXT:    cmlt v2.2s, v2.2s, #0
 ; CHECK-NEXT:    bif v0.8b, v1.8b, v2.8b
 ; CHECK-NEXT:    ret
   %sel = select <2 x i1> %mask, <2 x i32> %op1, <2 x i32> %op2
@@ -1780,7 +1780,7 @@ define <4 x i32> @select_v4i32(<4 x i32> %op1, <4 x i32> %op2, <4 x i1> %mask) #
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ushll v2.4s, v2.4h, #0
 ; CHECK-NEXT:    shl v2.4s, v2.4s, #31
-; CHECK-NEXT:    sshr v2.4s, v2.4s, #31
+; CHECK-NEXT:    cmlt v2.4s, v2.4s, #0
 ; CHECK-NEXT:    bif v0.16b, v1.16b, v2.16b
 ; CHECK-NEXT:    ret
   %sel = select <4 x i1> %mask, <4 x i32> %op1, <4 x i32> %op2
@@ -2110,7 +2110,7 @@ define <2 x i64> @select_v2i64(<2 x i64> %op1, <2 x i64> %op2, <2 x i1> %mask) #
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ushll v2.2d, v2.2s, #0
 ; CHECK-NEXT:    shl v2.2d, v2.2d, #63
-; CHECK-NEXT:    sshr v2.2d, v2.2d, #63
+; CHECK-NEXT:    cmlt v2.2d, v2.2d, #0
 ; CHECK-NEXT:    bif v0.16b, v1.16b, v2.16b
 ; CHECK-NEXT:    ret
   %sel = select <2 x i1> %mask, <2 x i64> %op1, <2 x i64> %op2

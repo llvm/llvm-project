@@ -348,8 +348,8 @@ define <32 x i8> @sext_v32i1(<32 x i1> %arg) {
 ; CHECK-NEXT:    mov.b v1[15], w8
 ; CHECK-NEXT:    shl.16b v0, v0, #7
 ; CHECK-NEXT:    shl.16b v1, v1, #7
-; CHECK-NEXT:    sshr.16b v0, v0, #7
-; CHECK-NEXT:    sshr.16b v1, v1, #7
+; CHECK-NEXT:    cmlt.16b v0, v0, #0
+; CHECK-NEXT:    cmlt.16b v1, v1, #0
 ; CHECK-NEXT:    ret
   %res = sext <32 x i1> %arg to <32 x i8>
   ret <32 x i8> %res
@@ -615,10 +615,10 @@ define <64 x i8> @sext_v64i1(<64 x i1> %arg) {
 ; CHECK-NEXT:    shl.16b v2, v2, #7
 ; CHECK-NEXT:    shl.16b v4, v1, #7
 ; CHECK-NEXT:    shl.16b v5, v0, #7
-; CHECK-NEXT:    sshr.16b v0, v3, #7
-; CHECK-NEXT:    sshr.16b v1, v2, #7
-; CHECK-NEXT:    sshr.16b v2, v4, #7
-; CHECK-NEXT:    sshr.16b v3, v5, #7
+; CHECK-NEXT:    cmlt.16b v0, v3, #0
+; CHECK-NEXT:    cmlt.16b v1, v2, #0
+; CHECK-NEXT:    cmlt.16b v2, v4, #0
+; CHECK-NEXT:    cmlt.16b v3, v5, #0
 ; CHECK-NEXT:    ret
   %res = sext <64 x i1> %arg to <64 x i8>
   ret <64 x i8> %res

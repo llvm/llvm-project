@@ -581,7 +581,7 @@ define void @masked_scatter_v2f16(<2 x half>* %a, <2 x half*>* %b) #0 {
 ; CHECK-NEXT:    mov v0.h[0], w8
 ; CHECK-NEXT:    mov v0.h[1], w9
 ; CHECK-NEXT:    shl v0.4h, v0.4h, #15
-; CHECK-NEXT:    sshr v0.4h, v0.4h, #15
+; CHECK-NEXT:    cmlt v0.4h, v0.4h, #0
 ; CHECK-NEXT:    sunpklo z0.s, z0.h
 ; CHECK-NEXT:    sunpklo z0.d, z0.s
 ; CHECK-NEXT:    cmpne p0.d, p0/z, z0.d, #0

@@ -42,7 +42,7 @@ define void @masked_store_v2f16(<2 x half>* %ap, <2 x half>* %bp) #0 {
 ; CHECK-NEXT:    mov v0.h[0], w8
 ; CHECK-NEXT:    mov v0.h[1], w9
 ; CHECK-NEXT:    shl v0.4h, v0.4h, #15
-; CHECK-NEXT:    sshr v0.4h, v0.4h, #15
+; CHECK-NEXT:    cmlt v0.4h, v0.4h, #0
 ; CHECK-NEXT:    cmpne p0.h, p0/z, z0.h, #0
 ; CHECK-NEXT:    st1h { z1.h }, p0, [x1]
 ; CHECK-NEXT:    ret

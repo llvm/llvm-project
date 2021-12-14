@@ -25,7 +25,7 @@ define <4 x half> @select_v4f16(<4 x half> %op1, <4 x half> %op2, <4 x i1> %mask
 ; CHECK-LABEL: select_v4f16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    shl v2.4h, v2.4h, #15
-; CHECK-NEXT:    sshr v2.4h, v2.4h, #15
+; CHECK-NEXT:    cmlt v2.4h, v2.4h, #0
 ; CHECK-NEXT:    bif v0.8b, v1.8b, v2.8b
 ; CHECK-NEXT:    ret
   %sel = select <4 x i1> %mask, <4 x half> %op1, <4 x half> %op2
@@ -38,7 +38,7 @@ define <8 x half> @select_v8f16(<8 x half> %op1, <8 x half> %op2, <8 x i1> %mask
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ushll v2.8h, v2.8b, #0
 ; CHECK-NEXT:    shl v2.8h, v2.8h, #15
-; CHECK-NEXT:    sshr v2.8h, v2.8h, #15
+; CHECK-NEXT:    cmlt v2.8h, v2.8h, #0
 ; CHECK-NEXT:    bif v0.16b, v1.16b, v2.16b
 ; CHECK-NEXT:    ret
   %sel = select <8 x i1> %mask, <8 x half> %op1, <8 x half> %op2
@@ -122,7 +122,7 @@ define <2 x float> @select_v2f32(<2 x float> %op1, <2 x float> %op2, <2 x i1> %m
 ; CHECK-LABEL: select_v2f32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    shl v2.2s, v2.2s, #31
-; CHECK-NEXT:    sshr v2.2s, v2.2s, #31
+; CHECK-NEXT:    cmlt v2.2s, v2.2s, #0
 ; CHECK-NEXT:    bif v0.8b, v1.8b, v2.8b
 ; CHECK-NEXT:    ret
   %sel = select <2 x i1> %mask, <2 x float> %op1, <2 x float> %op2
@@ -135,7 +135,7 @@ define <4 x float> @select_v4f32(<4 x float> %op1, <4 x float> %op2, <4 x i1> %m
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ushll v2.4s, v2.4h, #0
 ; CHECK-NEXT:    shl v2.4s, v2.4s, #31
-; CHECK-NEXT:    sshr v2.4s, v2.4s, #31
+; CHECK-NEXT:    cmlt v2.4s, v2.4s, #0
 ; CHECK-NEXT:    bif v0.16b, v1.16b, v2.16b
 ; CHECK-NEXT:    ret
   %sel = select <4 x i1> %mask, <4 x float> %op1, <4 x float> %op2
@@ -233,7 +233,7 @@ define <2 x double> @select_v2f64(<2 x double> %op1, <2 x double> %op2, <2 x i1>
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ushll v2.2d, v2.2s, #0
 ; CHECK-NEXT:    shl v2.2d, v2.2d, #63
-; CHECK-NEXT:    sshr v2.2d, v2.2d, #63
+; CHECK-NEXT:    cmlt v2.2d, v2.2d, #0
 ; CHECK-NEXT:    bif v0.16b, v1.16b, v2.16b
 ; CHECK-NEXT:    ret
   %sel = select <2 x i1> %mask, <2 x double> %op1, <2 x double> %op2
