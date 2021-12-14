@@ -695,11 +695,28 @@ Error RISCVISAInfo::checkDependency() {
   return Error::success();
 }
 
+static const char *ImpliedExtsV[] = {"zvlsseg"};
+static const char *ImpliedExtsZfh[] = {"zfhmin"};
+
+struct ImpliedExtsEntry {
+  StringLiteral Name;
+  ArrayRef<const char *> Exts;
+
+  bool operator<(const ImpliedExtsEntry &Other) const {
+    return Name < Other.Name;
+  }
+
+  bool operator<(StringRef Other) const { return Name < Other; }
+};
+
+static constexpr ImpliedExtsEntry ImpliedExts[] = {
+    {"v", ImpliedExtsV},
+    {"zfh", ImpliedExtsZfh},
+};
+
 void RISCVISAInfo::updateImplication() {
   bool HasE = Exts.count("e") == 1;
   bool HasI = Exts.count("i") == 1;
-  bool HasV = Exts.count("v") == 1;
-  bool HasZfh = Exts.count("zfh") == 1;
 
   // If not in e extension and i extension does not exist, i extension is
   // implied
@@ -708,14 +725,15 @@ void RISCVISAInfo::updateImplication() {
     addExtension("i", Version->Major, Version->Minor);
   }
 
-  if (HasV) {
-    auto Version = findDefaultVersion("zvlsseg");
-    addExtension("zvlsseg", Version->Major, Version->Minor);
-  }
-
-  if (HasZfh) {
-    auto Version = findDefaultVersion("zfhmin");
-    addExtension("zfhmin", Version->Major, Version->Minor);
+  assert(llvm::is_sorted(ImpliedExts) && "Table not sorted by Name");
+  for (auto &Ext : Exts) {
+    auto I = llvm::lower_bound(ImpliedExts, Ext.first);
+    if (I != std::end(ImpliedExts) && I->Name == Ext.first) {
+      for (auto &ImpliedExt : I->Exts) {
+        auto Version = findDefaultVersion(ImpliedExt);
+        addExtension(ImpliedExt, Version->Major, Version->Minor);
+      }
+    }
   }
 }
 
