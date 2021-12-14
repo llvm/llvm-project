@@ -72,10 +72,17 @@ static SymbolMapTy getSectionSyms(ArrayRef<Defined *> syms) {
   // Sort symbols by address. We want to print out symbols in the
   // order in the output file rather than the order they appeared
   // in the input files.
-  for (auto &it : ret)
+  SmallPtrSet<Defined *, 4> set;
+  for (auto &it : ret) {
+    // Deduplicate symbols which need a canonical PLT entry/copy relocation.
+    set.clear();
+    llvm::erase_if(it.second,
+                   [&](Defined *sym) { return !set.insert(sym).second; });
+
     llvm::stable_sort(it.second, [](Defined *a, Defined *b) {
       return a->getVA() < b->getVA();
     });
+  }
   return ret;
 }
 
