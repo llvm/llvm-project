@@ -832,9 +832,9 @@ _LIBCPP_FUNC_VIS void* align(size_t __align, size_t __sz, void*& __ptr, size_t& 
 
 // --- Helper for container swap --
 template <typename _Alloc>
-_LIBCPP_INLINE_VISIBILITY
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX11
 void __swap_allocator(_Alloc & __a1, _Alloc & __a2, true_type)
-#if _LIBCPP_STD_VER >= 14
+#if _LIBCPP_STD_VER > 11
     _NOEXCEPT
 #else
     _NOEXCEPT_(__is_nothrow_swappable<_Alloc>::value)
@@ -845,13 +845,13 @@ void __swap_allocator(_Alloc & __a1, _Alloc & __a2, true_type)
 }
 
 template <typename _Alloc>
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX11
 void __swap_allocator(_Alloc &, _Alloc &, false_type) _NOEXCEPT {}
 
 template <typename _Alloc>
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX11
 void __swap_allocator(_Alloc & __a1, _Alloc & __a2)
-#if _LIBCPP_STD_VER >= 14
+#if _LIBCPP_STD_VER > 11
     _NOEXCEPT
 #else
     _NOEXCEPT_(__is_nothrow_swappable<_Alloc>::value)
