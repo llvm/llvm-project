@@ -67,7 +67,7 @@ inline LogType& GetLogInstanceForLevel(int level) {
 }  // end namespace benchmark
 
 // clang-format off
-#define VLOG(x)                                                               \
+#define BM_VLOG(x)                                                               \
   (::benchmark::internal::GetLogInstanceForLevel(x) << "-- LOG(" << x << "):" \
                                                                          " ")
 // clang-format on

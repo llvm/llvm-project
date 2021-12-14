@@ -13,15 +13,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "benchmark/benchmark.h"
+#include "statistics.h"
 
 #include <algorithm>
 #include <cmath>
 #include <numeric>
 #include <string>
 #include <vector>
+
+#include "benchmark/benchmark.h"
 #include "check.h"
-#include "statistics.h"
 
 namespace benchmark {
 
@@ -74,6 +75,15 @@ double StatisticsStdDev(const std::vector<double>& v) {
   return Sqrt(v.size() / (v.size() - 1.0) * (avg_squares - Sqr(mean)));
 }
 
+double StatisticsCV(const std::vector<double>& v) {
+  if (v.size() < 2) return 0.0;
+
+  const auto stddev = StatisticsStdDev(v);
+  const auto mean = StatisticsMean(v);
+
+  return stddev / mean;
+}
+
 std::vector<BenchmarkReporter::Run> ComputeStats(
     const std::vector<BenchmarkReporter::Run>& reports) {
   typedef BenchmarkReporter::Run Run;
@@ -112,22 +122,22 @@ std::vector<BenchmarkReporter::Run> ComputeStats(
         it = counter_stats.find(cnt.first);
         it->second.s.reserve(reports.size());
       } else {
-        CHECK_EQ(counter_stats[cnt.first].c.flags, cnt.second.flags);
+        BM_CHECK_EQ(counter_stats[cnt.first].c.flags, cnt.second.flags);
       }
     }
   }
 
   // Populate the accumulators.
   for (Run const& run : reports) {
-    CHECK_EQ(reports[0].benchmark_name(), run.benchmark_name());
-    CHECK_EQ(run_iterations, run.iterations);
+    BM_CHECK_EQ(reports[0].benchmark_name(), run.benchmark_name());
+    BM_CHECK_EQ(run_iterations, run.iterations);
     if (run.error_occurred) continue;
     real_accumulated_time_stat.emplace_back(run.real_accumulated_time);
     cpu_accumulated_time_stat.emplace_back(run.cpu_accumulated_time);
     // user counters
     for (auto const& cnt : run.counters) {
       auto it = counter_stats.find(cnt.first);
-      CHECK_NE(it, counter_stats.end());
+      BM_CHECK_NE(it, counter_stats.end());
       it->second.s.emplace_back(cnt.second);
     }
   }
@@ -155,6 +165,7 @@ std::vector<BenchmarkReporter::Run> ComputeStats(
     data.repetitions = reports[0].repetitions;
     data.repetition_index = Run::no_repetition_index;
     data.aggregate_name = Stat.name_;
+    data.aggregate_unit = Stat.unit_;
     data.report_label = report_label;
 
     // It is incorrect to say that an aggregate is computed over
@@ -167,13 +178,15 @@ std::vector<BenchmarkReporter::Run> ComputeStats(
     data.real_accumulated_time = Stat.compute_(real_accumulated_time_stat);
     data.cpu_accumulated_time = Stat.compute_(cpu_accumulated_time_stat);
 
-    // We will divide these times by data.iterations when reporting, but the
-    // data.iterations is not nessesairly the scale of these measurements,
-    // because in each repetition, these timers are sum over all the iterations.
-    // And if we want to say that the stats are over N repetitions and not
-    // M iterations, we need to multiply these by (N/M).
-    data.real_accumulated_time *= iteration_rescale_factor;
-    data.cpu_accumulated_time *= iteration_rescale_factor;
+    if (data.aggregate_unit == StatisticUnit::kTime) {
+      // We will divide these times by data.iterations when reporting, but the
+      // data.iterations is not necessarily the scale of these measurements,
+      // because in each repetition, these timers are sum over all the iters.
+      // And if we want to say that the stats are over N repetitions and not
+      // M iterations, we need to multiply these by (N/M).
+      data.real_accumulated_time *= iteration_rescale_factor;
+      data.cpu_accumulated_time *= iteration_rescale_factor;
+    }
 
     data.time_unit = reports[0].time_unit;
 

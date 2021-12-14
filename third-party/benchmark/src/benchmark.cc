@@ -56,75 +56,75 @@
 #include "thread_manager.h"
 #include "thread_timer.h"
 
+namespace benchmark {
 // Print a list of benchmarks. This option overrides all other options.
-DEFINE_bool(benchmark_list_tests, false);
+BM_DEFINE_bool(benchmark_list_tests, false);
 
 // A regular expression that specifies the set of benchmarks to execute.  If
 // this flag is empty, or if this flag is the string \"all\", all benchmarks
 // linked into the binary are run.
-DEFINE_string(benchmark_filter, ".");
+BM_DEFINE_string(benchmark_filter, "");
 
 // Minimum number of seconds we should run benchmark before results are
 // considered significant.  For cpu-time based tests, this is the lower bound
 // on the total cpu time used by all threads that make up the test.  For
 // real-time based tests, this is the lower bound on the elapsed time of the
 // benchmark execution, regardless of number of threads.
-DEFINE_double(benchmark_min_time, 0.5);
+BM_DEFINE_double(benchmark_min_time, 0.5);
 
 // The number of runs of each benchmark. If greater than 1, the mean and
 // standard deviation of the runs will be reported.
-DEFINE_int32(benchmark_repetitions, 1);
+BM_DEFINE_int32(benchmark_repetitions, 1);
 
 // If set, enable random interleaving of repetitions of all benchmarks.
 // See http://github.com/google/benchmark/issues/1051 for details.
-DEFINE_bool(benchmark_enable_random_interleaving, false);
+BM_DEFINE_bool(benchmark_enable_random_interleaving, false);
 
 // Report the result of each benchmark repetitions. When 'true' is specified
 // only the mean, standard deviation, and other statistics are reported for
 // repeated benchmarks. Affects all reporters.
-DEFINE_bool(benchmark_report_aggregates_only, false);
+BM_DEFINE_bool(benchmark_report_aggregates_only, false);
 
 // Display the result of each benchmark repetitions. When 'true' is specified
 // only the mean, standard deviation, and other statistics are displayed for
 // repeated benchmarks. Unlike benchmark_report_aggregates_only, only affects
 // the display reporter, but  *NOT* file reporter, which will still contain
 // all the output.
-DEFINE_bool(benchmark_display_aggregates_only, false);
+BM_DEFINE_bool(benchmark_display_aggregates_only, false);
 
 // The format to use for console output.
 // Valid values are 'console', 'json', or 'csv'.
-DEFINE_string(benchmark_format, "console");
+BM_DEFINE_string(benchmark_format, "console");
 
 // The format to use for file output.
 // Valid values are 'console', 'json', or 'csv'.
-DEFINE_string(benchmark_out_format, "json");
+BM_DEFINE_string(benchmark_out_format, "json");
 
 // The file to write additional output to.
-DEFINE_string(benchmark_out, "");
+BM_DEFINE_string(benchmark_out, "");
 
 // Whether to use colors in the output.  Valid values:
 // 'true'/'yes'/1, 'false'/'no'/0, and 'auto'. 'auto' means to use colors if
 // the output is being sent to a terminal and the TERM environment variable is
 // set to a terminal type that supports colors.
-DEFINE_string(benchmark_color, "auto");
+BM_DEFINE_string(benchmark_color, "auto");
 
 // Whether to use tabular format when printing user counters to the console.
 // Valid values: 'true'/'yes'/1, 'false'/'no'/0.  Defaults to false.
-DEFINE_bool(benchmark_counters_tabular, false);
-
-// The level of verbose logging to output
-DEFINE_int32(v, 0);
+BM_DEFINE_bool(benchmark_counters_tabular, false);
 
 // List of additional perf counters to collect, in libpfm format. For more
 // information about libpfm: https://man7.org/linux/man-pages/man3/libpfm.3.html
-DEFINE_string(benchmark_perf_counters, "");
-
-namespace benchmark {
-namespace internal {
+BM_DEFINE_string(benchmark_perf_counters, "");
 
 // Extra context to include in the output formatted as comma-separated key-value
 // pairs. Kept internal as it's only used for parsing from env/command line.
-DEFINE_kvpairs(benchmark_context, {});
+BM_DEFINE_kvpairs(benchmark_context, {});
+
+// The level of verbose logging to output
+BM_DEFINE_int32(v, 0);
+
+namespace internal {
 
 std::map<std::string, std::string>* global_context = nullptr;
 
@@ -145,14 +145,14 @@ State::State(IterationCount max_iters, const std::vector<int64_t>& ranges,
       error_occurred_(false),
       range_(ranges),
       complexity_n_(0),
-      counters(),
-      thread_index(thread_i),
-      threads(n_threads),
+      thread_index_(thread_i),
+      threads_(n_threads),
       timer_(timer),
       manager_(manager),
       perf_counters_measurement_(perf_counters_measurement) {
-  CHECK(max_iterations != 0) << "At least one iteration must be run";
-  CHECK_LT(thread_index, threads) << "thread_index must be less than threads";
+  BM_CHECK(max_iterations != 0) << "At least one iteration must be run";
+  BM_CHECK_LT(thread_index_, threads_)
+      << "thread_index must be less than threads";
 
   // Note: The use of offsetof below is technically undefined until C++17
   // because State is not a standard layout type. However, all compilers
@@ -181,21 +181,21 @@ State::State(IterationCount max_iters, const std::vector<int64_t>& ranges,
 
 void State::PauseTiming() {
   // Add in time accumulated so far
-  CHECK(started_ && !finished_ && !error_occurred_);
+  BM_CHECK(started_ && !finished_ && !error_occurred_);
   timer_->StopTimer();
   if (perf_counters_measurement_) {
     auto measurements = perf_counters_measurement_->StopAndGetMeasurements();
     for (const auto& name_and_measurement : measurements) {
       auto name = name_and_measurement.first;
       auto measurement = name_and_measurement.second;
-      CHECK_EQ(counters[name], 0.0);
+      BM_CHECK_EQ(counters[name], 0.0);
       counters[name] = Counter(measurement, Counter::kAvgIterations);
     }
   }
 }
 
 void State::ResumeTiming() {
-  CHECK(started_ && !finished_ && !error_occurred_);
+  BM_CHECK(started_ && !finished_ && !error_occurred_);
   timer_->StartTimer();
   if (perf_counters_measurement_) {
     perf_counters_measurement_->Start();
@@ -203,7 +203,7 @@ void State::ResumeTiming() {
 }
 
 void State::SkipWithError(const char* msg) {
-  CHECK(msg);
+  BM_CHECK(msg);
   error_occurred_ = true;
   {
     MutexLock l(manager_->GetBenchmarkMutex());
@@ -226,7 +226,7 @@ void State::SetLabel(const char* label) {
 }
 
 void State::StartKeepRunning() {
-  CHECK(!started_ && !finished_);
+  BM_CHECK(!started_ && !finished_);
   started_ = true;
   total_iterations_ = error_occurred_ ? 0 : max_iterations;
   manager_->StartStopBarrier();
@@ -234,7 +234,7 @@ void State::StartKeepRunning() {
 }
 
 void State::FinishKeepRunning() {
-  CHECK(started_ && (!finished_ || error_occurred_));
+  BM_CHECK(started_ && (!finished_ || error_occurred_));
   if (!error_occurred_) {
     PauseTiming();
   }
@@ -282,7 +282,7 @@ void RunBenchmarks(const std::vector<BenchmarkInstance>& benchmarks,
                    BenchmarkReporter* display_reporter,
                    BenchmarkReporter* file_reporter) {
   // Note the file_reporter can be null.
-  CHECK(display_reporter != nullptr);
+  BM_CHECK(display_reporter != nullptr);
 
   // Determine the width of the name field using a minimum width of 10.
   bool might_have_aggregates = FLAGS_benchmark_repetitions > 1;
@@ -328,7 +328,7 @@ void RunBenchmarks(const std::vector<BenchmarkInstance>& benchmarks,
     }
     assert(runners.size() == benchmarks.size() && "Unexpected runner count.");
 
-    std::vector<int> repetition_indices;
+    std::vector<size_t> repetition_indices;
     repetition_indices.reserve(num_repetitions_total);
     for (size_t runner_index = 0, num_runners = runners.size();
          runner_index != num_runners; ++runner_index) {
@@ -362,7 +362,7 @@ void RunBenchmarks(const std::vector<BenchmarkInstance>& benchmarks,
                                              additional_run_stats.begin(),
                                              additional_run_stats.end());
           per_family_reports.erase(
-              (int)reports_for_family->Runs.front().family_index);
+              static_cast<int>(reports_for_family->Runs.front().family_index));
         }
       }
 
@@ -377,10 +377,7 @@ void RunBenchmarks(const std::vector<BenchmarkInstance>& benchmarks,
 
 // Disable deprecated warnings temporarily because we need to reference
 // CSVReporter but don't want to trigger -Werror=-Wdeprecated-declarations
-#ifdef __GNUC__
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-#endif
+BENCHMARK_DISABLE_DEPRECATED_WARNING
 
 std::unique_ptr<BenchmarkReporter> CreateReporter(
     std::string const& name, ConsoleReporter::OutputOptions output_opts) {
@@ -397,9 +394,7 @@ std::unique_ptr<BenchmarkReporter> CreateReporter(
   }
 }
 
-#ifdef __GNUC__
-#pragma GCC diagnostic pop
-#endif
+BENCHMARK_RESTORE_DEPRECATED_WARNING
 
 }  // end namespace
 
@@ -434,16 +429,32 @@ ConsoleReporter::OutputOptions GetOutputOptions(bool force_no_color) {
 }  // end namespace internal
 
 size_t RunSpecifiedBenchmarks() {
-  return RunSpecifiedBenchmarks(nullptr, nullptr);
+  return RunSpecifiedBenchmarks(nullptr, nullptr, FLAGS_benchmark_filter);
+}
+
+size_t RunSpecifiedBenchmarks(std::string spec) {
+  return RunSpecifiedBenchmarks(nullptr, nullptr, std::move(spec));
 }
 
 size_t RunSpecifiedBenchmarks(BenchmarkReporter* display_reporter) {
-  return RunSpecifiedBenchmarks(display_reporter, nullptr);
+  return RunSpecifiedBenchmarks(display_reporter, nullptr,
+                                FLAGS_benchmark_filter);
+}
+
+size_t RunSpecifiedBenchmarks(BenchmarkReporter* display_reporter,
+                              std::string spec) {
+  return RunSpecifiedBenchmarks(display_reporter, nullptr, std::move(spec));
 }
 
 size_t RunSpecifiedBenchmarks(BenchmarkReporter* display_reporter,
                               BenchmarkReporter* file_reporter) {
-  std::string spec = FLAGS_benchmark_filter;
+  return RunSpecifiedBenchmarks(display_reporter, file_reporter,
+                                FLAGS_benchmark_filter);
+}
+
+size_t RunSpecifiedBenchmarks(BenchmarkReporter* display_reporter,
+                              BenchmarkReporter* file_reporter,
+                              std::string spec) {
   if (spec.empty() || spec == "all")
     spec = ".";  // Regexp that matches all benchmarks
 
@@ -499,6 +510,8 @@ size_t RunSpecifiedBenchmarks(BenchmarkReporter* display_reporter,
   return benchmarks.size();
 }
 
+std::string GetBenchmarkFilter() { return FLAGS_benchmark_filter; }
+
 void RegisterMemoryManager(MemoryManager* manager) {
   internal::memory_manager = manager;
 }
@@ -530,6 +543,7 @@ void PrintUsageAndExit() {
           "          [--benchmark_out_format=<json|console|csv>]\n"
           "          [--benchmark_color={auto|true|false}]\n"
           "          [--benchmark_counters_tabular={true|false}]\n"
+          "          [--benchmark_perf_counters=<counter>,...]\n"
           "          [--benchmark_context=<key>=<value>,...]\n"
           "          [--v=<verbosity>]\n");
   exit(0);
@@ -558,9 +572,6 @@ void ParseCommandLineFlags(int* argc, char** argv) {
         ParseStringFlag(argv[i], "benchmark_out_format",
                         &FLAGS_benchmark_out_format) ||
         ParseStringFlag(argv[i], "benchmark_color", &FLAGS_benchmark_color) ||
-        // "color_print" is the deprecated name for "benchmark_color".
-        // TODO: Remove this.
-        ParseStringFlag(argv[i], "color_print", &FLAGS_benchmark_color) ||
         ParseBoolFlag(argv[i], "benchmark_counters_tabular",
                       &FLAGS_benchmark_counters_tabular) ||
         ParseStringFlag(argv[i], "benchmark_perf_counters",
@@ -602,9 +613,7 @@ void Initialize(int* argc, char** argv) {
   internal::LogLevel() = FLAGS_v;
 }
 
-void Shutdown() {
-  delete internal::global_context;
-}
+void Shutdown() { delete internal::global_context; }
 
 bool ReportUnrecognizedArguments(int argc, char** argv) {
   for (int i = 1; i < argc; ++i) {

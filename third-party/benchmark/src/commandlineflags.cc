@@ -248,9 +248,8 @@ bool ParseStringFlag(const char* str, const char* flag, std::string* value) {
   return true;
 }
 
-bool ParseKeyValueFlag(
-    const char* str, const char* flag,
-    std::map<std::string, std::string>* value) {
+bool ParseKeyValueFlag(const char* str, const char* flag,
+                       std::map<std::string, std::string>* value) {
   const char* const value_str = ParseFlagValue(str, flag, false);
 
   if (value_str == nullptr) return false;
