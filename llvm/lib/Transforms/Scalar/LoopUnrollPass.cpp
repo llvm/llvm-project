@@ -1136,6 +1136,31 @@ static LoopUnrollResult tryToUnrollLoop(
   TransformationMode TM = hasUnrollTransformation(L);
   if (TM & TM_Disable)
     return LoopUnrollResult::Unmodified;
+
+  // If this loop isn't forced to be unrolled, avoid unrolling it when the
+  // parent loop has an explicit unroll-and-jam pragma. This is to prevent
+  // automatic unrolling from interfering with the user requested
+  // transformation.
+  Loop *ParentL = L->getParentLoop();
+  if (ParentL != NULL &&
+      hasUnrollAndJamTransformation(ParentL) == TM_ForcedByUser &&
+      hasUnrollTransformation(L) != TM_ForcedByUser) {
+    LLVM_DEBUG(dbgs() << "Not unrolling loop since parent loop has"
+                      << " llvm.loop.unroll_and_jam.\n");
+    return LoopUnrollResult::Unmodified;
+  }
+
+  // If this loop isn't forced to be unrolled, avoid unrolling it when the
+  // loop has an explicit unroll-and-jam pragma. This is to prevent automatic
+  // unrolling from interfering with the user requested transformation.
+  if (hasUnrollAndJamTransformation(L) == TM_ForcedByUser &&
+      hasUnrollTransformation(L) != TM_ForcedByUser) {
+    LLVM_DEBUG(
+        dbgs()
+        << "  Not unrolling loop since it has llvm.loop.unroll_and_jam.\n");
+    return LoopUnrollResult::Unmodified;
+  }
+
   if (!L->isLoopSimplifyForm()) {
     LLVM_DEBUG(
         dbgs() << "  Not unrolling loop which is not in loop-simplify form.\n");
