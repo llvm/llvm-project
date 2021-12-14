@@ -9,9 +9,9 @@ target triple = "powerpc64-unknown-linux-gnu"
 
 define float @test2(<2 x float> %A, <2 x i32> %B) {
 ; CHECK-LABEL: @test2(
-; CHECK-NEXT:    [[TMP24:%.*]] = extractelement <2 x float> [[A:%.*]], i32 1
+; CHECK-NEXT:    [[TMP24:%.*]] = extractelement <2 x float> [[A:%.*]], i64 1
 ; CHECK-NEXT:    [[BC:%.*]] = bitcast <2 x i32> [[B:%.*]] to <2 x float>
-; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x float> [[BC]], i32 1
+; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x float> [[BC]], i64 1
 ; CHECK-NEXT:    [[ADD:%.*]] = fadd float [[TMP24]], [[TMP4]]
 ; CHECK-NEXT:    ret float [[ADD]]
 ;
@@ -29,9 +29,9 @@ define float @test2(<2 x float> %A, <2 x i32> %B) {
 
 define float @test3(<2 x float> %A, <2 x i64> %B) {
 ; CHECK-LABEL: @test3(
-; CHECK-NEXT:    [[TMP24:%.*]] = extractelement <2 x float> [[A:%.*]], i32 0
+; CHECK-NEXT:    [[TMP24:%.*]] = extractelement <2 x float> [[A:%.*]], i64 0
 ; CHECK-NEXT:    [[BC2:%.*]] = bitcast <2 x i64> [[B:%.*]] to <4 x float>
-; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <4 x float> [[BC2]], i32 1
+; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <4 x float> [[BC2]], i64 1
 ; CHECK-NEXT:    [[ADD:%.*]] = fadd float [[TMP24]], [[TMP4]]
 ; CHECK-NEXT:    ret float [[ADD]]
 ;
@@ -51,8 +51,8 @@ define float @test3(<2 x float> %A, <2 x i64> %B) {
 
 define <2 x i32> @test4(i32 %A, i32 %B){
 ; CHECK-LABEL: @test4(
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i32> poison, i32 [[B:%.*]], i32 0
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x i32> [[TMP1]], i32 [[A:%.*]], i32 1
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i32> poison, i32 [[B:%.*]], i64 0
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x i32> [[TMP1]], i32 [[A:%.*]], i64 1
 ; CHECK-NEXT:    ret <2 x i32> [[TMP2]]
 ;
   %tmp38 = zext i32 %A to i64
@@ -65,8 +65,8 @@ define <2 x i32> @test4(i32 %A, i32 %B){
 
 define <2 x float> @test5(float %A, float %B) {
 ; CHECK-LABEL: @test5(
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x float> poison, float [[B:%.*]], i32 0
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x float> [[TMP1]], float [[A:%.*]], i32 1
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x float> poison, float [[B:%.*]], i64 0
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x float> [[TMP1]], float [[A:%.*]], i64 1
 ; CHECK-NEXT:    ret <2 x float> [[TMP2]]
 ;
   %tmp37 = bitcast float %A to i32
@@ -81,7 +81,7 @@ define <2 x float> @test5(float %A, float %B) {
 
 define <2 x float> @test6(float %A){
 ; CHECK-LABEL: @test6(
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x float> <float poison, float 4.200000e+01>, float [[A:%.*]], i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x float> <float poison, float 4.200000e+01>, float [[A:%.*]], i64 0
 ; CHECK-NEXT:    ret <2 x float> [[TMP1]]
 ;
   %tmp23 = bitcast float %A to i32

@@ -15,13 +15,13 @@ target triple = "x86_64-unknown-linux-gnu"
 define i8 @PR31243_zext(i8 %v0, i8 %v1, i8 %v2, i8 %v3, i8* %ptr) {
 ; CHECK-LABEL: @PR31243_zext(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x i8> poison, i8 [[V0:%.*]], i32 0
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i8> [[TMP0]], i8 [[V1:%.*]], i32 1
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x i8> poison, i8 [[V0:%.*]], i64 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i8> [[TMP0]], i8 [[V1:%.*]], i64 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = or <2 x i8> [[TMP1]], <i8 1, i8 1>
-; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <2 x i8> [[TMP2]], i32 0
+; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <2 x i8> [[TMP2]], i64 0
 ; CHECK-NEXT:    [[TMP4:%.*]] = zext i8 [[TMP3]] to i64
 ; CHECK-NEXT:    [[TMP_4:%.*]] = getelementptr inbounds i8, i8* [[PTR:%.*]], i64 [[TMP4]]
-; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x i8> [[TMP2]], i32 1
+; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x i8> [[TMP2]], i64 1
 ; CHECK-NEXT:    [[TMP6:%.*]] = zext i8 [[TMP5]] to i64
 ; CHECK-NEXT:    [[TMP_5:%.*]] = getelementptr inbounds i8, i8* [[PTR]], i64 [[TMP6]]
 ; CHECK-NEXT:    [[TMP_6:%.*]] = load i8, i8* [[TMP_4]], align 1
@@ -71,14 +71,14 @@ define i8 @PR31243_sext(i8 %v0, i8 %v1, i8 %v2, i8 %v3, i8* %ptr) {
 ;
 ; AVX-LABEL: @PR31243_sext(
 ; AVX-NEXT:  entry:
-; AVX-NEXT:    [[TMP0:%.*]] = insertelement <2 x i8> poison, i8 [[V0:%.*]], i32 0
-; AVX-NEXT:    [[TMP1:%.*]] = insertelement <2 x i8> [[TMP0]], i8 [[V1:%.*]], i32 1
+; AVX-NEXT:    [[TMP0:%.*]] = insertelement <2 x i8> poison, i8 [[V0:%.*]], i64 0
+; AVX-NEXT:    [[TMP1:%.*]] = insertelement <2 x i8> [[TMP0]], i8 [[V1:%.*]], i64 1
 ; AVX-NEXT:    [[TMP2:%.*]] = or <2 x i8> [[TMP1]], <i8 1, i8 1>
 ; AVX-NEXT:    [[TMP3:%.*]] = sext <2 x i8> [[TMP2]] to <2 x i16>
-; AVX-NEXT:    [[TMP4:%.*]] = extractelement <2 x i16> [[TMP3]], i32 0
+; AVX-NEXT:    [[TMP4:%.*]] = extractelement <2 x i16> [[TMP3]], i64 0
 ; AVX-NEXT:    [[TMP5:%.*]] = sext i16 [[TMP4]] to i64
 ; AVX-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i8, i8* [[PTR:%.*]], i64 [[TMP5]]
-; AVX-NEXT:    [[TMP6:%.*]] = extractelement <2 x i16> [[TMP3]], i32 1
+; AVX-NEXT:    [[TMP6:%.*]] = extractelement <2 x i16> [[TMP3]], i64 1
 ; AVX-NEXT:    [[TMP7:%.*]] = sext i16 [[TMP6]] to i64
 ; AVX-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i8, i8* [[PTR]], i64 [[TMP7]]
 ; AVX-NEXT:    [[TMP6:%.*]] = load i8, i8* [[TMP4]], align 1

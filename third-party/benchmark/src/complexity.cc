@@ -15,12 +15,13 @@
 // Source project : https://github.com/ismaelJimenez/cpp.leastsq
 // Adapted to be used with google benchmark
 
-#include "benchmark/benchmark.h"
+#include "complexity.h"
 
 #include <algorithm>
 #include <cmath>
+
+#include "benchmark/benchmark.h"
 #include "check.h"
-#include "complexity.h"
 
 namespace benchmark {
 
@@ -123,10 +124,10 @@ LeastSq MinimalLeastSq(const std::vector<int64_t>& n,
 //                  fitting curve.
 LeastSq MinimalLeastSq(const std::vector<int64_t>& n,
                        const std::vector<double>& time, const BigO complexity) {
-  CHECK_EQ(n.size(), time.size());
-  CHECK_GE(n.size(), 2);  // Do not compute fitting curve is less than two
-                          // benchmark runs are given
-  CHECK_NE(complexity, oNone);
+  BM_CHECK_EQ(n.size(), time.size());
+  BM_CHECK_GE(n.size(), 2);  // Do not compute fitting curve is less than two
+                             // benchmark runs are given
+  BM_CHECK_NE(complexity, oNone);
 
   LeastSq best_fit;
 
@@ -167,7 +168,8 @@ std::vector<BenchmarkReporter::Run> ComputeBigO(
 
   // Populate the accumulators.
   for (const Run& run : reports) {
-    CHECK_GT(run.complexity_n, 0) << "Did you forget to call SetComplexityN?";
+    BM_CHECK_GT(run.complexity_n, 0)
+        << "Did you forget to call SetComplexityN?";
     n.push_back(run.complexity_n);
     real_time.push_back(run.real_accumulated_time / run.iterations);
     cpu_time.push_back(run.cpu_accumulated_time / run.iterations);
@@ -198,6 +200,7 @@ std::vector<BenchmarkReporter::Run> ComputeBigO(
   big_o.repetition_index = Run::no_repetition_index;
   big_o.threads = reports[0].threads;
   big_o.aggregate_name = "BigO";
+  big_o.aggregate_unit = StatisticUnit::kTime;
   big_o.report_label = reports[0].report_label;
   big_o.iterations = 0;
   big_o.real_accumulated_time = result_real.coef;
@@ -219,6 +222,7 @@ std::vector<BenchmarkReporter::Run> ComputeBigO(
   rms.per_family_instance_index = reports[0].per_family_instance_index;
   rms.run_type = BenchmarkReporter::Run::RT_Aggregate;
   rms.aggregate_name = "RMS";
+  rms.aggregate_unit = StatisticUnit::kPercentage;
   rms.report_label = big_o.report_label;
   rms.iterations = 0;
   rms.repetition_index = Run::no_repetition_index;

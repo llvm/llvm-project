@@ -21,6 +21,7 @@ TEST_ARGS = ["--benchmark_min_time=0.01"]
 PER_SRC_TEST_ARGS = ({
     "user_counters_tabular_test.cc": ["--benchmark_counters_tabular=true"],
     "repetitions_test.cc": [" --benchmark_repetitions=3"],
+    "spec_arg_test.cc" : ["--benchmark_filter=BM_NotChosen"],
 })
 
 load("@rules_cc//cc:defs.bzl", "cc_library", "cc_test")

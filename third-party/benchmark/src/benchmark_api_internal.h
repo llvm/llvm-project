@@ -32,12 +32,14 @@ class BenchmarkInstance {
   bool use_real_time() const { return use_real_time_; }
   bool use_manual_time() const { return use_manual_time_; }
   BigO complexity() const { return complexity_; }
-  BigOFunc& complexity_lambda() const { return *complexity_lambda_; }
+  BigOFunc* complexity_lambda() const { return complexity_lambda_; }
   const std::vector<Statistics>& statistics() const { return statistics_; }
   int repetitions() const { return repetitions_; }
   double min_time() const { return min_time_; }
   IterationCount iterations() const { return iterations_; }
   int threads() const { return threads_; }
+  void Setup() const;
+  void Teardown() const;
 
   State Run(IterationCount iters, int thread_id, internal::ThreadTimer* timer,
             internal::ThreadManager* manager,
@@ -62,6 +64,10 @@ class BenchmarkInstance {
   double min_time_;
   IterationCount iterations_;
   int threads_;  // Number of concurrent threads to us
+
+  typedef void (*callback_function)(const benchmark::State&);
+  callback_function setup_ = nullptr;
+  callback_function teardown_ = nullptr;
 };
 
 bool FindBenchmarksInternal(const std::string& re,

@@ -1694,6 +1694,13 @@ private:
       return *this;
     }
 
+    _LIBCPP_HIDE_FROM_ABI basic_string& __null_terminate_at(value_type* __p, size_type __newsz) {
+      __set_size(__newsz);
+      __invalidate_iterators_past(__newsz);
+      traits_type::assign(__p[__newsz], value_type());
+      return *this;
+    }
+
     _LIBCPP_INLINE_VISIBILITY void __invalidate_all_iterators();
     _LIBCPP_INLINE_VISIBILITY void __invalidate_iterators_past(size_type);
 
@@ -2351,14 +2358,12 @@ basic_string<_CharT, _Traits, _Allocator>::__assign_external(
   if (__cap >= __n) {
     value_type* __p = _VSTD::__to_address(__get_pointer());
     traits_type::move(__p, __s, __n);
-    traits_type::assign(__p[__n], value_type());
-    __set_size(__n);
-    __invalidate_iterators_past(__n);
+    return __null_terminate_at(__p, __n);
   } else {
     size_type __sz = size();
     __grow_by_and_replace(__cap, __n - __cap, __sz, 0, __sz, __n, __s);
+    return *this;
   }
-  return *this;
 }
 
 template <class _CharT, class _Traits, class _Allocator>
@@ -2383,10 +2388,7 @@ basic_string<_CharT, _Traits, _Allocator>::assign(size_type __n, value_type __c)
     }
     value_type* __p = _VSTD::__to_address(__get_pointer());
     traits_type::assign(__p, __n, __c);
-    traits_type::assign(__p[__n], value_type());
-    __set_size(__n);
-    __invalidate_iterators_past(__n);
-    return *this;
+    return __null_terminate_at(__p, __n);
 }
 
 template <class _CharT, class _Traits, class _Allocator>
@@ -2996,7 +2998,7 @@ basic_string<_CharT, _Traits, _Allocator>::replace(size_type __pos, size_type __
                 {
                     traits_type::move(__p + __pos, __s, __n2);
                     traits_type::move(__p + __pos + __n2, __p + __pos + __n1, __n_move);
-                    goto __finish;
+                    return __null_terminate_at(__p, __sz + (__n2 - __n1));
                 }
                 if (__p + __pos < __s && __s < __p + __sz)
                 {
@@ -3015,13 +3017,7 @@ basic_string<_CharT, _Traits, _Allocator>::replace(size_type __pos, size_type __
             }
         }
         traits_type::move(__p + __pos, __s, __n2);
-__finish:
-// __sz += __n2 - __n1; in this and the below function below can cause unsigned
-// integer overflow, but this is a safe operation, so we disable the check.
-        __sz += __n2 - __n1;
-        __set_size(__sz);
-        __invalidate_iterators_past(__sz);
-        traits_type::assign(__p[__sz], value_type());
+        return __null_terminate_at(__p, __sz + (__n2 - __n1));
     }
     else
         __grow_by_and_replace(__cap, __sz - __n1 + __n2 - __cap, __sz, __pos, __n1, __n2, __s);
@@ -3031,7 +3027,6 @@ __finish:
 template <class _CharT, class _Traits, class _Allocator>
 basic_string<_CharT, _Traits, _Allocator>&
 basic_string<_CharT, _Traits, _Allocator>::replace(size_type __pos, size_type __n1, size_type __n2, value_type __c)
-    _LIBCPP_DISABLE_UBSAN_UNSIGNED_INTEGER_CHECK
 {
     size_type __sz = size();
     if (__pos > __sz)
@@ -3055,11 +3050,7 @@ basic_string<_CharT, _Traits, _Allocator>::replace(size_type __pos, size_type __
         __p = _VSTD::__to_address(__get_long_pointer());
     }
     traits_type::assign(__p + __pos, __n2, __c);
-    __sz += __n2 - __n1;
-    __set_size(__sz);
-    __invalidate_iterators_past(__sz);
-    traits_type::assign(__p[__sz], value_type());
-    return *this;
+    return __null_terminate_at(__p, __sz - (__n1 - __n2));
 }
 
 template <class _CharT, class _Traits, class _Allocator>
@@ -3170,10 +3161,7 @@ basic_string<_CharT, _Traits, _Allocator>::__erase_external_with_move(
         size_type __n_move = __sz - __pos - __n;
         if (__n_move != 0)
             traits_type::move(__p + __pos, __p + __pos + __n, __n_move);
-        __sz -= __n;
-        __set_size(__sz);
-        __invalidate_iterators_past(__sz);
-        traits_type::assign(__p[__sz], value_type());
+        __null_terminate_at(__p, __sz - __n);
     }
 }
 
@@ -3231,20 +3219,7 @@ void
 basic_string<_CharT, _Traits, _Allocator>::pop_back()
 {
     _LIBCPP_ASSERT(!empty(), "string::pop_back(): string is already empty");
-    size_type __sz;
-    if (__is_long())
-    {
-        __sz = __get_long_size() - 1;
-        __set_long_size(__sz);
-        traits_type::assign(*(__get_long_pointer() + __sz), value_type());
-    }
-    else
-    {
-        __sz = __get_short_size() - 1;
-        __set_short_size(__sz);
-        traits_type::assign(*(__get_short_pointer() + __sz), value_type());
-    }
-    __invalidate_iterators_past(__sz);
+    __erase_to_end(size() - 1);
 }
 
 template <class _CharT, class _Traits, class _Allocator>
@@ -3270,17 +3245,7 @@ inline
 void
 basic_string<_CharT, _Traits, _Allocator>::__erase_to_end(size_type __pos)
 {
-    if (__is_long())
-    {
-        traits_type::assign(*(__get_long_pointer() + __pos), value_type());
-        __set_long_size(__pos);
-    }
-    else
-    {
-        traits_type::assign(*(__get_short_pointer() + __pos), value_type());
-        __set_short_size(__pos);
-    }
-    __invalidate_iterators_past(__pos);
+  __null_terminate_at(_VSTD::__to_address(__get_pointer()), __pos);
 }
 
 template <class _CharT, class _Traits, class _Allocator>

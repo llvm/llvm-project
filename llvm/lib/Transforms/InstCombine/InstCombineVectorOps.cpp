@@ -363,6 +363,18 @@ static APInt findDemandedEltsByAllUsers(Value *V) {
   return UnionUsedElts;
 }
 
+/// Given a constant index for a extractelement or insertelement instruction,
+/// return it with the canonical type if it isn't already canonical.  We
+/// arbitrarily pick 64 bit as our canonical type.  The actual bitwidth doesn't
+/// matter, we just want a consistent type to simplify CSE.
+ConstantInt *getPreferredVectorIndex(ConstantInt *IndexC) {
+  const unsigned IndexBW = IndexC->getType()->getBitWidth();
+  if (IndexBW == 64 || IndexC->getValue().getActiveBits() > 64)
+    return nullptr;
+  return ConstantInt::get(IndexC->getContext(),
+                          IndexC->getValue().zextOrTrunc(64));
+}
+
 Instruction *InstCombinerImpl::visitExtractElementInst(ExtractElementInst &EI) {
   Value *SrcVec = EI.getVectorOperand();
   Value *Index = EI.getIndexOperand();
@@ -374,6 +386,10 @@ Instruction *InstCombinerImpl::visitExtractElementInst(ExtractElementInst &EI) {
   // find a previously computed scalar that was inserted into the vector.
   auto *IndexC = dyn_cast<ConstantInt>(Index);
   if (IndexC) {
+    // Canonicalize type of constant indices to i64 to simplify CSE
+    if (auto *NewIdx = getPreferredVectorIndex(IndexC))
+      return replaceOperand(EI, 1, NewIdx);
+
     ElementCount EC = EI.getVectorOperandType()->getElementCount();
     unsigned NumElts = EC.getKnownMinValue();
 
@@ -1477,6 +1493,11 @@ Instruction *InstCombinerImpl::visitInsertElementInst(InsertElementInst &IE) {
   if (auto *V = SimplifyInsertElementInst(
           VecOp, ScalarOp, IdxOp, SQ.getWithInstruction(&IE)))
     return replaceInstUsesWith(IE, V);
+
+  // Canonicalize type of constant indices to i64 to simplify CSE
+  if (auto *IndexC = dyn_cast<ConstantInt>(IdxOp))
+    if (auto *NewIdx = getPreferredVectorIndex(IndexC))
+      return replaceOperand(IE, 2, NewIdx);
 
   // If the scalar is bitcast and inserted into undef, do the insert in the
   // source type followed by bitcast.
