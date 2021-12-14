@@ -76,7 +76,8 @@ def FSQRT_D : FPUnaryOp_r_frm<0b0101101, 0b00000, FPR64, FPR64, "fsqrt.d">,
               Sched<[WriteFSqrt64, ReadFSqrt64]>;
 def         : FPUnaryOpDynFrmAlias<FSQRT_D, "fsqrt.d", FPR64, FPR64>;
 
-let SchedRW = [WriteFSGNJ64, ReadFSGNJ64, ReadFSGNJ64] in {
+let SchedRW = [WriteFSGNJ64, ReadFSGNJ64, ReadFSGNJ64],
+    mayRaiseFPException = 0 in {
 def FSGNJ_D  : FPALU_rr<0b0010001, 0b000, "fsgnj.d", FPR64>;
 def FSGNJN_D : FPALU_rr<0b0010001, 0b001, "fsgnjn.d", FPR64>;
 def FSGNJX_D : FPALU_rr<0b0010001, 0b010, "fsgnjx.d", FPR64>;
@@ -100,6 +101,7 @@ def FLT_D : FPCmp_rr<0b1010001, 0b001, "flt.d", FPR64>;
 def FLE_D : FPCmp_rr<0b1010001, 0b000, "fle.d", FPR64>;
 }
 
+let mayRaiseFPException = 0 in
 def FCLASS_D : FPUnaryOp_r<0b1110001, 0b00000, 0b001, GPR, FPR64, "fclass.d">,
                Sched<[WriteFClass64, ReadFClass64]>;
 
@@ -127,6 +129,7 @@ def FCVT_LU_D : FPUnaryOp_r_frm<0b1100001, 0b00011, GPR, FPR64, "fcvt.lu.d">,
                 Sched<[WriteFCvtF64ToI64, ReadFCvtF64ToI64]>;
 def           : FPUnaryOpDynFrmAlias<FCVT_LU_D, "fcvt.lu.d", GPR, FPR64>;
 
+let mayRaiseFPException = 0 in
 def FMV_X_D : FPUnaryOp_r<0b1110001, 0b00000, 0b000, GPR, FPR64, "fmv.x.d">,
               Sched<[WriteFMovF64ToI64, ReadFMovF64ToI64]>;
 
@@ -138,6 +141,7 @@ def FCVT_D_LU : FPUnaryOp_r_frm<0b1101001, 0b00011, FPR64, GPR, "fcvt.d.lu">,
                 Sched<[WriteFCvtI64ToF64, ReadFCvtI64ToF64]>;
 def           : FPUnaryOpDynFrmAlias<FCVT_D_LU, "fcvt.d.lu", FPR64, GPR>;
 
+let mayRaiseFPException = 0 in
 def FMV_D_X : FPUnaryOp_r<0b1111001, 0b00000, 0b000, FPR64, GPR, "fmv.d.x">,
               Sched<[WriteFMovI64ToF64, ReadFMovI64ToF64]>;
 } // Predicates = [HasStdExtD, IsRV64]
