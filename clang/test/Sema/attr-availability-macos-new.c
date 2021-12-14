@@ -84,7 +84,7 @@ void fAppExtErr() { }
 __attribute__((availability(macos,introduced=11)))
 void fNew2();
 #ifndef NEW
-  // expected-note@-2 {{'fNew2' has been marked as being introduced in macOS 11 here, but the deployment target is macOS 10.15.0}}
+  // expected-note@-2 {{'fNew2' has been marked as being introduced in macOS 11 here, but the deployment target is macOS 10.15}}
 #endif
 __attribute__((availability(macos,introduced=10.16)))
 void fNew3();
@@ -92,7 +92,7 @@ void fNew3();
 __attribute__((availability(macos,introduced=12)))
 void evenNewer();
 #ifdef NEW
-  // expected-note@-2 {{'evenNewer' has been marked as being introduced in macOS 12 here, but the deployment target is macOS 11.0.0}}
+  // expected-note@-2 {{'evenNewer' has been marked as being introduced in macOS 12 here, but the deployment target is macOS 11}}
 #endif
 
 void testAvailabilityCheck() {
