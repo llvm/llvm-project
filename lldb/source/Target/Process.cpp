@@ -5911,9 +5911,10 @@ void Process::PrintWarningToolchainMismatch(const SymbolContext &sc) {
     if (sym_file_version != swift_version)
       PrintWarning(
           Process::Warnings::eWarningsToolchainMismatch, sc.module_sp.get(),
-          "%s was compiled with a Swift compiler from a different toolchain "
+          "%s was compiled with a different Swift compiler "
           "(version '%s') than the Swift compiler integrated into LLDB "
-          "(version '%s'). Swift expression evaluation may not work.\n",
+          "(version '%s'). Swift expression evaluation requires a matching "
+          "compiler and debugger from the same toolchain.",
           sc.module_sp->GetFileSpec().GetFilename().GetCString(),
           sym_file_version.getAsString().c_str(),
           swift_version.getAsString().c_str());
