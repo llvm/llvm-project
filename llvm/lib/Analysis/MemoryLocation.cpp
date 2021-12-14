@@ -137,6 +137,9 @@ MemoryLocation::getForDest(const CallBase *CB, const TargetLibraryInfo &TLI) {
   LibFunc LF;
   if (TLI.getLibFunc(*CB, LF) && TLI.has(LF)) {
     switch (LF) {
+    case LibFunc_memset_pattern4:
+    case LibFunc_memset_pattern8:
+    case LibFunc_memset_pattern16:
     case LibFunc_strncpy:
     case LibFunc_strcpy:
     case LibFunc_strcat:
