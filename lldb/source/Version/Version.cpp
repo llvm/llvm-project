@@ -19,7 +19,7 @@ static const char *GetLLDBVersion() {
 #ifdef LLDB_FULL_VERSION_STRING
   return LLDB_FULL_VERSION_STRING;
 #else
-  return "lldb version " CLANG_VERSION_STRING;
+  return "lldb version " LLDB_VERSION_STRING;
 #endif
 }
 
