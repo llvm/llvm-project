@@ -180,9 +180,13 @@ getNamespaceToken(const AnnotatedLine *Line,
   if (NamespaceTok->is(tok::l_brace)) {
     // "namespace" keyword can be on the line preceding '{', e.g. in styles
     // where BraceWrapping.AfterNamespace is true.
-    if (StartLineIndex > 0)
+    if (StartLineIndex > 0) {
       NamespaceTok = AnnotatedLines[StartLineIndex - 1]->First;
+      if (AnnotatedLines[StartLineIndex - 1]->endsWith(tok::semi))
+        return nullptr;
+    }
   }
+
   return NamespaceTok->getNamespaceToken();
 }
 
