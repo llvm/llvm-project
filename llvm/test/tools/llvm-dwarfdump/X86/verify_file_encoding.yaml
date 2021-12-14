@@ -2,18 +2,18 @@
 
 # CHECK:      error: DIE has DW_AT_decl_file with invalid encoding{{[[:space:]]}}
 # CHECK-NEXT: 0x0000001a: DW_TAG_subprogram
-# CHECK-NEXT:               DW_AT_name        ("main")
-# CHECK-NEXT:               DW_AT_low_pc      (0x0000000000001000)
-# CHECK-NEXT:               DW_AT_high_pc     (0x0000000000002000)
-# CHECK-NEXT:               DW_AT_decl_file   ("")
-# CHECK-NEXT:               DW_AT_call_line   (5){{[[:space:]]}}
+# CHECK-NEXT:               DW_AT_name        [DW_FORM_strp] ( .debug_str[0x0000000d] = "main")
+# CHECK-NEXT:               DW_AT_low_pc      [DW_FORM_addr] (0x0000000000001000)
+# CHECK-NEXT:               DW_AT_high_pc     [DW_FORM_addr] (0x0000000000002000)
+# CHECK-NEXT:               DW_AT_decl_file   [DW_FORM_strp] ( .debug_str[0x00000012] = "")
+# CHECK-NEXT:               DW_AT_call_line   [DW_FORM_data1] (5){{[[:space:]]}}
 # CHECK-NEXT: error: DIE has DW_AT_call_file with invalid encoding{{[[:space:]]}}
 # CHECK-NEXT: 0x00000034: DW_TAG_inlined_subroutine
-# CHECK-NEXT:               DW_AT_name        ("inline1")
-# CHECK-NEXT:               DW_AT_low_pc      (0x0000000000001100)
-# CHECK-NEXT:               DW_AT_high_pc     (0x0000000000001200)
-# CHECK-NEXT:               DW_AT_call_file   ("")
-# CHECK-NEXT:               DW_AT_call_line   (10){{[[:space:]]}}
+# CHECK-NEXT:               DW_AT_name        [DW_FORM_strp] ( .debug_str[0x00000013] = "inline1")
+# CHECK-NEXT:               DW_AT_low_pc      [DW_FORM_addr] (0x0000000000001100)
+# CHECK-NEXT:               DW_AT_high_pc     [DW_FORM_data4] (0x00000100)
+# CHECK-NEXT:               DW_AT_call_file   [DW_FORM_strp] ( .debug_str[0x00000012] = "")
+# CHECK-NEXT:               DW_AT_call_line   [DW_FORM_data1] (10){{[[:space:]]}}
 
 --- !ELF
 FileHeader:
