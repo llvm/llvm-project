@@ -269,6 +269,7 @@ protected:
   std::error_code writeCSNameTableSection();
 
   std::error_code writeFuncMetadata(const SampleProfileMap &Profiles);
+  std::error_code writeFuncMetadata(const FunctionSamples &Profile);
 
   // Functions to write various kinds of sections.
   std::error_code writeNameTableSection(const SampleProfileMap &ProfileMap);

@@ -4,6 +4,7 @@
  3: 287884
  4: 287864 _Z3fibi:315608
  15: 23
+ !Attributes: 2
 [main:3.1 @ _Z5funcBi:1 @ _Z8funcLeafi]:500853:20
  0: 15
  1: 15
@@ -12,7 +13,7 @@
  10: 23324
  11: 23327 _Z3fibi:25228
  15: 11
- !Attributes: 1
+ !Attributes: 2
 [external:12 @ main]:154:12
  2: 12
  3: 10 _Z5funcAi:7
@@ -31,8 +32,9 @@
  0: 19
  1: 19 _Z8funcLeafi:20
  3: 12
- !Attributes: 1
+ !Attributes: 2
 [main:3 @ _Z5funcAi]:99:11
  0: 10
  1: 10 _Z8funcLeafi:11
  3: 24
+ !Attributes: 2

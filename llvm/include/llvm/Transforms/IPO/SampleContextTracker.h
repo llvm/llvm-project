@@ -66,8 +66,6 @@ public:
   void dumpTree();
 
 private:
-  static uint64_t nodeHash(StringRef ChildName, const LineLocation &Callsite);
-
   // Map line+discriminator location to child context
   std::map<uint64_t, ContextTrieNode> AllChildContext;
 
