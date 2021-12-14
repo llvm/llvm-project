@@ -81,25 +81,25 @@ using __formatter_integer = __formatter_integral<__parser_integer<_CharT>>;
 // than char, wchar_t, char8_t, char16_t, or char32_t, a specialization
 
 // Signed integral types.
-template <class _CharT>
+template <__formatter::__char_type _CharT>
 struct _LIBCPP_TEMPLATE_VIS _LIBCPP_AVAILABILITY_FORMAT
     formatter<signed char, _CharT>
     : public __format_spec::__formatter_integer<_CharT> {};
-template <class _CharT>
+template <__formatter::__char_type _CharT>
 struct _LIBCPP_TEMPLATE_VIS _LIBCPP_AVAILABILITY_FORMAT formatter<short, _CharT>
     : public __format_spec::__formatter_integer<_CharT> {};
-template <class _CharT>
+template <__formatter::__char_type _CharT>
 struct _LIBCPP_TEMPLATE_VIS _LIBCPP_AVAILABILITY_FORMAT formatter<int, _CharT>
     : public __format_spec::__formatter_integer<_CharT> {};
-template <class _CharT>
+template <__formatter::__char_type _CharT>
 struct _LIBCPP_TEMPLATE_VIS _LIBCPP_AVAILABILITY_FORMAT formatter<long, _CharT>
     : public __format_spec::__formatter_integer<_CharT> {};
-template <class _CharT>
+template <__formatter::__char_type _CharT>
 struct _LIBCPP_TEMPLATE_VIS _LIBCPP_AVAILABILITY_FORMAT
     formatter<long long, _CharT>
     : public __format_spec::__formatter_integer<_CharT> {};
 #ifndef _LIBCPP_HAS_NO_INT128
-template <class _CharT>
+template <__formatter::__char_type _CharT>
 struct _LIBCPP_TEMPLATE_VIS _LIBCPP_AVAILABILITY_FORMAT
     formatter<__int128_t, _CharT>
     : public __format_spec::__formatter_integer<_CharT> {
@@ -119,28 +119,28 @@ struct _LIBCPP_TEMPLATE_VIS _LIBCPP_AVAILABILITY_FORMAT
 #endif
 
 // Unsigned integral types.
-template <class _CharT>
+template <__formatter::__char_type _CharT>
 struct _LIBCPP_TEMPLATE_VIS _LIBCPP_AVAILABILITY_FORMAT
     formatter<unsigned char, _CharT>
     : public __format_spec::__formatter_integer<_CharT> {};
-template <class _CharT>
+template <__formatter::__char_type _CharT>
 struct _LIBCPP_TEMPLATE_VIS _LIBCPP_AVAILABILITY_FORMAT
     formatter<unsigned short, _CharT>
     : public __format_spec::__formatter_integer<_CharT> {};
-template <class _CharT>
+template <__formatter::__char_type _CharT>
 struct _LIBCPP_TEMPLATE_VIS _LIBCPP_AVAILABILITY_FORMAT
     formatter<unsigned, _CharT>
     : public __format_spec::__formatter_integer<_CharT> {};
-template <class _CharT>
+template <__formatter::__char_type _CharT>
 struct _LIBCPP_TEMPLATE_VIS _LIBCPP_AVAILABILITY_FORMAT
     formatter<unsigned long, _CharT>
     : public __format_spec::__formatter_integer<_CharT> {};
-template <class _CharT>
+template <__formatter::__char_type _CharT>
 struct _LIBCPP_TEMPLATE_VIS _LIBCPP_AVAILABILITY_FORMAT
     formatter<unsigned long long, _CharT>
     : public __format_spec::__formatter_integer<_CharT> {};
 #ifndef _LIBCPP_HAS_NO_INT128
-template <class _CharT>
+template <__formatter::__char_type _CharT>
 struct _LIBCPP_TEMPLATE_VIS _LIBCPP_AVAILABILITY_FORMAT
     formatter<__uint128_t, _CharT>
     : public __format_spec::__formatter_integer<_CharT> {
