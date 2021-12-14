@@ -217,8 +217,8 @@ static void prettyPrintBaseTypeRef(DWARFUnit *U, raw_ostream &OS,
     if (DumpOpts.Verbose)
       OS << format("0x%08" PRIx64 " -> ", Operands[Operand]);
     OS << format("0x%08" PRIx64 ")", U->getOffset() + Operands[Operand]);
-    if (auto Name = Die.find(dwarf::DW_AT_name))
-      OS << " \"" << Name->getAsCString() << "\"";
+    if (auto Name = dwarf::toString(Die.find(dwarf::DW_AT_name)))
+      OS << " \"" << *Name << "\"";
   } else {
     OS << format(" <invalid base_type ref: 0x%" PRIx64 ">",
                  Operands[Operand]);

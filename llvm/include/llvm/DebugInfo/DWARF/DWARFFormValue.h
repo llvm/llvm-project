@@ -199,7 +199,9 @@ inline StringRef toStringRef(const Optional<DWARFFormValue> &V,
 /// form value's encoding wasn't a string.
 inline const char *toString(const Optional<DWARFFormValue> &V,
                             const char *Default) {
-  return toString(V).getValueOr(Default);
+  if (auto E = toString(V))
+    return *E;
+  return Default;
 }
 
 /// Take an optional DWARFFormValue and try to extract an unsigned constant.

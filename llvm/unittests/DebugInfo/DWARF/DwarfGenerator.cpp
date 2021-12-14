@@ -336,15 +336,13 @@ static void writeCString(StringRef Str, AsmPrinter &Asm) {
 
 static void writeV2IncludeAndFileTable(const DWARFDebugLine::Prologue &Prologue,
                                        AsmPrinter &Asm) {
-  for (auto Include : Prologue.IncludeDirectories) {
-    assert(Include.getAsCString() && "expected a string form for include dir");
-    writeCString(*Include.getAsCString(), Asm);
-  }
+  for (auto Include : Prologue.IncludeDirectories)
+    writeCString(*toString(Include), Asm);
+
   Asm.emitInt8(0);
 
   for (auto File : Prologue.FileNames) {
-    assert(File.Name.getAsCString() && "expected a string form for file name");
-    writeCString(*File.Name.getAsCString(), Asm);
+    writeCString(*toString(File.Name), Asm);
     Asm.emitULEB128(File.DirIdx);
     Asm.emitULEB128(File.ModTime);
     Asm.emitULEB128(File.Length);
@@ -360,10 +358,8 @@ static void writeV5IncludeAndFileTable(const DWARFDebugLine::Prologue &Prologue,
   Asm.emitULEB128(DW_LNCT_path);
   Asm.emitULEB128(DW_FORM_string);
   Asm.emitULEB128(Prologue.IncludeDirectories.size());
-  for (auto Include : Prologue.IncludeDirectories) {
-    assert(Include.getAsCString() && "expected a string form for include dir");
-    writeCString(*Include.getAsCString(), Asm);
-  }
+  for (auto Include : Prologue.IncludeDirectories)
+    writeCString(*toString(Include), Asm);
 
   Asm.emitInt8(2); // file_name_entry_format_count.
   Asm.emitULEB128(DW_LNCT_path);
@@ -372,8 +368,7 @@ static void writeV5IncludeAndFileTable(const DWARFDebugLine::Prologue &Prologue,
   Asm.emitULEB128(DW_FORM_data1);
   Asm.emitULEB128(Prologue.FileNames.size());
   for (auto File : Prologue.FileNames) {
-    assert(File.Name.getAsCString() && "expected a string form for file name");
-    writeCString(*File.Name.getAsCString(), Asm);
+    writeCString(*toString(File.Name), Asm);
     Asm.emitInt8(File.DirIdx);
   }
 }
