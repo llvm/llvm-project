@@ -1315,86 +1315,6 @@ static inline void __kmp_store_mxcsr(kmp_uint32 *p) { *p = _mm_getcsr(); }
 
 #define KMP_X86_MXCSR_MASK 0xffffffc0 /* ignore status flags (6 lsb) */
 
-#if KMP_ARCH_X86
-extern void __kmp_x86_pause(void);
-#elif KMP_MIC
-// Performance testing on KNC (C0QS-7120 P/A/X/D, 61-core, 16 GB Memory) showed
-// regression after removal of extra PAUSE from spin loops. Changing
-// the delay from 100 to 300 showed even better performance than double PAUSE
-// on Spec OMP2001 and LCPC tasking tests, no regressions on EPCC.
-static inline void __kmp_x86_pause(void) { _mm_delay_32(300); }
-#else
-static inline void __kmp_x86_pause(void) { _mm_pause(); }
-#endif
-#define KMP_CPU_PAUSE() __kmp_x86_pause()
-#elif KMP_ARCH_PPC64
-#define KMP_PPC64_PRI_LOW() __asm__ volatile("or 1, 1, 1")
-#define KMP_PPC64_PRI_MED() __asm__ volatile("or 2, 2, 2")
-#define KMP_PPC64_PRI_LOC_MB() __asm__ volatile("" : : : "memory")
-#define KMP_CPU_PAUSE()                                                        \
-  do {                                                                         \
-    KMP_PPC64_PRI_LOW();                                                       \
-    KMP_PPC64_PRI_MED();                                                       \
-    KMP_PPC64_PRI_LOC_MB();                                                    \
-  } while (0)
-#else
-#define KMP_CPU_PAUSE() /* nothing to do */
-#endif
-
-#define KMP_INIT_YIELD(count)                                                  \
-  { (count) = __kmp_yield_init; }
-
-#define KMP_OVERSUBSCRIBED                                                     \
-  (TCR_4(__kmp_nth) > (__kmp_avail_proc ? __kmp_avail_proc : __kmp_xproc))
-
-#define KMP_TRY_YIELD                                                          \
-  ((__kmp_use_yield == 1) || (__kmp_use_yield == 2 && (KMP_OVERSUBSCRIBED)))
-
-#define KMP_TRY_YIELD_OVERSUB                                                  \
-  ((__kmp_use_yield == 1 || __kmp_use_yield == 2) && (KMP_OVERSUBSCRIBED))
-
-#define KMP_YIELD(cond)                                                        \
-  {                                                                            \
-    KMP_CPU_PAUSE();                                                           \
-    if ((cond) && (KMP_TRY_YIELD))                                             \
-      __kmp_yield();                                                           \
-  }
-
-#define KMP_YIELD_OVERSUB()                                                    \
-  {                                                                            \
-    KMP_CPU_PAUSE();                                                           \
-    if ((KMP_TRY_YIELD_OVERSUB))                                               \
-      __kmp_yield();                                                           \
-  }
-
-// Note the decrement of 2 in the following Macros. With KMP_LIBRARY=turnaround,
-// there should be no yielding since initial value from KMP_INIT_YIELD() is odd.
-#define KMP_YIELD_SPIN(count)                                                  \
-  {                                                                            \
-    KMP_CPU_PAUSE();                                                           \
-    if (KMP_TRY_YIELD) {                                                       \
-      (count) -= 2;                                                            \
-      if (!(count)) {                                                          \
-        __kmp_yield();                                                         \
-        (count) = __kmp_yield_next;                                            \
-      }                                                                        \
-    }                                                                          \
-  }
-
-#define KMP_YIELD_OVERSUB_ELSE_SPIN(count)                                     \
-  {                                                                            \
-    KMP_CPU_PAUSE();                                                           \
-    if ((KMP_TRY_YIELD_OVERSUB))                                               \
-      __kmp_yield();                                                           \
-    else if (__kmp_use_yield == 1) {                                           \
-      (count) -= 2;                                                            \
-      if (!(count)) {                                                          \
-        __kmp_yield();                                                         \
-        (count) = __kmp_yield_next;                                            \
-      }                                                                        \
-    }                                                                          \
-  }
-
 // User-level Monitor/Mwait
 #if KMP_HAVE_UMWAIT
 // We always try for UMWAIT first
@@ -1405,6 +1325,7 @@ static inline void __kmp_x86_pause(void) { _mm_pause(); }
 #include <intrin.h>
 #endif
 #endif // KMP_HAVE_WAITPKG_INTRINSICS
+
 KMP_ATTRIBUTE_TARGET_WAITPKG
 static inline int __kmp_tpause(uint32_t hint, uint64_t counter) {
 #if !KMP_HAVE_WAITPKG_INTRINSICS
@@ -1468,6 +1389,119 @@ static inline void
 __kmp_mm_mwait(unsigned extensions, unsigned hints) {
   _mm_mwait(extensions, hints);
 }
+#endif // KMP_HAVE_UMWAIT
+
+#if KMP_ARCH_X86
+extern void __kmp_x86_pause(void);
+#elif KMP_MIC
+// Performance testing on KNC (C0QS-7120 P/A/X/D, 61-core, 16 GB Memory) showed
+// regression after removal of extra PAUSE from spin loops. Changing
+// the delay from 100 to 300 showed even better performance than double PAUSE
+// on Spec OMP2001 and LCPC tasking tests, no regressions on EPCC.
+static inline void __kmp_x86_pause(void) { _mm_delay_32(300); }
+#else
+static inline void __kmp_x86_pause(void) { _mm_pause(); }
+#endif
+#define KMP_CPU_PAUSE() __kmp_x86_pause()
+#elif KMP_ARCH_PPC64
+#define KMP_PPC64_PRI_LOW() __asm__ volatile("or 1, 1, 1")
+#define KMP_PPC64_PRI_MED() __asm__ volatile("or 2, 2, 2")
+#define KMP_PPC64_PRI_LOC_MB() __asm__ volatile("" : : : "memory")
+#define KMP_CPU_PAUSE()                                                        \
+  do {                                                                         \
+    KMP_PPC64_PRI_LOW();                                                       \
+    KMP_PPC64_PRI_MED();                                                       \
+    KMP_PPC64_PRI_LOC_MB();                                                    \
+  } while (0)
+#else
+#define KMP_CPU_PAUSE() /* nothing to do */
+#endif
+
+#define KMP_INIT_YIELD(count)                                                  \
+  { (count) = __kmp_yield_init; }
+
+#define KMP_INIT_BACKOFF(time)                                                 \
+  { (time) = __kmp_pause_init; }
+
+#define KMP_OVERSUBSCRIBED                                                     \
+  (TCR_4(__kmp_nth) > (__kmp_avail_proc ? __kmp_avail_proc : __kmp_xproc))
+
+#define KMP_TRY_YIELD                                                          \
+  ((__kmp_use_yield == 1) || (__kmp_use_yield == 2 && (KMP_OVERSUBSCRIBED)))
+
+#define KMP_TRY_YIELD_OVERSUB                                                  \
+  ((__kmp_use_yield == 1 || __kmp_use_yield == 2) && (KMP_OVERSUBSCRIBED))
+
+#define KMP_YIELD(cond)                                                        \
+  {                                                                            \
+    KMP_CPU_PAUSE();                                                           \
+    if ((cond) && (KMP_TRY_YIELD))                                             \
+      __kmp_yield();                                                           \
+  }
+
+#define KMP_YIELD_OVERSUB()                                                    \
+  {                                                                            \
+    KMP_CPU_PAUSE();                                                           \
+    if ((KMP_TRY_YIELD_OVERSUB))                                               \
+      __kmp_yield();                                                           \
+  }
+
+// Note the decrement of 2 in the following Macros. With KMP_LIBRARY=turnaround,
+// there should be no yielding since initial value from KMP_INIT_YIELD() is odd.
+#define KMP_YIELD_SPIN(count)                                                  \
+  {                                                                            \
+    KMP_CPU_PAUSE();                                                           \
+    if (KMP_TRY_YIELD) {                                                       \
+      (count) -= 2;                                                            \
+      if (!(count)) {                                                          \
+        __kmp_yield();                                                         \
+        (count) = __kmp_yield_next;                                            \
+      }                                                                        \
+    }                                                                          \
+  }
+
+// If TPAUSE is available & enabled, use it. If oversubscribed, use the slower
+// (C0.2) state, which improves performance of other SMT threads on the same
+// core, otherwise, use the fast (C0.1) default state, or whatever the user has
+// requested. Uses a timed TPAUSE, and exponential backoff. If TPAUSE isn't
+// available, fall back to the regular CPU pause and yield combination.
+#if KMP_HAVE_UMWAIT
+#define KMP_YIELD_OVERSUB_ELSE_SPIN(count, time)                               \
+  {                                                                            \
+    if (__kmp_tpause_enabled) {                                                \
+      if (KMP_OVERSUBSCRIBED) {                                                \
+        __kmp_tpause(0, (time));                                               \
+      } else {                                                                 \
+        __kmp_tpause(__kmp_tpause_hint, (time));                               \
+      }                                                                        \
+      (time) *= 2;                                                             \
+    } else {                                                                   \
+      KMP_CPU_PAUSE();                                                         \
+      if ((KMP_TRY_YIELD_OVERSUB)) {                                           \
+        __kmp_yield();                                                         \
+      } else if (__kmp_use_yield == 1) {                                       \
+        (count) -= 2;                                                          \
+        if (!(count)) {                                                        \
+          __kmp_yield();                                                       \
+          (count) = __kmp_yield_next;                                          \
+        }                                                                      \
+      }                                                                        \
+    }                                                                          \
+  }
+#else
+#define KMP_YIELD_OVERSUB_ELSE_SPIN(count, time)                               \
+  {                                                                            \
+    KMP_CPU_PAUSE();                                                           \
+    if ((KMP_TRY_YIELD_OVERSUB))                                               \
+      __kmp_yield();                                                           \
+    else if (__kmp_use_yield == 1) {                                           \
+      (count) -= 2;                                                            \
+      if (!(count)) {                                                          \
+        __kmp_yield();                                                         \
+        (count) = __kmp_yield_next;                                            \
+      }                                                                        \
+    }                                                                          \
+  }
 #endif // KMP_HAVE_UMWAIT
 
 /* ------------------------------------------------------------------------ */
@@ -3088,6 +3122,7 @@ extern kmp_int32 __kmp_use_yield;
 extern kmp_int32 __kmp_use_yield_exp_set;
 extern kmp_uint32 __kmp_yield_init;
 extern kmp_uint32 __kmp_yield_next;
+extern kmp_uint64 __kmp_pause_init;
 
 /* ------------------------------------------------------------------------- */
 extern int __kmp_allThreadsSpecified;
@@ -3288,6 +3323,13 @@ extern int __kmp_user_level_mwait; // TRUE or FALSE; from KMP_USER_LEVEL_MWAIT
 extern int __kmp_umwait_enabled; // Runtime check if user-level mwait enabled
 extern int __kmp_mwait_enabled; // Runtime check if ring3 mwait is enabled
 extern int __kmp_mwait_hints; // Hints to pass in to mwait
+#endif
+
+#if KMP_HAVE_UMWAIT
+extern int __kmp_waitpkg_enabled; // Runtime check if waitpkg exists
+extern int __kmp_tpause_state; // 0 (default), 1=C0.1, 2=C0.2; from KMP_TPAUSE
+extern int __kmp_tpause_hint; // 1=C0.1 (default), 0=C0.2; from KMP_TPAUSE
+extern int __kmp_tpause_enabled; // 0 (default), 1 (KMP_TPAUSE is non-zero)
 #endif
 
 /* ------------------------------------------------------------------------- */

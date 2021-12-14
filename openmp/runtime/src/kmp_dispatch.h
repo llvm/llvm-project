@@ -292,10 +292,12 @@ static UT __kmp_wait(volatile UT *spinner, UT checker,
   UT check = checker;
   kmp_uint32 spins;
   kmp_uint32 (*f)(UT, UT) = pred;
+  kmp_uint64 time;
   UT r;
 
   KMP_FSYNC_SPIN_INIT(obj, CCAST(UT *, spin));
   KMP_INIT_YIELD(spins);
+  KMP_INIT_BACKOFF(time);
   // main wait spin loop
   while (!f(r = *spin, check)) {
     KMP_FSYNC_SPIN_PREPARE(obj);
@@ -305,7 +307,7 @@ static UT __kmp_wait(volatile UT *spinner, UT checker,
     /* if ( TCR_4(__kmp_global.g.g_done) && __kmp_global.g.g_abort)
         __kmp_abort_thread(); */
     // If oversubscribed, or have waited a bit then yield.
-    KMP_YIELD_OVERSUB_ELSE_SPIN(spins);
+    KMP_YIELD_OVERSUB_ELSE_SPIN(spins, time);
   }
   KMP_FSYNC_SPIN_ACQUIRED(obj);
   return r;

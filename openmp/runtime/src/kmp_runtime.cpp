@@ -6895,7 +6895,9 @@ static void __kmp_check_mic_type() {
 static void __kmp_user_level_mwait_init() {
   struct kmp_cpuid buf;
   __kmp_x86_cpuid(7, 0, &buf);
-  __kmp_umwait_enabled = ((buf.ecx >> 5) & 1) && __kmp_user_level_mwait;
+  __kmp_waitpkg_enabled = ((buf.ecx >> 5) & 1);
+  __kmp_umwait_enabled = __kmp_waitpkg_enabled && __kmp_user_level_mwait;
+  __kmp_tpause_enabled = __kmp_waitpkg_enabled && (__kmp_tpause_state > 0);
   KF_TRACE(30, ("__kmp_user_level_mwait_init: __kmp_umwait_enabled = %d\n",
                 __kmp_umwait_enabled));
 }
