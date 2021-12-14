@@ -102,7 +102,6 @@ target(asan_target_type, "asan") {
     sources += [
       "asan_interceptors_vfork.S",
       "asan_rtl_x86_64.S",
-
     ]
   }
 
