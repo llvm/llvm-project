@@ -27,25 +27,25 @@ define i64 @predicated_udiv_scalarized_operand(i64* %a, i64 %x) optsize {
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i64* [[TMP0]] to <2 x i64>*
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i64>, <2 x i64>* [[TMP1]], align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp sgt <2 x i64> [[WIDE_LOAD]], zeroinitializer
-; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <2 x i1> [[TMP2]], i32 0
+; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <2 x i1> [[TMP2]], i64 0
 ; CHECK-NEXT:    br i1 [[TMP3]], label [[PRED_UDIV_IF:%.*]], label [[PRED_UDIV_CONTINUE:%.*]]
 ; CHECK:       pred.udiv.if:
-; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x i64> [[WIDE_LOAD]], i32 0
+; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x i64> [[WIDE_LOAD]], i64 0
 ; CHECK-NEXT:    [[TMP5:%.*]] = add nsw i64 [[TMP4]], [[X:%.*]]
-; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <2 x i64> [[WIDE_LOAD]], i32 0
+; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <2 x i64> [[WIDE_LOAD]], i64 0
 ; CHECK-NEXT:    [[TMP7:%.*]] = udiv i64 [[TMP6]], [[TMP5]]
-; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <2 x i64> poison, i64 [[TMP7]], i32 0
+; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <2 x i64> poison, i64 [[TMP7]], i64 0
 ; CHECK-NEXT:    br label [[PRED_UDIV_CONTINUE]]
 ; CHECK:       pred.udiv.continue:
 ; CHECK-NEXT:    [[TMP9:%.*]] = phi <2 x i64> [ poison, [[VECTOR_BODY]] ], [ [[TMP8]], [[PRED_UDIV_IF]] ]
-; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <2 x i1> [[TMP2]], i32 1
+; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <2 x i1> [[TMP2]], i64 1
 ; CHECK-NEXT:    br i1 [[TMP10]], label [[PRED_UDIV_IF1:%.*]], label [[PRED_UDIV_CONTINUE2]]
 ; CHECK:       pred.udiv.if1:
-; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <2 x i64> [[WIDE_LOAD]], i32 1
+; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <2 x i64> [[WIDE_LOAD]], i64 1
 ; CHECK-NEXT:    [[TMP12:%.*]] = add nsw i64 [[TMP11]], [[X]]
-; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <2 x i64> [[WIDE_LOAD]], i32 1
+; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <2 x i64> [[WIDE_LOAD]], i64 1
 ; CHECK-NEXT:    [[TMP14:%.*]] = udiv i64 [[TMP13]], [[TMP12]]
-; CHECK-NEXT:    [[TMP15:%.*]] = insertelement <2 x i64> [[TMP9]], i64 [[TMP14]], i32 1
+; CHECK-NEXT:    [[TMP15:%.*]] = insertelement <2 x i64> [[TMP9]], i64 [[TMP14]], i64 1
 ; CHECK-NEXT:    br label [[PRED_UDIV_CONTINUE2]]
 ; CHECK:       pred.udiv.continue2:
 ; CHECK-NEXT:    [[TMP16:%.*]] = phi <2 x i64> [ [[TMP9]], [[PRED_UDIV_CONTINUE]] ], [ [[TMP15]], [[PRED_UDIV_IF1]] ]

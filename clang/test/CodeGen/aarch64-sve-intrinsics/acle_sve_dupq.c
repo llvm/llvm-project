@@ -181,44 +181,44 @@ svfloat64_t test_svdupq_lane_f64(svfloat64_t data, uint64_t index)
 
 // CHECK-LABEL: @test_svdupq_n_s8(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = insertelement <16 x i8> undef, i8 [[X0:%.*]], i32 0
-// CHECK-NEXT:    [[TMP1:%.*]] = insertelement <16 x i8> [[TMP0]], i8 [[X1:%.*]], i32 1
-// CHECK-NEXT:    [[TMP2:%.*]] = insertelement <16 x i8> [[TMP1]], i8 [[X2:%.*]], i32 2
-// CHECK-NEXT:    [[TMP3:%.*]] = insertelement <16 x i8> [[TMP2]], i8 [[X3:%.*]], i32 3
-// CHECK-NEXT:    [[TMP4:%.*]] = insertelement <16 x i8> [[TMP3]], i8 [[X4:%.*]], i32 4
-// CHECK-NEXT:    [[TMP5:%.*]] = insertelement <16 x i8> [[TMP4]], i8 [[X5:%.*]], i32 5
-// CHECK-NEXT:    [[TMP6:%.*]] = insertelement <16 x i8> [[TMP5]], i8 [[X6:%.*]], i32 6
-// CHECK-NEXT:    [[TMP7:%.*]] = insertelement <16 x i8> [[TMP6]], i8 [[X7:%.*]], i32 7
-// CHECK-NEXT:    [[TMP8:%.*]] = insertelement <16 x i8> [[TMP7]], i8 [[X8:%.*]], i32 8
-// CHECK-NEXT:    [[TMP9:%.*]] = insertelement <16 x i8> [[TMP8]], i8 [[X9:%.*]], i32 9
-// CHECK-NEXT:    [[TMP10:%.*]] = insertelement <16 x i8> [[TMP9]], i8 [[X10:%.*]], i32 10
-// CHECK-NEXT:    [[TMP11:%.*]] = insertelement <16 x i8> [[TMP10]], i8 [[X11:%.*]], i32 11
-// CHECK-NEXT:    [[TMP12:%.*]] = insertelement <16 x i8> [[TMP11]], i8 [[X12:%.*]], i32 12
-// CHECK-NEXT:    [[TMP13:%.*]] = insertelement <16 x i8> [[TMP12]], i8 [[X13:%.*]], i32 13
-// CHECK-NEXT:    [[TMP14:%.*]] = insertelement <16 x i8> [[TMP13]], i8 [[X14:%.*]], i32 14
-// CHECK-NEXT:    [[TMP15:%.*]] = insertelement <16 x i8> [[TMP14]], i8 [[X15:%.*]], i32 15
+// CHECK-NEXT:    [[TMP0:%.*]] = insertelement <16 x i8> undef, i8 [[X0:%.*]], i64 0
+// CHECK-NEXT:    [[TMP1:%.*]] = insertelement <16 x i8> [[TMP0]], i8 [[X1:%.*]], i64 1
+// CHECK-NEXT:    [[TMP2:%.*]] = insertelement <16 x i8> [[TMP1]], i8 [[X2:%.*]], i64 2
+// CHECK-NEXT:    [[TMP3:%.*]] = insertelement <16 x i8> [[TMP2]], i8 [[X3:%.*]], i64 3
+// CHECK-NEXT:    [[TMP4:%.*]] = insertelement <16 x i8> [[TMP3]], i8 [[X4:%.*]], i64 4
+// CHECK-NEXT:    [[TMP5:%.*]] = insertelement <16 x i8> [[TMP4]], i8 [[X5:%.*]], i64 5
+// CHECK-NEXT:    [[TMP6:%.*]] = insertelement <16 x i8> [[TMP5]], i8 [[X6:%.*]], i64 6
+// CHECK-NEXT:    [[TMP7:%.*]] = insertelement <16 x i8> [[TMP6]], i8 [[X7:%.*]], i64 7
+// CHECK-NEXT:    [[TMP8:%.*]] = insertelement <16 x i8> [[TMP7]], i8 [[X8:%.*]], i64 8
+// CHECK-NEXT:    [[TMP9:%.*]] = insertelement <16 x i8> [[TMP8]], i8 [[X9:%.*]], i64 9
+// CHECK-NEXT:    [[TMP10:%.*]] = insertelement <16 x i8> [[TMP9]], i8 [[X10:%.*]], i64 10
+// CHECK-NEXT:    [[TMP11:%.*]] = insertelement <16 x i8> [[TMP10]], i8 [[X11:%.*]], i64 11
+// CHECK-NEXT:    [[TMP12:%.*]] = insertelement <16 x i8> [[TMP11]], i8 [[X12:%.*]], i64 12
+// CHECK-NEXT:    [[TMP13:%.*]] = insertelement <16 x i8> [[TMP12]], i8 [[X13:%.*]], i64 13
+// CHECK-NEXT:    [[TMP14:%.*]] = insertelement <16 x i8> [[TMP13]], i8 [[X14:%.*]], i64 14
+// CHECK-NEXT:    [[TMP15:%.*]] = insertelement <16 x i8> [[TMP14]], i8 [[X15:%.*]], i64 15
 // CHECK-NEXT:    [[TMP16:%.*]] = call <vscale x 16 x i8> @llvm.experimental.vector.insert.nxv16i8.v16i8(<vscale x 16 x i8> undef, <16 x i8> [[TMP15]], i64 0)
 // CHECK-NEXT:    [[TMP17:%.*]] = call <vscale x 16 x i8> @llvm.aarch64.sve.dupq.lane.nxv16i8(<vscale x 16 x i8> [[TMP16]], i64 0)
 // CHECK-NEXT:    ret <vscale x 16 x i8> [[TMP17]]
 //
 // CPP-CHECK-LABEL: @_Z16test_svdupq_n_s8aaaaaaaaaaaaaaaa(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = insertelement <16 x i8> undef, i8 [[X0:%.*]], i32 0
-// CPP-CHECK-NEXT:    [[TMP1:%.*]] = insertelement <16 x i8> [[TMP0]], i8 [[X1:%.*]], i32 1
-// CPP-CHECK-NEXT:    [[TMP2:%.*]] = insertelement <16 x i8> [[TMP1]], i8 [[X2:%.*]], i32 2
-// CPP-CHECK-NEXT:    [[TMP3:%.*]] = insertelement <16 x i8> [[TMP2]], i8 [[X3:%.*]], i32 3
-// CPP-CHECK-NEXT:    [[TMP4:%.*]] = insertelement <16 x i8> [[TMP3]], i8 [[X4:%.*]], i32 4
-// CPP-CHECK-NEXT:    [[TMP5:%.*]] = insertelement <16 x i8> [[TMP4]], i8 [[X5:%.*]], i32 5
-// CPP-CHECK-NEXT:    [[TMP6:%.*]] = insertelement <16 x i8> [[TMP5]], i8 [[X6:%.*]], i32 6
-// CPP-CHECK-NEXT:    [[TMP7:%.*]] = insertelement <16 x i8> [[TMP6]], i8 [[X7:%.*]], i32 7
-// CPP-CHECK-NEXT:    [[TMP8:%.*]] = insertelement <16 x i8> [[TMP7]], i8 [[X8:%.*]], i32 8
-// CPP-CHECK-NEXT:    [[TMP9:%.*]] = insertelement <16 x i8> [[TMP8]], i8 [[X9:%.*]], i32 9
-// CPP-CHECK-NEXT:    [[TMP10:%.*]] = insertelement <16 x i8> [[TMP9]], i8 [[X10:%.*]], i32 10
-// CPP-CHECK-NEXT:    [[TMP11:%.*]] = insertelement <16 x i8> [[TMP10]], i8 [[X11:%.*]], i32 11
-// CPP-CHECK-NEXT:    [[TMP12:%.*]] = insertelement <16 x i8> [[TMP11]], i8 [[X12:%.*]], i32 12
-// CPP-CHECK-NEXT:    [[TMP13:%.*]] = insertelement <16 x i8> [[TMP12]], i8 [[X13:%.*]], i32 13
-// CPP-CHECK-NEXT:    [[TMP14:%.*]] = insertelement <16 x i8> [[TMP13]], i8 [[X14:%.*]], i32 14
-// CPP-CHECK-NEXT:    [[TMP15:%.*]] = insertelement <16 x i8> [[TMP14]], i8 [[X15:%.*]], i32 15
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = insertelement <16 x i8> undef, i8 [[X0:%.*]], i64 0
+// CPP-CHECK-NEXT:    [[TMP1:%.*]] = insertelement <16 x i8> [[TMP0]], i8 [[X1:%.*]], i64 1
+// CPP-CHECK-NEXT:    [[TMP2:%.*]] = insertelement <16 x i8> [[TMP1]], i8 [[X2:%.*]], i64 2
+// CPP-CHECK-NEXT:    [[TMP3:%.*]] = insertelement <16 x i8> [[TMP2]], i8 [[X3:%.*]], i64 3
+// CPP-CHECK-NEXT:    [[TMP4:%.*]] = insertelement <16 x i8> [[TMP3]], i8 [[X4:%.*]], i64 4
+// CPP-CHECK-NEXT:    [[TMP5:%.*]] = insertelement <16 x i8> [[TMP4]], i8 [[X5:%.*]], i64 5
+// CPP-CHECK-NEXT:    [[TMP6:%.*]] = insertelement <16 x i8> [[TMP5]], i8 [[X6:%.*]], i64 6
+// CPP-CHECK-NEXT:    [[TMP7:%.*]] = insertelement <16 x i8> [[TMP6]], i8 [[X7:%.*]], i64 7
+// CPP-CHECK-NEXT:    [[TMP8:%.*]] = insertelement <16 x i8> [[TMP7]], i8 [[X8:%.*]], i64 8
+// CPP-CHECK-NEXT:    [[TMP9:%.*]] = insertelement <16 x i8> [[TMP8]], i8 [[X9:%.*]], i64 9
+// CPP-CHECK-NEXT:    [[TMP10:%.*]] = insertelement <16 x i8> [[TMP9]], i8 [[X10:%.*]], i64 10
+// CPP-CHECK-NEXT:    [[TMP11:%.*]] = insertelement <16 x i8> [[TMP10]], i8 [[X11:%.*]], i64 11
+// CPP-CHECK-NEXT:    [[TMP12:%.*]] = insertelement <16 x i8> [[TMP11]], i8 [[X12:%.*]], i64 12
+// CPP-CHECK-NEXT:    [[TMP13:%.*]] = insertelement <16 x i8> [[TMP12]], i8 [[X13:%.*]], i64 13
+// CPP-CHECK-NEXT:    [[TMP14:%.*]] = insertelement <16 x i8> [[TMP13]], i8 [[X14:%.*]], i64 14
+// CPP-CHECK-NEXT:    [[TMP15:%.*]] = insertelement <16 x i8> [[TMP14]], i8 [[X15:%.*]], i64 15
 // CPP-CHECK-NEXT:    [[TMP16:%.*]] = call <vscale x 16 x i8> @llvm.experimental.vector.insert.nxv16i8.v16i8(<vscale x 16 x i8> undef, <16 x i8> [[TMP15]], i64 0)
 // CPP-CHECK-NEXT:    [[TMP17:%.*]] = call <vscale x 16 x i8> @llvm.aarch64.sve.dupq.lane.nxv16i8(<vscale x 16 x i8> [[TMP16]], i64 0)
 // CPP-CHECK-NEXT:    ret <vscale x 16 x i8> [[TMP17]]
@@ -234,28 +234,28 @@ svint8_t test_svdupq_n_s8(int8_t x0, int8_t x1, int8_t x2, int8_t x3,
 
 // CHECK-LABEL: @test_svdupq_n_s16(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = insertelement <8 x i16> undef, i16 [[X0:%.*]], i32 0
-// CHECK-NEXT:    [[TMP1:%.*]] = insertelement <8 x i16> [[TMP0]], i16 [[X1:%.*]], i32 1
-// CHECK-NEXT:    [[TMP2:%.*]] = insertelement <8 x i16> [[TMP1]], i16 [[X2:%.*]], i32 2
-// CHECK-NEXT:    [[TMP3:%.*]] = insertelement <8 x i16> [[TMP2]], i16 [[X3:%.*]], i32 3
-// CHECK-NEXT:    [[TMP4:%.*]] = insertelement <8 x i16> [[TMP3]], i16 [[X4:%.*]], i32 4
-// CHECK-NEXT:    [[TMP5:%.*]] = insertelement <8 x i16> [[TMP4]], i16 [[X5:%.*]], i32 5
-// CHECK-NEXT:    [[TMP6:%.*]] = insertelement <8 x i16> [[TMP5]], i16 [[X6:%.*]], i32 6
-// CHECK-NEXT:    [[TMP7:%.*]] = insertelement <8 x i16> [[TMP6]], i16 [[X7:%.*]], i32 7
+// CHECK-NEXT:    [[TMP0:%.*]] = insertelement <8 x i16> undef, i16 [[X0:%.*]], i64 0
+// CHECK-NEXT:    [[TMP1:%.*]] = insertelement <8 x i16> [[TMP0]], i16 [[X1:%.*]], i64 1
+// CHECK-NEXT:    [[TMP2:%.*]] = insertelement <8 x i16> [[TMP1]], i16 [[X2:%.*]], i64 2
+// CHECK-NEXT:    [[TMP3:%.*]] = insertelement <8 x i16> [[TMP2]], i16 [[X3:%.*]], i64 3
+// CHECK-NEXT:    [[TMP4:%.*]] = insertelement <8 x i16> [[TMP3]], i16 [[X4:%.*]], i64 4
+// CHECK-NEXT:    [[TMP5:%.*]] = insertelement <8 x i16> [[TMP4]], i16 [[X5:%.*]], i64 5
+// CHECK-NEXT:    [[TMP6:%.*]] = insertelement <8 x i16> [[TMP5]], i16 [[X6:%.*]], i64 6
+// CHECK-NEXT:    [[TMP7:%.*]] = insertelement <8 x i16> [[TMP6]], i16 [[X7:%.*]], i64 7
 // CHECK-NEXT:    [[TMP8:%.*]] = call <vscale x 8 x i16> @llvm.experimental.vector.insert.nxv8i16.v8i16(<vscale x 8 x i16> undef, <8 x i16> [[TMP7]], i64 0)
 // CHECK-NEXT:    [[TMP9:%.*]] = call <vscale x 8 x i16> @llvm.aarch64.sve.dupq.lane.nxv8i16(<vscale x 8 x i16> [[TMP8]], i64 0)
 // CHECK-NEXT:    ret <vscale x 8 x i16> [[TMP9]]
 //
 // CPP-CHECK-LABEL: @_Z17test_svdupq_n_s16ssssssss(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = insertelement <8 x i16> undef, i16 [[X0:%.*]], i32 0
-// CPP-CHECK-NEXT:    [[TMP1:%.*]] = insertelement <8 x i16> [[TMP0]], i16 [[X1:%.*]], i32 1
-// CPP-CHECK-NEXT:    [[TMP2:%.*]] = insertelement <8 x i16> [[TMP1]], i16 [[X2:%.*]], i32 2
-// CPP-CHECK-NEXT:    [[TMP3:%.*]] = insertelement <8 x i16> [[TMP2]], i16 [[X3:%.*]], i32 3
-// CPP-CHECK-NEXT:    [[TMP4:%.*]] = insertelement <8 x i16> [[TMP3]], i16 [[X4:%.*]], i32 4
-// CPP-CHECK-NEXT:    [[TMP5:%.*]] = insertelement <8 x i16> [[TMP4]], i16 [[X5:%.*]], i32 5
-// CPP-CHECK-NEXT:    [[TMP6:%.*]] = insertelement <8 x i16> [[TMP5]], i16 [[X6:%.*]], i32 6
-// CPP-CHECK-NEXT:    [[TMP7:%.*]] = insertelement <8 x i16> [[TMP6]], i16 [[X7:%.*]], i32 7
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = insertelement <8 x i16> undef, i16 [[X0:%.*]], i64 0
+// CPP-CHECK-NEXT:    [[TMP1:%.*]] = insertelement <8 x i16> [[TMP0]], i16 [[X1:%.*]], i64 1
+// CPP-CHECK-NEXT:    [[TMP2:%.*]] = insertelement <8 x i16> [[TMP1]], i16 [[X2:%.*]], i64 2
+// CPP-CHECK-NEXT:    [[TMP3:%.*]] = insertelement <8 x i16> [[TMP2]], i16 [[X3:%.*]], i64 3
+// CPP-CHECK-NEXT:    [[TMP4:%.*]] = insertelement <8 x i16> [[TMP3]], i16 [[X4:%.*]], i64 4
+// CPP-CHECK-NEXT:    [[TMP5:%.*]] = insertelement <8 x i16> [[TMP4]], i16 [[X5:%.*]], i64 5
+// CPP-CHECK-NEXT:    [[TMP6:%.*]] = insertelement <8 x i16> [[TMP5]], i16 [[X6:%.*]], i64 6
+// CPP-CHECK-NEXT:    [[TMP7:%.*]] = insertelement <8 x i16> [[TMP6]], i16 [[X7:%.*]], i64 7
 // CPP-CHECK-NEXT:    [[TMP8:%.*]] = call <vscale x 8 x i16> @llvm.experimental.vector.insert.nxv8i16.v8i16(<vscale x 8 x i16> undef, <8 x i16> [[TMP7]], i64 0)
 // CPP-CHECK-NEXT:    [[TMP9:%.*]] = call <vscale x 8 x i16> @llvm.aarch64.sve.dupq.lane.nxv8i16(<vscale x 8 x i16> [[TMP8]], i64 0)
 // CPP-CHECK-NEXT:    ret <vscale x 8 x i16> [[TMP9]]
@@ -269,20 +269,20 @@ svint16_t test_svdupq_n_s16(int16_t x0, int16_t x1, int16_t x2, int16_t x3,
 
 // CHECK-LABEL: @test_svdupq_n_s32(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x i32> undef, i32 [[X0:%.*]], i32 0
-// CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i32> [[TMP0]], i32 [[X1:%.*]], i32 1
-// CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x i32> [[TMP1]], i32 [[X2:%.*]], i32 2
-// CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x i32> [[TMP2]], i32 [[X3:%.*]], i32 3
+// CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x i32> undef, i32 [[X0:%.*]], i64 0
+// CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i32> [[TMP0]], i32 [[X1:%.*]], i64 1
+// CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x i32> [[TMP1]], i32 [[X2:%.*]], i64 2
+// CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x i32> [[TMP2]], i32 [[X3:%.*]], i64 3
 // CHECK-NEXT:    [[TMP4:%.*]] = call <vscale x 4 x i32> @llvm.experimental.vector.insert.nxv4i32.v4i32(<vscale x 4 x i32> undef, <4 x i32> [[TMP3]], i64 0)
 // CHECK-NEXT:    [[TMP5:%.*]] = call <vscale x 4 x i32> @llvm.aarch64.sve.dupq.lane.nxv4i32(<vscale x 4 x i32> [[TMP4]], i64 0)
 // CHECK-NEXT:    ret <vscale x 4 x i32> [[TMP5]]
 //
 // CPP-CHECK-LABEL: @_Z17test_svdupq_n_s32iiii(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x i32> undef, i32 [[X0:%.*]], i32 0
-// CPP-CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i32> [[TMP0]], i32 [[X1:%.*]], i32 1
-// CPP-CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x i32> [[TMP1]], i32 [[X2:%.*]], i32 2
-// CPP-CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x i32> [[TMP2]], i32 [[X3:%.*]], i32 3
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x i32> undef, i32 [[X0:%.*]], i64 0
+// CPP-CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i32> [[TMP0]], i32 [[X1:%.*]], i64 1
+// CPP-CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x i32> [[TMP1]], i32 [[X2:%.*]], i64 2
+// CPP-CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x i32> [[TMP2]], i32 [[X3:%.*]], i64 3
 // CPP-CHECK-NEXT:    [[TMP4:%.*]] = call <vscale x 4 x i32> @llvm.experimental.vector.insert.nxv4i32.v4i32(<vscale x 4 x i32> undef, <4 x i32> [[TMP3]], i64 0)
 // CPP-CHECK-NEXT:    [[TMP5:%.*]] = call <vscale x 4 x i32> @llvm.aarch64.sve.dupq.lane.nxv4i32(<vscale x 4 x i32> [[TMP4]], i64 0)
 // CPP-CHECK-NEXT:    ret <vscale x 4 x i32> [[TMP5]]
@@ -295,16 +295,16 @@ svint32_t test_svdupq_n_s32(int32_t x0, int32_t x1, int32_t x2, int32_t x3)
 
 // CHECK-LABEL: @test_svdupq_n_s64(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x i64> undef, i64 [[X0:%.*]], i32 0
-// CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i64> [[TMP0]], i64 [[X1:%.*]], i32 1
+// CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x i64> undef, i64 [[X0:%.*]], i64 0
+// CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i64> [[TMP0]], i64 [[X1:%.*]], i64 1
 // CHECK-NEXT:    [[TMP2:%.*]] = call <vscale x 2 x i64> @llvm.experimental.vector.insert.nxv2i64.v2i64(<vscale x 2 x i64> undef, <2 x i64> [[TMP1]], i64 0)
 // CHECK-NEXT:    [[TMP3:%.*]] = call <vscale x 2 x i64> @llvm.aarch64.sve.dupq.lane.nxv2i64(<vscale x 2 x i64> [[TMP2]], i64 0)
 // CHECK-NEXT:    ret <vscale x 2 x i64> [[TMP3]]
 //
 // CPP-CHECK-LABEL: @_Z17test_svdupq_n_s64ll(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x i64> undef, i64 [[X0:%.*]], i32 0
-// CPP-CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i64> [[TMP0]], i64 [[X1:%.*]], i32 1
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x i64> undef, i64 [[X0:%.*]], i64 0
+// CPP-CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i64> [[TMP0]], i64 [[X1:%.*]], i64 1
 // CPP-CHECK-NEXT:    [[TMP2:%.*]] = call <vscale x 2 x i64> @llvm.experimental.vector.insert.nxv2i64.v2i64(<vscale x 2 x i64> undef, <2 x i64> [[TMP1]], i64 0)
 // CPP-CHECK-NEXT:    [[TMP3:%.*]] = call <vscale x 2 x i64> @llvm.aarch64.sve.dupq.lane.nxv2i64(<vscale x 2 x i64> [[TMP2]], i64 0)
 // CPP-CHECK-NEXT:    ret <vscale x 2 x i64> [[TMP3]]
@@ -316,44 +316,44 @@ svint64_t test_svdupq_n_s64(int64_t x0, int64_t x1)
 
 // CHECK-LABEL: @test_svdupq_n_u8(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = insertelement <16 x i8> undef, i8 [[X0:%.*]], i32 0
-// CHECK-NEXT:    [[TMP1:%.*]] = insertelement <16 x i8> [[TMP0]], i8 [[X1:%.*]], i32 1
-// CHECK-NEXT:    [[TMP2:%.*]] = insertelement <16 x i8> [[TMP1]], i8 [[X2:%.*]], i32 2
-// CHECK-NEXT:    [[TMP3:%.*]] = insertelement <16 x i8> [[TMP2]], i8 [[X3:%.*]], i32 3
-// CHECK-NEXT:    [[TMP4:%.*]] = insertelement <16 x i8> [[TMP3]], i8 [[X4:%.*]], i32 4
-// CHECK-NEXT:    [[TMP5:%.*]] = insertelement <16 x i8> [[TMP4]], i8 [[X5:%.*]], i32 5
-// CHECK-NEXT:    [[TMP6:%.*]] = insertelement <16 x i8> [[TMP5]], i8 [[X6:%.*]], i32 6
-// CHECK-NEXT:    [[TMP7:%.*]] = insertelement <16 x i8> [[TMP6]], i8 [[X7:%.*]], i32 7
-// CHECK-NEXT:    [[TMP8:%.*]] = insertelement <16 x i8> [[TMP7]], i8 [[X8:%.*]], i32 8
-// CHECK-NEXT:    [[TMP9:%.*]] = insertelement <16 x i8> [[TMP8]], i8 [[X9:%.*]], i32 9
-// CHECK-NEXT:    [[TMP10:%.*]] = insertelement <16 x i8> [[TMP9]], i8 [[X10:%.*]], i32 10
-// CHECK-NEXT:    [[TMP11:%.*]] = insertelement <16 x i8> [[TMP10]], i8 [[X11:%.*]], i32 11
-// CHECK-NEXT:    [[TMP12:%.*]] = insertelement <16 x i8> [[TMP11]], i8 [[X12:%.*]], i32 12
-// CHECK-NEXT:    [[TMP13:%.*]] = insertelement <16 x i8> [[TMP12]], i8 [[X13:%.*]], i32 13
-// CHECK-NEXT:    [[TMP14:%.*]] = insertelement <16 x i8> [[TMP13]], i8 [[X14:%.*]], i32 14
-// CHECK-NEXT:    [[TMP15:%.*]] = insertelement <16 x i8> [[TMP14]], i8 [[X15:%.*]], i32 15
+// CHECK-NEXT:    [[TMP0:%.*]] = insertelement <16 x i8> undef, i8 [[X0:%.*]], i64 0
+// CHECK-NEXT:    [[TMP1:%.*]] = insertelement <16 x i8> [[TMP0]], i8 [[X1:%.*]], i64 1
+// CHECK-NEXT:    [[TMP2:%.*]] = insertelement <16 x i8> [[TMP1]], i8 [[X2:%.*]], i64 2
+// CHECK-NEXT:    [[TMP3:%.*]] = insertelement <16 x i8> [[TMP2]], i8 [[X3:%.*]], i64 3
+// CHECK-NEXT:    [[TMP4:%.*]] = insertelement <16 x i8> [[TMP3]], i8 [[X4:%.*]], i64 4
+// CHECK-NEXT:    [[TMP5:%.*]] = insertelement <16 x i8> [[TMP4]], i8 [[X5:%.*]], i64 5
+// CHECK-NEXT:    [[TMP6:%.*]] = insertelement <16 x i8> [[TMP5]], i8 [[X6:%.*]], i64 6
+// CHECK-NEXT:    [[TMP7:%.*]] = insertelement <16 x i8> [[TMP6]], i8 [[X7:%.*]], i64 7
+// CHECK-NEXT:    [[TMP8:%.*]] = insertelement <16 x i8> [[TMP7]], i8 [[X8:%.*]], i64 8
+// CHECK-NEXT:    [[TMP9:%.*]] = insertelement <16 x i8> [[TMP8]], i8 [[X9:%.*]], i64 9
+// CHECK-NEXT:    [[TMP10:%.*]] = insertelement <16 x i8> [[TMP9]], i8 [[X10:%.*]], i64 10
+// CHECK-NEXT:    [[TMP11:%.*]] = insertelement <16 x i8> [[TMP10]], i8 [[X11:%.*]], i64 11
+// CHECK-NEXT:    [[TMP12:%.*]] = insertelement <16 x i8> [[TMP11]], i8 [[X12:%.*]], i64 12
+// CHECK-NEXT:    [[TMP13:%.*]] = insertelement <16 x i8> [[TMP12]], i8 [[X13:%.*]], i64 13
+// CHECK-NEXT:    [[TMP14:%.*]] = insertelement <16 x i8> [[TMP13]], i8 [[X14:%.*]], i64 14
+// CHECK-NEXT:    [[TMP15:%.*]] = insertelement <16 x i8> [[TMP14]], i8 [[X15:%.*]], i64 15
 // CHECK-NEXT:    [[TMP16:%.*]] = call <vscale x 16 x i8> @llvm.experimental.vector.insert.nxv16i8.v16i8(<vscale x 16 x i8> undef, <16 x i8> [[TMP15]], i64 0)
 // CHECK-NEXT:    [[TMP17:%.*]] = call <vscale x 16 x i8> @llvm.aarch64.sve.dupq.lane.nxv16i8(<vscale x 16 x i8> [[TMP16]], i64 0)
 // CHECK-NEXT:    ret <vscale x 16 x i8> [[TMP17]]
 //
 // CPP-CHECK-LABEL: @_Z16test_svdupq_n_u8hhhhhhhhhhhhhhhh(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = insertelement <16 x i8> undef, i8 [[X0:%.*]], i32 0
-// CPP-CHECK-NEXT:    [[TMP1:%.*]] = insertelement <16 x i8> [[TMP0]], i8 [[X1:%.*]], i32 1
-// CPP-CHECK-NEXT:    [[TMP2:%.*]] = insertelement <16 x i8> [[TMP1]], i8 [[X2:%.*]], i32 2
-// CPP-CHECK-NEXT:    [[TMP3:%.*]] = insertelement <16 x i8> [[TMP2]], i8 [[X3:%.*]], i32 3
-// CPP-CHECK-NEXT:    [[TMP4:%.*]] = insertelement <16 x i8> [[TMP3]], i8 [[X4:%.*]], i32 4
-// CPP-CHECK-NEXT:    [[TMP5:%.*]] = insertelement <16 x i8> [[TMP4]], i8 [[X5:%.*]], i32 5
-// CPP-CHECK-NEXT:    [[TMP6:%.*]] = insertelement <16 x i8> [[TMP5]], i8 [[X6:%.*]], i32 6
-// CPP-CHECK-NEXT:    [[TMP7:%.*]] = insertelement <16 x i8> [[TMP6]], i8 [[X7:%.*]], i32 7
-// CPP-CHECK-NEXT:    [[TMP8:%.*]] = insertelement <16 x i8> [[TMP7]], i8 [[X8:%.*]], i32 8
-// CPP-CHECK-NEXT:    [[TMP9:%.*]] = insertelement <16 x i8> [[TMP8]], i8 [[X9:%.*]], i32 9
-// CPP-CHECK-NEXT:    [[TMP10:%.*]] = insertelement <16 x i8> [[TMP9]], i8 [[X10:%.*]], i32 10
-// CPP-CHECK-NEXT:    [[TMP11:%.*]] = insertelement <16 x i8> [[TMP10]], i8 [[X11:%.*]], i32 11
-// CPP-CHECK-NEXT:    [[TMP12:%.*]] = insertelement <16 x i8> [[TMP11]], i8 [[X12:%.*]], i32 12
-// CPP-CHECK-NEXT:    [[TMP13:%.*]] = insertelement <16 x i8> [[TMP12]], i8 [[X13:%.*]], i32 13
-// CPP-CHECK-NEXT:    [[TMP14:%.*]] = insertelement <16 x i8> [[TMP13]], i8 [[X14:%.*]], i32 14
-// CPP-CHECK-NEXT:    [[TMP15:%.*]] = insertelement <16 x i8> [[TMP14]], i8 [[X15:%.*]], i32 15
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = insertelement <16 x i8> undef, i8 [[X0:%.*]], i64 0
+// CPP-CHECK-NEXT:    [[TMP1:%.*]] = insertelement <16 x i8> [[TMP0]], i8 [[X1:%.*]], i64 1
+// CPP-CHECK-NEXT:    [[TMP2:%.*]] = insertelement <16 x i8> [[TMP1]], i8 [[X2:%.*]], i64 2
+// CPP-CHECK-NEXT:    [[TMP3:%.*]] = insertelement <16 x i8> [[TMP2]], i8 [[X3:%.*]], i64 3
+// CPP-CHECK-NEXT:    [[TMP4:%.*]] = insertelement <16 x i8> [[TMP3]], i8 [[X4:%.*]], i64 4
+// CPP-CHECK-NEXT:    [[TMP5:%.*]] = insertelement <16 x i8> [[TMP4]], i8 [[X5:%.*]], i64 5
+// CPP-CHECK-NEXT:    [[TMP6:%.*]] = insertelement <16 x i8> [[TMP5]], i8 [[X6:%.*]], i64 6
+// CPP-CHECK-NEXT:    [[TMP7:%.*]] = insertelement <16 x i8> [[TMP6]], i8 [[X7:%.*]], i64 7
+// CPP-CHECK-NEXT:    [[TMP8:%.*]] = insertelement <16 x i8> [[TMP7]], i8 [[X8:%.*]], i64 8
+// CPP-CHECK-NEXT:    [[TMP9:%.*]] = insertelement <16 x i8> [[TMP8]], i8 [[X9:%.*]], i64 9
+// CPP-CHECK-NEXT:    [[TMP10:%.*]] = insertelement <16 x i8> [[TMP9]], i8 [[X10:%.*]], i64 10
+// CPP-CHECK-NEXT:    [[TMP11:%.*]] = insertelement <16 x i8> [[TMP10]], i8 [[X11:%.*]], i64 11
+// CPP-CHECK-NEXT:    [[TMP12:%.*]] = insertelement <16 x i8> [[TMP11]], i8 [[X12:%.*]], i64 12
+// CPP-CHECK-NEXT:    [[TMP13:%.*]] = insertelement <16 x i8> [[TMP12]], i8 [[X13:%.*]], i64 13
+// CPP-CHECK-NEXT:    [[TMP14:%.*]] = insertelement <16 x i8> [[TMP13]], i8 [[X14:%.*]], i64 14
+// CPP-CHECK-NEXT:    [[TMP15:%.*]] = insertelement <16 x i8> [[TMP14]], i8 [[X15:%.*]], i64 15
 // CPP-CHECK-NEXT:    [[TMP16:%.*]] = call <vscale x 16 x i8> @llvm.experimental.vector.insert.nxv16i8.v16i8(<vscale x 16 x i8> undef, <16 x i8> [[TMP15]], i64 0)
 // CPP-CHECK-NEXT:    [[TMP17:%.*]] = call <vscale x 16 x i8> @llvm.aarch64.sve.dupq.lane.nxv16i8(<vscale x 16 x i8> [[TMP16]], i64 0)
 // CPP-CHECK-NEXT:    ret <vscale x 16 x i8> [[TMP17]]
@@ -369,28 +369,28 @@ svuint8_t test_svdupq_n_u8(uint8_t x0, uint8_t x1, uint8_t x2, uint8_t x3,
 
 // CHECK-LABEL: @test_svdupq_n_u16(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = insertelement <8 x i16> undef, i16 [[X0:%.*]], i32 0
-// CHECK-NEXT:    [[TMP1:%.*]] = insertelement <8 x i16> [[TMP0]], i16 [[X1:%.*]], i32 1
-// CHECK-NEXT:    [[TMP2:%.*]] = insertelement <8 x i16> [[TMP1]], i16 [[X2:%.*]], i32 2
-// CHECK-NEXT:    [[TMP3:%.*]] = insertelement <8 x i16> [[TMP2]], i16 [[X3:%.*]], i32 3
-// CHECK-NEXT:    [[TMP4:%.*]] = insertelement <8 x i16> [[TMP3]], i16 [[X4:%.*]], i32 4
-// CHECK-NEXT:    [[TMP5:%.*]] = insertelement <8 x i16> [[TMP4]], i16 [[X5:%.*]], i32 5
-// CHECK-NEXT:    [[TMP6:%.*]] = insertelement <8 x i16> [[TMP5]], i16 [[X6:%.*]], i32 6
-// CHECK-NEXT:    [[TMP7:%.*]] = insertelement <8 x i16> [[TMP6]], i16 [[X7:%.*]], i32 7
+// CHECK-NEXT:    [[TMP0:%.*]] = insertelement <8 x i16> undef, i16 [[X0:%.*]], i64 0
+// CHECK-NEXT:    [[TMP1:%.*]] = insertelement <8 x i16> [[TMP0]], i16 [[X1:%.*]], i64 1
+// CHECK-NEXT:    [[TMP2:%.*]] = insertelement <8 x i16> [[TMP1]], i16 [[X2:%.*]], i64 2
+// CHECK-NEXT:    [[TMP3:%.*]] = insertelement <8 x i16> [[TMP2]], i16 [[X3:%.*]], i64 3
+// CHECK-NEXT:    [[TMP4:%.*]] = insertelement <8 x i16> [[TMP3]], i16 [[X4:%.*]], i64 4
+// CHECK-NEXT:    [[TMP5:%.*]] = insertelement <8 x i16> [[TMP4]], i16 [[X5:%.*]], i64 5
+// CHECK-NEXT:    [[TMP6:%.*]] = insertelement <8 x i16> [[TMP5]], i16 [[X6:%.*]], i64 6
+// CHECK-NEXT:    [[TMP7:%.*]] = insertelement <8 x i16> [[TMP6]], i16 [[X7:%.*]], i64 7
 // CHECK-NEXT:    [[TMP8:%.*]] = call <vscale x 8 x i16> @llvm.experimental.vector.insert.nxv8i16.v8i16(<vscale x 8 x i16> undef, <8 x i16> [[TMP7]], i64 0)
 // CHECK-NEXT:    [[TMP9:%.*]] = call <vscale x 8 x i16> @llvm.aarch64.sve.dupq.lane.nxv8i16(<vscale x 8 x i16> [[TMP8]], i64 0)
 // CHECK-NEXT:    ret <vscale x 8 x i16> [[TMP9]]
 //
 // CPP-CHECK-LABEL: @_Z17test_svdupq_n_u16tttttttt(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = insertelement <8 x i16> undef, i16 [[X0:%.*]], i32 0
-// CPP-CHECK-NEXT:    [[TMP1:%.*]] = insertelement <8 x i16> [[TMP0]], i16 [[X1:%.*]], i32 1
-// CPP-CHECK-NEXT:    [[TMP2:%.*]] = insertelement <8 x i16> [[TMP1]], i16 [[X2:%.*]], i32 2
-// CPP-CHECK-NEXT:    [[TMP3:%.*]] = insertelement <8 x i16> [[TMP2]], i16 [[X3:%.*]], i32 3
-// CPP-CHECK-NEXT:    [[TMP4:%.*]] = insertelement <8 x i16> [[TMP3]], i16 [[X4:%.*]], i32 4
-// CPP-CHECK-NEXT:    [[TMP5:%.*]] = insertelement <8 x i16> [[TMP4]], i16 [[X5:%.*]], i32 5
-// CPP-CHECK-NEXT:    [[TMP6:%.*]] = insertelement <8 x i16> [[TMP5]], i16 [[X6:%.*]], i32 6
-// CPP-CHECK-NEXT:    [[TMP7:%.*]] = insertelement <8 x i16> [[TMP6]], i16 [[X7:%.*]], i32 7
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = insertelement <8 x i16> undef, i16 [[X0:%.*]], i64 0
+// CPP-CHECK-NEXT:    [[TMP1:%.*]] = insertelement <8 x i16> [[TMP0]], i16 [[X1:%.*]], i64 1
+// CPP-CHECK-NEXT:    [[TMP2:%.*]] = insertelement <8 x i16> [[TMP1]], i16 [[X2:%.*]], i64 2
+// CPP-CHECK-NEXT:    [[TMP3:%.*]] = insertelement <8 x i16> [[TMP2]], i16 [[X3:%.*]], i64 3
+// CPP-CHECK-NEXT:    [[TMP4:%.*]] = insertelement <8 x i16> [[TMP3]], i16 [[X4:%.*]], i64 4
+// CPP-CHECK-NEXT:    [[TMP5:%.*]] = insertelement <8 x i16> [[TMP4]], i16 [[X5:%.*]], i64 5
+// CPP-CHECK-NEXT:    [[TMP6:%.*]] = insertelement <8 x i16> [[TMP5]], i16 [[X6:%.*]], i64 6
+// CPP-CHECK-NEXT:    [[TMP7:%.*]] = insertelement <8 x i16> [[TMP6]], i16 [[X7:%.*]], i64 7
 // CPP-CHECK-NEXT:    [[TMP8:%.*]] = call <vscale x 8 x i16> @llvm.experimental.vector.insert.nxv8i16.v8i16(<vscale x 8 x i16> undef, <8 x i16> [[TMP7]], i64 0)
 // CPP-CHECK-NEXT:    [[TMP9:%.*]] = call <vscale x 8 x i16> @llvm.aarch64.sve.dupq.lane.nxv8i16(<vscale x 8 x i16> [[TMP8]], i64 0)
 // CPP-CHECK-NEXT:    ret <vscale x 8 x i16> [[TMP9]]
@@ -404,20 +404,20 @@ svuint16_t test_svdupq_n_u16(uint16_t x0, uint16_t x1, uint16_t x2, uint16_t x3,
 
 // CHECK-LABEL: @test_svdupq_n_u32(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x i32> undef, i32 [[X0:%.*]], i32 0
-// CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i32> [[TMP0]], i32 [[X1:%.*]], i32 1
-// CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x i32> [[TMP1]], i32 [[X2:%.*]], i32 2
-// CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x i32> [[TMP2]], i32 [[X3:%.*]], i32 3
+// CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x i32> undef, i32 [[X0:%.*]], i64 0
+// CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i32> [[TMP0]], i32 [[X1:%.*]], i64 1
+// CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x i32> [[TMP1]], i32 [[X2:%.*]], i64 2
+// CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x i32> [[TMP2]], i32 [[X3:%.*]], i64 3
 // CHECK-NEXT:    [[TMP4:%.*]] = call <vscale x 4 x i32> @llvm.experimental.vector.insert.nxv4i32.v4i32(<vscale x 4 x i32> undef, <4 x i32> [[TMP3]], i64 0)
 // CHECK-NEXT:    [[TMP5:%.*]] = call <vscale x 4 x i32> @llvm.aarch64.sve.dupq.lane.nxv4i32(<vscale x 4 x i32> [[TMP4]], i64 0)
 // CHECK-NEXT:    ret <vscale x 4 x i32> [[TMP5]]
 //
 // CPP-CHECK-LABEL: @_Z17test_svdupq_n_u32jjjj(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x i32> undef, i32 [[X0:%.*]], i32 0
-// CPP-CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i32> [[TMP0]], i32 [[X1:%.*]], i32 1
-// CPP-CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x i32> [[TMP1]], i32 [[X2:%.*]], i32 2
-// CPP-CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x i32> [[TMP2]], i32 [[X3:%.*]], i32 3
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x i32> undef, i32 [[X0:%.*]], i64 0
+// CPP-CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i32> [[TMP0]], i32 [[X1:%.*]], i64 1
+// CPP-CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x i32> [[TMP1]], i32 [[X2:%.*]], i64 2
+// CPP-CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x i32> [[TMP2]], i32 [[X3:%.*]], i64 3
 // CPP-CHECK-NEXT:    [[TMP4:%.*]] = call <vscale x 4 x i32> @llvm.experimental.vector.insert.nxv4i32.v4i32(<vscale x 4 x i32> undef, <4 x i32> [[TMP3]], i64 0)
 // CPP-CHECK-NEXT:    [[TMP5:%.*]] = call <vscale x 4 x i32> @llvm.aarch64.sve.dupq.lane.nxv4i32(<vscale x 4 x i32> [[TMP4]], i64 0)
 // CPP-CHECK-NEXT:    ret <vscale x 4 x i32> [[TMP5]]
@@ -430,16 +430,16 @@ svuint32_t test_svdupq_n_u32(uint32_t x0, uint32_t x1, uint32_t x2, uint32_t x3)
 
 // CHECK-LABEL: @test_svdupq_n_u64(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x i64> undef, i64 [[X0:%.*]], i32 0
-// CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i64> [[TMP0]], i64 [[X1:%.*]], i32 1
+// CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x i64> undef, i64 [[X0:%.*]], i64 0
+// CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i64> [[TMP0]], i64 [[X1:%.*]], i64 1
 // CHECK-NEXT:    [[TMP2:%.*]] = call <vscale x 2 x i64> @llvm.experimental.vector.insert.nxv2i64.v2i64(<vscale x 2 x i64> undef, <2 x i64> [[TMP1]], i64 0)
 // CHECK-NEXT:    [[TMP3:%.*]] = call <vscale x 2 x i64> @llvm.aarch64.sve.dupq.lane.nxv2i64(<vscale x 2 x i64> [[TMP2]], i64 0)
 // CHECK-NEXT:    ret <vscale x 2 x i64> [[TMP3]]
 //
 // CPP-CHECK-LABEL: @_Z17test_svdupq_n_u64mm(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x i64> undef, i64 [[X0:%.*]], i32 0
-// CPP-CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i64> [[TMP0]], i64 [[X1:%.*]], i32 1
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x i64> undef, i64 [[X0:%.*]], i64 0
+// CPP-CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i64> [[TMP0]], i64 [[X1:%.*]], i64 1
 // CPP-CHECK-NEXT:    [[TMP2:%.*]] = call <vscale x 2 x i64> @llvm.experimental.vector.insert.nxv2i64.v2i64(<vscale x 2 x i64> undef, <2 x i64> [[TMP1]], i64 0)
 // CPP-CHECK-NEXT:    [[TMP3:%.*]] = call <vscale x 2 x i64> @llvm.aarch64.sve.dupq.lane.nxv2i64(<vscale x 2 x i64> [[TMP2]], i64 0)
 // CPP-CHECK-NEXT:    ret <vscale x 2 x i64> [[TMP3]]
@@ -451,28 +451,28 @@ svuint64_t test_svdupq_n_u64(uint64_t x0, uint64_t x1)
 
 // CHECK-LABEL: @test_svdupq_n_f16(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = insertelement <8 x half> undef, half [[X0:%.*]], i32 0
-// CHECK-NEXT:    [[TMP1:%.*]] = insertelement <8 x half> [[TMP0]], half [[X1:%.*]], i32 1
-// CHECK-NEXT:    [[TMP2:%.*]] = insertelement <8 x half> [[TMP1]], half [[X2:%.*]], i32 2
-// CHECK-NEXT:    [[TMP3:%.*]] = insertelement <8 x half> [[TMP2]], half [[X3:%.*]], i32 3
-// CHECK-NEXT:    [[TMP4:%.*]] = insertelement <8 x half> [[TMP3]], half [[X4:%.*]], i32 4
-// CHECK-NEXT:    [[TMP5:%.*]] = insertelement <8 x half> [[TMP4]], half [[X5:%.*]], i32 5
-// CHECK-NEXT:    [[TMP6:%.*]] = insertelement <8 x half> [[TMP5]], half [[X6:%.*]], i32 6
-// CHECK-NEXT:    [[TMP7:%.*]] = insertelement <8 x half> [[TMP6]], half [[X7:%.*]], i32 7
+// CHECK-NEXT:    [[TMP0:%.*]] = insertelement <8 x half> undef, half [[X0:%.*]], i64 0
+// CHECK-NEXT:    [[TMP1:%.*]] = insertelement <8 x half> [[TMP0]], half [[X1:%.*]], i64 1
+// CHECK-NEXT:    [[TMP2:%.*]] = insertelement <8 x half> [[TMP1]], half [[X2:%.*]], i64 2
+// CHECK-NEXT:    [[TMP3:%.*]] = insertelement <8 x half> [[TMP2]], half [[X3:%.*]], i64 3
+// CHECK-NEXT:    [[TMP4:%.*]] = insertelement <8 x half> [[TMP3]], half [[X4:%.*]], i64 4
+// CHECK-NEXT:    [[TMP5:%.*]] = insertelement <8 x half> [[TMP4]], half [[X5:%.*]], i64 5
+// CHECK-NEXT:    [[TMP6:%.*]] = insertelement <8 x half> [[TMP5]], half [[X6:%.*]], i64 6
+// CHECK-NEXT:    [[TMP7:%.*]] = insertelement <8 x half> [[TMP6]], half [[X7:%.*]], i64 7
 // CHECK-NEXT:    [[TMP8:%.*]] = call <vscale x 8 x half> @llvm.experimental.vector.insert.nxv8f16.v8f16(<vscale x 8 x half> undef, <8 x half> [[TMP7]], i64 0)
 // CHECK-NEXT:    [[TMP9:%.*]] = call <vscale x 8 x half> @llvm.aarch64.sve.dupq.lane.nxv8f16(<vscale x 8 x half> [[TMP8]], i64 0)
 // CHECK-NEXT:    ret <vscale x 8 x half> [[TMP9]]
 //
 // CPP-CHECK-LABEL: @_Z17test_svdupq_n_f16DhDhDhDhDhDhDhDh(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = insertelement <8 x half> undef, half [[X0:%.*]], i32 0
-// CPP-CHECK-NEXT:    [[TMP1:%.*]] = insertelement <8 x half> [[TMP0]], half [[X1:%.*]], i32 1
-// CPP-CHECK-NEXT:    [[TMP2:%.*]] = insertelement <8 x half> [[TMP1]], half [[X2:%.*]], i32 2
-// CPP-CHECK-NEXT:    [[TMP3:%.*]] = insertelement <8 x half> [[TMP2]], half [[X3:%.*]], i32 3
-// CPP-CHECK-NEXT:    [[TMP4:%.*]] = insertelement <8 x half> [[TMP3]], half [[X4:%.*]], i32 4
-// CPP-CHECK-NEXT:    [[TMP5:%.*]] = insertelement <8 x half> [[TMP4]], half [[X5:%.*]], i32 5
-// CPP-CHECK-NEXT:    [[TMP6:%.*]] = insertelement <8 x half> [[TMP5]], half [[X6:%.*]], i32 6
-// CPP-CHECK-NEXT:    [[TMP7:%.*]] = insertelement <8 x half> [[TMP6]], half [[X7:%.*]], i32 7
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = insertelement <8 x half> undef, half [[X0:%.*]], i64 0
+// CPP-CHECK-NEXT:    [[TMP1:%.*]] = insertelement <8 x half> [[TMP0]], half [[X1:%.*]], i64 1
+// CPP-CHECK-NEXT:    [[TMP2:%.*]] = insertelement <8 x half> [[TMP1]], half [[X2:%.*]], i64 2
+// CPP-CHECK-NEXT:    [[TMP3:%.*]] = insertelement <8 x half> [[TMP2]], half [[X3:%.*]], i64 3
+// CPP-CHECK-NEXT:    [[TMP4:%.*]] = insertelement <8 x half> [[TMP3]], half [[X4:%.*]], i64 4
+// CPP-CHECK-NEXT:    [[TMP5:%.*]] = insertelement <8 x half> [[TMP4]], half [[X5:%.*]], i64 5
+// CPP-CHECK-NEXT:    [[TMP6:%.*]] = insertelement <8 x half> [[TMP5]], half [[X6:%.*]], i64 6
+// CPP-CHECK-NEXT:    [[TMP7:%.*]] = insertelement <8 x half> [[TMP6]], half [[X7:%.*]], i64 7
 // CPP-CHECK-NEXT:    [[TMP8:%.*]] = call <vscale x 8 x half> @llvm.experimental.vector.insert.nxv8f16.v8f16(<vscale x 8 x half> undef, <8 x half> [[TMP7]], i64 0)
 // CPP-CHECK-NEXT:    [[TMP9:%.*]] = call <vscale x 8 x half> @llvm.aarch64.sve.dupq.lane.nxv8f16(<vscale x 8 x half> [[TMP8]], i64 0)
 // CPP-CHECK-NEXT:    ret <vscale x 8 x half> [[TMP9]]
@@ -486,20 +486,20 @@ svfloat16_t test_svdupq_n_f16(float16_t x0, float16_t x1, float16_t x2, float16_
 
 // CHECK-LABEL: @test_svdupq_n_f32(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x float> undef, float [[X0:%.*]], i32 0
-// CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x float> [[TMP0]], float [[X1:%.*]], i32 1
-// CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x float> [[TMP1]], float [[X2:%.*]], i32 2
-// CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x float> [[TMP2]], float [[X3:%.*]], i32 3
+// CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x float> undef, float [[X0:%.*]], i64 0
+// CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x float> [[TMP0]], float [[X1:%.*]], i64 1
+// CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x float> [[TMP1]], float [[X2:%.*]], i64 2
+// CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x float> [[TMP2]], float [[X3:%.*]], i64 3
 // CHECK-NEXT:    [[TMP4:%.*]] = call <vscale x 4 x float> @llvm.experimental.vector.insert.nxv4f32.v4f32(<vscale x 4 x float> undef, <4 x float> [[TMP3]], i64 0)
 // CHECK-NEXT:    [[TMP5:%.*]] = call <vscale x 4 x float> @llvm.aarch64.sve.dupq.lane.nxv4f32(<vscale x 4 x float> [[TMP4]], i64 0)
 // CHECK-NEXT:    ret <vscale x 4 x float> [[TMP5]]
 //
 // CPP-CHECK-LABEL: @_Z17test_svdupq_n_f32ffff(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x float> undef, float [[X0:%.*]], i32 0
-// CPP-CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x float> [[TMP0]], float [[X1:%.*]], i32 1
-// CPP-CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x float> [[TMP1]], float [[X2:%.*]], i32 2
-// CPP-CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x float> [[TMP2]], float [[X3:%.*]], i32 3
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x float> undef, float [[X0:%.*]], i64 0
+// CPP-CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x float> [[TMP0]], float [[X1:%.*]], i64 1
+// CPP-CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x float> [[TMP1]], float [[X2:%.*]], i64 2
+// CPP-CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x float> [[TMP2]], float [[X3:%.*]], i64 3
 // CPP-CHECK-NEXT:    [[TMP4:%.*]] = call <vscale x 4 x float> @llvm.experimental.vector.insert.nxv4f32.v4f32(<vscale x 4 x float> undef, <4 x float> [[TMP3]], i64 0)
 // CPP-CHECK-NEXT:    [[TMP5:%.*]] = call <vscale x 4 x float> @llvm.aarch64.sve.dupq.lane.nxv4f32(<vscale x 4 x float> [[TMP4]], i64 0)
 // CPP-CHECK-NEXT:    ret <vscale x 4 x float> [[TMP5]]
@@ -512,16 +512,16 @@ svfloat32_t test_svdupq_n_f32(float32_t x0, float32_t x1, float32_t x2, float32_
 
 // CHECK-LABEL: @test_svdupq_n_f64(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x double> undef, double [[X0:%.*]], i32 0
-// CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x double> [[TMP0]], double [[X1:%.*]], i32 1
+// CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x double> undef, double [[X0:%.*]], i64 0
+// CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x double> [[TMP0]], double [[X1:%.*]], i64 1
 // CHECK-NEXT:    [[TMP2:%.*]] = call <vscale x 2 x double> @llvm.experimental.vector.insert.nxv2f64.v2f64(<vscale x 2 x double> undef, <2 x double> [[TMP1]], i64 0)
 // CHECK-NEXT:    [[TMP3:%.*]] = call <vscale x 2 x double> @llvm.aarch64.sve.dupq.lane.nxv2f64(<vscale x 2 x double> [[TMP2]], i64 0)
 // CHECK-NEXT:    ret <vscale x 2 x double> [[TMP3]]
 //
 // CPP-CHECK-LABEL: @_Z17test_svdupq_n_f64dd(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x double> undef, double [[X0:%.*]], i32 0
-// CPP-CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x double> [[TMP0]], double [[X1:%.*]], i32 1
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x double> undef, double [[X0:%.*]], i64 0
+// CPP-CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x double> [[TMP0]], double [[X1:%.*]], i64 1
 // CPP-CHECK-NEXT:    [[TMP2:%.*]] = call <vscale x 2 x double> @llvm.experimental.vector.insert.nxv2f64.v2f64(<vscale x 2 x double> undef, <2 x double> [[TMP1]], i64 0)
 // CPP-CHECK-NEXT:    [[TMP3:%.*]] = call <vscale x 2 x double> @llvm.aarch64.sve.dupq.lane.nxv2f64(<vscale x 2 x double> [[TMP2]], i64 0)
 // CPP-CHECK-NEXT:    ret <vscale x 2 x double> [[TMP3]]
@@ -549,22 +549,22 @@ svfloat64_t test_svdupq_n_f64(float64_t x0, float64_t x1)
 // CHECK-NEXT:    [[FROMBOOL13:%.*]] = zext i1 [[X13:%.*]] to i8
 // CHECK-NEXT:    [[FROMBOOL14:%.*]] = zext i1 [[X14:%.*]] to i8
 // CHECK-NEXT:    [[FROMBOOL15:%.*]] = zext i1 [[X15:%.*]] to i8
-// CHECK-NEXT:    [[TMP0:%.*]] = insertelement <16 x i8> undef, i8 [[FROMBOOL]], i32 0
-// CHECK-NEXT:    [[TMP1:%.*]] = insertelement <16 x i8> [[TMP0]], i8 [[FROMBOOL1]], i32 1
-// CHECK-NEXT:    [[TMP2:%.*]] = insertelement <16 x i8> [[TMP1]], i8 [[FROMBOOL2]], i32 2
-// CHECK-NEXT:    [[TMP3:%.*]] = insertelement <16 x i8> [[TMP2]], i8 [[FROMBOOL3]], i32 3
-// CHECK-NEXT:    [[TMP4:%.*]] = insertelement <16 x i8> [[TMP3]], i8 [[FROMBOOL4]], i32 4
-// CHECK-NEXT:    [[TMP5:%.*]] = insertelement <16 x i8> [[TMP4]], i8 [[FROMBOOL5]], i32 5
-// CHECK-NEXT:    [[TMP6:%.*]] = insertelement <16 x i8> [[TMP5]], i8 [[FROMBOOL6]], i32 6
-// CHECK-NEXT:    [[TMP7:%.*]] = insertelement <16 x i8> [[TMP6]], i8 [[FROMBOOL7]], i32 7
-// CHECK-NEXT:    [[TMP8:%.*]] = insertelement <16 x i8> [[TMP7]], i8 [[FROMBOOL8]], i32 8
-// CHECK-NEXT:    [[TMP9:%.*]] = insertelement <16 x i8> [[TMP8]], i8 [[FROMBOOL9]], i32 9
-// CHECK-NEXT:    [[TMP10:%.*]] = insertelement <16 x i8> [[TMP9]], i8 [[FROMBOOL10]], i32 10
-// CHECK-NEXT:    [[TMP11:%.*]] = insertelement <16 x i8> [[TMP10]], i8 [[FROMBOOL11]], i32 11
-// CHECK-NEXT:    [[TMP12:%.*]] = insertelement <16 x i8> [[TMP11]], i8 [[FROMBOOL12]], i32 12
-// CHECK-NEXT:    [[TMP13:%.*]] = insertelement <16 x i8> [[TMP12]], i8 [[FROMBOOL13]], i32 13
-// CHECK-NEXT:    [[TMP14:%.*]] = insertelement <16 x i8> [[TMP13]], i8 [[FROMBOOL14]], i32 14
-// CHECK-NEXT:    [[TMP15:%.*]] = insertelement <16 x i8> [[TMP14]], i8 [[FROMBOOL15]], i32 15
+// CHECK-NEXT:    [[TMP0:%.*]] = insertelement <16 x i8> undef, i8 [[FROMBOOL]], i64 0
+// CHECK-NEXT:    [[TMP1:%.*]] = insertelement <16 x i8> [[TMP0]], i8 [[FROMBOOL1]], i64 1
+// CHECK-NEXT:    [[TMP2:%.*]] = insertelement <16 x i8> [[TMP1]], i8 [[FROMBOOL2]], i64 2
+// CHECK-NEXT:    [[TMP3:%.*]] = insertelement <16 x i8> [[TMP2]], i8 [[FROMBOOL3]], i64 3
+// CHECK-NEXT:    [[TMP4:%.*]] = insertelement <16 x i8> [[TMP3]], i8 [[FROMBOOL4]], i64 4
+// CHECK-NEXT:    [[TMP5:%.*]] = insertelement <16 x i8> [[TMP4]], i8 [[FROMBOOL5]], i64 5
+// CHECK-NEXT:    [[TMP6:%.*]] = insertelement <16 x i8> [[TMP5]], i8 [[FROMBOOL6]], i64 6
+// CHECK-NEXT:    [[TMP7:%.*]] = insertelement <16 x i8> [[TMP6]], i8 [[FROMBOOL7]], i64 7
+// CHECK-NEXT:    [[TMP8:%.*]] = insertelement <16 x i8> [[TMP7]], i8 [[FROMBOOL8]], i64 8
+// CHECK-NEXT:    [[TMP9:%.*]] = insertelement <16 x i8> [[TMP8]], i8 [[FROMBOOL9]], i64 9
+// CHECK-NEXT:    [[TMP10:%.*]] = insertelement <16 x i8> [[TMP9]], i8 [[FROMBOOL10]], i64 10
+// CHECK-NEXT:    [[TMP11:%.*]] = insertelement <16 x i8> [[TMP10]], i8 [[FROMBOOL11]], i64 11
+// CHECK-NEXT:    [[TMP12:%.*]] = insertelement <16 x i8> [[TMP11]], i8 [[FROMBOOL12]], i64 12
+// CHECK-NEXT:    [[TMP13:%.*]] = insertelement <16 x i8> [[TMP12]], i8 [[FROMBOOL13]], i64 13
+// CHECK-NEXT:    [[TMP14:%.*]] = insertelement <16 x i8> [[TMP13]], i8 [[FROMBOOL14]], i64 14
+// CHECK-NEXT:    [[TMP15:%.*]] = insertelement <16 x i8> [[TMP14]], i8 [[FROMBOOL15]], i64 15
 // CHECK-NEXT:    [[TMP16:%.*]] = call <vscale x 16 x i1> @llvm.aarch64.sve.ptrue.nxv16i1(i32 31)
 // CHECK-NEXT:    [[TMP17:%.*]] = call <vscale x 16 x i8> @llvm.experimental.vector.insert.nxv16i8.v16i8(<vscale x 16 x i8> undef, <16 x i8> [[TMP15]], i64 0)
 // CHECK-NEXT:    [[TMP18:%.*]] = call <vscale x 16 x i8> @llvm.aarch64.sve.dupq.lane.nxv16i8(<vscale x 16 x i8> [[TMP17]], i64 0)
@@ -589,22 +589,22 @@ svfloat64_t test_svdupq_n_f64(float64_t x0, float64_t x1)
 // CPP-CHECK-NEXT:    [[FROMBOOL13:%.*]] = zext i1 [[X13:%.*]] to i8
 // CPP-CHECK-NEXT:    [[FROMBOOL14:%.*]] = zext i1 [[X14:%.*]] to i8
 // CPP-CHECK-NEXT:    [[FROMBOOL15:%.*]] = zext i1 [[X15:%.*]] to i8
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = insertelement <16 x i8> undef, i8 [[FROMBOOL]], i32 0
-// CPP-CHECK-NEXT:    [[TMP1:%.*]] = insertelement <16 x i8> [[TMP0]], i8 [[FROMBOOL1]], i32 1
-// CPP-CHECK-NEXT:    [[TMP2:%.*]] = insertelement <16 x i8> [[TMP1]], i8 [[FROMBOOL2]], i32 2
-// CPP-CHECK-NEXT:    [[TMP3:%.*]] = insertelement <16 x i8> [[TMP2]], i8 [[FROMBOOL3]], i32 3
-// CPP-CHECK-NEXT:    [[TMP4:%.*]] = insertelement <16 x i8> [[TMP3]], i8 [[FROMBOOL4]], i32 4
-// CPP-CHECK-NEXT:    [[TMP5:%.*]] = insertelement <16 x i8> [[TMP4]], i8 [[FROMBOOL5]], i32 5
-// CPP-CHECK-NEXT:    [[TMP6:%.*]] = insertelement <16 x i8> [[TMP5]], i8 [[FROMBOOL6]], i32 6
-// CPP-CHECK-NEXT:    [[TMP7:%.*]] = insertelement <16 x i8> [[TMP6]], i8 [[FROMBOOL7]], i32 7
-// CPP-CHECK-NEXT:    [[TMP8:%.*]] = insertelement <16 x i8> [[TMP7]], i8 [[FROMBOOL8]], i32 8
-// CPP-CHECK-NEXT:    [[TMP9:%.*]] = insertelement <16 x i8> [[TMP8]], i8 [[FROMBOOL9]], i32 9
-// CPP-CHECK-NEXT:    [[TMP10:%.*]] = insertelement <16 x i8> [[TMP9]], i8 [[FROMBOOL10]], i32 10
-// CPP-CHECK-NEXT:    [[TMP11:%.*]] = insertelement <16 x i8> [[TMP10]], i8 [[FROMBOOL11]], i32 11
-// CPP-CHECK-NEXT:    [[TMP12:%.*]] = insertelement <16 x i8> [[TMP11]], i8 [[FROMBOOL12]], i32 12
-// CPP-CHECK-NEXT:    [[TMP13:%.*]] = insertelement <16 x i8> [[TMP12]], i8 [[FROMBOOL13]], i32 13
-// CPP-CHECK-NEXT:    [[TMP14:%.*]] = insertelement <16 x i8> [[TMP13]], i8 [[FROMBOOL14]], i32 14
-// CPP-CHECK-NEXT:    [[TMP15:%.*]] = insertelement <16 x i8> [[TMP14]], i8 [[FROMBOOL15]], i32 15
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = insertelement <16 x i8> undef, i8 [[FROMBOOL]], i64 0
+// CPP-CHECK-NEXT:    [[TMP1:%.*]] = insertelement <16 x i8> [[TMP0]], i8 [[FROMBOOL1]], i64 1
+// CPP-CHECK-NEXT:    [[TMP2:%.*]] = insertelement <16 x i8> [[TMP1]], i8 [[FROMBOOL2]], i64 2
+// CPP-CHECK-NEXT:    [[TMP3:%.*]] = insertelement <16 x i8> [[TMP2]], i8 [[FROMBOOL3]], i64 3
+// CPP-CHECK-NEXT:    [[TMP4:%.*]] = insertelement <16 x i8> [[TMP3]], i8 [[FROMBOOL4]], i64 4
+// CPP-CHECK-NEXT:    [[TMP5:%.*]] = insertelement <16 x i8> [[TMP4]], i8 [[FROMBOOL5]], i64 5
+// CPP-CHECK-NEXT:    [[TMP6:%.*]] = insertelement <16 x i8> [[TMP5]], i8 [[FROMBOOL6]], i64 6
+// CPP-CHECK-NEXT:    [[TMP7:%.*]] = insertelement <16 x i8> [[TMP6]], i8 [[FROMBOOL7]], i64 7
+// CPP-CHECK-NEXT:    [[TMP8:%.*]] = insertelement <16 x i8> [[TMP7]], i8 [[FROMBOOL8]], i64 8
+// CPP-CHECK-NEXT:    [[TMP9:%.*]] = insertelement <16 x i8> [[TMP8]], i8 [[FROMBOOL9]], i64 9
+// CPP-CHECK-NEXT:    [[TMP10:%.*]] = insertelement <16 x i8> [[TMP9]], i8 [[FROMBOOL10]], i64 10
+// CPP-CHECK-NEXT:    [[TMP11:%.*]] = insertelement <16 x i8> [[TMP10]], i8 [[FROMBOOL11]], i64 11
+// CPP-CHECK-NEXT:    [[TMP12:%.*]] = insertelement <16 x i8> [[TMP11]], i8 [[FROMBOOL12]], i64 12
+// CPP-CHECK-NEXT:    [[TMP13:%.*]] = insertelement <16 x i8> [[TMP12]], i8 [[FROMBOOL13]], i64 13
+// CPP-CHECK-NEXT:    [[TMP14:%.*]] = insertelement <16 x i8> [[TMP13]], i8 [[FROMBOOL14]], i64 14
+// CPP-CHECK-NEXT:    [[TMP15:%.*]] = insertelement <16 x i8> [[TMP14]], i8 [[FROMBOOL15]], i64 15
 // CPP-CHECK-NEXT:    [[TMP16:%.*]] = call <vscale x 16 x i1> @llvm.aarch64.sve.ptrue.nxv16i1(i32 31)
 // CPP-CHECK-NEXT:    [[TMP17:%.*]] = call <vscale x 16 x i8> @llvm.experimental.vector.insert.nxv16i8.v16i8(<vscale x 16 x i8> undef, <16 x i8> [[TMP15]], i64 0)
 // CPP-CHECK-NEXT:    [[TMP18:%.*]] = call <vscale x 16 x i8> @llvm.aarch64.sve.dupq.lane.nxv16i8(<vscale x 16 x i8> [[TMP17]], i64 0)
@@ -630,14 +630,14 @@ svbool_t test_svdupq_n_b8(bool x0, bool x1, bool x2, bool x3,
 // CHECK-NEXT:    [[TMP5:%.*]] = zext i1 [[X5:%.*]] to i16
 // CHECK-NEXT:    [[TMP6:%.*]] = zext i1 [[X6:%.*]] to i16
 // CHECK-NEXT:    [[TMP7:%.*]] = zext i1 [[X7:%.*]] to i16
-// CHECK-NEXT:    [[TMP8:%.*]] = insertelement <8 x i16> undef, i16 [[TMP0]], i32 0
-// CHECK-NEXT:    [[TMP9:%.*]] = insertelement <8 x i16> [[TMP8]], i16 [[TMP1]], i32 1
-// CHECK-NEXT:    [[TMP10:%.*]] = insertelement <8 x i16> [[TMP9]], i16 [[TMP2]], i32 2
-// CHECK-NEXT:    [[TMP11:%.*]] = insertelement <8 x i16> [[TMP10]], i16 [[TMP3]], i32 3
-// CHECK-NEXT:    [[TMP12:%.*]] = insertelement <8 x i16> [[TMP11]], i16 [[TMP4]], i32 4
-// CHECK-NEXT:    [[TMP13:%.*]] = insertelement <8 x i16> [[TMP12]], i16 [[TMP5]], i32 5
-// CHECK-NEXT:    [[TMP14:%.*]] = insertelement <8 x i16> [[TMP13]], i16 [[TMP6]], i32 6
-// CHECK-NEXT:    [[TMP15:%.*]] = insertelement <8 x i16> [[TMP14]], i16 [[TMP7]], i32 7
+// CHECK-NEXT:    [[TMP8:%.*]] = insertelement <8 x i16> undef, i16 [[TMP0]], i64 0
+// CHECK-NEXT:    [[TMP9:%.*]] = insertelement <8 x i16> [[TMP8]], i16 [[TMP1]], i64 1
+// CHECK-NEXT:    [[TMP10:%.*]] = insertelement <8 x i16> [[TMP9]], i16 [[TMP2]], i64 2
+// CHECK-NEXT:    [[TMP11:%.*]] = insertelement <8 x i16> [[TMP10]], i16 [[TMP3]], i64 3
+// CHECK-NEXT:    [[TMP12:%.*]] = insertelement <8 x i16> [[TMP11]], i16 [[TMP4]], i64 4
+// CHECK-NEXT:    [[TMP13:%.*]] = insertelement <8 x i16> [[TMP12]], i16 [[TMP5]], i64 5
+// CHECK-NEXT:    [[TMP14:%.*]] = insertelement <8 x i16> [[TMP13]], i16 [[TMP6]], i64 6
+// CHECK-NEXT:    [[TMP15:%.*]] = insertelement <8 x i16> [[TMP14]], i16 [[TMP7]], i64 7
 // CHECK-NEXT:    [[TMP16:%.*]] = call <vscale x 8 x i1> @llvm.aarch64.sve.ptrue.nxv8i1(i32 31)
 // CHECK-NEXT:    [[TMP17:%.*]] = call <vscale x 8 x i16> @llvm.experimental.vector.insert.nxv8i16.v8i16(<vscale x 8 x i16> undef, <8 x i16> [[TMP15]], i64 0)
 // CHECK-NEXT:    [[TMP18:%.*]] = call <vscale x 8 x i16> @llvm.aarch64.sve.dupq.lane.nxv8i16(<vscale x 8 x i16> [[TMP17]], i64 0)
@@ -655,14 +655,14 @@ svbool_t test_svdupq_n_b8(bool x0, bool x1, bool x2, bool x3,
 // CPP-CHECK-NEXT:    [[TMP5:%.*]] = zext i1 [[X5:%.*]] to i16
 // CPP-CHECK-NEXT:    [[TMP6:%.*]] = zext i1 [[X6:%.*]] to i16
 // CPP-CHECK-NEXT:    [[TMP7:%.*]] = zext i1 [[X7:%.*]] to i16
-// CPP-CHECK-NEXT:    [[TMP8:%.*]] = insertelement <8 x i16> undef, i16 [[TMP0]], i32 0
-// CPP-CHECK-NEXT:    [[TMP9:%.*]] = insertelement <8 x i16> [[TMP8]], i16 [[TMP1]], i32 1
-// CPP-CHECK-NEXT:    [[TMP10:%.*]] = insertelement <8 x i16> [[TMP9]], i16 [[TMP2]], i32 2
-// CPP-CHECK-NEXT:    [[TMP11:%.*]] = insertelement <8 x i16> [[TMP10]], i16 [[TMP3]], i32 3
-// CPP-CHECK-NEXT:    [[TMP12:%.*]] = insertelement <8 x i16> [[TMP11]], i16 [[TMP4]], i32 4
-// CPP-CHECK-NEXT:    [[TMP13:%.*]] = insertelement <8 x i16> [[TMP12]], i16 [[TMP5]], i32 5
-// CPP-CHECK-NEXT:    [[TMP14:%.*]] = insertelement <8 x i16> [[TMP13]], i16 [[TMP6]], i32 6
-// CPP-CHECK-NEXT:    [[TMP15:%.*]] = insertelement <8 x i16> [[TMP14]], i16 [[TMP7]], i32 7
+// CPP-CHECK-NEXT:    [[TMP8:%.*]] = insertelement <8 x i16> undef, i16 [[TMP0]], i64 0
+// CPP-CHECK-NEXT:    [[TMP9:%.*]] = insertelement <8 x i16> [[TMP8]], i16 [[TMP1]], i64 1
+// CPP-CHECK-NEXT:    [[TMP10:%.*]] = insertelement <8 x i16> [[TMP9]], i16 [[TMP2]], i64 2
+// CPP-CHECK-NEXT:    [[TMP11:%.*]] = insertelement <8 x i16> [[TMP10]], i16 [[TMP3]], i64 3
+// CPP-CHECK-NEXT:    [[TMP12:%.*]] = insertelement <8 x i16> [[TMP11]], i16 [[TMP4]], i64 4
+// CPP-CHECK-NEXT:    [[TMP13:%.*]] = insertelement <8 x i16> [[TMP12]], i16 [[TMP5]], i64 5
+// CPP-CHECK-NEXT:    [[TMP14:%.*]] = insertelement <8 x i16> [[TMP13]], i16 [[TMP6]], i64 6
+// CPP-CHECK-NEXT:    [[TMP15:%.*]] = insertelement <8 x i16> [[TMP14]], i16 [[TMP7]], i64 7
 // CPP-CHECK-NEXT:    [[TMP16:%.*]] = call <vscale x 8 x i1> @llvm.aarch64.sve.ptrue.nxv8i1(i32 31)
 // CPP-CHECK-NEXT:    [[TMP17:%.*]] = call <vscale x 8 x i16> @llvm.experimental.vector.insert.nxv8i16.v8i16(<vscale x 8 x i16> undef, <8 x i16> [[TMP15]], i64 0)
 // CPP-CHECK-NEXT:    [[TMP18:%.*]] = call <vscale x 8 x i16> @llvm.aarch64.sve.dupq.lane.nxv8i16(<vscale x 8 x i16> [[TMP17]], i64 0)
@@ -683,10 +683,10 @@ svbool_t test_svdupq_n_b16(bool x0, bool x1, bool x2, bool x3,
 // CHECK-NEXT:    [[TMP1:%.*]] = zext i1 [[X1:%.*]] to i32
 // CHECK-NEXT:    [[TMP2:%.*]] = zext i1 [[X2:%.*]] to i32
 // CHECK-NEXT:    [[TMP3:%.*]] = zext i1 [[X3:%.*]] to i32
-// CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x i32> undef, i32 [[TMP0]], i32 0
-// CHECK-NEXT:    [[TMP5:%.*]] = insertelement <4 x i32> [[TMP4]], i32 [[TMP1]], i32 1
-// CHECK-NEXT:    [[TMP6:%.*]] = insertelement <4 x i32> [[TMP5]], i32 [[TMP2]], i32 2
-// CHECK-NEXT:    [[TMP7:%.*]] = insertelement <4 x i32> [[TMP6]], i32 [[TMP3]], i32 3
+// CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x i32> undef, i32 [[TMP0]], i64 0
+// CHECK-NEXT:    [[TMP5:%.*]] = insertelement <4 x i32> [[TMP4]], i32 [[TMP1]], i64 1
+// CHECK-NEXT:    [[TMP6:%.*]] = insertelement <4 x i32> [[TMP5]], i32 [[TMP2]], i64 2
+// CHECK-NEXT:    [[TMP7:%.*]] = insertelement <4 x i32> [[TMP6]], i32 [[TMP3]], i64 3
 // CHECK-NEXT:    [[TMP8:%.*]] = call <vscale x 4 x i1> @llvm.aarch64.sve.ptrue.nxv4i1(i32 31)
 // CHECK-NEXT:    [[TMP9:%.*]] = call <vscale x 4 x i32> @llvm.experimental.vector.insert.nxv4i32.v4i32(<vscale x 4 x i32> undef, <4 x i32> [[TMP7]], i64 0)
 // CHECK-NEXT:    [[TMP10:%.*]] = call <vscale x 4 x i32> @llvm.aarch64.sve.dupq.lane.nxv4i32(<vscale x 4 x i32> [[TMP9]], i64 0)
@@ -700,10 +700,10 @@ svbool_t test_svdupq_n_b16(bool x0, bool x1, bool x2, bool x3,
 // CPP-CHECK-NEXT:    [[TMP1:%.*]] = zext i1 [[X1:%.*]] to i32
 // CPP-CHECK-NEXT:    [[TMP2:%.*]] = zext i1 [[X2:%.*]] to i32
 // CPP-CHECK-NEXT:    [[TMP3:%.*]] = zext i1 [[X3:%.*]] to i32
-// CPP-CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x i32> undef, i32 [[TMP0]], i32 0
-// CPP-CHECK-NEXT:    [[TMP5:%.*]] = insertelement <4 x i32> [[TMP4]], i32 [[TMP1]], i32 1
-// CPP-CHECK-NEXT:    [[TMP6:%.*]] = insertelement <4 x i32> [[TMP5]], i32 [[TMP2]], i32 2
-// CPP-CHECK-NEXT:    [[TMP7:%.*]] = insertelement <4 x i32> [[TMP6]], i32 [[TMP3]], i32 3
+// CPP-CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x i32> undef, i32 [[TMP0]], i64 0
+// CPP-CHECK-NEXT:    [[TMP5:%.*]] = insertelement <4 x i32> [[TMP4]], i32 [[TMP1]], i64 1
+// CPP-CHECK-NEXT:    [[TMP6:%.*]] = insertelement <4 x i32> [[TMP5]], i32 [[TMP2]], i64 2
+// CPP-CHECK-NEXT:    [[TMP7:%.*]] = insertelement <4 x i32> [[TMP6]], i32 [[TMP3]], i64 3
 // CPP-CHECK-NEXT:    [[TMP8:%.*]] = call <vscale x 4 x i1> @llvm.aarch64.sve.ptrue.nxv4i1(i32 31)
 // CPP-CHECK-NEXT:    [[TMP9:%.*]] = call <vscale x 4 x i32> @llvm.experimental.vector.insert.nxv4i32.v4i32(<vscale x 4 x i32> undef, <4 x i32> [[TMP7]], i64 0)
 // CPP-CHECK-NEXT:    [[TMP10:%.*]] = call <vscale x 4 x i32> @llvm.aarch64.sve.dupq.lane.nxv4i32(<vscale x 4 x i32> [[TMP9]], i64 0)
@@ -721,8 +721,8 @@ svbool_t test_svdupq_n_b32(bool x0, bool x1, bool x2, bool x3)
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = zext i1 [[X0:%.*]] to i64
 // CHECK-NEXT:    [[TMP1:%.*]] = zext i1 [[X1:%.*]] to i64
-// CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x i64> undef, i64 [[TMP0]], i32 0
-// CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x i64> [[TMP2]], i64 [[TMP1]], i32 1
+// CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x i64> undef, i64 [[TMP0]], i64 0
+// CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x i64> [[TMP2]], i64 [[TMP1]], i64 1
 // CHECK-NEXT:    [[TMP4:%.*]] = call <vscale x 2 x i1> @llvm.aarch64.sve.ptrue.nxv2i1(i32 31)
 // CHECK-NEXT:    [[TMP5:%.*]] = call <vscale x 2 x i64> @llvm.experimental.vector.insert.nxv2i64.v2i64(<vscale x 2 x i64> undef, <2 x i64> [[TMP3]], i64 0)
 // CHECK-NEXT:    [[TMP6:%.*]] = call <vscale x 2 x i64> @llvm.aarch64.sve.dupq.lane.nxv2i64(<vscale x 2 x i64> [[TMP5]], i64 0)
@@ -734,8 +734,8 @@ svbool_t test_svdupq_n_b32(bool x0, bool x1, bool x2, bool x3)
 // CPP-CHECK-NEXT:  entry:
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = zext i1 [[X0:%.*]] to i64
 // CPP-CHECK-NEXT:    [[TMP1:%.*]] = zext i1 [[X1:%.*]] to i64
-// CPP-CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x i64> undef, i64 [[TMP0]], i32 0
-// CPP-CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x i64> [[TMP2]], i64 [[TMP1]], i32 1
+// CPP-CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x i64> undef, i64 [[TMP0]], i64 0
+// CPP-CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x i64> [[TMP2]], i64 [[TMP1]], i64 1
 // CPP-CHECK-NEXT:    [[TMP4:%.*]] = call <vscale x 2 x i1> @llvm.aarch64.sve.ptrue.nxv2i1(i32 31)
 // CPP-CHECK-NEXT:    [[TMP5:%.*]] = call <vscale x 2 x i64> @llvm.experimental.vector.insert.nxv2i64.v2i64(<vscale x 2 x i64> undef, <2 x i64> [[TMP3]], i64 0)
 // CPP-CHECK-NEXT:    [[TMP6:%.*]] = call <vscale x 2 x i64> @llvm.aarch64.sve.dupq.lane.nxv2i64(<vscale x 2 x i64> [[TMP5]], i64 0)

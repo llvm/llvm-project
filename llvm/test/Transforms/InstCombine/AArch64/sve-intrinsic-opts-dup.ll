@@ -47,7 +47,7 @@ define <vscale x 8 x i16> @dup_insertelement_0_convert(<vscale x 8 x i16> %v, i1
 
 define <vscale x 8 x i16> @dupx_splat_convert(i16 %s) #0 {
 ; CHECK-LABEL: @dupx_splat_convert(
-; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <vscale x 8 x i16> poison, i16 [[S:%.*]], i32 0
+; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <vscale x 8 x i16> poison, i16 [[S:%.*]], i64 0
 ; CHECK-NEXT:    [[SPLAT:%.*]] = shufflevector <vscale x 8 x i16> [[DOTSPLATINSERT]], <vscale x 8 x i16> poison, <vscale x 8 x i32> zeroinitializer
 ; CHECK-NEXT:    ret <vscale x 8 x i16> [[SPLAT]]
 ;

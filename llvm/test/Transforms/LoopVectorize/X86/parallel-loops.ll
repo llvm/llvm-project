@@ -93,13 +93,13 @@ define void @parallel_loop(i32* nocapture %a, i32* nocapture %b) nounwind uwtabl
 ; CHECK-NEXT:    [[TMP18:%.*]] = getelementptr inbounds i32, i32* [[A]], i64 [[TMP14]]
 ; CHECK-NEXT:    [[TMP19:%.*]] = getelementptr inbounds i32, i32* [[A]], i64 [[TMP15]]
 ; CHECK-NEXT:    [[TMP20:%.*]] = getelementptr inbounds i32, i32* [[A]], i64 [[TMP16]]
-; CHECK-NEXT:    [[TMP21:%.*]] = extractelement <4 x i32> [[WIDE_LOAD]], i32 0
+; CHECK-NEXT:    [[TMP21:%.*]] = extractelement <4 x i32> [[WIDE_LOAD]], i64 0
 ; CHECK-NEXT:    store i32 [[TMP21]], i32* [[TMP17]], align 4, !llvm.access.group !1
-; CHECK-NEXT:    [[TMP22:%.*]] = extractelement <4 x i32> [[WIDE_LOAD]], i32 1
+; CHECK-NEXT:    [[TMP22:%.*]] = extractelement <4 x i32> [[WIDE_LOAD]], i64 1
 ; CHECK-NEXT:    store i32 [[TMP22]], i32* [[TMP18]], align 4, !llvm.access.group !1
-; CHECK-NEXT:    [[TMP23:%.*]] = extractelement <4 x i32> [[WIDE_LOAD]], i32 2
+; CHECK-NEXT:    [[TMP23:%.*]] = extractelement <4 x i32> [[WIDE_LOAD]], i64 2
 ; CHECK-NEXT:    store i32 [[TMP23]], i32* [[TMP19]], align 4, !llvm.access.group !1
-; CHECK-NEXT:    [[TMP24:%.*]] = extractelement <4 x i32> [[WIDE_LOAD]], i32 3
+; CHECK-NEXT:    [[TMP24:%.*]] = extractelement <4 x i32> [[WIDE_LOAD]], i64 3
 ; CHECK-NEXT:    store i32 [[TMP24]], i32* [[TMP20]], align 4, !llvm.access.group !1
 ; CHECK-NEXT:    [[TMP25:%.*]] = or i64 [[INDEX]], 1
 ; CHECK-NEXT:    [[TMP26:%.*]] = getelementptr inbounds i32, i32* [[B]], i64 [[TMP25]]

@@ -5,7 +5,7 @@ define i32 @extract_load(<4 x i32>* %p) {
 ;
 ; CHECK-LABEL: @extract_load(
 ; CHECK-NEXT:    [[X:%.*]] = load <4 x i32>, <4 x i32>* [[P:%.*]], align 4
-; CHECK-NEXT:    [[EXT:%.*]] = extractelement <4 x i32> [[X]], i32 1
+; CHECK-NEXT:    [[EXT:%.*]] = extractelement <4 x i32> [[X]], i64 1
 ; CHECK-NEXT:    ret i32 [[EXT]]
 ;
   %x = load <4 x i32>, <4 x i32>* %p, align 4
@@ -17,7 +17,7 @@ define double @extract_load_fp(<4 x double>* %p) {
 ;
 ; CHECK-LABEL: @extract_load_fp(
 ; CHECK-NEXT:    [[X:%.*]] = load <4 x double>, <4 x double>* [[P:%.*]], align 32
-; CHECK-NEXT:    [[EXT:%.*]] = extractelement <4 x double> [[X]], i32 3
+; CHECK-NEXT:    [[EXT:%.*]] = extractelement <4 x double> [[X]], i64 3
 ; CHECK-NEXT:    ret double [[EXT]]
 ;
   %x = load <4 x double>, <4 x double>* %p, align 32
@@ -29,7 +29,7 @@ define double @extract_load_volatile(<4 x double>* %p) {
 ;
 ; CHECK-LABEL: @extract_load_volatile(
 ; CHECK-NEXT:    [[X:%.*]] = load volatile <4 x double>, <4 x double>* [[P:%.*]], align 32
-; CHECK-NEXT:    [[EXT:%.*]] = extractelement <4 x double> [[X]], i32 2
+; CHECK-NEXT:    [[EXT:%.*]] = extractelement <4 x double> [[X]], i64 2
 ; CHECK-NEXT:    ret double [[EXT]]
 ;
   %x = load volatile <4 x double>, <4 x double>* %p
@@ -41,7 +41,7 @@ define double @extract_load_extra_use(<4 x double>* %p, <4 x double>* %p2) {
 ;
 ; CHECK-LABEL: @extract_load_extra_use(
 ; CHECK-NEXT:    [[X:%.*]] = load <4 x double>, <4 x double>* [[P:%.*]], align 8
-; CHECK-NEXT:    [[EXT:%.*]] = extractelement <4 x double> [[X]], i32 0
+; CHECK-NEXT:    [[EXT:%.*]] = extractelement <4 x double> [[X]], i64 0
 ; CHECK-NEXT:    store <4 x double> [[X]], <4 x double>* [[P2:%.*]], align 32
 ; CHECK-NEXT:    ret double [[EXT]]
 ;
@@ -111,7 +111,7 @@ for.end:
 define float @extract_element_binop_splat_constant_index(<4 x float> %x) {
 ;
 ; CHECK-LABEL: @extract_element_binop_splat_constant_index(
-; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <4 x float> [[X:%.*]], i32 2
+; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <4 x float> [[X:%.*]], i64 2
 ; CHECK-NEXT:    [[R:%.*]] = fadd float [[TMP1]], 0x4002A3D700000000
 ; CHECK-NEXT:    ret float [[R]]
 ;
@@ -123,7 +123,7 @@ define float @extract_element_binop_splat_constant_index(<4 x float> %x) {
 define double @extract_element_binop_splat_with_undef_constant_index(<2 x double> %x) {
 ;
 ; CHECK-LABEL: @extract_element_binop_splat_with_undef_constant_index(
-; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <2 x double> [[X:%.*]], i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <2 x double> [[X:%.*]], i64 0
 ; CHECK-NEXT:    [[R:%.*]] = fdiv double 4.200000e+01, [[TMP1]]
 ; CHECK-NEXT:    ret double [[R]]
 ;
@@ -135,7 +135,7 @@ define double @extract_element_binop_splat_with_undef_constant_index(<2 x double
 define float @extract_element_binop_nonsplat_constant_index(<2 x float> %x) {
 ;
 ; CHECK-LABEL: @extract_element_binop_nonsplat_constant_index(
-; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <2 x float> [[X:%.*]], i32 1
+; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <2 x float> [[X:%.*]], i64 1
 ; CHECK-NEXT:    [[R:%.*]] = fmul float [[TMP1]], 4.300000e+01
 ; CHECK-NEXT:    ret float [[R]]
 ;
@@ -184,8 +184,8 @@ define float @extract_element_load(<4 x float> %x, <4 x float>* %ptr) {
 ;
 ; CHECK-LABEL: @extract_element_load(
 ; CHECK-NEXT:    [[LOAD:%.*]] = load <4 x float>, <4 x float>* [[PTR:%.*]], align 16
-; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <4 x float> [[LOAD]], i32 2
-; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <4 x float> [[X:%.*]], i32 2
+; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <4 x float> [[LOAD]], i64 2
+; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <4 x float> [[X:%.*]], i64 2
 ; CHECK-NEXT:    [[R:%.*]] = fadd float [[TMP1]], [[TMP2]]
 ; CHECK-NEXT:    ret float [[R]]
 ;
@@ -201,7 +201,7 @@ define float @extract_element_multi_Use_load(<4 x float> %x, <4 x float>* %ptr0,
 ; CHECK-NEXT:    [[LOAD:%.*]] = load <4 x float>, <4 x float>* [[PTR0:%.*]], align 16
 ; CHECK-NEXT:    store <4 x float> [[LOAD]], <4 x float>* [[PTR1:%.*]], align 16
 ; CHECK-NEXT:    [[ADD:%.*]] = fadd <4 x float> [[LOAD]], [[X:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = extractelement <4 x float> [[ADD]], i32 2
+; CHECK-NEXT:    [[R:%.*]] = extractelement <4 x float> [[ADD]], i64 2
 ; CHECK-NEXT:    ret float [[R]]
 ;
   %load = load <4 x float>, <4 x float>* %ptr0
@@ -226,7 +226,7 @@ define float @extract_element_variable_index(<4 x float> %x, i32 %y) {
 define float @extelt_binop_insertelt(<4 x float> %A, <4 x float> %B, float %f) {
 ;
 ; CHECK-LABEL: @extelt_binop_insertelt(
-; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <4 x float> [[B:%.*]], i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <4 x float> [[B:%.*]], i64 0
 ; CHECK-NEXT:    [[E:%.*]] = fmul nnan float [[TMP1]], [[F:%.*]]
 ; CHECK-NEXT:    ret float [[E]]
 ;
@@ -242,9 +242,9 @@ define float @extelt_binop_insertelt(<4 x float> %A, <4 x float> %B, float %f) {
 define i32 @extelt_binop_binop_insertelt(<4 x i32> %A, <4 x i32> %B, i32 %f) {
 ;
 ; CHECK-LABEL: @extelt_binop_binop_insertelt(
-; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <4 x i32> [[B:%.*]], i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <4 x i32> [[B:%.*]], i64 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = add i32 [[TMP1]], [[F:%.*]]
-; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <4 x i32> [[B]], i32 0
+; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <4 x i32> [[B]], i64 0
 ; CHECK-NEXT:    [[E:%.*]] = mul nsw i32 [[TMP2]], [[TMP3]]
 ; CHECK-NEXT:    ret i32 [[E]]
 ;
@@ -268,9 +268,9 @@ define float @extract_element_constant_vector_variable_index(i32 %y) {
 define i1 @cheap_to_extract_icmp(<4 x i32> %x, <4 x i1> %y) {
 ;
 ; CHECK-LABEL: @cheap_to_extract_icmp(
-; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <4 x i32> [[X:%.*]], i32 2
+; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <4 x i32> [[X:%.*]], i64 2
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i32 [[TMP1]], 0
-; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <4 x i1> [[Y:%.*]], i32 2
+; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <4 x i1> [[Y:%.*]], i64 2
 ; CHECK-NEXT:    [[R:%.*]] = and i1 [[TMP2]], [[TMP3]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
@@ -283,9 +283,9 @@ define i1 @cheap_to_extract_icmp(<4 x i32> %x, <4 x i1> %y) {
 define i1 @cheap_to_extract_fcmp(<4 x float> %x, <4 x i1> %y) {
 ;
 ; CHECK-LABEL: @cheap_to_extract_fcmp(
-; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <4 x float> [[X:%.*]], i32 2
+; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <4 x float> [[X:%.*]], i64 2
 ; CHECK-NEXT:    [[TMP2:%.*]] = fcmp oeq float [[TMP1]], 0.000000e+00
-; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <4 x i1> [[Y:%.*]], i32 2
+; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <4 x i1> [[Y:%.*]], i64 2
 ; CHECK-NEXT:    [[R:%.*]] = and i1 [[TMP2]], [[TMP3]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
@@ -298,7 +298,7 @@ define i1 @cheap_to_extract_fcmp(<4 x float> %x, <4 x i1> %y) {
 define i1 @extractelt_vector_icmp_constrhs(<2 x i32> %arg) {
 ;
 ; CHECK-LABEL: @extractelt_vector_icmp_constrhs(
-; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <2 x i32> [[ARG:%.*]], i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <2 x i32> [[ARG:%.*]], i64 0
 ; CHECK-NEXT:    [[EXT:%.*]] = icmp eq i32 [[TMP1]], 0
 ; CHECK-NEXT:    ret i1 [[EXT]]
 ;
@@ -310,7 +310,7 @@ define i1 @extractelt_vector_icmp_constrhs(<2 x i32> %arg) {
 define i1 @extractelt_vector_fcmp_constrhs(<2 x float> %arg) {
 ;
 ; CHECK-LABEL: @extractelt_vector_fcmp_constrhs(
-; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <2 x float> [[ARG:%.*]], i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <2 x float> [[ARG:%.*]], i64 0
 ; CHECK-NEXT:    [[EXT:%.*]] = fcmp oeq float [[TMP1]], 0.000000e+00
 ; CHECK-NEXT:    ret i1 [[EXT]]
 ;
@@ -349,7 +349,7 @@ define i1 @extractelt_vector_fcmp_not_cheap_to_scalarize_multi_use(<2 x float> %
 ; CHECK-NEXT:    [[ADD:%.*]] = fadd <2 x float> [[ARG1:%.*]], [[ARG2:%.*]]
 ; CHECK-NEXT:    store volatile <2 x float> [[ADD]], <2 x float>* undef, align 8
 ; CHECK-NEXT:    [[CMP:%.*]] = fcmp oeq <2 x float> [[ADD]], [[ARG0:%.*]]
-; CHECK-NEXT:    [[EXT:%.*]] = extractelement <2 x i1> [[CMP]], i32 0
+; CHECK-NEXT:    [[EXT:%.*]] = extractelement <2 x i1> [[CMP]], i64 0
 ; CHECK-NEXT:    ret i1 [[EXT]]
 ;
   %add = fadd <2 x float> %arg1, %arg2

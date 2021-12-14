@@ -498,7 +498,7 @@ define <32 x i8> @demanded_elts_insertion_avx2(<32 x i8> %InVec, <32 x i8> %Base
 
 define <64 x i8> @demanded_elts_insertion_avx512(<64 x i8> %InVec, <64 x i8> %BaseMask, i8 %M0, i8 %M30) {
 ; CHECK-LABEL: @demanded_elts_insertion_avx512(
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <64 x i8> poison, i8 [[M0:%.*]], i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <64 x i8> poison, i8 [[M0:%.*]], i64 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = tail call <64 x i8> @llvm.x86.avx512.pshuf.b.512(<64 x i8> [[INVEC:%.*]], <64 x i8> [[TMP1]])
 ; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <64 x i8> [[TMP2]], <64 x i8> undef, <64 x i32> zeroinitializer
 ; CHECK-NEXT:    ret <64 x i8> [[TMP3]]

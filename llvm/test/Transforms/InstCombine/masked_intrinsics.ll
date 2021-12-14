@@ -160,7 +160,7 @@ define void @store_onemask(<2 x double>* %ptr, <2 x double> %val)  {
 
 define void @store_demandedelts(<2 x double>* %ptr, double %val)  {
 ; CHECK-LABEL: @store_demandedelts(
-; CHECK-NEXT:    [[VALVEC1:%.*]] = insertelement <2 x double> undef, double [[VAL:%.*]], i32 0
+; CHECK-NEXT:    [[VALVEC1:%.*]] = insertelement <2 x double> undef, double [[VAL:%.*]], i64 0
 ; CHECK-NEXT:    call void @llvm.masked.store.v2f64.p0v2f64(<2 x double> [[VALVEC1]], <2 x double>* [[PTR:%.*]], i32 4, <2 x i1> <i1 true, i1 false>)
 ; CHECK-NEXT:    ret void
 ;
@@ -259,7 +259,7 @@ define void @scatter_zeromask(<2 x double*> %ptrs, <2 x double> %val)  {
 define void @scatter_demandedelts(double* %ptr, double %val)  {
 ; CHECK-LABEL: @scatter_demandedelts(
 ; CHECK-NEXT:    [[PTRS:%.*]] = getelementptr double, double* [[PTR:%.*]], <2 x i64> <i64 0, i64 poison>
-; CHECK-NEXT:    [[VALVEC1:%.*]] = insertelement <2 x double> undef, double [[VAL:%.*]], i32 0
+; CHECK-NEXT:    [[VALVEC1:%.*]] = insertelement <2 x double> undef, double [[VAL:%.*]], i64 0
 ; CHECK-NEXT:    call void @llvm.masked.scatter.v2f64.v2p0f64(<2 x double> [[VALVEC1]], <2 x double*> [[PTRS]], i32 8, <2 x i1> <i1 true, i1 false>)
 ; CHECK-NEXT:    ret void
 ;

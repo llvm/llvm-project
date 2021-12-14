@@ -199,9 +199,9 @@ define void @no_gep_or_bitcast(i32** noalias %a, i64 %n) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i32*, i32** [[A:%.*]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i32** [[TMP0]] to <2 x i32*>*
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i32*>, <2 x i32*>* [[TMP1]], align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <2 x i32*> [[WIDE_LOAD]], i32 0
+; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <2 x i32*> [[WIDE_LOAD]], i64 0
 ; CHECK-NEXT:    store i32 0, i32* [[TMP2]], align 8
-; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <2 x i32*> [[WIDE_LOAD]], i32 1
+; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <2 x i32*> [[WIDE_LOAD]], i64 1
 ; CHECK-NEXT:    store i32 0, i32* [[TMP3]], align 8
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]

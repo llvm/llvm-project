@@ -16,8 +16,8 @@ define <4 x float> @foo(<4 x float> %x) {
 
 define <4 x float> @bar(<4 x float> %x, float %a) {
 ; CHECK-LABEL: @bar(
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x float> [[X:%.*]], float 2.000000e+00, i32 2
-; CHECK-NEXT:    [[INS2:%.*]] = insertelement <4 x float> [[TMP1]], float [[A:%.*]], i32 1
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x float> [[X:%.*]], float 2.000000e+00, i64 2
+; CHECK-NEXT:    [[INS2:%.*]] = insertelement <4 x float> [[TMP1]], float [[A:%.*]], i64 1
 ; CHECK-NEXT:    ret <4 x float> [[INS2]]
 ;
   %ins1 = insertelement<4 x float> %x, float %a, i32 1
@@ -27,7 +27,7 @@ define <4 x float> @bar(<4 x float> %x, float %a) {
 
 define <4 x float> @baz(<4 x float> %x, i32 %a) {
 ; CHECK-LABEL: @baz(
-; CHECK-NEXT:    [[INS1:%.*]] = insertelement <4 x float> [[X:%.*]], float 1.000000e+00, i32 1
+; CHECK-NEXT:    [[INS1:%.*]] = insertelement <4 x float> [[X:%.*]], float 1.000000e+00, i64 1
 ; CHECK-NEXT:    [[INS2:%.*]] = insertelement <4 x float> [[INS1]], float 2.000000e+00, i32 [[A:%.*]]
 ; CHECK-NEXT:    ret <4 x float> [[INS2]]
 ;
@@ -39,7 +39,7 @@ define <4 x float> @baz(<4 x float> %x, i32 %a) {
 ; insertelements should fold to shuffle
 define <4 x float> @bazz(<4 x float> %x, i32 %a) {
 ; CHECK-LABEL: @bazz(
-; CHECK-NEXT:    [[INS1:%.*]] = insertelement <4 x float> [[X:%.*]], float 1.000000e+00, i32 3
+; CHECK-NEXT:    [[INS1:%.*]] = insertelement <4 x float> [[X:%.*]], float 1.000000e+00, i64 3
 ; CHECK-NEXT:    [[INS2:%.*]] = insertelement <4 x float> [[INS1]], float 5.000000e+00, i32 [[A:%.*]]
 ; CHECK-NEXT:    [[INS5:%.*]] = shufflevector <4 x float> [[INS2]], <4 x float> <float poison, float 1.000000e+00, float 2.000000e+00, float poison>, <4 x i32> <i32 0, i32 5, i32 6, i32 3>
 ; CHECK-NEXT:    [[INS6:%.*]] = insertelement <4 x float> [[INS5]], float 7.000000e+00, i32 [[A]]

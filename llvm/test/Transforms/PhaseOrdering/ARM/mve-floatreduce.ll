@@ -14,8 +14,8 @@ define arm_aapcs_vfpcc half @vecAddAcrossF16Mve(<8 x half> %in) #0 {
 ; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <4 x i32> [[TMP2]], <4 x i32> poison, <4 x i32> <i32 1, i32 undef, i32 3, i32 undef>
 ; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <4 x i32> [[TMP3]] to <8 x half>
 ; CHECK-NEXT:    [[TMP5:%.*]] = fadd fast <8 x half> [[TMP1]], [[TMP4]]
-; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <8 x half> [[TMP5]], i32 0
-; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <8 x half> [[TMP5]], i32 4
+; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <8 x half> [[TMP5]], i64 0
+; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <8 x half> [[TMP5]], i64 4
 ; CHECK-NEXT:    [[ADD:%.*]] = fadd fast half [[TMP6]], [[TMP7]]
 ; CHECK-NEXT:    ret half [[ADD]]
 ;
@@ -35,12 +35,12 @@ entry:
 define arm_aapcs_vfpcc float @vecAddAcrossF32Mve(<4 x float> %in) {
 ; CHECK-LABEL: @vecAddAcrossF32Mve(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = extractelement <4 x float> [[IN:%.*]], i32 0
-; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <4 x float> [[IN]], i32 1
+; CHECK-NEXT:    [[TMP0:%.*]] = extractelement <4 x float> [[IN:%.*]], i64 0
+; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <4 x float> [[IN]], i64 1
 ; CHECK-NEXT:    [[ADD:%.*]] = fadd fast float [[TMP0]], [[TMP1]]
-; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <4 x float> [[IN]], i32 2
+; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <4 x float> [[IN]], i64 2
 ; CHECK-NEXT:    [[ADD1:%.*]] = fadd fast float [[ADD]], [[TMP2]]
-; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <4 x float> [[IN]], i32 3
+; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <4 x float> [[IN]], i64 3
 ; CHECK-NEXT:    [[ADD2:%.*]] = fadd fast float [[ADD1]], [[TMP3]]
 ; CHECK-NEXT:    ret float [[ADD2]]
 ;

@@ -9,13 +9,13 @@ target triple = "wasm32-unknown-unknown"
 
 define void @foo(<2 x i64> %x, <4 x i32> %y, i64* %out) #0 {
 ; CHECK-LABEL: @foo(
-; CHECK-NEXT:    [[A:%.*]] = extractelement <2 x i64> [[X:%.*]], i32 0
-; CHECK-NEXT:    [[B:%.*]] = extractelement <4 x i32> [[Y:%.*]], i32 2
+; CHECK-NEXT:    [[A:%.*]] = extractelement <2 x i64> [[X:%.*]], i64 0
+; CHECK-NEXT:    [[B:%.*]] = extractelement <4 x i32> [[Y:%.*]], i64 2
 ; CHECK-NEXT:    [[CONV6:%.*]] = zext i32 [[B]] to i64
 ; CHECK-NEXT:    [[C:%.*]] = tail call i64 @llvm.fshl.i64(i64 [[A]], i64 [[A]], i64 [[CONV6]])
 ; CHECK-NEXT:    store i64 [[C]], i64* [[OUT:%.*]], align 8
-; CHECK-NEXT:    [[D:%.*]] = extractelement <2 x i64> [[X]], i32 1
-; CHECK-NEXT:    [[E:%.*]] = extractelement <4 x i32> [[Y]], i32 3
+; CHECK-NEXT:    [[D:%.*]] = extractelement <2 x i64> [[X]], i64 1
+; CHECK-NEXT:    [[E:%.*]] = extractelement <4 x i32> [[Y]], i64 3
 ; CHECK-NEXT:    [[CONV17:%.*]] = zext i32 [[E]] to i64
 ; CHECK-NEXT:    [[F:%.*]] = tail call i64 @llvm.fshl.i64(i64 [[D]], i64 [[D]], i64 [[CONV17]])
 ; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds i64, i64* [[OUT]], i32 1

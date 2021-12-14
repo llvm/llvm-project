@@ -17,7 +17,7 @@ define <vscale x 4 x i32> @binop_reverse(<vscale x 4 x i32> %a, <vscale x 4 x i3
 
 define <vscale x 4 x i32> @binop_reverse_splat_RHS(<vscale x 4 x i32> %a, i32 %b) {
 ; CHECK-LABEL: @binop_reverse_splat_RHS(
-; CHECK-NEXT:    [[SPLAT_INSERT:%.*]] = insertelement <vscale x 4 x i32> poison, i32 [[B:%.*]], i32 0
+; CHECK-NEXT:    [[SPLAT_INSERT:%.*]] = insertelement <vscale x 4 x i32> poison, i32 [[B:%.*]], i64 0
 ; CHECK-NEXT:    [[SPLAT:%.*]] = shufflevector <vscale x 4 x i32> [[SPLAT_INSERT]], <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[UDIV1:%.*]] = udiv <vscale x 4 x i32> [[A:%.*]], [[SPLAT]]
 ; CHECK-NEXT:    ret <vscale x 4 x i32> [[UDIV1]]
@@ -32,7 +32,7 @@ define <vscale x 4 x i32> @binop_reverse_splat_RHS(<vscale x 4 x i32> %a, i32 %b
 
 define <vscale x 4 x i32> @binop_reverse_splat_LHS(<vscale x 4 x i32> %a, i32 %b) {
 ; CHECK-LABEL: @binop_reverse_splat_LHS(
-; CHECK-NEXT:    [[SPLAT_INSERT:%.*]] = insertelement <vscale x 4 x i32> poison, i32 [[B:%.*]], i32 0
+; CHECK-NEXT:    [[SPLAT_INSERT:%.*]] = insertelement <vscale x 4 x i32> poison, i32 [[B:%.*]], i64 0
 ; CHECK-NEXT:    [[SPLAT:%.*]] = shufflevector <vscale x 4 x i32> [[SPLAT_INSERT]], <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[UDIV1:%.*]] = udiv <vscale x 4 x i32> [[SPLAT]], [[A:%.*]]
 ; CHECK-NEXT:    ret <vscale x 4 x i32> [[UDIV1]]

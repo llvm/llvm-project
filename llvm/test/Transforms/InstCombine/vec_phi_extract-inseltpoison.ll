@@ -84,14 +84,14 @@ define void @nocopy(i64 %val, i32  %limit, i32 *%ptr) {
 ; CHECK-LABEL: @nocopy(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = trunc i64 [[VAL:%.*]] to i32
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <16 x i32> undef, i32 [[TMP0]], i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <16 x i32> undef, i32 [[TMP0]], i64 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <16 x i32> [[TMP1]], <16 x i32> poison, <16 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP3:%.*]] = add <16 x i32> [[TMP2]], <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[TMP4:%.*]] = phi <16 x i32> [ [[TMP3]], [[ENTRY:%.*]] ], [ [[INC:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[ELT:%.*]] = extractelement <16 x i32> [[TMP4]], i32 0
-; CHECK-NEXT:    [[ELTCOPY:%.*]] = extractelement <16 x i32> [[TMP4]], i32 1
+; CHECK-NEXT:    [[ELT:%.*]] = extractelement <16 x i32> [[TMP4]], i64 0
+; CHECK-NEXT:    [[ELTCOPY:%.*]] = extractelement <16 x i32> [[TMP4]], i64 1
 ; CHECK-NEXT:    [[END:%.*]] = icmp ult i32 [[ELT]], [[LIMIT:%.*]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = add i32 [[ELTCOPY]], 10
 ; CHECK-NEXT:    [[TMP6:%.*]] = sext i32 [[ELT]] to i64
@@ -128,7 +128,7 @@ ret:
 define i1 @g(<3 x i32> %input_2) {
 ; CHECK-LABEL: @g(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = extractelement <3 x i32> [[INPUT_2:%.*]], i32 0
+; CHECK-NEXT:    [[TMP0:%.*]] = extractelement <3 x i32> [[INPUT_2:%.*]], i64 0
 ; CHECK-NEXT:    br label [[FOR_COND:%.*]]
 ; CHECK:       for.cond:
 ; CHECK-NEXT:    [[TMP1:%.*]] = phi i32 [ [[TMP0]], [[ENTRY:%.*]] ], [ [[TMP4:%.*]], [[FOR_BODY:%.*]] ]

@@ -42,7 +42,7 @@ define i64 @sum_2_at_with_int_conversion(%vec* %A, %vec* %B, i64 %N) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = select i1 [[TMP2]], i64 4, i64 [[N_MOD_VF]]
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP1]], [[TMP3]]
 ; CHECK-NEXT:    [[IND_END:%.*]] = add i64 [[N_VEC]], 1
-; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <2 x i64> <i64 poison, i64 0>, i64 [[SUM_NEXT_PEEL]], i32 0
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <2 x i64> <i64 poison, i64 0>, i64 [[SUM_NEXT_PEEL]], i64 0
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
@@ -167,7 +167,7 @@ define i64 @sum_3_at_with_int_conversion(%vec* %A, %vec* %B, %vec* %C, i64 %N) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = select i1 [[TMP2]], i64 4, i64 [[N_MOD_VF]]
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP1]], [[TMP3]]
 ; CHECK-NEXT:    [[IND_END:%.*]] = add i64 [[N_VEC]], 1
-; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <2 x i64> <i64 poison, i64 0>, i64 [[SUM_NEXT_PEEL]], i32 0
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <2 x i64> <i64 poison, i64 0>, i64 [[SUM_NEXT_PEEL]], i64 0
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]

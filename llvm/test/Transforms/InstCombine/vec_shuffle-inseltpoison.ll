@@ -29,7 +29,7 @@ define float @test3(<4 x float> %A, <4 x float> %B, float %f) {
 
 define i32 @test4(<4 x i32> %X) {
 ; CHECK-LABEL: @test4(
-; CHECK-NEXT:    [[R:%.*]] = extractelement <4 x i32> [[X:%.*]], i32 0
+; CHECK-NEXT:    [[R:%.*]] = extractelement <4 x i32> [[X:%.*]], i64 0
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %t = shufflevector <4 x i32> %X, <4 x i32> poison, <4 x i32> zeroinitializer
@@ -39,7 +39,7 @@ define i32 @test4(<4 x i32> %X) {
 
 define i32 @test5(<4 x i32> %X) {
 ; CHECK-LABEL: @test5(
-; CHECK-NEXT:    [[R:%.*]] = extractelement <4 x i32> [[X:%.*]], i32 3
+; CHECK-NEXT:    [[R:%.*]] = extractelement <4 x i32> [[X:%.*]], i64 3
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %t = shufflevector <4 x i32> %X, <4 x i32> poison, <4 x i32> <i32 3, i32 2, i32 undef, i32 undef>
@@ -49,7 +49,7 @@ define i32 @test5(<4 x i32> %X) {
 
 define float @test6(<4 x float> %X) {
 ; CHECK-LABEL: @test6(
-; CHECK-NEXT:    [[R:%.*]] = extractelement <4 x float> [[X:%.*]], i32 0
+; CHECK-NEXT:    [[R:%.*]] = extractelement <4 x float> [[X:%.*]], i64 0
 ; CHECK-NEXT:    ret float [[R]]
 ;
   %X1 = bitcast <4 x float> %X to <4 x i32>
@@ -62,7 +62,7 @@ define float @test6(<4 x float> %X) {
 define float @testvscale6(<vscale x 4 x float> %X) {
 ; CHECK-LABEL: @testvscale6(
 ; CHECK-NEXT:    [[T2:%.*]] = shufflevector <vscale x 4 x float> [[X:%.*]], <vscale x 4 x float> poison, <vscale x 4 x i32> zeroinitializer
-; CHECK-NEXT:    [[R:%.*]] = extractelement <vscale x 4 x float> [[T2]], i32 0
+; CHECK-NEXT:    [[R:%.*]] = extractelement <vscale x 4 x float> [[T2]], i64 0
 ; CHECK-NEXT:    ret float [[R]]
 ;
   %X1 = bitcast <vscale x 4 x float> %X to <vscale x 4 x i32>
@@ -229,8 +229,8 @@ define <4 x i8> @extract_subvector_of_shuffle_extra_use(<2 x i8> %x, <2 x i8> %y
 
 define <2 x i8> @test13a(i8 %x1, i8 %x2) {
 ; CHECK-LABEL: @test13a(
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i8> undef, i8 [[X1:%.*]], i32 1
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x i8> [[TMP1]], i8 [[X2:%.*]], i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i8> undef, i8 [[X1:%.*]], i64 1
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x i8> [[TMP1]], i8 [[X2:%.*]], i64 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = add <2 x i8> [[TMP2]], <i8 7, i8 5>
 ; CHECK-NEXT:    ret <2 x i8> [[TMP3]]
 ;
@@ -245,8 +245,8 @@ define <2 x i8> @test13a(i8 %x1, i8 %x2) {
 
 define <3 x i32> @add_wider(i32 %y, i32 %z) {
 ; CHECK-LABEL: @add_wider(
-; CHECK-NEXT:    [[I0:%.*]] = insertelement <2 x i32> poison, i32 [[Y:%.*]], i32 0
-; CHECK-NEXT:    [[I1:%.*]] = insertelement <2 x i32> [[I0]], i32 [[Z:%.*]], i32 1
+; CHECK-NEXT:    [[I0:%.*]] = insertelement <2 x i32> poison, i32 [[Y:%.*]], i64 0
+; CHECK-NEXT:    [[I1:%.*]] = insertelement <2 x i32> [[I0]], i32 [[Z:%.*]], i64 1
 ; CHECK-NEXT:    [[A:%.*]] = add <2 x i32> [[I1]], <i32 255, i32 255>
 ; CHECK-NEXT:    [[EXT:%.*]] = shufflevector <2 x i32> [[A]], <2 x i32> poison, <3 x i32> <i32 0, i32 1, i32 undef>
 ; CHECK-NEXT:    ret <3 x i32> [[EXT]]
@@ -262,8 +262,8 @@ define <3 x i32> @add_wider(i32 %y, i32 %z) {
 
 define <3 x i32> @div_wider(i32 %y, i32 %z) {
 ; CHECK-LABEL: @div_wider(
-; CHECK-NEXT:    [[I0:%.*]] = insertelement <2 x i32> poison, i32 [[Y:%.*]], i32 0
-; CHECK-NEXT:    [[I1:%.*]] = insertelement <2 x i32> [[I0]], i32 [[Z:%.*]], i32 1
+; CHECK-NEXT:    [[I0:%.*]] = insertelement <2 x i32> poison, i32 [[Y:%.*]], i64 0
+; CHECK-NEXT:    [[I1:%.*]] = insertelement <2 x i32> [[I0]], i32 [[Z:%.*]], i64 1
 ; CHECK-NEXT:    [[A:%.*]] = sdiv <2 x i32> [[I1]], <i32 255, i32 255>
 ; CHECK-NEXT:    [[EXT:%.*]] = shufflevector <2 x i32> [[A]], <2 x i32> poison, <3 x i32> <i32 0, i32 1, i32 undef>
 ; CHECK-NEXT:    ret <3 x i32> [[EXT]]
@@ -279,8 +279,8 @@ define <3 x i32> @div_wider(i32 %y, i32 %z) {
 
 define <3 x i8> @fold_inselts_with_widening_shuffle(i8 %x, i8 %y) {
 ; CHECK-LABEL: @fold_inselts_with_widening_shuffle(
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <3 x i8> undef, i8 [[X:%.*]], i32 0
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <3 x i8> [[TMP1]], i8 [[Y:%.*]], i32 1
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <3 x i8> undef, i8 [[X:%.*]], i64 0
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <3 x i8> [[TMP1]], i8 [[Y:%.*]], i64 1
 ; CHECK-NEXT:    ret <3 x i8> [[TMP2]]
 ;
   %ins0 = insertelement <2 x i8> poison, i8 %x, i32 0
@@ -291,7 +291,7 @@ define <3 x i8> @fold_inselts_with_widening_shuffle(i8 %x, i8 %y) {
 
 define <2 x i8> @test13b(i8 %x) {
 ; CHECK-LABEL: @test13b(
-; CHECK-NEXT:    [[B:%.*]] = insertelement <2 x i8> poison, i8 [[X:%.*]], i32 1
+; CHECK-NEXT:    [[B:%.*]] = insertelement <2 x i8> poison, i8 [[X:%.*]], i64 1
 ; CHECK-NEXT:    ret <2 x i8> [[B]]
 ;
   %A = insertelement <2 x i8> poison, i8 %x, i32 0
@@ -301,8 +301,8 @@ define <2 x i8> @test13b(i8 %x) {
 
 define <2 x i8> @test13c(i8 %x1, i8 %x2) {
 ; CHECK-LABEL: @test13c(
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i8> undef, i8 [[X1:%.*]], i32 0
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x i8> [[TMP1]], i8 [[X2:%.*]], i32 1
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i8> undef, i8 [[X1:%.*]], i64 0
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x i8> [[TMP1]], i8 [[X2:%.*]], i64 1
 ; CHECK-NEXT:    ret <2 x i8> [[TMP2]]
 ;
   %A = insertelement <4 x i8> poison, i8 %x1, i32 0
@@ -749,7 +749,7 @@ define <8 x i8> @pr19730(<16 x i8> %in0) {
 
 define i32 @pr19737(<4 x i32> %in0) {
 ; CHECK-LABEL: @pr19737(
-; CHECK-NEXT:    [[RV:%.*]] = extractelement <4 x i32> [[IN0:%.*]], i32 0
+; CHECK-NEXT:    [[RV:%.*]] = extractelement <4 x i32> [[IN0:%.*]], i64 0
 ; CHECK-NEXT:    ret i32 [[RV]]
 ;
   %shuffle.i = shufflevector <4 x i32> zeroinitializer, <4 x i32> %in0, <4 x i32> <i32 0, i32 4, i32 2, i32 6>

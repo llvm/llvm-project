@@ -69,7 +69,7 @@ define i8 @test_combine_inttoptr(i8 %a) {
 
 define i32 @test_combine_vector_ptrtoint(<2 x i32 addrspace(2)*> %a) {
 ; CHECK-LABEL: @test_combine_vector_ptrtoint(
-; CHECK-NEXT:    [[P:%.*]] = extractelement <2 x i32 addrspace(2)*> [[A:%.*]], i32 0
+; CHECK-NEXT:    [[P:%.*]] = extractelement <2 x i32 addrspace(2)*> [[A:%.*]], i64 0
 ; CHECK-NEXT:    [[Y:%.*]] = load i32, i32 addrspace(2)* [[P]], align 4
 ; CHECK-NEXT:    ret i32 [[Y]]
 ;

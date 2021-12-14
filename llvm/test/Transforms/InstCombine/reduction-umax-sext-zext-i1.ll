@@ -65,7 +65,7 @@ define i8 @reduce_umax_zext_long_external_use(<128 x i1> %x) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <128 x i1> [[X:%.*]] to i128
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne i128 [[TMP1]], 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = sext i1 [[TMP2]] to i8
-; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <128 x i1> [[X]], i32 0
+; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <128 x i1> [[X]], i64 0
 ; CHECK-NEXT:    [[EXT:%.*]] = sext i1 [[TMP4]] to i8
 ; CHECK-NEXT:    store i8 [[EXT]], i8* @glob, align 1
 ; CHECK-NEXT:    ret i8 [[TMP3]]
@@ -83,7 +83,7 @@ define i64 @reduce_umax_zext_external_use(<8 x i1> %x) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <8 x i1> [[X:%.*]] to i8
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne i8 [[TMP1]], 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = zext i1 [[TMP2]] to i64
-; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <8 x i1> [[X]], i32 0
+; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <8 x i1> [[X]], i64 0
 ; CHECK-NEXT:    [[EXT:%.*]] = zext i1 [[TMP4]] to i64
 ; CHECK-NEXT:    store i64 [[EXT]], i64* @glob1, align 8
 ; CHECK-NEXT:    ret i64 [[TMP3]]

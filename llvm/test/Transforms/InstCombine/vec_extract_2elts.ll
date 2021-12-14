@@ -3,7 +3,7 @@
 
 define void @test(<4 x i32> %v, i64 *%r1, i64 *%r2) {
 ; CHECK-LABEL: @test(
-; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <4 x i32> [[V:%.*]], i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <4 x i32> [[V:%.*]], i64 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = zext i32 [[TMP1]] to i64
 ; CHECK-NEXT:    store i64 [[TMP2]], i64* [[R1:%.*]], align 4
 ; CHECK-NEXT:    store i64 [[TMP2]], i64* [[R2:%.*]], align 4

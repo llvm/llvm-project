@@ -90,7 +90,7 @@ entry:
 define <2 x i1> @test_vector_index(i8* %base, <2 x i64> %idx) {
 ; CHECK-LABEL: @test_vector_index(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <2 x i8*> poison, i8* [[BASE:%.*]], i32 0
+; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <2 x i8*> poison, i8* [[BASE:%.*]], i64 0
 ; CHECK-NEXT:    [[TMP0:%.*]] = icmp eq <2 x i8*> [[DOTSPLATINSERT]], zeroinitializer
 ; CHECK-NEXT:    [[CND:%.*]] = shufflevector <2 x i1> [[TMP0]], <2 x i1> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    ret <2 x i1> [[CND]]

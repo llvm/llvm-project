@@ -281,7 +281,7 @@ define <4 x double> @elts_test_vpermilvar_pd_256(<4 x double> %a0, <4 x i64> %a1
 
 define <8 x double> @elts_test_vpermilvar_pd_512(<8 x double> %a0, <8 x i64> %a1, i64 %a2) {
 ; CHECK-LABEL: @elts_test_vpermilvar_pd_512(
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <8 x i64> poison, i64 [[A2:%.*]], i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <8 x i64> poison, i64 [[A2:%.*]], i64 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = tail call <8 x double> @llvm.x86.avx512.vpermilvar.pd.512(<8 x double> [[A0:%.*]], <8 x i64> [[TMP1]])
 ; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <8 x double> [[TMP2]], <8 x double> poison, <8 x i32> zeroinitializer
 ; CHECK-NEXT:    ret <8 x double> [[TMP3]]

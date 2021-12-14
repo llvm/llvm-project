@@ -40,7 +40,7 @@ define <4 x i32> @shuffleRetain(<4 x i32> %base) {
 define <4 x float> @disguisedSelect(<4 x float> %x) {
 ; CHECK-LABEL: @disguisedSelect(
 ; CHECK-NEXT:    [[SHUF:%.*]] = shufflevector <4 x float> [[X:%.*]], <4 x float> <float poison, float 1.000000e+00, float 2.000000e+00, float poison>, <4 x i32> <i32 undef, i32 6, i32 5, i32 3>
-; CHECK-NEXT:    [[INS:%.*]] = insertelement <4 x float> [[SHUF]], float 4.000000e+00, i32 0
+; CHECK-NEXT:    [[INS:%.*]] = insertelement <4 x float> [[SHUF]], float 4.000000e+00, i64 0
 ; CHECK-NEXT:    ret <4 x float> [[INS]]
 ;
   %shuf = shufflevector <4 x float> %x, <4 x float> <float undef, float 1.0, float 2.0, float 3.0>, <4 x i32> <i32 7, i32 6, i32 5, i32 3>
@@ -53,7 +53,7 @@ define <4 x float> @disguisedSelect(<4 x float> %x) {
 define <4 x float> @notSelectButNoMaskDifference(<4 x float> %x) {
 ; CHECK-LABEL: @notSelectButNoMaskDifference(
 ; CHECK-NEXT:    [[SHUF:%.*]] = shufflevector <4 x float> [[X:%.*]], <4 x float> <float poison, float 1.000000e+00, float 2.000000e+00, float poison>, <4 x i32> <i32 1, i32 5, i32 6, i32 undef>
-; CHECK-NEXT:    [[INS:%.*]] = insertelement <4 x float> [[SHUF]], float 4.000000e+00, i32 3
+; CHECK-NEXT:    [[INS:%.*]] = insertelement <4 x float> [[SHUF]], float 4.000000e+00, i64 3
 ; CHECK-NEXT:    ret <4 x float> [[INS]]
 ;
   %shuf = shufflevector <4 x float> %x, <4 x float> <float undef, float 1.0, float 2.0, float 3.0>, <4 x i32> <i32 1, i32 5, i32 6, i32 3>
@@ -66,7 +66,7 @@ define <4 x float> @notSelectButNoMaskDifference(<4 x float> %x) {
 define <4 x float> @tooRisky(<4 x float> %x) {
 ; CHECK-LABEL: @tooRisky(
 ; CHECK-NEXT:    [[SHUF:%.*]] = shufflevector <4 x float> [[X:%.*]], <4 x float> <float 1.000000e+00, float poison, float poison, float poison>, <4 x i32> <i32 1, i32 4, i32 4, i32 undef>
-; CHECK-NEXT:    [[INS:%.*]] = insertelement <4 x float> [[SHUF]], float 4.000000e+00, i32 3
+; CHECK-NEXT:    [[INS:%.*]] = insertelement <4 x float> [[SHUF]], float 4.000000e+00, i64 3
 ; CHECK-NEXT:    ret <4 x float> [[INS]]
 ;
   %shuf = shufflevector <4 x float> %x, <4 x float> <float 1.0, float undef, float undef, float undef>, <4 x i32> <i32 1, i32 4, i32 4, i32 4>
@@ -80,7 +80,7 @@ define <4 x float> @tooRisky(<4 x float> %x) {
 define <3 x float> @twoShufUses(<3 x float> %x) {
 ; CHECK-LABEL: @twoShufUses(
 ; CHECK-NEXT:    [[SHUF:%.*]] = shufflevector <3 x float> [[X:%.*]], <3 x float> <float poison, float 1.000000e+00, float 2.000000e+00>, <3 x i32> <i32 0, i32 4, i32 5>
-; CHECK-NEXT:    [[INS:%.*]] = insertelement <3 x float> [[SHUF]], float 4.200000e+01, i2 1
+; CHECK-NEXT:    [[INS:%.*]] = insertelement <3 x float> [[SHUF]], float 4.200000e+01, i64 1
 ; CHECK-NEXT:    [[ADD:%.*]] = fadd <3 x float> [[SHUF]], [[INS]]
 ; CHECK-NEXT:    ret <3 x float> [[ADD]]
 ;
@@ -95,7 +95,7 @@ define <3 x float> @twoShufUses(<3 x float> %x) {
 define <5 x i8> @longerMask(<3 x i8> %x) {
 ; CHECK-LABEL: @longerMask(
 ; CHECK-NEXT:    [[SHUF:%.*]] = shufflevector <3 x i8> [[X:%.*]], <3 x i8> <i8 poison, i8 1, i8 poison>, <5 x i32> <i32 2, i32 1, i32 4, i32 undef, i32 undef>
-; CHECK-NEXT:    [[INS:%.*]] = insertelement <5 x i8> [[SHUF]], i8 42, i17 4
+; CHECK-NEXT:    [[INS:%.*]] = insertelement <5 x i8> [[SHUF]], i8 42, i64 4
 ; CHECK-NEXT:    ret <5 x i8> [[INS]]
 ;
   %shuf = shufflevector <3 x i8> %x, <3 x i8> <i8 undef, i8 1, i8 2>, <5 x i32> <i32 2, i32 1, i32 4, i32 3, i32 0>
@@ -108,7 +108,7 @@ define <5 x i8> @longerMask(<3 x i8> %x) {
 define <3 x i8> @shorterMask(<5 x i8> %x) {
 ; CHECK-LABEL: @shorterMask(
 ; CHECK-NEXT:    [[SHUF:%.*]] = shufflevector <5 x i8> [[X:%.*]], <5 x i8> poison, <3 x i32> <i32 undef, i32 1, i32 4>
-; CHECK-NEXT:    [[INS:%.*]] = insertelement <3 x i8> [[SHUF]], i8 42, i21 0
+; CHECK-NEXT:    [[INS:%.*]] = insertelement <3 x i8> [[SHUF]], i8 42, i64 0
 ; CHECK-NEXT:    ret <3 x i8> [[INS]]
 ;
   %shuf = shufflevector <5 x i8> %x, <5 x i8> <i8 undef, i8 1, i8 2, i8 3, i8 4>, <3 x i32> <i32 2, i32 1, i32 4>

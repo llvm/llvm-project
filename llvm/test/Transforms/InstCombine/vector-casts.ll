@@ -294,7 +294,7 @@ define <8 x i32> @pr24458(<8 x float> %n) {
 define <3 x i16> @trunc_inselt_undef(i32 %x) {
 ; CHECK-LABEL: @trunc_inselt_undef(
 ; CHECK-NEXT:    [[TMP1:%.*]] = trunc i32 [[X:%.*]] to i16
-; CHECK-NEXT:    [[TRUNC:%.*]] = insertelement <3 x i16> undef, i16 [[TMP1]], i32 1
+; CHECK-NEXT:    [[TRUNC:%.*]] = insertelement <3 x i16> undef, i16 [[TMP1]], i64 1
 ; CHECK-NEXT:    ret <3 x i16> [[TRUNC]]
 ;
   %vec = insertelement <3 x i32> undef, i32 %x, i32 1
@@ -322,7 +322,7 @@ define <2 x float> @fptrunc_inselt_undef(double %x, i32 %index) {
 
 define <3 x i16> @trunc_inselt1(i32 %x) {
 ; CHECK-LABEL: @trunc_inselt1(
-; CHECK-NEXT:    [[VEC:%.*]] = insertelement <3 x i32> <i32 3, i32 poison, i32 65536>, i32 [[X:%.*]], i32 1
+; CHECK-NEXT:    [[VEC:%.*]] = insertelement <3 x i32> <i32 3, i32 poison, i32 65536>, i32 [[X:%.*]], i64 1
 ; CHECK-NEXT:    [[TRUNC:%.*]] = trunc <3 x i32> [[VEC]] to <3 x i16>
 ; CHECK-NEXT:    ret <3 x i16> [[TRUNC]]
 ;
@@ -367,7 +367,7 @@ define <8 x i16> @trunc_inselt2(<8 x i32> %x, i32 %index) {
 
 define <3 x float> @fptrunc_inselt2(<3 x double> %x) {
 ; CHECK-LABEL: @fptrunc_inselt2(
-; CHECK-NEXT:    [[VEC:%.*]] = insertelement <3 x double> [[X:%.*]], double 4.000000e+00, i32 2
+; CHECK-NEXT:    [[VEC:%.*]] = insertelement <3 x double> [[X:%.*]], double 4.000000e+00, i64 2
 ; CHECK-NEXT:    [[TRUNC:%.*]] = fptrunc <3 x double> [[VEC]] to <3 x float>
 ; CHECK-NEXT:    ret <3 x float> [[TRUNC]]
 ;

@@ -289,9 +289,9 @@ define <2 x float> @bitcast_vector_select_no_fold2(<2 x float> %x, <4 x i16> %y,
 ; rdar://7892780
 define float @test2(<2 x float> %A, <2 x i32> %B) {
 ; CHECK-LABEL: @test2(
-; CHECK-NEXT:    [[TMP24:%.*]] = extractelement <2 x float> [[A:%.*]], i32 0
+; CHECK-NEXT:    [[TMP24:%.*]] = extractelement <2 x float> [[A:%.*]], i64 0
 ; CHECK-NEXT:    [[BC:%.*]] = bitcast <2 x i32> [[B:%.*]] to <2 x float>
-; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x float> [[BC]], i32 0
+; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x float> [[BC]], i64 0
 ; CHECK-NEXT:    [[ADD:%.*]] = fadd float [[TMP24]], [[TMP4]]
 ; CHECK-NEXT:    ret float [[ADD]]
 ;
@@ -311,9 +311,9 @@ define float @test2(<2 x float> %A, <2 x i32> %B) {
 ; rdar://7892780
 define float @test3(<2 x float> %A, <2 x i64> %B) {
 ; CHECK-LABEL: @test3(
-; CHECK-NEXT:    [[TMP24:%.*]] = extractelement <2 x float> [[A:%.*]], i32 1
+; CHECK-NEXT:    [[TMP24:%.*]] = extractelement <2 x float> [[A:%.*]], i64 1
 ; CHECK-NEXT:    [[BC2:%.*]] = bitcast <2 x i64> [[B:%.*]] to <4 x float>
-; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <4 x float> [[BC2]], i32 2
+; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <4 x float> [[BC2]], i64 2
 ; CHECK-NEXT:    [[ADD:%.*]] = fadd float [[TMP24]], [[TMP4]]
 ; CHECK-NEXT:    ret float [[ADD]]
 ;
@@ -335,7 +335,7 @@ define float @test3(<2 x float> %A, <2 x i64> %B) {
 
 define float @bitcast_extelt1(<2 x float> %A) {
 ; CHECK-LABEL: @bitcast_extelt1(
-; CHECK-NEXT:    [[BC2:%.*]] = extractelement <2 x float> [[A:%.*]], i32 0
+; CHECK-NEXT:    [[BC2:%.*]] = extractelement <2 x float> [[A:%.*]], i64 0
 ; CHECK-NEXT:    ret float [[BC2]]
 ;
   %bc1 = bitcast <2 x float> %A to <2 x i32>
@@ -349,7 +349,7 @@ define float @bitcast_extelt1(<2 x float> %A) {
 define i64 @bitcast_extelt2(<4 x float> %A) {
 ; CHECK-LABEL: @bitcast_extelt2(
 ; CHECK-NEXT:    [[BC:%.*]] = bitcast <4 x float> [[A:%.*]] to <2 x i64>
-; CHECK-NEXT:    [[BC2:%.*]] = extractelement <2 x i64> [[BC]], i32 1
+; CHECK-NEXT:    [[BC2:%.*]] = extractelement <2 x i64> [[BC]], i64 1
 ; CHECK-NEXT:    ret i64 [[BC2]]
 ;
   %bc1 = bitcast <4 x float> %A to <2 x double>
@@ -363,7 +363,7 @@ define i64 @bitcast_extelt2(<4 x float> %A) {
 define <2 x i32> @bitcast_extelt3(<2 x i32> %A) {
 ; CHECK-LABEL: @bitcast_extelt3(
 ; CHECK-NEXT:    [[BC1:%.*]] = bitcast <2 x i32> [[A:%.*]] to <1 x i64>
-; CHECK-NEXT:    [[EXT:%.*]] = extractelement <1 x i64> [[BC1]], i32 0
+; CHECK-NEXT:    [[EXT:%.*]] = extractelement <1 x i64> [[BC1]], i64 0
 ; CHECK-NEXT:    [[BC2:%.*]] = bitcast i64 [[EXT]] to <2 x i32>
 ; CHECK-NEXT:    ret <2 x i32> [[BC2]]
 ;
@@ -378,7 +378,7 @@ define <2 x i32> @bitcast_extelt3(<2 x i32> %A) {
 define double @bitcast_extelt4(i128 %A) {
 ; CHECK-LABEL: @bitcast_extelt4(
 ; CHECK-NEXT:    [[BC:%.*]] = bitcast i128 [[A:%.*]] to <2 x double>
-; CHECK-NEXT:    [[BC2:%.*]] = extractelement <2 x double> [[BC]], i32 0
+; CHECK-NEXT:    [[BC2:%.*]] = extractelement <2 x double> [[BC]], i64 0
 ; CHECK-NEXT:    ret double [[BC2]]
 ;
   %bc1 = bitcast i128 %A to <2 x i64>
@@ -389,8 +389,8 @@ define double @bitcast_extelt4(i128 %A) {
 
 define <2 x i32> @test4(i32 %A, i32 %B){
 ; CHECK-LABEL: @test4(
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i32> poison, i32 [[A:%.*]], i32 0
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x i32> [[TMP1]], i32 [[B:%.*]], i32 1
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i32> poison, i32 [[A:%.*]], i64 0
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x i32> [[TMP1]], i32 [[B:%.*]], i64 1
 ; CHECK-NEXT:    ret <2 x i32> [[TMP2]]
 ;
   %tmp38 = zext i32 %A to i64
@@ -404,8 +404,8 @@ define <2 x i32> @test4(i32 %A, i32 %B){
 ; rdar://8360454
 define <2 x float> @test5(float %A, float %B) {
 ; CHECK-LABEL: @test5(
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x float> poison, float [[A:%.*]], i32 0
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x float> [[TMP1]], float [[B:%.*]], i32 1
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x float> poison, float [[A:%.*]], i64 0
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x float> [[TMP1]], float [[B:%.*]], i64 1
 ; CHECK-NEXT:    ret <2 x float> [[TMP2]]
 ;
   %tmp37 = bitcast float %A to i32
@@ -420,7 +420,7 @@ define <2 x float> @test5(float %A, float %B) {
 
 define <2 x float> @test6(float %A){
 ; CHECK-LABEL: @test6(
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x float> <float 4.200000e+01, float poison>, float [[A:%.*]], i32 1
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x float> <float 4.200000e+01, float poison>, float [[A:%.*]], i64 1
 ; CHECK-NEXT:    ret <2 x float> [[TMP1]]
 ;
   %tmp23 = bitcast float %A to i32
@@ -573,7 +573,7 @@ define void @constant_fold_vector_to_half() {
 ; Ensure that we do not crash when looking at such a weird bitcast.
 define i8* @bitcast_from_single_element_pointer_vector_to_pointer(<1 x i8*> %ptrvec) {
 ; CHECK-LABEL: @bitcast_from_single_element_pointer_vector_to_pointer(
-; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <1 x i8*> [[PTRVEC:%.*]], i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <1 x i8*> [[PTRVEC:%.*]], i64 0
 ; CHECK-NEXT:    ret i8* [[TMP1]]
 ;
   %ptr = bitcast <1 x i8*> %ptrvec to i8*

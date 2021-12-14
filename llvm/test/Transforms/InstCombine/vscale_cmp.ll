@@ -12,7 +12,7 @@ define <vscale x 2 x i1> @sge(<vscale x 2 x i8> %x) {
 
 define <vscale x 2 x i1> @gep_scalevector1(i32* %X) nounwind {
 ; CHECK-LABEL: @gep_scalevector1(
-; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <vscale x 2 x i32*> poison, i32* [[X:%.*]], i32 0
+; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <vscale x 2 x i32*> poison, i32* [[X:%.*]], i64 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq <vscale x 2 x i32*> [[DOTSPLATINSERT]], zeroinitializer
 ; CHECK-NEXT:    [[C:%.*]] = shufflevector <vscale x 2 x i1> [[TMP1]], <vscale x 2 x i1> poison, <vscale x 2 x i32> zeroinitializer
 ; CHECK-NEXT:    ret <vscale x 2 x i1> [[C]]

@@ -4,7 +4,7 @@
 define i32 @a(<4 x i64> %I) {
 ; CHECK-LABEL: @a(
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x i64> [[I:%.*]] to <8 x i32>
-; CHECK-NEXT:    [[K:%.*]] = extractelement <8 x i32> [[TMP1]], i32 6
+; CHECK-NEXT:    [[K:%.*]] = extractelement <8 x i32> [[TMP1]], i64 6
 ; CHECK-NEXT:    ret i32 [[K]]
 ;
   %J = trunc <4 x i64> %I to <4 x i32>
@@ -14,7 +14,7 @@ define i32 @a(<4 x i64> %I) {
 
 define i32 @b(<4 x float> %I) {
 ; CHECK-LABEL: @b(
-; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <4 x float> [[I:%.*]], i32 3
+; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <4 x float> [[I:%.*]], i64 3
 ; CHECK-NEXT:    [[K:%.*]] = fptosi float [[TMP1]] to i32
 ; CHECK-NEXT:    ret i32 [[K]]
 ;
