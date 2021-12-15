@@ -1185,10 +1185,10 @@ void OperationFormat::genParser(Operator &op, OpClass &opClass) {
 
   // Generate the code to resolve the operand/result types and successors now
   // that they have been parsed.
-  genParserTypeResolution(op, body);
   genParserRegionResolution(op, body);
   genParserSuccessorResolution(op, body);
   genParserVariadicSegmentResolution(op, body);
+  genParserTypeResolution(op, body);
 
   body << "  return ::mlir::success();\n";
 }

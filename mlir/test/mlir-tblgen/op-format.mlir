@@ -423,6 +423,16 @@ test.format_infer_variadic_type_from_non_variadic %i64, %i64 : i64
 // CHECK: test.format_infer_type_all_types(%[[I64]], %[[I32]]) : i64, i32
 %ignored_res11:2 = test.format_infer_type_all_types(%i64, %i32) : i64, i32
 
+// CHECK: test.format_infer_type_regions
+// CHECK-NEXT: ^bb0(%{{.*}}: {{.*}}, %{{.*}}: {{.*}}):
+%ignored_res12:2 = test.format_infer_type_regions {
+^bb0(%arg0: i32, %arg1: f32):
+  "test.terminator"() : () -> ()
+}
+
+// CHECK: test.format_infer_type_variadic_operands(%[[I32]], %[[I32]] : i32, i32) (%[[I64]], %[[I64]] : i64, i64)
+%ignored_res13:4 = test.format_infer_type_variadic_operands(%i32, %i32 : i32, i32) (%i64, %i64 : i64, i64)
+
 //===----------------------------------------------------------------------===//
 // Check DefaultValuedStrAttr
 //===----------------------------------------------------------------------===//
