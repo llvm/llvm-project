@@ -722,10 +722,8 @@ body:             |
     ; GFX90A-LABEL: name: a2_to_a2_kill
     ; GFX90A: liveins: $agpr0_agpr1
     ; GFX90A-NEXT: {{  $}}
-    ; GFX90A-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 $agpr1, implicit $exec, implicit $agpr0_agpr1
-    ; GFX90A-NEXT: $agpr2 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr0, implicit $exec, implicit-def $agpr1_agpr2
-    ; GFX90A-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 $agpr0, implicit $exec, implicit $agpr0_agpr1
-    ; GFX90A-NEXT: $agpr1 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr0, implicit $exec, implicit $exec
+    ; GFX90A-NEXT: $agpr2 = V_ACCVGPR_MOV_B32 $agpr1, implicit $exec, implicit-def $agpr1_agpr2, implicit $agpr0_agpr1
+    ; GFX90A-NEXT: $agpr1 = V_ACCVGPR_MOV_B32 $agpr0, implicit $exec, implicit $agpr0_agpr1, implicit $exec
     ; GFX90A-NEXT: $agpr3 = V_ACCVGPR_MOV_B32 $agpr2, implicit $exec
     ; GFX90A-NEXT: S_ENDPGM 0, implicit $agpr1, implicit $agpr2, implicit $agpr3
     $agpr1_agpr2 = COPY killed $agpr0_agpr1, implicit $exec
@@ -752,12 +750,9 @@ body:             |
     ; GFX90A-LABEL: name: a3_to_a3_nonoverlap_kill
     ; GFX90A: liveins: $agpr4_agpr5_agpr6
     ; GFX90A-NEXT: {{  $}}
-    ; GFX90A-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 $agpr4, implicit $exec, implicit $agpr4_agpr5_agpr6
-    ; GFX90A-NEXT: $agpr0 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr0, implicit $exec, implicit-def $agpr0_agpr1_agpr2
-    ; GFX90A-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 $agpr5, implicit $exec, implicit $agpr4_agpr5_agpr6
-    ; GFX90A-NEXT: $agpr1 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr0, implicit $exec
-    ; GFX90A-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr6, implicit $exec, implicit killed $agpr4_agpr5_agpr6
-    ; GFX90A-NEXT: $agpr2 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr0, implicit $exec
+    ; GFX90A-NEXT: $agpr0 = V_ACCVGPR_MOV_B32 $agpr4, implicit $exec, implicit-def $agpr0_agpr1_agpr2, implicit $agpr4_agpr5_agpr6
+    ; GFX90A-NEXT: $agpr1 = V_ACCVGPR_MOV_B32 $agpr5, implicit $exec, implicit $agpr4_agpr5_agpr6
+    ; GFX90A-NEXT: $agpr2 = V_ACCVGPR_MOV_B32 $agpr6, implicit $exec, implicit killed $agpr4_agpr5_agpr6
     ; GFX90A-NEXT: S_ENDPGM 0, implicit $agpr0_agpr1_agpr2
     $agpr0_agpr1_agpr2 = COPY killed $agpr4_agpr5_agpr6
     S_ENDPGM 0, implicit $agpr0_agpr1_agpr2
@@ -782,11 +777,9 @@ body:             |
     ; GFX90A-LABEL: name: a3_to_a3_overlap_kill
     ; GFX90A: liveins: $agpr1_agpr2_agpr3
     ; GFX90A-NEXT: {{  $}}
-    ; GFX90A-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 $agpr1, implicit $exec, implicit $agpr1_agpr2_agpr3
-    ; GFX90A-NEXT: $agpr0 = V_ACCVGPR_WRITE_B32_e64 $vgpr0, implicit $exec, implicit-def $agpr0_agpr1_agpr2
-    ; GFX90A-NEXT: $agpr1 = V_ACCVGPR_WRITE_B32_e64 $vgpr0, implicit $exec, implicit $agpr1_agpr2_agpr3
-    ; GFX90A-NEXT: $vgpr2 = V_ACCVGPR_READ_B32_e64 $agpr3, implicit $exec, implicit $agpr1_agpr2_agpr3
-    ; GFX90A-NEXT: $agpr2 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr2, implicit $exec
+    ; GFX90A-NEXT: $agpr0 = V_ACCVGPR_MOV_B32 $agpr1, implicit $exec, implicit-def $agpr0_agpr1_agpr2, implicit $agpr1_agpr2_agpr3
+    ; GFX90A-NEXT: $agpr1 = V_ACCVGPR_MOV_B32 $agpr2, implicit $exec, implicit $agpr1_agpr2_agpr3
+    ; GFX90A-NEXT: $agpr2 = V_ACCVGPR_MOV_B32 $agpr3, implicit $exec, implicit $agpr1_agpr2_agpr3
     ; GFX90A-NEXT: $vgpr1 = V_ACCVGPR_READ_B32_e64 $agpr1, implicit $exec
     ; GFX90A-NEXT: S_ENDPGM 0, implicit $agpr0_agpr1_agpr2, implicit $vgpr1
     $agpr0_agpr1_agpr2 = COPY killed $agpr1_agpr2_agpr3
@@ -811,13 +804,10 @@ body:             |
     ; GFX908-NEXT: S_ENDPGM 0, implicit $agpr2_agpr3_agpr4_agpr5
     ; GFX90A-LABEL: name: a4_to_a4
     ; GFX90A: $agpr0_agpr1_agpr2_agpr3 = IMPLICIT_DEF
-    ; GFX90A-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 $agpr3, implicit $exec, implicit $agpr0_agpr1_agpr2_agpr3
-    ; GFX90A-NEXT: $agpr5 = V_ACCVGPR_WRITE_B32_e64 $vgpr0, implicit $exec, implicit-def $agpr2_agpr3_agpr4_agpr5
-    ; GFX90A-NEXT: $agpr4 = V_ACCVGPR_WRITE_B32_e64 $vgpr0, implicit $exec, implicit $agpr0_agpr1_agpr2_agpr3
-    ; GFX90A-NEXT: $vgpr1 = V_ACCVGPR_READ_B32_e64 $agpr1, implicit $exec, implicit $agpr0_agpr1_agpr2_agpr3
-    ; GFX90A-NEXT: $agpr3 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr1, implicit $exec
-    ; GFX90A-NEXT: $vgpr1 = V_ACCVGPR_READ_B32_e64 $agpr0, implicit $exec, implicit $agpr0_agpr1_agpr2_agpr3
-    ; GFX90A-NEXT: $agpr2 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr1, implicit $exec, implicit $exec
+    ; GFX90A-NEXT: $agpr5 = V_ACCVGPR_MOV_B32 $agpr3, implicit $exec, implicit-def $agpr2_agpr3_agpr4_agpr5, implicit $agpr0_agpr1_agpr2_agpr3
+    ; GFX90A-NEXT: $agpr4 = V_ACCVGPR_MOV_B32 $agpr2, implicit $exec, implicit $agpr0_agpr1_agpr2_agpr3
+    ; GFX90A-NEXT: $agpr3 = V_ACCVGPR_MOV_B32 $agpr1, implicit $exec, implicit $agpr0_agpr1_agpr2_agpr3
+    ; GFX90A-NEXT: $agpr2 = V_ACCVGPR_MOV_B32 $agpr0, implicit $exec, implicit $agpr0_agpr1_agpr2_agpr3, implicit $exec
     ; GFX90A-NEXT: S_ENDPGM 0, implicit $agpr2_agpr3_agpr4_agpr5
     $agpr0_agpr1_agpr2_agpr3 = IMPLICIT_DEF
     $agpr2_agpr3_agpr4_agpr5 = COPY killed $agpr0_agpr1_agpr2_agpr3, implicit $exec
@@ -844,13 +834,10 @@ body:             |
     ; GFX90A-LABEL: name: a4_to_a4_overlap
     ; GFX90A: liveins: $agpr0_agpr1_agpr2_agpr3
     ; GFX90A-NEXT: {{  $}}
-    ; GFX90A-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 $agpr3, implicit $exec, implicit $agpr0_agpr1_agpr2_agpr3
-    ; GFX90A-NEXT: $agpr5 = V_ACCVGPR_WRITE_B32_e64 $vgpr0, implicit $exec, implicit-def $agpr2_agpr3_agpr4_agpr5
-    ; GFX90A-NEXT: $agpr4 = V_ACCVGPR_WRITE_B32_e64 $vgpr0, implicit $exec, implicit $agpr0_agpr1_agpr2_agpr3
-    ; GFX90A-NEXT: $vgpr1 = V_ACCVGPR_READ_B32_e64 $agpr1, implicit $exec, implicit $agpr0_agpr1_agpr2_agpr3
-    ; GFX90A-NEXT: $agpr3 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr1, implicit $exec
-    ; GFX90A-NEXT: $vgpr1 = V_ACCVGPR_READ_B32_e64 $agpr0, implicit $exec, implicit $agpr0_agpr1_agpr2_agpr3
-    ; GFX90A-NEXT: $agpr2 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr1, implicit $exec, implicit $exec
+    ; GFX90A-NEXT: $agpr5 = V_ACCVGPR_MOV_B32 $agpr3, implicit $exec, implicit-def $agpr2_agpr3_agpr4_agpr5, implicit $agpr0_agpr1_agpr2_agpr3
+    ; GFX90A-NEXT: $agpr4 = V_ACCVGPR_MOV_B32 $agpr2, implicit $exec, implicit $agpr0_agpr1_agpr2_agpr3
+    ; GFX90A-NEXT: $agpr3 = V_ACCVGPR_MOV_B32 $agpr1, implicit $exec, implicit $agpr0_agpr1_agpr2_agpr3
+    ; GFX90A-NEXT: $agpr2 = V_ACCVGPR_MOV_B32 $agpr0, implicit $exec, implicit $agpr0_agpr1_agpr2_agpr3, implicit $exec
     ; GFX90A-NEXT: S_ENDPGM 0, implicit $agpr0, implicit $agpr1, implicit $agpr2, implicit $agpr3, implicit $agpr4, implicit $agpr5
     $agpr2_agpr3_agpr4_agpr5 = COPY $agpr0_agpr1_agpr2_agpr3, implicit $exec
     S_ENDPGM 0, implicit $agpr0, implicit $agpr1, implicit $agpr2, implicit $agpr3, implicit $agpr4, implicit $agpr5
@@ -882,22 +869,14 @@ body:             |
     ; GFX908-NEXT: S_ENDPGM 0, implicit $agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15
     ; GFX90A-LABEL: name: a8_to_a8
     ; GFX90A: $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7 = IMPLICIT_DEF
-    ; GFX90A-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 $agpr7, implicit $exec, implicit $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7
-    ; GFX90A-NEXT: $agpr15 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr0, implicit $exec, implicit-def $agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15
-    ; GFX90A-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 $agpr6, implicit $exec, implicit $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7
-    ; GFX90A-NEXT: $agpr14 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr0, implicit $exec
-    ; GFX90A-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 $agpr5, implicit $exec, implicit $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7
-    ; GFX90A-NEXT: $agpr13 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr0, implicit $exec
-    ; GFX90A-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 $agpr4, implicit $exec, implicit $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7
-    ; GFX90A-NEXT: $agpr12 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr0, implicit $exec
-    ; GFX90A-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 $agpr3, implicit $exec, implicit $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7
-    ; GFX90A-NEXT: $agpr11 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr0, implicit $exec
-    ; GFX90A-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 $agpr2, implicit $exec, implicit $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7
-    ; GFX90A-NEXT: $agpr10 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr0, implicit $exec
-    ; GFX90A-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 $agpr1, implicit $exec, implicit $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7
-    ; GFX90A-NEXT: $agpr9 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr0, implicit $exec
-    ; GFX90A-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr0, implicit $exec, implicit killed $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7
-    ; GFX90A-NEXT: $agpr8 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr0, implicit $exec, implicit $exec
+    ; GFX90A-NEXT: $agpr15 = V_ACCVGPR_MOV_B32 $agpr7, implicit $exec, implicit-def $agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15, implicit $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7
+    ; GFX90A-NEXT: $agpr14 = V_ACCVGPR_MOV_B32 $agpr6, implicit $exec, implicit $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7
+    ; GFX90A-NEXT: $agpr13 = V_ACCVGPR_MOV_B32 $agpr5, implicit $exec, implicit $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7
+    ; GFX90A-NEXT: $agpr12 = V_ACCVGPR_MOV_B32 $agpr4, implicit $exec, implicit $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7
+    ; GFX90A-NEXT: $agpr11 = V_ACCVGPR_MOV_B32 $agpr3, implicit $exec, implicit $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7
+    ; GFX90A-NEXT: $agpr10 = V_ACCVGPR_MOV_B32 $agpr2, implicit $exec, implicit $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7
+    ; GFX90A-NEXT: $agpr9 = V_ACCVGPR_MOV_B32 $agpr1, implicit $exec, implicit $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7
+    ; GFX90A-NEXT: $agpr8 = V_ACCVGPR_MOV_B32 $agpr0, implicit $exec, implicit killed $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7, implicit $exec
     ; GFX90A-NEXT: S_ENDPGM 0, implicit $agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15
     $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7 = IMPLICIT_DEF
     $agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = COPY killed $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7, implicit $exec
@@ -947,38 +926,22 @@ body:             |
     ; GFX908-NEXT: S_ENDPGM 0, implicit $agpr16_agpr17_agpr18_agpr19_agpr20_agpr21_agpr22_agpr23_agpr24_agpr25_agpr26_agpr27_agpr28_agpr29_agpr30_agpr31
     ; GFX90A-LABEL: name: a16_to_a16
     ; GFX90A: $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = IMPLICIT_DEF
-    ; GFX90A-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 $agpr15, implicit $exec, implicit $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15
-    ; GFX90A-NEXT: $agpr31 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr0, implicit $exec, implicit-def $agpr16_agpr17_agpr18_agpr19_agpr20_agpr21_agpr22_agpr23_agpr24_agpr25_agpr26_agpr27_agpr28_agpr29_agpr30_agpr31
-    ; GFX90A-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 $agpr14, implicit $exec, implicit $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15
-    ; GFX90A-NEXT: $agpr30 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr0, implicit $exec
-    ; GFX90A-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 $agpr13, implicit $exec, implicit $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15
-    ; GFX90A-NEXT: $agpr29 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr0, implicit $exec
-    ; GFX90A-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 $agpr12, implicit $exec, implicit $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15
-    ; GFX90A-NEXT: $agpr28 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr0, implicit $exec
-    ; GFX90A-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 $agpr11, implicit $exec, implicit $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15
-    ; GFX90A-NEXT: $agpr27 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr0, implicit $exec
-    ; GFX90A-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 $agpr10, implicit $exec, implicit $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15
-    ; GFX90A-NEXT: $agpr26 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr0, implicit $exec
-    ; GFX90A-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 $agpr9, implicit $exec, implicit $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15
-    ; GFX90A-NEXT: $agpr25 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr0, implicit $exec
-    ; GFX90A-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 $agpr8, implicit $exec, implicit $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15
-    ; GFX90A-NEXT: $agpr24 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr0, implicit $exec
-    ; GFX90A-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 $agpr7, implicit $exec, implicit $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15
-    ; GFX90A-NEXT: $agpr23 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr0, implicit $exec
-    ; GFX90A-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 $agpr6, implicit $exec, implicit $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15
-    ; GFX90A-NEXT: $agpr22 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr0, implicit $exec
-    ; GFX90A-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 $agpr5, implicit $exec, implicit $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15
-    ; GFX90A-NEXT: $agpr21 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr0, implicit $exec
-    ; GFX90A-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 $agpr4, implicit $exec, implicit $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15
-    ; GFX90A-NEXT: $agpr20 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr0, implicit $exec
-    ; GFX90A-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 $agpr3, implicit $exec, implicit $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15
-    ; GFX90A-NEXT: $agpr19 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr0, implicit $exec
-    ; GFX90A-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 $agpr2, implicit $exec, implicit $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15
-    ; GFX90A-NEXT: $agpr18 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr0, implicit $exec
-    ; GFX90A-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 $agpr1, implicit $exec, implicit $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15
-    ; GFX90A-NEXT: $agpr17 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr0, implicit $exec
-    ; GFX90A-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr0, implicit $exec, implicit killed $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15
-    ; GFX90A-NEXT: $agpr16 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr0, implicit $exec, implicit $exec
+    ; GFX90A-NEXT: $agpr31 = V_ACCVGPR_MOV_B32 $agpr15, implicit $exec, implicit-def $agpr16_agpr17_agpr18_agpr19_agpr20_agpr21_agpr22_agpr23_agpr24_agpr25_agpr26_agpr27_agpr28_agpr29_agpr30_agpr31, implicit $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15
+    ; GFX90A-NEXT: $agpr30 = V_ACCVGPR_MOV_B32 $agpr14, implicit $exec, implicit $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15
+    ; GFX90A-NEXT: $agpr29 = V_ACCVGPR_MOV_B32 $agpr13, implicit $exec, implicit $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15
+    ; GFX90A-NEXT: $agpr28 = V_ACCVGPR_MOV_B32 $agpr12, implicit $exec, implicit $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15
+    ; GFX90A-NEXT: $agpr27 = V_ACCVGPR_MOV_B32 $agpr11, implicit $exec, implicit $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15
+    ; GFX90A-NEXT: $agpr26 = V_ACCVGPR_MOV_B32 $agpr10, implicit $exec, implicit $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15
+    ; GFX90A-NEXT: $agpr25 = V_ACCVGPR_MOV_B32 $agpr9, implicit $exec, implicit $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15
+    ; GFX90A-NEXT: $agpr24 = V_ACCVGPR_MOV_B32 $agpr8, implicit $exec, implicit $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15
+    ; GFX90A-NEXT: $agpr23 = V_ACCVGPR_MOV_B32 $agpr7, implicit $exec, implicit $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15
+    ; GFX90A-NEXT: $agpr22 = V_ACCVGPR_MOV_B32 $agpr6, implicit $exec, implicit $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15
+    ; GFX90A-NEXT: $agpr21 = V_ACCVGPR_MOV_B32 $agpr5, implicit $exec, implicit $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15
+    ; GFX90A-NEXT: $agpr20 = V_ACCVGPR_MOV_B32 $agpr4, implicit $exec, implicit $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15
+    ; GFX90A-NEXT: $agpr19 = V_ACCVGPR_MOV_B32 $agpr3, implicit $exec, implicit $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15
+    ; GFX90A-NEXT: $agpr18 = V_ACCVGPR_MOV_B32 $agpr2, implicit $exec, implicit $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15
+    ; GFX90A-NEXT: $agpr17 = V_ACCVGPR_MOV_B32 $agpr1, implicit $exec, implicit $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15
+    ; GFX90A-NEXT: $agpr16 = V_ACCVGPR_MOV_B32 $agpr0, implicit $exec, implicit killed $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15, implicit $exec
     ; GFX90A-NEXT: S_ENDPGM 0, implicit $agpr16_agpr17_agpr18_agpr19_agpr20_agpr21_agpr22_agpr23_agpr24_agpr25_agpr26_agpr27_agpr28_agpr29_agpr30_agpr31
     $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = IMPLICIT_DEF
     $agpr16_agpr17_agpr18_agpr19_agpr20_agpr21_agpr22_agpr23_agpr24_agpr25_agpr26_agpr27_agpr28_agpr29_agpr30_agpr31 = COPY killed $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15, implicit $exec
@@ -1111,14 +1074,10 @@ body:             |
     ; GFX90A: liveins: $agpr0, $agpr2_agpr3
     ; GFX90A-NEXT: {{  $}}
     ; GFX90A-NEXT: S_NOP 0, implicit-def dead $agpr0_agpr1
-    ; GFX90A-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 $agpr3, implicit $exec, implicit $agpr0_agpr1_agpr2_agpr3
-    ; GFX90A-NEXT: $agpr7 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr0, implicit $exec, implicit-def $agpr4_agpr5_agpr6_agpr7
-    ; GFX90A-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 $agpr2, implicit $exec, implicit $agpr0_agpr1_agpr2_agpr3
-    ; GFX90A-NEXT: $agpr6 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr0, implicit $exec
-    ; GFX90A-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 $agpr1, implicit $exec, implicit $agpr0_agpr1_agpr2_agpr3
-    ; GFX90A-NEXT: $agpr5 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr0, implicit $exec
-    ; GFX90A-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 $agpr0, implicit $exec, implicit $agpr0_agpr1_agpr2_agpr3
-    ; GFX90A-NEXT: $agpr4 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr0, implicit $exec, implicit $exec
+    ; GFX90A-NEXT: $agpr7 = V_ACCVGPR_MOV_B32 $agpr3, implicit $exec, implicit-def $agpr4_agpr5_agpr6_agpr7, implicit $agpr0_agpr1_agpr2_agpr3
+    ; GFX90A-NEXT: $agpr6 = V_ACCVGPR_MOV_B32 $agpr2, implicit $exec, implicit $agpr0_agpr1_agpr2_agpr3
+    ; GFX90A-NEXT: $agpr5 = V_ACCVGPR_MOV_B32 $agpr1, implicit $exec, implicit $agpr0_agpr1_agpr2_agpr3
+    ; GFX90A-NEXT: $agpr4 = V_ACCVGPR_MOV_B32 $agpr0, implicit $exec, implicit $agpr0_agpr1_agpr2_agpr3, implicit $exec
     ; GFX90A-NEXT: S_ENDPGM 0, implicit $agpr4_agpr5_agpr6_agpr7, implicit $agpr0_agpr1_agpr2_agpr3
     S_NOP 0, implicit-def dead $agpr0_agpr1
     renamable $agpr4_agpr5_agpr6_agpr7 = COPY renamable $agpr0_agpr1_agpr2_agpr3, implicit $exec
@@ -1149,14 +1108,10 @@ body:             |
     ; GFX90A: liveins: $agpr0, $agpr2_agpr3
     ; GFX90A-NEXT: {{  $}}
     ; GFX90A-NEXT: S_NOP 0, implicit-def dead $agpr0_agpr1
-    ; GFX90A-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 $agpr3, implicit $exec, implicit $agpr0_agpr1_agpr2_agpr3
-    ; GFX90A-NEXT: $agpr7 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr0, implicit $exec, implicit-def $agpr4_agpr5_agpr6_agpr7
-    ; GFX90A-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 $agpr2, implicit $exec, implicit $agpr0_agpr1_agpr2_agpr3
-    ; GFX90A-NEXT: $agpr6 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr0, implicit $exec
-    ; GFX90A-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 $agpr1, implicit $exec, implicit $agpr0_agpr1_agpr2_agpr3
-    ; GFX90A-NEXT: $agpr5 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr0, implicit $exec
-    ; GFX90A-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr0, implicit $exec, implicit killed $agpr0_agpr1_agpr2_agpr3
-    ; GFX90A-NEXT: $agpr4 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr0, implicit $exec, implicit $exec
+    ; GFX90A-NEXT: $agpr7 = V_ACCVGPR_MOV_B32 $agpr3, implicit $exec, implicit-def $agpr4_agpr5_agpr6_agpr7, implicit $agpr0_agpr1_agpr2_agpr3
+    ; GFX90A-NEXT: $agpr6 = V_ACCVGPR_MOV_B32 $agpr2, implicit $exec, implicit $agpr0_agpr1_agpr2_agpr3
+    ; GFX90A-NEXT: $agpr5 = V_ACCVGPR_MOV_B32 $agpr1, implicit $exec, implicit $agpr0_agpr1_agpr2_agpr3
+    ; GFX90A-NEXT: $agpr4 = V_ACCVGPR_MOV_B32 $agpr0, implicit $exec, implicit killed $agpr0_agpr1_agpr2_agpr3, implicit $exec
     ; GFX90A-NEXT: S_ENDPGM 0, implicit $agpr4_agpr5_agpr6_agpr7
     S_NOP 0, implicit-def dead $agpr0_agpr1
     renamable $agpr4_agpr5_agpr6_agpr7 = COPY renamable killed $agpr0_agpr1_agpr2_agpr3, implicit $exec
