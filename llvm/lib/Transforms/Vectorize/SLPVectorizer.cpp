@@ -1648,11 +1648,37 @@ public:
           ReorderingModes[OpIdx] = ReorderingMode::Failed;
       }
 
+      // Check that we don't have same operands. No need to reorder if operands
+      // are just perfect diamond or shuffled diamond match. Do not do it only
+      // for possible broadcasts or non-power of 2 number of scalars (just for
+      // now).
+      auto &&SkipReordering = [this]() {
+        SmallPtrSet<Value *, 4> UniqueValues;
+        ArrayRef<OperandData> Op0 = OpsVec.front();
+        for (const OperandData &Data : Op0)
+          UniqueValues.insert(Data.V);
+        for (ArrayRef<OperandData> Op : drop_begin(OpsVec, 1)) {
+          if (any_of(Op, [&UniqueValues](const OperandData &Data) {
+                return !UniqueValues.contains(Data.V);
+              }))
+            return false;
+        }
+        // TODO: Check if we can remove a check for non-power-2 number of
+        // scalars after full support of non-power-2 vectorization.
+        return UniqueValues.size() != 2 && isPowerOf2_32(UniqueValues.size());
+      };
+
       // If the initial strategy fails for any of the operand indexes, then we
       // perform reordering again in a second pass. This helps avoid assigning
       // high priority to the failed strategy, and should improve reordering for
       // the non-failed operand indexes.
       for (int Pass = 0; Pass != 2; ++Pass) {
+        // Check if no need to reorder operands since they're are perfect or
+        // shuffled diamond match.
+        // Need to to do it to avoid extra external use cost counting for
+        // shuffled matches, which may cause regressions.
+        if (SkipReordering())
+          break;
         // Skip the second pass if the first pass did not fail.
         bool StrategyFailed = false;
         // Mark all operand data as free to use.
