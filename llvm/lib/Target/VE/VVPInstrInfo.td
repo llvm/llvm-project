@@ -54,4 +54,8 @@ def c_vvp_or   : vvp_commutative<vvp_or>;
 def vvp_xor    : SDNode<"VEISD::VVP_XOR",  SDTIntBinOpVVP>;
 def c_vvp_xor  : vvp_commutative<vvp_xor>;
 
+def vvp_srl    : SDNode<"VEISD::VVP_SRL",  SDTIntBinOpVVP>;
+def vvp_sra    : SDNode<"VEISD::VVP_SRA",  SDTIntBinOpVVP>;
+def vvp_shl    : SDNode<"VEISD::VVP_SHL",  SDTIntBinOpVVP>;
+
 // } Binary Operators

@@ -3637,6 +3637,34 @@ TEST_F(OpenMPIRBuilderTest, CreateSections) {
   EXPECT_FALSE(verifyModule(*M, &errs()));
 }
 
+TEST_F(OpenMPIRBuilderTest, CreateSectionsNoWait) {
+  using InsertPointTy = OpenMPIRBuilder::InsertPointTy;
+  using BodyGenCallbackTy = llvm::OpenMPIRBuilder::StorableBodyGenCallbackTy;
+  OpenMPIRBuilder OMPBuilder(*M);
+  OMPBuilder.initialize();
+  F->setName("func");
+  IRBuilder<> Builder(BB);
+
+  OpenMPIRBuilder::LocationDescription Loc({Builder.saveIP(), DL});
+  IRBuilder<>::InsertPoint AllocaIP(&F->getEntryBlock(),
+                                    F->getEntryBlock().getFirstInsertionPt());
+  llvm::SmallVector<BodyGenCallbackTy, 4> SectionCBVector;
+  auto PrivCB = [](InsertPointTy AllocaIP, InsertPointTy CodeGenIP,
+                   llvm::Value &, llvm::Value &Val,
+                   llvm::Value *&ReplVal) { return CodeGenIP; };
+  auto FiniCB = [&](InsertPointTy IP) {};
+
+  Builder.restoreIP(OMPBuilder.createSections(Loc, AllocaIP, SectionCBVector,
+                                              PrivCB, FiniCB, false, true));
+  Builder.CreateRetVoid(); // Required at the end of the function
+  for (auto &Inst : instructions(*F)) {
+    EXPECT_FALSE(isa<CallInst>(Inst) &&
+                 cast<CallInst>(&Inst)->getCalledFunction()->getName() ==
+                     "__kmpc_barrier" &&
+                 "call to function __kmpc_barrier found with nowait");
+  }
+}
+
 TEST_F(OpenMPIRBuilderTest, CreateOffloadMaptypes) {
   OpenMPIRBuilder OMPBuilder(*M);
   OMPBuilder.initialize();

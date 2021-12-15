@@ -1303,7 +1303,6 @@ td_library(
     name = "ArmSVETdFiles",
     srcs = [
         "include/mlir/Dialect/ArmSVE/ArmSVE.td",
-        "include/mlir/Dialect/ArmSVE/ArmSVEOpBase.td",
     ],
     includes = ["include"],
     deps = [
@@ -6393,12 +6392,11 @@ cc_library(
     includes = ["include"],
     deps = [
         ":BufferizableOpInterface",
+        ":BufferizationDialect",
         ":IR",
         ":LinalgOps",
         ":LinalgStructuredOpsIncGen",
-        ":Support",
         ":TensorDialect",
-        "//llvm:Support",
     ],
 )
 
@@ -6413,6 +6411,7 @@ cc_library(
     includes = ["include"],
     deps = [
         ":BufferizableOpInterface",
+        ":BufferizationDialect",
         ":IR",
         ":SCFDialect",
         ":Support",
@@ -6569,11 +6568,10 @@ cc_library(
     name = "LinalgOps",
     srcs = [
         "lib/Dialect/Linalg/IR/LinalgOps.cpp",
-        "lib/Dialect/Linalg/IR/LinalgTypes.cpp",
+        "lib/Dialect/Linalg/IR/LinalgDialect.cpp",
     ],
     hdrs = [
-        "include/mlir/Dialect/Linalg/IR/LinalgOps.h",
-        "include/mlir/Dialect/Linalg/IR/LinalgTypes.h",
+        "include/mlir/Dialect/Linalg/IR/Linalg.h"
     ],
     includes = ["include"],
     deps = [
