@@ -1696,6 +1696,14 @@ LLVMValueRef LLVMConstGEP(LLVMValueRef ConstantVal,
   return wrap(ConstantExpr::getGetElementPtr(Ty, Val, IdxList));
 }
 
+LLVMValueRef LLVMConstGEP2(LLVMTypeRef Ty, LLVMValueRef ConstantVal,
+                           LLVMValueRef *ConstantIndices, unsigned NumIndices) {
+  ArrayRef<Constant *> IdxList(unwrap<Constant>(ConstantIndices, NumIndices),
+                               NumIndices);
+  Constant *Val = unwrap<Constant>(ConstantVal);
+  return wrap(ConstantExpr::getGetElementPtr(unwrap(Ty), Val, IdxList));
+}
+
 LLVMValueRef LLVMConstInBoundsGEP(LLVMValueRef ConstantVal,
                                   LLVMValueRef *ConstantIndices,
                                   unsigned NumIndices) {
@@ -1705,6 +1713,15 @@ LLVMValueRef LLVMConstInBoundsGEP(LLVMValueRef ConstantVal,
   Type *Ty =
       cast<PointerType>(Val->getType()->getScalarType())->getElementType();
   return wrap(ConstantExpr::getInBoundsGetElementPtr(Ty, Val, IdxList));
+}
+
+LLVMValueRef LLVMConstInBoundsGEP2(LLVMTypeRef Ty, LLVMValueRef ConstantVal,
+                                   LLVMValueRef *ConstantIndices,
+                                   unsigned NumIndices) {
+  ArrayRef<Constant *> IdxList(unwrap<Constant>(ConstantIndices, NumIndices),
+                               NumIndices);
+  Constant *Val = unwrap<Constant>(ConstantVal);
+  return wrap(ConstantExpr::getInBoundsGetElementPtr(unwrap(Ty), Val, IdxList));
 }
 
 LLVMValueRef LLVMConstTrunc(LLVMValueRef ConstantVal, LLVMTypeRef ToType) {

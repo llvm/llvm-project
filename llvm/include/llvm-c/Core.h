@@ -2152,13 +2152,18 @@ LLVMValueRef LLVMConstFCmp(LLVMRealPredicate Predicate,
 LLVMValueRef LLVMConstShl(LLVMValueRef LHSConstant, LLVMValueRef RHSConstant);
 LLVMValueRef LLVMConstLShr(LLVMValueRef LHSConstant, LLVMValueRef RHSConstant);
 LLVMValueRef LLVMConstAShr(LLVMValueRef LHSConstant, LLVMValueRef RHSConstant);
-LLVMValueRef LLVMConstGEP(LLVMValueRef ConstantVal,
-                          LLVMValueRef *ConstantIndices, unsigned NumIndices);
+LLVM_ATTRIBUTE_C_DEPRECATED(
+    LLVMValueRef LLVMConstGEP(LLVMValueRef ConstantVal,
+                              LLVMValueRef *ConstantIndices,
+                              unsigned NumIndices),
+    "Use LLVMConstGEP2 instead to support opaque pointers");
 LLVMValueRef LLVMConstGEP2(LLVMTypeRef Ty, LLVMValueRef ConstantVal,
                            LLVMValueRef *ConstantIndices, unsigned NumIndices);
-LLVMValueRef LLVMConstInBoundsGEP(LLVMValueRef ConstantVal,
-                                  LLVMValueRef *ConstantIndices,
-                                  unsigned NumIndices);
+LLVM_ATTRIBUTE_C_DEPRECATED(
+    LLVMValueRef LLVMConstInBoundsGEP(LLVMValueRef ConstantVal,
+                                      LLVMValueRef *ConstantIndices,
+                                      unsigned NumIndices),
+    "Use LLVMConstInBoundsGEP2 instead to support opaque pointers");
 LLVMValueRef LLVMConstInBoundsGEP2(LLVMTypeRef Ty, LLVMValueRef ConstantVal,
                                    LLVMValueRef *ConstantIndices,
                                    unsigned NumIndices);
