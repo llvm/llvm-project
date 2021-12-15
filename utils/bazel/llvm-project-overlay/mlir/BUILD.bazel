@@ -6396,9 +6396,7 @@ cc_library(
         ":IR",
         ":LinalgOps",
         ":LinalgStructuredOpsIncGen",
-        ":Support",
         ":TensorDialect",
-        "//llvm:Support",
     ],
 )
 
