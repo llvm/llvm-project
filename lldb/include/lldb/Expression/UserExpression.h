@@ -266,10 +266,8 @@ public:
       0x1001; ///< ValueObject::GetError() returns this if there is no result
               /// from the expression.
 
-  const char *GetFixedText() {
-    if (m_fixed_text.empty())
-      return nullptr;
-    return m_fixed_text.c_str();
+  llvm::StringRef GetFixedText() {
+    return m_fixed_text;
   }
 
 protected:

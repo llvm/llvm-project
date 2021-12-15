@@ -254,9 +254,7 @@ UserExpression::Evaluate(ExecutionContext &exe_ctx,
   if (fixed_expression == nullptr)
     fixed_expression = &tmp_fixed_expression;
 
-  const char *fixed_text = user_expression_sp->GetFixedText();
-  if (fixed_text != nullptr)
-    fixed_expression->append(fixed_text);
+  *fixed_expression = user_expression_sp->GetFixedText().str();
 
   // If there is a fixed expression, try to parse it:
   if (!parse_success) {
@@ -285,8 +283,8 @@ UserExpression::Evaluate(ExecutionContext &exe_ctx,
         } else {
           // The fixed expression also didn't parse. Let's check for any new
           // Fix-Its we could try.
-          if (fixed_expression_sp->GetFixedText()) {
-            *fixed_expression = fixed_expression_sp->GetFixedText();
+          if (!fixed_expression_sp->GetFixedText().empty()) {
+            *fixed_expression = fixed_expression_sp->GetFixedText().str();
           } else {
             // Fixed expression didn't compile without a fixit, don't retry and
             // don't tell the user about it.
