@@ -798,7 +798,7 @@ static std::pair<bool, bool> getPackDynRelocs(opt::InputArgList &args) {
 static void readCallGraph(MemoryBufferRef mb) {
   // Build a map from symbol name to section
   DenseMap<StringRef, Symbol *> map;
-  for (InputFile *file : objectFiles)
+  for (ELFFileBase *file : objectFiles)
     for (Symbol *sym : file->getSymbols())
       map[sym->getName()] = sym;
 
@@ -1662,7 +1662,7 @@ static void excludeLibs(opt::InputArgList &args) {
             sym->versionId = VER_NDX_LOCAL;
   };
 
-  for (InputFile *file : objectFiles)
+  for (ELFFileBase *file : objectFiles)
     visit(file);
 
   for (BitcodeFile *file : bitcodeFiles)
@@ -1975,7 +1975,7 @@ template <class ELFT> void LinkerDriver::compileBitcodeFiles() {
     if (!config->relocatable)
       for (Symbol *sym : obj->getGlobalSymbols())
         sym->parseSymbolVersion();
-    objectFiles.push_back(file);
+    objectFiles.push_back(obj);
   }
 }
 
