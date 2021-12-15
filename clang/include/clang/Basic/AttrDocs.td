@@ -2377,6 +2377,19 @@ Additionally, a function may not become multiversioned after its first use.
 }];
 }
 
+def TargetVersionDocs : Documentation {
+  let Category = DocCatFunction;
+  let Content = [{
+For AArch64 target clang supports function multiversioning by
+``__attribute__((target_version("OPTIONS")))`` attribute. When applied to a
+function it instructs compiler to emit multiple function versions based on
+``target_version`` attribute strings, which resolved at runtime depend on their
+priority and target features availability. One of the versions is always
+( implicitly or explicitly ) the ``default`` (fallback). Attribute strings can
+contain dependent features names joined by the "+" sign.
+}];
+}
+
 def TargetClonesDocs : Documentation {
   let Category = DocCatFunction;
   let Content = [{
@@ -2387,6 +2400,19 @@ generation options.  Additionally, these versions will be resolved at runtime
 based on the priority of their attribute options. All ``target_clone`` functions
 are considered multiversioned functions.
 
+For AArch64 target:
+The attribute contains comma-separated strings of target features joined by "+"
+sign. For example:
+
+  .. code-block:: c++
+
+    __attribute__((target_clones("sha2+memtag2", "fcma+sve2-pmull128")))
+    void foo() {}
+
+For every multiversioned function a ``default`` (fallback) implementation
+always generated if not specified directly.
+
+For x86/x86-64 targets:
 All multiversioned functions must contain a ``default`` (fallback)
 implementation, otherwise usages of the function are considered invalid.
 Additionally, a function may not become multiversioned after its first use.
