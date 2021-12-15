@@ -443,6 +443,10 @@ feature_test_macros = [ add_version_header(x) for x in [
     "headers": ["memory_resource"],
     "unimplemented": True,
   }, {
+    "name": "__cpp_lib_monadic_optional",
+    "values": { "c++2b": 202110 },
+    "headers": ["optional"],
+  }, {
     "name": "__cpp_lib_node_extract",
     "values": { "c++17": 201606 },
     "headers": ["map", "set", "unordered_map", "unordered_set"],
