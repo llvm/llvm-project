@@ -213,6 +213,7 @@ using AggregatedCounter =
                        Hashable<PerfSample>::Hash, Hashable<PerfSample>::Equal>;
 
 using SampleVector = SmallVector<std::tuple<uint64_t, uint64_t, uint64_t>, 16>;
+
 // The state for the unwinder, it doesn't hold the data but only keep the
 // pointer/index of the data, While unwinding, the CallStack is changed
 // dynamicially and will be recorded as the context of the sample
@@ -221,7 +222,7 @@ struct UnwindState {
   const ProfiledBinary *Binary;
   // Call stack trie node
   struct ProfiledFrame {
-    const uint64_t Address = 0;
+    const uint64_t Address = DummyRoot;
     ProfiledFrame *Parent;
     SampleVector RangeSamples;
     SampleVector BranchSamples;
@@ -241,7 +242,8 @@ struct UnwindState {
     void recordBranchCount(uint64_t Source, uint64_t Target, uint64_t Count) {
       BranchSamples.emplace_back(std::make_tuple(Source, Target, Count));
     }
-    bool isDummyRoot() { return Address == 0; }
+    bool isDummyRoot() { return Address == DummyRoot; }
+    bool isExternalFrame() { return Address == ExternalAddr; }
     bool isLeafFrame() { return Children.empty(); }
   };
 
@@ -262,6 +264,9 @@ struct UnwindState {
   bool validateInitialState() {
     uint64_t LBRLeaf = LBRStack[LBRIndex].Target;
     uint64_t LeafAddr = CurrentLeafFrame->Address;
+    assert((LBRLeaf != ExternalAddr || LBRLeaf == LeafAddr) &&
+           "External leading LBR should match the leaf frame.");
+
     // When we take a stack sample, ideally the sampling distance between the
     // leaf IP of stack and the last LBR target shouldn't be very large.
     // Use a heuristic size (0x100) to filter out broken records.
@@ -283,8 +288,9 @@ struct UnwindState {
   uint64_t getCurrentLBRSource() const { return LBRStack[LBRIndex].Source; }
   uint64_t getCurrentLBRTarget() const { return LBRStack[LBRIndex].Target; }
   const LBREntry &getCurrentLBR() const { return LBRStack[LBRIndex]; }
+  bool IsLastLBR() const { return LBRIndex == 0; }
+  bool getLBRStackSize() const { return LBRStack.size(); }
   void advanceLBR() { LBRIndex++; }
-
   ProfiledFrame *getParentFrame() { return CurrentLeafFrame->Parent; }
 
   void pushFrame(uint64_t Address) {
@@ -298,6 +304,8 @@ struct UnwindState {
   }
 
   void popFrame() { CurrentLeafFrame = CurrentLeafFrame->Parent; }
+
+  void clearCallStack() { CurrentLeafFrame = &DummyTrieRoot; }
 
   void initFrameTrie(const SmallVectorImpl<uint64_t> &CallStack) {
     ProfiledFrame *Cur = &DummyTrieRoot;
@@ -412,6 +420,8 @@ struct FrameStack {
   ProfiledBinary *Binary;
   FrameStack(ProfiledBinary *B) : Binary(B) {}
   bool pushFrame(UnwindState::ProfiledFrame *Cur) {
+    assert(!Cur->isExternalFrame() &&
+           "External frame's not expected for context stack.");
     Stack.push_back(Cur->Address);
     return true;
   }
@@ -428,6 +438,8 @@ struct ProbeStack {
   ProfiledBinary *Binary;
   ProbeStack(ProfiledBinary *B) : Binary(B) {}
   bool pushFrame(UnwindState::ProfiledFrame *Cur) {
+    assert(!Cur->isExternalFrame() &&
+           "External frame's not expected for context stack.");
     const MCDecodedPseudoProbe *CallProbe =
         Binary->getCallProbeForAddr(Cur->Address);
     // We may not find a probe for a merged or external callsite.
@@ -484,6 +496,12 @@ public:
   bool unwind(const PerfSample *Sample, uint64_t Repeat);
   std::set<uint64_t> &getUntrackedCallsites() { return UntrackedCallsites; }
 
+  uint64_t NumTotalBranches = 0;
+  uint64_t NumExtCallBranch = 0;
+  uint64_t NumMissingExternalFrame = 0;
+  uint64_t NumMismatchedProEpiBranch = 0;
+  uint64_t NumMismatchedExtCallBranch = 0;
+
 private:
   bool isCallState(UnwindState &State) const {
     // The tail call frame is always missing here in stack sample, we will
@@ -494,13 +512,25 @@ private:
   bool isReturnState(UnwindState &State) const {
     // Simply check addressIsReturn, as ret is always reliable, both for
     // regular call and tail call.
-    return Binary->addressIsReturn(State.getCurrentLBRSource());
+    if (!Binary->addressIsReturn(State.getCurrentLBRSource()))
+      return false;
+
+    // In a callback case, a return from internal code, say A, to external
+    // runtime can happen. The external runtime can then call back to
+    // another internal routine, say B. Making an artificial branch that
+    // looks like a return from A to B can confuse the unwinder to treat
+    // the instruction before B as the call instruction. Here we detect this
+    // case if the return target is not the next inst of call inst, then we just
+    // do not treat it as a return.
+    uint64_t CallAddr =
+        Binary->getCallAddrFromFrameAddr(State.getCurrentLBRTarget());
+    return (CallAddr != 0);
   }
 
   void unwindCall(UnwindState &State);
   void unwindLinear(UnwindState &State, uint64_t Repeat);
   void unwindReturn(UnwindState &State);
-  void unwindBranchWithinFrame(UnwindState &State);
+  void unwindBranch(UnwindState &State);
 
   template <typename T>
   void collectSamplesFromFrame(UnwindState::ProfiledFrame *Cur, T &Stack);
@@ -538,14 +568,18 @@ public:
   const ContextSampleCounterMap &getSampleCounters() const {
     return SampleCounters;
   }
-  bool profileIsCS() { return ProfileIsCS; }
+  bool profileIsCSFlat() { return ProfileIsCSFlat; }
 
 protected:
   ProfiledBinary *Binary = nullptr;
   StringRef PerfTraceFile;
 
   ContextSampleCounterMap SampleCounters;
-  bool ProfileIsCS = false;
+  bool ProfileIsCSFlat = false;
+
+  uint64_t NumTotalSample = 0;
+  uint64_t NumLeafExternalFrame = 0;
+  uint64_t NumLeadingOutgoingLBR = 0;
 };
 
 // Read perf script to parse the events and samples.

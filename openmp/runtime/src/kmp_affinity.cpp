@@ -1104,10 +1104,12 @@ bool kmp_topology_t::filter_hw_subset() {
   struct core_type_indexer {
     int operator()(const kmp_hw_thread_t &t) const {
       switch (t.attrs.get_core_type()) {
+#if KMP_ARCH_X86 || KMP_ARCH_X86_64
       case KMP_HW_CORE_TYPE_ATOM:
         return 1;
       case KMP_HW_CORE_TYPE_CORE:
         return 2;
+#endif
       case KMP_HW_CORE_TYPE_UNKNOWN:
         return 0;
       }

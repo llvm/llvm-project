@@ -78,6 +78,9 @@ BenchmarkInstance::BenchmarkInstance(Benchmark* benchmark, int family_idx,
   if (!benchmark_.thread_counts_.empty()) {
     name_.threads = StrFormat("threads:%d", threads_);
   }
+
+  setup_ = benchmark_.setup_;
+  teardown_ = benchmark_.teardown_;
 }
 
 State BenchmarkInstance::Run(
@@ -90,5 +93,20 @@ State BenchmarkInstance::Run(
   return st;
 }
 
+void BenchmarkInstance::Setup() const {
+  if (setup_) {
+    State st(/*iters*/ 1, args_, /*thread_id*/ 0, threads_, nullptr, nullptr,
+             nullptr);
+    setup_(st);
+  }
+}
+
+void BenchmarkInstance::Teardown() const {
+  if (teardown_) {
+    State st(/*iters*/ 1, args_, /*thread_id*/ 0, threads_, nullptr, nullptr,
+             nullptr);
+    teardown_(st);
+  }
+}
 }  // namespace internal
 }  // namespace benchmark

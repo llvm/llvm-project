@@ -359,6 +359,36 @@ template <> struct DenseMapInfo<VTableSlotSummary> {
 
 namespace {
 
+// Returns true if the function must be unreachable based on ValueInfo.
+//
+// In particular, identifies a function as unreachable in the following
+// conditions
+//   1) All summaries are live.
+//   2) All function summaries indicate it's unreachable
+bool mustBeUnreachableFunction(ValueInfo TheFnVI) {
+  if ((!TheFnVI) || TheFnVI.getSummaryList().empty()) {
+    // Returns false if ValueInfo is absent, or the summary list is empty
+    // (e.g., function declarations).
+    return false;
+  }
+
+  for (auto &Summary : TheFnVI.getSummaryList()) {
+    // Conservatively returns false if any non-live functions are seen.
+    // In general either all summaries should be live or all should be dead.
+    if (!Summary->isLive())
+      return false;
+    if (auto *FS = dyn_cast<FunctionSummary>(Summary.get())) {
+      if (!FS->fflags().MustBeUnreachable)
+        return false;
+    }
+    // Do nothing if a non-function has the same GUID (which is rare).
+    // This is correct since non-function summaries are not relevant.
+  }
+  // All function summaries are live and all of them agree that the function is
+  // unreachble.
+  return true;
+}
+
 // A virtual call site. VTable is the loaded virtual table pointer, and CS is
 // the indirect virtual call.
 struct VirtualCallSite {
@@ -562,10 +592,12 @@ struct DevirtModule {
   void buildTypeIdentifierMap(
       std::vector<VTableBits> &Bits,
       DenseMap<Metadata *, std::set<TypeMemberInfo>> &TypeIdMap);
+
   bool
   tryFindVirtualCallTargets(std::vector<VirtualCallTarget> &TargetsForSlot,
                             const std::set<TypeMemberInfo> &TypeMemberInfos,
-                            uint64_t ByteOffset);
+                            uint64_t ByteOffset,
+                            ModuleSummaryIndex *ExportSummary);
 
   void applySingleImplDevirt(VTableSlotInfo &SlotInfo, Constant *TheFn,
                              bool &IsExported);
@@ -639,6 +671,12 @@ struct DevirtModule {
   void removeRedundantTypeTests();
 
   bool run();
+
+  // Look up the corresponding ValueInfo entry of `TheFn` in `ExportSummary`.
+  //
+  // Caller guarantees that `ExportSummary` is not nullptr.
+  static ValueInfo lookUpFunctionValueInfo(Function *TheFn,
+                                           ModuleSummaryIndex *ExportSummary);
 
   // Lower the module using the action and summary passed as command line
   // arguments. For testing purposes only.
@@ -969,7 +1007,8 @@ void DevirtModule::buildTypeIdentifierMap(
 
 bool DevirtModule::tryFindVirtualCallTargets(
     std::vector<VirtualCallTarget> &TargetsForSlot,
-    const std::set<TypeMemberInfo> &TypeMemberInfos, uint64_t ByteOffset) {
+    const std::set<TypeMemberInfo> &TypeMemberInfos, uint64_t ByteOffset,
+    ModuleSummaryIndex *ExportSummary) {
   for (const TypeMemberInfo &TM : TypeMemberInfos) {
     if (!TM.Bits->GV->isConstant())
       return false;
@@ -996,6 +1035,13 @@ bool DevirtModule::tryFindVirtualCallTargets(
     // calls to pure virtuals are UB.
     if (Fn->getName() == "__cxa_pure_virtual")
       continue;
+
+    // We can disregard unreachable functions as possible call targets, as
+    // unreachable functions shouldn't be called.
+    if (ExportSummary && (mustBeUnreachableFunction(
+                             lookUpFunctionValueInfo(Fn, ExportSummary)))) {
+      continue;
+    }
 
     TargetsForSlot.push_back({Fn, &TM});
   }
@@ -2014,6 +2060,30 @@ void DevirtModule::removeRedundantTypeTests() {
   }
 }
 
+ValueInfo
+DevirtModule::lookUpFunctionValueInfo(Function *TheFn,
+                                      ModuleSummaryIndex *ExportSummary) {
+  assert((ExportSummary != nullptr) &&
+         "Caller guarantees ExportSummary is not nullptr");
+
+  const auto TheFnGUID = TheFn->getGUID();
+  const auto TheFnGUIDWithExportedName = GlobalValue::getGUID(TheFn->getName());
+  // Look up ValueInfo with the GUID in the current linkage.
+  ValueInfo TheFnVI = ExportSummary->getValueInfo(TheFnGUID);
+  // If no entry is found and GUID is different from GUID computed using
+  // exported name, look up ValueInfo with the exported name unconditionally.
+  // This is a fallback.
+  //
+  // The reason to have a fallback:
+  // 1. LTO could enable global value internalization via
+  // `enable-lto-internalization`.
+  // 2. The GUID in ExportedSummary is computed using exported name.
+  if ((!TheFnVI) && (TheFnGUID != TheFnGUIDWithExportedName)) {
+    TheFnVI = ExportSummary->getValueInfo(TheFnGUIDWithExportedName);
+  }
+  return TheFnVI;
+}
+
 bool DevirtModule::run() {
   // If only some of the modules were split, we cannot correctly perform
   // this transformation. We already checked for the presense of type tests
@@ -2137,7 +2207,7 @@ bool DevirtModule::run() {
                      cast<MDString>(S.first.TypeID)->getString())
                  .WPDRes[S.first.ByteOffset];
     if (tryFindVirtualCallTargets(TargetsForSlot, TypeMemberInfos,
-                                  S.first.ByteOffset)) {
+                                  S.first.ByteOffset, ExportSummary)) {
 
       if (!trySingleImplDevirt(ExportSummary, TargetsForSlot, S.second, Res)) {
         DidVirtualConstProp |=

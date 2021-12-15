@@ -273,7 +273,7 @@ LogicalResult ConstantCompositeOpPattern::matchAndRewrite(
     arith::ConstantOp constOp, OpAdaptor adaptor,
     ConversionPatternRewriter &rewriter) const {
   auto srcType = constOp.getType().dyn_cast<ShapedType>();
-  if (!srcType)
+  if (!srcType || srcType.getNumElements() == 1)
     return failure();
 
   // arith.constant should only have vector or tenor types.
@@ -358,8 +358,17 @@ LogicalResult ConstantScalarOpPattern::matchAndRewrite(
     arith::ConstantOp constOp, OpAdaptor adaptor,
     ConversionPatternRewriter &rewriter) const {
   Type srcType = constOp.getType();
+  if (auto shapedType = srcType.dyn_cast<ShapedType>()) {
+    if (shapedType.getNumElements() != 1)
+      return failure();
+    srcType = shapedType.getElementType();
+  }
   if (!srcType.isIntOrIndexOrFloat())
     return failure();
+
+  Attribute cstAttr = constOp.getValue();
+  if (cstAttr.getType().isa<ShapedType>())
+    cstAttr = cstAttr.cast<DenseElementsAttr>().getSplatValue<Attribute>();
 
   Type dstType = getTypeConverter()->convertType(srcType);
   if (!dstType)
@@ -367,7 +376,7 @@ LogicalResult ConstantScalarOpPattern::matchAndRewrite(
 
   // Floating-point types.
   if (srcType.isa<FloatType>()) {
-    auto srcAttr = constOp.getValue().cast<FloatAttr>();
+    auto srcAttr = cstAttr.cast<FloatAttr>();
     auto dstAttr = srcAttr;
 
     // Floating-point types not supported in the target environment are all
@@ -386,7 +395,7 @@ LogicalResult ConstantScalarOpPattern::matchAndRewrite(
   if (srcType.isInteger(1)) {
     // arith.constant can use 0/1 instead of true/false for i1 values. We need
     // to handle that here.
-    auto dstAttr = convertBoolAttr(constOp.getValue(), rewriter);
+    auto dstAttr = convertBoolAttr(cstAttr, rewriter);
     if (!dstAttr)
       return failure();
     rewriter.replaceOpWithNewOp<spirv::ConstantOp>(constOp, dstType, dstAttr);
@@ -395,7 +404,7 @@ LogicalResult ConstantScalarOpPattern::matchAndRewrite(
 
   // IndexType or IntegerType. Index values are converted to 32-bit integer
   // values when converting to SPIR-V.
-  auto srcAttr = constOp.getValue().cast<IntegerAttr>();
+  auto srcAttr = cstAttr.cast<IntegerAttr>();
   auto dstAttr =
       convertIntegerAttr(srcAttr, dstType.cast<IntegerType>(), rewriter);
   if (!dstAttr)

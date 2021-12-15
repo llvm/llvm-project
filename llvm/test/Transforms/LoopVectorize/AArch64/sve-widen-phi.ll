@@ -37,7 +37,7 @@ define void @widen_ptr_phi_unrolled(i32* noalias nocapture %a, i32* noalias noca
 ; CHECK-NEXT:    [[TMP8:%.*]] = call <vscale x 4 x i64> @llvm.experimental.stepvector.nxv4i64()
 ; CHECK-NEXT:    [[VECTOR_GEP:%.*]] = shl <vscale x 4 x i64> [[TMP8]], shufflevector (<vscale x 4 x i64> insertelement (<vscale x 4 x i64> poison, i64 1, i32 0), <vscale x 4 x i64> poison, <vscale x 4 x i32> zeroinitializer)
 ; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr i32, i32* [[POINTER_PHI]], <vscale x 4 x i64> [[VECTOR_GEP]]
-; CHECK-NEXT:    [[DOTSPLATINSERT2:%.*]] = insertelement <vscale x 4 x i64> poison, i64 [[TMP6]], i32 0
+; CHECK-NEXT:    [[DOTSPLATINSERT2:%.*]] = insertelement <vscale x 4 x i64> poison, i64 [[TMP6]], i64 0
 ; CHECK-NEXT:    [[DOTSPLAT3:%.*]] = shufflevector <vscale x 4 x i64> [[DOTSPLATINSERT2]], <vscale x 4 x i64> poison, <vscale x 4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP10:%.*]] = call <vscale x 4 x i64> @llvm.experimental.stepvector.nxv4i64()
 ; CHECK-NEXT:    [[TMP11:%.*]] = add <vscale x 4 x i64> [[DOTSPLAT3]], [[TMP10]]
@@ -258,7 +258,7 @@ define i32 @pointer_iv_mixed(i32* noalias %a, i32** noalias %b, i64 %n) #0 {
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr i32, i32* [[POINTER_PHI]], <vscale x 2 x i64> [[TMP6]]
 ; CHECK-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i32*, i32** [[B]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[BC:%.*]] = bitcast <vscale x 2 x i32*> [[TMP7]] to <vscale x 2 x <vscale x 2 x i32>*>
-; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <vscale x 2 x <vscale x 2 x i32>*> [[BC]], i32 0
+; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <vscale x 2 x <vscale x 2 x i32>*> [[BC]], i64 0
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 2 x i32>, <vscale x 2 x i32>* [[TMP8]], align 8
 ; CHECK-NEXT:    [[TMP9]] = add <vscale x 2 x i32> [[WIDE_LOAD]], [[VEC_PHI]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = bitcast i32** [[NEXT_GEP]] to <vscale x 2 x i32*>*
@@ -338,7 +338,7 @@ define void @phi_used_in_vector_compare_and_scalar_indvar_update_and_store(i16* 
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i16, i16* [[POINTER_PHI]], <vscale x 2 x i64> [[TMP4]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp ne <vscale x 2 x i16*> [[TMP5]], zeroinitializer
 ; CHECK-NEXT:    [[BC:%.*]] = bitcast <vscale x 2 x i16*> [[TMP5]] to <vscale x 2 x <vscale x 2 x i16>*>
-; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <vscale x 2 x <vscale x 2 x i16>*> [[BC]], i32 0
+; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <vscale x 2 x <vscale x 2 x i16>*> [[BC]], i64 0
 ; CHECK-NEXT:    call void @llvm.masked.store.nxv2i16.p0nxv2i16(<vscale x 2 x i16> zeroinitializer, <vscale x 2 x i16>* [[TMP7]], i32 2, <vscale x 2 x i1> [[TMP6]])
 ; CHECK-NEXT:    [[TMP8:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP9:%.*]] = shl nuw nsw i64 [[TMP8]], 1

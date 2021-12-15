@@ -1,0 +1,30 @@
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_EXEC
+  Machine:         EM_AARCH64
+  Entry:           0xFFFF000000000800
+Sections:
+  - Name:            .bss
+    Type:            SHT_NOBITS
+    Flags:           [ SHF_WRITE, SHF_ALLOC ]
+    Address:         0xFFFF000000C35000
+    AddressAlign:    0x1000
+    Size:            0x37F000
+Symbols:
+  - Name:            kernbase
+    Index:           SHN_ABS
+    Binding:         STB_GLOBAL
+    Value:           0xFFFF000000000000
+  - Name:            dumppcb
+    Type:            STT_OBJECT
+    Section:         .bss
+    Value:           0xFFFF000000DF3790
+    Size:            0x560
+  - Name:            hz
+    Type:            STT_OBJECT
+    Section:         .bss
+    Binding:         STB_GLOBAL
+    Value:           0xFFFF000000E2651C
+    Size:            0x4

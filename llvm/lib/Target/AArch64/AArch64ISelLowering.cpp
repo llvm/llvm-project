@@ -18584,7 +18584,25 @@ AArch64TargetLowering::getVaListSizeInBits(const DataLayout &DL) const {
 }
 
 void AArch64TargetLowering::finalizeLowering(MachineFunction &MF) const {
-  MF.getFrameInfo().computeMaxCallFrameSize(MF);
+  MachineFrameInfo &MFI = MF.getFrameInfo();
+  // If we have any vulnerable SVE stack objects then the stack protector
+  // needs to be placed at the top of the SVE stack area, as the SVE locals
+  // are placed above the other locals, so we allocate it as if it were a
+  // scalable vector.
+  // FIXME: It may be worthwhile having a specific interface for this rather
+  // than doing it here in finalizeLowering.
+  if (MFI.hasStackProtectorIndex()) {
+    for (unsigned int i = 0, e = MFI.getObjectIndexEnd(); i != e; ++i) {
+      if (MFI.getStackID(i) == TargetStackID::ScalableVector &&
+          MFI.getObjectSSPLayout(i) != MachineFrameInfo::SSPLK_None) {
+        MFI.setStackID(MFI.getStackProtectorIndex(),
+                       TargetStackID::ScalableVector);
+        MFI.setObjectAlignment(MFI.getStackProtectorIndex(), Align(16));
+        break;
+      }
+    }
+  }
+  MFI.computeMaxCallFrameSize(MF);
   TargetLoweringBase::finalizeLowering(MF);
 }
 

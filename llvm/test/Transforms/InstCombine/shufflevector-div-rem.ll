@@ -8,11 +8,11 @@
 ; extracting the second element in the vector).
 define i16 @test_srem_orig(i16 %a, i1 %cmp) {
 ; CHECK-LABEL: @test_srem_orig(
-; CHECK-NEXT:    [[SPLATINSERT:%.*]] = insertelement <2 x i16> undef, i16 [[A:%.*]], i32 0
+; CHECK-NEXT:    [[SPLATINSERT:%.*]] = insertelement <2 x i16> undef, i16 [[A:%.*]], i64 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = srem <2 x i16> [[SPLATINSERT]], <i16 2, i16 1>
 ; CHECK-NEXT:    [[SPLAT_OP:%.*]] = shufflevector <2 x i16> [[TMP1]], <2 x i16> poison, <2 x i32> <i32 undef, i32 0>
 ; CHECK-NEXT:    [[T2:%.*]] = select i1 [[CMP:%.*]], <2 x i16> <i16 poison, i16 1>, <2 x i16> [[SPLAT_OP]]
-; CHECK-NEXT:    [[T3:%.*]] = extractelement <2 x i16> [[T2]], i32 1
+; CHECK-NEXT:    [[T3:%.*]] = extractelement <2 x i16> [[T2]], i64 1
 ; CHECK-NEXT:    ret i16 [[T3]]
 ;
   %splatinsert = insertelement <2 x i16> undef, i16 %a, i32 0
@@ -29,7 +29,7 @@ define i16 @test_srem_orig(i16 %a, i1 %cmp) {
 ; "evaluateInDifferentElementOrder".
 define <2 x i16> @test_srem(i16 %a, i1 %cmp) {
 ; CHECK-LABEL: @test_srem(
-; CHECK-NEXT:    [[SPLATINSERT:%.*]] = insertelement <2 x i16> undef, i16 [[A:%.*]], i32 0
+; CHECK-NEXT:    [[SPLATINSERT:%.*]] = insertelement <2 x i16> undef, i16 [[A:%.*]], i64 0
 ; CHECK-NEXT:    [[T1:%.*]] = srem <2 x i16> [[SPLATINSERT]], <i16 2, i16 1>
 ; CHECK-NEXT:    [[SPLAT_OP:%.*]] = shufflevector <2 x i16> [[T1]], <2 x i16> undef, <2 x i32> <i32 undef, i32 0>
 ; CHECK-NEXT:    [[T2:%.*]] = select i1 [[CMP:%.*]], <2 x i16> <i16 77, i16 99>, <2 x i16> [[SPLAT_OP]]
@@ -44,7 +44,7 @@ define <2 x i16> @test_srem(i16 %a, i1 %cmp) {
 
 define <2 x i16> @test_urem(i16 %a, i1 %cmp) {
 ; CHECK-LABEL: @test_urem(
-; CHECK-NEXT:    [[SPLATINSERT:%.*]] = insertelement <2 x i16> undef, i16 [[A:%.*]], i32 0
+; CHECK-NEXT:    [[SPLATINSERT:%.*]] = insertelement <2 x i16> undef, i16 [[A:%.*]], i64 0
 ; CHECK-NEXT:    [[T1:%.*]] = urem <2 x i16> [[SPLATINSERT]], <i16 3, i16 1>
 ; CHECK-NEXT:    [[SPLAT_OP:%.*]] = shufflevector <2 x i16> [[T1]], <2 x i16> undef, <2 x i32> <i32 undef, i32 0>
 ; CHECK-NEXT:    [[T2:%.*]] = select i1 [[CMP:%.*]], <2 x i16> <i16 77, i16 99>, <2 x i16> [[SPLAT_OP]]
@@ -59,7 +59,7 @@ define <2 x i16> @test_urem(i16 %a, i1 %cmp) {
 
 define <2 x i16> @test_sdiv(i16 %a, i1 %cmp) {
 ; CHECK-LABEL: @test_sdiv(
-; CHECK-NEXT:    [[SPLATINSERT:%.*]] = insertelement <2 x i16> undef, i16 [[A:%.*]], i32 0
+; CHECK-NEXT:    [[SPLATINSERT:%.*]] = insertelement <2 x i16> undef, i16 [[A:%.*]], i64 0
 ; CHECK-NEXT:    [[T1:%.*]] = sdiv <2 x i16> [[SPLATINSERT]], <i16 2, i16 1>
 ; CHECK-NEXT:    [[SPLAT_OP:%.*]] = shufflevector <2 x i16> [[T1]], <2 x i16> undef, <2 x i32> <i32 undef, i32 0>
 ; CHECK-NEXT:    [[T2:%.*]] = select i1 [[CMP:%.*]], <2 x i16> <i16 77, i16 99>, <2 x i16> [[SPLAT_OP]]
@@ -74,7 +74,7 @@ define <2 x i16> @test_sdiv(i16 %a, i1 %cmp) {
 
 define <2 x i16> @test_udiv(i16 %a, i1 %cmp) {
 ; CHECK-LABEL: @test_udiv(
-; CHECK-NEXT:    [[SPLATINSERT:%.*]] = insertelement <2 x i16> undef, i16 [[A:%.*]], i32 0
+; CHECK-NEXT:    [[SPLATINSERT:%.*]] = insertelement <2 x i16> undef, i16 [[A:%.*]], i64 0
 ; CHECK-NEXT:    [[T1:%.*]] = udiv <2 x i16> [[SPLATINSERT]], <i16 3, i16 1>
 ; CHECK-NEXT:    [[SPLAT_OP:%.*]] = shufflevector <2 x i16> [[T1]], <2 x i16> undef, <2 x i32> <i32 undef, i32 0>
 ; CHECK-NEXT:    [[T2:%.*]] = select i1 [[CMP:%.*]], <2 x i16> <i16 77, i16 99>, <2 x i16> [[SPLAT_OP]]
@@ -91,7 +91,7 @@ define <2 x i16> @test_udiv(i16 %a, i1 %cmp) {
 ; shufflevector is eliminated here.
 define <2 x float> @test_fdiv(float %a, float %b, i1 %cmp) {
 ; CHECK-LABEL: @test_fdiv(
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x float> undef, float [[A:%.*]], i32 1
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x float> undef, float [[A:%.*]], i64 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = fdiv <2 x float> [[TMP1]], <float undef, float 3.000000e+00>
 ; CHECK-NEXT:    [[T2:%.*]] = select i1 [[CMP:%.*]], <2 x float> <float 7.700000e+01, float 9.900000e+01>, <2 x float> [[TMP2]]
 ; CHECK-NEXT:    ret <2 x float> [[T2]]
@@ -108,7 +108,7 @@ define <2 x float> @test_fdiv(float %a, float %b, i1 %cmp) {
 ; shufflevector is eliminated here.
 define <2 x float> @test_frem(float %a, float %b, i1 %cmp) {
 ; CHECK-LABEL: @test_frem(
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x float> undef, float [[A:%.*]], i32 1
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x float> undef, float [[A:%.*]], i64 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = frem <2 x float> [[TMP1]], <float undef, float 3.000000e+00>
 ; CHECK-NEXT:    [[T2:%.*]] = select i1 [[CMP:%.*]], <2 x float> <float 7.700000e+01, float 9.900000e+01>, <2 x float> [[TMP2]]
 ; CHECK-NEXT:    ret <2 x float> [[T2]]

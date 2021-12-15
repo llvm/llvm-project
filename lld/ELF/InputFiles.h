@@ -54,8 +54,15 @@ void parseFile(InputFile *file);
 
 // The root class of input files.
 class InputFile {
+private:
+  // Cache for getNameForScript().
+  mutable SmallString<0> nameForScriptCache;
+
+protected:
+  SmallVector<InputSectionBase *, 0> sections;
+
 public:
-  enum Kind {
+  enum Kind : uint8_t {
     ObjKind,
     SharedKind,
     LazyObjKind,
@@ -96,27 +103,40 @@ public:
 
   // If not empty, this stores the name of the archive containing this file.
   // We use this string for creating error messages.
-  std::string archiveName;
-
-  // If this is an architecture-specific file, the following members
-  // have ELF type (i.e. ELF{32,64}{LE,BE}) and target machine type.
-  ELFKind ekind = ELFNoneKind;
-  uint16_t emachine = llvm::ELF::EM_NONE;
-  uint8_t osabi = 0;
-  uint8_t abiVersion = 0;
+  SmallString<0> archiveName;
 
   // Cache for toString(). Only toString() should use this member.
-  mutable std::string toStringCache;
+  mutable SmallString<0> toStringCache;
 
-  std::string getSrcMsg(const Symbol &sym, InputSectionBase &sec,
-                        uint64_t offset);
+  SmallVector<Symbol *, 0> symbols;
 
-  // True if this is an argument for --just-symbols. Usually false.
-  bool justSymbols = false;
+  // Index of MIPS GOT built for this file.
+  llvm::Optional<uint32_t> mipsGotIndex;
 
   // outSecOff of .got2 in the current file. This is used by PPC32 -fPIC/-fPIE
   // to compute offsets in PLT call stubs.
   uint32_t ppc32Got2OutSecOff = 0;
+
+  // groupId is used for --warn-backrefs which is an optional error
+  // checking feature. All files within the same --{start,end}-group or
+  // --{start,end}-lib get the same group ID. Otherwise, each file gets a new
+  // group ID. For more info, see checkDependency() in SymbolTable.cpp.
+  uint32_t groupId;
+  static bool isInGroup;
+  static uint32_t nextGroupId;
+
+  // If this is an architecture-specific file, the following members
+  // have ELF type (i.e. ELF{32,64}{LE,BE}) and target machine type.
+  uint16_t emachine = llvm::ELF::EM_NONE;
+  const Kind fileKind;
+  ELFKind ekind = ELFNoneKind;
+  uint8_t osabi = 0;
+  uint8_t abiVersion = 0;
+  // True if this is an argument for --just-symbols. Usually false.
+  bool justSymbols = false;
+
+  std::string getSrcMsg(const Symbol &sym, InputSectionBase &sec,
+                        uint64_t offset);
 
   // On PPC64 we need to keep track of which files contain small code model
   // relocations that access the .toc section. To minimize the chance of a
@@ -133,28 +153,8 @@ public:
   // R_PPC64_TLSLD. Disable TLS relaxation to avoid bad code generation.
   bool ppc64DisableTLSRelax = false;
 
-  // groupId is used for --warn-backrefs which is an optional error
-  // checking feature. All files within the same --{start,end}-group or
-  // --{start,end}-lib get the same group ID. Otherwise, each file gets a new
-  // group ID. For more info, see checkDependency() in SymbolTable.cpp.
-  uint32_t groupId;
-  static bool isInGroup;
-  static uint32_t nextGroupId;
-
-  // Index of MIPS GOT built for this file.
-  llvm::Optional<size_t> mipsGotIndex;
-
-  std::vector<Symbol *> symbols;
-
 protected:
   InputFile(Kind k, MemoryBufferRef m);
-  std::vector<InputSectionBase *> sections;
-
-private:
-  const Kind fileKind;
-
-  // Cache for getNameForScript().
-  mutable std::string nameForScriptCache;
 };
 
 class ELFFileBase : public InputFile {
@@ -190,7 +190,7 @@ protected:
   template <typename ELFT> void init();
 
   const void *elfSyms = nullptr;
-  size_t numELFSyms = 0;
+  uint32_t numELFSyms = 0;
   uint32_t firstGlobal = 0;
   StringRef stringTable;
 };
@@ -207,7 +207,7 @@ public:
   }
 
   ObjFile(MemoryBufferRef m, StringRef archiveName) : ELFFileBase(ObjKind, m) {
-    this->archiveName = std::string(archiveName);
+    this->archiveName = archiveName;
   }
 
   void parse(bool ignoreComdats = false);
@@ -231,17 +231,23 @@ public:
   llvm::Optional<llvm::DILineInfo> getDILineInfo(InputSectionBase *, uint64_t);
   llvm::Optional<std::pair<std::string, unsigned>> getVariableLoc(StringRef name);
 
+  // Name of source file obtained from STT_FILE symbol value,
+  // or empty string if there is no such symbol in object file
+  // symbol table.
+  StringRef sourceFile;
+
+  // Pointer to this input file's .llvm_addrsig section, if it has one.
+  const Elf_Shdr *addrsigSec = nullptr;
+
+  // SHT_LLVM_CALL_GRAPH_PROFILE section index.
+  uint32_t cgProfileSectionIndex = 0;
+
   // MIPS GP0 value defined by this file. This value represents the gp value
   // used to create the relocatable object and required to support
   // R_MIPS_GPREL16 / R_MIPS_GPREL32 relocations.
   uint32_t mipsGp0 = 0;
 
   uint32_t andFeatures = 0;
-
-  // Name of source file obtained from STT_FILE symbol value,
-  // or empty string if there is no such symbol in object file
-  // symbol table.
-  StringRef sourceFile;
 
   // True if the file defines functions compiled with
   // -fsplit-stack. Usually false.
@@ -250,12 +256,6 @@ public:
   // True if the file defines functions compiled with -fsplit-stack,
   // but had one or more functions with the no_split_stack attribute.
   bool someNoSplitStack = false;
-
-  // Pointer to this input file's .llvm_addrsig section, if it has one.
-  const Elf_Shdr *addrsigSec = nullptr;
-
-  // SHT_LLVM_CALL_GRAPH_PROFILE section index.
-  uint32_t cgProfileSectionIndex = 0;
 
   // Get cached DWARF information.
   DWARFCache *getDwarf();
@@ -306,7 +306,7 @@ public:
   LazyObjFile(MemoryBufferRef m, StringRef archiveName,
               uint64_t offsetInArchive)
       : InputFile(LazyObjKind, m), offsetInArchive(offsetInArchive) {
-    this->archiveName = std::string(archiveName);
+    this->archiveName = archiveName;
   }
 
   static bool classof(const InputFile *f) { return f->kind() == LazyObjKind; }
@@ -368,16 +368,16 @@ public:
         isNeeded(!config->asNeeded) {}
 
   // This is actually a vector of Elf_Verdef pointers.
-  std::vector<const void *> verdefs;
+  SmallVector<const void *, 0> verdefs;
 
   // If the output file needs Elf_Verneed data structures for this file, this is
   // a vector of Elf_Vernaux version identifiers that map onto the entries in
   // Verdefs, otherwise it is empty.
-  std::vector<unsigned> vernauxs;
+  SmallVector<uint32_t, 0> vernauxs;
 
   static unsigned vernauxNum;
 
-  std::vector<StringRef> dtNeeded;
+  SmallVector<StringRef, 0> dtNeeded;
   StringRef soName;
 
   static bool classof(const InputFile *f) { return f->kind() == SharedKind; }
@@ -389,7 +389,7 @@ public:
 
   // Non-weak undefined symbols which are not yet resolved when the SO is
   // parsed. Only filled for `--no-allow-shlib-undefined`.
-  std::vector<Symbol *> requiredSymbols;
+  SmallVector<Symbol *, 0> requiredSymbols;
 
 private:
   template <typename ELFT>
@@ -417,7 +417,7 @@ extern std::vector<ArchiveFile *> archiveFiles;
 extern std::vector<BinaryFile *> binaryFiles;
 extern std::vector<BitcodeFile *> bitcodeFiles;
 extern std::vector<LazyObjFile *> lazyObjFiles;
-extern std::vector<InputFile *> objectFiles;
+extern std::vector<ELFFileBase *> objectFiles;
 extern std::vector<SharedFile *> sharedFiles;
 
 } // namespace elf

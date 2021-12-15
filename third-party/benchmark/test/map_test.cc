@@ -1,7 +1,7 @@
-#include "benchmark/benchmark.h"
-
 #include <cstdlib>
 #include <map>
+
+#include "benchmark/benchmark.h"
 
 namespace {
 

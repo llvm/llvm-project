@@ -170,11 +170,11 @@ void checkDefaultPrologue(uint16_t Version, DwarfFormat Format,
   EXPECT_EQ(Prologue.StandardOpcodeLengths, ExpectedLengths);
   ASSERT_EQ(Prologue.IncludeDirectories.size(), 1u);
   ASSERT_EQ(Prologue.IncludeDirectories[0].getForm(), DW_FORM_string);
-  EXPECT_STREQ(*Prologue.IncludeDirectories[0].getAsCString(), "a dir");
+  EXPECT_STREQ(*toString(Prologue.IncludeDirectories[0]), "a dir");
   ASSERT_EQ(Prologue.FileNames.size(), 1u);
   ASSERT_EQ(Prologue.FileNames[0].Name.getForm(), DW_FORM_string);
   ASSERT_EQ(Prologue.FileNames[0].DirIdx, 0u);
-  EXPECT_STREQ(*Prologue.FileNames[0].Name.getAsCString(), "a file");
+  EXPECT_STREQ(*toString(Prologue.FileNames[0].Name), "a file");
 }
 
 #ifdef _AIX

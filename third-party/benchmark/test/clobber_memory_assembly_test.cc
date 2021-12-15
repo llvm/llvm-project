@@ -9,7 +9,6 @@ extern "C" {
 extern int ExternInt;
 extern int ExternInt2;
 extern int ExternInt3;
-
 }
 
 // CHECK-LABEL: test_basic:

@@ -613,50 +613,53 @@ void DWARFFormValue::dump(raw_ostream &OS, DIDumpOptions DumpOpts) const {
 }
 
 void DWARFFormValue::dumpString(raw_ostream &OS) const {
-  Optional<const char *> DbgStr = getAsCString();
-  if (DbgStr.hasValue()) {
+  if (auto DbgStr = dwarf::toString(*this)) {
     auto COS = WithColor(OS, HighlightColor::String);
     COS.get() << '"';
-    COS.get().write_escaped(DbgStr.getValue());
+    COS.get().write_escaped(*DbgStr);
     COS.get() << '"';
   }
 }
 
-Optional<const char *> DWARFFormValue::getAsCString() const {
+Expected<const char *> DWARFFormValue::getAsCString() const {
   if (!isFormClass(FC_String))
-    return None;
+    return make_error<StringError>("Invalid form for string attribute",
+                                   inconvertibleErrorCode());
   if (Form == DW_FORM_string)
     return Value.cstr;
   // FIXME: Add support for DW_FORM_GNU_strp_alt
   if (Form == DW_FORM_GNU_strp_alt || C == nullptr)
-    return None;
+    return make_error<StringError>("Unsupported form for string attribute",
+                                   inconvertibleErrorCode());
   uint64_t Offset = Value.uval;
-  if (Form == DW_FORM_line_strp) {
-    // .debug_line_str is tracked in the Context.
-    if (const char *Str = C->getLineStringExtractor().getCStr(&Offset))
-      return Str;
-    return None;
-  }
+  Optional<uint32_t> Index;
   if (Form == DW_FORM_GNU_str_index || Form == DW_FORM_strx ||
       Form == DW_FORM_strx1 || Form == DW_FORM_strx2 || Form == DW_FORM_strx3 ||
       Form == DW_FORM_strx4) {
     if (!U)
-      return None;
-    Optional<uint64_t> StrOffset = U->getStringOffsetSectionItem(Offset);
+      return make_error<StringError>("API limitation - string extraction not "
+                                     "available without a DWARFUnit",
+                                     inconvertibleErrorCode());
+    Expected<uint64_t> StrOffset = U->getStringOffsetSectionItem(Offset);
+    Index = Offset;
     if (!StrOffset)
-      return None;
+      return StrOffset.takeError();
     Offset = *StrOffset;
   }
   // Prefer the Unit's string extractor, because for .dwo it will point to
   // .debug_str.dwo, while the Context's extractor always uses .debug_str.
-  if (U) {
-    if (const char *Str = U->getStringExtractor().getCStr(&Offset))
-      return Str;
-    return None;
-  }
-  if (const char *Str = C->getStringExtractor().getCStr(&Offset))
+  DataExtractor StrData = Form == DW_FORM_line_strp
+                              ? C->getLineStringExtractor()
+                          : U ? U->getStringExtractor()
+                              : C->getStringExtractor();
+  if (const char *Str = StrData.getCStr(&Offset))
     return Str;
-  return None;
+  std::string Msg = FormEncodingString(Form).str();
+  if (Index)
+    Msg += (" uses index " + Twine(*Index) + ", but the referenced string").str();
+  Msg += (" offset " + Twine(Offset) + " is beyond .debug_str bounds").str();
+  return make_error<StringError>(Msg,
+      inconvertibleErrorCode());
 }
 
 Optional<uint64_t> DWARFFormValue::getAsAddress() const {

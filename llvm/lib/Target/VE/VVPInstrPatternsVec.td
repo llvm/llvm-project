@@ -87,6 +87,18 @@ multiclass Binary_rv_vv_ShortLong<
 defm : Binary_rv_vv_ShortLong<c_vvp_add,
                               i64, v256i64, "VADDSL",
                               i32, v256i32, "VADDSWSX">;
+defm : Binary_rv_vv_ShortLong<vvp_sub,
+                              i64, v256i64, "VSUBSL",
+                              i32, v256i32, "VSUBSWSX">;
+defm : Binary_rv_vv_ShortLong<c_vvp_mul,
+                              i64, v256i64, "VMULSL",
+                              i32, v256i32, "VMULSWSX">;
 defm : Binary_rv_vv_ShortLong<c_vvp_and,
                               i64, v256i64, "VAND",
                               i32, v256i32, "PVANDLO">;
+defm : Binary_rv_vv_ShortLong<c_vvp_or,
+                              i64, v256i64, "VOR",
+                              i32, v256i32, "PVORLO">;
+defm : Binary_rv_vv_ShortLong<c_vvp_xor,
+                              i64, v256i64, "VXOR",
+                              i32, v256i32, "PVXORLO">;

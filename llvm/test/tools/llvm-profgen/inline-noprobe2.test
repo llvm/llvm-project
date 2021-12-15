@@ -8,12 +8,10 @@
 ; RUN: llvm-profgen --format=extbinary --perfscript=%S/Inputs/inline-noprobe2.perfscript --binary=%S/Inputs/inline-noprobe2.perfbin --output=%t --populate-profile-symbol-list=1
 ; RUN: llvm-profdata show -show-prof-sym-list -sample %t | FileCheck %s --check-prefix=CHECK-SYM-LIST
 
-; CHECK-ARTIFICIAL-BRANCH: 3
-; CHECK-ARTIFICIAL-BRANCH: 400540-400540:1
+; CHECK-ARTIFICIAL-BRANCH: 2
 ; CHECK-ARTIFICIAL-BRANCH: 400870-400870:2
 ; CHECK-ARTIFICIAL-BRANCH: 400875-4008bf:1
-; CHECK-ARTIFICIAL-BRANCH: 2
-; CHECK-ARTIFICIAL-BRANCH: 400870->400540:2
+; CHECK-ARTIFICIAL-BRANCH: 1
 ; CHECK-ARTIFICIAL-BRANCH: 4008bf->400870:2
 
 ; CHECK-SYM-LIST: Dump profile symbol list
@@ -78,22 +76,30 @@
 ;CHECK:   1: 5
 ;CHECK:   2: 5
 ;CHECK:   3: 5
-;CHECK: main:820:0
+;CHECK: main:906:0
 ;CHECK:  0: 0
 ;CHECK:  3: 0
 ;CHECK:  4.1: 0
 ;CHECK:  4.3: 0
-;CHECK:  5.1: 10
-;CHECK:  5.3: 10
-;CHECK:  6: 10
-;CHECK:  6.1: 12
-;CHECK:  6.3: 10
+;CHECK:  5.1: 11
+;CHECK:  5.3: 11
+;CHECK:  6: 11
+;CHECK:  6.1: 14
+;CHECK:  6.3: 11
 ;CHECK:  7: 0
 ;CHECK:  8: 0 quick_sort:1
 ;CHECK:  9: 0
 ;CHECK:  11: 0
 ;CHECK:  14: 0
 ;CHECK:  65499: 0
+;CHECK: quick_sort:903:25
+;CHECK:  1: 24
+;CHECK:  2: 12 partition_pivot_last:7 partition_pivot_first:5
+;CHECK:  3: 11 quick_sort:12
+;CHECK:  4: 12 quick_sort:12
+;CHECK:  6: 24
+;CHECK:  65507: 12
+
 
 
 ; original code:

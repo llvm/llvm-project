@@ -119,43 +119,61 @@ uninitialized_fill_n(_ForwardIterator __f, _Size __n, const _Tp& __x)
 
 #if _LIBCPP_STD_VER > 14
 
-template <class _ForwardIterator>
-inline _LIBCPP_INLINE_VISIBILITY
-void uninitialized_default_construct(_ForwardIterator __first, _ForwardIterator __last) {
-    using _Vt = typename iterator_traits<_ForwardIterator>::value_type;
+// uninitialized_default_construct
+
+template <class _ValueType, class _ForwardIterator, class _Sentinel>
+inline _LIBCPP_HIDE_FROM_ABI
+_ForwardIterator __uninitialized_default_construct(_ForwardIterator __first, _Sentinel __last) {
     auto __idx = __first;
 #ifndef _LIBCPP_NO_EXCEPTIONS
     try {
 #endif
     for (; __idx != __last; ++__idx)
-        ::new ((void*)_VSTD::addressof(*__idx)) _Vt;
+        ::new ((void*)_VSTD::addressof(*__idx)) _ValueType;
 #ifndef _LIBCPP_NO_EXCEPTIONS
     } catch (...) {
         _VSTD::destroy(__first, __idx);
         throw;
     }
 #endif
+
+    return __idx;
 }
 
-template <class _ForwardIterator, class _Size>
+template <class _ForwardIterator>
 inline _LIBCPP_INLINE_VISIBILITY
-_ForwardIterator uninitialized_default_construct_n(_ForwardIterator __first, _Size __n) {
-    using _Vt = typename iterator_traits<_ForwardIterator>::value_type;
+void uninitialized_default_construct(_ForwardIterator __first, _ForwardIterator __last) {
+    using _ValueType = typename iterator_traits<_ForwardIterator>::value_type;
+    (void)_VSTD::__uninitialized_default_construct<_ValueType>(__first, __last);
+}
+
+// uninitialized_default_construct_n
+
+template <class _ValueType, class _ForwardIterator, class _Size>
+inline _LIBCPP_HIDE_FROM_ABI
+_ForwardIterator __uninitialized_default_construct_n(_ForwardIterator __first, _Size __n) {
     auto __idx = __first;
 #ifndef _LIBCPP_NO_EXCEPTIONS
     try {
 #endif
     for (; __n > 0; ++__idx, (void) --__n)
-        ::new ((void*)_VSTD::addressof(*__idx)) _Vt;
-    return __idx;
+        ::new ((void*)_VSTD::addressof(*__idx)) _ValueType;
 #ifndef _LIBCPP_NO_EXCEPTIONS
     } catch (...) {
         _VSTD::destroy(__first, __idx);
         throw;
     }
 #endif
+
+    return __idx;
 }
 
+template <class _ForwardIterator, class _Size>
+inline _LIBCPP_INLINE_VISIBILITY
+_ForwardIterator uninitialized_default_construct_n(_ForwardIterator __first, _Size __n) {
+    using _ValueType = typename iterator_traits<_ForwardIterator>::value_type;
+    return _VSTD::__uninitialized_default_construct_n<_ValueType>(__first, __n);
+}
 
 template <class _ForwardIterator>
 inline _LIBCPP_INLINE_VISIBILITY

@@ -45,7 +45,7 @@ namespace clang {
 namespace clangd {
 namespace {
 
-SlabTuple indexSymbols(ASTContext &AST, std::shared_ptr<Preprocessor> PP,
+SlabTuple indexSymbols(ASTContext &AST, Preprocessor &PP,
                        llvm::ArrayRef<Decl *> DeclsToIndex,
                        const MainFileMacros *MacroRefsToIndex,
                        const CanonicalIncludes &Includes, bool IsIndexMainAST,
@@ -77,7 +77,7 @@ SlabTuple indexSymbols(ASTContext &AST, std::shared_ptr<Preprocessor> PP,
 
   SymbolCollector Collector(std::move(CollectorOpts));
   Collector.setPreprocessor(PP);
-  index::indexTopLevelDecls(AST, *PP, DeclsToIndex, Collector, IndexOpts);
+  index::indexTopLevelDecls(AST, PP, DeclsToIndex, Collector, IndexOpts);
   if (MacroRefsToIndex)
     Collector.handleMacros(*MacroRefsToIndex);
 
@@ -219,18 +219,18 @@ FileShardedIndex::getShard(llvm::StringRef Uri) const {
 
 SlabTuple indexMainDecls(ParsedAST &AST) {
   return indexSymbols(
-      AST.getASTContext(), AST.getPreprocessorPtr(),
-      AST.getLocalTopLevelDecls(), &AST.getMacros(), AST.getCanonicalIncludes(),
+      AST.getASTContext(), AST.getPreprocessor(), AST.getLocalTopLevelDecls(),
+      &AST.getMacros(), AST.getCanonicalIncludes(),
       /*IsIndexMainAST=*/true, AST.version(), /*CollectMainFileRefs=*/true);
 }
 
 SlabTuple indexHeaderSymbols(llvm::StringRef Version, ASTContext &AST,
-                             std::shared_ptr<Preprocessor> PP,
+                             Preprocessor &PP,
                              const CanonicalIncludes &Includes) {
   std::vector<Decl *> DeclsToIndex(
       AST.getTranslationUnitDecl()->decls().begin(),
       AST.getTranslationUnitDecl()->decls().end());
-  return indexSymbols(AST, std::move(PP), DeclsToIndex,
+  return indexSymbols(AST, PP, DeclsToIndex,
                       /*MainFileMacros=*/nullptr, Includes,
                       /*IsIndexMainAST=*/false, Version,
                       /*CollectMainFileRefs=*/false);
@@ -424,12 +424,11 @@ FileIndex::FileIndex()
       MainFileIndex(std::make_unique<MemIndex>()) {}
 
 void FileIndex::updatePreamble(PathRef Path, llvm::StringRef Version,
-                               ASTContext &AST,
-                               std::shared_ptr<Preprocessor> PP,
+                               ASTContext &AST, Preprocessor &PP,
                                const CanonicalIncludes &Includes) {
   IndexFileIn IF;
   std::tie(IF.Symbols, std::ignore, IF.Relations) =
-      indexHeaderSymbols(Version, AST, std::move(PP), Includes);
+      indexHeaderSymbols(Version, AST, PP, Includes);
   FileShardedIndex ShardedIndex(std::move(IF));
   for (auto Uri : ShardedIndex.getAllSources()) {
     auto IF = ShardedIndex.getShard(Uri);

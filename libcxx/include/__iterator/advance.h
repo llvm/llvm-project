@@ -69,6 +69,7 @@ void advance(_InputIter& __i, _Distance __orig_n) {
 
 namespace ranges {
 // [range.iter.op.advance]
+// TODO(varconst): rename `__advance_fn` to `__fn`.
 struct __advance_fn final : private __function_like {
 private:
   template <class _Tp>

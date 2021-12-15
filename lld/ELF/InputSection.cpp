@@ -325,7 +325,7 @@ std::string InputSectionBase::getObjMsg(uint64_t off) {
 
   std::string archive;
   if (!file->archiveName.empty())
-    archive = " in archive " + file->archiveName;
+    archive = (" in archive " + file->archiveName).str();
 
   // Find a symbol that encloses a given location.
   for (Symbol *b : file->getSymbols())

@@ -291,8 +291,8 @@ void dumpDebugInfo(DWARFContext &DCtx, DWARFYAML::Data &Y) {
                 NewValue.Value = Val.getValue();
               break;
             case dwarf::DW_FORM_string:
-              if (auto Val = FormValue.getValue().getAsCString())
-                NewValue.CStr = Val.getValue();
+              if (auto Val = dwarf::toString(FormValue))
+                NewValue.CStr = *Val;
               break;
             case dwarf::DW_FORM_indirect:
               indirect = true;

@@ -6,8 +6,8 @@ define <4 x float> @test_vfmadd_ss(<4 x float> %a, <4 x float> %b, <4 x float> %
 ;
 ; CHECK-LABEL: @test_vfmadd_ss(
 ; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <4 x float> [[A:%.*]], i64 0
-; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <4 x float> [[B:%.*]], i32 0
-; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <4 x float> [[C:%.*]], i32 0
+; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <4 x float> [[B:%.*]], i64 0
+; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <4 x float> [[C:%.*]], i64 0
 ; CHECK-NEXT:    [[TMP4:%.*]] = call float @llvm.fma.f32(float [[TMP1]], float [[TMP2]], float [[TMP3]])
 ; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <4 x float> [[A]], float [[TMP4]], i64 0
 ; CHECK-NEXT:    ret <4 x float> [[TMP5]]
@@ -29,7 +29,7 @@ define <4 x float> @test_vfmadd_ss(<4 x float> %a, <4 x float> %b, <4 x float> %
 define float @test_vfmadd_ss_0(<4 x float> %a, <4 x float> %b, <4 x float> %c) {
 ;
 ; CHECK-LABEL: @test_vfmadd_ss_0(
-; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <4 x float> [[A:%.*]], i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <4 x float> [[A:%.*]], i64 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <4 x float> [[B:%.*]], i64 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <4 x float> [[C:%.*]], i64 0
 ; CHECK-NEXT:    [[TMP4:%.*]] = call float @llvm.fma.f32(float [[TMP1]], float [[TMP2]], float [[TMP3]])

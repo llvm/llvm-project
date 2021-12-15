@@ -310,8 +310,7 @@ static UseListOrderStack predictUseListOrder(const Module &M) {
   // We want to visit the functions backward now so we can list function-local
   // constants in the last Function they're used in.  Module-level constants
   // have already been visited above.
-  for (auto I = M.rbegin(), E = M.rend(); I != E; ++I) {
-    const Function &F = *I;
+  for (const Function &F : llvm::reverse(M)) {
     if (F.isDeclaration())
       continue;
     for (const BasicBlock &BB : F)

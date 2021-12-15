@@ -541,7 +541,7 @@ define <2 x i64> @test13_vec_undef(<2 x i32> %A, <2 x i32> %B) {
 
 define i32 @trunc_bitcast1(<4 x i32> %v) {
 ; CHECK-LABEL: @trunc_bitcast1(
-; CHECK-NEXT:    [[EXT:%.*]] = extractelement <4 x i32> [[V:%.*]], i32 1
+; CHECK-NEXT:    [[EXT:%.*]] = extractelement <4 x i32> [[V:%.*]], i64 1
 ; CHECK-NEXT:    ret i32 [[EXT]]
 ;
   %bc = bitcast <4 x i32> %v to i128
@@ -555,7 +555,7 @@ define i32 @trunc_bitcast1(<4 x i32> %v) {
 define i32 @trunc_bitcast2(<2 x i64> %v) {
 ; CHECK-LABEL: @trunc_bitcast2(
 ; CHECK-NEXT:    [[BC1:%.*]] = bitcast <2 x i64> [[V:%.*]] to <4 x i32>
-; CHECK-NEXT:    [[EXT:%.*]] = extractelement <4 x i32> [[BC1]], i32 2
+; CHECK-NEXT:    [[EXT:%.*]] = extractelement <4 x i32> [[BC1]], i64 2
 ; CHECK-NEXT:    ret i32 [[EXT]]
 ;
   %bc = bitcast <2 x i64> %v to i128
@@ -568,7 +568,7 @@ define i32 @trunc_bitcast2(<2 x i64> %v) {
 
 define i32 @trunc_bitcast3(<4 x i32> %v) {
 ; CHECK-LABEL: @trunc_bitcast3(
-; CHECK-NEXT:    [[EXT:%.*]] = extractelement <4 x i32> [[V:%.*]], i32 0
+; CHECK-NEXT:    [[EXT:%.*]] = extractelement <4 x i32> [[V:%.*]], i64 0
 ; CHECK-NEXT:    ret i32 [[EXT]]
 ;
   %bc = bitcast <4 x i32> %v to i128

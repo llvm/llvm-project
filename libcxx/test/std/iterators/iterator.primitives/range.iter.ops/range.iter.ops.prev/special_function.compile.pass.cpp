@@ -83,6 +83,7 @@ void prev(bidirectional_iterator<I>, std::ptrdiff_t, bidirectional_iterator<I>) 
 }
 } // namespace test
 
+// TODO(varconst): simply check that `prev` is a variable and not a function.
 // When found by unqualified ([basic.lookup.unqual]) name lookup for the postfix-expression in a
 // function call ([expr.call]), they inhibit argument-dependent name lookup.
 void adl_inhibition() {

@@ -307,6 +307,8 @@ static void replaceWithDefined(Symbol &sym, SectionBase *sec, uint64_t value,
   sym.verdefIndex = old.verdefIndex;
   sym.exportDynamic = true;
   sym.isUsedInRegularObj = true;
+  // A copy relocated alias may need a GOT entry.
+  sym.needsGot = old.needsGot;
 }
 
 // Reserve space in .bss or .bss.rel.ro for copy relocation.
@@ -1573,6 +1575,9 @@ static bool handleNonPreemptibleIfunc(Symbol &sym) {
   //   linker-defined symbols __rela?_iplt_{start,end}.
   if (!sym.isGnuIFunc() || sym.isPreemptible || config->zIfuncNoplt)
     return false;
+  // Skip unreferenced non-preemptible ifunc.
+  if (!(sym.needsGot || sym.needsPlt || sym.hasDirectReloc))
+    return true;
 
   sym.isInIplt = true;
 
@@ -1624,6 +1629,7 @@ void elf::postScanRelocations() {
           replaceWithDefined(
               sym, in.plt,
               target->pltHeaderSize + target->pltEntrySize * sym.pltIndex, 0);
+          sym.needsCopy = true;
           if (config->emachine == EM_PPC) {
             // PPC32 canonical PLT entries are at the beginning of .glink
             cast<Defined>(sym).value = in.plt->headerSize;
@@ -1631,7 +1637,6 @@ void elf::postScanRelocations() {
             cast<PPC32GlinkSection>(in.plt)->canonical_plts.push_back(&sym);
           }
         }
-        sym.needsPltAddr = true;
       }
     }
   };
@@ -1640,7 +1645,7 @@ void elf::postScanRelocations() {
 
   // Local symbols may need the aforementioned non-preemptible ifunc and GOT
   // handling. They don't need regular PLT.
-  for (InputFile *file : objectFiles)
+  for (ELFFileBase *file : objectFiles)
     for (Symbol *sym : cast<ELFFileBase>(file)->getLocalSymbols())
       fn(*sym);
 }

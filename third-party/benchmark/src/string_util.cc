@@ -151,7 +151,7 @@ std::string StrFormatImp(const char* msg, va_list args) {
   auto buff_ptr = std::unique_ptr<char[]>(new char[size]);
   // 2015-10-08: vsnprintf is used instead of snd::vsnprintf due to a limitation
   // in the android-ndk
-  ret = vsnprintf(buff_ptr.get(), size, msg, args);
+  vsnprintf(buff_ptr.get(), size, msg, args);
   return std::string(buff_ptr.get());
 }
 
@@ -198,11 +198,10 @@ unsigned long stoul(const std::string& str, size_t* pos, int base) {
 
   /* Check for errors and return */
   if (strtoulErrno == ERANGE) {
-    throw std::out_of_range(
-      "stoul failed: " + str + " is outside of range of unsigned long");
+    throw std::out_of_range("stoul failed: " + str +
+                            " is outside of range of unsigned long");
   } else if (strEnd == strStart || strtoulErrno != 0) {
-    throw std::invalid_argument(
-      "stoul failed: " + str + " is not an integer");
+    throw std::invalid_argument("stoul failed: " + str + " is not an integer");
   }
   if (pos != nullptr) {
     *pos = static_cast<size_t>(strEnd - strStart);
@@ -225,11 +224,10 @@ int stoi(const std::string& str, size_t* pos, int base) {
 
   /* Check for errors and return */
   if (strtolErrno == ERANGE || long(int(result)) != result) {
-    throw std::out_of_range(
-      "stoul failed: " + str + " is outside of range of int");
+    throw std::out_of_range("stoul failed: " + str +
+                            " is outside of range of int");
   } else if (strEnd == strStart || strtolErrno != 0) {
-    throw std::invalid_argument(
-      "stoul failed: " + str + " is not an integer");
+    throw std::invalid_argument("stoul failed: " + str + " is not an integer");
   }
   if (pos != nullptr) {
     *pos = static_cast<size_t>(strEnd - strStart);
@@ -252,11 +250,10 @@ double stod(const std::string& str, size_t* pos) {
 
   /* Check for errors and return */
   if (strtodErrno == ERANGE) {
-    throw std::out_of_range(
-      "stoul failed: " + str + " is outside of range of int");
+    throw std::out_of_range("stoul failed: " + str +
+                            " is outside of range of int");
   } else if (strEnd == strStart || strtodErrno != 0) {
-    throw std::invalid_argument(
-      "stoul failed: " + str + " is not an integer");
+    throw std::invalid_argument("stoul failed: " + str + " is not an integer");
   }
   if (pos != nullptr) {
     *pos = static_cast<size_t>(strEnd - strStart);

@@ -112,7 +112,7 @@ public:
   Optional<UnitOffset> getAsRelativeReference() const;
   Optional<uint64_t> getAsUnsignedConstant() const;
   Optional<int64_t> getAsSignedConstant() const;
-  Optional<const char *> getAsCString() const;
+  Expected<const char *> getAsCString() const;
   Optional<uint64_t> getAsAddress() const;
   Optional<object::SectionedAddress> getAsSectionedAddress() const;
   Optional<uint64_t> getAsSectionOffset() const;
@@ -173,9 +173,14 @@ namespace dwarf {
 /// \returns an optional value that contains a value if the form value
 /// was valid and was a string.
 inline Optional<const char *> toString(const Optional<DWARFFormValue> &V) {
-  if (V)
-    return V->getAsCString();
-  return None;
+  if (!V)
+    return None;
+  Expected<const char*> E = V->getAsCString();
+  if (!E) {
+    consumeError(E.takeError());
+    return None;
+  }
+  return *E;
 }
 
 /// Take an optional DWARFFormValue and try to extract a string value from it.
@@ -185,10 +190,16 @@ inline Optional<const char *> toString(const Optional<DWARFFormValue> &V) {
 /// was valid and was a string.
 inline StringRef toStringRef(const Optional<DWARFFormValue> &V,
                              StringRef Default = {}) {
-  if (V)
-    if (auto S = V->getAsCString())
-      return *S;
-  return Default;
+  if (!V)
+    return Default;
+  auto S = V->getAsCString();
+  if (!S) {
+    consumeError(S.takeError());
+    return Default;
+  }
+  if (!*S)
+    return Default;
+  return *S;
 }
 
 /// Take an optional DWARFFormValue and extract a string value from it.
@@ -199,7 +210,9 @@ inline StringRef toStringRef(const Optional<DWARFFormValue> &V,
 /// form value's encoding wasn't a string.
 inline const char *toString(const Optional<DWARFFormValue> &V,
                             const char *Default) {
-  return toString(V).getValueOr(Default);
+  if (auto E = toString(V))
+    return *E;
+  return Default;
 }
 
 /// Take an optional DWARFFormValue and try to extract an unsigned constant.

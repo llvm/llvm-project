@@ -185,10 +185,10 @@ func @dim_of_alloca(%size: index) -> index {
 // Test case: Folding of memref.dim(memref.alloca(rank(%v)), %idx) -> rank(%v)
 // CHECK-LABEL: func @dim_of_alloca_with_dynamic_size(
 //  CHECK-SAME:     %[[MEM:[0-9a-z]+]]: memref<*xf32>
-//  CHECK-NEXT:   %[[RANK:.*]] = rank %[[MEM]] : memref<*xf32>
+//  CHECK-NEXT:   %[[RANK:.*]] = memref.rank %[[MEM]] : memref<*xf32>
 //  CHECK-NEXT:   return %[[RANK]] : index
 func @dim_of_alloca_with_dynamic_size(%arg0: memref<*xf32>) -> index {
-  %0 = rank %arg0 : memref<*xf32>
+  %0 = memref.rank %arg0 : memref<*xf32>
   %1 = memref.alloca(%0) : memref<?xindex>
   %c0 = arith.constant 0 : index
   %2 = memref.dim %1, %c0 : memref<?xindex>
@@ -438,3 +438,15 @@ func @reduced_memref(%arg0: memref<2x5x7x1xf32>, %arg1 :index)
 //       CHECK:   %[[RESULT:.+]] = memref.subview
 //  CHECK-SAME:       memref<2x5x7x1xf32> to memref<1x4x1xf32, #{{.+}}>
 //       CHECK:   return %[[RESULT]]
+
+// -----
+
+// CHECK-LABEL: func @fold_rank_memref
+func @fold_rank_memref(%arg0 : memref<?x?xf32>) -> (index) {
+  // Fold a rank into a constant
+  // CHECK-NEXT: [[C2:%.+]] = arith.constant 2 : index
+  %rank_0 = memref.rank %arg0 : memref<?x?xf32>
+
+  // CHECK-NEXT: return [[C2]]
+  return %rank_0 : index
+}

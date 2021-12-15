@@ -99,7 +99,10 @@ target(asan_target_type, "asan") {
     "asan_win.cpp",
   ]
   if (target_os != "mac" && target_os != "win") {
-    sources += [ "asan_interceptors_vfork.S" ]
+    sources += [
+      "asan_interceptors_vfork.S",
+      "asan_rtl_x86_64.S",
+    ]
   }
 
   # To be able to include sanitizer_common.

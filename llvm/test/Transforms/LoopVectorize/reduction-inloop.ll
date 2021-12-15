@@ -798,7 +798,7 @@ define float @reduction_conditional(float* %A, float* %B, float* %C, float %S) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x float> <float poison, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00>, float [[S:%.*]], i32 0
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x float> <float poison, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00>, float [[S:%.*]], i64 0
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
@@ -1136,6 +1136,7 @@ define float @reduction_fmuladd(float* %a, float* %b, i64 %n) {
 ; CHECK:       for.end:
 ; CHECK-NEXT:    [[MULADD_LCSSA:%.*]] = phi float [ [[MULADD]], [[FOR_BODY]] ], [ [[TMP6]], [[MIDDLE_BLOCK]] ]
 ; CHECK-NEXT:    ret float [[MULADD_LCSSA]]
+;
 
 entry:
   br label %for.body

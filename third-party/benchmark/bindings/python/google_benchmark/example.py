@@ -102,7 +102,7 @@ def with_options(state):
 
 @benchmark.register(name="sum_million_microseconds")
 @benchmark.option.unit(benchmark.kMicrosecond)
-def with_options(state):
+def with_options2(state):
     while state:
         sum(range(1_000_000))
 

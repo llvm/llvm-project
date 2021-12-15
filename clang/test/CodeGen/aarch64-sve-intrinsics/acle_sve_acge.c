@@ -74,7 +74,7 @@ svbool_t test_svacge_f64(svbool_t pg, svfloat64_t op1, svfloat64_t op2)
 // CHECK-LABEL: @test_svacge_n_f32(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> [[PG:%.*]])
-// CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <vscale x 4 x float> poison, float [[OP2:%.*]], i32 0
+// CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <vscale x 4 x float> poison, float [[OP2:%.*]], i64 0
 // CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <vscale x 4 x float> [[DOTSPLATINSERT]], <vscale x 4 x float> poison, <vscale x 4 x i32> zeroinitializer
 // CHECK-NEXT:    [[TMP2:%.*]] = call <vscale x 4 x i1> @llvm.aarch64.sve.facge.nxv4f32(<vscale x 4 x i1> [[TMP0]], <vscale x 4 x float> [[OP1:%.*]], <vscale x 4 x float> [[TMP1]])
 // CHECK-NEXT:    [[TMP3:%.*]] = call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv4i1(<vscale x 4 x i1> [[TMP2]])
@@ -83,7 +83,7 @@ svbool_t test_svacge_f64(svbool_t pg, svfloat64_t op1, svfloat64_t op2)
 // CPP-CHECK-LABEL: @_Z17test_svacge_n_f32u10__SVBool_tu13__SVFloat32_tf(
 // CPP-CHECK-NEXT:  entry:
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> [[PG:%.*]])
-// CPP-CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <vscale x 4 x float> poison, float [[OP2:%.*]], i32 0
+// CPP-CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <vscale x 4 x float> poison, float [[OP2:%.*]], i64 0
 // CPP-CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <vscale x 4 x float> [[DOTSPLATINSERT]], <vscale x 4 x float> poison, <vscale x 4 x i32> zeroinitializer
 // CPP-CHECK-NEXT:    [[TMP2:%.*]] = call <vscale x 4 x i1> @llvm.aarch64.sve.facge.nxv4f32(<vscale x 4 x i1> [[TMP0]], <vscale x 4 x float> [[OP1:%.*]], <vscale x 4 x float> [[TMP1]])
 // CPP-CHECK-NEXT:    [[TMP3:%.*]] = call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv4i1(<vscale x 4 x i1> [[TMP2]])
@@ -97,7 +97,7 @@ svbool_t test_svacge_n_f32(svbool_t pg, svfloat32_t op1, float32_t op2)
 // CHECK-LABEL: @test_svacge_n_f64(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv2i1(<vscale x 16 x i1> [[PG:%.*]])
-// CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <vscale x 2 x double> poison, double [[OP2:%.*]], i32 0
+// CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <vscale x 2 x double> poison, double [[OP2:%.*]], i64 0
 // CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <vscale x 2 x double> [[DOTSPLATINSERT]], <vscale x 2 x double> poison, <vscale x 2 x i32> zeroinitializer
 // CHECK-NEXT:    [[TMP2:%.*]] = call <vscale x 2 x i1> @llvm.aarch64.sve.facge.nxv2f64(<vscale x 2 x i1> [[TMP0]], <vscale x 2 x double> [[OP1:%.*]], <vscale x 2 x double> [[TMP1]])
 // CHECK-NEXT:    [[TMP3:%.*]] = call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv2i1(<vscale x 2 x i1> [[TMP2]])
@@ -106,7 +106,7 @@ svbool_t test_svacge_n_f32(svbool_t pg, svfloat32_t op1, float32_t op2)
 // CPP-CHECK-LABEL: @_Z17test_svacge_n_f64u10__SVBool_tu13__SVFloat64_td(
 // CPP-CHECK-NEXT:  entry:
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv2i1(<vscale x 16 x i1> [[PG:%.*]])
-// CPP-CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <vscale x 2 x double> poison, double [[OP2:%.*]], i32 0
+// CPP-CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <vscale x 2 x double> poison, double [[OP2:%.*]], i64 0
 // CPP-CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <vscale x 2 x double> [[DOTSPLATINSERT]], <vscale x 2 x double> poison, <vscale x 2 x i32> zeroinitializer
 // CPP-CHECK-NEXT:    [[TMP2:%.*]] = call <vscale x 2 x i1> @llvm.aarch64.sve.facge.nxv2f64(<vscale x 2 x i1> [[TMP0]], <vscale x 2 x double> [[OP1:%.*]], <vscale x 2 x double> [[TMP1]])
 // CPP-CHECK-NEXT:    [[TMP3:%.*]] = call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv2i1(<vscale x 2 x i1> [[TMP2]])

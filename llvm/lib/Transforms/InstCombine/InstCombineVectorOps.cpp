@@ -363,6 +363,18 @@ static APInt findDemandedEltsByAllUsers(Value *V) {
   return UnionUsedElts;
 }
 
+/// Given a constant index for a extractelement or insertelement instruction,
+/// return it with the canonical type if it isn't already canonical.  We
+/// arbitrarily pick 64 bit as our canonical type.  The actual bitwidth doesn't
+/// matter, we just want a consistent type to simplify CSE.
+ConstantInt *getPreferredVectorIndex(ConstantInt *IndexC) {
+  const unsigned IndexBW = IndexC->getType()->getBitWidth();
+  if (IndexBW == 64 || IndexC->getValue().getActiveBits() > 64)
+    return nullptr;
+  return ConstantInt::get(IndexC->getContext(),
+                          IndexC->getValue().zextOrTrunc(64));
+}
+
 Instruction *InstCombinerImpl::visitExtractElementInst(ExtractElementInst &EI) {
   Value *SrcVec = EI.getVectorOperand();
   Value *Index = EI.getIndexOperand();
@@ -374,6 +386,10 @@ Instruction *InstCombinerImpl::visitExtractElementInst(ExtractElementInst &EI) {
   // find a previously computed scalar that was inserted into the vector.
   auto *IndexC = dyn_cast<ConstantInt>(Index);
   if (IndexC) {
+    // Canonicalize type of constant indices to i64 to simplify CSE
+    if (auto *NewIdx = getPreferredVectorIndex(IndexC))
+      return replaceOperand(EI, 1, NewIdx);
+
     ElementCount EC = EI.getVectorOperandType()->getElementCount();
     unsigned NumElts = EC.getKnownMinValue();
 
@@ -1478,6 +1494,11 @@ Instruction *InstCombinerImpl::visitInsertElementInst(InsertElementInst &IE) {
           VecOp, ScalarOp, IdxOp, SQ.getWithInstruction(&IE)))
     return replaceInstUsesWith(IE, V);
 
+  // Canonicalize type of constant indices to i64 to simplify CSE
+  if (auto *IndexC = dyn_cast<ConstantInt>(IdxOp))
+    if (auto *NewIdx = getPreferredVectorIndex(IndexC))
+      return replaceOperand(IE, 2, NewIdx);
+
   // If the scalar is bitcast and inserted into undef, do the insert in the
   // source type followed by bitcast.
   // TODO: Generalize for insert into any constant, not just undef?
@@ -2010,9 +2031,7 @@ static Instruction *canonicalizeInsertSplat(ShuffleVectorInst &Shuf,
 }
 
 /// Try to fold shuffles that are the equivalent of a vector select.
-static Instruction *foldSelectShuffle(ShuffleVectorInst &Shuf,
-                                      InstCombiner::BuilderTy &Builder,
-                                      const DataLayout &DL) {
+Instruction *InstCombinerImpl::foldSelectShuffle(ShuffleVectorInst &Shuf) {
   if (!Shuf.isSelect())
     return nullptr;
 
@@ -2120,21 +2139,23 @@ static Instruction *foldSelectShuffle(ShuffleVectorInst &Shuf,
     V = Builder.CreateShuffleVector(X, Y, Mask);
   }
 
-  Instruction *NewBO = ConstantsAreOp1 ? BinaryOperator::Create(BOpc, V, NewC) :
-                                         BinaryOperator::Create(BOpc, NewC, V);
+  Value *NewBO = ConstantsAreOp1 ? Builder.CreateBinOp(BOpc, V, NewC) :
+                                   Builder.CreateBinOp(BOpc, NewC, V);
 
   // Flags are intersected from the 2 source binops. But there are 2 exceptions:
   // 1. If we changed an opcode, poison conditions might have changed.
   // 2. If the shuffle had undef mask elements, the new binop might have undefs
   //    where the original code did not. But if we already made a safe constant,
   //    then there's no danger.
-  NewBO->copyIRFlags(B0);
-  NewBO->andIRFlags(B1);
-  if (DropNSW)
-    NewBO->setHasNoSignedWrap(false);
-  if (is_contained(Mask, UndefMaskElem) && !MightCreatePoisonOrUB)
-    NewBO->dropPoisonGeneratingFlags();
-  return NewBO;
+  if (auto *NewI = dyn_cast<Instruction>(NewBO)) {
+    NewI->copyIRFlags(B0);
+    NewI->andIRFlags(B1);
+    if (DropNSW)
+      NewI->setHasNoSignedWrap(false);
+    if (is_contained(Mask, UndefMaskElem) && !MightCreatePoisonOrUB)
+      NewI->dropPoisonGeneratingFlags();
+  }
+  return replaceInstUsesWith(Shuf, NewBO);
 }
 
 /// Convert a narrowing shuffle of a bitcasted vector into a vector truncate.
@@ -2499,7 +2520,7 @@ Instruction *InstCombinerImpl::visitShuffleVectorInst(ShuffleVectorInst &SVI) {
   if (Instruction *I = canonicalizeInsertSplat(SVI, Builder))
     return I;
 
-  if (Instruction *I = foldSelectShuffle(SVI, Builder, DL))
+  if (Instruction *I = foldSelectShuffle(SVI))
     return I;
 
   if (Instruction *I = foldTruncShuffle(SVI, DL.isBigEndian()))

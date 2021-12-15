@@ -1,8 +1,8 @@
 
-#include "benchmark/benchmark.h"
-
 #include <cassert>
 #include <memory>
+
+#include "benchmark/benchmark.h"
 
 template <typename T>
 class MyFixture : public ::benchmark::Fixture {

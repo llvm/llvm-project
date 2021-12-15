@@ -1,7 +1,6 @@
 // RUN: mlir-opt -convert-memref-to-llvm %s -split-input-file | FileCheck %s
 // RUN: mlir-opt -convert-memref-to-llvm='index-bitwidth=32' %s -split-input-file | FileCheck --check-prefix=CHECK32 %s
 
-
 // CHECK-LABEL: func @view(
 // CHECK: %[[ARG0F:.*]]: index, %[[ARG1F:.*]]: index, %[[ARG2F:.*]]: index
 func @view(%arg0 : index, %arg1 : index, %arg2 : index) {
@@ -835,3 +834,24 @@ func @expand_shape_dynamic(%arg0 : memref<1x?xf32>) -> memref<1x2x?xf32> {
 // CHECK:           llvm.mul %{{.*}}, %{{.*}}  : i64
 // CHECK:           llvm.insertvalue %{{.*}}, %{{.*}}[4, 0] : !llvm.struct<(ptr<f32>, ptr<f32>, i64, array<3 x i64>, array<3 x i64>)>
 // CHECK:           llvm.mul %{{.*}}, %{{.*}}  : i64
+
+// -----
+
+// CHECK-LABEL: func @rank_of_unranked
+// CHECK32-LABEL: func @rank_of_unranked
+func @rank_of_unranked(%unranked: memref<*xi32>) {
+  %rank = memref.rank %unranked : memref<*xi32>
+  return
+}
+// CHECK: %[[UNRANKED_DESC:.*]] = builtin.unrealized_conversion_cast
+// CHECK-NEXT: llvm.extractvalue %[[UNRANKED_DESC]][0] : !llvm.struct<(i64, ptr<i8>)>
+// CHECK32: llvm.extractvalue %{{.*}}[0] : !llvm.struct<(i32, ptr<i8>)>
+
+// CHECK-LABEL: func @rank_of_ranked
+// CHECK32-LABEL: func @rank_of_ranked
+func @rank_of_ranked(%ranked: memref<?xi32>) {
+  %rank = memref.rank %ranked : memref<?xi32>
+  return
+}
+// CHECK: llvm.mlir.constant(1 : index) : i64
+// CHECK32: llvm.mlir.constant(1 : index) : i32

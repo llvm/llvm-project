@@ -68,13 +68,13 @@ void test_core(void) {
   vector double vd2;
 
   f = vec_extract(vf, 0);
-  // CHECK: extractelement <4 x float> %{{.*}}, i32 0
+  // CHECK: extractelement <4 x float> %{{.*}}, i64 0
   // CHECK-ASM: vstef
   f = vec_extract(vf, idx);
   // CHECK: extractelement <4 x float> %{{.*}}, i32 %{{.*}}
   // CHECK-ASM: vlgvf
   d = vec_extract(vd, 0);
-  // CHECK: extractelement <2 x double> %{{.*}}, i32 0
+  // CHECK: extractelement <2 x double> %{{.*}}, i64 0
   // CHECK-ASM: vsteg
   d = vec_extract(vd, idx);
   // CHECK: extractelement <2 x double> %{{.*}}, i32 %{{.*}}
@@ -82,20 +82,20 @@ void test_core(void) {
 
   vf2 = vf;
   vf = vec_insert(f, vf2, 0);
-  // CHECK: insertelement <4 x float> %{{.*}}, float %{{.*}}, i32 0
+  // CHECK: insertelement <4 x float> %{{.*}}, float %{{.*}}, i64 0
   // CHECK-ASM: vlef
   vf = vec_insert(0.0f, vf, 1);
-  // CHECK: insertelement <4 x float> %{{.*}}, float 0.000000e+00, i32 1
+  // CHECK: insertelement <4 x float> %{{.*}}, float 0.000000e+00, i64 1
   // CHECK-ASM: vleif %{{.*}}, 0, 1
   vf = vec_insert(f, vf, idx);
   // CHECK: insertelement <4 x float> %{{.*}}, float %{{.*}}, i32 %{{.*}}
   // CHECK-ASM: vlvgf
   vd2 = vd;
   vd = vec_insert(d, vd2, 0);
-  // CHECK: insertelement <2 x double> %{{.*}}, double %{{.*}}, i32 0
+  // CHECK: insertelement <2 x double> %{{.*}}, double %{{.*}}, i64 0
   // CHECK-ASM: vleg
   vd = vec_insert(0.0, vd, 1);
-  // CHECK: insertelement <2 x double> %{{.*}}, double 0.000000e+00, i32 1
+  // CHECK: insertelement <2 x double> %{{.*}}, double 0.000000e+00, i64 1
   // CHECK-ASM: vleig %{{.*}}, 0, 1
   vd = vec_insert(d, vd, idx);
   // CHECK: insertelement <2 x double> %{{.*}}, double %{{.*}}, i32 %{{.*}}
@@ -109,10 +109,10 @@ void test_core(void) {
   // CHECK-ASM: vlvgg
 
   vf = vec_insert_and_zero(cptrf);
-  // CHECK: insertelement <4 x float> <float 0.000000e+00, float poison, float 0.000000e+00, float 0.000000e+00>, float %{{.*}}, i32 1
+  // CHECK: insertelement <4 x float> <float 0.000000e+00, float poison, float 0.000000e+00, float 0.000000e+00>, float %{{.*}}, i64 1
   // CHECK-ASM: vllezf
   vd = vec_insert_and_zero(cptrd);
-  // CHECK: insertelement <2 x double> <double poison, double 0.000000e+00>, double %{{.*}}, i32 0
+  // CHECK: insertelement <2 x double> <double poison, double 0.000000e+00>, double %{{.*}}, i64 0
   // CHECK-ASM: vllezg
 
   vf = vec_perm(vf, vf, vuc);

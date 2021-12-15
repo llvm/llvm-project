@@ -978,12 +978,12 @@ static void setAddend(Elf_Rel_Impl<ELFT, true> &Rela, uint64_t Addend) {
 }
 
 template <class RelRange, class T>
-static void writeRel(const RelRange &Relocations, T *Buf) {
+static void writeRel(const RelRange &Relocations, T *Buf, bool IsMips64EL) {
   for (const auto &Reloc : Relocations) {
     Buf->r_offset = Reloc.Offset;
     setAddend(*Buf, Reloc.Addend);
     Buf->setSymbolAndType(Reloc.RelocSymbol ? Reloc.RelocSymbol->Index : 0,
-                          Reloc.Type, false);
+                          Reloc.Type, IsMips64EL);
     ++Buf;
   }
 }
@@ -992,9 +992,11 @@ template <class ELFT>
 Error ELFSectionWriter<ELFT>::visit(const RelocationSection &Sec) {
   uint8_t *Buf = reinterpret_cast<uint8_t *>(Out.getBufferStart()) + Sec.Offset;
   if (Sec.Type == SHT_REL)
-    writeRel(Sec.Relocations, reinterpret_cast<Elf_Rel *>(Buf));
+    writeRel(Sec.Relocations, reinterpret_cast<Elf_Rel *>(Buf),
+             Sec.getObject().IsMips64EL);
   else
-    writeRel(Sec.Relocations, reinterpret_cast<Elf_Rela *>(Buf));
+    writeRel(Sec.Relocations, reinterpret_cast<Elf_Rela *>(Buf),
+             Sec.getObject().IsMips64EL);
   return Error::success();
 }
 
@@ -1398,6 +1400,14 @@ Expected<std::unique_ptr<Object>> IHexELFBuilder::build() {
   return std::move(Obj);
 }
 
+template <class ELFT>
+ELFBuilder<ELFT>::ELFBuilder(const ELFObjectFile<ELFT> &ElfObj, Object &Obj,
+                             Optional<StringRef> ExtractPartition)
+    : ElfFile(ElfObj.getELFFile()), Obj(Obj),
+      ExtractPartition(ExtractPartition) {
+  Obj.IsMips64EL = ElfFile.isMips64EL();
+}
+
 template <class ELFT> void ELFBuilder<ELFT>::setParentSegment(Segment &Child) {
   for (Segment &Parent : Obj.segments()) {
     // Every segment will overlap with itself but we don't want a segment to
@@ -1639,21 +1649,21 @@ static void getAddend(uint64_t &ToSet, const Elf_Rel_Impl<ELFT, true> &Rela) {
 }
 
 template <class T>
-static Error initRelocations(RelocationSection *Relocs,
-                             SymbolTableSection *SymbolTable, T RelRange) {
+static Error initRelocations(RelocationSection *Relocs, T RelRange) {
   for (const auto &Rel : RelRange) {
     Relocation ToAdd;
     ToAdd.Offset = Rel.r_offset;
     getAddend(ToAdd.Addend, Rel);
-    ToAdd.Type = Rel.getType(false);
+    ToAdd.Type = Rel.getType(Relocs->getObject().IsMips64EL);
 
-    if (uint32_t Sym = Rel.getSymbol(false)) {
-      if (!SymbolTable)
+    if (uint32_t Sym = Rel.getSymbol(Relocs->getObject().IsMips64EL)) {
+      if (!Relocs->getObject().SymbolTable)
         return createStringError(
             errc::invalid_argument,
             "'" + Relocs->Name + "': relocation references symbol with index " +
                 Twine(Sym) + ", but there is no symbol table");
-      Expected<Symbol *> SymByIndex = SymbolTable->getSymbolByIndex(Sym);
+      Expected<Symbol *> SymByIndex =
+          Relocs->getObject().SymbolTable->getSymbolByIndex(Sym);
       if (!SymByIndex)
         return SymByIndex.takeError();
 
@@ -1698,7 +1708,7 @@ Expected<SectionBase &> ELFBuilder<ELFT>::makeSection(const Elf_Shdr &Shdr) {
       else
         return Data.takeError();
     }
-    return Obj.addSection<RelocationSection>();
+    return Obj.addSection<RelocationSection>(Obj);
   case SHT_STRTAB:
     // If a string table is allocated we don't want to mess with it. That would
     // mean altering the memory image. There are no special link types or
@@ -1879,7 +1889,7 @@ template <class ELFT> Error ELFBuilder<ELFT>::readSections(bool EnsureSymtab) {
         if (!Rels)
           return Rels.takeError();
 
-        if (Error Err = initRelocations(RelSec, Obj.SymbolTable, *Rels))
+        if (Error Err = initRelocations(RelSec, *Rels))
           return Err;
       } else {
         Expected<typename ELFFile<ELFT>::Elf_Rela_Range> Relas =
@@ -1887,7 +1897,7 @@ template <class ELFT> Error ELFBuilder<ELFT>::readSections(bool EnsureSymtab) {
         if (!Relas)
           return Relas.takeError();
 
-        if (Error Err = initRelocations(RelSec, Obj.SymbolTable, *Relas))
+        if (Error Err = initRelocations(RelSec, *Relas))
           return Err;
       }
     } else if (auto GroupSec = dyn_cast<GroupSection>(&Sec)) {

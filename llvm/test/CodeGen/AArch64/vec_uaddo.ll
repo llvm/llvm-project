@@ -152,12 +152,12 @@ define <16 x i32> @uaddo_v16i8(<16 x i8> %a0, <16 x i8> %a1, <16 x i8>* %p2) nou
 ; CHECK-NEXT:    ushll v3.4s, v3.4h, #0
 ; CHECK-NEXT:    ushll v1.4s, v1.4h, #0
 ; CHECK-NEXT:    shl v5.4s, v0.4s, #31
-; CHECK-NEXT:    sshr v0.4s, v2.4s, #31
+; CHECK-NEXT:    cmlt v0.4s, v2.4s, #0
 ; CHECK-NEXT:    shl v3.4s, v3.4s, #31
 ; CHECK-NEXT:    shl v6.4s, v1.4s, #31
-; CHECK-NEXT:    sshr v1.4s, v5.4s, #31
-; CHECK-NEXT:    sshr v2.4s, v3.4s, #31
-; CHECK-NEXT:    sshr v3.4s, v6.4s, #31
+; CHECK-NEXT:    cmlt v1.4s, v5.4s, #0
+; CHECK-NEXT:    cmlt v2.4s, v3.4s, #0
+; CHECK-NEXT:    cmlt v3.4s, v6.4s, #0
 ; CHECK-NEXT:    ret
   %t = call {<16 x i8>, <16 x i1>} @llvm.uadd.with.overflow.v16i8(<16 x i8> %a0, <16 x i8> %a1)
   %val = extractvalue {<16 x i8>, <16 x i1>} %t, 0
@@ -180,8 +180,8 @@ define <8 x i32> @uaddo_v8i16(<8 x i16> %a0, <8 x i16> %a1, <8 x i16>* %p2) noun
 ; CHECK-NEXT:    ushll v0.4s, v0.4h, #0
 ; CHECK-NEXT:    shl v1.4s, v1.4s, #31
 ; CHECK-NEXT:    shl v3.4s, v0.4s, #31
-; CHECK-NEXT:    sshr v0.4s, v1.4s, #31
-; CHECK-NEXT:    sshr v1.4s, v3.4s, #31
+; CHECK-NEXT:    cmlt v0.4s, v1.4s, #0
+; CHECK-NEXT:    cmlt v1.4s, v3.4s, #0
 ; CHECK-NEXT:    ret
   %t = call {<8 x i16>, <8 x i1>} @llvm.uadd.with.overflow.v8i16(<8 x i16> %a0, <8 x i16> %a1)
   %val = extractvalue {<8 x i16>, <8 x i1>} %t, 0
@@ -296,7 +296,7 @@ define <2 x i32> @uaddo_v2i128(<2 x i128> %a0, <2 x i128> %a1, <2 x i128>* %p2) 
 ; CHECK-NEXT:    stp x8, x9, [x10, #16]
 ; CHECK-NEXT:    shl v0.2s, v0.2s, #31
 ; CHECK-NEXT:    stp x11, x12, [x10]
-; CHECK-NEXT:    sshr v0.2s, v0.2s, #31
+; CHECK-NEXT:    cmlt v0.2s, v0.2s, #0
 ; CHECK-NEXT:    ret
   %t = call {<2 x i128>, <2 x i1>} @llvm.uadd.with.overflow.v2i128(<2 x i128> %a0, <2 x i128> %a1)
   %val = extractvalue {<2 x i128>, <2 x i1>} %t, 0

@@ -50,7 +50,7 @@ using namespace lld::elf;
 LinkerScript *elf::script;
 
 static bool isSectionPrefix(StringRef prefix, StringRef name) {
-  return name.startswith(prefix) || name == prefix.drop_back();
+  return name.consume_front(prefix) && (name.empty() || name[0] == '.');
 }
 
 static StringRef getOutputSectionName(const InputSectionBase *s) {
@@ -94,18 +94,18 @@ static StringRef getOutputSectionName(const InputSectionBase *s) {
   // cold parts in .text.split instead of .text.unlikely mitigates against poor
   // profile inaccuracy. Techniques such as hugepage remapping can make
   // conservative decisions at the section granularity.
-  if (config->zKeepTextSectionPrefix)
-    for (StringRef v : {".text.hot.", ".text.unknown.", ".text.unlikely.",
-                        ".text.startup.", ".text.exit.", ".text.split."})
+  if (config->zKeepTextSectionPrefix && s->name.startswith(".text."))
+    for (StringRef v : {".text.hot", ".text.unknown", ".text.unlikely",
+                        ".text.startup", ".text.exit", ".text.split"})
       if (isSectionPrefix(v, s->name))
-        return v.drop_back();
+        return v;
 
   for (StringRef v :
-       {".text.", ".rodata.", ".data.rel.ro.", ".data.", ".bss.rel.ro.",
-        ".bss.", ".init_array.", ".fini_array.", ".ctors.", ".dtors.", ".tbss.",
-        ".gcc_except_table.", ".tdata.", ".ARM.exidx.", ".ARM.extab."})
+       {".text", ".data.rel.ro", ".data", ".rodata", ".bss.rel.ro", ".bss",
+        ".gcc_except_table", ".init_array", ".fini_array", ".tbss", ".tdata",
+        ".ARM.exidx", ".ARM.extab", ".ctors", ".dtors"})
     if (isSectionPrefix(v, s->name))
-      return v.drop_back();
+      return v;
 
   return s->name;
 }

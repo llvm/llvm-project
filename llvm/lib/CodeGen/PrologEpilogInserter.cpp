@@ -953,12 +953,22 @@ void PEI::calculateFrameObjectOffsets(MachineFunction &MF) {
     // LocalStackSlotPass didn't already allocate a slot for it.
     // If we are told to use the LocalStackAllocationBlock, the stack protector
     // is expected to be already pre-allocated.
-    if (!MFI.getUseLocalStackAllocationBlock())
+    if (MFI.getStackID(StackProtectorFI) != TargetStackID::Default) {
+      // If the stack protector isn't on the default stack then it's up to the
+      // target to set the stack offset.
+      assert(MFI.getObjectOffset(StackProtectorFI) != 0 &&
+             "Offset of stack protector on non-default stack expected to be "
+             "already set.");
+      assert(!MFI.isObjectPreAllocated(MFI.getStackProtectorIndex()) &&
+             "Stack protector on non-default stack expected to not be "
+             "pre-allocated by LocalStackSlotPass.");
+    } else if (!MFI.getUseLocalStackAllocationBlock()) {
       AdjustStackOffset(MFI, StackProtectorFI, StackGrowsDown, Offset, MaxAlign,
                         Skew);
-    else if (!MFI.isObjectPreAllocated(MFI.getStackProtectorIndex()))
+    } else if (!MFI.isObjectPreAllocated(MFI.getStackProtectorIndex())) {
       llvm_unreachable(
           "Stack protector not pre-allocated by LocalStackSlotPass.");
+    }
 
     // Assign large stack objects first.
     for (unsigned i = 0, e = MFI.getObjectIndexEnd(); i != e; ++i) {

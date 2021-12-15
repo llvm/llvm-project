@@ -69,6 +69,7 @@ static_library("Driver") {
     "ToolChains/Fuchsia.cpp",
     "ToolChains/Gnu.cpp",
     "ToolChains/HIPAMD.cpp",
+    "ToolChains/HIPSPV.cpp",
     "ToolChains/HIPUtility.cpp",
     "ToolChains/Haiku.cpp",
     "ToolChains/Hexagon.cpp",
