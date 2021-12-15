@@ -521,7 +521,7 @@ void CSProfileConverter::convertProfiles(CSProfileConverter::FrameNode &Node) {
     if (NodeProfile) {
       // Add child profile to the callsite profile map.
       auto &SamplesMap = NodeProfile->functionSamplesAt(ChildNode.CallSiteLoc);
-      SamplesMap.emplace(OrigChildContext.getName(), *ChildProfile);
+      SamplesMap.emplace(OrigChildContext.getName().str(), *ChildProfile);
       NodeProfile->addTotalSamples(ChildProfile->getTotalSamples());
     }
 
