@@ -1791,50 +1791,24 @@ define <2 x i64> @PR52719(<2 x i64> %a0, i32 %a1) {
 ; SSE41-LABEL: PR52719:
 ; SSE41:       # %bb.0:
 ; SSE41-NEXT:    movd %edi, %xmm1
-; SSE41-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,0,1,1]
 ; SSE41-NEXT:    pmovzxdq {{.*#+}} xmm1 = xmm1[0],zero,xmm1[1],zero
 ; SSE41-NEXT:    movdqa {{.*#+}} xmm2 = [9223372036854775808,9223372036854775808]
-; SSE41-NEXT:    movdqa %xmm2, %xmm3
-; SSE41-NEXT:    psrlq %xmm1, %xmm3
-; SSE41-NEXT:    pshufd {{.*#+}} xmm4 = xmm1[2,3,2,3]
-; SSE41-NEXT:    psrlq %xmm4, %xmm2
-; SSE41-NEXT:    pblendw {{.*#+}} xmm2 = xmm3[0,1,2,3],xmm2[4,5,6,7]
-; SSE41-NEXT:    movdqa %xmm0, %xmm3
-; SSE41-NEXT:    psrlq %xmm1, %xmm3
-; SSE41-NEXT:    psrlq %xmm4, %xmm0
-; SSE41-NEXT:    pblendw {{.*#+}} xmm0 = xmm3[0,1,2,3],xmm0[4,5,6,7]
+; SSE41-NEXT:    psrlq %xmm1, %xmm2
+; SSE41-NEXT:    psrlq %xmm1, %xmm0
 ; SSE41-NEXT:    pxor %xmm2, %xmm0
 ; SSE41-NEXT:    psubq %xmm2, %xmm0
 ; SSE41-NEXT:    retq
 ;
-; AVX1-LABEL: PR52719:
-; AVX1:       # %bb.0:
-; AVX1-NEXT:    vmovd %edi, %xmm1
-; AVX1-NEXT:    vpshufd {{.*#+}} xmm1 = xmm1[0,0,1,1]
-; AVX1-NEXT:    vpmovzxdq {{.*#+}} xmm1 = xmm1[0],zero,xmm1[1],zero
-; AVX1-NEXT:    vmovdqa {{.*#+}} xmm2 = [9223372036854775808,9223372036854775808]
-; AVX1-NEXT:    vpsrlq %xmm1, %xmm2, %xmm3
-; AVX1-NEXT:    vpshufd {{.*#+}} xmm4 = xmm1[2,3,2,3]
-; AVX1-NEXT:    vpsrlq %xmm4, %xmm2, %xmm2
-; AVX1-NEXT:    vpblendw {{.*#+}} xmm2 = xmm3[0,1,2,3],xmm2[4,5,6,7]
-; AVX1-NEXT:    vpsrlq %xmm1, %xmm0, %xmm1
-; AVX1-NEXT:    vpsrlq %xmm4, %xmm0, %xmm0
-; AVX1-NEXT:    vpblendw {{.*#+}} xmm0 = xmm1[0,1,2,3],xmm0[4,5,6,7]
-; AVX1-NEXT:    vpxor %xmm2, %xmm0, %xmm0
-; AVX1-NEXT:    vpsubq %xmm2, %xmm0, %xmm0
-; AVX1-NEXT:    retq
-;
-; AVX2-LABEL: PR52719:
-; AVX2:       # %bb.0:
-; AVX2-NEXT:    vmovd %edi, %xmm1
-; AVX2-NEXT:    vpbroadcastd %xmm1, %xmm1
-; AVX2-NEXT:    vpmovzxdq {{.*#+}} xmm1 = xmm1[0],zero,xmm1[1],zero
-; AVX2-NEXT:    vmovdqa {{.*#+}} xmm2 = [9223372036854775808,9223372036854775808]
-; AVX2-NEXT:    vpsrlvq %xmm1, %xmm2, %xmm2
-; AVX2-NEXT:    vpsrlvq %xmm1, %xmm0, %xmm0
-; AVX2-NEXT:    vpxor %xmm2, %xmm0, %xmm0
-; AVX2-NEXT:    vpsubq %xmm2, %xmm0, %xmm0
-; AVX2-NEXT:    retq
+; AVX-LABEL: PR52719:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vmovd %edi, %xmm1
+; AVX-NEXT:    vpmovzxdq {{.*#+}} xmm1 = xmm1[0],zero,xmm1[1],zero
+; AVX-NEXT:    vmovdqa {{.*#+}} xmm2 = [9223372036854775808,9223372036854775808]
+; AVX-NEXT:    vpsrlq %xmm1, %xmm2, %xmm2
+; AVX-NEXT:    vpsrlq %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    vpxor %xmm2, %xmm0, %xmm0
+; AVX-NEXT:    vpsubq %xmm2, %xmm0, %xmm0
+; AVX-NEXT:    retq
 ;
 ; XOPAVX1-LABEL: PR52719:
 ; XOPAVX1:       # %bb.0:
@@ -1860,18 +1834,17 @@ define <2 x i64> @PR52719(<2 x i64> %a0, i32 %a1) {
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
 ; AVX512-NEXT:    vmovd %edi, %xmm1
-; AVX512-NEXT:    vpbroadcastd %xmm1, %xmm1
 ; AVX512-NEXT:    vpmovzxdq {{.*#+}} xmm1 = xmm1[0],zero,xmm1[1],zero
-; AVX512-NEXT:    vpsravq %zmm1, %zmm0, %zmm0
+; AVX512-NEXT:    vpsraq %xmm1, %zmm0, %zmm0
 ; AVX512-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
 ;
 ; AVX512VL-LABEL: PR52719:
 ; AVX512VL:       # %bb.0:
-; AVX512VL-NEXT:    vpbroadcastd %edi, %xmm1
+; AVX512VL-NEXT:    vmovd %edi, %xmm1
 ; AVX512VL-NEXT:    vpmovzxdq {{.*#+}} xmm1 = xmm1[0],zero,xmm1[1],zero
-; AVX512VL-NEXT:    vpsravq %xmm1, %xmm0, %xmm0
+; AVX512VL-NEXT:    vpsraq %xmm1, %xmm0, %xmm0
 ; AVX512VL-NEXT:    retq
 ;
 ; X86-SSE-LABEL: PR52719:
