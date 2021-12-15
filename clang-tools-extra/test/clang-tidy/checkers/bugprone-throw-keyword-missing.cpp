@@ -175,3 +175,14 @@ struct ExceptionRAII {
 void exceptionRAIITest() {
   ExceptionRAII E;
 }
+
+namespace std {
+typedef decltype(sizeof(void*)) size_t;
+}
+
+void* operator new(std::size_t, void*);
+
+void placeMentNewTest() {
+  alignas(RegularException) unsigned char expr[sizeof(RegularException)];
+  new (expr) RegularException{};
+}
