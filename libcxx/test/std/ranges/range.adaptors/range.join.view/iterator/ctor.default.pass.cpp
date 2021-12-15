@@ -12,45 +12,46 @@
 
 // iterator() requires default_initializable<OuterIter> = default;
 
-#include <cassert>
 #include <ranges>
 
-#include "test_macros.h"
+#include <cassert>
+#include <type_traits>
+#include "test_iterators.h"
 #include "../types.h"
 
-template<class T>
-struct DefaultCtorParent : std::ranges::view_base {
-  T *ptr_;
-  constexpr DefaultCtorParent(T *ptr) : ptr_(ptr) {}
-
-  constexpr forward_iterator<T *> begin() { return forward_iterator<T *>(ptr_); }
-  constexpr forward_iterator<const T *> begin() const { return forward_iterator<const T *>(ptr_); }
-  constexpr T *end() { return ptr_ + 4; }
-  constexpr const T *end() const { return ptr_ + 4; }
+template <class It>
+struct view : std::ranges::view_base {
+  It begin() const;
+  sentinel_wrapper<It> end() const;
 };
 
-template<class T>
-constexpr bool operator==(const forward_iterator<T*> &lhs, const T *rhs) { return lhs.base() == rhs; }
-template<class T>
-constexpr bool operator==(const T *lhs, const forward_iterator<T*> &rhs) { return rhs.base() == lhs; }
+template <class It>
+constexpr void test_default_constructible() {
+  using JoinView = std::ranges::join_view<view<It>>;
+  using JoinIterator = std::ranges::iterator_t<JoinView>;
+  static_assert(std::is_default_constructible_v<JoinIterator>);
+  JoinIterator it; (void)it;
+}
+
+template <class It>
+constexpr void test_non_default_constructible() {
+  using JoinView = std::ranges::join_view<view<It>>;
+  using JoinIterator = std::ranges::iterator_t<JoinView>;
+  static_assert(!std::is_default_constructible_v<JoinIterator>);
+}
 
 constexpr bool test() {
-  using Base = DefaultCtorParent<ChildView>;
-  // Note, only the outer iterator is default_initializable:
-  static_assert( std::default_initializable<std::ranges::iterator_t<Base>>);
-  static_assert(!std::default_initializable<std::ranges::iterator_t<std::ranges::range_reference_t<Base>>>);
-
-  std::ranges::iterator_t<std::ranges::join_view<Base>> iter1;
-  (void) iter1;
-
-  static_assert(!std::default_initializable<std::ranges::iterator_t<std::ranges::join_view<ParentView<ChildView>>>>);
-
+  test_non_default_constructible<cpp17_input_iterator<ChildView*>>();
+  // NOTE: cpp20_input_iterator can't be used with join_view because it is not copyable.
+  test_default_constructible<forward_iterator<ChildView*>>();
+  test_default_constructible<bidirectional_iterator<ChildView*>>();
+  test_default_constructible<random_access_iterator<ChildView*>>();
+  test_default_constructible<contiguous_iterator<ChildView*>>();
   return true;
 }
 
 int main(int, char**) {
   test();
   static_assert(test());
-
   return 0;
 }
