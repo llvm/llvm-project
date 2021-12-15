@@ -59,6 +59,7 @@ void VirtualUnwinder::unwindCall(UnwindState &State) {
   // pro/epi tracker(Dwarf CFI) for the precise check.
   uint64_t Source = State.getCurrentLBRSource();
   auto *ParentFrame = State.getParentFrame();
+
   if (ParentFrame == State.getDummyRootPtr() ||
       ParentFrame->Address != Source) {
     State.switchToFrame(Source);
@@ -121,7 +122,7 @@ void VirtualUnwinder::unwindReturn(UnwindState &State) {
   State.InstPtr.update(LBR.Source);
 }
 
-void VirtualUnwinder::unwindBranchWithinFrame(UnwindState &State) {
+void VirtualUnwinder::unwindBranch(UnwindState &State) {
   // TODO: Tolerate tail call for now, as we may see tail call from libraries.
   // This is only for intra function branches, excluding tail calls.
   uint64_t Source = State.getCurrentLBRSource();
@@ -219,7 +220,7 @@ void VirtualUnwinder::collectSamplesFromFrameTrie(
 
 void VirtualUnwinder::recordBranchCount(const LBREntry &Branch,
                                         UnwindState &State, uint64_t Repeat) {
-  if (Branch.IsArtificial)
+  if (Branch.IsArtificial || Branch.Target == ExternalAddr)
     return;
 
   if (Binary->usePseudoProbes()) {
@@ -242,21 +243,18 @@ bool VirtualUnwinder::unwind(const PerfSample *Sample, uint64_t Repeat) {
   if (!State.validateInitialState())
     return false;
 
-  // Also do not attempt linear unwind for the leaf range as it's incomplete.
-  bool IsLeaf = true;
-
   // Now process the LBR samples in parrallel with stack sample
   // Note that we do not reverse the LBR entry order so we can
   // unwind the sample stack as we walk through LBR entries.
   while (State.hasNextLBR()) {
     State.checkStateConsistency();
 
-    // Unwind implicit calls/returns from inlining, along the linear path,
-    // break into smaller sub section each with its own calling context.
-    if (!IsLeaf) {
+    // Do not attempt linear unwind for the leaf range as it's incomplete.
+    if (!State.IsLastLBR()) {
+      // Unwind implicit calls/returns from inlining, along the linear path,
+      // break into smaller sub section each with its own calling context.
       unwindLinear(State, Repeat);
     }
-    IsLeaf = false;
 
     // Save the LBR branch before it gets unwound.
     const LBREntry &Branch = State.getCurrentLBR();
@@ -271,9 +269,15 @@ bool VirtualUnwinder::unwind(const PerfSample *Sample, uint64_t Repeat) {
       // Unwind returns - check whether the IP is indeed at a return instruction
       unwindReturn(State);
     } else {
-      // Unwind branches - for regular intra function branches, we only
-      // need to record branch with context.
-      unwindBranchWithinFrame(State);
+      // Unwind branches
+      // For regular intra function branches, we only need to record branch with
+      // context. For an artificial branch cross function boundaries, we got an
+      // issue with returning to external code. Take the two LBR enties for
+      // example: [foo:8(RETURN), ext:1] [ext:3(CALL), bar:1] After perf reader,
+      // we only get[foo:8(RETURN), bar:1], unwinder will be confused like foo
+      // return to bar. Here we detect and treat this case as BRANCH instead of
+      // RETURN which only update the source address.
+      unwindBranch(State);
     }
     State.advanceLBR();
     // Record `branch` with calling context after unwinding.
@@ -432,9 +436,9 @@ void HybridPerfReader::unwindSamples() {
   if (Binary->useFSDiscriminator())
     exitWithError("FS discriminator is not supported in CS profile.");
   std::set<uint64_t> AllUntrackedCallsites;
+  VirtualUnwinder Unwinder(&SampleCounters, Binary);
   for (const auto &Item : AggregatedSamples) {
     const PerfSample *Sample = Item.first.getPtr();
-    VirtualUnwinder Unwinder(&SampleCounters, Binary);
     Unwinder.unwind(Sample, Item.second);
     auto &CurrUntrackedCallsites = Unwinder.getUntrackedCallsites();
     AllUntrackedCallsites.insert(CurrUntrackedCallsites.begin(),
@@ -508,26 +512,32 @@ bool PerfScriptReader::extractLBRStack(TraceStream &TraceIt,
     bool IsOutgoing = SrcIsInternal && !DstIsInternal;
     bool IsArtificial = false;
 
-    // Ignore branches outside the current binary. Ignore all remaining branches
-    // if there's no incoming branch before the external branch in reverse
-    // order.
+    // Ignore branches outside the current binary.
     if (IsExternal) {
-      if (PrevTrDst)
-        continue;
-      if (!LBRStack.empty()) {
+      if (!PrevTrDst && !LBRStack.empty()) {
         WithColor::warning()
             << "Invalid transfer to external code in LBR record at line "
             << TraceIt.getLineNumber() << ": " << TraceIt.getCurrentLine()
             << "\n";
       }
-      break;
+      // Do not ignore the entire samples, the remaining LBR can still be
+      // unwound using a context-less stack.
+      continue;
     }
 
     if (IsOutgoing) {
       if (!PrevTrDst) {
-        // This is unpaired outgoing jump which is likely due to interrupt or
-        // incomplete LBR trace. Ignore current and subsequent entries since
-        // they are likely in different contexts.
+        // This is a leading outgoing LBR, we should keep processing the LBRs.
+        if (LBRStack.empty()) {
+          NumLeadingOutgoingLBR++;
+          // Record this LBR since current source and next LBR' target is still
+          // a valid range.
+          LBRStack.emplace_back(LBREntry(Src, ExternalAddr, false));
+          continue;
+        }
+        // This is middle unpaired outgoing jump which is likely due to
+        // interrupt or incomplete LBR trace. Ignore current and subsequent
+        // entries since they are likely in different contexts.
         break;
       }
 
@@ -593,9 +603,17 @@ bool PerfScriptReader::extractCallstack(TraceStream &TraceIt,
     }
     TraceIt.advance();
     // Currently intermixed frame from different binaries is not supported.
-    // Ignore caller frames not from binary of interest.
-    if (!Binary->addressIsCode(FrameAddr))
-      break;
+    if (!Binary->addressIsCode(FrameAddr)) {
+      if (CallStack.empty())
+        NumLeafExternalFrame++;
+      // Push a special value(ExternalAddr) for the external frames so that
+      // unwinder can still work on this with artificial Call/Return branch.
+      // After unwinding, the context will be truncated for external frame.
+      // Also deduplicate the consecutive external addresses.
+      if (CallStack.empty() || CallStack.back() != ExternalAddr)
+        CallStack.emplace_back(ExternalAddr);
+      continue;
+    }
 
     // We need to translate return address to call address for non-leaf frames.
     if (!CallStack.empty()) {
@@ -612,6 +630,10 @@ bool PerfScriptReader::extractCallstack(TraceStream &TraceIt,
 
     CallStack.emplace_back(FrameAddr);
   }
+
+  // Strip out the bottom external addr.
+  if (CallStack.size() > 1 && CallStack.back() == ExternalAddr)
+    CallStack.pop_back();
 
   // Skip other unrelated line, find the next valid LBR line
   // Note that even for empty call stack, we should skip the address at the
@@ -885,6 +907,7 @@ uint64_t PerfScriptReader::parseAggregatedCount(TraceStream &TraceIt) {
 }
 
 void PerfScriptReader::parseSample(TraceStream &TraceIt) {
+  NumTotalSample++;
   uint64_t Count = parseAggregatedCount(TraceIt);
   assert(Count >= 1 && "Aggregated count should be >= 1!");
   parseSample(TraceIt, Count);
@@ -1130,6 +1153,11 @@ void PerfScriptReader::warnInvalidRange() {
 void PerfScriptReader::parsePerfTraces() {
   // Parse perf traces and do aggregation.
   parseAndAggregateTrace();
+
+  emitWarningSummary(NumLeafExternalFrame, NumTotalSample,
+                     "of samples have leaf external frame in call stack.");
+  emitWarningSummary(NumLeadingOutgoingLBR, NumTotalSample,
+                     "of samples have leading external LBR.");
 
   // Generate unsymbolized profile.
   warnTruncatedStack();
