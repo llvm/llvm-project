@@ -397,7 +397,11 @@ void CommandInterpreter::Initialize() {
       po->SetHelpLong("");
     }
 
-    AddAlias("repl", cmd_obj_sp, "--repl -- ");
+#ifdef LLDB_ENABLE_SWIFT
+    // FIXME: Upstream the REPL command together with support for a default
+    // language, similar to what exists for scripting.
+    AddAlias("repl", cmd_obj_sp, "--repl --language swift -- ");
+#endif
 
     CommandAlias *parray_alias =
         AddAlias("parray", cmd_obj_sp, "--element-count %1 --");
