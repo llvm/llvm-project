@@ -337,8 +337,21 @@ struct _LIBCPP_TEMPLATE_VIS char_traits<char>
 
     static _LIBCPP_CONSTEXPR_AFTER_CXX14
     int compare(const char_type* __s1, const char_type* __s2, size_t __n) _NOEXCEPT;
-    static inline size_t _LIBCPP_CONSTEXPR_AFTER_CXX14
-    length(const char_type* __s)  _NOEXCEPT {return __builtin_strlen(__s);}
+
+    static inline size_t _LIBCPP_CONSTEXPR_AFTER_CXX14 length(const char_type* __s)  _NOEXCEPT {
+      // GCC currently does not support __builtin_strlen during constant evaluation.
+      // https://gcc.gnu.org/bugzilla/show_bug.cgi?id=70816
+#ifdef _LIBCPP_COMPILER_GCC
+      if (__libcpp_is_constant_evaluated()) {
+        size_t __i = 0;
+        for (; __s[__i] != char_type('\0'); ++__i)
+            ;
+        return __i;
+      }
+#endif
+      return __builtin_strlen(__s);
+    }
+
     static _LIBCPP_CONSTEXPR_AFTER_CXX14
     const char_type* find(const char_type* __s, size_t __n, const char_type& __a) _NOEXCEPT;
     static inline _LIBCPP_CONSTEXPR_AFTER_CXX17
