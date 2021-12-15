@@ -30,7 +30,7 @@ namespace elf {
 class InputFile;
 class InputSectionBase;
 
-enum ELFKind {
+enum ELFKind : uint8_t {
   ELFNoneKind,
   ELF32LEKind,
   ELF32BEKind,
