@@ -17,6 +17,8 @@
 # NOGC: Name: .tbss
 # NOGC: Name: .ctors
 # NOGC: Name: .dtors
+# NOGC: Name: .jcr
+# NOGC: Name: .jcr_x
 # NOGC: Name: .debug_pubtypes
 # NOGC: Name: .comment
 # NOGC: Name: a
@@ -36,6 +38,7 @@
 # GC1-DISCARD-NEXT: removing unused section {{.*}}:(.tbss.f)
 # GC1-DISCARD-NEXT: removing unused section {{.*}}:(.tdata.h)
 # GC1-DISCARD-NEXT: removing unused section {{.*}}:(.init_x)
+# GC1-DISCARD-NEXT: removing unused section {{.*}}:(.jcr_x)
 # GC1-DISCARD-EMPTY:
 
 # GC1:     Name: .eh_frame
@@ -46,6 +49,7 @@
 # GC1:     Name: .tbss
 # GC1:     Name: .ctors
 # GC1:     Name: .dtors
+# GC1:     Name: .jcr
 # GC1:     Name: .debug_pubtypes
 # GC1:     Name: .comment
 # GC1:     Name: a
@@ -67,6 +71,7 @@
 # GC2:     Name: .tbss
 # GC2:     Name: .ctors
 # GC2:     Name: .dtors
+# GC2:     Name: .jcr
 # GC2:     Name: .debug_pubtypes
 # GC2:     Name: .comment
 # GC2:     Name: a
@@ -143,6 +148,12 @@ h:
   .quad 0
 
 .section .preinit_array,"aw",@preinit_array
+  .quad 0
+
+.section .jcr,"aw"
+  .quad 0
+
+.section .jcr_x,"aw"
   .quad 0
 
 .section .eh_frame,"a",@unwind
