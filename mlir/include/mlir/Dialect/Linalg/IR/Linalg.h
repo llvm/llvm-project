@@ -1,4 +1,4 @@
-//===- LinalgOps.h - Linalg Operations --------------------------*- C++ -*-===//
+//===- Linalg.h - Linalg dialect --------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,30 +6,28 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_DIALECT_LINALG_LINALGOPS_H_
-#define MLIR_DIALECT_LINALG_LINALGOPS_H_
+#ifndef MLIR_DIALECT_LINALG_LINALG_H_
+#define MLIR_DIALECT_LINALG_LINALG_H_
 
-#include "mlir/Dialect/Linalg/IR/LinalgTypes.h"
+#include "mlir/Dialect/Affine/IR/AffineOps.h"
+#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
+#include "mlir/Dialect/Math/IR/Math.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
-#include "mlir/Dialect/StandardOps/IR/Ops.h"
+#include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/Utils/ReshapeOpsUtils.h"
 #include "mlir/Dialect/Utils/StructuredOpsUtils.h"
 #include "mlir/IR/AffineExpr.h"
 #include "mlir/IR/AffineMap.h"
-#include "mlir/IR/BlockAndValueMapping.h"
 #include "mlir/IR/BuiltinDialect.h"
 #include "mlir/IR/BuiltinTypes.h"
-#include "mlir/IR/OpDefinition.h"
+#include "mlir/IR/Dialect.h"
+#include "mlir/IR/ImplicitLocOpBuilder.h"
 #include "mlir/IR/TypeUtilities.h"
-#include "mlir/IR/Types.h"
 #include "mlir/Interfaces/CopyOpInterface.h"
 #include "mlir/Interfaces/InferTypeOpInterface.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Interfaces/TilingInterface.h"
 #include "mlir/Interfaces/ViewLikeInterface.h"
-#include "mlir/Support/LLVM.h"
-
-#include "llvm/ADT/STLExtras.h"
 
 namespace mlir {
 namespace linalg {
@@ -100,7 +98,21 @@ LogicalResult verifyStructuredOpInterface(Operation *op);
 } // namespace linalg
 } // namespace mlir
 
+//===----------------------------------------------------------------------===//
+// Linalg Dialect
+//===----------------------------------------------------------------------===//
+
+#include "mlir/Dialect/Linalg/IR/LinalgOpsDialect.h.inc"
+
+//===----------------------------------------------------------------------===//
+// Linalg Interfaces
+//===----------------------------------------------------------------------===//
+
 #include "mlir/Dialect/Linalg/IR/LinalgInterfaces.h"
+
+//===----------------------------------------------------------------------===//
+// Linalg Dialect Operations
+//===----------------------------------------------------------------------===//
 
 #define GET_OP_CLASSES
 #include "mlir/Dialect/Linalg/IR/LinalgOps.h.inc"
@@ -108,4 +120,4 @@ LogicalResult verifyStructuredOpInterface(Operation *op);
 #define GET_OP_CLASSES
 #include "mlir/Dialect/Linalg/IR/LinalgStructuredOps.h.inc"
 
-#endif // MLIR_DIALECT_LINALG_LINALGOPS_H_
+#endif // MLIR_DIALECT_LINALG_LINALG_H_

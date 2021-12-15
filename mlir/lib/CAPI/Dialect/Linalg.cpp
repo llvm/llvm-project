@@ -8,7 +8,7 @@
 
 #include "mlir-c/Dialect/Linalg.h"
 #include "mlir/CAPI/Registration.h"
-#include "mlir/Dialect/Linalg/IR/LinalgOps.h"
+#include "mlir/Dialect/Linalg/IR/Linalg.h"
 
 using namespace mlir;
 using namespace mlir::linalg;

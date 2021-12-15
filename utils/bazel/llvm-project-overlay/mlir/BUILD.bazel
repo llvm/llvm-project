@@ -6568,11 +6568,10 @@ cc_library(
     name = "LinalgOps",
     srcs = [
         "lib/Dialect/Linalg/IR/LinalgOps.cpp",
-        "lib/Dialect/Linalg/IR/LinalgTypes.cpp",
+        "lib/Dialect/Linalg/IR/LinalgDialect.cpp",
     ],
     hdrs = [
-        "include/mlir/Dialect/Linalg/IR/LinalgOps.h",
-        "include/mlir/Dialect/Linalg/IR/LinalgTypes.h",
+        "include/mlir/Dialect/Linalg/IR/Linalg.h"
     ],
     includes = ["include"],
     deps = [
