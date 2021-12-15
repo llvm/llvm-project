@@ -977,11 +977,9 @@ void PreambleThread::build(Request Req) {
 
   LatestBuild = clang::clangd::buildPreamble(
       FileName, *Req.CI, Inputs, StoreInMemory,
-      [this, Version(Inputs.Version)](ASTContext &Ctx,
-                                      std::shared_ptr<clang::Preprocessor> PP,
+      [this, Version(Inputs.Version)](ASTContext &Ctx, Preprocessor &PP,
                                       const CanonicalIncludes &CanonIncludes) {
-        Callbacks.onPreambleAST(FileName, Version, Ctx, std::move(PP),
-                                CanonIncludes);
+        Callbacks.onPreambleAST(FileName, Version, Ctx, PP, CanonIncludes);
       });
   if (LatestBuild && isReliable(LatestBuild->CompileCommand))
     HeaderIncluders.update(FileName, LatestBuild->Includes.allHeaders());
