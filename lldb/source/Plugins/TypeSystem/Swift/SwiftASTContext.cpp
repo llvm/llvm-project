@@ -131,25 +131,6 @@
 #include "Plugins/SymbolFile/DWARF/DWARFASTParserClang.h"
 #include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 
-#define VALID_OR_RETURN(value)                                                 \
-  do {                                                                         \
-    if (HasFatalErrors()) {                                                    \
-      return (value);                                                          \
-    }                                                                          \
-  } while (0)
-#define VALID_OR_RETURN_VOID()                                                 \
-  do {                                                                         \
-    if (HasFatalErrors()) {                                                    \
-      return;                                                                  \
-    }                                                                          \
-  } while (0);
-#define VALID_OR_RETURN_CHECK_TYPE(type, value)                                \
-  do {                                                                         \
-    if (HasFatalErrors() || !type) {                                           \
-      return (value);                                                          \
-    }                                                                          \
-  } while (0)
-
 namespace {
 /// This silly constexpr allows us to filter out the useless __FUNCTION__ name
 /// of lambdas in the LOG_PRINTF macro.
@@ -188,6 +169,27 @@ std::recursive_mutex g_log_mutex;
 #define HEALTH_LOG_PRINTF(FMT, ...)                                            \
   LOG_PRINTF(LIBLLDB_LOG_TYPES, FMT, ##__VA_ARGS__);                           \
   LOG_PRINTF_IMPL(lldb_private::GetSwiftHealthLog(), false, FMT, ##__VA_ARGS__)
+
+#define VALID_OR_RETURN(value)                                                 \
+  do {                                                                         \
+    if (HasFatalErrors()) {                                                    \
+      LOG_PRINTF(LIBLLDB_LOG_TYPES,                                            \
+                 "SwiftASTContext is in fatal error state, bailing out.");     \
+      return value;                                                            \
+    }                                                                          \
+  } while (0)
+#define VALID_OR_RETURN_CHECK_TYPE(type, value)                                \
+  do {                                                                         \
+    if (HasFatalErrors()) {                                                    \
+      LOG_PRINTF(LIBLLDB_LOG_TYPES,                                            \
+                 "SwiftASTContext is in fatal error state, bailing out.");     \
+      return (value);                                                          \
+    }                                                                          \
+    if (!type) {                                                               \
+      LOG_PRINTF(LIBLLDB_LOG_TYPES, "Input type is nullptr, bailing out.");    \
+      return (value);                                                          \
+    }                                                                          \
+  } while (0)
 
 using namespace lldb;
 using namespace lldb_private;
@@ -3607,7 +3609,7 @@ SwiftASTContext::CreateModule(const SourceModule &module, Status &error,
 }
 
 void SwiftASTContext::CacheModule(swift::ModuleDecl *module) {
-  VALID_OR_RETURN_VOID();
+  VALID_OR_RETURN();
 
   if (!module)
     return;
@@ -3824,7 +3826,7 @@ GetLibrarySearchPaths(const swift::SearchPathOptions &search_path_opts) {
 
 void SwiftASTContext::LoadModule(swift::ModuleDecl *swift_module,
                                  Process &process, Status &error) {
-  VALID_OR_RETURN_VOID();
+  VALID_OR_RETURN();
   LLDB_SCOPED_TIMER();
 
   Status current_error;
@@ -4126,7 +4128,7 @@ bool SwiftASTContext::LoadLibraryUsingPaths(
 }
 
 void SwiftASTContext::LoadExtraDylibs(Process &process, Status &error) {
-  VALID_OR_RETURN_VOID();
+  VALID_OR_RETURN();
 
   error.Clear();
   swift::IRGenOptions &irgen_options = GetIRGenOptions();
@@ -4160,7 +4162,7 @@ static std::string GetBriefModuleName(Module &module) {
 
 void SwiftASTContext::RegisterSectionModules(
     Module &module, std::vector<std::string> &module_names) {
-  VALID_OR_RETURN_VOID();
+  VALID_OR_RETURN();
   LLDB_SCOPED_TIMER();
 
   swift::MemoryBufferSerializedModuleLoader *loader =
@@ -4234,7 +4236,7 @@ void SwiftASTContext::RegisterSectionModules(
 
 void SwiftASTContext::ValidateSectionModules(
     Module &module, const std::vector<std::string> &module_names) {
-  VALID_OR_RETURN_VOID();
+  VALID_OR_RETURN();
   LLDB_SCOPED_TIMER();
 
   Status error;
@@ -4279,14 +4281,14 @@ ConstString SwiftASTContext::GetMangledTypeName(swift::TypeBase *type_base) {
 
 void SwiftASTContext::CacheDemangledType(ConstString name,
                                          swift::TypeBase *found_type) {
-  VALID_OR_RETURN_VOID();
+  VALID_OR_RETURN();
 
   m_type_to_mangled_name_map.insert({found_type, name.AsCString()});
   m_mangled_name_to_type_map.insert({name.AsCString(), found_type});
 }
 
 void SwiftASTContext::CacheDemangledTypeFailure(ConstString name) {
-  VALID_OR_RETURN_VOID();
+  VALID_OR_RETURN();
 
   m_negative_type_cache.Insert(name.AsCString());
 }
@@ -5023,7 +5025,7 @@ void SwiftASTContext::PrintDiagnostics(DiagnosticManager &diagnostic_manager,
   // fatal error field, and then put it to the stream, otherwise just
   // dump the diagnostics to the stream.
 
-  // N.B. you cannot use VALID_OR_RETURN_VOID here since that exits if
+  // N.B. you cannot use VALID_OR_RETURN here since that exits if
   // you have fatal errors, which are what we are trying to print
   // here.
   if (!m_ast_context_ap.get()) {
@@ -5095,7 +5097,10 @@ void SwiftASTContextForExpressions::ModulesDidLoad(ModuleList &module_list) {
       // We cannot reconfigure ClangImporter after its creation.
       // Instead poison the SwiftASTContext so it gets recreated.
       m_fatal_errors.SetErrorStringWithFormat(
-          "New Swift image added: %s",
+          "New Swift image added: %s. ClangImporter needs to be reinitialized.",
+          module_sp->GetFileSpec().GetPath().c_str());
+      HEALTH_LOG_PRINTF(
+          "New Swift image added: %s. ClangImporter needs to be reinitialized.",
           module_sp->GetFileSpec().GetPath().c_str());
     }
 
