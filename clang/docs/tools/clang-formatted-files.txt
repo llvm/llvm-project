@@ -7044,8 +7044,7 @@ mlir/include/mlir/Dialect/Linalg/ComprehensiveBufferize/SCFInterfaceImpl.h
 mlir/include/mlir/Dialect/Linalg/ComprehensiveBufferize/TensorInterfaceImpl.h
 mlir/include/mlir/Dialect/Linalg/ComprehensiveBufferize/VectorInterfaceImpl.h
 mlir/include/mlir/Dialect/Linalg/IR/LinalgInterfaces.h
-mlir/include/mlir/Dialect/Linalg/IR/LinalgOps.h
-mlir/include/mlir/Dialect/Linalg/IR/LinalgTypes.h
+mlir/include/mlir/Dialect/Linalg/IR/Linalg.h
 mlir/include/mlir/Dialect/Linalg/Transforms/CodegenStrategy.h
 mlir/include/mlir/Dialect/Linalg/Transforms/Hoisting.h
 mlir/include/mlir/Dialect/Linalg/Transforms/HoistPadding.h
@@ -7463,7 +7462,7 @@ mlir/lib/Dialect/Linalg/ComprehensiveBufferize/TensorInterfaceImpl.cpp
 mlir/lib/Dialect/Linalg/ComprehensiveBufferize/VectorInterfaceImpl.cpp
 mlir/lib/Dialect/Linalg/IR/LinalgInterfaces.cpp
 mlir/lib/Dialect/Linalg/IR/LinalgOps.cpp
-mlir/lib/Dialect/Linalg/IR/LinalgTypes.cpp
+mlir/lib/Dialect/Linalg/IR/LinalgDialect.cpp
 mlir/lib/Dialect/Linalg/Transforms/Bufferize.cpp
 mlir/lib/Dialect/Linalg/Transforms/CodegenStrategy.cpp
 mlir/lib/Dialect/Linalg/Transforms/ComprehensiveBufferizePass.cpp

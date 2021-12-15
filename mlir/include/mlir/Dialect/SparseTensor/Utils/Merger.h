@@ -13,7 +13,7 @@
 #ifndef MLIR_DIALECT_SPARSETENSOR_UTILS_MERGER_H_
 #define MLIR_DIALECT_SPARSETENSOR_UTILS_MERGER_H_
 
-#include "mlir/Dialect/Linalg/IR/LinalgOps.h"
+#include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/IR/Value.h"
 #include "llvm/ADT/BitVector.h"
 
