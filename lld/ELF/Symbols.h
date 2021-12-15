@@ -16,6 +16,7 @@
 #include "InputFiles.h"
 #include "InputSection.h"
 #include "lld/Common/LLVM.h"
+#include "lld/Common/Memory.h"
 #include "lld/Common/Strings.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/Object/Archive.h"
@@ -574,6 +575,12 @@ void Symbol::replace(const Symbol &newSym) {
   // This is for debugging.
   if (traced)
     printTraceSymbol(this);
+}
+
+template <typename... T> Defined *makeDefined(T &&...args) {
+  return new (reinterpret_cast<Defined *>(
+      getSpecificAllocSingleton<SymbolUnion>().Allocate()))
+      Defined(std::forward<T>(args)...);
 }
 
 void maybeWarnUnorderableSymbol(const Symbol *sym);
