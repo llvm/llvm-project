@@ -24,28 +24,28 @@
 
 ## st_value points to the canonical PLT entry in .glink
 # SYM: Symbol table '.dynsym'
-# SYM: 1001023c 0 FUNC GLOBAL DEFAULT UND func
-# SYM: 1001022c 0 FUNC GLOBAL DEFAULT UND func2
+# SYM: 1001022c 0 FUNC GLOBAL DEFAULT UND func
+# SYM: 1001023c 0 FUNC GLOBAL DEFAULT UND func2
 # SYM: 1001024c 0 FUNC GLOBAL DEFAULT UND ifunc
 # SYM: Symbol table '.symtab'
-# SYM: 1001023c 0 FUNC GLOBAL DEFAULT UND func
-# SYM: 1001022c 0 FUNC GLOBAL DEFAULT UND func2
+# SYM: 1001022c 0 FUNC GLOBAL DEFAULT UND func
+# SYM: 1001023c 0 FUNC GLOBAL DEFAULT UND func2
 # SYM: 1001024c 0 FUNC GLOBAL DEFAULT UND ifunc
 
 # HEX: 0x10030318 1001025c 10010260 10010264
 
-## Canonical PLT entry of func2.
-## 0x1003031C = 65536*4099+796
+## Canonical PLT entry of func.
+## 0x10030318 = 65536*4099+792
 # CHECK:      1001022c <.glink>:
 # CHECK-NEXT:           lis 11, 4099
-# CHECK-NEXT:           lwz 11, 796(11)
+# CHECK-NEXT:           lwz 11, 792(11)
 # CHECK-NEXT:           mtctr 11
 # CHECK-NEXT:           bctr
 
-## Canonical PLT entry of func.
-## 0x10030318 = 65536*4099+792
+## Canonical PLT entry of func2.
+## 0x1003031C = 65536*4099+796
 # CHECK-NEXT: 1001023c: lis 11, 4099
-# CHECK-NEXT:           lwz 11, 792(11)
+# CHECK-NEXT:           lwz 11, 796(11)
 # CHECK-NEXT:           mtctr 11
 # CHECK-NEXT:           bctr
 

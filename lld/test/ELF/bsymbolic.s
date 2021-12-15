@@ -41,9 +41,9 @@
 # REL_DEF-NEXT: }
 # REL_DEF-NEXT: .rela.plt {
 # REL_DEF-NEXT:   R_X86_64_JUMP_SLOT default
+# REL_DEF-NEXT:   R_X86_64_JUMP_SLOT notype_default
 # REL_DEF-NEXT:   R_X86_64_JUMP_SLOT weak_default
 # REL_DEF-NEXT:   R_X86_64_JUMP_SLOT ext_default
-# REL_DEF-NEXT:   R_X86_64_JUMP_SLOT notype_default
 # REL_DEF-NEXT:   R_X86_64_JUMP_SLOT undef
 # REL_DEF-NEXT: }
 
@@ -62,8 +62,8 @@
 # REL_GFUN-NEXT:   R_X86_64_64 data_default
 # REL_GFUN-NEXT: }
 # REL_GFUN-NEXT: .rela.plt {
-# REL_GFUN-NEXT:   R_X86_64_JUMP_SLOT weak_default
 # REL_GFUN-NEXT:   R_X86_64_JUMP_SLOT notype_default
+# REL_GFUN-NEXT:   R_X86_64_JUMP_SLOT weak_default
 # REL_GFUN-NEXT:   R_X86_64_JUMP_SLOT undef
 # REL_GFUN-NEXT: }
 
