@@ -5,11 +5,10 @@
 
 ; This call should not get inlined, because it would make the callee_not_avx
 ; call ABI incompatible.
-; TODO: Currently gets inlined.
 define void @caller_avx() "target-features"="+avx" {
 ; CHECK-LABEL: define {{[^@]+}}@caller_avx
 ; CHECK-SAME: () #[[ATTR0:[0-9]+]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = call i64 @callee_not_avx(<4 x i64> <i64 0, i64 1, i64 2, i64 3>)
+; CHECK-NEXT:    call void @caller_not_avx()
 ; CHECK-NEXT:    ret void
 ;
   call void @caller_not_avx()
@@ -17,6 +16,10 @@ define void @caller_avx() "target-features"="+avx" {
 }
 
 define internal void @caller_not_avx() {
+; CHECK-LABEL: define {{[^@]+}}@caller_not_avx() {
+; CHECK-NEXT:    [[TMP1:%.*]] = call i64 @callee_not_avx(<4 x i64> <i64 0, i64 1, i64 2, i64 3>)
+; CHECK-NEXT:    ret void
+;
   call i64 @callee_not_avx(<4 x i64> <i64 0, i64 1, i64 2, i64 3>)
   ret void
 }
@@ -33,11 +36,10 @@ define i64 @callee_not_avx(<4 x i64> %arg) noinline {
 
 ; This call also shouldn't be inlined, as we don't know whether callee_unknown
 ; is ABI compatible or not.
-; TODO: Currently gets inlined.
 define void @caller_avx2() "target-features"="+avx" {
 ; CHECK-LABEL: define {{[^@]+}}@caller_avx2
 ; CHECK-SAME: () #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = call i64 @callee_unknown(<4 x i64> <i64 0, i64 1, i64 2, i64 3>)
+; CHECK-NEXT:    call void @caller_not_avx2()
 ; CHECK-NEXT:    ret void
 ;
   call void @caller_not_avx2()
@@ -45,6 +47,10 @@ define void @caller_avx2() "target-features"="+avx" {
 }
 
 define internal void @caller_not_avx2() {
+; CHECK-LABEL: define {{[^@]+}}@caller_not_avx2() {
+; CHECK-NEXT:    [[TMP1:%.*]] = call i64 @callee_unknown(<4 x i64> <i64 0, i64 1, i64 2, i64 3>)
+; CHECK-NEXT:    ret void
+;
   call i64 @callee_unknown(<4 x i64> <i64 0, i64 1, i64 2, i64 3>)
   ret void
 }
