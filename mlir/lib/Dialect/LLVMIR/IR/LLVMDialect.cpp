@@ -155,12 +155,14 @@ static ParseResult parseCmpOp(OpAsmParser &parser, OperationState &result) {
     return parser.emitError(trailingTypeLoc,
                             "expected LLVM dialect-compatible type");
   if (LLVM::isCompatibleVectorType(type)) {
-    if (type.isa<LLVM::LLVMScalableVectorType>()) {
-      resultType = LLVM::LLVMScalableVectorType::get(
-          resultType, LLVM::getVectorNumElements(type).getKnownMinValue());
+    if (LLVM::isScalableVectorType(type)) {
+      resultType = LLVM::getVectorType(
+          resultType, LLVM::getVectorNumElements(type).getKnownMinValue(),
+          /*isScalable=*/true);
     } else {
-      resultType = LLVM::getFixedVectorType(
-          resultType, LLVM::getVectorNumElements(type).getFixedValue());
+      resultType = LLVM::getVectorType(
+          resultType, LLVM::getVectorNumElements(type).getFixedValue(),
+          /*isScalable=*/false);
     }
   }
 
