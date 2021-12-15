@@ -496,3 +496,18 @@ define <64 x i8> @ashr_const7_v64i8(<64 x i8> %a) {
   %res = ashr <64 x i8> %a, <i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7>
   ret <64 x i8> %res
 }
+
+define <8 x i64> @PR52719(<8 x i64> %a0, i32 %a1) {
+; ALL-LABEL: PR52719:
+; ALL:       # %bb.0:
+; ALL-NEXT:    vmovd %edi, %xmm1
+; ALL-NEXT:    vpbroadcastd %xmm1, %xmm1
+; ALL-NEXT:    vpmovzxdq {{.*#+}} xmm1 = xmm1[0],zero,xmm1[1],zero
+; ALL-NEXT:    vpsraq %xmm1, %zmm0, %zmm0
+; ALL-NEXT:    retq
+  %vec = insertelement <8 x i32> poison, i32 %a1, i64 0
+  %splat = shufflevector <8 x i32> %vec, <8 x i32> poison, <8 x i32> zeroinitializer
+  %zext = zext <8 x i32> %splat to <8 x i64>
+  %ashr = ashr <8 x i64> %a0, %zext
+  ret <8 x i64> %ashr
+}
