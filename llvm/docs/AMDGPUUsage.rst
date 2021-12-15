@@ -23,6 +23,7 @@ User Guide for AMDGPU Backend
    AMDGPUInstructionSyntax
    AMDGPUInstructionNotation
    AMDGPUDwarfExtensionsForHeterogeneousDebugging
+   AMDGPULLVMExtensionsForHeterogeneousDebugging
    AMDGPUDwarfExtensionAllowLocationDescriptionOnTheDwarfExpressionStack/AMDGPUDwarfExtensionAllowLocationDescriptionOnTheDwarfExpressionStack
 
 Introduction
