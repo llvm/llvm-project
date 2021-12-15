@@ -1379,5 +1379,22 @@ TEST_F(FormatTestCSharp, SwitchExpression) {
                Style);
 }
 
+TEST_F(FormatTestCSharp, EmptyShortBlock) {
+  auto Style = getLLVMStyle();
+  Style.AllowShortBlocksOnASingleLine = FormatStyle::SBS_Empty;
+
+  verifyFormat("try {\n"
+               "  doA();\n"
+               "} catch (Exception e) {\n"
+               "  e.printStackTrace();\n"
+               "}\n",
+               Style);
+
+  verifyFormat("try {\n"
+               "  doA();\n"
+               "} catch (Exception e) {}\n",
+               Style);
+}
+
 } // namespace format
 } // end namespace clang
