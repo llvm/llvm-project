@@ -59,11 +59,11 @@ std::string lld::toString(const InputFile *f) {
 
   if (f->toStringCache.empty()) {
     if (f->archiveName.empty())
-      f->toStringCache = std::string(f->getName());
+      f->toStringCache = f->getName();
     else
-      f->toStringCache = (f->archiveName + "(" + f->getName() + ")").str();
+      (f->archiveName + "(" + f->getName() + ")").toVector(f->toStringCache);
   }
-  return f->toStringCache;
+  return std::string(f->toStringCache);
 }
 
 static ELFKind getELFKind(MemoryBufferRef mb, StringRef archiveName) {
@@ -384,7 +384,7 @@ template <class ELFT> void ELFFileBase::init() {
     fatal(toString(this) + ": invalid sh_info in symbol table");
 
   elfSyms = reinterpret_cast<const void *>(eSyms.data());
-  numELFSyms = eSyms.size();
+  numELFSyms = uint32_t(eSyms.size());
   stringTable = CHECK(obj.getStringTableForSymtab(*symtabSec, sections), this);
 }
 
@@ -1642,7 +1642,7 @@ static uint8_t getOsAbi(const Triple &t) {
 BitcodeFile::BitcodeFile(MemoryBufferRef mb, StringRef archiveName,
                          uint64_t offsetInArchive)
     : InputFile(BitcodeKind, mb) {
-  this->archiveName = std::string(archiveName);
+  this->archiveName = archiveName;
 
   std::string path = mb.getBufferIdentifier().str();
   if (config->thinLTOIndexOnly)
