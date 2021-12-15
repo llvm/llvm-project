@@ -11,7 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "M88kISelLowering.h"
-//#include "M88kCallingConv.h"
+#include "M88kCallingConv.h"
 //#include "M88kConstantPoolValue.h"
 //#include "M88kMachineFunctionInfo.h"
 #include "M88kTargetMachine.h"

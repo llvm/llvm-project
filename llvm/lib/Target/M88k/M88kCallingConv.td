@@ -22,6 +22,9 @@ def CC_M88k : CallingConv<[
   CCIfSRet<CCIfType<[i32], CCAssignToReg<[R12]>>>,
 
   // Because i64 and f64 values are split into two 32bit values and passed in
+  CCIfType<[f64], CCCustom<"CC_M88k_Custom_f64">>,
+
+  // Because i64 values are split into two 32bit values and passed in
   // an even/odd register pairs, we have to eat a register as pad register.
   CCIfType<[i32], CCIfSplit<CCAssignToRegWithShadow<[R2, R4, R6, R8],
                                                     [R1, R3, R5, R7]>>>,
@@ -36,6 +39,8 @@ def CC_M88k : CallingConv<[
 
 // M88k 32-bit ELF C return-value convention.
 def RetCC_M88k : CallingConv<[
+  CCIfType<[f64], CCCustom<"RetCC_M88k_Custom_f64">>,
+
   // 32-bit values are returned in R2, 64-bit values in pair R2/R3.
   CCIfType<[i32,f32], CCAssignToReg<[R2,R3]>>
 ]>;

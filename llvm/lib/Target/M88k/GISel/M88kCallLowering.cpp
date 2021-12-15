@@ -13,7 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "M88kCallLowering.h"
-#include "M88kISelLowering.h"
+#include "M88kCallingConv.h"
 #include "M88kInstrInfo.h"
 #include "M88kSubtarget.h"
 #include "M88kTargetMachine.h"
@@ -38,15 +38,15 @@ struct OutgoingArgHandler : public CallLowering::OutgoingValueHandler {
       : OutgoingValueHandler(MIRBuilder, MRI), MIB(MIB) {}
 
   void assignValueToReg(Register ValVReg, Register PhysReg,
-                        CCValAssign VA) override {
-    MIB.addUse(PhysReg, RegState::Implicit);
-    Register ExtReg = extendRegister(ValVReg, VA);
-    MIRBuilder.buildCopy(PhysReg, ExtReg);
-  }
+                        CCValAssign VA) override;
+
+  unsigned assignCustomValue(CallLowering::ArgInfo &Arg,
+                             ArrayRef<CCValAssign> VAs,
+                             std::function<void()> *Thunk = nullptr) override;
 
   void assignValueToAddress(Register ValVReg, Register Addr, LLT MemTy,
                             MachinePointerInfo &MPO, CCValAssign &VA) override {
-    llvm_unreachable("unimplemented");
+    llvm_unreachable("assignValueToAddress not implemented");
   }
 
   Register getStackAddress(uint64_t Size, int64_t Offset,
@@ -75,20 +75,75 @@ private:
   Register getStackAddress(uint64_t Size, int64_t Offset,
                            MachinePointerInfo &MPO,
                            ISD::ArgFlagsTy Flags) override;
+
+  unsigned assignCustomValue(CallLowering::ArgInfo &Arg,
+                             ArrayRef<CCValAssign> VAs,
+                             std::function<void()> *Thunk = nullptr) override;
+
+  /// Marking a physical register as used is different between formal
+  /// parameters, where it's a basic block live-in, and call returns, where it's
+  /// an implicit-def of the call instruction.
+  virtual void markPhysRegUsed(unsigned PhysReg) = 0;
 };
 
 struct FormalArgHandler : public M88kIncomingValueHandler {
   FormalArgHandler(MachineIRBuilder &MIRBuilder, MachineRegisterInfo &MRI)
       : M88kIncomingValueHandler(MIRBuilder, MRI) {}
+
+  void markPhysRegUsed(unsigned PhysReg) override;
 };
 
 } // namespace
 
+void OutgoingArgHandler::assignValueToReg(Register ValVReg, Register PhysReg,
+                                          CCValAssign VA) {
+  MIB.addUse(PhysReg, RegState::Implicit);
+  Register ExtReg = extendRegister(ValVReg, VA);
+  MIRBuilder.buildCopy(PhysReg, ExtReg);
+}
+
+unsigned OutgoingArgHandler::assignCustomValue(CallLowering::ArgInfo &Arg,
+                                               ArrayRef<CCValAssign> VAs,
+                                               std::function<void()> *Thunk) {
+  assert(Arg.Regs.size() == 1 && "Can't handle multple regs yet");
+
+  CCValAssign VA = VAs[0];
+  assert(VA.needsCustom() && "Value doesn't need custom handling");
+
+  // Custom lowering for other types, such as f16, is currently not supported
+  if (VA.getValVT() != MVT::f64)
+    return 0;
+
+  CCValAssign NextVA = VAs[1];
+  assert(NextVA.needsCustom() && "Value doesn't need custom handling");
+  assert(NextVA.getValVT() == MVT::f64 && "Unsupported type");
+
+  assert(VA.getValNo() == NextVA.getValNo() &&
+         "Values belong to different arguments");
+
+  assert(VA.isRegLoc() && "Value should be in reg");
+  assert(NextVA.isRegLoc() && "Value should be in reg");
+
+  Register NewRegs[] = {MRI.createGenericVirtualRegister(LLT::scalar(32)),
+                        MRI.createGenericVirtualRegister(LLT::scalar(32))};
+  MIRBuilder.buildUnmerge(NewRegs, Arg.Regs[0]);
+
+  if (Thunk) {
+    *Thunk = [=]() {
+      assignValueToReg(NewRegs[0], VA.getLocReg(), VA);
+      assignValueToReg(NewRegs[1], NextVA.getLocReg(), NextVA);
+    };
+    return 1;
+  }
+  assignValueToReg(NewRegs[0], VA.getLocReg(), VA);
+  assignValueToReg(NewRegs[1], NextVA.getLocReg(), NextVA);
+  return 1;
+}
+
 void M88kIncomingValueHandler::assignValueToReg(Register ValVReg,
                                                 Register PhysReg,
                                                 CCValAssign VA) {
-  MIRBuilder.getMRI()->addLiveIn(PhysReg);
-  MIRBuilder.getMBB().addLiveIn(PhysReg);
+  markPhysRegUsed(PhysReg);
   IncomingValueHandler::assignValueToReg(ValVReg, PhysReg, VA);
 }
 
@@ -117,6 +172,45 @@ Register M88kIncomingValueHandler::getStackAddress(uint64_t Size,
   MachineInstrBuilder AddrReg = MIRBuilder.buildFrameIndex(FramePtr, FI);
   StackUsed = std::max(StackUsed, Size + Offset);
   return AddrReg.getReg(0);
+}
+
+unsigned
+M88kIncomingValueHandler::assignCustomValue(CallLowering::ArgInfo &Arg,
+                                            ArrayRef<CCValAssign> VAs,
+                                            std::function<void()> *Thunk) {
+  assert(Arg.Regs.size() == 1 && "Can't handle multple regs yet");
+
+  CCValAssign VA = VAs[0];
+  assert(VA.needsCustom() && "Value doesn't need custom handling");
+
+  // Custom lowering for other types is currently not supported.
+  if (VA.getValVT() != MVT::f64)
+    return 0;
+
+  CCValAssign NextVA = VAs[1];
+  assert(NextVA.needsCustom() && "Value doesn't need custom handling");
+  assert(NextVA.getValVT() == MVT::f64 && "Unsupported type");
+
+  assert(VA.getValNo() == NextVA.getValNo() &&
+         "Values belong to different arguments");
+
+  assert(VA.isRegLoc() && "Value should be in reg");
+  assert(NextVA.isRegLoc() && "Value should be in reg");
+
+  Register NewRegs[] = {MRI.createGenericVirtualRegister(LLT::scalar(32)),
+                        MRI.createGenericVirtualRegister(LLT::scalar(32))};
+
+  assignValueToReg(NewRegs[0], VA.getLocReg(), VA);
+  assignValueToReg(NewRegs[1], NextVA.getLocReg(), NextVA);
+
+  MIRBuilder.buildMerge(Arg.Regs[0], NewRegs);
+
+  return 1;
+}
+
+void FormalArgHandler::markPhysRegUsed(unsigned PhysReg) {
+  MIRBuilder.getMRI()->addLiveIn(PhysReg);
+  MIRBuilder.getMBB().addLiveIn(PhysReg);
 }
 
 bool M88kCallLowering::lowerReturn(MachineIRBuilder &MIRBuilder,
