@@ -1110,11 +1110,12 @@ template <class ELFT> void ObjFile<ELFT>::initializeSymbols() {
       continue;
     }
 
+    Symbol *sym = this->symbols[i];
     if (eSym.st_shndx == SHN_COMMON) {
       if (value == 0 || value >= UINT32_MAX)
         fatal(toString(this) + ": common symbol '" + StringRef(name.data) +
               "' has invalid alignment: " + Twine(value));
-      this->symbols[i]->resolve(
+      sym->resolve(
           CommonSymbol{this, name, binding, stOther, type, value, size});
       continue;
     }
@@ -1126,7 +1127,6 @@ template <class ELFT> void ObjFile<ELFT>::initializeSymbols() {
     // defined symbol in a .eh_frame becomes dangling symbols.
     if (sec == &InputSection::discarded) {
       Undefined und{this, name, binding, stOther, type, secIdx};
-      Symbol *sym = this->symbols[i];
       // !ArchiveFile::parsed or LazyObjFile::extracted means that the file
       // containing this object has not finished processing, i.e. this symbol is
       // a result of a lazy symbol extract. We should demote the lazy symbol to
@@ -1148,7 +1148,7 @@ template <class ELFT> void ObjFile<ELFT>::initializeSymbols() {
     // Handle global defined symbols.
     if (binding == STB_GLOBAL || binding == STB_WEAK ||
         binding == STB_GNU_UNIQUE) {
-      this->symbols[i]->resolve(
+      sym->resolve(
           Defined{this, name, binding, stOther, type, value, size, sec});
       continue;
     }
