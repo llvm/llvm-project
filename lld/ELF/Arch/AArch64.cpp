@@ -690,11 +690,11 @@ void AArch64BtiPac::writePlt(uint8_t *buf, const Symbol &sym,
   };
   const uint8_t nopData[] = { 0x1f, 0x20, 0x03, 0xd5 }; // nop
 
-  // needsPltAddr indicates a non-ifunc canonical PLT entry whose address may
+  // needsCopy indicates a non-ifunc canonical PLT entry whose address may
   // escape to shared objects. isInIplt indicates a non-preemptible ifunc. Its
   // address may escape if referenced by a direct relocation. The condition is
   // conservative.
-  bool hasBti = btiHeader && (sym.needsPltAddr || sym.isInIplt);
+  bool hasBti = btiHeader && (sym.needsCopy || sym.isInIplt);
   if (hasBti) {
     memcpy(buf, btiData, sizeof(btiData));
     buf += sizeof(btiData);
