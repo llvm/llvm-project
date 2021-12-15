@@ -17,6 +17,9 @@ namespace llvm {
 
 /// MLModelRunner interface: abstraction of a mechanism for evaluating a
 /// tensorflow "saved model".
+/// NOTE: feature indices are expected to be consistent all accross
+/// MLModelRunners (pertaining to the same model), and also Loggers (see
+/// TFUtils.h)
 class MLModelRunner {
 public:
   // Disallows copy and assign.
