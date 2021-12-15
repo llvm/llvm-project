@@ -3716,6 +3716,10 @@ bool TokenAnnotator::mustBreakBefore(const AnnotatedLine &Line,
       return false;
     if (Right.is(TT_CSharpGenericTypeConstraint))
       return true;
+    if (Right.Next && Right.Next->is(TT_FatArrow) &&
+        (Right.is(tok::numeric_constant) ||
+         (Right.is(tok::identifier) && Right.TokenText == "_")))
+      return true;
 
     // Break after C# [...] and before public/protected/private/internal.
     if (Left.is(TT_AttributeSquare) && Left.is(tok::r_square) &&
