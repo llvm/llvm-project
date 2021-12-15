@@ -168,25 +168,25 @@ func @insert_slice_fun(%A0 : tensor<?xf32>,
   ->  (tensor<?xf32>, tensor<?xf32>, tensor<?xf32>, tensor<?xf32>)
 {
   // Hoisted allocs.
-  //      CHECK: %[[REALLOC_A0_2:.*]] = memref.alloc
-  //      CHECK: %[[REALLOC_A0:.*]] = memref.alloc
-  //      CHECK: %[[REALLOC_A1:.*]] = memref.alloc
+  //      CHECK: %[[REALLOC1:.*]] = memref.alloc
+  //      CHECK: %[[REALLOC2:.*]] = memref.alloc
+  //      CHECK: %[[REALLOC3:.*]] = memref.alloc
 
   // Alloc and copy the whole result tensor. Copy the tensor.extract_slice.
-  //      CHECK: linalg.copy(%[[A0]], %[[REALLOC_A0]]
-  //      CHECK: %[[SV_A0:.*]] = memref.subview %[[REALLOC_A0]]
+  //      CHECK: linalg.copy(%[[A0]], %[[REALLOC3]]
+  //      CHECK: %[[SV_A0:.*]] = memref.subview %[[REALLOC3]]
   //      CHECK: linalg.copy(%[[t0]], %[[SV_A0]])
   %r0 = tensor.insert_slice %t0 into %A0[0][4][1] : tensor<4xf32> into tensor<?xf32>
 
   // Alloc and copy the whole result tensor. Copy the tensor.extract_slice.
   //      CHECK: linalg.copy(%[[A0]]
-  //      CHECK: %[[SV_A0_2:.*]] = memref.subview %[[REALLOC_A0_2]]
+  //      CHECK: %[[SV_A0_2:.*]] = memref.subview %[[REALLOC2]]
   //      CHECK: linalg.copy(%[[t1]], %[[SV_A0_2]])
   %r1 = tensor.insert_slice %t1 into %A0[0][4][1] : tensor<4xf32> into tensor<?xf32>
 
   //  Still alloc the large tensor because %A1 is read after. Copy the tensor.extract_slice.
   //      CHECK: linalg.copy(%[[A1]]
-  //      CHECK: %[[SV_A1:.*]] = memref.subview %[[REALLOC_A1]]
+  //      CHECK: %[[SV_A1:.*]] = memref.subview %[[REALLOC1]]
   //      CHECK: linalg.copy(%[[t0]], %[[SV_A1]])
   %r2 = tensor.insert_slice %t0 into %A1[0][4][1] : tensor<4xf32> into tensor<?xf32>
 
@@ -196,7 +196,7 @@ func @insert_slice_fun(%A0 : tensor<?xf32>,
   //      CHECK: linalg.copy(%[[t1]], %[[SV_A1_2]])
   %r3 = tensor.insert_slice %t1 into %A1[0][4][1] : tensor<4xf32> into tensor<?xf32>
 
-  //      CHECK: return %[[REALLOC_A0]], %[[REALLOC_A0_2]], %[[REALLOC_A1]] :
+  //      CHECK: return %[[REALLOC3]], %[[REALLOC2]], %[[REALLOC1]] :
   // CHECK-SAME:   memref<?xf32>, memref<?xf32>, memref<?xf32>
   return %r0, %r1, %r2, %r3: tensor<?xf32>, tensor<?xf32>, tensor<?xf32>, tensor<?xf32>
 }

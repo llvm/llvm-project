@@ -56,7 +56,6 @@ static LogicalResult bufferizeLinalgOp(OpBuilder &b, LinalgOp op,
     if (!resultBuffer)
       return failure();
     newOutputBuffers.push_back(resultBuffer);
-    state.mapBuffer(opResult, resultBuffer);
   }
 
   // Clone the newly bufferized op.
@@ -68,7 +67,9 @@ static LogicalResult bufferizeLinalgOp(OpBuilder &b, LinalgOp op,
   auto bufferizedOp = cast<LinalgOp>(
       op.clone(b, op.getLoc(), /*resultTypes=*/TypeRange{}, newOperands));
 
-  // The original op will be DCE'd away later.
+  // Replace the results of the old op with the new output buffers.
+  state.replaceOp(op, newOutputBuffers);
+
   return comprehensive_bufferize::bufferize(bufferizedOp.getBlock(), state);
 }
 
@@ -194,7 +195,7 @@ struct InitTensorOpInterface
 
     Value alloc = state.createAllocDeallocPair(b, initTensorOp->getLoc(),
                                                initTensorOp.result());
-    state.mapBuffer(initTensorOp.result(), alloc);
+    state.replaceOp(op, alloc);
     return success();
   }
 };

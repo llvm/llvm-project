@@ -268,6 +268,9 @@ private:
   llvm::EquivalenceClasses<Value, ValueComparator> equivalentInfo;
 };
 
+/// Return `true` if the given value is a BlockArgument of a FuncOp.
+bool isFunctionArgument(Value value);
+
 /// Determine which OpOperand* will alias with `result` if the op is bufferized
 /// in place. Return an empty vector if the op is not bufferizable.
 SmallVector<OpOperand *> getAliasingOpOperand(OpResult result);
@@ -342,18 +345,18 @@ struct DialectBufferizationState {
   DialectBufferizationState(const DialectBufferizationState &) = delete;
 };
 
-/// BufferizationState keeps track of memory buffers and provides a variety of
-/// helper functions for dealing with them. In particular,
+/// BufferizationState provides a variety of helper functions for dealing with
+/// tensor values and memref buffers. In particular,
 /// `BufferizableOpInterface::bufferize` implementation should utilize the
 /// following helper functions.
 ///
 /// * `createAlloc` / `createDealloc` / `createAllocDeallocPair` creates ops
 ///   that allocate and/or deallocate memref buffers.
-/// * `mapBuffer` maps a tensor value to a memref buffer during bufferization.
-/// * `lookupBuffer` returns the mapped memref buffer of a given tensor value.
+/// * `lookupBuffer` returns the memref buffer of a given tensor value.
 /// * `getResultBuffer` returns the memref buffer for a given tensor OpResult.
 ///   Based on inplace bufferization decisions of the analysis, it may either
 ///   directly return a mapped buffer or allocate a new brand new buffer.
+/// * `replaceOp` replaces an op with new values.
 class BufferizationState {
 public:
   BufferizationState(Operation *op, const BufferizationOptions &options)
@@ -378,16 +381,19 @@ public:
   /// Creates a memcpy between two given buffers.
   void createMemCpy(OpBuilder &b, Location loc, Value from, Value to);
 
-  /// Replace an op with replacement values. The op is deleted.
+  /// Replace an op with replacement values. The op is deleted. Tensor OpResults
+  /// must be replaced with memref values.
   void replaceOp(Operation *op, ValueRange values);
 
-  /// Map tensor values to memref buffers.
-  // TODO: Deprecated. Remove all uses of this op. Use `replaceOp` instead.
-  void mapBuffer(ValueRange tensors, ValueRange buffers);
-
-  /// Map a tensor value to a memref buffer.
-  // TODO: Deprecated. Remove all uses of this op. Use `replaceOp` instead.
-  void mapBuffer(Value tensor, Value buffer);
+  /// Replace an op with a new op. Tensor OpResults must be replaced with memref
+  /// values.
+  template <typename OpTy, typename... Args>
+  OpTy replaceOpWithNewOp(OpBuilder &b, Operation *op, Args &&...args) {
+    Operation *newOp =
+        b.create<OpTy>(op->getLoc(), std::forward<Args>(args)...);
+    replaceOp(op, newOp->getResults());
+    return cast<OpTy>(newOp);
+  }
 
   /// Lookup the memref buffer that is associated to the given tensor value.
   /// Asserts if no buffer is associated.
@@ -396,22 +402,10 @@ public:
   /// Return `true` if the given OpResult has been decided to bufferize inplace.
   bool isInPlace(OpResult opResult) const;
 
-  /// Return `true` if the given value is mapped.
-  // TODO: Deprecated. Remove all uses of this op.
-  bool isMapped(Value value) const;
-
   /// Return the result buffer (memref) for a given OpResult (tensor). Allocate
   /// a new buffer and copy over data from the existing buffer if out-of-place
   /// bufferization is necessary.
   Value getResultBuffer(OpResult result);
-
-  /// Mark `op` as obsolete, so that it is deleted after bufferization.
-  // TODO: Deprecated. Remove all uses of this op.
-  void markOpObsolete(Operation *op);
-
-  /// Erase all ops that were marked obsolete.
-  // TODO: Deprecated. Remove all uses of this op.
-  void eraseObsoleteOps();
 
   /// Return dialect-specific bufferization state.
   template <typename StateT> StateT &getDialectState(StringRef name) {
@@ -440,12 +434,6 @@ private:
   /// `aliasInfo` keeps track of aliasing and equivalent values. Only internal
   /// functions and `runComprehensiveBufferize` may access this object.
   BufferizationAliasInfo aliasInfo;
-
-  /// The mapping of tensors to buffers.
-  BlockAndValueMapping mapping;
-
-  /// Obsolete ops that should be deleted after bufferization.
-  SmallVector<Operation *> obsoleteOps;
 
   /// Dialect-specific bufferization state.
   DenseMap<StringRef, std::unique_ptr<DialectBufferizationState>> dialectState;

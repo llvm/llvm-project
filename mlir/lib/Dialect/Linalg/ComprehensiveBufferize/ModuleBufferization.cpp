@@ -551,9 +551,6 @@ struct CallOpInterface
                   .equivalentFuncArgs[funcOp][returnOperand.getOperandNumber()];
           Value oldRes = callOp->getResult(returnOperand.getOperandNumber());
           Value buffer = state.lookupBuffer(callOp->getOperand(idx));
-          // Add CallOp operand/result equivalence: this is interprocedural
-          // info.
-          state.mapBuffer(oldRes, buffer);
           // Add a ToTensorOp to kill all uses of the CallOp return.
           // Replace all uses of the CallOp results so we can erase the CallOp.
           // This ToTensorOp must fold/DCE away or bufferization should be
@@ -561,8 +558,6 @@ struct CallOpInterface
           Value toTensorOp =
               b.create<bufferization::ToTensorOp>(callOp.getLoc(), buffer);
           oldRes.replaceAllUsesWith(toTensorOp);
-          // Add new op equivalence info.
-          state.mapBuffer(toTensorOp, buffer);
           continue;
         }
 
@@ -603,8 +598,6 @@ struct CallOpInterface
       if (buffer.getType() != memRefType) {
         Value castBuffer =
             b.create<memref::CastOp>(callOp.getLoc(), memRefType, buffer);
-        // Add new op equivalence info.
-        state.mapBuffer(tensorOperand, castBuffer);
         buffer = castBuffer;
       }
       newOperands.push_back(buffer);
@@ -616,7 +609,7 @@ struct CallOpInterface
     newCallOp->setAttrs(callOp->getAttrs());
 
     // 5. Delete the op at the end of bufferization.
-    state.markOpObsolete(callOp);
+    callOp->erase();
 
     return success();
   }
@@ -651,7 +644,6 @@ struct ReturnOpInterface
       Value returnTensor = b.create<bufferization::ToTensorOp>(
           returnOp.getLoc(), v);
       operand.set(returnTensor);
-      state.mapBuffer(returnTensor, v);
     }
     return success();
   }
@@ -662,23 +654,6 @@ struct FuncOpInterface
   LogicalResult bufferize(Operation *op, OpBuilder &b,
                           BufferizationState &state) const {
     auto funcOp = cast<FuncOp>(op);
-    b.setInsertionPointToStart(&funcOp.body().front());
-
-    // Create BufferCastOps for function args.
-    for (auto bbArg : funcOp.getArguments()) {
-      auto tensorType = bbArg.getType().dyn_cast<TensorType>();
-      if (!tensorType)
-        continue;
-      auto rankedTensorType = tensorType.dyn_cast<RankedTensorType>();
-      // Cast the tensor to the most dynamic buffer possible. Further
-      // canonicalizations will clean up.
-      Type memRefType = rankedTensorType
-                            ? getDynamicMemRefType(rankedTensorType)
-                            : getContiguousOrUnrankedMemRefType(tensorType);
-      Value bufferCast = b.create<bufferization::ToMemrefOp>(funcOp.getLoc(),
-                                                             memRefType, bbArg);
-      state.mapBuffer(bbArg, bufferCast);
-    }
 
     // Bufferize function body.
     return comprehensive_bufferize::bufferize(&funcOp.body(), state);

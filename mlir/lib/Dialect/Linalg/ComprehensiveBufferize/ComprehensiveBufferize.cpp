@@ -699,8 +699,5 @@ LogicalResult mlir::linalg::comprehensive_bufferize::runComprehensiveBufferize(
   if (failed(bufferize(op, state)))
     return failure();
 
-  // Erase all obsolete ops.
-  state.eraseObsoleteOps();
-
   return success();
 }
