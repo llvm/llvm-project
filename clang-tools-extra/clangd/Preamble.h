@@ -72,9 +72,8 @@ struct PreambleData {
   bool MainIsIncludeGuarded = false;
 };
 
-using PreambleParsedCallback =
-    std::function<void(ASTContext &, std::shared_ptr<clang::Preprocessor>,
-                       const CanonicalIncludes &)>;
+using PreambleParsedCallback = std::function<void(ASTContext &, Preprocessor &,
+                                                  const CanonicalIncludes &)>;
 
 /// Build a preamble for the new inputs unless an old one can be reused.
 /// If \p PreambleCallback is set, it will be run on top of the AST while

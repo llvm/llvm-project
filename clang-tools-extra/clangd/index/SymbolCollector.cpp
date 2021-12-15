@@ -186,7 +186,7 @@ class SymbolCollector::HeaderFileURICache {
   // Weird double-indirect access to PP, which might not be ready yet when
   // HeaderFiles is created but will be by the time it's used.
   // (IndexDataConsumer::setPreprocessor can happen before or after initialize)
-  const std::shared_ptr<Preprocessor> &PP;
+  Preprocessor *&PP;
   const SourceManager &SM;
   const CanonicalIncludes *Includes;
   llvm::StringRef FallbackDir;
@@ -195,8 +195,7 @@ class SymbolCollector::HeaderFileURICache {
   llvm::DenseMap<FileID, llvm::StringRef> CacheFIDToInclude;
 
 public:
-  HeaderFileURICache(const std::shared_ptr<Preprocessor> &PP,
-                     const SourceManager &SM,
+  HeaderFileURICache(Preprocessor *&PP, const SourceManager &SM,
                      const SymbolCollector::Options &Opts)
       : PP(PP), SM(SM), Includes(Opts.Includes), FallbackDir(Opts.FallbackDir) {
   }
@@ -304,7 +303,7 @@ SymbolCollector::~SymbolCollector() = default;
 void SymbolCollector::initialize(ASTContext &Ctx) {
   ASTCtx = &Ctx;
   HeaderFileURIs = std::make_unique<HeaderFileURICache>(
-      PP, ASTCtx->getSourceManager(), Opts);
+      this->PP, ASTCtx->getSourceManager(), Opts);
   CompletionAllocator = std::make_shared<GlobalCodeCompletionAllocator>();
   CompletionTUInfo =
       std::make_unique<CodeCompletionTUInfo>(CompletionAllocator);
@@ -365,7 +364,7 @@ bool SymbolCollector::handleDeclOccurrence(
     const Decl *D, index::SymbolRoleSet Roles,
     llvm::ArrayRef<index::SymbolRelation> Relations, SourceLocation Loc,
     index::IndexDataConsumer::ASTNodeInfo ASTNode) {
-  assert(ASTCtx && PP.get() && HeaderFileURIs);
+  assert(ASTCtx && PP && HeaderFileURIs);
   assert(CompletionAllocator && CompletionTUInfo);
   assert(ASTNode.OrigD);
   // Indexing API puts canonical decl into D, which might not have a valid
@@ -486,7 +485,7 @@ bool SymbolCollector::handleDeclOccurrence(
 }
 
 void SymbolCollector::handleMacros(const MainFileMacros &MacroRefsToIndex) {
-  assert(HeaderFileURIs && PP.get());
+  assert(HeaderFileURIs && PP);
   const auto &SM = PP->getSourceManager();
   const auto *MainFileEntry = SM.getFileEntryForID(SM.getMainFileID());
   assert(MainFileEntry);
@@ -533,7 +532,7 @@ bool SymbolCollector::handleMacroOccurrence(const IdentifierInfo *Name,
                                             const MacroInfo *MI,
                                             index::SymbolRoleSet Roles,
                                             SourceLocation Loc) {
-  assert(PP.get());
+  assert(PP);
   // Builtin macros don't have useful locations and aren't needed in completion.
   if (MI->isBuiltinMacro())
     return true;
@@ -805,7 +804,7 @@ const Symbol *SymbolCollector::addDeclaration(const NamedDecl &ND, SymbolID ID,
 
   // Add completion info.
   // FIXME: we may want to choose a different redecl, or combine from several.
-  assert(ASTCtx && PP.get() && "ASTContext and Preprocessor must be set.");
+  assert(ASTCtx && PP && "ASTContext and Preprocessor must be set.");
   // We use the primary template, as clang does during code completion.
   CodeCompletionResult SymbolCompletion(&getTemplateOrThis(ND), 0);
   const auto *CCS = SymbolCompletion.CreateCodeCompletionString(

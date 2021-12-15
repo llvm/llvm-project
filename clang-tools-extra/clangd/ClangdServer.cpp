@@ -71,10 +71,10 @@ struct UpdateIndexCallbacks : public ParsingCallbacks {
       : FIndex(FIndex), ServerCallbacks(ServerCallbacks) {}
 
   void onPreambleAST(PathRef Path, llvm::StringRef Version, ASTContext &Ctx,
-                     std::shared_ptr<clang::Preprocessor> PP,
+                     Preprocessor &PP,
                      const CanonicalIncludes &CanonIncludes) override {
     if (FIndex)
-      FIndex->updatePreamble(Path, Version, Ctx, std::move(PP), CanonIncludes);
+      FIndex->updatePreamble(Path, Version, Ctx, PP, CanonIncludes);
   }
 
   void onMainAST(PathRef Path, ParsedAST &AST, PublishFn Publish) override {

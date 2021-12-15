@@ -84,8 +84,7 @@ public:
   void AfterExecute(CompilerInstance &CI) override {
     if (ParsedCallback) {
       trace::Span Tracer("Running PreambleCallback");
-      ParsedCallback(CI.getASTContext(), CI.getPreprocessorPtr(),
-                     CanonIncludes);
+      ParsedCallback(CI.getASTContext(), CI.getPreprocessor(), CanonIncludes);
     }
 
     const SourceManager &SM = CI.getSourceManager();
