@@ -298,16 +298,6 @@ func @generic(%arg0: memref<?x?xi4>) {
 //
 // // -----
 
-// expected-error @+1 {{unknown Linalg type}}
-!invalid_type = type !linalg.unknown
-
-// -----
-
-// expected-error @+1 {{expected valid keyword}}
-!invalid_type = type !linalg<"?">
-
-// -----
-
 func @named_ops(%a3: memref<?x?x?xf32>, %b3: memref<?x?xf32>, %c3: memref<?x?x?xf32>) {
   // expected-error @+1 {{expected operand rank (2) to match the result rank of indexing_map #1 (3)}}
   linalg.batch_matmul ins(%a3, %b3: memref<?x?x?xf32>, memref<?x?xf32>)
