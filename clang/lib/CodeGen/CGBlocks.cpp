@@ -2721,8 +2721,7 @@ void CodeGenFunction::emitByrefStructureInit(const AutoVarEmission &emission) {
   Address addr = emission.Addr;
 
   // That's an alloca of the byref structure type.
-  llvm::StructType *byrefType = cast<llvm::StructType>(
-    cast<llvm::PointerType>(addr.getPointer()->getType())->getElementType());
+  llvm::StructType *byrefType = cast<llvm::StructType>(addr.getElementType());
 
   unsigned nextHeaderIndex = 0;
   CharUnits nextHeaderOffset;

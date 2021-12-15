@@ -1777,16 +1777,14 @@ llvm::Value *CodeGenFunction::EmitFromMemory(llvm::Value *Value, QualType Ty) {
 // MatrixType), if it points to a array (the memory type of MatrixType).
 static Address MaybeConvertMatrixAddress(Address Addr, CodeGenFunction &CGF,
                                          bool IsVector = true) {
-  auto *ArrayTy = dyn_cast<llvm::ArrayType>(
-      cast<llvm::PointerType>(Addr.getPointer()->getType())->getElementType());
+  auto *ArrayTy = dyn_cast<llvm::ArrayType>(Addr.getElementType());
   if (ArrayTy && IsVector) {
     auto *VectorTy = llvm::FixedVectorType::get(ArrayTy->getElementType(),
                                                 ArrayTy->getNumElements());
 
     return Address(CGF.Builder.CreateElementBitCast(Addr, VectorTy));
   }
-  auto *VectorTy = dyn_cast<llvm::VectorType>(
-      cast<llvm::PointerType>(Addr.getPointer()->getType())->getElementType());
+  auto *VectorTy = dyn_cast<llvm::VectorType>(Addr.getElementType());
   if (VectorTy && !IsVector) {
     auto *ArrayTy = llvm::ArrayType::get(
         VectorTy->getElementType(),

@@ -1079,8 +1079,8 @@ RValue CodeGenFunction::EmitAtomicExpr(AtomicExpr *E) {
       if (AS == LangAS::opencl_generic)
         return V;
       auto DestAS = getContext().getTargetAddressSpace(LangAS::opencl_generic);
-      auto T = V->getType();
-      auto *DestType = T->getPointerElementType()->getPointerTo(DestAS);
+      auto T = llvm::cast<llvm::PointerType>(V->getType());
+      auto *DestType = llvm::PointerType::getWithSamePointeeType(T, DestAS);
 
       return getTargetHooks().performAddrSpaceCast(
           *this, V, AS, LangAS::opencl_generic, DestType, false);
