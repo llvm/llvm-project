@@ -178,9 +178,8 @@ static bool isReserved(InputSectionBase *sec) {
     return !sec->nextInSectionGroup;
   default:
     StringRef s = sec->name;
-    return s.startswith(".ctors") || s.startswith(".dtors") ||
-           s.startswith(".init") || s.startswith(".fini") ||
-           s.startswith(".jcr");
+    return s == ".init" || s == ".fini" || s.startswith(".ctors") ||
+           s.startswith(".dtors") || s.startswith(".jcr");
   }
 }
 
