@@ -515,7 +515,8 @@ static Type getI1SameShape(Type type) {
   if (type.isa<UnrankedTensorType>())
     return UnrankedTensorType::get(i1Type);
   if (auto vectorType = type.dyn_cast<VectorType>())
-    return VectorType::get(vectorType.getShape(), i1Type);
+    return VectorType::get(vectorType.getShape(), i1Type,
+                           vectorType.getNumScalableDims());
   return i1Type;
 }
 
