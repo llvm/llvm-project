@@ -1321,15 +1321,14 @@ RValue CodeGenFunction::EmitAtomicExpr(AtomicExpr *E) {
         ResVal = Builder.CreateNot(ResVal);
 
       Builder.CreateStore(
-          ResVal,
-          Builder.CreateBitCast(Dest, ResVal->getType()->getPointerTo()));
+          ResVal, Builder.CreateElementBitCast(Dest, ResVal->getType()));
     }
 
     if (RValTy->isVoidType())
       return RValue::get(nullptr);
 
     return convertTempToRValue(
-        Builder.CreateBitCast(Dest, ConvertTypeForMem(RValTy)->getPointerTo()),
+        Builder.CreateElementBitCast(Dest, ConvertTypeForMem(RValTy)),
         RValTy, E->getExprLoc());
   }
 
@@ -1382,8 +1381,7 @@ RValue CodeGenFunction::EmitAtomicExpr(AtomicExpr *E) {
       return RValue::get(nullptr);
 
     return convertTempToRValue(
-        Builder.CreateBitCast(Dest, ConvertTypeForMem(RValTy)->getPointerTo(
-                                        Dest.getAddressSpace())),
+        Builder.CreateElementBitCast(Dest, ConvertTypeForMem(RValTy)),
         RValTy, E->getExprLoc());
   }
 
@@ -1455,17 +1453,14 @@ RValue CodeGenFunction::EmitAtomicExpr(AtomicExpr *E) {
 
   assert(Atomics.getValueSizeInBits() <= Atomics.getAtomicSizeInBits());
   return convertTempToRValue(
-      Builder.CreateBitCast(Dest, ConvertTypeForMem(RValTy)->getPointerTo(
-                                      Dest.getAddressSpace())),
+      Builder.CreateElementBitCast(Dest, ConvertTypeForMem(RValTy)),
       RValTy, E->getExprLoc());
 }
 
 Address AtomicInfo::emitCastToAtomicIntPointer(Address addr) const {
-  unsigned addrspace =
-    cast<llvm::PointerType>(addr.getPointer()->getType())->getAddressSpace();
   llvm::IntegerType *ty =
     llvm::IntegerType::get(CGF.getLLVMContext(), AtomicSizeInBits);
-  return CGF.Builder.CreateBitCast(addr, ty->getPointerTo(addrspace));
+  return CGF.Builder.CreateElementBitCast(addr, ty);
 }
 
 Address AtomicInfo::convertToAtomicIntPointer(Address Addr) const {

@@ -18711,8 +18711,8 @@ Value *CodeGenFunction::EmitHexagonBuiltinExpr(unsigned BuiltinID,
   case Hexagon::BI__builtin_HEXAGON_V6_vsubcarry_128B: {
     // Get the type from the 0-th argument.
     llvm::Type *VecType = ConvertType(E->getArg(0)->getType());
-    Address PredAddr = Builder.CreateBitCast(
-        EmitPointerWithAlignment(E->getArg(2)), VecType->getPointerTo(0));
+    Address PredAddr = Builder.CreateElementBitCast(
+        EmitPointerWithAlignment(E->getArg(2)), VecType);
     llvm::Value *PredIn = V2Q(Builder.CreateLoad(PredAddr));
     llvm::Value *Result = Builder.CreateCall(CGM.getIntrinsic(ID),
         {EmitScalarExpr(E->getArg(0)), EmitScalarExpr(E->getArg(1)), PredIn});

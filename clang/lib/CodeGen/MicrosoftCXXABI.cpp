@@ -917,7 +917,7 @@ void MicrosoftCXXABI::emitBeginCatch(CodeGenFunction &CGF,
 std::tuple<Address, llvm::Value *, const CXXRecordDecl *>
 MicrosoftCXXABI::performBaseAdjustment(CodeGenFunction &CGF, Address Value,
                                        QualType SrcRecordTy) {
-  Value = CGF.Builder.CreateBitCast(Value, CGF.Int8PtrTy);
+  Value = CGF.Builder.CreateElementBitCast(Value, CGF.Int8Ty);
   const CXXRecordDecl *SrcDecl = SrcRecordTy->getAsCXXRecordDecl();
   const ASTContext &Context = getContext();
 

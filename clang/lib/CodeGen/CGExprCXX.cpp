@@ -1135,7 +1135,7 @@ void CodeGenFunction::EmitNewArrayInitializer(
     }
 
     // Switch back to initializing one base element at a time.
-    CurPtr = Builder.CreateBitCast(CurPtr, BeginPtr.getType());
+    CurPtr = Builder.CreateElementBitCast(CurPtr, BeginPtr.getElementType());
   }
 
   // If all elements have already been initialized, skip any further
