@@ -92,6 +92,9 @@ TEST(QualTypeNameTest, getFullyQualifiedName) {
       "OuterTemplateClass<A::B::Class0>::Inner";
   Visitor.ExpectedQualTypeNames["CheckM"] = "const A::B::Class0 *";
   Visitor.ExpectedQualTypeNames["CheckN"] = "const X *";
+  Visitor.ExpectedQualTypeNames["ttp_using"] =
+      "OuterTemplateClass<A::B::Class0>";
+  Visitor.ExpectedQualTypeNames["alias_of_template"] = "ABTemplate0IntInt";
   Visitor.runOver(
       "int CheckInt;\n"
       "template <typename T>\n"
@@ -124,6 +127,9 @@ TEST(QualTypeNameTest, getFullyQualifiedName) {
       "}\n"
       "using A::B::Class0;\n"
       "void Function(Class0 CheckF);\n"
+      "OuterTemplateClass<Class0> ttp_using;\n"
+      "using ABTemplate0IntInt = A::B::Template0<int, int>;\n"
+      "void Function(ABTemplate0IntInt alias_of_template);\n"
       "using namespace A::B::C;\n"
       "void Function(MyInt CheckG);\n"
       "void f() {\n"
@@ -181,6 +187,25 @@ TEST(QualTypeNameTest, getFullyQualifiedName) {
       "  TX CheckTX;"
       "  struct A { typedef int X; };"
       "}");
+
+  TypeNameVisitor DoubleUsing;
+  DoubleUsing.ExpectedQualTypeNames["direct"] = "a::A<0>";
+  DoubleUsing.ExpectedQualTypeNames["indirect"] = "b::B";
+  DoubleUsing.ExpectedQualTypeNames["double_indirect"] = "b::B";
+  DoubleUsing.runOver(R"cpp(
+    namespace a {
+      template<int> class A {};
+      A<0> direct;
+    }
+    namespace b {
+      using B = ::a::A<0>;
+      B indirect;
+    }
+    namespace b {
+      using ::b::B;
+      B double_indirect;
+    }
+  )cpp");
 
   TypeNameVisitor GlobalNsPrefix;
   GlobalNsPrefix.WithGlobalNsPrefix = true;
