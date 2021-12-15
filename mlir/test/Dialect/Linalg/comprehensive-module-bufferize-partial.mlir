@@ -52,10 +52,10 @@ func @use_of_unknown_op_3(%t1: tensor<?xf32> {linalg.inplaceable = true})
     -> (vector<5xf32>, vector<5xf32>) {
   %idx = arith.constant 0 : index
   %cst = arith.constant 0.0 : f32
+  // CHECK: %[[m1_tensor:.*]] = bufferization.to_tensor %[[m1]]
   // CHECK: %[[v1:.*]] = vector.transfer_read %[[m1]]
   %1 = vector.transfer_read %t1[%idx], %cst : tensor<?xf32>, vector<5xf32>
 
-  // CHECK: %[[m1_tensor:.*]] = bufferization.to_tensor %[[m1]]
   // CHECK: %[[dummy:.*]] = "test.dummy_op"(%[[m1_tensor]])
   %0 = "test.dummy_op"(%t1) : (tensor<?xf32>) -> tensor<?xf32>
   // CHECK: %[[dummy_memref:.*]] = bufferization.to_memref %[[dummy]]
@@ -114,11 +114,11 @@ func @use_of_bufferizable_op_in_unbufferizable_op(
 func @unused_unknown_op(%t1 : tensor<?xf32>) -> vector<5xf32> {
   %idx = arith.constant 0 : index
   %cst = arith.constant 0.0 : f32
+  // ToTensorOp is inserted to pass in the result of the above bufferized op.
+  // CHECK: %[[m1_tensor:.*]] = bufferization.to_tensor %[[m1]]
   // CHECK: vector.transfer_read %[[m1]]
   %1 = vector.transfer_read %t1[%idx], %cst : tensor<?xf32>, vector<5xf32>
 
-  // ToTensorOp is inserted to pass in the result of the above bufferized op.
-  // CHECK: %[[m1_tensor:.*]] = bufferization.to_tensor %[[m1]]
   // CHECK: "test.dummy_op"(%[[m1_tensor]])
   "test.dummy_op"(%t1) : (tensor<?xf32>) -> ()
 
@@ -158,10 +158,10 @@ func @simple_tensor_test(%t1 : tensor<?xf32>, %f : f32) -> tensor<?xf32> {
   %c0 = arith.constant 0 : index
   // CHECK-TENSOR: %[[alloc:.*]] = memref.alloc
   // CHECK-TENSOR: %[[casted:.*]] = memref.cast %[[alloc]]
+  // CHECK-TENSOR: %[[casted_tensor:.*]] = bufferization.to_tensor %[[casted]]
   // CHECK-TENSOR: memref.copy %[[t1_memref]], %[[casted]]
   // CHECK-TENSOR: memref.store %{{.*}}, %[[alloc]]
   %0 = tensor.insert %f into %t1[%c0] : tensor<?xf32>
-  // CHECK-TENSOR: %[[casted_tensor:.*]] = bufferization.to_tensor %[[casted]]
   // CHECK-TENSOR: return %[[casted_tensor]]
   return %0 : tensor<?xf32>
 }

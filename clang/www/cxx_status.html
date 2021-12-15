@@ -1199,7 +1199,13 @@ code. This issue is expected to be rectified soon.
     <tr>
       <td>Coroutines</td>
       <td><a href="https://wg21.link/p0912r5">P0912R5</a></td>
-      <td class="partial" align="center">Partial</td>
+      <td class="partial" align="center">
+        <details><summary>Partial</summary>
+          The optimizer does not yet handle TLS with
+  `__attribute__((const))` attribute correctly. There can be issues where the
+  coroutine may resume on a different thread. <br \>This feature requires further
+  analysis of the C++ Standard to determine what work is necessary for conformance.
+        </details></td>
     </tr>
     <!-- Cologne 2019 papers -->
     <tr>

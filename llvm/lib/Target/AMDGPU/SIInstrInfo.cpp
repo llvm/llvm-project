@@ -3297,7 +3297,7 @@ MachineInstr *SIInstrInfo::convertToThreeAddress(MachineInstr &MI,
     }
   }
 
-  unsigned NewOpc = IsFMA ? (IsF16 ? AMDGPU::V_FMA_F16_e64
+  unsigned NewOpc = IsFMA ? (IsF16 ? AMDGPU::V_FMA_F16_gfx9_e64
                                    : IsF64 ? AMDGPU::V_FMA_F64_e64
                                            : AMDGPU::V_FMA_F32_e64)
                           : (IsF16 ? AMDGPU::V_MAD_F16_e64 : AMDGPU::V_MAD_F32_e64);

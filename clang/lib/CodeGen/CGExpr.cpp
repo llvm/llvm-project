@@ -3585,7 +3585,7 @@ static llvm::Value *emitArraySubscriptGEP(CodeGenFunction &CGF,
                                           SourceLocation loc,
                                     const llvm::Twine &name = "arrayidx") {
   if (inbounds) {
-    return CGF.EmitCheckedInBoundsGEP(ptr, indices, signedIndices,
+    return CGF.EmitCheckedInBoundsGEP(elemType, ptr, indices, signedIndices,
                                       CodeGenFunction::NotSubtraction, loc,
                                       name);
   } else {
@@ -3697,7 +3697,7 @@ static Address emitArraySubscriptGEP(CodeGenFunction &CGF, Address addr,
                                                         idx, DbgInfo);
   }
 
-  return Address(eltPtr, eltAlign);
+  return Address(eltPtr, CGF.ConvertTypeForMem(eltType), eltAlign);
 }
 
 LValue CodeGenFunction::EmitArraySubscriptExpr(const ArraySubscriptExpr *E,

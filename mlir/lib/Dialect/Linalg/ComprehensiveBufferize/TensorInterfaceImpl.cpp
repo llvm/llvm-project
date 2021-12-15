@@ -78,9 +78,7 @@ struct CastOpInterface
             : MemRefLayoutAttrInterface();
     Type memRefType = getContiguousOrUnrankedMemRefType(
         castOp.getResult().getType(), layout, memorySpace);
-    Value res =
-        b.create<memref::CastOp>(castOp.getLoc(), memRefType, resultBuffer);
-    state.mapBuffer(castOp.getResult(), res);
+    state.replaceOpWithNewOp<memref::CastOp>(b, op, memRefType, resultBuffer);
     return success();
   }
 };
@@ -103,11 +101,10 @@ struct DimOpInterface
   LogicalResult bufferize(Operation *op, OpBuilder &b,
                           BufferizationState &state) const {
     auto dimOp = cast<tensor::DimOp>(op);
-    if (dimOp.source().getType().isa<RankedTensorType>()) {
-      Value v = state.lookupBuffer(dimOp.source());
-      dimOp.result().replaceAllUsesWith(
-          b.create<memref::DimOp>(dimOp.getLoc(), v, dimOp.index()));
-    }
+    if (!dimOp.source().getType().isa<RankedTensorType>())
+      return dimOp.emitError("unranked tensor not supported");
+    Value v = state.lookupBuffer(dimOp.source());
+    state.replaceOpWithNewOp<memref::DimOp>(b, op, v, dimOp.index());
     return success();
   }
 };
@@ -168,7 +165,7 @@ struct ExtractSliceOpInterface
       subView = alloc;
     }
 
-    state.mapBuffer(extractSliceOp.result(), subView);
+    state.replaceOp(op, subView);
     return success();
   }
 };
@@ -191,10 +188,9 @@ struct ExtractOpInterface
   LogicalResult bufferize(Operation *op, OpBuilder &b,
                           BufferizationState &state) const {
     auto extractOp = cast<tensor::ExtractOp>(op);
-    Location loc = extractOp.getLoc();
     Value srcMemref = state.lookupBuffer(extractOp.tensor());
-    Value l = b.create<memref::LoadOp>(loc, srcMemref, extractOp.indices());
-    extractOp.replaceAllUsesWith(l);
+    state.replaceOpWithNewOp<memref::LoadOp>(b, op, srcMemref,
+                                             extractOp.indices());
     return success();
   }
 };
@@ -228,7 +224,7 @@ struct InsertOpInterface
     Value destMemref = state.getResultBuffer(insertOp->getOpResult(0));
     b.create<memref::StoreOp>(loc, insertOp.scalar(), destMemref,
                               insertOp.indices());
-    state.mapBuffer(insertOp, destMemref);
+    state.replaceOp(op, destMemref);
     return success();
   }
 
@@ -423,7 +419,7 @@ struct InsertSliceOpInterface
       state.createMemCpy(b, insertSliceOp.getLoc(), srcMemref, subView);
     }
 
-    state.mapBuffer(insertSliceOp.result(), dstMemref);
+    state.replaceOp(op, dstMemref);
     return success();
   }
 };
