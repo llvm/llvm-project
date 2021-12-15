@@ -3,7 +3,7 @@
 # RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %s -o %t
 # RUN: ld.lld %t -o %t2
 # RUN: llvm-readobj --sections --symbols %t2 | FileCheck -check-prefix=NOGC %s
-# RUN: ld.lld --gc-sections %t -o %t2
+# RUN: ld.lld --gc-sections --print-gc-sections %t -o %t2 | FileCheck --check-prefix=GC1-DISCARD %s
 # RUN: llvm-readobj --sections --symbols %t2 | FileCheck -check-prefix=GC1 %s
 # RUN: ld.lld --export-dynamic --gc-sections %t -o %t2
 # RUN: llvm-readobj --sections --symbols %t2 | FileCheck -check-prefix=GC2 %s
@@ -11,6 +11,7 @@
 # NOGC: Name: .eh_frame
 # NOGC: Name: .text
 # NOGC: Name: .init
+# NOGC: Name: .init_x
 # NOGC: Name: .fini
 # NOGC: Name: .tdata
 # NOGC: Name: .tbss
@@ -28,6 +29,14 @@
 # NOGC: Name: x
 # NOGC: Name: y
 # NOGC: Name: d
+
+# GC1-DISCARD:      removing unused section {{.*}}:(.text.d)
+# GC1-DISCARD-NEXT: removing unused section {{.*}}:(.text.x)
+# GC1-DISCARD-NEXT: removing unused section {{.*}}:(.text.y)
+# GC1-DISCARD-NEXT: removing unused section {{.*}}:(.tbss.f)
+# GC1-DISCARD-NEXT: removing unused section {{.*}}:(.tdata.h)
+# GC1-DISCARD-NEXT: removing unused section {{.*}}:(.init_x)
+# GC1-DISCARD-EMPTY:
 
 # GC1:     Name: .eh_frame
 # GC1:     Name: .text
@@ -124,10 +133,13 @@ h:
 .section .dtors,"aw",@progbits
   .quad 0
 
-.section .init,"aw",@init_array
+.section .init,"ax"
   .quad 0
 
-.section .fini,"aw",@fini_array
+.section .init_x,"ax"
+  .quad 0
+
+.section .fini,"ax"
   .quad 0
 
 .section .preinit_array,"aw",@preinit_array
