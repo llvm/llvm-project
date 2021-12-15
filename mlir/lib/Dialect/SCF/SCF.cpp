@@ -474,7 +474,7 @@ void ForOp::getNumRegionInvocations(ArrayRef<Attribute> operands,
 
   // Loop bounds are not known statically.
   if (!lb || !ub || !step || step.getValue().getSExtValue() == 0) {
-    countPerRegion[0] = -1;
+    countPerRegion[0] = kUnknownNumRegionInvocations;
     return;
   }
 
@@ -1179,6 +1179,23 @@ void IfOp::getSuccessorRegions(Optional<unsigned> index,
 
   // Add the successor regions using the condition.
   regions.push_back(RegionSuccessor(condition ? &thenRegion() : elseRegion));
+}
+
+/// If the condition is a constant, returns 1 for the executed block and 0 for
+/// the other. Otherwise, returns `kUnknownNumRegionInvocations` for both
+/// successors.
+void IfOp::getNumRegionInvocations(ArrayRef<Attribute> operands,
+                                   SmallVectorImpl<int64_t> &countPerRegion) {
+  if (auto condAttr = operands.front().dyn_cast_or_null<IntegerAttr>()) {
+    // If the condition is true, `then` is executed once and `else` zero times,
+    // and vice-versa.
+    bool cond = condAttr.getValue().isOneValue();
+    countPerRegion.assign(1, cond ? 1 : 0);
+    countPerRegion.push_back(cond ? 0 : 1);
+  } else {
+    // Non-constant condition: unknown invocations for both successors.
+    countPerRegion.assign(2, kUnknownNumRegionInvocations);
+  }
 }
 
 namespace {
