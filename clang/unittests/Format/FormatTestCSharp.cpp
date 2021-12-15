@@ -1369,5 +1369,15 @@ TEST_F(FormatTestCSharp, NamespaceIndentation) {
                Style);
 }
 
+TEST_F(FormatTestCSharp, SwitchExpression) {
+  FormatStyle Style = getMicrosoftStyle(FormatStyle::LK_CSharp);
+  verifyFormat("int x = a switch {\n"
+               "    1 => (0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0),\n"
+               "    2 => 1,\n"
+               "    _ => 2\n"
+               "};\n",
+               Style);
+}
+
 } // namespace format
 } // end namespace clang
