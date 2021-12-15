@@ -440,9 +440,8 @@ void AArch64Err843419Patcher::init() {
   };
 
   // Collect mapping symbols for every executable InputSection.
-  for (InputFile *file : objectFiles) {
-    auto *f = cast<ObjFile<ELF64LE>>(file);
-    for (Symbol *b : f->getLocalSymbols()) {
+  for (ELFFileBase *file : objectFiles) {
+    for (Symbol *b : file->getLocalSymbols()) {
       auto *def = dyn_cast<Defined>(b);
       if (!def)
         continue;
