@@ -101,7 +101,8 @@ void TestComprehensiveFunctionBufferize::runOnFunction() {
   // TODO: Find a way to enable this step automatically when bufferizing
   // tensor dialect ops.
   options.addPostAnalysisStep<tensor_ext::InplaceInsertSliceOpAnalysis>();
-  options.addPostAnalysisStep<scf_ext::AssertDestinationPassingStyle>();
+  if (!allowReturnMemref)
+    options.addPostAnalysisStep<scf_ext::AssertDestinationPassingStyle>();
 
   options.allowReturnMemref = allowReturnMemref;
   options.allowUnknownOps = allowUnknownOps;

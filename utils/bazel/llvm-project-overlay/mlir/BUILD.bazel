@@ -1303,7 +1303,6 @@ td_library(
     name = "ArmSVETdFiles",
     srcs = [
         "include/mlir/Dialect/ArmSVE/ArmSVE.td",
-        "include/mlir/Dialect/ArmSVE/ArmSVEOpBase.td",
     ],
     includes = ["include"],
     deps = [
@@ -6393,12 +6392,11 @@ cc_library(
     includes = ["include"],
     deps = [
         ":BufferizableOpInterface",
+        ":BufferizationDialect",
         ":IR",
         ":LinalgOps",
         ":LinalgStructuredOpsIncGen",
-        ":Support",
         ":TensorDialect",
-        "//llvm:Support",
     ],
 )
 
@@ -6413,6 +6411,7 @@ cc_library(
     includes = ["include"],
     deps = [
         ":BufferizableOpInterface",
+        ":BufferizationDialect",
         ":IR",
         ":SCFDialect",
         ":Support",

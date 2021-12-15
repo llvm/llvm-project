@@ -39,6 +39,28 @@ multiclass Binary_rv<SDPatternOperator OpNode,
                 ScalarVT:$sx, $vy, $mask, $avl)>;
 }
 
+multiclass Binary_vr<SDPatternOperator OpNode,
+    ValueType ScalarVT, ValueType DataVT,
+    ValueType MaskVT, string OpBaseName> {
+  // Masked with select, broadcast.
+  // TODO
+
+  // Unmasked, broadcast.
+  def : Pat<(OpNode
+                DataVT:$vx, (any_broadcast ScalarVT:$sy),
+                (MaskVT true_mask),
+                i32:$avl),
+            (!cast<Instruction>(OpBaseName#"vrl")
+                $vx, ScalarVT:$sy, $avl)>;
+  // Masked, broadcast.
+  def : Pat<(OpNode
+                DataVT:$vx, (any_broadcast ScalarVT:$sy),
+                MaskVT:$mask,
+                i32:$avl),
+            (!cast<Instruction>(OpBaseName#"vrml")
+                $vx, ScalarVT:$sy, $mask, $avl)>;
+}
+
 multiclass Binary_vv<SDPatternOperator OpNode,
     ValueType DataVT,
     ValueType MaskVT, string OpBaseName> {
@@ -70,6 +92,14 @@ multiclass Binary_rv_vv<
   defm : Binary_vv<OpNode, DataVT, MaskVT, OpBaseName>;
 }
 
+multiclass Binary_vr_vv<
+    SDPatternOperator OpNode,
+    ValueType ScalarVT, ValueType DataVT, ValueType MaskVT,
+    string OpBaseName> {
+  defm : Binary_vr<OpNode, ScalarVT, DataVT, MaskVT, OpBaseName>;
+  defm : Binary_vv<OpNode, DataVT, MaskVT, OpBaseName>;
+}
+
 // Expand both 64bit and 32 bit variant (256 elements)
 multiclass Binary_rv_vv_ShortLong<
     SDPatternOperator OpNode,
@@ -83,6 +113,17 @@ multiclass Binary_rv_vv_ShortLong<
                       ShortOpBaseName>;
 }
 
+multiclass Binary_vr_vv_ShortLong<
+    SDPatternOperator OpNode,
+    ValueType LongScalarVT, ValueType LongDataVT, string LongOpBaseName,
+    ValueType ShortScalarVT, ValueType ShortDataVT, string ShortOpBaseName> {
+  defm : Binary_vr_vv<OpNode,
+                      LongScalarVT, LongDataVT, v256i1,
+                      LongOpBaseName>;
+  defm : Binary_vr_vv<OpNode,
+                      ShortScalarVT, ShortDataVT, v256i1,
+                      ShortOpBaseName>;
+}
 
 defm : Binary_rv_vv_ShortLong<c_vvp_add,
                               i64, v256i64, "VADDSL",
@@ -102,3 +143,12 @@ defm : Binary_rv_vv_ShortLong<c_vvp_or,
 defm : Binary_rv_vv_ShortLong<c_vvp_xor,
                               i64, v256i64, "VXOR",
                               i32, v256i32, "PVXORLO">;
+defm : Binary_vr_vv_ShortLong<vvp_shl,
+                              i64, v256i64, "VSLL",
+                              i32, v256i32, "PVSLLLO">;
+defm : Binary_vr_vv_ShortLong<vvp_sra,
+                              i64, v256i64, "VSRAL",
+                              i32, v256i32, "PVSRALO">;
+defm : Binary_vr_vv_ShortLong<vvp_srl,
+                              i64, v256i64, "VSRL",
+                              i32, v256i32, "PVSRLLO">;

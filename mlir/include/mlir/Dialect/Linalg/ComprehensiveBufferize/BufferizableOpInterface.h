@@ -334,7 +334,12 @@ Value findLastPrecedingWrite(Value value, const BufferizationOptions &options);
 /// that is specific to ops from a certain dialect can be stored in derived
 /// variants of this struct.
 struct DialectBufferizationState {
+  DialectBufferizationState() = default;
+
   virtual ~DialectBufferizationState() = default;
+
+  // Copying state is forbidden. Always pass as reference.
+  DialectBufferizationState(const DialectBufferizationState &) = delete;
 };
 
 /// BufferizationState keeps track of memory buffers and provides a variety of
@@ -373,10 +378,15 @@ public:
   /// Creates a memcpy between two given buffers.
   void createMemCpy(OpBuilder &b, Location loc, Value from, Value to);
 
+  /// Replace an op with replacement values. The op is deleted.
+  void replaceOp(Operation *op, ValueRange values);
+
   /// Map tensor values to memref buffers.
+  // TODO: Deprecated. Remove all uses of this op. Use `replaceOp` instead.
   void mapBuffer(ValueRange tensors, ValueRange buffers);
 
   /// Map a tensor value to a memref buffer.
+  // TODO: Deprecated. Remove all uses of this op. Use `replaceOp` instead.
   void mapBuffer(Value tensor, Value buffer);
 
   /// Lookup the memref buffer that is associated to the given tensor value.
@@ -387,6 +397,7 @@ public:
   bool isInPlace(OpResult opResult) const;
 
   /// Return `true` if the given value is mapped.
+  // TODO: Deprecated. Remove all uses of this op.
   bool isMapped(Value value) const;
 
   /// Return the result buffer (memref) for a given OpResult (tensor). Allocate
@@ -395,9 +406,11 @@ public:
   Value getResultBuffer(OpResult result);
 
   /// Mark `op` as obsolete, so that it is deleted after bufferization.
+  // TODO: Deprecated. Remove all uses of this op.
   void markOpObsolete(Operation *op);
 
   /// Erase all ops that were marked obsolete.
+  // TODO: Deprecated. Remove all uses of this op.
   void eraseObsoleteOps();
 
   /// Return dialect-specific bufferization state.
