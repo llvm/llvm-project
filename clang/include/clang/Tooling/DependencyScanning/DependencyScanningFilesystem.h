@@ -36,20 +36,17 @@ public:
   /// Creates an uninitialized entry.
   CachedFileSystemEntry() : MaybeStat(llvm::vfs::Status()) {}
 
-  CachedFileSystemEntry(std::error_code Error) : MaybeStat(std::move(Error)) {}
+  /// Initialize the cached file system entry.
+  void init(llvm::ErrorOr<llvm::vfs::Status> &&MaybeStatus, StringRef Filename,
+            llvm::vfs::FileSystem &FS, bool ShouldMinimize = true);
 
-  /// Create an entry that represents an opened source file with minimized or
-  /// original contents.
+  /// Initialize the entry as file with minimized or original contents.
   ///
   /// The filesystem opens the file even for `stat` calls open to avoid the
   /// issues with stat + open of minimized files that might lead to a
   /// mismatching size of the file.
-  static CachedFileSystemEntry createFileEntry(StringRef Filename,
-                                               llvm::vfs::FileSystem &FS,
-                                               bool Minimize = true);
-
-  /// Create an entry that represents a directory on the filesystem.
-  static CachedFileSystemEntry createDirectoryEntry(llvm::vfs::Status &&Stat);
+  llvm::ErrorOr<llvm::vfs::Status>
+  initFile(StringRef Filename, llvm::vfs::FileSystem &FS, bool Minimize = true);
 
   /// \returns True if the entry is initialized.
   bool isInitialized() const {
@@ -202,11 +199,6 @@ private:
 
   llvm::ErrorOr<const CachedFileSystemEntry *>
   getOrCreateFileSystemEntry(const StringRef Filename);
-
-  /// Create a cached file system entry based on the initial status result.
-  CachedFileSystemEntry
-  createFileSystemEntry(llvm::ErrorOr<llvm::vfs::Status> &&MaybeStatus,
-                        StringRef Filename, bool ShouldMinimize);
 
   /// The global cache shared between worker threads.
   DependencyScanningFilesystemSharedCache &SharedCache;
