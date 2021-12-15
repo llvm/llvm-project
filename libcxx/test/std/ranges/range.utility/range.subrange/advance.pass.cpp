@@ -31,7 +31,7 @@ constexpr bool test() {
   assert(a4.begin() == globalBuff + 4);
   assert(a4.size() == 4);
 
-  std::ranges::subrange<InputIter> b(InputIter(globalBuff), InputIter(globalBuff + 8));
+  std::ranges::subrange<InputIter, sentinel_wrapper<InputIter>> b(InputIter(globalBuff), sentinel_wrapper(InputIter(globalBuff + 8)));
   auto b1 = std::move(b).next();
   assert(b1.begin().base() == globalBuff + 1);
 

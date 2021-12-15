@@ -156,9 +156,9 @@ int main(int, char**)
     typedef ThrowingIterator<char> TIter;
     typedef cpp17_input_iterator<TIter> IIter;
     const char* s = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
-    test_exceptions(S(), 0, IIter(TIter(s, s+10, 4, TIter::TAIncrement)), IIter());
-    test_exceptions(S(), 0, IIter(TIter(s, s+10, 5, TIter::TADereference)), IIter());
-    test_exceptions(S(), 0, IIter(TIter(s, s+10, 6, TIter::TAComparison)), IIter());
+    test_exceptions(S(), 0, IIter(TIter(s, s+10, 4, TIter::TAIncrement)), IIter(TIter()));
+    test_exceptions(S(), 0, IIter(TIter(s, s+10, 5, TIter::TADereference)), IIter(TIter()));
+    test_exceptions(S(), 0, IIter(TIter(s, s+10, 6, TIter::TAComparison)), IIter(TIter()));
 
     test_exceptions(S(), 0, TIter(s, s+10, 4, TIter::TAIncrement), TIter());
     test_exceptions(S(), 0, TIter(s, s+10, 5, TIter::TADereference), TIter());

@@ -66,7 +66,6 @@ public:
 
     TEST_CONSTEXPR_CXX14 It base() const {return it_;}
 
-    TEST_CONSTEXPR_CXX14 cpp17_input_iterator() : it_() {}
     explicit TEST_CONSTEXPR_CXX14 cpp17_input_iterator(It it) : it_(it) {}
     template <class U, class T>
         TEST_CONSTEXPR_CXX14 cpp17_input_iterator(const cpp17_input_iterator<U, T>& u) :it_(u.it_) {}
