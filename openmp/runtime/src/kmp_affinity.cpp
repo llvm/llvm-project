@@ -982,7 +982,8 @@ bool kmp_topology_t::filter_hw_subset() {
 
     // Check to see if each layer's num & offset parameters are valid
     max_count = get_ratio(level);
-    if (max_count < 0 || num + offset > max_count) {
+    if (max_count < 0 ||
+        (num != kmp_hw_subset_t::USE_ALL && num + offset > max_count)) {
       bool plural = (num > 1);
       KMP_WARNING(AffHWSubsetManyGeneric,
                   __kmp_hw_get_catalog_string(type, plural));
@@ -1053,7 +1054,8 @@ bool kmp_topology_t::filter_hw_subset() {
           int level_above = core_level - 1;
           if (level_above >= 0) {
             max_count = get_ncores_with_attr_per(item.attr[j], level_above);
-            if (max_count <= 0 || num + offset > max_count) {
+            if (max_count <= 0 ||
+                (num != kmp_hw_subset_t::USE_ALL && num + offset > max_count)) {
               kmp_str_buf_t buf;
               __kmp_hw_get_catalog_core_string(item.attr[j], &buf, num > 0);
               KMP_WARNING(AffHWSubsetManyGeneric, buf.str);
@@ -1175,7 +1177,8 @@ bool kmp_topology_t::filter_hw_subset() {
           sub_id = core_type_sub_ids.get_sub_id(hw_thread);
         else
           sub_id = core_eff_sub_ids.get_sub_id(hw_thread);
-        if (sub_id < offset || sub_id >= offset + num) {
+        if (sub_id < offset ||
+            (num != kmp_hw_subset_t::USE_ALL && sub_id >= offset + num)) {
           should_be_filtered = true;
           break;
         }
@@ -1183,7 +1186,8 @@ bool kmp_topology_t::filter_hw_subset() {
         int num = hw_subset_item.num[0];
         int offset = hw_subset_item.offset[0];
         if (hw_thread.sub_ids[level] < offset ||
-            hw_thread.sub_ids[level] >= offset + num) {
+            (num != kmp_hw_subset_t::USE_ALL &&
+             hw_thread.sub_ids[level] >= offset + num)) {
           should_be_filtered = true;
           break;
         }

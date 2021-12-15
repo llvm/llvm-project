@@ -4978,10 +4978,20 @@ static void __kmp_stg_parse_hw_subset(char const *name, char const *value,
       char *attr_ptr;
       int offset = 0;
       kmp_hw_attr_t attr;
-      int num =
-          atoi(core_components[j]); // each component should start with a number
-      if (num <= 0) {
-        goto err; // only positive integers are valid for count
+      int num;
+      // components may begin with an optional count of the number of resources
+      if (isdigit(*core_components[j])) {
+        num = atoi(core_components[j]);
+        if (num <= 0) {
+          goto err; // only positive integers are valid for count
+        }
+        pos = core_components[j] + strspn(core_components[j], digits);
+      } else if (*core_components[j] == '*') {
+        num = kmp_hw_subset_t::USE_ALL;
+        pos = core_components[j] + 1;
+      } else {
+        num = kmp_hw_subset_t::USE_ALL;
+        pos = core_components[j];
       }
 
       offset_ptr = strchr(core_components[j], '@');
@@ -5015,10 +5025,6 @@ static void __kmp_stg_parse_hw_subset(char const *name, char const *value,
           goto err;
         }
         *attr_ptr = '\0'; // cut the attribute from the component
-      }
-      pos = core_components[j] + strspn(core_components[j], digits);
-      if (pos == core_components[j]) {
-        goto err;
       }
       // detect the component type
       kmp_hw_t type = __kmp_stg_parse_hw_subset_name(pos);

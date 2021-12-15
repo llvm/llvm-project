@@ -15,6 +15,7 @@
 
 #include "kmp.h"
 #include "kmp_os.h"
+#include <limits>
 
 #if KMP_AFFINITY_SUPPORTED
 #if KMP_USE_HWLOC
@@ -879,6 +880,8 @@ public:
     int offset[MAX_ATTRS];
     kmp_hw_attr_t attr[MAX_ATTRS];
   };
+  // Put parenthesis around max to avoid accidental use of Windows max macro.
+  const static int USE_ALL = (std::numeric_limits<int>::max)();
 
 private:
   int depth;
