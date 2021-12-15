@@ -921,6 +921,22 @@ func @scf_if_inside_scf_for(%t1: tensor<?xf32> {linalg.inplaceable = true},
 
 // -----
 
+// CHECK-LABEL: func @scf_if_non_equiv_yields(
+//  CHECK-SAME:     %[[cond:.*]]: i1, %[[A:.*]]: memref<{{.*}}>, %[[B:.*]]: memref<{{.*}}>) -> memref<{{.*}}>
+func @scf_if_non_equiv_yields(%b : i1, %A : tensor<4xf32>, %B : tensor<4xf32>) -> tensor<4xf32>
+{
+  // CHECK: %[[r:.*]] = select %[[cond]], %[[A]], %[[B]]
+  %r = scf.if %b -> (tensor<4xf32>) {
+    scf.yield %A : tensor<4xf32>
+  } else {
+    scf.yield %B : tensor<4xf32>
+  }
+  // CHECK: return %[[r]]
+  return %r: tensor<4xf32>
+}
+
+// -----
+
 // CHECK-LABEL: func @insert_op
 //  CHECK-SAME:     %[[t1:.*]]: memref<?xf32, {{.*}}>, %[[s:.*]]: f32, %[[i:.*]]: index
 func @insert_op(%t1 : tensor<?xf32> {linalg.inplaceable = true},

@@ -131,26 +131,73 @@ struct IfOpInterface
                           BufferizationState &state) const {
     auto ifOp = cast<scf::IfOp>(op);
 
-    // Bufferize then/else blocks.
-    if (failed(comprehensive_bufferize::bufferize(ifOp.thenBlock(), state)))
-      return failure();
-    if (failed(comprehensive_bufferize::bufferize(ifOp.elseBlock(), state)))
-      return failure();
+    // Use IRRewriter instead of OpBuilder because it has additional helper
+    // functions.
+    IRRewriter rewriter(op->getContext());
+    rewriter.setInsertionPoint(ifOp);
 
-    for (OpResult opResult : ifOp->getResults()) {
-      if (!opResult.getType().isa<TensorType>())
-        continue;
-      // TODO: Atm we bail on unranked TensorType because we don't know how to
-      // alloc an UnrankedMemRefType + its underlying ranked MemRefType.
-      assert(opResult.getType().isa<RankedTensorType>() &&
-             "unsupported unranked tensor");
-
-      Value resultBuffer = state.getResultBuffer(opResult);
-      if (!resultBuffer)
-        return failure();
-
-      state.mapBuffer(opResult, resultBuffer);
+    // Compute new types of the bufferized scf.if op.
+    SmallVector<Type> newTypes;
+    for (Type returnType : ifOp->getResultTypes()) {
+      if (returnType.isa<TensorType>()) {
+        assert(returnType.isa<RankedTensorType>() &&
+               "unsupported unranked tensor");
+        newTypes.push_back(
+            getDynamicMemRefType(returnType.cast<RankedTensorType>()));
+      } else {
+        newTypes.push_back(returnType);
+      }
     }
+
+    // Create new op.
+    auto newIfOp =
+        rewriter.create<scf::IfOp>(ifOp.getLoc(), newTypes, ifOp.condition(),
+                                   /*withElseRegion=*/true);
+
+    // Remove terminators.
+    if (!newIfOp.thenBlock()->empty()) {
+      rewriter.eraseOp(newIfOp.thenBlock()->getTerminator());
+      rewriter.eraseOp(newIfOp.elseBlock()->getTerminator());
+    }
+
+    // Move over then/else blocks.
+    rewriter.mergeBlocks(ifOp.thenBlock(), newIfOp.thenBlock());
+    rewriter.mergeBlocks(ifOp.elseBlock(), newIfOp.elseBlock());
+
+    // Update scf.yield of new then-block.
+    auto thenYieldOp = cast<scf::YieldOp>(newIfOp.thenBlock()->getTerminator());
+    rewriter.setInsertionPoint(thenYieldOp);
+    SmallVector<Value> thenYieldValues;
+    for (OpOperand &operand : thenYieldOp->getOpOperands()) {
+      if (operand.get().getType().isa<TensorType>()) {
+        Value toMemrefOp = rewriter.create<bufferization::ToMemrefOp>(
+            operand.get().getLoc(), newTypes[operand.getOperandNumber()],
+            operand.get());
+        operand.set(toMemrefOp);
+      }
+    }
+
+    // Update scf.yield of new else-block.
+    auto elseYieldOp = cast<scf::YieldOp>(newIfOp.elseBlock()->getTerminator());
+    rewriter.setInsertionPoint(elseYieldOp);
+    SmallVector<Value> elseYieldValues;
+    for (OpOperand &operand : elseYieldOp->getOpOperands()) {
+      if (operand.get().getType().isa<TensorType>()) {
+        Value toMemrefOp = rewriter.create<bufferization::ToMemrefOp>(
+            operand.get().getLoc(), newTypes[operand.getOperandNumber()],
+            operand.get());
+        operand.set(toMemrefOp);
+      }
+    }
+
+    // Replace op results.
+    state.replaceOp(op, newIfOp->getResults());
+
+    // Bufferize then/else blocks.
+    if (failed(comprehensive_bufferize::bufferize(newIfOp.thenBlock(), state)))
+      return failure();
+    if (failed(comprehensive_bufferize::bufferize(newIfOp.elseBlock(), state)))
+      return failure();
 
     return success();
   }
@@ -293,33 +340,65 @@ struct ForOpInterface
   }
 };
 
+// TODO: Evolve toward matching ReturnLike ops. Check for aliasing values that
+// do not bufferize inplace. (Requires a few more changes for ConstantOp,
+// InitTensorOp, CallOp.)
 LogicalResult mlir::linalg::comprehensive_bufferize::scf_ext::
     AssertDestinationPassingStyle::run(Operation *op, BufferizationState &state,
                                        BufferizationAliasInfo &aliasInfo,
                                        SmallVector<Operation *> &newOps) {
   LogicalResult status = success();
   op->walk([&](scf::YieldOp yieldOp) {
-    auto forOp = dyn_cast<scf::ForOp>(yieldOp->getParentOp());
-    if (!forOp)
-      return WalkResult::advance();
+    if (auto forOp = dyn_cast<scf::ForOp>(yieldOp->getParentOp())) {
+      for (OpOperand &operand : yieldOp->getOpOperands()) {
+        auto tensorType = operand.get().getType().dyn_cast<TensorType>();
+        if (!tensorType)
+          continue;
 
-    for (OpOperand &operand : yieldOp->getOpOperands()) {
-      auto tensorType = operand.get().getType().dyn_cast<TensorType>();
-      if (!tensorType)
-        continue;
+        OpOperand &forOperand = forOp.getOpOperandForResult(
+            forOp->getResult(operand.getOperandNumber()));
+        auto bbArg = forOp.getRegionIterArgForOpOperand(forOperand);
+        if (!aliasInfo.areEquivalentBufferizedValues(operand.get(), bbArg)) {
+          // TODO: this could get resolved with copies but it can also turn into
+          // swaps so we need to be careful about order of copies.
+          status =
+              yieldOp->emitError()
+              << "Yield operand #" << operand.getOperandNumber()
+              << " does not bufferize to an equivalent buffer to the matching"
+              << " enclosing scf::for operand";
+          return WalkResult::interrupt();
+        }
+      }
+    }
 
-      OpOperand &forOperand = forOp.getOpOperandForResult(
-          forOp->getResult(operand.getOperandNumber()));
-      auto bbArg = forOp.getRegionIterArgForOpOperand(forOperand);
-      if (!aliasInfo.areEquivalentBufferizedValues(operand.get(), bbArg)) {
-        // TODO: this could get resolved with copies but it can also turn into
-        // swaps so we need to be careful about order of copies.
-        status =
-            yieldOp->emitError()
-            << "Yield operand #" << operand.getOperandNumber()
-            << " does not bufferize to an equivalent buffer to the matching"
-            << " enclosing scf::for operand";
-        return WalkResult::interrupt();
+    if (auto ifOp = dyn_cast<scf::IfOp>(yieldOp->getParentOp())) {
+      // IfOps are in destination passing style if all yielded tensors are
+      // a value or equivalent to a value that is defined outside of the IfOp.
+      for (OpOperand &operand : yieldOp->getOpOperands()) {
+        auto tensorType = operand.get().getType().dyn_cast<TensorType>();
+        if (!tensorType)
+          continue;
+
+        bool foundOutsideEquivalent = false;
+        aliasInfo.applyOnEquivalenceClass(operand.get(), [&](Value value) {
+          Operation *valueOp = value.getDefiningOp();
+          if (value.isa<BlockArgument>())
+            valueOp = value.cast<BlockArgument>().getOwner()->getParentOp();
+
+          bool inThenBlock = ifOp.thenBlock()->findAncestorOpInBlock(*valueOp);
+          bool inElseBlock = ifOp.elseBlock()->findAncestorOpInBlock(*valueOp);
+
+          if (!inThenBlock && !inElseBlock)
+            foundOutsideEquivalent = true;
+        });
+
+        if (!foundOutsideEquivalent) {
+          status = yieldOp->emitError()
+                   << "Yield operand #" << operand.getOperandNumber()
+                   << " does not bufferize to a buffer that is equivalent to a"
+                   << " buffer defined outside of the scf::if op";
+          return WalkResult::interrupt();
+        }
       }
     }
 

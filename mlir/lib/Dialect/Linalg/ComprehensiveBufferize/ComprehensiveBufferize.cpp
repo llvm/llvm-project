@@ -461,8 +461,6 @@ wouldCreateWriteToNonWritableBuffer(OpOperand &opOperand, OpResult opResult,
   // Certain buffers are not writeable:
   //   1. A function bbArg that is not inplaceable or
   //   2. A constant op.
-  assert(!aliasesNonWritableBuffer(opResult, aliasInfo, state) &&
-         "expected that opResult does not alias non-writable buffer");
   bool nonWritable =
       aliasesNonWritableBuffer(opOperand.get(), aliasInfo, state);
   if (!nonWritable)

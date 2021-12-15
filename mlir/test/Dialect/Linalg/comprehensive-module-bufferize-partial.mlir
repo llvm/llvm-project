@@ -194,3 +194,28 @@ func @simple_scf_for(
   // CHECK-SCF: return %[[scf_for_tensor]]
   return %0 : tensor<?xf32>
 }
+
+// -----
+
+// CHECK-SCF-LABEL: func @simple_scf_if(
+//  CHECK-SCF-SAME:     %[[t1:.*]]: tensor<?xf32> {linalg.inplaceable = true}, %[[c:.*]]: i1, %[[pos:.*]]: index
+func @simple_scf_if(%t1: tensor<?xf32> {linalg.inplaceable = true}, %c: i1, %pos: index, %f: f32)
+    -> (tensor<?xf32>, index) {
+  // CHECK-SCF: %[[r:.*]] = scf.if %[[c]] -> (memref<?xf32, #{{.*}}>) {
+  %r1, %r2 = scf.if %c -> (tensor<?xf32>, index) {
+    // CHECK-SCF: %[[t1_memref:.*]] = bufferization.to_memref %[[t1]]
+    // CHECK-SCF: scf.yield %[[t1_memref]]
+    scf.yield %t1, %pos : tensor<?xf32>, index
+  // CHECK-SCF: } else {
+  } else {
+    // CHECK-SCF: %[[insert:.*]] = tensor.insert %{{.*}} into %[[t1]][{{.*}}]
+    // CHECK-SCF: %[[insert_memref:.*]] = bufferization.to_memref %[[insert]]
+    %1 = tensor.insert %f into %t1[%pos] : tensor<?xf32>
+    // CHECK-SCF: scf.yield %[[insert_memref]]
+    scf.yield %1, %pos : tensor<?xf32>, index
+  }
+
+  // CHECK-SCF: %[[r_tensor:.*]] = bufferization.to_tensor %[[r]]
+  // CHECK-SCF: return %[[r_tensor]], %[[pos]]
+  return %r1, %r2 : tensor<?xf32>, index
+}
