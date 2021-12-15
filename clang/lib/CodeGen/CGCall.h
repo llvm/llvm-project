@@ -151,7 +151,8 @@ public:
     OrdinaryInfo.PointerAuthInfo = pointerAuthInfo;
     assert(functionPtr && "configuring callee without function pointer");
     assert(functionPtr->getType()->isPointerTy());
-    assert(functionPtr->getType()->getPointerElementType()->isFunctionTy());
+    assert(functionPtr->getType()->isOpaquePointerTy() ||
+           functionPtr->getType()->getPointerElementType()->isFunctionTy());
   }
 
   static CGCallee forBuiltin(unsigned builtinID,
