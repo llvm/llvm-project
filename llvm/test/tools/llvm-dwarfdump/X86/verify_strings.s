@@ -22,7 +22,7 @@ str_producer:
         .section .debug_abbrev,"",@progbits
         .byte 0x01  # Abbrev code
         .byte 0x11  # DW_TAG_compile_unit
-        .byte 0x01  # DW_CHILDREN_no
+        .byte 0x00  # DW_CHILDREN_no
         .byte 0x25  # DW_AT_producer
         .byte 0x1a  # DW_FORM_strx
         .byte 0x72  # DW_AT_str_offsets_base
