@@ -41,9 +41,6 @@ public:
     auto src = multiReductionOp.source();
     auto loc = multiReductionOp.getLoc();
     auto srcRank = multiReductionOp.getSourceVectorType().getRank();
-    // If the rank is less than or equal to 1, there is nothing to do.
-    if (srcRank <= 1)
-      return failure();
 
     // Separate reduction and parallel dims
     auto reductionDimsRange =
@@ -59,6 +56,9 @@ public:
         parallelDims.push_back(i);
 
     // Add transpose only if inner-most/outer-most dimensions are not parallel
+    // and there are parallel dims.
+    if (parallelDims.empty())
+      return failure();
     if (useInnerDimsForReduction &&
         (parallelDims ==
          llvm::to_vector<4>(llvm::seq<int64_t>(0, parallelDims.size()))))
