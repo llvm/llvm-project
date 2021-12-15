@@ -1983,7 +1983,8 @@ CGObjCCommonMac::GenerateConstantNSString(const StringLiteral *Literal) {
     GetConstantStringEntry(NSConstantStringMap, Literal, StringLength);
 
   if (auto *C = Entry.second)
-    return ConstantAddress(C, CharUnits::fromQuantity(C->getAlignment()));
+    return ConstantAddress(
+        C, C->getValueType(), CharUnits::fromQuantity(C->getAlignment()));
 
   // If we don't already have it, get _NSConstantStringClassReference.
   llvm::Constant *Class = getNSConstantStringClassRef();
@@ -2036,7 +2037,7 @@ CGObjCCommonMac::GenerateConstantNSString(const StringLiteral *Literal) {
                      : NSStringSection);
   Entry.second = GV;
 
-  return ConstantAddress(GV, Alignment);
+  return ConstantAddress(GV, GV->getValueType(), Alignment);
 }
 
 enum {
