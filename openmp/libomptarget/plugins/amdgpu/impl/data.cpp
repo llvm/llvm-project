@@ -17,9 +17,12 @@
 using core::TaskImpl;
 
 namespace core {
-extern __attribute__((weak)) hsa_status_t fort_ptr_assign_i8(void *arg0, void *arg1, void *arg2, void *arg3, void *arg4);
+extern "C" __attribute__((weak)) void
+fort_ptr_assign_i8(void *arg0, void *arg1, void *arg2, void *arg3, void *arg4);
 hsa_status_t Runtime::FtnAssignWrapper(void *arg0, void *arg1, void *arg2, void *arg3, void *arg4) {
-  return fort_ptr_assign_i8(arg0, arg1, arg2, arg3, arg4);
+  fort_ptr_assign_i8(arg0, arg1, arg2, arg3, arg4);
+
+  return HSA_STATUS_SUCCESS;
 }
 
 hsa_status_t Runtime::HostMalloc(void **ptr, size_t size,
