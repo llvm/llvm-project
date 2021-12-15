@@ -1303,7 +1303,6 @@ td_library(
     name = "ArmSVETdFiles",
     srcs = [
         "include/mlir/Dialect/ArmSVE/ArmSVE.td",
-        "include/mlir/Dialect/ArmSVE/ArmSVEOpBase.td",
     ],
     includes = ["include"],
     deps = [
