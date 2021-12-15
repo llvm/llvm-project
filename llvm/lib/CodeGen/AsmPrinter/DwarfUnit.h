@@ -226,6 +226,9 @@ public:
   /// Add thrown types.
   void addThrownTypes(DIE &Die, DINodeArray ThrownTypes);
 
+  /// Add the accessibility attribute.
+  void addAccess(DIE &Die, DINode::DIFlags Flags);
+
   /// Add a new type attribute to the specified entity.
   ///
   /// This takes and attribute parameter because DW_AT_friend attributes are
