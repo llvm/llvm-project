@@ -4648,13 +4648,13 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
     //
     // In other cases, we assert that the types match up (until pointers stop
     // having pointee types).
-    llvm::Type *TypeFromVal;
     if (Callee.isVirtual())
-      TypeFromVal = Callee.getVirtualFunctionType();
-    else
-      TypeFromVal =
-          Callee.getFunctionPointer()->getType()->getPointerElementType();
-    assert(IRFuncTy == TypeFromVal);
+      assert(IRFuncTy == Callee.getVirtualFunctionType());
+    else {
+      llvm::PointerType *PtrTy =
+          llvm::cast<llvm::PointerType>(Callee.getFunctionPointer()->getType());
+      assert(PtrTy->isOpaqueOrPointeeTypeMatches(IRFuncTy));
+    }
   }
 #endif
 
