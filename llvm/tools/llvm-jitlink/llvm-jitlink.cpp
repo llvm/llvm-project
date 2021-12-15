@@ -24,6 +24,7 @@
 #include "llvm/ExecutionEngine/Orc/ExecutionUtils.h"
 #include "llvm/ExecutionEngine/Orc/IndirectionUtils.h"
 #include "llvm/ExecutionEngine/Orc/MachOPlatform.h"
+#include "llvm/ExecutionEngine/Orc/ObjectFileInterface.h"
 #include "llvm/ExecutionEngine/Orc/TargetProcess/JITLoaderGDB.h"
 #include "llvm/ExecutionEngine/Orc/TargetProcess/RegisterEHFrames.h"
 #include "llvm/MC/MCAsmInfo.h"
@@ -637,34 +638,23 @@ static std::unique_ptr<JITLinkMemoryManager> createMemoryManager() {
   return ExitOnErr(InProcessMemoryManager::Create());
 }
 
-LLVMJITLinkObjectLinkingLayer::LLVMJITLinkObjectLinkingLayer(
-    Session &S, JITLinkMemoryManager &MemMgr)
-    : ObjectLinkingLayer(S.ES, MemMgr), S(S) {}
+static Expected<MaterializationUnit::Interface>
+getTestObjectFileInterface(Session &S, MemoryBufferRef O) {
 
-Error LLVMJITLinkObjectLinkingLayer::add(ResourceTrackerSP RT,
-                                         std::unique_ptr<MemoryBuffer> O) {
-
-  if (S.HarnessFiles.empty() || S.HarnessFiles.count(O->getBufferIdentifier()))
-    return ObjectLinkingLayer::add(std::move(RT), std::move(O));
-
-  // Use getObjectSymbolInfo to compute the init symbol, but ignore
-  // the symbols field. We'll handle that manually to include promotion.
-  auto ObjInterface =
-      getObjectInterface(getExecutionSession(), O->getMemBufferRef());
-
-  if (!ObjInterface)
-    return ObjInterface.takeError();
+  // Get the standard interface for this object, but ignore the symbols field.
+  // We'll handle that manually to include promotion.
+  auto I = getObjectFileInterface(S.ES, O);
+  if (!I)
+    return I.takeError();
+  I->SymbolFlags.clear();
 
   // If creating an object file was going to fail it would have happened above,
   // so we can 'cantFail' this.
-  auto Obj =
-      cantFail(object::ObjectFile::createObjectFile(O->getMemBufferRef()));
-
-  ObjInterface->SymbolFlags.clear();
+  auto Obj = cantFail(object::ObjectFile::createObjectFile(O));
 
   // The init symbol must be included in the SymbolFlags map if present.
-  if (ObjInterface->InitSymbol)
-    ObjInterface->SymbolFlags[ObjInterface->InitSymbol] =
+  if (I->InitSymbol)
+    I->SymbolFlags[I->InitSymbol] =
         JITSymbolFlags::MaterializationSideEffectsOnly;
 
   for (auto &Sym : Obj->symbols()) {
@@ -698,7 +688,7 @@ Error LLVMJITLinkObjectLinkingLayer::add(ResourceTrackerSP RT,
       // that we've seen) or discard it.
       if (S.HarnessDefinitions.count(*Name) || S.CanonicalWeakDefs.count(*Name))
         continue;
-      S.CanonicalWeakDefs[*Name] = O->getBufferIdentifier();
+      S.CanonicalWeakDefs[*Name] = O.getBufferIdentifier();
       *SymFlags &= ~JITSymbolFlags::Weak;
       if (!S.HarnessExternals.count(*Name))
         *SymFlags &= ~JITSymbolFlags::Exported;
@@ -709,14 +699,10 @@ Error LLVMJITLinkObjectLinkingLayer::add(ResourceTrackerSP RT,
       continue;
 
     auto InternedName = S.ES.intern(*Name);
-    ObjInterface->SymbolFlags[InternedName] = std::move(*SymFlags);
+    I->SymbolFlags[InternedName] = std::move(*SymFlags);
   }
 
-  auto MU = std::make_unique<BasicObjectLayerMaterializationUnit>(
-      *this, std::move(O), std::move(*ObjInterface));
-
-  auto &JD = RT->getJITDylib();
-  return JD.define(std::move(MU), std::move(RT));
+  return I;
 }
 
 static Error loadProcessSymbols(Session &S) {
@@ -954,7 +940,7 @@ Session::~Session() {
 
 Session::Session(std::unique_ptr<ExecutorProcessControl> EPC, Error &Err)
     : ES(std::move(EPC)),
-      ObjLayer(*this, ES.getExecutorProcessControl().getMemMgr()) {
+      ObjLayer(ES, ES.getExecutorProcessControl().getMemMgr()) {
 
   /// Local ObjectLinkingLayer::Plugin class to forward modifyPassConfig to the
   /// Session.
@@ -1034,7 +1020,7 @@ Session::Session(std::unique_ptr<ExecutorProcessControl> EPC, Error &Err)
         ExitOnErr(errorOrToExpected(MemoryBuffer::getFile(HarnessFile)));
 
     auto ObjInterface =
-        ExitOnErr(getObjectInterface(ES, ObjBuffer->getMemBufferRef()));
+        ExitOnErr(getObjectFileInterface(ES, ObjBuffer->getMemBufferRef()));
 
     for (auto &KV : ObjInterface.SymbolFlags)
       HarnessDefinitions.insert(*KV.first);
@@ -1360,8 +1346,18 @@ static Error loadObjects(Session &S) {
       JD.addGenerator(ExitOnErr(StaticLibraryDefinitionGenerator::Load(
           S.ObjLayer, InputFile.c_str(),
           S.ES.getExecutorProcessControl().getTargetTriple())));
-    else
-      ExitOnErr(S.ObjLayer.add(JD, std::move(ObjBuffer)));
+    else {
+      if (S.HarnessFiles.empty())
+        ExitOnErr(S.ObjLayer.add(JD, std::move(ObjBuffer)));
+      else {
+        // We're in -harness mode. Use a custom interface for this
+        // test object.
+        auto ObjInterface = ExitOnErr(
+            getTestObjectFileInterface(S, ObjBuffer->getMemBufferRef()));
+        ExitOnErr(
+            S.ObjLayer.add(JD, std::move(ObjBuffer), std::move(ObjInterface)));
+      }
+    }
   }
 
   // Define absolute symbols.
