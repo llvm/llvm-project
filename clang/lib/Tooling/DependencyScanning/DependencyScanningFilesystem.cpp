@@ -188,7 +188,7 @@ DependencyScanningWorkerFilesystem::getOrCreateFileSystemEntry(
     std::lock_guard<std::mutex> LockGuard(SharedCacheEntry.ValueLock);
     CachedFileSystemEntry &CacheEntry = SharedCacheEntry.Value;
 
-    if (!CacheEntry.isValid()) {
+    if (!CacheEntry.isInitialized()) {
       auto MaybeStatus = getUnderlyingFS().status(Filename);
       if (!MaybeStatus && !shouldCacheStatFailures(Filename))
         // HACK: We need to always restat non source files if the stat fails.
