@@ -4872,7 +4872,7 @@ AST_POLYMORPHIC_MATCHER_P2(forEachArgumentWithParamType,
     }
   }
 
-  int ParamIndex = 0;
+  unsigned ParamIndex = 0;
   bool Matched = false;
   unsigned NumArgs = Node.getNumArgs();
   if (FProto && FProto->isVariadic())
