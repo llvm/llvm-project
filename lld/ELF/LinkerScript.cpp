@@ -94,14 +94,17 @@ static StringRef getOutputSectionName(const InputSectionBase *s) {
   // cold parts in .text.split instead of .text.unlikely mitigates against poor
   // profile inaccuracy. Techniques such as hugepage remapping can make
   // conservative decisions at the section granularity.
-  if (config->zKeepTextSectionPrefix && s->name.startswith(".text."))
-    for (StringRef v : {".text.hot", ".text.unknown", ".text.unlikely",
-                        ".text.startup", ".text.exit", ".text.split"})
-      if (isSectionPrefix(v, s->name))
-        return v;
+  if (isSectionPrefix(".text", s->name)) {
+    if (config->zKeepTextSectionPrefix)
+      for (StringRef v : {".text.hot", ".text.unknown", ".text.unlikely",
+                          ".text.startup", ".text.exit", ".text.split"})
+        if (isSectionPrefix(v.substr(5), s->name.substr(5)))
+          return v;
+    return ".text";
+  }
 
   for (StringRef v :
-       {".text", ".data.rel.ro", ".data", ".rodata", ".bss.rel.ro", ".bss",
+       {".data.rel.ro", ".data", ".rodata", ".bss.rel.ro", ".bss",
         ".gcc_except_table", ".init_array", ".fini_array", ".tbss", ".tdata",
         ".ARM.exidx", ".ARM.extab", ".ctors", ".dtors"})
     if (isSectionPrefix(v, s->name))
