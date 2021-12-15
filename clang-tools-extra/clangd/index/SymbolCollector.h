@@ -100,8 +100,9 @@ public:
   void initialize(ASTContext &Ctx) override;
 
   void setPreprocessor(std::shared_ptr<Preprocessor> PP) override {
-    this->PP = std::move(PP);
+    this->PP = PP.get();
   }
+  void setPreprocessor(Preprocessor &PP) { this->PP = &PP; }
 
   bool
   handleDeclOccurrence(const Decl *D, index::SymbolRoleSet Roles,
@@ -153,7 +154,7 @@ private:
   // All relations collected from the AST.
   RelationSlab::Builder Relations;
   ASTContext *ASTCtx;
-  std::shared_ptr<Preprocessor> PP;
+  Preprocessor *PP = nullptr;
   std::shared_ptr<GlobalCodeCompletionAllocator> CompletionAllocator;
   std::unique_ptr<CodeCompletionTUInfo> CompletionTUInfo;
   Options Opts;
