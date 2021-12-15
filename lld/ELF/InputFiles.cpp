@@ -1047,33 +1047,18 @@ InputSectionBase *ObjFile<ELFT>::createInputSection(uint32_t idx,
 template <class ELFT> void ObjFile<ELFT>::initializeSymbols() {
   ArrayRef<Elf_Sym> eSyms = this->getELFSyms<ELFT>();
   this->symbols.resize(eSyms.size());
+  SymbolUnion *locals =
+      getSpecificAllocSingleton<SymbolUnion>().Allocate(firstGlobal);
 
-  // Fill in InputFile::symbols. Some entries have been initialized
-  // because of LazyObjFile.
-  for (size_t i = 0, end = eSyms.size(); i != end; ++i) {
-    if (this->symbols[i])
-      continue;
+  for (size_t i = 0; i != firstGlobal; ++i) {
     const Elf_Sym &eSym = eSyms[i];
     uint32_t secIdx = getSectionIndex(eSym);
     if (secIdx >= this->sections.size())
       fatal(toString(this) + ": invalid section index: " + Twine(secIdx));
-    if (eSym.getBinding() != STB_LOCAL) {
-      if (i < firstGlobal)
-        error(toString(this) + ": non-local symbol (" + Twine(i) +
-              ") found at index < .symtab's sh_info (" + Twine(firstGlobal) +
-              ")");
-      this->symbols[i] =
-          symtab->insert(CHECK(eSyms[i].getName(this->stringTable), this));
-      continue;
-    }
-
-    // Handle local symbols. Local symbols are not added to the symbol
-    // table because they are not visible from other object files. We
-    // allocate symbol instances and add their pointers to symbols.
-    if (i >= firstGlobal)
-      errorOrWarn(toString(this) + ": STB_LOCAL symbol (" + Twine(i) +
-                  ") found at index >= .symtab's sh_info (" +
-                  Twine(firstGlobal) + ")");
+    if (eSym.getBinding() != STB_LOCAL)
+      error(toString(this) + ": non-local symbol (" + Twine(i) +
+            ") found at index < .symtab's sh_info (" + Twine(firstGlobal) +
+            ")");
 
     InputSectionBase *sec = this->sections[secIdx];
     uint8_t type = eSym.getType();
@@ -1083,27 +1068,36 @@ template <class ELFT> void ObjFile<ELFT>::initializeSymbols() {
       fatal(toString(this) + ": invalid symbol name offset");
     StringRefZ name = this->stringTable.data() + eSym.st_name;
 
-    if (eSym.st_shndx == SHN_UNDEF)
-      this->symbols[i] =
-          make<Undefined>(this, name, STB_LOCAL, eSym.st_other, type);
-    else if (sec == &InputSection::discarded)
-      this->symbols[i] =
-          make<Undefined>(this, name, STB_LOCAL, eSym.st_other, type,
-                          /*discardedSecIdx=*/secIdx);
+    this->symbols[i] = reinterpret_cast<Symbol *>(locals + i);
+    if (eSym.st_shndx == SHN_UNDEF || sec == &InputSection::discarded)
+      new (this->symbols[i])
+          Undefined(this, name, STB_LOCAL, eSym.st_other, type,
+                    /*discardedSecIdx=*/secIdx);
     else
-      this->symbols[i] = make<Defined>(this, name, STB_LOCAL, eSym.st_other,
-                                       type, eSym.st_value, eSym.st_size, sec);
+      new (this->symbols[i]) Defined(this, name, STB_LOCAL, eSym.st_other, type,
+                                     eSym.st_value, eSym.st_size, sec);
   }
 
-  // Symbol resolution of non-local symbols.
+  // Some entries have been filled by LazyObjFile.
+  for (size_t i = firstGlobal, end = eSyms.size(); i != end; ++i)
+    if (!this->symbols[i])
+      this->symbols[i] =
+          symtab->insert(CHECK(eSyms[i].getName(this->stringTable), this));
+
+  // Perform symbol resolution on non-local symbols.
   SmallVector<unsigned, 32> undefineds;
   for (size_t i = firstGlobal, end = eSyms.size(); i != end; ++i) {
     const Elf_Sym &eSym = eSyms[i];
     uint8_t binding = eSym.getBinding();
-    if (binding == STB_LOCAL)
-      continue; // Errored above.
-
+    if (binding == STB_LOCAL) {
+      errorOrWarn(toString(this) + ": STB_LOCAL symbol (" + Twine(i) +
+                  ") found at index >= .symtab's sh_info (" +
+                  Twine(firstGlobal) + ")");
+      continue;
+    }
     uint32_t secIdx = getSectionIndex(eSym);
+    if (secIdx >= this->sections.size())
+      fatal(toString(this) + ": invalid section index: " + Twine(secIdx));
     InputSectionBase *sec = this->sections[secIdx];
     uint8_t stOther = eSym.st_other;
     uint8_t type = eSym.getType();
@@ -1111,18 +1105,17 @@ template <class ELFT> void ObjFile<ELFT>::initializeSymbols() {
     uint64_t size = eSym.st_size;
     StringRefZ name = this->stringTable.data() + eSym.st_name;
 
-    // Handle global undefined symbols.
     if (eSym.st_shndx == SHN_UNDEF) {
       undefineds.push_back(i);
       continue;
     }
 
-    // Handle global common symbols.
+    Symbol *sym = this->symbols[i];
     if (eSym.st_shndx == SHN_COMMON) {
       if (value == 0 || value >= UINT32_MAX)
         fatal(toString(this) + ": common symbol '" + StringRef(name.data) +
               "' has invalid alignment: " + Twine(value));
-      this->symbols[i]->resolve(
+      sym->resolve(
           CommonSymbol{this, name, binding, stOther, type, value, size});
       continue;
     }
@@ -1134,7 +1127,6 @@ template <class ELFT> void ObjFile<ELFT>::initializeSymbols() {
     // defined symbol in a .eh_frame becomes dangling symbols.
     if (sec == &InputSection::discarded) {
       Undefined und{this, name, binding, stOther, type, secIdx};
-      Symbol *sym = this->symbols[i];
       // !ArchiveFile::parsed or LazyObjFile::extracted means that the file
       // containing this object has not finished processing, i.e. this symbol is
       // a result of a lazy symbol extract. We should demote the lazy symbol to
@@ -1156,7 +1148,7 @@ template <class ELFT> void ObjFile<ELFT>::initializeSymbols() {
     // Handle global defined symbols.
     if (binding == STB_GLOBAL || binding == STB_WEAK ||
         binding == STB_GNU_UNIQUE) {
-      this->symbols[i]->resolve(
+      sym->resolve(
           Defined{this, name, binding, stOther, type, value, size, sec});
       continue;
     }
