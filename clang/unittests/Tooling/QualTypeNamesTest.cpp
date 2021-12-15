@@ -15,12 +15,7 @@ struct TypeNameVisitor : TestVisitor<TypeNameVisitor> {
   llvm::StringMap<std::string> ExpectedQualTypeNames;
   bool WithGlobalNsPrefix = false;
 
-  // ValueDecls are the least-derived decl with both a qualtype and a
-  // name.
-  bool TraverseDecl(Decl *D) {
-    return true;  // Always continue
-  }
-
+  // ValueDecls are the least-derived decl with both a qualtype and a name.
   bool VisitValueDecl(const ValueDecl *VD) {
     std::string ExpectedName =
         ExpectedQualTypeNames.lookup(VD->getNameAsString());
@@ -35,10 +30,10 @@ struct TypeNameVisitor : TestVisitor<TypeNameVisitor> {
       if (ExpectedName != ActualName) {
         // A custom message makes it much easier to see what declaration
         // failed compared to EXPECT_EQ.
-        EXPECT_TRUE(false) << "Typename::getFullyQualifiedName failed for "
-                           << VD->getQualifiedNameAsString() << std::endl
-                           << "   Actual: " << ActualName << std::endl
-                           << " Exepcted: " << ExpectedName;
+        ADD_FAILURE() << "Typename::getFullyQualifiedName failed for "
+                      << VD->getQualifiedNameAsString() << std::endl
+                      << "   Actual: " << ActualName << std::endl
+                      << " Exepcted: " << ExpectedName;
       }
     }
     return true;
@@ -69,7 +64,7 @@ TEST(QualTypeNameTest, getFullyQualifiedName) {
   // Recursive template parameter expansion.
   Visitor.ExpectedQualTypeNames["CheckD"] =
       "A::B::Template0<A::B::Template1<A::B::C::MyInt, A::B::AnotherClass>, "
-      "A::B::Template0<int, long> >";
+      "A::B::Template0<int, long>>";
   // Variadic Template expansion.
   Visitor.ExpectedQualTypeNames["CheckE"] =
       "A::Variadic<int, A::B::Template0<int, char>, "
@@ -239,14 +234,14 @@ TEST(QualTypeNameTest, getFullyQualifiedName) {
   TypeNameVisitor AnonStrucs;
   AnonStrucs.ExpectedQualTypeNames["a"] = "short";
   AnonStrucs.ExpectedQualTypeNames["un_in_st_1"] =
-      "union (anonymous struct at input.cc:1:1)::(anonymous union at "
+      "union (unnamed struct at input.cc:1:1)::(unnamed union at "
       "input.cc:2:27)";
   AnonStrucs.ExpectedQualTypeNames["b"] = "short";
   AnonStrucs.ExpectedQualTypeNames["un_in_st_2"] =
-      "union (anonymous struct at input.cc:1:1)::(anonymous union at "
+      "union (unnamed struct at input.cc:1:1)::(unnamed union at "
       "input.cc:5:27)";
   AnonStrucs.ExpectedQualTypeNames["anon_st"] =
-      "struct (anonymous struct at input.cc:1:1)";
+      "struct (unnamed struct at input.cc:1:1)";
   AnonStrucs.runOver(R"(struct {
                           union {
                             short a;
