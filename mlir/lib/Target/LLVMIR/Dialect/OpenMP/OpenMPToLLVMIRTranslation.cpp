@@ -547,6 +547,77 @@ convertOmpOrderedRegion(Operation &opInst, llvm::IRBuilderBase &builder,
   return bodyGenStatus;
 }
 
+static LogicalResult
+convertOmpSections(Operation &opInst, llvm::IRBuilderBase &builder,
+                   LLVM::ModuleTranslation &moduleTranslation) {
+  using InsertPointTy = llvm::OpenMPIRBuilder::InsertPointTy;
+  using StorableBodyGenCallbackTy =
+      llvm::OpenMPIRBuilder::StorableBodyGenCallbackTy;
+
+  auto sectionsOp = cast<omp::SectionsOp>(opInst);
+
+  // TODO: Support the following clauses: private, firstprivate, lastprivate,
+  // reduction, allocate
+  if (!sectionsOp.private_vars().empty() ||
+      !sectionsOp.firstprivate_vars().empty() ||
+      !sectionsOp.lastprivate_vars().empty() ||
+      !sectionsOp.reduction_vars().empty() || sectionsOp.reductions() ||
+      !sectionsOp.allocate_vars().empty() ||
+      !sectionsOp.allocators_vars().empty())
+    return emitError(sectionsOp.getLoc())
+           << "private, firstprivate, lastprivate, reduction and allocate "
+              "clauses are not supported for sections construct";
+
+  LogicalResult bodyGenStatus = success();
+  SmallVector<StorableBodyGenCallbackTy> sectionCBs;
+
+  for (Operation &op : *sectionsOp.region().begin()) {
+    auto sectionOp = dyn_cast<omp::SectionOp>(op);
+    if (!sectionOp) // omp.terminator
+      continue;
+
+    Region &region = sectionOp.region();
+    auto sectionCB = [&region, &builder, &moduleTranslation, &bodyGenStatus](
+                         InsertPointTy allocaIP, InsertPointTy codeGenIP,
+                         llvm::BasicBlock &finiBB) {
+      builder.restoreIP(codeGenIP);
+      builder.CreateBr(&finiBB);
+      convertOmpOpRegions(region, "omp.section.region", *codeGenIP.getBlock(),
+                          finiBB, builder, moduleTranslation, bodyGenStatus);
+    };
+    sectionCBs.push_back(sectionCB);
+  }
+
+  // No sections within omp.sections operation - skip generation. This situation
+  // is only possible if there is only a terminator operation inside the
+  // sections operation
+  if (sectionCBs.size() == 0)
+    return success();
+
+  assert(isa<omp::SectionOp>(*sectionsOp.region().op_begin()));
+
+  // TODO: Perform appropriate actions according to the data-sharing
+  // attribute (shared, private, firstprivate, ...) of variables.
+  // Currently defaults to shared.
+  auto privCB = [&](InsertPointTy, InsertPointTy codeGenIP, llvm::Value &,
+                    llvm::Value &vPtr,
+                    llvm::Value *&replacementValue) -> InsertPointTy {
+    replacementValue = &vPtr;
+    return codeGenIP;
+  };
+
+  // TODO: Perform finalization actions for variables. This has to be
+  // called for variables which have destructors/finalizers.
+  auto finiCB = [&](InsertPointTy codeGenIP) {};
+
+  llvm::OpenMPIRBuilder::LocationDescription ompLoc(
+      builder.saveIP(), builder.getCurrentDebugLocation());
+  builder.restoreIP(moduleTranslation.getOpenMPBuilder()->createSections(
+      ompLoc, findAllocaInsertPoint(builder, moduleTranslation), sectionCBs,
+      privCB, finiCB, false, sectionsOp.nowait()));
+  return bodyGenStatus;
+}
+
 /// Converts an OpenMP workshare loop into LLVM IR using OpenMPIRBuilder.
 static LogicalResult
 convertOmpWsLoop(Operation &opInst, llvm::IRBuilderBase &builder,
@@ -961,6 +1032,9 @@ LogicalResult OpenMPDialectLLVMIRTranslationInterface::convertOperation(
       })
       .Case([&](omp::AtomicReadOp) {
         return convertOmpAtomicRead(*op, builder, moduleTranslation);
+      })
+      .Case([&](omp::SectionsOp) {
+        return convertOmpSections(*op, builder, moduleTranslation);
       })
       .Case<omp::YieldOp, omp::TerminatorOp, omp::ReductionDeclareOp,
             omp::CriticalDeclareOp>([](auto op) {

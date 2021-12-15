@@ -736,3 +736,145 @@ llvm.func @omp_atomic_read(%arg0 : !llvm.ptr<i32>) -> () {
   %x4 = omp.atomic.read %arg0 memory_order(relaxed) : !llvm.ptr<i32> -> i32
   llvm.return
 }
+
+// -----
+
+// CHECK-LABEL: @omp_sections_empty
+llvm.func @omp_sections_empty() -> () {
+  omp.sections {
+    omp.terminator
+  }
+  // CHECK-NEXT: ret void
+  llvm.return
+}
+
+// -----
+
+// Check IR generation for simple empty sections. This only checks the overall
+// shape of the IR, detailed checking is done by the OpenMPIRBuilder.
+
+// CHECK-LABEL: @omp_sections_trivial
+llvm.func @omp_sections_trivial() -> () {
+  // CHECK:   br label %[[PREHEADER:.*]]
+
+  // CHECK: [[PREHEADER]]:
+  // CHECK:   %{{.*}} = call i32 @__kmpc_global_thread_num({{.*}})
+  // CHECK:   call void @__kmpc_for_static_init_4u({{.*}})
+  // CHECK:   br label %[[HEADER:.*]]
+
+  // CHECK: [[HEADER]]:
+  // CHECK:   br label %[[COND:.*]]
+
+  // CHECK: [[COND]]:
+  // CHECK:   br i1 %{{.*}}, label %[[BODY:.*]], label %[[EXIT:.*]]
+  // CHECK: [[BODY]]:
+  // CHECK:   switch i32 %{{.*}}, label %[[INC:.*]] [
+  // CHECK-NEXT:     i32 0, label %[[SECTION1:.*]]
+  // CHECK-NEXT:     i32 1, label %[[SECTION2:.*]]
+  // CHECK-NEXT: ]
+
+  // CHECK: [[INC]]:
+  // CHECK:   %{{.*}} = add {{.*}}, 1
+  // CHECK:   br label %[[HEADER]]
+
+  // CHECK: [[EXIT]]:
+  // CHECK:   call void @__kmpc_for_static_fini({{.*}})
+  // CHECK:   call void @__kmpc_barrier({{.*}})
+  // CHECK:   br label %[[AFTER:.*]]
+
+  // CHECK: [[AFTER]]:
+  // CHECK:   br label %[[END:.*]]
+
+  // CHECK: [[END]]:
+  // CHECK:   ret void
+  omp.sections {
+    omp.section {
+      // CHECK: [[SECTION1]]:
+      // CHECK-NEXT: br label %[[REGION1:[^ ,]*]]
+      // CHECK: [[REGION1]]:
+      // CHECK-NEXT: br label %[[EXIT]]
+      omp.terminator
+    }
+    omp.section {
+      // CHECK: [[SECTION2]]:
+      // CHECK-NEXT: br label %[[REGION2:[^ ,]*]]
+      // CHECK: [[REGION2]]:
+      // CHECK-NEXT: br label %[[EXIT]]
+      omp.terminator
+    }
+    omp.terminator
+  }
+  llvm.return
+}
+
+// -----
+
+// CHECK: declare void @foo()
+llvm.func @foo()
+
+// CHECK: declare void @bar(i32)
+llvm.func @bar(%arg0 : i32)
+
+// CHECK-LABEL: @omp_sections
+llvm.func @omp_sections(%arg0 : i32, %arg1 : i32, %arg2 : !llvm.ptr<i32>) -> () {
+
+  // CHECK: switch i32 %{{.*}}, label %{{.*}} [
+  // CHECK-NEXT:   i32 0, label %[[SECTION1:.*]]
+  // CHECK-NEXT:   i32 1, label %[[SECTION2:.*]]
+  // CHECK-NEXT:   i32 2, label %[[SECTION3:.*]]
+  // CHECK-NEXT: ]
+  omp.sections {
+    omp.section {
+      // CHECK: [[SECTION1]]:
+      // CHECK:   br label %[[REGION1:[^ ,]*]]
+      // CHECK: [[REGION1]]:
+      // CHECK:   call void @foo()
+      // CHECK:   br label %{{.*}}
+      llvm.call @foo() : () -> ()
+      omp.terminator
+    }
+    omp.section {
+      // CHECK: [[SECTION2]]:
+      // CHECK:   br label %[[REGION2:[^ ,]*]]
+      // CHECK: [[REGION2]]:
+      // CHECK:   call void @bar(i32 %{{.*}})
+      // CHECK:   br label %{{.*}}
+      llvm.call @bar(%arg0) : (i32) -> ()
+      omp.terminator
+    }
+    omp.section {
+      // CHECK: [[SECTION3]]:
+      // CHECK:   br label %[[REGION3:[^ ,]*]]
+      // CHECK: [[REGION3]]:
+      // CHECK:   %11 = add i32 %{{.*}}, %{{.*}}
+      %add = llvm.add %arg0, %arg1 : i32
+      // CHECK:   store i32 %{{.*}}, i32* %{{.*}}, align 4
+      // CHECK:   br label %{{.*}}
+      llvm.store %add, %arg2 : !llvm.ptr<i32>
+      omp.terminator
+    }
+    omp.terminator
+  }
+  llvm.return
+}
+
+// -----
+
+llvm.func @foo()
+
+// CHECK-LABEL: @omp_sections_with_clauses
+llvm.func @omp_sections_with_clauses() -> () {
+  // CHECK-NOT: call void @__kmpc_barrier
+  omp.sections nowait {
+    omp.section {
+      llvm.call @foo() : () -> ()
+      omp.terminator
+    }
+    omp.section {
+      llvm.call @foo() : () -> ()
+      omp.terminator
+    }
+    omp.terminator
+  }
+  llvm.return
+}
