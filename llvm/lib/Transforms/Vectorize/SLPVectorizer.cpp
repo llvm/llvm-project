@@ -3524,9 +3524,14 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
     // Check that every instruction appears once in this bundle.
     DenseMap<Value *, unsigned> UniquePositions;
     for (Value *V : VL) {
+      if (isConstant(V)) {
+        ReuseShuffleIndicies.emplace_back(
+            isa<UndefValue>(V) ? UndefMaskElem : UniqueValues.size());
+        UniqueValues.emplace_back(V);
+        continue;
+      }
       auto Res = UniquePositions.try_emplace(V, UniqueValues.size());
-      ReuseShuffleIndicies.emplace_back(isa<UndefValue>(V) ? -1
-                                                           : Res.first->second);
+      ReuseShuffleIndicies.emplace_back(Res.first->second);
       if (Res.second)
         UniqueValues.emplace_back(V);
     }
@@ -3536,6 +3541,8 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
     } else {
       LLVM_DEBUG(dbgs() << "SLP: Shuffle for reused scalars.\n");
       if (NumUniqueScalarValues <= 1 ||
+          (NumUniqueScalarValues == 2 &&
+           any_of(UniqueValues, UndefValue::classof)) ||
           !llvm::isPowerOf2_32(NumUniqueScalarValues)) {
         LLVM_DEBUG(dbgs() << "SLP: Scalar used twice in bundle.\n");
         newTreeEntry(VL, None /*not vectorized*/, S, UserTreeIdx);
@@ -4729,6 +4736,8 @@ InstructionCost BoUpSLP::getEntryCost(const TreeEntry *E,
     if (isSplat(VL)) {
       // Found the broadcasting of the single scalar, calculate the cost as the
       // broadcast.
+      assert(VecTy == FinalVecTy &&
+             "No reused scalars expected for broadcast.");
       return TTI->getShuffleCost(TargetTransformInfo::SK_Broadcast, VecTy);
     }
     InstructionCost ReuseShuffleCost = 0;
