@@ -2828,13 +2828,11 @@ __enable_if_t
 >
 basic_string<_CharT, _Traits, _Allocator>::insert(const_iterator __pos, _InputIterator __first, _InputIterator __last)
 {
-#if _LIBCPP_DEBUG_LEVEL == 2
-    _LIBCPP_ASSERT(__get_const_db()->__find_c_from_i(&__pos) == this,
-        "string::insert(iterator, range) called with an iterator not"
-        " referring to this string");
-#endif
-    const basic_string __temp(__first, __last, __alloc());
-    return insert(__pos, __temp.data(), __temp.data() + __temp.size());
+  _LIBCPP_DEBUG_ASSERT(__get_const_db()->__find_c_from_i(&__pos) == this,
+                       "string::insert(iterator, range) called with an iterator not"
+                       " referring to this string");
+  const basic_string __temp(__first, __last, __alloc());
+  return insert(__pos, __temp.data(), __temp.data() + __temp.size());
 }
 
 template <class _CharT, class _Traits, class _Allocator>
@@ -2846,11 +2844,10 @@ __enable_if_t
 >
 basic_string<_CharT, _Traits, _Allocator>::insert(const_iterator __pos, _ForwardIterator __first, _ForwardIterator __last)
 {
-#if _LIBCPP_DEBUG_LEVEL == 2
-    _LIBCPP_ASSERT(__get_const_db()->__find_c_from_i(&__pos) == this,
-        "string::insert(iterator, range) called with an iterator not"
-        " referring to this string");
-#endif
+  _LIBCPP_DEBUG_ASSERT(__get_const_db()->__find_c_from_i(&__pos) == this,
+                       "string::insert(iterator, range) called with an iterator not"
+                       " referring to this string");
+
     size_type __ip = static_cast<size_type>(__pos - begin());
     size_type __n = static_cast<size_type>(_VSTD::distance(__first, __last));
     if (__n)
@@ -2963,14 +2960,12 @@ inline
 typename basic_string<_CharT, _Traits, _Allocator>::iterator
 basic_string<_CharT, _Traits, _Allocator>::insert(const_iterator __pos, size_type __n, value_type __c)
 {
-#if _LIBCPP_DEBUG_LEVEL == 2
-    _LIBCPP_ASSERT(__get_const_db()->__find_c_from_i(&__pos) == this,
-        "string::insert(iterator, n, value) called with an iterator not"
-        " referring to this string");
-#endif
-    difference_type __p = __pos - begin();
-    insert(static_cast<size_type>(__p), __n, __c);
-    return begin() + __p;
+  _LIBCPP_DEBUG_ASSERT(__get_const_db()->__find_c_from_i(&__pos) == this,
+                       "string::insert(iterator, n, value) called with an iterator not"
+                       " referring to this string");
+  difference_type __p = __pos - begin();
+  insert(static_cast<size_type>(__p), __n, __c);
+  return begin() + __p;
 }
 
 // replace
@@ -3183,17 +3178,15 @@ inline
 typename basic_string<_CharT, _Traits, _Allocator>::iterator
 basic_string<_CharT, _Traits, _Allocator>::erase(const_iterator __pos)
 {
-#if _LIBCPP_DEBUG_LEVEL == 2
-    _LIBCPP_ASSERT(__get_const_db()->__find_c_from_i(&__pos) == this,
-        "string::erase(iterator) called with an iterator not"
-        " referring to this string");
-#endif
-    _LIBCPP_ASSERT(__pos != end(),
-        "string::erase(iterator) called with a non-dereferenceable iterator");
-    iterator __b = begin();
-    size_type __r = static_cast<size_type>(__pos - __b);
-    erase(__r, 1);
-    return __b + static_cast<difference_type>(__r);
+  _LIBCPP_DEBUG_ASSERT(__get_const_db()->__find_c_from_i(&__pos) == this,
+                       "string::erase(iterator) called with an iterator not"
+                       " referring to this string");
+
+  _LIBCPP_ASSERT(__pos != end(), "string::erase(iterator) called with a non-dereferenceable iterator");
+  iterator __b = begin();
+  size_type __r = static_cast<size_type>(__pos - __b);
+  erase(__r, 1);
+  return __b + static_cast<difference_type>(__r);
 }
 
 template <class _CharT, class _Traits, class _Allocator>
@@ -3201,16 +3194,15 @@ inline
 typename basic_string<_CharT, _Traits, _Allocator>::iterator
 basic_string<_CharT, _Traits, _Allocator>::erase(const_iterator __first, const_iterator __last)
 {
-#if _LIBCPP_DEBUG_LEVEL == 2
-    _LIBCPP_ASSERT(__get_const_db()->__find_c_from_i(&__first) == this,
-        "string::erase(iterator,  iterator) called with an iterator not"
-        " referring to this string");
-#endif
-    _LIBCPP_ASSERT(__first <= __last, "string::erase(first, last) called with invalid range");
-    iterator __b = begin();
-    size_type __r = static_cast<size_type>(__first - __b);
-    erase(__r, static_cast<size_type>(__last - __first));
-    return __b + static_cast<difference_type>(__r);
+  _LIBCPP_DEBUG_ASSERT(__get_const_db()->__find_c_from_i(&__first) == this,
+                       "string::erase(iterator,  iterator) called with an iterator not"
+                       " referring to this string");
+
+  _LIBCPP_ASSERT(__first <= __last, "string::erase(first, last) called with invalid range");
+  iterator __b = begin();
+  size_type __r = static_cast<size_type>(__first - __b);
+  erase(__r, static_cast<size_type>(__last - __first));
+  return __b + static_cast<difference_type>(__r);
 }
 
 template <class _CharT, class _Traits, class _Allocator>
