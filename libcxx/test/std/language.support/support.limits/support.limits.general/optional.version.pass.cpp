@@ -15,8 +15,9 @@
 
 // Test the feature test macros defined by <optional>
 
-/*  Constant              Value
-    __cpp_lib_optional    201606L [C++17]
+/*  Constant                      Value
+    __cpp_lib_monadic_optional    202110L [C++2b]
+    __cpp_lib_optional            201606L [C++17]
 */
 
 #include <optional>
@@ -24,17 +25,29 @@
 
 #if TEST_STD_VER < 14
 
+# ifdef __cpp_lib_monadic_optional
+#   error "__cpp_lib_monadic_optional should not be defined before c++2b"
+# endif
+
 # ifdef __cpp_lib_optional
 #   error "__cpp_lib_optional should not be defined before c++17"
 # endif
 
 #elif TEST_STD_VER == 14
 
+# ifdef __cpp_lib_monadic_optional
+#   error "__cpp_lib_monadic_optional should not be defined before c++2b"
+# endif
+
 # ifdef __cpp_lib_optional
 #   error "__cpp_lib_optional should not be defined before c++17"
 # endif
 
 #elif TEST_STD_VER == 17
+
+# ifdef __cpp_lib_monadic_optional
+#   error "__cpp_lib_monadic_optional should not be defined before c++2b"
+# endif
 
 # ifndef __cpp_lib_optional
 #   error "__cpp_lib_optional should be defined in c++17"
@@ -45,6 +58,10 @@
 
 #elif TEST_STD_VER == 20
 
+# ifdef __cpp_lib_monadic_optional
+#   error "__cpp_lib_monadic_optional should not be defined before c++2b"
+# endif
+
 # ifndef __cpp_lib_optional
 #   error "__cpp_lib_optional should be defined in c++20"
 # endif
@@ -53,6 +70,13 @@
 # endif
 
 #elif TEST_STD_VER > 20
+
+# ifndef __cpp_lib_monadic_optional
+#   error "__cpp_lib_monadic_optional should be defined in c++2b"
+# endif
+# if __cpp_lib_monadic_optional != 202110L
+#   error "__cpp_lib_monadic_optional should have the value 202110L in c++2b"
+# endif
 
 # ifndef __cpp_lib_optional
 #   error "__cpp_lib_optional should be defined in c++2b"
