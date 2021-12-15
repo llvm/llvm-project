@@ -1987,6 +1987,12 @@ void Clang::AddMIPSTargetArgs(const ArgList &Args,
       CmdArgs.push_back("-mips-jalr-reloc=0");
     }
   }
+
+  // Enable interprocedural register allocation by default on NanoMips
+  if (Triple.isNanoMips()) {
+    CmdArgs.push_back("-mllvm");
+    CmdArgs.push_back("-enable-ipra");
+  }
 }
 
 void Clang::AddPPCTargetArgs(const ArgList &Args,
