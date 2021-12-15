@@ -39,7 +39,10 @@ TEST(DebuginfodClient, CacheHit) {
 
 // Check that the Debuginfod client returns an Error when it fails to find an
 // artifact.
-TEST(DebuginfodClient, CacheMiss) {
+//
+// FIXME(kzhuravl): Following test is failing on jenkins due to permissions
+// issue.
+TEST(DISABLED_DebuginfodClient, CacheMiss) {
   // Ensure there are no urls to guarantee a cache miss.
   setenv("DEBUGINFOD_URLS", "", /*replace=*/1);
   HTTPClient::initialize();
