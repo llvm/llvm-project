@@ -20,6 +20,7 @@ write_cmake_config("Config") {
     "CURSES_HAVE_NCURSES_CURSES_H=",
     "LLDB_ENABLE_LUA=",
     "LLDB_ENABLE_PYTHON=",
+    "LLDB_ENABLE_FBSDVMCORE=",
     "LLDB_EMBED_PYTHON_HOME=",
 
     "LLDB_PYTHON_HOME=",
