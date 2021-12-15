@@ -168,25 +168,25 @@ func @insert_slice_fun(%A0 : tensor<?xf32>,
   ->  (tensor<?xf32>, tensor<?xf32>, tensor<?xf32>, tensor<?xf32>)
 {
   // Hoisted allocs.
-  //      CHECK: %[[REALLOC_A0_2:.*]] = memref.alloc
-  //      CHECK: %[[REALLOC_A0:.*]] = memref.alloc
-  //      CHECK: %[[REALLOC_A1:.*]] = memref.alloc
+  //      CHECK: %[[REALLOC1:.*]] = memref.alloc
+  //      CHECK: %[[REALLOC2:.*]] = memref.alloc
+  //      CHECK: %[[REALLOC3:.*]] = memref.alloc
 
   // Alloc and copy the whole result tensor. Copy the tensor.extract_slice.
-  //      CHECK: linalg.copy(%[[A0]], %[[REALLOC_A0]]
-  //      CHECK: %[[SV_A0:.*]] = memref.subview %[[REALLOC_A0]]
+  //      CHECK: linalg.copy(%[[A0]], %[[REALLOC3]]
+  //      CHECK: %[[SV_A0:.*]] = memref.subview %[[REALLOC3]]
   //      CHECK: linalg.copy(%[[t0]], %[[SV_A0]])
   %r0 = tensor.insert_slice %t0 into %A0[0][4][1] : tensor<4xf32> into tensor<?xf32>
 
   // Alloc and copy the whole result tensor. Copy the tensor.extract_slice.
   //      CHECK: linalg.copy(%[[A0]]
-  //      CHECK: %[[SV_A0_2:.*]] = memref.subview %[[REALLOC_A0_2]]
+  //      CHECK: %[[SV_A0_2:.*]] = memref.subview %[[REALLOC2]]
   //      CHECK: linalg.copy(%[[t1]], %[[SV_A0_2]])
   %r1 = tensor.insert_slice %t1 into %A0[0][4][1] : tensor<4xf32> into tensor<?xf32>
 
   //  Still alloc the large tensor because %A1 is read after. Copy the tensor.extract_slice.
   //      CHECK: linalg.copy(%[[A1]]
-  //      CHECK: %[[SV_A1:.*]] = memref.subview %[[REALLOC_A1]]
+  //      CHECK: %[[SV_A1:.*]] = memref.subview %[[REALLOC1]]
   //      CHECK: linalg.copy(%[[t0]], %[[SV_A1]])
   %r2 = tensor.insert_slice %t0 into %A1[0][4][1] : tensor<4xf32> into tensor<?xf32>
 
@@ -196,7 +196,7 @@ func @insert_slice_fun(%A0 : tensor<?xf32>,
   //      CHECK: linalg.copy(%[[t1]], %[[SV_A1_2]])
   %r3 = tensor.insert_slice %t1 into %A1[0][4][1] : tensor<4xf32> into tensor<?xf32>
 
-  //      CHECK: return %[[REALLOC_A0]], %[[REALLOC_A0_2]], %[[REALLOC_A1]] :
+  //      CHECK: return %[[REALLOC3]], %[[REALLOC2]], %[[REALLOC1]] :
   // CHECK-SAME:   memref<?xf32>, memref<?xf32>, memref<?xf32>
   return %r0, %r1, %r2, %r3: tensor<?xf32>, tensor<?xf32>, tensor<?xf32>, tensor<?xf32>
 }
@@ -291,6 +291,7 @@ func @scf_for_yield_only(%A : tensor<?xf32>,
   -> (tensor<?xf32>, tensor<?xf32>)
 {
   //     CHECK:   %[[ALLOC_FOR_A:.*]] = memref.alloc
+  //     CHECK:   %[[CASTED:.*]] = memref.cast %[[ALLOC_FOR_A]]
   //     CHECK:   linalg.copy(%[[A]], %[[ALLOC_FOR_A]])
 
   // The first scf.for remains but just turns into dead code.
@@ -304,7 +305,7 @@ func @scf_for_yield_only(%A : tensor<?xf32>,
   }
 
   //     CHECK:   memref.dealloc %[[ALLOC_FOR_A]] : memref<?xf32>
-  //     CHECK:   return %[[ALLOC_FOR_A]] : memref<?xf32>
+  //     CHECK:   return %[[CASTED]] : memref<?xf32, #[[$map_1d_dyn]]>
   return %r0, %r1: tensor<?xf32>, tensor<?xf32>
 }
 
@@ -346,6 +347,7 @@ func @scf_for_with_tensor.insert_slice(
   -> (tensor<?xf32>, tensor<?xf32>)
 {
   //     CHECK:   %[[ALLOC_FOR_A:.*]] = memref.alloc
+  //     CHECK:   %[[CASTED:.*]] = memref.cast %[[ALLOC_FOR_A]]
   //     CHECK:   linalg.copy(%[[A]], %[[ALLOC_FOR_A]])
 
   //     CHECK: %[[svA:.*]] = memref.subview %[[ALLOC_FOR_A]][0] [4] [1]
@@ -369,7 +371,7 @@ func @scf_for_with_tensor.insert_slice(
   }
 
   //     CHECK:  memref.dealloc %[[ALLOC_FOR_A]] : memref<?xf32>
-  //     CHECK:  return %[[ALLOC_FOR_A]] : memref<?xf32>
+  //     CHECK:  return %[[CASTED]] : memref<?xf32, #[[$map_1d_dyn]]>
   return %r0#0, %r0#1: tensor<?xf32>, tensor<?xf32>
 }
 
@@ -915,6 +917,22 @@ func @scf_if_inside_scf_for(%t1: tensor<?xf32> {linalg.inplaceable = true},
     scf.yield %r2 : tensor<?xf32>
   }
   return %r : tensor<?xf32>
+}
+
+// -----
+
+// CHECK-LABEL: func @scf_if_non_equiv_yields(
+//  CHECK-SAME:     %[[cond:.*]]: i1, %[[A:.*]]: memref<{{.*}}>, %[[B:.*]]: memref<{{.*}}>) -> memref<{{.*}}>
+func @scf_if_non_equiv_yields(%b : i1, %A : tensor<4xf32>, %B : tensor<4xf32>) -> tensor<4xf32>
+{
+  // CHECK: %[[r:.*]] = select %[[cond]], %[[A]], %[[B]]
+  %r = scf.if %b -> (tensor<4xf32>) {
+    scf.yield %A : tensor<4xf32>
+  } else {
+    scf.yield %B : tensor<4xf32>
+  }
+  // CHECK: return %[[r]]
+  return %r: tensor<4xf32>
 }
 
 // -----

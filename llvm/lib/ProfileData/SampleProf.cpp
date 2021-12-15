@@ -35,11 +35,18 @@ static cl::opt<uint64_t> ProfileSymbolListCutOff(
     cl::desc("Cutoff value about how many symbols in profile symbol list "
              "will be used. This is very useful for performance debugging"));
 
+cl::opt<bool> GenerateMergedBaseProfiles(
+    "generate-merged-base-profiles", cl::init(true), cl::ZeroOrMore,
+    cl::desc("When generating nested context-sensitive profiles, always "
+             "generate extra base profile for function with all its context "
+             "profiles merged into it."));
+
 namespace llvm {
 namespace sampleprof {
 SampleProfileFormat FunctionSamples::Format;
 bool FunctionSamples::ProfileIsProbeBased = false;
-bool FunctionSamples::ProfileIsCS = false;
+bool FunctionSamples::ProfileIsCSFlat = false;
+bool FunctionSamples::ProfileIsCSNested = false;
 bool FunctionSamples::UseMD5 = false;
 bool FunctionSamples::HasUniqSuffix = true;
 bool FunctionSamples::ProfileIsFS = false;
@@ -218,8 +225,9 @@ unsigned FunctionSamples::getOffset(const DILocation *DIL) {
       0xffff;
 }
 
-LineLocation FunctionSamples::getCallSiteIdentifier(const DILocation *DIL) {
-  if (FunctionSamples::ProfileIsProbeBased)
+LineLocation FunctionSamples::getCallSiteIdentifier(const DILocation *DIL,
+                                                    bool ProfileIsFS) {
+  if (FunctionSamples::ProfileIsProbeBased) {
     // In a pseudo-probe based profile, a callsite is simply represented by the
     // ID of the probe associated with the call instruction. The probe ID is
     // encoded in the Discriminator field of the call instruction's debug
@@ -227,9 +235,19 @@ LineLocation FunctionSamples::getCallSiteIdentifier(const DILocation *DIL) {
     return LineLocation(PseudoProbeDwarfDiscriminator::extractProbeIndex(
                             DIL->getDiscriminator()),
                         0);
-  else
-    return LineLocation(FunctionSamples::getOffset(DIL),
-                        DIL->getBaseDiscriminator());
+  } else {
+    unsigned Discriminator =
+        ProfileIsFS ? DIL->getDiscriminator() : DIL->getBaseDiscriminator();
+    return LineLocation(FunctionSamples::getOffset(DIL), Discriminator);
+  }
+}
+
+uint64_t FunctionSamples::getCallSiteHash(StringRef CalleeName,
+                                          const LineLocation &Callsite) {
+  uint64_t NameHash = std::hash<std::string>{}(CalleeName.str());
+  uint64_t LocId =
+      (((uint64_t)Callsite.LineOffset) << 32) | Callsite.Discriminator;
+  return NameHash + (LocId << 5) + LocId;
 }
 
 const FunctionSamples *FunctionSamples::findFunctionSamples(
@@ -239,21 +257,16 @@ const FunctionSamples *FunctionSamples::findFunctionSamples(
 
   const DILocation *PrevDIL = DIL;
   for (DIL = DIL->getInlinedAt(); DIL; DIL = DIL->getInlinedAt()) {
-    unsigned Discriminator;
-    if (ProfileIsFS)
-      Discriminator = DIL->getDiscriminator();
-    else
-      Discriminator = DIL->getBaseDiscriminator();
-
     // Use C++ linkage name if possible.
     StringRef Name = PrevDIL->getScope()->getSubprogram()->getLinkageName();
     if (Name.empty())
       Name = PrevDIL->getScope()->getSubprogram()->getName();
-
-    S.push_back(
-        std::make_pair(LineLocation(getOffset(DIL), Discriminator), Name));
+    S.emplace_back(FunctionSamples::getCallSiteIdentifier(
+                       DIL, FunctionSamples::ProfileIsFS),
+                   Name);
     PrevDIL = DIL;
   }
+
   if (S.size() == 0)
     return this;
   const FunctionSamples *FS = this;
@@ -454,3 +467,81 @@ void ProfileSymbolList::dump(raw_ostream &OS) const {
   for (auto &Sym : SortedList)
     OS << Sym << "\n";
 }
+
+CSProfileConverter::FrameNode *
+CSProfileConverter::FrameNode::getOrCreateChildFrame(
+    const LineLocation &CallSite, StringRef CalleeName) {
+  uint64_t Hash = FunctionSamples::getCallSiteHash(CalleeName, CallSite);
+  auto It = AllChildFrames.find(Hash);
+  if (It != AllChildFrames.end()) {
+    assert(It->second.FuncName == CalleeName &&
+           "Hash collision for child context node");
+    return &It->second;
+  }
+
+  AllChildFrames[Hash] = FrameNode(CalleeName, nullptr, CallSite);
+  return &AllChildFrames[Hash];
+}
+
+CSProfileConverter::CSProfileConverter(SampleProfileMap &Profiles)
+    : ProfileMap(Profiles) {
+  for (auto &FuncSample : Profiles) {
+    FunctionSamples *FSamples = &FuncSample.second;
+    auto *NewNode = getOrCreateContextPath(FSamples->getContext());
+    assert(!NewNode->FuncSamples && "New node cannot have sample profile");
+    NewNode->FuncSamples = FSamples;
+  }
+}
+
+CSProfileConverter::FrameNode *
+CSProfileConverter::getOrCreateContextPath(const SampleContext &Context) {
+  auto Node = &RootFrame;
+  LineLocation CallSiteLoc(0, 0);
+  for (auto &Callsite : Context.getContextFrames()) {
+    Node = Node->getOrCreateChildFrame(CallSiteLoc, Callsite.FuncName);
+    CallSiteLoc = Callsite.Location;
+  }
+  return Node;
+}
+
+void CSProfileConverter::convertProfiles(CSProfileConverter::FrameNode &Node) {
+  // Process each child profile. Add each child profile to callsite profile map
+  // of the current node `Node` if `Node` comes with a profile. Otherwise
+  // promote the child profile to a standalone profile.
+  auto *NodeProfile = Node.FuncSamples;
+  for (auto &It : Node.AllChildFrames) {
+    auto &ChildNode = It.second;
+    convertProfiles(ChildNode);
+    auto *ChildProfile = ChildNode.FuncSamples;
+    if (!ChildProfile)
+      continue;
+    SampleContext OrigChildContext = ChildProfile->getContext();
+    // Reset the child context to be contextless.
+    ChildProfile->getContext().setName(OrigChildContext.getName());
+    if (NodeProfile) {
+      // Add child profile to the callsite profile map.
+      auto &SamplesMap = NodeProfile->functionSamplesAt(ChildNode.CallSiteLoc);
+      SamplesMap.emplace(OrigChildContext.getName().str(), *ChildProfile);
+      NodeProfile->addTotalSamples(ChildProfile->getTotalSamples());
+    }
+
+    // Separate child profile to be a standalone profile, if the current parent
+    // profile doesn't exist. This is a duplicating operation when the child
+    // profile is already incorporated into the parent which is still useful and
+    // thus done optionally. It is seen that duplicating context profiles into
+    // base profiles improves the code quality for thinlto build by allowing a
+    // profile in the prelink phase for to-be-fully-inlined functions.
+    if (!NodeProfile || GenerateMergedBaseProfiles)
+      ProfileMap[ChildProfile->getContext()].merge(*ChildProfile);
+
+    // Contexts coming with a `ContextShouldBeInlined` attribute indicate this
+    // is a preinliner-computed profile.
+    if (OrigChildContext.hasAttribute(ContextShouldBeInlined))
+      FunctionSamples::ProfileIsCSNested = true;
+
+    // Remove the original child profile.
+    ProfileMap.erase(OrigChildContext);
+  }
+}
+
+void CSProfileConverter::convertProfiles() { convertProfiles(RootFrame); }

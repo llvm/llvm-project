@@ -23,7 +23,7 @@
 #include "mlir/Dialect/Linalg/ComprehensiveBufferize/SCFInterfaceImpl.h"
 #include "mlir/Dialect/Linalg/ComprehensiveBufferize/TensorInterfaceImpl.h"
 #include "mlir/Dialect/Linalg/ComprehensiveBufferize/VectorInterfaceImpl.h"
-#include "mlir/Dialect/Linalg/IR/LinalgOps.h"
+#include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Dialect/Linalg/Passes.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/Dialect/Vector/VectorOps.h"
@@ -101,7 +101,8 @@ void TestComprehensiveFunctionBufferize::runOnFunction() {
   // TODO: Find a way to enable this step automatically when bufferizing
   // tensor dialect ops.
   options.addPostAnalysisStep<tensor_ext::InplaceInsertSliceOpAnalysis>();
-  options.addPostAnalysisStep<scf_ext::AssertDestinationPassingStyle>();
+  if (!allowReturnMemref)
+    options.addPostAnalysisStep<scf_ext::AssertDestinationPassingStyle>();
 
   options.allowReturnMemref = allowReturnMemref;
   options.allowUnknownOps = allowUnknownOps;

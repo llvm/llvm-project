@@ -417,6 +417,37 @@ Value mlir::linalg::comprehensive_bufferize::BufferizationState::
   return operandBuffer;
 }
 
+void mlir::linalg::comprehensive_bufferize::BufferizationState::replaceOp(
+    Operation *op, ValueRange values) {
+  OpBuilder &b = getBuilder();
+  OpBuilder::InsertionGuard g(b);
+
+  // Replace all OpResults with the given values.
+  for (OpResult opResult : op->getOpResults()) {
+    // Skip OpResult if it has no uses.
+    if (opResult.getUses().empty())
+      continue;
+
+    Value replacement = values[opResult.getResultNumber()];
+    if (opResult.getType().isa<TensorType>()) {
+      // The OpResult is a tensor. Such values are replaced with memrefs during
+      // bufferization.
+      assert((replacement.getType().isa<MemRefType>() ||
+              replacement.getType().isa<UnrankedMemRefType>()) &&
+             "tensor op result should be replaced with a memref value");
+      // The existing uses of the OpResult still expect a tensor. Insert a
+      // ToTensorOp. Throughout bufferization, this ToTensorOp will gradually
+      // loose all of its users and eventually DCE away.
+      setInsertionPointAfter(b, replacement);
+      replacement = b.create<bufferization::ToTensorOp>(replacement.getLoc(),
+                                                        replacement);
+    }
+    opResult.replaceAllUsesWith(replacement);
+  }
+
+  op->erase();
+}
+
 LogicalResult
 mlir::linalg::comprehensive_bufferize::bufferize(Region *region,
                                                  BufferizationState &state) {
@@ -429,8 +460,14 @@ mlir::linalg::comprehensive_bufferize::bufferize(Region *region,
 LogicalResult
 mlir::linalg::comprehensive_bufferize::bufferize(Block *block,
                                                  BufferizationState &state) {
+  // Ops may get deleted during the traversal, so do not iterate over `block`
+  // directly.
+  SmallVector<Operation *> ops;
+  ops.reserve(block->getOperations().size());
   for (Operation &op : *block)
-    if (failed(bufferize(&op, state)))
+    ops.push_back(&op);
+  for (Operation *op : ops)
+    if (failed(bufferize(op, state)))
       return failure();
   return success();
 }
@@ -460,19 +497,6 @@ mlir::linalg::comprehensive_bufferize::bufferize(Operation *op,
   // `op` is an unbufferizable tensor op.
   if (!state.getOptions().allowUnknownOps)
     return op->emitError() << "unsupported op with tensors";
-
-  // Replace all OpOperands with "to-tensor casted" bufferized values.
-  for (OpOperand &operand : op->getOpOperands()) {
-    if (operand.get().getType().isa<TensorType>() &&
-        state.isMapped(operand.get())) {
-      assert(state.getOptions().allowUnknownOps &&
-             "unsupported op error should have been emitted earlier");
-      b.setInsertionPoint(op);
-      Value toTensorOp = b.create<bufferization::ToTensorOp>(
-          op->getLoc(), state.lookupBuffer(operand.get()));
-      operand.set(toTensorOp);
-    }
-  }
 
   // Bufferize all regions.
   for (Region &region : op->getRegions())
@@ -617,91 +641,49 @@ void mlir::linalg::comprehensive_bufferize::BufferizationState::createMemCpy(
 // Bufferization-specific BlockAndValueMapping support with debugging.
 //===----------------------------------------------------------------------===//
 
-/// Wrapper for better debugging.
-void mlir::linalg::comprehensive_bufferize::BufferizationState::mapBuffer(
-    ValueRange tensors, ValueRange buffers) {
-  assert(!tensors.empty() && "unexpected empty tensors");
-#ifndef NDEBUG
-  for (Value tensor : tensors) {
-    assert(tensor && "unexpected empty tensor");
-    assert(tensor.getType().isa<TensorType>() && "unexpected non-tensor type");
-  }
-  for (Value buffer : buffers) {
-    assert(buffer && "unexpected empty buffer");
-    assert((buffer.getType().isa<MemRefType>() ||
-            buffer.getType().isa<UnrankedMemRefType>()) &&
-           "expected that tensor is mapped to memref");
-  }
-#endif // NDEBUG
-  return mapping.map(tensors, buffers);
+bool mlir::linalg::comprehensive_bufferize::isFunctionArgument(Value value) {
+  auto bbArg = value.dyn_cast<BlockArgument>();
+  if (!bbArg)
+    return false;
+  return isa<FuncOp>(bbArg.getOwner()->getParentOp());
 }
 
-/// Wrapper for better debugging.
-void mlir::linalg::comprehensive_bufferize::BufferizationState::mapBuffer(
-    Value tensor, Value buffer) {
-  assert(tensor && "unexpected empty tensor");
-  assert(tensor.getType().isa<TensorType>() && "unexpected non-tensor type");
-  assert(buffer && "unexpected empty buffer");
-  assert((buffer.getType().isa<MemRefType>() ||
-          buffer.getType().isa<UnrankedMemRefType>()) &&
-         "expected that tensor is mapped to memref");
-  return mapping.map(tensor, buffer);
-}
-
-/// Wrapper for better debugging.
 Value mlir::linalg::comprehensive_bufferize::BufferizationState::lookupBuffer(
     Value tensor) {
-  // TODO: if key comes from bbArg, forward.
   assert(tensor.getType().isa<TensorType>() && "unexpected non-tensor type");
-  Value buffer = mapping.lookupOrNull(tensor);
 
-  if (!buffer) {
-    if (options.allowUnknownOps) {
-      // `tensor` was not bufferized yet. This should never happen with
-      // bufferizable ops.
-      assert(!options.dynCastBufferizableOp(tensor) && "tensor is not mapped");
-      // Insert to_memref op.
-      OpBuilder b(tensor.getContext());
-      setInsertionPointAfter(b, tensor);
-      return b.create<bufferization::ToMemrefOp>(
-          tensor.getLoc(),
-          getDynamicMemRefType(tensor.getType().cast<RankedTensorType>()),
-          tensor);
+  // Replace "%t = to_tensor %m" with %m.
+  if (auto toTensorOp = tensor.getDefiningOp<bufferization::ToTensorOp>())
+    return toTensorOp.memref();
+
+  if (!isFunctionArgument(tensor)) {
+    if (static_cast<bool>(options.dynCastBufferizableOp(tensor))) {
+      // Dump tensor for easier debugging.
+      tensor.dump();
+      llvm_unreachable("op is known, but has not been bufferized yet");
+      return Value();
     }
-
-    // Dump tensor for easier debugging.
-    tensor.dump();
-    llvm_unreachable("tensor is not mapped");
-    return Value();
+    if (!options.allowUnknownOps) {
+      // Dump tensor for easier debugging.
+      tensor.dump();
+      // Note: An assertion should already have failed earlier.
+      llvm_unreachable("unknown ops are not allowed");
+      return Value();
+    }
   }
 
-  assert((buffer.getType().isa<MemRefType>() ||
-          buffer.getType().isa<UnrankedMemRefType>()) &&
-         "expected that tensor is mapped to memref");
-  return buffer;
-}
-
-bool mlir::linalg::comprehensive_bufferize::BufferizationState::isMapped(
-    Value value) const {
-  assert(value.getType().isa<TensorType>() && "unexpected non-tensor type");
-  return mapping.contains(value);
+  // Insert to_memref op.
+  OpBuilder &b = getBuilder();
+  OpBuilder::InsertionGuard g(b);
+  setInsertionPointAfter(b, tensor);
+  return b.create<bufferization::ToMemrefOp>(
+      tensor.getLoc(),
+      getDynamicMemRefType(tensor.getType().cast<RankedTensorType>()), tensor);
 }
 
 bool mlir::linalg::comprehensive_bufferize::BufferizationState::isInPlace(
     OpResult opResult) const {
   return aliasInfo.isInPlace(opResult);
-}
-
-void mlir::linalg::comprehensive_bufferize::BufferizationState::markOpObsolete(
-    Operation *op) {
-  obsoleteOps.push_back(op);
-}
-
-void mlir::linalg::comprehensive_bufferize::BufferizationState::
-    eraseObsoleteOps() {
-  for (Operation *op : obsoleteOps)
-    op->erase();
-  obsoleteOps.clear();
 }
 
 MemRefType mlir::linalg::comprehensive_bufferize::getContiguousMemRefType(

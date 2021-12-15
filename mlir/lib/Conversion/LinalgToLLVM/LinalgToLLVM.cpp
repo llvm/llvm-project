@@ -18,8 +18,7 @@
 #include "mlir/Conversion/VectorToLLVM/ConvertVectorToLLVM.h"
 #include "mlir/Conversion/VectorToSCF/VectorToSCF.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
-#include "mlir/Dialect/Linalg/IR/LinalgOps.h"
-#include "mlir/Dialect/Linalg/IR/LinalgTypes.h"
+#include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Dialect/Linalg/Passes.h"
 #include "mlir/Dialect/SCF/SCF.h"
 #include "mlir/IR/AffineExpr.h"
@@ -52,48 +51,7 @@ static Type getPtrToElementType(T containerType, LLVMTypeConverter &lowering) {
       lowering.convertType(containerType.getElementType()));
 }
 
-/// Convert the given range descriptor type to the LLVMIR dialect.
-/// Range descriptor contains the range bounds and the step as 64-bit integers.
-///
-/// struct {
-///   int64_t min;
-///   int64_t max;
-///   int64_t step;
-/// };
-static Type convertRangeType(RangeType t, LLVMTypeConverter &converter) {
-  auto *context = t.getContext();
-  auto int64Ty = converter.convertType(IntegerType::get(context, 64));
-  return LLVMStructType::getLiteral(context, {int64Ty, int64Ty, int64Ty});
-}
-
 namespace {
-// RangeOp creates a new range descriptor.
-class RangeOpConversion : public ConvertOpToLLVMPattern<RangeOp> {
-public:
-  using ConvertOpToLLVMPattern<RangeOp>::ConvertOpToLLVMPattern;
-
-  LogicalResult
-  matchAndRewrite(RangeOp rangeOp, OpAdaptor adaptor,
-                  ConversionPatternRewriter &rewriter) const override {
-    auto rangeDescriptorTy = convertRangeType(
-        rangeOp.getType().cast<RangeType>(), *getTypeConverter());
-
-    ImplicitLocOpBuilder b(rangeOp->getLoc(), rewriter);
-
-    // Fill in an aggregate value of the descriptor.
-    Value desc = b.create<LLVM::UndefOp>(rangeDescriptorTy);
-    desc = b.create<LLVM::InsertValueOp>(desc, adaptor.min(),
-                                         rewriter.getI64ArrayAttr(0));
-    desc = b.create<LLVM::InsertValueOp>(desc, adaptor.max(),
-                                         rewriter.getI64ArrayAttr(1));
-    desc = b.create<LLVM::InsertValueOp>(desc, adaptor.step(),
-                                         rewriter.getI64ArrayAttr(2));
-    rewriter.replaceOp(rangeOp, desc);
-    return success();
-  }
-};
-
-
 // YieldOp produces and LLVM::ReturnOp.
 class YieldOpConversion : public ConvertOpToLLVMPattern<linalg::YieldOp> {
 public:
@@ -111,11 +69,7 @@ public:
 /// Populate the given list with patterns that convert from Linalg to LLVM.
 void mlir::populateLinalgToLLVMConversionPatterns(LLVMTypeConverter &converter,
                                                   RewritePatternSet &patterns) {
-  patterns.add<RangeOpConversion, YieldOpConversion>(converter);
-
-  // Populate the type conversions for the linalg types.
-  converter.addConversion(
-      [&](RangeType type) { return convertRangeType(type, converter); });
+  patterns.add<YieldOpConversion>(converter);
 }
 
 namespace {
@@ -135,7 +89,6 @@ void ConvertLinalgToLLVMPass::runOnOperation() {
   populateMemRefToLLVMConversionPatterns(converter, patterns);
 
   LLVMConversionTarget target(getContext());
-  target.addIllegalOp<RangeOp>();
   target.addLegalOp<ModuleOp>();
   if (failed(applyPartialConversion(module, target, std::move(patterns))))
     signalPassFailure();

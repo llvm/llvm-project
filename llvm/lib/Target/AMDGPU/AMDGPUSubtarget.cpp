@@ -413,21 +413,21 @@ bool GCNSubtarget::zeroesHigh16BitsOfDest(unsigned Opcode) const {
   case AMDGPU::V_MAX_I16_e32:
   case AMDGPU::V_MIN_I16_e64:
   case AMDGPU::V_MIN_I16_e32:
+  case AMDGPU::V_MAD_F16_e64:
+  case AMDGPU::V_MAD_U16_e64:
+  case AMDGPU::V_MAD_I16_e64:
+  case AMDGPU::V_FMA_F16_e64:
+  case AMDGPU::V_DIV_FIXUP_F16_e64:
     // On gfx10, all 16-bit instructions preserve the high bits.
     return getGeneration() <= AMDGPUSubtarget::GFX9;
-  case AMDGPU::V_MAD_F16_e64:
   case AMDGPU::V_MADAK_F16:
   case AMDGPU::V_MADMK_F16:
   case AMDGPU::V_MAC_F16_e64:
   case AMDGPU::V_MAC_F16_e32:
   case AMDGPU::V_FMAMK_F16:
   case AMDGPU::V_FMAAK_F16:
-  case AMDGPU::V_MAD_U16_e64:
-  case AMDGPU::V_MAD_I16_e64:
-  case AMDGPU::V_FMA_F16_e64:
   case AMDGPU::V_FMAC_F16_e64:
   case AMDGPU::V_FMAC_F16_e32:
-  case AMDGPU::V_DIV_FIXUP_F16_e64:
     // In gfx9, the preferred handling of the unused high 16-bits changed. Most
     // instructions maintain the legacy behavior of 0ing. Some instructions
     // changed to preserving the high bits.

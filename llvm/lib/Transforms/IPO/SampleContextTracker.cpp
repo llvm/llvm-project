@@ -32,7 +32,7 @@ ContextTrieNode *ContextTrieNode::getChildContext(const LineLocation &CallSite,
   if (CalleeName.empty())
     return getHottestChildContext(CallSite);
 
-  uint64_t Hash = nodeHash(CalleeName, CallSite);
+  uint64_t Hash = FunctionSamples::getCallSiteHash(CalleeName, CallSite);
   auto It = AllChildContext.find(Hash);
   if (It != AllChildContext.end())
     return &It->second;
@@ -65,7 +65,8 @@ ContextTrieNode::getHottestChildContext(const LineLocation &CallSite) {
 ContextTrieNode &ContextTrieNode::moveToChildContext(
     const LineLocation &CallSite, ContextTrieNode &&NodeToMove,
     uint32_t ContextFramesToRemove, bool DeleteNode) {
-  uint64_t Hash = nodeHash(NodeToMove.getFuncName(), CallSite);
+  uint64_t Hash =
+      FunctionSamples::getCallSiteHash(NodeToMove.getFuncName(), CallSite);
   assert(!AllChildContext.count(Hash) && "Node to remove must exist");
   LineLocation OldCallSite = NodeToMove.CallSiteLoc;
   ContextTrieNode &OldParentContext = *NodeToMove.getParentContext();
@@ -108,7 +109,7 @@ ContextTrieNode &ContextTrieNode::moveToChildContext(
 
 void ContextTrieNode::removeChildContext(const LineLocation &CallSite,
                                          StringRef CalleeName) {
-  uint64_t Hash = nodeHash(CalleeName, CallSite);
+  uint64_t Hash = FunctionSamples::getCallSiteHash(CalleeName, CallSite);
   // Note this essentially calls dtor and destroys that child context
   AllChildContext.erase(Hash);
 }
@@ -174,21 +175,9 @@ void ContextTrieNode::dumpTree() {
   }
 }
 
-uint64_t ContextTrieNode::nodeHash(StringRef ChildName,
-                                   const LineLocation &Callsite) {
-  // We still use child's name for child hash, this is
-  // because for children of root node, we don't have
-  // different line/discriminator, and we'll rely on name
-  // to differentiate children.
-  uint64_t NameHash = std::hash<std::string>{}(ChildName.str());
-  uint64_t LocId =
-      (((uint64_t)Callsite.LineOffset) << 32) | Callsite.Discriminator;
-  return NameHash + (LocId << 5) + LocId;
-}
-
 ContextTrieNode *ContextTrieNode::getOrCreateChildContext(
     const LineLocation &CallSite, StringRef CalleeName, bool AllowCreate) {
-  uint64_t Hash = nodeHash(CalleeName, CallSite);
+  uint64_t Hash = FunctionSamples::getCallSiteHash(CalleeName, CallSite);
   auto It = AllChildContext.find(Hash);
   if (It != AllChildContext.end()) {
     assert(It->second.getFuncName() == CalleeName &&

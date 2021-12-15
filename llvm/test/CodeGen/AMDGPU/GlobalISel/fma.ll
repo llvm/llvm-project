@@ -93,8 +93,7 @@ define half @v_fma_f16(half %x, half %y, half %z) {
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX10-NEXT:    v_fmac_f16_e32 v2, v0, v1
-; GFX10-NEXT:    v_mov_b32_e32 v0, v2
+; GFX10-NEXT:    v_fma_f16 v0, v0, v1, v2
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
   %fma = call half @llvm.fma.f16(half %x, half %y, half %z)
   ret half %fma

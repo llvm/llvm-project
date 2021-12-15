@@ -242,10 +242,14 @@ llvm::Constant *mlir::LLVM::detail::getLLVMConstant(
     if (auto *arrayTy = dyn_cast<llvm::ArrayType>(llvmType)) {
       elementType = arrayTy->getElementType();
       numElements = arrayTy->getNumElements();
+    } else if (auto fVectorTy = dyn_cast<llvm::FixedVectorType>(llvmType)) {
+      elementType = fVectorTy->getElementType();
+      numElements = fVectorTy->getNumElements();
+    } else if (auto sVectorTy = dyn_cast<llvm::ScalableVectorType>(llvmType)) {
+      elementType = sVectorTy->getElementType();
+      numElements = sVectorTy->getMinNumElements();
     } else {
-      auto *vectorTy = cast<llvm::FixedVectorType>(llvmType);
-      elementType = vectorTy->getElementType();
-      numElements = vectorTy->getNumElements();
+      llvm_unreachable("unrecognized constant vector type");
     }
     // Splat value is a scalar. Extract it only if the element type is not
     // another sequence type. The recursion terminates because each step removes

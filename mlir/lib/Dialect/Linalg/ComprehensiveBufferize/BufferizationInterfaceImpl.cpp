@@ -25,14 +25,17 @@ namespace bufferization_ext {
 // TODO: These ops should implement BufferizableOpInterface directly when moved
 // to the Bufferization dialect.
 
-// TODO: These implementations are conservative and will likely have to be
-// loosened for partial bufferization.
-
 /// ToMemrefOp casts a tensor into a memref. The resulting memref is the memory
 /// location of the incoming tensor once it will be bufferized. In the anlysis,
 /// the incoming tensor is assumed to bufferize to a memory read and to an
 /// inplace memory write, since it is unknown what will happen to the resulting
 /// memref.
+///
+/// Note: ToMemrefOp / ToTensorOp are temporary ops that are inserted at the
+/// bufferization boundary. When bufferization is complete, there should be no
+/// such ops left over. If `allowUnknownOps`, such ops may be part of the
+/// resulting IR, but such IR may no longer be bufferizable by Comprehensive
+/// Bufferize.
 struct ToMemrefOpInterface
     : public BufferizableOpInterface::ExternalModel<ToMemrefOpInterface,
                                                     bufferization::ToMemrefOp> {
@@ -47,6 +50,23 @@ struct ToMemrefOpInterface
 
   LogicalResult bufferize(Operation *op, OpBuilder &b,
                           BufferizationState &state) const {
+    auto toMemrefOp = cast<bufferization::ToMemrefOp>(op);
+
+    // Fold to_memref(to_tensor(x)) to x.
+    if (auto toTensorOp =
+            toMemrefOp.tensor().getDefiningOp<bufferization::ToTensorOp>()) {
+      toMemrefOp.replaceAllUsesWith(toTensorOp.memref());
+      toMemrefOp.erase();
+      return success();
+    }
+
+    // If a ToMemrefOp's tensor operand has not been bufferized yet, the op
+    // remains unchanged. All IR up to this ToMemrefOp has already been
+    // bufferized, unless there were unknown ops that could be bufferized.
+    assert((isFunctionArgument(toMemrefOp.tensor()) ||
+            state.getOptions().allowUnknownOps) &&
+           "expected that tensor is mapped");
+
     return success();
   }
 };
@@ -66,8 +86,6 @@ struct ToTensorOpInterface
                                                     bufferization::ToTensorOp> {
   LogicalResult bufferize(Operation *op, OpBuilder &b,
                           BufferizationState &state) const {
-    auto tensorLoadOp = cast<bufferization::ToTensorOp>(op);
-    state.mapBuffer(tensorLoadOp.result(), tensorLoadOp.memref());
     return success();
   }
 

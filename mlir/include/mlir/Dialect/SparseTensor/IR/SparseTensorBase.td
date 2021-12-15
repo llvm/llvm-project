@@ -50,7 +50,7 @@ def SparseTensor_Dialect : Dialect {
     relatively straightforward one-to-one mapping from iteration lattices
     to combinations of for-loops, while-loops, and if-statements. Sparse
     tensor outputs that materialize uninitialized are handled with
-    insertions in pure lexicograph index order if all parallel loops
+    insertions in pure lexicographical index order if all parallel loops
     are outermost or using a 1-dimensional access pattern expansion
     (a.k.a. workspace) where feasible [Gustavson72,Bik96,Kjolstad19].
 

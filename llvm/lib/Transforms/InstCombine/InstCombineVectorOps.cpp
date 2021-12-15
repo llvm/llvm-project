@@ -2031,9 +2031,7 @@ static Instruction *canonicalizeInsertSplat(ShuffleVectorInst &Shuf,
 }
 
 /// Try to fold shuffles that are the equivalent of a vector select.
-static Instruction *foldSelectShuffle(ShuffleVectorInst &Shuf,
-                                      InstCombiner::BuilderTy &Builder,
-                                      const DataLayout &DL) {
+Instruction *InstCombinerImpl::foldSelectShuffle(ShuffleVectorInst &Shuf) {
   if (!Shuf.isSelect())
     return nullptr;
 
@@ -2141,21 +2139,23 @@ static Instruction *foldSelectShuffle(ShuffleVectorInst &Shuf,
     V = Builder.CreateShuffleVector(X, Y, Mask);
   }
 
-  Instruction *NewBO = ConstantsAreOp1 ? BinaryOperator::Create(BOpc, V, NewC) :
-                                         BinaryOperator::Create(BOpc, NewC, V);
+  Value *NewBO = ConstantsAreOp1 ? Builder.CreateBinOp(BOpc, V, NewC) :
+                                   Builder.CreateBinOp(BOpc, NewC, V);
 
   // Flags are intersected from the 2 source binops. But there are 2 exceptions:
   // 1. If we changed an opcode, poison conditions might have changed.
   // 2. If the shuffle had undef mask elements, the new binop might have undefs
   //    where the original code did not. But if we already made a safe constant,
   //    then there's no danger.
-  NewBO->copyIRFlags(B0);
-  NewBO->andIRFlags(B1);
-  if (DropNSW)
-    NewBO->setHasNoSignedWrap(false);
-  if (is_contained(Mask, UndefMaskElem) && !MightCreatePoisonOrUB)
-    NewBO->dropPoisonGeneratingFlags();
-  return NewBO;
+  if (auto *NewI = dyn_cast<Instruction>(NewBO)) {
+    NewI->copyIRFlags(B0);
+    NewI->andIRFlags(B1);
+    if (DropNSW)
+      NewI->setHasNoSignedWrap(false);
+    if (is_contained(Mask, UndefMaskElem) && !MightCreatePoisonOrUB)
+      NewI->dropPoisonGeneratingFlags();
+  }
+  return replaceInstUsesWith(Shuf, NewBO);
 }
 
 /// Convert a narrowing shuffle of a bitcasted vector into a vector truncate.
@@ -2520,7 +2520,7 @@ Instruction *InstCombinerImpl::visitShuffleVectorInst(ShuffleVectorInst &SVI) {
   if (Instruction *I = canonicalizeInsertSplat(SVI, Builder))
     return I;
 
-  if (Instruction *I = foldSelectShuffle(SVI, Builder, DL))
+  if (Instruction *I = foldSelectShuffle(SVI))
     return I;
 
   if (Instruction *I = foldTruncShuffle(SVI, DL.isBigEndian()))

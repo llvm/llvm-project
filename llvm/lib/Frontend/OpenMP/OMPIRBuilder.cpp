@@ -996,7 +996,7 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createSections(
   Builder.SetInsertPoint(AllocaIP.getBlock()->getTerminator());
   AllocaIP = Builder.saveIP();
   InsertPointTy AfterIP =
-      applyStaticWorkshareLoop(Loc.DL, LoopInfo, AllocaIP, true);
+      applyStaticWorkshareLoop(Loc.DL, LoopInfo, AllocaIP, !IsNowait);
   BasicBlock *LoopAfterBB = AfterIP.getBlock();
   Instruction *SplitPos = LoopAfterBB->getTerminator();
   if (!isa_and_nonnull<BranchInst>(SplitPos))

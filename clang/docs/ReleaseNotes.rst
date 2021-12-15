@@ -237,7 +237,7 @@ Floating Point Support in Clang
   rather than -ffp-contract=fast, and the documentation of these features has
   been clarified. Previously, the documentation claimed that -ffp-model=precise
   was the default, but this was incorrect because the precise model implied
-  -ffp-contract=fast, wheras the (now corrected) default behavior is
+  -ffp-contract=fast, whereas the (now corrected) default behavior is
   -ffp-contract=on.
   -ffp-model=precise is now exactly the default mode of the compiler.
 
@@ -249,7 +249,10 @@ Internal API Changes
 Build System Changes
 --------------------
 
-- ...
+- Linux distros can specify ``-DCLANG_DEFAULT_PIE_ON_LINUX=On`` to use ``-fPIE`` and
+  ``-pie`` by default. This matches GCC installations on many Linux distros
+  (configured with ``--enable-default-pie``).
+  (`D113372 <https://reviews.llvm.org/D113372>`_)
 
 AST Matchers
 ------------
@@ -273,7 +276,7 @@ clang-format
 - Option ``AllowShortEnumsOnASingleLine: false`` has been improved, it now
   correctly places the opening brace according to ``BraceWrapping.AfterEnum``.
 
-- Option ``QualifierAligment`` has been added in order to auto-arrange the
+- Option ``QualifierAlignment`` has been added in order to auto-arrange the
   positioning of specifiers/qualifiers
   `const` `volatile` `static` `inline` `constexpr` `restrict`
   in variable and parameter declarations to be either ``Right`` aligned

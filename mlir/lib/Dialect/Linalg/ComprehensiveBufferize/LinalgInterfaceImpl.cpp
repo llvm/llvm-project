@@ -7,8 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/Linalg/ComprehensiveBufferize/LinalgInterfaceImpl.h"
+#include "mlir/Dialect/Bufferization/IR/Bufferization.h"
 #include "mlir/Dialect/Linalg/ComprehensiveBufferize/BufferizableOpInterface.h"
-#include "mlir/Dialect/Linalg/IR/LinalgOps.h"
+#include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/Operation.h"
@@ -55,7 +56,6 @@ static LogicalResult bufferizeLinalgOp(OpBuilder &b, LinalgOp op,
     if (!resultBuffer)
       return failure();
     newOutputBuffers.push_back(resultBuffer);
-    state.mapBuffer(opResult, resultBuffer);
   }
 
   // Clone the newly bufferized op.
@@ -67,7 +67,9 @@ static LogicalResult bufferizeLinalgOp(OpBuilder &b, LinalgOp op,
   auto bufferizedOp = cast<LinalgOp>(
       op.clone(b, op.getLoc(), /*resultTypes=*/TypeRange{}, newOperands));
 
-  // The original op will be DCE'd away later.
+  // Replace the results of the old op with the new output buffers.
+  state.replaceOp(op, newOutputBuffers);
+
   return comprehensive_bufferize::bufferize(bufferizedOp.getBlock(), state);
 }
 
@@ -193,7 +195,7 @@ struct InitTensorOpInterface
 
     Value alloc = state.createAllocDeallocPair(b, initTensorOp->getLoc(),
                                                initTensorOp.result());
-    state.mapBuffer(initTensorOp.result(), alloc);
+    state.replaceOp(op, alloc);
     return success();
   }
 };
@@ -241,115 +243,88 @@ struct TiledLoopOpInterface
                           BufferizationState &state) const {
     auto tiledLoopOp = cast<linalg::TiledLoopOp>(op);
 
-    // Take a guard before anything else.
-    OpBuilder::InsertionGuard g(b);
+    // Use IRRewriter instead of OpBuilder because it has additional helper
+    // functions.
+    IRRewriter rewriter(op->getContext());
+    rewriter.setInsertionPoint(tiledLoopOp);
 
-    // Allocate output buffers if needed, forward output tensor args to the
-    // terminator.
-    Operation *yieldOp = tiledLoopOp.getBody()->getTerminator();
-    Block *body = tiledLoopOp.getBody();
-
-    // Take copies of the old input and output operands, so we can insert
-    // inplace easily.
-    auto oldInputs = llvm::to_vector<4>(tiledLoopOp.inputs());
-    auto oldOutputs = llvm::to_vector<4>(tiledLoopOp.outputs());
-
-    int numLoops = tiledLoopOp.getNumLoops();
-    int numControlOperands = tiledLoopOp.getNumControlOperands();
-
-    // Add buffers for outputs and the corresponding block arguments.
-    // Keep separate iterators to increment without further leaking impl.
-    // details. Start with outputs to avoid interference from new input buffers.
-    int numNewOutputBuffers = 0;
-    int resultIndex = 0;
-    int oldOutputBBArgIndex = numLoops + oldInputs.size();
-    int nextOutputBBArgIndex = numLoops + oldInputs.size() + oldOutputs.size();
-    int nextOutputOperandIndex =
-        numControlOperands + oldInputs.size() + oldOutputs.size();
-    for (Value oldOutputTensor : oldOutputs) {
-      if (!oldOutputTensor.getType().isa<TensorType>()) {
-        // Skip and increment the old bbarg index only.
-        ++oldOutputBBArgIndex;
-        // Do not increment resultIndex as only tensors are returned.
-        // TODO: better interface to avoid leaking such impl details.
-        continue;
+    // Compute new inputs, outputs and results.
+    SmallVector<Value> newInputs, newOutputs, newResults;
+    for (Value value : tiledLoopOp.inputs()) {
+      if (value.getType().isa<TensorType>()) {
+        newInputs.push_back(state.lookupBuffer(value));
+      } else {
+        newInputs.push_back(value);
       }
-
-      assert(oldOutputTensor.getType().isa<RankedTensorType>() &&
-             "bufferizable output must be a ranked tensor");
-
-      const OpResult &opResult = tiledLoopOp->getResult(resultIndex);
-      OpOperand &yieldOperand = yieldOp->getOpOperand(resultIndex);
-      Value resultBuffer = state.getResultBuffer(opResult);
-      if (!resultBuffer)
-        return failure();
-
-      // Insert mapping and aliasing info.
-      state.mapBuffer(opResult, resultBuffer);
-
-      // Insert new operand and bbArg.
-      tiledLoopOp->insertOperands(nextOutputOperandIndex, resultBuffer);
-      BlockArgument newBufferBBArg =
-          body->insertArgument(nextOutputBBArgIndex, resultBuffer.getType());
-      BlockArgument oldTensorBBArg = body->getArgument(oldOutputBBArgIndex);
-      // Insert mapping and aliasing info.
-      state.mapBuffer(oldTensorBBArg, newBufferBBArg);
-
-      // Set operand of `linalg.yield` to the bbArg so it just canonicalizes
-      // away later.
-      yieldOperand.set(oldTensorBBArg);
-
-      // Increment indices.
-      ++numNewOutputBuffers;
-      ++resultIndex;
-      ++oldOutputBBArgIndex;
-      ++nextOutputBBArgIndex;
-      ++nextOutputOperandIndex;
+    }
+    int nextResultNum = 0;
+    for (Value value : tiledLoopOp.outputs()) {
+      if (value.getType().isa<TensorType>()) {
+        Value buffer =
+            state.getResultBuffer(tiledLoopOp->getResult(nextResultNum++));
+        newOutputs.push_back(buffer);
+        newResults.push_back(buffer);
+      } else {
+        newOutputs.push_back(value);
+      }
     }
 
-    // Add buffers for inputs and the corresponding block arguments.
-    // Keep separate iterators to increment without further leaking impl.
-    // details.
-    int numNewInputBuffers = 0;
-    int oldInputBBArgIndex = numLoops;
-    int nextInputBBArgIndex = numLoops + oldInputs.size();
-    int nextInputOperandIndex = numControlOperands + oldInputs.size();
-    for (Value oldInputTensor : oldInputs) {
-      if (!oldInputTensor.getType().isa<TensorType>()) {
-        // Skip and increment the old bbarg index only.
-        ++oldInputBBArgIndex;
-        continue;
+    // Create new TiledLoopOp.
+    auto newTiledLoopOp = rewriter.create<TiledLoopOp>(
+        tiledLoopOp.getLoc(), tiledLoopOp.lowerBound(),
+        tiledLoopOp.upperBound(), tiledLoopOp.step(), newInputs, newOutputs,
+        tiledLoopOp.iterator_types(), tiledLoopOp.distribution_types());
+
+    // Remove terminator.
+    if (!newTiledLoopOp.getBody()->empty())
+      rewriter.eraseOp(tiledLoopOp.getBody()->getTerminator());
+
+    // Compute new loop body arguments.
+    SmallVector<Value> newBlockArgs, newRegionInOutArgs, oldRegionInOutArgs;
+    ValueRange newInductionVars = newTiledLoopOp.getInductionVars();
+    newBlockArgs.append(newInductionVars.begin(), newInductionVars.end());
+
+    ValueRange newRegionInArgs = newTiledLoopOp.getRegionInputArgs();
+    ValueRange newRegionOutArgs = newTiledLoopOp.getRegionOutputArgs();
+    newRegionInOutArgs.append(newRegionInArgs.begin(), newRegionInArgs.end());
+    newRegionInOutArgs.append(newRegionOutArgs.begin(), newRegionOutArgs.end());
+
+    ValueRange oldRegionInArgs = tiledLoopOp.getRegionInputArgs();
+    ValueRange oldRegionOutArgs = tiledLoopOp.getRegionOutputArgs();
+    oldRegionInOutArgs.append(oldRegionInArgs.begin(), oldRegionInArgs.end());
+    oldRegionInOutArgs.append(oldRegionOutArgs.begin(), oldRegionOutArgs.end());
+    assert(newRegionInArgs.size() == oldRegionInArgs.size() &&
+           "expected same number of input args");
+    assert(newRegionOutArgs.size() == oldRegionOutArgs.size() &&
+           "expected same number of output args");
+
+    for (auto it : llvm::zip(oldRegionInOutArgs, newRegionInOutArgs)) {
+      Value oldArg = std::get<0>(it);
+      Value newArg = std::get<1>(it);
+      rewriter.setInsertionPointToStart(newTiledLoopOp->getBlock());
+      if (oldArg.getType().isa<TensorType>()) {
+        newBlockArgs.push_back(rewriter.create<bufferization::ToTensorOp>(
+            oldArg.getLoc(), newArg));
+      } else {
+        newBlockArgs.push_back(newArg);
       }
-
-      Value inputBuffer = state.lookupBuffer(oldInputTensor);
-
-      // Insert new operand and bbArg.
-      tiledLoopOp->insertOperands(nextInputOperandIndex, inputBuffer);
-      BlockArgument newBufferBBArg =
-          body->insertArgument(nextInputBBArgIndex, inputBuffer.getType());
-      BlockArgument oldTensorBBArg = body->getArgument(oldInputBBArgIndex);
-
-      // Insert mapping and aliasing info.
-      state.mapBuffer(oldTensorBBArg, newBufferBBArg);
-
-      // Increment indices.
-      ++numNewInputBuffers;
-      ++oldInputBBArgIndex;
-      ++nextInputBBArgIndex;
-      ++nextInputOperandIndex;
     }
 
-    // Update segment sizes.
-    // TODO: Helper method to avoid leaking impl details.
-    tiledLoopOp->setAttr(
-        TiledLoopOp::getOperandSegmentSizeAttr(),
-        b.getI32VectorAttr(
-            {numLoops, numLoops, numLoops,
-             static_cast<int>(oldInputs.size()) + numNewInputBuffers,
-             static_cast<int>(oldOutputs.size()) + numNewOutputBuffers}));
+    // Move old body into new loop.
+    rewriter.mergeBlocks(tiledLoopOp.getBody(), newTiledLoopOp.getBody(),
+                         newBlockArgs);
+
+    // Replace previous terminator with a new one that does not yield anything.
+    Operation *oldTerminator = newTiledLoopOp.getBody()->getTerminator();
+    rewriter.setInsertionPointToEnd(newTiledLoopOp.getBody());
+    rewriter.create<linalg::YieldOp>(oldTerminator->getLoc());
+    rewriter.eraseOp(oldTerminator);
+
+    // Replace results and delete old op.
+    state.replaceOp(op, newResults);
 
     // Bufferize loop body.
-    return comprehensive_bufferize::bufferize(&tiledLoopOp.region(), state);
+    return comprehensive_bufferize::bufferize(newTiledLoopOp.getBody(), state);
   }
 };
 
@@ -372,14 +347,14 @@ struct YieldOpInterface
                           BufferizationState &state) const {
     auto yieldOp = cast<linalg::YieldOp>(op);
 
-    // No tensors -> success.
-    if (!llvm::any_of(yieldOp.getOperandTypes(),
-                      [](Type t) { return t.isa<TensorType>(); }))
-      return success();
-    // linalg::YieldOp nested under TiledLoop must just canonicalize.
-    if (yieldOp->getParentOfType<TiledLoopOp>())
-      return success();
-    llvm_unreachable("unexpected yieldOp");
+    if (!yieldOp->getParentOfType<TiledLoopOp>())
+      return yieldOp->emitError(
+          "expected that linalg.yield terminates a tiled_loop");
+
+    assert(yieldOp->getOpOperands().empty() &&
+           "expected that linalg.yield was bufferized together with"
+           " tiled_loop");
+    return success();
   }
 };
 

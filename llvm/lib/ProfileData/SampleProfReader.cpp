@@ -146,7 +146,7 @@ static bool ParseLine(const StringRef &Input, LineType &LineTy, uint32_t &Depth,
   if (Depth == 0)
     return false;
 
-  if (Depth == 1 && Input[Depth] == '!') {
+  if (Input[Depth] == '!') {
     LineTy = LineType::Metadata;
     return parseMetadata(Input.substr(Depth), FunctionHash, Attributes);
   }
@@ -244,11 +244,11 @@ std::error_code SampleProfileReaderText::readImpl() {
   sampleprof_error Result = sampleprof_error::success;
 
   InlineCallStack InlineStack;
-  uint32_t ProbeProfileCount = 0;
+  uint32_t TopLevelProbeProfileCount = 0;
 
-  // SeenMetadata tracks whether we have processed metadata for the current
-  // top-level function profile.
-  bool SeenMetadata = false;
+  // DepthMetadata tracks whether we have processed metadata for the current
+  // top-level or nested function profile.
+  uint32_t DepthMetadata = 0;
 
   ProfileIsFS = ProfileIsFSDisciminator;
   FunctionSamples::ProfileIsFS = ProfileIsFS;
@@ -275,7 +275,7 @@ std::error_code SampleProfileReaderText::readImpl() {
                     "Expected 'mangled_name:NUM:NUM', found " + *LineIt);
         return sampleprof_error::malformed;
       }
-      SeenMetadata = false;
+      DepthMetadata = 0;
       SampleContext FContext(FName, CSNameTable);
       if (FContext.hasContext())
         ++CSProfileCount;
@@ -302,7 +302,7 @@ std::error_code SampleProfileReaderText::readImpl() {
                         *LineIt);
         return sampleprof_error::malformed;
       }
-      if (SeenMetadata && LineTy != LineType::Metadata) {
+      if (LineTy != LineType::Metadata && Depth == DepthMetadata) {
         // Metadata must be put at the end of a function profile.
         reportError(LineIt.line_number(),
                     "Found non-metadata after metadata: " + *LineIt);
@@ -322,6 +322,7 @@ std::error_code SampleProfileReaderText::readImpl() {
         FSamples.setName(FName);
         MergeResult(Result, FSamples.addTotalSamples(NumSamples));
         InlineStack.push_back(&FSamples);
+        DepthMetadata = 0;
         break;
       }
       case LineType::BodyProfile: {
@@ -342,11 +343,13 @@ std::error_code SampleProfileReaderText::readImpl() {
         FunctionSamples &FProfile = *InlineStack.back();
         if (FunctionHash) {
           FProfile.setFunctionHash(FunctionHash);
-          ++ProbeProfileCount;
+          if (Depth == 1)
+            ++TopLevelProbeProfileCount;
         }
-        if (Attributes)
-          FProfile.getContext().setAllAttributes(Attributes);
-        SeenMetadata = true;
+        FProfile.getContext().setAllAttributes(Attributes);
+        if (Attributes & (uint32_t)ContextShouldBeInlined)
+          ProfileIsCSNested = true;
+        DepthMetadata = Depth;
         break;
       }
       }
@@ -355,12 +358,14 @@ std::error_code SampleProfileReaderText::readImpl() {
 
   assert((CSProfileCount == 0 || CSProfileCount == Profiles.size()) &&
          "Cannot have both context-sensitive and regular profile");
-  ProfileIsCS = (CSProfileCount > 0);
-  assert((ProbeProfileCount == 0 || ProbeProfileCount == Profiles.size()) &&
+  ProfileIsCSFlat = (CSProfileCount > 0);
+  assert((TopLevelProbeProfileCount == 0 ||
+          TopLevelProbeProfileCount == Profiles.size()) &&
          "Cannot have both probe-based profiles and regular profiles");
-  ProfileIsProbeBased = (ProbeProfileCount > 0);
+  ProfileIsProbeBased = (TopLevelProbeProfileCount > 0);
   FunctionSamples::ProfileIsProbeBased = ProfileIsProbeBased;
-  FunctionSamples::ProfileIsCS = ProfileIsCS;
+  FunctionSamples::ProfileIsCSFlat = ProfileIsCSFlat;
+  FunctionSamples::ProfileIsCSNested = ProfileIsCSNested;
 
   if (Result == sampleprof_error::success)
     computeSummary();
@@ -625,7 +630,7 @@ SampleProfileReaderExtBinaryBase::readContextFromTable() {
 
 ErrorOr<SampleContext>
 SampleProfileReaderExtBinaryBase::readSampleContextFromTable() {
-  if (ProfileIsCS) {
+  if (ProfileIsCSFlat) {
     auto FContext(readContextFromTable());
     if (std::error_code EC = FContext.getError())
       return EC;
@@ -649,7 +654,7 @@ std::error_code SampleProfileReaderExtBinaryBase::readOneSection(
     if (hasSecFlag(Entry, SecProfSummaryFlags::SecFlagPartial))
       Summary->setPartialProfile(true);
     if (hasSecFlag(Entry, SecProfSummaryFlags::SecFlagFullContext))
-      FunctionSamples::ProfileIsCS = ProfileIsCS = true;
+      FunctionSamples::ProfileIsCSFlat = ProfileIsCSFlat = true;
     if (hasSecFlag(Entry, SecProfSummaryFlags::SecFlagFSDiscriminator))
       FunctionSamples::ProfileIsFS = ProfileIsFS = true;
     break;
@@ -683,6 +688,9 @@ std::error_code SampleProfileReaderExtBinaryBase::readOneSection(
     ProfileIsProbeBased =
         hasSecFlag(Entry, SecFuncMetadataFlags::SecFlagIsProbeBased);
     FunctionSamples::ProfileIsProbeBased = ProfileIsProbeBased;
+    ProfileIsCSNested =
+        hasSecFlag(Entry, SecFuncMetadataFlags::SecFlagIsCSNested);
+    FunctionSamples::ProfileIsCSNested = ProfileIsCSNested;
     bool HasAttribute =
         hasSecFlag(Entry, SecFuncMetadataFlags::SecFlagHasAttribute);
     if (std::error_code EC = readFuncMetadata(HasAttribute))
@@ -770,7 +778,7 @@ std::error_code SampleProfileReaderExtBinaryBase::readFuncProfiles() {
       }
     }
 
-    if (ProfileIsCS) {
+    if (ProfileIsCSFlat) {
       DenseSet<uint64_t> FuncGuidsToUse;
       if (useMD5()) {
         for (auto Name : FuncsToUse)
@@ -840,7 +848,7 @@ std::error_code SampleProfileReaderExtBinaryBase::readFuncProfiles() {
   }
   assert((CSProfileCount == 0 || CSProfileCount == Profiles.size()) &&
          "Cannot have both context-sensitive and regular profile");
-  assert((!CSProfileCount || ProfileIsCS) &&
+  assert((!CSProfileCount || ProfileIsCSFlat) &&
          "Section flag should be consistent with actual profile");
   return sampleprof_error::success;
 }
@@ -1078,28 +1086,75 @@ std::error_code SampleProfileReaderExtBinaryBase::readCSNameTableSec() {
 }
 
 std::error_code
-SampleProfileReaderExtBinaryBase::readFuncMetadata(bool ProfileHasAttribute) {
-  while (Data < End) {
-    auto FContext(readSampleContextFromTable());
-    if (std::error_code EC = FContext.getError())
-      return EC;
 
-    bool ProfileInMap = Profiles.count(*FContext);
+SampleProfileReaderExtBinaryBase::readFuncMetadata(bool ProfileHasAttribute,
+                                                   FunctionSamples *FProfile) {
+  if (Data < End) {
     if (ProfileIsProbeBased) {
       auto Checksum = readNumber<uint64_t>();
       if (std::error_code EC = Checksum.getError())
         return EC;
-      if (ProfileInMap)
-        Profiles[*FContext].setFunctionHash(*Checksum);
+      if (FProfile)
+        FProfile->setFunctionHash(*Checksum);
     }
 
     if (ProfileHasAttribute) {
       auto Attributes = readNumber<uint32_t>();
       if (std::error_code EC = Attributes.getError())
         return EC;
-      if (ProfileInMap)
-        Profiles[*FContext].getContext().setAllAttributes(*Attributes);
+      if (FProfile)
+        FProfile->getContext().setAllAttributes(*Attributes);
     }
+
+    if (!ProfileIsCSFlat) {
+      // Read all the attributes for inlined function calls.
+      auto NumCallsites = readNumber<uint32_t>();
+      if (std::error_code EC = NumCallsites.getError())
+        return EC;
+
+      for (uint32_t J = 0; J < *NumCallsites; ++J) {
+        auto LineOffset = readNumber<uint64_t>();
+        if (std::error_code EC = LineOffset.getError())
+          return EC;
+
+        auto Discriminator = readNumber<uint64_t>();
+        if (std::error_code EC = Discriminator.getError())
+          return EC;
+
+        auto FContext(readSampleContextFromTable());
+        if (std::error_code EC = FContext.getError())
+          return EC;
+
+        FunctionSamples *CalleeProfile = nullptr;
+        if (FProfile) {
+          CalleeProfile = const_cast<FunctionSamples *>(
+              &FProfile->functionSamplesAt(LineLocation(
+                  *LineOffset,
+                  *Discriminator))[std::string(FContext.get().getName())]);
+        }
+        if (std::error_code EC =
+                readFuncMetadata(ProfileHasAttribute, CalleeProfile))
+          return EC;
+      }
+    }
+  }
+
+  return sampleprof_error::success;
+}
+
+std::error_code
+SampleProfileReaderExtBinaryBase::readFuncMetadata(bool ProfileHasAttribute) {
+  while (Data < End) {
+    auto FContext(readSampleContextFromTable());
+    if (std::error_code EC = FContext.getError())
+      return EC;
+    FunctionSamples *FProfile = nullptr;
+    auto It = Profiles.find(*FContext);
+    if (It != Profiles.end())
+      FProfile = &It->second;
+
+    if (std::error_code EC = readFuncMetadata(ProfileHasAttribute, FProfile))
+      return EC;
   }
 
   assert(Data == End && "More data is read than expected");
@@ -1233,6 +1288,8 @@ static std::string getSecFlagsStr(const SecHdrTableEntry &Entry) {
       Flags.append("probe,");
     if (hasSecFlag(Entry, SecFuncMetadataFlags::SecFlagHasAttribute))
       Flags.append("attr,");
+    if (hasSecFlag(Entry, SecFuncMetadataFlags::SecFlagIsCSNested))
+      Flags.append("preinlined,");
     break;
   default:
     break;

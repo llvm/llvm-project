@@ -19,7 +19,7 @@ std::unique_ptr<SymbolIndex> TestWorkspace::index() {
       continue;
     TU.Code = Input.second.Code;
     TU.Filename = Input.first().str();
-    TU.preamble([&](ASTContext &Ctx, std::shared_ptr<clang::Preprocessor> PP,
+    TU.preamble([&](ASTContext &Ctx, Preprocessor &PP,
                     const CanonicalIncludes &CanonIncludes) {
       Index->updatePreamble(testPath(Input.first()), "null", Ctx, PP,
                             CanonIncludes);

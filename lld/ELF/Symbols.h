@@ -245,17 +245,12 @@ protected:
         type(type), stOther(stOther), symbolKind(k), visibility(stOther & 3),
         isUsedInRegularObj(!file || file->kind() == InputFile::ObjKind),
         exportDynamic(isExportDynamic(k, visibility)), inDynamicList(false),
-        canInline(false), referenced(false), traced(false), needsPltAddr(false),
-        isInIplt(false), gotInIgot(false), isPreemptible(false),
-        used(!config->gcSections), needsTocRestore(false), scriptDefined(false),
-        needsCopy(false), needsGot(false), needsPlt(false),
-        hasDirectReloc(false) {}
+        canInline(false), referenced(false), traced(false), isInIplt(false),
+        gotInIgot(false), isPreemptible(false), used(!config->gcSections),
+        needsTocRestore(false), scriptDefined(false), needsCopy(false),
+        needsGot(false), needsPlt(false), hasDirectReloc(false) {}
 
 public:
-  // True the symbol should point to its PLT entry.
-  // For SharedSymbol only.
-  uint8_t needsPltAddr : 1;
-
   // True if this symbol is in the Iplt sub-section of the Plt and the Igot
   // sub-section of the .got.plt or .got.
   uint8_t isInIplt : 1;

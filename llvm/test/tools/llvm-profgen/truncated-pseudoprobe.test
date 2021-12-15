@@ -1,4 +1,4 @@
-; RUN: llvm-profgen --format=text --perfscript=%S/Inputs/truncated-pseudoprobe.perfscript --binary=%S/Inputs/truncated-pseudoprobe.perfbin --output=%t
+; RUN: llvm-profgen --format=text --perfscript=%S/Inputs/truncated-pseudoprobe.perfscript --binary=%S/Inputs/truncated-pseudoprobe.perfbin --csspgo-preinliner=0 --output=%t
 ; RUN: FileCheck %s --input-file %t
 
 ; CHECK:     [foo]:75:0
@@ -12,7 +12,6 @@
 ; CHECK-NEXT:  8: 15 bar:15
 ; CHECK-NEXT:  9: 0
 ; CHECK-NEXT:  !CFGChecksum: 563088904013236
-; CHECK-NEXT:  !Attributes: 0
 ; CHECK:     [foo:8 @ bar]:30:15
 ; CHECK-NEXT:  1: 15
 ; CHECK-NEXT:  4: 15

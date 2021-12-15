@@ -76,7 +76,8 @@ def FSQRT_D : FPUnaryOp_r_frm<0b0101101, 0b00000, FPR64, FPR64, "fsqrt.d">,
               Sched<[WriteFSqrt64, ReadFSqrt64]>;
 def         : FPUnaryOpDynFrmAlias<FSQRT_D, "fsqrt.d", FPR64, FPR64>;
 
-let SchedRW = [WriteFSGNJ64, ReadFSGNJ64, ReadFSGNJ64] in {
+let SchedRW = [WriteFSGNJ64, ReadFSGNJ64, ReadFSGNJ64],
+    mayRaiseFPException = 0 in {
 def FSGNJ_D  : FPALU_rr<0b0010001, 0b000, "fsgnj.d", FPR64>;
 def FSGNJN_D : FPALU_rr<0b0010001, 0b001, "fsgnjn.d", FPR64>;
 def FSGNJX_D : FPALU_rr<0b0010001, 0b010, "fsgnjx.d", FPR64>;
@@ -100,6 +101,7 @@ def FLT_D : FPCmp_rr<0b1010001, 0b001, "flt.d", FPR64>;
 def FLE_D : FPCmp_rr<0b1010001, 0b000, "fle.d", FPR64>;
 }
 
+let mayRaiseFPException = 0 in
 def FCLASS_D : FPUnaryOp_r<0b1110001, 0b00000, 0b001, GPR, FPR64, "fclass.d">,
                Sched<[WriteFClass64, ReadFClass64]>;
 
@@ -127,6 +129,7 @@ def FCVT_LU_D : FPUnaryOp_r_frm<0b1100001, 0b00011, GPR, FPR64, "fcvt.lu.d">,
                 Sched<[WriteFCvtF64ToI64, ReadFCvtF64ToI64]>;
 def           : FPUnaryOpDynFrmAlias<FCVT_LU_D, "fcvt.lu.d", GPR, FPR64>;
 
+let mayRaiseFPException = 0 in
 def FMV_X_D : FPUnaryOp_r<0b1110001, 0b00000, 0b000, GPR, FPR64, "fmv.x.d">,
               Sched<[WriteFMovF64ToI64, ReadFMovF64ToI64]>;
 
@@ -138,6 +141,7 @@ def FCVT_D_LU : FPUnaryOp_r_frm<0b1101001, 0b00011, FPR64, GPR, "fcvt.d.lu">,
                 Sched<[WriteFCvtI64ToF64, ReadFCvtI64ToF64]>;
 def           : FPUnaryOpDynFrmAlias<FCVT_D_LU, "fcvt.d.lu", FPR64, GPR>;
 
+let mayRaiseFPException = 0 in
 def FMV_D_X : FPUnaryOp_r<0b1111001, 0b00000, 0b000, FPR64, GPR, "fmv.d.x">,
               Sched<[WriteFMovI64ToF64, ReadFMovI64ToF64]>;
 } // Predicates = [HasStdExtD, IsRV64]
@@ -188,12 +192,12 @@ def : Pat<(fpextend FPR32:$rs1), (FCVT_D_S FPR32:$rs1)>;
 
 /// Float arithmetic operations
 
-def : PatFpr64Fpr64DynFrm<fadd, FADD_D>;
-def : PatFpr64Fpr64DynFrm<fsub, FSUB_D>;
-def : PatFpr64Fpr64DynFrm<fmul, FMUL_D>;
-def : PatFpr64Fpr64DynFrm<fdiv, FDIV_D>;
+def : PatFpr64Fpr64DynFrm<any_fadd, FADD_D>;
+def : PatFpr64Fpr64DynFrm<any_fsub, FSUB_D>;
+def : PatFpr64Fpr64DynFrm<any_fmul, FMUL_D>;
+def : PatFpr64Fpr64DynFrm<any_fdiv, FDIV_D>;
 
-def : Pat<(fsqrt FPR64:$rs1), (FSQRT_D FPR64:$rs1, 0b111)>;
+def : Pat<(any_fsqrt FPR64:$rs1), (FSQRT_D FPR64:$rs1, 0b111)>;
 
 def : Pat<(fneg FPR64:$rs1), (FSGNJN_D $rs1, $rs1)>;
 def : Pat<(fabs FPR64:$rs1), (FSGNJX_D $rs1, $rs1)>;
@@ -205,19 +209,19 @@ def : Pat<(fcopysign FPR32:$rs1, FPR64:$rs2), (FSGNJ_S $rs1, (FCVT_S_D $rs2,
                                                               0b111))>;
 
 // fmadd: rs1 * rs2 + rs3
-def : Pat<(fma FPR64:$rs1, FPR64:$rs2, FPR64:$rs3),
+def : Pat<(any_fma FPR64:$rs1, FPR64:$rs2, FPR64:$rs3),
           (FMADD_D $rs1, $rs2, $rs3, 0b111)>;
 
 // fmsub: rs1 * rs2 - rs3
-def : Pat<(fma FPR64:$rs1, FPR64:$rs2, (fneg FPR64:$rs3)),
+def : Pat<(any_fma FPR64:$rs1, FPR64:$rs2, (fneg FPR64:$rs3)),
           (FMSUB_D FPR64:$rs1, FPR64:$rs2, FPR64:$rs3, 0b111)>;
 
 // fnmsub: -rs1 * rs2 + rs3
-def : Pat<(fma (fneg FPR64:$rs1), FPR64:$rs2, FPR64:$rs3),
+def : Pat<(any_fma (fneg FPR64:$rs1), FPR64:$rs2, FPR64:$rs3),
           (FNMSUB_D FPR64:$rs1, FPR64:$rs2, FPR64:$rs3, 0b111)>;
 
 // fnmadd: -rs1 * rs2 - rs3
-def : Pat<(fma (fneg FPR64:$rs1), FPR64:$rs2, (fneg FPR64:$rs3)),
+def : Pat<(any_fma (fneg FPR64:$rs1), FPR64:$rs2, (fneg FPR64:$rs3)),
           (FNMADD_D FPR64:$rs1, FPR64:$rs2, FPR64:$rs3, 0b111)>;
 
 // The ratified 20191213 ISA spec defines fmin and fmax in a way that matches

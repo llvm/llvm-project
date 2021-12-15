@@ -2126,3 +2126,122 @@ define <4 x i64> @shift32_v4i64(<4 x i64> %a) nounwind {
   %shift = ashr <4 x i64> %a, <i64 32, i64 32, i64 32, i64 32>
   ret <4 x i64> %shift
 }
+
+define <4 x i64> @PR52719(<4 x i64> %a0, i32 %a1) {
+; AVX1-LABEL: PR52719:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vmovd %edi, %xmm1
+; AVX1-NEXT:    vpmovzxdq {{.*#+}} xmm2 = xmm1[0],zero,xmm1[1],zero
+; AVX1-NEXT:    vmovdqa {{.*#+}} xmm3 = [9223372036854775808,9223372036854775808]
+; AVX1-NEXT:    vpsrlq %xmm1, %xmm3, %xmm4
+; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm5
+; AVX1-NEXT:    vpsrlq %xmm1, %xmm5, %xmm1
+; AVX1-NEXT:    vpxor %xmm4, %xmm1, %xmm1
+; AVX1-NEXT:    vpsubq %xmm4, %xmm1, %xmm1
+; AVX1-NEXT:    vpsrlq %xmm2, %xmm3, %xmm3
+; AVX1-NEXT:    vpsrlq %xmm2, %xmm0, %xmm0
+; AVX1-NEXT:    vpxor %xmm3, %xmm0, %xmm0
+; AVX1-NEXT:    vpsubq %xmm3, %xmm0, %xmm0
+; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: PR52719:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vmovd %edi, %xmm1
+; AVX2-NEXT:    vpbroadcastd %xmm1, %xmm1
+; AVX2-NEXT:    vpmovzxdq {{.*#+}} xmm1 = xmm1[0],zero,xmm1[1],zero
+; AVX2-NEXT:    vpbroadcastq {{.*#+}} ymm2 = [9223372036854775808,9223372036854775808,9223372036854775808,9223372036854775808]
+; AVX2-NEXT:    vpsrlq %xmm1, %ymm2, %ymm2
+; AVX2-NEXT:    vpsrlq %xmm1, %ymm0, %ymm0
+; AVX2-NEXT:    vpxor %ymm2, %ymm0, %ymm0
+; AVX2-NEXT:    vpsubq %ymm2, %ymm0, %ymm0
+; AVX2-NEXT:    retq
+;
+; XOPAVX1-LABEL: PR52719:
+; XOPAVX1:       # %bb.0:
+; XOPAVX1-NEXT:    vmovd %edi, %xmm1
+; XOPAVX1-NEXT:    vpshufd {{.*#+}} xmm1 = xmm1[0,0,0,0]
+; XOPAVX1-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; XOPAVX1-NEXT:    vpblendw {{.*#+}} xmm3 = xmm1[0,1],xmm2[2,3],xmm1[4,5],xmm2[6,7]
+; XOPAVX1-NEXT:    vpmovzxdq {{.*#+}} xmm1 = xmm1[0],zero,xmm1[1],zero
+; XOPAVX1-NEXT:    vpsubq %xmm3, %xmm2, %xmm3
+; XOPAVX1-NEXT:    vextractf128 $1, %ymm0, %xmm4
+; XOPAVX1-NEXT:    vpshaq %xmm3, %xmm4, %xmm3
+; XOPAVX1-NEXT:    vpsubq %xmm1, %xmm2, %xmm1
+; XOPAVX1-NEXT:    vpshaq %xmm1, %xmm0, %xmm0
+; XOPAVX1-NEXT:    vinsertf128 $1, %xmm3, %ymm0, %ymm0
+; XOPAVX1-NEXT:    retq
+;
+; XOPAVX2-LABEL: PR52719:
+; XOPAVX2:       # %bb.0:
+; XOPAVX2-NEXT:    vmovd %edi, %xmm1
+; XOPAVX2-NEXT:    vpbroadcastd %xmm1, %xmm1
+; XOPAVX2-NEXT:    vpmovzxdq {{.*#+}} xmm1 = xmm1[0],zero,xmm1[1],zero
+; XOPAVX2-NEXT:    vpbroadcastq {{.*#+}} ymm2 = [9223372036854775808,9223372036854775808,9223372036854775808,9223372036854775808]
+; XOPAVX2-NEXT:    vpsrlq %xmm1, %ymm2, %ymm2
+; XOPAVX2-NEXT:    vpsrlq %xmm1, %ymm0, %ymm0
+; XOPAVX2-NEXT:    vpxor %ymm2, %ymm0, %ymm0
+; XOPAVX2-NEXT:    vpsubq %ymm2, %ymm0, %ymm0
+; XOPAVX2-NEXT:    retq
+;
+; AVX512-LABEL: PR52719:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
+; AVX512-NEXT:    vmovd %edi, %xmm1
+; AVX512-NEXT:    vpbroadcastd %xmm1, %xmm1
+; AVX512-NEXT:    vpmovzxdq {{.*#+}} xmm1 = xmm1[0],zero,xmm1[1],zero
+; AVX512-NEXT:    vpsraq %xmm1, %zmm0, %zmm0
+; AVX512-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
+; AVX512-NEXT:    retq
+;
+; AVX512VL-LABEL: PR52719:
+; AVX512VL:       # %bb.0:
+; AVX512VL-NEXT:    vpbroadcastd %edi, %xmm1
+; AVX512VL-NEXT:    vpmovzxdq {{.*#+}} xmm1 = xmm1[0],zero,xmm1[1],zero
+; AVX512VL-NEXT:    vpsraq %xmm1, %ymm0, %ymm0
+; AVX512VL-NEXT:    retq
+;
+; X86-AVX1-LABEL: PR52719:
+; X86-AVX1:       # %bb.0:
+; X86-AVX1-NEXT:    vbroadcastss {{[0-9]+}}(%esp), %xmm2
+; X86-AVX1-NEXT:    vpmovzxdq {{.*#+}} xmm1 = xmm2[0],zero,xmm2[1],zero
+; X86-AVX1-NEXT:    vpsrldq {{.*#+}} xmm3 = xmm2[12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; X86-AVX1-NEXT:    vmovddup {{.*#+}} xmm4 = [9223372036854775808,9223372036854775808]
+; X86-AVX1-NEXT:    # xmm4 = mem[0,0]
+; X86-AVX1-NEXT:    vpsrlq %xmm3, %xmm4, %xmm5
+; X86-AVX1-NEXT:    vpxor %xmm6, %xmm6, %xmm6
+; X86-AVX1-NEXT:    vpblendw {{.*#+}} xmm2 = xmm2[0,1],xmm6[2,3,4,5,6,7]
+; X86-AVX1-NEXT:    vpsrlq %xmm2, %xmm4, %xmm6
+; X86-AVX1-NEXT:    vpblendw {{.*#+}} xmm5 = xmm6[0,1,2,3],xmm5[4,5,6,7]
+; X86-AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm7
+; X86-AVX1-NEXT:    vpsrlq %xmm3, %xmm7, %xmm3
+; X86-AVX1-NEXT:    vpsrlq %xmm2, %xmm7, %xmm7
+; X86-AVX1-NEXT:    vpblendw {{.*#+}} xmm3 = xmm7[0,1,2,3],xmm3[4,5,6,7]
+; X86-AVX1-NEXT:    vpxor %xmm5, %xmm3, %xmm3
+; X86-AVX1-NEXT:    vpsubq %xmm5, %xmm3, %xmm3
+; X86-AVX1-NEXT:    vpsrlq %xmm1, %xmm4, %xmm4
+; X86-AVX1-NEXT:    vpblendw {{.*#+}} xmm4 = xmm4[0,1,2,3],xmm6[4,5,6,7]
+; X86-AVX1-NEXT:    vpsrlq %xmm2, %xmm0, %xmm2
+; X86-AVX1-NEXT:    vpsrlq %xmm1, %xmm0, %xmm0
+; X86-AVX1-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0,1,2,3],xmm2[4,5,6,7]
+; X86-AVX1-NEXT:    vpxor %xmm4, %xmm0, %xmm0
+; X86-AVX1-NEXT:    vpsubq %xmm4, %xmm0, %xmm0
+; X86-AVX1-NEXT:    vinsertf128 $1, %xmm3, %ymm0, %ymm0
+; X86-AVX1-NEXT:    retl
+;
+; X86-AVX2-LABEL: PR52719:
+; X86-AVX2:       # %bb.0:
+; X86-AVX2-NEXT:    vpbroadcastd {{[0-9]+}}(%esp), %xmm1
+; X86-AVX2-NEXT:    vpmovzxdq {{.*#+}} ymm1 = xmm1[0],zero,xmm1[1],zero,xmm1[2],zero,xmm1[3],zero
+; X86-AVX2-NEXT:    vmovdqa {{.*#+}} ymm2 = [0,2147483648,0,2147483648,0,2147483648,0,2147483648]
+; X86-AVX2-NEXT:    vpsrlvq %ymm1, %ymm2, %ymm2
+; X86-AVX2-NEXT:    vpsrlvq %ymm1, %ymm0, %ymm0
+; X86-AVX2-NEXT:    vpxor %ymm2, %ymm0, %ymm0
+; X86-AVX2-NEXT:    vpsubq %ymm2, %ymm0, %ymm0
+; X86-AVX2-NEXT:    retl
+  %vec = insertelement <4 x i32> poison, i32 %a1, i64 0
+  %splat = shufflevector <4 x i32> %vec, <4 x i32> poison, <4 x i32> zeroinitializer
+  %zext = zext <4 x i32> %splat to <4 x i64>
+  %ashr = ashr <4 x i64> %a0, %zext
+  ret <4 x i64> %ashr
+}

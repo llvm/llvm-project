@@ -41,11 +41,6 @@ PyObject *SBTypeToSWIGWrapper(lldb::SBTypeSummaryOptions &summary_options_sb) {
                             SWIGTYPE_p_lldb__SBTypeSummaryOptions, 0);
 }
 
-PyObject *SBTypeToSWIGWrapper(lldb::SBStructuredData &structured_data_sb) {
-  return SWIG_NewPointerObj(&structured_data_sb,
-                            SWIGTYPE_p_lldb__SBStructuredData, 0);
-}
-
 PyObject *SBTypeToSWIGWrapper(lldb::SBSymbolContext &sym_ctx_sb) {
   return SWIG_NewPointerObj(&sym_ctx_sb, SWIGTYPE_p_lldb__SBSymbolContext, 0);
 }
@@ -84,6 +79,14 @@ PythonObject ToSWIGWrapper(lldb::ThreadPlanSP thread_plan_sp) {
 PythonObject ToSWIGWrapper(lldb::BreakpointSP breakpoint_sp) {
   return ToSWIGHelper(new lldb::SBBreakpoint(std::move(breakpoint_sp)),
                       SWIGTYPE_p_lldb__SBBreakpoint);
+}
+
+PythonObject ToSWIGWrapper(std::unique_ptr<lldb::SBStructuredData> data_sb) {
+  return ToSWIGHelper(data_sb.release(), SWIGTYPE_p_lldb__SBStructuredData);
+}
+
+PythonObject ToSWIGWrapper(const StructuredDataImpl &data_impl) {
+  return ToSWIGWrapper(std::make_unique<lldb::SBStructuredData>(data_impl));
 }
 
 } // namespace python

@@ -1641,19 +1641,30 @@ define dso_local void @cmp_v8i64_zext(<8 x i64>* %xptr, <8 x i64>* %yptr, <8 x i
 }
 
 define <16 x i8> @var_rotate_v16i8(<16 x i8> %a, <16 x i8> %b) nounwind "min-legal-vector-width"="256" {
-; CHECK-LABEL: var_rotate_v16i8:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    vmovdqa {{.*#+}} xmm2 = [8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8]
-; CHECK-NEXT:    vpsubb %xmm1, %xmm2, %xmm2
-; CHECK-NEXT:    vpmovzxbw {{.*#+}} ymm1 = xmm1[0],zero,xmm1[1],zero,xmm1[2],zero,xmm1[3],zero,xmm1[4],zero,xmm1[5],zero,xmm1[6],zero,xmm1[7],zero,xmm1[8],zero,xmm1[9],zero,xmm1[10],zero,xmm1[11],zero,xmm1[12],zero,xmm1[13],zero,xmm1[14],zero,xmm1[15],zero
-; CHECK-NEXT:    vpmovzxbw {{.*#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero,xmm0[8],zero,xmm0[9],zero,xmm0[10],zero,xmm0[11],zero,xmm0[12],zero,xmm0[13],zero,xmm0[14],zero,xmm0[15],zero
-; CHECK-NEXT:    vpsllvw %ymm1, %ymm0, %ymm1
-; CHECK-NEXT:    vpmovzxbw {{.*#+}} ymm2 = xmm2[0],zero,xmm2[1],zero,xmm2[2],zero,xmm2[3],zero,xmm2[4],zero,xmm2[5],zero,xmm2[6],zero,xmm2[7],zero,xmm2[8],zero,xmm2[9],zero,xmm2[10],zero,xmm2[11],zero,xmm2[12],zero,xmm2[13],zero,xmm2[14],zero,xmm2[15],zero
-; CHECK-NEXT:    vpsrlvw %ymm2, %ymm0, %ymm0
-; CHECK-NEXT:    vpor %ymm0, %ymm1, %ymm0
-; CHECK-NEXT:    vpmovwb %ymm0, %xmm0
-; CHECK-NEXT:    vzeroupper
-; CHECK-NEXT:    retq
+; CHECK-AVX512-LABEL: var_rotate_v16i8:
+; CHECK-AVX512:       # %bb.0:
+; CHECK-AVX512-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
+; CHECK-AVX512-NEXT:    vpmovzxbw {{.*#+}} ymm1 = xmm1[0],zero,xmm1[1],zero,xmm1[2],zero,xmm1[3],zero,xmm1[4],zero,xmm1[5],zero,xmm1[6],zero,xmm1[7],zero,xmm1[8],zero,xmm1[9],zero,xmm1[10],zero,xmm1[11],zero,xmm1[12],zero,xmm1[13],zero,xmm1[14],zero,xmm1[15],zero
+; CHECK-AVX512-NEXT:    vpmovzxbw {{.*#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero,xmm0[8],zero,xmm0[9],zero,xmm0[10],zero,xmm0[11],zero,xmm0[12],zero,xmm0[13],zero,xmm0[14],zero,xmm0[15],zero
+; CHECK-AVX512-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0,0,2,2,4,4,6,6,8,8,10,10,12,12,14,14,16,16,18,18,20,20,22,22,24,24,26,26,28,28,30,30]
+; CHECK-AVX512-NEXT:    vpsllvw %ymm1, %ymm0, %ymm0
+; CHECK-AVX512-NEXT:    vpsrlw $8, %ymm0, %ymm0
+; CHECK-AVX512-NEXT:    vpmovwb %ymm0, %xmm0
+; CHECK-AVX512-NEXT:    vzeroupper
+; CHECK-AVX512-NEXT:    retq
+;
+; CHECK-VBMI-LABEL: var_rotate_v16i8:
+; CHECK-VBMI:       # %bb.0:
+; CHECK-VBMI-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
+; CHECK-VBMI-NEXT:    vmovdqa {{.*#+}} ymm2 = [0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7,8,8,9,9,10,10,11,11,12,12,13,13,14,14,15,15]
+; CHECK-VBMI-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
+; CHECK-VBMI-NEXT:    vpermb %ymm0, %ymm2, %ymm0
+; CHECK-VBMI-NEXT:    vpmovzxbw {{.*#+}} ymm1 = xmm1[0],zero,xmm1[1],zero,xmm1[2],zero,xmm1[3],zero,xmm1[4],zero,xmm1[5],zero,xmm1[6],zero,xmm1[7],zero,xmm1[8],zero,xmm1[9],zero,xmm1[10],zero,xmm1[11],zero,xmm1[12],zero,xmm1[13],zero,xmm1[14],zero,xmm1[15],zero
+; CHECK-VBMI-NEXT:    vpsllvw %ymm1, %ymm0, %ymm0
+; CHECK-VBMI-NEXT:    vpsrlw $8, %ymm0, %ymm0
+; CHECK-VBMI-NEXT:    vpmovwb %ymm0, %xmm0
+; CHECK-VBMI-NEXT:    vzeroupper
+; CHECK-VBMI-NEXT:    retq
   %b8 = sub <16 x i8> <i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8>, %b
   %shl = shl <16 x i8> %a, %b
   %lshr = lshr <16 x i8> %a, %b8
@@ -1664,21 +1675,17 @@ define <16 x i8> @var_rotate_v16i8(<16 x i8> %a, <16 x i8> %b) nounwind "min-leg
 define <32 x i8> @var_rotate_v32i8(<32 x i8> %a, <32 x i8> %b) nounwind "min-legal-vector-width"="256" {
 ; CHECK-LABEL: var_rotate_v32i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpsllw $4, %ymm0, %ymm2
-; CHECK-NEXT:    vpsrlw $4, %ymm0, %ymm3
-; CHECK-NEXT:    vpternlogq $216, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %ymm2, %ymm3
-; CHECK-NEXT:    vpsllw $5, %ymm1, %ymm1
-; CHECK-NEXT:    vpblendvb %ymm1, %ymm3, %ymm0, %ymm0
-; CHECK-NEXT:    vpsllw $2, %ymm0, %ymm2
-; CHECK-NEXT:    vpsrlw $6, %ymm0, %ymm3
-; CHECK-NEXT:    vpternlogq $216, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %ymm2, %ymm3
-; CHECK-NEXT:    vpaddb %ymm1, %ymm1, %ymm1
-; CHECK-NEXT:    vpblendvb %ymm1, %ymm3, %ymm0, %ymm0
-; CHECK-NEXT:    vpsrlw $7, %ymm0, %ymm2
-; CHECK-NEXT:    vpaddb %ymm0, %ymm0, %ymm3
-; CHECK-NEXT:    vpternlogq $248, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm2, %ymm3
-; CHECK-NEXT:    vpaddb %ymm1, %ymm1, %ymm1
-; CHECK-NEXT:    vpblendvb %ymm1, %ymm3, %ymm0, %ymm0
+; CHECK-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm1, %ymm1
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; CHECK-NEXT:    vpunpckhbw {{.*#+}} ymm3 = ymm1[8],ymm2[8],ymm1[9],ymm2[9],ymm1[10],ymm2[10],ymm1[11],ymm2[11],ymm1[12],ymm2[12],ymm1[13],ymm2[13],ymm1[14],ymm2[14],ymm1[15],ymm2[15],ymm1[24],ymm2[24],ymm1[25],ymm2[25],ymm1[26],ymm2[26],ymm1[27],ymm2[27],ymm1[28],ymm2[28],ymm1[29],ymm2[29],ymm1[30],ymm2[30],ymm1[31],ymm2[31]
+; CHECK-NEXT:    vpunpckhbw {{.*#+}} ymm4 = ymm0[8,8,9,9,10,10,11,11,12,12,13,13,14,14,15,15,24,24,25,25,26,26,27,27,28,28,29,29,30,30,31,31]
+; CHECK-NEXT:    vpsllvw %ymm3, %ymm4, %ymm3
+; CHECK-NEXT:    vpsrlw $8, %ymm3, %ymm3
+; CHECK-NEXT:    vpunpcklbw {{.*#+}} ymm1 = ymm1[0],ymm2[0],ymm1[1],ymm2[1],ymm1[2],ymm2[2],ymm1[3],ymm2[3],ymm1[4],ymm2[4],ymm1[5],ymm2[5],ymm1[6],ymm2[6],ymm1[7],ymm2[7],ymm1[16],ymm2[16],ymm1[17],ymm2[17],ymm1[18],ymm2[18],ymm1[19],ymm2[19],ymm1[20],ymm2[20],ymm1[21],ymm2[21],ymm1[22],ymm2[22],ymm1[23],ymm2[23]
+; CHECK-NEXT:    vpunpcklbw {{.*#+}} ymm0 = ymm0[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7,16,16,17,17,18,18,19,19,20,20,21,21,22,22,23,23]
+; CHECK-NEXT:    vpsllvw %ymm1, %ymm0, %ymm0
+; CHECK-NEXT:    vpsrlw $8, %ymm0, %ymm0
+; CHECK-NEXT:    vpackuswb %ymm3, %ymm0, %ymm0
 ; CHECK-NEXT:    retq
   %b8 = sub <32 x i8> <i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8>, %b
   %shl = shl <32 x i8> %a, %b
@@ -1709,45 +1716,16 @@ define <32 x i8> @splatvar_rotate_v32i8(<32 x i8> %a, <32 x i8> %b) nounwind "mi
 }
 
 define <32 x i8> @constant_rotate_v32i8(<32 x i8> %a) nounwind "min-legal-vector-width"="256" {
-; CHECK-AVX512-LABEL: constant_rotate_v32i8:
-; CHECK-AVX512:       # %bb.0:
-; CHECK-AVX512-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; CHECK-AVX512-NEXT:    vpunpckhbw {{.*#+}} ymm2 = ymm0[8],ymm1[8],ymm0[9],ymm1[9],ymm0[10],ymm1[10],ymm0[11],ymm1[11],ymm0[12],ymm1[12],ymm0[13],ymm1[13],ymm0[14],ymm1[14],ymm0[15],ymm1[15],ymm0[24],ymm1[24],ymm0[25],ymm1[25],ymm0[26],ymm1[26],ymm0[27],ymm1[27],ymm0[28],ymm1[28],ymm0[29],ymm1[29],ymm0[30],ymm1[30],ymm0[31],ymm1[31]
-; CHECK-AVX512-NEXT:    vpsllvw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm2, %ymm2
-; CHECK-AVX512-NEXT:    vpsrlw $8, %ymm2, %ymm2
-; CHECK-AVX512-NEXT:    vpunpcklbw {{.*#+}} ymm1 = ymm0[0],ymm1[0],ymm0[1],ymm1[1],ymm0[2],ymm1[2],ymm0[3],ymm1[3],ymm0[4],ymm1[4],ymm0[5],ymm1[5],ymm0[6],ymm1[6],ymm0[7],ymm1[7],ymm0[16],ymm1[16],ymm0[17],ymm1[17],ymm0[18],ymm1[18],ymm0[19],ymm1[19],ymm0[20],ymm1[20],ymm0[21],ymm1[21],ymm0[22],ymm1[22],ymm0[23],ymm1[23]
-; CHECK-AVX512-NEXT:    vpsllvw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm1, %ymm1
-; CHECK-AVX512-NEXT:    vpsrlw $8, %ymm1, %ymm1
-; CHECK-AVX512-NEXT:    vpackuswb %ymm2, %ymm1, %ymm1
-; CHECK-AVX512-NEXT:    vpunpckhbw {{.*#+}} ymm2 = ymm0[8,8,9,9,10,10,11,11,12,12,13,13,14,14,15,15,24,24,25,25,26,26,27,27,28,28,29,29,30,30,31,31]
-; CHECK-AVX512-NEXT:    vpsllvw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm2, %ymm2
-; CHECK-AVX512-NEXT:    vmovdqa {{.*#+}} ymm3 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
-; CHECK-AVX512-NEXT:    vpand %ymm3, %ymm2, %ymm2
-; CHECK-AVX512-NEXT:    vpunpcklbw {{.*#+}} ymm0 = ymm0[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7,16,16,17,17,18,18,19,19,20,20,21,21,22,22,23,23]
-; CHECK-AVX512-NEXT:    vpsllvw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
-; CHECK-AVX512-NEXT:    vpand %ymm3, %ymm0, %ymm0
-; CHECK-AVX512-NEXT:    vpackuswb %ymm2, %ymm0, %ymm0
-; CHECK-AVX512-NEXT:    vpor %ymm1, %ymm0, %ymm0
-; CHECK-AVX512-NEXT:    retq
-;
-; CHECK-VBMI-LABEL: constant_rotate_v32i8:
-; CHECK-VBMI:       # %bb.0:
-; CHECK-VBMI-NEXT:    vpunpckhbw {{.*#+}} ymm1 = ymm0[8,8,9,9,10,10,11,11,12,12,13,13,14,14,15,15,24,24,25,25,26,26,27,27,28,28,29,29,30,30,31,31]
-; CHECK-VBMI-NEXT:    vpsllvw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm1, %ymm1
-; CHECK-VBMI-NEXT:    vpunpcklbw {{.*#+}} ymm2 = ymm0[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7,16,16,17,17,18,18,19,19,20,20,21,21,22,22,23,23]
-; CHECK-VBMI-NEXT:    vpsllvw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm2, %ymm2
-; CHECK-VBMI-NEXT:    vmovdqa {{.*#+}} ymm3 = [0,2,4,6,8,10,12,14,32,34,36,38,40,42,44,46,16,18,20,22,24,26,28,30,48,50,52,54,56,58,60,62]
-; CHECK-VBMI-NEXT:    vpermi2b %ymm1, %ymm2, %ymm3
-; CHECK-VBMI-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; CHECK-VBMI-NEXT:    vpunpckhbw {{.*#+}} ymm2 = ymm0[8],ymm1[8],ymm0[9],ymm1[9],ymm0[10],ymm1[10],ymm0[11],ymm1[11],ymm0[12],ymm1[12],ymm0[13],ymm1[13],ymm0[14],ymm1[14],ymm0[15],ymm1[15],ymm0[24],ymm1[24],ymm0[25],ymm1[25],ymm0[26],ymm1[26],ymm0[27],ymm1[27],ymm0[28],ymm1[28],ymm0[29],ymm1[29],ymm0[30],ymm1[30],ymm0[31],ymm1[31]
-; CHECK-VBMI-NEXT:    vpsllvw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm2, %ymm2
-; CHECK-VBMI-NEXT:    vpsrlw $8, %ymm2, %ymm2
-; CHECK-VBMI-NEXT:    vpunpcklbw {{.*#+}} ymm0 = ymm0[0],ymm1[0],ymm0[1],ymm1[1],ymm0[2],ymm1[2],ymm0[3],ymm1[3],ymm0[4],ymm1[4],ymm0[5],ymm1[5],ymm0[6],ymm1[6],ymm0[7],ymm1[7],ymm0[16],ymm1[16],ymm0[17],ymm1[17],ymm0[18],ymm1[18],ymm0[19],ymm1[19],ymm0[20],ymm1[20],ymm0[21],ymm1[21],ymm0[22],ymm1[22],ymm0[23],ymm1[23]
-; CHECK-VBMI-NEXT:    vpsllvw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
-; CHECK-VBMI-NEXT:    vpsrlw $8, %ymm0, %ymm0
-; CHECK-VBMI-NEXT:    vpackuswb %ymm2, %ymm0, %ymm0
-; CHECK-VBMI-NEXT:    vpor %ymm0, %ymm3, %ymm0
-; CHECK-VBMI-NEXT:    retq
+; CHECK-LABEL: constant_rotate_v32i8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vpunpckhbw {{.*#+}} ymm1 = ymm0[8,8,9,9,10,10,11,11,12,12,13,13,14,14,15,15,24,24,25,25,26,26,27,27,28,28,29,29,30,30,31,31]
+; CHECK-NEXT:    vpsllvw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm1, %ymm1
+; CHECK-NEXT:    vpsrlw $8, %ymm1, %ymm1
+; CHECK-NEXT:    vpunpcklbw {{.*#+}} ymm0 = ymm0[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7,16,16,17,17,18,18,19,19,20,20,21,21,22,22,23,23]
+; CHECK-NEXT:    vpsllvw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
+; CHECK-NEXT:    vpsrlw $8, %ymm0, %ymm0
+; CHECK-NEXT:    vpackuswb %ymm1, %ymm0, %ymm0
+; CHECK-NEXT:    retq
   %shl = shl <32 x i8> %a, <i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 8, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 8, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1>
   %lshr = lshr <32 x i8> %a, <i8 8, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 8, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7>
   %or = or <32 x i8> %shl, %lshr

@@ -403,6 +403,12 @@ def IfOp : SCF_Op<"if",
     YieldOp thenYield();
     Block* elseBlock();
     YieldOp elseYield();
+
+    /// If the condition is a constant, returns 1 for the executed block and 0
+    /// for the other. Otherwise, returns `kUnknownNumRegionInvocations` for
+    /// both successors.
+    void getNumRegionInvocations(ArrayRef<Attribute> operands,
+                                 SmallVectorImpl<int64_t> &countPerRegion);
   }];
 
   let hasCanonicalizer = 1;

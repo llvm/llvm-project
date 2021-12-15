@@ -773,6 +773,7 @@ lltok::Kind LLLexer::LexIdentifier() {
   KEYWORD(noUnwind);
   KEYWORD(mayThrow);
   KEYWORD(hasUnknownCall);
+  KEYWORD(mustBeUnreachable);
   KEYWORD(calls);
   KEYWORD(callee);
   KEYWORD(params);

@@ -411,7 +411,8 @@ Type LLVMTypeConverter::convertVectorType(VectorType type) {
     return {};
   if (type.getShape().empty())
     return VectorType::get({1}, elementType);
-  Type vectorType = VectorType::get(type.getShape().back(), elementType);
+  Type vectorType = VectorType::get(type.getShape().back(), elementType,
+                                    type.getNumScalableDims());
   assert(LLVM::isCompatibleVectorType(vectorType) &&
          "expected vector type compatible with the LLVM dialect");
   auto shape = type.getShape();

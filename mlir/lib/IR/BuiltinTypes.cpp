@@ -294,8 +294,8 @@ ShapedType ShapedType::clone(ArrayRef<int64_t> shape, Type elementType) {
   if (isa<TensorType>())
     return RankedTensorType::get(shape, elementType);
 
-  if (isa<VectorType>())
-    return VectorType::get(shape, elementType);
+  if (auto vecTy = dyn_cast<VectorType>())
+    return VectorType::get(shape, elementType, vecTy.getNumScalableDims());
 
   llvm_unreachable("Unhandled ShapedType clone case");
 }
@@ -317,8 +317,8 @@ ShapedType ShapedType::clone(ArrayRef<int64_t> shape) {
   if (isa<TensorType>())
     return RankedTensorType::get(shape, getElementType());
 
-  if (isa<VectorType>())
-    return VectorType::get(shape, getElementType());
+  if (auto vecTy = dyn_cast<VectorType>())
+    return VectorType::get(shape, getElementType(), vecTy.getNumScalableDims());
 
   llvm_unreachable("Unhandled ShapedType clone case");
 }
@@ -340,8 +340,8 @@ ShapedType ShapedType::clone(Type elementType) {
     return UnrankedTensorType::get(elementType);
   }
 
-  if (isa<VectorType>())
-    return VectorType::get(getShape(), elementType);
+  if (auto vecTy = dyn_cast<VectorType>())
+    return VectorType::get(getShape(), elementType, vecTy.getNumScalableDims());
 
   llvm_unreachable("Unhandled ShapedType clone hit");
 }
@@ -441,7 +441,8 @@ bool ShapedType::hasStaticShape(ArrayRef<int64_t> shape) const {
 //===----------------------------------------------------------------------===//
 
 LogicalResult VectorType::verify(function_ref<InFlightDiagnostic()> emitError,
-                                 ArrayRef<int64_t> shape, Type elementType) {
+                                 ArrayRef<int64_t> shape, Type elementType,
+                                 unsigned numScalableDims) {
   if (!isValidElementType(elementType))
     return emitError()
            << "vector elements must be int/index/float type but got "
@@ -460,10 +461,10 @@ VectorType VectorType::scaleElementBitwidth(unsigned scale) {
     return VectorType();
   if (auto et = getElementType().dyn_cast<IntegerType>())
     if (auto scaledEt = et.scaleElementBitwidth(scale))
-      return VectorType::get(getShape(), scaledEt);
+      return VectorType::get(getShape(), scaledEt, getNumScalableDims());
   if (auto et = getElementType().dyn_cast<FloatType>())
     if (auto scaledEt = et.scaleElementBitwidth(scale))
-      return VectorType::get(getShape(), scaledEt);
+      return VectorType::get(getShape(), scaledEt, getNumScalableDims());
   return VectorType();
 }
 
