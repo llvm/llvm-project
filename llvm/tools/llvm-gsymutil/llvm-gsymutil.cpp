@@ -20,7 +20,6 @@
 #include "llvm/Support/Format.h"
 #include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/MemoryBuffer.h"
-#include "llvm/Support/Path.h"
 #include "llvm/Support/PrettyStackTrace.h"
 #include "llvm/Support/Regex.h"
 #include "llvm/Support/Signals.h"
@@ -126,6 +125,13 @@ static opt<bool> LookupAddressesFromStdin(
 /// @}
 //===----------------------------------------------------------------------===//
 
+static void error(Error Err) {
+  if (!Err)
+    return;
+  WithColor::error() << toString(std::move(Err)) << "\n";
+  exit(1);
+}
+
 static void error(StringRef Prefix, llvm::Error Err) {
   if (!Err)
     return;
@@ -139,39 +145,6 @@ static void error(StringRef Prefix, std::error_code EC) {
     return;
   errs() << Prefix << ": " << EC.message() << "\n";
   exit(1);
-}
-
-/// If the input path is a .dSYM bundle (as created by the dsymutil tool),
-/// replace it with individual entries for each of the object files inside the
-/// bundle otherwise return the input path.
-static std::vector<std::string> expandBundle(const std::string &InputPath) {
-  std::vector<std::string> BundlePaths;
-  SmallString<256> BundlePath(InputPath);
-  // Manually open up the bundle to avoid introducing additional dependencies.
-  if (sys::fs::is_directory(BundlePath) &&
-      sys::path::extension(BundlePath) == ".dSYM") {
-    std::error_code EC;
-    sys::path::append(BundlePath, "Contents", "Resources", "DWARF");
-    for (sys::fs::directory_iterator Dir(BundlePath, EC), DirEnd;
-         Dir != DirEnd && !EC; Dir.increment(EC)) {
-      const std::string &Path = Dir->path();
-      sys::fs::file_status Status;
-      EC = sys::fs::status(Path, Status);
-      error(Path, EC);
-      switch (Status.type()) {
-      case sys::fs::file_type::regular_file:
-      case sys::fs::file_type::symlink_file:
-      case sys::fs::file_type::type_unknown:
-        BundlePaths.push_back(Path);
-        break;
-      default: /*ignore*/;
-      }
-    }
-    error(BundlePath, EC);
-  }
-  if (!BundlePaths.size())
-    BundlePaths.push_back(InputPath);
-  return BundlePaths;
 }
 
 static uint32_t getCPUType(MachOObjectFile &MachO) {
@@ -420,8 +393,15 @@ static llvm::Error convertFileToGSYM(raw_ostream &OS) {
 
   OS << "Input file: " << ConvertFilename << "\n";
 
-  auto Objs = expandBundle(ConvertFilename);
-  llvm::append_range(Objects, Objs);
+  if (auto DsymObjectsOrErr =
+          MachOObjectFile::findDsymObjectMembers(ConvertFilename)) {
+    if (DsymObjectsOrErr->empty())
+      Objects.push_back(ConvertFilename);
+    else
+      llvm::append_range(Objects, *DsymObjectsOrErr);
+  } else {
+    error(DsymObjectsOrErr.takeError());
+  }
 
   for (auto Object : Objects) {
     if (auto Err = handleFileConversionToGSYM(Object, OutFile))

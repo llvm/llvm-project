@@ -26,12 +26,15 @@
 #include "llvm/Object/SymbolicFile.h"
 #include "llvm/Support/DataExtractor.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/Errc.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/Host.h"
 #include "llvm/Support/LEB128.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/Path.h"
 #include "llvm/Support/SwapByteOrder.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
@@ -4718,4 +4721,47 @@ StringRef MachOObjectFile::mapDebugSectionName(StringRef Name) const {
   return StringSwitch<StringRef>(Name)
       .Case("debug_str_offs", "debug_str_offsets")
       .Default(Name);
+}
+
+Expected<std::vector<std::string>>
+MachOObjectFile::findDsymObjectMembers(StringRef Path) {
+  SmallString<256> BundlePath(Path);
+  // Normalize input path. This is necessary to accept `bundle.dSYM/`.
+  sys::path::remove_dots(BundlePath);
+  if (!sys::fs::is_directory(BundlePath) ||
+      sys::path::extension(BundlePath) != ".dSYM")
+    return std::vector<std::string>();
+  sys::path::append(BundlePath, "Contents", "Resources", "DWARF");
+  bool IsDir;
+  auto EC = sys::fs::is_directory(BundlePath, IsDir);
+  if (EC == errc::no_such_file_or_directory || (!EC && !IsDir))
+    return createStringError(
+        EC, "%s: expected directory 'Contents/Resources/DWARF' in dSYM bundle",
+        Path.str().c_str());
+  if (EC)
+    return createFileError(BundlePath, errorCodeToError(EC));
+
+  std::vector<std::string> ObjectPaths;
+  for (sys::fs::directory_iterator Dir(BundlePath, EC), DirEnd;
+       Dir != DirEnd && !EC; Dir.increment(EC)) {
+    StringRef ObjectPath = Dir->path();
+    sys::fs::file_status Status;
+    if (auto EC = sys::fs::status(ObjectPath, Status))
+      return createFileError(ObjectPath, errorCodeToError(EC));
+    switch (Status.type()) {
+    case sys::fs::file_type::regular_file:
+    case sys::fs::file_type::symlink_file:
+    case sys::fs::file_type::type_unknown:
+      ObjectPaths.push_back(ObjectPath.str());
+      break;
+    default: /*ignore*/;
+    }
+  }
+  if (EC)
+    return createFileError(BundlePath, errorCodeToError(EC));
+  if (ObjectPaths.empty())
+    return createStringError(std::error_code(),
+                             "%s: no objects found in dSYM bundle",
+                             Path.str().c_str());
+  return ObjectPaths;
 }
