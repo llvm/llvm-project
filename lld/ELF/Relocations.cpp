@@ -1585,7 +1585,7 @@ static bool handleNonPreemptibleIfunc(Symbol &sym) {
   // original section/value pairs. For non-GOT non-PLT relocation case below, we
   // may alter section/value, so create a copy of the symbol to make
   // section/value fixed.
-  auto *directSym = make<Defined>(cast<Defined>(sym));
+  auto *directSym = makeDefined(cast<Defined>(sym));
   addPltEntry(in.iplt, in.igotPlt, in.relaIplt, target->iRelativeRel,
               *directSym);
   sym.pltIndex = directSym->pltIndex;
