@@ -368,16 +368,16 @@ public:
         isNeeded(!config->asNeeded) {}
 
   // This is actually a vector of Elf_Verdef pointers.
-  std::vector<const void *> verdefs;
+  SmallVector<const void *, 0> verdefs;
 
   // If the output file needs Elf_Verneed data structures for this file, this is
   // a vector of Elf_Vernaux version identifiers that map onto the entries in
   // Verdefs, otherwise it is empty.
-  std::vector<unsigned> vernauxs;
+  SmallVector<uint32_t, 0> vernauxs;
 
   static unsigned vernauxNum;
 
-  std::vector<StringRef> dtNeeded;
+  SmallVector<StringRef, 0> dtNeeded;
   StringRef soName;
 
   static bool classof(const InputFile *f) { return f->kind() == SharedKind; }
@@ -389,7 +389,7 @@ public:
 
   // Non-weak undefined symbols which are not yet resolved when the SO is
   // parsed. Only filled for `--no-allow-shlib-undefined`.
-  std::vector<Symbol *> requiredSymbols;
+  SmallVector<Symbol *, 0> requiredSymbols;
 
 private:
   template <typename ELFT>
