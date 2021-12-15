@@ -1436,6 +1436,8 @@ def LLVM_MaximumOp : LLVM_BinarySameArgsIntrinsicOp<"maximum">;
 def LLVM_MinimumOp : LLVM_BinarySameArgsIntrinsicOp<"minimum">;
 def LLVM_SMaxOp : LLVM_BinarySameArgsIntrinsicOp<"smax">;
 def LLVM_SMinOp : LLVM_BinarySameArgsIntrinsicOp<"smin">;
+def LLVM_UMaxOp : LLVM_BinarySameArgsIntrinsicOp<"umax">;
+def LLVM_UMinOp : LLVM_BinarySameArgsIntrinsicOp<"umin">;
 
 def LLVM_MemcpyOp : LLVM_ZeroResultIntrOp<"memcpy", [0, 1, 2]> {
   let arguments = (ins LLVM_Type:$dst, LLVM_Type:$src, LLVM_Type:$len,
